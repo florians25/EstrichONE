@@ -9,8 +9,12 @@ Ein unstrukturierter Monolith (wie `api/index.php` in Estrich Web) ist ebenso we
 ## Entscheidung
 Ein Projekt `EstrichOne.Api`. Fachmodule liegen in `Modules/<Name>/` und registrieren sich über `IModule`
 (Dienste + Endpunkte). Endpunkte sind Minimal APIs, gruppiert je Modul unter `/api/v1/...`.
-Ein Modul greift auf ein anderes nur über dessen Namespace `Modules.<Name>.Public` zu. Ein Architekturtest
-erzwingt das.
+Ein Modul greift auf ein anderes nur über dessen Namespace `Modules.<Name>.Exports` zu. Ein Architekturtest
+erzwingt das. In `Exports` liegen nur Typen, die andere Module brauchen: vor allem die Entitäten, auf die
+Fremdschlüssel verweisen (`User`, `Contact`, `Bauakte`). Lesen und Ändern fremder Daten geschieht über Dienste
+des besitzenden Moduls, nicht über direkte Abfragen.
+
+(Der Name `Public` bzw. `Shared` scheidet aus, weil beides reservierte Wörter in VB.NET sind – Analyseregel CA1716.)
 
 ## Folgen
 - Ein Deployment, eine Datenbank, eine Transaktion über Modulgrenzen, wenn nötig.

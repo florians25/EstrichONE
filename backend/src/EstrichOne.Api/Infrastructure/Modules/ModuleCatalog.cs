@@ -1,4 +1,11 @@
+using EstrichOne.Api.Modules.Access;
+using EstrichOne.Api.Modules.Bauakten;
+using EstrichOne.Api.Modules.Contacts;
+using EstrichOne.Api.Modules.Documentation;
+using EstrichOne.Api.Modules.Identity;
+using EstrichOne.Api.Modules.Organization;
 using EstrichOne.Api.Modules.Platform;
+using EstrichOne.Api.Modules.Work;
 
 namespace EstrichOne.Api.Infrastructure.Modules;
 
@@ -7,6 +14,13 @@ public static class ModuleCatalog
     public static IReadOnlyList<IModule> All { get; } =
     [
         new PlatformModule(),
+        new IdentityModule(),
+        new AccessModule(),
+        new OrganizationModule(),
+        new ContactsModule(),
+        new BauaktenModule(),
+        new DocumentationModule(),
+        new WorkModule(),
     ];
 
     public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)

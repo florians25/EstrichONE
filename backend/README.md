@@ -27,7 +27,7 @@ src/EstrichOne.Api/
     Http/                        Fehlerformat (RFC 9457, Feld code), Sicherheitsheader
     Modules/                     IModule, ModuleCatalog (alle Module ausdrücklich aufgeführt)
     Persistence/                 DbContext, Migrationen
-  Modules/<Name>/                ein Ordner je Fachmodul; andere Module nutzen nur <Name>/Public
+  Modules/<Name>/                ein Ordner je Fachmodul; andere Module nutzen nur <Name>/Exports
 tests/EstrichOne.Api.Tests/      Integrationstests gegen echte PostgreSQL, Architektur- und Vertragstests
 ../contracts/openapi/v1.json     API-Vertrag (wird durch Test geprüft)
 ```

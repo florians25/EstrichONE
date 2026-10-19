@@ -21,7 +21,7 @@ public sealed class ModuleBoundaryTests
 
     [Theory]
     [MemberData(nameof(ModuleNames))]
-    public void Module_UsesOtherModulesOnlyThroughTheirPublicNamespace(string module)
+    public void Module_UsesOtherModulesOnlyThroughTheirExportsNamespace(string module)
     {
         var forbidden = ModuleCatalog.All
             .Select(m => ModuleName(m.GetType()))
@@ -58,12 +58,16 @@ public sealed class ModuleBoundaryTests
     private static string ModuleName(Type moduleType) =>
         moduleType.Namespace!.Replace(ModulesNamespace + ".", string.Empty, StringComparison.Ordinal);
 
-    /// <summary>Alle Namespaces eines Moduls außer <c>.Public</c>.</summary>
+    /// <summary>
+    /// Vollständige Namen aller Typen eines Moduls außerhalb von <c>.Exports</c>. NetArchTest vergleicht Präfixe;
+    /// mit Typnamen statt Namespaces zählt <c>Modules.X.Exports</c> nicht versehentlich als Interna.
+    /// </summary>
     private static IEnumerable<string> InternalNamespacesOf(string module) =>
         typeof(Program).Assembly.GetTypes()
-            .Select(type => type.Namespace)
-            .OfType<string>()
-            .Where(ns => ns == $"{ModulesNamespace}.{module}" || ns.StartsWith($"{ModulesNamespace}.{module}.", StringComparison.Ordinal))
-            .Where(ns => !ns.StartsWith($"{ModulesNamespace}.{module}.Public", StringComparison.Ordinal))
+            .Where(type => type.Namespace is { } ns
+                && (ns == $"{ModulesNamespace}.{module}" || ns.StartsWith($"{ModulesNamespace}.{module}.", StringComparison.Ordinal))
+                && !ns.StartsWith($"{ModulesNamespace}.{module}.Exports", StringComparison.Ordinal))
+            .Where(type => !type.IsNested)
+            .Select(type => type.FullName!)
             .Distinct();
 }

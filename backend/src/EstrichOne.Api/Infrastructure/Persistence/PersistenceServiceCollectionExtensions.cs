@@ -13,7 +13,12 @@ public static class PersistenceServiceCollectionExtensions
                 $"Die Verbindungszeichenfolge 'ConnectionStrings:{ConnectionStringName}' fehlt " +
                 "(Umgebungsvariable ConnectionStrings__Default).");
 
-        services.AddDbContext<EstrichOneDbContext>(options => Configure(options, connectionString));
+        services.AddSingleton<AuditingInterceptor>();
+        services.AddDbContext<EstrichOneDbContext>((provider, options) =>
+        {
+            Configure(options, connectionString);
+            options.AddInterceptors(provider.GetRequiredService<AuditingInterceptor>());
+        });
         return services;
     }
 
