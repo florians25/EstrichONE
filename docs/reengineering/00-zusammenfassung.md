@@ -46,7 +46,7 @@ Details: [01-bestandsaufnahme.md](01-bestandsaufnahme.md)
 
 | Teil | Vorschlag | Status |
 |---|---|---|
-| Backend | **ASP.NET Core (.NET 10 LTS), modularer Monolith**, EF Core, PostgreSQL 17 | **[Vorschlag] E-01 – bitte bestätigen.** Alternative NestJS (aus SATZIO bekannt), siehe [04](04-framework-bewertung.md) |
+| Backend | **ASP.NET Core (.NET 10 LTS), modularer Monolith**, EF Core, PostgreSQL 17 | **entschieden (E-01)** |
 | Web | **Angular beibehalten**, als neues Projekt; eigenes Designsystem auf Angular CDK statt Material-Optik | [Vorschlag] E-02 |
 | Windows | WinUI 3 + Windows App SDK, MVVM Toolkit, eigenes natives Ribbon | [Verbindlich] + [Vorschlag] |
 | iOS | SwiftUI, Liquid Glass ab iOS 26, Fallback ab iOS 17, GRDB | [Verbindlich] + [Vorschlag] |
@@ -129,33 +129,33 @@ Vollständig offline; Duplikate werden erkannt, ohne zu blockieren. [09](09-mobi
 
 ## 12. Migrationsstrategie
 
-Neuaufbau mit **wiederholbarem** Migrationswerkzeug (Dump → PostgreSQL, IDs bleiben erhalten), zwei
-Probeläufen, einer Umstellung von ≤ 4 h und 4 Wochen Lesezugriff auf das Altsystem. Die Migration liest
-ausschließlich und verändert am Altbestand nichts.
+**Entschieden: keine Datenübernahme. EstrichONE startet als Neuprodukt.** Der Altbestand bleibt fachliche
+Referenz; Estrich Web läuft unabhängig weiter, bis der Betrieb umstellt. Optional gibt es einen
+CSV-Import für Kunden und Mitarbeiter.
 [18](18-migrationsstrategie.md)
 
 ## 13. Roadmap
 
-Fundament → Datenübernahme + **Backup (vor Go-live)** → Web 1.0 und **Ablösung von Estrich Web** →
-Sync + **eine** native App → zweite App → SSO/IT-Center-Ausbau → Windows-Desktop (mit Prüfpunkt).
-Gesamtaufwand ≈ 300–445 Personentage; jeder Meilenstein ist für sich nutzbar.
+Fundament → Dateien, Sync, **Backup (vor Go-live)** → **iOS-App 1.0** mit Web-Administration (Basis) →
+Web 1.0 → Android → SSO/IT-Center-Ausbau → Windows-Desktop (mit Prüfpunkt).
+Gesamtaufwand ≈ 300–440 Personentage; jeder Meilenstein ist für sich nutzbar.
 [20](20-entwicklungsroadmap.md)
 
 ## 14. Die ersten zehn Arbeitspakete
 
 AP-01 Repository und CI · AP-02 Backend-Skelett und Docker · AP-03 Kern-Datenmodell · AP-04 Lokale
-Anmeldung · AP-05 Rechte, Objektzugriff, Geräteidentität · AP-06 Datenmigration · AP-07 Dateiservice ·
-AP-08 Sync-Protokoll · AP-09 Backup und Restore · AP-10 Web-Grundgerüst und Designsystem.
+Anmeldung · AP-05 Rechte, Objektzugriff, Geräteidentität · AP-06 Ersteinrichtung und Stammdaten-Import · AP-07 Dateiservice ·
+AP-08 Sync-Protokoll · AP-09 Backup und Restore · AP-10 iOS-Grundgerüst und Server-Onboarding.
 Details mit Akzeptanzkriterien: [20, Abschnitt 4](20-entwicklungsroadmap.md#4-die-ersten-zehn-arbeitspakete)
 
 ## Offene Entscheidungen
 
 | ID | Entscheidung | Mein Vorschlag |
 |---|---|---|
-| **E-01** | Backend-Technologie | **ASP.NET Core .NET 10 LTS** (Alternative NestJS) |
+| E-01 | Backend-Technologie | ✅ **entschieden:** ASP.NET Core .NET 10 LTS |
 | E-02 | Web | Angular, Neuaufbau |
-| E-04 | Mandantenfähigkeit | entfällt (1 Installation = 1 Betrieb) |
-| E-05 | Bauakte + Baustelle | zusammenführen, nach Prüfung der Produktivdaten |
+| E-04 | Mandantenfähigkeit | entfällt (1 Installation = 1 Betrieb) – durch Neuprodukt-Entscheidung bestätigt |
+| E-05 | Bauakte + Baustelle | ✅ **entschieden:** zusammenführen, Bauabschnitte als Bereiche |
 | E-07 | Push-Benachrichtigungen | optional; Standard In-App + E-Mail |
 | E-08 | Original-Fotos behalten | ja |
 | E-09 | PDF-Bibliothek | MIT-lizenziert (PDFsharp/MigraDoc) |
@@ -165,8 +165,8 @@ Details mit Akzeptanzkriterien: [20, Abschnitt 4](20-entwicklungsroadmap.md#4-di
 | E-15 | Anrede in den Apps | „Sie“ |
 | E-16 | Windows 10 unterstützen? | nach Gerätebasis |
 | E-18 | Ungesendete Daten auf Poolgeräten nach Abmeldung | 1.0 beim nächsten Login, 1.1 Upload-Ticket |
-| **E-19** | **Welche Mobilplattform zuerst?** | nach den Geräten im Betrieb (iPhone oder Android?) |
-| **M-1** | **Lesender Export der Produktivdatenbank + Dateiliste** | Voraussetzung für AP-03/AP-06 |
+| E-19 | Welche Mobilplattform zuerst? | ✅ **entschieden:** iOS/iPhone |
+| E-20 | Datenübernahme aus Estrich Web | ✅ **entschieden:** keine, Neuprodukt |
 
 ## Verbindlich · Vorschlag · Offen
 

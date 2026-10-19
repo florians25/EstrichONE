@@ -84,8 +84,7 @@ audit_events (append-only)  ·  sync_operations  ·  change_log
 ```
 
 **Bauakte statt Projekt/Baustelle:** Ein Datensatz trägt Bezeichnung und Baustellenadresse. Der bisherige
-Fall „mehrere Baustellen je Projekt“ wird über `bauakte_bereiche` abgebildet. Die Migration prüft, wie oft er
-tatsächlich vorkommt (18, M-1). **[Offen] E-05.**
+Fall „mehrere Baustellen je Projekt“ wird über `bauakte_bereiche` abgebildet. **E-05 entschieden.**
 
 ## 5. API-Vertrag
 
@@ -182,11 +181,11 @@ Synchronisationsstatus wird zusätzlich je Datensatz angezeigt (15).
 
 | ID | Frage | Vorschlag |
 |---|---|---|
-| E-01 | Backend-Technologie | ASP.NET Core (.NET 10 LTS) – **bitte bestätigen** (Alternative NestJS, siehe 04) |
+| E-01 | Backend-Technologie | ✅ ASP.NET Core (.NET 10 LTS) – entschieden |
 | E-02 | Web-Framework | Angular, Neuaufbau |
 | E-03 | Datenbank | PostgreSQL 17 (verbindlich bevorzugt) |
 | E-04 | Mandantenfähigkeit | entfällt, eine Installation = ein Betrieb |
-| E-05 | Bauakte/Baustelle | zusammenführen, Bereiche für Bauabschnitte |
+| E-05 | Bauakte/Baustelle | ✅ zusammenführen, Bereiche für Bauabschnitte – entschieden |
 | E-06 | Reverse Proxy | Caddy |
 | E-07 | Push-Benachrichtigungen | optional (APNs/FCM benötigen Konten, siehe 20, Abschnitt 6); Standard: In-App + E-Mail |
 | E-08 | Original-Fotos behalten | ja, standardmäßig |

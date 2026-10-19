@@ -24,7 +24,7 @@ manuell oder auf echten Geräten prüfbar ist, wird als solches gekennzeichnet.
 | Android | JUnit + Robolectric (Logik), Compose UI Tests, Room-Migrationstests | | jeder PR |
 | Windows | xUnit für ViewModels und Ribbon-Logik; UI-Automation (WinAppDriver/Appium) nur für Rauchtests | | Windows-Runner |
 | Backup/Restore | CI-Job: Stack starten, Testdaten, Backup → neuer Stack → Restore → Vergleich | | nächtlich |
-| Migration | Migrationswerkzeug gegen anonymisierten Altbestand-Ausschnitt; Zählabgleich | | jeder PR im Migrationsmodul |
+| Stammdaten-Import | CSV-Import mit fehlerhaften, doppelten und leeren Zeilen | | jeder PR |
 | Sicherheit | OWASP ZAP Baseline gegen Staging; Abhängigkeits- und Container-Scan | | nächtlich |
 
 ## 2. Mobile Testfälle (verbindlich laut Vorgabe)

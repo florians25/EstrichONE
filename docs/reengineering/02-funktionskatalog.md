@@ -8,8 +8,8 @@ Spalte **Plattform:** W = Web, D = Windows Desktop, M = Mobile (iOS und Android)
 Spalte **Status heute:** ✅ vorhanden · ⚠️ unvollständig · ❌ Platzhalter · – nicht vorhanden. Belege stehen in 01.
 
 > **Bitte prüfen:** Die Spalte „Entscheidung“ ist ein **Vorschlag**. Ob eine Funktion im Betrieb tatsächlich
-> genutzt wird, kann ich nur aus dem Code schließen. Eine Abfrage der Produktivdaten (siehe 18, Schritt M-1)
-> zeigt, welche Tabellen leer sind. Dieses Ergebnis sollte die Liste vor Version 1.0 bestätigen.
+> genutzt wird, kann ich nur aus dem Code schließen. Da keine Daten übernommen werden (18), sollte der Betrieb
+> die Liste vor Version 1.0 einmal durchsehen: Was wird im Alltag wirklich genutzt?
 
 ## 1. Bauakten (Kern)
 
@@ -83,7 +83,7 @@ Spalte **Status heute:** ✅ vorhanden · ⚠️ unvollständig · ❌ Platzhalt
 
 | Funktion | Status heute | Entscheidung | Version | Plattform |
 |---|---|---|---|---|
-| Lokale Anmeldung | ✅ | **Neu entwickeln** (Argon2id, Rehash von bcrypt beim Login) | 1.0 | alle |
+| Lokale Anmeldung | ✅ | **Neu entwickeln** (Argon2id) | 1.0 | alle |
 | Sperre nach Fehlversuchen | ✅ | Beibehalten (Konzept) | 1.0 | – |
 | Passwortänderung erzwingen | ✅ | Beibehalten | 1.0 | alle |
 | Passwort-Zurücksetzen per E-Mail | – | Neu entwickeln | 1.0 | W (nur mit SMTP) |

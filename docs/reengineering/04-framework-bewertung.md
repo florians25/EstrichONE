@@ -28,7 +28,7 @@ Hintergrunddienste für Synchronisation und Benachrichtigungen. Zur Wahl stehen:
 | Support-Zeitraum | jährliche Hauptversionen | LTS von Node, häufige Major-Wechsel im Ökosystem | **LTS 3 Jahre** (.NET 10 bis Nov. 2028), danach planbarer Wechsel auf die nächste LTS |
 | Vorkenntnisse des Entwicklers | Estrich Web (PHP ohne Framework) | SATZIO | über WinUI 3 ohnehin erforderlich |
 
-**[Vorschlag] Entscheidung E-01: ASP.NET Core (.NET 10 LTS) als modularer Monolith.**
+**Entscheidung E-01 (bestätigt am 19.10.2026): ASP.NET Core (.NET 10 LTS) als modularer Monolith.**
 
 Begründung:
 1. **WinUI 3 erzwingt C#.** Mit einem C#-Backend bleibt es bei drei Sprachen (C#, TypeScript, Swift/Kotlin)
@@ -43,7 +43,7 @@ selbst gehostete Architektur betrieben, inklusive einer Sync-Engine mit `opId`-I
 Muster bereits umsetzt. Das wäre der kürzere Weg zum ersten lauffähigen Backend. Ich empfehle trotzdem .NET, weil
 die Sprachgleichheit mit dem Desktop über die Lebensdauer schwerer wiegt als der schnellere Start. Wenn der
 Windows-Desktop später zurückgestellt würde (siehe 20, Risiko R-1), kippt diese Abwägung zugunsten von NestJS.
-**Bitte diese Entscheidung ausdrücklich bestätigen.**
+**Bestätigt.**
 
 ### Bibliotheken Backend [Vorschlag]
 
@@ -51,7 +51,7 @@ Windows-Desktop später zurückgestellt würde (siehe 20, Risiko R-1), kippt die
 |---|---|---|---|
 | Datenbank | PostgreSQL 17 | PostgreSQL | – |
 | ORM, Migrationen | EF Core + Npgsql | MIT | Migrationen als C#-Code im Repository, beim Start **nicht** automatisch auf Produktion, sondern über `estrichone migrate` |
-| Passwort-Hashing | Argon2id (Konscious.Security.Cryptography oder Isopoh) | MIT | Altbestand bcrypt → Rehash beim ersten Login |
+| Passwort-Hashing | Argon2id (Konscious.Security.Cryptography oder Isopoh) | MIT | – |
 | OpenAPI | Microsoft.AspNetCore.OpenApi | MIT | Spezifikation wird in `contracts/openapi.yaml` eingecheckt (Vertragstest) |
 | Bildverarbeitung | NetVips (libvips) | MIT / LGPL | SkiaSharp (MIT). **Nicht** ImageSharp (eingeschränkte Lizenz) |
 | PDF | **[Offen] E-09** PDFsharp/MigraDoc (MIT) oder QuestPDF (Community-Lizenz nur bis 1 Mio. USD Jahresumsatz des Anwenderbetriebs) | – | Für eine frei weitergegebene Software empfehle ich MIT |

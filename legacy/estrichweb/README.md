@@ -1,11 +1,11 @@
 # Estrich Web – Altbestand (eingefroren)
 
 Dieser Ordner enthält den Quellcode von **Estrich Web**, dem Vorgänger von EstrichONE,
-Stand **23.08.2026** (Runde 66). Er dient als Referenz für die Bestandsaufnahme
-(`docs/reengineering/01-bestandsaufnahme.md`) und als Quelle für die Datenmigration.
+Stand **23.08.2026** (Runde 66). Er dient als fachliche Referenz (siehe
+`docs/reengineering/01-bestandsaufnahme.md`). **Es werden weder Code noch Daten übernommen** – EstrichONE ist ein
+Neuprodukt (siehe `docs/reengineering/18-migrationsstrategie.md`).
 
-**Nicht weiterentwickeln.** Fehlerbehebungen für den laufenden Betrieb erfolgen nur noch,
-wenn sie für die Migration oder den Parallelbetrieb zwingend sind.
+**Nicht weiterentwickeln.** Dieser Ordner ist eingefroren.
 
 ## Bewusst nicht übernommen
 

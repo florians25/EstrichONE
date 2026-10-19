@@ -22,7 +22,7 @@ nach deiner ausdrücklichen Anweisung durch.
 
 | Bereich | Maßnahme |
 |---|---|
-| Passwörter | Argon2id (m=19 MiB, t=2, p=1 als Untergrenze; nach Serverleistung kalibriert); bcrypt-Hashes aus der Migration werden beim nächsten Login neu gehasht. Mindestlänge 10, Prüfung gegen eine Liste häufiger Passwörter (offline, kein externer Dienst); keine Zwangswechsel ohne Anlass (NIST SP 800-63B). |
+| Passwörter | Argon2id (m=19 MiB, t=2, p=1 als Untergrenze; nach Serverleistung kalibriert). Mindestlänge 10, Prüfung gegen eine Liste häufiger Passwörter (offline, kein externer Dienst); keine Zwangswechsel ohne Anlass (NIST SP 800-63B). |
 | Brute-Force | je Konto und je IP gedrosselt (ASP.NET Core Rate Limiting) + progressive Verzögerung; Geräte-PIN lokal (11) |
 | Sitzungen | Access-Token 10 min (JWT, ES256, Schlüssel rotierbar mit `kid`), Refresh-Token rotierend mit Wiederverwendungserkennung (Wiederverwendung → ganze Sitzungsfamilie widerrufen), Gerätebindung (11). Web: HttpOnly-, Secure-, SameSite=Strict-Cookie + CSRF-Token für zustandsändernde Cookie-Requests. **Kein Token in `localStorage`, kein Token in URLs.** |
 | Widerruf | Jede Anfrage prüft Sitzungs- und Gerätestatus (zwischengespeichert ≤ 30 s) → Sperre wirkt praktisch sofort |
