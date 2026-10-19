@@ -1,0 +1,29 @@
+# EstrichONE – Reverse Proxy (ADR 0007)
+# Öffentliche Domain: Zertifikat automatisch von Let's Encrypt.
+# „localhost“: Zertifikat aus Caddys interner Zertifizierungsstelle (nur für Tests).
+
+{$ESTRICHONE_DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+
+	request_body {
+		max_size 600MB
+	}
+
+	handle /api/* {
+		reverse_proxy api:8080
+	}
+
+	handle /health/* {
+		reverse_proxy api:8080
+	}
+
+	handle {
+		header Content-Type "text/plain; charset=utf-8"
+		respond "EstrichONE-Server ist erreichbar. Die Weboberfläche ist in dieser Version noch nicht enthalten." 200
+	}
+}

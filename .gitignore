@@ -1,0 +1,29 @@
+# .NET
+bin/
+obj/
+*.user
+.vs/
+TestResults/
+*.trx
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Betrieb – niemals einchecken
+deploy/.env
+deploy/data/
+*.pfx
+*.p12
+
+# macOS / Xcode
+.DS_Store
+xcuserdata/
+DerivedData/
+*.xcuserstate
+
+# Node
+node_modules/
+dist/
+deploy/caddy-root.crt

@@ -2,9 +2,8 @@
 
 Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger von **Estrich Web**.
 
-> **Status: Phase 1–5 (Analyse und Konzept) abgeschlossen. Implementierung noch nicht freigegeben.**
-> Es gibt in diesem Repository noch keinen neuen Anwendungscode. Bisher liegen hier nur der eingefrorene
-> Altbestand und die Reengineering-Dokumentation.
+> **Status: Implementierung läuft** (Roadmap: `docs/reengineering/20-entwicklungsroadmap.md`).
+> Fertig: AP-01 Repository und CI, AP-02 Backend-Skelett und Docker-Stack.
 
 ## Inhalt
 
@@ -12,9 +11,13 @@ Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger vo
 |---|---|
 | [`docs/reengineering/`](docs/reengineering/) | Bestandsaufnahme, Funktionskatalog, Zielarchitektur, UX-Konzept, Roadmap (20 Dokumente + Zusammenfassung) |
 | [`docs/reengineering/00-zusammenfassung.md`](docs/reengineering/00-zusammenfassung.md) | **Einstieg:** Ergebnis der Analyse auf wenigen Seiten, offene Entscheidungen |
+| [`backend/`](backend/) | ASP.NET-Core-Server ([Entwickeln](backend/README.md)) |
+| [`deploy/`](deploy/) | Docker Compose, Caddy, Einrichtung ([Installation](deploy/README.md)) |
+| [`contracts/openapi/v1.json`](contracts/openapi/v1.json) | API-Vertrag für alle Clients |
+| [`docs/adr/`](docs/adr/) | Architekturentscheidungen |
 | [`legacy/estrichweb/`](legacy/estrichweb/) | Quellcode von Estrich Web, Stand 23.08.2026 (ohne Zugangsdaten und Build-Artefakte) |
 
-## Geplante Zielstruktur (nach Freigabe)
+## Zielstruktur
 
 ```
 backend/        ASP.NET Core – modularer Monolith (API, Hintergrunddienste)

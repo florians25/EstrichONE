@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/EstrichOne.Api/EstrichOne.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/EstrichOne.Api.Tests/EstrichOne.Api.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <Version>0.1.0</Version>
+    <Company>EstrichONE</Company>
+    <Product>EstrichONE</Product>
+    <!-- CA1515: Typen in einer Anwendung (nicht Bibliothek) dürfen public sein; Tests greifen darauf zu. -->
+    <!-- CA1062/CA2007: nicht sinnvoll in ASP.NET Core mit Nullable-Analyse bzw. ohne SynchronizationContext. -->
+    <NoWarn>$(NoWarn);CA1515;CA1062;CA2007;CA1848</NoWarn>
+  </PropertyGroup>
+</Project>

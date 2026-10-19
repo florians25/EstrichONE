@@ -1,0 +1,92 @@
+# EstrichONE – Self-Hosting
+#   Einrichtung:  ./setup.sh
+#   Start:        docker compose up -d --build
+# Nur Caddy öffnet Ports nach außen. Datenbank und API sind ausschließlich intern erreichbar.
+
+name: estrichone
+
+x-api-image: &api-image
+  image: estrichone/api:${ESTRICHONE_VERSION:-dev}
+  build:
+    context: ..
+    dockerfile: docker/api.Dockerfile
+    args:
+      ESTRICHONE_VERSION: ${ESTRICHONE_VERSION:-0.1.0}
+
+x-database: &database
+  ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-estrichone};Username=${POSTGRES_USER:-estrichone};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen};Gss Encryption Mode=Disable
+
+x-hardening: &hardening
+  read_only: true
+  tmpfs: [/tmp]
+  security_opt: ["no-new-privileges:true"]
+  cap_drop: [ALL]
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-estrichone}
+      POSTGRES_USER: ${POSTGRES_USER:-estrichone}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen}
+    volumes:
+      - ${ESTRICHONE_DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    shm_size: 128mb
+    networks: [backend]
+
+  # Aktualisiert das Datenbankschema und beendet sich danach (ADR 0003).
+  migrate:
+    <<: [*api-image, *hardening]
+    command: ["migrate"]
+    restart: "no"
+    environment:
+      <<: *database
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+
+  api:
+    <<: [*api-image, *hardening]
+    restart: unless-stopped
+    environment:
+      <<: *database
+      EstrichOne__ServerName: ${ESTRICHONE_SERVER_NAME:-EstrichONE}
+      EstrichOne__PublicUrl: https://${ESTRICHONE_DOMAIN:-localhost}
+      EstrichOne__TrustForwardedHeaders: "true"
+    volumes:
+      - ${ESTRICHONE_DATA_DIR:-./data}/files:/data/files
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [backend, frontend]
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "${ESTRICHONE_HTTP_PORT:-80}:80"
+      - "${ESTRICHONE_HTTPS_PORT:-443}:443"
+      - "${ESTRICHONE_HTTPS_PORT:-443}:443/udp"
+    environment:
+      ESTRICHONE_DOMAIN: ${ESTRICHONE_DOMAIN:-localhost}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ${ESTRICHONE_DATA_DIR:-./data}/caddy/data:/data
+      - ${ESTRICHONE_DATA_DIR:-./data}/caddy/config:/config
+    depends_on:
+      api:
+        condition: service_healthy
+    networks: [frontend]
+
+networks:
+  # Kein Internetzugang für Datenbank und Migration.
+  backend:
+    internal: true
+  frontend: {}

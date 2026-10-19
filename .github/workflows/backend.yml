@@ -1,0 +1,61 @@
+name: Backend
+
+on:
+  push:
+    branches: [main, "claude/**"]
+    paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "global.json", ".github/workflows/backend.yml"]
+  pull_request:
+    paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "global.json", ".github/workflows/backend.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backend-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build und Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Wiederherstellen
+        run: dotnet restore backend/EstrichOne.slnx
+      - name: Bauen (Warnungen sind Fehler)
+        run: dotnet build backend/EstrichOne.slnx --configuration Release --no-restore
+      - name: Tests (PostgreSQL per Testcontainers)
+        run: dotnet test --solution backend/EstrichOne.slnx --configuration Release --no-build
+      - name: Schwachstellen in Abhängigkeiten
+        run: |
+          dotnet list backend/EstrichOne.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          ! grep -q "has the following vulnerable packages" vulnerable.txt
+
+  container:
+    name: Container und Compose
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: Image bauen
+        run: docker build -f docker/api.Dockerfile -t estrichone/api:ci .
+      - name: Compose-Datei prüfen
+        working-directory: deploy
+        run: POSTGRES_PASSWORD=ci docker compose config --quiet
+      - name: Shellcheck
+        run: shellcheck deploy/*.sh
+      - name: Stack starten und server-info abrufen
+        working-directory: deploy
+        run: |
+          ./setup.sh --domain localhost --name "CI" --yes
+          ESTRICHONE_VERSION=ci docker compose up -d --no-build --wait --wait-timeout 180
+          docker compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
+          curl --fail --cacert caddy-root.crt https://localhost/api/v1/server-info
+      - name: Logs bei Fehler
+        if: failure()
+        working-directory: deploy
+        run: docker compose logs
