@@ -80,4 +80,4 @@ jobs:
       - name: Sichern, Totalverlust, Wiederherstellen, Prüfen
         env:
           ESTRICHONE_VERSION: ci
-        run: deploy/backup/test-backup-restore.sh
+        run: sudo -E deploy/backup/test-backup-restore.sh

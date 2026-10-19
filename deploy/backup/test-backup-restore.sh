@@ -5,6 +5,12 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
+# Wie bei einer echten Installation: setup.sh muss die Datenverzeichnisse dem API-Benutzer übergeben können.
+if [[ $EUID -ne 0 ]]; then
+  echo "Bitte mit Root-Rechten ausführen: sudo -E $0" >&2
+  exit 2
+fi
+
 export ESTRICHONE_VERSION="${ESTRICHONE_VERSION:-dev}"
 PASSWORD="Estrich trocknet langsam 7"
 CA="$(mktemp)"
@@ -12,6 +18,11 @@ CURL=(curl -sS --fail-with-body --noproxy localhost --cacert "$CA")
 
 log() { printf '\n== %s\n' "$*"; }
 cleanup() {
+  local status=$?
+  if [[ $status -ne 0 ]]; then
+    echo "Fehlgeschlagen (Status $status). Letzte Protokollzeilen:" >&2
+    docker compose logs --tail 60 api backup >&2 2>&1 || true
+  fi
   docker compose --profile restore down -v >/dev/null 2>&1 || true
   rm -rf data backup-repository ssh .env "$CA"
 }
