@@ -98,8 +98,9 @@ Fall „mehrere Baustellen je Projekt“ wird über `bauakte_bereiche` abgebilde
 - **Optimistische Sperre:** `If-Match: "<version>"` bei Änderungen; bei Abweichung `409 VERSION_CONFLICT` mit
   aktuellem Serverstand.
 - **Paginierung:** Cursor-basiert (`?cursor=…&limit=…`), stabile Sortierung.
-- **Authentifizierung:** `Authorization: Bearer <access>`. Kein Token in URLs. Dateien werden über
-  kurzlebige, signierte Download-URLs (60 s, an Benutzer und Datei gebunden) geladen.
+- **Authentifizierung:** `Authorization: Bearer <access>`. Kein Token in URLs. Dateien werden ebenfalls mit
+  Bearer-Token abgerufen (`GET /files/{id}/content`, mit Range für Videos). Signierte URLs sind nicht nötig,
+  weil alle Clients Anfragen authentifizieren können (Web: Sitzungs-Cookie). Damit entfällt ein weiterer Schlüssel.
 
 ### Endpunktgruppen (Auszug)
 
@@ -109,7 +110,7 @@ Fall „mehrere Baustellen je Projekt“ wird über `bauakte_bereiche` abgebilde
 | Auth | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/logout`, `POST /auth/entra/exchange`, `GET /auth/entra/web/start` |
 | Geräte | `POST /devices/enrollments` (Antrag), `POST /devices/enroll-with-code` (QR), `GET /devices/me`, `POST /devices/me/heartbeat` |
 | Bauakten | `GET /bauakten?query=&status=&mine=`, `GET /bauakten/{id}`, `PUT /bauakten/{id}`, `GET /bauakten/{id}/hinweise`, `POST /bauakten/duplicate-check` |
-| Dateien | `PUT /files/{id}` (Upload, idempotent, SHA-256), `POST /files/{id}/uploads` (Teilupload für große Videos), `GET /files/{id}/download-url` |
+| Dateien | `POST /files` (Ankündigung mit SHA-256), `PUT /files/{id}/content` (ganz oder mit `Content-Range` in Teilen), `GET /files/{id}/upload-status`, `GET /files/{id}/content?variant=` |
 | Sync | `POST /sync/push`, `GET /sync/pull?cursor=` |
 | Admin | `/admin/users`, `/admin/roles`, `/admin/devices`, `/admin/sso`, `/admin/backup`, `/admin/audit` |
 | Helpdesk | `/tickets`, `/tickets/{id}/comments`, `/tickets/{id}/diagnostics` |
@@ -133,10 +134,10 @@ Fall „mehrere Baustellen je Projekt“ wird über `bauakte_bereiche` abgebilde
 
 - Ablage außerhalb der Datenbank unter `/data/files/<jahr>/<monat>/<uuid>`. Die Datenbank speichert Metadaten,
   SHA-256, Größe und MIME-Typ, ermittelt aus dem Inhalt und nicht aus der Endung.
-- Upload ist idempotent: Der Client sendet `PUT /files/{fileId}` mit `Content-SHA256`. Ist die Datei bereits
-  vorhanden und stimmt der Hash, antwortet der Server mit 200 ohne erneutes Speichern. Bei Abweichung prüft er
-  und meldet einen Fehler.
-- Große Videos laden in Teilen (8 MB) mit Fortsetzung hoch.
+- Upload in zwei Schritten: Ankündigung (`POST /files`, idempotent über die ID, mit Größe und SHA-256 – auch offline
+  vorbereitet), dann Inhalt (`PUT /files/{id}/content`). Der Server prüft Größe, Prüfsumme und Typ anhand der
+  Magic Bytes und gibt die Datei erst danach frei. Ist sie bereits gespeichert, antwortet er sofort mit 200.
+- Große Videos laden in Teilen mit `Content-Range` hoch; `GET /files/{id}/upload-status` liefert die Position zum Fortsetzen.
 - Bildvarianten (Vorschau 400 px, Ansicht 2048 px, WebP) erzeugt ein Hintergrunddienst. Das Original bleibt
   **standardmäßig erhalten** (Beweiswert in Streitfällen am Bau); per Einstellung abschaltbar. GPS und
   Aufnahmezeit werden in Spalten übernommen; ausgelieferte Varianten enthalten keine EXIF-Daten.

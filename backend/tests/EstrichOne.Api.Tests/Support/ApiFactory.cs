@@ -15,6 +15,9 @@ public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<stri
     /// <summary>Steuerbare Uhr für Ablaufzeiten; startet bei der echten Zeit.</summary>
     public FakeTimeProvider Clock { get; } = new(DateTimeOffset.UtcNow);
 
+    /// <summary>Eigene Dateiablage je Testinstanz.</summary>
+    public string FilesRoot { get; } = Path.Combine(Path.GetTempPath(), "estrichone-tests", Guid.NewGuid().ToString("N"));
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
@@ -27,6 +30,7 @@ public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<stri
         builder.UseSetting("ConnectionStrings:Default", connectionString);
         builder.UseSetting("EstrichOne:ServerName", "Estrichbau Test GmbH");
         builder.UseSetting("Serilog:MinimumLevel:Default", "Warning");
+        builder.UseSetting("EstrichOne:Files:RootPath", FilesRoot);
     }
 
     public static async Task<ApiFactory> CreateMigratedAsync(PostgresFixture postgres,
@@ -35,6 +39,20 @@ public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<stri
         var factory = new ApiFactory(await postgres.CreateDatabaseAsync(), settings);
         await factory.MigrateAsync();
         return factory;
+    }
+
+    public override async ValueTask DisposeAsync()
+    {
+        await base.DisposeAsync();
+        await using (var connection = new Npgsql.NpgsqlConnection(connectionString))
+        {
+            Npgsql.NpgsqlConnection.ClearPool(connection);
+        }
+
+        if (Directory.Exists(FilesRoot))
+        {
+            Directory.Delete(FilesRoot, recursive: true);
+        }
     }
 
     public async Task MigrateAsync()

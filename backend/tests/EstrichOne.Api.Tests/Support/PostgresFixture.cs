@@ -24,7 +24,10 @@ public sealed class PostgresFixture : IAsyncLifetime
             return;
         }
 
-        _container = new PostgreSqlBuilder("postgres:17-alpine").Build();
+        // Jede Testklasse hat eine eigene Datenbank mit eigenem Verbindungspool; parallel braucht das mehr als 100 Verbindungen.
+        _container = new PostgreSqlBuilder("postgres:17-alpine")
+            .WithCommand("-c", "max_connections=500", "-c", "fsync=off", "-c", "synchronous_commit=off")
+            .Build();
         await _container.StartAsync();
         _adminConnectionString = _container.GetConnectionString();
     }
@@ -40,7 +43,12 @@ public sealed class PostgresFixture : IAsyncLifetime
             await command.ExecuteNonQueryAsync();
         }
 
-        return new NpgsqlConnectionStringBuilder(_adminConnectionString) { Database = name }.ConnectionString;
+        return new NpgsqlConnectionStringBuilder(_adminConnectionString)
+        {
+            Database = name,
+            MaxPoolSize = 20,
+            ConnectionIdleLifetime = 10,
+        }.ConnectionString;
     }
 
     public async ValueTask DisposeAsync()

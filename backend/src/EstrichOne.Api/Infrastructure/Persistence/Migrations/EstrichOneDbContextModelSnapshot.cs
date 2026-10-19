@@ -804,6 +804,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<string>("DetectedContentType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("detected_content_type");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -854,6 +859,12 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("uploaded_by_user_id");
 
+                    b.Property<string>("Variants")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("variants");
+
                     b.Property<long>("Version")
                         .IsConcurrencyToken()
                         .HasColumnType("bigint")
@@ -867,6 +878,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("UploadedByUserId")
                         .HasDatabaseName("ix_files_uploaded_by_user_id");
+
+                    b.HasIndex("Variants")
+                        .HasDatabaseName("ix_files_variants")
+                        .HasFilter("variants = 'Pending'");
 
                     b.HasIndex("BauakteId", "Kind")
                         .HasDatabaseName("ix_files_bauakte_id_kind");

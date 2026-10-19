@@ -12,6 +12,8 @@
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Formatting.Compact" />
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
+    <PackageReference Include="NetVips" />
+    <PackageReference Include="NetVips.Native" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="EstrichOne.Api.Tests" />
