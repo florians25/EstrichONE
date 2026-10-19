@@ -10,7 +10,7 @@ Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger vo
 
 | Pfad | Inhalt |
 |---|---|
-| [`docs/reengineering/`](docs/reengineering/) | Bestandsaufnahme, Funktionskatalog, Zielarchitektur, UX-Konzept, Roadmap (20 Dokumente) |
+| [`docs/reengineering/`](docs/reengineering/) | Bestandsaufnahme, Funktionskatalog, Zielarchitektur, UX-Konzept, Roadmap (20 Dokumente + Zusammenfassung) |
 | [`docs/reengineering/00-zusammenfassung.md`](docs/reengineering/00-zusammenfassung.md) | **Einstieg:** Ergebnis der Analyse auf wenigen Seiten, offene Entscheidungen |
 | [`legacy/estrichweb/`](legacy/estrichweb/) | Quellcode von Estrich Web, Stand 23.08.2026 (ohne Zugangsdaten und Build-Artefakte) |
 

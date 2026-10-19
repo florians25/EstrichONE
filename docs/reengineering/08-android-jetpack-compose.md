@@ -32,7 +32,7 @@ gestalterisch konsequent Android.
 | Lokale Datenbank | **Room**, verschlüsselt mit **SQLCipher**; Schlüssel per Keystore umhüllt | `EncryptedSharedPreferences` (Jetpack Security) ist abgekündigt → **DataStore + Tink** für kleine Einstellungen |
 | Hintergrund | **WorkManager**: `SyncWorker` (periodisch, Netzbedingung), `UploadWorker` (expedited bzw. Foreground-Service mit Fortschrittsbenachrichtigung bei großen Videos, Typ `dataSync`) | |
 | Benachrichtigungen | `NotificationCompat`, Kanäle („Einsätze“, „Aufgaben“, „Synchronisation“, „Support“), Laufzeitberechtigung ab Android 13 | |
-| Push | FCM (optional, siehe 21) **oder** UnifiedPush **[Vormerken]** für Geräte ohne Google-Dienste | ohne Push: Abfrage beim Start + periodischer Worker |
+| Push | FCM (optional, siehe 20, Abschnitt 6) **oder** UnifiedPush **[Vormerken]** für Geräte ohne Google-Dienste | ohne Push: Abfrage beim Start + periodischer Worker |
 | Standort | `FusedLocationProvider` nur auf Knopfdruck; Fallback `LocationManager` | Fused benötigt Play Services |
 | Adressvorschläge | `android.location.Geocoder` (ohne Konto; liefert auf manchen Geräten nichts) bzw. serverseitiger Anbieter | optional |
 | TalkBack | `contentDescription`/`semantics` für alle Symbolaktionen, Fokusreihenfolge geprüft | |

@@ -92,7 +92,7 @@ Windows-Desktop später zurückgestellt würde (siehe 20, Risiko R-1), kippt die
 | Tabellen | **[Offen] E-11:** WinUI.TableView (MIT, aktiv gepflegt) oder `ItemsRepeater`-basierte Eigenentwicklung | Eine erstklassige DataGrid-Komponente von Microsoft gibt es für WinUI 3 nicht; das alte Toolkit-DataGrid ist nicht mehr gepflegt |
 | API-Zugriff | gemeinsame Bibliothek `EstrichOne.Contracts` + typisierter `HttpClient` | Typgleichheit mit dem Server |
 | Anmeldung | lokal; Entra über MSAL.NET mit WAM-Broker | offiziell |
-| Verteilung | MSIX + `.appinstaller` (Updates ohne Store) | siehe 06 und 21 |
+| Verteilung | MSIX + `.appinstaller` (Updates ohne Store) | siehe 06 und 20, Abschnitt 6 |
 
 ## 4. iOS [Verbindlich: Swift, SwiftUI]
 

@@ -58,7 +58,7 @@ Schwebende Aktion „Neue Bauakte“ auf „Heute“ und „Bauakten“ (unten r
 | Dateien-App | `fileImporter`, `fileExporter` | – |
 | Teilen | `ShareLink`; Share-Extension „In Bauakte speichern“ **[Vormerken 1.1]** | |
 | Biometrie | `LocalAuthentication` (Face ID/Touch ID) | nur zum Entsperren des lokal gespeicherten Schlüssels, nie als Ersatz für die Serveranmeldung |
-| Push | APNs (optional, siehe 21) | ohne APNs: Benachrichtigungen beim App-Start und über Hintergrundaktualisierung |
+| Push | APNs (optional, siehe 20, Abschnitt 6) | ohne APNs: Benachrichtigungen beim App-Start und über Hintergrundaktualisierung |
 | Lokale Datenbank | GRDB.swift | je Benutzer eine Datei (11) |
 | Offline-Speicherung | Datenschutzklasse `.complete` für Datenbank und Fotos; Warteschlange `.completeUntilFirstUserAuthentication`, damit Hintergrund-Uploads funktionieren | |
 | Hintergrundübertragung | `URLSessionConfiguration.background` für Datei-Uploads; `BGTaskScheduler` (`BGProcessingTask`) für die Synchronisation | iOS bestimmt den Zeitpunkt. **Garantiert ist nur:** Uploads, die bereits an die Hintergrund-Session übergeben wurden, laufen weiter, auch wenn die App beendet wurde. |

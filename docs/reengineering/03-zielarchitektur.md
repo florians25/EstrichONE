@@ -188,6 +188,6 @@ Synchronisationsstatus wird zusätzlich je Datensatz angezeigt (15).
 | E-04 | Mandantenfähigkeit | entfällt, eine Installation = ein Betrieb |
 | E-05 | Bauakte/Baustelle | zusammenführen, Bereiche für Bauabschnitte |
 | E-06 | Reverse Proxy | Caddy |
-| E-07 | Push-Benachrichtigungen | optional (APNs/FCM benötigen Konten, siehe 21); Standard: In-App + E-Mail |
+| E-07 | Push-Benachrichtigungen | optional (APNs/FCM benötigen Konten, siehe 20, Abschnitt 6); Standard: In-App + E-Mail |
 | E-08 | Original-Fotos behalten | ja, standardmäßig |
 | E-09 | PDF-Bibliothek | MIT-lizenziert (PDFsharp/MigraDoc) |
