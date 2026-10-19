@@ -47,8 +47,8 @@ public sealed class PlatformModule : IModule
             ServerVersion: ApplicationVersion.Current,
             ApiVersions: ["v1"],
             MinClientVersion: settings.MinClientVersion,
-            // Anmeldeverfahren registriert das Identity-Modul (AP-04); bis dahin bietet der Server keines an.
-            AuthMethods: [],
+            // Microsoft Entra ID kommt als optionales Verfahren hinzu, wenn es konfiguriert ist (docs/reengineering/12).
+            AuthMethods: ["password"],
             InstanceEpoch: state.InstanceEpoch));
     }
 

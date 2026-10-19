@@ -31,9 +31,21 @@ public sealed class HttpPipelineTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task UnknownRoute_ReturnsProblemWithCodeAndTraceId()
+    public async Task UnknownRoute_WithoutLogin_RevealsNothing()
     {
         using var response = await _client.GetAsync(new Uri("/api/v1/gibt-es-nicht", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+    }
+
+    [Fact]
+    public async Task UnknownRoute_WhenLoggedIn_ReturnsProblemWithCodeAndTraceId()
+    {
+        await _factory.CreateUserAsync("m.huber");
+        var tokens = await _client.LoginOkAsync("m.huber");
+
+        using var response = await _client.WithToken(tokens.AccessToken)
+            .GetAsync(new Uri("/api/v1/gibt-es-nicht", UriKind.Relative), TestContext.Current.CancellationToken);
 
         response.StatusCode.ShouldBe(HttpStatusCode.NotFound);
         var problem = await response.ReadProblemAsync();

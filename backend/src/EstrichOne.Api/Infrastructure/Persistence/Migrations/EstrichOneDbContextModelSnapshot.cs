@@ -102,6 +102,62 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("user_roles", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Audit.AuditEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("action");
+
+                    b.Property<Guid?>("ActorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("actor_user_id");
+
+                    b.Property<string>("Details")
+                        .HasColumnType("jsonb")
+                        .HasColumnName("details");
+
+                    b.Property<string>("EntityId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("entity_id");
+
+                    b.Property<string>("EntityType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("entity_type");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("occurred_at");
+
+                    b.Property<string>("TraceId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("trace_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_audit_events");
+
+                    b.HasIndex("OccurredAt")
+                        .HasDatabaseName("ix_audit_events_occurred_at");
+
+                    b.HasIndex("ActorUserId", "OccurredAt")
+                        .HasDatabaseName("ix_audit_events_actor_user_id_occurred_at");
+
+                    b.ToTable("audit_events", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Bauakten.BauakteNumberSequence", b =>
                 {
                     b.Property<int>("Year")
@@ -796,6 +852,171 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("users", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Passwords.FailedLogin", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)")
+                        .HasColumnName("ip_address");
+
+                    b.Property<string>("NormalizedLogin")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("normalized_login");
+
+                    b.HasKey("Id")
+                        .HasName("pk_failed_logins");
+
+                    b.HasIndex("IpAddress", "At")
+                        .HasDatabaseName("ix_failed_logins_ip_address_at");
+
+                    b.HasIndex("NormalizedLogin", "At")
+                        .HasDatabaseName("ix_failed_logins_normalized_login_at");
+
+                    b.ToTable("failed_logins", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Passwords.LocalCredential", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("ChangedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("changed_at");
+
+                    b.Property<bool>("MustChange")
+                        .HasColumnType("boolean")
+                        .HasColumnName("must_change");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("password_hash");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_local_credentials");
+
+                    b.ToTable("local_credentials", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Sessions.RefreshToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<Guid>("SessionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("session_id");
+
+                    b.Property<byte[]>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("bytea")
+                        .HasColumnName("token_hash");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_refresh_tokens");
+
+                    b.HasIndex("SessionId")
+                        .HasDatabaseName("ix_refresh_tokens_session_id");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_refresh_tokens_token_hash");
+
+                    b.ToTable("refresh_tokens", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Sessions.Session", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AccessTokenExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("access_token_expires_at");
+
+                    b.Property<byte[]>("AccessTokenHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("bytea")
+                        .HasColumnName("access_token_hash");
+
+                    b.Property<string>("ClientKind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("client_kind");
+
+                    b.Property<string>("ClientName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("client_name");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<DateTimeOffset>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<string>("RevokeReason")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("revoke_reason");
+
+                    b.Property<DateTimeOffset?>("RevokedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("revoked_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_sessions");
+
+                    b.HasIndex("AccessTokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_sessions_access_token_hash");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_sessions_user_id");
+
+                    b.ToTable("sessions", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Organization.CompanyProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -1103,6 +1324,36 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_files_user_uploaded_by_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Passwords.LocalCredential", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithOne()
+                        .HasForeignKey("EstrichOne.Api.Modules.Identity.Passwords.LocalCredential", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_local_credentials_user_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Sessions.RefreshToken", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Sessions.Session", null)
+                        .WithMany()
+                        .HasForeignKey("SessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_refresh_tokens_session_session_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Sessions.Session", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sessions_user_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Work.WorkItem", b =>

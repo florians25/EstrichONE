@@ -32,19 +32,17 @@ var options = builder.Configuration.GetSection(EstrichOneOptions.SectionName).Ge
 
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.ConfigureHttpJsonOptions(json =>
-    // Zahlen nur als JSON-Zahlen – eindeutige Schemas für die generierten Clients.
-    json.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.Strict);
+{
+    // Zahlen nur als JSON-Zahlen, Aufzählungen als Text – eindeutige Schemas für die generierten Clients.
+    json.SerializerOptions.NumberHandling = System.Text.Json.Serialization.JsonNumberHandling.Strict;
+    json.SerializerOptions.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(System.Text.Json.JsonNamingPolicy.CamelCase));
+});
+builder.Services.AddValidation();
 builder.Services.AddEstrichOneProblemDetails();
 builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<EstrichOneDbContext>("database", tags: ["ready"]);
-builder.Services.AddOpenApi("v1", openApi => openApi.AddDocumentTransformer((document, _, _) =>
-{
-    document.Info.Title = "EstrichONE API";
-    document.Info.Version = "v1";
-    document.Info.Description = "Zentrale API für EstrichONE Web, Desktop, iOS und Android.";
-    return Task.CompletedTask;
-}));
+builder.Services.AddEstrichOneOpenApi();
 builder.Services.AddModules(builder.Configuration);
 
 if (options.TrustForwardedHeaders)
@@ -73,18 +71,21 @@ if (options.TrustForwardedHeaders)
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+app.UseAuthentication();
+app.UseRateLimiter();
+app.UseAuthorization();
 app.UseSerilogRequestLogging(logging =>
     logging.GetLevel = (context, _, exception) =>
         exception is not null || context.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
         : context.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
         : Serilog.Events.LogEventLevel.Information);
 
-app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
-app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") });
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
+app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();
 
 if (options.ExposeOpenApi)
 {
-    app.MapOpenApi("/api/openapi/{documentName}.json");
+    app.MapOpenApi("/api/openapi/{documentName}.json").AllowAnonymous();
 }
 
 app.MapModules();

@@ -1,4 +1,5 @@
 using EstrichOne.Api.Modules.Access;
+using EstrichOne.Api.Modules.Audit;
 using EstrichOne.Api.Modules.Bauakten;
 using EstrichOne.Api.Modules.Contacts;
 using EstrichOne.Api.Modules.Documentation;
@@ -14,6 +15,7 @@ public static class ModuleCatalog
     public static IReadOnlyList<IModule> All { get; } =
     [
         new PlatformModule(),
+        new AuditModule(),
         new IdentityModule(),
         new AccessModule(),
         new OrganizationModule(),

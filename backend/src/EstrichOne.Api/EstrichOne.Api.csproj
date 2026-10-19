@@ -11,6 +11,7 @@
     <PackageReference Include="EFCore.NamingConventions" />
     <PackageReference Include="Serilog.AspNetCore" />
     <PackageReference Include="Serilog.Formatting.Compact" />
+    <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="EstrichOne.Api.Tests" />

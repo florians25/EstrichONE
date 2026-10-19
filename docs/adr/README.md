@@ -16,3 +16,4 @@ gelöscht, sondern durch eine neue ADR **ersetzt** (Status „ersetzt durch 00xx
 | [0008](0008-neuprodukt-ohne-datenuebernahme.md) | Neuprodukt ohne Datenübernahme aus Estrich Web | angenommen |
 | [0009](0009-ios-zuerst.md) | iOS als erste native Plattform | angenommen |
 | [0010](0010-tests-gegen-echte-postgresql.md) | Integrationstests gegen echte PostgreSQL (Testcontainers) | angenommen |
+| [0011](0011-undurchsichtige-sitzungstokens.md) | Undurchsichtige Sitzungstokens statt JWT | angenommen |

@@ -15,7 +15,9 @@ public static class ProblemDetailsSetup
             var problem = context.ProblemDetails;
             var status = problem.Status ?? StatusCodes.Status500InternalServerError;
 
-            problem.Extensions.TryAdd("code", ErrorCodes.FromStatus(status));
+            problem.Extensions.TryAdd("code", problem is HttpValidationProblemDetails
+                ? ErrorCodes.ValidationFailed
+                : ErrorCodes.FromStatus(status));
             problem.Extensions["traceId"] = Activity.Current?.Id ?? context.HttpContext.TraceIdentifier;
             problem.Instance ??= context.HttpContext.Request.Path;
 
