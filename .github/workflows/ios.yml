@@ -1,0 +1,98 @@
+name: iOS
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main, "claude/**"]
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+  pull_request:
+    paths: ["ios/**", ".github/workflows/ios.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core-linux:
+    name: EstrichCore (Linux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    container: swift:6.1-noble
+    steps:
+      - uses: actions/checkout@v5
+      - name: Tests
+        working-directory: ios/Packages/EstrichCore
+        run: swift test
+
+  app:
+    name: App bauen und testen (Simulator)
+    runs-on: macos-15
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Neuestes Xcode wählen
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          swift --version
+
+      - name: XcodeGen installieren
+        run: brew install xcodegen
+
+      - name: EstrichCore testen (macOS)
+        working-directory: ios/Packages/EstrichCore
+        run: swift test
+
+      - name: Xcode-Projekt erzeugen
+        working-directory: ios
+        run: xcodegen generate
+
+      - name: Simulator wählen
+        id: simulator
+        run: |
+          UDID=$(xcrun simctl list devices available --json | jq -r '
+            [.devices | to_entries[]
+              | select(.key | test("SimRuntime\\.iOS-"))
+              | {version: (.key | capture("iOS-(?<maj>[0-9]+)-(?<min>[0-9]+)") | [(.maj | tonumber), (.min | tonumber)]),
+                 devices: [.value[] | select(.name | test("^iPhone"))]}
+              | select(.devices | length > 0)]
+            | sort_by(.version) | last | .devices[0].udid')
+          test -n "$UDID" && test "$UDID" != "null"
+          xcrun simctl list devices available | grep "$UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Build und Tests (Debug, Simulator)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild test \
+            -project EstrichONE.xcodeproj -scheme EstrichONE \
+            -destination "id=${{ steps.simulator.outputs.udid }}" \
+            -resultBundlePath "$RUNNER_TEMP/EstrichONE.xcresult" \
+            CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/xcodebuild-test.log" | grep -E "error:|warning:|Test Case|Test Suite|✔|✘|\*\* TEST" || true
+          grep -q "\*\* TEST SUCCEEDED \*\*" "$RUNNER_TEMP/xcodebuild-test.log"
+
+      - name: Release-Build (Gerät, ohne Signatur)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build \
+            -project EstrichONE.xcodeproj -scheme EstrichONE -configuration Release \
+            -destination "generic/platform=iOS" \
+            CODE_SIGNING_ALLOWED=NO | tee "$RUNNER_TEMP/xcodebuild-release.log" | grep -E "error:|warning:|\*\* BUILD" || true
+          grep -q "\*\* BUILD SUCCEEDED \*\*" "$RUNNER_TEMP/xcodebuild-release.log"
+
+      - name: Ergebnisse sichern
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-ergebnisse
+          path: |
+            ${{ runner.temp }}/EstrichONE.xcresult
+            ${{ runner.temp }}/xcodebuild-*.log
+          retention-days: 7

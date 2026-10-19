@@ -4,6 +4,7 @@ Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger vo
 
 > **Status: Implementierung läuft** (Roadmap: `docs/reengineering/20-entwicklungsroadmap.md`).
 > Fertig: AP-01 bis AP-09 – Server-Fundament inkl. Dateiservice, Sync-Protokoll ([Spezifikation](docs/sync-protokoll.md)) sowie Backup und Wiederherstellung ([Betrieb](deploy/README.md)).
+> In Arbeit: AP-10 – [iOS-App](ios/README.md) mit Server-Einrichtung (QR-Code oder Adresse, Verbindungsprüfung).
 
 ## Inhalt
 
@@ -13,6 +14,7 @@ Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger vo
 | [`docs/reengineering/00-zusammenfassung.md`](docs/reengineering/00-zusammenfassung.md) | **Einstieg:** Ergebnis der Analyse auf wenigen Seiten, offene Entscheidungen |
 | [`backend/`](backend/) | ASP.NET-Core-Server ([Entwickeln](backend/README.md)) |
 | [`deploy/`](deploy/) | Docker Compose, Caddy, Einrichtung ([Installation](deploy/README.md)) |
+| [`ios/`](ios/) | SwiftUI-App für iPhone/iPad ([Entwickeln](ios/README.md)) |
 | [`contracts/openapi/v1.json`](contracts/openapi/v1.json) | API-Vertrag für alle Clients |
 | [`docs/adr/`](docs/adr/) | Architekturentscheidungen |
 | [`legacy/estrichweb/`](legacy/estrichweb/) | Quellcode von Estrich Web, Stand 23.08.2026 (ohne Zugangsdaten und Build-Artefakte) |

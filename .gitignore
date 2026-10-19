@@ -22,6 +22,11 @@ deploy/data/
 xcuserdata/
 DerivedData/
 *.xcuserstate
+# Wird von XcodeGen aus ios/project.yml erzeugt
+ios/EstrichONE.xcodeproj/
+.build/
+.swiftpm/
+Package.resolved
 
 # Node
 node_modules/
