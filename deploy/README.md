@@ -17,6 +17,28 @@ sudo docker compose up -d --build    # baut und startet Datenbank, Migration, AP
 curl https://<ihre-adresse>/api/v1/server-info
 ```
 
+## Ersteinrichtung (erster Administrator)
+
+Solange es keinen Benutzer gibt, schreibt der Server beim Start einen **Einrichtungscode** ins Protokoll
+(24 Stunden gültig, einmalig; jeder Neustart erzeugt einen neuen Code):
+
+```bash
+sudo docker compose logs api | grep Einrichtungscode
+```
+
+Mit diesem Code werden Firmenname und erster Administrator angelegt – bis die Weboberfläche fertig ist per API:
+
+```bash
+curl -X POST https://<ihre-adresse>/api/v1/setup -H 'Content-Type: application/json' -d '{
+  "setupCode": "ABCD-EFGH-JKLM",
+  "companyName": "Estrichbau Muster GmbH",
+  "administrator": { "displayName": "Anna Admin", "userName": "admin", "email": null,
+                     "password": "eine lange Passphrase" }
+}'
+```
+
+Danach ist die Einrichtung dauerhaft gesperrt. Es gibt keine Standardpasswörter.
+
 `setup.sh` überschreibt eine vorhandene `.env` nie. **Bewahren Sie die `.env` zusätzlich sicher auf**
 (Passwortmanager). Sie enthält das Datenbankpasswort und ist bewusst nicht Teil des Backups.
 

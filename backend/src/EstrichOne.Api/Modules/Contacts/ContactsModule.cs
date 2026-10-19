@@ -7,9 +7,8 @@ public sealed class ContactsModule : IModule
 {
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<ContactImport>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api)
-    {
-    }
+    public void MapEndpoints(IEndpointRouteBuilder api) => ContactEndpoints.Map(api);
 }

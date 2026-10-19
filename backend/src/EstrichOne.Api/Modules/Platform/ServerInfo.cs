@@ -11,7 +11,8 @@ public sealed record ServerInfo(
     IReadOnlyList<string> ApiVersions,
     string MinClientVersion,
     IReadOnlyList<string> AuthMethods,
-    Guid InstanceEpoch)
+    Guid InstanceEpoch,
+    bool SetupRequired)
 {
     public const string ProductName = "EstrichONE";
 }

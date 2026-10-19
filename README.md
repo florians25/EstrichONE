@@ -3,7 +3,7 @@
 Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger von **Estrich Web**.
 
 > **Status: Implementierung läuft** (Roadmap: `docs/reengineering/20-entwicklungsroadmap.md`).
-> Fertig: AP-01 Repository und CI, AP-02 Backend-Skelett und Docker-Stack.
+> Fertig: AP-01 bis AP-06 (Server-Fundament: Datenmodell, Anmeldung, Rechte, Geräte, Ersteinrichtung, Kundenimport).
 
 ## Inhalt
 

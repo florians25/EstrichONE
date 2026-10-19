@@ -1213,6 +1213,35 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Setup.SetupCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("bytea")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<int>("FailedAttempts")
+                        .HasColumnType("integer")
+                        .HasColumnName("failed_attempts");
+
+                    b.HasKey("Id")
+                        .HasName("pk_setup_code");
+
+                    b.ToTable("setup_code", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_setup_code_singleton", "id = 1");
+                        });
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Work.WorkItem", b =>
                 {
                     b.Property<Guid>("Id")

@@ -1,0 +1,9 @@
+namespace EstrichOne.Api.Modules.Organization.Exports;
+
+public interface ICompanyProfiles
+{
+    /// <summary>Legt die Firmendaten bei der Ersteinrichtung an. Speichert mit dem nächsten SaveChanges.</summary>
+    Task CreateAsync(string companyName, CancellationToken cancellationToken);
+
+    Task<string?> GetNameAsync(CancellationToken cancellationToken);
+}

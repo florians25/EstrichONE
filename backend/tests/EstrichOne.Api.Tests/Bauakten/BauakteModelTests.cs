@@ -140,7 +140,7 @@ public sealed class BauakteModelTests(PostgresFixture postgres) : IAsyncLifetime
     {
         var user = await _database.CreateUserAsync();
         var bauakte = Bauakte.Create(Guid.CreateVersion7(), "EFH Weber", user.Id);
-        var screed = ScreedType.Create(Guid.CreateVersion7(), "Zementestrich", "CT-C25-F4", ScreedBinder.Cement);
+        var screed = ScreedType.Create(Guid.CreateVersion7(), "Zementestrich Test", "CT-C25-F4", ScreedBinder.Cement);
         var room = Room.Create(Guid.CreateVersion7(), bauakte.Id, "Wohnen");
         room.Update(null, "Wohnen", "EG", 31.456m, null);
         room.ChangeBuildup(screed.Id, 65, 40, underfloorHeating: true);

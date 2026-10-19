@@ -1,4 +1,5 @@
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Modules.Organization.Exports;
 
 namespace EstrichOne.Api.Modules.Organization;
 
@@ -7,6 +8,7 @@ public sealed class OrganizationModule : IModule
 {
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
+        services.AddScoped<ICompanyProfiles, CompanyProfiles>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)

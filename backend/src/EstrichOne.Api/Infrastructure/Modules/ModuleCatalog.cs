@@ -7,6 +7,7 @@ using EstrichOne.Api.Modules.Documentation;
 using EstrichOne.Api.Modules.Identity;
 using EstrichOne.Api.Modules.Organization;
 using EstrichOne.Api.Modules.Platform;
+using EstrichOne.Api.Modules.Setup;
 using EstrichOne.Api.Modules.Work;
 
 namespace EstrichOne.Api.Infrastructure.Modules;
@@ -25,6 +26,7 @@ public static class ModuleCatalog
         new BauaktenModule(),
         new DocumentationModule(),
         new WorkModule(),
+        new SetupModule(),
     ];
 
     public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)

@@ -1,6 +1,7 @@
 using EstrichOne.Api.Infrastructure.Hosting;
 using EstrichOne.Api.Infrastructure.Modules;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Setup.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -28,6 +29,7 @@ public sealed class PlatformModule : IModule
     private static async Task<Results<Ok<ServerInfo>, ProblemHttpResult>> GetServerInfoAsync(
         EstrichOneDbContext db,
         IOptions<EstrichOneOptions> options,
+        ISetupState setup,
         CancellationToken cancellationToken)
     {
         var state = await TryReadStateAsync(db, cancellationToken);
@@ -49,7 +51,8 @@ public sealed class PlatformModule : IModule
             MinClientVersion: settings.MinClientVersion,
             // Microsoft Entra ID kommt als optionales Verfahren hinzu, wenn es konfiguriert ist (docs/reengineering/12).
             AuthMethods: ["password"],
-            InstanceEpoch: state.InstanceEpoch));
+            InstanceEpoch: state.InstanceEpoch,
+            SetupRequired: await setup.IsSetupRequiredAsync(cancellationToken)));
     }
 
     /// <summary>Liefert <c>null</c>, solange die Datenbank nicht migriert ist (Tabelle fehlt oder ist leer).</summary>
