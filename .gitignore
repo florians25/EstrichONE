@@ -27,3 +27,5 @@ DerivedData/
 node_modules/
 dist/
 deploy/caddy-root.crt
+deploy/backup-repository/
+deploy/ssh/

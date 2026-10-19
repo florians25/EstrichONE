@@ -1,0 +1,227 @@
+#!/usr/bin/env bash
+# EstrichONE Backup-Werkzeug (läuft im Container „backup“ bzw. „restore“).
+#
+#   estrichone-backup schedule        Dauerbetrieb: täglich sichern, wöchentlich prüfen, aufräumen, Wiederherstellung testen
+#   estrichone-backup run             jetzt sichern
+#   estrichone-backup snapshots       Sicherungen auflisten
+#   estrichone-backup check           Integrität prüfen (Stichprobe der Daten)
+#   estrichone-backup restore-test    Sicherung testweise in eine temporäre Datenbank einspielen
+#   estrichone-backup restore [ID]    WIEDERHERSTELLEN (Standard: latest) – nur im Dienst „restore“
+#
+# Konfiguration über Umgebungsvariablen (siehe deploy/.env.example):
+#   RESTIC_PASSWORD, BACKUP_REPOSITORY (Pflicht), BACKUP_REPOSITORY_2 (optional), BACKUP_TIME (HH:MM),
+#   PGHOST, PGDATABASE, PGUSER, PGPASSWORD, FILES_DIR, STATUS_DIR
+# Deutsche Anführungszeichen („…“) in Meldungen sind beabsichtigt.
+# shellcheck disable=SC1111,SC1112
+set -euo pipefail
+
+FILES_DIR="${FILES_DIR:-/data/files}"
+STATUS_DIR="${STATUS_DIR:-/status}"
+STAGING_DIR="${STAGING_DIR:-/tmp/estrichone-backup}"
+BACKUP_TIME="${BACKUP_TIME:-22:30}"
+KEEP="--keep-daily ${KEEP_DAILY:-14} --keep-weekly ${KEEP_WEEKLY:-8} --keep-monthly ${KEEP_MONTHLY:-12} --keep-yearly ${KEEP_YEARLY:-3}"
+TAG="estrichone"
+
+# Leert ein Verzeichnis, ohne es selbst zu entfernen (es kann ein Mount-Punkt sein).
+reset_dir() { mkdir -p "$1"; find "$1" -mindepth 1 -delete; }
+
+log() { printf '%s %s\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$*"; }
+fail() { log "FEHLER: $*"; exit 1; }
+
+repositories() {
+  [[ -n "${BACKUP_REPOSITORY:-}" ]] || fail "BACKUP_REPOSITORY ist nicht gesetzt."
+  [[ -n "${RESTIC_PASSWORD:-}" ]] || fail "RESTIC_PASSWORD ist nicht gesetzt."
+  echo "$BACKUP_REPOSITORY"
+  if [[ -n "${BACKUP_REPOSITORY_2:-}" ]]; then echo "$BACKUP_REPOSITORY_2"; fi
+}
+
+# Status für das Backup Center (liest die API): je Eintrag eine JSON-Datei, atomar geschrieben.
+write_status() {
+  local key="$1" value="$2"
+  mkdir -p "$STATUS_DIR"
+  printf '%s\n' "$value" > "$STATUS_DIR/$key.json.tmp"
+  mv "$STATUS_DIR/$key.json.tmp" "$STATUS_DIR/$key.json"
+}
+
+# Meldungstexte sind feste Zeichenketten ohne Anführungszeichen; Zusatzfelder als fertiges JSON-Fragment.
+result_json() { # status, message, [zusatzfelder ohne geschweifte Klammern]
+  local extra="${3:-}"
+  printf '{"status":"%s","message":"%s","at":"%s"%s}' "$1" "$2" "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "${extra:+,$extra}"
+}
+
+ensure_repository() {
+  local repo="$1"
+  if ! restic -r "$repo" cat config >/dev/null 2>&1; then
+    log "Lege neues Sicherungs-Repository an: $repo"
+    restic -r "$repo" init
+  fi
+}
+
+cmd_run() {
+  local started; started="$(date +%s)"
+  write_status lastRun "$(result_json running 'Sicherung läuft')"
+  reset_dir "$STAGING_DIR"
+  log "Datenbank-Dump …"
+  if ! pg_dump --format=custom --no-owner --file="$STAGING_DIR/database.dump"; then
+    write_status lastRun "$(result_json failed 'Datenbank-Dump fehlgeschlagen')"
+    fail "pg_dump fehlgeschlagen"
+  fi
+
+  local repo summary errors=0
+  while read -r repo; do
+    ensure_repository "$repo"
+    log "Sichere nach $repo …"
+    if summary="$(cd "$STAGING_DIR" && restic -r "$repo" backup --tag "$TAG" --json --host estrichone \
+        database.dump "$FILES_DIR" | tail -n 1)"; then
+      log "Fertig: Snapshot $(grep -o '"snapshot_id":"[0-9a-f]*"' <<<"$summary" | cut -d'"' -f4)"
+    else
+      errors=$((errors + 1))
+      log "Sicherung nach $repo fehlgeschlagen"
+    fi
+  done < <(repositories)
+  reset_dir "$STAGING_DIR"
+
+  local duration=$(( $(date +%s) - started ))
+  if [[ $errors -gt 0 ]]; then
+    write_status lastRun "$(result_json failed "Sicherung in $errors Ziel(en) fehlgeschlagen" "\"durationSeconds\":$duration")"
+    fail "Sicherung unvollständig"
+  fi
+  local result; result="$(result_json succeeded 'Sicherung erfolgreich' "\"durationSeconds\":$duration,\"targets\":$(repositories | wc -l)")"
+  write_status lastRun "$result"
+  write_status lastSuccess "$result"
+}
+
+cmd_snapshots() {
+  while read -r repo; do restic -r "$repo" snapshots --tag "$TAG"; done < <(repositories)
+}
+
+cmd_prune() {
+  while read -r repo; do
+    log "Aufbewahrung anwenden ($repo) …"
+    # shellcheck disable=SC2086
+    restic -r "$repo" forget --tag "$TAG" $KEEP --prune
+  done < <(repositories)
+}
+
+cmd_check() {
+  local subset="${1:-10%}" errors=0
+  while read -r repo; do
+    log "Prüfe $repo (Datenstichprobe $subset) …"
+    restic -r "$repo" check --read-data-subset="$subset" || errors=$((errors + 1))
+  done < <(repositories)
+  if [[ $errors -gt 0 ]]; then
+    write_status lastCheck "$(result_json failed 'Integritätsprüfung fehlgeschlagen')"
+    fail "Integritätsprüfung fehlgeschlagen"
+  fi
+  write_status lastCheck "$(result_json succeeded 'Integrität bestätigt')"
+}
+
+# Spielt den neuesten Dump in eine temporäre Datenbank ein und vergleicht die Zeilenzahlen mit dem Live-System.
+cmd_restore_test() {
+  local repo; repo="$(repositories | head -n 1)"
+  local dir="$STAGING_DIR/restore-test"
+  local db="estrichone_restoretest"
+  rm -rf "$dir" && mkdir -p "$dir"
+  log "Wiederherstellungstest aus $repo …"
+  restic -r "$repo" restore latest --tag "$TAG" --target "$dir" --include database.dump >/dev/null \
+    || { write_status lastRestoreTest "$(result_json failed 'Dump nicht wiederherstellbar')"; fail "restic restore fehlgeschlagen"; }
+  local dump; dump="$(find "$dir" -name database.dump | head -n 1)"
+  psql -v ON_ERROR_STOP=1 -q -c "DROP DATABASE IF EXISTS $db" -c "CREATE DATABASE $db" postgres
+  if ! pg_restore --no-owner --dbname="$db" "$dump"; then
+    psql -q -c "DROP DATABASE IF EXISTS $db" postgres
+    write_status lastRestoreTest "$(result_json failed 'pg_restore fehlgeschlagen')"
+    fail "pg_restore fehlgeschlagen"
+  fi
+  local tables="bauakten notes files work_items users contacts"
+  local report="" table restored live
+  for table in $tables; do
+    restored="$(psql -tA -c "SELECT count(*) FROM $table" "$db")"
+    live="$(psql -tA -c "SELECT count(*) FROM $table")"
+    report="${report:+$report,}\"$table\":{\"restored\":$restored,\"live\":$live}"
+  done
+  local migrations; migrations="$(psql -tA -c 'SELECT count(*) FROM __ef_migrations_history' "$db")"
+  psql -q -c "DROP DATABASE IF EXISTS $db" postgres
+  rm -rf "$dir"
+  write_status lastRestoreTest "$(result_json succeeded 'Wiederherstellung erfolgreich getestet' "\"migrations\":$migrations,\"tables\":{$report}")"
+  log "Wiederherstellungstest erfolgreich ($migrations Migrationen)."
+}
+
+# Vollständige Wiederherstellung: Dateien und Datenbank aus einem Snapshot. Nur mit gestoppter API ausführen.
+cmd_restore() {
+  local snapshot="${1:-latest}"
+  [[ "${ESTRICHONE_RESTORE_MODE:-}" == "1" ]] || fail "Wiederherstellung nur über den Dienst „restore“ (docker compose --profile restore run --rm restore)."
+  local repo; repo="$(repositories | head -n 1)"
+  local dir="$STAGING_DIR/restore"
+  rm -rf "$dir" && mkdir -p "$dir"
+
+  log "Prüfe Snapshot $snapshot in $repo …"
+  restic -r "$repo" snapshots --tag "$TAG" "$snapshot" >/dev/null || fail "Snapshot $snapshot nicht gefunden."
+  restic -r "$repo" check --read-data-subset=5% || fail "Repository beschädigt – Wiederherstellung abgebrochen."
+
+  log "Stelle Daten wieder her …"
+  restic -r "$repo" restore "$snapshot" --tag "$TAG" --target "$dir"
+  local dump; dump="$(find "$dir" -name database.dump | head -n 1)"
+  [[ -f "$dump" ]] || fail "Im Snapshot fehlt der Datenbank-Dump."
+
+  log "Datenbank einspielen (vorhandene Daten werden ersetzt) …"
+  psql -v ON_ERROR_STOP=1 -q -c "DROP SCHEMA public CASCADE" -c "CREATE SCHEMA public"
+  pg_restore --no-owner --exit-on-error --dbname="$PGDATABASE" "$dump"
+  # Neue Instanz-Kennung: Apps erkennen die Wiederherstellung und gleichen vollständig neu ab (docs/sync-protokoll.md).
+  psql -v ON_ERROR_STOP=1 -q -c "UPDATE system_state SET instance_epoch = gen_random_uuid()"
+
+  log "Dateien zurückspielen …"
+  local restored_files; restored_files="$(find "$dir" -type d -path "*${FILES_DIR}" | head -n 1)"
+  if [[ -n "$restored_files" ]]; then
+    find "$FILES_DIR" -mindepth 1 -delete
+    cp -a "$restored_files/." "$FILES_DIR/"
+  fi
+  rm -rf "$dir"
+
+  local count; count="$(psql -tA -c 'SELECT count(*) FROM bauakten')"
+  local files; files="$(find "$FILES_DIR" -type f -path '*/originals/*' | wc -l)"
+  log "Wiederherstellung abgeschlossen: $count Bauakten, $files Originaldateien. API jetzt starten: docker compose up -d"
+}
+
+seconds_until() { # HH:MM → Sekunden bis zum nächsten Zeitpunkt (Ortszeit, ohne GNU date)
+  local hour=$((10#${1%%:*})) minute=$((10#${1##*:}))
+  local now_h now_m now_s; read -r now_h now_m now_s < <(date +'%H %M %S')
+  local now=$(( 10#$now_h * 3600 + 10#$now_m * 60 + 10#$now_s )) target=$(( hour * 3600 + minute * 60 ))
+  (( target <= now )) && target=$(( target + 86400 ))
+  echo $(( target - now ))
+}
+
+cmd_schedule() {
+  log "Backup-Dienst gestartet. Tägliche Sicherung um $BACKUP_TIME ($(date +%Z))."
+  repositories >/dev/null
+  mkdir -p "$STATUS_DIR/requests"
+  while true; do
+    local wait; wait="$(seconds_until "$BACKUP_TIME")"
+    # In kurzen Schritten warten, damit „Jetzt sichern“ aus dem Backup Center schnell greift.
+    while (( wait > 0 )); do
+      if [[ -f "$STATUS_DIR/requests/backup-now" ]]; then
+        rm -f "$STATUS_DIR/requests/backup-now"
+        log "Sicherung auf Anforderung aus dem Backup Center"
+        cmd_run || true
+      fi
+      sleep 30; wait=$(( wait - 30 ))
+    done
+    cmd_run || true
+    if [[ "$(date +%u)" == "7" ]]; then
+      cmd_prune || true
+      cmd_check "10%" || true
+      cmd_restore_test || true
+    fi
+  done
+}
+
+case "${1:-schedule}" in
+  schedule) cmd_schedule ;;
+  run) cmd_run ;;
+  snapshots) cmd_snapshots ;;
+  prune) cmd_prune ;;
+  check) cmd_check "${2:-10%}" ;;
+  restore-test) cmd_restore_test ;;
+  restore) cmd_restore "${2:-latest}" ;;
+  -h|--help|help) sed -n '2,13p' "$0" ;;
+  *) fail "Unbekannter Befehl: $1 (Hilfe: estrichone-backup help)" ;;
+esac

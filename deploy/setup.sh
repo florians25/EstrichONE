@@ -42,12 +42,23 @@ else
   [[ "$NAME" != *'"'* ]] || fail "Der Firmenname darf keine Anführungszeichen enthalten."
 
   PASSWORD="$(head -c 32 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40)"
+  BACKUP_PASSWORD="$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 48)"
   umask 077
   sed -e "s|^ESTRICHONE_DOMAIN=.*|ESTRICHONE_DOMAIN=${DOMAIN}|" \
       -e "s|^ESTRICHONE_SERVER_NAME=.*|ESTRICHONE_SERVER_NAME=\"${NAME}\"|" \
       -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=${PASSWORD}|" \
+      -e "s|^RESTIC_PASSWORD=.*|RESTIC_PASSWORD=${BACKUP_PASSWORD}|" \
       .env.example > .env
+  umask 022
   echo ".env angelegt (nur für root lesbar). Bitte zusätzlich sicher verwahren – sie ist nicht Teil des Backups."
+  echo
+  echo "======================================================================"
+  echo " BACKUP-PASSWORT – jetzt notieren und AUSSERHALB des Servers aufbewahren:"
+  echo
+  echo "   ${BACKUP_PASSWORD}"
+  echo
+  echo " Ohne dieses Passwort lässt sich keine Sicherung wiederherstellen."
+  echo "======================================================================"
 fi
 
 set -a
@@ -55,12 +66,16 @@ set -a
 source .env
 set +a
 DATA_DIR="${ESTRICHONE_DATA_DIR:-./data}"
-mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/files" "$DATA_DIR/caddy/data" "$DATA_DIR/caddy/config"
+BACKUP_DIR="${ESTRICHONE_BACKUP_DIR:-./backup-repository}"
+SSH_DIR="${ESTRICHONE_SSH_DIR:-./ssh}"
+APP_DIRS=("$DATA_DIR/files" "$DATA_DIR/backup-status" "$DATA_DIR/backup-staging" "$DATA_DIR/restic-cache" "$BACKUP_DIR")
+mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/caddy/data" "$DATA_DIR/caddy/config" "$SSH_DIR" "${APP_DIRS[@]}"
 if [[ $(id -u) -eq 0 ]]; then
-  chown -R "$API_UID:$API_UID" "$DATA_DIR/files"
+  # API und Backup laufen ohne root als UID $API_UID.
+  chown -R "$API_UID:$API_UID" "${APP_DIRS[@]}"
 else
-  echo "Hinweis: Ohne root-Rechte konnte $DATA_DIR/files nicht dem API-Benutzer (UID $API_UID) übergeben werden:"
-  echo "         sudo chown -R $API_UID:$API_UID $DATA_DIR/files"
+  echo "Hinweis: Ohne root-Rechte konnten die Datenverzeichnisse nicht dem Dienstbenutzer (UID $API_UID) übergeben werden:"
+  echo "         sudo chown -R $API_UID:$API_UID ${APP_DIRS[*]}"
 fi
 
 echo

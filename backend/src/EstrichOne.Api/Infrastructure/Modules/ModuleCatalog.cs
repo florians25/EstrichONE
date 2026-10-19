@@ -1,5 +1,6 @@
 using EstrichOne.Api.Modules.Access;
 using EstrichOne.Api.Modules.Audit;
+using EstrichOne.Api.Modules.Backup;
 using EstrichOne.Api.Modules.Bauakten;
 using EstrichOne.Api.Modules.Contacts;
 using EstrichOne.Api.Modules.Devices;
@@ -29,6 +30,7 @@ public static class ModuleCatalog
         new WorkModule(),
         new SetupModule(),
         new SyncModule(),
+        new BackupModule(),
     ];
 
     public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)

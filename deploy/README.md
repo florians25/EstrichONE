@@ -50,6 +50,8 @@ Danach ist die Einrichtung dauerhaft gesperrt. Es gibt keine Standardpasswörter
 | `api` | EstrichONE-Server | nein |
 | `migrate` | aktualisiert das Datenbankschema bei jedem Start und beendet sich dann | nein |
 | `postgres` | Datenbank | nein (internes Netz ohne Internetzugang) |
+| `backup` | tägliche verschlüsselte Sicherung (restic), Prüfung, Wiederherstellungstest | nein |
+| `restore` | nur bei Bedarf: Wiederherstellung (Profil `restore`) | nein |
 
 Alle Daten liegen unter `ESTRICHONE_DATA_DIR` (Standard `deploy/data`):
 
@@ -76,12 +78,49 @@ docker compose logs -f api            # Protokoll (JSON, ohne personenbezogene I
 curl https://<adresse>/health/ready   # 200 = API und Datenbank bereit
 ```
 
+## Sicherung (Backup)
+
+Der Dienst `backup` sichert **täglich um 22:30** (`BACKUP_TIME`) Datenbank und Dateien verschlüsselt mit restic.
+Sonntags kommen dazu: Aufbewahrungsregeln anwenden, Integrität prüfen und **eine echte Wiederherstellung in eine
+Testdatenbank**. Den Zustand zeigt `GET /api/v1/backup/status` (später das Backup Center). `/health/ready` meldet
+„Degraded“, wenn die letzte erfolgreiche Sicherung älter als 36 Stunden ist.
+
+| Einstellung (.env) | Bedeutung |
+|---|---|
+| `RESTIC_PASSWORD` | Schlüssel der Sicherungen – **von setup.sh angezeigt, außerhalb des Servers aufbewahren** |
+| `ESTRICHONE_BACKUP_DIR` | Hauptziel auf dem Host, idealerweise zweite Festplatte oder eingebundenes NAS |
+| `BACKUP_REPOSITORY_2` | **dringend empfohlen:** zweites Ziel an anderem Ort, z. B. `sftp:backup@nas2.firma.de:/estrichone` (Schlüssel in `ESTRICHONE_SSH_DIR`) |
+
+Gesichert werden Datenbank und Dateien. **Nicht** gesichert wird die `.env` (Passwörter). Sie gehört getrennt in
+einen Passwortmanager.
+
+```bash
+docker compose exec backup estrichone-backup run           # jetzt sichern
+docker compose exec backup estrichone-backup snapshots     # Sicherungen anzeigen
+docker compose exec backup estrichone-backup check 100%    # alles vollständig prüfen
+```
+
+## Wiederherstellen (auch auf einem neuen Server)
+
+Voraussetzungen: Docker, dieses Repository, die gesicherte `.env` (bzw. `RESTIC_PASSWORD`) und Zugriff auf das
+Backup-Ziel.
+
+```bash
+sudo ./setup.sh                                   # .env zurückkopieren statt neu erzeugen, falls vorhanden
+docker compose stop api backup                    # bzw. auf neuem Server: docker compose up -d --wait postgres
+docker compose --profile restore run --rm restore latest   # oder eine Snapshot-ID aus „snapshots“
+docker compose up -d
+```
+
+Die Wiederherstellung prüft zuerst das Repository, ersetzt dann Datenbank und Dateien und vergibt eine neue
+Instanzkennung. Die Apps erkennen das und gleichen vollständig neu ab. Ungesendete Änderungen auf den Geräten
+bleiben erhalten. Der komplette Ablauf wird in der CI bei jeder Änderung und nächtlich geprüft
+(`deploy/backup/test-backup-restore.sh`).
+
 ## Aktualisieren
 
 ```bash
+docker compose exec backup estrichone-backup run   # vorher sichern
 git pull
-docker compose up -d --build          # migrate aktualisiert das Schema automatisch vor dem API-Start
+docker compose up -d --build                        # migrate aktualisiert das Schema vor dem API-Start
 ```
-
-Ein Update-Skript mit vorherigem Backup folgt mit dem Backup Center (Arbeitspaket AP-09).
-Bis dahin: **vor jedem Update `data/` sichern.**

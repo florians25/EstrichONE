@@ -16,6 +16,23 @@ x-api-image: &api-image
 x-database: &database
   ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-estrichone};Username=${POSTGRES_USER:-estrichone};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen};Gss Encryption Mode=Disable
 
+x-backup-image: &backup-image
+  image: estrichone/backup:${ESTRICHONE_VERSION:-dev}
+  build:
+    context: ..
+    dockerfile: docker/backup.Dockerfile
+
+x-backup-environment: &backup-environment
+  PGHOST: postgres
+  PGDATABASE: ${POSTGRES_DB:-estrichone}
+  PGUSER: ${POSTGRES_USER:-estrichone}
+  PGPASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen}
+  RESTIC_PASSWORD: ${RESTIC_PASSWORD:?RESTIC_PASSWORD fehlt – bitte ./setup.sh ausführen}
+  RESTIC_CACHE_DIR: /cache
+  BACKUP_REPOSITORY: ${BACKUP_REPOSITORY:-/repository}
+  BACKUP_REPOSITORY_2: ${BACKUP_REPOSITORY_2:-}
+  BACKUP_TIME: ${BACKUP_TIME:-22:30}
+
 x-hardening: &hardening
   read_only: true
   tmpfs: [/tmp]
@@ -60,11 +77,51 @@ services:
       EstrichOne__ServerName: ${ESTRICHONE_SERVER_NAME:-EstrichONE}
       EstrichOne__PublicUrl: https://${ESTRICHONE_DOMAIN:-localhost}
       EstrichOne__TrustForwardedHeaders: "true"
+      EstrichOne__Backup__StatusPath: /status
     volumes:
       - ${ESTRICHONE_DATA_DIR:-./data}/files:/data/files
+      - ${ESTRICHONE_DATA_DIR:-./data}/backup-status:/status
     depends_on:
       migrate:
         condition: service_completed_successfully
+    networks: [backend, frontend]
+
+  # Tägliche Sicherung (Datenbank + Dateien) mit restic; Status für das Backup Center (docs/reengineering/16).
+  backup:
+    <<: [*backup-image, *hardening]
+    restart: unless-stopped
+    environment:
+      <<: *backup-environment
+    volumes:
+      - ${ESTRICHONE_DATA_DIR:-./data}/files:/data/files:ro
+      - ${ESTRICHONE_DATA_DIR:-./data}/backup-status:/status
+      - ${ESTRICHONE_DATA_DIR:-./data}/backup-staging:/tmp/estrichone-backup
+      - ${ESTRICHONE_DATA_DIR:-./data}/restic-cache:/cache
+      - ${ESTRICHONE_BACKUP_DIR:-./backup-repository}:/repository
+      - ${ESTRICHONE_SSH_DIR:-./ssh}:/home/backup/.ssh:ro
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    networks: [backend, frontend]
+
+  # Wiederherstellung – nur manuell: docker compose stop api && docker compose --profile restore run --rm restore [snapshot]
+  restore:
+    <<: [*backup-image, *hardening]
+    profiles: [restore]
+    entrypoint: ["estrichone-backup", "restore"]
+    command: ["latest"]
+    environment:
+      <<: *backup-environment
+      ESTRICHONE_RESTORE_MODE: "1"
+    volumes:
+      - ${ESTRICHONE_DATA_DIR:-./data}/files:/data/files
+      - ${ESTRICHONE_DATA_DIR:-./data}/backup-staging:/tmp/estrichone-backup
+      - ${ESTRICHONE_DATA_DIR:-./data}/restic-cache:/cache
+      - ${ESTRICHONE_BACKUP_DIR:-./backup-repository}:/repository
+      - ${ESTRICHONE_SSH_DIR:-./ssh}:/home/backup/.ssh:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
     networks: [backend, frontend]
 
   caddy:

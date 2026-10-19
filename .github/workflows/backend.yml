@@ -1,6 +1,9 @@
 name: Backend
 
 on:
+  schedule:
+    - cron: "17 2 * * *"   # nächtlich: u. a. Backup/Restore-Test gegen aktuelle Basis-Images
+  workflow_dispatch: {}
   push:
     branches: [main, "claude/**"]
     paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "global.json", ".github/workflows/backend.yml"]
@@ -41,13 +44,15 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - name: Image bauen
-        run: docker build -f docker/api.Dockerfile -t estrichone/api:ci .
+      - name: Images bauen
+        run: |
+          docker build -f docker/api.Dockerfile -t estrichone/api:ci .
+          docker build -f docker/backup.Dockerfile -t estrichone/backup:ci .
       - name: Compose-Datei prüfen
         working-directory: deploy
-        run: POSTGRES_PASSWORD=ci docker compose config --quiet
+        run: POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose config --quiet
       - name: Shellcheck
-        run: shellcheck deploy/*.sh
+        run: shellcheck deploy/*.sh deploy/backup/*
       - name: Stack starten und server-info abrufen
         working-directory: deploy
         run: |
@@ -59,3 +64,20 @@ jobs:
         if: failure()
         working-directory: deploy
         run: docker compose logs
+
+  backup-restore:
+    name: Backup und Wiederherstellung (Ende zu Ende)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Images bauen
+        run: |
+          docker build -f docker/api.Dockerfile -t estrichone/api:ci .
+          docker build -f docker/backup.Dockerfile -t estrichone/backup:ci .
+      - name: Shellcheck
+        run: shellcheck deploy/backup/estrichone-backup deploy/backup/test-backup-restore.sh
+      - name: Sichern, Totalverlust, Wiederherstellen, Prüfen
+        env:
+          ESTRICHONE_VERSION: ci
+        run: deploy/backup/test-backup-restore.sh
