@@ -1,3 +1,4 @@
+using EstrichOne.Api.Modules.Devices.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -21,6 +22,9 @@ public sealed class Session
 {
     public Guid Id { get; private set; }
     public Guid UserId { get; private set; }
+
+    /// <summary>Registriertes Gerät; bei iOS/Android Voraussetzung für Zugriff auf Fachdaten (docs/reengineering/11).</summary>
+    public Guid? DeviceId { get; private set; }
     public ClientKind ClientKind { get; private set; }
     public string? ClientName { get; private set; }
     public byte[] AccessTokenHash { get; private set; } = [];
@@ -55,6 +59,19 @@ public sealed class Session
     }
 
     public void Touch(DateTimeOffset now) => LastSeenAt = now;
+
+    public void BindDevice(Guid deviceId)
+    {
+        if (DeviceId is not null && DeviceId != deviceId)
+        {
+            throw new InvalidOperationException("Die Sitzung ist bereits an ein anderes Gerät gebunden.");
+        }
+
+        DeviceId = deviceId;
+    }
+
+    /// <summary>Mobile Sitzungen brauchen ein freigegebenes Gerät, Web- und Desktop-Sitzungen nicht.</summary>
+    public bool RequiresDevice => ClientKind is ClientKind.Ios or ClientKind.Android;
 
     public void Revoke(DateTimeOffset now, string reason)
     {
@@ -108,6 +125,8 @@ internal sealed class SessionConfiguration : IEntityTypeConfiguration<Session>
         builder.HasIndex(session => session.AccessTokenHash).IsUnique();
         builder.HasIndex(session => session.UserId);
         builder.HasOne<User>().WithMany().HasForeignKey(session => session.UserId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasOne<Device>().WithMany().HasForeignKey(session => session.DeviceId).OnDelete(DeleteBehavior.Cascade);
+        builder.HasIndex(session => session.DeviceId);
     }
 }
 

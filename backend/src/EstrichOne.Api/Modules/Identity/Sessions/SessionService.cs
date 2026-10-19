@@ -1,5 +1,6 @@
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Audit.Exports;
+using EstrichOne.Api.Modules.Devices.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -20,6 +21,9 @@ public enum RefreshFailure
     Reused,
     SessionEnded,
     UserDisabled,
+    DeviceProofRequired,
+    DeviceLocked,
+    DeviceRevoked,
 }
 
 /// <summary>Sitzungen anlegen, Tokens rotieren, Sitzungen beenden.</summary>
@@ -40,7 +44,12 @@ public sealed class SessionService(
         return Issue(session, now);
     }
 
-    public async Task<(IssuedTokens? Tokens, RefreshFailure? Failure)> RefreshAsync(string refreshToken, CancellationToken cancellationToken)
+    /// <param name="deviceSignature">
+    /// Pflicht für gerätegebundene Sitzungen: ECDSA-Signatur des Geräteschlüssels über
+    /// <see cref="Device.RefreshProofPrefix"/> + Refresh-Token. Ein abgegriffener Refresh-Token ist ohne das Gerät wertlos.
+    /// </param>
+    public async Task<(IssuedTokens? Tokens, RefreshFailure? Failure)> RefreshAsync(string refreshToken, byte[]? deviceSignature,
+        CancellationToken cancellationToken)
     {
         var now = clock.GetUtcNow();
         var hash = TokenFactory.Hash(refreshToken);
@@ -54,7 +63,7 @@ public sealed class SessionService(
         if (stored.UsedAt is not null)
         {
             // Innerhalb der Gnadenfrist: vermutlich zwei parallele Anfragen desselben Geräts – ablehnen, nicht bestrafen.
-            if (now - stored.UsedAt.Value <= Settings.RefreshReuseGracePeriod)
+            if (now - stored.UsedAt.Value < Settings.RefreshReuseGracePeriod)
             {
                 return (null, RefreshFailure.Invalid);
             }
@@ -73,6 +82,27 @@ public sealed class SessionService(
         if (stored.ExpiresAt <= now)
         {
             return (null, RefreshFailure.Expired);
+        }
+
+        if (session.DeviceId is { } deviceId)
+        {
+            var device = await db.Set<Device>().SingleAsync(d => d.Id == deviceId, cancellationToken);
+            if (deviceSignature is null || !device.VerifyRefreshProof(refreshToken, deviceSignature))
+            {
+                return (null, RefreshFailure.DeviceProofRequired);
+            }
+
+            if (device.Status == DeviceStatus.Locked)
+            {
+                return (null, RefreshFailure.DeviceLocked);
+            }
+
+            if (device.Status == DeviceStatus.Retired)
+            {
+                session.Revoke(now, "device_retired");
+                await db.SaveChangesAsync(cancellationToken);
+                return (null, RefreshFailure.DeviceRevoked);
+            }
         }
 
         var user = await db.Set<User>().SingleAsync(u => u.Id == session.UserId, cancellationToken);

@@ -1,5 +1,4 @@
 using EstrichOne.Api.Infrastructure.Persistence;
-using EstrichOne.Api.Modules.Platform;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Infrastructure.Hosting;
@@ -41,7 +40,11 @@ public static partial class CommandLine
         LogPendingMigrations(logger, pending.Count, pending);
         await db.Database.MigrateAsync(cancellationToken);
 
-        await scope.ServiceProvider.GetRequiredService<SystemStateInitializer>().EnsureCreatedAsync(cancellationToken);
+        foreach (var initializer in scope.ServiceProvider.GetServices<IDataInitializer>().OrderBy(i => i.Order))
+        {
+            await initializer.InitializeAsync(cancellationToken);
+        }
+
         LogDatabaseUpToDate(logger);
     }
 

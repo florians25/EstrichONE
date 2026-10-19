@@ -20,13 +20,19 @@ public sealed class IdentityModule : IModule
         services.AddScoped<LoginService>();
         services.AddScoped<IUserAccounts, UserAccounts>();
         services.AddScoped<ICurrentUser, CurrentUser>();
+        services.AddScoped<ISessionDevices, SessionDevices>();
+        services.AddSingleton<IAuthorizationHandler, DeviceApprovedHandler>();
 
         services.AddAuthentication(TokenAuthenticationHandler.SchemeName)
             .AddScheme<AuthenticationSchemeOptions, TokenAuthenticationHandler>(TokenAuthenticationHandler.SchemeName, null);
 
-        // Alles erfordert eine Anmeldung, sofern ein Endpunkt nicht ausdrücklich AllowAnonymous trägt.
+        // Alles erfordert eine Anmeldung (und bei mobilen Clients ein freigegebenes Gerät),
+        // sofern ein Endpunkt nicht ausdrücklich AllowAnonymous bzw. AllowPendingDevice trägt.
+        var approved = new AuthorizationPolicyBuilder().RequireAuthenticatedUser().RequireApprovedDevice().Build();
         services.AddAuthorizationBuilder()
-            .SetFallbackPolicy(new AuthorizationPolicyBuilder().RequireAuthenticatedUser().Build());
+            .SetDefaultPolicy(approved)
+            .SetFallbackPolicy(approved)
+            .AddPolicy(DeviceAuthorization.AllowPendingPolicy, policy => policy.RequireAuthenticatedUser());
 
         // Zusätzliche Bremse vor der Kontosperre: je IP-Adresse höchstens 20 Anfragen pro Minute an /auth.
         services.AddRateLimiter(limiter =>

@@ -35,10 +35,19 @@ public sealed class Role : IVersionedEntity
         return role;
     }
 
+    /// <summary>Gleicht die Rechte ab (entfernt fehlende, ergänzt neue), statt alle neu anzulegen.</summary>
     public void SetPermissions(IEnumerable<string> permissions)
     {
-        Permissions.Clear();
-        Permissions.AddRange(permissions.Distinct(StringComparer.Ordinal).Select(code => new RoleGrant(Id, code)));
+        var wanted = permissions.ToHashSet(StringComparer.Ordinal);
+        Permissions.RemoveAll(grant => !wanted.Contains(grant.Permission));
+        wanted.ExceptWith(Permissions.Select(grant => grant.Permission));
+        Permissions.AddRange(wanted.Order(StringComparer.Ordinal).Select(code => new RoleGrant(Id, code)));
+    }
+
+    public void Rename(string name, string? description)
+    {
+        Name = name.Trim();
+        Description = description;
     }
 }
 

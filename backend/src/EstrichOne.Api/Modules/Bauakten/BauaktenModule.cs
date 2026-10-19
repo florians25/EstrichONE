@@ -1,4 +1,5 @@
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Modules.Bauakten.Exports;
 
 namespace EstrichOne.Api.Modules.Bauakten;
 
@@ -8,9 +9,8 @@ public sealed class BauaktenModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<BauakteNumberGenerator>();
+        services.AddScoped<IBauakteAccess, BauakteAccess>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api)
-    {
-    }
+    public void MapEndpoints(IEndpointRouteBuilder api) => BauakteEndpoints.Map(api);
 }

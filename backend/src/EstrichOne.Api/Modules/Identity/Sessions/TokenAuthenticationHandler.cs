@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Devices.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
@@ -51,7 +52,10 @@ public sealed class TokenAuthenticationHandler(
                 session.AccessTokenExpiresAt,
                 session.RevokedAt,
                 session.LastSeenAt,
+                session.DeviceId,
+                session.ClientKind,
                 UserActive = db.Set<User>().Where(user => user.Id == session.UserId).Select(user => user.IsActive).FirstOrDefault(),
+                DeviceStatus = db.Set<Device>().Where(device => device.Id == session.DeviceId).Select(device => (DeviceStatus?)device.Status).FirstOrDefault(),
             })
             .SingleOrDefaultAsync(Context.RequestAborted);
 
@@ -66,6 +70,16 @@ public sealed class TokenAuthenticationHandler(
             return Fail("USER_DISABLED", "Das Benutzerkonto ist gesperrt.");
         }
 
+        if (match.DeviceStatus is DeviceStatus.Locked)
+        {
+            return Fail("DEVICE_LOCKED", "Dieses Gerät ist gesperrt. Bitte an die IT-Administration wenden.");
+        }
+
+        if (match.DeviceStatus is DeviceStatus.Retired)
+        {
+            return Fail("DEVICE_REVOKED", "Dieses Gerät wurde aus EstrichONE entfernt.");
+        }
+
         if (match.AccessTokenExpiresAt <= now)
         {
             return Fail("ACCESS_TOKEN_EXPIRED", "Das Zugriffstoken ist abgelaufen. Bitte mit dem Refresh-Token erneuern.");
@@ -77,10 +91,18 @@ public sealed class TokenAuthenticationHandler(
                 .ExecuteUpdateAsync(set => set.SetProperty(s => s.LastSeenAt, now), Context.RequestAborted);
         }
 
+        var deviceState = match.DeviceStatus switch
+        {
+            DeviceStatus.Active => DeviceApprovedRequirement.Approved,
+            DeviceStatus.Pending => DeviceApprovedRequirement.Pending,
+            _ when match.ClientKind is ClientKind.Ios or ClientKind.Android => DeviceApprovedRequirement.Pending,
+            _ => DeviceApprovedRequirement.NotRequired,
+        };
         var identity = new ClaimsIdentity(
             [
                 new Claim(ClaimTypes.NameIdentifier, match.UserId.ToString()),
                 new Claim(SessionClaim, match.Id.ToString()),
+                new Claim(DeviceApprovedRequirement.ClaimType, deviceState),
             ],
             SchemeName);
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
@@ -102,6 +124,25 @@ public sealed class TokenAuthenticationHandler(
                 Extensions = { ["code"] = code },
             },
         });
+    }
+
+    protected override Task HandleForbiddenAsync(AuthenticationProperties properties)
+    {
+        var pending = Context.User.FindFirst(DeviceApprovedRequirement.ClaimType)?.Value == DeviceApprovedRequirement.Pending;
+        Response.StatusCode = StatusCodes.Status403Forbidden;
+        return problemDetails.WriteAsync(new ProblemDetailsContext
+        {
+            HttpContext = Context,
+            ProblemDetails =
+            {
+                Status = StatusCodes.Status403Forbidden,
+                Title = pending ? "Gerät noch nicht freigegeben" : "Keine Berechtigung",
+                Detail = pending
+                    ? "Dieses Gerät wartet auf die Freigabe durch die IT-Administration."
+                    : "Für diese Aktion fehlt die nötige Berechtigung.",
+                Extensions = { ["code"] = pending ? "DEVICE_NOT_APPROVED" : "PERMISSION_DENIED" },
+            },
+        }).AsTask();
     }
 
     private AuthenticateResult Fail(string code, string message)

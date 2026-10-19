@@ -13,7 +13,7 @@ public sealed class ServerInfoTests(PostgresFixture postgres)
         await using var factory = await ApiFactory.CreateMigratedAsync(postgres);
         using var client = factory.CreateClient();
 
-        var info = await client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestContext.Current.CancellationToken);
+        var info = await client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestJson.Options, TestContext.Current.CancellationToken);
 
         info.ShouldNotBeNull();
         info.Product.ShouldBe("EstrichONE");
@@ -27,10 +27,10 @@ public sealed class ServerInfoTests(PostgresFixture postgres)
     {
         await using var factory = await ApiFactory.CreateMigratedAsync(postgres);
         using var client = factory.CreateClient();
-        var first = await client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestContext.Current.CancellationToken);
+        var first = await client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestJson.Options, TestContext.Current.CancellationToken);
 
         await factory.MigrateAsync();
-        var second = await client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestContext.Current.CancellationToken);
+        var second = await client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestJson.Options, TestContext.Current.CancellationToken);
 
         second!.InstanceEpoch.ShouldBe(first!.InstanceEpoch);
     }

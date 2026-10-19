@@ -16,7 +16,10 @@ public sealed record LoginRequest(
     ClientKind Client,
     [property: MaxLength(100)] string? ClientName);
 
-public sealed record RefreshRequest([property: Required, MaxLength(200)] string RefreshToken);
+/// <param name="DeviceSignature">Base64; Pflicht, wenn die Sitzung an ein Gerät gebunden ist.</param>
+public sealed record RefreshRequest(
+    [property: Required, MaxLength(200)] string RefreshToken,
+    [property: MaxLength(200)] string? DeviceSignature = null);
 
 public sealed record ChangePasswordRequest(
     [property: Required, MaxLength(PasswordPolicy.MaxLength)] string CurrentPassword,
@@ -58,10 +61,12 @@ internal static class AuthEndpoints
             .AllowAnonymous().RequireRateLimiting(RateLimitPolicy);
 
         auth.MapPost("/logout", LogoutAsync)
-            .WithName("Logout").WithSummary("Aktuelle Sitzung beenden");
+            .WithName("Logout").WithSummary("Aktuelle Sitzung beenden")
+            .AllowPendingDevice();
 
         auth.MapGet("/me", GetMeAsync)
-            .WithName("GetCurrentUser").WithSummary("Angemeldeter Benutzer");
+            .WithName("GetCurrentUser").WithSummary("Angemeldeter Benutzer")
+            .AllowPendingDevice();
 
         auth.MapPost("/change-password", ChangePasswordAsync)
             .WithName("ChangePassword").WithSummary("Eigenes Passwort ändern; beendet alle anderen Sitzungen")
@@ -97,13 +102,22 @@ internal static class AuthEndpoints
     private static async Task<Results<Ok<RefreshResponse>, ProblemHttpResult>> RefreshAsync(
         RefreshRequest request, SessionService sessions, CancellationToken cancellationToken)
     {
-        var (tokens, failure) = await sessions.RefreshAsync(request.RefreshToken, cancellationToken);
+        byte[]? signature = null;
+        if (request.DeviceSignature is not null && !TryDecodeBase64(request.DeviceSignature, out signature))
+        {
+            return Problem(StatusCodes.Status401Unauthorized, "DEVICE_PROOF_INVALID", "Erneuerung fehlgeschlagen", "Die Gerätesignatur ist ungültig.");
+        }
+
+        var (tokens, failure) = await sessions.RefreshAsync(request.RefreshToken, signature, cancellationToken);
         if (tokens is null)
         {
             var (code, detail) = failure switch
             {
                 RefreshFailure.Reused => ("REFRESH_TOKEN_REUSED", "Der Token wurde bereits verwendet. Die Sitzung wurde aus Sicherheitsgründen beendet."),
                 RefreshFailure.UserDisabled => ("USER_DISABLED", "Das Benutzerkonto ist gesperrt."),
+                RefreshFailure.DeviceProofRequired => ("DEVICE_PROOF_INVALID", "Die Gerätesignatur fehlt oder ist ungültig."),
+                RefreshFailure.DeviceLocked => ("DEVICE_LOCKED", "Dieses Gerät ist gesperrt."),
+                RefreshFailure.DeviceRevoked => ("DEVICE_REVOKED", "Dieses Gerät wurde aus EstrichONE entfernt."),
                 RefreshFailure.SessionEnded or RefreshFailure.Expired => ("SESSION_EXPIRED", "Die Sitzung ist abgelaufen. Bitte neu anmelden."),
                 _ => ("INVALID_REFRESH_TOKEN", "Der Token ist ungültig."),
             };
@@ -153,6 +167,19 @@ internal static class AuthEndpoints
         audit.Record(AuditActions.PasswordChanged, user.Id, "user", user.Id.ToString());
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
+    }
+
+    private static bool TryDecodeBase64(string value, out byte[]? bytes)
+    {
+        bytes = new byte[value.Length];
+        if (Convert.TryFromBase64String(value, bytes, out var written))
+        {
+            bytes = bytes[..written];
+            return true;
+        }
+
+        bytes = null;
+        return false;
     }
 
     private static UserSummary Summarize(User user) => new(user.Id, user.DisplayName, user.UserName, user.Email);

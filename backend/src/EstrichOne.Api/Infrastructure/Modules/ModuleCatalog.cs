@@ -2,6 +2,7 @@ using EstrichOne.Api.Modules.Access;
 using EstrichOne.Api.Modules.Audit;
 using EstrichOne.Api.Modules.Bauakten;
 using EstrichOne.Api.Modules.Contacts;
+using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Documentation;
 using EstrichOne.Api.Modules.Identity;
 using EstrichOne.Api.Modules.Organization;
@@ -18,6 +19,7 @@ public static class ModuleCatalog
         new AuditModule(),
         new IdentityModule(),
         new AccessModule(),
+        new DevicesModule(),
         new OrganizationModule(),
         new ContactsModule(),
         new BauaktenModule(),

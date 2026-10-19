@@ -12,7 +12,7 @@ public sealed class PlatformModule : IModule
 {
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
-        services.AddScoped<SystemStateInitializer>();
+        services.AddScoped<IDataInitializer, SystemStateInitializer>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)

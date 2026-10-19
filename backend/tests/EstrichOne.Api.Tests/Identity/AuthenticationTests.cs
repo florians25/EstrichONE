@@ -42,7 +42,7 @@ public sealed class AuthenticationTests(PostgresFixture postgres) : IAsyncLifeti
         byName.AccessToken.ShouldStartWith("eo1_");
         byName.RefreshToken.ShouldStartWith("eor1_");
         byEmail.User.UserName.ShouldBe("m.huber");
-        var me = await _client.WithToken(byName.AccessToken).GetFromJsonAsync<UserSummary>("/api/v1/auth/me", TestContext.Current.CancellationToken);
+        var me = await _client.WithToken(byName.AccessToken).GetFromJsonAsync<UserSummary>("/api/v1/auth/me", TestJson.Options, TestContext.Current.CancellationToken);
         me!.DisplayName.ShouldBe("Max Huber");
     }
 
@@ -224,6 +224,6 @@ public sealed class AuthenticationTests(PostgresFixture postgres) : IAsyncLifeti
     {
         using var response = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken }, TestContext.Current.CancellationToken);
         response.EnsureSuccessStatusCode();
-        return (await response.Content.ReadFromJsonAsync<RefreshResponse>(TestContext.Current.CancellationToken))!;
+        return (await response.Content.ReadFromJsonAsync<RefreshResponse>(TestJson.Options, TestContext.Current.CancellationToken))!;
     }
 }

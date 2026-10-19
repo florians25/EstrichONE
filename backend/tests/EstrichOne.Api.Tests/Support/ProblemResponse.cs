@@ -15,7 +15,7 @@ public static class ProblemResponseExtensions
     public static async Task<ProblemResponse> ReadProblemAsync(this HttpResponseMessage response)
     {
         response.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
-        var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>();
+        var problem = await response.Content.ReadFromJsonAsync<ProblemResponse>(TestJson.Options);
         problem.ShouldNotBeNull();
         return problem;
     }

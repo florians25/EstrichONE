@@ -669,6 +669,108 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("contact_persons", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Devices.Exports.Device", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AppVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("app_version");
+
+                    b.Property<DateTimeOffset?>("ApprovedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("approved_at");
+
+                    b.Property<Guid?>("ApprovedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("approved_by_user_id");
+
+                    b.Property<Guid?>("AssignedUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assigned_user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset?>("LastSeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_seen_at");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("OsVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("os_version");
+
+                    b.Property<string>("Platform")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("platform");
+
+                    b.Property<byte[]>("PublicKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("bytea")
+                        .HasColumnName("public_key");
+
+                    b.Property<Guid>("RegisteredByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("registered_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_devices");
+
+                    b.HasIndex("ApprovedByUserId")
+                        .HasDatabaseName("ix_devices_approved_by_user_id");
+
+                    b.HasIndex("AssignedUserId")
+                        .HasDatabaseName("ix_devices_assigned_user_id");
+
+                    b.HasIndex("RegisteredByUserId")
+                        .HasDatabaseName("ix_devices_registered_by_user_id");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_devices_status");
+
+                    b.ToTable("devices", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.FileRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -983,6 +1085,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
                     b.Property<DateTimeOffset>("ExpiresAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("expires_at");
@@ -1010,6 +1116,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("AccessTokenHash")
                         .IsUnique()
                         .HasDatabaseName("ix_sessions_access_token_hash");
+
+                    b.HasIndex("DeviceId")
+                        .HasDatabaseName("ix_sessions_device_id");
 
                     b.HasIndex("UserId")
                         .HasDatabaseName("ix_sessions_user_id");
@@ -1310,6 +1419,28 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_contact_persons_contacts_contact_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Devices.Exports.Device", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_devices_user_approved_by_user_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("AssignedUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_devices_user_assigned_user_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("RegisteredByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_devices_user_registered_by_user_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.FileRecord", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", null)
@@ -1348,6 +1479,12 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Sessions.Session", b =>
                 {
+                    b.HasOne("EstrichOne.Api.Modules.Devices.Exports.Device", null)
+                        .WithMany()
+                        .HasForeignKey("DeviceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_sessions_devices_device_id");
+
                     b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
                         .WithMany()
                         .HasForeignKey("UserId")
