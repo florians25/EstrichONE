@@ -1,0 +1,41 @@
+{
+  "name": "estrichweb-enterprise-angular",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {
+    "start": "ng serve",
+    "build": "ng build --configuration production",
+    "build:dev": "ng build --configuration development"
+  },
+  "dependencies": {
+    "@angular/animations": "20.3.13",
+    "@angular/cdk": "20.2.14",
+    "@angular/common": "20.3.13",
+    "@angular/compiler": "20.3.13",
+    "@angular/core": "20.3.13",
+    "@angular/forms": "20.3.13",
+    "@angular/material": "20.2.14",
+    "@angular/platform-browser": "20.3.13",
+    "@angular/router": "20.3.13",
+    "@angular/service-worker": "20.3.13",
+    "@fullcalendar/core": "^6.1.21",
+    "@fullcalendar/daygrid": "^6.1.21",
+    "@fullcalendar/interaction": "^6.1.21",
+    "@fullcalendar/list": "^6.1.21",
+    "@fullcalendar/timegrid": "^6.1.21",
+    "@ngrx/store": "20.1.0",
+    "jspdf": "^2.5.2",
+    "mammoth": "^1.8.0",
+    "qrcode": "^1.5.4",
+    "rxjs": "7.8.2",
+    "tslib": "2.8.1",
+    "zone.js": "0.15.1"
+  },
+  "devDependencies": {
+    "@angular/build": "20.3.13",
+    "@angular/cli": "20.3.13",
+    "@angular/compiler-cli": "20.3.13",
+    "@types/qrcode": "^1.5.6",
+    "typescript": "5.9.3"
+  }
+}

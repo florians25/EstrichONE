@@ -1,0 +1,82 @@
+
+/* =====================================================================
+   14. STAMMDATEN: Aktionsspalte rechts (16.08.2026, zehnte Runde)
+   ===================================================================== */
+.module-list-card .data-table th.mat-column-actions,
+.module-list-card .data-table td.mat-column-actions {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 14px !important;
+  border-left: 1px solid #eef2f6;
+}
+.module-list-card .data-table td.mat-column-actions .row-action-group {
+  justify-content: flex-end;
+  flex-wrap: nowrap;
+}
+.module-list-card .data-table td.mat-column-actions .mat-mdc-button-base {
+  min-height: 34px;
+  padding: 0 10px !important;
+}
+/* Am Handy bleiben die Aktionen als volle Zeile unter den Daten. */
+@media (max-width: 900px) {
+  .module-list-card .data-table td.mat-column-actions { text-align: left; width: auto; white-space: normal; border-left: 0; }
+  .module-list-card .data-table td.mat-column-actions .row-action-group { justify-content: flex-start; flex-wrap: wrap; }
+}
+
+/* =====================================================================
+   15. KOLONNENPLAN: Baustellen-Vorrat platzsparender
+   ---------------------------------------------------------------------
+   Die Karten waren durch vier Textzeilen sehr hoch – bei zehn offenen
+   Baustellen musste man weit scrollen. Jetzt zwei Zeilen plus Kopfzeile,
+   Adresse und Kenndaten in einer Zeile zusammengefasst.
+   ===================================================================== */
+.site-stock { flex: 0 0 226px !important; }
+.site-stock-body { padding: 8px !important; gap: 6px !important; }
+.site-stock-card {
+  display: grid !important;
+  grid-template-columns: 16px minmax(0, 1fr);
+  gap: 6px;
+  padding: 7px 8px !important;
+  border-radius: 9px !important;
+  align-items: start;
+}
+.site-stock-grip { align-self: center; }
+.site-stock-grip .mat-icon { font-size: 15px !important; width: 15px !important; height: 15px !important; color: #94a3b8 !important; }
+.site-stock-info { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.site-stock-title-row { display: flex; align-items: baseline; justify-content: space-between; gap: 6px; }
+.site-stock-title-row strong { font-size: .82rem !important; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.site-stock-title-row span {
+  flex: 0 0 auto; font-size: .62rem; font-weight: 800; text-transform: uppercase; letter-spacing: .03em;
+  color: #15803d; background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 999px; padding: 1px 6px;
+}
+.site-stock-card.is-planned .site-stock-title-row span { color: #9a3412; background: #fff7ed; border-color: #fed7aa; }
+.site-stock-info small { font-size: .71rem !important; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Kenndaten und Adresse zusammenlegen – spart eine Zeile je Karte. */
+.site-stock-info .site-stock-spec { color: #94a3b8 !important; }
+/* Einplanen-Knopf über die volle Breite unter den Text, kompakt. */
+.site-stock-plan-btn.mat-mdc-outlined-button {
+  grid-column: 1 / -1;
+  width: 100%;
+  min-height: 30px !important;
+  height: 30px !important;
+  margin-top: 4px;
+  padding: 0 8px !important;
+  font-size: .74rem !important;
+}
+.site-stock-plan-btn .mat-icon { font-size: 15px !important; width: 15px !important; height: 15px !important; }
+/* Kopfzeile und Zusammenfassung schlanker */
+.site-stock-head { padding: 8px 10px !important; }
+.site-stock-summary { gap: 4px !important; }
+.site-stock-summary span { padding: 4px 2px !important; }
+.site-stock-summary b { font-size: .95rem !important; }
+.site-stock-summary small { font-size: .66rem !important; }
+.site-stock-hint { font-size: .7rem !important; margin-bottom: 2px !important; }
+.site-stock-toggle { padding: 5px 8px !important; font-size: .74rem !important; margin-bottom: 4px !important; }
+.site-stock-search .mat-mdc-form-field-subscript-wrapper { display: none; }
+/* Beim Ziehen deutlich sichtbar, wohin es geht. */
+.site-stock-card.cdk-drag-preview { grid-template-columns: 16px minmax(0, 1fr); background: #fff; opacity: .96; }
+.site-stock-card.cdk-drag-placeholder { opacity: .35; border-style: dashed; }
+@media (max-width: 1100px) {
+  .site-stock { flex-basis: 200px !important; }
+}

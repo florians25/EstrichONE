@@ -1,0 +1,43 @@
+RewriteEngine On
+
+# Keine Inhaltsaushandlung – sonst kann /api/auth/login auf falsche Dateien
+# gemappt werden oder ins Leere laufen.
+Options -MultiViews -Indexes
+
+# Preserve Authorization header for PHP/FastCGI providers.
+# Some shared hostings strip the Authorization header before PHP sees it.
+SetEnvIfNoCase Authorization "^Bearer (.*)" HTTP_AUTHORIZATION=Bearer\ $1
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteRule .* - [E=REDIRECT_HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# Alles, was keine echte Datei/kein Verzeichnis ist, an index.php geben.
+# Diese Regel allein genuegt bereits fuer /api/... – auch dann, wenn die
+# .htaccess im Document-Root fehlen sollte.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]
+
+# Apache 2.4
+<IfModule mod_authz_core.c>
+  <FilesMatch "\.(php|inc)$">
+    Require all granted
+  </FilesMatch>
+</IfModule>
+# Apache 2.2 (aeltere Hostings)
+<IfModule !mod_authz_core.c>
+  <FilesMatch "\.(php|inc)$">
+    Order allow,deny
+    Allow from all
+  </FilesMatch>
+</IfModule>
+
+# Konfiguration mit Zugangsdaten niemals ausliefern.
+<FilesMatch "^(local|config\.sample)\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order deny,allow
+    Deny from all
+  </IfModule>
+</FilesMatch>

@@ -1,0 +1,10 @@
+{
+  "name": "Estrich Leis EstrichWeb",
+  "short_name": "Estrich Leis EstrichWeb",
+  "theme_color": "#18212f",
+  "background_color": "#f5f7fb",
+  "display": "standalone",
+  "scope": "/",
+  "start_url": "/",
+  "icons": []
+}

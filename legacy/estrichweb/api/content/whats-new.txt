@@ -1,0 +1,117 @@
+# Was gibt es Neues
+
+## 2026-08-22 – Anmeldung, Profil und Feinschliff
+
+**Sicherheit bei der Anmeldung**
+- Nach 5 Fehlversuchen je Kennung (bzw. 20 je Herkunftsadresse) wird die Anmeldung 15 Minuten gesperrt. Vorher ließen sich Passwörter unbegrenzt durchprobieren.
+- Die Meldung lautet bei falscher Kennung und falschem Passwort gleich – so lässt sich nicht mehr herausfinden, welche E-Mail-Adressen es gibt.
+- Vor der Sperre erscheint eine Warnung: „Noch 2 Versuch(e)".
+
+**Schnellanmeldung mit PIN (optional)**
+- Für Bürorechner und feste Baustellen-Tablets: Nach einer vollständigen Anmeldung lässt sich im eigenen Profil eine 6-stellige PIN für dieses Gerät einrichten.
+- Die PIN gilt nur zusammen mit dem Gerät – auf einem anderen Rechner nützt sie niemandem.
+- Nach 5 Fehlversuchen wird die Schnellanmeldung gesperrt; ohne Nutzung läuft sie nach 90 Tagen ab.
+- Muss vom Betrieb unter „Firmendaten & Optionen" freigeschaltet werden und ist standardmäßig ausgeschaltet.
+
+**Anmeldemaske**
+- Neu gestaltet: ruhige Flächen, klare Typografie, keine Verläufe – passend für einen Bildschirm, der den ganzen Tag im Büro offen ist.
+- „E-Mail-Adresse merken" spart auf dem Baustellenhandy das Tippen. Gespeichert wird nur die Kennung, nie das Passwort.
+
+**Benutzerprofil**
+- Neue Bereiche: Konto (mit Rolle und letzter Anmeldung), Sicherheit, Berechtigungen und Anwendung.
+- Passwort ändern direkt im Profil, mit Anzeige der Passwortgüte.
+- Berechtigungen werden nachvollziehbar aufgeschlüsselt („Bauakten – sehen, ändern") statt als bloße Zahl.
+
+**Weitere Änderungen**
+- Dokumente werden am Handy vollflächig in der Anwendung geöffnet, nicht mehr in einem neuen Tab.
+- Hinweis im Dokumentenbereich: Die Ablage ist nicht revisionssicher; Unterlagen bitte zusätzlich im Büro-Ordner auf dem NAS führen.
+- Notizen: mehrzeilige Eingabe, Liste scrollt eigenständig, Eingabefeld bleibt sichtbar.
+- Anrufe erscheinen in der Bauakte als eigene Karte mit anrufbarer Nummer.
+- Räume und Flächen je Bauakte (freiwillig), gegliedert nach Geschossen.
+- Gelöschte Datensätze werden jetzt endgültig entfernt – samt der zugehörigen Dateien.
+
+## 2026-06-28 – E-Mail, Berechtigungen & Feinschliff
+- E-Mail-Benachrichtigungen: Bei Zuweisung einer Bauakte erhält der zuständige Mitarbeiter automatisch eine E-Mail.
+- Erinnerungen für fällige und überfällige Aufgaben können per Tagesaufruf an die jeweiligen Mitarbeiter verschickt werden.
+- Neuer Bereich „E-Mail" in den Einstellungen: SMTP-Server, Verschlüsselung und Absender pflegen, inklusive Test-Versand.
+- Berechtigungen: Administrator-Rollen erhalten den Vollzugriff jetzt zuverlässig; der Installer legt einen Admin mit allen Rechten an.
+- Firmendaten erscheinen in allen Dokumenten ausschließlich so, wie sie unter „Firmenstammdaten" gepflegt sind.
+- Estricharten und weitere Auswahllisten stammen ausschließlich aus den Stammdaten – keine festen Vorgaben mehr.
+- Bestell-PDF nutzt durchgängig die gepflegten Firmendaten.
+- Schriftbild der Formulare verbessert; die obere Rahmenlinie überlappt keine Feldbeschriftung mehr.
+- Kolonnenplanung: Drag & Drop stabiler – unnötige Verschiebungen werden ignoriert.
+- Nach dem Abschließen einer Bauakte wird zurück in die Bauaktensuche gewechselt und eine Erfolgsmeldung angezeigt.
+
+## 2026-06-06 – Materialbestellungen
+- Neuer Reiter „Material“ direkt in der Bauakte.
+- Materialbestellungen können mit Positionen, Lieferadresse, Ansprechpartner, Lieferdatum und Status erfasst werden.
+- Status je Bestellung: Zu bestellen, Bestellt, Erledigt oder Abgesagt.
+- Lieferanten können jetzt über die Stammdaten gepflegt und in Bestellungen ausgewählt werden.
+- Für jede Materialbestellung kann eine Bestell-PDF erzeugt werden.
+- Unter Büro gibt es jetzt eine zentrale Übersicht „Materialbestellungen“ für alle Bauakten.
+- Die Sidebar zeigt direkt eine Zahl der noch zu bestellenden Materialbestellungen.
+
+## 2026-06-06 – Erstbegehung & Fotos
+- Fotos aus der Erstbegehung werden im Fotos-Tab dedupliziert, damit dasselbe Bild nicht doppelt erscheint.
+- Der Hinweis „Noch keine Erstbegehung durchgeführt“ öffnet jetzt zuerst den Erstbegehungs-Tab statt direkt den Wizard zu starten.
+- Im Erstbegehungs-Tab gibt es nun „Keine Erstbegehung notwendig“, um die Erstbegehung sauber zu überspringen.
+
+## 2026-06-06 – Anfragen, Anrufe & mobile Anlage
+- Anfragen haben jetzt einen echten Status: Offen, In Bearbeitung, Bauakte erstellt oder Abgebrochen.
+- Anfragen können direkt in Bearbeitung genommen und bei Bedarf wieder geöffnet werden.
+- Die Anfrage-Detailseite zeigt den Status oben als horizontalen Stepper und darunter die vollständigen Ticketdaten.
+- Aus einem bestehenden Anruf kann jetzt direkt eine Anfrage erstellt werden. Kontaktdaten, Betreff und Notizen werden übernommen.
+- Anrufe und Anfragen verwenden bei Bestätigungen jetzt App-Dialoge statt Browser-Meldungen.
+- Die mobile Bauakten-Anlage wurde wieder als vertikaler Stepper optimiert, ohne überlappende Texte und ohne verdeckte Buttons.
+- Das Dashboard zählt aktive Baustellen jetzt ohne abgeschlossene, stornierte oder archivierte Einträge.
+
+## 2026-06-05 – Bauakten-Update
+- Bauaktennummern werden automatisch nach Jahr fortlaufend vergeben.
+- Nach dem Speichern einer neuen Bauakte wird direkt die Bauakte geöffnet.
+- Stornieren und Löschen von Bauakten sind mit Passwortbestätigung abgesichert.
+- Nach dem Löschen einer Bauakte wird zurück in die Bauaktensuche gewechselt.
+- Die mobile Dashboard-Ansicht wurde für die Schnellaktionen optimiert.
+- „Was gibt es Neues“ wird statisch aus dieser Textdatei geladen und ist nicht mehr DB-basiert.
+
+## 2026-06-03 – Rollen & Oberfläche
+- Rollen und Berechtigungen wurden vereinfacht.
+- Die Bauakte wurde für Innendienst-Zugriffe korrigiert.
+- Dashboard- und Dialogdarstellung wurden weiter verbessert.
+
+06.06.2026 – Materialbestellungen & Büro
+- Neuer Büro-Menüpunkt „Materialbestellungen“ zeigt Bestellungen aus allen Bauakten zentral an.
+- Die Sidebar zeigt direkt die Anzahl offener Materialbestellungen.
+- Der Büro-Bereich steht in der Navigation nun oberhalb der Ressourcen.
+- API-Endpunkte für Materialbestellungen sind im Overlay enthalten; API und Frontend müssen zusammen deployt werden.
+
+2026-06-07
+- Kolonnenplan: Datumsauswahl im Kopfbereich mittig ausgerichtet.
+- Stammdaten: Lieferantenverwaltung zusätzlich direkt im Stammdaten-Hub verlinkt.
+- Sidebar: Bereich „Baustelle“ ist standardmäßig eingeklappt.
+- Materialbestellungen: Übersicht, Karten, Status-Kennzahlen und Sidebar-Zahl für offene Bestellungen überarbeitet.
+- Materialbestellungen: Bestell-PDF im professionelleren DIN-5008-Brieflayout überarbeitet.
+- Anfragen: Detailseite optisch neu strukturiert, Status/Kontakt/Nächster Schritt als Übersichtskarte ergänzt.
+- Anfragen: PDF-Ausgabe direkt aus der Detailseite ergänzt.
+- Anfragen/Anrufe: Speichern robuster gegen ältere Datenbankstände und neue Prioritätswerte gemacht.
+
+2026-06-07 – Anfragen-Redesign & Sidebar-Badge
+- Anfrage-Tickets wurden vollständig im EstrichWeb-Design neu aufgebaut: kompakter Kopfbereich, horizontale Statusleiste, klare Kontakt-/Bedarf-/Bearbeitungsbereiche und mobile Optimierung.
+- Die Anfrage-Detailseite ist platzsparender und besser mobil nutzbar; Schnellaktionen und Ticketdaten sind übersichtlich rechts bzw. mobil untereinander angeordnet.
+- Die Badge-Zahl bei Materialbestellungen in der Sidebar steht jetzt sauber in einer Zeile mit Icon und Menütext.
+
+2026-06-07 – Materialbestellungen Feinschliff
+- Die zentrale Materialbestellungsübersicht wurde an das Bauakten-Design angeglichen: kompakte Kopfzeile, klare Status-Kennzahlen, Bauakten-nahe Bestellkarten und mobil optimierte Aktionsbereiche.
+- Die Bestell-PDF wurde grundlegend an die bestehende Bauakten-PDF-Optik angepasst: schwarz-weißes Formularlayout, graue Abschnittsbalken, klare Infoboxen, Tabellenrahmen und Freigabebereich.
+
+2026-06-07 – Mobile & PDF Feinschliff
+- Anfragen verwenden bei Estrichart nun die gepflegten Stammdatenwerte aus der Datenbank.
+- Anfragen-Listen und Anfrage-Detailseite wurden für Handys weiter verdichtet: kompakte Ticketkarten, kleinere Statusleiste und platzsparende Detailbereiche.
+- Die mobile Bauaktenanlage wurde neu als kompakter vertikaler Accordion-Stepper aufgebaut; Desktop bleibt unverändert.
+- Überschriften sind mobil konsequent linksbündig.
+- Die PDF-Footer von Bauakten- und Kolonnenplan-Ausgaben wurden höher gesetzt, damit sie beim Ausdruck nicht mehr abgeschnitten werden.
+
+2026-06-07 – Material, Anrufe & Disposition
+- Materialbestellungsübersicht weiter verdichtet: kleinere Karten, weichere Rundungen, kompaktere Aktionsbereiche und bessere mobile Darstellung.
+- Bestell-PDF bleibt DIN-5008-orientiert, übernimmt aber wieder die klare EstrichWeb-/Bauakten-Formularoptik.
+- Anrufe können optional mit einem Kunden verknüpft werden; Kundendetails werden direkt in der Anrufmaske angezeigt.
+- Beim Bearbeiten von Einplanungen im Kolonnenplan werden die aktuellen Daten frisch aus der API geladen, inklusive Auftrag, Baustelle und Ressourcen.

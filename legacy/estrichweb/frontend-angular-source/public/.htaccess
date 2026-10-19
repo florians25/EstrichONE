@@ -1,0 +1,40 @@
+# ============================================================================
+# EstrichWeb – Root .htaccess
+# Diese Datei gehoert in den DOCUMENT-ROOT (dieselbe Ebene wie index.html + /api).
+# Verhindert 404 beim Aktualisieren von Angular-Routen wie /auftragsakte.
+# ============================================================================
+
+DirectoryIndex index.html
+Options -MultiViews -Indexes
+RewriteEngine On
+RewriteBase /
+
+# --- Authorization-Header fuer PHP durchreichen (Shared-Hosting strippt ihn oft) ---
+SetEnvIfNoCase Authorization "^Bearer (.*)" HTTP_AUTHORIZATION=Bearer\ $1
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+RewriteRule .* - [E=REDIRECT_HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+# --- /api wird NICHT vom SPA-Fallback erfasst: an PHP weiterreichen ---
+RewriteRule ^api(/|$) - [L]
+
+# --- Statische Dateien (JS, CSS, Bilder, favicon ...) direkt ausliefern ---
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# --- Alles andere -> index.html (Angular-Router uebernimmt das Routing) ---
+RewriteRule . /index.html [L]
+
+# --- Korrekte MIME-Typen ---
+<IfModule mod_mime.c>
+  AddType application/javascript .js
+  AddType text/css .css
+  AddType application/manifest+json .webmanifest
+</IfModule>
+
+# --- Kein Caching der index.html (immer frischen App-Stand laden) ---
+<IfModule mod_headers.c>
+  <FilesMatch "index\.html$">
+    Header set Cache-Control "no-cache, no-store, must-revalidate"
+  </FilesMatch>
+</IfModule>

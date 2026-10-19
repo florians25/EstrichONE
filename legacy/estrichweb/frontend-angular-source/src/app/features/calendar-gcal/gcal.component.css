@@ -1,0 +1,359 @@
+/* =====================================================================
+   Kalender im Stil von Google Kalender
+   ---------------------------------------------------------------------
+   Ziel ist Wiedererkennung: gleiche Anordnung, gleiche Proportionen,
+   gleiche Bedienlogik. Farben und Schrift folgen dem EstrichWeb-Design,
+   damit es kein Fremdkörper wird.
+   ===================================================================== */
+:host { display: block; }
+
+.gc {
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - 92px);
+  min-height: 520px;
+  background: #fff;
+  border: 1px solid #dadce0;
+  border-radius: 12px;
+  overflow: hidden;
+  color: #3c4043;
+  font-size: 14px;
+}
+
+/* ---------- Kopfleiste ---------- */
+.gc-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-bottom: 1px solid #dadce0;
+  flex: 0 0 auto;
+}
+.gc-brand { display: inline-flex; align-items: center; gap: 8px; margin-right: 8px; }
+.gc-brand b { font-size: 1.24rem; font-weight: 400; color: #3c4043; letter-spacing: -.01em; }
+.gc-brand .mat-icon { color: #1a73e8 !important; }
+
+.gc-icon {
+  width: 40px; height: 40px; border: 0; border-radius: 50%;
+  background: transparent; color: #5f6368; cursor: pointer;
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+}
+.gc-icon:hover { background: #f1f3f4; }
+.gc-icon .mat-icon { color: #5f6368 !important; }
+
+.gc-today {
+  height: 36px; padding: 0 16px; margin-right: 4px;
+  border: 1px solid #dadce0; border-radius: 18px;
+  background: #fff; color: #3c4043; cursor: pointer;
+  font: inherit; font-size: .88rem;
+}
+.gc-today:hover { background: #f1f3f4; }
+
+.gc-title {
+  margin: 0 0 0 6px;
+  font-size: 1.32rem; font-weight: 400; color: #3c4043;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gc-spacer { flex: 1 1 auto; }
+
+.gc-search {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 40px; padding: 0 14px; border-radius: 8px;
+  background: #f1f3f4; min-width: 200px; max-width: 320px; flex: 0 1 280px;
+}
+.gc-search input { border: 0; outline: none; background: transparent; font: inherit; font-size: .88rem; width: 100%; color: #3c4043; }
+.gc-search .mat-icon { color: #5f6368 !important; flex: 0 0 auto; }
+
+.gc-viewbtn {
+  display: inline-flex; align-items: center; gap: 2px;
+  height: 36px; padding: 0 8px 0 16px;
+  border: 1px solid #dadce0; border-radius: 18px;
+  background: #fff; color: #3c4043; cursor: pointer; font: inherit; font-size: .88rem;
+}
+.gc-viewbtn:hover { background: #f1f3f4; }
+.gc-key { margin-left: auto; color: #80868b; font-size: .78rem; }
+
+/* ---------- Rumpf ---------- */
+.gc-body { display: flex; flex: 1 1 auto; min-height: 0; }
+
+/* ---------- Seitenleiste ---------- */
+.gc-side {
+  width: 256px; flex: 0 0 256px;
+  border-right: 1px solid #dadce0;
+  padding: 12px 10px 16px;
+  overflow-y: auto;
+}
+.gc-create {
+  display: inline-flex; align-items: center; gap: 10px;
+  height: 48px; padding: 0 22px 0 18px; margin: 4px 0 18px;
+  border: 1px solid transparent; border-radius: 24px;
+  background: #fff; color: #3c4043; cursor: pointer;
+  font: inherit; font-size: .92rem; font-weight: 500;
+  box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.15);
+}
+.gc-create:hover { background: #f8f9fa; box-shadow: 0 1px 3px rgba(60,64,67,.3), 0 4px 8px 3px rgba(60,64,67,.2); }
+.gc-create .mat-icon { color: #1a73e8 !important; }
+
+/* Mini-Monat */
+.gc-mini { margin-bottom: 18px; }
+.gc-mini header { display: flex; align-items: center; justify-content: space-between; padding: 0 4px 6px; }
+.gc-mini header b { font-size: .84rem; font-weight: 500; color: #3c4043; }
+.gc-mini-nav {
+  width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: transparent; color: #5f6368; cursor: pointer; display: inline-grid; place-items: center;
+}
+.gc-mini-nav:hover { background: #f1f3f4; }
+.gc-mini-nav .mat-icon { font-size: 17px !important; width: 17px !important; height: 17px !important; color: #5f6368 !important; }
+.gc-mini-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 1px 0; }
+.gc-mini-wd { text-align: center; font-size: .66rem; color: #70757a; padding: 3px 0; }
+/* Tagesfeld im Mini-Monat.
+   Der Button ist nur die Trefferfläche und hat KEINEN Hintergrund. Die runde
+   Fläche liegt auf .gc-mini-face – ein quadratisches Element mit fester
+   Kantenlänge. Damit kann weder eine Mindestbreite noch ein Innenabstand aus
+   einer Button-Regel die Form zu einer Ellipse ziehen. */
+.gc-mini-day {
+  position: relative;
+  display: grid; place-items: center;
+  width: 100%; height: 34px;
+  min-width: 0 !important; max-width: none !important;
+  padding: 0 !important; margin: 0;
+  border: 0; background: transparent !important;
+  cursor: pointer; font: inherit;
+}
+.gc-mini-face {
+  display: grid; place-items: center;
+  width: 30px; height: 30px;
+  min-width: 30px; max-width: 30px;
+  min-height: 30px; max-height: 30px;
+  aspect-ratio: 1 / 1;
+  box-sizing: border-box;
+  border-radius: 50%;
+  font-size: .74rem; line-height: 1; color: #3c4043;
+  transition: background-color .1s ease;
+}
+.gc-mini-day:hover .gc-mini-face { background: #f1f3f4; }
+.gc-mini-day.other .gc-mini-face { color: #b7bcc2; }
+.gc-mini-day.sel:not(.today) .gc-mini-face { background: #e8f0fe; color: #1967d2; font-weight: 600; }
+.gc-mini-day.today .gc-mini-face { background: #1a73e8; color: #fff; font-weight: 600; }
+.gc-mini-day.has::after {
+  content: ''; position: absolute; bottom: 1px; left: 50%; transform: translateX(-50%);
+  width: 3px; height: 3px; min-width: 3px; aspect-ratio: 1 / 1;
+  border-radius: 50%; background: #1a73e8;
+}
+.gc-mini-day.today.has::after { background: #1a73e8; opacity: 0; }
+
+/* Kalenderliste */
+.gc-cals h3 {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 0 0 6px; padding: 0 0 0 4px; font-size: .82rem; font-weight: 500; color: #3c4043;
+}
+.gc-addcal {
+  width: 28px; height: 28px; border: 0; border-radius: 50%;
+  background: transparent; color: #5f6368; cursor: pointer; display: inline-grid; place-items: center;
+}
+.gc-addcal:hover { background: #f1f3f4; }
+.gc-addcal .mat-icon { font-size: 18px !important; width: 18px !important; height: 18px !important; color: #5f6368 !important; }
+.gc-cal { display: flex; align-items: center; gap: 12px; padding: 6px 4px; border-radius: 4px; cursor: pointer; }
+.gc-cal:hover { background: #f1f3f4; }
+.gc-cal input { position: absolute; opacity: 0; width: 0; height: 0; }
+.gc-box {
+  width: 18px; height: 18px; min-width: 18px; aspect-ratio: 1 / 1; border-radius: 4px; border: 2px solid;
+  display: inline-grid; place-items: center; flex: 0 0 auto;
+}
+.gc-box .mat-icon { font-size: 14px !important; width: 14px !important; height: 14px !important; color: #fff !important; opacity: 0; }
+.gc-cal input:checked + .gc-box .mat-icon { opacity: 1; }
+.gc-cal-name { font-size: .84rem; color: #3c4043; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- Hauptbereich ---------- */
+.gc-main { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+
+/* ---------- Mobil ---------- */
+@media (max-width: 1000px) {
+  .gc-side { display: none; }
+}
+
+
+
+/* ---------- Detailfenster (Popover) ---------- */
+/* Die Überlagerung beginnt hinter der Seitenleiste der Anwendung, damit das
+   Fenster mittig im Inhaltsbereich sitzt und die Navigation bedienbar bleibt.
+   Die Breite liefert die Anwendungsschale als --ew-sidebar-width. */
+.gc-pop-backdrop {
+  position: fixed; top: 0; right: 0; bottom: 0;
+  left: var(--ew-sidebar-width, 0px);
+  z-index: 1200;
+  background: rgba(32,33,36,.32);
+  display: grid; place-items: center; padding: 20px;
+}
+.gc-pop {
+  width: min(460px, 94vw); max-height: 86vh; overflow-y: auto;
+  background: #fff; border-radius: 10px;
+  box-shadow: 0 24px 38px 3px rgba(60,64,67,.16), 0 9px 46px 8px rgba(60,64,67,.12), 0 11px 15px -7px rgba(60,64,67,.2);
+  overflow: hidden;
+}
+.gc-pop-head { display: flex; align-items: center; gap: 2px; padding: 6px 8px; }
+.gc-pop-body { padding: 2px 22px 22px; }
+.gc-pop-title { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 14px; align-items: start; margin-bottom: 16px; }
+.gc-pop-dot { width: 14px; height: 14px; min-width: 14px; aspect-ratio: 1 / 1; border-radius: 50%; margin-top: 6px; flex: none; }
+.gc-pop-title b { display: block; font-size: 1.24rem; font-weight: 400; color: #3c4043; line-height: 1.3; }
+.gc-pop-title span { font-size: .84rem; color: #5f6368; }
+.gc-pop-row { display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 14px; align-items: start; margin: 0 0 12px; font-size: .84rem; color: #3c4043; }
+.gc-pop-row .mat-icon { color: #5f6368 !important; font-size: 17px !important; width: 17px !important; height: 17px !important; margin-top: 1px; }
+.gc-pop-desc { white-space: pre-wrap; }
+.gc-pop-locked {
+  display: flex; align-items: center; gap: 8px;
+  margin: 0 0 14px; padding: 8px 11px; border-radius: 6px;
+  background: #fef7ed; border: 1px solid #f3d3ae; color: #8a5a12; font-size: .8rem;
+}
+.gc-pop-locked .mat-icon { color: #b45309 !important; font-size: 16px !important; width: 16px !important; height: 16px !important; }
+.gc-pop-link {
+  display: grid; grid-template-columns: 14px minmax(0, 1fr) 18px; gap: 14px; align-items: center;
+  margin-top: 14px; padding: 10px 12px; border: 1px solid #dadce0; border-radius: 8px;
+  color: #1a73e8; font-size: .84rem; text-decoration: none;
+}
+.gc-pop-link:hover { background: #f8fbff; border-color: #1a73e8; }
+.gc-pop-link .mat-icon { color: #1a73e8 !important; font-size: 17px !important; width: 17px !important; height: 17px !important; }
+.gc-pop-link span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.gc-pop-go { justify-self: end; }
+@media (max-width: 600px) {
+  .gc-pop-backdrop { place-items: end center; padding: 0; }
+  .gc-pop { width: 100%; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* ---------- Detailfenster: Zusatzangaben ---------- */
+.gc-pop-dur { display: block; font-size: .78rem; color: #80868b; margin-top: 2px; }
+.gc-pop-state {
+  display: inline-flex; align-items: center; gap: 7px;
+  border-radius: 16px; padding: 5px 12px; margin-bottom: 16px;
+  font-size: .78rem; font-weight: 600;
+}
+.gc-pop-state .mat-icon { font-size: 16px !important; width: 16px !important; height: 16px !important; }
+.gc-pop-state.st-now { background: #e6f4ea; color: #137333; }
+.gc-pop-state.st-now .mat-icon { color: #137333 !important; }
+.gc-pop-state.st-past { background: #f1f3f4; color: #5f6368; }
+.gc-pop-state.st-past .mat-icon { color: #5f6368 !important; }
+.gc-pop-state.st-future { background: #e8f0fe; color: #1967d2; }
+.gc-pop-state.st-future .mat-icon { color: #1967d2 !important; }
+
+.gc-pop-actions { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; }
+.gc-pop-actions .gc-pop-link { margin-top: 0; }
+.gc-pop-btn {
+  width: 100%; background: #fff; cursor: pointer; font: inherit; text-align: left;
+}
+.gc-pop-btn:hover { background: #f8fbff; border-color: #1a73e8; }
+
+/* =====================================================================
+   Handy-Ansicht
+   ---------------------------------------------------------------------
+   Ein Stundenraster mit sieben Spalten ergibt auf dem Handy rund 40px je
+   Tag – darin ist kein Titel lesbar. Deshalb dort: drei Tage statt sieben,
+   größere Beschriftung, Wischen zum Blättern und ein Daumenknopf zum
+   Anlegen. Ziehen ist am Handy abgeschaltet, weil es mit dem Scrollen
+   kollidiert; geändert wird über das Detailfenster.
+   ===================================================================== */
+
+
+/* Sehr schmale Geräte: zwei Tage statt drei wirken ruhiger */
+
+
+/* =====================================================================
+   Handy: weitere Feinarbeit (18.08.2026)
+   ===================================================================== */
+
+/* Sehr schmale Geräte */
+
+/* =====================================================================
+   HANDY (bis 760px) – EIN Block statt mehrerer konkurrierender
+   ---------------------------------------------------------------------
+   Zuvor gab es drei getrennte 760px-Blöcke, die sich gegenseitig
+   überschrieben (Stundenachse mal 44px, mal 40px; Zellhöhe teils 60px,
+   teils 66px, während das Raster mit 1584px rechnete). Alles zusammengeführt.
+   ===================================================================== */
+@media (max-width: 760px) {
+  /* --- Kopfleiste --- */
+  .gc { height: calc(100dvh - 132px); border-radius: 0; border-left: 0; border-right: 0; }
+  .gc-top { padding: 6px 8px; gap: 4px; }
+  .gc-brand, .gc-search { display: none; }
+  .gc-title { font-size: 1rem; margin-left: 2px; }
+  .gc-today { height: 34px; padding: 0 12px; margin-right: 0; }
+  .gc-icon { width: 42px; height: 42px; }
+  .gc-viewbtn { height: 38px; padding: 0 6px 0 12px; font-size: .84rem; }
+  .gc-side { display: none; }
+
+  /* --- Raster: EINE verbindliche Höhe, sonst sitzen Termine falsch ---
+     24 Stunden × 66px = 1584px. Zellhöhe, Achse, Spalten und Rasterhöhe
+     müssen exakt zusammenpassen. */
+  .gc-grid-head, .gc-allday, .gc-grid { grid-template-columns: 40px repeat(var(--gc-cols, 3), minmax(0, 1fr)); }
+  .gc-slot { height: 66px; }
+  .gc-hour { height: 66px; font-size: .58rem; padding-right: 4px; }
+  .gc-grid, .gc-col, .gc-gutter { height: 1584px; }
+
+  /* Tageskopf bleibt beim Scrollen stehen */
+  .gc-grid-head { position: sticky; top: 0; z-index: 6; background: #fff; }
+  .gc-allday { position: sticky; top: 60px; z-index: 5; background: #fff; }
+  .gc-dayhead { padding: 4px 0 6px; min-height: 52px; }
+  .gc-dayhead small { font-size: .62rem; }
+  .gc-dayhead b { font-size: 1.02rem; width: 30px; height: 30px; min-width: 30px; }
+
+  /* --- Termine --- */
+  .gc-event { border-radius: 7px; padding: 4px 8px; min-height: 22px; }
+  .gc-event b { font-size: .78rem; }
+  .gc-event small { font-size: .72rem; }
+  .gc-event.is-tiny { gap: 6px; }
+  .gc-event.is-narrow small { display: block; }
+  .gc-resize { display: none; }        /* am Handy wird nicht gezogen */
+
+  /* --- Daumenknopf --- */
+  .gc-fab {
+    position: fixed; right: 16px;
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    z-index: 90;
+    width: 56px; height: 56px; min-width: 56px; max-width: 56px;
+    aspect-ratio: 1 / 1; box-sizing: border-box;
+    border: 0; border-radius: 50%; padding: 0;
+    background: #1a73e8; color: #fff; cursor: pointer;
+    display: grid; place-items: center; line-height: 0;
+    box-shadow: 0 4px 10px rgba(60,64,67,.3), 0 1px 18px rgba(60,64,67,.15);
+  }
+  .gc-fab .mat-icon {
+    color: #fff !important;
+    font-size: 26px !important; width: 26px !important; height: 26px !important;
+    line-height: 26px !important; display: block !important; margin: 0 !important;
+  }
+  .gc-fab:active { background: #1662c4; }
+
+  /* --- Monat --- */
+  .gc-month { grid-template-rows: auto repeat(6, minmax(74px, 1fr)); }
+  .gc-mcell { padding: 2px 3px 3px; }
+  .gc-mnum { width: 24px; height: 24px; font-size: .74rem; }
+  .gc-mev small { display: none; }
+  .gc-mev span { font-size: .68rem; }
+
+  /* --- Terminübersicht als Karten --- */
+  .gc-agenda { padding: 6px 10px 90px; }
+  .gc-ag-day { grid-template-columns: 1fr; gap: 6px; padding: 12px 0 14px; }
+  .gc-ag-day header { flex-direction: row; align-items: baseline; gap: 8px; text-align: left; }
+  .gc-ag-day header b { font-size: 1rem; }
+  .gc-ag-row {
+    grid-template-columns: 10px 92px minmax(0, 1fr);
+    background: #fff; border: 1px solid #e8eaed; border-radius: 10px;
+    padding: 12px 10px; min-height: 56px;
+  }
+  .gc-ag-row:active { background: #f1f3f4; }
+  .gc-ag-meta { display: none; }
+  .gc-ag-title { font-size: .92rem; }
+  .gc-ag-time { font-size: .8rem; }
+
+  /* --- Detailfenster von unten --- */
+  .gc-pop-backdrop { left: 0; place-items: end center; padding: 0; }
+  .gc-pop { width: 100%; border-radius: 14px 14px 0 0; padding-bottom: env(safe-area-inset-bottom); }
+}
+
+/* Sehr schmale Geräte */
+@media (max-width: 400px) {
+  .gc-grid-head, .gc-allday, .gc-grid { grid-template-columns: 34px repeat(var(--gc-cols, 3), minmax(0, 1fr)); }
+  .gc-hour { font-size: .54rem; padding-right: 3px; }
+  .gc-dayhead b { font-size: .94rem; width: 27px; height: 27px; min-width: 27px; }
+  .gc-event b { font-size: .74rem; }
+  .gc-ag-row { grid-template-columns: 10px 80px minmax(0, 1fr); }
+}
