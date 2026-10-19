@@ -145,49 +145,32 @@ internal static class BauakteEndpoints
     }
 
     private static async Task<Results<Created<BauakteDetail>, Ok<BauakteDetail>, ProblemHttpResult>> CreateAsync(
-        CreateBauakteRequest request, EstrichOneDbContext db, ICurrentUser currentUser, BauakteNumberGenerator numbers,
-        HttpContext http, CancellationToken cancellationToken)
+        CreateBauakteRequest request, BauakteCommands commands, HttpContext http, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty || string.IsNullOrWhiteSpace(request.Title))
         {
             return Validation("Id und Bezeichnung sind erforderlich.");
         }
 
-        var existing = await db.Set<Bauakte>().IgnoreQueryFilters([QueryFilters.NotDeleted])
-            .AsNoTracking().SingleOrDefaultAsync(b => b.Id == request.Id, cancellationToken);
-        if (existing is not null)
+        var (bauakte, outcome) = await commands.CreateAsync(new NewBauakte(request.Id, request.Title, request.Street,
+            request.PostalCode, request.City, request.Latitude, request.Longitude, request.Description, request.CustomerId,
+            request.TemplateKey), cancellationToken);
+
+        switch (outcome)
         {
-            // Wiederholte Übertragung derselben Anlage (z. B. nach Verbindungsabbruch): gespeicherten Stand zurückgeben.
-            if (existing.CreatedByUserId == currentUser.UserId && existing.Title == request.Title.Trim() && existing.DeletedAt is null)
-            {
-                SetETag(http, existing.Version);
-                return TypedResults.Ok(ToDetail(existing));
-            }
-
-            return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "ID bereits vergeben",
-                detail: "Unter dieser ID existiert bereits eine andere Bauakte.",
-                extensions: new Dictionary<string, object?> { ["code"] = "ID_CONFLICT" });
+            case CreateBauakteOutcome.IdConflict:
+                return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "ID bereits vergeben",
+                    detail: "Unter dieser ID existiert bereits eine andere Bauakte.",
+                    extensions: new Dictionary<string, object?> { ["code"] = "ID_CONFLICT" });
+            case CreateBauakteOutcome.UnknownCustomer:
+                return Validation("Der angegebene Kunde existiert nicht.", "UNKNOWN_CUSTOMER");
+            case CreateBauakteOutcome.AlreadyExists:
+                SetETag(http, bauakte!.Version);
+                return TypedResults.Ok(ToDetail(bauakte));
+            default:
+                SetETag(http, bauakte!.Version);
+                return TypedResults.Created($"/api/v1/bauakten/{bauakte.Id}", ToDetail(bauakte));
         }
-
-        if (request.CustomerId is { } customerId && !await db.Set<Contact>().AnyAsync(c => c.Id == customerId, cancellationToken))
-        {
-            return Validation("Der angegebene Kunde existiert nicht.", "UNKNOWN_CUSTOMER");
-        }
-
-        var bauakte = Bauakte.Create(request.Id, request.Title, currentUser.UserId);
-        bauakte.ChangeAddress(request.Street, request.PostalCode, request.City, request.Latitude, request.Longitude);
-        bauakte.Describe(request.Description);
-        bauakte.AssignCustomer(request.CustomerId);
-        bauakte.ApplyTemplate(request.TemplateKey);
-
-        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
-        bauakte.AssignNumber(await numbers.NextAsync(cancellationToken));
-        db.Add(bauakte);
-        await db.SaveChangesAsync(cancellationToken);
-        await transaction.CommitAsync(cancellationToken);
-
-        SetETag(http, bauakte.Version);
-        return TypedResults.Created($"/api/v1/bauakten/{bauakte.Id}", ToDetail(bauakte));
     }
 
     private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> UpdateAsync(
@@ -253,7 +236,7 @@ internal static class BauakteEndpoints
         return TypedResults.NoContent();
     }
 
-    private static BauakteDetail ToDetail(Bauakte b) => new(
+    internal static BauakteDetail ToDetail(Bauakte b) => new(
         b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.Latitude, b.Longitude, b.Description,
         b.CustomerId, b.TemplateKey, b.ResponsibleUserId, b.CreatedByUserId, b.CreatedAt, b.UpdatedAt, b.Version);
 

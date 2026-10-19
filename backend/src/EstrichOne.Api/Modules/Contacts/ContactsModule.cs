@@ -1,4 +1,5 @@
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Modules.Sync.Exports;
 
 namespace EstrichOne.Api.Modules.Contacts;
 
@@ -8,6 +9,7 @@ public sealed class ContactsModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ContactImport>();
+        services.AddScoped<ISyncEntitySource, ContactSource>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api) => ContactEndpoints.Map(api);

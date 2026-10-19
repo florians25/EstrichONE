@@ -1257,6 +1257,59 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Sync.ProcessedOperation", b =>
+                {
+                    b.Property<Guid>("OpId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("op_id");
+
+                    b.Property<Guid?>("DeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("device_id");
+
+                    b.Property<Guid>("EntityId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("entity_id");
+
+                    b.Property<DateTimeOffset>("ProcessedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("processed_at");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("result");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("type");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.HasKey("OpId")
+                        .HasName("pk_sync_operations");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("ix_sync_operations_status")
+                        .HasFilter("status = 'Rejected'");
+
+                    b.HasIndex("UserId", "ProcessedAt")
+                        .HasDatabaseName("ix_sync_operations_user_id_processed_at");
+
+                    b.ToTable("sync_operations", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Work.WorkItem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1535,6 +1588,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_sessions_user_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Sync.ProcessedOperation", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_sync_operations_users_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Work.WorkItem", b =>

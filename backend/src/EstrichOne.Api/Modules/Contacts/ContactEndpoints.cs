@@ -119,6 +119,6 @@ internal static class ContactEndpoints
         return TypedResults.Ok(await import.ImportAsync(buffer.ToArray(), dryRun, cancellationToken));
     }
 
-    private static ContactResponse ToResponse(Contact c) => new(c.Id, c.Kind, c.Name, c.CustomerNumber, c.Street, c.PostalCode,
+    internal static ContactResponse ToResponse(Contact c) => new(c.Id, c.Kind, c.Name, c.CustomerNumber, c.Street, c.PostalCode,
         c.City, c.Phone, c.Email, c.Notes, c.Version);
 }

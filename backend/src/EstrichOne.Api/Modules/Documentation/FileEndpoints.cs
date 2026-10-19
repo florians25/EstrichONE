@@ -215,7 +215,7 @@ internal static class FileEndpoints
         return TypedResults.Ok(files.Select(ToResponse).ToList());
     }
 
-    private static FileResponse ToResponse(FileRecord f) => new(f.Id, f.BauakteId, f.Kind, f.State, f.Variants, f.OriginalName,
+    internal static FileResponse ToResponse(FileRecord f) => new(f.Id, f.BauakteId, f.Kind, f.State, f.Variants, f.OriginalName,
         f.ContentType, f.SizeBytes, f.Sha256, f.Caption, f.CapturedAt, f.Latitude, f.Longitude, f.UploadedByUserId, f.CreatedAt, f.Version);
 
     private static ProblemHttpResult ProblemFor(FileFailure failure) => failure switch

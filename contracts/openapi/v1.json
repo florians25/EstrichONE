@@ -1772,6 +1772,120 @@
           }
         }
       }
+    },
+    "/api/v1/sync/push": {
+      "post": {
+        "tags": [
+          "Synchronisation"
+        ],
+        "summary": "Outbox-Operationen in Reihenfolge anwenden (max. 100); idempotent über opId",
+        "operationId": "SyncPush",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PushRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sync/pull": {
+      "get": {
+        "tags": [
+          "Synchronisation"
+        ],
+        "summary": "Änderungen seit dem Cursor; ohne Cursor = vollständiger Abgleich. 409 RESYNC_REQUIRED nach Wiederherstellung",
+        "operationId": "SyncPull",
+        "parameters": [
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 200
+            }
+          },
+          {
+            "name": "includeScope",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PullResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -2415,6 +2529,39 @@
           "retired"
         ]
       },
+      "FieldConflict": {
+        "required": [
+          "field",
+          "serverValue",
+          "clientValue"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "serverValue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonNode"
+              }
+            ]
+          },
+          "clientValue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonNode"
+              }
+            ]
+          }
+        }
+      },
       "FileKind": {
         "enum": [
           "photo",
@@ -2605,6 +2752,10 @@
           }
         }
       },
+      "JsonNode": {},
+      "JsonObject": {
+        "type": "object"
+      },
       "LoginRequest": {
         "required": [
           "login",
@@ -2686,6 +2837,102 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "PullResponse": {
+        "required": [
+          "changes",
+          "cursor",
+          "hasMore",
+          "visibleBauakteIds"
+        ],
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncChange"
+            }
+          },
+          "cursor": {
+            "type": "string"
+          },
+          "hasMore": {
+            "type": "boolean"
+          },
+          "visibleBauakteIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "PushOperation": {
+        "required": [
+          "opId",
+          "type",
+          "entityId",
+          "baseVersion",
+          "payload"
+        ],
+        "type": "object",
+        "properties": {
+          "opId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "type": {
+            "maxLength": 50,
+            "type": "string"
+          },
+          "entityId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "baseVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "payload": {
+            "$ref": "#/components/schemas/JsonObject"
+          }
+        }
+      },
+      "PushRequest": {
+        "required": [
+          "operations"
+        ],
+        "type": "object",
+        "properties": {
+          "operations": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PushOperation"
+            }
+          }
+        }
+      },
+      "PushResponse": {
+        "required": [
+          "results"
+        ],
+        "type": "object",
+        "properties": {
+          "results": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncOperationResult"
+            }
           }
         }
       },
@@ -2994,6 +3241,90 @@
         "type": "string",
         "format": "binary"
       },
+      "SyncChange": {
+        "required": [
+          "entityType",
+          "id",
+          "deleted",
+          "data"
+        ],
+        "type": "object",
+        "properties": {
+          "entityType": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "data": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonNode"
+              }
+            ]
+          }
+        }
+      },
+      "SyncOperationResult": {
+        "required": [
+          "opId",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "opId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "status": {
+            "$ref": "#/components/schemas/SyncOperationStatus"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "conflicts": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/FieldConflict"
+            }
+          },
+          "entity": {}
+        }
+      },
+      "SyncOperationStatus": {
+        "enum": [
+          "applied",
+          "duplicate",
+          "conflict",
+          "rejected"
+        ]
+      },
       "TokenResponse": {
         "required": [
           "accessToken",
@@ -3205,6 +3536,9 @@
     },
     {
       "name": "Ersteinrichtung"
+    },
+    {
+      "name": "Synchronisation"
     }
   ]
 }
