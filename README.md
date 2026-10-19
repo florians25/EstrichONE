@@ -4,7 +4,8 @@ Kostenlose, selbst hostbare Branchensoftware für Estrichbetriebe. Nachfolger vo
 
 > **Status: Implementierung läuft** (Roadmap: `docs/reengineering/20-entwicklungsroadmap.md`).
 > Fertig: AP-01 bis AP-09 – Server-Fundament inkl. Dateiservice, Sync-Protokoll ([Spezifikation](docs/sync-protokoll.md)) sowie Backup und Wiederherstellung ([Betrieb](deploy/README.md)).
-> In Arbeit: AP-10 – [iOS-App](ios/README.md) mit Server-Einrichtung (QR-Code oder Adresse, Verbindungsprüfung).
+> AP-10 – [iOS-App](ios/README.md): Grundgerüst und Server-Einrichtung (QR-Code oder Adresse, Verbindungsprüfung).
+> Als Nächstes: AP-11 – Geräteregistrierung, Anmeldung und Poolgeräte in der iOS-App.
 
 ## Inhalt
 
