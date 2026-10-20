@@ -47,6 +47,9 @@ public struct BauakteService: Sendable {
     public let userId: UUID
     private let now: @Sendable () -> Date
 
+    /// Aktuelle Zeit (im Test steuerbar); auch für Erweiterungen in anderen Dateien.
+    func currentDate() -> Date { now() }
+
     public init(store: LocalStore, files: FileVault, userId: UUID, now: @escaping @Sendable () -> Date = Date.init) {
         self.store = store
         self.files = files

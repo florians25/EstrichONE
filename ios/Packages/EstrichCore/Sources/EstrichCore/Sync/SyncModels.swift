@@ -8,11 +8,14 @@ public enum EntityType: String, CaseIterable, Sendable {
     case workItem
     case contact
     case screedType
+    case diaryEntry
+    case inspection
 
-    /// Präfix der Operationstypen (`bauakte.create`, `workitem.update`).
+    /// Präfix der Operationstypen (`bauakte.create`, `workitem.update`, `diary.create`).
     var operationPrefix: String {
         switch self {
         case .workItem: "workitem"
+        case .diaryEntry: "diary"
         default: rawValue
         }
     }

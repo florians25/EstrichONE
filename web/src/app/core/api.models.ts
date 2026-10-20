@@ -146,3 +146,54 @@ export interface Problem {
   code?: string;
   errors?: Record<string, string[]>;
 }
+
+export interface DirectoryUser {
+  id: string;
+  displayName: string;
+  isActive: boolean;
+}
+
+export interface BauakteHistoryEntry {
+  at: string;
+  action: string;
+  actorUserId: string | null;
+  actorName: string | null;
+  text: string;
+}
+
+export type DiaryWeather = 'sunny' | 'cloudy' | 'rain' | 'snow' | 'frost' | 'wind';
+
+export interface DiaryEntry {
+  id: string;
+  bauakteId: string;
+  authorUserId: string;
+  day: string;
+  text: string;
+  weather: DiaryWeather | null;
+  temperatureCelsius: number | null;
+  workersPresent: number | null;
+  createdAt: string;
+  editedAt: string | null;
+}
+
+export type CheckResult = 'ok' | 'notOk' | 'notApplicable';
+
+export interface Inspection {
+  id: string;
+  bauakteId: string;
+  kind: 'initialInspection' | 'cmMeasurement';
+  performedByUserId: string;
+  performedAt: string;
+  correctsInspectionId: string | null;
+  remarks: string | null;
+  notRequired: boolean;
+  checks: Record<string, CheckResult>;
+  photoFileIds: string[];
+  location: string | null;
+  binder: 'cement' | 'calciumSulfate' | null;
+  heated: boolean | null;
+  thicknessMm: number | null;
+  measuredCmPercent: number | null;
+  limitCmPercent: number | null;
+  isReadyForCovering: boolean | null;
+}

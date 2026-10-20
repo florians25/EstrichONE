@@ -194,4 +194,29 @@ struct LiveServerTests {
         #expect(try await second.store.conflicts().map(\.conflict.field) == ["city"])
         #expect(try await second.store.entity(.bauakte, bauakte)?.data["city"]?.string == "Altdorf")
     }
+
+    @Test("Bautagebuch, CM-Messung und Erstbegehung über den echten Server; Belegreife stimmt mit der App überein")
+    func siteRecords() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let bauakte = try await service.create(NewBauakte(title: "Prüfungen Integrationstest"))
+        try await service.addDiaryEntry(NewDiaryEntry(day: "2026-10-20", text: "Estrich eingebracht", weather: .cloudy, temperatureCelsius: 12), to: bauakte)
+        let cm = try await service.addCmMeasurement(to: bauakte, location: "Bad", binder: .calciumSulfate, heated: true, thicknessMm: 50,
+                                                    measuredCmPercent: 0.3)
+        let initial = try await service.addInitialInspection(to: bauakte, notRequired: false, checks: [.substrate: .ok, .access: .notOk],
+                                                             photoFileIds: [], remarks: "Zufahrt nur mit kleinem Lkw")
+        let local = try #require(try await service.inspections(of: bauakte).first { $0.id == cm })
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled)
+
+        let synced = try #require(try await service.inspections(of: bauakte).first { $0.id == cm })
+        #expect(synced.limitCmPercent == local.limitCmPercent && synced.limitCmPercent == 0.3)
+        #expect(synced.isReadyForCovering == true && local.isReadyForCovering == true)
+        #expect(try await service.inspections(of: bauakte).first { $0.id == initial }?.checks[.access] == .notOk)
+        #expect(try await service.diary(of: bauakte).first?.weather == .cloudy)
+
+        let history = try await device.client.history(of: bauakte)
+        #expect(history.contains { $0.text.hasSuffix("hat das Bautagebuch für den 20.10.2026 ergänzt.") })
+        #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-% – belegreif.") })
+    }
 }

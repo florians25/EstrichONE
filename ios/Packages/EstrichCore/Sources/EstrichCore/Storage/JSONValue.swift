@@ -54,6 +54,7 @@ public enum JSONValue: Codable, Hashable, Sendable {
     public var number: Double? { if case let .number(value) = self { value } else { nil } }
     public var bool: Bool? { if case let .bool(value) = self { value } else { nil } }
     public var object: [String: JSONValue]? { if case let .object(value) = self { value } else { nil } }
+    public var array: [JSONValue]? { if case let .array(value) = self { value } else { nil } }
     public var isNull: Bool { self == .null }
 
     public init(_ string: String?) { self = string.map(JSONValue.string) ?? .null }

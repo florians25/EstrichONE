@@ -458,9 +458,12 @@ public actor LocalStore {
         case .workItem: ["title", "description"]
         case .contact: ["name", "customerNumber", "street", "city", "email", "phone"]
         case .screedType: ["name", "designation"]
+        case .diaryEntry: ["text"]
+        case .inspection: ["location", "remarks"]
         }
         let search = searchFields.compactMap { data[$0]?.string }.joined(separator: " ").lowercased()
-        let sortKey = data["updatedAt"]?.string ?? data["createdAt"]?.string ?? data["capturedAt"]?.string ?? ""
+        let sortKey = data["performedAt"]?.string ?? data["day"]?.string.map { $0 + (data["createdAt"]?.string ?? "") }
+            ?? data["updatedAt"]?.string ?? data["createdAt"]?.string ?? data["capturedAt"]?.string ?? ""
         return [SQLValue(parent), .text(search), .text(sortKey)]
     }
 

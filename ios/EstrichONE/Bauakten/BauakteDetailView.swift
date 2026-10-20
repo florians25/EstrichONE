@@ -1,7 +1,8 @@
 import EstrichCore
 import SwiftUI
 
-/// Bauakte auf dem Gerät (07, Abschnitt 2): Kopf, Kunde, Navigation, Aufgaben und Mängel, Notizen, Fotos, Verlauf.
+/// Bauakte auf dem Gerät (07, Abschnitt 2): Kopf, Kunde, Navigation, Aufgaben und Mängel, Prüfungen, Bautagebuch,
+/// Notizen, Fotos, Verlauf.
 struct BauakteDetailView: View {
     let bauakteId: UUID
 
@@ -13,7 +14,15 @@ struct BauakteDetailView: View {
     @State private var customer: Contact?
     @State private var names: [UUID: String] = [:]
     @State private var addingNote = false
-    @State private var addingWorkItem: WorkItemKind?
+    @State private var diary: [DiaryEntry] = []
+    @State private var inspections: [Inspection] = []
+    @State private var form: CaptureForm?
+
+    /// Was über das „+“-Menü erfasst wird.
+    private enum CaptureForm: String, Identifiable {
+        case task, defect, diary, cmMeasurement, initialInspection
+        var id: String { rawValue }
+    }
     @State private var capturing = false
     @State private var viewing: FileItem?
 
@@ -71,6 +80,28 @@ struct BauakteDetailView: View {
                     }
 
                     Section {
+                        if inspections.isEmpty {
+                            Text("Noch keine Erstbegehung oder CM-Messung.").foregroundStyle(Theme.textSecondary)
+                        }
+                        ForEach(inspections) { inspection in
+                            InspectionRow(inspection: inspection, performerName: inspection.performedByUserId.flatMap { names[$0] })
+                        }
+                    } header: {
+                        Text("Prüfungen (\(inspections.count))")
+                    }
+
+                    Section {
+                        if diary.isEmpty {
+                            Text("Noch keine Einträge im Bautagebuch.").foregroundStyle(Theme.textSecondary)
+                        }
+                        ForEach(diary) { entry in
+                            DiaryRow(entry: entry, authorName: entry.authorUserId.flatMap { names[$0] })
+                        }
+                    } header: {
+                        Text("Bautagebuch (\(diary.count))")
+                    }
+
+                    Section {
                         if notes.isEmpty {
                             Text("Noch keine Notizen.").foregroundStyle(Theme.textSecondary)
                         }
@@ -120,12 +151,15 @@ struct BauakteDetailView: View {
                         .accessibilityIdentifier("addNoteButton")
                         Spacer()
                         Menu {
-                            Button("Aufgabe", systemImage: "checklist") { addingWorkItem = .task }
-                            Button("Mangel", systemImage: "exclamationmark.triangle") { addingWorkItem = .defect }
+                            Button("Aufgabe", systemImage: "checklist") { form = .task }
+                            Button("Mangel", systemImage: "exclamationmark.triangle") { form = .defect }
+                            Button("Bautagebuch", systemImage: "book") { form = .diary }
+                            Button("CM-Messung", systemImage: "drop") { form = .cmMeasurement }
+                            Button("Erstbegehung", systemImage: "checkmark.rectangle.stack") { form = .initialInspection }
                         } label: {
-                            Label("Aufgabe oder Mangel", systemImage: "plus.circle")
+                            Label("Erfassen", systemImage: "plus.circle")
                         }
-                        .accessibilityIdentifier("addWorkItemMenu")
+                        .accessibilityIdentifier("addMenu")
                     }
                 }
                 .fullScreenCover(isPresented: $capturing) {
@@ -137,8 +171,14 @@ struct BauakteDetailView: View {
                 .sheet(isPresented: $addingNote) {
                     NewNoteView(bauakteId: bauakteId) { addingNote = false }
                 }
-                .sheet(item: $addingWorkItem) { kind in
-                    NewWorkItemView(bauakteId: bauakteId, initialKind: kind) { addingWorkItem = nil }
+                .sheet(item: $form) { form in
+                    switch form {
+                    case .task: NewWorkItemView(bauakteId: bauakteId, initialKind: .task) { self.form = nil }
+                    case .defect: NewWorkItemView(bauakteId: bauakteId, initialKind: .defect) { self.form = nil }
+                    case .diary: NewDiaryEntryView(bauakteId: bauakteId) { self.form = nil }
+                    case .cmMeasurement: NewCmMeasurementView(bauakteId: bauakteId) { self.form = nil }
+                    case .initialInspection: InitialInspectionView(bauakte: bauakte) { self.form = nil }
+                    }
                 }
             } else {
                 ContentUnavailableView("Bauakte nicht gefunden", systemImage: "folder.badge.questionmark",
@@ -160,6 +200,8 @@ struct BauakteDetailView: View {
         photos = ((try? await service.files(of: bauakteId)) ?? []).filter(\.isPhoto)
         notes = (try? await service.notes(of: bauakteId)) ?? []
         workItems = (try? await service.workItems(of: bauakteId)) ?? []
+        diary = (try? await service.diary(of: bauakteId)) ?? []
+        inspections = (try? await service.inspections(of: bauakteId)) ?? []
         customer = if let id = bauakte?.customerId { try? await service.contact(id) } else { nil }
         let directory = (try? await service.cachedDirectory()) ?? []
         names = Dictionary(directory.map { ($0.id, $0.displayName) }, uniquingKeysWith: { first, _ in first })

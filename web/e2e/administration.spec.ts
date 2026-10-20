@@ -75,6 +75,40 @@ test('Falsches Passwort wird verständlich abgelehnt; Sicherung zeigt ihren Zust
   await expect(page.getByRole('row', { name: /Letzte Sicherung/ })).toBeVisible();
 });
 
+test('Bauakte im Browser: Prüfungen, Bautagebuch und Verlauf aus der App erscheinen', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  // Wie die App: Erfassen über den Sync (Browser-Sitzung mit CSRF-Schutz).
+  const bauakte = crypto.randomUUID();
+  const results = await page.evaluate(async (id) => {
+    const xsrf = decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '');
+    const op = (type: string, entityId: string, payload: unknown) => ({ opId: crypto.randomUUID(), type, entityId, baseVersion: null, payload });
+    const response = await fetch('/api/v1/sync/push', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf },
+      body: JSON.stringify({
+        operations: [
+          op('bauakte.create', id, { title: 'EFH Prüfung E2E', city: 'Landshut' }),
+          op('diary.create', crypto.randomUUID(), { bauakteId: id, day: '2026-10-20', text: 'Estrich im EG eingebracht', weather: 'rain', temperatureCelsius: 9 }),
+          op('inspection.create', crypto.randomUUID(), { bauakteId: id, kind: 'cmMeasurement', location: 'Bad OG', binder: 'cement', heated: true, measuredCmPercent: 1.6 }),
+          op('inspection.create', crypto.randomUUID(), { bauakteId: id, kind: 'initialInspection', checks: { substrate: 'ok', edgeInsulation: 'notOk' }, remarks: 'Randdämmung fehlt' }),
+        ],
+      }),
+    });
+    return (await response.json()).results.map((r: { status: string }) => r.status);
+  }, bauakte);
+  expect(results).toEqual(['applied', 'applied', 'applied', 'applied']);
+
+  await page.goto(`/bauakten/${bauakte}`);
+  await expect(page.getByRole('heading', { name: 'EFH Prüfung E2E' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Prüfungen (2)' })).toBeVisible();
+  await expect(page.getByText('Bad OG: 1,6 CM-% (Grenzwert 1,8)')).toBeVisible();
+  await expect(page.getByText('Belegreif', { exact: true })).toBeVisible();
+  await expect(page.getByText('Randdämmstreifen vorhanden')).toBeVisible();
+  await expect(page.getByText('Estrich im EG eingebracht')).toBeVisible();
+  await expect(page.getByText('Regen · 9 °C')).toBeVisible();
+  await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-% – belegreif.')).toBeVisible();
+});
+
 async function signIn(page: import('@playwright/test').Page, login: string, password: string) {
   await page.goto('/anmelden');
   await page.getByLabel('Anmeldename oder E-Mail').fill(login);

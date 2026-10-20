@@ -103,7 +103,7 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Schlüssel liegt beim Nachbarn"].waitForExistence(timeout: 5))
 
         // Mangel erfassen, dann abhaken.
-        tap("addWorkItemMenu", in: app)
+        tap("addMenu", in: app)
         app.buttons["Mangel"].firstMatch.tap()
         type("Riss im Flur", into: "workItemTitleField", in: app)
         tap("saveWorkItemButton", in: app)
@@ -113,6 +113,15 @@ final class BauakteUITests: XCTestCase {
         let reopen = NSPredicate(format: "label CONTAINS %@", "Wieder öffnen")
         expectation(for: reopen, evaluatedWith: toggle)
         waitForExpectations(timeout: 10)
+
+        // CM-Messung: Belegreife sofort sichtbar.
+        tap("addMenu", in: app)
+        app.buttons["CM-Messung"].firstMatch.tap()
+        type("Bad OG", into: "cmLocationField", in: app)
+        type("1,6", into: "cmValueField", in: app)
+        XCTAssertEqual(element("readinessLabel", in: app).label, "Belegreif")
+        tap("saveCmButton", in: app)
+        XCTAssertTrue(app.staticTexts["Prüfungen (1)"].waitForExistence(timeout: 5))
 
         // Verlauf vom Server.
         app.swipeUp()
