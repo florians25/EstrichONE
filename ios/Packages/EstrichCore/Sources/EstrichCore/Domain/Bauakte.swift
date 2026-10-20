@@ -53,6 +53,9 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     public let description: String?
     public let customerId: UUID?
     public let templateKey: String?
+    /// Ansprechpartner vor Ort (z. B. Polier), vom Büro gepflegt.
+    public let siteContactName: String?
+    public let siteContactPhone: String?
     public let updatedAt: Date?
     public let syncState: SyncState
 
@@ -70,6 +73,8 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
         description = data["description"]?.string
         customerId = data["customerId"]?.string.flatMap(UUID.init(uuidString:))
         templateKey = data["templateKey"]?.string
+        siteContactName = data["siteContactName"]?.string
+        siteContactPhone = data["siteContactPhone"]?.string
         updatedAt = data["updatedAt"]?.string.flatMap(APIDate.parse)
         syncState = entity.syncState
     }
@@ -88,14 +93,82 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
 public struct Contact: Identifiable, Equatable, Sendable {
     public let id: UUID
     public let name: String
+    public let isCompany: Bool
     public let customerNumber: String?
+    public let street: String?
+    public let postalCode: String?
     public let city: String?
+    public let phone: String?
+    public let email: String?
+    public let syncState: SyncState
 
     public init(_ entity: LocalEntity) {
+        let data = entity.data
         id = entity.id
-        name = entity.data["name"]?.string ?? ""
-        customerNumber = entity.data["customerNumber"]?.string
-        city = entity.data["city"]?.string
+        name = data["name"]?.string ?? ""
+        isCompany = data["kind"]?.string == "company"
+        customerNumber = data["customerNumber"]?.string
+        street = data["street"]?.string
+        postalCode = data["postalCode"]?.string
+        city = data["city"]?.string
+        phone = data["phone"]?.string
+        email = data["email"]?.string
+        syncState = entity.syncState
+    }
+
+    /// „Ahornweg 3, 84028 Landshut“ – nur vorhandene Teile.
+    public var addressLine: String? {
+        let place = [postalCode, city].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " ")
+        let parts = [street, place].compactMap { $0?.isEmpty == false ? $0 : nil }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
+    }
+
+    /// Kurzinfo für Listen: Kundennummer · Ort (oder „Neu“, solange das Büro noch keine Nummer vergeben hat).
+    public var subtitle: String {
+        [customerNumber, city].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " · ")
+    }
+}
+
+/// Dokumentarten wie im Büro (Server: `DocumentCategories`).
+public enum DocumentCategory: String, CaseIterable, Sendable, Identifiable {
+    case delivery
+    case acceptance
+    case plan
+    case order
+    case offer
+    case invoice
+    case customer
+    case office
+    case other
+
+    public var id: String { rawValue }
+
+    public var title: String {
+        switch self {
+        case .offer: "Angebot"
+        case .order: "Auftrag"
+        case .invoice: "Rechnung"
+        case .plan: "Plan"
+        case .delivery: "Lieferschein"
+        case .acceptance: "Abnahme"
+        case .customer: "Kundenunterlagen"
+        case .office: "Büro"
+        case .other: "Sonstiges"
+        }
+    }
+
+    public var symbol: String {
+        switch self {
+        case .offer: "doc.text"
+        case .order: "doc.badge.gearshape"
+        case .invoice: "eurosign.circle"
+        case .plan: "ruler"
+        case .delivery: "shippingbox"
+        case .acceptance: "checkmark.seal"
+        case .customer: "person.text.rectangle"
+        case .office: "building.2"
+        case .other: "doc"
+        }
     }
 }
 
@@ -108,7 +181,10 @@ public struct FileItem: Identifiable, Equatable, Sendable {
     public let contentType: String
     public let sizeBytes: Int64
     public let caption: String?
+    /// Nur bei Dokumenten (`DocumentCategory`).
+    public let category: DocumentCategory?
     public let capturedAt: Date?
+    public let createdAt: Date?
     /// `stored`, sobald der Server den Inhalt vollständig hat.
     public let isStoredOnServer: Bool
     public let syncState: SyncState
@@ -122,10 +198,39 @@ public struct FileItem: Identifiable, Equatable, Sendable {
         contentType = data["contentType"]?.string ?? "application/octet-stream"
         sizeBytes = Int64(data["sizeBytes"]?.number ?? 0)
         caption = data["caption"]?.string
+        category = data["category"]?.string.flatMap(DocumentCategory.init(rawValue:))
         capturedAt = data["capturedAt"]?.string.flatMap(APIDate.parse)
+        createdAt = data["createdAt"]?.string.flatMap(APIDate.parse)
         isStoredOnServer = data["state"]?.string == "stored"
         syncState = entity.syncState
     }
 
     public var isPhoto: Bool { kind == "photo" }
+    public var isDocument: Bool { kind == "document" }
+    public var isPDF: Bool { contentType == "application/pdf" || originalName.lowercased().hasSuffix(".pdf") }
+
+    /// Anzeigename: Beschriftung, sonst Dateiname ohne Endung.
+    public var displayName: String {
+        if let caption, !caption.isEmpty { return caption }
+        let name = Self.splitName(originalName).base
+        return name.isEmpty ? "Datei" : name
+    }
+
+    /// Endung für eine temporäre Kopie (Vorschau, Teilen).
+    public var fileExtension: String {
+        let ext = Self.splitName(originalName).ext.lowercased()
+        if !ext.isEmpty { return ext }
+        switch contentType {
+        case "application/pdf": return "pdf"
+        case "image/png": return "png"
+        case "image/heic": return "heic"
+        default: return "jpg"
+        }
+    }
+
+    /// „Aufmaß EG.pdf“ → („Aufmaß EG“, „pdf“).
+    static func splitName(_ name: String) -> (base: String, ext: String) {
+        guard let dot = name.lastIndex(of: "."), dot != name.startIndex else { return (name, "") }
+        return (String(name[..<dot]), String(name[name.index(after: dot)...]))
+    }
 }

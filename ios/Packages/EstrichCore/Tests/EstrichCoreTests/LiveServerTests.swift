@@ -220,6 +220,34 @@ struct LiveServerTests {
         #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-% – belegreif.") })
     }
 
+    @Test("Neuer Kunde bei der Schnellanlage, gescanntes Dokument und Fotobeschriftung über den echten Server")
+    func customerAndDocuments() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let bauakte = try await service.create(NewBauakte(title: "Kunde Integrationstest"),
+                                               newCustomer: NewCustomer(name: "Familie Integrationstest", phone: "0871 4711",
+                                                                        email: "kunde@example.com", city: "Landshut"))
+        let pdf = Data("%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n".utf8)
+        let document = try await service.addDocument(pdf, title: "Lieferschein 4711", category: .delivery, to: bauakte)
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+        let photo = try await service.addPhoto(png, to: bauakte, capturedAt: Date(), contentType: "image/png", caption: "Bad OG")
+
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled)
+        let synced = try #require(try await service.bauakte(bauakte))
+        let customerId = try #require(synced.customerId)
+        let customer = try #require(try await service.contact(customerId))
+        #expect(customer.name == "Familie Integrationstest" && customer.phone == "0871 4711" && customer.syncState == .synced)
+        let stored = try #require(try await service.documents(of: bauakte).first)
+        #expect(stored.id == document && stored.category == .delivery && stored.caption == "Lieferschein 4711")
+
+        try await service.setCaption("Bad OG, Randdämmstreifen", of: photo)
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled)
+        #expect(try await service.files(of: bauakte).first { $0.id == photo }?.caption == "Bad OG, Randdämmstreifen")
+        #expect(try await device.store.uploads().allSatisfy { $0.state == .done })
+    }
+
     @Test("Helpdesk: Meldung mit Diagnose über den Sync, eigene Liste, Meldung ohne Anmeldung mit Gerätesignatur")
     func helpdesk() async throws {
         let device = try await syncingAccount()

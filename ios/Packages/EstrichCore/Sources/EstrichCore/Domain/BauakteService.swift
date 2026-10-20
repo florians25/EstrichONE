@@ -26,15 +26,60 @@ public struct NewBauakte: Sendable {
     }
 }
 
+/// Neuer Kunde, direkt bei der Anlage einer Bauakte erfasst (offline möglich, `contact.create`).
+public struct NewCustomer: Sendable, Equatable {
+    public var name: String
+    public var isCompany: Bool
+    public var phone: String?
+    public var email: String?
+    public var street: String?
+    public var postalCode: String?
+    public var city: String?
+
+    public init(name: String = "", isCompany: Bool = false, phone: String? = nil, email: String? = nil, street: String? = nil,
+                postalCode: String? = nil, city: String? = nil) {
+        self.name = name
+        self.isCompany = isCompany
+        self.phone = phone
+        self.email = email
+        self.street = street
+        self.postalCode = postalCode
+        self.city = city
+    }
+
+    /// Prüft die Eingaben wie der Server, damit nichts erst bei der Übertragung abgelehnt wird.
+    public func validate() throws(BauakteError) {
+        let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !name.isEmpty else { throw .customerNameRequired }
+        guard name.count <= 200 else { throw .tooLong("Name") }
+        if let email = email?.trimmingCharacters(in: .whitespacesAndNewlines), !email.isEmpty {
+            let parts = email.split(separator: "@", omittingEmptySubsequences: false)
+            guard parts.count == 2, !parts[0].isEmpty, parts[1].contains("."), !email.contains(" "), email.count <= 320 else {
+                throw .invalidEmail
+            }
+        }
+        if let phone, phone.count > 50 { throw .tooLong("Telefon") }
+        if let street, street.count > 200 { throw .tooLong("Straße") }
+        if let postalCode, postalCode.count > 10 { throw .tooLong("PLZ") }
+        if let city, city.count > 100 { throw .tooLong("Ort") }
+    }
+}
+
 public enum BauakteError: Error, Equatable, Sendable {
     case titleRequired
     case textRequired
+    case customerNameRequired
+    case invalidEmail
+    case tooLong(String)
     case storage
 
     public var message: String {
         switch self {
         case .titleRequired: "Bitte eine Bezeichnung eingeben."
         case .textRequired: "Bitte einen Text eingeben."
+        case .customerNameRequired: "Bitte den Namen des Kunden eingeben."
+        case .invalidEmail: "Die E-Mail-Adresse ist ungültig."
+        case let .tooLong(field): "Die Angabe „\(field)“ ist zu lang."
         case .storage: "Die Daten konnten auf diesem Gerät nicht gespeichert werden."
         }
     }
@@ -68,10 +113,15 @@ public struct BauakteService: Sendable {
     }
 
     /// Legt eine Bauakte lokal an (eine Transaktion: Datensatz + Outbox). Die Nummer vergibt der Server.
+    /// Mit `newCustomer` wird zuerst der Kunde angelegt und verknüpft; seine Anlage steht in der Outbox vor der Bauakte.
     @discardableResult
-    public func create(_ input: NewBauakte) async throws(BauakteError) -> UUID {
+    public func create(_ input: NewBauakte, newCustomer: NewCustomer? = nil) async throws(BauakteError) -> UUID {
         let title = input.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { throw .titleRequired }
+        var input = input
+        if let newCustomer {
+            input.customerId = try await createCustomer(newCustomer)
+        }
         let id = UUID.v7(now: now())
         func clean(_ text: String?) -> JSONValue {
             JSONValue(text.flatMap { $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : $0.trimmingCharacters(in: .whitespacesAndNewlines) })
@@ -115,6 +165,54 @@ public struct BauakteService: Sendable {
 
     public func contact(_ id: UUID) async throws -> Contact? {
         try await store.entity(.contact, id).map(Contact.init)
+    }
+
+    /// Legt einen Kunden lokal an (`contact.create`). Die Kundennummer vergibt später das Büro.
+    @discardableResult
+    public func createCustomer(_ input: NewCustomer) async throws(BauakteError) -> UUID {
+        try input.validate()
+        func clean(_ text: String?) -> JSONValue {
+            let trimmed = text?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return JSONValue(trimmed?.isEmpty == false ? trimmed : nil)
+        }
+        let id = UUID.v7(now: now())
+        let payload: [String: JSONValue] = [
+            "name": .string(input.name.trimmingCharacters(in: .whitespacesAndNewlines)), "kind": .string(input.isCompany ? "company" : "person"),
+            "phone": clean(input.phone), "email": clean(input.email), "street": clean(input.street),
+            "postalCode": clean(input.postalCode), "city": clean(input.city),
+        ]
+        let local = JSONValue.object(payload).merging(["id": JSONValue(id), "customerNumber": .null, "notes": .null, "version": 0])
+        do {
+            try await store.create(.contact, id: id, data: local, payload: payload)
+            try await remember(id, key: "recent_customers")
+        } catch {
+            throw .storage
+        }
+        return id
+    }
+
+    /// Ordnet einer bestehenden Bauakte einen Kunden zu (feldweise Änderung `customerId`).
+    public func assignCustomer(_ customerId: UUID?, to bauakteId: UUID) async throws {
+        try await store.update(.bauakte, id: bauakteId, changes: ["customerId": JSONValue(customerId)])
+        if let customerId { try await remember(customerId, key: "recent_customers") }
+    }
+
+    /// Mögliche Dubletten beim Erfassen eines neuen Kunden: gleicher Name (ohne Groß-/Kleinschreibung, Leerzeichen),
+    /// gleiche Telefonnummer oder E-Mail.
+    public func similarCustomers(to input: NewCustomer) async throws -> [Contact] {
+        func normalized(_ text: String?) -> String {
+            (text ?? "").lowercased().split(whereSeparator: { $0 == " " }).joined(separator: " ")
+        }
+        func digits(_ text: String?) -> String { (text ?? "").filter(\.isNumber) }
+        let name = normalized(input.name)
+        let phone = digits(input.phone)
+        let email = normalized(input.email)
+        guard name.count >= 3 || phone.count >= 6 || !email.isEmpty else { return [] }
+        return try await contacts().filter { contact in
+            (name.count >= 3 && (normalized(contact.name) == name || normalized(contact.name).contains(name)))
+                || (phone.count >= 6 && digits(contact.phone).hasSuffix(phone))
+                || (!email.isEmpty && normalized(contact.email) == email)
+        }
     }
 
     /// Die drei zuletzt bei einer Anlage gewählten Kunden (09, Abschnitt 2: Chips „Zuletzt“).
@@ -254,7 +352,7 @@ public struct BauakteService: Sendable {
     /// (09, Abschnitt 5, Schritt 3). Erst danach gilt es als gespeichert.
     @discardableResult
     public func addPhoto(_ jpeg: Data, to bauakteId: UUID?, capturedAt: Date, latitude: Double? = nil, longitude: Double? = nil,
-                         contentType: String = "image/jpeg") async throws -> UUID {
+                         contentType: String = "image/jpeg", caption: String? = nil) async throws -> UUID {
         let id = UUID.v7(now: now())
         let sha = try files.store(jpeg, for: id)
         let fileExtension = contentType == "image/png" ? "png" : (contentType == "image/heic" ? "heic" : "jpg")
@@ -263,7 +361,7 @@ public struct BauakteService: Sendable {
             "bauakteId": JSONValue(bauakteId), "kind": "photo", "originalName": .string("Foto_\(stamp).\(fileExtension)"),
             "contentType": .string(contentType), "sizeBytes": .number(Double(jpeg.count)), "sha256": .string(sha),
             "capturedAt": .string(APIDate.format(capturedAt)), "latitude": JSONValue(latitude), "longitude": JSONValue(longitude),
-            "caption": .null,
+            "caption": JSONValue(Self.cleanCaption(caption)),
         ]
         let local = JSONValue.object(payload).merging([
             "id": JSONValue(id), "state": "awaitingUpload", "uploadedByUserId": JSONValue(userId),
@@ -277,6 +375,82 @@ public struct BauakteService: Sendable {
             throw error
         }
         return id
+    }
+
+    /// Legt ein Dokument (z. B. einen Scan als PDF) zuerst verschlüsselt auf dem Gerät ab, dann Ankündigung mit Titel
+    /// und Dokumentart und Upload wie bei Fotos – offline möglich.
+    @discardableResult
+    public func addDocument(_ content: Data, title: String, category: DocumentCategory, to bauakteId: UUID,
+                            contentType: String = "application/pdf") async throws(BauakteError) -> UUID {
+        let title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw .titleRequired }
+        guard title.count <= 500 else { throw .tooLong("Titel") }
+        let id = UUID.v7(now: now())
+        let sha: String
+        do {
+            sha = try files.store(content, for: id)
+        } catch {
+            throw .storage
+        }
+        let fileExtension = contentType == "application/pdf" ? "pdf" : (contentType == "image/png" ? "png" : "jpg")
+        let payload: [String: JSONValue] = [
+            "bauakteId": JSONValue(bauakteId), "kind": "document", "originalName": .string("\(Self.fileName(for: title)).\(fileExtension)"),
+            "contentType": .string(contentType), "sizeBytes": .number(Double(content.count)), "sha256": .string(sha),
+            "capturedAt": .string(APIDate.format(now())), "caption": .string(title), "category": .string(category.rawValue),
+        ]
+        let local = JSONValue.object(payload).merging([
+            "id": JSONValue(id), "state": "awaitingUpload", "uploadedByUserId": JSONValue(userId),
+            "createdAt": .string(APIDate.format(now())), "version": 0,
+        ])
+        do {
+            try await store.create(.file, id: id, data: local, payload: payload, operation: "file.announce")
+            try await store.enqueueUpload(fileId: id, size: Int64(content.count), sha256: sha, contentType: contentType)
+        } catch {
+            files.remove(id)
+            throw .storage
+        }
+        return id
+    }
+
+    /// Beschriftung eines Fotos oder Titel eines Dokuments ändern. Vor der Übertragung fließt sie in die Ankündigung ein,
+    /// danach als `file.update`.
+    public func setCaption(_ caption: String?, of fileId: UUID) async throws {
+        try await store.update(.file, id: fileId, changes: ["caption": JSONValue(Self.cleanCaption(caption))])
+    }
+
+    public func setCategory(_ category: DocumentCategory, of fileId: UUID) async throws {
+        try await store.update(.file, id: fileId, changes: ["category": .string(category.rawValue)])
+    }
+
+    /// Noch nicht übertragene eigene Aufnahme verwerfen (z. B. verwackelt). Übertragene Dateien löscht das Büro.
+    /// - Returns: `false`, wenn die Datei bereits beim Server ist.
+    @discardableResult
+    public func discardUnsentFile(_ fileId: UUID) async throws -> Bool {
+        guard try await store.entity(.file, fileId)?.syncState == .pending,
+              try await store.operations().contains(where: { $0.entityId == fileId && $0.type == "file.announce" && $0.state == .pending })
+        else { return false }
+        try await store.delete(.file, id: fileId)
+        files.remove(fileId)
+        return true
+    }
+
+    /// Dokumente der Bauakte, neueste zuerst.
+    public func documents(of bauakteId: UUID) async throws -> [FileItem] {
+        try await files(of: bauakteId).filter(\.isDocument)
+            .sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+    }
+
+    static func cleanCaption(_ caption: String?) -> String? {
+        guard let trimmed = caption?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else { return nil }
+        return String(trimmed.prefix(500))
+    }
+
+    /// Dateiname aus einem Titel: ohne Pfadzeichen, höchstens 80 Zeichen.
+    static func fileName(for title: String) -> String {
+        let forbidden = CharacterSet(charactersIn: "/\\:*?\"<>|").union(.newlines).union(.controlCharacters)
+        let cleaned = title.unicodeScalars.map { forbidden.contains($0) ? "_" : String($0) }.joined()
+            .trimmingCharacters(in: .whitespaces)
+        return cleaned.isEmpty ? "Dokument" : String(cleaned.prefix(80))
     }
 
     /// Inhalt eines Fotos, solange es auf dem Gerät liegt (eigene Aufnahmen, 7 Tage nach dem Upload).
