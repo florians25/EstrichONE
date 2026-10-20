@@ -1,5 +1,5 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Component, ElementRef, inject, signal, viewChild } from '@angular/core';
+import { Component, ElementRef, effect, inject, input, signal, untracked, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { firstValueFrom } from 'rxjs';
@@ -8,6 +8,7 @@ import { AuthService } from '../core/auth.service';
 import { uuidv7 } from '../core/ids';
 import { problemMessage } from '../core/problem';
 import { CustomerPickerComponent } from '../shared/customer-picker.component';
+import { IconComponent } from '../shared/icon.component';
 import { BauakteStatusComponent, formatDateTime } from '../shared/status';
 
 interface NewForm {
@@ -22,52 +23,58 @@ interface NewForm {
 /** Bauakten im Büro (AP-18): suchen, nach Status filtern, anlegen – auch als Anfrage. */
 @Component({
   selector: 'eo-bauakten',
-  imports: [FormsModule, RouterLink, BauakteStatusComponent, CustomerPickerComponent],
+  imports: [FormsModule, RouterLink, BauakteStatusComponent, CustomerPickerComponent, IconComponent],
   template: `
-    <div class="title">
-      <h1>Bauakten</h1>
+    <div class="title"><h1>{{ statusFilter() === 'inquiry' ? 'Anfragen' : 'Bauakten' }}</h1></div>
+    <div class="toolbar" role="toolbar" aria-label="Bauakten">
       @if (canCreate()) {
-        <div class="actions">
-          <button class="button" type="button" (click)="openNew('inquiry')">Neue Anfrage</button>
-          <button class="button primary" type="button" (click)="openNew('planned')">Neue Bauakte</button>
-        </div>
+        <button class="tool" type="button" (click)="openNew('planned')"><eo-icon name="folder-plus" />Neue Bauakte</button>
+        <button class="tool" type="button" (click)="openNew('inquiry')"><eo-icon name="inbox" />Neue Anfrage</button>
+        <span class="sep" aria-hidden="true"></span>
       }
+      <button class="tool" type="button" [disabled]="!selected()" (click)="openSelected()"><eo-icon name="edit" />Öffnen</button>
+      <button class="tool" type="button" (click)="load(true)"><eo-icon name="refresh" />Aktualisieren</button>
+      <span class="sep" aria-hidden="true"></span>
+      <label class="visually-hidden" for="status-filter">Status</label>
+      <select id="status-filter" [value]="statusFilter() ?? ''" (change)="setStatus($any($event.target).value)">
+        @for (tab of tabs; track tab.label) { <option [value]="tab.value ?? ''">{{ tab.label }}</option> }
+      </select>
+      <span class="grow"></span>
+      <form class="search" role="search" (ngSubmit)="load(true)">
+        <label class="visually-hidden" for="search">Suche</label>
+        <input id="search" name="search" type="search" placeholder="Nummer, Bauvorhaben, Adresse" [(ngModel)]="searchText" />
+        <button class="tool" type="submit"><eo-icon name="search" />Suchen</button>
+      </form>
     </div>
-    <div class="tabs" role="tablist" aria-label="Status">
-      @for (tab of tabs; track tab.label) {
-        <button type="button" role="tab" class="tab" [class.active]="status() === tab.value" [attr.aria-selected]="status() === tab.value"
-          (click)="status.set(tab.value); load(true)">{{ tab.label }}</button>
-      }
-    </div>
-    <form class="search" role="search" (ngSubmit)="load(true)">
-      <label class="visually-hidden" for="search">Suche</label>
-      <input id="search" name="search" type="search" placeholder="Nummer, Bauvorhaben, Adresse" [(ngModel)]="search" />
-      <button class="button" type="submit">Suchen</button>
-    </form>
     @if (error()) {
       <div class="message error" role="alert">{{ error() }}</div>
     }
     <table class="table">
       <thead>
-        <tr><th scope="col">Nummer</th><th scope="col">Bauvorhaben</th><th scope="col">Baustelle</th><th scope="col">Status</th><th scope="col">Geändert</th></tr>
+        <tr><th scope="col" class="rownum"><span class="visually-hidden">Zeile</span></th><th scope="col">Nummer</th><th scope="col">Bauvorhaben</th>
+          <th scope="col">Baustelle</th><th scope="col">Status</th><th scope="col" class="numeric">Geändert</th></tr>
       </thead>
       <tbody>
-        @for (item of items(); track item.id) {
-          <tr>
-            <td class="numeric">{{ item.number ?? 'neu' }}</td>
+        @for (item of items(); track item.id; let i = $index) {
+          <tr [class.selected]="selected() === item.id" (click)="selected.set(item.id)" (dblclick)="open(item.id)">
+            <td class="rownum">{{ i + 1 }}</td>
+            <td class="numeric left">{{ item.number ?? 'neu' }}</td>
             <td><a [routerLink]="['/bauakten', item.id]">{{ item.title }}</a></td>
             <td>{{ address(item) }}</td>
             <td><eo-bauakte-status [status]="item.status" /></td>
             <td class="numeric">{{ date(item.updatedAt) }}</td>
           </tr>
         } @empty {
-          <tr><td colspan="5">{{ loading() ? 'Wird geladen …' : 'Keine Bauakten gefunden.' }}</td></tr>
+          <tr><td colspan="6" class="empty">{{ loading() ? 'Wird geladen …' : 'Keine Bauakten gefunden.' }}</td></tr>
         }
       </tbody>
     </table>
-    @if (nextCursor()) {
-      <p><button class="button" type="button" (click)="load(false)" [disabled]="loading()">Weitere laden</button></p>
-    }
+    <div class="footer-bar">
+      <span>{{ items().length }} {{ items().length === 1 ? 'Eintrag' : 'Einträge' }}{{ nextCursor() ? ' (weitere vorhanden)' : '' }}</span>
+      @if (nextCursor()) {
+        <button class="button small" type="button" (click)="load(false)" [disabled]="loading()">Weitere laden</button>
+      }
+    </div>
 
     <dialog #dialog aria-labelledby="new-title">
       <h2 id="new-title">{{ newStatus === 'inquiry' ? 'Neue Anfrage' : 'Neue Bauakte' }}</h2>
@@ -90,11 +97,12 @@ interface NewForm {
     </dialog>
   `,
   styles: `
-    .search { display: flex; gap: 8px; margin-bottom: 16px; max-width: 560px; }
-    .search input { flex: 1; font: inherit; min-height: 36px; padding: 6px 10px; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface); color: var(--text-primary); }
-    .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
-    .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; font: inherit; color: var(--text-secondary); cursor: pointer; }
-    .tab.active { color: var(--text-primary); border-bottom-color: var(--action-primary); font-weight: 600; }
+    .search { display: flex; gap: 4px; align-items: center; }
+    .search input { width: 280px; }
+    td.left { text-align: left; }
+    tbody tr { cursor: default; }
+    .empty { color: var(--text-secondary); text-align: center; padding: 24px; }
+    .footer-bar { display: flex; align-items: center; gap: 12px; padding: 6px 2px; font-size: 12px; color: var(--text-secondary); }
     .row { display: flex; gap: 12px; }
     .row .field:first-child { width: 110px; }
     .grow { flex: 1; }
@@ -114,8 +122,13 @@ export class BauaktenPage {
     { label: 'Abgeschlossen', value: 'completed' },
   ];
   protected readonly dialog = viewChild.required<ElementRef<HTMLDialogElement>>('dialog');
-  protected search = '';
-  protected readonly status = signal<BauakteStatus | null>(null);
+  /** Aus der Adresse: ?status=inquiry, ?search=…, ?neu=bauakte|anfrage (Kacheln und globale Suche). */
+  readonly statusParam = input<string | undefined>(undefined, { alias: 'status' });
+  readonly searchParam = input<string | undefined>(undefined, { alias: 'search' });
+  readonly neu = input<string | undefined>(undefined);
+  protected searchText = '';
+  protected readonly statusFilter = signal<BauakteStatus | null>(null);
+  protected readonly selected = signal<string | null>(null);
   protected readonly items = signal<BauakteListItem[]>([]);
   protected readonly nextCursor = signal<string | null>(null);
   protected readonly loading = signal(false);
@@ -127,17 +140,44 @@ export class BauaktenPage {
   protected readonly canCreate = () => this.auth.permissions().has('bauakten.create');
 
   constructor() {
-    void this.load(true);
+    effect(() => {
+      const status = this.statusParam() as BauakteStatus | undefined;
+      const search = this.searchParam();
+      const neu = this.neu();
+      untracked(() => {
+        this.statusFilter.set(status ?? null);
+        this.searchText = search ?? '';
+        void this.load(true);
+        if (neu === 'bauakte' || neu === 'anfrage') {
+          setTimeout(() => this.openNew(neu === 'anfrage' ? 'inquiry' : 'planned'));
+        }
+      });
+    });
+  }
+
+  protected setStatus(value: string): void {
+    void this.router.navigate(['/bauakten'], { queryParams: { status: value || null, search: this.searchText.trim() || null } });
+  }
+
+  protected open(id: string): void {
+    void this.router.navigate(['/bauakten', id]);
+  }
+
+  protected openSelected(): void {
+    const id = this.selected();
+    if (id) {
+      this.open(id);
+    }
   }
 
   async load(reset: boolean): Promise<void> {
     this.loading.set(true);
     this.error.set(null);
     let params = new HttpParams().set('limit', 50);
-    if (this.search.trim()) {
-      params = params.set('search', this.search.trim());
+    if (this.searchText.trim()) {
+      params = params.set('search', this.searchText.trim());
     }
-    const status = this.status();
+    const status = this.statusFilter();
     if (status) {
       params = params.set('status', status);
     }

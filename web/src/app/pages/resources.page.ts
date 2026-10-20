@@ -118,9 +118,6 @@ type Tab = 'crews' | 'resources' | 'absences';
     }
   `,
   styles: `
-    .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; border-bottom: 1px solid var(--line); }
-    .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; font: inherit; color: var(--text-secondary); cursor: pointer; }
-    .tab.active { color: var(--text-primary); border-bottom-color: var(--action-primary); font-weight: 600; }
     .inline { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-bottom: 16px; }
     .inline input, .inline select { font: inherit; min-height: 36px; padding: 6px 10px; border: 1px solid var(--border-control); border-radius: var(--radius-control); background: var(--surface); color: var(--text-primary); }
     .inline input[type='color'] { padding: 2px; width: 44px; }

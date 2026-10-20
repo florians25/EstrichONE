@@ -17,13 +17,13 @@ test('Ersteinrichtung im Browser und Anmeldung als Administrator', async ({ page
   await page.getByLabel('Passwort').fill(adminPassword);
   await page.getByRole('button', { name: 'Einrichten und anmelden' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Bauakten' })).toBeVisible();
-  await expect(page.getByText('Anna Admin')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Auftragsbearbeitung' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Anna Admin/ })).toBeVisible();
 });
 
 test('Benutzer anlegen, Einmalpasswort, Pflichtwechsel bei der ersten Anmeldung', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await page.getByRole('link', { name: 'Benutzer' }).click();
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Benutzer', exact: true }).click();
   await page.getByRole('button', { name: 'Benutzer anlegen' }).click();
 
   const dialog = page.getByRole('dialog');
@@ -37,7 +37,8 @@ test('Benutzer anlegen, Einmalpasswort, Pflichtwechsel bei der ersten Anmeldung'
   const password = (await oneTime.locator('code').textContent())!.trim();
   await expect(page.getByRole('row', { name: /Lukas Brandl/ })).toContainText('Baustelle');
 
-  await page.getByRole('button', { name: 'Abmelden' }).click();
+  await page.getByRole('button', { name: /Anna Admin/ }).click();
+  await page.getByRole('menuitem', { name: 'Abmelden' }).click();
   await signIn(page, 'l.brandl', password);
   await expect(page.getByText('Sie haben ein Einmalpasswort erhalten')).toBeVisible();
   await page.getByLabel('Bisheriges Passwort').fill(password);
@@ -45,14 +46,14 @@ test('Benutzer anlegen, Einmalpasswort, Pflichtwechsel bei der ersten Anmeldung'
   await page.getByLabel('Neues Passwort wiederholen').fill('Estrich-Lukas-2026!');
   await page.getByRole('button', { name: 'Passwort ändern' }).click();
 
-  await expect(page.getByRole('heading', { name: 'Bauakten' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Auftragsbearbeitung' })).toBeVisible();
   // Rolle „Baustelle“: keine Verwaltung in der Navigation.
-  await expect(page.getByRole('link', { name: 'Benutzer' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Benutzer', exact: true })).toHaveCount(0);
 });
 
 test('Gerät einrichten: Einrichtungscode mit QR-Code', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await page.getByRole('link', { name: 'Geräte' }).click();
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Geräte', exact: true }).click();
   await page.getByRole('button', { name: 'Gerät einrichten' }).click();
   await page.getByLabel('Poolgerät (mehrere Personen)').check();
   await page.getByLabel('Gerätename (optional)').fill('Fahrzeug 3');
@@ -70,7 +71,7 @@ test('Falsches Passwort wird verständlich abgelehnt; Sicherung zeigt ihren Zust
   await expect(page.getByRole('alert')).toHaveText('Anmeldename oder Passwort ist nicht korrekt.');
 
   await signIn(page, 'admin', adminPassword);
-  await page.getByRole('link', { name: 'Sicherung' }).click();
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Sicherung', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Sicherung' })).toBeVisible();
   await expect(page.getByRole('row', { name: /Letzte Sicherung/ })).toBeVisible();
 });
@@ -125,7 +126,7 @@ test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async
   });
   expect(status).toBe(201);
 
-  await page.getByRole('link', { name: 'Helpdesk' }).click();
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Helpdesk', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Helpdesk' })).toBeVisible();
   const row = page.getByRole('row', { name: /Drucker im Büro druckt nicht/ });
   await expect(row.getByText('Kann nicht arbeiten')).toBeVisible();
@@ -148,6 +149,7 @@ test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async
 
 test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe, Notiz, Dokument', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Bauakten', exact: true }).click();
   await page.getByRole('button', { name: 'Neue Anfrage' }).click();
   const dialog = page.getByRole('dialog');
   await dialog.getByLabel('Bauvorhaben').fill('Anfrage Familie Kraus, Heizestrich');
@@ -158,10 +160,10 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
 
   await expect(page.getByRole('heading', { name: 'Anfrage Familie Kraus, Heizestrich' })).toBeVisible();
-  await expect(page.locator('.head').getByText('Anfrage')).toBeVisible();
+  await expect(page.locator('.head-title').getByText('Anfrage', { exact: true })).toBeVisible();
   await expect(page.locator('.facts').getByText('Familie Kraus')).toBeVisible();
   await page.getByRole('button', { name: 'Als Auftrag übernehmen' }).click();
-  await expect(page.locator('.head').getByText('Geplant')).toBeVisible();
+  await expect(page.locator('.head-title').getByText('Geplant')).toBeVisible();
 
   await page.getByRole('tab', { name: 'Räume und Flächen' }).click();
   await page.getByRole('button', { name: 'Raum hinzufügen' }).click();
@@ -202,7 +204,7 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
 
 test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird angezeigt', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await page.getByRole('link', { name: 'Ressourcen' }).click();
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Kolonnen und Geräte', exact: true }).click();
   await page.getByLabel('Name der Kolonne').fill('Kolonne Admin');
   await page.getByLabel('Kolonnenführer').selectOption({ label: 'Anna Admin' });
   await page.getByRole('button', { name: 'Kolonne anlegen' }).click();
@@ -212,7 +214,7 @@ test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird an
   await page.getByRole('button', { name: 'Hinzufügen' }).click();
   await expect(page.getByRole('row', { name: /Mixokret 2/ })).toContainText('Verfügbar');
 
-  await page.getByRole('link', { name: 'Planung', exact: true }).click();
+  await page.getByRole('navigation', { name: 'Hauptnavigation' }).getByRole('link', { name: 'Planung', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Planung' })).toBeVisible();
   const monday = page.getByRole('button', { name: /^Einsatz planen: Kolonne Admin, Montag/ });
   await monday.click();

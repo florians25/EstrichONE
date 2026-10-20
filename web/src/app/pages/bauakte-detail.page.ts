@@ -7,6 +7,7 @@ import { BauakteDetail, BauakteHistoryEntry, BauakteStatus, ContactResponse, Dir
 import { AuthService } from '../core/auth.service';
 import { problemCode, problemMessage } from '../core/problem';
 import { CustomerPickerComponent } from '../shared/customer-picker.component';
+import { IconComponent } from '../shared/icon.component';
 import { BauakteStatusComponent, formatDateTime } from '../shared/status';
 import { BauakteFilesComponent } from './bauakte/files.component';
 import { BauakteNotesComponent } from './bauakte/notes.component';
@@ -31,26 +32,46 @@ interface EditForm {
 @Component({
   selector: 'eo-bauakte-detail',
   imports: [
-    FormsModule, RouterLink, BauakteStatusComponent, CustomerPickerComponent, BauakteRoomsComponent, BauakteWorkComponent,
+    FormsModule, RouterLink, IconComponent, BauakteStatusComponent, CustomerPickerComponent, BauakteRoomsComponent, BauakteWorkComponent,
     BauakteNotesComponent, BauakteFilesComponent, BauakteRecordsComponent,
   ],
   template: `
-    <p><a routerLink="/bauakten">← Alle Bauakten</a></p>
+    <nav class="crumbs" aria-label="Pfad"><a routerLink="/bauakten">Bauakten</a> › <span>{{ bauakte()?.number ?? 'Bauakte' }}</span></nav>
     @if (error()) {
       <div class="message error" role="alert">{{ error() }}</div>
     }
     @if (bauakte(); as b) {
-      <div class="head">
-        <span class="number">{{ b.number ?? 'noch ohne Nummer' }}</span>
-        <eo-bauakte-status [status]="b.status" />
+      <div class="toolbar" role="toolbar" aria-label="Bauakte">
         @if (canEdit()) {
+          <button class="tool" type="button" (click)="openEdit()"><eo-icon name="edit" />Bearbeiten</button>
           @if (b.status === 'inquiry') {
-            <button class="button small primary" type="button" (click)="convertInquiry()">Als Auftrag übernehmen</button>
+            <button class="tool primary" type="button" (click)="convertInquiry()"><eo-icon name="check" />Als Auftrag übernehmen</button>
           }
-          <button class="button small" type="button" (click)="openEdit()">Bearbeiten</button>
+          <span class="sep" aria-hidden="true"></span>
         }
+        <button class="tool" type="button" (click)="load(b.id)"><eo-icon name="refresh" />Aktualisieren</button>
+        @if (mapsUrl(b)) { <a class="tool" [href]="mapsUrl(b)" target="_blank" rel="noopener"><eo-icon name="pin" />Karte</a> }
+        @if (customer()?.phone) { <a class="tool" [href]="'tel:' + customer()!.phone"><eo-icon name="phone" />Kunde anrufen</a> }
       </div>
-      <h1>{{ b.title }}</h1>
+      <section class="pane head-pane" aria-labelledby="bauakte-title">
+        <div class="pane-title head-title">
+          <span class="number">{{ b.number ?? 'noch ohne Nummer' }}</span>
+          <h1 id="bauakte-title">{{ b.title }}</h1>
+          <eo-bauakte-status [status]="b.status" />
+        </div>
+        <div class="facts">
+          <dl>
+            <dt>Kunde</dt><dd>{{ customer()?.name ?? '–' }}</dd>
+            <dt>Baustelle</dt><dd>{{ address(b) }}</dd>
+            <dt>Zuständig</dt><dd>{{ name(b.responsibleUserId) }}</dd>
+          </dl>
+          <dl>
+            <dt>Telefon</dt><dd>{{ customer()?.phone ?? '–' }}</dd>
+            <dt>Angelegt</dt><dd>{{ date(b.createdAt) }} · {{ name(b.createdByUserId) }}</dd>
+            <dt>Geändert</dt><dd>{{ date(b.updatedAt) }}</dd>
+          </dl>
+        </div>
+      </section>
       <div class="tabs" role="tablist" aria-label="Bereiche der Bauakte">
         @for (t of tabs; track t.id) {
           <button type="button" role="tab" class="tab" [class.active]="tab() === t.id" [attr.aria-selected]="tab() === t.id" (click)="tab.set(t.id)">{{ t.label }}</button>
@@ -58,14 +79,10 @@ interface EditForm {
       </div>
       @switch (tab()) {
         @case ('overview') {
-          <dl class="card facts">
-            <dt>Kunde</dt><dd>{{ customer()?.name ?? '–' }}@if (customer()?.phone) { · <a [href]="'tel:' + customer()!.phone">{{ customer()!.phone }}</a> }</dd>
-            <dt>Baustelle</dt><dd>{{ address(b) }}@if (mapsUrl(b)) { · <a [href]="mapsUrl(b)" target="_blank" rel="noopener">Karte</a> }</dd>
-            <dt>Zuständig</dt><dd>{{ name(b.responsibleUserId) }}</dd>
-            <dt>Beschreibung</dt><dd class="pre">{{ b.description ?? '–' }}</dd>
-            <dt>Angelegt</dt><dd>{{ date(b.createdAt) }} von {{ name(b.createdByUserId) }}</dd>
-            <dt>Geändert</dt><dd>{{ date(b.updatedAt) }}</dd>
-          </dl>
+          <div class="pane">
+            <div class="pane-title">Beschreibung</div>
+            <p class="pre">{{ b.description ?? 'Keine Beschreibung.' }}</p>
+          </div>
         }
         @case ('rooms') { <eo-bauakte-rooms [bauakteId]="b.id" [canEdit]="canEdit()" /> }
         @case ('work') { <eo-bauakte-work [bauakteId]="b.id" [canEdit]="has('work.edit')" [people]="people()" /> }
@@ -113,12 +130,13 @@ interface EditForm {
     }
   `,
   styles: `
-    .head { display: flex; gap: 12px; align-items: center; color: var(--text-secondary); font-variant-numeric: tabular-nums; flex-wrap: wrap; }
-    .head .button:first-of-type { margin-left: auto; }
-    .tabs { display: flex; gap: 4px; flex-wrap: wrap; margin: 8px 0 16px; border-bottom: 1px solid var(--line); }
-    .tab { background: none; border: 0; border-bottom: 2px solid transparent; padding: 8px 12px; font: inherit; color: var(--text-secondary); cursor: pointer; }
-    .tab.active { color: var(--text-primary); border-bottom-color: var(--action-primary); font-weight: 600; }
-    .facts { display: grid; grid-template-columns: 160px 1fr; gap: 8px 16px; max-width: 720px; }
+    .crumbs { font-size: 12px; color: var(--text-secondary); margin-bottom: 8px; }
+    .head-pane { margin-bottom: 12px; }
+    .head-title { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .head-title h1 { margin: 0; font-size: 17px; }
+    .number { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--text-secondary); }
+    .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 0 32px; }
+    .facts dl { display: grid; grid-template-columns: 110px 1fr; gap: 4px 12px; margin: 0; }
     dt { color: var(--text-secondary); }
     dd { margin: 0; }
     .pre { white-space: pre-wrap; }
@@ -180,7 +198,7 @@ export class BauakteDetailPage {
     return this.has('bauakten.edit');
   }
 
-  private async load(id: string): Promise<void> {
+  protected async load(id: string): Promise<void> {
     try {
       const [bauakte, people] = await Promise.all([
         firstValueFrom(this.http.get<BauakteDetail>(`/api/v1/bauakten/${id}`)),

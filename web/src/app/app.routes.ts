@@ -11,7 +11,12 @@ export const routes: Routes = [
     canActivate: [signedInGuard],
     canActivateChild: [signedInGuard],
     children: [
-      { path: '', pathMatch: 'full', redirectTo: 'bauakten' },
+      { path: '', pathMatch: 'full', redirectTo: 'start' },
+      {
+        path: 'start',
+        title: 'Übersicht · EstrichONE',
+        loadComponent: () => import('./pages/start.page').then((m) => m.StartPage),
+      },
       {
         path: 'bauakten',
         title: 'Bauakten · EstrichONE',
