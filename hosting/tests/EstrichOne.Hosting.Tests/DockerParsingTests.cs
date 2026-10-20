@@ -77,6 +77,15 @@ public sealed class DockerParsingTests
     }
 
     [Fact]
+    public void Evaluate_DegradedBeiNeuerInstanz_IstKeinBefund()
+    {
+        var degraded = new ProbeResult(true, 200, "Degraded", "0.1.0", "X", true, null);
+        var containers = new[] { C("postgres"), C("api"), C("backup"), C("caddy") };
+        HealthEvaluator.Evaluate(true, containers, degraded, null, false, null, 0, null, 0).Level.ShouldBe(HealthLevel.Healthy);
+        HealthEvaluator.Evaluate(true, containers, degraded, null, true, null, 0, null, 0).Level.ShouldBe(HealthLevel.Degraded);
+    }
+
+    [Fact]
     public void Evaluate_NichtErreichbar_IstFehler()
     {
         var (level, _) = HealthEvaluator.Evaluate(true, [C("postgres"), C("api"), C("backup"), C("caddy")],

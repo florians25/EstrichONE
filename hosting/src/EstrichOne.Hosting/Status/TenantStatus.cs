@@ -124,8 +124,10 @@ public static class HealthEvaluator
             {
                 Raise(HealthLevel.Unhealthy, $"/health/ready meldet HTTP {probe.HealthStatusCode} ({probe.HealthText}).");
             }
-            else if (string.Equals(probe.HealthText, "Degraded", StringComparison.OrdinalIgnoreCase))
+            else if (string.Equals(probe.HealthText, "Degraded", StringComparison.OrdinalIgnoreCase) && backupExpected)
             {
+                // Die Suite meldet „Degraded“ vor allem bei veralteter Sicherung – bei neuen Instanzen (noch keine
+                // nächtliche Sicherung möglich) ist das kein Befund.
                 Raise(HealthLevel.Degraded, "/health/ready meldet „Degraded“ (z. B. Sicherung veraltet).");
             }
         }
