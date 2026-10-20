@@ -11,9 +11,10 @@ on:
 permissions:
   contents: read
 
+# Ein Simulatorlauf dauert ~15 Minuten: laufende Läufe zu Ende führen, nur wartende durch den neuesten ersetzen.
 concurrency:
   group: ios-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   core-live:
