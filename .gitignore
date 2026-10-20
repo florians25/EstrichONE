@@ -34,3 +34,8 @@ dist/
 deploy/caddy-root.crt
 deploy/backup-repository/
 deploy/ssh/
+
+# Web (Angular)
+web/node_modules/
+web/dist/
+web/.angular/
