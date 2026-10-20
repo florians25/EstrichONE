@@ -100,12 +100,14 @@ test('Bauakte im Browser: Prüfungen, Bautagebuch und Verlauf aus der App ersche
 
   await page.goto(`/bauakten/${bauakte}`);
   await expect(page.getByRole('heading', { name: 'EFH Prüfung E2E' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Prüfungen und Bautagebuch' }).click();
   await expect(page.getByRole('heading', { name: 'Prüfungen (2)' })).toBeVisible();
   await expect(page.getByText('Bad OG: 1,6 CM-% (Grenzwert 1,8)')).toBeVisible();
   await expect(page.getByText('Belegreif', { exact: true })).toBeVisible();
   await expect(page.getByText('Randdämmstreifen vorhanden')).toBeVisible();
   await expect(page.getByText('Estrich im EG eingebracht')).toBeVisible();
   await expect(page.getByText('Regen · 9 °C')).toBeVisible();
+  await page.getByRole('tab', { name: 'Verlauf' }).click();
   await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-% – belegreif.')).toBeVisible();
 });
 
@@ -142,6 +144,60 @@ test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.head').getByText('Gelöst')).toBeVisible();
   await expect(page.getByText('hat den Status geändert: Gelöst')).toBeVisible();
+});
+
+test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe, Notiz, Dokument', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await page.getByRole('button', { name: 'Neue Anfrage' }).click();
+  const dialog = page.getByRole('dialog');
+  await dialog.getByLabel('Bauvorhaben').fill('Anfrage Familie Kraus, Heizestrich');
+  await dialog.getByLabel('Kunde').fill('Familie Kraus');
+  await dialog.getByRole('button', { name: '„Familie Kraus“ als neuen Kunden anlegen' }).click();
+  await expect(dialog.getByText('Familie Kraus')).toBeVisible();
+  await dialog.getByLabel('Ort').fill('Landshut');
+  await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
+
+  await expect(page.getByRole('heading', { name: 'Anfrage Familie Kraus, Heizestrich' })).toBeVisible();
+  await expect(page.locator('.head').getByText('Anfrage')).toBeVisible();
+  await expect(page.locator('.facts').getByText('Familie Kraus')).toBeVisible();
+  await page.getByRole('button', { name: 'Als Auftrag übernehmen' }).click();
+  await expect(page.locator('.head').getByText('Geplant')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Räume und Flächen' }).click();
+  await page.getByRole('button', { name: 'Raum hinzufügen' }).click();
+  const room = page.getByRole('dialog', { name: 'Raum hinzufügen' });
+  await room.getByLabel('Raum').fill('Wohnen/Essen');
+  await room.getByLabel('Geschoss').fill('EG');
+  await room.getByLabel('Fläche (m²)').fill('42.5');
+  await room.getByLabel('Dicke (mm)').fill('65');
+  await room.getByLabel('Fußbodenheizung').check();
+  await room.getByLabel('Estrichart').selectOption({ index: 1 });
+  await room.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('row', { name: /Wohnen\/Essen/ })).toContainText('42,50 m²');
+  await expect(page.locator('.summary')).toContainText('42,50 m²');
+
+  await page.getByRole('tab', { name: 'Aufgaben und Mängel' }).click();
+  await page.getByLabel('Art').selectOption('defect');
+  await page.getByLabel('Titel').fill('Randdämmstreifen fehlt im Bad');
+  await page.getByRole('button', { name: 'Hinzufügen' }).click();
+  await page.getByLabel('Erledigt: Randdämmstreifen fehlt im Bad').check();
+  await expect(page.getByLabel('Wieder öffnen: Randdämmstreifen fehlt im Bad')).toBeChecked();
+
+  await page.getByRole('tab', { name: 'Notizen' }).click();
+  await page.getByLabel('Neue Notiz').fill('Kunde wünscht Ausführung ab KW 46');
+  await page.getByRole('button', { name: 'Notiz speichern' }).click();
+  await expect(page.locator('.note').getByText('Kunde wünscht Ausführung ab KW 46')).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Fotos und Dokumente' }).click();
+  const pdf = '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n';
+  await page.locator('#file-input').setInputFiles({ name: 'Angebot.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) });
+  await expect(page.getByRole('status')).toHaveText('1 Datei hochgeladen.');
+  await expect(page.getByRole('link', { name: 'Angebot.pdf' })).toBeVisible();
+
+  await page.getByRole('tab', { name: 'Verlauf' }).click();
+  await expect(page.getByText('Anna Admin hat einen Raum angelegt.')).toBeVisible();
+  await expect(page.getByText('Anna Admin hat einen Mangel als behoben markiert.')).toBeVisible();
+  await expect(page.getByText('Anna Admin hat ein Dokument hinzugefügt.')).toBeVisible();
 });
 
 async function signIn(page: import('@playwright/test').Page, login: string, password: string) {

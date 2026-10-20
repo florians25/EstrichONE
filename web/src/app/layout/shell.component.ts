@@ -68,6 +68,7 @@ export class ShellComponent {
 
   private readonly items: NavItem[] = [
     { label: 'Bauakten', link: '/bauakten', permission: 'bauakten.read' },
+    { label: 'Kunden', link: '/kunden', permission: 'contacts.read' },
     { label: 'Benutzer', link: '/verwaltung/benutzer', permission: 'users.manage' },
     { label: 'Geräte', link: '/it-center/geraete', permission: 'devices.read' },
     { label: 'Helpdesk', link: '/it-center/helpdesk', permission: 'helpdesk.agent' },

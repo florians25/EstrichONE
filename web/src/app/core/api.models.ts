@@ -252,3 +252,88 @@ export interface TicketDetail {
   comments: TicketComment[];
   events: TicketEvent[];
 }
+
+export type ContactKind = 'company' | 'person';
+
+export interface ContactResponse {
+  id: string;
+  kind: ContactKind;
+  name: string;
+  customerNumber: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  phone: string | null;
+  email: string | null;
+  notes: string | null;
+  version: number;
+}
+
+export interface NoteDto {
+  id: string;
+  bauakteId: string;
+  authorUserId: string;
+  text: string;
+  isPinned: boolean;
+  color: string | null;
+  createdAt: string;
+  editedAt: string | null;
+  version: number;
+}
+
+export type WorkItemKind = 'task' | 'defect';
+export type WorkItemStatus = 'open' | 'inProgress' | 'done';
+
+export interface WorkItemDto {
+  id: string;
+  bauakteId: string | null;
+  kind: WorkItemKind;
+  status: WorkItemStatus;
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  assigneeUserId: string | null;
+  createdByUserId: string;
+  completedAt: string | null;
+  updatedAt: string;
+  version: number;
+}
+
+export interface ScreedTypeResponse {
+  id: string;
+  name: string;
+  designation: string | null;
+  binder: string;
+  isActive: boolean;
+}
+
+export type RoomStatus = 'planned' | 'laid' | 'ready';
+
+export interface SectionResponse {
+  id: string;
+  name: string;
+  sortOrder: number;
+}
+
+export interface RoomResponse {
+  id: string;
+  sectionId: string | null;
+  name: string;
+  floor: string | null;
+  areaSquareMeters: number | null;
+  screedTypeId: string | null;
+  screedTypeName: string | null;
+  thicknessMillimeters: number | null;
+  insulationMillimeters: number | null;
+  underfloorHeating: boolean;
+  status: RoomStatus;
+  notes: string | null;
+  version: number;
+}
+
+export interface RoomOverview {
+  sections: SectionResponse[];
+  rooms: RoomResponse[];
+  totalAreaSquareMeters: number;
+  heatedAreaSquareMeters: number;
+}
