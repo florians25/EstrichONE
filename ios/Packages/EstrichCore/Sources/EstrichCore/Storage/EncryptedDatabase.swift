@@ -14,7 +14,7 @@ public final class EncryptedDatabase {
     private let url: URL
     private let key: SymmetricKey
 
-    public init(url: URL, key: SymmetricKey, migrations: [(SQLiteDatabase) throws -> Void]) throws {
+    public init(url: URL, key: SymmetricKey, migrations: [@Sendable (SQLiteDatabase) throws -> Void]) throws {
         self.url = url
         self.key = key
         let image: Data?

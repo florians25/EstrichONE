@@ -18,3 +18,4 @@ gelöscht, sondern durch eine neue ADR **ersetzt** (Status „ersetzt durch 00xx
 | [0010](0010-tests-gegen-echte-postgresql.md) | Integrationstests gegen echte PostgreSQL (Testcontainers) | angenommen |
 | [0011](0011-undurchsichtige-sitzungstokens.md) | Undurchsichtige Sitzungstokens statt JWT | angenommen |
 | [0012](0012-ios-datentresor-und-api-client.md) | iOS: Datentresor je Benutzer und handgeschriebener API-Client | angenommen |
+| [0013](0013-ios-lokale-datenbank.md) | iOS: verschlüsselte SQLite-Datenbank ohne Zusatzbibliothek | angenommen |

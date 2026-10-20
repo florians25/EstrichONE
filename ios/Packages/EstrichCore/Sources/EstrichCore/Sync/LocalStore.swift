@@ -20,7 +20,7 @@ public actor LocalStore {
         LocalStore(database: try EncryptedDatabase(url: url, key: account.dataKey, migrations: schema), now: now)
     }
 
-    static let schema: [(SQLiteDatabase) throws -> Void] = [
+    static let schema: [@Sendable (SQLiteDatabase) throws -> Void] = [
         { db in
             try db.execute("""
                 CREATE TABLE entity (
@@ -362,8 +362,15 @@ public actor LocalStore {
 
     // MARK: Intern
 
-    private func meta(_ key: String) throws -> String? {
+    public func meta(_ key: String) throws -> String? {
         try db.database.scalar("SELECT value FROM meta WHERE key = ?", [.text(key)]).string
+    }
+
+    /// Einstellungen und Listen der App (z. B. „zuletzt geöffnet“), mit der Datenbank verschlüsselt.
+    public func setMeta(_ key: String, _ value: String) throws {
+        try db.write { db in
+            try db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)", [.text(key), .text(value)])
+        }
     }
 
     private func insertOperation(_ db: SQLiteDatabase, type: String, entityType: EntityType, entityId: UUID,
