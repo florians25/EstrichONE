@@ -8,6 +8,12 @@ Einrichtungsablauf: [`10-server-onboarding.md`](../docs/reengineering/10-server-
 `GET /api/v1/server-info` → sichtbare Bestätigung → Server bleibt gespeichert. Anmeldung, Geräteregistrierung
 und Poolgeräte folgen mit AP-11.
 
+**Baustellenfunktionen:** Schnellanlage einer Bauakte mit Kunde (vorhandenen suchen oder neu erfassen, offline
+über `contact.create` vor `bauakte.create`), Foto-Serien mit Beschriftung und Zuordnung, Dokumentenscanner
+(VisionKit, mehrseitig, PDF mit Texterkennung, Dokumentart), Dokumente per QuickLook, Bautagebuch mit Textbausteinen,
+Kunde anrufen und Route starten aus der Akte. Designsystem: `Design/ActionButtons.swift` (`EstrichButtonStyle`,
+`ActionTileStyle`, `IconButtonStyle`), Tokens in `Design/Theme.swift`.
+
 ## Aufbau
 
 | Pfad | Inhalt |

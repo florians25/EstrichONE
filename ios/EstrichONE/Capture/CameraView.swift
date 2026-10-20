@@ -123,13 +123,13 @@ struct CameraView: View {
 
             HStack(alignment: .center) {
                 PhotosPicker(selection: $pickerItems, maxSelectionCount: 20, matching: .images) {
-                    Label("Aus Fotos auswählen", systemImage: "photo.on.rectangle")
-                        .labelStyle(.iconOnly)
+                    Image(systemName: "photo.on.rectangle")
                         .font(.title3)
                         .frame(width: 52, height: 52)
                 }
                 .overlayControlStyle()
                 .tint(.white)
+                .accessibilityLabel("Aus Fotos auswählen")
 
                 Spacer()
 

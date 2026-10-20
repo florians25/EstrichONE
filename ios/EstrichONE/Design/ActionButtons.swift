@@ -47,6 +47,7 @@ private struct EstrichButtonBody: View {
 
     var body: some View {
         let pressed = configuration.isPressed
+        let hapticOnPress = rank != .tertiary
         configuration.label
             .font(size == .regular ? .body.weight(.semibold) : .subheadline.weight(.semibold))
             .labelStyle(TightLabelStyle())
@@ -64,7 +65,7 @@ private struct EstrichButtonBody: View {
             .opacity(isEnabled ? 1 : 0.45)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
             .sensoryFeedback(.impact(weight: .light, intensity: 0.7), trigger: pressed) { _, isPressed in
-                isPressed && rank != .tertiary
+                isPressed && hapticOnPress
             }
     }
 
