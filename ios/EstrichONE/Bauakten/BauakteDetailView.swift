@@ -66,6 +66,40 @@ struct BauakteDetailView: View {
                         }
                     }
 
+                    // Aktionszeile im Inhalt statt unterer Werkzeugleiste: die Leiste läge unter Tab-Leiste und
+                    // schwebender „Neue Bauakte“-Schaltfläche (iOS 26).
+                    Section {
+                        HStack(spacing: 10) {
+                            Button {
+                                capturing = true
+                            } label: {
+                                Label("Foto", systemImage: "camera").frame(maxWidth: .infinity)
+                            }
+                            .accessibilityIdentifier("addPhotoButton")
+                            Button {
+                                addingNote = true
+                            } label: {
+                                Label("Notiz", systemImage: "square.and.pencil").frame(maxWidth: .infinity)
+                            }
+                            .accessibilityIdentifier("addNoteButton")
+                            Menu {
+                                Button("Aufgabe", systemImage: "checklist") { form = .task }
+                                Button("Mangel", systemImage: "exclamationmark.triangle") { form = .defect }
+                                Button("Bautagebuch", systemImage: "book") { form = .diary }
+                                Button("CM-Messung", systemImage: "drop") { form = .cmMeasurement }
+                                Button("Erstbegehung", systemImage: "checkmark.rectangle.stack") { form = .initialInspection }
+                            } label: {
+                                Label("Erfassen", systemImage: "plus.circle").frame(maxWidth: .infinity)
+                            }
+                            .accessibilityIdentifier("addMenu")
+                        }
+                        .buttonStyle(.bordered)
+                        .controlSize(.large)
+                        .labelStyle(.titleAndIcon)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                    }
+
                     Section {
                         if workItems.isEmpty {
                             Text("Keine Aufgaben oder Mängel.").foregroundStyle(Theme.textSecondary)
@@ -134,34 +168,6 @@ struct BauakteDetailView: View {
                 }
                 .navigationTitle(bauakte.number ?? "Neue Bauakte")
                 .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItemGroup(placement: .bottomBar) {
-                        Button {
-                            capturing = true
-                        } label: {
-                            Label("Foto", systemImage: "camera")
-                        }
-                        .accessibilityIdentifier("addPhotoButton")
-                        Spacer()
-                        Button {
-                            addingNote = true
-                        } label: {
-                            Label("Notiz", systemImage: "square.and.pencil")
-                        }
-                        .accessibilityIdentifier("addNoteButton")
-                        Spacer()
-                        Menu {
-                            Button("Aufgabe", systemImage: "checklist") { form = .task }
-                            Button("Mangel", systemImage: "exclamationmark.triangle") { form = .defect }
-                            Button("Bautagebuch", systemImage: "book") { form = .diary }
-                            Button("CM-Messung", systemImage: "drop") { form = .cmMeasurement }
-                            Button("Erstbegehung", systemImage: "checkmark.rectangle.stack") { form = .initialInspection }
-                        } label: {
-                            Label("Erfassen", systemImage: "plus.circle")
-                        }
-                        .accessibilityIdentifier("addMenu")
-                    }
-                }
                 .fullScreenCover(isPresented: $capturing) {
                     CameraView(bauakte: bauakte) { _ in capturing = false }
                 }

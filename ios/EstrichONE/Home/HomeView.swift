@@ -86,7 +86,7 @@ struct HomeView: View {
             SectionTitle("Baustelle")
             LazyVGrid(columns: [GridItem(.adaptive(minimum: 100, maximum: 160), spacing: 12)], spacing: 12) {
                 HomeTile(title: "Neue Bauakte", symbol: "folder.badge.plus", accent: Theme.success) { creating = true }
-                    .accessibilityIdentifier("newBauakteButton")
+                    .accessibilityIdentifier("newBauakteTile")
                 HomeTile(title: "Bauakten", symbol: "building.2") { openTab(.bauakten) }
                 HomeTile(title: "Fotos", symbol: "camera") { openTab(.capture) }
                 HomeTile(title: "Meine Aufgaben", symbol: "checklist", badge: openTasks) { path.append(.tasks) }

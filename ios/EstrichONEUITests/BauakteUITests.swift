@@ -11,6 +11,9 @@ final class BauakteUITests: XCTestCase {
     private func tap(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 10) {
         let target = element(identifier, in: app)
         XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht\n\(app.debugDescription)")
+        // Nach Anmeldung, Sheets und Systemdialogen laufen noch Animationen: erst tippen, wenn das Element erreichbar ist.
+        let hittable = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: target)
+        wait(for: [hittable], timeout: timeout)
         target.tap()
     }
 
@@ -40,7 +43,7 @@ final class BauakteUITests: XCTestCase {
         type("Richtig-2026", into: "passwordField", in: app)
         tap("signInButton", in: app)
         app.dismissSavePasswordPrompt()
-        XCTAssertTrue(element("newBauakteButton", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(element("newBauakteTile", in: app).waitForExistence(timeout: 15))
         return app
     }
 
@@ -48,7 +51,7 @@ final class BauakteUITests: XCTestCase {
     func testQuickCreateWithPhotosGetsNumberFromServer() {
         let app = launchSignedIn()
 
-        tap("newBauakteButton", in: app)
+        tap("newBauakteTile", in: app)
         type("EFH Müller, Neubau", into: "newTitleField", in: app)
         tap("createAndPhotographButton", in: app)
 
@@ -75,7 +78,7 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testCreatedBauakteIsFoundBySearch() {
         let app = launchSignedIn()
-        tap("newBauakteButton", in: app)
+        tap("newBauakteTile", in: app)
         type("Halle Huber", into: "newTitleField", in: app)
         tap("createButton", in: app)
         XCTAssertTrue(element("bauakteTitle", in: app).waitForExistence(timeout: 10))
@@ -91,7 +94,7 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testNoteDefectAndHistory() {
         let app = launchSignedIn()
-        tap("newBauakteButton", in: app)
+        tap("newBauakteTile", in: app)
         type("Reihenhaus Mitte", into: "newTitleField", in: app)
         tap("createButton", in: app)
         XCTAssertTrue(element("bauakteTitle", in: app).waitForExistence(timeout: 10))
