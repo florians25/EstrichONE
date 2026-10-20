@@ -153,7 +153,7 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await dialog.getByLabel('Bauvorhaben').fill('Anfrage Familie Kraus, Heizestrich');
   await dialog.getByLabel('Kunde').fill('Familie Kraus');
   await dialog.getByRole('button', { name: '„Familie Kraus“ als neuen Kunden anlegen' }).click();
-  await expect(dialog.getByText('Familie Kraus')).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Ändern' })).toBeVisible();
   await dialog.getByLabel('Ort').fill('Landshut');
   await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
 
@@ -198,6 +198,45 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await expect(page.getByText('Anna Admin hat einen Raum angelegt.')).toBeVisible();
   await expect(page.getByText('Anna Admin hat einen Mangel als behoben markiert.')).toBeVisible();
   await expect(page.getByText('Anna Admin hat ein Dokument hinzugefügt.')).toBeVisible();
+});
+
+test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird angezeigt', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await page.getByRole('link', { name: 'Ressourcen' }).click();
+  await page.getByLabel('Name der Kolonne').fill('Kolonne Admin');
+  await page.getByLabel('Kolonnenführer').selectOption({ label: 'Anna Admin' });
+  await page.getByRole('button', { name: 'Kolonne anlegen' }).click();
+  await expect(page.getByRole('row', { name: /Kolonne Admin/ })).toContainText('Anna Admin');
+  await page.getByRole('tab', { name: 'Fahrzeuge und Geräte' }).click();
+  await page.getByLabel('Bezeichnung').fill('Mixokret 2');
+  await page.getByRole('button', { name: 'Hinzufügen' }).click();
+  await expect(page.getByRole('row', { name: /Mixokret 2/ })).toContainText('Verfügbar');
+
+  await page.getByRole('link', { name: 'Planung', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Planung' })).toBeVisible();
+  const monday = page.getByRole('button', { name: /^Einsatz planen: Kolonne Admin, Montag/ });
+  await monday.click();
+  const dialog = page.getByRole('dialog', { name: 'Einsatz planen' });
+  await dialog.getByLabel('Bauakte').fill('Prüfung E2E');
+  await dialog.getByRole('button', { name: /EFH Prüfung E2E/ }).click();
+  await dialog.getByLabel('Tätigkeit').fill('Estrich einbringen EG');
+  await dialog.getByLabel('Mixokret 2').check();
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('button', { name: /Estrich einbringen EG, EFH Prüfung E2E/ })).toBeVisible();
+
+  await page.getByRole('button', { name: /^Einsatz planen: Einzeln eingeplant, Montag/ }).click();
+  const second = page.getByRole('dialog', { name: 'Einsatz planen' });
+  await second.getByLabel('Bauakte').fill('Kraus');
+  await second.getByRole('button', { name: /Anfrage Familie Kraus/ }).click();
+  await second.getByLabel('Tätigkeit').fill('Randdämmung stellen');
+  await second.getByLabel('Anna Admin').check();
+  await second.getByLabel('Mixokret 2').check();
+  await second.getByRole('button', { name: 'Speichern' }).click();
+  const hints = page.getByRole('dialog').getByRole('status');
+  await expect(hints).toContainText('Anna Admin ist an diesem Tag mehrfach eingeplant.');
+  await expect(hints).toContainText('Mixokret 2 ist an diesem Tag mehrfach eingeplant.');
+  await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
+  await expect(page.getByRole('button', { name: /Randdämmung stellen, Anfrage Familie Kraus, Heizestrich, 2 Hinweise/ })).toBeVisible();
 });
 
 async function signIn(page: import('@playwright/test').Page, login: string, password: string) {

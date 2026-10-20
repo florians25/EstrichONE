@@ -20,7 +20,7 @@ import { problemMessage } from '../core/problem';
         </div>
       } @else {
         <input [id]="inputId()" type="search" autocomplete="off" placeholder="Name, Kundennummer oder Ort"
-          [ngModel]="query()" (ngModelChange)="search($event)" />
+          [ngModel]="query()" [ngModelOptions]="{ standalone: true }" (ngModelChange)="search($event)" />
         @if (query().trim().length > 1) {
           <ul class="results" role="listbox" aria-label="Kunden">
             @for (c of results(); track c.id) {

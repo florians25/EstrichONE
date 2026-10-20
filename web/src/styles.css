@@ -109,7 +109,9 @@ a { color: var(--action-primary); }
 .table th { text-align: left; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); padding: 8px 12px; border-bottom: 1px solid var(--line); }
 .table td { padding: 8px 12px; border-bottom: 1px solid var(--line); height: var(--row-height); vertical-align: middle; }
 .table tr:last-child td { border-bottom: none; }
-.table .numeric { font-variant-numeric: tabular-nums; }
+.table .numeric { font-variant-numeric: tabular-nums; white-space: nowrap; }
+.table td.actions { display: table-cell; white-space: nowrap; }
+.table td.actions .button + .button { margin-left: 8px; }
 .actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 /* Statusanzeigen: immer Farbe + Symbol/Punkt + Text (05, Abschnitt 2.3) */

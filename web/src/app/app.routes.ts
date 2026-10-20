@@ -23,6 +23,18 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/bauakte-detail.page').then((m) => m.BauakteDetailPage),
       },
       {
+        path: 'planung',
+        title: 'Planung · EstrichONE',
+        canActivate: [permissionGuard('planning.read')],
+        loadComponent: () => import('./pages/planning.page').then((m) => m.PlanningPage),
+      },
+      {
+        path: 'planung/ressourcen',
+        title: 'Ressourcen · EstrichONE',
+        canActivate: [permissionGuard('planning.read')],
+        loadComponent: () => import('./pages/resources.page').then((m) => m.ResourcesPage),
+      },
+      {
         path: 'kunden',
         title: 'Kunden · EstrichONE',
         canActivate: [permissionGuard('contacts.read')],

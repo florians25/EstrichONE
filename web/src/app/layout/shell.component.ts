@@ -6,6 +6,8 @@ interface NavItem {
   label: string;
   link: string;
   permission?: string;
+  /** Nur bei genau dieser Adresse hervorheben (z. B. „Planung“ nicht unter „Planung › Ressourcen“). */
+  exact?: boolean;
 }
 
 /** Rahmen: linke Navigation (232 px), Kopfzeile mit angemeldeter Person (05, Abschnitt 4). */
@@ -22,7 +24,7 @@ interface NavItem {
         </a>
         <ul>
           @for (item of visibleItems(); track item.link) {
-            <li><a [routerLink]="item.link" routerLinkActive="active" ariaCurrentWhenActive="page">{{ item.label }}</a></li>
+            <li><a [routerLink]="item.link" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: item.exact ?? false }" ariaCurrentWhenActive="page">{{ item.label }}</a></li>
           }
         </ul>
       </nav>
@@ -69,6 +71,8 @@ export class ShellComponent {
   private readonly items: NavItem[] = [
     { label: 'Bauakten', link: '/bauakten', permission: 'bauakten.read' },
     { label: 'Kunden', link: '/kunden', permission: 'contacts.read' },
+    { label: 'Planung', link: '/planung', permission: 'planning.read', exact: true },
+    { label: 'Ressourcen', link: '/planung/ressourcen', permission: 'planning.read' },
     { label: 'Benutzer', link: '/verwaltung/benutzer', permission: 'users.manage' },
     { label: 'Geräte', link: '/it-center/geraete', permission: 'devices.read' },
     { label: 'Helpdesk', link: '/it-center/helpdesk', permission: 'helpdesk.agent' },

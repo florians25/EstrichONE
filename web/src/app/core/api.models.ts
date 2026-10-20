@@ -337,3 +337,63 @@ export interface RoomOverview {
   totalAreaSquareMeters: number;
   heatedAreaSquareMeters: number;
 }
+
+export type ResourceKind = 'vehicle' | 'pump' | 'machine';
+export type AbsenceKind = 'vacation' | 'sick' | 'training' | 'other';
+
+export interface ResourceResponse {
+  id: string;
+  kind: ResourceKind;
+  name: string;
+  identifier: string | null;
+  notes: string | null;
+  isActive: boolean;
+  version: number;
+}
+
+export interface CrewResponse {
+  id: string;
+  name: string;
+  leaderUserId: string | null;
+  memberUserIds: string[];
+  color: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  version: number;
+}
+
+export interface AssignmentView {
+  id: string;
+  day: string;
+  startTime: string | null;
+  activity: string;
+  bauakteId: string;
+  bauakteNumber: string | null;
+  bauakteTitle: string;
+  bauakteAddress: string | null;
+  crewId: string | null;
+  crewName: string | null;
+  crewColor: string | null;
+  people: { id: string; name: string }[];
+  resources: { id: string; name: string; kind: ResourceKind }[];
+  notes: string | null;
+  warnings: string[];
+  version: number;
+}
+
+export interface AbsenceView {
+  id: string;
+  userId: string;
+  userName: string;
+  from: string;
+  to: string;
+  kind: AbsenceKind;
+  note: string | null;
+}
+
+export interface PlanningRange {
+  from: string;
+  to: string;
+  assignments: AssignmentView[];
+  absences: AbsenceView[];
+}

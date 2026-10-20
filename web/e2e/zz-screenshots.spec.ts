@@ -19,4 +19,16 @@ test('Bildschirmfotos', async ({ page }) => {
   await page.getByRole('button', { name: 'Code erzeugen' }).click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screenshots/devices.png' });
+  await page.keyboard.press('Escape');
+  await page.getByRole('link', { name: 'Planung', exact: true }).click();
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: 'test-results/screenshots/planning.png', fullPage: true });
+  await page.getByRole('link', { name: 'Bauakten' }).click();
+  await page.getByRole('link', { name: /Anfrage Familie Kraus/ }).click();
+  await page.getByRole('tab', { name: 'Räume und Flächen' }).click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: 'test-results/screenshots/rooms.png', fullPage: true });
+  await page.getByRole('link', { name: 'Helpdesk' }).click();
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: 'test-results/screenshots/helpdesk.png', fullPage: true });
 });
