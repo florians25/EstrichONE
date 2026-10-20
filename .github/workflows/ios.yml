@@ -3,7 +3,7 @@ name: iOS
 on:
   workflow_dispatch: {}
   push:
-    branches: [main, "claude/**"]
+    branches: ["**", "!dependabot/**"]
     paths: ["ios/**", "contracts/**", "backend/src/**", ".github/workflows/ios.yml"]
   pull_request:
     paths: ["ios/**", "contracts/**", "backend/src/**", ".github/workflows/ios.yml"]

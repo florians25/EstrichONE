@@ -3,7 +3,7 @@ name: Android
 on:
   workflow_dispatch: {}
   push:
-    branches: [main, "claude/**"]
+    branches: ["**", "!dependabot/**"]
     paths: ["android/**", "backend/src/**", ".github/workflows/android.yml"]
   pull_request:
     paths: ["android/**", "backend/src/**", ".github/workflows/android.yml"]

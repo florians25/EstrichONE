@@ -5,7 +5,7 @@ on:
     - cron: "17 2 * * *"   # nächtlich: u. a. Backup/Restore-Test gegen aktuelle Basis-Images
   workflow_dispatch: {}
   push:
-    branches: [main, "claude/**"]
+    branches: ["**", "!dependabot/**"]
     paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "web/**", "global.json", ".github/workflows/backend.yml"]
   pull_request:
     paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "web/**", "global.json", ".github/workflows/backend.yml"]
