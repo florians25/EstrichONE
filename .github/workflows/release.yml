@@ -23,9 +23,8 @@ jobs:
     name: Release anlegen
     runs-on: ubuntu-latest
     steps:
+      # Beim manuellen Start existiert der Tag noch nicht: Release und Tag entstehen auf dem gestarteten Stand.
       - uses: actions/checkout@v5
-        with:
-          ref: ${{ env.TAG }}
       - name: Release mit Versionshinweisen
         env:
           GH_TOKEN: ${{ github.token }}
@@ -37,7 +36,7 @@ jobs:
           else
             pre=""; [[ "$TAG" == *-* ]] && pre="--prerelease"
             title="EstrichONE ${TAG#v}"; [[ -n "$pre" ]] && title="EstrichONE ${TAG#v} (Vorabversion)"
-            gh release create "$TAG" --title "$title" --notes-file "$notes" $pre --verify-tag --repo "$GITHUB_REPOSITORY"
+            gh release create "$TAG" --title "$title" --notes-file "$notes" $pre --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY"
           fi
 
   windows:
