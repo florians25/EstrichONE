@@ -53,6 +53,9 @@ if (options.TrustForwardedHeaders)
         // Die API ist im Docker-Stack nur über das interne Netz erreichbar; der Proxy hat keine feste IP.
         forwarded.KnownIPNetworks.Clear();
         forwarded.KnownProxies.Clear();
+        // Hinter einem weiteren Proxy (Nginx Proxy Manager) lautet die Kette „Client, Proxy“. Caddy übernimmt fremde
+        // Einträge nur von ESTRICHONE_TRUSTED_PROXIES; im Direktbetrieb steht dort deshalb nur der Client.
+        forwarded.ForwardLimit = 2;
     });
 }
 

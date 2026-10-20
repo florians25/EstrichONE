@@ -6,6 +6,8 @@
 #
 # Ohne Rückfragen:  -e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"
 # Ports (Standard 8181/8143): -e ESTRICHONE_HTTP_PORT=8181 -e ESTRICHONE_HTTPS_PORT=8143
+# Betriebsart: -e ESTRICHONE_MODE=proxy  – hinter Nginx Proxy Manager o. Ä.: nur HTTP auf 8181, HTTPS macht der Proxy
+#              -e ESTRICHONE_MODE=direkt – Caddy macht HTTPS selbst (8143) und leitet 8181 dorthin weiter
 # Erneut ausführen = auf die Version dieses Installers aktualisieren; Daten und .env bleiben erhalten.
 set -eu
 
@@ -21,6 +23,26 @@ ask() { # ask VAR "Frage" "Standard"
   fi
   eval "$1=\"\${current:-$3}\""
 }
+set_env() { # set_env SCHLÜSSEL WERT – ersetzt oder ergänzt eine Zeile in der .env
+  if grep -q "^$1=" "$DIR/.env"; then sed -i "s|^$1=.*|$1=$2|" "$DIR/.env"; else echo "$1=$2" >> "$DIR/.env"; fi
+}
+ask_mode() { # ask_mode Standard
+  ask ESTRICHONE_MODE "Betriebsart: proxy = hinter Nginx Proxy Manager o. Ä. (nur HTTP), direkt = eigenes HTTPS" "$1"
+  case "$ESTRICHONE_MODE" in proxy|direkt) ;; *) fail "Betriebsart muss proxy oder direkt sein." ;; esac
+}
+apply_mode() { # schreibt Betriebsart, Compose-Dateien und öffentliche Adresse in die .env
+  domain="$(sed -n 's/^ESTRICHONE_DOMAIN=//p' "$DIR/.env")"
+  https_port="$(sed -n 's/^ESTRICHONE_HTTPS_PORT=//p' "$DIR/.env")"
+  set_env ESTRICHONE_MODE "$ESTRICHONE_MODE"
+  if [ "$ESTRICHONE_MODE" = "proxy" ]; then
+    set_env COMPOSE_FILE compose.yml:compose.override.yml:compose.proxy.yml
+    set_env ESTRICHONE_PUBLIC_URL "https://$domain"
+  else
+    set_env COMPOSE_FILE compose.yml:compose.override.yml
+    url="https://$domain"; [ "$https_port" = "443" ] || url="$url:$https_port"
+    set_env ESTRICHONE_PUBLIC_URL "$url"
+  fi
+}
 
 [ -S /var/run/docker.sock ] || fail "Docker-Socket fehlt: bitte mit -v /var/run/docker.sock:/var/run/docker.sock starten."
 docker version >/dev/null 2>&1 || fail "Docker ist über den Socket nicht erreichbar."
@@ -28,7 +50,7 @@ docker version >/dev/null 2>&1 || fail "Docker ist über den Socket nicht erreic
   || fail "Bitte das Installationsverzeichnis einbinden: -v /opt/estrichone:/opt/estrichone (gleicher Pfad innen und außen)."
 
 echo "EstrichONE $VERSION – Installation nach $DIR"
-cp /installer/compose.yml /installer/compose.override.yml "$DIR/"
+cp /installer/compose.yml /installer/compose.override.yml /installer/compose.proxy.yml "$DIR/"
 
 if [ -f "$DIR/.env" ]; then
   echo "Vorhandene Installation gefunden – Konfiguration bleibt, Version wird auf $VERSION gesetzt."
@@ -48,20 +70,28 @@ if [ -f "$DIR/.env" ]; then
   fi
   if [ -n "${ESTRICHONE_HTTPS_PORT:-}" ]; then
     sed -i "s|^ESTRICHONE_HTTPS_PORT=.*|ESTRICHONE_HTTPS_PORT=$ESTRICHONE_HTTPS_PORT|" "$DIR/.env"
-    domain="$(sed -n 's/^ESTRICHONE_DOMAIN=//p' "$DIR/.env")"
-    url="https://$domain"; [ "$ESTRICHONE_HTTPS_PORT" = "443" ] || url="$url:$ESTRICHONE_HTTPS_PORT"
-    sed -i "s|^ESTRICHONE_PUBLIC_URL=.*|ESTRICHONE_PUBLIC_URL=$url|" "$DIR/.env"
   fi
+  if [ -n "${ESTRICHONE_DOMAIN:-}" ]; then
+    echo "$ESTRICHONE_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+$' || fail "Ungültige Adresse: $ESTRICHONE_DOMAIN"
+    set_env ESTRICHONE_DOMAIN "$ESTRICHONE_DOMAIN"
+  fi
+  # Betriebsart: bis 0.1.0-preview.3 gab es nur „direkt“; ältere Installationen werden einmal gefragt.
+  [ -n "${ESTRICHONE_MODE:-}" ] || ESTRICHONE_MODE="$(sed -n 's/^ESTRICHONE_MODE=//p' "$DIR/.env")"
+  ask_mode direkt
+  apply_mode
   FIRST=0
 else
-  ask ESTRICHONE_DOMAIN "Adresse des Servers (Domain oder IP, ohne https://)" "localhost"
+  ask_mode proxy
+  if [ "$ESTRICHONE_MODE" = "proxy" ]; then
+    ask ESTRICHONE_DOMAIN "Domain, unter der der Proxy EstrichONE anbietet (ohne https://, z. B. estrichone.firma.de)" "localhost"
+  else
+    ask ESTRICHONE_DOMAIN "Adresse des Servers (Domain oder IP, ohne https://)" "localhost"
+  fi
   ask ESTRICHONE_NAME "Firmenname für die Anzeige in den Apps" "EstrichONE"
   HTTP_PORT="${ESTRICHONE_HTTP_PORT:-8181}"
   HTTPS_PORT="${ESTRICHONE_HTTPS_PORT:-8143}"
   echo "$ESTRICHONE_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+$' || fail "Ungültige Adresse: $ESTRICHONE_DOMAIN"
   case "$ESTRICHONE_NAME" in *'"'*) fail "Der Firmenname darf keine Anführungszeichen enthalten." ;; esac
-  PUBLIC_URL="https://$ESTRICHONE_DOMAIN"
-  [ "$HTTPS_PORT" = "443" ] || PUBLIC_URL="$PUBLIC_URL:$HTTPS_PORT"
   PASSWORD="$(head -c 48 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 40)"
   BACKUP_PASSWORD="$(head -c 64 /dev/urandom | base64 | tr -dc 'A-Za-z0-9' | head -c 48)"
   umask 077
@@ -72,7 +102,8 @@ else
       -e "s|^POSTGRES_PASSWORD=.*|POSTGRES_PASSWORD=$PASSWORD|" \
       -e "s|^RESTIC_PASSWORD=.*|RESTIC_PASSWORD=$BACKUP_PASSWORD|" \
       /installer/env.example > "$DIR/.env"
-  printf 'ESTRICHONE_PUBLIC_URL=%s\nESTRICHONE_VERSION=%s\n' "$PUBLIC_URL" "$VERSION" >> "$DIR/.env"
+  echo "ESTRICHONE_VERSION=$VERSION" >> "$DIR/.env"
+  apply_mode
   umask 022
   FIRST=1
 fi
@@ -89,10 +120,20 @@ echo "Images laden und Dienste starten …"
 docker compose -p estrichone pull --quiet --ignore-pull-failures
 docker compose -p estrichone up -d --remove-orphans
 
-URL="https://$ESTRICHONE_DOMAIN"
-[ "$ESTRICHONE_HTTPS_PORT" = "443" ] || URL="$URL:$ESTRICHONE_HTTPS_PORT"
+URL="$ESTRICHONE_PUBLIC_URL"
 echo
-echo "EstrichONE läuft: $URL   (HTTP-Port $ESTRICHONE_HTTP_PORT leitet weiter)"
+if [ "$ESTRICHONE_MODE" = "proxy" ]; then
+  echo "EstrichONE läuft auf diesem Server unter http://<server-ip>:$ESTRICHONE_HTTP_PORT (nur HTTP, für den Proxy)."
+  echo
+  echo "Im Nginx Proxy Manager einen Proxy Host anlegen:"
+  echo "  Domain: $ESTRICHONE_DOMAIN   →   Scheme http, Host <server-ip>, Port $ESTRICHONE_HTTP_PORT"
+  echo "  SSL: Let's-Encrypt-Zertifikat, Force SSL einschalten (die Anmeldung im Web braucht HTTPS)"
+  echo "  Für große Videos unter Advanced eintragen:  client_max_body_size 600m;"
+  echo
+  echo "Danach erreichbar unter: $URL"
+else
+  echo "EstrichONE läuft: $URL   (HTTP-Port $ESTRICHONE_HTTP_PORT leitet weiter)"
+fi
 
 if [ "$FIRST" = "1" ]; then
   echo
@@ -126,6 +167,6 @@ if [ -n "$CODE" ]; then
   echo
   echo "   $CODE"
 fi
-case "$ESTRICHONE_DOMAIN" in
+[ "$ESTRICHONE_MODE" = "proxy" ] || case "$ESTRICHONE_DOMAIN" in
   localhost|*[0-9].[0-9]*) echo; echo "Hinweis: Für $ESTRICHONE_DOMAIN stellt Caddy ein eigenes Zertifikat aus – der Browser warnt einmal." ;;
 esac

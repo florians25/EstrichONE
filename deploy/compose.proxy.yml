@@ -1,0 +1,16 @@
+# Betrieb hinter einem vorhandenen Reverse Proxy (z. B. Nginx Proxy Manager):
+# Caddy liefert nur HTTP auf ESTRICHONE_HTTP_PORT aus, HTTPS und Zertifikat übernimmt der Proxy.
+# Einbinden über die .env:
+#   COMPOSE_FILE=compose.yml:compose.proxy.yml          (Installation aus dem Quellcode)
+#   COMPOSE_FILE=compose.yml:compose.override.yml:compose.proxy.yml   (Docker-Installer)
+#   ESTRICHONE_MODE=proxy
+#   ESTRICHONE_PUBLIC_URL=https://estrichone.firma.de   (Adresse, unter der der Proxy die Suite anbietet)
+
+services:
+  caddy:
+    ports: !override
+      - "${ESTRICHONE_HTTP_PORT:-8181}:${ESTRICHONE_HTTP_PORT:-8181}"
+    environment:
+      ESTRICHONE_MODE: proxy
+      # Nur von diesen Adressen werden X-Forwarded-For/-Proto übernommen (Docker-Netze, LAN).
+      ESTRICHONE_TRUSTED_PROXIES: ${ESTRICHONE_TRUSTED_PROXIES:-private_ranges}

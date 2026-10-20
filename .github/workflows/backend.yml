@@ -51,7 +51,9 @@ jobs:
           docker build -f docker/web.Dockerfile -t estrichone/web:ci .
       - name: Compose-Datei prüfen
         working-directory: deploy
-        run: POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose config --quiet
+        run: |
+          POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose config --quiet
+          POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose -f compose.yml -f compose.proxy.yml config --quiet
       - name: Shellcheck
         run: shellcheck deploy/*.sh deploy/backup/*
       - name: Stack starten und server-info abrufen

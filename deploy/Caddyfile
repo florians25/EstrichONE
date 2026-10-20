@@ -1,21 +1,22 @@
 # EstrichONE – Weboberfläche und Reverse Proxy (ADR 0007)
-# Öffentliche Domain: Zertifikat automatisch von Let's Encrypt.
-# „localhost“ oder IP-Adresse: Zertifikat aus Caddys interner Zertifizierungsstelle (Browser warnt einmal).
-# Ports: Standard 80/443; der Docker-Installer nutzt 8181/8143. Weiterleitungen zeigen dann auf den richtigen Port.
-# Für ein Let's-Encrypt-Zertifikat auf 8181/8143 am Router 80 → 8181 und 443 → 8143 weiterleiten.
+#
+# Zwei Betriebsarten (ESTRICHONE_MODE):
+#   direkt – Caddy ist von außen erreichbar und kümmert sich selbst um HTTPS:
+#            öffentliche Domain → Zertifikat von Let's Encrypt; „localhost“ oder IP → eigenes Zertifikat
+#            (Browser warnt einmal). HTTP leitet auf HTTPS weiter. Standard-Ports 80/443.
+#   proxy  – hinter einem vorhandenen Reverse Proxy (z. B. Nginx Proxy Manager): nur HTTP auf
+#            ESTRICHONE_HTTP_PORT, ohne Weiterleitung und ohne Zertifikat; HTTPS macht der Proxy.
+#            X-Forwarded-For/-Proto werden nur von Adressen aus ESTRICHONE_TRUSTED_PROXIES übernommen.
 
 {
 	http_port {$ESTRICHONE_HTTP_PORT:80}
 	https_port {$ESTRICHONE_HTTPS_PORT:443}
+	servers {
+		trusted_proxies static {$ESTRICHONE_TRUSTED_PROXIES:127.0.0.1/32}
+	}
 }
 
-# HTTP → HTTPS mit dem richtigen Port (Caddys automatische Weiterleitung nennt keinen abweichenden Port).
-# ACME-Prüfungen für Let's Encrypt beantwortet Caddy weiterhin selbst.
-http://{$ESTRICHONE_DOMAIN}:{$ESTRICHONE_HTTP_PORT:80} {
-	redir https://{host}:{$ESTRICHONE_HTTPS_PORT:443}{uri} 308
-}
-
-{$ESTRICHONE_DOMAIN}:{$ESTRICHONE_HTTPS_PORT:443} {
+(app) {
 	encode zstd gzip
 
 	header {
@@ -54,3 +55,23 @@ http://{$ESTRICHONE_DOMAIN}:{$ESTRICHONE_HTTP_PORT:80} {
 		file_server
 	}
 }
+
+(direkt) {
+	# HTTP → HTTPS mit dem richtigen Port (Caddys automatische Weiterleitung nennt keinen abweichenden Port).
+	# ACME-Prüfungen für Let's Encrypt beantwortet Caddy weiterhin selbst.
+	http://{$ESTRICHONE_DOMAIN}:{$ESTRICHONE_HTTP_PORT:80} {
+		redir https://{host}:{$ESTRICHONE_HTTPS_PORT:443}{uri} 308
+	}
+
+	{$ESTRICHONE_DOMAIN}:{$ESTRICHONE_HTTPS_PORT:443} {
+		import app
+	}
+}
+
+(proxy) {
+	http://:{$ESTRICHONE_HTTP_PORT:80} {
+		import app
+	}
+}
+
+import {$ESTRICHONE_MODE:direkt}

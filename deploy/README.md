@@ -16,21 +16,42 @@ sudo docker run --rm -it \
   ghcr.io/florians25/estrichone-installer:latest
 ```
 
-Der Installer fragt Adresse (Domain oder IP) und Firmennamen ab, legt `/opt/estrichone` mit `.env` (zufällige
+Der Installer fragt **Betriebsart**, Domain und Firmennamen ab, legt `/opt/estrichone` mit `.env` (zufällige
 Passwörter) an, lädt die fertigen Images und startet die Suite. Er zeigt am Ende das **Backup-Passwort** und den
 **Einrichtungscode** für den ersten Administrator.
+
+### Betriebsart `proxy` (Standard) – hinter Nginx Proxy Manager o. Ä.
+
+EstrichONE stellt nur **HTTP auf Port 8181** bereit – ohne Weiterleitung und ohne eigenes Zertifikat. HTTPS, Domain
+und Zertifikat übernimmt der vorhandene Reverse Proxy. Im Nginx Proxy Manager:
+
+| Einstellung | Wert |
+|---|---|
+| Domain Names | die beim Installer angegebene Domain, z. B. `estrichone.firma.de` |
+| Scheme / Forward Hostname / Port | `http` / IP des EstrichONE-Servers / `8181` |
+| SSL | Let's-Encrypt-Zertifikat, **Force SSL** an (die Anmeldung im Web setzt HTTPS voraus) |
+| Advanced (für große Videos) | `client_max_body_size 600m;` |
+
+`X-Forwarded-For`/`-Proto` werden nur von privaten Adressen (LAN, Docker-Netze) übernommen; die Protokolle zeigen
+dadurch die echte Client-Adresse.
+
+### Betriebsart `direkt` – ohne vorgeschalteten Proxy
 
 | Port | Zweck |
 |---|---|
 | **8143** | HTTPS – Weboberfläche und API (`https://<adresse>:8143`) |
 | **8181** | HTTP – leitet auf 8143 weiter |
 
-- Ohne Rückfragen: `-e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"`
+Bei IP-Adresse oder `localhost` stellt Caddy ein eigenes Zertifikat aus (der Browser warnt einmal; die Android-App
+akzeptiert es nicht). Für ein gültiges Let's-Encrypt-Zertifikat eine Domain verwenden und am Router
+**80 → 8181** und **443 → 8143** weiterleiten.
+
+### Optionen
+
+- Ohne Rückfragen: `-e ESTRICHONE_MODE=proxy -e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"`
 - Andere Ports: `-e ESTRICHONE_HTTP_PORT=8181 -e ESTRICHONE_HTTPS_PORT=8143`
 - **Aktualisieren:** denselben Befehl erneut ausführen (Daten und Konfiguration bleiben, Version wird angehoben).
-- Bei IP-Adresse oder `localhost` stellt Caddy ein eigenes Zertifikat aus (der Browser warnt einmal; die Android-App
-  akzeptiert es nicht). Für ein gültiges Let's-Encrypt-Zertifikat eine Domain verwenden und am Router
-  **80 → 8181** und **443 → 8143** weiterleiten.
+  Betriebsart wechseln: zusätzlich `-e ESTRICHONE_MODE=proxy` bzw. `direkt`.
 - Verwalten: `cd /opt/estrichone && sudo docker compose -p estrichone ps|logs|down`
 
 ## Installation aus dem Quellcode
@@ -42,6 +63,9 @@ sudo ./setup.sh                      # fragt Adresse und Firmennamen ab, erzeugt
 sudo docker compose up -d --build    # baut und startet Datenbank, Migration, API, Weboberfläche und Reverse Proxy
 curl https://<ihre-adresse>/api/v1/server-info
 ```
+
+Hinter einem eigenen Reverse Proxy: in der `.env` `COMPOSE_FILE=compose.yml:compose.proxy.yml`,
+`ESTRICHONE_HTTP_PORT=8181` und `ESTRICHONE_PUBLIC_URL=https://<domain>` setzen (siehe `compose.proxy.yml`).
 
 ## Ersteinrichtung (erster Administrator)
 
