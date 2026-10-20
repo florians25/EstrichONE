@@ -121,8 +121,18 @@ public sealed class BauakteSection
     {
         Id = id;
         BauakteId = bauakteId;
-        Name = name.Trim();
+        Name = Validate(name);
         SortOrder = sortOrder;
+    }
+
+    public void Rename(string name) => Name = Validate(name);
+
+    public void Move(int sortOrder) => SortOrder = sortOrder;
+
+    private static string Validate(string name)
+    {
+        var trimmed = name?.Trim() ?? string.Empty;
+        return trimmed.Length is > 0 and <= 100 ? trimmed : throw new ArgumentException("Der Bereich braucht einen Namen (höchstens 100 Zeichen).", nameof(name));
     }
 }
 

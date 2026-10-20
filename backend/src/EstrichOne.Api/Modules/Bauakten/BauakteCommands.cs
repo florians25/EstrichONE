@@ -16,7 +16,8 @@ public enum CreateBauakteOutcome
 
 public sealed record NewBauakte(
     Guid Id, string Title, string? Street = null, string? PostalCode = null, string? City = null, double? Latitude = null,
-    double? Longitude = null, string? Description = null, Guid? CustomerId = null, string? TemplateKey = null);
+    double? Longitude = null, string? Description = null, Guid? CustomerId = null, string? TemplateKey = null,
+    BauakteStatus InitialStatus = BauakteStatus.Planned);
 
 /// <summary>Anlage einer Bauakte – gemeinsam für REST-API und Synchronisation.</summary>
 public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser currentUser, BauakteNumberGenerator numbers, IBauakteHistory history)
@@ -49,6 +50,11 @@ public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser current
         bauakte.Describe(request.Description);
         bauakte.AssignCustomer(request.CustomerId);
         bauakte.ApplyTemplate(request.TemplateKey);
+        if (request.InitialStatus == BauakteStatus.Inquiry)
+        {
+            // Anfrage aus dem Büro: wird später per Statuswechsel zum Auftrag (02: „Anfragen → Bauakte“).
+            bauakte.ChangeStatus(BauakteStatus.Inquiry);
+        }
 
         var ownTransaction = db.Database.CurrentTransaction is null ? await db.Database.BeginTransactionAsync(cancellationToken) : null;
         try

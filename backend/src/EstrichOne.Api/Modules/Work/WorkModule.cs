@@ -12,7 +12,5 @@ public sealed class WorkModule : IModule
         services.AddScoped<ISyncEntitySource, WorkItemSource>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api)
-    {
-    }
+    public void MapEndpoints(IEndpointRouteBuilder api) => WorkEndpoints.Map(api);
 }

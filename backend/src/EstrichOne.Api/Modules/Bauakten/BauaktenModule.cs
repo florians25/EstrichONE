@@ -25,5 +25,6 @@ public sealed class BauaktenModule : IModule
     {
         BauakteEndpoints.Map(api);
         BauakteHistoryEndpoints.Map(api);
+        OfficeEndpoints.Map(api);
     }
 }

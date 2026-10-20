@@ -37,7 +37,13 @@ public sealed class Room : IVersionedEntity, ISoftDeletable
     }
 
     public static Room Create(Guid id, Guid bauakteId, string name) =>
-        new() { Id = id, BauakteId = bauakteId, Name = name.Trim() };
+        new() { Id = id, BauakteId = bauakteId, Name = ValidName(name) };
+
+    private static string ValidName(string name)
+    {
+        var trimmed = name?.Trim() ?? string.Empty;
+        return trimmed.Length is > 0 and <= 100 ? trimmed : throw new ArgumentException("Der Raum braucht einen Namen (höchstens 100 Zeichen).", nameof(name));
+    }
 
     public void Update(Guid? sectionId, string name, string? floor, decimal? areaSquareMeters, string? notes)
     {
@@ -47,14 +53,24 @@ public sealed class Room : IVersionedEntity, ISoftDeletable
         }
 
         SectionId = sectionId;
-        Name = name.Trim();
-        Floor = floor;
+        Name = ValidName(name);
+        Floor = string.IsNullOrWhiteSpace(floor) ? null : floor.Trim();
         AreaSquareMeters = areaSquareMeters is null ? null : decimal.Round(areaSquareMeters.Value, 2);
         Notes = notes;
     }
 
     public void ChangeBuildup(Guid? screedTypeId, int? thicknessMillimeters, int? insulationMillimeters, bool underfloorHeating)
     {
+        if (thicknessMillimeters is < 10 or > 300)
+        {
+            throw new ArgumentOutOfRangeException(nameof(thicknessMillimeters), "Die Estrichdicke muss zwischen 10 und 300 mm liegen.");
+        }
+
+        if (insulationMillimeters is < 0 or > 500)
+        {
+            throw new ArgumentOutOfRangeException(nameof(insulationMillimeters), "Die Dämmung muss zwischen 0 und 500 mm liegen.");
+        }
+
         ScreedTypeId = screedTypeId;
         ThicknessMillimeters = thicknessMillimeters;
         InsulationMillimeters = insulationMillimeters;

@@ -35,7 +35,8 @@ public sealed record CreateBauakteRequest(
     [property: Range(-180, 180)] double? Longitude = null,
     [property: MaxLength(4000)] string? Description = null,
     Guid? CustomerId = null,
-    [property: MaxLength(50)] string? TemplateKey = null);
+    [property: MaxLength(50)] string? TemplateKey = null,
+    BauakteStatus? Status = null);
 
 /// <summary>Ersetzt alle bearbeitbaren Felder. Version per <c>If-Match</c>.</summary>
 public sealed record UpdateBauakteRequest(
@@ -89,7 +90,7 @@ internal static class BauakteEndpoints
 
     private static async Task<Results<Ok<BauaktePage>, ProblemHttpResult>> ListAsync(
         EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken,
-        [FromQuery] string? search = null, [FromQuery] BauakteStatus? status = null,
+        [FromQuery] string? search = null, [FromQuery] string? status = null,
         [FromQuery] string? cursor = null, [FromQuery] int? limit = null)
     {
         var pageSize = Math.Clamp(limit ?? DefaultPageSize, 1, MaxPageSize);
@@ -104,9 +105,15 @@ internal static class BauakteEndpoints
                 || (b.City != null && EF.Functions.ILike(b.City, pattern, "\\")));
         }
 
+        // Wie in JSON (camelCase, „inquiry“) oder als Enum-Name; Unbekanntes ist ein Fehler, kein stiller Filterverzicht.
         if (status is not null)
         {
-            query = query.Where(b => b.Status == status);
+            if (!Enum.TryParse<BauakteStatus>(status, ignoreCase: true, out var wanted) || int.TryParse(status, out _))
+            {
+                return Validation($"Unbekannter Status „{status}“.");
+            }
+
+            query = query.Where(b => b.Status == wanted);
         }
 
         if (cursor is not null)
@@ -154,7 +161,7 @@ internal static class BauakteEndpoints
 
         var (bauakte, outcome) = await commands.CreateAsync(new NewBauakte(request.Id, request.Title, request.Street,
             request.PostalCode, request.City, request.Latitude, request.Longitude, request.Description, request.CustomerId,
-            request.TemplateKey), cancellationToken);
+            request.TemplateKey, request.Status == BauakteStatus.Inquiry ? BauakteStatus.Inquiry : BauakteStatus.Planned), cancellationToken);
 
         switch (outcome)
         {

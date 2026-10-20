@@ -82,6 +82,7 @@ internal static class BauakteHistoryEndpoints
             },
             "bauakte.workitem_created" => kindIsDefect ? $"{actor} hat einen Mangel erfasst." : $"{actor} hat eine Aufgabe angelegt.",
             "bauakte.workitem_done" => kindIsDefect ? $"{actor} hat einen Mangel als behoben markiert." : $"{actor} hat eine Aufgabe erledigt.",
+            "bauakte.room_added" => $"{actor} hat einen Raum angelegt.",
             "bauakte.diary_added" => $"{actor} hat das Bautagebuch für den {Day(Detail("day"))} ergänzt.",
             "bauakte.inspection_added" when Detail("kind") == "CmMeasurement" =>
                 $"{actor} hat eine CM-Messung erfasst: {Percent(Detail("measured"))} CM-% bei Grenzwert {Percent(Detail("limit"))} CM-% – "

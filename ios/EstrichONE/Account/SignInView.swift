@@ -19,6 +19,19 @@ struct SignInView: View {
         case password
     }
 
+    // Für echte Benutzer: Passwort-Manager und „Passwort sichern?“. In UI-Tests nicht, weil das Systemblatt
+    // zeitversetzt erscheint und Tests zufällig verdeckt.
+    private static var isUITest: Bool {
+        #if DEBUG
+        UITestSupport.isActive
+        #else
+        false
+        #endif
+    }
+
+    private static var loginContentType: UITextContentType? { isUITest ? nil : .username }
+    private static var passwordContentType: UITextContentType? { isUITest ? nil : .password }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -46,7 +59,7 @@ struct SignInView: View {
 
                     field("Anmeldename oder E-Mail") {
                         TextField("m.huber", text: $login)
-                            .textContentType(.username)
+                            .textContentType(Self.loginContentType)
                             .textInputAutocapitalization(.never)
                             .autocorrectionDisabled()
                             .submitLabel(.next)
@@ -57,7 +70,7 @@ struct SignInView: View {
 
                     field("Passwort") {
                         SecureField("", text: $password)
-                            .textContentType(.password)
+                            .textContentType(Self.passwordContentType)
                             .submitLabel(.go)
                             .focused($focus, equals: .password)
                             .onSubmit { Task { await signIn() } }
