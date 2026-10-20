@@ -4610,6 +4610,47 @@
         ]
       }
     },
+    "/api/v1/planning/backlog": {
+      "get": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Baustellen-Vorrat: geplante und laufende Bauakten mit Stand der Einplanung (frei, verplant)",
+        "operationId": "GetPlanningBacklog",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BacklogItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/setup/status": {
       "get": {
         "tags": [
@@ -5030,6 +5071,21 @@
           }
         }
       },
+      "AssignmentKind": {
+        "enum": [
+          "screed",
+          "initialInspection",
+          "secondInspection",
+          "cmMeasurement",
+          "acceptance",
+          "survey",
+          "check",
+          "customerAppointment",
+          "delivery",
+          "other"
+        ],
+        "default": "screed"
+      },
       "AssignmentView": {
         "required": [
           "id",
@@ -5134,6 +5190,26 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AssignmentKind"
+          },
+          "endTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "bauakteStatus": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BauakteStatus"
+              }
+            ]
           }
         }
       },
@@ -5236,6 +5312,102 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "BacklogItem": {
+        "required": [
+          "bauakteId",
+          "number",
+          "title",
+          "status",
+          "street",
+          "postalCode",
+          "city",
+          "plannedStart",
+          "plannedEnd",
+          "customerName",
+          "totalAreaSquareMeters",
+          "screedTypes",
+          "upcomingAssignments",
+          "nextAssignment"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/BauakteStatus"
+          },
+          "street": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "plannedStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "plannedEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "customerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalAreaSquareMeters": {
+            "type": "number",
+            "format": "double"
+          },
+          "screedTypes": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "upcomingAssignments": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nextAssignment": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -7667,6 +7839,23 @@
               "null",
               "string"
             ]
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AssignmentKind"
+              }
+            ]
+          },
+          "endTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
           }
         }
       },

@@ -16,6 +16,7 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<IBauakteHistory, BauakteHistory>();
         services.AddScoped<BauakteCommands>();
         services.AddScoped<IBauakteHintSource, BauakteOwnHints>();
+        services.AddScoped<IBauakteSummaries, BauakteSummaries>();
         services.AddScoped<ISyncOperationHandler, BauakteSync>();
         services.AddScoped<ISyncEntitySource, BauakteSource>();
         services.AddScoped<ISyncEntitySource, NoteSource>();

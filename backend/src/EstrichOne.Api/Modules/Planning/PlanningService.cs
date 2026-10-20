@@ -14,7 +14,8 @@ public sealed record ResourceRef(Guid Id, string Name, ResourceKind Kind);
 public sealed record AssignmentView(
     Guid Id, DateOnly Day, TimeOnly? StartTime, string Activity, Guid BauakteId, string? BauakteNumber, string BauakteTitle,
     string? BauakteAddress, Guid? CrewId, string? CrewName, string? CrewColor, IReadOnlyList<PersonRef> People,
-    IReadOnlyList<ResourceRef> Resources, string? Notes, IReadOnlyList<string> Warnings, long Version);
+    IReadOnlyList<ResourceRef> Resources, string? Notes, IReadOnlyList<string> Warnings, long Version,
+    AssignmentKind Kind = AssignmentKind.Screed, TimeOnly? EndTime = null, BauakteStatus? BauakteStatus = null);
 
 public sealed record AbsenceView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, AbsenceKind Kind, string? Note);
 
@@ -94,7 +95,7 @@ public sealed class PlanningService(EstrichOneDbContext db)
                 string.IsNullOrEmpty(address) ? null : address, a.CrewId, crew?.Name, crew?.Color,
                 people.Select(id => new PersonRef(id, Name(id))).OrderBy(p => p.Name, StringComparer.CurrentCulture).ToList(),
                 a.ResourceIds.Where(resources.ContainsKey).Select(id => new ResourceRef(id, resources[id].Name, resources[id].Kind)).ToList(),
-                a.Notes, warnings.Distinct().ToList(), a.Version);
+                a.Notes, warnings.Distinct().ToList(), a.Version, a.Kind, a.EndTime, bauakte?.Status);
         }).ToList();
 
         return new PlanningRange(from, to, views,

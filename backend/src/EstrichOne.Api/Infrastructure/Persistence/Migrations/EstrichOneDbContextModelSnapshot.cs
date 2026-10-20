@@ -1786,6 +1786,18 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("day");
 
+                    b.Property<TimeOnly?>("EndTime")
+                        .HasColumnType("time without time zone")
+                        .HasColumnName("end_time");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasDefaultValue("Screed")
+                        .HasColumnName("kind");
+
                     b.Property<string>("Notes")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")

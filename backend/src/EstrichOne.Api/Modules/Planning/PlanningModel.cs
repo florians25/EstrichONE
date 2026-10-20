@@ -139,6 +139,24 @@ public sealed class Absence
 /// Einsatz: an einem Tag auf einer Baustelle, mit Kolonne und/oder einzelnen Mitarbeitern und Geräten.
 /// Mehrtägige Arbeiten sind mehrere Einsätze (jeder Tag einzeln verschiebbar).
 /// </summary>
+/// <summary>Art des Termins wie in Estrich Web (Tageseinteilung, Kalender).</summary>
+public enum AssignmentKind
+{
+    /// <summary>Estrich einbringen bzw. Ausführung.</summary>
+    Screed,
+    InitialInspection,
+    SecondInspection,
+    CmMeasurement,
+    Acceptance,
+    /// <summary>Aufmaß.</summary>
+    Survey,
+    /// <summary>Kontrolle / Nacharbeit.</summary>
+    Check,
+    CustomerAppointment,
+    Delivery,
+    Other,
+}
+
 public sealed class Assignment : IVersionedEntity
 {
     public Guid Id { get; private set; }
@@ -147,6 +165,10 @@ public sealed class Assignment : IVersionedEntity
 
     /// <summary>Beginn vor Ort (optional), z. B. 07:00.</summary>
     public TimeOnly? StartTime { get; private set; }
+
+    /// <summary>Voraussichtliches Ende (optional).</summary>
+    public TimeOnly? EndTime { get; private set; }
+    public AssignmentKind Kind { get; private set; } = AssignmentKind.Screed;
     public string Activity { get; private set; } = string.Empty;
     public Guid? CrewId { get; private set; }
     public List<Guid> UserIds { get; private set; } = [];
@@ -164,15 +186,22 @@ public sealed class Assignment : IVersionedEntity
     public static Assignment Create(Guid id, Guid bauakteId) => new() { Id = id, BauakteId = bauakteId };
 
     public void Update(DateOnly day, TimeOnly? startTime, string activity, Guid? crewId, IReadOnlyCollection<Guid> userIds,
-        IReadOnlyCollection<Guid> resourceIds, string? notes)
+        IReadOnlyCollection<Guid> resourceIds, string? notes, AssignmentKind kind = AssignmentKind.Screed, TimeOnly? endTime = null)
     {
         if (crewId is null && userIds.Count == 0)
         {
             throw new ArgumentException("Bitte eine Kolonne oder mindestens einen Mitarbeiter einplanen.", nameof(userIds));
         }
 
+        if (startTime is { } start && endTime is { } end && end <= start)
+        {
+            throw new ArgumentException("Das Ende muss nach dem Beginn liegen.", nameof(endTime));
+        }
+
         Day = day;
         StartTime = startTime;
+        EndTime = endTime;
+        Kind = kind;
         Activity = PlanningText.Required(activity, 200, "Bitte angeben, was zu tun ist (z. B. „Estrich einbringen EG“).");
         CrewId = crewId;
         UserIds = userIds.Distinct().ToList();
@@ -253,6 +282,7 @@ internal sealed class AssignmentConfiguration : IEntityTypeConfiguration<Assignm
         builder.ConfigureVersioned();
         builder.Property(a => a.Id).ValueGeneratedNever();
         builder.Property(a => a.Activity).HasMaxLength(200);
+        builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(30).HasDefaultValue(AssignmentKind.Screed).HasSentinel(AssignmentKind.Screed);
         builder.Property(a => a.Notes).HasMaxLength(2000);
         builder.Property(a => a.UserIds).HasColumnType("uuid[]");
         builder.Property(a => a.ResourceIds).HasColumnType("uuid[]");

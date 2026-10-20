@@ -4,6 +4,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Planning;
@@ -25,11 +26,20 @@ public sealed record SaveAbsenceRequest(Guid UserId, DateOnly From, DateOnly To,
 
 public sealed record SaveAssignmentRequest(
     Guid BauakteId, DateOnly Day, TimeOnly? StartTime, [property: Required, MaxLength(200)] string Activity, Guid? CrewId,
-    IReadOnlyList<Guid>? UserIds, IReadOnlyList<Guid>? ResourceIds, [property: MaxLength(2000)] string? Notes);
+    IReadOnlyList<Guid>? UserIds, IReadOnlyList<Guid>? ResourceIds, [property: MaxLength(2000)] string? Notes,
+    AssignmentKind? Kind = null, TimeOnly? EndTime = null);
 
 /// <summary>Einsatzplanung (AP-19). Planen nur online im Büro; mobil lesend („Mein Einsatz“, 15: „Planung nur online“).</summary>
+/// <summary>Eintrag im Baustellen-Vorrat; <see cref="UpcomingAssignments"/> = 0 heißt „frei“ (noch nicht eingeplant).</summary>
+public sealed record BacklogItem(
+    Guid BauakteId, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City,
+    DateOnly? PlannedStart, DateOnly? PlannedEnd, string? CustomerName, decimal TotalAreaSquareMeters, IReadOnlyList<string> ScreedTypes,
+    int UpcomingAssignments, DateOnly? NextAssignment);
+
 internal static class PlanningEndpoints
 {
+    private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+
     public static void Map(IEndpointRouteBuilder api)
     {
         var planning = api.MapGroup("/planning").WithTags("Planung");
@@ -61,6 +71,9 @@ internal static class PlanningEndpoints
             .WithSummary("Einsatz anlegen oder ändern; Antwort enthält Konflikthinweise")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.PlanningManage);
+        planning.MapGet("/backlog", BacklogAsync).WithName("GetPlanningBacklog")
+            .WithSummary("Baustellen-Vorrat: geplante und laufende Bauakten mit Stand der Einplanung (frei, verplant)")
+            .RequirePermission(Permissions.PlanningRead);
         planning.MapDelete("/assignments/{id:guid}", DeleteAssignmentAsync).WithName("DeleteAssignment")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.PlanningManage);
     }
@@ -203,7 +216,8 @@ internal static class PlanningEndpoints
             }
 
             assignment.MoveTo(request.BauakteId);
-            assignment.Update(request.Day, request.StartTime, request.Activity, request.CrewId, users, resources, request.Notes);
+            assignment.Update(request.Day, request.StartTime, request.Activity, request.CrewId, users, resources, request.Notes,
+                request.Kind ?? AssignmentKind.Screed, request.EndTime);
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (ArgumentException exception)
@@ -213,6 +227,36 @@ internal static class PlanningEndpoints
 
         var range = await planning.RangeAsync(request.Day, request.Day, null, cancellationToken);
         return TypedResults.Ok(range.Assignments.Single(a => a.Id == id));
+    }
+
+    private static async Task<Ok<List<BacklogItem>>> BacklogAsync(
+        EstrichOneDbContext db, IBauakteAccess access, IBauakteSummaries summaries, TimeProvider clock, CancellationToken cancellationToken,
+        [FromQuery] string? search = null)
+    {
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Berlin).DateTime);
+        var query = (await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken))
+            .Where(b => b.Status == BauakteStatus.Planned || b.Status == BauakteStatus.InProgress);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var pattern = $"%{search.Trim()}%";
+            query = query.Where(b => EF.Functions.ILike(b.Title, pattern) || (b.Number != null && EF.Functions.ILike(b.Number, pattern))
+                || (b.City != null && EF.Functions.ILike(b.City, pattern)) || (b.Street != null && EF.Functions.ILike(b.Street, pattern)));
+        }
+
+        var bauakten = await query.OrderBy(b => b.PlannedStart ?? DateOnly.MaxValue).ThenByDescending(b => b.UpdatedAt).Take(300).ToListAsync(cancellationToken);
+        var ids = bauakten.Select(b => b.Id).ToList();
+        var upcoming = await db.Set<Assignment>().AsNoTracking().Where(a => ids.Contains(a.BauakteId) && a.Day >= today)
+            .GroupBy(a => a.BauakteId).Select(g => new { BauakteId = g.Key, Count = g.Count(), Next = g.Min(a => a.Day) })
+            .ToDictionaryAsync(g => g.BauakteId, cancellationToken);
+        var details = await summaries.GetAsync(ids, cancellationToken);
+
+        return TypedResults.Ok(bauakten.Select(b =>
+        {
+            var plan = upcoming.GetValueOrDefault(b.Id);
+            var summary = details.GetValueOrDefault(b.Id);
+            return new BacklogItem(b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.PlannedStart, b.PlannedEnd,
+                summary?.CustomerName, summary?.TotalAreaSquareMeters ?? 0, summary?.ScreedTypes ?? [], plan?.Count ?? 0, plan?.Next);
+        }).ToList());
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAssignmentAsync(Guid id, EstrichOneDbContext db, CancellationToken cancellationToken)

@@ -1,7 +1,7 @@
 import {
-  AppstoreOutlined, AuditOutlined, CalendarOutlined, CarOutlined, CloudServerOutlined, CustomerServiceOutlined, EnvironmentOutlined,
+  AppstoreOutlined, AuditOutlined, CalendarOutlined, CarOutlined, ClusterOutlined, CloudServerOutlined, CustomerServiceOutlined, EnvironmentOutlined,
   FileSearchOutlined, InboxOutlined,
-  KeyOutlined, LogoutOutlined, MobileOutlined, ProjectOutlined, SearchOutlined, TeamOutlined, UserOutlined,
+  KeyOutlined, LogoutOutlined, MobileOutlined, ProjectOutlined, ScheduleOutlined, SearchOutlined, TeamOutlined, UnorderedListOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { ProLayout, type MenuDataItem } from '@ant-design/pro-components';
 import { useQuery } from '@tanstack/react-query';
@@ -27,7 +27,14 @@ const navigation: NavEntry[] = [
       { path: '/bauakten?status=inquiry', name: 'Anfragen', icon: <InboxOutlined />, permission: 'bauakten.read' },
       { path: '/bauakten', name: 'Bauakten', icon: <ProjectOutlined />, permission: 'bauakten.read' },
       { path: '/bauakten/karte', name: 'Baustellenkarte', icon: <EnvironmentOutlined />, permission: 'bauakten.read' },
-      { path: '/planung', name: 'Planung', icon: <CalendarOutlined />, permission: 'planning.read' },
+    ],
+  },
+  {
+    path: '/disposition', name: 'Planung', children: [
+      { path: '/planung', name: 'Kolonnenplanung', icon: <ClusterOutlined />, permission: 'planning.read' },
+      { path: '/planung/kalender', name: 'Kalender', icon: <CalendarOutlined />, permission: 'planning.read' },
+      { path: '/planung/tageseinteilung', name: 'Tageseinteilung', icon: <ScheduleOutlined />, permission: 'planning.read' },
+      { path: '/planung/arbeitsplan', name: 'Arbeitsplan', icon: <UnorderedListOutlined />, permission: 'planning.read' },
     ],
   },
   {

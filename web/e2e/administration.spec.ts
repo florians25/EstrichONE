@@ -246,8 +246,8 @@ test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird an
   await resource.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Mixokret 2/ })).toContainText('Verfügbar');
 
-  await nav(page, 'Planung').click();
-  await expect(pageTitle(page)).toHaveText('Plantafel');
+  await nav(page, 'Kolonnenplanung').click();
+  await expect(pageTitle(page)).toContainText('Kolonnenplanung');
   await page.getByRole('button', { name: /^Einsatz planen: Kolonne Admin, Montag/ }).click();
   const dialog = page.getByRole('dialog', { name: 'Einsatz planen' });
   await choose(page, dialog.getByRole('combobox', { name: 'Bauakte', exact: true }), /EFH Prüfung E2E/, 'Prüfung E2E');
@@ -257,7 +257,7 @@ test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird an
   await dialog.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('button', { name: /Estrich einbringen EG, EFH Prüfung E2E/ })).toBeVisible();
 
-  await page.getByRole('button', { name: /^Einsatz planen: Einzeln eingeplant, Montag/ }).click();
+  await page.getByRole('button', { name: /^Einsatz planen: Termine ohne Kolonne, Montag/ }).click();
   const second = page.getByRole('dialog', { name: 'Einsatz planen' });
   await choose(page, second.getByRole('combobox', { name: 'Bauakte', exact: true }), /Anfrage Familie Kraus/, 'Kraus');
   await second.getByLabel('Tätigkeit').fill('Randdämmung stellen');
@@ -304,12 +304,39 @@ test('Standort per Karte festlegen, Baustellenkarte zeigt die Bauakte', async ({
 
 test('Plantafel: Einsatz per Ziehen auf einen anderen Tag verschieben', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Planung').click();
+  await nav(page, 'Kolonnenplanung').click();
   const item = page.getByRole('button', { name: /Estrich einbringen EG, EFH Prüfung E2E/ });
   const target = page.getByRole('button', { name: /^Einsatz planen: Kolonne Admin, Mittwoch/ }).locator('xpath=..');
   await item.dragTo(target);
   await expect(page.locator('.ant-message')).toContainText('verschoben');
   await expect(target.getByRole('button', { name: /Estrich einbringen EG/ })).toBeVisible();
+});
+
+test('Disposition: Vorrat einplanen, Terminart, Tag-, Monatsansicht und Arbeitsplan', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await nav(page, 'Kolonnenplanung').click();
+  await page.getByRole('button', { name: 'Baustellen-Vorrat' }).click();
+  const drawer = page.locator('.backlog-drawer');
+  await expect(drawer.getByText('Anfrage Familie Kraus, Heizestrich')).toBeVisible();
+  await drawer.getByText('alle', { exact: true }).click();
+  await drawer.getByRole('button', { name: 'Anfrage Familie Kraus, Heizestrich einplanen' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Einsatz planen' });
+  await choose(page, dialog.getByRole('combobox', { name: 'Terminart', exact: true }), 'Erstbegehung');
+  await expect(dialog.getByLabel('Tätigkeit')).toHaveValue('Erstbegehung');
+  await choose(page, dialog.getByRole('combobox', { name: 'Kolonne', exact: true }), 'Kolonne Admin');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('button', { name: /Erstbegehung, Anfrage Familie Kraus/ })).toBeVisible();
+
+  await page.getByText('Tag', { exact: true }).click();
+  await expect(pageTitle(page)).toContainText('Tageseinteilung');
+  await page.getByText('Monat', { exact: true }).click();
+  await expect(pageTitle(page)).toContainText('Kalender');
+  await expect(page.getByRole('button', { name: /Erstbegehung, Anfrage Familie Kraus/ })).toBeVisible();
+
+  await nav(page, 'Arbeitsplan').click();
+  await expect(pageTitle(page)).toContainText('Arbeitsplan');
+  await page.getByText('14 Tage', { exact: true }).click();
+  await expect(page.getByText('Erstbegehung', { exact: true }).first()).toBeVisible();
 });
 
 test('Protokoll: Anmeldungen und Änderungen sind nachvollziehbar', async ({ page }) => {

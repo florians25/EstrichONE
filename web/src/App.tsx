@@ -11,7 +11,8 @@ const StartPage = lazy(() => import('./pages/StartPage'));
 const BauaktenPage = lazy(() => import('./pages/BauaktenPage'));
 const BauaktePage = lazy(() => import('./pages/bauakte/BauaktePage'));
 const CustomersPage = lazy(() => import('./pages/CustomersPage'));
-const PlanningPage = lazy(() => import('./pages/PlanningPage'));
+const PlanningPage = lazy(() => import('./pages/planning/PlanningPage'));
+const WorkPlanPage = lazy(() => import('./pages/planning/WorkPlanPage'));
 const ResourcesPage = lazy(() => import('./pages/ResourcesPage'));
 const UsersPage = lazy(() => import('./pages/UsersPage'));
 const DevicesPage = lazy(() => import('./pages/DevicesPage'));
@@ -59,6 +60,9 @@ export function App() {
           <Route path="bauakten/:id" element={<Permitted permission="bauakten.read"><BauaktePage /></Permitted>} />
           <Route path="kunden" element={<Permitted permission="contacts.read"><CustomersPage /></Permitted>} />
           <Route path="planung" element={<Permitted permission="planning.read"><PlanningPage /></Permitted>} />
+          <Route path="planung/kalender" element={<Permitted permission="planning.read"><PlanningPage key="monat" defaultView="monat" /></Permitted>} />
+          <Route path="planung/tageseinteilung" element={<Permitted permission="planning.read"><PlanningPage key="tag" defaultView="tag" /></Permitted>} />
+          <Route path="planung/arbeitsplan" element={<Permitted permission="planning.read"><WorkPlanPage /></Permitted>} />
           <Route path="planung/ressourcen" element={<Permitted permission="planning.read"><ResourcesPage /></Permitted>} />
           <Route path="verwaltung/benutzer" element={<Permitted permission="users.manage"><UsersPage /></Permitted>} />
           <Route path="it-center/geraete" element={<Permitted permission="devices.read"><DevicesPage /></Permitted>} />

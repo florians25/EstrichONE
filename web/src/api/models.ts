@@ -438,6 +438,29 @@ export interface AssignmentView {
   notes: string | null;
   warnings: string[];
   version: number;
+  kind: AssignmentKind;
+  endTime: string | null;
+  bauakteStatus: BauakteStatus | null;
+}
+
+export type AssignmentKind = 'screed' | 'initialInspection' | 'secondInspection' | 'cmMeasurement' | 'acceptance' | 'survey' | 'check'
+  | 'customerAppointment' | 'delivery' | 'other';
+
+export interface BacklogItem {
+  bauakteId: string;
+  number: string | null;
+  title: string;
+  status: BauakteStatus;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  plannedStart: string | null;
+  plannedEnd: string | null;
+  customerName: string | null;
+  totalAreaSquareMeters: number;
+  screedTypes: string[];
+  upcomingAssignments: number;
+  nextAssignment: string | null;
 }
 
 export interface AbsenceView {
