@@ -127,6 +127,9 @@ public sealed class Device : IVersionedEntity
     /// <summary>Prüft die Signatur über <see cref="AttachProofPrefix"/> + Zugriffstoken der Sitzung, die gebunden werden soll.</summary>
     public bool VerifyAttachProof(string accessToken, byte[] signature) => Verify(AttachProofPrefix + accessToken, signature);
 
+    /// <summary>Prüft eine Gerätesignatur über eine vollständige Nachricht mit eigenem Präfix (z. B. Meldung ohne Anmeldung).</summary>
+    public bool VerifyProof(string message, byte[] signature) => Verify(message, signature);
+
     private bool Verify(string message, byte[] signature)
     {
         if (signature.Length == 0)

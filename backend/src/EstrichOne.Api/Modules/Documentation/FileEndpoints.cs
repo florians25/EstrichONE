@@ -60,15 +60,14 @@ internal static class FileEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.FilesUpload);
 
+        // Lesen: Die Prüfung je Datei (FindReadableAsync) entscheidet – Bauakte, eigene Datei oder Ticketanhang.
         files.MapGet("/{id:guid}", GetAsync).WithName("GetFile")
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(Permissions.BauaktenRead);
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         files.MapGet("/{id:guid}/content", DownloadAsync).WithName("DownloadFile")
             .WithSummary("Inhalt (variant = original | display | thumb); unterstützt Range für Videos")
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
-            .ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(Permissions.BauaktenRead);
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         files.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteFile")
             .ProducesProblem(StatusCodes.Status404NotFound)

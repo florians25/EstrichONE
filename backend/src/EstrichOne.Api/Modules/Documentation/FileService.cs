@@ -1,7 +1,9 @@
 using System.Security.Cryptography;
 using System.Threading.Channels;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Helpdesk.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -27,7 +29,9 @@ public sealed class FileService(
     ICurrentUser currentUser,
     IOptions<FileStorageSettings> settings,
     Channel<Guid> variantQueue,
-    IBauakteHistory history)
+    IBauakteHistory history,
+    IUserPermissions permissions,
+    ITicketAttachments tickets)
 {
     public async Task<(FileRecord? File, bool Created, FileFailure? Failure)> AnnounceAsync(
         Guid id, Guid? bauakteId, FileKind kind, string originalName, string contentType, long sizeBytes, string sha256,
@@ -153,9 +157,16 @@ public sealed class FileService(
             return null;
         }
 
-        return file.BauakteId is { } bauakteId
-            ? await bauakten.CanReadAsync(bauakteId, cancellationToken) ? file : null
-            : file.UploadedByUserId == currentUser.UserId ? file : null;
+        if (file.BauakteId is { } bauakteId)
+        {
+            return await bauakten.CanReadAsync(bauakteId, cancellationToken) ? file : null;
+        }
+
+        // Ohne Bauakte: eigene Dateien; Anhänge von Tickets zusätzlich für die Bearbeitung im Helpdesk.
+        return file.UploadedByUserId == currentUser.UserId
+            || (await permissions.HasAsync(Permissions.HelpdeskAgent, cancellationToken) && await tickets.IsAttachedToTicketAsync(id, cancellationToken))
+            ? file
+            : null;
     }
 
     private Task<FileRecord?> FindOwnAsync(Guid id, CancellationToken cancellationToken) =>

@@ -5,6 +5,7 @@ using EstrichOne.Api.Modules.Bauakten;
 using EstrichOne.Api.Modules.Contacts;
 using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Documentation;
+using EstrichOne.Api.Modules.Helpdesk;
 using EstrichOne.Api.Modules.Identity;
 using EstrichOne.Api.Modules.Organization;
 using EstrichOne.Api.Modules.Platform;
@@ -28,6 +29,7 @@ public static class ModuleCatalog
         new BauaktenModule(),
         new DocumentationModule(),
         new WorkModule(),
+        new HelpdeskModule(),
         new SetupModule(),
         new SyncModule(),
         new BackupModule(),

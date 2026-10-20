@@ -2383,6 +2383,453 @@
         ]
       }
     },
+    "/api/v1/tickets": {
+      "post": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Problem melden (idempotent über die Ticket-ID)",
+        "operationId": "CreateTicket",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Tickets für die Bearbeitung",
+        "operationId": "ListTickets",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "default": "open",
+              "$ref": "#/components/schemas/TicketFilter"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/TicketCategory"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TicketSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tickets/device": {
+      "post": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Problem melden ohne Anmeldung – nur von eingerichteten, nicht gesperrten Geräten mit Gerätesignatur",
+        "operationId": "CreateTicketFromDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeviceTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceTicketResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/mine": {
+      "get": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Eigene Meldungen",
+        "operationId": "ListMyTickets",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TicketSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}": {
+      "get": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Ticket mit Verlauf (interne Notizen nur für die Bearbeitung)",
+        "operationId": "GetTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Status, Priorität, Kategorie, Zuweisung, Lösung",
+        "operationId": "UpdateTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateTicketRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/comments": {
+      "post": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Kommentar oder interne Notiz",
+        "operationId": "AddTicketComment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddTicketCommentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/reopen": {
+      "post": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Gelöstes Ticket wieder öffnen (Melder)",
+        "operationId": "ReopenTicket",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/setup/status": {
       "get": {
         "tags": [
@@ -2651,6 +3098,22 @@
   },
   "components": {
     "schemas": {
+      "AddTicketCommentRequest": {
+        "required": [
+          "text",
+          "isInternal"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 10000,
+            "type": "string"
+          },
+          "isInternal": {
+            "type": "boolean"
+          }
+        }
+      },
       "AnnounceFileRequest": {
         "required": [
           "id",
@@ -3360,6 +3823,73 @@
           }
         }
       },
+      "CreateTicketRequest": {
+        "required": [
+          "id",
+          "title",
+          "description",
+          "category",
+          "source",
+          "reporterBlocked",
+          "bauakteId",
+          "diagnostics",
+          "attachmentFileIds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "$ref": "#/components/schemas/TicketCategory"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TicketSource"
+          },
+          "reporterBlocked": {
+            "type": "boolean"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "diagnostics": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonObject"
+              }
+            ]
+          },
+          "attachmentFileIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "CreateUserRequest": {
         "required": [
           "displayName",
@@ -3505,6 +4035,51 @@
           "locked",
           "retired"
         ]
+      },
+      "DeviceTicketRequest": {
+        "required": [
+          "deviceId",
+          "timestamp",
+          "signature",
+          "reporterName",
+          "ticket"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "timestamp": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "signature": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "reporterName": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "ticket": {
+            "$ref": "#/components/schemas/CreateTicketRequest"
+          }
+        }
+      },
+      "DeviceTicketResponse": {
+        "required": [
+          "number"
+        ],
+        "type": "object",
+        "properties": {
+          "number": {
+            "type": "string"
+          }
+        }
       },
       "DiaryEntryDto": {
         "required": [
@@ -4589,6 +5164,314 @@
           "rejected"
         ]
       },
+      "TicketCategory": {
+        "enum": [
+          "signIn",
+          "sync",
+          "appError",
+          "deviceDefect",
+          "officeIt",
+          "access",
+          "other"
+        ]
+      },
+      "TicketCommentDto": {
+        "required": [
+          "id",
+          "authorUserId",
+          "authorName",
+          "text",
+          "isInternal",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": "string"
+          },
+          "isInternal": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketDetail": {
+        "required": [
+          "summary",
+          "description",
+          "deviceId",
+          "deviceName",
+          "bauakteId",
+          "resolution",
+          "resolvedAt",
+          "closedAt",
+          "diagnostics",
+          "attachmentFileIds",
+          "comments",
+          "events"
+        ],
+        "type": "object",
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/TicketSummary"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deviceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "resolution": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "resolvedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "diagnostics": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonNode"
+              }
+            ]
+          },
+          "attachmentFileIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "comments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketCommentDto"
+            }
+          },
+          "events": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketEventDto"
+            }
+          }
+        }
+      },
+      "TicketEventDto": {
+        "required": [
+          "actorUserId",
+          "actorName",
+          "kind",
+          "fromValue",
+          "toValue",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "actorUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "actorName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": "string"
+          },
+          "fromValue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "toValue": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketFilter": {
+        "enum": [
+          "open",
+          "mine",
+          "unassigned",
+          "all"
+        ]
+      },
+      "TicketPriority": {
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ]
+      },
+      "TicketSource": {
+        "enum": [
+          "web",
+          "desktop",
+          "ios",
+          "android"
+        ]
+      },
+      "TicketStatus": {
+        "enum": [
+          "new",
+          "inProgress",
+          "waitingForReporter",
+          "resolved",
+          "closed"
+        ]
+      },
+      "TicketSummary": {
+        "required": [
+          "id",
+          "number",
+          "title",
+          "category",
+          "priority",
+          "status",
+          "reporterBlocked",
+          "reporterUserId",
+          "reporterDisplayName",
+          "assigneeUserId",
+          "assigneeName",
+          "source",
+          "createdAt",
+          "lastActivityAt",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "category": {
+            "$ref": "#/components/schemas/TicketCategory"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/TicketPriority"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "reporterBlocked": {
+            "type": "boolean"
+          },
+          "reporterUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "reporterDisplayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assigneeUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "assigneeName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "$ref": "#/components/schemas/TicketSource"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "TokenResponse": {
         "required": [
           "accessToken",
@@ -4703,6 +5586,66 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "UpdateTicketRequest": {
+        "required": [
+          "status",
+          "priority",
+          "category",
+          "assigneeUserId",
+          "unassign",
+          "resolution"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TicketStatus"
+              }
+            ]
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TicketPriority"
+              }
+            ]
+          },
+          "category": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TicketCategory"
+              }
+            ]
+          },
+          "assigneeUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "unassign": {
+            "type": "boolean"
+          },
+          "resolution": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -4945,6 +5888,9 @@
     },
     {
       "name": "Bautagebuch und Prüfungen"
+    },
+    {
+      "name": "Helpdesk"
     },
     {
       "name": "Ersteinrichtung"
