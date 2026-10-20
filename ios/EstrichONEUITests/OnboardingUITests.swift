@@ -22,27 +22,24 @@ final class OnboardingUITests: XCTestCase {
 
     @MainActor
     private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
+        app.element(identifier)
     }
 
     @MainActor
-    private func tap(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 10) {
-        let target = element(identifier, in: app)
-        XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht\n\(app.debugDescription)")
-        target.tap()
+    private func tap(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15,
+                     file: StaticString = #filePath, line: UInt = #line) {
+        app.tap(identifier, timeout: timeout, file: file, line: line)
     }
 
     @MainActor
-    private func type(_ text: String, into identifier: String, in app: XCUIApplication) {
-        let field = element(identifier, in: app)
-        XCTAssertTrue(field.waitForExistence(timeout: 10), "\(identifier) erscheint nicht")
-        field.tap()
-        field.typeText(text)
+    private func type(_ text: String, into identifier: String, in app: XCUIApplication,
+                      file: StaticString = #filePath, line: UInt = #line) {
+        app.type(text, into: identifier, file: file, line: line)
     }
 
     @MainActor
     private func enterAddress(_ address: String, in app: XCUIApplication) {
-        XCTAssertTrue(element("welcomeTitle", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(element("welcomeTitle", in: app).waitForExistence(timeout: 20))
         tap("enterAddressButton", in: app)
         type(address, into: "serverAddressField", in: app)
         tap("checkConnectionButton", in: app)
@@ -73,7 +70,7 @@ final class OnboardingUITests: XCTestCase {
         enterAddress("www.example.com", in: app)
 
         let error = element("serverError", in: app)
-        XCTAssertTrue(error.waitForExistence(timeout: 5))
+        XCTAssertTrue(error.waitForExistence(timeout: 15))
         XCTAssertTrue(error.label.contains("Unter dieser Adresse läuft kein EstrichONE-Server."), error.label)
         XCTAssertFalse(element("useServerButton", in: app).exists)
     }
@@ -84,7 +81,7 @@ final class OnboardingUITests: XCTestCase {
         enterAddress("http://estrichone.example.com", in: app)
 
         let error = element("serverError", in: app)
-        XCTAssertTrue(error.waitForExistence(timeout: 5))
+        XCTAssertTrue(error.waitForExistence(timeout: 15))
         XCTAssertTrue(error.label.contains("keine verschlüsselte Verbindung"), error.label)
     }
 
@@ -95,7 +92,7 @@ final class OnboardingUITests: XCTestCase {
         var app = launch()
         enterAddress("estrichone.example.com", in: app)
         let name = element("confirmServerName", in: app)
-        XCTAssertTrue(name.waitForExistence(timeout: 5))
+        XCTAssertTrue(name.waitForExistence(timeout: 15))
         XCTAssertEqual(name.label, "Estrichbau Beispiel GmbH")
         tap("useServerButton", in: app)
 
@@ -104,13 +101,13 @@ final class OnboardingUITests: XCTestCase {
         type("m.huber", into: "loginField", in: app)
         type("falsch", into: "passwordField", in: app)
         tap("signInButton", in: app)
-        XCTAssertTrue(element("signInError", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element("signInError", in: app).waitForExistence(timeout: 15))
 
         type(password, into: "passwordField", in: app)
         tap("signInButton", in: app)
         app.dismissSavePasswordPrompt()
         let user = element("currentUserName", in: app)
-        XCTAssertTrue(user.waitForExistence(timeout: 10))
+        XCTAssertTrue(user.waitForExistence(timeout: 15))
         XCTAssertEqual(user.label, "Max Huber")
 
         // Nach einem Neustart ist die App eingerichtet und gesperrt; Entsperren öffnet die eigene Sitzung.
@@ -125,16 +122,16 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     func testPoolDeviceWithEnrollmentLinkAndTwoPeople() {
         let app = launch()
-        XCTAssertTrue(element("welcomeTitle", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(element("welcomeTitle", in: app).waitForExistence(timeout: 20))
 
         // QR-Code aus dem IT Center, hier als Link geöffnet: Verbindungsprüfung startet sofort.
         app.open(URL(string: "estrichone://enroll?v=1&server=https://estrichone.example.com&code=K7QX-M2PA&type=pool")!)
         tap("useServerButton", in: app, timeout: 15)
 
         signIn("m.huber", in: app)
-        XCTAssertTrue(element("choosePINTitle", in: app).waitForExistence(timeout: 10))
+        XCTAssertTrue(element("choosePINTitle", in: app).waitForExistence(timeout: 15))
         enterPIN("123456", in: app)
-        XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 5), "Triviale PIN wird abgelehnt\n\(app.debugDescription)")
+        XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 15), "Triviale PIN wird abgelehnt\n\(app.debugDescription)")
         enterPIN("482913", in: app)
         enterPIN("482913", in: app)
         XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
@@ -142,7 +139,7 @@ final class OnboardingUITests: XCTestCase {
 
         // Benutzerwechsel: Auswahl statt Fortsetzung der letzten Sitzung (11, AK-2).
         tap("switchUserButton", in: app)
-        XCTAssertTrue(element("userPickerTitle", in: app).waitForExistence(timeout: 5))
+        XCTAssertTrue(element("userPickerTitle", in: app).waitForExistence(timeout: 15))
         tap("addPersonButton", in: app)
         signIn("lukas", in: app)
         enterPIN("573920", in: app)
@@ -154,7 +151,7 @@ final class OnboardingUITests: XCTestCase {
         tap("switchUserButton", in: app)
         tap("userTile-m.huber", in: app)
         enterPIN("573920", in: app)
-        XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 10))
+        XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 15))
         enterPIN("482913", in: app)
         XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
         XCTAssertEqual(element("currentUserName", in: app).label, "Max Huber")

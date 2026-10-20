@@ -3,6 +3,7 @@ import EstrichCore
 import SwiftUI
 
 /// Schnellanlage auf der Baustelle (09): ein Bildschirm, nur die Bezeichnung ist Pflicht, offline möglich.
+/// Der Kunde wird direkt hier gewählt oder neu erfasst; ein neuer Kunde wird mit der Bauakte übertragen und verknüpft.
 struct NewBauakteView: View {
     /// Neue Bauakte angelegt; `true`, wenn direkt fotografiert werden soll.
     let onCreated: (UUID, Bool) -> Void
@@ -11,6 +12,8 @@ struct NewBauakteView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var input = NewBauakte(title: "")
     @State private var customer: Contact?
+    @State private var newCustomer: NewCustomer?
+    @State private var similarCustomers: [Contact] = []
     @State private var recentCustomers: [Contact] = []
     @State private var showsCustomerSearch = false
     @State private var showsDescription = false
@@ -39,6 +42,17 @@ struct NewBauakteView: View {
                     Text("Bauvorhaben *")
                 }
 
+                customerSection
+
+                if newCustomer != nil {
+                    SimilarCustomersSection(similar: similarCustomers) { contact in
+                        withAnimation {
+                            newCustomer = nil
+                            customer = contact
+                        }
+                    }
+                }
+
                 Section {
                     Button {
                         Task { await useCurrentLocation() }
@@ -50,7 +64,6 @@ struct NewBauakteView: View {
                                 ProgressView()
                             }
                         }
-                        .frame(minHeight: 44)
                     }
                     .disabled(locating)
                     if let locationHint {
@@ -66,39 +79,19 @@ struct NewBauakteView: View {
                         TextField("Ort", text: binding(\.city))
                             .textContentType(.addressCity)
                     }
+                    if let customer, customer.addressLine != nil, input.street == nil, input.city == nil {
+                        Button {
+                            input.street = customer.street
+                            input.postalCode = customer.postalCode
+                            input.city = customer.city
+                        } label: {
+                            Label("Adresse des Kunden übernehmen", systemImage: "arrow.down.doc")
+                        }
+                    }
                 } header: {
                     Text("Baustelle")
                 } footer: {
                     Text("Empfohlen, aber nicht Pflicht – die Adresse kann später ergänzt werden.")
-                }
-
-                Section {
-                    if let customer {
-                        HStack {
-                            Text(customer.name)
-                            Spacer()
-                            Button("Entfernen", role: .destructive) { self.customer = nil }
-                                .font(.callout)
-                        }
-                    } else {
-                        Button {
-                            showsCustomerSearch = true
-                        } label: {
-                            Label("Kunde suchen …", systemImage: "magnifyingglass").frame(minHeight: 44)
-                        }
-                        if !recentCustomers.isEmpty {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack {
-                                    ForEach(recentCustomers) { contact in
-                                        Button(contact.name) { customer = contact }
-                                            .buttonStyle(.bordered)
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Kunde (optional)")
                 }
 
                 Section {
@@ -137,7 +130,7 @@ struct NewBauakteView: View {
                 }
 
                 if let errorMessage {
-                    Section { StatusMessage(kind: .error, text: errorMessage) }
+                    Section { StatusMessage(kind: .error, text: errorMessage).accessibilityIdentifier("newBauakteError") }
                 }
             }
             .navigationTitle("Neue Bauakte")
@@ -148,39 +141,106 @@ struct NewBauakteView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                HStack(spacing: 12) {
+                HStack(spacing: 10) {
                     Button {
                         Task { await create(photograph: false) }
                     } label: {
-                        ActionLabel("Anlegen")
+                        Label("Anlegen", systemImage: "checkmark")
                     }
-                    .secondaryActionStyle()
+                    .estrichButton(.secondary, size: .regular, fullWidth: true)
                     .accessibilityIdentifier("createButton")
                     Button {
                         Task { await create(photograph: true) }
                     } label: {
-                        ActionLabel("Anlegen und fotografieren", systemImage: "camera.fill")
+                        Label("Anlegen + Foto", systemImage: "camera.fill")
                     }
-                    .primaryActionStyle()
+                    .estrichButton(.primary, size: .regular, fullWidth: true)
                     .accessibilityIdentifier("createAndPhotographButton")
                 }
                 .disabled(saving)
                 .padding(.horizontal, 16)
-                .padding(.vertical, 10)
+                .padding(.vertical, 8)
                 .background(.bar)
             }
             .onAppear { titleFocused = true }
             .task { recentCustomers = (try? await model.active?.service?.recentCustomers()) ?? [] }
             .task(id: "\(input.title)|\(input.street ?? "")|\(input.city ?? "")|\(input.latitude ?? 0)") { await findSimilar() }
+            .task(id: "\(newCustomer?.name ?? "")|\(newCustomer?.phone ?? "")|\(newCustomer?.email ?? "")") { await findSimilarCustomers() }
             .sheet(isPresented: $showsCustomerSearch) {
-                CustomerSearchView { contact in
+                CustomerPickerView(onSelect: { contact in
                     customer = contact
+                    newCustomer = nil
                     showsCustomerSearch = false
-                }
+                }, onNew: { name in
+                    newCustomer = NewCustomer(name: name)
+                    customer = nil
+                    showsCustomerSearch = false
+                })
             }
             .sensoryFeedback(.error, trigger: errorMessage) { _, new in new != nil }
         }
         .presentationDetents([.large])
+    }
+
+    /// Kunde: vorhandenen wählen (Suche, zuletzt gewählte) oder neu erfassen.
+    @ViewBuilder
+    private var customerSection: some View {
+        Section {
+            if let customer {
+                HStack {
+                    CustomerSummary(contact: customer, showsActions: false)
+                    Button {
+                        withAnimation { self.customer = nil }
+                    } label: {
+                        Label("Kunde entfernen", systemImage: "xmark")
+                    }
+                    .buttonStyle(IconButtonStyle())
+                    .accessibilityIdentifier("removeCustomerButton")
+                }
+            } else if newCustomer != nil {
+                CustomerFields(customer: Binding(get: { newCustomer ?? NewCustomer() }, set: { newCustomer = $0 }),
+                               siteAddress: (street: input.street, postalCode: input.postalCode, city: input.city))
+                Button(role: .destructive) {
+                    withAnimation { newCustomer = nil }
+                } label: {
+                    Label("Neuen Kunden verwerfen", systemImage: "trash")
+                        .font(.subheadline)
+                }
+            } else {
+                Button {
+                    showsCustomerSearch = true
+                } label: {
+                    Label("Vorhandenen Kunden suchen", systemImage: "magnifyingglass")
+                }
+                .accessibilityIdentifier("customerSearchButton")
+                Button {
+                    withAnimation { newCustomer = NewCustomer() }
+                } label: {
+                    Label("Neuen Kunden erfassen", systemImage: "person.crop.circle.badge.plus")
+                }
+                .accessibilityIdentifier("newCustomerButton")
+                if !recentCustomers.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(recentCustomers) { contact in
+                                Button {
+                                    withAnimation { customer = contact }
+                                } label: {
+                                    Label(contact.name, systemImage: "clock.arrow.circlepath")
+                                }
+                                .estrichButton(.secondary)
+                            }
+                        }
+                    }
+                }
+            }
+        } header: {
+            Text(newCustomer != nil ? "Neuer Kunde" : "Kunde")
+        } footer: {
+            if newCustomer != nil {
+                Text("Wird mit der Bauakte gespeichert und beim nächsten Abgleich übertragen. Die Kundennummer vergibt das Büro.")
+            }
+        }
     }
 
     /// „Straße Nr., Ort“ als Bezeichnung, sobald eine Adresse vorhanden ist (09, Abschnitt 3).
@@ -224,6 +284,16 @@ struct NewBauakteView: View {
         similar = (try? await service.similar(to: candidate)) ?? []
     }
 
+    private func findSimilarCustomers() async {
+        guard let newCustomer else {
+            similarCustomers = []
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+        similarCustomers = (try? await model.active?.service?.similarCustomers(to: newCustomer)) ?? []
+    }
+
     private func create(photograph: Bool) async {
         guard let service = model.active?.service else { return }
         saving = true
@@ -231,47 +301,11 @@ struct NewBauakteView: View {
         var data = input
         data.customerId = customer?.id
         do throws(BauakteError) {
-            let id = try await service.create(data)
+            let id = try await service.create(data, newCustomer: newCustomer)
             model.active?.sync?.localChangeMade()
             onCreated(id, photograph)
         } catch {
             errorMessage = error.message
-        }
-    }
-}
-
-/// Kundensuche über die synchronisierten Kontakte (offline).
-struct CustomerSearchView: View {
-    let onSelect: (Contact) -> Void
-    @Environment(AppModel.self) private var model
-    @Environment(\.dismiss) private var dismiss
-    @State private var search = ""
-    @State private var contacts: [Contact] = []
-
-    var body: some View {
-        NavigationStack {
-            List(contacts) { contact in
-                Button {
-                    onSelect(contact)
-                } label: {
-                    VStack(alignment: .leading) {
-                        Text(contact.name).foregroundStyle(.primary)
-                        Text([contact.customerNumber, contact.city].compactMap { $0 }.joined(separator: " · "))
-                            .font(.footnote).foregroundStyle(Theme.textSecondary)
-                    }
-                }
-            }
-            .overlay {
-                if contacts.isEmpty {
-                    ContentUnavailableView("Keine Kunden", systemImage: "person.crop.circle.badge.questionmark",
-                                           description: Text("Auf diesem Gerät sind keine passenden Kunden vorhanden. Der Kunde kann im Büro nachgetragen werden."))
-                }
-            }
-            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Name oder Kundennummer")
-            .navigationTitle("Kunde")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } } }
-            .task(id: search) { contacts = (try? await model.active?.service?.contacts(search: search)) ?? [] }
         }
     }
 }

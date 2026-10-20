@@ -1,8 +1,14 @@
 import EstrichCore
 import SwiftUI
 
-/// Bautagebuch-Eintrag: Tag, was geschah, optional Wetter, Temperatur und Anwesende.
+/// Bautagebuch-Eintrag: Tag, was geschah, optional Wetter, Temperatur und Anwesende. Schnell erfasst über
+/// Textbausteine für die häufigsten Ereignisse auf der Estrichbaustelle.
 struct NewDiaryEntryView: View {
+    static let phrases = [
+        "Estrich eingebracht", "Randdämmstreifen gesetzt", "Folie verlegt", "Aufheizen begonnen",
+        "CM-Messung durchgeführt", "Baustelle nicht frei", "Wartezeit wegen Vorgewerk", "Material angeliefert",
+    ]
+
     let bauakteId: UUID
     let onDone: () -> Void
 
@@ -25,6 +31,20 @@ struct NewDiaryEntryView: View {
                         .lineLimit(4...12)
                         .focused($focused)
                         .accessibilityIdentifier("diaryTextField")
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(Self.phrases, id: \.self) { phrase in
+                                Button {
+                                    append(phrase)
+                                } label: {
+                                    Label(phrase, systemImage: "plus")
+                                }
+                                .estrichButton(.secondary)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .accessibilityIdentifier("diaryPhrases")
                 }
                 Section("Wetter (optional)") {
                     ScrollView(.horizontal, showsIndicators: false) {
@@ -34,9 +54,14 @@ struct NewDiaryEntryView: View {
                                     weather = weather == option ? nil : option
                                 } label: {
                                     Label(option.title, systemImage: option.symbol)
-                                        .padding(.horizontal, 10).padding(.vertical, 6)
+                                        .labelStyle(TightLabelStyle())
+                                        .font(.subheadline.weight(.medium))
+                                        .padding(.horizontal, 12)
+                                        .frame(minHeight: 36)
                                         .background(weather == option ? Theme.navyBackground : Theme.neutralBackground, in: Capsule())
                                         .foregroundStyle(weather == option ? Theme.navyText : Theme.neutral)
+                                        .padding(.vertical, 4)
+                                        .contentShape(Rectangle())
                                 }
                                 .buttonStyle(.plain)
                                 .accessibilityAddTraits(weather == option ? .isSelected : [])
@@ -50,7 +75,7 @@ struct NewDiaryEntryView: View {
                     Stepper(workers == 0 ? "Anwesende: keine Angabe" : "Anwesende: \(workers)", value: $workers, in: 0...50)
                 }
                 if let error {
-                    Text(error).foregroundStyle(Theme.error)
+                    StatusMessage(kind: .error, text: error)
                 }
             }
             .navigationTitle("Bautagebuch")
@@ -65,6 +90,12 @@ struct NewDiaryEntryView: View {
             }
             .task { focused = true }
         }
+    }
+
+    /// Textbaustein anfügen: neuer Satz bzw. neue Zeile, falls schon Text da ist.
+    private func append(_ phrase: String) {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        text = trimmed.isEmpty ? phrase : "\(trimmed)\n\(phrase)"
     }
 
     private func save() async {

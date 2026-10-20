@@ -176,7 +176,14 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             let json = (try? JSONSerialization.data(withJSONObject: ["results": results])).map { String(decoding: $0, as: UTF8.self) }
             return (200, json ?? #"{"results":[]}"#)
         case "/api/v1/sync/pull":
-            return (200, #"{"changes":[],"cursor":"1:0","hasMore":false,"visibleBauakteIds":null}"#)
+            // Ein Bestandskunde für die Kundensuche der Schnellanlage.
+            return (200, """
+            {"changes":[{"entityType":"contact","id":"0193a1b2-0000-7000-8000-0000000c0001","deleted":false,
+              "data":{"id":"0193a1b2-0000-7000-8000-0000000c0001","kind":"company","name":"Huber Bau GmbH","customerNumber":"K-1042",
+                      "street":"Industriestr. 1","postalCode":"84028","city":"Landshut","phone":"0871 4711",
+                      "email":"info@huber.example","notes":null,"version":1}}],
+             "cursor":"1:0","hasMore":false,"visibleBauakteIds":null}
+            """)
         case "/api/v1/tickets/mine":
             return (200, "[]")
         case "/api/v1/tickets/device":

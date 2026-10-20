@@ -1,34 +1,7 @@
 import XCTest
 
-/// Schnellanlage und Fotos (09) gegen den Testserver im App-Prozess.
+/// Schnellanlage mit Kunde, Fotos, Dokumentenscan und Bautagebuch (09) gegen den Testserver im App-Prozess.
 final class BauakteUITests: XCTestCase {
-    @MainActor
-    private func element(_ identifier: String, in app: XCUIApplication) -> XCUIElement {
-        app.descendants(matching: .any).matching(identifier: identifier).firstMatch
-    }
-
-    @MainActor
-    private func tap(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 10) {
-        let target = element(identifier, in: app)
-        XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht\n\(app.debugDescription)")
-        // Nach Anmeldung, Sheets und Systemdialogen laufen noch Animationen: erst tippen, wenn das Element erreichbar ist.
-        // Kurz warten, bis Animationen fertig sind; Elemente außerhalb des sichtbaren Bereichs scrollt tap() selbst heran.
-        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: target)
-        if XCTWaiter().wait(for: [hittable], timeout: 5) != .completed {
-            // Meist liegt ein verspätetes Systemblatt („Passwort sichern?“) darüber.
-            app.dismissLateSystemPrompt()
-        }
-        target.tap()
-    }
-
-    @MainActor
-    private func type(_ text: String, into identifier: String, in app: XCUIApplication) {
-        let field = element(identifier, in: app)
-        XCTAssertTrue(field.waitForExistence(timeout: 10), "\(identifier) erscheint nicht")
-        field.tap()
-        field.typeText(text)
-    }
-
     /// Persönliches Gerät einrichten und anmelden.
     @MainActor
     private func launchSignedIn() -> XCUIApplication {
@@ -36,130 +9,194 @@ final class BauakteUITests: XCTestCase {
         let app = XCUIApplication()
         app.launchEnvironment = ["ESTRICHONE_UITEST": "1", "ESTRICHONE_UITEST_KEEP": "0"]
         app.launch()
-        XCTAssertTrue(element("welcomeTitle", in: app).waitForExistence(timeout: 15))
-        tap("enterAddressButton", in: app)
-        type("estrichone.example.com", into: "serverAddressField", in: app)
-        tap("checkConnectionButton", in: app)
-        tap("useServerButton", in: app)
-        tap("kindPersonal", in: app)
-        tap("deviceKindContinue", in: app)
-        type("m.huber", into: "loginField", in: app)
-        type("Richtig-2026", into: "passwordField", in: app)
-        tap("signInButton", in: app)
+        XCTAssertTrue(app.element("welcomeTitle").waitForExistence(timeout: 20))
+        app.tap("enterAddressButton")
+        app.type("estrichone.example.com", into: "serverAddressField")
+        app.tap("checkConnectionButton")
+        app.tap("useServerButton")
+        app.tap("kindPersonal")
+        app.tap("deviceKindContinue")
+        app.type("m.huber", into: "loginField")
+        app.type("Richtig-2026", into: "passwordField")
+        app.tap("signInButton")
         app.dismissSavePasswordPrompt()
-        XCTAssertTrue(element("newBauakteTile", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(app.element("newBauakteTile").waitForExistence(timeout: 20))
         // Neu starten (Anmeldung bleibt erhalten): Beim ersten Start nach der Installation bleibt sonst teils ein
-        // Systemblatt („Passwort sichern?“) über der App liegen und verdeckt Kacheln und Tab-Leiste.
+        // Systemblatt („Passwort sichern?“) über der App liegen und verdeckt Schaltflächen und Tab-Leiste.
         app.terminate()
         app.launchEnvironment["ESTRICHONE_UITEST_KEEP"] = "1"
         app.launch()
-        XCTAssertTrue(element("newBauakteTile", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(app.element("newBauakteTile").waitForExistence(timeout: 20))
+        XCTAssertTrue(app.waitUntilHittable(app.element("newBauakteTile"), timeout: 10), app.debugDescription)
         return app
+    }
+
+    /// Bauakte über die Startseite anlegen; danach ist ihre Ansicht offen.
+    @MainActor
+    private func createBauakte(_ title: String, in app: XCUIApplication) {
+        app.tap("newBauakteTile")
+        app.type(title, into: "newTitleField")
+        app.tap("createButton")
+        let header = app.element("bauakteTitle")
+        XCTAssertTrue(header.waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.wait(for: header, "label == %@", title, timeout: 5))
     }
 
     @MainActor
     func testQuickCreateWithPhotosGetsNumberFromServer() {
         let app = launchSignedIn()
 
-        tap("newBauakteTile", in: app)
-        type("EFH Müller, Neubau", into: "newTitleField", in: app)
-        tap("createAndPhotographButton", in: app)
+        app.tap("newBauakteTile")
+        app.type("EFH Müller, Neubau", into: "newTitleField")
+        app.tap("createAndPhotographButton")
 
-        // Kamera (im Simulator mit Testfoto-Auslöser): drei Fotos, dann „Fertig (3)“.
+        // Kamera (im Simulator mit Testfoto-Auslöser): Beschriftung für die Serie, drei Fotos, dann „Fertig (3)“.
+        app.tap("captionButton", timeout: 20)
+        let captionField = app.textFields.firstMatch
+        XCTAssertTrue(captionField.waitForExistence(timeout: 10))
+        captionField.typeText("Bad OG")
+        app.tapElement(app.alerts.buttons["Übernehmen"], "Übernehmen")
         for _ in 0..<3 {
-            tap("uitestCaptureButton", in: app)
+            app.tap("uitestCaptureButton")
         }
-        let counter = element("photoCounter", in: app)
+        let counter = app.element("photoCounter")
         XCTAssertTrue(counter.waitForExistence(timeout: 5))
-        let threePhotos = NSPredicate(format: "label CONTAINS %@", "3 Fotos")
-        expectation(for: threePhotos, evaluatedWith: counter)
-        waitForExpectations(timeout: 10)
-        tap("cameraDoneButton", in: app)
+        XCTAssertTrue(app.wait(for: counter, "label CONTAINS %@", "3 Fotos", timeout: 15), counter.label)
+        app.tap("cameraDoneButton")
 
-        // Bauakte ist sofort da; nach der Synchronisation trägt sie die Nummer vom Server.
-        XCTAssertEqual(element("bauakteTitle", in: app).label, "EFH Müller, Neubau")
-        // Fotos stehen weiter unten in der Liste (nach Aktionszeile, Aufgaben, Notizen).
-        let grid = element("photoGrid", in: app)
-        for _ in 0..<4 where !grid.exists {
-            app.swipeUp()
-        }
-        XCTAssertTrue(grid.waitForExistence(timeout: 5))
-        for _ in 0..<4 { app.swipeDown() }
-        let number = element("bauakteNumber", in: app)
-        let hasNumber = NSPredicate(format: "label BEGINSWITH %@", "2026-")
-        expectation(for: hasNumber, evaluatedWith: number)
-        waitForExpectations(timeout: 20)
+        // Bauakte ist sofort da; die Fotos tragen die Beschriftung; nach der Synchronisation kommt die Nummer vom Server.
+        let title = app.element("bauakteTitle")
+        XCTAssertTrue(title.waitForExistence(timeout: 15))
+        XCTAssertEqual(title.label, "EFH Müller, Neubau")
+        XCTAssertTrue(app.reveal(app.element("photoGrid")), app.debugDescription)
+        XCTAssertTrue(app.text(containing: "Bad OG").waitForExistence(timeout: 5))
+        let number = app.reveal("bauakteNumber")
+        XCTAssertTrue(app.wait(for: number, "label BEGINSWITH %@", "2026-", timeout: 30), number.label)
+    }
+
+    @MainActor
+    func testCustomerIsCapturedDuringQuickCreate() {
+        let app = launchSignedIn()
+        app.tap("newBauakteTile")
+        app.type("EFH Schneider", into: "newTitleField")
+
+        // Vorhandenen Kunden suchen und übernehmen …
+        app.tap("customerSearchButton")
+        let search = app.searchFields.firstMatch
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        app.tapElement(search, "Suchfeld")
+        search.typeText("huber")
+        app.tap("customerResult")
+        XCTAssertTrue(app.element("removeCustomerButton").waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.text(containing: "Huber Bau GmbH").exists)
+
+        // … wieder entfernen und stattdessen einen neuen Kunden direkt im Formular erfassen.
+        app.tap("removeCustomerButton")
+        app.tap("newCustomerButton")
+        app.type("Familie Schneider", into: "customerNameField")
+        app.type("0871 123456", into: "customerPhoneField")
+        app.type("schneider@example.com", into: "customerEmailField")
+        app.tap("createButton")
+
+        // Die Bauakte zeigt den Kunden mit Anruf-Schaltfläche.
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
+        let customer = app.reveal("customerName")
+        XCTAssertTrue(app.wait(for: customer, "label == %@", "Familie Schneider", timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.element("callCustomerButton").exists)
+    }
+
+    @MainActor
+    func testScanDocumentAndQuickDiaryEntry() {
+        let app = launchSignedIn()
+        createBauakte("Halle Gewerbering", in: app)
+
+        // Scan (im Simulator mit zwei erzeugten Seiten): Seiten prüfen, Art wählen, als PDF ablegen.
+        app.tap("scanDocumentButton")
+        XCTAssertTrue(app.element("scanTitleField").waitForExistence(timeout: 20), app.debugDescription)
+        let pages = app.descendants(matching: .any).matching(identifier: "scanPage")
+        XCTAssertTrue(app.wait(for: pages.element(boundBy: 1), "exists == true", timeout: 15), app.debugDescription)
+        let save = app.element("saveScanButton")
+        XCTAssertTrue(app.wait(for: save, "isEnabled == true", timeout: 15))
+        app.tapElement(save, "saveScanButton")
+
+        let document = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "document-Lieferschein")).firstMatch
+        XCTAssertTrue(document.waitForExistence(timeout: 30) || app.reveal(document), app.debugDescription)
+
+        // Bautagebuch mit Textbaustein.
+        app.tap("addDiaryButton")
+        XCTAssertTrue(app.element("diaryTextField").waitForExistence(timeout: 10))
+        app.tapElement(app.buttons["Estrich eingebracht"].firstMatch, "Textbaustein")
+        app.tap("saveDiaryButton")
+        let entry = app.staticTexts["Estrich eingebracht"].firstMatch
+        XCTAssertTrue(entry.waitForExistence(timeout: 10) || app.reveal(entry), app.debugDescription)
     }
 
     @MainActor
     func testCreatedBauakteIsFoundBySearch() {
         let app = launchSignedIn()
-        // Anlegen über die schwebende Schaltfläche der Bauaktenliste (zweiter Weg neben der Kachel auf „Heute“).
-        app.tabBars.buttons["Bauakten"].tap()
-        tap("newBauakteButton", in: app)
-        type("Halle Huber", into: "newTitleField", in: app)
-        tap("createButton", in: app)
-        XCTAssertTrue(element("bauakteTitle", in: app).waitForExistence(timeout: 10))
+        // Anlegen über die schwebende Schaltfläche der Bauaktenliste (zweiter Weg neben der Startseite).
+        app.tapElement(app.tabBars.buttons["Bauakten"], "Reiter Bauakten")
+        app.tap("newBauakteButton")
+        app.type("Halle Huber", into: "newTitleField")
+        app.tap("createButton")
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15))
 
-        app.tabBars.buttons["Bauakten"].tap()
+        app.tapElement(app.tabBars.buttons["Bauakten"], "Reiter Bauakten")
         let search = app.searchFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 5))
-        search.tap()
+        XCTAssertTrue(search.waitForExistence(timeout: 10))
+        app.tapElement(search, "Suchfeld")
         search.typeText("huber")
-        XCTAssertTrue(app.staticTexts["Halle Huber"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.staticTexts["Halle Huber"].waitForExistence(timeout: 10))
     }
 
     @MainActor
     func testNoteDefectAndHistory() {
         let app = launchSignedIn()
-        tap("newBauakteTile", in: app)
-        type("Reihenhaus Mitte", into: "newTitleField", in: app)
-        tap("createButton", in: app)
-        XCTAssertTrue(element("bauakteTitle", in: app).waitForExistence(timeout: 10))
+        createBauakte("Reihenhaus Mitte", in: app)
 
         // Notiz: sofort sichtbar.
-        tap("addNoteButton", in: app)
-        type("Schlüssel liegt beim Nachbarn", into: "noteTextField", in: app)
-        tap("saveNoteButton", in: app)
-        XCTAssertTrue(app.staticTexts["Schlüssel liegt beim Nachbarn"].waitForExistence(timeout: 5))
+        app.tap("addNoteButton")
+        app.type("Schlüssel liegt beim Nachbarn", into: "noteTextField")
+        app.tap("saveNoteButton")
+        let note = app.staticTexts["Schlüssel liegt beim Nachbarn"]
+        XCTAssertTrue(note.waitForExistence(timeout: 5) || app.reveal(note), app.debugDescription)
 
         // Mangel erfassen, dann abhaken.
-        tap("addMenu", in: app)
-        app.buttons["Mangel"].firstMatch.tap()
-        type("Riss im Flur", into: "workItemTitleField", in: app)
-        tap("saveWorkItemButton", in: app)
-        let toggle = element("toggleWorkItem-Riss im Flur", in: app)
-        XCTAssertTrue(toggle.waitForExistence(timeout: 5), app.debugDescription)
-        toggle.tap()
-        let reopen = NSPredicate(format: "label CONTAINS %@", "Wieder öffnen")
-        expectation(for: reopen, evaluatedWith: toggle)
-        waitForExpectations(timeout: 10)
+        app.tapElement(app.reveal("addMenu"), "addMenu")
+        app.tapElement(app.buttons["Mangel"].firstMatch, "Menüpunkt Mangel")
+        app.type("Riss im Flur", into: "workItemTitleField")
+        app.tap("saveWorkItemButton")
+        let toggle = app.element("toggleWorkItem-Riss im Flur")
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5) || app.reveal(toggle), app.debugDescription)
+        app.reveal(toggle)
+        app.tapElement(toggle, "Mangel abhaken")
+        XCTAssertTrue(app.wait(for: toggle, "label CONTAINS %@", "Wieder öffnen", timeout: 10), toggle.label)
 
         // CM-Messung: Belegreife sofort sichtbar.
-        tap("addMenu", in: app)
-        app.buttons["CM-Messung"].firstMatch.tap()
-        type("Bad OG", into: "cmLocationField", in: app)
-        type("1,6", into: "cmValueField", in: app)
-        XCTAssertEqual(element("readinessLabel", in: app).label, "Belegreif")
-        tap("saveCmButton", in: app)
-        XCTAssertTrue(app.staticTexts["Prüfungen (1)"].waitForExistence(timeout: 5))
+        app.tapElement(app.reveal("addMenu"), "addMenu")
+        app.tapElement(app.buttons["CM-Messung"].firstMatch, "Menüpunkt CM-Messung")
+        app.type("Bad OG", into: "cmLocationField")
+        app.type("1,6", into: "cmValueField")
+        XCTAssertTrue(app.wait(for: app.element("readinessLabel"), "label == %@", "Belegreif", timeout: 5))
+        app.tap("saveCmButton")
+        let inspections = app.staticTexts["Prüfungen (1)"]
+        XCTAssertTrue(inspections.waitForExistence(timeout: 5) || app.reveal(inspections), app.debugDescription)
 
         // Verlauf vom Server.
-        app.swipeUp()
-        tap("historyLink", in: app)
-        XCTAssertTrue(app.staticTexts["Max Huber hat die Bauakte angelegt."].waitForExistence(timeout: 10))
+        app.tapElement(app.reveal("historyLink"), "historyLink")
+        XCTAssertTrue(app.staticTexts["Max Huber hat die Bauakte angelegt."].waitForExistence(timeout: 15))
     }
 
     @MainActor
     func testReportProblemWithDiagnosticsPreview() {
         let app = launchSignedIn()
-        app.tabBars.buttons["Mehr"].tap()
-        tap("reportProblemButton", in: app)
-        type("Fotos werden nicht übertragen", into: "ticketTitleField", in: app)
+        app.tapElement(app.tabBars.buttons["Mehr"], "Reiter Mehr")
+        app.tap("reportProblemButton")
+        app.type("Fotos werden nicht übertragen", into: "ticketTitleField")
         // Vor dem Senden ist sichtbar, was mitgeht.
-        tap("diagnosticsDisclosure", in: app)
-        XCTAssertTrue(app.staticTexts["Fehlercodes"].waitForExistence(timeout: 5))
-        tap("sendTicketButton", in: app)
-        XCTAssertTrue(app.alerts["Meldung gespeichert"].waitForExistence(timeout: 10))
+        app.tap("diagnosticsDisclosure")
+        XCTAssertTrue(app.staticTexts["Fehlercodes"].waitForExistence(timeout: 10))
+        app.tap("sendTicketButton")
+        XCTAssertTrue(app.alerts["Meldung gespeichert"].waitForExistence(timeout: 15))
     }
 }

@@ -7,11 +7,14 @@ struct BauakteStatusChip: View {
 
     var body: some View {
         Label(status.title, systemImage: symbol)
-            .font(.caption.weight(.semibold))
+            .labelStyle(TightLabelStyle())
+            .font(.caption2.weight(.semibold))
+            .imageScale(.small)
             .strikethrough(status == .cancelled)
+            .lineLimit(1)
             .foregroundStyle(colors.foreground)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 7)
+            .padding(.vertical, 3)
             .background(colors.background, in: Capsule())
     }
 
@@ -45,7 +48,7 @@ struct SyncStateBadge: View {
     var body: some View {
         switch state {
         case .pending:
-            Label("Auf diesem Gerät gespeichert · wird übertragen", systemImage: "arrow.up.circle")
+            Label(showsSynced ? "Auf diesem Gerät gespeichert · wird übertragen" : "Wird übertragen", systemImage: "arrow.up.circle")
                 .font(.caption)
                 .foregroundStyle(Theme.textSecondary)
         case .problem:
@@ -62,28 +65,70 @@ struct SyncStateBadge: View {
     }
 }
 
-/// Zeile einer Bauakte in Listen.
+/// Zeile einer Bauakte in Listen: Bezeichnung und Status, darunter Nummer und Adresse – zwei ruhige Zeilen.
 struct BauakteRow: View {
     let bauakte: Bauakte
+    var customerName: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .firstTextBaseline) {
-                Text(bauakte.number ?? "Neu · noch ohne Nummer")
-                    .font(.caption.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(Theme.textSecondary)
-                Spacer()
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(bauakte.title)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(.primary)
+                    .lineLimit(2)
+                Spacer(minLength: 4)
                 BauakteStatusChip(status: bauakte.status)
             }
-            Text(bauakte.title)
-                .font(.headline)
-                .foregroundStyle(.primary)
-            if let address = bauakte.addressLine {
-                Text(address).font(.subheadline).foregroundStyle(Theme.textSecondary)
+            HStack(spacing: 4) {
+                Text(bauakte.number ?? "Neu · noch ohne Nummer")
+                    .monospacedDigit()
+                    .fontWeight(.medium)
+                if let address = bauakte.addressLine {
+                    Text("·")
+                    Text(address).lineLimit(1)
+                }
+            }
+            .font(.caption)
+            .foregroundStyle(Theme.textSecondary)
+            if let customerName {
+                Label(customerName, systemImage: "person")
+                    .labelStyle(TightLabelStyle())
+                    .font(.caption)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
             SyncStateBadge(state: bauakte.syncState)
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
         .accessibilityElement(children: .combine)
+    }
+}
+
+/// Abschnittsüberschrift mit Anzahl und optionaler Aktion rechts (z. B. „+ Eintrag“).
+struct SectionHeader<Trailing: View>: View {
+    let title: String
+    let count: Int?
+    @ViewBuilder let trailing: () -> Trailing
+
+    init(_ title: String, count: Int? = nil, @ViewBuilder trailing: @escaping () -> Trailing) {
+        self.title = title
+        self.count = count
+        self.trailing = trailing
+    }
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text(count.map { "\(title) (\($0))" } ?? title)
+            Spacer()
+            trailing()
+                .textCase(nil)
+        }
+    }
+}
+
+extension SectionHeader where Trailing == EmptyView {
+    init(_ title: String, count: Int? = nil) {
+        self.init(title, count: count) { EmptyView() }
     }
 }

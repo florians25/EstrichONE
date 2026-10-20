@@ -158,7 +158,7 @@ struct InitialInspectionView: View {
                 }
             }
             .fullScreenCover(isPresented: $capturing) {
-                CameraView(bauakte: bauakte) { _ in
+                CameraView(bauakte: bauakte, allowsChangingBauakte: false) { _ in
                     capturing = false
                     Task { await collectPhotos() }
                 }

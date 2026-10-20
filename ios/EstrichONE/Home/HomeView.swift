@@ -1,10 +1,11 @@
 import EstrichCore
 import SwiftUI
 
-/// Startseite im Stil der Handwerker-Apps (Vorbild Streit): Kopf in Navy mit Person und Gerät, „Mein Einsatz heute“,
-/// darunter Kacheln für die häufigsten Abläufe. Große Flächen, gut mit Arbeitshandschuhen zu treffen.
+/// Startseite: kompakter Kopf in Navy mit Person und Gerät, drei Schnellaktionen, „Mein Einsatz heute“,
+/// Navigation als ruhige Liste und zuletzt geöffnete Bauakten. Normale iOS-Größen, gut lesbar mit Dynamic Type.
 struct HomeView: View {
     let openTab: (MainTabView.Tab) -> Void
+    var openCapture: (CaptureMode) -> Void = { _ in }
 
     @Environment(AppModel.self) private var model
     @State private var path: [HomeRoute] = []
@@ -18,29 +19,40 @@ struct HomeView: View {
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 20) {
+                VStack(alignment: .leading, spacing: 18) {
                     HomeHeader()
                     if let sync = model.active?.sync {
                         SyncStatusBar(sync: sync)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
                             .padding(.horizontal)
                     }
+                    quickActions
+                        .padding(.horizontal)
                     TodayAssignments(snapshot: planning) { path.append(.bauakte($0)) }
                         .padding(.horizontal)
-                    tiles
+                    navigation
                         .padding(.horizontal)
                     if !recent.isEmpty {
                         VStack(alignment: .leading, spacing: 8) {
                             SectionTitle("Zuletzt geöffnet")
-                            ForEach(recent) { bauakte in
-                                Button { path.append(.bauakte(bauakte.id)) } label: {
-                                    BauakteRow(bauakte: bauakte)
-                                        .padding(12)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
-                                        .background(.background, in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+                            VStack(spacing: 0) {
+                                ForEach(Array(recent.enumerated()), id: \.element.id) { index, bauakte in
+                                    if index > 0 { Divider().padding(.leading, 14) }
+                                    Button { path.append(.bauakte(bauakte.id)) } label: {
+                                        HStack(spacing: 10) {
+                                            BauakteRow(bauakte: bauakte)
+                                            Image(systemName: "chevron.right")
+                                                .font(.footnote.weight(.semibold))
+                                                .foregroundStyle(.tertiary)
+                                        }
+                                        .padding(.horizontal, 14)
+                                        .padding(.vertical, 10)
+                                        .contentShape(Rectangle())
+                                    }
+                                    .buttonStyle(RowButtonStyle())
                                 }
-                                .buttonStyle(.plain)
                             }
+                            .card()
                         }
                         .padding(.horizontal)
                     }
@@ -81,22 +93,42 @@ struct HomeView: View {
         }
     }
 
-    private var tiles: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionTitle("Baustelle")
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 100, maximum: 160), spacing: 12)], spacing: 12) {
-                HomeTile(title: "Neue Bauakte", symbol: "folder.badge.plus", accent: Theme.success) { creating = true }
-                    .accessibilityIdentifier("newBauakteTile")
-                HomeTile(title: "Bauakten", symbol: "building.2") { openTab(.bauakten) }
-                HomeTile(title: "Fotos", symbol: "camera") { openTab(.capture) }
-                HomeTile(title: "Meine Aufgaben", symbol: "checklist", badge: openTasks) { path.append(.tasks) }
-                    .accessibilityIdentifier("myTasksTile")
-                HomeTile(title: "Meine Woche", symbol: "calendar") { path.append(.week) }
-                    .accessibilityIdentifier("myWeekTile")
-                HomeTile(title: "Synchronisation", symbol: "arrow.triangle.2.circlepath") { path.append(.sync) }
-                HomeTile(title: "Problem melden", symbol: "exclamationmark.bubble", accent: Theme.hint) { reporting = true }
+    /// Drei Schnellaktionen: anlegen (Hauptaktion), fotografieren und scannen (Akzent bzw. Nebenaktion).
+    private var quickActions: some View {
+        HStack(spacing: 10) {
+            Button { creating = true } label: {
+                Label("Neue Bauakte", systemImage: "folder.badge.plus")
             }
+            .buttonStyle(ActionTileStyle(rank: .primary))
+            .accessibilityIdentifier("newBauakteTile")
+            Button { openCapture(.photo) } label: {
+                Label("Foto", systemImage: "camera.fill")
+            }
+            .buttonStyle(ActionTileStyle(rank: .accent))
+            .accessibilityIdentifier("photoTile")
+            Button { openCapture(.document) } label: {
+                Label("Scannen", systemImage: "doc.viewfinder")
+            }
+            .buttonStyle(ActionTileStyle(rank: .secondary))
+            .accessibilityIdentifier("scanTile")
         }
+    }
+
+    private var navigation: some View {
+        VStack(spacing: 0) {
+            NavigationRow(title: "Bauakten", symbol: "folder.fill", color: Theme.navyLight) { openTab(.bauakten) }
+            Divider().padding(.leading, 54)
+            NavigationRow(title: "Meine Aufgaben", symbol: "checklist", color: Color(hex: 0xE07A1F), badge: openTasks) { path.append(.tasks) }
+                .accessibilityIdentifier("myTasksTile")
+            Divider().padding(.leading, 54)
+            NavigationRow(title: "Meine Woche", symbol: "calendar", color: Color(hex: 0x2F80ED)) { path.append(.week) }
+                .accessibilityIdentifier("myWeekTile")
+            Divider().padding(.leading, 54)
+            NavigationRow(title: "Synchronisation", symbol: "arrow.triangle.2.circlepath", color: Color(hex: 0x1F9D63)) { path.append(.sync) }
+            Divider().padding(.leading, 54)
+            NavigationRow(title: "Problem melden", symbol: "exclamationmark.bubble.fill", color: Color(hex: 0xC2410C)) { reporting = true }
+        }
+        .card()
     }
 
     private func reload() async {
@@ -116,38 +148,88 @@ enum HomeRoute: Hashable {
     case sync
 }
 
-/// Kopf in Navy: Firma, Person, Gerät; Benutzerwechsel auf Poolgeräten als Glas-Schaltfläche.
+/// Zeile wie in den Einstellungen: farbiges Symbol, Titel, Zähler, Pfeil. 44 pt Mindesthöhe.
+struct NavigationRow: View {
+    let title: String
+    let symbol: String
+    var color: Color = Theme.navyLight
+    var badge = 0
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Image(systemName: symbol)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(color, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                    .accessibilityHidden(true)
+                Text(title)
+                    .foregroundStyle(.primary)
+                Spacer()
+                if badge > 0 {
+                    Text("\(badge)")
+                        .font(.caption.weight(.bold)).monospacedDigit()
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(Theme.error, in: Capsule())
+                }
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(.horizontal, 14)
+            .frame(minHeight: 48)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(RowButtonStyle())
+        .accessibilityLabel(badge > 0 ? "\(title), \(badge) offen" : title)
+    }
+}
+
+/// Zeilen in Karten: beim Drücken grau hinterlegt wie Listenzeilen.
+struct RowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Color(uiColor: .systemFill) : .clear)
+    }
+}
+
+/// Kopf in Navy: Marke, Server, Person, Gerät; Benutzerwechsel auf Poolgeräten.
 struct HomeHeader: View {
     @Environment(AppModel.self) private var model
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            HStack {
-                Image(systemName: "square.stack.3d.up.fill").font(.title3).foregroundStyle(.white.opacity(0.9))
-                Text("EstrichONE").font(.headline).foregroundStyle(.white)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                BrandMark()
+                    .frame(width: 22, height: 22)
+                    .accessibilityHidden(true)
+                Text("EstrichONE").font(.subheadline.weight(.bold)).foregroundStyle(.white)
                 Spacer()
                 if let server = model.server {
-                    Text(server.info.serverName).font(.footnote).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+                    Text(server.info.serverName).font(.caption).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
                 }
             }
             if let user = model.active?.user {
                 HStack(spacing: 12) {
                     Initials(text: LocalUser.initials(of: user.displayName))
-                        .overlay(Circle().strokeBorder(.white.opacity(0.7), lineWidth: 1.5))
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text(greeting).font(.subheadline).foregroundStyle(.white.opacity(0.8))
-                        Text(user.displayName).font(.title2.weight(.semibold)).foregroundStyle(.white)
+                        .overlay(Circle().strokeBorder(.white.opacity(0.6), lineWidth: 1.5))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(greeting).font(.caption).foregroundStyle(.white.opacity(0.8))
+                        Text(user.displayName).font(.title3.weight(.semibold)).foregroundStyle(.white)
                             .accessibilityIdentifier("currentUserName")
                         if let device = model.deviceRegistration {
-                            Text(device.name).font(.caption).foregroundStyle(.white.opacity(0.7))
+                            Text(device.name).font(.caption2).foregroundStyle(.white.opacity(0.7))
                         }
                     }
                     Spacer()
                     if model.isPoolDevice {
                         Button { model.lock() } label: {
-                            Label("Wechseln", systemImage: "person.2").font(.subheadline.weight(.semibold))
+                            Label("Wechseln", systemImage: "person.2")
                         }
-                        .glassOrBordered()
+                        .overlayControlStyle()
                         .tint(.white)
                         .accessibilityIdentifier("switchUserButton")
                     }
@@ -155,11 +237,11 @@ struct HomeHeader: View {
             }
         }
         .padding(.horizontal)
-        .padding(.top, 12)
-        .padding(.bottom, 22)
+        .padding(.top, 8)
+        .padding(.bottom, 16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            LinearGradient(colors: [Theme.navy, Color(hex: 0x12396F)], startPoint: .topLeading, endPoint: .bottomTrailing)
+            LinearGradient(colors: [Theme.navy, Theme.navyLight], startPoint: .topLeading, endPoint: .bottomTrailing)
                 .ignoresSafeArea(edges: .top)
         )
     }
@@ -173,56 +255,16 @@ struct HomeHeader: View {
     }
 }
 
-/// Kachel: weißes Feld, Linien-Symbol in Navy, Beschriftung darunter (wie die Programmkacheln im Desktop).
-struct HomeTile: View {
-    let title: String
-    let symbol: String
-    var accent: Color = Theme.navy
-    var badge = 0
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 10) {
-                Image(systemName: symbol)
-                    .font(.system(size: 28, weight: .light))
-                    .foregroundStyle(accent == Theme.navy ? Theme.navyText : accent)
-                    .frame(height: 34)
-                Text(title)
-                    .font(.footnote.weight(.medium))
-                    .multilineTextAlignment(.center)
-                    .lineLimit(2, reservesSpace: true)
-                    .foregroundStyle(.primary)
-            }
-            .frame(maxWidth: .infinity, minHeight: 104)
-            .padding(.horizontal, 6)
-            .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 14, style: .continuous).strokeBorder(Theme.line.opacity(0.6)))
-            .overlay(alignment: .topTrailing) {
-                if badge > 0 {
-                    Text("\(badge)")
-                        .font(.caption2.weight(.bold)).monospacedDigit()
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(Theme.error, in: Capsule())
-                        .padding(8)
-                }
-            }
-            .shadow(color: .black.opacity(0.05), radius: 2, y: 1)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(badge > 0 ? "\(title), \(badge) offen" : title)
-    }
-}
-
 struct SectionTitle: View {
     let text: String
     init(_ text: String) { self.text = text }
 
     var body: some View {
         Text(text)
-            .font(.subheadline.weight(.bold))
-            .foregroundStyle(Theme.navyText)
+            .font(.footnote.weight(.semibold))
+            .textCase(.uppercase)
+            .foregroundStyle(Theme.textSecondary)
+            .padding(.leading, 4)
             .accessibilityAddTraits(.isHeader)
     }
 }
@@ -234,12 +276,12 @@ struct TodayAssignments: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 SectionTitle("Mein Einsatz heute")
                 Spacer()
                 if let snapshot, !snapshot.isCurrent {
                     Text("Stand \(snapshot.loadedAt.formatted(date: .abbreviated, time: .shortened))")
-                        .font(.caption).foregroundStyle(Theme.textSecondary)
+                        .font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
             }
             let today = snapshot?.assignments(on: CalendarDay.string(.now)) ?? []
@@ -247,9 +289,9 @@ struct TodayAssignments: View {
                 Label(snapshot == nil ? "Noch keine Planung geladen." : "Heute ist für Sie nichts eingeplant.", systemImage: "calendar")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)
-                    .padding(14)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .padding(.horizontal, 14)
+                    .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                    .card()
             }
             ForEach(today) { assignment in
                 AssignmentCard(assignment: assignment) { open(assignment.bauakteId) }
@@ -266,14 +308,14 @@ struct AssignmentCard: View {
     var body: some View {
         Button(action: open) {
             HStack(alignment: .top, spacing: 12) {
-                VStack(spacing: 2) {
-                    Text(assignment.startText ?? "–").font(.headline.monospacedDigit()).foregroundStyle(Theme.navyText)
+                VStack(spacing: 0) {
+                    Text(assignment.startText ?? "–").font(.subheadline.monospacedDigit().weight(.bold)).foregroundStyle(Theme.navyText)
                     Text("Uhr").font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
-                .frame(width: 52)
-                VStack(alignment: .leading, spacing: 4) {
+                .frame(width: 46)
+                VStack(alignment: .leading, spacing: 3) {
                     Text([assignment.bauakteNumber, assignment.bauakteTitle].compactMap { $0 }.joined(separator: " · "))
-                        .font(.headline).foregroundStyle(.primary)
+                        .font(.subheadline.weight(.semibold)).foregroundStyle(.primary)
                     Text(assignment.activity).font(.subheadline)
                     if let address = assignment.bauakteAddress {
                         Label(address, systemImage: "mappin.and.ellipse").font(.caption).foregroundStyle(Theme.textSecondary)
@@ -288,12 +330,13 @@ struct AssignmentCard: View {
                     }
                 }
                 Spacer(minLength: 0)
-                Image(systemName: "chevron.right").foregroundStyle(Theme.textSecondary)
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
-            .padding(14)
-            .background(.background, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+            .padding(12)
+            .card()
             .overlay(alignment: .leading) {
-                UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 14).fill(Theme.navy).frame(width: 5)
+                UnevenRoundedRectangle(topLeadingRadius: Theme.cardRadius, bottomLeadingRadius: Theme.cardRadius)
+                    .fill(Theme.accent).frame(width: 4)
             }
         }
         .buttonStyle(.plain)
@@ -373,21 +416,5 @@ struct MyTasksView: View {
         try? await model.active?.service?.setStatus(item.isDone ? .open : .done, of: item.id)
         model.active?.sync?.localChangeMade()
         await reload()
-    }
-}
-
-extension View {
-    /// Liquid Glass ab iOS 26, sonst eine umrandete Schaltfläche.
-    @ViewBuilder
-    func glassOrBordered() -> some View {
-        #if compiler(>=6.2)
-        if #available(iOS 26, *) {
-            self.buttonStyle(.glass)
-        } else {
-            self.buttonStyle(.bordered)
-        }
-        #else
-        self.buttonStyle(.bordered)
-        #endif
     }
 }

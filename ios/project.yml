@@ -45,7 +45,7 @@ targets:
         INFOPLIST_KEY_UILaunchScreen_Generation: YES
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone: UIInterfaceOrientationPortrait
         INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad: "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
-        INFOPLIST_KEY_NSCameraUsageDescription: "Die Kamera wird zum Scannen des Einrichtungscodes und für Baustellenfotos verwendet."
+        INFOPLIST_KEY_NSCameraUsageDescription: "Die Kamera wird für Baustellenfotos, zum Scannen von Dokumenten (Lieferscheine, Pläne, Abnahmen) und des Einrichtungscodes verwendet."
         INFOPLIST_KEY_NSLocationWhenInUseUsageDescription: "Der Standort wird nur auf Knopfdruck verwendet, um die Adresse einer neuen Baustelle oder den Aufnahmeort eines Fotos zu übernehmen."
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor

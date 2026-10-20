@@ -6,6 +6,7 @@ struct BauaktenListView: View {
     @Environment(AppModel.self) private var model
     @State private var search = ""
     @State private var bauakten: [Bauakte] = []
+    @State private var customers: [UUID: String] = [:]
     @State private var path: [UUID] = []
     @State private var creating = false
     @State private var captureFor: Bauakte?
@@ -21,15 +22,22 @@ struct BauaktenListView: View {
                         .foregroundStyle(Theme.textSecondary)
                 }
                 ForEach(bauakten) { bauakte in
-                    NavigationLink(value: bauakte.id) { BauakteRow(bauakte: bauakte) }
-                        .contextMenu {
-                            Button("Foto aufnehmen", systemImage: "camera") { captureFor = bauakte }
-                            if let url = MapsLink.url(for: bauakte) {
-                                Link(destination: url) { Label("Navigation starten", systemImage: "car") }
-                            }
+                    NavigationLink(value: bauakte.id) {
+                        BauakteRow(bauakte: bauakte, customerName: bauakte.customerId.flatMap { customers[$0] })
+                    }
+                    .swipeActions(edge: .leading) {
+                        Button { captureFor = bauakte } label: { Label("Foto", systemImage: "camera.fill") }
+                            .tint(Theme.accentPressed)
+                    }
+                    .contextMenu {
+                        Button("Foto aufnehmen", systemImage: "camera") { captureFor = bauakte }
+                        if let url = MapsLink.url(for: bauakte) {
+                            Link(destination: url) { Label("Route starten", systemImage: "car") }
                         }
+                    }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("Bauakten")
             .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
             .navigationDestination(for: UUID.self) { BauakteDetailView(bauakteId: $0) }
@@ -53,7 +61,10 @@ struct BauaktenListView: View {
                 CameraView(bauakte: bauakte) { _ in captureFor = nil }
             }
             .task(id: "\(search)|\(model.active?.sync?.revision ?? 0)") {
-                bauakten = (try? await model.active?.service?.bauakten(search: search)) ?? []
+                guard let service = model.active?.service else { return }
+                bauakten = (try? await service.bauakten(search: search)) ?? []
+                let contacts = (try? await service.contacts()) ?? []
+                customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
             }
             .refreshable { await model.active?.sync?.run() }
         }
@@ -72,5 +83,19 @@ enum MapsLink {
             return nil
         }
         return components?.url
+    }
+}
+
+/// Telefon und E-Mail als Systemlinks (Anruf über die Telefon-App, E-Mail über die Mail-App).
+enum ContactLink {
+    static func phone(_ number: String?) -> URL? {
+        guard let number else { return nil }
+        let digits = number.filter { $0.isNumber || $0 == "+" }
+        return digits.count >= 3 ? URL(string: "tel:\(digits)") : nil
+    }
+
+    static func email(_ address: String?) -> URL? {
+        guard let address = address?.trimmingCharacters(in: .whitespaces), address.contains("@") else { return nil }
+        return URL(string: "mailto:\(address.addingPercentEncoding(withAllowedCharacters: .urlUserAllowed) ?? address)")
     }
 }

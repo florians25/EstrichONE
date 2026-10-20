@@ -1,41 +1,72 @@
 import EstrichCore
 import SwiftUI
 
-/// Reiter „Aufnehmen“ (09, W-2): Bauakte ist vorausgewählt (zuletzt geöffnet) → Kamera → „Fertig“. 3 Tipps.
+/// Was im Reiter „Aufnehmen“ entsteht.
+enum CaptureMode: String, CaseIterable, Identifiable {
+    case photo
+    case document
+
+    var id: String { rawValue }
+    var title: String { self == .photo ? "Fotos" : "Dokument scannen" }
+    var symbol: String { self == .photo ? "camera.fill" : "doc.viewfinder" }
+}
+
+/// Reiter „Aufnehmen“ (09, W-2): Fotos oder Dokument, Bauakte ist vorausgewählt (zuletzt geöffnet). 2–3 Tipps.
 struct CaptureTabView: View {
+    @Binding var mode: CaptureMode
+
     @Environment(AppModel.self) private var model
     @State private var recent: [Bauakte] = []
     @State private var all: [Bauakte] = []
     @State private var search = ""
     @State private var captureFor: Bauakte?
-    @State private var lastResult: (title: String, count: Int)?
+    @State private var scanFor: Bauakte?
+    @State private var lastResult: String?
 
     var body: some View {
         NavigationStack {
             List {
-                if let lastResult, lastResult.count > 0 {
-                    StatusMessage(kind: .success, text: "\(lastResult.count) \(lastResult.count == 1 ? "Foto" : "Fotos") für „\(lastResult.title)“ gespeichert.")
+                Section {
+                    Picker("Aufnahme", selection: $mode) {
+                        ForEach(CaptureMode.allCases) { Label($0.title, systemImage: $0.symbol).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .accessibilityIdentifier("captureModePicker")
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 4, trailing: 0))
+                }
+                if let lastResult {
+                    StatusMessage(kind: .success, text: lastResult)
                         .listRowInsets(EdgeInsets())
                 }
                 if let first = recent.first, search.isEmpty {
                     Section("Vorausgewählt") {
-                        Button {
-                            captureFor = first
-                        } label: {
-                            HStack {
-                                BauakteRow(bauakte: first)
-                                Image(systemName: "camera.fill").font(.title2).foregroundStyle(Theme.actionPrimary)
+                        HStack(spacing: 12) {
+                            BauakteRow(bauakte: first)
+                            Button {
+                                start(first)
+                            } label: {
+                                Label(mode == .photo ? "Fotos" : "Scannen", systemImage: mode.symbol)
                             }
+                            .estrichButton(mode == .photo ? .accent : .primary)
+                            .accessibilityIdentifier("captureSuggested")
                         }
-                        .accessibilityIdentifier("captureSuggested")
                     }
                 }
                 Section(search.isEmpty ? "Andere Bauakte" : "Treffer") {
+                    if all.isEmpty {
+                        Text("Keine Bauakte gefunden.").foregroundStyle(Theme.textSecondary)
+                    }
                     ForEach(all) { bauakte in
                         Button {
-                            captureFor = bauakte
+                            start(bauakte)
                         } label: {
-                            BauakteRow(bauakte: bauakte)
+                            HStack {
+                                BauakteRow(bauakte: bauakte)
+                                Image(systemName: mode.symbol)
+                                    .foregroundStyle(Theme.actionPrimary)
+                                    .accessibilityHidden(true)
+                            }
                         }
                         .buttonStyle(.plain)
                     }
@@ -45,8 +76,14 @@ struct CaptureTabView: View {
             .searchable(text: $search, prompt: "Bauakte suchen")
             .fullScreenCover(item: $captureFor) { bauakte in
                 CameraView(bauakte: bauakte) { count in
-                    lastResult = (bauakte.title, count)
+                    lastResult = count > 0 ? "\(count) \(count == 1 ? "Foto" : "Fotos") gespeichert." : nil
                     captureFor = nil
+                }
+            }
+            .fullScreenCover(item: $scanFor) { bauakte in
+                ScanFlowView(bauakte: bauakte) { saved in
+                    lastResult = saved ? "Dokument für „\(bauakte.title)“ gespeichert." : nil
+                    scanFor = nil
                 }
             }
             .task(id: "\(search)|\(model.active?.sync?.revision ?? 0)") {
@@ -54,6 +91,48 @@ struct CaptureTabView: View {
                 recent = (try? await service.recentBauakten(limit: 1)) ?? []
                 all = (try? await service.bauakten(search: search)) ?? []
             }
+        }
+    }
+
+    private func start(_ bauakte: Bauakte) {
+        lastResult = nil
+        switch mode {
+        case .photo: captureFor = bauakte
+        case .document: scanFor = bauakte
+        }
+    }
+}
+
+/// Bauakte wählen (z. B. Zuordnung der Fotos in der Kamera ändern).
+struct BauaktePickerView: View {
+    let selected: UUID?
+    let onSelect: (Bauakte) -> Void
+
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var search = ""
+    @State private var bauakten: [Bauakte] = []
+
+    var body: some View {
+        NavigationStack {
+            List(bauakten) { bauakte in
+                Button {
+                    onSelect(bauakte)
+                } label: {
+                    HStack {
+                        BauakteRow(bauakte: bauakte)
+                        if bauakte.id == selected {
+                            Image(systemName: "checkmark").foregroundStyle(Theme.actionPrimary).fontWeight(.semibold)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Nummer, Bauvorhaben oder Adresse")
+            .navigationTitle("Fotos zuordnen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } } }
+            .task(id: search) { bauakten = (try? await model.active?.service?.bauakten(search: search)) ?? [] }
         }
     }
 }
