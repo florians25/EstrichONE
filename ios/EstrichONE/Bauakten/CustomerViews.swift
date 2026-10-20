@@ -240,3 +240,135 @@ struct SimilarCustomersSection: View {
         }
     }
 }
+
+/// Kunde wählen oder neu erfassen – Pflichtangabe der Schnellanlage. Gesucht wird lokal (offline) und, mit
+/// Verbindung, zusätzlich auf dem Server; beim Neuerfassen weist eine Dublettenprüfung auf vorhandene Kunden hin.
+struct CustomerChooser: View {
+    @Binding var customer: Contact?
+    @Binding var newCustomer: NewCustomer?
+    var siteAddress: (street: String?, postalCode: String?, city: String?)?
+
+    @Environment(AppModel.self) private var model
+    @State private var search = ""
+    @State private var results: [Contact] = []
+    @State private var recent: [Contact] = []
+    @State private var similar: [Contact] = []
+
+    var body: some View {
+        Section {
+            if let customer {
+                HStack {
+                    CustomerSummary(contact: customer, showsActions: false)
+                    Button {
+                        withAnimation { self.customer = nil }
+                    } label: {
+                        Label("Kunde entfernen", systemImage: "xmark")
+                    }
+                    .buttonStyle(IconButtonStyle())
+                    .accessibilityIdentifier("removeCustomerButton")
+                }
+            } else if newCustomer != nil {
+                CustomerFields(customer: Binding(get: { newCustomer ?? NewCustomer() }, set: { newCustomer = $0 }),
+                               siteAddress: siteAddress)
+                Button(role: .destructive) {
+                    withAnimation { newCustomer = nil }
+                } label: {
+                    Label("Neuen Kunden verwerfen", systemImage: "trash").font(.subheadline)
+                }
+            } else {
+                HStack(spacing: 8) {
+                    Image(systemName: "magnifyingglass").foregroundStyle(Theme.textSecondary).accessibilityHidden(true)
+                    TextField("Kunde suchen: Name, Nummer, Ort", text: $search)
+                        .textInputAutocapitalization(.words)
+                        .autocorrectionDisabled()
+                        .accessibilityIdentifier("customerSearchField")
+                }
+                ForEach(results) { contact in
+                    Button {
+                        withAnimation { customer = contact }
+                    } label: {
+                        CustomerSummary(contact: contact, showsActions: false).foregroundStyle(.primary)
+                    }
+                    .accessibilityIdentifier("customerResult")
+                }
+                if search.isEmpty, !recent.isEmpty {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(recent) { contact in
+                                Button {
+                                    withAnimation { customer = contact }
+                                } label: {
+                                    Label(contact.name, systemImage: "clock.arrow.circlepath")
+                                }
+                                .estrichButton(.secondary)
+                            }
+                        }
+                    }
+                }
+                Button {
+                    withAnimation { newCustomer = NewCustomer(name: search.trimmingCharacters(in: .whitespaces)) }
+                } label: {
+                    Label(search.trimmingCharacters(in: .whitespaces).isEmpty
+                          ? "Neuen Kunden anlegen"
+                          : "„\(search.trimmingCharacters(in: .whitespaces))“ als neuen Kunden anlegen",
+                          systemImage: "person.crop.circle.badge.plus")
+                }
+                .accessibilityIdentifier("newCustomerButton")
+            }
+        } header: {
+            Text(newCustomer != nil ? "Neuer Kunde *" : "Kunde *")
+        } footer: {
+            if newCustomer != nil {
+                Text("Wird mit der Bauakte gespeichert und beim nächsten Abgleich übertragen. Die Kundennummer vergibt das Büro.")
+            } else if customer == nil {
+                Text("Pflichtangabe. Gesucht wird auf dem Gerät und – mit Verbindung – auf dem Server.")
+            }
+        }
+        .task { recent = (try? await model.active?.service?.recentCustomers()) ?? [] }
+        .task(id: search) { await find() }
+        .task(id: "\(newCustomer?.name ?? "")|\(newCustomer?.phone ?? "")|\(newCustomer?.email ?? "")") { await checkDuplicates() }
+
+        if newCustomer != nil {
+            SimilarCustomersSection(similar: similar) { contact in
+                withAnimation {
+                    newCustomer = nil
+                    customer = contact
+                }
+            }
+        }
+    }
+
+    private func find() async {
+        let text = search.trimmingCharacters(in: .whitespaces)
+        guard !text.isEmpty else {
+            results = []
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(250))
+        guard !Task.isCancelled, let active = model.active else { return }
+        let local = Array(((try? await active.service?.contacts(search: text)) ?? []).prefix(8))
+        results = local
+        guard text.count >= 2, let remote = try? await active.client.searchContacts(text, limit: 8), !Task.isCancelled else { return }
+        results = Self.merged(local, remote)
+    }
+
+    private func checkDuplicates() async {
+        guard let newCustomer else {
+            similar = []
+            return
+        }
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled, let active = model.active else { return }
+        let local = (try? await active.service?.similarCustomers(to: newCustomer)) ?? []
+        similar = local
+        let name = newCustomer.name.trimmingCharacters(in: .whitespaces)
+        guard name.count >= 3, let remote = try? await active.client.searchContacts(name, limit: 5), !Task.isCancelled else { return }
+        similar = Self.merged(local, remote)
+    }
+
+    /// Lokale Treffer zuerst, Servertreffer ohne Doppelte dahinter.
+    static func merged(_ local: [Contact], _ remote: [Contact]) -> [Contact] {
+        let known = Set(local.map(\.id))
+        return local + remote.filter { !known.contains($0.id) }
+    }
+}

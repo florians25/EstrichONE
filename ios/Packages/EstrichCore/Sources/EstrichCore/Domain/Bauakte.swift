@@ -116,6 +116,12 @@ public struct Contact: Identifiable, Equatable, Sendable {
         syncState = entity.syncState
     }
 
+    /// Kontakt aus einer Serverantwort (`ContactResponse`); `nil` ohne gültige ID.
+    public init?(remote data: JSONValue) {
+        guard let id = data["id"]?.string.flatMap(UUID.init(uuidString:)) else { return nil }
+        self.init(LocalEntity(type: .contact, id: id, data: data, syncState: .synced))
+    }
+
     /// „Ahornweg 3, 84028 Landshut“ – nur vorhandene Teile.
     public var addressLine: String? {
         let place = [postalCode, city].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " ")
@@ -207,6 +213,7 @@ public struct FileItem: Identifiable, Equatable, Sendable {
 
     public var isPhoto: Bool { kind == "photo" }
     public var isDocument: Bool { kind == "document" }
+    public var isVideo: Bool { kind == "video" }
     public var isPDF: Bool { contentType == "application/pdf" || originalName.lowercased().hasSuffix(".pdf") }
 
     /// Anzeigename: Beschriftung, sonst Dateiname ohne Endung.

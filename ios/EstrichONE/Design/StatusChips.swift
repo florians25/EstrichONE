@@ -132,3 +132,38 @@ extension SectionHeader where Trailing == EmptyView {
         self.init(title, count: count) { EmptyView() }
     }
 }
+
+/// Fortschritt eines Assistenten: nummerierte Schritte, erledigte mit Haken, der aktuelle hervorgehoben.
+struct WizardProgress: View {
+    let steps: [String]
+    let current: Int
+
+    var body: some View {
+        HStack(spacing: 6) {
+            ForEach(Array(steps.enumerated()), id: \.offset) { index, title in
+                HStack(spacing: 5) {
+                    ZStack {
+                        Circle().fill(index <= current ? Theme.navyLight : Theme.secondaryFill)
+                        if index < current {
+                            Image(systemName: "checkmark").font(.caption2.weight(.bold)).foregroundStyle(.white)
+                        } else {
+                            Text("\(index + 1)").font(.caption2.weight(.bold))
+                                .foregroundStyle(index == current ? Color.white : Theme.textSecondary)
+                        }
+                    }
+                    .frame(width: 22, height: 22)
+                    Text(title)
+                        .font(.caption.weight(index == current ? .semibold : .regular))
+                        .foregroundStyle(index == current ? Color.primary : Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                if index < steps.count - 1 {
+                    Capsule().fill(index < current ? Theme.navyLight : Theme.line).frame(height: 2)
+                }
+            }
+        }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Schritt \(current + 1) von \(steps.count): \(steps[min(current, steps.count - 1)])")
+        .accessibilityIdentifier("wizardProgress")
+    }
+}

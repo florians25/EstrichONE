@@ -94,7 +94,8 @@ struct ReadinessLabel: View {
     }
 }
 
-/// Erstbegehung als kurze Liste: je Punkt „In Ordnung / Mangel / Entfällt“, Fotos (z. B. Zählerstand), Bemerkung.
+/// Erstbegehung: standardmäßig als Assistent (ein Prüfpunkt je Schritt, große Antworten, weiter nach dem Antippen),
+/// umschaltbar auf die kurze Liste. Je Punkt „In Ordnung / Mangel / Entfällt“, Fotos (z. B. Zählerstand), Bemerkung.
 /// „Keine Erstbegehung notwendig“ verlangt eine Begründung.
 struct InitialInspectionView: View {
     let bauakte: Bauakte
@@ -108,9 +109,171 @@ struct InitialInspectionView: View {
     @State private var capturing = false
     @State private var captureStarted = Date.now
     @State private var error: String?
+    @AppStorage("inspectionMode") private var mode: NewBauakteView.Mode = .wizard
+    /// Schritt im Assistenten: 0 = Beginn, 1…n = Prüfpunkte, n+1 = Fotos und Bemerkung.
+    @State private var step = 0
 
     var body: some View {
         NavigationStack {
+            Group {
+                if mode == .wizard {
+                    wizard
+                } else {
+                    form
+                }
+            }
+            .safeAreaInset(edge: .top) {
+                Picker("Darstellung", selection: $mode) {
+                    ForEach(NewBauakteView.Mode.allCases) { Text($0.title).tag($0) }
+                }
+                .pickerStyle(.segmented)
+                .padding(.horizontal)
+                .padding(.vertical, 6)
+                .background(.bar)
+                .accessibilityIdentifier("inspectionModePicker")
+            }
+            .navigationTitle("Erstbegehung")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: onDone) }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Sichern") { Task { await save() } }
+                        .accessibilityIdentifier("saveInspectionButton")
+                }
+            }
+            .fullScreenCover(isPresented: $capturing) {
+                CameraView(bauakte: bauakte, allowsChangingBauakte: false) { _ in
+                    capturing = false
+                    Task { await collectPhotos() }
+                }
+            }
+            .sensoryFeedback(.selection, trigger: step)
+        }
+    }
+
+    private var lastStep: Int { InitialCheck.allCases.count + 1 }
+
+    /// Ein Prüfpunkt je Bildschirm; Antwort antippen führt weiter.
+    private var wizard: some View {
+        VStack(spacing: 0) {
+            WizardProgress(steps: ["Beginn", "Prüfpunkte", "Abschluss"],
+                           current: step == 0 ? 0 : (step == lastStep || notRequired ? 2 : 1))
+                .padding(.horizontal)
+                .padding(.vertical, 10)
+            Form {
+                if step == 0 {
+                    Section {
+                        Button {
+                            notRequired = false
+                            withAnimation { step = 1 }
+                        } label: {
+                            Label("Erstbegehung durchführen", systemImage: "checklist")
+                        }
+                        .estrichButton(.primary, size: .regular, fullWidth: true)
+                        .listRowBackground(Color.clear)
+                        .accessibilityIdentifier("startInspectionButton")
+                        Button {
+                            notRequired = true
+                            withAnimation { step = lastStep }
+                        } label: {
+                            Label("Keine Erstbegehung notwendig", systemImage: "xmark.circle")
+                        }
+                        .estrichButton(.secondary, size: .regular, fullWidth: true)
+                        .listRowBackground(Color.clear)
+                        .accessibilityIdentifier("notRequiredButton")
+                    } footer: {
+                        Text("Geprüft werden \(InitialCheck.allCases.count) Punkte, danach Fotos und Bemerkung.")
+                    }
+                } else if step < lastStep, !notRequired {
+                    let check = InitialCheck.allCases[step - 1]
+                    Section {
+                        ForEach(CheckResult.allCases) { result in
+                            Button {
+                                checks[check] = result
+                                withAnimation { step += 1 }
+                            } label: {
+                                HStack {
+                                    Label(result.title, systemImage: symbol(for: result))
+                                    Spacer()
+                                    if checks[check] == result { Image(systemName: "checkmark") }
+                                }
+                            }
+                            .estrichButton(result == .notOk ? .destructive : .secondary, size: .regular, fullWidth: true)
+                            .listRowBackground(Color.clear)
+                            .accessibilityIdentifier("answer-\(check.rawValue)-\(result.rawValue)")
+                        }
+                    } header: {
+                        Text("Punkt \(step) von \(InitialCheck.allCases.count)")
+                    } footer: {
+                        Text(check.title).font(.title3.weight(.semibold)).foregroundStyle(.primary).padding(.top, 4)
+                    }
+                } else {
+                    finishSections
+                }
+                if let error {
+                    Section { StatusMessage(kind: .error, text: error).accessibilityIdentifier("inspectionError") }
+                }
+            }
+            if step > 0 {
+                HStack(spacing: 10) {
+                    Button {
+                        withAnimation { step = notRequired ? 0 : max(0, step - 1) }
+                    } label: {
+                        Label("Zurück", systemImage: "chevron.left")
+                    }
+                    .estrichButton(.secondary, size: .regular)
+                    if step < lastStep {
+                        Button { withAnimation { step += 1 } } label: { Label("Überspringen", systemImage: "chevron.right") }
+                            .estrichButton(.tertiary, size: .regular, fullWidth: true)
+                    } else {
+                        Button { Task { await save() } } label: { Label("Erstbegehung sichern", systemImage: "checkmark") }
+                            .estrichButton(.primary, size: .regular, fullWidth: true)
+                            .accessibilityIdentifier("finishInspectionButton")
+                    }
+                }
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .background(.bar)
+            }
+        }
+    }
+
+    /// Abschluss im Assistenten: Übersicht, Fotos, Bemerkung bzw. Begründung.
+    @ViewBuilder
+    private var finishSections: some View {
+        if !notRequired {
+            Section("Ergebnis") {
+                ForEach(InitialCheck.allCases) { check in
+                    LabeledContent(check.title, value: checks[check]?.title ?? "–")
+                        .font(.subheadline)
+                }
+            }
+            Section {
+                Button {
+                    captureStarted = .now
+                    capturing = true
+                } label: {
+                    Label(photoIds.isEmpty ? "Fotos aufnehmen (z. B. Zählerstand)" : "\(photoIds.count) Fotos – weitere aufnehmen",
+                          systemImage: "camera")
+                }
+            }
+        }
+        Section(notRequired ? "Begründung *" : "Bemerkung (optional)") {
+            TextField(notRequired ? "Warum ist keine Erstbegehung notwendig?" : "z. B. Randdämmung im Bad fehlt", text: $remarks, axis: .vertical)
+                .lineLimit(2...6)
+                .accessibilityIdentifier("inspectionRemarksField")
+        }
+    }
+
+    private func symbol(for result: CheckResult) -> String {
+        switch result {
+        case .ok: "checkmark.circle.fill"
+        case .notOk: "exclamationmark.triangle.fill"
+        case .notApplicable: "minus.circle"
+        }
+    }
+
+    private var form: some View {
             Form {
                 Toggle("Keine Erstbegehung notwendig", isOn: $notRequired.animation())
                     .accessibilityIdentifier("notRequiredToggle")
@@ -148,22 +311,6 @@ struct InitialInspectionView: View {
                     Text(error).foregroundStyle(Theme.error).accessibilityIdentifier("inspectionError")
                 }
             }
-            .navigationTitle("Erstbegehung")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: onDone) }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern") { Task { await save() } }
-                        .accessibilityIdentifier("saveInspectionButton")
-                }
-            }
-            .fullScreenCover(isPresented: $capturing) {
-                CameraView(bauakte: bauakte, allowsChangingBauakte: false) { _ in
-                    capturing = false
-                    Task { await collectPhotos() }
-                }
-            }
-        }
     }
 
     /// Fotos, die seit dem Öffnen der Kamera zu dieser Bauakte gespeichert wurden, gehören zur Erstbegehung.

@@ -31,12 +31,22 @@ final class BauakteUITests: XCTestCase {
         return app
     }
 
+    /// Neue Bauakte im Formular ausfüllen (Kunde ist Pflicht: hier neu erfasst) und anlegen.
+    /// Das Anlageblatt muss bereits offen sein.
+    @MainActor
+    private func fillQuickForm(_ title: String, in app: XCUIApplication, photograph: Bool = false) {
+        app.chooseSegment("Formular")
+        app.type(title, into: "newTitleField")
+        app.tap("newCustomerButton")
+        app.type("Familie \(title)", into: "customerNameField")
+        app.tap(photograph ? "createAndPhotographButton" : "createButton")
+    }
+
     /// Bauakte über die Startseite anlegen; danach ist ihre Ansicht offen.
     @MainActor
     private func createBauakte(_ title: String, in app: XCUIApplication) {
         app.tap("newBauakteTile")
-        app.type(title, into: "newTitleField")
-        app.tap("createButton")
+        fillQuickForm(title, in: app)
         let header = app.element("bauakteTitle")
         XCTAssertTrue(header.waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(app.wait(for: header, "label == %@", title, timeout: 5))
@@ -47,15 +57,14 @@ final class BauakteUITests: XCTestCase {
         let app = launchSignedIn()
 
         app.tap("newBauakteTile")
-        app.type("EFH Müller, Neubau", into: "newTitleField")
-        app.tap("createAndPhotographButton")
+        fillQuickForm("EFH Müller, Neubau", in: app, photograph: true)
 
         // Kamera (im Simulator mit Testfoto-Auslöser): Beschriftung für die Serie, drei Fotos, dann „Fertig (3)“.
         app.tap("captionButton", timeout: 20)
         let captionField = app.textFields.firstMatch
         XCTAssertTrue(captionField.waitForExistence(timeout: 10))
         captionField.typeText("Bad OG")
-        app.tapElement(app.alerts.buttons["Übernehmen"], "Übernehmen")
+        app.tapElement(app.alerts.buttons["Übernehmen"].firstMatch, "Übernehmen")
         for _ in 0..<3 {
             app.tap("uitestCaptureButton")
         }
@@ -75,33 +84,34 @@ final class BauakteUITests: XCTestCase {
     }
 
     @MainActor
-    func testCustomerIsCapturedDuringQuickCreate() {
+    func testWizardWithMandatoryCustomerAndDuplicateCheck() {
         let app = launchSignedIn()
         app.tap("newBauakteTile")
-        app.type("EFH Schneider", into: "newTitleField")
+        app.chooseSegment("Assistent")
 
-        // Vorhandenen Kunden suchen und übernehmen …
-        app.tap("customerSearchButton")
-        let search = app.searchFields.firstMatch
-        XCTAssertTrue(search.waitForExistence(timeout: 10))
-        app.tapElement(search, "Suchfeld")
-        search.typeText("huber")
-        app.tap("customerResult")
+        // Schritt 1 – Kunde ist Pflicht: ohne Kunde geht es nicht weiter.
+        app.tap("wizardNextButton")
+        XCTAssertTrue(app.element("newBauakteError").waitForExistence(timeout: 10), app.debugDescription)
+
+        // Neuer Kunde „Huber“: Die Dublettenprüfung findet den vorhandenen Kunden, der wird übernommen.
+        app.type("Huber", into: "customerSearchField")
+        XCTAssertTrue(app.element("customerResult").waitForExistence(timeout: 15), app.debugDescription)
+        app.tap("newCustomerButton")
+        app.tap("useSimilarCustomer", timeout: 20)
         XCTAssertTrue(app.element("removeCustomerButton").waitForExistence(timeout: 10), app.debugDescription)
         XCTAssertTrue(app.text(containing: "Huber Bau GmbH").exists)
+        app.tap("wizardNextButton")
 
-        // … wieder entfernen und stattdessen einen neuen Kunden direkt im Formular erfassen.
-        app.tap("removeCustomerButton")
-        app.tap("newCustomerButton")
-        app.type("Familie Schneider", into: "customerNameField")
-        app.type("0871 123456", into: "customerPhoneField")
-        app.type("schneider@example.com", into: "customerEmailField")
+        // Schritt 2 – Bauvorhaben und Baustelle, Schritt 3 – Übersicht.
+        app.type("EFH Schneider", into: "newTitleField")
+        app.tap("wizardNextButton")
+        XCTAssertTrue(app.text(containing: "Huber Bau GmbH").waitForExistence(timeout: 10))
         app.tap("createButton")
 
         // Die Bauakte zeigt den Kunden mit Anruf-Schaltfläche.
         XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
         let customer = app.reveal("customerName")
-        XCTAssertTrue(app.wait(for: customer, "label == %@", "Familie Schneider", timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.wait(for: customer, "label == %@", "Huber Bau GmbH", timeout: 10), app.debugDescription)
         XCTAssertTrue(app.element("callCustomerButton").exists)
     }
 
@@ -135,13 +145,12 @@ final class BauakteUITests: XCTestCase {
     func testCreatedBauakteIsFoundBySearch() {
         let app = launchSignedIn()
         // Anlegen über die schwebende Schaltfläche der Bauaktenliste (zweiter Weg neben der Startseite).
-        app.tapElement(app.tabBars.buttons["Bauakten"], "Reiter Bauakten")
+        app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
         app.tap("newBauakteButton")
-        app.type("Halle Huber", into: "newTitleField")
-        app.tap("createButton")
+        fillQuickForm("Halle Huber", in: app)
         XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15))
 
-        app.tapElement(app.tabBars.buttons["Bauakten"], "Reiter Bauakten")
+        app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
         let search = app.searchFields.firstMatch
         XCTAssertTrue(search.waitForExistence(timeout: 10))
         app.tapElement(search, "Suchfeld")
@@ -190,7 +199,7 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testReportProblemWithDiagnosticsPreview() {
         let app = launchSignedIn()
-        app.tapElement(app.tabBars.buttons["Mehr"], "Reiter Mehr")
+        app.tapElement(app.tabBars.buttons["Mehr"].firstMatch, "Reiter Mehr")
         app.tap("reportProblemButton")
         app.type("Fotos werden nicht übertragen", into: "ticketTitleField")
         // Vor dem Senden ist sichtbar, was mitgeht.

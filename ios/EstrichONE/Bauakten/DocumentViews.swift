@@ -1,4 +1,5 @@
 import EstrichCore
+import AVKit
 import QuickLook
 import SwiftUI
 
@@ -165,5 +166,53 @@ struct EditDocumentView: View {
         if category != file.category { try? await service.setCategory(category, of: file.id) }
         model.active?.sync?.localChangeMade()
         onDone()
+    }
+}
+
+/// Video abspielen (AVPlayer): eigene Aufnahme aus der verschlüsselten Ablage oder vom Server geladen.
+struct VideoPreview: View {
+    let file: FileItem
+
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var player: AVPlayer?
+    @State private var failed = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color.black.ignoresSafeArea()
+                if let player {
+                    VideoPlayer(player: player)
+                        .accessibilityIdentifier("videoPlayer")
+                } else if failed {
+                    Text("Das Video ist auf diesem Gerät nicht vorhanden und noch nicht auf dem Server.")
+                        .foregroundStyle(.white).multilineTextAlignment(.center).padding()
+                } else {
+                    ProgressView("Video wird geladen …").tint(.white).foregroundStyle(.white)
+                }
+            }
+            .navigationTitle(file.displayName)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.black, for: .navigationBar)
+            .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } }
+            }
+        }
+        .task {
+            do throws(FilePreview.Failure) {
+                let url = try await FilePreview.temporaryCopy(of: file, using: model)
+                let player = AVPlayer(url: url)
+                self.player = player
+                player.play()
+            } catch {
+                failed = true
+            }
+        }
+        .onDisappear {
+            player?.pause()
+            FilePreview.removeCopies()
+        }
     }
 }

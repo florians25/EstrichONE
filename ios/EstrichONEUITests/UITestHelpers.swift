@@ -50,7 +50,10 @@ extension XCUIApplication {
         // sonst scrollt XCUITest das Element selbst heran.
         let frame = target.frame
         let window = windows.firstMatch.frame
-        if !frame.isEmpty, window.contains(CGPoint(x: frame.midX, y: frame.midY)) {
+        let center = CGPoint(x: frame.midX, y: frame.midY)
+        let keyboard = keyboards.firstMatch
+        let underKeyboard = keyboard.exists && keyboard.frame.contains(center)
+        if !frame.isEmpty, window.contains(center), !underKeyboard {
             target.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5)).tap()
         } else {
             target.tap()
@@ -88,6 +91,14 @@ extension XCUIApplication {
             if target.waitForExistence(timeout: 0.5), target.isHittable { return true }
         }
         return target.exists && target.isHittable
+    }
+
+    /// Segment eines Umschalters wählen (z. B. „Formular“ statt „Assistent“).
+    @MainActor
+    func chooseSegment(_ title: String, file: StaticString = #filePath, line: UInt = #line) {
+        let segment = segmentedControls.buttons[title].firstMatch
+        tapElement(segment, "Segment \(title)", file: file, line: line)
+        wait(for: segment, "isSelected == true", timeout: 3)
     }
 
     @MainActor

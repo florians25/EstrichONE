@@ -238,6 +238,8 @@ struct LiveServerTests {
         let customerId = try #require(synced.customerId)
         let customer = try #require(try await service.contact(customerId))
         #expect(customer.name == "Familie Integrationstest" && customer.phone == "0871 4711" && customer.syncState == .synced)
+        let found = try await device.client.searchContacts("familie integrationstest")
+        #expect(found.contains { $0.id == customerId && $0.phone == "0871 4711" && !$0.isCompany })
         let stored = try #require(try await service.documents(of: bauakte).first)
         #expect(stored.id == document && stored.category == .delivery && stored.caption == "Lieferschein 4711")
 

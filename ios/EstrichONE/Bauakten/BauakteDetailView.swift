@@ -24,6 +24,7 @@ struct BauakteDetailView: View {
     @State private var choosingCustomer = false
     @State private var viewing: FileItem?
     @State private var previewing: FileItem?
+    @State private var playing: FileItem?
     @State private var editingDocument: FileItem?
 
     /// Was über das „Erfassen“-Menü bzw. die Aktionsleiste erfasst wird.
@@ -64,7 +65,10 @@ struct BauakteDetailView: View {
                     ScanFlowView(bauakte: bauakte) { _ in scanning = false }
                 }
                 .sheet(item: $viewing) { file in
-                    PhotoViewer(photos: photos, selection: file.id) { Task { await reload() } }
+                    PhotoViewer(photos: photos.filter(\.isPhoto), selection: file.id) { Task { await reload() } }
+                }
+                .fullScreenCover(item: $playing) { file in
+                    VideoPreview(file: file)
                 }
                 .sheet(item: $editingDocument) { file in
                     EditDocumentView(file: file) { editingDocument = nil }
@@ -220,11 +224,13 @@ struct BauakteDetailView: View {
                     Label("Noch keine Fotos – jetzt aufnehmen", systemImage: "camera")
                 }
             } else {
-                PhotoGrid(photos: photos) { viewing = $0 }
+                PhotoGrid(photos: photos) { file in
+                    if file.isVideo { playing = file } else { viewing = file }
+                }
                     .listRowInsets(EdgeInsets(top: 8, leading: 8, bottom: 8, trailing: 8))
             }
         } header: {
-            SectionHeader("Fotos", count: photos.count) {
+            SectionHeader("Fotos und Videos", count: photos.count) {
                 if !photos.isEmpty {
                     Button { capturing = true } label: { Label("Foto", systemImage: "plus") }
                         .font(.subheadline.weight(.semibold))
@@ -332,7 +338,7 @@ struct BauakteDetailView: View {
         guard let service = model.active?.service else { return }
         bauakte = try? await service.bauakte(bauakteId)
         let files = (try? await service.files(of: bauakteId)) ?? []
-        photos = files.filter(\.isPhoto)
+        photos = files.filter { $0.isPhoto || $0.isVideo }
         documents = files.filter(\.isDocument).sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
         notes = (try? await service.notes(of: bauakteId)) ?? []
         workItems = (try? await service.workItems(of: bauakteId)) ?? []
@@ -390,7 +396,16 @@ struct PhotoThumbnail: View {
                 if let image {
                     Image(uiImage: image).resizable().scaledToFill()
                 } else {
-                    Image(systemName: "photo").foregroundStyle(Theme.textSecondary)
+                    Image(systemName: file.isVideo ? "video" : "photo").foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .overlay(alignment: .bottomLeading) {
+                if file.isVideo {
+                    Image(systemName: "play.circle.fill")
+                        .font(.title)
+                        .foregroundStyle(.white, .black.opacity(0.45))
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .accessibilityLabel("Video")
                 }
             }
             .overlay(alignment: .bottomLeading) {
@@ -415,7 +430,11 @@ struct PhotoThumbnail: View {
                         .accessibilityLabel(file.syncState == .problem ? "Problem bei der Übertragung" : "Wird übertragen")
                 }
             }
-            .task(id: file.id) { image = await model.active?.thumbnails?.thumbnail(for: file, size: 120) }
+            .task(id: file.id) {
+                // Videos: keine Vorschaubild-Variante – nicht das ganze Video laden.
+                guard !file.isVideo else { return }
+                image = await model.active?.thumbnails?.thumbnail(for: file, size: 120)
+            }
     }
 }
 

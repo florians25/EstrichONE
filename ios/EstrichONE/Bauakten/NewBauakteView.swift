@@ -2,20 +2,42 @@ import CoreLocation
 import EstrichCore
 import SwiftUI
 
-/// Schnellanlage auf der Baustelle (09): ein Bildschirm, nur die Bezeichnung ist Pflicht, offline möglich.
-/// Der Kunde wird direkt hier gewählt oder neu erfasst; ein neuer Kunde wird mit der Bauakte übertragen und verknüpft.
+/// Schnellanlage auf der Baustelle (09), offline möglich. Standard ist ein geführter Assistent in drei Schritten
+/// (Kunde → Bauvorhaben und Baustelle → Art und Übersicht); wer es eilig hat, schaltet auf das einseitige Formular
+/// um (die Wahl bleibt gespeichert). Pflicht sind Bezeichnung und Kunde – vorhanden oder neu erfasst; ein neuer
+/// Kunde wird mit der Bauakte übertragen und verknüpft.
 struct NewBauakteView: View {
     /// Neue Bauakte angelegt; `true`, wenn direkt fotografiert werden soll.
     let onCreated: (UUID, Bool) -> Void
 
+    enum Mode: String, CaseIterable, Identifiable {
+        case wizard
+        case form
+        var id: String { rawValue }
+        var title: String { self == .wizard ? "Assistent" : "Formular" }
+    }
+
+    enum Step: Int, CaseIterable {
+        case customer
+        case site
+        case details
+
+        var title: String {
+            switch self {
+            case .customer: "Kunde"
+            case .site: "Baustelle"
+            case .details: "Übersicht"
+            }
+        }
+    }
+
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("newBauakteMode") private var mode: Mode = .wizard
+    @State private var step: Step = .customer
     @State private var input = NewBauakte(title: "")
     @State private var customer: Contact?
     @State private var newCustomer: NewCustomer?
-    @State private var similarCustomers: [Contact] = []
-    @State private var recentCustomers: [Contact] = []
-    @State private var showsCustomerSearch = false
     @State private var showsDescription = false
     @State private var locating = false
     @State private var locationHint: String?
@@ -29,106 +51,37 @@ struct NewBauakteView: View {
         NavigationStack {
             Form {
                 Section {
-                    TextField("z. B. EFH Müller, Neubau", text: $input.title)
-                        .focused($titleFocused)
-                        .submitLabel(.done)
-                        .font(.body.weight(.medium))
-                        .accessibilityIdentifier("newTitleField")
-                    if input.title.isEmpty, let suggestion {
-                        Button("Vorschlag: \(suggestion)") { input.title = suggestion }
-                            .font(.callout)
-                    }
-                } header: {
-                    Text("Bauvorhaben *")
-                }
-
-                customerSection
-
-                if newCustomer != nil {
-                    SimilarCustomersSection(similar: similarCustomers) { contact in
-                        withAnimation {
-                            newCustomer = nil
-                            customer = contact
-                        }
-                    }
-                }
-
-                Section {
-                    Button {
-                        Task { await useCurrentLocation() }
-                    } label: {
-                        HStack {
-                            Label("Aktuellen Standort übernehmen", systemImage: "location.fill")
-                            if locating {
-                                Spacer()
-                                ProgressView()
-                            }
-                        }
-                    }
-                    .disabled(locating)
-                    if let locationHint {
-                        Text(locationHint).font(.footnote).foregroundStyle(Theme.textSecondary)
-                    }
-                    TextField("Straße, Nr.", text: binding(\.street))
-                        .textContentType(.fullStreetAddress)
-                    HStack {
-                        TextField("PLZ", text: binding(\.postalCode))
-                            .keyboardType(.numberPad)
-                            .textContentType(.postalCode)
-                            .frame(maxWidth: 90)
-                        TextField("Ort", text: binding(\.city))
-                            .textContentType(.addressCity)
-                    }
-                    if let customer, customer.addressLine != nil, input.street == nil, input.city == nil {
-                        Button {
-                            input.street = customer.street
-                            input.postalCode = customer.postalCode
-                            input.city = customer.city
-                        } label: {
-                            Label("Adresse des Kunden übernehmen", systemImage: "arrow.down.doc")
-                        }
-                    }
-                } header: {
-                    Text("Baustelle")
-                } footer: {
-                    Text("Empfohlen, aber nicht Pflicht – die Adresse kann später ergänzt werden.")
-                }
-
-                Section {
-                    Picker("Art", selection: $input.template) {
-                        ForEach(BauakteTemplate.allCases, id: \.self) { template in
-                            Text(template.title).tag(template)
-                        }
+                    Picker("Darstellung", selection: $mode) {
+                        ForEach(Mode.allCases) { Text($0.title).tag($0) }
                     }
                     .pickerStyle(.segmented)
-                    DisclosureGroup("Beschreibung hinzufügen", isExpanded: $showsDescription) {
-                        TextField("Beschreibung", text: binding(\.description), axis: .vertical)
-                            .lineLimit(2...6)
-                    }
+                    .accessibilityIdentifier("newBauakteModePicker")
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
                 }
-
-                if !similar.isEmpty {
+                if mode == .wizard {
                     Section {
-                        ForEach(similar) { bauakte in
-                            Button {
-                                onCreated(bauakte.id, false)
-                            } label: {
-                                Label {
-                                    VStack(alignment: .leading) {
-                                        Text("Ähnliche Bauakte: \(bauakte.number.map { "\($0) · " } ?? "")\(bauakte.title)")
-                                        if let address = bauakte.addressLine { Text(address).font(.footnote) }
-                                        Text("Öffnen statt neu anlegen").font(.footnote.weight(.semibold))
-                                    }
-                                } icon: {
-                                    Image(systemName: "exclamationmark.triangle.fill")
-                                }
-                                .foregroundStyle(Theme.hint)
-                            }
-                            .accessibilityIdentifier("similarBauakte")
-                        }
+                        WizardProgress(steps: Step.allCases.map(\.title), current: step.rawValue)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
                     }
+                    switch step {
+                    case .customer:
+                        customerSection
+                    case .site:
+                        titleSection
+                        siteSection
+                    case .details:
+                        summarySection
+                        kindSection
+                    }
+                } else {
+                    titleSection
+                    customerSection
+                    siteSection
+                    kindSection
                 }
-
+                similarSection
                 if let errorMessage {
                     Section { StatusMessage(kind: .error, text: errorMessage).accessibilityIdentifier("newBauakteError") }
                 }
@@ -140,107 +93,227 @@ struct NewBauakteView: View {
                     Button("Abbrechen") { dismiss() }
                 }
             }
-            .safeAreaInset(edge: .bottom) {
-                HStack(spacing: 10) {
-                    Button {
-                        Task { await create(photograph: false) }
-                    } label: {
-                        Label("Anlegen", systemImage: "checkmark")
-                    }
-                    .estrichButton(.secondary, size: .regular, fullWidth: true)
-                    .accessibilityIdentifier("createButton")
-                    Button {
-                        Task { await create(photograph: true) }
-                    } label: {
-                        Label("Anlegen + Foto", systemImage: "camera.fill")
-                    }
-                    .estrichButton(.primary, size: .regular, fullWidth: true)
-                    .accessibilityIdentifier("createAndPhotographButton")
-                }
-                .disabled(saving)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(.bar)
+            .safeAreaInset(edge: .bottom) { bottomBar }
+            .onAppear { if mode == .form { titleFocused = true } }
+            .onChange(of: mode) { errorMessage = nil }
+            .onChange(of: step) {
+                errorMessage = nil
+                if step == .site, input.title.isEmpty { titleFocused = true }
             }
-            .onAppear { titleFocused = true }
-            .task { recentCustomers = (try? await model.active?.service?.recentCustomers()) ?? [] }
             .task(id: "\(input.title)|\(input.street ?? "")|\(input.city ?? "")|\(input.latitude ?? 0)") { await findSimilar() }
-            .task(id: "\(newCustomer?.name ?? "")|\(newCustomer?.phone ?? "")|\(newCustomer?.email ?? "")") { await findSimilarCustomers() }
-            .sheet(isPresented: $showsCustomerSearch) {
-                CustomerPickerView(onSelect: { contact in
-                    customer = contact
-                    newCustomer = nil
-                    showsCustomerSearch = false
-                }, onNew: { name in
-                    newCustomer = NewCustomer(name: name)
-                    customer = nil
-                    showsCustomerSearch = false
-                })
-            }
             .sensoryFeedback(.error, trigger: errorMessage) { _, new in new != nil }
+            .sensoryFeedback(.selection, trigger: step)
         }
         .presentationDetents([.large])
     }
 
-    /// Kunde: vorhandenen wählen (Suche, zuletzt gewählte) oder neu erfassen.
-    @ViewBuilder
-    private var customerSection: some View {
+    // MARK: Abschnitte
+
+    private var titleSection: some View {
         Section {
-            if let customer {
+            TextField("z. B. EFH Müller, Neubau", text: $input.title)
+                .focused($titleFocused)
+                .submitLabel(.done)
+                .font(.body.weight(.medium))
+                .accessibilityIdentifier("newTitleField")
+            if input.title.isEmpty, let suggestion {
+                Button("Vorschlag: \(suggestion)") { input.title = suggestion }
+                    .font(.callout)
+            }
+        } header: {
+            Text("Bauvorhaben *")
+        }
+    }
+
+    private var customerSection: some View {
+        CustomerChooser(customer: $customer, newCustomer: $newCustomer,
+                        siteAddress: (street: input.street, postalCode: input.postalCode, city: input.city))
+    }
+
+    private var siteSection: some View {
+        Section {
+            Button {
+                Task { await useCurrentLocation() }
+            } label: {
                 HStack {
-                    CustomerSummary(contact: customer, showsActions: false)
-                    Button {
-                        withAnimation { self.customer = nil }
-                    } label: {
-                        Label("Kunde entfernen", systemImage: "xmark")
+                    Label("Aktuellen Standort übernehmen", systemImage: "location.fill")
+                    if locating {
+                        Spacer()
+                        ProgressView()
                     }
-                    .buttonStyle(IconButtonStyle())
-                    .accessibilityIdentifier("removeCustomerButton")
                 }
-            } else if newCustomer != nil {
-                CustomerFields(customer: Binding(get: { newCustomer ?? NewCustomer() }, set: { newCustomer = $0 }),
-                               siteAddress: (street: input.street, postalCode: input.postalCode, city: input.city))
-                Button(role: .destructive) {
-                    withAnimation { newCustomer = nil }
-                } label: {
-                    Label("Neuen Kunden verwerfen", systemImage: "trash")
-                        .font(.subheadline)
-                }
-            } else {
+            }
+            .disabled(locating)
+            if let locationHint {
+                Text(locationHint).font(.footnote).foregroundStyle(Theme.textSecondary)
+            }
+            TextField("Straße, Nr.", text: binding(\.street))
+                .textContentType(.fullStreetAddress)
+            HStack {
+                TextField("PLZ", text: binding(\.postalCode))
+                    .keyboardType(.numberPad)
+                    .textContentType(.postalCode)
+                    .frame(maxWidth: 90)
+                TextField("Ort", text: binding(\.city))
+                    .textContentType(.addressCity)
+            }
+            if let address = customerAddress, input.street == nil, input.city == nil {
                 Button {
-                    showsCustomerSearch = true
+                    input.street = address.street
+                    input.postalCode = address.postalCode
+                    input.city = address.city
                 } label: {
-                    Label("Vorhandenen Kunden suchen", systemImage: "magnifyingglass")
-                }
-                .accessibilityIdentifier("customerSearchButton")
-                Button {
-                    withAnimation { newCustomer = NewCustomer() }
-                } label: {
-                    Label("Neuen Kunden erfassen", systemImage: "person.crop.circle.badge.plus")
-                }
-                .accessibilityIdentifier("newCustomerButton")
-                if !recentCustomers.isEmpty {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(recentCustomers) { contact in
-                                Button {
-                                    withAnimation { customer = contact }
-                                } label: {
-                                    Label(contact.name, systemImage: "clock.arrow.circlepath")
-                                }
-                                .estrichButton(.secondary)
-                            }
-                        }
-                    }
+                    Label("Adresse des Kunden übernehmen", systemImage: "arrow.down.doc")
                 }
             }
         } header: {
-            Text(newCustomer != nil ? "Neuer Kunde" : "Kunde")
+            Text("Baustelle")
         } footer: {
-            if newCustomer != nil {
-                Text("Wird mit der Bauakte gespeichert und beim nächsten Abgleich übertragen. Die Kundennummer vergibt das Büro.")
+            Text("Empfohlen, aber nicht Pflicht – die Adresse kann später ergänzt werden.")
+        }
+    }
+
+    private var kindSection: some View {
+        Section {
+            Picker("Art", selection: $input.template) {
+                ForEach(BauakteTemplate.allCases, id: \.self) { template in
+                    Text(template.title).tag(template)
+                }
+            }
+            .pickerStyle(.segmented)
+            DisclosureGroup("Beschreibung hinzufügen", isExpanded: $showsDescription) {
+                TextField("Beschreibung", text: binding(\.description), axis: .vertical)
+                    .lineLimit(2...6)
+            }
+        } header: {
+            Text("Art")
+        }
+    }
+
+    private var summarySection: some View {
+        Section {
+            LabeledContent("Bauvorhaben", value: input.title.isEmpty ? "–" : input.title)
+            LabeledContent("Kunde", value: customer?.name ?? newCustomer.map { "\($0.name) (neu)" } ?? "–")
+            LabeledContent("Baustelle", value: addressLine ?? "noch ohne Adresse")
+        } header: {
+            Text("Übersicht")
+        }
+    }
+
+    @ViewBuilder
+    private var similarSection: some View {
+        if !similar.isEmpty, mode == .form || step != .customer {
+            Section {
+                ForEach(similar) { bauakte in
+                    Button {
+                        onCreated(bauakte.id, false)
+                    } label: {
+                        Label {
+                            VStack(alignment: .leading) {
+                                Text("Ähnliche Bauakte: \(bauakte.number.map { "\($0) · " } ?? "")\(bauakte.title)")
+                                if let address = bauakte.addressLine { Text(address).font(.footnote) }
+                                Text("Öffnen statt neu anlegen").font(.footnote.weight(.semibold))
+                            }
+                        } icon: {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                        }
+                        .foregroundStyle(Theme.hint)
+                    }
+                    .accessibilityIdentifier("similarBauakte")
+                }
             }
         }
+    }
+
+    /// Unten: im Assistenten Zurück/Weiter, im letzten Schritt bzw. im Formular die beiden Anlage-Schaltflächen.
+    private var bottomBar: some View {
+        HStack(spacing: 10) {
+            if mode == .wizard, step != .details {
+                if step != .customer {
+                    Button { goBack() } label: { Label("Zurück", systemImage: "chevron.left") }
+                        .estrichButton(.secondary, size: .regular)
+                        .accessibilityIdentifier("wizardBackButton")
+                }
+                Button { goNext() } label: { Label("Weiter", systemImage: "chevron.right") }
+                    .estrichButton(.primary, size: .regular, fullWidth: true)
+                    .accessibilityIdentifier("wizardNextButton")
+            } else {
+                if mode == .wizard {
+                    Button { goBack() } label: { Image(systemName: "chevron.left") }
+                        .estrichButton(.secondary, size: .regular)
+                        .accessibilityLabel("Zurück")
+                        .accessibilityIdentifier("wizardBackButton")
+                }
+                Button {
+                    Task { await create(photograph: false) }
+                } label: {
+                    Label("Anlegen", systemImage: "checkmark")
+                }
+                .estrichButton(.secondary, size: .regular, fullWidth: true)
+                .accessibilityIdentifier("createButton")
+                Button {
+                    Task { await create(photograph: true) }
+                } label: {
+                    Label("Anlegen + Foto", systemImage: "camera.fill")
+                }
+                .estrichButton(.primary, size: .regular, fullWidth: true)
+                .accessibilityIdentifier("createAndPhotographButton")
+            }
+        }
+        .disabled(saving)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
+        .background(.bar)
+    }
+
+    // MARK: Ablauf
+
+    private func goNext() {
+        if let problem = problem(upTo: step) {
+            errorMessage = problem
+            return
+        }
+        if let next = Step(rawValue: step.rawValue + 1) {
+            withAnimation { step = next }
+        }
+    }
+
+    private func goBack() {
+        if let previous = Step(rawValue: step.rawValue - 1) {
+            withAnimation { step = previous }
+        }
+    }
+
+    /// Fehlende Pflichtangaben bis einschließlich `step`.
+    private func problem(upTo step: Step) -> String? {
+        if customer == nil {
+            guard let newCustomer else { return "Bitte einen Kunden wählen oder neu anlegen." }
+            do throws(BauakteError) {
+                try newCustomer.validate()
+            } catch {
+                return error.message
+            }
+        }
+        if step.rawValue >= Step.site.rawValue, input.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return BauakteError.titleRequired.message
+        }
+        return nil
+    }
+
+    private var customerAddress: (street: String?, postalCode: String?, city: String?)? {
+        if let customer, customer.addressLine != nil {
+            return (street: customer.street, postalCode: customer.postalCode, city: customer.city)
+        }
+        if let newCustomer, newCustomer.street != nil || newCustomer.city != nil {
+            return (street: newCustomer.street, postalCode: newCustomer.postalCode, city: newCustomer.city)
+        }
+        return nil
+    }
+
+    private var addressLine: String? {
+        let place = [input.postalCode, input.city].compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " ")
+        let parts = [input.street, place].compactMap { $0?.isEmpty == false ? $0 : nil }
+        return parts.isEmpty ? nil : parts.joined(separator: ", ")
     }
 
     /// „Straße Nr., Ort“ als Bezeichnung, sobald eine Adresse vorhanden ist (09, Abschnitt 3).
@@ -284,18 +357,12 @@ struct NewBauakteView: View {
         similar = (try? await service.similar(to: candidate)) ?? []
     }
 
-    private func findSimilarCustomers() async {
-        guard let newCustomer else {
-            similarCustomers = []
-            return
-        }
-        try? await Task.sleep(for: .milliseconds(300))
-        guard !Task.isCancelled else { return }
-        similarCustomers = (try? await model.active?.service?.similarCustomers(to: newCustomer)) ?? []
-    }
-
     private func create(photograph: Bool) async {
         guard let service = model.active?.service else { return }
+        if let problem = problem(upTo: .details) {
+            errorMessage = problem
+            return
+        }
         saving = true
         defer { saving = false }
         var data = input
