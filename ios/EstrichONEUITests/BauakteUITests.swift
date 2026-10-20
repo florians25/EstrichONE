@@ -48,6 +48,12 @@ final class BauakteUITests: XCTestCase {
         tap("signInButton", in: app)
         app.dismissSavePasswordPrompt()
         XCTAssertTrue(element("newBauakteTile", in: app).waitForExistence(timeout: 15))
+        // Neu starten (Anmeldung bleibt erhalten): Beim ersten Start nach der Installation bleibt sonst teils ein
+        // Systemblatt („Passwort sichern?“) über der App liegen und verdeckt Kacheln und Tab-Leiste.
+        app.terminate()
+        app.launchEnvironment["ESTRICHONE_UITEST_KEEP"] = "1"
+        app.launch()
+        XCTAssertTrue(element("newBauakteTile", in: app).waitForExistence(timeout: 15))
         return app
     }
 
