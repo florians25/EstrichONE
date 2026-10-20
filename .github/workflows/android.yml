@@ -1,0 +1,59 @@
+name: Android
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main, "claude/**"]
+    paths: ["android/**", "backend/src/**", ".github/workflows/android.yml"]
+  pull_request:
+    paths: ["android/**", "backend/src/**", ".github/workflows/android.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  core:
+    name: Kern (Kotlin) gegen echten Server
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Tests gegen API und PostgreSQL
+        run: android/scripts/test-core-against-server.sh
+
+  app:
+    name: App bauen (Compose)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: APK bauen und Lint
+        working-directory: android
+        run: ./gradlew --no-daemon :app:assembleDebug :app:lintDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: EstrichONE-Android-debug
+          path: android/app/build/outputs/apk/debug/*.apk
+          retention-days: 14
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Android-Lint
+          path: android/app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+          retention-days: 7
