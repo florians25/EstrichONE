@@ -6,6 +6,7 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="CommunityToolkit.Mvvm" />
+    <PackageReference Include="QRCoder" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../EstrichOne.Client/EstrichOne.Client.csproj" />

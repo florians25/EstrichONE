@@ -103,6 +103,63 @@ public sealed class ExtendedClientTests(PostgresFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
+    public async Task Documents_FoldersVersionsLinksAndZipArchive()
+    {
+        using var client = await SignedInAsync("buero", StandardRoles.OfficeId);
+        var bauakte = await client.CreateBauakteAsync(new CreateBauakteRequest(Guid.CreateVersion7(), "EFH Kraus"), Ct);
+        var rooms = await client.SaveRoomAsync(bauakte.Id, new SaveRoomRequest(Guid.CreateVersion7(), null, "Bad", "EG", 8m, null, 65, null, true,
+            RoomStatus.Planned, null), Ct);
+        var defect = await client.CreateWorkItemAsync(new CreateWorkItemRequest(Guid.CreateVersion7(), bauakte.Id, WorkItemKind.Defect, "Riss im Bad"), Ct);
+
+        var plan = await client.UploadFileAsync(Guid.CreateVersion7(), bauakte.Id, "Grundriss EG.pdf", () => new MemoryStream(Pdf), category: "plan",
+            folder: " Pläne / EG ", cancellationToken: Ct);
+        var revised = await client.UploadFileAsync(Guid.CreateVersion7(), bauakte.Id, "Grundriss EG Index B.pdf",
+            () => new MemoryStream([.. Pdf, .. "% Index B"u8.ToArray()]), previousVersionId: plan.Id, cancellationToken: Ct);
+        var photo = await client.UploadFileAsync(Guid.CreateVersion7(), bauakte.Id, "riss.png", () => new MemoryStream(Png), cancellationToken: Ct);
+        // Vorschaubilder entstehen im Hintergrund und ändern den Datensatz; erst danach Angaben ändern.
+        for (var i = 0; i < 100 && photo.Variants == VariantState.Pending; i++)
+        {
+            await Task.Delay(100, Ct);
+            photo = await client.GetFileAsync(photo.Id, Ct);
+        }
+
+        var linked = await client.UpdateFileDetailsAsync(photo.Id, UpdateFileDetailsRequest.From(photo) with
+        {
+            Caption = "Riss im Estrich", RoomId = rooms.Rooms.Single().Id, WorkItemId = defect.Id,
+        }, Ct);
+        var renamed = await client.UpdateFileDetailsAsync(plan.Id, UpdateFileDetailsRequest.From(plan) with { OriginalName = "Grundriss EG Index A.pdf", Folder = "Pläne/Alt" }, Ct);
+        using var zip = new MemoryStream();
+        await client.DownloadArchiveAsync(bauakte.Id, [revised.Id, photo.Id], zip, Ct);
+        zip.Position = 0;
+        using var archive = new System.IO.Compression.ZipArchive(zip);
+
+        plan.Folder.ShouldBe("Pläne/EG");
+        revised.PreviousVersionId.ShouldBe(plan.Id);
+        revised.Category.ShouldBe("plan");
+        revised.Folder.ShouldBe("Pläne/EG");
+        linked.RoomId.ShouldBe(rooms.Rooms.Single().Id);
+        linked.WorkItemId.ShouldBe(defect.Id);
+        linked.DisplayName.ShouldBe("Riss im Estrich");
+        renamed.OriginalName.ShouldBe("Grundriss EG Index A.pdf");
+        renamed.Folder.ShouldBe("Pläne/Alt");
+        archive.Entries.Select(e => e.FullName).ShouldBe(["Dokumente/Pläne/EG/Grundriss EG Index B.pdf", "Fotos/riss.png"], ignoreOrder: true);
+
+        var diaryId = Guid.CreateVersion7();
+        await client.AddDiaryEntryAsync(diaryId, bauakte.Id, new DiaryInput(new DateOnly(2026, 10, 20), "Estrich Bad eingebracht", "sunny", 14, 2,
+            new TimeOnly(7, 0), new TimeOnly(15, 30), "Kolonne Nord", [photo.Id]), Ct);
+        var diary = (await client.GetDiaryAsync(bauakte.Id, Ct)).ShouldHaveSingleItem();
+        diary.StartTime.ShouldBe(new TimeOnly(7, 0));
+        diary.Crew.ShouldBe("Kolonne Nord");
+        diary.PhotoFileIds.ShouldNotBeNull().ShouldHaveSingleItem().ShouldBe(photo.Id);
+        await client.UpdateDiaryEntryAsync(diaryId, new DiaryInput(diary.Day, diary.Text, "rain", null, 2, new TimeOnly(7, 30), null, null, []), Ct);
+        var edited = (await client.GetDiaryAsync(bauakte.Id, Ct)).Single();
+        edited.Weather.ShouldBe("rain");
+        edited.StartTime.ShouldBe(new TimeOnly(7, 30));
+        edited.PhotoFileIds.ShouldNotBeNull().ShouldBeEmpty();
+        QrCodes.Png("https://estrich.example/einrichten?code=ABC")[..4].ShouldBe(new byte[] { 0x89, (byte)'P', (byte)'N', (byte)'G' });
+    }
+
+    [Fact]
     public async Task Upload_EmptyOrUnsupportedFile_IsReadableError()
     {
         using var client = await SignedInAsync("buero", StandardRoles.OfficeId);

@@ -68,6 +68,26 @@ public sealed partial class EstrichOneClient
     public Task<FileItem> UpdateFileAsync(Guid id, string? caption, string? category, CancellationToken cancellationToken = default) =>
         SendAsync<FileItem>(HttpMethod.Patch, $"files/{id}", new { caption, category }, cancellationToken: cancellationToken);
 
+    /// <summary>Name, Beschriftung, Ablage (Dokumentart, Unterordner) und Bezug zu Raum oder Mangel ändern.</summary>
+    public Task<FileItem> UpdateFileDetailsAsync(Guid id, UpdateFileDetailsRequest request, CancellationToken cancellationToken = default) =>
+        SendAsync<FileItem>(HttpMethod.Put, $"files/{id}/details", request, cancellationToken: cancellationToken);
+
+    /// <summary>Ausgewählte Dateien der Bauakte als ZIP (Originale, Ordner Fotos/Videos/Dokumente).</summary>
+    public async Task DownloadArchiveAsync(Guid bauakteId, IReadOnlyCollection<Guid> fileIds, Stream target, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(fileIds);
+        ArgumentNullException.ThrowIfNull(target);
+        using var response = await SendRequestAsync(_transfer, () => new HttpRequestMessage(HttpMethod.Get,
+            $"bauakten/{bauakteId}/files/archive?ids={string.Join(',', fileIds)}"), authenticated: true, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        if (!response.IsSuccessStatusCode)
+        {
+            throw await ToExceptionAsync(response, cancellationToken);
+        }
+
+        await using var source = await response.Content.ReadAsStreamAsync(cancellationToken);
+        await source.CopyToAsync(target, cancellationToken);
+    }
+
     public Task DeleteFileAsync(Guid id, CancellationToken cancellationToken = default) =>
         SendAsync<object>(HttpMethod.Delete, $"files/{id}", null, cancellationToken: cancellationToken);
 
@@ -80,8 +100,8 @@ public sealed partial class EstrichOneClient
     /// </summary>
     /// <param name="open">Öffnet den Inhalt (für die Prüfsumme und je Sendeversuch neu).</param>
     public async Task<FileItem> UploadFileAsync(Guid id, Guid? bauakteId, string fileName, Func<Stream> open, DateTimeOffset? capturedAt = null,
-        string? category = null, string? caption = null, IProgress<double>? progress = null, FileKind? kind = null,
-        CancellationToken cancellationToken = default)
+        string? category = null, string? caption = null, IProgress<double>? progress = null, FileKind? kind = null, string? folder = null,
+        Guid? previousVersionId = null, CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(open);
         long size;
@@ -102,7 +122,8 @@ public sealed partial class EstrichOneClient
         var contentType = FileTypes.ContentTypeOf(fileName);
         var fileKind = kind ?? FileTypes.KindOf(contentType);
         var announced = await AnnounceFileAsync(new AnnounceFileRequest(id, bauakteId, fileKind, fileName, contentType, size, sha256,
-            CapturedAt: fileKind == FileKind.Photo ? capturedAt : null, Caption: caption, Category: fileKind == FileKind.Document ? category : null), cancellationToken);
+            CapturedAt: fileKind == FileKind.Photo ? capturedAt : null, Caption: caption, Category: fileKind == FileKind.Document ? category : null,
+            Folder: fileKind == FileKind.Document ? folder : null, PreviousVersionId: previousVersionId), cancellationToken);
         if (announced.IsStored)
         {
             progress?.Report(1);
@@ -188,12 +209,37 @@ public sealed partial class EstrichOneClient
     /// <param name="weather">sunny, cloudy, rain, snow, frost oder wind.</param>
     public Task AddDiaryEntryAsync(Guid id, Guid bauakteId, DateOnly day, string text, string? weather = null, int? temperatureCelsius = null,
         int? workersPresent = null, CancellationToken cancellationToken = default) =>
-        PushOneAsync("diary.create", id, new { bauakteId, day, text, weather, temperatureCelsius, workersPresent }, cancellationToken);
+        AddDiaryEntryAsync(id, bauakteId, new DiaryInput(day, text, weather, temperatureCelsius, workersPresent), cancellationToken);
+
+    public Task AddDiaryEntryAsync(Guid id, Guid bauakteId, DiaryInput entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return PushOneAsync("diary.create", id, new
+        {
+            bauakteId, day = entry.Day, text = entry.Text, weather = entry.Weather, temperatureCelsius = entry.TemperatureCelsius,
+            workersPresent = entry.WorkersPresent, startTime = entry.StartTime, endTime = entry.EndTime, crew = entry.Crew,
+            photoFileIds = entry.PhotoFileIds ?? [],
+        }, cancellationToken);
+    }
 
     /// <summary>Eigenen Eintrag ändern (nur der Verfasser).</summary>
     public Task UpdateDiaryEntryAsync(Guid id, string text, string? weather, int? temperatureCelsius, int? workersPresent,
         CancellationToken cancellationToken = default) =>
         PushOneAsync("diary.update", id, new { changes = new { text, weather, temperatureCelsius, workersPresent } }, cancellationToken);
+
+    /// <summary>Eigenen Eintrag vollständig ändern (Text, Wetter, Mannschaft, Arbeitszeit, Fotos).</summary>
+    public Task UpdateDiaryEntryAsync(Guid id, DiaryInput entry, CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(entry);
+        return PushOneAsync("diary.update", id, new
+        {
+            changes = new
+            {
+                text = entry.Text, weather = entry.Weather, temperatureCelsius = entry.TemperatureCelsius, workersPresent = entry.WorkersPresent,
+                startTime = entry.StartTime, endTime = entry.EndTime, crew = entry.Crew, photoFileIds = entry.PhotoFileIds ?? [],
+            },
+        }, cancellationToken);
+    }
 
     public Task DeleteDiaryEntryAsync(Guid id, CancellationToken cancellationToken = default) =>
         PushOneAsync("diary.delete", id, new { }, cancellationToken);

@@ -114,7 +114,7 @@ public enum VariantState { NotApplicable, Pending, Ready, Failed }
 public sealed record FileItem(
     Guid Id, Guid? BauakteId, FileKind Kind, FileState State, VariantState Variants, string OriginalName, string ContentType, long SizeBytes,
     string Sha256, string? Caption, DateTimeOffset? CapturedAt, double? Latitude, double? Longitude, Guid UploadedByUserId, DateTimeOffset CreatedAt,
-    long Version, string? Category = null)
+    long Version, string? Category = null, string? Folder = null, Guid? RoomId = null, Guid? WorkItemId = null, Guid? PreviousVersionId = null)
 {
     public bool IsStored => State == FileState.Stored;
 
@@ -127,7 +127,18 @@ public sealed record FileItem(
 /// <summary>Datei ankündigen (Schritt 1 des Uploads); der Client berechnet SHA-256 vorab.</summary>
 public sealed record AnnounceFileRequest(
     Guid Id, Guid? BauakteId, FileKind Kind, string OriginalName, string ContentType, long SizeBytes, string Sha256,
-    DateTimeOffset? CapturedAt = null, double? Latitude = null, double? Longitude = null, string? Caption = null, string? Category = null);
+    DateTimeOffset? CapturedAt = null, double? Latitude = null, double? Longitude = null, string? Caption = null, string? Category = null,
+    string? Folder = null, Guid? PreviousVersionId = null);
+
+/// <summary>Alle Angaben einer Datei im Büro ändern: Name, Beschriftung, Ablage (Dokumentart, Unterordner „Pläne/EG“), Bezug zu Raum oder Mangel.</summary>
+public sealed record UpdateFileDetailsRequest(string OriginalName, string? Caption, string? Category, string? Folder, Guid? RoomId, Guid? WorkItemId)
+{
+    public static UpdateFileDetailsRequest From(FileItem file)
+    {
+        ArgumentNullException.ThrowIfNull(file);
+        return new(file.OriginalName, file.Caption, file.Category, file.Folder, file.RoomId, file.WorkItemId);
+    }
+}
 
 public sealed record UploadStatus(Guid Id, long ReceivedBytes, long SizeBytes, FileState State);
 
@@ -142,7 +153,13 @@ public sealed record Inspection(
 
 public sealed record DiaryEntry(
     Guid Id, Guid BauakteId, Guid AuthorUserId, DateOnly Day, string Text, string? Weather, int? TemperatureCelsius, int? WorkersPresent,
-    DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, long Version = 0);
+    DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, long Version = 0, TimeOnly? StartTime = null, TimeOnly? EndTime = null, string? Crew = null,
+    IReadOnlyList<Guid>? PhotoFileIds = null);
+
+/// <summary>Tagesbericht (Bautagebuch) – Text, Wetter, Mannschaft, Arbeitszeit und Fotos des Tages.</summary>
+public sealed record DiaryInput(
+    DateOnly Day, string Text, string? Weather = null, int? TemperatureCelsius = null, int? WorkersPresent = null, TimeOnly? StartTime = null,
+    TimeOnly? EndTime = null, string? Crew = null, IReadOnlyList<Guid>? PhotoFileIds = null);
 
 /// <summary>Erstbegehung erfassen (Prüfpunkte: substrate, edgeInsulation, heatingPressureTest, access, utilities).</summary>
 public sealed record NewInitialInspection(
