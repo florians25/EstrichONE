@@ -53,6 +53,7 @@ final class OnboardingUITests: XCTestCase {
         type(login, into: "loginField", in: app)
         type(password, into: "passwordField", in: app)
         tap("signInButton", in: app)
+        app.dismissSavePasswordPrompt()
     }
 
     @MainActor
@@ -107,6 +108,7 @@ final class OnboardingUITests: XCTestCase {
 
         type(password, into: "passwordField", in: app)
         tap("signInButton", in: app)
+        app.dismissSavePasswordPrompt()
         let user = element("currentUserName", in: app)
         XCTAssertTrue(user.waitForExistence(timeout: 10))
         XCTAssertEqual(user.label, "Max Huber")

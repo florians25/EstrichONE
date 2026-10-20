@@ -39,6 +39,7 @@ final class BauakteUITests: XCTestCase {
         type("m.huber", into: "loginField", in: app)
         type("Richtig-2026", into: "passwordField", in: app)
         tap("signInButton", in: app)
+        app.dismissSavePasswordPrompt()
         XCTAssertTrue(element("newBauakteButton", in: app).waitForExistence(timeout: 15))
         return app
     }
