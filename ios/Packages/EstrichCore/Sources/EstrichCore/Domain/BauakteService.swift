@@ -85,6 +85,9 @@ public struct BauakteService: Sendable {
         do {
             try await store.create(.bauakte, id: id, data: local, payload: payload)
             try await markOpened(id)
+            if let customer = input.customerId {
+                try await remember(customer, key: "recent_customers")
+            }
         } catch {
             throw .storage
         }
@@ -99,26 +102,49 @@ public struct BauakteService: Sendable {
         DuplicateFinder.matches(candidate, in: try await bauakten())
     }
 
+    // MARK: Kunden
+
+    public func contacts(search: String? = nil) async throws -> [Contact] {
+        try await store.entities(.contact, search: search).map(Contact.init).sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
+    }
+
+    public func contact(_ id: UUID) async throws -> Contact? {
+        try await store.entity(.contact, id).map(Contact.init)
+    }
+
+    /// Die drei zuletzt bei einer Anlage gewählten Kunden (09, Abschnitt 2: Chips „Zuletzt“).
+    public func recentCustomers() async throws -> [Contact] {
+        var result: [Contact] = []
+        for id in try await ids(forKey: "recent_customers") {
+            if let contact = try await contact(id) { result.append(contact) }
+        }
+        return Array(result.prefix(3))
+    }
+
     // MARK: Zuletzt geöffnet (Startseite „Heute“)
 
     public func markOpened(_ id: UUID) async throws {
-        var recent = try await recentIds().filter { $0 != id }
-        recent.insert(id, at: 0)
-        try await store.setMeta("recent_bauakten", try JSONValue.array(recent.prefix(10).map { JSONValue($0) }).encoded())
+        try await remember(id, key: "recent_bauakten")
     }
 
     public func recentBauakten(limit: Int = 5) async throws -> [Bauakte] {
         var result: [Bauakte] = []
-        for id in try await recentIds() {
+        for id in try await ids(forKey: "recent_bauakten") {
             if let bauakte = try await bauakte(id) { result.append(bauakte) }
             if result.count == limit { break }
         }
         return result
     }
 
-    private func recentIds() async throws -> [UUID] {
-        guard let text = try await store.meta("recent_bauakten"), case let .array(values) = try JSONValue.decode(text) else { return [] }
+    private func ids(forKey key: String) async throws -> [UUID] {
+        guard let text = try await store.meta(key), case let .array(values) = try JSONValue.decode(text) else { return [] }
         return values.compactMap { $0.string.flatMap(UUID.init(uuidString:)) }
+    }
+
+    private func remember(_ id: UUID, key: String) async throws {
+        var ids = try await ids(forKey: key).filter { $0 != id }
+        ids.insert(id, at: 0)
+        try await store.setMeta(key, try JSONValue.array(ids.prefix(10).map { JSONValue($0) }).encoded())
     }
 
     // MARK: Fotos

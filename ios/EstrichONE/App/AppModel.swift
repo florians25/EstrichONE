@@ -30,6 +30,8 @@ struct ActiveAccount {
     let client: AuthorizedClient
     /// Lokale Daten und Synchronisation; `nil`, wenn die Datenbank nicht geöffnet werden konnte.
     let sync: SyncController?
+    let service: BauakteService?
+    let thumbnails: ThumbnailLoader?
     var user: UserSummary { account.user }
 }
 
@@ -325,7 +327,9 @@ final class AppModel {
         if sync == nil {
             notice = "Die Daten auf diesem Gerät konnten nicht geöffnet werden. Bitte die App zurücksetzen oder die IT-Administration informieren."
         }
-        active = ActiveAccount(account: account, client: client, sync: sync)
+        let service = sync.map { BauakteService(store: $0.store, files: $0.files, userId: account.user.id) }
+        active = ActiveAccount(account: account, client: client, sync: sync, service: service,
+                               thumbnails: service.map { ThumbnailLoader(service: $0, client: client) })
         deviceState = accounts.state
         sync?.start()
         screen = deviceState.registration?.status == .pending ? .waitingForApproval : .home

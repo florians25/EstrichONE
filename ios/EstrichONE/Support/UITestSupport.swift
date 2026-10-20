@@ -1,6 +1,7 @@
 #if DEBUG
 import EstrichCore
 import Foundation
+import UIKit
 
 /// Steuerung für XCUITests über Umgebungsvariablen. Nur in Debug-Builds enthalten.
 ///
@@ -11,6 +12,21 @@ import Foundation
 /// - `ESTRICHONE_UITEST_DEVICE_STATUS`: Status neu registrierter Geräte ohne Einrichtungscode (`active`/`pending`)
 enum UITestSupport {
     private static var environment: [String: String] { ProcessInfo.processInfo.environment }
+
+    static var isActive: Bool { environment["ESTRICHONE_UITEST"] == "1" }
+
+    /// Erzeugtes JPEG statt Kamera (der Simulator hat keine Kamera).
+    @MainActor
+    static func samplePhoto() -> Data {
+        let renderer = UIGraphicsImageRenderer(size: CGSize(width: 640, height: 480))
+        let image = renderer.image { context in
+            UIColor(red: 0.04, green: 0.18, blue: 0.36, alpha: 1).setFill()
+            context.fill(CGRect(x: 0, y: 0, width: 640, height: 480))
+            UIColor.white.setFill()
+            context.fill(CGRect(x: 200, y: 140, width: 240, height: 200))
+        }
+        return image.jpegData(compressionQuality: 0.85) ?? Data()
+    }
 
     @MainActor
     static func makeEnvironment() -> AppEnvironment? {
@@ -56,6 +72,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private var deviceKind = "personal"
     private var deviceName = "iPhone"
     private var counter = 0
+    /// Angekündigte Dateien: Größe und empfangene Bytes.
+    private var files: [String: (size: Int, received: Int)] = [:]
 
     init(serverInfoStatus: Int, serverInfoBody: String, password: String, newDeviceStatus: String) {
         self.serverInfoStatus = serverInfoStatus
@@ -68,7 +86,10 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         try await Task.sleep(for: .milliseconds(150))
         let path = request.url?.path() ?? ""
         let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
-        let (status, json) = lock.withLock { route(path, body: body) }
+        let (status, json) = lock.withLock {
+            path.hasPrefix("/api/v1/files/") ? routeFile(path, method: request.httpMethod ?? "GET", bytes: request.httpBody?.count ?? 0)
+                                             : route(path, body: body)
+        }
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
         return (Data(json.utf8), response)
     }
@@ -118,6 +139,10 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                     entity["number"] = "2026-0\(10 + counter)"
                     entity["status"] = "planned"
                 }
+                if (operation["type"] as? String) == "file.announce", let id = operation["entityId"] as? String {
+                    files[id.lowercased()] = ((entity["sizeBytes"] as? Int) ?? 0, 0)
+                    entity["state"] = "awaitingUpload"
+                }
                 return ["opId": operation["opId"] ?? "", "status": "applied", "version": 1, "entity": entity]
             }
             let json = (try? JSONSerialization.data(withJSONObject: ["results": results])).map { String(decoding: $0, as: UTF8.self) }
@@ -127,6 +152,20 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         default:
             return problem(404, "NOT_FOUND", "Nicht gefunden")
         }
+    }
+
+    /// `GET /files/{id}/upload-status` und `PUT /files/{id}/content`.
+    private func routeFile(_ path: String, method: String, bytes: Int) -> (Int, String) {
+        let parts = path.split(separator: "/")
+        guard parts.count >= 5 else { return problem(404, "NOT_FOUND", "Nicht gefunden") }
+        let id = String(parts[3]).lowercased()
+        guard var file = files[id] else { return problem(404, "FILE_NOT_FOUND", "Datei unbekannt") }
+        if method == "PUT" {
+            file.received += bytes
+            files[id] = file
+        }
+        let state = file.received >= file.size ? "stored" : "awaitingUpload"
+        return (200, #"{"id":"\#(id)","receivedBytes":\#(file.received),"sizeBytes":\#(file.size),"state":"\#(state)"}"#)
     }
 
     private func tokens(userId: String, name: String, userName: String) -> String {

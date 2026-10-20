@@ -108,3 +108,26 @@ struct BauakteServiceTests {
         #expect(try await restarted.store.summary().isSettled)
     }
 }
+
+@Suite("Kunden in der Schnellanlage")
+struct CustomerTests {
+    @Test("Suche über Name und Kundennummer; zuletzt gewählte Kunden zuerst")
+    func customers() async throws {
+        let server = SimulatedSyncServer()
+        let directory = FileManager.default.temporaryDirectory.appending(path: "kunden-\(UUID().uuidString)")
+        let key = SymmetricKey(size: .bits256)
+        let store = LocalStore(database: try EncryptedDatabase(url: directory.appending(path: "data.sealed"), key: key, migrations: LocalStore.schema))
+        let files = FileVault(directory: directory.appending(path: "files"), key: key)
+        let service = BauakteService(store: store, files: files, userId: UUID.v7())
+        let huber = UUID.v7()
+        let bau = UUID.v7()
+        server.serverSideChange("contact", id: huber, data: ["id": JSONValue(huber), "name": "Fa. Huber", "customerNumber": "K-1042", "city": "Landshut"])
+        server.serverSideChange("contact", id: bau, data: ["id": JSONValue(bau), "name": "Bau GmbH", "customerNumber": "K-7", "city": "Ergolding"])
+        _ = await SyncEngine(store: store, transport: server, files: files).synchronize()
+
+        #expect(try await service.contacts().map(\.name) == ["Bau GmbH", "Fa. Huber"])
+        #expect(try await service.contacts(search: "k-1042").map(\.id) == [huber])
+        _ = try await service.create(NewBauakte(title: "Halle", customerId: huber))
+        #expect(try await service.recentCustomers().map(\.id) == [huber])
+    }
+}

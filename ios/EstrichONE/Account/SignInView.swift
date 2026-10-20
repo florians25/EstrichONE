@@ -136,6 +136,8 @@ struct SignInView: View {
     private func signIn() async {
         guard !isWorking else { return }
         errorMessage = nil
+        // Tastatur schließen, bevor der nächste Bildschirm (z. B. die PIN-Tastatur) erscheint.
+        focus = nil
         isWorking = true
         defer { isWorking = false }
         do throws(AccountError) {

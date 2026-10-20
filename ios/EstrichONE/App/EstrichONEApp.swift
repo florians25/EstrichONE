@@ -71,7 +71,7 @@ struct RootView: View {
         case .waitingForApproval:
             WaitingForApprovalView()
         case .home:
-            HomeView()
+            MainTabView()
         case let .blocked(end):
             BlockedView(end: end)
         }

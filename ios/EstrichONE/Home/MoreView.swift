@@ -1,9 +1,8 @@
 import EstrichCore
 import SwiftUI
 
-/// Startseite nach der Anmeldung. „Heute“, Bauakten und Kamera folgen mit AP-12/13; bis dahin zeigt die App
-/// ehrlich, wer angemeldet ist und wie das Gerät eingerichtet ist.
-struct HomeView: View {
+/// Reiter „Mehr“: Person, Synchronisation, Gerät, Server, Benutzerwechsel, Abmelden (07, Abschnitt 2).
+struct MoreView: View {
     @Environment(AppModel.self) private var model
     @State private var confirmSignOut = false
     @State private var confirmReset = false
@@ -39,15 +38,6 @@ struct HomeView: View {
                         .padding(.vertical, 4)
                     } header: {
                         Text("Angemeldet")
-                    }
-                }
-
-                Section {
-                    Label {
-                        Text("Bauakten, Fotos und Synchronisation folgen im nächsten Ausbauschritt der App.")
-                            .fixedSize(horizontal: false, vertical: true)
-                    } icon: {
-                        Image(systemName: "hammer").foregroundStyle(Theme.actionPrimary)
                     }
                 }
 
@@ -105,7 +95,7 @@ struct HomeView: View {
                     Text("EstrichONE \(AppEnvironment.appVersionText)")
                 }
             }
-            .navigationTitle("EstrichONE")
+            .navigationTitle("Mehr")
             .confirmationDialog("Abmelden?", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button(unsentBeforeSignOut > 0 ? "Trotzdem abmelden und Daten löschen" : "Abmelden", role: .destructive) {
                     Task { await model.signOut() }

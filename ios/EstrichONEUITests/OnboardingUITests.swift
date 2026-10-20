@@ -57,6 +57,8 @@ final class OnboardingUITests: XCTestCase {
 
     @MainActor
     private func enterPIN(_ pin: String, in app: XCUIApplication) {
+        // Die Systemtastatur der Anmeldung darf die PIN-Tasten nicht verdecken.
+        XCTAssertTrue(app.keyboards.firstMatch.waitForNonExistence(timeout: 10), "Tastatur bleibt sichtbar")
         for digit in pin {
             tap("pinKey\(digit)", in: app)
         }

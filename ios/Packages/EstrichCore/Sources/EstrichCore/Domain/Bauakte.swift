@@ -84,6 +84,21 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     public var hasLocation: Bool { latitude != nil && longitude != nil }
 }
 
+/// Kunde bzw. Kontakt (nur mit Recht `contacts.read` auf dem Gerät).
+public struct Contact: Identifiable, Equatable, Sendable {
+    public let id: UUID
+    public let name: String
+    public let customerNumber: String?
+    public let city: String?
+
+    public init(_ entity: LocalEntity) {
+        id = entity.id
+        name = entity.data["name"]?.string ?? ""
+        customerNumber = entity.data["customerNumber"]?.string
+        city = entity.data["city"]?.string
+    }
+}
+
 /// Foto, Video oder Dokument einer Bauakte.
 public struct FileItem: Identifiable, Equatable, Sendable {
     public let id: UUID

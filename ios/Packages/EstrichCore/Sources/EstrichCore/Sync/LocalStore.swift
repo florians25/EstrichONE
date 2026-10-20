@@ -456,7 +456,7 @@ public actor LocalStore {
         case .note: ["text"]
         case .file: ["originalName", "caption"]
         case .workItem: ["title", "description"]
-        case .contact: ["displayName", "companyName", "firstName", "lastName", "city", "email"]
+        case .contact: ["name", "customerNumber", "street", "city", "email", "phone"]
         case .screedType: ["name", "designation"]
         }
         let search = searchFields.compactMap { data[$0]?.string }.joined(separator: " ").lowercased()

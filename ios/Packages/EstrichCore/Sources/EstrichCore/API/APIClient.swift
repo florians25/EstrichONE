@@ -131,6 +131,10 @@ public struct APIClient: Sendable {
         if Response.self == NoContent.self, let empty = NoContent() as? Response {
             return empty
         }
+        // Dateiinhalte (z. B. Vorschaubilder) unverändert durchreichen.
+        if Response.self == Data.self, let raw = data as? Response {
+            return raw
+        }
         do {
             return try JSONCoding.decoder.decode(Response.self, from: data)
         } catch {
