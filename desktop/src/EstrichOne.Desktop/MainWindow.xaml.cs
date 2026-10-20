@@ -1,4 +1,5 @@
-using EstrichOne.Client;
+using ApiException = EstrichOne.Client.ApiException;
+using Labels = EstrichOne.Client.Labels;
 using EstrichOne.Desktop.Controls;
 using EstrichOne.Desktop.Services;
 using EstrichOne.Desktop.Views;
