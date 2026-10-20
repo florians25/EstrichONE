@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Window
+    x:Class="EstrichOne.Desktop.MainWindow"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:controls="using:EstrichOne.Desktop.Controls"
+    xmlns:views="using:EstrichOne.Desktop.Views"
+    Title="EstrichONE">
+    <Window.SystemBackdrop>
+        <MicaBackdrop />
+    </Window.SystemBackdrop>
+
+    <Grid x:Name="Root">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+
+        <TitleBar x:Name="AppTitleBar" Title="EstrichONE" Subtitle="Büro">
+            <TitleBar.IconSource>
+                <FontIconSource Glyph="&#xE80F;" />
+            </TitleBar.IconSource>
+            <TitleBar.Content>
+                <AutoSuggestBox x:Name="SearchBox" Width="420" PlaceholderText="Bauakte oder Befehl suchen (Strg+K)" QueryIcon="Find"
+                                AutomationProperties.Name="Suche" Visibility="Collapsed"
+                                TextChanged="OnSearchTextChanged" QuerySubmitted="OnSearchSubmitted" />
+            </TitleBar.Content>
+            <TitleBar.RightHeader>
+                <DropDownButton x:Name="UserButton" Visibility="Collapsed" Margin="0,0,8,0" AutomationProperties.Name="Benutzer">
+                    <DropDownButton.Flyout>
+                        <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <MenuFlyoutItem Text="Passwort ändern (im Browser)" Click="OnChangePassword">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE8D7;" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutItem Text="EstrichONE im Browser öffnen" Click="OnOpenWeb">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xE774;" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                            <MenuFlyoutSeparator />
+                            <MenuFlyoutItem Text="Abmelden" Click="OnSignOut">
+                                <MenuFlyoutItem.Icon><FontIcon Glyph="&#xF3B1;" /></MenuFlyoutItem.Icon>
+                            </MenuFlyoutItem>
+                        </MenuFlyout>
+                    </DropDownButton.Flyout>
+                </DropDownButton>
+            </TitleBar.RightHeader>
+        </TitleBar>
+
+        <Grid x:Name="Shell" Grid.Row="1" Visibility="Collapsed">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
+            <controls:Ribbon x:Name="Ribbon" />
+            <NavigationView x:Name="Nav" Grid.Row="1" PaneDisplayMode="LeftCompact" IsSettingsVisible="False" IsBackButtonVisible="Auto"
+                            IsBackEnabled="{x:Bind ContentFrame.CanGoBack, Mode=OneWay}" SelectionChanged="OnNavSelectionChanged"
+                            BackRequested="OnBackRequested" OpenPaneLength="240">
+                <NavigationView.MenuItems>
+                    <NavigationViewItem Content="Tagesübersicht" Tag="today">
+                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE787;" /></NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                    <NavigationViewItem Content="Bauakten" Tag="bauakten">
+                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE8B7;" /></NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                    <NavigationViewItem Content="Kolonnenplanung" Tag="planning" x:Name="NavPlanning">
+                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE8F1;" /></NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                    <NavigationViewItem Content="Anrufe" Tag="calls" x:Name="NavCalls">
+                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE717;" /></NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                    <NavigationViewItem Content="Bestellungen" Tag="orders" x:Name="NavOrders">
+                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE7BF;" /></NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                </NavigationView.MenuItems>
+                <NavigationView.FooterMenuItems>
+                    <NavigationViewItem Content="Helpdesk" Tag="helpdesk">
+                        <NavigationViewItem.Icon><FontIcon Glyph="&#xE897;" /></NavigationViewItem.Icon>
+                    </NavigationViewItem>
+                </NavigationView.FooterMenuItems>
+                <Frame x:Name="ContentFrame" Navigated="OnNavigated" />
+            </NavigationView>
+            <Grid Grid.Row="2" Padding="12,4" Background="{ThemeResource RibbonBrush}" BorderBrush="{ThemeResource DividerBrush}" BorderThickness="0,1,0,0"
+                  ColumnSpacing="16">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel Orientation="Horizontal" Spacing="6">
+                    <Ellipse Width="8" Height="8" Fill="#2E7D32" VerticalAlignment="Center" />
+                    <TextBlock x:Name="StatusServer" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock x:Name="StatusUser" Grid.Column="1" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center" />
+                <TextBlock x:Name="StatusVersion" Grid.Column="2" Style="{StaticResource CaptionTextBlockStyle}" VerticalAlignment="Center"
+                           Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+            </Grid>
+        </Grid>
+
+        <views:SignInView x:Name="SignIn" Grid.Row="1" />
+    </Grid>
+</Window>

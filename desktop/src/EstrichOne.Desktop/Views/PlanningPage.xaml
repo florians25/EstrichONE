@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="EstrichOne.Desktop.Views.PlanningPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:EstrichOne.Desktop.ViewModels"
+    xmlns:local="using:EstrichOne.Desktop.Views">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="PLANUNG" Style="{StaticResource Overline}" />
+            <TextBlock Text="Kolonnenplanung" Style="{StaticResource PageTitle}" />
+        </StackPanel>
+        <Grid Grid.Row="1" ColumnSpacing="8">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <Button Command="{x:Bind ViewModel.PreviousCommand}" AutomationProperties.Name="Vorherige Woche"><FontIcon Glyph="&#xE76B;" FontSize="14" /></Button>
+            <Button Grid.Column="1" Content="Diese Woche" Command="{x:Bind ViewModel.ThisWeekCommand}" />
+            <Button Grid.Column="2" Command="{x:Bind ViewModel.NextCommand}" AutomationProperties.Name="Nächste Woche"><FontIcon Glyph="&#xE76C;" FontSize="14" /></Button>
+            <TextBlock Grid.Column="3" Text="{x:Bind ViewModel.Title, Mode=OneWay}" Style="{StaticResource SubtitleTextBlockStyle}" VerticalAlignment="Center"
+                       Margin="12,0,0,0" />
+            <ToggleSwitch Grid.Column="4" OnContent="Standardwoche (Mo–So)" OffContent="Arbeitswoche (Mo–Fr)" IsOn="{x:Bind ViewModel.ShowWeekend, Mode=TwoWay}"
+                          AutomationProperties.Name="Wochenende anzeigen" />
+            <Button Grid.Column="5" Click="OnEditInBrowser">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE774;" FontSize="14" />
+                    <TextBlock Text="Im Browser planen" />
+                </StackPanel>
+            </Button>
+        </Grid>
+        <StackPanel Grid.Row="2" Spacing="6">
+            <ProgressBar IsIndeterminate="True" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+            <InfoBar Severity="Error" IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
+        </StackPanel>
+
+        <ScrollViewer Grid.Row="3" HorizontalScrollBarVisibility="Auto" HorizontalScrollMode="Auto">
+            <StackPanel>
+                <StackPanel Orientation="Horizontal" Background="{ThemeResource BrandSoftBrush}" CornerRadius="8,8,0,0">
+                    <Border Width="170" Padding="12,10"><TextBlock Text="Kolonne" Style="{StaticResource ColumnHeader}" /></Border>
+                    <ItemsControl ItemsSource="{x:Bind ViewModel.Days}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DayHeader">
+                                <Border Width="230" Padding="12,8" BorderBrush="{ThemeResource DividerBrush}" BorderThickness="1,0,0,0">
+                                    <StackPanel>
+                                        <TextBlock Text="{x:Bind Weekday}" FontWeight="SemiBold" />
+                                        <TextBlock Text="{x:Bind Date}" Style="{StaticResource CaptionTextBlockStyle}" />
+                                    </StackPanel>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <ItemsControl ItemsSource="{x:Bind ViewModel.Rows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PlanningRow">
+                            <StackPanel Orientation="Horizontal" BorderBrush="{ThemeResource DividerBrush}" BorderThickness="0,1,0,0">
+                                <Border Width="170" Padding="12,10">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Ellipse Width="10" Height="10" Fill="{x:Bind local:PlanningPage.Brush(Color)}" VerticalAlignment="Center" />
+                                        <TextBlock Text="{x:Bind Name}" FontWeight="SemiBold" TextWrapping="Wrap" MaxWidth="130" />
+                                    </StackPanel>
+                                </Border>
+                                <ItemsControl ItemsSource="{x:Bind Cells}">
+                                    <ItemsControl.ItemsPanel>
+                                        <ItemsPanelTemplate><StackPanel Orientation="Horizontal" /></ItemsPanelTemplate>
+                                    </ItemsControl.ItemsPanel>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:PlanningCell">
+                                            <Border Width="230" MinHeight="90" Padding="6" BorderBrush="{ThemeResource DividerBrush}" BorderThickness="1,0,0,0">
+                                                <StackPanel Spacing="6">
+                                                    <ItemsControl ItemsSource="{x:Bind Absent}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="x:String">
+                                                                <TextBlock Text="{x:Bind}" Style="{StaticResource CaptionTextBlockStyle}" Foreground="#C25700" />
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                    <ItemsControl ItemsSource="{x:Bind Items}">
+                                                        <ItemsControl.ItemTemplate>
+                                                            <DataTemplate x:DataType="vm:AssignmentCard">
+                                                                <Button HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch" Padding="8,6" Margin="0,0,0,6"
+                                                                        Tag="{x:Bind BauakteId}" Click="OnOpenAssignment" AutomationProperties.Name="{x:Bind Title}"
+                                                                        BorderBrush="{x:Bind local:PlanningPage.Brush(Color)}" BorderThickness="3,1,1,1">
+                                                                    <StackPanel Spacing="1">
+                                                                        <TextBlock Style="{StaticResource CaptionTextBlockStyle}">
+                                                                            <Run Text="{x:Bind Time}" FontWeight="SemiBold" /><Run Text=" · " /><Run Text="{x:Bind Kind}" />
+                                                                        </TextBlock>
+                                                                        <TextBlock Text="{x:Bind Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                                                        <TextBlock Text="{x:Bind Activity}" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextBlockStyle}" />
+                                                                        <TextBlock Text="{x:Bind Resources}" TextTrimming="CharacterEllipsis" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}" />
+                                                                        <TextBlock Text="{x:Bind Warnings}" TextWrapping="Wrap" Style="{StaticResource CaptionTextBlockStyle}"
+                                                                                   Foreground="#C25700" Visibility="{x:Bind HasWarnings}" />
+                                                                    </StackPanel>
+                                                                </Button>
+                                                            </DataTemplate>
+                                                        </ItemsControl.ItemTemplate>
+                                                    </ItemsControl>
+                                                </StackPanel>
+                                            </Border>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</Page>

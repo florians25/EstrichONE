@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="EstrichOne.Desktop.Views.OrdersPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:EstrichOne.Desktop.ViewModels">
+    <Grid Padding="24" RowSpacing="12">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel>
+            <TextBlock Text="MATERIAL" Style="{StaticResource Overline}" />
+            <TextBlock Text="Bestellungen" Style="{StaticResource PageTitle}" />
+        </StackPanel>
+        <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="12">
+            <ComboBox ItemsSource="{x:Bind vm:OrdersViewModel.Filters}" SelectedItem="{x:Bind ViewModel.Filter, Mode=TwoWay}" Width="180"
+                      AutomationProperties.Name="Ansicht" />
+            <TextBox Width="300" PlaceholderText="Nummer, Material, Ort" AutomationProperties.Name="Bestellungen durchsuchen"
+                     Text="{x:Bind ViewModel.Search, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnSearchKeyDown" />
+            <Button Click="OnNewInBrowser">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <FontIcon Glyph="&#xE710;" FontSize="14" />
+                    <TextBlock Text="Material bestellen (Browser)" />
+                </StackPanel>
+            </Button>
+        </StackPanel>
+        <InfoBar Grid.Row="2" Severity="Error" IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
+        <ListView Grid.Row="3" ItemsSource="{x:Bind ViewModel.Items}" SelectionMode="None" AutomationProperties.Name="Bestellungen">
+            <ListView.ItemTemplate>
+                <DataTemplate x:DataType="vm:OrderItem">
+                    <Grid ColumnSpacing="12" Padding="0,8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="110" />
+                            <ColumnDefinition Width="170" />
+                            <ColumnDefinition Width="170" />
+                            <ColumnDefinition Width="2*" />
+                            <ColumnDefinition Width="3*" />
+                            <ColumnDefinition Width="100" />
+                            <ColumnDefinition Width="90" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{x:Bind Number, Mode=OneWay}" FontWeight="SemiBold" />
+                        <TextBlock Grid.Column="1" Text="{x:Bind Delivery, Mode=OneWay}" />
+                        <TextBlock Grid.Column="2" Text="{x:Bind Supplier, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="3" Text="{x:Bind Site, Mode=OneWay}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Grid.Column="4" Text="{x:Bind Lines, Mode=OneWay}" TextWrapping="Wrap" MaxLines="2" />
+                        <TextBlock Grid.Column="5" Text="{x:Bind Total, Mode=OneWay}" TextAlignment="Right" />
+                        <TextBlock Grid.Column="6" Text="{x:Bind Status, Mode=OneWay}" FontWeight="SemiBold" />
+                        <StackPanel Grid.Column="7" Orientation="Horizontal" Spacing="4">
+                            <Button Content="Bestellt" Click="OnOrdered" Visibility="{x:Bind CanOrder, Mode=OneWay}" />
+                            <Button Content="Bestätigt" Click="OnConfirmed" Visibility="{x:Bind CanConfirm, Mode=OneWay}" />
+                            <Button Content="Geliefert" Click="OnDelivered" Visibility="{x:Bind CanDeliver, Mode=OneWay}" Style="{StaticResource AccentButtonStyle}" />
+                        </StackPanel>
+                    </Grid>
+                </DataTemplate>
+            </ListView.ItemTemplate>
+        </ListView>
+    </Grid>
+</Page>

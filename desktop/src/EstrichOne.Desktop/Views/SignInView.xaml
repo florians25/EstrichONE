@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<UserControl
+    x:Class="EstrichOne.Desktop.Views.SignInView"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Grid>
+        <Border Style="{StaticResource Card}" Width="440" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32">
+            <StackPanel Spacing="16">
+                <StackPanel Orientation="Horizontal" Spacing="12">
+                    <Border Width="44" Height="44" CornerRadius="8" Background="{ThemeResource BrandBrush}">
+                        <FontIcon Glyph="&#xE80F;" Foreground="White" FontSize="22" />
+                    </Border>
+                    <StackPanel VerticalAlignment="Center">
+                        <TextBlock Text="EstrichONE" Style="{StaticResource SubtitleTextBlockStyle}" />
+                        <TextBlock Text="für Windows" Style="{StaticResource Overline}" />
+                    </StackPanel>
+                </StackPanel>
+
+                <InfoBar x:Name="Notice" IsOpen="False" IsClosable="True" Severity="Warning" />
+
+                <StackPanel Spacing="12" Visibility="{x:Bind Hidden(ViewModel.IsConnected), Mode=OneWay}">
+                    <TextBlock TextWrapping="Wrap" Text="Mit welchem EstrichONE-Server möchten Sie arbeiten? Die Adresse erhalten Sie von Ihrer IT." />
+                    <TextBox x:Name="ServerBox" Header="Serveradresse" PlaceholderText="z. B. estrich.firma.de"
+                             Text="{x:Bind ViewModel.ServerAddress, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnServerKeyDown" />
+                    <Button Content="Verbinden" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch"
+                            Command="{x:Bind ViewModel.ConnectCommand}" />
+                </StackPanel>
+
+                <StackPanel Spacing="12" Visibility="{x:Bind ViewModel.IsConnected, Mode=OneWay}">
+                    <Grid ColumnSpacing="8" Padding="12,8" CornerRadius="6" Background="{ThemeResource BrandSoftBrush}">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <FontIcon Glyph="&#xE968;" FontSize="16" VerticalAlignment="Center" />
+                        <TextBlock Grid.Column="1" VerticalAlignment="Center" TextTrimming="CharacterEllipsis">
+                            <Run Text="{x:Bind ViewModel.ServerName, Mode=OneWay}" FontWeight="SemiBold" />
+                        </TextBlock>
+                        <HyperlinkButton Grid.Column="2" Content="Ändern" Command="{x:Bind ViewModel.ChangeServerCommand}" />
+                    </Grid>
+                    <TextBox x:Name="LoginBox" Header="Anmeldename oder E-Mail"
+                             Text="{x:Bind ViewModel.Login, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <PasswordBox x:Name="PasswordBox" Header="Passwort" Password="{x:Bind ViewModel.Password, Mode=TwoWay}" KeyDown="OnPasswordKeyDown" />
+                    <Button Content="Anmelden" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch"
+                            Command="{x:Bind ViewModel.SignInCommand}" />
+                    <InfoBar Severity="Informational" IsClosable="False" IsOpen="{x:Bind ViewModel.MustChangePassword, Mode=OneWay}"
+                             Title="Neues Passwort nötig"
+                             Message="Sie haben ein Einmalpasswort erhalten. Bitte legen Sie im Browser ein eigenes Passwort fest und melden Sie sich dann hier an.">
+                        <InfoBar.ActionButton>
+                            <Button Content="Im Browser öffnen" Click="OnOpenPasswordPage" />
+                        </InfoBar.ActionButton>
+                    </InfoBar>
+                </StackPanel>
+
+                <ProgressBar IsIndeterminate="True" Visibility="{x:Bind ViewModel.IsBusy, Mode=OneWay}" />
+                <InfoBar Severity="Error" IsClosable="False" IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}"
+                         Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+    </Grid>
+</UserControl>

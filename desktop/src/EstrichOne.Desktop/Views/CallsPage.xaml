@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Page
+    x:Class="EstrichOne.Desktop.Views.CallsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:vm="using:EstrichOne.Desktop.ViewModels"
+    xmlns:local="using:EstrichOne.Desktop.Views">
+    <Grid Padding="24" ColumnSpacing="16" RowSpacing="12">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="380" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+        </Grid.RowDefinitions>
+        <StackPanel Grid.ColumnSpan="2">
+            <TextBlock Text="BÜRO" Style="{StaticResource Overline}" />
+            <TextBlock Text="Anrufe" Style="{StaticResource PageTitle}" />
+        </StackPanel>
+
+        <Border Grid.Row="1" Style="{StaticResource Card}" VerticalAlignment="Top" Visibility="{x:Bind ViewModel.CanWrite}">
+            <StackPanel Spacing="12">
+                <TextBlock Text="Telefon-Schnellerfassung" Style="{StaticResource CardTitle}" />
+                <TextBox x:Name="CallerBox" Header="Wer ruft an?" Text="{x:Bind ViewModel.Caller, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox Header="Telefon" InputScope="TelephoneNumber" Text="{x:Bind ViewModel.Phone, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <TextBox Header="Notiz" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96" KeyDown="OnNotesKeyDown"
+                         Text="{x:Bind ViewModel.Notes, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                <ToggleSwitch Header="Richtung" OffContent="Eingehend" OnContent="Ausgehend" IsOn="{x:Bind ViewModel.Outbound, Mode=TwoWay}" />
+                <CheckBox Content="Wiedervorlage" IsChecked="{x:Bind ViewModel.FollowUp, Mode=TwoWay}" />
+                <Button Content="Speichern (Strg+Enter)" Style="{StaticResource AccentButtonStyle}" HorizontalAlignment="Stretch"
+                        Command="{x:Bind ViewModel.SaveQuickCallCommand}" />
+                <InfoBar Severity="Success" IsClosable="True" IsOpen="{x:Bind local:CallsPage.HasText(ViewModel.Saved), Mode=OneWay}"
+                         Message="{x:Bind ViewModel.Saved, Mode=OneWay}" />
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="1" Grid.Column="1" RowSpacing="12">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+            </Grid.RowDefinitions>
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBox Width="320" PlaceholderText="Name, Firma, Telefon, Betreff" AutomationProperties.Name="Anrufe durchsuchen"
+                         Text="{x:Bind ViewModel.Search, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" KeyDown="OnSearchKeyDown" />
+                <ToggleSwitch OnContent="Nur fällige Wiedervorlagen" OffContent="Alle Anrufe" IsOn="{x:Bind ViewModel.OnlyDue, Mode=TwoWay}" />
+            </StackPanel>
+            <InfoBar Grid.Row="1" Severity="Error" IsOpen="{x:Bind ViewModel.HasError, Mode=OneWay}" Message="{x:Bind ViewModel.Error, Mode=OneWay}" />
+            <ListView Grid.Row="2" ItemsSource="{x:Bind ViewModel.Items}" SelectionMode="None" AutomationProperties.Name="Anrufe">
+                <ListView.ItemTemplate>
+                    <DataTemplate x:DataType="vm:CallRow">
+                        <Grid ColumnSpacing="12" Padding="0,8">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Spacing="2">
+                                <TextBlock>
+                                    <Run Text="{x:Bind Caller}" FontWeight="SemiBold" /><Run Text="   " /><Run Text="{x:Bind Phone}" />
+                                </TextBlock>
+                                <TextBlock Text="{x:Bind Subject}" TextWrapping="Wrap" MaxLines="3" />
+                                <TextBlock Style="{StaticResource CaptionTextBlockStyle}" Foreground="{ThemeResource TextFillColorSecondaryBrush}">
+                                    <Run Text="{x:Bind When}" /><Run Text="  ·  " /><Run Text="{x:Bind Handler}" /><Run Text="   " /><Run Text="{x:Bind Due}" Foreground="#C25700" />
+                                </TextBlock>
+                            </StackPanel>
+                            <Button Grid.Column="1" Content="Erledigt" VerticalAlignment="Center" Click="OnDone"
+                                    Visibility="{x:Bind local:Show.IfText(Due)}" AutomationProperties.Name="Wiedervorlage erledigt" />
+                        </Grid>
+                    </DataTemplate>
+                </ListView.ItemTemplate>
+            </ListView>
+        </Grid>
+    </Grid>
+</Page>
