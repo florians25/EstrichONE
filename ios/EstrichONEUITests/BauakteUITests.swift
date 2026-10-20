@@ -16,7 +16,7 @@ final class BauakteUITests: XCTestCase {
         let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: target)
         if XCTWaiter().wait(for: [hittable], timeout: 5) != .completed {
             // Meist liegt ein verspätetes Systemblatt („Passwort sichern?“) darüber.
-            app.dismissSavePasswordPrompt(timeout: 3)
+            app.dismissLateSystemPrompt()
         }
         target.tap()
     }
