@@ -1,0 +1,82 @@
+name: Release
+
+# Wird ein Release (auch Vorabversion) auf GitHub veröffentlicht, baut dieser Ablauf die installierbaren Pakete
+# und hängt sie an: Windows-App (ZIP, ohne Installation lauffähig), Android-App (APK) und das Server-Paket.
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag eines vorhandenen Releases"
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+
+jobs:
+  windows:
+    name: Windows-App
+    runs-on: windows-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Veröffentlichen (x64, eigenständig)
+        working-directory: desktop
+        run: dotnet publish src/EstrichOne.Desktop/EstrichOne.Desktop.csproj -c Release -r win-x64 -p:Platform=x64 -o ${{ runner.temp }}\EstrichONE
+      - name: Packen und anhängen
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $zip = Join-Path $env:RUNNER_TEMP "EstrichONE-Windows-x64-$env:TAG.zip"
+          Compress-Archive -Path "$env:RUNNER_TEMP\EstrichONE\*" -DestinationPath $zip
+          gh release upload $env:TAG $zip --clobber --repo $env:GITHUB_REPOSITORY
+
+  android:
+    name: Android-App
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: APK bauen
+        working-directory: android
+        # Testversion mit dem Debug-Schlüssel: direkt installierbar. Für Google Play folgt eine Signatur mit dem
+        # Schlüssel des Herausgebers (docs/reengineering/08, Abschnitt 5).
+        run: ./gradlew --no-daemon :app:assembleDebug
+      - name: Anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cp android/app/build/outputs/apk/debug/app-debug.apk "EstrichONE-Android-$TAG.apk"
+          gh release upload "$TAG" "EstrichONE-Android-$TAG.apk" --clobber --repo "$GITHUB_REPOSITORY"
+
+  server:
+    name: Server-Paket
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - name: Paket mit Quellcode und Docker-Compose
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="EstrichONE-Server-$TAG"
+          git archive --format=tar.gz --prefix="$name/" -o "$name.tar.gz" HEAD backend contracts docker deploy web global.json README.md
+          gh release upload "$TAG" "$name.tar.gz" --clobber --repo "$GITHUB_REPOSITORY"
