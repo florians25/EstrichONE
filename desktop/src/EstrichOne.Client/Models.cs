@@ -36,7 +36,10 @@ public sealed record TokenResponse(
 
 public sealed record RefreshResponse(string AccessToken, DateTimeOffset AccessTokenExpiresAt, string RefreshToken, DateTimeOffset RefreshTokenExpiresAt);
 
-public sealed record DirectoryUser(Guid Id, string DisplayName, bool IsActive);
+public sealed record DirectoryUser(Guid Id, string DisplayName, bool IsActive)
+{
+    public override string ToString() => DisplayName;
+}
 
 public sealed record BauakteListItem(
     Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City,
@@ -101,25 +104,117 @@ public sealed record CreateWorkItemRequest(
 public sealed record Note(
     Guid Id, Guid BauakteId, Guid AuthorUserId, string Text, bool IsPinned, string? Color, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, long Version);
 
+public enum FileKind { Photo, Video, Document }
+
+public enum FileState { AwaitingUpload, Stored }
+
+/// <summary>Vorschaubilder (thumb/display, WebP) des Servers.</summary>
+public enum VariantState { NotApplicable, Pending, Ready, Failed }
+
 public sealed record FileItem(
-    Guid Id, Guid? BauakteId, string Kind, string State, string Variants, string OriginalName, string ContentType, long SizeBytes,
-    string? Caption, DateTimeOffset? CapturedAt, DateTimeOffset CreatedAt);
+    Guid Id, Guid? BauakteId, FileKind Kind, FileState State, VariantState Variants, string OriginalName, string ContentType, long SizeBytes,
+    string Sha256, string? Caption, DateTimeOffset? CapturedAt, double? Latitude, double? Longitude, Guid UploadedByUserId, DateTimeOffset CreatedAt,
+    long Version, string? Category = null)
+{
+    public bool IsStored => State == FileState.Stored;
+
+    public bool HasPreviewVariants => Variants == VariantState.Ready;
+
+    /// <summary>Anzeigename: Beschriftung, sonst Dateiname.</summary>
+    public string DisplayName => string.IsNullOrWhiteSpace(Caption) ? OriginalName : Caption;
+}
+
+/// <summary>Datei ankündigen (Schritt 1 des Uploads); der Client berechnet SHA-256 vorab.</summary>
+public sealed record AnnounceFileRequest(
+    Guid Id, Guid? BauakteId, FileKind Kind, string OriginalName, string ContentType, long SizeBytes, string Sha256,
+    DateTimeOffset? CapturedAt = null, double? Latitude = null, double? Longitude = null, string? Caption = null, string? Category = null);
+
+public sealed record UploadStatus(Guid Id, long ReceivedBytes, long SizeBytes, FileState State);
+
+public enum InspectionKind { InitialInspection, CmMeasurement }
+
+public enum CheckResult { Ok, NotOk, NotApplicable }
 
 public sealed record Inspection(
-    Guid Id, Guid BauakteId, string Kind, Guid PerformedByUserId, DateTimeOffset PerformedAt, string? Remarks, bool NotRequired,
-    string? Location, decimal? MeasuredCmPercent, decimal? LimitCmPercent, bool? IsReadyForCovering);
+    Guid Id, Guid BauakteId, InspectionKind Kind, Guid PerformedByUserId, DateTimeOffset PerformedAt, Guid? CorrectsInspectionId, string? Remarks,
+    bool NotRequired, IReadOnlyDictionary<string, CheckResult> Checks, IReadOnlyList<Guid> PhotoFileIds, string? Location, string? Binder, bool? Heated,
+    int? ThicknessMm, decimal? MeasuredCmPercent, decimal? LimitCmPercent, bool? IsReadyForCovering, long Version);
 
 public sealed record DiaryEntry(
     Guid Id, Guid BauakteId, Guid AuthorUserId, DateOnly Day, string Text, string? Weather, int? TemperatureCelsius, int? WorkersPresent,
-    DateTimeOffset CreatedAt, DateTimeOffset? EditedAt);
+    DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, long Version = 0);
+
+/// <summary>Erstbegehung erfassen (Prüfpunkte: substrate, edgeInsulation, heatingPressureTest, access, utilities).</summary>
+public sealed record NewInitialInspection(
+    Guid BauakteId, DateTimeOffset PerformedAt, bool NotRequired, IReadOnlyDictionary<string, CheckResult> Checks, string? Remarks,
+    IReadOnlyList<Guid>? PhotoFileIds = null);
+
+/// <summary>CM-Messung erfassen; Grenzwert und Belegreife bestimmt der Server.</summary>
+public sealed record NewCmMeasurement(
+    Guid BauakteId, DateTimeOffset PerformedAt, string Location, string Binder, bool Heated, int? ThicknessMm, decimal MeasuredCmPercent, string? Remarks);
+
+public sealed record SyncOperationResult(Guid OpId, string Status, string? Code, string? Message, long? Version);
+
+public sealed record PushResponse(IReadOnlyList<SyncOperationResult> Results);
+
+public sealed record ScreedType(Guid Id, string Name, string? Designation, string Binder, bool IsActive)
+{
+    public string Label => Designation is null ? Name : $"{Name} ({Designation})";
+
+    public override string ToString() => Label;
+}
+
+public sealed record SaveRoomRequest(
+    Guid Id, Guid? SectionId, string Name, string? Floor, decimal? AreaSquareMeters, Guid? ScreedTypeId, int? ThicknessMillimeters,
+    int? InsulationMillimeters, bool UnderfloorHeating, RoomStatus Status, string? Notes);
 
 public sealed record Contact(
     Guid Id, ContactKind Kind, string Name, string? CustomerNumber, string? Street, string? PostalCode, string? City, string? Phone,
-    string? Email, string? Notes, long Version);
+    string? Email, string? Notes, long Version)
+{
+    /// <summary>Für Auswahllisten: Name · Kundennummer · Ort.</summary>
+    public string Label => string.Join(" · ", new[] { Name, CustomerNumber, City }.Where(s => !string.IsNullOrWhiteSpace(s)));
 
-public sealed record Crew(Guid Id, string Name, Guid? LeaderUserId, IReadOnlyList<Guid> MemberUserIds, string? Color, bool IsActive, int SortOrder, long Version);
+    public override string ToString() => Label;
+}
 
-public sealed record Resource(Guid Id, ResourceKind Kind, string Name, string? Identifier, string? Notes, bool IsActive, long Version);
+/// <summary>Kontakt anlegen (POST, idempotent über die ID).</summary>
+public sealed record SaveContactRequest(
+    Guid Id, ContactKind Kind, string Name, string? CustomerNumber = null, string? Street = null, string? PostalCode = null, string? City = null,
+    string? Phone = null, string? Email = null, string? Notes = null);
+
+public sealed record ImportIssue(int Line, string Message);
+
+public sealed record ImportDuplicate(int Line, string Name, Guid ExistingContactId);
+
+public sealed record ContactImportResult(int TotalRows, int Imported, int WouldImport, IReadOnlyList<ImportIssue> Errors,
+    IReadOnlyList<ImportDuplicate> Duplicates, bool DryRun);
+
+public sealed record Crew(Guid Id, string Name, Guid? LeaderUserId, IReadOnlyList<Guid> MemberUserIds, string? Color, bool IsActive, int SortOrder, long Version)
+{
+    public override string ToString() => Name;
+}
+
+public sealed record Resource(Guid Id, ResourceKind Kind, string Name, string? Identifier, string? Notes, bool IsActive, long Version)
+{
+    public override string ToString() => Name;
+}
+
+public sealed record SaveCrewRequest(string Name, Guid? LeaderUserId, IReadOnlyList<Guid> MemberUserIds, string? Color, bool IsActive, int SortOrder);
+
+public sealed record SaveResourceRequest(ResourceKind Kind, string Name, string? Identifier, string? Notes, bool IsActive);
+
+public sealed record SaveAbsenceRequest(Guid UserId, DateOnly From, DateOnly To, AbsenceKind Kind, string? Note);
+
+public sealed record SaveAssignmentRequest(
+    Guid BauakteId, DateOnly Day, TimeOnly? StartTime, string Activity, Guid? CrewId, IReadOnlyList<Guid> UserIds, IReadOnlyList<Guid> ResourceIds,
+    string? Notes, AssignmentKind Kind, TimeOnly? EndTime);
+
+/// <summary>Baustellen-Vorrat: geplante und laufende Bauakten mit Stand der Einplanung.</summary>
+public sealed record BacklogItem(
+    Guid BauakteId, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City, DateOnly? PlannedStart,
+    DateOnly? PlannedEnd, string? CustomerName, decimal TotalAreaSquareMeters, IReadOnlyList<string> ScreedTypes, int UpcomingAssignments,
+    DateOnly? NextAssignment);
 
 public sealed record AssignmentPerson(Guid Id, string Name);
 
@@ -144,9 +239,17 @@ public sealed record TicketSummary(
 
 public sealed record TicketComment(Guid Id, Guid AuthorUserId, string? AuthorName, string Text, bool IsInternal, DateTimeOffset CreatedAt);
 
+public sealed record TicketEvent(Guid? ActorUserId, string? ActorName, string Kind, string? FromValue, string? ToValue, DateTimeOffset At);
+
 public sealed record TicketDetail(
     TicketSummary Summary, string? Description, Guid? DeviceId, string? DeviceName, Guid? BauakteId, string? Resolution,
-    DateTimeOffset? ResolvedAt, DateTimeOffset? ClosedAt, IReadOnlyList<Guid> AttachmentFileIds, IReadOnlyList<TicketComment> Comments);
+    DateTimeOffset? ResolvedAt, DateTimeOffset? ClosedAt, IReadOnlyList<Guid> AttachmentFileIds, IReadOnlyList<TicketComment> Comments,
+    IReadOnlyList<TicketEvent>? Events = null);
+
+/// <summary>Ticket bearbeiten (nur gesetzte Felder ändern sich).</summary>
+public sealed record UpdateTicketRequest(
+    TicketStatus? Status = null, TicketPriority? Priority = null, TicketCategory? Category = null, Guid? AssigneeUserId = null, bool Unassign = false,
+    string? Resolution = null);
 
 public sealed record CreateTicketRequest(
     Guid Id, string Title, string? Description, TicketCategory Category, TicketSource Source, bool ReporterBlocked, Guid? BauakteId = null,
@@ -189,11 +292,25 @@ public enum OrderStatus { Draft, Ordered, Confirmed, Delivered, Cancelled }
 
 public sealed record Supplier(
     Guid Id, string Name, string? CustomerNumber, string? ContactName, string? Phone, string? Email, string? Street, string? PostalCode,
-    string? City, string? OrderNotes, bool IsActive, long Version);
+    string? City, string? OrderNotes, bool IsActive, long Version)
+{
+    public override string ToString() => Name;
+}
+
+public sealed record SaveSupplierRequest(
+    Guid Id, string Name, string? CustomerNumber, string? ContactName, string? Phone, string? Email, string? Street, string? PostalCode,
+    string? City, string? OrderNotes, bool IsActive = true);
 
 public sealed record Material(
     Guid Id, string Name, string? ArticleNumber, MaterialCategory Category, string Unit, Guid? SupplierId, string? SupplierName, decimal? Price,
-    string? Notes, bool IsActive, long Version);
+    string? Notes, bool IsActive, long Version)
+{
+    public override string ToString() => ArticleNumber is null ? Name : $"{Name} ({ArticleNumber})";
+}
+
+public sealed record SaveMaterialRequest(
+    Guid Id, string Name, MaterialCategory Category, string Unit, string? ArticleNumber, Guid? SupplierId, decimal? Price, string? Notes,
+    bool IsActive = true);
 
 public sealed record OrderLine(
     Guid Id, int Position, Guid? MaterialId, string? ArticleNumber, string Description, decimal Quantity, string Unit, decimal? UnitPrice, decimal? Total);
@@ -213,3 +330,5 @@ public sealed record SaveOrderRequest(
     IReadOnlyList<SaveOrderLineRequest>? Lines = null);
 
 public sealed record Company(string Name, string? Street, string? PostalCode, string? City, string? Phone, string? Email, string? Website, long Version);
+
+public sealed record SaveCompanyRequest(string Name, string? Street, string? PostalCode, string? City, string? Phone, string? Email, string? Website);

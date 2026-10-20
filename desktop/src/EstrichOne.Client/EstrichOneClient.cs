@@ -46,7 +46,10 @@ public sealed partial class EstrichOneClient : IDisposable
         DefaultIgnoreCondition = JsonIgnoreCondition.Never,
     };
 
+    private readonly HttpMessageHandler _handler;
+    private readonly bool _ownsHandler;
     private readonly HttpClient _http;
+    private readonly HttpClient _transfer;
     private readonly ITokenStore _tokens;
     private readonly string _clientName;
     private readonly SemaphoreSlim _refreshLock = new(1, 1);
@@ -55,13 +58,20 @@ public sealed partial class EstrichOneClient : IDisposable
     public EstrichOneClient(Uri serverUrl, ITokenStore tokens, HttpMessageHandler? handler = null, string clientName = "Windows")
     {
         ArgumentNullException.ThrowIfNull(serverUrl);
-        _http = handler is null ? new HttpClient() : new HttpClient(handler, disposeHandler: false);
-        _http.BaseAddress = new Uri(serverUrl.ToString().TrimEnd('/') + "/api/v1/");
-        _http.Timeout = TimeSpan.FromSeconds(60);
+        _ownsHandler = handler is null;
+        _handler = handler ?? new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) };
+        var baseAddress = new Uri(serverUrl.ToString().TrimEnd('/') + "/api/v1/");
+        _http = new HttpClient(_handler, disposeHandler: false) { BaseAddress = baseAddress, Timeout = TimeSpan.FromSeconds(60) };
         _http.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+        // Hoch- und Herunterladen großer Dateien (Videos bis 500 MB) braucht mehr Zeit als ein Fachaufruf.
+        _transfer = new HttpClient(_handler, disposeHandler: false) { BaseAddress = baseAddress, Timeout = TimeSpan.FromMinutes(30) };
+        ServerUrl = new Uri(serverUrl.GetLeftPart(UriPartial.Authority));
         _tokens = tokens;
         _clientName = clientName;
     }
+
+    /// <summary>Adresse des Servers (ohne Pfad).</summary>
+    public Uri ServerUrl { get; }
 
     /// <summary>Angemeldeter Benutzer, sobald <see cref="SignInAsync"/> oder <see cref="RestoreAsync"/> erfolgreich war.</summary>
     public UserSummary? User { get; private set; }
@@ -180,47 +190,66 @@ public sealed partial class EstrichOneClient : IDisposable
     internal async Task<T> SendAsync<T>(HttpMethod method, string path, object? body, bool authenticated = true,
         IReadOnlyDictionary<string, string>? headers = null, CancellationToken cancellationToken = default)
     {
-        var token = _accessToken;
-        using var response = await SendOnceAsync(method, path, body, authenticated ? token : null, headers, cancellationToken);
-        if (authenticated && response.StatusCode == HttpStatusCode.Unauthorized)
+        using var response = await SendRequestAsync(_http, () =>
         {
-            var error = await ToExceptionAsync(response, cancellationToken);
-            if (error.Code == "ACCESS_TOKEN_EXPIRED" && await RefreshAsync(token, cancellationToken))
+            var request = new HttpRequestMessage(method, path);
+            if (body is not null)
             {
-                using var retry = await SendOnceAsync(method, path, body, _accessToken, headers, cancellationToken);
-                return await ReadAsync<T>(retry, cancellationToken);
+                request.Content = JsonContent.Create(body, body.GetType(), options: Json);
             }
 
-            Clear();
-            SessionEnded?.Invoke(this, error.Code);
-            throw error;
-        }
+            foreach (var (name, value) in headers ?? new Dictionary<string, string>())
+            {
+                request.Headers.TryAddWithoutValidation(name, value);
+            }
 
+            return request;
+        }, authenticated, HttpCompletionOption.ResponseContentRead, cancellationToken);
         return await ReadAsync<T>(response, cancellationToken);
     }
 
-    private async Task<HttpResponseMessage> SendOnceAsync(HttpMethod method, string path, object? body, string? token,
-        IReadOnlyDictionary<string, string>? headers, CancellationToken cancellationToken)
+    /// <summary>
+    /// Anfrage mit Anmeldung senden; ein abgelaufenes Zugriffstoken wird einmal erneuert und die Anfrage mit neu erzeugtem
+    /// Inhalt wiederholt (<paramref name="build"/> wird dafür erneut aufgerufen). Der Aufrufer gibt die Antwort frei.
+    /// </summary>
+    internal async Task<HttpResponseMessage> SendRequestAsync(HttpClient http, Func<HttpRequestMessage> build, bool authenticated,
+        HttpCompletionOption completion, CancellationToken cancellationToken)
     {
-        using var request = new HttpRequestMessage(method, path);
-        if (body is not null)
+        var token = _accessToken;
+        var response = await SendOnceAsync(http, build, authenticated ? token : null, completion, cancellationToken);
+        if (!authenticated || response.StatusCode != HttpStatusCode.Unauthorized)
         {
-            request.Content = JsonContent.Create(body, body.GetType(), options: Json);
+            return response;
         }
 
+        ApiException error;
+        using (response)
+        {
+            error = await ToExceptionAsync(response, cancellationToken);
+        }
+
+        if (error.Code == "ACCESS_TOKEN_EXPIRED" && await RefreshAsync(token, cancellationToken))
+        {
+            return await SendOnceAsync(http, build, _accessToken, completion, cancellationToken);
+        }
+
+        Clear();
+        SessionEnded?.Invoke(this, error.Code);
+        throw error;
+    }
+
+    private static async Task<HttpResponseMessage> SendOnceAsync(HttpClient http, Func<HttpRequestMessage> build, string? token,
+        HttpCompletionOption completion, CancellationToken cancellationToken)
+    {
+        using var request = build();
         if (token is not null)
         {
             request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
         }
 
-        foreach (var (name, value) in headers ?? new Dictionary<string, string>())
-        {
-            request.Headers.TryAddWithoutValidation(name, value);
-        }
-
         try
         {
-            return await _http.SendAsync(request, cancellationToken);
+            return await http.SendAsync(request, completion, cancellationToken);
         }
         catch (HttpRequestException ex)
         {
@@ -228,7 +257,7 @@ public sealed partial class EstrichOneClient : IDisposable
         }
     }
 
-    private static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
+    internal static async Task<T> ReadAsync<T>(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         if (!response.IsSuccessStatusCode)
         {
@@ -243,7 +272,7 @@ public sealed partial class EstrichOneClient : IDisposable
         return (await response.Content.ReadFromJsonAsync<T>(Json, cancellationToken))!;
     }
 
-    private static async Task<ApiException> ToExceptionAsync(HttpResponseMessage response, CancellationToken cancellationToken)
+    internal static async Task<ApiException> ToExceptionAsync(HttpResponseMessage response, CancellationToken cancellationToken)
     {
         string? code = null;
         string? message = null;
@@ -281,6 +310,12 @@ public sealed partial class EstrichOneClient : IDisposable
     public void Dispose()
     {
         _http.Dispose();
+        _transfer.Dispose();
+        if (_ownsHandler)
+        {
+            _handler.Dispose();
+        }
+
         _refreshLock.Dispose();
     }
 }

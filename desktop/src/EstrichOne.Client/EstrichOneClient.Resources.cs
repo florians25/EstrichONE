@@ -10,11 +10,12 @@ public sealed partial class EstrichOneClient
     // Bauakten
 
     public Task<BauaktePage> ListBauaktenAsync(string? search = null, BauakteStatus? status = null, string? cursor = null, int limit = 100,
-        CancellationToken cancellationToken = default) =>
+        Guid? responsibleUserId = null, Guid? customerId = null, CancellationToken cancellationToken = default) =>
         GetAsync<BauaktePage>("bauakten", new Dictionary<string, string?>
         {
             ["search"] = search, ["status"] = status is null ? null : JsonEnum(status.Value), ["cursor"] = cursor,
-            ["limit"] = limit.ToString(CultureInfo.InvariantCulture),
+            ["limit"] = limit.ToString(CultureInfo.InvariantCulture), ["responsibleUserId"] = responsibleUserId?.ToString(),
+            ["customerId"] = customerId?.ToString(),
         }, cancellationToken);
 
     public Task<BauakteDetail> GetBauakteAsync(Guid id, CancellationToken cancellationToken = default) =>
@@ -73,20 +74,6 @@ public sealed partial class EstrichOneClient
 
     public Task<List<DiaryEntry>> GetDiaryAsync(Guid bauakteId, CancellationToken cancellationToken = default) =>
         GetAsync<List<DiaryEntry>>($"bauakten/{bauakteId}/diary", cancellationToken: cancellationToken);
-
-    /// <summary>Dateiinhalt (z. B. Vorschaubild <c>thumb</c>) als Datenstrom; der Aufrufer schließt ihn.</summary>
-    public async Task<byte[]> GetFileContentAsync(Guid fileId, string variant = "thumb", CancellationToken cancellationToken = default)
-    {
-        await EnsureFreshTokenAsync(cancellationToken);
-        using var request = new HttpRequestMessage(HttpMethod.Get, $"files/{fileId}/content?variant={variant}");
-        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", _accessToken);
-        using var response = await _http.SendAsync(request, cancellationToken);
-        response.EnsureSuccessStatusCode();
-        return await response.Content.ReadAsByteArrayAsync(cancellationToken);
-    }
-
-    /// <summary>Vor Binärabrufen sicherstellen, dass das Zugriffstoken gilt (ein günstiger Aufruf erneuert es bei Bedarf).</summary>
-    private Task<UserSummary> EnsureFreshTokenAsync(CancellationToken cancellationToken) => GetAsync<UserSummary>("auth/me", cancellationToken: cancellationToken);
 
     // Stammdaten und Verzeichnis
 
@@ -147,16 +134,22 @@ public sealed partial class EstrichOneClient
     public Task<CallRecord> SetInquiryStatusAsync(Guid id, InquiryStatus status, CancellationToken cancellationToken = default) =>
         SendAsync<CallRecord>(HttpMethod.Post, $"calls/{id}/status", new { status }, cancellationToken: cancellationToken);
 
-    public Task<ConvertInquiryResponse> ConvertInquiryAsync(Guid id, string? title = null, CancellationToken cancellationToken = default) =>
-        SendAsync<ConvertInquiryResponse>(HttpMethod.Post, $"calls/{id}/convert", new { title, createCustomer = true }, cancellationToken: cancellationToken);
+    /// <param name="createCustomer">Ohne verknüpften Kunden einen Kunden aus den Anruferdaten anlegen.</param>
+    public Task<ConvertInquiryResponse> ConvertInquiryAsync(Guid id, string? title = null, bool createCustomer = true, CancellationToken cancellationToken = default) =>
+        SendAsync<ConvertInquiryResponse>(HttpMethod.Post, $"calls/{id}/convert", new { title, createCustomer }, cancellationToken: cancellationToken);
 
     // Material
 
-    public Task<List<Supplier>> GetSuppliersAsync(CancellationToken cancellationToken = default) =>
-        GetAsync<List<Supplier>>("suppliers", cancellationToken: cancellationToken);
+    public Task<List<Supplier>> GetSuppliersAsync(bool includeInactive = false, CancellationToken cancellationToken = default) =>
+        GetAsync<List<Supplier>>("suppliers", new Dictionary<string, string?> { ["includeInactive"] = includeInactive ? "true" : null }, cancellationToken);
 
-    public Task<List<Material>> GetMaterialsAsync(string? search = null, CancellationToken cancellationToken = default) =>
-        GetAsync<List<Material>>("materials", new Dictionary<string, string?> { ["search"] = search }, cancellationToken);
+    public Task<List<Material>> GetMaterialsAsync(string? search = null, bool includeInactive = false, MaterialCategory? category = null,
+        Guid? supplierId = null, CancellationToken cancellationToken = default) =>
+        GetAsync<List<Material>>("materials", new Dictionary<string, string?>
+        {
+            ["search"] = search, ["includeInactive"] = includeInactive ? "true" : null,
+            ["category"] = category is null ? null : JsonEnum(category.Value), ["supplierId"] = supplierId?.ToString(),
+        }, cancellationToken);
 
     /// <param name="open">Nur Bestellt und Bestätigt.</param>
     public Task<List<MaterialOrder>> GetOrdersAsync(bool open = false, OrderStatus? status = null, Guid? bauakteId = null, DateOnly? from = null,
@@ -176,7 +169,7 @@ public sealed partial class EstrichOneClient
     public Task<Company> GetCompanyAsync(CancellationToken cancellationToken = default) =>
         GetAsync<Company>("company", cancellationToken: cancellationToken);
 
-    private static string JsonEnum<TEnum>(TEnum value) where TEnum : struct, Enum
+    internal static string JsonEnum<TEnum>(TEnum value) where TEnum : struct, Enum
     {
         var name = value.ToString();
         return char.ToLowerInvariant(name[0]) + name[1..];

@@ -122,9 +122,9 @@ public sealed partial class BauakteViewModel(AppSession session, Guid id) : Page
                 r.ScreedTypeName ?? "–", r.ThicknessMillimeters is { } t ? $"{t} mm" : "–", r.UnderfloorHeating ? "ja" : "nein", Labels.Of(r.Status))));
             RoomSummary = $"{rooms.Result.Rooms.Count} Räume · {Labels.Area(rooms.Result.TotalAreaSquareMeters)} gesamt · {Labels.Area(rooms.Result.HeatedAreaSquareMeters)} beheizt";
             Replace(WorkItems, work.Result.OrderBy(w => w.Status == WorkItemStatus.Done).ThenBy(w => w.DueDate).Select(w => new WorkItemRow(w)));
-            Replace(Files, files.Result.Where(f => f.State == "stored")
+            Replace(Files, files.Result.Where(f => f.IsStored)
                 .OrderByDescending(f => f.CreatedAt)
-                .Select(f => new FileRow(f.Id, f.Caption ?? f.OriginalName, KindLabel(f.Kind), Size(f.SizeBytes), Labels.DateTime(f.CreatedAt))));
+                .Select(f => new FileRow(f.Id, f.DisplayName, Labels.Of(f.Kind), FileTypes.Size(f.SizeBytes), Labels.DateTime(f.CreatedAt))));
             Replace(Orders, orders.Result.Select(o => new OrderRow(o.Id, o.Number,
                 o.DeliveryDate is { } d ? Labels.Date(d) + (o.DeliveryTime is { } t ? $", {t}" : string.Empty) : "nach Absprache", o.SupplierName,
                 string.Join(" · ", o.Lines.Select(l => $"{Labels.Quantity(l.Quantity)} {l.Unit} {l.Description}")), Labels.Money(o.Total), Labels.Of(o.Status))));
@@ -188,19 +188,6 @@ public sealed partial class BauakteViewModel(AppSession session, Guid id) : Page
     }
 
     private NoteRow ToRow(Note n) => new(n.Id, _people.GetValueOrDefault(n.AuthorUserId, "–"), n.Text, Labels.DateTime(n.CreatedAt), n.IsPinned);
-
-    private static string KindLabel(string kind) => kind switch
-    {
-        "photo" => "Foto",
-        "video" => "Video",
-        _ => "Dokument",
-    };
-
-    private static string Size(long bytes) => bytes switch
-    {
-        < 1024 * 1024 => $"{Math.Max(1, bytes / 1024)} KB",
-        _ => $"{bytes / (1024.0 * 1024):0.0} MB",
-    };
 
     private static void Replace<T>(ObservableCollection<T> target, IEnumerable<T> items)
     {
