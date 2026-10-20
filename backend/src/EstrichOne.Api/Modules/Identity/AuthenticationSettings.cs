@@ -19,4 +19,7 @@ public sealed class AuthenticationSettings
     public int MaxFailedLoginsPerAccount { get; set; } = 5;
     public int MaxFailedLoginsPerAddress { get; set; } = 20;
     public TimeSpan FailedLoginWindow { get; set; } = TimeSpan.FromMinutes(15);
+
+    /// <summary>Anfragen an /auth je IP-Adresse und Minute (Bremse vor der Kontosperre). Nur für Testumgebungen erhöhen.</summary>
+    public int RequestsPerMinutePerAddress { get; set; } = 20;
 }

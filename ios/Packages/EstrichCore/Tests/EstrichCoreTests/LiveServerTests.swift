@@ -250,4 +250,29 @@ struct LiveServerTests {
                                                 keys: SoftwareDeviceKeys(), api: service.api, diagnostics: nil)
         }
     }
+
+    @Test("Mein Einsatz: im Büro geplant, in der App sichtbar und offline zwischengespeichert")
+    func myPlanning() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let bauakte = try await service.create(NewBauakte(title: "Einsatz Integrationstest", city: "Landshut"))
+        #expect(await device.engine.synchronize() == .completed)
+
+        // Das Büro plant (hier derselbe Administrator) für heute.
+        let today = CalendarDay.string(Date())
+        let body = try JSONSerialization.data(withJSONObject: [
+            "bauakteId": bauakte.key, "day": today, "startTime": "07:00:00", "activity": "Estrich einbringen EG", "userIds": [device.userId.key],
+        ])
+        struct Saved: Decodable { let id: UUID }
+        let _: Saved = try await device.client.send(APIRequest(method: "PUT", path: "planning/assignments/\(UUID.v7().key)", body: body,
+                                                               contentType: "application/json"))
+
+        let planning = MyPlanning(store: device.store)
+        let online = try #require(await planning.load(using: device.client))
+        #expect(online.isCurrent)
+        let mine = online.assignments(on: today)
+        #expect(mine.contains { $0.bauakteId == bauakte && $0.activity == "Estrich einbringen EG" && $0.startText == "07:00" })
+        let offline = try #require(await planning.cached())
+        #expect(offline.assignments(on: today) == mine)
+    }
 }

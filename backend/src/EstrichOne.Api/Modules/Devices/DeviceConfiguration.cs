@@ -41,4 +41,7 @@ public sealed class DeviceSettings
     /// Poolgeräte warten immer auf einen Administrator (docs/reengineering/11, Abschnitt 2).
     /// </summary>
     public bool AutoApprovePersonalDevices { get; set; } = true;
+
+    /// <summary>Registrierungen je IP-Adresse und Minute. Nur für Testumgebungen erhöhen.</summary>
+    public int RegistrationsPerMinutePerAddress { get; set; } = 10;
 }

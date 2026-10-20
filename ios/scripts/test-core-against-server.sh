@@ -36,6 +36,9 @@ export ASPNETCORE_URLS="http://localhost:$PORT"
 export EstrichOne__PublicUrl="http://localhost:$PORT"
 export EstrichOne__ServerName="EstrichONE Integrationstest"
 export EstrichOne__Files__RootPath="$WORK/files"
+# Viele Anmeldungen in kurzer Zeit (je Test ein Gerät): Bremsen nur hier anheben.
+export EstrichOne__Authentication__RequestsPerMinutePerAddress=500
+export EstrichOne__Devices__RegistrationsPerMinutePerAddress=500
 dotnet publish "$ROOT/backend/src/EstrichOne.Api" -c Release -o "$WORK/api" --nologo -v quiet
 dotnet "$WORK/api/EstrichOne.Api.dll" migrate >/dev/null
 dotnet "$WORK/api/EstrichOne.Api.dll" >"$WORK/api.log" 2>&1 &

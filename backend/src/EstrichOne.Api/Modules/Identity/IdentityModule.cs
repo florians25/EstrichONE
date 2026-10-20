@@ -34,13 +34,14 @@ public sealed class IdentityModule : IModule
             .SetFallbackPolicy(approved)
             .AddPolicy(DeviceAuthorization.AllowPendingPolicy, policy => policy.RequireAuthenticatedUser());
 
-        // Zusätzliche Bremse vor der Kontosperre: je IP-Adresse höchstens 20 Anfragen pro Minute an /auth.
+        // Zusätzliche Bremse vor der Kontosperre: je IP-Adresse höchstens 20 Anfragen pro Minute an /auth (einstellbar).
+        var authPerMinute = configuration.GetSection(AuthenticationSettings.SectionName).GetValue(nameof(AuthenticationSettings.RequestsPerMinutePerAddress), 20);
         services.AddRateLimiter(limiter =>
         {
             limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
             limiter.AddPolicy(AuthEndpoints.RateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
                 http.Connection.RemoteIpAddress?.ToString() ?? "unbekannt",
-                _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
         });
     }
 
