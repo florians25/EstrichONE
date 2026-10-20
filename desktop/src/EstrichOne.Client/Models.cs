@@ -125,10 +125,13 @@ public sealed record AssignmentPerson(Guid Id, string Name);
 
 public sealed record AssignmentResource(Guid Id, string Name, ResourceKind Kind);
 
+public enum AssignmentKind { Screed, InitialInspection, SecondInspection, CmMeasurement, Acceptance, Survey, Check, CustomerAppointment, Delivery, Other }
+
 public sealed record Assignment(
     Guid Id, DateOnly Day, TimeOnly? StartTime, string Activity, Guid BauakteId, string? BauakteNumber, string BauakteTitle,
     string? BauakteAddress, Guid? CrewId, string? CrewName, string? CrewColor, IReadOnlyList<AssignmentPerson> People,
-    IReadOnlyList<AssignmentResource> Resources, string? Notes, IReadOnlyList<string> Warnings, long Version);
+    IReadOnlyList<AssignmentResource> Resources, string? Notes, IReadOnlyList<string> Warnings, long Version,
+    AssignmentKind Kind = AssignmentKind.Screed, TimeOnly? EndTime = null, BauakteStatus? BauakteStatus = null);
 
 public sealed record Absence(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, AbsenceKind Kind, string? Note);
 
@@ -148,3 +151,65 @@ public sealed record TicketDetail(
 public sealed record CreateTicketRequest(
     Guid Id, string Title, string? Description, TicketCategory Category, TicketSource Source, bool ReporterBlocked, Guid? BauakteId = null,
     IReadOnlyDictionary<string, object?>? Diagnostics = null);
+
+// Büro: Anrufe und Anfragen
+
+public enum CallKind { Call, Inquiry }
+
+public enum CallDirection { Inbound, Outbound }
+
+public enum CallSource { Phone, Email, Website, Personal, Other }
+
+public enum CallPriority { Low, Normal, High }
+
+public enum InquiryStatus { Open, InProgress, Converted, Cancelled }
+
+public sealed record CallRecord(
+    Guid Id, CallKind Kind, CallDirection Direction, CallSource Source, CallPriority Priority, string? CallerName, string? CallerPhone,
+    string? CallerEmail, string? Company, Guid? CustomerId, string? CustomerName, Guid? BauakteId, string? BauakteLabel, string? Subject,
+    string? Notes, bool FollowUp, DateOnly? DueDate, string? NextStep, InquiryStatus InquiryStatus, decimal? AreaSquareMeters, string? ScreedType,
+    DateOnly? DesiredStart, string? SiteStreet, string? SitePostalCode, string? SiteCity, Guid? ConvertedBauakteId, string? ConvertedBauakteNumber,
+    Guid HandledByUserId, string? HandledByName, DateTimeOffset CalledAt, DateTimeOffset UpdatedAt, long Version);
+
+/// <summary>Anruf oder Anfrage speichern (PUT ersetzt alle Felder).</summary>
+public sealed record SaveCallRequest(
+    Guid Id, CallKind Kind, CallDirection Direction = CallDirection.Inbound, CallSource Source = CallSource.Phone,
+    CallPriority Priority = CallPriority.Normal, string? CallerName = null, string? CallerPhone = null, string? CallerEmail = null,
+    string? Company = null, Guid? CustomerId = null, Guid? BauakteId = null, string? Subject = null, string? Notes = null, bool FollowUp = false,
+    DateOnly? DueDate = null, string? NextStep = null, decimal? AreaSquareMeters = null, string? ScreedType = null, DateOnly? DesiredStart = null,
+    string? SiteStreet = null, string? SitePostalCode = null, string? SiteCity = null, DateTimeOffset? CalledAt = null);
+
+public sealed record ConvertInquiryResponse(CallRecord Inquiry, Guid BauakteId, string? BauakteNumber);
+
+// Material
+
+public enum MaterialCategory { Screed, Binder, Aggregate, Insulation, Membrane, EdgeStrip, Additive, Other }
+
+public enum OrderStatus { Draft, Ordered, Confirmed, Delivered, Cancelled }
+
+public sealed record Supplier(
+    Guid Id, string Name, string? CustomerNumber, string? ContactName, string? Phone, string? Email, string? Street, string? PostalCode,
+    string? City, string? OrderNotes, bool IsActive, long Version);
+
+public sealed record Material(
+    Guid Id, string Name, string? ArticleNumber, MaterialCategory Category, string Unit, Guid? SupplierId, string? SupplierName, decimal? Price,
+    string? Notes, bool IsActive, long Version);
+
+public sealed record OrderLine(
+    Guid Id, int Position, Guid? MaterialId, string? ArticleNumber, string Description, decimal Quantity, string Unit, decimal? UnitPrice, decimal? Total);
+
+public sealed record MaterialOrder(
+    Guid Id, string Number, OrderStatus Status, Guid SupplierId, string SupplierName, string? SupplierCustomerNumber, string? SupplierEmail,
+    string? SupplierPhone, Guid? BauakteId, string? BauakteNumber, string? BauakteTitle, DateOnly? DeliveryDate, string? DeliveryTime,
+    string? DeliveryStreet, string? DeliveryPostalCode, string? DeliveryCity, string? SiteContact, string? Notes, IReadOnlyList<OrderLine> Lines,
+    decimal? Total, Guid CreatedByUserId, string? CreatedByName, DateTimeOffset? OrderedAt, DateTimeOffset? DeliveredAt, DateTimeOffset UpdatedAt,
+    long Version);
+
+public sealed record SaveOrderLineRequest(Guid Id, Guid? MaterialId, string Description, decimal Quantity, string Unit, decimal? UnitPrice = null);
+
+public sealed record SaveOrderRequest(
+    Guid Id, Guid SupplierId, Guid? BauakteId = null, DateOnly? DeliveryDate = null, string? DeliveryTime = null, string? DeliveryStreet = null,
+    string? DeliveryPostalCode = null, string? DeliveryCity = null, string? SiteContact = null, string? Notes = null,
+    IReadOnlyList<SaveOrderLineRequest>? Lines = null);
+
+public sealed record Company(string Name, string? Street, string? PostalCode, string? City, string? Phone, string? Email, string? Website, long Version);

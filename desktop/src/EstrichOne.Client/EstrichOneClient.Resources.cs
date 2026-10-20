@@ -128,6 +128,54 @@ public sealed partial class EstrichOneClient
     public Task<TicketDetail> ReportProblemAsync(CreateTicketRequest request, CancellationToken cancellationToken = default) =>
         SendAsync<TicketDetail>(HttpMethod.Post, "tickets", request, cancellationToken: cancellationToken);
 
+    // Büro: Anrufe und Anfragen
+
+    public Task<List<CallRecord>> GetCallsAsync(CallKind? kind = null, bool due = false, bool open = false, string? search = null, Guid? bauakteId = null,
+        int limit = 200, CancellationToken cancellationToken = default) =>
+        GetAsync<List<CallRecord>>("calls", new Dictionary<string, string?>
+        {
+            ["kind"] = kind is null ? null : JsonEnum(kind.Value), ["due"] = due ? "true" : null, ["open"] = open ? "true" : null,
+            ["search"] = search, ["bauakteId"] = bauakteId?.ToString(), ["limit"] = limit.ToString(CultureInfo.InvariantCulture),
+        }, cancellationToken);
+
+    public Task<CallRecord> SaveCallAsync(SaveCallRequest request, CancellationToken cancellationToken = default) =>
+        SendAsync<CallRecord>(HttpMethod.Put, $"calls/{request.Id}", request, cancellationToken: cancellationToken);
+
+    public Task<CallRecord> CompleteFollowUpAsync(Guid id, CancellationToken cancellationToken = default) =>
+        SendAsync<CallRecord>(HttpMethod.Post, $"calls/{id}/follow-up-done", null, cancellationToken: cancellationToken);
+
+    public Task<CallRecord> SetInquiryStatusAsync(Guid id, InquiryStatus status, CancellationToken cancellationToken = default) =>
+        SendAsync<CallRecord>(HttpMethod.Post, $"calls/{id}/status", new { status }, cancellationToken: cancellationToken);
+
+    public Task<ConvertInquiryResponse> ConvertInquiryAsync(Guid id, string? title = null, CancellationToken cancellationToken = default) =>
+        SendAsync<ConvertInquiryResponse>(HttpMethod.Post, $"calls/{id}/convert", new { title, createCustomer = true }, cancellationToken: cancellationToken);
+
+    // Material
+
+    public Task<List<Supplier>> GetSuppliersAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<List<Supplier>>("suppliers", cancellationToken: cancellationToken);
+
+    public Task<List<Material>> GetMaterialsAsync(string? search = null, CancellationToken cancellationToken = default) =>
+        GetAsync<List<Material>>("materials", new Dictionary<string, string?> { ["search"] = search }, cancellationToken);
+
+    /// <param name="open">Nur Bestellt und Bestätigt.</param>
+    public Task<List<MaterialOrder>> GetOrdersAsync(bool open = false, OrderStatus? status = null, Guid? bauakteId = null, DateOnly? from = null,
+        DateOnly? to = null, string? search = null, CancellationToken cancellationToken = default) =>
+        GetAsync<List<MaterialOrder>>("material-orders", new Dictionary<string, string?>
+        {
+            ["open"] = open ? "true" : null, ["status"] = status is null ? null : JsonEnum(status.Value), ["bauakteId"] = bauakteId?.ToString(),
+            ["from"] = from is { } f ? Day(f) : null, ["to"] = to is { } t ? Day(t) : null, ["search"] = search,
+        }, cancellationToken);
+
+    public Task<MaterialOrder> SaveOrderAsync(SaveOrderRequest request, CancellationToken cancellationToken = default) =>
+        SendAsync<MaterialOrder>(HttpMethod.Put, $"material-orders/{request.Id}", request, cancellationToken: cancellationToken);
+
+    public Task<MaterialOrder> SetOrderStatusAsync(Guid id, OrderStatus status, CancellationToken cancellationToken = default) =>
+        SendAsync<MaterialOrder>(HttpMethod.Post, $"material-orders/{id}/status", new { status }, cancellationToken: cancellationToken);
+
+    public Task<Company> GetCompanyAsync(CancellationToken cancellationToken = default) =>
+        GetAsync<Company>("company", cancellationToken: cancellationToken);
+
     private static string JsonEnum<TEnum>(TEnum value) where TEnum : struct, Enum
     {
         var name = value.ToString();

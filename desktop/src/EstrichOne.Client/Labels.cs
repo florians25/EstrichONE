@@ -64,6 +64,43 @@ public static class Labels
         _ => "Abwesend",
     };
 
+    public static string Of(AssignmentKind kind) => kind switch
+    {
+        AssignmentKind.Screed => "Estrich / Ausführung",
+        AssignmentKind.InitialInspection => "Erstbegehung",
+        AssignmentKind.SecondInspection => "Zweitbegehung",
+        AssignmentKind.CmMeasurement => "CM-Messung",
+        AssignmentKind.Acceptance => "Abnahme",
+        AssignmentKind.Survey => "Aufmaß",
+        AssignmentKind.Check => "Kontrolle",
+        AssignmentKind.CustomerAppointment => "Kundentermin",
+        AssignmentKind.Delivery => "Lieferung",
+        _ => "Sonstiges",
+    };
+
+    public static string Of(InquiryStatus status) => status switch
+    {
+        InquiryStatus.Open => "Offen",
+        InquiryStatus.InProgress => "In Bearbeitung",
+        InquiryStatus.Converted => "Bauakte erstellt",
+        _ => "Abgebrochen",
+    };
+
+    public static string Of(OrderStatus status) => status switch
+    {
+        OrderStatus.Draft => "Entwurf",
+        OrderStatus.Ordered => "Bestellt",
+        OrderStatus.Confirmed => "Bestätigt",
+        OrderStatus.Delivered => "Geliefert",
+        _ => "Storniert",
+    };
+
+    public static string Money(decimal? value) => value is { } v ? v.ToString("C", German) : "–";
+
+    public static string Quantity(decimal value) => value.ToString("0.###", German);
+
+    public static string Time(TimeOnly? value) => value is { } t ? t.ToString("HH:mm", German) : string.Empty;
+
     public static string Area(decimal squareMeters) => squareMeters.ToString("N2", German) + " m²";
 
     public static string DateTime(DateTimeOffset? value) =>

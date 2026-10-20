@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\EstrichOne.Client\EstrichOne.Client.csproj" />
+    <ProjectReference Include="..\..\src\EstrichOne.Desktop.Core\EstrichOne.Desktop.Core.csproj" />
     <ProjectReference Include="..\..\..\backend\src\EstrichOne.Api\EstrichOne.Api.csproj" />
   </ItemGroup>
   <ItemGroup>

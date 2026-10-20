@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- ViewModels und Dienste der Windows-App ohne WinUI-Abhängigkeit: auf Linux gegen den echten Server testbar. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>EstrichOne.Desktop</RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../EstrichOne.Client/EstrichOne.Client.csproj" />
+  </ItemGroup>
+</Project>
