@@ -15,7 +15,12 @@ namespace EstrichOne.Api.Modules.Bauakten;
 
 public sealed record BauakteListItem(
     Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City,
-    Guid? CustomerId, DateTimeOffset UpdatedAt, long Version);
+    Guid? CustomerId, DateTimeOffset UpdatedAt, long Version, Guid? ResponsibleUserId, double? Latitude, double? Longitude);
+
+/// <summary>Baustelle mit Standort für die Kartenansicht.</summary>
+public sealed record BauakteMapPoint(
+    Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? City, double Latitude, double Longitude,
+    Guid? ResponsibleUserId);
 
 public sealed record BauaktePage(IReadOnlyList<BauakteListItem> Items, string? NextCursor);
 
@@ -62,6 +67,10 @@ internal static class BauakteEndpoints
 
         group.MapGet("/", ListAsync).WithName("ListBauakten")
             .WithSummary("Sichtbare Bauakten, neueste Änderung zuerst")
+            .RequirePermission(Permissions.BauaktenRead);
+
+        group.MapGet("/map", MapPointsAsync).WithName("ListBauakteMapPoints")
+            .WithSummary("Sichtbare Baustellen mit Standort; ohne abgeschlossene und stornierte, außer mit all=true")
             .RequirePermission(Permissions.BauaktenRead);
 
         group.MapGet("/{id:guid}", GetAsync).WithName("GetBauakte")
@@ -129,12 +138,32 @@ internal static class BauakteEndpoints
 
         var rows = await query.OrderByDescending(b => b.UpdatedAt).ThenByDescending(b => b.Id)
             .Take(pageSize + 1)
-            .Select(b => new BauakteListItem(b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.CustomerId, b.UpdatedAt, b.Version))
+            .Select(b => new BauakteListItem(b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.CustomerId, b.UpdatedAt, b.Version,
+                b.ResponsibleUserId, b.Latitude, b.Longitude))
             .ToListAsync(cancellationToken);
 
         var hasMore = rows.Count > pageSize;
         var items = rows.Take(pageSize).ToList();
         return TypedResults.Ok(new BauaktePage(items, hasMore ? EncodeCursor(items[^1].UpdatedAt, items[^1].Id) : null));
+    }
+
+    private const int MaxMapPoints = 2000;
+
+    private static async Task<Ok<List<BauakteMapPoint>>> MapPointsAsync(
+        EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken, [FromQuery] bool all = false)
+    {
+        var query = (await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken))
+            .Where(b => b.Latitude != null && b.Longitude != null);
+        if (!all)
+        {
+            query = query.Where(b => b.Status != BauakteStatus.Completed && b.Status != BauakteStatus.Cancelled);
+        }
+
+        var points = await query.OrderByDescending(b => b.UpdatedAt).Take(MaxMapPoints)
+            .Select(b => new BauakteMapPoint(b.Id, b.Number, b.Title, b.Status, b.Street, b.City, b.Latitude!.Value, b.Longitude!.Value,
+                b.ResponsibleUserId))
+            .ToListAsync(cancellationToken);
+        return TypedResults.Ok(points);
     }
 
     private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> GetAsync(

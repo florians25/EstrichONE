@@ -1,10 +1,11 @@
-import { FileAddOutlined, InboxOutlined } from '@ant-design/icons';
+import { EnvironmentOutlined, FileAddOutlined, InboxOutlined } from '@ant-design/icons';
 import { ModalForm, PageContainer, ProFormText, ProFormTextArea, ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
-import { App, Button, Form, Space } from 'antd';
+import { useQuery } from '@tanstack/react-query';
+import { App, Button, Form, Space, Tooltip } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { get, post, problemMessage } from '../api/client';
-import type { BauakteDetail, BauakteListItem, BauaktePage, BauakteStatus } from '../api/models';
+import type { BauakteDetail, BauakteListItem, BauaktePage, BauakteStatus, DirectoryUser } from '../api/models';
 import { useAuth } from '../auth/AuthContext';
 import { CustomerSelect } from '../shared/CustomerSelect';
 import { uuidv7 } from '../shared/ids';
@@ -28,6 +29,7 @@ export default function BauaktenPage() {
   const action = useRef<ActionType>(undefined);
   const cursors = useRef<Record<number, string | null>>({ 1: null });
   const [creating, setCreating] = useState<'planned' | 'inquiry' | null>(null);
+  const people = useQuery({ queryKey: ['directory'], queryFn: () => get<DirectoryUser[]>('directory/users'), staleTime: 60_000 });
   const status = (params.get('status') as BauakteStatus | null) ?? undefined;
   const search = params.get('search') ?? undefined;
 
@@ -46,7 +48,15 @@ export default function BauaktenPage() {
   const columns: ProColumns<BauakteListItem>[] = [
     { title: 'Nummer', dataIndex: 'number', width: 110, render: (_, r) => <span className="tabular">{r.number ?? 'neu'}</span>, search: false },
     { title: 'Bauvorhaben', dataIndex: 'title', render: (_, r) => <Link to={`/bauakten/${r.id}`}>{r.title}</Link>, search: false },
-    { title: 'Baustelle', key: 'address', render: (_, r) => address(r), search: false },
+    {
+      title: 'Baustelle', key: 'address', search: false, render: (_, r) => (
+        <Space size={6}>
+          {r.latitude !== null && <Tooltip title="Standort bekannt"><EnvironmentOutlined style={{ color: '#0B2D5B' }} aria-label="Standort bekannt" /></Tooltip>}
+          {address(r)}
+        </Space>
+      ),
+    },
+    { title: 'Zuständig', dataIndex: 'responsibleUserId', width: 170, search: false, render: (_, r) => people.data?.find((p) => p.id === r.responsibleUserId)?.displayName ?? '–' },
     { title: 'Status', dataIndex: 'status', width: 190, render: (_, r) => <BauakteStatusTag status={r.status} />, search: false },
     { title: 'Geändert', dataIndex: 'updatedAt', width: 170, align: 'right', render: (_, r) => <span className="tabular">{formatDateTime(r.updatedAt)}</span>, search: false },
   ];
@@ -96,10 +106,10 @@ export default function BauaktenPage() {
             items: [{ key: 'all', label: 'Alle' }, ...(['inquiry', 'planned', 'inProgress', 'drying', 'completed'] as BauakteStatus[]).map((s) => ({ key: s, label: bauakteStatusLabels[s] }))],
             onChange: (key) => setFilter({ status: key === 'all' ? undefined : String(key) }),
           },
-          actions: has('bauakten.create') ? [
+          actions: [<Button key="map" icon={<EnvironmentOutlined />} onClick={() => navigate('/bauakten/karte')}>Karte</Button>].concat(has('bauakten.create') ? [
             <Button key="inquiry" icon={<InboxOutlined />} onClick={() => setCreating('inquiry')}>Neue Anfrage</Button>,
             <Button key="new" type="primary" icon={<FileAddOutlined />} onClick={() => setCreating('planned')}>Neue Bauakte</Button>,
-          ] : [],
+          ] : []),
         }}
         request={async ({ current = 1 }) => {
           const cursor = cursors.current[current] ?? null;

@@ -37,6 +37,38 @@ export interface BauakteListItem {
   customerId: string | null;
   updatedAt: string;
   version: number;
+  responsibleUserId: string | null;
+  latitude: number | null;
+  longitude: number | null;
+}
+
+export interface BauakteMapPoint {
+  id: string;
+  number: string | null;
+  title: string;
+  status: BauakteStatus;
+  street: string | null;
+  city: string | null;
+  latitude: number;
+  longitude: number;
+  responsibleUserId: string | null;
+}
+
+export interface AuditLogItem {
+  id: string;
+  occurredAt: string;
+  action: string;
+  actorUserId: string | null;
+  actorName: string | null;
+  entityType: string | null;
+  entityId: string | null;
+  ipAddress: string | null;
+  details: Record<string, string | null>;
+}
+
+export interface AuditLogPage {
+  items: AuditLogItem[];
+  nextCursor: string | null;
 }
 
 export interface BauaktePage {

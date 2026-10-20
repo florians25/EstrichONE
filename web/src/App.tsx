@@ -18,6 +18,8 @@ const DevicesPage = lazy(() => import('./pages/DevicesPage'));
 const HelpdeskPage = lazy(() => import('./pages/HelpdeskPage'));
 const TicketPage = lazy(() => import('./pages/TicketPage'));
 const BackupPage = lazy(() => import('./pages/BackupPage'));
+const SiteMapPage = lazy(() => import('./pages/SiteMapPage'));
+const AuditPage = lazy(() => import('./pages/AuditPage'));
 
 const loading = <div style={{ display: 'grid', placeItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
 
@@ -53,6 +55,7 @@ export function App() {
           <Route path="start" element={<StartPage />} />
           <Route path="konto/passwort" element={<ChangePasswordPage />} />
           <Route path="bauakten" element={<Permitted permission="bauakten.read"><BauaktenPage /></Permitted>} />
+          <Route path="bauakten/karte" element={<Permitted permission="bauakten.read"><SiteMapPage /></Permitted>} />
           <Route path="bauakten/:id" element={<Permitted permission="bauakten.read"><BauaktePage /></Permitted>} />
           <Route path="kunden" element={<Permitted permission="contacts.read"><CustomersPage /></Permitted>} />
           <Route path="planung" element={<Permitted permission="planning.read"><PlanningPage /></Permitted>} />
@@ -62,6 +65,7 @@ export function App() {
           <Route path="it-center/helpdesk" element={<Permitted permission="helpdesk.agent"><HelpdeskPage /></Permitted>} />
           <Route path="it-center/helpdesk/:id" element={<Permitted permission="helpdesk.agent"><TicketPage /></Permitted>} />
           <Route path="system/sicherung" element={<Permitted permission="backup.manage"><BackupPage /></Permitted>} />
+          <Route path="system/protokoll" element={<Permitted permission="audit.read"><AuditPage /></Permitted>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

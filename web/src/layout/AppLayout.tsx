@@ -1,5 +1,6 @@
 import {
-  AppstoreOutlined, CalendarOutlined, CarOutlined, CloudServerOutlined, CustomerServiceOutlined, FileSearchOutlined, InboxOutlined,
+  AppstoreOutlined, AuditOutlined, CalendarOutlined, CarOutlined, CloudServerOutlined, CustomerServiceOutlined, EnvironmentOutlined,
+  FileSearchOutlined, InboxOutlined,
   KeyOutlined, LogoutOutlined, MobileOutlined, ProjectOutlined, SearchOutlined, TeamOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { ProLayout, type MenuDataItem } from '@ant-design/pro-components';
@@ -25,6 +26,7 @@ const navigation: NavEntry[] = [
     path: '/auftraege', name: 'Auftragsbearbeitung', children: [
       { path: '/bauakten?status=inquiry', name: 'Anfragen', icon: <InboxOutlined />, permission: 'bauakten.read' },
       { path: '/bauakten', name: 'Bauakten', icon: <ProjectOutlined />, permission: 'bauakten.read' },
+      { path: '/bauakten/karte', name: 'Baustellenkarte', icon: <EnvironmentOutlined />, permission: 'bauakten.read' },
       { path: '/planung', name: 'Planung', icon: <CalendarOutlined />, permission: 'planning.read' },
     ],
   },
@@ -41,7 +43,8 @@ const navigation: NavEntry[] = [
       { path: '/it-center/helpdesk', name: 'Helpdesk', icon: <CustomerServiceOutlined />, permission: 'helpdesk.agent' },
     ],
   },
-  { path: '/system', name: 'System', children: [{ path: '/system/sicherung', name: 'Sicherung', icon: <CloudServerOutlined />, permission: 'backup.manage' }] },
+  { path: '/system', name: 'System', children: [{ path: '/system/sicherung', name: 'Sicherung', icon: <CloudServerOutlined />, permission: 'backup.manage' },
+    { path: '/system/protokoll', name: 'Protokoll', icon: <AuditOutlined />, permission: 'audit.read' }] },
 ];
 
 function Logo() {

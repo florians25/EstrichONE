@@ -13,7 +13,5 @@ public sealed class AuditModule : IModule
         services.AddScoped<IAuditQueries, AuditQueries>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api)
-    {
-    }
+    public void MapEndpoints(IEndpointRouteBuilder api) => AuditEndpoints.Map(api);
 }

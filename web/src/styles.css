@@ -25,3 +25,18 @@ body { background: #f0f2f5; }
 .board-time { color: rgba(0,0,0,.45); font-size: 11px; }
 .board-add { align-self: flex-start; }
 .ticket-internal { background: #fffbe6; padding: 4px 8px; border-radius: 4px; }
+.photo-grid-small { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); }
+.clickable { cursor: pointer; }
+.clickable:hover { background: #fafcff; }
+.leaflet-container { font: inherit; }
+.board-drop { background: #e6f4ff !important; outline: 2px dashed #1677ff; outline-offset: -3px; }
+.board-item[draggable="true"] { cursor: grab; }
+@media print {
+  .ant-pro-sider, .ant-layout-sider, .ant-pro-layout-header, .ant-layout-header, .ant-pro-global-header, .ant-page-header-heading-extra,
+  .board-add, .ant-pro-layout-footer, footer, .ant-alert { display: none !important; }
+  .ant-pro-layout .ant-layout { margin: 0 !important; padding: 0 !important; background: #fff !important; }
+  .ant-pro-layout-container, .ant-pro-layout-content { margin: 0 !important; padding: 0 !important; }
+  .board-row { min-width: 0; grid-template-columns: 120px repeat(6, 1fr); }
+  .board-item { box-shadow: none; break-inside: avoid; }
+  body { background: #fff; }
+}

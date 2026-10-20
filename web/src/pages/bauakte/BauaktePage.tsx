@@ -11,6 +11,7 @@ import { CustomerSelect } from '../../shared/CustomerSelect';
 import { address, BauakteStatusTag, bauakteStatusLabels, formatDateTime } from '../../shared/status';
 import { BauakteFiles } from './Files';
 import { BauakteNotes } from './Notes';
+import { BauakteOverview } from './Overview';
 import { BauakteRecords } from './Records';
 import { BauakteRooms } from './Rooms';
 import { BauakteWork } from './Work';
@@ -24,6 +25,8 @@ interface EditForm {
   city?: string;
   responsibleUserId: string | null;
   description?: string;
+  latitude?: number | null;
+  longitude?: number | null;
 }
 
 /** Bauakte im Büro (AP-18): Stammdaten, Räume, Aufgaben, Notizen, Dateien, Prüfungen, Verlauf. */
@@ -61,7 +64,8 @@ export default function BauaktePage() {
     try {
       const updated = await put<BauakteDetail>(`bauakten/${b.id}`, {
         title: (values.title ?? b.title).trim(), status: values.status ?? b.status, street: values.street ?? b.street ?? null,
-        postalCode: values.postalCode ?? b.postalCode ?? null, city: values.city ?? b.city ?? null, latitude: b.latitude, longitude: b.longitude,
+        postalCode: values.postalCode ?? b.postalCode ?? null, city: values.city ?? b.city ?? null,
+        latitude: 'latitude' in values ? values.latitude ?? null : b.latitude, longitude: 'longitude' in values ? values.longitude ?? null : b.longitude,
         description: values.description ?? b.description ?? null,
         customerId: 'customerId' in values ? values.customerId ?? null : b.customerId,
         responsibleUserId: 'responsibleUserId' in values ? values.responsibleUserId ?? null : b.responsibleUserId,
@@ -113,7 +117,8 @@ export default function BauaktePage() {
       ]}
     >
       {tab === 'overview' && (
-        <Card title="Beschreibung" size="small"><Typography.Paragraph className="pre" style={{ margin: 0 }}>{b.description ?? 'Keine Beschreibung.'}</Typography.Paragraph></Card>
+        <BauakteOverview bauakte={b} canEdit={canEdit} onTab={setTab}
+          onLocation={(latitude, longitude) => save({ latitude, longitude })} />
       )}
       {tab === 'rooms' && <BauakteRooms bauakteId={b.id} canEdit={canEdit} />}
       {tab === 'work' && <BauakteWork bauakteId={b.id} canEdit={has('work.edit')} people={people.data ?? []} />}

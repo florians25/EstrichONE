@@ -279,6 +279,41 @@ test('Kunden: Kundenstamm durchsuchen und bearbeiten', async ({ page }) => {
   await expect(page.getByRole('row', { name: /Familie Kraus/ })).toContainText('0871 123456');
 });
 
+test('Standort per Karte festlegen, Baustellenkarte zeigt die Bauakte', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await nav(page, 'Bauakten').click();
+  await page.getByRole('link', { name: 'Anfrage Familie Kraus, Heizestrich' }).click();
+  await expect(page.getByText('Offene Aufgaben', { exact: true })).toBeVisible();
+  await expect(page.getByText('Letzte CM-Messung')).toBeVisible();
+  await page.getByRole('button', { name: 'Standort festlegen' }).click();
+  await page.getByRole('region', { name: 'Karte' }).click({ position: { x: 200, y: 150 } });
+  await page.getByRole('button', { name: 'Standort speichern' }).click();
+  await expect(page.getByRole('button', { name: 'Standort ändern' })).toBeVisible();
+
+  await nav(page, 'Baustellenkarte').click();
+  await expect(pageTitle(page)).toHaveText('Baustellenkarte');
+  await expect(page.locator('.ant-list').getByText('Anfrage Familie Kraus, Heizestrich')).toBeVisible();
+  await expect(page.locator('.leaflet-interactive')).toHaveCount(1);
+});
+
+test('Plantafel: Einsatz per Ziehen auf einen anderen Tag verschieben', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await nav(page, 'Planung').click();
+  const item = page.getByRole('button', { name: /Estrich einbringen EG, EFH Prüfung E2E/ });
+  const target = page.getByRole('button', { name: /^Einsatz planen: Kolonne Admin, Mittwoch/ }).locator('xpath=..');
+  await item.dragTo(target);
+  await expect(page.locator('.ant-message')).toContainText('verschoben');
+  await expect(target.getByRole('button', { name: /Estrich einbringen EG/ })).toBeVisible();
+});
+
+test('Protokoll: Anmeldungen und Änderungen sind nachvollziehbar', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await nav(page, 'Protokoll').click();
+  await expect(pageTitle(page)).toHaveText('Protokoll');
+  await choose(page, page.getByRole('combobox', { name: 'Bereich', exact: true }), 'Benutzer');
+  await expect(page.getByRole('row', { name: /Benutzer angelegt/ }).first()).toContainText('Anna Admin');
+});
+
 async function signIn(page: Page, login: string, password: string) {
   await page.goto('/anmelden');
   await page.getByLabel('Anmeldename oder E-Mail').fill(login);

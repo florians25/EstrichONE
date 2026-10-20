@@ -32,6 +32,8 @@ test('Bildschirmfotos', async ({ page }) => {
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screenshots/bauakten.png', fullPage: true });
   await page.getByRole('link', { name: /Anfrage Familie Kraus/ }).click();
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: 'test-results/screenshots/bauakte-overview.png', fullPage: true });
   await page.getByRole('tab', { name: 'Räume und Flächen' }).click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screenshots/rooms.png', fullPage: true });
@@ -42,6 +44,12 @@ test('Bildschirmfotos', async ({ page }) => {
   await page.getByRole('row', { name: /Drucker/ }).getByRole('link').click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screenshots/ticket.png', fullPage: true });
+  await nav(page, 'Baustellenkarte').click();
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: 'test-results/screenshots/sitemap.png' });
+  await nav(page, 'Protokoll').click();
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: 'test-results/screenshots/audit.png' });
   await nav(page, 'Kunden').click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screenshots/customers.png' });

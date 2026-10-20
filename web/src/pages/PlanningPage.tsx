@@ -1,4 +1,4 @@
-import { CalendarOutlined, DeleteOutlined, LeftOutlined, PlusOutlined, RightOutlined, SettingOutlined, WarningOutlined } from '@ant-design/icons';
+import { CalendarOutlined, DeleteOutlined, LeftOutlined, PlusOutlined, PrinterOutlined, RightOutlined, SettingOutlined, WarningOutlined } from '@ant-design/icons';
 import { PageContainer } from '@ant-design/pro-components';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, Card, DatePicker, Form, Input, Modal, Select, Space, Tag, TimePicker, Tooltip, Typography } from 'antd';
@@ -151,6 +151,9 @@ export default function PlanningPage() {
   const days = Array.from({ length: 6 }, (_, i) => addDays(week, i));
   const canPlan = has('planning.manage');
   const [editing, setEditing] = useState<Editing | null>(null);
+  const [dropTarget, setDropTarget] = useState<string | null>(null);
+  const { message } = App.useApp();
+  const queries = useQueryClient();
 
   const range = useQuery({ queryKey: ['planning', week], queryFn: () => get<PlanningRange>('planning/range', { from: week, to: addDays(week, 6) }) });
   const crews = useQuery({ queryKey: ['crews'], queryFn: () => get<CrewResponse[]>('planning/crews') });
@@ -160,6 +163,34 @@ export default function PlanningPage() {
   const activeCrews = (crews.data ?? []).filter((c) => c.isActive);
   const lanes = [...activeCrews.map((c) => ({ id: c.id as string | null, name: c.name, color: c.color })), { id: null, name: 'Einzeln eingeplant', color: null }];
   const assignments = range.data?.assignments ?? [];
+
+  /** Einsatz auf einen anderen Tag oder in eine andere Kolonne ziehen; zusätzliche Mitarbeiter und Geräte bleiben erhalten. */
+  const move = async (assignmentId: string, crewId: string | null, day: string) => {
+    const a = assignments.find((x) => x.id === assignmentId);
+    if (!a || (a.day === day && (a.crewId ?? null) === crewId)) {
+      return;
+    }
+    const crewMembers = new Set(crews.data?.find((c) => c.id === a.crewId)?.memberUserIds ?? []);
+    const extras = a.people.map((p) => p.id).filter((id) => !crewMembers.has(id));
+    if (!crewId && extras.length === 0) {
+      message.warning('Ohne Kolonne braucht der Einsatz mindestens einen Mitarbeiter. Bitte im Einsatz Mitarbeiter wählen.');
+      return;
+    }
+    try {
+      const saved = await put<AssignmentView>(`planning/assignments/${a.id}`, {
+        bauakteId: a.bauakteId, day, startTime: a.startTime, activity: a.activity, crewId,
+        userIds: extras, resourceIds: a.resources.map((r) => r.id), notes: a.notes,
+      });
+      void queries.invalidateQueries({ queryKey: ['planning'] });
+      if (saved.warnings.length > 0) {
+        message.warning(`Verschoben – ${saved.warnings.join(' ')}`);
+      } else {
+        message.success(`„${a.activity}“ auf ${weekday(day)}, ${label(day)} verschoben`);
+      }
+    } catch (e) {
+      message.error(problemMessage(e));
+    }
+  };
   const absentOn = (d: string) => (range.data?.absences ?? []).filter((a) => a.from <= d && d <= a.to);
   const warningCount = assignments.filter((a) => a.warnings.length > 0).length;
 
@@ -192,6 +223,7 @@ export default function PlanningPage() {
           <Button icon={<RightOutlined />} aria-label="Nächste Woche" onClick={() => setWeek(addDays(week, 7))} />
         </Space.Compact>,
         <DatePicker key="pick" picker="week" allowClear={false} value={dayjs(week)} onChange={(d) => d && setWeek(mondayOf(d.format('YYYY-MM-DD')))} format="[KW] w, YYYY" aria-label="Woche wählen" />,
+        <Button key="print" icon={<PrinterOutlined />} onClick={() => window.print()}>Drucken</Button>,
         <Link key="res" to="/planung/ressourcen"><Button icon={<SettingOutlined />}>Kolonnen und Geräte</Button></Link>,
       ]}
     >
@@ -224,9 +256,14 @@ export default function PlanningPage() {
                 <span className="swatch" style={{ background: lane.color ?? '#d9d9d9' }} aria-hidden="true" />{lane.name}
               </div>
               {days.map((d) => (
-                <div key={d} className={`board-cell${d === today ? ' board-today' : ''}`} role="cell">
+                <div key={d} className={`board-cell${d === today ? ' board-today' : ''}${dropTarget === `${lane.id}|${d}` ? ' board-drop' : ''}`} role="cell"
+                  onDragOver={canPlan ? (e) => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; setDropTarget(`${lane.id}|${d}`); } : undefined}
+                  onDragLeave={canPlan ? () => setDropTarget((t) => (t === `${lane.id}|${d}` ? null : t)) : undefined}
+                  onDrop={canPlan ? (e) => { e.preventDefault(); setDropTarget(null); void move(e.dataTransfer.getData('text/assignment'), lane.id, d); } : undefined}>
                   {assignments.filter((a) => a.day === d && (a.crewId ?? null) === lane.id).map((a) => (
                     <button key={a.id} type="button" className={`board-item${a.warnings.length ? ' board-warn' : ''}`}
+                      draggable={canPlan} onDragStart={(e) => { e.dataTransfer.setData('text/assignment', a.id); e.dataTransfer.effectAllowed = 'move'; }}
+                      onDragEnd={() => setDropTarget(null)}
                       style={{ borderLeftColor: a.warnings.length ? undefined : (lane.color ?? '#0B2D5B') }}
                       onClick={() => open(a, null, d)}
                       aria-label={`${a.activity}, ${a.bauakteTitle}${a.warnings.length ? `, ${a.warnings.length} Hinweise` : ''}`}>
