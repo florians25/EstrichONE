@@ -8,6 +8,7 @@ using EstrichOne.Api.Modules.Documentation;
 using EstrichOne.Api.Modules.Helpdesk;
 using EstrichOne.Api.Modules.Identity;
 using EstrichOne.Api.Modules.Organization;
+using EstrichOne.Api.Modules.Planning;
 using EstrichOne.Api.Modules.Platform;
 using EstrichOne.Api.Modules.Setup;
 using EstrichOne.Api.Modules.Sync;
@@ -30,6 +31,7 @@ public static class ModuleCatalog
         new DocumentationModule(),
         new WorkModule(),
         new HelpdeskModule(),
+        new PlanningModule(),
         new SetupModule(),
         new SyncModule(),
         new BackupModule(),
