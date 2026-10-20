@@ -14,7 +14,10 @@ final class BauakteUITests: XCTestCase {
         // Nach Anmeldung, Sheets und Systemdialogen laufen noch Animationen: erst tippen, wenn das Element erreichbar ist.
         // Kurz warten, bis Animationen fertig sind; Elemente außerhalb des sichtbaren Bereichs scrollt tap() selbst heran.
         let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: target)
-        _ = XCTWaiter().wait(for: [hittable], timeout: 5)
+        if XCTWaiter().wait(for: [hittable], timeout: 5) != .completed {
+            // Meist liegt ein verspätetes Systemblatt („Passwort sichern?“) darüber.
+            app.dismissSavePasswordPrompt(timeout: 3)
+        }
         target.tap()
     }
 
