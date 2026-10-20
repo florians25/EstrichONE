@@ -87,6 +87,9 @@ struct ReadinessLabel: View {
         Label(isReady ? "Belegreif" : "Noch nicht belegreif", systemImage: isReady ? "checkmark.seal.fill" : "hourglass")
             .font(.subheadline.weight(.semibold))
             .foregroundStyle(isReady ? Theme.success : Theme.hint)
+            // Ein Element mit dem Text vorlesen, nicht den Symbolnamen („Überprüft“).
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(isReady ? "Belegreif" : "Noch nicht belegreif")
             .accessibilityIdentifier("readinessLabel")
     }
 }

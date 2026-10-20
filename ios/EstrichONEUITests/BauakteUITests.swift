@@ -12,8 +12,9 @@ final class BauakteUITests: XCTestCase {
         let target = element(identifier, in: app)
         XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht\n\(app.debugDescription)")
         // Nach Anmeldung, Sheets und Systemdialogen laufen noch Animationen: erst tippen, wenn das Element erreichbar ist.
-        let hittable = expectation(for: NSPredicate(format: "isHittable == true"), evaluatedWith: target)
-        wait(for: [hittable], timeout: timeout)
+        // Kurz warten, bis Animationen fertig sind; Elemente außerhalb des sichtbaren Bereichs scrollt tap() selbst heran.
+        let hittable = XCTNSPredicateExpectation(predicate: NSPredicate(format: "isHittable == true"), object: target)
+        _ = XCTWaiter().wait(for: [hittable], timeout: 5)
         target.tap()
     }
 
@@ -68,7 +69,13 @@ final class BauakteUITests: XCTestCase {
 
         // Bauakte ist sofort da; nach der Synchronisation trägt sie die Nummer vom Server.
         XCTAssertEqual(element("bauakteTitle", in: app).label, "EFH Müller, Neubau")
-        XCTAssertTrue(element("photoGrid", in: app).waitForExistence(timeout: 5))
+        // Fotos stehen weiter unten in der Liste (nach Aktionszeile, Aufgaben, Notizen).
+        let grid = element("photoGrid", in: app)
+        for _ in 0..<4 where !grid.exists {
+            app.swipeUp()
+        }
+        XCTAssertTrue(grid.waitForExistence(timeout: 5))
+        for _ in 0..<4 { app.swipeDown() }
         let number = element("bauakteNumber", in: app)
         let hasNumber = NSPredicate(format: "label BEGINSWITH %@", "2026-")
         expectation(for: hasNumber, evaluatedWith: number)
