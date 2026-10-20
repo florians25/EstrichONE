@@ -155,6 +155,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("ActorUserId", "OccurredAt")
                         .HasDatabaseName("ix_audit_events_actor_user_id_occurred_at");
 
+                    b.HasIndex("EntityType", "EntityId", "OccurredAt")
+                        .HasDatabaseName("ix_audit_events_entity_type_entity_id_occurred_at");
+
                     b.ToTable("audit_events", (string)null);
                 });
 

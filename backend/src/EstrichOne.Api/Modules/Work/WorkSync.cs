@@ -19,7 +19,7 @@ public sealed record WorkItemDto(
 
 /// <summary>Aufgaben und Mängel: Anlage idempotent, Änderungen feldweise zusammengeführt.</summary>
 internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IUserPermissions permissions, ICurrentUser currentUser,
-    TimeProvider clock) : ISyncOperationHandler
+    TimeProvider clock, IBauakteHistory history) : ISyncOperationHandler
 {
     private static readonly HashSet<string> EditableFields = ["title", "description", "dueDate", "assigneeUserId", "status"];
 
@@ -66,6 +66,10 @@ internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IU
         await EnsureUserExistsAsync(assignee, cancellationToken);
         item.Update(item.Title, SyncPayload.Read<string>(op.Payload, "description"), SyncPayload.Read<DateOnly?>(op.Payload, "dueDate"), assignee);
         db.Add(item);
+        if (bauakteId is { } owner)
+        {
+            history.Record(owner, BauakteHistoryActions.WorkItemCreated, new Dictionary<string, string?> { ["kind"] = item.Kind.ToString() });
+        }
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: item.Version, Entity: SyncPayload.ToNode(WorkItemDto.From(item)));
     }
@@ -99,7 +103,15 @@ internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IU
                     assignee = value.Deserialize<Guid?>(SyncPayload.Json);
                     await EnsureUserExistsAsync(assignee, cancellationToken);
                     break;
-                case "status": item.ChangeStatus(value.Deserialize<WorkItemStatus>(SyncPayload.Json), clock.GetUtcNow()); break;
+                case "status":
+                    var wasDone = item.Status == WorkItemStatus.Done;
+                    item.ChangeStatus(value.Deserialize<WorkItemStatus>(SyncPayload.Json), clock.GetUtcNow());
+                    if (!wasDone && item.Status == WorkItemStatus.Done && item.BauakteId is { } owner)
+                    {
+                        history.Record(owner, BauakteHistoryActions.WorkItemDone, new Dictionary<string, string?> { ["kind"] = item.Kind.ToString() });
+                    }
+
+                    break;
             }
         }
 

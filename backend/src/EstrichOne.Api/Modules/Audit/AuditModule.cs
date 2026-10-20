@@ -10,6 +10,7 @@ public sealed class AuditModule : IModule
     {
         services.AddHttpContextAccessor();
         services.AddScoped<IAuditLog, AuditLog>();
+        services.AddScoped<IAuditQueries, AuditQueries>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)

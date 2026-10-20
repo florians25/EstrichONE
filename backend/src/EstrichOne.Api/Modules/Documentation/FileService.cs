@@ -26,7 +26,8 @@ public sealed class FileService(
     IBauakteAccess bauakten,
     ICurrentUser currentUser,
     IOptions<FileStorageSettings> settings,
-    Channel<Guid> variantQueue)
+    Channel<Guid> variantQueue,
+    IBauakteHistory history)
 {
     public async Task<(FileRecord? File, bool Created, FileFailure? Failure)> AnnounceAsync(
         Guid id, Guid? bauakteId, FileKind kind, string originalName, string contentType, long sizeBytes, string sha256,
@@ -56,6 +57,10 @@ public sealed class FileService(
         file.SetLocation(latitude, longitude);
         file.Describe(caption);
         db.Add(file);
+        if (bauakteId is { } owner)
+        {
+            history.Record(owner, BauakteHistoryActions.FileAdded, new Dictionary<string, string?> { ["kind"] = kind.ToString() });
+        }
         await db.SaveChangesAsync(cancellationToken);
         return (file, true, null);
     }

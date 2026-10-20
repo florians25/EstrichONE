@@ -37,6 +37,91 @@
         }
       }
     },
+    "/api/v1/directory/users": {
+      "get": {
+        "tags": [
+          "Verzeichnis"
+        ],
+        "summary": "Alle Benutzer mit Anzeigenamen (aktive zuerst, alphabetisch)",
+        "operationId": "ListDirectoryUsers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DirectoryUser"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/history": {
+      "get": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Verlauf einer Bauakte (neueste zuerst)",
+        "operationId": "GetBauakteHistory",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BauakteHistoryEntry"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{bauakteId}/files": {
       "get": {
         "tags": [
@@ -2768,6 +2853,41 @@
           }
         }
       },
+      "BauakteHistoryEntry": {
+        "required": [
+          "at",
+          "action",
+          "actorUserId",
+          "actorName",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "action": {
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "actorName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
       "BauakteListItem": {
         "required": [
           "id",
@@ -3272,6 +3392,26 @@
           "locked",
           "retired"
         ]
+      },
+      "DirectoryUser": {
+        "required": [
+          "id",
+          "displayName",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
       },
       "EnrollmentCodeResponse": {
         "required": [
@@ -4441,6 +4581,12 @@
       "name": "Plattform"
     },
     {
+      "name": "Verzeichnis"
+    },
+    {
+      "name": "Bauakten"
+    },
+    {
       "name": "Dateien"
     },
     {
@@ -4457,9 +4603,6 @@
     },
     {
       "name": "Kontakte"
-    },
-    {
-      "name": "Bauakten"
     },
     {
       "name": "Ersteinrichtung"

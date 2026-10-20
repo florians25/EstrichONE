@@ -19,7 +19,7 @@ public sealed record NewBauakte(
     double? Longitude = null, string? Description = null, Guid? CustomerId = null, string? TemplateKey = null);
 
 /// <summary>Anlage einer Bauakte – gemeinsam für REST-API und Synchronisation.</summary>
-public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser currentUser, BauakteNumberGenerator numbers)
+public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser currentUser, BauakteNumberGenerator numbers, IBauakteHistory history)
 {
     /// <summary>Erwartet eine offene Transaktion des Aufrufers oder legt selbst eine an.</summary>
     public async Task<(Bauakte? Bauakte, CreateBauakteOutcome Outcome)> CreateAsync(NewBauakte request, CancellationToken cancellationToken)
@@ -55,6 +55,7 @@ public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser current
         {
             bauakte.AssignNumber(await numbers.NextAsync(cancellationToken));
             db.Add(bauakte);
+            history.Record(bauakte.Id, BauakteHistoryActions.Created);
             await db.SaveChangesAsync(cancellationToken);
             if (ownTransaction is not null)
             {

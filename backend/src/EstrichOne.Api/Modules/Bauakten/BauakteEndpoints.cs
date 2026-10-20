@@ -174,7 +174,7 @@ internal static class BauakteEndpoints
     }
 
     private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> UpdateAsync(
-        Guid id, UpdateBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, HttpContext http,
+        Guid id, UpdateBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, HttpContext http,
         CancellationToken cancellationToken)
     {
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
@@ -200,12 +200,14 @@ internal static class BauakteEndpoints
             return Validation("Der angegebene Kunde existiert nicht.", "UNKNOWN_CUSTOMER");
         }
 
+        var before = ToDetail(bauakte);
         bauakte.Rename(request.Title);
         bauakte.ChangeStatus(request.Status);
         bauakte.ChangeAddress(request.Street, request.PostalCode, request.City, request.Latitude, request.Longitude);
         bauakte.Describe(request.Description);
         bauakte.AssignCustomer(request.CustomerId);
         bauakte.AssignResponsible(request.ResponsibleUserId);
+        RecordChanges(history, before, ToDetail(bauakte));
 
         try
         {
@@ -223,7 +225,7 @@ internal static class BauakteEndpoints
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
-        Guid id, EstrichOneDbContext db, IBauakteAccess access, TimeProvider clock, CancellationToken cancellationToken)
+        Guid id, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, TimeProvider clock, CancellationToken cancellationToken)
     {
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
@@ -232,8 +234,33 @@ internal static class BauakteEndpoints
         }
 
         bauakte.Delete(clock.GetUtcNow());
+        history.Record(bauakte.Id, BauakteHistoryActions.Deleted);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
+    }
+
+    /// <summary>Statuswechsel und geänderte Felder als Verlaufseinträge (ohne Inhalte).</summary>
+    internal static void RecordChanges(IBauakteHistory history, BauakteDetail before, BauakteDetail after)
+    {
+        if (before.Status != after.Status)
+        {
+            history.Record(after.Id, BauakteHistoryActions.StatusChanged,
+                new Dictionary<string, string?> { ["from"] = before.Status.ToString(), ["to"] = after.Status.ToString() });
+        }
+
+        var fields = new List<string>();
+        if (before.Title != after.Title) fields.Add("title");
+        if (before.Street != after.Street) fields.Add("street");
+        if (before.PostalCode != after.PostalCode) fields.Add("postalCode");
+        if (before.City != after.City) fields.Add("city");
+        if (before.Latitude != after.Latitude || before.Longitude != after.Longitude) fields.Add("latitude");
+        if (before.Description != after.Description) fields.Add("description");
+        if (before.CustomerId != after.CustomerId) fields.Add("customerId");
+        if (before.ResponsibleUserId != after.ResponsibleUserId) fields.Add("responsibleUserId");
+        if (fields.Count > 0)
+        {
+            history.Record(after.Id, BauakteHistoryActions.Updated, new Dictionary<string, string?> { ["fields"] = string.Join(',', fields) });
+        }
     }
 
     internal static BauakteDetail ToDetail(Bauakte b) => new(

@@ -22,3 +22,12 @@ public static class AuditActions
     public const string PasswordChanged = "auth.password.changed";
     public const string SessionRevoked = "auth.session.revoked";
 }
+
+/// <summary>Ein gespeichertes Ereignis (Lesesicht, z. B. für den Verlauf einer Bauakte).</summary>
+public sealed record AuditEntry(DateTimeOffset OccurredAt, string Action, Guid? ActorUserId, IReadOnlyDictionary<string, string?> Details);
+
+public interface IAuditQueries
+{
+    /// <summary>Neueste zuerst.</summary>
+    Task<IReadOnlyList<AuditEntry>> ForEntityAsync(string entityType, string entityId, int limit, CancellationToken cancellationToken);
+}

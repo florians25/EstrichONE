@@ -53,6 +53,21 @@ internal sealed class AuditEventConfiguration : IEntityTypeConfiguration<AuditEv
         builder.Property(e => e.Details).HasColumnType("jsonb");
         builder.HasIndex(e => e.OccurredAt);
         builder.HasIndex(e => new { e.ActorUserId, e.OccurredAt });
+        builder.HasIndex(e => new { e.EntityType, e.EntityId, e.OccurredAt });
+    }
+}
+
+internal sealed class AuditQueries(EstrichOneDbContext db) : IAuditQueries
+{
+    public async Task<IReadOnlyList<AuditEntry>> ForEntityAsync(string entityType, string entityId, int limit, CancellationToken cancellationToken)
+    {
+        var events = await db.Set<AuditEvent>().AsNoTracking()
+            .Where(e => e.EntityType == entityType && e.EntityId == entityId)
+            .OrderByDescending(e => e.OccurredAt).ThenByDescending(e => e.Id)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+        return events.Select(e => new AuditEntry(e.OccurredAt, e.Action, e.ActorUserId,
+            e.Details is null ? new Dictionary<string, string?>() : JsonSerializer.Deserialize<Dictionary<string, string?>>(e.Details)!)).ToList();
     }
 }
 

@@ -13,6 +13,7 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<BauakteNumberGenerator>();
         services.AddScoped<IBauakteAccess, BauakteAccess>();
         services.AddScoped<IDataInitializer, ScreedTypeSeed>();
+        services.AddScoped<IBauakteHistory, BauakteHistory>();
         services.AddScoped<BauakteCommands>();
         services.AddScoped<ISyncOperationHandler, BauakteSync>();
         services.AddScoped<ISyncEntitySource, BauakteSource>();
@@ -20,5 +21,9 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<ISyncEntitySource, ScreedTypeSource>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => BauakteEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        BauakteEndpoints.Map(api);
+        BauakteHistoryEndpoints.Map(api);
+    }
 }

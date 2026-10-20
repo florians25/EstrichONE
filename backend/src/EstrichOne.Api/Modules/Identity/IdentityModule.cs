@@ -48,5 +48,6 @@ public sealed class IdentityModule : IModule
     {
         AuthEndpoints.Map(api);
         WebSessionEndpoints.Map(api);
+        DirectoryEndpoints.Map(api);
     }
 }

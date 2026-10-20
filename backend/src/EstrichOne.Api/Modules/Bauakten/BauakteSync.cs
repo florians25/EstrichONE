@@ -20,6 +20,7 @@ internal sealed class BauakteSync(
     IBauakteAccess access,
     IUserPermissions permissions,
     ICurrentUser currentUser,
+    IBauakteHistory history,
     TimeProvider clock) : ISyncOperationHandler
 {
     private static readonly HashSet<string> EditableFields =
@@ -82,6 +83,7 @@ internal sealed class BauakteSync(
         var current = (JsonObject)SyncPayload.ToNode(BauakteEndpoints.ToDetail(bauakte))!;
         var (accepted, conflicts) = SyncPayload.Merge(op.Payload, current.ToDictionary(pair => pair.Key, pair => pair.Value), EditableFields);
         var changes = (JsonObject)op.Payload["changes"]!;
+        var before = BauakteEndpoints.ToDetail(bauakte);
 
         foreach (var field in accepted)
         {
@@ -139,6 +141,7 @@ internal sealed class BauakteSync(
             }
         }
 
+        BauakteEndpoints.RecordChanges(history, before, BauakteEndpoints.ToDetail(bauakte));
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, conflicts.Count == 0 ? SyncOperationStatus.Applied : SyncOperationStatus.Conflict,
             Code: conflicts.Count == 0 ? null : "FIELD_CONFLICT",
@@ -161,6 +164,7 @@ internal sealed class BauakteSync(
         }
 
         bauakte.Delete(clock.GetUtcNow());
+        history.Record(bauakte.Id, BauakteHistoryActions.Deleted);
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: bauakte.Version);
     }
@@ -202,6 +206,7 @@ internal sealed class BauakteSync(
         }
 
         db.Add(note);
+        history.Record(bauakteId, BauakteHistoryActions.NoteAdded);
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: note.Version, Entity: SyncPayload.ToNode(NoteDto.From(note)));
     }
