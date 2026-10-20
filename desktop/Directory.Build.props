@@ -1,0 +1,15 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <Version>0.1.0</Version>
+    <Company>EstrichONE</Company>
+    <Product>EstrichONE</Product>
+    <!-- CA2007: keine Bibliothek für fremde SynchronizationContexts; die App erwartet die Rückkehr in den UI-Thread. -->
+    <NoWarn>$(NoWarn);CA2007;CA1515</NoWarn>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Prüft den Desktop-Client gegen die echte API im Speicher und eine echte PostgreSQL (wie die Backend-Tests). -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <OutputType>Exe</OutputType>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CA1707;CA2234;CA1001;CA1062</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
+    <PackageReference Include="Testcontainers.PostgreSql" />
+    <PackageReference Include="Shouldly" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\EstrichOne.Client\EstrichOne.Client.csproj" />
+    <ProjectReference Include="..\..\..\backend\src\EstrichOne.Api\EstrichOne.Api.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Gleiche Testinfrastruktur wie backend/tests (eine Quelle, verlinkt). -->
+    <Compile Include="..\..\..\backend\tests\EstrichOne.Api.Tests\Support\PostgresFixture.cs" Link="Support\PostgresFixture.cs" />
+    <Compile Include="..\..\..\backend\tests\EstrichOne.Api.Tests\Support\ApiFactory.cs" Link="Support\ApiFactory.cs" />
+    <Compile Include="..\..\..\backend\tests\EstrichOne.Api.Tests\Support\AuthClient.cs" Link="Support\AuthClient.cs" />
+    <Compile Include="..\..\..\backend\tests\EstrichOne.Api.Tests\Support\TestJson.cs" Link="Support\TestJson.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <Using Include="Xunit" />
+    <Using Include="Shouldly" />
+  </ItemGroup>
+</Project>

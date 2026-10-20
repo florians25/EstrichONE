@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Gemeinsamer .NET-Client für die EstrichONE-API (Windows-Desktop, Werkzeuge). Ohne UI-Abhängigkeiten, auf Linux testbar. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <RootNamespace>EstrichOne.Client</RootNamespace>
+  </PropertyGroup>
+</Project>

@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="EstrichOne.Api.Tests" />
+    <InternalsVisibleTo Include="EstrichOne.Client.Tests" />
   </ItemGroup>
 </Project>

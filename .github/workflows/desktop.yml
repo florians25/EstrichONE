@@ -1,0 +1,30 @@
+name: Desktop
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main, "claude/**"]
+    paths: ["desktop/**", "backend/src/**", ".github/workflows/desktop.yml"]
+  pull_request:
+    paths: ["desktop/**", "backend/src/**", ".github/workflows/desktop.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  client:
+    name: Client-Bibliothek gegen echten Server (Linux, PostgreSQL)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Tests
+        working-directory: desktop
+        run: dotnet test --solution EstrichOne.Desktop.slnx
