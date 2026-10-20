@@ -36,17 +36,17 @@ public static class TestPaths
         }
     }
 
-    /// <summary>Compose-Vorlagen der Suite – genau die Dateien, die auch ins Konsolen-Image kopiert werden.</summary>
-    public static string Templates
+    private static readonly Lazy<string> TemplateDirectory = new(() =>
     {
-        get
-        {
-            var target = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "estrichone-hosting-tests", "templates");
-            Directory.CreateDirectory(target);
-            File.Copy(System.IO.Path.Combine(RepositoryRoot, "deploy", "compose.yml"), System.IO.Path.Combine(target, "compose.yml"), true);
-            File.Copy(System.IO.Path.Combine(RepositoryRoot, "deploy", "compose.proxy.yml"), System.IO.Path.Combine(target, "compose.proxy.yml"), true);
-            File.Copy(System.IO.Path.Combine(RepositoryRoot, "docker", "installer", "compose.override.yml"), System.IO.Path.Combine(target, "compose.override.yml"), true);
-            return target;
-        }
-    }
+        // Einmal je Testlauf in ein eigenes Verzeichnis kopieren (Tests laufen parallel).
+        var target = System.IO.Path.Combine(System.IO.Path.GetTempPath(), "estrichone-hosting-tests", "templates-" + Guid.NewGuid().ToString("N"));
+        Directory.CreateDirectory(target);
+        File.Copy(System.IO.Path.Combine(RepositoryRoot, "deploy", "compose.yml"), System.IO.Path.Combine(target, "compose.yml"));
+        File.Copy(System.IO.Path.Combine(RepositoryRoot, "deploy", "compose.proxy.yml"), System.IO.Path.Combine(target, "compose.proxy.yml"));
+        File.Copy(System.IO.Path.Combine(RepositoryRoot, "docker", "installer", "compose.override.yml"), System.IO.Path.Combine(target, "compose.override.yml"));
+        return target;
+    });
+
+    /// <summary>Compose-Vorlagen der Suite – genau die Dateien, die auch ins Konsolen-Image kopiert werden.</summary>
+    public static string Templates => TemplateDirectory.Value;
 }
