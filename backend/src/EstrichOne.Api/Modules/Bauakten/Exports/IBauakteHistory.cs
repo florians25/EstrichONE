@@ -20,4 +20,6 @@ public static class BauakteHistoryActions
     public const string FileAdded = "file_added";
     public const string WorkItemCreated = "workitem_created";
     public const string WorkItemDone = "workitem_done";
+    public const string DiaryAdded = "diary_added";
+    public const string InspectionAdded = "inspection_added";
 }

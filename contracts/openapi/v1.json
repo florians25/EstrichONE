@@ -2277,6 +2277,112 @@
         ]
       }
     },
+    "/api/v1/bauakten/{id}/diary": {
+      "get": {
+        "tags": [
+          "Bautagebuch und Prüfungen"
+        ],
+        "summary": "Bautagebuch (neuester Tag zuerst)",
+        "operationId": "ListDiaryEntries",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DiaryEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/inspections": {
+      "get": {
+        "tags": [
+          "Bautagebuch und Prüfungen"
+        ],
+        "summary": "Prüfungen (neueste zuerst)",
+        "operationId": "ListInspections",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/InspectionDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/setup/status": {
       "get": {
         "tags": [
@@ -3002,6 +3108,13 @@
           }
         }
       },
+      "CheckResult": {
+        "enum": [
+          "ok",
+          "notOk",
+          "notApplicable"
+        ]
+      },
       "ClientKind": {
         "enum": [
           "web",
@@ -3393,6 +3506,93 @@
           "retired"
         ]
       },
+      "DiaryEntryDto": {
+        "required": [
+          "id",
+          "bauakteId",
+          "authorUserId",
+          "day",
+          "text",
+          "weather",
+          "temperatureCelsius",
+          "workersPresent",
+          "createdAt",
+          "editedAt",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "authorUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "text": {
+            "type": "string"
+          },
+          "weather": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DiaryWeather"
+              }
+            ]
+          },
+          "temperatureCelsius": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "workersPresent": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "editedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "DiaryWeather": {
+        "enum": [
+          "sunny",
+          "cloudy",
+          "rain",
+          "snow",
+          "frost",
+          "wind",
+          null
+        ]
+      },
       "DirectoryUser": {
         "required": [
           "id",
@@ -3669,6 +3869,138 @@
             "type": "string"
           }
         }
+      },
+      "InspectionDto": {
+        "required": [
+          "id",
+          "bauakteId",
+          "kind",
+          "performedByUserId",
+          "performedAt",
+          "correctsInspectionId",
+          "remarks",
+          "notRequired",
+          "checks",
+          "photoFileIds",
+          "location",
+          "binder",
+          "heated",
+          "thicknessMm",
+          "measuredCmPercent",
+          "limitCmPercent",
+          "isReadyForCovering",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/InspectionKind"
+          },
+          "performedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "performedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "correctsInspectionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "remarks": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notRequired": {
+            "type": "boolean"
+          },
+          "checks": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/CheckResult"
+            }
+          },
+          "photoFileIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "location": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "binder": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ScreedBinderKind"
+              }
+            ]
+          },
+          "heated": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "thicknessMm": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "measuredCmPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "limitCmPercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "isReadyForCovering": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "InspectionKind": {
+        "enum": [
+          "initialInspection",
+          "cmMeasurement"
+        ]
       },
       "JsonNode": {},
       "JsonObject": {
@@ -4059,6 +4391,13 @@
             ]
           }
         }
+      },
+      "ScreedBinderKind": {
+        "enum": [
+          "cement",
+          "calciumSulfate",
+          null
+        ]
       },
       "ServerInfo": {
         "required": [
@@ -4603,6 +4942,9 @@
     },
     {
       "name": "Kontakte"
+    },
+    {
+      "name": "Bautagebuch und Prüfungen"
     },
     {
       "name": "Ersteinrichtung"

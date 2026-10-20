@@ -4,7 +4,7 @@ using EstrichOne.Api.Modules.Sync.Exports;
 
 namespace EstrichOne.Api.Modules.Documentation;
 
-/// <summary>Fotos, Videos, Dokumente; später Bautagebuch und Prüfungen.</summary>
+/// <summary>Fotos, Videos, Dokumente, Bautagebuch und Prüfungen (Erstbegehung, CM-Messung).</summary>
 public sealed class DocumentationModule : IModule
 {
     public void AddServices(IServiceCollection services, IConfiguration configuration)
@@ -16,7 +16,14 @@ public sealed class DocumentationModule : IModule
         services.AddHostedService<VariantWorker>();
         services.AddScoped<ISyncOperationHandler, FileSync>();
         services.AddScoped<ISyncEntitySource, FileSource>();
+        services.AddScoped<ISyncOperationHandler, SiteRecordSync>();
+        services.AddScoped<ISyncEntitySource, DiaryEntrySource>();
+        services.AddScoped<ISyncEntitySource, InspectionSource>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => FileEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        FileEndpoints.Map(api);
+        SiteRecordEndpoints.Map(api);
+    }
 }

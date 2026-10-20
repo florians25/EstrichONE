@@ -1,3 +1,4 @@
+using System.Globalization;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
@@ -81,9 +82,26 @@ internal static class BauakteHistoryEndpoints
             },
             "bauakte.workitem_created" => kindIsDefect ? $"{actor} hat einen Mangel erfasst." : $"{actor} hat eine Aufgabe angelegt.",
             "bauakte.workitem_done" => kindIsDefect ? $"{actor} hat einen Mangel als behoben markiert." : $"{actor} hat eine Aufgabe erledigt.",
+            "bauakte.diary_added" => $"{actor} hat das Bautagebuch für den {Day(Detail("day"))} ergänzt.",
+            "bauakte.inspection_added" when Detail("kind") == "CmMeasurement" =>
+                $"{actor} hat eine CM-Messung erfasst: {Percent(Detail("measured"))} CM-% bei Grenzwert {Percent(Detail("limit"))} CM-% – "
+                + (Detail("ready") == "true" ? "belegreif." : "noch nicht belegreif."),
+            "bauakte.inspection_added" => Detail("notRequired") == "true"
+                ? $"{actor} hat vermerkt, dass keine Erstbegehung notwendig ist."
+                : $"{actor} hat die Erstbegehung dokumentiert.",
             _ => $"{actor}: {entry.Action}",
         };
     }
+
+    private static string Day(string value) =>
+        DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)
+            ? day.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture)
+            : value;
+
+    private static string Percent(string value) =>
+        decimal.TryParse(value, NumberStyles.Number, CultureInfo.InvariantCulture, out var number)
+            ? number.ToString("0.0#", CultureInfo.GetCultureInfo("de-DE"))
+            : value;
 
     private static string Status(string value) => StatusNames.TryGetValue(value, out var name) ? name : value;
 

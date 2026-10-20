@@ -17,6 +17,8 @@ public static class Permissions
     public const string FilesUpload = "files.upload";
     public const string FilesDelete = "files.delete";
     public const string NotesWrite = "notes.write";
+    public const string DiaryWrite = "diary.write";
+    public const string InspectionsWrite = "inspections.write";
     public const string WorkRead = "work.read";
     public const string WorkEdit = "work.edit";
     public const string PlanningRead = "planning.read";
@@ -45,6 +47,8 @@ public static class Permissions
         new(FilesUpload, "Dokumentation", "Fotos, Videos und Dokumente hochladen"),
         new(FilesDelete, "Dokumentation", "Fotos, Videos und Dokumente löschen"),
         new(NotesWrite, "Dokumentation", "Notizen schreiben"),
+        new(DiaryWrite, "Dokumentation", "Bautagebuch führen"),
+        new(InspectionsWrite, "Dokumentation", "Prüfungen erfassen (Erstbegehung, CM-Messung)"),
         new(WorkRead, "Aufgaben", "Aufgaben und Mängel sehen"),
         new(WorkEdit, "Aufgaben", "Aufgaben und Mängel anlegen und bearbeiten"),
         new(PlanningRead, "Planung", "Einsatzplanung sehen"),
