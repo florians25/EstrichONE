@@ -92,12 +92,14 @@ internal static class FileEndpoints
 
         files.MapPatch("/{id:guid}", UpdateAsync).WithName("UpdateFile")
             .WithSummary("Beschriftung und Dokumentart ändern")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.FilesUpload);
 
         files.MapPut("/{id:guid}/details", UpdateDetailsAsync).WithName("UpdateFileDetails")
             .WithSummary("Name, Beschriftung, Ablage (Dokumentart, Unterordner) und Bezug zu Raum oder Mangel ändern")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.FilesUpload);
 
         files.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteFile")
@@ -106,7 +108,7 @@ internal static class FileEndpoints
 
         api.MapGet("/bauakten/{bauakteId:guid}/files", ListForBauakteAsync).WithName("ListBauakteFiles")
             .WithTags("Dateien")
-            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.BauaktenRead);
 
         api.MapGet("/bauakten/{bauakteId:guid}/files/archive", ArchiveAsync).WithName("DownloadBauakteFilesArchive")
@@ -179,10 +181,24 @@ internal static class FileEndpoints
         }
 
         var file = await db.Set<FileRecord>().SingleAsync(f => f.Id == id, cancellationToken);
-        file.Describe(string.IsNullOrWhiteSpace(request.Caption) ? null : request.Caption.Trim());
-        file.Categorize(file.Kind == FileKind.Document ? request.Category : null);
-        await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(ToResponse(file));
+        for (var attempt = 1; ; attempt++)
+        {
+            file.Describe(string.IsNullOrWhiteSpace(request.Caption) ? null : request.Caption.Trim());
+            file.Categorize(file.Kind == FileKind.Document ? request.Category : null);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                return TypedResults.Ok(ToResponse(file));
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < 5)
+            {
+                await db.Entry(file).ReloadAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Problem(StatusCodes.Status409Conflict, "VERSION_CONFLICT", "Die Datei wurde gerade geändert. Bitte erneut versuchen.");
+            }
+        }
     }
 
     private static async Task<Results<Ok<FileResponse>, ProblemHttpResult>> UpdateDetailsAsync(
@@ -215,20 +231,37 @@ internal static class FileEndpoints
             return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Die Aufgabe gehört nicht zu dieser Bauakte.");
         }
 
-        try
+        // Die Vorschaubild-Erzeugung kann die Datei gleichzeitig speichern (Versionskonflikt): neu lesen und erneut anwenden.
+        for (var attempt = 1; ; attempt++)
         {
-            file.Rename(request.OriginalName);
-            file.Describe(string.IsNullOrWhiteSpace(request.Caption) ? null : request.Caption.Trim());
-            file.Categorize(file.Kind == FileKind.Document ? request.Category : null);
-            file.MoveTo(request.Folder);
-        }
-        catch (ArgumentException exception)
-        {
-            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", exception.Message);
+            try
+            {
+                file.Rename(request.OriginalName);
+                file.Describe(string.IsNullOrWhiteSpace(request.Caption) ? null : request.Caption.Trim());
+                file.Categorize(file.Kind == FileKind.Document ? request.Category : null);
+                file.MoveTo(request.Folder);
+            }
+            catch (ArgumentException exception)
+            {
+                return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", exception.Message);
+            }
+
+            file.Link(request.RoomId, request.WorkItemId);
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                break;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < 5)
+            {
+                await db.Entry(file).ReloadAsync(cancellationToken);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                return Problem(StatusCodes.Status409Conflict, "VERSION_CONFLICT", "Die Datei wurde gerade geändert. Bitte erneut versuchen.");
+            }
         }
 
-        file.Link(request.RoomId, request.WorkItemId);
-        await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(file));
     }
 
@@ -410,7 +443,7 @@ internal static class FileEndpoints
     }
 
     private static async Task<Results<Ok<List<FileResponse>>, ProblemHttpResult>> ListForBauakteAsync(
-        Guid bauakteId, EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken, [FromQuery] FileKind? kind = null)
+        Guid bauakteId, EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken, [FromQuery] string? kind = null)
     {
         if (!await access.CanReadAsync(bauakteId, cancellationToken))
         {
@@ -418,9 +451,15 @@ internal static class FileEndpoints
         }
 
         var query = db.Set<FileRecord>().AsNoTracking().Where(f => f.BauakteId == bauakteId);
-        if (kind is not null)
+        if (!string.IsNullOrEmpty(kind))
         {
-            query = query.Where(f => f.Kind == kind);
+            // Groß- und Kleinschreibung egal (photo, Photo); unbekannte Werte sind ein Fehler statt einer leeren Liste.
+            if (!Enum.TryParse<FileKind>(kind, ignoreCase: true, out var parsed) || !Enum.IsDefined(parsed) || int.TryParse(kind, out _))
+            {
+                return Problem(StatusCodes.Status400BadRequest, "BAD_REQUEST", "Erlaubt: photo, video, document.");
+            }
+
+            query = query.Where(f => f.Kind == parsed);
         }
 
         var files = await query.OrderByDescending(f => f.CapturedAt ?? f.CreatedAt).ToListAsync(cancellationToken);

@@ -20,7 +20,15 @@ internal sealed partial class VariantWorker(
         await EnqueuePendingAsync(stoppingToken);
         await foreach (var id in queue.Reader.ReadAllAsync(stoppingToken))
         {
-            await ProcessAsync(id, stoppingToken);
+            try
+            {
+                await ProcessAsync(id, stoppingToken);
+            }
+            catch (Exception exception) when (exception is not OperationCanceledException)
+            {
+                // Ein Fehler bei einer Datei darf den Dienst (und damit den Server) nicht beenden.
+                LogVariantFailed(logger, id, exception.Message);
+            }
         }
     }
 
@@ -51,7 +59,26 @@ internal sealed partial class VariantWorker(
             file.SetVariants(VariantState.Failed);
         }
 
-        await db.SaveChangesAsync(cancellationToken);
+        // Gleichzeitige Änderungen (Beschriftung, Ablage) erhöhen die Version: neu lesen und erneut setzen.
+        var state = file.Variants;
+        for (var attempt = 1; ; attempt++)
+        {
+            try
+            {
+                await db.SaveChangesAsync(cancellationToken);
+                return;
+            }
+            catch (DbUpdateConcurrencyException) when (attempt < 10)
+            {
+                await db.Entry(file).ReloadAsync(cancellationToken);
+                if (file.DeletedAt is not null)
+                {
+                    return;
+                }
+
+                file.SetVariants(state);
+            }
+        }
     }
 
     private async Task EnqueuePendingAsync(CancellationToken cancellationToken)

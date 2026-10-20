@@ -228,6 +228,45 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task ConcurrentDetailChanges_AreRetried_NotServerErrors()
+    {
+        var jpeg = CreateJpeg(1200, 900);
+        var id = await AnnounceAsync(jpeg, FileKind.Photo, "parallel.jpg");
+        (await UploadAsync(id, jpeg)).EnsureSuccessStatusCode();
+
+        // Gleichzeitig: Vorschaubilder entstehen im Hintergrund, mehrere Beschriftungen kommen parallel.
+        var responses = await Task.WhenAll(Enumerable.Range(1, 8).Select(i => _worker.PutAsJsonAsync($"/api/v1/files/{id}/details",
+            new { originalName = "parallel.jpg", caption = $"Fassung {i}" }, TestContext.Current.CancellationToken)));
+
+        responses.Select(r => r.StatusCode).ShouldAllBe(status => status == HttpStatusCode.OK || status == HttpStatusCode.Conflict);
+        responses.Count(r => r.StatusCode == HttpStatusCode.OK).ShouldBeGreaterThan(0);
+        foreach (var response in responses)
+        {
+            response.Dispose();
+        }
+    }
+
+    [Theory]
+    [InlineData("photo", 1)]
+    [InlineData("Photo", 1)]
+    [InlineData("document", 0)]
+    [InlineData("Document", 0)]
+    public async Task FileList_KindFilter_IgnoresCase(string kind, int expected)
+    {
+        var jpeg = CreateJpeg(40, 40);
+        var id = await AnnounceAsync(jpeg, FileKind.Photo, "filter.jpg");
+        (await UploadAsync(id, jpeg)).EnsureSuccessStatusCode();
+
+        var list = await _worker.GetFromJsonAsync<List<FileResponse>>($"/api/v1/bauakten/{_bauakteId}/files?kind={kind}", TestJson.Options,
+            TestContext.Current.CancellationToken);
+        list!.Count.ShouldBe(expected);
+
+        using var invalid = await _worker.GetAsync(new Uri($"/api/v1/bauakten/{_bauakteId}/files?kind=foo", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+        invalid.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+    }
+
+    [Fact]
     public async Task Announce_LargerThanAllowed_IsRejected()
     {
         using var response = await _worker.PostAsJsonAsync("/api/v1/files", new
