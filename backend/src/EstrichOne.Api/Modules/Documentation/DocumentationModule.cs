@@ -1,5 +1,6 @@
 using System.Threading.Channels;
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Sync.Exports;
 
 namespace EstrichOne.Api.Modules.Documentation;
@@ -13,6 +14,7 @@ public sealed class DocumentationModule : IModule
         services.AddSingleton<LocalFileStorage>();
         services.AddSingleton(Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions { SingleReader = true }));
         services.AddScoped<FileService>();
+        services.AddScoped<IBauakteHintSource, DocumentationHints>();
         services.AddHostedService<VariantWorker>();
         services.AddScoped<ISyncOperationHandler, FileSync>();
         services.AddScoped<ISyncEntitySource, FileSource>();

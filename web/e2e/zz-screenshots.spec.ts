@@ -34,7 +34,12 @@ test('Bildschirmfotos', async ({ page }) => {
   await page.getByRole('link', { name: /Anfrage Familie Kraus/ }).click();
   await page.waitForTimeout(1500);
   await page.screenshot({ path: 'test-results/screenshots/bauakte-overview.png', fullPage: true });
-  await page.getByRole('tab', { name: 'Räume und Flächen' }).click();
+  for (const [tab, file] of [['Kontakte', 'contacts'], ['Notizen & Verlauf', 'notes'], ['Dokumente', 'documents']]) {
+    await page.getByRole('tab', { name: tab }).click();
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `test-results/screenshots/bauakte-${file}.png`, fullPage: true });
+  }
+  await page.getByRole('tab', { name: 'Räume & Flächen' }).click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screenshots/rooms.png', fullPage: true });
   await nav(page, 'Helpdesk').click();
@@ -55,7 +60,7 @@ test('Bildschirmfotos', async ({ page }) => {
   await page.screenshot({ path: 'test-results/screenshots/customers.png' });
   await nav(page, 'Bauakten').click();
   await page.getByRole('link', { name: /EFH Prüfung E2E/ }).click();
-  await page.getByRole('tab', { name: 'Prüfungen und Bautagebuch' }).click();
+  await page.getByRole('tab', { name: 'Erstbegehung' }).click();
   await page.waitForTimeout(500);
   await page.screenshot({ path: 'test-results/screenshots/records.png', fullPage: true });
 });

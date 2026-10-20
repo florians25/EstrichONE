@@ -40,3 +40,49 @@ body { background: #f0f2f5; }
   .board-item { box-shadow: none; break-inside: avoid; }
   body { background: #fff; }
 }
+/* Bauakte im Stil von Estrich Web */
+.bauakte-head .overline { text-transform: uppercase; letter-spacing: .06em; font-size: 11px; }
+.bauakte-page .ant-page-header-heading-title { white-space: normal; }
+.status-button { background: #F0F9F0; border-color: #B7E1B7; }
+.button-success { background: #2E7D32; border-color: #2E7D32; color: #fff; font-weight: 600; }
+.button-success:hover { background: #1B5E20 !important; border-color: #1B5E20 !important; color: #fff !important; }
+.hints .ant-alert { padding: 6px 12px; }
+.fact-strip-grid { display: grid; grid-template-columns: 2fr repeat(4, 1fr); }
+.fact-strip-grid > * { padding: 14px 16px; border-left: 1px solid #f0f0f0; }
+.fact-strip-grid > :first-child { border-left: none; background: #F3F7FC; display: grid; gap: 10px; }
+.fact { display: flex; gap: 10px; align-items: flex-start; }
+.fact-icon { color: #0B2D5B; font-size: 16px; margin-top: 2px; }
+.fact-label { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: rgba(0,0,0,.5); }
+.fact-value { font-weight: 600; color: rgba(0,0,0,.88); }
+@media (max-width: 1100px) { .fact-strip-grid { grid-template-columns: 1fr 1fr; } .fact-strip-grid > :first-child { grid-column: 1 / -1; } }
+.hero { position: relative; height: 230px; border-radius: 8px; background: #8a6a4d center / cover no-repeat; overflow: hidden; }
+.hero-shade { position: absolute; inset: 0; display: grid; place-content: center; justify-items: center; gap: 8px; color: #fff;
+  background: rgba(40, 28, 18, .45); backdrop-filter: blur(6px); }
+.hero-empty { display: grid; place-content: center; justify-items: center; gap: 8px; background: #fafafa; border: 1px dashed #d9d9d9; color: rgba(0,0,0,.45); }
+.kpi .kpi-icon { font-size: 22px; color: #0B2D5B; margin-top: 4px; }
+.kpi-value { font-size: 20px; font-weight: 600; line-height: 1.4; }
+.section-title { margin: 14px 0 6px; padding: 6px 12px; background: #F3F7FC; border-left: 3px solid #0B2D5B; border-radius: 4px;
+  font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #0B2D5B; }
+.section-title:first-child { margin-top: 0; }
+.field-grid .ant-descriptions-item { padding-bottom: 8px !important; }
+.field-grid .ant-descriptions-item-label { font-size: 11px !important; color: rgba(0,0,0,.5) !important; padding-bottom: 2px !important; }
+.field-grid .ant-descriptions-item-content { font-weight: 500; border-bottom: 1px solid #f0f0f0; padding-bottom: 4px !important; }
+.remark-box { border: 1px solid #f0f0f0; border-radius: 6px; padding: 10px 12px; }
+.pinned-notes { display: grid; gap: 6px; margin-bottom: 12px; }
+.pinned-note { display: flex; gap: 10px; align-items: flex-start; padding: 8px 12px; border-radius: 6px; border: 1px solid #f5e3a3; }
+.chat { display: grid; gap: 10px; max-height: 60vh; overflow: auto; padding: 4px 2px 8px; }
+.chat-event { font-size: 12px; color: rgba(0,0,0,.6); display: flex; gap: 8px; align-items: center; padding-left: 4px; }
+.chat-note { display: flex; gap: 10px; align-items: flex-start; }
+.chat-bubble { flex: 1; background: #F6F8FB; border: 1px solid #E6EBF2; border-radius: 8px; padding: 8px 12px; max-width: 900px; }
+.chat-note.own .chat-bubble { background: #EEF5FF; border-color: #D6E6FB; }
+.chat-meta { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 12px; margin-bottom: 2px; }
+.chat-meta .note-actions { margin-left: auto; }
+.composer { border-top: 1px solid #f0f0f0; padding-top: 12px; margin-top: 8px; }
+.note-yellow { background: #FFF7D6; } .note-red { background: #FFE4E1; } .note-green { background: #E3F6E5; } .note-blue { background: #E3EEFB; }
+.photo-tile { margin: 0; }
+.photo-tile figcaption { display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: rgba(0,0,0,.55); margin-top: 2px; }
+.video-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 12px; }
+@media print {
+  .ant-page-header-heading-extra, .ant-tabs-nav, .hints, .ant-upload, .composer, .note-actions, .ant-card-extra button { display: none !important; }
+  .ant-card { break-inside: avoid; border-color: #ccc !important; }
+}

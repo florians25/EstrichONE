@@ -17,6 +17,12 @@ public interface IUserAccounts
     /// <summary>Sperrt bzw. entsperrt ein Konto; Sperren beendet alle Sitzungen sofort. Speichert noch nicht.</summary>
     Task SetActiveAsync(Guid userId, bool active, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Bestätigung kritischer Aktionen (z. B. Bauakte löschen) mit dem eigenen Passwort. Konten ohne lokales
+    /// Passwort (nur SSO) können so nicht bestätigen.
+    /// </summary>
+    Task<bool> VerifyPasswordAsync(Guid userId, string password, CancellationToken cancellationToken);
+
     /// <summary>Zufälliges, gut lesbares Einmalpasswort (ohne verwechselbare Zeichen).</summary>
     string GenerateOneTimePassword();
 }

@@ -93,7 +93,7 @@ public sealed class ClientAgainstServerTests(PostgresFixture postgres) : IAsyncL
 
         var created = await client.CreateBauakteAsync(new CreateBauakteRequest(Guid.CreateVersion7(), "EFH Müller", City: "Landshut"), ct);
         var updated = await client.UpdateBauakteAsync(created.Id, created.Version,
-            UpdateBauakteRequest.From(created) with { Status = BauakteStatus.InProgress, Street = "Musterstr. 1" }, ct);
+            UpdateBauakteRequest.From(created) with { Status = BauakteStatus.InProgress, Street = "Musterstr. 1", SiteNotes = "Hund im Garten" }, ct);
         var conflict = await Should.ThrowAsync<ApiException>(() =>
             client.UpdateBauakteAsync(created.Id, created.Version, UpdateBauakteRequest.From(created) with { Title = "Alt" }, ct));
         var task = await client.CreateWorkItemAsync(new CreateWorkItemRequest(Guid.CreateVersion7(), created.Id, WorkItemKind.Defect, "Riss im Flur"), ct);
@@ -101,6 +101,9 @@ public sealed class ClientAgainstServerTests(PostgresFixture postgres) : IAsyncL
         await client.AddNoteAsync(created.Id, "Zugang über Garage", ct);
 
         updated.Status.ShouldBe(BauakteStatus.InProgress);
+        updated.SiteNotes.ShouldBe("Hund im Garten");
+        (await client.GetHintsAsync(created.Id, ct)).ShouldContain(h => h.Kind == "site_notes" && h.Severity == BauakteHintSeverity.Warning);
+        (await client.GetMembersAsync(created.Id, ct)).Single().Role.ShouldBe(BauakteMemberRole.Responsible);
         updated.Number.ShouldNotBeNull();
         conflict.Status.ShouldBe(HttpStatusCode.PreconditionFailed);
         (await client.GetWorkItemsAsync(created.Id, ct)).Single().Status.ShouldBe(WorkItemStatus.Done);

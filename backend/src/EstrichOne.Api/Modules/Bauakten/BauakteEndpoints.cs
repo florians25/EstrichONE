@@ -27,7 +27,9 @@ public sealed record BauaktePage(IReadOnlyList<BauakteListItem> Items, string? N
 public sealed record BauakteDetail(
     Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City,
     double? Latitude, double? Longitude, string? Description, Guid? CustomerId, string? TemplateKey,
-    Guid? ResponsibleUserId, Guid CreatedByUserId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Version);
+    Guid? ResponsibleUserId, Guid CreatedByUserId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Version,
+    DateOnly? PlannedStart = null, DateOnly? PlannedEnd = null, string? SiteContactName = null, string? SiteContactPhone = null,
+    string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null);
 
 /// <summary>Anlage mit vom Client erzeugter ID (UUIDv7, ADR 0006). Pflicht ist nur <see cref="Title"/>.</summary>
 public sealed record CreateBauakteRequest(
@@ -54,7 +56,17 @@ public sealed record UpdateBauakteRequest(
     [property: Range(-180, 180)] double? Longitude,
     [property: MaxLength(4000)] string? Description,
     Guid? CustomerId,
-    Guid? ResponsibleUserId);
+    Guid? ResponsibleUserId,
+    DateOnly? PlannedStart = null,
+    DateOnly? PlannedEnd = null,
+    [property: MaxLength(100)] string? SiteContactName = null,
+    [property: MaxLength(50)] string? SiteContactPhone = null,
+    [property: MaxLength(320), EmailAddress] string? SiteContactEmail = null,
+    [property: MaxLength(2000)] string? SiteNotes = null,
+    [property: MaxLength(500)] string? CancellationReason = null);
+
+/// <summary>Löschen bestätigt der Benutzer mit seinem Passwort (02: „Löschen mit Passwortbestätigung“).</summary>
+public sealed record DeleteBauakteRequest([property: Required, MaxLength(1024)] string Password);
 
 internal static class BauakteEndpoints
 {
@@ -91,8 +103,9 @@ internal static class BauakteEndpoints
             .ProducesProblem(StatusCodes.Status428PreconditionRequired)
             .RequirePermission(Permissions.BauaktenEdit);
 
-        group.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteBauakte")
-            .WithSummary("Bauakte in den Papierkorb legen")
+        group.MapPost("/{id:guid}/delete", DeleteAsync).WithName("DeleteBauakte")
+            .WithSummary("Bauakte in den Papierkorb legen; bestätigt mit dem eigenen Passwort")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.BauaktenDelete);
     }
@@ -236,9 +249,30 @@ internal static class BauakteEndpoints
             return Validation("Der angegebene Kunde existiert nicht.", "UNKNOWN_CUSTOMER");
         }
 
+        if (request.PlannedStart is { } start && request.PlannedEnd is { } end && end < start)
+        {
+            return Validation("Das Ende darf nicht vor dem Beginn liegen.", "INVALID_PERIOD");
+        }
+
+        if (request.Status == BauakteStatus.Cancelled && bauakte.Status != BauakteStatus.Cancelled && string.IsNullOrWhiteSpace(request.CancellationReason))
+        {
+            return Validation("Bitte einen Stornogrund angeben.", "CANCELLATION_REASON_REQUIRED");
+        }
+
         var before = ToDetail(bauakte);
         bauakte.Rename(request.Title);
-        bauakte.ChangeStatus(request.Status);
+        if (request.Status == BauakteStatus.Cancelled && !string.IsNullOrWhiteSpace(request.CancellationReason))
+        {
+            bauakte.Cancel(request.CancellationReason);
+        }
+        else
+        {
+            bauakte.ChangeStatus(request.Status);
+        }
+
+        bauakte.Schedule(request.PlannedStart, request.PlannedEnd);
+        bauakte.ChangeSiteContact(request.SiteContactName, request.SiteContactPhone, request.SiteContactEmail);
+        bauakte.ChangeSiteNotes(request.SiteNotes);
         bauakte.ChangeAddress(request.Street, request.PostalCode, request.City, request.Latitude, request.Longitude);
         bauakte.Describe(request.Description);
         bauakte.AssignCustomer(request.CustomerId);
@@ -261,12 +295,20 @@ internal static class BauakteEndpoints
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
-        Guid id, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, TimeProvider clock, CancellationToken cancellationToken)
+        Guid id, DeleteBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, IUserAccounts accounts,
+        ICurrentUser currentUser, TimeProvider clock, CancellationToken cancellationToken)
     {
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
         {
             return NotFound();
+        }
+
+        if (!await accounts.VerifyPasswordAsync(currentUser.UserId, request.Password, cancellationToken))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Passwort falsch",
+                detail: "Das Passwort ist nicht korrekt. Die Bauakte wurde nicht gelöscht.",
+                extensions: new Dictionary<string, object?> { ["code"] = "PASSWORD_CONFIRMATION_FAILED" });
         }
 
         bauakte.Delete(clock.GetUtcNow());
@@ -293,6 +335,10 @@ internal static class BauakteEndpoints
         if (before.Description != after.Description) fields.Add("description");
         if (before.CustomerId != after.CustomerId) fields.Add("customerId");
         if (before.ResponsibleUserId != after.ResponsibleUserId) fields.Add("responsibleUserId");
+        if (before.PlannedStart != after.PlannedStart || before.PlannedEnd != after.PlannedEnd) fields.Add("period");
+        if (before.SiteContactName != after.SiteContactName || before.SiteContactPhone != after.SiteContactPhone
+            || before.SiteContactEmail != after.SiteContactEmail) fields.Add("siteContact");
+        if (before.SiteNotes != after.SiteNotes) fields.Add("siteNotes");
         if (fields.Count > 0)
         {
             history.Record(after.Id, BauakteHistoryActions.Updated, new Dictionary<string, string?> { ["fields"] = string.Join(',', fields) });
@@ -301,7 +347,8 @@ internal static class BauakteEndpoints
 
     internal static BauakteDetail ToDetail(Bauakte b) => new(
         b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.Latitude, b.Longitude, b.Description,
-        b.CustomerId, b.TemplateKey, b.ResponsibleUserId, b.CreatedByUserId, b.CreatedAt, b.UpdatedAt, b.Version);
+        b.CustomerId, b.TemplateKey, b.ResponsibleUserId, b.CreatedByUserId, b.CreatedAt, b.UpdatedAt, b.Version,
+        b.PlannedStart, b.PlannedEnd, b.SiteContactName, b.SiteContactPhone, b.SiteContactEmail, b.SiteNotes, b.CancellationReason);
 
     /// <summary>Nicht sichtbare und nicht vorhandene Bauakten sind von außen nicht unterscheidbar.</summary>
     private static ProblemHttpResult NotFound() =>

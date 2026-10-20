@@ -1,27 +1,49 @@
-import { AimOutlined, CalendarOutlined, CheckOutlined, CloseOutlined, ExperimentOutlined, PictureOutlined, PushpinOutlined, WarningOutlined } from '@ant-design/icons';
-import { StatisticCard } from '@ant-design/pro-components';
+import {
+  AimOutlined, CalendarOutlined, CheckOutlined, CloseOutlined, EditOutlined, EnvironmentOutlined, ExperimentOutlined, NumberOutlined,
+  PictureOutlined, PushpinFilled, UserOutlined, WarningOutlined,
+} from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
-import { Alert, Button, Card, Col, Empty, Image, List, Row, Space, Tag, Typography } from 'antd';
+import { Alert, Button, Card, Col, Descriptions, Empty, Image, List, Row, Space, Tag, Typography } from 'antd';
 import { useState } from 'react';
 import { get } from '../../api/client';
-import type { BauakteDetail, FileResponse, Inspection, NoteDto, PlanningRange, RoomOverview, WorkItemDto } from '../../api/models';
+import type {
+  BauakteDetail, BauakteMember, ContactResponse, FileResponse, Inspection, NoteDto, PlanningRange, RoomOverview, WorkItemDto,
+} from '../../api/models';
 import { useAuth } from '../../auth/AuthContext';
 import { addDays, isoDay, parseDay } from '../../shared/days';
 import { SiteMap, statusMarkerColors } from '../../shared/SiteMap';
-import { address } from '../../shared/status';
+import { address, BauakteStatusTag, formatDateTime } from '../../shared/status';
 import { cmNumber } from './Records';
 
-const area = (v: number) => `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+export const area = (v: number) => `${v.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} m²`;
+const day = (v: string | null) => (v ? parseDay(v).toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '–');
+const content = (f: FileResponse, variant: 'thumb' | 'display') => `/api/v1/files/${f.id}/content?variant=${f.variants === 'ready' ? variant : 'original'}`;
+
+/** Ein Feld im Kopfstreifen der Baustellenübersicht. */
+function Fact({ icon, label, children }: { icon?: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="fact">
+      {icon && <span className="fact-icon">{icon}</span>}
+      <div>
+        <div className="fact-label">{label}</div>
+        <div className="fact-value">{children}</div>
+      </div>
+    </div>
+  );
+}
 
 /**
- * Übersicht einer Bauakte: Kennzahlen aus Räumen, Aufgaben, Dateien, Prüfungen und Planung,
- * Standort auf der Karte (im Büro per Klick festlegbar), neueste Fotos und angeheftete Notizen.
+ * Baustellenübersicht wie in Estrich Web: Kopfstreifen (Bauakte, Kunde, Baustelle, Aufbau, Fläche, Zugewiesen),
+ * Objektbilder, Standort mit Karte, Kennzahlen, Baustellendaten. Standort im Büro per Klick in die Karte.
  */
-export function BauakteOverview({ bauakte: b, canEdit, onLocation, onTab }: {
+export function BauakteOverview({ bauakte: b, customer, members, canEdit, onLocation, onTab, onEdit }: {
   bauakte: BauakteDetail;
+  customer: ContactResponse | null;
+  members: BauakteMember[];
   canEdit: boolean;
   onLocation: (latitude: number | null, longitude: number | null) => Promise<boolean>;
   onTab: (tab: string) => void;
+  onEdit: () => void;
 }) {
   const { has } = useAuth();
   const today = isoDay(new Date());
@@ -36,15 +58,18 @@ export function BauakteOverview({ bauakte: b, canEdit, onLocation, onTab }: {
   });
   const [picking, setPicking] = useState(false);
   const [picked, setPicked] = useState<[number, number] | null>(null);
+  const [gallery, setGallery] = useState(false);
 
   const openWork = (work.data ?? []).filter((w) => w.status !== 'done');
-  const openDefects = openWork.filter((w) => w.kind === 'defect');
-  const overdue = openWork.filter((w) => w.dueDate && w.dueDate < today);
-  const photos = (files.data ?? []).filter((f) => f.kind === 'photo' && f.state === 'stored').slice(0, 8);
+  const photos = (files.data ?? []).filter((f) => f.kind === 'photo' && f.state === 'stored');
   const lastCm = (inspections.data ?? []).filter((i) => i.kind === 'cmMeasurement').sort((x, y) => y.performedAt.localeCompare(x.performedAt))[0];
-  const next = (planning.data?.assignments ?? []).filter((a) => a.bauakteId === b.id).sort((x, y) => (x.day + (x.startTime ?? '')).localeCompare(y.day + (y.startTime ?? '')));
+  const initial = (inspections.data ?? []).filter((i) => i.kind === 'initialInspection').sort((x, y) => y.performedAt.localeCompare(x.performedAt))[0];
+  const next = (planning.data?.assignments ?? []).filter((a) => a.bauakteId === b.id)
+    .sort((x, y) => (x.day + (x.startTime ?? '')).localeCompare(y.day + (y.startTime ?? '')))[0];
   const pinned = (notes.data ?? []).filter((n) => n.isPinned);
+  const screeds = [...new Set((rooms.data?.rooms ?? []).map((r) => r.screedTypeName).filter(Boolean))];
   const position: [number, number] | null = picked ?? (b.latitude !== null && b.longitude !== null ? [b.latitude, b.longitude] : null);
+  const responsible = members.find((m) => m.role === 'responsible');
 
   const finishPick = async (save: boolean) => {
     if (save && picked && !(await onLocation(picked[0], picked[1]))) {
@@ -55,78 +80,50 @@ export function BauakteOverview({ bauakte: b, canEdit, onLocation, onTab }: {
   };
 
   return (
-    <Row gutter={[16, 16]}>
+    <Row gutter={[16, 16]} className="overview">
       <Col span={24}>
-        <StatisticCard.Group direction="row" className="overview-kpis">
-          <StatisticCard statistic={{ title: 'Fläche', value: rooms.data ? area(rooms.data.totalAreaSquareMeters) : '–', description: rooms.data ? `${rooms.data.rooms.length} Räume, ${area(rooms.data.heatedAreaSquareMeters)} beheizt` : undefined }}
-            onClick={() => onTab('rooms')} className="clickable" />
-          {has('work.read') && (
-            <StatisticCard statistic={{
-              title: 'Offene Aufgaben', value: openWork.length,
-              description: openDefects.length || overdue.length
-                ? <Space size={4}>{openDefects.length > 0 && <Tag color="orange" bordered={false}>{openDefects.length} Mängel</Tag>}{overdue.length > 0 && <Tag color="red" bordered={false}>{overdue.length} überfällig</Tag>}</Space>
-                : 'nichts überfällig',
-            }} onClick={() => onTab('work')} className="clickable" />
-          )}
-          <StatisticCard statistic={{ title: 'Fotos und Dokumente', value: files.data?.length ?? '–', icon: <PictureOutlined style={{ fontSize: 24, color: '#0B2D5B' }} /> }}
-            onClick={() => onTab('files')} className="clickable" />
-          <StatisticCard statistic={{
-            title: 'Letzte CM-Messung',
-            value: lastCm ? `${cmNumber(lastCm.measuredCmPercent)} CM-%` : '–',
-            description: lastCm
-              ? <Tag color={lastCm.isReadyForCovering ? 'success' : 'warning'} bordered={false}>{lastCm.isReadyForCovering ? 'Belegreif' : 'Noch nicht belegreif'} · {lastCm.location}</Tag>
-              : 'noch keine Messung',
-            icon: <ExperimentOutlined style={{ fontSize: 24, color: '#0B2D5B' }} />,
-          }} onClick={() => onTab('records')} className="clickable" />
-          {has('planning.read') && (
-            <StatisticCard statistic={{
-              title: 'Nächster Einsatz',
-              value: next[0] ? parseDay(next[0].day).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '–',
-              description: next[0] ? `${next[0].startTime?.slice(0, 5) ?? ''} ${next[0].activity}${next[0].crewName ? ` · ${next[0].crewName}` : ''}` : 'nicht eingeplant',
-              icon: <CalendarOutlined style={{ fontSize: 24, color: '#0B2D5B' }} />,
-            }} />
-          )}
-        </StatisticCard.Group>
+        <Card size="small" className="fact-strip" styles={{ body: { padding: 0 } }}>
+          <div className="fact-strip-grid">
+            <div className="fact-strip-main">
+              <Fact icon={<NumberOutlined />} label="Bauakte"><span className="tabular">{b.number ?? '–'}</span></Fact>
+              <Fact icon={<UserOutlined />} label="Kunde">{customer?.name ?? '–'}</Fact>
+              <Fact icon={<EnvironmentOutlined />} label="Baustelle">{address(b)}</Fact>
+            </div>
+            <Fact label="Aufbau">{screeds.length ? screeds.join(', ') : '–'}</Fact>
+            <Fact label="Fläche">{rooms.data ? area(rooms.data.totalAreaSquareMeters) : '–'}</Fact>
+            <Fact label="Zugewiesen">{responsible?.displayName ?? '–'}{members.length > 1 && <Typography.Text type="secondary"> +{members.length - 1}</Typography.Text>}</Fact>
+            <Fact label="Ausführung">{b.plannedStart || b.plannedEnd ? `${day(b.plannedStart)} – ${day(b.plannedEnd)}` : '–'}</Fact>
+          </div>
+        </Card>
       </Col>
 
-      <Col xs={24} xl={14}>
-        <Space direction="vertical" size={16} style={{ width: '100%' }}>
-          <Card size="small" title="Beschreibung">
-            <Typography.Paragraph className="pre" style={{ margin: 0 }}>{b.description ?? 'Keine Beschreibung.'}</Typography.Paragraph>
-          </Card>
-          {pinned.length > 0 && (
-            <Card size="small" title={<Space><PushpinOutlined />Angeheftete Notizen</Space>}>
-              <List size="small" dataSource={pinned} renderItem={(n) => <List.Item><Typography.Text className="pre">{n.text}</Typography.Text></List.Item>} />
-            </Card>
-          )}
-          {openWork.length > 0 && (
-            <Card size="small" title="Offene Aufgaben und Mängel" extra={<a onClick={() => onTab('work')}>Alle anzeigen</a>}>
-              <List size="small" dataSource={openWork.slice(0, 6)} renderItem={(w) => (
-                <List.Item extra={w.dueDate && <Typography.Text type={w.dueDate < today ? 'danger' : 'secondary'} className="tabular">{parseDay(w.dueDate).toLocaleDateString('de-DE')}</Typography.Text>}>
-                  <Space>{w.kind === 'defect' ? <WarningOutlined style={{ color: '#FA8C16' }} /> : <CheckOutlined style={{ color: '#8C8C8C' }} />}{w.title}</Space>
-                </List.Item>
-              )} />
-            </Card>
-          )}
-          <Card size="small" title="Neueste Fotos" extra={photos.length > 0 && <a onClick={() => onTab('files')}>Alle Fotos</a>}>
-            {photos.length === 0
-              ? <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Noch keine Fotos." />
-              : (
-                <Image.PreviewGroup>
-                  <div className="photo-grid photo-grid-small">
-                    {photos.map((p) => (
-                      <Image key={p.id} alt="Foto" src={`/api/v1/files/${p.id}/content?variant=${p.variants === 'ready' ? 'thumb' : 'original'}`}
-                        preview={{ src: `/api/v1/files/${p.id}/content?variant=${p.variants === 'ready' ? 'display' : 'original'}` }} />
-                    ))}
-                  </div>
-                </Image.PreviewGroup>
-              )}
-          </Card>
-        </Space>
+      <Col xs={24} xl={12}>
+        <Card size="small" title="Objektbilder" extra={<Typography.Text type="secondary">{photos.length} {photos.length === 1 ? 'Foto' : 'Fotos'}</Typography.Text>} style={{ height: '100%' }}>
+          {photos.length === 0
+            ? (
+              <div className="hero hero-empty">
+                <PictureOutlined style={{ fontSize: 28 }} />
+                <span>Noch kein Bild hochgeladen</span>
+                <Button onClick={() => onTab('fotos')}>Erstes Foto hinzufügen</Button>
+              </div>
+            )
+            : (
+              <div className="hero" style={{ backgroundImage: `url(${content(photos[0], 'display')})` }}>
+                <div className="hero-shade">
+                  <PictureOutlined style={{ fontSize: 22 }} />
+                  <strong>{photos.length} {photos.length === 1 ? 'Foto hinterlegt' : 'Fotos hinterlegt'}</strong>
+                  <Button type="primary" icon={<PictureOutlined />} onClick={() => setGallery(true)}>Foto-Galerie öffnen</Button>
+                </div>
+                <Image.PreviewGroup preview={{ visible: gallery, onVisibleChange: setGallery }}
+                  items={photos.map((p) => content(p, 'display'))} />
+              </div>
+            )}
+        </Card>
       </Col>
 
-      <Col xs={24} xl={10}>
-        <Card size="small" title="Standort"
+      <Col xs={24} xl={12}>
+        <Card size="small" style={{ height: '100%' }}
+          title={<Space>Standort<Typography.Text type="secondary" style={{ fontWeight: 400 }}>{[b.street, b.city].filter(Boolean).join(' ')}</Typography.Text></Space>}
           extra={canEdit && (picking
             ? <Space>
                 <Button size="small" icon={<CloseOutlined />} onClick={() => void finishPick(false)}>Abbrechen</Button>
@@ -135,12 +132,107 @@ export function BauakteOverview({ bauakte: b, canEdit, onLocation, onTab }: {
             : <Button size="small" icon={<AimOutlined />} onClick={() => setPicking(true)}>{position ? 'Standort ändern' : 'Standort festlegen'}</Button>)}>
           {picking && <Alert type="info" showIcon style={{ marginBottom: 8 }} message="In die Karte klicken, um den Standort der Baustelle zu setzen." />}
           {position || picking
-            ? <SiteMap height={340} onPick={picking ? (lat, lng) => setPicked([lat, lng]) : undefined}
+            ? <SiteMap height={250} onPick={picking ? (lat, lng) => setPicked([lat, lng]) : undefined}
                 markers={position ? [{ id: b.id, latitude: position[0], longitude: position[1], color: statusMarkerColors[b.status], label: b.title }] : []} />
             : <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="Noch kein Standort. Die Apps übernehmen ihn beim Anlegen vor Ort, im Büro per „Standort festlegen“." />}
-          <Typography.Paragraph type="secondary" style={{ margin: '8px 0 0' }}>
-            {address(b)}{position && <span className="tabular"> · {position[0].toLocaleString('de-DE', { maximumFractionDigits: 5 })}, {position[1].toLocaleString('de-DE', { maximumFractionDigits: 5 })}</span>}
-          </Typography.Paragraph>
+          {position && (
+            <Typography.Paragraph type="secondary" style={{ margin: '8px 0 0' }}>
+              <span className="tabular">{position[0].toLocaleString('de-DE', { maximumFractionDigits: 5 })}, {position[1].toLocaleString('de-DE', { maximumFractionDigits: 5 })}</span>
+              {' · '}<a href={`https://www.openstreetmap.org/directions?to=${position[0]}%2C${position[1]}`} target="_blank" rel="noreferrer">Route</a>
+            </Typography.Paragraph>
+          )}
+        </Card>
+      </Col>
+
+      <Col xs={24} md={8}>
+        <Card size="small" className="kpi clickable" onClick={() => onTab('aufgaben')}>
+          <Space align="start">
+            <WarningOutlined className="kpi-icon" />
+            <div>
+              <div className="fact-label">Offene Aufgaben und Mängel</div>
+              <div className="kpi-value">{has('work.read') ? openWork.length : '–'}</div>
+              <Space size={4}>
+                {openWork.filter((w) => w.kind === 'defect').length > 0 && <Tag color="orange" bordered={false}>{openWork.filter((w) => w.kind === 'defect').length} Mängel</Tag>}
+                {openWork.filter((w) => w.dueDate && w.dueDate < today).length > 0 && <Tag color="red" bordered={false}>{openWork.filter((w) => w.dueDate && w.dueDate < today).length} überfällig</Tag>}
+              </Space>
+            </div>
+          </Space>
+        </Card>
+      </Col>
+      <Col xs={24} md={8}>
+        <Card size="small" className="kpi clickable" onClick={() => onTab('erstbegehung')}>
+          <Space align="start">
+            <ExperimentOutlined className="kpi-icon" />
+            <div>
+              <div className="fact-label">Erstbegehung / CM-Messung</div>
+              <div className="kpi-value">{lastCm ? `${cmNumber(lastCm.measuredCmPercent)} CM-%` : initial ? 'Erstbegehung erfolgt' : '–'}</div>
+              {lastCm
+                ? <Tag color={lastCm.isReadyForCovering ? 'success' : 'warning'} bordered={false}>{lastCm.isReadyForCovering ? 'Belegreif' : 'Noch nicht belegreif'} · {lastCm.location}</Tag>
+                : <Typography.Text type="secondary">{initial ? formatDateTime(initial.performedAt) : 'Erstbegehung noch nicht ausgeführt'}</Typography.Text>}
+            </div>
+          </Space>
+        </Card>
+      </Col>
+      <Col xs={24} md={8}>
+        <Card size="small" className="kpi">
+          <Space align="start">
+            <CalendarOutlined className="kpi-icon" />
+            <div>
+              <div className="fact-label">Nächster Einsatz</div>
+              <div className="kpi-value">{next ? parseDay(next.day).toLocaleDateString('de-DE', { weekday: 'short', day: '2-digit', month: '2-digit' }) : '–'}</div>
+              <Typography.Text type="secondary">{next ? `${next.startTime?.slice(0, 5) ?? ''} ${next.activity}${next.crewName ? ` · ${next.crewName}` : ''}` : 'nicht eingeplant'}</Typography.Text>
+            </div>
+          </Space>
+        </Card>
+      </Col>
+
+      {(pinned.length > 0 || openWork.length > 0) && (
+        <Col span={24}>
+          <Row gutter={[16, 16]}>
+            {pinned.length > 0 && (
+              <Col xs={24} xl={12}>
+                <Card size="small" title={<Space><PushpinFilled style={{ color: '#FA8C16' }} />Angeheftete Notizen</Space>} extra={<a onClick={() => onTab('notizen')}>Alle Notizen</a>}>
+                  <List size="small" dataSource={pinned} renderItem={(n) => <List.Item className={n.color ? `note-${n.color}` : undefined}><Typography.Text className="pre">{n.text}</Typography.Text></List.Item>} />
+                </Card>
+              </Col>
+            )}
+            {openWork.length > 0 && (
+              <Col xs={24} xl={12}>
+                <Card size="small" title="Offene Aufgaben und Mängel" extra={<a onClick={() => onTab('aufgaben')}>Alle anzeigen</a>}>
+                  <List size="small" dataSource={openWork.slice(0, 6)} renderItem={(w) => (
+                    <List.Item extra={w.dueDate && <Typography.Text type={w.dueDate < today ? 'danger' : 'secondary'} className="tabular">{day(w.dueDate)}</Typography.Text>}>
+                      <Space>{w.kind === 'defect' ? <WarningOutlined style={{ color: '#FA8C16' }} /> : <CheckOutlined style={{ color: '#8C8C8C' }} />}{w.title}</Space>
+                    </List.Item>
+                  )} />
+                </Card>
+              </Col>
+            )}
+          </Row>
+        </Col>
+      )}
+
+      <Col span={24}>
+        <Card size="small" title="Baustellendaten" extra={canEdit && <Button size="small" icon={<EditOutlined />} onClick={onEdit}>Bearbeiten</Button>}>
+          <div className="section-title">Basisdaten</div>
+          <Descriptions column={{ xs: 1, md: 2, xl: 4 }} size="small" layout="vertical" colon={false} className="field-grid" items={[
+            { key: 'nr', label: 'Bauakte', children: <span className="tabular">{b.number ?? '–'}</span> },
+            { key: 'customer', label: 'Kunde', children: customer?.name ?? '–' },
+            { key: 'start', label: 'Beginn', children: day(b.plannedStart) },
+            { key: 'end', label: 'Ende', children: day(b.plannedEnd) },
+            { key: 'status', label: 'Status', children: <BauakteStatusTag status={b.status} /> },
+            { key: 'resp', label: 'Zuständig', children: responsible?.displayName ?? '–' },
+            { key: 'created', label: 'Angelegt', children: formatDateTime(b.createdAt) },
+            { key: 'updated', label: 'Geändert', children: formatDateTime(b.updatedAt) },
+          ]} />
+          <div className="section-title">Standort</div>
+          <Descriptions column={{ xs: 1, md: 2, xl: 4 }} size="small" layout="vertical" colon={false} className="field-grid" items={[
+            { key: 'street', label: 'Straße', children: b.street ?? '–' },
+            { key: 'zip', label: 'PLZ', children: b.postalCode ?? '–' },
+            { key: 'city', label: 'Ort', children: b.city ?? '–' },
+            { key: 'geo', label: 'Koordinaten', children: position ? <span className="tabular">{position[0].toFixed(5)}, {position[1].toFixed(5)}</span> : '–' },
+          ]} />
+          <div className="section-title">Beschreibung</div>
+          <Typography.Paragraph className="pre" style={{ margin: '4px 12px 0' }}>{b.description ?? 'Keine Beschreibung.'}</Typography.Paragraph>
         </Card>
       </Col>
     </Row>

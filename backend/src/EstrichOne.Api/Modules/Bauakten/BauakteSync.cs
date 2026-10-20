@@ -24,7 +24,8 @@ internal sealed class BauakteSync(
     TimeProvider clock) : ISyncOperationHandler
 {
     private static readonly HashSet<string> EditableFields =
-        ["title", "status", "street", "postalCode", "city", "latitude", "longitude", "description", "customerId", "responsibleUserId"];
+        ["title", "status", "street", "postalCode", "city", "latitude", "longitude", "description", "customerId", "responsibleUserId",
+            "siteContactName", "siteContactPhone", "siteContactEmail", "siteNotes"];
 
     public IReadOnlyCollection<string> OperationTypes { get; } =
         ["bauakte.create", "bauakte.update", "bauakte.delete", "note.create", "note.update", "note.delete"];
@@ -100,7 +101,14 @@ internal sealed class BauakteSync(
                     bauakte.Rename(title);
                     break;
                 case "status":
-                    bauakte.ChangeStatus(value.Deserialize<BauakteStatus>(SyncPayload.Json));
+                    var status = value.Deserialize<BauakteStatus>(SyncPayload.Json);
+                    if (status == BauakteStatus.Cancelled && bauakte.Status != BauakteStatus.Cancelled)
+                    {
+                        // Stornieren braucht eine Begründung und geschieht im Büro.
+                        throw new SyncValidationException("Stornieren ist nur im Büro mit Begründung möglich.");
+                    }
+
+                    bauakte.ChangeStatus(status);
                     break;
                 case "street":
                     bauakte.ChangeAddress(value?.GetValue<string>(), bauakte.PostalCode, bauakte.City, bauakte.Latitude, bauakte.Longitude);
@@ -119,6 +127,18 @@ internal sealed class BauakteSync(
                     break;
                 case "description":
                     bauakte.Describe(value?.GetValue<string>());
+                    break;
+                case "siteContactName":
+                    bauakte.ChangeSiteContact(value?.GetValue<string>(), bauakte.SiteContactPhone, bauakte.SiteContactEmail);
+                    break;
+                case "siteContactPhone":
+                    bauakte.ChangeSiteContact(bauakte.SiteContactName, value?.GetValue<string>(), bauakte.SiteContactEmail);
+                    break;
+                case "siteContactEmail":
+                    bauakte.ChangeSiteContact(bauakte.SiteContactName, bauakte.SiteContactPhone, value?.GetValue<string>());
+                    break;
+                case "siteNotes":
+                    bauakte.ChangeSiteNotes(value?.GetValue<string>());
                     break;
                 case "customerId":
                     var customerId = value.Deserialize<Guid?>(SyncPayload.Json);

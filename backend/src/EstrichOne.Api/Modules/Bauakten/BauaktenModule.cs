@@ -15,6 +15,7 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<IDataInitializer, ScreedTypeSeed>();
         services.AddScoped<IBauakteHistory, BauakteHistory>();
         services.AddScoped<BauakteCommands>();
+        services.AddScoped<IBauakteHintSource, BauakteOwnHints>();
         services.AddScoped<ISyncOperationHandler, BauakteSync>();
         services.AddScoped<ISyncEntitySource, BauakteSource>();
         services.AddScoped<ISyncEntitySource, NoteSource>();
@@ -26,5 +27,6 @@ public sealed class BauaktenModule : IModule
         BauakteEndpoints.Map(api);
         BauakteHistoryEndpoints.Map(api);
         OfficeEndpoints.Map(api);
+        BauakteTeamEndpoints.Map(api);
     }
 }

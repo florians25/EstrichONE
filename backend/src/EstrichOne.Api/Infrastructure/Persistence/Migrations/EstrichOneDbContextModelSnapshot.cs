@@ -184,6 +184,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<string>("CancellationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("cancellation_reason");
+
                     b.Property<string>("City")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
@@ -223,6 +228,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("number");
 
+                    b.Property<DateOnly?>("PlannedEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("planned_end");
+
+                    b.Property<DateOnly?>("PlannedStart")
+                        .HasColumnType("date")
+                        .HasColumnName("planned_start");
+
                     b.Property<string>("PostalCode")
                         .HasMaxLength(10)
                         .HasColumnType("character varying(10)")
@@ -231,6 +244,26 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("ResponsibleUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("responsible_user_id");
+
+                    b.Property<string>("SiteContactEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("site_contact_email");
+
+                    b.Property<string>("SiteContactName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("site_contact_name");
+
+                    b.Property<string>("SiteContactPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("site_contact_phone");
+
+                    b.Property<string>("SiteNotes")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("site_notes");
 
                     b.Property<string>("Status")
                         .IsRequired()
@@ -276,6 +309,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasDatabaseName("ix_bauakten_number")
                         .HasFilter("number IS NOT NULL");
+
+                    b.HasIndex("PlannedStart")
+                        .HasDatabaseName("ix_bauakten_planned_start");
 
                     b.HasIndex("ResponsibleUserId")
                         .HasDatabaseName("ix_bauakten_responsible_user_id");
@@ -922,6 +958,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset?>("CapturedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("captured_at");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("category");
 
                     b.Property<string>("ContentType")
                         .IsRequired()

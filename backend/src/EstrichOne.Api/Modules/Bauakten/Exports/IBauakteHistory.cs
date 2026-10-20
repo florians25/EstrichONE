@@ -23,4 +23,5 @@ public static class BauakteHistoryActions
     public const string DiaryAdded = "diary_added";
     public const string InspectionAdded = "inspection_added";
     public const string RoomAdded = "room_added";
+    public const string MembersChanged = "members_changed";
 }

@@ -40,6 +40,21 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
     public Guid? ResponsibleUserId { get; private set; }
     public Guid CreatedByUserId { get; private set; }
 
+    /// <summary>Geplanter Beginn und geplantes Ende der Ausführung.</summary>
+    public DateOnly? PlannedStart { get; private set; }
+    public DateOnly? PlannedEnd { get; private set; }
+
+    /// <summary>Ansprechpartner vor Ort (oft nicht der Kunde, z. B. Bauleiter des Generalunternehmers).</summary>
+    public string? SiteContactName { get; private set; }
+    public string? SiteContactPhone { get; private set; }
+    public string? SiteContactEmail { get; private set; }
+
+    /// <summary>Hinweise und Behinderungen – werden in allen Ansichten hervorgehoben (Zufahrt, Schlüssel, Hund …).</summary>
+    public string? SiteNotes { get; private set; }
+
+    /// <summary>Begründung bei Status <see cref="BauakteStatus.Cancelled"/>.</summary>
+    public string? CancellationReason { get; private set; }
+
     public List<BauakteSection> Sections { get; private set; } = [];
     public List<BauakteMember> Members { get; private set; } = [];
 
@@ -90,7 +105,49 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
         Longitude = longitude;
     }
 
-    public void ChangeStatus(BauakteStatus status) => Status = status;
+    public void ChangeStatus(BauakteStatus status)
+    {
+        Status = status;
+        if (status != BauakteStatus.Cancelled)
+        {
+            CancellationReason = null;
+        }
+    }
+
+    /// <summary>Stornieren mit Begründung; die Bauakte bleibt mit Verlauf erhalten.</summary>
+    public void Cancel(string reason)
+    {
+        var trimmed = reason?.Trim() ?? string.Empty;
+        if (trimmed.Length == 0)
+        {
+            throw new ArgumentException("Bitte einen Stornogrund angeben.", nameof(reason));
+        }
+
+        Status = BauakteStatus.Cancelled;
+        CancellationReason = trimmed.Length > 500 ? trimmed[..500] : trimmed;
+    }
+
+    public void Schedule(DateOnly? start, DateOnly? end)
+    {
+        if (start is { } s && end is { } e && e < s)
+        {
+            throw new ArgumentException("Das Ende darf nicht vor dem Beginn liegen.", nameof(end));
+        }
+
+        PlannedStart = start;
+        PlannedEnd = end;
+    }
+
+    public void ChangeSiteContact(string? name, string? phone, string? email)
+    {
+        SiteContactName = Blank(name);
+        SiteContactPhone = Blank(phone);
+        SiteContactEmail = Blank(email);
+    }
+
+    public void ChangeSiteNotes(string? notes) => SiteNotes = Blank(notes);
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     public void Describe(string? description) => Description = description;
 

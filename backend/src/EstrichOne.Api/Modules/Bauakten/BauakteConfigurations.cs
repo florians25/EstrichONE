@@ -22,6 +22,12 @@ internal sealed class BauakteConfiguration : IEntityTypeConfiguration<Bauakte>
         builder.Property(bauakte => bauakte.City).HasMaxLength(100);
         builder.Property(bauakte => bauakte.Description).HasMaxLength(4000);
         builder.Property(bauakte => bauakte.TemplateKey).HasMaxLength(50);
+        builder.Property(bauakte => bauakte.SiteContactName).HasMaxLength(100);
+        builder.Property(bauakte => bauakte.SiteContactPhone).HasMaxLength(50);
+        builder.Property(bauakte => bauakte.SiteContactEmail).HasMaxLength(320);
+        builder.Property(bauakte => bauakte.SiteNotes).HasMaxLength(2000);
+        builder.Property(bauakte => bauakte.CancellationReason).HasMaxLength(500);
+        builder.HasIndex(bauakte => bauakte.PlannedStart);
 
         builder.HasIndex(bauakte => bauakte.Number).IsUnique().HasFilter("number IS NOT NULL");
         builder.HasIndex(bauakte => bauakte.Status);

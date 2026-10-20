@@ -32,6 +32,13 @@ internal sealed class UserAccounts(EstrichOneDbContext db, PasswordHasher hasher
         return user;
     }
 
+    public async Task<bool> VerifyPasswordAsync(Guid userId, string password, CancellationToken cancellationToken)
+    {
+        var credential = await db.Set<LocalCredential>().AsNoTracking().SingleOrDefaultAsync(c => c.UserId == userId, cancellationToken);
+        // Ohne Zugangsdaten trotzdem rechnen: gleiche Antwortzeit, keine Rückschlüsse.
+        return hasher.Verify(password, credential?.PasswordHash) && credential is not null;
+    }
+
     public async Task<string> ResetPasswordAsync(Guid userId, CancellationToken cancellationToken)
     {
         var password = GenerateOneTimePassword();

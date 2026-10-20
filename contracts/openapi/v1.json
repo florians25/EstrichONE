@@ -2171,12 +2171,14 @@
             "bearer": []
           }
         ]
-      },
-      "delete": {
+      }
+    },
+    "/api/v1/bauakten/{id}/delete": {
+      "post": {
         "tags": [
           "Bauakten"
         ],
-        "summary": "Bauakte in den Papierkorb legen",
+        "summary": "Bauakte in den Papierkorb legen; bestätigt mit dem eigenen Passwort",
         "operationId": "DeleteBauakte",
         "parameters": [
           {
@@ -2189,9 +2191,29 @@
             }
           }
         ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBauakteRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "204": {
             "description": "No Content"
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           },
           "404": {
             "description": "Not Found",
@@ -2666,6 +2688,262 @@
         ]
       }
     },
+    "/api/v1/bauakten/{id}/members": {
+      "get": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Zuständige Person und zugewiesene Mitarbeiter",
+        "operationId": "ListBauakteMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BauakteMemberResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Zugewiesene Mitarbeiter festlegen",
+        "operationId": "SetBauakteMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetMembersRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BauakteMemberResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/notes/{noteId}": {
+      "patch": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Notiz anheften, lösen oder einfärben",
+        "operationId": "UpdateNote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "noteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NoteDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/hints": {
+      "get": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Hinweiszeilen (Einsatz heute, Erstbegehung offen, Mängel …)",
+        "operationId": "GetBauakteHints",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BauakteHint"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/files": {
       "post": {
         "tags": [
@@ -2974,6 +3252,74 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Dateien"
+        ],
+        "summary": "Beschriftung und Dokumentart ändern",
+        "operationId": "UpdateFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFileRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FileResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4674,6 +5020,13 @@
               "null",
               "string"
             ]
+          },
+          "category": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -5095,8 +5448,79 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "plannedStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "plannedEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "siteContactName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteContactPhone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteContactEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteNotes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cancellationReason": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
+      },
+      "BauakteHint": {
+        "required": [
+          "kind",
+          "severity",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "severity": {
+            "$ref": "#/components/schemas/BauakteHintSeverity"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "BauakteHintSeverity": {
+        "enum": [
+          "info",
+          "success",
+          "warning",
+          "danger"
+        ]
       },
       "BauakteHistoryEntry": {
         "required": [
@@ -5281,6 +5705,43 @@
             "format": "uuid"
           }
         }
+      },
+      "BauakteMemberResponse": {
+        "required": [
+          "userId",
+          "displayName",
+          "email",
+          "role",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "role": {
+            "$ref": "#/components/schemas/BauakteMemberRole"
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BauakteMemberRole": {
+        "enum": [
+          "responsible",
+          "member"
+        ]
       },
       "BauaktePage": {
         "required": [
@@ -5823,6 +6284,18 @@
           }
         }
       },
+      "DeleteBauakteRequest": {
+        "required": [
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "maxLength": 1024,
+            "type": "string"
+          }
+        }
+      },
       "DeviceKind": {
         "enum": [
           "personal",
@@ -6246,6 +6719,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "category": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -7566,6 +8045,21 @@
           }
         }
       },
+      "SetMembersRequest": {
+        "required": [
+          "userIds"
+        ],
+        "type": "object",
+        "properties": {
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "SetupAdministrator": {
         "required": [
           "displayName",
@@ -8124,6 +8618,55 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "plannedStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "plannedEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "siteContactName": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteContactPhone": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteContactEmail": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteNotes": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "cancellationReason": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -8190,6 +8733,51 @@
           },
           "notes": {
             "maxLength": 4000,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "UpdateFileRequest": {
+        "required": [
+          "caption",
+          "category"
+        ],
+        "type": "object",
+        "properties": {
+          "caption": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "UpdateNoteRequest": {
+        "required": [
+          "isPinned",
+          "color"
+        ],
+        "type": "object",
+        "properties": {
+          "isPinned": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "color": {
+            "maxLength": 20,
             "type": [
               "null",
               "string"

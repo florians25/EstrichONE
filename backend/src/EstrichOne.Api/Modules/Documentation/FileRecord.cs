@@ -23,6 +23,15 @@ public enum VariantState
     Failed,
 }
 
+/// <summary>Dokumentarten wie in Estrich Web (Reiter „Dokumente“).</summary>
+public static class DocumentCategories
+{
+    public static IReadOnlySet<string> All { get; } = new HashSet<string>
+    {
+        "offer", "order", "invoice", "plan", "delivery", "acceptance", "customer", "office", "other",
+    };
+}
+
 public enum FileState
 {
     /// <summary>Metadaten bekannt (z. B. offline angelegt und synchronisiert), Inhalt noch nicht hochgeladen.</summary>
@@ -53,6 +62,9 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
     public string? DetectedContentType { get; private set; }
     public VariantState Variants { get; private set; } = VariantState.NotApplicable;
     public string? Caption { get; private set; }
+
+    /// <summary>Dokumentart (<see cref="DocumentCategories"/>), z. B. Angebot oder Plan; bei Fotos und Videos leer.</summary>
+    public string? Category { get; private set; }
     public DateTimeOffset? CapturedAt { get; private set; }
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
@@ -107,6 +119,10 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
 
     public void Describe(string? caption) => Caption = caption;
 
+    public void Categorize(string? category) => Category = category is null || DocumentCategories.All.Contains(category)
+        ? category
+        : throw new ArgumentException("Unbekannte Dokumentart.", nameof(category));
+
     public void SetLocation(double? latitude, double? longitude)
     {
         Latitude = latitude;
@@ -137,6 +153,7 @@ internal sealed class FileRecordConfiguration : IEntityTypeConfiguration<FileRec
         builder.Property(file => file.Variants).HasConversion<string>().HasMaxLength(20);
         builder.HasIndex(file => file.Variants).HasFilter("variants = 'Pending'");
         builder.Property(file => file.Caption).HasMaxLength(500);
+        builder.Property(file => file.Category).HasMaxLength(30);
         builder.HasOne<Bauakte>().WithMany().HasForeignKey(file => file.BauakteId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<User>().WithMany().HasForeignKey(file => file.UploadedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(file => new { file.BauakteId, file.Kind });

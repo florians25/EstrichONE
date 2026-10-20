@@ -25,7 +25,8 @@ internal static class BauakteHistoryEndpoints
     {
         ["title"] = "die Bezeichnung", ["street"] = "die Straße", ["postalCode"] = "die PLZ", ["city"] = "den Ort",
         ["latitude"] = "den Standort", ["longitude"] = "den Standort", ["description"] = "die Beschreibung",
-        ["customerId"] = "den Kunden", ["responsibleUserId"] = "die Zuständigkeit",
+        ["customerId"] = "den Kunden", ["responsibleUserId"] = "die Zuständigkeit", ["period"] = "den Zeitraum",
+        ["siteContact"] = "den Baustellenkontakt", ["siteNotes"] = "die Hinweise zur Baustelle",
     };
 
     private static readonly Dictionary<string, string> StatusNames = new()
@@ -83,6 +84,7 @@ internal static class BauakteHistoryEndpoints
             "bauakte.workitem_created" => kindIsDefect ? $"{actor} hat einen Mangel erfasst." : $"{actor} hat eine Aufgabe angelegt.",
             "bauakte.workitem_done" => kindIsDefect ? $"{actor} hat einen Mangel als behoben markiert." : $"{actor} hat eine Aufgabe erledigt.",
             "bauakte.room_added" => $"{actor} hat einen Raum angelegt.",
+            "bauakte.members_changed" => $"{actor} hat die zugewiesenen Mitarbeiter geändert.",
             "bauakte.diary_added" => $"{actor} hat das Bautagebuch für den {Day(Detail("day"))} ergänzt.",
             "bauakte.inspection_added" when Detail("kind") == "CmMeasurement" =>
                 $"{actor} hat eine CM-Messung erfasst: {Percent(Detail("measured"))} CM-% bei Grenzwert {Percent(Detail("limit"))} CM-% – "

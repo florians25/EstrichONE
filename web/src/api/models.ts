@@ -84,7 +84,32 @@ export interface BauakteDetail extends BauakteListItem {
   responsibleUserId: string | null;
   createdByUserId: string;
   createdAt: string;
+  plannedStart: string | null;
+  plannedEnd: string | null;
+  siteContactName: string | null;
+  siteContactPhone: string | null;
+  siteContactEmail: string | null;
+  siteNotes: string | null;
+  cancellationReason: string | null;
 }
+
+export type BauakteHintSeverity = 'info' | 'success' | 'warning' | 'danger';
+
+export interface BauakteHint {
+  kind: string;
+  severity: BauakteHintSeverity;
+  text: string;
+}
+
+export interface BauakteMember {
+  userId: string;
+  displayName: string;
+  email: string | null;
+  role: 'responsible' | 'member';
+  isActive: boolean;
+}
+
+export type DocumentCategory = 'offer' | 'order' | 'invoice' | 'plan' | 'delivery' | 'acceptance' | 'customer' | 'office' | 'other';
 
 export interface FileResponse {
   id: string;
@@ -98,6 +123,8 @@ export interface FileResponse {
   caption: string | null;
   capturedAt: string | null;
   createdAt: string;
+  uploadedByUserId: string;
+  category: DocumentCategory | null;
 }
 
 export interface RoleResponse {

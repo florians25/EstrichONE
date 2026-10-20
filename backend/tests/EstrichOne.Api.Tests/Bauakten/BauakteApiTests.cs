@@ -121,9 +121,15 @@ public sealed class BauakteApiTests(PostgresFixture postgres) : IAsyncLifetime
         using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
         var bauakte = await CreateAsync(worker, "Garage");
 
-        (await worker.DeleteAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}", UriKind.Relative), TestContext.Current.CancellationToken))
+        var path = new Uri($"/api/v1/bauakten/{bauakte.Id}/delete", UriKind.Relative);
+        (await worker.PostAsJsonAsync(path, new { password = AuthClient.DefaultPassword }, TestContext.Current.CancellationToken))
             .StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-        (await office.DeleteAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}", UriKind.Relative), TestContext.Current.CancellationToken))
+        using var wrong = await office.PostAsJsonAsync(path, new { password = "falsch-falsch" }, TestContext.Current.CancellationToken);
+        wrong.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await wrong.ReadProblemAsync()).Code.ShouldBe("PASSWORD_CONFIRMATION_FAILED");
+        (await office.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}", UriKind.Relative), TestContext.Current.CancellationToken))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await office.PostAsJsonAsync(path, new { password = AuthClient.DefaultPassword }, TestContext.Current.CancellationToken))
             .StatusCode.ShouldBe(HttpStatusCode.NoContent);
         (await office.GetAsync(new Uri($"/api/v1/bauakten/{bauakte.Id}", UriKind.Relative), TestContext.Current.CancellationToken))
             .StatusCode.ShouldBe(HttpStatusCode.NotFound);

@@ -122,14 +122,17 @@ test('Bauakte im Browser: Prüfungen, Bautagebuch und Verlauf aus der App ersche
 
   await page.goto(`/bauakten/${bauakte}`);
   await expect(pageTitle(page)).toContainText('EFH Prüfung E2E');
-  await page.getByRole('tab', { name: 'Prüfungen und Bautagebuch' }).click();
-  await expect(page.getByText('Prüfungen (2)')).toBeVisible();
-  await expect(page.getByText('Bad OG: 1,6 CM-% (Grenzwert 1,8)')).toBeVisible();
-  await expect(page.getByText('Belegreif', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Erstbegehung' }).click();
+  await expect(page.getByText('Erstbegehungsprotokoll')).toBeVisible();
+  await expect(page.getByText('Mit Mängeln – Klärung nötig')).toBeVisible();
   await expect(page.getByText('Randdämmstreifen vorhanden')).toBeVisible();
+  await expect(page.getByText('Randdämmung fehlt')).toBeVisible();
+  await expect(page.getByRole('row', { name: /Bad OG/ })).toContainText('1,6 CM-% (Grenzwert 1,8)');
+  await expect(page.getByRole('row', { name: /Bad OG/ }).getByText('Belegreif', { exact: true })).toBeVisible();
+  await page.getByRole('tab', { name: 'Tagesübersicht' }).click();
   await expect(page.getByText('Estrich im EG eingebracht')).toBeVisible();
   await expect(page.getByText('Regen · 9 °C')).toBeVisible();
-  await page.getByRole('tab', { name: 'Verlauf' }).click();
+  await page.getByRole('tab', { name: 'Notizen & Verlauf' }).click();
   await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-% – belegreif.')).toBeVisible();
 });
 
@@ -181,13 +184,13 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await dialog.getByRole('button', { name: 'Anlegen', exact: true }).click();
 
   await expect(pageTitle(page)).toContainText('Anfrage Familie Kraus, Heizestrich');
-  const tags = page.locator('.ant-page-header-heading-tags');
-  await expect(tags.getByText('Anfrage', { exact: true })).toBeVisible();
-  await expect(page.locator('.facts').getByText('Familie Kraus')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Status: Anfrage' })).toBeVisible();
+  await expect(page.locator('.fact-strip').getByText('Familie Kraus')).toBeVisible();
   await page.getByRole('button', { name: 'Als Auftrag übernehmen' }).click();
-  await expect(tags.getByText('Geplant')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Status: Geplant' })).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Erstbegehung noch nicht ausgeführt.' })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Räume und Flächen' }).click();
+  await page.getByRole('tab', { name: 'Räume & Flächen' }).click();
   await page.getByRole('button', { name: 'Raum hinzufügen' }).click();
   const room = page.getByRole('dialog', { name: 'Raum hinzufügen' });
   await room.getByLabel('Raum', { exact: true }).fill('Wohnen/Essen');
@@ -200,25 +203,27 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await expect(page.getByRole('row', { name: /Wohnen\/Essen/ })).toContainText('42,50 m²');
   await expect(page.locator('.summary')).toContainText('42,50 m²');
 
-  await page.getByRole('tab', { name: 'Aufgaben und Mängel' }).click();
+  await page.getByRole('tab', { name: 'Aufgaben & Mängel' }).click();
   await choose(page, page.getByRole('combobox', { name: 'Art', exact: true }), 'Mangel');
   await page.getByLabel('Titel').fill('Randdämmstreifen fehlt im Bad');
   await page.getByRole('button', { name: 'Hinzufügen' }).click();
   await page.getByLabel('Erledigt: Randdämmstreifen fehlt im Bad').click();
   await expect(page.getByLabel('Wieder öffnen: Randdämmstreifen fehlt im Bad')).toBeChecked();
 
-  await page.getByRole('tab', { name: 'Notizen' }).click();
+  await page.getByRole('tab', { name: 'Notizen & Verlauf' }).click();
   await page.getByLabel('Neue Notiz').fill('Kunde wünscht Ausführung ab KW 46');
   await page.getByRole('button', { name: 'Notiz speichern' }).click();
   await expect(page.locator('.notes').getByText('Kunde wünscht Ausführung ab KW 46')).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Fotos und Dokumente' }).click();
+  await page.getByRole('tab', { name: 'Dokumente' }).click();
+  await choose(page, page.getByRole('combobox', { name: 'Dokumentart', exact: true }), 'Angebot');
   const pdf = '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n';
   await page.locator('input[type=file]').setInputFiles({ name: 'Angebot.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) });
   await expect(page.getByText('1 Datei hochgeladen.')).toBeVisible();
-  await expect(page.getByRole('link', { name: /Angebot\.pdf/ })).toBeVisible();
+  await expect(page.getByRole('link', { name: /Angebot\.pdf$/ })).toBeVisible();
+  await expect(page.getByRole('row', { name: /Angebot\.pdf/ })).toContainText('Angebot');
 
-  await page.getByRole('tab', { name: 'Verlauf' }).click();
+  await page.getByRole('tab', { name: 'Notizen & Verlauf' }).click();
   await expect(page.getByText('Anna Admin hat einen Raum angelegt.')).toBeVisible();
   await expect(page.getByText('Anna Admin hat einen Mangel als behoben markiert.')).toBeVisible();
   await expect(page.getByText('Anna Admin hat ein Dokument hinzugefügt.')).toBeVisible();
@@ -283,8 +288,9 @@ test('Standort per Karte festlegen, Baustellenkarte zeigt die Bauakte', async ({
   await signIn(page, 'admin', adminPassword);
   await nav(page, 'Bauakten').click();
   await page.getByRole('link', { name: 'Anfrage Familie Kraus, Heizestrich' }).click();
-  await expect(page.getByText('Offene Aufgaben', { exact: true })).toBeVisible();
-  await expect(page.getByText('Letzte CM-Messung')).toBeVisible();
+  await expect(page.getByText('Offene Aufgaben und Mängel', { exact: true })).toBeVisible();
+  await expect(page.getByText('Erstbegehung / CM-Messung')).toBeVisible();
+  await expect(page.getByText('Baustellendaten')).toBeVisible();
   await page.getByRole('button', { name: 'Standort festlegen' }).click();
   await page.getByRole('region', { name: 'Karte' }).click({ position: { x: 200, y: 150 } });
   await page.getByRole('button', { name: 'Standort speichern' }).click();
@@ -312,6 +318,56 @@ test('Protokoll: Anmeldungen und Änderungen sind nachvollziehbar', async ({ pag
   await expect(pageTitle(page)).toHaveText('Protokoll');
   await choose(page, page.getByRole('combobox', { name: 'Bereich', exact: true }), 'Benutzer');
   await expect(page.getByRole('row', { name: /Benutzer angelegt/ }).first()).toContainText('Anna Admin');
+});
+
+test('Bauakte: Baustellenkontakt, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await nav(page, 'Bauakten').click();
+  await page.getByRole('link', { name: 'Anfrage Familie Kraus, Heizestrich' }).click();
+
+  await page.getByRole('tab', { name: 'Kontakte' }).click();
+  await page.getByRole('button', { name: 'Bearbeiten' }).click();
+  await page.getByLabel('Ansprechpartner vor Ort').fill('Herr Bauer (Bauleitung)');
+  await page.getByLabel('Telefon').fill('0171 2345678');
+  await page.getByLabel('Hinweise / Behinderungen').fill('Schlüssel beim Nachbarn Nr. 5');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByText('Herr Bauer (Bauleitung)')).toBeVisible();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Schlüssel beim Nachbarn Nr. 5' })).toBeVisible();
+
+  await page.getByRole('button', { name: /Zugewiesen:/ }).click();
+  const assign = page.getByRole('dialog', { name: 'Bauakte zuweisen' });
+  await choose(page, assign.getByRole('combobox', { name: 'Zugewiesene Mitarbeiter', exact: true }), 'Lukas Brandl');
+  await assign.locator('.ant-modal-title').click();
+  await assign.getByRole('button', { name: 'Zuweisen' }).click();
+  await expect(page.getByRole('button', { name: /Zugewiesen: Anna Admin \+1/ })).toBeVisible();
+  await expect(page.getByText('Lukas Brandl')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Aktionen' }).click();
+  await page.getByRole('menuitem', { name: 'Bauakte stornieren' }).click();
+  const cancel = page.getByRole('dialog', { name: 'Bauakte stornieren' });
+  await cancel.getByLabel('Stornogrund').fill('Kunde hat verschoben');
+  await cancel.getByRole('button', { name: 'Stornieren' }).click();
+  await expect(page.getByRole('listitem').filter({ hasText: 'Storniert: Kunde hat verschoben' })).toBeVisible();
+  await page.getByRole('button', { name: 'Aktionen' }).click();
+  await page.getByRole('menuitem', { name: 'Storno aufheben' }).click();
+  await expect(page.getByRole('button', { name: 'Status: Geplant' })).toBeVisible();
+
+  // Löschen: eigene Wegwerf-Bauakte, Bestätigung mit Passwort.
+  await nav(page, 'Bauakten').click();
+  await page.getByRole('button', { name: 'Neue Bauakte' }).click();
+  await page.getByRole('dialog', { name: 'Neue Bauakte' }).getByLabel('Bauvorhaben').fill('Zum Löschen');
+  await page.getByRole('dialog', { name: 'Neue Bauakte' }).getByRole('button', { name: 'Anlegen', exact: true }).click();
+  await expect(pageTitle(page)).toContainText('Zum Löschen');
+  await page.getByRole('button', { name: 'Aktionen' }).click();
+  await page.getByRole('menuitem', { name: 'In den Papierkorb' }).click();
+  const remove = page.getByRole('dialog', { name: 'Bauakte löschen' });
+  await remove.getByLabel('Passwort bestätigen').fill('falsch-falsch');
+  await remove.getByRole('button', { name: 'In den Papierkorb' }).click();
+  await expect(remove.getByText('Das Passwort ist nicht korrekt. Die Bauakte wurde nicht gelöscht.')).toBeVisible();
+  await remove.getByLabel('Passwort bestätigen').fill(adminPassword);
+  await remove.getByRole('button', { name: 'In den Papierkorb' }).click();
+  await expect(pageTitle(page)).toHaveText('Bauakten');
+  await expect(page.getByRole('link', { name: 'Zum Löschen' })).toHaveCount(0);
 });
 
 async function signIn(page: Page, login: string, password: string) {

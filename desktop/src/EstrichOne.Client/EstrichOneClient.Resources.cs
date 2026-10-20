@@ -29,6 +29,15 @@ public sealed partial class EstrichOneClient
             headers: new Dictionary<string, string> { ["If-Match"] = $"\"{version.ToString(CultureInfo.InvariantCulture)}\"" },
             cancellationToken: cancellationToken);
 
+    public Task<List<BauakteHint>> GetHintsAsync(Guid bauakteId, CancellationToken cancellationToken = default) =>
+        GetAsync<List<BauakteHint>>($"bauakten/{bauakteId}/hints", cancellationToken: cancellationToken);
+
+    public Task<List<BauakteMember>> GetMembersAsync(Guid bauakteId, CancellationToken cancellationToken = default) =>
+        GetAsync<List<BauakteMember>>($"bauakten/{bauakteId}/members", cancellationToken: cancellationToken);
+
+    public Task<List<BauakteMember>> SetMembersAsync(Guid bauakteId, IReadOnlyList<Guid> userIds, CancellationToken cancellationToken = default) =>
+        SendAsync<List<BauakteMember>>(HttpMethod.Put, $"bauakten/{bauakteId}/members", new { userIds }, cancellationToken: cancellationToken);
+
     public Task<List<BauakteMapPoint>> GetMapPointsAsync(bool all = false, CancellationToken cancellationToken = default) =>
         GetAsync<List<BauakteMapPoint>>("bauakten/map", new Dictionary<string, string?> { ["all"] = all ? "true" : null }, cancellationToken);
 

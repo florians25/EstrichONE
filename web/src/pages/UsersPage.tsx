@@ -139,7 +139,7 @@ export default function UsersPage() {
         onFinish={save}
       >
         <ProFormText name="displayName" label="Name" rules={[{ required: true, message: 'Bitte den Namen angeben.' }]} />
-        <ProFormText name="userName" label="Anmeldename" disabled={editing !== 'new'} tooltip="Für Mitarbeiter ohne E-Mail-Adresse, z. B. „m.huber“."
+        <ProFormText name="userName" label="Anmeldename" disabled={editing !== 'new'} extra="Für Mitarbeiter ohne E-Mail-Adresse, z. B. „m.huber“."
           rules={[{ required: true, message: 'Bitte einen Anmeldenamen angeben.' }]} />
         <ProFormText name="email" label="E-Mail (optional)" rules={[{ type: 'email', message: 'Bitte eine gültige E-Mail-Adresse angeben.' }]} />
         <ProFormText name="phone" label="Telefon (optional)" />

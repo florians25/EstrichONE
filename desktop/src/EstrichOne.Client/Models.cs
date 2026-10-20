@@ -47,19 +47,33 @@ public sealed record BauaktePage(IReadOnlyList<BauakteListItem> Items, string? N
 public sealed record BauakteDetail(
     Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City,
     double? Latitude, double? Longitude, string? Description, Guid? CustomerId, string? TemplateKey,
-    Guid? ResponsibleUserId, Guid CreatedByUserId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Version);
+    Guid? ResponsibleUserId, Guid CreatedByUserId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Version,
+    DateOnly? PlannedStart = null, DateOnly? PlannedEnd = null, string? SiteContactName = null, string? SiteContactPhone = null,
+    string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null);
+
+public enum BauakteHintSeverity { Info, Success, Warning, Danger }
+
+/// <summary>Hinweiszeile der Bauakte („Einsatz heute“, „Erstbegehung offen“ …), vom Server berechnet.</summary>
+public sealed record BauakteHint(string Kind, BauakteHintSeverity Severity, string Text);
+
+public enum BauakteMemberRole { Responsible, Member }
+
+public sealed record BauakteMember(Guid UserId, string DisplayName, string? Email, BauakteMemberRole Role, bool IsActive);
 
 public sealed record CreateBauakteRequest(
     Guid Id, string Title, string? Street = null, string? PostalCode = null, string? City = null, double? Latitude = null,
     double? Longitude = null, string? Description = null, Guid? CustomerId = null, string? TemplateKey = null, BauakteStatus? Status = null);
 
+/// <summary>Ersetzt alle bearbeitbaren Felder – deshalb immer mit <see cref="From"/> vom gelesenen Stand ausgehen.</summary>
 public sealed record UpdateBauakteRequest(
     string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City, double? Latitude, double? Longitude,
-    string? Description, Guid? CustomerId, Guid? ResponsibleUserId)
+    string? Description, Guid? CustomerId, Guid? ResponsibleUserId, DateOnly? PlannedStart, DateOnly? PlannedEnd,
+    string? SiteContactName, string? SiteContactPhone, string? SiteContactEmail, string? SiteNotes, string? CancellationReason)
 {
     /// <summary>Alle bearbeitbaren Felder aus dem gelesenen Stand übernehmen.</summary>
     public static UpdateBauakteRequest From(BauakteDetail b) =>
-        new(b.Title, b.Status, b.Street, b.PostalCode, b.City, b.Latitude, b.Longitude, b.Description, b.CustomerId, b.ResponsibleUserId);
+        new(b.Title, b.Status, b.Street, b.PostalCode, b.City, b.Latitude, b.Longitude, b.Description, b.CustomerId, b.ResponsibleUserId,
+            b.PlannedStart, b.PlannedEnd, b.SiteContactName, b.SiteContactPhone, b.SiteContactEmail, b.SiteNotes, b.CancellationReason);
 }
 
 public sealed record BauakteMapPoint(

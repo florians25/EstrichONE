@@ -25,12 +25,16 @@ public sealed record AnnounceFileRequest(
     DateTimeOffset? CapturedAt = null,
     [property: Range(-90, 90)] double? Latitude = null,
     [property: Range(-180, 180)] double? Longitude = null,
-    [property: MaxLength(500)] string? Caption = null);
+    [property: MaxLength(500)] string? Caption = null,
+    [property: MaxLength(30)] string? Category = null);
+
+/// <summary>Beschriftung und Dokumentart nachträglich ändern.</summary>
+public sealed record UpdateFileRequest([property: MaxLength(500)] string? Caption, [property: MaxLength(30)] string? Category);
 
 public sealed record FileResponse(
     Guid Id, Guid? BauakteId, FileKind Kind, FileState State, VariantState Variants, string OriginalName, string ContentType,
     long SizeBytes, string Sha256, string? Caption, DateTimeOffset? CapturedAt, double? Latitude, double? Longitude,
-    Guid UploadedByUserId, DateTimeOffset CreatedAt, long Version);
+    Guid UploadedByUserId, DateTimeOffset CreatedAt, long Version, string? Category = null);
 
 public sealed record UploadStatus(Guid Id, long ReceivedBytes, long SizeBytes, FileState State);
 
@@ -69,6 +73,11 @@ internal static class FileEndpoints
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        files.MapPatch("/{id:guid}", UpdateAsync).WithName("UpdateFile")
+            .WithSummary("Beschriftung und Dokumentart ändern")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission(Permissions.FilesUpload);
+
         files.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteFile")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.FilesDelete);
@@ -80,8 +89,13 @@ internal static class FileEndpoints
     }
 
     private static async Task<Results<Created<FileResponse>, Ok<FileResponse>, ProblemHttpResult>> AnnounceAsync(
-        AnnounceFileRequest request, FileService service, CancellationToken cancellationToken)
+        AnnounceFileRequest request, FileService service, EstrichOneDbContext db, CancellationToken cancellationToken)
     {
+        if (request.Category is { } category && !DocumentCategories.All.Contains(category))
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Unbekannte Dokumentart.");
+        }
+
         var (file, created, failure) = await service.AnnounceAsync(request.Id, request.BauakteId, request.Kind, request.OriginalName,
             request.ContentType, request.SizeBytes, request.Sha256, request.CapturedAt, request.Latitude, request.Longitude,
             request.Caption, cancellationToken);
@@ -90,7 +104,33 @@ internal static class FileEndpoints
             return ProblemFor(failure.Value);
         }
 
+        if (created && request.Category is not null)
+        {
+            file!.Categorize(request.Category);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         return created ? TypedResults.Created($"/api/v1/files/{file!.Id}", ToResponse(file)) : TypedResults.Ok(ToResponse(file!));
+    }
+
+    private static async Task<Results<Ok<FileResponse>, ProblemHttpResult>> UpdateAsync(
+        Guid id, UpdateFileRequest request, FileService service, EstrichOneDbContext db, CancellationToken cancellationToken)
+    {
+        if (await service.FindReadableAsync(id, cancellationToken) is null)
+        {
+            return ProblemFor(FileFailure.NotFound);
+        }
+
+        if (request.Category is { } category && !DocumentCategories.All.Contains(category))
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Unbekannte Dokumentart.");
+        }
+
+        var file = await db.Set<FileRecord>().SingleAsync(f => f.Id == id, cancellationToken);
+        file.Describe(string.IsNullOrWhiteSpace(request.Caption) ? null : request.Caption.Trim());
+        file.Categorize(file.Kind == FileKind.Document ? request.Category : null);
+        await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok(ToResponse(file));
     }
 
     private static async Task<Results<Ok<FileResponse>, Accepted<UploadStatus>, ProblemHttpResult>> UploadAsync(
@@ -215,7 +255,8 @@ internal static class FileEndpoints
     }
 
     internal static FileResponse ToResponse(FileRecord f) => new(f.Id, f.BauakteId, f.Kind, f.State, f.Variants, f.OriginalName,
-        f.ContentType, f.SizeBytes, f.Sha256, f.Caption, f.CapturedAt, f.Latitude, f.Longitude, f.UploadedByUserId, f.CreatedAt, f.Version);
+        f.ContentType, f.SizeBytes, f.Sha256, f.Caption, f.CapturedAt, f.Latitude, f.Longitude, f.UploadedByUserId, f.CreatedAt, f.Version,
+        f.Category);
 
     private static ProblemHttpResult ProblemFor(FileFailure failure) => failure switch
     {

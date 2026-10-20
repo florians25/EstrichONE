@@ -1,4 +1,5 @@
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Sync.Exports;
 
 namespace EstrichOne.Api.Modules.Work;
@@ -9,6 +10,7 @@ public sealed class WorkModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ISyncOperationHandler, WorkSync>();
+        services.AddScoped<IBauakteHintSource, WorkHints>();
         services.AddScoped<ISyncEntitySource, WorkItemSource>();
     }
 
