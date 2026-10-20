@@ -7,7 +7,33 @@
 - Für den Zugriff aus dem Internet bzw. von Smartphones: eine Domain, die auf den Server zeigt,
   und offene Ports 80 und 443
 
-## Installation
+## Installation mit einem Docker-Befehl (empfohlen zum Testen)
+
+```bash
+sudo docker run --rm -it \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /opt/estrichone:/opt/estrichone \
+  ghcr.io/florians25/estrichone-installer:latest
+```
+
+Der Installer fragt Adresse (Domain oder IP) und Firmennamen ab, legt `/opt/estrichone` mit `.env` (zufällige
+Passwörter) an, lädt die fertigen Images und startet die Suite. Er zeigt am Ende das **Backup-Passwort** und den
+**Einrichtungscode** für den ersten Administrator.
+
+| Port | Zweck |
+|---|---|
+| **8143** | HTTPS – Weboberfläche und API (`https://<adresse>:8143`) |
+| **8180** | HTTP – leitet auf 8143 weiter |
+
+- Ohne Rückfragen: `-e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"`
+- Andere Ports: `-e ESTRICHONE_HTTP_PORT=8180 -e ESTRICHONE_HTTPS_PORT=8143`
+- **Aktualisieren:** denselben Befehl erneut ausführen (Daten und Konfiguration bleiben, Version wird angehoben).
+- Bei IP-Adresse oder `localhost` stellt Caddy ein eigenes Zertifikat aus (der Browser warnt einmal; die Android-App
+  akzeptiert es nicht). Für ein gültiges Let's-Encrypt-Zertifikat eine Domain verwenden und am Router
+  **80 → 8180** und **443 → 8143** weiterleiten.
+- Verwalten: `cd /opt/estrichone && sudo docker compose -p estrichone ps|logs|down`
+
+## Installation aus dem Quellcode
 
 ```bash
 git clone https://github.com/florians25/EstrichONE.git estrichone

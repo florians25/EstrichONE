@@ -1,0 +1,23 @@
+# Vom Docker-Installer verwendet: fertige Images aus der GitHub Container Registry statt lokal bauen.
+# Die eigentliche Konfiguration steht in compose.yml (deploy/compose.yml), damit es nur eine Quelle gibt.
+
+services:
+  migrate:
+    image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-api:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
+    build: !reset null
+  api:
+    image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-api:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
+    build: !reset null
+  backup:
+    image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-backup:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
+    build: !reset null
+  restore:
+    image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-backup:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
+    build: !reset null
+  caddy:
+    image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-web:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
+    build: !reset null
+    # Caddyfile ist im Image enthalten.
+    volumes: !override
+      - ${ESTRICHONE_DATA_DIR:-./data}/caddy/data:/data
+      - ${ESTRICHONE_DATA_DIR:-./data}/caddy/config:/config

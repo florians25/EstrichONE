@@ -38,41 +38,41 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      - name: Veröffentlichen (x64, eigenständig)
-        working-directory: desktop
-        run: dotnet publish src/EstrichOne.Desktop/EstrichOne.Desktop.csproj -c Release -r win-x64 -p:Platform=x64 -o ${{ runner.temp }}\EstrichONE
-      - name: Starten und Bildschirmfoto
+      - name: App und Installationsprogramm bauen
+        shell: pwsh
+        run: pwsh desktop/installer/build.ps1 -Version 0.1.0-ci -Output "$env:RUNNER_TEMP\out"
+      - name: Installieren, starten, Bildschirmfoto, deinstallieren
         shell: pwsh
         run: |
-          $exe = Join-Path $env:RUNNER_TEMP 'EstrichONE\EstrichONE.exe'
+          $setup = Get-ChildItem "$env:RUNNER_TEMP\out\EstrichONE-Setup-*.exe" | Select-Object -First 1
+          Start-Process $setup.FullName -ArgumentList '/VERYSILENT', '/CURRENTUSER', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+          $exe = Join-Path $env:LOCALAPPDATA 'Programs\EstrichONE\EstrichONE.exe'
+          if (-not (Test-Path $exe)) { throw "Nach der Installation fehlt $exe" }
           $process = Start-Process -FilePath $exe -PassThru
           Start-Sleep -Seconds 20
           $process.Refresh()
           if ($process.HasExited) {
             Get-ChildItem "$env:LOCALAPPDATA\EstrichONE\logs" -ErrorAction SilentlyContinue | Get-Content
             Get-WinEvent -LogName Application -MaxEvents 20 | Where-Object { $_.LevelDisplayName -eq 'Error' } | Format-List TimeCreated, ProviderName, Message
-            throw "Die App hat sich nach dem Start beendet (Exitcode $($process.ExitCode))."
+            throw "Die installierte App hat sich nach dem Start beendet (Exitcode $($process.ExitCode))."
           }
           "Fenster: '$($process.MainWindowTitle)' Handle $($process.MainWindowHandle)"
           Add-Type -AssemblyName System.Windows.Forms, System.Drawing
           $bounds = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
           $bitmap = New-Object System.Drawing.Bitmap $bounds.Width, $bounds.Height
-          $graphics = [System.Drawing.Graphics]::FromImage($bitmap)
-          $graphics.CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
+          [System.Drawing.Graphics]::FromImage($bitmap).CopyFromScreen($bounds.Location, [System.Drawing.Point]::Empty, $bounds.Size)
           $bitmap.Save((Join-Path $env:RUNNER_TEMP 'start.png'), [System.Drawing.Imaging.ImageFormat]::Png)
-          # Verkleinert als Text ins Protokoll, damit es ohne Artefakt-Download geprüft werden kann.
-          $small = New-Object System.Drawing.Bitmap $bitmap, ([int]($bounds.Width / 2)), ([int]($bounds.Height / 2))
-          $stream = New-Object System.IO.MemoryStream
-          $small.Save($stream, [System.Drawing.Imaging.ImageFormat]::Jpeg)
-          $text = [Convert]::ToBase64String($stream.ToArray())
-          "SCREENSHOT-BEGIN"
-          for ($i = 0; $i -lt $text.Length; $i += 4000) { $text.Substring($i, [Math]::Min(4000, $text.Length - $i)) }
-          "SCREENSHOT-END"
           $process | Stop-Process -Force
+          Start-Sleep -Seconds 2
+          $uninstaller = Join-Path $env:LOCALAPPDATA 'Programs\EstrichONE\unins000.exe'
+          Start-Process $uninstaller -ArgumentList '/VERYSILENT', '/SUPPRESSMSGBOXES', '/NORESTART' -Wait
+          Start-Sleep -Seconds 3
+          if (Test-Path $exe) { throw "Deinstallation hat $exe nicht entfernt" }
+          "Installation, Start und Deinstallation in Ordnung."
       - uses: actions/upload-artifact@v4
         with:
           name: EstrichONE-Windows-x64
-          path: ${{ runner.temp }}\EstrichONE
+          path: ${{ runner.temp }}\out
           retention-days: 14
       - uses: actions/upload-artifact@v4
         if: always()

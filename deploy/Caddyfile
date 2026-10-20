@@ -1,8 +1,21 @@
 # EstrichONE – Weboberfläche und Reverse Proxy (ADR 0007)
 # Öffentliche Domain: Zertifikat automatisch von Let's Encrypt.
-# „localhost“: Zertifikat aus Caddys interner Zertifizierungsstelle (nur für Tests).
+# „localhost“ oder IP-Adresse: Zertifikat aus Caddys interner Zertifizierungsstelle (Browser warnt einmal).
+# Ports: Standard 80/443; der Docker-Installer nutzt 8180/8143. Weiterleitungen zeigen dann auf den richtigen Port.
+# Für ein Let's-Encrypt-Zertifikat auf 8180/8143 am Router 80 → 8180 und 443 → 8143 weiterleiten.
 
-{$ESTRICHONE_DOMAIN} {
+{
+	http_port {$ESTRICHONE_HTTP_PORT:80}
+	https_port {$ESTRICHONE_HTTPS_PORT:443}
+}
+
+# HTTP → HTTPS mit dem richtigen Port (Caddys automatische Weiterleitung nennt keinen abweichenden Port).
+# ACME-Prüfungen für Let's Encrypt beantwortet Caddy weiterhin selbst.
+http://{$ESTRICHONE_DOMAIN}:{$ESTRICHONE_HTTP_PORT:80} {
+	redir https://{host}:{$ESTRICHONE_HTTPS_PORT:443}{uri} 308
+}
+
+{$ESTRICHONE_DOMAIN}:{$ESTRICHONE_HTTPS_PORT:443} {
 	encode zstd gzip
 
 	header {
@@ -24,11 +37,11 @@
 		reverse_proxy api:8080
 	}
 
-	# Weboberfläche (Angular): unbekannte Pfade liefern index.html, die App übernimmt das Routing.
+	# Weboberfläche (React): unbekannte Pfade liefern index.html, die App übernimmt das Routing.
 	handle {
 		root * /srv
 		header {
-			# Strikte CSP (docs/reengineering/17): nur eigene Skripte; Inline-Styles erzeugt Angular selbst.
+			# Strikte CSP (docs/reengineering/17): nur eigene Skripte; Inline-Styles erzeugt Ant Design selbst.
 			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
 			Permissions-Policy "camera=(), microphone=(), geolocation=()"
 			X-Frame-Options "DENY"

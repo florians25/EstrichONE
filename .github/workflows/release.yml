@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  packages: write
 
 env:
   TAG: ${{ inputs.tag || github.ref_name }}
@@ -51,17 +52,13 @@ jobs:
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
-      - name: Veröffentlichen (x64, eigenständig)
-        working-directory: desktop
-        run: dotnet publish src/EstrichOne.Desktop/EstrichOne.Desktop.csproj -c Release -r win-x64 -p:Platform=x64 -o ${{ runner.temp }}\EstrichONE
-      - name: Packen und anhängen
+      - name: App und Installationsprogramm bauen und anhängen
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $zip = Join-Path $env:RUNNER_TEMP "EstrichONE-Windows-x64-$env:TAG.zip"
-          Compress-Archive -Path "$env:RUNNER_TEMP\EstrichONE\*" -DestinationPath $zip
-          gh release upload $env:TAG $zip --clobber --repo $env:GITHUB_REPOSITORY
+          pwsh desktop/installer/build.ps1 -Version $env:TAG.TrimStart('v') -Output "$env:RUNNER_TEMP\out"
+          Get-ChildItem "$env:RUNNER_TEMP\out" -File | ForEach-Object { gh release upload $env:TAG $_.FullName --clobber --repo $env:GITHUB_REPOSITORY }
 
   android:
     needs: create
@@ -139,3 +136,31 @@ jobs:
           rsync -a --exclude '.build' --exclude 'build' --exclude 'DerivedData' ios/ "$RUNNER_TEMP/$name/ios/"
           (cd "$RUNNER_TEMP" && zip -qry "$name.zip" "$name")
           gh release upload "$TAG" "$RUNNER_TEMP/$name.zip" --clobber --repo "$GITHUB_REPOSITORY"
+
+  images:
+    name: Docker-Images (GitHub Container Registry)
+    needs: create
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Bauen und veröffentlichen
+        run: |
+          version="${TAG#v}"
+          owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
+          source="org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY"
+          for image in api web backup installer; do
+            file="docker/$image.Dockerfile"; [ "$image" = installer ] && file="docker/installer/Dockerfile"
+            ref="ghcr.io/$owner/estrichone-$image"
+            docker build -f "$file" --build-arg ESTRICHONE_VERSION="$version" --label "$source" \
+              --label "org.opencontainers.image.version=$version" -t "$ref:$version" -t "$ref:latest" .
+            docker push "$ref:$version"
+            docker push "$ref:latest"
+          done
