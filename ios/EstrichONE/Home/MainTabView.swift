@@ -14,8 +14,8 @@ struct MainTabView: View {
 
     var body: some View {
         TabView(selection: $selection) {
-            TodayView()
-                .tabItem { Label("Heute", systemImage: "sun.max") }
+            HomeView { selection = $0 }
+                .tabItem { Label("Start", systemImage: "house") }
                 .tag(Tab.today)
             BauaktenListView()
                 .tabItem { Label("Bauakten", systemImage: "folder") }

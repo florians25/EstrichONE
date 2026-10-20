@@ -71,6 +71,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private let lock = NSLock()
     private var deviceKind = "personal"
     private var deviceName = "iPhone"
+    /// Status des registrierten Geräts, wie ihn der echte Server bei /devices/me meldet.
+    private var deviceStatus = "active"
     private var counter = 0
     /// Angekündigte Dateien: Größe und empfangene Bytes.
     private var files: [String: (size: Int, received: Int)] = [:]
@@ -125,13 +127,15 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                 }
                 deviceKind = "pool"
                 deviceName = "Fahrzeug 3"
-                return (201, device(status: "active"))
+                deviceStatus = "active"
+                return (201, device(status: deviceStatus))
             }
             deviceKind = body["kind"] as? String ?? "personal"
             deviceName = body["name"] as? String ?? "iPhone"
-            return (201, device(status: deviceKind == "pool" ? "pending" : newDeviceStatus))
+            deviceStatus = deviceKind == "pool" ? "pending" : newDeviceStatus
+            return (201, device(status: deviceStatus))
         case "/api/v1/devices/attach", "/api/v1/devices/me":
-            return (200, device(status: "active"))
+            return (200, device(status: deviceStatus))
         case "/api/v1/sync/push":
             // Nimmt jede Operation an und meldet den Datensatz so zurück, wie der Client ihn gesendet hat.
             let operations = body["operations"] as? [[String: Any]] ?? []
