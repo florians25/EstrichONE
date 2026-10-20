@@ -255,6 +255,15 @@ struct CustomerChooser: View {
     @State private var similar: [Contact] = []
 
     var body: some View {
+        // Dublettenhinweis oberhalb der Eingabefelder, damit er nicht unter der Tastatur verschwindet.
+        if newCustomer != nil {
+            SimilarCustomersSection(similar: similar) { contact in
+                withAnimation {
+                    newCustomer = nil
+                    customer = contact
+                }
+            }
+        }
         Section {
             if let customer {
                 HStack {
@@ -328,14 +337,6 @@ struct CustomerChooser: View {
         .task(id: search) { await find() }
         .task(id: "\(newCustomer?.name ?? "")|\(newCustomer?.phone ?? "")|\(newCustomer?.email ?? "")") { await checkDuplicates() }
 
-        if newCustomer != nil {
-            SimilarCustomersSection(similar: similar) { contact in
-                withAnimation {
-                    newCustomer = nil
-                    customer = contact
-                }
-            }
-        }
     }
 
     private func find() async {
