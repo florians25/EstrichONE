@@ -14,7 +14,12 @@ public sealed class AccessModule : IModule
         services.AddScoped<IAuthorizationHandler, PermissionHandler>();
         services.AddScoped<IDataInitializer, StandardRoles>();
         services.AddScoped<IRoleAssignments, RoleAssignments>();
+        services.AddScoped<UserAdministration>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => AccessEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        AccessEndpoints.Map(api);
+        UserAdministrationEndpoints.Map(api);
+    }
 }

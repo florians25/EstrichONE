@@ -10,7 +10,7 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     private func tap(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 10) {
         let target = element(identifier, in: app)
-        XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht")
+        XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht\n\(app.debugDescription)")
         target.tap()
     }
 

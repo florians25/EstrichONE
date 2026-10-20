@@ -11,8 +11,9 @@ using Microsoft.Net.Http.Headers;
 namespace EstrichOne.Api.Modules.Identity.Sessions;
 
 /// <summary>
-/// Prüft <c>Authorization: Bearer eo1_…</c> gegen die Sitzungstabelle. Gesperrte Benutzer und beendete Sitzungen
-/// verlieren den Zugriff mit der nächsten Anfrage (ADR 0011).
+/// Prüft <c>Authorization: Bearer eo1_…</c> bzw. im Browser das HttpOnly-Cookie gegen die Sitzungstabelle.
+/// Gesperrte Benutzer und beendete Sitzungen verlieren den Zugriff mit der nächsten Anfrage (ADR 0011).
+/// Mit Cookie angemeldete, zustandsändernde Anfragen brauchen den CSRF-Header (WebSessionEndpoints).
 /// </summary>
 public sealed class TokenAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -31,12 +32,26 @@ public sealed class TokenAuthenticationHandler(
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
         string? header = Request.Headers.Authorization;
-        if (string.IsNullOrEmpty(header) || !header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        string token;
+        if (!string.IsNullOrEmpty(header) && header.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+        {
+            token = header["Bearer ".Length..].Trim();
+        }
+        else if (Request.Cookies[WebSessionEndpoints.AccessCookie] is { Length: > 0 } cookie)
+        {
+            if (!HttpMethods.IsGet(Request.Method) && !HttpMethods.IsHead(Request.Method) && !HttpMethods.IsOptions(Request.Method)
+                && !WebSessionEndpoints.HasValidCsrfToken(Request))
+            {
+                return Fail("CSRF_INVALID", "Der Sicherheitstoken der Anfrage fehlt oder ist ungültig.");
+            }
+
+            token = cookie;
+        }
+        else
         {
             return AuthenticateResult.NoResult();
         }
 
-        var token = header["Bearer ".Length..].Trim();
         if (!token.StartsWith(TokenFactory.AccessPrefix, StringComparison.Ordinal))
         {
             return Fail("UNAUTHORIZED", "Ungültiges Zugriffstoken.");
@@ -120,7 +135,12 @@ public sealed class TokenAuthenticationHandler(
             {
                 Status = StatusCodes.Status401Unauthorized,
                 Title = "Nicht angemeldet",
-                Detail = code == "UNAUTHORIZED" ? "Für diese Anfrage ist eine Anmeldung erforderlich." : null,
+                Detail = code switch
+                {
+                    "UNAUTHORIZED" => "Für diese Anfrage ist eine Anmeldung erforderlich.",
+                    "CSRF_INVALID" => "Der Sicherheitstoken der Anfrage fehlt oder ist ungültig. Bitte die Seite neu laden.",
+                    _ => null,
+                },
                 Extensions = { ["code"] = code },
             },
         });

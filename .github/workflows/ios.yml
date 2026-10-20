@@ -78,7 +78,12 @@ jobs:
             -destination "id=${{ steps.simulator.outputs.udid }}" \
             -resultBundlePath "$RUNNER_TEMP/EstrichONE.xcresult" \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= | tee "$RUNNER_TEMP/xcodebuild-test.log" | grep -E "error:|warning:|Test Case|Test Suite|✔|✘|\*\* TEST" || true
-          grep -q "\*\* TEST SUCCEEDED \*\*" "$RUNNER_TEMP/xcodebuild-test.log"
+          if ! grep -q "\*\* TEST SUCCEEDED \*\*" "$RUNNER_TEMP/xcodebuild-test.log"; then
+            echo "::group::Fehlgeschlagene Tests mit Elementbaum"
+            sed -n '/: error: -\[/,/^Test Case .* failed/p' "$RUNNER_TEMP/xcodebuild-test.log" | head -n 800
+            echo "::endgroup::"
+            exit 1
+          fi
 
       - name: Release-Build (Gerät, ohne Signatur)
         working-directory: ios

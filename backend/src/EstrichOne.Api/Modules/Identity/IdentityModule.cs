@@ -44,5 +44,9 @@ public sealed class IdentityModule : IModule
         });
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => AuthEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        AuthEndpoints.Map(api);
+        WebSessionEndpoints.Map(api);
+    }
 }

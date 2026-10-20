@@ -40,7 +40,7 @@ struct TodayView: View {
             }
             .navigationTitle("Heute")
             .navigationDestination(for: UUID.self) { BauakteDetailView(bauakteId: $0) }
-            .overlay(alignment: .bottomTrailing) {
+            .safeAreaInset(edge: .bottom, alignment: .trailing) {
                 NewBauakteButton { creating = true }
             }
             .sheet(isPresented: $creating) {

@@ -301,6 +301,102 @@
         ]
       }
     },
+    "/api/v1/auth/web/login": {
+      "post": {
+        "tags": [
+          "Anmeldung"
+        ],
+        "summary": "Anmeldung im Browser; setzt HttpOnly-Cookies statt Tokens zurückzugeben",
+        "operationId": "WebLogin",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WebLoginRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/web/refresh": {
+      "post": {
+        "tags": [
+          "Anmeldung"
+        ],
+        "summary": "Sitzung im Browser verlängern (Refresh-Cookie, CSRF-Header erforderlich)",
+        "operationId": "WebRefresh",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WebSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/auth/web/logout": {
+      "post": {
+        "tags": [
+          "Anmeldung"
+        ],
+        "summary": "Abmelden im Browser; beendet die Sitzung und löscht die Cookies",
+        "operationId": "WebLogout",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        }
+      }
+    },
     "/api/v1/access/me/permissions": {
       "get": {
         "tags": [
@@ -451,6 +547,312 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users": {
+      "get": {
+        "tags": [
+          "Benutzer"
+        ],
+        "operationId": "ListUsers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/UserListItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Benutzer"
+        ],
+        "summary": "Benutzer mit Einmalpasswort anlegen",
+        "operationId": "CreateUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserWithPassword"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/{id}": {
+      "put": {
+        "tags": [
+          "Benutzer"
+        ],
+        "operationId": "UpdateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/{id}/reset-password": {
+      "post": {
+        "tags": [
+          "Benutzer"
+        ],
+        "summary": "Einmalpasswort vergeben; beendet alle Sitzungen des Benutzers",
+        "operationId": "ResetUserPassword",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserWithPassword"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/{id}/deactivate": {
+      "post": {
+        "tags": [
+          "Benutzer"
+        ],
+        "summary": "Konto sperren; alle Sitzungen enden sofort",
+        "operationId": "DeactivateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/users/{id}/activate": {
+      "post": {
+        "tags": [
+          "Benutzer"
+        ],
+        "operationId": "ActivateUser",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UserListItem"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -2725,6 +3127,47 @@
           }
         }
       },
+      "CreateUserRequest": {
+        "required": [
+          "displayName",
+          "userName",
+          "email",
+          "phone",
+          "roleIds"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "userName": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "DeviceKind": {
         "enum": [
           "personal",
@@ -3784,6 +4227,34 @@
           }
         }
       },
+      "UpdateUserRequest": {
+        "required": [
+          "displayName",
+          "email",
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "displayName": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "email": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "UploadStatus": {
         "required": [
           "id",
@@ -3807,6 +4278,65 @@
           },
           "state": {
             "$ref": "#/components/schemas/FileState"
+          }
+        }
+      },
+      "UserListItem": {
+        "required": [
+          "id",
+          "displayName",
+          "userName",
+          "email",
+          "phone",
+          "isActive",
+          "lastLoginAt",
+          "roleIds",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "lastLoginAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -3837,6 +4367,21 @@
           }
         }
       },
+      "UserWithPassword": {
+        "required": [
+          "user",
+          "oneTimePassword"
+        ],
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserListItem"
+          },
+          "oneTimePassword": {
+            "type": "string"
+          }
+        }
+      },
       "VariantState": {
         "enum": [
           "notApplicable",
@@ -3844,6 +4389,43 @@
           "ready",
           "failed"
         ]
+      },
+      "WebLoginRequest": {
+        "required": [
+          "login",
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "login": {
+            "maxLength": 320,
+            "type": "string"
+          },
+          "password": {
+            "maxLength": 128,
+            "type": "string"
+          }
+        }
+      },
+      "WebSessionResponse": {
+        "required": [
+          "user",
+          "mustChangePassword",
+          "accessTokenExpiresAt"
+        ],
+        "type": "object",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/UserSummary"
+          },
+          "mustChangePassword": {
+            "type": "boolean"
+          },
+          "accessTokenExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
       }
     },
     "securitySchemes": {
@@ -3866,6 +4448,9 @@
     },
     {
       "name": "Rechte und Rollen"
+    },
+    {
+      "name": "Benutzer"
     },
     {
       "name": "Geräte"

@@ -182,9 +182,9 @@ internal static class AuthEndpoints
         return false;
     }
 
-    private static UserSummary Summarize(User user) => new(user.Id, user.DisplayName, user.UserName, user.Email);
+    internal static UserSummary Summarize(User user) => new(user.Id, user.DisplayName, user.UserName, user.Email);
 
-    private static ProblemHttpResult Problem(int status, string code, string title, string detail) =>
+    internal static ProblemHttpResult Problem(int status, string code, string title, string detail) =>
         TypedResults.Problem(statusCode: status, title: title, detail: detail,
             extensions: new Dictionary<string, object?> { ["code"] = code });
 }

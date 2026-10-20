@@ -33,7 +33,7 @@ struct BauaktenListView: View {
             .navigationTitle("Bauakten")
             .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
             .navigationDestination(for: UUID.self) { BauakteDetailView(bauakteId: $0) }
-            .overlay(alignment: .bottomTrailing) {
+            .safeAreaInset(edge: .bottom, alignment: .trailing) {
                 NewBauakteButton { creating = true }
             }
             .sheet(isPresented: $creating) {

@@ -28,7 +28,7 @@ final class OnboardingUITests: XCTestCase {
     @MainActor
     private func tap(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 10) {
         let target = element(identifier, in: app)
-        XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht")
+        XCTAssertTrue(target.waitForExistence(timeout: timeout), "\(identifier) erscheint nicht\n\(app.debugDescription)")
         target.tap()
     }
 
@@ -132,7 +132,7 @@ final class OnboardingUITests: XCTestCase {
         signIn("m.huber", in: app)
         XCTAssertTrue(element("choosePINTitle", in: app).waitForExistence(timeout: 10))
         enterPIN("123456", in: app)
-        XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 5), "Triviale PIN wird abgelehnt")
+        XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 5), "Triviale PIN wird abgelehnt\n\(app.debugDescription)")
         enterPIN("482913", in: app)
         enterPIN("482913", in: app)
         XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
