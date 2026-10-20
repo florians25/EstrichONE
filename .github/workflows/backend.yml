@@ -57,7 +57,8 @@ jobs:
       - name: Stack starten und server-info abrufen
         working-directory: deploy
         run: |
-          ./setup.sh --domain localhost --name "CI" --yes
+          sudo ./setup.sh --domain localhost --name "CI" --yes
+          sudo chmod 644 .env   # nur in der CI: Compose läuft ohne root und muss .env lesen
           ESTRICHONE_VERSION=ci docker compose up -d --no-build --wait --wait-timeout 180
           docker compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
           curl --fail --cacert caddy-root.crt https://localhost/api/v1/server-info
