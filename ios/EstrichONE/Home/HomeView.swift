@@ -25,6 +25,8 @@ struct HomeView: View {
                         SyncStatusBar(sync: sync)
                             .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
                             .padding(.horizontal)
+                        SystemNoticesBanner(sync: sync)
+                            .padding(.horizontal)
                     }
                     quickActions
                         .padding(.horizontal)

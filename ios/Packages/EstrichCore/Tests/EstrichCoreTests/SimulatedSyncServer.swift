@@ -24,6 +24,8 @@ final class SimulatedSyncServer: SyncTransport, @unchecked Sendable {
     var pullPageSize = 2
     var visibleBauakten: Set<UUID>?
     var failUploadAfterBytes: Int?
+    /// Server in Wartung: jede Anfrage endet mit 503 `MAINTENANCE`.
+    var inMaintenance = false
 
     // MARK: Steuerung durch den Test
 
@@ -56,6 +58,7 @@ final class SimulatedSyncServer: SyncTransport, @unchecked Sendable {
     // MARK: SyncTransport
 
     func push(_ operations: [PushOperation]) async throws(APIError) -> [PushResult] {
+        if lock.withLock({ inMaintenance }) { throw .server(status: 503, code: "MAINTENANCE", message: "Wartung bis 22 Uhr") }
         let failure = lock.withLock { () -> Failure? in
             defer { nextPushFailure = nil }
             return nextPushFailure

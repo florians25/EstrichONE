@@ -53,6 +53,8 @@ public enum SyncOutcome: Equatable, Sendable {
     case offline
     /// Der Server hat um spätere Wiederholung gebeten oder einen vorübergehenden Fehler gemeldet.
     case retryLater
+    /// Wartung des Servers (503 `MAINTENANCE`): Synchronisation pausiert, alles bleibt lokal gespeichert.
+    case maintenance(message: String?)
     case failed(APIError)
 }
 
@@ -105,6 +107,7 @@ public actor SyncEngine {
             return .completed
         } catch let error as APIError {
             if error == .offline { return .offline }
+            if error.status == 503, error.code == "MAINTENANCE" { return .maintenance(message: error.serverMessage) }
             if let status = error.status, status >= 500 || status == 429 { return .retryLater }
             return .failed(error)
         } catch {

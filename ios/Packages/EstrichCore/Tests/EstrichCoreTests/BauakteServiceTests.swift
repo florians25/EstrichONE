@@ -180,6 +180,41 @@ struct BauakteServiceTests {
         #expect(server.entity(id)?["category"]?.string == "acceptance")
     }
 
+    @Test("Wartung des Servers: Synchronisation pausiert, nichts geht verloren, danach wird alles übertragen")
+    func maintenance() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        let bauakte = try await service.create(NewBauakte(title: "Wartung"))
+        server.inMaintenance = true
+
+        #expect(await engine.synchronize() == .maintenance(message: "Wartung bis 22 Uhr"))
+        #expect(try await service.store.summary().pendingOperations == 1)
+        #expect(try await service.store.summary().hasProblems == false)
+
+        server.inMaintenance = false
+        #expect(await engine.synchronize() == .completed)
+        #expect(server.entity(bauakte) != nil)
+    }
+
+    @Test("Systemhinweise: Zeitfenster, unbekannte Stufe, Wartungsankündigung")
+    func systemNotices() throws {
+        let json = """
+        {"announcements":[
+           {"id":"a1","title":"Neue Version","text":"Ab Montag","severity":"info","startsAt":null,"endsAt":null},
+           {"id":"a2","title":"Alt","text":"vorbei","severity":"warning","startsAt":null,"endsAt":"2026-01-01T00:00:00+00:00"},
+           {"id":"a3","title":"Seltsam","text":"x","severity":"purple","startsAt":"2026-10-01T00:00:00Z","endsAt":null}],
+         "maintenance":{"active":false,"message":"Update","startsAt":"2026-10-25T20:00:00+00:00","endsAt":"2026-10-25T22:00:00+00:00","adminsMayWork":true},
+         "serverTime":"2026-10-20T10:00:00+00:00"}
+        """
+        let notices = try JSONCoding.decoder.decode(SystemNotices.self, from: Data(json.utf8))
+        let now = try #require(APIDate.parse("2026-10-20T10:00:00+00:00"))
+        #expect(notices.currentAnnouncements(at: now).map(\.id) == ["a1", "a3"])
+        #expect(notices.announcements[2].severity == .info)
+        #expect(notices.upcomingMaintenance(at: now)?.message == "Update")
+        let after = try #require(APIDate.parse("2026-10-26T00:00:00+00:00"))
+        #expect(notices.upcomingMaintenance(at: after) == nil)
+    }
+
     @Test("Dateinamen: Endung und Anzeigename")
     func fileNames() {
         let pdf = FileItem.splitName("Aufmaß EG.pdf")

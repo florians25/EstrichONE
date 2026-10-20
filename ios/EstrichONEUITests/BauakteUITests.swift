@@ -199,6 +199,8 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testReportProblemWithDiagnosticsPreview() {
         let app = launchSignedIn()
+        // Hinweis des Betreibers als Banner auf der Startseite.
+        XCTAssertTrue(app.text(containing: "Neue App-Version").waitForExistence(timeout: 20), app.debugDescription)
         app.tapElement(app.tabBars.buttons["Mehr"].firstMatch, "Reiter Mehr")
         app.tap("reportProblemButton")
         app.type("Fotos werden nicht übertragen", into: "ticketTitleField")

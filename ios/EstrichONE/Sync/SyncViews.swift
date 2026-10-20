@@ -31,6 +31,10 @@ struct SyncStatusBar: View {
         if summary?.hasProblems == true {
             return ("Problem bei der Übertragung – antippen für Details", "exclamationmark.triangle.fill", Theme.error, Theme.errorBackground)
         }
+        if let message = sync.maintenanceMessage {
+            return ("Wartung: \(message) Änderungen bleiben auf dem Gerät und werden danach übertragen.", "wrench.and.screwdriver.fill",
+                    Theme.hint, Theme.hintBackground)
+        }
         if sync.isOffline {
             return ("Offline – Änderungen werden gespeichert", "wifi.slash", Theme.textSecondary, Theme.surfaceAlt)
         }
@@ -202,5 +206,104 @@ struct SyncView: View {
         case .none, .null: "–"
         default: "…"
         }
+    }
+}
+
+/// Hinweise des Betreibers kompakt als Banner (Startseite): laufende oder angekündigte Wartung und Ankündigungen.
+/// Einzelne Hinweise lassen sich für die Sitzung ausblenden.
+struct SystemNoticesBanner: View {
+    let sync: SyncController
+    @State private var dismissed: Set<String> = []
+
+    var body: some View {
+        let notices = sync.notices
+        let announcements = (notices?.currentAnnouncements() ?? []).filter { !dismissed.contains($0.id) }
+        VStack(spacing: 8) {
+            if let maintenance = notices?.maintenance, maintenance.active, sync.maintenanceMessage == nil {
+                NoticeCard(symbol: "wrench.and.screwdriver.fill", title: "Wartung läuft",
+                           text: [maintenance.message, Self.window(maintenance)].compactMap { $0 }.joined(separator: " · "),
+                           foreground: Theme.hint, background: Theme.hintBackground, onDismiss: nil)
+            } else if let upcoming = notices?.upcomingMaintenance(), !dismissed.contains("maintenance") {
+                NoticeCard(symbol: "calendar.badge.exclamationmark", title: "Geplante Wartung",
+                           text: [Self.window(upcoming), upcoming.message].compactMap { $0 }.joined(separator: " · "),
+                           foreground: Theme.hint, background: Theme.hintBackground) { dismissed.insert("maintenance") }
+            }
+            ForEach(announcements) { announcement in
+                NoticeCard(symbol: Self.symbol(announcement.severity), title: announcement.title, text: announcement.text,
+                           foreground: Self.foreground(announcement.severity), background: Self.background(announcement.severity)) {
+                    dismissed.insert(announcement.id)
+                }
+            }
+        }
+        .accessibilityIdentifier("systemNotices")
+    }
+
+    static func window(_ maintenance: SystemNotices.Maintenance) -> String? {
+        guard let start = maintenance.start else { return nil }
+        let from = start.formatted(date: .abbreviated, time: .shortened)
+        guard let end = maintenance.end else { return "ab \(from)" }
+        let sameDay = Calendar.current.isDate(start, inSameDayAs: end)
+        return "\(from) – \(sameDay ? end.formatted(date: .omitted, time: .shortened) : end.formatted(date: .abbreviated, time: .shortened))"
+    }
+
+    static func symbol(_ severity: SystemNotices.Announcement.Severity) -> String {
+        switch severity {
+        case .info: "info.circle.fill"
+        case .warning: "exclamationmark.triangle.fill"
+        case .critical: "exclamationmark.octagon.fill"
+        }
+    }
+
+    static func foreground(_ severity: SystemNotices.Announcement.Severity) -> Color {
+        switch severity {
+        case .info: Theme.info
+        case .warning: Theme.hint
+        case .critical: Theme.error
+        }
+    }
+
+    static func background(_ severity: SystemNotices.Announcement.Severity) -> Color {
+        switch severity {
+        case .info: Theme.infoBackground
+        case .warning: Theme.hintBackground
+        case .critical: Theme.errorBackground
+        }
+    }
+}
+
+private struct NoticeCard: View {
+    let symbol: String
+    let title: String
+    let text: String
+    let foreground: Color
+    let background: Color
+    let onDismiss: (() -> Void)?
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: symbol).foregroundStyle(foreground).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(.subheadline.weight(.semibold)).foregroundStyle(foreground)
+                if !text.isEmpty {
+                    Text(text).font(.footnote).foregroundStyle(.primary).fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+            if let onDismiss {
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark").font(.caption.weight(.bold)).foregroundStyle(Theme.textSecondary)
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Hinweis ausblenden")
+                .padding(.vertical, -12)
+                .padding(.trailing, -10)
+            }
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(background, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 }

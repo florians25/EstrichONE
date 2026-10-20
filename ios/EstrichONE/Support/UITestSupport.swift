@@ -184,6 +184,12 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                       "email":"info@huber.example","notes":null,"version":1}}],
              "cursor":"1:0","hasMore":false,"visibleBauakteIds":null}
             """)
+        case "/api/v1/system/notices":
+            return (200, """
+            {"announcements":[{"id":"uitest-1","title":"Neue App-Version","text":"Dokumente lassen sich jetzt direkt scannen.",
+              "severity":"info","startsAt":null,"endsAt":null}],
+             "maintenance":null,"serverTime":"\(APIDate.format(Date()))"}
+            """)
         case "/api/v1/tickets/mine":
             return (200, "[]")
         case "/api/v1/tickets/device":

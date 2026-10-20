@@ -20,6 +20,11 @@ public enum APIError: Error, Equatable, Sendable {
         if case let .server(status, _, _) = self { status } else { nil }
     }
 
+    /// Meldung des Servers, falls er eine mitgeschickt hat.
+    public var serverMessage: String? {
+        if case let .server(_, _, message) = self { message } else { nil }
+    }
+
     public var message: String {
         switch self {
         case .offline:
