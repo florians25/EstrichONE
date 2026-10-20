@@ -107,6 +107,23 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return (201, device(status: deviceKind == "pool" ? "pending" : newDeviceStatus))
         case "/api/v1/devices/attach", "/api/v1/devices/me":
             return (200, device(status: "active"))
+        case "/api/v1/sync/push":
+            // Nimmt jede Operation an und meldet den Datensatz so zurück, wie der Client ihn gesendet hat.
+            let operations = body["operations"] as? [[String: Any]] ?? []
+            let results = operations.map { operation -> [String: Any] in
+                var entity = operation["payload"] as? [String: Any] ?? [:]
+                entity["id"] = operation["entityId"]
+                entity["version"] = 1
+                if (operation["type"] as? String) == "bauakte.create" {
+                    entity["number"] = "2026-0\(10 + counter)"
+                    entity["status"] = "planned"
+                }
+                return ["opId": operation["opId"] ?? "", "status": "applied", "version": 1, "entity": entity]
+            }
+            let json = (try? JSONSerialization.data(withJSONObject: ["results": results])).map { String(decoding: $0, as: UTF8.self) }
+            return (200, json ?? #"{"results":[]}"#)
+        case "/api/v1/sync/pull":
+            return (200, #"{"changes":[],"cursor":"1:0","hasMore":false,"visibleBauakteIds":null}"#)
         default:
             return problem(404, "NOT_FOUND", "Nicht gefunden")
         }

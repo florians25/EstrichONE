@@ -39,6 +39,26 @@ public enum APIError: Error, Equatable, Sendable {
     }
 }
 
+/// Beschreibung einer Anfrage (Pfad relativ zu `api/v1/`).
+public struct APIRequest: Sendable {
+    public var method: String
+    public var path: String
+    public var query: [URLQueryItem] = []
+    public var body: Data?
+    public var contentType: String?
+    public var headers: [String: String] = [:]
+
+    public init(method: String, path: String, query: [URLQueryItem] = [], body: Data? = nil, contentType: String? = nil,
+                headers: [String: String] = [:]) {
+        self.method = method
+        self.path = path
+        self.query = query
+        self.body = body
+        self.contentType = contentType
+        self.headers = headers
+    }
+}
+
 /// Leere Antwort (`204 No Content`).
 public struct NoContent: Decodable, Sendable {
     public init() {}
@@ -54,12 +74,13 @@ public struct APIClient: Sendable {
         self.transport = transport
     }
 
-    public func get<Response: Decodable & Sendable>(_ path: String, accessToken: String? = nil) async throws(APIError) -> Response {
-        try await perform("GET", path, body: nil, accessToken: accessToken)
+    public func get<Response: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = [], accessToken: String? = nil)
+        async throws(APIError) -> Response {
+        try await perform(APIRequest(method: "GET", path: path, query: query), accessToken: accessToken)
     }
 
     public func post<Response: Decodable & Sendable>(_ path: String, accessToken: String? = nil) async throws(APIError) -> Response {
-        try await perform("POST", path, body: nil, accessToken: accessToken)
+        try await perform(APIRequest(method: "POST", path: path), accessToken: accessToken)
     }
 
     public func post<Response: Decodable & Sendable, Body: Encodable & Sendable>(
@@ -71,21 +92,27 @@ public struct APIClient: Sendable {
         } catch {
             throw .invalidResponse
         }
-        return try await perform("POST", path, body: data, accessToken: accessToken)
+        return try await perform(APIRequest(method: "POST", path: path, body: data, contentType: "application/json"), accessToken: accessToken)
     }
 
-    private func perform<Response: Decodable & Sendable>(
-        _ method: String, _ path: String, body: Data?, accessToken: String?
-    ) async throws(APIError) -> Response {
-        var request = URLRequest(url: server.url(for: "api/v1/" + path))
-        request.httpMethod = method
+    public func perform<Response: Decodable & Sendable>(_ spec: APIRequest, accessToken: String?) async throws(APIError) -> Response {
+        var components = URLComponents(url: server.url(for: "api/v1/" + spec.path), resolvingAgainstBaseURL: false)
+        if !spec.query.isEmpty {
+            components?.queryItems = spec.query
+        }
+        guard let url = components?.url else { throw .invalidResponse }
+        var request = URLRequest(url: url)
+        request.httpMethod = spec.method
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         if let accessToken {
             request.setValue("Bearer \(accessToken)", forHTTPHeaderField: "Authorization")
         }
-        if let body {
-            request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let body = spec.body {
+            request.setValue(spec.contentType ?? "application/octet-stream", forHTTPHeaderField: "Content-Type")
             request.httpBody = body
+        }
+        for (name, value) in spec.headers {
+            request.setValue(value, forHTTPHeaderField: name)
         }
 
         let data: Data

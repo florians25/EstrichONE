@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Führt die Tests von EstrichCore gegen einen echten EstrichONE-Server aus (ADR 0012):
 # startet PostgreSQL (Docker) und die API, schließt die Ersteinrichtung ab und ruft `swift test` im
-# Container swift:6.1-noble auf. Zusätzliche docker-run-Argumente (z. B. Proxy) über SWIFT_DOCKER_ARGS.
+# Container swift:6.1-noble auf (SWIFT_IMAGE; fehlende SQLite-Header werden nachinstalliert).
+# Zusätzliche docker-run-Argumente (z. B. Proxy) über SWIFT_DOCKER_ARGS.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 PORT="${PORT:-5081}"
@@ -53,5 +54,6 @@ echo "== swift test gegen http://localhost:$PORT"
 # shellcheck disable=SC2086
 docker run --rm --network host ${SWIFT_DOCKER_ARGS:-} \
   -e ESTRICHONE_LIVE_SERVER="http://localhost:$PORT" -e ESTRICHONE_LIVE_LOGIN=admin -e ESTRICHONE_LIVE_PASSWORD="$PASSWORD" \
-  -v "$ROOT":/repo -w /repo/ios/Packages/EstrichCore swift:6.1-noble \
-  bash -c 'swift test 2>&1 | tee /tmp/swift-test.log; test "${PIPESTATUS[0]}" -eq 0 && grep -q "Echter Server\" passed" /tmp/swift-test.log'
+  -v "$ROOT":/repo -w /repo/ios/Packages/EstrichCore "${SWIFT_IMAGE:-swift:6.1-noble}" \
+  bash -c 'test -f /usr/include/sqlite3.h || (apt-get update -qq && apt-get install -y -qq libsqlite3-dev >/dev/null)
+           swift test 2>&1 | tee /tmp/swift-test.log; test "${PIPESTATUS[0]}" -eq 0 && grep -q "Echter Server\" passed" /tmp/swift-test.log'

@@ -7,10 +7,24 @@ struct HomeView: View {
     @Environment(AppModel.self) private var model
     @State private var confirmSignOut = false
     @State private var confirmReset = false
+    @State private var unsentBeforeSignOut = 0
 
     var body: some View {
         NavigationStack {
             List {
+                if let sync = model.active?.sync {
+                    Section {
+                        SyncStatusBar(sync: sync)
+                            .listRowInsets(EdgeInsets())
+                        NavigationLink {
+                            SyncView(sync: sync)
+                        } label: {
+                            Label("Synchronisation", systemImage: "arrow.triangle.2.circlepath")
+                        }
+                        .accessibilityIdentifier("syncLink")
+                    }
+                }
+
                 if let user = model.active?.user {
                     Section {
                         HStack(spacing: 14) {
@@ -73,7 +87,10 @@ struct HomeView: View {
                         .accessibilityIdentifier("lockButton")
                     }
                     Button(role: .destructive) {
-                        confirmSignOut = true
+                        Task {
+                            unsentBeforeSignOut = await model.unsentItems()
+                            confirmSignOut = true
+                        }
                     } label: {
                         Label("Abmelden", systemImage: "rectangle.portrait.and.arrow.right")
                     }
@@ -90,7 +107,13 @@ struct HomeView: View {
             }
             .navigationTitle("EstrichONE")
             .confirmationDialog("Abmelden?", isPresented: $confirmSignOut, titleVisibility: .visible) {
-                Button("Abmelden", role: .destructive) { Task { await model.signOut() } }
+                Button(unsentBeforeSignOut > 0 ? "Trotzdem abmelden und Daten löschen" : "Abmelden", role: .destructive) {
+                    Task { await model.signOut() }
+                }
+            } message: {
+                if unsentBeforeSignOut > 0 {
+                    Text("\(unsentBeforeSignOut) Änderungen sind noch nicht übertragen. Beim Abmelden gehen sie verloren. Besser: Verbindung herstellen und warten, bis alles übertragen ist.")
+                }
             }
             .confirmationDialog("App zurücksetzen?", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("Alle Daten auf diesem Gerät löschen", role: .destructive) { model.resetApp() }

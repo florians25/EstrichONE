@@ -54,8 +54,12 @@ public actor AuthorizedClient {
         self.ended = ended
     }
 
-    public func get<Response: Decodable & Sendable>(_ path: String) async throws(APIError) -> Response {
-        try await perform { api, token throws(APIError) in try await api.get(path, accessToken: token) }
+    public func get<Response: Decodable & Sendable>(_ path: String, query: [URLQueryItem] = []) async throws(APIError) -> Response {
+        try await perform { api, token throws(APIError) in try await api.get(path, query: query, accessToken: token) }
+    }
+
+    public func send<Response: Decodable & Sendable>(_ request: APIRequest) async throws(APIError) -> Response {
+        try await perform { api, token throws(APIError) in try await api.perform(request, accessToken: token) }
     }
 
     public func post<Response: Decodable & Sendable>(_ path: String) async throws(APIError) -> Response {

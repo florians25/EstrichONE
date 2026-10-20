@@ -28,6 +28,8 @@ enum Screen: Equatable {
 struct ActiveAccount {
     let account: UnlockedAccount
     let client: AuthorizedClient
+    /// Lokale Daten und Synchronisation; `nil`, wenn die Datenbank nicht geöffnet werden konnte.
+    let sync: SyncController?
     var user: UserSummary { account.user }
 }
 
@@ -186,13 +188,28 @@ final class AppModel {
 
     /// Sperrt den Tresor: Poolgerät zeigt die Benutzerauswahl, nie die letzte Sitzung (11, AK-2).
     func lock() {
-        guard active != nil else { return }
-        active = nil
+        guard let active else { return }
+        // Vor dem Wechsel noch einmal übertragen; was offline bleibt, wartet verschlüsselt auf die nächste
+        // Anmeldung derselben Person (11, Abschnitt 4.4; einfache Variante für 1.0).
+        if let sync = active.sync {
+            sync.stop()
+            Task { await sync.run() }
+        }
+        self.active = nil
         screen = lockedScreen()
+    }
+
+    /// Anzahl noch nicht übertragener Vorgänge und Dateien (Warnung vor dem Abmelden).
+    func unsentItems() async -> Int {
+        guard let sync = active?.sync else { return 0 }
+        await sync.run()
+        guard let summary = sync.summary else { return 0 }
+        return summary.pendingOperations + summary.pendingUploads
     }
 
     func signOut() async {
         guard let active, let accounts else { return }
+        active.sync?.stop()
         self.active = nil
         await accounts.signOut(active.account, client: active.client)
         deviceState = accounts.state
@@ -240,7 +257,11 @@ final class AppModel {
     func didBecomeActive(at date: Date) {
         defer { backgroundSince = nil }
         guard let since = backgroundSince, active != nil else { return }
-        if date.timeIntervalSince(since) >= environment.personalLockAfter { lock() }
+        if date.timeIntervalSince(since) >= environment.personalLockAfter {
+            lock()
+        } else if let sync = active?.sync {
+            Task { await sync.run() }
+        }
     }
 
     /// Inaktivität im Vordergrund (Poolgerät: 5 Minuten).
@@ -300,14 +321,20 @@ final class AppModel {
             api: accounts.api, session: account.session, keys: accounts.keys,
             persist: { session in _ = try? accounts.store(session, dataKey: dataKey) },
             ended: { [weak self] end in await self?.handleSessionEnd(end) })
-        active = ActiveAccount(account: account, client: client)
+        let sync = try? SyncController(account: account, client: client, storage: AppStorage(root: environment.storageRoot))
+        if sync == nil {
+            notice = "Die Daten auf diesem Gerät konnten nicht geöffnet werden. Bitte die App zurücksetzen oder die IT-Administration informieren."
+        }
+        active = ActiveAccount(account: account, client: client, sync: sync)
         deviceState = accounts.state
+        sync?.start()
         screen = deviceState.registration?.status == .pending ? .waitingForApproval : .home
         Task { await refreshDeviceStatus() }
     }
 
     private func handleSessionEnd(_ end: SessionEnd) {
         let userName = active?.user.userName
+        active?.sync?.stop()
         active = nil
         switch end {
         case .signedOut:

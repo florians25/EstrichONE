@@ -95,4 +95,73 @@ struct LiveServerTests {
             _ = try await other.bindDevice(tokens: otherTokens, kind: .pool, enrollmentCode: code.code, description: description)
         }
     }
+
+    /// Angemeldetes Gerät mit eigener verschlüsselter Datenbank und Synchronisation gegen den echten Server.
+    private func syncingDevice() async throws -> (store: LocalStore, files: FileVault, engine: SyncEngine) {
+        let service = makeService()
+        let tokens = try await service.signIn(login: login, password: password, clientName: "CI Sync")
+        _ = try await service.bindDevice(tokens: tokens, kind: .personal, enrollmentCode: nil, description: description)
+        let account = try service.createVault(for: tokens, pin: nil)
+        let directory = service.storage.userDirectory(account.user.id)
+        let store = try LocalStore.open(url: directory.appending(path: "data.sealed"), account: account)
+        let files = FileVault(directory: directory.appending(path: "files"), key: account.dataKey)
+        let engine = SyncEngine(store: store, transport: APISyncTransport(client: authorized(service, account)), files: files)
+        return (store, files, engine)
+    }
+
+    @Test("Synchronisation: offline anlegen, Nummer vom Server, Notiz und Foto, zweites Gerät sieht alles, Felder zusammengeführt")
+    func synchronization() async throws {
+        let first = try await syncingDevice()
+        let second = try await syncingDevice()
+        #expect(await second.engine.synchronize(includeScope: true) == .completed)
+
+        // Erstes Gerät, offline erfasst.
+        let bauakte = UUID.v7()
+        let fields: [String: JSONValue] = ["title": "EFH Integrationstest", "city": "Landshut"]
+        try await first.store.create(.bauakte, id: bauakte, data: JSONValue.object(fields).merging(["id": JSONValue(bauakte)]), payload: fields)
+        let note = UUID.v7()
+        let noteFields: [String: JSONValue] = ["bauakteId": JSONValue(bauakte), "text": "Estrich CT-C25-F4, 65 mm"]
+        try await first.store.create(.note, id: note, data: JSONValue.object(noteFields).merging(["id": JSONValue(note)]), payload: noteFields)
+        // 1×1-PNG: Der Server prüft den Inhalt anhand der Signatur.
+        let photo = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
+        let fileId = UUID.v7()
+        let sha = try first.files.store(photo, for: fileId)
+        let fileFields: [String: JSONValue] = ["bauakteId": JSONValue(bauakte), "kind": "photo", "originalName": "foto.png",
+                                               "contentType": "image/png", "sizeBytes": .number(Double(photo.count)), "sha256": .string(sha)]
+        try await first.store.create(.file, id: fileId, data: .object(fileFields), payload: fileFields, operation: "file.announce")
+        try await first.store.enqueueUpload(fileId: fileId, size: Int64(photo.count), sha256: sha, contentType: "image/png")
+
+        #expect(await first.engine.synchronize() == .completed)
+        let created = try #require(try await first.store.entity(.bauakte, bauakte))
+        let number = try #require(created.data["number"]?.string)
+        #expect(number.range(of: #"^\d{4}-\d{3,}$"#, options: .regularExpression) != nil)
+        #expect(try await first.store.summary().isSettled)
+        #expect(try await first.store.uploads().first?.state == .done)
+
+        // Zweites Gerät holt alles.
+        #expect(await second.engine.synchronize() == .completed)
+        #expect(try await second.store.entity(.bauakte, bauakte)?.data["number"]?.string == number)
+        #expect(try await second.store.entities(.note, parent: bauakte).first?.data["text"]?.string == "Estrich CT-C25-F4, 65 mm")
+        #expect(try await second.store.entity(.file, fileId)?.data["state"]?.string == "stored")
+
+        // Parallel verschiedene Felder ändern: beide Änderungen bleiben.
+        try await first.store.update(.bauakte, id: bauakte, changes: ["city": "Ergolding"])
+        try await second.store.update(.bauakte, id: bauakte, changes: ["description": "Zufahrt über den Hof"])
+        #expect(await first.engine.synchronize() == .completed)
+        #expect(await second.engine.synchronize() == .completed)
+        #expect(await first.engine.synchronize() == .completed)
+        for device in [first, second] {
+            let merged = try #require(try await device.store.entity(.bauakte, bauakte))
+            #expect(merged.data["city"]?.string == "Ergolding")
+            #expect(merged.data["description"]?.string == "Zufahrt über den Hof")
+        }
+
+        // Gleiches Feld parallel: Konflikt, der Serverwert bleibt.
+        try await first.store.update(.bauakte, id: bauakte, changes: ["city": "Altdorf"])
+        try await second.store.update(.bauakte, id: bauakte, changes: ["city": "Essenbach"])
+        #expect(await first.engine.synchronize() == .completed)
+        #expect(await second.engine.synchronize() == .completed)
+        #expect(try await second.store.conflicts().map(\.conflict.field) == ["city"])
+        #expect(try await second.store.entity(.bauakte, bauakte)?.data["city"]?.string == "Altdorf")
+    }
 }
