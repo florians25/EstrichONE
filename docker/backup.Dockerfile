@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # EstrichONE Backup-Dienst. Build-Kontext ist die Repository-Wurzel.
 # Basis: offizielles PostgreSQL-17-Image (pg_dump passend zur Serverversion), dazu restic als einzelnes Binary.
-FROM restic/restic:0.18.0 AS restic
+FROM restic/restic:0.19.1 AS restic
 
 FROM postgres:17-alpine
 COPY --from=restic /usr/bin/restic /usr/local/bin/restic
