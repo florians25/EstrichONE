@@ -88,7 +88,9 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testCreatedBauakteIsFoundBySearch() {
         let app = launchSignedIn()
-        tap("newBauakteTile", in: app)
+        // Anlegen über die schwebende Schaltfläche der Bauaktenliste (zweiter Weg neben der Kachel auf „Heute“).
+        app.tabBars.buttons["Bauakten"].tap()
+        tap("newBauakteButton", in: app)
         type("Halle Huber", into: "newTitleField", in: app)
         tap("createButton", in: app)
         XCTAssertTrue(element("bauakteTitle", in: app).waitForExistence(timeout: 10))
