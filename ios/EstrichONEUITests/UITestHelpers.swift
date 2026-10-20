@@ -46,6 +46,11 @@ extension XCUIApplication {
             target.tap()
             return
         }
+        // Häufigste Ursache: Tastatur samt darüberliegender Leiste verdeckt das Element.
+        if dismissKeyboard(), waitUntilHittable(target, timeout: 4) {
+            target.tap()
+            return
+        }
         // Noch in Bewegung oder teilweise verdeckt: Mitte des Rahmens antippen, falls sie im Fenster liegt;
         // sonst scrollt XCUITest das Element selbst heran.
         let frame = target.frame
@@ -58,6 +63,18 @@ extension XCUIApplication {
         } else {
             target.tap()
         }
+    }
+
+    /// Schließt die Tastatur über ihre Eingabetaste. `true`, wenn eine Tastatur offen war.
+    @MainActor
+    @discardableResult
+    func dismissKeyboard() -> Bool {
+        let keyboard = keyboards.firstMatch
+        guard keyboard.exists else { return false }
+        let returnKey = keyboard.buttons.matching(NSPredicate(format: "identifier IN %@", ["Return", "Search", "Done", "Go"])).firstMatch
+        if returnKey.exists { returnKey.tap() }
+        _ = keyboard.waitForNonExistence(timeout: 3)
+        return true
     }
 
     @MainActor
