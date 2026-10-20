@@ -80,3 +80,37 @@ jobs:
           name="EstrichONE-Server-$TAG"
           git archive --format=tar.gz --prefix="$name/" -o "$name.tar.gz" HEAD backend contracts docker deploy web global.json README.md
           gh release upload "$TAG" "$name.tar.gz" --clobber --repo "$GITHUB_REPOSITORY"
+
+  ios:
+    name: iOS-Xcode-Projekt
+    runs-on: macos-15
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - name: Neuestes Xcode wählen
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+      - name: Xcode-Projekt erzeugen
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          xcodegen generate
+      - name: Bauen prüfen (Simulator, ohne Signatur)
+        working-directory: ios
+        run: |
+          set -o pipefail
+          xcodebuild build -project EstrichONE.xcodeproj -scheme EstrichONE -destination "generic/platform=iOS Simulator" \
+            CODE_SIGNING_ALLOWED=NO | tail -n 5
+      - name: Packen und anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          name="EstrichONE-iOS-Xcode-Projekt-$TAG"
+          mkdir -p "$RUNNER_TEMP/$name"
+          rsync -a --exclude '.build' --exclude 'build' --exclude 'DerivedData' ios/ "$RUNNER_TEMP/$name/ios/"
+          (cd "$RUNNER_TEMP" && zip -qry "$name.zip" "$name")
+          gh release upload "$TAG" "$RUNNER_TEMP/$name.zip" --clobber --repo "$GITHUB_REPOSITORY"
