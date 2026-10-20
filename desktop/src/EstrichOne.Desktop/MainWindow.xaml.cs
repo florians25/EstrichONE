@@ -48,6 +48,7 @@ public sealed partial class MainWindow : Window
         SetTitleBar(AppTitleBar);
         AppWindow.Resize(new Windows.Graphics.SizeInt32(1440, 900));
         AppWindow.Title = "EstrichONE";
+        AppWindow.SetIcon(Path.Combine(AppContext.BaseDirectory, "Assets", "EstrichONE.ico"));
         StatusVersion.Text = $"EstrichONE für Windows {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)}";
 
         SignIn.SignedIn += (_, _) => ShowShell();

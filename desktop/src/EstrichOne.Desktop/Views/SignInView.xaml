@@ -8,9 +8,7 @@
         <Border Style="{StaticResource Card}" Width="440" HorizontalAlignment="Center" VerticalAlignment="Center" Padding="32">
             <StackPanel Spacing="16">
                 <StackPanel Orientation="Horizontal" Spacing="12">
-                    <Border Width="44" Height="44" CornerRadius="8" Background="{ThemeResource BrandBrush}">
-                        <FontIcon Glyph="&#xE80F;" Foreground="White" FontSize="22" />
-                    </Border>
+                    <Image Source="ms-appx:///Assets/logo.png" Width="48" Height="48" AutomationProperties.Name="EstrichONE" />
                     <StackPanel VerticalAlignment="Center">
                         <TextBlock Text="EstrichONE" Style="{StaticResource SubtitleTextBlockStyle}" />
                         <TextBlock Text="für Windows" Style="{StaticResource Overline}" />

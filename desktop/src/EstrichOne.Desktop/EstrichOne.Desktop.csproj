@@ -7,6 +7,7 @@
     <RootNamespace>EstrichOne.Desktop</RootNamespace>
     <AssemblyName>EstrichONE</AssemblyName>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <ApplicationIcon>Assets\EstrichONE.ico</ApplicationIcon>
     <Platforms>x64;ARM64</Platforms>
     <RuntimeIdentifiers>win-x64;win-arm64</RuntimeIdentifiers>
     <UseWinUI>true</UseWinUI>
@@ -25,6 +26,10 @@
     <PackageReference Include="Microsoft.WindowsAppSDK" />
     <PackageReference Include="Microsoft.Windows.SDK.BuildTools" />
     <PackageReference Include="CommunityToolkit.Mvvm" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Logo (branding/build.sh) – liegt neben der EXE, damit ms-appx:/// es auch unverpackt findet. -->
+    <Content Include="Assets\**" CopyToOutputDirectory="PreserveNewest" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="../EstrichOne.Desktop.Core/EstrichOne.Desktop.Core.csproj" />

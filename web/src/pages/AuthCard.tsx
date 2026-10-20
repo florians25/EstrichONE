@@ -1,5 +1,6 @@
 import { Card, Typography } from 'antd';
 import type { ReactNode } from 'react';
+import { LogoMark } from '../shared/Logo';
 import { brand } from '../theme';
 
 /** Rahmen für Anmeldung und Einrichtung: Markenfläche links, Formular rechts. */
@@ -8,11 +9,7 @@ export function AuthCard({ title, subtitle, children }: { title: string; subtitl
     <div style={{ minHeight: '100vh', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(360px, 480px)', background: '#F0F2F5' }}>
       <div style={{ background: `linear-gradient(135deg, ${brand.navy}, ${brand.navyLight})`, color: '#fff', padding: '48px 56px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, fontSize: 22, fontWeight: 700 }}>
-          <svg width="28" height="28" viewBox="0 0 22 22" aria-hidden="true">
-            <rect x="2" y="4" width="18" height="3.5" rx="1" fill="#fff" />
-            <rect x="2" y="9.5" width="13" height="3.5" rx="1" fill="#fff" />
-            <rect x="2" y="15" width="18" height="3.5" rx="1" fill={brand.blue} />
-          </svg>
+          <LogoMark size={32} />
           EstrichONE
         </div>
         <div>

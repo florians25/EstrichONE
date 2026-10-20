@@ -11,6 +11,7 @@ import { get } from '../api/client';
 import { QuickCallProvider, useQuickCall } from './QuickCall';
 import type { ServerInfo } from '../api/models';
 import { useAuth } from '../auth/AuthContext';
+import { LogoMark } from '../shared/Logo';
 import { brand } from '../theme';
 
 interface NavEntry {
@@ -65,16 +66,6 @@ const navigation: NavEntry[] = [
     { path: '/system/protokoll', name: 'Protokoll', icon: <AuditOutlined />, permission: 'audit.read' }] },
 ];
 
-function Logo() {
-  return (
-    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true">
-      <rect x="2" y="4" width="18" height="3.5" rx="1" fill="#fff" />
-      <rect x="2" y="9.5" width="13" height="3.5" rx="1" fill="#fff" />
-      <rect x="2" y="15" width="18" height="3.5" rx="1" fill={brand.blue} />
-    </svg>
-  );
-}
-
 /** Programmrahmen: Kopf in Navy mit Suche und Benutzer, gruppierte Navigation, Statuszeile. */
 export function AppLayout() {
   return <QuickCallProvider><Shell /></QuickCallProvider>;
@@ -97,7 +88,7 @@ function Shell() {
   return (
     <ProLayout
       title="EstrichONE"
-      logo={<Logo />}
+      logo={<LogoMark />}
       layout="mix"
       splitMenus={false}
       fixSiderbar

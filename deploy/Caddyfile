@@ -1,8 +1,8 @@
 # EstrichONE – Weboberfläche und Reverse Proxy (ADR 0007)
 # Öffentliche Domain: Zertifikat automatisch von Let's Encrypt.
 # „localhost“ oder IP-Adresse: Zertifikat aus Caddys interner Zertifizierungsstelle (Browser warnt einmal).
-# Ports: Standard 80/443; der Docker-Installer nutzt 8180/8143. Weiterleitungen zeigen dann auf den richtigen Port.
-# Für ein Let's-Encrypt-Zertifikat auf 8180/8143 am Router 80 → 8180 und 443 → 8143 weiterleiten.
+# Ports: Standard 80/443; der Docker-Installer nutzt 8181/8143. Weiterleitungen zeigen dann auf den richtigen Port.
+# Für ein Let's-Encrypt-Zertifikat auf 8181/8143 am Router 80 → 8181 und 443 → 8143 weiterleiten.
 
 {
 	http_port {$ESTRICHONE_HTTP_PORT:80}

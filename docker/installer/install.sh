@@ -5,7 +5,7 @@
 #     ghcr.io/florians25/estrichone-installer:latest
 #
 # Ohne Rückfragen:  -e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"
-# Ports (Standard 8180/8143): -e ESTRICHONE_HTTP_PORT=8180 -e ESTRICHONE_HTTPS_PORT=8143
+# Ports (Standard 8181/8143): -e ESTRICHONE_HTTP_PORT=8181 -e ESTRICHONE_HTTPS_PORT=8143
 # Erneut ausführen = auf die Version dieses Installers aktualisieren; Daten und .env bleiben erhalten.
 set -eu
 
@@ -37,11 +37,26 @@ if [ -f "$DIR/.env" ]; then
   else
     echo "ESTRICHONE_VERSION=$VERSION" >> "$DIR/.env"
   fi
+  # Ports beim Aktualisieren ändern: -e ESTRICHONE_HTTP_PORT=… / -e ESTRICHONE_HTTPS_PORT=…
+  # 8180 war bis 0.1.0-preview.2 der Standard und kollidiert oft mit anderen Diensten → automatisch 8181.
+  if [ -z "${ESTRICHONE_HTTP_PORT:-}" ] && grep -q '^ESTRICHONE_HTTP_PORT=8180$' "$DIR/.env"; then
+    ESTRICHONE_HTTP_PORT=8181
+    echo "HTTP-Port wird von 8180 auf 8181 umgestellt."
+  fi
+  if [ -n "${ESTRICHONE_HTTP_PORT:-}" ]; then
+    sed -i "s|^ESTRICHONE_HTTP_PORT=.*|ESTRICHONE_HTTP_PORT=$ESTRICHONE_HTTP_PORT|" "$DIR/.env"
+  fi
+  if [ -n "${ESTRICHONE_HTTPS_PORT:-}" ]; then
+    sed -i "s|^ESTRICHONE_HTTPS_PORT=.*|ESTRICHONE_HTTPS_PORT=$ESTRICHONE_HTTPS_PORT|" "$DIR/.env"
+    domain="$(sed -n 's/^ESTRICHONE_DOMAIN=//p' "$DIR/.env")"
+    url="https://$domain"; [ "$ESTRICHONE_HTTPS_PORT" = "443" ] || url="$url:$ESTRICHONE_HTTPS_PORT"
+    sed -i "s|^ESTRICHONE_PUBLIC_URL=.*|ESTRICHONE_PUBLIC_URL=$url|" "$DIR/.env"
+  fi
   FIRST=0
 else
   ask ESTRICHONE_DOMAIN "Adresse des Servers (Domain oder IP, ohne https://)" "localhost"
   ask ESTRICHONE_NAME "Firmenname für die Anzeige in den Apps" "EstrichONE"
-  HTTP_PORT="${ESTRICHONE_HTTP_PORT:-8180}"
+  HTTP_PORT="${ESTRICHONE_HTTP_PORT:-8181}"
   HTTPS_PORT="${ESTRICHONE_HTTPS_PORT:-8143}"
   echo "$ESTRICHONE_DOMAIN" | grep -Eq '^[A-Za-z0-9.-]+$' || fail "Ungültige Adresse: $ESTRICHONE_DOMAIN"
   case "$ESTRICHONE_NAME" in *'"'*) fail "Der Firmenname darf keine Anführungszeichen enthalten." ;; esac

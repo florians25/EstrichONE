@@ -39,6 +39,7 @@ SolidCompression=yes
 WizardStyle=modern
 UninstallDisplayName=EstrichONE
 UninstallDisplayIcon={app}\EstrichONE.exe
+SetupIconFile=..\src\EstrichOne.Desktop\Assets\EstrichONE.ico
 CloseApplications=yes
 
 [Languages]

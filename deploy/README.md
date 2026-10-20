@@ -23,14 +23,14 @@ Passwörter) an, lädt die fertigen Images und startet die Suite. Er zeigt am En
 | Port | Zweck |
 |---|---|
 | **8143** | HTTPS – Weboberfläche und API (`https://<adresse>:8143`) |
-| **8180** | HTTP – leitet auf 8143 weiter |
+| **8181** | HTTP – leitet auf 8143 weiter |
 
 - Ohne Rückfragen: `-e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"`
-- Andere Ports: `-e ESTRICHONE_HTTP_PORT=8180 -e ESTRICHONE_HTTPS_PORT=8143`
+- Andere Ports: `-e ESTRICHONE_HTTP_PORT=8181 -e ESTRICHONE_HTTPS_PORT=8143`
 - **Aktualisieren:** denselben Befehl erneut ausführen (Daten und Konfiguration bleiben, Version wird angehoben).
 - Bei IP-Adresse oder `localhost` stellt Caddy ein eigenes Zertifikat aus (der Browser warnt einmal; die Android-App
   akzeptiert es nicht). Für ein gültiges Let's-Encrypt-Zertifikat eine Domain verwenden und am Router
-  **80 → 8180** und **443 → 8143** weiterleiten.
+  **80 → 8181** und **443 → 8143** weiterleiten.
 - Verwalten: `cd /opt/estrichone && sudo docker compose -p estrichone ps|logs|down`
 
 ## Installation aus dem Quellcode

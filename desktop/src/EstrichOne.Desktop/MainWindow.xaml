@@ -18,7 +18,7 @@
 
         <TitleBar x:Name="AppTitleBar" Title="EstrichONE" Subtitle="Büro">
             <TitleBar.IconSource>
-                <FontIconSource Glyph="&#xE80F;" />
+                <ImageIconSource ImageSource="ms-appx:///Assets/logo.png" />
             </TitleBar.IconSource>
             <TitleBar.Content>
                 <AutoSuggestBox x:Name="SearchBox" Width="420" PlaceholderText="Bauakte oder Befehl suchen (Strg+K)" QueryIcon="Find"
