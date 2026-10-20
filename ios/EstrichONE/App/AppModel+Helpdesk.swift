@@ -28,6 +28,7 @@ extension AppModel {
             freeStorageBytes: free, log: .shared)
     }
 
+    @discardableResult
     func report(_ ticket: NewTicket, includeDiagnostics: Bool, attachments: [Data]) async throws(TicketError) -> UUID {
         guard let helpdesk else { throw .storage }
         let diagnostics = includeDiagnostics ? await diagnostics() : nil

@@ -48,10 +48,11 @@ struct ReportProblemView: View {
                     Toggle("Dringend – ich kann nicht arbeiten", isOn: $blocked)
                 }
                 if !withoutSignIn {
+                    // Der Label-Inhalt läuft in einer Sendable-Closure: nur den fertigen Text übergeben.
+                    let attachmentText = attachments.isEmpty ? "Bildschirmfoto oder Foto anhängen" : "\(attachments.count) Bilder angehängt"
                     Section {
                         PhotosPicker(selection: $pickerItems, maxSelectionCount: 5, matching: .images) {
-                            Label(attachments.isEmpty ? "Bildschirmfoto oder Foto anhängen" : "\(attachments.count) Bilder angehängt",
-                                  systemImage: "paperclip")
+                            Label(attachmentText, systemImage: "paperclip")
                         }
                     }
                 }
