@@ -109,7 +109,7 @@ struct InitialInspectionView: View {
     @State private var capturing = false
     @State private var captureStarted = Date.now
     @State private var error: String?
-    @AppStorage("inspectionMode") private var mode: NewBauakteView.Mode = .wizard
+    @SwiftUI.AppStorage("inspectionMode") private var mode: NewBauakteView.Mode = .wizard
     /// Schritt im Assistenten: 0 = Beginn, 1…n = Prüfpunkte, n+1 = Fotos und Bemerkung.
     @State private var step = 0
 

@@ -33,7 +33,7 @@ struct NewBauakteView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
-    @AppStorage("newBauakteMode") private var mode: Mode = .wizard
+    @SwiftUI.AppStorage("newBauakteMode") private var mode: Mode = .wizard
     @State private var step: Step = .customer
     @State private var input = NewBauakte(title: "")
     @State private var customer: Contact?
