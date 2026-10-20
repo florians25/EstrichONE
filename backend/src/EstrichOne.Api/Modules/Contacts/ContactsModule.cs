@@ -10,6 +10,7 @@ public sealed class ContactsModule : IModule
     {
         services.AddScoped<ContactImport>();
         services.AddScoped<ISyncEntitySource, ContactSource>();
+        services.AddScoped<ISyncOperationHandler, ContactSync>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api) => ContactEndpoints.Map(api);

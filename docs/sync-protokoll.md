@@ -83,9 +83,11 @@ Der Client fasst mehrere ungesendete Änderungen desselben Datensatzes zusammen,
 | `note.create` | `bauakteId`*, `text`*, `pinned`, `color` | `notes.write` + Bauakte sichtbar | nur anfügen |
 | `note.update` | `text`, `pinned`, `color` | Verfasser | letzte Änderung gilt (nur ein Verfasser) |
 | `note.delete` | – | Verfasser | Tombstone |
+| `contact.create` | `name`*, `kind` (`person`/`company`, Standard `person`), `street`, `postalCode`, `city`, `phone`, `email`, `notes` | `contacts.edit` oder `bauakten.create` + `contacts.read` | Kundenanlage bei der Schnellanlage; steht in der Outbox vor `bauakte.create` mit dieser `customerId`. Keine Kundennummer (vergibt das Büro). Gleiche ID + gleicher Name: bestätigt |
 | `workitem.create` | `kind`* (`task`/`defect`), `title`*, `description`, `dueDate`, `assigneeUserId`, `bauakteId` | `work.edit` | |
 | `workitem.update` | `changes`/`base`: `title`, `description`, `dueDate`, `assigneeUserId`, `status` | `work.edit` + sichtbar | Abschnitt 3 |
-| `file.announce` | `bauakteId`, `kind`*, `originalName`*, `contentType`*, `sizeBytes`*, `sha256`*, `capturedAt`, `latitude`, `longitude`, `caption` | `files.upload` | danach Upload (Abschnitt 6) |
+| `file.announce` | `bauakteId`, `kind`*, `originalName`*, `contentType`*, `sizeBytes`*, `sha256`*, `capturedAt`, `latitude`, `longitude`, `caption`, `category` (nur `document`: `offer`/`order`/`invoice`/`plan`/`delivery`/`acceptance`/`customer`/`office`/`other`) | `files.upload` | danach Upload (Abschnitt 6) |
+| `file.update` | `changes`/`base`: `caption`, `category` | `files.upload` + sichtbar | Abschnitt 3; der Inhalt bleibt unveränderlich |
 | `file.delete` | – | `files.delete` + sichtbar | Tombstone |
 
 \* Pflichtfeld. Werte im JSON-Format der API: Aufzählungen als camelCase-Text, Zeitpunkte ISO 8601 mit Zeitzone.
