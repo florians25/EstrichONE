@@ -479,3 +479,50 @@ export interface PlanningRange {
   assignments: AssignmentView[];
   absences: AbsenceView[];
 }
+
+export type CallKind = 'call' | 'inquiry';
+export type CallDirection = 'inbound' | 'outbound';
+export type CallSource = 'phone' | 'email' | 'website' | 'personal' | 'other';
+export type CallPriority = 'low' | 'normal' | 'high';
+export type InquiryStatus = 'open' | 'inProgress' | 'converted' | 'cancelled';
+
+export interface CallResponse {
+  id: string;
+  kind: CallKind;
+  direction: CallDirection;
+  source: CallSource;
+  priority: CallPriority;
+  callerName: string | null;
+  callerPhone: string | null;
+  callerEmail: string | null;
+  company: string | null;
+  customerId: string | null;
+  customerName: string | null;
+  bauakteId: string | null;
+  bauakteLabel: string | null;
+  subject: string | null;
+  notes: string | null;
+  followUp: boolean;
+  dueDate: string | null;
+  nextStep: string | null;
+  inquiryStatus: InquiryStatus;
+  areaSquareMeters: number | null;
+  screedType: string | null;
+  desiredStart: string | null;
+  siteStreet: string | null;
+  sitePostalCode: string | null;
+  siteCity: string | null;
+  convertedBauakteId: string | null;
+  convertedBauakteNumber: string | null;
+  handledByUserId: string;
+  handledByName: string | null;
+  calledAt: string;
+  updatedAt: string;
+  version: number;
+}
+
+export interface ConvertInquiryResponse {
+  inquiry: CallResponse;
+  bauakteId: string;
+  bauakteNumber: string | null;
+}

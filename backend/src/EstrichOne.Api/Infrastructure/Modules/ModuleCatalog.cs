@@ -2,6 +2,7 @@ using EstrichOne.Api.Modules.Access;
 using EstrichOne.Api.Modules.Audit;
 using EstrichOne.Api.Modules.Backup;
 using EstrichOne.Api.Modules.Bauakten;
+using EstrichOne.Api.Modules.Calls;
 using EstrichOne.Api.Modules.Contacts;
 using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Documentation;
@@ -32,6 +33,7 @@ public static class ModuleCatalog
         new WorkModule(),
         new HelpdeskModule(),
         new PlanningModule(),
+        new CallsModule(),
         new SetupModule(),
         new SyncModule(),
         new BackupModule(),

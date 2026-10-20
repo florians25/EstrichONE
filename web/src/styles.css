@@ -120,3 +120,22 @@ body { background: #f0f2f5; }
 @media print {
   .planning-toolbar, .backlog-drawer, .board-add { display: none !important; }
 }
+/* Büro: Anrufe, Anfragen, Schnellerfassung */
+.header-button { font-weight: 600; }
+.header-button.ghost { background: transparent; color: #fff; border-color: rgba(255,255,255,.45); }
+.header-button.ghost:hover { color: #fff !important; border-color: #fff !important; background: rgba(255,255,255,.08) !important; }
+.call-list { display: grid; gap: 8px; }
+.call-row { display: flex; gap: 12px; align-items: flex-start; padding: 10px 12px; border: 1px solid #f0f0f0; border-radius: 8px; background: #fff; }
+.call-row.follow-up { border-left: 3px solid #FA8C16; }
+.call-dir { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none; }
+.call-dir.in { background: #E6F4FF; color: #0958D9; }
+.call-dir.out { background: #F6FFED; color: #389E0D; }
+.call-main { flex: 1; min-width: 0; }
+.call-head { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.call-subject { font-weight: 500; margin-top: 2px; }
+.call-notes { margin: 4px 0 !important; color: rgba(0,0,0,.75); }
+.call-meta { font-size: 12px; color: rgba(0,0,0,.55); }
+.quick-live { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; color: #CF1322; font-variant-numeric: tabular-nums; }
+.quick-dot { width: 8px; height: 8px; border-radius: 50%; background: #F5222D; animation: pulse 1.4s infinite; }
+@keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+.stat-icon { font-size: 26px; color: #0B2D5B; }

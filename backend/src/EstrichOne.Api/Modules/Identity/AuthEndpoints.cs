@@ -131,7 +131,8 @@ internal static class AuthEndpoints
         CancellationToken cancellationToken)
     {
         audit.Record(AuditActions.Logout, current.UserId, "session", current.SessionId.ToString());
-        await sessions.RevokeAsync(current.SessionId, "logout", current.UserId, cancellationToken);
+        // Abmelden muss vollständig wirken, auch wenn der Browser die Anfrage beim Verlassen abbricht.
+        await sessions.RevokeAsync(current.SessionId, "logout", current.UserId, CancellationToken.None);
         return TypedResults.NoContent();
     }
 

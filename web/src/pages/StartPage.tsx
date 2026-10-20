@@ -1,6 +1,6 @@
 import {
   AppstoreAddOutlined, CalendarOutlined, CarOutlined, CloudServerOutlined, CustomerServiceOutlined, FileAddOutlined, InboxOutlined,
-  KeyOutlined, MobileOutlined, ProjectOutlined, ScheduleOutlined, TeamOutlined, ToolOutlined, UserOutlined, WarningOutlined,
+  KeyOutlined, MobileOutlined, PhoneOutlined, ProjectOutlined, ScheduleOutlined, TeamOutlined, ToolOutlined, UserOutlined, WarningOutlined,
 } from '@ant-design/icons';
 import { PageContainer, ProCard, StatisticCard } from '@ant-design/pro-components';
 import { useQuery } from '@tanstack/react-query';
@@ -25,22 +25,30 @@ const groups: { label: string; tiles: Tile[] }[] = [
   {
     label: 'Auftragsbearbeitung',
     tiles: [
-      { label: 'Anfragen', icon: <InboxOutlined />, to: '/bauakten?status=inquiry', permission: 'bauakten.read' },
+      { label: 'Tagesübersicht', icon: <ScheduleOutlined />, to: '/tagesuebersicht', permission: 'bauakten.read' },
       { label: 'Bauakten', icon: <ProjectOutlined />, to: '/bauakten', permission: 'bauakten.read' },
       { label: 'Neue Bauakte', icon: <FileAddOutlined />, to: '/bauakten?neu=bauakte', permission: 'bauakten.create' },
-      { label: 'Neue Anfrage', icon: <AppstoreAddOutlined />, to: '/bauakten?neu=anfrage', permission: 'bauakten.create' },
+      { label: 'Anfragen', icon: <InboxOutlined />, to: '/anfragen', permission: 'contacts.read' },
+      { label: 'Baustellenkarte', icon: <AppstoreAddOutlined />, to: '/bauakten/karte', permission: 'bauakten.read' },
     ],
   },
   {
     label: 'Planung',
     tiles: [
-      { label: 'Wochenplan', icon: <CalendarOutlined />, to: '/planung', permission: 'planning.read' },
+      { label: 'Kolonnenplanung', icon: <CalendarOutlined />, to: '/planung', permission: 'planning.read' },
+      { label: 'Arbeitsplan', icon: <ScheduleOutlined />, to: '/planung/arbeitsplan', permission: 'planning.read' },
       { label: 'Kolonnen', icon: <TeamOutlined />, to: '/planung/ressourcen?reiter=kolonnen', permission: 'planning.read' },
       { label: 'Fahrzeuge und Geräte', icon: <CarOutlined />, to: '/planung/ressourcen?reiter=geraete', permission: 'planning.read' },
       { label: 'Abwesenheiten', icon: <ScheduleOutlined />, to: '/planung/ressourcen?reiter=abwesenheiten', permission: 'planning.read' },
     ],
   },
-  { label: 'Stammdaten', tiles: [{ label: 'Kunden', icon: <TeamOutlined />, to: '/kunden', permission: 'contacts.read' }] },
+  {
+    label: 'Büro',
+    tiles: [
+      { label: 'Kunden', icon: <TeamOutlined />, to: '/kunden', permission: 'contacts.read' },
+      { label: 'Anrufe', icon: <PhoneOutlined />, to: '/anrufe', permission: 'contacts.read' },
+    ],
+  },
   {
     label: 'IT Center',
     tiles: [
@@ -95,7 +103,7 @@ export default function StartPage() {
     >
       <StatisticCard.Group direction="row" style={{ marginBottom: 16 }}>
         {has('planning.read') && <StatisticCard statistic={{ title: 'Einsätze heute', value: assignments.data?.assignments.length ?? '–', icon: <CalendarOutlined style={{ color: brand.navy, fontSize: 28 }} /> }} />}
-        {has('bauakten.read') && <StatisticCard statistic={{ title: 'Offene Anfragen', value: count(inquiries.data), icon: <InboxOutlined style={{ color: brand.navy, fontSize: 28 }} /> }} onClick={() => navigate('/bauakten?status=inquiry')} />}
+        {has('bauakten.read') && <StatisticCard statistic={{ title: 'Offene Anfragen', value: count(inquiries.data), icon: <InboxOutlined style={{ color: brand.navy, fontSize: 28 }} /> }} onClick={() => navigate('/bauakten?status=inquiry')} className="clickable" />}
         {has('bauakten.read') && <StatisticCard statistic={{ title: 'Baustellen in Ausführung', value: count(running.data), icon: <ToolOutlined style={{ color: brand.navy, fontSize: 28 }} /> }} />}
         {has('helpdesk.agent') && (
           <StatisticCard statistic={{

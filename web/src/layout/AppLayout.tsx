@@ -1,13 +1,14 @@
 import {
-  AppstoreOutlined, AuditOutlined, CalendarOutlined, CarOutlined, ClusterOutlined, CloudServerOutlined, CustomerServiceOutlined, EnvironmentOutlined,
+  AppstoreOutlined, AuditOutlined, FieldTimeOutlined, FileAddOutlined, PhoneOutlined, CalendarOutlined, CarOutlined, ClusterOutlined, CloudServerOutlined, CustomerServiceOutlined, EnvironmentOutlined,
   FileSearchOutlined, InboxOutlined,
   KeyOutlined, LogoutOutlined, MobileOutlined, ProjectOutlined, ScheduleOutlined, SearchOutlined, TeamOutlined, UnorderedListOutlined, UserOutlined,
 } from '@ant-design/icons';
 import { ProLayout, type MenuDataItem } from '@ant-design/pro-components';
 import { useQuery } from '@tanstack/react-query';
-import { Badge, Dropdown, Input, Space, Typography } from 'antd';
+import { Badge, Button, Dropdown, Input, Space, Typography } from 'antd';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { get } from '../api/client';
+import { QuickCallProvider, useQuickCall } from './QuickCall';
 import type { ServerInfo } from '../api/models';
 import { useAuth } from '../auth/AuthContext';
 import { brand } from '../theme';
@@ -24,8 +25,9 @@ const navigation: NavEntry[] = [
   { path: '/start', name: 'Übersicht', icon: <AppstoreOutlined /> },
   {
     path: '/auftraege', name: 'Auftragsbearbeitung', children: [
-      { path: '/bauakten?status=inquiry', name: 'Anfragen', icon: <InboxOutlined />, permission: 'bauakten.read' },
+      { path: '/tagesuebersicht', name: 'Tagesübersicht', icon: <ScheduleOutlined />, permission: 'bauakten.read' },
       { path: '/bauakten', name: 'Bauakten', icon: <ProjectOutlined />, permission: 'bauakten.read' },
+      { path: '/anfragen', name: 'Anfragen', icon: <InboxOutlined />, permission: 'contacts.read' },
       { path: '/bauakten/karte', name: 'Baustellenkarte', icon: <EnvironmentOutlined />, permission: 'bauakten.read' },
     ],
   },
@@ -33,13 +35,14 @@ const navigation: NavEntry[] = [
     path: '/disposition', name: 'Planung', children: [
       { path: '/planung', name: 'Kolonnenplanung', icon: <ClusterOutlined />, permission: 'planning.read' },
       { path: '/planung/kalender', name: 'Kalender', icon: <CalendarOutlined />, permission: 'planning.read' },
-      { path: '/planung/tageseinteilung', name: 'Tageseinteilung', icon: <ScheduleOutlined />, permission: 'planning.read' },
+      { path: '/planung/tageseinteilung', name: 'Tageseinteilung', icon: <FieldTimeOutlined />, permission: 'planning.read' },
       { path: '/planung/arbeitsplan', name: 'Arbeitsplan', icon: <UnorderedListOutlined />, permission: 'planning.read' },
     ],
   },
   {
-    path: '/stammdaten', name: 'Stammdaten', children: [
+    path: '/stammdaten', name: 'Büro und Stammdaten', children: [
       { path: '/kunden', name: 'Kunden', icon: <TeamOutlined />, permission: 'contacts.read' },
+      { path: '/anrufe', name: 'Anrufe', icon: <PhoneOutlined />, permission: 'contacts.read' },
       { path: '/planung/ressourcen', name: 'Kolonnen und Geräte', icon: <CarOutlined />, permission: 'planning.read' },
     ],
   },
@@ -66,6 +69,11 @@ function Logo() {
 
 /** Programmrahmen: Kopf in Navy mit Suche und Benutzer, gruppierte Navigation, Statuszeile. */
 export function AppLayout() {
+  return <QuickCallProvider><Shell /></QuickCallProvider>;
+}
+
+function Shell() {
+  const quickCall = useQuickCall();
   const { user, has, signOut } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
@@ -102,17 +110,23 @@ export function AppLayout() {
       )}
       onMenuHeaderClick={() => navigate('/start')}
       actionsRender={() => [
+        has('bauakten.create') && (
+          <Button key="new" type="primary" icon={<FileAddOutlined />} className="header-button" onClick={() => navigate('/bauakten?neu=bauakte')}>Neue Akte</Button>
+        ),
+        has('contacts.edit') && (
+          <Button key="phone" icon={<PhoneOutlined />} className="header-button ghost" onClick={() => quickCall.open()}>Telefon</Button>
+        ),
         <Input.Search
           key="search"
           placeholder="Bauakte suchen: Nummer, Bauvorhaben, Ort"
           allowClear
           prefix={<SearchOutlined />}
           aria-label="Bauakten suchen"
-          style={{ width: 340 }}
+          style={{ width: 300 }}
           onSearch={(value) => navigate(value.trim() ? `/bauakten?search=${encodeURIComponent(value.trim())}` : '/bauakten')}
         />,
         server.data ? <Typography.Text key="company" style={{ color: '#dbe5f3' }}>{server.data.serverName}</Typography.Text> : null,
-      ]}
+      ].filter(Boolean)}
       avatarProps={{
         title: user?.displayName,
         size: 'small',

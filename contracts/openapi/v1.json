@@ -1903,6 +1903,22 @@
               "type": "integer",
               "format": "int32"
             }
+          },
+          {
+            "name": "responsibleUserId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         ],
         "responses": {
@@ -4651,6 +4667,436 @@
         ]
       }
     },
+    "/api/v1/calls": {
+      "get": {
+        "tags": [
+          "Anrufe und Anfragen"
+        ],
+        "summary": "Anrufe oder Anfragen, neueste zuerst; due=true nur fällige Wiedervorlagen",
+        "operationId": "ListCalls",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "due",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "open",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "bauakteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CallResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calls/{id}": {
+      "get": {
+        "tags": [
+          "Anrufe und Anfragen"
+        ],
+        "operationId": "GetCall",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Anrufe und Anfragen"
+        ],
+        "summary": "Anruf oder Anfrage anlegen bzw. ändern",
+        "operationId": "SaveCall",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Anrufe und Anfragen"
+        ],
+        "operationId": "DeleteCall",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calls/{id}/status": {
+      "post": {
+        "tags": [
+          "Anrufe und Anfragen"
+        ],
+        "operationId": "SetInquiryStatus",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetInquiryStatusRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calls/{id}/follow-up-done": {
+      "post": {
+        "tags": [
+          "Anrufe und Anfragen"
+        ],
+        "operationId": "CompleteFollowUp",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CallResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/calls/{id}/convert": {
+      "post": {
+        "tags": [
+          "Anrufe und Anfragen"
+        ],
+        "summary": "Anfrage in eine Bauakte umwandeln (legt bei Bedarf den Kunden an)",
+        "operationId": "ConvertInquiry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ConvertInquiryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConvertInquiryResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/setup/status": {
       "get": {
         "tags": [
@@ -5946,6 +6392,243 @@
           "cancelled"
         ]
       },
+      "CallDirection": {
+        "enum": [
+          "inbound",
+          "outbound"
+        ]
+      },
+      "CallKind": {
+        "enum": [
+          "call",
+          "inquiry"
+        ]
+      },
+      "CallPriority": {
+        "enum": [
+          "low",
+          "normal",
+          "high"
+        ]
+      },
+      "CallResponse": {
+        "required": [
+          "id",
+          "kind",
+          "direction",
+          "source",
+          "priority",
+          "callerName",
+          "callerPhone",
+          "callerEmail",
+          "company",
+          "customerId",
+          "customerName",
+          "bauakteId",
+          "bauakteLabel",
+          "subject",
+          "notes",
+          "followUp",
+          "dueDate",
+          "nextStep",
+          "inquiryStatus",
+          "areaSquareMeters",
+          "screedType",
+          "desiredStart",
+          "siteStreet",
+          "sitePostalCode",
+          "siteCity",
+          "convertedBauakteId",
+          "convertedBauakteNumber",
+          "handledByUserId",
+          "handledByName",
+          "calledAt",
+          "updatedAt",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CallKind"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/CallDirection"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CallSource"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/CallPriority"
+          },
+          "callerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "callerPhone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "callerEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "company": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "customerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "customerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteLabel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "subject": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "followUp": {
+            "type": "boolean"
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "nextStep": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "inquiryStatus": {
+            "$ref": "#/components/schemas/InquiryStatus"
+          },
+          "areaSquareMeters": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "screedType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "desiredStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "siteStreet": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sitePostalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteCity": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "convertedBauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "convertedBauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "handledByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "handledByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "calledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "CallSource": {
+        "enum": [
+          "phone",
+          "email",
+          "website",
+          "personal",
+          "other"
+        ]
+      },
       "ChangePasswordRequest": {
         "required": [
           "currentPassword",
@@ -6117,6 +6800,45 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "ConvertInquiryRequest": {
+        "type": "object",
+        "properties": {
+          "title": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createCustomer": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "ConvertInquiryResponse": {
+        "required": [
+          "inquiry",
+          "bauakteId",
+          "bauakteNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "inquiry": {
+            "$ref": "#/components/schemas/CallResponse"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -6987,6 +7709,14 @@
             "type": "string"
           }
         }
+      },
+      "InquiryStatus": {
+        "enum": [
+          "open",
+          "inProgress",
+          "converted",
+          "cancelled"
+        ]
       },
       "InspectionDto": {
         "required": [
@@ -7859,6 +8589,156 @@
           }
         }
       },
+      "SaveCallRequest": {
+        "required": [
+          "id",
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/CallKind"
+          },
+          "direction": {
+            "$ref": "#/components/schemas/CallDirection"
+          },
+          "source": {
+            "$ref": "#/components/schemas/CallSource"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/CallPriority"
+          },
+          "callerName": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "callerPhone": {
+            "maxLength": 80,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "callerEmail": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "company": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "customerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "subject": {
+            "maxLength": 300,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "followUp": {
+            "type": "boolean",
+            "default": false
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "nextStep": {
+            "maxLength": 300,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "areaSquareMeters": {
+            "maximum": 100000,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "screedType": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "desiredStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "siteStreet": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sitePostalCode": {
+            "maxLength": 10,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteCity": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "calledAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "SaveContactRequest": {
         "required": [
           "id",
@@ -8231,6 +9111,17 @@
           },
           "setupRequired": {
             "type": "boolean"
+          }
+        }
+      },
+      "SetInquiryStatusRequest": {
+        "required": [
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/InquiryStatus"
           }
         }
       },
@@ -9434,6 +10325,9 @@
     },
     {
       "name": "Planung"
+    },
+    {
+      "name": "Anrufe und Anfragen"
     },
     {
       "name": "Ersteinrichtung"

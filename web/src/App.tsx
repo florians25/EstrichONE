@@ -21,6 +21,9 @@ const TicketPage = lazy(() => import('./pages/TicketPage'));
 const BackupPage = lazy(() => import('./pages/BackupPage'));
 const SiteMapPage = lazy(() => import('./pages/SiteMapPage'));
 const AuditPage = lazy(() => import('./pages/AuditPage'));
+const TodayPage = lazy(() => import('./pages/TodayPage'));
+const CallsPage = lazy(() => import('./pages/office/CallsPage'));
+const InquiriesPage = lazy(() => import('./pages/office/InquiriesPage'));
 
 const loading = <div style={{ display: 'grid', placeItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
 
@@ -58,6 +61,9 @@ export function App() {
           <Route path="bauakten" element={<Permitted permission="bauakten.read"><BauaktenPage /></Permitted>} />
           <Route path="bauakten/karte" element={<Permitted permission="bauakten.read"><SiteMapPage /></Permitted>} />
           <Route path="bauakten/:id" element={<Permitted permission="bauakten.read"><BauaktePage /></Permitted>} />
+          <Route path="tagesuebersicht" element={<Permitted permission="bauakten.read"><TodayPage /></Permitted>} />
+          <Route path="anrufe" element={<Permitted permission="contacts.read"><CallsPage /></Permitted>} />
+          <Route path="anfragen" element={<Permitted permission="contacts.read"><InquiriesPage /></Permitted>} />
           <Route path="kunden" element={<Permitted permission="contacts.read"><CustomersPage /></Permitted>} />
           <Route path="planung" element={<Permitted permission="planning.read"><PlanningPage /></Permitted>} />
           <Route path="planung/kalender" element={<Permitted permission="planning.read"><PlanningPage key="monat" defaultView="monat" /></Permitted>} />

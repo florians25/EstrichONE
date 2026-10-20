@@ -180,6 +180,25 @@ public sealed class BauakteDetailsTests(PostgresFixture postgres) : IAsyncLifeti
         file.Caption.ShouldBe("Angebot Nr. 4711");
     }
 
+    [Fact]
+    public async Task List_FiltersByResponsibleAndCustomer()
+    {
+        using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
+        var mine = await CreateAsync(office, "Meine");
+        var customer = Guid.CreateVersion7();
+        (await office.PostAsJsonAsync("/api/v1/contacts", new { id = customer, kind = "person", name = "Familie Kraus" }, Ct)).EnsureSuccessStatusCode();
+        using var other = await office.PostAsJsonAsync("/api/v1/bauakten", new { id = Guid.CreateVersion7(), title = "Kraus", customerId = customer }, Ct);
+        other.EnsureSuccessStatusCode();
+
+        var byCustomer = await office.GetFromJsonAsync<BauaktePage>($"/api/v1/bauakten?customerId={customer}", TestJson.Options, Ct);
+        var byResponsible = await office.GetFromJsonAsync<BauaktePage>($"/api/v1/bauakten?responsibleUserId={mine.ResponsibleUserId}", TestJson.Options, Ct);
+        var nobody = await office.GetFromJsonAsync<BauaktePage>($"/api/v1/bauakten?responsibleUserId={Guid.CreateVersion7()}", TestJson.Options, Ct);
+
+        byCustomer!.Items.Single().Title.ShouldBe("Kraus");
+        byResponsible!.Items.Count.ShouldBe(2);
+        nobody!.Items.ShouldBeEmpty();
+    }
+
     private sealed record FileDto(Guid Id, string? Caption, string? Category);
 
     private sealed record UserSummaryDto(Guid Id);

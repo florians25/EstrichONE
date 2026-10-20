@@ -12,7 +12,7 @@ const pageTitle = (page: Page) => page.locator('.ant-page-header-heading-title')
 /** Ant-Design-Auswahl öffnen und eine Option wählen. */
 async function choose(page: Page, field: Locator, option: string | RegExp, type?: string) {
   const item = page.locator('.ant-select-dropdown:not(.ant-select-dropdown-hidden) .ant-select-item-option').filter({ hasText: option }).first();
-  // Dialoge blenden animiert ein; bis die Auswahl offen ist und die Option geladen hat, erneut versuchen.
+  // Dialoge und Leisten blenden animiert ein und aus; bis Auswahl offen, Option geladen und geklickt ist, erneut versuchen.
   await expect(async () => {
     if (!(await item.isVisible())) {
       await field.click({ force: true });
@@ -20,9 +20,8 @@ async function choose(page: Page, field: Locator, option: string | RegExp, type?
         await field.fill(type);
       }
     }
-    await expect(item).toBeVisible({ timeout: 1500 });
-  }).toPass({ timeout: 15_000 });
-  await item.click();
+    await item.click({ timeout: 2000 });
+  }).toPass({ timeout: 20_000 });
 }
 
 test('Ersteinrichtung im Browser und Anmeldung als Administrator', async ({ page }) => {
@@ -321,6 +320,7 @@ test('Disposition: Vorrat einplanen, Terminart, Tag-, Monatsansicht und Arbeitsp
   await drawer.getByText('alle', { exact: true }).click();
   await drawer.getByRole('button', { name: 'Anfrage Familie Kraus, Heizestrich einplanen' }).click();
   const dialog = page.getByRole('dialog', { name: 'Einsatz planen' });
+  await expect(dialog).toBeVisible();
   await choose(page, dialog.getByRole('combobox', { name: 'Terminart', exact: true }), 'Erstbegehung');
   await expect(dialog.getByLabel('Tätigkeit')).toHaveValue('Erstbegehung');
   await choose(page, dialog.getByRole('combobox', { name: 'Kolonne', exact: true }), 'Kolonne Admin');
@@ -337,6 +337,45 @@ test('Disposition: Vorrat einplanen, Terminart, Tag-, Monatsansicht und Arbeitsp
   await expect(pageTitle(page)).toContainText('Arbeitsplan');
   await page.getByText('14 Tage', { exact: true }).click();
   await expect(page.getByText('Erstbegehung', { exact: true }).first()).toBeVisible();
+});
+
+test('Büro: Telefon-Schnellerfassung, Wiedervorlage, Anfrage in Bauakte umwandeln, Tagesübersicht', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await page.getByRole('button', { name: 'Telefon' }).click();
+  const quick = page.getByRole('dialog', { name: /Telefon-Schnellerfassung/ });
+  await expect(quick.getByRole('timer')).toContainText('Gespräch läuft');
+  await quick.getByLabel('Wer ruft an?').fill('Herr Bauer');
+  await quick.getByLabel('Notiz').fill('Fragt nach Termin für Erstbegehung');
+  await quick.getByRole('switch', { name: 'Wiedervorlage' }).click();
+  await quick.getByLabel('Notiz').press('Control+Enter');
+  await expect(page.locator('.ant-message')).toContainText('Gesprächsnotiz gespeichert');
+
+  await nav(page, 'Anrufe').click();
+  const row = page.locator('.call-row').filter({ hasText: 'Herr Bauer' });
+  await expect(row).toContainText('Fragt nach Termin für Erstbegehung');
+  await expect(row.getByText('Wiedervorlage')).toBeVisible();
+
+  await nav(page, 'Anfragen').click();
+  await page.getByRole('button', { name: 'Anfrage erfassen' }).click();
+  const form = page.getByRole('dialog', { name: 'Anfrage erfassen' });
+  await form.getByLabel('Name', { exact: true }).fill('Petra Lang');
+  await form.getByLabel('Firma').fill('Lang Bau GmbH');
+  await form.getByLabel('Anliegen').fill('Heizestrich Halle Süd');
+  await form.getByLabel('Ort').fill('Landshut');
+  await form.getByRole('button', { name: 'Speichern' }).click();
+  await page.getByRole('row', { name: /Lang Bau GmbH/ }).getByText('Petra Lang · Lang Bau GmbH').click();
+  const detail = page.getByRole('dialog', { name: /Anfrage: Petra Lang/ });
+  await detail.getByRole('button', { name: 'In Bearbeitung' }).click();
+  await expect(detail.getByText('In Bearbeitung', { exact: true }).first()).toBeVisible();
+  await detail.getByRole('button', { name: 'In Bauakte umwandeln' }).click();
+  await page.getByRole('button', { name: 'Umwandeln', exact: true }).click();
+  await expect(pageTitle(page)).toContainText('Heizestrich Halle Süd');
+  await expect(page.locator('.fact-strip').getByText('Lang Bau GmbH')).toBeVisible();
+
+  await nav(page, 'Tagesübersicht').click();
+  await expect(pageTitle(page)).toContainText('Tagesübersicht');
+  await expect(page.getByText('Fällige Wiedervorlagen')).toBeVisible();
+  await expect(page.getByText('Herr Bauer')).toBeVisible();
 });
 
 test('Protokoll: Anmeldungen und Änderungen sind nachvollziehbar', async ({ page }) => {
@@ -393,7 +432,7 @@ test('Bauakte: Baustellenkontakt, Zuweisung, Storno mit Begründung, Löschen mi
   await expect(remove.getByText('Das Passwort ist nicht korrekt. Die Bauakte wurde nicht gelöscht.')).toBeVisible();
   await remove.getByLabel('Passwort bestätigen').fill(adminPassword);
   await remove.getByRole('button', { name: 'In den Papierkorb' }).click();
-  await expect(pageTitle(page)).toHaveText('Bauakten');
+  await expect(pageTitle(page)).toContainText('Bauakten');
   await expect(page.getByRole('link', { name: 'Zum Löschen' })).toHaveCount(0);
 });
 

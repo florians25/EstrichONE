@@ -4,7 +4,7 @@ import {
 import { PageContainer } from '@ant-design/pro-components';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Badge, Button, Card, Drawer, Empty, Input, List, Segmented, Select, Space, Switch, Tag, Typography } from 'antd';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { get, problemMessage, put } from '../../api/client';
 import type {
@@ -58,6 +58,8 @@ export default function PlanningPage({ defaultView = 'woche' }: { defaultView?: 
   const [editing, setEditing] = useState<Editing | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
   const [backlogOpen, setBacklogOpen] = useState(false);
+  // Aus dem Vorrat: Dialog erst nach dem Schließen der Leiste öffnen (sonst nimmt die Leiste den Fokus zurück).
+  const pending = useRef<Editing | null>(null);
   const [filter, setFilter] = useState<{ bauakte?: string; crew?: string; status?: BauakteStatus; kind?: AssignmentKind; search: string }>({ search: '' });
   const canPlan = has('planning.manage');
   const days = visibleDays(view, anchor, workWeek);
@@ -310,9 +312,9 @@ export default function PlanningPage({ defaultView = 'woche' }: { defaultView?: 
       )}
 
       <Drawer title={<Space><InboxOutlined />Baustellen-Vorrat</Space>} open={backlogOpen} onClose={() => setBacklogOpen(false)} mask={false} width={380}
-        className="backlog-drawer">
+        className="backlog-drawer" afterOpenChange={(isOpen) => { if (!isOpen && pending.current) { setEditing(pending.current); pending.current = null; } }}>
         <Backlog items={backlog.data ?? []} loading={backlog.isLoading} canPlan={canPlan}
-          onPlan={(b) => setEditing(newEditing(days.includes(today) ? today : days[0], null, { id: b.bauakteId, label: `${b.number ?? 'neu'} · ${b.title}` }))} />
+          onPlan={(b) => { pending.current = (newEditing(days.includes(today) ? today : days[0], null, { id: b.bauakteId, label: `${b.number ?? 'neu'} · ${b.title}` })); setBacklogOpen(false); }} />
       </Drawer>
 
       {editing && (

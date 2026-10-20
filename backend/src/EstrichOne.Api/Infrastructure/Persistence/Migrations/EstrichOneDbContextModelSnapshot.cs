@@ -585,6 +585,179 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("screed_types", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Calls.CallRecord", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal?>("AreaSquareMeters")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)")
+                        .HasColumnName("area_square_meters");
+
+                    b.Property<Guid?>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<DateTimeOffset>("CalledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("called_at");
+
+                    b.Property<string>("CallerEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("caller_email");
+
+                    b.Property<string>("CallerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("caller_name");
+
+                    b.Property<string>("CallerPhone")
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)")
+                        .HasColumnName("caller_phone");
+
+                    b.Property<string>("Company")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("company");
+
+                    b.Property<Guid?>("ConvertedBauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("converted_bauakte_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("customer_id");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("deleted_at");
+
+                    b.Property<DateOnly?>("DesiredStart")
+                        .HasColumnType("date")
+                        .HasColumnName("desired_start");
+
+                    b.Property<string>("Direction")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("direction");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<bool>("FollowUp")
+                        .HasColumnType("boolean")
+                        .HasColumnName("follow_up");
+
+                    b.Property<Guid>("HandledByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("handled_by_user_id");
+
+                    b.Property<string>("InquiryStatus")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("inquiry_status");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("NextStep")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("next_step");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("priority");
+
+                    b.Property<string>("ScreedType")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("screed_type");
+
+                    b.Property<string>("SiteCity")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("site_city");
+
+                    b.Property<string>("SitePostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("site_postal_code");
+
+                    b.Property<string>("SiteStreet")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("site_street");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("source");
+
+                    b.Property<string>("Subject")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("subject");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_calls");
+
+                    b.HasIndex("BauakteId")
+                        .HasDatabaseName("ix_calls_bauakte_id");
+
+                    b.HasIndex("ConvertedBauakteId")
+                        .HasDatabaseName("ix_calls_converted_bauakte_id");
+
+                    b.HasIndex("CustomerId")
+                        .HasDatabaseName("ix_calls_customer_id");
+
+                    b.HasIndex("DueDate")
+                        .HasDatabaseName("ix_calls_due_date")
+                        .HasFilter("follow_up");
+
+                    b.HasIndex("HandledByUserId")
+                        .HasDatabaseName("ix_calls_handled_by_user_id");
+
+                    b.HasIndex("Kind", "CalledAt")
+                        .HasDatabaseName("ix_calls_kind_called_at");
+
+                    b.HasIndex("Kind", "InquiryStatus")
+                        .HasDatabaseName("ix_calls_kind_inquiry_status");
+
+                    b.ToTable("calls", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.Contact", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2252,6 +2425,34 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasForeignKey("SectionId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_rooms_bauakte_sections_section_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Calls.CallRecord", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", null)
+                        .WithMany()
+                        .HasForeignKey("BauakteId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_calls_bauakten_bauakte_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", null)
+                        .WithMany()
+                        .HasForeignKey("ConvertedBauakteId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_calls_bauakten_converted_bauakte_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Contacts.Exports.Contact", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_calls_contact_customer_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("HandledByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_calls_user_handled_by_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.ContactPerson", b =>

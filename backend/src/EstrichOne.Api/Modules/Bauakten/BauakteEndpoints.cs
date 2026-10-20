@@ -113,7 +113,8 @@ internal static class BauakteEndpoints
     private static async Task<Results<Ok<BauaktePage>, ProblemHttpResult>> ListAsync(
         EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken,
         [FromQuery] string? search = null, [FromQuery] string? status = null,
-        [FromQuery] string? cursor = null, [FromQuery] int? limit = null)
+        [FromQuery] string? cursor = null, [FromQuery] int? limit = null,
+        [FromQuery] Guid? responsibleUserId = null, [FromQuery] Guid? customerId = null)
     {
         var pageSize = Math.Clamp(limit ?? DefaultPageSize, 1, MaxPageSize);
         var query = (await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken));
@@ -136,6 +137,16 @@ internal static class BauakteEndpoints
             }
 
             query = query.Where(b => b.Status == wanted);
+        }
+
+        if (responsibleUserId is { } responsible)
+        {
+            query = query.Where(b => b.ResponsibleUserId == responsible);
+        }
+
+        if (customerId is { } customer)
+        {
+            query = query.Where(b => b.CustomerId == customer);
         }
 
         if (cursor is not null)

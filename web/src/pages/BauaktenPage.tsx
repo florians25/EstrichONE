@@ -1,7 +1,7 @@
 import { EnvironmentOutlined, FileAddOutlined, InboxOutlined } from '@ant-design/icons';
 import { ModalForm, PageContainer, ProFormText, ProFormTextArea, ProTable, type ActionType, type ProColumns } from '@ant-design/pro-components';
 import { useQuery } from '@tanstack/react-query';
-import { App, Button, Form, Space, Tooltip } from 'antd';
+import { App, Button, Form, Select, Space, Tooltip, Typography } from 'antd';
 import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { get, post, problemMessage } from '../api/client';
@@ -32,6 +32,8 @@ export default function BauaktenPage() {
   const people = useQuery({ queryKey: ['directory'], queryFn: () => get<DirectoryUser[]>('directory/users'), staleTime: 60_000 });
   const status = (params.get('status') as BauakteStatus | null) ?? undefined;
   const search = params.get('search') ?? undefined;
+  const responsible = params.get('zustaendig') ?? undefined;
+  const customer = params.get('kunde') ?? undefined;
 
   useEffect(() => {
     const neu = params.get('neu');
@@ -43,7 +45,7 @@ export default function BauaktenPage() {
   useEffect(() => {
     cursors.current = { 1: null };
     action.current?.reloadAndRest?.();
-  }, [status, search]);
+  }, [status, search, responsible, customer]);
 
   const columns: ProColumns<BauakteListItem>[] = [
     { title: 'Nummer', dataIndex: 'number', width: 110, render: (_, r) => <span className="tabular">{r.number ?? 'neu'}</span>, search: false },
@@ -76,17 +78,17 @@ export default function BauaktenPage() {
     }
   };
 
-  const setFilter = (next: { status?: string; search?: string }) => {
+  const setFilter = (next: { status?: string; search?: string; zustaendig?: string; kunde?: string }) => {
     const p = new URLSearchParams();
-    const s = 'status' in next ? next.status : status;
-    const q = 'search' in next ? next.search : search;
-    if (s) p.set('status', s);
-    if (q) p.set('search', q);
+    const values = { status, search, zustaendig: responsible, kunde: customer, ...next };
+    for (const [key, value] of Object.entries(values)) {
+      if (value) p.set(key, value);
+    }
     setParams(p);
   };
 
   return (
-    <PageContainer title={status === 'inquiry' ? 'Anfragen' : 'Bauakten'}>
+    <PageContainer title={<Space direction="vertical" size={0}><Typography.Text type="secondary" className="overline">Bauaktensuche</Typography.Text>{status === 'inquiry' ? 'Anfragen (Bauakten)' : 'Bauakten'}</Space>}>
       <ProTable<BauakteListItem>
         actionRef={action}
         rowKey="id"
@@ -106,6 +108,14 @@ export default function BauaktenPage() {
             items: [{ key: 'all', label: 'Alle' }, ...(['inquiry', 'planned', 'inProgress', 'drying', 'completed'] as BauakteStatus[]).map((s) => ({ key: s, label: bauakteStatusLabels[s] }))],
             onChange: (key) => setFilter({ status: key === 'all' ? undefined : String(key) }),
           },
+          filter: (
+            <Space wrap>
+              <Select allowClear showSearch optionFilterProp="label" placeholder="Zuständig: alle" style={{ width: 190 }} aria-label="Zuständig"
+                value={responsible} onChange={(v) => setFilter({ zustaendig: v ?? undefined })}
+                options={(people.data ?? []).map((p) => ({ value: p.id, label: p.displayName }))} />
+              <div style={{ width: 230 }}><CustomerSelect value={customer ?? null} onChange={(v) => setFilter({ kunde: v ?? undefined })} /></div>
+            </Space>
+          ),
           actions: [<Button key="map" icon={<EnvironmentOutlined />} onClick={() => navigate('/bauakten/karte')}>Karte</Button>].concat(has('bauakten.create') ? [
             <Button key="inquiry" icon={<InboxOutlined />} onClick={() => setCreating('inquiry')}>Neue Anfrage</Button>,
             <Button key="new" type="primary" icon={<FileAddOutlined />} onClick={() => setCreating('planned')}>Neue Bauakte</Button>,
@@ -113,7 +123,7 @@ export default function BauaktenPage() {
         }}
         request={async ({ current = 1 }) => {
           const cursor = cursors.current[current] ?? null;
-          const page = await get<BauaktePage>('bauakten', { limit: 50, status, search, cursor });
+          const page = await get<BauaktePage>('bauakten', { limit: 50, status, search, cursor, responsibleUserId: responsible, customerId: customer });
           cursors.current[current + 1] = page.nextCursor;
           return { data: page.items, success: true, total: (current - 1) * 50 + page.items.length + (page.nextCursor ? 1 : 0) };
         }}

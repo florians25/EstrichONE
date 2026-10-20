@@ -107,7 +107,8 @@ internal static class WebSessionEndpoints
             var sessionId = Guid.Parse(claim.Value);
             var userId = Guid.Parse(http.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)!.Value);
             audit.Record(AuditActions.Logout, userId, "session", sessionId.ToString());
-            await sessions.RevokeAsync(sessionId, "logout", userId, cancellationToken);
+            // Abmelden muss vollständig wirken, auch wenn der Browser die Anfrage beim Verlassen abbricht.
+            await sessions.RevokeAsync(sessionId, "logout", userId, CancellationToken.None);
         }
 
         ClearCookies(http);
