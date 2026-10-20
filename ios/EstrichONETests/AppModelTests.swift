@@ -3,80 +3,174 @@ import Foundation
 import Testing
 @testable import EstrichONE
 
-private struct UnusedTransport: HTTPTransport {
-    func get(_ url: URL) async throws -> (Data, HTTPURLResponse) {
-        throw URLError(.notConnectedToInternet)
-    }
-}
-
 @MainActor
-@Suite("App-Zustand")
+@Suite("App-Ablauf", .serialized)
 struct AppModelTests {
     private let suiteName = "estrichone.apptests.\(UUID().uuidString)"
-    private let defaults: UserDefaults
+    private let root = FileManager.default.temporaryDirectory.appending(path: "estrichone-apptests-\(UUID().uuidString)")
+    private let secrets = InMemorySecretStore()
 
-    init() throws {
-        defaults = try #require(UserDefaults(suiteName: suiteName))
+    private func environment(deviceStatus: String = "active") -> AppEnvironment {
+        AppEnvironment(
+            defaults: UserDefaults(suiteName: suiteName)!,
+            transport: FakeServer(serverInfoStatus: 200, serverInfoBody: FakeServer.defaultServerInfo,
+                                  password: "Richtig-2026", newDeviceStatus: deviceStatus),
+            secrets: secrets, storageRoot: root, pinIterations: 1_000,
+            personalLockAfter: 15 * 60, poolInactivityTimeout: 5 * 60, skipsDeviceOwnerAuthentication: true)
     }
 
-    private func makeModel() -> AppModel {
-        AppModel(store: ServerStore(defaults: defaults),
-                 checker: ServerConnectionChecker(transport: UnusedTransport(), appVersion: SemanticVersion(major: 1, minor: 0, patch: 0)))
+    private func verifiedServer() async throws -> VerifiedServer {
+        let checker = ServerConnectionChecker(transport: environment().transport, appVersion: SemanticVersion(major: 1, minor: 0, patch: 0))
+        return try await checker.check(try ServerAddress.parse("estrichone.example.com")).get()
     }
 
-    private func server(_ host: String) throws -> VerifiedServer {
-        VerifiedServer(
-            address: try ServerAddress.parse(host),
-            info: ServerInfo(product: "EstrichONE", serverName: "Estrichbau Beispiel GmbH", serverVersion: "1.0.0",
-                             apiVersions: ["v1"], minClientVersion: "0.1.0", authMethods: ["local"],
-                             instanceEpoch: UUID(), setupRequired: false))
+    private func cleanUp() {
+        UserDefaults().removePersistentDomain(forName: suiteName)
+        try? FileManager.default.removeItem(at: root)
     }
 
-    @Test("ein bestätigter Server bleibt nach einem Neustart eingerichtet")
-    func confirmPersists() throws {
-        let verified = try server("estrichone.example.com")
-        try makeModel().confirm(verified, enrollment: nil)
-        #expect(makeModel().server == verified)
-        defaults.removePersistentDomain(forName: suiteName)
+    @Test("Persönliches Gerät: Anmeldung, Sperre, Entsperren, Neustart, Abmelden")
+    func personalDevice() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        #expect(model.screen == .onboarding)
+
+        try model.confirm(try await verifiedServer(), enrollment: nil)
+        #expect(model.screen == .deviceKind)
+        model.chooseKind(.personal)
+        #expect(model.screen == .signIn(userName: nil))
+
+        await #expect(throws: AccountError.self) { try await model.signIn(login: "m.huber", password: "falsch") }
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        #expect(model.screen == .home)
+        #expect(model.active?.user.displayName == "Max Huber")
+        #expect(model.deviceRegistration?.kind == .personal)
+
+        model.lock()
+        #expect(model.screen == .appLocked)
+        #expect(model.active == nil)
+        await model.unlockPersonal()
+        #expect(model.screen == .home)
+
+        // Neustart: Server und Gerät sind bekannt, die App startet gesperrt.
+        let restarted = AppModel(environment: environment())
+        #expect(restarted.screen == .appLocked)
+
+        await model.signOut()
+        #expect(model.screen == .signIn(userName: nil))
+        #expect(model.deviceState.users.isEmpty)
     }
 
-    @Test("der Einrichtungscode gilt nur für den Server aus demselben QR-Code")
-    func enrollmentCodeMatchesServer() throws {
-        let model = makeModel()
-        let link = try EnrollmentLink.parse("estrichone://enroll?v=1&server=estrichone.example.com&code=k7qx-m2pa")
-        try model.confirm(try server("estrichone.example.com"), enrollment: link)
-        #expect(model.enrollmentCode == "K7QX-M2PA")
+    @Test("Poolgerät per Einrichtungscode: PIN, Benutzerwechsel, zweite Person, falsche PIN")
+    func poolDevice() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        let link = try EnrollmentLink.parse("estrichone://enroll?v=1&server=estrichone.example.com&code=K7QX-M2PA&type=pool")
 
-        model.resetServer()
-        try model.confirm(try server("anderer.example.com"), enrollment: link)
-        #expect(model.enrollmentCode == nil)
-        defaults.removePersistentDomain(forName: suiteName)
+        try model.confirm(try await verifiedServer(), enrollment: link)
+        #expect(model.screen == .signIn(userName: nil))
+        #expect(model.hasEnrollmentCode)
+
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        #expect(model.screen == .choosePIN)
+        await #expect(throws: AccountError.pin(.trivial)) { try await model.choosePIN("111111") }
+        try await model.choosePIN("482913")
+        #expect(model.screen == .home)
+        #expect(model.deviceRegistration?.kind == .pool)
+        #expect(model.deviceRegistration?.name == "Fahrzeug 3")
+        #expect(model.deviceRegistration?.status == .active)
+
+        model.lock()
+        #expect(model.screen == .userPicker)
+        model.addPerson()
+        try await model.signIn(login: "lukas", password: "Richtig-2026")
+        try await model.choosePIN("573920")
+        #expect(model.active?.user.displayName == "Lukas Brandl")
+
+        model.lock()
+        let max = try #require(model.deviceState.users.first { $0.displayName == "Max Huber" })
+        model.selectUser(max)
+        #expect(model.screen == .pinEntry(max.id))
+        await #expect(throws: AccountError.vault(.wrongPIN)) { try await model.unlock(userId: max.id, pin: "573920") }
+        try await model.unlock(userId: max.id, pin: "482913")
+        #expect(model.active?.user.displayName == "Max Huber")
     }
 
-    @Test("ein Einrichtungslink startet die Prüfung nur, solange kein Server eingerichtet ist")
-    func deepLink() throws {
-        let model = makeModel()
-        let url = try #require(URL(string: "estrichone://enroll?v=1&server=https://estrichone.example.com"))
+    @Test("Poolgerät sperrt beim Wechsel in den Hintergrund sofort")
+    func poolLocksInBackground() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        try model.confirm(try await verifiedServer(), enrollment: EnrollmentLink.parse("estrichone://enroll?v=1&server=estrichone.example.com&code=K7QX-M2PA&type=pool"))
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        try await model.choosePIN("482913")
 
+        model.didEnterBackground(at: .now)
+
+        #expect(model.screen == .userPicker)
+        #expect(model.active == nil)
+    }
+
+    @Test("Persönliches Gerät sperrt erst nach 15 Minuten im Hintergrund")
+    func personalLocksAfterTimeout() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        try model.confirm(try await verifiedServer(), enrollment: nil)
+        model.chooseKind(.personal)
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        let start = Date.now
+
+        model.didEnterBackground(at: start)
+        model.didBecomeActive(at: start.addingTimeInterval(60))
+        #expect(model.screen == .home)
+
+        model.didEnterBackground(at: start)
+        model.didBecomeActive(at: start.addingTimeInterval(15 * 60))
+        #expect(model.screen == .appLocked)
+    }
+
+    @Test("Poolgerät ohne Einrichtungscode wartet auf Freigabe")
+    func poolWaitsForApproval() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        try model.confirm(try await verifiedServer(), enrollment: nil)
+        model.chooseKind(.pool)
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        try await model.choosePIN("482913")
+
+        #expect(model.screen == .waitingForApproval)
+    }
+
+    @Test("Einrichtungslinks nur ohne eingerichteten Server; ungültige Links mit Meldung")
+    func deepLinks() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        model.handle(url: try #require(URL(string: "estrichone://enroll?v=1&server=http://estrichone.example.com")))
+        #expect(model.notice == ServerAddressError.insecure.message)
+        model.hasNotice = false
+
+        let url = try #require(URL(string: "estrichone://enroll?v=1&server=https://estrichone.example.com&code=K7QX-M2PA"))
         model.handle(url: url)
-        #expect(model.pendingEnrollment?.server.host == "estrichone.example.com")
-        #expect(model.notice == nil)
+        #expect(model.pendingEnrollment?.enrollmentCode == "K7QX-M2PA")
 
         model.pendingEnrollment = nil
-        try model.confirm(try server("estrichone.example.com"), enrollment: nil)
+        try model.confirm(try await verifiedServer(), enrollment: nil)
         model.handle(url: url)
         #expect(model.pendingEnrollment == nil)
         #expect(model.notice != nil)
-        defaults.removePersistentDomain(forName: suiteName)
     }
 
-    @Test("ungültige Links werden mit einer Meldung abgelehnt")
-    func invalidDeepLink() throws {
-        let model = makeModel()
-        model.handle(url: try #require(URL(string: "estrichone://enroll?v=1&server=http://estrichone.example.com")))
-        #expect(model.pendingEnrollment == nil)
-        #expect(model.notice == ServerAddressError.insecure.message)
-        model.hasNotice = false
-        #expect(model.notice == nil)
+    @Test("Zurücksetzen löscht Server, Gerät und Personen")
+    func reset() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        try model.confirm(try await verifiedServer(), enrollment: nil)
+        model.chooseKind(.personal)
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+
+        model.resetApp()
+
+        #expect(model.screen == .onboarding)
+        #expect(AppModel(environment: environment()).screen == .onboarding)
+        #expect(!FileManager.default.fileExists(atPath: root.path()))
     }
 }

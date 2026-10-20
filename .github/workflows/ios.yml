@@ -4,9 +4,9 @@ on:
   workflow_dispatch: {}
   push:
     branches: [main, "claude/**"]
-    paths: ["ios/**", ".github/workflows/ios.yml"]
+    paths: ["ios/**", "contracts/**", "backend/src/**", ".github/workflows/ios.yml"]
   pull_request:
-    paths: ["ios/**", ".github/workflows/ios.yml"]
+    paths: ["ios/**", "contracts/**", "backend/src/**", ".github/workflows/ios.yml"]
 
 permissions:
   contents: read
@@ -16,16 +16,19 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  core-linux:
-    name: EstrichCore (Linux)
+  core-live:
+    name: EstrichCore (Linux, gegen echten Server)
     runs-on: ubuntu-latest
-    timeout-minutes: 15
-    container: swift:6.1-noble
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
-      - name: Tests
-        working-directory: ios/Packages/EstrichCore
-        run: swift test
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Shellcheck
+        run: shellcheck ios/scripts/test-core-against-server.sh
+      - name: PostgreSQL + API starten, einrichten, swift test
+        run: ios/scripts/test-core-against-server.sh
 
   app:
     name: App bauen und testen (Simulator)

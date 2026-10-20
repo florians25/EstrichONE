@@ -3,16 +3,23 @@ import Foundation
 import FoundationNetworking
 #endif
 
-/// Abstraktion des HTTP-Zugriffs, damit die Prüfung ohne Netzwerk testbar ist.
+/// Abstraktion des HTTP-Zugriffs, damit Prüfung und API-Aufrufe ohne Netzwerk testbar sind.
 public protocol HTTPTransport: Sendable {
-    func get(_ url: URL) async throws -> (Data, HTTPURLResponse)
+    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse)
+}
+
+extension HTTPTransport {
+    public func get(_ url: URL) async throws -> (Data, HTTPURLResponse) {
+        var request = URLRequest(url: url)
+        request.setValue("application/json", forHTTPHeaderField: "Accept")
+        return try await send(request)
+    }
 }
 
 extension URLSession: HTTPTransport {
-    public func get(_ url: URL) async throws -> (Data, HTTPURLResponse) {
-        var request = URLRequest(url: url)
-        request.timeoutInterval = 10
-        request.setValue("application/json", forHTTPHeaderField: "Accept")
+    public func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        var request = request
+        request.timeoutInterval = min(request.timeoutInterval, 30)
         let (data, response) = try await data(for: request)
         guard let http = response as? HTTPURLResponse else { throw URLError(.badServerResponse) }
         return (data, http)

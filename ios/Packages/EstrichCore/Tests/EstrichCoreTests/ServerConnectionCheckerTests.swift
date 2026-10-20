@@ -19,7 +19,8 @@ private final class StubTransport: HTTPTransport, @unchecked Sendable {
         self.reply = reply
     }
 
-    func get(_ url: URL) async throws -> (Data, HTTPURLResponse) {
+    func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
+        let url = request.url!
         requestedURL = url
         switch reply {
         case let .response(status, body):
