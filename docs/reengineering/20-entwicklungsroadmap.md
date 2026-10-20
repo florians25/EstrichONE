@@ -67,7 +67,33 @@ Jedes Arbeitspaket endet mit Code, Tests, Dokumentation und erfüllten Akzeptanz
 | **AP-09** | Backup-Worker, Restore-Werkzeug, Backup Center (API) | Image mit restic + pg_dump, Zeitplan, Ziele lokal/SFTP, Aufbewahrung, Integritätsprüfung, automatischer Wiederherstellungstest, `estrichone-restore`, Statusendpunkte, Benachrichtigung | AP-02 | AK-1 bis AK-3 aus 16 als CI-Job (nächtlich) grün | 6–8 PT |
 | **AP-10** | iOS-Grundgerüst und Server-Onboarding | Xcode-Projekt, Swift-Pakete `EstrichCore`/`EstrichAPI`/`EstrichDesign`, Tokens, generierter API-Client, Onboarding Schritt 1–2 (QR + Adresse, Verbindungsprüfung gegen `server-info`), CI-Build auf macOS-Runner | AP-02 | Build und Tests in CI grün; AK-2 aus 10 (TLS-Fehler werden abgelehnt) automatisiert, Gegenprobe auf Gerät manuell. AK-4 wandert zu AP-11, weil der Server Einrichtungscodes erst dort ausstellt. `EstrichAPI` folgt mit AP-11, `EstrichDesign` als eigenes Paket erst bei einem zweiten Nutzer (ios/README.md) | 6–8 PT |
 
-**Direkt danach (M2):** AP-11 Geräteregistrierung, Anmeldung und Poolgeräte in iOS · AP-12 Schnellanlage + Fotos offline (iOS) · AP-13 Web-Grundgerüst mit Administration (Login, Benutzer, Gerätefreigabe per QR, Bauakten ansehen).
+## 4a. Restliche Arbeitspakete (M2 bis M6)
+
+Zuschnitt nach Abschluss von AP-10 (20.10.2026). Gleiche Regeln wie oben: Ein Paket ist fertig, wenn Code, Tests,
+Dokumentation und grüne CI vorliegen. Was nur auf echten Geräten prüfbar ist, steht als „manuell offen“ im Paket.
+
+| AP | Meilenstein | Titel | Inhalt |
+|---|---|---|---|
+| **AP-11** | M2 | Geräteeinrichtung, Anmeldung, Poolgeräte (iOS) | Server: Einrichtungscodes (15 min, einmalig, nur Hash). iOS: Geräteschlüssel (Secure Enclave), Schlüsselbund, Anmeldung, Registrierung, Warten auf Freigabe, Sitzungserneuerung mit Signatur, Poolgerät mit Benutzerwechsel und Geräte-PIN, getrennter Datenbereich je Benutzer |
+| **AP-12** | M2 | Lokale Datenbank und Sync-Engine (iOS) | GRDB je Benutzer, Outbox mit `opId`, Push/Pull nach Sync-Protokoll v1, Upload-Warteschlange mit Fortsetzen, `RESYNC_REQUIRED`, Synchronisationsansicht |
+| **AP-13** | M2 | Schnellanlage, Fotos, Bauakten (iOS) | Startseite „Heute“, Bauaktenliste mit lokaler Suche, Schnellanlage (09), Serienkamera, Fotogalerie |
+| **AP-14** | M2 | Web-Grundgerüst und Administration | Angular-Projekt mit eigenem Designsystem; Server: Cookie-Anmeldung + CSRF; Anmeldung, Benutzer und Rollen, Gerätefreigabe, Einrichtungscode als QR, Bauakten ansehen, Backup-Status |
+| **AP-15** | M2 | Bauakte im Detail (iOS) | Notizen, Aufgaben und Mängel, Kontakte, Verlauf, Karte/Navigation |
+| **AP-16** | M2 | Bautagebuch und Prüfungen | Server + iOS + Web-Ansicht: Bautagebuch (Wetter optional), Erstbegehung, CM-Messung |
+| **AP-17** | M2 | Helpdesk (Basis) | Server + iOS „Problem melden“ mit Diagnosedaten + Web-Bearbeitung |
+| **AP-18** | M3 | Bauakten im Büro (Web) | Anlegen/Bearbeiten, Bereiche, Räume, Estrichaufbau, Dateien, Notizen, Aufgaben, Verlauf; Kunden, Anfragen → Bauakte |
+| **AP-19** | M3 | Ressourcen und Planung | Kolonnen, Mitarbeiter, Fahrzeuge, Maschinen, Abwesenheiten; Wochenplaner, Kalender; „Mein Einsatz heute“ in der App |
+| **AP-20** | M3 | Material und Bestellungen | Material in der Bauakte, Lieferanten, Materialbestellungen |
+| **AP-21** | M3 | Benachrichtigungen und Einstellungen | In-App-Benachrichtigungen, Erinnerungen, SMTP, Passwort-Reset per E-Mail, Firmendaten |
+| **AP-22** | M3 | IT Center, Audit, Updates | IT Center (Web) Basis, Audit-Ansicht, `update.sh`, Container-Images in GHCR |
+| **AP-23** | M4 | Android-Grundgerüst, Einrichtung, Anmeldung | Kotlin/Compose, Onboarding, Keystore, Poolgeräte |
+| **AP-24** | M4 | Android: Datenbank, Sync, Schnellanlage | Room je Benutzer, WorkManager, CameraX |
+| **AP-25** | M4 | Android: Bauakte im Detail | Notizen, Aufgaben, Bautagebuch, Prüfungen, Helpdesk |
+| **AP-26** | M5 | Microsoft Entra SSO | Server, Web, iOS, Android |
+| **AP-27** | M5 | Richtlinien, 2FA, Helpdesk 1.1 | IT-Center-Richtlinien, TOTP für Administratoren, Helpdesk-Erweiterungen |
+| **AP-28** | M6 | Windows-Desktop: Grundgerüst | WinUI 3, Ribbon, Anmeldung, Bauakten-Tabelle |
+| **AP-29** | M6 | Windows-Desktop: Büroarbeit | Bauakte, Planung, Mehrfenster, Druck, MSIX |
+
 
 **Hinweis iOS:** Für Build, Simulator und Gerätetests ist ein **Mac mit Xcode** nötig. In der Cloud-Umgebung
 dieser Entwicklung läuft Linux: Swift-Code kann ich schreiben, aber nicht mit Xcode bauen. Gebaut und getestet wird

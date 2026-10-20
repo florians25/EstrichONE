@@ -36,6 +36,7 @@ public enum DeviceStatus
 public sealed class Device : IVersionedEntity
 {
     public const string RefreshProofPrefix = "EstrichONE refresh v1\n";
+    public const string AttachProofPrefix = "EstrichONE attach v1\n";
 
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
@@ -121,11 +122,21 @@ public sealed class Device : IVersionedEntity
     }
 
     /// <summary>Prüft die Signatur (ECDSA P-256, SHA-256, IEEE-P1363 oder DER) über <see cref="RefreshProofPrefix"/> + Refresh-Token.</summary>
-    public bool VerifyRefreshProof(string refreshToken, byte[] signature)
+    public bool VerifyRefreshProof(string refreshToken, byte[] signature) => Verify(RefreshProofPrefix + refreshToken, signature);
+
+    /// <summary>Prüft die Signatur über <see cref="AttachProofPrefix"/> + Zugriffstoken der Sitzung, die gebunden werden soll.</summary>
+    public bool VerifyAttachProof(string accessToken, byte[] signature) => Verify(AttachProofPrefix + accessToken, signature);
+
+    private bool Verify(string message, byte[] signature)
     {
+        if (signature.Length == 0)
+        {
+            return false;
+        }
+
         using var key = ECDsa.Create();
         key.ImportSubjectPublicKeyInfo(PublicKey, out _);
-        var data = Encoding.UTF8.GetBytes(RefreshProofPrefix + refreshToken);
+        var data = Encoding.UTF8.GetBytes(message);
         return key.VerifyData(data, signature, HashAlgorithmName.SHA256, DSASignatureFormat.IeeeP1363FixedFieldConcatenation)
             || key.VerifyData(data, signature, HashAlgorithmName.SHA256, DSASignatureFormat.Rfc3279DerSequence);
     }

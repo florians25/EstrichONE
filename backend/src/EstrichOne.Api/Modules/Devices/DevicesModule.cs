@@ -1,4 +1,6 @@
+using System.Threading.RateLimiting;
 using EstrichOne.Api.Infrastructure.Modules;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace EstrichOne.Api.Modules.Devices;
 
@@ -9,6 +11,10 @@ public sealed class DevicesModule : IModule
     {
         services.AddOptions<DeviceSettings>().Bind(configuration.GetSection(DeviceSettings.SectionName));
         services.AddScoped<DeviceActions>();
+        services.Configure<RateLimiterOptions>(limiter => limiter.AddPolicy(DeviceSettings.RateLimitPolicy, http =>
+            RateLimitPartition.GetFixedWindowLimiter(
+                http.Connection.RemoteIpAddress?.ToString() ?? "unbekannt",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 })));
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api) => DeviceEndpoints.Map(api);

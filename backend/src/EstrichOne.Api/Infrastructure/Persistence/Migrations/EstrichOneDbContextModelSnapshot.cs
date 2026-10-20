@@ -669,6 +669,65 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("contact_persons", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Devices.EnrollmentCode", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<byte[]>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("bytea")
+                        .HasColumnName("code_hash");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("DeviceName")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("device_name");
+
+                    b.Property<DateTimeOffset>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("expires_at");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset?>("UsedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("used_at");
+
+                    b.Property<Guid?>("UsedByDeviceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("used_by_device_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_device_enrollment_codes");
+
+                    b.HasIndex("CodeHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_device_enrollment_codes_code_hash");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_device_enrollment_codes_created_by_user_id");
+
+                    b.HasIndex("UsedByDeviceId")
+                        .HasDatabaseName("ix_device_enrollment_codes_used_by_device_id");
+
+                    b.ToTable("device_enrollment_codes", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Devices.Exports.Device", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1514,6 +1573,22 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_contact_persons_contacts_contact_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Devices.EnrollmentCode", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_device_enrollment_codes_user_created_by_user_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Devices.Exports.Device", null)
+                        .WithMany()
+                        .HasForeignKey("UsedByDeviceId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_device_enrollment_codes_devices_used_by_device_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Devices.Exports.Device", b =>

@@ -33,6 +33,9 @@ public sealed class DeviceSettings
 {
     public const string SectionName = "EstrichOne:Devices";
 
+    /// <summary>Begrenzt das Durchprobieren von Einrichtungscodes (je IP-Adresse).</summary>
+    public const string RateLimitPolicy = "device-registration";
+
     /// <summary>
     /// Persönliche Geräte von Benutzern mit <c>devices.self_enroll</c> sofort freigeben (Standard).
     /// Poolgeräte warten immer auf einen Administrator (docs/reengineering/11, Abschnitt 2).

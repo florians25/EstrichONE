@@ -529,6 +529,114 @@
         ]
       }
     },
+    "/api/v1/devices/attach": {
+      "post": {
+        "tags": [
+          "Geräte"
+        ],
+        "summary": "Weitere Anmeldung auf einem bereits registrierten Gerät (Poolgerät, Neuanmeldung) an das Gerät binden",
+        "operationId": "AttachDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AttachDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DeviceResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/devices/enrollment-codes": {
+      "post": {
+        "tags": [
+          "Geräte"
+        ],
+        "summary": "Einmal-Einrichtungscode (15 Minuten gültig) für ein neues Gerät erzeugen",
+        "operationId": "CreateEnrollmentCode",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateEnrollmentCodeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EnrollmentCodeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/devices/me": {
       "get": {
         "tags": [
@@ -2029,6 +2137,23 @@
           }
         }
       },
+      "AttachDeviceRequest": {
+        "required": [
+          "deviceId",
+          "signature"
+        ],
+        "type": "object",
+        "properties": {
+          "deviceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "signature": {
+            "maxLength": 200,
+            "type": "string"
+          }
+        }
+      },
       "BackupRunInfo": {
         "required": [
           "status",
@@ -2582,6 +2707,24 @@
           }
         }
       },
+      "CreateEnrollmentCodeRequest": {
+        "required": [
+          "kind"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/DeviceKind"
+          },
+          "deviceName": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "DeviceKind": {
         "enum": [
           "personal",
@@ -2686,6 +2829,40 @@
           "locked",
           "retired"
         ]
+      },
+      "EnrollmentCodeResponse": {
+        "required": [
+          "code",
+          "kind",
+          "deviceName",
+          "expiresAt",
+          "link"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DeviceKind"
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "FieldConflict": {
         "required": [
@@ -3177,6 +3354,13 @@
           },
           "appVersion": {
             "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "enrollmentCode": {
+            "maxLength": 20,
             "type": [
               "null",
               "string"
