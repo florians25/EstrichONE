@@ -86,28 +86,15 @@ struct WelcomeView: View {
     }
 }
 
-/// Bildmarke aus dem App-Symbol: drei Schichten wie ein Estrichaufbau, zusammen ein „E“.
+/// Bildmarke des Logos (branding/logo-mark*.svg) als Vektor aus dem Asset-Katalog; passt sich dem Dunkelmodus an.
+/// `onDark` für Navy-Flächen (z. B. Kopf der Startseite), unabhängig vom Erscheinungsbild.
 struct BrandMark: View {
-    var body: some View {
-        GeometryReader { geometry in
-            let size = min(geometry.size.width, geometry.size.height)
-            let unit = size / 1024
-            ZStack(alignment: .topLeading) {
-                RoundedRectangle(cornerRadius: 224 * unit, style: .continuous)
-                    .fill(Theme.navy)
-                layer(x: 300, y: 212, width: 132, height: 600, color: .white, unit: unit)
-                layer(x: 300, y: 212, width: 424, height: 132, color: .white, unit: unit)
-                layer(x: 300, y: 446, width: 330, height: 132, color: .white, unit: unit)
-                layer(x: 300, y: 680, width: 424, height: 132, color: Theme.brandBlue, unit: unit)
-            }
-            .frame(width: size, height: size)
-        }
-    }
+    var onDark = false
 
-    private func layer(x: CGFloat, y: CGFloat, width: CGFloat, height: CGFloat, color: Color, unit: CGFloat) -> some View {
-        RoundedRectangle(cornerRadius: 18 * unit, style: .continuous)
-            .fill(color)
-            .frame(width: width * unit, height: height * unit)
-            .offset(x: x * unit, y: y * unit)
+    var body: some View {
+        Image(onDark ? "BrandMarkOnDark" : "BrandMark")
+            .resizable()
+            .scaledToFit()
+            .accessibilityLabel("EstrichONE")
     }
 }

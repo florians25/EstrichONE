@@ -353,13 +353,27 @@ public struct BauakteService: Sendable {
     @discardableResult
     public func addPhoto(_ jpeg: Data, to bauakteId: UUID?, capturedAt: Date, latitude: Double? = nil, longitude: Double? = nil,
                          contentType: String = "image/jpeg", caption: String? = nil) async throws -> UUID {
-        let id = UUID.v7(now: now())
-        let sha = try files.store(jpeg, for: id)
         let fileExtension = contentType == "image/png" ? "png" : (contentType == "image/heic" ? "heic" : "jpg")
+        return try await addMedia(jpeg, kind: "photo", prefix: "Foto", fileExtension: fileExtension, to: bauakteId, capturedAt: capturedAt,
+                                  latitude: latitude, longitude: longitude, contentType: contentType, caption: caption)
+    }
+
+    /// Video (MP4 oder QuickTime): wie Fotos zuerst verschlüsselt auf dem Gerät, dann Ankündigung und Upload in Teilen.
+    @discardableResult
+    public func addVideo(_ movie: Data, to bauakteId: UUID?, capturedAt: Date, contentType: String = "video/mp4",
+                         caption: String? = nil) async throws -> UUID {
+        try await addMedia(movie, kind: "video", prefix: "Video", fileExtension: contentType == "video/quicktime" ? "mov" : "mp4",
+                           to: bauakteId, capturedAt: capturedAt, latitude: nil, longitude: nil, contentType: contentType, caption: caption)
+    }
+
+    private func addMedia(_ content: Data, kind: String, prefix: String, fileExtension: String, to bauakteId: UUID?, capturedAt: Date,
+                          latitude: Double?, longitude: Double?, contentType: String, caption: String?) async throws -> UUID {
+        let id = UUID.v7(now: now())
+        let sha = try files.store(content, for: id)
         let stamp = Self.fileNameFormatter.string(from: capturedAt)
         let payload: [String: JSONValue] = [
-            "bauakteId": JSONValue(bauakteId), "kind": "photo", "originalName": .string("Foto_\(stamp).\(fileExtension)"),
-            "contentType": .string(contentType), "sizeBytes": .number(Double(jpeg.count)), "sha256": .string(sha),
+            "bauakteId": JSONValue(bauakteId), "kind": .string(kind), "originalName": .string("\(prefix)_\(stamp).\(fileExtension)"),
+            "contentType": .string(contentType), "sizeBytes": .number(Double(content.count)), "sha256": .string(sha),
             "capturedAt": .string(APIDate.format(capturedAt)), "latitude": JSONValue(latitude), "longitude": JSONValue(longitude),
             "caption": JSONValue(Self.cleanCaption(caption)),
         ]
@@ -369,7 +383,7 @@ public struct BauakteService: Sendable {
         ])
         do {
             try await store.create(.file, id: id, data: local, payload: payload, operation: "file.announce")
-            try await store.enqueueUpload(fileId: id, size: Int64(jpeg.count), sha256: sha, contentType: contentType)
+            try await store.enqueueUpload(fileId: id, size: Int64(content.count), sha256: sha, contentType: contentType)
         } catch {
             files.remove(id)
             throw error

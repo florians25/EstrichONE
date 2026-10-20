@@ -231,6 +231,8 @@ struct LiveServerTests {
         let document = try await service.addDocument(pdf, title: "Lieferschein 4711", category: .delivery, to: bauakte)
         let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="))
         let photo = try await service.addPhoto(png, to: bauakte, capturedAt: Date(), contentType: "image/png", caption: "Bad OG")
+        let movie = Data([0, 0, 0, 0x18] + Array("ftypisom".utf8) + Array(repeating: 0, count: 4096))
+        let video = try await service.addVideo(movie, to: bauakte, capturedAt: Date(), caption: "Einbringen")
 
         #expect(await device.engine.synchronize() == .completed)
         #expect(try await device.store.summary().isSettled)
@@ -250,6 +252,7 @@ struct LiveServerTests {
         #expect(try await device.store.summary().isSettled)
         #expect(try await service.files(of: bauakte).first { $0.id == photo }?.caption == "Bad OG, Randdämmstreifen")
         #expect(try await device.store.uploads().allSatisfy { $0.state == .done })
+        #expect(try await service.files(of: bauakte).first { $0.id == video }?.isStoredOnServer == true)
     }
 
     @Test("Helpdesk: Meldung mit Diagnose über den Sync, eigene Liste, Meldung ohne Anmeldung mit Gerätesignatur")

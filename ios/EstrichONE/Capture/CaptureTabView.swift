@@ -4,11 +4,26 @@ import SwiftUI
 /// Was im Reiter „Aufnehmen“ entsteht.
 enum CaptureMode: String, CaseIterable, Identifiable {
     case photo
+    case video
     case document
 
     var id: String { rawValue }
-    var title: String { self == .photo ? "Fotos" : "Dokument scannen" }
-    var symbol: String { self == .photo ? "camera.fill" : "doc.viewfinder" }
+
+    var title: String {
+        switch self {
+        case .photo: "Fotos"
+        case .video: "Video"
+        case .document: "Scannen"
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .photo: "camera.fill"
+        case .video: "video.fill"
+        case .document: "doc.viewfinder"
+        }
+    }
 }
 
 /// Reiter „Aufnehmen“ (09, W-2): Fotos oder Dokument, Bauakte ist vorausgewählt (zuletzt geöffnet). 2–3 Tipps.
@@ -21,6 +36,7 @@ struct CaptureTabView: View {
     @State private var search = ""
     @State private var captureFor: Bauakte?
     @State private var scanFor: Bauakte?
+    @State private var videoFor: Bauakte?
     @State private var lastResult: String?
 
     var body: some View {
@@ -46,7 +62,7 @@ struct CaptureTabView: View {
                             Button {
                                 start(first)
                             } label: {
-                                Label(mode == .photo ? "Fotos" : "Scannen", systemImage: mode.symbol)
+                                Label(mode.title, systemImage: mode.symbol)
                             }
                             .estrichButton(mode == .photo ? .accent : .primary)
                             .accessibilityIdentifier("captureSuggested")
@@ -80,6 +96,12 @@ struct CaptureTabView: View {
                     captureFor = nil
                 }
             }
+            .sheet(item: $videoFor) { bauakte in
+                VideoCaptureView(bauakte: bauakte) { saved in
+                    lastResult = saved ? "Video für „\(bauakte.title)“ gespeichert." : nil
+                    videoFor = nil
+                }
+            }
             .fullScreenCover(item: $scanFor) { bauakte in
                 ScanFlowView(bauakte: bauakte) { saved in
                     lastResult = saved ? "Dokument für „\(bauakte.title)“ gespeichert." : nil
@@ -98,6 +120,7 @@ struct CaptureTabView: View {
         lastResult = nil
         switch mode {
         case .photo: captureFor = bauakte
+        case .video: videoFor = bauakte
         case .document: scanFor = bauakte
         }
     }

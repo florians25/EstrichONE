@@ -130,6 +130,23 @@ struct BauakteServiceTests {
         #expect(try await service.files(of: bauakte).first { $0.id == second }?.syncState == .synced)
     }
 
+    @Test("Video: offline gespeichert, als video angekündigt und in Teilen hochgeladen")
+    func video() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        let bauakte = try await service.create(NewBauakte(title: "Video"))
+        let movie = Data([0, 0, 0, 0x18] + Array("ftypmp42".utf8) + (0..<(SyncEngine.chunkSize + 1000)).map { UInt8($0 % 251) })
+
+        let id = try await service.addVideo(movie, to: bauakte, capturedAt: Date(), caption: "Estrich wird eingebracht")
+
+        let local = try #require(try await service.files(of: bauakte).first)
+        #expect(local.isVideo && !local.isPhoto && local.originalName.hasSuffix(".mp4") && local.caption == "Estrich wird eingebracht")
+        #expect(await engine.synchronize() == .completed)
+        #expect(server.uploaded(id) == movie, "zwei Teile, vollständig")
+        #expect(server.entity(id)?["kind"]?.string == "video")
+        #expect(server.entity(id)?["contentType"]?.string == "video/mp4")
+    }
+
     @Test("Unübertragene Aufnahme verwerfen; übertragene bleibt")
     func discardUnsent() async throws {
         let server = SimulatedSyncServer()

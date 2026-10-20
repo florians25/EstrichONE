@@ -205,8 +205,8 @@ struct HomeHeader: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                BrandMark()
-                    .frame(width: 22, height: 22)
+                BrandMark(onDark: true)
+                    .frame(width: 26, height: 26)
                     .accessibilityHidden(true)
                 Text("EstrichONE").font(.subheadline.weight(.bold)).foregroundStyle(.white)
                 Spacer()

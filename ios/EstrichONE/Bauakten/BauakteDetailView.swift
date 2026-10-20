@@ -25,6 +25,7 @@ struct BauakteDetailView: View {
     @State private var viewing: FileItem?
     @State private var previewing: FileItem?
     @State private var playing: FileItem?
+    @State private var recordingVideo = false
     @State private var editingDocument: FileItem?
 
     /// Was über das „Erfassen“-Menü bzw. die Aktionsleiste erfasst wird.
@@ -66,6 +67,9 @@ struct BauakteDetailView: View {
                 }
                 .sheet(item: $viewing) { file in
                     PhotoViewer(photos: photos.filter(\.isPhoto), selection: file.id) { Task { await reload() } }
+                }
+                .sheet(isPresented: $recordingVideo) {
+                    VideoCaptureView(bauakte: bauakte) { _ in recordingVideo = false }
                 }
                 .fullScreenCover(item: $playing) { file in
                     VideoPreview(file: file)
@@ -149,6 +153,7 @@ struct BauakteDetailView: View {
                     .buttonStyle(ActionTileStyle())
                     .accessibilityIdentifier("addNoteButton")
                 Menu {
+                    Button("Video", systemImage: "video") { recordingVideo = true }
                     Button("Aufgabe", systemImage: "checklist") { form = .task }
                     Button("Mangel", systemImage: "exclamationmark.triangle") { form = .defect }
                     Button("CM-Messung", systemImage: "drop") { form = .cmMeasurement }
