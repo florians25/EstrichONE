@@ -1,0 +1,45 @@
+<mvc:View controllerName="estrichone.hosting.controller.Audit" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core">
+	<Page id="auditPage" title="Ereignisprotokoll">
+		<content>
+			<Table id="auditTable" items="{audit>/items}" class="sapUiResponsiveContentPadding" noDataText="Keine Ereignisse für diese Auswahl." sticky="ColumnHeaders,HeaderToolbar">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="Ereignisse ({audit>/total})" level="H2" />
+						<ToolbarSpacer />
+						<SearchField id="auditSearch" width="16rem" placeholder="Aktion, Benutzer, Mandant, Details …" search=".onSearch" value="{audit>/q}" />
+						<DateRangeSelection id="auditRange" width="15rem" change=".onSearch" displayFormat="dd.MM.yyyy" placeholder="Zeitraum" />
+						<Select selectedKey="{audit>/success}" change=".onSearch">
+							<core:Item key="" text="Alle Ergebnisse" />
+							<core:Item key="false" text="Nur fehlgeschlagene" />
+							<core:Item key="true" text="Nur erfolgreiche" />
+						</Select>
+						<Button icon="sap-icon://excel-attachment" text="CSV" tooltip="Auswahl als CSV exportieren" press=".onExport" />
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column width="11rem"><Text text="Zeitpunkt" /></Column>
+					<Column width="9rem"><Text text="Benutzer" /></Column>
+					<Column><Text text="Aktion" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true" width="10rem"><Text text="Mandant" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Details" /></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true" width="9rem"><Text text="Adresse" /></Column>
+				</columns>
+				<items>
+					<ColumnListItem highlight="{= ${audit>success} ? 'None' : 'Error' }">
+						<Text text="{path: 'audit>at', formatter: '.formatter.dateTime'}" />
+						<Text text="{audit>actor}" />
+						<ObjectStatus text="{audit>action}" state="{= ${audit>success} ? 'None' : 'Error' }" icon="{= ${audit>success} ? '' : 'sap-icon://error' }" />
+						<Link text="{audit>tenantSlug}" press=".onTenant" enabled="{= !!${audit>tenantId} }" />
+						<Text text="{audit>details}" maxLines="3" />
+						<Text text="{audit>ipAddress}" />
+					</ColumnListItem>
+				</items>
+			</Table>
+			<HBox justifyContent="Center" class="sapUiSmallMargin">
+				<Button icon="sap-icon://navigation-left-arrow" press=".onPrevious" enabled="{= ${audit>/skip} > 0 }" tooltip="Neuere" />
+				<Text text="{= ${audit>/skip} + 1 } – {= Math.min(${audit>/skip} + ${audit>/take}, ${audit>/total}) } von {audit>/total}" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTop" />
+				<Button icon="sap-icon://navigation-right-arrow" press=".onNext" enabled="{= ${audit>/skip} + ${audit>/take} &lt; ${audit>/total} }" tooltip="Ältere" />
+			</HBox>
+		</content>
+	</Page>
+</mvc:View>

@@ -1,0 +1,69 @@
+<mvc:View controllerName="estrichone.hosting.controller.Plans" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<Page id="plansPage" title="Tarife">
+		<content>
+			<Table id="planTable" items="{plans>/items}" class="sapUiResponsiveContentPadding" noDataText="Noch keine Tarife.">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="Tarife und Pakete" level="H2" />
+						<ToolbarSpacer />
+						<Button id="createPlan" text="Tarif anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" />
+					</OverflowToolbar>
+				</headerToolbar>
+				<infoToolbar>
+					<OverflowToolbar>
+						<Text text="Arbeitsspeicher- und CPU-Grenzen gelten für den API-Container und werden beim Ändern sofort auf alle Instanzen des Tarifs angewendet. Benutzer- und Speicherlimits werden überwacht und in Übersicht und Liste gemeldet." wrapping="true" />
+					</OverflowToolbar>
+				</infoToolbar>
+				<columns>
+					<Column><Text text="Tarif" /></Column>
+					<Column hAlign="End"><Text text="Benutzer" /></Column>
+					<Column hAlign="End"><Text text="Speicher" /></Column>
+					<Column hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="RAM (API)" /></Column>
+					<Column hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="CPU (API)" /></Column>
+					<Column hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Preis" /></Column>
+					<Column hAlign="End"><Text text="Mandanten" /></Column>
+					<Column hAlign="End" width="6rem"><Text text="" /></Column>
+				</columns>
+				<items>
+					<ColumnListItem>
+						<ObjectIdentifier title="{plans>name}" text="{plans>description}" />
+						<Text text="{path: 'plans>maxUsers', formatter: '.formatter.limit'}" />
+						<Text text="{= ${plans>storageGb} ? ${plans>storageGb} + ' GB' : 'unbegrenzt' }" />
+						<Text text="{= ${plans>memoryMb} ? ${plans>memoryMb} + ' MB' : 'keine Grenze' }" />
+						<Text text="{= ${plans>cpuLimit} ? ${plans>cpuLimit} + ' Kerne' : 'keine Grenze' }" />
+						<Text text="{path: 'plans>monthlyPrice', formatter: '.formatter.price'}" />
+						<Text text="{plans>tenantCount}" />
+						<HBox justifyContent="End">
+							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit" />
+							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete" enabled="{= ${plans>tenantCount} === 0 }" />
+						</HBox>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</content>
+		<dependents>
+			<Dialog id="planDialog" title="{= ${plan>/id} ? 'Tarif bearbeiten' : 'Tarif anlegen'}" contentWidth="30rem">
+				<content>
+					<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1">
+						<Label text="Name" required="true" labelFor="pName" />
+						<Input id="pName" value="{plan>/name}" maxLength="80" />
+						<Label text="Beschreibung" labelFor="pDescription" />
+						<Input id="pDescription" value="{plan>/description}" maxLength="400" />
+						<Label text="Benutzer (0 = unbegrenzt)" labelFor="pUsers" />
+						<StepInput id="pUsers" value="{plan>/maxUsers}" min="0" max="100000" />
+						<Label text="Speicher in GB (0 = unbegrenzt)" labelFor="pStorage" />
+						<StepInput id="pStorage" value="{plan>/storageGb}" min="0" max="100000" step="5" />
+						<Label text="RAM API in MB (0 = keine Grenze)" labelFor="pMemory" />
+						<StepInput id="pMemory" value="{plan>/memoryMb}" min="0" max="262144" step="256" />
+						<Label text="CPU API in Kernen (0 = keine Grenze)" labelFor="pCpu" />
+						<StepInput id="pCpu" value="{plan>/cpuLimit}" min="0" max="128" step="0.25" displayValuePrecision="2" />
+						<Label text="Monatspreis netto in €" labelFor="pPrice" />
+						<StepInput id="pPrice" value="{plan>/monthlyPrice}" min="0" max="1000000" step="1" displayValuePrecision="2" />
+					</f:SimpleForm>
+				</content>
+				<beginButton><Button id="planSave" text="Speichern" type="Emphasized" press=".onSave" /></beginButton>
+				<endButton><Button text="Abbrechen" press=".onCancel" /></endButton>
+			</Dialog>
+		</dependents>
+	</Page>
+</mvc:View>

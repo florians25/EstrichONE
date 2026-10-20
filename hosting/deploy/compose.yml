@@ -1,0 +1,69 @@
+# EstrichONE Hosting-Konsole – Konsole + gemeinsamer Reverse Proxy (Caddy) für alle Mandanten-Instanzen.
+# Wird vom Installer nach ${HOSTING_ROOT}/compose.yml kopiert; Einstellungen stehen in der .env daneben.
+#   docker compose -p estrichone-hosting up -d
+# Jede Mandanten-Instanz ist ein eigenes Compose-Projekt estrichone-<kürzel> unter ${HOSTING_ROOT}/instances/.
+
+name: estrichone-hosting
+
+services:
+  console:
+    image: ${HOSTING_IMAGE:-ghcr.io/florians25/estrichone-hosting:latest}
+    container_name: estrichone-hosting-console
+    restart: unless-stopped
+    environment:
+      Hosting__Root: ${HOSTING_ROOT:?HOSTING_ROOT fehlt}
+      Hosting__BaseDomain: ${HOSTING_BASE_DOMAIN:?HOSTING_BASE_DOMAIN fehlt}
+      Hosting__ConsoleDomain: ${HOSTING_CONSOLE_DOMAIN:?HOSTING_CONSOLE_DOMAIN fehlt}
+      Hosting__DefaultVersion: ${HOSTING_DEFAULT_VERSION:-0.1.0-preview.4}
+      Hosting__Registry: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}
+      Hosting__Proxy: ${HOSTING_PROXY:-caddy}
+      Hosting__ProxyContainer: ${HOSTING_PROXY_CONTAINER:-estrichone-hosting-proxy}
+      Hosting__Tls: ${HOSTING_TLS:-acme}
+      Hosting__AcmeEmail: ${HOSTING_ACME_EMAIL:-}
+      Hosting__BackupRoot: ${HOSTING_BACKUP_ROOT:-}
+      Hosting__Docker: ${HOSTING_DOCKER:-docker}
+      Hosting__InsecureCookies: ${HOSTING_INSECURE_COOKIES:-false}
+    volumes:
+      # Docker-Socket nur in diesem Container. Achtung: Zugriff auf den Socket entspricht root-Rechten auf dem Host.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Gleicher Pfad innen und außen: relative Pfade der Instanz-Compose-Dateien löst der Docker-Daemon des Hosts auf.
+      - ${HOSTING_ROOT}:${HOSTING_ROOT}
+      # Optional eigene Platte für Sicherungs-Repositorys (HOSTING_BACKUP_ROOT), ebenfalls mit gleichem Pfad.
+      - ${HOSTING_BACKUP_ROOT:-${HOSTING_ROOT}/backups}:${HOSTING_BACKUP_ROOT:-${HOSTING_ROOT}/backups}
+    ports:
+      # Nur lokal (SSH-Tunnel/Notzugang); regulär erreichbar über den Proxy unter HOSTING_CONSOLE_DOMAIN.
+      - "127.0.0.1:${HOSTING_CONSOLE_LOCAL_PORT:-8099}:8080"
+    read_only: true
+    tmpfs: [/tmp]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    # Besitzer der Datenverzeichnisse setzen (UID 1654), fremde Dateien beim Löschen/Messen erreichen.
+    cap_add: [CHOWN, DAC_OVERRIDE, DAC_READ_SEARCH, FOWNER]
+    networks: [hosting]
+
+  proxy:
+    image: ${HOSTING_PROXY_IMAGE:-caddy:2}
+    container_name: estrichone-hosting-proxy
+    restart: unless-stopped
+    # Nur mit COMPOSE_PROFILES=caddy (Standard); bei externem Proxy (Nginx Proxy Manager) entfällt dieser Dienst.
+    profiles: [caddy]
+    ports:
+      - "${HOSTING_HTTP_PORT:-80}:80"
+      - "${HOSTING_HTTPS_PORT:-443}:443"
+      - "${HOSTING_HTTPS_PORT:-443}:443/udp"
+    volumes:
+      # Caddyfile und Wartungsseite schreibt die Konsole.
+      - ${HOSTING_ROOT}/proxy:/etc/caddy:ro
+      - ${HOSTING_ROOT}/proxy-data:/data
+      - ${HOSTING_ROOT}/proxy-config:/config
+    depends_on:
+      console:
+        condition: service_healthy
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [NET_BIND_SERVICE]
+    networks: [hosting]
+
+networks:
+  hosting:
+    name: estrichone-hosting

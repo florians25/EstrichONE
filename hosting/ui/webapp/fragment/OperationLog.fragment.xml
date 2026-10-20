@@ -1,0 +1,15 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<Dialog id="operationDialog" title="{op>/label} · {path: 'op>/status', formatter: '.formatter.operationText'}" contentWidth="56rem" contentHeight="70%"
+		resizable="true" draggable="true" stretch="{device>/system/phone}">
+		<content>
+			<VBox class="sapUiSmallMargin" height="100%">
+				<MessageStrip type="Error" showIcon="true" visible="{= !!${op>/error} }" text="{op>/error}" class="sapUiSmallMarginBottom" />
+				<Text text="Angefordert von {op>/requestedBy} · {path: 'op>/queuedAt', formatter: '.formatter.dateTime'}{= ${op>/finishedAt} ? ' · abgeschlossen ' : '' }{path: 'op>/finishedAt', formatter: '.formatter.ago'}" class="hostingHint sapUiSmallMarginBottom" />
+				<TextArea id="operationLogText" value="{op>/log}" editable="false" width="100%" rows="26" wrapping="Off" class="hostingMono" />
+			</VBox>
+		</content>
+		<endButton>
+			<Button text="Schließen" press=".onOperationClose" />
+		</endButton>
+	</Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,29 @@
+/* EstrichONE Hosting-Konsole – Ergänzungen zu den OpenUI5-Themes (nur Theme-Parameter, keine festen Farben). */
+.loginOuter { min-height: 100vh; padding: 2rem 1rem; box-sizing: border-box; }
+.loginCard {
+	padding: 2rem 2rem 1.5rem;
+	border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
+	background: var(--sapGroup_ContentBackground);
+	box-shadow: var(--sapContent_Shadow1);
+	border: 1px solid var(--sapGroup_ContentBorderColor);
+	max-width: calc(100vw - 2rem);
+	box-sizing: border-box;
+}
+.loginLogo { align-self: flex-start; }
+.hostingHint { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
+.hostingMono, .hostingMono textarea {
+	font-family: var(--sapFontFamilyMono, ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace) !important;
+	font-size: 0.8125rem !important;
+	line-height: 1.45 !important;
+}
+.hostingSetupCode {
+	font-family: var(--sapFontFamilyMono, ui-monospace, Menlo, Consolas, monospace);
+	font-size: 1.5rem;
+	letter-spacing: 0.15em;
+	font-weight: bold;
+	color: var(--sapTextColor);
+}
+.hostingTiles { gap: 1rem; flex-wrap: wrap; }
+.hostingTiles .sapMGT { margin: 0 !important; }
+.hostingQr { background: #fff; padding: 0.5rem; border-radius: 0.5rem; }
+.hostingSecret { font-family: var(--sapFontFamilyMono, monospace); word-break: break-all; }

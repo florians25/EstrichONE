@@ -1,0 +1,23 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<Dialog id="lockDialog" title="Instanz sperren" contentWidth="30rem" class="sapUiContentPadding" type="Message" state="Warning">
+		<content>
+			<VBox>
+				<Text text="Besucher sehen statt EstrichONE eine Wartungsseite (HTTP 503). Daten und Konfiguration bleiben erhalten; Sicherungen laufen weiter, solange die Instanz nicht angehalten wird." />
+				<Label text="Grund (erscheint im Ereignisprotokoll)" labelFor="lockReason" required="true" class="sapUiSmallMarginTop" />
+				<ComboBox id="lockReason" value="{dlg>/reason}" width="100%" placeholder="z. B. Zahlungsverzug">
+					<core:Item text="Zahlungsverzug" />
+					<core:Item text="Vertrag gekündigt" />
+					<core:Item text="Wartungsarbeiten" />
+					<core:Item text="Sicherheitsvorfall" />
+				</ComboBox>
+				<CheckBox text="Instanz zusätzlich anhalten (gibt CPU und Arbeitsspeicher frei)" selected="{dlg>/stopInstance}" />
+			</VBox>
+		</content>
+		<beginButton>
+			<Button id="lockConfirm" text="Sperren" type="Emphasized" press=".onLockConfirm" />
+		</beginButton>
+		<endButton>
+			<Button text="Abbrechen" press=".onDialogCancel" />
+		</endButton>
+	</Dialog>
+</core:FragmentDefinition>

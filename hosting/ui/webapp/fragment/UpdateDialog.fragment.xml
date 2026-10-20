@@ -1,0 +1,20 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<Dialog id="updateDialog" title="Instanz aktualisieren" contentWidth="28rem" class="sapUiContentPadding">
+		<content>
+			<VBox>
+				<Text text="Aktuell: {detail>/summary/version}. Die Konsole lädt die Images der Zielversion, migriert die Datenbank und startet die Dienste neu. Sind die Images nicht verfügbar, bleibt die bisherige Version aktiv." />
+				<Label text="Zielversion" labelFor="updateVersion" required="true" class="sapUiSmallMarginTop" />
+				<ComboBox id="updateVersion" value="{dlg>/version}" items="{dlg>/versions}" width="100%">
+					<core:Item key="{dlg>}" text="{dlg>}" />
+				</ComboBox>
+				<Text text="Quelle der Versionsliste: {dlg>/source}" class="hostingHint sapUiTinyMarginTop" />
+			</VBox>
+		</content>
+		<beginButton>
+			<Button id="updateConfirm" text="Aktualisieren" type="Emphasized" press=".onUpdateConfirm" />
+		</beginButton>
+		<endButton>
+			<Button text="Abbrechen" press=".onDialogCancel" />
+		</endButton>
+	</Dialog>
+</core:FragmentDefinition>

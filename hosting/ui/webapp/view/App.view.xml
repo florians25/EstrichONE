@@ -1,0 +1,42 @@
+<mvc:View controllerName="estrichone.hosting.controller.App" displayBlock="true" height="100%"
+	xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:f="sap.f" xmlns:tnt="sap.tnt" xmlns:core="sap.ui.core">
+	<App id="rootApp" autoFocus="false" busy="{= !${session>/ready} }" busyIndicatorDelay="0">
+		<pages>
+			<mvc:XMLView id="login" viewName="estrichone.hosting.view.Login" />
+			<tnt:ToolPage id="shell" sideExpanded="true">
+				<tnt:header>
+					<f:ShellBar id="shellBar" title="EstrichONE" secondTitle="Hosting-Konsole" homeIcon="{ui>/logo}" homeIconTooltip="Zur Übersicht"
+						showMenuButton="true" menuButtonPressed=".onToggleSide" homeIconPressed=".onHome"
+						showNotifications="true" notificationsNumber="{shell>/openOperations}" notificationsPressed=".onOperations"
+						avatarPressed=".onAvatar">
+						<f:additionalContent>
+							<OverflowToolbarButton id="themeButton" icon="sap-icon://palette" text="Darstellung" tooltip="Darstellung" type="Transparent" press=".onTheme" />
+						</f:additionalContent>
+						<f:profile>
+							<Avatar initials="{path: 'session>/user/userName', formatter: '.formatter.initials'}" tooltip="{session>/user/userName}" />
+						</f:profile>
+					</f:ShellBar>
+				</tnt:header>
+				<tnt:sideContent>
+					<tnt:SideNavigation id="sideNavigation" selectedKey="{shell>/selectedKey}" itemSelect=".onNavigate">
+						<tnt:NavigationList>
+							<tnt:NavigationListItem key="dashboard" text="Übersicht" icon="sap-icon://home" />
+							<tnt:NavigationListItem key="tenants" text="Mandanten" icon="sap-icon://building" />
+							<tnt:NavigationListItem key="operations" text="Vorgänge" icon="sap-icon://activity-items" />
+							<tnt:NavigationListItem key="plans" text="Tarife" icon="sap-icon://product" />
+							<tnt:NavigationListItem key="audit" text="Ereignisprotokoll" icon="sap-icon://history" />
+						</tnt:NavigationList>
+						<tnt:fixedItem>
+							<tnt:NavigationList>
+								<tnt:NavigationListItem key="settings" text="Einstellungen" icon="sap-icon://action-settings" />
+							</tnt:NavigationList>
+						</tnt:fixedItem>
+					</tnt:SideNavigation>
+				</tnt:sideContent>
+				<tnt:mainContents>
+					<NavContainer id="content" />
+				</tnt:mainContents>
+			</tnt:ToolPage>
+		</pages>
+	</App>
+</mvc:View>

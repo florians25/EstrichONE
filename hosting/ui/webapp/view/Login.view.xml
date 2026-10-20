@@ -1,0 +1,38 @@
+<mvc:View controllerName="estrichone.hosting.controller.Login" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core"
+	xmlns:f="sap.ui.layout.form">
+	<Page id="loginPage" showHeader="false" class="loginPage" enableScrolling="true">
+		<FlexBox width="100%" alignItems="Center" justifyContent="Center" class="loginOuter">
+			<VBox class="loginCard" width="24rem" visible="{session>/ready}">
+				<Image src="{ui>/wordmark}" alt="EstrichONE" height="3rem" class="loginLogo" decorative="false" />
+				<Title text="{= ${session>/setupRequired} ? 'Ersteinrichtung der Hosting-Konsole' : 'Hosting-Konsole – Anmeldung'}" level="H1" titleStyle="H4" wrapping="true" class="sapUiSmallMarginTop" />
+				<Text visible="{session>/setupRequired}" class="sapUiSmallMarginTop"
+					text="Den Einrichtungscode zeigt das Protokoll der Konsole: docker logs estrichone-hosting-console" />
+				<MessageStrip id="loginError" type="Error" showIcon="true" visible="{= !!${login>/error} }" text="{login>/error}" class="sapUiSmallMarginTop" />
+				<MessageStrip type="Warning" showIcon="true" visible="{session>/simulation}" class="sapUiSmallMarginTop"
+					text="Simulation: Docker wird nicht wirklich gesteuert (nur Test/Vorführung)." />
+				<VBox class="sapUiSmallMarginTop" visible="{session>/setupRequired}">
+					<Label text="Einrichtungscode" labelFor="setupCode" required="true" />
+					<Input id="setupCode" value="{login>/setupCode}" placeholder="ABCD-EFGH-JKLM" submit=".onSubmit" />
+					<Label text="Name" labelFor="setupDisplayName" class="sapUiTinyMarginTop" />
+					<Input id="setupDisplayName" value="{login>/displayName}" placeholder="z. B. Anna Admin" />
+				</VBox>
+				<Label text="Benutzername" labelFor="userName" required="true" class="sapUiSmallMarginTop" />
+				<Input id="userName" value="{login>/userName}" submit=".onSubmit" autocomplete="false" />
+				<Label text="Passwort" labelFor="password" required="true" class="sapUiTinyMarginTop" />
+				<Input id="password" type="Password" value="{login>/password}" submit=".onSubmit" />
+				<VBox visible="{session>/setupRequired}">
+					<Label text="Passwort wiederholen" labelFor="password2" required="true" class="sapUiTinyMarginTop" />
+					<Input id="password2" type="Password" value="{login>/password2}" submit=".onSubmit" />
+					<Text text="Mindestens 12 Zeichen – am besten eine Passphrase." class="sapUiTinyMarginTop hostingHint" />
+				</VBox>
+				<VBox visible="{login>/totpRequired}">
+					<Label text="Code aus der Authenticator-App" labelFor="totp" required="true" class="sapUiTinyMarginTop" />
+					<Input id="totp" value="{login>/code}" maxLength="7" placeholder="123456" submit=".onSubmit" />
+				</VBox>
+				<Button id="loginButton" text="{= ${session>/setupRequired} ? 'Einrichten und anmelden' : 'Anmelden'}" type="Emphasized"
+					width="100%" press=".onSubmit" class="sapUiMediumMarginTop" />
+				<Text text="EstrichONE Hosting {session>/consoleVersion}" class="sapUiSmallMarginTop hostingHint" textAlign="Center" width="100%" />
+			</VBox>
+		</FlexBox>
+	</Page>
+</mvc:View>

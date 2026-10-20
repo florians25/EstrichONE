@@ -1,0 +1,47 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<Dialog id="tenantDialog" title="{= ${form>/edit} ? 'Mandant bearbeiten' : 'Mandant anlegen'}" contentWidth="40rem" resizable="true" draggable="true">
+		<content>
+			<f:SimpleForm id="tenantForm" editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
+				<core:Title text="Firma" />
+				<Label text="Firmenname" required="true" labelFor="fCompany" />
+				<Input id="fCompany" value="{form>/companyName}" valueLiveUpdate="true" liveChange=".onCompanyChange" placeholder="Estrichbau Muster GmbH" maxLength="120" />
+				<Label text="Kundennummer" labelFor="fCustomer" />
+				<Input id="fCustomer" value="{form>/customerNumber}" maxLength="40" />
+				<Label text="Ansprechpartner" labelFor="fContact" />
+				<Input id="fContact" value="{form>/contactName}" maxLength="120" />
+				<Label text="E-Mail" required="true" labelFor="fEmail" />
+				<Input id="fEmail" type="Email" value="{form>/contactEmail}" maxLength="254" />
+				<Label text="Telefon" labelFor="fPhone" />
+				<Input id="fPhone" type="Tel" value="{form>/contactPhone}" maxLength="40" />
+				<core:Title text="Instanz" />
+				<Label text="Kürzel" required="true" labelFor="fSlug" />
+				<Input id="fSlug" value="{form>/slug}" enabled="{= !${form>/edit} }" liveChange=".onSlugChange" maxLength="32"
+					placeholder="z. B. muster" valueLiveUpdate="true" />
+				<Label text="Domain" required="true" labelFor="fDomain" />
+				<Input id="fDomain" value="{form>/domain}" placeholder="{form>/suggestedDomain}" maxLength="253" />
+				<Label text="Tarif" required="true" labelFor="fPlan" />
+				<Select id="fPlan" selectedKey="{form>/planId}" items="{form>/plans}" forceSelection="false">
+					<core:ListItem key="{form>id}" text="{form>name}" additionalText="{form>description}" />
+				</Select>
+				<Label text="Version" required="true" labelFor="fVersion" visible="{= !${form>/edit} }" />
+				<ComboBox id="fVersion" value="{form>/version}" items="{form>/versions}" visible="{= !${form>/edit} }">
+					<core:Item key="{form>}" text="{form>}" />
+				</ComboBox>
+				<Label text="Notiz" labelFor="fNotes" />
+				<TextArea id="fNotes" value="{form>/notes}" rows="3" maxLength="4000" growing="true" />
+				<Label text="" visible="{= !${form>/edit} }" />
+				<CheckBox id="fProvision" text="Sofort bereitstellen (Images laden, Instanz starten)" selected="{form>/provisionNow}" visible="{= !${form>/edit} }" />
+			</f:SimpleForm>
+			<MessageStrip class="sapUiSmallMargin" type="Information" showIcon="true" visible="{= !${form>/edit} }"
+				text="Die Instanz erhält ein eigenes Compose-Projekt estrichone-{form>/slug}, eigene Netze, zufällige Passwörter und ist über den gemeinsamen Proxy unter https://{= ${form>/domain} || ${form>/suggestedDomain} } erreichbar. Die Domain muss per DNS auf diesen Server zeigen (Wildcard-Eintrag für die Basis-Domain)." />
+			<MessageStrip class="sapUiSmallMargin" type="Warning" showIcon="true" visible="{form>/edit}"
+				text="Änderungen an Domain, Tarif oder Firmenname werden sofort auf die Instanz angewendet (kurzer Neustart der betroffenen Dienste)." />
+		</content>
+		<beginButton>
+			<Button id="tenantSave" text="{= ${form>/edit} ? 'Speichern' : 'Anlegen'}" type="Emphasized" press=".onSave" />
+		</beginButton>
+		<endButton>
+			<Button text="Abbrechen" press=".onCancel" />
+		</endButton>
+	</Dialog>
+</core:FragmentDefinition>

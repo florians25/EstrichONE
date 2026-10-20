@@ -11,6 +11,7 @@ using EstrichOne.Hosting.Operations;
 using EstrichOne.Hosting.Proxy;
 using EstrichOne.Hosting.Status;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -35,13 +36,23 @@ public static class HostingApp
         configure?.Invoke(builder);
 
         var hosting = builder.Configuration.GetSection(HostingOptions.SectionName).Get<HostingOptions>() ?? new HostingOptions();
+        // Datenbank (Passwort-Hashes, TOTP-Geheimnisse) und Sitzungsschlüssel: nur für root lesbar.
+        Directory.CreateDirectory(hosting.ConsoleDataDirectory);
+        if (!OperatingSystem.IsWindows())
+        {
+            File.SetUnixFileMode(hosting.ConsoleDataDirectory, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+        }
+
         var connection = builder.Configuration.GetConnectionString("Default");
         if (string.IsNullOrWhiteSpace(connection))
         {
-            Directory.CreateDirectory(hosting.ConsoleDataDirectory);
             connection = $"Data Source={Path.Combine(hosting.ConsoleDataDirectory, "hosting.db")}";
         }
 
+        // Schlüssel für Sitzungscookies dauerhaft speichern (Container ist schreibgeschützt; Neustart beendet keine Sitzungen).
+        builder.Services.AddDataProtection()
+            .SetApplicationName("estrichone-hosting")
+            .PersistKeysToFileSystem(new DirectoryInfo(Path.Combine(hosting.ConsoleDataDirectory, "keys")));
         builder.Services.AddDbContext<HostingDbContext>(o => o.UseSqlite(connection));
         builder.Services.AddSingleton(TimeProvider.System);
         builder.Services.AddHttpContextAccessor();
@@ -155,12 +166,19 @@ public static class HostingApp
         app.UseForwardedHeaders();
         app.UseSecurityHeaders();
         app.UseDefaultFiles();
+        var contentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();
+        contentTypes.Mappings[".properties"] = "text/plain; charset=utf-8";
         app.UseStaticFiles(new StaticFileOptions
         {
+            ContentTypeProvider = contentTypes,
             OnPrepareResponse = context =>
             {
-                var path = context.File.Name;
-                context.Context.Response.Headers.CacheControl = path.EndsWith(".html", StringComparison.Ordinal) ? "no-cache" : "public, max-age=3600";
+                // Unter /ui-<hash>/ ändert sich nie etwas (neuer Build = neuer Pfad); index.html immer neu laden.
+                var path = context.Context.Request.Path.Value ?? string.Empty;
+                context.Context.Response.Headers.CacheControl =
+                    path.StartsWith("/ui-", StringComparison.Ordinal) ? "public, max-age=31536000, immutable"
+                    : path.EndsWith(".html", StringComparison.Ordinal) || path == "/" ? "no-cache"
+                    : "public, max-age=3600";
             },
         });
         app.UseAuthentication();

@@ -5,3 +5,4 @@ ui/test-results/
 ui/playwright-report/
 ui/webapp/brand/
 src/EstrichOne.Hosting/wwwroot/
+ui/build-app/

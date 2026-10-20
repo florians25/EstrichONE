@@ -1,0 +1,22 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<Dialog id="updateAllDialog" title="Alle Instanzen aktualisieren" contentWidth="28rem" class="sapUiContentPadding">
+		<content>
+			<VBox>
+				<Text text="Jede Instanz mit älterer Version erhält einen eigenen Aktualisierungsvorgang (Images laden, Datenbank migrieren, Dienste neu starten). Instanzen mit laufendem Vorgang werden übersprungen." />
+				<Label text="Zielversion" labelFor="updateAllVersion" required="true" class="sapUiSmallMarginTop" />
+				<ComboBox id="updateAllVersion" value="{update>/version}" items="{update>/versions}" width="100%">
+					<core:Item key="{update>}" text="{update>}" />
+				</ComboBox>
+				<CheckBox text="Auch angehaltene Instanzen (Version wird beim nächsten Start aktiv)" selected="{update>/includeStopped}" />
+				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginTop"
+					text="Betroffen: {update>/affected} Instanz(en)." />
+			</VBox>
+		</content>
+		<beginButton>
+			<Button text="Aktualisieren" type="Emphasized" press=".onUpdateAllConfirm" />
+		</beginButton>
+		<endButton>
+			<Button text="Abbrechen" press=".onUpdateAllCancel" />
+		</endButton>
+	</Dialog>
+</core:FragmentDefinition>

@@ -1,0 +1,21 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<Dialog id="deleteDialog" title="Mandant endgültig löschen" contentWidth="32rem" type="Message" state="Error">
+		<content>
+			<VBox class="sapUiSmallMargin">
+				<MessageStrip type="Error" showIcon="true"
+					text="Alle Container, Netze, die Datenbank und alle Dateien von „{detail>/summary/companyName}“ werden gelöscht. Das lässt sich nicht rückgängig machen." />
+				<CheckBox id="deleteFinalBackup" text="Vorher Endsicherung erstellen und mit Schlüssel archivieren (empfohlen)" selected="{dlg>/finalBackup}" class="sapUiSmallMarginTop" />
+				<Text text="Das Archiv liegt danach unter archive/{detail>/summary/slug}-… auf dem Server." visible="{dlg>/finalBackup}" class="hostingHint" />
+				<Label text="Zur Bestätigung das Kürzel „{detail>/summary/slug}“ eingeben" labelFor="deleteSlug" required="true" class="sapUiSmallMarginTop" />
+				<Input id="deleteSlug" value="{dlg>/confirmSlug}" valueLiveUpdate="true" placeholder="{detail>/summary/slug}" />
+			</VBox>
+		</content>
+		<beginButton>
+			<Button id="deleteConfirm" text="Endgültig löschen" type="Reject" press=".onDeleteConfirm"
+				enabled="{= ${dlg>/confirmSlug} === ${detail>/summary/slug} }" />
+		</beginButton>
+		<endButton>
+			<Button text="Abbrechen" press=".onDialogCancel" />
+		</endButton>
+	</Dialog>
+</core:FragmentDefinition>

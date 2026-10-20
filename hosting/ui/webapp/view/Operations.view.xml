@@ -1,0 +1,33 @@
+<mvc:View controllerName="estrichone.hosting.controller.Operations" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc">
+	<Page id="operationsPage" title="Vorgänge">
+		<content>
+			<Table id="operationsTable" items="{ops>/items}" class="sapUiResponsiveContentPadding" growing="true" growingThreshold="50" noDataText="Noch keine Vorgänge.">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="Letzte 100 Vorgänge" level="H2" />
+						<ToolbarSpacer />
+						<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh" />
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Mandant" /></Column>
+					<Column><Text text="Vorgang" /></Column>
+					<Column width="9rem"><Text text="Ergebnis" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Angefordert" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Dauer" /></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Fehler" /></Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${ops>operation/status} === 'Failed' ? 'Error' : ${ops>operation/status} === 'Succeeded' ? 'Success' : 'Information' }">
+						<Link text="{= ${ops>companyName} || 'gelöschter Mandant' }" press=".onTenant" enabled="{= !!${ops>companyName} }" />
+						<ObjectIdentifier title="{ops>operation/label}" text="von {ops>operation/requestedBy}" />
+						<ObjectStatus text="{path: 'ops>operation/status', formatter: '.formatter.operationText'}" state="{path: 'ops>operation/status', formatter: '.formatter.operationState'}" />
+						<Text text="{path: 'ops>operation/queuedAt', formatter: '.formatter.dateTime'}" />
+						<Text text="{parts: ['ops>operation/startedAt', 'ops>operation/finishedAt'], formatter: '.duration'}" />
+						<Text text="{ops>operation/error}" maxLines="2" />
+					</ColumnListItem>
+				</items>
+			</Table>
+		</content>
+	</Page>
+</mvc:View>

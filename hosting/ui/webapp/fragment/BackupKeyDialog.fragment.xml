@@ -1,0 +1,26 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<Dialog id="backupKeyDialog" title="Sicherungsschlüssel" contentWidth="30rem" class="sapUiContentPadding">
+		<content>
+			<VBox>
+				<Text text="Der Schlüssel (RESTIC_PASSWORD) ist nötig, um Sicherungen dieser Instanz wiederherzustellen. Die Anzeige wird protokolliert." />
+				<VBox visible="{= !${dlg>/secret} }">
+					<Label text="Ihr Passwort zur Bestätigung" labelFor="backupKeyPassword" required="true" class="sapUiSmallMarginTop" />
+					<Input id="backupKeyPassword" type="Password" value="{dlg>/password}" submit=".onBackupKeyConfirm" />
+				</VBox>
+				<VBox visible="{= !!${dlg>/secret} }" class="sapUiSmallMarginTop">
+					<Label text="Schlüssel" />
+					<HBox alignItems="Center">
+						<Text id="backupKeyValue" text="{dlg>/secret}" class="hostingSecret" />
+						<Button icon="sap-icon://copy" type="Transparent" tooltip="Kopieren" press=".onCopyBackupKey" />
+					</HBox>
+				</VBox>
+			</VBox>
+		</content>
+		<beginButton>
+			<Button text="Anzeigen" type="Emphasized" press=".onBackupKeyConfirm" visible="{= !${dlg>/secret} }" />
+		</beginButton>
+		<endButton>
+			<Button text="Schließen" press=".onDialogCancel" />
+		</endButton>
+	</Dialog>
+</core:FragmentDefinition>

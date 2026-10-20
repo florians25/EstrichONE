@@ -1,0 +1,22 @@
+{
+  "name": "estrichone-hosting-ui",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "EstrichONE Hosting-Konsole – Weboberfläche (OpenUI5, TypeScript, sap_horizon, self-hosted)",
+  "scripts": {
+    "brand": "node scripts/brand.mjs",
+    "start": "npm run brand && ui5 serve --port 4300 --accept-remote-connections",
+    "build": "npm run brand && ui5 build --all --clean-dest --dest build && node scripts/package.mjs build dist",
+    "lint": "tsc --noEmit",
+    "e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@openui5/types": "1.136.22",
+    "@playwright/test": "1.56.1",
+    "@ui5/cli": "4.0.71",
+    "typescript": "~5.9.3",
+    "ui5-middleware-simpleproxy": "3.9.0",
+    "ui5-tooling-transpile": "3.13.1"
+  }
+}

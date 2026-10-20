@@ -1,0 +1,71 @@
+<mvc:View controllerName="estrichone.hosting.controller.Tenants" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core">
+	<Page id="tenantsPage" title="Mandanten">
+		<content>
+			<Table id="tenantTable" items="{path: 'tenants>/items', sorter: {path: 'companyName'}}" growing="true" growingThreshold="50"
+				sticky="ColumnHeaders,HeaderToolbar" mode="None" fixedLayout="false" popinLayout="GridSmall" class="sapUiResponsiveContentPadding"
+				noDataText="Keine Mandanten gefunden. Mit „Mandant anlegen“ die erste Instanz bereitstellen.">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title id="tenantCount" text="Mandanten ({tenants>/count})" level="H2" />
+						<ToolbarSpacer />
+						<SearchField id="tenantSearch" width="16rem" placeholder="Firma, Kürzel, Domain, Kd.-Nr. …" liveChange=".onSearch" search=".onSearch">
+							<layoutData><OverflowToolbarLayoutData minWidth="12rem" shrinkable="true" priority="NeverOverflow" /></layoutData>
+						</SearchField>
+						<Select id="tenantFilter" selectedKey="{tenants>/filter}" change=".applyFilters" tooltip="Filter">
+							<core:Item key="all" text="Alle Zustände" />
+							<core:Item key="Running" text="Aktiv" />
+							<core:Item key="Stopped" text="Angehalten" />
+							<core:Item key="Locked" text="Gesperrt" />
+							<core:Item key="problems" text="Mit Fehler oder Warnung" />
+							<core:Item key="outdated" text="Veraltete Version" />
+							<core:Item key="backup" text="Sicherung veraltet" />
+							<core:Item key="Provisioning" text="In Bereitstellung" />
+						</Select>
+						<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh" />
+						<Button id="updateAllButton" text="Alle aktualisieren …" icon="sap-icon://upload-to-cloud" press=".onUpdateAll" />
+						<Button id="createTenantButton" text="Mandant anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" />
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Mandant" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Adresse" /></Column>
+					<Column><Text text="Status" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zustand" /></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Version" /></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Tarif / Benutzer" /></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true" width="12rem"><Text text="Speicher" /></Column>
+					<Column minScreenWidth="1600px" demandPopin="true"><Text text="CPU / RAM" /></Column>
+					<Column minScreenWidth="1400px" demandPopin="true"><Text text="Sicherung" /></Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${tenants>health} === 'Unhealthy' || ${tenants>state} === 'Failed' ? 'Error' : ${tenants>health} === 'Degraded' ? 'Warning' : 'None'}">
+						<ObjectIdentifier title="{tenants>companyName}" text="{tenants>slug}{= ${tenants>customerNumber} ? ' · Kd.-Nr. ' + ${tenants>customerNumber} : ''}" />
+						<VBox>
+							<Link text="{tenants>domain}" href="{tenants>url}" target="_blank" wrapping="true" />
+							<Text text="{tenants>contactName}" visible="{= !!${tenants>contactName} }" class="hostingHint" />
+						</VBox>
+						<VBox>
+							<ObjectStatus text="{path: 'tenants>state', formatter: '.formatter.stateText'}" state="{path: 'tenants>state', formatter: '.formatter.stateState'}" icon="{path: 'tenants>state', formatter: '.formatter.stateIcon'}" />
+							<HBox visible="{= !!${tenants>openOperation} }" alignItems="Center">
+								<BusyIndicator size="0.75rem" class="sapUiTinyMarginEnd" />
+								<Text text="{tenants>openOperation/label} …" class="hostingHint" />
+							</HBox>
+						</VBox>
+						<ObjectStatus text="{path: 'tenants>health', formatter: '.formatter.healthText'}" state="{path: 'tenants>health', formatter: '.formatter.healthState'}" icon="{path: 'tenants>health', formatter: '.formatter.healthIcon'}"
+							tooltip="{= ${tenants>problems}.join('\n') }" />
+						<ObjectStatus text="{tenants>version}" state="{path: 'tenants>outdated', formatter: '.formatter.versionState'}" icon="{= ${tenants>outdated} ? 'sap-icon://upload-to-cloud' : '' }" />
+						<VBox>
+							<Text text="{tenants>planName}" />
+							<ObjectStatus text="{parts: ['tenants>activeUsers', 'tenants>maxUsers'], formatter: '.formatter.usersText'} Benutzer" state="{parts: ['tenants>activeUsers', 'tenants>maxUsers'], formatter: '.formatter.usersState'}" />
+						</VBox>
+						<ProgressIndicator percentValue="{parts: ['tenants>diskBytes', 'tenants>storageLimitBytes'], formatter: '.formatter.usagePercent'}"
+							state="{parts: ['tenants>diskBytes', 'tenants>storageLimitBytes'], formatter: '.formatter.usageState'}"
+							displayValue="{parts: ['tenants>diskBytes', 'tenants>storageLimitBytes'], formatter: '.formatStorage'}" showValue="true" />
+						<Text text="{path: 'tenants>cpuPercent', formatter: '.formatter.percent'} · {path: 'tenants>memoryBytes', formatter: '.formatter.bytes'}" wrapping="false" />
+						<ObjectStatus text="{parts: ['tenants>backupHealthy', 'tenants>backupLastSuccess'], formatter: '.formatter.backupText'}" state="{path: 'tenants>backupHealthy', formatter: '.formatter.backupState'}" />
+					</ColumnListItem>
+				</items>
+			</Table>
+		</content>
+	</Page>
+</mvc:View>

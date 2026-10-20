@@ -1,0 +1,122 @@
+<mvc:View controllerName="estrichone.hosting.controller.Dashboard" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core"
+	xmlns:l="sap.ui.layout" xmlns:f="sap.ui.layout.form"
+	xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1">
+	<Page id="dashboardPage" title="Übersicht" showNavButton="false">
+		<headerContent>
+			<Text text="Stand: {path: 'dashboard>/loadedAt', formatter: '.formatter.ago'}" class="hostingHint" />
+			<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh" />
+		</headerContent>
+		<content>
+			<VBox class="sapUiResponsiveContentPadding">
+				<MessageStrip type="Warning" showIcon="true" visible="{dashboard>/system/simulation}" class="sapUiSmallMarginBottom"
+					text="Simulation aktiv (Hosting__Docker=fake): Es werden keine echten Container gesteuert." />
+				<MessageStrip type="Error" showIcon="true" visible="{= !!${dashboard>/system/proxyError} }" class="sapUiSmallMarginBottom"
+					text="Reverse Proxy: {dashboard>/system/proxyError}" />
+				<MessageStrip type="Error" showIcon="true" visible="{= ${dashboard>/system/docker/reachable} === false }" class="sapUiSmallMarginBottom"
+					text="Docker ist nicht erreichbar: {dashboard>/system/docker/error}" />
+				<FlexBox id="kpiTiles" class="hostingTiles sapUiSmallMarginBottom" wrap="Wrap">
+					<GenericTile id="tileTotal" header="Mandanten" subheader="gesamt" press=".onTile" frameType="OneByOne" app:filter="all">
+						<TileContent footer="{dashboard>/tenants/provisioning} in Bereitstellung">
+							<NumericContent value="{dashboard>/tenants/total}" icon="sap-icon://building" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+					<GenericTile id="tileActive" header="Aktiv" subheader="laufende Instanzen" press=".onTile" app:filter="Running">
+						<TileContent footer="{dashboard>/health/healthy} ohne Befund">
+							<NumericContent value="{dashboard>/tenants/running}" valueColor="Good" icon="sap-icon://status-positive" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+					<GenericTile id="tileLocked" header="Gesperrt" subheader="Wartungsseite aktiv" press=".onTile" app:filter="Locked">
+						<TileContent footer="{dashboard>/tenants/stopped} angehalten">
+							<NumericContent value="{dashboard>/tenants/locked}" valueColor="{= ${dashboard>/tenants/locked} > 0 ? 'Critical' : 'Neutral'}" icon="sap-icon://locked" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+					<GenericTile id="tileErrors" header="Fehler" subheader="gestört oder fehlgeschlagen" press=".onTile" app:filter="problems">
+						<TileContent footer="{dashboard>/health/degraded} mit Warnung">
+							<NumericContent value="{= ${dashboard>/health/unhealthy} + ${dashboard>/tenants/failed} }"
+								valueColor="{= ${dashboard>/health/unhealthy} + ${dashboard>/tenants/failed} > 0 ? 'Error' : 'Good'}" icon="sap-icon://message-error" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+					<GenericTile id="tileOutdated" header="Veraltete Versionen" subheader="Ziel {dashboard>/defaultVersion}" press=".onTile" app:filter="outdated">
+						<TileContent footer="Alle aktualisieren in „Mandanten“">
+							<NumericContent value="{dashboard>/outdated}" valueColor="{= ${dashboard>/outdated} > 0 ? 'Critical' : 'Good'}" icon="sap-icon://upload-to-cloud" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+					<GenericTile id="tileStorage" header="Speicher" subheader="Daten aller Instanzen" press=".onTile" app:filter="all">
+						<TileContent footer="frei: {path: 'dashboard>/system/diskFreeBytes', formatter: '.formatter.bytes'}">
+							<NumericContent value="{path: 'dashboard>/storageBytes', formatter: '.formatter.gigabytes'}" scale="GB" truncateValueTo="7" icon="sap-icon://database" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+					<GenericTile id="tileUsers" header="Aktive Benutzer" subheader="über alle Instanzen" press=".onTile" app:filter="all">
+						<TileContent footer="{dashboard>/setupPending} Ersteinrichtung offen">
+							<NumericContent value="{dashboard>/activeUsers}" icon="sap-icon://group" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+					<GenericTile id="tileBackups" header="Sicherungen" subheader="älter als 36 Stunden" press=".onTile" app:filter="backup">
+						<TileContent footer="täglich, nachts gestaffelt">
+							<NumericContent value="{dashboard>/backupsStale}" valueColor="{= ${dashboard>/backupsStale} > 0 ? 'Critical' : 'Good'}" icon="sap-icon://save" withMargin="false" />
+						</TileContent>
+					</GenericTile>
+				</FlexBox>
+				<l:Grid defaultSpan="XL6 L6 M12 S12" hSpacing="1" vSpacing="1">
+					<Panel headerText="Handlungsbedarf" class="sapUiNoContentPadding">
+						<Table id="problemTable" items="{dashboard>/problems}" noDataText="Alles in Ordnung – keine gestörten Instanzen." mode="None">
+							<columns>
+								<Column><Text text="Mandant" /></Column>
+								<Column width="9rem"><Text text="Zustand" /></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Befund" /></Column>
+							</columns>
+							<items>
+								<ColumnListItem type="Navigation" press=".onProblem">
+									<ObjectIdentifier title="{dashboard>companyName}" text="{dashboard>slug}" />
+									<ObjectStatus text="{path: 'dashboard>health', formatter: '.formatter.healthText'}" state="{path: 'dashboard>health', formatter: '.formatter.healthState'}" icon="{path: 'dashboard>health', formatter: '.formatter.healthIcon'}" />
+									<Text text="{dashboard>problem}" maxLines="3" />
+								</ColumnListItem>
+							</items>
+						</Table>
+					</Panel>
+					<Panel headerText="Server">
+						<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1">
+							<Label text="Docker" />
+							<Text text="{dashboard>/system/docker/serverVersion} · Compose {dashboard>/system/docker/composeVersion}" />
+							<Label text="System" />
+							<Text text="{dashboard>/system/docker/operatingSystem} · {dashboard>/system/docker/cpus} CPU · {path: 'dashboard>/system/docker/memoryBytes', formatter: '.formatter.bytes'} RAM" />
+							<Label text="Container" />
+							<Text text="{dashboard>/system/docker/containersRunning} laufend von {dashboard>/system/docker/containers}" />
+							<Label text="Last (Instanzen)" />
+							<Text text="CPU {path: 'dashboard>/cpuPercent', formatter: '.formatter.percent'} · RAM {path: 'dashboard>/memoryBytes', formatter: '.formatter.bytes'}" />
+							<Label text="Datenträger" />
+							<ProgressIndicator percentValue="{parts: [{path: 'dashboard>/diskUsedBytes'}, {path: 'dashboard>/system/diskTotalBytes'}], formatter: '.formatter.usagePercent'}"
+								state="{parts: [{path: 'dashboard>/diskUsedBytes'}, {path: 'dashboard>/system/diskTotalBytes'}], formatter: '.formatter.usageState'}"
+								displayValue="{path: 'dashboard>/system/diskFreeBytes', formatter: '.formatter.bytes'} frei" showValue="true" />
+							<Label text="Reverse Proxy" />
+							<Text text="{= ${dashboard>/system/proxyMode} === 'caddy' ? 'Mitgelieferter Caddy' : 'Externer Proxy'}{= ${dashboard>/system/proxyReloadedAt} ? ' · zuletzt neu geladen ' : ''}{path: 'dashboard>/system/proxyReloadedAt', formatter: '.formatter.ago'}" />
+							<Label text="Konsole" />
+							<Text text="Version {dashboard>/system/consoleVersion} · {dashboard>/runningOperations} Vorgänge offen" />
+						</f:SimpleForm>
+					</Panel>
+					<Panel headerText="Versionen im Einsatz">
+						<List items="{dashboard>/versions}" noDataText="Keine Mandanten.">
+							<StandardListItem title="{dashboard>version}" info="{dashboard>count} Instanz(en)"
+								infoState="{= ${dashboard>version} === ${dashboard>/defaultVersion} ? 'Success' : 'Warning'}" icon="sap-icon://tag" />
+						</List>
+					</Panel>
+					<Panel headerText="Letzte Ereignisse">
+						<headerToolbar>
+							<Toolbar>
+								<Title text="Letzte Ereignisse" level="H3" />
+								<ToolbarSpacer />
+								<Link text="Alle anzeigen" press=".onAudit" />
+							</Toolbar>
+						</headerToolbar>
+						<List items="{dashboard>/recentEvents}" noDataText="Noch keine Ereignisse.">
+							<StandardListItem title="{dashboard>action}{= ${dashboard>tenantSlug} ? ' · ' + ${dashboard>tenantSlug} : ''}"
+								description="{dashboard>actor} · {path: 'dashboard>at', formatter: '.formatter.dateTime'}"
+								icon="{= ${dashboard>success} ? 'sap-icon://accept' : 'sap-icon://error'}"
+								highlight="{= ${dashboard>success} ? 'None' : 'Error'}" />
+						</List>
+					</Panel>
+				</l:Grid>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

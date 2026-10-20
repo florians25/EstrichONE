@@ -1,0 +1,125 @@
+<mvc:View controllerName="estrichone.hosting.controller.Settings" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<Page id="settingsPage" title="Einstellungen">
+		<content>
+			<IconTabBar id="settingsTabs" expandable="false" class="sapUiResponsiveContentPadding" stretchContentHeight="false">
+				<items>
+					<IconTabFilter key="appearance" text="Darstellung" icon="sap-icon://palette">
+						<VBox>
+							<Text text="Wählen Sie ein Theme oder folgen Sie der Systemeinstellung (hell, dunkel, hoher Kontrast). Die Änderung wirkt sofort und wird für Ihr Konto gespeichert." />
+							<HBox alignItems="Center" class="sapUiSmallMarginTop">
+								<Switch id="settingsAuto" state="{settings>/themeAuto}" change=".onThemeAuto" customTextOn="Ja" customTextOff="Nein" />
+								<Label text="Systemeinstellung folgen (aktuell: {ui>/theme})" labelFor="settingsAuto" class="sapUiSmallMarginBegin" />
+							</HBox>
+							<Select id="settingsTheme" items="{ui>/themes}" selectedKey="{settings>/themeSelected}" change=".onThemeChange" enabled="{= !${settings>/themeAuto} }"
+								width="22rem" class="sapUiSmallMarginTop">
+								<core:ListItem key="{ui>id}" text="{ui>name}" additionalText="{ui>group}" />
+							</Select>
+						</VBox>
+					</IconTabFilter>
+					<IconTabFilter key="account" text="Konto und Sicherheit" icon="sap-icon://shield">
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" title="Passwort ändern">
+							<Label text="Aktuelles Passwort" labelFor="pwCurrent" required="true" />
+							<Input id="pwCurrent" type="Password" value="{settings>/currentPassword}" />
+							<Label text="Neues Passwort (mind. 12 Zeichen)" labelFor="pwNew" required="true" />
+							<Input id="pwNew" type="Password" value="{settings>/newPassword}" />
+							<Label text="Wiederholen" labelFor="pwRepeat" required="true" />
+							<Input id="pwRepeat" type="Password" value="{settings>/repeatPassword}" />
+							<Label text="" />
+							<Button text="Passwort ändern" type="Emphasized" press=".onChangePassword" width="12rem" />
+						</f:SimpleForm>
+						<Panel headerText="Zwei-Faktor-Anmeldung (TOTP)" class="sapUiSmallMarginTop">
+							<VBox>
+								<ObjectStatus text="{= ${session>/user/totpEnabled} ? 'Eingeschaltet' : 'Ausgeschaltet' }" state="{= ${session>/user/totpEnabled} ? 'Success' : 'Warning' }"
+									icon="{= ${session>/user/totpEnabled} ? 'sap-icon://locked' : 'sap-icon://unlocked' }" class="sapMObjectStatusLarge" />
+								<Text text="Zusätzlich zum Passwort fragt die Anmeldung einen 6-stelligen Code aus einer Authenticator-App (z. B. Microsoft Authenticator, Google Authenticator, 2FAS) ab." class="sapUiSmallMarginTop" />
+								<Button id="totpBegin" text="Einrichten …" icon="sap-icon://iphone" press=".onTotpBegin" visible="{= !${session>/user/totpEnabled} &amp;&amp; !${settings>/totp} }" class="sapUiSmallMarginTop" width="12rem" />
+								<VBox visible="{= !!${settings>/totp} }" class="sapUiSmallMarginTop">
+									<Text text="1. QR-Code mit der Authenticator-App scannen oder den Schlüssel manuell eingeben:" />
+									<HBox alignItems="Center" class="sapUiSmallMarginTop">
+										<Image src="{settings>/totp/qr}" width="12rem" height="12rem" class="hostingQr" alt="QR-Code für die Authenticator-App" />
+										<VBox class="sapUiMediumMarginBegin">
+											<Label text="Schlüssel" />
+											<Text id="totpSecret" text="{settings>/totp/secret}" class="hostingSecret" />
+										</VBox>
+									</HBox>
+									<Label text="2. Angezeigten Code eingeben" labelFor="totpCode" class="sapUiSmallMarginTop" />
+									<HBox>
+										<Input id="totpCode" value="{settings>/totpCode}" width="10rem" placeholder="123456" submit=".onTotpEnable" />
+										<Button text="Bestätigen und einschalten" type="Emphasized" press=".onTotpEnable" class="sapUiSmallMarginBegin" />
+									</HBox>
+								</VBox>
+								<HBox visible="{session>/user/totpEnabled}" alignItems="Center" class="sapUiSmallMarginTop">
+									<Input type="Password" value="{settings>/disablePassword}" placeholder="Passwort zur Bestätigung" width="16rem" />
+									<Button text="Ausschalten" type="Reject" press=".onTotpDisable" class="sapUiSmallMarginBegin" />
+								</HBox>
+							</VBox>
+						</Panel>
+					</IconTabFilter>
+					<IconTabFilter key="admins" text="Administratoren" icon="sap-icon://group">
+						<Table id="adminTable" items="{settings>/admins}">
+							<headerToolbar>
+								<OverflowToolbar>
+									<Title text="Administratoren der Konsole" level="H3" />
+									<ToolbarSpacer />
+									<Button text="Administrator anlegen" icon="sap-icon://add-employee" press=".onAddAdmin" />
+								</OverflowToolbar>
+							</headerToolbar>
+							<columns>
+								<Column><Text text="Benutzer" /></Column>
+								<Column><Text text="2FA" /></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Letzte Anmeldung" /></Column>
+								<Column hAlign="End" width="8rem"><Text text="" /></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<ObjectIdentifier title="{settings>userName}" text="{settings>displayName}" />
+									<ObjectStatus text="{= ${settings>totpEnabled} ? 'an' : 'aus' }" state="{= ${settings>totpEnabled} ? 'Success' : 'Warning' }" />
+									<Text text="{path: 'settings>lastLoginAt', formatter: '.formatter.dateTime'}{= ${settings>locked} ? ' · gesperrt' : '' }" />
+									<HBox justifyContent="End">
+										<Button icon="sap-icon://unlocked" type="Transparent" tooltip="Sperre aufheben" press=".onUnlockAdmin" visible="{settings>locked}" />
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteAdmin" enabled="{= ${settings>id} !== ${session>/user/id} }" />
+									</HBox>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+					<IconTabFilter key="system" text="System" icon="sap-icon://it-system">
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="2" columnsXL="2" title="Bereitstellung">
+							<Label text="Standardversion neuer Mandanten" labelFor="sysVersion" />
+							<HBox>
+								<ComboBox id="sysVersion" value="{settings>/system/defaultVersion}" items="{settings>/versions}" width="14rem">
+									<core:Item key="{settings>}" text="{settings>}" />
+								</ComboBox>
+								<Button text="Speichern" press=".onSaveSystem" class="sapUiSmallMarginBegin" />
+							</HBox>
+							<Label text="Basis-Domain" /><Text text="{settings>/system/baseDomain} (Mandanten: kürzel.{settings>/system/baseDomain})" />
+							<Label text="Konsole" /><Text text="{settings>/system/consoleDomain}" />
+							<Label text="Reverse Proxy" /><Text text="{= ${settings>/system/proxy} === 'caddy' ? 'Mitgelieferter Caddy (' + ${settings>/system/proxyContainer} + ')' : 'Extern: ' + ${settings>/system/proxyContainer} }" />
+							<Label text="Zertifikate" /><Text text="{= ${settings>/system/tls} === 'acme' ? 'Let’s Encrypt (automatisch)' : ${settings>/system/tls} === 'internal' ? 'Eigene Zertifizierungsstelle (Test)' : 'Aus (nur HTTP hinter weiterem Proxy)' }" />
+							<Label text="Registry" /><Text text="{settings>/system/registry}" />
+							<Label text="Datenverzeichnis" /><Text text="{settings>/system/root}" />
+							<Label text="Sicherungen" /><Text text="{= ${settings>/system/backupRoot} || 'im Instanzverzeichnis (backup-repository)' }" />
+							<Label text="Konsolenversion" /><Text text="{settings>/system/consoleVersion}{= ${settings>/system/simulation} ? ' · Simulation' : '' }" />
+						</f:SimpleForm>
+					</IconTabFilter>
+				</items>
+			</IconTabBar>
+		</content>
+		<dependents>
+			<Dialog id="adminDialog" title="Administrator anlegen" contentWidth="26rem">
+				<content>
+					<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1">
+						<Label text="Benutzername" required="true" labelFor="aUser" />
+						<Input id="aUser" value="{settings>/newAdmin/userName}" />
+						<Label text="Name" labelFor="aName" />
+						<Input id="aName" value="{settings>/newAdmin/displayName}" />
+						<Label text="Startpasswort (mind. 12 Zeichen)" required="true" labelFor="aPassword" />
+						<Input id="aPassword" type="Password" value="{settings>/newAdmin/password}" />
+					</f:SimpleForm>
+				</content>
+				<beginButton><Button text="Anlegen" type="Emphasized" press=".onAdminSave" /></beginButton>
+				<endButton><Button text="Abbrechen" press=".onAdminCancel" /></endButton>
+			</Dialog>
+		</dependents>
+	</Page>
+</mvc:View>

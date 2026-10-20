@@ -1,0 +1,8 @@
+/* Ladebildschirm vor dem Start von UI5 – nur das eigene Logo, keine Fremdmarken. */
+html, body { margin: 0; height: 100%; }
+.splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 24px;
+  background: #f5f6f7; z-index: 10; }
+@media (prefers-color-scheme: dark) { .splash { background: #12171c; } }
+.splash-bar { width: 160px; height: 3px; border-radius: 2px; background: rgba(11, 45, 91, .15); overflow: hidden; position: relative; }
+.splash-bar::after { content: ""; position: absolute; inset: 0; width: 40%; background: #2f6db5; animation: splash 1.1s ease-in-out infinite; }
+@keyframes splash { from { transform: translateX(-100%); } to { transform: translateX(250%); } }

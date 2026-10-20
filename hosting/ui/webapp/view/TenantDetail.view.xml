@@ -1,0 +1,301 @@
+<mvc:View controllerName="estrichone.hosting.controller.TenantDetail" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core"
+	xmlns:uxap="sap.uxap" xmlns:f="sap.ui.layout.form" xmlns:l="sap.ui.layout"
+	xmlns:app="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1">
+	<Page id="tenantPage" showHeader="false">
+		<uxap:ObjectPageLayout id="tenantObjectPage" showFooter="false" upperCaseAnchorBar="false" useIconTabBar="false"
+			headerContentPinnable="true" toggleHeaderOnTitleClick="true">
+			<uxap:headerTitle>
+				<uxap:ObjectPageDynamicHeaderTitle>
+					<uxap:breadcrumbs>
+						<Breadcrumbs currentLocationText="{detail>/summary/companyName}">
+							<Link text="Mandanten" press=".onBack" />
+						</Breadcrumbs>
+					</uxap:breadcrumbs>
+					<uxap:expandedHeading>
+						<Title id="tenantTitle" text="{detail>/summary/companyName}" wrapping="true" />
+					</uxap:expandedHeading>
+					<uxap:snappedHeading>
+						<Title text="{detail>/summary/companyName}" />
+					</uxap:snappedHeading>
+					<uxap:expandedContent>
+						<Text text="{detail>/summary/slug} · {detail>/summary/domain}" />
+					</uxap:expandedContent>
+					<uxap:snappedContent>
+						<Text text="{detail>/summary/slug}" />
+					</uxap:snappedContent>
+					<uxap:actions>
+						<Button id="actStart" text="Starten" icon="sap-icon://media-play" press=".onAction" visible="{= ${detail>/summary/state} === 'Stopped' || ${detail>/summary/state} === 'Failed' }" enabled="{= !${detail>/summary/openOperation} }" app:action="start" />
+						<Button id="actProvision" text="Erneut bereitstellen" icon="sap-icon://synchronize" press=".onAction" visible="{= ${detail>/summary/state} === 'Provisioning' || ${detail>/summary/state} === 'Failed' }" enabled="{= !${detail>/summary/openOperation} }" app:action="provision" />
+						<Button id="actStop" text="Stoppen" icon="sap-icon://stop" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="stop" />
+						<Button id="actRestart" text="Neu starten" icon="sap-icon://restart" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="restart" />
+						<Button id="actUpdate" text="Aktualisieren …" icon="sap-icon://upload-to-cloud" press=".onUpdate" type="{= ${detail>/summary/outdated} ? 'Emphasized' : 'Default' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" />
+						<Button id="actLock" text="Sperren …" icon="sap-icon://locked" press=".onLock" visible="{= ${detail>/summary/state} !== 'Locked' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" />
+						<Button id="actUnlock" text="Entsperren" icon="sap-icon://unlocked" press=".onAction" visible="{= ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="unlock" />
+						<Button id="actEdit" text="Bearbeiten" icon="sap-icon://edit" press=".onEdit" />
+						<Button id="actDelete" text="Löschen …" icon="sap-icon://delete" type="Reject" press=".onDelete" enabled="{= !${detail>/summary/openOperation} }" />
+					</uxap:actions>
+				</uxap:ObjectPageDynamicHeaderTitle>
+			</uxap:headerTitle>
+			<uxap:headerContent>
+				<FlexBox wrap="Wrap" class="hostingTiles">
+					<VBox class="sapUiMediumMarginEnd">
+						<Label text="Status" />
+						<ObjectStatus id="detailState" text="{path: 'detail>/summary/state', formatter: '.formatter.stateText'}" state="{path: 'detail>/summary/state', formatter: '.formatter.stateState'}" icon="{path: 'detail>/summary/state', formatter: '.formatter.stateIcon'}" class="sapMObjectStatusLarge" />
+					</VBox>
+					<VBox class="sapUiMediumMarginEnd">
+						<Label text="Zustand" />
+						<ObjectStatus id="detailHealth" text="{path: 'detail>/summary/health', formatter: '.formatter.healthText'}" state="{path: 'detail>/summary/health', formatter: '.formatter.healthState'}" icon="{path: 'detail>/summary/health', formatter: '.formatter.healthIcon'}" class="sapMObjectStatusLarge" />
+					</VBox>
+					<VBox class="sapUiMediumMarginEnd">
+						<Label text="Version" />
+						<ObjectStatus text="{detail>/summary/version}{= ${detail>/status/runningVersion} &amp;&amp; ${detail>/status/runningVersion} !== ${detail>/summary/version} ? ' (läuft: ' + ${detail>/status/runningVersion} + ')' : ''}" state="{path: 'detail>/summary/outdated', formatter: '.formatter.versionState'}" class="sapMObjectStatusLarge" />
+					</VBox>
+					<VBox class="sapUiMediumMarginEnd">
+						<Label text="Tarif" />
+						<Text text="{detail>/plan/name}" />
+					</VBox>
+					<VBox class="sapUiMediumMarginEnd">
+						<Label text="Adresse" />
+						<Link text="{detail>/summary/url}" href="{detail>/summary/url}" target="_blank" />
+					</VBox>
+					<VBox class="sapUiMediumMarginEnd" visible="{= !!${detail>/summary/openOperation} }">
+						<Label text="Laufender Vorgang" />
+						<HBox alignItems="Center">
+							<BusyIndicator size="1rem" class="sapUiTinyMarginEnd" />
+							<Link text="{detail>/summary/openOperation/label} ({path: 'detail>/summary/openOperation/status', formatter: '.formatter.operationText'})" press=".onOpenOperationLog" />
+						</HBox>
+					</VBox>
+				</FlexBox>
+			</uxap:headerContent>
+			<uxap:sections>
+				<uxap:ObjectPageSection id="secOverview" title="Übersicht" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<VBox>
+								<MessageStrip type="Warning" showIcon="true" visible="{= ${detail>/summary/state} === 'Locked' }" class="sapUiSmallMarginBottom"
+									text="Gesperrt seit {path: 'detail>/lockedAt', formatter: '.formatter.dateTime'}: {detail>/summary/lockReason}. Besucher sehen die Wartungsseite." />
+								<MessageStrip type="Error" showIcon="true" visible="{= !!${detail>/summary/lastError} }" class="sapUiSmallMarginBottom" text="{detail>/summary/lastError}" />
+								<MessageStrip type="Warning" showIcon="true" visible="{= ${detail>/summary/problems}.length > 0 }" class="sapUiSmallMarginBottom"
+									text="{= ${detail>/summary/problems}.join(' · ') }" />
+								<Panel id="setupPanel" visible="{= ${detail>/status/setupRequired} === true }" class="sapUiSmallMarginBottom" headerText="Ersteinrichtung der Instanz ausstehend">
+									<VBox>
+										<Text text="Der Kunde öffnet {detail>/summary/url}, wählt „Jetzt einrichten“ und gibt diesen Code ein (24 Stunden gültig, einmalig; ein Neustart der Instanz erzeugt einen neuen):" />
+										<HBox alignItems="Center" class="sapUiSmallMarginTop">
+											<Text id="setupCodeText" text="{= ${detail>/status/setupCode} || 'Code wird ermittelt …' }" class="hostingSetupCode" />
+											<Button icon="sap-icon://copy" tooltip="Code kopieren" type="Transparent" press=".onCopySetupCode" class="sapUiSmallMarginBegin" enabled="{= !!${detail>/status/setupCode} }" />
+										</HBox>
+									</VBox>
+								</Panel>
+								<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="3" title="Stammdaten">
+									<Label text="Firmenname" /><Text text="{detail>/summary/companyName}" />
+									<Label text="Kundennummer" /><Text text="{= ${detail>/summary/customerNumber} || '–' }" />
+									<Label text="Ansprechpartner" /><Text text="{= ${detail>/summary/contactName} || '–' }" />
+									<Label text="E-Mail" /><Link text="{detail>/summary/contactEmail}" href="mailto:{detail>/summary/contactEmail}" />
+									<Label text="Telefon" /><Text text="{= ${detail>/contactPhone} || '–' }" />
+									<Label text="Kürzel" /><Text text="{detail>/summary/slug}" />
+									<Label text="Domain" /><Text text="{detail>/summary/domain}" />
+									<Label text="Angelegt" /><Text text="{path: 'detail>/summary/createdAt', formatter: '.formatter.dateTime'}" />
+									<Label text="Notiz" /><Text text="{= ${detail>/notes} || '–' }" />
+								</f:SimpleForm>
+							</VBox>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secOperation" title="Betrieb" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<VBox>
+								<Toolbar style="Clear">
+									<Title text="Container" level="H3" />
+									<ToolbarSpacer />
+									<Text text="erhoben {path: 'detail>/status/collectedAt', formatter: '.formatter.ago'}" class="hostingHint" />
+									<Button id="refreshStatus" icon="sap-icon://refresh" text="Jetzt prüfen" press=".onRefreshStatus" />
+								</Toolbar>
+								<Table id="containerTable" items="{detail>/status/containers}" noDataText="Keine Container – Instanz nicht bereitgestellt oder gelöscht.">
+									<columns>
+										<Column width="8rem"><Text text="Dienst" /></Column>
+										<Column width="10rem"><Text text="Zustand" /></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Status" /></Column>
+										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Image" /></Column>
+										<Column hAlign="End" width="6rem"><Text text="CPU" /></Column>
+										<Column hAlign="End" width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="RAM" /></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<Text text="{detail>service}" />
+											<ObjectStatus text="{parts: ['detail>state', 'detail>health'], formatter: '.formatter.containerText'}" state="{parts: ['detail>state', 'detail>health'], formatter: '.formatter.containerState'}" />
+											<Text text="{detail>status}" />
+											<Text text="{detail>image}" wrapping="true" />
+											<Text text="{path: 'detail>cpuPercent', formatter: '.formatter.percent'}" />
+											<Text text="{parts: ['detail>memoryBytes', 'detail>memoryLimitBytes'], formatter: '.formatMemory'}" />
+										</ColumnListItem>
+									</items>
+								</Table>
+								<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="2" title="Erreichbarkeit" class="sapUiSmallMarginTop">
+									<Label text="/health/ready" />
+									<ObjectStatus text="{= ${detail>/status/probe} ? (${detail>/status/probe/reachable} ? 'HTTP ' + ${detail>/status/probe/healthStatusCode} + ' ' + (${detail>/status/probe/healthText} || '') : 'nicht erreichbar') : '–' }"
+										state="{= ${detail>/status/probe/healthStatusCode} === 200 ? 'Success' : ${detail>/status/probe} ? 'Error' : 'None' }" />
+									<Label text="Serverversion" /><Text text="{= ${detail>/status/probe/serverVersion} || '–' }" />
+									<Label text="Servername" /><Text text="{= ${detail>/status/probe/serverName} || '–' }" />
+									<Label text="Ersteinrichtung" /><Text text="{= ${detail>/status/setupRequired} === true ? 'ausstehend' : ${detail>/status/setupRequired} === false ? 'abgeschlossen' : '–' }" />
+									<Label text="Fehler" /><Text text="{= ${detail>/status/probe/error} || ${detail>/status/error} || '–' }" />
+								</f:SimpleForm>
+							</VBox>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secResources" title="Ressourcen" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<l:Grid defaultSpan="XL3 L3 M6 S12">
+								<VBox>
+									<Label text="Speicher (Daten + Sicherungen)" />
+									<ProgressIndicator percentValue="{parts: ['detail>/status/diskBytes', 'detail>/summary/storageLimitBytes'], formatter: '.formatter.usagePercent'}"
+										state="{parts: ['detail>/status/diskBytes', 'detail>/summary/storageLimitBytes'], formatter: '.formatter.usageState'}"
+										displayValue="{parts: ['detail>/status/diskBytes', 'detail>/summary/storageLimitBytes'], formatter: '.formatStorage'}" showValue="true" />
+									<Text text="gemessen {path: 'detail>/status/diskMeasuredAt', formatter: '.formatter.ago'}" class="hostingHint" />
+								</VBox>
+								<VBox>
+									<Label text="Aktive Benutzer" />
+									<ObjectStatus text="{parts: ['detail>/status/activeUsers', 'detail>/plan/maxUsers'], formatter: '.formatter.usersText'}" state="{parts: ['detail>/status/activeUsers', 'detail>/plan/maxUsers'], formatter: '.formatter.usersState'}" class="sapMObjectStatusLarge" />
+								</VBox>
+								<VBox>
+									<Label text="CPU (alle Container)" />
+									<ObjectStatus text="{path: 'detail>/status/cpuPercent', formatter: '.formatter.percent'}" class="sapMObjectStatusLarge" />
+									<Text text="Grenze API: {= ${detail>/plan/cpuLimit} ? ${detail>/plan/cpuLimit} + ' Kerne' : 'keine' }" class="hostingHint" />
+								</VBox>
+								<VBox>
+									<Label text="Arbeitsspeicher (alle Container)" />
+									<ObjectStatus text="{path: 'detail>/status/memoryBytes', formatter: '.formatter.bytes'}" class="sapMObjectStatusLarge" />
+									<Text text="Grenze API: {= ${detail>/plan/memoryMb} ? ${detail>/plan/memoryMb} + ' MB' : 'keine' }" class="hostingHint" />
+								</VBox>
+							</l:Grid>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secBackup" title="Sicherung" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<VBox>
+								<MessageStrip type="{= ${detail>/status/backup/healthy} ? 'Success' : 'Warning' }" showIcon="true" text="{= ${detail>/status/backup/summary} || 'Noch kein Sicherungsstatus.' }" />
+								<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="2">
+									<Label text="Tägliche Sicherung" /><Text text="{= ${detail>/backupTime} ? ${detail>/backupTime} + ' Uhr (Europe/Berlin), sonntags zusätzlich Prüfung und Wiederherstellungstest' : '–' }" />
+									<Label text="Letzter Lauf" />
+									<ObjectStatus text="{path: 'detail>/status/backup/lastRun/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastRun/at', formatter: '.formatter.dateTime'} · {detail>/status/backup/lastRun/message}" state="{path: 'detail>/status/backup/lastRun/status', formatter: '.formatter.backupEntryState'}" />
+									<Label text="Letzte erfolgreiche" /><Text text="{path: 'detail>/status/backup/lastSuccess/at', formatter: '.formatter.dateTime'}" />
+									<Label text="Integritätsprüfung" />
+									<ObjectStatus text="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastCheck/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryState'}" />
+									<Label text="Wiederherstellungstest" />
+									<ObjectStatus text="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastRestoreTest/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryState'}" />
+								</f:SimpleForm>
+								<HBox>
+									<Button id="actBackup" text="Jetzt sichern" icon="sap-icon://save" press=".onAction" app:action="backup"
+										enabled="{= !${detail>/summary/openOperation} &amp;&amp; (${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Locked' || ${detail>/summary/state} === 'Failed') }" class="sapUiSmallMarginEnd" />
+									<Button id="showBackupKey" text="Sicherungsschlüssel anzeigen …" icon="sap-icon://key" press=".onBackupKey" />
+								</HBox>
+							</VBox>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secLogs" title="Protokolle" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<VBox>
+								<OverflowToolbar style="Clear">
+									<SegmentedButton id="logService" selectedKey="{logs>/service}" selectionChange=".onLoadLogs">
+										<items>
+											<SegmentedButtonItem key="api" text="API" />
+											<SegmentedButtonItem key="caddy" text="Web" />
+											<SegmentedButtonItem key="postgres" text="Datenbank" />
+											<SegmentedButtonItem key="backup" text="Sicherung" />
+											<SegmentedButtonItem key="migrate" text="Migration" />
+										</items>
+									</SegmentedButton>
+									<Select selectedKey="{logs>/level}" change=".onLoadLogs" tooltip="Stufe">
+										<core:Item key="all" text="Alle Zeilen" />
+										<core:Item key="warning" text="Warnungen und Fehler" />
+										<core:Item key="error" text="Nur Fehler" />
+									</Select>
+									<Select selectedKey="{logs>/lines}" change=".onLoadLogs" tooltip="Zeilen">
+										<core:Item key="100" text="Letzte 100" />
+										<core:Item key="200" text="Letzte 200" />
+										<core:Item key="500" text="Letzte 500" />
+										<core:Item key="2000" text="Letzte 2000" />
+										<core:Item key="5000" text="Letzte 5000" />
+									</Select>
+									<SearchField id="logFilter" value="{logs>/filter}" search=".onLoadLogs" width="14rem" placeholder="Text filtern …" />
+									<ToolbarSpacer />
+									<Text text="{logs>/count} Zeilen" class="hostingHint" />
+									<Switch state="{logs>/follow}" change=".onFollow" customTextOn="Live" customTextOff="Live" tooltip="Alle 5 Sekunden aktualisieren" />
+									<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onLoadLogs" />
+									<Button icon="sap-icon://download" tooltip="Als Textdatei speichern" press=".onDownloadLogs" />
+								</OverflowToolbar>
+								<TextArea id="logOutput" value="{logs>/text}" editable="false" width="100%" rows="24" wrapping="Off" class="hostingMono" />
+							</VBox>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secOperations" title="Vorgänge" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<Table id="operationTable" items="{detail>/operations}" noDataText="Noch keine Vorgänge.">
+								<columns>
+									<Column><Text text="Vorgang" /></Column>
+									<Column width="9rem"><Text text="Ergebnis" /></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Angefordert" /></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Abgeschlossen" /></Column>
+									<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Fehler" /></Column>
+								</columns>
+								<items>
+									<ColumnListItem type="Navigation" press=".onOperation">
+										<ObjectIdentifier title="{detail>label}" text="von {detail>requestedBy}" />
+										<ObjectStatus text="{path: 'detail>status', formatter: '.formatter.operationText'}" state="{path: 'detail>status', formatter: '.formatter.operationState'}" />
+										<Text text="{path: 'detail>queuedAt', formatter: '.formatter.dateTime'}" />
+										<Text text="{path: 'detail>finishedAt', formatter: '.formatter.dateTime'}" />
+										<Text text="{detail>error}" maxLines="2" />
+									</ColumnListItem>
+								</items>
+							</Table>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secTechnical" title="Technik" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="1" columnsL="2" columnsXL="2">
+								<Label text="Compose-Projekt" /><Text text="{detail>/composeProject}" />
+								<Label text="Verzeichnis" /><Text text="{detail>/directory}" />
+								<Label text="Edge-Netz" /><Text text="{detail>/edgeNetwork}" />
+								<Label text="Proxy-Ziel" /><Text text="{detail>/proxyTarget}" />
+								<Label text="Tarif-Grenzen" /><Text text="{path: 'detail>/plan/maxUsers', formatter: '.formatter.limit'} Benutzer · {= ${detail>/plan/storageGb} ? ${detail>/plan/storageGb} + ' GB' : 'Speicher unbegrenzt' } · {= ${detail>/plan/memoryMb} ? ${detail>/plan/memoryMb} + ' MB RAM' : 'RAM unbegrenzt' }" />
+								<Label text="Manuell" /><Text text="cd {detail>/directory} &amp;&amp; docker compose ps | logs | exec" />
+							</f:SimpleForm>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secEvents" title="Ereignisse" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<Table id="eventTable" items="{events>/items}" noDataText="Keine Ereignisse." growing="true" growingThreshold="20">
+								<columns>
+									<Column width="11rem"><Text text="Zeitpunkt" /></Column>
+									<Column width="9rem"><Text text="Benutzer" /></Column>
+									<Column><Text text="Aktion" /></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Details" /></Column>
+								</columns>
+								<items>
+									<ColumnListItem highlight="{= ${events>success} ? 'None' : 'Error' }">
+										<Text text="{path: 'events>at', formatter: '.formatter.dateTime'}" />
+										<Text text="{events>actor}" />
+										<ObjectStatus text="{events>action}" state="{= ${events>success} ? 'None' : 'Error' }" />
+										<Text text="{events>details}" maxLines="3" />
+									</ColumnListItem>
+								</items>
+							</Table>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
+			</uxap:sections>
+		</uxap:ObjectPageLayout>
+	</Page>
+</mvc:View>
