@@ -139,6 +139,95 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Document_CanBeRenamedFiledLinkedAndVersioned()
+    {
+        using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
+        var pdf = "%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n"u8.ToArray();
+        var id = await AnnounceAsync(pdf, FileKind.Document, "scan001.pdf", contentType: "application/pdf");
+        (await UploadAsync(id, pdf)).EnsureSuccessStatusCode();
+
+        var newRoom = Guid.CreateVersion7();
+        using var room = await office.PutAsJsonAsync($"/api/v1/bauakten/{_bauakteId}/rooms/{newRoom}", new
+        {
+            id = newRoom, name = "Bad", underfloorHeating = false, status = "planned",
+        }, TestContext.Current.CancellationToken);
+        room.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var roomId = (await room.Content.ReadFromJsonAsync<RoomOverview>(TestJson.Options, TestContext.Current.CancellationToken))!.Rooms.Single().Id;
+
+        using var updated = await office.PutAsJsonAsync($"/api/v1/files/{id}/details", new
+        {
+            originalName = "Grundriss EG.pdf", caption = "Stand Bauantrag", category = "plan", folder = " Pläne / EG ", roomId,
+        }, TestContext.Current.CancellationToken);
+        updated.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var file = (await updated.Content.ReadFromJsonAsync<FileResponse>(TestJson.Options, TestContext.Current.CancellationToken))!;
+        file.OriginalName.ShouldBe("Grundriss EG.pdf");
+        file.Folder.ShouldBe("Pläne/EG");
+        file.Category.ShouldBe("plan");
+        file.RoomId.ShouldBe(roomId);
+
+        using var foreignRoom = await office.PutAsJsonAsync($"/api/v1/files/{id}/details", new
+        {
+            originalName = "Grundriss EG.pdf", roomId = Guid.CreateVersion7(),
+        }, TestContext.Current.CancellationToken);
+        (await foreignRoom.ReadProblemAsync()).Code.ShouldBe("VALIDATION_FAILED");
+
+        var second = Guid.CreateVersion7();
+        using var version = await _worker.PostAsJsonAsync("/api/v1/files", new
+        {
+            id = second, bauakteId = _bauakteId, kind = "document", originalName = "Grundriss EG v2.pdf", contentType = "application/pdf",
+            sizeBytes = (long)pdf.Length, sha256 = Convert.ToHexStringLower(SHA256.HashData(pdf)), previousVersionId = id,
+        }, TestContext.Current.CancellationToken);
+        version.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var next = (await version.Content.ReadFromJsonAsync<FileResponse>(TestJson.Options, TestContext.Current.CancellationToken))!;
+        next.PreviousVersionId.ShouldBe(id);
+        next.Folder.ShouldBe("Pläne/EG");
+        next.Category.ShouldBe("plan");
+
+        using var photoAsVersion = await _worker.PostAsJsonAsync("/api/v1/files", new
+        {
+            id = Guid.CreateVersion7(), bauakteId = _bauakteId, kind = "photo", originalName = "x.jpg", contentType = "image/jpeg",
+            sizeBytes = 10L, sha256 = new string('a', 64), previousVersionId = id,
+        }, TestContext.Current.CancellationToken);
+        (await photoAsVersion.ReadProblemAsync()).Code.ShouldBe("VALIDATION_FAILED");
+    }
+
+    [Fact]
+    public async Task SelectedFiles_CanBeDownloadedAsZip()
+    {
+        var first = CreateJpeg(60, 60);
+        var second = CreateJpeg(80, 60);
+        var a = await AnnounceAsync(first, FileKind.Photo, "foto.jpg");
+        var b = await AnnounceAsync(second, FileKind.Photo, "foto.jpg");
+        (await UploadAsync(a, first)).EnsureSuccessStatusCode();
+        (await UploadAsync(b, second)).EnsureSuccessStatusCode();
+
+        using var response = await _worker.GetAsync(new Uri($"/api/v1/bauakten/{_bauakteId}/files/archive?ids={a},{b}", UriKind.Relative),
+            TestContext.Current.CancellationToken);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        response.Content.Headers.ContentType!.MediaType.ShouldBe("application/zip");
+        await using var stream = await response.Content.ReadAsStreamAsync(TestContext.Current.CancellationToken);
+        using var zip = new System.IO.Compression.ZipArchive(stream);
+        zip.Entries.Select(e => e.FullName).Order().ShouldBe(["Fotos/foto (2).jpg", "Fotos/foto.jpg"]);
+
+        using var other = await _factory.CreateClientAsAsync("fremd", StandardRoles.SiteWorkerId);
+        (await other.GetAsync(new Uri($"/api/v1/bauakten/{_bauakteId}/files/archive?ids={a}", UriKind.Relative),
+            TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task InlineContent_MayBeFramedBySameOrigin_ApiOtherwiseNot()
+    {
+        var jpeg = CreateJpeg(50, 50);
+        var id = await AnnounceAsync(jpeg, FileKind.Photo, "rahmen.jpg");
+        (await UploadAsync(id, jpeg)).EnsureSuccessStatusCode();
+
+        using var content = await _worker.GetAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), TestContext.Current.CancellationToken);
+        content.Headers.GetValues("X-Frame-Options").ShouldHaveSingleItem().ShouldBe("SAMEORIGIN");
+        using var meta = await _worker.GetAsync(new Uri($"/api/v1/files/{id}", UriKind.Relative), TestContext.Current.CancellationToken);
+        meta.Headers.GetValues("X-Frame-Options").ShouldHaveSingleItem().ShouldBe("DENY");
+    }
+
+    [Fact]
     public async Task Announce_LargerThanAllowed_IsRejected()
     {
         using var response = await _worker.PostAsJsonAsync("/api/v1/files", new

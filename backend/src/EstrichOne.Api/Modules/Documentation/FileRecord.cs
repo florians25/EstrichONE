@@ -65,6 +65,18 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
 
     /// <summary>Dokumentart (<see cref="DocumentCategories"/>), z. B. Angebot oder Plan; bei Fotos und Videos leer.</summary>
     public string? Category { get; private set; }
+    /// <summary>Unterordner innerhalb der Dokumentart, z. B. „Pläne/EG“ (nur Dokumente; Trennzeichen „/“).</summary>
+    public string? Folder { get; private set; }
+
+    /// <summary>Bezug auf einen Raum der Bauakte (z. B. Foto aus dem Bad).</summary>
+    public Guid? RoomId { get; private set; }
+
+    /// <summary>Bezug auf eine Aufgabe oder einen Mangel (z. B. Foto des Mangels).</summary>
+    public Guid? WorkItemId { get; private set; }
+
+    /// <summary>Neue Fassung eines Dokuments: verweist auf die vorige Fassung (Versionskette).</summary>
+    public Guid? PreviousVersionId { get; private set; }
+
     public DateTimeOffset? CapturedAt { get; private set; }
     public double? Latitude { get; private set; }
     public double? Longitude { get; private set; }
@@ -123,6 +135,47 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
         ? category
         : throw new ArgumentException("Unbekannte Dokumentart.", nameof(category));
 
+    public const int MaxFolderLength = 200;
+
+    /// <summary>Ordnerpfad bereinigen: Segmente getrimmt, leere entfernt, „/“ als Trenner; leer = kein Ordner.</summary>
+    public static string? NormalizeFolder(string? folder)
+    {
+        if (string.IsNullOrWhiteSpace(folder))
+        {
+            return null;
+        }
+
+        var segments = folder.Replace('\\', '/').Split('/', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        var normalized = string.Join('/', segments);
+        if (normalized.Length > MaxFolderLength)
+        {
+            throw new ArgumentException($"Der Ordnerpfad ist länger als {MaxFolderLength} Zeichen.", nameof(folder));
+        }
+
+        return normalized.Length == 0 ? null : normalized;
+    }
+
+    public void Rename(string originalName)
+    {
+        var name = Path.GetFileName(originalName?.Trim() ?? string.Empty);
+        if (name.Length == 0 || name.Length > 255)
+        {
+            throw new ArgumentException("Bitte einen Dateinamen mit höchstens 255 Zeichen angeben.", nameof(originalName));
+        }
+
+        OriginalName = name;
+    }
+
+    public void MoveTo(string? folder) => Folder = Kind == FileKind.Document ? NormalizeFolder(folder) : null;
+
+    public void Link(Guid? roomId, Guid? workItemId)
+    {
+        RoomId = roomId;
+        WorkItemId = workItemId;
+    }
+
+    public void Supersede(Guid previousVersionId) => PreviousVersionId = previousVersionId;
+
     public void SetLocation(double? latitude, double? longitude)
     {
         Latitude = latitude;
@@ -154,6 +207,8 @@ internal sealed class FileRecordConfiguration : IEntityTypeConfiguration<FileRec
         builder.HasIndex(file => file.Variants).HasFilter("variants = 'Pending'");
         builder.Property(file => file.Caption).HasMaxLength(500);
         builder.Property(file => file.Category).HasMaxLength(30);
+        builder.Property(file => file.Folder).HasMaxLength(FileRecord.MaxFolderLength);
+        builder.HasIndex(file => file.PreviousVersionId);
         builder.HasOne<Bauakte>().WithMany().HasForeignKey(file => file.BauakteId).OnDelete(DeleteBehavior.Restrict);
         builder.HasOne<User>().WithMany().HasForeignKey(file => file.UploadedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(file => new { file.BauakteId, file.Kind });

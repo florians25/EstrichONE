@@ -10,6 +10,7 @@ public sealed class WorkModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ISyncOperationHandler, WorkSync>();
+        services.AddScoped<Exports.IWorkItemReferences, WorkItemReferences>();
         services.AddScoped<IBauakteHintSource, WorkHints>();
         services.AddScoped<ISyncEntitySource, WorkItemSource>();
     }

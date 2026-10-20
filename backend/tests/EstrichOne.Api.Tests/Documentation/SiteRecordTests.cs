@@ -61,6 +61,39 @@ public sealed class SiteRecordTests(PostgresFixture postgres) : IAsyncLifetime
         history!.Select(h => h.Text).ShouldContain("Max Huber hat das Bautagebuch für den 20.10.2026 ergänzt.");
     }
 
+    [Fact]
+    public async Task Diary_KeepsWorkTimesCrewAndPhotos_AndValidatesThem()
+    {
+        using var site = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        var bauakte = await CreateBauakteAsync(site);
+        var entry = Guid.CreateVersion7();
+        var photo = Guid.CreateVersion7();
+
+        Single(await site.PushAsync(SyncClient.Op("diary.create", entry, new
+        {
+            bauakteId = bauakte, day = "2026-10-21", text = "Heizestrich OG", startTime = "07:00:00", endTime = "15:30:00",
+            crew = "Kolonne Nord", photoFileIds = new[] { photo },
+        }))).Status.ShouldBe(SyncOperationStatus.Applied);
+
+        var invalid = Single(await site.PushAsync(SyncClient.Op("diary.update", entry, new
+        {
+            changes = new { startTime = "16:00:00" }, @base = new { },
+        })));
+        invalid.Status.ShouldBe(SyncOperationStatus.Rejected);
+
+        Single(await site.PushAsync(SyncClient.Op("diary.update", entry, new
+        {
+            changes = new { crew = "Kolonne Süd", photoFileIds = Array.Empty<Guid>() }, @base = new { },
+        }))).Status.ShouldBe(SyncOperationStatus.Applied);
+
+        var item = (await site.GetFromJsonAsync<List<DiaryEntryDto>>($"/api/v1/bauakten/{bauakte}/diary", TestJson.Options,
+            TestContext.Current.CancellationToken)).ShouldHaveSingleItem();
+        item.StartTime.ShouldBe(new TimeOnly(7, 0));
+        item.EndTime.ShouldBe(new TimeOnly(15, 30));
+        item.Crew.ShouldBe("Kolonne Süd");
+        item.PhotoFileIds.ShouldNotBeNull().ShouldBeEmpty();
+    }
+
     [Theory]
     [InlineData("cement", false, 1.9, 2.0, true)]
     [InlineData("cement", true, 1.9, 1.8, false)]

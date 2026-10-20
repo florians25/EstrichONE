@@ -23,6 +23,8 @@ public enum DiaryWeather
 public sealed class DiaryEntry : IVersionedEntity, ISoftDeletable
 {
     public const int MaxTextLength = 10_000;
+    public const int MaxCrewLength = 100;
+    public const int MaxPhotos = 50;
 
     public Guid Id { get; private set; }
     public Guid BauakteId { get; private set; }
@@ -32,6 +34,16 @@ public sealed class DiaryEntry : IVersionedEntity, ISoftDeletable
     public DiaryWeather? Weather { get; private set; }
     public int? TemperatureCelsius { get; private set; }
     public int? WorkersPresent { get; private set; }
+
+    /// <summary>Arbeitsbeginn und -ende auf der Baustelle (optional).</summary>
+    public TimeOnly? StartTime { get; private set; }
+    public TimeOnly? EndTime { get; private set; }
+
+    /// <summary>Kolonne bzw. anwesende Mannschaft als Text, z. B. „Kolonne Nord (3 Pers.)“.</summary>
+    public string? Crew { get; private set; }
+
+    /// <summary>Verknüpfte Fotos der Bauakte (Nachweis des Tages).</summary>
+    public List<Guid> PhotoFileIds { get; private set; } = [];
     public DateTimeOffset? EditedAt { get; private set; }
 
     public long Version { get; set; }
@@ -58,6 +70,31 @@ public sealed class DiaryEntry : IVersionedEntity, ISoftDeletable
     }
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
+
+    /// <summary>Arbeitszeit, Kolonne und Fotos des Tages (zusätzliche Angaben, getrennt vom Text änderbar).</summary>
+    public void SetWorkDetails(TimeOnly? startTime, TimeOnly? endTime, string? crew, IReadOnlyCollection<Guid> photoFileIds)
+    {
+        if (startTime is not null && endTime is not null && endTime <= startTime)
+        {
+            throw new ArgumentException("Das Arbeitsende muss nach dem Beginn liegen.", nameof(endTime));
+        }
+
+        var trimmed = crew?.Trim();
+        if (trimmed?.Length > MaxCrewLength)
+        {
+            throw new ArgumentException($"Die Kolonne ist länger als {MaxCrewLength} Zeichen.", nameof(crew));
+        }
+
+        if (photoFileIds.Count > MaxPhotos)
+        {
+            throw new ArgumentException($"Höchstens {MaxPhotos} Fotos je Eintrag.", nameof(photoFileIds));
+        }
+
+        StartTime = startTime;
+        EndTime = endTime;
+        Crew = string.IsNullOrEmpty(trimmed) ? null : trimmed;
+        PhotoFileIds = photoFileIds.Distinct().ToList();
+    }
 
     private void Apply(string text, DiaryWeather? weather, int? temperatureCelsius, int? workersPresent)
     {
@@ -98,6 +135,8 @@ internal sealed class DiaryEntryConfiguration : IEntityTypeConfiguration<DiaryEn
         builder.Property(entry => entry.Id).ValueGeneratedNever();
         builder.Property(entry => entry.Text).HasMaxLength(DiaryEntry.MaxTextLength);
         builder.Property(entry => entry.Weather).HasConversion<string>().HasMaxLength(20);
+        builder.Property(entry => entry.Crew).HasMaxLength(DiaryEntry.MaxCrewLength);
+        builder.Property(entry => entry.PhotoFileIds).HasColumnType("uuid[]");
         builder.HasOne<Bauakte>().WithMany().HasForeignKey(entry => entry.BauakteId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<User>().WithMany().HasForeignKey(entry => entry.AuthorUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(entry => new { entry.BauakteId, entry.Day });

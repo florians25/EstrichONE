@@ -1,8 +1,10 @@
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
+using EstrichOne.Api.Infrastructure.Http;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Work.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -26,7 +28,21 @@ public sealed record AnnounceFileRequest(
     [property: Range(-90, 90)] double? Latitude = null,
     [property: Range(-180, 180)] double? Longitude = null,
     [property: MaxLength(500)] string? Caption = null,
-    [property: MaxLength(30)] string? Category = null);
+    [property: MaxLength(30)] string? Category = null,
+    [property: MaxLength(FileRecord.MaxFolderLength)] string? Folder = null,
+    Guid? PreviousVersionId = null);
+
+/// <summary>
+/// Alle Angaben einer Datei im Büro ändern: Name, Beschriftung, Ablage (Dokumentart und Unterordner) und Bezug
+/// zu Raum oder Aufgabe/Mangel derselben Bauakte. Der Inhalt bleibt unverändert.
+/// </summary>
+public sealed record UpdateFileDetailsRequest(
+    [property: Required, MaxLength(255)] string OriginalName,
+    [property: MaxLength(500)] string? Caption,
+    [property: MaxLength(30)] string? Category,
+    [property: MaxLength(FileRecord.MaxFolderLength)] string? Folder,
+    Guid? RoomId,
+    Guid? WorkItemId);
 
 /// <summary>Beschriftung und Dokumentart nachträglich ändern.</summary>
 public sealed record UpdateFileRequest([property: MaxLength(500)] string? Caption, [property: MaxLength(30)] string? Category);
@@ -34,7 +50,8 @@ public sealed record UpdateFileRequest([property: MaxLength(500)] string? Captio
 public sealed record FileResponse(
     Guid Id, Guid? BauakteId, FileKind Kind, FileState State, VariantState Variants, string OriginalName, string ContentType,
     long SizeBytes, string Sha256, string? Caption, DateTimeOffset? CapturedAt, double? Latitude, double? Longitude,
-    Guid UploadedByUserId, DateTimeOffset CreatedAt, long Version, string? Category = null);
+    Guid UploadedByUserId, DateTimeOffset CreatedAt, long Version, string? Category = null, string? Folder = null,
+    Guid? RoomId = null, Guid? WorkItemId = null, Guid? PreviousVersionId = null);
 
 public sealed record UploadStatus(Guid Id, long ReceivedBytes, long SizeBytes, FileState State);
 
@@ -78,6 +95,11 @@ internal static class FileEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.FilesUpload);
 
+        files.MapPut("/{id:guid}/details", UpdateDetailsAsync).WithName("UpdateFileDetails")
+            .WithSummary("Name, Beschriftung, Ablage (Dokumentart, Unterordner) und Bezug zu Raum oder Mangel ändern")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission(Permissions.FilesUpload);
+
         files.MapDelete("/{id:guid}", DeleteAsync).WithName("DeleteFile")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.FilesDelete);
@@ -85,6 +107,13 @@ internal static class FileEndpoints
         api.MapGet("/bauakten/{bauakteId:guid}/files", ListForBauakteAsync).WithName("ListBauakteFiles")
             .WithTags("Dateien")
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(Permissions.BauaktenRead);
+
+        api.MapGet("/bauakten/{bauakteId:guid}/files/archive", ArchiveAsync).WithName("DownloadBauakteFilesArchive")
+            .WithTags("Dateien")
+            .WithSummary("Ausgewählte Dateien der Bauakte als ZIP-Archiv (ids = kommagetrennte IDs)")
+            .Produces(StatusCodes.Status200OK, contentType: "application/zip")
+            .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.BauaktenRead);
     }
 
@@ -96,6 +125,18 @@ internal static class FileEndpoints
             return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Unbekannte Dokumentart.");
         }
 
+        FileRecord? previous = null;
+        if (request.PreviousVersionId is { } previousId)
+        {
+            previous = await db.Set<FileRecord>().AsNoTracking().SingleOrDefaultAsync(f => f.Id == previousId, cancellationToken);
+            if (previous is null || previous.BauakteId is null || previous.BauakteId != request.BauakteId
+                || previous.Kind != FileKind.Document || request.Kind != FileKind.Document)
+            {
+                return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED",
+                    "Eine neue Fassung muss ein Dokument derselben Bauakte ersetzen.");
+            }
+        }
+
         var (file, created, failure) = await service.AnnounceAsync(request.Id, request.BauakteId, request.Kind, request.OriginalName,
             request.ContentType, request.SizeBytes, request.Sha256, request.CapturedAt, request.Latitude, request.Longitude,
             request.Caption, cancellationToken);
@@ -104,9 +145,20 @@ internal static class FileEndpoints
             return ProblemFor(failure.Value);
         }
 
-        if (created && request.Category is not null)
+        if (created && (request.Category is not null || request.Folder is not null || previous is not null))
         {
-            file!.Categorize(request.Category);
+            if (previous is not null)
+            {
+                file!.Supersede(previous.Id);
+                file.Categorize(request.Category ?? previous.Category);
+                file.MoveTo(request.Folder ?? previous.Folder);
+            }
+            else
+            {
+                file!.Categorize(file.Kind == FileKind.Document ? request.Category : null);
+                file.MoveTo(request.Folder);
+            }
+
             await db.SaveChangesAsync(cancellationToken);
         }
 
@@ -131,6 +183,121 @@ internal static class FileEndpoints
         file.Categorize(file.Kind == FileKind.Document ? request.Category : null);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(file));
+    }
+
+    private static async Task<Results<Ok<FileResponse>, ProblemHttpResult>> UpdateDetailsAsync(
+        Guid id, UpdateFileDetailsRequest request, FileService service, EstrichOneDbContext db, IBauakteRooms rooms,
+        IWorkItemReferences workItems, CancellationToken cancellationToken)
+    {
+        if (await service.FindReadableAsync(id, cancellationToken) is null)
+        {
+            return ProblemFor(FileFailure.NotFound);
+        }
+
+        if (request.Category is { } category && !DocumentCategories.All.Contains(category))
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Unbekannte Dokumentart.");
+        }
+
+        var file = await db.Set<FileRecord>().SingleAsync(f => f.Id == id, cancellationToken);
+        if ((request.RoomId is not null || request.WorkItemId is not null) && file.BauakteId is null)
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Nur Dateien einer Bauakte können zugeordnet werden.");
+        }
+
+        if (request.RoomId is { } roomId && !await rooms.BelongsToAsync(file.BauakteId!.Value, roomId, cancellationToken))
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Der Raum gehört nicht zu dieser Bauakte.");
+        }
+
+        if (request.WorkItemId is { } workItemId && !await workItems.BelongsToAsync(file.BauakteId!.Value, workItemId, cancellationToken))
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Die Aufgabe gehört nicht zu dieser Bauakte.");
+        }
+
+        try
+        {
+            file.Rename(request.OriginalName);
+            file.Describe(string.IsNullOrWhiteSpace(request.Caption) ? null : request.Caption.Trim());
+            file.Categorize(file.Kind == FileKind.Document ? request.Category : null);
+            file.MoveTo(request.Folder);
+        }
+        catch (ArgumentException exception)
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", exception.Message);
+        }
+
+        file.Link(request.RoomId, request.WorkItemId);
+        await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok(ToResponse(file));
+    }
+
+    /// <summary>
+    /// ZIP der Originale (Massendownload). Erst in eine temporäre Datei, dann ausgeliefert – Kestrel erlaubt kein
+    /// synchrones Schreiben in die Antwort, ZipArchive schreibt synchron.
+    /// </summary>
+    private static async Task<Results<FileStreamHttpResult, ProblemHttpResult>> ArchiveAsync(
+        Guid bauakteId, [FromQuery] string ids, EstrichOneDbContext db, IBauakteAccess access, LocalFileStorage storage,
+        CancellationToken cancellationToken)
+    {
+        if (!await access.CanReadAsync(bauakteId, cancellationToken))
+        {
+            return Problem(StatusCodes.Status404NotFound, "BAUAKTE_NOT_FOUND", "Bauakte nicht gefunden");
+        }
+
+        var wanted = (ids ?? string.Empty).Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(value => Guid.TryParse(value, out var parsed) ? parsed : Guid.Empty).Distinct().ToList();
+        if (wanted.Count == 0 || wanted.Count > 500 || wanted.Contains(Guid.Empty))
+        {
+            return Problem(StatusCodes.Status400BadRequest, "BAD_REQUEST", "Bitte 1 bis 500 gültige Datei-IDs angeben.");
+        }
+
+        var files = await db.Set<FileRecord>().AsNoTracking()
+            .Where(f => f.BauakteId == bauakteId && wanted.Contains(f.Id) && f.State == FileState.Stored && f.StorageKey != null)
+            .OrderBy(f => f.CapturedAt ?? f.CreatedAt).ToListAsync(cancellationToken);
+        if (files.Count == 0)
+        {
+            return ProblemFor(FileFailure.NotFound);
+        }
+
+        var temp = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920,
+            FileOptions.DeleteOnClose | FileOptions.Asynchronous);
+        using (var zip = new System.IO.Compression.ZipArchive(temp, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var used = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var file in files)
+            {
+                var entry = zip.CreateEntry(UniqueName(file, used), System.IO.Compression.CompressionLevel.Fastest);
+                entry.LastWriteTime = file.CapturedAt ?? file.CreatedAt;
+                await using var target = entry.Open();
+                await using var content = File.OpenRead(storage.PathOf(file.StorageKey!));
+                await content.CopyToAsync(target, cancellationToken);
+            }
+        }
+
+        temp.Position = 0;
+        return TypedResults.File(temp, "application/zip", $"Bauakte-Dateien-{DateTime.UtcNow:yyyyMMdd-HHmm}.zip");
+    }
+
+    /// <summary>Ordner und Dateiname im Archiv, doppelte Namen mit Zähler.</summary>
+    internal static string UniqueName(FileRecord file, ISet<string> used)
+    {
+        var folder = file.Kind switch
+        {
+            FileKind.Photo => "Fotos",
+            FileKind.Video => "Videos",
+            _ => string.Join('/', new[] { "Dokumente", file.Folder }.Where(part => !string.IsNullOrEmpty(part))),
+        };
+        var name = string.Concat(Path.GetFileName(file.OriginalName).Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        var stem = Path.GetFileNameWithoutExtension(name);
+        var extension = Path.GetExtension(name);
+        var candidate = $"{folder}/{name}";
+        for (var counter = 2; !used.Add(candidate); counter++)
+        {
+            candidate = $"{folder}/{stem} ({counter}){extension}";
+        }
+
+        return candidate;
     }
 
     private static async Task<Results<Ok<FileResponse>, Accepted<UploadStatus>, ProblemHttpResult>> UploadAsync(
@@ -182,7 +349,7 @@ internal static class FileEndpoints
         await service.FindReadableAsync(id, cancellationToken) is { } file ? TypedResults.Ok(ToResponse(file)) : ProblemFor(FileFailure.NotFound);
 
     private static async Task<Results<PhysicalFileHttpResult, ProblemHttpResult>> DownloadAsync(
-        Guid id, FileService service, LocalFileStorage storage, CancellationToken cancellationToken,
+        Guid id, FileService service, LocalFileStorage storage, HttpContext http, CancellationToken cancellationToken,
         [FromQuery] string variant = "original")
     {
         var file = await service.FindReadableAsync(id, cancellationToken);
@@ -218,6 +385,12 @@ internal static class FileEndpoints
         };
         var inline = contentType.StartsWith("image/", StringComparison.Ordinal) || contentType.StartsWith("video/", StringComparison.Ordinal)
             || contentType == "application/pdf";
+        if (inline)
+        {
+            // Vorschau im Web (PDF im eingebetteten Rahmen derselben Herkunft), siehe SecurityHeadersMiddleware.
+            http.Items[SecurityHeadersMiddleware.AllowSameOriginFramingKey] = true;
+        }
+
         return TypedResults.PhysicalFile(storage.PathOf(file.StorageKey), contentType,
             fileDownloadName: inline ? null : file.OriginalName, enableRangeProcessing: true);
     }
@@ -256,7 +429,7 @@ internal static class FileEndpoints
 
     internal static FileResponse ToResponse(FileRecord f) => new(f.Id, f.BauakteId, f.Kind, f.State, f.Variants, f.OriginalName,
         f.ContentType, f.SizeBytes, f.Sha256, f.Caption, f.CapturedAt, f.Latitude, f.Longitude, f.UploadedByUserId, f.CreatedAt, f.Version,
-        f.Category);
+        f.Category, f.Folder, f.RoomId, f.WorkItemId, f.PreviousVersionId);
 
     private static ProblemHttpResult ProblemFor(FileFailure failure) => failure switch
     {

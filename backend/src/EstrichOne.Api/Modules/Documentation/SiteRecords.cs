@@ -12,10 +12,12 @@ namespace EstrichOne.Api.Modules.Documentation;
 
 public sealed record DiaryEntryDto(
     Guid Id, Guid BauakteId, Guid AuthorUserId, DateOnly Day, string Text, DiaryWeather? Weather, int? TemperatureCelsius,
-    int? WorkersPresent, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, long Version)
+    int? WorkersPresent, DateTimeOffset CreatedAt, DateTimeOffset? EditedAt, long Version, TimeOnly? StartTime = null,
+    TimeOnly? EndTime = null, string? Crew = null, IReadOnlyList<Guid>? PhotoFileIds = null)
 {
     public static DiaryEntryDto From(DiaryEntry entry) => new(entry.Id, entry.BauakteId, entry.AuthorUserId, entry.Day, entry.Text,
-        entry.Weather, entry.TemperatureCelsius, entry.WorkersPresent, entry.CreatedAt, entry.EditedAt, entry.Version);
+        entry.Weather, entry.TemperatureCelsius, entry.WorkersPresent, entry.CreatedAt, entry.EditedAt, entry.Version, entry.StartTime,
+        entry.EndTime, entry.Crew, entry.PhotoFileIds);
 }
 
 /// <param name="LimitCmPercent">Grenzwert für die Belegreife, vom Server aus Bindemittel und Beheizung bestimmt.</param>
@@ -81,6 +83,8 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
         var entry = DiaryEntry.Create(op.EntityId, bauakteId, currentUser.UserId, day, SyncPayload.Read<string>(op.Payload, "text") ?? string.Empty,
             SyncPayload.Read<DiaryWeather?>(op.Payload, "weather"), SyncPayload.Read<int?>(op.Payload, "temperatureCelsius"),
             SyncPayload.Read<int?>(op.Payload, "workersPresent"));
+        entry.SetWorkDetails(SyncPayload.Read<TimeOnly?>(op.Payload, "startTime"), SyncPayload.Read<TimeOnly?>(op.Payload, "endTime"),
+            SyncPayload.Read<string>(op.Payload, "crew"), SyncPayload.Read<List<Guid>>(op.Payload, "photoFileIds") ?? []);
         db.Add(entry);
         history.Record(bauakteId, BauakteHistoryActions.DiaryAdded, new Dictionary<string, string?> { ["day"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
         await db.SaveChangesAsync(cancellationToken);
@@ -102,7 +106,7 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
         }
 
         var changes = op.Payload["changes"] as JsonObject ?? new JsonObject();
-        var allowed = new HashSet<string> { "text", "weather", "temperatureCelsius", "workersPresent" };
+        var allowed = new HashSet<string> { "text", "weather", "temperatureCelsius", "workersPresent", "startTime", "endTime", "crew", "photoFileIds" };
         if (changes.Select(pair => pair.Key).FirstOrDefault(field => !allowed.Contains(field)) is { } invalid)
         {
             throw new SyncValidationException($"Das Feld „{invalid}“ kann nicht geändert werden.");
@@ -114,6 +118,11 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
             changes.ContainsKey("temperatureCelsius") ? SyncPayload.Read<int?>(changes, "temperatureCelsius") : entry.TemperatureCelsius,
             changes.ContainsKey("workersPresent") ? SyncPayload.Read<int?>(changes, "workersPresent") : entry.WorkersPresent,
             clock.GetUtcNow());
+        entry.SetWorkDetails(
+            changes.ContainsKey("startTime") ? SyncPayload.Read<TimeOnly?>(changes, "startTime") : entry.StartTime,
+            changes.ContainsKey("endTime") ? SyncPayload.Read<TimeOnly?>(changes, "endTime") : entry.EndTime,
+            changes.ContainsKey("crew") ? SyncPayload.Read<string>(changes, "crew") : entry.Crew,
+            changes.ContainsKey("photoFileIds") ? SyncPayload.Read<List<Guid>>(changes, "photoFileIds") ?? [] : entry.PhotoFileIds);
         await db.SaveChangesAsync(cancellationToken);
         return Applied(op, entry.Version, DiaryEntryDto.From(entry));
     }
