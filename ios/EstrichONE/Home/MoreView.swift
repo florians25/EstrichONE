@@ -1,12 +1,13 @@
 import EstrichCore
 import SwiftUI
 
-/// Reiter „Mehr“: Person, Synchronisation, Gerät, Server, Benutzerwechsel, Abmelden (07, Abschnitt 2).
+/// Reiter „Mehr“: Person, Synchronisation, Hilfe, Gerät, Server, Benutzerwechsel, Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     @Environment(AppModel.self) private var model
     @State private var confirmSignOut = false
     @State private var confirmReset = false
     @State private var unsentBeforeSignOut = 0
+    @State private var reporting = false
 
     var body: some View {
         NavigationStack {
@@ -39,6 +40,22 @@ struct MoreView: View {
                     } header: {
                         Text("Angemeldet")
                     }
+                }
+
+                Section {
+                    Button {
+                        reporting = true
+                    } label: {
+                        Label("Problem melden", systemImage: "exclamationmark.bubble")
+                    }
+                    .accessibilityIdentifier("reportProblemButton")
+                    NavigationLink {
+                        MyTicketsView()
+                    } label: {
+                        Label("Meine Meldungen", systemImage: "tray.full")
+                    }
+                } header: {
+                    Text("Hilfe")
                 }
 
                 if let registration = model.deviceRegistration {
@@ -111,6 +128,9 @@ struct MoreView: View {
                 Text("Die App vergisst Server, Gerät und alle Personen. Das Gerät muss danach neu eingerichtet werden.")
             }
             .refreshable { await model.refreshDeviceStatus() }
+            .sheet(isPresented: $reporting) {
+                ReportProblemView { reporting = false }
+            }
         }
     }
 

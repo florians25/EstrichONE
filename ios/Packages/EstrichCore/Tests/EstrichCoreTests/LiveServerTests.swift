@@ -219,4 +219,35 @@ struct LiveServerTests {
         #expect(history.contains { $0.text.hasSuffix("hat das Bautagebuch für den 20.10.2026 ergänzt.") })
         #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-% – belegreif.") })
     }
+
+    @Test("Helpdesk: Meldung mit Diagnose über den Sync, eigene Liste, Meldung ohne Anmeldung mit Gerätesignatur")
+    func helpdesk() async throws {
+        let device = try await syncingAccount()
+        let helpdesk = HelpdeskService(store: device.store, files: device.files, userId: device.userId)
+        let log = DiagnosticsLog()
+        log.record("SYNC_PUSH", ["ops": 1])
+        log.recordError(code: "SYNC_UPLOAD_FAILED")
+        let diagnostics = DiagnosticsReport(appVersion: "1.0.0", build: "1", platform: "iOS", osVersion: "26.0", deviceModel: "iPhone16,2",
+                                            deviceKind: .personal, deviceId: UUID.v7(), sync: try await device.store.summary(),
+                                            network: "WLAN", freeStorageBytes: 1_000_000, log: log)
+        let id = try await helpdesk.report(NewTicket(title: "Integrationstest Helpdesk", category: .sync), diagnostics: diagnostics)
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled, "Der Server hat die Diagnosedaten angenommen")
+        let mine = try await device.client.myTickets()
+        #expect(mine.contains { $0.id == id && $0.status == .new && $0.number.hasPrefix("T-") })
+
+        // Ohne Anmeldung: dasselbe Gerät signiert.
+        let keys = SoftwareDeviceKeys()
+        let service = makeService(keys: keys)
+        let tokens = try await service.signIn(login: login, password: password, clientName: "CI Helpdesk")
+        _ = try await service.bindDevice(tokens: tokens, kind: .personal, enrollmentCode: nil, description: description)
+        let deviceId = try #require(service.state.registration?.deviceId)
+        let number = try await DeviceTicketReporter.send(NewTicket(title: "Anmeldung klappt nicht", description: "Passwort abgelehnt", category: .signIn),
+                                                         reporterName: "CI", deviceId: deviceId, keys: keys, api: service.api, diagnostics: nil)
+        #expect(number.hasPrefix("T-"))
+        await #expect(throws: TicketError.notRegistered) {
+            try await DeviceTicketReporter.send(NewTicket(title: "Fremdes Gerät"), reporterName: nil, deviceId: deviceId,
+                                                keys: SoftwareDeviceKeys(), api: service.api, diagnostics: nil)
+        }
+    }
 }

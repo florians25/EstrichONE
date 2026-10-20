@@ -197,3 +197,58 @@ export interface Inspection {
   limitCmPercent: number | null;
   isReadyForCovering: boolean | null;
 }
+
+export type TicketCategory = 'signIn' | 'sync' | 'appError' | 'deviceDefect' | 'officeIt' | 'access' | 'other';
+export type TicketPriority = 'low' | 'normal' | 'high' | 'urgent';
+export type TicketStatus = 'new' | 'inProgress' | 'waitingForReporter' | 'resolved' | 'closed';
+
+export interface TicketSummary {
+  id: string;
+  number: string;
+  title: string;
+  category: TicketCategory;
+  priority: TicketPriority;
+  status: TicketStatus;
+  reporterBlocked: boolean;
+  reporterUserId: string | null;
+  reporterDisplayName: string | null;
+  assigneeUserId: string | null;
+  assigneeName: string | null;
+  source: 'web' | 'desktop' | 'ios' | 'android';
+  createdAt: string;
+  lastActivityAt: string;
+  version: number;
+}
+
+export interface TicketComment {
+  id: string;
+  authorUserId: string;
+  authorName: string | null;
+  text: string;
+  isInternal: boolean;
+  createdAt: string;
+}
+
+export interface TicketEvent {
+  actorUserId: string | null;
+  actorName: string | null;
+  kind: string;
+  fromValue: string | null;
+  toValue: string | null;
+  at: string;
+}
+
+export interface TicketDetail {
+  summary: TicketSummary;
+  description: string | null;
+  deviceId: string | null;
+  deviceName: string | null;
+  bauakteId: string | null;
+  resolution: string | null;
+  resolvedAt: string | null;
+  closedAt: string | null;
+  diagnostics: Record<string, unknown> | null;
+  attachmentFileIds: string[];
+  comments: TicketComment[];
+  events: TicketEvent[];
+}

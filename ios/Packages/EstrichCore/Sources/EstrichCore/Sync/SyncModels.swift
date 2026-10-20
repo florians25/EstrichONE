@@ -10,6 +10,8 @@ public enum EntityType: String, CaseIterable, Sendable {
     case screedType
     case diaryEntry
     case inspection
+    /// Nur ausgehend (eigene Meldungen bis zur Übertragung); der Server liefert Tickets nicht über den Feed.
+    case ticket
 
     /// Präfix der Operationstypen (`bauakte.create`, `workitem.update`, `diary.create`).
     var operationPrefix: String {

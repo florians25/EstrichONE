@@ -11,6 +11,7 @@ struct SignInView: View {
     @State private var errorMessage: String?
     @State private var isWorking = false
     @State private var showsPasswordHelp = false
+    @State private var reporting = false
     @FocusState private var focus: Field?
 
     private enum Field {
@@ -82,6 +83,15 @@ struct SignInView: View {
                         .tint(Theme.actionPrimary)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
+
+                    if model.canReportWithoutSignIn {
+                        Button("Anmeldung klappt nicht? Problem melden") { reporting = true }
+                            .font(.callout)
+                            .tint(Theme.actionPrimary)
+                            .frame(maxWidth: .infinity)
+                            .frame(minHeight: 44)
+                            .accessibilityIdentifier("reportWithoutSignInButton")
+                    }
                 }
                 .padding(24)
                 .frame(maxWidth: 560)
@@ -106,6 +116,9 @@ struct SignInView: View {
                 Text("Ihre Administration kann das Passwort in EstrichONE zurücksetzen. Sie erhalten dann ein Einmalpasswort.")
             }
             .sensoryFeedback(.error, trigger: errorMessage) { _, new in new != nil }
+            .sheet(isPresented: $reporting) {
+                ReportProblemView(initialCategory: .signIn, withoutSignIn: true) { reporting = false }
+            }
             .onAppear {
                 if let prefilledUserName, login.isEmpty {
                     login = prefilledUserName

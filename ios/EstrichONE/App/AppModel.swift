@@ -56,7 +56,7 @@ final class AppModel {
     let checker: ServerConnectionChecker
     private let environment: AppEnvironment
     private let serverStore: ServerStore
-    private var accounts: AccountService?
+    private(set) var accounts: AccountService?
 
     /// Aus dem Einrichtungscode bzw. der Auswahl in Schritt 3; gilt bis zur Registrierung.
     private var requestedKind: DeviceKind?

@@ -128,4 +128,17 @@ final class BauakteUITests: XCTestCase {
         tap("historyLink", in: app)
         XCTAssertTrue(app.staticTexts["Max Huber hat die Bauakte angelegt."].waitForExistence(timeout: 10))
     }
+
+    @MainActor
+    func testReportProblemWithDiagnosticsPreview() {
+        let app = launchSignedIn()
+        app.tabBars.buttons["Mehr"].tap()
+        tap("reportProblemButton", in: app)
+        type("Fotos werden nicht übertragen", into: "ticketTitleField", in: app)
+        // Vor dem Senden ist sichtbar, was mitgeht.
+        tap("diagnosticsDisclosure", in: app)
+        XCTAssertTrue(app.staticTexts["Fehlercodes"].waitForExistence(timeout: 5))
+        tap("sendTicketButton", in: app)
+        XCTAssertTrue(app.alerts["Meldung gespeichert"].waitForExistence(timeout: 10))
+    }
 }

@@ -66,6 +66,15 @@ final class SyncController {
         isRunning = true
         let outcome = await engine.synchronize(includeScope: includeScope)
         lastOutcome = outcome
+        // Nur Codes und Zahlen ins Diagnoseprotokoll (14, Abschnitt 3).
+        switch outcome {
+        case .completed: DiagnosticsLog.shared.record("SYNC_COMPLETED")
+        case .offline: DiagnosticsLog.shared.record("SYNC_OFFLINE")
+        case .retryLater: DiagnosticsLog.shared.record("SYNC_RETRY_LATER")
+        case let .failed(error):
+            DiagnosticsLog.shared.record("SYNC_FAILED", ["attempt": consecutiveFailures + 1])
+            DiagnosticsLog.shared.recordError(code: error.code ?? "SYNC_FAILED")
+        }
         consecutiveFailures = outcome == .completed ? 0 : consecutiveFailures + 1
         await refreshSummary()
         revision += 1

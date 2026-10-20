@@ -35,6 +35,18 @@ export const routes: Routes = [
         loadComponent: () => import('./pages/devices.page').then((m) => m.DevicesPage),
       },
       {
+        path: 'it-center/helpdesk',
+        title: 'Helpdesk · EstrichONE',
+        canActivate: [permissionGuard('helpdesk.agent')],
+        loadComponent: () => import('./pages/helpdesk.page').then((m) => m.HelpdeskPage),
+      },
+      {
+        path: 'it-center/helpdesk/:id',
+        title: 'Ticket · EstrichONE',
+        canActivate: [permissionGuard('helpdesk.agent')],
+        loadComponent: () => import('./pages/ticket.page').then((m) => m.TicketPage),
+      },
+      {
         path: 'system/sicherung',
         title: 'Sicherung · EstrichONE',
         canActivate: [permissionGuard('backup.manage')],

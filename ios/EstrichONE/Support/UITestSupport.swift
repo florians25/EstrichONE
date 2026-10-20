@@ -173,6 +173,10 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return (200, json ?? #"{"results":[]}"#)
         case "/api/v1/sync/pull":
             return (200, #"{"changes":[],"cursor":"1:0","hasMore":false,"visibleBauakteIds":null}"#)
+        case "/api/v1/tickets/mine":
+            return (200, "[]")
+        case "/api/v1/tickets/device":
+            return (200, #"{"number":"T-2026-0001"}"#)
         case "/api/v1/directory/users":
             return (200, """
             [{"id":"0193a1b2-0000-7000-8000-00000000bbbb","displayName":"Lukas Brandl","isActive":true},

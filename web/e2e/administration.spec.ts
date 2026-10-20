@@ -109,6 +109,41 @@ test('Bauakte im Browser: Prüfungen, Bautagebuch und Verlauf aus der App ersche
   await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-% – belegreif.')).toBeVisible();
 });
 
+test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  const status = await page.evaluate(async () => {
+    const xsrf = decodeURIComponent(document.cookie.split('; ').find((c) => c.startsWith('XSRF-TOKEN='))?.split('=')[1] ?? '');
+    const response = await fetch('/api/v1/tickets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-XSRF-TOKEN': xsrf },
+      body: JSON.stringify({ id: crypto.randomUUID(), title: 'Drucker im Büro druckt nicht', category: 'officeIt', source: 'web', reporterBlocked: true,
+        diagnostics: { appVersion: '1.0.0', platform: 'Web' } }),
+    });
+    return response.status;
+  });
+  expect(status).toBe(201);
+
+  await page.getByRole('link', { name: 'Helpdesk' }).click();
+  await expect(page.getByRole('heading', { name: 'Helpdesk' })).toBeVisible();
+  const row = page.getByRole('row', { name: /Drucker im Büro druckt nicht/ });
+  await expect(row.getByText('Kann nicht arbeiten')).toBeVisible();
+  await row.getByRole('link').click();
+
+  await page.getByLabel('Antwort oder Notiz').fill('Toner prüfen, vermutlich leer');
+  await page.getByLabel('Interne Notiz (für den Melder unsichtbar)').check();
+  await page.getByRole('button', { name: 'Notiz speichern' }).click();
+  await expect(page.getByText('Toner prüfen, vermutlich leer')).toBeVisible();
+  await expect(page.getByText('Interne Notiz', { exact: true })).toBeVisible();
+
+  await page.getByLabel('Status').selectOption({ label: 'Gelöst' });
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('alert')).toContainText('Lösung');
+  await page.getByLabel('Lösung (Pflicht)').fill('Toner gewechselt.');
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.head').getByText('Gelöst')).toBeVisible();
+  await expect(page.getByText('hat den Status geändert: Gelöst')).toBeVisible();
+});
+
 async function signIn(page: import('@playwright/test').Page, login: string, password: string) {
   await page.goto('/anmelden');
   await page.getByLabel('Anmeldename oder E-Mail').fill(login);

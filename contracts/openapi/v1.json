@@ -2462,15 +2462,14 @@
             "name": "filter",
             "in": "query",
             "schema": {
-              "default": "open",
-              "$ref": "#/components/schemas/TicketFilter"
+              "type": "string"
             }
           },
           {
             "name": "category",
             "in": "query",
             "schema": {
-              "$ref": "#/components/schemas/TicketCategory"
+              "type": "string"
             }
           }
         ],
@@ -5353,14 +5352,6 @@
             "format": "date-time"
           }
         }
-      },
-      "TicketFilter": {
-        "enum": [
-          "open",
-          "mine",
-          "unassigned",
-          "all"
-        ]
       },
       "TicketPriority": {
         "enum": [

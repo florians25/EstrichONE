@@ -460,6 +460,7 @@ public actor LocalStore {
         case .screedType: ["name", "designation"]
         case .diaryEntry: ["text"]
         case .inspection: ["location", "remarks"]
+        case .ticket: ["title"]
         }
         let search = searchFields.compactMap { data[$0]?.string }.joined(separator: " ").lowercased()
         let sortKey = data["performedAt"]?.string ?? data["day"]?.string.map { $0 + (data["createdAt"]?.string ?? "") }

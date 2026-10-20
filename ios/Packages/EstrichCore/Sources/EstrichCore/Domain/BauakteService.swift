@@ -253,7 +253,7 @@ public struct BauakteService: Sendable {
     /// Speichert ein Foto **zuerst** verschlüsselt auf dem Gerät, dann Ankündigung und Upload-Warteschlange
     /// (09, Abschnitt 5, Schritt 3). Erst danach gilt es als gespeichert.
     @discardableResult
-    public func addPhoto(_ jpeg: Data, to bauakteId: UUID, capturedAt: Date, latitude: Double? = nil, longitude: Double? = nil,
+    public func addPhoto(_ jpeg: Data, to bauakteId: UUID?, capturedAt: Date, latitude: Double? = nil, longitude: Double? = nil,
                          contentType: String = "image/jpeg") async throws -> UUID {
         let id = UUID.v7(now: now())
         let sha = try files.store(jpeg, for: id)

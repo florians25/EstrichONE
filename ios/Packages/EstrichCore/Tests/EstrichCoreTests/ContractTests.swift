@@ -67,6 +67,15 @@ struct ContractTests {
         try checkResponse("EnrollmentCodeResponse", sample: EnrollmentCodeResponse(code: "A", kind: .pool, deviceName: nil, expiresAt: Date(), link: nil))
         try checkResponse("ServerInfo", sample: ServerInfo(product: "EstrichONE", serverName: "x", serverVersion: "1", apiVersions: [],
                                                            minClientVersion: "1", authMethods: [], instanceEpoch: UUID(), setupRequired: false))
+        let ticket = try JSONCoding.decoder.decode(TicketDetail.self, from: Data("""
+            {"summary":{"id":"01a00000-0000-7000-8000-000000000001","number":"T-2026-0001","title":"x","category":"sync","priority":"normal",
+             "status":"new","reporterBlocked":false,"assigneeName":null,"createdAt":"2026-10-20T07:00:00Z","lastActivityAt":"2026-10-20T07:00:00Z"},
+             "description":null,"resolution":null,"comments":[{"id":"01a00000-0000-7000-8000-000000000002","authorUserId":"01a00000-0000-7000-8000-000000000003",
+             "authorName":null,"text":"x","isInternal":false,"createdAt":"2026-10-20T07:00:00Z"}]}
+            """.utf8))
+        try checkResponse("TicketDetail", sample: ticket)
+        try checkResponse("TicketSummary", sample: ticket.summary)
+        try checkResponse("TicketCommentDto", sample: ticket.comments[0])
         try checkResponse("DirectoryUser", sample: DirectoryUser(id: UUID(), displayName: "a", isActive: true))
         try checkResponse("BauakteHistoryEntry", sample: try JSONCoding.decoder.decode(BauakteHistoryEntry.self, from: Data("""
             {"at":"2026-10-20T07:00:00.0000000+00:00","action":"bauakte.created","actorUserId":null,"actorName":null,"text":"x"}
@@ -90,6 +99,10 @@ struct ContractTests {
         #expect(Set(kinds) == Set(DeviceKind.allCases.map(\.rawValue)))
         let statuses = try #require(schemas["DeviceStatus"]?["enum"] as? [String])
         #expect(Set(statuses) == ["pending", "active", "locked", "retired"])
+        let ticketStatus = try #require(schemas["TicketStatus"]?["enum"] as? [String])
+        #expect(Set(ticketStatus) == Set(TicketStatus.allCases.map(\.rawValue)))
+        let ticketCategory = try #require(schemas["TicketCategory"]?["enum"] as? [String])
+        #expect(Set(ticketCategory) == Set(TicketCategory.allCases.map(\.rawValue)))
         let bauakteStatus = try #require(schemas["BauakteStatus"]?["enum"] as? [String])
         #expect(Set(bauakteStatus) == Set(BauakteStatus.allCases.map(\.rawValue)))
         // Aufgaben und Mängel laufen nur über den Sync (kein REST-Schema); ihre Werte prüft der Live-Test.

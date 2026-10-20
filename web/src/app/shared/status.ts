@@ -1,5 +1,5 @@
 import { Component, computed, input } from '@angular/core';
-import { BauakteStatus, DeviceStatus } from '../core/api.models';
+import { BauakteStatus, DeviceStatus, TicketCategory, TicketPriority, TicketStatus } from '../core/api.models';
 
 const bauakteStatus: Record<BauakteStatus, { label: string; tone: string }> = {
   inquiry: { label: 'Anfrage', tone: 'neutral' },
@@ -41,4 +41,45 @@ export function formatDateTime(value: string | null | undefined): string {
     return '–';
   }
   return new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(value));
+}
+
+export const ticketCategoryLabels: Record<TicketCategory, string> = {
+  signIn: 'Anmeldung',
+  sync: 'Synchronisation',
+  appError: 'App-Fehler',
+  deviceDefect: 'Gerät defekt',
+  officeIt: 'Drucker/Büro-IT',
+  access: 'Zugang/Rechte',
+  other: 'Sonstiges',
+};
+
+export const ticketPriorityLabels: Record<TicketPriority, string> = { low: 'Niedrig', normal: 'Normal', high: 'Hoch', urgent: 'Dringend' };
+
+const ticketStatus: Record<TicketStatus, { label: string; tone: string }> = {
+  new: { label: 'Neu', tone: 'info' },
+  inProgress: { label: 'In Bearbeitung', tone: 'navy' },
+  waitingForReporter: { label: 'Rückfrage', tone: 'hint' },
+  resolved: { label: 'Gelöst', tone: 'success' },
+  closed: { label: 'Geschlossen', tone: 'neutral' },
+};
+
+export const ticketStatusLabels = Object.fromEntries(Object.entries(ticketStatus).map(([key, value]) => [key, value.label])) as Record<TicketStatus, string>;
+
+@Component({
+  selector: 'eo-ticket-status',
+  template: `<span class="status {{ info().tone }}">{{ info().label }}</span>`,
+})
+export class TicketStatusComponent {
+  readonly status = input.required<TicketStatus>();
+  protected readonly info = computed(() => ticketStatus[this.status()]);
+}
+
+/** „seit 3 Std.“ – wie lange ein Ticket schon wartet. */
+export function waitingSince(value: string, now = Date.now()): string {
+  const minutes = Math.max(0, Math.round((now - new Date(value).getTime()) / 60000));
+  if (minutes < 60) {
+    return `${minutes} Min.`;
+  }
+  const hours = Math.round(minutes / 60);
+  return hours < 48 ? `${hours} Std.` : `${Math.round(hours / 24)} Tage`;
 }

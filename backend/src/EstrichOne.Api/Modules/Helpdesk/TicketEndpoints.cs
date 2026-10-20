@@ -133,17 +133,20 @@ internal static class TicketEndpoints
 
     private static async Task<Ok<IReadOnlyList<TicketSummary>>> ListAsync(
         TicketService tickets, EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken,
-        TicketFilter filter = TicketFilter.Open, TicketCategory? category = null)
+        string? filter = null, string? category = null)
     {
+        // Werte wie in JSON (camelCase, z. B. „unassigned“, „officeIt“) oder als Enum-Name.
+        var selected = Enum.TryParse<TicketFilter>(filter, ignoreCase: true, out var parsedFilter) ? parsedFilter : TicketFilter.Open;
+        TicketCategory? categoryFilter = Enum.TryParse<TicketCategory>(category, ignoreCase: true, out var parsedCategory) ? parsedCategory : null;
         var query = db.Set<Ticket>().AsQueryable();
-        query = filter switch
+        query = selected switch
         {
             TicketFilter.Open => query.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved),
             TicketFilter.Mine => query.Where(t => t.AssigneeUserId == currentUser.UserId && t.Status != TicketStatus.Closed),
             TicketFilter.Unassigned => query.Where(t => t.AssigneeUserId == null && t.Status != TicketStatus.Closed),
             _ => query,
         };
-        if (category is { } c)
+        if (categoryFilter is { } c)
         {
             query = query.Where(t => t.Category == c);
         }

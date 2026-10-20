@@ -70,6 +70,7 @@ export class ShellComponent {
     { label: 'Bauakten', link: '/bauakten', permission: 'bauakten.read' },
     { label: 'Benutzer', link: '/verwaltung/benutzer', permission: 'users.manage' },
     { label: 'Geräte', link: '/it-center/geraete', permission: 'devices.read' },
+    { label: 'Helpdesk', link: '/it-center/helpdesk', permission: 'helpdesk.agent' },
     { label: 'Sicherung', link: '/system/sicherung', permission: 'backup.manage' },
   ];
 

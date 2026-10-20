@@ -90,8 +90,12 @@ public sealed class HelpdeskTests(PostgresFixture postgres) : IAsyncLifetime
         using var reporter = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
         using var agent = await _factory.CreateClientAsAsync("it", StandardRoles.ItAdministratorId);
         var id = (await CreateAsync(reporter, NewTicket(Guid.CreateVersion7()))).Summary.Id;
-        var me = (await agent.GetFromJsonAsync<List<TicketSummary>>("/api/v1/tickets", TestJson.Options, Ct))!.Single().Id;
-        me.ShouldBe(id);
+        var listed = (await agent.GetFromJsonAsync<List<TicketSummary>>("/api/v1/tickets", TestJson.Options, Ct))!.Single().Id;
+        listed.ShouldBe(id);
+        (await agent.GetFromJsonAsync<List<TicketSummary>>("/api/v1/tickets?filter=unassigned&category=sync", TestJson.Options, Ct))!
+            .ShouldHaveSingleItem();
+        (await agent.GetFromJsonAsync<List<TicketSummary>>("/api/v1/tickets?filter=all&category=officeIt", TestJson.Options, Ct))!
+            .ShouldBeEmpty();
 
         using var withoutResolution = await PatchAsync(agent, id, new { status = "resolved" });
         withoutResolution.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
