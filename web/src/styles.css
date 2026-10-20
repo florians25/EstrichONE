@@ -1,0 +1,134 @@
+/*
+ * EstrichONE Designsystem (docs/reengineering/05-designsystem.md).
+ * Eigene Tokens statt einer Komponentenbibliothek; Kontraste nach WCAG 2.2 geprüft (05, Abschnitt 2.2).
+ */
+:root {
+  color-scheme: light dark;
+
+  --brand-navy: #0b2d5b;
+  --brand-blue: #007bff;
+  --action-primary: #0062cc;
+  --action-primary-hover: #0b2d5b;
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --surface: #ffffff;
+  --surface-raised: #ffffff;
+  --surface-alt: #f3f4f6;
+  --line: #d1d5db;
+  --border-control: #6b7280;
+  --focus-ring: #007bff;
+
+  --success: #15803d;
+  --success-bg: #dcfce7;
+  --hint: #b45309;
+  --hint-bg: #fef3c7;
+  --error: #b91c1c;
+  --error-bg: #fee2e2;
+  --info: #0062cc;
+  --info-bg: #e0efff;
+  --neutral: #4b5563;
+  --neutral-bg: #f3f4f6;
+
+  --radius-control: 6px;
+  --radius-surface: 8px;
+  --row-height: 40px;
+  --nav-width: 232px;
+
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  font-size: 15px;
+  line-height: 22px;
+  color: var(--text-primary);
+  background: var(--surface-alt);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --action-primary: #4da3ff;
+    --text-primary: #f9fafb;
+    --text-secondary: #d1d5db;
+    --text-tertiary: #9ca3af;
+    --surface: #111827;
+    --surface-raised: #1f2937;
+    --surface-alt: #0b1220;
+    --line: #374151;
+    --border-control: #9ca3af;
+    --success: #86efac;
+    --success-bg: #052e16;
+    --hint: #fcd34d;
+    --hint-bg: #451a03;
+    --error: #fca5a5;
+    --error-bg: #450a0a;
+    --info: #93c5fd;
+    --info-bg: #172554;
+    --neutral: #d1d5db;
+    --neutral-bg: #1f2937;
+  }
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+body { margin: 0; }
+h1 { font-size: 24px; line-height: 32px; font-weight: 600; margin: 0 0 16px; }
+h2 { font-size: 19px; line-height: 26px; font-weight: 600; margin: 24px 0 12px; }
+h3 { font-size: 16px; line-height: 24px; font-weight: 600; margin: 16px 0 8px; }
+p { margin: 0 0 12px; }
+a { color: var(--action-primary); }
+
+:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 2px; }
+
+.visually-hidden {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0;
+}
+
+/* Schaltflächen */
+.button {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+  min-height: 36px; padding: 0 14px; border-radius: var(--radius-control);
+  border: 1px solid var(--border-control); background: var(--surface-raised); color: var(--text-primary);
+  font: inherit; font-weight: 500; cursor: pointer; text-decoration: none;
+}
+.button:hover { background: var(--surface-alt); }
+.button.primary { background: var(--action-primary); border-color: var(--action-primary); color: #fff; }
+.button.primary:hover { background: var(--action-primary-hover); border-color: var(--action-primary-hover); }
+.button.danger { color: var(--error); border-color: var(--error); }
+.button:disabled { opacity: 0.5; cursor: not-allowed; }
+.button.small { min-height: 30px; padding: 0 10px; font-size: 13px; }
+
+/* Formulare */
+.field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 16px; max-width: 720px; }
+.field label { font-size: 13px; font-weight: 500; color: var(--text-secondary); }
+.field input, .field select, .field textarea {
+  font: inherit; color: var(--text-primary); background: var(--surface);
+  min-height: 36px; padding: 6px 10px; border: 1px solid var(--border-control); border-radius: var(--radius-control);
+}
+.field .help { font-size: 13px; color: var(--text-tertiary); }
+
+/* Flächen und Tabellen */
+.card { background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-surface); padding: 16px; }
+.table { width: 100%; border-collapse: collapse; background: var(--surface-raised); border: 1px solid var(--line); border-radius: var(--radius-surface); }
+.table th { text-align: left; font-size: 12px; font-weight: 500; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-secondary); padding: 8px 12px; border-bottom: 1px solid var(--line); }
+.table td { padding: 8px 12px; border-bottom: 1px solid var(--line); height: var(--row-height); vertical-align: middle; }
+.table tr:last-child td { border-bottom: none; }
+.table .numeric { font-variant-numeric: tabular-nums; }
+.actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* Statusanzeigen: immer Farbe + Symbol/Punkt + Text (05, Abschnitt 2.3) */
+.status { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; font-size: 13px; font-weight: 500; }
+.status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.status.success { color: var(--success); background: var(--success-bg); }
+.status.hint { color: var(--hint); background: var(--hint-bg); }
+.status.error { color: var(--error); background: var(--error-bg); }
+.status.info { color: var(--info); background: var(--info-bg); }
+.status.neutral { color: var(--neutral); background: var(--neutral-bg); }
+.status.navy { color: #fff; background: var(--brand-navy); }
+.status.cancelled { text-decoration: line-through; }
+
+.message { padding: 10px 12px; border-radius: var(--radius-control); margin-bottom: 16px; max-width: 720px; }
+.message.error { color: var(--error); background: var(--error-bg); }
+.message.success { color: var(--success); background: var(--success-bg); }
+.message.hint { color: var(--hint); background: var(--hint-bg); }
+
+/* Dialoge (natives <dialog>) */
+dialog { border: 1px solid var(--line); border-radius: var(--radius-surface); padding: 24px; max-width: 560px; width: calc(100% - 32px);
+  background: var(--surface-raised); color: var(--text-primary); box-shadow: 0 12px 32px rgb(0 0 0 / 0.25); }
+dialog::backdrop { background: rgb(0 0 0 / 0.4); }

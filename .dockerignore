@@ -7,3 +7,7 @@ docs/
 deploy/data/
 deploy/.env
 **/node_modules/
+web/dist/
+web/.angular/
+web/test-results/
+ios/

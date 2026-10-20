@@ -1,0 +1,73 @@
+name: Web
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main, "claude/**"]
+    paths: ["web/**", "backend/src/**", "contracts/**", "deploy/Caddyfile", "docker/web.Dockerfile", ".github/workflows/web.yml"]
+  pull_request:
+    paths: ["web/**", "backend/src/**", "contracts/**", "deploy/Caddyfile", "docker/web.Dockerfile", ".github/workflows/web.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Unit-Tests und Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - name: Unit-Tests (Vitest)
+        run: npx ng test --watch=false
+      - name: Produktions-Build
+        run: npx ng build --configuration production
+
+  e2e:
+    name: Ende zu Ende (Playwright gegen Web-Image und echte API)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - name: Web-Image bauen
+        run: docker build -f docker/web.Dockerfile -t estrichone/web:ci .
+      - name: Abhängigkeiten und Browser
+        working-directory: web
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+      - name: Shellcheck
+        run: shellcheck web/scripts/e2e.sh
+      - name: PostgreSQL + API + Web-Image starten, Playwright
+        working-directory: web
+        env:
+          WEB_IMAGE: estrichone/web:ci
+        run: scripts/e2e.sh
+      - name: Ergebnisse sichern
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-e2e-ergebnisse
+          path: web/test-results
+          retention-days: 7

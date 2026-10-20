@@ -6,9 +6,9 @@ on:
   workflow_dispatch: {}
   push:
     branches: [main, "claude/**"]
-    paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "global.json", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "web/**", "global.json", ".github/workflows/backend.yml"]
   pull_request:
-    paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "global.json", ".github/workflows/backend.yml"]
+    paths: ["backend/**", "contracts/**", "docker/**", "deploy/**", "web/**", "global.json", ".github/workflows/backend.yml"]
 
 permissions:
   contents: read
@@ -48,6 +48,7 @@ jobs:
         run: |
           docker build -f docker/api.Dockerfile -t estrichone/api:ci .
           docker build -f docker/backup.Dockerfile -t estrichone/backup:ci .
+          docker build -f docker/web.Dockerfile -t estrichone/web:ci .
       - name: Compose-Datei prüfen
         working-directory: deploy
         run: POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose config --quiet
@@ -60,6 +61,10 @@ jobs:
           ESTRICHONE_VERSION=ci docker compose up -d --no-build --wait --wait-timeout 180
           docker compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
           curl --fail --cacert caddy-root.crt https://localhost/api/v1/server-info
+          # Weboberfläche: Startseite, Routen der App (index.html) und Sicherheitsheader
+          curl --fail --cacert caddy-root.crt -s https://localhost/ | grep -q '<app-root>'
+          curl --fail --cacert caddy-root.crt -s https://localhost/verwaltung/benutzer | grep -q '<app-root>'
+          curl --fail --cacert caddy-root.crt -sI https://localhost/ | grep -qi "content-security-policy: default-src 'self'"
       - name: Logs bei Fehler
         if: failure()
         working-directory: deploy
@@ -75,6 +80,7 @@ jobs:
         run: |
           docker build -f docker/api.Dockerfile -t estrichone/api:ci .
           docker build -f docker/backup.Dockerfile -t estrichone/backup:ci .
+          docker build -f docker/web.Dockerfile -t estrichone/web:ci .
       - name: Shellcheck
         run: shellcheck deploy/backup/estrichone-backup deploy/backup/test-backup-restore.sh
       - name: Sichern, Totalverlust, Wiederherstellen, Prüfen

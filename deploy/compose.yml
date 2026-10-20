@@ -13,6 +13,12 @@ x-api-image: &api-image
     args:
       ESTRICHONE_VERSION: ${ESTRICHONE_VERSION:-0.1.0}
 
+x-web-image: &web-image
+  image: estrichone/web:${ESTRICHONE_VERSION:-dev}
+  build:
+    context: ..
+    dockerfile: docker/web.Dockerfile
+
 x-database: &database
   ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-estrichone};Username=${POSTGRES_USER:-estrichone};Password=${POSTGRES_PASSWORD:?POSTGRES_PASSWORD fehlt – bitte ./setup.sh ausführen};Gss Encryption Mode=Disable
 
@@ -125,7 +131,7 @@ services:
     networks: [backend, frontend]
 
   caddy:
-    image: caddy:2
+    <<: *web-image
     restart: unless-stopped
     ports:
       - "${ESTRICHONE_HTTP_PORT:-80}:80"

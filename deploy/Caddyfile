@@ -1,4 +1,4 @@
-# EstrichONE – Reverse Proxy (ADR 0007)
+# EstrichONE – Weboberfläche und Reverse Proxy (ADR 0007)
 # Öffentliche Domain: Zertifikat automatisch von Let's Encrypt.
 # „localhost“: Zertifikat aus Caddys interner Zertifizierungsstelle (nur für Tests).
 
@@ -7,6 +7,8 @@
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "same-origin"
 		-Server
 	}
 
@@ -22,8 +24,20 @@
 		reverse_proxy api:8080
 	}
 
+	# Weboberfläche (Angular): unbekannte Pfade liefern index.html, die App übernimmt das Routing.
 	handle {
-		header Content-Type "text/plain; charset=utf-8"
-		respond "EstrichONE-Server ist erreichbar. Die Weboberfläche ist in dieser Version noch nicht enthalten." 200
+		root * /srv
+		header {
+			# Strikte CSP (docs/reengineering/17): nur eigene Skripte; Inline-Styles erzeugt Angular selbst.
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			X-Frame-Options "DENY"
+		}
+		@immutable path *.js *.css *.woff2
+		header @immutable Cache-Control "public, max-age=31536000, immutable"
+		@page not path *.js *.css *.woff2
+		header @page Cache-Control "no-cache"
+		try_files {path} /index.html
+		file_server
 	}
 }

@@ -13,7 +13,7 @@
 git clone https://github.com/florians25/EstrichONE.git estrichone
 cd estrichone/deploy
 sudo ./setup.sh                      # fragt Adresse und Firmennamen ab, erzeugt .env mit sicherem Passwort
-sudo docker compose up -d --build    # baut und startet Datenbank, Migration, API und Reverse Proxy
+sudo docker compose up -d --build    # baut und startet Datenbank, Migration, API, Weboberfläche und Reverse Proxy
 curl https://<ihre-adresse>/api/v1/server-info
 ```
 
@@ -26,7 +26,8 @@ Solange es keinen Benutzer gibt, schreibt der Server beim Start einen **Einricht
 sudo docker compose logs api | grep Einrichtungscode
 ```
 
-Mit diesem Code werden Firmenname und erster Administrator angelegt – bis die Weboberfläche fertig ist per API:
+Im Browser `https://<ihre-adresse>/` öffnen, „Jetzt einrichten“ wählen und mit diesem Code Firmenname und
+ersten Administrator anlegen. Alternativ per API:
 
 ```bash
 curl -X POST https://<ihre-adresse>/api/v1/setup -H 'Content-Type: application/json' -d '{
@@ -46,7 +47,7 @@ Danach ist die Einrichtung dauerhaft gesperrt. Es gibt keine Standardpasswörter
 
 | Dienst | Aufgabe | Von außen erreichbar |
 |---|---|---|
-| `caddy` | HTTPS, Zertifikate, Weiterleitung an die API | ja (80, 443) |
+| `caddy` | Weboberfläche (Image `estrichone/web`), HTTPS, Zertifikate, Weiterleitung an die API | ja (80, 443) |
 | `api` | EstrichONE-Server | nein |
 | `migrate` | aktualisiert das Datenbankschema bei jedem Start und beendet sich dann | nein |
 | `postgres` | Datenbank | nein (internes Netz ohne Internetzugang) |
