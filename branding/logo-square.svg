@@ -1,26 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="EstrichONE">
-  <!-- Quadratisch ohne Rundung: iOS und Android legen ihre eigene Maske darüber. -->
-  <!-- EstrichONE: ein „E“ aus den Schichten eines Estrichaufbaus. Rand = Randdämmstreifen, oben die glatt
-       abgezogene Estrichoberfläche, Mitte die Dämmlage, unten die tragende Rohdecke. Die grüne Blase ist die
-       Libelle der Wasserwaage: eben und belegreif. -->
-  <defs>
-    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#174A8B"/>
-      <stop offset="1" stop-color="#0B2D5B"/>
-    </linearGradient>
-    <linearGradient id="screed" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#DCE8F7"/>
-    </linearGradient>
-  </defs>
-  <rect width="100" height="100" fill="url(#bg)"/>
-  <!-- Rand und Rohdecke -->
-  <path d="M27 22h7v56h-7a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4z" fill="#FFFFFF"/>
-  <rect x="23" y="64" width="54" height="14" rx="4" fill="#FFFFFF"/>
-  <!-- Estrichoberfläche, zum Ende hin abgezogen -->
-  <path d="M23 26a4 4 0 0 1 4-4h46a4 4 0 0 1 4 4v1.5c0 3-1.6 5.5-4.5 6.5L66 36H23z" fill="url(#screed)"/>
-  <!-- Dämmlage -->
-  <rect x="23" y="43" width="38" height="14" rx="4" fill="#8EC5FF"/>
-  <!-- Libelle -->
-  <circle cx="71" cy="50" r="6" fill="#3CCB7F"/>
+  <!-- App-Symbol vollflächig (iOS/Android maskieren selbst). -->
+  <defs><linearGradient id="eo-bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#174A8B"/><stop offset="1" stop-color="#0B2D5B"/></linearGradient></defs>
+  <path d="M0 0H100V100H0Z" fill="url(#eo-bg)"/>
+  <path d="M30 24H70A4 4 0 0 1 74 28V32A4 4 0 0 1 70 36H40.5A1.5 1.5 0 0 0 39 37.5V62.5A1.5 1.5 0 0 0 40.5 64H70A4 4 0 0 1 74 68V72A4 4 0 0 1 70 76H30A4 4 0 0 1 26 72V28A4 4 0 0 1 30 24Z" fill="#FFFFFF"/>
+  <path d="M51 44H68A6 6 0 0 1 74 50V50A6 6 0 0 1 68 56H51A6 6 0 0 1 45 50V50A6 6 0 0 1 51 44Z" fill="#8EC5FF"/>
+  <path d="M55.9 50A3.6 3.6 0 1 0 63.1 50A3.6 3.6 0 1 0 55.9 50Z" fill="#3CCB7F"/>
 </svg>

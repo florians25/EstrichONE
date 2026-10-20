@@ -1,8 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="EstrichONE">
-  <!-- Zeichen ohne Hintergrund, für dunkle Flächen (Kopfzeile, Titelleiste). -->
-  <path d="M27 22h7v56h-7a4 4 0 0 1-4-4V26a4 4 0 0 1 4-4z" fill="#FFFFFF"/>
-  <rect x="23" y="64" width="54" height="14" rx="4" fill="#FFFFFF"/>
-  <path d="M23 26a4 4 0 0 1 4-4h46a4 4 0 0 1 4 4v1.5c0 3-1.6 5.5-4.5 6.5L66 36H23z" fill="#FFFFFF"/>
-  <rect x="23" y="43" width="38" height="14" rx="4" fill="#8EC5FF"/>
-  <circle cx="71" cy="50" r="6" fill="#3CCB7F"/>
+  <!-- Bildmarke, transparent, für helle Flächen. -->
+  <path d="M30 24H70A4 4 0 0 1 74 28V32A4 4 0 0 1 70 36H40.5A1.5 1.5 0 0 0 39 37.5V62.5A1.5 1.5 0 0 0 40.5 64H70A4 4 0 0 1 74 68V72A4 4 0 0 1 70 76H30A4 4 0 0 1 26 72V28A4 4 0 0 1 30 24Z" fill="#0B2D5B"/>
+  <path d="M51 44H68A6 6 0 0 1 74 50V50A6 6 0 0 1 68 56H51A6 6 0 0 1 45 50V50A6 6 0 0 1 51 44Z" fill="#2F6DB5"/>
+  <path d="M55.9 50A3.6 3.6 0 1 0 63.1 50A3.6 3.6 0 1 0 55.9 50Z" fill="#3CCB7F"/>
 </svg>
