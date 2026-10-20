@@ -53,7 +53,7 @@ if [[ -n "${WEB_IMAGE:-}" ]]; then
   # Gleiches Caddyfile wie im Betrieb, nur mit lokaler API-Adresse.
   sed "s/api:8080/localhost:$API_PORT/g" "$ROOT/deploy/Caddyfile" >"$WORK/Caddyfile"
   docker rm -f estrichone-web-e2e >/dev/null 2>&1 || true
-  docker run -d --name estrichone-web-e2e --network host -e ESTRICHONE_DOMAIN=localhost:8443 \
+  docker run -d --name estrichone-web-e2e --network host -e ESTRICHONE_DOMAIN=localhost -e ESTRICHONE_HTTPS_PORT=8443 -e ESTRICHONE_HTTP_PORT=8088 \
     -v "$WORK/Caddyfile:/etc/caddy/Caddyfile:ro" "$WEB_IMAGE" >/dev/null
   CLEANUP_CONTAINER=estrichone-web-e2e
   export E2E_BASE_URL=https://localhost:8443
