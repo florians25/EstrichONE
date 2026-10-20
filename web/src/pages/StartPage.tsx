@@ -1,4 +1,5 @@
 import {
+  ExperimentOutlined, ShopOutlined, ShoppingCartOutlined,
   AppstoreAddOutlined, CalendarOutlined, CarOutlined, CloudServerOutlined, CustomerServiceOutlined, FileAddOutlined, InboxOutlined,
   KeyOutlined, MobileOutlined, PhoneOutlined, ProjectOutlined, ScheduleOutlined, TeamOutlined, ToolOutlined, UserOutlined, WarningOutlined,
 } from '@ant-design/icons';
@@ -40,6 +41,14 @@ const groups: { label: string; tiles: Tile[] }[] = [
       { label: 'Kolonnen', icon: <TeamOutlined />, to: '/planung/ressourcen?reiter=kolonnen', permission: 'planning.read' },
       { label: 'Fahrzeuge und Geräte', icon: <CarOutlined />, to: '/planung/ressourcen?reiter=geraete', permission: 'planning.read' },
       { label: 'Abwesenheiten', icon: <ScheduleOutlined />, to: '/planung/ressourcen?reiter=abwesenheiten', permission: 'planning.read' },
+    ],
+  },
+  {
+    label: 'Material',
+    tiles: [
+      { label: 'Bestellungen', icon: <ShoppingCartOutlined />, to: '/bestellungen', permission: 'materials.read' },
+      { label: 'Materialstamm', icon: <ExperimentOutlined />, to: '/material', permission: 'materials.read' },
+      { label: 'Lieferanten', icon: <ShopOutlined />, to: '/lieferanten', permission: 'materials.read' },
     ],
   },
   {

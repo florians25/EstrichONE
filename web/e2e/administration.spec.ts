@@ -24,6 +24,15 @@ async function choose(page: Page, field: Locator, option: string | RegExp, type?
   }).toPass({ timeout: 20_000 });
 }
 
+/** Reiter der Bauakte öffnen; bei vielen Reitern scrollt die Leiste animiert, daher bis zur Auswahl wiederholen. */
+async function openTab(page: Page, name: string) {
+  const tab = page.getByRole('tab', { name, exact: true });
+  await expect(async () => {
+    await tab.click({ timeout: 2000 });
+    await expect(tab).toHaveAttribute('aria-selected', 'true', { timeout: 1000 });
+  }).toPass({ timeout: 15_000 });
+}
+
 test('Ersteinrichtung im Browser und Anmeldung als Administrator', async ({ page }) => {
   await page.goto('/anmelden');
   await expect(page.getByText('EstrichONE ist noch nicht eingerichtet')).toBeVisible();
@@ -121,17 +130,17 @@ test('Bauakte im Browser: Prüfungen, Bautagebuch und Verlauf aus der App ersche
 
   await page.goto(`/bauakten/${bauakte}`);
   await expect(pageTitle(page)).toContainText('EFH Prüfung E2E');
-  await page.getByRole('tab', { name: 'Erstbegehung' }).click();
+  await openTab(page, 'Erstbegehung');
   await expect(page.getByText('Erstbegehungsprotokoll')).toBeVisible();
   await expect(page.getByText('Mit Mängeln – Klärung nötig')).toBeVisible();
   await expect(page.getByText('Randdämmstreifen vorhanden')).toBeVisible();
   await expect(page.getByText('Randdämmung fehlt')).toBeVisible();
   await expect(page.getByRole('row', { name: /Bad OG/ })).toContainText('1,6 CM-% (Grenzwert 1,8)');
   await expect(page.getByRole('row', { name: /Bad OG/ }).getByText('Belegreif', { exact: true })).toBeVisible();
-  await page.getByRole('tab', { name: 'Tagesübersicht' }).click();
+  await openTab(page, 'Tagesübersicht');
   await expect(page.getByText('Estrich im EG eingebracht')).toBeVisible();
   await expect(page.getByText('Regen · 9 °C')).toBeVisible();
-  await page.getByRole('tab', { name: 'Notizen & Verlauf' }).click();
+  await openTab(page, 'Notizen & Verlauf');
   await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-% – belegreif.')).toBeVisible();
 });
 
@@ -189,7 +198,7 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await expect(page.getByRole('button', { name: 'Status: Geplant' })).toBeVisible();
   await expect(page.getByRole('listitem').filter({ hasText: 'Erstbegehung noch nicht ausgeführt.' })).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Räume & Flächen' }).click();
+  await openTab(page, 'Räume & Flächen');
   await page.getByRole('button', { name: 'Raum hinzufügen' }).click();
   const room = page.getByRole('dialog', { name: 'Raum hinzufügen' });
   await room.getByLabel('Raum', { exact: true }).fill('Wohnen/Essen');
@@ -202,19 +211,19 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await expect(page.getByRole('row', { name: /Wohnen\/Essen/ })).toContainText('42,50 m²');
   await expect(page.locator('.summary')).toContainText('42,50 m²');
 
-  await page.getByRole('tab', { name: 'Aufgaben & Mängel' }).click();
+  await openTab(page, 'Aufgaben & Mängel');
   await choose(page, page.getByRole('combobox', { name: 'Art', exact: true }), 'Mangel');
   await page.getByLabel('Titel').fill('Randdämmstreifen fehlt im Bad');
   await page.getByRole('button', { name: 'Hinzufügen' }).click();
   await page.getByLabel('Erledigt: Randdämmstreifen fehlt im Bad').click();
   await expect(page.getByLabel('Wieder öffnen: Randdämmstreifen fehlt im Bad')).toBeChecked();
 
-  await page.getByRole('tab', { name: 'Notizen & Verlauf' }).click();
+  await openTab(page, 'Notizen & Verlauf');
   await page.getByLabel('Neue Notiz').fill('Kunde wünscht Ausführung ab KW 46');
   await page.getByRole('button', { name: 'Notiz speichern' }).click();
   await expect(page.locator('.notes').getByText('Kunde wünscht Ausführung ab KW 46')).toBeVisible();
 
-  await page.getByRole('tab', { name: 'Dokumente' }).click();
+  await openTab(page, 'Dokumente');
   await choose(page, page.getByRole('combobox', { name: 'Dokumentart', exact: true }), 'Angebot');
   const pdf = '%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n';
   await page.locator('input[type=file]').setInputFiles({ name: 'Angebot.pdf', mimeType: 'application/pdf', buffer: Buffer.from(pdf) });
@@ -222,7 +231,7 @@ test('Büro: Anfrage mit neuem Kunden, als Auftrag übernehmen, Räume, Aufgabe,
   await expect(page.getByRole('link', { name: /Angebot\.pdf$/ })).toBeVisible();
   await expect(page.getByRole('row', { name: /Angebot\.pdf/ })).toContainText('Angebot');
 
-  await page.getByRole('tab', { name: 'Notizen & Verlauf' }).click();
+  await openTab(page, 'Notizen & Verlauf');
   await expect(page.getByText('Anna Admin hat einen Raum angelegt.')).toBeVisible();
   await expect(page.getByText('Anna Admin hat einen Mangel als behoben markiert.')).toBeVisible();
   await expect(page.getByText('Anna Admin hat ein Dokument hinzugefügt.')).toBeVisible();
@@ -238,7 +247,7 @@ test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird an
   await crew.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Kolonne Admin/ })).toContainText('Anna Admin');
 
-  await page.getByRole('tab', { name: 'Fahrzeuge und Geräte' }).click();
+  await openTab(page, 'Fahrzeuge und Geräte');
   await page.getByRole('button', { name: 'Fahrzeug oder Gerät hinzufügen' }).click();
   const resource = page.getByRole('dialog', { name: 'Fahrzeug oder Gerät hinzufügen' });
   await resource.getByLabel('Bezeichnung').fill('Mixokret 2');
@@ -378,6 +387,60 @@ test('Büro: Telefon-Schnellerfassung, Wiedervorlage, Anfrage in Bauakte umwande
   await expect(page.getByText('Herr Bauer')).toBeVisible();
 });
 
+test('Material: Lieferant, Artikel, Bedarf aus Räumen bestellen, Bestellschein, Lieferung', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await nav(page, 'Lieferanten').click();
+  await page.getByRole('button', { name: 'Lieferant anlegen' }).click();
+  const supplier = page.getByRole('dialog', { name: 'Lieferant anlegen' });
+  await supplier.getByLabel('Name').fill('Baustoff Huber KG');
+  await supplier.getByLabel('Unsere Kundennummer').fill('K-4711');
+  await supplier.getByLabel('Telefon (Disposition)').fill('0871 99887');
+  await supplier.getByLabel('Bestellhinweise').fill('Bestellschluss 12 Uhr für Lieferung am Folgetag');
+  await supplier.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('row', { name: /Baustoff Huber KG/ })).toContainText('K-4711');
+
+  await nav(page, 'Materialstamm').click();
+  await page.getByRole('button', { name: 'Artikel anlegen' }).click();
+  const material = page.getByRole('dialog', { name: 'Artikel anlegen' });
+  await material.getByLabel('Bezeichnung').fill('Randdämmstreifen 8 mm');
+  await choose(page, material.getByRole('combobox', { name: 'Kategorie' }), 'Randdämmstreifen');
+  await choose(page, material.getByRole('combobox', { name: 'Einheit' }), 'Rolle');
+  await material.getByLabel('Einkaufspreis je Einheit (netto)').fill('12,90');
+  await choose(page, material.getByRole('combobox', { name: 'Standardlieferant' }), 'Baustoff Huber KG');
+  await material.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.getByRole('row', { name: /Randdämmstreifen 8 mm/ })).toContainText('12,90');
+
+  await nav(page, 'Bauakten').click();
+  await page.getByRole('link', { name: 'Anfrage Familie Kraus, Heizestrich' }).click();
+  await expect(pageTitle(page)).toContainText('Anfrage Familie Kraus, Heizestrich');
+  await page.goto(`${new URL(page.url()).pathname}?reiter=material`);
+  // 42,5 m² × 65 mm = 2,76 m³, mit 5 % Reserve auf 0,5 m³ aufgerundet.
+  await expect(page.locator('.need-row')).toContainText('3 m³');
+  await page.getByRole('button', { name: 'Auswahl bestellen' }).click();
+  const editor = page.getByRole('dialog', { name: 'Material bestellen' });
+  await choose(page, editor.getByRole('combobox', { name: 'Lieferant' }), 'Baustoff Huber KG');
+  await expect(editor.getByText('Bestellschluss 12 Uhr für Lieferung am Folgetag')).toBeVisible();
+  await editor.getByRole('button', { name: 'Position hinzufügen' }).click();
+  await choose(page, editor.getByRole('combobox', { name: 'Artikel Position 2' }), 'Randdämmstreifen 8 mm');
+  await editor.getByLabel('Menge Position 2').fill('4');
+  await expect(editor.getByText('Summe netto der Positionen mit Preis 51,60 €')).toBeVisible();
+  await editor.getByRole('button', { name: 'Speichern' }).click();
+
+  const detail = page.getByRole('dialog', { name: /Bestellung B-\d{4}-0001/ });
+  await expect(detail.locator('.order-sheet')).toContainText('Baustoff Huber KG');
+  await expect(detail.locator('.order-sheet')).toContainText('Landshut');
+  await expect(detail.locator('.order-sheet')).toContainText('Randdämmstreifen 8 mm');
+  await detail.getByRole('button', { name: 'Als bestellt markieren' }).click();
+  await expect(detail.getByText('Bestellt', { exact: true })).toBeVisible();
+  await detail.getByRole('button', { name: 'Geliefert' }).click();
+  await expect(detail.getByText('Geliefert', { exact: true }).first()).toBeVisible();
+  await detail.locator('.ant-drawer-close').click();
+
+  await nav(page, 'Bestellungen').click();
+  await page.getByText('Geliefert', { exact: true }).click();
+  await expect(page.getByRole('row', { name: /B-\d{4}-0001/ })).toContainText('Baustoff Huber KG');
+});
+
 test('Protokoll: Anmeldungen und Änderungen sind nachvollziehbar', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await nav(page, 'Protokoll').click();
@@ -391,7 +454,7 @@ test('Bauakte: Baustellenkontakt, Zuweisung, Storno mit Begründung, Löschen mi
   await nav(page, 'Bauakten').click();
   await page.getByRole('link', { name: 'Anfrage Familie Kraus, Heizestrich' }).click();
 
-  await page.getByRole('tab', { name: 'Kontakte' }).click();
+  await openTab(page, 'Kontakte');
   await page.getByRole('button', { name: 'Bearbeiten' }).click();
   await page.getByLabel('Ansprechpartner vor Ort').fill('Herr Bauer (Bauleitung)');
   await page.getByLabel('Telefon').fill('0171 2345678');

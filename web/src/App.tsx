@@ -24,6 +24,11 @@ const AuditPage = lazy(() => import('./pages/AuditPage'));
 const TodayPage = lazy(() => import('./pages/TodayPage'));
 const CallsPage = lazy(() => import('./pages/office/CallsPage'));
 const InquiriesPage = lazy(() => import('./pages/office/InquiriesPage'));
+const OrdersPage = lazy(() => import('./pages/materials/OrdersPage'));
+const MaterialsPage = lazy(() => import('./pages/materials/MaterialsPage'));
+const SuppliersPage = lazy(() => import('./pages/materials/SuppliersPage'));
+const OrderPrintPage = lazy(() => import('./pages/materials/OrderPrintPage'));
+const CompanyPage = lazy(() => import('./pages/CompanyPage'));
 
 const loading = <div style={{ display: 'grid', placeItems: 'center', height: '100vh' }}><Spin size="large" /></div>;
 
@@ -54,6 +59,7 @@ export function App() {
       <Routes>
         <Route path="/anmelden" element={<LoginPage />} />
         <Route path="/einrichtung" element={<SetupPage />} />
+        <Route path="/bestellungen/:id/druck" element={<SignedIn><Permitted permission="materials.read"><OrderPrintPage /></Permitted></SignedIn>} />
         <Route element={<SignedIn><AppLayout /></SignedIn>}>
           <Route index element={<Navigate to="/start" replace />} />
           <Route path="start" element={<StartPage />} />
@@ -64,6 +70,9 @@ export function App() {
           <Route path="tagesuebersicht" element={<Permitted permission="bauakten.read"><TodayPage /></Permitted>} />
           <Route path="anrufe" element={<Permitted permission="contacts.read"><CallsPage /></Permitted>} />
           <Route path="anfragen" element={<Permitted permission="contacts.read"><InquiriesPage /></Permitted>} />
+          <Route path="bestellungen" element={<Permitted permission="materials.read"><OrdersPage /></Permitted>} />
+          <Route path="material" element={<Permitted permission="materials.read"><MaterialsPage /></Permitted>} />
+          <Route path="lieferanten" element={<Permitted permission="materials.read"><SuppliersPage /></Permitted>} />
           <Route path="kunden" element={<Permitted permission="contacts.read"><CustomersPage /></Permitted>} />
           <Route path="planung" element={<Permitted permission="planning.read"><PlanningPage /></Permitted>} />
           <Route path="planung/kalender" element={<Permitted permission="planning.read"><PlanningPage key="monat" defaultView="monat" /></Permitted>} />
@@ -75,6 +84,7 @@ export function App() {
           <Route path="it-center/helpdesk" element={<Permitted permission="helpdesk.agent"><HelpdeskPage /></Permitted>} />
           <Route path="it-center/helpdesk/:id" element={<Permitted permission="helpdesk.agent"><TicketPage /></Permitted>} />
           <Route path="system/sicherung" element={<Permitted permission="backup.manage"><BackupPage /></Permitted>} />
+          <Route path="system/firmendaten" element={<Permitted permission="settings.manage"><CompanyPage /></Permitted>} />
           <Route path="system/protokoll" element={<Permitted permission="audit.read"><AuditPage /></Permitted>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

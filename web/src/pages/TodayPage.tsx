@@ -4,10 +4,11 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { App, Button, Card, Col, Empty, List, Row, Space, Tag, Typography } from 'antd';
 import { Link } from 'react-router-dom';
 import { get, post, problemMessage } from '../api/client';
-import type { BauaktePage, CallResponse, PlanningRange, WorkItemDto } from '../api/models';
+import type { BauaktePage, CallResponse, OrderResponse, PlanningRange, WorkItemDto } from '../api/models';
 import { useAuth } from '../auth/AuthContext';
 import { isoDay, parseDay } from '../shared/days';
 import { BauakteStatusTag, formatDateTime } from '../shared/status';
+import { OrderStatusTag, quantity } from './materials/shared';
 import { caller, callTime, InquiryStatusTag } from './office/calls';
 import { absenceNames, kindColors, kindIcons, kindLabels, timeRange } from './planning/shared';
 
@@ -21,6 +22,7 @@ export default function TodayPage() {
   const due = useQuery({ queryKey: ['calls', 'due'], enabled: has('contacts.read'), queryFn: () => get<CallResponse[]>('calls', { due: true }) });
   const inquiries = useQuery({ queryKey: ['calls', 'inquiries-open'], enabled: has('contacts.read'), queryFn: () => get<CallResponse[]>('calls', { kind: 'inquiry', open: true, limit: 6 }) });
   const work = useQuery({ queryKey: ['work', 'mine'], enabled: has('work.read'), queryFn: () => get<WorkItemDto[]>('work-items/mine') });
+  const deliveries = useQuery({ queryKey: ['material-orders', 'today', today], enabled: has('materials.read'), queryFn: () => get<OrderResponse[]>('material-orders', { from: today, to: today }) });
   const recent = useQuery({ queryKey: ['bauakten', 'recent'], queryFn: () => get<BauaktePage>('bauakten', { limit: 8 }) });
 
   const assignments = planning.data?.assignments ?? [];
@@ -76,6 +78,18 @@ export default function TodayPage() {
             {absences.length > 0 && (
               <Card size="small" title="Heute abwesend">
                 <Space wrap>{absences.map((a) => <Tag key={a.id} color="orange" bordered={false}>{a.userName} · {absenceNames[a.kind] ?? a.kind}</Tag>)}</Space>
+              </Card>
+            )}
+            {has('materials.read') && (
+              <Card size="small" title="Lieferungen heute" extra={<Link to="/bestellungen">Alle Bestellungen</Link>} loading={deliveries.isLoading}>
+                <List size="small" dataSource={(deliveries.data ?? []).filter((o) => o.status !== 'cancelled')} locale={{ emptyText: 'Heute keine Lieferungen.' }} renderItem={(o) => (
+                  <List.Item extra={<OrderStatusTag status={o.status} />}>
+                    <List.Item.Meta
+                      title={<Space wrap size={6}>{o.deliveryTime && <span className="tabular">{o.deliveryTime}</span>}<Link to={`/bestellungen?bestellung=${o.id}`}>{o.supplierName}</Link>
+                        {o.bauakteId && <Link to={`/bauakten/${o.bauakteId}?reiter=material`}>{o.bauakteNumber} {o.bauakteTitle}</Link>}</Space>}
+                      description={o.lines.map((l) => `${quantity(l.quantity)} ${l.unit} ${l.description}`).join(' · ')} />
+                  </List.Item>
+                )} />
               </Card>
             )}
             {has('contacts.read') && (

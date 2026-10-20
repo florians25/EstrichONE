@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using EstrichOne.Api.Modules.Access.Exports;
+using EstrichOne.Api.Modules.Organization;
 using EstrichOne.Api.Modules.Platform;
 using EstrichOne.Api.Modules.Setup;
 using EstrichOne.Api.Tests.Support;
@@ -88,6 +89,32 @@ public sealed class SetupTests(PostgresFixture postgres) : IAsyncLifetime
 
         (await response.ReadProblemAsync()).Code.ShouldBe("VALIDATION_FAILED");
         (await _client.GetFromJsonAsync<SetupStatus>("/api/v1/setup/status", TestJson.Options, TestContext.Current.CancellationToken))!.SetupRequired.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task CompanyProfile_FromSetup_CanBeCompletedByAdministrator()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        (await CompleteAsync(await IssueCodeAsync())).EnsureSuccessStatusCode();
+        var tokens = await _client.LoginOkAsync("admin", "Estrich trocknet langsam 7");
+        using var admin = _factory.CreateClient().WithToken(tokens.AccessToken);
+
+        var initial = await admin.GetFromJsonAsync<CompanyResponse>("/api/v1/company", TestJson.Options, ct);
+        using var saved = await admin.PutAsJsonAsync("/api/v1/company", new
+        {
+            name = "Estrichbau Muster GmbH", street = "Industriestraße 5", postalCode = "84030", city = "Ergolding", phone = "0871 1234-0",
+            email = "info@muster.example", website = " ",
+        }, ct);
+        using var empty = await admin.PutAsJsonAsync("/api/v1/company", new { name = " " }, ct);
+
+        initial!.Name.ShouldBe("Estrichbau Muster GmbH");
+        initial.City.ShouldBeNull();
+        saved.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var company = (await saved.Content.ReadFromJsonAsync<CompanyResponse>(TestJson.Options, ct))!;
+        company.City.ShouldBe("Ergolding");
+        company.Email.ShouldBe("info@muster.example");
+        company.Website.ShouldBeNull();
+        empty.StatusCode.ShouldBeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.UnprocessableEntity);
     }
 
     private async Task<string> IssueCodeAsync()

@@ -2,10 +2,11 @@ import { DeleteOutlined } from '@ant-design/icons';
 import { useQueryClient } from '@tanstack/react-query';
 import { Alert, App, Button, DatePicker, Form, Input, Modal, Select, Space, TimePicker } from 'antd';
 import dayjs, { type Dayjs } from 'dayjs';
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { del, get, problemMessage, put } from '../../api/client';
-import type { AssignmentKind, AssignmentView, BauaktePage, CrewResponse, DirectoryUser, ResourceResponse } from '../../api/models';
+import { del, problemMessage, put } from '../../api/client';
+import type { AssignmentKind, AssignmentView, CrewResponse, DirectoryUser, ResourceResponse } from '../../api/models';
+import { BauakteSelect } from '../../shared/BauakteSelect';
 import { uuidv7 } from '../../shared/ids';
 import { kindActivities, kindLabels } from './shared';
 
@@ -52,26 +53,6 @@ export function editingOf(a: AssignmentView, crews: CrewResponse[]): Editing {
       userIds: a.people.map((p) => p.id).filter((id) => !crewMembers.has(id)), resourceIds: a.resources.map((r) => r.id), notes: a.notes ?? '',
     },
   };
-}
-
-/** Bauakte suchen (Nummer, Bauvorhaben, Ort). */
-function BauakteSelect({ value, onChange, initialLabel }: { value?: string | null; onChange?: (v: string | null) => void; initialLabel: string | null }) {
-  const [options, setOptions] = useState<{ value: string; label: string }[]>(value && initialLabel ? [{ value, label: initialLabel }] : []);
-  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
-  const search = (text: string) => {
-    clearTimeout(timer.current);
-    timer.current = setTimeout(async () => {
-      if (text.trim().length < 2) {
-        return;
-      }
-      const page = await get<BauaktePage>('bauakten', { search: text.trim(), limit: 8 });
-      setOptions(page.items.map((b) => ({ value: b.id, label: `${b.number ?? 'neu'} · ${b.title}${b.city ? ` (${b.city})` : ''}` })));
-    }, 200);
-  };
-  return (
-    <Select aria-label="Bauakte" showSearch allowClear filterOption={false} placeholder="Nummer oder Bauvorhaben eingeben" value={value}
-      onChange={(v) => onChange?.(v ?? null)} onSearch={search} options={options} notFoundContent={null} />
-  );
 }
 
 /** Einsatz planen oder bearbeiten; eigenes Formular je Einsatz. Hinweise bleiben nach dem Speichern sichtbar. */

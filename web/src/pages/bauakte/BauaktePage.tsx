@@ -17,6 +17,7 @@ import { BauakteContacts } from './Contacts';
 import { BauakteDocuments, BauaktePhotos, BauakteVideos } from './Files';
 import { BauakteNotes } from './Notes';
 import { BauakteOverview } from './Overview';
+import { BauakteMaterial } from './Material';
 import { BauakteDiary, BauakteInspections } from './Records';
 import { BauakteRooms } from './Rooms';
 import { BauakteWork } from './Work';
@@ -55,7 +56,7 @@ interface EditForm {
   siteNotes?: string;
 }
 
-const tabs = [
+const allTabs: { key: string; tab: string; permission?: string }[] = [
   { key: 'uebersicht', tab: 'Übersicht' },
   { key: 'kontakte', tab: 'Kontakte' },
   { key: 'notizen', tab: 'Notizen & Verlauf' },
@@ -66,6 +67,7 @@ const tabs = [
   { key: 'erstbegehung', tab: 'Erstbegehung' },
   { key: 'raeume', tab: 'Räume & Flächen' },
   { key: 'aufgaben', tab: 'Aufgaben & Mängel' },
+  { key: 'material', tab: 'Material', permission: 'materials.read' },
 ];
 
 const hintTypes = { info: 'info', success: 'success', warning: 'warning', danger: 'error' } as const;
@@ -79,6 +81,7 @@ export default function BauaktePage() {
   const queries = useQueryClient();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
+  const tabs = allTabs.filter((t) => !t.permission || has(t.permission)).map(({ key, tab: label }) => ({ key, tab: label }));
   const tab = tabs.some((t) => t.key === params.get('reiter')) ? params.get('reiter')! : 'uebersicht';
   const setTab = (key: string) => setParams((p) => { p.set('reiter', key); return p; }, { replace: true });
   const [editing, setEditing] = useState(false);
@@ -197,7 +200,7 @@ export default function BauaktePage() {
       tabActiveKey={tab}
       onTabChange={setTab}
       tabList={tabs}
-      tabProps={{ size: 'middle', tabBarGutter: 18 }}
+      tabProps={{ size: 'middle', tabBarGutter: 14 }}
     >
       {tab === 'uebersicht' && (
         <BauakteOverview bauakte={b} customer={customer.data ?? null} members={members.data ?? []} canEdit={canEdit} onTab={setTab}
@@ -214,6 +217,7 @@ export default function BauaktePage() {
       {tab === 'tagesuebersicht' && <BauakteDiary bauakteId={b.id} people={people.data ?? []} />}
       {tab === 'erstbegehung' && <BauakteInspections bauakte={b} people={people.data ?? []} />}
       {tab === 'raeume' && <BauakteRooms bauakteId={b.id} canEdit={canEdit} />}
+      {tab === 'material' && <BauakteMaterial bauakte={b} canManage={has('materials.manage')} />}
       {tab === 'aufgaben' && <BauakteWork bauakteId={b.id} canEdit={has('work.edit')} people={people.data ?? []} />}
 
       <DrawerForm<EditForm>

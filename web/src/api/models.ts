@@ -526,3 +526,87 @@ export interface ConvertInquiryResponse {
   bauakteId: string;
   bauakteNumber: string | null;
 }
+
+export interface CompanyResponse {
+  name: string;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  phone: string | null;
+  email: string | null;
+  website: string | null;
+  version: number;
+}
+
+export type MaterialCategory = 'screed' | 'binder' | 'aggregate' | 'insulation' | 'membrane' | 'edgeStrip' | 'additive' | 'other';
+export type OrderStatus = 'draft' | 'ordered' | 'confirmed' | 'delivered' | 'cancelled';
+
+export interface SupplierResponse {
+  id: string;
+  name: string;
+  customerNumber: string | null;
+  contactName: string | null;
+  phone: string | null;
+  email: string | null;
+  street: string | null;
+  postalCode: string | null;
+  city: string | null;
+  orderNotes: string | null;
+  isActive: boolean;
+  version: number;
+}
+
+export interface MaterialResponse {
+  id: string;
+  name: string;
+  articleNumber: string | null;
+  category: MaterialCategory;
+  unit: string;
+  supplierId: string | null;
+  supplierName: string | null;
+  price: number | null;
+  notes: string | null;
+  isActive: boolean;
+  version: number;
+}
+
+export interface OrderLineResponse {
+  id: string;
+  position: number;
+  materialId: string | null;
+  articleNumber: string | null;
+  description: string;
+  quantity: number;
+  unit: string;
+  unitPrice: number | null;
+  total: number | null;
+}
+
+export interface OrderResponse {
+  id: string;
+  number: string;
+  status: OrderStatus;
+  supplierId: string;
+  supplierName: string;
+  supplierCustomerNumber: string | null;
+  supplierEmail: string | null;
+  supplierPhone: string | null;
+  bauakteId: string | null;
+  bauakteNumber: string | null;
+  bauakteTitle: string | null;
+  deliveryDate: string | null;
+  deliveryTime: string | null;
+  deliveryStreet: string | null;
+  deliveryPostalCode: string | null;
+  deliveryCity: string | null;
+  siteContact: string | null;
+  notes: string | null;
+  lines: OrderLineResponse[];
+  total: number | null;
+  createdByUserId: string;
+  createdByName: string | null;
+  orderedAt: string | null;
+  deliveredAt: string | null;
+  updatedAt: string;
+  version: number;
+}

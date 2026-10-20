@@ -1,5 +1,5 @@
 import {
-  AppstoreOutlined, AuditOutlined, FieldTimeOutlined, FileAddOutlined, PhoneOutlined, CalendarOutlined, CarOutlined, ClusterOutlined, CloudServerOutlined, CustomerServiceOutlined, EnvironmentOutlined,
+  AppstoreOutlined, AuditOutlined, BankOutlined, ExperimentOutlined, FieldTimeOutlined, ShopOutlined, ShoppingCartOutlined, FileAddOutlined, PhoneOutlined, CalendarOutlined, CarOutlined, ClusterOutlined, CloudServerOutlined, CustomerServiceOutlined, EnvironmentOutlined,
   FileSearchOutlined, InboxOutlined,
   KeyOutlined, LogoutOutlined, MobileOutlined, ProjectOutlined, ScheduleOutlined, SearchOutlined, TeamOutlined, UnorderedListOutlined, UserOutlined,
 } from '@ant-design/icons';
@@ -40,6 +40,13 @@ const navigation: NavEntry[] = [
     ],
   },
   {
+    path: '/materialwirtschaft', name: 'Material', children: [
+      { path: '/bestellungen', name: 'Bestellungen', icon: <ShoppingCartOutlined />, permission: 'materials.read' },
+      { path: '/material', name: 'Materialstamm', icon: <ExperimentOutlined />, permission: 'materials.read' },
+      { path: '/lieferanten', name: 'Lieferanten', icon: <ShopOutlined />, permission: 'materials.read' },
+    ],
+  },
+  {
     path: '/stammdaten', name: 'Büro und Stammdaten', children: [
       { path: '/kunden', name: 'Kunden', icon: <TeamOutlined />, permission: 'contacts.read' },
       { path: '/anrufe', name: 'Anrufe', icon: <PhoneOutlined />, permission: 'contacts.read' },
@@ -53,7 +60,8 @@ const navigation: NavEntry[] = [
       { path: '/it-center/helpdesk', name: 'Helpdesk', icon: <CustomerServiceOutlined />, permission: 'helpdesk.agent' },
     ],
   },
-  { path: '/system', name: 'System', children: [{ path: '/system/sicherung', name: 'Sicherung', icon: <CloudServerOutlined />, permission: 'backup.manage' },
+  { path: '/system', name: 'System', children: [{ path: '/system/firmendaten', name: 'Firmendaten', icon: <BankOutlined />, permission: 'settings.manage' },
+    { path: '/system/sicherung', name: 'Sicherung', icon: <CloudServerOutlined />, permission: 'backup.manage' },
     { path: '/system/protokoll', name: 'Protokoll', icon: <AuditOutlined />, permission: 'audit.read' }] },
 ];
 

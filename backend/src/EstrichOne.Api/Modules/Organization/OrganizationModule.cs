@@ -11,7 +11,5 @@ public sealed class OrganizationModule : IModule
         services.AddScoped<ICompanyProfiles, CompanyProfiles>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api)
-    {
-    }
+    public void MapEndpoints(IEndpointRouteBuilder api) => CompanyEndpoints.Map(api);
 }
