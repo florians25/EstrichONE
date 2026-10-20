@@ -31,10 +31,12 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - run: npm ci
+      - name: Typprüfung
+        run: npm run lint
       - name: Unit-Tests (Vitest)
-        run: npx ng test --watch=false
+        run: npm test
       - name: Produktions-Build
-        run: npx ng build --configuration production
+        run: npm run build
 
   e2e:
     name: Ende zu Ende (Playwright gegen Web-Image und echte API)

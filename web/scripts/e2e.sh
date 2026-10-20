@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ende-zu-Ende-Tests der Web-Oberfläche gegen einen echten Server:
-# PostgreSQL (Docker) + API + Angular-Entwicklungsserver mit Proxy, dann Playwright.
-# NG überschreibt den Aufruf der Angular-CLI (z. B. in einem Container mit neuerem Node.js).
+# PostgreSQL (Docker) + API + Vite-Entwicklungsserver mit Proxy, dann Playwright.
+# VITE überschreibt den Aufruf von Vite (z. B. in einem Container mit neuerem Node.js).
 # WEB_IMAGE=estrichone/web:… testet stattdessen das fertige Image (Caddy, HTTPS, CSP) wie im Betrieb.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -62,7 +62,7 @@ if [[ -n "${WEB_IMAGE:-}" ]]; then
     sleep 1
   done
 else
-  ${NG:-npx ng} serve --port 4200 --proxy-config proxy.conf.json >"$WORK/web.log" 2>&1 &
+  ${VITE:-npx vite} --port 4200 --strictPort >"$WORK/web.log" 2>&1 &
   PIDS+=($!)
   for _ in $(seq 1 120); do
     curl -sf --noproxy localhost http://localhost:4200/ >/dev/null && break

@@ -35,9 +35,8 @@ deploy/caddy-root.crt
 deploy/backup-repository/
 deploy/ssh/
 
-# Web (Angular)
+# Web (React, Vite)
 web/node_modules/
 web/dist/
-web/.angular/
 web/test-results/
 web/playwright-report/
