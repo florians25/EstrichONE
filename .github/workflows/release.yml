@@ -1,24 +1,47 @@
 name: Release
 
-# Wird ein Release (auch Vorabversion) auf GitHub veröffentlicht, baut dieser Ablauf die installierbaren Pakete
-# und hängt sie an: Windows-App (ZIP, ohne Installation lauffähig), Android-App (APK) und das Server-Paket.
+# Ein Versions-Tag (z. B. v0.1.0 oder v0.1.0-preview.1) legt das Release an und hängt die installierbaren Pakete an:
+# Windows-App (ZIP, ohne Installation lauffähig), Android-App (APK), iOS-Xcode-Projekt und das Server-Paket.
+# Tags mit Bindestrich werden als Vorabversion veröffentlicht. Versionshinweise: docs/releases/<tag>.md
 on:
-  release:
-    types: [published]
+  push:
+    tags: ["v*"]
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag eines vorhandenen Releases"
+        description: "Vorhandener Tag"
         required: true
 
 permissions:
   contents: write
 
 env:
-  TAG: ${{ github.event.release.tag_name || inputs.tag }}
+  TAG: ${{ inputs.tag || github.ref_name }}
 
 jobs:
+  create:
+    name: Release anlegen
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ env.TAG }}
+      - name: Release mit Versionshinweisen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          notes="docs/releases/$TAG.md"
+          test -f "$notes" || { echo "Versionshinweise $notes fehlen"; exit 1; }
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release edit "$TAG" --notes-file "$notes" --repo "$GITHUB_REPOSITORY"
+          else
+            pre=""; [[ "$TAG" == *-* ]] && pre="--prerelease"
+            title="EstrichONE ${TAG#v}"; [[ -n "$pre" ]] && title="EstrichONE ${TAG#v} (Vorabversion)"
+            gh release create "$TAG" --title "$title" --notes-file "$notes" $pre --verify-tag --repo "$GITHUB_REPOSITORY"
+          fi
+
   windows:
+    needs: create
     name: Windows-App
     runs-on: windows-latest
     timeout-minutes: 30
@@ -42,6 +65,7 @@ jobs:
           gh release upload $env:TAG $zip --clobber --repo $env:GITHUB_REPOSITORY
 
   android:
+    needs: create
     name: Android-App
     runs-on: ubuntu-latest
     timeout-minutes: 30
@@ -66,6 +90,7 @@ jobs:
           gh release upload "$TAG" "EstrichONE-Android-$TAG.apk" --clobber --repo "$GITHUB_REPOSITORY"
 
   server:
+    needs: create
     name: Server-Paket
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -82,6 +107,7 @@ jobs:
           gh release upload "$TAG" "$name.tar.gz" --clobber --repo "$GITHUB_REPOSITORY"
 
   ios:
+    needs: create
     name: iOS-Xcode-Projekt
     runs-on: macos-15
     timeout-minutes: 40
