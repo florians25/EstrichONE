@@ -156,7 +156,7 @@ final class AppModel {
             return
         }
         guard await environment.authenticateDeviceOwner() else { return }
-        do {
+        do throws(AccountError) {
             activate(try requireAccounts().unlock(userId: user.id, pin: nil))
         } catch {
             notice = error.message
@@ -298,7 +298,7 @@ final class AppModel {
         let dataKey = account.dataKey
         let client = AuthorizedClient(
             api: accounts.api, session: account.session, keys: accounts.keys,
-            persist: { session in try? accounts.store(session, dataKey: dataKey) },
+            persist: { session in _ = try? accounts.store(session, dataKey: dataKey) },
             ended: { [weak self] end in await self?.handleSessionEnd(end) })
         active = ActiveAccount(account: account, client: client)
         deviceState = accounts.state

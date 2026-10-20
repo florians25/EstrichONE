@@ -6,11 +6,6 @@ import Foundation
 /// Der QR-Code enthält kein Geheimnis von Dauer: Der Einrichtungscode ist einmalig und kurzlebig
 /// (docs/reengineering/10-server-onboarding.md, Schritt 2A). Unbekannte Parameter werden ignoriert.
 public struct EnrollmentLink: Hashable, Sendable {
-    public enum DeviceKind: String, Sendable {
-        case personal
-        case pool
-    }
-
     public let server: ServerAddress
     public let enrollmentCode: String?
     public let deviceKind: DeviceKind?

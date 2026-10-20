@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import UIKit.UIGestureRecognizerSubclass
 
 /// Meldet, wenn eine Zeit lang niemand den Bildschirm berührt hat (Poolgerät: automatische Sperre).
 /// Ein unsichtbarer Gestenerkenner am Fenster sieht jede Berührung, ohne sie abzufangen.
