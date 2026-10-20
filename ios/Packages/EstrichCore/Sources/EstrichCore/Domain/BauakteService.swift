@@ -28,11 +28,13 @@ public struct NewBauakte: Sendable {
 
 public enum BauakteError: Error, Equatable, Sendable {
     case titleRequired
+    case textRequired
     case storage
 
     public var message: String {
         switch self {
-        case .titleRequired: "Bitte eine Bezeichnung für das Bauvorhaben eingeben."
+        case .titleRequired: "Bitte eine Bezeichnung eingeben."
+        case .textRequired: "Bitte einen Text eingeben."
         case .storage: "Die Daten konnten auf diesem Gerät nicht gespeichert werden."
         }
     }
@@ -145,6 +147,98 @@ public struct BauakteService: Sendable {
         var ids = try await ids(forKey: key).filter { $0 != id }
         ids.insert(id, at: 0)
         try await store.setMeta(key, try JSONValue.array(ids.prefix(10).map { JSONValue($0) }).encoded())
+    }
+
+    // MARK: Notizen
+
+    public func notes(of bauakteId: UUID) async throws -> [Note] {
+        try await store.entities(.note, parent: bauakteId).map(Note.init)
+            .sorted { ($0.isPinned ? 1 : 0, $0.createdAt ?? .distantPast) > ($1.isPinned ? 1 : 0, $1.createdAt ?? .distantPast) }
+    }
+
+    @discardableResult
+    public func addNote(_ text: String, to bauakteId: UUID) async throws(BauakteError) -> UUID {
+        let text = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { throw .textRequired }
+        let id = UUID.v7(now: now())
+        let payload: [String: JSONValue] = ["bauakteId": JSONValue(bauakteId), "text": .string(text)]
+        let local = JSONValue.object(payload).merging([
+            "id": JSONValue(id), "authorUserId": JSONValue(userId), "isPinned": false, "color": .null,
+            "createdAt": .string(APIDate.format(now())), "editedAt": .null, "version": 0,
+        ])
+        do {
+            try await store.create(.note, id: id, data: local, payload: payload)
+        } catch {
+            throw .storage
+        }
+        return id
+    }
+
+    // MARK: Aufgaben und Mängel
+
+    public func workItems(of bauakteId: UUID) async throws -> [WorkItem] {
+        Self.ordered(try await store.entities(.workItem, parent: bauakteId).map(WorkItem.init))
+    }
+
+    /// Reiter „Aufgaben“: mir zugewiesen oder von mir angelegt und ohne Zuständigen.
+    public func myWorkItems(includeDone: Bool = false) async throws -> [WorkItem] {
+        Self.ordered(try await store.entities(.workItem).map(WorkItem.init).filter { item in
+            (includeDone || !item.isDone)
+                && (item.assigneeUserId == userId || (item.assigneeUserId == nil && item.createdByUserId == userId))
+        })
+    }
+
+    /// Offen vor erledigt, dann nach Fälligkeit (ohne Datum zuletzt), dann Titel.
+    static func ordered(_ items: [WorkItem]) -> [WorkItem] {
+        items.sorted { a, b in
+            if a.isDone != b.isDone { return !a.isDone }
+            switch (a.dueDate, b.dueDate) {
+            case let (x?, y?) where x != y: return x < y
+            case (_?, nil): return true
+            case (nil, _?): return false
+            default: return a.title.localizedCompare(b.title) == .orderedAscending
+            }
+        }
+    }
+
+    @discardableResult
+    public func addWorkItem(_ input: NewWorkItem) async throws(BauakteError) -> UUID {
+        let title = input.title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !title.isEmpty else { throw .titleRequired }
+        let id = UUID.v7(now: now())
+        let description = input.description?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let payload: [String: JSONValue] = [
+            "bauakteId": JSONValue(input.bauakteId), "kind": .string(input.kind.rawValue), "title": .string(title),
+            "description": JSONValue(description?.isEmpty == false ? description : nil), "dueDate": JSONValue(input.dueDate),
+            "assigneeUserId": JSONValue(input.assigneeUserId),
+        ]
+        let timestamp = JSONValue.string(APIDate.format(now()))
+        let local = JSONValue.object(payload).merging([
+            "id": JSONValue(id), "status": .string(WorkItemStatus.open.rawValue), "createdByUserId": JSONValue(userId),
+            "completedAt": .null, "updatedAt": timestamp, "version": 0,
+        ])
+        do {
+            try await store.create(.workItem, id: id, data: local, payload: payload)
+        } catch {
+            throw .storage
+        }
+        return id
+    }
+
+    public func setStatus(_ status: WorkItemStatus, of itemId: UUID) async throws {
+        try await store.update(.workItem, id: itemId, changes: ["status": .string(status.rawValue)])
+    }
+
+    // MARK: Verzeichnis (für Namen offline zwischengespeichert)
+
+    public func cachedDirectory() async throws -> [DirectoryUser] {
+        guard let text = try await store.meta("directory") else { return [] }
+        return (try? JSONCoding.decoder.decode([DirectoryUser].self, from: Data(text.utf8))) ?? []
+    }
+
+    public func saveDirectory(_ users: [DirectoryUser]) async throws {
+        let data = try JSONCoding.encoder.encode(users)
+        try await store.setMeta("directory", String(decoding: data, as: UTF8.self))
     }
 
     // MARK: Fotos

@@ -74,6 +74,9 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private var counter = 0
     /// Angekündigte Dateien: Größe und empfangene Bytes.
     private var files: [String: (size: Int, received: Int)] = [:]
+    /// Zuletzt gemeldeter Stand je Datensatz, damit Änderungen (`*.update`) zusammengeführt zurückkommen.
+    private var entities: [String: [String: Any]] = [:]
+    private var currentUserId = "0193a1b2-0000-7000-8000-00000000aaaa"
 
     init(serverInfoStatus: Int, serverInfoBody: String, password: String, newDeviceStatus: String) {
         self.serverInfoStatus = serverInfoStatus
@@ -106,6 +109,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             let login = (body["login"] as? String ?? "").lowercased()
             let name = login.contains("lukas") ? "Lukas Brandl" : "Max Huber"
             let id = login.contains("lukas") ? "0193a1b2-0000-7000-8000-00000000bbbb" : "0193a1b2-0000-7000-8000-00000000aaaa"
+            currentUserId = id
             return (200, tokens(userId: id, name: name, userName: login))
         case "/api/v1/auth/refresh":
             return (200, """
@@ -132,9 +136,28 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             // Nimmt jede Operation an und meldet den Datensatz so zurück, wie der Client ihn gesendet hat.
             let operations = body["operations"] as? [[String: Any]] ?? []
             let results = operations.map { operation -> [String: Any] in
+                let type = operation["type"] as? String ?? ""
+                let entityId = (operation["entityId"] as? String ?? "").lowercased()
+                if type.hasSuffix(".update") {
+                    var entity = entities[entityId] ?? ["id": entityId]
+                    let changes = (operation["payload"] as? [String: Any])?["changes"] as? [String: Any] ?? [:]
+                    entity.merge(changes) { _, new in new }
+                    entity["version"] = ((entity["version"] as? Int) ?? 1) + 1
+                    entities[entityId] = entity
+                    return ["opId": operation["opId"] ?? "", "status": "applied", "version": entity["version"] ?? 2, "entity": entity]
+                }
                 var entity = operation["payload"] as? [String: Any] ?? [:]
                 entity["id"] = operation["entityId"]
                 entity["version"] = 1
+                if type == "workitem.create" {
+                    entity["status"] = "open"
+                    entity["createdByUserId"] = currentUserId
+                }
+                if type == "note.create" {
+                    entity["authorUserId"] = currentUserId
+                    entity["isPinned"] = false
+                    entity["createdAt"] = APIDate.format(Date())
+                }
                 if (operation["type"] as? String) == "bauakte.create" {
                     entity["number"] = "2026-0\(10 + counter)"
                     entity["status"] = "planned"
@@ -143,12 +166,23 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                     files[id.lowercased()] = ((entity["sizeBytes"] as? Int) ?? 0, 0)
                     entity["state"] = "awaitingUpload"
                 }
+                entities[entityId] = entity
                 return ["opId": operation["opId"] ?? "", "status": "applied", "version": 1, "entity": entity]
             }
             let json = (try? JSONSerialization.data(withJSONObject: ["results": results])).map { String(decoding: $0, as: UTF8.self) }
             return (200, json ?? #"{"results":[]}"#)
         case "/api/v1/sync/pull":
             return (200, #"{"changes":[],"cursor":"1:0","hasMore":false,"visibleBauakteIds":null}"#)
+        case "/api/v1/directory/users":
+            return (200, """
+            [{"id":"0193a1b2-0000-7000-8000-00000000bbbb","displayName":"Lukas Brandl","isActive":true},
+             {"id":"0193a1b2-0000-7000-8000-00000000aaaa","displayName":"Max Huber","isActive":true}]
+            """)
+        case let historyPath where historyPath.hasPrefix("/api/v1/bauakten/") && historyPath.hasSuffix("/history"):
+            return (200, """
+            [{"at":"\(APIDate.format(Date()))","action":"bauakte.created","actorUserId":"\(currentUserId)","actorName":"Max Huber",
+              "text":"Max Huber hat die Bauakte angelegt."}]
+            """)
         default:
             return problem(404, "NOT_FOUND", "Nicht gefunden")
         }

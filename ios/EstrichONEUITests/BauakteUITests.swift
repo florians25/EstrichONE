@@ -87,4 +87,36 @@ final class BauakteUITests: XCTestCase {
         search.typeText("huber")
         XCTAssertTrue(app.staticTexts["Halle Huber"].waitForExistence(timeout: 5))
     }
+
+    @MainActor
+    func testNoteDefectAndHistory() {
+        let app = launchSignedIn()
+        tap("newBauakteButton", in: app)
+        type("Reihenhaus Mitte", into: "newTitleField", in: app)
+        tap("createButton", in: app)
+        XCTAssertTrue(element("bauakteTitle", in: app).waitForExistence(timeout: 10))
+
+        // Notiz: sofort sichtbar.
+        tap("addNoteButton", in: app)
+        type("Schlüssel liegt beim Nachbarn", into: "noteTextField", in: app)
+        tap("saveNoteButton", in: app)
+        XCTAssertTrue(app.staticTexts["Schlüssel liegt beim Nachbarn"].waitForExistence(timeout: 5))
+
+        // Mangel erfassen, dann abhaken.
+        tap("addWorkItemMenu", in: app)
+        app.buttons["Mangel"].firstMatch.tap()
+        type("Riss im Flur", into: "workItemTitleField", in: app)
+        tap("saveWorkItemButton", in: app)
+        let toggle = element("toggleWorkItem-Riss im Flur", in: app)
+        XCTAssertTrue(toggle.waitForExistence(timeout: 5), app.debugDescription)
+        toggle.tap()
+        let reopen = NSPredicate(format: "label CONTAINS %@", "Wieder öffnen")
+        expectation(for: reopen, evaluatedWith: toggle)
+        waitForExpectations(timeout: 10)
+
+        // Verlauf vom Server.
+        app.swipeUp()
+        tap("historyLink", in: app)
+        XCTAssertTrue(app.staticTexts["Max Huber hat die Bauakte angelegt."].waitForExistence(timeout: 10))
+    }
 }

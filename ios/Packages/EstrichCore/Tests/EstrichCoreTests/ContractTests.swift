@@ -67,6 +67,10 @@ struct ContractTests {
         try checkResponse("EnrollmentCodeResponse", sample: EnrollmentCodeResponse(code: "A", kind: .pool, deviceName: nil, expiresAt: Date(), link: nil))
         try checkResponse("ServerInfo", sample: ServerInfo(product: "EstrichONE", serverName: "x", serverVersion: "1", apiVersions: [],
                                                            minClientVersion: "1", authMethods: [], instanceEpoch: UUID(), setupRequired: false))
+        try checkResponse("DirectoryUser", sample: DirectoryUser(id: UUID(), displayName: "a", isActive: true))
+        try checkResponse("BauakteHistoryEntry", sample: try JSONCoding.decoder.decode(BauakteHistoryEntry.self, from: Data("""
+            {"at":"2026-10-20T07:00:00.0000000+00:00","action":"bauakte.created","actorUserId":null,"actorName":null,"text":"x"}
+            """.utf8)))
     }
 
     @Test("Anfragetypen")
@@ -86,5 +90,8 @@ struct ContractTests {
         #expect(Set(kinds) == Set(DeviceKind.allCases.map(\.rawValue)))
         let statuses = try #require(schemas["DeviceStatus"]?["enum"] as? [String])
         #expect(Set(statuses) == ["pending", "active", "locked", "retired"])
+        let bauakteStatus = try #require(schemas["BauakteStatus"]?["enum"] as? [String])
+        #expect(Set(bauakteStatus) == Set(BauakteStatus.allCases.map(\.rawValue)))
+        // Aufgaben und Mängel laufen nur über den Sync (kein REST-Schema); ihre Werte prüft der Live-Test.
     }
 }

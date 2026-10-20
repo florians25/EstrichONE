@@ -1,13 +1,19 @@
 import EstrichCore
 import SwiftUI
 
-/// Bauakte auf dem Gerät (07, Abschnitt 2). Notizen, Aufgaben und Prüfungen folgen mit AP-15/16.
+/// Bauakte auf dem Gerät (07, Abschnitt 2): Kopf, Kunde, Navigation, Aufgaben und Mängel, Notizen, Fotos, Verlauf.
 struct BauakteDetailView: View {
     let bauakteId: UUID
 
     @Environment(AppModel.self) private var model
     @State private var bauakte: Bauakte?
     @State private var photos: [FileItem] = []
+    @State private var notes: [Note] = []
+    @State private var workItems: [WorkItem] = []
+    @State private var customer: Contact?
+    @State private var names: [UUID: String] = [:]
+    @State private var addingNote = false
+    @State private var addingWorkItem: WorkItemKind?
     @State private var capturing = false
     @State private var viewing: FileItem?
 
@@ -32,6 +38,9 @@ struct BauakteDetailView: View {
                         }
                         .padding(.vertical, 4)
 
+                        if let customer {
+                            LabeledContent("Kunde", value: customer.name)
+                        }
                         if let address = bauakte.addressLine {
                             LabeledContent("Baustelle", value: address)
                         } else {
@@ -49,6 +58,30 @@ struct BauakteDetailView: View {
                     }
 
                     Section {
+                        if workItems.isEmpty {
+                            Text("Keine Aufgaben oder Mängel.").foregroundStyle(Theme.textSecondary)
+                        }
+                        ForEach(workItems) { item in
+                            WorkItemRow(item: item, assigneeName: item.assigneeUserId.flatMap { names[$0] }) {
+                                Task { await toggle(item) }
+                            }
+                        }
+                    } header: {
+                        Text("Aufgaben und Mängel (\(workItems.filter { !$0.isDone }.count) offen)")
+                    }
+
+                    Section {
+                        if notes.isEmpty {
+                            Text("Noch keine Notizen.").foregroundStyle(Theme.textSecondary)
+                        }
+                        ForEach(notes) { note in
+                            NoteRow(note: note, authorName: note.authorUserId.flatMap { names[$0] })
+                        }
+                    } header: {
+                        Text("Notizen (\(notes.count))")
+                    }
+
+                    Section {
                         if photos.isEmpty {
                             Text("Noch keine Fotos.").foregroundStyle(Theme.textSecondary)
                         } else {
@@ -57,6 +90,15 @@ struct BauakteDetailView: View {
                         }
                     } header: {
                         Text("Fotos (\(photos.count))")
+                    }
+
+                    Section {
+                        NavigationLink {
+                            HistoryView(bauakteId: bauakteId)
+                        } label: {
+                            Label("Verlauf", systemImage: "clock.arrow.circlepath")
+                        }
+                        .accessibilityIdentifier("historyLink")
                     }
                 }
                 .navigationTitle(bauakte.number ?? "Neue Bauakte")
@@ -70,6 +112,20 @@ struct BauakteDetailView: View {
                         }
                         .accessibilityIdentifier("addPhotoButton")
                         Spacer()
+                        Button {
+                            addingNote = true
+                        } label: {
+                            Label("Notiz", systemImage: "square.and.pencil")
+                        }
+                        .accessibilityIdentifier("addNoteButton")
+                        Spacer()
+                        Menu {
+                            Button("Aufgabe", systemImage: "checklist") { addingWorkItem = .task }
+                            Button("Mangel", systemImage: "exclamationmark.triangle") { addingWorkItem = .defect }
+                        } label: {
+                            Label("Aufgabe oder Mangel", systemImage: "plus.circle")
+                        }
+                        .accessibilityIdentifier("addWorkItemMenu")
                     }
                 }
                 .fullScreenCover(isPresented: $capturing) {
@@ -78,13 +134,23 @@ struct BauakteDetailView: View {
                 .sheet(item: $viewing) { file in
                     PhotoViewer(file: file)
                 }
+                .sheet(isPresented: $addingNote) {
+                    NewNoteView(bauakteId: bauakteId) { addingNote = false }
+                }
+                .sheet(item: $addingWorkItem) { kind in
+                    NewWorkItemView(bauakteId: bauakteId, initialKind: kind) { addingWorkItem = nil }
+                }
             } else {
                 ContentUnavailableView("Bauakte nicht gefunden", systemImage: "folder.badge.questionmark",
                                        description: Text("Sie ist auf diesem Gerät nicht (mehr) vorhanden."))
             }
         }
         .task(id: model.active?.sync?.revision) { await reload() }
-        .task { try? await model.active?.service?.markOpened(bauakteId) }
+        .task {
+            try? await model.active?.service?.markOpened(bauakteId)
+            // Namen für Verfasser und Zuständige; danach neu anzeigen.
+            if !(await DirectoryCache.load(model)).isEmpty { await reload() }
+        }
         .refreshable { await model.active?.sync?.run() }
     }
 
@@ -92,6 +158,17 @@ struct BauakteDetailView: View {
         guard let service = model.active?.service else { return }
         bauakte = try? await service.bauakte(bauakteId)
         photos = ((try? await service.files(of: bauakteId)) ?? []).filter(\.isPhoto)
+        notes = (try? await service.notes(of: bauakteId)) ?? []
+        workItems = (try? await service.workItems(of: bauakteId)) ?? []
+        customer = if let id = bauakte?.customerId { try? await service.contact(id) } else { nil }
+        let directory = (try? await service.cachedDirectory()) ?? []
+        names = Dictionary(directory.map { ($0.id, $0.displayName) }, uniquingKeysWith: { first, _ in first })
+    }
+
+    private func toggle(_ item: WorkItem) async {
+        try? await model.active?.service?.setStatus(item.isDone ? .open : .done, of: item.id)
+        model.active?.sync?.localChangeMade()
+        await reload()
     }
 }
 

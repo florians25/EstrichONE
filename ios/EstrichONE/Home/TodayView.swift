@@ -1,12 +1,15 @@
 import EstrichCore
 import SwiftUI
 
-/// „Heute“ (07, Abschnitt 2): zuletzt geöffnete und zuletzt geänderte Bauakten, Hauptaktion „Neue Bauakte“.
+/// „Heute“ (07, Abschnitt 2): meine offenen Aufgaben, zuletzt geöffnete und zuletzt geänderte Bauakten,
+/// Hauptaktion „Neue Bauakte“.
 /// „Mein Einsatz heute“ kommt mit der Einsatzplanung (AP-19).
 struct TodayView: View {
     @Environment(AppModel.self) private var model
     @State private var recent: [Bauakte] = []
     @State private var changed: [Bauakte] = []
+    @State private var tasks: [WorkItem] = []
+    @State private var titles: [UUID: String] = [:]
     @State private var path: [UUID] = []
     @State private var creating = false
     @State private var captureFor: Bauakte?
@@ -20,6 +23,23 @@ struct TodayView: View {
                 if let sync = model.active?.sync {
                     SyncStatusBar(sync: sync)
                         .listRowInsets(EdgeInsets())
+                }
+                if !tasks.isEmpty {
+                    Section {
+                        ForEach(tasks.prefix(5)) { item in
+                            let row = WorkItemRow(item: item, showsBauakte: item.bauakteId.flatMap { titles[$0] }) {
+                                Task { await toggle(item) }
+                            }
+                            if let bauakteId = item.bauakteId {
+                                NavigationLink(value: bauakteId) { row }
+                            } else {
+                                row
+                            }
+                        }
+                    } header: {
+                        Text("Meine Aufgaben (\(tasks.count))")
+                    }
+                    .accessibilityIdentifier("myTasksSection")
                 }
                 if !recent.isEmpty {
                     Section("Zuletzt geöffnet") {
@@ -68,6 +88,16 @@ struct TodayView: View {
         guard let service = model.active?.service else { return }
         recent = (try? await service.recentBauakten()) ?? []
         let recentIds = Set(recent.map(\.id))
-        changed = ((try? await service.bauakten()) ?? []).filter { !recentIds.contains($0.id) }.prefix(10).map { $0 }
+        let all = (try? await service.bauakten()) ?? []
+        changed = all.filter { !recentIds.contains($0.id) }.prefix(10).map { $0 }
+        titles = Dictionary(all.map { ($0.id, [$0.number, $0.title].compactMap { $0 }.joined(separator: " · ")) },
+                            uniquingKeysWith: { first, _ in first })
+        tasks = (try? await service.myWorkItems()) ?? []
+    }
+
+    private func toggle(_ item: WorkItem) async {
+        try? await model.active?.service?.setStatus(item.isDone ? .open : .done, of: item.id)
+        model.active?.sync?.localChangeMade()
+        await reload()
     }
 }

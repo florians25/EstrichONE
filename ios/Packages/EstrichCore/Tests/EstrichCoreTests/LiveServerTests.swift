@@ -98,6 +98,11 @@ struct LiveServerTests {
 
     /// Angemeldetes Gerät mit eigener verschlüsselter Datenbank und Synchronisation gegen den echten Server.
     private func syncingDevice() async throws -> (store: LocalStore, files: FileVault, engine: SyncEngine) {
+        let device = try await syncingAccount()
+        return (device.store, device.files, device.engine)
+    }
+
+    private func syncingAccount() async throws -> (store: LocalStore, files: FileVault, engine: SyncEngine, client: AuthorizedClient, userId: UUID) {
         let service = makeService()
         let tokens = try await service.signIn(login: login, password: password, clientName: "CI Sync")
         _ = try await service.bindDevice(tokens: tokens, kind: .personal, enrollmentCode: nil, description: description)
@@ -105,8 +110,33 @@ struct LiveServerTests {
         let directory = service.storage.userDirectory(account.user.id)
         let store = try LocalStore.open(url: directory.appending(path: "data.sealed"), account: account)
         let files = FileVault(directory: directory.appending(path: "files"), key: account.dataKey)
-        let engine = SyncEngine(store: store, transport: APISyncTransport(client: authorized(service, account)), files: files)
-        return (store, files, engine)
+        let client = authorized(service, account)
+        let engine = SyncEngine(store: store, transport: APISyncTransport(client: client), files: files)
+        return (store, files, engine, client, account.user.id)
+    }
+
+    @Test("Notiz, Mangel und Erledigt über den echten Server; Verlauf und Verzeichnis")
+    func workAndHistory() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let bauakte = try await service.create(NewBauakte(title: "Verlauf Integrationstest"))
+        try await service.addNote("Zugang über den Hof", to: bauakte)
+        let defect = try await service.addWorkItem(NewWorkItem(kind: .defect, title: "Riss im Flur", dueDate: "2026-11-02",
+                                                              assigneeUserId: device.userId, bauakteId: bauakte))
+        #expect(await device.engine.synchronize() == .completed)
+        try await service.setStatus(.done, of: defect)
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled)
+
+        let item = try #require(try await service.workItems(of: bauakte).first)
+        #expect(item.kind == .defect && item.status == .done && item.dueDate == "2026-11-02")
+
+        let history = try await device.client.history(of: bauakte)
+        #expect(Set(history.map(\.action)) == ["bauakte.created", "bauakte.note_added", "bauakte.workitem_created", "bauakte.workitem_done"])
+        #expect(history.first?.text.hasSuffix("hat einen Mangel als behoben markiert.") == true)
+
+        let users = try await device.client.directoryUsers()
+        #expect(users.contains { $0.id == device.userId && $0.isActive })
     }
 
     @Test("Synchronisation: offline anlegen, Nummer vom Server, Notiz und Foto, zweites Gerät sieht alles, Felder zusammengeführt")
