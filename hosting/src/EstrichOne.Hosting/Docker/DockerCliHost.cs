@@ -267,6 +267,30 @@ public sealed partial class DockerCliHost(IOptions<HostingOptions> options, ILog
         }
     }
 
+    public Task<CommandResult> PullImageAsync(string image, CancellationToken cancellationToken) =>
+        DockerAsync(["pull", "--quiet", image], TimeSpan.FromMinutes(15), cancellationToken);
+
+    public Task<CommandResult> RunDetachedAsync(string image, string name, IReadOnlyDictionary<string, string> environment,
+        IReadOnlyList<string> volumes, IReadOnlyList<string> command, CancellationToken cancellationToken)
+    {
+        var arguments = new List<string> { "run", "-d", "--rm", "--name", name };
+        foreach (var (key, value) in environment)
+        {
+            arguments.Add("-e");
+            arguments.Add($"{key}={value}");
+        }
+
+        foreach (var volume in volumes)
+        {
+            arguments.Add("-v");
+            arguments.Add(volume);
+        }
+
+        arguments.Add(image);
+        arguments.AddRange(command);
+        return DockerAsync(arguments, ShortTimeout, cancellationToken);
+    }
+
     [GeneratedRegex(@"Exited \((-?\d+)\)", RegexOptions.CultureInvariant)]
     private static partial Regex ExitedPattern();
 

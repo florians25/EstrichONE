@@ -273,6 +273,21 @@ public sealed class FakeDockerHost : IDockerHost
             all.Count(c => c.State == "running"), all.Count, "Simulation", null));
     }
 
+    public Task<CommandResult> PullImageAsync(string image, CancellationToken cancellationToken)
+    {
+        Calls.Enqueue($"pull {image}");
+        return Task.FromResult(image.Contains("fehler", StringComparison.Ordinal)
+            ? new CommandResult(1, string.Empty, $"manifest for {image} not found")
+            : new CommandResult(0, string.Empty, string.Empty));
+    }
+
+    public Task<CommandResult> RunDetachedAsync(string image, string name, IReadOnlyDictionary<string, string> environment,
+        IReadOnlyList<string> volumes, IReadOnlyList<string> command, CancellationToken cancellationToken)
+    {
+        Calls.Enqueue($"run {name} {image} {string.Join(' ', command)}");
+        return Task.FromResult(new CommandResult(0, "simuliert", string.Empty));
+    }
+
     private static Dictionary<string, string> ReadEnv(string directory)
     {
         var file = Path.Combine(directory, ".env");

@@ -7,6 +7,7 @@
 				<ComboBox id="updateVersion" value="{dlg>/version}" items="{dlg>/versions}" width="100%">
 					<core:Item key="{dlg>}" text="{dlg>}" />
 				</ComboBox>
+				<CheckBox id="updateBackupFirst" text="Vorher sichern (empfohlen)" selected="{dlg>/backupFirst}" />
 				<Text text="Quelle der Versionsliste: {dlg>/source}" class="hostingHint sapUiTinyMarginTop" />
 			</VBox>
 		</content>

@@ -163,7 +163,7 @@ public static partial class TenantEndpoints
     private static async Task<IResult> ActionAsync(Guid id, string action, ActionRequest? request, HostingDbContext db,
         OperationService operations, AuditLog audit, CancellationToken cancellationToken)
     {
-        request ??= new ActionRequest(null, null, null, null, null, null);
+        request ??= new ActionRequest(null, null, null, null, null, null, null);
         var tenant = await db.Tenants.FirstOrDefaultAsync(t => t.Id == id && t.State != TenantState.Deleted, cancellationToken);
         if (tenant is null)
         {
@@ -192,7 +192,7 @@ public static partial class TenantEndpoints
                 if (state is not (TenantState.Running or TenantState.Failed or TenantState.Locked)) error = "Nur laufende Instanzen können neu gestartet werden.";
                 break;
             case "update":
-                plan = (OperationKind.Update, new OperationParameters(Version: request.Version?.Trim()));
+                plan = (OperationKind.Update, new OperationParameters(Version: request.Version?.Trim(), BackupFirst: request.BackupFirst != false));
                 error = Validation.CheckVersion(request.Version?.Trim());
                 if (error is null && request.Version!.Trim() == tenant.Version) error = $"Die Instanz hat bereits Version {tenant.Version}.";
                 if (state is TenantState.Deleting or TenantState.Provisioning) error = "Die Instanz kann in diesem Zustand nicht aktualisiert werden.";
@@ -262,7 +262,7 @@ public static partial class TenantEndpoints
         {
             try
             {
-                await operations.EnqueueAsync(tenant, OperationKind.Update, new OperationParameters(Version: version), cancellationToken);
+                await operations.EnqueueAsync(tenant, OperationKind.Update, new OperationParameters(Version: version, BackupFirst: request.BackupFirst != false), cancellationToken);
                 queued++;
             }
             catch (OperationConflictException)

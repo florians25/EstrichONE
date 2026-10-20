@@ -14,21 +14,23 @@ public sealed record VersionList(IReadOnlyList<string> Versions, string? Latest,
 public sealed class VersionCatalog(HttpClient http, IOptions<HostingOptions> options, TimeProvider clock, ILogger<VersionCatalog> logger)
 {
     private static readonly TimeSpan CacheDuration = TimeSpan.FromMinutes(15);
-    private VersionList? cached;
-    private DateTimeOffset cachedAt;
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, (VersionList List, DateTimeOffset At)> cache = new(StringComparer.Ordinal);
 
     private sealed record TokenResponse([property: JsonPropertyName("token")] string? Token);
 
     private sealed record TagsResponse([property: JsonPropertyName("tags")] List<string>? Tags);
 
-    public async Task<VersionList> GetAsync(IEnumerable<string> known, CancellationToken cancellationToken)
+    /// <param name="image">Image-Name in der Registry: <c>estrichone-api</c> (Suite) oder <c>estrichone-hosting</c> (Konsole).</param>
+    public async Task<VersionList> GetAsync(IEnumerable<string> known, CancellationToken cancellationToken, string image = "estrichone-api")
     {
-        var knownList = known.Append(options.Value.DefaultVersion).ToList();
-        if (cached is null || clock.GetUtcNow() - cachedAt > CacheDuration)
+        var knownList = known.Append(image == "estrichone-api" ? options.Value.DefaultVersion : ConsoleVersion.Current).ToList();
+        if (!cache.TryGetValue(image, out var entry) || clock.GetUtcNow() - entry.At > CacheDuration)
         {
-            cached = await FetchAsync(cancellationToken);
-            cachedAt = clock.GetUtcNow();
+            entry = (await FetchAsync(image, cancellationToken), clock.GetUtcNow());
+            cache[image] = entry;
         }
+
+        var cached = entry.List;
 
         var versions = cached.Versions.Concat(knownList)
             .Where(v => Validation.CheckVersion(v) is null)
@@ -41,7 +43,7 @@ public sealed class VersionCatalog(HttpClient http, IOptions<HostingOptions> opt
         return cached with { Versions = versions, Latest = versions.FirstOrDefault() };
     }
 
-    private async Task<VersionList> FetchAsync(CancellationToken cancellationToken)
+    private async Task<VersionList> FetchAsync(string image, CancellationToken cancellationToken)
     {
         if (options.Value.IsFake)
         {
@@ -56,7 +58,7 @@ public sealed class VersionCatalog(HttpClient http, IOptions<HostingOptions> opt
         }
 
         var host = registry[..slash];
-        var repository = $"{registry[(slash + 1)..]}/estrichone-api";
+        var repository = $"{registry[(slash + 1)..]}/{image}";
         try
         {
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);

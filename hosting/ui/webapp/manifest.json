@@ -4,20 +4,45 @@
     "id": "estrichone.hosting",
     "type": "application",
     "title": "EstrichONE Hosting-Konsole",
-    "applicationVersion": { "version": "0.1.0" }
+    "applicationVersion": {
+      "version": "0.1.0"
+    }
   },
   "sap.ui": {
     "technology": "UI5",
-    "deviceTypes": { "desktop": true, "tablet": true, "phone": true }
+    "deviceTypes": {
+      "desktop": true,
+      "tablet": true,
+      "phone": true
+    }
   },
   "sap.ui5": {
-    "rootView": { "viewName": "estrichone.hosting.view.App", "type": "XML", "id": "app" },
+    "rootView": {
+      "viewName": "estrichone.hosting.view.App",
+      "type": "XML",
+      "id": "app"
+    },
     "dependencies": {
       "minUI5Version": "1.136.0",
-      "libs": { "sap.m": {}, "sap.f": {}, "sap.tnt": {}, "sap.uxap": {}, "sap.ui.layout": {} }
+      "libs": {
+        "sap.m": {},
+        "sap.f": {},
+        "sap.tnt": {},
+        "sap.uxap": {},
+        "sap.ui.layout": {}
+      }
     },
-    "contentDensities": { "compact": true, "cozy": true },
-    "resources": { "css": [{ "uri": "css/style.css" }] },
+    "contentDensities": {
+      "compact": true,
+      "cozy": true
+    },
+    "resources": {
+      "css": [
+        {
+          "uri": "css/style.css"
+        }
+      ]
+    },
     "routing": {
       "config": {
         "routerClass": "sap.m.routing.Router",
@@ -28,25 +53,93 @@
         "controlAggregation": "pages",
         "transition": "show",
         "async": true,
-        "bypassed": { "target": "dashboard" }
+        "bypassed": {
+          "target": "dashboard"
+        }
       },
       "routes": [
-        { "name": "dashboard", "pattern": "", "target": "dashboard" },
-        { "name": "tenants", "pattern": "mandanten:?query:", "target": "tenants" },
-        { "name": "tenant", "pattern": "mandanten/{id}", "target": "tenant" },
-        { "name": "plans", "pattern": "tarife", "target": "plans" },
-        { "name": "operations", "pattern": "vorgaenge", "target": "operations" },
-        { "name": "audit", "pattern": "ereignisse", "target": "audit" },
-        { "name": "settings", "pattern": "einstellungen", "target": "settings" }
+        {
+          "name": "dashboard",
+          "pattern": "",
+          "target": "dashboard"
+        },
+        {
+          "name": "tenants",
+          "pattern": "mandanten:?query:",
+          "target": "tenants"
+        },
+        {
+          "name": "tenant",
+          "pattern": "mandanten/{id}",
+          "target": "tenant"
+        },
+        {
+          "name": "plans",
+          "pattern": "tarife",
+          "target": "plans"
+        },
+        {
+          "name": "notices",
+          "pattern": "hinweise",
+          "target": "notices"
+        },
+        {
+          "name": "operations",
+          "pattern": "vorgaenge",
+          "target": "operations"
+        },
+        {
+          "name": "audit",
+          "pattern": "ereignisse",
+          "target": "audit"
+        },
+        {
+          "name": "settings",
+          "pattern": "einstellungen",
+          "target": "settings"
+        }
       ],
       "targets": {
-        "dashboard": { "name": "Dashboard", "id": "dashboard", "level": 1 },
-        "tenants": { "name": "Tenants", "id": "tenants", "level": 1 },
-        "tenant": { "name": "TenantDetail", "id": "tenantDetail", "level": 2 },
-        "plans": { "name": "Plans", "id": "plans", "level": 1 },
-        "operations": { "name": "Operations", "id": "operations", "level": 1 },
-        "audit": { "name": "Audit", "id": "audit", "level": 1 },
-        "settings": { "name": "Settings", "id": "settings", "level": 1 }
+        "dashboard": {
+          "name": "Dashboard",
+          "id": "dashboard",
+          "level": 1
+        },
+        "tenants": {
+          "name": "Tenants",
+          "id": "tenants",
+          "level": 1
+        },
+        "tenant": {
+          "name": "TenantDetail",
+          "id": "tenantDetail",
+          "level": 2
+        },
+        "plans": {
+          "name": "Plans",
+          "id": "plans",
+          "level": 1
+        },
+        "operations": {
+          "name": "Operations",
+          "id": "operations",
+          "level": 1
+        },
+        "audit": {
+          "name": "Audit",
+          "id": "audit",
+          "level": 1
+        },
+        "settings": {
+          "name": "Settings",
+          "id": "settings",
+          "level": 1
+        },
+        "notices": {
+          "name": "Notices",
+          "id": "notices",
+          "level": 1
+        }
       }
     }
   }

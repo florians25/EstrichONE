@@ -194,7 +194,7 @@ export default class TenantDetailController extends BaseController {
 			return;
 		}
 		const current = this.detail.getProperty("/summary/version") as string;
-		this.dlg.setData({ versions: versions.versions.filter((v) => v !== current), version: versions.latest !== current ? versions.latest ?? "" : "", source: versions.error ? `${versions.source} (${versions.error})` : versions.source });
+		this.dlg.setData({ backupFirst: true, versions: versions.versions.filter((v) => v !== current), version: versions.latest !== current ? versions.latest ?? "" : "", source: versions.error ? `${versions.source} (${versions.error})` : versions.source });
 		(await this.dialog("UpdateDialog")).open();
 	}
 
@@ -205,7 +205,7 @@ export default class TenantDetailController extends BaseController {
 			return;
 		}
 		(await this.dialog("UpdateDialog")).close();
-		await this.execute("update", { version });
+		await this.execute("update", { version, backupFirst: this.dlg.getProperty("/backupFirst") });
 	}
 
 	/** Löschen mit doppelter Bestätigung: Rückfrage, dann Kürzel eintippen (und optional Endsicherung). */

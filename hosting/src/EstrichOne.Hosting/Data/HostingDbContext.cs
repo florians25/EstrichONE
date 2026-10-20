@@ -12,6 +12,7 @@ public sealed class HostingDbContext(DbContextOptions<HostingDbContext> options)
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<Operation> Operations => Set<Operation>();
     public DbSet<Setting> Settings => Set<Setting>();
+    public DbSet<Notice> Notices => Set<Notice>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -62,6 +63,14 @@ public sealed class HostingDbContext(DbContextOptions<HostingDbContext> options)
         });
 
         modelBuilder.Entity<Setting>().HasKey(s => s.Key);
+
+        modelBuilder.Entity<Notice>(notice =>
+        {
+            notice.Property(n => n.Kind).HasConversion<string>().HasMaxLength(20);
+            notice.Property(n => n.Title).HasMaxLength(120);
+            notice.Property(n => n.Severity).HasMaxLength(10);
+            notice.HasIndex(n => n.EndsAt);
+        });
     }
 
     private sealed class UtcConverter() : ValueConverter<DateTime, DateTime>(

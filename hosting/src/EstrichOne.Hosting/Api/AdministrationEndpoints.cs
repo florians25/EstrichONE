@@ -40,6 +40,32 @@ public static class AdministrationEndpoints
             return Results.Ok(operations.Select(o => new { operation = TenantService.ToSummary(o), tenantId = o.TenantId, companyName = names.GetValueOrDefault(o.TenantId) }));
         }).RequireAuthorization().WithTags("Vorgänge");
 
+        var system = app.MapGroup("/api/system").WithTags("Einstellungen").RequireAuthorization();
+        system.MapGet("/console-update", async (ConsoleUpdater updater, VersionCatalog catalog, CancellationToken ct) =>
+        {
+            var versions = await catalog.GetAsync([], ct, "estrichone-hosting");
+            return Results.Ok(new
+            {
+                current = ConsoleVersion.Current,
+                versions.Versions,
+                versions.Latest,
+                updateAvailable = SemanticVersion.IsOlder(ConsoleVersion.Current, versions.Latest),
+                state = updater.State,
+            });
+        });
+        system.MapPost("/console-update", async (SettingsInput input, ConsoleUpdater updater, AuditLog audit, CancellationToken ct) =>
+        {
+            var version = input.DefaultVersion?.Trim();
+            if (version != "latest" && Validation.CheckVersion(version) is { } error)
+            {
+                return ApiErrors.BadRequest(error);
+            }
+
+            var state = await updater.StartAsync(version!, ct);
+            await audit.WriteAsync("Konsole aktualisieren", details: $"Zielversion {version}: {state.Message}", success: state.Success != false, cancellationToken: ct);
+            return state.Success == false ? ApiErrors.Conflict(state.Message) : Results.Accepted(value: state);
+        });
+
         var settings = app.MapGroup("/api/settings").WithTags("Einstellungen").RequireAuthorization();
         settings.MapGet("/", SettingsAsync);
         settings.MapPut("/", SaveSettingsAsync);

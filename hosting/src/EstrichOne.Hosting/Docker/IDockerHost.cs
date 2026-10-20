@@ -79,4 +79,11 @@ public interface IDockerHost
     Task<CommandResult> ExecAsync(string container, IReadOnlyList<string> command, TimeSpan timeout, CancellationToken cancellationToken);
 
     Task<DockerSystemInfo> GetSystemInfoAsync(CancellationToken cancellationToken);
+
+    /// <summary><c>docker pull</c> eines Images.</summary>
+    Task<CommandResult> PullImageAsync(string image, CancellationToken cancellationToken);
+
+    /// <summary>Startet einen Container losgelöst (<c>docker run -d --rm</c>), z. B. den Installer für das Selbst-Update.</summary>
+    Task<CommandResult> RunDetachedAsync(string image, string name, IReadOnlyDictionary<string, string> environment,
+        IReadOnlyList<string> volumes, IReadOnlyList<string> command, CancellationToken cancellationToken);
 }

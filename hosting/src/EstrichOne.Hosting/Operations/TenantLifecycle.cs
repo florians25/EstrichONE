@@ -81,7 +81,7 @@ public sealed class TenantLifecycle(
 
                 break;
             case OperationKind.Update:
-                await UpdateAsync(tenant, plan, parameters.Version, log, cancellationToken);
+                await UpdateAsync(tenant, plan, parameters.Version, parameters.BackupFirst, log, cancellationToken);
                 break;
             case OperationKind.Lock:
                 await LockAsync(tenant, parameters, log, cancellationToken);
@@ -154,7 +154,7 @@ public sealed class TenantLifecycle(
             UpTimeout, log, cancellationToken);
     }
 
-    private async Task UpdateAsync(Tenant tenant, Plan plan, string? version, OperationLog log, CancellationToken cancellationToken)
+    private async Task UpdateAsync(Tenant tenant, Plan plan, string? version, bool backupFirst, OperationLog log, CancellationToken cancellationToken)
     {
         if (Validation.CheckVersion(version) is { } error)
         {
@@ -181,6 +181,22 @@ public sealed class TenantLifecycle(
 
         var wasRunning = tenant.State is TenantState.Running or TenantState.Failed
             || (tenant.State == TenantState.Locked && tenant.StateBeforeLock == TenantState.Running);
+        if (backupFirst && wasRunning)
+        {
+            try
+            {
+                log.Write("Vorab-Sicherung mit der bisherigen Version …");
+                await BackupAsync(tenant, log, cancellationToken);
+            }
+            catch
+            {
+                tenant.Version = previous;
+                await files.UpdateEnvAsync(tenant.Slug, InstanceFiles.EnvValuesFor(tenant, Settings), cancellationToken);
+                log.Write($"Vorab-Sicherung fehlgeschlagen – Aktualisierung abgebrochen, {previous} bleibt aktiv.");
+                throw;
+            }
+        }
+
         await SaveAsync(tenant, cancellationToken);
         if (wasRunning)
         {

@@ -37,7 +37,15 @@ public sealed partial class InstanceFiles(IOptions<HostingOptions> options, Inst
         }
         else
         {
-            await UpdateEnvAsync(tenant.Slug, EnvValuesFor(tenant, Settings), cancellationToken);
+            var values = new Dictionary<string, string>(EnvValuesFor(tenant, Settings));
+            var existing = await ReadEnvAsync(tenant.Slug, cancellationToken);
+            if (string.IsNullOrEmpty(existing.GetValueOrDefault("ESTRICHONE_NOTICE_TOKEN")))
+            {
+                // Instanzen aus älteren Konsolenversionen erhalten den Schlüssel beim nächsten Vorgang.
+                values["ESTRICHONE_NOTICE_TOKEN"] = Secret(48);
+            }
+
+            await UpdateEnvAsync(tenant.Slug, values, cancellationToken);
         }
 
         CreateDataDirectories(tenant.Slug);
@@ -86,6 +94,10 @@ public sealed partial class InstanceFiles(IOptions<HostingOptions> options, Inst
         builder.AppendLine("    labels: *tenant-labels");
         builder.AppendLine("  api:");
         builder.AppendLine("    labels: *tenant-labels");
+        builder.AppendLine("    environment:");
+        builder.AppendLine("      # Systemhinweise (Ankündigungen, Wartung) setzt die Konsole mit diesem Instanz-Schlüssel.");
+        builder.AppendLine("      EstrichOne__Notices__ManagementToken: ${ESTRICHONE_NOTICE_TOKEN:-}");
+        builder.AppendLine("      EstrichOne__Notices__StoragePath: /data/files/.system-notices.json");
         if (plan.MemoryMb > 0)
         {
             builder.AppendLine(CultureInfo.InvariantCulture, $"    mem_limit: {plan.MemoryMb}m");
@@ -154,6 +166,8 @@ public sealed partial class InstanceFiles(IOptions<HostingOptions> options, Inst
         builder.AppendLine("BACKUP_REPOSITORY_2=");
         builder.AppendLine("ESTRICHONE_SSH_DIR=./ssh");
         builder.AppendLine(CultureInfo.InvariantCulture, $"BACKUP_TIME={BackupTime(tenant.Slug)}");
+        builder.AppendLine("# Schlüssel, mit dem die Hosting-Konsole Systemhinweise setzt");
+        builder.AppendLine(CultureInfo.InvariantCulture, $"ESTRICHONE_NOTICE_TOKEN={Secret(48)}");
         return builder.ToString();
     }
 

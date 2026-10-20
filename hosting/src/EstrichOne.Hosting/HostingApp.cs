@@ -64,7 +64,8 @@ public static class HostingApp
         {
             builder.Services.AddSingleton<FakeDockerHost>();
             builder.Services.AddSingleton<IDockerHost>(sp => sp.GetRequiredService<FakeDockerHost>());
-            builder.Services.AddSingleton<IInstanceProbe, FakeInstanceProbe>();
+            builder.Services.AddSingleton<FakeInstanceProbe>();
+            builder.Services.AddSingleton<IInstanceProbe>(sp => sp.GetRequiredService<FakeInstanceProbe>());
         }
         else
         {
@@ -78,6 +79,7 @@ public static class HostingApp
             sp.GetRequiredService<IHttpClientFactory>().CreateClient(nameof(VersionCatalog)),
             sp.GetRequiredService<IOptions<HostingOptions>>(), sp.GetRequiredService<TimeProvider>(), sp.GetRequiredService<ILogger<VersionCatalog>>()));
         builder.Services.AddSingleton<InstanceLayout>();
+        builder.Services.AddSingleton<ConsoleUpdater>();
         builder.Services.AddSingleton<InstanceFiles>();
         builder.Services.AddSingleton<ProxyManager>();
         builder.Services.AddSingleton<StatusService>();
@@ -91,6 +93,8 @@ public static class HostingApp
         builder.Services.AddHostedService<SetupCodeAnnouncer>();
         builder.Services.AddHostedService<OperationWorker>();
         builder.Services.AddHostedService<ProxyStartup>();
+        builder.Services.AddSingleton<EstrichOne.Hosting.Notices.NoticeDistributor>();
+        builder.Services.AddHostedService<EstrichOne.Hosting.Notices.NoticeSync>();
         if (!builder.Configuration.GetValue<bool>("Hosting:DisableStatusCollector"))
         {
             builder.Services.AddHostedService<StatusCollector>();
@@ -190,6 +194,7 @@ public static class HostingApp
         AuthEndpoints.Map(app);
         TenantEndpoints.Map(app);
         AdministrationEndpoints.Map(app);
+        EstrichOne.Hosting.Notices.NoticeEndpoints.Map(app);
         app.MapFallback("/api/{**rest}", () => ApiErrors.NotFound("Unbekannter API-Pfad."));
         return app;
     }

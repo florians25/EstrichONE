@@ -1,0 +1,83 @@
+<mvc:View controllerName="estrichone.hosting.controller.Notices" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<Page id="noticesPage" title="Hinweise und Wartung">
+		<content>
+			<Table id="noticeTable" items="{notices>/items}" class="sapUiResponsiveContentPadding" fixedLayout="false"
+				noDataText="Keine Hinweise. Ankündigungen erscheinen in der Suite als Banner, Wartungsfenster als Wartungsseite.">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="Ankündigungen und Wartungsfenster" level="H2" />
+						<ToolbarSpacer />
+						<Button icon="sap-icon://synchronize" text="Neu verteilen" tooltip="An alle laufenden Instanzen erneut senden" press=".onSync" />
+						<Button id="createMaintenance" text="Wartung planen" icon="sap-icon://wrench" press=".onCreateMaintenance" />
+						<Button id="createAnnouncement" text="Ankündigung" icon="sap-icon://add" type="Emphasized" press=".onCreateAnnouncement" />
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Hinweis" /></Column>
+					<Column><Text text="Art" /></Column>
+					<Column><Text text="Zeitraum" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Instanzen" /></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Verteilt" /></Column>
+					<Column hAlign="End"><Text text="" /></Column>
+				</columns>
+				<items>
+					<ColumnListItem highlight="{= ${notices>status} === 'aktiv' ? (${notices>kind} === 'Maintenance' ? 'Warning' : 'Information') : 'None' }">
+						<ObjectIdentifier title="{notices>title}" text="{notices>text}" />
+						<VBox>
+							<ObjectStatus text="{= ${notices>kind} === 'Maintenance' ? 'Wartung' : 'Ankündigung'}" icon="{= ${notices>kind} === 'Maintenance' ? 'sap-icon://wrench' : 'sap-icon://message-information'}"
+								state="{= ${notices>severity} === 'critical' ? 'Error' : ${notices>severity} === 'warning' ? 'Warning' : 'Information'}" />
+							<Text text="{= ${notices>kind} === 'Maintenance' ? (${notices>adminsMayWork} ? 'Admins arbeiten weiter' : 'auch Admins gesperrt') : ''}" class="hostingHint" />
+						</VBox>
+						<VBox>
+							<ObjectStatus text="{notices>status}" state="{= ${notices>status} === 'aktiv' ? 'Success' : ${notices>status} === 'geplant' ? 'Information' : 'None'}" />
+							<Text text="{path: 'notices>startsAt', formatter: '.formatter.dateTime'} – {path: 'notices>endsAt', formatter: '.formatter.dateTime'}" />
+						</VBox>
+						<Text text="{parts: ['notices>allTenants', 'notices>targets'], formatter: '.targetsText'}" />
+						<ObjectStatus text="{path: 'notices>targets', formatter: '.syncText'}" state="{path: 'notices>targets', formatter: '.syncState'}" tooltip="{path: 'notices>targets', formatter: '.syncDetails'}" />
+						<HBox justifyContent="End">
+							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit" />
+							<Button icon="sap-icon://stop" type="Transparent" tooltip="Jetzt beenden" press=".onEnd" visible="{= ${notices>status} !== 'beendet' }" />
+							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete" />
+						</HBox>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</content>
+		<dependents>
+			<Dialog id="noticeDialog" title="{= ${notice>/kind} === 'Maintenance' ? 'Wartung planen' : 'Ankündigung'}" contentWidth="36rem" resizable="true">
+				<content>
+					<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1">
+						<Label text="Titel" required="true" labelFor="nTitle" />
+						<Input id="nTitle" value="{notice>/title}" maxLength="120" valueLiveUpdate="true" />
+						<Label text="Text" labelFor="nText" />
+						<TextArea id="nText" value="{notice>/text}" rows="4" maxLength="2000" growing="true" />
+						<Label text="Schweregrad" labelFor="nSeverity" visible="{= ${notice>/kind} !== 'Maintenance' }" />
+						<SegmentedButton id="nSeverity" selectedKey="{notice>/severity}" visible="{= ${notice>/kind} !== 'Maintenance' }">
+							<items>
+								<SegmentedButtonItem key="info" text="Information" />
+								<SegmentedButtonItem key="warning" text="Warnung" />
+								<SegmentedButtonItem key="critical" text="Kritisch" />
+							</items>
+						</SegmentedButton>
+						<Label text="Beginn" labelFor="nStart" required="{= ${notice>/kind} === 'Maintenance' }" />
+						<DateTimePicker id="nStart" dateValue="{notice>/startsAt}" placeholder="sofort" />
+						<Label text="Ende" labelFor="nEnd" />
+						<DateTimePicker id="nEnd" dateValue="{notice>/endsAt}" placeholder="offen" />
+						<Label text="" visible="{= ${notice>/kind} === 'Maintenance' }" />
+						<CheckBox text="Administratoren dürfen während der Wartung weiterarbeiten" selected="{notice>/adminsMayWork}" visible="{= ${notice>/kind} === 'Maintenance' }" />
+						<Label text="Instanzen" />
+						<CheckBox id="nAll" text="Alle Instanzen" selected="{notice>/allTenants}" />
+						<Label text="" visible="{= !${notice>/allTenants} }" />
+						<MultiComboBox id="nTargets" selectedKeys="{notice>/tenantIds}" items="{notice>/tenants}" visible="{= !${notice>/allTenants} }" placeholder="Instanzen wählen …">
+							<core:Item key="{notice>id}" text="{notice>companyName} ({notice>slug})" />
+						</MultiComboBox>
+					</f:SimpleForm>
+					<MessageStrip class="sapUiSmallMargin" type="Information" showIcon="true"
+						text="{= ${notice>/kind} === 'Maintenance' ? 'Ab 14 Tagen vorher kündigt die Suite die Wartung an; im Zeitraum zeigt sie die Wartungsseite und sperrt alle außer Administratoren.' : 'Die Ankündigung erscheint im Zeitraum als Banner in Web und Apps.'}" />
+				</content>
+				<beginButton><Button id="noticeSave" text="Speichern und verteilen" type="Emphasized" press=".onSave" /></beginButton>
+				<endButton><Button text="Abbrechen" press=".onCancel" /></endButton>
+			</Dialog>
+		</dependents>
+	</Page>
+</mvc:View>

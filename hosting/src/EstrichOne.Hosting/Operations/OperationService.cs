@@ -50,7 +50,7 @@ public sealed class OperationService(HostingDbContext db, OperationDispatcher qu
 
     private static string? Describe(OperationKind kind, OperationParameters? parameters) => kind switch
     {
-        OperationKind.Update => $"Zielversion {parameters?.Version}",
+        OperationKind.Update => $"Zielversion {parameters?.Version}{(parameters?.BackupFirst == true ? ", mit Vorab-Sicherung" : string.Empty)}",
         OperationKind.Lock => $"Grund: {parameters?.Reason}{(parameters?.StopInstance == true ? "; Instanz wird angehalten" : string.Empty)}",
         OperationKind.Delete => parameters?.FinalBackup == true ? "mit Endsicherung" : "ohne Endsicherung",
         _ => null,

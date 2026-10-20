@@ -7,7 +7,8 @@ public sealed record OperationParameters(
     string? Version = null,
     string? Reason = null,
     bool StopInstance = false,
-    bool FinalBackup = false)
+    bool FinalBackup = false,
+    bool BackupFirst = false)
 {
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 

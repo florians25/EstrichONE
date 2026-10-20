@@ -136,3 +136,38 @@ public sealed class Setting
     public required string Key { get; set; }
     public required string Value { get; set; }
 }
+
+public enum NoticeKind
+{
+    /// <summary>Ankündigung (Banner in der Suite).</summary>
+    Announcement,
+    /// <summary>Wartungszeitraum: Wartungsseite, Anmeldung nur für Administratoren.</summary>
+    Maintenance,
+}
+
+/// <summary>Systemhinweis, den die Konsole an ausgewählte oder alle Instanzen verteilt.</summary>
+public sealed class Notice
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public NoticeKind Kind { get; set; }
+    public required string Title { get; set; }
+    public string Text { get; set; } = string.Empty;
+    /// <summary><c>info</c>, <c>warning</c>, <c>critical</c>.</summary>
+    public string Severity { get; set; } = "info";
+    public DateTime? StartsAt { get; set; }
+    public DateTime? EndsAt { get; set; }
+    /// <summary>Nur Wartung: Administratoren dürfen weiterarbeiten.</summary>
+    public bool AdminsMayWork { get; set; } = true;
+    public bool AllTenants { get; set; } = true;
+    /// <summary>Ziel-Mandanten (IDs, kommagetrennt), wenn nicht alle.</summary>
+    public string TenantIds { get; set; } = string.Empty;
+    public required string CreatedBy { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+
+    public IReadOnlySet<Guid> Targets() =>
+        TenantIds.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(id => Guid.TryParse(id, out var g) ? g : Guid.Empty)
+            .Where(g => g != Guid.Empty).ToHashSet();
+
+    public bool AppliesTo(Guid tenantId) => AllTenants || Targets().Contains(tenantId);
+}

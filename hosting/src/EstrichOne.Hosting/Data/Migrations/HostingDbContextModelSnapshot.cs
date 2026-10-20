@@ -111,6 +111,64 @@ namespace EstrichOne.Hosting.Data.Migrations
                     b.ToTable("AuditEvents");
                 });
 
+            modelBuilder.Entity("EstrichOne.Hosting.Data.Notice", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("AdminsMayWork")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<bool>("AllTenants")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartsAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TenantIds")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EndsAt");
+
+                    b.ToTable("Notices");
+                });
+
             modelBuilder.Entity("EstrichOne.Hosting.Data.Operation", b =>
                 {
                     b.Property<Guid>("Id")

@@ -97,6 +97,20 @@ test.describe.serial('Hosting-Konsole', () => {
     expect(problems).toEqual([]);
   });
 
+  test('Ankündigung an alle Instanzen verteilen', async ({ page }) => {
+    const problems = watchConsole(page);
+    await login(page);
+    await page.goto('/#/hinweise');
+    await ui(page, 'createAnnouncement').click();
+    await input(page, 'nTitle').fill('Neue Funktion: Bautagebuch');
+    await input(page, 'nText').fill('Ab sofort in allen Instanzen verfügbar.');
+    await ui(page, 'noticeSave').click();
+    await expect(ui(page, 'noticeTable')).toContainText('Neue Funktion: Bautagebuch');
+    await expect(ui(page, 'noticeTable')).toContainText('1 von 1');
+    await page.screenshot({ path: 'test-results/06b-hinweise.png', fullPage: true });
+    expect(problems).toEqual([]);
+  });
+
   test('Darstellung: Theme live umschalten und speichern, Logo je Theme', async ({ page }) => {
     const problems = watchConsole(page);
     await login(page);

@@ -1,0 +1,132 @@
+name: Hosting
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["**", "!dependabot/**"]
+    paths: ["hosting/**", "docker/hosting*.Dockerfile", "deploy/compose*.yml", "docker/installer/compose.override.yml", "branding/*.svg", "global.json", ".github/workflows/hosting.yml"]
+  pull_request:
+    paths: ["hosting/**", "docker/hosting*.Dockerfile", "deploy/compose*.yml", "docker/installer/compose.override.yml", "branding/*.svg", "global.json", ".github/workflows/hosting.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: hosting-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Build und Tests (Konsole)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: global.json
+      - name: Bauen (Warnungen sind Fehler)
+        run: dotnet build hosting/EstrichOne.Hosting.slnx --configuration Release
+      - name: Tests (xUnit, simulierter Docker)
+        run: dotnet test --solution hosting/EstrichOne.Hosting.slnx --configuration Release --no-build
+      - name: Schwachstellen in Abhängigkeiten
+        run: |
+          dotnet list hosting/EstrichOne.Hosting.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
+          ! grep -q "has the following vulnerable packages" vulnerable.txt
+      - name: Shellcheck
+        run: shellcheck hosting/deploy/*.sh hosting/scripts/*.sh
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: hosting/ui/package-lock.json
+      - name: Typprüfung der Oberfläche
+        working-directory: hosting/ui
+        run: |
+          npm ci
+          npm run lint
+
+  image:
+    name: Docker-Image
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v5
+      - name: Image bauen
+        run: docker build -f docker/hosting.Dockerfile --build-arg ESTRICHONE_VERSION=0.1.0-ci -t estrichone/hosting:ci .
+      - name: Image prüfen
+        run: |
+          docker run --rm --entrypoint sh estrichone/hosting:ci -c 'docker --version && docker compose version && ls /app/templates /app/wwwroot/brand && test -f /app/wwwroot/index.html'
+      - name: Image sichern
+        run: docker save estrichone/hosting:ci | gzip -1 > hosting-image.tar.gz
+      - uses: actions/upload-artifact@v4
+        with:
+          name: hosting-image
+          path: hosting-image.tar.gz
+          retention-days: 1
+
+  e2e:
+    name: Oberfläche Ende zu Ende (Playwright, simulierter Docker)
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: hosting-image
+      - run: gunzip -c hosting-image.tar.gz | docker load
+      - name: Konsole starten (Hosting__Docker=fake)
+        run: |
+          docker run -d --name console -p 5090:8080 -e Hosting__Docker=fake -e Hosting__Root=/tmp/hosting \
+            -e Hosting__BaseDomain=hosting.test -e Hosting__ConsoleDomain=konsole.hosting.test estrichone/hosting:ci
+          for i in $(seq 1 60); do curl -sf http://localhost:5090/health && break; sleep 1; done
+          echo "E2E_SETUP_CODE=$(docker logs console 2>&1 | grep -o 'Einrichtungscode: [A-Z0-9-]*' | tail -1 | cut -d' ' -f2)" >> "$GITHUB_ENV"
+          curl -sI http://localhost:5090/ | grep -i "content-security-policy: default-src 'self'; script-src 'self';"
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: hosting/ui/package-lock.json
+      - name: Playwright
+        working-directory: hosting/ui
+        env:
+          E2E_BASE_URL: http://localhost:5090
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npx playwright test
+      - name: Protokoll der Konsole
+        if: failure()
+        run: docker logs console
+      - name: Bildschirmfotos
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: hosting-e2e
+          path: hosting/ui/test-results
+          retention-days: 7
+
+  integration:
+    name: Integration mit echtem Docker (Suite-Images 0.1.0-preview.4)
+    needs: image
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/download-artifact@v4
+        with:
+          name: hosting-image
+      - run: gunzip -c hosting-image.tar.gz | docker load
+      - name: Installer, Bereitstellung, Health, Lebenszyklus, Löschen
+        env:
+          IMAGE: estrichone/hosting:ci
+          SUITE_VERSION: 0.1.0-preview.4
+        run: hosting/scripts/integration.sh
+      - name: Protokolle bei Fehler
+        if: failure()
+        run: |
+          docker logs estrichone-hosting-console 2>&1 | tail -200 || true
+          docker logs estrichone-hosting-proxy 2>&1 | tail -50 || true
+          docker ps -a
+          sudo cat /srv/estrichone-hosting-ci/proxy/Caddyfile || true

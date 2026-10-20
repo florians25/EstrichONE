@@ -101,6 +101,20 @@
 							<Label text="Sicherungen" /><Text text="{= ${settings>/system/backupRoot} || 'im Instanzverzeichnis (backup-repository)' }" />
 							<Label text="Konsolenversion" /><Text text="{settings>/system/consoleVersion}{= ${settings>/system/simulation} ? ' · Simulation' : '' }" />
 						</f:SimpleForm>
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" title="Konsole aktualisieren">
+							<Label text="Verfügbar" />
+							<ObjectStatus text="{= ${settings>/consoleUpdate/updateAvailable} ? 'Neue Version ' + ${settings>/consoleUpdate/latest} + ' verfügbar' : 'Aktuell (' + ${settings>/consoleUpdate/current} + ')' }"
+								state="{= ${settings>/consoleUpdate/updateAvailable} ? 'Warning' : 'Success' }" />
+							<Label text="Zielversion" labelFor="consoleVersion" />
+							<HBox>
+								<ComboBox id="consoleVersion" value="{settings>/consoleTarget}" items="{settings>/consoleUpdate/versions}" width="14rem">
+									<core:Item key="{settings>}" text="{settings>}" />
+								</ComboBox>
+								<Button id="consoleUpdate" text="Konsole aktualisieren" icon="sap-icon://upload-to-cloud" press=".onConsoleUpdate" class="sapUiSmallMarginBegin" />
+							</HBox>
+							<Label text="Stand" /><Text text="{settings>/consoleUpdate/state/message}" />
+							<Label text="" /><Text class="hostingHint" text="Der Installer der Zielversion ersetzt den Konsolen-Container; Mandanten laufen ungestört weiter. Alternativ auf dem Server: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v {settings>/system/root}:{settings>/system/root} ghcr.io/florians25/estrichone-hosting:latest install" />
+						</f:SimpleForm>
 					</IconTabFilter>
 				</items>
 			</IconTabBar>

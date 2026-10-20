@@ -133,7 +133,7 @@ export default class TenantsController extends BaseController {
 			get<{ versions: string[]; latest?: string }>("/api/versions").catch(() => ({ versions: [] as string[], latest: undefined })),
 			get<{ defaultVersion: string }>("/api/settings")
 		]);
-		this.update.setData({ versions: versions.versions, version: settings.defaultVersion, includeStopped: false, affected: 0 });
+		this.update.setData({ versions: versions.versions, version: settings.defaultVersion, includeStopped: false, backupFirst: true, affected: 0 });
 		this.update.attachPropertyChange(() => this.countAffected());
 		this.countAffected();
 		if (!this.updateDialog) {
@@ -153,9 +153,9 @@ export default class TenantsController extends BaseController {
 	}
 
 	public async onUpdateAllConfirm(): Promise<void> {
-		const { version, includeStopped } = this.update.getData();
+		const { version, includeStopped, backupFirst } = this.update.getData();
 		this.updateDialog!.close();
-		const result = await this.run(() => post<{ queued: number; skipped: string[] }>("/api/tenants/update-all", { version, includeStopped }));
+		const result = await this.run(() => post<{ queued: number; skipped: string[] }>("/api/tenants/update-all", { version, includeStopped, backupFirst }));
 		if (result) {
 			MessageBox.information(
 				`${result.queued} Aktualisierung(en) eingereiht.` + (result.skipped.length ? `\nÜbersprungen (laufender Vorgang): ${result.skipped.join(", ")}` : ""),

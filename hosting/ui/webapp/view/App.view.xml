@@ -23,6 +23,7 @@
 							<tnt:NavigationListItem key="dashboard" text="Übersicht" icon="sap-icon://home" />
 							<tnt:NavigationListItem key="tenants" text="Mandanten" icon="sap-icon://building" />
 							<tnt:NavigationListItem key="operations" text="Vorgänge" icon="sap-icon://activity-items" />
+							<tnt:NavigationListItem key="notices" text="Hinweise und Wartung" icon="sap-icon://message-information" />
 							<tnt:NavigationListItem key="plans" text="Tarife" icon="sap-icon://product" />
 							<tnt:NavigationListItem key="audit" text="Ereignisprotokoll" icon="sap-icon://history" />
 						</tnt:NavigationList>

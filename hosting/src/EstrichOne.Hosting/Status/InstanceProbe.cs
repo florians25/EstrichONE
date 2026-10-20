@@ -18,7 +18,12 @@ public sealed record ProbeResult(
 public interface IInstanceProbe
 {
     Task<ProbeResult> ProbeAsync(string slug, CancellationToken cancellationToken);
+
+    /// <summary>Setzt die Systemhinweise der Instanz (<c>PUT /api/v1/system/notices</c> mit Instanz-Schlüssel).</summary>
+    Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken);
 }
+
+public sealed record NoticePushResult(bool Success, int? StatusCode, string? Error);
 
 /// <summary>Fragt die Instanz über ihr Edge-Netz direkt beim Caddy der Instanz ab (ohne den öffentlichen Proxy).</summary>
 public sealed class HttpInstanceProbe(HttpClient http) : IInstanceProbe
@@ -62,11 +67,53 @@ public sealed class HttpInstanceProbe(HttpClient http) : IInstanceProbe
             return new ProbeResult(healthCode is not null, healthCode, healthText, null, null, null, exception.Message);
         }
     }
+
+    private static string Shorten(string text) => text.Trim() is { Length: > 200 } long_ ? long_[..200] : text.Trim();
+
+    public async Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken)
+    {
+        var uri = new Uri($"http://{InstanceLayout.WebContainer(slug)}:{InstanceLayout.InstanceHttpPort}/api/v1/system/notices");
+        using var request = new HttpRequestMessage(HttpMethod.Put, uri)
+        {
+            Content = new StringContent(json, System.Text.Encoding.UTF8, "application/json"),
+        };
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        try
+        {
+            using var response = await http.SendAsync(request, cancellationToken);
+            var code = (int)response.StatusCode;
+            return response.IsSuccessStatusCode
+                ? new NoticePushResult(true, code, null)
+                : new NoticePushResult(false, code, code == 404
+                    ? "Die Suite-Version dieser Instanz kennt noch keine Systemhinweise (bitte aktualisieren)."
+                    : $"HTTP {code}: {Shorten(await response.Content.ReadAsStringAsync(cancellationToken))}");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new NoticePushResult(false, null, exception.Message);
+        }
+    }
 }
 
 /// <summary>Simulation: „erreichbar“, sobald der Web-Container im simulierten Docker läuft.</summary>
 public sealed class FakeInstanceProbe(IDockerHost docker, InstanceFiles files) : IInstanceProbe
 {
+    /// <summary>Zuletzt an eine Instanz gesendete Systemhinweise (für Tests und Vorführung).</summary>
+    public System.Collections.Concurrent.ConcurrentDictionary<string, string> PushedNotices { get; } = new(StringComparer.Ordinal);
+
+    public async Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken)
+    {
+        var containers = await docker.ListContainersAsync(InstanceLayout.ProjectName(slug), cancellationToken);
+        if (!containers.Any(c => c.Service == "api" && c.State == "running"))
+        {
+            return new NoticePushResult(false, null, "Instanz läuft nicht (Simulation)");
+        }
+
+        PushedNotices[slug] = json;
+        return new NoticePushResult(true, 204, null);
+    }
+
     public async Task<ProbeResult> ProbeAsync(string slug, CancellationToken cancellationToken)
     {
         var containers = await docker.ListContainersAsync(InstanceLayout.ProjectName(slug), cancellationToken);

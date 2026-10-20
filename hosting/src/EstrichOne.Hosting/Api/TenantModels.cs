@@ -83,8 +83,9 @@ public sealed record ActionRequest(
     bool? StopInstance,
     string? ConfirmSlug,
     bool? Confirm,
-    bool? FinalBackup);
+    bool? FinalBackup,
+    bool? BackupFirst);
 
-public sealed record UpdateAllRequest(string? Version, bool? IncludeStopped);
+public sealed record UpdateAllRequest(string? Version, bool? IncludeStopped, bool? BackupFirst);
 
 public sealed record SecretRequest(string? Password);

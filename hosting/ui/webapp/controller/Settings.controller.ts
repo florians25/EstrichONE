@@ -28,11 +28,14 @@ export default class SettingsController extends BaseController {
 			admins: [], system: {}, versions: []
 		});
 		await this.run(async () => {
-			const [admins, system, versions] = await Promise.all([
+			const [admins, system, versions, consoleUpdate] = await Promise.all([
 				get<unknown[]>("/api/admins"),
 				get<object>("/api/settings"),
-				get<{ versions: string[] }>("/api/versions").catch(() => ({ versions: [] as string[] }))
+				get<{ versions: string[] }>("/api/versions").catch(() => ({ versions: [] as string[] })),
+				get<{ latest?: string; current: string }>("/api/system/console-update").catch(() => null)
 			]);
+			this.settings.setProperty("/consoleUpdate", consoleUpdate);
+			this.settings.setProperty("/consoleTarget", consoleUpdate?.latest ?? "");
 			this.settings.setProperty("/admins", admins);
 			this.settings.setProperty("/system", system);
 			this.settings.setProperty("/versions", versions.versions);
@@ -137,6 +140,25 @@ export default class SettingsController extends BaseController {
 		const id = (event.getSource() as Control).getBindingContext("settings")!.getProperty("id") as string;
 		await this.run(() => post(`/api/admins/${id}/unlock`));
 		await this.load();
+	}
+
+	public onConsoleUpdate(): void {
+		const version = (this.settings.getProperty("/consoleTarget") as string)?.trim();
+		if (!version) {
+			return;
+		}
+		MessageBox.confirm(`Konsole auf ${version} aktualisieren? Die Konsole ist dabei etwa eine Minute nicht erreichbar; die Instanzen laufen weiter.`, {
+			onClose: async (choice: string) => {
+				if (choice !== MessageBox.Action.OK) {
+					return;
+				}
+				const state = await this.run(() => post<{ message: string }>("/api/system/console-update", { defaultVersion: version }));
+				if (state) {
+					this.settings.setProperty("/consoleUpdate/state", state);
+					MessageBox.information(state.message, { title: "Konsole aktualisieren" });
+				}
+			}
+		});
 	}
 
 	public async onSaveSystem(): Promise<void> {
