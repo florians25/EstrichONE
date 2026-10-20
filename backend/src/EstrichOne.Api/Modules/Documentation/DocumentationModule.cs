@@ -14,6 +14,8 @@ public sealed class DocumentationModule : IModule
         services.AddSingleton<LocalFileStorage>();
         services.AddSingleton(Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions { SingleReader = true }));
         services.AddScoped<FileService>();
+        services.AddScoped<ApprovalService>();
+        services.AddScoped<BauakteReportBuilder>();
         services.AddScoped<IBauakteHintSource, DocumentationHints>();
         services.AddHostedService<VariantWorker>();
         services.AddScoped<ISyncOperationHandler, FileSync>();
@@ -27,5 +29,8 @@ public sealed class DocumentationModule : IModule
     {
         FileEndpoints.Map(api);
         SiteRecordEndpoints.Map(api);
+        ApprovalEndpoints.Map(api);
+        DocumentEndpoints.Map(api);
+        BauakteReportEndpoints.Map(api);
     }
 }

@@ -28,7 +28,7 @@ public static class DocumentCategories
 {
     public static IReadOnlySet<string> All { get; } = new HashSet<string>
     {
-        "offer", "order", "invoice", "plan", "delivery", "acceptance", "customer", "office", "other",
+        "offer", "order", "invoice", "plan", "delivery", "acceptance", "protocol", "customer", "office", "other",
     };
 }
 

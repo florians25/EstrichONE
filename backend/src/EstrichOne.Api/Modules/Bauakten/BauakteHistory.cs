@@ -2,6 +2,7 @@ using System.Globalization;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Contacts.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -17,7 +18,11 @@ internal sealed class BauakteHistory(IAuditLog audit, ICurrentUser currentUser) 
 }
 
 /// <param name="Text">Fertiger Satz für die Anzeige – auf allen Plattformen gleich (02: serverseitig berechnet).</param>
-public sealed record BauakteHistoryEntry(DateTimeOffset At, string Action, Guid? ActorUserId, string? ActorName, string Text);
+public sealed record BauakteHistoryEntry(DateTimeOffset At, string Action, Guid? ActorUserId, string? ActorName, string Text,
+    IReadOnlyList<BauakteFieldChange>? Changes = null);
+
+/// <summary>Geändertes Feld mit altem und neuem Wert (Anzeige; Kunde und Zuständigkeit als Namen).</summary>
+public sealed record BauakteFieldChange(string Field, string Label, string? From, string? To);
 
 internal static class BauakteHistoryEndpoints
 {
@@ -27,6 +32,13 @@ internal static class BauakteHistoryEndpoints
         ["latitude"] = "den Standort", ["longitude"] = "den Standort", ["description"] = "die Beschreibung",
         ["customerId"] = "den Kunden", ["responsibleUserId"] = "die Zuständigkeit", ["period"] = "den Zeitraum",
         ["siteContact"] = "den Baustellenkontakt", ["siteNotes"] = "die Hinweise zur Baustelle",
+    };
+
+    private static readonly Dictionary<string, string> FieldLabels = new()
+    {
+        ["title"] = "Bezeichnung", ["street"] = "Straße", ["postalCode"] = "PLZ", ["city"] = "Ort", ["latitude"] = "Standort",
+        ["description"] = "Beschreibung", ["customerId"] = "Kunde", ["responsibleUserId"] = "Zuständig", ["period"] = "Zeitraum",
+        ["siteContact"] = "Baustellenkontakt", ["siteNotes"] = "Hinweise zur Baustelle",
     };
 
     private static readonly Dictionary<string, string> StatusNames = new()
@@ -52,14 +64,42 @@ internal static class BauakteHistoryEndpoints
         }
 
         var entries = await audit.ForEntityAsync(BauakteHistory.EntityType, id.ToString(), 200, cancellationToken);
-        var actorIds = entries.Select(e => e.ActorUserId).OfType<Guid>().Distinct().ToList();
+        Guid? Id(string? value) => Guid.TryParse(value, out var guid) ? guid : null;
+        var referenced = entries.SelectMany(e => e.Details.Where(d => d.Key.StartsWith("responsibleUserId.", StringComparison.Ordinal)).Select(d => Id(d.Value)))
+            .OfType<Guid>();
+        var actorIds = entries.Select(e => e.ActorUserId).OfType<Guid>().Concat(referenced).Distinct().ToList();
         var names = await db.Set<User>().AsNoTracking().Where(u => actorIds.Contains(u.Id))
             .ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
+        var customerIds = entries.SelectMany(e => e.Details.Where(d => d.Key.StartsWith("customerId.", StringComparison.Ordinal)).Select(d => Id(d.Value)))
+            .OfType<Guid>().Distinct().ToList();
+        var customers = customerIds.Count == 0 ? new Dictionary<Guid, string>()
+            : await db.Set<Contact>().AsNoTracking().IgnoreQueryFilters().Where(c => customerIds.Contains(c.Id)).ToDictionaryAsync(c => c.Id, c => c.Name, cancellationToken);
+
+        string? Value(string field, string? raw) => field switch
+        {
+            "customerId" => Id(raw) is { } c ? customers.GetValueOrDefault(c, "?") : null,
+            "responsibleUserId" => Id(raw) is { } u ? names.GetValueOrDefault(u, "?") : null,
+            "period" => raw is null ? null : string.Join(" – ", raw.Split(" · ").Select(Day)),
+            _ => raw,
+        };
 
         return TypedResults.Ok(entries.Select(entry =>
         {
             var actor = entry.ActorUserId is { } actorId && names.TryGetValue(actorId, out var name) ? name : null;
-            return new BauakteHistoryEntry(entry.OccurredAt, entry.Action, entry.ActorUserId, actor, Describe(actor ?? "Jemand", entry));
+            var changes = entry.Action == "bauakte.updated"
+                ? entry.Details.Keys.Where(k => k.EndsWith(".from", StringComparison.Ordinal)).Select(k => k[..^5])
+                    .Select(f => new BauakteFieldChange(f, FieldLabels.GetValueOrDefault(f, f),
+                        Value(f, entry.Details.GetValueOrDefault($"{f}.from")), Value(f, entry.Details.GetValueOrDefault($"{f}.to"))))
+                    .ToList()
+                : null;
+            if (entry.Action == "bauakte.status_changed")
+            {
+                changes = [new BauakteFieldChange("status", "Status", Status(entry.Details.GetValueOrDefault("from") ?? string.Empty),
+                    Status(entry.Details.GetValueOrDefault("to") ?? string.Empty))];
+            }
+
+            return new BauakteHistoryEntry(entry.OccurredAt, entry.Action, entry.ActorUserId, actor, Describe(actor ?? "Jemand", entry),
+                changes is { Count: > 0 } ? changes : null);
         }).ToList());
     }
 
@@ -75,6 +115,7 @@ internal static class BauakteHistoryEndpoints
             "bauakte.status_changed" => $"{actor} hat den Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt.",
             "bauakte.deleted" => $"{actor} hat die Bauakte in den Papierkorb gelegt.",
             "bauakte.note_added" => $"{actor} hat eine Notiz geschrieben.",
+            "bauakte.report_printed" => $"{actor} hat die Bauakte als PDF erstellt.",
             "bauakte.file_added" => Detail("kind") switch
             {
                 "Photo" => $"{actor} hat ein Foto hinzugefügt.",

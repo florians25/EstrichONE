@@ -1,0 +1,113 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Documents" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
+	xmlns:upload="sap.m.upload" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout"
+	core:require="{fmt: 'estrichone/model/formatter'}">
+	<FlexBox id="docLayout" wrap="Wrap" alignItems="Start" width="100%">
+		<VBox class="sapUiSmallMarginEnd" width="17rem">
+			<layoutData><FlexItemData shrinkFactor="0"/></layoutData>
+			<OverflowToolbar style="Clear">
+				<Title text="{i18n>docs.folders}" level="H3"/>
+				<ToolbarSpacer/>
+				<Button icon="sap-icon://add-folder" tooltip="{i18n>docs.newFolder}" press=".onNewFolder" visible="{= ${session>/permissions/files.upload} === true }"/>
+			</OverflowToolbar>
+			<Tree id="folderTree" items="{path: 'doc>/tree', parameters: {arrayNames: ['nodes']}}" mode="SingleSelectMaster"
+				selectionChange=".onFolder" includeItemInSelection="true" ariaLabelledBy="foldersLabel">
+				<StandardTreeItem title="{doc>text} ({doc>count})" icon="{doc>icon}" selected="{= ${doc>key} === ${doc>/selected} }"/>
+			</Tree>
+			<core:InvisibleText id="foldersLabel" text="{i18n>docs.folders}"/>
+		</VBox>
+		<VBox>
+			<layoutData><FlexItemData growFactor="1" baseSize="30rem"/></layoutData>
+			<MessageStrip text="{doc>/targetText}" type="Information" showIcon="true" class="sapUiTinyMarginBottom"
+				visible="{= ${session>/permissions/files.upload} === true }"/>
+			<upload:UploadSet id="uploadSet" class="eoUpload" instantUpload="true" multiple="true" showIcons="true" uploadEnabled="{= ${session>/permissions/files.upload} === true }"
+				terminationEnabled="true" maxFileNameLength="255" mode="None" sameFilenameAllowed="true"
+				noDataText="{i18n>docs.dropHint}" noDataDescription="{i18n>docs.dropDescription}" noDataIllustrationType="sapIllus-UploadCollection"
+				uploadCompleted=".onUploadCompleted" uploadTerminated=".onUploadTerminated" afterItemAdded=".onItemAdded"
+				visible="{= ${session>/permissions/files.upload} === true }">
+				<upload:toolbar>
+					<OverflowToolbar>
+						<Title text="{i18n>docs.upload}" level="H3"/>
+						<ToolbarSpacer/>
+						<upload:UploadSetToolbarPlaceholder/>
+					</OverflowToolbar>
+				</upload:toolbar>
+			</upload:UploadSet>
+			<Table id="docTable" items="{path: 'doc>/rows', templateShareable: false}" mode="MultiSelect" selectionChange=".onSelection"
+				sticky="HeaderToolbar,ColumnHeaders" growing="true" growingThreshold="100" noDataText="{doc>/noData}" popinLayout="GridSmall"
+				class="sapUiSmallMarginTop">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{doc>/title}" level="H3"/>
+						<ToolbarSpacer/>
+						<SearchField width="14rem" placeholder="{i18n>docs.search}" liveChange=".onSearch" value="{doc>/query}">
+							<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+						</SearchField>
+						<Select selectedKey="{doc>/sort}" change=".refreshRows" tooltip="{i18n>docs.sort}" ariaLabelledBy="sortLabel">
+							<core:Item key="newest" text="Neueste zuerst"/>
+							<core:Item key="oldest" text="Älteste zuerst"/>
+							<core:Item key="name" text="Name A–Z"/>
+							<core:Item key="size" text="Größte zuerst"/>
+							<core:Item key="category" text="Nach Ablage"/>
+						</Select>
+						<ToggleButton text="{i18n>docs.allVersions}" pressed="{doc>/allVersions}" press=".refreshRows" icon="sap-icon://history"/>
+						<Button text="{i18n>docs.download}" icon="sap-icon://download" enabled="{= ${doc>/selectedCount} > 0 }" press=".onDownloadSelected"/>
+						<Button text="{i18n>docs.move}" icon="sap-icon://move" enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.upload} === true }" press=".onMoveSelected"/>
+						<Button text="{i18n>common.delete}" icon="sap-icon://delete" type="Reject"
+							enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.delete} === true }" press=".onDeleteSelected"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="{i18n>docs.file}"/></Column>
+					<Column width="5rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>docs.version}"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>docs.place}"/></Column>
+					<Column width="6rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>docs.size}"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="{i18n>docs.uploaded}"/></Column>
+					<Column width="9rem" hAlign="End"><Text text="" /></Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Inactive" highlight="{= ${doc>superseded} ? 'None' : 'Information' }">
+						<HBox alignItems="Center">
+							<core:Icon src="{doc>icon}" size="1.25rem" class="sapUiSmallMarginEnd"/>
+							<VBox>
+								<Link text="{doc>originalName}" press=".onPreview" wrapping="true" enabled="{= ${doc>state} === 'stored' }"/>
+								<Text text="{doc>caption}" visible="{= !!${doc>caption} }" class="eoMuted"/>
+								<ObjectStatus text="{i18n>docs.pending}" state="Warning" visible="{= ${doc>state} !== 'stored' }"/>
+								<ObjectStatus text="{doc>approvalText}" state="{doc>approvalState}" icon="sap-icon://approvals" visible="{= !!${doc>approvalText} }"/>
+							</VBox>
+						</HBox>
+						<ObjectStatus text="v{doc>versionNumber}" state="{= ${doc>superseded} ? 'None' : 'Information' }"
+							tooltip="{= ${doc>superseded} ? 'Ersetzt durch eine neuere Fassung' : ${doc>versionCount} + ' Fassung(en)' }"/>
+						<VBox>
+							<Text text="{path: 'doc>category', formatter: 'fmt.documentCategoryText'}"/>
+							<Text text="{doc>folder}" visible="{= !!${doc>folder} }" class="eoMuted"/>
+						</VBox>
+						<Text text="{path: 'doc>sizeBytes', formatter: 'fmt.fileSize'}" class="eoTabular"/>
+						<VBox>
+							<Text text="{path: 'doc>createdAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
+							<Text text="{path: 'doc>uploadedByUserId', formatter: 'fmt.person'}" class="eoMuted"/>
+						</VBox>
+						<HBox justifyContent="End">
+							<Button icon="sap-icon://show" type="Transparent" tooltip="{i18n>docs.preview}" press=".onPreview" enabled="{= ${doc>state} === 'stored' }"
+								ariaLabelledBy="previewLabel"/>
+							<Button icon="sap-icon://download" type="Transparent" tooltip="{i18n>docs.downloadOne}" press=".onDownload" enabled="{= ${doc>state} === 'stored' }"/>
+							<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="{i18n>docs.more}">
+								<menu>
+									<Menu>
+										<MenuItem text="{i18n>docs.rename}" icon="sap-icon://edit" press=".onRename" visible="{= ${session>/permissions/files.upload} === true }"/>
+										<MenuItem text="{i18n>docs.moveOne}" icon="sap-icon://move" press=".onMove" visible="{= ${session>/permissions/files.upload} === true }"/>
+										<MenuItem text="{i18n>docs.newVersion}" icon="sap-icon://upload" press=".onNewVersion" visible="{= ${session>/permissions/files.upload} === true }"/>
+										<MenuItem text="Freigabe anfordern" icon="sap-icon://approvals" press=".onRequestApproval"
+											visible="{= ${session>/permissions/files.upload} === true &amp;&amp; ${doc>approvalStatus} !== 'pending' &amp;&amp; !${doc>superseded} }"/>
+										<MenuItem text="{i18n>common.delete}" icon="sap-icon://delete" press=".onDelete" visible="{= ${session>/permissions/files.delete} === true }" startsSection="true"/>
+									</Menu>
+								</menu>
+							</MenuButton>
+						</HBox>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</VBox>
+	</FlexBox>
+	<core:InvisibleText id="sortLabel" text="{i18n>docs.sort}"/>
+	<core:InvisibleText id="previewLabel" text="{i18n>docs.preview}"/>
+</mvc:View>

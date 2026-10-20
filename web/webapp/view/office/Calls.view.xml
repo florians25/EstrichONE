@@ -1,0 +1,56 @@
+<mvc:View controllerName="estrichone.controller.office.Calls" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.calls}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Gesprächsnotizen mit Wiedervorlage, verknüpft mit Kunde und Bauakte"/></f:expandedContent>
+				<f:actions>
+					<Button text="Schnellerfassung" icon="sap-icon://outgoing-call" type="Emphasized" press=".onQuick" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+					<Button text="Anruf mit allen Feldern" icon="sap-icon://add" press=".onNew" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+					<Button text="Liste drucken" icon="sap-icon://print" press=".onPrint"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<List id="callList" items="{view>/items}" busy="{view>/busy}" noDataText="Keine Anrufe in dieser Ansicht." growing="true" growingThreshold="100">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{= ${view>/items}.length } Anrufe" level="H2"/>
+						<ToolbarSpacer/>
+						<SearchField width="18rem" placeholder="Name, Firma, Telefon, Betreff" search=".onSearch" value="{view>/search}"/>
+						<Label text="Nur fällige Wiedervorlagen" labelFor="onlyDue"/>
+						<Switch id="onlyDue" state="{view>/onlyDue}" change=".onSearch"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<CustomListItem class="call-row" highlight="{= ${view>followUp} ? (${view>overdue} ? 'Error' : 'Warning') : 'None' }">
+					<HBox class="sapUiSmallMargin" justifyContent="SpaceBetween" alignItems="Start">
+						<HBox alignItems="Start">
+							<core:Icon src="{= ${view>direction} === 'outbound' ? 'sap-icon://outgoing-call' : 'sap-icon://incoming-call' }" size="1.25rem"
+								class="sapUiSmallMarginEnd" tooltip="{= ${view>direction} === 'outbound' ? 'Ausgehend' : 'Eingehend' }"/>
+							<VBox>
+								<HBox alignItems="Center" wrap="Wrap">
+									<Text text="{view>who}" class="sapUiSmallMarginEnd"/>
+									<Link text="{view>callerPhone}" href="tel:{view>callerPhone}" visible="{= !!${view>callerPhone} }" class="sapUiSmallMarginEnd"/>
+									<Text text="{view>time}" class="eoMuted eoTabular sapUiSmallMarginEnd"/>
+									<ObjectStatus text="{view>followText}" state="{= ${view>overdue} ? 'Error' : 'Warning' }" visible="{view>followUp}" inverted="true"/>
+								</HBox>
+								<Text text="{view>subject}" visible="{= !!${view>subject} }"/>
+								<ExpandableText text="{view>notes}" maxCharacters="240" visible="{= !!${view>notes} }" class="eoPre"/>
+								<HBox wrap="Wrap" class="eoMuted">
+									<Link text="{view>bauakteLabel}" href="/bauakten/{view>bauakteId}" visible="{= !!${view>bauakteId} }" class="sapUiSmallMarginEnd"/>
+									<Text text="Nächster Schritt: {view>nextStep}" visible="{= !!${view>nextStep} }" class="sapUiSmallMarginEnd"/>
+									<Text text="Bearbeiter: {= ${view>handledByName} || '–' }"/>
+								</HBox>
+							</VBox>
+						</HBox>
+						<HBox visible="{= ${session>/permissions/contacts.edit} === true }">
+							<Button text="Erledigt" icon="sap-icon://accept" type="Transparent" press=".onDone" visible="{view>followUp}"/>
+							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
+							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+						</HBox>
+					</HBox>
+				</CustomListItem>
+			</List>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

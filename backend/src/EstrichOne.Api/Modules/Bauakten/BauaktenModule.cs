@@ -19,6 +19,7 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<IBauakteSummaries, BauakteSummaries>();
         services.AddScoped<IBauakteFactory, BauakteFactory>();
         services.AddScoped<IBauakteRooms, BauakteRooms>();
+        services.AddScoped<IBauakteReportSource, BauakteReportSource>();
         services.AddScoped<ISyncOperationHandler, BauakteSync>();
         services.AddScoped<ISyncEntitySource, BauakteSource>();
         services.AddScoped<ISyncEntitySource, NoteSource>();

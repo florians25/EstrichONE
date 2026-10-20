@@ -1,0 +1,163 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Documentation" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
+	xmlns:f="sap.f" xmlns:card="sap.f.cards" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout"
+	core:require="{fmt: 'estrichone/model/formatter'}">
+	<IconTabBar id="docuTabs" selectedKey="{dc>/tab}" expandable="false" headerMode="Inline" stretchContentHeight="false" applyContentPadding="false"
+		backgroundDesign="Transparent">
+		<items>
+			<!-- Bautagebuch -->
+			<IconTabFilter key="tagebuch" text="{i18n>diary.title}" icon="sap-icon://notes" count="{dc>/diaryCount}">
+				<OverflowToolbar style="Clear">
+					<Title text="{i18n>diary.chronicle}" level="H3"/>
+					<ToolbarSpacer/>
+					<SearchField width="14rem" placeholder="{i18n>diary.search}" value="{dc>/diaryQuery}" liveChange=".refreshDiary"/>
+					<Button text="{i18n>diary.add}" icon="sap-icon://add" type="Emphasized" press=".onAddDiary" visible="{= ${session>/permissions/diary.write} === true }"/>
+				</OverflowToolbar>
+				<List id="diaryList" items="{dc>/diaryShown}" noDataText="{i18n>diary.none}" showSeparators="All" growing="true" growingThreshold="50">
+					<CustomListItem>
+						<VBox class="sapUiSmallMargin">
+							<HBox alignItems="Center" wrap="Wrap" justifyContent="SpaceBetween">
+								<HBox alignItems="Center" wrap="Wrap">
+									<core:Icon src="sap-icon://calendar" class="sapUiTinyMarginEnd"/>
+									<Title text="{path: 'dc>day', formatter: 'fmt.longDay'}" level="H4" class="sapUiSmallMarginEnd"/>
+									<ObjectStatus text="{dc>weatherText}" icon="sap-icon://weather-proofing" visible="{= !!${dc>weatherText} }" class="sapUiSmallMarginEnd"/>
+									<ObjectStatus text="{dc>timeText}" icon="sap-icon://time-entry-request" visible="{= !!${dc>timeText} }" class="sapUiSmallMarginEnd"/>
+									<ObjectStatus text="{dc>crew}" icon="sap-icon://group" visible="{= !!${dc>crew} }"/>
+								</HBox>
+								<HBox visible="{dc>own}">
+									<Button icon="sap-icon://edit" type="Transparent" tooltip="{i18n>common.edit}" press=".onEditDiary"/>
+									<Button icon="sap-icon://delete" type="Transparent" tooltip="{i18n>common.delete}" press=".onDeleteDiary"/>
+								</HBox>
+							</HBox>
+							<Text text="{dc>text}" class="eoPre sapUiTinyMarginTop"/>
+							<HBox items="{path: 'dc>photos', templateShareable: false}" wrap="Wrap" class="sapUiTinyMarginTop" visible="{= ${dc>photos}.length > 0 }">
+								<Image src="{dc>thumb}" width="6rem" height="4.5rem" class="sapUiTinyMarginEnd eoPhoto" press=".onDiaryPhoto" alt="{dc>alt}" decorative="false"/>
+							</HBox>
+							<Text text="{dc>meta}" class="eoMuted sapUiTinyMarginTop"/>
+						</VBox>
+					</CustomListItem>
+				</List>
+			</IconTabFilter>
+			<!-- Prüfungen und Protokolle -->
+			<IconTabFilter key="pruefungen" text="{i18n>inspections.title}" icon="sap-icon://lab" count="{dc>/inspectionCount}">
+				<OverflowToolbar style="Clear">
+					<Title text="{i18n>inspections.protocol}" level="H3"/>
+					<ToolbarSpacer/>
+					<Button text="{i18n>inspections.addInitial}" icon="sap-icon://inspection" press=".onAddInitial" visible="{= ${session>/permissions/inspections.write} === true }"/>
+					<Button text="{i18n>inspections.addCm}" icon="sap-icon://lab" type="Emphasized" press=".onAddCm" visible="{= ${session>/permissions/inspections.write} === true }"/>
+				</OverflowToolbar>
+				<f:Card class="sapUiSmallMarginBottom">
+					<f:header>
+						<card:Header title="{i18n>inspections.initialProtocol}" subtitle="{dc>/latestText}" iconSrc="sap-icon://inspection"/>
+					</f:header>
+					<f:content>
+						<VBox width="100%">
+							<IllustratedMessage illustrationType="sapIllus-NoTasks" illustrationSize="Dot" visible="{= !${dc>/latest} }"
+								title="{i18n>inspections.noneInitial}" description="{i18n>inspections.noneInitialText}" enableVerticalResponsiveness="true"/>
+							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="2" columnsL="2" columnsM="1" visible="{= !!${dc>/latest} }"
+								labelSpanXL="5" labelSpanL="5" labelSpanM="5">
+								<core:Title text="{i18n>inspections.essentials}"/>
+								<Label text="Ergebnis"/><ObjectStatus text="{dc>/latestResult/text}" state="{dc>/latestResult/tone}" inverted="true"/>
+								<Label text="Status"/><Text text="{= ${dc>/latest/correctsInspectionId} ? 'Korrigiert' : 'Abgeschlossen' }"/>
+								<Label text="Prüfer"/><Text text="{path: 'dc>/latest/performedByUserId', formatter: 'fmt.person'}"/>
+								<Label text="Datum"/><Text text="{path: 'dc>/latest/performedAt', formatter: 'fmt.dateTime'}"/>
+								<core:Title text="{i18n>inspections.substrate}"/>
+								<Label text="Estrichart"/><Text text="{= ${dc>/screeds} || '–' }"/>
+								<Label text="Fläche"/><Text text="{dc>/areaText}"/>
+								<Label text="Fußbodenheizung"/><Text text="{dc>/heatingText}"/>
+							</form:SimpleForm>
+							<Table items="{dc>/checks}" visible="{= !!${dc>/latest} }" class="sapUiSmallMarginBeginEnd">
+								<columns>
+									<Column><Text text="{i18n>inspections.checkPoint}"/></Column>
+									<Column width="12rem"><Text text="{i18n>inspections.result}"/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{dc>title}"/>
+										<ObjectStatus text="{path: 'dc>result', formatter: 'fmt.checkText'}" state="{path: 'dc>result', formatter: 'fmt.checkState'}"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+							<VBox class="sapUiSmallMargin" visible="{= !!${dc>/latest} }">
+								<Label text="{i18n>inspections.remarks}"/>
+								<Text text="{= ${dc>/latest/remarks} || '–' }" class="eoPre"/>
+								<HBox items="{path: 'dc>/latestPhotos', templateShareable: false}" wrap="Wrap" class="sapUiTinyMarginTop">
+									<Image src="{dc>thumb}" width="6rem" height="4.5rem" class="sapUiTinyMarginEnd eoPhoto" press=".onInspectionPhoto" alt="{dc>alt}" decorative="false"/>
+								</HBox>
+								<Button text="{i18n>inspections.correct}" icon="sap-icon://edit" press=".onCorrectInitial" class="sapUiSmallMarginTop"
+									visible="{= ${session>/permissions/inspections.write} === true }"/>
+							</VBox>
+							<List items="{dc>/initialOlder}" headerText="{i18n>inspections.earlier}" visible="{= ${dc>/initialOlder}.length > 0 }">
+								<StandardListItem title="{path: 'dc>performedAt', formatter: 'fmt.dateTime'} · {path: 'dc>performedByUserId', formatter: 'fmt.person'}"
+									info="{dc>resultText}" infoState="{dc>resultTone}"/>
+							</List>
+						</VBox>
+					</f:content>
+				</f:Card>
+				<Table id="cmTable" items="{dc>/cm}" noDataText="{i18n>inspections.noneCm}" headerText="{i18n>inspections.cmTitle}" popinLayout="GridSmall">
+					<headerToolbar>
+						<OverflowToolbar style="Clear"><Title text="{i18n>inspections.cmTitle} ({= ${dc>/cm}.length })" level="H3"/></OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="10rem"><Text text="Datum"/></Column>
+						<Column><Text text="Messstelle"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Estrich"/></Column>
+						<Column width="5rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Dicke"/></Column>
+						<Column width="13rem" hAlign="End"><Text text="CM / Feuchte"/></Column>
+						<Column width="11rem"><Text text="Ergebnis"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Prüfer"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Bemerkung"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem highlight="{path: 'dc>isReadyForCovering', formatter: 'fmt.readyState'}">
+							<Text text="{path: 'dc>performedAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
+							<Text text="{dc>location}"/>
+							<Text text="{path: 'dc>binder', formatter: 'fmt.binderText'}{= ${dc>heated} ? ', beheizt' : '' }"/>
+							<Text text="{= ${dc>thicknessMm} === null ? '–' : ${dc>thicknessMm} + ' mm' }"/>
+							<Text text="{path: 'dc>measuredCmPercent', formatter: 'fmt.cm'} CM-% (Grenzwert {path: 'dc>limitCmPercent', formatter: 'fmt.cm'})" class="eoTabular"/>
+							<ObjectStatus text="{path: 'dc>isReadyForCovering', formatter: 'fmt.readyText'}" state="{path: 'dc>isReadyForCovering', formatter: 'fmt.readyState'}"/>
+							<Text text="{path: 'dc>performedByUserId', formatter: 'fmt.person'}"/>
+							<Text text="{= (${dc>remarks} || '–') + (${dc>correctsInspectionId} ? ' (Korrektur)' : '') }"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</IconTabFilter>
+			<!-- Berichte -->
+			<IconTabFilter key="berichte" text="{i18n>reports.title}" icon="sap-icon://print">
+				<l:Grid defaultSpan="XL4 L4 M6 S12" class="sapUiSmallMarginTop">
+					<f:Card>
+						<f:header><card:Header title="{i18n>reports.site}" subtitle="{i18n>reports.siteText}" iconSrc="sap-icon://print"/></f:header>
+						<f:content>
+							<VBox class="sapUiSmallMargin">
+								<Label text="{i18n>reports.from}" labelFor="reportFrom"/>
+								<DatePicker id="reportFrom" value="{dc>/reportFrom}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy"/>
+								<Label text="{i18n>reports.to}" labelFor="reportTo"/>
+								<DatePicker id="reportTo" value="{dc>/reportTo}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy"/>
+								<CheckBox text="{i18n>reports.withPhotos}" selected="{dc>/reportPhotos}"/>
+								<CheckBox text="{i18n>reports.withWork}" selected="{dc>/reportWork}"/>
+								<Button text="{i18n>reports.open}" type="Emphasized" icon="sap-icon://print" press=".onReport" class="sapUiSmallMarginTop"/>
+							</VBox>
+						</f:content>
+					</f:Card>
+					<f:Card>
+						<f:header><card:Header title="{i18n>reports.acceptance}" subtitle="{i18n>reports.acceptanceText}" iconSrc="sap-icon://approvals"/></f:header>
+						<f:content>
+							<VBox class="sapUiSmallMargin">
+								<Text text="{i18n>reports.acceptanceHelp}"/>
+								<Button text="{i18n>reports.open}" icon="sap-icon://print" press=".onAcceptance" class="sapUiSmallMarginTop"/>
+							</VBox>
+						</f:content>
+					</f:Card>
+					<f:Card>
+						<f:header><card:Header title="{i18n>reports.sheet}" subtitle="{i18n>reports.sheetText}" iconSrc="sap-icon://document-text"/></f:header>
+						<f:content>
+							<VBox class="sapUiSmallMargin">
+								<Text text="{i18n>reports.sheetHelp}"/>
+								<Button text="{i18n>reports.open}" icon="sap-icon://print" press=".onSheet" class="sapUiSmallMarginTop"/>
+							</VBox>
+						</f:content>
+					</f:Card>
+				</l:Grid>
+			</IconTabFilter>
+		</items>
+	</IconTabBar>
+</mvc:View>

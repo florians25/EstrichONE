@@ -6,6 +6,12 @@ public interface IRoleAssignments
     /// <exception cref="LastAdministratorException">Der letzte aktive Administrator würde seine Rolle verlieren.</exception>
     Task SetRolesAsync(Guid userId, IReadOnlyCollection<Guid> roleIds, CancellationToken cancellationToken);
 
+    /// <summary>Rollen eines Benutzers (z. B. für Freigaben, die an eine Rolle gehen).</summary>
+    Task<IReadOnlyList<Guid>> GetRoleIdsAsync(Guid userId, CancellationToken cancellationToken);
+
+    /// <summary>Namen aller Rollen (Anzeige).</summary>
+    Task<IReadOnlyDictionary<Guid, string>> GetRoleNamesAsync(CancellationToken cancellationToken);
+
     /// <summary>ID der Standardrolle „Administrator“ (für die Ersteinrichtung).</summary>
     Guid AdministratorRoleId { get; }
 }

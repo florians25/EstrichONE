@@ -1,0 +1,27 @@
+<mvc:View controllerName="estrichone.controller.auth.Login" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<FlexBox class="eoAuth" alignItems="Center" justifyContent="Center" height="100%" direction="Column">
+		<VBox class="eoAuthCard" width="26rem">
+			<Image src="{view>/logo}" alt="EstrichONE" height="3rem" class="eoAuthLogo" decorative="false" error=".onLogoError"/>
+			<Title text="{i18n>login.title}" level="H1" titleStyle="H3" class="sapUiSmallMarginTop"/>
+			<Text text="{session>/server/serverName}" class="eoMuted sapUiTinyMarginBottom"/>
+			<MessageStrip text="{i18n>login.expired}" type="Information" showIcon="true" visible="{= ${view>/reason} === 'abgelaufen' }" class="sapUiSmallMarginBottom"/>
+			<MessageStrip text="{i18n>login.locked}" type="Error" showIcon="true" visible="{= ${view>/reason} === 'gesperrt' }" class="sapUiSmallMarginBottom"/>
+			<MessageStrip type="Warning" showIcon="true" visible="{= ${session>/server/setupRequired} === true }" class="sapUiSmallMarginBottom"
+				text="{i18n>login.setupRequired}">
+				<link><Link text="{i18n>login.setupLink}" href="/einrichtung"/></link>
+			</MessageStrip>
+			<Label text="{i18n>login.user}" labelFor="loginUser" required="true"/>
+			<Input id="loginUser" value="{view>/login}" valueLiveUpdate="true" width="100%" submit=".onSubmit">
+				<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
+			</Input>
+			<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
+			<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit"/>
+			<MessageStrip id="loginError" text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginTop">
+				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
+			</MessageStrip>
+			<Button text="{i18n>login.submit}" type="Emphasized" width="100%" press=".onSubmit" busy="{view>/busy}" class="sapUiMediumMarginTop"/>
+			<Text text="{i18n>login.selfHosted}" class="eoMuted sapUiMediumMarginTop"/>
+		</VBox>
+	</FlexBox>
+</mvc:View>

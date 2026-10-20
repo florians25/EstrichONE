@@ -30,13 +30,24 @@ jobs:
           node-version: 24
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: OpenUI5-Bibliotheken zwischenspeichern
+        uses: actions/cache@v4
+        with:
+          path: ~/.ui5
+          key: ui5-${{ hashFiles('web/ui5.yaml') }}
       - run: npm ci
-      - name: Typprüfung
+      - name: Typprüfung (TypeScript, OpenUI5-Typen)
         run: npm run lint
       - name: Unit-Tests (Vitest)
         run: npm test
-      - name: Produktions-Build
+      - name: Produktions-Build (UI5 Tooling, alle Themes, versionierte Pfade)
         run: npm run build
+      - name: Build prüfen (keine CDN-Quellen, alle Themes enthalten)
+        run: |
+          ! grep -R "ui5.sap.com\|sapui5.hana.ondemand\|openui5.hana.ondemand" dist/index.html
+          for theme in sap_horizon sap_horizon_dark sap_horizon_hcb sap_horizon_hcw sap_fiori_3 sap_fiori_3_dark sap_fiori_3_hcb sap_fiori_3_hcw; do
+            test -f dist/ui-*/resources/sap/m/themes/$theme/library.css || { echo "Theme $theme fehlt"; exit 1; }
+          done
 
   e2e:
     name: Ende zu Ende (Playwright gegen Web-Image und echte API)
@@ -54,6 +65,11 @@ jobs:
           cache-dependency-path: web/package-lock.json
       - name: Web-Image bauen
         run: docker build -f docker/web.Dockerfile -t estrichone/web:ci .
+      - name: OpenUI5-Bibliotheken zwischenspeichern
+        uses: actions/cache@v4
+        with:
+          path: ~/.ui5
+          key: ui5-${{ hashFiles('web/ui5.yaml') }}
       - name: Abhängigkeiten und Browser
         working-directory: web
         run: |
@@ -65,11 +81,22 @@ jobs:
         working-directory: web
         env:
           WEB_IMAGE: estrichone/web:ci
+          SCREENSHOTS: "1"
         run: scripts/e2e.sh
+      - name: Bildschirmfotos sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-bildschirmfotos
+          path: web/test-results/screenshots
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Ergebnisse sichern
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: web-e2e-ergebnisse
-          path: web/test-results
+          path: |
+            web/test-results
+            web/playwright-report
           retention-days: 7

@@ -1,0 +1,184 @@
+/* EstrichONE – ergänzende Stile. Farben ausschließlich über Theme-Parameter (alle Themes inkl. Kontrast). */
+
+.eoMuted { color: var(--sapContent_LabelColor); }
+.eoHelpText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); display: block; margin-top: 0.125rem; }
+.eoTabular { font-variant-numeric: tabular-nums; }
+.eoPre { white-space: pre-wrap; }
+
+/* Anmeldung */
+.eoAuthPage, .eoAuthPage section { background: var(--sapBackgroundColor); }
+.eoAuth { padding: 1rem; min-height: 100%; box-sizing: border-box; }
+.eoAuthCard {
+	background: var(--sapGroup_ContentBackground);
+	border: 1px solid var(--sapGroup_ContentBorderColor);
+	border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
+	box-shadow: var(--sapContent_Shadow1);
+	padding: 2rem 2rem 1.5rem;
+	max-width: calc(100vw - 2rem);
+	box-sizing: border-box;
+}
+.eoAuthLogo { display: block; }
+.eoAuthLogo img, img.eoAuthLogo { height: 3rem; width: auto; }
+
+/* Programmrahmen */
+.eoMain { height: 100%; }
+.eoStatusBar { border-top: 1px solid var(--sapGroup_TitleBorderColor); font-size: var(--sapFontSmallSize); }
+.eoContent > .sapMNavItem { height: 100%; }
+
+/* Kennzahlen und Kacheln */
+.eoTiles { gap: 0.75rem; flex-wrap: wrap; }
+.eoTiles .sapMGT { margin: 0 !important; }
+.eoKpiValue { font-size: 1.75rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Objektseite Bauakte */
+.eoHeaderFacts { gap: 2rem; flex-wrap: wrap; }
+.eoMiniMap { width: 18rem; height: 9rem; border-radius: 0.5rem; overflow: hidden; border: 1px solid var(--sapGroup_ContentBorderColor); }
+.eoMap { width: 100%; height: 100%; min-height: 12rem; }
+.eoMap .leaflet-container { font: inherit; }
+.eoHero { width: 100%; height: 15rem; object-fit: cover; border-radius: 0.5rem; }
+
+/* Fotos */
+.eoPhoto { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; display: block; background: var(--sapField_Background); }
+.eoPhotoTile .sapFGLIContent, .eoPhotoTile { overflow: hidden; }
+.eoPhotoMeta { padding: 0.375rem 0.5rem 0.5rem; }
+.eoLightbox .sapMCrsl { background: #000; }
+.eoLightboxImage { max-width: 100%; max-height: 72vh; object-fit: contain; margin: auto; display: block; }
+.eoPreviewFrame { width: 100%; height: 70vh; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.25rem; background: #fff; }
+
+/* Notizen */
+.eoNote { border-radius: 0.5rem; padding: 0.5rem 0.75rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
+.eoNote[data-color="yellow"] { background: var(--sapWarningBackground); }
+.eoNote[data-color="red"] { background: var(--sapErrorBackground); }
+.eoNote[data-color="green"] { background: var(--sapSuccessBackground); }
+.eoNote[data-color="blue"] { background: var(--sapInformationBackground); }
+
+/* Plantafel */
+.eoBoard { display: grid; grid-template-columns: 12rem repeat(var(--days), minmax(9rem, 1fr)); border: 1px solid var(--sapList_BorderColor); background: var(--sapList_Background); }
+.eoBoardCell { border-right: 1px solid var(--sapList_BorderColor); border-bottom: 1px solid var(--sapList_BorderColor); padding: 0.375rem; min-height: 5rem; position: relative; }
+.eoBoardHead { background: var(--sapList_HeaderBackground); font-weight: 600; min-height: auto; position: sticky; top: 0; z-index: 2; }
+.eoBoardLane { background: var(--sapList_HeaderBackground); font-weight: 600; }
+.eoBoardToday { background: var(--sapList_SelectionBackgroundColor); }
+.eoBoardDrop { outline: 2px dashed var(--sapContent_FocusColor); outline-offset: -3px; }
+.eoBoardItem {
+	display: flex; flex-direction: column; gap: 0.125rem; width: 100%; text-align: left; margin-bottom: 0.375rem; cursor: pointer;
+	border: 1px solid var(--sapList_BorderColor); border-left: 4px solid var(--eoColor, var(--sapAccentColor6)); border-radius: 0.25rem;
+	background: var(--sapTile_Background); color: var(--sapTextColor); font: inherit; font-size: var(--sapFontSmallSize); padding: 0.25rem 0.375rem;
+}
+.eoBoardItem:focus-visible { outline: 2px solid var(--sapContent_FocusColor); }
+.eoBoardItem.eoWarn { border-left-color: var(--sapCriticalColor); background: var(--sapWarningBackground); }
+.eoBoardItem strong { font-size: var(--sapFontSize); }
+.eoBoardAdd { width: 100%; border: 1px dashed var(--sapList_BorderColor); background: transparent; color: var(--sapContent_LabelColor); border-radius: 0.25rem; cursor: pointer; font: inherit; }
+.eoBoardAdd:hover { color: var(--sapButton_Lite_TextColor); border-color: var(--sapButton_Lite_TextColor); }
+.eoMonth { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); border: 1px solid var(--sapList_BorderColor); }
+.eoMonthCell { min-height: 7rem; border-right: 1px solid var(--sapList_BorderColor); border-bottom: 1px solid var(--sapList_BorderColor); padding: 0.25rem; }
+.eoMonthOutside { opacity: 0.55; }
+.eoSwatch { display: inline-block; width: 0.75rem; height: 0.75rem; border-radius: 0.2rem; vertical-align: middle; margin-right: 0.375rem; }
+
+/* Bestellschein und Berichte */
+.eoSheet { background: #fff; color: #111; max-width: 52rem; margin: 0 auto; padding: 2rem 2.25rem; font-size: 0.875rem; box-shadow: var(--sapContent_Shadow1); }
+.eoSheet h1 { font-size: 1.375rem; margin: 0 0 0.25rem; }
+.eoSheet h2 { font-size: 1rem; margin: 1.25rem 0 0.5rem; border-bottom: 1px solid #ccc; padding-bottom: 0.25rem; }
+.eoSheet table { width: 100%; border-collapse: collapse; }
+.eoSheet th, .eoSheet td { text-align: left; padding: 0.3rem 0.4rem; border-bottom: 1px solid #ddd; vertical-align: top; }
+.eoSheet th { background: #f3f4f6; font-weight: 600; }
+.eoSheet .num { text-align: right; font-variant-numeric: tabular-nums; }
+.eoSheet .muted { color: #555; }
+.eoSheet .head { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 2px solid #0B2D5B; padding-bottom: 0.75rem; }
+.eoSheet .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1.5rem; }
+.eoSheet .photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
+.eoSheet .photos figure { margin: 0; break-inside: avoid; }
+.eoSheet .photos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #ddd; }
+.eoSheet .photos figcaption { font-size: 0.75rem; color: #444; }
+.eoSheet .sign { display: grid; grid-template-columns: 1fr 1fr; gap: 3rem; margin-top: 3rem; }
+.eoSheet .sign div { border-top: 1px solid #333; padding-top: 0.25rem; font-size: 0.75rem; }
+.eoSheet .pre { white-space: pre-wrap; }
+.eoSheet .entry { break-inside: avoid; border-bottom: 1px solid #eee; padding: 0.4rem 0; }
+.eoPrintToolbar { max-width: 52rem; margin: 1rem auto; }
+
+@media print {
+	@page { size: A4; margin: 14mm 12mm; }
+	html, body { background: #fff !important; }
+	.eoNoPrint, .eoPrintToolbar, .sapTntToolPageHeaderWrapper, .sapTntToolPageAsideContent, .eoStatusBar, .sapFDynamicPageTitle,
+	.sapUxAPObjectPageHeaderTitle, .sapUxAPAnchorBar, .sapFDynamicPageHeader { display: none !important; }
+	.eoSheet { box-shadow: none; padding: 0; max-width: none; }
+	.sapMPage > section, .sapMNav, .sapTntToolPage, .sapTntToolPageMain, .sapTntToolPageContentWrapper, .sapMPageEnableScrolling { overflow: visible !important; height: auto !important; position: static !important; }
+}
+
+/* Upload-Bereich kompakt halten */
+.eoUpload .sapMIllustratedMessage { padding: 0.5rem 0 !important; }
+.eoUpload .sapMIllustratedMessage .sapMIllustratedMessageIllustration svg,
+.eoUpload .sapMIllustratedMessage svg { max-height: 5rem; }
+.eoUpload .sapMIllustratedMessageMainContent { min-height: 0 !important; }
+.eoColorBar { display: block; width: 0.25rem; align-self: stretch; border-radius: 0.125rem; margin-right: 0.5rem; min-height: 1.5rem; }
+.eoGrow { flex: 1 1 auto; min-width: 0; }
+.eoEntryRow { gap: 0.5rem; }
+
+/* ---- Plantafel (Kolonnenplanung / Dienstplan) ---- */
+.eoPlanBoard { overflow-x: auto; background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius); }
+.eoPlanGrid { display: grid; grid-template-columns: minmax(11rem, 14rem) repeat(var(--eo-days), minmax(9.5rem, 1fr)); min-width: max-content; }
+.eoPlan-day { grid-template-columns: minmax(12rem, 16rem) minmax(24rem, 1fr); }
+.eoPlanRow { display: contents; }
+.eoPlanCell { border-right: 1px solid var(--sapList_BorderColor); border-bottom: 1px solid var(--sapList_BorderColor); padding: 0.375rem; min-height: 3rem; display: flex; flex-direction: column; gap: 0.25rem; }
+.eoPlanHead .eoPlanCell { position: sticky; top: 0; z-index: 1; background: var(--sapList_HeaderBackground); font-weight: bold; min-height: auto; justify-content: center; }
+.eoPlanLane { position: sticky; left: 0; z-index: 1; background: var(--sapList_HeaderBackground); flex-direction: row; align-items: flex-start; gap: 0.5rem; }
+.eoPlanHead .eoPlanLane { z-index: 2; }
+.eoPlanLaneText { display: flex; flex-direction: column; min-width: 0; }
+.eoPlanLaneText small, .eoPlanCard small { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
+.eoPlanAbsences .eoPlanCell { min-height: 2rem; background: var(--sapList_AlternatingBackground); }
+.eoPlanToday { background: var(--sapList_SelectionBackgroundColor); }
+.eoPlanHead .eoPlanToday { background: var(--sapList_SelectionBackgroundColor); }
+.eoPlanSlot { position: relative; padding-bottom: 1.75rem; }
+.eoPlanDrop { outline: 2px dashed var(--sapContent_FocusColor); outline-offset: -3px; background: var(--sapList_Hover_Background); }
+.eoPlanAbsent { background: repeating-linear-gradient(135deg, var(--sapWarningBackground), var(--sapWarningBackground) 6px, transparent 6px, transparent 12px); }
+.eoPlanConflict { box-shadow: inset 0 0 0 2px var(--sapErrorBorderColor); }
+.eoPlanAbsence { display: inline-block; font-size: var(--sapFontSmallSize); padding: 0.0625rem 0.375rem; border-radius: 0.5rem; background: var(--sapWarningBackground); color: var(--sapTextColor); border: 1px solid var(--sapWarningBorderColor); }
+.eoAbs-sick { background: var(--sapErrorBackground); border-color: var(--sapErrorBorderColor); }
+.eoAbs-training { background: var(--sapInformationBackground); border-color: var(--sapInformationBorderColor); }
+.eoPlanAbsentNote { color: var(--sapCriticalTextColor); font-size: var(--sapFontSmallSize); }
+.eoPlanCard { all: unset; box-sizing: border-box; display: flex; flex-direction: column; gap: 0.125rem; width: 100%; cursor: pointer; padding: 0.375rem 0.5rem;
+	background: var(--sapTile_Background); color: var(--sapTextColor); border: 1px solid var(--sapTile_BorderColor); border-left: 0.25rem solid var(--sapNeutralBorderColor);
+	border-radius: var(--sapElement_BorderCornerRadius); box-shadow: var(--sapContent_Shadow0); font-size: var(--sapFontSize); line-height: 1.3; overflow-wrap: anywhere; }
+.eoPlanCard:hover { background: var(--sapTile_Hover_Background); }
+.eoPlanCard:focus-visible { outline: 2px solid var(--sapContent_FocusColor); outline-offset: 1px; }
+.eoPlanMovable { cursor: grab; touch-action: none; }
+.eoPlanGhost { position: fixed; z-index: 1000; pointer-events: none; opacity: 0.92; box-shadow: var(--sapContent_Shadow2); transform: rotate(-1deg); }
+.eoPlanDragging { opacity: 0.5; }
+.eoPlanWarn { border-left-color: var(--sapCriticalElementColor); background: var(--sapWarningBackground); }
+.eoPlanWarning { color: var(--sapCriticalTextColor) !important; }
+.eoPlanCompact { padding: 0.125rem 0.375rem; font-size: var(--sapFontSmallSize); }
+.eoPlanTime { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); font-variant-numeric: tabular-nums; }
+.eoPlanIcon { display: inline-block; width: 1em; }
+.eoPlanAdd { all: unset; position: absolute; right: 0.375rem; bottom: 0.25rem; width: 1.5rem; height: 1.25rem; text-align: center; cursor: pointer; border-radius: 0.25rem;
+	border: 1px dashed var(--sapButton_BorderColor); color: var(--sapButton_TextColor); opacity: 0.55; }
+.eoPlanSlot:hover .eoPlanAdd, .eoPlanAdd:focus-visible { opacity: 1; }
+.eoPlanAdd:focus-visible { outline: 2px solid var(--sapContent_FocusColor); }
+.eoPlanDayLink { all: unset; cursor: pointer; color: var(--sapLinkColor); }
+.eoPlanDayLink:hover { text-decoration: underline; }
+.eoPlanDayLink:focus-visible { outline: 2px solid var(--sapContent_FocusColor); }
+.eoPlanEmpty { grid-column: 1 / -1; padding: 1rem; color: var(--sapContent_LabelColor); }
+.eoPlanMonth { display: grid; grid-template-columns: repeat(7, minmax(7rem, 1fr)); min-width: 49rem; }
+.eoPlanMonthHead { padding: 0.375rem; font-weight: bold; background: var(--sapList_HeaderBackground); border-bottom: 1px solid var(--sapList_BorderColor); }
+.eoPlanMonthCell { min-height: 7rem; padding: 0.25rem; border-right: 1px solid var(--sapList_BorderColor); border-bottom: 1px solid var(--sapList_BorderColor); display: flex; flex-direction: column; gap: 0.125rem; }
+.eoPlanOutside { background: var(--sapList_AlternatingBackground); opacity: 0.7; }
+.eoPlanMonthDay { display: flex; justify-content: space-between; align-items: center; font-weight: bold; }
+.eoPlanMore { font-size: var(--sapFontSmallSize); }
+.eoPeriod { min-width: 11rem; }
+.eoSwatchEmpty { border: 1px dashed var(--sapNeutralBorderColor); }
+.eoBacklog { flex: 0 0 22rem; max-height: calc(100vh - 14rem); overflow: auto; }
+.eoBacklog .eoBacklogDraggable { cursor: grab; touch-action: none; }
+.eoPlanLegend { gap: 0.25rem; }
+@media (max-width: 900px) { .eoPlanLayout { flex-direction: column; } .eoBacklog { flex-basis: auto; width: 100% !important; margin-left: 0 !important; } }
+@media print {
+	.eoPlanBoard { overflow: visible; border: 0; }
+	.eoPlanAdd, .eoBacklog { display: none !important; }
+	.eoPlanCard { box-shadow: none; break-inside: avoid; }
+}
+.eoWizardDialog .sapMWizard { height: 100%; }
+.eoDmsLayout { gap: 1rem; } .eoDmsFolders { flex: 0 0 15rem; } @media (max-width: 900px) { .eoDmsLayout { flex-direction: column; } .eoDmsFolders { width: 100% !important; } }
+
+/* ---- Systemhinweise und Wartung ---- */
+.eoNoticeBar { padding: 0.25rem 0.5rem 0; }
+.eoNotice { margin-bottom: 0.25rem; }
+.eoAdminMaintenance { margin: 0.25rem 0.5rem; font-weight: bold; }
+.eoMaintenance { position: fixed; inset: 0; z-index: 9000; background: var(--sapBackgroundColor); padding: 1rem; overflow: auto; }
+.eoHistoryChanges { font-size: var(--sapFontSmallSize); }

@@ -1,0 +1,91 @@
+<mvc:View controllerName="estrichone.controller.admin.MasterData" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.masterData}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Textbausteine, Ordnervorlagen der Dokumentablage und Bauakten-Vorlagen"/></f:expandedContent>
+				<f:actions>
+					<Button text="{view>/addText}" icon="sap-icon://add" type="Emphasized" press=".onAdd" visible="{view>/canManage}"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox>
+				<MessageStrip text="Kunden, Lieferanten, Material, Kolonnen, Geräte, Benutzer und Rollen werden auf ihren eigenen Seiten gepflegt (Links unten)."
+					type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
+				<HBox wrap="Wrap" class="sapUiSmallMarginBottom eoEntryRow">
+					<Link text="Kunden" href="/kunden"/><Link text="Lieferanten" href="/lieferanten"/><Link text="Materialstamm" href="/material"/>
+					<Link text="Kolonnen und Geräte" href="/planung/ressourcen"/><Link text="Benutzer" href="/verwaltung/benutzer"/>
+					<Link text="Rollen und Rechte" href="/verwaltung/rollen"/><Link text="Firmendaten" href="/system/firmendaten"/>
+				</HBox>
+				<IconTabBar selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false">
+					<items>
+						<IconTabFilter key="textBlock" text="Textbausteine" icon="sap-icon://text" count="{= ${view>/textBlock}.length }">
+							<Table items="{view>/textBlock}" noDataText="Noch keine Textbausteine." popinLayout="GridSmall">
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column><Text text="Text"/></Column>
+									<Column width="7rem"><Text text="Status"/></Column>
+									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>name}"/>
+										<Text text="{view>content/text}" maxLines="3"/>
+										<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
+											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="folderTemplate" text="Ordnervorlagen" icon="sap-icon://folder" count="{= ${view>/folderTemplate}.length }">
+							<Table items="{view>/folderTemplate}" noDataText="Noch keine Ordnervorlagen – Unterordner werden dann in jeder Bauakte angeboten." popinLayout="GridSmall">
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column width="12rem"><Text text="Dokumentart"/></Column>
+									<Column><Text text="Unterordner"/></Column>
+									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>name}"/>
+										<Text text="{view>categoryText}"/>
+										<Text text="{view>foldersText}"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
+											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="bauakteTemplate" text="Bauakten-Vorlagen" icon="sap-icon://copy" count="{= ${view>/bauakteTemplate}.length }">
+							<Table items="{view>/bauakteTemplate}" noDataText="Noch keine Vorlagen – bei der Anlage einer Bauakte wählbar (Beschreibung und Räume)." popinLayout="GridSmall">
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column><Text text="Beschreibung"/></Column>
+									<Column><Text text="Räume"/></Column>
+									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>name}"/>
+										<Text text="{view>content/description}" maxLines="2"/>
+										<Text text="{view>roomsText}"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
+											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+					</items>
+				</IconTabBar>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

@@ -1,0 +1,94 @@
+<mvc:View controllerName="estrichone.controller.App"
+	xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:tnt="sap.tnt" xmlns:core="sap.ui.core"
+	displayBlock="true" height="100%">
+	<App id="root" autoFocus="false">
+		<Page id="authPage" showHeader="false" enableScrolling="true" class="eoAuthPage">
+			<VBox items="{notices>/banners}" class="eoNoticeBar" visible="{= ${notices>/banners}.length > 0 }">
+				<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" showCloseButton="true" close=".onNoticeClose"
+					class="eoNotice"/>
+			</VBox>
+			<NavContainer id="authNav" height="100%" autoFocus="false"/>
+		</Page>
+		<Page id="barePage" showHeader="false" enableScrolling="true" class="eoBarePage">
+			<NavContainer id="bareNav" height="100%" autoFocus="false"/>
+		</Page>
+		<tnt:ToolPage id="toolPage" sideExpanded="{= !${device>/system/phone} }" class="eoToolPage">
+			<tnt:header>
+				<f:ShellBar id="shellBar" title="EstrichONE" secondTitle="{session>/server/serverName}"
+					homeIcon="{view>/logo}" homeIconTooltip="{i18n>shell.home}" homeIconPressed=".onHome"
+					showMenuButton="true" menuButtonPressed=".onToggleSide" showNotifications="true"
+					notificationsNumber="{view>/notifications/count}" notificationsPressed=".onNotifications"
+					avatarPressed=".onAvatar" showCopilot="false">
+					<f:profile>
+						<Avatar id="profileAvatar" initials="{view>/initials}" displaySize="XS" tooltip="{i18n>shell.profile}"
+							ariaLabelledBy="profileLabel"/>
+					</f:profile>
+					<f:additionalContent>
+						<SearchField id="globalSearch" width="20rem" placeholder="{i18n>shell.searchPlaceholder}"
+							search=".onSearch" ariaLabelledBy="globalSearchLabel"/>
+						<OverflowToolbarButton id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakte}" icon="sap-icon://add-document" type="Emphasized"
+							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }"/>
+						<OverflowToolbarButton id="phoneButton" text="{i18n>shell.phone}" tooltip="{i18n>shell.phone}" icon="sap-icon://outgoing-call" press=".onQuickCall"
+							visible="{= ${session>/permissions/contacts.edit} === true }"/>
+					</f:additionalContent>
+				</f:ShellBar>
+			</tnt:header>
+			<tnt:sideContent>
+				<tnt:SideNavigation id="sideNavigation" itemSelect=".onNavigate" selectedKey="{view>/navKey}">
+					<tnt:NavigationList id="navigationList"/>
+					<tnt:fixedItem>
+						<tnt:NavigationList id="fixedNavigation">
+							<tnt:NavigationListItem id="navSettings" key="__settings" text="{i18n>settings.title}" icon="sap-icon://action-settings"
+								selectable="false"/>
+						</tnt:NavigationList>
+					</tnt:fixedItem>
+				</tnt:SideNavigation>
+			</tnt:sideContent>
+			<tnt:mainContents>
+				<FlexBox direction="Column" height="100%" renderType="Bare" class="eoMain">
+					<MessageStrip text="{notices>/adminHint}" type="Error" showIcon="true" visible="{= !!${notices>/adminHint} }"
+						customIcon="sap-icon://wrench" class="eoNotice eoAdminMaintenance"/>
+					<VBox items="{notices>/banners}" class="eoNoticeBar" visible="{= ${notices>/banners}.length > 0 }">
+						<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" showCloseButton="true" close=".onNoticeClose"
+							class="eoNotice"/>
+					</VBox>
+					<NavContainer id="content" autoFocus="false" height="100%" class="eoContent">
+						<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+					</NavContainer>
+					<OverflowToolbar id="statusBar" design="Solid" style="Clear" class="eoStatusBar" height="2rem">
+						<core:Icon src="{= ${view>/online} ? 'sap-icon://connected' : 'sap-icon://disconnected' }"
+							color="{= ${view>/online} ? 'Positive' : 'Negative' }"/>
+						<Text text="{= ${view>/online} ? ${i18n>status.connected} + ' ' + (${session>/server/serverName} || '') : ${i18n>status.offline} }"/>
+						<ToolbarSeparator/>
+						<Text text="{i18n>status.version} {session>/server/serverVersion}"/>
+						<ToolbarSpacer/>
+						<core:Icon src="sap-icon://person-placeholder"/>
+						<Text text="{session>/user/displayName}"/>
+						<ToolbarSeparator/>
+						<Text text="{view>/today}"/>
+					</OverflowToolbar>
+				</FlexBox>
+			</tnt:mainContents>
+		</tnt:ToolPage>
+	</App>
+	<FlexBox id="maintenanceOverlay" visible="{notices>/page}" direction="Column" alignItems="Center" justifyContent="Center" class="eoMaintenance"
+		renderType="Bare">
+		<Image src="{view>/loginLogo}" alt="EstrichONE" height="3rem" class="sapUiMediumMarginBottom"/>
+		<IllustratedMessage illustrationType="sapIllus-SimpleConnection" title="Wartungsarbeiten" description="{notices>/pageText}"
+			enableDefaultTitleAndDescription="false">
+			<additionalContent>
+				<VBox alignItems="Center">
+					<Text text="{notices>/pageEnd}" class="sapUiSmallMarginBottom" visible="{= !!${notices>/pageEnd} }"/>
+					<HBox>
+						<Button text="Erneut prüfen" icon="sap-icon://refresh" press=".onMaintenanceRecheck" busy="{notices>/checking}" class="sapUiTinyMarginEnd"/>
+						<Button text="Als Administrator anmelden" icon="sap-icon://key-user-settings" type="Transparent" press=".onMaintenanceAdmin"
+							visible="{notices>/canBypass}"/>
+					</HBox>
+					<Text text="Die Seite prüft automatisch alle 30 Sekunden und arbeitet danach weiter." class="eoMuted sapUiSmallMarginTop"/>
+				</VBox>
+			</additionalContent>
+		</IllustratedMessage>
+	</FlexBox>
+	<core:InvisibleText id="profileLabel" text="{i18n>shell.profileMenu} {session>/user/displayName}"/>
+	<core:InvisibleText id="globalSearchLabel" text="{i18n>shell.searchLabel}"/>
+</mvc:View>

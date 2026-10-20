@@ -1,0 +1,28 @@
+<mvc:View controllerName="estrichone.controller.admin.Roles" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.roles}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Rollen mit fein abgestuften Rechten – Rechtematrix bearbeiten, eigene Rollen anlegen"/></f:expandedContent>
+				<f:actions>
+					<Button text="Rolle anlegen" icon="sap-icon://add" type="Emphasized" press=".onNew" visible="{view>/canManage}"/>
+					<Button text="Änderungen speichern" icon="sap-icon://save" press=".onSave" enabled="{= ${view>/dirty} &amp;&amp; ${view>/canManage} }"
+						type="{= ${view>/dirty} ? 'Emphasized' : 'Default' }" visible="{view>/canManage}"/>
+					<Button text="Verwerfen" press=".onDiscard" enabled="{view>/dirty}" visible="{view>/canManage}"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox>
+				<MessageStrip text="Die Rolle „Administrator“ hat immer alle Rechte. Änderungen werden erst mit „Änderungen speichern“ übernommen und im Protokoll festgehalten."
+					type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
+				<MessageStrip text="Ohne das Recht „Rollen und Rechte verwalten“ ist die Matrix nur lesbar." type="Warning" showIcon="true"
+					visible="{= !${view>/canManage} }" class="sapUiSmallMarginBottom"/>
+				<SearchField value="{view>/filter}" liveChange=".onFilter" placeholder="Recht suchen" width="20rem" class="sapUiTinyMarginBottom"/>
+				<ScrollContainer horizontal="true" vertical="false" width="100%">
+					<VBox id="matrixHost"/>
+				</ScrollContainer>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

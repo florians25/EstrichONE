@@ -1,0 +1,45 @@
+<mvc:View controllerName="estrichone.controller.admin.Devices" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.devices}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="iPhones, iPads, Android-Geräte und Windows-Arbeitsplätze"/></f:expandedContent>
+				<f:actions><Button text="Gerät einrichten" icon="sap-icon://qr-code" type="Emphasized" press=".onEnroll" visible="{= ${session>/permissions/devices.manage} === true }"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox>
+				<MessageStrip text="{view>/pendingText}" type="Warning" showIcon="true" visible="{= ${view>/pending} > 0 }" class="sapUiSmallMarginBottom"/>
+				<Table items="{view>/items}" busy="{view>/busy}" noDataText="Noch keine Geräte registriert." popinLayout="GridSmall">
+					<columns>
+						<Column><Text text="Gerät"/></Column>
+						<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Nutzung"/></Column>
+						<Column width="10rem"><Text text="Status"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="App / System"/></Column>
+						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuletzt gesehen"/></Column>
+						<Column width="16rem" hAlign="End" visible="{= ${session>/permissions/devices.manage} === true }"><Text text="Aktionen"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<HBox alignItems="Center">
+								<core:Icon src="{view>icon}" size="1.25rem" class="sapUiSmallMarginEnd"/>
+								<VBox><Text text="{view>name}"/><Text text="{= ${view>model} || ${view>platform} }" class="eoMuted"/></VBox>
+							</HBox>
+							<Text text="{= ${view>kind} === 'pool' ? 'Poolgerät' : 'Persönlich' }"/>
+							<ObjectStatus text="{path: 'view>status', formatter: 'fmt.deviceStatusText'}" state="{path: 'view>status', formatter: 'fmt.deviceStatusState'}" inverted="true"/>
+							<Text text="{= (${view>appVersion} || '–') + ' · ' + (${view>osVersion} || '–') }"/>
+							<Text text="{path: 'view>lastSeenAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
+							<HBox justifyContent="End">
+								<Button text="Freigeben" type="Transparent" press=".onApprove" visible="{= ${view>status} === 'pending' }"/>
+								<Button text="Sperren" type="Transparent" press=".onLock" visible="{= ${view>status} === 'active' }"/>
+								<Button text="Entsperren" type="Transparent" press=".onUnlock" visible="{= ${view>status} === 'locked' }"/>
+								<Button text="Entfernen" type="Transparent" press=".onRetire" visible="{= ${view>status} !== 'retired' }"/>
+							</HBox>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

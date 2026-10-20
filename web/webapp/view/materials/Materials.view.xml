@@ -1,0 +1,55 @@
+<mvc:View controllerName="estrichone.controller.materials.Materials" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.materials}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Artikel mit Einheit, Standardlieferant und Einkaufspreis"/></f:expandedContent>
+				<f:actions><Button text="Artikel anlegen" icon="sap-icon://add-product" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/materials.manage} === true }"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<Table items="{view>/shown}" busy="{view>/busy}" noDataText="Noch keine Artikel. Legen Sie die Materialien an, die Sie regelmäßig bestellen." sticky="HeaderToolbar,ColumnHeaders"
+				growing="true" growingThreshold="100" popinLayout="GridSmall">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{= ${view>/shown}.length } Artikel" level="H2"/>
+						<ToolbarSpacer/>
+						<SearchField width="16rem" placeholder="Bezeichnung, Art.-Nr., Lieferant" liveChange=".refresh" value="{view>/search}"/>
+						<Select selectedKey="{view>/category}" change=".refresh" items="{view>/categories}" ariaLabelledBy="catLabel">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+						<Label text="Inaktive anzeigen" labelFor="inactive"/>
+						<Switch id="inactive" state="{view>/inactive}" change=".onInactive"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Bezeichnung"/></Column>
+					<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art.-Nr."/></Column>
+					<Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kategorie"/></Column>
+					<Column width="6rem"><Text text="Einheit"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Lieferant"/></Column>
+					<Column width="9rem" hAlign="End"><Text text="Preis je Einheit"/></Column>
+					<Column width="6rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Status"/></Column>
+					<Column width="4rem" hAlign="End" visible="{= ${session>/permissions/materials.manage} === true }"><Text text=""/></Column>
+				</columns>
+				<items>
+					<ColumnListItem>
+						<VBox>
+							<Link text="{view>name}" press=".onEdit" enabled="{= ${session>/permissions/materials.manage} === true }"/>
+							<Text text="{view>notes}" visible="{= !!${view>notes} }" class="eoMuted"/>
+						</VBox>
+						<Text text="{= ${view>articleNumber} || '–' }"/>
+						<Text text="{path: 'view>category', formatter: 'fmt.materialCategoryText'}"/>
+						<Text text="{view>unit}"/>
+						<Text text="{= ${view>supplierName} || '–' }"/>
+						<Text text="{path: 'view>price', formatter: 'fmt.money'}" class="eoTabular"/>
+						<ObjectStatus text="{path: 'view>isActive', formatter: 'fmt.activeText'}" state="{path: 'view>isActive', formatter: 'fmt.activeState'}"/>
+						<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+	<core:InvisibleText id="catLabel" text="Kategorie"/>
+</mvc:View>

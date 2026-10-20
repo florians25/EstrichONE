@@ -1,0 +1,86 @@
+<mvc:View controllerName="estrichone.controller.bauakte.List" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
+	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" headerPinned="true" fitContent="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title id="listTitle" text="{= ${view>/status} === 'inquiry' ? ${i18n>bauakten.inquiries} : ${i18n>nav.bauakten} }" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{i18n>bauakten.subtitle}"/></f:expandedContent>
+				<f:actions>
+					<Button text="{i18n>bauakten.map}" icon="sap-icon://map-2" press=".onMap"/>
+					<Button text="{i18n>bauakten.export}" icon="sap-icon://excel-attachment" press=".onExport" tooltip="{i18n>bauakten.exportTooltip}"/>
+					<Button text="{i18n>bauakten.newInquiry}" icon="sap-icon://inbox" press=".onNewInquiry" visible="{= ${session>/permissions/bauakten.create} === true }"/>
+					<Button text="{i18n>bauakten.new}" icon="sap-icon://add-document" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/bauakten.create} === true }"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="true">
+				<VBox>
+					<FlexBox wrap="Wrap" alignItems="End" class="sapUiTinyMarginBottom">
+						<VBox class="sapUiSmallMarginEnd">
+							<Label text="{i18n>common.search}" labelFor="listSearch"/>
+							<SearchField id="listSearch" value="{view>/search}" width="20rem" placeholder="{i18n>bauakten.searchPlaceholder}" search=".onSearch"/>
+						</VBox>
+						<VBox class="sapUiSmallMarginEnd">
+							<Label text="{i18n>bauakten.responsible}" labelFor="listResponsible"/>
+							<Select id="listResponsible" selectedKey="{view>/responsible}" change=".onFilter" width="14rem" forceSelection="false"/>
+						</VBox>
+						<VBox class="sapUiSmallMarginEnd">
+							<Label text="{i18n>bauakten.customer}" labelFor="listCustomerHost"/>
+							<HBox id="listCustomerHost" width="16rem"/>
+						</VBox>
+						<Button text="{i18n>bauakten.resetFilters}" type="Transparent" icon="sap-icon://clear-filter" press=".onReset"/>
+					</FlexBox>
+					<IconTabHeader id="statusTabs" selectedKey="{view>/statusKey}" select=".onStatus" mode="Inline" backgroundDesign="Transparent">
+						<items>
+							<IconTabFilter key="all" text="{i18n>common.all}"/>
+							<IconTabFilter key="inquiry" text="Anfrage"/>
+							<IconTabFilter key="planned" text="Geplant"/>
+							<IconTabFilter key="inProgress" text="In Ausführung"/>
+							<IconTabFilter key="drying" text="Belegreif / Trocknung"/>
+							<IconTabFilter key="completed" text="Abgeschlossen"/>
+							<IconTabFilter key="cancelled" text="Storniert"/>
+						</items>
+					</IconTabHeader>
+				</VBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<VBox>
+				<Table id="bauaktenTable" items="{view>/items}" busy="{view>/busy}" sticky="ColumnHeaders,HeaderToolbar" popinLayout="GridSmall"
+					noDataText="{i18n>bauakten.noData}" mode="None" alternateRowColors="true">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="{view>/countText}" level="H2"/>
+							<ToolbarSpacer/>
+							<Button icon="sap-icon://refresh" tooltip="{i18n>common.refresh}" press=".onRefresh"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="7rem"><Text text="{i18n>bauakten.number}"/></Column>
+						<Column><Text text="{i18n>bauakten.title}"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>bauakten.site}"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true" width="11rem"><Text text="{i18n>bauakten.responsible}"/></Column>
+						<Column width="12rem" minScreenWidth="Phone" demandPopin="true"><Text text="{i18n>bauakten.status}"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true" width="10rem" hAlign="End"><Text text="{i18n>bauakten.updated}"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onOpen" highlight="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}">
+							<Text text="{= ${view>number} || 'neu' }" class="eoTabular"/>
+							<Link text="{view>title}" href="/bauakten/{view>id}" wrapping="true" emphasized="true"/>
+							<HBox alignItems="Center">
+								<core:Icon src="sap-icon://map" visible="{= ${view>latitude} !== null }" tooltip="{i18n>bauakten.located}" class="sapUiTinyMarginEnd"/>
+								<Text text="{parts: ['view>street', 'view>postalCode', 'view>city'], formatter: 'fmt.address'}"/>
+							</HBox>
+							<Text text="{path: 'view>responsibleUserId', formatter: 'fmt.person'}"/>
+							<ObjectStatus text="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" state="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}"
+								icon="{path: 'view>status', formatter: 'fmt.bauakteStatusIcon'}" inverted="true"/>
+							<Text text="{path: 'view>updatedAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+				<Button text="{i18n>bauakten.more}" width="100%" type="Transparent" visible="{= !!${view>/cursor} }" press=".onMore"/>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

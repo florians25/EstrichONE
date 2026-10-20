@@ -11,6 +11,7 @@ public sealed class WorkModule : IModule
     {
         services.AddScoped<ISyncOperationHandler, WorkSync>();
         services.AddScoped<Exports.IWorkItemReferences, WorkItemReferences>();
+        services.AddScoped<Exports.IWorkReportSource, WorkReportSource>();
         services.AddScoped<IBauakteHintSource, WorkHints>();
         services.AddScoped<ISyncEntitySource, WorkItemSource>();
     }

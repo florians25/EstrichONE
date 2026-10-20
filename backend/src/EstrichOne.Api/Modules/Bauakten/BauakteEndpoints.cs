@@ -337,22 +337,41 @@ internal static class BauakteEndpoints
                 new Dictionary<string, string?> { ["from"] = before.Status.ToString(), ["to"] = after.Status.ToString() });
         }
 
-        var fields = new List<string>();
-        if (before.Title != after.Title) fields.Add("title");
-        if (before.Street != after.Street) fields.Add("street");
-        if (before.PostalCode != after.PostalCode) fields.Add("postalCode");
-        if (before.City != after.City) fields.Add("city");
-        if (before.Latitude != after.Latitude || before.Longitude != after.Longitude) fields.Add("latitude");
-        if (before.Description != after.Description) fields.Add("description");
-        if (before.CustomerId != after.CustomerId) fields.Add("customerId");
-        if (before.ResponsibleUserId != after.ResponsibleUserId) fields.Add("responsibleUserId");
-        if (before.PlannedStart != after.PlannedStart || before.PlannedEnd != after.PlannedEnd) fields.Add("period");
-        if (before.SiteContactName != after.SiteContactName || before.SiteContactPhone != after.SiteContactPhone
-            || before.SiteContactEmail != after.SiteContactEmail) fields.Add("siteContact");
-        if (before.SiteNotes != after.SiteNotes) fields.Add("siteNotes");
+        var details = new Dictionary<string, string?>();
+        void Change(string field, string? from, string? to)
+        {
+            if (from == to)
+            {
+                return;
+            }
+
+            details[$"{field}.from"] = Clip(from);
+            details[$"{field}.to"] = Clip(to);
+        }
+
+        static string? Clip(string? value) => value is { Length: > 300 } ? value[..297] + "…" : value;
+        static string? Day(DateOnly? day) => day?.ToString("yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture);
+        static string? Join(params string?[] parts) =>
+            parts.Any(p => !string.IsNullOrWhiteSpace(p)) ? string.Join(" · ", parts.Where(p => !string.IsNullOrWhiteSpace(p))) : null;
+
+        Change("title", before.Title, after.Title);
+        Change("street", before.Street, after.Street);
+        Change("postalCode", before.PostalCode, after.PostalCode);
+        Change("city", before.City, after.City);
+        Change("latitude", before.Latitude is null ? null : $"{before.Latitude:0.#####}, {before.Longitude:0.#####}",
+            after.Latitude is null ? null : $"{after.Latitude:0.#####}, {after.Longitude:0.#####}");
+        Change("description", before.Description, after.Description);
+        Change("customerId", before.CustomerId?.ToString(), after.CustomerId?.ToString());
+        Change("responsibleUserId", before.ResponsibleUserId?.ToString(), after.ResponsibleUserId?.ToString());
+        Change("period", Join(Day(before.PlannedStart), Day(before.PlannedEnd)), Join(Day(after.PlannedStart), Day(after.PlannedEnd)));
+        Change("siteContact", Join(before.SiteContactName, before.SiteContactPhone, before.SiteContactEmail),
+            Join(after.SiteContactName, after.SiteContactPhone, after.SiteContactEmail));
+        Change("siteNotes", before.SiteNotes, after.SiteNotes);
+        var fields = details.Keys.Where(k => k.EndsWith(".from", StringComparison.Ordinal)).Select(k => k[..^5]).ToList();
         if (fields.Count > 0)
         {
-            history.Record(after.Id, BauakteHistoryActions.Updated, new Dictionary<string, string?> { ["fields"] = string.Join(',', fields) });
+            details["fields"] = string.Join(',', fields);
+            history.Record(after.Id, BauakteHistoryActions.Updated, details);
         }
     }
 

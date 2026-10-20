@@ -1,0 +1,66 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Rooms" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}">
+	<VBox>
+		<FlexBox wrap="Wrap" class="eoTiles sapUiSmallMarginBottom" alignItems="Center">
+			<GenericTile header="{i18n>rooms.total}" frameType="TwoByHalf" class="eoRoomTotal">
+				<TileContent><NumericContent value="{rm>/total}" scale="m²" withMargin="false" icon="sap-icon://measure"/></TileContent>
+			</GenericTile>
+			<GenericTile header="{i18n>rooms.heated}" frameType="TwoByHalf">
+				<TileContent><NumericContent value="{rm>/heated}" scale="m²" withMargin="false" icon="sap-icon://temperature"/></TileContent>
+			</GenericTile>
+			<GenericTile header="{i18n>rooms.count}" frameType="TwoByHalf">
+				<TileContent footer="{rm>/progress}"><NumericContent value="{rm>/count}" withMargin="false" icon="sap-icon://grid"/></TileContent>
+			</GenericTile>
+			<GenericTile header="{i18n>rooms.volume}" frameType="TwoByHalf">
+				<TileContent footer="{i18n>rooms.volumeHint}"><NumericContent value="{rm>/volume}" scale="m³" withMargin="false" icon="sap-icon://product"/></TileContent>
+			</GenericTile>
+		</FlexBox>
+		<Table id="roomTable" items="{path: 'rm>/rooms', sorter: {path: 'sectionName', group: true}}" noDataText="{i18n>rooms.none}"
+			sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+			<headerToolbar>
+				<OverflowToolbar>
+					<Title text="{i18n>rooms.title} ({= ${rm>/rooms}.length })" level="H3"/>
+					<ToolbarSpacer/>
+					<MenuButton text="{i18n>rooms.sections}" icon="sap-icon://hierarchy" visible="{akte>/canEdit}">
+						<menu>
+							<Menu items="{path: 'rm>/sectionMenu', templateShareable: false}" itemSelected=".onSectionMenu">
+								<MenuItem text="{rm>text}" key="{rm>key}" icon="{rm>icon}"/>
+							</Menu>
+						</menu>
+					</MenuButton>
+					<Button text="{i18n>rooms.add}" icon="sap-icon://add" type="Emphasized" press=".onAdd" visible="{akte>/canEdit}"/>
+				</OverflowToolbar>
+			</headerToolbar>
+			<columns>
+				<Column><Text text="Raum"/></Column>
+				<Column width="6rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Geschoss"/></Column>
+				<Column width="8rem" hAlign="End"><Text text="Fläche"/></Column>
+				<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Estrich"/></Column>
+				<Column width="5rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Dicke"/></Column>
+				<Column width="6rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Dämmung"/></Column>
+				<Column width="6rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Heizung"/></Column>
+				<Column width="8rem"><Text text="Status"/></Column>
+				<Column width="6rem" hAlign="End" visible="{akte>/canEdit}"><Text text=""/></Column>
+			</columns>
+			<items>
+				<ColumnListItem>
+					<VBox>
+						<Text text="{rm>name}"/>
+						<Text text="{rm>notes}" visible="{= !!${rm>notes} }" class="eoMuted"/>
+					</VBox>
+					<Text text="{= ${rm>floor} || '–' }"/>
+					<Text text="{path: 'rm>areaSquareMeters', formatter: 'fmt.area'}" class="eoTabular"/>
+					<Text text="{= ${rm>screedTypeName} || '–' }"/>
+					<Text text="{= ${rm>thicknessMillimeters} === null ? '–' : ${rm>thicknessMillimeters} + ' mm' }"/>
+					<Text text="{= ${rm>insulationMillimeters} === null ? '–' : ${rm>insulationMillimeters} + ' mm' }"/>
+					<Text text="{path: 'rm>underfloorHeating', formatter: 'fmt.yesNo'}"/>
+					<ObjectStatus text="{path: 'rm>status', formatter: 'fmt.roomStatusText'}" state="{path: 'rm>status', formatter: 'fmt.roomStatusState'}"/>
+					<HBox justifyContent="End">
+						<Button icon="sap-icon://edit" type="Transparent" tooltip="Raum {rm>name} bearbeiten" press=".onEdit"/>
+						<Button icon="sap-icon://delete" type="Transparent" tooltip="Raum {rm>name} entfernen" press=".onDelete"/>
+					</HBox>
+				</ColumnListItem>
+			</items>
+		</Table>
+	</VBox>
+</mvc:View>

@@ -1,106 +1,49 @@
 import { test, type Page } from '@playwright/test';
+import { adminPassword, openSection, signIn } from './helpers';
 
-const nav = (page: Page, name: string) => page.locator('.ant-pro-sider').getByText(name, { exact: true });
-
-// Nur für die visuelle Durchsicht (SCREENSHOTS=1), nicht Teil der regulären Tests.
+// Bildschirmfotos für die visuelle Durchsicht (SCREENSHOTS=1), nicht Teil der regulären Tests.
 test.skip(!process.env['SCREENSHOTS'], 'nur auf Anforderung');
 
+const shot = (page: Page, name: string, fullPage = false) =>
+  page.waitForTimeout(800).then(() => page.screenshot({ path: `test-results/screenshots/${name}.png`, fullPage }));
+
 test('Bildschirmfotos', async ({ page }) => {
-  await page.setViewportSize({ width: 1280, height: 800 });
+  test.setTimeout(240_000);
   await page.goto('/anmelden');
-  await page.screenshot({ path: 'test-results/screenshots/login.png' });
-  await page.getByLabel('Anmeldename oder E-Mail').fill('admin');
-  await page.getByLabel('Passwort').fill('Estrich-Chefin-2026!');
-  await page.getByRole('button', { name: 'Anmelden' }).click();
-  await page.waitForURL('**/start');
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/start.png', fullPage: true });
-  await nav(page, 'Benutzer').click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/users.png' });
-  await nav(page, 'Geräte').click();
-  await page.getByRole('button', { name: 'Gerät einrichten' }).click();
-  await page.getByRole('button', { name: 'Code erzeugen' }).click();
-  await page.getByAltText('QR-Code zur Einrichtung').waitFor();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/devices.png' });
-  await page.getByRole('button', { name: 'Fertig' }).click();
-  await nav(page, 'Kolonnenplanung').click();
-  await page.waitForTimeout(800);
-  await page.screenshot({ path: 'test-results/screenshots/planning.png', fullPage: true });
-  await page.getByRole('button', { name: 'Baustellen-Vorrat' }).click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/planning-backlog.png' });
-  await page.locator('.backlog-drawer .ant-drawer-close').click();
-  await nav(page, 'Tageseinteilung').click();
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/planning-day.png', fullPage: true });
-  await nav(page, 'Kalender').click();
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/planning-month.png', fullPage: true });
-  await nav(page, 'Arbeitsplan').click();
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/workplan.png', fullPage: true });
-  await nav(page, 'Bauakten').click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/bauakten.png', fullPage: true });
-  await page.getByRole('link', { name: /Anfrage Familie Kraus/ }).click();
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: 'test-results/screenshots/bauakte-overview.png', fullPage: true });
-  for (const [tab, file] of [['Kontakte', 'contacts'], ['Notizen & Verlauf', 'notes'], ['Dokumente', 'documents']]) {
-    await page.getByRole('tab', { name: tab }).click();
-    await page.waitForTimeout(600);
-    await page.screenshot({ path: `test-results/screenshots/bauakte-${file}.png`, fullPage: true });
+  await shot(page, 'login');
+  await signIn(page, 'admin', adminPassword);
+  await shot(page, 'start', true);
+  const pages: [string, string][] = [
+    ['/bauakten', 'bauakten'], ['/tagesuebersicht', 'today'], ['/bauakten/karte', 'sitemap'], ['/planung', 'planning'],
+    ['/planung/tageseinteilung', 'planning-day'], ['/planung/kalender', 'planning-month'], ['/planung/arbeitsplan', 'workplan'],
+    ['/planung/ressourcen', 'resources'], ['/anfragen', 'inquiries'], ['/anrufe', 'calls'], ['/kunden', 'customers'],
+    ['/bestellungen', 'orders'], ['/material', 'materials'], ['/lieferanten', 'suppliers'], ['/verwaltung/benutzer', 'users'],
+    ['/it-center/geraete', 'devices'], ['/it-center/helpdesk', 'helpdesk'], ['/system/sicherung', 'backup'],
+    ['/system/firmendaten', 'company'], ['/system/protokoll', 'audit'], ['/dokumente', 'dms'], ['/dokumente?reiter=freigaben', 'approvals'],
+    ['/verwaltung/rollen', 'roles'], ['/verwaltung/stammdaten', 'masterdata'],
+  ];
+  for (const [path, name] of pages) {
+    await page.goto(path);
+    await shot(page, name);
   }
-  await page.getByRole('tab', { name: 'Räume & Flächen' }).click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/rooms.png', fullPage: true });
-  await page.goto(`${new URL(page.url()).pathname}?reiter=material`);
-  await page.waitForTimeout(800);
-  await page.screenshot({ path: 'test-results/screenshots/bauakte-material.png', fullPage: true });
-  await nav(page, 'Bestellungen').click();
-  await page.getByText('Alle', { exact: true }).click();
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/orders.png', fullPage: true });
-  await page.getByRole('row', { name: /B-\d{4}-0001/ }).click();
-  await page.waitForTimeout(800);
-  await page.screenshot({ path: 'test-results/screenshots/order-sheet.png' });
-  await page.locator('.ant-drawer-close').click();
-  await nav(page, 'Materialstamm').click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/materials.png' });
-  await nav(page, 'Helpdesk').click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/helpdesk.png', fullPage: true });
-  await page.getByRole('tab', { name: 'Alle' }).click();
-  await page.getByRole('row', { name: /Drucker/ }).getByRole('link').click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/ticket.png', fullPage: true });
-  await nav(page, 'Baustellenkarte').click();
-  await page.waitForTimeout(1500);
-  await page.screenshot({ path: 'test-results/screenshots/sitemap.png' });
-  await nav(page, 'Protokoll').click();
-  await page.waitForTimeout(800);
-  await page.screenshot({ path: 'test-results/screenshots/audit.png' });
-  await nav(page, 'Tagesübersicht').click();
-  await page.waitForTimeout(800);
-  await page.screenshot({ path: 'test-results/screenshots/today.png', fullPage: true });
-  await nav(page, 'Anrufe').click();
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/calls.png', fullPage: true });
-  await nav(page, 'Anfragen').click();
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/inquiries.png', fullPage: true });
-  await page.getByRole('button', { name: 'Telefon' }).click();
-  await page.waitForTimeout(600);
-  await page.screenshot({ path: 'test-results/screenshots/quick-call.png' });
-  await page.keyboard.press('Escape');
-  await nav(page, 'Kunden').click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/customers.png' });
-  await nav(page, 'Bauakten').click();
-  await page.getByRole('link', { name: /EFH Prüfung E2E/ }).click();
-  await page.getByRole('tab', { name: 'Erstbegehung' }).click();
-  await page.waitForTimeout(500);
-  await page.screenshot({ path: 'test-results/screenshots/records.png', fullPage: true });
+  await page.goto('/bauakten');
+  await page.getByRole('link', { name: /Anfrage Familie Kraus/ }).click();
+  await shot(page, 'bauakte-overview');
+  for (const [section, file] of [['Dokumente', 'documents'], ['Fotos & Videos', 'photos'], ['Dokumentation', 'documentation'],
+    ['Räume & Flächen', 'rooms'], ['Aufgaben & Mängel', 'work'], ['Material', 'material'], ['Einsätze', 'assignments'],
+    ['Kontakte', 'contacts'], ['Notizen & Verlauf', 'notes']]) {
+    await openSection(page, section).catch(() => undefined);
+    await shot(page, `bauakte-${file}`);
+  }
+  for (const theme of ['Abendhorizont (dunkel)', 'Quartz hell', 'Quartz dunkel', 'Horizon Hoher Kontrast Schwarz']) {
+    await page.getByLabel(/Benutzermenü/).click();
+    await page.getByRole('menuitem', { name: 'Einstellungen' }).click();
+    await page.getByRole('dialog', { name: 'Einstellungen' }).getByText(theme, { exact: true }).click();
+    await page.waitForTimeout(1500);
+    await shot(page, `theme-${theme.replace(/[^a-z]/gi, '').toLowerCase()}`);
+    await page.getByRole('dialog', { name: 'Einstellungen' }).getByRole('button', { name: 'Schließen' }).click();
+  }
+  await page.getByLabel(/Benutzermenü/).click();
+  await page.getByRole('menuitem', { name: 'Einstellungen' }).click();
+  await page.getByRole('dialog', { name: 'Einstellungen' }).getByText('Systemeinstellung folgen').click();
 });

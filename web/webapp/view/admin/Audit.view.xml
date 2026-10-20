@@ -1,0 +1,55 @@
+<mvc:View controllerName="estrichone.controller.admin.Audit" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.audit}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Nachvollziehbar, wer wann was getan hat. Einträge lassen sich nicht ändern oder löschen."/></f:expandedContent>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox>
+				<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Einträge." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Ereignisse" level="H2"/>
+							<ToolbarSpacer/>
+							<Select selectedKey="{view>/group}" change=".onFilter" items="{view>/groups}" ariaLabelledBy="groupLabel">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+							<Select selectedKey="{view>/actor}" change=".onFilter" items="{view>/people}" ariaLabelledBy="actorLabel">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+							<DateRangeSelection dateValue="{view>/from}" secondDateValue="{view>/to}" change=".onFilter" displayFormat="dd.MM.yyyy" width="14rem" ariaLabelledBy="rangeLabel"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column width="10rem"><Text text="Zeitpunkt"/></Column>
+						<Column><Text text="Ereignis"/></Column>
+						<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Bereich"/></Column>
+						<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Person"/></Column>
+						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Objekt"/></Column>
+						<Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="IP-Adresse"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<Text text="{path: 'view>occurredAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
+							<VBox>
+								<Text text="{path: 'view>action', formatter: 'fmt.auditText'}"/>
+								<Text text="{view>detailsText}" visible="{= !!${view>detailsText} }" class="eoMuted"/>
+							</VBox>
+							<ObjectStatus text="{view>area}" state="{path: 'view>action', formatter: 'fmt.auditState'}"/>
+							<Text text="{= ${view>actorName} || 'System' }"/>
+							<Link text="Bauakte öffnen" href="/bauakten/{view>entityId}" visible="{= ${view>entityType} === 'bauakte' &amp;&amp; !!${view>entityId} }"/>
+							<Text text="{= ${view>ipAddress} || '–' }" class="eoTabular"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+				<Button text="Weitere laden" type="Transparent" width="100%" visible="{= !!${view>/cursor} }" press=".onMore"/>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+	<core:InvisibleText id="groupLabel" text="Bereich"/>
+	<core:InvisibleText id="actorLabel" text="Person"/>
+	<core:InvisibleText id="rangeLabel" text="Zeitraum"/>
+</mvc:View>

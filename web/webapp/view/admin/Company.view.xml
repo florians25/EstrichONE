@@ -1,0 +1,22 @@
+<mvc:View controllerName="estrichone.controller.admin.Company" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.company}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Erscheinen im Briefkopf von Bestellscheinen, Berichten und Ausdrucken."/></f:expandedContent>
+				<f:actions><Button text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="48rem" busy="{view>/busy}">
+				<Label text="Firmenname" labelFor="coName" required="true"/><Input id="coName" value="{view>/c/name}" maxLength="200"/>
+				<Label text="Straße" labelFor="coStreet"/><Input id="coStreet" value="{view>/c/street}" maxLength="200"/>
+				<Label text="PLZ" labelFor="coPostal"/><Input id="coPostal" value="{view>/c/postalCode}" maxLength="10"/>
+				<Label text="Ort" labelFor="coCity"/><Input id="coCity" value="{view>/c/city}" maxLength="100"/>
+				<Label text="Telefon" labelFor="coPhone"/><Input id="coPhone" value="{view>/c/phone}" maxLength="50"/>
+				<Label text="E-Mail" labelFor="coMail"/><Input id="coMail" value="{view>/c/email}" type="Email" maxLength="320"/>
+				<Label text="Website" labelFor="coWeb"/><Input id="coWeb" value="{view>/c/website}" maxLength="200"/>
+			</form:SimpleForm>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

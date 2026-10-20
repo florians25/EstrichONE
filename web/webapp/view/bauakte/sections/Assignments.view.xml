@@ -1,0 +1,40 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Assignments" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}">
+	<Table items="{path: 'as>/items', sorter: {path: 'group', group: true}}" noDataText="{i18n>assignments.none}" popinLayout="GridSmall">
+		<headerToolbar>
+			<OverflowToolbar>
+				<Title text="{i18n>assignments.title} ({= ${as>/items}.length })" level="H3"/>
+				<ToolbarSpacer/>
+				<Link text="{i18n>assignments.toBoard}" href="/planung"/>
+				<Button text="{i18n>assignments.plan}" icon="sap-icon://add" type="Emphasized" press=".onPlan" visible="{= ${session>/permissions/planning.manage} === true }"/>
+			</OverflowToolbar>
+		</headerToolbar>
+		<columns>
+			<Column width="12rem"><Text text="Tag"/></Column>
+			<Column width="8rem"><Text text="Zeit"/></Column>
+			<Column><Text text="Tätigkeit"/></Column>
+			<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kolonne / Mitarbeiter"/></Column>
+			<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Geräte"/></Column>
+			<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Hinweise"/></Column>
+		</columns>
+		<items>
+			<ColumnListItem type="Active" press=".onOpen" highlight="{= ${as>warnings}.length ? 'Warning' : 'None' }">
+				<Text text="{path: 'as>day', formatter: 'fmt.weekdayDate'}" class="eoTabular"/>
+				<Text text="{= ${as>timeText} || 'ganztags' }" class="eoTabular"/>
+				<HBox alignItems="Center">
+					<core:Icon src="{path: 'as>kind', formatter: 'fmt.kindIcon'}" class="sapUiTinyMarginEnd" color="{as>color}"/>
+					<VBox>
+						<Text text="{as>activity}"/>
+						<Text text="{path: 'as>kind', formatter: 'fmt.kindText'}" class="eoMuted"/>
+					</VBox>
+				</HBox>
+				<VBox>
+					<Text text="{as>crewName}" visible="{= !!${as>crewName} }"/>
+					<Text text="{as>peopleText}" class="eoMuted"/>
+				</VBox>
+				<Text text="{as>resourceText}"/>
+				<Text text="{as>warningText}"/>
+			</ColumnListItem>
+		</items>
+	</Table>
+</mvc:View>

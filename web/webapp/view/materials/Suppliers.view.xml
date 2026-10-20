@@ -1,0 +1,49 @@
+<mvc:View controllerName="estrichone.controller.materials.Suppliers" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.suppliers}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Lieferanten mit Bestellhinweisen (Bestellschluss, Mindestmengen …)"/></f:expandedContent>
+				<f:actions><Button text="Lieferant anlegen" icon="sap-icon://add" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/materials.manage} === true }"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Noch keine Lieferanten angelegt." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{= ${view>/items}.length } Lieferanten" level="H2"/>
+						<ToolbarSpacer/>
+						<Label text="Inaktive anzeigen" labelFor="inactiveSup"/>
+						<Switch id="inactiveSup" state="{view>/inactive}" change=".onInactive"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Lieferant"/></Column>
+					<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kundennr."/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kontakt"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Bestellhinweise"/></Column>
+					<Column width="6rem"><Text text="Status"/></Column>
+					<Column width="4rem" hAlign="End" visible="{= ${session>/permissions/materials.manage} === true }"><Text text=""/></Column>
+				</columns>
+				<items>
+					<ColumnListItem>
+						<VBox>
+							<Link text="{view>name}" press=".onEdit" emphasized="true" enabled="{= ${session>/permissions/materials.manage} === true }"/>
+							<Text text="{= ((${view>street} || '') + ' ' + (${view>postalCode} || '') + ' ' + (${view>city} || '')).trim() || '–' }" class="eoMuted"/>
+						</VBox>
+						<Text text="{= ${view>customerNumber} || '–' }"/>
+						<VBox>
+							<Text text="{view>contactName}" visible="{= !!${view>contactName} }"/>
+							<Link text="{view>phone}" href="tel:{view>phone}" visible="{= !!${view>phone} }"/>
+							<Link text="{view>email}" href="mailto:{view>email}" visible="{= !!${view>email} }"/>
+						</VBox>
+						<Text text="{= ${view>orderNotes} || '–' }"/>
+						<ObjectStatus text="{path: 'view>isActive', formatter: 'fmt.activeText'}" state="{path: 'view>isActive', formatter: 'fmt.activeState'}"/>
+						<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

@@ -1,0 +1,69 @@
+<mvc:View controllerName="estrichone.controller.planning.WorkPlan" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:eo="estrichone.control" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.workPlan}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Wer ist wann wo – mit Navigation und Druck"/></f:expandedContent>
+				<f:actions>
+					<Button text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh"/>
+					<Button text="Drucken" icon="sap-icon://print" press=".onPrint"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox>
+				<OverflowToolbar style="Clear" class="eoNoPrint">
+					<SegmentedButton selectedKey="{view>/length}" selectionChange=".onFilter">
+						<items><SegmentedButtonItem key="7" text="7 Tage"/><SegmentedButtonItem key="14" text="14 Tage"/></items>
+					</SegmentedButton>
+					<Switch state="{view>/mine}" change=".onFilter" ariaLabelledBy="mineLabel"/>
+					<Label id="mineLabel" text="Nur meine Einsätze"/>
+					<Select selectedKey="{view>/crew}" change=".onFilter" items="{view>/crewOptions}" width="14rem" ariaLabelledBy="crewLabel">
+						<core:Item key="{view>key}" text="{view>text}"/>
+					</Select>
+					<core:InvisibleText id="crewLabel" text="Kolonne"/>
+				</OverflowToolbar>
+				<VBox items="{view>/days}" busy="{view>/busy}">
+					<Panel expandable="false" class="sapUiSmallMarginBottom eoAgendaDay">
+						<headerToolbar>
+							<Toolbar>
+								<Title text="{view>title}" level="H2"/>
+								<ObjectStatus text="Heute" state="Information" inverted="true" visible="{view>today}"/>
+								<ToolbarSpacer/>
+								<Text text="{view>countText}"/>
+							</Toolbar>
+						</headerToolbar>
+						<HBox wrap="Wrap" items="{view>absences}" visible="{= ${view>absences}.length > 0 }" class="sapUiTinyMarginBottom">
+							<ObjectStatus text="{view>text}" state="Warning" inverted="true" class="sapUiTinyMarginEnd"/>
+						</HBox>
+						<Text text="Keine Einsätze." class="eoMuted" visible="{= ${view>items}.length === 0 }"/>
+						<List items="{view>items}" visible="{= ${view>items}.length > 0 }" showSeparators="Inner">
+							<CustomListItem>
+								<HBox alignItems="Start" class="sapUiTinyMargin">
+									<eo:Swatch color="{view>crewColor}" shape="bar"/>
+									<VBox width="6.5rem" class="sapUiSmallMarginEnd">
+										<core:Icon src="{view>icon}" size="1.1rem"/>
+										<Text text="{view>timeText}" class="eoTabular"/>
+									</VBox>
+									<VBox class="eoGrow">
+										<HBox wrap="Wrap" alignItems="Center">
+											<Link text="{view>bauakteText}" href="{= '/bauakten/' + ${view>bauakteId} }" class="sapUiTinyMarginEnd"/>
+											<ObjectStatus text="{view>kindText}" state="Information" class="sapUiTinyMarginEnd"/>
+											<ObjectStatus text="{view>crewName}" visible="{= !!${view>crewName} }" class="sapUiTinyMarginEnd"/>
+											<ObjectStatus text="{= ${view>warnings}.length + ' Hinweise' }" state="Warning" inverted="true" visible="{= ${view>warnings}.length > 0 }" tooltip="{view>warningText}"/>
+										</HBox>
+										<Text text="{view>line}"/>
+										<Text text="{view>team}" class="eoMuted"/>
+										<Text text="{= 'Notiz: ' + ${view>notes} }" visible="{= !!${view>notes} }"/>
+									</VBox>
+									<Link text="Navigation starten" href="{view>route}" target="_blank" visible="{= !!${view>route} }" class="eoNoPrint"/>
+								</HBox>
+							</CustomListItem>
+						</List>
+					</Panel>
+				</VBox>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

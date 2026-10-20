@@ -1,0 +1,85 @@
+<mvc:View controllerName="estrichone.controller.planning.Resources" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="Kolonnen und Geräte" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Stammdaten der Einsatzplanung"/></f:expandedContent>
+				<f:actions>
+					<Button text="{view>/addText}" icon="sap-icon://add" type="Emphasized" press=".onAdd" visible="{= ${session>/permissions/planning.manage} === true }"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<IconTabBar id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" stretchContentHeight="false" applyContentPadding="false">
+				<items>
+					<IconTabFilter key="kolonnen" text="Kolonnen" count="{= ${view>/crews}.length }">
+						<Table items="{view>/crews}" busy="{view>/busy}" noDataText="Noch keine Kolonnen." popinLayout="GridSmall">
+							<columns>
+								<Column><Text text="Kolonne"/></Column>
+								<Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kolonnenführer"/></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Mitglieder"/></Column>
+								<Column width="7rem"><Text text="Status"/></Column>
+								<Column width="14rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<HBox alignItems="Center"><eo:Swatch color="{view>color}"/><Text text="{view>name}"/></HBox>
+									<Text text="{view>leaderName}"/>
+									<Text text="{view>memberNames}"/>
+									<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }" inverted="true"/>
+									<HBox justifyContent="End">
+										<Button text="Bearbeiten" type="Transparent" press=".onEditCrew"/>
+										<Button text="{= ${view>isActive} ? 'Deaktivieren' : 'Aktivieren' }" type="Transparent" press=".onToggleCrew"/>
+									</HBox>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+					<IconTabFilter key="geraete" text="Fahrzeuge und Geräte" count="{= ${view>/resources}.length }">
+						<Table items="{view>/resources}" busy="{view>/busy}" noDataText="Noch keine Fahrzeuge oder Geräte." popinLayout="GridSmall">
+							<columns>
+								<Column><Text text="Bezeichnung"/></Column>
+								<Column width="9rem"><Text text="Art"/></Column>
+								<Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kennzeichen / Nr."/></Column>
+								<Column width="9rem"><Text text="Status"/></Column>
+								<Column width="16rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<Text text="{view>name}"/>
+									<Text text="{view>kindText}"/>
+									<Text text="{= ${view>identifier} || '–' }"/>
+									<ObjectStatus text="{= ${view>isActive} ? 'Verfügbar' : 'Außer Betrieb' }" state="{= ${view>isActive} ? 'Success' : 'None' }" inverted="true"/>
+									<HBox justifyContent="End">
+										<Button text="Bearbeiten" type="Transparent" press=".onEditResource"/>
+										<Button text="{= ${view>isActive} ? 'Außer Betrieb' : 'Wieder verfügbar' }" type="Transparent" press=".onToggleResource"/>
+									</HBox>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+					<IconTabFilter key="abwesenheiten" text="Abwesenheiten" count="{= ${view>/absences}.length }">
+						<Text text="Abwesenheiten der nächsten 60 Tage" class="eoMuted sapUiSmallMargin"/>
+						<Table items="{view>/absences}" busy="{view>/busy}" noDataText="Keine Abwesenheiten eingetragen." popinLayout="GridSmall">
+							<columns>
+								<Column><Text text="Mitarbeiter"/></Column>
+								<Column width="9rem"><Text text="Art"/></Column>
+								<Column width="14rem"><Text text="Zeitraum"/></Column>
+								<Column width="9rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<Text text="{view>userName}"/>
+									<ObjectStatus text="{view>kindText}" state="{= ${view>kind} === 'sick' ? 'Error' : ${view>kind} === 'vacation' ? 'Information' : 'Warning' }" inverted="true"/>
+									<Text text="{view>rangeText}" class="eoTabular"/>
+									<Button text="Entfernen" icon="sap-icon://delete" type="Transparent" press=".onRemoveAbsence"/>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+				</items>
+			</IconTabBar>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

@@ -1,0 +1,137 @@
+<mvc:View controllerName="estrichone.controller.Documents" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.documents}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Dokumentverwaltung über alle Bauakten – Ablage, Fassungen und Freigaben"/></f:expandedContent>
+				<f:actions>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<IconTabBar id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false">
+				<items>
+					<IconTabFilter key="ablage" text="Ablage" icon="sap-icon://documents" count="{view>/facets/total}">
+						<FlexBox alignItems="Start" class="eoDmsLayout">
+							<List id="folders" mode="SingleSelectMaster" items="{view>/folders}" selectionChange=".onFolder" width="15rem" class="eoDmsFolders"
+								headerText="Ordner">
+								<StandardListItem title="{view>text}" icon="{view>icon}" counter="{view>count}" selected="{view>selected}"/>
+							</List>
+							<VBox class="eoGrow">
+								<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow sapUiTinyMarginBottom">
+									<SearchField value="{view>/search}" search=".onSearch" liveChange=".onSearchLive" placeholder="Dateiname, Beschreibung, Bauakte" width="20rem"/>
+									<ComboBox selectedKey="{view>/bauakteId}" items="{view>/akten}" placeholder="Alle Bauakten" width="16rem" selectionChange=".onFilter" ariaLabelledBy="dmsAkte">
+										<core:Item key="{view>key}" text="{view>text}"/>
+									</ComboBox>
+									<core:InvisibleText id="dmsAkte" text="Bauakte"/>
+									<Select selectedKey="{view>/approval}" change=".onFilter" width="13rem" ariaLabelledBy="dmsApproval">
+										<core:Item key="" text="Alle Freigabestände"/>
+										<core:Item key="pending" text="Wartet auf Freigabe"/>
+										<core:Item key="approved" text="Freigegeben"/>
+										<core:Item key="rejected" text="Abgelehnt"/>
+										<core:Item key="none" text="Ohne Freigabe"/>
+									</Select>
+									<core:InvisibleText id="dmsApproval" text="Freigabe"/>
+									<Select selectedKey="{view>/sort}" change=".onFilter" width="11rem" ariaLabelledBy="dmsSort">
+										<core:Item key="newest" text="Neueste zuerst"/>
+										<core:Item key="name" text="Name"/>
+										<core:Item key="bauakte" text="Nach Bauakte"/>
+									</Select>
+									<core:InvisibleText id="dmsSort" text="Sortierung"/>
+								</FlexBox>
+								<Table id="docTable" items="{view>/items}" busy="{view>/busy}" growing="true" growingThreshold="50" popinLayout="GridSmall"
+									noDataText="Keine Dokumente in dieser Auswahl.">
+									<columns>
+										<Column><Text text="Dokument"/></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Bauakte"/></Column>
+										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Ablage"/></Column>
+										<Column width="4.5rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Fassung"/></Column>
+										<Column width="11rem"><Text text="Freigabe"/></Column>
+										<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Hochgeladen"/></Column>
+										<Column width="8rem" hAlign="End"><Text text=""/></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<HBox alignItems="Center">
+												<core:Icon src="{view>icon}" size="1.25rem" class="sapUiSmallMarginEnd"/>
+												<VBox>
+													<Link text="{view>file/originalName}" href="{view>openHref}" wrapping="true"/>
+													<Text text="{view>file/caption}" visible="{= !!${view>file/caption} }" class="eoMuted"/>
+												</VBox>
+											</HBox>
+											<Link text="{view>akteText}" href="{= '/bauakten/' + ${view>file/bauakteId} + '?abschnitt=dokumente' }" wrapping="true"/>
+											<VBox>
+												<Text text="{view>categoryText}"/>
+												<Text text="{view>file/folder}" visible="{= !!${view>file/folder} }" class="eoMuted"/>
+											</VBox>
+											<Text text="v{view>versionCount}"/>
+											<VBox>
+												<ObjectStatus text="{view>approvalText}" state="{view>approvalState}" inverted="true" visible="{= !!${view>approvalStatus} }"/>
+												<Text text="{view>approvalAssignee}" visible="{= !!${view>approvalAssignee} }" class="eoMuted"/>
+											</VBox>
+											<VBox>
+												<Text text="{path: 'view>file/createdAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
+												<Text text="{view>uploadedByName}" class="eoMuted"/>
+											</VBox>
+											<HBox justifyContent="End">
+												<Button icon="sap-icon://download" type="Transparent" tooltip="Herunterladen" press=".onDownload"/>
+												<Button icon="sap-icon://approvals" type="Transparent" tooltip="Freigabe anfordern" press=".onRequest"
+													visible="{= ${view>approvalStatus} !== 'pending' &amp;&amp; ${session>/permissions/files.upload} === true }"/>
+											</HBox>
+										</ColumnListItem>
+									</items>
+								</Table>
+							</VBox>
+						</FlexBox>
+					</IconTabFilter>
+					<IconTabFilter key="freigaben" text="Freigaben" icon="sap-icon://approvals" count="{= ${view>/mine}.length }" iconColor="Critical">
+						<Title text="Warten auf meine Freigabe" level="H3" class="sapUiSmallMarginTop sapUiSmallMarginBegin"/>
+						<List items="{view>/mine}" noDataText="Nichts zu tun – keine offenen Freigaben." class="sapUiTinyMarginTop">
+							<CustomListItem>
+								<HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap" class="sapUiSmallMargin">
+									<VBox>
+										<Link text="{view>fileName}" href="{= '/bauakten/' + ${view>bauakteId} + '/datei/' + ${view>fileId} + '?abschnitt=dokumente' }" emphasized="true"/>
+										<Text text="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} }"/>
+										<Text text="{view>requestText}" class="eoMuted"/>
+										<Text text="{= '„' + ${view>message} + '“' }" visible="{= !!${view>message} }"/>
+									</VBox>
+									<HBox>
+										<Button text="Freigeben" icon="sap-icon://accept" type="Accept" press=".onApprove" class="sapUiTinyMarginEnd" enabled="{view>canDecide}"/>
+										<Button text="Ablehnen" icon="sap-icon://decline" type="Reject" press=".onReject" enabled="{view>canDecide}"/>
+									</HBox>
+								</HBox>
+							</CustomListItem>
+						</List>
+						<Title text="Von mir angefragt" level="H3" class="sapUiMediumMarginTop sapUiSmallMarginBegin"/>
+						<Table items="{view>/requested}" noDataText="Keine Anfragen." class="sapUiTinyMarginTop" popinLayout="GridSmall">
+							<columns>
+								<Column><Text text="Dokument"/></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Freigabe durch"/></Column>
+								<Column width="11rem"><Text text="Stand"/></Column>
+								<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Kommentar"/></Column>
+								<Column width="9rem" hAlign="End"><Text text=""/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<VBox>
+										<Link text="{view>fileName}" href="{= '/bauakten/' + ${view>bauakteId} + '/datei/' + ${view>fileId} + '?abschnitt=dokumente' }"/>
+										<Text text="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} }" class="eoMuted"/>
+									</VBox>
+									<Text text="{view>assigneeName}"/>
+									<VBox>
+										<ObjectStatus text="{view>statusText}" state="{view>statusState}" inverted="true"/>
+										<Text text="{path: 'view>requestedAt', formatter: 'fmt.dateTime'}" class="eoMuted eoTabular"/>
+									</VBox>
+									<Text text="{= ${view>decisionComment} || '–' }"/>
+									<Button text="Zurückziehen" type="Transparent" press=".onCancel" visible="{= ${view>status} === 'pending' }"/>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+				</items>
+			</IconTabBar>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

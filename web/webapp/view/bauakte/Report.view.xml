@@ -1,0 +1,11 @@
+<mvc:View controllerName="estrichone.controller.bauakte.Report" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core">
+	<VBox busy="{view>/busy}">
+		<OverflowToolbar class="eoPrintToolbar eoNoPrint" style="Clear">
+			<Button text="{i18n>report.back}" icon="sap-icon://nav-back" press=".onBack"/>
+			<Title text="{view>/title}" level="H1"/>
+			<ToolbarSpacer/>
+			<Button text="{i18n>report.print}" icon="sap-icon://print" type="Emphasized" press=".onPrint"/>
+		</OverflowToolbar>
+		<core:HTML content="{view>/html}" sanitizeContent="false"/>
+	</VBox>
+</mvc:View>

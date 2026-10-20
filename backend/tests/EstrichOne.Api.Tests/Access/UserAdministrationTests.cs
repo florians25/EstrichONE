@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using EstrichOne.Api.Modules.Access;
+using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Tests.Support;
 
 namespace EstrichOne.Api.Tests.Access;
@@ -30,6 +31,46 @@ public sealed class UserAdministrationTests(PostgresFixture postgres) : IAsyncLi
             new { displayName = "Lukas Brandl", userName, email = (string?)null, phone = "0871 123", roleIds = roles }, Ct);
         response.StatusCode.ShouldBe(HttpStatusCode.Created);
         return (await response.Content.ReadFromJsonAsync<UserWithPassword>(TestJson.Options, Ct))!;
+    }
+
+    [Fact]
+    public async Task CustomRole_CanBeCreatedChangedAndDeleted_AdminRoleKeepsAllRights()
+    {
+        var id = Guid.CreateVersion7();
+        string[] planning = ["planning.read", "planning.manage"];
+        string[] unknownRight = ["gibt.es.nicht"];
+        string[] readOnly = ["planning.read"];
+        using (var created = await _admin.PutAsJsonAsync($"/api/v1/access/roles/{id}",
+                   new { name = "Disposition", description = "Planung ohne Stammdaten", permissions = planning }, Ct))
+        {
+            created.StatusCode.ShouldBe(HttpStatusCode.OK, await created.Content.ReadAsStringAsync(Ct));
+        }
+
+        using (var unknown = await _admin.PutAsJsonAsync($"/api/v1/access/roles/{id}", new { name = "Disposition", permissions = unknownRight }, Ct))
+        {
+            unknown.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        }
+
+        using (var taken = await _admin.PutAsJsonAsync($"/api/v1/access/roles/{Guid.CreateVersion7()}", new { name = "disposition", permissions = Array.Empty<string>() }, Ct))
+        {
+            taken.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        }
+
+        var user = await CreateAsync("d.planer", id);
+        using (var changed = await _admin.PutAsJsonAsync($"/api/v1/access/roles/{id}", new { name = "Disposition", permissions = readOnly }, Ct))
+        {
+            (await changed.Content.ReadFromJsonAsync<RoleResponse>(TestJson.Options, Ct))!.Permissions.ShouldBe(["planning.read"]);
+        }
+
+        using (var admin = await _admin.PutAsJsonAsync($"/api/v1/access/roles/{StandardRoles.AdministratorId}", new { name = "Administrator", permissions = readOnly }, Ct))
+        {
+            (await admin.Content.ReadFromJsonAsync<RoleResponse>(TestJson.Options, Ct))!.Permissions.Count.ShouldBe(Permissions.All.Count);
+        }
+
+        (await _admin.DeleteAsync(new Uri($"/api/v1/access/roles/{StandardRoles.OfficeId}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await _admin.DeleteAsync(new Uri($"/api/v1/access/roles/{id}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        var users = await _admin.GetFromJsonAsync<List<UserListItem>>("/api/v1/users", TestJson.Options, Ct);
+        users!.Single(u => u.Id == user.User.Id).RoleIds.ShouldBeEmpty();
     }
 
     [Fact]

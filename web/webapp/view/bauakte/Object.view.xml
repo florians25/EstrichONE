@@ -1,0 +1,190 @@
+<mvc:View controllerName="estrichone.controller.bauakte.Object" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:uxap="sap.uxap"
+	xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout" xmlns:eo="estrichone.control"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<uxap:ObjectPageLayout id="objectPage" useIconTabBar="true" showFooter="false" upperCaseAnchorBar="false" busy="{akte>/busy}"
+		headerContentPinnable="true" toggleHeaderOnTitleClick="true" navigate=".onSectionNavigate" showEditHeaderButton="false"
+		sectionTitleLevel="H2" enableLazyLoading="false">
+		<uxap:headerTitle>
+			<uxap:ObjectPageDynamicHeaderTitle id="headerTitle">
+				<uxap:breadcrumbs>
+					<Breadcrumbs currentLocationText="{= ${akte>/bauakte/number} || 'Neue Bauakte' }">
+						<Link text="{i18n>nav.bauakten}" href="/bauakten"/>
+					</Breadcrumbs>
+				</uxap:breadcrumbs>
+				<uxap:expandedHeading>
+					<VBox>
+						<Text text="Bauakte {= ${akte>/bauakte/number} || '(noch ohne Nummer)' }" class="eoMuted"/>
+						<Title id="bauakteTitle" text="{akte>/bauakte/title}" level="H1" wrapping="true" titleStyle="H2"/>
+					</VBox>
+				</uxap:expandedHeading>
+				<uxap:snappedHeading>
+					<HBox alignItems="Center">
+						<Avatar src="sap-icon://folder-full" displaySize="XS" class="sapUiTinyMarginEnd" backgroundColor="Accent6"/>
+						<Title text="{akte>/bauakte/number} · {akte>/bauakte/title}" level="H1" wrapping="false"/>
+					</HBox>
+				</uxap:snappedHeading>
+				<uxap:expandedContent>
+					<ObjectStatus text="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}"
+						state="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusState'}" inverted="true"
+						icon="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusIcon'}"/>
+				</uxap:expandedContent>
+				<uxap:snappedContent>
+					<ObjectStatus text="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}"
+						state="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusState'}" inverted="true"/>
+				</uxap:snappedContent>
+				<uxap:actions>
+					<MenuButton id="statusButton" text="Status: {path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}"
+						icon="sap-icon://flag" enabled="{= ${akte>/canEdit} &amp;&amp; ${akte>/bauakte/status} !== 'cancelled' }"
+						ariaLabelledBy="statusLabel">
+						<menu>
+							<Menu itemSelected=".onStatusMenu">
+								<MenuItem text="Anfrage" key="inquiry" icon="sap-icon://inbox"/>
+								<MenuItem text="Geplant" key="planned" icon="sap-icon://appointment-2"/>
+								<MenuItem text="In Ausführung" key="inProgress" icon="sap-icon://process"/>
+								<MenuItem text="Belegreif / Trocknung" key="drying" icon="sap-icon://temperature"/>
+								<MenuItem text="Abgeschlossen" key="completed" icon="sap-icon://complete"/>
+							</Menu>
+						</menu>
+					</MenuButton>
+					<Button text="{i18n>akte.takeOver}" type="Emphasized" icon="sap-icon://accept" press=".onTakeOver"
+						visible="{= ${akte>/canEdit} &amp;&amp; ${akte>/bauakte/status} === 'inquiry' }"/>
+					<Button text="{i18n>akte.complete}" type="Success" icon="sap-icon://complete" press=".onComplete"
+						visible="{= ${akte>/canEdit} &amp;&amp; ['planned','inProgress','drying'].indexOf(${akte>/bauakte/status}) >= 0 }"/>
+					<Button id="assignButton" text="{i18n>akte.assigned}: {akte>/assignedText}" icon="sap-icon://employee-pane" press=".onAssign"
+						enabled="{akte>/canEdit}"/>
+					<Button text="{i18n>common.edit}" icon="sap-icon://edit" press=".onEdit" visible="{akte>/canEdit}"/>
+					<MenuButton id="actionsButton" text="{i18n>common.actions}" icon="sap-icon://overflow">
+						<menu>
+							<Menu>
+								<MenuItem text="Bauakte als PDF (mit Fotos)" icon="sap-icon://pdf-attachment" press=".onPdf"/>
+								<MenuItem text="{i18n>akte.report}" icon="sap-icon://print" press=".onReport"/>
+								<MenuItem text="{i18n>akte.acceptanceSheet}" icon="sap-icon://approvals" press=".onAcceptanceSheet"/>
+								<MenuItem text="{i18n>akte.sheet}" icon="sap-icon://document-text" press=".onSheet"/>
+								<MenuItem text="{i18n>akte.route}" icon="sap-icon://map-3" press=".onRoute" visible="{= !!${akte>/routeUrl} }" startsSection="true"/>
+								<MenuItem text="{i18n>akte.call} ({akte>/phone})" icon="sap-icon://call" press=".onCall" visible="{= !!${akte>/phone} }"/>
+								<MenuItem text="{i18n>akte.mail}" icon="sap-icon://email" press=".onMail" visible="{= !!${akte>/mail} }"/>
+								<MenuItem text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onReload"/>
+								<MenuItem text="{i18n>akte.cancel}" icon="sap-icon://cancel" press=".onCancel" startsSection="true"
+									visible="{= ${akte>/canEdit} &amp;&amp; ${akte>/bauakte/status} !== 'cancelled' }"/>
+								<MenuItem text="{i18n>akte.reactivate}" icon="sap-icon://undo" press=".onReactivate"
+									visible="{= ${akte>/canEdit} &amp;&amp; ${akte>/bauakte/status} === 'cancelled' }"/>
+								<MenuItem text="{i18n>akte.delete}" icon="sap-icon://delete" press=".onDelete" visible="{= ${session>/permissions/bauakten.delete} === true }"/>
+							</Menu>
+						</menu>
+					</MenuButton>
+				</uxap:actions>
+				<uxap:navigationActions>
+					<OverflowToolbarButton type="Transparent" icon="{= ${akte>/listShown} ? 'sap-icon://full-screen' : 'sap-icon://exit-full-screen' }"
+						tooltip="{= ${akte>/listShown} ? ${i18n>akte.hideList} : ${i18n>akte.showList} }" text="{= ${akte>/listShown} ? ${i18n>akte.hideList} : ${i18n>akte.showList} }"
+						press=".onToggleList"/>
+					<OverflowToolbarButton type="Transparent" icon="sap-icon://decline" tooltip="{i18n>common.close}" text="{i18n>common.close}" press=".onClose"/>
+				</uxap:navigationActions>
+			</uxap:ObjectPageDynamicHeaderTitle>
+		</uxap:headerTitle>
+		<uxap:headerContent>
+			<VBox width="100%">
+				<FlexBox class="eoHeaderFacts" wrap="Wrap" alignItems="Start">
+					<VBox>
+						<Label text="{i18n>akte.customer}"/>
+						<Link text="{= ${akte>/customer/name} || '–' }" href="/kunden?kunde={akte>/customer/id}" enabled="{= !!${akte>/customer} }" emphasized="true"/>
+						<Link text="{akte>/customer/phone}" href="tel:{akte>/customer/phone}" visible="{= !!${akte>/customer/phone} }"/>
+					</VBox>
+					<VBox>
+						<Label text="{i18n>akte.site}"/>
+						<Text text="{akte>/bauakte/street}" visible="{= !!${akte>/bauakte/street} }"/>
+						<Text text="{= (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }"/>
+						<Link text="{i18n>akte.route}" href="{akte>/routeUrl}" target="_blank" visible="{= !!${akte>/routeUrl} }"/>
+					</VBox>
+					<VBox>
+						<Label text="{i18n>akte.responsible}"/>
+						<Text text="{akte>/responsibleName}"/>
+						<Label text="{i18n>akte.period}" class="sapUiTinyMarginTop"/>
+						<Text text="{akte>/periodText}"/>
+						<Label text="Angelegt" class="sapUiTinyMarginTop"/>
+						<Text text="{akte>/createdText}"/>
+					</VBox>
+					<VBox>
+						<Label text="{i18n>akte.area}"/>
+						<ObjectNumber number="{akte>/kpi/area}" unit="m²" emphasized="true"/>
+						<Label text="{i18n>akte.screed}" class="sapUiTinyMarginTop"/>
+						<Text text="{= ${akte>/kpi/screeds} || '–' }"/>
+					</VBox>
+					<VBox>
+						<Label text="{i18n>akte.openWork}"/>
+						<ObjectNumber number="{akte>/kpi/openWork}" state="{= ${akte>/kpi/overdue} > 0 ? 'Error' : 'None' }" emphasized="true"/>
+						<ObjectStatus text="{akte>/kpi/defectsText}" state="Warning" visible="{= ${akte>/kpi/defects} > 0 }"/>
+					</VBox>
+					<VBox>
+						<Label text="{i18n>akte.documentation}"/>
+						<Text text="{akte>/kpi/filesText}"/>
+						<ObjectStatus text="{akte>/kpi/readyText}" state="{akte>/kpi/readyState}" visible="{= !!${akte>/kpi/readyText} }"/>
+					</VBox>
+					<VBox>
+						<Label text="{i18n>akte.next}"/>
+						<Text text="{akte>/kpi/nextText}" wrapping="true" width="14rem"/>
+					</VBox>
+					<eo:LeafletMap id="miniMap" height="8.5rem" width="17rem" zoom="14" interactive="false" markers="{akte>/markers}"
+						visible="{= ${akte>/markers}.length > 0 }"/>
+				</FlexBox>
+				<VBox items="{akte>/hints}" class="sapUiSmallMarginTop">
+					<MessageStrip text="{akte>text}" type="{akte>type}" showIcon="true" class="sapUiTinyMarginBottom">
+						<customData><core:CustomData key="role" value="listitem" writeToDom="true"/></customData>
+					</MessageStrip>
+				</VBox>
+			</VBox>
+		</uxap:headerContent>
+		<uxap:sections>
+			<uxap:ObjectPageSection id="uebersicht" title="{i18n>akte.sec.overview}" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secOverview" viewName="estrichone.view.bauakte.sections.Overview" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="dokumente" title="{i18n>akte.sec.documents}" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secDocuments" viewName="estrichone.view.bauakte.sections.Documents" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="fotos" title="{i18n>akte.sec.photos}" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secPhotos" viewName="estrichone.view.bauakte.sections.Photos" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="dokumentation" title="{i18n>akte.sec.documentation}" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secDocumentation" viewName="estrichone.view.bauakte.sections.Documentation" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="raeume" title="{i18n>akte.sec.rooms}" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secRooms" viewName="estrichone.view.bauakte.sections.Rooms" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="aufgaben" title="{i18n>akte.sec.work}" titleUppercase="false" visible="{= ${session>/permissions/work.read} === true }">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secWork" viewName="estrichone.view.bauakte.sections.Work" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="material" title="{i18n>akte.sec.material}" titleUppercase="false" visible="{= ${session>/permissions/materials.read} === true }">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secMaterial" viewName="estrichone.view.bauakte.sections.Material" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="einsaetze" title="{i18n>akte.sec.assignments}" titleUppercase="false" visible="{= ${session>/permissions/planning.read} === true }">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secAssignments" viewName="estrichone.view.bauakte.sections.Assignments" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="kontakte" title="{i18n>akte.sec.contacts}" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secContacts" viewName="estrichone.view.bauakte.sections.Contacts" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="notizen" title="{i18n>akte.sec.notes}" titleUppercase="false">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<mvc:XMLView id="secNotes" viewName="estrichone.view.bauakte.sections.Notes" async="true"/>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+		</uxap:sections>
+	</uxap:ObjectPageLayout>
+	<core:InvisibleText id="statusLabel" text="Status: {path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}"/>
+</mvc:View>

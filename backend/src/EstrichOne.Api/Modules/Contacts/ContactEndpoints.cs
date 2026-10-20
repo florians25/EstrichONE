@@ -66,6 +66,8 @@ internal static class ContactEndpoints
             .ProducesProblem(StatusCodes.Status412PreconditionFailed)
             .RequirePermission(Permissions.ContactsEdit);
 
+        ContactDuplicates.Map(contacts);
+
         contacts.MapPost("/import", ImportAsync).WithName("ImportContacts")
             .WithSummary("CSV-Import (text/csv im Anfragekörper); mit dryRun=true nur prüfen")
             .Accepts<string>("text/csv")

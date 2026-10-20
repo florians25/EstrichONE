@@ -1,0 +1,101 @@
+<mvc:View controllerName="estrichone.controller.Today" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:card="sap.f.cards"
+	xmlns:l="sap.ui.layout" xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.today}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{view>/today}"/></f:expandedContent>
+				<f:actions><Button text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<FlexBox class="eoTiles" items="{view>/kpis}">
+					<GenericTile header="{view>title}" frameType="OneByHalf" press=".onKpi">
+						<TileContent><NumericContent value="{view>value}" icon="{view>icon}" valueColor="{view>color}" withMargin="false"/></TileContent>
+					</GenericTile>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<l:Grid defaultSpan="XL6 L6 M12 S12" containerQuery="true">
+				<f:Card>
+					<f:header><card:Header title="Einsätze heute" iconSrc="sap-icon://appointment-2" press=".onToDay"/></f:header>
+					<f:content>
+						<List items="{path: 'view>/assignments', sorter: {path: 'crewLabel', group: true}}" noDataText="Heute ist nichts eingeplant." width="100%">
+							<ObjectListItem title="{view>bauakteNumber} {view>bauakteTitle}" number="{view>timeText}" type="Navigation" press=".onAssignment"
+								icon="{path: 'view>kind', formatter: 'fmt.kindIcon'}">
+								<attributes>
+									<ObjectAttribute text="{view>activity}{= ${view>bauakteAddress} ? ' · ' + ${view>bauakteAddress} : '' }"/>
+									<ObjectAttribute text="{view>peopleText}"/>
+								</attributes>
+								<firstStatus><ObjectStatus text="{view>warningText}" state="Warning"/></firstStatus>
+							</ObjectListItem>
+						</List>
+					</f:content>
+				</f:Card>
+				<VBox>
+					<f:Card class="sapUiSmallMarginBottom" visible="{= ${view>/absences}.length > 0 }">
+						<f:header><card:Header title="Heute abwesend" iconSrc="sap-icon://general-leave-request"/></f:header>
+						<f:content>
+							<List items="{view>/absences}" width="100%">
+								<StandardListItem title="{view>userName}" info="{path: 'view>kind', formatter: 'fmt.absenceText'}" infoState="Warning"/>
+							</List>
+						</f:content>
+					</f:Card>
+					<f:Card class="sapUiSmallMarginBottom" visible="{= ${session>/permissions/materials.read} === true }">
+						<f:header><card:Header title="Lieferungen heute" iconSrc="sap-icon://shipping-status" press=".onToOrders"/></f:header>
+						<f:content>
+							<List items="{view>/deliveries}" noDataText="Heute keine Lieferungen." width="100%">
+								<StandardListItem title="{view>supplierName}{= ${view>deliveryTime} ? ' · ' + ${view>deliveryTime} : '' }" description="{view>linesText}"
+									info="{path: 'view>status', formatter: 'fmt.orderStatusText'}" type="Navigation" press=".onOrder"/>
+							</List>
+						</f:content>
+					</f:Card>
+					<f:Card class="sapUiSmallMarginBottom" visible="{= ${session>/permissions/contacts.read} === true }">
+						<f:header><card:Header title="Fällige Wiedervorlagen" iconSrc="sap-icon://call" press=".onToCalls"/></f:header>
+						<f:content>
+							<List items="{view>/due}" noDataText="Keine fälligen Wiedervorlagen." width="100%">
+								<CustomListItem>
+									<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom">
+										<VBox>
+											<Text text="{view>who}"/>
+											<Text text="{= ${view>subject} || ${view>notes} || '–' }" class="eoMuted"/>
+										</VBox>
+										<Button text="Erledigt" icon="sap-icon://accept" type="Transparent" press=".onDone" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+									</HBox>
+								</CustomListItem>
+							</List>
+						</f:content>
+					</f:Card>
+					<f:Card class="sapUiSmallMarginBottom" visible="{= ${session>/permissions/contacts.read} === true }">
+						<f:header><card:Header title="Offene Anfragen" iconSrc="sap-icon://inbox" press=".onToInquiries"/></f:header>
+						<f:content>
+							<List items="{view>/inquiries}" noDataText="Keine offenen Anfragen." width="100%">
+								<StandardListItem title="{view>who}" description="{= ${view>subject} || '–' }" info="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusText'}"/>
+							</List>
+						</f:content>
+					</f:Card>
+					<f:Card class="sapUiSmallMarginBottom" visible="{= ${session>/permissions/work.read} === true }">
+						<f:header><card:Header title="Meine offenen Aufgaben" iconSrc="sap-icon://task"/></f:header>
+						<f:content>
+							<List items="{view>/work}" noDataText="Keine offenen Aufgaben." width="100%">
+								<StandardListItem title="{view>title}" icon="{= ${view>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"
+									info="{path: 'view>dueDate', formatter: 'fmt.date'}" infoState="{path: 'view>dueDate', formatter: 'fmt.overdueState'}" type="Navigation" press=".onWork"/>
+							</List>
+						</f:content>
+					</f:Card>
+					<f:Card>
+						<f:header><card:Header title="Zuletzt geänderte Bauakten" iconSrc="sap-icon://folder-full"/></f:header>
+						<f:content>
+							<List items="{view>/recent}" width="100%">
+								<StandardListItem title="{view>number} {view>title}" description="{path: 'view>updatedAt', formatter: 'fmt.dateTime'}" type="Navigation" press=".onBauakte"
+									info="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" infoState="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}"/>
+							</List>
+						</f:content>
+					</f:Card>
+				</VBox>
+			</l:Grid>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

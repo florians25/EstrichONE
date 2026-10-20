@@ -1,0 +1,13 @@
+<mvc:View controllerName="estrichone.controller.bauakte.Fcl" xmlns:mvc="sap.ui.core.mvc" xmlns:f="sap.f" height="100%">
+	<f:FlexibleColumnLayout id="fcl" layout="{view>/layout}" backgroundDesign="Solid" stateChange=".onStateChange">
+		<f:beginColumnPages>
+			<mvc:XMLView id="listView" viewName="estrichone.view.bauakte.List" async="true"/>
+		</f:beginColumnPages>
+		<f:midColumnPages>
+			<mvc:XMLView id="objectView" viewName="estrichone.view.bauakte.Object" async="true"/>
+		</f:midColumnPages>
+		<f:endColumnPages>
+			<mvc:XMLView id="itemView" viewName="estrichone.view.bauakte.Item" async="true"/>
+		</f:endColumnPages>
+	</f:FlexibleColumnLayout>
+</mvc:View>

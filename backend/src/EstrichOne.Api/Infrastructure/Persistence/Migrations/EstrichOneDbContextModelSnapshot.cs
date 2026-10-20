@@ -1131,6 +1131,101 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("diary_entries", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.FileApproval", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AssigneeRoleId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignee_role_id");
+
+                    b.Property<Guid?>("AssigneeUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignee_user_id");
+
+                    b.Property<Guid>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("decision_comment");
+
+                    b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("date")
+                        .HasColumnName("due_date");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("Message")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("message");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_file_approvals");
+
+                    b.HasIndex("BauakteId")
+                        .HasDatabaseName("ix_file_approvals_bauakte_id");
+
+                    b.HasIndex("FileId")
+                        .HasDatabaseName("ix_file_approvals_file_id");
+
+                    b.HasIndex("RequestedByUserId")
+                        .HasDatabaseName("ix_file_approvals_requested_by_user_id");
+
+                    b.HasIndex("Status", "AssigneeRoleId")
+                        .HasDatabaseName("ix_file_approvals_status_assignee_role_id");
+
+                    b.HasIndex("Status", "AssigneeUserId")
+                        .HasDatabaseName("ix_file_approvals_status_assignee_user_id");
+
+                    b.ToTable("file_approvals", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_file_approvals_assignee", "(assignee_user_id IS NULL) <> (assignee_role_id IS NULL)");
+                        });
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.FileRecord", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2201,6 +2296,59 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Organization.CatalogEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("content");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_catalog_entries");
+
+                    b.HasIndex("Kind", "SortOrder")
+                        .HasDatabaseName("ix_catalog_entries_kind_sort_order");
+
+                    b.ToTable("catalog_entries", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Organization.CompanyProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -2893,6 +3041,30 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_diary_entries_bauakten_bauakte_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.FileApproval", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", null)
+                        .WithMany()
+                        .HasForeignKey("BauakteId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_file_approvals_bauakten_bauakte_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Documentation.FileRecord", null)
+                        .WithMany()
+                        .HasForeignKey("FileId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_file_approvals_file_record_file_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("RequestedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_file_approvals_user_requested_by_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.FileRecord", b =>

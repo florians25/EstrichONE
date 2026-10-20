@@ -1,0 +1,60 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Contacts" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
+	xmlns:card="sap.f.cards" xmlns:form="sap.ui.layout.form" xmlns:l="sap.ui.layout" xmlns:core="sap.ui.core">
+	<l:Grid defaultSpan="XL6 L6 M12 S12" containerQuery="true">
+		<f:Card>
+			<f:header><card:Header title="{i18n>contacts.customer}" iconSrc="sap-icon://customer"/></f:header>
+			<f:content>
+				<VBox width="100%">
+					<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" visible="{= !!${akte>/customer} }">
+						<Label text="Name"/><Text text="{akte>/customer/name}"/>
+						<Label text="Kundennummer"/><Text text="{= ${akte>/customer/customerNumber} || '–' }"/>
+						<Label text="Art"/><Text text="{= ${akte>/customer/kind} === 'company' ? 'Firma' : 'Person' }"/>
+						<Label text="Telefon"/><Link text="{= ${akte>/customer/phone} || '–' }" href="tel:{akte>/customer/phone}" enabled="{= !!${akte>/customer/phone} }"/>
+						<Label text="E-Mail"/><Link text="{= ${akte>/customer/email} || '–' }" href="mailto:{akte>/customer/email}" enabled="{= !!${akte>/customer/email} }"/>
+						<Label text="Adresse"/><Text text="{= (${akte>/customer/street} || '–') + ', ' + (${akte>/customer/postalCode} || '') + ' ' + (${akte>/customer/city} || '') }"/>
+					</form:SimpleForm>
+					<IllustratedMessage illustrationType="sapIllus-NoEntries" illustrationSize="Dot" visible="{= !${akte>/customer} }"
+						title="{i18n>contacts.noCustomer}" description="{i18n>contacts.noCustomerText}" enableVerticalResponsiveness="true"/>
+					<OverflowToolbar style="Clear" visible="{akte>/canEdit}">
+						<ToolbarSpacer/>
+						<Button text="{i18n>contacts.changeCustomer}" icon="sap-icon://edit" press=".onCustomer"/>
+					</OverflowToolbar>
+				</VBox>
+			</f:content>
+		</f:Card>
+		<f:Card>
+			<f:header><card:Header title="{i18n>contacts.site}" iconSrc="sap-icon://building"/></f:header>
+			<f:content>
+				<VBox width="100%">
+					<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4">
+						<Label text="Ansprechpartner vor Ort"/><Text text="{= ${akte>/bauakte/siteContactName} || '–' }"/>
+						<Label text="Telefon"/><Link text="{= ${akte>/bauakte/siteContactPhone} || '–' }" href="tel:{akte>/bauakte/siteContactPhone}" enabled="{= !!${akte>/bauakte/siteContactPhone} }"/>
+						<Label text="E-Mail Baustellenkontakt"/><Link text="{= ${akte>/bauakte/siteContactEmail} || '–' }" href="mailto:{akte>/bauakte/siteContactEmail}" enabled="{= !!${akte>/bauakte/siteContactEmail} }"/>
+						<Label text="Adresse"/><Text text="{= (${akte>/bauakte/street} || '–') + ', ' + (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }"/>
+						<Label text="Hinweise"/><Text text="{= ${akte>/bauakte/siteNotes} || '–' }" class="eoPre"/>
+					</form:SimpleForm>
+					<OverflowToolbar style="Clear" visible="{akte>/canEdit}">
+						<ToolbarSpacer/>
+						<Button text="{i18n>common.edit}" icon="sap-icon://edit" press=".onSiteContact"/>
+					</OverflowToolbar>
+				</VBox>
+			</f:content>
+		</f:Card>
+		<f:Card>
+			<f:header><card:Header title="{i18n>contacts.members}" iconSrc="sap-icon://employee-pane"/></f:header>
+			<f:content>
+				<VBox width="100%">
+					<List items="{akte>/members}" noDataText="{i18n>contacts.noMembers}">
+						<StandardListItem title="{akte>displayName}" description="{= ${akte>email} || 'Mitarbeiter' }" icon="sap-icon://person-placeholder"
+							info="{= ${akte>role} === 'responsible' ? 'Zuständig' : (${akte>isActive} ? '' : 'Gesperrt') }"
+							infoState="{= ${akte>role} === 'responsible' ? 'Information' : 'None' }"/>
+					</List>
+					<OverflowToolbar style="Clear" visible="{akte>/canEdit}">
+						<ToolbarSpacer/>
+						<Button text="{i18n>contacts.assign}" icon="sap-icon://add-employee" press=".onAssign"/>
+					</OverflowToolbar>
+				</VBox>
+			</f:content>
+		</f:Card>
+	</l:Grid>
+</mvc:View>

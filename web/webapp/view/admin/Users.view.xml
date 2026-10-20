@@ -1,0 +1,60 @@
+<mvc:View controllerName="estrichone.controller.admin.Users" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.users}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Konten, Rollen und Zugänge"/></f:expandedContent>
+				<f:actions><Button text="Benutzer anlegen" icon="sap-icon://add-employee" type="Emphasized" press=".onNew"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox>
+				<VBox visible="{= !!${view>/oneTime} }" class="sapUiSmallMarginBottom eoOneTime">
+					<customData><core:CustomData key="testid" value="one-time-password" writeToDom="true"/></customData>
+					<MessageStrip type="Success" showIcon="true" showCloseButton="true" close=".onCloseOneTime"
+						text="{= 'Einmalpasswort für ' + ${view>/oneTime/user/displayName} + ' – es wird nur jetzt angezeigt. Bei der ersten Anmeldung muss ein eigenes Passwort gewählt werden.' }"/>
+					<HBox alignItems="Center" class="sapUiTinyMarginTop">
+						<Title text="{view>/oneTime/oneTimePassword}" level="H2" titleStyle="H3" class="eoTabular sapUiSmallMarginEnd">
+							<customData><core:CustomData key="testid" value="one-time-code" writeToDom="true"/></customData>
+						</Title>
+						<Button icon="sap-icon://copy" text="Kopieren" press=".onCopy"/>
+					</HBox>
+				</VBox>
+				<Toolbar style="Clear">
+					<SearchField width="18rem" liveChange=".onSearch" placeholder="Name, Anmeldename, E-Mail"/>
+					<ToolbarSpacer/>
+					<Text text="{= ${view>/items}.length + ' Benutzer' }"/>
+				</Toolbar>
+				<Table id="table" items="{path: 'view>/items', sorter: {path: 'displayName'}}" busy="{view>/busy}" noDataText="Keine Benutzer." popinLayout="GridSmall">
+					<columns>
+						<Column><Text text="Name"/></Column>
+						<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Anmeldename"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Rollen"/></Column>
+						<Column width="7rem"><Text text="Status"/></Column>
+						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Letzte Anmeldung"/></Column>
+						<Column width="22rem" hAlign="End"><Text text="Aktionen"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<HBox alignItems="Center">
+								<Avatar initials="{path: 'view>displayName', formatter: 'fmt.initials'}" displaySize="XS" class="sapUiSmallMarginEnd"/>
+								<VBox><Text text="{view>displayName}"/><Text text="{view>email}" class="eoMuted"/></VBox>
+							</HBox>
+							<Text text="{view>userName}"/>
+							<Text text="{view>roleText}"/>
+							<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Gesperrt' }" state="{= ${view>isActive} ? 'Success' : 'Error' }" inverted="true"/>
+							<Text text="{path: 'view>lastLoginAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
+							<HBox justifyContent="End" wrap="Wrap">
+								<Button text="Bearbeiten" type="Transparent" press=".onEdit"/>
+								<Button text="Passwort zurücksetzen" icon="sap-icon://key" type="Transparent" press=".onReset"/>
+								<Button text="Sperren" icon="sap-icon://locked" type="Transparent" press=".onLock" visible="{view>isActive}"/>
+								<Button text="Entsperren" icon="sap-icon://unlocked" type="Transparent" press=".onUnlock" visible="{= !${view>isActive} }"/>
+							</HBox>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

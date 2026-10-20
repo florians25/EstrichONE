@@ -1,0 +1,122 @@
+<mvc:View controllerName="estrichone.controller.planning.Planning" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:eo="estrichone.control" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" fitContent="false" class="eoPlanningPage">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{view>/title}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{view>/subtitle}"/></f:expandedContent>
+				<f:actions>
+					<Button text="Einplanung" icon="sap-icon://add" type="Emphasized" press=".onNew" visible="{view>/canPlan}"/>
+					<Button text="{= ${view>/mode} === 'tag' ? 'Tages-PDF' : 'Wochen-PDF' }" icon="sap-icon://pdf-attachment" press=".onPdf" tooltip="Plan als PDF für Aushang oder Kolonnen"/>
+					<Button text="{= 'Baustellen-Vorrat (' + ${view>/backlogCounts/free} + ' frei)' }" icon="sap-icon://inbox" press=".onBacklog" type="{= ${view>/backlogOpen} ? 'Emphasized' : 'Default' }"/>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+					<Button icon="sap-icon://settings" tooltip="Kolonnen und Geräte" press=".onResources"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<VBox>
+					<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow">
+						<SegmentedButton selectedKey="{view>/mode}" selectionChange=".onMode">
+							<items>
+								<SegmentedButtonItem key="tag" text="Tag"/>
+								<SegmentedButtonItem key="woche" text="Woche"/>
+								<SegmentedButtonItem key="monat" text="Monat"/>
+							</items>
+						</SegmentedButton>
+						<Button icon="sap-icon://navigation-left-arrow" tooltip="Zurück" press=".onPrev"/>
+						<VBox class="eoPeriod" alignItems="Center">
+							<Title text="{view>/period}" level="H2"/>
+							<Text text="{view>/periodSub}" class="eoMuted eoTabular" visible="{= !!${view>/periodSub} }"/>
+						</VBox>
+						<Button icon="sap-icon://navigation-right-arrow" tooltip="Weiter" press=".onNext"/>
+						<Button text="{view>/todayText}" icon="sap-icon://calendar" press=".onToday"/>
+						<DatePicker value="{view>/anchor}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" width="9.5rem" change=".onPick" ariaLabelledBy="pickLabel"/>
+						<core:InvisibleText id="pickLabel" text="Datum wählen"/>
+						<ToolbarSpacer/>
+						<SegmentedButton selectedKey="{view>/rows}" selectionChange=".onRows" visible="{= ${view>/mode} !== 'monat' }">
+							<items>
+								<SegmentedButtonItem key="kolonnen" text="Kolonnen" icon="sap-icon://group"/>
+								<SegmentedButtonItem key="mitarbeiter" text="Mitarbeiter" icon="sap-icon://employee"/>
+							</items>
+						</SegmentedButton>
+						<HBox alignItems="Center" visible="{= ${view>/mode} === 'woche' }">
+							<Switch state="{view>/fullWeek}" change=".onFullWeek" ariaLabelledBy="weekLabel" customTextOn=" " customTextOff=" "/>
+							<Label id="weekLabel" text="Mit Wochenende"/>
+						</HBox>
+					</FlexBox>
+					<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow sapUiTinyMarginTop">
+						<ComboBox selectedKey="{view>/filter/bauakte}" items="{view>/bauakteOptions}" placeholder="Alle Bauakten" width="16rem" selectionChange=".onFilter" change=".onFilter" ariaLabelledBy="fBauakte">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</ComboBox>
+						<core:InvisibleText id="fBauakte" text="Auftrag"/>
+						<Select selectedKey="{view>/filter/crew}" items="{view>/crewOptions}" width="12rem" change=".onFilter" ariaLabelledBy="fCrew">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+						<core:InvisibleText id="fCrew" text="Kolonne"/>
+						<Select selectedKey="{view>/filter/status}" items="{view>/statusOptions}" width="10rem" change=".onFilter" ariaLabelledBy="fStatus">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+						<core:InvisibleText id="fStatus" text="Status"/>
+						<Select selectedKey="{view>/filter/kind}" items="{view>/kindOptions}" width="12rem" change=".onFilter" ariaLabelledBy="fKind">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+						<core:InvisibleText id="fKind" text="Terminart"/>
+						<SearchField value="{view>/filter/search}" liveChange=".onFilter" placeholder="Suche im Plan" width="14rem"/>
+					</FlexBox>
+				</VBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<VBox>
+				<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginBottom"/>
+				<MessageStrip text="{view>/warningText}" type="Warning" showIcon="true" visible="{= ${view>/warningCount} > 0 }" class="sapUiSmallMarginBottom"/>
+				<FlexBox alignItems="Start" class="eoPlanLayout">
+					<VBox class="eoGrow" busy="{view>/busy}" busyIndicatorDelay="300">
+						<eo:PlanBoard id="board" data="{view>/board}" open=".onOpen" add=".onAdd" move=".onMove" dropBauakte=".onDropBauakte" dayPress=".onDay"/>
+						<HBox wrap="Wrap" class="eoPlanLegend sapUiTinyMarginTop" items="{view>/legend}">
+							<HBox alignItems="Center" class="sapUiSmallMarginEnd">
+								<eo:Swatch color="{view>color}"/><Text text="{view>text}"/>
+							</HBox>
+						</HBox>
+					</VBox>
+					<Panel id="backlog" headerText="Baustellen-Vorrat" width="22rem" visible="{view>/backlogOpen}" class="eoBacklog sapUiSmallMarginBegin">
+						<headerToolbar>
+							<Toolbar>
+								<Title text="Baustellen-Vorrat" level="H3"/>
+								<ToolbarSpacer/>
+								<Button icon="sap-icon://decline" tooltip="Schließen" type="Transparent" press=".onBacklog"/>
+							</Toolbar>
+						</headerToolbar>
+						<SegmentedButton selectedKey="{view>/backlogMode}" selectionChange=".onBacklogFilter" width="100%">
+							<items>
+								<SegmentedButtonItem key="free" text="{= ${view>/backlogCounts/free} + ' frei' }"/>
+								<SegmentedButtonItem key="planned" text="{= ${view>/backlogCounts/planned} + ' verplant' }"/>
+								<SegmentedButtonItem key="all" text="{= ${view>/backlogCounts/all} + ' alle' }"/>
+							</items>
+						</SegmentedButton>
+						<SearchField value="{view>/backlogSearch}" liveChange=".onBacklogFilter" placeholder="Name, Ort, Akte, Kunde" class="sapUiTinyMarginTop"/>
+						<Text text="Baustelle in den Plan ziehen oder „Einplanen“ wählen." class="eoMuted sapUiTinyMarginTop" visible="{view>/canPlan}"/>
+						<List id="backlogList" items="{view>/backlogShown}" noDataText="Keine Baustellen in dieser Auswahl." updateFinished=".onBacklogRendered" growing="true" growingThreshold="40">
+							<CustomListItem>
+								<HBox alignItems="Start" class="sapUiTinyMargin">
+									<VBox class="eoGrow">
+										<Link text="{view>title}" href="{= '/bauakten/' + ${view>bauakteId} }" emphasized="true" wrapping="true"/>
+										<Text text="{view>meta}" class="eoMuted"/>
+										<Text text="{view>meta2}" class="eoMuted eoTabular"/>
+										<HBox class="sapUiTinyMarginTop">
+											<ObjectStatus text="{view>statusText}" class="sapUiTinyMarginEnd"/>
+											<ObjectStatus text="{view>planText}" state="{= ${view>upcomingAssignments} > 0 ? 'Information' : 'Success' }" inverted="true"/>
+										</HBox>
+									</VBox>
+									<Button icon="sap-icon://appointment-2" text="Einplanen" press=".onPlanBacklog" visible="{view>/canPlan}" tooltip="{= ${view>title} + ' einplanen' }"/>
+								</HBox>
+							</CustomListItem>
+						</List>
+					</Panel>
+				</FlexBox>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

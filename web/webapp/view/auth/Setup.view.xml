@@ -1,0 +1,27 @@
+<mvc:View controllerName="estrichone.controller.auth.Setup" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" height="100%">
+	<FlexBox class="eoAuth" alignItems="Center" justifyContent="Center" height="100%" direction="Column">
+		<VBox class="eoAuthCard" width="30rem">
+			<Image src="{view>/logo}" alt="EstrichONE" height="3rem" class="eoAuthLogo" decorative="false" error=".onLogoError"/>
+			<Title text="{i18n>setup.title}" level="H1" titleStyle="H3" class="sapUiSmallMarginTop"/>
+			<Text text="{i18n>setup.intro}" class="eoMuted sapUiSmallMarginBottom"/>
+			<Label text="{i18n>setup.code}" labelFor="setupCode" required="true"/>
+			<Input id="setupCode" value="{view>/setupCode}" valueLiveUpdate="true" width="100%"/>
+			<Label text="{i18n>setup.company}" labelFor="setupCompany" required="true" class="sapUiSmallMarginTop"/>
+			<Input id="setupCompany" value="{view>/companyName}" valueLiveUpdate="true" width="100%"/>
+			<Title text="{i18n>setup.admin}" level="H2" titleStyle="H5" class="sapUiMediumMarginTop"/>
+			<Label text="{i18n>setup.name}" labelFor="setupName" required="true" class="sapUiSmallMarginTop"/>
+			<Input id="setupName" value="{view>/displayName}" valueLiveUpdate="true" width="100%"/>
+			<Label text="{i18n>setup.userName}" labelFor="setupUser" required="true" class="sapUiSmallMarginTop"/>
+			<Input id="setupUser" value="{view>/userName}" valueLiveUpdate="true" width="100%"/>
+			<Label text="{i18n>setup.email}" labelFor="setupEmail" class="sapUiSmallMarginTop"/>
+			<Input id="setupEmail" value="{view>/email}" valueLiveUpdate="true" type="Email" width="100%"/>
+			<Label text="{i18n>setup.password}" labelFor="setupPassword" required="true" class="sapUiSmallMarginTop"/>
+			<Input id="setupPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit"/>
+			<Text text="{i18n>setup.passwordHint}" class="eoHelpText"/>
+			<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginTop">
+				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
+			</MessageStrip>
+			<Button text="{i18n>setup.submit}" type="Emphasized" width="100%" press=".onSubmit" busy="{view>/busy}" class="sapUiMediumMarginTop"/>
+		</VBox>
+	</FlexBox>
+</mvc:View>

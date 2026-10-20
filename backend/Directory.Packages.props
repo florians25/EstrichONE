@@ -9,6 +9,10 @@
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageVersion Include="EFCore.NamingConventions" Version="10.0.1" />
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+    <!-- PDF-Ausdrucke. Bewusst 6.2.4: letzte Version unter MIT-Lizenz (ab 6.5 AGPL-3.0) – nicht ohne Lizenzprüfung anheben. -->
+    <PackageVersion Include="PDFsharp-MigraDoc" Version="6.2.4" />
+    <!-- Transitiv über PDFsharp (8.0.1 hat eine bekannte Schwachstelle) – auf die gepflegte .NET-10-Fassung anheben. -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
     <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
     <PackageVersion Include="Konscious.Security.Cryptography.Argon2" Version="1.3.1" />
     <PackageVersion Include="NetVips" Version="3.2.0" />

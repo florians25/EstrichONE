@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Ende-zu-Ende-Tests der Web-Oberfläche gegen einen echten Server:
-# PostgreSQL (Docker) + API + Vite-Entwicklungsserver mit Proxy, dann Playwright.
-# VITE überschreibt den Aufruf von Vite (z. B. in einem Container mit neuerem Node.js).
+# PostgreSQL (Docker) + API + UI5-Entwicklungsserver (ui5 serve mit Proxy auf die API), dann Playwright.
+# UI5_SERVE überschreibt den Aufruf des Entwicklungsservers (z. B. in einem Container mit anderem Node.js).
 # WEB_IMAGE=estrichone/web:… testet stattdessen das fertige Image (Caddy, HTTPS, CSP) wie im Betrieb.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
@@ -37,6 +37,9 @@ export EstrichOne__PublicUrl="${WEB_IMAGE:+https://localhost:8443}"
 export EstrichOne__ServerName="Estrichbau E2E GmbH"
 export EstrichOne__Files__RootPath="$WORK/files"
 export Serilog__MinimumLevel__Default=Warning
+# Systemhinweise wie von der Hosting-Konsole setzen (Instanz-Schlüssel nur für den Test).
+export EstrichOne__Notices__ManagementToken="e2e-notices-token"
+export E2E_NOTICES_TOKEN="$EstrichOne__Notices__ManagementToken"
 dotnet publish "$ROOT/backend/src/EstrichOne.Api" -c Release -o "$WORK/api" --nologo -v quiet
 dotnet "$WORK/api/EstrichOne.Api.dll" migrate >/dev/null
 dotnet "$WORK/api/EstrichOne.Api.dll" >"$WORK/api.log" 2>&1 &
@@ -62,7 +65,7 @@ if [[ -n "${WEB_IMAGE:-}" ]]; then
     sleep 1
   done
 else
-  ${VITE:-npx vite} --port 4200 --strictPort >"$WORK/web.log" 2>&1 &
+  ${UI5_SERVE:-npx ui5 serve} --port 4200 >"$WORK/web.log" 2>&1 &
   PIDS+=($!)
   for _ in $(seq 1 120); do
     curl -sf --noproxy localhost http://localhost:4200/ >/dev/null && break

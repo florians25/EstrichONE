@@ -1,0 +1,53 @@
+<mvc:View controllerName="estrichone.controller.office.Inquiries" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.inquiries}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Anfragen als Vorgänge: Offen → In Bearbeitung → Bauakte erstellt (oder abgebrochen)"/></f:expandedContent>
+				<f:actions>
+					<Button text="Anfrage erfassen" icon="sap-icon://add" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Anfragen in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{= ${view>/items}.length } Anfragen" level="H2"/>
+						<ToolbarSpacer/>
+						<SegmentedButton selectedKey="{view>/tab}" selectionChange=".onTab">
+							<items>
+								<SegmentedButtonItem key="open" text="Offen und in Bearbeitung"/>
+								<SegmentedButtonItem key="all" text="Alle"/>
+							</items>
+						</SegmentedButton>
+						<Button icon="sap-icon://refresh" tooltip="{i18n>common.refresh}" press=".onTab"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column width="10rem"><Text text="Status"/></Column>
+					<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Eingang"/></Column>
+					<Column><Text text="Anfragender"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Anliegen"/></Column>
+					<Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Ort"/></Column>
+					<Column width="7rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Fläche"/></Column>
+					<Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Wunschtermin"/></Column>
+					<Column width="7rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Kanal"/></Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Navigation" press=".onOpen">
+						<ObjectStatus text="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusText'}" state="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusState'}" inverted="true"/>
+						<Text text="{view>time}" class="eoTabular"/>
+						<Text text="{view>who}"/>
+						<Text text="{= ${view>subject} || '–' }"/>
+						<Text text="{= ${view>siteCity} || '–' }"/>
+						<Text text="{= ${view>areaSquareMeters} ? ${view>areaSquareMeters} + ' m²' : '–' }"/>
+						<Text text="{path: 'view>desiredStart', formatter: 'fmt.date'}"/>
+						<Text text="{path: 'view>source', formatter: 'fmt.callSourceText'}"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

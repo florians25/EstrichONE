@@ -18,4 +18,9 @@ internal sealed class CompanyProfiles(EstrichOneDbContext db) : ICompanyProfiles
 
     public Task<string?> GetNameAsync(CancellationToken cancellationToken) =>
         db.Set<CompanyProfile>().Select(profile => profile.Name).SingleOrDefaultAsync(cancellationToken);
+
+    public Task<CompanyInfo?> GetProfileAsync(CancellationToken cancellationToken) =>
+        db.Set<CompanyProfile>().AsNoTracking()
+            .Select(p => new CompanyInfo(p.Name, p.Street, p.PostalCode, p.City, p.Phone, p.Email, p.Website))
+            .SingleOrDefaultAsync(cancellationToken);
 }

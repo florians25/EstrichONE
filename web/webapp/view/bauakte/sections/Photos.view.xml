@@ -1,0 +1,71 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Photos" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
+	xmlns:grid="sap.ui.layout.cssgrid" xmlns:upload="sap.m.upload" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}">
+	<VBox>
+		<upload:UploadSet id="photoUpload" class="eoUpload" instantUpload="true" multiple="true" showIcons="true" uploadEnabled="{= ${session>/permissions/files.upload} === true }"
+			terminationEnabled="true" mode="None" sameFilenameAllowed="true" fileTypes="jpg,jpeg,png,heic,heif,webp,gif,mp4,mov,m4v"
+			noDataText="{i18n>photos.dropHint}" noDataDescription="{i18n>photos.dropDescription}" noDataIllustrationType="sapIllus-UploadCollection"
+			uploadCompleted=".onUploadCompleted" uploadTerminated=".onUploadCompleted" visible="{= ${session>/permissions/files.upload} === true }">
+			<upload:toolbar>
+				<OverflowToolbar>
+					<Title text="{i18n>photos.upload}" level="H3"/>
+					<ToolbarSpacer/>
+					<upload:UploadSetToolbarPlaceholder/>
+				</OverflowToolbar>
+			</upload:toolbar>
+		</upload:UploadSet>
+		<FlexBox wrap="Wrap" justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginTop eoEntryRow">
+			<Title text="{ph>/title}" level="H3"/>
+			<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow">
+			<SegmentedButton selectedKey="{ph>/mode}" selectionChange=".refresh">
+				<items>
+					<SegmentedButtonItem key="timeline" text="{i18n>photos.timeline}" icon="sap-icon://timeline"/>
+					<SegmentedButtonItem key="grid" text="{i18n>photos.grid}" icon="sap-icon://grid"/>
+				</items>
+			</SegmentedButton>
+			<SearchField width="12rem" placeholder="{i18n>photos.search}" value="{ph>/query}" liveChange=".refresh"/>
+			<Select selectedKey="{ph>/room}" change=".refresh" items="{ph>/roomOptions}" tooltip="{i18n>photos.filterRoom}" ariaLabelledBy="roomFilterLabel">
+				<core:Item key="{ph>key}" text="{ph>text}"/>
+			</Select>
+			<Select selectedKey="{ph>/work}" change=".refresh" items="{ph>/workOptions}" tooltip="{i18n>photos.filterWork}" ariaLabelledBy="workFilterLabel">
+				<core:Item key="{ph>key}" text="{ph>text}"/>
+			</Select>
+			<ToggleButton text="{i18n>photos.select}" pressed="{ph>/selecting}" press=".onSelectMode" icon="sap-icon://multi-select"/>
+			</FlexBox>
+		</FlexBox>
+		<OverflowToolbar visible="{ph>/selecting}" design="Info">
+			<Text text="{ph>/selectedCount} ausgewählt"/>
+			<ToolbarSpacer/>
+			<Button text="{i18n>photos.selectAll}" press=".onSelectAll"/>
+			<Button text="{i18n>photos.downloadZip}" icon="sap-icon://download" enabled="{= ${ph>/selectedCount} > 0 }" press=".onDownloadSelected"/>
+			<Button text="{i18n>photos.assign}" icon="sap-icon://chain-link" enabled="{= ${ph>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.upload} === true }" press=".onAssign"/>
+			<Button text="{i18n>common.delete}" icon="sap-icon://delete" type="Reject"
+				enabled="{= ${ph>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.delete} === true }" press=".onDeleteSelected"/>
+		</OverflowToolbar>
+		<f:GridList id="photoGrid" mode="{= ${ph>/selecting} ? 'MultiSelect' : 'None' }" selectionChange=".onSelection" growing="true" growingThreshold="60"
+			noDataText="{i18n>photos.none}" class="sapUiTinyMarginTop">
+			<f:customLayout>
+				<grid:GridBoxLayout boxMinWidth="13rem"/>
+			</f:customLayout>
+		</f:GridList>
+		<Title text="{i18n>photos.videos} ({= ${ph>/videos}.length })" level="H3" class="sapUiMediumMarginTop sapUiTinyMarginBottom" visible="{= ${ph>/videos}.length > 0 }"/>
+		<f:GridList items="{ph>/videos}" visible="{= ${ph>/videos}.length > 0 }">
+			<f:customLayout><grid:GridBoxLayout boxMinWidth="20rem"/></f:customLayout>
+			<f:GridListItem>
+				<VBox class="sapUiTinyMargin">
+					<core:HTML content="{ph>html}" sanitizeContent="false"/>
+					<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginTop">
+						<VBox>
+							<Text text="{ph>originalName}" wrapping="false"/>
+							<Text text="{path: 'ph>createdAt', formatter: 'fmt.dateTime'} · {path: 'ph>sizeBytes', formatter: 'fmt.fileSize'}" class="eoMuted"/>
+						</VBox>
+						<Button icon="sap-icon://delete" type="Transparent" tooltip="{i18n>common.delete}" press=".onDeleteVideo"
+							visible="{= ${session>/permissions/files.delete} === true }"/>
+					</HBox>
+				</VBox>
+			</f:GridListItem>
+		</f:GridList>
+	</VBox>
+	<core:InvisibleText id="roomFilterLabel" text="{i18n>photos.filterRoom}"/>
+	<core:InvisibleText id="workFilterLabel" text="{i18n>photos.filterWork}"/>
+</mvc:View>

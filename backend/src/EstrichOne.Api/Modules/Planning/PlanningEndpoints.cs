@@ -43,6 +43,7 @@ internal static class PlanningEndpoints
     public static void Map(IEndpointRouteBuilder api)
     {
         var planning = api.MapGroup("/planning").WithTags("Planung");
+        PlanningPrint.Map(planning);
 
         planning.MapGet("/resources", async (EstrichOneDbContext db, CancellationToken ct) => TypedResults.Ok(
                 (await db.Set<Resource>().AsNoTracking().OrderBy(r => r.Kind).ThenBy(r => r.Name).ToListAsync(ct)).Select(ToResponse).ToList()))

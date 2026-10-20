@@ -1,0 +1,40 @@
+<mvc:View controllerName="estrichone.controller.SiteMap" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:l="sap.ui.layout" xmlns:core="sap.ui.core"
+	xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<Page showHeader="false" enableScrolling="false">
+		<l:FixFlex id="fixFlex" fixContentSize="auto" minFlexSize="300">
+			<l:fixContent>
+				<VBox class="sapUiSmallMargin">
+					<HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap">
+						<VBox>
+							<Title text="{i18n>nav.siteMap}" level="H1"/>
+							<Text text="{view>/subtitle}" class="eoMuted"/>
+						</VBox>
+						<Button text="Als Liste" icon="sap-icon://list" press=".onList"/>
+					</HBox>
+					<OverflowToolbar style="Clear" class="sapUiTinyMarginTop">
+						<SearchField width="18rem" placeholder="Nummer, Bauvorhaben, Ort" liveChange=".refresh" value="{view>/search}"/>
+						<ToolbarSeparator/>
+						<HBox items="{view>/statusOptions}">
+							<CheckBox text="{view>text}" selected="{view>selected}" select=".refresh" class="sapUiTinyMarginEnd"/>
+						</HBox>
+						<ToolbarSpacer/>
+						<Label text="Auch abgeschlossene" labelFor="showAll"/>
+						<Switch id="showAll" state="{view>/all}" change=".onAll"/>
+					</OverflowToolbar>
+				</VBox>
+			</l:fixContent>
+			<l:flexContent>
+				<FlexBox height="100%" class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+					<eo:LeafletMap id="map" height="100%" zoom="13" markers="{view>/markers}" markerPress=".onMarker">
+						<eo:layoutData><FlexItemData growFactor="3" baseSize="0"/></eo:layoutData>
+					</eo:LeafletMap>
+					<List items="{view>/shown}" noDataText="Keine Baustelle mit Standort in dieser Auswahl." headerText="Baustellen" width="22rem"
+						class="sapUiSmallMarginBegin eoMapList">
+						<StandardListItem title="{view>title}" description="{= ${view>number} || 'neu' } · {= ${view>city} || '–' }" type="Navigation" press=".onOpen"
+							info="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" infoState="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}"/>
+					</List>
+				</FlexBox>
+			</l:flexContent>
+		</l:FixFlex>
+	</Page>
+</mvc:View>

@@ -384,6 +384,139 @@
         ]
       }
     },
+    "/api/v1/documents": {
+      "get": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Dokumente aller sichtbaren Bauakten (aktuelle Fassungen); Filter: search, category, bauakteId, approval (pending|approved|rejected|none), sort (newest|name|bauakte)",
+        "operationId": "SearchDocuments",
+        "parameters": [
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "bauakteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "approval",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DocumentSearchResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/report.pdf": {
+      "get": {
+        "tags": [
+          "Ausdrucke"
+        ],
+        "summary": "Bauakte als PDF; parts=uebersicht,raeume,tagebuch,pruefungen,maengel,fotos (Standard: alle); maxPhotos (Standard 60)",
+        "operationId": "BauakteReportPdf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "parts",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "maxPhotos",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{id}/work-items": {
       "get": {
         "tags": [
@@ -817,6 +950,180 @@
                   "type": "array",
                   "items": {
                     "$ref": "#/components/schemas/RoleResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/access/roles/{id}": {
+      "put": {
+        "tags": [
+          "Rechte und Rollen"
+        ],
+        "summary": "Rolle anlegen oder ändern (Name, Beschreibung, Rechte). Die Administratorrolle behält immer alle Rechte.",
+        "operationId": "SaveRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRoleRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Rechte und Rollen"
+        ],
+        "summary": "Eigene Rolle löschen (Standardrollen nicht; zugeordnete Benutzer verlieren die Rolle)",
+        "operationId": "DeleteRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/access/roles/{id}/users": {
+      "get": {
+        "tags": [
+          "Rechte und Rollen"
+        ],
+        "summary": "Benutzer mit dieser Rolle",
+        "operationId": "GetRoleUsers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AnonymousTypeOfGuidAndstringAndboolean"
                   }
                 }
               }
@@ -1740,6 +2047,164 @@
         ]
       }
     },
+    "/api/v1/catalog": {
+      "get": {
+        "tags": [
+          "Stammdaten"
+        ],
+        "summary": "Stammdaten-Katalog: kind=textBlock|folderTemplate|bauakteTemplate; active=true nur aktive",
+        "operationId": "ListCatalog",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "active",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/CatalogEntryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/catalog/{id}": {
+      "put": {
+        "tags": [
+          "Stammdaten"
+        ],
+        "operationId": "SaveCatalogEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCatalogEntryRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CatalogEntryResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Stammdaten"
+        ],
+        "operationId": "DeleteCatalogEntry",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/contacts": {
       "get": {
         "tags": [
@@ -1958,6 +2423,82 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/contacts/duplicates": {
+      "get": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Mögliche Dubletten vor dem Anlegen eines Kunden (Name, Telefon, E-Mail, Anschrift); höchstens 10 Treffer, bester zuerst",
+        "operationId": "FindContactDuplicates",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "street",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "postalCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "city",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "phone",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "email",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContactDuplicateCandidate"
+                  }
                 }
               }
             }
@@ -3756,6 +4297,380 @@
         ]
       }
     },
+    "/api/v1/files/{fileId}/approvals": {
+      "get": {
+        "tags": [
+          "Freigaben"
+        ],
+        "summary": "Freigabeverlauf eines Dokuments (neueste zuerst)",
+        "operationId": "ListFileApprovals",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Freigaben"
+        ],
+        "summary": "Freigabe für ein Dokument anfragen (bei einer Person oder Rolle)",
+        "operationId": "RequestFileApproval",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals": {
+      "get": {
+        "tags": [
+          "Freigaben"
+        ],
+        "summary": "Freigaben: scope=mine (an mich oder meine Rollen), requested (von mir angefragt), all; status=pending|done|all",
+        "operationId": "ListApprovals",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ApprovalResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals/{id}/approve": {
+      "post": {
+        "tags": [
+          "Freigaben"
+        ],
+        "operationId": "ApproveFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals/{id}/reject": {
+      "post": {
+        "tags": [
+          "Freigaben"
+        ],
+        "operationId": "RejectFile",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideApprovalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/approvals/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Freigaben"
+        ],
+        "operationId": "CancelFileApproval",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApprovalResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/work-items/mine": {
       "get": {
         "tags": [
@@ -4370,6 +5285,60 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/print.pdf": {
+      "get": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Kolonnenplan als PDF: mode=week|day, from (Tag bzw. Montag), rows=crews|people, weekend=true|false",
+        "operationId": "PlanningPdf",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "mode",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "rows",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "weekend",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           },
           "401": {
             "description": "Nicht angemeldet oder Token abgelaufen"
@@ -6490,6 +7459,167 @@
           }
         }
       },
+      "AnonymousTypeOfGuidAndstringAndboolean": {
+        "required": [
+          "id",
+          "displayName",
+          "isActive"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isActive": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ApprovalResponse": {
+        "required": [
+          "id",
+          "fileId",
+          "fileName",
+          "bauakteId",
+          "bauakteNumber",
+          "bauakteTitle",
+          "status",
+          "requestedByUserId",
+          "requestedByName",
+          "requestedAt",
+          "assigneeUserId",
+          "assigneeRoleId",
+          "assigneeName",
+          "message",
+          "dueDate",
+          "decidedByUserId",
+          "decidedByName",
+          "decidedAt",
+          "decisionComment",
+          "canDecide",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApprovalStatus"
+          },
+          "requestedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestedByName": {
+            "type": "string"
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "assigneeUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "assigneeRoleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "assigneeName": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "decidedByUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "decidedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decidedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decisionComment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canDecide": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ApprovalStatus": {
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "cancelled",
+          null
+        ]
+      },
       "AssignmentKind": {
         "enum": [
           "screed",
@@ -7086,6 +8216,35 @@
           }
         }
       },
+      "BauakteFieldChange": {
+        "required": [
+          "field",
+          "label",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "field": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "from": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "to": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "BauakteHint": {
         "required": [
           "kind",
@@ -7145,6 +8304,15 @@
           },
           "text": {
             "type": "string"
+          },
+          "changes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/BauakteFieldChange"
+            }
           }
         }
       },
@@ -7602,6 +8770,44 @@
           "other"
         ]
       },
+      "CatalogEntryResponse": {
+        "required": [
+          "id",
+          "kind",
+          "name",
+          "content",
+          "sortOrder",
+          "isActive",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "ChangePasswordRequest": {
         "required": [
           "currentPassword",
@@ -7711,6 +8917,29 @@
           },
           "administrator": {
             "$ref": "#/components/schemas/SetupAdministrator"
+          }
+        }
+      },
+      "ContactDuplicateCandidate": {
+        "required": [
+          "contact",
+          "score",
+          "reasons"
+        ],
+        "type": "object",
+        "properties": {
+          "contact": {
+            "$ref": "#/components/schemas/ContactResponse"
+          },
+          "score": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "reasons": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -8209,6 +9438,18 @@
           }
         }
       },
+      "DecideApprovalRequest": {
+        "type": "object",
+        "properties": {
+          "comment": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "DeleteBauakteRequest": {
         "required": [
           "password"
@@ -8505,6 +9746,98 @@
           },
           "isActive": {
             "type": "boolean"
+          }
+        }
+      },
+      "DocumentFacets": {
+        "required": [
+          "total",
+          "categories",
+          "pendingApprovals"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "categories": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          "pendingApprovals": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DocumentListItem": {
+        "required": [
+          "file",
+          "bauakteNumber",
+          "bauakteTitle",
+          "uploadedByName",
+          "versionCount",
+          "approvalStatus",
+          "approvalAssignee"
+        ],
+        "type": "object",
+        "properties": {
+          "file": {
+            "$ref": "#/components/schemas/FileResponse"
+          },
+          "bauakteNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteTitle": {
+            "type": "string"
+          },
+          "uploadedByName": {
+            "type": "string"
+          },
+          "versionCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "approvalStatus": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ApprovalStatus"
+              }
+            ]
+          },
+          "approvalAssignee": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "DocumentSearchResult": {
+        "required": [
+          "items",
+          "facets"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentListItem"
+            }
+          },
+          "facets": {
+            "$ref": "#/components/schemas/DocumentFacets"
           }
         }
       },
@@ -8938,6 +10271,7 @@
           "cmMeasurement"
         ]
       },
+      "JsonElement": {},
       "JsonNode": {},
       "JsonObject": {
         "type": "object"
@@ -9714,6 +11048,48 @@
           }
         }
       },
+      "RequestApprovalRequest": {
+        "required": [
+          "id",
+          "assigneeUserId",
+          "assigneeRoleId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assigneeUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "assigneeRoleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "message": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "dueDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
       "ResourceKind": {
         "enum": [
           "vehicle",
@@ -10220,6 +11596,42 @@
           }
         }
       },
+      "SaveCatalogEntryRequest": {
+        "required": [
+          "kind",
+          "name",
+          "content"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "content": {
+            "$ref": "#/components/schemas/JsonElement"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "SaveCompanyRequest": {
         "required": [
           "name"
@@ -10613,6 +12025,40 @@
           "isActive": {
             "type": "boolean",
             "default": true
+          }
+        }
+      },
+      "SaveRoleRequest": {
+        "required": [
+          "name",
+          "description",
+          "permissions"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -12338,6 +13784,12 @@
       "name": "Dateien"
     },
     {
+      "name": "Dokumente"
+    },
+    {
+      "name": "Ausdrucke"
+    },
+    {
       "name": "Aufgaben"
     },
     {
@@ -12356,10 +13808,16 @@
       "name": "Firmendaten"
     },
     {
+      "name": "Stammdaten"
+    },
+    {
       "name": "Kontakte"
     },
     {
       "name": "Bautagebuch und Prüfungen"
+    },
+    {
+      "name": "Freigaben"
     },
     {
       "name": "Helpdesk"

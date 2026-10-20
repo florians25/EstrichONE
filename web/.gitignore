@@ -5,3 +5,5 @@
 *.tsbuildinfo
 npm-debug.log
 .DS_Store
+/build
+/.ui5-tooling-modules

@@ -60,6 +60,14 @@ public sealed class BauakteHistoryTests(PostgresFixture postgres) : IAsyncLifeti
         texts[5].ShouldBe("Max Huber hat die Bauakte angelegt.");
         texts.Count.ShouldBe(6);
         history!.ShouldAllBe(e => e.ActorName == "Max Huber");
+
+        // Feldänderungen mit altem und neuem Wert.
+        var updated = history!.Single(e => e.Action == "bauakte.updated");
+        updated.Changes.ShouldNotBeNull();
+        updated.Changes!.Single(c => c.Field == "street").ShouldBe(new BauakteFieldChange("street", "Straße", null, "Musterstr. 1"));
+        updated.Changes!.Single(c => c.Field == "city").To.ShouldBe("Landshut");
+        history!.Single(e => e.Action == "bauakte.status_changed").Changes!.ShouldHaveSingleItem()
+            .ShouldBe(new BauakteFieldChange("status", "Status", "Geplant", "In Ausführung"));
     }
 
     [Fact]

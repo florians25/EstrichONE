@@ -1,0 +1,26 @@
+<mvc:View controllerName="estrichone.controller.admin.Backup" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.backup}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Datenbank und Dateien, verschlüsselt mit Prüfsummen"/></f:expandedContent>
+				<f:actions>
+					<Button text="{= ${view>/s/runRequested} ? 'Sicherung angefordert …' : 'Jetzt sichern' }" icon="sap-icon://upload-to-cloud" type="Emphasized"
+						enabled="{= !!${view>/s} &amp;&amp; !${view>/s/runRequested} &amp;&amp; ${view>/s/configured} }" press=".onRun"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox visible="{= !!${view>/s} }">
+				<MessageStrip text="{view>/s/summary}" type="{= ${view>/s/healthy} ? 'Success' : 'Error' }" showIcon="true" class="sapUiSmallMarginBottom"/>
+				<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Verlauf">
+					<Label text="Letzte Sicherung"/><ObjectStatus text="{view>/run/text}" state="{view>/run/state}"/>
+					<Label text="Letzte erfolgreiche"/><ObjectStatus text="{view>/success/text}" state="{view>/success/state}"/>
+					<Label text="Integritätsprüfung"/><ObjectStatus text="{view>/check/text}" state="{view>/check/state}"/>
+					<Label text="Wiederherstellungstest"/><ObjectStatus text="{view>/restore/text}" state="{view>/restore/state}"/>
+				</form:SimpleForm>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

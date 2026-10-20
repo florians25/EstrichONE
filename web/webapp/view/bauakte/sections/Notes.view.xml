@@ -1,0 +1,81 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Notes" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}">
+	<VBox class="notes">
+		<OverflowToolbar style="Clear">
+			<Title text="{i18n>notes.title}" level="H3"/>
+			<ToolbarSpacer/>
+			<SegmentedButton selectedKey="{nt>/filter}" selectionChange=".refresh">
+				<items>
+					<SegmentedButtonItem key="all" text="Mit Systemänderungen"/>
+					<SegmentedButtonItem key="notes" text="Nur Notizen"/>
+				</items>
+			</SegmentedButton>
+		</OverflowToolbar>
+		<VBox items="{nt>/pinned}" visible="{= ${nt>/pinned}.length > 0 }" class="sapUiSmallMarginBottom">
+			<HBox class="eoNote sapUiTinyMarginBottom" alignItems="Start" justifyContent="SpaceBetween">
+				<customData><core:CustomData key="color" value="{= ${nt>color} || 'yellow' }" writeToDom="true"/></customData>
+				<HBox alignItems="Start">
+					<core:Icon src="sap-icon://pushpin-on" class="sapUiTinyMarginEnd" color="Critical"/>
+					<Text text="{nt>text}" class="eoPre"/>
+				</HBox>
+				<Button icon="sap-icon://pushpin-off" type="Transparent" tooltip="Notiz lösen" press=".onPin" visible="{= ${session>/permissions/notes.write} === true }"/>
+			</HBox>
+		</VBox>
+		<List items="{nt>/items}" noDataText="{i18n>notes.none}" showSeparators="None" growing="true" growingThreshold="100" ariaLabelledBy="notesLabel">
+			<CustomListItem>
+				<HBox class="sapUiTinyMarginTopBottom" visible="{= ${nt>type} === 'event' }" alignItems="Start">
+					<core:Icon src="sap-icon://history" class="sapUiSmallMarginBegin sapUiTinyMarginEnd"/>
+					<VBox>
+						<HBox alignItems="Center" wrap="Wrap">
+							<Text text="{nt>text}"/>
+							<Text text="{path: 'nt>at', formatter: 'fmt.dateTime'}" class="eoMuted eoTabular sapUiSmallMarginBegin"/>
+						</HBox>
+						<Text text="{nt>changes}" visible="{= !!${nt>changes} }" class="eoMuted eoPre eoHistoryChanges"/>
+					</VBox>
+				</HBox>
+				<HBox visible="{= ${nt>type} === 'note' }" class="sapUiTinyMargin" alignItems="Start">
+					<Avatar initials="{path: 'nt>authorName', formatter: 'fmt.initials'}" displaySize="XS" class="sapUiSmallMarginEnd"/>
+					<VBox class="eoNote" width="100%">
+						<customData><core:CustomData key="color" value="{= ${nt>color} || 'none' }" writeToDom="true"/></customData>
+						<HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap">
+							<HBox alignItems="Center">
+								<Text text="{nt>authorName}" class="sapUiTinyMarginEnd"/>
+								<Text text="{path: 'nt>at', formatter: 'fmt.dateTime'}" class="eoMuted eoTabular sapUiTinyMarginEnd"/>
+								<ObjectStatus text="Angeheftet" state="Warning" visible="{= !!${nt>isPinned} }" class="sapUiTinyMarginEnd"/>
+								<Text text="· bearbeitet" visible="{= !!${nt>editedAt} }" class="eoMuted"/>
+							</HBox>
+							<HBox visible="{= ${session>/permissions/notes.write} === true }">
+								<Button icon="{= ${nt>isPinned} ? 'sap-icon://pushpin-off' : 'sap-icon://pushpin-on' }" type="Transparent"
+									tooltip="{= ${nt>isPinned} ? 'Notiz lösen' : 'Notiz anheften' }" press=".onPin"/>
+								<MenuButton icon="sap-icon://palette" type="Transparent" tooltip="Notiz einfärben">
+									<menu>
+										<Menu itemSelected=".onColor">
+											<MenuItem text="Gelb" key="yellow"/>
+											<MenuItem text="Rot" key="red"/>
+											<MenuItem text="Grün" key="green"/>
+											<MenuItem text="Blau" key="blue"/>
+										</Menu>
+									</menu>
+								</MenuButton>
+							</HBox>
+						</HBox>
+						<Text text="{nt>text}" class="eoPre"/>
+					</VBox>
+				</HBox>
+			</CustomListItem>
+		</List>
+		<VBox visible="{= ${session>/permissions/notes.write} === true }" class="sapUiSmallMarginTop">
+			<Label text="{i18n>notes.new}" labelFor="noteInput"/>
+			<TextArea id="noteInput" value="{nt>/text}" valueLiveUpdate="true" rows="3" width="100%" placeholder="Notiz schreiben …" growing="true"/>
+			<HBox justifyContent="SpaceBetween" alignItems="Center">
+				<CheckBox text="Anheften" selected="{nt>/pin}"/>
+				<HBox alignItems="Center">
+					<Text text="Strg + Enter speichert" class="eoMuted sapUiSmallMarginEnd"/>
+					<Button text="Textbaustein" icon="sap-icon://text" press=".onTextBlock" tooltip="Textbaustein einfügen"/>
+					<Button text="{i18n>notes.save}" icon="sap-icon://paper-plane" type="Emphasized" press=".onSend" enabled="{= !!${nt>/text}.trim() }"/>
+				</HBox>
+			</HBox>
+		</VBox>
+	</VBox>
+	<core:InvisibleText id="notesLabel" text="Notizen und Verlauf"/>
+</mvc:View>

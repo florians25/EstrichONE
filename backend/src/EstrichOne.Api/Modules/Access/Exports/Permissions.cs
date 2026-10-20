@@ -16,6 +16,7 @@ public static class Permissions
     public const string ContactsEdit = "contacts.edit";
     public const string FilesUpload = "files.upload";
     public const string FilesDelete = "files.delete";
+    public const string DocumentsApprove = "documents.approve";
     public const string NotesWrite = "notes.write";
     public const string DiaryWrite = "diary.write";
     public const string InspectionsWrite = "inspections.write";
@@ -48,6 +49,7 @@ public static class Permissions
         new(ContactsEdit, "Kontakte", "Kunden und Projektbeteiligte bearbeiten"),
         new(FilesUpload, "Dokumentation", "Fotos, Videos und Dokumente hochladen"),
         new(FilesDelete, "Dokumentation", "Fotos, Videos und Dokumente löschen"),
+        new(DocumentsApprove, "Dokumentation", "Über alle Dokumentfreigaben entscheiden (auch fremde)"),
         new(NotesWrite, "Dokumentation", "Notizen schreiben"),
         new(DiaryWrite, "Dokumentation", "Bautagebuch führen"),
         new(InspectionsWrite, "Dokumentation", "Prüfungen erfassen (Erstbegehung, CM-Messung)"),

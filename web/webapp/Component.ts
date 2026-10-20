@@ -1,0 +1,21 @@
+import UIComponent from "sap/ui/core/UIComponent";
+import JSONModel from "sap/ui/model/json/JSONModel";
+import Device from "sap/ui/Device";
+import { session } from "./util/session";
+
+/**
+ * EstrichONE im Browser. Der Pfad-Router (util/router) und der Programmrahmen sitzen im App-Controller.
+ * @namespace estrichone
+ */
+export default class Component extends UIComponent {
+	public static metadata = {
+		manifest: "json",
+		interfaces: ["sap.ui.core.IAsyncContentCreation"],
+	};
+
+	init(): void {
+		super.init();
+		this.setModel(new JSONModel(Device), "device");
+		this.setModel(session.model, "session");
+	}
+}

@@ -1,0 +1,63 @@
+<mvc:View controllerName="estrichone.controller.bauakte.Item" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
+	xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="itemPage" toggleHeaderOnTitleClick="false" busy="{it>/busy}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{it>/file/originalName}" level="H2" wrapping="true"/></f:heading>
+				<f:expandedContent><Text text="{it>/subtitle}"/></f:expandedContent>
+				<f:actions>
+					<Button text="{i18n>docs.downloadOne}" icon="sap-icon://download" press=".onDownload"/>
+					<Button text="Freigabe anfordern" icon="sap-icon://approvals" press=".onRequestApproval" visible="{= ${it>/canRequest} === true }"/>
+					<Button text="Freigeben" icon="sap-icon://accept" type="Accept" press=".onDecide" visible="{= ${it>/pendingApproval/canDecide} === true }">
+						<customData><core:CustomData key="approve" value="true"/></customData>
+					</Button>
+					<Button text="Ablehnen" icon="sap-icon://decline" type="Reject" press=".onDecide" visible="{= ${it>/pendingApproval/canDecide} === true }">
+						<customData><core:CustomData key="approve" value="false"/></customData>
+					</Button>
+					<Button text="{i18n>item.newTab}" icon="sap-icon://action" press=".onNewTab"/>
+				</f:actions>
+				<f:navigationActions>
+					<OverflowToolbarButton icon="{= ${it>/full} ? 'sap-icon://exit-full-screen' : 'sap-icon://full-screen' }" type="Transparent"
+						tooltip="{i18n>item.fullScreen}" text="{i18n>item.fullScreen}" press=".onFull"/>
+					<OverflowToolbarButton icon="sap-icon://decline" type="Transparent" tooltip="{i18n>common.close}" text="{i18n>common.close}" press=".onClose"/>
+				</f:navigationActions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox>
+				<core:HTML content="{it>/frame}" sanitizeContent="false" visible="{= ${it>/kind} === 'pdf' }"/>
+				<Image src="{it>/image}" visible="{= ${it>/kind} === 'image' }" width="100%" alt="{it>/file/originalName}" decorative="false" class="eoLightboxImage"/>
+				<core:HTML content="{it>/video}" sanitizeContent="false" visible="{= ${it>/kind} === 'video' }"/>
+				<IllustratedMessage illustrationType="sapIllus-NoData" illustrationSize="Spot" visible="{= ${it>/kind} === 'none' }"
+					title="{i18n>item.noPreview}" description="{i18n>item.noPreviewText}">
+					<additionalContent><Button text="{i18n>docs.downloadOne}" icon="sap-icon://download" press=".onDownload"/></additionalContent>
+				</IllustratedMessage>
+				<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" class="sapUiSmallMarginTop">
+					<core:Title text="{i18n>item.details}"/>
+					<Label text="Ablage"/><Text text="{it>/place}"/>
+					<Label text="Beschreibung"/><Text text="{= ${it>/file/caption} || '–' }"/>
+					<Label text="Größe"/><Text text="{path: 'it>/file/sizeBytes', formatter: 'fmt.fileSize'}"/>
+					<Label text="Typ"/><Text text="{it>/file/contentType}"/>
+					<Label text="Hochgeladen"/><Text text="{path: 'it>/file/createdAt', formatter: 'fmt.dateTime'} · {path: 'it>/file/uploadedByUserId', formatter: 'fmt.person'}"/>
+					<Label text="Prüfsumme (SHA-256)"/><Text text="{it>/file/sha256}" class="eoTabular"/>
+				</form:SimpleForm>
+				<MessageStrip type="Warning" showIcon="true" visible="{= !!${it>/pendingApproval} }" class="sapUiSmallMarginTop"
+					text="{= 'Wartet auf Freigabe durch ' + ${it>/pendingApproval/assigneeName} + (${it>/pendingApproval/message} ? ': „' + ${it>/pendingApproval/message} + '“' : '') }"/>
+				<List headerText="Freigaben" items="{it>/approvals}" visible="{= ${it>/approvals}.length > 0 }" class="sapUiSmallMarginTop">
+					<CustomListItem>
+						<VBox class="sapUiTinyMargin">
+							<ObjectStatus text="{it>statusText}" state="{it>statusState}" inverted="true"/>
+							<Text text="{it>line}"/>
+							<Text text="{it>decision}" visible="{= !!${it>decision} }" class="eoMuted"/>
+						</VBox>
+					</CustomListItem>
+				</List>
+				<List headerText="{i18n>item.versions}" items="{it>/versions}" visible="{= ${it>/versions}.length > 1 }">
+					<StandardListItem title="Fassung {it>number}: {it>originalName}" description="{path: 'it>createdAt', formatter: 'fmt.dateTime'} · {path: 'it>uploadedByUserId', formatter: 'fmt.person'}"
+						type="{= ${it>current} ? 'Inactive' : 'Navigation' }" press=".onVersion" info="{= ${it>current} ? 'angezeigt' : (${it>latest} ? 'aktuell' : '') }"
+						infoState="Information" icon="sap-icon://document"/>
+				</List>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

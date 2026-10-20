@@ -1,0 +1,50 @@
+<mvc:View controllerName="estrichone.controller.Customers" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:u="sap.ui.unified" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.customers}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Kundenstamm für Bauakten und Anfragen"/></f:expandedContent>
+				<f:actions>
+					<u:FileUploader id="importFile" buttonOnly="true" buttonText="CSV importieren" icon="sap-icon://upload" fileType="csv,txt"
+						change=".onImport" visible="{= ${session>/permissions/contacts.edit} === true }" sameFilenameAllowed="true" style="Transparent"/>
+					<Button text="Neuer Kunde" icon="sap-icon://add-employee" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<Table items="{view>/items}" busy="{view>/busy}" sticky="HeaderToolbar,ColumnHeaders" noDataText="Keine Kunden gefunden." popinLayout="GridSmall"
+				growing="true" growingThreshold="100">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{= ${view>/items}.length } Kunden" level="H2"/>
+						<ToolbarSpacer/>
+						<SearchField width="20rem" placeholder="Name, Kundennummer, Ort" search=".onSearch" value="{view>/search}"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column width="8rem"><Text text="Kd.-Nr."/></Column>
+					<Column><Text text="Name"/></Column>
+					<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Straße"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Ort"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Telefon"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="E-Mail"/></Column>
+					<Column width="8rem" hAlign="End"><Text text=""/></Column>
+				</columns>
+				<items>
+					<ColumnListItem>
+						<Text text="{= ${view>customerNumber} || '–' }" class="eoTabular"/>
+						<Link text="{view>name}" press=".onEdit" emphasized="true"/>
+						<Text text="{= ${view>kind} === 'company' ? 'Firma' : 'Person' }"/>
+						<Text text="{= ${view>street} || '–' }"/>
+						<Text text="{= ((${view>postalCode} || '') + ' ' + (${view>city} || '')).trim() || '–' }"/>
+						<Link text="{= ${view>phone} || '–' }" href="tel:{view>phone}" enabled="{= !!${view>phone} }"/>
+						<Link text="{= ${view>email} || '–' }" href="mailto:{view>email}" enabled="{= !!${view>email} }"/>
+						<Link text="Bauakten" href="/bauakten?kunde={view>id}"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

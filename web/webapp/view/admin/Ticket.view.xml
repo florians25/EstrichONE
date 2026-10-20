@@ -1,0 +1,75 @@
+<mvc:View controllerName="estrichone.controller.admin.Ticket" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:l="sap.ui.layout"
+	xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:breadcrumbs><Breadcrumbs currentLocationText="{view>/t/summary/number}"><Link text="{i18n>nav.helpdesk}" href="/it-center/helpdesk"/></Breadcrumbs></f:breadcrumbs>
+				<f:heading><Title text="{view>/t/summary/title}" level="H1" wrapping="true"/></f:heading>
+				<f:content>
+					<HBox id="ticketTags" alignItems="Center" class="ticketTags">
+						<ObjectStatus text="{view>/t/summary/number}" class="sapUiSmallMarginEnd eoTabular"/>
+						<ObjectStatus text="{path: 'view>/t/summary/status', formatter: 'fmt.ticketStatusText'}" state="{path: 'view>/t/summary/status', formatter: 'fmt.ticketStatusState'}" inverted="true" class="sapUiSmallMarginEnd"/>
+						<ObjectStatus text="Kann nicht arbeiten" state="Error" inverted="true" visible="{= !!${view>/t/summary/reporterBlocked} }"/>
+					</HBox>
+				</f:content>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<l:Grid defaultSpan="XL8 L8 M12 S12" containerQuery="true">
+				<VBox>
+					<Panel headerText="Beschreibung" visible="{= !!${view>/t/description} }" class="sapUiSmallMarginBottom"><Text text="{view>/t/description}" class="eoPre"/></Panel>
+					<Panel headerText="Verlauf">
+						<List items="{view>/timeline}" showSeparators="Inner">
+							<CustomListItem highlight="{= ${view>internal} ? 'Warning' : 'None' }">
+								<VBox class="sapUiSmallMargin">
+									<Text text="{view>who} · {path: 'view>at', formatter: 'fmt.dateTime'}{= ${view>internal} ? ' · Interne Notiz' : '' }" class="eoMuted"/>
+									<Text text="{view>text}" class="eoPre"/>
+								</VBox>
+							</CustomListItem>
+						</List>
+						<Label text="Antwort oder Notiz" labelFor="reply" class="sapUiSmallMarginTop"/>
+						<TextArea id="reply" value="{view>/reply}" valueLiveUpdate="true" rows="3" width="100%" placeholder="Antwort oder interne Notiz …"/>
+						<HBox justifyContent="SpaceBetween" alignItems="Center">
+							<CheckBox text="Interne Notiz (für den Melder unsichtbar)" selected="{view>/internal}"/>
+							<Button text="{= ${view>/internal} ? 'Notiz speichern' : 'Antwort senden' }" type="Emphasized" enabled="{= !!${view>/reply}.trim() }" press=".onComment"/>
+						</HBox>
+					</Panel>
+				</VBox>
+				<VBox>
+					<layoutData><l:GridData span="XL4 L4 M12 S12"/></layoutData>
+					<Panel headerText="Bearbeitung" class="sapUiSmallMarginBottom">
+						<Label text="Status" labelFor="tStatus"/>
+						<Select id="tStatus" selectedKey="{view>/edit/status}" width="100%" items="{view>/statusOptions}"><core:Item key="{view>key}" text="{view>text}"/></Select>
+						<Label text="Lösung (Pflicht)" labelFor="tResolution" visible="{= ${view>/edit/status} === 'resolved' || ${view>/edit/status} === 'closed' }"/>
+						<TextArea id="tResolution" value="{view>/edit/resolution}" valueLiveUpdate="true" rows="3" width="100%"
+							visible="{= ${view>/edit/status} === 'resolved' || ${view>/edit/status} === 'closed' }"/>
+						<Label text="Priorität" labelFor="tPriority"/>
+						<Select id="tPriority" selectedKey="{view>/edit/priority}" width="100%" items="{view>/priorityOptions}"><core:Item key="{view>key}" text="{view>text}"/></Select>
+						<Label text="Kategorie" labelFor="tCategory"/>
+						<Select id="tCategory" selectedKey="{view>/edit/category}" width="100%" items="{view>/categoryOptions}"><core:Item key="{view>key}" text="{view>text}"/></Select>
+						<Label text="Zuständig" labelFor="tAssignee"/>
+						<Select id="tAssignee" selectedKey="{view>/edit/assignee}" width="100%" items="{view>/people}" forceSelection="false"><core:Item key="{view>key}" text="{view>text}"/></Select>
+						<HBox class="sapUiSmallMarginTop">
+							<Button text="Mir zuweisen" icon="sap-icon://employee" press=".onMine" class="sapUiTinyMarginEnd"/>
+							<Button text="Speichern" type="Emphasized" press=".onSave"/>
+						</HBox>
+					</Panel>
+					<Panel headerText="Details" class="sapUiSmallMarginBottom">
+						<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4">
+							<Label text="Melder"/><Text text="{= ${view>/t/summary/reporterDisplayName} || '–' }"/>
+							<Label text="Gerät"/><Link text="{= ${view>/t/deviceName} || '–' }" href="/it-center/geraete" enabled="{= !!${view>/t/deviceId} }"/>
+							<Label text="Bauakte"/><Link text="{= ${view>/t/bauakteId} ? 'öffnen' : '–' }" href="/bauakten/{view>/t/bauakteId}" enabled="{= !!${view>/t/bauakteId} }"/>
+							<Label text="Gemeldet"/><Text text="{path: 'view>/t/summary/createdAt', formatter: 'fmt.dateTime'} · {view>/t/summary/source}"/>
+						</form:SimpleForm>
+						<HBox items="{view>/attachments}" wrap="Wrap">
+							<Image src="/api/v1/files/{view>id}/content?variant=thumb" width="5.5rem" height="5.5rem" class="eoPhoto sapUiTinyMarginEnd" press=".onAttachment" alt="Anhang" decorative="false"/>
+						</HBox>
+					</Panel>
+					<Panel headerText="Diagnosedaten" expandable="true" expanded="false" visible="{= ${view>/diagnostics}.length > 0 }">
+						<List items="{view>/diagnostics}"><StandardListItem title="{view>key}" description="{view>value}" wrapping="true"/></List>
+					</Panel>
+				</VBox>
+			</l:Grid>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

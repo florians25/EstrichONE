@@ -1,0 +1,77 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Work" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}">
+	<VBox>
+		<FlexBox wrap="Wrap" alignItems="Center" visible="{= ${session>/permissions/work.edit} === true }" class="sapUiTinyMarginBottom eoEntryRow">
+			<Select id="newKind" selectedKey="{wk>/kind}" width="9rem" ariaLabelledBy="kindLabel">
+				<core:Item key="task" text="Aufgabe"/>
+				<core:Item key="defect" text="Mangel"/>
+			</Select>
+			<Input id="newTitle" value="{wk>/title}" valueLiveUpdate="true" placeholder="{= ${wk>/kind} === 'defect' ? 'Was ist mangelhaft?' : 'Was ist zu tun?' }"
+				submit=".onAdd" ariaLabelledBy="titleLabel" width="100%">
+				<layoutData><FlexItemData growFactor="1" minWidth="14rem"/></layoutData>
+			</Input>
+			<DatePicker value="{wk>/due}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" width="10rem" placeholder="Fällig am" ariaLabelledBy="dueLabel"/>
+			<Select selectedKey="{wk>/assignee}" width="12rem" items="{path: 'wk>/people', templateShareable: false}" forceSelection="false" ariaLabelledBy="assigneeLabel">
+				<core:Item key="{wk>key}" text="{wk>text}"/>
+			</Select>
+			<Button text="{i18n>work.add}" icon="sap-icon://add" type="Emphasized" press=".onAdd"/>
+		</FlexBox>
+		<Table id="workTable" items="{wk>/shown}" noDataText="{i18n>work.none}" sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+			<headerToolbar>
+				<OverflowToolbar>
+					<Title text="{i18n>work.title} ({= ${wk>/shown}.length })" level="H3"/>
+					<ToolbarSpacer/>
+					<SegmentedButton selectedKey="{wk>/filter}" selectionChange=".refresh">
+						<items>
+							<SegmentedButtonItem key="open" text="Offen"/>
+							<SegmentedButtonItem key="defects" text="Mängel"/>
+							<SegmentedButtonItem key="overdue" text="Überfällig"/>
+							<SegmentedButtonItem key="all" text="Alle"/>
+						</items>
+					</SegmentedButton>
+				</OverflowToolbar>
+			</headerToolbar>
+			<columns>
+				<Column width="3rem"><Text text=""/></Column>
+				<Column><Text text="Aufgabe"/></Column>
+				<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
+				<Column width="11rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Fällig"/></Column>
+				<Column width="13rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuständig"/></Column>
+				<Column width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Status"/></Column>
+				<Column width="5rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Fotos"/></Column>
+			</columns>
+			<items>
+				<ColumnListItem highlight="{= ${wk>overdue} ? 'Error' : ${wk>kind} === 'defect' &amp;&amp; ${wk>status} !== 'done' ? 'Warning' : 'None' }">
+					<Button icon="{= ${wk>status} === 'done' ? 'sap-icon://complete' : 'sap-icon://border' }" type="Transparent" press=".onToggle"
+						enabled="{= ${session>/permissions/work.edit} === true }"
+						tooltip="{= ${wk>status} === 'done' ? 'Wieder öffnen: ' + ${wk>title} : 'Erledigt: ' + ${wk>title} }"/>
+					<VBox>
+						<Input value="{wk>title}" change=".onTitle" editable="{= ${session>/permissions/work.edit} === true }" class="eoInline"
+							ariaLabelledBy="titleLabel"/>
+						<Text text="{wk>description}" visible="{= !!${wk>description} }" class="eoMuted"/>
+					</VBox>
+					<ObjectStatus text="{= ${wk>kind} === 'defect' ? 'Mangel' : 'Aufgabe' }" state="{= ${wk>kind} === 'defect' ? 'Warning' : 'None' }"
+						icon="{= ${wk>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"/>
+					<DatePicker value="{wk>dueDate}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" change=".onDue"
+						editable="{= ${session>/permissions/work.edit} === true }" valueState="{= ${wk>overdue} ? 'Error' : 'None' }" ariaLabelledBy="dueLabel"/>
+					<Select selectedKey="{wk>assigneeUserId}" change=".onAssignee" items="{path: 'wk>/people', templateShareable: false}" forceSelection="false"
+						enabled="{= ${session>/permissions/work.edit} === true }" width="100%" ariaLabelledBy="assigneeLabel">
+						<core:Item key="{wk>key}" text="{wk>text}"/>
+					</Select>
+					<Select selectedKey="{wk>status}" change=".onStatus" enabled="{= ${session>/permissions/work.edit} === true }" width="100%" ariaLabelledBy="statusLabel">
+						<core:Item key="open" text="Offen"/>
+						<core:Item key="inProgress" text="In Arbeit"/>
+						<core:Item key="done" text="Erledigt"/>
+					</Select>
+					<Link text="{wk>photoCount}" press=".onPhotos" enabled="{= ${wk>photoCount} > 0 }"/>
+				</ColumnListItem>
+			</items>
+		</Table>
+	</VBox>
+	<core:InvisibleText id="kindLabel" text="Art"/>
+	<core:InvisibleText id="titleLabel" text="Titel"/>
+	<core:InvisibleText id="dueLabel" text="Fällig am"/>
+	<core:InvisibleText id="assigneeLabel" text="Zuständig"/>
+	<core:InvisibleText id="statusLabel" text="Status"/>
+	<core:InvisibleText id="toggleLabel" text="Erledigt"/>
+</mvc:View>

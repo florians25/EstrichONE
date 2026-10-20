@@ -1,0 +1,75 @@
+<mvc:View controllerName="estrichone.controller.materials.Orders" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.orders}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Materialbestellungen nach Liefertermin, Bestellschein, Status"/></f:expandedContent>
+				<f:actions>
+					<Button text="Material bestellen" icon="sap-icon://cart" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/materials.manage} === true }"/>
+					<Button text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<FlexBox class="eoTiles" items="{view>/kpis}">
+					<GenericTile header="{view>title}" frameType="OneByHalf">
+						<TileContent><NumericContent value="{view>value}" icon="{view>icon}" valueColor="{view>color}" withMargin="false"/></TileContent>
+					</GenericTile>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Bestellungen in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{= ${view>/items}.length } Bestellungen" level="H2"/>
+						<ToolbarSpacer/>
+						<SegmentedButton selectedKey="{view>/view}" selectionChange=".onRefresh">
+							<items>
+								<SegmentedButtonItem key="open" text="Offen"/>
+								<SegmentedButtonItem key="draft" text="Entwürfe"/>
+								<SegmentedButtonItem key="delivered" text="Geliefert"/>
+								<SegmentedButtonItem key="cancelled" text="Storniert"/>
+								<SegmentedButtonItem key="all" text="Alle"/>
+							</items>
+						</SegmentedButton>
+						<Select selectedKey="{view>/supplier}" change=".onRefresh" items="{view>/suppliers}" ariaLabelledBy="supplierLabel">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+						<SearchField width="14rem" placeholder="Nummer, Material, Ort" search=".onRefresh" value="{view>/search}"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column width="8rem"><Text text="Nummer"/></Column>
+					<Column width="11rem"><Text text="Liefertermin"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Lieferant"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Bauakte / Lieferadresse"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Positionen"/></Column>
+					<Column width="7rem" hAlign="End"><Text text="Summe"/></Column>
+					<Column width="7rem"><Text text="Status"/></Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${view>overdue} ? 'Error' : 'None' }">
+						<Text text="{view>number}" class="eoTabular"/>
+						<VBox>
+							<Text text="{view>deliveryText}" class="eoTabular"/>
+							<Text text="{view>deliveryTime}" visible="{= !!${view>deliveryTime} }" class="eoMuted"/>
+						</VBox>
+						<Text text="{view>supplierName}"/>
+						<VBox>
+							<Link text="{view>bauakteNumber} · {view>bauakteTitle}" href="/bauakten/{view>bauakteId}?abschnitt=material" visible="{= !!${view>bauakteId} }"/>
+							<Text text="Lager / ohne Bauakte" visible="{= !${view>bauakteId} }"/>
+							<Text text="{view>address}" class="eoMuted"/>
+						</VBox>
+						<Text text="{view>linesText}" maxLines="2"/>
+						<Text text="{view>totalText}" class="eoTabular"/>
+						<ObjectStatus text="{path: 'view>status', formatter: 'fmt.orderStatusText'}" state="{path: 'view>status', formatter: 'fmt.orderStatusState'}"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+	<core:InvisibleText id="supplierLabel" text="Lieferant"/>
+</mvc:View>

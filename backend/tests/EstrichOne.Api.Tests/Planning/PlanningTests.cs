@@ -32,6 +32,32 @@ public sealed class PlanningTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task PlanPdf_ForWeekAndDay_ByCrewsOrPeople()
+    {
+        using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
+        var lukas = await _factory.CreateUserAsync("lukas", roleIds: StandardRoles.SiteWorkerId);
+        var crewId = Guid.CreateVersion7();
+        await PutAsync<CrewResponse>(office, $"/api/v1/planning/crews/{crewId}", new { name = "Kolonne Nord", leaderUserId = lukas.Id, memberUserIds = Array.Empty<Guid>() });
+        var halle = await BauakteAsync(office, "Halle Nord");
+        await PutAsync<AssignmentView>(office, $"/api/v1/planning/assignments/{Guid.CreateVersion7()}", new
+        {
+            bauakteId = halle, day = "2026-11-04", startTime = "07:00:00", activity = "Estrich einbringen EG", crewId,
+        });
+
+        foreach (var query in new[] { "mode=week&from=2026-11-04", "mode=week&from=2026-11-02&rows=people&weekend=true", "mode=day&from=2026-11-04" })
+        {
+            using var response = await office.GetAsync(new Uri($"/api/v1/planning/print.pdf?{query}", UriKind.Relative), Ct);
+            response.StatusCode.ShouldBe(HttpStatusCode.OK, query);
+            response.Content.Headers.ContentType!.MediaType.ShouldBe("application/pdf");
+            var pdf = await response.Content.ReadAsByteArrayAsync(Ct);
+            System.Text.Encoding.ASCII.GetString(pdf, 0, 5).ShouldBe("%PDF-");
+        }
+
+        using var week = await office.GetAsync(new Uri("/api/v1/planning/print.pdf?mode=week&from=2026-11-04", UriKind.Relative), Ct);
+        week.Content.Headers.ContentDisposition!.FileNameStar.ShouldBe("Kolonnenplan 2026-11-02.pdf");
+    }
+
+    [Fact]
     public async Task WeekPlan_WarnsAboutDoubleBookingAndAbsence_AndWorkerSeesOwnAssignments()
     {
         using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);

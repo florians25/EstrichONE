@@ -1,0 +1,56 @@
+<mvc:View controllerName="estrichone.controller.admin.Helpdesk" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.helpdesk}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Gemeldete Probleme aus den Apps und dem Büro – am längsten wartende zuerst"/></f:expandedContent>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Tickets in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+				<headerToolbar>
+					<OverflowToolbar>
+						<SegmentedButton selectedKey="{view>/filter}" selectionChange=".onFilter">
+							<items>
+								<SegmentedButtonItem key="open" text="Offen"/>
+								<SegmentedButtonItem key="mine" text="Mir zugewiesen"/>
+								<SegmentedButtonItem key="unassigned" text="Nicht zugewiesen"/>
+								<SegmentedButtonItem key="all" text="Alle"/>
+							</items>
+						</SegmentedButton>
+						<ToolbarSpacer/>
+						<Select selectedKey="{view>/category}" change=".onFilter" items="{view>/categories}" ariaLabelledBy="catLabel2">
+							<core:Item key="{view>key}" text="{view>text}"/>
+						</Select>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column width="8rem"><Text text="Nummer"/></Column>
+					<Column><Text text="Problem"/></Column>
+					<Column width="9rem"><Text text="Status"/></Column>
+					<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Priorität"/></Column>
+					<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Melder"/></Column>
+					<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuständig"/></Column>
+					<Column width="7rem" hAlign="End"><Text text="Wartet seit"/></Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${view>reporterBlocked} ? 'Error' : 'None' }">
+						<Link text="{view>number}" href="/it-center/helpdesk/{view>id}" class="eoTabular"/>
+						<VBox>
+							<HBox alignItems="Center"><Text text="{view>title}" class="sapUiTinyMarginEnd"/>
+								<ObjectStatus text="Kann nicht arbeiten" state="Error" inverted="true" visible="{view>reporterBlocked}"/></HBox>
+							<Text text="{path: 'view>category', formatter: 'fmt.ticketCategoryText'}" class="eoMuted"/>
+						</VBox>
+						<ObjectStatus text="{path: 'view>status', formatter: 'fmt.ticketStatusText'}" state="{path: 'view>status', formatter: 'fmt.ticketStatusState'}"/>
+						<ObjectStatus text="{path: 'view>priority', formatter: 'fmt.ticketPriorityText'}" state="{path: 'view>priority', formatter: 'fmt.ticketPriorityState'}"/>
+						<Text text="{= ${view>reporterDisplayName} || '–' }"/>
+						<Text text="{= ${view>assigneeName} || 'nicht zugewiesen' }"/>
+						<Text text="{path: 'view>lastActivityAt', formatter: 'fmt.waiting'}" class="eoTabular"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+	<core:InvisibleText id="catLabel2" text="Kategorie"/>
+</mvc:View>

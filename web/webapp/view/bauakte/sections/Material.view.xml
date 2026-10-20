@@ -1,0 +1,61 @@
+<mvc:View controllerName="estrichone.controller.bauakte.sections.Material" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:l="sap.ui.layout"
+	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}">
+	<l:Grid defaultSpan="XL5 L5 M12 S12" containerQuery="true">
+		<VBox>
+			<Table id="needsTable" items="{mt>/needs}" mode="MultiSelect" selectionChange=".onNeedSelection" noDataText="{i18n>material.noNeeds}">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="{i18n>material.needs}" level="H3"/>
+						<ToolbarSpacer/>
+						<Label text="{i18n>material.reserve}" labelFor="reserveInput"/>
+						<StepInput id="reserveInput" value="{mt>/reserve}" min="0" max="50" width="7rem" description="%" change=".onReserve"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Material"/></Column>
+					<Column width="7rem" hAlign="End"><Text text="Bedarf"/></Column>
+				</columns>
+				<items>
+					<ColumnListItem selected="{mt>selected}" class="need-row">
+						<VBox>
+							<Text text="{mt>description}"/>
+							<Text text="{mt>detail}" class="eoMuted"/>
+						</VBox>
+						<ObjectNumber number="{path: 'mt>amount', formatter: 'fmt.quantity'}" unit="{mt>unit}" emphasized="true"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+			<Text text="{i18n>material.needsHint}" class="eoHelpText sapUiTinyMarginTop"/>
+			<Button text="{i18n>material.orderSelection}" icon="sap-icon://cart" type="Emphasized" press=".onOrderNeeds" class="sapUiSmallMarginTop"
+				enabled="{= ${mt>/selectedNeeds} > 0 }" visible="{= ${session>/permissions/materials.manage} === true &amp;&amp; ${mt>/needs}.length > 0 }"/>
+		</VBox>
+		<Table items="{mt>/orders}" noDataText="{i18n>material.noOrders}">
+			<layoutData><l:GridData span="XL7 L7 M12 S12"/></layoutData>
+			<headerToolbar>
+				<OverflowToolbar>
+					<Title text="{i18n>material.orders}" level="H3"/>
+					<ToolbarSpacer/>
+					<Button text="{i18n>material.order}" icon="sap-icon://add" press=".onOrder" visible="{= ${session>/permissions/materials.manage} === true }"/>
+				</OverflowToolbar>
+			</headerToolbar>
+			<columns>
+				<Column width="8rem"><Text text="Nummer"/></Column>
+				<Column width="11rem"><Text text="Liefertermin"/></Column>
+				<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Lieferant"/></Column>
+				<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Positionen"/></Column>
+				<Column width="7rem" hAlign="End"><Text text="Summe"/></Column>
+				<Column width="7rem"><Text text="Status"/></Column>
+			</columns>
+			<items>
+				<ColumnListItem type="Navigation" press=".onOpenOrder">
+					<Text text="{mt>number}" class="eoTabular"/>
+					<Text text="{mt>deliveryText}" class="eoTabular"/>
+					<Text text="{mt>supplierName}"/>
+					<Text text="{mt>linesText}"/>
+					<Text text="{mt>totalText}" class="eoTabular"/>
+					<ObjectStatus text="{path: 'mt>status', formatter: 'fmt.orderStatusText'}" state="{path: 'mt>status', formatter: 'fmt.orderStatusState'}"/>
+				</ColumnListItem>
+			</items>
+		</Table>
+	</l:Grid>
+</mvc:View>

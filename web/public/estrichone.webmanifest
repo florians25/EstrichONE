@@ -1,0 +1,28 @@
+{
+  "name": "EstrichONE",
+  "short_name": "EstrichONE",
+  "description": "Die Software für Estrichbetriebe – Bauakten, Planung, Baustellendokumentation und Büro.",
+  "lang": "de",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "id": "/",
+  "display": "standalone",
+  "display_override": ["window-controls-overlay", "standalone"],
+  "orientation": "any",
+  "background_color": "#F5F6F7",
+  "theme_color": "#0B2D5B",
+  "categories": ["business", "productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/logo.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Bauakten", "url": "/bauakten", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Neue Bauakte", "url": "/bauakten?neu=bauakte", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Tagesübersicht", "url": "/tagesuebersicht", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] },
+    { "name": "Kolonnenplanung", "url": "/planung", "icons": [{ "src": "/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

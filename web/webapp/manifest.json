@@ -1,0 +1,37 @@
+{
+  "_version": "1.60.0",
+  "sap.app": {
+    "id": "estrichone",
+    "type": "application",
+    "i18n": { "bundleUrl": "i18n/i18n.properties", "supportedLocales": [""], "fallbackLocale": "" },
+    "title": "{{appTitle}}",
+    "description": "{{appDescription}}",
+    "applicationVersion": { "version": "1.0.0" }
+  },
+  "sap.ui": {
+    "technology": "UI5",
+    "deviceTypes": { "desktop": true, "tablet": true, "phone": true }
+  },
+  "sap.ui5": {
+    "rootView": { "viewName": "estrichone.view.App", "type": "XML", "id": "app", "async": true },
+    "dependencies": {
+      "minUI5Version": "1.136",
+      "libs": {
+        "sap.m": {},
+        "sap.f": {},
+        "sap.tnt": {},
+        "sap.uxap": {},
+        "sap.ui.layout": {},
+        "sap.ui.unified": {}
+      }
+    },
+    "contentDensities": { "compact": true, "cozy": true },
+    "models": {
+      "i18n": {
+        "type": "sap.ui.model.resource.ResourceModel",
+        "settings": { "bundleName": "estrichone.i18n.i18n", "supportedLocales": [""], "fallbackLocale": "" }
+      }
+    },
+    "resources": { "css": [{ "uri": "css/style.css" }] }
+  }
+}

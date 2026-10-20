@@ -1,0 +1,7 @@
+/* Ladebildschirm bis die Anwendung geladen ist (ohne Inline-Stile, CSP). */
+html, body { height: 100%; margin: 0; }
+.splash { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1.25rem; background: #f5f6f7; }
+.splash img { width: 64px; height: 64px; }
+.splash-bar { width: 160px; height: 3px; border-radius: 2px; background: linear-gradient(90deg, #0B2D5B 0 30%, #d9dee5 30%); background-size: 200% 100%; animation: eo-load 1.1s ease-in-out infinite; }
+@keyframes eo-load { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-color-scheme: dark) { .splash { background: #12171c; } .splash-bar { background: linear-gradient(90deg, #8ec5ff 0 30%, #2a3440 30%); background-size: 200% 100%; } }

@@ -32,6 +32,21 @@ tests/EstrichOne.Api.Tests/      Integrationstests gegen echte PostgreSQL, Archi
 ../contracts/openapi/v1.json     API-Vertrag (wird durch Test geprüft)
 ```
 
+## PDF-Ausdrucke und Lizenzen
+
+Bauakte (`GET /api/v1/bauakten/{id}/report.pdf`, mit Fotodokumentation) und Kolonnenplan
+(`GET /api/v1/planning/print.pdf?mode=week|day`) werden serverseitig mit **PDFsharp/MigraDoc 6.2.4** erzeugt
+(`Infrastructure/Pdf`).
+
+- QuestPDF wurde geprüft und nicht gewählt: Die Community-Lizenz ist nur bis zu einer Umsatzgrenze kostenlos; für
+  Kunden-Installationen wäre eine kostenpflichtige Lizenz nötig.
+- PDFsharp/MigraDoc steht bis einschließlich **6.2.x unter MIT**. Ab 6.5 ist das Paket **AGPL-3.0** lizenziert – die
+  Version ist in `Directory.Packages.props` deshalb fest auf 6.2.4 gesetzt und darf nur nach Lizenzprüfung angehoben
+  werden. Das transitiv eingebundene `System.Security.Cryptography.Pkcs` ist auf die gepflegte .NET-10-Fassung gehoben.
+- Schrift: **Liberation Sans** (SIL Open Font License 1.1, Lizenztext in `Infrastructure/Pdf/Assets/LiberationSans-OFL.txt`)
+  wird eingebettet, damit der Server keine Systemschriften braucht. Logo: `branding/png/logo-horizontal.png`.
+- Fotos kommen aus der Vorschau-Variante (WebP) und werden für das PDF mit libvips als JPEG verkleinert.
+
 ## Regeln
 
 - **Schemaänderung:** `dotnet ef migrations add <Name> --project src/EstrichOne.Api --output-dir Infrastructure/Persistence/Migrations`.

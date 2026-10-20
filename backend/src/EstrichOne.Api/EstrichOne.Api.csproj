@@ -14,6 +14,13 @@
     <PackageReference Include="Konscious.Security.Cryptography.Argon2" />
     <PackageReference Include="NetVips" />
     <PackageReference Include="NetVips.Native" />
+    <PackageReference Include="PDFsharp-MigraDoc" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" />
+  </ItemGroup>
+  <ItemGroup>
+    <!-- Schrift (SIL OFL 1.1) und Logo für PDF-Ausdrucke -->
+    <EmbeddedResource Include="Infrastructure/Pdf/Assets/*.ttf" LogicalName="EstrichOne.Pdf.%(Filename)%(Extension)" />
+    <EmbeddedResource Include="Infrastructure/Pdf/Assets/*.png" LogicalName="EstrichOne.Pdf.%(Filename)%(Extension)" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="EstrichOne.Api.Tests" />
