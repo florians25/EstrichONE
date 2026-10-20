@@ -20,8 +20,6 @@ public sealed partial class SignInView : UserControl
 
     public event EventHandler? SignedIn;
 
-    public static Visibility Hidden(bool value) => value ? Visibility.Collapsed : Visibility.Visible;
-
     /// <summary>Anmeldung anzeigen; optional mit Hinweis (z. B. Sitzung abgelaufen).</summary>
     public void Start(string? notice = null)
     {

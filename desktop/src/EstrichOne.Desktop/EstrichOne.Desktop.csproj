@@ -18,6 +18,8 @@
     <!-- XAML-Code wird generiert; die strengen Analysen gelten für unseren Code in den Core-Projekten. -->
     <AnalysisLevel>latest-minimum</AnalysisLevel>
     <EnforceCodeStyleInBuild>false</EnforceCodeStyleInBuild>
+    <!-- XAML-Ereignisbehandler müssen Instanzmethoden sein. -->
+    <NoWarn>$(NoWarn);CA1822</NoWarn>
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.WindowsAppSDK" />

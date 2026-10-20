@@ -56,7 +56,7 @@ public sealed partial class Ribbon : UserControl
     public void SetTabs(IReadOnlyList<RibbonTab> tabs)
     {
         _all = tabs;
-        Rebuild(tabs.FirstOrDefault()?.Key);
+        Rebuild(tabs.Count > 0 ? tabs[0].Key : null);
     }
 
     /// <summary>Kontextregister einblenden (Schlüssel) oder ausblenden (<c>null</c>); es wird gleich ausgewählt.</summary>
@@ -106,7 +106,7 @@ public sealed partial class Ribbon : UserControl
         }
     }
 
-    private static FrameworkElement BuildGroup(RibbonGroup group)
+    private static Border BuildGroup(RibbonGroup group)
     {
         var buttons = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 2 };
         foreach (var command in group.Commands)

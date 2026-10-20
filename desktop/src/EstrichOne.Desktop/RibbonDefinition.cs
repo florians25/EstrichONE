@@ -126,6 +126,6 @@ internal static class RibbonDefinition
             .Select(t => t with { Groups = t.Groups.Where(g => g.Commands.Count > 0).ToList() }).ToList();
     }
 
-    private static IEnumerable<RibbonCommand> Only(EstrichOneClient client, string permission, params RibbonCommand[] commands) =>
+    private static RibbonCommand[] Only(EstrichOneClient client, string permission, params RibbonCommand[] commands) =>
         client.Has(permission) ? commands : [];
 }
