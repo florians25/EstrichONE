@@ -6205,6 +6205,62 @@
         ]
       }
     },
+    "/api/v1/system/notices": {
+      "get": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "summary": "Aktuelle Ankündigungen und geplante bzw. laufende Wartung (ohne Anmeldung lesbar)",
+        "operationId": "GetSystemNotices",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemNoticesResponse"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "summary": "Systemhinweise vollständig ersetzen – nur Hosting-Konsole (Authorization: Bearer <Instanz-Schlüssel>)",
+        "operationId": "SetSystemNotices",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SystemNoticesDocument"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/backup/status": {
       "get": {
         "tags": [
@@ -8915,6 +8971,72 @@
           }
         }
       },
+      "MaintenanceState": {
+        "required": [
+          "active",
+          "message",
+          "startsAt",
+          "endsAt",
+          "adminsMayWork"
+        ],
+        "type": "object",
+        "properties": {
+          "active": {
+            "type": "boolean"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "adminsMayWork": {
+            "type": "boolean"
+          }
+        }
+      },
+      "MaintenanceWindow": {
+        "required": [
+          "message",
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startsAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "adminsMayWork": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
       "MaterialCategory": {
         "enum": [
           "screed",
@@ -11054,6 +11176,100 @@
           "rejected"
         ]
       },
+      "SystemAnnouncement": {
+        "required": [
+          "id",
+          "title",
+          "text",
+          "severity",
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "SystemNoticesDocument": {
+        "required": [
+          "announcements",
+          "maintenance"
+        ],
+        "type": "object",
+        "properties": {
+          "announcements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemAnnouncement"
+            }
+          },
+          "maintenance": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MaintenanceWindow"
+              }
+            ]
+          }
+        }
+      },
+      "SystemNoticesResponse": {
+        "required": [
+          "announcements",
+          "maintenance",
+          "serverTime"
+        ],
+        "type": "object",
+        "properties": {
+          "announcements": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemAnnouncement"
+            }
+          },
+          "maintenance": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/MaintenanceState"
+              }
+            ]
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "TicketCategory": {
         "enum": [
           "signIn",
@@ -12162,6 +12378,9 @@
     },
     {
       "name": "Synchronisation"
+    },
+    {
+      "name": "Systemhinweise"
     },
     {
       "name": "Backup Center"

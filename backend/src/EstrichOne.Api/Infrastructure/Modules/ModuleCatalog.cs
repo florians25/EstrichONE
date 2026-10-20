@@ -9,6 +9,7 @@ using EstrichOne.Api.Modules.Documentation;
 using EstrichOne.Api.Modules.Helpdesk;
 using EstrichOne.Api.Modules.Identity;
 using EstrichOne.Api.Modules.Materials;
+using EstrichOne.Api.Modules.Notices;
 using EstrichOne.Api.Modules.Organization;
 using EstrichOne.Api.Modules.Planning;
 using EstrichOne.Api.Modules.Platform;
@@ -38,6 +39,7 @@ public static class ModuleCatalog
         new MaterialsModule(),
         new SetupModule(),
         new SyncModule(),
+        new NoticesModule(),
         new BackupModule(),
     ];
 
