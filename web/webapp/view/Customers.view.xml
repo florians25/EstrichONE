@@ -19,39 +19,44 @@
 					<OverflowToolbar>
 						<Title text="{= ${view>/items}.length } Kunden" level="H2"/>
 						<ToolbarSpacer/>
-						<SearchField width="20rem" placeholder="Name, Kundennummer, Ort" search=".onSearch" value="{view>/search}"/>
+						<SegmentedButton selectedKey="{view>/kind}" selectionChange=".onFilter">
+							<items>
+								<SegmentedButtonItem key="" text="Alle"/>
+								<SegmentedButtonItem key="company" text="Firmen"/>
+								<SegmentedButtonItem key="person" text="Privat"/>
+							</items>
+						</SegmentedButton>
+						<Select selectedKey="{view>/sort}" change=".onFilter" tooltip="Sortierung" width="11rem">
+							<core:Item key="name" text="Nach Name"/><core:Item key="number" text="Nach Kundennummer"/>
+							<core:Item key="city" text="Nach Ort"/><core:Item key="recent" text="Zuletzt geändert"/>
+						</Select>
+						<SearchField width="22rem" placeholder="Name, Nummer, Ort, Telefon, E-Mail, Ansprechpartner" search=".onSearch" value="{view>/search}"/>
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>
 					<Column width="8rem"><Text text="Kd.-Nr."/></Column>
 					<Column><Text text="Name"/></Column>
-					<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
-					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Straße"/></Column>
+					<Column width="6rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
 					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Ort"/></Column>
 					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Telefon"/></Column>
 					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="E-Mail"/></Column>
-					<Column width="8rem" hAlign="End"><Text text=""/></Column>
+					<Column width="9rem" hAlign="End"><Text text=""/></Column>
 				</columns>
 				<items>
-					<ColumnListItem>
-						<Text text="{= ${view>customerNumber} || '–' }" class="eoTabular"/>
+					<ColumnListItem type="Navigation" press=".onOpen">
+						<FormattedText htmlText="{view>numberHtml}" class="eoTabular"/>
 						<VBox>
-							<Link text="{view>name}" press=".onEdit" emphasized="true"/>
-							<Text text="{= [${view>salutation}, ${view>title}].filter(Boolean).join(' ') }" class="eoMuted" visible="{= !!${view>salutation} || !!${view>title} }"/>
+							<FormattedText htmlText="{view>nameHtml}" class="eoStrong"/>
+							<Text text="{view>sub}" class="eoMuted" visible="{= !!${view>sub} }"/>
 						</VBox>
 						<Text text="{= ${view>kind} === 'company' ? 'Firma' : 'Privat' }"/>
-						<Text text="{= ${view>street} || '–' }"/>
-						<Text text="{= ((${view>postalCode} || '') + ' ' + (${view>city} || '')).trim() || '–' }"/>
-						<VBox>
-							<Link text="{= ${view>phone} || '–' }" href="tel:{view>phone}" enabled="{= !!${view>phone} }"/>
-							<Text text="{view>morePhones}" class="eoMuted" visible="{= !!${view>morePhones} }" wrapping="true"/>
-						</VBox>
-						<VBox>
-							<Link text="{= ${view>email} || '–' }" href="mailto:{view>email}" enabled="{= !!${view>email} }"/>
-							<Text text="{= ${view>emails} &amp;&amp; ${view>emails}.length > 1 ? '+' + (${view>emails}.length - 1) + ' weitere' : '' }" class="eoMuted"
-								visible="{= !!${view>emails} &amp;&amp; ${view>emails}.length > 1 }"/>
-						</VBox>
-						<Link text="Bauakten" href="/bauakten?kunde={view>id}"/>
+						<FormattedText htmlText="{view>placeHtml}"/>
+						<FormattedText htmlText="{view>phonesHtml}"/>
+						<FormattedText htmlText="{view>emailsHtml}"/>
+						<HBox justifyContent="End">
+							<Button icon="sap-icon://edit" type="Transparent" tooltip="{= 'Bearbeiten: ' + ${view>name} }" press=".onEdit" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+							<Link text="Bauakten" href="/bauakten?kunde={view>id}" class="sapUiTinyMarginBegin"/>
+						</HBox>
 					</ColumnListItem>
 				</items>
 			</Table>

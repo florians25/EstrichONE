@@ -64,9 +64,11 @@
 						<Link text="Alle Freigaben" href="/dokumente?reiter=freigaben" class="sapUiTinyMarginTop"/>
 					</Panel>
 					<Panel headerText="{i18n>start.backup}" visible="{= ${session>/permissions/backup.manage} === true &amp;&amp; !!${view>/backup} }" backgroundDesign="Solid">
-						<ObjectStatus text="{view>/backup/text}" state="{view>/backup/state}" icon="sap-icon://upload-to-cloud" class="sapUiSmallMarginBottom"/>
-						<Text text="{view>/backup/detail}"/>
-						<Link text="{i18n>common.open}" href="/system/sicherung" class="sapUiTinyMarginTop"/>
+						<FlexBox alignItems="Center" wrap="Wrap" class="eoSystemItem">
+							<ObjectStatus text="{view>/backup/text}" state="{view>/backup/state}" icon="sap-icon://upload-to-cloud"/>
+							<Text text="{view>/backup/detail}"/>
+							<Link text="{i18n>common.open}" href="/system/sicherung"/>
+						</FlexBox>
 					</Panel>
 				</VBox>
 			</l:Grid>

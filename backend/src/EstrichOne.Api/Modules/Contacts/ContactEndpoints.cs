@@ -34,6 +34,8 @@ public interface IContactDetailsRequest
     string? Website { get; }
 }
 
+public sealed record ContactPersonResponse(Guid Id, string Name, string? Function, string? Phone, string? Email);
+
 public sealed record SaveContactRequest(
     [property: Required] Guid Id,
     ContactKind Kind,
@@ -89,7 +91,7 @@ internal static class ContactEndpoints
         var contacts = api.MapGroup("/contacts").WithTags("Kontakte");
 
         contacts.MapGet("/", SearchAsync).WithName("SearchContacts")
-            .WithSummary("Kunden suchen (Name, Kundennummer, Ort) – z. B. für die Kundenauswahl der Schnellanlage")
+            .WithSummary("Kunden suchen (Name, Kundennummer, Ort, alle Telefonnummern und E-Mail-Adressen, Ansprechpartner); kind=company|person, sort=name|number|city|recent")
             .RequirePermission(Permissions.ContactsRead);
 
         contacts.MapGet("/{id:guid}", async (Guid id, EstrichOneDbContext db, CancellationToken ct) =>
@@ -97,6 +99,12 @@ internal static class ContactEndpoints
                     ? Results.Ok(ToResponse(contact))
                     : Results.Problem(statusCode: 404, title: "Kontakt nicht gefunden", extensions: new Dictionary<string, object?> { ["code"] = "CONTACT_NOT_FOUND" }))
             .WithName("GetContact").Produces<ContactResponse>().ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission(Permissions.ContactsRead);
+
+        contacts.MapGet("/{id:guid}/persons", async (Guid id, EstrichOneDbContext db, CancellationToken ct) =>
+                TypedResults.Ok(await db.Set<ContactPerson>().AsNoTracking().Where(p => p.ContactId == id).OrderBy(p => p.Name)
+                    .Select(p => new ContactPersonResponse(p.Id, p.Name, p.Function, p.Phone, p.Email)).ToListAsync(ct)))
+            .WithName("ListContactPersons").WithSummary("Ansprechpartner des Kunden")
             .RequirePermission(Permissions.ContactsRead);
 
         contacts.MapPost("/", CreateAsync).WithName("CreateContact")
@@ -120,18 +128,45 @@ internal static class ContactEndpoints
     }
 
     private static async Task<Ok<List<ContactResponse>>> SearchAsync(EstrichOneDbContext db, CancellationToken cancellationToken,
-        [FromQuery] string? search = null, [FromQuery] int? limit = null)
+        [FromQuery] string? search = null, [FromQuery] int? limit = null, [FromQuery] ContactKind? kind = null, [FromQuery] string? sort = null)
     {
         var query = db.Set<Contact>().AsNoTracking();
-        if (!string.IsNullOrWhiteSpace(search))
+        if (kind is { } k)
         {
-            var pattern = "%" + search.Trim().Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
-            query = query.Where(c => EF.Functions.ILike(c.Name, pattern, "\\")
-                || (c.CustomerNumber != null && EF.Functions.ILike(c.CustomerNumber, pattern, "\\"))
-                || (c.City != null && EF.Functions.ILike(c.City, pattern, "\\")));
+            query = query.Where(c => c.Kind == k);
         }
 
-        var contacts = await query.OrderBy(c => c.Name).Take(Math.Clamp(limit ?? 25, 1, 100)).ToListAsync(cancellationToken);
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var text = search.Trim();
+            var pattern = "%" + text.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
+            // Telefonnummern ohne Leer-/Sonderzeichen vergleichen; E-Mail-Adressen und Ansprechpartner per SQL (jsonb, Tabelle).
+            var digits = new string(text.Where(char.IsDigit).ToArray());
+            var digitPattern = digits.Length >= 4 ? "%" + digits + "%" : null;
+            var extra = await db.Database.SqlQuery<Guid>($"""
+                SELECT c.id AS "Value" FROM contacts c
+                WHERE c.deleted_at IS NULL AND (c.emails::text ILIKE {pattern}
+                   OR ({digitPattern}::text IS NOT NULL AND regexp_replace(c.phones::text, '[^0-9]', '', 'g') LIKE {digitPattern})
+                   OR c.street ILIKE {pattern} OR c.postal_code ILIKE {pattern}
+                   OR EXISTS (SELECT 1 FROM contact_persons p WHERE p.contact_id = c.id
+                      AND (p.name ILIKE {pattern} OR p.email ILIKE {pattern}
+                           OR ({digitPattern}::text IS NOT NULL AND regexp_replace(coalesce(p.phone, ''), '[^0-9]', '', 'g') LIKE {digitPattern}))))
+                LIMIT 500
+                """).ToListAsync(cancellationToken);
+            query = query.Where(c => EF.Functions.ILike(c.Name, pattern, "\\")
+                || (c.CustomerNumber != null && EF.Functions.ILike(c.CustomerNumber, pattern, "\\"))
+                || (c.City != null && EF.Functions.ILike(c.City, pattern, "\\"))
+                || extra.Contains(c.Id));
+        }
+
+        query = sort switch
+        {
+            "number" => query.OrderBy(c => c.CustomerNumber == null).ThenBy(c => c.CustomerNumber).ThenBy(c => c.Name),
+            "city" => query.OrderBy(c => c.City == null).ThenBy(c => c.City).ThenBy(c => c.Name),
+            "recent" => query.OrderByDescending(c => c.UpdatedAt),
+            _ => query.OrderBy(c => c.Name),
+        };
+        var contacts = await query.Take(Math.Clamp(limit ?? 25, 1, 500)).ToListAsync(cancellationToken);
         return TypedResults.Ok(contacts.Select(ToResponse).ToList());
     }
 

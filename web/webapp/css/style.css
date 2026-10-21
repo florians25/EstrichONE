@@ -277,3 +277,16 @@ li[data-dot]::before { content: ""; display: inline-block; flex: none; width: 0.
 li[data-dot] { display: flex; align-items: center; }
 .eoColorSelect .sapMSltLabel::before { content: ""; display: inline-block; width: 0.875rem; height: 0.875rem; border-radius: 50%;
 	margin-right: 0.5rem; vertical-align: middle; background: var(--eoDot, transparent); box-shadow: 0 0 0 1px var(--sapGroup_ContentBorderColor); }
+
+/* Tagesübersicht: Raster über die volle Breite, kompakte Listen, schmale Systemzeile, dezente leere Zustände. */
+.eoTodayGrid { margin-bottom: 1rem; }
+.eoTodayPanel { margin: 0 !important; }
+.eoTodayPanel .sapMPanelContent { padding: 0 !important; }
+.eoTodayWide { grid-column: span 2; }
+@media (max-width: 900px) { .eoTodayWide { grid-column: auto; } }
+.eoTodayRow { padding: 0.375rem 1rem; }
+.eoToday .sapMListNoData, .eoToday .sapMListTblNoData { height: auto !important; min-height: 0; padding: 0.5rem 1rem; color: var(--sapContent_LabelColor);
+	font-size: var(--sapFontSmallSize); justify-content: flex-start; }
+.eoWarnText { color: var(--sapCriticalTextColor); font-size: var(--sapFontSmallSize); }
+.eoSystemRow { gap: 0.5rem 2rem; padding: 0.5rem 1rem; border-top: 1px solid var(--sapGroup_TitleBorderColor); }
+.eoSystemItem { gap: 0.5rem; }

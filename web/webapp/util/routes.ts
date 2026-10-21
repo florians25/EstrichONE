@@ -22,6 +22,7 @@ export const routes: RouteDef[] = [
 	{ name: "materials", pattern: "/material", view: "materials.Materials", permission: "materials.read", nav: "materials", title: "nav.materials" },
 	{ name: "suppliers", pattern: "/lieferanten", view: "materials.Suppliers", permission: "materials.read", nav: "suppliers", title: "nav.suppliers" },
 	{ name: "customers", pattern: "/kunden", view: "Customers", permission: "contacts.read", nav: "customers", title: "nav.customers" },
+	{ name: "customer", pattern: "/kunden/:id", view: "Customer", permission: "contacts.read", nav: "customers", title: "nav.customers" },
 	{ name: "planning", pattern: "/planung", view: "planning.Planning", permission: "planning.read", nav: "planning", title: "nav.planning" },
 	{ name: "calendar", pattern: "/planung/kalender", view: "planning.Calendar", permission: "planning.read", nav: "calendar", title: "nav.calendar" },
 	{ name: "teamPlanner", pattern: "/planung/teamplaner", view: "planning.TeamPlanner", permission: "planning.read", nav: "teamPlanner", title: "nav.teamPlanner" },

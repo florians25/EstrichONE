@@ -129,7 +129,7 @@ test('Kunden bearbeiten, Baustellenkarte, Firmendaten und Protokoll', async ({ p
   await signIn(page, 'admin', adminPassword);
   await nav(page, 'Kunden').click();
   await expect(pageTitle(page)).toHaveText('Kunden');
-  await page.getByRole('link', { name: 'Familie Kraus' }).click();
+  await page.getByRole('button', { name: 'Bearbeiten: Familie Kraus' }).click();
   const dialog = page.getByRole('dialog', { name: 'Kunde bearbeiten' });
   await dialog.getByRole('textbox', { name: 'Telefonnummer 1' }).fill('0871 654321');
   await dialog.getByRole('button', { name: 'Nummer hinzufügen' }).click();
@@ -137,6 +137,11 @@ test('Kunden bearbeiten, Baustellenkarte, Firmendaten und Protokoll', async ({ p
   await dialog.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Familie Kraus/ })).toContainText('0871 654321');
   await expect(page.getByRole('row', { name: /Familie Kraus/ })).toContainText('0171 1112223');
+  // Kundenseite mit Bauakten des Kunden.
+  await page.getByRole('row', { name: /Familie Kraus/ }).getByText('Familie Kraus').click();
+  await expect(page).toHaveURL(/\/kunden\/[0-9a-f-]{36}/);
+  await expect(pageTitle(page)).toHaveText('Familie Kraus');
+  await expect(page.getByRole('row', { name: /Kraus/ }).first()).toBeVisible();
 
   await nav(page, 'Baustellenkarte').click();
   await expect(page.getByRole('heading', { name: 'Baustellenkarte' }).first()).toBeVisible();

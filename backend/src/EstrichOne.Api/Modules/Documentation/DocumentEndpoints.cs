@@ -29,7 +29,7 @@ internal static class DocumentEndpoints
     public static void Map(IEndpointRouteBuilder api)
     {
         api.MapGet("/documents", SearchAsync).WithTags("Dokumente").WithName("SearchDocuments")
-            .WithSummary("Dokumente aller sichtbaren Bauakten (aktuelle Fassungen); Filter: search, category, bauakteId, approval (pending|approved|rejected|none), sort (newest|name|bauakte)")
+            .WithSummary("Dokumente aller sichtbaren Bauakten (aktuelle Fassungen); Filter: search, category, bauakteId, customerId, approval (pending|approved|rejected|none), sort (newest|name|bauakte)")
             .RequirePermission(Permissions.BauaktenRead);
         api.MapGet("/documents/tree", TreeAsync).WithTags("Dokumente").WithName("DocumentTree")
             .WithSummary("Ordnerbaum Kunde → Bauakte → Dokumentarten mit Anzahl aktueller Dokumente")
@@ -61,9 +61,15 @@ internal static class DocumentEndpoints
 
     private static async Task<Ok<DocumentSearchResult>> SearchAsync(EstrichOneDbContext db, IBauakteAccess access, IRoleAssignments roles, CancellationToken cancellationToken,
         [FromQuery] string? search = null, [FromQuery] string? category = null, [FromQuery] Guid? bauakteId = null,
-        [FromQuery] string? approval = null, [FromQuery] string? sort = null, [FromQuery] int? limit = null)
+        [FromQuery] string? approval = null, [FromQuery] string? sort = null, [FromQuery] int? limit = null, [FromQuery] Guid? customerId = null)
     {
-        var visible = (await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken)).Select(b => b.Id);
+        var visibleAkten = await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken);
+        if (customerId is { } customer)
+        {
+            visibleAkten = visibleAkten.Where(b => b.CustomerId == customer);
+        }
+
+        var visible = visibleAkten.Select(b => b.Id);
         var files = db.Set<FileRecord>().AsNoTracking()
             .Where(f => f.Kind == FileKind.Document && f.State == FileState.Stored && f.BauakteId != null && visible.Contains(f.BauakteId.Value));
         // Nur die aktuelle Fassung: keine andere Datei verweist auf diese als Vorgänger.

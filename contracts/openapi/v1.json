@@ -389,7 +389,7 @@
         "tags": [
           "Dokumente"
         ],
-        "summary": "Dokumente aller sichtbaren Bauakten (aktuelle Fassungen); Filter: search, category, bauakteId, approval (pending|approved|rejected|none), sort (newest|name|bauakte)",
+        "summary": "Dokumente aller sichtbaren Bauakten (aktuelle Fassungen); Filter: search, category, bauakteId, customerId, approval (pending|approved|rejected|none), sort (newest|name|bauakte)",
         "operationId": "SearchDocuments",
         "parameters": [
           {
@@ -434,6 +434,14 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "customerId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
             }
           }
         ],
@@ -2587,7 +2595,7 @@
         "tags": [
           "Kontakte"
         ],
-        "summary": "Kunden suchen (Name, Kundennummer, Ort) – z. B. für die Kundenauswahl der Schnellanlage",
+        "summary": "Kunden suchen (Name, Kundennummer, Ort, alle Telefonnummern und E-Mail-Adressen, Ansprechpartner); kind=company|person, sort=name|number|city|recent",
         "operationId": "SearchContacts",
         "parameters": [
           {
@@ -2603,6 +2611,20 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ContactKind"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -2800,6 +2822,49 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/contacts/{id}/persons": {
+      "get": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Ansprechpartner des Kunden",
+        "operationId": "ListContactPersons",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ContactPersonResponse"
+                  }
                 }
               }
             }
@@ -15068,6 +15133,43 @@
           "company",
           "person"
         ]
+      },
+      "ContactPersonResponse": {
+        "required": [
+          "id",
+          "name",
+          "function",
+          "phone",
+          "email"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "function": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "ContactPhone": {
         "required": [

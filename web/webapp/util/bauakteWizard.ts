@@ -40,6 +40,8 @@ import type { BauakteDetail, BauakteStatus, ContactResponse } from "./models";
 
 export interface WizardOptions {
 	status: Extract<BauakteStatus, "planned" | "inquiry">;
+	/** Vorgewählter Kunde (z. B. von der Kundenseite). */
+	customer?: ContactResponse | null;
 }
 
 export interface DuplicateCandidate {
@@ -425,6 +427,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		kind.attachSelectionChange(() => dialog.setTitle(titleOf(kind.getSelectedKey())));
 		dialog.addStyleClass("eoWizardDialog");
 		validate();
+		if (options.customer) useExisting(options.customer);
 		dialog.open();
 	});
 }

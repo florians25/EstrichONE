@@ -1,0 +1,113 @@
+<mvc:View controllerName="estrichone.controller.Customer" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:uxap="sap.uxap" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<uxap:ObjectPageLayout id="objectPage" upperCaseAnchorBar="false" useIconTabBar="true" showFooter="false" busy="{view>/busy}"
+		navigate=".onSection" headerContentPinnable="false" toggleHeaderOnTitleClick="false">
+		<uxap:headerTitle>
+			<uxap:ObjectPageDynamicHeaderTitle>
+				<uxap:breadcrumbs><Breadcrumbs currentLocationText="{view>/c/name}"><Link text="Kunden" href="/kunden"/></Breadcrumbs></uxap:breadcrumbs>
+				<uxap:heading><Title text="{view>/c/name}" level="H1" wrapping="true"/></uxap:heading>
+				<uxap:expandedContent><Text text="{view>/headline}"/></uxap:expandedContent>
+				<uxap:snappedContent><Text text="{view>/headline}"/></uxap:snappedContent>
+				<uxap:actions>
+					<Button text="Anrufen" icon="sap-icon://call" press=".onCall" visible="{= !!${view>/c/phone} }"/>
+					<Button text="E-Mail" icon="sap-icon://email" press=".onMail" visible="{= !!${view>/c/email} }"/>
+					<Button text="Bearbeiten" icon="sap-icon://edit" press=".onEdit" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+					<Button text="Neue Bauakte" icon="sap-icon://add-document" type="Emphasized" press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }"/>
+				</uxap:actions>
+			</uxap:ObjectPageDynamicHeaderTitle>
+		</uxap:headerTitle>
+		<uxap:headerContent>
+			<FlexBox wrap="Wrap" class="eoStaffHeaderFacts">
+				<VBox><Label text="Kundennummer"/><Text text="{= ${view>/c/customerNumber} || '–' }"/></VBox>
+				<VBox><Label text="Anschrift"/><Text text="{view>/address}"/></VBox>
+				<VBox><Label text="Telefon"/><Link text="{= ${view>/c/phone} || '–' }" href="tel:{view>/c/phone}" enabled="{= !!${view>/c/phone} }"/></VBox>
+				<VBox><Label text="E-Mail"/><Link text="{= ${view>/c/email} || '–' }" href="mailto:{view>/c/email}" enabled="{= !!${view>/c/email} }"/></VBox>
+				<VBox><Label text="Bauakten"/><Text text="{= ${view>/bauakten}.length }"/></VBox>
+			</FlexBox>
+		</uxap:headerContent>
+		<uxap:sections>
+			<uxap:ObjectPageSection id="secOverview" title="Übersicht">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<form:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="3" columnsXL="3">
+						<core:Title text="Stammdaten"/>
+						<Label text="Art"/><Text text="{= ${view>/c/kind} === 'company' ? 'Firma' : 'Privatperson' }"/>
+						<Label text="Anrede / Titel"/><Text text="{view>/salutation}"/>
+						<Label text="Kundennummer"/><Text text="{= ${view>/c/customerNumber} || '–' }"/>
+						<Label text="Geburtstag" visible="{= !!${view>/c/birthday} }"/><Text text="{path: 'view>/c/birthday', formatter: 'fmt.date'}" visible="{= !!${view>/c/birthday} }"/>
+						<Label text="Bevorzugt"/><Text text="{view>/channel}"/>
+						<Label text="Website"/><Link text="{= ${view>/c/website} || '–' }" href="{view>/c/website}" target="_blank" enabled="{= !!${view>/c/website} }"/>
+						<core:Title text="Anschrift"/>
+						<Label text="Anschrift"/><Text text="{view>/address}"/>
+						<Label text="Rechnung an"/><Text text="{view>/billing}"/>
+						<Label text="Lieferung an"/><Text text="{view>/delivery}"/>
+						<core:Title text="Steuer und Notiz"/>
+						<Label text="USt-IdNr."/><Text text="{= ${view>/c/vatId} || '–' }"/>
+						<Label text="Steuernummer"/><Text text="{= ${view>/c/taxNumber} || '–' }"/>
+						<Label text="Notiz"/><Text text="{= ${view>/c/notes} || '–' }" class="eoPre"/>
+					</form:SimpleForm>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secBauakten" title="Bauakten">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<Table items="{view>/bauakten}" noDataText="Für diesen Kunden gibt es noch keine Bauakte." popinLayout="GridSmall">
+						<headerToolbar><OverflowToolbar><Title text="{= ${view>/bauakten}.length + ' Bauakten' }" level="H3"/><ToolbarSpacer/>
+							<Button text="Neue Bauakte für den Kunden" icon="sap-icon://add-document" press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }"/></OverflowToolbar></headerToolbar>
+						<columns>
+							<Column width="8rem"><Text text="Nummer"/></Column><Column><Text text="Bauvorhaben"/></Column>
+							<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Baustelle"/></Column>
+							<Column width="9rem"><Text text="Status"/></Column><Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Geändert"/></Column>
+						</columns>
+						<items>
+							<ColumnListItem type="Navigation" press=".onBauakte">
+								<Text text="{= ${view>number} || '–' }" class="eoTabular"/><Text text="{view>title}" class="eoStrong"/>
+								<Text text="{view>place}"/>
+								<ObjectStatus text="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" state="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}" inverted="true"/>
+								<Text text="{path: 'view>updatedAt', formatter: 'fmt.date'}"/>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secDocuments" title="Dokumente">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<VBox>
+						<Text text="Alle Dokumente aus allen Bauakten des Kunden – gegliedert nach Bauakte und Dokumentart. Klick öffnet die Vorschau." class="eoMuted sapUiTinyMarginBottom"/>
+						<Table items="{path: 'view>/documents', sorter: [{path: 'group', group: true}]}" noDataText="Keine Dokumente." class="eoDenseTable" popinLayout="GridSmall">
+							<columns>
+								<Column><Text text="Dokument"/></Column><Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Freigabe"/></Column>
+								<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Hochgeladen"/></Column>
+							</columns>
+							<items>
+								<ColumnListItem type="Active" press=".onDocument">
+									<HBox alignItems="Center"><core:Icon src="{view>icon}" class="sapUiTinyMarginEnd"/><Text text="{view>file/originalName}"/></HBox>
+									<Text text="{view>approvalText}"/>
+									<Text text="{path: 'view>file/createdAt', formatter: 'fmt.date'}"/>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</VBox>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secContacts" title="Kontakte">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<VBox>
+						<List items="{view>/reach}" headerText="Telefon und E-Mail" noDataText="Keine Telefonnummern oder E-Mail-Adressen.">
+							<StandardListItem title="{view>value}" description="{view>label}" icon="{view>icon}" type="Active" press=".onReach"/>
+						</List>
+						<List items="{view>/persons}" headerText="Ansprechpartner" noDataText="Keine Ansprechpartner erfasst." class="sapUiSmallMarginTop">
+							<StandardListItem title="{view>name}" description="{view>detail}" icon="sap-icon://person-placeholder"/>
+						</List>
+					</VBox>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secHistory" title="Verlauf">
+				<uxap:subSections><uxap:ObjectPageSubSection>
+					<List items="{view>/history}" noDataText="Noch kein Verlauf." growing="true" growingThreshold="30">
+						<StandardListItem title="{view>title}" description="{view>text}" info="{path: 'view>at', formatter: 'fmt.dateTime'}" icon="{view>icon}"
+							type="{= ${view>to} ? 'Navigation' : 'Inactive' }" press=".onHistory"/>
+					</List>
+				</uxap:ObjectPageSubSection></uxap:subSections>
+			</uxap:ObjectPageSection>
+		</uxap:sections>
+	</uxap:ObjectPageLayout>
+</mvc:View>
