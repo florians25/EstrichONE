@@ -234,38 +234,45 @@ test('Teamplaner: Zeilen je Kolonne und Mitarbeiter, Einsatz mit Uhrzeit, Versch
 
 test('Wer fährt wohin: Kolonnen auf Baustellen ziehen, mehrere Kolonnen je Baustelle, Tätigkeit/Beginn, herausnehmen, Fahrzeug im Detail, PDF und App-Endpunkt', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  const crew = await apiCall(page, 'PUT', `/api/v1/planning/crews/${crypto.randomUUID()}`, { name: 'Kolonne Ost', color: '#2e7d32', memberUserIds: [] });
+  const ostName = `Kolonne Ost ${Math.floor(Math.random() * 900) + 100}`;
+  const crew = await apiCall(page, 'PUT', `/api/v1/planning/crews/${crypto.randomUUID()}`, { name: ostName, color: '#2e7d32', memberUserIds: [] });
   expect(crew.status).toBeLessThan(300);
   await page.goto(`/planung/wer-faehrt-wohin?tag=${monday()}`);
   await expect(pageTitle(page)).toHaveText('Wer fährt wohin');
-  await expect(page.getByText(/von \d+ Kolonnen eingeteilt/).first()).toBeVisible();
+  await expect(page.getByText(/von \d+ Kolonnen eingeteilt/).filter({ visible: true }).first()).toBeVisible();
   const card = page.locator('.eoDispatchCard').filter({ hasText: 'Kraus' }).first();
-  await expect(card.locator('.eoDispatchCrewChip').filter({ hasText: 'Kolonne Admin' })).toBeVisible();
+  // Montag: auf Kraus nur ein Einzeleinsatz (die Kolonne wurde in 03 auf Mittwoch verschoben).
+  await expect(card).toContainText('Randdämmung stellen');
 
   // Kolonne aus der Liste auf die Baustelle ziehen → zweite Kolonne auf derselben Baustelle.
   const pool = page.locator('.eoDispatchCrews');
-  const ost = pool.locator('.eoDispatchPerson').filter({ hasText: 'Kolonne Ost' });
+  const ost = pool.locator('.eoDispatchPerson').filter({ hasText: ostName });
   await expect(ost).toContainText('frei');
   await ost.dragTo(card);
-  await expect(toast(page)).toContainText('Kolonne Ost → ');
-  const chip = card.locator('.eoDispatchCrewChip').filter({ hasText: 'Kolonne Ost' });
+  await expect(toast(page)).toContainText(`${ostName} → `);
+  const chip = card.locator('.eoDispatchCrewChip').filter({ hasText: ostName });
   await expect(chip).toBeVisible();
+
+  // Zweite Kolonne über die Auswahl auf der Karte.
+  await card.getByRole('button', { name: 'Kolonne', exact: true }).click();
+  await page.getByRole('dialog').getByText('Kolonne Admin', { exact: true }).click();
+  await expect(card.locator('.eoDispatchCrewChip').filter({ hasText: 'Kolonne Admin' })).toBeVisible();
   await expect(card.locator('.eoDispatchCrewChip')).toHaveCount(2);
 
   // Tätigkeit und Beginn der Kolonne ändern.
   await chip.click();
   await page.getByRole('button', { name: 'Tätigkeit und Beginn' }).click();
-  const form = await dialog(page, /Kolonne Ost: Tätigkeit und Beginn/);
+  const form = await dialog(page, /Tätigkeit und Beginn/);
   await form.getByLabel('Tätigkeit').fill('Randdämmung stellen');
   await form.getByLabel('Beginn vor Ort').fill('06:30');
   await form.getByRole('heading', { name: /Tätigkeit und Beginn/ }).click();
   await form.getByRole('button', { name: 'Speichern' }).click();
-  await expect(chip).toContainText('06:30 Kolonne Ost · Randdämmung stellen');
+  await expect(chip).toContainText(`06:30 ${ostName} · Randdämmung stellen`);
 
-  // Wieder herausnehmen: Kolonne Admin bleibt, Kolonne Ost ist frei.
+  // Wieder herausnehmen: Kolonne Admin bleibt, die neue Kolonne ist frei.
   await chip.click();
   await page.getByRole('button', { name: 'Herausnehmen' }).click();
-  await expect(toast(page)).toContainText('Kolonne Ost herausgenommen');
+  await expect(toast(page)).toContainText(`${ostName} herausgenommen`);
   await expect(ost).toContainText('frei');
   await expect(card.locator('.eoDispatchCrewChip')).toHaveCount(1);
 
@@ -288,7 +295,7 @@ test('Wer fährt wohin: Kolonnen auf Baustellen ziehen, mehrere Kolonnen je Baus
     page, 'GET', `/api/v1/planning/dispatch/${monday()}`);
   expect(board.status).toBe(200);
   expect(board.json.sites.some((s) => s.title.includes('Kraus') && s.crews.some((c) => c.name === 'Kolonne Admin'))).toBe(true);
-  expect(board.json.crews.find((c) => c.name === 'Kolonne Ost')?.siteIds).toEqual([]);
+  expect(board.json.crews.find((c) => c.name === ostName)?.siteIds).toEqual([]);
   expect(board.json.mySiteIds.length).toBeGreaterThan(0);
 });
 
