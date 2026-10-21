@@ -372,7 +372,9 @@ struct HomeView: View {
         bauakten = loaded
         var names: [UUID: String] = [:]
         for id in Set(tasks.compactMap(\.bauakteId)) {
-            if let bauakte = loaded[id] ?? (try? await service.bauakte(id)) {
+            var found = loaded[id]
+            if found == nil { found = try? await service.bauakte(id) }
+            if let bauakte = found {
                 names[id] = [bauakte.number, bauakte.title].compactMap { $0 }.joined(separator: " · ")
             }
         }
