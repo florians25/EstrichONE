@@ -56,6 +56,8 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     /// Ansprechpartner vor Ort (z. B. Polier), vom Büro gepflegt.
     public let siteContactName: String?
     public let siteContactPhone: String?
+    /// Begründung, falls storniert.
+    public let cancellationReason: String?
     public let updatedAt: Date?
     public let syncState: SyncState
 
@@ -75,6 +77,7 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
         templateKey = data["templateKey"]?.string
         siteContactName = data["siteContactName"]?.string
         siteContactPhone = data["siteContactPhone"]?.string
+        cancellationReason = data["cancellationReason"]?.string
         updatedAt = data["updatedAt"]?.string.flatMap(APIDate.parse)
         syncState = entity.syncState
     }

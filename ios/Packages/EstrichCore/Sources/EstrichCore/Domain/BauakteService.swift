@@ -71,6 +71,7 @@ public enum BauakteError: Error, Equatable, Sendable {
     case customerNameRequired
     case invalidEmail
     case tooLong(String)
+    case cancellationReasonRequired
     case storage
 
     public var message: String {
@@ -80,6 +81,7 @@ public enum BauakteError: Error, Equatable, Sendable {
         case .customerNameRequired: "Bitte den Namen des Kunden eingeben."
         case .invalidEmail: "Die E-Mail-Adresse ist ungültig."
         case let .tooLong(field): "Die Angabe „\(field)“ ist zu lang."
+        case .cancellationReasonRequired: "Bitte einen Stornogrund angeben."
         case .storage: "Die Daten konnten auf diesem Gerät nicht gespeichert werden."
         }
     }
@@ -147,6 +149,17 @@ public struct BauakteService: Sendable {
             throw .storage
         }
         return id
+    }
+
+    /// Status ändern; Stornieren verlangt eine Begründung (wie im Büro). Offline möglich, der Server prüft Konflikte.
+    public func changeStatus(_ status: BauakteStatus, reason: String? = nil, of id: UUID) async throws(BauakteError) {
+        let reason = reason?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if status == .cancelled, reason?.isEmpty ?? true { throw .cancellationReasonRequired }
+        do {
+            try await store.setStatus(status.rawValue, reason: status == .cancelled ? reason.map { String($0.prefix(500)) } : nil, of: id)
+        } catch {
+            throw .storage
+        }
     }
 
     public func update(_ id: UUID, changes: [String: JSONValue]) async throws {

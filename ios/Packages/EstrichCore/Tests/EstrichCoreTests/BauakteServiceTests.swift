@@ -270,6 +270,35 @@ struct BauakteServiceTests {
         #expect(try await service.store.retryFailedUploads() == 0)
     }
 
+    @Test("Status ändern und stornieren: sofort lokal, Begründung Pflicht, Storno vom Server gewinnt")
+    func statusAndCancellation() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        let bauakte = try await service.create(NewBauakte(title: "Status"))
+        try await service.changeStatus(.inProgress, of: bauakte)
+        #expect(try await service.bauakte(bauakte)?.status == .inProgress, "auch vor der ersten Übertragung")
+        #expect(await engine.synchronize() == .completed)
+        #expect(server.entity(bauakte)?["status"]?.string == "inProgress")
+
+        await #expect(throws: BauakteError.cancellationReasonRequired) { try await service.changeStatus(.cancelled, reason: "  ", of: bauakte) }
+        try await service.changeStatus(.cancelled, reason: "Kunde hat abgesagt", of: bauakte)
+        let cancelled = try #require(try await service.bauakte(bauakte))
+        #expect(cancelled.status == .cancelled && cancelled.cancellationReason == "Kunde hat abgesagt")
+        #expect(try await service.store.operations().first?.payload["baseStatus"]?.string == "inProgress")
+        #expect(await engine.synchronize() == .completed)
+        #expect(server.entity(bauakte)?["cancellationReason"]?.string == "Kunde hat abgesagt")
+
+        // Gerät kennt „In Ausführung“, im Büro wurde inzwischen storniert: der Wechsel wird abgelehnt, „Storniert“ bleibt.
+        let other = try await service.create(NewBauakte(title: "Andere"))
+        try await service.changeStatus(.inProgress, of: other)
+        #expect(await engine.synchronize() == .completed)
+        server.serverSideChange("bauakte", id: other, data: (server.entity(other) ?? [:]).merging(["status": "cancelled", "cancellationReason": "Büro"]))
+        try await service.changeStatus(.completed, of: other)
+        #expect(await engine.synchronize() == .completed)
+        #expect(try await service.store.operations().first?.errorCode == "ALREADY_CANCELLED")
+        #expect(try await service.bauakte(other)?.status == .cancelled)
+    }
+
     @Test("Dateinamen: Endung und Anzeigename")
     func fileNames() {
         let pdf = FileItem.splitName("Aufmaß EG.pdf")

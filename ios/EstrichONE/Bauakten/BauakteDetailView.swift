@@ -26,6 +26,9 @@ struct BauakteDetailView: View {
     @State private var previewing: FileItem?
     @State private var playing: FileItem?
     @State private var recordingVideo = false
+    @State private var cancelling = false
+    @State private var cancelReason = ""
+    @State private var statusError: String?
     @State private var editingDocument: FileItem?
 
     /// Was über das „Erfassen“-Menü bzw. die Aktionsleiste erfasst wird.
@@ -96,6 +99,15 @@ struct BauakteDetailView: View {
                     }
                 }
                 .filePreview($previewing)
+                .alert("Bauakte stornieren?", isPresented: $cancelling) {
+                    TextField("Grund (Pflicht)", text: $cancelReason)
+                        .accessibilityIdentifier("cancelReasonField")
+                    Button("Stornieren", role: .destructive) { Task { await change(to: .cancelled, reason: cancelReason) } }
+                        .disabled(cancelReason.trimmingCharacters(in: .whitespaces).isEmpty)
+                    Button("Abbrechen", role: .cancel) {}
+                } message: {
+                    Text("Die Bauakte bleibt mit Verlauf erhalten. Löschen ist nur im Büro möglich.")
+                }
             } else {
                 MissingBauakteView(bauakteId: bauakteId) { await reload() }
             }
@@ -120,11 +132,39 @@ struct BauakteDetailView: View {
                         .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("bauakteNumber")
                     Spacer()
-                    BauakteStatusChip(status: bauakte.status)
+                    Menu {
+                        ForEach(BauakteStatus.allCases.filter { $0 != bauakte.status && $0 != .cancelled }, id: \.self) { status in
+                            Button(status.title) { Task { await change(to: status) } }
+                        }
+                        if bauakte.status != .cancelled {
+                            Divider()
+                            Button("Stornieren …", systemImage: "xmark.circle", role: .destructive) {
+                                cancelReason = ""
+                                cancelling = true
+                            }
+                            .accessibilityIdentifier("cancelBauakteButton")
+                        }
+                    } label: {
+                        HStack(spacing: 4) {
+                            BauakteStatusChip(status: bauakte.status)
+                            Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(Theme.textSecondary)
+                        }
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                    }
+                    .accessibilityLabel("Status: \(bauakte.status.title). Ändern")
+                    .accessibilityIdentifier("statusMenu")
                 }
                 Text(bauakte.title)
                     .font(.title3.weight(.semibold))
                     .accessibilityIdentifier("bauakteTitle")
+                if bauakte.status == .cancelled {
+                    Label("Storniert: \(bauakte.cancellationReason ?? "ohne Angabe")", systemImage: "xmark.circle")
+                        .font(.footnote).foregroundStyle(Theme.error)
+                }
+                if let statusError {
+                    Text(statusError).font(.footnote).foregroundStyle(Theme.error)
+                }
                 if let description = bauakte.description {
                     Text(description).font(.subheadline).foregroundStyle(Theme.textSecondary)
                 }
@@ -371,6 +411,18 @@ struct BauakteDetailView: View {
         try? await model.active?.service?.setStatus(item.isDone ? .open : .done, of: item.id)
         model.active?.sync?.localChangeMade()
         await reload()
+    }
+
+    /// Status ändern bzw. stornieren – sofort lokal, Übertragung und Konfliktprüfung über die Synchronisation.
+    private func change(to status: BauakteStatus, reason: String? = nil) async {
+        do throws(BauakteError) {
+            try await model.active?.service?.changeStatus(status, reason: reason, of: bauakteId)
+            statusError = nil
+            model.active?.sync?.localChangeMade()
+            await reload()
+        } catch {
+            statusError = error.message
+        }
     }
 
     private func assign(_ contact: Contact) async {

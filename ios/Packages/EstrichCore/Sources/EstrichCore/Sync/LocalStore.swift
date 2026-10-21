@@ -157,6 +157,20 @@ public actor LocalStore {
         }
     }
 
+    /// Status einer Bauakte ändern bzw. stornieren (`bauakte.setStatus`). `baseStatus` ist der Stand des Geräts –
+    /// der Server lehnt ab, wenn sich der Status inzwischen anders geändert hat.
+    public func setStatus(_ status: String, reason: String?, of bauakteId: UUID) throws {
+        try db.write { db in
+            guard let row = try db.query("SELECT * FROM entity WHERE type = 'bauakte' AND id = ?", [.text(bauakteId.key)]).first,
+                  let localText = row["local"]?.string else { return }
+            let local = try JSONValue.decode(localText)
+            var payload: [String: JSONValue] = ["status": .string(status), "baseStatus": local["status"] ?? .null]
+            if let reason { payload["reason"] = .string(reason) }
+            try insertOperation(db, type: "bauakte.setStatus", entityType: .bauakte, entityId: bauakteId, baseVersion: nil, payload: .object(payload))
+            try recompute(db, .bauakte, bauakteId)
+        }
+    }
+
     /// Löscht einen Datensatz. Nie gesendete Anlagen verschwinden ohne Serverkontakt.
     public func delete(_ type: EntityType, id: UUID) throws {
         try db.write { db in
@@ -458,15 +472,29 @@ public actor LocalStore {
         var local: JSONValue
         if let serverText = row["server"]?.string {
             local = try JSONValue.decode(serverText)
-            for operation in operations where operation.type.hasSuffix(".update") {
-                local = local.merging(operation.payload["changes"]?.object ?? [:])
+            for operation in operations {
+                local = Self.applyLocally(operation, to: local)
             }
         } else {
             local = try JSONValue.decode(row["local"]?.string ?? "{}")
+            for operation in operations where operation.type.hasSuffix(".setStatus") {
+                local = Self.applyLocally(operation, to: local)
+            }
         }
         let deleted = operations.contains { $0.type.hasSuffix(".delete") }
         try db.execute("UPDATE entity SET local = ?, deleted = ?, parent_id = ?, search = ?, sort_key = ? WHERE type = ? AND id = ?",
                        [.text(try local.encoded()), .integer(deleted ? 1 : 0)] + derived(type, local) + [.text(type.rawValue), .text(id.key)])
+    }
+
+    /// Wirkung einer noch nicht bestätigten Operation auf den angezeigten Stand.
+    static func applyLocally(_ operation: OutboxOperation, to local: JSONValue) -> JSONValue {
+        if operation.type.hasSuffix(".update") {
+            return local.merging(operation.payload["changes"]?.object ?? [:])
+        }
+        if operation.type.hasSuffix(".setStatus"), let status = operation.payload["status"] {
+            return local.merging(["status": status, "cancellationReason": status.string == "cancelled" ? operation.payload["reason"] ?? .null : .null])
+        }
+        return local
     }
 
     private func removeEntity(_ db: SQLiteDatabase, _ type: EntityType, _ id: UUID) throws {

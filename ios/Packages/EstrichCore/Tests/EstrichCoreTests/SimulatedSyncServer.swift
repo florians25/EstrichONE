@@ -197,6 +197,18 @@ final class SimulatedSyncServer: SyncTransport, @unchecked Sendable {
             if type == "file" { data = data.merging(["state": "awaitingUpload"]) }
             record(type, id: id, data: data)
             return PushResult(opId: operation.opId, status: .applied, code: nil, message: nil, version: 1, conflicts: nil, entity: data)
+        case "setStatus":
+            guard var current = entities[id.key]?.data else {
+                return PushResult(opId: operation.opId, status: .rejected, code: "NOT_FOUND", message: "Nicht gefunden", version: nil, conflicts: nil, entity: nil)
+            }
+            let status = payload["status"] ?? .null
+            if current["status"]?.string == "cancelled", payload["baseStatus"]?.string != "cancelled", status.string != "cancelled" {
+                return PushResult(opId: operation.opId, status: .rejected, code: "ALREADY_CANCELLED", message: "Inzwischen storniert",
+                                  version: nil, conflicts: nil, entity: nil)
+            }
+            current = current.merging(["status": status, "cancellationReason": payload["reason"] ?? .null])
+            record(type, id: id, data: current)
+            return PushResult(opId: operation.opId, status: .applied, code: nil, message: nil, version: 2, conflicts: nil, entity: current)
         case "update":
             guard var current = entities[id.key]?.data else {
                 return PushResult(opId: operation.opId, status: .rejected, code: "NOT_FOUND", message: "Nicht gefunden", version: nil, conflicts: nil, entity: nil)

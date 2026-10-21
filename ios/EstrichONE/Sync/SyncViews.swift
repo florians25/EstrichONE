@@ -228,6 +228,10 @@ struct SyncView: View {
         case "create", "announce": "\(object) angelegt"
         case "update": "\(object) geändert"
         case "delete": "\(object) gelöscht"
+        case "setStatus":
+            operation.payload["status"]?.string == "cancelled"
+                ? "\(object) storniert"
+                : "Status auf „\(operation.payload["status"]?.string.flatMap(BauakteStatus.init(rawValue:))?.title ?? "–")“ gesetzt"
         default: object
         }
     }
