@@ -11,7 +11,7 @@ on:
 permissions:
   contents: read
 
-# Ein Simulatorlauf dauert ~15 Minuten: laufende Läufe zu Ende führen, nur wartende durch den neuesten ersetzen.
+# Laufende Läufe zu Ende führen, nur wartende durch den neuesten ersetzen.
 concurrency:
   group: ios-${{ github.ref }}
   cancel-in-progress: false
@@ -34,7 +34,7 @@ jobs:
   app:
     name: App bauen und testen (Simulator)
     runs-on: macos-15
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
 
@@ -70,12 +70,13 @@ jobs:
           xcrun simctl list devices available | grep "$UDID"
           echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
-      - name: Build und Tests (Debug, Simulator)
+      # Nur die Unit-Tests der App; die UI-Tests (EstrichONEUITests) startet man bei Bedarf lokal in Xcode (ios/README.md).
+      - name: Build und Unit-Tests (Debug, Simulator)
         working-directory: ios
         run: |
           set -o pipefail
           xcodebuild test \
-            -project EstrichONE.xcodeproj -scheme EstrichONE \
+            -project EstrichONE.xcodeproj -scheme EstrichONE -only-testing:EstrichONETests \
             -destination "id=${{ steps.simulator.outputs.udid }}" \
             -resultBundlePath "$RUNNER_TEMP/EstrichONE.xcresult" \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= | tee "$RUNNER_TEMP/xcodebuild-test.log" | grep -E "error:|warning:|Test Case|Test Suite|✔|✘|\*\* TEST" || true

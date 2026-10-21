@@ -77,16 +77,23 @@ xcrun simctl openurl booted "estrichone://enroll?v=1&server=http://localhost:808
 # Kernlogik – auf dem Mac oder unter Linux (auch per Docker: swift:6.1-noble)
 cd ios/Packages/EstrichCore && swift test
 
-# App inkl. UI-Tests im Simulator
+# App: Unit-Tests im Simulator (so läuft es in der CI)
+cd ios && xcodegen generate && xcodebuild test -project EstrichONE.xcodeproj -scheme EstrichONE \
+  -only-testing:EstrichONETests -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
+
+# App: UI-Tests (nur lokal, nicht in der CI)
 cd ios && xcodebuild test -project EstrichONE.xcodeproj -scheme EstrichONE \
-  -destination 'platform=iOS Simulator,name=iPhone 16'
+  -only-testing:EstrichONEUITests -destination 'platform=iOS Simulator,name=iPhone 17 Pro'
 ```
 
-Die UI-Tests sprechen keinen echten Server an: Über Umgebungsvariablen (`EstrichONE/Support/UITestSupport.swift`,
-nur in Debug-Builds enthalten) liefert die App eine feste `server-info`-Antwort.
+UI-Tests in Xcode: `ios/EstrichONE.xcodeproj` öffnen (vorher `xcodegen generate`), Schema „EstrichONE“, im
+Test-Navigator (⌘6) `EstrichONEUITests` bzw. einen einzelnen Test starten. Die meisten UI-Tests sprechen keinen
+echten Server an: Über Umgebungsvariablen (`EstrichONE/Support/UITestSupport.swift`, nur in Debug-Builds enthalten)
+liefert die App feste Antworten; `testDemoModeWithoutServer` nutzt den Demomodus.
 
-CI: `.github/workflows/ios.yml` – EstrichCore unter Linux und macOS, App-Build mit Unit- und UI-Tests im
-Simulator sowie ein Release-Build ohne Signatur.
+CI: `.github/workflows/ios.yml` – EstrichCore unter Linux gegen einen echten Server (ca. 3 Minuten) und unter macOS,
+App-Build (Debug) mit den Unit-Tests der App im Simulator sowie ein Release-Build ohne Signatur. Die UI-Tests laufen
+bewusst nicht in der CI.
 
 ## Akzeptanzkriterien aus 10 – Stand
 
