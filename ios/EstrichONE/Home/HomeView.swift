@@ -221,7 +221,7 @@ struct HomeView: View {
         }
     }
 
-    /// „Wer fährt wohin“: alle Baustellen des Tages, meine markiert; weitere über „Alle“.
+    /// „Wer fährt wohin“: je Kolonne ihre Baustellen des Tages, meine markiert; alles über „Alle“.
     private var dispatchCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
@@ -231,31 +231,43 @@ struct HomeView: View {
                     .font(.subheadline.weight(.semibold))
                     .accessibilityIdentifier("dispatchAllButton")
             }
-            VStack(spacing: 0) {
-                let sites = dispatch?.board?.sortedSites ?? []
-                let limit = isWide ? 6 : 4
-                if sites.isEmpty {
+            VStack(alignment: .leading, spacing: 0) {
+                let groups = dispatch?.board?.crewGroups ?? []
+                let total = dispatch?.board?.sites.count ?? 0
+                if groups.isEmpty {
                     Text(dispatch?.message ?? (dispatch == nil ? "Planung wird geladen …" : "Heute ist nichts eingeplant."))
                         .font(.subheadline).foregroundStyle(Theme.textSecondary)
                         .padding(.horizontal, 14)
                         .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                 }
-                ForEach(Array(sites.prefix(limit).enumerated()), id: \.element.id) { index, site in
-                    if index > 0 { Divider().padding(.leading, 14) }
-                    DispatchSiteRow(site: site, isMine: dispatch?.board?.mySiteIds.contains(site.id) == true)
-                        .padding(.horizontal, 14).padding(.vertical, 8)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                ForEach(Array(groups.prefix(isWide ? 6 : 4).enumerated()), id: \.offset) { index, group in
+                    if index > 0 { Divider() }
+                    Group {
+                        if let crew = group.crew, let board = dispatch?.board {
+                            CrewHeader(crew: crew, board: board)
+                        } else {
+                            Text(dispatch?.board?.crews.isEmpty == false ? "Ohne Kolonne" : "Baustellen")
+                                .font(.subheadline.weight(.bold)).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    .padding(.horizontal, 14).padding(.top, 10)
+                    ForEach(group.sites) { site in
+                        DispatchSiteRow(site: site, isMine: dispatch?.board?.mySiteIds.contains(site.id) == true)
+                            .padding(.leading, 34).padding(.trailing, 14).padding(.vertical, 6)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
                 }
-                if sites.count > limit {
-                    Divider().padding(.leading, 14)
+                if groups.count > (isWide ? 6 : 4) {
+                    Divider()
                     Button { path.append(.dispatch) } label: {
-                        Text("\(sites.count - limit) weitere Baustellen")
+                        Text("Alle \(total) Baustellen ansehen")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.actionPrimary)
                             .padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }
                     .buttonStyle(RowButtonStyle())
                 }
             }
+            .padding(.bottom, 6)
             .card()
         }
         .accessibilityIdentifier("dispatchCard")

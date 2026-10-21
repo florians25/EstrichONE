@@ -2,9 +2,11 @@ import EstrichCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// „Wer fährt wohin“: welche Kolonne fährt auf welche Baustelle (meine zuerst), Team und Fahrzeuge als Detail. Mit dem Recht
-/// zur Planung lassen sich Kolonnen verlegen, zusätzlich einplanen oder herausnehmen – per Menü, auf dem iPad auch per
-/// Ziehen der Kolonnen-Chips auf die Baustellen. Ohne Verbindung bleibt der zuletzt geladene Stand des Tages sichtbar.
+/// „Wer fährt wohin“: Baustellen werden Kolonnen zugeordnet. Je Kolonne (Farbe, Leitung, Stärke, Fahrzeuge, Abwesende)
+/// ihre Baustellen des Tages mit Beginn, Adresse und Route; darunter Baustellen ohne Kolonne. Mit dem Recht zur Planung:
+/// „Baustelle zuordnen …“ je Kolonne, Baustelle in eine andere Kolonne verschieben oder herausnehmen. iPad: Kolonnen als
+/// Spalten, Baustellen-Karten per Ziehen zwischen den Kolonnen und aus dem Vorrat. Ohne Verbindung bleibt der zuletzt
+/// geladene Stand des Tages sichtbar.
 struct DispatchView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -12,83 +14,19 @@ struct DispatchView: View {
     @State private var data: DispatchData.Day?
     @State private var loading = false
     @State private var moveError: String?
+    @State private var assigningTo: DispatchBoard.Crew?
 
     var body: some View {
-        List {
-            Section {
-                HStack(spacing: 8) {
-                    Button { shift(-1) } label: { Label("Vorheriger Tag", systemImage: "chevron.left") }
-                        .buttonStyle(IconButtonStyle())
-                    DatePicker("Tag", selection: $day, displayedComponents: .date)
-                        .labelsHidden()
-                        .frame(maxWidth: .infinity)
-                    Button { shift(1) } label: { Label("Nächster Tag", systemImage: "chevron.right") }
-                        .buttonStyle(IconButtonStyle())
+        Group {
+            if sizeClass == .regular, let board = data?.board, !board.crews.isEmpty {
+                VStack(spacing: 0) {
+                    dayBar.padding(.horizontal).padding(.vertical, 8)
+                    statusLines.padding(.horizontal)
+                    columns(board)
                 }
-                if !Calendar.current.isDateInToday(day) {
-                    Button("Heute") { day = .now }
-                }
-            }
-            if let data, !data.isCurrent {
-                Label("Ohne Verbindung – Stand \(data.loadedAt.formatted(date: .abbreviated, time: .shortened))", systemImage: "wifi.slash")
-                    .font(.footnote).foregroundStyle(Theme.textSecondary)
-            }
-            if let moveError {
-                StatusMessage(kind: .error, text: moveError).listRowInsets(EdgeInsets())
-            }
-            if let message = data?.message {
-                Text(message).foregroundStyle(Theme.textSecondary)
-            } else if let board = data?.board, board.sites.isEmpty {
-                ContentUnavailableView("Nichts eingeplant", systemImage: "calendar", description: Text("Für diesen Tag gibt es keine Einsätze."))
-            }
-            if let board = data?.board {
-                if !board.crews.isEmpty, sizeClass != .regular || !board.canPlan {
-                    Section {
-                        crewPalette(board)
-                    } header: {
-                        Text("Kolonnen")
-                    } footer: {
-                        if board.canPlan { Text("Kolonne antippen, um sie zu verlegen, zusätzlich einzuplanen oder herauszunehmen.") }
-                    }
-                }
-                ForEach(board.sortedSites) { site in
-                    Section {
-                        DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id))
-                        if !site.crews.isEmpty {
-                            ChipFlow {
-                                ForEach(site.crews) { crew in
-                                    crewChip(crew.id, crew.name, color: crew.color, detail: crew.activity, board: board, from: site.id)
-                                        .draggable(DispatchDrag(target: .crew, id: crew.id, from: site.id).text)
-                                }
-                            }
-                            .padding(.vertical, 2)
-                        }
-                        let team = (site.people.map(\.name) + site.vehicles.map(\.name)).joined(separator: ", ")
-                        if !team.isEmpty {
-                            Label(team, systemImage: "person.2").labelStyle(TightLabelStyle())
-                                .font(.caption).foregroundStyle(Theme.textSecondary)
-                        }
-                    }
-                    .dropDestination(for: String.self) { items, _ in
-                        guard board.canPlan, let drag = items.first.flatMap(DispatchDrag.init(text:)), drag.from != site.id else { return false }
-                        Task { await move(drag.target, drag.id, to: site.id, from: drag.from) }
-                        return true
-                    }
-                    .accessibilityIdentifier("dispatchSite-\(site.title)")
-                }
-            }
-        }
-        .safeAreaInset(edge: .top) {
-            // iPad mit Planungsrecht: Kolonnen immer sichtbar, zum Ziehen auf die Baustellen.
-            if sizeClass == .regular, let board = data?.board, board.canPlan, !board.crews.isEmpty {
-                VStack(alignment: .leading, spacing: 6) {
-                    Text("Kolonnen – auf eine Baustelle ziehen oder antippen").font(.caption.weight(.semibold))
-                        .foregroundStyle(Theme.textSecondary)
-                    crewPalette(board)
-                }
-                .padding(.horizontal).padding(.vertical, 8)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(.bar)
+                .background(Theme.surfaceAlt)
+            } else {
+                list
             }
         }
         .overlay { if loading && data == nil { ProgressView() } }
@@ -97,79 +35,174 @@ struct DispatchView: View {
         .task(id: CalendarDay.string(day)) { await load() }
         .refreshable { await load() }
         .sensoryFeedback(.success, trigger: data?.board)
-    }
-
-    /// Alle Kolonnen des Tages mit Leitung, Stärke, Fahrzeugen, Abwesenheiten und Doppelbelegung.
-    private func crewPalette(_ board: DispatchBoard) -> some View {
-        ChipFlow {
-            ForEach(board.crews) { crew in
-                crewChip(crew.id, crew.name, color: crew.color, detail: Self.details(of: crew, on: board), board: board,
-                         from: crew.siteIds.count == 1 ? crew.siteIds.first : nil, warning: crew.isDoubleBooked)
-                    .draggable(DispatchDrag(target: .crew, id: crew.id, from: crew.siteIds.count == 1 ? crew.siteIds.first : nil).text)
-            }
-        }
-        .padding(.vertical, 2)
-    }
-
-    static func details(of crew: DispatchBoard.Crew, on board: DispatchBoard) -> String {
-        var details: [String] = []
-        if let leader = crew.leaderName { details.append(leader) }
-        if crew.memberCount > 0 { details.append("\(crew.memberCount) Pers.") }
-        if !crew.vehicles.isEmpty { details.append(crew.vehicles.map(\.name).joined(separator: ", ")) }
-        if !crew.absentMembers.isEmpty {
-            details.append("fehlt: " + crew.absentMembers.map { [$0.name, $0.note].compactMap { $0 }.joined(separator: " – ") }.joined(separator: ", "))
-        }
-        let sites = crew.siteIds.compactMap { id in board.sites.first { $0.id == id }?.title }
-        details.append(sites.isEmpty ? "frei" : sites.joined(separator: " + "))
-        return details.joined(separator: " · ")
-    }
-
-    /// Kolonne als farbiger Chip; mit Planungsrecht als Menü: verlegen, zusätzlich einplanen, herausnehmen.
-    @ViewBuilder
-    private func crewChip(_ crewId: UUID, _ name: String, color: String?, detail: String?, board: DispatchBoard, from: UUID?, warning: Bool = false) -> some View {
-        let tint = Color(hexString: color) ?? Theme.accent
-        let label = HStack(spacing: 6) {
-            Circle().fill(tint).frame(width: 10, height: 10)
-            VStack(alignment: .leading, spacing: 0) {
-                Text(name).font(.footnote.weight(.semibold))
-                if let detail, !detail.isEmpty {
-                    Text(detail).font(.caption2).foregroundStyle(Theme.textSecondary).lineLimit(1)
+        .sheet(item: $assigningTo) { crew in
+            if let board = data?.board {
+                AssignSiteView(crew: crew, board: board) { bauakteId in
+                    assigningTo = nil
+                    if let bauakteId { Task { await assign(bauakteId, to: crew.id, from: nil) } }
                 }
             }
-            if warning {
-                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.hint).accessibilityLabel("Doppelt eingeplant")
+        }
+    }
+
+    // MARK: iPhone: Abschnitte je Kolonne
+
+    private var list: some View {
+        List {
+            Section { dayBar }
+            statusLines
+            if let message = data?.message {
+                Text(message).foregroundStyle(Theme.textSecondary)
+            } else if let board = data?.board, board.sites.isEmpty, board.crews.isEmpty {
+                ContentUnavailableView("Nichts eingeplant", systemImage: "calendar", description: Text("Für diesen Tag gibt es keine Einsätze."))
+            }
+            if let board = data?.board {
+                ForEach(board.crews) { crew in
+                    Section {
+                        let assigned = board.crewSites(crew)
+                        if assigned.isEmpty {
+                            Text("Noch keine Baustelle").font(.subheadline).foregroundStyle(Theme.textSecondary)
+                        }
+                        ForEach(assigned) { site in
+                            siteRow(site, crew: crew, board: board)
+                        }
+                        if board.canPlan {
+                            Button { assigningTo = crew } label: { Label("Baustelle zuordnen …", systemImage: "plus") }
+                                .accessibilityIdentifier("assignSite-\(crew.name)")
+                        }
+                    } header: {
+                        CrewHeader(crew: crew, board: board)
+                    }
+                }
+                let pool = board.sitesWithoutCrew
+                if !pool.isEmpty {
+                    Section {
+                        ForEach(pool) { site in siteRow(site, crew: nil, board: board) }
+                    } header: {
+                        Text("Ohne Kolonne")
+                    }
+                }
             }
         }
-        .padding(.horizontal, 10).padding(.vertical, 5)
-        .frame(minHeight: 36)
-        .background(tint.opacity(0.14), in: Capsule())
-        .overlay(Capsule().strokeBorder(tint.opacity(0.5)))
-        .foregroundStyle(Theme.navyText)
-        // Bereits anderswo eingeplant (Auswahl ohne Ausgangsbaustelle): zusätzlich einplanen statt alles zu verlegen.
-        let alsoElsewhere = from == nil && board.crews.first { $0.id == crewId }?.siteIds.isEmpty == false
+    }
+
+    @ViewBuilder
+    private func siteRow(_ site: DispatchBoard.Site, crew: DispatchBoard.Crew?, board: DispatchBoard) -> some View {
+        DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id))
+            .contextMenu { if board.canPlan { moveMenu(site, crew: crew, board: board) } }
+            .swipeActions(edge: .trailing) {
+                if board.canPlan, let crew {
+                    Button("Entfernen", systemImage: "minus.circle", role: .destructive) {
+                        Task { await assign(site.id, to: nil, from: crew.id) }
+                    }
+                }
+            }
         if board.canPlan {
             Menu {
-                Section(from == nil ? "Einplanen auf" : "Verlegen nach") {
-                    ForEach(board.sortedSites.filter { $0.id != from }) { site in
-                        Button(site.title) { Task { await move(.crew, crewId, to: site.id, from: from, keep: alsoElsewhere) } }
-                    }
-                }
-                if from != nil {
-                    Menu("Zusätzlich einplanen auf") {
-                        ForEach(board.sortedSites.filter { $0.id != from }) { site in
-                            Button(site.title) { Task { await move(.crew, crewId, to: site.id, from: from, keep: true) } }
-                        }
-                    }
-                    Button("Aus dem Einsatz nehmen", systemImage: "minus.circle", role: .destructive) {
-                        Task { await move(.crew, crewId, to: nil, from: from) }
-                    }
-                }
+                moveMenu(site, crew: crew, board: board)
             } label: {
-                label
+                Label(crew == nil ? "Kolonne zuordnen" : "Andere Kolonne", systemImage: "arrow.left.arrow.right")
+                    .font(.footnote.weight(.semibold))
             }
-            .accessibilityIdentifier("crewChip-\(name)")
-        } else {
-            label.accessibilityElement(children: .combine).accessibilityIdentifier("crewChip-\(name)")
+            .accessibilityIdentifier("moveSite-\(site.title)")
+        }
+    }
+
+    /// Baustelle einer anderen Kolonne zuordnen bzw. aus der Kolonne nehmen.
+    @ViewBuilder
+    private func moveMenu(_ site: DispatchBoard.Site, crew: DispatchBoard.Crew?, board: DispatchBoard) -> some View {
+        Section(crew == nil ? "Kolonne zuordnen" : "In Kolonne verschieben") {
+            ForEach(board.crews.filter { $0.id != crew?.id }) { other in
+                Button(other.name) { Task { await assign(site.id, to: other.id, from: crew?.id) } }
+            }
+        }
+        if let crew {
+            Button("Aus \(crew.name) nehmen", systemImage: "minus.circle", role: .destructive) {
+                Task { await assign(site.id, to: nil, from: crew.id) }
+            }
+        }
+    }
+
+    // MARK: iPad: Kolonnen als Spalten
+
+    private func columns(_ board: DispatchBoard) -> some View {
+        ScrollView(.horizontal) {
+            HStack(alignment: .top, spacing: 14) {
+                ForEach(board.crews) { crew in
+                    column(title: { CrewHeader(crew: crew, board: board) }, sites: board.crewSites(crew), crew: crew, board: board)
+                }
+                column(title: { Text("Ohne Kolonne").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary) },
+                       sites: board.sitesWithoutCrew, crew: nil, board: board)
+            }
+            .padding()
+        }
+    }
+
+    private func column<Title: View>(@ViewBuilder title: () -> Title, sites: [DispatchBoard.Site], crew: DispatchBoard.Crew?,
+                                     board: DispatchBoard) -> some View {
+        VStack(alignment: .leading, spacing: 10) {
+            title()
+            ScrollView {
+                VStack(spacing: 8) {
+                    ForEach(sites) { site in
+                        DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id))
+                            .padding(10)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .card()
+                            .contextMenu { if board.canPlan { moveMenu(site, crew: crew, board: board) } }
+                            .draggable(SiteDrag(bauakteId: site.id, fromCrewId: crew?.id).text)
+                    }
+                    if sites.isEmpty {
+                        Text(board.canPlan ? "Baustelle hierher ziehen" : "Keine Baustelle")
+                            .font(.footnote).foregroundStyle(Theme.textSecondary)
+                            .frame(maxWidth: .infinity, minHeight: 60)
+                            .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [5])))
+                    }
+                    if board.canPlan, let crew {
+                        Button { assigningTo = crew } label: { Label("Baustelle zuordnen …", systemImage: "plus") }
+                            .estrichButton(.tertiary)
+                    }
+                }
+            }
+        }
+        .frame(width: 300)
+        .frame(maxHeight: .infinity, alignment: .top)
+        .padding(10)
+        .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: Theme.cardRadius))
+        .dropDestination(for: String.self) { items, _ in
+            guard board.canPlan, let drag = items.first.flatMap(SiteDrag.init(text:)), drag.fromCrewId != crew?.id else { return false }
+            Task { await assign(drag.bauakteId, to: crew?.id, from: drag.fromCrewId) }
+            return true
+        }
+    }
+
+    // MARK: Gemeinsam
+
+    private var dayBar: some View {
+        VStack(spacing: 6) {
+            HStack(spacing: 8) {
+                Button { shift(-1) } label: { Label("Vorheriger Tag", systemImage: "chevron.left") }
+                    .buttonStyle(IconButtonStyle())
+                DatePicker("Tag", selection: $day, displayedComponents: .date)
+                    .labelsHidden()
+                    .frame(maxWidth: .infinity)
+                Button { shift(1) } label: { Label("Nächster Tag", systemImage: "chevron.right") }
+                    .buttonStyle(IconButtonStyle())
+            }
+            if !Calendar.current.isDateInToday(day) {
+                Button("Heute") { day = .now }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var statusLines: some View {
+        if let data, !data.isCurrent {
+            Label("Ohne Verbindung – Stand \(data.loadedAt.formatted(date: .abbreviated, time: .shortened))", systemImage: "wifi.slash")
+                .font(.footnote).foregroundStyle(Theme.textSecondary)
+        }
+        if let moveError {
+            StatusMessage(kind: .error, text: moveError)
         }
     }
 
@@ -183,40 +216,152 @@ struct DispatchView: View {
         data = await DispatchData.load(day: CalendarDay.string(day), model: model)
     }
 
-    private func move(_ target: DispatchMove.Target, _ id: UUID, to site: UUID?, from: UUID?, keep: Bool = false) async {
+    /// Baustelle einer Kolonne zuordnen (`to`), aus einer Kolonne nehmen (`from`) oder beides (verschieben).
+    private func assign(_ bauakteId: UUID, to crewId: UUID?, from oldCrewId: UUID?) async {
         guard let client = model.active?.client else { return }
+        let dayText = CalendarDay.string(day)
         do throws(APIError) {
-            let board = try await client.move(DispatchMove(target: target, id: id, to: site, from: from, keep: keep), on: CalendarDay.string(day))
-            data = DispatchData.Day(board: board, loadedAt: .now, isCurrent: true, message: nil)
+            var board: DispatchBoard?
+            if let crewId {
+                board = try await client.move(DispatchMove(target: .crew, id: crewId, to: bauakteId, from: nil, keep: true), on: dayText)
+            }
+            if let oldCrewId {
+                board = try await client.move(DispatchMove(target: .crew, id: oldCrewId, to: nil, from: bauakteId), on: dayText)
+            }
+            if let board { data = DispatchData.Day(board: board, loadedAt: .now, isCurrent: true, message: nil) }
             moveError = nil
         } catch {
-            moveError = error == .offline ? "Umsetzen geht nur mit Verbindung zum Server." : error.message
+            moveError = error == .offline ? "Planen geht nur mit Verbindung zum Server." : error.message
+            await load()
         }
     }
 }
 
-/// Gezogene Person bzw. gezogenes Fahrzeug (als Text, damit kein eigener Datentyp registriert werden muss).
-struct DispatchDrag {
-    let target: DispatchMove.Target
-    let id: UUID
-    let from: UUID?
+extension DispatchBoard {
+    /// Baustellen einer Kolonne an diesem Tag (meine zuerst, dann nach Beginn).
+    func crewSites(_ crew: Crew) -> [Site] {
+        sortedSites.filter { site in crew.siteIds.contains(site.id) || site.crews.contains { $0.id == crew.id } }
+    }
 
-    init(target: DispatchMove.Target, id: UUID, from: UUID?) {
-        self.target = target
-        self.id = id
-        self.from = from
+    /// Baustellen, denen noch keine Kolonne zugeordnet ist.
+    var sitesWithoutCrew: [Site] {
+        let assigned = Set(crews.flatMap(\.siteIds))
+        return sortedSites.filter { $0.crews.isEmpty && !assigned.contains($0.id) }
+    }
+
+    /// Kolonnen mit Baustellen zuerst; ohne Kolonnen (ältere Server) alle Baustellen in einer Gruppe.
+    var crewGroups: [(crew: Crew?, sites: [Site])] {
+        let groups: [(crew: Crew?, sites: [Site])] = crews.map { (crew: Optional($0), sites: crewSites($0)) }.filter { !$0.sites.isEmpty }
+        let rest = sitesWithoutCrew
+        return rest.isEmpty ? groups : groups + [(crew: nil, sites: rest)]
+    }
+}
+
+/// Kopf einer Kolonne: Farbe, Name, Leitung, Stärke, Fahrzeuge, Abwesende, Hinweis bei Doppelbelegung.
+struct CrewHeader: View {
+    let crew: DispatchBoard.Crew
+    let board: DispatchBoard
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 8) {
+            Circle().fill(Color(hexString: crew.color) ?? Theme.accent).frame(width: 12, height: 12).padding(.top, 3)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(crew.name).font(.subheadline.weight(.bold)).foregroundStyle(Theme.navyText)
+                    if crew.isDoubleBooked {
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.hint)
+                            .accessibilityLabel("Mehrere Baustellen")
+                    }
+                }
+                let details = [crew.leaderName, crew.memberCount > 0 ? "\(crew.memberCount) Pers." : nil,
+                               crew.vehicles.isEmpty ? nil : crew.vehicles.map(\.name).joined(separator: ", ")].compactMap { $0 }
+                if !details.isEmpty {
+                    Text(details.joined(separator: " · ")).font(.caption).foregroundStyle(Theme.textSecondary)
+                }
+                if !crew.absentMembers.isEmpty {
+                    Text("fehlt: " + crew.absentMembers.map { [$0.name, $0.note].compactMap { $0 }.joined(separator: " – ") }.joined(separator: ", "))
+                        .font(.caption).foregroundStyle(Theme.hint)
+                }
+            }
+        }
+        .textCase(nil)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("crew-\(crew.name)")
+    }
+}
+
+/// Auswahl einer Baustelle für eine Kolonne: Baustellen des Tages und aktive Bauakten auf dem Gerät, mit Suche.
+struct AssignSiteView: View {
+    let crew: DispatchBoard.Crew
+    let board: DispatchBoard
+    let onDone: (UUID?) -> Void
+
+    @Environment(AppModel.self) private var model
+    @State private var search = ""
+    @State private var bauakten: [Bauakte] = []
+
+    var body: some View {
+        NavigationStack {
+            List {
+                let daySites = board.sortedSites.filter { !crew.siteIds.contains($0.id) && matches([$0.number, $0.title, $0.address]) }
+                if !daySites.isEmpty {
+                    Section("Baustellen des Tages") {
+                        ForEach(daySites) { site in
+                            Button { onDone(site.id) } label: {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text([site.number, site.title].compactMap { $0 }.joined(separator: " · ")).font(.subheadline.weight(.semibold))
+                                    Text(site.crews.isEmpty ? "ohne Kolonne" : site.crews.map(\.name).joined(separator: ", "))
+                                        .font(.caption).foregroundStyle(Theme.textSecondary)
+                                }
+                            }
+                        }
+                    }
+                }
+                let known = Set(board.sites.map(\.id))
+                let others = bauakten.filter { !known.contains($0.id) }
+                if !others.isEmpty {
+                    Section("Weitere aktive Bauakten") {
+                        ForEach(others) { bauakte in
+                            Button { onDone(bauakte.id) } label: { BauakteRow(bauakte: bauakte) }
+                        }
+                    }
+                }
+            }
+            .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
+            .navigationTitle("Baustelle für \(crew.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { onDone(nil) } } }
+            .task(id: search) {
+                let all = (try? await model.active?.service?.bauakten(search: search.isEmpty ? nil : search)) ?? []
+                bauakten = all.filter { [BauakteStatus.planned, .inProgress, .drying].contains($0.status) }
+            }
+        }
+    }
+
+    private func matches(_ fields: [String?]) -> Bool {
+        let query = search.trimmingCharacters(in: .whitespaces).lowercased()
+        return query.isEmpty || fields.compactMap { $0?.lowercased() }.contains { $0.contains(query) }
+    }
+}
+
+/// Gezogene Baustelle mit ihrer bisherigen Kolonne (als Text, damit kein eigener Datentyp registriert werden muss).
+struct SiteDrag {
+    let bauakteId: UUID
+    let fromCrewId: UUID?
+
+    init(bauakteId: UUID, fromCrewId: UUID?) {
+        self.bauakteId = bauakteId
+        self.fromCrewId = fromCrewId
     }
 
     init?(text: String) {
         let parts = text.split(separator: "|", omittingEmptySubsequences: false).map(String.init)
-        guard parts.count == 4, parts[0] == "estrichone-dispatch", let target = DispatchMove.Target(rawValue: parts[1]),
-              let id = UUID(uuidString: parts[2]) else { return nil }
-        self.target = target
-        self.id = id
-        self.from = UUID(uuidString: parts[3])
+        guard parts.count == 3, parts[0] == "estrichone-site", let id = UUID(uuidString: parts[1]) else { return nil }
+        bauakteId = id
+        fromCrewId = UUID(uuidString: parts[2])
     }
 
-    var text: String { "estrichone-dispatch|\(target.rawValue)|\(id.uuidString)|\(from?.uuidString ?? "")" }
+    var text: String { "estrichone-site|\(bauakteId.uuidString)|\(fromCrewId?.uuidString ?? "")" }
 }
 
 /// Laden und Zwischenspeichern der Tafel (auch für die Startseite).

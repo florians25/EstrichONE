@@ -299,7 +299,7 @@ final class BauakteUITests: XCTestCase {
 
         // „Wer fährt wohin“ nach Kolonnen: Kolonnen mit Farbe, Stärke und Abwesenden.
         app.tapElement(app.reveal("dispatchAllButton"), "dispatchAllButton")
-        XCTAssertTrue(app.element("crewChip-Kolonne Huber").waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.element("crew-Kolonne Huber").waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(app.text(containing: "fehlt: Tobias Lang").waitForExistence(timeout: 5), app.debugDescription)
         app.navigationBars.buttons.element(boundBy: 0).tap()
 
