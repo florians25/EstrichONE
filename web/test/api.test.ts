@@ -3,6 +3,7 @@ import { api, ApiError, NetworkError, onSessionEnded, problemMessage, setRetryDe
 import { uploadError } from '../webapp/util/upload';
 
 setRetryDelay(1);
+document.cookie = 'XSRF-TOKEN=test-token';
 
 const problem = (status: number, body: object) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/problem+json' } });

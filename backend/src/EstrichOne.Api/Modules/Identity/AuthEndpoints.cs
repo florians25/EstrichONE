@@ -45,6 +45,12 @@ internal static class AuthEndpoints
 {
     public const string RateLimitPolicy = "auth";
 
+    /// <summary>
+    /// Erneuern ist kein Rateversuch (Refresh-Tokens sind zufällig, 256 Bit) und kommt bei vielen Benutzern hinter
+    /// einer gemeinsamen Adresse (Büro, Proxy) oft vor: großzügigere eigene Grenze.
+    /// </summary>
+    public const string RefreshRateLimitPolicy = "auth-refresh";
+
     public static void Map(IEndpointRouteBuilder api)
     {
         var auth = api.MapGroup("/auth").WithTags("Anmeldung");
@@ -58,7 +64,7 @@ internal static class AuthEndpoints
         auth.MapPost("/refresh", RefreshAsync)
             .WithName("RefreshTokens").WithSummary("Zugriffstoken erneuern (Refresh-Token wird dabei ersetzt)")
             .ProducesProblem(StatusCodes.Status401Unauthorized)
-            .AllowAnonymous().RequireRateLimiting(RateLimitPolicy);
+            .AllowAnonymous().RequireRateLimiting(RefreshRateLimitPolicy);
 
         auth.MapPost("/logout", LogoutAsync)
             .WithName("Logout").WithSummary("Aktuelle Sitzung beenden")

@@ -42,6 +42,9 @@ public sealed class IdentityModule : IModule
             limiter.AddPolicy(AuthEndpoints.RateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
                 http.Connection.RemoteIpAddress?.ToString() ?? "unbekannt",
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
+            limiter.AddPolicy(AuthEndpoints.RefreshRateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
+                http.Connection.RemoteIpAddress?.ToString() ?? "unbekannt",
+                _ => new FixedWindowRateLimiterOptions { PermitLimit = authPerMinute * 10, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
         });
     }
 

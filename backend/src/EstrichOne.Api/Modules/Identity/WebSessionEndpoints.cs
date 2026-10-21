@@ -44,7 +44,7 @@ internal static class WebSessionEndpoints
         web.MapPost("/refresh", RefreshAsync).WithName("WebRefresh")
             .WithSummary("Sitzung im Browser verlängern (Refresh-Cookie, CSRF-Header erforderlich)")
             .ProducesProblem(StatusCodes.Status401Unauthorized).ProducesProblem(StatusCodes.Status409Conflict)
-            .AllowAnonymous().RequireRateLimiting(AuthEndpoints.RateLimitPolicy);
+            .AllowAnonymous().RequireRateLimiting(AuthEndpoints.RefreshRateLimitPolicy);
 
         web.MapPost("/logout", LogoutAsync).WithName("WebLogout")
             .WithSummary("Abmelden im Browser; beendet die Sitzung und löscht die Cookies")

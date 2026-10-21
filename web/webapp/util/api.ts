@@ -96,6 +96,8 @@ async function toError(response: Response): Promise<ApiError> {
  * die Cookies sind schon neu; die Anfrage kann einfach wiederholt werden.
  */
 export function refreshSession(): Promise<boolean> {
+	// Ohne CSRF-Cookie gab es keine Sitzung (oder sie wurde beendet): nicht unnötig anfragen.
+	if (!xsrfToken()) return Promise.resolve(false);
 	refreshing ??= fetch("/api/v1/auth/web/refresh", { method: "POST", credentials: "same-origin", headers: csrfHeaders("POST") })
 		.then((r) => r.ok || r.status === 409)
 		.catch(() => false)
