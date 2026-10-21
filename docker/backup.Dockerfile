@@ -3,7 +3,7 @@
 # Basis: offizielles PostgreSQL-17-Image (pg_dump passend zur Serverversion), dazu restic als einzelnes Binary.
 FROM restic/restic:0.18.0 AS restic
 
-FROM postgres:17-alpine
+FROM postgres:18-alpine
 COPY --from=restic /usr/bin/restic /usr/local/bin/restic
 # SSH-Client nur für SFTP-Sicherungsziele.
 RUN apk add --no-cache openssh-client \
