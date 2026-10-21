@@ -237,7 +237,7 @@ test('Teamplaner: Zeilen je Kolonne und Mitarbeiter, Einsatz mit Uhrzeit, Versch
   expect((await download).suggestedFilename()).toMatch(/^Tageseinteilung \d{4}-\d{2}-\d{2}\.pdf$/);
 });
 
-test('Wer fährt wohin: Kolonnen auf Baustellen ziehen, mehrere Kolonnen je Baustelle, Tätigkeit/Beginn, herausnehmen, Fahrzeug im Detail, PDF und App-Endpunkt', async ({ page }) => {
+test('Wer fährt wohin: Baustellen den Kolonnen zuordnen (Ziehen und Auswahl), mehrere Kolonnen je Baustelle, Tätigkeit/Beginn, entfernen, Fahrzeug im Detail, PDF und App-Endpunkt', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   const ostName = `Kolonne Ost ${Math.floor(Math.random() * 900) + 100}`;
   const crew = await apiCall(page, 'PUT', `/api/v1/planning/crews/${crypto.randomUUID()}`, { name: ostName, color: '#2e7d32', memberUserIds: [] });
@@ -245,47 +245,48 @@ test('Wer fährt wohin: Kolonnen auf Baustellen ziehen, mehrere Kolonnen je Baus
   await page.goto(`/planung/wer-faehrt-wohin?tag=${monday()}`);
   await expect(pageTitle(page)).toHaveText('Wer fährt wohin');
   await expect(page.getByText(/von \d+ Kolonnen eingeteilt/).filter({ visible: true }).first()).toBeVisible();
-  const card = page.locator('.eoDispatchCard').filter({ hasText: 'Kraus' }).first();
-  // Montag: auf Kraus nur ein Einzeleinsatz (die Kolonne wurde in 03 auf Mittwoch verschoben).
-  await expect(card).toContainText('Randdämmung stellen');
 
-  // Kolonne aus der Liste auf die Baustelle ziehen → zweite Kolonne auf derselben Baustelle.
-  const pool = page.locator('.eoDispatchCrews');
-  const ost = pool.locator('.eoDispatchPerson').filter({ hasText: ostName });
-  await expect(ost).toContainText('frei');
-  await ost.dragTo(card);
-  await expect(toast(page)).toContainText(`${ostName} → `);
-  const chip = card.locator('.eoDispatchCrewChip').filter({ hasText: ostName });
-  await expect(chip).toBeVisible();
+  // Vorrat: Kraus ist am Montag ohne Kolonne (die Kolonne wurde in 03 auf Mittwoch verschoben).
+  const poolSite = page.locator('.eoDispatchSitePool .eoDispatchPerson').filter({ hasText: 'Kraus' });
+  await expect(poolSite).toContainText('ohne Kolonne');
+  const ost = page.locator('.eoDispatchLane').filter({ hasText: ostName });
+  const admin = page.locator('.eoDispatchLane').filter({ hasText: 'Kolonne Admin' });
 
-  // Zweite Kolonne über die Auswahl auf der Karte.
-  await card.getByRole('button', { name: 'Kolonne', exact: true }).click();
+  // Per Ziehen der neuen Kolonne zuordnen.
+  await poolSite.dragTo(ost);
+  await expect(toast(page)).toContainText(`→ ${ostName}`);
+  const card = ost.locator('.eoDispatchCard').filter({ hasText: 'Kraus' });
+  await expect(card).toBeVisible();
+
+  // Zusätzlich über „Kolonne zuordnen…“ der Kolonne Admin – eine Baustelle, zwei Kolonnen.
+  await poolSite.getByRole('button', { name: /Kolonne zuordnen/ }).click();
   await page.getByRole('dialog').getByText('Kolonne Admin', { exact: true }).click();
-  await expect(card.locator('.eoDispatchCrewChip').filter({ hasText: 'Kolonne Admin' })).toBeVisible();
-  await expect(card.locator('.eoDispatchCrewChip')).toHaveCount(2);
+  await expect(admin.locator('.eoDispatchCard').filter({ hasText: 'Kraus' })).toBeVisible();
+  await expect(poolSite).toContainText(ostName);
+  await expect(poolSite).toContainText('Kolonne Admin');
 
-  // Tätigkeit und Beginn der Kolonne ändern.
-  await chip.click();
+  // Tätigkeit und Beginn der Baustelle in der Kolonne.
+  await card.getByRole('button', { name: /Aktionen/ }).click();
   await page.getByRole('button', { name: 'Tätigkeit und Beginn' }).click();
   const form = await dialog(page, /Tätigkeit und Beginn/);
   await form.getByLabel('Tätigkeit').fill('Randdämmung stellen');
   await form.getByLabel('Beginn vor Ort').fill('06:30');
   await form.getByRole('heading', { name: /Tätigkeit und Beginn/ }).click();
   await form.getByRole('button', { name: 'Speichern' }).click();
-  await expect(chip).toContainText(`06:30 ${ostName} · Randdämmung stellen`);
+  await expect(card).toContainText('06:30');
 
-  // Wieder herausnehmen: Kolonne Admin bleibt, die neue Kolonne ist frei.
-  await chip.click();
-  await page.getByRole('button', { name: 'Herausnehmen' }).click();
-  await expect(toast(page)).toContainText(`${ostName} herausgenommen`);
-  await expect(ost).toContainText('frei');
-  await expect(card.locator('.eoDispatchCrewChip')).toHaveCount(1);
+  // Zurück in den Vorrat ziehen entfernt die Zuordnung zu dieser Kolonne; Kolonne Admin behält die Baustelle.
+  await card.dragTo(page.locator('.eoDispatchSitePool'));
+  await expect(toast(page)).toContainText(`von ${ostName} entfernt`);
+  await expect(ost.locator('.eoDispatchCard')).toHaveCount(0);
+  await expect(admin.locator('.eoDispatchCard').filter({ hasText: 'Kraus' })).toBeVisible();
 
   // Einzelnes Fahrzeug nur im Detailbereich.
-  await card.getByText(/^Details: Team/).click();
-  await card.getByRole('button', { name: 'Fahrzeug', exact: true }).click();
+  await page.getByText('Details: einzelne Mitarbeiter und Fahrzeuge je Baustelle').click();
+  const detail = page.locator('.eoDispatchDetailCard').filter({ hasText: 'Kraus' });
+  await detail.getByRole('button', { name: 'Fahrzeug', exact: true }).click();
   await page.getByRole('dialog').getByText('Mixokret 2', { exact: true }).click();
-  await expect(card.locator('.eoDispatchChip').filter({ hasText: 'Mixokret 2' })).toBeVisible();
+  await expect(detail.getByRole('button', { name: 'Mixokret 2' })).toBeVisible();
 
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'PDF', exact: true }).click();

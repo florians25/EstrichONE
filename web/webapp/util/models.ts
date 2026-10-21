@@ -343,7 +343,22 @@ export interface ContactResponse {
   email: string | null;
   notes: string | null;
   version: number;
+  phones: ContactPhone[];
+  emails: ContactEmail[];
+  salutation: string | null;
+  title: string | null;
+  billingAddress: ContactAddress | null;
+  deliveryAddress: ContactAddress | null;
+  vatId: string | null;
+  taxNumber: string | null;
+  preferredChannel: "phone" | "mobile" | "email" | "letter" | null;
+  birthday: string | null;
+  website: string | null;
 }
+
+export interface ContactPhone { kind: "mobile" | "landline" | "office" | "fax" | "private"; number: string; label: string | null }
+export interface ContactEmail { address: string; label: string | null }
+export interface ContactAddress { name: string | null; street: string | null; postalCode: string | null; city: string | null }
 
 export interface NoteDto {
   id: string;

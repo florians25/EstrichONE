@@ -14939,6 +14939,50 @@
           }
         }
       },
+      "ContactAddress": {
+        "required": [
+          "name",
+          "street",
+          "postalCode",
+          "city"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "street": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ContactChannel": {
+        "enum": [
+          "phone",
+          "mobile",
+          "email",
+          "letter",
+          null
+        ]
+      },
       "ContactDuplicateCandidate": {
         "required": [
           "contact",
@@ -14959,6 +15003,23 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "ContactEmail": {
+        "required": [
+          "address"
+        ],
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -15008,6 +15069,36 @@
           "person"
         ]
       },
+      "ContactPhone": {
+        "required": [
+          "kind",
+          "number"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/ContactPhoneKind"
+          },
+          "number": {
+            "type": "string"
+          },
+          "label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ContactPhoneKind": {
+        "enum": [
+          "mobile",
+          "landline",
+          "office",
+          "fax",
+          "private"
+        ]
+      },
       "ContactResponse": {
         "required": [
           "id",
@@ -15020,7 +15111,18 @@
           "phone",
           "email",
           "notes",
-          "version"
+          "version",
+          "phones",
+          "emails",
+          "salutation",
+          "title",
+          "billingAddress",
+          "deliveryAddress",
+          "vatId",
+          "taxNumber",
+          "preferredChannel",
+          "birthday",
+          "website"
         ],
         "type": "object",
         "properties": {
@@ -15079,6 +15181,85 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "phones": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactPhone"
+            }
+          },
+          "emails": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContactEmail"
+            }
+          },
+          "salutation": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "billingAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactAddress"
+              }
+            ]
+          },
+          "deliveryAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactAddress"
+              }
+            ]
+          },
+          "vatId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "preferredChannel": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactChannel"
+              }
+            ]
+          },
+          "birthday": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "website": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20201,6 +20382,98 @@
               "null",
               "string"
             ]
+          },
+          "phones": {
+            "maxItems": 10,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactPhone"
+            }
+          },
+          "emails": {
+            "maxItems": 10,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactEmail"
+            }
+          },
+          "salutation": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "billingAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactAddress"
+              }
+            ]
+          },
+          "deliveryAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactAddress"
+              }
+            ]
+          },
+          "vatId": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxNumber": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "preferredChannel": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactChannel"
+              }
+            ]
+          },
+          "birthday": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "website": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -22396,6 +22669,98 @@
           },
           "notes": {
             "maxLength": 4000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phones": {
+            "maxItems": 10,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactPhone"
+            }
+          },
+          "emails": {
+            "maxItems": 10,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactEmail"
+            }
+          },
+          "salutation": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "billingAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactAddress"
+              }
+            ]
+          },
+          "deliveryAddress": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactAddress"
+              }
+            ]
+          },
+          "vatId": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "taxNumber": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "preferredChannel": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactChannel"
+              }
+            ]
+          },
+          "birthday": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "website": {
+            "maxLength": 200,
             "type": [
               "null",
               "string"

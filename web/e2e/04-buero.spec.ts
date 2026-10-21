@@ -131,9 +131,12 @@ test('Kunden bearbeiten, Baustellenkarte, Firmendaten und Protokoll', async ({ p
   await expect(pageTitle(page)).toHaveText('Kunden');
   await page.getByRole('link', { name: 'Familie Kraus' }).click();
   const dialog = page.getByRole('dialog', { name: 'Kunde bearbeiten' });
-  await dialog.getByLabel('Telefon').fill('0871 654321');
+  await dialog.getByRole('textbox', { name: 'Telefonnummer 1' }).fill('0871 654321');
+  await dialog.getByRole('button', { name: 'Nummer hinzufügen' }).click();
+  await dialog.getByRole('textbox', { name: 'Telefonnummer 2' }).fill('0171 1112223');
   await dialog.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Familie Kraus/ })).toContainText('0871 654321');
+  await expect(page.getByRole('row', { name: /Familie Kraus/ })).toContainText('0171 1112223');
 
   await nav(page, 'Baustellenkarte').click();
   await expect(page.getByRole('heading', { name: 'Baustellenkarte' }).first()).toBeVisible();

@@ -11,7 +11,6 @@ import EventBus from "sap/ui/core/EventBus";
 import type { RouteMatch } from "../../util/router";
 import { get, post } from "../../util/api";
 import { addDays, isoDay, parseDay } from "../../util/days";
-import { assignmentKinds } from "../../util/labels";
 import { openForm } from "../../util/forms";
 import { planningChanged } from "../../util/assignmentDialog";
 import { enablePointerDrag, type DragSource } from "../../util/pointerDrag";
@@ -21,10 +20,13 @@ import { download, navQuery } from "../../util/planningModels";
 type Target = "person" | "vehicle" | "crew";
 const hm = (value: string) => parseLocal(value).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
+interface LaneSite { bauakteId: string; title: string; crewId: string; crewName: string; activity: string; startTime: string | null }
+
 /**
- * „Wer fährt wohin“ (C3): Schnelleinsatzplanung für heute/morgen – KOLONNEN per Ziehen oder Auswahl auf Baustellen
- * verteilen (mehrere Kolonnen je Baustelle, Hinweis bei Kolonne doppelt am Tag). Einzelne Mitarbeiter und Fahrzeuge
- * nur im Bereich „Details“. Die Einteilung ändert direkt die Einsätze der Planung. Druck und PDF für den Aushang.
+ * „Wer fährt wohin“ (C3): Kolonnen des Tages als feste Bahnen, darin die zugeordneten Baustellen. Baustellen aus dem
+ * Vorrat per Ziehen oder „Kolonne zuordnen…“ einer Kolonne zuweisen, zwischen Kolonnen verschieben oder entfernen;
+ * eine Baustelle darf mehreren Kolonnen gehören, mehrere Baustellen je Kolonne sind ein Hinweis. Einzelne Mitarbeiter
+ * und Fahrzeuge nur unter „Details“. Die Zuordnung ändert direkt die Einsätze der Planung. Druck und PDF für den Aushang.
  * @namespace estrichone.controller.planning
  */
 export default class Dispatch extends BaseController {
@@ -32,7 +34,7 @@ export default class Dispatch extends BaseController {
 
 	onInit(): void {
 		this.local({ day: isoDay(new Date()), dayKey: "heute", subtitle: "", search: "", busy: false, error: "", board: { canPlan: false },
-			sites: [], crews: [], freeCrews: 0, details: false, free: [], idleVehicles: [], away: [], appointments: [] });
+			sites: [], lanes: [], pool: [], unassigned: 0, details: false, freeText: "", idleText: "", away: [], appointments: [] });
 		EventBus.getInstance().subscribe("estrichone", "planningChanged", this.changed, this);
 	}
 
@@ -106,40 +108,32 @@ export default class Dispatch extends BaseController {
 		const q = String(m.getProperty("/search") ?? "").trim().toLowerCase();
 		const match = (...values: (string | null | undefined)[]) => !q || values.some((v) => v?.toLowerCase().includes(q));
 		const busyElsewhere = new Map(b.people.map((p) => [p.id, p.siteIds.length]));
-		const crewSites = new Map(b.crews.map((c) => [c.id, c.siteIds.length]));
-		const siteName = (id: string) => b.sites.find((s) => s.bauakteId === id)?.title ?? "";
+		const sites = new Map(b.sites.map((s) => [s.bauakteId, s]));
 		m.setProperty("/board", b);
-		m.setProperty("/sites", b.sites
-			.filter((s) => match(s.title, s.number, s.address, ...s.crews.map((c) => c.name), ...s.people.map((p) => p.name)))
-			.map((s) => ({
-				...s,
-				crews: s.crews.map((c) => {
-					const twice = (crewSites.get(c.id) ?? 0) > 1;
-					return { ...c, siteId: s.bauakteId, twice,
-						label: `${c.startTime ? `${c.startTime.slice(0, 5)} ` : ""}${c.name} · ${c.activity}`,
-						tooltip: twice ? `${c.name} ist an diesem Tag auf mehreren Baustellen.` : `${c.name}: ${c.activity}` };
-				}),
-				detailText: `Details: Team ${s.people.length} · Fahrzeuge ${s.vehicles.length}`,
-				soloJobs: s.jobs.filter((j) => !j.crewId).map((j) => ({
-					color: j.crewColor ?? assignmentKinds[j.kind]?.color ?? "",
-					label: `${j.startTime ? `${j.startTime.slice(0, 5)}${j.endTime ? `–${j.endTime.slice(0, 5)}` : ""} ` : ""}${j.activity}${j.crewName ? ` (${j.crewName})` : ""}`,
-				})),
-				people: s.people.map((p) => ({ ...p, siteId: s.bauakteId, conflict: (busyElsewhere.get(p.id) ?? 0) > 1,
-					tooltip: (busyElsewhere.get(p.id) ?? 0) > 1 ? `${p.name} ist an diesem Tag auf mehreren Baustellen.` : p.name })),
-				vehicles: s.vehicles.map((v) => ({ ...v, siteId: s.bauakteId })),
-			})));
-		m.setProperty("/crews", b.crews.filter((c) => match(c.name, c.leaderName)).map((c) => ({
+		m.setProperty("/lanes", b.crews.map((c) => ({
 			...c,
-			info: [c.leaderName ? `Leitung: ${c.leaderName}` : null, `${c.memberCount} ${c.memberCount === 1 ? "Mitarbeiter" : "Mitarbeiter"}`].filter(Boolean).join(" · "),
+			info: [c.leaderName ? `Leitung: ${c.leaderName}` : null, `${c.memberCount} Mitarbeiter`].filter(Boolean).join(" · "),
 			vehicleText: c.vehicles.map((v) => v.name).join(", "),
-			placeText: c.siteIds.length ? `auf ${c.siteIds.map(siteName).join(", ")}` : "frei",
-			placeState: c.siteIds.length > 1 ? "Warning" : c.siteIds.length ? "Information" : "Success",
 			absentText: c.absentMembers.length ? `Fehlt: ${c.absentMembers.map((a) => `${a.name} (${a.note})`).join(", ")}` : "",
+			sites: c.siteIds.map((id) => sites.get(id)).filter((s): s is DispatchSite => !!s).map((s) => {
+				const job = s.crews.find((x) => x.id === c.id);
+				return { bauakteId: s.bauakteId, number: s.number, title: s.title, address: s.address, crewId: c.id, crewName: c.name,
+					startTime: job?.startTime ?? null, activity: job?.activity ?? "" };
+			}),
 		})));
-		m.setProperty("/freeCrews", b.crews.filter((c) => c.siteIds.length === 0).length);
-		m.setProperty("/free", b.people.filter((p) => p.siteIds.length === 0 && !p.note && match(p.name, p.crewName)));
+		m.setProperty("/pool", b.sites.filter((s) => match(s.title, s.number, s.address, ...s.crews.map((c) => c.name))).map((s) => ({
+			...s, crewCount: s.crews.length, crewText: s.crews.length ? s.crews.map((c) => c.name).join(", ") : "ohne Kolonne",
+		})));
+		m.setProperty("/unassigned", b.sites.filter((s) => s.crews.length === 0).length);
+		m.setProperty("/sites", b.sites.map((s) => ({
+			...s,
+			people: s.people.map((p) => ({ ...p, siteId: s.bauakteId, conflict: (busyElsewhere.get(p.id) ?? 0) > 1,
+				tooltip: (busyElsewhere.get(p.id) ?? 0) > 1 ? `${p.name} ist an diesem Tag auf mehreren Baustellen.` : p.name })),
+			vehicles: s.vehicles.map((v) => ({ ...v, siteId: s.bauakteId })),
+		})));
+		m.setProperty("/freeText", b.people.filter((p) => p.siteIds.length === 0 && !p.note).map((p) => p.name).join(", "));
+		m.setProperty("/idleText", b.vehicles.filter((v) => v.siteIds.length === 0).map((v) => v.name).join(", "));
 		m.setProperty("/away", b.people.filter((p) => p.siteIds.length === 0 && p.note).map((p) => ({ name: p.name, note: p.note })));
-		m.setProperty("/idleVehicles", b.vehicles.filter((v) => v.siteIds.length === 0 && match(v.name, v.identifier)));
 		m.setProperty("/appointments", b.appointments.map((a) => ({
 			title: a.title, description: [a.location, a.people.map((p) => p.name).join(", ")].filter(Boolean).join(" · "),
 			time: a.allDay ? "ganztags" : `${hm(a.start)}–${hm(a.end)}`,
@@ -149,38 +143,60 @@ export default class Dispatch extends BaseController {
 		m.setProperty("/subtitle", `${day} · ${b.sites.length} ${b.sites.length === 1 ? "Baustelle" : "Baustellen"} · ${placed} von ${b.crews.length} Kolonnen eingeteilt`);
 	}
 
-	private async move(target: Target, id: string, toBauakteId: string | null, fromBauakteId: string | null = null, extra: Record<string, unknown> = {}): Promise<void> {
+	private async move(target: Target, id: string, toBauakteId: string | null, fromBauakteId: string | null = null,
+		extra: Record<string, unknown> = {}, quiet = false): Promise<boolean> {
 		const m = this.model();
 		const updated = await this.run(() => post<DispatchBoard>(`planning/dispatch/${m.getProperty("/day")}/moves`, {
 			target, id, toBauakteId, fromBauakteId, ...extra,
 		}));
-		if (!updated) return;
+		if (!updated) return false;
 		this.board = updated;
 		this.render();
-		const site = updated.sites.find((s) => s.bauakteId === toBauakteId);
+		EventBus.getInstance().publish("estrichone", "planningChanged", { source: "dispatch" });
+		if (quiet) return true;
+		const site = updated.sites.find((s) => s.bauakteId === (toBauakteId ?? fromBauakteId))?.title ?? "Baustelle";
 		const name = target === "crew" ? updated.crews.find((c) => c.id === id)?.name
 			: target === "person" ? updated.people.find((p) => p.id === id)?.name : updated.vehicles.find((v) => v.id === id)?.name;
-		MessageToast.show(toBauakteId ? `${name ?? "Eingeteilt"} → ${site?.title ?? "Baustelle"}` : `${name ?? "Einteilung"} herausgenommen`);
-		EventBus.getInstance().publish("estrichone", "planningChanged", { source: "dispatch" });
+		MessageToast.show(target === "crew"
+			? toBauakteId ? `${site} → ${name ?? "Kolonne"}` : `${site} von ${name ?? "Kolonne"} entfernt`
+			: toBauakteId ? `${name ?? "Eingeteilt"} → ${site}` : `${name ?? "Einteilung"} herausgenommen`);
+		return true;
+	}
+
+	/** Baustelle einer Kolonne zuordnen (zusätzlich zu anderen Kolonnen); Tätigkeit und Beginn von einem vorhandenen Einsatz. */
+	private assign(crewId: string, bauakteId: string): Promise<boolean> {
+		const job = this.board?.sites.find((s) => s.bauakteId === bauakteId)?.jobs[0];
+		return this.move("crew", crewId, bauakteId, null, { keep: true, activity: job?.activity ?? null, startTime: job?.startTime ?? null });
+	}
+
+	/** Baustelle von einer Kolonne zur anderen: dort mit gleicher Tätigkeit und Beginn anlegen, hier entfernen. */
+	private async reassign(fromCrewId: string, toCrewId: string, bauakteId: string): Promise<void> {
+		const job = this.board?.sites.find((s) => s.bauakteId === bauakteId)?.crews.find((c) => c.id === fromCrewId);
+		if (await this.move("crew", toCrewId, bauakteId, null, { keep: true, activity: job?.activity ?? null, startTime: job?.startTime ?? null }, true)) {
+			await this.move("crew", fromCrewId, null, bauakteId, {}, true);
+			const site = this.board?.sites.find((s) => s.bauakteId === bauakteId)?.title ?? "Baustelle";
+			MessageToast.show(`${site} → ${this.board?.crews.find((c) => c.id === toCrewId)?.name ?? "Kolonne"}`);
+		}
 	}
 
 	private async dropped(source: DragSource, target: string): Promise<void> {
-		if (source.kind !== "person" && source.kind !== "vehicle" && source.kind !== "crew") return;
-		if (target === "free") {
-			if (source.from) await this.move(source.kind, source.id, null, source.from);
+		if (source.kind !== "site") return;
+		if (target === "pool") {
+			if (source.from) await this.move("crew", source.from, null, source.id);
 			return;
 		}
 		if (target === source.from) return;
-		await this.move(source.kind, source.id, target, source.from);
+		if (source.from) await this.reassign(source.from, target, source.id);
+		else await this.assign(target, source.id);
 	}
 
 	/** Kolonne wählen (statt Ziehen, z. B. am Tablet). */
-	private chooseCrew(title: string, onPick: (id: string) => void): void {
+	private chooseCrew(title: string, onPick: (id: string) => void, except?: string): void {
 		const b = this.board;
 		if (!b) return;
 		const siteName = (id: string) => b.sites.find((s) => s.bauakteId === id)?.title ?? "";
-		const items = b.crews.map((c) => new StandardListItem({
-			title: c.name, description: c.siteIds.length ? `auf ${c.siteIds.map(siteName).join(", ")}` : "frei",
+		const items = b.crews.filter((c) => c.id !== except).map((c) => new StandardListItem({
+			title: c.name, description: c.siteIds.length ? `hat ${c.siteIds.map(siteName).join(", ")}` : "noch keine Baustelle",
 			info: c.absentMembers.length ? `${c.absentMembers.length} fehlt` : `${c.memberCount} MA`, infoState: c.absentMembers.length ? "Warning" : "None",
 			icon: "sap-icon://group",
 		}).data("id", c.id));
@@ -200,47 +216,42 @@ export default class Dispatch extends BaseController {
 		dialog.open("");
 	}
 
-	onAddCrew(e: Event): void {
-		const s = this.site(e);
-		// Zusätzlich: Eine Kolonne, die schon woanders ist, wird hier dazu genommen – umsetzen über das Kolonnen-Menü.
-		this.chooseCrew(`Kolonne für ${s.title}`, (id) => {
-			const placed = (this.board?.crews.find((c) => c.id === id)?.siteIds.length ?? 0) > 0;
-			void this.move("crew", id, s.bauakteId, null, placed ? { keep: true } : {});
-		});
+	/** Vorrat: „Kolonne zuordnen…“. */
+	onAssignSite(e: Event): void {
+		const s = (e.getSource() as Control).getBindingContext("view")?.getObject() as DispatchSite;
+		this.chooseCrew(`Kolonne zuordnen: ${s.title}`, (crewId) => void this.assign(crewId, s.bauakteId));
 	}
 
-	onAssignCrew(e: Event): void {
-		const c = (e.getSource() as Control).getBindingContext("view")?.getObject() as { id: string; name: string };
-		this.pickSite(`${c.name} einteilen`, (site) => void this.move("crew", c.id, site));
-	}
-
-	onCrewMenu(e: Event): void {
+	/** Baustelle in einer Kolonne: verschieben, weitere Kolonne, Tätigkeit/Beginn, entfernen. */
+	onSiteMenu(e: Event): void {
 		if (this.board?.canPlan !== true) return;
 		const source = e.getSource() as Button;
-		const item = source.getBindingContext("view")?.getObject() as { id: string; name: string; siteId: string; activity: string; startTime: string | null };
+		const item = source.getBindingContext("view")?.getObject() as LaneSite;
 		const sheet = new ActionSheet({
-			title: item.name, placement: "Bottom", showCancelButton: true,
+			title: item.title, placement: "Bottom", showCancelButton: true,
 			buttons: [
-				new Button({ text: "Auf andere Baustelle", icon: "sap-icon://journey-change", press: () => this.pickSite(`${item.name} umsetzen`, (site) => void this.move("crew", item.id, site, item.siteId)) }),
-				new Button({ text: "Zusätzlich auf weitere Baustelle", icon: "sap-icon://add", press: () => this.pickSite(`${item.name} zusätzlich`, (site) => void this.move("crew", item.id, site, null, { keep: true })) }),
-				new Button({ text: "Tätigkeit und Beginn", icon: "sap-icon://edit", press: () => void this.editCrewJob(item) }),
-				new Button({ text: "Herausnehmen", icon: "sap-icon://decline", type: "Reject", press: () => void this.move("crew", item.id, null, item.siteId) }),
+				new Button({ text: "Andere Kolonne", icon: "sap-icon://journey-change",
+					press: () => this.chooseCrew(`${item.title}: andere Kolonne`, (crewId) => void this.reassign(item.crewId, crewId, item.bauakteId), item.crewId) }),
+				new Button({ text: "Weitere Kolonne zuordnen", icon: "sap-icon://add",
+					press: () => this.chooseCrew(`${item.title}: weitere Kolonne`, (crewId) => void this.assign(crewId, item.bauakteId), item.crewId) }),
+				new Button({ text: "Tätigkeit und Beginn", icon: "sap-icon://edit", press: () => void this.editJob(item) }),
+				new Button({ text: "Von Kolonne entfernen", icon: "sap-icon://decline", type: "Reject", press: () => void this.move("crew", item.crewId, null, item.bauakteId) }),
 			],
 			afterClose: () => setTimeout(() => sheet.destroy(), 0),
 		});
 		sheet.openBy(source);
 	}
 
-	private async editCrewJob(item: { id: string; name: string; siteId: string; activity: string; startTime: string | null }): Promise<void> {
+	private async editJob(item: LaneSite): Promise<void> {
 		const result = await openForm<DispatchBoard>({
-			title: `${item.name}: Tätigkeit und Beginn`, width: "30rem",
+			title: `${item.crewName}: Tätigkeit und Beginn`, width: "30rem",
 			initial: { activity: item.activity, startTime: item.startTime },
 			fields: [
 				{ key: "activity", label: "Tätigkeit", required: true, maxLength: 200 },
 				{ key: "startTime", label: "Beginn vor Ort", type: "time" },
 			],
 			submit: (v) => post<DispatchBoard>(`planning/dispatch/${this.model().getProperty("/day")}/moves`, {
-				target: "crew", id: item.id, toBauakteId: item.siteId, keep: true, activity: v.activity, startTime: v.startTime || null,
+				target: "crew", id: item.crewId, toBauakteId: item.bauakteId, keep: true, activity: v.activity, startTime: v.startTime || null,
 			}),
 		});
 		if (result) {
@@ -254,8 +265,8 @@ export default class Dispatch extends BaseController {
 		return (e.getSource() as Control).getBindingContext("view")?.getObject() as DispatchSite;
 	}
 
-	/** Auswahl statt Ziehen (z. B. am Tablet): Mitarbeiter bzw. Fahrzeug für die Baustelle wählen. */
-	private choose(target: Target, title: string, onPick: (id: string) => void): void {
+	/** Details: Mitarbeiter bzw. Fahrzeug für die Baustelle wählen. */
+	private choose(target: "person" | "vehicle", title: string, onPick: (id: string) => void): void {
 		const b = this.board;
 		if (!b) return;
 		const siteName = (id: string) => b.sites.find((s) => s.bauakteId === id)?.title ?? "";
@@ -278,7 +289,6 @@ export default class Dispatch extends BaseController {
 				const item = ev.getParameter("selectedItem") as StandardListItem | null;
 				if (item) onPick(String(item.data("id")));
 			},
-			cancel: () => undefined,
 		});
 		dialog.attachEventOnce("confirm", () => setTimeout(() => dialog.destroy(), 0));
 		dialog.attachEventOnce("cancel", () => setTimeout(() => dialog.destroy(), 0));
@@ -297,10 +307,7 @@ export default class Dispatch extends BaseController {
 
 	private pickSite(title: string, onPick: (bauakteId: string) => void): void {
 		const b = this.board;
-		if (!b || b.sites.length === 0) {
-			this.onAddSite();
-			return;
-		}
+		if (!b) return;
 		const items = b.sites.map((s) => new StandardListItem({ title: s.title, description: s.address ?? "", info: s.startTime?.slice(0, 5) ?? "", icon: "sap-icon://building" })
 			.data("id", s.bauakteId));
 		const dialog = new SelectDialog({
@@ -315,21 +322,11 @@ export default class Dispatch extends BaseController {
 		dialog.open("");
 	}
 
-	onAssignPerson(e: Event): void {
-		const p = (e.getSource() as Control).getBindingContext("view")?.getObject() as { id: string; name: string };
-		this.pickSite(`${p.name} einteilen`, (site) => void this.move("person", p.id, site));
-	}
-
-	onAssignVehicle(e: Event): void {
-		const v = (e.getSource() as Control).getBindingContext("view")?.getObject() as { id: string; name: string };
-		this.pickSite(`${v.name} einteilen`, (site) => void this.move("vehicle", v.id, site));
-	}
-
-	/** Klick auf eine Person der Baustelle: umsetzen oder herausnehmen. */
+	/** Details: Klick auf Person/Fahrzeug einer Baustelle – umsetzen, zusätzlich, herausnehmen. */
 	onPersonMenu(e: Event): void { this.chipMenu(e, "person"); }
 	onVehicleMenu(e: Event): void { this.chipMenu(e, "vehicle"); }
 
-	private chipMenu(e: Event, target: Target): void {
+	private chipMenu(e: Event, target: "person" | "vehicle"): void {
 		if (this.board?.canPlan !== true) return;
 		const source = e.getSource() as Button;
 		const item = source.getBindingContext("view")?.getObject() as { id: string; name: string; siteId: string };
@@ -345,13 +342,13 @@ export default class Dispatch extends BaseController {
 		sheet.openBy(source);
 	}
 
-	/** Neue Baustelle für den Tag: Bauakte und Kolonne wählen (legt den Einsatz der Kolonne an). */
+	/** Weitere Baustelle (auch ohne Planung an dem Tag): Bauakte und Kolonne wählen – legt den Einsatz der Kolonne an. */
 	async onAddSite(): Promise<void> {
 		const b = this.board;
 		if (!b) return;
-		const options = b.crews.map((c) => ({ key: c.id, text: c.name, additionalText: c.siteIds.length ? "eingeteilt" : "frei" }));
+		const options = b.crews.map((c) => ({ key: c.id, text: c.name, additionalText: c.siteIds.length ? `${c.siteIds.length} Baustelle(n)` : "frei" }));
 		const result = await openForm<DispatchBoard>({
-			title: "Baustelle einteilen", width: "36rem",
+			title: "Baustelle zuordnen", width: "36rem",
 			intro: "Nur vorhandene Bauvorhaben. Der Einsatz der Kolonne wird in der Planung angelegt und kann dort weiter bearbeitet werden.",
 			fields: [
 				{ key: "bauakteId", label: "Bauakte", type: "bauakte", required: true },
@@ -361,14 +358,13 @@ export default class Dispatch extends BaseController {
 			],
 			initial: { startTime: "07:00:00" },
 			submit: (v) => post<DispatchBoard>(`planning/dispatch/${this.model().getProperty("/day")}/moves`, {
-				target: "crew", id: v.crewId, toBauakteId: v.bauakteId, keep: (b.crews.find((c) => c.id === v.crewId)?.siteIds.length ?? 0) > 0,
-				activity: v.activity || null, startTime: v.startTime || null,
+				target: "crew", id: v.crewId, toBauakteId: v.bauakteId, keep: true, activity: v.activity || null, startTime: v.startTime || null,
 			}),
 		});
 		if (result) {
 			this.board = result;
 			this.render();
-			MessageToast.show("Baustelle eingeteilt");
+			MessageToast.show("Baustelle zugeordnet");
 			planningChanged();
 		}
 	}

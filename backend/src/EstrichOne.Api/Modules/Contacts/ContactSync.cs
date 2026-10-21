@@ -54,6 +54,24 @@ internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permi
 
         var contact = Contact.Create(op.EntityId, kind, name);
         contact.Update(kind, name, null, street, postalCode, city, phone, email, notes);
+        // Erweiterte Felder (neuere Apps); ältere senden nur phone/email.
+        var details = new SyncContactDetails(
+            p.ContainsKey("phones") ? SyncPayload.Read<List<ContactPhone>>(p, "phones") : null,
+            p.ContainsKey("emails") ? SyncPayload.Read<List<ContactEmail>>(p, "emails") : null,
+            Clean(SyncPayload.Read<string>(p, "salutation")), Clean(SyncPayload.Read<string>(p, "title")),
+            p.ContainsKey("billingAddress") ? SyncPayload.Read<ContactAddress>(p, "billingAddress") : null,
+            p.ContainsKey("deliveryAddress") ? SyncPayload.Read<ContactAddress>(p, "deliveryAddress") : null,
+            Clean(SyncPayload.Read<string>(p, "vatId")), Clean(SyncPayload.Read<string>(p, "taxNumber")),
+            p.ContainsKey("preferredChannel") ? SyncPayload.Read<ContactChannel?>(p, "preferredChannel") : null,
+            p.ContainsKey("birthday") ? SyncPayload.Read<DateOnly?>(p, "birthday") : null,
+            Clean(SyncPayload.Read<string>(p, "website")));
+        if ((details.Phones ?? []).Count > 10 || (details.Emails ?? []).Count > 10
+            || (details.Phones ?? []).Any(x => x.Number is { Length: > 50 }) || (details.Emails ?? []).Any(x => x.Address is { Length: > 320 }))
+        {
+            throw new SyncValidationException("Zu viele oder zu lange Telefonnummern/E-Mail-Adressen.");
+        }
+
+        ContactEndpoints.ApplyDetails(contact, details);
         db.Add(contact);
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: contact.Version,
@@ -79,3 +97,8 @@ internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permi
         }
     }
 }
+
+internal sealed record SyncContactDetails(
+    IReadOnlyList<ContactPhone>? Phones, IReadOnlyList<ContactEmail>? Emails, string? Salutation, string? Title,
+    ContactAddress? BillingAddress, ContactAddress? DeliveryAddress, string? VatId, string? TaxNumber,
+    ContactChannel? PreferredChannel, DateOnly? Birthday, string? Website) : IContactDetailsRequest;

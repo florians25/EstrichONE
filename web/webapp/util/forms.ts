@@ -18,8 +18,11 @@ import SegmentedButton from "sap/m/SegmentedButton";
 import SegmentedButtonItem from "sap/m/SegmentedButtonItem";
 import MessageStrip from "sap/m/MessageStrip";
 import Text from "sap/m/Text";
-import Title from "sap/m/Title";
+import VBox from "sap/m/VBox";
+import HBox from "sap/m/HBox";
+import FlexItemData from "sap/m/FlexItemData";
 import SimpleForm from "sap/ui/layout/form/SimpleForm";
+import CoreTitle from "sap/ui/core/Title";
 import Item from "sap/ui/core/Item";
 import ListItem from "sap/ui/core/ListItem";
 import SuggestionItem from "sap/m/SuggestionItem";
@@ -33,7 +36,7 @@ import type { BauaktePage, ContactResponse } from "./models";
 
 export type FieldType =
 	| "text" | "textarea" | "email" | "password" | "number" | "integer" | "date" | "time" | "select" | "combo" | "multi" | "switch"
-	| "checkbox" | "segmented" | "customer" | "bauakte" | "section" | "info";
+	| "checkbox" | "segmented" | "customer" | "bauakte" | "section" | "info" | "phones" | "emails";
 
 export interface Option {
 	key: string;
@@ -290,7 +293,10 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 			c.attachSelectionFinish(() => notify(c.getSelectedKeys()));
 			return { field, control: c, read: () => c.getSelectedKeys(), write: (v) => c.setSelectedKeys((v as string[]) ?? []) };
 		}
-		case "switch": {
+		case "phones":
+		case "emails":
+			return listField(id, field, initial, notify);
+				case "switch": {
 			const c = new Switch(id, { state: !!initial, customTextOn: "Ja", customTextOff: "Nein" });
 			c.attachChange(() => notify(c.getState()));
 			return { field, control: c, read: () => c.getState(), write: (v) => c.setState(!!v) };
@@ -316,8 +322,10 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 			return { field, ...b };
 		}
 		case "section": {
-			const c = new Title(id, { text: field.label, level: "H5" });
-			return { field, control: c, read: () => undefined, write: () => undefined };
+			// sap.ui.core.Title beginnt in der SimpleForm eine neue Gruppe mit Überschrift über die volle Breite;
+			// sap.m.Title würde wie ein Feld neben das vorige Feld gesetzt.
+			const c = new CoreTitle(id, { text: field.label, level: "H5" });
+			return { field, control: c as unknown as Control, read: () => undefined, write: () => undefined };
 		}
 		case "info": {
 			const c = new Text(id, { text: field.help ?? field.label });
@@ -487,4 +495,49 @@ export function prompt(title: string, label: string, options: { submitText?: str
 		initial: { value: options.initial ?? "" },
 		submit: async (values) => String(values.value ?? ""),
 	});
+}
+
+/** Telefonarten für Listenfelder „phones“. */
+export const phoneKinds: Option[] = [
+	{ key: "mobile", text: "Mobil" }, { key: "landline", text: "Festnetz" }, { key: "office", text: "Büro" },
+	{ key: "fax", text: "Fax" }, { key: "private", text: "Privat" },
+];
+
+/** Mehrere Telefonnummern (Art, Nummer, Bezeichnung) bzw. E-Mail-Adressen (Adresse, Bezeichnung) mit Hinzufügen/Entfernen. */
+function listField(id: string, field: Field, initial: unknown, notify: (v: unknown) => void): Bound {
+	const phones = field.type === "phones";
+	type Row = { kind?: string; value: string; label: string };
+	const box = new VBox(id, { width: "100%" });
+	const rows: { row: Row; kind?: Select; value: Input; label: Input; line: HBox }[] = [];
+	const read = () => rows.map((r) => ({ kind: r.kind?.getSelectedKey(), value: r.value.getValue().trim(), label: r.label.getValue().trim() }))
+		.filter((r) => r.value)
+		.map((r) => phones ? { kind: r.kind || "landline", number: r.value, label: r.label || null } : { address: r.value, label: r.label || null });
+	const add = (row: Row) => {
+		const n = rows.length + 1;
+		const kind = phones ? new Select({ selectedKey: row.kind ?? "mobile", width: "7.5rem", tooltip: `Art ${n}` }) : undefined;
+		for (const o of phones ? phoneKinds : []) kind!.addItem(new Item({ key: o.key, text: o.text }));
+		const value = new Input({ value: row.value, width: "100%", type: phones ? "Tel" : "Email", maxLength: phones ? 50 : 320,
+			placeholder: phones ? `Nummer ${n}` : `E-Mail ${n}`, liveChange: () => notify(read()) });
+		value.setTooltip(`${phones ? "Telefonnummer" : "E-Mail-Adresse"} ${n}`);
+		const label = new Input({ value: row.label, width: "9rem", maxLength: 50, placeholder: "Bezeichnung (optional)", tooltip: `Bezeichnung ${n}` });
+		const line = new HBox({ alignItems: "Center", width: "100%", renderType: "Bare" });
+		const entry = { row, kind, value, label, line };
+		const remove = new Button({ icon: "sap-icon://decline", type: "Transparent", tooltip: `${phones ? "Nummer" : "Adresse"} entfernen`,
+			press: () => { rows.splice(rows.indexOf(entry), 1); box.removeItem(line); line.destroy(); notify(read()); } });
+		if (kind) line.addItem(kind.addStyleClass("sapUiTinyMarginEnd"));
+		value.setLayoutData(new FlexItemData({ growFactor: 1 }));
+		line.addItem(value).addItem(label.addStyleClass("sapUiTinyMarginBegin")).addItem(remove);
+		rows.push(entry);
+		box.insertItem(line, rows.length - 1);
+	};
+	box.addItem(new Button({ text: phones ? "Nummer hinzufügen" : "E-Mail hinzufügen", icon: "sap-icon://add", type: "Transparent",
+		press: () => add({ value: "", label: "" }) }));
+	const write = (v: unknown) => {
+		for (const r of rows.splice(0)) { box.removeItem(r.line); r.line.destroy(); }
+		const list = (v as { kind?: string; number?: string; address?: string; label?: string | null }[] | null) ?? [];
+		for (const x of list) add({ kind: x.kind, value: (phones ? x.number : x.address) ?? "", label: x.label ?? "" });
+		if (rows.length === 0) add({ value: "", label: "" });
+	};
+	write(initial);
+	return { field, control: box, read, write };
 }

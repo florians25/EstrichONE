@@ -47,9 +47,15 @@ internal static class ContactDuplicates
         var query = db.Set<Contact>().AsNoTracking();
         var patterns = tokens.Where(t => t.Length >= 3).Select(t => "%" + t[..Math.Min(t.Length, 4)] + "%").Distinct().ToList();
         var phoneTail = digits is { Length: >= 6 } ? "%" + digits[^6..] : null;
+        // Weitere E-Mail-Adressen stehen in der jsonb-Liste.
+        var mailIds = mail is null ? [] : await db.Database.SqlQuery<Guid>($"""
+            SELECT id AS "Value" FROM contacts
+            WHERE deleted_at IS NULL AND EXISTS (SELECT 1 FROM jsonb_array_elements(emails) e WHERE lower(e->>'address') = lower({mail}))
+            """).ToListAsync(cancellationToken);
         var candidates = await query.Where(c =>
                 patterns.Any(p => EF.Functions.ILike(c.Name, p))
                 || (mail != null && c.Email != null && EF.Functions.ILike(c.Email, mail))
+                || mailIds.Contains(c.Id)
                 || (postal != null && c.PostalCode == postal)
                 || (phoneTail != null && c.Phone != null))
             .OrderBy(c => c.Name).Take(2000).ToListAsync(cancellationToken);
@@ -77,14 +83,16 @@ internal static class ContactDuplicates
                 }
             }
 
-            if (digits is { Length: >= 6 } && Digits(contact.Phone) is { } theirs && (theirs.EndsWith(digits[^Math.Min(digits.Length, 8)..], StringComparison.Ordinal)
-                || digits.EndsWith(theirs[^Math.Min(theirs.Length, 8)..], StringComparison.Ordinal)))
+            // Alle Nummern des Kunden (Mobil, Festnetz, Büro …), nicht nur die erste.
+            if (digits is { Length: >= 6 } && contact.Phones.Select(x => x.Number).Append(contact.Phone).Select(Digits).Any(theirs => theirs is { Length: > 0 }
+                && (theirs.EndsWith(digits[^Math.Min(digits.Length, 8)..], StringComparison.Ordinal)
+                    || digits.EndsWith(theirs[^Math.Min(theirs.Length, 8)..], StringComparison.Ordinal))))
             {
                 score += 45;
                 reasons.Add("gleiche Telefonnummer");
             }
 
-            if (mail is not null && string.Equals(contact.Email?.Trim(), mail, StringComparison.OrdinalIgnoreCase))
+            if (mail is not null && contact.Emails.Select(x => x.Address).Append(contact.Email).Any(x => string.Equals(x?.Trim(), mail, StringComparison.OrdinalIgnoreCase)))
             {
                 score += 50;
                 reasons.Add("gleiche E-Mail-Adresse");

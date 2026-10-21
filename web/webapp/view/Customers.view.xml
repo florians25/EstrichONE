@@ -35,12 +35,22 @@
 				<items>
 					<ColumnListItem>
 						<Text text="{= ${view>customerNumber} || '–' }" class="eoTabular"/>
-						<Link text="{view>name}" press=".onEdit" emphasized="true"/>
-						<Text text="{= ${view>kind} === 'company' ? 'Firma' : 'Person' }"/>
+						<VBox>
+							<Link text="{view>name}" press=".onEdit" emphasized="true"/>
+							<Text text="{= [${view>salutation}, ${view>title}].filter(Boolean).join(' ') }" class="eoMuted" visible="{= !!${view>salutation} || !!${view>title} }"/>
+						</VBox>
+						<Text text="{= ${view>kind} === 'company' ? 'Firma' : 'Privat' }"/>
 						<Text text="{= ${view>street} || '–' }"/>
 						<Text text="{= ((${view>postalCode} || '') + ' ' + (${view>city} || '')).trim() || '–' }"/>
-						<Link text="{= ${view>phone} || '–' }" href="tel:{view>phone}" enabled="{= !!${view>phone} }"/>
-						<Link text="{= ${view>email} || '–' }" href="mailto:{view>email}" enabled="{= !!${view>email} }"/>
+						<VBox>
+							<Link text="{= ${view>phone} || '–' }" href="tel:{view>phone}" enabled="{= !!${view>phone} }"/>
+							<Text text="{view>morePhones}" class="eoMuted" visible="{= !!${view>morePhones} }" wrapping="true"/>
+						</VBox>
+						<VBox>
+							<Link text="{= ${view>email} || '–' }" href="mailto:{view>email}" enabled="{= !!${view>email} }"/>
+							<Text text="{= ${view>emails} &amp;&amp; ${view>emails}.length > 1 ? '+' + (${view>emails}.length - 1) + ' weitere' : '' }" class="eoMuted"
+								visible="{= !!${view>emails} &amp;&amp; ${view>emails}.length > 1 }"/>
+						</VBox>
 						<Link text="Bauakten" href="/bauakten?kunde={view>id}"/>
 					</ColumnListItem>
 				</items>

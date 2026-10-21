@@ -13,6 +13,9 @@
 .eoDispatchPool { flex: 0 0 19rem; max-width: 100%; }
 .eoDispatchSites { flex: 1 1 24rem; min-width: 0; }
 .eoDispatchGrid { gap: 0.75rem; }
+.eoDispatchLanes { gap: 0.75rem; }
+.eoDispatchLane { box-sizing: border-box; padding: 0.5rem 0.75rem 0.75rem; min-height: 5rem; border: 1px dashed var(--sapGroup_TitleBorderColor); border-radius: 0.5rem; }
+.eoDispatchLaneHead { gap: 0.25rem; margin-bottom: 0.5rem; }
 .eoDispatchCard { box-sizing: border-box; padding: 0.75rem; background: var(--sapTile_Background); border: 1px solid var(--sapTile_BorderColor);
 	border-radius: var(--sapTile_BorderCornerRadius, 0.75rem); box-shadow: var(--sapContent_Shadow0); max-width: 100%; }
 .eoDispatchCardHead { gap: 0.25rem; margin-bottom: 0.25rem; }

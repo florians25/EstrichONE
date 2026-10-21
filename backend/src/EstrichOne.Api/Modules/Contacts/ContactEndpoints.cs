@@ -10,7 +10,29 @@ namespace EstrichOne.Api.Modules.Contacts;
 
 public sealed record ContactResponse(
     Guid Id, ContactKind Kind, string Name, string? CustomerNumber, string? Street, string? PostalCode, string? City,
-    string? Phone, string? Email, string? Notes, long Version);
+    string? Phone, string? Email, string? Notes, long Version,
+    IReadOnlyList<ContactPhone> Phones, IReadOnlyList<ContactEmail> Emails, string? Salutation, string? Title,
+    ContactAddress? BillingAddress, ContactAddress? DeliveryAddress, string? VatId, string? TaxNumber,
+    ContactChannel? PreferredChannel, DateOnly? Birthday, string? Website);
+
+/// <summary>
+/// Erweiterte Kundendaten im Anlegen/Ändern. Sendet ein Client keines dieser Felder (ältere App), bleiben sie
+/// unverändert; <c>phone</c>/<c>email</c> ersetzen dann nur die erste Nummer bzw. Adresse.
+/// </summary>
+public interface IContactDetailsRequest
+{
+    IReadOnlyList<ContactPhone>? Phones { get; }
+    IReadOnlyList<ContactEmail>? Emails { get; }
+    string? Salutation { get; }
+    string? Title { get; }
+    ContactAddress? BillingAddress { get; }
+    ContactAddress? DeliveryAddress { get; }
+    string? VatId { get; }
+    string? TaxNumber { get; }
+    ContactChannel? PreferredChannel { get; }
+    DateOnly? Birthday { get; }
+    string? Website { get; }
+}
 
 public sealed record SaveContactRequest(
     [property: Required] Guid Id,
@@ -22,7 +44,18 @@ public sealed record SaveContactRequest(
     [property: MaxLength(100)] string? City = null,
     [property: MaxLength(50)] string? Phone = null,
     [property: MaxLength(320), EmailAddress] string? Email = null,
-    [property: MaxLength(4000)] string? Notes = null);
+    [property: MaxLength(4000)] string? Notes = null,
+    [property: MaxLength(10)] IReadOnlyList<ContactPhone>? Phones = null,
+    [property: MaxLength(10)] IReadOnlyList<ContactEmail>? Emails = null,
+    [property: MaxLength(30)] string? Salutation = null,
+    [property: MaxLength(50)] string? Title = null,
+    ContactAddress? BillingAddress = null,
+    ContactAddress? DeliveryAddress = null,
+    [property: MaxLength(30)] string? VatId = null,
+    [property: MaxLength(30)] string? TaxNumber = null,
+    ContactChannel? PreferredChannel = null,
+    DateOnly? Birthday = null,
+    [property: MaxLength(200)] string? Website = null) : IContactDetailsRequest;
 
 public sealed record UpdateContactRequest(
     long Version,
@@ -34,7 +67,18 @@ public sealed record UpdateContactRequest(
     [property: MaxLength(100)] string? City = null,
     [property: MaxLength(50)] string? Phone = null,
     [property: MaxLength(320), EmailAddress] string? Email = null,
-    [property: MaxLength(4000)] string? Notes = null);
+    [property: MaxLength(4000)] string? Notes = null,
+    [property: MaxLength(10)] IReadOnlyList<ContactPhone>? Phones = null,
+    [property: MaxLength(10)] IReadOnlyList<ContactEmail>? Emails = null,
+    [property: MaxLength(30)] string? Salutation = null,
+    [property: MaxLength(50)] string? Title = null,
+    ContactAddress? BillingAddress = null,
+    ContactAddress? DeliveryAddress = null,
+    [property: MaxLength(30)] string? VatId = null,
+    [property: MaxLength(30)] string? TaxNumber = null,
+    ContactChannel? PreferredChannel = null,
+    DateOnly? Birthday = null,
+    [property: MaxLength(200)] string? Website = null) : IContactDetailsRequest;
 
 internal static class ContactEndpoints
 {
@@ -111,9 +155,15 @@ internal static class ContactEndpoints
                 extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
         }
 
+        if (Invalid(request) is { } invalid)
+        {
+            return invalid;
+        }
+
         var contact = Contact.Create(request.Id, request.Kind, request.Name);
         contact.Update(request.Kind, request.Name, request.CustomerNumber, request.Street, request.PostalCode, request.City,
             request.Phone, request.Email, request.Notes);
+        ApplyDetails(contact, request);
         db.Add(contact);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Created($"/api/v1/contacts/{contact.Id}", ToResponse(contact));
@@ -142,9 +192,15 @@ internal static class ContactEndpoints
                 extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
         }
 
+        if (Invalid(request) is { } invalid)
+        {
+            return invalid;
+        }
+
         static string? Clean(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
         contact.Update(request.Kind, request.Name, number, Clean(request.Street), Clean(request.PostalCode), Clean(request.City),
             Clean(request.Phone), Clean(request.Email), Clean(request.Notes));
+        ApplyDetails(contact, request);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToResponse(contact));
     }
@@ -170,5 +226,37 @@ internal static class ContactEndpoints
     }
 
     internal static ContactResponse ToResponse(Contact c) => new(c.Id, c.Kind, c.Name, c.CustomerNumber, c.Street, c.PostalCode,
-        c.City, c.Phone, c.Email, c.Notes, c.Version);
+        c.City, c.Phone, c.Email, c.Notes, c.Version, c.Phones, c.Emails, c.Salutation, c.Title, c.BillingAddress, c.DeliveryAddress,
+        c.VatId, c.TaxNumber, c.PreferredChannel, c.Birthday, c.Website);
+
+    private static bool HasDetails(IContactDetailsRequest r) =>
+        r.Phones is not null || r.Emails is not null || r.Salutation is not null || r.Title is not null || r.BillingAddress is not null
+        || r.DeliveryAddress is not null || r.VatId is not null || r.TaxNumber is not null || r.PreferredChannel is not null
+        || r.Birthday is not null || r.Website is not null;
+
+    internal static void ApplyDetails(Contact contact, IContactDetailsRequest r)
+    {
+        if (!HasDetails(r))
+        {
+            return;
+        }
+
+        contact.UpdateDetails(new ContactDetails(r.Phones ?? contact.Phones, r.Emails ?? contact.Emails, r.Salutation, r.Title, r.BillingAddress,
+            r.DeliveryAddress, r.VatId, r.TaxNumber, r.PreferredChannel, r.Birthday, r.Website));
+    }
+
+    private static ProblemHttpResult? Invalid(IContactDetailsRequest r)
+    {
+        static bool TooLong(string? v, int max) => v is not null && v.Trim().Length > max;
+        static bool BadAddress(ContactAddress? a) => a is not null && (TooLong(a.Name, 200) || TooLong(a.Street, 200) || TooLong(a.PostalCode, 10) || TooLong(a.City, 100));
+        var problem = (r.Phones ?? []).Any(p => TooLong(p.Number, 50) || TooLong(p.Label, 50)) ? "Telefonnummern höchstens 50 Zeichen, Bezeichnung höchstens 50."
+            : (r.Emails ?? []).Any(e => TooLong(e.Address, 320) || TooLong(e.Label, 50)
+                || (!string.IsNullOrWhiteSpace(e.Address) && !System.Text.RegularExpressions.Regex.IsMatch(e.Address.Trim(), @"^[^\s@]+@[^\s@]+\.[^\s@]+$")))
+                ? "Bitte gültige E-Mail-Adressen angeben."
+            : BadAddress(r.BillingAddress) || BadAddress(r.DeliveryAddress) ? "Die abweichende Anschrift ist zu lang."
+            : r.Birthday is { } b && (b > DateOnly.FromDateTime(DateTime.Today) || b.Year < 1900) ? "Bitte ein gültiges Geburtsdatum angeben."
+            : null;
+        return problem is null ? null : TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "Ungültige Angaben",
+            detail: problem, extensions: new Dictionary<string, object?> { ["code"] = "VALIDATION_FAILED" });
+    }
 }
