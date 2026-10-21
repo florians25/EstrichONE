@@ -187,7 +187,17 @@
 									<ObjectStatus text="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastCheck/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastCheck/status', formatter: '.formatter.backupEntryState'}" />
 									<Label text="Wiederherstellungstest" />
 									<ObjectStatus text="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>/status/backup/lastRestoreTest/at', formatter: '.formatter.dateTime'}" state="{path: 'detail>/status/backup/lastRestoreTest/status', formatter: '.formatter.backupEntryState'}" />
+									<Label text="Archivserver" />
+									<ObjectStatus id="archiveState"
+										text="{= ${detail>/status/backup/archive/connected} ? ${detail>/status/backup/archive/serverName} + ' · ' + ${detail>/status/backup/archive/archived} + ' archiviert, ' + ${detail>/status/backup/archive/pending} + ' wartend, ' + ${detail>/status/backup/archive/failed} + ' fehlgeschlagen' + (${detail>/status/backup/archive/lastError} ? ' · ' + ${detail>/status/backup/archive/lastError} : '') : 'nicht gekoppelt (Suite: System → Archiv)' }"
+										state="{= !${detail>/status/backup/archive/connected} ? 'None' : (${detail>/status/backup/archive/failed} > 0 || !!${detail>/status/backup/archive/lastError}) ? 'Warning' : 'Success' }" />
 								</f:SimpleForm>
+								<List id="backupTargets" headerText="Backup-Ziele auf anderer Hardware" items="{detail>/status/backup/targets}"
+									noDataText="Keine gekoppelt (Suite: System → Backup-Ziele). Für Hosting empfohlen: ein Backup-Ziel je Server, siehe hosting/README.md." class="sapUiSmallMarginBottom">
+									<StandardListItem title="{detail>name}"
+										description="{path: 'detail>lastRun/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>lastRun/at', formatter: '.formatter.dateTime'}"
+										icon="sap-icon://it-host" />
+								</List>
 								<HBox>
 									<Button id="actBackup" text="Jetzt sichern" icon="sap-icon://save" press=".onAction" app:action="backup"
 										enabled="{= !${detail>/summary/openOperation} &amp;&amp; (${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Locked' || ${detail>/summary/state} === 'Failed') }" class="sapUiSmallMarginEnd" />

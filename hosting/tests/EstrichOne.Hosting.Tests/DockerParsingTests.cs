@@ -113,4 +113,23 @@ public sealed class DockerParsingTests
         BackupState.Read(temp.Path, now.AddHours(40)).Healthy.ShouldBeFalse();
         BackupState.Read(Path.Combine(temp.Path, "fehlt"), now).Configured.ShouldBeFalse();
     }
+
+    [Fact]
+    public void BackupState_LiestBackupZieleUndArchiv()
+    {
+        using var temp = new TempDirectory();
+        var now = new DateTime(2026, 10, 20, 12, 0, 0, DateTimeKind.Utc);
+        Directory.CreateDirectory(Path.Combine(temp.Path, "targets"));
+        File.WriteAllText(Path.Combine(temp.Path, "targets", "abc.conf"), "# x\nTARGET_NAME='NAS Keller (192.168.1.60)'\nTARGET_REPOSITORY='rest:https://u:p@h/'\n");
+        File.WriteAllText(Path.Combine(temp.Path, "target-abc.json"), "{\"status\":\"succeeded\",\"message\":\"ok\",\"at\":\"2026-10-20T01:00:00Z\"}");
+        File.WriteAllText(Path.Combine(temp.Path, "archive.json"),
+            "{\"connected\":true,\"serverName\":\"Archiv\",\"address\":\"https://10.0.0.5:8443\",\"lastContactAt\":\"2026-10-20T11:59:00Z\",\"lastError\":null,\"archived\":12,\"pending\":1,\"failed\":0,\"at\":\"2026-10-20T11:59:00Z\"}");
+
+        var state = BackupState.Read(temp.Path, now);
+
+        state.Targets.Single().Name.ShouldBe("NAS Keller (192.168.1.60)");
+        state.Targets.Single().LastRun!.Status.ShouldBe("succeeded");
+        state.Archive!.Connected.ShouldBeTrue();
+        state.Archive.Archived.ShouldBe(12);
+    }
 }

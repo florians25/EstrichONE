@@ -52,6 +52,8 @@ code_of() {
 
 log "Server einrichten"
 cleanup
+CA="$(mktemp)"
+WORK="$(mktemp -d)"
 ./setup.sh --domain localhost --name "Archiv-Test" --yes >/dev/null
 docker compose up -d --no-build --wait --wait-timeout 180 >/dev/null
 docker compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > "$CA"

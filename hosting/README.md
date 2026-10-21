@@ -116,3 +116,22 @@ Hosting__Docker=fake Hosting__Root=/tmp/hosting dotnet run --project ../src/Estr
 npx playwright test                                       # E2E gegen http://localhost:5090
 IMAGE=estrichone/hosting:ci hosting/scripts/integration.sh  # echter Test mit Docker und Suite-Images
 ```
+
+## Archivserver und Backup-Ziele je Mandant
+
+Jede Instanz koppelt ihren Archivserver bzw. ihre Backup-Ziele selbst (Suite: System → Archiv, System → Backup-Ziele).
+Die Konsole zeigt je Mandant unter **Sicherung**: Archivserver (gekoppelt, Anzahl archiviert/wartend/fehlgeschlagen,
+letzter Fehler) und alle Backup-Ziele mit dem Ergebnis der letzten Sicherung dorthin. Quelle sind die Dateien im
+Statusverzeichnis der Instanz (`data/backup-status/archive.json`, `targets/*.conf`, `target-*.json`) – ohne Zugriff
+auf die Datenbank und ohne Zugangsdaten auszulesen.
+
+Empfehlung für Hosting:
+
+- **Backup-Ziel:** ein eigener Rechner (oder Speicher-VM) im Rechenzentrum mit
+  `ghcr.io/florians25/estrichone-installer:latest backup-ziel`. Jede Instanz koppelt sich mit einem eigenen Code
+  (`sudo docker exec estrichone-backup-target estrichone-archive pair` erzeugt den nächsten) und bekommt ein eigenes,
+  nur für sie lesbares Repository (nur anhängen).
+- **Archivserver:** pro Kunde ein eigener Archivserver oder ein gemeinsamer mit je einem Code pro Instanz; die
+  Ablage ist je gekoppelter Instanz getrennt, das Journal gemeinsam (enthält nur Kennungen und Prüfsummen).
+- Die Instanzen erreichen die Ziele über das Netz `estrichone-<kürzel>-edge`/`frontend` (ausgehend). Adresse beim
+  Koppeln: interne IP oder Name des Zielrechners, Port 8443.

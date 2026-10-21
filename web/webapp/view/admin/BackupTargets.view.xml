@@ -1,0 +1,40 @@
+<mvc:View controllerName="estrichone.controller.admin.BackupTargets" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.backupTargets}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Zusätzliche Sicherung auf einem anderen Rechner (NAS, alter PC, Raspberry Pi) – nur anhängen, Löschen unmöglich: Schutz vor Brand, Diebstahl und Verschlüsselungstrojanern."/></f:expandedContent>
+				<f:actions>
+					<Button text="Backup-Ziel koppeln" icon="sap-icon://chain-link" type="Emphasized" press=".onPair"/>
+					<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox busy="{view>/busy}">
+				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${view>/items}.length === 0 }"
+					text="Auf dem Zielrechner (Linux mit Docker) einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel – er zeigt Adresse und Kopplungscode. Danach „Backup-Ziel koppeln“ wählen."/>
+				<MessageStrip type="Warning" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${view>/items}.length > 0 }"
+					text="Notfallzugang herunterladen und zusammen mit dem Backup-Passwort (.env) getrennt vom Server aufbewahren – nur damit lässt sich nach einem Totalverlust vom Backup-Ziel wiederherstellen."/>
+				<List items="{view>/items}" noDataText="Kein Backup-Ziel gekoppelt." showSeparators="All">
+					<CustomListItem>
+						<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
+							<VBox>
+								<Title text="{view>name}" level="H3"/>
+								<Text text="{view>address} · Version {view>serverVersion} · gekoppelt {view>paired}"/>
+								<Text text="Fingerabdruck {view>fingerprintDisplay}" class="sapUiTinyMarginTop"/>
+								<ObjectStatus text="{view>runText}" state="{view>runState}" class="sapUiTinyMarginTop"/>
+								<ObjectStatus text="{view>remoteText}" state="{view>remoteState}" class="sapUiTinyMarginTop"/>
+								<Text text="{view>lastError}" visible="{= !!${view>lastError} }" class="sapUiTinyMarginTop"/>
+							</VBox>
+							<HBox>
+								<Button text="Notfallzugang" icon="sap-icon://download" press=".onRecovery"/>
+								<Button text="Entfernen" icon="sap-icon://delete" type="Transparent" press=".onRemove" class="sapUiTinyMarginBegin"/>
+							</HBox>
+						</HBox>
+					</CustomListItem>
+				</List>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

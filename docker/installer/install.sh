@@ -195,7 +195,7 @@ fi
 if [ "${COMPOSE_PROFILES:-}" = "archive" ]; then
   ACODE="$(docker compose -p estrichone logs archive 2>/dev/null | sed -n 's/.*KOPPLUNGSCODE: *\([A-Z0-9-]*\).*/\1/p' | tail -n 1)"
   echo
-  echo "Archivserver im Stack aktiv. Koppeln unter Einstellungen → Archiv mit Adresse „archive“${ACODE:+ und Code $ACODE}."
+  echo "Archivserver im Stack aktiv. Koppeln unter System → Archiv mit Adresse „archive“${ACODE:+ und Code $ACODE}."
 fi
 echo
 echo "Aktualisieren später mit:  sudo /opt/estrichone/update.sh   (oder: sudo /opt/estrichone/update.sh <version>)"

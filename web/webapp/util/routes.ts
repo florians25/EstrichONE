@@ -33,6 +33,9 @@ export const routes: RouteDef[] = [
 	{ name: "helpdesk", pattern: "/it-center/helpdesk", view: "admin.Helpdesk", permission: "helpdesk.agent", nav: "helpdesk", title: "nav.helpdesk" },
 	{ name: "ticket", pattern: "/it-center/helpdesk/:id", view: "admin.Ticket", permission: "helpdesk.agent", nav: "helpdesk", title: "nav.helpdesk" },
 	{ name: "backup", pattern: "/system/sicherung", view: "admin.Backup", permission: "backup.manage", nav: "backup", title: "nav.backup" },
+	{ name: "backupTargets", pattern: "/system/backup-ziele", view: "admin.BackupTargets", permission: "backup.manage", nav: "backupTargets", title: "nav.backupTargets" },
+	{ name: "archive", pattern: "/system/archiv", view: "admin.Archive", permission: "settings.manage", nav: "archive", title: "nav.archive" },
+	{ name: "mail", pattern: "/system/e-mail", view: "admin.Mail", permission: "settings.manage", nav: "mail", title: "nav.mail" },
 	{ name: "company", pattern: "/system/firmendaten", view: "admin.Company", permission: "settings.manage", nav: "company", title: "nav.company" },
 	{ name: "audit", pattern: "/system/protokoll", view: "admin.Audit", permission: "audit.read", nav: "audit", title: "nav.audit" },
 ];
@@ -92,6 +95,9 @@ export const navigation: NavEntry[] = [
 		key: "groupSystem", children: [
 			{ key: "company", path: "/system/firmendaten", icon: "sap-icon://building", permission: "settings.manage" },
 			{ key: "backup", path: "/system/sicherung", icon: "sap-icon://upload-to-cloud", permission: "backup.manage" },
+			{ key: "backupTargets", path: "/system/backup-ziele", icon: "sap-icon://it-host", permission: "backup.manage" },
+			{ key: "archive", path: "/system/archiv", icon: "sap-icon://inbox", permission: "settings.manage" },
+			{ key: "mail", path: "/system/e-mail", icon: "sap-icon://email", permission: "settings.manage" },
 			{ key: "audit", path: "/system/protokoll", icon: "sap-icon://activities", permission: "audit.read" },
 		],
 	},

@@ -16,6 +16,12 @@ public sealed record BackupState(
     BackupEntry? LastRestoreTest,
     bool RunRequested)
 {
+    /// <summary>Gekoppelte Backup-Ziele auf anderer Hardware (Suite: System → Backup-Ziele).</summary>
+    public IReadOnlyList<BackupTargetState> Targets { get; init; } = [];
+
+    /// <summary>Gekoppelter Archivserver (Suite: System → Archiv); null = nicht eingerichtet.</summary>
+    public ArchiveState? Archive { get; init; }
+
     /// <summary>Wie die API der Suite: Sicherung gilt als aktuell, wenn die letzte erfolgreiche jünger als 36 Stunden ist.</summary>
     public static readonly TimeSpan MaxAge = TimeSpan.FromHours(36);
 
@@ -35,8 +41,62 @@ public sealed record BackupState(
             : healthy ? "Die letzte Sicherung ist aktuell."
             : $"Die letzte erfolgreiche Sicherung ist {(int)age!.Value.TotalHours} Stunden alt.";
         return new BackupState(true, healthy, summary, lastRun, lastSuccess, ReadEntry(statusDirectory, "lastCheck"),
-            ReadEntry(statusDirectory, "lastRestoreTest"), File.Exists(Path.Combine(statusDirectory, "requests", "backup-now")));
+            ReadEntry(statusDirectory, "lastRestoreTest"), File.Exists(Path.Combine(statusDirectory, "requests", "backup-now")))
+        {
+            Targets = ReadTargets(statusDirectory),
+            Archive = ReadArchive(statusDirectory),
+        };
     }
+
+    /// <summary>Je Ziel <c>targets/&lt;id&gt;.conf</c> (Name) und <c>target-&lt;id&gt;.json</c> (letzte Sicherung dorthin).</summary>
+    private static List<BackupTargetState> ReadTargets(string directory)
+    {
+        var targets = Path.Combine(directory, "targets");
+        if (!Directory.Exists(targets))
+        {
+            return [];
+        }
+
+        var result = new List<BackupTargetState>();
+        foreach (var conf in Directory.EnumerateFiles(targets, "*.conf").Order(StringComparer.Ordinal))
+        {
+            var id = Path.GetFileNameWithoutExtension(conf);
+            string name = id;
+            try
+            {
+                var line = File.ReadLines(conf).FirstOrDefault(l => l.StartsWith("TARGET_NAME=", StringComparison.Ordinal));
+                if (line is not null)
+                {
+                    name = line["TARGET_NAME=".Length..].Trim('\'');
+                }
+            }
+            catch (IOException)
+            {
+            }
+            catch (UnauthorizedAccessException)
+            {
+            }
+
+            result.Add(new BackupTargetState(id, name, ReadEntry(directory, "target-" + id)));
+        }
+
+        return result;
+    }
+
+    private static ArchiveState? ReadArchive(string directory)
+    {
+        var file = Path.Combine(directory, "archive.json");
+        try
+        {
+            return File.Exists(file) ? JsonSerializer.Deserialize<ArchiveState>(File.ReadAllText(file), Json) : null;
+        }
+        catch (Exception exception) when (exception is JsonException or IOException or UnauthorizedAccessException)
+        {
+            return null;
+        }
+    }
+
+    private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
 
     private static BackupEntry? ReadEntry(string directory, string name)
     {
@@ -68,3 +128,11 @@ public sealed record BackupState(
         }
     }
 }
+
+/// <summary>Backup-Ziel einer Instanz mit Ergebnis der letzten Sicherung dorthin.</summary>
+public sealed record BackupTargetState(string Id, string Name, BackupEntry? LastRun);
+
+/// <summary>Archivserver einer Instanz, wie die Suite ihn meldet (<c>backup-status/archive.json</c>).</summary>
+public sealed record ArchiveState(
+    bool Connected, string? ServerName, string? Address, DateTimeOffset? LastContactAt, string? LastError, int Archived, int Pending,
+    int Failed, DateTimeOffset At);

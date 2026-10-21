@@ -29,6 +29,9 @@ public static class DefaultMailTemplates
         new(MailTemplateKeys.HelpdeskUpdated, "Helpdesk-Ticket geändert", "Ticket {{ticket}}: {{titel}}",
             "Hallo {{name}},\n\nIhr Ticket {{ticket}} „{{titel}}“ hat einen neuen Stand: {{status}}.\n\n{{kommentar}}\n\n{{link}}\n\nViele Grüße\n{{firma}}",
             ["name", "ticket", "titel", "status", "kommentar", "link", "firma"]),
+        new(MailTemplateKeys.AcceptanceCustomerApproval, "Abnahme – Freigabe durch den Kunden", "Abnahmeprotokoll {{bauakte}} – bitte freigeben",
+            "Guten Tag {{name}},\n\nanbei bzw. unter folgendem Link finden Sie das Abnahmeprotokoll für das Bauvorhaben {{bauakte}}:\n\n{{link}}\n\n" +
+            "Bitte prüfen und freigeben Sie es bis {{frist}}.\n\nMit freundlichen Grüßen\n{{firma}}", ["name", "bauakte", "link", "frist", "firma"]),
         new(MailTemplateKeys.ArchiveFailed, "Archivierung fehlgeschlagen", "EstrichONE: Archivierung fehlgeschlagen",
             "Hallo,\n\ndas Dokument „{{dokument}}“ (Bauakte {{bauakte}}) konnte nicht archiviert werden:\n\n{{fehler}}\n\n" +
             "EstrichONE versucht es automatisch weiter. Status: {{link}}\n\nViele Grüße\nEstrichONE", ["dokument", "bauakte", "fehler", "link"]),

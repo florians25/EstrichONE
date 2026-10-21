@@ -48,6 +48,9 @@ public static class MailTemplateKeys
     /// <summary>Helpdesk-Ticket geändert (Platzhalter: name, ticket, titel, status, kommentar, link).</summary>
     public const string HelpdeskUpdated = "helpdesk.ticket_updated";
 
+    /// <summary>Abnahme zur Freigabe an den Kunden (Platzhalter: name, bauakte, link, frist). Anhang optional: Abnahmeprotokoll (PDF).</summary>
+    public const string AcceptanceCustomerApproval = "acceptance.customer_approval";
+
     /// <summary>Archivierung fehlgeschlagen (Platzhalter: dokument, bauakte, fehler, link).</summary>
     public const string ArchiveFailed = "archive.failed";
 }

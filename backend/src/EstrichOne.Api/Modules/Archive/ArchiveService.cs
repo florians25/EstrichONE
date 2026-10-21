@@ -33,7 +33,7 @@ public sealed record ArchiveVerification(
 /// <summary>Kopplung, Regeln, Warteschlange und Übertragung zum Archivserver.</summary>
 internal sealed partial class ArchiveService(
     EstrichOneDbContext db, IArchivableDocuments documents, IDataProtectionProvider protection, TimeProvider clock, IMailService mail,
-    IOptions<EstrichOneOptions> options, ILogger<ArchiveService> logger)
+    IOptions<EstrichOneOptions> options, IConfiguration configuration, ILogger<ArchiveService> logger)
 {
     public const string ProtectorPurpose = "EstrichOne.Archive.Token";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -45,7 +45,7 @@ internal sealed partial class ArchiveService(
         new("order", "Aufträge", true, 6, ArchiveTrigger.OnUpload),
         new("offer", "Angebote", true, 6, ArchiveTrigger.OnApproval),
         new("delivery", "Lieferscheine", true, 6, ArchiveTrigger.OnBauakteCompleted),
-        new("acceptance", "Abnahmen", true, 10, ArchiveTrigger.OnBauakteCompleted),
+        new("acceptance", "Abnahmen", true, 10, ArchiveTrigger.OnUpload),
         new("protocol", "Protokolle", true, 10, ArchiveTrigger.OnBauakteCompleted),
         new("plan", "Pläne", true, 10, ArchiveTrigger.OnBauakteCompleted),
         new("customer", "Kundenschreiben", true, 6, ArchiveTrigger.OnBauakteCompleted),
@@ -391,7 +391,7 @@ internal sealed partial class ArchiveService(
                 ["dokument"] = record.Name,
                 ["bauakte"] = bauakte,
                 ["fehler"] = error,
-                ["link"] = $"{options.Value.PublicUrl?.ToString().TrimEnd('/')}/einstellungen/archiv",
+                ["link"] = $"{options.Value.PublicUrl?.ToString().TrimEnd('/')}/system/archiv",
             }, $"archive_record:{record.Id}", cancellationToken: cancellationToken);
         }
         catch (ArgumentException)
@@ -411,6 +411,37 @@ internal sealed partial class ArchiveService(
         {
             return problem.Length > 200 ? problem[..200] : problem;
         }
+    }
+
+    /// <summary>
+    /// Zustand für die Hosting-Konsole (je Mandant): <c>&lt;Backup-Statusverzeichnis&gt;/archive.json</c>, ohne Geheimnisse.
+    /// </summary>
+    public async Task WriteStatusFileAsync(CancellationToken cancellationToken)
+    {
+        var dir = configuration["EstrichOne:Backup:StatusPath"];
+        if (string.IsNullOrWhiteSpace(dir) || !Directory.Exists(dir))
+        {
+            return;
+        }
+
+        var connection = await ConnectionAsync(cancellationToken);
+        var counts = await db.Set<ArchiveRecord>().GroupBy(r => r.Status).Select(g => new { g.Key, Count = g.Count() })
+            .ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);
+        var state = new
+        {
+            connected = connection is not null,
+            serverName = connection?.ServerName,
+            address = connection?.Address,
+            lastContactAt = connection?.LastContactAt,
+            lastError = connection?.LastError,
+            archived = counts.GetValueOrDefault(ArchiveRecordStatus.Archived),
+            pending = counts.GetValueOrDefault(ArchiveRecordStatus.Pending),
+            failed = counts.GetValueOrDefault(ArchiveRecordStatus.Failed),
+            at = clock.GetUtcNow(),
+        };
+        var path = Path.Combine(dir, "archive.json");
+        await File.WriteAllTextAsync(path + ".tmp", JsonSerializer.Serialize(state, Json), cancellationToken);
+        File.Move(path + ".tmp", path, overwrite: true);
     }
 
     public static string Describe(Exception exception) => exception switch

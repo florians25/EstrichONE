@@ -55,6 +55,14 @@ done
 E2E_SETUP_CODE="$(grep -o 'Einrichtungscode: [A-Z0-9-]*' "$WORK/api.log" | tail -n 1 | awk '{print $2}')"
 export E2E_SETUP_CODE
 
+# Archivserver (backend/src/EstrichOne.Archive) für die Seite System → Archiv: koppeln per Adresse und Code.
+dotnet publish "$ROOT/backend/src/EstrichOne.Archive" -c Release -o "$WORK/archive" --nologo -v quiet
+ESTRICHONE_DATA="$WORK/archive-data" ESTRICHONE_PORT=18443 ESTRICHONE_NAME="Archiv E2E" dotnet "$WORK/archive/estrichone-archive.dll" >"$WORK/archive.log" 2>&1 &
+PIDS+=($!)
+for _ in $(seq 1 60); do grep -q 'KOPPLUNGSCODE' "$WORK/archive.log" && break; sleep 1; done
+E2E_ARCHIVE_CODE="$(sed -n 's/.*KOPPLUNGSCODE: *\([A-Z0-9-]*\).*/\1/p' "$WORK/archive.log" | tail -n 1)"
+export E2E_ARCHIVE_CODE E2E_ARCHIVE_ADDRESS="127.0.0.1:18443"
+
 cd "$ROOT/web"
 if [[ -n "${WEB_IMAGE:-}" ]]; then
   # Gleiches Caddyfile wie im Betrieb, nur mit lokaler API-Adresse.

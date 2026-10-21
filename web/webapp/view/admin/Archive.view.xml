@@ -1,0 +1,108 @@
+<mvc:View controllerName="estrichone.controller.admin.Archive" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.archive}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Revisionssichere Aufbewahrung (GoBD): unveränderbar, mit Prüfsummen, Hash-Kette und Löschsperre bis zum Fristende."/></f:expandedContent>
+				<f:actions>
+					<Button text="Archiv prüfen" icon="sap-icon://validate" press=".onVerify" visible="{view>/o/connected}"/>
+					<Button text="Export für Betriebsprüfer" icon="sap-icon://download" press=".onExport" visible="{view>/o/connected}"/>
+					<Button text="Archivserver koppeln" icon="sap-icon://chain-link" type="Emphasized" press=".onPair" visible="{= !${view>/o/connected} }"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox busy="{view>/busy}" class="sapUiSmallMarginBottom">
+				<MessageStrip visible="{= !!${view>/o} &amp;&amp; !${view>/o/connected} }" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
+					text="Noch kein Archivserver gekoppelt. Auf dem Archivrechner einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv – dann „Archivserver koppeln“ wählen und Adresse und Kopplungscode eingeben."/>
+				<MessageStrip visible="{= !!${view>/o/connection/lastError} }" text="{view>/o/connection/lastError}" type="Warning" showIcon="true" class="sapUiSmallMarginBottom"/>
+				<form:SimpleForm visible="{view>/o/connected}" editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" columnsL="2" columnsXL="2" title="Archivserver">
+					<core:Title text="Verbindung"/>
+					<Label text="Archivserver"/><Text text="{view>/o/connection/serverName} ({view>/o/connection/address}, Version {view>/o/connection/serverVersion})"/>
+					<Label text="Fingerabdruck"/><Text text="{view>/o/connection/fingerprintDisplay}"/>
+					<Label text="Gekoppelt"/><Text text="{path: 'view>/o/connection/pairedAt', formatter: '.fmt.dateTime'}"/>
+					<Label text="Letzter Kontakt"/><ObjectStatus text="{view>/contact/text}" state="{view>/contact/state}"/>
+					<core:Title text="Bestand"/>
+					<Label text="Dokumente"/><Text text="{view>/stats/objects}"/>
+					<Label text="Speicher"/><Text text="{view>/stats/disk}"/>
+					<Label text="Journal"/><Text text="{view>/stats/ledger}"/>
+					<Label text="Letzte Prüfung"/><ObjectStatus text="{view>/stats/verification/text}" state="{view>/stats/verification/state}"/>
+					<Label text="Warteschlange"/><Text text="{view>/o/counts/archived} archiviert · {view>/o/counts/pending} wartend · {view>/o/counts/failed} fehlgeschlagen"/>
+				</form:SimpleForm>
+				<form:SimpleForm visible="{view>/o/connected}" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Einstellungen" width="48rem">
+					<Label text="Automatisch archivieren" labelFor="arAuto"/><Switch id="arAuto" state="{view>/settings/autoArchive}" customTextOn="An" customTextOff="Aus"/>
+					<Label text="Bei Fehlern benachrichtigen" labelFor="arMail"/><Input id="arMail" value="{view>/settings/notifyEmail}" type="Email" placeholder="z. B. buero@firma.de (E-Mail-Konto nötig)"/>
+					<Label/><HBox><Button text="{i18n>common.save}" icon="sap-icon://save" press=".onSaveSettings"/><Button text="Entkoppeln" icon="sap-icon://broken-link" type="Transparent" press=".onUnpair" class="sapUiSmallMarginBegin"/></HBox>
+				</form:SimpleForm>
+			</VBox>
+			<Table id="rules" items="{view>/rules}" headerText="Aufbewahrung je Dokumentart" class="sapUiSmallMarginBottom" growing="false">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="Aufbewahrung je Dokumentart" level="H2"/>
+						<ToolbarSpacer/>
+						<Button text="Regeln speichern" icon="sap-icon://save" type="Emphasized" press=".onSaveRules"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<infoToolbar>
+					<OverflowToolbar><Label text="Vorschläge nach § 147 AO / § 257 HGB (6 bzw. 10 Jahre ab Jahresende). Maßgeblich ist Ihre steuerliche Beratung."/></OverflowToolbar>
+				</infoToolbar>
+				<columns>
+					<Column><Text text="Dokumentart"/></Column>
+					<Column width="7rem"><Text text="Archivieren"/></Column>
+					<Column width="10rem"><Text text="Frist (Jahre)"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zeitpunkt"/></Column>
+				</columns>
+				<items>
+					<ColumnListItem>
+						<Text text="{view>label}"/>
+						<Switch state="{view>enabled}" customTextOn="Ja" customTextOff="Nein"/>
+						<StepInput value="{view>retentionYears}" min="1" max="30" width="8rem" enabled="{view>enabled}"/>
+						<Select selectedKey="{view>trigger}" enabled="{view>enabled}" width="100%">
+							<core:Item key="onUpload" text="Sofort nach dem Hochladen"/>
+							<core:Item key="onApproval" text="Nach der Freigabe"/>
+							<core:Item key="onBauakteCompleted" text="Wenn die Bauakte abgeschlossen ist"/>
+							<core:Item key="manual" text="Nur manuell"/>
+						</Select>
+					</ColumnListItem>
+				</items>
+			</Table>
+			<Table id="records" items="{view>/records}" growing="true" growingThreshold="50" noDataText="Noch nichts archiviert.">
+				<headerToolbar>
+					<OverflowToolbar>
+						<Title text="Archivierte Dokumente (Nachweis)" level="H2"/>
+						<ToolbarSpacer/>
+						<SegmentedButton selectedKey="{view>/filter}" selectionChange=".onFilter">
+							<items>
+								<SegmentedButtonItem key="" text="Alle"/>
+								<SegmentedButtonItem key="pending" text="Wartend"/>
+								<SegmentedButtonItem key="failed" text="Fehler"/>
+								<SegmentedButtonItem key="archived" text="Archiviert"/>
+							</items>
+						</SegmentedButton>
+						<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Dokument"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Status"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Aufbewahren bis"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Nachweis"/></Column>
+					<Column width="4rem" hAlign="End"><Text text=""/></Column>
+				</columns>
+				<items>
+					<ColumnListItem>
+						<ObjectIdentifier title="{view>name}" text="{view>documentTypeLabel} · {view>size}"/>
+						<VBox>
+							<ObjectStatus text="{view>statusText}" state="{view>statusState}"/>
+							<Text text="{view>lastError}" visible="{= !!${view>lastError} }" wrapping="true" class="sapUiTinyMarginTop"/>
+						</VBox>
+						<Text text="{view>retain}"/>
+						<Text text="{view>proof}" wrapping="true"/>
+						<Button icon="sap-icon://refresh" tooltip="Erneut versuchen" type="Transparent" visible="{= ${view>status} !== 'archived' }" press=".onRetry"/>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

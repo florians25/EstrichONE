@@ -311,7 +311,7 @@ internal static class ArchiveEndpoints
     }
 
     private static ProblemHttpResult NotConnected() =>
-        Problem(409, "ARCHIVE_NOT_CONNECTED", "Kein Archivserver gekoppelt", "Bitte zuerst unter Einstellungen → Archiv einen Archivserver koppeln.");
+        Problem(409, "ARCHIVE_NOT_CONNECTED", "Kein Archivserver gekoppelt", "Bitte zuerst unter System → Archiv einen Archivserver koppeln.");
 
     private static ProblemHttpResult Problem(int status, string code, string title, string detail) =>
         TypedResults.Problem(statusCode: status, title: title, detail: detail, extensions: new Dictionary<string, object?> { ["code"] = code });

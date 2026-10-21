@@ -327,8 +327,8 @@ public static class ArchiveServer
             text.AppendLine($" KOPPLUNGSCODE:  {pairing.Code}      (gültig bis {pairing.ExpiresAt.ToLocalTime():dd.MM.yyyy HH:mm})");
             text.AppendLine();
             text.AppendLine(options.Role == ServerRole.Archive
-                ? " In EstrichONE: Einstellungen → Archiv → „Archivserver koppeln“: Adresse dieses Rechners und Code eingeben."
-                : " In EstrichONE: Backup Center → Backup-Ziele → „Backup-Ziel koppeln“: Adresse dieses Rechners und Code eingeben.");
+                ? " In EstrichONE: System → Archiv → „Archivserver koppeln“: Adresse dieses Rechners und Code eingeben."
+                : " In EstrichONE: System → Backup-Ziele → „Backup-Ziel koppeln“: Adresse dieses Rechners und Code eingeben.");
         }
         else
         {

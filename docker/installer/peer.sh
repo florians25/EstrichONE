@@ -4,7 +4,7 @@
 #   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv
 #   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel
 #
-# Optionen (-e …): ESTRICHONE_PORT=8443, ESTRICHONE_NAME="Archiv Keller", ESTRICHONE_ADDRESS=192.168.1.50 (sonst automatisch),
+# Optionen (-e …): ESTRICHONE_PORT=8443 (Backup-Ziel: 8444), ESTRICHONE_NAME="Archiv Keller", ESTRICHONE_ADDRESS=192.168.1.50 (sonst automatisch),
 #   ESTRICHONE_DATA_DIR=/srv/archiv (Ordner auf dem Rechner statt Docker-Volume), ESTRICHONE_MIN_RETENTION_YEARS=10 (nur Archiv),
 #   ESTRICHONE_NEW_CODE=1 (neuen Kopplungscode ausgeben, z. B. für eine weitere EstrichONE-Installation).
 # Erneut ausführen = aktualisieren (Daten, Zertifikat und Kopplungen bleiben).
@@ -17,8 +17,8 @@ REGISTRY="${ESTRICHONE_REGISTRY:-ghcr.io/florians25}"
 fail() { echo "FEHLER: $*" >&2; exit 1; }
 
 case "${1:-}" in
-  archiv|archive) ROLE=archive; TITLE="Archivserver"; WHERE="Einstellungen → Archiv → „Archivserver koppeln“" ;;
-  backup-ziel|backup-target) ROLE=backup-target; TITLE="Backup-Ziel"; WHERE="Backup Center → Backup-Ziele → „Backup-Ziel koppeln“" ;;
+  archiv|archive) ROLE=archive; TITLE="Archivserver"; WHERE="System → Archiv → „Archivserver koppeln“" ;;
+  backup-ziel|backup-target) ROLE=backup-target; TITLE="Backup-Ziel"; WHERE="System → Backup-Ziele → „Backup-Ziel koppeln“" ;;
   *) fail "Unbekannte Rolle '${1:-}' (archiv oder backup-ziel)." ;;
 esac
 
@@ -27,7 +27,9 @@ docker version >/dev/null 2>&1 || fail "Docker ist über den Socket nicht erreic
 
 NAME="estrichone-$ROLE"
 IMAGE="$REGISTRY/estrichone-$ROLE:$VERSION"
-PORT="${ESTRICHONE_PORT:-8443}"
+# Standardports: Archivserver 8443, Backup-Ziel 8444 (beide auf einem Rechner möglich)
+DEFAULT_PORT=8443; [ "$ROLE" = "backup-target" ] && DEFAULT_PORT=8444
+PORT="${ESTRICHONE_PORT:-$DEFAULT_PORT}"
 DATA="${ESTRICHONE_DATA_DIR:-$NAME}"
 SELF="$REGISTRY/estrichone-installer:$VERSION"
 

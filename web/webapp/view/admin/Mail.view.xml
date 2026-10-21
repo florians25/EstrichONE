@@ -1,0 +1,86 @@
+<mvc:View controllerName="estrichone.controller.admin.Mail" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.mail}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="E-Mail-Konto für Benachrichtigungen (Freigaben, Helpdesk), Zugangsbriefe und Fehlermeldungen. Welche Benachrichtigungen verschickt werden, steht unter Einstellungen."/></f:expandedContent>
+				<f:actions><Button id="mailSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<IconTabBar id="mailTabs" expandable="false" stretchContentHeight="false" applyContentPadding="false">
+				<items>
+					<IconTabFilter key="account" text="Konto">
+						<MessageStrip visible="{= ${view>/s/lastTestAt} !== null }" type="{= ${view>/s/lastTestOk} ? 'Success' : 'Error' }" showIcon="true" class="sapUiSmallMargin"
+							text="{= ${view>/s/lastTestOk} ? 'Letzte Testmail erfolgreich.' : 'Letzte Testmail fehlgeschlagen: ' + ${view>/s/lastTestError} }"/>
+						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="48rem" busy="{view>/busy}">
+							<Label text="E-Mail-Versand" labelFor="mlEnabled"/><Switch id="mlEnabled" state="{view>/s/enabled}" customTextOn="An" customTextOff="Aus"/>
+							<Label text="SMTP-Server" labelFor="mlHost" required="true"/><Input id="mlHost" value="{view>/s/host}" placeholder="z. B. smtp.ionos.de, smtp.office365.com" maxLength="253"/>
+							<Label text="Port" labelFor="mlPort"/><StepInput id="mlPort" value="{view>/s/port}" min="1" max="65535" width="10rem"/>
+							<Label text="Verschlüsselung" labelFor="mlSec"/>
+							<Select id="mlSec" selectedKey="{view>/s/security}" change=".onSecurity">
+								<core:Item key="startTls" text="STARTTLS (Port 587, üblich)"/>
+								<core:Item key="sslOnConnect" text="SSL/TLS (Port 465)"/>
+								<core:Item key="none" text="Keine (nur internes Relay)"/>
+							</Select>
+							<Label text="Benutzername" labelFor="mlUser"/><Input id="mlUser" value="{view>/s/userName}" placeholder="meist die E-Mail-Adresse" maxLength="254"/>
+							<Label text="Passwort" labelFor="mlPass"/>
+							<VBox>
+								<Input id="mlPass" value="{view>/password}" type="Password" placeholder="{= ${view>/s/hasPassword} ? 'gespeichert – leer lassen, um es zu behalten' : 'Passwort' }"/>
+								<Text text="Wird verschlüsselt gespeichert und nie wieder angezeigt." class="sapUiTinyMarginTop"/>
+							</VBox>
+							<Label text="Absenderadresse" labelFor="mlFrom" required="true"/><Input id="mlFrom" value="{view>/s/fromAddress}" type="Email" placeholder="buero@firma.de" maxLength="254"/>
+							<Label text="Absendername" labelFor="mlFromName"/><Input id="mlFromName" value="{view>/s/fromName}" placeholder="Estrichbau Muster GmbH" maxLength="200"/>
+							<Label text="Antworten an" labelFor="mlReply"/><Input id="mlReply" value="{view>/s/replyTo}" type="Email" placeholder="optional" maxLength="254"/>
+							<core:Title text="Testmail"/>
+							<Label text="Empfänger" labelFor="mlTestTo"/>
+							<HBox>
+								<Input id="mlTestTo" value="{view>/testTo}" type="Email" placeholder="ihre@adresse.de" width="20rem"/>
+								<Button id="mlTest" text="Testmail senden" icon="sap-icon://email" press=".onTest" class="sapUiTinyMarginBegin"/>
+							</HBox>
+						</form:SimpleForm>
+					</IconTabFilter>
+					<IconTabFilter key="templates" text="Vorlagen">
+						<HBox class="sapUiSmallMargin" wrap="Wrap">
+							<List id="mlTemplates" items="{view>/templates}" mode="SingleSelectMaster" selectionChange=".onTemplate" width="20rem" class="sapUiSmallMarginEnd">
+								<StandardListItem title="{view>name}" description="{= ${view>customized} ? 'angepasst' : 'Standardtext' }"/>
+							</List>
+							<VBox width="40rem" visible="{= !!${view>/t} }">
+								<Label text="Betreff" labelFor="mlSubject"/><Input id="mlSubject" value="{view>/t/subject}" maxLength="300"/>
+								<Label text="Text" labelFor="mlBody" class="sapUiSmallMarginTop"/><TextArea id="mlBody" value="{view>/t/body}" rows="14" width="100%" growing="true"/>
+								<Text text="Platzhalter: {view>/t/placeholderText}" class="sapUiTinyMarginTop"/>
+								<HBox class="sapUiSmallMarginTop">
+									<Button text="Vorlage speichern" icon="sap-icon://save" type="Emphasized" press=".onSaveTemplate"/>
+									<Button text="Standardtext wiederherstellen" type="Transparent" press=".onResetTemplate" enabled="{view>/t/customized}" class="sapUiTinyMarginBegin"/>
+								</HBox>
+							</VBox>
+						</HBox>
+					</IconTabFilter>
+					<IconTabFilter key="log" text="Versandprotokoll">
+						<Table id="mlLog" items="{view>/log}" growing="true" growingThreshold="50" noDataText="Noch keine E-Mails versendet.">
+							<headerToolbar><OverflowToolbar><ToolbarSpacer/><Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefreshLog"/></OverflowToolbar></headerToolbar>
+							<columns>
+								<Column width="11rem"><Text text="Zeit"/></Column>
+								<Column><Text text="Empfänger / Betreff"/></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Status"/></Column>
+								<Column width="4rem" hAlign="End"><Text text=""/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<Text text="{view>time}"/>
+									<ObjectIdentifier title="{view>to}" text="{view>subject}"/>
+									<VBox>
+										<ObjectStatus text="{view>statusText}" state="{view>statusState}"/>
+										<Text text="{view>error}" visible="{= !!${view>error} }" wrapping="true"/>
+									</VBox>
+									<Button icon="sap-icon://refresh" tooltip="Erneut senden" type="Transparent" visible="{= ${view>status} === 'failed' }" press=".onRetry"/>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</IconTabFilter>
+				</items>
+			</IconTabBar>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

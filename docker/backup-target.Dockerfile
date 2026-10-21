@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 # EstrichONE Backup-Ziel (restic-REST-Server, nur anhängen) – Build-Kontext ist die Repository-Wurzel.
 # Ein Befehl auf dem Zielrechner (siehe deploy/backup-target/README.md):
-#   docker run -d --name estrichone-backup-target --restart unless-stopped -p 8443:8443 -v estrichone-backup-target:/data ghcr.io/florians25/estrichone-backup-target:latest
+#   docker run -d --name estrichone-backup-target --restart unless-stopped -p 8444:8443 -v estrichone-backup-target:/data ghcr.io/florians25/estrichone-backup-target:latest
 FROM restic/rest-server:0.14.0 AS rest-server
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build

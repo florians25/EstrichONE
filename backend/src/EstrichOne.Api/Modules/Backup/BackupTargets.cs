@@ -204,7 +204,7 @@ internal sealed class BackupTargetService(
         var name = new string([.. target.Name.Where(c => c is not ('\'' or '\n' or '\r' or '\\'))]);
         WritePrivate(Path.Combine(dir, $"{target.Id:N}.ca.pem"), target.CaCertificatePem);
         WritePrivate(Path.Combine(dir, $"{target.Id:N}.conf"),
-            $"# Von EstrichONE geschrieben (Backup Center → Backup-Ziele). Nicht von Hand ändern.\nTARGET_NAME='{name} ({address.Host})'\nTARGET_REPOSITORY='{repository}'\n");
+            $"# Von EstrichONE geschrieben (System → Backup-Ziele). Nicht von Hand ändern.\nTARGET_NAME='{name} ({address.Host})'\nTARGET_REPOSITORY='{repository}'\n");
     }
 
     /// <summary>

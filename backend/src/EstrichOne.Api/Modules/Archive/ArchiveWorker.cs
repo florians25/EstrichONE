@@ -48,6 +48,8 @@ internal sealed partial class ArchiveWorker(IServiceScopeFactory scopes, Archive
                 while (await service.ProcessDueAsync(stoppingToken) == 20)
                 {
                 }
+
+                await service.WriteStatusFileAsync(stoppingToken);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {

@@ -50,8 +50,10 @@ akzeptiert es nicht). Für ein gültiges Let's-Encrypt-Zertifikat eine Domain ve
 
 - Ohne Rückfragen: `-e ESTRICHONE_MODE=proxy -e ESTRICHONE_DOMAIN=estrichone.firma.de -e ESTRICHONE_NAME="Estrichbau Muster GmbH"`
 - Andere Ports: `-e ESTRICHONE_HTTP_PORT=8181 -e ESTRICHONE_HTTPS_PORT=8143`
-- **Aktualisieren:** denselben Befehl erneut ausführen (Daten und Konfiguration bleiben, Version wird angehoben).
-  Betriebsart wechseln: zusätzlich `-e ESTRICHONE_MODE=proxy` bzw. `direkt`.
+- **Aktualisieren:** `sudo /opt/estrichone/update.sh` (siehe „Aktualisieren“ unten) – oder denselben Befehl mit
+  neuer Version erneut ausführen (Daten und Konfiguration bleiben). Betriebsart wechseln: zusätzlich
+  `-e ESTRICHONE_MODE=proxy` bzw. `direkt`.
+- Archivserver im selben Stack (nur ohne zweiten Rechner): `-e ESTRICHONE_ARCHIVE=lokal`
 - Verwalten: `cd /opt/estrichone && sudo docker compose -p estrichone ps|logs|down`
 
 ## Installation aus dem Quellcode
@@ -102,6 +104,7 @@ Danach ist die Einrichtung dauerhaft gesperrt. Es gibt keine Standardpasswörter
 | `postgres` | Datenbank | nein (internes Netz ohne Internetzugang) |
 | `backup` | tägliche verschlüsselte Sicherung (restic), Prüfung, Wiederherstellungstest | nein |
 | `restore` | nur bei Bedarf: Wiederherstellung (Profil `restore`) | nein |
+| `archive` | nur mit Profil `archive`: Archivserver im selben Stack (besser: eigener Rechner) | nein |
 
 Alle Daten liegen unter `ESTRICHONE_DATA_DIR` (Standard `deploy/data`):
 
@@ -169,8 +172,61 @@ bleiben erhalten. Der komplette Ablauf wird in der CI bei jeder Änderung und n�
 
 ## Aktualisieren
 
+Der Installer legt `/opt/estrichone/update.sh` an. Auf dem Server genügt:
+
+```bash
+sudo /opt/estrichone/update.sh          # neueste veröffentlichte Version
+sudo /opt/estrichone/update.sh 0.1.0    # bestimmte Version (auch zurück auf eine ältere)
+```
+
+Das Skript zeigt „Installiert → Neu“, **sichert vorher** (Backup-Dienst; bricht bei Fehler ab, ohne Sicherung:
+`--ohne-sicherung`), führt den Installer der Zielversion aus (Konfiguration und Daten bleiben), wartet, bis alle
+Dienste gesund sind, prüft die laufende Version und meldet klar Erfolg oder Fehler. Installationen vor 0.1.0 haben
+das Skript noch nicht: einmal den Installer-Befehl von oben mit der neuen Version ausführen, danach ist es da.
+
+Aus dem Quellcode:
+
 ```bash
 docker compose exec backup estrichone-backup run   # vorher sichern
 git pull
 docker compose up -d --build                        # die API aktualisiert das Schema beim Start
 ```
+
+Archivserver und Backup-Ziele auf anderen Rechnern: dort den jeweiligen Installationsbefehl erneut ausführen.
+
+## Archivserver (10 Jahre, revisionssicher)
+
+Unveränderbare Ablage mit Prüfsummen, Hash-Kette, Löschsperre bis Fristende, Prüfprotokoll und Export für den
+Betriebsprüfer – auf einem zweiten Rechner mit **einem** Befehl:
+
+```bash
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv
+```
+
+Danach in EstrichONE: **System → Archiv → „Archivserver koppeln“**, Adresse und Kopplungscode eingeben, fertig.
+Regeln (welche Dokumentart, wie lange, wann) stehen auf derselben Seite. Ausführlich: [archive/README.md](archive/README.md).
+
+## Backup-Ziel auf einem zweiten Rechner
+
+Zusätzliche Sicherung auf NAS/PC/Raspberry Pi, **nur anhängen** (Löschen unmöglich, Schutz vor Trojanern):
+
+```bash
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel
+```
+
+Dann **System → Backup-Ziele → „Backup-Ziel koppeln“** und den **Notfallzugang** herunterladen und mit dem
+Backup-Passwort aufbewahren. Ausführlich: [backup-target/README.md](backup-target/README.md).
+
+## E-Mail-Konto
+
+**System → E-Mail:** SMTP-Server (z. B. `smtp.ionos.de`, `smtp.office365.com`, `smtp.strato.de`), Port und
+Verschlüsselung (587 STARTTLS oder 465 SSL), Benutzer, Passwort, Absender. **„Testmail senden“** prüft alles sofort
+und nennt bei Fehlern die Ursache (Anmeldung, Verschlüsselung, Server nicht erreichbar …).
+
+- Das Passwort wird mit ASP.NET Data Protection verschlüsselt gespeichert und nie wieder angezeigt. Die Schlüssel
+  liegen in `data/files/.keys` und sind Teil der Sicherung (nach einer Wiederherstellung funktioniert das Konto weiter).
+- Welche Benachrichtigungen verschickt werden (Freigaben, Helpdesk, Benutzerbrief per Mail), steht unter
+  Einstellungen → Benachrichtigungen. Texte sind unter E-Mail → Vorlagen anpassbar (Platzhalter wie `{{name}}`).
+- **Versandprotokoll:** jede Mail mit Empfänger, Betreff, Status, Fehlerursache; fehlgeschlagene werden automatisch
+  wiederholt (1, 5, 30 Minuten, 2 Stunden) und lassen sich erneut senden. Inhalte werden nach dem Versand gelöscht.
+- Für Entwickler: andere Module versenden über `IMailService` (`Modules/Mail/Exports/IMailService.cs`).
