@@ -268,7 +268,8 @@ final class BauakteUITests: XCTestCase {
         app.tap("saveAcceptanceButton")
 
         // In der Bauakte: Protokoll mit Mangel; nach der Übertragung abgeschlossen und als PDF abgelegt.
-        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
+        // (Die Liste bleibt an der Stelle der Abnahme stehen – der Kopf ist dann nicht im Bild.)
+        XCTAssertTrue(app.element("saveAcceptanceButton").waitForNonExistence(timeout: 15), app.debugDescription)
         app.tapElement(app.reveal("acceptanceLink"), "acceptanceLink")
         XCTAssertTrue(app.text(containing: "Fuge Bad nacharbeiten").waitForExistence(timeout: 10), app.debugDescription)
         let pdf = app.element("acceptancePdfButton")
@@ -329,7 +330,8 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(quickLookDone.waitForExistence(timeout: 20), app.debugDescription)
         XCTAssertFalse(app.alerts["Vorschau nicht möglich"].exists)
         quickLookDone.tap()
-        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(quickLookDone.waitForNonExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(document.waitForExistence(timeout: 10), app.debugDescription)
 
         // Verlassen: zurück zur Einrichtung, Demodaten gelöscht.
         app.tap("endDemoButton")
