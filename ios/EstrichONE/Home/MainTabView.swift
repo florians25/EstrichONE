@@ -70,25 +70,31 @@ struct NewBauakteButton: View {
     }
 }
 
-/// Deutliche Kennzeichnung des Demomodus mit „Beenden“.
+/// Kennzeichnung des Demomodus als schmale Kapsel mit „Beenden“.
 struct DemoBanner: View {
     let end: () -> Void
 
     var body: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 8) {
             Image(systemName: "play.rectangle.fill").accessibilityHidden(true)
-            Text("Demo · Beispieldaten, nichts wird gesendet").font(.footnote.weight(.semibold))
+            Text("Demo · Beispieldaten, nichts wird gesendet")
+                .font(.footnote.weight(.semibold))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
                 .accessibilityIdentifier("demoBanner")
-            Spacer()
+            Spacer(minLength: 4)
             Button("Beenden", action: end)
                 .font(.footnote.weight(.bold))
-                .foregroundStyle(Theme.onAccent)
-                .frame(minHeight: 32)
+                .padding(.horizontal, 10)
+                .frame(minHeight: 30)
+                .background(Theme.onAccent.opacity(0.12), in: Capsule())
                 .accessibilityIdentifier("endDemoButton")
         }
         .foregroundStyle(Theme.onAccent)
+        .padding(.leading, 14).padding(.trailing, 4)
+        .padding(.vertical, 4)
+        .background(Theme.accent, in: Capsule())
         .padding(.horizontal, 16)
-        .padding(.vertical, 6)
-        .background(Theme.accent)
+        .padding(.vertical, 4)
     }
 }

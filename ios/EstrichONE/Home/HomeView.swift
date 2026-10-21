@@ -31,7 +31,9 @@ struct HomeView: View {
         NavigationStack(path: $path) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 18) {
-                    HomeHeader()
+                    HomeHeader(todayCount: planning == nil && dispatch == nil ? nil : TodayJob.make(
+                                   assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten).count,
+                               openTasks: openTasks, onTasks: { path.append(.tasks) }, onSync: { path.append(.sync) })
                     if let sync = model.active?.sync {
                         VStack(spacing: 10) {
                             SyncStatusBar(sync: sync)
@@ -605,52 +607,88 @@ struct RowButtonStyle: ButtonStyle {
 
 /// Kopf in Navy: Marke, Server, Person, Gerät; Benutzerwechsel auf Poolgeräten.
 struct HomeHeader: View {
+    /// Heutige Einsätze bzw. offene Aufgaben (nil = noch nicht geladen).
+    var todayCount: Int?
+    var openTasks: Int?
+    var onTasks: () -> Void = {}
+    var onSync: () -> Void = {}
+
     @Environment(AppModel.self) private var model
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
+        VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
                 BrandMark(onDark: true)
-                    .frame(width: 26, height: 26)
+                    .frame(width: 22, height: 22)
                     .accessibilityHidden(true)
-                Text("EstrichONE").font(.subheadline.weight(.bold)).foregroundStyle(.white)
-                Spacer()
-                if let server = model.server {
-                    Text(server.info.serverName).font(.caption).foregroundStyle(.white.opacity(0.75)).lineLimit(1)
+                Text(model.server?.info.serverName ?? "EstrichONE")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.white.opacity(0.8))
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                if model.isPoolDevice {
+                    Button { model.lock() } label: {
+                        Label("Wechseln", systemImage: "person.2")
+                    }
+                    .overlayControlStyle()
+                    .tint(.white)
+                    .accessibilityIdentifier("switchUserButton")
                 }
             }
             if let user = model.active?.user {
-                HStack(spacing: 12) {
-                    Initials(text: LocalUser.initials(of: user.displayName))
-                        .overlay(Circle().strokeBorder(.white.opacity(0.6), lineWidth: 1.5))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(greeting).font(.caption).foregroundStyle(.white.opacity(0.8))
-                        Text(user.displayName).font(.title3.weight(.semibold)).foregroundStyle(.white)
-                            .accessibilityIdentifier("currentUserName")
-                        if let device = model.deviceRegistration {
-                            Text(device.name).font(.caption2).foregroundStyle(.white.opacity(0.7))
-                        }
-                    }
-                    Spacer()
-                    if model.isPoolDevice {
-                        Button { model.lock() } label: {
-                            Label("Wechseln", systemImage: "person.2")
-                        }
-                        .overlayControlStyle()
-                        .tint(.white)
-                        .accessibilityIdentifier("switchUserButton")
-                    }
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("\(greeting), \(Self.firstName(user.displayName))")
+                        .font(.largeTitle.weight(.bold))
+                        .foregroundStyle(.white)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.8)
+                        .accessibilityLabel(user.displayName)
+                        .accessibilityIdentifier("currentUserName")
+                    Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                        .font(.subheadline)
+                        .foregroundStyle(.white.opacity(0.75))
                 }
             }
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: 8) { metrics }
+                VStack(alignment: .leading, spacing: 8) { metrics }
+            }
         }
-        .padding(.horizontal)
-        .padding(.top, 8)
-        .padding(.bottom, 16)
+        .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            LinearGradient(colors: [Theme.navy, Theme.navyLight], startPoint: .topLeading, endPoint: .bottomTrailing)
-                .ignoresSafeArea(edges: .top)
-        )
+        .background {
+            shape.fill(LinearGradient(colors: colorScheme == .dark ? [Color(hex: 0x0A2246), Color(hex: 0x123A6E)] : [Theme.navy, Theme.navyLight],
+                                      startPoint: .topLeading, endPoint: .bottomTrailing))
+        }
+        .overlay(shape.strokeBorder(.white.opacity(colorScheme == .dark ? 0.08 : 0)))
+        .shadow(color: Theme.navy.opacity(colorScheme == .dark ? 0 : 0.22), radius: 16, y: 8)
+        .padding(.horizontal, sizeClass == .regular ? 20 : 16)
+        .padding(.top, 8)
+    }
+
+    @ViewBuilder
+    private var metrics: some View {
+        MetricCapsule(symbol: "calendar", value: todayCount.map(String.init) ?? "–", label: todayCount == 1 ? "Einsatz heute" : "Einsätze heute")
+        Button(action: onTasks) {
+            MetricCapsule(symbol: "checklist", value: openTasks.map(String.init) ?? "–", label: "offene Aufgaben")
+        }
+        .buttonStyle(.plain)
+        Button(action: onSync) {
+            MetricCapsule(symbol: syncState.symbol, value: nil, label: syncState.text)
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var syncState: (symbol: String, text: String) {
+        guard let sync = model.active?.sync else { return ("icloud.slash", "Nicht verbunden") }
+        if sync.isRunning { return ("arrow.triangle.2.circlepath", "Wird abgeglichen") }
+        if sync.isOffline { return ("wifi.slash", "Offline") }
+        if sync.summary?.hasProblems == true { return ("exclamationmark.icloud", "Bitte prüfen") }
+        if let summary = sync.summary, !summary.isSettled { return ("icloud.and.arrow.up", "Wird übertragen") }
+        return ("checkmark.icloud", "Aktuell")
     }
 
     private var greeting: String {
@@ -659,6 +697,33 @@ struct HomeHeader: View {
         case 11..<17: "Guten Tag"
         default: "Guten Abend"
         }
+    }
+
+    static func firstName(_ name: String) -> String {
+        name.split(separator: " ").first.map(String.init) ?? name
+    }
+}
+
+/// Kennzahl als Glas-Kapsel auf dem dunkelblauen Kopf.
+private struct MetricCapsule: View {
+    let symbol: String
+    let value: String?
+    let label: String
+
+    var body: some View {
+        HStack(spacing: 6) {
+            Image(systemName: symbol).font(.subheadline.weight(.semibold))
+            if let value {
+                Text(value).font(.subheadline.weight(.bold).monospacedDigit())
+            }
+            Text(label).font(.subheadline)
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 12)
+        .frame(minHeight: 36)
+        .background(.white.opacity(0.14), in: Capsule())
+        .overlay(Capsule().strokeBorder(.white.opacity(0.18)))
+        .accessibilityElement(children: .combine)
     }
 }
 
