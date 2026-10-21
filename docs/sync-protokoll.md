@@ -79,6 +79,7 @@ Der Client fasst mehrere ungesendete Änderungen desselben Datensatzes zusammen,
 |---|---|---|---|
 | `bauakte.create` | `title`*, `street`, `postalCode`, `city`, `latitude`, `longitude`, `description`, `customerId`, `templateKey` | `bauakten.create` | Antwort enthält die vergebene `number` |
 | `bauakte.update` | `changes`/`base`: `title`, `status`, `street`, `postalCode`, `city`, `latitude`, `longitude`, `description`, `customerId`, `responsibleUserId` | `bauakten.edit` + sichtbar | Abschnitt 3 |
+| `bauakte.setStatus` | `status`* (`inquiry`/`planned`/`inProgress`/`drying`/`completed`/`cancelled`), `baseStatus` (Stand des Geräts), `reason` (Pflicht bei `cancelled`) | `bauakten.edit` + sichtbar | Storno gewinnt: auf eine inzwischen stornierte Bauakte → `ALREADY_CANCELLED` (außer `baseStatus` = `cancelled`); anderer Serverstatus als `baseStatus` → `STATUS_CHANGED`; gleicher Status → bestätigt |
 | `bauakte.delete` | – | `bauakten.delete` + sichtbar | Papierkorb (Tombstone) |
 | `note.create` | `bauakteId`*, `text`*, `pinned`, `color` | `notes.write` + Bauakte sichtbar | nur anfügen |
 | `note.update` | `text`, `pinned`, `color` | Verfasser | letzte Änderung gilt (nur ein Verfasser) |

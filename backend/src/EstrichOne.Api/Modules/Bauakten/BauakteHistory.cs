@@ -47,6 +47,9 @@ internal static class BauakteHistoryEndpoints
         ["Completed"] = "Abgeschlossen", ["Cancelled"] = "Storniert",
     };
 
+    /// <summary>Deutscher Name eines Status (für Meldungen).</summary>
+    internal static string StatusName(BauakteStatus status) => StatusNames.GetValueOrDefault(status.ToString(), status.ToString());
+
     public static void Map(IEndpointRouteBuilder api)
     {
         api.MapGet("/bauakten/{id:guid}/history", GetAsync).WithName("GetBauakteHistory").WithTags("Bauakten")

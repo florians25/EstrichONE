@@ -28,12 +28,13 @@ internal sealed class BauakteSync(
             "siteContactName", "siteContactPhone", "siteContactEmail", "siteNotes"];
 
     public IReadOnlyCollection<string> OperationTypes { get; } =
-        ["bauakte.create", "bauakte.update", "bauakte.delete", "note.create", "note.update", "note.delete"];
+        ["bauakte.create", "bauakte.update", "bauakte.setStatus", "bauakte.delete", "note.create", "note.update", "note.delete"];
 
     public Task<SyncOperationResult> ApplyAsync(SyncOperation operation, CancellationToken cancellationToken) => operation.Type switch
     {
         "bauakte.create" => CreateBauakteAsync(operation, cancellationToken),
         "bauakte.update" => UpdateBauakteAsync(operation, cancellationToken),
+        "bauakte.setStatus" => SetStatusAsync(operation, cancellationToken),
         "bauakte.delete" => DeleteBauakteAsync(operation, cancellationToken),
         "note.create" => CreateNoteAsync(operation, cancellationToken),
         "note.update" => UpdateNoteAsync(operation, cancellationToken),
@@ -167,6 +168,77 @@ internal sealed class BauakteSync(
             Code: conflicts.Count == 0 ? null : "FIELD_CONFLICT",
             Message: conflicts.Count == 0 ? null : "Einige Felder wurden inzwischen von jemand anderem geändert.",
             Version: bauakte.Version, Conflicts: conflicts.Count == 0 ? null : conflicts,
+            Entity: SyncPayload.ToNode(BauakteEndpoints.ToDetail(bauakte)));
+    }
+
+    /// <summary>
+    /// Status ändern bzw. stornieren (mit Pflicht-Begründung) – auch offline erfasst. Konfliktregel: Eine inzwischen
+    /// stornierte Bauakte bleibt storniert (Server gewinnt); hat sich der Status seit dem Stand des Geräts (<c>baseStatus</c>)
+    /// anders geändert, wird abgelehnt statt blind zu überschreiben.
+    /// </summary>
+    private async Task<SyncOperationResult> SetStatusAsync(SyncOperation op, CancellationToken cancellationToken)
+    {
+        if (!await permissions.HasAsync(Permissions.BauaktenEdit, cancellationToken))
+        {
+            return Denied(op);
+        }
+
+        var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == op.EntityId, cancellationToken);
+        if (bauakte is null)
+        {
+            return NotFound(op);
+        }
+
+        BauakteStatus status;
+        BauakteStatus? baseStatus;
+        try
+        {
+            status = SyncPayload.Read<BauakteStatus?>(op.Payload, "status") ?? throw new SyncValidationException("Der neue Status fehlt.");
+            baseStatus = SyncPayload.Read<BauakteStatus?>(op.Payload, "baseStatus");
+        }
+        catch (JsonException)
+        {
+            throw new SyncValidationException("Unbekannter Status.");
+        }
+
+        var reason = SyncPayload.Read<string>(op.Payload, "reason")?.Trim();
+        var entity = SyncPayload.ToNode(BauakteEndpoints.ToDetail(bauakte));
+        if (bauakte.Status == status)
+        {
+            // Schon so (z. B. doppelt gesendet oder parallel gleich entschieden).
+            return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: bauakte.Version, Entity: entity);
+        }
+
+        if (bauakte.Status == BauakteStatus.Cancelled && baseStatus != BauakteStatus.Cancelled)
+        {
+            return SyncOperationResult.Rejected(op.OpId, "ALREADY_CANCELLED",
+                $"Die Bauakte wurde inzwischen storniert ({bauakte.CancellationReason ?? "ohne Angabe"}). Der Status bleibt „Storniert“.") with { Entity = entity };
+        }
+
+        if (baseStatus is { } expected && expected != bauakte.Status)
+        {
+            return SyncOperationResult.Rejected(op.OpId, "STATUS_CHANGED",
+                $"Der Status wurde inzwischen auf „{BauakteHistoryEndpoints.StatusName(bauakte.Status)}“ geändert. Bitte prüfen und erneut wählen.") with { Entity = entity };
+        }
+
+        var before = BauakteEndpoints.ToDetail(bauakte);
+        if (status == BauakteStatus.Cancelled)
+        {
+            if (string.IsNullOrWhiteSpace(reason))
+            {
+                throw new SyncValidationException("Bitte einen Stornogrund angeben.");
+            }
+
+            bauakte.Cancel(reason);
+        }
+        else
+        {
+            bauakte.ChangeStatus(status);
+        }
+
+        BauakteEndpoints.RecordChanges(history, before, BauakteEndpoints.ToDetail(bauakte));
+        await db.SaveChangesAsync(cancellationToken);
+        return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: bauakte.Version,
             Entity: SyncPayload.ToNode(BauakteEndpoints.ToDetail(bauakte)));
     }
 
