@@ -98,8 +98,7 @@ Danach ist die Einrichtung dauerhaft gesperrt. Es gibt keine Standardpasswörter
 | Dienst | Aufgabe | Von außen erreichbar |
 |---|---|---|
 | `caddy` | Weboberfläche (Image `estrichone/web`), HTTPS, Zertifikate, Weiterleitung an die API | ja (80, 443) |
-| `api` | EstrichONE-Server | nein |
-| `migrate` | aktualisiert das Datenbankschema bei jedem Start und beendet sich dann | nein |
+| `api` | EstrichONE-Server; aktualisiert beim Start das Datenbankschema | nein |
 | `postgres` | Datenbank | nein (internes Netz ohne Internetzugang) |
 | `backup` | tägliche verschlüsselte Sicherung (restic), Prüfung, Wiederherstellungstest | nein |
 | `restore` | nur bei Bedarf: Wiederherstellung (Profil `restore`) | nein |
@@ -124,7 +123,7 @@ data/caddy      Zertifikate
 ## Zustand prüfen
 
 ```bash
-docker compose ps                     # alle Dienste „healthy“, migrate „Exited (0)“
+docker compose ps                     # alle Dienste „healthy“
 docker compose logs -f api            # Protokoll (JSON, ohne personenbezogene Inhalte)
 curl https://<adresse>/health/ready   # 200 = API und Datenbank bereit
 ```
@@ -173,5 +172,5 @@ bleiben erhalten. Der komplette Ablauf wird in der CI bei jeder Änderung und n�
 ```bash
 docker compose exec backup estrichone-backup run   # vorher sichern
 git pull
-docker compose up -d --build                        # migrate aktualisiert das Schema vor dem API-Start
+docker compose up -d --build                        # die API aktualisiert das Schema beim Start
 ```

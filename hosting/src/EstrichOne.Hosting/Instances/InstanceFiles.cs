@@ -88,8 +88,6 @@ public sealed partial class InstanceFiles(IOptions<HostingOptions> options, Inst
         builder.AppendLine("services:");
         builder.AppendLine("  postgres:");
         builder.AppendLine("    labels: *tenant-labels");
-        builder.AppendLine("  migrate:");
-        builder.AppendLine("    labels: *tenant-labels");
         builder.AppendLine("  backup:");
         builder.AppendLine("    labels: *tenant-labels");
         builder.AppendLine("  api:");

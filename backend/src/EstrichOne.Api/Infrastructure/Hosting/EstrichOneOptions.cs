@@ -22,4 +22,9 @@ public sealed class EstrichOneOptions
 
     /// <summary>OpenAPI-Beschreibung unter <c>/api/openapi/v1.json</c> ausliefern.</summary>
     public bool ExposeOpenApi { get; set; } = true;
+
+    /// <summary>
+    /// Datenbankschema beim Serverstart aktualisieren (statt eines eigenen <c>migrate</c>-Dienstes). Im Docker-Stack an.
+    /// </summary>
+    public bool MigrateOnStartup { get; set; }
 }

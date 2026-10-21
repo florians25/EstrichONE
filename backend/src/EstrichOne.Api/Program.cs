@@ -66,6 +66,11 @@ if (command.Length > 0)
     return await CommandLine.RunAsync(command, app);
 }
 
+if (options.MigrateOnStartup)
+{
+    await CommandLine.MigrateAsync(app.Services, app.Logger, app.Lifetime.ApplicationStopping);
+}
+
 if (options.TrustForwardedHeaders)
 {
     app.UseForwardedHeaders();

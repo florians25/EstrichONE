@@ -108,7 +108,7 @@ jobs:
           retention-days: 7
 
   integration:
-    name: Integration mit echtem Docker (Suite-Images 0.1.0-preview.4)
+    name: Integration mit echtem Docker (Suite-Images aus diesem Stand)
     needs: image
     runs-on: ubuntu-latest
     timeout-minutes: 40
@@ -118,10 +118,16 @@ jobs:
         with:
           name: hosting-image
       - run: gunzip -c hosting-image.tar.gz | docker load
+      - name: Suite-Images aus diesem Stand bauen (lokal, unter dem Registry-Namen)
+        run: |
+          for image in api web backup; do
+            docker build -f "docker/$image.Dockerfile" --build-arg ESTRICHONE_VERSION=0.1.0-ci \
+              -t "ghcr.io/florians25/estrichone-$image:0.1.0-ci" .
+          done
       - name: Installer, Bereitstellung, Health, Lebenszyklus, Löschen
         env:
           IMAGE: estrichone/hosting:ci
-          SUITE_VERSION: 0.1.0-preview.4
+          SUITE_VERSION: 0.1.0-ci
         run: hosting/scripts/integration.sh
       - name: Protokolle bei Fehler
         if: failure()

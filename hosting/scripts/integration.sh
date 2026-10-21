@@ -2,13 +2,13 @@
 # Echter Integrationstest der Hosting-Konsole (CI: Linux-Runner mit Docker):
 # Installer ausführen → Konsole + Caddy laufen → Mandant mit den veröffentlichten Suite-Images bereitstellen →
 # Health über den gemeinsamen Proxy prüfen → stoppen/starten, sperren/entsperren, sichern → löschen mit Endsicherung.
-#   IMAGE=estrichone/hosting:ci SUITE_VERSION=0.1.0-preview.4 hosting/scripts/integration.sh
+#   IMAGE=estrichone/hosting:ci SUITE_VERSION=0.1.0-preview.6 hosting/scripts/integration.sh
 # Deutsche Anführungszeichen („…“) in Meldungen sind beabsichtigt.
 # shellcheck disable=SC1111,SC1112
 set -euo pipefail
 
 IMAGE="${IMAGE:-estrichone/hosting:ci}"
-SUITE_VERSION="${SUITE_VERSION:-0.1.0-preview.4}"
+SUITE_VERSION="${SUITE_VERSION:-0.1.0-preview.6}"
 ROOT="${HOSTING_ROOT:-/srv/estrichone-hosting-ci}"
 HTTP_PORT="${HTTP_PORT:-8088}"
 CONSOLE="http://localhost:${CONSOLE_PORT:-8099}"

@@ -109,7 +109,7 @@ public sealed class TenantTests
         summary.GetProperty("health").GetString().ShouldBe("Healthy");
         summary.GetProperty("url").GetString().ShouldBe("https://mueller.hosting.test");
         detail.GetProperty("status").GetProperty("setupCode").GetString()!.ShouldMatch("^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$");
-        detail.GetProperty("status").GetProperty("containers").GetArrayLength().ShouldBe(5);
+        detail.GetProperty("status").GetProperty("containers").GetArrayLength().ShouldBe(4);
 
         // Kürzel und Domain sind eindeutig.
         var duplicate = await client.PostAsJsonAsync("/api/tenants", new

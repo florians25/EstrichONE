@@ -51,7 +51,7 @@ public sealed record UsageSample(long? DiskBytes, int? ActiveUsers, DateTime Mea
 
 public static class HealthEvaluator
 {
-    /// <summary>Dienste, die bei einer laufenden Instanz laufen müssen (migrate beendet sich nach dem Schema-Update).</summary>
+    /// <summary>Dienste, die bei einer laufenden Instanz laufen müssen (das Schema-Update erledigt die API beim Start).</summary>
     public static readonly IReadOnlyList<string> RequiredServices = ["postgres", "api", "backup", "caddy"];
 
     public static (HealthLevel Level, List<string> Problems) Evaluate(
@@ -108,6 +108,7 @@ public static class HealthEvaluator
             }
         }
 
+        // Instanzen vor 0.1.0 hatten noch einen eigenen migrate-Dienst.
         var migrate = containers.FirstOrDefault(c => c.Service == "migrate");
         if (migrate is { State: "exited", ExitCode: not 0 and not null })
         {

@@ -16,7 +16,7 @@ namespace EstrichOne.Hosting.Api;
 public static partial class TenantEndpoints
 {
     /// <summary>Dienste, deren Protokoll angezeigt werden darf (feste Liste – keine freien Eingaben an Docker).</summary>
-    public static readonly IReadOnlyList<string> LogServices = ["api", "caddy", "postgres", "backup", "migrate"];
+    public static readonly IReadOnlyList<string> LogServices = ["api", "caddy", "postgres", "backup"];
 
     public static void Map(IEndpointRouteBuilder app)
     {

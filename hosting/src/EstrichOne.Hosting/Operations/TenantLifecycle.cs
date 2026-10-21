@@ -124,7 +124,7 @@ public sealed class TenantLifecycle(
         await SetStateAsync(tenant, TenantState.Provisioning, cancellationToken);
         await PrepareAsync(tenant, plan, log, cancellationToken);
         log.Write("Images laden …");
-        await ComposeAsync(tenant, ["pull"], PullTimeout, log, cancellationToken);
+        await ComposeAsync(tenant, ["pull", "--ignore-pull-failures"], PullTimeout, log, cancellationToken);
         await UpAsync(tenant, log, cancellationToken);
         await SetStateAsync(tenant, TenantState.Running, cancellationToken);
         log.Write($"Instanz läuft. Öffentliche Adresse: {InstanceFiles.PublicUrl(tenant.Domain, Settings)}");

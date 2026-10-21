@@ -8,7 +8,7 @@ namespace EstrichOne.Hosting.Docker;
 
 /// <summary>
 /// Docker-Steuerung über die offizielle Docker-CLI mit Compose-Plugin (im Konsolen-Image enthalten).
-/// Begründung: Die Instanzen sind Compose-Projekte mit Abhängigkeiten, Healthchecks, einmaligen Diensten (migrate),
+/// Begründung: Die Instanzen sind Compose-Projekte mit Abhängigkeiten, Healthchecks, Profilen,
 /// Profilen und YAML-Merge-Tags (<c>!override</c>, <c>!reset</c>). Diese Semantik implementiert nur Compose selbst –
 /// eine Nachbildung über die Engine-API (Docker.DotNet) wäre aufwendig und fehleranfällig. Die CLI wird ohne Shell
 /// mit Argumentlisten aufgerufen; alle variablen Teile (Kürzel, Domains, Versionen) sind vorher streng geprüft.

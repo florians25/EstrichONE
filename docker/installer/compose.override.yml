@@ -2,9 +2,6 @@
 # Die eigentliche Konfiguration steht in compose.yml (deploy/compose.yml), damit es nur eine Quelle gibt.
 
 services:
-  migrate:
-    image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-api:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
-    build: !reset null
   api:
     image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-api:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
     build: !reset null

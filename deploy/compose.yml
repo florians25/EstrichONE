@@ -63,18 +63,6 @@ services:
     shm_size: 128mb
     networks: [backend]
 
-  # Aktualisiert das Datenbankschema und beendet sich danach (ADR 0003).
-  migrate:
-    <<: [*api-image, *hardening]
-    command: ["migrate"]
-    restart: "no"
-    environment:
-      <<: *database
-    depends_on:
-      postgres:
-        condition: service_healthy
-    networks: [backend]
-
   api:
     <<: [*api-image, *hardening]
     restart: unless-stopped
@@ -83,13 +71,22 @@ services:
       EstrichOne__ServerName: ${ESTRICHONE_SERVER_NAME:-EstrichONE}
       EstrichOne__PublicUrl: ${ESTRICHONE_PUBLIC_URL:-https://${ESTRICHONE_DOMAIN:-localhost}}
       EstrichOne__TrustForwardedHeaders: "true"
+      # Datenbankschema beim Start aktualisieren (ersetzt den früheren Dienst „migrate“, ADR 0003).
+      EstrichOne__MigrateOnStartup: "true"
       EstrichOne__Backup__StatusPath: /status
     volumes:
       - ${ESTRICHONE_DATA_DIR:-./data}/files:/data/files
       - ${ESTRICHONE_DATA_DIR:-./data}/backup-status:/status
+    # Erster Start mit Schema-Update kann dauern.
+    healthcheck:
+      test: ["CMD", "dotnet", "EstrichOne.Api.dll", "healthcheck"]
+      interval: 15s
+      timeout: 5s
+      start_period: 120s
+      retries: 3
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
     networks: [backend, frontend]
 
   # Tägliche Sicherung (Datenbank + Dateien) mit restic; Status für das Backup Center (docs/reengineering/16).
@@ -106,8 +103,8 @@ services:
       - ${ESTRICHONE_BACKUP_DIR:-./backup-repository}:/repository
       - ${ESTRICHONE_SSH_DIR:-./ssh}:/home/backup/.ssh:ro
     depends_on:
-      migrate:
-        condition: service_completed_successfully
+      api:
+        condition: service_healthy
     networks: [backend, frontend]
 
   # Wiederherstellung – nur manuell: docker compose stop api && docker compose --profile restore run --rm restore [snapshot]

@@ -6,7 +6,7 @@ namespace EstrichOne.Api.Infrastructure.Hosting;
 /// <summary>
 /// Betriebsbefehle neben dem normalen Serverstart:
 /// <list type="bullet">
-/// <item><c>migrate</c> – Datenbankschema aktualisieren und Erstzustand anlegen (Docker-Dienst <c>migrate</c>).</item>
+/// <item><c>migrate</c> – Datenbankschema aktualisieren und Erstzustand anlegen (manuell; im Docker-Stack erledigt das die API beim Start).</item>
 /// <item><c>healthcheck</c> – prüft <c>/health/live</c> des laufenden Servers (für Docker; das Image hat keine Shell).</item>
 /// </list>
 /// </summary>

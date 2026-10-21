@@ -12,7 +12,7 @@ namespace EstrichOne.Hosting.Docker;
 /// </summary>
 public sealed class FakeDockerHost : IDockerHost
 {
-    private static readonly string[] Services = ["postgres", "migrate", "api", "backup", "caddy"];
+    private static readonly string[] Services = ["postgres", "api", "backup", "caddy"];
 
     private readonly ConcurrentDictionary<string, List<FakeContainer>> projects = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, bool> networks = new(StringComparer.Ordinal);
