@@ -36,7 +36,7 @@ extension BauakteService {
 
     @discardableResult
     public func addCmMeasurement(to bauakteId: UUID, location: String, binder: ScreedBinderKind, heated: Bool, thicknessMm: Int?,
-                                 measuredCmPercent: Double, remarks: String? = nil,
+                                 measuredCmPercent: Double, remarks: String? = nil, notes: String? = nil,
                                  corrects: UUID? = nil) async throws(SiteRecordError) -> UUID {
         let location = location.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !location.isEmpty else { throw .locationRequired }
@@ -44,12 +44,12 @@ extension BauakteService {
         return try await createInspection(bauakteId, kind: .cmMeasurement, fields: [
             "location": .string(location), "binder": .string(binder.rawValue), "heated": .bool(heated),
             "thicknessMm": JSONValue(thicknessMm.map(Double.init)), "measuredCmPercent": .number((measuredCmPercent * 100).rounded() / 100),
-        ], remarks: remarks, corrects: corrects)
+        ], remarks: remarks, notes: notes, corrects: corrects)
     }
 
     @discardableResult
     public func addInitialInspection(to bauakteId: UUID, notRequired: Bool, checks: [InitialCheck: CheckResult], photoFileIds: [UUID],
-                                     remarks: String?, corrects: UUID? = nil) async throws(SiteRecordError) -> UUID {
+                                     remarks: String?, notes: String? = nil, corrects: UUID? = nil) async throws(SiteRecordError) -> UUID {
         let reason = remarks?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
         if notRequired, reason.isEmpty { throw .reasonRequired }
         if !notRequired, checks.isEmpty { throw .checksRequired }
@@ -57,16 +57,17 @@ extension BauakteService {
         return try await createInspection(bauakteId, kind: .initialInspection, fields: [
             "notRequired": .bool(notRequired), "checks": .object(checkValues),
             "photoFileIds": .array(photoFileIds.map { JSONValue($0) }),
-        ], remarks: remarks, corrects: corrects)
+        ], remarks: remarks, notes: notes, corrects: corrects)
     }
 
     private func createInspection(_ bauakteId: UUID, kind: InspectionKind, fields: [String: JSONValue], remarks: String?,
-                                  corrects: UUID?) async throws(SiteRecordError) -> UUID {
+                                  notes: String?, corrects: UUID?) async throws(SiteRecordError) -> UUID {
         let id = UUID.v7(now: currentDate())
         let cleaned = remarks?.trimmingCharacters(in: .whitespacesAndNewlines)
         let payload = JSONValue.object(fields).merging([
             "bauakteId": JSONValue(bauakteId), "kind": .string(kind.rawValue), "performedAt": .string(APIDate.format(currentDate())),
             "remarks": JSONValue(cleaned?.isEmpty == false ? cleaned : nil), "correctsInspectionId": JSONValue(corrects),
+            "notes": JSONValue(Self.cleanNotes(notes)),
         ])
         let local = payload.merging(["id": JSONValue(id), "performedByUserId": JSONValue(userId), "version": 0])
         do {
@@ -75,5 +76,11 @@ extension BauakteService {
             throw .storage
         }
         return id
+    }
+
+    /// Leere Notizen werden nicht gespeichert; Zeilenumbrüche bleiben erhalten.
+    static func cleanNotes(_ notes: String?) -> String? {
+        guard let notes, !notes.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return nil }
+        return String(notes.trimmingCharacters(in: .whitespacesAndNewlines).prefix(100_000))
     }
 }

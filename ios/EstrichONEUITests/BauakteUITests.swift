@@ -233,7 +233,7 @@ final class BauakteUITests: XCTestCase {
                                 ("access", "ok"), ("utilities", "notApplicable")] {
             app.tap("answer-\(check)-\(answer)")
         }
-        app.type("Heizkreis Bad undicht, Kunde informiert", into: "inspectionRemarksField")
+        app.type("Heizkreis Bad undicht, Kunde informiert", into: "inspectionNotesField")
         app.tap("finishInspectionButton")
 
         // Anzeige: Protokoll mit Ergebnis und Notizen.

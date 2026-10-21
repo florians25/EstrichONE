@@ -204,7 +204,8 @@ struct LiveServerTests {
         let cm = try await service.addCmMeasurement(to: bauakte, location: "Bad", binder: .calciumSulfate, heated: true, thicknessMm: 50,
                                                     measuredCmPercent: 0.3)
         let initial = try await service.addInitialInspection(to: bauakte, notRequired: false, checks: [.substrate: .ok, .access: .notOk],
-                                                             photoFileIds: [], remarks: "Zufahrt nur mit kleinem Lkw")
+                                                             photoFileIds: [], remarks: "Zufahrt nur mit kleinem Lkw",
+                                                             notes: "Erste Zeile\nZweite Zeile")
         let local = try #require(try await service.inspections(of: bauakte).first { $0.id == cm })
         #expect(await device.engine.synchronize() == .completed)
         #expect(try await device.store.summary().isSettled)
@@ -213,6 +214,7 @@ struct LiveServerTests {
         #expect(synced.limitCmPercent == local.limitCmPercent && synced.limitCmPercent == 0.3)
         #expect(synced.isReadyForCovering == true && local.isReadyForCovering == true)
         #expect(try await service.inspections(of: bauakte).first { $0.id == initial }?.checks[.access] == .notOk)
+        #expect(try await service.inspections(of: bauakte).first { $0.id == initial }?.notes == "Erste Zeile\nZweite Zeile")
         #expect(try await service.diary(of: bauakte).first?.weather == .cloudy)
 
         let history = try await device.client.history(of: bauakte)

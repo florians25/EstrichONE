@@ -74,13 +74,16 @@ struct SiteRecordTests {
         let photo = UUID.v7()
         let id = try await service.addInitialInspection(to: bauakte, notRequired: false,
                                                         checks: [.substrate: .ok, .edgeInsulation: .notOk], photoFileIds: [photo],
-                                                        remarks: "Randdämmung fehlt im Bad")
+                                                        remarks: "Randdämmung fehlt im Bad",
+                                                        notes: "  Heizkreis Bad undicht.\nKunde informiert, Termin Installateur Mo.  ")
         let local = try #require(try await service.inspections(of: bauakte).first)
         #expect(local.hasDefects)
+        #expect(local.notes == "Heizkreis Bad undicht.\nKunde informiert, Termin Installateur Mo.")
         #expect(local.photoFileIds == [photo])
 
         _ = await engine.synchronize()
         #expect(server.entity(id)?["checks"]?["edgeInsulation"]?.string == "notOk")
         #expect(server.entity(id)?["kind"]?.string == "initialInspection")
+        #expect(server.entity(id)?["notes"]?.string?.contains("\n") == true)
     }
 }

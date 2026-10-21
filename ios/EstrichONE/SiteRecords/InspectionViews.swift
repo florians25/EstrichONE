@@ -107,6 +107,8 @@ struct InitialInspectionView: View {
     @State private var notRequired = false
     @State private var checks: [InitialCheck: CheckResult] = [:]
     @State private var remarks = ""
+    /// Freie Notizen (mehrzeilig, beliebig lang) – Besonderheiten, Absprachen, Maße.
+    @State private var notes = ""
     @State private var photoIds: [UUID] = []
     @State private var capturing = false
     /// Beschriftung der nächsten Fotos (z. B. der Prüfpunkt, zu dem sie gehören).
@@ -169,6 +171,7 @@ struct InitialInspectionView: View {
         notRequired = correcting.notRequired
         checks = correcting.checks
         remarks = correcting.remarks ?? ""
+        notes = correcting.notes ?? ""
         photoIds = correcting.photoFileIds
     }
 
@@ -310,13 +313,27 @@ struct InitialInspectionView: View {
                 Text("Fotos und Unterschrift")
             }
         }
+        notesSection
         Section {
-            TextField(notRequired ? "Warum ist keine Erstbegehung notwendig?" : "Freie Notizen: Besonderheiten, Absprachen mit dem Kunden, Maße …",
+            TextField(notRequired ? "Warum ist keine Erstbegehung notwendig?" : "Kurz zusammengefasst, z. B. Randdämmung im Bad fehlt",
                       text: $remarks, axis: .vertical)
-                .lineLimit(4...14)
+                .lineLimit(2...5)
                 .accessibilityIdentifier("inspectionRemarksField")
         } header: {
-            Text(notRequired ? "Begründung *" : "Notizen")
+            Text(notRequired ? "Begründung *" : "Bemerkung (kurz, optional)")
+        }
+    }
+
+    /// Freie Notizen – auf dem iPad großzügig, auf dem iPhone mitwachsend.
+    private var notesSection: some View {
+        Section {
+            TextField("Freie Notizen: Besonderheiten, Absprachen mit dem Kunden, Maße, Zugang …", text: $notes, axis: .vertical)
+                .lineLimit(5...30)
+                .accessibilityIdentifier("inspectionNotesField")
+        } header: {
+            Text("Notizen")
+        } footer: {
+            Text("Mehrzeilig und ohne Längenbegrenzung; erscheinen im Protokoll und im PDF.")
         }
     }
 
@@ -368,7 +385,8 @@ struct InitialInspectionView: View {
                         }
                     }
                 }
-                Section(notRequired ? "Begründung" : "Bemerkung (optional)") {
+                notesSection
+                Section(notRequired ? "Begründung" : "Bemerkung (kurz, optional)") {
                     TextField(notRequired ? "Warum ist keine Erstbegehung notwendig?" : "z. B. Randdämmung im Bad fehlt", text: $remarks, axis: .vertical)
                         .lineLimit(2...6)
                         .accessibilityIdentifier("inspectionRemarksField")
@@ -395,7 +413,7 @@ struct InitialInspectionView: View {
         guard let service = model.active?.service else { return }
         do throws(SiteRecordError) {
             try await service.addInitialInspection(to: bauakte.id, notRequired: notRequired, checks: checks, photoFileIds: photoIds,
-                                                   remarks: remarks, corrects: correcting?.id)
+                                                   remarks: remarks, notes: notes, corrects: correcting?.id)
             model.active?.sync?.localChangeMade()
             onDone()
         } catch {

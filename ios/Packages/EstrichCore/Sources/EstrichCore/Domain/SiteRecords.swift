@@ -152,6 +152,8 @@ public struct Inspection: Identifiable, Equatable, Sendable {
     public let performedAt: Date?
     public let correctsInspectionId: UUID?
     public let remarks: String?
+    /// Freie Notizen, beliebig lang und mehrzeilig (zusätzlich zur kurzen Bemerkung).
+    public let notes: String?
     public let notRequired: Bool
     public let checks: [InitialCheck: CheckResult]
     public let photoFileIds: [UUID]
@@ -173,6 +175,7 @@ public struct Inspection: Identifiable, Equatable, Sendable {
         performedAt = data["performedAt"]?.string.flatMap(APIDate.parse)
         correctsInspectionId = data["correctsInspectionId"]?.string.flatMap(UUID.init(uuidString:))
         remarks = data["remarks"]?.string
+        notes = data["notes"]?.string
         notRequired = data["notRequired"]?.bool ?? false
         var checks: [InitialCheck: CheckResult] = [:]
         for (key, value) in data["checks"]?.object ?? [:] {

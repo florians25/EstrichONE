@@ -167,11 +167,16 @@ struct InspectionProtocolView: View {
 
     @ViewBuilder
     private var notesSection: some View {
-        Section(inspection.notRequired ? "Begründung" : "Notizen") {
-            if let remarks = inspection.remarks, !remarks.isEmpty {
-                Text(remarks).accessibilityIdentifier("inspectionNotes")
+        Section("Notizen") {
+            if let notes = inspection.notes, !notes.isEmpty {
+                Text(notes).textSelection(.enabled).accessibilityIdentifier("inspectionNotes")
             } else {
                 Text("Keine Notizen.").foregroundStyle(Theme.textSecondary)
+            }
+        }
+        if let remarks = inspection.remarks, !remarks.isEmpty {
+            Section(inspection.notRequired ? "Begründung" : "Bemerkung") {
+                Text(remarks).textSelection(.enabled)
             }
         }
     }
