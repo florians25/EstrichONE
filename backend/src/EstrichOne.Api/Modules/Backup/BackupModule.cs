@@ -80,5 +80,20 @@ public sealed class BackupModule : IModule
                 return TypedResults.NoContent();
             })
             .WithName("RemoveBackupTarget").RequirePermission(Permissions.BackupManage);
+        backup.MapGet("/targets/{id:guid}/recovery", async Task<Results<FileContentHttpResult, NotFound>> (Guid id, BackupTargetService targets,
+                IAuditLog audit, ICurrentUser user, EstrichOneDbContext db, CancellationToken ct) =>
+            {
+                var text = await targets.RecoveryInfoAsync(id, ct);
+                if (text is null)
+                {
+                    return TypedResults.NotFound();
+                }
+
+                audit.Record("backup.target.recovery_downloaded", user.UserId, "backup_target", id.ToString());
+                await db.SaveChangesAsync(ct);
+                return TypedResults.File(System.Text.Encoding.UTF8.GetBytes(text), "text/plain; charset=utf-8", "estrichone-notfallzugang-backup-ziel.txt");
+            })
+            .WithName("GetBackupTargetRecovery").WithSummary("Notfallzugang (Repository, Zertifikat, Anleitung) zum Aufbewahren")
+            .RequirePermission(Permissions.BackupManage);
     }
 }

@@ -1,0 +1,88 @@
+name: Infrastruktur
+
+# Archivserver, Backup-Ziel, E-Mail und Installer/Update – Ende zu Ende mit den echten Images.
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ["**", "!dependabot/**"]
+    paths: ["backend/src/**", "docker/**", "deploy/**", "global.json", ".github/workflows/infra.yml"]
+  pull_request:
+    paths: ["backend/src/**", "docker/**", "deploy/**", "global.json", ".github/workflows/infra.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infra-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  archive:
+    name: Archiv, Backup-Ziel und E-Mail (Ende zu Ende)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - name: Images bauen
+        run: |
+          for image in api backup web archive backup-target; do
+            docker build -q -f "docker/$image.Dockerfile" -t "estrichone/$image:ci" .
+          done
+      - name: Shellcheck
+        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/update.sh deploy/backup/estrichone-backup
+      - name: Archiv koppeln, archivieren, Unveränderbarkeit, Löschsperre, Export, Backup-Ziel, Testmail
+        env:
+          ESTRICHONE_VERSION: ci
+        run: sudo -E deploy/archive/test-archive.sh
+
+  installer:
+    name: Installer, Update von der letzten Version, weitere Rechner
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      VERSION: 0.1.99-ci
+    steps:
+      - uses: actions/checkout@v5
+      - name: Images dieser Version lokal bauen (Namen wie in der Registry)
+        run: |
+          for image in api backup web archive backup-target; do
+            docker build -q -f "docker/$image.Dockerfile" --build-arg ESTRICHONE_VERSION="$VERSION" -t "ghcr.io/florians25/estrichone-$image:$VERSION" .
+          done
+          docker build -q -f docker/installer/Dockerfile --build-arg ESTRICHONE_VERSION="$VERSION" -t "ghcr.io/florians25/estrichone-installer:$VERSION" .
+      - name: Letzte veröffentlichte Version installieren
+        run: |
+          PREVIOUS="$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=5" -H "Authorization: Bearer ${{ github.token }}" \
+            | grep -o '"tag_name": *"v[^"]*"' | head -n 1 | sed 's/.*"v\([^"]*\)"/\1/')"
+          echo "Ausgangsversion: $PREVIOUS"
+          sudo mkdir -p /opt/estrichone
+          sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone:/opt/estrichone \
+            -e ESTRICHONE_MODE=proxy -e ESTRICHONE_DOMAIN=localhost -e ESTRICHONE_NAME="CI" \
+            "ghcr.io/florians25/estrichone-installer:$PREVIOUS"
+      - name: update.sh auf die lokal gebaute Version (mit Sicherung vorher)
+        run: |
+          sudo cp docker/installer/update.sh /opt/estrichone/update.sh
+          sudo /opt/estrichone/update.sh "$VERSION" | tee update.log
+          grep -q "Update erfolgreich" update.log
+          grep -q "^ESTRICHONE_VERSION=$VERSION$" <(sudo cat /opt/estrichone/.env)
+          curl -fsS http://localhost:8181/api/v1/server-info | grep -q "\"serverVersion\":\"$VERSION"
+      - name: Vom Installer abgelegtes update.sh erneut ausführen (idempotent)
+        run: |
+          sudo /opt/estrichone/update.sh --ohne-sicherung "$VERSION" | tee update2.log
+          grep -q "Update erfolgreich" update2.log
+      - name: Unbekannte Version wird sauber abgelehnt
+        run: |
+          ! sudo /opt/estrichone/update.sh 9.9.9 2> err.log
+          grep -q "gibt es nicht" err.log
+      - name: Archivserver und Backup-Ziel mit einem Befehl (zweimal = Update)
+        run: |
+          for role in archiv backup-ziel; do
+            for run in 1 2; do
+              sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "ghcr.io/florians25/estrichone-installer:$VERSION" "$role" | tee "$role.log"
+              grep -q "Kopplungscode:" "$role.log"
+            done
+          done
+          docker ps --format '{{.Names}} {{.Status}}'
+      - name: Logs bei Fehler
+        if: failure()
+        run: |
+          cd /opt/estrichone && sudo docker compose -p estrichone ps && sudo docker compose -p estrichone logs --tail 80

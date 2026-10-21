@@ -156,7 +156,7 @@ jobs:
           version="${TAG#v}"
           owner="$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')"
           source="org.opencontainers.image.source=https://github.com/$GITHUB_REPOSITORY"
-          for image in api web backup installer hosting; do
+          for image in api web backup installer hosting archive backup-target; do
             file="docker/$image.Dockerfile"; [ "$image" = installer ] && file="docker/installer/Dockerfile"; [ "$image" = hosting ] && file="docker/hosting.Dockerfile"
             ref="ghcr.io/$owner/estrichone-$image"
             docker build -f "$file" --build-arg ESTRICHONE_VERSION="$version" --label "$source" \

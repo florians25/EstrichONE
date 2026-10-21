@@ -28,6 +28,12 @@ x-backup-image: &backup-image
     context: ..
     dockerfile: docker/backup.Dockerfile
 
+x-archive-image: &archive-image
+  image: estrichone/archive:${ESTRICHONE_VERSION:-dev}
+  build:
+    context: ..
+    dockerfile: docker/archive.Dockerfile
+
 x-backup-environment: &backup-environment
   PGHOST: postgres
   PGDATABASE: ${POSTGRES_DB:-estrichone}
@@ -126,6 +132,20 @@ services:
       postgres:
         condition: service_healthy
     networks: [backend, frontend]
+
+  # Archivserver im selben Stack – nur, wenn kein zweiter Rechner zur Verfügung steht (besser: eigener Rechner,
+  # siehe deploy/archive/README.md). Einschalten: COMPOSE_PROFILES=archive in der .env bzw. Installer mit
+  # -e ESTRICHONE_ARCHIVE=lokal. Koppeln in EstrichONE mit Adresse „archive“ und dem Code aus „docker compose logs archive“.
+  archive:
+    <<: [*archive-image, *hardening]
+    profiles: [archive]
+    restart: unless-stopped
+    environment:
+      ESTRICHONE_NAME: Archiv (im EstrichONE-Stack)
+      ESTRICHONE_ADDRESS: archive
+    volumes:
+      - ${ESTRICHONE_ARCHIVE_DIR:-./archive}:/data
+    networks: [frontend]
 
   caddy:
     <<: *web-image

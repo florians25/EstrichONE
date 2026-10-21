@@ -11,6 +11,11 @@
 # Erneut ausführen = auf die Version dieses Installers aktualisieren; Daten und .env bleiben erhalten.
 set -eu
 
+# Weitere Rechner: Archivserver bzw. Backup-Ziel (siehe peer.sh)
+case "${1:-}" in
+  archiv|archive|backup-ziel|backup-target) exec estrichone-peer "$@" ;;
+esac
+
 DIR=/opt/estrichone
 VERSION="${INSTALLER_VERSION:?}"
 API_UID=1654
@@ -51,6 +56,8 @@ docker version >/dev/null 2>&1 || fail "Docker ist über den Socket nicht erreic
 
 echo "EstrichONE $VERSION – Installation nach $DIR"
 cp /installer/compose.yml /installer/compose.override.yml /installer/compose.proxy.yml "$DIR/"
+# Einfaches Aktualisieren: sudo /opt/estrichone/update.sh [VERSION]
+cp /installer/update.sh "$DIR/update.sh" && chmod 755 "$DIR/update.sh"
 
 if [ -f "$DIR/.env" ]; then
   echo "Vorhandene Installation gefunden – Konfiguration bleibt, Version wird auf $VERSION gesetzt."
@@ -108,13 +115,20 @@ else
   FIRST=1
 fi
 
+# Archivserver im selben Stack (nur ohne zweiten Rechner): -e ESTRICHONE_ARCHIVE=lokal; abschalten mit =aus
+case "${ESTRICHONE_ARCHIVE:-}" in
+  lokal|local) set_env COMPOSE_PROFILES archive ;;
+  aus|off) sed -i '/^COMPOSE_PROFILES=/d' "$DIR/.env" ;;
+esac
+
 cd "$DIR"
 set -a; . ./.env; set +a
 DATA="${ESTRICHONE_DATA_DIR:-./data}"
 mkdir -p "$DATA/postgres" "$DATA/caddy/data" "$DATA/caddy/config" "$DATA/files" "$DATA/backup-status" \
-  "$DATA/backup-staging" "$DATA/restic-cache" "${ESTRICHONE_BACKUP_DIR:-./backup-repository}" "${ESTRICHONE_SSH_DIR:-./ssh}"
+  "$DATA/backup-staging" "$DATA/restic-cache" "${ESTRICHONE_BACKUP_DIR:-./backup-repository}" "${ESTRICHONE_SSH_DIR:-./ssh}" \
+  "${ESTRICHONE_ARCHIVE_DIR:-./archive}"
 chown -R "$API_UID:$API_UID" "$DATA/files" "$DATA/backup-status" "$DATA/backup-staging" "$DATA/restic-cache" \
-  "${ESTRICHONE_BACKUP_DIR:-./backup-repository}"
+  "${ESTRICHONE_BACKUP_DIR:-./backup-repository}" "${ESTRICHONE_ARCHIVE_DIR:-./archive}"
 
 echo "Images laden und Dienste starten …"
 docker compose -p estrichone pull --quiet --ignore-pull-failures
@@ -178,6 +192,13 @@ if [ -n "$CODE" ]; then
   echo
   echo "   $CODE"
 fi
+if [ "${COMPOSE_PROFILES:-}" = "archive" ]; then
+  ACODE="$(docker compose -p estrichone logs archive 2>/dev/null | sed -n 's/.*KOPPLUNGSCODE: *\([A-Z0-9-]*\).*/\1/p' | tail -n 1)"
+  echo
+  echo "Archivserver im Stack aktiv. Koppeln unter Einstellungen → Archiv mit Adresse „archive“${ACODE:+ und Code $ACODE}."
+fi
+echo
+echo "Aktualisieren später mit:  sudo /opt/estrichone/update.sh   (oder: sudo /opt/estrichone/update.sh <version>)"
 [ "$ESTRICHONE_MODE" = "proxy" ] || case "$ESTRICHONE_DOMAIN" in
   localhost|*[0-9].[0-9]*) echo; echo "Hinweis: Für $ESTRICHONE_DOMAIN stellt Caddy ein eigenes Zertifikat aus – der Browser warnt einmal." ;;
 esac

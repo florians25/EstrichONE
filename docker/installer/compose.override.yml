@@ -11,6 +11,9 @@ services:
   restore:
     image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-backup:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
     build: !reset null
+  archive:
+    image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-archive:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
+    build: !reset null
   caddy:
     image: ${ESTRICHONE_REGISTRY:-ghcr.io/florians25}/estrichone-web:${ESTRICHONE_VERSION:?ESTRICHONE_VERSION fehlt}
     build: !reset null

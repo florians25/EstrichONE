@@ -49,6 +49,10 @@ public sealed class BackupTargetTests(PostgresFixture postgres) : IAsyncLifetime
         conf.ShouldContain($"@{_target.Address}/restic/eo-");
         File.Exists(Path.Combine(_status, "targets", $"{target.Id:N}.ca.pem")).ShouldBeTrue();
 
+        var recovery = await _admin.GetStringAsync(new Uri($"/api/v1/backup/targets/{target.Id}/recovery", UriKind.Relative));
+        recovery.ShouldContain("RESTORE_FROM='rest:https://eo-");
+        recovery.ShouldContain("BEGIN CERTIFICATE");
+
         // Archivserver-Code passt nicht für ein Backup-Ziel und umgekehrt.
         await using var archive = await ArchiveServerHost.StartAsync();
         using var wrongRole = await _admin.PostAsJsonAsync("/api/v1/backup/targets", new { address = archive.Address, code = archive.NewCode() });

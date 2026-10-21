@@ -33,6 +33,40 @@ repositories() {
   [[ -n "${RESTIC_PASSWORD:-}" ]] || fail "RESTIC_PASSWORD ist nicht gesetzt."
   echo "$BACKUP_REPOSITORY"
   if [[ -n "${BACKUP_REPOSITORY_2:-}" ]]; then echo "$BACKUP_REPOSITORY_2"; fi
+  # Gekoppelte Backup-Ziele auf anderer Hardware (Backup Center → Backup-Ziele): je Ziel targets/<id>.conf + <id>.ca.pem
+  local conf
+  for conf in "$STATUS_DIR"/targets/*.conf; do
+    [[ -f "$conf" ]] && echo "target:$(basename "$conf" .conf)"
+  done
+  return 0
+}
+
+# restic für ein Ziel aufrufen. Gekoppelte Ziele: Repository und Zugang aus der .conf, Zertifikat gepinnt über --cacert.
+rr() {
+  local repo="$1"; shift
+  if [[ "$repo" == target:* ]]; then
+    local id="${repo#target:}"
+    (
+      TARGET_REPOSITORY=""
+      # shellcheck disable=SC1090
+      . "$STATUS_DIR/targets/$id.conf"
+      restic -r "$TARGET_REPOSITORY" --cacert "$STATUS_DIR/targets/$id.ca.pem" "$@"
+    )
+  else
+    restic -r "$repo" "$@"
+  fi
+}
+
+# Anzeigename ohne Zugangsdaten
+label() {
+  if [[ "$1" == target:* ]]; then
+    local TARGET_NAME=""
+    # shellcheck disable=SC1090
+    . "$STATUS_DIR/targets/${1#target:}.conf"
+    echo "Backup-Ziel ${TARGET_NAME:-${1#target:}}"
+  else
+    echo "$1"
+  fi
 }
 
 # Status für das Backup Center (liest die API): je Eintrag eine JSON-Datei, atomar geschrieben.
@@ -51,9 +85,9 @@ result_json() { # status, message, [zusatzfelder ohne geschweifte Klammern]
 
 ensure_repository() {
   local repo="$1"
-  if ! restic -r "$repo" cat config >/dev/null 2>&1; then
-    log "Lege neues Sicherungs-Repository an: $repo"
-    restic -r "$repo" init
+  if ! rr "$repo" cat config >/dev/null 2>&1; then
+    log "Lege neues Sicherungs-Repository an: $(label "$repo")"
+    rr "$repo" init
   fi
 }
 
@@ -67,16 +101,18 @@ cmd_run() {
     fail "pg_dump fehlgeschlagen"
   fi
 
-  local repo summary errors=0
+  local repo summary errors=0 target_started
   while read -r repo; do
-    ensure_repository "$repo"
-    log "Sichere nach $repo …"
-    if summary="$(cd "$STAGING_DIR" && restic -r "$repo" backup --tag "$TAG" --json --host estrichone \
+    target_started="$(date +%s)"
+    if ensure_repository "$repo" && summary="$(cd "$STAGING_DIR" && rr "$repo" backup --tag "$TAG" --json --host estrichone \
         database.dump "$FILES_DIR" | tail -n 1)"; then
-      log "Fertig: Snapshot $(grep -o '"snapshot_id":"[0-9a-f]*"' <<<"$summary" | cut -d'"' -f4)"
+      log "Fertig ($(label "$repo")): Snapshot $(grep -o '"snapshot_id":"[0-9a-f]*"' <<<"$summary" | cut -d'"' -f4)"
+      [[ "$repo" == target:* ]] && write_status "target-${repo#target:}" \
+        "$(result_json succeeded 'Sicherung erfolgreich' "\"durationSeconds\":$(( $(date +%s) - target_started ))")"
     else
       errors=$((errors + 1))
-      log "Sicherung nach $repo fehlgeschlagen"
+      log "Sicherung nach $(label "$repo") fehlgeschlagen"
+      [[ "$repo" == target:* ]] && write_status "target-${repo#target:}" "$(result_json failed 'Sicherung fehlgeschlagen')"
     fi
   done < <(repositories)
   reset_dir "$STAGING_DIR"
@@ -92,22 +128,24 @@ cmd_run() {
 }
 
 cmd_snapshots() {
-  while read -r repo; do restic -r "$repo" snapshots --tag "$TAG"; done < <(repositories)
+  while read -r repo; do echo "== $(label "$repo")"; rr "$repo" snapshots --tag "$TAG"; done < <(repositories)
 }
 
 cmd_prune() {
   while read -r repo; do
+    # Backup-Ziele sind „nur anhängen“: Löschen ist dort absichtlich nicht möglich (Schutz vor Verschlüsselungstrojanern).
+    if [[ "$repo" == target:* ]]; then log "Aufbewahrung: $(label "$repo") ist nur-anhängen – übersprungen."; continue; fi
     log "Aufbewahrung anwenden ($repo) …"
     # shellcheck disable=SC2086
-    restic -r "$repo" forget --tag "$TAG" $KEEP --prune
+    rr "$repo" forget --tag "$TAG" $KEEP --prune
   done < <(repositories)
 }
 
 cmd_check() {
   local subset="${1:-10%}" errors=0
   while read -r repo; do
-    log "Prüfe $repo (Datenstichprobe $subset) …"
-    restic -r "$repo" check --read-data-subset="$subset" || errors=$((errors + 1))
+    log "Prüfe $(label "$repo") (Datenstichprobe $subset) …"
+    rr "$repo" check --read-data-subset="$subset" || errors=$((errors + 1))
   done < <(repositories)
   if [[ $errors -gt 0 ]]; then
     write_status lastCheck "$(result_json failed 'Integritätsprüfung fehlgeschlagen')"
@@ -123,7 +161,7 @@ cmd_restore_test() {
   local db="estrichone_restoretest"
   rm -rf "$dir" && mkdir -p "$dir"
   log "Wiederherstellungstest aus $repo …"
-  restic -r "$repo" restore latest --tag "$TAG" --target "$dir" --include database.dump >/dev/null \
+  rr "$repo" restore latest --tag "$TAG" --target "$dir" --include database.dump >/dev/null \
     || { write_status lastRestoreTest "$(result_json failed 'Dump nicht wiederherstellbar')"; fail "restic restore fehlgeschlagen"; }
   local dump; dump="$(find "$dir" -name database.dump | head -n 1)"
   psql -v ON_ERROR_STOP=1 -q -c "DROP DATABASE IF EXISTS $db" -c "CREATE DATABASE $db" postgres
@@ -150,16 +188,17 @@ cmd_restore_test() {
 cmd_restore() {
   local snapshot="${1:-latest}"
   [[ "${ESTRICHONE_RESTORE_MODE:-}" == "1" ]] || fail "Wiederherstellung nur über den Dienst „restore“ (docker compose --profile restore run --rm restore)."
-  local repo; repo="$(repositories | head -n 1)"
+  # RESTORE_FROM: anderes Ziel, z. B. target:<id> (gekoppeltes Backup-Ziel) oder ein restic-Repository
+  local repo; repo="${RESTORE_FROM:-$(repositories | head -n 1)}"
   local dir="$STAGING_DIR/restore"
   rm -rf "$dir" && mkdir -p "$dir"
 
-  log "Prüfe Snapshot $snapshot in $repo …"
-  restic -r "$repo" snapshots --tag "$TAG" "$snapshot" >/dev/null || fail "Snapshot $snapshot nicht gefunden."
-  restic -r "$repo" check --read-data-subset=5% || fail "Repository beschädigt – Wiederherstellung abgebrochen."
+  log "Prüfe Snapshot $snapshot in $(label "$repo") …"
+  rr "$repo" snapshots --tag "$TAG" "$snapshot" >/dev/null || fail "Snapshot $snapshot nicht gefunden."
+  rr "$repo" check --read-data-subset=5% || fail "Repository beschädigt – Wiederherstellung abgebrochen."
 
   log "Stelle Daten wieder her …"
-  restic -r "$repo" restore "$snapshot" --tag "$TAG" --target "$dir"
+  rr "$repo" restore "$snapshot" --tag "$TAG" --target "$dir"
   local dump; dump="$(find "$dir" -name database.dump | head -n 1)"
   [[ -f "$dump" ]] || fail "Im Snapshot fehlt der Datenbank-Dump."
 

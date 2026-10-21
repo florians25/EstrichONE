@@ -68,7 +68,8 @@ set +a
 DATA_DIR="${ESTRICHONE_DATA_DIR:-./data}"
 BACKUP_DIR="${ESTRICHONE_BACKUP_DIR:-./backup-repository}"
 SSH_DIR="${ESTRICHONE_SSH_DIR:-./ssh}"
-APP_DIRS=("$DATA_DIR/files" "$DATA_DIR/backup-status" "$DATA_DIR/backup-staging" "$DATA_DIR/restic-cache" "$BACKUP_DIR")
+ARCHIVE_DIR="${ESTRICHONE_ARCHIVE_DIR:-./archive}"
+APP_DIRS=("$DATA_DIR/files" "$DATA_DIR/backup-status" "$DATA_DIR/backup-staging" "$DATA_DIR/restic-cache" "$BACKUP_DIR" "$ARCHIVE_DIR")
 mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/caddy/data" "$DATA_DIR/caddy/config" "$SSH_DIR" "${APP_DIRS[@]}"
 if [[ $(id -u) -eq 0 ]]; then
   # API und Backup laufen ohne root als UID $API_UID.

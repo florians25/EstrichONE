@@ -7589,6 +7589,39 @@
         ]
       }
     },
+    "/api/v1/backup/targets/{id}/recovery": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Notfallzugang (Repository, Zertifikat, Anleitung) zum Aufbewahren",
+        "operationId": "GetBackupTargetRecovery",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/mail/settings": {
       "get": {
         "tags": [

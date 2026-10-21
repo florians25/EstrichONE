@@ -207,6 +207,42 @@ internal sealed class BackupTargetService(
             $"# Von EstrichONE geschrieben (Backup Center → Backup-Ziele). Nicht von Hand ändern.\nTARGET_NAME='{name} ({address.Host})'\nTARGET_REPOSITORY='{repository}'\n");
     }
 
+    /// <summary>
+    /// Notfallzugang: alles, um nach einem Totalverlust des Servers von diesem Ziel wiederherzustellen
+    /// (zusammen mit dem Backup-Passwort aus der .env). Getrennt vom Server aufbewahren.
+    /// </summary>
+    public async Task<string?> RecoveryInfoAsync(Guid id, CancellationToken cancellationToken)
+    {
+        var target = await db.Set<BackupTarget>().AsNoTracking().SingleOrDefaultAsync(t => t.Id == id, cancellationToken);
+        if (target is null)
+        {
+            return null;
+        }
+
+        var password = protection.CreateProtector(PasswordPurpose).Unprotect(target.ProtectedRestPassword);
+        var address = new Uri(target.Address);
+        var repository = $"rest:https://{target.RestUsername}:{password}@{address.Authority}{target.RestPath}";
+        return $"""
+            EstrichONE – Notfallzugang zum Backup-Ziel „{target.Name}“ ({target.Address})
+            Erstellt: {clock.GetUtcNow():dd.MM.yyyy HH:mm} UTC – VERTRAULICH, getrennt vom Server aufbewahren (z. B. Passwortmanager).
+
+            Repository:     {repository}
+            Fingerabdruck:  {PeerClient.FormatFingerprint(target.CaFingerprint)}
+
+            Wiederherstellen auf einem neuen Server (zusätzlich nötig: RESTIC_PASSWORD aus der alten .env):
+            1. EstrichONE wie gewohnt installieren und die alte .env zurückkopieren (bzw. RESTIC_PASSWORD eintragen).
+            2. Den Zertifikatsblock unten als Datei ssh/backup-ziel-ca.pem im Installationsverzeichnis speichern.
+            3. cd /opt/estrichone && sudo docker compose -p estrichone stop api
+            4. sudo docker compose -p estrichone --profile restore run --rm \
+                 -e RESTORE_FROM='{repository}' \
+                 -e RESTIC_CACERT=/home/backup/.ssh/backup-ziel-ca.pem restore latest
+            5. sudo docker compose -p estrichone up -d
+
+            {target.CaCertificatePem.Trim()}
+
+            """;
+    }
+
     private HttpClient Client(BackupTarget target, TimeSpan timeout) =>
         PeerClient.CreateClient(new Uri(target.Address), target.CaCertificatePem,
             protection.CreateProtector(TokenPurpose).Unprotect(target.ProtectedToken), timeout);
