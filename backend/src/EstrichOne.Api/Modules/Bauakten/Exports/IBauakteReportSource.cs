@@ -1,7 +1,7 @@
 namespace EstrichOne.Api.Modules.Bauakten.Exports;
 
 public sealed record RoomReportRow(string Name, string? Floor, decimal? AreaSquareMeters, string? ScreedType, int? ThicknessMillimeters,
-    int? InsulationMillimeters, bool UnderfloorHeating, string Status);
+    int? InsulationMillimeters, bool UnderfloorHeating, string Status, Guid Id = default);
 
 public sealed record CustomerReportInfo(string Name, string? CustomerNumber, string? Street, string? PostalCode, string? City, string? Phone, string? Email);
 

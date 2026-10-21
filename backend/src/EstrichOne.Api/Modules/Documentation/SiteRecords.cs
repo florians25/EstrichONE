@@ -35,7 +35,7 @@ public sealed record InspectionDto(
 
 /// <summary>Bautagebuch (anfügen, Verfasser ändert) und Prüfungen (nur anlegen) über den Sync.</summary>
 internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess access, IUserPermissions permissions, ICurrentUser currentUser,
-    IBauakteHistory history, TimeProvider clock) : ISyncOperationHandler
+    IBauakteHistory history, TimeProvider clock, IBauakteAutoStatus autoStatus) : ISyncOperationHandler
 {
     public IReadOnlyCollection<string> OperationTypes { get; } = ["diary.create", "diary.update", "diary.delete", "inspection.create"];
 
@@ -87,6 +87,7 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
             SyncPayload.Read<string>(op.Payload, "crew"), SyncPayload.Read<List<Guid>>(op.Payload, "photoFileIds") ?? []);
         db.Add(entry);
         history.Record(bauakteId, BauakteHistoryActions.DiaryAdded, new Dictionary<string, string?> { ["day"] = day.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture) });
+        await autoStatus.TryStartAsync(bauakteId, BauakteAutoTrigger.Diary, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
         return Applied(op, entry.Version, DiaryEntryDto.From(entry));
     }
@@ -204,6 +205,10 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
         }
 
         history.Record(bauakteId, BauakteHistoryActions.InspectionAdded, details);
+        if (inspection.Kind == InspectionKind.InitialInspection && !inspection.NotRequired)
+        {
+            await autoStatus.TryStartAsync(bauakteId, BauakteAutoTrigger.Inspection, cancellationToken);
+        }
         await db.SaveChangesAsync(cancellationToken);
         return Applied(op, inspection.Version, InspectionDto.From(inspection));
     }

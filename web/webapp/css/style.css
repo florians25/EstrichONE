@@ -182,3 +182,56 @@
 .eoAdminMaintenance { margin: 0.25rem 0.5rem; font-weight: bold; }
 .eoMaintenance { position: fixed; inset: 0; z-index: 9000; background: var(--sapBackgroundColor); padding: 1rem; overflow: auto; }
 .eoHistoryChanges { font-size: var(--sapFontSmallSize); }
+
+/* Hochladen im Dialog: Ablagefläche, Kopf mit Aktendaten */
+.eoAkteHeader { padding: 0.5rem 0.75rem; margin-bottom: 0.75rem; border-radius: 0.5rem; background: var(--sapObjectHeader_Background, var(--sapGroup_TitleBackground)); border: 1px solid var(--sapGroup_ContentBorderColor); }
+.eoDropBox { gap: 0.5rem; }
+.eoDropZone { position: relative; display: flex; align-items: center; justify-content: center; min-height: 7rem; border: 2px dashed var(--sapField_BorderColor); border-radius: 0.5rem; background: var(--sapField_Background); color: var(--sapContent_LabelColor); }
+.eoDropZone.eoDropActive { border-color: var(--sapBrandColor); background: var(--sapList_SelectionBackgroundColor); }
+.eoDropText { font-size: 1rem; }
+.eoFileInput { position: absolute; width: 1px; height: 1px; opacity: 0; overflow: hidden; }
+.eoErrorText { color: var(--sapNegativeTextColor); }
+.eoDropTarget.eoDropActive { outline: 2px dashed var(--sapBrandColor); outline-offset: -2px; }
+
+/* Große Vorschau */
+.eoPreviewBody { display: flex; flex-direction: column; height: 100%; padding: 0.75rem 1rem 1rem; box-sizing: border-box; }
+.eoPreviewLarge { flex: 1 1 auto; width: 100%; min-height: 50vh; height: calc(90vh - 11rem); border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.25rem; background: #fff; box-sizing: border-box; }
+.eoPreviewCenter { display: flex; align-items: center; justify-content: center; background: var(--sapBackgroundColor); }
+.eoPreviewMedia { max-width: 100%; max-height: 100%; object-fit: contain; }
+/* Werkzeugleisten ohne abgeschnittene Beschriftungen („Zeitst…“) */
+.eoNoShrink > * { flex-shrink: 0; }
+.eoNoShrink .sapMSegBBtn { width: auto !important; }
+.eoNoShrink .sapMSegBBtnInner { overflow: visible; }
+.eoDropActive { outline: 2px dashed var(--sapBrandColor); outline-offset: -2px; }
+
+/* Kopf der Bauakte: kompakt, klar gegliedert */
+.eoAkteNumber { font-weight: 600; color: var(--sapContent_LabelColor); }
+.eoHeaderGrid { gap: 0.75rem 1.5rem; }
+.eoFact { min-width: 11rem; max-width: 18rem; }
+.eoFact > .sapMLabel { margin-bottom: 0.125rem; }
+.eoFactButton.sapMBtn { margin-left: -0.5rem; height: auto; }
+.eoFactButton .sapMBtnInner { height: auto; white-space: normal; text-align: left; }
+.eoKpis { gap: 1.25rem; max-width: none; padding-left: 1.25rem; border-left: 1px solid var(--sapGroup_ContentBorderColor); }
+.eoKpi { min-width: 6rem; }
+.eoFactMap { border-radius: 0.5rem; overflow: hidden; }
+
+/* Übersicht der Bauakte: Raster ohne Lücken, Karten je Zeile gleich hoch */
+.eoOverviewGrid > .sapFCard { height: 100%; }
+@media (max-width: 48rem) { .eoOverviewGrid > * { grid-column: auto !important; } }
+.eoChanges { font-size: 0.875rem; color: var(--sapContent_LabelColor); }
+.eoTeamChip { padding: 0.25rem 0.75rem 0.25rem 0.25rem; border-radius: 1.5rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
+.eoContactGrid > .sapFCard { height: 100%; }
+.eoShellCompanyLogo { max-width: 10rem; object-fit: contain; margin-right: 0.5rem; }
+.eoLogoPreview { max-width: 20rem; object-fit: contain; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.25rem; padding: 0.25rem; background: #fff; }
+.eoSignature { position: relative; border: 1px solid var(--sapField_BorderColor); border-radius: 0.5rem; background: #fff; touch-action: none; }
+.eoSignature canvas { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
+.eoSignatureLine { position: absolute; left: 1rem; right: 1rem; bottom: 1.5rem; border-top: 1px dashed #9aa5b1; color: #6a7681; font-size: 0.75rem; padding-top: 0.125rem; pointer-events: none; }
+.eoSignBox { flex: 1 1 18rem; min-width: 16rem; }
+.eoWizardBody { padding: 0.5rem 1rem; box-sizing: border-box; }
+/* Öffentliche Freigabeseite (Kunde) */
+.eoPublic { background: var(--sapBackgroundColor); }
+.eoPublicCard { max-width: 52rem; margin: 1.5rem auto; padding: 1.5rem; background: var(--sapGroup_ContentBackground); border-radius: 0.75rem; box-shadow: var(--sapContent_Shadow1); box-sizing: border-box; }
+@media (max-width: 40rem) { .eoPublicCard { margin: 0; border-radius: 0; padding: 1rem; } }
+.eoPublicLead { font-size: 1.125rem; font-weight: 600; margin-top: 0.25rem; }
+.eoPublicLogo { max-width: 16rem; object-fit: contain; }
+.eoPublicDecision { padding: 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.5rem; }

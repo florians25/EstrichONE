@@ -8,11 +8,15 @@ export interface SystemSettings {
 	session: { idleHours: number; rememberDays: number };
 	map: { tileUrl: string; attribution: string; maxZoom: number };
 	numbering: { bauaktePattern: string };
-	bauakte: { assignCreator: boolean; warnMissingInspection: boolean; defaultTemplateId: string | null };
+	bauakte: {
+		assignCreator: boolean; warnMissingInspection: boolean; defaultTemplateId: string | null;
+		autoStart: "manual" | "firstAssignmentDay" | "firstSiteActivity" | "both"; autoCompleteAfterAcceptance: boolean; acceptanceLinkDays: number;
+	};
 	approvals: { defaultDueDays: number; defaultRoleId: string | null; requireCommentOnApprove: boolean };
 	notifications: { approvalRequested: boolean; approvalDecided: boolean; helpdeskUpdates: boolean; newUserLetterByEmail: boolean };
 	appearance: { defaultTheme: string; density: "compact" | "cozy"; showCompanyLogo: boolean };
 	pdf: { showCompanyLogo: boolean; showEstrichOneLogo: boolean; accentColor: string; footerText: string | null; photosPerRow: number };
+	modules: { materials: boolean };
 }
 
 export interface SystemSettingsResponse {

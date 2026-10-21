@@ -39,7 +39,7 @@ internal static class PlanningPrint
             .RequirePermission(Permissions.PlanningRead);
 
     private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> CreateAsync(
-        PlanningService service, EstrichOneDbContext db, ICompanyProfiles companies, TimeProvider clock, CancellationToken cancellationToken,
+        PlanningService service, EstrichOneDbContext db, IPdfBranding branding, TimeProvider clock, CancellationToken cancellationToken,
         [FromQuery] DateOnly? from = null, [FromQuery] string? mode = null, [FromQuery] string? rows = null, [FromQuery] bool weekend = false)
     {
         var today = DateOnly.FromDateTime(clock.GetLocalNow().Date);
@@ -53,8 +53,7 @@ internal static class PlanningPrint
         var days = Enumerable.Range(0, day ? 1 : weekend ? 7 : 5).Select(start.AddDays).ToList();
         var range = await service.RangeAsync(days[0], days[^1], null, cancellationToken);
         var crews = await db.Set<Crew>().AsNoTracking().Where(c => c.IsActive).OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync(cancellationToken);
-        var profile = await companies.GetProfileAsync(cancellationToken);
-        var company = new PdfCompany(profile?.Name ?? "EstrichONE", profile?.Street, profile?.PostalCode, profile?.City, profile?.Phone, profile?.Email, profile?.Website);
+        var company = await branding.GetAsync(cancellationToken);
         var byPeople = rows?.ToLowerInvariant() == "people";
 
         var title = day

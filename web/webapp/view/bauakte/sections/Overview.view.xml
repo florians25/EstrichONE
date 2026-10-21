@@ -1,155 +1,153 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Overview" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
-	xmlns:card="sap.f.cards" xmlns:l="sap.ui.layout" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
+	xmlns:card="sap.f.cards" xmlns:l="sap.ui.layout" xmlns:grid="sap.ui.layout.cssgrid" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
 	core:require="{fmt: 'estrichone/model/formatter'}">
-	<l:Grid defaultSpan="XL6 L6 M12 S12" hSpacing="1" vSpacing="1" containerQuery="true">
-		<!-- Objektbilder -->
-		<f:Card>
-			<f:header>
-				<card:Header title="{i18n>overview.photos}" subtitle="{ov>/photoText}" iconSrc="sap-icon://camera" press=".onGallery"/>
-			</f:header>
-			<f:content>
-				<VBox width="100%" class="sapUiSmallMargin">
-					<Carousel id="heroCarousel" pages="{ov>/hero}" height="15rem" visible="{= ${ov>/hero}.length > 0 }" arrowsPlacement="Content"
-						showPageIndicator="true" pageIndicatorPlacement="Bottom">
-						<Image src="{ov>url}" alt="{ov>alt}" class="eoHero" press=".onGallery" decorative="false"/>
-					</Carousel>
-					<IllustratedMessage illustrationType="sapIllus-NoMail" illustrationSize="Dot" visible="{= ${ov>/hero}.length === 0 }"
-						title="{i18n>overview.noPhotos}" description="{i18n>overview.noPhotosText}" enableVerticalResponsiveness="true">
-						<additionalContent><Button text="{i18n>overview.addPhoto}" press=".onToPhotos"/></additionalContent>
-					</IllustratedMessage>
-				</VBox>
-			</f:content>
-		</f:Card>
-		<!-- Standort -->
-		<f:Card>
-			<f:header>
-				<card:Header title="{i18n>overview.location}" subtitle="{= (${akte>/bauakte/street} || '') + ' ' + (${akte>/bauakte/city} || '') }" iconSrc="sap-icon://map"/>
-			</f:header>
-			<f:content>
-				<VBox width="100%" class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
-					<OverflowToolbar style="Clear" visible="{akte>/canEdit}">
-						<ToolbarSpacer/>
-						<Button text="{= ${ov>/hasLocation} ? ${i18n>overview.changeLocation} : ${i18n>overview.setLocation} }" icon="sap-icon://locate-me"
-							press=".onPick" visible="{= !${ov>/picking} }"/>
-						<Button text="{i18n>common.cancel}" press=".onPickCancel" visible="{ov>/picking}"/>
-						<Button text="{i18n>overview.saveLocation}" type="Emphasized" press=".onPickSave" visible="{ov>/picking}" enabled="{= !!${ov>/picked} }"/>
-					</OverflowToolbar>
-					<MessageStrip text="{i18n>overview.pickHint}" type="Information" showIcon="true" visible="{ov>/picking}" class="sapUiTinyMarginBottom"/>
-					<eo:LeafletMap id="siteMap" height="12rem" markers="{ov>/markers}" pickMode="{ov>/picking}" pick=".onPicked"
-						visible="{= ${ov>/hasLocation} || ${ov>/picking} }"/>
-					<IllustratedMessage illustrationType="sapIllus-NoSearchResults" illustrationSize="Dot" visible="{= !${ov>/hasLocation} &amp;&amp; !${ov>/picking} }"
-						title="{i18n>overview.noLocation}" description="{i18n>overview.noLocationText}" enableVerticalResponsiveness="true"/>
-					<Text text="{ov>/coordinates}" visible="{ov>/hasLocation}" class="eoMuted eoTabular sapUiTinyMarginTop"/>
-				</VBox>
-			</f:content>
-		</f:Card>
-		<!-- Kennzahlen -->
-		<FlexBox wrap="Wrap" class="eoTiles">
-			<layoutData><l:GridData span="XL12 L12 M12 S12"/></layoutData>
-			<GenericTile header="{i18n>overview.openWork}" frameType="TwoByHalf" press=".onToWork" visible="{= ${session>/permissions/work.read} === true }">
-				<TileContent footer="{ov>/workFooter}">
-					<NumericContent value="{ov>/openWork}" icon="sap-icon://alert" valueColor="{= ${ov>/overdue} > 0 ? 'Error' : 'Neutral' }" withMargin="false"/>
-				</TileContent>
-			</GenericTile>
-			<GenericTile header="{i18n>overview.inspection}" frameType="TwoByHalf" press=".onToDocumentation">
-				<TileContent footer="{ov>/inspectionFooter}">
-					<NumericContent value="{ov>/inspectionValue}" scale="{ov>/inspectionScale}" icon="sap-icon://lab" withMargin="false"
-						valueColor="{ov>/inspectionColor}"/>
-				</TileContent>
-			</GenericTile>
-			<GenericTile header="{i18n>overview.next}" frameType="TwoByHalf" press=".onToAssignments" visible="{= ${session>/permissions/planning.read} === true }">
-				<TileContent footer="{ov>/nextFooter}">
-					<NumericContent value="{ov>/nextValue}" icon="sap-icon://appointment-2" withMargin="false" valueColor="Neutral"/>
-				</TileContent>
-			</GenericTile>
-			<GenericTile header="{i18n>overview.documents}" frameType="TwoByHalf" press=".onToDocuments">
-				<TileContent footer="{ov>/documentFooter}">
-					<NumericContent value="{ov>/documentCount}" icon="sap-icon://documents" withMargin="false" valueColor="Neutral"/>
-				</TileContent>
-			</GenericTile>
-			<GenericTile header="{i18n>overview.diary}" frameType="TwoByHalf" press=".onToDocumentation">
-				<TileContent footer="{ov>/diaryFooter}">
-					<NumericContent value="{ov>/diaryCount}" icon="sap-icon://notes" withMargin="false" valueColor="Neutral"/>
-				</TileContent>
-			</GenericTile>
-		</FlexBox>
-		<!-- Angeheftete Notizen -->
-		<f:Card visible="{= ${ov>/pinned}.length > 0 }">
-			<f:header><card:Header title="{i18n>overview.pinned}" iconSrc="sap-icon://pushpin-on"/></f:header>
-			<f:content>
-				<List items="{ov>/pinned}" showSeparators="Inner" width="100%">
-					<CustomListItem>
-						<Text text="{ov>text}" class="eoPre sapUiSmallMargin"/>
-					</CustomListItem>
-				</List>
-			</f:content>
-		</f:Card>
-		<!-- Offene Aufgaben -->
-		<f:Card visible="{= ${ov>/approvals}.length > 0 }">
-			<f:header><card:Header title="Warten auf Freigabe" subtitle="{= ${ov>/approvals}.length + ' Dokument(e)' }" iconSrc="sap-icon://approvals"/></f:header>
-			<f:content>
-				<List items="{ov>/approvals}" showSeparators="Inner">
-					<StandardListItem title="{ov>name}" description="{ov>assignee}" icon="sap-icon://pending" type="Navigation" press=".onOpenDoc"/>
-				</List>
-			</f:content>
-			<f:layoutData><l:GridData span="XL4 L4 M6 S12"/></f:layoutData>
-		</f:Card>
-
-		<f:Card visible="{= ${ov>/latestDocs}.length > 0 }">
-			<f:header><card:Header title="Neueste Dokumente" iconSrc="sap-icon://documents"/></f:header>
-			<f:content>
-				<List items="{ov>/latestDocs}" showSeparators="Inner">
-					<StandardListItem title="{ov>originalName}" description="{path: 'ov>createdAt', formatter: 'fmt.dateTime'}" icon="{ov>icon}" type="Navigation" press=".onOpenDoc"/>
-				</List>
-			</f:content>
-			<f:layoutData><l:GridData span="XL4 L4 M6 S12"/></f:layoutData>
-		</f:Card>
-
-		<f:Card visible="{= ${ov>/work}.length > 0 }">
-			<f:header><card:Header title="{i18n>overview.openWorkList}" iconSrc="sap-icon://task" press=".onToWork"/></f:header>
-			<f:content>
-				<List items="{ov>/work}" width="100%">
-					<StandardListItem title="{ov>title}" icon="{= ${ov>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"
-						info="{path: 'ov>dueDate', formatter: 'fmt.date'}" infoState="{path: 'ov>dueDate', formatter: 'fmt.overdueState'}"/>
-				</List>
-			</f:content>
-		</f:Card>
-		<!-- Baustellendaten -->
-		<f:Card>
-			<f:layoutData><l:GridData span="XL8 L8 M12 S12"/></f:layoutData>
-			<f:header>
-				<card:Header title="{i18n>overview.siteData}" iconSrc="sap-icon://building"/>
-			</f:header>
-			<f:content>
-				<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="2" columnsL="2" columnsM="2" labelSpanXL="4" labelSpanL="4" labelSpanM="4"
-					singleContainerFullSize="false" class="sapUiSmallMarginBottom">
-					<core:Title text="{i18n>overview.base}"/>
-					<Label text="Bauakte"/><Text text="{= ${akte>/bauakte/number} || '–' }"/>
-					<Label text="Kunde"/><Text text="{= ${akte>/customer/name} || '–' }"/>
-					<Label text="Status"/><ObjectStatus text="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}" state="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusState'}"/>
-					<Label text="Zuständig"/><Text text="{akte>/responsibleName}"/>
-					<Label text="Beginn"/><Text text="{path: 'akte>/bauakte/plannedStart', formatter: 'fmt.date'}"/>
-					<Label text="Ende"/><Text text="{path: 'akte>/bauakte/plannedEnd', formatter: 'fmt.date'}"/>
-					<Label text="Angelegt"/><Text text="{path: 'akte>/bauakte/createdAt', formatter: 'fmt.dateTime'}"/>
-					<Label text="Geändert"/><Text text="{path: 'akte>/bauakte/updatedAt', formatter: 'fmt.dateTime'}"/>
-					<core:Title text="{i18n>overview.siteTitle}"/>
-					<Label text="Straße"/><Text text="{= ${akte>/bauakte/street} || '–' }"/>
-					<Label text="PLZ / Ort"/><Text text="{= (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }"/>
-					<Label text="Koordinaten"/><Text text="{= ${ov>/coordinates} || '–' }"/>
-					<Label text="Hinweise"/><Text text="{= ${akte>/bauakte/siteNotes} || '–' }" class="eoPre"/>
-					<Label text="Beschreibung"/><Text text="{= ${akte>/bauakte/description} || 'Keine Beschreibung.' }" class="eoPre"/>
-				</form:SimpleForm>
-			</f:content>
-		</f:Card>
-		<!-- Letzte Aktivitäten -->
-		<f:Card>
-			<f:layoutData><l:GridData span="XL4 L4 M12 S12"/></f:layoutData>
-			<f:header><card:Header title="{i18n>overview.activity}" iconSrc="sap-icon://history" press=".onToNotes"/></f:header>
-			<f:content>
-				<List items="{ov>/activity}" width="100%" noDataText="{i18n>overview.noActivity}">
-					<StandardListItem title="{ov>text}" description="{path: 'ov>at', formatter: 'fmt.dateTime'}" wrapping="true" icon="sap-icon://history"/>
-				</List>
-			</f:content>
-		</f:Card>
-	</l:Grid>
+	<VBox class="eoOverview">
+		<Title text="Auf einen Blick" level="H3" class="sapUiTinyMarginBottom"/>
+			<!-- Kennzahlen -->
+			<FlexBox wrap="Wrap" class="eoTiles">
+				<GenericTile header="{i18n>overview.openWork}" frameType="TwoByHalf" press=".onToWork" visible="{= ${session>/permissions/work.read} === true }">
+					<TileContent footer="{ov>/workFooter}">
+						<NumericContent value="{ov>/openWork}" icon="sap-icon://alert" valueColor="{= ${ov>/overdue} > 0 ? 'Error' : 'Neutral' }" withMargin="false"/>
+					</TileContent>
+				</GenericTile>
+				<GenericTile header="{i18n>overview.inspection}" frameType="TwoByHalf" press=".onToDocumentation">
+					<TileContent footer="{ov>/inspectionFooter}">
+						<NumericContent value="{ov>/inspectionValue}" scale="{ov>/inspectionScale}" icon="sap-icon://lab" withMargin="false"
+							valueColor="{ov>/inspectionColor}"/>
+					</TileContent>
+				</GenericTile>
+				<GenericTile header="{i18n>overview.next}" frameType="TwoByHalf" press=".onToAssignments" visible="{= ${session>/permissions/planning.read} === true }">
+					<TileContent footer="{ov>/nextFooter}">
+						<NumericContent value="{ov>/nextValue}" icon="sap-icon://appointment-2" withMargin="false" valueColor="Neutral"/>
+					</TileContent>
+				</GenericTile>
+				<GenericTile header="{i18n>overview.documents}" frameType="TwoByHalf" press=".onToDocuments">
+					<TileContent footer="{ov>/documentFooter}">
+						<NumericContent value="{ov>/documentCount}" icon="sap-icon://documents" withMargin="false" valueColor="Neutral"/>
+					</TileContent>
+				</GenericTile>
+				<GenericTile header="{i18n>overview.diary}" frameType="TwoByHalf" press=".onToDocumentation">
+					<TileContent footer="{ov>/diaryFooter}">
+						<NumericContent value="{ov>/diaryCount}" icon="sap-icon://notes" withMargin="false" valueColor="Neutral"/>
+					</TileContent>
+				</GenericTile>
+			</FlexBox>
+		<grid:CSSGrid gridTemplateColumns="repeat(auto-fill, minmax(21rem, 1fr))" gridGap="1rem" class="eoOverviewGrid sapUiSmallMarginTop">
+			<!-- Objektbilder -->
+			<f:Card>
+				<f:header>
+					<card:Header title="{i18n>overview.photos}" subtitle="{ov>/photoText}" iconSrc="sap-icon://camera" press=".onGallery"/>
+				</f:header>
+				<f:content>
+					<VBox width="100%" class="sapUiSmallMargin">
+						<Carousel id="heroCarousel" pages="{ov>/hero}" height="15rem" visible="{= ${ov>/hero}.length > 0 }" arrowsPlacement="Content"
+							showPageIndicator="true" pageIndicatorPlacement="Bottom">
+							<Image src="{ov>url}" alt="{ov>alt}" class="eoHero" press=".onGallery" decorative="false"/>
+						</Carousel>
+						<IllustratedMessage illustrationType="sapIllus-NoMail" illustrationSize="Dot" visible="{= ${ov>/hero}.length === 0 }"
+							title="{i18n>overview.noPhotos}" description="{i18n>overview.noPhotosText}" enableVerticalResponsiveness="true">
+							<additionalContent><Button text="{i18n>overview.addPhoto}" press=".onToPhotos"/></additionalContent>
+						</IllustratedMessage>
+					</VBox>
+				</f:content>
+			</f:Card>
+			<!-- Standort -->
+			<f:Card>
+				<f:header>
+					<card:Header title="{i18n>overview.location}" subtitle="{= (${akte>/bauakte/street} || '') + ' ' + (${akte>/bauakte/city} || '') }" iconSrc="sap-icon://map"/>
+				</f:header>
+				<f:content>
+					<VBox width="100%" class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+						<OverflowToolbar style="Clear" visible="{akte>/canEdit}">
+							<ToolbarSpacer/>
+							<Button text="{= ${ov>/hasLocation} ? ${i18n>overview.changeLocation} : ${i18n>overview.setLocation} }" icon="sap-icon://locate-me"
+								press=".onPick" visible="{= !${ov>/picking} }"/>
+							<Button text="{i18n>common.cancel}" press=".onPickCancel" visible="{ov>/picking}"/>
+							<Button text="{i18n>overview.saveLocation}" type="Emphasized" press=".onPickSave" visible="{ov>/picking}" enabled="{= !!${ov>/picked} }"/>
+						</OverflowToolbar>
+						<MessageStrip text="{i18n>overview.pickHint}" type="Information" showIcon="true" visible="{ov>/picking}" class="sapUiTinyMarginBottom"/>
+						<eo:LeafletMap id="siteMap" height="12rem" markers="{ov>/markers}" pickMode="{ov>/picking}" pick=".onPicked"
+							visible="{= ${ov>/hasLocation} || ${ov>/picking} }"/>
+						<IllustratedMessage illustrationType="sapIllus-NoSearchResults" illustrationSize="Dot" visible="{= !${ov>/hasLocation} &amp;&amp; !${ov>/picking} }"
+							title="{i18n>overview.noLocation}" description="{i18n>overview.noLocationText}" enableVerticalResponsiveness="true"/>
+						<Text text="{ov>/coordinates}" visible="{ov>/hasLocation}" class="eoMuted eoTabular sapUiTinyMarginTop"/>
+					</VBox>
+				</f:content>
+			</f:Card>
+			<!-- Offene Aufgaben -->
+			<f:Card visible="{= ${session>/permissions/work.read} === true }">
+				<f:header><card:Header title="{i18n>overview.openWorkList}" iconSrc="sap-icon://task" press=".onToWork"/></f:header>
+				<f:content>
+					<List items="{ov>/work}" width="100%" noDataText="Keine offenen Aufgaben oder Mängel.">
+						<StandardListItem title="{ov>title}" icon="{= ${ov>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"
+							info="{path: 'ov>dueDate', formatter: 'fmt.date'}" infoState="{path: 'ov>dueDate', formatter: 'fmt.overdueState'}"/>
+					</List>
+				</f:content>
+			</f:Card>
+			<!-- Baustellendaten -->
+			<f:Card>
+				<f:layoutData><grid:GridItemLayoutData gridColumn="span 2"/></f:layoutData>
+				<f:header>
+					<card:Header title="{i18n>overview.siteData}" iconSrc="sap-icon://building"/>
+				</f:header>
+				<f:content>
+					<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="2" columnsL="2" columnsM="2" labelSpanXL="4" labelSpanL="4" labelSpanM="4"
+						singleContainerFullSize="false" class="sapUiSmallMarginBottom">
+						<core:Title text="{i18n>overview.base}"/>
+						<Label text="Bauakte"/><Text text="{= ${akte>/bauakte/number} || '–' }"/>
+						<Label text="Kunde"/><Text text="{= ${akte>/customer/name} || '–' }"/>
+						<Label text="Status"/><ObjectStatus text="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}" state="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusState'}"/>
+						<Label text="Zuständig"/><Text text="{akte>/responsibleName}"/>
+						<Label text="Beginn"/><Text text="{path: 'akte>/bauakte/plannedStart', formatter: 'fmt.date'}"/>
+						<Label text="Ende"/><Text text="{path: 'akte>/bauakte/plannedEnd', formatter: 'fmt.date'}"/>
+						<Label text="Angelegt"/><Text text="{path: 'akte>/bauakte/createdAt', formatter: 'fmt.dateTime'}"/>
+						<Label text="Geändert"/><Text text="{path: 'akte>/bauakte/updatedAt', formatter: 'fmt.dateTime'}"/>
+						<core:Title text="{i18n>overview.siteTitle}"/>
+						<Label text="Straße"/><Text text="{= ${akte>/bauakte/street} || '–' }"/>
+						<Label text="PLZ / Ort"/><Text text="{= (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }"/>
+						<Label text="Koordinaten"/><Text text="{= ${ov>/coordinates} || '–' }"/>
+						<Label text="Hinweise"/><Text text="{= ${akte>/bauakte/siteNotes} || '–' }" class="eoPre"/>
+						<Label text="Beschreibung"/><Text text="{= ${akte>/bauakte/description} || 'Keine Beschreibung.' }" class="eoPre"/>
+					</form:SimpleForm>
+				</f:content>
+			</f:Card>
+			<!-- Letzte Aktivitäten -->
+			<f:Card>
+				<f:header><card:Header title="{i18n>overview.activity}" iconSrc="sap-icon://history" press=".onActivities"/></f:header>
+				<f:content>
+					<List items="{ov>/activity}" width="100%" noDataText="{i18n>overview.noActivity}">
+						<StandardListItem title="{ov>text}" description="{path: 'ov>at', formatter: 'fmt.dateTime'}" wrapping="true" icon="sap-icon://history"/>
+					</List>
+				</f:content>
+			</f:Card>
+			<!-- Warten auf Freigabe -->
+			<f:Card visible="{= ${ov>/approvals}.length > 0 }">
+				<f:header><card:Header title="Warten auf Freigabe" subtitle="{= ${ov>/approvals}.length + ' Dokument(e)' }" iconSrc="sap-icon://approvals"/></f:header>
+				<f:content>
+					<List items="{ov>/approvals}" showSeparators="Inner">
+						<StandardListItem title="{ov>name}" description="{ov>assignee}" icon="sap-icon://pending" type="Navigation" press=".onOpenDoc"/>
+					</List>
+				</f:content>
+			</f:Card>
+			<f:Card visible="{= ${ov>/latestDocs}.length > 0 }">
+				<f:header><card:Header title="Neueste Dokumente" iconSrc="sap-icon://documents"/></f:header>
+				<f:content>
+					<List items="{ov>/latestDocs}" showSeparators="Inner">
+						<StandardListItem title="{ov>originalName}" description="{path: 'ov>createdAt', formatter: 'fmt.dateTime'}" icon="{ov>icon}" type="Navigation" press=".onOpenDoc"/>
+					</List>
+				</f:content>
+			</f:Card>
+			<!-- Angeheftete Notizen -->
+			<f:Card visible="{= ${ov>/pinned}.length > 0 }">
+				<f:header><card:Header title="{i18n>overview.pinned}" iconSrc="sap-icon://pushpin-on"/></f:header>
+				<f:content>
+					<List items="{ov>/pinned}" showSeparators="Inner" width="100%">
+						<CustomListItem>
+							<Text text="{ov>text}" class="eoPre sapUiSmallMargin"/>
+						</CustomListItem>
+					</List>
+				</f:content>
+			</f:Card>
+		</grid:CSSGrid>
+	</VBox>
 </mvc:View>

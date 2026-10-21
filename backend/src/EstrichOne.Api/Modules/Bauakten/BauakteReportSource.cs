@@ -32,7 +32,7 @@ internal sealed class BauakteReportSource(EstrichOneDbContext db) : IBauakteRepo
         var rooms = (await db.Set<Room>().AsNoTracking().Where(r => r.BauakteId == bauakteId).ToListAsync(cancellationToken))
             .OrderBy(r => r.Floor, StringComparer.CurrentCulture).ThenBy(r => r.Name, StringComparer.CurrentCulture)
             .Select(r => new RoomReportRow(r.Name, r.Floor, r.AreaSquareMeters, r.ScreedTypeId is { } t ? screedTypes.GetValueOrDefault(t) : null,
-                r.ThicknessMillimeters, r.InsulationMillimeters, r.UnderfloorHeating, RoomStatusText.GetValueOrDefault(r.Status, r.Status.ToString())))
+                r.ThicknessMillimeters, r.InsulationMillimeters, r.UnderfloorHeating, RoomStatusText.GetValueOrDefault(r.Status, r.Status.ToString()), r.Id))
             .ToList();
         return new BauakteReportInfo(bauakte.Id, bauakte.Number, bauakte.Title, bauakte.Status, bauakte.Street, bauakte.PostalCode, bauakte.City,
             bauakte.Description, bauakte.PlannedStart, bauakte.PlannedEnd, bauakte.SiteContactName, bauakte.SiteContactPhone, bauakte.SiteNotes,

@@ -18,6 +18,9 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<IBauakteHintSource, BauakteOwnHints>();
         services.AddScoped<IBauakteSummaries, BauakteSummaries>();
         services.AddScoped<IBauakteFactory, BauakteFactory>();
+        services.AddScoped<IBauakteAutoStatus, BauakteAutoStatus>();
+        services.AddSingleton<BauakteAutoStartJob>();
+        services.AddHostedService(sp => sp.GetRequiredService<BauakteAutoStartJob>());
         services.AddScoped<IBauakteRooms, BauakteRooms>();
         services.AddScoped<IBauakteReportSource, BauakteReportSource>();
         services.AddScoped<ISyncOperationHandler, BauakteSync>();
@@ -32,5 +35,6 @@ public sealed class BauaktenModule : IModule
         BauakteHistoryEndpoints.Map(api);
         OfficeEndpoints.Map(api);
         BauakteTeamEndpoints.Map(api);
+        BauaktePartyEndpoints.Map(api);
     }
 }

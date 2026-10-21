@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, apiCall, choose, jpeg, nav, openSection, pageTitle, pdf, signIn, toast } from './helpers';
+import { adminPassword, apiCall, choose, jpeg, nav, openSection, pageTitle, pdf, signIn, toast, uploadViaDialog, rowMenu } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -97,20 +97,23 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   await openAkte(page);
   await openSection(page, 'Dokumente');
   await page.locator('.sapMTreeItemBase').filter({ hasText: 'Angebote (0)' }).click();
-  await expect(page.getByText('Neue Dateien werden abgelegt unter: Angebote.')).toBeVisible();
-  await page.locator('.eoUpload input[type=file]').setInputFiles([
+  // Hochladen im Dialog: Kopf mit Aktendaten, Ziel aus dem gewählten Ordner vorbelegt.
+  const upload = await uploadViaDialog(page, [
     { name: 'Angebot.pdf', mimeType: 'application/pdf', buffer: pdf },
     { name: 'Leistungsverzeichnis.pdf', mimeType: 'application/pdf', buffer: Buffer.concat([pdf, Buffer.from('% LV\n')]) },
-  ]);
+  ], async (dialog) => {
+    await expect(dialog.locator('.eoAkteHeader')).toContainText(title);
+    await expect(dialog.getByRole('combobox', { name: 'Dokumentart' })).toContainText('Angebote');
+  });
   await expect(toast(page)).toContainText('2 Dateien hochgeladen.');
+  await expect(upload).toBeHidden();
   const table = page.locator('.sapMList').filter({ hasText: 'Angebote (2)' }).last();
   await expect(table.getByRole('link', { name: 'Angebot.pdf' })).toBeVisible();
   await expect(page.locator('.sapMTreeItemBase').filter({ hasText: 'Angebote (2)' })).toBeVisible();
 
   // Umbenennen
   const angebot = page.getByRole('row').filter({ hasText: 'Angebot.pdf' });
-  await angebot.getByRole('button', { name: 'Weitere Aktionen' }).click();
-  await page.getByRole('menuitem', { name: 'Umbenennen …' }).click();
+  await rowMenu(page, angebot, 'Umbenennen …');
   const rename = page.getByRole('dialog', { name: 'Umbenennen' });
   await rename.getByLabel('Dateiname').fill('Angebot 2026-117');
   await rename.getByLabel('Beschreibung').fill('Heizestrich EG, Stand Oktober');
@@ -123,11 +126,10 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   const folder = page.getByRole('dialog', { name: 'Neuer Unterordner' });
   await folder.getByRole('textbox').fill('Ausschreibung');
   await folder.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByText('Neue Dateien werden abgelegt unter: Angebote / Ausschreibung.')).toBeVisible();
+  await expect(page.getByText('Angebote / Ausschreibung (0)')).toBeVisible();
   await page.locator('.sapMTreeItemBase').filter({ hasText: /^Alle Dokumente/ }).click();
   const lv = page.getByRole('row').filter({ hasText: 'Leistungsverzeichnis.pdf' });
-  await lv.getByRole('button', { name: 'Weitere Aktionen' }).click();
-  await page.getByRole('menuitem', { name: 'Verschieben …' }).click();
+  await rowMenu(page, lv, 'Verschieben …');
   const move = page.getByRole('dialog', { name: /verschieben/ });
   await move.getByLabel('Unterordner').fill('Ausschreibung');
   await move.getByRole('button', { name: 'Verschieben' }).click();
@@ -135,8 +137,7 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   await expect(page.getByRole('row').filter({ hasText: 'Leistungsverzeichnis.pdf' })).toContainText('Ausschreibung');
 
   // Neue Fassung
-  await page.getByRole('row').filter({ hasText: 'Angebot 2026-117.pdf' }).getByRole('button', { name: 'Weitere Aktionen' }).click();
-  await page.getByRole('menuitem', { name: 'Neue Fassung hochladen …' }).click();
+  await rowMenu(page, page.getByRole('row').filter({ hasText: 'Angebot 2026-117.pdf' }), 'Neue Fassung hochladen …');
   const version = page.getByRole('dialog', { name: 'Neue Fassung hochladen' });
   await version.locator('input[type=file]').setInputFiles({ name: 'Angebot 2026-117 v2.pdf', mimeType: 'application/pdf', buffer: Buffer.concat([pdf, Buffer.from('% v2\n')]) });
   await version.getByRole('button', { name: 'Als neue Fassung hochladen' }).click();
@@ -148,8 +149,14 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   await expect(page.getByRole('link', { name: 'Angebot 2026-117.pdf' })).toBeVisible();
   await page.getByRole('button', { name: 'Alle Fassungen' }).click();
 
-  // Vorschau in der rechten Spalte mit Fassungen
+  // Große Vorschau im Dialog, von dort zu den Details (rechte Spalte) mit Fassungen
   await current.getByRole('link', { name: 'Angebot 2026-117 v2.pdf' }).click();
+  const preview = page.getByRole('dialog', { name: 'Vorschau' });
+  await expect(preview.locator('iframe.eoPreviewLarge')).toBeVisible();
+  await expect(preview.locator('.eoAkteHeader')).toContainText(title);
+  const box = await preview.locator('iframe.eoPreviewLarge').boundingBox();
+  expect(box!.width).toBeGreaterThan(1000);
+  await preview.getByRole('button', { name: 'Details' }).click();
   await expect(page).toHaveURL(/\/datei\//);
   await expect(page.locator('iframe.eoPreviewFrame')).toBeVisible();
   await expect(page.getByText('Fassung 1: Angebot 2026-117.pdf')).toBeVisible();
@@ -165,8 +172,7 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Auswahl herunterladen', exact: true }).click();
   expect((await download).suggestedFilename()).toMatch(/\.zip$/);
-  await page.getByRole('row').filter({ hasText: 'Leistungsverzeichnis.pdf' }).getByRole('button', { name: 'Weitere Aktionen' }).click();
-  await page.getByRole('menuitem', { name: 'Löschen' }).click();
+  await rowMenu(page, page.getByRole('row').filter({ hasText: 'Leistungsverzeichnis.pdf' }), 'Löschen');
   await page.getByRole('alertdialog').getByRole('button', { name: 'Löschen' }).click();
   await expect(page.getByRole('link', { name: 'Leistungsverzeichnis.pdf' })).toHaveCount(0);
   await openSection(page, 'Notizen & Verlauf');
@@ -230,7 +236,7 @@ test('Fotos: Upload, Zeitstrahl, Großansicht mit Vor/Zurück, Beschriftung, Zuo
   await signIn(page, 'admin', adminPassword);
   await openAkte(page);
   await openSection(page, 'Fotos & Videos');
-  await page.locator('.eoUpload input[type=file]').setInputFiles([
+  await uploadViaDialog(page, [
     { name: 'Bad-OG.jpg', mimeType: 'image/jpeg', buffer: jpeg },
     { name: 'Wohnen-EG.jpg', mimeType: 'image/jpeg', buffer: jpeg },
   ]);
@@ -305,6 +311,7 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   // Erstbegehung als geführter Ablauf: Prüfpunkt beanstandet → Mangel wird angelegt.
   await page.getByRole('button', { name: 'Erstbegehung erfassen' }).first().click();
   const insp = page.getByRole('dialog', { name: 'Erstbegehung erfassen' });
+  await insp.getByLabel('Notizen (frei, beliebig lang)').fill('Gespräch mit Frau Kraus:\nZufahrt über den Hof, Hund im Garten.');
   await insp.getByRole('button', { name: 'Weiter' }).click();
   await insp.locator('[id="inspCheck-edgeInsulation"]').getByText('Mangel', { exact: true }).click();
   await insp.locator('[id="inspNote-edgeInsulation-inner"]').fill('fehlt an der Treppe');
@@ -317,6 +324,7 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   await insp.getByRole('button', { name: 'Erstbegehung speichern' }).click();
   await expect(toast(page)).toContainText('Erstbegehung gespeichert');
   await expect(page.getByText('Erstbegehungsprotokoll').first()).toBeVisible();
+  await expect(page.getByText(/Zufahrt über den Hof, Hund im Garten/).first()).toBeVisible();
 
   // Bauakte als PDF (Server): Deckblatt, Räume, Tagebuch, Prüfungen, Mängel, Fotodokumentation.
   const pdfDownload = page.waitForEvent('download');
@@ -391,7 +399,7 @@ test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page
   await page.getByRole('button', { name: 'Standort speichern' }).click();
   await expect(toast(page)).toContainText('Standort gespeichert');
   await expect(page.getByRole('button', { name: 'Standort ändern' })).toBeVisible();
-  await expect(page.locator('.leaflet-interactive').first()).toBeVisible();
+  await expect(page.locator('.leaflet-interactive').filter({ visible: true }).first()).toBeVisible();
   await expect(page.locator('img.leaflet-tile').first()).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
   expect(referers.length).toBeGreaterThan(0);
   expect(referers.every((r) => r.startsWith(new URL(page.url()).origin))).toBe(true);
@@ -400,15 +408,38 @@ test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page
 test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await openAkte(page);
+  // Reiter „Kontakte“ direkt hinter „Übersicht“
+  const tabs = await page.locator('.sapUxAPAnchorBar [role=option], .sapUxAPAnchorBar button, .sapMITBFilter').allInnerTexts();
+  const names = tabs.map((t) => t.trim()).filter(Boolean);
+  expect(names.indexOf('Kontakte')).toBe(names.indexOf('Übersicht') + 1);
   await openSection(page, 'Kontakte');
-  await page.getByRole('button', { name: 'Bearbeiten' }).last().click();
+  const site = page.locator('.sapFCard').filter({ hasText: 'Ansprechpartner vor Ort' }).filter({ visible: true }).first();
+  await site.getByRole('button', { name: 'Bearbeiten' }).click();
   const contact = page.getByRole('dialog', { name: 'Baustellenkontakt bearbeiten' });
   await contact.getByLabel('Ansprechpartner vor Ort').fill('Herr Bauer (Bauleitung)');
   await contact.getByLabel('Telefon').fill('0171 2345678');
   await contact.getByLabel('Hinweise / Behinderungen').fill('Schlüssel beim Nachbarn Nr. 5');
   await contact.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.getByText('Herr Bauer (Bauleitung)')).toBeVisible();
-  await expect(page.locator('.sapMMsgStrip').filter({ hasText: 'Schlüssel beim Nachbarn Nr. 5' }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.locator('.sapFCard').filter({ hasText: 'Herr Bauer (Bauleitung)' }).first()).toContainText('Schlüssel beim Nachbarn Nr. 5');
+
+  // Schnellerfassung eines Beteiligten mit Rolle
+  await page.getByRole('button', { name: 'Kontakt erfassen' }).click();
+  const quick = page.getByRole('dialog', { name: 'Kontakt erfassen' });
+  await choose(page, quick.getByLabel('Rolle'), 'Architekt');
+  await quick.getByLabel('Name', { exact: true }).fill('Frau Lehner');
+  await quick.getByLabel('Firma').fill('Architekturbüro Lehner');
+  await quick.getByLabel('Telefon').fill('0871 12345');
+  await quick.getByRole('button', { name: 'Speichern' }).click();
+  const architect = page.locator('.sapFCard').filter({ hasText: 'Frau Lehner' }).filter({ visible: true }).first();
+  await expect(architect).toContainText('Architekt');
+  await expect(architect.getByRole('button', { name: /0871 12345/ })).toBeVisible();
+
+  // Letzte Aktivitäten im eigenen Fenster
+  await page.getByRole('button', { name: 'Aktionen' }).click();
+  await page.getByRole('menuitem', { name: 'Letzte Aktivitäten …' }).click();
+  const activities = page.getByRole('dialog', { name: 'Letzte Aktivitäten' });
+  await expect(activities.getByText(/„Frau Lehner“ als Architekt hinzugefügt/)).toBeVisible();
+  await activities.getByRole('button', { name: 'Schließen' }).click();
 
   await page.getByRole('button', { name: /Zugewiesen:/ }).click();
   const assign = page.getByRole('dialog', { name: 'Bauakte zuweisen' });

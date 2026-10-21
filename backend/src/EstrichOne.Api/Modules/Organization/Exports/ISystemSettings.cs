@@ -16,6 +16,7 @@ public sealed record SystemSettings
     public NotificationSettings Notifications { get; init; } = new();
     public AppearanceSettings Appearance { get; init; } = new();
     public PdfSettings Pdf { get; init; } = new();
+    public ModuleSettings Modules { get; init; } = new();
 
     /// <summary>Werte auf erlaubte Bereiche begrenzen (auch für alte oder von Hand geänderte Daten).</summary>
     public SystemSettings Normalize() => this with
@@ -23,11 +24,12 @@ public sealed record SystemSettings
         Session = (Session ?? new()).Normalize(),
         Map = (Map ?? new()).Normalize(),
         Numbering = (Numbering ?? new()).Normalize(),
-        Bauakte = Bauakte ?? new(),
+        Bauakte = (Bauakte ?? new()).Normalize(),
         Approvals = (Approvals ?? new()).Normalize(),
         Notifications = Notifications ?? new(),
         Appearance = (Appearance ?? new()).Normalize(),
         Pdf = (Pdf ?? new()).Normalize(),
+        Modules = Modules ?? new(),
     };
 
     internal static string? Text(string? value, int max) =>
@@ -91,6 +93,39 @@ public sealed record BauakteDefaults
 
     /// <summary>Vorgeschlagene Bauakten-Vorlage im Anlage-Assistenten (Stammdaten).</summary>
     public Guid? DefaultTemplateId { get; init; }
+
+    /// <summary>„Geplant“ automatisch auf „In Ausführung“ setzen – Auslöser siehe <see cref="AutoStartTrigger"/>.</summary>
+    public AutoStartTrigger AutoStart { get; init; } = AutoStartTrigger.Both;
+
+    /// <summary>Nach freigegebener Abnahme ohne Vorbehalt und ohne offene Mängel automatisch abschließen.</summary>
+    public bool AutoCompleteAfterAcceptance { get; init; } = true;
+
+    /// <summary>Gültigkeit des Freigabelinks für Kunden (Abnahmeprotokoll) in Tagen.</summary>
+    public int AcceptanceLinkDays { get; init; } = 14;
+
+    public BauakteDefaults Normalize() => this with { AcceptanceLinkDays = Math.Clamp(AcceptanceLinkDays, 1, 60) };
+}
+
+/// <summary>Wann eine geplante Bauakte automatisch „In Ausführung“ wird.</summary>
+public enum AutoStartTrigger
+{
+    /// <summary>Nur von Hand.</summary>
+    Manual,
+
+    /// <summary>Am ersten Tag mit einem geplanten Einsatz.</summary>
+    FirstAssignmentDay,
+
+    /// <summary>Bei der ersten Aktivität vor Ort (Foto, Bautagebuch, Erstbegehung).</summary>
+    FirstSiteActivity,
+
+    /// <summary>Was zuerst eintritt.</summary>
+    Both,
+}
+
+/// <summary>Abschaltbare Module. Daten bleiben beim Abschalten erhalten.</summary>
+public sealed record ModuleSettings
+{
+    public bool Materials { get; init; } = true;
 }
 
 public sealed record ApprovalSettings

@@ -4,8 +4,6 @@ import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type Table from "sap/m/Table";
 import type Tree from "sap/m/Tree";
-import type UploadSet from "sap/m/upload/UploadSet";
-import type UploadSetItem from "sap/m/upload/UploadSetItem";
 import Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
 import Label from "sap/m/Label";
@@ -14,7 +12,6 @@ import VBox from "sap/m/VBox";
 import MessageStrip from "sap/m/MessageStrip";
 import FileUploader from "sap/ui/unified/FileUploader";
 import MessageBox from "sap/m/MessageBox";
-import DocumentUploader from "../../../control/DocumentUploader";
 import { del, get, problemMessage, put } from "../../../util/api";
 import { approvalStatus, requestApproval, type ApprovalStatus } from "../../../util/approvals";
 import { catalog, type FolderTemplate } from "../../../util/catalog";
@@ -24,7 +21,11 @@ import { openForm, prompt } from "../../../util/forms";
 import { documentCategories, options } from "../../../util/labels";
 import type { DocumentCategory, FileResponse } from "../../../util/models";
 import { navTo } from "../../../util/navigation";
+import { session } from "../../../util/session";
 import { uploadFile } from "../../../util/upload";
+import { openUploadDialog } from "../../../util/uploadDialog";
+import { openPreview } from "../../../util/previewDialog";
+import { akteContextOf } from "../../../util/akteHeader";
 
 /**
  * Dokumente der Bauakte: Ablage nach Dokumentart und Unterordnern, Mehrfach-Upload per Ziehen (UploadSet),
@@ -37,21 +38,54 @@ export default class Documents extends SectionBase {
 	private extraFolders: string[] = [];
 	/** Unterordner aus den Ordnervorlagen (Stammdaten), in jeder Bauakte angeboten. */
 	private templateFolders: string[] = [];
-	private uploader!: DocumentUploader;
-	private batchTimer: ReturnType<typeof setTimeout> | undefined;
+	private dropReady = false;
 
 	protected init(): void {
 		const model = new JSONModel({ tree: [], rows: [], selected: "", category: null, folder: null, query: "", sort: "newest", allVersions: false,
-			selectedCount: 0, title: "", noData: "", targetText: "" });
+			selectedCount: 0, title: "", noData: "" });
 		model.setSizeLimit(5000);
 		this.v().setModel(model, "doc");
-		this.uploader = new DocumentUploader();
-		this.uploader.target = () => ({ bauakteId: this.bauakteId, category: (this.doc().getProperty("/category") as DocumentCategory | null) ?? "other",
-			folder: this.doc().getProperty("/folder") as string | null });
-		const set = this.v().byId("uploadSet") as UploadSet;
-		set.setUploader(this.uploader);
-		set.registerUploaderEvents(this.uploader);
-		this.updateTarget();
+	}
+
+	/** Dateien direkt auf die Liste ziehen: öffnet den Hochladen-Dialog mit dem gewählten Ordner. */
+	onAfterRendering(): void {
+		const dom = this.v().byId("docTable")?.getDomRef() as HTMLElement | null;
+		if (!dom || this.dropReady) return;
+		this.dropReady = true;
+		const files = (event: DragEvent) => [...(event.dataTransfer?.types ?? [])].includes("Files");
+		dom.addEventListener("dragover", (event) => {
+			if (!files(event) || !session.has("files.upload")) return;
+			event.preventDefault();
+			dom.classList.add("eoDropActive");
+		});
+		dom.addEventListener("dragleave", () => dom.classList.remove("eoDropActive"));
+		dom.addEventListener("drop", (event) => {
+			if (!files(event) || !session.has("files.upload")) return;
+			event.preventDefault();
+			dom.classList.remove("eoDropActive");
+			this.openUpload([...(event.dataTransfer?.files ?? [])]);
+		});
+	}
+
+	private context() {
+		return akteContextOf((this.v().getModel("akte") as JSONModel | undefined)?.getData() as Parameters<typeof akteContextOf>[0]);
+	}
+
+	onUpload(): void {
+		this.openUpload([]);
+	}
+
+	private openUpload(files: File[]): void {
+		const m = this.doc();
+		openUploadDialog({
+			title: "Dokumente hochladen", bauakteId: this.bauakteId, context: this.context(), kind: "documents", files,
+			category: (m.getProperty("/category") as DocumentCategory | null) ?? "other", folder: m.getProperty("/folder") as string | null,
+			folderSuggestions: this.folderSuggestions(),
+			onUploaded: (count) => {
+				this.toast(`${count} ${count === 1 ? "Datei" : "Dateien"} hochgeladen.`);
+				akte.invalidate(this.bauakteId, "files");
+			},
+		});
 	}
 
 	private doc(): JSONModel {
@@ -100,15 +134,6 @@ export default class Documents extends SectionBase {
 		m.setProperty("/noData", query ? "Keine Treffer." : "Noch keine Dokumente in diesem Ordner. Dateien hierher ziehen oder „Hochladen“ wählen.");
 		(this.v().byId("docTable") as Table).removeSelections(true);
 		m.setProperty("/selectedCount", 0);
-		this.updateTarget();
-	}
-
-	private updateTarget(): void {
-		const m = this.doc();
-		const category = (m.getProperty("/category") as DocumentCategory | null) ?? "other";
-		const folder = m.getProperty("/folder") as string | null;
-		m.setProperty("/targetText", `Neue Dateien werden abgelegt unter: ${[documentCategories[category].text, folder].filter(Boolean).join(" / ")}. `
-			+ "Ordner links wählen, um woanders abzulegen. Mehrere Dateien gleichzeitig hierher ziehen.");
 	}
 
 	onFolder(event: Event): void {
@@ -159,46 +184,15 @@ export default class Documents extends SectionBase {
 		this.refreshRows();
 	}
 
-	// Hochladen (UploadSet mit eigenem Uploader)
-
-	onItemAdded(): void {
-		this.uploader.errors = [];
-	}
-
-	onUploadCompleted(): void {
-		this.scheduleRefresh();
-	}
-
-	onUploadTerminated(): void {
-		this.scheduleRefresh();
-	}
-
-	/** Nach einem Stapel: Liste neu laden, fertige Einträge aus dem Upload-Bereich entfernen, Fehler zeigen. */
-	private scheduleRefresh(): void {
-		clearTimeout(this.batchTimer);
-		this.batchTimer = setTimeout(() => {
-			const set = this.v().byId("uploadSet") as UploadSet;
-			const busy = set.getIncompleteItems().some((i: UploadSetItem) => i.getUploadState() === "Uploading" || i.getUploadState() === "Ready");
-			if (busy) {
-				this.scheduleRefresh();
-				return;
-			}
-			const done = set.getItems().filter((i) => i.getUploadState() === "Complete");
-			for (const item of done) set.removeItem(item);
-			for (const item of set.getIncompleteItems().filter((i) => i.getUploadState() === "Error")) set.removeIncompleteItem(item);
-			const errors = this.uploader.errors;
-			this.uploader.errors = [];
-			if (done.length) this.toast(`${done.length} ${done.length === 1 ? "Datei" : "Dateien"} hochgeladen.`);
-			if (errors.length) MessageBox.error(errors.join("\n"), { title: "Nicht hochgeladen" });
-			akte.invalidate(this.bauakteId, "files");
-		}, 400);
-	}
-
 	// Aktionen je Dokument
 
 	onPreview(event: Event): void {
 		const row = this.rowOf(event);
-		navTo(`/bauakten/${this.bauakteId}/datei/${row.id}?abschnitt=dokumente`);
+		const rows = (this.doc().getProperty("/rows") as DocumentRow[]).filter((r) => r.state === "stored");
+		openPreview({
+			files: rows, index: Math.max(0, rows.findIndex((r) => r.id === row.id)), context: this.context(),
+			onDetails: (file) => navTo(`/bauakten/${this.bauakteId}/datei/${file.id}?abschnitt=dokumente`),
+		});
 	}
 
 	async onRequestApproval(event: Event): Promise<void> {

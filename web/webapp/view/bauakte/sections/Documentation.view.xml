@@ -124,6 +124,35 @@
 				</Table>
 			</IconTabFilter>
 			<!-- Berichte -->
+			<!-- Abnahmen -->
+			<IconTabFilter id="abnahmenTab" key="abnahmen" text="Abnahmen" icon="sap-icon://approvals" count="{dc>/acceptanceCount}">
+				<OverflowToolbar style="Clear">
+					<Title text="Abnahmeprotokolle" level="H3"/>
+					<ToolbarSpacer/>
+					<Button id="addAcceptance" text="Abnahmeprotokoll erstellen" icon="sap-icon://signature" type="Emphasized" press=".onAddAcceptance"
+						visible="{= ${session>/permissions/inspections.write} === true }"/>
+				</OverflowToolbar>
+				<List id="acceptanceList" items="{dc>/acceptances}" noDataText="Noch keine Abnahme. Bei der Abnahme vor Ort den Assistenten starten – Unterschriften direkt auf dem Gerät.">
+					<CustomListItem>
+						<FlexBox wrap="Wrap" justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMargin eoEntryRow">
+							<VBox>
+								<HBox alignItems="Center" class="eoEntryRow">
+									<ObjectStatus text="{dc>resultText}" state="{dc>resultState}" inverted="true"/>
+									<ObjectStatus text="{dc>stateText}" state="{dc>stateState}"/>
+								</HBox>
+								<Text text="{dc>line}" class="sapUiTinyMarginTop"/>
+								<Text text="{dc>customerLine}" visible="{= !!${dc>customerLine} }" class="eoMuted"/>
+							</VBox>
+							<HBox class="eoEntryRow">
+								<Button text="PDF" icon="sap-icon://pdf-attachment" press=".onAcceptancePdf" visible="{= !!${dc>pdfFileId} }"/>
+								<Button text="Freigabelink" icon="sap-icon://share-2" press=".onAcceptanceLink"
+									visible="{= ${dc>state} !== 'completed' &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
+							</HBox>
+						</FlexBox>
+					</CustomListItem>
+				</List>
+			</IconTabFilter>
+
 			<IconTabFilter key="berichte" text="{i18n>reports.title}" icon="sap-icon://print">
 				<l:Grid defaultSpan="XL4 L4 M6 S12" class="sapUiSmallMarginTop">
 					<f:Card>

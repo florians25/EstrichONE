@@ -511,6 +511,77 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("bauakte_number_sequences", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Bauakten.BauakteParty", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<string>("Company")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("company");
+
+                    b.Property<Guid?>("ContactId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("contact_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("note");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("role");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_bauakte_parties");
+
+                    b.HasIndex("BauakteId")
+                        .HasDatabaseName("ix_bauakte_parties_bauakte_id");
+
+                    b.HasIndex("ContactId")
+                        .HasDatabaseName("ix_bauakte_parties_contact_id");
+
+                    b.ToTable("bauakte_parties", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1374,6 +1445,162 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_devices_status");
 
                     b.ToTable("devices", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.AcceptanceProtocol", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<string>("ClientName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("client_name");
+
+                    b.Property<byte[]>("ClientSignature")
+                        .HasColumnType("bytea")
+                        .HasColumnName("client_signature");
+
+                    b.Property<DateTimeOffset?>("ClientSignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("client_signed_at");
+
+                    b.Property<string>("ContractorName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("contractor_name");
+
+                    b.Property<byte[]>("ContractorSignature")
+                        .HasColumnType("bytea")
+                        .HasColumnName("contractor_signature");
+
+                    b.Property<DateTimeOffset?>("ContractorSignedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("contractor_signed_at");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CustomerComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("customer_comment");
+
+                    b.Property<DateTimeOffset?>("CustomerDecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("customer_decided_at");
+
+                    b.Property<string>("CustomerDecision")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("customer_decision");
+
+                    b.Property<string>("CustomerDecisionName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("customer_decision_name");
+
+                    b.Property<string>("CustomerEmail")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("customer_email");
+
+                    b.Property<string>("CustomerIp")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("customer_ip");
+
+                    b.Property<DateTimeOffset?>("CustomerLinkExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("customer_link_expires_at");
+
+                    b.Property<byte[]>("CustomerTokenHash")
+                        .HasColumnType("bytea")
+                        .HasColumnName("customer_token_hash");
+
+                    b.PrimitiveCollection<List<Guid>>("DefectWorkItemIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("defect_work_item_ids");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("location");
+
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("PdfFileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pdf_file_id");
+
+                    b.Property<DateTimeOffset>("PerformedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("performed_at");
+
+                    b.Property<Guid>("PerformedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("performed_by_user_id");
+
+                    b.PrimitiveCollection<List<Guid>>("PhotoFileIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("photo_file_ids");
+
+                    b.Property<string>("Result")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("result");
+
+                    b.PrimitiveCollection<List<Guid>>("RoomIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("room_ids");
+
+                    b.Property<string>("Scope")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("scope");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_acceptance_protocols");
+
+                    b.HasIndex("BauakteId")
+                        .HasDatabaseName("ix_acceptance_protocols_bauakte_id");
+
+                    b.HasIndex("CustomerTokenHash")
+                        .IsUnique()
+                        .HasDatabaseName("ix_acceptance_protocols_customer_token_hash")
+                        .HasFilter("customer_token_hash IS NOT NULL");
+
+                    b.HasIndex("PerformedByUserId")
+                        .HasDatabaseName("ix_acceptance_protocols_performed_by_user_id");
+
+                    b.ToTable("acceptance_protocols", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.DiaryEntry", b =>
@@ -2903,6 +3130,35 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("catalog_entries", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Organization.CompanyLogo", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<int>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<byte[]>("Png")
+                        .IsRequired()
+                        .HasColumnType("bytea")
+                        .HasColumnName("png");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id")
+                        .HasName("pk_company_logo");
+
+                    b.ToTable("company_logo", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Organization.CompanyProfile", b =>
                 {
                     b.Property<int>("Id")
@@ -4097,6 +4353,22 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_user_roles_user_user_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Bauakten.BauakteParty", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", null)
+                        .WithMany()
+                        .HasForeignKey("BauakteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_bauakte_parties_bauakten_bauakte_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Contacts.Exports.Contact", null)
+                        .WithMany()
+                        .HasForeignKey("ContactId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_bauakte_parties_contact_contact_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
@@ -4259,6 +4531,23 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired()
                         .HasConstraintName("fk_devices_user_registered_by_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.AcceptanceProtocol", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", null)
+                        .WithMany()
+                        .HasForeignKey("BauakteId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_acceptance_protocols_bauakten_bauakte_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("PerformedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_acceptance_protocols_user_performed_by_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.DiaryEntry", b =>

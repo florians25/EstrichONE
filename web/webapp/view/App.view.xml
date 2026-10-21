@@ -24,6 +24,8 @@
 							ariaLabelledBy="profileLabel"/>
 					</f:profile>
 					<f:additionalContent>
+						<Image id="companyLogo" src="{view>/companyLogo}" height="1.75rem" visible="{= !!${view>/companyLogo} }" alt="Firmenlogo"
+							decorative="false" class="eoShellCompanyLogo"/>
 						<SearchField id="globalSearch" width="20rem" placeholder="{i18n>shell.searchPlaceholder}"
 							search=".onSearch" ariaLabelledBy="globalSearchLabel"/>
 						<OverflowToolbarButton id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakte}" icon="sap-icon://add-document" type="Emphasized"

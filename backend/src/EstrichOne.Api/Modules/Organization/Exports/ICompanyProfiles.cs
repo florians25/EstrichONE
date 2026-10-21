@@ -12,3 +12,12 @@ public interface ICompanyProfiles
 }
 
 public sealed record CompanyInfo(string Name, string? Street, string? PostalCode, string? City, string? Phone, string? Email, string? Website);
+
+/// <summary>Kopf- und Fußzeile der PDFs: Firmendaten, eigenes Logo, Gestaltung aus den Einstellungen.</summary>
+public interface IPdfBranding
+{
+    Task<EstrichOne.Api.Infrastructure.Pdf.PdfCompany> GetAsync(CancellationToken cancellationToken);
+
+    /// <summary>Ist ein eigenes Firmenlogo hinterlegt (GET /company/logo)?</summary>
+    Task<bool> HasLogoAsync(CancellationToken cancellationToken);
+}

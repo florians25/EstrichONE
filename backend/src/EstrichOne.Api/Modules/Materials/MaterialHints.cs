@@ -1,17 +1,23 @@
 using System.Globalization;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Materials;
 
 /// <summary>„Lieferung heute“, „Lieferung überfällig“ und nicht abgeschickte Bestellungen in der Bauakte.</summary>
-internal sealed class MaterialHints(EstrichOneDbContext db) : IBauakteHintSource
+internal sealed class MaterialHints(EstrichOneDbContext db, ISystemSettings settings) : IBauakteHintSource
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
     public async Task<IReadOnlyList<BauakteHint>> GetHintsAsync(Bauakte bauakte, DateOnly today, CancellationToken cancellationToken)
     {
+        if (!(await settings.GetAsync(cancellationToken)).Modules.Materials)
+        {
+            return [];
+        }
+
         var orders = await db.Set<MaterialOrder>().AsNoTracking()
             .Where(o => o.BauakteId == bauakte.Id && o.Status != OrderStatus.Delivered && o.Status != OrderStatus.Cancelled)
             .OrderBy(o => o.DeliveryDate).ThenBy(o => o.Number)

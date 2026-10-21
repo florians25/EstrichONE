@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Documents" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
-	xmlns:upload="sap.m.upload" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout"
+	xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout"
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<FlexBox id="docLayout" wrap="Wrap" alignItems="Start" width="100%">
 		<VBox class="sapUiSmallMarginEnd" width="17rem">
@@ -17,28 +17,17 @@
 		</VBox>
 		<VBox>
 			<layoutData><FlexItemData growFactor="1" baseSize="30rem"/></layoutData>
-			<MessageStrip text="{doc>/targetText}" type="Information" showIcon="true" class="sapUiTinyMarginBottom"
-				visible="{= ${session>/permissions/files.upload} === true }"/>
-			<upload:UploadSet id="uploadSet" class="eoUpload" instantUpload="true" multiple="true" showIcons="true" uploadEnabled="{= ${session>/permissions/files.upload} === true }"
-				terminationEnabled="true" maxFileNameLength="255" mode="None" sameFilenameAllowed="true"
-				noDataText="{i18n>docs.dropHint}" noDataDescription="{i18n>docs.dropDescription}" noDataIllustrationType="sapIllus-UploadCollection"
-				uploadCompleted=".onUploadCompleted" uploadTerminated=".onUploadTerminated" afterItemAdded=".onItemAdded"
-				visible="{= ${session>/permissions/files.upload} === true }">
-				<upload:toolbar>
-					<OverflowToolbar>
-						<Title text="{i18n>docs.upload}" level="H3"/>
-						<ToolbarSpacer/>
-						<upload:UploadSetToolbarPlaceholder/>
-					</OverflowToolbar>
-				</upload:toolbar>
-			</upload:UploadSet>
 			<Table id="docTable" items="{path: 'doc>/rows', templateShareable: false}" mode="MultiSelect" selectionChange=".onSelection"
 				sticky="HeaderToolbar,ColumnHeaders" growing="true" growingThreshold="100" noDataText="{doc>/noData}" popinLayout="GridSmall"
-				class="sapUiSmallMarginTop">
+				class="eoDropTarget">
 				<headerToolbar>
 					<OverflowToolbar>
 						<Title text="{doc>/title}" level="H3"/>
 						<ToolbarSpacer/>
+						<Button id="docUpload" text="{i18n>docs.uploadButton}" icon="sap-icon://upload" type="Emphasized" press=".onUpload"
+							visible="{= ${session>/permissions/files.upload} === true }">
+							<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+						</Button>
 						<SearchField width="14rem" placeholder="{i18n>docs.search}" liveChange=".onSearch" value="{doc>/query}">
 							<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 						</SearchField>

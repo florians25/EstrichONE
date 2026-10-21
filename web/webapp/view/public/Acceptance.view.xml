@@ -1,0 +1,68 @@
+<mvc:View controllerName="estrichone.controller.public.Acceptance" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+	xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<ScrollContainer height="100%" vertical="true" class="eoPublic">
+		<VBox class="eoPublicCard" busy="{pub>/busy}">
+			<HBox alignItems="Center" justifyContent="SpaceBetween" class="sapUiSmallMarginBottom">
+				<Image src="/api/v1/company/logo" visible="{= !!${pub>/v/hasCompanyLogo} }" height="3rem" alt="{pub>/v/companyName}" decorative="false" class="eoPublicLogo"/>
+				<Title text="{pub>/v/companyName}" level="H2" visible="{= !${pub>/v/hasCompanyLogo} }"/>
+				<Image src="/logo-horizontal.svg" height="1.5rem" alt="EstrichONE" decorative="false"/>
+			</HBox>
+			<Title text="Abnahmeprotokoll" level="H1" titleStyle="H2"/>
+			<MessageStrip id="pubInvalid" type="Error" showIcon="true" visible="{= ${pub>/state} === 'invalid' }" text="{pub>/error}" class="sapUiSmallMarginTop"/>
+			<VBox visible="{= ${pub>/state} !== 'invalid' &amp;&amp; !!${pub>/v} }">
+				<Text text="{pub>/v/bauakteNumber} · {pub>/v/bauakteTitle}" class="eoPublicLead"/>
+				<Text text="{pub>/v/address}" visible="{= !!${pub>/v/address} }" class="eoMuted"/>
+				<Panel headerText="Abnahme" class="sapUiSmallMarginTop">
+					<VBox>
+						<Text text="Datum: {path: 'pub>/v/performedAt', formatter: 'fmt.dateTime'}{= ${pub>/v/location} ? ' · Ort: ' + ${pub>/v/location} : '' }"/>
+						<Text text="Für den Auftraggeber: {= ${pub>/v/clientName} || '–' } · Für den Auftragnehmer: {= ${pub>/v/contractorName} || '–' }"/>
+						<ObjectStatus text="{pub>/resultText}" state="{pub>/resultState}" inverted="true" class="sapUiSmallMarginTop"/>
+					</VBox>
+				</Panel>
+				<Panel headerText="Abgenommene Leistung">
+					<VBox>
+						<Text text="{pub>/v/scope}" class="eoPre"/>
+						<Table items="{pub>/v/rooms}" visible="{= ${pub>/v/rooms}.length > 0 }" class="sapUiSmallMarginTop">
+							<columns><Column><Text text="Raum"/></Column><Column><Text text="Geschoss"/></Column><Column hAlign="End"><Text text="Fläche"/></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Estrich"/></Column></columns>
+							<items><ColumnListItem><Text text="{pub>name}"/><Text text="{pub>floor}"/><Text text="{path: 'pub>areaSquareMeters', formatter: 'fmt.area'}"/><Text text="{pub>screedType}"/></ColumnListItem></items>
+						</Table>
+					</VBox>
+				</Panel>
+				<Panel headerText="Mängel und Restarbeiten" visible="{= ${pub>/v/defects}.length > 0 }">
+					<List items="{pub>/v/defects}">
+						<StandardListItem title="{pub>title}" info="{= ${pub>dueDate} ? 'Frist ' + ${pub>dueText} : '' }" icon="sap-icon://alert"/>
+					</List>
+				</Panel>
+				<Panel headerText="Notizen" visible="{= !!${pub>/v/notes} }"><Text text="{pub>/v/notes}" class="eoPre"/></Panel>
+				<Panel headerText="Fotos" visible="{= ${pub>/photos}.length > 0 }">
+					<FlexBox wrap="Wrap" items="{pub>/photos}" class="eoEntryRow">
+						<Image src="{pub>url}" width="12rem" height="9rem" alt="Foto zur Abnahme" decorative="false" class="eoPhoto"/>
+					</FlexBox>
+				</Panel>
+				<Panel headerText="Unterschrift Auftragnehmer" visible="{= !!${pub>/v/hasContractorSignature} }">
+					<Image src="{pub>/signatureUrl}" height="5rem" alt="Unterschrift Auftragnehmer" decorative="false"/>
+				</Panel>
+				<VBox visible="{= ${pub>/state} === 'open' }" class="sapUiMediumMarginTop eoPublicDecision">
+					<Title text="Ihre Freigabe" level="H3"/>
+					<Text text="Bitte prüfen Sie das Protokoll. Mit „Freigeben“ bestätigen Sie die Abnahme wie protokolliert. Gültig bis {path: 'pub>/v/expiresAt', formatter: 'fmt.dateTime'}." class="sapUiTinyMarginBottom"/>
+					<Label text="Ihr Name" labelFor="pubName" required="true"/>
+					<Input id="pubName" value="{pub>/name}" valueLiveUpdate="true" maxLength="200"/>
+					<Label text="Unterschrift (optional)" labelFor="pubSignature" class="sapUiSmallMarginTop"/>
+					<eo:SignaturePad id="pubSignature"/>
+					<Button text="Unterschrift löschen" type="Transparent" icon="sap-icon://eraser" press=".onClearSignature"/>
+					<Label text="Kommentar (bei Ablehnung Pflicht)" labelFor="pubComment" class="sapUiSmallMarginTop"/>
+					<TextArea id="pubComment" value="{pub>/comment}" valueLiveUpdate="true" rows="3" width="100%" maxLength="2000"/>
+					<MessageStrip type="Error" showIcon="true" visible="{= !!${pub>/error} }" text="{pub>/error}" class="sapUiSmallMarginTop"/>
+					<HBox class="sapUiSmallMarginTop eoEntryRow">
+						<Button id="pubApprove" text="Freigeben" type="Accept" icon="sap-icon://accept" press=".onApprove" enabled="{= !!${pub>/name}.trim() }"/>
+						<Button id="pubReject" text="Ablehnen" type="Reject" icon="sap-icon://decline" press=".onReject" enabled="{= !!${pub>/name}.trim() }"/>
+					</HBox>
+				</VBox>
+				<MessageStrip id="pubDone" type="{= ${pub>/decision} === 'approved' ? 'Success' : 'Warning' }" showIcon="true" visible="{= ${pub>/state} === 'done' }"
+					text="{= ${pub>/decision} === 'approved' ? 'Vielen Dank – das Abnahmeprotokoll ist freigegeben. Sie erhalten es vom Estrichbetrieb als PDF.' : 'Ihre Ablehnung wurde übermittelt. Der Estrichbetrieb meldet sich bei Ihnen.' }"
+					class="sapUiMediumMarginTop"/>
+			</VBox>
+			<Text text="Bereitgestellt mit EstrichONE · nur dieses Protokoll ist über den Link sichtbar." class="eoMuted sapUiMediumMarginTop"/>
+		</VBox>
+	</ScrollContainer>
+</mvc:View>

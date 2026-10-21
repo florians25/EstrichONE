@@ -115,6 +115,8 @@ internal static class BauakteHistoryEndpoints
         {
             "bauakte.created" => $"{actor} hat die Bauakte angelegt.",
             "bauakte.updated" => $"{actor} hat {DescribeFields(Detail("fields"))} geändert.",
+            "bauakte.status_changed" when Detail("auto") == "true" =>
+                $"Automatisch: Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt (Auslöser: {Trigger(Detail("trigger"))}).",
             "bauakte.status_changed" => $"{actor} hat den Status von „{Status(Detail("from"))}“ auf „{Status(Detail("to"))}“ gesetzt.",
             "bauakte.deleted" => $"{actor} hat die Bauakte in den Papierkorb gelegt.",
             "bauakte.note_added" => $"{actor} hat eine Notiz geschrieben.",
@@ -128,7 +130,20 @@ internal static class BauakteHistoryEndpoints
             "bauakte.workitem_created" => kindIsDefect ? $"{actor} hat einen Mangel erfasst." : $"{actor} hat eine Aufgabe angelegt.",
             "bauakte.workitem_done" => kindIsDefect ? $"{actor} hat einen Mangel als behoben markiert." : $"{actor} hat eine Aufgabe erledigt.",
             "bauakte.room_added" => $"{actor} hat einen Raum angelegt.",
+            "bauakte.acceptance_added" => $"{actor} hat ein Abnahmeprotokoll erfasst (Ergebnis: {AcceptanceResult(Detail("result"))}).",
+            "bauakte.acceptance_link_sent" => Detail("emailed") == "true"
+                ? $"{actor} hat dem Kunden das Abnahmeprotokoll per E-Mail zur Freigabe geschickt."
+                : $"{actor} hat einen Freigabelink für das Abnahmeprotokoll erstellt.",
+            "bauakte.acceptance_customer_approved" => $"Der Kunde ({Detail("name")}) hat das Abnahmeprotokoll online freigegeben.",
+            "bauakte.acceptance_customer_rejected" => $"Der Kunde ({Detail("name")}) hat die Abnahme abgelehnt: „{Detail("comment")}“.",
+            "bauakte.acceptance_completed" => $"Abnahmeprotokoll abgeschlossen ({AcceptanceResult(Detail("result"))}) und als PDF unter „Abnahmen“ abgelegt.",
             "bauakte.members_changed" => $"{actor} hat die zugewiesenen Mitarbeiter geändert.",
+            "bauakte.parties_changed" => Detail("change") switch
+            {
+                "added" => $"{actor} hat „{Detail("name")}“ als {PartyRole(Detail("role"))} hinzugefügt.",
+                "removed" => $"{actor} hat „{Detail("name")}“ ({PartyRole(Detail("role"))}) entfernt.",
+                _ => $"{actor} hat den Kontakt „{Detail("name")}“ ({PartyRole(Detail("role"))}) geändert.",
+            },
             "bauakte.diary_added" => $"{actor} hat das Bautagebuch für den {Day(Detail("day"))} ergänzt.",
             "bauakte.inspection_added" when Detail("kind") == "CmMeasurement" =>
                 $"{actor} hat eine CM-Messung erfasst: {Percent(Detail("measured"))} CM-% bei Grenzwert {Percent(Detail("limit"))} CM-% – "
@@ -139,6 +154,37 @@ internal static class BauakteHistoryEndpoints
             _ => $"{actor}: {entry.Action}",
         };
     }
+
+    private static string AcceptanceResult(string value) => value switch
+    {
+        "Accepted" => "abgenommen",
+        "AcceptedWithReservations" => "abgenommen mit Vorbehalt",
+        "Refused" => "Abnahme verweigert",
+        _ => value,
+    };
+
+    private static string Trigger(string value) => value switch
+    {
+        "AssignmentDay" => "erster Einsatztag",
+        "Photo" => "erstes Foto vor Ort",
+        "Diary" => "erster Bautagebucheintrag",
+        "Inspection" => "Erstbegehung",
+        "Acceptance" => "Abnahme ohne Vorbehalt",
+        _ => value,
+    };
+
+    private static string PartyRole(string value) => value switch
+    {
+        "Client" => "Bauherr/Kunde",
+        "SiteContact" => "Ansprechpartner vor Ort",
+        "SiteManager" => "Bauleiter",
+        "Architect" => "Architekt",
+        "Planner" => "Planer",
+        "GeneralContractor" => "Generalunternehmer",
+        "Supplier" => "Lieferant",
+        "Subcontractor" => "Nachunternehmer",
+        _ => "Beteiligter",
+    };
 
     private static string Day(string value) =>
         DateOnly.TryParseExact(value, "yyyy-MM-dd", CultureInfo.InvariantCulture, DateTimeStyles.None, out var day)

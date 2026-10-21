@@ -25,6 +25,10 @@ public sealed class DocumentationModule : IModule
         services.AddScoped<ISyncOperationHandler, SiteRecordSync>();
         services.AddScoped<ISyncEntitySource, DiaryEntrySource>();
         services.AddScoped<ISyncEntitySource, InspectionSource>();
+        services.AddScoped<AcceptanceService>();
+        services.AddScoped<ISyncOperationHandler, AcceptanceSync>();
+        services.AddScoped<ISyncEntitySource, AcceptanceSource>();
+        services.AddScoped<IBauakteHintSource, AcceptanceHints>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)
@@ -34,5 +38,6 @@ public sealed class DocumentationModule : IModule
         ApprovalEndpoints.Map(api);
         DocumentEndpoints.Map(api);
         BauakteReportEndpoints.Map(api);
+        AcceptanceEndpoints.Map(api);
     }
 }

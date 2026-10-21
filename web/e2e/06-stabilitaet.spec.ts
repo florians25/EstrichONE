@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, openSection, signIn, toast } from './helpers';
+import { adminPassword, openSection, signIn, toast, uploadViaDialog } from './helpers';
 
 /** Erste Bauakte der Liste öffnen. */
 async function openFirstAkte(page: Page) {
@@ -32,7 +32,7 @@ test('Große Datei hinter einem Proxy mit 10-MB-Grenze: in Teilen, nach Verbindu
   await openFirstAkte(page);
   await openSection(page, 'Dokumente');
   const big = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(12 * 1024 * 1024, 0x20), Buffer.from('\n%%EOF\n')]);
-  await page.locator('.eoUpload input[type=file]').first().setInputFiles({ name: 'Großer Plan.pdf', mimeType: 'application/pdf', buffer: big });
+  await uploadViaDialog(page, { name: 'Großer Plan.pdf', mimeType: 'application/pdf', buffer: big });
   await expect(toast(page)).toContainText('hochgeladen', { timeout: 60_000 });
   await expect(page.getByRole('link', { name: 'Großer Plan.pdf' }).first()).toBeVisible();
   expect(aborted).toBe(true);

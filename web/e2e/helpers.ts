@@ -21,8 +21,15 @@ export const pageTitle = (page: Page) => page.locator('.sapFDynamicPageTitle .sa
 
 export async function signIn(page: Page, login: string, password: string) {
   await page.goto('/anmelden');
-  await page.getByLabel('Anmeldename oder E-Mail').fill(login);
-  await page.getByLabel('Passwort', { exact: true }).fill(password);
+  const user = page.locator('input[id$="loginUser-inner"]');
+  const secret = page.locator('input[id$="loginPassword-inner"]');
+  // Die Seite setzt beim Öffnen Fokus und Felder zurück: erst danach füllen und prüfen.
+  await expect(async () => {
+    await user.fill(login);
+    await secret.fill(password);
+    await expect(user).toHaveValue(login, { timeout: 500 });
+    await expect(secret).toHaveValue(password, { timeout: 500 });
+  }).toPass({ timeout: 15_000 });
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/anmelden'));
 }
@@ -85,4 +92,27 @@ export async function apiCall<T>(page: Page, method: string, path: string, body?
     const text = await response.text();
     return { status: response.status, json: text ? JSON.parse(text) : null };
   }, [method, path, body] as const) as Promise<{ status: number; json: T }>;
+}
+
+/** Hochladen über den Dialog („Hochladen“ in der Werkzeugleiste → Dateien wählen → „Hochladen“). */
+export async function uploadViaDialog(page: Page, files: Parameters<Locator['setInputFiles']>[0], prepare?: (dialog: Locator) => Promise<void>) {
+  await page.getByRole('button', { name: 'Hochladen', exact: true }).filter({ visible: true }).first().click();
+  const dialog = page.getByRole('dialog', { name: /hochladen/ });
+  await expect(dialog).toBeVisible();
+  if (prepare) await prepare(dialog);
+  await dialog.locator('input.eoFileInput').setInputFiles(files);
+  await dialog.getByRole('button', { name: 'Hochladen', exact: true }).click();
+  return dialog;
+}
+
+/** Menü „Weitere Aktionen“ einer Zeile öffnen und Eintrag wählen (robust gegen Neuaufbau der Liste nach dem Laden). */
+export async function rowMenu(page: Page, row: Locator, item: string) {
+  const entry = page.getByRole('menuitem', { name: item });
+  await expect(async () => {
+    if (!(await entry.isVisible())) {
+      await row.getByRole('button', { name: 'Weitere Aktionen' }).click();
+      await page.waitForTimeout(400);
+    }
+    await entry.click({ timeout: 2500 });
+  }).toPass({ timeout: 30_000 });
 }

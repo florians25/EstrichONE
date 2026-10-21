@@ -25,6 +25,9 @@ import type {
 } from "../../util/models";
 import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
+import { openActivityDialog } from "../../util/activityDialog";
+import { runAcceptance } from "../../util/acceptanceFlow";
+import { akteContextOf } from "../../util/akteHeader";
 
 /** Abschnitte der Objektseite: Schlüssel (Adresse ?abschnitt=…) → eingebettete View. */
 const sections: Record<string, string> = {
@@ -62,6 +65,10 @@ export default class ObjectController extends BaseController {
 				void this.loadHints();
 				void this.loadKpis();
 			}
+		});
+		// Serverseitige Folgen (z. B. Status nach Abnahme): Akte neu laden.
+		bus.subscribe("bauakte", "reload", (_c: string, _e: string, data: object) => {
+			if ((data as { id: string }).id === this.id) void this.onReload();
 		});
 	}
 
@@ -158,6 +165,31 @@ export default class ObjectController extends BaseController {
 		m.setProperty("/responsibleName", responsible);
 		m.setProperty("/createdText", b ? `${session.name(b.createdByUserId)} · ${new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt))}` : "");
 		m.setProperty("/assignedText", members.length === 0 ? responsible : members.length === 1 ? members[0].displayName : `${responsible} +${members.length - 1}`);
+		const me = session.userId;
+		m.setProperty("/canAssignMe", !!b && !!me && b.status !== "cancelled" && b.responsibleUserId !== me && !members.some((x) => x.userId === me));
+	}
+
+	/** „Mir zuweisen“: sich selbst als Mitarbeiter eintragen (wie in der App). */
+	async onAssignMe(): Promise<void> {
+		const b = this.cur();
+		try {
+			await post(`bauakten/${b.id}/members/me`);
+			this.toast("Die Bauakte ist Ihnen jetzt zugewiesen.");
+			await this.loadSide();
+		} catch (error) {
+			this.showError(error);
+		}
+	}
+
+	/** Letzte Aktivitäten im eigenen Fenster (Wer/Wann/Was, alt → neu). */
+	async onActivities(): Promise<void> {
+		const b = this.cur();
+		try {
+			const entries = await akte.history(b.id);
+			openActivityDialog(entries, akteContextOf(this.m().getData() as Parameters<typeof akteContextOf>[0]));
+		} catch (error) {
+			this.showError(error);
+		}
 	}
 
 	private async loadSide(): Promise<void> {
@@ -170,6 +202,7 @@ export default class ObjectController extends BaseController {
 		this.m().setProperty("/members", members);
 		this.m().setProperty("/customer", customer);
 		this.updateContactFacts();
+		EventBus.getInstance().publish("bauakte", "side", { id: b.id });
 	}
 
 	private async loadHints(): Promise<void> {
@@ -382,6 +415,11 @@ export default class ObjectController extends BaseController {
 
 	onReport(): void {
 		this.nav(`/bauakten/${this.id}/bericht?art=bericht`);
+	}
+
+	/** Digitales Abnahmeprotokoll (Assistent). */
+	async onAcceptance(): Promise<void> {
+		await runAcceptance(this.cur().id, this.m().getData() as Parameters<typeof runAcceptance>[1]);
 	}
 
 	onAcceptanceSheet(): void {

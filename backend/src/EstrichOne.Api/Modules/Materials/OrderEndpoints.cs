@@ -52,7 +52,7 @@ internal static class OrderEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var orders = api.MapGroup("/material-orders").WithTags("Material");
+        var orders = api.MapGroup("/material-orders").WithTags("Material").RequireMaterialsModule();
         orders.MapGet("/", ListAsync).WithName("ListMaterialOrders")
             .WithSummary("Bestellungen; open=true nur Bestellt/Bestätigt; from/to auf den Liefertag")
             .RequirePermission(Permissions.MaterialsRead);

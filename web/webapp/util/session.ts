@@ -4,6 +4,7 @@
  */
 import JSONModel from "sap/ui/model/json/JSONModel";
 import { api, get, post } from "./api";
+import { loadSystemSettings } from "./systemSettings";
 import type { DirectoryUser, ServerInfo, UserSummary, WebSessionResponse } from "./models";
 
 export interface SessionData {
@@ -34,8 +35,17 @@ class Session {
 	}
 
 	private async loadPermissions(): Promise<void> {
-		const list = await get<string[]>("access/me/permissions");
-		this.model.setProperty("/permissions", Object.fromEntries(list.map((p) => [p, true])));
+		const [list, settings] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true)]);
+		// Abgeschaltete Module (Einstellungen → Module): Rechte des Moduls ausblenden – Navigation, Reiter und Kacheln verschwinden.
+		const modules = settings?.settings.modules ?? { materials: true };
+		const disabled = Object.entries(modules).filter(([, on]) => on === false).map(([key]) => `${key}.`);
+		this.model.setProperty("/modules", modules);
+		this.model.setProperty("/permissions", Object.fromEntries(list.filter((p) => !disabled.some((d) => p.startsWith(d))).map((p) => [p, true])));
+	}
+
+	/** Nach dem Speichern der Einstellungen: Module und Rechte neu anwenden. */
+	async reloadPermissions(): Promise<void> {
+		await this.loadPermissions();
 	}
 
 	async loadServer(): Promise<ServerInfo | null> {

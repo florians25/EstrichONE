@@ -10,6 +10,7 @@ public sealed class OrganizationModule : IModule
     {
         services.AddScoped<ICompanyProfiles, CompanyProfiles>();
         services.AddScoped<ISystemSettings, SystemSettingsStore>();
+        services.AddScoped<IPdfBranding, PdfBranding>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)
@@ -17,5 +18,6 @@ public sealed class OrganizationModule : IModule
         CompanyEndpoints.Map(api);
         CatalogEndpoints.Map(api);
         SystemSettingsEndpoints.Map(api);
+        CompanyLogoEndpoints.Map(api);
     }
 }

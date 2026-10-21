@@ -48,7 +48,7 @@ internal static class BauakteReportEndpoints
 }
 
 internal sealed class BauakteReportBuilder(
-    EstrichOneDbContext db, IBauakteReportSource bauakten, IWorkReportSource work, ICompanyProfiles company, LocalFileStorage storage,
+    EstrichOneDbContext db, IBauakteReportSource bauakten, IWorkReportSource work, IPdfBranding branding, LocalFileStorage storage,
     ICurrentUser currentUser, IAuditLog audit, TimeProvider clock, ILogger<BauakteReportBuilder> logger)
 {
     public static readonly IReadOnlySet<string> AllParts =
@@ -80,8 +80,7 @@ internal sealed class BauakteReportBuilder(
             return null;
         }
 
-        var profile = await company.GetProfileAsync(cancellationToken);
-        var pdfCompany = new PdfCompany(profile?.Name ?? "EstrichONE", profile?.Street, profile?.PostalCode, profile?.City, profile?.Phone, profile?.Email, profile?.Website);
+        var pdfCompany = await branding.GetAsync(cancellationToken);
         var label = $"Bauakte {info.Number ?? "(ohne Nummer)"} – {info.Title}";
         var (document, section) = Create(label, "Bauakte", pdfCompany);
         const double width = 17.2;

@@ -10,9 +10,9 @@ import VBox from "sap/m/VBox";
 import Image from "sap/m/Image";
 import Text from "sap/m/Text";
 import ObjectStatus from "sap/m/ObjectStatus";
-import type UploadSet from "sap/m/upload/UploadSet";
 import MessageBox from "sap/m/MessageBox";
-import DocumentUploader from "../../../control/DocumentUploader";
+import { openUploadDialog } from "../../../util/uploadDialog";
+import { akteContextOf } from "../../../util/akteHeader";
 import { del, problemMessage, put } from "../../../util/api";
 import { akte } from "../../../util/akteStore";
 import { isoDay } from "../../../util/days";
@@ -40,19 +40,13 @@ export default class Photos extends SectionBase {
 	private all: PhotoRow[] = [];
 	private rooms: RoomOverview | null = null;
 	private work: WorkItemDto[] = [];
-	private uploader!: DocumentUploader;
-	private timer: ReturnType<typeof setTimeout> | undefined;
+	private dropReady = false;
 
 	protected init(): void {
 		const model = new JSONModel({ photos: [], videos: [], mode: "timeline", query: "", room: "", work: "", selecting: false, selectedCount: 0,
 			title: "", roomOptions: [], workOptions: [] });
 		model.setSizeLimit(10000);
 		this.v().setModel(model, "ph");
-		this.uploader = new DocumentUploader();
-		this.uploader.target = () => ({ bauakteId: this.bauakteId });
-		const photoSet = this.v().byId("photoUpload") as UploadSet;
-		photoSet.setUploader(this.uploader);
-		photoSet.registerUploaderEvents(this.uploader);
 		this.bind();
 	}
 
@@ -91,7 +85,7 @@ export default class Photos extends SectionBase {
 		m.setProperty("/videos", files.filter((f) => f.kind === "video").map((v) => ({
 			...v, html: v.state === "stored"
 				? `<video controls preload="metadata" class="eoVideo" style="width:100%;border-radius:4px;background:#000" src="/api/v1/files/${v.id}/content"></video>`
-				: "<div class=\"eoMuted\">Upload ausstehend</div>",
+				: "<div class=\"eoMuted\">Hochladen ausstehend</div>",
 		})));
 		this.refresh();
 	}
@@ -247,21 +241,40 @@ export default class Photos extends SectionBase {
 		akte.invalidate(this.bauakteId, "files");
 	}
 
-	onUploadCompleted(): void {
-		clearTimeout(this.timer);
-		this.timer = setTimeout(() => {
-			const set = this.v().byId("photoUpload") as UploadSet;
-			if (set.getIncompleteItems().some((i) => i.getUploadState() === "Uploading" || i.getUploadState() === "Ready")) {
-				this.onUploadCompleted();
-				return;
-			}
-			const done = set.getItems().filter((i) => i.getUploadState() === "Complete");
-			for (const item of done) set.removeItem(item);
-			for (const item of set.getIncompleteItems().filter((i) => i.getUploadState() === "Error")) set.removeIncompleteItem(item);
-			if (done.length) this.toast(`${done.length} ${done.length === 1 ? "Datei" : "Dateien"} hochgeladen.`);
-			if (this.uploader.errors.length) MessageBox.error(this.uploader.errors.join("\n"), { title: "Nicht hochgeladen" });
-			this.uploader.errors = [];
-			akte.invalidate(this.bauakteId, "files");
-		}, 400);
+	onUpload(): void {
+		this.openUpload([]);
+	}
+
+	private openUpload(files: File[]): void {
+		openUploadDialog({
+			title: "Fotos und Videos hochladen", bauakteId: this.bauakteId, kind: "media", files,
+			context: akteContextOf((this.v().getModel("akte") as JSONModel | undefined)?.getData() as Parameters<typeof akteContextOf>[0]),
+			onUploaded: (count) => {
+				this.toast(`${count} ${count === 1 ? "Datei" : "Dateien"} hochgeladen.`);
+				akte.invalidate(this.bauakteId, "files");
+			},
+		});
+	}
+
+	/** Fotos direkt auf die Galerie ziehen: öffnet den Hochladen-Dialog. */
+	onAfterRendering(): void {
+		const dom = this.v().getDomRef() as HTMLElement | null;
+		if (!dom || this.dropReady) return;
+		this.dropReady = true;
+		const files = (event: DragEvent) => [...(event.dataTransfer?.types ?? [])].includes("Files");
+		dom.addEventListener("dragover", (event) => {
+			if (!files(event) || !session.has("files.upload")) return;
+			event.preventDefault();
+			dom.classList.add("eoDropActive");
+		});
+		dom.addEventListener("dragleave", (event) => {
+			if (event.target === dom) dom.classList.remove("eoDropActive");
+		});
+		dom.addEventListener("drop", (event) => {
+			if (!files(event) || !session.has("files.upload")) return;
+			event.preventDefault();
+			dom.classList.remove("eoDropActive");
+			this.openUpload([...(event.dataTransfer?.files ?? [])]);
+		});
 	}
 }

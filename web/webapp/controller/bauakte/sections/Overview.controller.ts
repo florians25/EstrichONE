@@ -13,6 +13,8 @@ import type { BauakteDetail, FileResponse } from "../../../util/models";
 import { navTo } from "../../../util/navigation";
 import { session } from "../../../util/session";
 import { openLightbox } from "../../../util/lightbox";
+import { openActivityDialog } from "../../../util/activityDialog";
+import { akteContextOf } from "../../../util/akteHeader";
 
 /** Übersicht: Objektbilder, Standort (im Büro per Klick setzen), Kennzahlen, Notizen, Aufgaben, Stammdaten, Aktivitäten. @namespace estrichone.controller.bauakte.sections */
 export default class Overview extends SectionBase {
@@ -168,6 +170,15 @@ export default class Overview extends SectionBase {
 
 	onToDocuments(): void {
 		this.section("dokumente");
+	}
+
+	async onActivities(): Promise<void> {
+		try {
+			openActivityDialog(await akte.history(this.bauakteId),
+				akteContextOf((this.v().getModel("akte") as JSONModel | undefined)?.getData() as Parameters<typeof akteContextOf>[0]));
+		} catch (error) {
+			this.showError(error);
+		}
 	}
 
 	onToNotes(): void {

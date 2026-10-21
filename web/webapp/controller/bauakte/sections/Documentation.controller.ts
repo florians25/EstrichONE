@@ -14,6 +14,34 @@ import { openLightbox } from "../../../util/lightbox";
 import type { CrewResponse, DiaryEntry, FileResponse, Inspection, RoomOverview } from "../../../util/models";
 import { navTo } from "../../../util/navigation";
 import { session } from "../../../util/session";
+import { acceptanceResults, type AcceptanceResult } from "../../../util/acceptanceWizard";
+import { runAcceptance, showAcceptanceLink } from "../../../util/acceptanceFlow";
+import { akteContextOf } from "../../../util/akteHeader";
+import { openPreview } from "../../../util/previewDialog";
+import { post } from "../../../util/api";
+
+interface AcceptanceDto {
+	id: string;
+	performedAt: string;
+	performedByUserId: string;
+	clientName: string | null;
+	contractorName: string | null;
+	result: AcceptanceResult;
+	state: "recorded" | "awaitingCustomer" | "completed";
+	customerLinkExpiresAt: string | null;
+	customerEmail: string | null;
+	customerDecision: "approved" | "rejected" | null;
+	customerDecidedAt: string | null;
+	customerDecisionName: string | null;
+	customerComment: string | null;
+	pdfFileId: string | null;
+}
+
+const acceptanceStates: Record<AcceptanceDto["state"], { text: string; state: string }> = {
+	recorded: { text: "Unterschrift des Kunden fehlt", state: "Warning" },
+	awaitingCustomer: { text: "Wartet auf Freigabe durch den Kunden", state: "Information" },
+	completed: { text: "Abgeschlossen, PDF unter „Abnahmen“", state: "Success" },
+};
 
 interface PhotoRef {
 	id: string;
@@ -51,11 +79,62 @@ export default class Documentation extends SectionBase {
 		}));
 	}
 
+	private showAcceptances(list: AcceptanceDto[]): void {
+		const m = this.dc();
+		m.setProperty("/acceptanceCount", String(list.length));
+		m.setProperty("/acceptances", list.map((a) => ({
+			...a,
+			resultText: acceptanceResults[a.result].text, resultState: acceptanceResults[a.result].state,
+			stateText: acceptanceStates[a.state].text, stateState: acceptanceStates[a.state].state,
+			line: `${dateTime(a.performedAt)} · ${[a.clientName, a.contractorName].filter(Boolean).join(" / ") || session.name(a.performedByUserId)}`,
+			customerLine: a.customerDecision
+				? `Kunde ${a.customerDecision === "approved" ? "hat freigegeben" : "hat abgelehnt"}: ${a.customerDecisionName} am ${dateTime(a.customerDecidedAt)}${a.customerComment ? ` – „${a.customerComment}“` : ""}`
+				: a.state === "awaitingCustomer" && a.customerLinkExpiresAt ? `Link gültig bis ${dateTime(a.customerLinkExpiresAt)}${a.customerEmail ? ` · an ${a.customerEmail}` : ""}` : "",
+		})));
+	}
+
+	private acceptanceOf(event: Event): AcceptanceDto {
+		return (event.getSource() as Control).getBindingContext("dc")?.getObject() as AcceptanceDto;
+	}
+
+	async onAddAcceptance(): Promise<void> {
+		if (await runAcceptance(this.bauakteId, (this.v().getModel("akte") as JSONModel | undefined)?.getData() as Parameters<typeof runAcceptance>[1])) {
+			this.dc().setProperty("/tab", "abnahmen");
+		}
+	}
+
+	async onAcceptanceLink(event: Event): Promise<void> {
+		const a = this.acceptanceOf(event);
+		const email = await openForm<string | null>({
+			title: "Freigabelink für den Kunden", submitText: "Link erstellen", initial: { email: a.customerEmail ?? "" },
+			intro: "Ein neuer Link ersetzt einen früheren. Der Kunde sieht nur dieses Protokoll und kann freigeben oder mit Begründung ablehnen.",
+			fields: [{ key: "email", label: "E-Mail-Adresse (optional)", type: "email", maxLength: 320 }],
+			submit: async (v) => (v.email as string) || "",
+		});
+		if (email === null) return;
+		try {
+			const link = await post<{ url: string; expiresAt: string; emailed: boolean }>(`acceptances/${a.id}/customer-link`, { email: email || null });
+			showAcceptanceLink(link);
+			void this.reload();
+		} catch (error) {
+			this.showError(error);
+		}
+	}
+
+	async onAcceptancePdf(event: Event): Promise<void> {
+		const a = this.acceptanceOf(event);
+		const file = await get<FileResponse>(`files/${a.pdfFileId}`).catch(() => null);
+		if (!file) return;
+		openPreview({ files: [file], index: 0, context: akteContextOf((this.v().getModel("akte") as JSONModel | undefined)?.getData() as Parameters<typeof akteContextOf>[0]) });
+	}
+
 	protected async load(): Promise<void> {
 		const id = this.bauakteId;
-		const [diary, inspections, files, rooms] = await Promise.all([
+		const [diary, inspections, files, rooms, acceptances] = await Promise.all([
 			akte.diary(id), akte.inspections(id), akte.files(id), akte.rooms(id).catch(() => null),
+			get<AcceptanceDto[]>(`bauakten/${id}/acceptances`).catch(() => [] as AcceptanceDto[]),
 		]);
+		this.showAcceptances(acceptances);
 		if (session.has("planning.read") && !this.crews.length) {
 			this.crews = await get<CrewResponse[]>("planning/crews").catch(() => []);
 		}

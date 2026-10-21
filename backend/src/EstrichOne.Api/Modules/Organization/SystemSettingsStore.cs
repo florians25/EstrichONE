@@ -39,7 +39,10 @@ internal sealed class SystemSettingsRowConfiguration : IEntityTypeConfiguration<
 
 internal sealed class SystemSettingsStore(EstrichOneDbContext db) : ISystemSettings
 {
-    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
+    internal static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web)
+    {
+        Converters = { new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase) },
+    };
 
     public async Task<SystemSettings> GetAsync(CancellationToken cancellationToken)
     {

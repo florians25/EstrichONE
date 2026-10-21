@@ -16,7 +16,7 @@ internal sealed class WorkReportSource(EstrichOneDbContext db) : IWorkReportSour
             .OrderBy(w => w.Status == WorkItemStatus.Done).ThenByDescending(w => w.Kind == WorkItemKind.Defect).ThenBy(w => w.CreatedAt)
             .Select(w => new WorkReportRow(w.Kind == WorkItemKind.Defect, w.Title, w.Description,
                 w.Status switch { WorkItemStatus.Done => "erledigt", WorkItemStatus.InProgress => "in Arbeit", _ => "offen" },
-                w.DueDate, w.AssigneeUserId is { } a ? names.GetValueOrDefault(a) : null, w.CreatedAt, w.CompletedAt))
+                w.DueDate, w.AssigneeUserId is { } a ? names.GetValueOrDefault(a) : null, w.CreatedAt, w.CompletedAt, w.Id))
             .ToList();
     }
 }

@@ -44,7 +44,7 @@ internal static class MaterialEndpoints
 {
     public static void Map(IEndpointRouteBuilder api)
     {
-        var suppliers = api.MapGroup("/suppliers").WithTags("Material");
+        var suppliers = api.MapGroup("/suppliers").WithTags("Material").RequireMaterialsModule();
         suppliers.MapGet("/", ListSuppliersAsync).WithName("ListSuppliers").RequirePermission(Permissions.MaterialsRead);
         suppliers.MapPut("/{id:guid}", SaveSupplierAsync).WithName("SaveSupplier").WithSummary("Lieferant anlegen oder ändern")
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.MaterialsManage);
@@ -52,7 +52,7 @@ internal static class MaterialEndpoints
             .WithSummary("Lieferant entfernen; mit offenen Bestellungen nicht möglich")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).RequirePermission(Permissions.MaterialsManage);
 
-        var materials = api.MapGroup("/materials").WithTags("Material");
+        var materials = api.MapGroup("/materials").WithTags("Material").RequireMaterialsModule();
         materials.MapGet("/", ListMaterialsAsync).WithName("ListMaterials").RequirePermission(Permissions.MaterialsRead);
         materials.MapPut("/{id:guid}", SaveMaterialAsync).WithName("SaveMaterial").WithSummary("Artikel anlegen oder ändern")
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.MaterialsManage);

@@ -32,7 +32,8 @@ public sealed class FileService(
     IBauakteHistory history,
     IUserPermissions permissions,
     ITicketAttachments tickets,
-    IEnumerable<Exports.IFileReadGrant> grants)
+    IEnumerable<Exports.IFileReadGrant> grants,
+    IBauakteAutoStatus autoStatus)
 {
     public async Task<(FileRecord? File, bool Created, FileFailure? Failure)> AnnounceAsync(
         Guid id, Guid? bauakteId, FileKind kind, string originalName, string contentType, long sizeBytes, string sha256,
@@ -68,6 +69,27 @@ public sealed class FileService(
         }
         await db.SaveChangesAsync(cancellationToken);
         return (file, true, null);
+    }
+
+    /// <summary>
+    /// Vom Server erzeugte Datei (z. B. Abnahmeprotokoll als PDF) direkt als fertiges Dokument der Bauakte ablegen.
+    /// Gespeichert wird mit dem nächsten <c>SaveChanges</c>; die Datei liegt dann schon am Zielort.
+    /// </summary>
+    public FileRecord StoreGenerated(Guid bauakteId, Guid uploadedBy, string originalName, string contentType, byte[] content,
+        string? category, string? caption, DateTimeOffset now)
+    {
+        var id = Guid.CreateVersion7(now);
+        var sha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(content));
+        var file = FileRecord.Announce(id, bauakteId, FileKind.Document, originalName, contentType, content.Length, sha, uploadedBy);
+        file.Categorize(category);
+        file.Describe(caption);
+        var key = LocalFileStorage.OriginalKey(id, now);
+        var path = storage.PathOf(key);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllBytes(path, content);
+        file.MarkStored(key, contentType, needsVariants: false);
+        db.Add(file);
+        return file;
     }
 
     /// <summary>
@@ -134,6 +156,12 @@ public sealed class FileService(
         var key = LocalFileStorage.OriginalKey(file.Id, file.CreatedAt);
         storage.Commit(id, key);
         file.MarkStored(key, detected, ContentSniffer.HasVariants(detected));
+        if (file.Kind == FileKind.Photo && file.BauakteId is { } photoBauakte)
+        {
+            // Erstes Foto vor Ort: „Geplant“ wird ggf. automatisch „In Ausführung“ (Einstellungen).
+            await autoStatus.TryStartAsync(photoBauakte, BauakteAutoTrigger.Photo, cancellationToken);
+        }
+
         await db.SaveChangesAsync(cancellationToken);
         if (file.Variants == VariantState.Pending)
         {

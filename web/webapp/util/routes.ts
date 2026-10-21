@@ -5,6 +5,7 @@ export const routes: RouteDef[] = [
 	{ name: "login", pattern: "/anmelden", view: "auth.Login", public: true, title: "login.title" },
 	{ name: "setup", pattern: "/einrichtung", view: "auth.Setup", public: true, title: "setup.title" },
 	{ name: "setupAlias", pattern: "/einrichten", view: "auth.Setup", public: true, title: "setup.title" },
+	{ name: "acceptancePublic", pattern: "/abnahme/:token", view: "public.Acceptance", public: true, title: "acceptance.title" },
 	{ name: "orderPrint", pattern: "/bestellungen/:id/druck", view: "materials.OrderPrint", bare: true, permission: "materials.read", title: "orders.print" },
 	{ name: "report", pattern: "/bauakten/:id/bericht", view: "bauakte.Report", bare: true, permission: "bauakten.read", title: "report.title" },
 	{ name: "start", pattern: "/start", view: "Start", nav: "start", title: "nav.start" },

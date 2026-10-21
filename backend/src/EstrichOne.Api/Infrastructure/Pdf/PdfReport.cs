@@ -9,6 +9,18 @@ namespace EstrichOne.Api.Infrastructure.Pdf;
 /// <summary>Firmendaten für Kopf- und Fußzeile (aus dem Organisationsmodul übergeben).</summary>
 public sealed record PdfCompany(string Name, string? Street, string? PostalCode, string? City, string? Phone, string? Email, string? Website)
 {
+    /// <summary>Logo des Betriebs (PNG). Ohne Logo steht das EstrichONE-Logo im Kopf.</summary>
+    public byte[]? Logo { get; init; }
+
+    /// <summary>EstrichONE-Logo zusätzlich klein in der Fußzeile.</summary>
+    public bool ShowEstrichOneLogo { get; init; } = true;
+
+    /// <summary>Akzentfarbe (#RRGGBB) für Überschriften.</summary>
+    public string? AccentColor { get; init; }
+
+    /// <summary>Zusätzliche Zeile in der Fußzeile (z. B. Bankverbindung, Registergericht).</summary>
+    public string? FooterText { get; init; }
+
     public string AddressLine => string.Join(" · ", new[] { Street, string.Join(' ', new[] { PostalCode, City }.Where(v => !string.IsNullOrWhiteSpace(v))) }
         .Where(v => !string.IsNullOrWhiteSpace(v)));
 
@@ -46,8 +58,14 @@ public static class PdfReport
     public static byte[] Logo { get; } = EmbeddedFontResolver.Read("logo-horizontal.png");
 
     /// <summary>Neues Dokument mit Stilen und einem Abschnitt (A4 hoch oder quer) inkl. Kopf-/Fußzeile.</summary>
+    public static Color Accent(PdfCompany company) =>
+        company.AccentColor is { Length: 7 } c && c[0] == '#' && uint.TryParse(c[1..], System.Globalization.NumberStyles.HexNumber, CultureInfo.InvariantCulture, out var rgb)
+            ? Color.FromRgb((byte)(rgb >> 16), (byte)(rgb >> 8), (byte)rgb)
+            : Brand;
+
     public static (Document Document, Section Section) Create(string title, string subject, PdfCompany company, bool landscape = false)
     {
+        var brand = Accent(company);
         var document = new Document();
         document.Info.Title = title;
         document.Info.Subject = subject;
@@ -60,7 +78,7 @@ public static class PdfReport
         var h1 = document.Styles[StyleNames.Heading1]!;
         h1.Font.Size = 16;
         h1.Font.Bold = true;
-        h1.Font.Color = Brand;
+        h1.Font.Color = brand;
         h1.ParagraphFormat.SpaceBefore = Unit.FromPoint(6);
         h1.ParagraphFormat.SpaceAfter = Unit.FromPoint(8);
         h1.ParagraphFormat.KeepWithNext = true;
@@ -68,7 +86,7 @@ public static class PdfReport
         var h2 = document.Styles[StyleNames.Heading2]!;
         h2.Font.Size = 12;
         h2.Font.Bold = true;
-        h2.Font.Color = Brand;
+        h2.Font.Color = brand;
         h2.ParagraphFormat.SpaceBefore = Unit.FromPoint(12);
         h2.ParagraphFormat.SpaceAfter = Unit.FromPoint(5);
         h2.ParagraphFormat.KeepWithNext = true;
@@ -99,12 +117,12 @@ public static class PdfReport
         headerTable.AddColumn(Unit.FromCentimeter(usable * 0.45));
         headerTable.AddColumn(Unit.FromCentimeter(usable * 0.55));
         var row = headerTable.AddRow();
-        var logo = row.Cells[0].AddImage(ImageSource(Logo));
-        logo.Height = Unit.FromCentimeter(0.85);
+        var logo = row.Cells[0].AddImage(ImageSource(company.Logo ?? Logo));
+        logo.Height = Unit.FromCentimeter(company.Logo is null ? 0.85 : 1.1);
         logo.LockAspectRatio = true;
         var right = row.Cells[1].AddParagraph();
         right.Format.Alignment = ParagraphAlignment.Right;
-        right.AddFormattedText(company.Name, TextFormat.Bold).Font.Color = Brand;
+        right.AddFormattedText(company.Name, TextFormat.Bold).Font.Color = brand;
         right.AddLineBreak();
         right.AddFormattedText(title, new Font { Size = 8.5, Color = Muted });
         row.Borders.Bottom.Width = 0.75;
@@ -122,6 +140,20 @@ public static class PdfReport
         frow.TopPadding = Unit.FromPoint(3);
         var info = frow.Cells[0].AddParagraph(string.Join(" · ", new[] { company.Name, company.AddressLine, company.ContactLine }.Where(v => !string.IsNullOrWhiteSpace(v))));
         info.Style = "Muted";
+        if (!string.IsNullOrWhiteSpace(company.FooterText))
+        {
+            frow.Cells[0].AddParagraph(company.FooterText).Style = "Muted";
+        }
+
+        if (company.Logo is not null && company.ShowEstrichOneLogo)
+        {
+            // Eigenes Logo im Kopf, EstrichONE dezent in der Fußzeile.
+            var made = frow.Cells[0].AddParagraph();
+            made.Style = "Muted";
+            var mark = made.AddImage(ImageSource(Logo));
+            mark.Height = Unit.FromCentimeter(0.35);
+            mark.LockAspectRatio = true;
+        }
         var pages = frow.Cells[1].AddParagraph();
         pages.Style = "Muted";
         pages.Format.Alignment = ParagraphAlignment.Right;
