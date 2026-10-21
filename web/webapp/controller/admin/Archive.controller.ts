@@ -18,8 +18,6 @@ export function verificationText(v: ArchiveVerification | null): { text: string;
 
 /** System › Archiv: Archivserver koppeln, Regeln je Dokumentart, Warteschlange und Nachweis, Prüfung, Export. @namespace estrichone.controller.admin */
 export default class Archive extends BaseController {
-	fmt = { dateTime };
-
 	onInit(): void {
 		this.local({ o: null, busy: false, rules: [], records: [], filter: "", settings: { autoArchive: true, notifyEmail: "" }, stats: {}, contact: {} });
 	}
@@ -38,6 +36,7 @@ export default class Archive extends BaseController {
 		m.setProperty("/o", o);
 		m.setProperty("/rules", rules ?? []);
 		const c = o.connection;
+		m.setProperty("/pairedText", c ? dateTime(c.pairedAt) : "");
 		m.setProperty("/settings", { autoArchive: c?.autoArchive ?? true, notifyEmail: c?.notifyEmail ?? "" });
 		m.setProperty("/contact", c?.lastError
 			? { text: `Fehler · zuletzt erreicht ${dateTime(c.lastContactAt)}`, state: "Error" }

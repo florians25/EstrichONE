@@ -26,6 +26,7 @@ ENV ESTRICHONE_ROLE=backup-target \
     ESTRICHONE_DATA=/data \
     PATH=/app:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     DOTNET_gcServer=0 \
+    ASPNETCORE_HTTP_PORTS= \
     TZ=Europe/Berlin
 VOLUME /data
 EXPOSE 8443

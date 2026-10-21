@@ -43,13 +43,16 @@ public sealed class ArchiveTests(PostgresFixture postgres) : IAsyncLifetime
     [Fact]
     public async Task Pairing_WithWrongCode_IsRejected_WithRightCode_PinsCertificate()
     {
+        var before = (await _admin.GetFromJsonAsync<ArchiveOverview>("/api/v1/archive/status", TestJson.Options))!;
+        before.Connected.ShouldBeFalse();
+        (await _admin.GetFromJsonAsync<List<ArchiveRuleDto>>("/api/v1/archive/rules", TestJson.Options))!.Count.ShouldBe(12);
         var code = _archive.NewCode();
         using var wrong = await _admin.PostAsJsonAsync("/api/v1/archive/pair", new { address = _archive.Address, code = "AAAA-BBBB-CCCC" });
         wrong.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         (await wrong.Content.ReadAsStringAsync()).ShouldContain("PEER_CODE_WRONG");
 
         using var paired = await _admin.PostAsJsonAsync("/api/v1/archive/pair", new { address = _archive.Address, code });
-        paired.StatusCode.ShouldBe(HttpStatusCode.OK);
+        paired.StatusCode.ShouldBe(HttpStatusCode.OK, await paired.Content.ReadAsStringAsync());
         var connection = (await paired.Content.ReadFromJsonAsync<ArchiveConnectionDto>(TestJson.Options))!;
         connection.ServerName.ShouldBe("Archiv Test");
         connection.CaFingerprint.Length.ShouldBe(64);

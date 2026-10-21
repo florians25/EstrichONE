@@ -13,6 +13,7 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
+			<VBox>
 			<VBox busy="{view>/busy}" class="sapUiSmallMarginBottom">
 				<MessageStrip visible="{= !!${view>/o} &amp;&amp; !${view>/o/connected} }" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
 					text="Noch kein Archivserver gekoppelt. Auf dem Archivrechner einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv – dann „Archivserver koppeln“ wählen und Adresse und Kopplungscode eingeben."/>
@@ -21,7 +22,7 @@
 					<core:Title text="Verbindung"/>
 					<Label text="Archivserver"/><Text text="{view>/o/connection/serverName} ({view>/o/connection/address}, Version {view>/o/connection/serverVersion})"/>
 					<Label text="Fingerabdruck"/><Text text="{view>/o/connection/fingerprintDisplay}"/>
-					<Label text="Gekoppelt"/><Text text="{path: 'view>/o/connection/pairedAt', formatter: '.fmt.dateTime'}"/>
+					<Label text="Gekoppelt"/><Text text="{view>/pairedText}"/>
 					<Label text="Letzter Kontakt"/><ObjectStatus text="{view>/contact/text}" state="{view>/contact/state}"/>
 					<core:Title text="Bestand"/>
 					<Label text="Dokumente"/><Text text="{view>/stats/objects}"/>
@@ -103,6 +104,7 @@
 					</ColumnListItem>
 				</items>
 			</Table>
+			</VBox>
 		</f:content>
 	</f:DynamicPage>
 </mvc:View>

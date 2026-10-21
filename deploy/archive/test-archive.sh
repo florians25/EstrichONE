@@ -29,10 +29,14 @@ cleanup() {
     docker logs --tail 40 eo-test-archive >&2 2>&1 || true
     docker logs --tail 40 eo-test-target >&2 2>&1 || true
   fi
+  reset_stack
+  rm -rf "$CA" "$WORK"
+}
+reset_stack() {
   docker rm -f eo-test-archive eo-test-target eo-test-mailpit >/dev/null 2>&1 || true
   docker volume rm eo-test-archive eo-test-target >/dev/null 2>&1 || true
   docker compose --profile restore down -v >/dev/null 2>&1 || true
-  rm -rf data backup-repository ssh archive .env "$CA" "$WORK"
+  rm -rf data backup-repository ssh archive .env
 }
 trap cleanup EXIT
 
@@ -51,9 +55,7 @@ code_of() {
 }
 
 log "Server einrichten"
-cleanup
-CA="$(mktemp)"
-WORK="$(mktemp -d)"
+reset_stack
 ./setup.sh --domain localhost --name "Archiv-Test" --yes >/dev/null
 docker compose up -d --no-build --wait --wait-timeout 180 >/dev/null
 docker compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > "$CA"
