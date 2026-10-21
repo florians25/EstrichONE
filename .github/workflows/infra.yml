@@ -22,7 +22,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Images bauen
         run: |
           for image in api backup web archive backup-target; do
@@ -42,7 +42,7 @@ jobs:
     env:
       VERSION: 0.1.99-ci
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Images dieser Version lokal bauen (Namen wie in der Registry)
         run: |
           for image in api backup web archive backup-target; do
