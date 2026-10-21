@@ -18,8 +18,10 @@
 						<Title text="{view>/oneTime/oneTimePassword}" level="H2" titleStyle="H3" class="eoTabular sapUiSmallMarginEnd">
 							<customData><core:CustomData key="testid" value="one-time-code" writeToDom="true"/></customData>
 						</Title>
-						<Button icon="sap-icon://copy" text="Kopieren" press=".onCopy"/>
+						<Button icon="sap-icon://copy" text="Kopieren" press=".onCopy" class="sapUiTinyMarginEnd"/>
+						<Button id="letterButton" icon="sap-icon://pdf-attachment" text="Zugangsbrief (PDF)" type="Emphasized" press=".onLetter"/>
 					</HBox>
+					<Text text="Der Zugangsbrief wurde zusätzlich per E-Mail verschickt." visible="{= !!${view>/oneTime/letterEmailed} }" class="eoMuted sapUiTinyMarginTop"/>
 				</VBox>
 				<Toolbar style="Clear">
 					<SearchField width="18rem" liveChange=".onSearch" placeholder="Name, Anmeldename, E-Mail"/>

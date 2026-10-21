@@ -11,6 +11,7 @@ public sealed class AccessModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<IUserPermissions, UserPermissions>();
+        services.AddScoped<AccessLetterService>();
         services.AddScoped<IAuthorizationHandler, PermissionHandler>();
         services.AddScoped<IDataInitializer, StandardRoles>();
         services.AddScoped<IRoleAssignments, RoleAssignments>();

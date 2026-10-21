@@ -233,3 +233,18 @@ export async function syncPush(type: string, entityId: string, payload: unknown,
 	}
 	return first;
 }
+
+/** POST mit JSON, Antwort als Datei (z. B. PDF); Fehler wie bei api(). */
+export async function postForBlob(path: string, body: unknown): Promise<Blob> {
+	const send = () => fetch(apiUrl(path), {
+		method: "POST", credentials: "same-origin",
+		headers: { "Content-Type": "application/json", Accept: "application/pdf, application/problem+json", ...csrfHeaders("POST") },
+		body: JSON.stringify(body),
+	}).catch(() => {
+		throw new NetworkError();
+	});
+	let response = await send();
+	if (response.status === 401 && (await refreshSession())) response = await send();
+	if (!response.ok) throw await toError(response);
+	return response.blob();
+}

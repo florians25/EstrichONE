@@ -46,6 +46,7 @@ class Session {
 	/** Nach dem Speichern der Einstellungen: Module und Rechte neu anwenden. */
 	async reloadPermissions(): Promise<void> {
 		await this.loadPermissions();
+		document.dispatchEvent(new CustomEvent("estrichone-permissions"));
 	}
 
 	async loadServer(): Promise<ServerInfo | null> {

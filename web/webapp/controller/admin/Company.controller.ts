@@ -8,6 +8,7 @@ import { resetCompany } from "../../util/orderDialogs";
 import { session } from "../../util/session";
 import { loadSystemSettings, saveSystemSettings, type SystemSettings } from "../../util/systemSettings";
 import { themes } from "../../util/theme";
+import type { RouteMatch } from "../../util/router";
 
 interface LogoInfo {
 	hasLogo: boolean;
@@ -32,7 +33,7 @@ export default class Company extends BaseController {
 
 	onInit(): void {
 		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
-			themes, patternExample: "" });
+			themes: [{ id: "system", text: "Systemeinstellung folgen (hell/dunkel)" }, ...themes], patternExample: "" });
 		this.model().attachPropertyChange((event) => {
 			if (String(event.getParameter("path")).includes("bauaktePattern")) this.updateExample();
 		});
@@ -42,7 +43,9 @@ export default class Company extends BaseController {
 		this.model().setProperty("/patternExample", numberExample(String(this.model().getProperty("/s/numbering/bauaktePattern") ?? "")));
 	}
 
-	async onRouteMatched(): Promise<void> {
+	async onRouteMatched(match?: RouteMatch): Promise<void> {
+		const tab = match?.query.get("bereich");
+		if (tab) this.model().setProperty("/tab", tab);
 		this.model().setProperty("/busy", true);
 		try {
 			const [c, settings, logo, templates, roles] = await Promise.all([

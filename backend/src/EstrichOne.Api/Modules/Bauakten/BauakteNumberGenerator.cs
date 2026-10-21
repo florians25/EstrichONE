@@ -9,7 +9,7 @@ namespace EstrichOne.Api.Modules.Bauakten;
 /// atomares UPSERT; die Zeilensperre gilt bis zum Ende der Transaktion. Läuft der Aufruf in derselben Transaktion
 /// wie das Anlegen der Bauakte, entstehen auch bei einem Abbruch keine Lücken.
 /// </summary>
-public sealed class BauakteNumberGenerator(EstrichOneDbContext db, TimeProvider clock)
+public sealed class BauakteNumberGenerator(EstrichOneDbContext db, TimeProvider clock, Organization.Exports.ISystemSettings settings)
 {
     private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
 
@@ -24,7 +24,17 @@ public sealed class BauakteNumberGenerator(EstrichOneDbContext db, TimeProvider 
                 """)
             .ToListAsync(cancellationToken);
 
-        return Format(year, rows.Single());
+        var pattern = (await settings.GetAsync(cancellationToken)).Numbering.BauaktePattern;
+        return Format(pattern, year, rows.Single());
+    }
+
+    /// <summary>Nummer nach Muster (Einstellungen → Bauakten): {JJJJ} Jahr, {JJ} zweistellig, {N…} laufende Nummer mit Mindeststellen.</summary>
+    public static string Format(string pattern, int year, int number)
+    {
+        var text = pattern.Replace("{JJJJ}", year.ToString(CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("{JJ}", (year % 100).ToString("00", CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        return System.Text.RegularExpressions.Regex.Replace(text, "\\{(N+)\\}",
+            match => number.ToString(new string('0', match.Groups[1].Value.Length), CultureInfo.InvariantCulture));
     }
 
     public static string Format(int year, int number) =>

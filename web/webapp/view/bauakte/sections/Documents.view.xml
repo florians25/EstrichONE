@@ -85,6 +85,7 @@
 										<MenuItem text="{i18n>docs.rename}" icon="sap-icon://edit" press=".onRename" visible="{= ${session>/permissions/files.upload} === true }"/>
 										<MenuItem text="{i18n>docs.moveOne}" icon="sap-icon://move" press=".onMove" visible="{= ${session>/permissions/files.upload} === true }"/>
 										<MenuItem text="{i18n>docs.newVersion}" icon="sap-icon://upload" press=".onNewVersion" visible="{= ${session>/permissions/files.upload} === true }"/>
+										<MenuItem text="Archivnachweis …" icon="sap-icon://attachment-zip-file" press=".onArchiveProof"/>
 										<MenuItem text="Freigabe anfordern" icon="sap-icon://approvals" press=".onRequestApproval"
 											visible="{= ${session>/permissions/files.upload} === true &amp;&amp; ${doc>approvalStatus} !== 'pending' &amp;&amp; !${doc>superseded} }"/>
 										<MenuItem text="{i18n>common.delete}" icon="sap-icon://delete" press=".onDelete" visible="{= ${session>/permissions/files.delete} === true }" startsSection="true"/>

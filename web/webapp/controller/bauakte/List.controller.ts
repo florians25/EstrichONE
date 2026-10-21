@@ -139,7 +139,7 @@ export default class List extends BaseController {
 
 	private async create(status: Extract<BauakteStatus, "planned" | "inquiry">): Promise<void> {
 		const created = await openBauakteWizard({ status });
-		if (created) this.nav(`/bauakten/${created.id}`);
+		if (created) this.nav(`/bauakten/${created.id}${created.startInspection ? "?erstbegehung=1" : ""}`);
 	}
 
 	/** Geladene Treffer als CSV (Excel, Semikolon, UTF-8 mit BOM). */

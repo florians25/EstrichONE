@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Mail.Exports;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
@@ -129,6 +130,7 @@ internal static class ApprovalEndpoints
             ["assignee"] = (request.AssigneeUserId ?? request.AssigneeRoleId)?.ToString(),
         });
         await db.SaveChangesAsync(cancellationToken);
+        await service.NotifyRequestedAsync(approval, file.OriginalName, cancellationToken);
         return TypedResults.Created($"/api/v1/files/{fileId}/approvals", (await service.ToResponsesAsync([approval], cancellationToken))[0]);
     }
 
@@ -170,8 +172,51 @@ internal static class ApprovalEndpoints
 
 /// <summary>Entscheiden, zurückziehen und Antworten mit Namen aufbereiten.</summary>
 internal sealed class ApprovalService(EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions, IRoleAssignments roles,
-    IBauakteAccess access, IAuditLog audit, TimeProvider clock)
+    IBauakteAccess access, IAuditLog audit, TimeProvider clock, IMailService mail, IBauakteReportSource bauakten,
+    Organization.Exports.ISystemSettings settings, ILogger<ApprovalService> logger)
 {
+    /// <summary>E-Mail an die Person bzw. alle Mitglieder der Rolle (wenn eingerichtet und eingeschaltet).</summary>
+    public async Task NotifyRequestedAsync(FileApproval approval, string fileName, CancellationToken cancellationToken)
+    {
+        var recipients = approval.AssigneeUserId is { } user ? [user] : approval.AssigneeRoleId is { } role ? await roles.GetUserIdsInRoleAsync(role, cancellationToken) : [];
+        var info = await bauakten.GetAsync(approval.BauakteId, cancellationToken);
+        await SendAsync(MailTemplateKeys.ApprovalRequested, recipients.Where(r => r != currentUser.UserId), approval, new Dictionary<string, string?>
+        {
+            ["dokument"] = fileName, ["bauakte"] = info is null ? null : $"{info.Number} {info.Title}".Trim(), ["nachricht"] = approval.Message,
+        }, cancellationToken);
+    }
+
+    private async Task NotifyDecidedAsync(FileApproval approval, CancellationToken cancellationToken)
+    {
+        var file = await db.Set<FileRecord>().AsNoTracking().Where(f => f.Id == approval.FileId).Select(f => f.OriginalName).SingleOrDefaultAsync(cancellationToken);
+        var info = await bauakten.GetAsync(approval.BauakteId, cancellationToken);
+        await SendAsync(MailTemplateKeys.ApprovalDecided, [approval.RequestedByUserId], approval, new Dictionary<string, string?>
+        {
+            ["dokument"] = file, ["bauakte"] = info is null ? null : $"{info.Number} {info.Title}".Trim(),
+            ["entscheidung"] = approval.Status == ApprovalStatus.Approved ? "freigegeben" : "abgelehnt", ["kommentar"] = approval.DecisionComment,
+        }, cancellationToken);
+    }
+
+    private async Task SendAsync(string template, IEnumerable<Guid> userIds, FileApproval approval, Dictionary<string, string?> values,
+        CancellationToken cancellationToken)
+    {
+        var ids = userIds.Distinct().ToList();
+        var people = await db.Set<User>().AsNoTracking().Where(u => ids.Contains(u.Id) && u.IsActive && u.Email != null)
+            .Select(u => new { u.DisplayName, u.Email }).ToListAsync(cancellationToken);
+        foreach (var person in people)
+        {
+            try
+            {
+                await mail.QueueTemplateAsync(template, person.Email!, new Dictionary<string, string?>(values) { ["name"] = person.DisplayName },
+                    $"bauakte:{approval.BauakteId}", null, cancellationToken);
+            }
+            catch (ArgumentException exception)
+            {
+                logger.LogWarning(exception, "Freigabe-Benachrichtigung an {Name} nicht möglich.", person.DisplayName);
+            }
+        }
+    }
+
     public async Task<Results<Ok<ApprovalResponse>, ProblemHttpResult>> DecideAsync(Guid id, bool approve, string? comment, CancellationToken cancellationToken)
     {
         var approval = await db.Set<FileApproval>().SingleOrDefaultAsync(a => a.Id == id, cancellationToken);
@@ -183,6 +228,11 @@ internal sealed class ApprovalService(EstrichOneDbContext db, ICurrentUser curre
         if (!await CanDecideAsync(approval, cancellationToken))
         {
             return ApprovalEndpoints.Problem(StatusCodes.Status403Forbidden, "Über diese Freigabe entscheidet jemand anderes.", "NOT_ASSIGNEE");
+        }
+
+        if (approve && string.IsNullOrWhiteSpace(comment) && (await settings.GetAsync(cancellationToken)).Approvals.RequireCommentOnApprove)
+        {
+            return ApprovalEndpoints.Problem(StatusCodes.Status400BadRequest, "Bitte einen Kommentar zur Freigabe angeben (Einstellungen).", "COMMENT_REQUIRED");
         }
 
         try
@@ -201,6 +251,7 @@ internal sealed class ApprovalService(EstrichOneDbContext db, ICurrentUser curre
         audit.Record(approve ? "documents.approved" : "documents.rejected", currentUser.UserId, "file", approval.FileId.ToString(),
             new Dictionary<string, string?> { ["bauakteId"] = approval.BauakteId.ToString(), ["comment"] = approval.DecisionComment });
         await db.SaveChangesAsync(cancellationToken);
+        await NotifyDecidedAsync(approval, cancellationToken);
         return TypedResults.Ok((await ToResponsesAsync([approval], cancellationToken))[0]);
     }
 

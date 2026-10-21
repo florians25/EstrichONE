@@ -100,3 +100,8 @@ export function logos(themeId: string): { shell: string; horizontal: string; mar
 		? { shell: "/logo.svg", horizontal: "/logo-horizontal-white.svg", mark: "/logo-mark-dark.svg" }
 		: { shell: "/logo.svg", horizontal: "/logo-horizontal.svg", mark: "/logo-mark.svg" };
 }
+
+/** Hat der Benutzer auf diesem Gerät selbst ein Farbschema bzw. eine Dichte gewählt? */
+export function hasOwnChoice(): { theme: boolean; density: boolean } {
+	return { theme: !!read(STORAGE_KEY), density: !!read(DENSITY_KEY) };
+}

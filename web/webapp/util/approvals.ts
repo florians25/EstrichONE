@@ -4,6 +4,7 @@ import { openForm } from "./forms";
 import { uuidv7 } from "./ids";
 import { session } from "./session";
 import type { RoleResponse } from "./models";
+import { loadSystemSettings } from "./systemSettings";
 
 export type ApprovalStatus = "pending" | "approved" | "rejected" | "cancelled";
 
@@ -49,7 +50,9 @@ function roles(): Promise<RoleResponse[]> {
 
 /** Freigabe anfragen; liefert die neue Freigabe oder null (abgebrochen). */
 export async function requestApproval(file: { id: string; originalName: string }): Promise<ApprovalResponse | null> {
-	const [people, roleList] = await Promise.all([session.people(), roles()]);
+	const [people, roleList, settings] = await Promise.all([session.people(), roles(), loadSystemSettings()]);
+	const defaults = settings?.settings.approvals;
+	const due = defaults?.defaultDueDays ? new Date(Date.now() + defaults.defaultDueDays * 86_400_000).toISOString().slice(0, 10) : "";
 	const me = session.model.getProperty("/user/id") as string | undefined;
 	const options = [
 		...people.filter((p) => p.isActive && p.id !== me).map((p) => ({ key: `u:${p.id}`, text: p.displayName, additionalText: "Person" })),
@@ -57,6 +60,7 @@ export async function requestApproval(file: { id: string; originalName: string }
 	];
 	return openForm<ApprovalResponse>({
 		title: "Freigabe anfordern", submitText: "Anfordern", width: "34rem",
+		initial: { target: defaults?.defaultRoleId && roleList.some((r) => r.id === defaults.defaultRoleId) ? `r:${defaults.defaultRoleId}` : "", dueDate: due },
 		intro: `Dokument: ${file.originalName}`,
 		fields: [
 			{ key: "target", label: "Freigabe durch", type: "combo", required: true, options },
@@ -74,11 +78,12 @@ export async function requestApproval(file: { id: string; originalName: string }
 }
 
 /** Genehmigen oder ablehnen; beim Ablehnen ist ein Kommentar Pflicht. */
-export function decideApproval(approval: ApprovalResponse, approve: boolean): Promise<ApprovalResponse | null> {
+export async function decideApproval(approval: ApprovalResponse, approve: boolean): Promise<ApprovalResponse | null> {
+	const commentRequired = !approve || (await loadSystemSettings())?.settings.approvals.requireCommentOnApprove === true;
 	return openForm<ApprovalResponse>({
 		title: approve ? "Dokument freigeben" : "Freigabe ablehnen", submitText: approve ? "Freigeben" : "Ablehnen", danger: !approve, width: "32rem",
 		intro: `${approval.fileName} · ${approval.bauakteNumber ?? ""} ${approval.bauakteTitle}${approval.message ? `\nAnfrage von ${approval.requestedByName}: ${approval.message}` : ""}`,
-		fields: [{ key: "comment", label: approve ? "Kommentar (optional)" : "Begründung", type: "textarea", rows: 3, maxLength: 2000, required: !approve }],
+		fields: [{ key: "comment", label: approve ? (commentRequired ? "Kommentar" : "Kommentar (optional)") : "Begründung", type: "textarea", rows: 3, maxLength: 2000, required: commentRequired }],
 		submit: (v) => post<ApprovalResponse>(`approvals/${approval.id}/${approve ? "approve" : "reject"}`, { comment: (v.comment as string) || null }),
 	});
 }

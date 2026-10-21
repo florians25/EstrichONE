@@ -5,7 +5,7 @@ import Filter from "sap/ui/model/Filter";
 import FilterOperator from "sap/ui/model/FilterOperator";
 import type ListBinding from "sap/ui/model/ListBinding";
 import type Table from "sap/m/Table";
-import { get, post, put } from "../../util/api";
+import { get, post, postForBlob, put } from "../../util/api";
 import { openForm } from "../../util/forms";
 import type { RoleResponse, UserListItem, UserWithPassword } from "../../util/models";
 
@@ -46,6 +46,23 @@ export default class Users extends BaseController {
 		try { await navigator.clipboard.writeText(pw); this.toast("Kopiert"); } catch { this.toast("Kopieren nicht möglich – bitte markieren und kopieren."); }
 	}
 
+	/** Zugangsbrief nach DIN 5008 mit dem gerade vergebenen Einmalpasswort (neuer Tab). */
+	async onLetter(): Promise<void> {
+		const one = this.model().getProperty("/oneTime") as UserWithPassword & { reset?: boolean } | null;
+		if (!one) return;
+		try {
+			const blob = await postForBlob(`users/${one.user.id}/access-letter`, { password: one.oneTimePassword, reset: one.reset === true });
+			const url = URL.createObjectURL(blob);
+			const a = document.createElement("a");
+			a.href = url;
+			a.download = `Zugangsbrief ${one.user.userName}.pdf`;
+			a.click();
+			setTimeout(() => URL.revokeObjectURL(url), 60_000);
+		} catch (error) {
+			this.showError(error);
+		}
+	}
+
 	onCloseOneTime(): void { this.model().setProperty("/oneTime", null); }
 
 	private roleField() {
@@ -72,7 +89,7 @@ export default class Users extends BaseController {
 				email: v.email || null, phone: v.phone || null, roleIds: v.roleIds ?? [],
 			}),
 		});
-		if (result) { this.model().setProperty("/oneTime", result); void this.load(); }
+		if (result) { this.model().setProperty("/oneTime", { ...result, reset: true }); void this.load(); }
 	}
 
 	async onEdit(e: Event): Promise<void> {
@@ -102,7 +119,7 @@ export default class Users extends BaseController {
 		if (!(await this.confirm("Alle Sitzungen der Person werden beendet. Sie erhalten ein Einmalpasswort zum Weitergeben.",
 			{ title: `Passwort von ${u.displayName} zurücksetzen?`, action: "Zurücksetzen" }))) return;
 		const result = await this.run(() => post<UserWithPassword>(`users/${u.id}/reset-password`));
-		if (result) { this.model().setProperty("/oneTime", result); void this.load(); }
+		if (result) { this.model().setProperty("/oneTime", { ...result, reset: true }); void this.load(); }
 	}
 
 	async onLock(e: Event): Promise<void> {

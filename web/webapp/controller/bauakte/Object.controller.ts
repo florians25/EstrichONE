@@ -27,6 +27,8 @@ import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
 import { openActivityDialog } from "../../util/activityDialog";
 import { runAcceptance } from "../../util/acceptanceFlow";
+import { openInitialInspectionWizard } from "../../util/inspectionWizard";
+import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
 
 /** Abschnitte der Objektseite: Schlüssel (Adresse ?abschnitt=…) → eingebettete View. */
@@ -104,6 +106,20 @@ export default class ObjectController extends BaseController {
 			void this.loadKpis();
 		}
 		this.select(section);
+		if (match.query.get("erstbegehung") === "1") {
+			// Aus dem Anlage-Assistenten: nahtlos in die Erstbegehung der neuen Akte.
+			this.nav(`/bauakten/${id}?abschnitt=dokumentation`, true);
+			void this.startInspection(id);
+		}
+	}
+
+	private async startInspection(id: string): Promise<void> {
+		const files = await akte.files(id).catch(() => []);
+		if (await openInitialInspectionWizard({ bauakteId: id, photos: files.filter((f) => f.kind === "photo"), corrects: null })) {
+			this.toast("Erstbegehung gespeichert");
+			akte.invalidate(id, "inspections", "work", "files");
+			EventBus.getInstance().publish("bauakte", "reload", { id });
+		}
 	}
 
 	private page(): ObjectPageLayout {
@@ -415,6 +431,11 @@ export default class ObjectController extends BaseController {
 
 	onReport(): void {
 		this.nav(`/bauakten/${this.id}/bericht?art=bericht`);
+	}
+
+	onArchiveProof(): void {
+		const b = this.cur();
+		void openArchiveProof({ bauakteId: b.id, title: `${b.number ?? ""} ${b.title}`.trim() });
 	}
 
 	/** Digitales Abnahmeprotokoll (Assistent). */

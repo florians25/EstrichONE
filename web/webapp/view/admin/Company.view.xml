@@ -41,7 +41,6 @@
 							<Input id="setPattern" value="{view>/s/numbering/bauaktePattern}" maxLength="40" valueLiveUpdate="true"
 								description="z. B. {JJJJ}-{NNN} → {view>/patternExample}"/>
 							<core:Title text="Vorgaben für neue Bauakten"/>
-							<Label text="Anlegende Person zuweisen"/><Switch state="{view>/s/bauakte/assignCreator}" customTextOn="Ja" customTextOff="Nein"/>
 							<Label text="Hinweis „Erstbegehung fehlt“"/><Switch state="{view>/s/bauakte/warnMissingInspection}" customTextOn="Ja" customTextOff="Nein"/>
 							<Label text="Vorgeschlagene Vorlage" labelFor="setTemplate"/>
 							<Select id="setTemplate" selectedKey="{view>/s/bauakte/defaultTemplateId}" items="{view>/templates}" forceSelection="false">

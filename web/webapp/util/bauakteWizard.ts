@@ -7,6 +7,7 @@
  *  3. Prüfen und anlegen.
  */
 import Dialog from "sap/m/Dialog";
+import { loadSystemSettings } from "./systemSettings";
 import Button from "sap/m/Button";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
@@ -55,7 +56,7 @@ function form(content: Control[]): SimpleForm {
 	});
 }
 
-export function openBauakteWizard(options: WizardOptions): Promise<BauakteDetail | null> {
+export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetail & { startInspection?: boolean }) | null> {
 	const titleOf = (status: string) => (status === "inquiry" ? "Neue Anfrage" : "Neue Bauakte");
 
 	// ---- Schritt 1: Kunde -----------------------------------------------------------------------------------------
@@ -218,11 +219,14 @@ export function openBauakteWizard(options: WizardOptions): Promise<BauakteDetail
 	// Bauakten-Vorlagen aus den Stammdaten: Beschreibung und Standardräume.
 	let templates: BauakteTemplate[] = [];
 	const template = new Select("newTemplate", { width: "100%", forceSelection: false, items: [new Item({ key: "", text: "– ohne Vorlage –" })] });
-	void catalog<BauakteTemplate>("bauakteTemplate").then((list) => {
+	void Promise.all([catalog<BauakteTemplate>("bauakteTemplate"), loadSystemSettings()]).then(([list, settings]) => {
 		templates = list;
 		for (const t of list) {
 			template.addItem(new Item({ key: t.id, text: `${t.name}${t.content.rooms?.length ? ` (${t.content.rooms.length} Räume)` : ""}` }));
 		}
+		// Vorgeschlagene Vorlage aus den Einstellungen.
+		const preferred = settings?.settings.bauakte.defaultTemplateId;
+		if (preferred && list.some((t) => t.id === preferred) && !template.getSelectedKey()) template.setSelectedKey(preferred);
 	});
 	template.attachChange(() => {
 		const t = templates.find((x) => x.id === template.getSelectedKey());
@@ -245,7 +249,10 @@ export function openBauakteWizard(options: WizardOptions): Promise<BauakteDetail
 
 	// ---- Schritt 3: Prüfen -------------------------------------------------------------------------------------------
 	const summary = new VBox({ renderType: "Bare" });
-	const reviewStep = new WizardStep("newStepReview", { title: "Prüfen", icon: "sap-icon://accept", validated: true, content: [summary] });
+	// Beim Kunden vor Ort: direkt im Anschluss die Erstbegehung der neuen Akte erfassen.
+	const inspectNow = new CheckBox("newInspectNow", { text: "Direkt im Anschluss die Erstbegehung durchführen (z. B. jetzt beim Kunden vor Ort)" });
+	const reviewStep = new WizardStep("newStepReview", { title: "Prüfen", icon: "sap-icon://accept", validated: true,
+		content: [new VBox({ items: [summary, inspectNow.addStyleClass("sapUiSmallMarginTop")] })] });
 	const fillSummary = () => {
 		const line = (label: string, value: string) => new HBox({ items: [new Label({ text: label, width: "10rem" }), new Text({ text: value || "–" })] }).addStyleClass("sapUiTinyMarginBottom");
 		summary.destroyItems();
@@ -382,6 +389,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<BauakteDetail
 						underfloorHeating: !!room.underfloorHeating, status: "planned", notes: null, sortOrder: index,
 					});
 				}
+				if (inspectNow.getSelected()) (result as BauakteDetail & { startInspection?: boolean }).startInspection = true;
 				MessageToast.show(status === "inquiry" ? "Anfrage angelegt" : "Bauakte angelegt");
 				dialog.close();
 			} catch (error) {

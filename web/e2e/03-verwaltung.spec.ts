@@ -20,6 +20,10 @@ test('Benutzer anlegen, Einmalpasswort, Pflichtwechsel bei der ersten Anmeldung'
   await expect(oneTime).toContainText('Lukas Brandl');
   const password = (await page.getByTestId('one-time-code').textContent())!.trim();
   expect(password.length).toBeGreaterThan(8);
+  // Zugangsbrief nach DIN 5008 als PDF
+  const letter = page.waitForEvent('download');
+  await oneTime.getByRole('button', { name: 'Zugangsbrief (PDF)' }).click();
+  expect((await letter).suggestedFilename()).toBe('Zugangsbrief l.brandl.pdf');
   await expect(page.getByRole('row', { name: /Lukas Brandl/ })).toContainText('Baustelle');
 
   await page.getByLabel('Benutzermenü Anna Admin').click();

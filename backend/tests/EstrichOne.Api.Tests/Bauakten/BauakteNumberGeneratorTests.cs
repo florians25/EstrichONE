@@ -65,4 +65,11 @@ public sealed class BauakteNumberGeneratorTests(PostgresFixture postgres) : IAsy
     private static int Year(string number) => int.Parse(number[..4], System.Globalization.CultureInfo.InvariantCulture);
 
     private static int Sequence(string number) => int.Parse(number[5..], System.Globalization.CultureInfo.InvariantCulture);
+
+    [Theory]
+    [InlineData("{JJJJ}-{NNN}", 2026, 7, "2026-007")]
+    [InlineData("BA-{JJ}/{NNNN}", 2026, 42, "BA-26/0042")]
+    [InlineData("{JJJJ}{NN}", 2026, 123, "2026123")]
+    public void Pattern_FromSettings(string pattern, int year, int number, string expected) =>
+        BauakteNumberGenerator.Format(pattern, year, number).ShouldBe(expected);
 }

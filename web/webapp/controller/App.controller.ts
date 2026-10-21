@@ -22,6 +22,7 @@ import type Control from "sap/ui/core/Control";
 import { get, onSessionEnded } from "../util/api";
 import { relogin } from "../util/relogin";
 import { loadSystemSettings } from "../util/systemSettings";
+import { hasOwnChoice } from "../util/theme";
 import { initials } from "../util/format";
 import { setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
@@ -82,6 +83,8 @@ export default class AppController extends BaseController {
 			return false;
 		});
 		document.addEventListener("estrichone-logo", () => void this.loadCompanyLogo());
+		// Module oder Rechte geändert (Einstellungen): Navigation sofort anpassen.
+		document.addEventListener("estrichone-permissions", () => this.refreshShell());
 		window.addEventListener("online", () => this.model().setProperty("/online", true));
 		window.addEventListener("offline", () => this.model().setProperty("/online", false));
 		// Nur die aktuelle Seite bleibt im DOM (Seiten bleiben im Speicher erhalten): eindeutige Beschriftungen,
@@ -123,6 +126,16 @@ export default class AppController extends BaseController {
 			get<{ hasLogo: boolean; updatedAt: string | null }>("company/logo/info").catch(() => ({ hasLogo: false, updatedAt: null })),
 		]);
 		const show = info.hasLogo && settings?.settings.appearance.showCompanyLogo !== false;
+		// Vorgabe der Installation, solange auf diesem Gerät nichts Eigenes gewählt ist.
+		const own = hasOwnChoice();
+		const appearance = settings?.settings.appearance;
+		if (appearance && !own.theme && appearance.defaultTheme !== "system" && Theming.getTheme() !== appearance.defaultTheme) {
+			Theming.setTheme(appearance.defaultTheme);
+		}
+		if (appearance && !own.density) {
+			document.body.classList.toggle("sapUiSizeCompact", appearance.density === "compact");
+			document.body.classList.toggle("sapUiSizeCozy", appearance.density === "cozy");
+		}
 		this.model().setProperty("/companyLogo", show ? `/api/v1/company/logo?v=${encodeURIComponent(info.updatedAt ?? "")}` : "");
 	}
 
@@ -190,7 +203,7 @@ export default class AppController extends BaseController {
 
 	onNewBauakte(): void {
 		void openBauakteWizard({ status: "planned" }).then((created) => {
-			if (created) this.nav(`/bauakten/${created.id}`);
+			if (created) this.nav(`/bauakten/${created.id}${created.startInspection ? "?erstbegehung=1" : ""}`);
 		});
 	}
 

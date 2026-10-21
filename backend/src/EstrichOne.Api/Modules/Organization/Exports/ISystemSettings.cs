@@ -153,13 +153,14 @@ public sealed record NotificationSettings
 
 public sealed record AppearanceSettings
 {
-    public string DefaultTheme { get; init; } = "sap_horizon";
+    /// <summary>„system“ = hell/dunkel nach dem Betriebssystem.</summary>
+    public string DefaultTheme { get; init; } = "system";
     public string Density { get; init; } = "compact";
     public bool ShowCompanyLogo { get; init; } = true;
 
     public AppearanceSettings Normalize() => this with
     {
-        DefaultTheme = SystemSettings.Text(DefaultTheme, 40) ?? "sap_horizon",
+        DefaultTheme = SystemSettings.Text(DefaultTheme, 40) ?? "system",
         Density = Density is "cozy" ? "cozy" : "compact",
     };
 }

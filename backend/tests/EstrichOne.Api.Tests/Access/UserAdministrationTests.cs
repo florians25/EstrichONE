@@ -87,6 +87,20 @@ public sealed class UserAdministrationTests(PostgresFixture postgres) : IAsyncLi
     }
 
     [Fact]
+    public async Task AccessLetter_IsAPdf_OnlyWithTheCurrentOneTimePassword()
+    {
+        var created = await CreateAsync("k.letter", StandardRoles.SiteWorkerId);
+        created.LetterEmailed.ShouldBeFalse();
+        using var letter = await _admin.PostAsJsonAsync($"/api/v1/users/{created.User.Id}/access-letter", new { password = created.OneTimePassword }, Ct);
+        letter.StatusCode.ShouldBe(HttpStatusCode.OK);
+        letter.Content.Headers.ContentType!.MediaType.ShouldBe("application/pdf");
+        (await letter.Content.ReadAsByteArrayAsync(Ct))[..4].ShouldBe("%PDF"u8.ToArray());
+
+        using var wrong = await _admin.PostAsJsonAsync($"/api/v1/users/{created.User.Id}/access-letter", new { password = "falsch-falsch" }, Ct);
+        wrong.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+    }
+
+    [Fact]
     public async Task DuplicateUserName_IsRejected_UnknownRoleCreatesNothing()
     {
         await CreateAsync("doppelt", StandardRoles.SiteWorkerId);

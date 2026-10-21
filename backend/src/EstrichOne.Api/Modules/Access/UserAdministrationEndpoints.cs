@@ -25,7 +25,10 @@ public sealed record UpdateUserRequest(
     [property: MaxLength(50)] string? Phone);
 
 /// <param name="OneTimePassword">Nur in dieser Antwort sichtbar; muss bei der ersten Anmeldung ersetzt werden.</param>
-public sealed record UserWithPassword(UserListItem User, string OneTimePassword);
+/// <param name="LetterEmailed">Zugangsbrief (PDF) per E-Mail verschickt (Einstellungen → Benachrichtigungen, E-Mail-Konto).</param>
+public sealed record UserWithPassword(UserListItem User, string OneTimePassword, bool LetterEmailed = false);
+
+public sealed record AccessLetterRequest([property: Required, MaxLength(200)] string Password, bool Reset = false);
 
 /// <summary>Benutzerverwaltung im Web (docs/reengineering/17, Abschnitt 2: Einmalpasswort + Zwangswechsel).</summary>
 internal static class UserAdministrationEndpoints
@@ -43,6 +46,10 @@ internal static class UserAdministrationEndpoints
         users.MapPost("/{id:guid}/reset-password", ResetPasswordAsync).WithName("ResetUserPassword")
             .WithSummary("Einmalpasswort vergeben; beendet alle Sitzungen des Benutzers")
             .ProducesProblem(StatusCodes.Status404NotFound);
+        users.MapPost("/{id:guid}/access-letter", LetterAsync).WithName("GetAccessLetter")
+            .WithSummary("Zugangsbrief als PDF (DIN 5008) mit dem gerade vergebenen Einmalpasswort")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity);
         users.MapPost("/{id:guid}/deactivate", (Guid id, UserAdministration admin, CancellationToken ct) => admin.SetActiveAsync(id, false, ct))
             .WithName("DeactivateUser").WithSummary("Konto sperren; alle Sitzungen enden sofort")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
@@ -55,7 +62,7 @@ internal static class UserAdministrationEndpoints
 
     private static async Task<Results<Created<UserWithPassword>, ProblemHttpResult>> CreateAsync(
         CreateUserRequest request, IUserAccounts accounts, IRoleAssignments roles, UserAdministration admin, EstrichOneDbContext db,
-        ICurrentUser current, IAuditLog audit, CancellationToken cancellationToken)
+        ICurrentUser current, IAuditLog audit, AccessLetterService letters, HttpRequest http, CancellationToken cancellationToken)
     {
         var roleIds = request.RoleIds.Distinct().ToList();
         if (await db.Set<Role>().CountAsync(r => roleIds.Contains(r.Id), cancellationToken) != roleIds.Count)
@@ -91,7 +98,8 @@ internal static class UserAdministrationEndpoints
         audit.Record("users.created", current.UserId, "user", user.Id.ToString());
         await db.SaveChangesAsync(cancellationToken);
         var item = (await admin.ListAsync(user.Id, cancellationToken)).Single();
-        return TypedResults.Created($"/api/v1/users/{user.Id}", new UserWithPassword(item, password));
+        var emailed = await letters.MailAsync(user, password, letters.ServerUrl(http), reset: false, cancellationToken);
+        return TypedResults.Created($"/api/v1/users/{user.Id}", new UserWithPassword(item, password, emailed));
     }
 
     private static async Task<Results<Ok<UserListItem>, ProblemHttpResult>> UpdateAsync(
@@ -119,9 +127,10 @@ internal static class UserAdministrationEndpoints
 
     private static async Task<Results<Ok<UserWithPassword>, ProblemHttpResult>> ResetPasswordAsync(
         Guid id, IUserAccounts accounts, UserAdministration admin, EstrichOneDbContext db, ICurrentUser current, IAuditLog audit,
-        CancellationToken cancellationToken)
+        AccessLetterService letters, HttpRequest http, CancellationToken cancellationToken)
     {
-        if (!await db.Set<User>().AnyAsync(u => u.Id == id, cancellationToken))
+        var user = await db.Set<User>().AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
+        if (user is null)
         {
             return NotFound();
         }
@@ -129,7 +138,30 @@ internal static class UserAdministrationEndpoints
         var password = await accounts.ResetPasswordAsync(id, cancellationToken);
         audit.Record("users.password_reset", current.UserId, "user", id.ToString());
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(new UserWithPassword((await admin.ListAsync(id, cancellationToken)).Single(), password));
+        var emailed = await letters.MailAsync(user, password, letters.ServerUrl(http), reset: true, cancellationToken);
+        return TypedResults.Ok(new UserWithPassword((await admin.ListAsync(id, cancellationToken)).Single(), password, emailed));
+    }
+
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> LetterAsync(
+        Guid id, AccessLetterRequest request, IUserAccounts accounts, AccessLetterService letters, EstrichOneDbContext db, ICurrentUser current,
+        IAuditLog audit, HttpRequest http, CancellationToken cancellationToken)
+    {
+        var user = await db.Set<User>().AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
+        if (user is null)
+        {
+            return NotFound();
+        }
+
+        // Nur mit dem gerade vergebenen Passwort: der Server speichert es nicht im Klartext.
+        if (!await accounts.VerifyPasswordAsync(id, request.Password, cancellationToken))
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "PASSWORD_MISMATCH", "Das Einmalpasswort passt nicht (mehr) zu diesem Benutzer.");
+        }
+
+        var pdf = await letters.RenderAsync(user, request.Password, letters.ServerUrl(http), request.Reset, cancellationToken);
+        audit.Record("users.letter_printed", current.UserId, "user", id.ToString());
+        await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.File(pdf, "application/pdf", $"Zugangsbrief {user.UserName}.pdf");
     }
 
     internal static ProblemHttpResult NotFound() => Problem(StatusCodes.Status404NotFound, "USER_NOT_FOUND", "Benutzer nicht gefunden.");

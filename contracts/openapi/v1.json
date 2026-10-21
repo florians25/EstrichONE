@@ -1420,6 +1420,69 @@
         ]
       }
     },
+    "/api/v1/users/{id}/access-letter": {
+      "post": {
+        "tags": [
+          "Benutzer"
+        ],
+        "summary": "Zugangsbrief als PDF (DIN 5008) mit dem gerade vergebenen Einmalpasswort",
+        "operationId": "GetAccessLetter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AccessLetterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/users/{id}/deactivate": {
       "post": {
         "tags": [
@@ -11893,6 +11956,22 @@
           "completed"
         ]
       },
+      "AccessLetterRequest": {
+        "required": [
+          "password"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "reset": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "AddEmployeeDocumentRequest": {
         "required": [
           "fileId",
@@ -22276,6 +22355,10 @@
           },
           "oneTimePassword": {
             "type": "string"
+          },
+          "letterEmailed": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

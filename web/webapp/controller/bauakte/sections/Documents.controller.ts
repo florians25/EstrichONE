@@ -25,6 +25,7 @@ import { session } from "../../../util/session";
 import { uploadFile } from "../../../util/upload";
 import { openUploadDialog } from "../../../util/uploadDialog";
 import { openPreview } from "../../../util/previewDialog";
+import { openArchiveProof } from "../../../util/archiveProof";
 import { akteContextOf } from "../../../util/akteHeader";
 
 /**
@@ -193,6 +194,11 @@ export default class Documents extends SectionBase {
 			files: rows, index: Math.max(0, rows.findIndex((r) => r.id === row.id)), context: this.context(),
 			onDetails: (file) => navTo(`/bauakten/${this.bauakteId}/datei/${file.id}?abschnitt=dokumente`),
 		});
+	}
+
+	onArchiveProof(event: Event): void {
+		const row = this.rowOf(event);
+		void openArchiveProof({ fileId: row.id, title: row.originalName });
 	}
 
 	async onRequestApproval(event: Event): Promise<void> {

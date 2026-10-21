@@ -6,7 +6,7 @@ using Microsoft.EntityFrameworkCore;
 namespace EstrichOne.Api.Modules.Documentation;
 
 /// <summary>„Erstbegehung offen“ und der Stand der Belegreife aus der letzten CM-Messung.</summary>
-internal sealed class DocumentationHints(EstrichOneDbContext db) : IBauakteHintSource
+internal sealed class DocumentationHints(EstrichOneDbContext db, Organization.Exports.ISystemSettings settings) : IBauakteHintSource
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
@@ -17,7 +17,8 @@ internal sealed class DocumentationHints(EstrichOneDbContext db) : IBauakteHintS
             .OrderByDescending(i => i.PerformedAt).ToListAsync(cancellationToken);
 
         if (bauakte.Status is BauakteStatus.Planned or BauakteStatus.InProgress
-            && inspections.All(i => i.Kind != InspectionKind.InitialInspection))
+            && inspections.All(i => i.Kind != InspectionKind.InitialInspection)
+            && (await settings.GetAsync(cancellationToken)).Bauakte.WarnMissingInspection)
         {
             hints.Add(new("initial_inspection_missing", BauakteHintSeverity.Warning, "Erstbegehung noch nicht ausgeführt."));
         }

@@ -66,7 +66,7 @@ public sealed class AcceptanceService(
             Guid? queued;
             try
             {
-                queued = await mail.QueueTemplateAsync("acceptance.customer_approval", email, values, $"bauakte:{protocol.BauakteId}", null, cancellationToken);
+                queued = await mail.QueueTemplateAsync(MailTemplateKeys.AcceptanceCustomerApproval, email, values, $"bauakte:{protocol.BauakteId}", null, cancellationToken);
             }
             catch (Exception exception) when (exception is KeyNotFoundException or InvalidOperationException)
             {
