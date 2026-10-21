@@ -143,6 +143,7 @@ public sealed class SiteRecordTests(PostgresFixture postgres) : IAsyncLifetime
             bauakteId = bauakte, kind = "initialInspection",
             checks = new Dictionary<string, string> { ["substrate"] = "ok", ["edgeInsulation"] = "notOk", ["heatingPressureTest"] = "notApplicable" },
             remarks = "Randdämmstreifen fehlen im Bad",
+            notes = "Kunde vor Ort: Herr Kraus.\nZufahrt nur über Hof, Schlüssel bei Nachbar Nr. 5.\n\n" + new string('x', 20_000),
         }))).Status.ShouldBe(SyncOperationStatus.Applied);
         var correction = Single(await site.PushAsync(SyncClient.Op("inspection.create", Guid.CreateVersion7(), new
         {
@@ -155,6 +156,10 @@ public sealed class SiteRecordTests(PostgresFixture postgres) : IAsyncLifetime
         inspections!.Count.ShouldBe(2);
         inspections.ShouldContain(i => i.CorrectsInspectionId == original && i.Checks["edgeInsulation"] == CheckResult.Ok);
         inspections.ShouldContain(i => i.Id == original && i.Checks["edgeInsulation"] == CheckResult.NotOk);
+        // Freie Notizen: mehrzeilig und lang.
+        var notes = inspections.Single(i => i.Id == original).Notes!;
+        notes.ShouldStartWith("Kunde vor Ort: Herr Kraus.\nZufahrt nur über Hof");
+        notes.Length.ShouldBeGreaterThan(20_000);
     }
 
     [Fact]

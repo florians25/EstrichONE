@@ -203,6 +203,7 @@ internal sealed class BauakteReportBuilder(
                 if (i.NotRequired)
                 {
                     section.AddParagraph($"Nicht notwendig: {i.Remarks}");
+                    AddNotes(section, i.Notes);
                     continue;
                 }
 
@@ -224,6 +225,8 @@ internal sealed class BauakteReportBuilder(
                 {
                     section.AddParagraph($"Bemerkungen: {i.Remarks}");
                 }
+
+                AddNotes(section, i.Notes);
             }
 
             if (cm.Count > 0)
@@ -317,6 +320,24 @@ internal sealed class BauakteReportBuilder(
         var pdf = Render(document);
         var name = SafeName($"Bauakte {info.Number ?? string.Empty} {info.Title}".Trim());
         return (pdf, $"{name} ({clock.GetUtcNow():yyyy-MM-dd}).pdf");
+    }
+
+    /// <summary>Freie Notizen der Begehung, Absätze und Zeilenumbrüche bleiben erhalten.</summary>
+    private static void AddNotes(Section section, string? notes)
+    {
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            return;
+        }
+
+        var heading = section.AddParagraph();
+        heading.Format.SpaceBefore = Unit.FromPoint(4);
+        heading.Format.KeepWithNext = true;
+        heading.AddFormattedText("Notizen", TextFormat.Bold);
+        foreach (var line in notes.Split('\n'))
+        {
+            section.AddParagraph(line.Length == 0 ? " " : line);
+        }
     }
 
     private void Cover(Section section, BauakteReportInfo info, PdfCompany company, double width, int diary, int inspections, int work, int photos)

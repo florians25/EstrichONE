@@ -42,6 +42,9 @@ public enum CheckResult
 public sealed class Inspection : IVersionedEntity
 {
     public const int MaxRemarksLength = 4_000;
+
+    /// <summary>Freie Notizen (Erstbegehung): bewusst großzügig, mehrzeilig.</summary>
+    public const int MaxNotesLength = 100_000;
     public const int MaxLocationLength = 200;
 
     /// <summary>Feste Punkte der Erstbegehung (Reihenfolge = Anzeige).</summary>
@@ -55,6 +58,9 @@ public sealed class Inspection : IVersionedEntity
     public DateTimeOffset PerformedAt { get; private set; }
     public Guid? CorrectsInspectionId { get; private set; }
     public string? Remarks { get; private set; }
+
+    /// <summary>Freie Notizen der Begehung (beliebig lang, mehrzeilig) – zusätzlich zur kurzen Bemerkung.</summary>
+    public string? Notes { get; private set; }
 
     // Erstbegehung
     public bool NotRequired { get; private set; }
@@ -94,7 +100,8 @@ public sealed class Inspection : IVersionedEntity
     }
 
     public static Inspection CreateInitial(Guid id, Guid bauakteId, Guid userId, DateTimeOffset performedAt, bool notRequired,
-        IReadOnlyDictionary<string, CheckResult> checks, IReadOnlyList<Guid> photoFileIds, string? remarks, Guid? correctsInspectionId)
+        IReadOnlyDictionary<string, CheckResult> checks, IReadOnlyList<Guid> photoFileIds, string? remarks, Guid? correctsInspectionId,
+        string? notes = null)
     {
         var unknown = checks.Keys.Except(InitialChecks).ToList();
         if (unknown.Count > 0)
@@ -117,11 +124,13 @@ public sealed class Inspection : IVersionedEntity
             Id = id, BauakteId = bauakteId, Kind = InspectionKind.InitialInspection, PerformedByUserId = userId, PerformedAt = performedAt,
             NotRequired = notRequired, Checks = notRequired ? [] : new Dictionary<string, CheckResult>(checks),
             PhotoFileIds = photoFileIds.Distinct().Take(50).ToList(), Remarks = CleanRemarks(remarks), CorrectsInspectionId = correctsInspectionId,
+            Notes = CleanNotes(notes),
         };
     }
 
     public static Inspection CreateCmMeasurement(Guid id, Guid bauakteId, Guid userId, DateTimeOffset performedAt, string location,
-        ScreedBinderKind binder, bool heated, int? thicknessMm, decimal measuredCmPercent, string? remarks, Guid? correctsInspectionId)
+        ScreedBinderKind binder, bool heated, int? thicknessMm, decimal measuredCmPercent, string? remarks, Guid? correctsInspectionId,
+        string? notes = null)
     {
         var trimmed = location?.Trim() ?? string.Empty;
         if (trimmed.Length is 0 or > MaxLocationLength)
@@ -144,7 +153,21 @@ public sealed class Inspection : IVersionedEntity
             Id = id, BauakteId = bauakteId, Kind = InspectionKind.CmMeasurement, PerformedByUserId = userId, PerformedAt = performedAt,
             Location = trimmed, Binder = binder, Heated = heated, ThicknessMm = thicknessMm,
             MeasuredCmPercent = decimal.Round(measuredCmPercent, 2), Remarks = CleanRemarks(remarks), CorrectsInspectionId = correctsInspectionId,
+            Notes = CleanNotes(notes),
         };
+    }
+
+    private static string? CleanNotes(string? notes)
+    {
+        if (string.IsNullOrWhiteSpace(notes))
+        {
+            return null;
+        }
+
+        var text = notes.Replace("\r\n", "\n", StringComparison.Ordinal).Trim();
+        return text.Length <= MaxNotesLength
+            ? text
+            : throw new ArgumentException($"Die Notizen sind länger als {MaxNotesLength} Zeichen.", nameof(notes));
     }
 
     private static string? CleanRemarks(string? remarks)

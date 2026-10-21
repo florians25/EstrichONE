@@ -76,7 +76,7 @@ ${rooms.rooms.map((r) => `<tr><td>${e(r.name)}</td><td>${e(r.floor ?? "")}</td><
 		const initial = inspections.filter((i) => i.kind === "initialInspection").sort((x, y) => y.performedAt.localeCompare(x.performedAt));
 		const checks = `<h2>Prüfungen</h2>${initial[0] ? `<p><strong>Erstbegehung</strong> am ${e(dateTime(initial[0].performedAt))} durch ${e(session.name(initial[0].performedByUserId))}: ${e(inspectionResult(initial[0]).text)}</p>
 <table><tbody>${Object.entries(checkTitles).map(([k, t]) => `<tr><td>${e(t)}</td><td>${e(initial[0].checks[k] ? checkResults[initial[0].checks[k]]?.text : "–")}</td></tr>`).join("")}</tbody></table>
-${initial[0].remarks ? `<p class="pre">Bemerkungen: ${e(initial[0].remarks)}</p>` : ""}` : "<p>Erstbegehung noch nicht ausgeführt.</p>"}
+${initial[0].remarks ? `<p class="pre">Bemerkungen: ${e(initial[0].remarks)}</p>` : ""}${initial[0].notes ? `<p class="pre"><strong>Notizen:</strong> ${e(initial[0].notes)}</p>` : ""}` : "<p>Erstbegehung noch nicht ausgeführt.</p>"}
 ${cm.length ? `<table><thead><tr><th>Datum</th><th>Messstelle</th><th>Estrich</th><th class="num">Messwert</th><th class="num">Grenzwert</th><th>Ergebnis</th></tr></thead><tbody>
 ${cm.map((i) => `<tr><td>${e(dateTime(i.performedAt))}</td><td>${e(i.location)}</td><td>${e(i.binder ? binderNames[i.binder] : "–")}${i.heated ? ", beheizt" : ""}</td><td class="num">${cmNumber(i.measuredCmPercent)} CM-%</td><td class="num">${cmNumber(i.limitCmPercent)} CM-%</td><td>${i.isReadyForCovering ? "Belegreif" : "Noch nicht belegreif"}</td></tr>`).join("")}</tbody></table>` : "<p>Keine CM-Messungen.</p>"}`;
 		const openWork = work.filter((w) => w.status !== "done");

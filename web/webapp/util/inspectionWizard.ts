@@ -53,6 +53,11 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 	const notRequired = new Switch("inspNotRequired", { state: corrects?.notRequired ?? false, customTextOn: " ", customTextOff: " " });
 	const reason = new TextArea("inspReason", { rows: 3, width: "100%", maxLength: 4000, visible: notRequired.getState(), placeholder: "z. B. Bestandsgebäude, vom Bauherrn bestätigt" });
 	const reasonLabel = new Label({ text: "Begründung", labelFor: reason, required: true, visible: notRequired.getState() });
+	// Freie Notizen: das Wichtigste der Begehung, beliebig lang, mehrzeilig, auch offline in der App.
+	const freeNotes = new TextArea("inspFreeNotes", {
+		rows: 8, width: "100%", growing: true, growingMaxLines: 30, maxLength: 100_000, value: corrects?.notes ?? "",
+		placeholder: "Alles, was vor Ort wichtig ist: Gespräch mit dem Kunden, Zufahrt, Besonderheiten, Wünsche, offene Fragen …",
+	});
 	const visitStep = new WizardStep("inspStepVisit", {
 		title: "Begehung", icon: "sap-icon://appointment-2", validated: true,
 		content: [new VBox({ items: [
@@ -60,6 +65,7 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 			new Label({ text: "Zeitpunkt der Begehung", labelFor: performedAt }), performedAt,
 			new HBox({ alignItems: "Center", items: [notRequired, new Label({ text: "Erstbegehung nicht notwendig", labelFor: notRequired }).addStyleClass("sapUiSmallMarginBegin")] }).addStyleClass("sapUiSmallMarginTop"),
 			reasonLabel, reason,
+			new Label({ text: "Notizen (frei, beliebig lang)", labelFor: freeNotes, design: "Bold" }).addStyleClass("sapUiSmallMarginTop"), freeNotes,
 		] })],
 	});
 
@@ -151,6 +157,10 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 	const fillSummary = () => {
 		summary.destroyItems();
 		summary.addItem(new Title({ text: notRequired.getState() ? "Erstbegehung nicht notwendig" : "Ergebnis", level: "H5" }));
+		const noteText = freeNotes.getValue().trim();
+		if (noteText) {
+			summary.addItem(new Text({ text: `Notizen: ${noteText.length > 300 ? `${noteText.slice(0, 300)} …` : noteText}` }).addStyleClass("eoPre sapUiTinyMarginBottom"));
+		}
 		if (notRequired.getState()) {
 			summary.addItem(new Text({ text: reason.getValue().trim() }));
 			return;
@@ -236,7 +246,7 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 			await syncPush("inspection.create", uuidv7(), {
 				bauakteId, kind: "initialInspection", notRequired: off,
 				checks: off ? {} : Object.fromEntries(Object.entries(checks).map(([k, c]) => [k, c.result.getSelectedKey()])),
-				remarks: text || null, photoFileIds: off ? [] : selectedPhotos(), correctsInspectionId: corrects?.id ?? null,
+				remarks: text || null, notes: freeNotes.getValue().trim() || null, photoFileIds: off ? [] : selectedPhotos(), correctsInspectionId: corrects?.id ?? null,
 				performedAt: at ? new Date(at).toISOString() : null,
 			}, uuidv7());
 			if (!off) {

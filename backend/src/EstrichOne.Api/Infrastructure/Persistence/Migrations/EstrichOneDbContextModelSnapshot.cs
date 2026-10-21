@@ -1426,6 +1426,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("not_required");
 
+                    b.Property<string>("Notes")
+                        .HasColumnType("text")
+                        .HasColumnName("notes");
+
                     b.Property<DateTimeOffset>("PerformedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("performed_at");

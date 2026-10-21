@@ -10500,6 +10500,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

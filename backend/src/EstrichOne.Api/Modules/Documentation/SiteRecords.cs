@@ -26,11 +26,11 @@ public sealed record InspectionDto(
     Guid Id, Guid BauakteId, InspectionKind Kind, Guid PerformedByUserId, DateTimeOffset PerformedAt, Guid? CorrectsInspectionId,
     string? Remarks, bool NotRequired, IReadOnlyDictionary<string, CheckResult> Checks, IReadOnlyList<Guid> PhotoFileIds,
     string? Location, ScreedBinderKind? Binder, bool? Heated, int? ThicknessMm, decimal? MeasuredCmPercent, decimal? LimitCmPercent,
-    bool? IsReadyForCovering, long Version)
+    bool? IsReadyForCovering, long Version, string? Notes = null)
 {
     public static InspectionDto From(Inspection i) => new(i.Id, i.BauakteId, i.Kind, i.PerformedByUserId, i.PerformedAt,
         i.CorrectsInspectionId, i.Remarks, i.NotRequired, i.Checks, i.PhotoFileIds, i.Location, i.Binder, i.Heated, i.ThicknessMm,
-        i.MeasuredCmPercent, i.LimitCmPercent, i.IsReadyForCovering, i.Version);
+        i.MeasuredCmPercent, i.LimitCmPercent, i.IsReadyForCovering, i.Version, i.Notes);
 }
 
 /// <summary>Bautagebuch (anfügen, Verfasser ändert) und Prüfungen (nur anlegen) über den Sync.</summary>
@@ -177,16 +177,17 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
 
         var kind = SyncPayload.Read<InspectionKind>(p, "kind");
         var remarks = SyncPayload.Read<string>(p, "remarks");
+        var notes = SyncPayload.Read<string>(p, "notes");
         var inspection = kind switch
         {
             InspectionKind.InitialInspection => Inspection.CreateInitial(op.EntityId, bauakteId, userId, performedAt,
                 SyncPayload.Read<bool>(p, "notRequired"), SyncPayload.Read<Dictionary<string, CheckResult>>(p, "checks") ?? [],
-                SyncPayload.Read<List<Guid>>(p, "photoFileIds") ?? [], remarks, corrects),
+                SyncPayload.Read<List<Guid>>(p, "photoFileIds") ?? [], remarks, corrects, notes),
             _ => Inspection.CreateCmMeasurement(op.EntityId, bauakteId, userId, performedAt, SyncPayload.Read<string>(p, "location") ?? string.Empty,
                 SyncPayload.Read<ScreedBinderKind?>(p, "binder") ?? throw new SyncValidationException("Bitte das Bindemittel angeben."),
                 SyncPayload.Read<bool>(p, "heated"), SyncPayload.Read<int?>(p, "thicknessMm"),
                 SyncPayload.Read<decimal?>(p, "measuredCmPercent") ?? throw new SyncValidationException("Bitte den Messwert angeben."),
-                remarks, corrects),
+                remarks, corrects, notes),
         };
 
         db.Add(inspection);

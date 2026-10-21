@@ -80,6 +80,8 @@
 							<VBox class="sapUiSmallMargin" visible="{= !!${dc>/latest} }">
 								<Label text="{i18n>inspections.remarks}"/>
 								<Text text="{= ${dc>/latest/remarks} || '–' }" class="eoPre"/>
+								<Label text="Notizen" visible="{= !!${dc>/latest/notes} }" class="sapUiSmallMarginTop"/>
+								<Text text="{dc>/latest/notes}" visible="{= !!${dc>/latest/notes} }" class="eoPre"/>
 								<HBox items="{path: 'dc>/latestPhotos', templateShareable: false}" wrap="Wrap" class="sapUiTinyMarginTop">
 									<Image src="{dc>thumb}" width="6rem" height="4.5rem" class="sapUiTinyMarginEnd eoPhoto" press=".onInspectionPhoto" alt="{dc>alt}" decorative="false"/>
 								</HBox>

@@ -258,6 +258,7 @@ export interface Inspection {
   performedAt: string;
   correctsInspectionId: string | null;
   remarks: string | null;
+  notes?: string | null;
   notRequired: boolean;
   checks: Record<string, CheckResult>;
   photoFileIds: string[];
