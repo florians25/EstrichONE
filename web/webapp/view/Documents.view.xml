@@ -15,10 +15,14 @@
 				<items>
 					<IconTabFilter key="ablage" text="Ablage" icon="sap-icon://documents" count="{view>/facets/total}">
 						<FlexBox alignItems="Start" class="eoDmsLayout">
-							<List id="folders" mode="SingleSelectMaster" items="{view>/folders}" selectionChange=".onFolder" width="15rem" class="eoDmsFolders"
-								headerText="Ordner">
-								<StandardListItem title="{view>text}" icon="{view>icon}" counter="{view>count}" selected="{view>selected}"/>
-							</List>
+							<VBox width="19rem" class="eoDmsFolders">
+								<Title id="dmsTreeTitle" text="Ordner" level="H3" class="sapUiTinyMarginBottom"/>
+								<Tree id="dmsTree" items="{path: 'view>/tree', parameters: {arrayNames: ['nodes']}}" mode="SingleSelectMaster" includeItemInSelection="true"
+									selectionChange=".onTreeSelect" ariaLabelledBy="dmsTreeTitle">
+									<StandardTreeItem title="{view>text}{= ${view>count} !== null ? ' (' + ${view>count} + ')' : '' }" icon="{view>icon}"
+										selected="{= ${view>key} === ${view>/node} }"/>
+								</Tree>
+							</VBox>
 							<VBox class="eoGrow">
 								<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow sapUiTinyMarginBottom">
 									<SearchField value="{view>/search}" search=".onSearch" liveChange=".onSearchLive" placeholder="Dateiname, Beschreibung, Bauakte" width="20rem"/>

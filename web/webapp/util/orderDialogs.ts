@@ -303,7 +303,12 @@ export async function openOrderDetail(orderId: string, canManage: boolean): Prom
 			actions.addContent(new Button({ text: "Geliefert", type: "Success", icon: "sap-icon://shipping-status", press: () => void setStatus("delivered", "Als geliefert erfasst") }));
 		}
 		actions.addContent(new ToolbarSpacer());
-		actions.addContent(new Button({ text: "Drucken", icon: "sap-icon://print", press: () => window.open(`/bestellungen/${o.id}/druck`, "_blank", "noopener") }));
+		actions.addContent(new Button({ text: "Bestellschein (PDF)", icon: "sap-icon://pdf-attachment", press: () => {
+			const a = document.createElement("a");
+			a.href = `/api/v1/material-orders/${o.id}/pdf`;
+			a.download = "";
+			a.click();
+		} }));
 		actions.addContent(new Button({ text: "Text kopieren", icon: "sap-icon://copy", press: async () => {
 			await navigator.clipboard.writeText(orderText(o, comp)).catch(() => undefined);
 			MessageToast.show("Bestelltext kopiert");

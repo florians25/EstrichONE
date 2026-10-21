@@ -35,7 +35,7 @@ public sealed record InspectionDto(
 
 /// <summary>Bautagebuch (anfügen, Verfasser ändert) und Prüfungen (nur anlegen) über den Sync.</summary>
 internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess access, IUserPermissions permissions, ICurrentUser currentUser,
-    IBauakteHistory history, TimeProvider clock, IBauakteAutoStatus autoStatus) : ISyncOperationHandler
+    IBauakteHistory history, TimeProvider clock, IBauakteAutoStatus autoStatus, IServiceProvider services, ILogger<SiteRecordSync> logger) : ISyncOperationHandler
 {
     public IReadOnlyCollection<string> OperationTypes { get; } = ["diary.create", "diary.update", "diary.delete", "inspection.create"];
 
@@ -209,8 +209,39 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
         {
             await autoStatus.TryStartAsync(bauakteId, BauakteAutoTrigger.Inspection, cancellationToken);
         }
+
         await db.SaveChangesAsync(cancellationToken);
+        if (inspection.Kind == InspectionKind.InitialInspection)
+        {
+            await StoreInspectionPdfAsync(inspection, cancellationToken);
+        }
+
         return Applied(op, inspection.Version, InspectionDto.From(inspection));
+    }
+
+    /// <summary>Erstbegehungsprotokoll als PDF in der Bauakte ablegen (Protokolle / Erstbegehung). Fehler blockieren den Sync nicht.</summary>
+    private async Task StoreInspectionPdfAsync(Inspection inspection, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var builder = services.GetRequiredService<BauakteReportBuilder>();
+            var result = await builder.BuildAsync(inspection.BauakteId, new HashSet<string>(["pruefungen", "fotos"], StringComparer.OrdinalIgnoreCase), 20,
+                cancellationToken, inspection.Id);
+            if (result is null)
+            {
+                return;
+            }
+
+            var day = inspection.PerformedAt.ToOffset(TimeSpan.FromHours(1)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            await services.GetRequiredService<Exports.IGeneratedDocuments>().StoreAsync(inspection.BauakteId, inspection.PerformedByUserId,
+                $"Erstbegehungsprotokoll {day}.pdf", result.Value.Pdf, "protocol", "Erstbegehung",
+                inspection.CorrectsInspectionId is null ? "Erstbegehung" : "Erstbegehung (Korrektur)", cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            logger.LogWarning(exception, "Erstbegehungsprotokoll für {BauakteId} konnte nicht als PDF abgelegt werden.", inspection.BauakteId);
+        }
     }
 
     private static SyncOperationResult Applied<T>(SyncOperation op, long version, T entity) =>

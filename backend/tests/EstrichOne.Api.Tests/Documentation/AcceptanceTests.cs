@@ -180,4 +180,29 @@ public sealed class AcceptanceTests(PostgresFixture postgres) : IAsyncLifetime
         (await admin.PutAsync(new Uri("/api/v1/company/logo", UriKind.Relative), junk, Ct)).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
         (await admin.DeleteAsync(new Uri("/api/v1/company/logo", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
     }
+
+    [Fact]
+    public async Task GeneratedPdfs_AreStoredInTheBauakte_AsVersions()
+    {
+        using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
+        var bauakte = await CreateBauakteAsync(office);
+        (await office.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/report.pdf", UriKind.Relative), Ct)).EnsureSuccessStatusCode();
+        (await office.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/report.pdf", UriKind.Relative), Ct)).EnsureSuccessStatusCode();
+        Single(await office.PushAsync(SyncClient.Op("inspection.create", Guid.CreateVersion7(), new
+        {
+            bauakteId = bauakte, kind = "initialInspection", checks = new Dictionary<string, string> { ["substrate"] = "ok" },
+        }))).Status.ShouldBe(SyncOperationStatus.Applied);
+        using var form = await office.GetAsync(new Uri($"/api/v1/bauakten/{bauakte}/acceptance-form.pdf", UriKind.Relative), Ct);
+        form.Content.Headers.ContentType!.MediaType.ShouldBe("application/pdf");
+
+        var files = await office.GetFromJsonAsync<List<FileResponse>>($"/api/v1/bauakten/{bauakte}/files", TestJson.Options, Ct);
+        var reports = files!.Where(f => f.OriginalName == "Bauaktenbericht.pdf").ToList();
+        reports.Count.ShouldBe(2);
+        reports.ShouldAllBe(f => f.Category == "protocol" && f.Folder == "Berichte");
+        reports.ShouldContain(f => f.PreviousVersionId != null);
+        files!.ShouldContain(f => f.OriginalName.StartsWith("Erstbegehungsprotokoll", StringComparison.Ordinal) && f.Folder == "Erstbegehung", string.Join(";", files!.Select(f => f.OriginalName + "/" + f.Folder)));
+
+        var tree = await office.GetFromJsonAsync<List<DocumentTreeCustomer>>("/api/v1/documents/tree", TestJson.Options, Ct);
+        tree!.SelectMany(c => c.Bauakten).Single(b => b.Id == bauakte).Categories["protocol"].ShouldBe(2);
+    }
 }

@@ -17,7 +17,7 @@ async function openAkte(page: Page) {
 
 async function settings(page: Page, tab: string) {
   await page.goto(`/system/firmendaten?bereich=${tab}`);
-  await expect(page.getByRole('heading', { name: 'Einstellungen' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Systemeinstellungen' })).toBeVisible();
 }
 
 test('Einstellungen: Materialmodul ab- und wieder einschalten, Firmenlogo hochladen', async ({ page }) => {

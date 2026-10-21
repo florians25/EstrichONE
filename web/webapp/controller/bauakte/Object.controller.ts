@@ -421,16 +421,22 @@ export default class ObjectController extends BaseController {
 	}
 
 	/** Serverseitiges PDF (Deckblatt, Räume, Tagebuch, Prüfungen, Mängel, Fotodokumentation). */
-	onPdf(): void {
+	/** Server-PDF herunterladen; Berichte legt der Server zusätzlich in der Bauakte ab (Protokolle / Berichte). */
+	private download(path: string, stored: boolean): void {
 		const a = document.createElement("a");
-		a.href = `/api/v1/bauakten/${this.id}/report.pdf`;
+		a.href = `/api/v1/${path}`;
 		a.download = "";
 		a.click();
-		this.toast("PDF wird erstellt …");
+		this.toast(stored ? "PDF wird erstellt und unter „Protokolle / Berichte“ abgelegt …" : "PDF wird erstellt …");
+		if (stored) setTimeout(() => akte.invalidate(this.id, "files"), 4000);
+	}
+
+	onPdf(): void {
+		this.download(`bauakten/${this.id}/report.pdf`, true);
 	}
 
 	onReport(): void {
-		this.nav(`/bauakten/${this.id}/bericht?art=bericht`);
+		this.download(`bauakten/${this.id}/report.pdf?parts=uebersicht,raeume,tagebuch,pruefungen,maengel&maxPhotos=0`, true);
 	}
 
 	onArchiveProof(): void {
@@ -444,11 +450,11 @@ export default class ObjectController extends BaseController {
 	}
 
 	onAcceptanceSheet(): void {
-		this.nav(`/bauakten/${this.id}/bericht?art=abnahme`);
+		this.download(`bauakten/${this.id}/acceptance-form.pdf`, false);
 	}
 
 	onSheet(): void {
-		this.nav(`/bauakten/${this.id}/bericht?art=blatt`);
+		this.download(`bauakten/${this.id}/report.pdf?parts=uebersicht,raeume&maxPhotos=0`, true);
 	}
 
 	onRoute(): void {

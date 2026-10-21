@@ -106,8 +106,8 @@ test('Kunden bearbeiten, Baustellenkarte, Firmendaten und Protokoll', async ({ p
   await nav(page, 'Baustellenkarte').click();
   await expect(page.getByRole('heading', { name: 'Baustellenkarte' }).first()).toBeVisible();
 
-  await nav(page, 'Einstellungen').click();
-  await expect(pageTitle(page)).toHaveText('Einstellungen');
+  await nav(page, 'Systemeinstellungen').click();
+  await expect(pageTitle(page)).toHaveText('Systemeinstellungen');
 
   await nav(page, 'Protokoll').click();
   await expect(pageTitle(page)).toHaveText('Protokoll');

@@ -127,7 +127,7 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   await folder.getByRole('textbox').fill('Ausschreibung');
   await folder.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByText('Angebote / Ausschreibung (0)')).toBeVisible();
-  await page.locator('.sapMTreeItemBase').filter({ hasText: /^Alle Dokumente/ }).click();
+  await page.locator('.sapMTreeItemBase').filter({ hasText: /Anfrage Familie Kraus, Heizestrich \(/ }).first().click();
   const lv = page.getByRole('row').filter({ hasText: 'Leistungsverzeichnis.pdf' });
   await rowMenu(page, lv, 'Verschieben …');
   const move = page.getByRole('dialog', { name: /verschieben/ });
@@ -186,7 +186,10 @@ test('Zentrale Dokumentverwaltung: Ordner, Suche, Freigabe anfordern, ablehnen m
   const table = page.locator('[id$="docTable"]').first();
   await expect(table.getByRole('link', { name: 'Angebot 2026-117 v2.pdf' })).toBeVisible();
   await expect(table).toContainText('v2');
-  await page.getByRole('list', { name: 'Ordner' }).getByRole('listitem').filter({ hasText: 'Angebote' }).click();
+  // Ordnerbaum: Kunde → Bauakte → Dokumentart
+  const tree = page.locator('[id$="dmsTree"]');
+  await expect(tree.locator('.sapMTreeItemBase').filter({ hasText: /Anfrage Familie Kraus, Heizestrich/ }).first()).toBeVisible();
+  await tree.locator('.sapMTreeItemBase').filter({ hasText: /^Angebote \(/ }).first().click();
   await expect(table.getByRole('link', { name: 'Angebot 2026-117 v2.pdf' })).toBeVisible();
   await page.getByPlaceholder('Dateiname, Beschreibung, Bauakte').fill('gibt es nicht');
   await expect(table.getByRole('link', { name: 'Angebot 2026-117 v2.pdf' })).toHaveCount(0);
@@ -323,7 +326,7 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   await expect(insp).toContainText('1 Mängel werden angelegt');
   await insp.getByRole('button', { name: 'Erstbegehung speichern' }).click();
   await expect(toast(page)).toContainText('Erstbegehung gespeichert');
-  await expect(page.getByText('Erstbegehungsprotokoll').first()).toBeVisible();
+  await expect(page.getByText('Erstbegehungsprotokoll', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText(/Zufahrt über den Hof, Hund im Garten/).first()).toBeVisible();
 
   // Bauakte als PDF (Server): Deckblatt, Räume, Tagebuch, Prüfungen, Mängel, Fotodokumentation.
@@ -339,19 +342,16 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   expect(bytes.length).toBeGreaterThan(30_000);
   if (process.env['SCREENSHOTS']) fs.copyFileSync(pdfPath!, 'test-results/bauakte.pdf');
 
+  // Alle Ausdrucke als Server-PDF; Berichte liegen danach automatisch in der Bauakte.
   await page.getByRole('tab', { name: 'Berichte' }).click();
-  await page.getByRole('button', { name: 'Druckansicht öffnen' }).first().click();
-  await expect(page).toHaveURL(/\/bericht\?art=bericht/);
-  const sheet = page.locator('.eoSheet');
-  await expect(sheet).toContainText('Baustellenbericht');
-  await expect(sheet).toContainText('Heizestrich im EG eingebracht, 65 mm');
-  await expect(sheet).toContainText('Wohnen/Essen');
-  await expect(sheet).toContainText('Belegreif');
-  await expect(sheet.locator('img').first()).toBeVisible();
-  await page.getByRole('button', { name: 'Zur Bauakte' }).click();
-  await page.goto(`${new URL(page.url()).pathname.replace(/\?.*/, '')}/bericht?art=abnahme`);
-  await expect(page.locator('.eoSheet')).toContainText('Abnahmeprotokoll');
-  await expect(page.locator('.eoSheet')).toContainText('Unterschrift Auftraggeber');
+  const report = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF erstellen' }).first().click();
+  expect((await report).suggestedFilename()).toMatch(/\.pdf$/);
+  const form = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'PDF erstellen' }).nth(1).click();
+  expect((await form).suggestedFilename()).toBe('Abnahmeprotokoll (Vordruck).pdf');
+  await openSection(page, 'Dokumente');
+  await expect(page.locator('.sapMTreeItemBase').filter({ hasText: /^Protokolle \([1-9]/ }).first()).toBeVisible();
 });
 
 test('Prüfungen und Bautagebuch aus der App erscheinen in der Bauakte', async ({ page }) => {
@@ -373,7 +373,7 @@ test('Prüfungen und Bautagebuch aus der App erscheinen in der Bauakte', async (
   await expect(page.getByText('Estrich im EG eingebracht')).toBeVisible();
   await expect(page.getByText('Regen · 9 °C')).toBeVisible();
   await page.getByRole('tab', { name: /Prüfungen/ }).click();
-  await expect(page.getByText('Erstbegehungsprotokoll')).toBeVisible();
+  await expect(page.getByText('Erstbegehungsprotokoll', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText('Mit Mängeln – Klärung nötig')).toBeVisible();
   await expect(page.getByText('Randdämmstreifen vorhanden')).toBeVisible();
   await expect(page.getByText('Randdämmung fehlt')).toBeVisible();

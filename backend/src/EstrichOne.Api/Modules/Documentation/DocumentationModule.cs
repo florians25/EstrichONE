@@ -26,6 +26,7 @@ public sealed class DocumentationModule : IModule
         services.AddScoped<ISyncEntitySource, DiaryEntrySource>();
         services.AddScoped<ISyncEntitySource, InspectionSource>();
         services.AddScoped<AcceptanceService>();
+        services.AddScoped<Exports.IGeneratedDocuments, GeneratedDocuments>();
         services.AddScoped<ISyncOperationHandler, AcceptanceSync>();
         services.AddScoped<ISyncEntitySource, AcceptanceSource>();
         services.AddScoped<IBauakteHintSource, AcceptanceHints>();

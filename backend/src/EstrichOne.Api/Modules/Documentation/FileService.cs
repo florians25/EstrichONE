@@ -75,18 +75,36 @@ public sealed class FileService(
     /// Vom Server erzeugte Datei (z. B. Abnahmeprotokoll als PDF) direkt als fertiges Dokument der Bauakte ablegen.
     /// Gespeichert wird mit dem nächsten <c>SaveChanges</c>; die Datei liegt dann schon am Zielort.
     /// </summary>
-    public FileRecord StoreGenerated(Guid bauakteId, Guid uploadedBy, string originalName, string contentType, byte[] content,
-        string? category, string? caption, DateTimeOffset now)
+    public async Task<FileRecord> StoreGeneratedAsync(Guid bauakteId, Guid uploadedBy, string originalName, string contentType, byte[] content,
+        string? category, string? folder, string? caption, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var id = Guid.CreateVersion7(now);
         var sha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(content));
         var file = FileRecord.Announce(id, bauakteId, FileKind.Document, originalName, contentType, content.Length, sha, uploadedBy);
         file.Categorize(category);
+        file.MoveTo(folder);
         file.Describe(caption);
+
+        // Gleiches Dokument erneut erzeugt (z. B. Bericht nach Änderungen): als neue Fassung anhängen.
+        var normalized = FileRecord.NormalizeFolder(folder);
+        var candidates = await db.Set<FileRecord>().AsNoTracking()
+            .Where(f => f.BauakteId == bauakteId && f.Kind == FileKind.Document && f.OriginalName == originalName && f.Category == category && f.Folder == normalized)
+            .Select(f => f.Id).ToListAsync(cancellationToken);
+        if (candidates.Count > 0)
+        {
+            var superseded = await db.Set<FileRecord>().AsNoTracking().Where(f => f.PreviousVersionId != null && candidates.Contains(f.PreviousVersionId.Value))
+                .Select(f => f.PreviousVersionId!.Value).ToListAsync(cancellationToken);
+            var latest = candidates.Except(superseded).Order().LastOrDefault();
+            if (latest != Guid.Empty)
+            {
+                file.Supersede(latest);
+            }
+        }
+
         var key = LocalFileStorage.OriginalKey(id, now);
         var path = storage.PathOf(key);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllBytes(path, content);
+        await File.WriteAllBytesAsync(path, content, cancellationToken);
         file.MarkStored(key, contentType, needsVariants: false);
         db.Add(file);
         return file;

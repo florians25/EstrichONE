@@ -38,6 +38,9 @@ internal static class AcceptanceEndpoints
         var group = api.MapGroup("/").WithTags("Abnahme");
         group.MapGet("/bauakten/{id:guid}/acceptances", ListAsync).WithName("ListAcceptances").WithSummary("Abnahmeprotokolle der Bauakte (neueste zuerst)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
+        group.MapGet("/bauakten/{id:guid}/acceptance-form.pdf", BlankAsync).WithName("AcceptanceFormPdf")
+            .WithSummary("Leerer Abnahme-Vordruck als PDF (zum Ausfüllen von Hand)").Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
         group.MapGet("/acceptances/{id:guid}/signatures/{side}", SignatureAsync).WithName("GetAcceptanceSignature")
             .WithSummary("Unterschrift als PNG (side = client | contractor)")
             .Produces(StatusCodes.Status200OK, contentType: "image/png").ProducesProblem(StatusCodes.Status404NotFound)
@@ -67,6 +70,18 @@ internal static class AcceptanceEndpoints
         var list = await db.Set<AcceptanceProtocol>().AsNoTracking().Where(a => a.BauakteId == id)
             .OrderByDescending(a => a.PerformedAt).ThenByDescending(a => a.Id).ToListAsync(cancellationToken);
         return TypedResults.Ok(list.Select(AcceptanceDto.From).ToList());
+    }
+
+    private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> BlankAsync(
+        Guid id, IBauakteAccess access, AcceptanceService service, ICurrentUser currentUser, CancellationToken cancellationToken)
+    {
+        if (!await access.CanReadAsync(id, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        var pdf = await service.RenderBlankAsync(id, currentUser.UserId, cancellationToken);
+        return pdf is null ? NotFound() : TypedResults.File(pdf, "application/pdf", "Abnahmeprotokoll (Vordruck).pdf");
     }
 
     private static async Task<AcceptanceProtocol?> VisibleAsync(Guid id, IBauakteAccess access, EstrichOneDbContext db, CancellationToken cancellationToken)

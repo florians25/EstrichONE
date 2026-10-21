@@ -20,12 +20,44 @@ public sealed record DocumentSearchResult(IReadOnlyList<DocumentListItem> Items,
 /// Zentrale Dokumentverwaltung über alle sichtbaren Bauakten: jeweils die aktuelle Fassung eines Dokuments mit
 /// Bauakte, Ablage (Dokumentart/Unterordner), Anzahl Fassungen und Freigabestand – durchsuch- und filterbar.
 /// </summary>
+public sealed record DocumentTreeBauakte(Guid Id, string? Number, string Title, IReadOnlyDictionary<string, int> Categories);
+
+public sealed record DocumentTreeCustomer(Guid? CustomerId, string Name, IReadOnlyList<DocumentTreeBauakte> Bauakten);
+
 internal static class DocumentEndpoints
 {
-    public static void Map(IEndpointRouteBuilder api) =>
+    public static void Map(IEndpointRouteBuilder api)
+    {
         api.MapGet("/documents", SearchAsync).WithTags("Dokumente").WithName("SearchDocuments")
             .WithSummary("Dokumente aller sichtbaren Bauakten (aktuelle Fassungen); Filter: search, category, bauakteId, approval (pending|approved|rejected|none), sort (newest|name|bauakte)")
             .RequirePermission(Permissions.BauaktenRead);
+        api.MapGet("/documents/tree", TreeAsync).WithTags("Dokumente").WithName("DocumentTree")
+            .WithSummary("Ordnerbaum Kunde → Bauakte → Dokumentarten mit Anzahl aktueller Dokumente")
+            .RequirePermission(Permissions.BauaktenRead);
+    }
+
+    private static async Task<Ok<List<DocumentTreeCustomer>>> TreeAsync(EstrichOneDbContext db, IBauakteAccess access, IBauakteSummaries summaries,
+        CancellationToken cancellationToken)
+    {
+        var visible = await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken);
+        var akten = await visible.Select(b => new { b.Id, b.Number, b.Title, b.CustomerId }).ToListAsync(cancellationToken);
+        var ids = akten.Select(a => a.Id).ToList();
+        var counts = await db.Set<FileRecord>().AsNoTracking()
+            .Where(f => f.Kind == FileKind.Document && f.State == FileState.Stored && f.BauakteId != null && ids.Contains(f.BauakteId.Value)
+                && !db.Set<FileRecord>().Any(n => n.PreviousVersionId == f.Id))
+            .GroupBy(f => new { BauakteId = f.BauakteId!.Value, Category = f.Category ?? "other" })
+            .Select(g => new { g.Key.BauakteId, g.Key.Category, Count = g.Count() })
+            .ToListAsync(cancellationToken);
+        var names = await summaries.GetAsync(ids, cancellationToken);
+        return TypedResults.Ok(akten
+            .GroupBy(a => a.CustomerId)
+            .Select(g => new DocumentTreeCustomer(g.Key, g.Key is null ? "Ohne Kunde" : names.GetValueOrDefault(g.First().Id)?.CustomerName ?? "Kunde",
+                g.Select(a => new DocumentTreeBauakte(a.Id, a.Number, a.Title,
+                        counts.Where(c => c.BauakteId == a.Id).ToDictionary(c => c.Category, c => c.Count)))
+                    .OrderByDescending(a => a.Number ?? "").ToList()))
+            .OrderBy(c => c.CustomerId is null).ThenBy(c => c.Name, StringComparer.CurrentCultureIgnoreCase)
+            .ToList());
+    }
 
     private static async Task<Ok<DocumentSearchResult>> SearchAsync(EstrichOneDbContext db, IBauakteAccess access, IRoleAssignments roles, CancellationToken cancellationToken,
         [FromQuery] string? search = null, [FromQuery] string? category = null, [FromQuery] Guid? bauakteId = null,

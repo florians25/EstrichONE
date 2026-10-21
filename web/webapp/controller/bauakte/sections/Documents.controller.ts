@@ -1,5 +1,6 @@
 import SectionBase from "./SectionBase";
 import JSONModel from "sap/ui/model/json/JSONModel";
+import EventBus from "sap/ui/core/EventBus";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type Table from "sap/m/Table";
@@ -46,6 +47,9 @@ export default class Documents extends SectionBase {
 			selectedCount: 0, title: "", noData: "" });
 		model.setSizeLimit(5000);
 		this.v().setModel(model, "doc");
+		EventBus.getInstance().subscribe("bauakte", "side", (_c: string, _e: string, data: object) => {
+			if ((data as { id: string }).id === this.bauakteId && this.rows.length >= 0) this.refreshTree();
+		});
 	}
 
 	/** Dateien direkt auf die Liste ziehen: öffnet den Hochladen-Dialog mit dem gewählten Ordner. */
@@ -116,8 +120,12 @@ export default class Documents extends SectionBase {
 
 	private refreshTree(): void {
 		const tree = folderTree(this.rows, [...this.extraFolders, ...this.templateFolders]);
-		this.doc().setProperty("/tree", [tree]);
-		setTimeout(() => (this.v().byId("folderTree") as Tree).expandToLevel(2), 0);
+		// Gleiche Gliederung wie die zentrale Dokumentverwaltung: Kunde → Bauakte → Dokumentarten.
+		const data = (this.v().getModel("akte") as JSONModel | undefined)?.getData() as { bauakte?: { number: string | null; title: string }; customer?: { name: string } | null } | undefined;
+		if (data?.bauakte) tree.text = `${data.bauakte.number ?? "neu"} · ${data.bauakte.title}`;
+		const root = { key: "__customer", text: data?.customer?.name ?? "Ohne Kunde", icon: "sap-icon://customer", count: tree.count, category: null, folder: null, nodes: [tree] };
+		this.doc().setProperty("/tree", [root]);
+		setTimeout(() => (this.v().byId("folderTree") as Tree).expandToLevel(3), 0);
 	}
 
 	refreshRows(): void {

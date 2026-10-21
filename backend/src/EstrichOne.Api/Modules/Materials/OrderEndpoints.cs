@@ -207,9 +207,10 @@ internal static class OrderEndpoints
     }
 
     private static async Task<Results<Ok<OrderResponse>, ProblemHttpResult>> SetStatusAsync(
-        Guid id, SetOrderStatusRequest request, EstrichOneDbContext db, IBauakteAccess access, TimeProvider clock, CancellationToken cancellationToken)
+        Guid id, SetOrderStatusRequest request, EstrichOneDbContext db, IBauakteAccess access, TimeProvider clock, OrderPdf pdf, ICurrentUser currentUser,
+        CancellationToken cancellationToken)
     {
-        var order = await db.Set<MaterialOrder>().SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
+        var order = await db.Set<MaterialOrder>().Include(o => o.Lines).SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
         if (order is null || (order.BauakteId is { } b && !await access.CanReadAsync(b, cancellationToken)))
         {
             return Problems.NotFound("ORDER_NOT_FOUND");
@@ -222,6 +223,12 @@ internal static class OrderEndpoints
         catch (InvalidOperationException exception)
         {
             return Problems.Conflict("ORDER_STATUS_CONFLICT", exception.Message);
+        }
+
+        if (request.Status == OrderStatus.Ordered)
+        {
+            // Bestellt: Bestellschein automatisch zur Bauakte.
+            await pdf.StoreAsync(order, await pdf.RenderAsync(order, cancellationToken), currentUser.UserId, cancellationToken);
         }
 
         await db.SaveChangesAsync(cancellationToken);

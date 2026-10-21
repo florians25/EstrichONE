@@ -459,12 +459,44 @@
         ]
       }
     },
+    "/api/v1/documents/tree": {
+      "get": {
+        "tags": [
+          "Dokumente"
+        ],
+        "summary": "Ordnerbaum Kunde → Bauakte → Dokumentarten mit Anzahl aktueller Dokumente",
+        "operationId": "DocumentTree",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DocumentTreeCustomer"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{id}/report.pdf": {
       "get": {
         "tags": [
           "Ausdrucke"
         ],
-        "summary": "Bauakte als PDF; parts=uebersicht,raeume,tagebuch,pruefungen,maengel,fotos (Standard: alle); maxPhotos (Standard 60)",
+        "summary": "Bauakte als PDF; parts=uebersicht,raeume,tagebuch,pruefungen,maengel,fotos (Standard: alle); maxPhotos (Standard 60); from/to für das Bautagebuch",
         "operationId": "BauakteReportPdf",
         "parameters": [
           {
@@ -489,6 +521,22 @@
             "schema": {
               "type": "integer",
               "format": "int32"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
             }
           }
         ],
@@ -547,6 +595,49 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/material-orders/{id}/pdf": {
+      "get": {
+        "tags": [
+          "Material"
+        ],
+        "summary": "Bestellschein als PDF (DIN 5008); mit Bezug zur Bauakte wird er dort unter Büro / Bestellungen abgelegt",
+        "operationId": "MaterialOrderPdf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           },
           "404": {
             "description": "Not Found",
@@ -5245,6 +5336,49 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/acceptance-form.pdf": {
+      "get": {
+        "tags": [
+          "Abnahme"
+        ],
+        "summary": "Leerer Abnahme-Vordruck als PDF (zum Ausfüllen von Hand)",
+        "operationId": "AcceptanceFormPdf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           },
           "404": {
             "description": "Not Found",
@@ -16070,6 +16204,63 @@
           }
         }
       },
+      "DocumentTreeBauakte": {
+        "required": [
+          "id",
+          "number",
+          "title",
+          "categories"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "categories": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        }
+      },
+      "DocumentTreeCustomer": {
+        "required": [
+          "customerId",
+          "name",
+          "bauakten"
+        ],
+        "type": "object",
+        "properties": {
+          "customerId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "bauakten": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DocumentTreeBauakte"
+            }
+          }
+        }
+      },
       "EmployeeDetail": {
         "required": [
           "id",
@@ -22713,6 +22904,9 @@
       "name": "Aufgaben"
     },
     {
+      "name": "Material"
+    },
+    {
       "name": "Anmeldung"
     },
     {
@@ -22762,9 +22956,6 @@
     },
     {
       "name": "Anrufe und Anfragen"
-    },
-    {
-      "name": "Material"
     },
     {
       "name": "Ersteinrichtung"

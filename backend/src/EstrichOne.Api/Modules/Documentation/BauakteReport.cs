@@ -3,6 +3,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Documentation.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Organization.Exports;
 using EstrichOne.Api.Modules.Work.Exports;
@@ -23,14 +24,15 @@ internal static class BauakteReportEndpoints
 {
     public static void Map(IEndpointRouteBuilder api) =>
         api.MapGet("/bauakten/{id:guid}/report.pdf", CreateAsync).WithTags("Ausdrucke").WithName("BauakteReportPdf")
-            .WithSummary("Bauakte als PDF; parts=uebersicht,raeume,tagebuch,pruefungen,maengel,fotos (Standard: alle); maxPhotos (Standard 60)")
+            .WithSummary("Bauakte als PDF; parts=uebersicht,raeume,tagebuch,pruefungen,maengel,fotos (Standard: alle); maxPhotos (Standard 60); from/to für das Bautagebuch")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.BauaktenRead);
 
     private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> CreateAsync(
-        Guid id, BauakteReportBuilder builder, IBauakteAccess access, CancellationToken cancellationToken,
-        [FromQuery] string? parts = null, [FromQuery] int? maxPhotos = null)
+        Guid id, BauakteReportBuilder builder, IBauakteAccess access, IGeneratedDocuments generated, ICurrentUser currentUser, EstrichOneDbContext db,
+        CancellationToken cancellationToken, [FromQuery] string? parts = null, [FromQuery] int? maxPhotos = null,
+        [FromQuery] DateOnly? from = null, [FromQuery] DateOnly? to = null)
     {
         if (!await access.CanReadAsync(id, cancellationToken))
         {
@@ -40,10 +42,18 @@ internal static class BauakteReportEndpoints
         var selected = string.IsNullOrWhiteSpace(parts)
             ? BauakteReportBuilder.AllParts
             : parts.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var result = await builder.BuildAsync(id, selected, Math.Clamp(maxPhotos ?? 60, 0, 200), cancellationToken);
-        return result is null
-            ? TypedResults.Problem(statusCode: 404, title: "Bauakte nicht gefunden", extensions: new Dictionary<string, object?> { ["code"] = "BAUAKTE_NOT_FOUND" })
-            : TypedResults.File(result.Value.Pdf, "application/pdf", result.Value.FileName);
+        var result = await builder.BuildAsync(id, selected, Math.Clamp(maxPhotos ?? 60, 0, 200), cancellationToken, from: from, to: to);
+        if (result is null)
+        {
+            return TypedResults.Problem(statusCode: 404, title: "Bauakte nicht gefunden", extensions: new Dictionary<string, object?> { ["code"] = "BAUAKTE_NOT_FOUND" });
+        }
+
+        // Erzeugte PDFs liegen automatisch in der Bauakte (Protokolle / Berichte, je Druck eine neue Fassung).
+        var full = selected.SetEquals(BauakteReportBuilder.AllParts) && from is null && to is null;
+        await generated.StoreAsync(id, currentUser.UserId, full ? "Bauaktenbericht.pdf" : "Bauaktenauszug.pdf", result.Value.Pdf, "protocol", "Berichte",
+            full ? "Bauakte als PDF (vollständig)" : $"Auszug: {string.Join(", ", selected.Order())}", cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.File(result.Value.Pdf, "application/pdf", result.Value.FileName);
     }
 }
 
@@ -72,7 +82,9 @@ internal sealed class BauakteReportBuilder(
         ["heatingPressureTest"] = "Fußbodenheizung abgedrückt", ["access"] = "Zufahrt und Pumpenstandort", ["utilities"] = "Wasser und Strom vorhanden",
     };
 
-    public async Task<(byte[] Pdf, string FileName)?> BuildAsync(Guid bauakteId, IReadOnlySet<string> parts, int maxPhotos, CancellationToken cancellationToken)
+    /// <param name="inspectionId">Nur dieses Protokoll (Erstbegehung) mit seinen Fotos.</param>
+    public async Task<(byte[] Pdf, string FileName)?> BuildAsync(Guid bauakteId, IReadOnlySet<string> parts, int maxPhotos, CancellationToken cancellationToken,
+        Guid? inspectionId = null, DateOnly? from = null, DateOnly? to = null)
     {
         var info = await bauakten.GetAsync(bauakteId, cancellationToken);
         if (info is null)
@@ -81,20 +93,24 @@ internal sealed class BauakteReportBuilder(
         }
 
         var pdfCompany = await branding.GetAsync(cancellationToken);
-        var label = $"Bauakte {info.Number ?? "(ohne Nummer)"} – {info.Title}";
+        var label = inspectionId is null
+            ? $"Bauakte {info.Number ?? "(ohne Nummer)"} – {info.Title}"
+            : $"Erstbegehungsprotokoll {info.Number ?? ""} – {info.Title}";
         var (document, section) = Create(label, "Bauakte", pdfCompany);
         const double width = 17.2;
 
         var diary = parts.Contains("tagebuch")
-            ? await db.Set<DiaryEntry>().AsNoTracking().Where(d => d.BauakteId == bauakteId).OrderBy(d => d.Day).ThenBy(d => d.CreatedAt).ToListAsync(cancellationToken)
+            ? await db.Set<DiaryEntry>().AsNoTracking().Where(d => d.BauakteId == bauakteId && (from == null || d.Day >= from) && (to == null || d.Day <= to)).OrderBy(d => d.Day).ThenBy(d => d.CreatedAt).ToListAsync(cancellationToken)
             : [];
         var inspections = parts.Contains("pruefungen")
-            ? await db.Set<Inspection>().AsNoTracking().Where(i => i.BauakteId == bauakteId).OrderBy(i => i.PerformedAt).ToListAsync(cancellationToken)
+            ? await db.Set<Inspection>().AsNoTracking().Where(i => i.BauakteId == bauakteId && (inspectionId == null || i.Id == inspectionId))
+                .OrderBy(i => i.PerformedAt).ToListAsync(cancellationToken)
             : [];
+        var onlyPhotos = inspectionId is null ? null : inspections.SelectMany(i => i.PhotoFileIds).ToList();
         var workItems = parts.Contains("maengel") ? await work.ListAsync(bauakteId, cancellationToken) : [];
         var photos = parts.Contains("fotos")
             ? await db.Set<FileRecord>().AsNoTracking()
-                .Where(f => f.BauakteId == bauakteId && f.Kind == FileKind.Photo && f.State == FileState.Stored)
+                .Where(f => f.BauakteId == bauakteId && f.Kind == FileKind.Photo && f.State == FileState.Stored && (onlyPhotos == null || onlyPhotos.Contains(f.Id)))
                 .OrderBy(f => f.CapturedAt ?? f.CreatedAt).Take(maxPhotos).ToListAsync(cancellationToken)
             : [];
         var userIds = diary.Select(d => d.AuthorUserId).Concat(inspections.Select(i => i.PerformedByUserId)).Distinct().ToList();
@@ -313,9 +329,12 @@ internal sealed class BauakteReportBuilder(
             }
         }
 
-        audit.Record("bauakte.report_printed", currentUser.UserId, "bauakte", bauakteId.ToString(),
-            new Dictionary<string, string?> { ["parts"] = string.Join(",", parts.Order(StringComparer.Ordinal)), ["photos"] = photos.Count.ToString(German) });
-        await db.SaveChangesAsync(cancellationToken);
+        if (inspectionId is null)
+        {
+            audit.Record("bauakte.report_printed", currentUser.UserId, "bauakte", bauakteId.ToString(),
+                new Dictionary<string, string?> { ["parts"] = string.Join(",", parts.Order(StringComparer.Ordinal)), ["photos"] = photos.Count.ToString(German) });
+            await db.SaveChangesAsync(cancellationToken);
+        }
         var pdf = Render(document);
         var name = SafeName($"Bauakte {info.Number ?? string.Empty} {info.Title}".Trim());
         return (pdf, $"{name} ({clock.GetUtcNow():yyyy-MM-dd}).pdf");

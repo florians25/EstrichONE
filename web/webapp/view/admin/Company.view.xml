@@ -3,7 +3,7 @@
 	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}">
 		<f:title>
 			<f:DynamicPageTitle>
-				<f:heading><Title text="Einstellungen" level="H1"/></f:heading>
+				<f:heading><Title text="Systemeinstellungen" level="H1"/></f:heading>
 				<f:expandedContent><Text text="Firmendaten, Logo, Vorgaben und Verhalten von EstrichONE für alle Benutzer."/></f:expandedContent>
 				<f:actions><Button id="settingsSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}"/></f:actions>
 			</f:DynamicPageTitle>

@@ -1,3 +1,4 @@
+import type Tree from "sap/m/Tree";
 import BaseController from "./BaseController";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
@@ -29,13 +30,30 @@ interface SearchResult {
  * Reiter „Freigaben“ mit „Warten auf meine Freigabe“ und „Von mir angefragt“.
  * @namespace estrichone.controller
  */
+interface TreeNode {
+	key: string;
+	text: string;
+	icon: string;
+	count: number | null;
+	category: string | null;
+	bauakteId: string | null;
+	customerAkten?: string[];
+	nodes: TreeNode[];
+}
+
+interface DocumentTreeCustomer {
+	customerId: string | null;
+	name: string;
+	bauakten: { id: string; number: string | null; title: string; categories: Record<string, number> }[];
+}
+
 export default class Documents extends BaseController {
 	private timer: ReturnType<typeof setTimeout> | undefined;
 
 	onInit(): void {
 		this.local({
 			tab: "ablage", search: "", bauakteId: "", approval: "", sort: "newest", category: "", busy: false,
-			items: [], folders: [], akten: [], facets: { total: 0, categories: {}, pendingApprovals: 0 }, mine: [], requested: [],
+			items: [], folders: [], tree: [], node: "", customerAkten: null, akten: [], facets: { total: 0, categories: {}, pendingApprovals: 0 }, mine: [], requested: [],
 		});
 	}
 
@@ -45,6 +63,7 @@ export default class Documents extends BaseController {
 		m.setProperty("/category", match.query.get("ordner") ?? "");
 		m.setProperty("/approval", match.query.get("freigabe") ?? "");
 		void this.loadAkten();
+		void this.loadTree();
 		void this.load();
 		void this.loadApprovals();
 	}
@@ -58,14 +77,45 @@ export default class Documents extends BaseController {
 		void this.loadApprovals();
 	}
 
-	onFolder(e: Event): void {
+	/** Ordnerbaum Kunde → Bauakte → Dokumentart: setzt die Filter (Kunde = alle seine Bauakten). */
+	onTreeSelect(e: Event): void {
 		const item = e.getParameter("listItem" as never) as Control;
-		const key = String((item.getBindingContext("view")?.getObject() as { key: string }).key);
-		this.model().setProperty("/category", key);
-		this.setQuery({ ordner: key || null });
+		const node = item.getBindingContext("view")?.getObject() as TreeNode;
+		const m = this.model();
+		m.setProperty("/node", node.key);
+		m.setProperty("/category", node.category ?? "");
+		m.setProperty("/bauakteId", node.bauakteId ?? "");
+		m.setProperty("/customerAkten", node.customerAkten ?? null);
+		void this.load();
 	}
 
-	onFilter(): void { void this.load(); }
+	private async loadTree(): Promise<void> {
+		const customers = await get<DocumentTreeCustomer[]>("documents/tree").catch(() => [] as DocumentTreeCustomer[]);
+		const sum = (c: Record<string, number>) => Object.values(c).reduce((a, b) => a + b, 0);
+		const tree: TreeNode[] = [{ key: "", text: "Alle Dokumente", icon: "sap-icon://documents", count: null, category: null, bauakteId: null, nodes: [] }];
+		for (const c of customers) {
+			const akten = c.bauakten.filter((b) => sum(b.categories) > 0);
+			if (!akten.length) continue;
+			tree.push({
+				key: `c:${c.customerId ?? "none"}`, text: c.name, icon: "sap-icon://customer", count: akten.reduce((n, b) => n + sum(b.categories), 0),
+				category: null, bauakteId: null, customerAkten: akten.map((b) => b.id),
+				nodes: akten.map((b) => ({
+					key: `b:${b.id}`, text: `${b.number ?? "neu"} · ${b.title}`, icon: "sap-icon://folder-full", count: sum(b.categories), category: null, bauakteId: b.id,
+					nodes: Object.entries(documentCategories).filter(([key]) => (b.categories[key] ?? 0) > 0).map(([key, cat]) => ({
+						key: `b:${b.id}:${key}`, text: cat.text, icon: cat.icon, count: b.categories[key], category: key, bauakteId: b.id, nodes: [],
+					})),
+				})),
+			});
+		}
+		this.model().setProperty("/tree", tree);
+		// Überschaubar: Kunden mit ihren Bauakten aufgeklappt, bei wenigen Kunden auch die Dokumentarten.
+		setTimeout(() => (this.byId("dmsTree") as Tree | undefined)?.expandToLevel(customers.length <= 5 ? 2 : 1), 0);
+	}
+
+	onFilter(): void {
+		this.model().setProperty("/customerAkten", null);
+		void this.load();
+	}
 	onSearch(): void { void this.load(); }
 	onSearchLive(): void {
 		clearTimeout(this.timer);
@@ -89,6 +139,8 @@ export default class Documents extends BaseController {
 		m.setProperty("/busy", false);
 		if (!result) return;
 		m.setProperty("/facets", result.facets);
+		const restrict = m.getProperty("/customerAkten") as string[] | null;
+		if (restrict) result.items = result.items.filter((i) => restrict.includes(i.file.bauakteId ?? ""));
 		m.setProperty("/folders", [
 			{ key: "", text: "Alle Dokumente", icon: "sap-icon://documents", count: result.facets.total, selected: !category },
 			...Object.entries(documentCategories).map(([key, c]) => ({

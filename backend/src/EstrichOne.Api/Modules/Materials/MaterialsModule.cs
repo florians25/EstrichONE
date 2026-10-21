@@ -6,12 +6,16 @@ namespace EstrichOne.Api.Modules.Materials;
 /// <summary>Material, Lieferanten und Bestellungen (AP-20).</summary>
 public sealed class MaterialsModule : IModule
 {
-    public void AddServices(IServiceCollection services, IConfiguration configuration) =>
+    public void AddServices(IServiceCollection services, IConfiguration configuration)
+    {
         services.AddScoped<IBauakteHintSource, MaterialHints>();
+        services.AddScoped<OrderPdf>();
+    }
 
     public void MapEndpoints(IEndpointRouteBuilder api)
     {
         MaterialEndpoints.Map(api);
         OrderEndpoints.Map(api);
+        OrderPdfEndpoints.Map(api);
     }
 }

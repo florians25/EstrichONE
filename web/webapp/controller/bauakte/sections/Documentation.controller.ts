@@ -12,7 +12,6 @@ import { uuidv7 } from "../../../util/ids";
 import { binderNames, checkTitles, inspectionResult } from "../../../util/labels";
 import { openLightbox } from "../../../util/lightbox";
 import type { CrewResponse, DiaryEntry, FileResponse, Inspection, RoomOverview } from "../../../util/models";
-import { navTo } from "../../../util/navigation";
 import { session } from "../../../util/session";
 import { acceptanceResults, type AcceptanceResult } from "../../../util/acceptanceWizard";
 import { runAcceptance, showAcceptanceLink } from "../../../util/acceptanceFlow";
@@ -311,18 +310,30 @@ export default class Documentation extends SectionBase {
 
 	// Berichte
 
+	private download(path: string, stored: boolean): void {
+		const a = document.createElement("a");
+		a.href = `/api/v1/${path}`;
+		a.download = "";
+		a.click();
+		this.toast(stored ? "PDF wird erstellt und unter „Protokolle / Berichte“ abgelegt …" : "PDF wird erstellt …");
+		if (stored) setTimeout(() => akte.invalidate(this.bauakteId, "files"), 4000);
+	}
+
+	/** Baustellenbericht als Server-PDF (Zeitraum, Fotos, Aufgaben wählbar). */
 	onReport(): void {
 		const m = this.dc();
-		const query = new URLSearchParams({ art: "bericht", von: m.getProperty("/reportFrom") ?? "", bis: m.getProperty("/reportTo") ?? "",
-			fotos: m.getProperty("/reportPhotos") ? "1" : "0", aufgaben: m.getProperty("/reportWork") ? "1" : "0" });
-		navTo(`/bauakten/${this.bauakteId}/bericht?${query.toString()}`);
+		const parts = ["uebersicht", "raeume", "tagebuch", "pruefungen", ...(m.getProperty("/reportWork") ? ["maengel"] : []), ...(m.getProperty("/reportPhotos") ? ["fotos"] : [])];
+		const query = new URLSearchParams({ parts: parts.join(","), maxPhotos: m.getProperty("/reportPhotos") ? "40" : "0" });
+		if (m.getProperty("/reportFrom")) query.set("from", m.getProperty("/reportFrom") as string);
+		if (m.getProperty("/reportTo")) query.set("to", m.getProperty("/reportTo") as string);
+		this.download(`bauakten/${this.bauakteId}/report.pdf?${query.toString()}`, true);
 	}
 
 	onAcceptance(): void {
-		navTo(`/bauakten/${this.bauakteId}/bericht?art=abnahme`);
+		this.download(`bauakten/${this.bauakteId}/acceptance-form.pdf`, false);
 	}
 
 	onSheet(): void {
-		navTo(`/bauakten/${this.bauakteId}/bericht?art=blatt`);
+		this.download(`bauakten/${this.bauakteId}/report.pdf?parts=uebersicht,raeume&maxPhotos=0`, true);
 	}
 }

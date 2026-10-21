@@ -4,7 +4,6 @@ using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Mail.Exports;
 using EstrichOne.Api.Modules.Organization.Exports;
 using MigraDoc.DocumentObjectModel;
-using MigraDoc.DocumentObjectModel.Shapes;
 using Microsoft.Extensions.Options;
 
 namespace EstrichOne.Api.Modules.Access;
@@ -19,83 +18,11 @@ public sealed class AccessLetterService(IPdfBranding branding, IMailService mail
 
     public async Task<byte[]> RenderAsync(User user, string password, string serverUrl, bool reset, CancellationToken cancellationToken)
     {
-        PdfReport.EnsureFonts();
         var company = await branding.GetAsync(cancellationToken);
-        var (document, section) = PdfReport.Create(reset ? "Neues Einmalpasswort" : "Ihr Zugang zu EstrichONE", "Zugangsbrief", company);
-        var setup = section.PageSetup;
-        setup.LeftMargin = Unit.FromMillimeter(25);
-        setup.RightMargin = Unit.FromMillimeter(20);
-
-        // Falzmarken (105 mm, 210 mm) und Lochmarke (148,5 mm) am linken Rand.
-        foreach (var y in new[] { 105.0, 148.5, 210.0 })
-        {
-            var mark = section.AddTextFrame();
-            mark.RelativeHorizontal = RelativeHorizontal.Page;
-            mark.RelativeVertical = RelativeVertical.Page;
-            mark.Left = Unit.FromMillimeter(4);
-            mark.Top = Unit.FromMillimeter(y);
-            mark.Width = Unit.FromMillimeter(y == 148.5 ? 7 : 5);
-            mark.Height = Unit.FromMillimeter(0.5);
-            mark.LineFormat.Width = 0.4;
-            mark.LineFormat.Color = PdfReport.Muted;
-            mark.WrapFormat.Style = WrapStyle.None;
-        }
-
-        // Anschriftfeld (Form B: 45 mm von oben, 20 mm von links, 85 × 45 mm) mit Rücksendeangabe.
-        var address = section.AddTextFrame();
-        address.RelativeHorizontal = RelativeHorizontal.Page;
-        address.RelativeVertical = RelativeVertical.Page;
-        address.Left = Unit.FromMillimeter(20);
-        address.Top = Unit.FromMillimeter(45);
-        address.Width = Unit.FromMillimeter(85);
-        address.Height = Unit.FromMillimeter(45);
-        address.WrapFormat.Style = WrapStyle.None;
-        var sender = address.AddParagraph(string.Join(" · ", new[] { company.Name, company.AddressLine }.Where(v => !string.IsNullOrWhiteSpace(v))));
-        sender.Format.Font.Size = 7;
-        sender.Format.Font.Color = PdfReport.Muted;
-        sender.Format.SpaceAfter = Unit.FromMillimeter(4);
-        address.AddParagraph("Persönlich – vertraulich").Format.Font.Bold = true;
-        address.AddParagraph(user.DisplayName);
-        address.AddParagraph($"z. Hd. {user.DisplayName}, im Hause");
-        if (!string.IsNullOrWhiteSpace(company.Street))
-        {
-            address.AddParagraph(company.Street);
-        }
-
-        if (!string.IsNullOrWhiteSpace(company.City))
-        {
-            address.AddParagraph($"{company.PostalCode} {company.City}".Trim());
-        }
-
-        // Informationsblock rechts.
-        var info = section.AddTextFrame();
-        info.RelativeHorizontal = RelativeHorizontal.Page;
-        info.RelativeVertical = RelativeVertical.Page;
-        info.Left = Unit.FromMillimeter(125);
-        info.Top = Unit.FromMillimeter(50);
-        info.Width = Unit.FromMillimeter(75);
-        info.Height = Unit.FromMillimeter(40);
-        info.WrapFormat.Style = WrapStyle.None;
-        foreach (var (label, value) in new[]
-        {
-            ("Datum", clock.GetUtcNow().ToOffset(TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin").GetUtcOffset(clock.GetUtcNow())).ToString("dd.MM.yyyy", PdfReport.German)),
-            ("Ansprechpartner", company.Name),
-            ("Telefon", company.Phone ?? "–"),
-            ("E-Mail", company.Email ?? "–"),
-        })
-        {
-            var line = info.AddParagraph();
-            line.Format.Font.Size = 8.5;
-            line.AddFormattedText($"{label}: ", new Font { Color = PdfReport.Muted });
-            line.AddText(value);
-        }
-
-        // Brieftext beginnt nach DIN 5008 Form B bei 98,46 mm (oberer Rand 26 mm).
-        var subject = section.AddParagraph(reset ? "Neues Einmalpasswort für EstrichONE" : "Ihr Zugang zu EstrichONE");
-        subject.Format.SpaceBefore = Unit.FromMillimeter(72);
-        subject.Format.Font.Bold = true;
-        subject.Format.Font.Size = 11;
-        subject.Format.SpaceAfter = Unit.FromMillimeter(8);
+        var (document, section) = PdfLetter.Create(reset ? "Neues Einmalpasswort" : "Ihr Zugang zu EstrichONE", company,
+            ["Persönlich – vertraulich", user.DisplayName, $"z. Hd. {user.DisplayName}, im Hause", company.Street ?? "", $"{company.PostalCode} {company.City}".Trim()],
+            [("Datum", PdfLetter.Today(clock)), ("Ansprechpartner", company.Name), ("Telefon", company.Phone), ("E-Mail", company.Email)],
+            reset ? "Neues Einmalpasswort für EstrichONE" : "Ihr Zugang zu EstrichONE");
         section.AddParagraph($"Guten Tag {user.DisplayName},").Format.SpaceAfter = Unit.FromMillimeter(4);
         section.AddParagraph(reset
             ? "Ihr Passwort für EstrichONE wurde zurückgesetzt. Mit den folgenden Daten melden Sie sich wieder an:"

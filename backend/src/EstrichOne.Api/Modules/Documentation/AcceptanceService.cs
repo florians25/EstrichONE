@@ -109,8 +109,8 @@ public sealed class AcceptanceService(
         var rows = await work.ListAsync(protocol.BauakteId, cancellationToken);
         var pdf = await RenderAsync(protocol, info, rows, cancellationToken);
         var name = $"Abnahmeprotokoll {info.Number ?? info.Title} {protocol.PerformedAt.ToOffset(TimeSpan.FromHours(1)):yyyy-MM-dd}.pdf";
-        var file = files.StoreGenerated(protocol.BauakteId, protocol.PerformedByUserId, name.Replace('/', '-'), "application/pdf", pdf, "acceptance",
-            $"Abnahme: {Result(protocol.Result)}", clock.GetUtcNow());
+        var file = await files.StoreGeneratedAsync(protocol.BauakteId, protocol.PerformedByUserId, name.Replace('/', '-'), "application/pdf", pdf, "acceptance",
+            null, $"Abnahme: {Result(protocol.Result)}", clock.GetUtcNow(), cancellationToken);
         protocol.Complete(file.Id);
         audit.Record("bauakte.file_added", actor, EntityType, protocol.BauakteId.ToString(), new Dictionary<string, string?> { ["kind"] = "Document" });
         audit.Record("bauakte.acceptance_completed", actor, EntityType, protocol.BauakteId.ToString(), new Dictionary<string, string?> { ["result"] = protocol.Result.ToString() });
@@ -131,7 +131,22 @@ public sealed class AcceptanceService(
         _ => "Abnahme verweigert",
     };
 
-    private async Task<byte[]> RenderAsync(AcceptanceProtocol p, BauakteReportInfo info, IReadOnlyList<WorkReportRow> rows, CancellationToken cancellationToken)
+    /// <summary>Leerer Vordruck zum Ausfüllen von Hand (alle Räume, Ergebnis zum Ankreuzen).</summary>
+    public async Task<byte[]?> RenderBlankAsync(Guid bauakteId, Guid userId, CancellationToken cancellationToken)
+    {
+        var info = await bauakten.GetAsync(bauakteId, cancellationToken);
+        if (info is null)
+        {
+            return null;
+        }
+
+        var blank = AcceptanceProtocol.Create(Guid.Empty, bauakteId, userId, clock.GetUtcNow(), null, null, null, null, [], AcceptanceResult.Accepted,
+            null, [], [], null, null, null, null);
+        return await RenderAsync(blank, info, [], cancellationToken, blankForm: true);
+    }
+
+    private async Task<byte[]> RenderAsync(AcceptanceProtocol p, BauakteReportInfo info, IReadOnlyList<WorkReportRow> rows, CancellationToken cancellationToken,
+        bool blankForm = false)
     {
         PdfReport.EnsureFonts();
         var company = await branding.GetAsync(cancellationToken);
@@ -147,7 +162,7 @@ public sealed class AcceptanceService(
             ("Bauvorhaben", $"{info.Number} {info.Title}".Trim()),
             ("Baustelle", string.IsNullOrEmpty(address) ? "–" : address),
             ("Auftraggeber", info.Customer?.Name ?? "–"),
-            ("Datum der Abnahme", PdfReport.DateTime(p.PerformedAt)),
+            ("Datum der Abnahme", blankForm ? "______________________" : PdfReport.DateTime(p.PerformedAt)),
             ("Ort", p.Location ?? (string.IsNullOrEmpty(address) ? "–" : address)),
             ("Für den Auftraggeber", p.ClientName ?? p.CustomerDecisionName ?? "–"),
             ("Für den Auftragnehmer", p.ContractorName ?? company.Name));
@@ -172,7 +187,20 @@ public sealed class AcceptanceService(
 
         section.AddParagraph("Ergebnis", StyleNames.Heading2);
         var result = section.AddParagraph();
-        var resultText = result.AddFormattedText(Result(p.Result), TextFormat.Bold);
+        if (blankForm)
+        {
+            result.AddText("☐ abgenommen     ☐ abgenommen mit Vorbehalt     ☐ Abnahme verweigert");
+            section.AddParagraph("Mängel und Restarbeiten (mit Frist)", StyleNames.Heading2);
+            for (var i = 0; i < 6; i++)
+            {
+                var line = section.AddParagraph(" ");
+                line.Format.Borders.Bottom.Width = 0.5;
+                line.Format.Borders.Bottom.Color = PdfReport.Line;
+                line.Format.SpaceBefore = Unit.FromMillimeter(4);
+            }
+        }
+
+        var resultText = result.AddFormattedText(blankForm ? "" : Result(p.Result), TextFormat.Bold);
         resultText.Font.Size = 12;
         resultText.Font.Color = p.Result switch
         {
