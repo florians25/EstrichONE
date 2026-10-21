@@ -65,8 +65,8 @@ jobs:
           docker compose exec -T caddy cat /data/caddy/pki/authorities/local/root.crt > caddy-root.crt
           curl --fail --cacert caddy-root.crt https://localhost/api/v1/server-info
           # Weboberfläche: Startseite, Routen der App (index.html) und Sicherheitsheader
-          curl --fail --cacert caddy-root.crt -s https://localhost/ | grep -q '<div id="root">'
-          curl --fail --cacert caddy-root.crt -s https://localhost/verwaltung/benutzer | grep -q '<div id="root">'
+          curl --fail --cacert caddy-root.crt -s https://localhost/ | grep -q 'id="sap-ui-bootstrap"'
+          curl --fail --cacert caddy-root.crt -s https://localhost/verwaltung/benutzer | grep -q 'id="sap-ui-bootstrap"'
           curl --fail --cacert caddy-root.crt -sI https://localhost/ | grep -qi "content-security-policy: default-src 'self'"
       - name: Logs bei Fehler
         if: failure()
