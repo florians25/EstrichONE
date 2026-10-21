@@ -296,6 +296,12 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.element("todayJobRoute").exists, app.debugDescription)
         XCTAssertTrue(app.reveal(app.element("tomorrowPreview")), app.debugDescription)
 
+        // „Wer fährt wohin“ nach Kolonnen: Kolonnen mit Farbe, Stärke und Abwesenden.
+        app.tapElement(app.reveal("dispatchAllButton"), "dispatchAllButton")
+        XCTAssertTrue(app.element("crewChip-Kolonne Huber").waitForExistence(timeout: 15), app.debugDescription)
+        XCTAssertTrue(app.text(containing: "fehlt: Tobias Lang").waitForExistence(timeout: 5), app.debugDescription)
+        app.navigationBars.buttons.element(boundBy: 0).tap()
+
         app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
         let efh = app.staticTexts["EFH Schneider, Neubau"].firstMatch
         XCTAssertTrue(efh.waitForExistence(timeout: 20), app.debugDescription)

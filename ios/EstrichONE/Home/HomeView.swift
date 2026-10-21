@@ -388,7 +388,8 @@ struct TodayJob: Identifiable {
 
     static func make(assignments: [Assignment], board: DispatchBoard?, bauakten: [UUID: Bauakte]) -> [TodayJob] {
         let sites = Dictionary((board?.sites ?? []).map { ($0.bauakteId, $0) }, uniquingKeysWith: { first, _ in first })
-        let crewColors = Dictionary((board?.crews ?? []).compactMap { crew in Color(hexString: crew.color).map { (crew.name, $0) } },
+        let named = (board?.crews ?? []).map { ($0.name, $0.color) } + (board?.sites ?? []).flatMap(\.crews).map { ($0.name, $0.color) }
+        let crewColors = Dictionary(named.compactMap { name, color in Color(hexString: color).map { (name, $0) } },
                                     uniquingKeysWith: { first, _ in first })
         func color(_ job: DispatchBoard.Job?, crewName: String?) -> Color? {
             Color(hexString: job?.crewColor) ?? crewName.flatMap { crewColors[$0] }

@@ -50,3 +50,41 @@ struct PlanningTests {
         let loadedAt: Date
     }
 }
+
+@Suite("Wer fährt wohin nach Kolonnen")
+struct DispatchCrewTests {
+    @Test("Kolonnen mit Fahrzeugen, Abwesenden und Doppelbelegung; ältere Antwort ohne Kolonnen bleibt lesbar")
+    func decodeCrews() throws {
+        let site = "0193a1b2-de00-7000-8000-0000000b0001"
+        let other = "0193a1b2-de00-7000-8000-0000000b0002"
+        let json = """
+        {"day":"2026-10-21","canPlan":true,"mySiteIds":["\(site)"],"people":[],"vehicles":[],"appointments":[],
+         "sites":[{"bauakteId":"\(site)","number":"2026-041","title":"EFH","address":null,"latitude":null,"longitude":null,
+           "siteContactName":null,"siteContactPhone":null,"startTime":"07:00:00","jobs":[],"people":[],"vehicles":[],
+           "warnings":["Kolonne Huber ist an dem Tag auch auf Halle eingeplant."],"navigationUrl":null,
+           "crews":[{"id":"0193a1b2-de00-7000-8000-000000006001","name":"Kolonne Huber","color":"#E07A1F",
+                     "assignmentId":"0193a1b2-de00-7000-8000-000000003001","activity":"Estrich EG","startTime":"07:00:00"}]}],
+         "crews":[{"id":"0193a1b2-de00-7000-8000-000000006001","name":"Kolonne Huber","color":"#E07A1F","leaderName":"Max Huber",
+                   "memberCount":3,"vehicles":[{"id":"0193a1b2-de00-7000-8000-000000005001","name":"Pumpe 1","kind":"machine"}],
+                   "siteIds":["\(site)","\(other)"],"absentMembers":[{"id":"0193a1b2-de00-7000-8000-000000004004","name":"Tobias","note":"Urlaub"}]}]}
+        """
+        let board = try JSONCoding.decoder.decode(DispatchBoard.self, from: Data(json.utf8))
+        let crew = try #require(board.crews.first)
+        #expect(crew.isDoubleBooked && crew.memberCount == 3 && crew.vehicles.first?.name == "Pumpe 1")
+        #expect(crew.absentMembers.first?.note == "Urlaub")
+        #expect(board.sites.first?.crews.first?.startText == "07:00")
+        #expect(board.unassignedCrews.isEmpty)
+
+        let old = #"{"day":"2026-10-21","sites":[],"people":[],"vehicles":[],"mySiteIds":[],"canPlan":false}"#
+        #expect(try JSONCoding.decoder.decode(DispatchBoard.self, from: Data(old.utf8)).crews.isEmpty)
+    }
+
+    @Test("Kolonne verlegen bzw. zusätzlich einplanen: Ziel crew, keep, Tätigkeit und Beginn")
+    func encodeMove() throws {
+        let move = DispatchMove(target: .crew, id: UUID(), to: UUID(), from: nil, keep: true, activity: "Estrich OG", startTime: "07:30:00")
+        let object = try #require(try JSONSerialization.jsonObject(with: JSONCoding.encoder.encode(move)) as? [String: Any])
+        #expect(object["target"] as? String == "crew")
+        #expect(object["keep"] as? Bool == true)
+        #expect(object["activity"] as? String == "Estrich OG" && object["startTime"] as? String == "07:30:00")
+    }
+}

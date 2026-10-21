@@ -136,6 +136,8 @@ struct DemoContent: Sendable {
          "sites":[{"bauakteId":"\(Self.efh)","number":"2026-041","title":"EFH Schneider, Neubau","address":"Ahornweg 3, 84028 Landshut",
            "latitude":48.5372,"longitude":12.1521,"siteContactName":"Herr Schneider","siteContactPhone":"0171 2345678","startTime":"07:00:00",
            "navigationUrl":"https://maps.apple.com/?daddr=48.5372,12.1521","warnings":[],
+           "crews":[{"id":"0193a1b2-de00-7000-8000-000000006001","name":"Kolonne Huber","color":"#E07A1F",
+                     "assignmentId":"0193a1b2-de00-7000-8000-000000003001","activity":"Estrich einbringen OG","startTime":"07:00:00"}],
            "jobs":[{"assignmentId":"0193a1b2-de00-7000-8000-000000003001","kind":"screed","activity":"Estrich einbringen OG",
              "startTime":"07:00:00","endTime":"15:00:00","crewId":null,"crewName":"Kolonne Huber","crewColor":"#E07A1F","notes":null}],
            "people":[{"id":"\(Self.userId)","name":"Max Huber"},{"id":"0193a1b2-de00-7000-8000-000000004002","name":"Lukas Brandl"}],
@@ -143,13 +145,17 @@ struct DemoContent: Sendable {
           {"bauakteId":"\(Self.halle)","number":"2026-042","title":"Halle Gewerbering","address":"Gewerbering 3, 84030 Ergolding",
            "latitude":null,"longitude":null,"siteContactName":null,"siteContactPhone":null,"startTime":"08:30:00","navigationUrl":null,
            "warnings":["Zufahrt nur bis 7,5 t"],
+           "crews":[{"id":"0193a1b2-de00-7000-8000-000000006002","name":"Kolonne Brandl","color":"#2F80ED",
+                     "assignmentId":"0193a1b2-de00-7000-8000-000000003002","activity":"Erstbegehung","startTime":"08:30:00"}],
            "jobs":[{"assignmentId":"0193a1b2-de00-7000-8000-000000003002","kind":"initialInspection","activity":"Erstbegehung",
              "startTime":"08:30:00","endTime":"09:30:00","crewId":null,"crewName":"Kolonne Brandl","crewColor":"#2F80ED","notes":null}],
            "people":[{"id":"0193a1b2-de00-7000-8000-000000004003","name":"Anna Koller"}],"vehicles":[]}],
          "people":[],"vehicles":[],"appointments":[],
-         "crews":[{"id":"0193a1b2-de00-7000-8000-000000006001","name":"Kolonne Huber","color":"#E07A1F","memberNames":["Max Huber","Lukas Brandl"],
+         "crews":[{"id":"0193a1b2-de00-7000-8000-000000006001","name":"Kolonne Huber","color":"#E07A1F","leaderName":"Max Huber","memberCount":2,
+                   "vehicles":[{"id":"0193a1b2-de00-7000-8000-000000005001","name":"Estrichpumpe 1","kind":"machine"}],"absentMembers":[],
                    "siteIds":["\(Self.efh)"]},
-                  {"id":"0193a1b2-de00-7000-8000-000000006002","name":"Kolonne Brandl","color":"#2F80ED","memberNames":["Anna Koller"],
+                  {"id":"0193a1b2-de00-7000-8000-000000006002","name":"Kolonne Brandl","color":"#2F80ED","leaderName":"Anna Koller","memberCount":1,"vehicles":[],
+                   "absentMembers":[{"id":"0193a1b2-de00-7000-8000-000000004004","name":"Tobias Lang","note":"Urlaub"}],
                    "siteIds":["\(Self.halle)"]}]}
         """
     }

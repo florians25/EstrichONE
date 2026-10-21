@@ -128,7 +128,7 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         public let people: [Ref]
         public let vehicles: [Ref]
         /// Eingeplante Kolonnen (Disposition nach Kolonnen).
-        public let crews: [Ref]
+        public let crews: [SiteCrew]
         public let warnings: [String]
         public let navigationUrl: String?
 
@@ -144,13 +144,42 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         public let note: String?
     }
 
-    /// Kolonne mit Farbe und Mitgliedern; `siteIds` = Baustellen des Tages.
+    /// Einsatz einer Kolonne auf einer Baustelle.
+    public struct SiteCrew: Codable, Equatable, Sendable, Identifiable {
+        public let id: UUID
+        public let name: String
+        public let color: String?
+        public let assignmentId: UUID?
+        public let activity: String?
+        public let startTime: String?
+
+        public var startText: String? { startTime.map { String($0.prefix(5)) } }
+    }
+
+    public struct VehicleRef: Codable, Equatable, Sendable, Identifiable {
+        public let id: UUID
+        public let name: String
+        public let kind: String?
+    }
+
+    public struct AbsentMember: Codable, Equatable, Sendable, Identifiable {
+        public let id: UUID
+        public let name: String
+        public let note: String?
+    }
+
+    /// Kolonne des Tages; `siteIds` = Baustellen des Tages (mehr als eine = doppelt eingeplant).
     public struct Crew: Codable, Equatable, Sendable, Identifiable {
         public let id: UUID
         public let name: String
         public let color: String?
-        public let memberNames: [String]
+        public let leaderName: String?
+        public let memberCount: Int
+        public let vehicles: [VehicleRef]
         public let siteIds: [UUID]
+        public let absentMembers: [AbsentMember]
+
+        public var isDoubleBooked: Bool { siteIds.count > 1 }
     }
 
     public struct Vehicle: Codable, Equatable, Sendable, Identifiable {
@@ -210,7 +239,7 @@ extension DispatchBoard.Site {
         jobs = try c.decodeIfPresent([DispatchBoard.Job].self, forKey: .jobs) ?? []
         people = try c.decodeIfPresent([DispatchBoard.Ref].self, forKey: .people) ?? []
         vehicles = try c.decodeIfPresent([DispatchBoard.Ref].self, forKey: .vehicles) ?? []
-        crews = try c.decodeIfPresent([DispatchBoard.Ref].self, forKey: .crews) ?? []
+        crews = try c.decodeIfPresent([DispatchBoard.SiteCrew].self, forKey: .crews) ?? []
         warnings = try c.decodeIfPresent([String].self, forKey: .warnings) ?? []
         navigationUrl = try c.decodeIfPresent(String.self, forKey: .navigationUrl)
     }
@@ -222,12 +251,16 @@ extension DispatchBoard.Crew {
         id = try c.decode(UUID.self, forKey: .id)
         name = try c.decode(String.self, forKey: .name)
         color = try c.decodeIfPresent(String.self, forKey: .color)
-        memberNames = try c.decodeIfPresent([String].self, forKey: .memberNames) ?? []
+        leaderName = try c.decodeIfPresent(String.self, forKey: .leaderName)
+        memberCount = try c.decodeIfPresent(Int.self, forKey: .memberCount) ?? 0
+        vehicles = try c.decodeIfPresent([DispatchBoard.VehicleRef].self, forKey: .vehicles) ?? []
         siteIds = try c.decodeIfPresent([UUID].self, forKey: .siteIds) ?? []
+        absentMembers = try c.decodeIfPresent([DispatchBoard.AbsentMember].self, forKey: .absentMembers) ?? []
     }
 }
 
-/// Person oder Fahrzeug auf eine andere Baustelle setzen (`null` = herausnehmen).
+/// Kolonne (mit Fahrzeugen und Tätigkeit), Person oder Fahrzeug auf eine andere Baustelle setzen;
+/// `to == nil` mit `from` = herausnehmen, `keep` = zusätzlich einplanen statt verlegen.
 public struct DispatchMove: Encodable, Sendable {
     public enum Target: String, Encodable, Sendable {
         case person
@@ -240,13 +273,18 @@ public struct DispatchMove: Encodable, Sendable {
     public let toBauakteId: UUID?
     public let fromBauakteId: UUID?
     public let keep: Bool
+    /// Nur Kolonne: Tätigkeit und Beginn (`HH:mm:ss`) für den neuen Einsatz.
+    public let activity: String?
+    public let startTime: String?
 
-    public init(target: Target, id: UUID, to: UUID?, from: UUID?, keep: Bool = false) {
+    public init(target: Target, id: UUID, to: UUID?, from: UUID?, keep: Bool = false, activity: String? = nil, startTime: String? = nil) {
         self.target = target
         self.id = id
         self.toBauakteId = to
         self.fromBauakteId = from
         self.keep = keep
+        self.activity = activity
+        self.startTime = startTime
     }
 }
 

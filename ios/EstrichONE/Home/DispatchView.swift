@@ -2,9 +2,9 @@ import EstrichCore
 import SwiftUI
 import UniformTypeIdentifiers
 
-/// „Wer fährt wohin“: alle Baustellen eines Tages mit Einsätzen, Personen und Fahrzeugen (meine zuerst). Mit dem Recht
-/// zur Planung lassen sich Personen und Fahrzeuge umsetzen – per Auswahl, auf dem iPad auch per Ziehen zwischen den
-/// Baustellen. Ohne Verbindung bleibt der zuletzt geladene Stand des Tages sichtbar.
+/// „Wer fährt wohin“: welche Kolonne fährt auf welche Baustelle (meine zuerst), Team und Fahrzeuge als Detail. Mit dem Recht
+/// zur Planung lassen sich Kolonnen verlegen, zusätzlich einplanen oder herausnehmen – per Menü, auf dem iPad auch per
+/// Ziehen der Kolonnen-Chips auf die Baustellen. Ohne Verbindung bleibt der zuletzt geladene Stand des Tages sichtbar.
 struct DispatchView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -42,25 +42,31 @@ struct DispatchView: View {
                 ContentUnavailableView("Nichts eingeplant", systemImage: "calendar", description: Text("Für diesen Tag gibt es keine Einsätze."))
             }
             if let board = data?.board {
+                if !board.crews.isEmpty, sizeClass != .regular || !board.canPlan {
+                    Section {
+                        crewPalette(board)
+                    } header: {
+                        Text("Kolonnen")
+                    } footer: {
+                        if board.canPlan { Text("Kolonne antippen, um sie zu verlegen, zusätzlich einzuplanen oder herauszunehmen.") }
+                    }
+                }
                 ForEach(board.sortedSites) { site in
                     Section {
                         DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id))
-                        if !site.people.isEmpty || !site.vehicles.isEmpty || board.canPlan {
+                        if !site.crews.isEmpty {
                             ChipFlow {
-                                ForEach(site.people) { person in
-                                    chip(person.name, symbol: "person.fill", board: board) { target in
-                                        await move(.person, person.id, to: target, from: site.id)
-                                    }
-                                    .draggable(DispatchDrag(target: .person, id: person.id, from: site.id).text)
-                                }
-                                ForEach(site.vehicles) { vehicle in
-                                    chip(vehicle.name, symbol: "truck.box.fill", board: board) { target in
-                                        await move(.vehicle, vehicle.id, to: target, from: site.id)
-                                    }
-                                    .draggable(DispatchDrag(target: .vehicle, id: vehicle.id, from: site.id).text)
+                                ForEach(site.crews) { crew in
+                                    crewChip(crew.id, crew.name, color: crew.color, detail: crew.activity, board: board, from: site.id)
+                                        .draggable(DispatchDrag(target: .crew, id: crew.id, from: site.id).text)
                                 }
                             }
                             .padding(.vertical, 2)
+                        }
+                        let team = (site.people.map(\.name) + site.vehicles.map(\.name)).joined(separator: ", ")
+                        if !team.isEmpty {
+                            Label(team, systemImage: "person.2").labelStyle(TightLabelStyle())
+                                .font(.caption).foregroundStyle(Theme.textSecondary)
                         }
                     }
                     .dropDestination(for: String.self) { items, _ in
@@ -68,25 +74,21 @@ struct DispatchView: View {
                         Task { await move(drag.target, drag.id, to: site.id, from: drag.from) }
                         return true
                     }
+                    .accessibilityIdentifier("dispatchSite-\(site.title)")
                 }
-                if board.canPlan, !board.unassignedPeople.isEmpty || !board.unassignedVehicles.isEmpty {
-                    Section {
-                        ChipFlow {
-                            ForEach(board.unassignedPeople) { person in
-                                chip(person.name, symbol: "person", board: board) { target in await move(.person, person.id, to: target, from: nil) }
-                                    .draggable(DispatchDrag(target: .person, id: person.id, from: nil).text)
-                            }
-                            ForEach(board.unassignedVehicles) { vehicle in
-                                chip(vehicle.name, symbol: "truck.box", board: board) { target in await move(.vehicle, vehicle.id, to: target, from: nil) }
-                                    .draggable(DispatchDrag(target: .vehicle, id: vehicle.id, from: nil).text)
-                            }
-                        }
-                    } header: {
-                        Text("Noch ohne Einsatz")
-                    } footer: {
-                        Text(sizeClass == .regular ? "Zum Umsetzen auf eine Baustelle ziehen oder antippen." : "Zum Umsetzen antippen.")
-                    }
+            }
+        }
+        .safeAreaInset(edge: .top) {
+            // iPad mit Planungsrecht: Kolonnen immer sichtbar, zum Ziehen auf die Baustellen.
+            if sizeClass == .regular, let board = data?.board, board.canPlan, !board.crews.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Kolonnen – auf eine Baustelle ziehen oder antippen").font(.caption.weight(.semibold))
+                        .foregroundStyle(Theme.textSecondary)
+                    crewPalette(board)
                 }
+                .padding(.horizontal).padding(.vertical, 8)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(.bar)
             }
         }
         .overlay { if loading && data == nil { ProgressView() } }
@@ -97,30 +99,77 @@ struct DispatchView: View {
         .sensoryFeedback(.success, trigger: data?.board)
     }
 
-    /// Person bzw. Fahrzeug als Chip; mit Planungsrecht als Menü zum Umsetzen.
+    /// Alle Kolonnen des Tages mit Leitung, Stärke, Fahrzeugen, Abwesenheiten und Doppelbelegung.
+    private func crewPalette(_ board: DispatchBoard) -> some View {
+        ChipFlow {
+            ForEach(board.crews) { crew in
+                crewChip(crew.id, crew.name, color: crew.color, detail: Self.details(of: crew, on: board), board: board,
+                         from: crew.siteIds.count == 1 ? crew.siteIds.first : nil, warning: crew.isDoubleBooked)
+                    .draggable(DispatchDrag(target: .crew, id: crew.id, from: crew.siteIds.count == 1 ? crew.siteIds.first : nil).text)
+            }
+        }
+        .padding(.vertical, 2)
+    }
+
+    static func details(of crew: DispatchBoard.Crew, on board: DispatchBoard) -> String {
+        var details: [String] = []
+        if let leader = crew.leaderName { details.append(leader) }
+        if crew.memberCount > 0 { details.append("\(crew.memberCount) Pers.") }
+        if !crew.vehicles.isEmpty { details.append(crew.vehicles.map(\.name).joined(separator: ", ")) }
+        if !crew.absentMembers.isEmpty {
+            details.append("fehlt: " + crew.absentMembers.map { [$0.name, $0.note].compactMap { $0 }.joined(separator: " – ") }.joined(separator: ", "))
+        }
+        let sites = crew.siteIds.compactMap { id in board.sites.first { $0.id == id }?.title }
+        details.append(sites.isEmpty ? "frei" : sites.joined(separator: " + "))
+        return details.joined(separator: " · ")
+    }
+
+    /// Kolonne als farbiger Chip; mit Planungsrecht als Menü: verlegen, zusätzlich einplanen, herausnehmen.
     @ViewBuilder
-    private func chip(_ name: String, symbol: String, board: DispatchBoard, move: @escaping (UUID?) async -> Void) -> some View {
-        let label = Label(name, systemImage: symbol)
-            .labelStyle(TightLabelStyle())
-            .font(.footnote.weight(.medium))
-            .padding(.horizontal, 10)
-            .frame(minHeight: 32)
-            .background(Theme.secondaryFill, in: Capsule())
-            .foregroundStyle(Theme.navyText)
+    private func crewChip(_ crewId: UUID, _ name: String, color: String?, detail: String?, board: DispatchBoard, from: UUID?, warning: Bool = false) -> some View {
+        let tint = Color(hexString: color) ?? Theme.accent
+        let label = HStack(spacing: 6) {
+            Circle().fill(tint).frame(width: 10, height: 10)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(name).font(.footnote.weight(.semibold))
+                if let detail, !detail.isEmpty {
+                    Text(detail).font(.caption2).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                }
+            }
+            if warning {
+                Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.hint).accessibilityLabel("Doppelt eingeplant")
+            }
+        }
+        .padding(.horizontal, 10).padding(.vertical, 5)
+        .frame(minHeight: 36)
+        .background(tint.opacity(0.14), in: Capsule())
+        .overlay(Capsule().strokeBorder(tint.opacity(0.5)))
+        .foregroundStyle(Theme.navyText)
+        // Bereits anderswo eingeplant (Auswahl ohne Ausgangsbaustelle): zusätzlich einplanen statt alles zu verlegen.
+        let alsoElsewhere = from == nil && board.crews.first { $0.id == crewId }?.siteIds.isEmpty == false
         if board.canPlan {
             Menu {
-                Section("Umsetzen nach") {
-                    ForEach(board.sortedSites) { site in
-                        Button(site.title) { Task { await move(site.id) } }
+                Section(from == nil ? "Einplanen auf" : "Verlegen nach") {
+                    ForEach(board.sortedSites.filter { $0.id != from }) { site in
+                        Button(site.title) { Task { await move(.crew, crewId, to: site.id, from: from, keep: alsoElsewhere) } }
                     }
                 }
-                Button("Aus dem Einsatz nehmen", systemImage: "minus.circle", role: .destructive) { Task { await move(nil) } }
+                if from != nil {
+                    Menu("Zusätzlich einplanen auf") {
+                        ForEach(board.sortedSites.filter { $0.id != from }) { site in
+                            Button(site.title) { Task { await move(.crew, crewId, to: site.id, from: from, keep: true) } }
+                        }
+                    }
+                    Button("Aus dem Einsatz nehmen", systemImage: "minus.circle", role: .destructive) {
+                        Task { await move(.crew, crewId, to: nil, from: from) }
+                    }
+                }
             } label: {
                 label
             }
-            .accessibilityIdentifier("dispatchChip-\(name)")
+            .accessibilityIdentifier("crewChip-\(name)")
         } else {
-            label
+            label.accessibilityElement(children: .combine).accessibilityIdentifier("crewChip-\(name)")
         }
     }
 
@@ -134,10 +183,10 @@ struct DispatchView: View {
         data = await DispatchData.load(day: CalendarDay.string(day), model: model)
     }
 
-    private func move(_ target: DispatchMove.Target, _ id: UUID, to site: UUID?, from: UUID?) async {
+    private func move(_ target: DispatchMove.Target, _ id: UUID, to site: UUID?, from: UUID?, keep: Bool = false) async {
         guard let client = model.active?.client else { return }
         do throws(APIError) {
-            let board = try await client.move(DispatchMove(target: target, id: id, to: site, from: from), on: CalendarDay.string(day))
+            let board = try await client.move(DispatchMove(target: target, id: id, to: site, from: from, keep: keep), on: CalendarDay.string(day))
             data = DispatchData.Day(board: board, loadedAt: .now, isCurrent: true, message: nil)
             moveError = nil
         } catch {
@@ -224,6 +273,17 @@ struct DispatchSiteRow: View {
                                 .padding(.horizontal, 6).padding(.vertical, 1)
                                 .background(Theme.accent, in: Capsule())
                         }
+                    }
+                    if !site.crews.isEmpty {
+                        HStack(spacing: 8) {
+                            ForEach(site.crews) { crew in
+                                HStack(spacing: 4) {
+                                    Circle().fill(Color(hexString: crew.color) ?? Theme.accent).frame(width: 8, height: 8)
+                                    Text(crew.name).font(.caption.weight(.semibold))
+                                }
+                            }
+                        }
+                        .foregroundStyle(Theme.navyText)
                     }
                     ForEach(site.jobs) { job in
                         Text([job.activity, job.crewName, [job.startText, job.endText].compactMap { $0 }.joined(separator: "–")]
