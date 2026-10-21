@@ -229,9 +229,9 @@ struct TicketDetailView: View {
                     if let resolution = detail.resolution { LabeledContent("Lösung", value: resolution) }
                 }
                 Section("Verlauf") {
-                    if detail.timeline.isEmpty { Text("Noch keine Antwort.").foregroundStyle(Theme.textSecondary) }
-                    ForEach(Array(detail.timeline.enumerated()), id: \.offset) { _, item in
-                        TicketTimelineRow(item: item, isOwn: { comment in comment.authorUserId == model.active?.user.id })
+                    if detail.history.isEmpty { Text("Noch keine Antwort.").foregroundStyle(Theme.textSecondary) }
+                    ForEach(detail.history) { entry in
+                        TicketTimelineRow(entry: entry, isOwn: entry.isReporter || (entry.actorUserId != nil && entry.actorUserId == model.active?.user.id))
                     }
                 }
                 if detail.summary.status != .closed {
@@ -287,33 +287,35 @@ struct TicketDetailView: View {
 
 /// Eintrag im Ticketverlauf: Antworten als Sprechblase (eigene rechts), Ereignisse als ruhige Zeile mit Symbol.
 struct TicketTimelineRow: View {
-    let item: TicketDetail.TimelineItem
-    let isOwn: (TicketComment) -> Bool
+    let entry: TicketTimelineEntry
+    let isOwn: Bool
 
     var body: some View {
-        switch item {
-        case let .comment(comment):
-            let own = isOwn(comment)
-            VStack(alignment: own ? .trailing : .leading, spacing: 3) {
-                Text(comment.text)
+        if let text = entry.text, entry.isComment {
+            VStack(alignment: isOwn ? .trailing : .leading, spacing: 3) {
+                Text(text)
                     .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(own ? Theme.navyBackground : Theme.neutralBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(own ? Theme.navyText : .primary)
-                Text([own ? "Sie" : comment.authorName, comment.createdAt.formatted(date: .abbreviated, time: .shortened)]
+                    .background(isOwn ? Theme.navyBackground : Theme.neutralBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(isOwn ? Theme.navyText : .primary)
+                if !entry.attachmentFileIds.isEmpty {
+                    Label("\(entry.attachmentFileIds.count) \(entry.attachmentFileIds.count == 1 ? "Anhang" : "Anhänge")", systemImage: "paperclip")
+                        .labelStyle(TightLabelStyle()).font(.caption).foregroundStyle(Theme.textSecondary)
+                }
+                Text([isOwn ? "Sie" : entry.actorName, entry.at.formatted(date: .abbreviated, time: .shortened)]
                     .compactMap { $0 }.joined(separator: " · "))
                     .font(.caption2).foregroundStyle(Theme.textSecondary)
             }
-            .frame(maxWidth: .infinity, alignment: own ? .trailing : .leading)
+            .frame(maxWidth: .infinity, alignment: isOwn ? .trailing : .leading)
             .listRowSeparator(.hidden)
             .accessibilityElement(children: .combine)
-        case let .event(event):
+        } else {
             Label {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(event.text).font(.footnote)
-                    Text(event.at.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(Theme.textSecondary)
+                    Text(entry.summary).font(.footnote)
+                    Text(entry.at.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
             } icon: {
-                Image(systemName: event.kind == "created" ? "plus.circle" : "arrow.triangle.swap").foregroundStyle(Theme.textSecondary)
+                Image(systemName: entry.kind == "created" ? "plus.circle" : "arrow.triangle.swap").foregroundStyle(Theme.textSecondary)
             }
             .listRowSeparator(.hidden)
         }

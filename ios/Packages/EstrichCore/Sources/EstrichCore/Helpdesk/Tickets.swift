@@ -105,29 +105,81 @@ public struct TicketDetail: Decodable, Equatable, Sendable {
         resolution = try container.decodeIfPresent(String.self, forKey: .resolution)
         comments = try container.decodeIfPresent([TicketComment].self, forKey: .comments) ?? []
         events = (try? container.decodeIfPresent([TicketEvent].self, forKey: .events)) ?? []
+        timeline = try? container.decodeIfPresent([TicketTimelineEntry].self, forKey: .timeline)
     }
 
     private enum CodingKeys: String, CodingKey {
-        case summary, description, resolution, comments, events
+        case summary, description, resolution, comments, events, timeline
     }
 
-    /// Kommentare (ohne interne Notizen) und Ereignisse zeitlich sortiert.
-    public var timeline: [TimelineItem] {
-        (comments.filter { !$0.isInternal }.map { TimelineItem.comment($0) } + events.map { TimelineItem.event($0) })
-            .sorted { $0.date < $1.date }
-    }
+    /// Verlauf des Servers (fertige deutsche Sätze); `nil` bei älteren Servern.
+    public let timeline: [TicketTimelineEntry]?
 
-    public enum TimelineItem: Equatable, Sendable {
-        case comment(TicketComment)
-        case event(TicketEvent)
-
-        public var date: Date {
-            switch self {
-            case let .comment(comment): comment.createdAt
-            case let .event(event): event.at
-            }
+    /// Verlauf für die Anzeige, älteste zuerst, ohne interne Notizen: vom Server oder aus Antworten und Ereignissen.
+    public var history: [TicketTimelineEntry] {
+        if let timeline {
+            return timeline.filter { !$0.isInternal }.sorted { $0.at < $1.at }
         }
+        let fromComments = comments.filter { !$0.isInternal }.map {
+            TicketTimelineEntry(id: $0.id, at: $0.createdAt, kind: "comment", actorUserId: $0.authorUserId, actorName: $0.authorName,
+                                summary: "\($0.authorName ?? "Jemand") hat geantwortet.", text: $0.text, isInternal: false, isReporter: false,
+                                attachmentFileIds: [])
+        }
+        let fromEvents = events.map {
+            TicketTimelineEntry(id: UUID(), at: $0.at, kind: $0.kind, actorUserId: nil, actorName: $0.actorName, summary: $0.text,
+                                text: nil, isInternal: false, isReporter: false, attachmentFileIds: [])
+        }
+        return (fromComments + fromEvents).sorted { $0.at < $1.at }
     }
+}
+
+/// Eintrag im Ticketverlauf: Antwort (mit `text`) oder Ereignis (nur `summary`).
+public struct TicketTimelineEntry: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let at: Date
+    public let kind: String
+    public let actorUserId: UUID?
+    public let actorName: String?
+    public let summary: String
+    public let text: String?
+    public let isInternal: Bool
+    public let isReporter: Bool
+    public let attachmentFileIds: [UUID]
+
+    public init(id: UUID, at: Date, kind: String, actorUserId: UUID?, actorName: String?, summary: String, text: String?,
+                isInternal: Bool, isReporter: Bool, attachmentFileIds: [UUID]) {
+        self.id = id
+        self.at = at
+        self.kind = kind
+        self.actorUserId = actorUserId
+        self.actorName = actorName
+        self.summary = summary
+        self.text = text
+        self.isInternal = isInternal
+        self.isReporter = isReporter
+        self.attachmentFileIds = attachmentFileIds
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(UUID.self, forKey: .id)
+        at = try container.decode(Date.self, forKey: .at)
+        kind = try container.decode(String.self, forKey: .kind)
+        actorUserId = try container.decodeIfPresent(UUID.self, forKey: .actorUserId)
+        actorName = try container.decodeIfPresent(String.self, forKey: .actorName)
+        summary = try container.decodeIfPresent(String.self, forKey: .summary) ?? ""
+        text = try container.decodeIfPresent(String.self, forKey: .text)
+        isInternal = try container.decodeIfPresent(Bool.self, forKey: .isInternal) ?? false
+        isReporter = try container.decodeIfPresent(Bool.self, forKey: .isReporter) ?? false
+        attachmentFileIds = try container.decodeIfPresent([UUID].self, forKey: .attachmentFileIds) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id, at, kind, actorUserId, actorName, summary, text, isInternal, isReporter, attachmentFileIds
+    }
+
+    /// Antwort (Sprechblase) statt Ereigniszeile.
+    public var isComment: Bool { text?.isEmpty == false }
 }
 
 /// Eingaben von „Problem melden“. Pflicht ist nur der Titel (14, Abschnitt 2).

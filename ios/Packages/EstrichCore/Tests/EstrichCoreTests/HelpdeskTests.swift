@@ -102,14 +102,14 @@ struct HelpdeskTests {
           {"actorUserId":null,"actorName":"IT","kind":"status","fromValue":"New","toValue":"InProgress","at":"2026-10-20T09:00:00+00:00"}]}
         """
         let detail = try JSONCoding.decoder.decode(TicketDetail.self, from: Data(json.utf8))
-        #expect(detail.timeline.count == 3)
-        guard case let .event(created) = detail.timeline[0], case let .event(status) = detail.timeline[1],
-              case let .comment(answer) = detail.timeline[2] else {
-            Issue.record("Reihenfolge stimmt nicht")
-            return
-        }
-        #expect(created.text == "Max Huber hat die Meldung erstellt.")
-        #expect(status.text == "IT hat den Status auf „In Bearbeitung“ gesetzt.")
-        #expect(answer.text == "Bitte App neu starten")
+        #expect(detail.history.map(\.summary) == ["Max Huber hat die Meldung erstellt.", "IT hat den Status auf „In Bearbeitung“ gesetzt.",
+                                                     "IT hat geantwortet."])
+        #expect(detail.history[2].text == "Bitte App neu starten" && detail.history[2].isComment)
+
+        // Neuere Server liefern den Verlauf fertig; interne Einträge bleiben ausgeblendet.
+        let withTimeline = json.replacingOccurrences(of: #""events":["#, with: #""timeline":[{"id":"0193a1b2-0000-7000-8000-000000000009","at":"2026-10-20T11:00:00+00:00","kind":"comment","actorUserId":null,"actorName":"IT","summary":"IT hat geantwortet.","text":"Foto anbei","fromValue":null,"toValue":null,"isInternal":false,"isReporter":false,"attachmentFileIds":["0193a1b2-0000-7000-8000-00000000000a"]},{"id":"0193a1b2-0000-7000-8000-00000000000b","at":"2026-10-20T11:05:00+00:00","kind":"comment","actorUserId":null,"actorName":"IT","summary":"intern","text":"x","fromValue":null,"toValue":null,"isInternal":true,"isReporter":false,"attachmentFileIds":[]}],"events":["#)
+        let server = try JSONCoding.decoder.decode(TicketDetail.self, from: Data(withTimeline.utf8))
+        #expect(server.history.map(\.text) == ["Foto anbei"])
+        #expect(server.history.first?.attachmentFileIds.count == 1)
     }
 }

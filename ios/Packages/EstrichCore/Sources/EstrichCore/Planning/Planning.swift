@@ -93,3 +93,110 @@ public struct MyPlanning: Sendable {
         let loadedAt: Date
     }
 }
+
+/// „Wer fährt wohin“ für einen Tag (`GET /planning/dispatch/{day}`): Baustellen mit Einsätzen, Personen und Fahrzeugen.
+public struct DispatchBoard: Codable, Equatable, Sendable {
+    public struct Ref: Codable, Equatable, Sendable, Identifiable {
+        public let id: UUID
+        public let name: String
+    }
+
+    public struct Job: Codable, Equatable, Sendable, Identifiable {
+        public let assignmentId: UUID
+        public let activity: String
+        public let startTime: String?
+        public let endTime: String?
+        public let crewName: String?
+        public let notes: String?
+
+        public var id: UUID { assignmentId }
+        public var startText: String? { startTime.map { String($0.prefix(5)) } }
+        public var endText: String? { endTime.map { String($0.prefix(5)) } }
+    }
+
+    public struct Site: Codable, Equatable, Sendable, Identifiable {
+        public let bauakteId: UUID
+        public let number: String?
+        public let title: String
+        public let address: String?
+        public let siteContactName: String?
+        public let siteContactPhone: String?
+        public let startTime: String?
+        public let jobs: [Job]
+        public let people: [Ref]
+        public let vehicles: [Ref]
+        public let warnings: [String]
+        public let navigationUrl: String?
+
+        public var id: UUID { bauakteId }
+        public var startText: String? { startTime.map { String($0.prefix(5)) } }
+    }
+
+    public struct Person: Codable, Equatable, Sendable, Identifiable {
+        public let id: UUID
+        public let name: String
+        public let crewName: String?
+        public let siteIds: [UUID]
+        public let note: String?
+    }
+
+    public struct Vehicle: Codable, Equatable, Sendable, Identifiable {
+        public let id: UUID
+        public let name: String
+        public let identifier: String?
+        public let siteIds: [UUID]
+    }
+
+    public let day: String
+    public let sites: [Site]
+    public let people: [Person]
+    public let vehicles: [Vehicle]
+    public let mySiteIds: [UUID]
+    public let canPlan: Bool
+
+    /// Meine Baustellen zuerst, dann nach Beginn.
+    public var sortedSites: [Site] {
+        let mine = Set(mySiteIds)
+        return sites.sorted { lhs, rhs in
+            if mine.contains(lhs.id) != mine.contains(rhs.id) { return mine.contains(lhs.id) }
+            return (lhs.startTime ?? "99") < (rhs.startTime ?? "99")
+        }
+    }
+
+    /// Personen ohne Einsatz an diesem Tag (für die Schnellplanung).
+    public var unassignedPeople: [Person] { people.filter { $0.siteIds.isEmpty } }
+    public var unassignedVehicles: [Vehicle] { vehicles.filter { $0.siteIds.isEmpty } }
+}
+
+/// Person oder Fahrzeug auf eine andere Baustelle setzen (`null` = herausnehmen).
+public struct DispatchMove: Encodable, Sendable {
+    public enum Target: String, Encodable, Sendable {
+        case person
+        case vehicle
+    }
+
+    public let target: Target
+    public let id: UUID
+    public let toBauakteId: UUID?
+    public let fromBauakteId: UUID?
+    public let keep: Bool
+
+    public init(target: Target, id: UUID, to: UUID?, from: UUID?, keep: Bool = false) {
+        self.target = target
+        self.id = id
+        self.toBauakteId = to
+        self.fromBauakteId = from
+        self.keep = keep
+    }
+}
+
+extension AuthorizedClient {
+    public func dispatch(day: String) async throws(APIError) -> DispatchBoard {
+        try await get("planning/dispatch/\(day)")
+    }
+
+    /// Schnellplanung (Recht `planning.manage`): liefert die neue Tafel.
+    public func move(_ move: DispatchMove, on day: String) async throws(APIError) -> DispatchBoard {
+        try await post("planning/dispatch/\(day)/moves", body: move)
+    }
+}

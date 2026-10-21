@@ -248,6 +248,8 @@ struct LiveServerTests {
         try await device.client.assignToMe(bauakte)
         let week = try await device.client.planning(from: "2026-10-19", to: "2026-10-25")
         #expect(week.from == "2026-10-19")
+        let board = try await device.client.dispatch(day: "2026-10-20")
+        #expect(board.day == "2026-10-20")
         try await service.changeStatus(.inProgress, of: bauakte)
         #expect(await device.engine.synchronize() == .completed)
         try await service.changeStatus(.cancelled, reason: "Kunde hat abgesagt", of: bauakte)

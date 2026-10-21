@@ -135,7 +135,7 @@ struct HomeView: View {
         }
     }
 
-    /// „Wer fährt wohin“ heute: die ersten Einsätze aller Kolonnen, Rest über „Alle“.
+    /// „Wo fahre ich heute hin“ und „Wer fährt wohin“: meine Baustellen zuerst, weitere über „Alle“.
     private var dispatchCard: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .firstTextBaseline) {
@@ -146,27 +146,23 @@ struct HomeView: View {
                     .accessibilityIdentifier("dispatchAllButton")
             }
             VStack(spacing: 0) {
-                let assignments = dispatch?.assignments ?? []
-                if assignments.isEmpty {
+                let sites = dispatch?.board?.sortedSites ?? []
+                if sites.isEmpty {
                     Text(dispatch?.message ?? (dispatch == nil ? "Planung wird geladen …" : "Heute ist nichts eingeplant."))
                         .font(.subheadline).foregroundStyle(Theme.textSecondary)
                         .padding(.horizontal, 14)
                         .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
                 }
-                ForEach(Array(assignments.prefix(4).enumerated()), id: \.element.id) { index, assignment in
+                ForEach(Array(sites.prefix(4).enumerated()), id: \.element.id) { index, site in
                     if index > 0 { Divider().padding(.leading, 14) }
-                    Button { path.append(.bauakte(assignment.bauakteId)) } label: {
-                        DispatchRow(assignment: assignment, isMine: assignment.people.contains { $0.id == model.active?.user.id })
-                            .padding(.horizontal, 14).padding(.vertical, 8)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowButtonStyle())
+                    DispatchSiteRow(site: site, isMine: dispatch?.board?.mySiteIds.contains(site.id) == true)
+                        .padding(.horizontal, 14).padding(.vertical, 8)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
-                if assignments.count > 4 {
+                if sites.count > 4 {
                     Divider().padding(.leading, 14)
                     Button { path.append(.dispatch) } label: {
-                        Text("\(assignments.count - 4) weitere Einsätze")
+                        Text("\(sites.count - 4) weitere Baustellen")
                             .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.actionPrimary)
                             .padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
                     }

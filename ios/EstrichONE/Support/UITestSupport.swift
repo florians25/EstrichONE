@@ -193,6 +193,20 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
               "crewName":"Kolonne Huber","people":[{"id":"\(currentUserId)","name":"Max Huber"}],"resources":[],"notes":null,"warnings":[]}],
              "absences":[]}
             """)
+        case let dispatchPath where dispatchPath.hasPrefix("/api/v1/planning/dispatch/"):
+            let today = CalendarDay.string(Date())
+            return (200, """
+            {"day":"\(today)","canPlan":false,"mySiteIds":["0193a1b2-0000-7000-8000-0000000b0001"],
+             "sites":[{"bauakteId":"0193a1b2-0000-7000-8000-0000000b0001","number":"2026-090","title":"Halle Gewerbering",
+               "address":"Gewerbering 3, 84030 Ergolding","latitude":null,"longitude":null,"siteContactName":null,"siteContactPhone":null,
+               "startTime":"07:00:00","navigationUrl":null,"warnings":[],
+               "jobs":[{"assignmentId":"0193a1b2-0000-7000-8000-0000000a0001","kind":"screed","activity":"Estrich einbringen",
+                 "startTime":"07:00:00","endTime":null,"crewId":null,"crewName":"Kolonne Huber","crewColor":null,"notes":null}],
+               "people":[{"id":"\(currentUserId)","name":"Max Huber"}],"vehicles":[]}],
+             "people":[{"id":"\(currentUserId)","name":"Max Huber","crewId":null,"crewName":"Kolonne Huber","crewColor":null,
+               "siteIds":["0193a1b2-0000-7000-8000-0000000b0001"],"note":null}],
+             "vehicles":[],"appointments":[]}
+            """)
         case "/api/v1/sync/snapshot":
             return (200, #"{"changes":[],"missing":[]}"#)
         case "/api/v1/system/notices":
