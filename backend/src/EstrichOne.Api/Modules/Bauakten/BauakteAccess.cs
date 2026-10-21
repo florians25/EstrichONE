@@ -11,7 +11,8 @@ namespace EstrichOne.Api.Modules.Bauakten;
 /// (Sichtbarkeit über Einsätze der eigenen Kolonne folgt mit dem Planungsmodul.)
 /// Jede Liste, jede Detailabfrage, die Synchronisation und die Dateiauslieferung nutzen diesen einen Filter.
 /// </summary>
-internal sealed class BauakteAccess(EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions) : IBauakteAccess
+internal sealed class BauakteAccess(EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions,
+    IEnumerable<IBauakteVisibilitySource> visibilitySources) : IBauakteAccess
 {
     public async Task<IQueryable<Bauakte>> VisibleAsync(IQueryable<Bauakte> query, CancellationToken cancellationToken)
     {
@@ -27,8 +28,18 @@ internal sealed class BauakteAccess(EstrichOneDbContext db, ICurrentUser current
         }
 
         var userId = currentUser.UserId;
-        return query.Where(bauakte => bauakte.ResponsibleUserId == userId
+        var own = query.Where(bauakte => bauakte.ResponsibleUserId == userId
             || db.Set<BauakteMember>().Any(member => member.BauakteId == bauakte.Id && member.UserId == userId));
+        var extra = visibilitySources.Select(source => source.AdditionalVisibleIds(userId)).ToList();
+        if (extra.Count == 0)
+        {
+            return own;
+        }
+
+        var additional = extra.Aggregate((left, right) => left.Union(right));
+        return query.Where(bauakte => bauakte.ResponsibleUserId == userId
+            || db.Set<BauakteMember>().Any(member => member.BauakteId == bauakte.Id && member.UserId == userId)
+            || additional.Contains(bauakte.Id));
     }
 
     public async Task<bool> CanReadAsync(Guid bauakteId, CancellationToken cancellationToken) =>

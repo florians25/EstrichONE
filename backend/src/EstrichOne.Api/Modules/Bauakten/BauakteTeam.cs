@@ -30,6 +30,9 @@ internal static class BauakteTeamEndpoints
         group.MapPut("/members", SetMembersAsync).WithName("SetBauakteMembers").WithSummary("Zugewiesene Mitarbeiter festlegen")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.BauaktenEdit);
+        group.MapPost("/members/me", AssignMeAsync).WithName("AssignBauakteToMe")
+            .WithSummary("„Mir zuweisen“: sich selbst als Mitarbeiter eintragen (sichtbar, eingeplant oder mit Recht bauakten.assign)")
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
         group.MapPatch("/notes/{noteId:guid}", UpdateNoteAsync).WithName("UpdateNote").WithSummary("Notiz anheften, lösen oder einfärben")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.NotesWrite);
@@ -78,6 +81,48 @@ internal static class BauakteTeamEndpoints
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok(await MembersAsync(db, bauakte, cancellationToken));
+    }
+
+    private static async Task<Results<Ok<List<BauakteMemberResponse>>, ProblemHttpResult>> AssignMeAsync(
+        Guid id, IBauakteAccess access, IBauakteHistory history, IUserPermissions permissions, ICurrentUser currentUser,
+        IEnumerable<IBauakteVisibilitySource> sources, EstrichOneDbContext db, CancellationToken cancellationToken)
+    {
+        var bauakte = await db.Set<Bauakte>().Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
+        if (bauakte is null)
+        {
+            return NotFound();
+        }
+
+        var granted = await permissions.GetAsync(cancellationToken);
+        var allowed = await access.CanReadAsync(id, cancellationToken) || granted.Contains(Permissions.BauaktenAssign);
+        if (!allowed && granted.Contains(Permissions.PlanningRead))
+        {
+            foreach (var source in sources)
+            {
+                if (await source.IsPlannedAsync(id, cancellationToken))
+                {
+                    allowed = true;
+                    break;
+                }
+            }
+        }
+
+        if (!allowed)
+        {
+            // Wie „nicht vorhanden“: keine Auskunft über fremde Bauakten.
+            return NotFound();
+        }
+
+        var userId = currentUser.UserId;
+        if (bauakte.ResponsibleUserId != userId && bauakte.Members.All(m => m.UserId != userId))
+        {
+            bauakte.Members.Add(new BauakteMember(bauakte.Id, userId, BauakteMemberRole.Member));
+            history.Record(bauakte.Id, BauakteHistoryActions.MembersChanged,
+                new Dictionary<string, string?> { ["count"] = bauakte.Members.Count(m => m.UserId != bauakte.ResponsibleUserId).ToString(System.Globalization.CultureInfo.InvariantCulture) });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
         return TypedResults.Ok(await MembersAsync(db, bauakte, cancellationToken));
     }
 

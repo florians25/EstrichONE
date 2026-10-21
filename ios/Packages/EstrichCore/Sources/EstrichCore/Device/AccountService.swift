@@ -136,9 +136,21 @@ public final class AccountService: @unchecked Sendable {
 
         let session = StoredSession(tokens)
         do {
+            let directory = storage.userDirectory(tokens.user.id)
+            // Erneute Anmeldung derselben Person (z. B. nach Ablauf der Sitzung): Lässt sich der vorhandene Tresor
+            // öffnen, bleiben Datenschlüssel und lokale Daten erhalten – auch noch nicht übertragene Änderungen.
+            if let envelopeData = try? Data(contentsOf: directory.appending(path: "vault.json")),
+               let envelope = try? JSONCoding.decoder.decode(VaultEnvelope.self, from: envelopeData),
+               let existingKey = try? UserVault.unlock(envelope, pin: registration.kind == .pool ? pin : nil, keys: keys) {
+                try storage.write(UserVault.encrypt(JSONCoding.encoder.encode(session), with: existingKey),
+                                  to: directory.appending(path: "session.sealed"))
+                var state = self.state
+                state.upsert(tokens.user, at: now())
+                try save(state)
+                return UnlockedAccount(user: tokens.user, session: session, dataKey: existingKey)
+            }
             try storage.eraseUser(tokens.user.id)
             let (envelope, dataKey) = try UserVault.create(pin: registration.kind == .pool ? pin : nil, keys: keys, iterations: pinIterations)
-            let directory = storage.userDirectory(tokens.user.id)
             try storage.write(JSONCoding.encoder.encode(envelope), to: directory.appending(path: "vault.json"))
             try storage.write(UserVault.encrypt(JSONCoding.encoder.encode(session), with: dataKey), to: directory.appending(path: "session.sealed"))
 

@@ -10,6 +10,7 @@ public sealed class PlanningModule : IModule
     {
         services.AddScoped<PlanningService>();
         services.AddScoped<IBauakteHintSource, PlanningHints>();
+        services.AddScoped<IBauakteVisibilitySource, PlanningVisibility>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api) => PlanningEndpoints.Map(api);

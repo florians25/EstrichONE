@@ -121,6 +121,14 @@ Der Client fasst mehrere ungesendete Änderungen desselben Datensatzes zusammen,
   Cursor ist ungültig. Der Client verwirft den Cursor und gleicht ohne Cursor neu ab. **Die Outbox bleibt erhalten und
   wird gesendet.** Lokal noch vorhandene Fotos, die auf dem Server fehlen, werden erneut angekündigt und hochgeladen.
 
+### Snapshot (`POST /sync/snapshot`)
+
+Liefert den vollständigen aktuellen Stand von bis zu 50 Bauakten samt Inhalt (Notizen, Dateien, Aufgaben,
+Bautagebuch, Prüfungen) als `changes` im Format des Pulls, nicht (mehr) sichtbare in `missing`. Clients rufen ihn
+auf, wenn `visibleBauakteIds` eine Bauakte enthält, die sie noch nicht kennen (z. B. neu eingeplant oder über
+„Mir zuweisen“, `POST /bauakten/{id}/members/me`). Sichtbar sind Bauakten auch für Personen, die (selbst oder über
+ihre Kolonne) in den letzten 30 Tagen oder künftig dafür eingeplant sind.
+
 ## 6. Dateien
 
 1. Aufnahme: Datei sofort dauerhaft im Benutzer-Container speichern, SHA-256 berechnen.

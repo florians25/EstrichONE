@@ -3534,6 +3534,59 @@
         ]
       }
     },
+    "/api/v1/bauakten/{id}/members/me": {
+      "post": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "„Mir zuweisen“: sich selbst als Mitarbeiter eintragen (sichtbar, eingeplant oder mit Recht bauakten.assign)",
+        "operationId": "AssignBauakteToMe",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BauakteMemberResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{id}/notes/{noteId}": {
       "patch": {
         "tags": [
@@ -7159,6 +7212,55 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/sync/snapshot": {
+      "post": {
+        "tags": [
+          "Synchronisation"
+        ],
+        "summary": "Aktueller Stand ganzer Bauakten samt Inhalt (max. 50) – schließt Lücken, wenn eine Bauakte neu sichtbar wird",
+        "operationId": "SyncSnapshot",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SnapshotRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SnapshotResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
                 }
               }
             }
@@ -12445,6 +12547,44 @@
         "type": "object",
         "properties": {
           "roleIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "SnapshotRequest": {
+        "required": [
+          "bauakteIds"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "SnapshotResponse": {
+        "required": [
+          "changes",
+          "missing"
+        ],
+        "type": "object",
+        "properties": {
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SyncChange"
+            }
+          },
+          "missing": {
             "type": "array",
             "items": {
               "type": "string",

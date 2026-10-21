@@ -34,6 +34,7 @@ internal sealed partial class SyncService(
 {
     public const int MaxOperationsPerPush = 100;
     public const int MaxChangesPerPull = 500;
+    public const int MaxBauaktenPerSnapshot = 50;
 
     private readonly Dictionary<string, ISyncOperationHandler> _handlers = handlers
         .SelectMany(handler => handler.OperationTypes.Select(type => (type, handler)))
@@ -190,6 +191,45 @@ internal sealed partial class SyncService(
         var ordered = changes.OrderBy(change => rows.FindIndex(row => row.EntityId == change.Id && row.EntityType == change.EntityType)).ToList();
         return (new PullResponse(ordered, nextCursor, hasMore, includeScope ? visible.Order().ToList() : null), false);
     }
+
+    /// <summary>
+    /// Vollständiger aktueller Stand sichtbarer Bauakten mit allem, was an ihnen hängt. Der Änderungsfeed liefert
+    /// nur Änderungen – wird eine Bauakte erst später sichtbar (z. B. eingeplant oder zugewiesen), fehlt dem Gerät
+    /// sonst ihr bisheriger Inhalt. Nicht (mehr) sichtbare oder gelöschte Bauakten stehen in <c>Missing</c>.
+    /// </summary>
+    public async Task<SnapshotResponse> SnapshotAsync(IReadOnlyList<Guid> bauakteIds, CancellationToken cancellationToken)
+    {
+        var visible = await (await bauakten.VisibleAsync(db.Set<Bauakte>(), cancellationToken))
+            .Where(b => bauakteIds.Contains(b.Id)).Select(b => b.Id).ToListAsync(cancellationToken);
+        var missing = bauakteIds.Except(visible).ToList();
+        if (visible.Count == 0)
+        {
+            return new SnapshotResponse([], missing);
+        }
+
+        var ids = visible.ToArray();
+        var rows = await db.Database.SqlQuery<SnapshotRow>($"""
+            SELECT DISTINCT entity_type, entity_id FROM change_log WHERE bauakte_id = ANY({ids})
+            """).ToListAsync(cancellationToken);
+
+        var changes = new List<SyncChange>();
+        foreach (var group in rows.GroupBy(row => row.EntityType))
+        {
+            if (!_sources.TryGetValue(group.Key, out var source))
+            {
+                continue;
+            }
+
+            var entityIds = group.Select(row => row.EntityId).Distinct().ToList();
+            var data = await source.LoadAsync(entityIds, cancellationToken);
+            changes.AddRange(entityIds.Select(id => new SyncChange(group.Key, id, !data.ContainsKey(id), data.GetValueOrDefault(id))));
+        }
+
+        // Bauakten zuerst, damit Inhalte ihre Bauakte vorfinden.
+        return new SnapshotResponse(changes.OrderBy(change => change.EntityType == "bauakte" ? 0 : 1).ToList(), missing);
+    }
+
+    private sealed record SnapshotRow(string EntityType, Guid EntityId);
 
     private static SyncOperationResult Restore(ProcessedOperation earlier) =>
         JsonSerializer.Deserialize<SyncOperationResult>(earlier.Result, SyncPayload.Json)!;

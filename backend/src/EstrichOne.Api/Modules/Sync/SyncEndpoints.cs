@@ -13,6 +13,10 @@ public sealed record PushOperation(
     long? BaseVersion,
     [property: Required] JsonObject Payload);
 
+public sealed record SnapshotRequest([property: Required, MaxLength(SyncService.MaxBauaktenPerSnapshot)] IReadOnlyList<Guid> BauakteIds);
+
+public sealed record SnapshotResponse(IReadOnlyList<SyncChange> Changes, IReadOnlyList<Guid> Missing);
+
 public sealed record PushRequest([property: Required, MaxLength(SyncService.MaxOperationsPerPush)] IReadOnlyList<PushOperation> Operations);
 
 internal static class SyncEndpoints
@@ -28,6 +32,23 @@ internal static class SyncEndpoints
         sync.MapGet("/pull", PullAsync).WithName("SyncPull")
             .WithSummary("Änderungen seit dem Cursor; ohne Cursor = vollständiger Abgleich. 409 RESYNC_REQUIRED nach Wiederherstellung")
             .ProducesProblem(StatusCodes.Status409Conflict);
+
+        sync.MapPost("/snapshot", SnapshotAsync).WithName("SyncSnapshot")
+            .WithSummary("Aktueller Stand ganzer Bauakten samt Inhalt (max. 50) – schließt Lücken, wenn eine Bauakte neu sichtbar wird")
+            .ProducesValidationProblem();
+    }
+
+    private static async Task<Results<Ok<SnapshotResponse>, ValidationProblem>> SnapshotAsync(
+        SnapshotRequest request, SyncService service, CancellationToken cancellationToken)
+    {
+        if (request.BauakteIds.Count > SyncService.MaxBauaktenPerSnapshot)
+        {
+            return TypedResults.ValidationProblem(
+                new Dictionary<string, string[]> { ["bauakteIds"] = [$"Höchstens {SyncService.MaxBauaktenPerSnapshot} Bauakten je Abruf."] },
+                extensions: new Dictionary<string, object?> { ["code"] = "VALIDATION_FAILED" });
+        }
+
+        return TypedResults.Ok(await service.SnapshotAsync(request.BauakteIds.Distinct().ToList(), cancellationToken));
     }
 
     private static async Task<Results<Ok<PushResponse>, ValidationProblem>> PushAsync(
