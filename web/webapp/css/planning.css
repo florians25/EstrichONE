@@ -105,3 +105,4 @@
 .eoVacTodayLegend { box-shadow: inset 2px 0 0 var(--sapContent_FocusColor), inset -2px 0 0 var(--sapContent_FocusColor); }
 .eoVacKpis { gap: 2rem; margin-top: 0.25rem; }
 .eoKpiLink, .eoKpiValue { font-size: 1.5rem !important; font-weight: bold; }
+.eoVacFilters { gap: 0.5rem; }

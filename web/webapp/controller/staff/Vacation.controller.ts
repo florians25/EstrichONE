@@ -35,7 +35,7 @@ const requestKinds = [
 	{ key: "training", text: "Schulung" }, { key: "other", text: "Sonstige Abwesenheit" },
 ];
 const reminderIcons: Record<string, string> = {
-	qualification: "sap-icon://certificate", probation: "sap-icon://employee-approvals", birthday: "sap-icon://lead", anniversary: "sap-icon://competitor",
+	qualification: "sap-icon://lateness", probation: "sap-icon://employee-approvals", birthday: "sap-icon://lead", anniversary: "sap-icon://competitor",
 	document: "sap-icon://document",
 };
 const num = (v: number | null | undefined) => (v == null ? "–" : v.toLocaleString("de-DE", { maximumFractionDigits: 1 }));
@@ -82,7 +82,7 @@ export default class Vacation extends BaseController {
 			this.loadMine(),
 			can.approve ? this.loadPending() : Promise.resolve(),
 			can.hrRead ? this.loadPlan() : Promise.resolve(),
-			can.hrRead ? get<Reminder[]>("hr/reminders", { days: 60 }).then((r) => m.setProperty("/reminders", r.map((x) => ({ ...x, icon: reminderIcons[x.kind] ?? "sap-icon://alarm" })))) : Promise.resolve(),
+			can.hrRead ? get<Reminder[]>("hr/reminders", { days: 60 }).then((r) => m.setProperty("/reminders", r.map((x) => ({ ...x, icon: reminderIcons[x.kind] ?? "sap-icon://lateness" })))) : Promise.resolve(),
 			can.hrRead ? this.loadToday() : Promise.resolve(),
 			can.hrManage ? get<SickNote[]>("hr/sick-notes").then((s) => m.setProperty("/sickNotes", s.map((x) => ({ ...x, rangeText: `${date(x.from)} – ${date(x.to)}` })))) : Promise.resolve(),
 		]);

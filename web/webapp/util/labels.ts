@@ -25,7 +25,7 @@ export const statusMarkerColors: Record<BauakteStatus, string> = {
 export const documentCategories: Record<DocumentCategory, { text: string; icon: string }> = {
 	offer: { text: "Angebote", icon: "sap-icon://sales-quote" },
 	order: { text: "Aufträge", icon: "sap-icon://sales-order" },
-	plan: { text: "Pläne", icon: "sap-icon://blueprint" },
+	plan: { text: "Pläne", icon: "sap-icon://draw-rectangle" },
 	protocol: { text: "Protokolle", icon: "sap-icon://inspection" },
 	acceptance: { text: "Abnahmen", icon: "sap-icon://approvals" },
 	invoice: { text: "Rechnungen", icon: "sap-icon://receipt" },

@@ -13,7 +13,7 @@ import { get, post } from "../../util/api";
 import { openForm } from "../../util/forms";
 import type { DeviceResponse, EnrollmentCodeResponse } from "../../util/models";
 
-const icons: Record<string, string> = { ios: "sap-icon://iphone", android: "sap-icon://iphone-2", windows: "sap-icon://laptop", other: "sap-icon://devices" };
+const icons: Record<string, string> = { ios: "sap-icon://iphone", android: "sap-icon://iphone-2", windows: "sap-icon://laptop", other: "sap-icon://display" };
 
 /** IT Center › Geräte: freigeben, sperren, entfernen, neues Gerät per QR-Code einrichten. @namespace estrichone.controller.admin */
 export default class Devices extends BaseController {

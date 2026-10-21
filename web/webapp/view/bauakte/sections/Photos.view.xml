@@ -9,7 +9,7 @@
 				visible="{= ${session>/permissions/files.upload} === true }"/>
 			<SegmentedButton selectedKey="{ph>/mode}" selectionChange=".refresh" width="auto">
 				<items>
-					<SegmentedButtonItem key="timeline" text="{i18n>photos.timeline}" icon="sap-icon://timeline"/>
+					<SegmentedButtonItem key="timeline" text="{i18n>photos.timeline}" icon="sap-icon://history"/>
 					<SegmentedButtonItem key="grid" text="{i18n>photos.grid}" icon="sap-icon://grid"/>
 				</items>
 			</SegmentedButton>

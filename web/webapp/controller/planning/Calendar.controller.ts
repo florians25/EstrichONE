@@ -293,7 +293,9 @@ export default class Calendar extends BaseController {
 	onNew(): void {
 		const start = new Date();
 		start.setMinutes(0, 0, 0);
-		start.setHours(start.getHours() + 1);
+		// Nächste volle Stunde, aber im sichtbaren Bereich (6–21 Uhr) und am selben Tag – sonst erschiene der neue
+		// Termin abends bzw. Sonntagnacht außerhalb der Ansicht (nächster Tag/nächste Woche).
+		start.setHours(Math.min(Math.max(start.getHours() + 1, 8), 17));
 		const day = parseDay(this.anchor());
 		if (isoDay(day) !== isoDay(new Date())) start.setFullYear(day.getFullYear(), day.getMonth(), day.getDate());
 		void openEventDialog({ defaults: { start, end: new Date(start.getTime() + 3600_000) } });

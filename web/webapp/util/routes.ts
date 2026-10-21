@@ -100,7 +100,7 @@ export const navigation: NavEntry[] = [
 			{ key: "vacationPlan", path: "/personal/urlaub?reiter=plan", icon: "sap-icon://calendar", permission: "hr.read" },
 			{ key: "vacationRequests", path: "/personal/urlaub?reiter=antraege", icon: "sap-icon://approvals", permission: "absence.approve" },
 			{ key: "sickNotes", path: "/personal/urlaub?reiter=krank", icon: "sap-icon://stethoscope", permission: "hr.manage" },
-			{ key: "hrReminders", path: "/personal/urlaub?reiter=fristen", icon: "sap-icon://certificate", permission: "hr.read" },
+			{ key: "hrReminders", path: "/personal/urlaub?reiter=fristen", icon: "sap-icon://lateness", permission: "hr.read" },
 			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 		],
 	},

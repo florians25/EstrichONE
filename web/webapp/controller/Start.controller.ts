@@ -77,7 +77,7 @@ export default class Start extends BaseController {
 		}
 		if (this.has("bauakten.read")) kpis.push({ key: "approvals", title: "Warten auf Genehmigung", subtitle: "Dokumentfreigaben für mich", icon: "sap-icon://approvals", value: "…", to: "/dokumente?reiter=freigaben", loading: true, color: "Neutral" });
 		if (this.has("absence.approve")) kpis.push({ key: "vacation", title: "Urlaubsanträge", subtitle: "Warten auf Genehmigung", icon: "sap-icon://general-leave-request", value: "…", to: "/personal/urlaub?reiter=antraege", loading: true, color: "Neutral" });
-		if (this.has("hr.read")) kpis.push({ key: "hrDeadlines", title: "Personal-Fristen", subtitle: "Nachweise, Probezeit (30 Tage)", icon: "sap-icon://alarm", value: "…", to: "/personal/urlaub?reiter=fristen", loading: true, color: "Neutral" });
+		if (this.has("hr.read")) kpis.push({ key: "hrDeadlines", title: "Personal-Fristen", subtitle: "Nachweise, Probezeit (30 Tage)", icon: "sap-icon://lateness", value: "…", to: "/personal/urlaub?reiter=fristen", loading: true, color: "Neutral" });
 		if (this.has("helpdesk.agent")) kpis.push({ key: "tickets", title: "Offene Tickets", icon: "sap-icon://headset", value: "…", to: "/it-center/helpdesk", loading: true, color: "Neutral" });
 		m.setProperty("/kpis", kpis);
 		const set = (key: string, value: string, extra: Record<string, unknown> = {}) => {

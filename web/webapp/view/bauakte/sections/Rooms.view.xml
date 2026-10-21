@@ -21,7 +21,7 @@
 				<OverflowToolbar>
 					<Title text="{i18n>rooms.title} ({= ${rm>/rooms}.length })" level="H3"/>
 					<ToolbarSpacer/>
-					<MenuButton text="{i18n>rooms.sections}" icon="sap-icon://hierarchy" visible="{akte>/canEdit}">
+					<MenuButton text="{i18n>rooms.sections}" icon="sap-icon://tree" visible="{akte>/canEdit}">
 						<menu>
 							<Menu items="{path: 'rm>/sectionMenu', templateShareable: false}" itemSelected=".onSectionMenu">
 								<MenuItem text="{rm>text}" key="{rm>key}" icon="{rm>icon}"/>

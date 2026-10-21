@@ -289,4 +289,4 @@ li[data-dot] { display: flex; align-items: center; }
 	font-size: var(--sapFontSmallSize); justify-content: flex-start; }
 .eoWarnText { color: var(--sapCriticalTextColor); font-size: var(--sapFontSmallSize); }
 .eoSystemRow { gap: 0.5rem 2rem; padding: 0.5rem 1rem; border-top: 1px solid var(--sapGroup_TitleBorderColor); }
-.eoSystemItem { gap: 0.5rem; }
+.eoSystemItem { gap: 0.5rem 1rem; }

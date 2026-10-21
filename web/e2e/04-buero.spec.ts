@@ -138,9 +138,10 @@ test('Kunden bearbeiten, Baustellenkarte, Firmendaten und Protokoll', async ({ p
   await expect(page.getByRole('row', { name: /Familie Kraus/ })).toContainText('0871 654321');
   await expect(page.getByRole('row', { name: /Familie Kraus/ })).toContainText('0171 1112223');
   // Kundenseite mit Bauakten des Kunden.
-  await page.getByRole('row', { name: /Familie Kraus/ }).getByText('Familie Kraus').click();
+  await page.getByRole('row', { name: /Familie Kraus/ }).getByText('Familie Kraus', { exact: true }).click();
   await expect(page).toHaveURL(/\/kunden\/[0-9a-f-]{36}/);
   await expect(pageTitle(page)).toHaveText('Familie Kraus');
+  await page.getByRole('tab', { name: 'Bauakten' }).click();
   await expect(page.getByRole('row', { name: /Kraus/ }).first()).toBeVisible();
 
   await nav(page, 'Baustellenkarte').click();
