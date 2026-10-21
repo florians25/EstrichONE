@@ -257,14 +257,42 @@ final class BauakteUITests: XCTestCase {
         // Ohne Eingaben angemeldet, deutlich als Demo gekennzeichnet, mit Beispieldaten.
         XCTAssertTrue(app.element("demoBanner").waitForExistence(timeout: 30), app.debugDescription)
         XCTAssertTrue(app.element("newBauakteTile").waitForExistence(timeout: 20))
+
+        // Startseite: heutiger Einsatz als Karte mit Anruf und Route, Vorschau auf morgen.
+        let job = app.element("todayJob-EFH Schneider, Neubau")
+        XCTAssertTrue(job.waitForExistence(timeout: 20) || app.reveal(job), app.debugDescription)
+        XCTAssertTrue(app.element("todayJobCall").exists, app.debugDescription)
+        XCTAssertTrue(app.element("todayJobRoute").exists, app.debugDescription)
+        XCTAssertTrue(app.reveal(app.element("tomorrowPreview")), app.debugDescription)
+
         app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
         let efh = app.staticTexts["EFH Schneider, Neubau"].firstMatch
         XCTAssertTrue(efh.waitForExistence(timeout: 20), app.debugDescription)
         app.tapElement(efh, "EFH Schneider")
-        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15))
-        XCTAssertTrue(app.reveal(app.element("photoGrid")), app.debugDescription)
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
+
+        // Fotos: Vorschaubild antippen, Großansicht lädt das Bild, Blättern zum nächsten Foto.
+        let thumb = app.element("photoThumb-0")
+        XCTAssertTrue(thumb.waitForExistence(timeout: 10) || app.reveal(thumb), app.debugDescription)
+        app.tapElement(thumb, "erstes Foto")
+        XCTAssertTrue(app.element("photoFullImage").waitForExistence(timeout: 20), app.debugDescription)
+        XCTAssertTrue(app.staticTexts["1 von 3"].waitForExistence(timeout: 5), app.debugDescription)
+        app.swipeLeft()
+        XCTAssertTrue(app.staticTexts["2 von 3"].waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(app.element("photoFullImage").waitForExistence(timeout: 20), app.debugDescription)
+        XCTAssertFalse(app.element("photoUnavailable").exists)
+        app.tap("closePhotoViewer")
+
+        // Dokument: Vorschau per QuickLook mit dem PDF vom (Demo-)Server.
         let document = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "document-Lieferschein")).firstMatch
         XCTAssertTrue(document.waitForExistence(timeout: 5) || app.reveal(document), app.debugDescription)
+        app.tapElement(document, "Lieferschein")
+        let quickLookDone = app.buttons.matching(NSPredicate(
+            format: "identifier == %@ OR label IN %@", "QLOverlayDoneButtonAccessibilityIdentifier", ["Fertig", "Done"])).firstMatch
+        XCTAssertTrue(quickLookDone.waitForExistence(timeout: 20), app.debugDescription)
+        XCTAssertFalse(app.alerts["Vorschau nicht möglich"].exists)
+        quickLookDone.tap()
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 10), app.debugDescription)
 
         // Verlassen: zurück zur Einrichtung, Demodaten gelöscht.
         app.tap("endDemoButton")

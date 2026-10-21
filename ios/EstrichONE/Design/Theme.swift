@@ -54,6 +54,14 @@ extension Color {
         self.init(uiColor: UIColor(hex: hex))
     }
 
+    /// Farbe aus `#RRGGBB` (z. B. Kolonnenfarbe aus der Planung); ungültige Angaben ergeben `nil`.
+    init?(hexString: String?) {
+        guard var text = hexString?.trimmingCharacters(in: .whitespaces), !text.isEmpty else { return nil }
+        if text.hasPrefix("#") { text.removeFirst() }
+        guard text.count == 6, let value = UInt32(text, radix: 16) else { return nil }
+        self.init(hex: value)
+    }
+
     static func dynamic(light: UInt32, dark: UInt32) -> Color {
         Color(uiColor: UIColor { traits in
             UIColor(hex: traits.userInterfaceStyle == .dark ? dark : light)

@@ -56,15 +56,22 @@ struct DocumentRow: View {
 @MainActor
 enum FilePreview {
     enum Failure: Error {
+        /// Weder auf dem Gerät noch auf dem Server (noch nicht übertragen).
         case notAvailable
+        /// Auf dem Server, aber das Laden ist fehlgeschlagen (keine Verbindung, abgemeldet).
+        case downloadFailed(String)
     }
 
     static func temporaryCopy(of file: FileItem, using model: AppModel) async throws(Failure) -> URL {
         guard let active = model.active, let service = active.service else { throw .notAvailable }
         var content = service.localContent(of: file.id)
         if content == nil, file.isStoredOnServer {
-            let downloaded: Data? = try? await active.client.get("files/\(file.id.uuidString.lowercased())/content")
-            content = downloaded
+            do throws(APIError) {
+                let downloaded: Data = try await active.client.get("files/\(file.id.uuidString.lowercased())/content")
+                content = downloaded
+            } catch {
+                throw .downloadFailed(error.message)
+            }
         }
         guard let content else { throw .notAvailable }
         let folder = FileManager.default.temporaryDirectory
@@ -93,6 +100,7 @@ struct FilePreviewModifier: ViewModifier {
     @Environment(AppModel.self) private var model
     @State private var url: URL?
     @State private var failed = false
+    @State private var failure: String?
 
     func body(content: Content) -> some View {
         content
@@ -102,6 +110,12 @@ struct FilePreviewModifier: ViewModifier {
                 do throws(FilePreview.Failure) {
                     url = try await FilePreview.temporaryCopy(of: file, using: model)
                 } catch {
+                    switch error {
+                    case .notAvailable:
+                        failure = "Die Datei ist auf diesem Gerät nicht vorhanden und noch nicht auf dem Server. Bitte nach der Übertragung erneut versuchen."
+                    case let .downloadFailed(message):
+                        failure = "Die Datei konnte nicht vom Server geladen werden. \(message)"
+                    }
                     failed = true
                     self.file = nil
                 }
@@ -115,7 +129,7 @@ struct FilePreviewModifier: ViewModifier {
             .alert("Vorschau nicht möglich", isPresented: $failed) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("Die Datei ist auf diesem Gerät nicht vorhanden und noch nicht auf dem Server. Bitte nach der Übertragung erneut versuchen.")
+                Text(failure ?? "")
             }
     }
 }
@@ -177,6 +191,7 @@ struct VideoPreview: View {
     @Environment(\.dismiss) private var dismiss
     @State private var player: AVPlayer?
     @State private var failed = false
+    @State private var failure: String?
 
     var body: some View {
         NavigationStack {

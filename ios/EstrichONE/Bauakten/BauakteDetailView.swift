@@ -68,7 +68,7 @@ struct BauakteDetailView: View {
                 .fullScreenCover(isPresented: $scanning) {
                     ScanFlowView(bauakte: bauakte) { _ in scanning = false }
                 }
-                .sheet(item: $viewing) { file in
+                .fullScreenCover(item: $viewing) { file in
                     PhotoViewer(photos: photos.filter(\.isPhoto), selection: file.id) { Task { await reload() } }
                 }
                 .sheet(isPresented: $recordingVideo) {
@@ -440,17 +440,19 @@ struct PhotoGrid: View {
 
     var body: some View {
         LazyVGrid(columns: [GridItem(.adaptive(minimum: 84), spacing: 6)], spacing: 6) {
-            ForEach(photos) { photo in
+            ForEach(Array(photos.enumerated()), id: \.element.id) { index, photo in
                 Button {
                     onSelect(photo)
                 } label: {
                     PhotoThumbnail(file: photo)
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("photoThumb-\(index)")
                 .accessibilityLabel([photo.caption, photo.capturedAt.map { "Foto vom \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "Foto"]
                     .compactMap { $0 }.joined(separator: ", "))
             }
         }
+        .accessibilityElement(children: .contain)
         .accessibilityIdentifier("photoGrid")
     }
 }
@@ -587,7 +589,9 @@ struct PhotoViewer: View {
                 }
             }
             .toolbar {
-                ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Fertig") { dismiss() }.accessibilityIdentifier("closePhotoViewer")
+                }
                 ToolbarItem(placement: .principal) {
                     if let index = photos.firstIndex(where: { $0.id == selection }), photos.count > 1 {
                         Text("\(index + 1) von \(photos.count)").font(.subheadline.weight(.semibold)).foregroundStyle(.white)
@@ -635,20 +639,35 @@ private struct PhotoPage: View {
     @Environment(AppModel.self) private var model
     @State private var image: UIImage?
     @State private var done = false
+    @State private var attempt = 0
 
     var body: some View {
         ZStack {
             if let image {
                 ZoomableImage(image: image)
+                    .accessibilityLabel(file.caption ?? "Foto")
+                    .accessibilityIdentifier("photoFullImage")
             } else if done {
-                Text("Das Foto ist auf diesem Gerät nicht verfügbar und noch nicht auf dem Server.")
-                    .foregroundStyle(.white).multilineTextAlignment(.center).padding()
+                VStack(spacing: 12) {
+                    Image(systemName: "photo.badge.exclamationmark").font(.largeTitle).foregroundStyle(.white.opacity(0.8))
+                    Text(file.isStoredOnServer
+                         ? "Das Foto konnte nicht geladen werden. Bitte Verbindung prüfen."
+                         : "Das Foto ist auf diesem Gerät nicht verfügbar und noch nicht auf dem Server.")
+                        .foregroundStyle(.white).multilineTextAlignment(.center)
+                    if file.isStoredOnServer {
+                        Button("Erneut laden", systemImage: "arrow.clockwise") { done = false; attempt += 1 }
+                            .overlayControlStyle()
+                            .tint(.white)
+                    }
+                }
+                .padding()
+                .accessibilityIdentifier("photoUnavailable")
             } else {
                 ProgressView().tint(.white)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: "\(file.id)|\(file.isStoredOnServer)") {
+        .task(id: "\(file.id)|\(file.isStoredOnServer)|\(attempt)") {
             image = await model.active?.thumbnails?.fullImage(for: file)
             if let image { loaded(image) }
             done = true

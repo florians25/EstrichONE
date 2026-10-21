@@ -137,25 +137,34 @@ struct DemoContent: Sendable {
            "latitude":48.5372,"longitude":12.1521,"siteContactName":"Herr Schneider","siteContactPhone":"0171 2345678","startTime":"07:00:00",
            "navigationUrl":"https://maps.apple.com/?daddr=48.5372,12.1521","warnings":[],
            "jobs":[{"assignmentId":"0193a1b2-de00-7000-8000-000000003001","kind":"screed","activity":"Estrich einbringen OG",
-             "startTime":"07:00:00","endTime":"15:00:00","crewId":null,"crewName":"Kolonne Huber","crewColor":null,"notes":null}],
+             "startTime":"07:00:00","endTime":"15:00:00","crewId":null,"crewName":"Kolonne Huber","crewColor":"#E07A1F","notes":null}],
            "people":[{"id":"\(Self.userId)","name":"Max Huber"},{"id":"0193a1b2-de00-7000-8000-000000004002","name":"Lukas Brandl"}],
            "vehicles":[{"id":"0193a1b2-de00-7000-8000-000000005001","name":"Estrichpumpe 1"}]},
           {"bauakteId":"\(Self.halle)","number":"2026-042","title":"Halle Gewerbering","address":"Gewerbering 3, 84030 Ergolding",
            "latitude":null,"longitude":null,"siteContactName":null,"siteContactPhone":null,"startTime":"08:30:00","navigationUrl":null,
            "warnings":["Zufahrt nur bis 7,5 t"],
            "jobs":[{"assignmentId":"0193a1b2-de00-7000-8000-000000003002","kind":"initialInspection","activity":"Erstbegehung",
-             "startTime":"08:30:00","endTime":"09:30:00","crewId":null,"crewName":"Kolonne Brandl","crewColor":null,"notes":null}],
+             "startTime":"08:30:00","endTime":"09:30:00","crewId":null,"crewName":"Kolonne Brandl","crewColor":"#2F80ED","notes":null}],
            "people":[{"id":"0193a1b2-de00-7000-8000-000000004003","name":"Anna Koller"}],"vehicles":[]}],
-         "people":[],"vehicles":[],"appointments":[]}
+         "people":[],"vehicles":[],"appointments":[],
+         "crews":[{"id":"0193a1b2-de00-7000-8000-000000006001","name":"Kolonne Huber","color":"#E07A1F","memberNames":["Max Huber","Lukas Brandl"],
+                   "siteIds":["\(Self.efh)"]},
+                  {"id":"0193a1b2-de00-7000-8000-000000006002","name":"Kolonne Brandl","color":"#2F80ED","memberNames":["Anna Koller"],
+                   "siteIds":["\(Self.halle)"]}]}
         """
     }
 
     func myPlanning(day: String) -> String {
-        """
+        let tomorrow = CalendarDay.date(day).flatMap { Calendar.current.date(byAdding: .day, value: 1, to: $0) }.map { CalendarDay.string($0) } ?? day
+        return """
         {"from":"\(day)","to":"\(day)","assignments":[{"id":"0193a1b2-de00-7000-8000-000000003001","day":"\(day)","startTime":"07:00:00",
           "activity":"Estrich einbringen OG","bauakteId":"\(Self.efh)","bauakteNumber":"2026-041","bauakteTitle":"EFH Schneider, Neubau",
           "bauakteAddress":"Ahornweg 3, 84028 Landshut","crewName":"Kolonne Huber","people":[{"id":"\(Self.userId)","name":"Max Huber"}],
-          "resources":[{"id":"0193a1b2-de00-7000-8000-000000005001","name":"Estrichpumpe 1","kind":"machine"}],"notes":null,"warnings":[]}],
+          "resources":[{"id":"0193a1b2-de00-7000-8000-000000005001","name":"Estrichpumpe 1","kind":"machine"}],"notes":"Pumpe vorher prüfen","warnings":[]},
+          {"id":"0193a1b2-de00-7000-8000-000000003003","day":"\(tomorrow)","startTime":"07:30:00",
+          "activity":"CM-Messung und Belegreife","bauakteId":"\(Self.praxis)","bauakteNumber":"2026-038","bauakteTitle":"Praxis Dr. Maier, Sanierung",
+          "bauakteAddress":"Altstadt 12, 84028 Landshut","crewName":"Kolonne Huber","people":[{"id":"\(Self.userId)","name":"Max Huber"}],
+          "resources":[],"notes":null,"warnings":[]}],
          "absences":[]}
         """
     }

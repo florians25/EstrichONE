@@ -230,11 +230,27 @@ public struct FileItem: Identifiable, Equatable, Sendable {
     public var fileExtension: String {
         let ext = Self.splitName(originalName).ext.lowercased()
         if !ext.isEmpty { return ext }
-        switch contentType {
+        return Self.fileExtension(forContentType: contentType)
+    }
+
+    /// Endung zum Inhaltstyp (ohne Endung im Namen erkennt QuickLook die Datei sonst nicht).
+    static func fileExtension(forContentType contentType: String) -> String {
+        switch contentType.lowercased().split(separator: ";").first.map(String.init) ?? "" {
         case "application/pdf": return "pdf"
         case "image/png": return "png"
-        case "image/heic": return "heic"
-        default: return "jpg"
+        case "image/heic", "image/heif": return "heic"
+        case "image/webp": return "webp"
+        case "image/gif": return "gif"
+        case "image/tiff": return "tiff"
+        case "video/mp4": return "mp4"
+        case "video/quicktime": return "mov"
+        case "text/plain": return "txt"
+        case "text/csv": return "csv"
+        case "application/vnd.openxmlformats-officedocument.wordprocessingml.document": return "docx"
+        case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": return "xlsx"
+        case "application/msword": return "doc"
+        case "application/vnd.ms-excel": return "xls"
+        default: return contentType.hasPrefix("video/") ? "mp4" : (contentType.hasPrefix("image/") ? "jpg" : "bin")
         }
     }
 

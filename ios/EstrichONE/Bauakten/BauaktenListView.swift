@@ -67,38 +67,57 @@ struct BauaktenListView: View {
         }
     }
 
+    /// iPad: Auswahl steuert die rechte Spalte. iPhone: ohne Auswahlbindung, sonst würde ein Tippen nur auswählen statt öffnen.
+    @ViewBuilder
     private var list: some View {
-        List(selection: sizeClass == .regular ? $selection : .constant(nil)) {
-            if let sync = model.active?.sync {
-                SyncStatusBar(sync: sync).listRowInsets(EdgeInsets())
+        if sizeClass == .regular {
+            List(selection: $selection) { rows }.modifier(ListChrome(search: $search, creating: $creating, model: model))
+        } else {
+            List { rows }.modifier(ListChrome(search: $search, creating: $creating, model: model))
+        }
+    }
+
+    @ViewBuilder
+    private var rows: some View {
+        if let sync = model.active?.sync {
+            SyncStatusBar(sync: sync).listRowInsets(EdgeInsets())
+        }
+        if bauakten.isEmpty {
+            Text(search.isEmpty ? "Noch keine Bauakten auf diesem Gerät." : "Keine Bauakte gefunden.")
+                .foregroundStyle(Theme.textSecondary)
+        }
+        ForEach(bauakten) { bauakte in
+            NavigationLink(value: bauakte.id) {
+                BauakteRow(bauakte: bauakte, customerName: bauakte.customerId.flatMap { customers[$0] })
             }
-            if bauakten.isEmpty {
-                Text(search.isEmpty ? "Noch keine Bauakten auf diesem Gerät." : "Keine Bauakte gefunden.")
-                    .foregroundStyle(Theme.textSecondary)
+            .swipeActions(edge: .leading) {
+                Button { captureFor = bauakte } label: { Label("Foto", systemImage: "camera.fill") }
+                    .tint(Theme.accentPressed)
             }
-            ForEach(bauakten) { bauakte in
-                NavigationLink(value: bauakte.id) {
-                    BauakteRow(bauakte: bauakte, customerName: bauakte.customerId.flatMap { customers[$0] })
-                }
-                .swipeActions(edge: .leading) {
-                    Button { captureFor = bauakte } label: { Label("Foto", systemImage: "camera.fill") }
-                        .tint(Theme.accentPressed)
-                }
-                .contextMenu {
-                    Button("Foto aufnehmen", systemImage: "camera") { captureFor = bauakte }
-                    if let url = MapsLink.url(for: bauakte) {
-                        Link(destination: url) { Label("Route starten", systemImage: "car") }
-                    }
+            .contextMenu {
+                Button("Foto aufnehmen", systemImage: "camera") { captureFor = bauakte }
+                if let url = MapsLink.url(for: bauakte) {
+                    Link(destination: url) { Label("Route starten", systemImage: "car") }
                 }
             }
         }
-        .listStyle(.plain)
-        .navigationTitle("Bauakten")
-        .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
-        .safeAreaInset(edge: .bottom, alignment: .trailing) {
-            NewBauakteButton { creating = true }
-        }
-        .refreshable { await model.active?.sync?.run() }
+    }
+}
+
+private struct ListChrome: ViewModifier {
+    @Binding var search: String
+    @Binding var creating: Bool
+    let model: AppModel
+
+    func body(content: Content) -> some View {
+        content
+            .listStyle(.plain)
+            .navigationTitle("Bauakten")
+            .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
+            .safeAreaInset(edge: .bottom, alignment: .trailing) {
+                NewBauakteButton { creating = true }
+            }
+            .refreshable { await model.active?.sync?.run() }
     }
 }
 
@@ -113,6 +132,14 @@ enum MapsLink {
         } else {
             return nil
         }
+        return components?.url
+    }
+
+    /// Route zu einer Adresse ohne Koordinaten.
+    static func url(address: String?) -> URL? {
+        guard let address, !address.trimmingCharacters(in: .whitespaces).isEmpty else { return nil }
+        var components = URLComponents(string: "https://maps.apple.com/")
+        components?.queryItems = [URLQueryItem(name: "daddr", value: address)]
         return components?.url
     }
 }

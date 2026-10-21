@@ -309,6 +309,12 @@ struct BauakteServiceTests {
         #expect(hidden.base == ".hidden" && hidden.ext.isEmpty)
         #expect(BauakteService.fileName(for: "a/b\\c") == "a_b_c")
         #expect(BauakteService.fileName(for: "  ") == "Dokument")
+        #expect(FileItem.fileExtension(forContentType: "image/webp") == "webp")
+        #expect(FileItem.fileExtension(forContentType: "image/HEIF") == "heic")
+        #expect(FileItem.fileExtension(forContentType: "application/pdf; charset=binary") == "pdf")
+        #expect(FileItem.fileExtension(forContentType: "video/quicktime") == "mov")
+        #expect(FileItem.fileExtension(forContentType: "image/x-unknown") == "jpg")
+        #expect(FileItem.fileExtension(forContentType: "application/octet-stream") == "bin")
     }
 }
 
