@@ -287,6 +287,8 @@ struct InitialInspectionView: View {
     /// Abschluss im Assistenten: Übersicht, Fotos, Bemerkung bzw. Begründung.
     @ViewBuilder
     private var finishSections: some View {
+        // Notizen zuerst: vor Ort das Wichtigste, nicht unter Übersicht und Fotos versteckt.
+        if !notRequired { notesSection }
         if !notRequired {
             Section("Ergebnis") {
                 ForEach(InitialCheck.allCases) { check in
@@ -313,7 +315,7 @@ struct InitialInspectionView: View {
                 Text("Fotos und Unterschrift")
             }
         }
-        notesSection
+        if notRequired { notesSection }
         Section {
             TextField(notRequired ? "Warum ist keine Erstbegehung notwendig?" : "Kurz zusammengefasst, z. B. Randdämmung im Bad fehlt",
                       text: $remarks, axis: .vertical)

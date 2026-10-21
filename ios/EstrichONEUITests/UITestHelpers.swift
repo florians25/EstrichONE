@@ -38,7 +38,8 @@ extension XCUIApplication {
     @MainActor
     func tapElement(_ target: XCUIElement, _ name: String, timeout: TimeInterval = 15,
                     file: StaticString = #filePath, line: UInt = #line) {
-        guard target.waitForExistence(timeout: timeout) else {
+        // Nicht gerenderte Listenzeilen existieren erst, wenn sie in den sichtbaren Bereich gescrollt sind.
+        guard target.waitForExistence(timeout: min(timeout, 6)) || reveal(target) || target.waitForExistence(timeout: timeout) else {
             XCTFail("\(name) erscheint nicht\n\(debugDescription)", file: file, line: line)
             return
         }
