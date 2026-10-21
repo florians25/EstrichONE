@@ -1956,6 +1956,13 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.PrimitiveCollection<List<Guid>>("AttachmentFileIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("attachment_file_ids")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
                     b.Property<Guid>("AuthorUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("author_user_id");
@@ -1980,6 +1987,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_ticket_comments");
+
+                    b.HasIndex("AttachmentFileIds")
+                        .HasDatabaseName("ix_ticket_comments_attachment_file_ids");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("AttachmentFileIds"), "gin");
 
                     b.HasIndex("AuthorUserId")
                         .HasDatabaseName("ix_ticket_comments_author_user_id");
@@ -3058,6 +3070,13 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("time without time zone")
                         .HasColumnName("end_time");
 
+                    b.PrimitiveCollection<List<Guid>>("ExcludedUserIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("excluded_user_ids")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .ValueGeneratedOnAdd()
@@ -3107,6 +3126,205 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_assignments_bauakte_id_day");
 
                     b.ToTable("assignments", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Calendar", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("color");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_calendars");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("ix_calendars_owner_user_id");
+
+                    b.ToTable("calendars", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.CalendarEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<bool>("AllDay")
+                        .HasColumnType("boolean")
+                        .HasColumnName("all_day");
+
+                    b.Property<Guid?>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<Guid>("CalendarId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("calendar_id");
+
+                    b.Property<string>("Color")
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("color");
+
+                    b.Property<int?>("Count")
+                        .HasColumnType("integer")
+                        .HasColumnName("count");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.PrimitiveCollection<List<Guid>>("CrewIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("crew_ids");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("description");
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("end");
+
+                    b.PrimitiveCollection<List<DateOnly>>("ExceptionDates")
+                        .IsRequired()
+                        .HasColumnType("date[]")
+                        .HasColumnName("exception_dates");
+
+                    b.Property<string>("Frequency")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("frequency");
+
+                    b.Property<int>("Interval")
+                        .HasColumnType("integer")
+                        .HasColumnName("interval");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Location")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("location");
+
+                    b.PrimitiveCollection<List<Guid>>("ParticipantUserIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("participant_user_ids");
+
+                    b.Property<Guid?>("SeriesId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("series_id");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("timestamp without time zone")
+                        .HasColumnName("start");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateOnly?>("Until")
+                        .HasColumnType("date")
+                        .HasColumnName("until");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.Property<int>("Weekdays")
+                        .HasColumnType("integer")
+                        .HasColumnName("weekdays");
+
+                    b.HasKey("Id")
+                        .HasName("pk_calendar_events");
+
+                    b.HasIndex("BauakteId")
+                        .HasDatabaseName("ix_calendar_events_bauakte_id");
+
+                    b.HasIndex("CrewIds")
+                        .HasDatabaseName("ix_calendar_events_crew_ids");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("CrewIds"), "gin");
+
+                    b.HasIndex("ParticipantUserIds")
+                        .HasDatabaseName("ix_calendar_events_participant_user_ids");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("ParticipantUserIds"), "gin");
+
+                    b.HasIndex("CalendarId", "Start")
+                        .HasDatabaseName("ix_calendar_events_calendar_id_start");
+
+                    b.ToTable("calendar_events", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_calendar_events_range", "\"end\" > start");
+                        });
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Crew", b =>
@@ -3168,6 +3386,318 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("MemberUserIds"), "gin");
 
                     b.ToTable("crews", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Employee", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateOnly?>("BirthDate")
+                        .HasColumnType("date")
+                        .HasColumnName("birth_date");
+
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("city");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Email")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("email");
+
+                    b.Property<string>("EmergencyContactName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("emergency_contact_name");
+
+                    b.Property<string>("EmergencyContactPhone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("emergency_contact_phone");
+
+                    b.Property<string>("EmergencyContactRelation")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("emergency_contact_relation");
+
+                    b.Property<string>("EmploymentType")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("employment_type");
+
+                    b.Property<DateOnly?>("EntryDate")
+                        .HasColumnType("date")
+                        .HasColumnName("entry_date");
+
+                    b.Property<DateOnly?>("ExitDate")
+                        .HasColumnType("date")
+                        .HasColumnName("exit_date");
+
+                    b.Property<string>("FirstName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("first_name");
+
+                    b.Property<decimal?>("HourlyRate")
+                        .HasPrecision(8, 2)
+                        .HasColumnType("numeric(8,2)")
+                        .HasColumnName("hourly_rate");
+
+                    b.Property<string>("JobTitle")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("job_title");
+
+                    b.Property<string>("LastName")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("last_name");
+
+                    b.Property<string>("Mobile")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("mobile");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("PersonnelNumber")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("personnel_number");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("phone");
+
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("postal_code");
+
+                    b.Property<string>("Street")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("street");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<decimal>("VacationCarryOver")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("vacation_carry_over");
+
+                    b.Property<decimal>("VacationDaysPerYear")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("vacation_days_per_year");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.Property<decimal?>("WeeklyHours")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)")
+                        .HasColumnName("weekly_hours");
+
+                    b.Property<int>("WorkDays")
+                        .HasColumnType("integer")
+                        .HasColumnName("work_days");
+
+                    b.Property<string>("WorkTimeModel")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("work_time_model");
+
+                    b.HasKey("Id")
+                        .HasName("pk_employees");
+
+                    b.HasIndex("PersonnelNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_employees_personnel_number");
+
+                    b.HasIndex("UserId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_employees_user_id");
+
+                    b.HasIndex("LastName", "FirstName")
+                        .HasDatabaseName("ix_employees_last_name_first_name");
+
+                    b.ToTable("employees", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.EmployeeDocument", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("AddedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("added_at");
+
+                    b.Property<Guid>("AddedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("added_by_user_id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("category");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<Guid>("FileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("file_id");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateOnly?>("ValidUntil")
+                        .HasColumnType("date")
+                        .HasColumnName("valid_until");
+
+                    b.HasKey("Id")
+                        .HasName("pk_employee_documents");
+
+                    b.HasIndex("EmployeeId")
+                        .HasDatabaseName("ix_employee_documents_employee_id");
+
+                    b.HasIndex("FileId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_employee_documents_file_id");
+
+                    b.ToTable("employee_documents", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.EmployeeEquipment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateOnly?>("IssuedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("issued_on");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("notes");
+
+                    b.Property<Guid?>("ResourceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("resource_id");
+
+                    b.Property<DateOnly?>("ReturnedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("returned_on");
+
+                    b.Property<string>("SerialNumber")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("serial_number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_employee_equipment");
+
+                    b.HasIndex("EmployeeId")
+                        .HasDatabaseName("ix_employee_equipment_employee_id");
+
+                    b.HasIndex("ResourceId")
+                        .HasDatabaseName("ix_employee_equipment_resource_id");
+
+                    b.ToTable("employee_equipment", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.EmployeeQualification", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<DateOnly?>("ExpiresOn")
+                        .HasColumnType("date")
+                        .HasColumnName("expires_on");
+
+                    b.Property<DateOnly?>("IssuedOn")
+                        .HasColumnType("date")
+                        .HasColumnName("issued_on");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("notes");
+
+                    b.Property<string>("Number")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_employee_qualifications");
+
+                    b.HasIndex("EmployeeId")
+                        .HasDatabaseName("ix_employee_qualifications_employee_id");
+
+                    b.HasIndex("ExpiresOn")
+                        .HasDatabaseName("ix_employee_qualifications_expires_on");
+
+                    b.ToTable("employee_qualifications", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Resource", b =>
@@ -3842,6 +4372,31 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_assignments_crew_crew_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Calendar", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_calendars_users_owner_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.CalendarEvent", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Bauakten.Exports.Bauakte", null)
+                        .WithMany()
+                        .HasForeignKey("BauakteId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_calendar_events_bauakten_bauakte_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Planning.Calendar", null)
+                        .WithMany()
+                        .HasForeignKey("CalendarId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_calendar_events_calendars_calendar_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Crew", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
@@ -3849,6 +4404,51 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasForeignKey("LeaderUserId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_crews_users_leader_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Employee", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_employees_users_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.EmployeeDocument", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Planning.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_documents_employees_employee_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.EmployeeEquipment", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Planning.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_equipment_employees_employee_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Planning.Resource", null)
+                        .WithMany()
+                        .HasForeignKey("ResourceId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_employee_equipment_resource_resource_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.EmployeeQualification", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Planning.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_employee_qualifications_employees_employee_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Sync.ProcessedOperation", b =>

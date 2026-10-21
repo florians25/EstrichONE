@@ -172,6 +172,9 @@ public sealed class Assignment : IVersionedEntity
     public string Activity { get; private set; } = string.Empty;
     public Guid? CrewId { get; private set; }
     public List<Guid> UserIds { get; private set; } = [];
+
+    /// <summary>Kolonnenmitglieder, die bei diesem Einsatz nicht dabei sind (z. B. heute auf einer anderen Baustelle).</summary>
+    public List<Guid> ExcludedUserIds { get; private set; } = [];
     public List<Guid> ResourceIds { get; private set; } = [];
     public string? Notes { get; private set; }
 
@@ -186,7 +189,8 @@ public sealed class Assignment : IVersionedEntity
     public static Assignment Create(Guid id, Guid bauakteId) => new() { Id = id, BauakteId = bauakteId };
 
     public void Update(DateOnly day, TimeOnly? startTime, string activity, Guid? crewId, IReadOnlyCollection<Guid> userIds,
-        IReadOnlyCollection<Guid> resourceIds, string? notes, AssignmentKind kind = AssignmentKind.Screed, TimeOnly? endTime = null)
+        IReadOnlyCollection<Guid> resourceIds, string? notes, AssignmentKind kind = AssignmentKind.Screed, TimeOnly? endTime = null,
+        IReadOnlyCollection<Guid>? excludedUserIds = null)
     {
         if (crewId is null && userIds.Count == 0)
         {
@@ -205,9 +209,55 @@ public sealed class Assignment : IVersionedEntity
         Activity = PlanningText.Required(activity, 200, "Bitte angeben, was zu tun ist (z. B. „Estrich einbringen EG“).");
         CrewId = crewId;
         UserIds = userIds.Distinct().ToList();
+        ExcludedUserIds = crewId is null ? [] : (excludedUserIds ?? []).Except(UserIds).Distinct().ToList();
         ResourceIds = resourceIds.Distinct().ToList();
         Notes = PlanningText.Optional(notes, 2000);
     }
+
+    /// <summary>Wer tatsächlich dabei ist: Kolonne ohne Ausnahmen plus einzeln eingeplante Mitarbeiter.</summary>
+    public IReadOnlyList<Guid> PeopleWith(IReadOnlyCollection<Guid> crewMembers) =>
+        crewMembers.Except(ExcludedUserIds).Concat(UserIds).Distinct().ToList();
+
+    /// <summary>Schnelleinsatzplanung: Person kommt dazu oder fällt weg (Kolonnenmitglied wird ausgenommen).</summary>
+    public void SetPerson(Guid userId, bool present, IReadOnlyCollection<Guid> crewMembers)
+    {
+        if (present)
+        {
+            ExcludedUserIds = ExcludedUserIds.Where(id => id != userId).ToList();
+            if (!crewMembers.Contains(userId) && !UserIds.Contains(userId))
+            {
+                UserIds = [.. UserIds, userId];
+            }
+
+            return;
+        }
+
+        UserIds = UserIds.Where(id => id != userId).ToList();
+        if (crewMembers.Contains(userId) && !ExcludedUserIds.Contains(userId))
+        {
+            ExcludedUserIds = [.. ExcludedUserIds, userId];
+        }
+    }
+
+    public void SetResource(Guid resourceId, bool present) =>
+        ResourceIds = present ? ResourceIds.Append(resourceId).Distinct().ToList() : ResourceIds.Where(id => id != resourceId).ToList();
+
+    /// <summary>Uhrzeit ändern (Teamplaner: Ziehen, Dauer ziehen).</summary>
+    public void Reschedule(DateOnly day, TimeOnly? startTime, TimeOnly? endTime)
+    {
+        if (startTime is { } start && endTime is { } end && end <= start)
+        {
+            throw new ArgumentException("Das Ende muss nach dem Beginn liegen.", nameof(endTime));
+        }
+
+        Day = day;
+        StartTime = startTime;
+        EndTime = endTime;
+    }
+
+    /// <summary>Zeitraum am Tag für Überschneidungen; ohne Uhrzeit gilt der ganze Tag, ohne Ende der Rest des Tages.</summary>
+    public (TimeOnly From, TimeOnly To) Span() =>
+        StartTime is { } s ? (s, EndTime ?? TimeOnly.MaxValue) : (TimeOnly.MinValue, TimeOnly.MaxValue);
 
     public void MoveTo(Guid bauakteId) => BauakteId = bauakteId;
 }
@@ -218,6 +268,20 @@ internal static class PlanningText
     {
         var trimmed = value?.Trim() ?? string.Empty;
         return trimmed.Length is > 0 && trimmed.Length <= max ? trimmed : throw new ArgumentException(message, nameof(value));
+    }
+
+    /// <summary>Farbe als #RRGGBB (leer = keine).</summary>
+    public static string? Color(string? value)
+    {
+        var trimmed = value?.Trim();
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        return System.Text.RegularExpressions.Regex.IsMatch(trimmed, "^#[0-9A-Fa-f]{6}$")
+            ? trimmed.ToUpperInvariant()
+            : throw new ArgumentException("Die Farbe muss als #RRGGBB angegeben werden.", nameof(value));
     }
 
     public static string? Optional(string? value, int max)
@@ -285,6 +349,7 @@ internal sealed class AssignmentConfiguration : IEntityTypeConfiguration<Assignm
         builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(30).HasDefaultValue(AssignmentKind.Screed).HasSentinel(AssignmentKind.Screed);
         builder.Property(a => a.Notes).HasMaxLength(2000);
         builder.Property(a => a.UserIds).HasColumnType("uuid[]");
+        builder.Property(a => a.ExcludedUserIds).HasColumnType("uuid[]").HasDefaultValueSql("'{}'::uuid[]");
         builder.Property(a => a.ResourceIds).HasColumnType("uuid[]");
         builder.HasOne<Bauakte>().WithMany().HasForeignKey(a => a.BauakteId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<Crew>().WithMany().HasForeignKey(a => a.CrewId).OnDelete(DeleteBehavior.SetNull);

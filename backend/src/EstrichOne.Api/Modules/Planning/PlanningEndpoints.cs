@@ -27,7 +27,14 @@ public sealed record SaveAbsenceRequest(Guid UserId, DateOnly From, DateOnly To,
 public sealed record SaveAssignmentRequest(
     Guid BauakteId, DateOnly Day, TimeOnly? StartTime, [property: Required, MaxLength(200)] string Activity, Guid? CrewId,
     IReadOnlyList<Guid>? UserIds, IReadOnlyList<Guid>? ResourceIds, [property: MaxLength(2000)] string? Notes,
-    AssignmentKind? Kind = null, TimeOnly? EndTime = null);
+    AssignmentKind? Kind = null, TimeOnly? EndTime = null, IReadOnlyList<Guid>? ExcludedUserIds = null);
+
+/// <summary>
+/// Teamplaner: Einsatz per Ziehen verschieben bzw. Dauer ändern. Optional andere Kolonne (<see cref="ChangeCrew"/>)
+/// oder Person tauschen (<see cref="FromUserId"/> → <see cref="ToUserId"/>).
+/// </summary>
+public sealed record MoveAssignmentRequest(
+    DateOnly Day, TimeOnly? StartTime, TimeOnly? EndTime, bool ChangeCrew = false, Guid? ToCrewId = null, Guid? FromUserId = null, Guid? ToUserId = null);
 
 /// <summary>Einsatzplanung (AP-19). Planen nur online im Büro; mobil lesend („Mein Einsatz“, 15: „Planung nur online“).</summary>
 /// <summary>Eintrag im Baustellen-Vorrat; <see cref="UpcomingAssignments"/> = 0 heißt „frei“ (noch nicht eingeplant).</summary>
@@ -70,6 +77,10 @@ internal static class PlanningEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest).RequirePermission(Permissions.PlanningRead);
         planning.MapPut("/assignments/{id:guid}", SaveAssignmentAsync).WithName("SaveAssignment")
             .WithSummary("Einsatz anlegen oder ändern; Antwort enthält Konflikthinweise")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission(Permissions.PlanningManage);
+        planning.MapPost("/assignments/{id:guid}/move", MoveAssignmentAsync).WithName("MoveAssignment")
+            .WithSummary("Teamplaner: Tag/Uhrzeit ändern (Ziehen, Dauer ziehen), Kolonne wechseln oder Person tauschen; Antwort mit Konflikthinweisen")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.PlanningManage);
         planning.MapGet("/backlog", BacklogAsync).WithName("GetPlanningBacklog")
@@ -198,6 +209,18 @@ internal static class PlanningEndpoints
             return NotFound("Bauakte nicht gefunden", "BAUAKTE_NOT_FOUND");
         }
 
+        // Einplanen nur für vorhandene, laufende Bauvorhaben; Termine ohne Bauvorhaben gehören in den Kalender.
+        var status = await db.Set<Bauakte>().Where(b => b.Id == request.BauakteId).Select(b => (BauakteStatus?)b.Status).SingleOrDefaultAsync(cancellationToken);
+        if (status is null)
+        {
+            return NotFound("Bauakte nicht gefunden", "BAUAKTE_NOT_FOUND");
+        }
+
+        if (status == BauakteStatus.Cancelled)
+        {
+            return Validation("Die Bauakte ist storniert und kann nicht eingeplant werden.");
+        }
+
         var users = (request.UserIds ?? []).Distinct().ToList();
         var resources = (request.ResourceIds ?? []).Distinct().ToList();
         if (await db.Set<User>().CountAsync(u => users.Contains(u.Id), cancellationToken) != users.Count
@@ -218,7 +241,7 @@ internal static class PlanningEndpoints
 
             assignment.MoveTo(request.BauakteId);
             assignment.Update(request.Day, request.StartTime, request.Activity, request.CrewId, users, resources, request.Notes,
-                request.Kind ?? AssignmentKind.Screed, request.EndTime);
+                request.Kind ?? AssignmentKind.Screed, request.EndTime, request.ExcludedUserIds);
             await db.SaveChangesAsync(cancellationToken);
         }
         catch (ArgumentException exception)
@@ -227,6 +250,58 @@ internal static class PlanningEndpoints
         }
 
         var range = await planning.RangeAsync(request.Day, request.Day, null, cancellationToken);
+        return TypedResults.Ok(range.Assignments.Single(a => a.Id == id));
+    }
+
+    private static async Task<Results<Ok<AssignmentView>, ProblemHttpResult>> MoveAssignmentAsync(
+        Guid id, MoveAssignmentRequest request, PlanningService planning, IBauakteAccess access, EstrichOneDbContext db, CancellationToken cancellationToken)
+    {
+        var assignment = await db.Set<Assignment>().SingleOrDefaultAsync(a => a.Id == id, cancellationToken);
+        if (assignment is null || !await access.CanReadAsync(assignment.BauakteId, cancellationToken))
+        {
+            return NotFound("Einsatz nicht gefunden");
+        }
+
+        try
+        {
+            assignment.Reschedule(request.Day, request.StartTime, request.EndTime);
+            var crewId = assignment.CrewId;
+            if (request.ChangeCrew && request.ToCrewId != crewId)
+            {
+                if (request.ToCrewId is { } target && !await db.Set<Crew>().AnyAsync(c => c.Id == target, cancellationToken))
+                {
+                    return Validation("Unbekannte Kolonne.");
+                }
+
+                crewId = request.ToCrewId;
+                assignment.Update(assignment.Day, assignment.StartTime, assignment.Activity, crewId, assignment.UserIds, assignment.ResourceIds,
+                    assignment.Notes, assignment.Kind, assignment.EndTime);
+            }
+
+            if (request.ToUserId is { } to && to != request.FromUserId)
+            {
+                if (!await db.Set<User>().AnyAsync(u => u.Id == to, cancellationToken))
+                {
+                    return Validation("Unbekannter Mitarbeiter.");
+                }
+
+                var members = crewId is { } c ? (await db.Set<Crew>().AsNoTracking().SingleAsync(x => x.Id == c, cancellationToken)).MemberUserIds : [];
+                if (request.FromUserId is { } from)
+                {
+                    assignment.SetPerson(from, false, members);
+                }
+
+                assignment.SetPerson(to, true, members);
+            }
+
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (ArgumentException exception)
+        {
+            return Validation(exception.Message);
+        }
+
+        var range = await planning.RangeAsync(assignment.Day, assignment.Day, null, cancellationToken);
         return TypedResults.Ok(range.Assignments.Single(a => a.Id == id));
     }
 

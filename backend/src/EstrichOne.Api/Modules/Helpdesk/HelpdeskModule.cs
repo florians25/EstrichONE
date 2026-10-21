@@ -1,5 +1,6 @@
 using System.Threading.RateLimiting;
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Modules.Documentation.Exports;
 using EstrichOne.Api.Modules.Helpdesk.Exports;
 using EstrichOne.Api.Modules.Sync.Exports;
 using Microsoft.AspNetCore.RateLimiting;
@@ -13,6 +14,7 @@ public sealed class HelpdeskModule : IModule
     {
         services.AddScoped<TicketService>();
         services.AddScoped<ITicketAttachments>(provider => provider.GetRequiredService<TicketService>());
+        services.AddScoped<IFileReadGrant, TicketAttachmentGrant>();
         services.AddScoped<ISyncOperationHandler, TicketSync>();
         services.AddHostedService<TicketMaintenance>();
         // Meldung ohne Anmeldung: höchstens 5 je Stunde und Adresse (14, Abschnitt 5).

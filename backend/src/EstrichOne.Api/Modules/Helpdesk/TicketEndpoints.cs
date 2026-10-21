@@ -44,7 +44,9 @@ public sealed record UpdateTicketRequest(
     bool Unassign,
     [property: MaxLength(Ticket.MaxResolutionLength)] string? Resolution);
 
-public sealed record AddTicketCommentRequest([property: Required, MaxLength(TicketComment.MaxTextLength)] string Text, bool IsInternal);
+/// <param name="AttachmentFileIds">Eigene, vorher hochgeladene Dateien ohne Bauakte (POST /files), z. B. Bildschirmfotos.</param>
+public sealed record AddTicketCommentRequest(
+    [property: MaxLength(TicketComment.MaxTextLength)] string? Text, bool IsInternal, IReadOnlyList<Guid>? AttachmentFileIds = null);
 
 public enum TicketFilter
 {
@@ -239,10 +241,16 @@ internal static class TicketEndpoints
             return Problem(StatusCodes.Status403Forbidden, "PERMISSION_DENIED", "Keine Berechtigung", "Interne Notizen schreibt nur die Bearbeitung.");
         }
 
+        var attachments = request.AttachmentFileIds ?? [];
+        if (!await tickets.AreOwnLooseFilesAsync(attachments, currentUser.UserId, cancellationToken))
+        {
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben", "Anhänge müssen eigene Dateien ohne Bauakte sein.");
+        }
+
         var now = clock.GetUtcNow();
         try
         {
-            db.Add(TicketComment.Create(ticket.Id, currentUser.UserId, request.Text, request.IsInternal, now));
+            db.Add(TicketComment.Create(ticket.Id, currentUser.UserId, request.Text ?? string.Empty, request.IsInternal, now, attachments));
         }
         catch (ArgumentException exception)
         {

@@ -20,7 +20,18 @@ public enum TicketFailure
     Validation,
 }
 
-public sealed record TicketCommentDto(Guid Id, Guid AuthorUserId, string? AuthorName, string Text, bool IsInternal, DateTimeOffset CreatedAt);
+public sealed record TicketCommentDto(
+    Guid Id, Guid AuthorUserId, string? AuthorName, string Text, bool IsInternal, DateTimeOffset CreatedAt, IReadOnlyList<Guid>? AttachmentFileIds = null);
+
+/// <summary>
+/// Eintrag im Verlauf eines Tickets (Web und App zeigen ihn als Zeitleiste): Meldung, Antworten, interne Notizen,
+/// Statuswechsel, Zuweisung, Priorität, Kategorie. <see cref="Summary"/> ist der fertige deutsche Text des Ereignisses.
+/// </summary>
+/// <param name="Kind">created, comment, note, status, assignee, priority, category</param>
+/// <param name="IsReporter">Vom Melder selbst (Web/App zeigen das wie eine Chat-Blase auf der anderen Seite).</param>
+public sealed record TicketTimelineItem(
+    Guid Id, DateTimeOffset At, string Kind, Guid? ActorUserId, string? ActorName, string Summary, string? Text, string? FromValue, string? ToValue,
+    bool IsInternal, bool IsReporter, IReadOnlyList<Guid> AttachmentFileIds);
 
 public sealed record TicketEventDto(Guid? ActorUserId, string? ActorName, string Kind, string? FromValue, string? ToValue, DateTimeOffset At);
 
@@ -33,11 +44,30 @@ public sealed record TicketSummary(
 public sealed record TicketDetail(
     TicketSummary Summary, string? Description, Guid? DeviceId, string? DeviceName, Guid? BauakteId, string? Resolution,
     DateTimeOffset? ResolvedAt, DateTimeOffset? ClosedAt, JsonNode? Diagnostics, IReadOnlyList<Guid> AttachmentFileIds,
-    IReadOnlyList<TicketCommentDto> Comments, IReadOnlyList<TicketEventDto> Events);
+    IReadOnlyList<TicketCommentDto> Comments, IReadOnlyList<TicketEventDto> Events, IReadOnlyList<TicketTimelineItem>? Timeline = null);
 
 /// <summary>Anlegen und Lesen von Tickets – gemeinsam für REST, Sync und Meldung ohne Anmeldung.</summary>
 public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakten, TimeProvider clock) : ITicketAttachments
 {
+    private static readonly Dictionary<string, string> StatusText = new()
+    {
+        [nameof(TicketStatus.New)] = "Neu", [nameof(TicketStatus.InProgress)] = "In Bearbeitung", [nameof(TicketStatus.WaitingForReporter)] = "Rückfrage",
+        [nameof(TicketStatus.Resolved)] = "Gelöst", [nameof(TicketStatus.Closed)] = "Geschlossen",
+    };
+
+    private static readonly Dictionary<string, string> PriorityText = new()
+    {
+        [nameof(TicketPriority.Low)] = "Niedrig", [nameof(TicketPriority.Normal)] = "Normal", [nameof(TicketPriority.High)] = "Hoch",
+        [nameof(TicketPriority.Urgent)] = "Dringend",
+    };
+
+    private static readonly Dictionary<string, string> CategoryText = new()
+    {
+        [nameof(TicketCategory.SignIn)] = "Anmeldung", [nameof(TicketCategory.Sync)] = "Synchronisation", [nameof(TicketCategory.AppError)] = "App-Fehler",
+        [nameof(TicketCategory.DeviceDefect)] = "Gerät defekt", [nameof(TicketCategory.OfficeIt)] = "Drucker/Büro-IT", [nameof(TicketCategory.Access)] = "Zugang/Rechte",
+        [nameof(TicketCategory.Other)] = "Sonstiges",
+    };
+
     private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
 
     public async Task<(Ticket? Ticket, bool Created, TicketFailure? Failure, string? Message)> CreateAsync(
@@ -117,20 +147,80 @@ public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakte
             .Where(c => c.TicketId == ticket.Id && (includeInternal || !c.IsInternal))
             .OrderBy(c => c.CreatedAt).ToListAsync(cancellationToken);
         var events = await db.Set<TicketEvent>().AsNoTracking().Where(e => e.TicketId == ticket.Id).OrderBy(e => e.At).ToListAsync(cancellationToken);
+        var assigneeIds = events.Where(e => e.Kind == "assignee").SelectMany(e => new[] { e.FromValue, e.ToValue })
+            .Select(v => Guid.TryParse(v, out var g) ? g : (Guid?)null);
         var names = await NamesAsync(new[] { ticket.ReporterUserId, ticket.AssigneeUserId }
-            .Concat(comments.Select(c => (Guid?)c.AuthorUserId)).Concat(events.Select(e => e.ActorUserId)), cancellationToken);
+            .Concat(comments.Select(c => (Guid?)c.AuthorUserId)).Concat(events.Select(e => e.ActorUserId)).Concat(assigneeIds), cancellationToken);
         var deviceName = ticket.DeviceId is { } deviceId
             ? await db.Database.SqlQuery<string>($"""SELECT name AS "Value" FROM devices WHERE id = {deviceId}""").SingleOrDefaultAsync(cancellationToken)
             : null;
 
         return new TicketDetail(Summarize(ticket, names), ticket.Description, ticket.DeviceId, deviceName, ticket.BauakteId, ticket.Resolution,
             ticket.ResolvedAt, ticket.ClosedAt, TicketDiagnostics.Parse(ticket.Diagnostics), ticket.AttachmentFileIds,
-            comments.Select(c => new TicketCommentDto(c.Id, c.AuthorUserId, names.GetValueOrDefault(c.AuthorUserId), c.Text, c.IsInternal, c.CreatedAt)).ToList(),
-            events.Select(e => new TicketEventDto(e.ActorUserId, e.ActorUserId is { } a ? names.GetValueOrDefault(a) : null, e.Kind, e.FromValue, e.ToValue, e.At)).ToList());
+            comments.Select(c => new TicketCommentDto(c.Id, c.AuthorUserId, names.GetValueOrDefault(c.AuthorUserId), c.Text, c.IsInternal, c.CreatedAt,
+                c.AttachmentFileIds)).ToList(),
+            events.Select(e => new TicketEventDto(e.ActorUserId, e.ActorUserId is { } a ? names.GetValueOrDefault(a) : null, e.Kind, e.FromValue, e.ToValue, e.At)).ToList(),
+            Timeline(ticket, comments, events, names));
+    }
+
+    private static List<TicketTimelineItem> Timeline(Ticket ticket, List<TicketComment> comments, List<TicketEvent> events, Dictionary<Guid, string> names)
+    {
+        string? Name(Guid? id) => id is { } value ? names.GetValueOrDefault(value) : null;
+        string Person(string? value) => Guid.TryParse(value, out var id) ? names.GetValueOrDefault(id) ?? "Unbekannt" : "niemand";
+        static string Text(Dictionary<string, string> map, string? value) => value is null ? "–" : map.GetValueOrDefault(value) ?? value;
+
+        var items = new List<TicketTimelineItem>();
+        foreach (var e in events)
+        {
+            var actor = Name(e.ActorUserId) ?? (e.Kind == "created" ? ticket.ReporterName ?? "Gerät" : "System");
+            var isReporter = e.ActorUserId is { } a && a == ticket.ReporterUserId;
+            var item = e.Kind switch
+            {
+                "created" => new TicketTimelineItem(e.Id, e.At, "created", e.ActorUserId, actor, $"{actor} hat das Problem gemeldet", ticket.Description, null,
+                    e.ToValue, false, true, ticket.AttachmentFileIds),
+                "status" => new TicketTimelineItem(e.Id, e.At, "status", e.ActorUserId, actor,
+                    $"Status: {Text(StatusText, e.FromValue)} → {Text(StatusText, e.ToValue)}",
+                    e.ToValue == nameof(TicketStatus.Resolved) ? ticket.Resolution : null, e.FromValue, e.ToValue, false, isReporter, []),
+                "assignee" => new TicketTimelineItem(e.Id, e.At, "assignee", e.ActorUserId, actor,
+                    e.ToValue is null ? "Zuweisung aufgehoben" : $"Zugewiesen an {Person(e.ToValue)}", null, e.FromValue, e.ToValue, false, isReporter, []),
+                "priority" => new TicketTimelineItem(e.Id, e.At, "priority", e.ActorUserId, actor,
+                    $"Priorität: {Text(PriorityText, e.FromValue)} → {Text(PriorityText, e.ToValue)}", null, e.FromValue, e.ToValue, false, isReporter, []),
+                "category" => new TicketTimelineItem(e.Id, e.At, "category", e.ActorUserId, actor,
+                    $"Kategorie: {Text(CategoryText, e.FromValue)} → {Text(CategoryText, e.ToValue)}", null, e.FromValue, e.ToValue, false, isReporter, []),
+                _ => new TicketTimelineItem(e.Id, e.At, e.Kind, e.ActorUserId, actor, e.Kind, null, e.FromValue, e.ToValue, false, isReporter, []),
+            };
+            items.Add(item);
+        }
+
+        foreach (var c in comments)
+        {
+            var author = Name(c.AuthorUserId) ?? "Unbekannt";
+            items.Add(new TicketTimelineItem(c.Id, c.CreatedAt, c.IsInternal ? "note" : "comment", c.AuthorUserId, author,
+                c.IsInternal ? $"{author} hat eine interne Notiz geschrieben" : $"{author} hat geantwortet", c.Text, null, null, c.IsInternal,
+                c.AuthorUserId == ticket.ReporterUserId, c.AttachmentFileIds));
+        }
+
+        return items.OrderBy(i => i.At).ThenBy(i => i.Kind == "created" ? 0 : 1).ToList();
     }
 
     public async Task<bool> IsAttachedToTicketAsync(Guid fileId, CancellationToken cancellationToken) =>
-        await db.Set<Ticket>().AnyAsync(t => t.AttachmentFileIds.Contains(fileId), cancellationToken);
+        await db.Set<Ticket>().AnyAsync(t => t.AttachmentFileIds.Contains(fileId), cancellationToken)
+        || await db.Set<TicketComment>().AnyAsync(c => c.AttachmentFileIds.Contains(fileId), cancellationToken);
+
+    /// <summary>Nur eigene, hochgeladene Dateien ohne Bauakte dürfen an eine Antwort.</summary>
+    public async Task<bool> AreOwnLooseFilesAsync(IReadOnlyCollection<Guid> fileIds, Guid userId, CancellationToken cancellationToken)
+    {
+        if (fileIds.Count == 0)
+        {
+            return true;
+        }
+
+        var ids = fileIds.Distinct().ToArray();
+        var own = await db.Database.SqlQuery<Guid>($"""
+            SELECT id AS "Value" FROM files WHERE id = ANY({ids}) AND bauakte_id IS NULL AND uploaded_by_user_id = {userId}
+            """).ToListAsync(cancellationToken);
+        return own.Count == ids.Length;
+    }
 
     /// <summary>Schließt gelöste Tickets nach <see cref="Ticket.AutoCloseAfter"/> ohne Widerspruch.</summary>
     public async Task<int> CloseResolvedAsync(CancellationToken cancellationToken)

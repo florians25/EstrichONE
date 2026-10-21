@@ -169,23 +169,34 @@ public sealed class TicketComment
 
     /// <summary>Interne Notiz: nur für die Bearbeitung sichtbar, nie für den Melder (14, AK-2).</summary>
     public bool IsInternal { get; private set; }
+
+    /// <summary>Anhänge der Antwort (eigene Dateien ohne Bauakte, z. B. Bildschirmfotos).</summary>
+    public List<Guid> AttachmentFileIds { get; private set; } = [];
     public DateTimeOffset CreatedAt { get; private set; }
 
     private TicketComment()
     {
     }
 
-    public static TicketComment Create(Guid ticketId, Guid authorUserId, string text, bool isInternal, DateTimeOffset now)
+    public static TicketComment Create(Guid ticketId, Guid authorUserId, string text, bool isInternal, DateTimeOffset now,
+        IReadOnlyCollection<Guid>? attachmentFileIds = null)
     {
         var trimmed = text?.Trim() ?? string.Empty;
-        if (trimmed.Length is 0 or > MaxTextLength)
+        var attachments = (attachmentFileIds ?? []).Distinct().ToList();
+        if ((trimmed.Length == 0 && attachments.Count == 0) || trimmed.Length > MaxTextLength)
         {
             throw new ArgumentException("Der Kommentar ist leer oder zu lang.", nameof(text));
+        }
+
+        if (attachments.Count > 20)
+        {
+            throw new ArgumentException("Höchstens 20 Anhänge.", nameof(attachmentFileIds));
         }
 
         return new TicketComment
         {
             Id = Guid.CreateVersion7(now), TicketId = ticketId, AuthorUserId = authorUserId, Text = trimmed, IsInternal = isInternal, CreatedAt = now,
+            AttachmentFileIds = attachments,
         };
     }
 }
@@ -251,6 +262,8 @@ internal sealed class TicketCommentConfiguration : IEntityTypeConfiguration<Tick
         builder.ToTable("ticket_comments");
         builder.Property(c => c.Id).ValueGeneratedNever();
         builder.Property(c => c.Text).HasMaxLength(TicketComment.MaxTextLength);
+        builder.Property(c => c.AttachmentFileIds).HasColumnType("uuid[]").HasDefaultValueSql("'{}'::uuid[]");
+        builder.HasIndex(c => c.AttachmentFileIds).HasMethod("gin");
         builder.HasOne<Ticket>().WithMany().HasForeignKey(c => c.TicketId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<User>().WithMany().HasForeignKey(c => c.AuthorUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(c => new { c.TicketId, c.CreatedAt });

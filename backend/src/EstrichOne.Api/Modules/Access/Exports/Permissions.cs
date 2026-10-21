@@ -24,6 +24,8 @@ public static class Permissions
     public const string WorkEdit = "work.edit";
     public const string PlanningRead = "planning.read";
     public const string PlanningManage = "planning.manage";
+    public const string StaffRead = "staff.read";
+    public const string StaffManage = "staff.manage";
     public const string MaterialsRead = "materials.read";
     public const string MaterialsManage = "materials.manage";
     public const string UsersManage = "users.manage";
@@ -57,6 +59,8 @@ public static class Permissions
         new(WorkEdit, "Aufgaben", "Aufgaben und Mängel anlegen und bearbeiten"),
         new(PlanningRead, "Planung", "Einsatzplanung sehen"),
         new(PlanningManage, "Planung", "Einsätze planen"),
+        new(StaffRead, "Personal", "Personalstamm sehen (Kontakt, Qualifikationen, Abwesenheiten)"),
+        new(StaffManage, "Personal", "Personalstamm pflegen, inkl. Stundensätze und Personaldokumente"),
         new(MaterialsRead, "Material", "Material, Lieferanten und Bestellungen sehen"),
         new(MaterialsManage, "Material", "Materialstamm pflegen und Material bestellen"),
         new(UsersManage, "Verwaltung", "Benutzer verwalten"),

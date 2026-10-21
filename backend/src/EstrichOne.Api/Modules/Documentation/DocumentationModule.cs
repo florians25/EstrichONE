@@ -14,6 +14,7 @@ public sealed class DocumentationModule : IModule
         services.AddSingleton<LocalFileStorage>();
         services.AddSingleton(Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions { SingleReader = true }));
         services.AddScoped<FileService>();
+        services.AddScoped<Exports.IStoredFiles, StoredFiles>();
         services.AddScoped<ApprovalService>();
         services.AddScoped<Exports.IArchivableDocuments, ArchivableDocuments>();
         services.AddScoped<BauakteReportBuilder>();

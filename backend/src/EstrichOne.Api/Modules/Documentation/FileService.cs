@@ -31,7 +31,8 @@ public sealed class FileService(
     Channel<Guid> variantQueue,
     IBauakteHistory history,
     IUserPermissions permissions,
-    ITicketAttachments tickets)
+    ITicketAttachments tickets,
+    IEnumerable<Exports.IFileReadGrant> grants)
 {
     public async Task<(FileRecord? File, bool Created, FileFailure? Failure)> AnnounceAsync(
         Guid id, Guid? bauakteId, FileKind kind, string originalName, string contentType, long sizeBytes, string sha256,
@@ -163,10 +164,22 @@ public sealed class FileService(
         }
 
         // Ohne Bauakte: eigene Dateien; Anhänge von Tickets zusätzlich für die Bearbeitung im Helpdesk.
-        return file.UploadedByUserId == currentUser.UserId
-            || (await permissions.HasAsync(Permissions.HelpdeskAgent, cancellationToken) && await tickets.IsAttachedToTicketAsync(id, cancellationToken))
-            ? file
-            : null;
+        if (file.UploadedByUserId == currentUser.UserId
+            || (await permissions.HasAsync(Permissions.HelpdeskAgent, cancellationToken) && await tickets.IsAttachedToTicketAsync(id, cancellationToken)))
+        {
+            return file;
+        }
+
+        // Freigaben anderer Module (Personaldokumente, Antworten im Helpdesk).
+        foreach (var grant in grants)
+        {
+            if (await grant.CanReadAsync(id, cancellationToken))
+            {
+                return file;
+            }
+        }
+
+        return null;
     }
 
     private Task<FileRecord?> FindOwnAsync(Guid id, CancellationToken cancellationToken) =>

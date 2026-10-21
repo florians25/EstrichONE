@@ -15,14 +15,18 @@ public sealed record AssignmentView(
     Guid Id, DateOnly Day, TimeOnly? StartTime, string Activity, Guid BauakteId, string? BauakteNumber, string BauakteTitle,
     string? BauakteAddress, Guid? CrewId, string? CrewName, string? CrewColor, IReadOnlyList<PersonRef> People,
     IReadOnlyList<ResourceRef> Resources, string? Notes, IReadOnlyList<string> Warnings, long Version,
-    AssignmentKind Kind = AssignmentKind.Screed, TimeOnly? EndTime = null, BauakteStatus? BauakteStatus = null);
+    AssignmentKind Kind = AssignmentKind.Screed, TimeOnly? EndTime = null, BauakteStatus? BauakteStatus = null,
+    IReadOnlyList<Guid>? ExcludedUserIds = null);
 
 public sealed record AbsenceView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, AbsenceKind Kind, string? Note);
 
-public sealed record PlanningRange(DateOnly From, DateOnly To, IReadOnlyList<AssignmentView> Assignments, IReadOnlyList<AbsenceView> Absences);
+/// <param name="Appointments">Termine aus den Kalendern mit Teilnehmern oder Kolonnen (Termine ohne Bauvorhaben im Plan).</param>
+public sealed record PlanningRange(
+    DateOnly From, DateOnly To, IReadOnlyList<AssignmentView> Assignments, IReadOnlyList<AbsenceView> Absences,
+    IReadOnlyList<CalendarOccurrence>? Appointments = null);
 
 /// <summary>Einsätze lesen und auf Konflikte prüfen (Doppelbelegung von Personen und Geräten, Abwesenheiten).</summary>
-public sealed class PlanningService(EstrichOneDbContext db)
+public sealed class PlanningService(EstrichOneDbContext db, CalendarService calendar)
 {
     private static readonly Dictionary<AbsenceKind, string> AbsenceNames = new()
     {
@@ -36,13 +40,22 @@ public sealed class PlanningService(EstrichOneDbContext db)
         var crews = await db.Set<Crew>().AsNoTracking().ToDictionaryAsync(c => c.Id, cancellationToken);
         var absences = await db.Set<Absence>().AsNoTracking().Where(a => a.From <= to && a.To >= from).ToListAsync(cancellationToken);
 
-        IReadOnlyList<Guid> PeopleOf(Assignment a) =>
-            (a.CrewId is { } crewId && crews.TryGetValue(crewId, out var crew) ? crew.MemberUserIds : []).Concat(a.UserIds).Distinct().ToList();
+        IReadOnlyList<Guid> PeopleOf(Assignment a) => a.PeopleWith(a.CrewId is { } crewId && crews.TryGetValue(crewId, out var crew) ? crew.MemberUserIds : []);
 
         if (onlyForUser is { } userId)
         {
             assignments = assignments.Where(a => PeopleOf(a).Contains(userId)).ToList();
             absences = absences.Where(a => a.UserId == userId).ToList();
+        }
+
+        // Termine der Beteiligten (für Konflikte alle, angezeigt nur die sichtbaren mit Teilnehmern/Kolonnen).
+        var busy = await calendar.OccurrencesAsync(from.ToDateTime(TimeOnly.MinValue), to.AddDays(1).ToDateTime(TimeOnly.MinValue), null, true,
+            cancellationToken, all: true);
+        var shown = await calendar.OccurrencesAsync(from.ToDateTime(TimeOnly.MinValue), to.AddDays(1).ToDateTime(TimeOnly.MinValue), null, true,
+            cancellationToken);
+        if (onlyForUser is { } me)
+        {
+            shown = shown.Where(o => o.People.Any(p => p.Id == me)).ToList();
         }
 
         var userIds = assignments.SelectMany(PeopleOf).Concat(absences.Select(a => a.UserId)).Distinct().ToList();
@@ -66,9 +79,18 @@ public sealed class PlanningService(EstrichOneDbContext db)
         {
             var warnings = new List<string>();
             var people = PeopleOf(a);
+            var (spanFrom, spanTo) = a.Span();
+            bool Overlaps(Assignment other)
+            {
+                var (otherFrom, otherTo) = other.Span();
+                return other.Id != a.Id && other.Day == a.Day && otherFrom < spanTo && spanFrom < otherTo;
+            }
+
+            var dayStart = a.Day.ToDateTime(spanFrom);
+            var dayEnd = spanTo == TimeOnly.MaxValue ? a.Day.AddDays(1).ToDateTime(TimeOnly.MinValue) : a.Day.ToDateTime(spanTo);
             foreach (var person in people)
             {
-                if (allOfDays.Any(other => other.Id != a.Id && other.Day == a.Day && PeopleOf(other).Contains(person)))
+                if (allOfDays.Any(other => Overlaps(other) && PeopleOf(other).Contains(person)))
                 {
                     warnings.Add($"{Name(person)} ist an diesem Tag mehrfach eingeplant.");
                 }
@@ -77,11 +99,16 @@ public sealed class PlanningService(EstrichOneDbContext db)
                 {
                     warnings.Add($"{Name(person)} ist {AbsenceNames[absence.Kind]}.");
                 }
+
+                if (busy.FirstOrDefault(o => o.Start < dayEnd && dayStart < o.End && o.People.Any(p => p.Id == person)) is { } appointment)
+                {
+                    warnings.Add($"{Name(person)} hat zur selben Zeit den Termin „{appointment.Title}“.");
+                }
             }
 
             foreach (var resourceId in a.ResourceIds)
             {
-                if (allOfDays.Any(other => other.Id != a.Id && other.Day == a.Day && other.ResourceIds.Contains(resourceId)))
+                if (allOfDays.Any(other => Overlaps(other) && other.ResourceIds.Contains(resourceId)))
                 {
                     warnings.Add($"{(resources.TryGetValue(resourceId, out var r) ? r.Name : "Ein Gerät")} ist an diesem Tag mehrfach eingeplant.");
                 }
@@ -95,11 +122,11 @@ public sealed class PlanningService(EstrichOneDbContext db)
                 string.IsNullOrEmpty(address) ? null : address, a.CrewId, crew?.Name, crew?.Color,
                 people.Select(id => new PersonRef(id, Name(id))).OrderBy(p => p.Name, StringComparer.CurrentCulture).ToList(),
                 a.ResourceIds.Where(resources.ContainsKey).Select(id => new ResourceRef(id, resources[id].Name, resources[id].Kind)).ToList(),
-                a.Notes, warnings.Distinct().ToList(), a.Version, a.Kind, a.EndTime, bauakte?.Status);
+                a.Notes, warnings.Distinct().ToList(), a.Version, a.Kind, a.EndTime, bauakte?.Status, a.ExcludedUserIds);
         }).ToList();
 
         return new PlanningRange(from, to, views,
-            absences.OrderBy(a => a.From).Select(a => new AbsenceView(a.Id, a.UserId, Name(a.UserId), a.From, a.To, a.Kind, a.Note)).ToList());
+            absences.OrderBy(a => a.From).Select(a => new AbsenceView(a.Id, a.UserId, Name(a.UserId), a.From, a.To, a.Kind, a.Note)).ToList(), shown);
     }
 
     public static bool TryParseDay(string? value, out DateOnly day) =>
