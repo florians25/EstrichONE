@@ -42,9 +42,17 @@ export default class Devices extends BaseController {
 	onUnlock(e: Event): void { void this.act(e, "unlock"); }
 	onRetire(e: Event): void { void this.act(e, "retire"); }
 
-	async onEnroll(): Promise<void> {
+	async onEnroll(): Promise<void> { await this.enroll({ kind: "personal" }); }
+
+	/** Entferntes Gerät neu einrichten: neuer Code mit Nutzung und Name des bisherigen Geräts. */
+	onReEnroll(e: Event): void {
+		const d = (e.getSource() as Control).getBindingContext("view")?.getObject() as DeviceResponse;
+		void this.enroll({ kind: d.kind, deviceName: d.name });
+	}
+
+	private async enroll(initial: Record<string, unknown>): Promise<void> {
 		const code = await openForm<EnrollmentCodeResponse>({
-			title: "Gerät einrichten", submitText: "Code erzeugen", initial: { kind: "personal" },
+			title: "Gerät einrichten", submitText: "Code erzeugen", initial,
 			intro: "Ein Gerät, das mit diesem Code eingerichtet wird, ist sofort freigegeben.",
 			fields: [
 				{ key: "kind", label: "Nutzung", type: "segmented", options: [{ key: "personal", text: "Persönliches Gerät" }, { key: "pool", text: "Poolgerät (mehrere Personen)" }] },

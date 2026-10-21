@@ -122,6 +122,28 @@ public sealed class DeviceTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task RetiredDevice_CanRegisterAgain_WithSameKeyAndName_OldEntryStaysRetired()
+    {
+        var phone = await LoginPhoneAsync("baustelle");
+        var old = await phone.RegisterAsync(DeviceKind.Personal);
+        using var admin = await _factory.CreateClientAsAsync("it", StandardRoles.ItAdministratorId);
+        (await admin.PostAsync(new Uri($"/api/v1/devices/{old.Id}/retire", UriKind.Relative), null, TestContext.Current.CancellationToken)).EnsureSuccessStatusCode();
+
+        // Neu anmelden (die alte Sitzung ist beendet) und mit demselben Schlüssel und Namen erneut registrieren.
+        using var fresh = _factory.CreateClient();
+        var tokens = await fresh.LoginOkAsync("baustelle", clientKind: "ios");
+        var again = phone with { Client = fresh.WithToken(tokens.AccessToken), Tokens = tokens };
+        var device = await again.RegisterAsync(DeviceKind.Personal);
+
+        device.Id.ShouldNotBe(old.Id);
+        device.Status.ShouldBe(DeviceStatus.Active);
+        (await again.Client.GetAsync(new Uri("/api/v1/bauakten", UriKind.Relative), TestContext.Current.CancellationToken)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        var all = (await admin.GetFromJsonAsync<List<DeviceResponse>>("/api/v1/devices", TestJson.Options, TestContext.Current.CancellationToken))!;
+        all.Single(d => d.Id == old.Id).Status.ShouldBe(DeviceStatus.Retired);
+        all.Single(d => d.Id == device.Id).Status.ShouldBe(DeviceStatus.Active);
+    }
+
+    [Fact]
     public async Task DeviceAdministration_RequiresPermission()
     {
         var phone = await LoginPhoneAsync("baustelle");

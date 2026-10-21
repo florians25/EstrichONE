@@ -106,6 +106,11 @@ final class AppModel {
 
     /// Der Benutzer hat den geprüften Server sichtbar bestätigt (10, Schritt 2).
     func confirm(_ server: VerifiedServer, enrollment: EnrollmentLink?) throws {
+        if let previous = self.server, previous.address != server.address {
+            // Neueinrichtung an einem anderen Server: Daten des bisherigen dürfen nicht dorthin gelangen.
+            accounts?.eraseDevice()
+            deviceState = DeviceState()
+        }
         try serverStore.save(server)
         let fromSameServer = enrollment?.server == server.address
         requestedKind = fromSameServer ? enrollment?.deviceKind : nil
@@ -243,6 +248,17 @@ final class AppModel {
     }
 
     /// Alles löschen: Server, Gerät, Benutzer (Einstellungen › App zurücksetzen; Gerät entfernt).
+    /// Entferntes Gerät neu einrichten: Server bestätigen bzw. neuen Einrichtungscode scannen oder eingeben, anmelden.
+    /// Server und Daten bleiben bis dahin erhalten; wird ein anderer Server gewählt, werden die alten Daten gelöscht.
+    func startReEnrollment() {
+        active = nil
+        requestedKind = nil
+        enrollmentCode = nil
+        pendingTokens = nil
+        pendingEnrollment = nil
+        screen = .onboarding
+    }
+
     func resetApp() {
         accounts?.eraseDevice()
         serverStore.clear()
@@ -372,9 +388,10 @@ final class AppModel {
             notice = "Die Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an – Ihre Daten auf diesem Gerät bleiben erhalten."
             screen = .signIn(userName: userName)
         case .deviceRevoked:
-            // Das Gerät gibt es serverseitig nicht mehr: lokale Daten sind wertlos und werden gelöscht.
-            accounts?.eraseDevice()
-            deviceState = DeviceState()
+            // Das Gerät wurde im Büro entfernt: Registrierung vergessen, verschlüsselte Daten behalten. Nach der
+            // Neueinrichtung (gleicher Server, gleiche Person) wird noch nicht Übertragenes gesendet.
+            accounts?.forgetRegistration()
+            deviceState = accounts?.state ?? DeviceState()
             screen = .blocked(end)
         case .deviceLocked, .userDisabled:
             screen = .blocked(end)
@@ -383,7 +400,7 @@ final class AppModel {
 
     func leaveBlockedScreen() {
         if case .blocked(.deviceRevoked) = screen {
-            resetApp()
+            startReEnrollment()
         } else {
             screen = lockedScreen()
         }

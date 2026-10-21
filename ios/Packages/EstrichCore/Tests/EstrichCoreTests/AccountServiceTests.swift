@@ -108,6 +108,27 @@ struct AccountServiceTests {
         try? storage.eraseAll()
     }
 
+    @Test("Entferntes Gerät: neu registrieren, gleiche Person findet ihre ungesendeten Daten wieder")
+    func reRegistrationKeepsData() async throws {
+        transport.on("POST", "/api/v1/devices/register", reply: .json(Samples.deviceJSON(kind: "personal", status: "active"), status: 201))
+        let service = makeService()
+        let tokens = Samples.tokens()
+        _ = try await service.bindDevice(tokens: tokens, kind: .personal, enrollmentCode: nil, description: description)
+        let first = try service.createVault(for: tokens, pin: nil)
+        let marker = storage.userDirectory(Samples.userId).appending(path: "data.sealed")
+        try Data("ungesendet".utf8).write(to: marker)
+
+        service.forgetRegistration()
+        #expect(service.state.registration == nil)
+        await #expect(throws: AccountError.self) { _ = try service.createVault(for: tokens, pin: nil) }
+        _ = try await service.bindDevice(tokens: tokens, kind: .personal, enrollmentCode: "NEU-CODE", description: description)
+        #expect(transport.count("POST", "/api/v1/devices/register") == 2)
+        let again = try service.createVault(for: tokens, pin: nil)
+        #expect(again.dataKey.withUnsafeBytes { Data($0) } == first.dataKey.withUnsafeBytes { Data($0) })
+        #expect(try Data(contentsOf: marker) == Data("ungesendet".utf8))
+        try? storage.eraseAll()
+    }
+
     @Test("Die Sitzung liegt nur verschlüsselt auf dem Gerät")
     func sessionEncrypted() async throws {
         transport.on("POST", "/api/v1/devices/register", reply: .json(Samples.deviceJSON(kind: "personal", status: "active"), status: 201))

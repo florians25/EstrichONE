@@ -82,6 +82,12 @@ struct BlockedView: View {
                 .accessibilityHidden(true)
             StatusMessage(kind: .error, text: end.message)
                 .accessibilityIdentifier("blockedMessage")
+            if end == .deviceRevoked {
+                Text("Mit einem neuen Einrichtungscode (QR-Code oder Eingabe) aus dem IT Center lässt sich das Gerät neu einrichten. Noch nicht übertragene Daten bleiben erhalten und werden nach der Anmeldung derselben Person gesendet.")
+                    .font(.subheadline)
+                    .foregroundStyle(Theme.textSecondary)
+                    .multilineTextAlignment(.center)
+            }
             Spacer()
             Button {
                 model.leaveBlockedScreen()

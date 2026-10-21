@@ -233,6 +233,15 @@ public final class AccountService: @unchecked Sendable {
         try? save(state)
     }
 
+    /// Das Gerät wurde im Büro entfernt: nur die Registrierung vergessen. Geräteschlüssel und verschlüsselte Tresore
+    /// bleiben, damit nach der Neuregistrierung (gleicher Server, gleiche Person) noch nicht übertragene Daten gesendet
+    /// werden. Die Sitzungen sind serverseitig ungültig; geöffnet wird erst nach erneuter Anmeldung mit Passwort.
+    public func forgetRegistration() {
+        var state = self.state
+        state.registration = nil
+        try? save(state)
+    }
+
     /// Gerät entfernt oder App zurücksetzen: alle Daten und den Geräteschlüssel löschen.
     public func eraseDevice() {
         try? storage.eraseAll()

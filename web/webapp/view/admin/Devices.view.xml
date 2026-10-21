@@ -35,6 +35,7 @@
 								<Button text="Sperren" type="Transparent" press=".onLock" visible="{= ${view>status} === 'active' }"/>
 								<Button text="Entsperren" type="Transparent" press=".onUnlock" visible="{= ${view>status} === 'locked' }"/>
 								<Button text="Entfernen" type="Transparent" press=".onRetire" visible="{= ${view>status} !== 'retired' }"/>
+								<Button text="Neu einrichten" icon="sap-icon://qr-code" type="Transparent" press=".onReEnroll" visible="{= ${view>status} === 'retired' }"/>
 							</HBox>
 						</ColumnListItem>
 					</items>
