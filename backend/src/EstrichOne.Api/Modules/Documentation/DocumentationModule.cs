@@ -15,6 +15,7 @@ public sealed class DocumentationModule : IModule
         services.AddSingleton(Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions { SingleReader = true }));
         services.AddScoped<FileService>();
         services.AddScoped<ApprovalService>();
+        services.AddScoped<Exports.IArchivableDocuments, ArchivableDocuments>();
         services.AddScoped<BauakteReportBuilder>();
         services.AddScoped<IBauakteHintSource, DocumentationHints>();
         services.AddHostedService<VariantWorker>();

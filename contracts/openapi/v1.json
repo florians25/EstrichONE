@@ -7476,6 +7476,948 @@
           }
         ]
       }
+    },
+    "/api/v1/backup/targets": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "operationId": "GetBackupTargets",
+        "parameters": [
+          {
+            "name": "live",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BackupTargetDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Backup-Ziel per Adresse und Kopplungscode verbinden",
+        "operationId": "PairBackupTarget",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairBackupTargetRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupTargetDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/targets/{id}": {
+      "delete": {
+        "tags": [
+          "Backup Center"
+        ],
+        "operationId": "RemoveBackupTarget",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail/settings": {
+      "get": {
+        "tags": [
+          "E-Mail"
+        ],
+        "operationId": "GetMailSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailSettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "E-Mail"
+        ],
+        "operationId": "UpdateMailSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMailSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailSettingsDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail/test": {
+      "post": {
+        "tags": [
+          "E-Mail"
+        ],
+        "summary": "Testmail sofort senden (ohne Warteschlange), Ergebnis mit Ursache",
+        "operationId": "SendTestMail",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TestMailRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TestMailResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail/templates": {
+      "get": {
+        "tags": [
+          "E-Mail"
+        ],
+        "operationId": "GetMailTemplates",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailTemplateDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail/templates/{key}": {
+      "put": {
+        "tags": [
+          "E-Mail"
+        ],
+        "operationId": "UpdateMailTemplate",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateMailTemplateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailTemplateDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "E-Mail"
+        ],
+        "summary": "Eingebauten Text wiederherstellen",
+        "operationId": "ResetMailTemplate",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MailTemplateDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail/log": {
+      "get": {
+        "tags": [
+          "E-Mail"
+        ],
+        "operationId": "GetMailLog",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/MailStatus"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/MailLogItem"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/mail/log/{id}/retry": {
+      "post": {
+        "tags": [
+          "E-Mail"
+        ],
+        "operationId": "RetryMail",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/status": {
+      "get": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "GetArchiveStatus",
+        "parameters": [
+          {
+            "name": "live",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/pair": {
+      "post": {
+        "tags": [
+          "Archiv"
+        ],
+        "summary": "Archivserver per Adresse und Kopplungscode verbinden (Zertifikat wird gepinnt)",
+        "operationId": "PairArchive",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairArchiveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveConnectionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/connection": {
+      "delete": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "UnpairArchive",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/settings": {
+      "put": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "UpdateArchiveSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ArchiveSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveConnectionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/rules": {
+      "get": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "GetArchiveRules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchiveRuleDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "UpdateArchiveRules",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/ArchiveRuleDto"
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchiveRuleDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/records": {
+      "get": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "GetArchiveRecords",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "$ref": "#/components/schemas/ArchiveRecordStatus"
+            }
+          },
+          {
+            "name": "bauakteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchiveRecordDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/records/{id}/retry": {
+      "post": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "RetryArchiveRecord",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveRecordDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/verify": {
+      "post": {
+        "tags": [
+          "Archiv"
+        ],
+        "summary": "Prüflauf auf dem Archivserver (Hash-Kette, alle Prüfsummen) – Ergebnis = Prüfprotokoll",
+        "operationId": "VerifyArchive",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveVerification"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/export": {
+      "get": {
+        "tags": [
+          "Archiv"
+        ],
+        "summary": "Export für Betriebsprüfer (ZIP: Dokumente, Metadaten, Journal, Prüfsummen, Prüfprotokoll)",
+        "operationId": "ExportArchive",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/bauakten/{bauakteId}": {
+      "get": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "GetBauakteArchiveRecords",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ArchiveRecordDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Archiv"
+        ],
+        "summary": "Alle Dokumente der Bauakte archivieren (bzw. Fehlgeschlagene erneut versuchen)",
+        "operationId": "ArchiveBauakte",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/QueueResult"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/files/{fileId}": {
+      "get": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "GetFileArchiveRecord",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveRecordDto"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Archiv"
+        ],
+        "operationId": "ArchiveFile",
+        "parameters": [
+          {
+            "name": "fileId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ArchiveRecordDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -7839,6 +8781,456 @@
           "cancelled",
           null
         ]
+      },
+      "ArchiveConnectionDto": {
+        "required": [
+          "address",
+          "serverName",
+          "serverVersion",
+          "caFingerprint",
+          "fingerprintDisplay",
+          "pairedAt",
+          "lastContactAt",
+          "lastError",
+          "autoArchive",
+          "notifyEmail"
+        ],
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "serverName": {
+            "type": "string"
+          },
+          "serverVersion": {
+            "type": "string"
+          },
+          "caFingerprint": {
+            "type": "string"
+          },
+          "fingerprintDisplay": {
+            "type": "string"
+          },
+          "pairedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastContactAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "autoArchive": {
+            "type": "boolean"
+          },
+          "notifyEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ArchiveCounts": {
+        "required": [
+          "pending",
+          "archived",
+          "failed"
+        ],
+        "type": "object",
+        "properties": {
+          "pending": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "archived": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "ArchiveOverview": {
+        "required": [
+          "connected",
+          "connection",
+          "server",
+          "counts"
+        ],
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "connection": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ArchiveConnectionDto"
+              }
+            ]
+          },
+          "server": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ArchiveServerStatus"
+              }
+            ]
+          },
+          "counts": {
+            "$ref": "#/components/schemas/ArchiveCounts"
+          }
+        }
+      },
+      "ArchiveRecordDto": {
+        "required": [
+          "id",
+          "fileId",
+          "bauakteId",
+          "documentType",
+          "documentTypeLabel",
+          "name",
+          "sha256",
+          "sizeBytes",
+          "retentionYears",
+          "trigger",
+          "status",
+          "attempts",
+          "nextAttemptAt",
+          "lastError",
+          "queuedAt",
+          "archivedAt",
+          "retainUntil",
+          "ledgerSeq",
+          "ledgerHash",
+          "archiveServerName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "documentType": {
+            "type": "string"
+          },
+          "documentTypeLabel": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "retentionYears": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/ArchiveTrigger"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ArchiveRecordStatus"
+          },
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "nextAttemptAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "queuedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archivedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "retainUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "ledgerSeq": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "ledgerHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "archiveServerName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ArchiveRecordStatus": {
+        "enum": [
+          "pending",
+          "archived",
+          "failed"
+        ]
+      },
+      "ArchiveRuleDto": {
+        "required": [
+          "documentType",
+          "label",
+          "enabled",
+          "retentionYears",
+          "trigger"
+        ],
+        "type": "object",
+        "properties": {
+          "documentType": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "retentionYears": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "trigger": {
+            "$ref": "#/components/schemas/ArchiveTrigger"
+          }
+        }
+      },
+      "ArchiveServerStatistics": {
+        "required": [
+          "objects",
+          "bytes",
+          "deleted",
+          "ledgerEntries",
+          "ledgerHead"
+        ],
+        "type": "object",
+        "properties": {
+          "objects": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "deleted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "ledgerEntries": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ledgerHead": {
+            "type": "string"
+          }
+        }
+      },
+      "ArchiveServerStatus": {
+        "required": [
+          "role",
+          "name",
+          "version",
+          "now",
+          "clientId",
+          "clientName",
+          "pairedAt",
+          "archive",
+          "lastVerification",
+          "diskFreeBytes",
+          "diskTotalBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "clientId": {
+            "type": "string"
+          },
+          "clientName": {
+            "type": "string"
+          },
+          "pairedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "archive": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ArchiveServerStatistics"
+              }
+            ]
+          },
+          "lastVerification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ArchiveVerification"
+              }
+            ]
+          },
+          "diskFreeBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "diskTotalBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "ArchiveSettingsRequest": {
+        "required": [
+          "autoArchive",
+          "notifyEmail"
+        ],
+        "type": "object",
+        "properties": {
+          "autoArchive": {
+            "type": "boolean"
+          },
+          "notifyEmail": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ArchiveTrigger": {
+        "enum": [
+          "onUpload",
+          "onApproval",
+          "onBauakteCompleted",
+          "manual"
+        ]
+      },
+      "ArchiveVerification": {
+        "required": [
+          "at",
+          "ok",
+          "ledgerEntries",
+          "ledgerHead",
+          "objectsChecked",
+          "bytesChecked",
+          "deleted",
+          "errors"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "ledgerEntries": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "ledgerHead": {
+            "type": "string"
+          },
+          "objectsChecked": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytesChecked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "deleted": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
       },
       "AssignmentKind": {
         "enum": [
@@ -8275,6 +9667,129 @@
           },
           "runRequested": {
             "type": "boolean"
+          }
+        }
+      },
+      "BackupTargetDto": {
+        "required": [
+          "id",
+          "name",
+          "address",
+          "serverVersion",
+          "fingerprintDisplay",
+          "pairedAt",
+          "lastContactAt",
+          "lastError",
+          "lastRun",
+          "remote",
+          "backupServiceConfigured"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "address": {
+            "type": "string"
+          },
+          "serverVersion": {
+            "type": "string"
+          },
+          "fingerprintDisplay": {
+            "type": "string"
+          },
+          "pairedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastContactAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastRun": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BackupRunInfo"
+              }
+            ]
+          },
+          "remote": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BackupTargetRemoteStatus"
+              }
+            ]
+          },
+          "backupServiceConfigured": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BackupTargetRemoteStatus": {
+        "required": [
+          "bytes",
+          "snapshots",
+          "lastSnapshotAt",
+          "appendOnly",
+          "serverRunning",
+          "diskFreeBytes",
+          "diskTotalBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "snapshots": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastSnapshotAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "appendOnly": {
+            "type": "boolean"
+          },
+          "serverRunning": {
+            "type": "boolean"
+          },
+          "diskFreeBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "diskTotalBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -10549,6 +12064,210 @@
           }
         }
       },
+      "MailLogItem": {
+        "required": [
+          "id",
+          "createdAt",
+          "to",
+          "subject",
+          "templateKey",
+          "category",
+          "relatedEntity",
+          "status",
+          "attempts",
+          "sentAt",
+          "error",
+          "attachmentNames"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "templateKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "relatedEntity": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/MailStatus"
+          },
+          "attempts": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sentAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentNames": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MailSecurity": {
+        "enum": [
+          "startTls",
+          "sslOnConnect",
+          "none"
+        ]
+      },
+      "MailSettingsDto": {
+        "required": [
+          "configured",
+          "enabled",
+          "host",
+          "port",
+          "security",
+          "userName",
+          "hasPassword",
+          "fromAddress",
+          "fromName",
+          "replyTo",
+          "lastTestAt",
+          "lastTestOk",
+          "lastTestError"
+        ],
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "security": {
+            "$ref": "#/components/schemas/MailSecurity"
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hasPassword": {
+            "type": "boolean"
+          },
+          "fromAddress": {
+            "type": "string"
+          },
+          "fromName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "replyTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastTestAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastTestOk": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "lastTestError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MailStatus": {
+        "enum": [
+          "queued",
+          "sent",
+          "failed"
+        ]
+      },
+      "MailTemplateDto": {
+        "required": [
+          "key",
+          "name",
+          "subject",
+          "body",
+          "customized",
+          "placeholders"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "customized": {
+            "type": "boolean"
+          },
+          "placeholders": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "MaintenanceState": {
         "required": [
           "active",
@@ -11037,6 +12756,36 @@
           "cancelled"
         ]
       },
+      "PairArchiveRequest": {
+        "required": [
+          "address",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "PairBackupTargetRequest": {
+        "required": [
+          "address",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
       "PdfSettings": {
         "type": "object",
         "properties": {
@@ -11256,6 +13005,18 @@
             "items": {
               "$ref": "#/components/schemas/SyncOperationResult"
             }
+          }
+        }
+      },
+      "QueueResult": {
+        "required": [
+          "queued"
+        ],
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -13138,6 +14899,40 @@
           }
         }
       },
+      "TestMailRequest": {
+        "required": [
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "to": {
+            "type": "string"
+          }
+        }
+      },
+      "TestMailResult": {
+        "required": [
+          "ok",
+          "error",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "TicketCategory": {
         "enum": [
           "signIn",
@@ -13749,6 +15544,81 @@
           }
         }
       },
+      "UpdateMailSettingsRequest": {
+        "required": [
+          "enabled",
+          "host",
+          "port",
+          "security",
+          "userName",
+          "password",
+          "clearPassword",
+          "fromAddress",
+          "fromName",
+          "replyTo"
+        ],
+        "type": "object",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "host": {
+            "type": "string"
+          },
+          "port": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "security": {
+            "$ref": "#/components/schemas/MailSecurity"
+          },
+          "userName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "password": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clearPassword": {
+            "type": "boolean"
+          },
+          "fromAddress": {
+            "type": "string"
+          },
+          "fromName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "replyTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "UpdateMailTemplateRequest": {
+        "required": [
+          "subject",
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "subject": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          }
+        }
+      },
       "UpdateNoteRequest": {
         "required": [
           "isPinned",
@@ -14271,6 +16141,12 @@
     },
     {
       "name": "Backup Center"
+    },
+    {
+      "name": "E-Mail"
+    },
+    {
+      "name": "Archiv"
     }
   ]
 }

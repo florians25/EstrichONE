@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <!-- Archivserver (GoBD-orientiert, WORM) und Backup-Ziel für EstrichONE. Eigenes Image, läuft auf beliebiger Hardware. -->
+  <PropertyGroup>
+    <RootNamespace>EstrichOne.Archive</RootNamespace>
+    <AssemblyName>estrichone-archive</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+    <!-- CA1873: Protokollaufrufe sind selten (Start, Kopplung, Prüfung). -->
+    <NoWarn>$(NoWarn);CA1873</NoWarn>
+  </PropertyGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="EstrichOne.Api.Tests" />
+  </ItemGroup>
+</Project>

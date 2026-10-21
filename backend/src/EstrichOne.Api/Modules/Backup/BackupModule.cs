@@ -1,4 +1,6 @@
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Infrastructure.Peers;
+using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
@@ -13,6 +15,7 @@ public sealed class BackupModule : IModule
     {
         services.AddOptions<BackupSettings>().Bind(configuration.GetSection(BackupSettings.SectionName));
         services.AddSingleton<BackupStatusReader>();
+        services.AddScoped<BackupTargetService>();
         services.AddHealthChecks().AddCheck<BackupHealthCheck>("backup", tags: ["ready"]);
     }
 
@@ -37,5 +40,45 @@ public sealed class BackupModule : IModule
             .WithName("RequestBackupRun").WithSummary("Sicherung anfordern; der Backup-Dienst startet sie innerhalb von 30 Sekunden")
             .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.BackupManage);
+
+        // Backup-Ziele auf anderer Hardware (Kopplungscode, gepinntes Zertifikat, nur anhängen).
+        backup.MapGet("/targets", async (BackupTargetService targets, bool? live, CancellationToken ct) =>
+                TypedResults.Ok(await targets.ListAsync(live != false, ct)))
+            .WithName("GetBackupTargets").RequirePermission(Permissions.BackupManage);
+
+        backup.MapPost("/targets", async Task<Results<Ok<BackupTargetDto>, ProblemHttpResult>> (PairBackupTargetRequest request,
+                BackupTargetService targets, IAuditLog audit, ICurrentUser user, EstrichOneDbContext db, CancellationToken ct) =>
+            {
+                try
+                {
+                    var target = await targets.PairAsync(request.Address, request.Code, user.UserId, ct);
+                    audit.Record("backup.target.paired", user.UserId, "backup_target", target.Id.ToString(),
+                        new Dictionary<string, string?> { ["address"] = target.Address, ["fingerprint"] = target.CaFingerprint });
+                    await db.SaveChangesAsync(ct);
+                    var list = await targets.ListAsync(live: true, ct);
+                    return TypedResults.Ok(list.Single(t => t.Id == target.Id));
+                }
+                catch (PeerException exception)
+                {
+                    return TypedResults.Problem(statusCode: exception.Code == "PEER_UNREACHABLE" ? 502 : 422, title: "Kopplung fehlgeschlagen",
+                        detail: exception.Message, extensions: new Dictionary<string, object?> { ["code"] = exception.Code });
+                }
+            })
+            .WithName("PairBackupTarget").WithSummary("Backup-Ziel per Adresse und Kopplungscode verbinden")
+            .RequirePermission(Permissions.BackupManage);
+
+        backup.MapDelete("/targets/{id:guid}", async Task<Results<NoContent, NotFound>> (Guid id, BackupTargetService targets, IAuditLog audit,
+                ICurrentUser user, EstrichOneDbContext db, CancellationToken ct) =>
+            {
+                if (!await targets.RemoveAsync(id, ct))
+                {
+                    return TypedResults.NotFound();
+                }
+
+                audit.Record("backup.target.removed", user.UserId, "backup_target", id.ToString());
+                await db.SaveChangesAsync(ct);
+                return TypedResults.NoContent();
+            })
+            .WithName("RemoveBackupTarget").RequirePermission(Permissions.BackupManage);
     }
 }

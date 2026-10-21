@@ -15,6 +15,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\src\EstrichOne.Api\EstrichOne.Api.csproj" />
+    <ProjectReference Include="..\..\src\EstrichOne.Archive\EstrichOne.Archive.csproj" />
   </ItemGroup>
   <ItemGroup>
     <Using Include="Xunit" />

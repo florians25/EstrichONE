@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/EstrichOne.Api/EstrichOne.Api.csproj" />
+    <Project Path="src/EstrichOne.Archive/EstrichOne.Archive.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/EstrichOne.Api.Tests/EstrichOne.Api.Tests.csproj" />

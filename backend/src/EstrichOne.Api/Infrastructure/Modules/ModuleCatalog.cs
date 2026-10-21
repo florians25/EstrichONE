@@ -1,4 +1,5 @@
 using EstrichOne.Api.Modules.Access;
+using EstrichOne.Api.Modules.Archive;
 using EstrichOne.Api.Modules.Audit;
 using EstrichOne.Api.Modules.Backup;
 using EstrichOne.Api.Modules.Bauakten;
@@ -8,6 +9,7 @@ using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Documentation;
 using EstrichOne.Api.Modules.Helpdesk;
 using EstrichOne.Api.Modules.Identity;
+using EstrichOne.Api.Modules.Mail;
 using EstrichOne.Api.Modules.Materials;
 using EstrichOne.Api.Modules.Notices;
 using EstrichOne.Api.Modules.Organization;
@@ -41,6 +43,8 @@ public static class ModuleCatalog
         new SyncModule(),
         new NoticesModule(),
         new BackupModule(),
+        new MailModule(),
+        new ArchiveModule(),
     ];
 
     public static IServiceCollection AddModules(this IServiceCollection services, IConfiguration configuration)

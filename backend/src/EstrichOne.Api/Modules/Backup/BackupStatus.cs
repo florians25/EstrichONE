@@ -63,7 +63,7 @@ public sealed class BackupStatusReader(IOptions<BackupSettings> options, TimePro
     }
 
     /// <summary>Der Backup-Dienst schreibt je Eintrag eine Datei (z. B. <c>lastSuccess.json</c>).</summary>
-    private BackupRunInfo? ReadEntry(string name)
+    public BackupRunInfo? ReadEntry(string name)
     {
         var file = Path.Combine(Settings.StatusPath!, name + ".json");
         try

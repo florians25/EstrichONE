@@ -43,6 +43,7 @@ builder.Services.AddPersistence(builder.Configuration);
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<EstrichOneDbContext>("database", tags: ["ready"]);
 builder.Services.AddEstrichOneOpenApi();
+builder.Services.AddEstrichOneDataProtection(builder.Configuration);
 builder.Services.AddModules(builder.Configuration);
 
 if (options.TrustForwardedHeaders)
