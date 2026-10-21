@@ -46,11 +46,11 @@ test('Archiv: falscher Code wird abgelehnt, mit richtigem Code gekoppelt, Regeln
   await expect(page.getByText('Noch kein Archivserver gekoppelt.', { exact: false })).toBeVisible();
 
   await page.getByRole('button', { name: 'Archivserver koppeln' }).click();
-  await page.getByLabel('Adresse').fill(archiveAddress);
-  await page.getByLabel('Kopplungscode').fill('AAAA-BBBB-CCCC');
+  await page.getByRole('textbox', { name: 'Adresse' }).fill(archiveAddress);
+  await page.getByRole('textbox', { name: 'Kopplungscode' }).fill('AAAA-BBBB-CCCC');
   await page.getByRole('button', { name: 'Koppeln', exact: true }).click();
   await expect(page.getByText('Der Kopplungscode stimmt nicht.', { exact: false })).toBeVisible();
-  await page.getByLabel('Kopplungscode').fill(archiveCode);
+  await page.getByRole('textbox', { name: 'Kopplungscode' }).fill(archiveCode);
   await page.getByRole('button', { name: 'Koppeln', exact: true }).click();
   const ok = page.locator('.sapMMessageBox').filter({ hasText: 'Gekoppelt mit „Archiv E2E“' });
   await expect(ok).toBeVisible({ timeout: 30_000 });
@@ -71,8 +71,8 @@ test('Backup-Ziele: Anleitung mit Installationsbefehl, Kopplungsdialog', async (
   await expect(pageTitle(page)).toHaveText('Backup-Ziele');
   await expect(page.getByText('estrichone-installer:latest backup-ziel', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Backup-Ziel koppeln' }).click();
-  await page.getByLabel('Adresse').fill('127.0.0.1:1');
-  await page.getByLabel('Kopplungscode').fill('AAAA-BBBB-CCCC');
+  await page.getByRole('textbox', { name: 'Adresse' }).fill('127.0.0.1:1');
+  await page.getByRole('textbox', { name: 'Kopplungscode' }).fill('AAAA-BBBB-CCCC');
   await page.getByRole('button', { name: 'Koppeln', exact: true }).click();
   await expect(page.getByText('nicht erreichbar', { exact: false })).toBeVisible({ timeout: 30_000 });
 });
