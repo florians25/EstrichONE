@@ -26,7 +26,7 @@ import { hasOwnChoice } from "../util/theme";
 import { initials } from "../util/format";
 import { setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
-import { navigation, routes, type NavEntry } from "../util/routes";
+import { navKeyFor, navigation, routes, type NavEntry } from "../util/routes";
 import { notices } from "../util/notices";
 import { session } from "../util/session";
 import { logos } from "../util/theme";
@@ -297,7 +297,7 @@ export default class AppController extends BaseController {
 		for (const other of ["authNav", "bareNav", "content"].filter((id) => id !== containerId)) {
 			this.el<NavContainer>(other).removeAllPages();
 		}
-		this.model().setProperty("/navKey", route.nav ?? "");
+		this.model().setProperty("/navKey", navKeyFor(route.nav, match.query));
 		document.title = `${route.title ? this.t(route.title) : ""} – EstrichONE`.replace(/^ – /, "");
 		const controller = view.getController() as BaseController | undefined;
 		try {

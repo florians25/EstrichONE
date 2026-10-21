@@ -87,9 +87,17 @@ export const navigation: NavEntry[] = [
 		key: "groupOffice", children: [
 			{ key: "customers", path: "/kunden", icon: "sap-icon://customer", permission: "contacts.read" },
 			{ key: "calls", path: "/anrufe", icon: "sap-icon://call", permission: "contacts.read" },
-			{ key: "staff", path: "/personal", icon: "sap-icon://employee-lookup", permission: "hr.read" },
-			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 			{ key: "resources", path: "/planung/ressourcen", icon: "sap-icon://shipping-status", permission: "planning.read" },
+		],
+	},
+	{
+		key: "groupHr", children: [
+			{ key: "staff", path: "/personal", icon: "sap-icon://employee-lookup", permission: "hr.read" },
+			{ key: "vacationPlan", path: "/personal/urlaub?reiter=plan", icon: "sap-icon://calendar", permission: "hr.read" },
+			{ key: "vacationRequests", path: "/personal/urlaub?reiter=antraege", icon: "sap-icon://approvals", permission: "absence.approve" },
+			{ key: "sickNotes", path: "/personal/urlaub?reiter=krank", icon: "sap-icon://stethoscope", permission: "hr.manage" },
+			{ key: "hrReminders", path: "/personal/urlaub?reiter=fristen", icon: "sap-icon://alarm", permission: "hr.read" },
+			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 		],
 	},
 	{
@@ -112,3 +120,11 @@ export const navigation: NavEntry[] = [
 		],
 	},
 ];
+
+/** Personal (HR): Reiter der Urlaubsseite als eigene Navigationseinträge markieren. */
+const vacationTabs: Record<string, string> = { plan: "vacationPlan", antraege: "vacationRequests", krank: "sickNotes", fristen: "hrReminders" };
+
+export function navKeyFor(nav: string | undefined, query: URLSearchParams): string {
+	if (nav === "vacation") return vacationTabs[query.get("reiter") ?? ""] ?? "vacation";
+	return nav ?? "";
+}

@@ -19,7 +19,7 @@ async function dialog(page: Page, name: string | RegExp) {
 
 test('Personal: aus Benutzerkonten übernehmen, Stammdaten, Qualifikation mit Ablauf, Abwesenheit, Personaldokument', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Personal').click();
+  await nav(page, 'Mitarbeiter').click();
   await expect(pageTitle(page)).toHaveText('Personal');
   await page.getByRole('button', { name: 'Aus Benutzerkonten übernehmen' }).click();
   await page.getByRole('button', { name: 'Übernehmen', exact: true }).click();
@@ -75,14 +75,14 @@ test('Personal: aus Benutzerkonten übernehmen, Stammdaten, Qualifikation mit Ab
   await doc.getByRole('button', { name: 'Hochladen' }).click();
   await expect(page.getByRole('row', { name: /Arbeitsvertrag/ })).toBeVisible();
 
-  await nav(page, 'Personal').click();
+  await nav(page, 'Mitarbeiter').click();
   await expect(page.getByRole('row', { name: /Anna Admin/ })).toContainText('Nachweis(e) laufen ab');
   await expect(page.getByText(/Qualifikationen oder Führerscheine laufen/)).toBeVisible();
 });
 
 test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankmeldung vertraulich, Fristen', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Urlaub und Abwesenheiten').click();
+  await nav(page, 'Mein Urlaub / Urlaubsantrag').click();
   await expect(pageTitle(page)).toHaveText('Urlaub und Abwesenheiten');
   const start = new Date();
   start.setMonth(start.getMonth() + 2, 1);
