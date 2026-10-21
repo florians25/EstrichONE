@@ -1,0 +1,75 @@
+<mvc:View controllerName="estrichone.controller.planning.TeamPlanner" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
+	xmlns:core="sap.ui.core" xmlns:unified="sap.ui.unified" xmlns:eo="estrichone.control" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" fitContent="true" class="eoTeamPlannerPage">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="Teamplaner" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{view>/subtitle}"/></f:expandedContent>
+				<f:actions>
+					<MenuButton text="Einplanung" icon="sap-icon://add" type="Emphasized" buttonMode="Split" useDefaultActionOnly="true" defaultAction=".onNewAssignment" visible="{view>/canPlan}">
+						<menu>
+							<Menu>
+								<MenuItem text="Einsatz auf Bauvorhaben" icon="sap-icon://building" press=".onNewAssignment"/>
+								<MenuItem text="Termin ohne Bauvorhaben" icon="sap-icon://appointment" press=".onNewEvent"/>
+							</Menu>
+						</menu>
+					</MenuButton>
+					<Button text="Tages-PDF" icon="sap-icon://pdf-attachment" press=".onPdf" tooltip="Tagesplan als PDF (Einsätze je Kolonne mit Uhrzeit)"/>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox height="100%" renderType="Bare" class="eoTeamPlanner">
+				<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiTinyMarginBottom"/>
+				<MessageStrip text="{view>/conflictText}" type="Warning" showIcon="true" visible="{= ${view>/conflicts}.length > 0 }" class="sapUiTinyMarginBottom">
+					<link><Link text="Anzeigen" press=".onConflicts"/></link>
+				</MessageStrip>
+				<PlanningCalendar id="pc" startDate="{view>/startDate}" viewKey="{view>/viewKey}" rows="{path: 'view>/rows', templateShareable: false}"
+					appointmentsVisualization="Filled" showWeekNumbers="true" firstDayOfWeek="1" stickyHeader="true" showEmptyIntervalHeaders="false"
+					groupAppointmentsMode="Expanded" busy="{view>/busy}" busyIndicatorDelay="200" appointmentSelect=".onSelect" startDateChange=".onStartDateChange"
+					viewChange=".onViewChange" intervalSelect=".onInterval" rowHeaderPress=".onRowHeader" height="100%" class="eoPlanningCalendar"
+					noDataText="Keine Kolonnen bzw. Mitarbeiter – unter „Kolonnen und Geräte“ anlegen.">
+					<toolbarContent>
+						<SegmentedButton selectedKey="{view>/rowsMode}" selectionChange=".onRowsMode">
+							<items>
+								<SegmentedButtonItem key="kolonnen" text="Kolonnen" icon="sap-icon://group"/>
+								<SegmentedButtonItem key="mitarbeiter" text="Mitarbeiter" icon="sap-icon://employee"/>
+							</items>
+						</SegmentedButton>
+						<ToolbarSpacer/>
+						<SearchField value="{view>/search}" liveChange=".onSearch" placeholder="Zeile suchen" width="12rem"/>
+						<CheckBox text="Termine" selected="{view>/showEvents}" select=".onToggle" tooltip="Termine aus den Kalendern anzeigen"/>
+						<CheckBox text="Abwesenheiten" selected="{view>/showAbsences}" select=".onToggle"/>
+					</toolbarContent>
+					<views>
+						<PlanningCalendarView key="tag" intervalType="Hour" description="Tag (Stunden)" intervalsS="4" intervalsM="8" intervalsL="14" showSubIntervals="true"/>
+						<PlanningCalendarView key="woche" intervalType="Day" description="Woche" intervalsS="2" intervalsM="5" intervalsL="7"/>
+						<PlanningCalendarView key="zweiwochen" intervalType="Day" description="2 Wochen" intervalsS="3" intervalsM="7" intervalsL="14"/>
+						<PlanningCalendarView key="monat" intervalType="OneMonth" description="Monat" intervalsS="1" intervalsM="1" intervalsL="1"/>
+					</views>
+					<rows>
+						<PlanningCalendarRow key="{view>key}" title="{view>title}" text="{view>text}" icon="{view>icon}"
+							enableAppointmentsDragAndDrop="{view>/canPlan}" enableAppointmentsResize="{view>/canPlan}" enableAppointmentsCreate="{view>/canPlan}"
+							appointmentDrop=".onDrop" appointmentResize=".onResize" appointmentCreate=".onCreate"
+							appointments="{path: 'view>appointments', templateShareable: false}" intervalHeaders="{path: 'view>headers', templateShareable: false}">
+							<appointments>
+								<unified:CalendarAppointment key="{view>key}" startDate="{view>start}" endDate="{view>end}" title="{view>title}" text="{view>text}"
+									icon="{view>icon}" color="{view>color}" tooltip="{view>tooltip}" tentative="{view>tentative}"/>
+							</appointments>
+							<intervalHeaders>
+								<unified:CalendarAppointment key="{view>key}" startDate="{view>start}" endDate="{view>end}" title="{view>title}" icon="{view>icon}"
+									color="{view>color}" tooltip="{view>tooltip}"/>
+							</intervalHeaders>
+						</PlanningCalendarRow>
+					</rows>
+				</PlanningCalendar>
+				<HBox wrap="Wrap" class="eoPlanLegend sapUiTinyMarginTop" items="{view>/legend}">
+					<HBox alignItems="Center" class="sapUiSmallMarginEnd">
+						<eo:Swatch color="{view>color}"/><Text text="{view>text}"/>
+					</HBox>
+				</HBox>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

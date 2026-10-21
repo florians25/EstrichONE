@@ -1,7 +1,39 @@
 import { expect, test } from '@playwright/test';
-import { adminPassword, apiCall, choose, nav, pageTitle, signIn, toast } from './helpers';
+import { adminPassword, apiCall, choose, jpeg, nav, pageTitle, signIn, toast } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
+
+test('IT-Ticket als normaler Benutzer im Web anlegen (Kategorie, Priorität, Bildschirmfoto), eigene Tickets mit Verlauf', async ({ page }) => {
+  await signIn(page, 'l.brandl', 'Estrich-Lukas-2026!');
+  await nav(page, 'Helpdesk').click();
+  await expect(page.getByText('Ihre IT-Meldungen mit Verlauf')).toBeVisible();
+  await page.getByRole('button', { name: 'Neues Ticket' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Neues IT-Ticket' });
+  await dialog.getByLabel('Kurzbeschreibung').fill('Tablet zeigt keine Pläne an');
+  await choose(page, dialog.getByLabel('Kategorie'), 'App-Fehler');
+  await choose(page, dialog.getByLabel('Priorität'), 'Hoch');
+  await dialog.getByRole('textbox', { name: /^Beschreibung/ }).fill('Seit dem Update bleibt die Planansicht weiß.');
+  const chooser = page.waitForEvent('filechooser');
+  await dialog.getByRole('button', { name: 'Anhang oder Bildschirmfoto' }).click();
+  await (await chooser).setFiles({ name: 'bildschirm.jpg', mimeType: 'image/jpeg', buffer: jpeg });
+  await expect(dialog.getByText('bildschirm.jpg')).toBeVisible();
+  await dialog.getByRole('button', { name: 'Ticket anlegen' }).click();
+
+  await expect(page).toHaveURL(/\/it-center\/helpdesk\/[0-9a-f-]{36}/);
+  await expect(pageTitle(page)).toHaveText('Tablet zeigt keine Pläne an');
+  await expect(page.locator('#ticketTags, [id$="ticketTags"]').getByText('Hoch')).toBeVisible();
+  await expect(page.locator('.eoTimeline').getByAltText('bildschirm.jpg')).toBeVisible();
+  // Keine Bearbeitungsfunktionen für Melder.
+  await expect(page.getByText('Interne Notiz (für den Melder unsichtbar)')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Mir zuweisen' })).toHaveCount(0);
+  await page.getByLabel('Antwort oder Notiz').fill('Neustart hat nicht geholfen.');
+  await page.getByRole('button', { name: 'Senden', exact: true }).click();
+  await expect(page.locator('.eoTimeline').getByText('Neustart hat nicht geholfen.')).toBeVisible();
+
+  await page.getByRole('link', { name: 'Helpdesk' }).click();
+  const row = page.getByRole('row', { name: /Tablet zeigt keine Pläne an/ });
+  await expect(row).toContainText('Hoch');
+});
 
 test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
@@ -21,12 +53,12 @@ test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async
   await page.getByLabel('Antwort oder Notiz').fill('Toner prüfen, vermutlich leer');
   await page.getByText('Interne Notiz (für den Melder unsichtbar)').click();
   await page.getByRole('button', { name: /Notiz speichern|Senden|Antwort senden/ }).first().click();
-  await expect(page.getByText('Toner prüfen, vermutlich leer')).toBeVisible();
+  await expect(page.locator('.eoTimeline').getByText('Toner prüfen, vermutlich leer')).toBeVisible();
 
   await choose(page, page.getByLabel('Status', { exact: true }), 'Gelöst');
   await page.getByLabel(/Lösung/).fill('Toner gewechselt.');
   await page.getByRole('button', { name: 'Speichern', exact: true }).click();
-  await expect(page.getByText(/Status geändert: Gelöst|hat den Status/).first()).toBeVisible();
+  await expect(page.getByText(/Status geändert: Gelöst|hat den Status|Status: .* → Gelöst/).first()).toBeVisible();
 });
 
 test('Büro: Telefon-Schnellerfassung mit Wiedervorlage, Anfrage erfassen und in Bauakte umwandeln, Tagesübersicht', async ({ page }) => {

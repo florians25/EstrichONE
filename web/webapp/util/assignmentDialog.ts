@@ -12,6 +12,8 @@ import type { AssignmentKind, AssignmentView, CrewResponse, ResourceResponse } f
 import { navTo } from "./navigation";
 import { session } from "./session";
 import { uuidv7 } from "./ids";
+import { openEventDialog } from "./calendarDialog";
+import { parseLocal } from "./planningModels";
 
 export interface AssignmentDraft {
 	id: string;
@@ -28,6 +30,8 @@ export interface AssignmentDraft {
 	resourceIds: string[];
 	notes: string;
 	warnings: string[];
+	/** Kolonnenmitglieder, die bei diesem Einsatz nicht dabei sind. */
+	excludedUserIds?: string[];
 }
 
 export function newDraft(day: string, crewId: string | null, bauakte?: { id: string; label: string }): AssignmentDraft {
@@ -44,6 +48,7 @@ export function draftOf(a: AssignmentView, crews: CrewResponse[]): AssignmentDra
 		id: a.id, existing: true, bauakteId: a.bauakteId, bauakteLabel: `${a.bauakteNumber ?? "neu"} · ${a.bauakteTitle}`, kind: a.kind, day: a.day,
 		startTime: a.startTime, endTime: a.endTime, activity: a.activity, crewId: a.crewId,
 		userIds: a.people.map((p) => p.id).filter((id) => !crewMembers.has(id)), resourceIds: a.resources.map((r) => r.id), notes: a.notes ?? "", warnings: a.warnings,
+		excludedUserIds: (a as AssignmentView & { excludedUserIds?: string[] | null }).excludedUserIds ?? [],
 	};
 }
 
@@ -91,6 +96,18 @@ export async function openAssignment(draft: AssignmentDraft): Promise<void> {
 		],
 		extra: (dialog) => {
 			const content = [];
+			if (!draft.existing && !draft.bauakteId && canPlan) {
+				// C1: Ohne Bauvorhaben wird nicht „irgendwas“ eingeplant, sondern ein Termin im Kalender angelegt.
+				content.push(new Link({
+					text: "Kein Bauvorhaben? Stattdessen Termin anlegen (z. B. Schulung, Werkstatt, Besprechung)",
+					press: () => {
+						dialog.close();
+						const start = parseLocal(`${draft.day}T${draft.startTime ?? "07:00:00"}`);
+						const end = draft.endTime ? parseLocal(`${draft.day}T${draft.endTime}`) : new Date(start.getTime() + 2 * 3600_000);
+						void openEventDialog({ defaults: { start, end, crewIds: draft.crewId ? [draft.crewId] : [], participantUserIds: draft.userIds } });
+					},
+				}));
+			}
 			if (draft.bauakteId) {
 				content.push(new Link({ text: "Bauakte öffnen", press: () => { dialog.close(); navTo(`/bauakten/${draft.bauakteId}?abschnitt=einsaetze`); } }));
 			}
@@ -117,6 +134,8 @@ export async function openAssignment(draft: AssignmentDraft): Promise<void> {
 			const saved = await put<AssignmentView>(`planning/assignments/${current.id}`, {
 				bauakteId: v.bauakteId, kind: v.kind, day: v.day, startTime: v.startTime || null, endTime: v.endTime || null, activity: v.activity,
 				crewId: v.crewId || null, userIds: v.userIds ?? [], resourceIds: v.resourceIds ?? [], notes: v.notes || null,
+				// Ausnahmen aus „Wer fährt wohin“ bleiben erhalten, solange die Kolonne gleich bleibt.
+				excludedUserIds: v.crewId && v.crewId === draft.crewId ? draft.excludedUserIds ?? [] : [],
 			});
 			planningChanged();
 			current = { ...current, existing: true, warnings: saved.warnings };

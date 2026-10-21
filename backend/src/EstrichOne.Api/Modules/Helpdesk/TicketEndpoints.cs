@@ -20,9 +20,10 @@ public sealed record CreateTicketRequest(
     bool ReporterBlocked,
     Guid? BauakteId,
     JsonObject? Diagnostics,
-    IReadOnlyList<Guid>? AttachmentFileIds)
+    IReadOnlyList<Guid>? AttachmentFileIds,
+    TicketPriority? Priority = null)
 {
-    internal CreateTicketInput ToInput() => new(Id, Title, Description, Category, Source, ReporterBlocked, BauakteId, Diagnostics, AttachmentFileIds);
+    internal CreateTicketInput ToInput() => new(Id, Title, Description, Category, Source, ReporterBlocked, BauakteId, Diagnostics, AttachmentFileIds, Priority);
 }
 
 /// <param name="Timestamp">Zeitpunkt der Signatur (ISO 8601, wie gesendet); höchstens 10 Minuten Abweichung.</param>
@@ -123,7 +124,7 @@ internal static class TicketEndpoints
                 "Das Gerät ist nicht eingerichtet, gesperrt oder die Signatur ist ungültig.");
         }
 
-        var input = request.Ticket.ToInput() with { BauakteId = null, AttachmentFileIds = [] };
+        var input = request.Ticket.ToInput() with { BauakteId = null, AttachmentFileIds = [], Priority = null };
         var (ticket, _, failure, failureMessage) = await tickets.CreateAsync(input, null, request.ReporterName, device.Id, cancellationToken);
         return ticket is null ? Failure(failure!.Value, failureMessage!) : TypedResults.Ok(new DeviceTicketResponse(ticket.Number));
     }

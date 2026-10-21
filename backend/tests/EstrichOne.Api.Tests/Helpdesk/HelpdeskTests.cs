@@ -59,6 +59,21 @@ public sealed class HelpdeskTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Create_FromWebForm_TakesPriority_ForNormalUsers()
+    {
+        using var reporter = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        var ticket = await CreateAsync(reporter, new
+        {
+            id = Guid.CreateVersion7(), title = "Drucker im Büro druckt nicht", description = "Papierstau-Meldung",
+            category = "officeIt", source = "web", reporterBlocked = false, priority = "high",
+        });
+
+        ticket.Summary.Priority.ShouldBe(TicketPriority.High, "Im Webformular wählt der Melder die Priorität (Runde 3b, F2).");
+        var mine = await reporter.GetFromJsonAsync<List<TicketSummary>>("/api/v1/tickets/mine", TestJson.Options, Ct);
+        mine.ShouldHaveSingleItem().Priority.ShouldBe(TicketPriority.High);
+    }
+
+    [Fact]
     public async Task InternalNotes_AreNeverVisibleToTheReporter_AK2()
     {
         using var reporter = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);

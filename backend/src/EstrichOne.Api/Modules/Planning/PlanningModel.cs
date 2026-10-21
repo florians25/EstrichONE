@@ -259,6 +259,21 @@ public sealed class Assignment : IVersionedEntity
     public void SetResource(Guid resourceId, bool present) =>
         ResourceIds = present ? ResourceIds.Append(resourceId).Distinct().ToList() : ResourceIds.Where(id => id != resourceId).ToList();
 
+    /// <summary>Wer fährt wohin: Einsatz (mit Kolonne, Fahrzeugen, Tätigkeit) auf eine andere Baustelle verlegen.</summary>
+    public void Relocate(Guid bauakteId) => BauakteId = bauakteId;
+
+    /// <summary>Kolonne aus dem Einsatz nehmen; einzeln eingeplante Mitarbeiter bleiben (nur aufrufen, wenn welche da sind).</summary>
+    public void DetachCrew()
+    {
+        if (UserIds.Count == 0)
+        {
+            throw new InvalidOperationException("Ohne Kolonne bliebe niemand im Einsatz.");
+        }
+
+        CrewId = null;
+        ExcludedUserIds = [];
+    }
+
     /// <summary>Uhrzeit ändern (Teamplaner: Ziehen, Dauer ziehen).</summary>
     public void Reschedule(DateOnly day, TimeOnly? startTime, TimeOnly? endTime)
     {

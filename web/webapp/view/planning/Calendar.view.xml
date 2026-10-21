@@ -1,0 +1,100 @@
+<mvc:View controllerName="estrichone.controller.planning.Calendar" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:unified="sap.ui.unified" xmlns:eo="estrichone.control" height="100%">
+	<Page id="page" showHeader="false" enableScrolling="false" class="eoCalendarPage">
+		<FlexBox height="100%" alignItems="Stretch" class="eoCalendarLayout">
+			<VBox id="sidebar" class="eoCalendarSide" width="17rem" visible="{view>/sidebar}">
+				<Button text="Neuer Termin" icon="sap-icon://add" type="Emphasized" press=".onNew" width="100%" class="sapUiSmallMarginBottom"/>
+				<unified:Calendar id="mini" firstDayOfWeek="1" showWeekNumbers="true" select=".onMiniSelect" width="100%" class="eoMiniCalendar"/>
+				<Toolbar style="Clear" class="sapUiTinyMarginTop">
+					<Title text="Kalender" level="H3"/>
+					<ToolbarSpacer/>
+					<Button icon="sap-icon://add" type="Transparent" tooltip="Kalender hinzufügen" press=".onAddCalendar"/>
+				</Toolbar>
+				<List id="calendarList" items="{view>/calendars}" showSeparators="None" mode="None" class="eoCalendarList">
+					<CustomListItem>
+						<HBox alignItems="Center" justifyContent="SpaceBetween">
+							<CheckBox selected="{view>visible}" select=".onToggleCalendar" text="{view>name}" tooltip="{= ${view>visible} ? ${view>name} + ' ausblenden' : ${view>name} + ' einblenden' }"/>
+							<HBox alignItems="Center">
+								<eo:Swatch color="{view>color}"/>
+								<Button icon="sap-icon://edit" type="Transparent" press=".onEditCalendar" visible="{view>canEdit}" tooltip="{= ${view>name} + ' bearbeiten' }"/>
+							</HBox>
+						</HBox>
+					</CustomListItem>
+				</List>
+				<CheckBox text="Einsätze der Planung" selected="{view>/showAssignments}" select=".onToggleAssignments" tooltip="Einsätze auf Bauvorhaben mit anzeigen"/>
+				<Label text="Farben nach" labelFor="colorMode" class="sapUiSmallMarginTop"/>
+				<SegmentedButton id="colorMode" selectedKey="{view>/colorMode}" selectionChange=".onColorMode" width="100%">
+					<items>
+						<SegmentedButtonItem key="calendar" text="Kalender"/>
+						<SegmentedButtonItem key="kind" text="Terminart"/>
+					</items>
+				</SegmentedButton>
+				<VBox items="{view>/legend}" class="sapUiTinyMarginTop" visible="{= ${view>/colorMode} === 'kind' }">
+					<HBox alignItems="Center"><eo:Swatch color="{view>color}"/><Text text="{view>text}"/></HBox>
+				</VBox>
+			</VBox>
+			<VBox class="eoGrow eoCalendarMain" height="100%">
+				<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiTinyMarginBottom"/>
+				<SinglePlanningCalendar id="spc" title="{view>/title}" startDate="{view>/startDate}" firstDayOfWeek="1" startHour="6" endHour="21"
+					fullDay="{view>/fullDay}" stickyMode="All" visible="{= ${view>/mode} !== 'agenda' }" busy="{view>/busy}" busyIndicatorDelay="200"
+					enableAppointmentsDragAndDrop="true" enableAppointmentsResize="true" enableAppointmentsCreate="true"
+					appointments="{path: 'view>/appointments', templateShareable: false}" appointmentSelect=".onSelect" appointmentDrop=".onDrop"
+					appointmentResize=".onResize" appointmentCreate=".onCreate" startDateChange=".onStartDateChange" headerDateSelect=".onHeaderDate"
+					moreLinkPress=".onMore" cellPress=".onCell" height="100%" class="eoSpc">
+					<actions>
+						<SegmentedButton selectedKey="{view>/mode}" selectionChange=".onMode">
+							<items>
+								<SegmentedButtonItem key="tag" text="Tag"/>
+								<SegmentedButtonItem key="woche" text="Woche"/>
+								<SegmentedButtonItem key="arbeitswoche" text="Mo–Fr"/>
+								<SegmentedButtonItem key="monat" text="Monat"/>
+								<SegmentedButtonItem key="agenda" text="Agenda"/>
+							</items>
+						</SegmentedButton>
+						<ToggleButton icon="sap-icon://full-screen" pressed="{view>/fullDay}" tooltip="Ganzen Tag (0–24 Uhr) zeigen"/>
+						<ToggleButton icon="sap-icon://menu2" pressed="{view>/sidebar}" tooltip="Kalenderliste ein-/ausblenden"/>
+					</actions>
+					<appointments>
+						<unified:CalendarAppointment key="{view>key}" title="{view>title}" text="{view>text}" startDate="{view>start}" endDate="{view>end}"
+							color="{view>color}" icon="{view>icon}" tooltip="{view>tooltip}"/>
+					</appointments>
+				</SinglePlanningCalendar>
+				<VBox visible="{= ${view>/mode} === 'agenda' }" height="100%" class="eoAgenda">
+					<Toolbar>
+						<Title text="{view>/title}" level="H2"/>
+						<ToolbarSpacer/>
+						<Button icon="sap-icon://navigation-left-arrow" tooltip="Zurück" press=".onAgendaPrev"/>
+						<Button text="Heute" press=".onToday"/>
+						<Button icon="sap-icon://navigation-right-arrow" tooltip="Weiter" press=".onAgendaNext"/>
+						<SegmentedButton selectedKey="{view>/mode}" selectionChange=".onMode">
+							<items>
+								<SegmentedButtonItem key="tag" text="Tag"/>
+								<SegmentedButtonItem key="woche" text="Woche"/>
+								<SegmentedButtonItem key="arbeitswoche" text="Mo–Fr"/>
+								<SegmentedButtonItem key="monat" text="Monat"/>
+								<SegmentedButtonItem key="agenda" text="Agenda"/>
+							</items>
+						</SegmentedButton>
+						<ToggleButton icon="sap-icon://menu2" pressed="{view>/sidebar}" tooltip="Kalenderliste ein-/ausblenden"/>
+					</Toolbar>
+					<ScrollContainer vertical="true" height="100%">
+						<List id="agenda" items="{path: 'view>/agenda', sorter: {path: 'day', group: true}}" noDataText="Keine Termine in den nächsten 30 Tagen."
+							busy="{view>/busy}" growing="true" growingThreshold="200">
+							<CustomListItem type="Active" press=".onAgendaPress">
+								<HBox alignItems="Center" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom eoAgendaItem">
+									<Text text="{view>time}" class="eoAgendaTime eoTabular"/>
+									<eo:Swatch color="{view>color}"/>
+									<VBox class="eoGrow">
+										<Text text="{view>title}" class="eoStrong"/>
+										<Text text="{view>meta}" class="eoMuted" visible="{= !!${view>meta} }"/>
+									</VBox>
+									<core:Icon src="{view>icon}" tooltip="{view>kindText}"/>
+								</HBox>
+							</CustomListItem>
+						</List>
+					</ScrollContainer>
+				</VBox>
+			</VBox>
+		</FlexBox>
+	</Page>
+</mvc:View>

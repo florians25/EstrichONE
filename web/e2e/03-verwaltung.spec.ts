@@ -137,7 +137,7 @@ test('Disposition: Vorrat einplanen, Terminart, Tag-, Monatsansicht und Arbeitsp
   await page.getByRole('option', { name: 'Tag', exact: true }).click();
   await expect(pageTitle(page)).toContainText('Tageseinteilung');
   await page.getByRole('option', { name: 'Monat', exact: true }).click();
-  await expect(pageTitle(page)).toContainText('Kalender');
+  await expect(pageTitle(page)).toContainText('Monatsplan');
 
   await nav(page, 'Arbeitsplan').click();
   await expect(pageTitle(page)).toContainText('Arbeitsplan');

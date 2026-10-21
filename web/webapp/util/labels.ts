@@ -107,7 +107,9 @@ export const assignmentKinds: Record<AssignmentKind, { text: string; color: stri
 	other: { text: "Sonstiges", color: "#94A3B8", icon: "sap-icon://overflow", activity: "" },
 };
 
-export const absenceKinds: Record<string, string> = { vacation: "Urlaub", sick: "Krank", training: "Schulung", other: "Sonstiges" };
+export const absenceKinds: Record<string, string> = {
+	vacation: "Urlaub", sick: "Krank", training: "Schulung", other: "Sonstiges", specialLeave: "Sonderurlaub", school: "Berufsschule",
+};
 export const resourceKinds: Record<string, string> = { vehicle: "Fahrzeug", pump: "Pumpe", machine: "Maschine" };
 
 export const checkTitles: Record<string, string> = {

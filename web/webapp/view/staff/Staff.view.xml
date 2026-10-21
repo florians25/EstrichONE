@@ -1,0 +1,76 @@
+<mvc:View controllerName="estrichone.controller.staff.Staff" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="Personal" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Personalstamm: Kontakt, Beschäftigung, Qualifikationen, Urlaub, Geräte und Dokumente"/></f:expandedContent>
+				<f:actions>
+					<Button text="Mitarbeiter anlegen" icon="sap-icon://add-employee" type="Emphasized" press=".onAdd" visible="{view>/canManage}"/>
+					<Button text="Aus Benutzerkonten übernehmen" icon="sap-icon://synchronize" press=".onImport" visible="{view>/canManage}"
+						tooltip="Für alle aktiven Benutzer ohne Personalstamm einen Mitarbeiter anlegen"/>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow">
+					<SegmentedButton selectedKey="{view>/status}" selectionChange=".onStatus">
+						<items>
+							<SegmentedButtonItem key="active" text="Aktiv"/>
+							<SegmentedButtonItem key="former" text="Ausgetreten"/>
+							<SegmentedButtonItem key="all" text="Alle"/>
+						</items>
+					</SegmentedButton>
+					<SearchField value="{view>/search}" search=".onRefresh" liveChange=".onFilter" placeholder="Name, Personalnummer, Ort, Tätigkeit" width="20rem"/>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<VBox>
+				<MessageStrip text="{view>/expiringText}" type="Warning" showIcon="true" visible="{= ${view>/expiring}.length > 0 }" class="sapUiSmallMarginBottom">
+					<link><Link text="Liste anzeigen" press=".onExpiring"/></link>
+				</MessageStrip>
+				<Table id="staffTable" items="{view>/shown}" busy="{view>/busy}" busyIndicatorDelay="200" growing="true" growingThreshold="100"
+					noDataText="Noch keine Mitarbeiter im Personalstamm. „Aus Benutzerkonten übernehmen“ legt sie für alle Benutzer an." popinLayout="GridSmall"
+					sticky="ColumnHeaders" mode="None">
+					<columns>
+						<Column><Text text="Mitarbeiter"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Tätigkeit"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kolonne"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Kontakt"/></Column>
+						<Column width="8rem" minScreenWidth="Tablet" demandPopin="true" hAlign="End"><Text text="Resturlaub"/></Column>
+						<Column width="10rem"><Text text="Status"/></Column>
+						<Column width="7rem" minScreenWidth="Desktop" demandPopin="true" hAlign="End" visible="{view>/canManage}"><Text text="Stundensatz"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onOpen">
+							<VBox>
+								<Text text="{view>displayName}" class="eoStrong"/>
+								<Text text="{= (${view>personnelNumber} ? 'Nr. ' + ${view>personnelNumber} + ' · ' : '') + (${view>userName} ? 'Konto: ' + ${view>userName} : 'kein Benutzerkonto') }" class="eoMuted"/>
+							</VBox>
+							<VBox>
+								<Text text="{= ${view>jobTitle} || '–' }"/>
+								<Text text="{view>employmentText}" class="eoMuted"/>
+							</VBox>
+							<Text text="{view>crewText}"/>
+							<VBox>
+								<Link text="{view>mobile}" href="{= 'tel:' + ${view>mobile} }" visible="{= !!${view>mobile} }"/>
+								<Link text="{view>phone}" href="{= 'tel:' + ${view>phone} }" visible="{= !!${view>phone} &amp;&amp; !${view>mobile} }"/>
+								<Text text="{= ${view>city} || '' }" class="eoMuted"/>
+							</VBox>
+							<ObjectNumber number="{view>vacationText}" unit="Tage" state="{= ${view>vacationRemaining} &lt; 0 ? 'Error' : 'None' }"/>
+							<VBox>
+								<ObjectStatus text="{view>todayText}" state="{view>todayState}" inverted="true"/>
+								<ObjectStatus text="{= ${view>expiringQualifications} + ' Nachweis(e) laufen ab' }" state="Warning" visible="{= ${view>expiringQualifications} > 0 }"
+									icon="sap-icon://alert" class="sapUiTinyMarginTop"/>
+							</VBox>
+							<Text text="{view>rateText}"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

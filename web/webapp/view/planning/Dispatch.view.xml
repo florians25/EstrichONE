@@ -1,0 +1,201 @@
+<mvc:View controllerName="estrichone.controller.planning.Dispatch" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:eo="estrichone.control" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoDispatchPage">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="Wer fährt wohin" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{view>/subtitle}"/></f:expandedContent>
+				<f:snappedContent><Text text="{view>/subtitle}"/></f:snappedContent>
+				<f:actions>
+					<Button text="Baustelle einteilen" icon="sap-icon://add" type="Emphasized" press=".onAddSite" visible="{view>/board/canPlan}"/>
+					<Button text="PDF" icon="sap-icon://pdf-attachment" press=".onPdf" tooltip="Wer fährt wohin als PDF (Aushang, Fahrerliste)"/>
+					<Button icon="sap-icon://print" tooltip="Drucken" press=".onPrint"/>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:header>
+			<f:DynamicPageHeader pinnable="false">
+				<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow">
+					<SegmentedButton selectedKey="{view>/dayKey}" selectionChange=".onDayKey">
+						<items>
+							<SegmentedButtonItem key="heute" text="Heute"/>
+							<SegmentedButtonItem key="morgen" text="Morgen"/>
+							<SegmentedButtonItem key="datum" text="Anderer Tag"/>
+						</items>
+					</SegmentedButton>
+					<Button icon="sap-icon://navigation-left-arrow" tooltip="Vorheriger Tag" press=".onPrev"/>
+					<DatePicker value="{view>/day}" valueFormat="yyyy-MM-dd" displayFormat="EEEE, dd.MM.yyyy" width="15rem" change=".onPick" ariaLabelledBy="dispatchDayLabel"/>
+					<core:InvisibleText id="dispatchDayLabel" text="Tag"/>
+					<Button icon="sap-icon://navigation-right-arrow" tooltip="Nächster Tag" press=".onNext"/>
+					<ToolbarSpacer/>
+					<SearchField value="{view>/search}" liveChange=".onSearch" placeholder="Baustelle oder Kolonne" width="16rem"/>
+				</FlexBox>
+			</f:DynamicPageHeader>
+		</f:header>
+		<f:content>
+			<VBox busy="{view>/busy}" busyIndicatorDelay="200">
+				<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginBottom"/>
+				<MessageStrip text="Kolonne auf eine Baustelle ziehen – oder auf der Karte „+ Kolonne“ wählen. Mehrere Kolonnen je Baustelle sind möglich; zurück zu „Kolonnen“ ziehen nimmt sie heraus. Einzelne Mitarbeiter und Fahrzeuge unter „Details“."
+					type="Information" showIcon="true" visible="{view>/board/canPlan}" class="sapUiSmallMarginBottom eoNoPrint"/>
+				<FlexBox id="dispatchRoot" alignItems="Start" wrap="Wrap" class="eoDispatch">
+					<VBox class="eoDispatchPool" width="19rem">
+						<Panel class="eoDispatchCrews">
+							<customData><core:CustomData key="dropsite" value="free" writeToDom="true"/></customData>
+							<headerToolbar>
+								<Toolbar><Title text="{= 'Kolonnen (' + ${view>/freeCrews} + ' frei)' }" level="H3"/></Toolbar>
+							</headerToolbar>
+							<List items="{view>/crews}" noDataText="Keine Kolonnen angelegt (Planung › Ressourcen)." showSeparators="Inner">
+								<CustomListItem class="eoDispatchPerson">
+									<customData>
+										<core:CustomData key="dragkind" value="crew" writeToDom="true"/>
+										<core:CustomData key="dragid" value="{view>id}" writeToDom="true"/>
+									</customData>
+									<HBox alignItems="Center" class="sapUiTinyMargin">
+										<eo:Swatch color="{view>color}"/>
+										<VBox class="eoGrow">
+											<Text text="{view>name}" class="eoStrong"/>
+											<Text text="{view>info}" class="eoMuted" wrapping="true"/>
+											<Text text="{view>vehicleText}" class="eoMuted" visible="{= !!${view>vehicleText} }" wrapping="true"/>
+											<ObjectStatus text="{view>placeText}" state="{view>placeState}"/>
+											<ObjectStatus text="{view>absentText}" state="Warning" icon="sap-icon://general-leave-request" visible="{= !!${view>absentText} }"/>
+										</VBox>
+										<Button icon="sap-icon://journey-depart" type="Transparent" tooltip="{= 'Einteilen: ' + ${view>name} }" press=".onAssignCrew" visible="{view>/board/canPlan}"/>
+									</HBox>
+								</CustomListItem>
+							</List>
+						</Panel>
+						<Panel headerText="{= 'Details: einzelne Mitarbeiter und Fahrzeuge (' + ${view>/free}.length + ' frei)' }" expandable="true" expanded="{view>/details}" class="sapUiSmallMarginTop eoDispatchDetails">
+						<Panel class="eoDispatchFree">
+							<customData><core:CustomData key="dropsite" value="free" writeToDom="true"/></customData>
+							<headerToolbar>
+								<Toolbar><Title text="{= 'Noch frei (' + ${view>/free}.length + ')' }" level="H3"/><ToolbarSpacer/></Toolbar>
+							</headerToolbar>
+							<List items="{view>/free}" noDataText="Alle sind eingeteilt." showSeparators="Inner">
+								<CustomListItem class="eoDispatchPerson">
+									<customData>
+										<core:CustomData key="dragkind" value="person" writeToDom="true"/>
+										<core:CustomData key="dragid" value="{view>id}" writeToDom="true"/>
+									</customData>
+									<HBox alignItems="Center" class="sapUiTinyMargin">
+										<eo:Swatch color="{view>crewColor}"/>
+										<VBox class="eoGrow">
+											<Text text="{view>name}" class="eoStrong"/>
+											<Text text="{= ${view>crewName} || 'ohne Kolonne' }" class="eoMuted"/>
+										</VBox>
+										<Button icon="sap-icon://journey-depart" type="Transparent" tooltip="{= 'Einteilen: ' + ${view>name} }" press=".onAssignPerson" visible="{view>/board/canPlan}"/>
+									</HBox>
+								</CustomListItem>
+							</List>
+						</Panel>
+						<Panel class="sapUiSmallMarginTop">
+							<headerToolbar>
+								<Toolbar><Title text="{= 'Freie Fahrzeuge und Geräte (' + ${view>/idleVehicles}.length + ')' }" level="H3"/></Toolbar>
+							</headerToolbar>
+							<customData><core:CustomData key="dropsite" value="free" writeToDom="true"/></customData>
+							<List items="{view>/idleVehicles}" noDataText="Alle Fahrzeuge sind unterwegs." showSeparators="Inner">
+								<CustomListItem class="eoDispatchPerson">
+									<customData>
+										<core:CustomData key="dragkind" value="vehicle" writeToDom="true"/>
+										<core:CustomData key="dragid" value="{view>id}" writeToDom="true"/>
+									</customData>
+									<HBox alignItems="Center" class="sapUiTinyMargin">
+										<core:Icon src="{= ${view>kind} === 'vehicle' ? 'sap-icon://shipping-status' : 'sap-icon://wrench' }" class="sapUiTinyMarginEnd"/>
+										<VBox class="eoGrow">
+											<Text text="{view>name}" class="eoStrong"/>
+											<Text text="{= ${view>identifier} || '' }" class="eoMuted"/>
+										</VBox>
+										<Button icon="sap-icon://journey-depart" type="Transparent" tooltip="{= 'Einteilen: ' + ${view>name} }" press=".onAssignVehicle" visible="{view>/board/canPlan}"/>
+									</HBox>
+								</CustomListItem>
+							</List>
+						</Panel>
+						</Panel>
+						<Panel headerText="{= 'Abwesend / Termine (' + ${view>/away}.length + ')' }" class="sapUiSmallMarginTop" visible="{= ${view>/away}.length > 0 }">
+							<List items="{view>/away}" showSeparators="Inner">
+								<StandardListItem title="{view>name}" description="{view>note}" icon="sap-icon://general-leave-request"/>
+							</List>
+						</Panel>
+					</VBox>
+					<VBox class="eoGrow eoDispatchSites">
+						<Text text="Für diesen Tag ist noch keine Baustelle eingeplant." class="eoMuted sapUiSmallMargin" visible="{= ${view>/sites}.length === 0 }"/>
+						<FlexBox items="{view>/sites}" wrap="Wrap" class="eoDispatchGrid">
+							<VBox class="eoDispatchCard" width="22rem">
+								<customData><core:CustomData key="dropsite" value="{view>bauakteId}" writeToDom="true"/></customData>
+								<HBox alignItems="Start" class="eoDispatchCardHead">
+									<ObjectStatus text="{= ${view>startTime} ? ${view>startTime}.slice(0, 5) : '–' }" state="Information" inverted="true" class="sapUiTinyMarginEnd eoTabular"/>
+									<VBox class="eoGrow">
+										<Link text="{= (${view>number} ? ${view>number} + ' · ' : '') + ${view>title} }" href="{= '/bauakten/' + ${view>bauakteId} }" emphasized="true" wrapping="true"/>
+										<Text text="{view>address}" visible="{= !!${view>address} }" class="eoMuted"/>
+										<HBox wrap="Wrap">
+											<Link text="Route" href="{view>navigationUrl}" target="_blank" visible="{= !!${view>navigationUrl} }" class="sapUiTinyMarginEnd"/>
+											<Link text="{= 'Vor Ort: ' + (${view>siteContactName} || '') + ' ' + (${view>siteContactPhone} || '') }" href="{= ${view>siteContactPhone} ? 'tel:' + ${view>siteContactPhone} : '' }"
+												visible="{= !!${view>siteContactName} || !!${view>siteContactPhone} }"/>
+										</HBox>
+									</VBox>
+								</HBox>
+								<Label text="Kolonnen" class="sapUiTinyMarginTop"/>
+								<VBox items="{path: 'view>crews', templateShareable: false}" class="eoDispatchTokens">
+									<HBox alignItems="Center">
+									<eo:Swatch color="{view>color}"/>
+									<Button text="{view>label}" icon="sap-icon://group" type="{= ${view>twice} ? 'Attention' : 'Default' }" press=".onCrewMenu" tooltip="{view>tooltip}" class="eoDispatchChip eoDispatchCrewChip">
+										<customData>
+											<core:CustomData key="dragkind" value="crew" writeToDom="true"/>
+											<core:CustomData key="dragid" value="{view>id}" writeToDom="true"/>
+											<core:CustomData key="dragfrom" value="{view>siteId}" writeToDom="true"/>
+										</customData>
+									</Button>
+									</HBox>
+								</VBox>
+								<Text text="Keine Kolonne – Kolonne hierher ziehen." class="eoMuted" visible="{= ${view>crews}.length === 0 }"/>
+								<VBox items="{path: 'view>soloJobs', templateShareable: false}" class="eoDispatchJobs" visible="{= ${view>soloJobs}.length > 0 }">
+									<HBox alignItems="Center">
+										<eo:Swatch color="{view>color}"/>
+										<Text text="{view>label}" wrapping="true"/>
+									</HBox>
+								</VBox>
+								<Panel headerText="{view>detailText}" expandable="true" expanded="{view>/details}" class="eoDispatchCardDetails">
+								<Label text="Team"/>
+								<FlexBox items="{path: 'view>people', templateShareable: false}" wrap="Wrap" class="eoDispatchTokens">
+									<Button text="{view>name}" icon="sap-icon://employee" type="{= ${view>conflict} ? 'Attention' : 'Default' }" press=".onPersonMenu" tooltip="{view>tooltip}" class="eoDispatchChip">
+										<customData>
+											<core:CustomData key="dragkind" value="person" writeToDom="true"/>
+											<core:CustomData key="dragid" value="{view>id}" writeToDom="true"/>
+											<core:CustomData key="dragfrom" value="{view>siteId}" writeToDom="true"/>
+										</customData>
+									</Button>
+								</FlexBox>
+								<Text text="Noch niemand eingeteilt." class="eoMuted" visible="{= ${view>people}.length === 0 }"/>
+								<Label text="Fahrzeuge und Geräte" class="sapUiTinyMarginTop"/>
+								<FlexBox items="{path: 'view>vehicles', templateShareable: false}" wrap="Wrap" class="eoDispatchTokens">
+									<Button text="{view>name}" icon="{= ${view>kind} === 'vehicle' ? 'sap-icon://shipping-status' : 'sap-icon://wrench' }" press=".onVehicleMenu" class="eoDispatchChip">
+										<customData>
+											<core:CustomData key="dragkind" value="vehicle" writeToDom="true"/>
+											<core:CustomData key="dragid" value="{view>id}" writeToDom="true"/>
+											<core:CustomData key="dragfrom" value="{view>siteId}" writeToDom="true"/>
+										</customData>
+									</Button>
+								</FlexBox>
+								<Text text="Kein Fahrzeug." class="eoMuted" visible="{= ${view>vehicles}.length === 0 }"/>
+								<HBox class="sapUiTinyMarginTop eoNoPrint" visible="{view>/board/canPlan}">
+									<Button text="Mitarbeiter" icon="sap-icon://add-employee" press=".onAddPerson" class="sapUiTinyMarginEnd" tooltip="{= 'Mitarbeiter einteilen: ' + ${view>title} }"/>
+									<Button text="Fahrzeug" icon="sap-icon://add" press=".onAddVehicle" tooltip="{= 'Fahrzeug einteilen: ' + ${view>title} }"/>
+								</HBox>
+								</Panel>
+								<MessageStrip text="{= ${view>warnings}.join(' ') }" type="Warning" visible="{= ${view>warnings}.length > 0 }" class="sapUiTinyMarginTop"/>
+								<HBox class="sapUiTinyMarginTop eoNoPrint" visible="{view>/board/canPlan}">
+									<Button text="Kolonne" icon="sap-icon://add" press=".onAddCrew" type="Emphasized" tooltip="{= 'Kolonne einteilen: ' + ${view>title} }"/>
+								</HBox>
+							</VBox>
+						</FlexBox>
+						<Panel headerText="Termine ohne Bauvorhaben" visible="{= ${view>/appointments}.length > 0 }" class="sapUiSmallMarginTop">
+							<List items="{view>/appointments}">
+								<StandardListItem title="{view>title}" description="{view>description}" info="{view>time}" icon="sap-icon://appointment"/>
+							</List>
+						</Panel>
+					</VBox>
+				</FlexBox>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

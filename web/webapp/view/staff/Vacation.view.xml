@@ -1,0 +1,151 @@
+<mvc:View controllerName="estrichone.controller.staff.Vacation" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="Urlaub und Abwesenheiten" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{view>/subtitle}"/></f:expandedContent>
+				<f:actions>
+					<Button text="Urlaub beantragen" icon="sap-icon://general-leave-request" type="Emphasized" press=".onRequest"/>
+					<Button text="Krankmeldung erfassen" icon="sap-icon://add" press=".onSickNote" visible="{view>/can/hrManage}"/>
+					<Button icon="sap-icon://action-settings" tooltip="Einstellungen: Bundesland, Kolonnen-Grenze, Erinnerungen" press=".onSettings" visible="{view>/can/hrManage}"/>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<IconTabBar id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false" busy="{view>/busy}">
+				<items>
+					<IconTabFilter key="mein" text="Mein Urlaub" icon="sap-icon://person-placeholder">
+						<VBox class="sapUiSmallMargin">
+							<MessageStrip text="Für Ihr Konto ist noch kein Personalstamm angelegt – der Resturlaub wird angezeigt, sobald das Büro ihn anlegt."
+								type="Information" showIcon="true" visible="{= !${view>/me/employeeId} }" class="sapUiSmallMarginBottom"/>
+							<FlexBox wrap="Wrap" class="eoStaffHeaderFacts sapUiSmallMarginBottom" visible="{= !!${view>/me/vacation} }">
+								<VBox><Label text="Anspruch {view>/me/vacation/year}"/><ObjectNumber number="{view>/meText/entitlement}" unit="Tage"/></VBox>
+								<VBox><Label text="Übertrag"/><ObjectNumber number="{view>/meText/carryOver}" unit="Tage"/></VBox>
+								<VBox><Label text="Genommen"/><ObjectNumber number="{view>/meText/taken}" unit="Tage"/></VBox>
+								<VBox><Label text="Geplant"/><ObjectNumber number="{view>/meText/planned}" unit="Tage"/></VBox>
+								<VBox><Label text="Beantragt"/><ObjectNumber number="{view>/meText/requested}" unit="Tage"/></VBox>
+								<VBox><Label text="Rest"/><ObjectNumber number="{view>/meText/remaining}" unit="Tage" emphasized="true" state="{= ${view>/me/vacation/remaining} &lt; 0 ? 'Error' : 'Success' }"/></VBox>
+							</FlexBox>
+							<Table items="{view>/myRequests}" noDataText="Noch keine Anträge." popinLayout="GridSmall">
+								<headerToolbar><OverflowToolbar><Title text="Meine Anträge" level="H3"/></OverflowToolbar></headerToolbar>
+								<columns>
+									<Column><Text text="Zeitraum"/></Column>
+									<Column width="9rem"><Text text="Art"/></Column>
+									<Column width="6rem" hAlign="End"><Text text="Tage"/></Column>
+									<Column width="10rem"><Text text="Status"/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kommentar"/></Column>
+									<Column width="9rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>rangeText}"/>
+										<Text text="{view>kindText}"/>
+										<Text text="{view>workingDays}"/>
+										<ObjectStatus text="{view>statusText}" state="{view>statusState}" inverted="true"/>
+										<Text text="{= ${view>decisionComment} || ${view>note} || '' }"/>
+										<Button text="Zurückziehen" type="Transparent" press=".onCancel" visible="{view>canCancel}"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</VBox>
+					</IconTabFilter>
+					<IconTabFilter key="antraege" text="Anträge" icon="sap-icon://approvals" count="{= ${view>/pending}.length }" visible="{view>/can/approve}">
+						<VBox class="sapUiSmallMargin">
+							<Table id="pendingTable" items="{view>/pending}" noDataText="Keine offenen Anträge." popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Warten auf Genehmigung" level="H3"/><ToolbarSpacer/>
+										<Button text="Für Mitarbeiter beantragen" icon="sap-icon://add" press=".onRequestFor"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column><Text text="Mitarbeiter"/></Column>
+									<Column><Text text="Zeitraum"/></Column>
+									<Column width="6rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Tage"/></Column>
+									<Column width="7rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Rest danach"/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Hinweise"/></Column>
+									<Column width="14rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem highlight="{= ${view>warnings}.length > 0 ? 'Warning' : 'None' }">
+										<VBox><Text text="{view>userName}" class="eoStrong"/><Text text="{view>kindText}" class="eoMuted"/></VBox>
+										<VBox><Text text="{view>rangeText}"/><Text text="{= ${view>note} || '' }" class="eoMuted"/></VBox>
+										<Text text="{view>workingDays}"/>
+										<Text text="{= ${view>remainingAfter} === null ? '–' : ${view>remainingAfter} }"/>
+										<Text text="{= ${view>warnings}.join(' ') || 'keine' }"/>
+										<HBox justifyContent="End">
+											<Button text="Genehmigen" type="Accept" press=".onApprove" visible="{view>canDecide}" class="sapUiTinyMarginEnd"/>
+											<Button text="Ablehnen" type="Reject" press=".onReject" visible="{view>canDecide}"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</VBox>
+					</IconTabFilter>
+					<IconTabFilter key="plan" text="Urlaubsplan" icon="sap-icon://calendar" visible="{view>/can/hrRead}">
+						<VBox class="sapUiSmallMargin">
+							<OverflowToolbar class="eoNoPrint">
+								<Button icon="sap-icon://navigation-left-arrow" tooltip="Vorheriger Monat" press=".onPrevMonth"/>
+								<Title text="{view>/monthTitle}" level="H2"/>
+								<Button icon="sap-icon://navigation-right-arrow" tooltip="Nächster Monat" press=".onNextMonth"/>
+								<Button text="Heute" press=".onThisMonth"/>
+								<ToolbarSpacer/>
+								<Text text="{view>/stateText}" class="eoMuted"/>
+								<Button text="PDF Monat" icon="sap-icon://pdf-attachment" press=".onPdfMonth"/>
+								<Button text="PDF Jahr" icon="sap-icon://pdf-attachment" press=".onPdfYear"/>
+							</OverflowToolbar>
+							<HBox wrap="Wrap" class="eoVacLegend sapUiTinyMarginTop sapUiTinyMarginBottom">
+								<Text text="U Urlaub" class="eoVac-vacation"/>
+								<Text text="K Krank" class="eoVac-sick" visible="{view>/can/hrManage}"/>
+								<Text text="S Schulung · B Berufsschule" class="eoVac-school"/>
+								<Text text="SU Sonderurlaub" class="eoVac-specialLeave"/>
+								<Text text="A Abwesend" class="eoVac-other"/>
+								<Text text="schraffiert: beantragt" class="eoVacPending"/>
+								<Text text="Wochenende / Feiertag" class="eoVacHoliday"/>
+							</HBox>
+							<eo:VacationGrid data="{view>/grid}" cellPress=".onCell"/>
+							<Text text="{view>/holidayText}" class="eoMuted sapUiTinyMarginTop"/>
+						</VBox>
+					</IconTabFilter>
+					<IconTabFilter key="krank" text="Krankmeldungen" icon="sap-icon://stethoscope" visible="{view>/can/hrManage}" count="{= ${view>/sickNotes}.length }">
+						<VBox class="sapUiSmallMargin">
+							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In der Planung erscheint nur „abwesend“."
+								type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
+							<Table items="{view>/sickNotes}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
+								<columns>
+									<Column><Text text="Mitarbeiter"/></Column>
+									<Column><Text text="Zeitraum"/></Column>
+									<Column width="6rem" hAlign="End"><Text text="Arbeitstage"/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Notiz"/></Column>
+									<Column width="10rem"><Text text="AU-Bescheinigung"/></Column>
+									<Column width="5rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>userName}"/>
+										<Text text="{view>rangeText}"/>
+										<Text text="{view>workingDays}"/>
+										<Text text="{= ${view>note} || '' }"/>
+										<Link text="{= ${view>certificateFileId} ? 'öffnen' : 'fehlt' }" enabled="{= !!${view>certificateFileId} }" press=".onCertificate"/>
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteSick"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</VBox>
+					</IconTabFilter>
+					<IconTabFilter key="fristen" text="Fristen" icon="sap-icon://alarm" visible="{view>/can/hrRead}" count="{= ${view>/reminders}.length }">
+						<VBox class="sapUiSmallMargin">
+							<List items="{view>/reminders}" noDataText="Keine Fristen in den nächsten 60 Tagen.">
+								<StandardListItem title="{view>employeeName}" description="{view>text}" info="{path: 'view>date', formatter: 'fmt.date'}"
+									infoState="{= ${view>severity} === 'error' ? 'Error' : ${view>severity} === 'warning' ? 'Warning' : 'Information' }"
+									icon="{view>icon}" type="Navigation" press=".onReminder"/>
+							</List>
+						</VBox>
+					</IconTabFilter>
+				</items>
+			</IconTabBar>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

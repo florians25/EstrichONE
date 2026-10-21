@@ -128,6 +128,67 @@ public sealed class DispatchTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Dispatch_ByCrew_RelocatesWithVehicles_SeveralCrewsPerSite_WarnsWhenTwice_AndRemoves()
+    {
+        using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
+        var lukas = await UserAsync("lukas", "Lukas Berger");
+        var anna = await UserAsync("anna", "Anna Kraus");
+        var tom = await UserAsync("tom", "Tom Weber");
+        var nord = Guid.CreateVersion7();
+        var sued = Guid.CreateVersion7();
+        await SendAsync<CrewResponse>(office, HttpMethod.Put, $"/api/v1/planning/crews/{nord}", new { name = "Kolonne Nord", color = "#1565c0", leaderUserId = lukas.Id, memberUserIds = new[] { anna.Id } });
+        await SendAsync<CrewResponse>(office, HttpMethod.Put, $"/api/v1/planning/crews/{sued}", new { name = "Kolonne Süd", leaderUserId = tom.Id, memberUserIds = Array.Empty<Guid>() });
+        var truck = Guid.CreateVersion7();
+        await SendAsync<ResourceResponse>(office, HttpMethod.Put, $"/api/v1/planning/resources/{truck}", new { kind = "vehicle", name = "Sprinter 1" });
+        var halle = await BauakteAsync(office, "Halle Nord");
+        var efh = await BauakteAsync(office, "EFH Müller");
+        await SendAsync<AssignmentView>(office, HttpMethod.Put, $"/api/v1/planning/assignments/{Guid.CreateVersion7()}", new
+        {
+            bauakteId = halle, day = "2026-11-05", startTime = "07:00:00", activity = "Estrich einbringen EG", crewId = nord, resourceIds = new[] { truck },
+        });
+        const string moves = "/api/v1/planning/dispatch/2026-11-05/moves";
+
+        var board = await office.GetFromJsonAsync<DispatchBoard>("/api/v1/planning/dispatch/2026-11-05", TestJson.Options, Ct);
+        var crew = board!.Crews.Single(c => c.Id == nord);
+        crew.LeaderName.ShouldBe("Lukas Berger");
+        crew.MemberCount.ShouldBe(2);
+        crew.Color.ShouldBe("#1565c0");
+        crew.SiteIds.ShouldBe([halle]);
+        board.Crews.Single(c => c.Id == sued).SiteIds.ShouldBeEmpty();
+        board.Sites.ShouldHaveSingleItem().Crews.ShouldHaveSingleItem().Activity.ShouldBe("Estrich einbringen EG");
+
+        // Kolonne Nord fährt zum EFH: Einsatz wandert mit Fahrzeug und Tätigkeit, neue Startzeit.
+        board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = nord, toBauakteId = efh, startTime = "06:30:00" });
+        var efhSite = board.Sites.ShouldHaveSingleItem();
+        efhSite.BauakteId.ShouldBe(efh);
+        efhSite.Crews.ShouldHaveSingleItem().StartTime.ShouldBe(new TimeOnly(6, 30));
+        efhSite.Vehicles.ShouldHaveSingleItem().Id.ShouldBe(truck);
+        efhSite.People.Count.ShouldBe(2);
+
+        // Kolonne Süd ebenfalls zum EFH (mehrere Kolonnen je Baustelle), mit eigener Tätigkeit.
+        board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = sued, toBauakteId = efh, activity = "Randdämmung stellen" });
+        efhSite = board.Sites.ShouldHaveSingleItem();
+        efhSite.Crews.Select(c => c.Name).ShouldBe(["Kolonne Nord", "Kolonne Süd"], ignoreOrder: true);
+        efhSite.Crews.Single(c => c.Id == sued).Activity.ShouldBe("Randdämmung stellen");
+
+        // Zusätzlich auf die Halle (keep) → Kolonne doppelt am Tag: Hinweis.
+        board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = sued, toBauakteId = halle, keep = true });
+        board.Crews.Single(c => c.Id == sued).SiteIds.Count.ShouldBe(2);
+        board.Sites.Single(s => s.BauakteId == halle).Warnings.ShouldContain(w => w.Contains("Kolonne Süd") && w.Contains("EFH Müller"));
+
+        // Von der Halle wieder herausnehmen.
+        board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = sued, toBauakteId = (Guid?)null, fromBauakteId = halle });
+        board.Crews.Single(c => c.Id == sued).SiteIds.ShouldBe([efh]);
+        board.Sites.ShouldHaveSingleItem();
+
+        using var unknown = await office.PostAsJsonAsync(moves, new { target = "crew", id = Guid.CreateVersion7(), toBauakteId = efh }, Ct);
+        unknown.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+
+        using var pdf = await office.GetAsync(new Uri("/api/v1/planning/dispatch/2026-11-05/print.pdf", UriKind.Relative), Ct);
+        pdf.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task TeamPlanner_MoveResizeSwapPerson_TimeAwareConflicts_CancelledBauakteRejected()
     {
         using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);

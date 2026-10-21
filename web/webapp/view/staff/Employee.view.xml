@@ -1,0 +1,224 @@
+<mvc:View controllerName="estrichone.controller.staff.Employee" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:uxap="sap.uxap" xmlns:f="sap.f"
+	xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<uxap:ObjectPageLayout id="objectPage" useIconTabBar="true" upperCaseAnchorBar="false" busy="{view>/busy}" busyIndicatorDelay="200"
+		headerContentPinnable="false" toggleHeaderOnTitleClick="false" navigate=".onSection">
+		<uxap:headerTitle>
+			<uxap:ObjectPageDynamicHeaderTitle>
+				<uxap:breadcrumbs><Breadcrumbs currentLocationText="{view>/e/displayName}"><Link text="Personal" href="/personal"/></Breadcrumbs></uxap:breadcrumbs>
+				<uxap:heading><Title text="{view>/e/displayName}" level="H1" wrapping="true"/></uxap:heading>
+				<uxap:expandedContent><Text text="{view>/headline}"/></uxap:expandedContent>
+				<uxap:snappedContent><Text text="{view>/headline}"/></uxap:snappedContent>
+				<uxap:actions>
+					<Button text="Bearbeiten" icon="sap-icon://edit" type="Emphasized" press=".onEdit" visible="{view>/e/canManage}"/>
+					<Button text="Löschen" icon="sap-icon://delete" type="Transparent" press=".onDelete" visible="{view>/e/canManage}"/>
+				</uxap:actions>
+			</uxap:ObjectPageDynamicHeaderTitle>
+		</uxap:headerTitle>
+		<uxap:headerContent>
+			<FlexBox wrap="Wrap" class="eoStaffHeaderFacts">
+				<VBox>
+					<Label text="Status"/>
+					<ObjectStatus text="{view>/statusText}" state="{view>/statusState}" inverted="true"/>
+				</VBox>
+				<VBox>
+					<Label text="Benutzerkonto"/>
+					<ObjectStatus text="{= ${view>/e/userName} || 'nicht verknüpft' }" state="{= ${view>/e/userId} ? 'Success' : 'Warning' }"
+						icon="{= ${view>/e/userId} ? 'sap-icon://person-placeholder' : 'sap-icon://alert' }"/>
+				</VBox>
+				<VBox>
+					<Label text="Kolonnen"/>
+					<Text text="{view>/crewText}"/>
+				</VBox>
+				<VBox>
+					<Label text="Resturlaub {view>/e/vacation/year}"/>
+					<ObjectNumber number="{view>/vacation/remaining}" unit="Tage" emphasized="true" state="{= ${view>/e/vacation/remaining} &lt; 0 ? 'Error' : 'None' }"/>
+				</VBox>
+				<VBox>
+					<Label text="Mobil"/>
+					<Link text="{= ${view>/e/mobile} || ${view>/e/phone} || '–' }" href="{= 'tel:' + (${view>/e/mobile} || ${view>/e/phone} || '') }" enabled="{= !!(${view>/e/mobile} || ${view>/e/phone}) }"/>
+				</VBox>
+			</FlexBox>
+		</uxap:headerContent>
+		<uxap:sections>
+			<uxap:ObjectPageSection id="secOverview" title="Übersicht" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<form:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="3" columnsXL="3">
+							<core:Title text="Kontakt"/>
+							<Label text="Handy"/><Text text="{= ${view>/e/mobile} || '–' }"/>
+							<Label text="Telefon"/><Text text="{= ${view>/e/phone} || '–' }"/>
+							<Label text="E-Mail"/><Link text="{= ${view>/e/email} || '–' }" href="{= 'mailto:' + ${view>/e/email} }" enabled="{= !!${view>/e/email} }"/>
+							<Label text="Anschrift"/><Text text="{view>/address}"/>
+							<Label text="Geburtsdatum"/><Text text="{path: 'view>/e/birthDate', formatter: 'fmt.date'}"/>
+							<core:Title text="Notfallkontakt"/>
+							<Label text="Name"/><Text text="{= ${view>/e/emergencyContactName} || '–' }"/>
+							<Label text="Telefon"/><Link text="{= ${view>/e/emergencyContactPhone} || '–' }" href="{= 'tel:' + ${view>/e/emergencyContactPhone} }" enabled="{= !!${view>/e/emergencyContactPhone} }"/>
+							<Label text="Beziehung"/><Text text="{= ${view>/e/emergencyContactRelation} || '–' }"/>
+							<core:Title text="Beschäftigung"/>
+							<Label text="Personalnummer"/><Text text="{= ${view>/e/personnelNumber} || '–' }"/>
+							<Label text="Art"/><Text text="{view>/employmentText}"/>
+							<Label text="Eintritt / Austritt"/><Text text="{view>/periodText}"/>
+							<Label text="Arbeitszeit"/><Text text="{view>/workText}"/>
+							<Label text="Stundensatz" visible="{view>/e/canManage}"/><Text text="{view>/rateText}" visible="{view>/e/canManage}"/>
+							<Label text="Notizen"/><Text text="{= ${view>/e/notes} || '–' }" class="eoPre"/>
+						</form:SimpleForm>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secCrews" title="Kolonnen" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox>
+							<MessageStrip text="Kolonnen, Planung und Abwesenheiten brauchen ein verknüpftes Benutzerkonto (unter „Bearbeiten“ → Benutzerkonto)."
+								type="Information" showIcon="true" visible="{= !${view>/e/userId} }" class="sapUiSmallMarginBottom"/>
+							<HBox items="{view>/e/crews}" wrap="Wrap">
+								<HBox alignItems="Center" class="sapUiSmallMarginEnd"><eo:Swatch color="{view>color}"/><Text text="{view>name}"/></HBox>
+							</HBox>
+							<Text text="In keiner Kolonne." visible="{= ${view>/e/crews}.length === 0 }" class="eoMuted"/>
+							<Button text="Kolonnen ändern" icon="sap-icon://group" press=".onCrews" visible="{= ${view>/e/canManage} &amp;&amp; !!${view>/e/userId} }" class="sapUiSmallMarginTop"/>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secQualifications" title="Qualifikationen" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<Table items="{view>/qualifications}" noDataText="Keine Qualifikationen oder Führerscheinklassen erfasst." popinLayout="GridSmall">
+							<headerToolbar>
+								<OverflowToolbar>
+									<Title text="Qualifikationen und Führerscheinklassen" level="H3"/><ToolbarSpacer/>
+									<Button text="Hinzufügen" icon="sap-icon://add" press=".onAddQualification" visible="{view>/e/canManage}"/>
+								</OverflowToolbar>
+							</headerToolbar>
+							<columns>
+								<Column><Text text="Bezeichnung"/></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Nummer"/></Column>
+								<Column width="9rem"><Text text="Gültig bis"/></Column>
+								<Column width="8rem" hAlign="End" visible="{view>/e/canManage}"><Text text=""/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<VBox><Text text="{view>name}" class="eoStrong"/><Text text="{= ${view>notes} || '' }" class="eoMuted"/></VBox>
+									<Text text="{view>kindText}"/>
+									<Text text="{= ${view>number} || '–' }"/>
+									<ObjectStatus text="{view>expiryText}" state="{view>expiryState}" icon="{= ${view>expired} ? 'sap-icon://alert' : '' }"/>
+									<HBox justifyContent="End">
+										<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditQualification"/>
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteQualification"/>
+									</HBox>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secAbsences" title="Urlaub und Abwesenheiten" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<VBox>
+							<FlexBox wrap="Wrap" class="eoStaffHeaderFacts sapUiSmallMarginBottom">
+								<VBox><Label text="Anspruch"/><ObjectNumber number="{view>/vacation/entitlement}" unit="Tage"/></VBox>
+								<VBox><Label text="Übertrag"/><ObjectNumber number="{view>/vacation/carryOver}" unit="Tage"/></VBox>
+								<VBox><Label text="Genommen"/><ObjectNumber number="{view>/vacation/taken}" unit="Tage"/></VBox>
+								<VBox><Label text="Geplant"/><ObjectNumber number="{view>/vacation/planned}" unit="Tage"/></VBox>
+								<VBox><Label text="Rest"/><ObjectNumber number="{view>/vacation/remaining}" unit="Tage" emphasized="true"/></VBox>
+								<VBox><Label text="Krankheitstage"/><ObjectNumber number="{view>/vacation/sickDays}" unit="Tage"/></VBox>
+							</FlexBox>
+							<Table items="{view>/absences}" noDataText="Keine Abwesenheiten erfasst." popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Abwesenheiten" level="H3"/><ToolbarSpacer/>
+										<Button text="Abwesenheit eintragen" icon="sap-icon://add" press=".onAddAbsence" visible="{= ${view>/e/canManage} &amp;&amp; !!${view>/e/userId} }"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column><Text text="Zeitraum"/></Column>
+									<Column width="9rem"><Text text="Art"/></Column>
+									<Column width="7rem" hAlign="End"><Text text="Arbeitstage"/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Notiz"/></Column>
+									<Column width="5rem" hAlign="End" visible="{view>/e/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>rangeText}"/>
+										<ObjectStatus text="{view>kindText}" state="{= ${view>kind} === 'sick' ? 'Error' : ${view>kind} === 'vacation' ? 'Success' : 'Information' }"/>
+										<Text text="{view>days}"/>
+										<Text text="{= ${view>note} || '' }"/>
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteAbsence"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</VBox>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secEquipment" title="Geräte und Fahrzeuge" titleUppercase="false">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<Table items="{view>/equipment}" noDataText="Keine Geräte oder Fahrzeuge ausgegeben." popinLayout="GridSmall">
+							<headerToolbar>
+								<OverflowToolbar>
+									<Title text="Ausgegebene Geräte und Fahrzeuge" level="H3"/><ToolbarSpacer/>
+									<Button text="Ausgeben" icon="sap-icon://add" press=".onAddEquipment" visible="{view>/e/canManage}"/>
+								</OverflowToolbar>
+							</headerToolbar>
+							<columns>
+								<Column><Text text="Gerät / Fahrzeug"/></Column>
+								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kennzeichen / Seriennr."/></Column>
+								<Column width="8rem"><Text text="Ausgabe"/></Column>
+								<Column width="9rem"><Text text="Rückgabe"/></Column>
+								<Column width="8rem" hAlign="End" visible="{view>/e/canManage}"><Text text=""/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<VBox><Text text="{view>name}" class="eoStrong"/><Text text="{= ${view>notes} || '' }" class="eoMuted"/></VBox>
+									<Text text="{= ${view>serialNumber} || '–' }"/>
+									<Text text="{path: 'view>issuedOn', formatter: 'fmt.date'}"/>
+									<ObjectStatus text="{= ${view>returnedOn} ? 'zurück' : 'im Besitz' }" state="{= ${view>returnedOn} ? 'None' : 'Information' }"/>
+									<HBox justifyContent="End">
+										<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditEquipment"/>
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteEquipment"/>
+									</HBox>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+			<uxap:ObjectPageSection id="secDocuments" title="Dokumente" titleUppercase="false" visible="{view>/e/canManage}">
+				<uxap:subSections>
+					<uxap:ObjectPageSubSection>
+						<Table items="{view>/documents}" noDataText="Keine Personaldokumente abgelegt." popinLayout="GridSmall">
+							<headerToolbar>
+								<OverflowToolbar>
+									<Title text="Personaldokumente (vertraulich)" level="H3"/><ToolbarSpacer/>
+									<Button text="Hochladen" icon="sap-icon://upload" press=".onUpload"/>
+								</OverflowToolbar>
+							</headerToolbar>
+							<columns>
+								<Column><Text text="Dokument"/></Column>
+								<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kategorie"/></Column>
+								<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Gültig bis"/></Column>
+								<Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Abgelegt"/></Column>
+								<Column width="8rem" hAlign="End"><Text text=""/></Column>
+							</columns>
+							<items>
+								<ColumnListItem>
+									<VBox><Link text="{view>title}" press=".onOpenDocument" emphasized="true"/><Text text="{view>fileText}" class="eoMuted"/></VBox>
+									<Text text="{view>categoryText}"/>
+									<Text text="{path: 'view>validUntil', formatter: 'fmt.date'}"/>
+									<Text text="{path: 'view>addedAt', formatter: 'fmt.dateTime'}"/>
+									<HBox justifyContent="End">
+										<Button icon="sap-icon://download" type="Transparent" tooltip="Herunterladen" press=".onOpenDocument"/>
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteDocument"/>
+									</HBox>
+								</ColumnListItem>
+							</items>
+						</Table>
+					</uxap:ObjectPageSubSection>
+				</uxap:subSections>
+			</uxap:ObjectPageSection>
+		</uxap:sections>
+	</uxap:ObjectPageLayout>
+</mvc:View>

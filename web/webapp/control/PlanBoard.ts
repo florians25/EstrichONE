@@ -7,6 +7,7 @@ import { assignmentKinds, absenceKinds } from "../util/labels";
 import { timeRange } from "../util/format";
 import { parseDay } from "../util/days";
 import type { AbsenceView, AssignmentView } from "../util/models";
+import { calendarEventKinds, parseLocal, type CalendarOccurrence } from "../util/planningModels";
 
 /** Zeile der Plantafel: Kolonne oder Mitarbeiter. */
 export interface Lane {
@@ -28,6 +29,8 @@ export interface BoardData {
 	lanes: Lane[];
 	assignments: AssignmentView[];
 	absences: AbsenceView[];
+	/** Termine ohne Bauvorhaben (Kalender) mit Teilnehmern oder Kolonnen. */
+	appointments?: CalendarOccurrence[];
 }
 
 const weekdays = ["Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"];
@@ -129,6 +132,7 @@ export default class PlanBoard extends Control {
 			move: { parameters: { id: { type: "string" }, laneId: { type: "string" }, day: { type: "string" }, fromLaneId: { type: "string" } } },
 			dropBauakte: { parameters: { laneId: { type: "string" }, day: { type: "string" }, bauakte: { type: "object" } } },
 			dayPress: { parameters: { day: { type: "string" } } },
+			openEvent: { parameters: { eventId: { type: "string" }, occurrenceDate: { type: "string" }, start: { type: "string" } } },
 		},
 	};
 
@@ -157,6 +161,42 @@ export default class PlanBoard extends Control {
 		return data.assignments
 			.filter((a) => a.day === day && (data.rows === "people" ? a.people.some((p) => p.id === lane.id) : (a.crewId ?? null) === lane.id))
 			.sort((x, y) => (x.startTime ?? "99").localeCompare(y.startTime ?? "99"));
+	}
+
+	/** Termine des Tages in der Zeile (Kolonne eingeladen, Person beteiligt bzw. ohne Kolonne). */
+	private eventsInCell(data: BoardData, lane: Lane | null, day: string): CalendarOccurrence[] {
+		return (data.appointments ?? []).filter((o) => o.start.slice(0, 10) <= day && day < (o.allDay ? o.end.slice(0, 10) : `${o.end.slice(0, 10)}~`)
+			&& (!lane ? true : data.rows === "people" ? o.people.some((p) => p.id === lane.id)
+				: lane.id ? o.crews.some((c) => c.id === lane.id) : o.crews.length === 0))
+			.sort((x, y) => x.start.localeCompare(y.start));
+	}
+
+	private eventCard(o: CalendarOccurrence, compact: boolean): HTMLElement {
+		const kind = calendarEventKinds[o.kind];
+		const b = el("div", `eoPlanCard eoPlanEvent${compact ? " eoPlanCompact" : ""}`);
+		b.setAttribute("role", "button");
+		b.tabIndex = 0;
+		const color = safeColor(o.color) || safeColor(o.calendarColor) || safeColor(kind?.color);
+		if (color) b.style.borderLeftColor = color;
+		const time = o.allDay ? "ganztags" : `${parseLocal(o.start).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}–${parseLocal(o.end).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })}`;
+		b.setAttribute("aria-label", `Termin ${o.title}, ${time}`);
+		const head = el("span", "eoPlanTime");
+		head.append(icon(kind?.icon ?? "sap-icon://appointment"), document.createTextNode(` ${time}${compact ? "" : ` · ${kind?.text ?? "Termin"}`}`));
+		b.append(head, el("strong", undefined, o.title));
+		if (!compact) {
+			if (o.location) b.append(el("span", undefined, o.location));
+			if (o.people.length) b.append(el("small", undefined, o.people.map((p) => p.name).join(", ")));
+		}
+		b.title = [o.title, o.location, o.calendarName].filter(Boolean).join("\n");
+		const open = () => this.fireEvent("openEvent", { eventId: o.eventId, occurrenceDate: o.occurrenceDate ?? "", start: o.start });
+		b.addEventListener("click", open);
+		b.addEventListener("keydown", (e) => {
+			if (e.key === "Enter" || e.key === " ") {
+				e.preventDefault();
+				open();
+			}
+		});
+		return b;
 	}
 
 	private card(a: AssignmentView, data: BoardData, compact: boolean, showPeople: boolean): HTMLElement {
@@ -281,6 +321,7 @@ export default class PlanBoard extends Control {
 				const items = this.inCell(data, lane, d);
 				if (data.rows === "people" && items.length > 1) cell.classList.add("eoPlanConflict");
 				for (const a of items) cell.append(this.card(a, data, false, data.rows === "crews" ? !lane.id || data.mode === "day" : false));
+				for (const o of this.eventsInCell(data, lane, d)) cell.append(this.eventCard(o, false));
 				if (data.mode === "day" && data.rows === "crews" && lane.id && absent.length) {
 					cell.append(el("small", "eoPlanAbsentNote", `Abwesend: ${absent.map((a) => a.userName).join(", ")}`));
 				}
@@ -325,8 +366,11 @@ export default class PlanBoard extends Control {
 			cell.append(top);
 			const items = data.assignments.filter((a) => a.day === d).sort((x, y) => (x.startTime ?? "99").localeCompare(y.startTime ?? "99"));
 			for (const a of items.slice(0, 4)) cell.append(this.card(a, data, true, false));
-			if (items.length > 4) {
-				const more = el("button", "eoPlanDayLink eoPlanMore", `+${items.length - 4} weitere`);
+			const events = this.eventsInCell(data, null, d);
+			for (const o of events.slice(0, Math.max(0, 4 - items.length))) cell.append(this.eventCard(o, true));
+			const hidden = Math.max(0, items.length - 4) + Math.max(0, events.length - Math.max(0, 4 - items.length));
+			if (hidden > 0) {
+				const more = el("button", "eoPlanDayLink eoPlanMore", `+${hidden} weitere`);
 				more.type = "button";
 				more.addEventListener("click", () => this.fireEvent("dayPress", { day: d }));
 				cell.append(more);

@@ -7544,7 +7544,7 @@
         "tags": [
           "Planung"
         ],
-        "summary": "Person oder Fahrzeug auf eine Baustelle einteilen bzw. abziehen; Antwort ist die neue Tafel",
+        "summary": "Kolonne, Person oder Fahrzeug auf eine Baustelle einteilen bzw. abziehen; Antwort ist die neue Tafel",
         "operationId": "MoveDispatch",
         "parameters": [
           {
@@ -15184,6 +15184,16 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TicketPriority"
+              }
+            ]
           }
         }
       },
@@ -15705,6 +15715,26 @@
           }
         }
       },
+      "DispatchAbsentMember": {
+        "required": [
+          "id",
+          "name",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "note": {
+            "type": "string"
+          }
+        }
+      },
       "DispatchAppointment": {
         "required": [
           "eventId",
@@ -15757,7 +15787,8 @@
           "vehicles",
           "appointments",
           "mySiteIds",
-          "canPlan"
+          "canPlan",
+          "crews"
         ],
         "type": "object",
         "properties": {
@@ -15798,6 +15829,69 @@
           },
           "canPlan": {
             "type": "boolean"
+          },
+          "crews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DispatchCrew"
+            }
+          }
+        }
+      },
+      "DispatchCrew": {
+        "required": [
+          "id",
+          "name",
+          "color",
+          "leaderName",
+          "memberCount",
+          "vehicles",
+          "siteIds",
+          "absentMembers"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "leaderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "memberCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceRef"
+            }
+          },
+          "siteIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "absentMembers": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DispatchAbsentMember"
+            }
           }
         }
       },
@@ -15983,7 +16077,8 @@
           "people",
           "vehicles",
           "warnings",
-          "navigationUrl"
+          "navigationUrl",
+          "crews"
         ],
         "type": "object",
         "properties": {
@@ -16068,13 +16163,60 @@
               "null",
               "string"
             ]
+          },
+          "crews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DispatchSiteCrew"
+            }
+          }
+        }
+      },
+      "DispatchSiteCrew": {
+        "required": [
+          "id",
+          "name",
+          "color",
+          "assignmentId",
+          "activity",
+          "startTime"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "activity": {
+            "type": "string"
+          },
+          "startTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
           }
         }
       },
       "DispatchTarget": {
         "enum": [
           "person",
-          "vehicle"
+          "vehicle",
+          "crew"
         ]
       },
       "DispatchVehicle": {

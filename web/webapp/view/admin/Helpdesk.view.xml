@@ -4,13 +4,14 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.helpdesk}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Gemeldete Probleme aus den Apps und dem Büro – am längsten wartende zuerst"/></f:expandedContent>
+				<f:expandedContent><Text text="{= ${view>/agent} ? 'Gemeldete Probleme aus den Apps und dem Büro – am längsten wartende zuerst' : 'Ihre IT-Meldungen mit Verlauf' }"/></f:expandedContent>
+				<f:actions><Button id="newTicket" text="Neues Ticket" icon="sap-icon://add" type="Emphasized" press=".onNew"/></f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Tickets in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+			<Table items="{view>/items}" busy="{view>/busy}" noDataText="{= ${view>/agent} ? 'Keine Tickets in dieser Ansicht.' : 'Sie haben noch kein Ticket gemeldet.' }" sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
 				<headerToolbar>
-					<OverflowToolbar>
+					<OverflowToolbar visible="{view>/agent}">
 						<SegmentedButton selectedKey="{view>/filter}" selectionChange=".onFilter">
 							<items>
 								<SegmentedButtonItem key="open" text="Offen"/>
@@ -30,9 +31,9 @@
 					<Column><Text text="Problem"/></Column>
 					<Column width="9rem"><Text text="Status"/></Column>
 					<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Priorität"/></Column>
-					<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Melder"/></Column>
+					<Column width="10rem" minScreenWidth="Desktop" demandPopin="true" visible="{view>/agent}"><Text text="Melder"/></Column>
 					<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuständig"/></Column>
-					<Column width="7rem" hAlign="End"><Text text="Wartet seit"/></Column>
+					<Column width="7rem" hAlign="End"><Text text="{= ${view>/agent} ? 'Wartet seit' : 'Letzte Änderung' }"/></Column>
 				</columns>
 				<items>
 					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${view>reporterBlocked} ? 'Error' : 'None' }">

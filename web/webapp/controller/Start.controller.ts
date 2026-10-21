@@ -76,6 +76,8 @@ export default class Start extends BaseController {
 			kpis.push({ key: "running", title: "Baustellen in Ausführung", icon: "sap-icon://process", value: "…", to: "/bauakten?status=inProgress", loading: true, color: "Good" });
 		}
 		if (this.has("bauakten.read")) kpis.push({ key: "approvals", title: "Warten auf Genehmigung", subtitle: "Dokumentfreigaben für mich", icon: "sap-icon://approvals", value: "…", to: "/dokumente?reiter=freigaben", loading: true, color: "Neutral" });
+		if (this.has("absence.approve")) kpis.push({ key: "vacation", title: "Urlaubsanträge", subtitle: "Warten auf Genehmigung", icon: "sap-icon://general-leave-request", value: "…", to: "/personal/urlaub?reiter=antraege", loading: true, color: "Neutral" });
+		if (this.has("hr.read")) kpis.push({ key: "hrDeadlines", title: "Personal-Fristen", subtitle: "Nachweise, Probezeit (30 Tage)", icon: "sap-icon://alarm", value: "…", to: "/personal/urlaub?reiter=fristen", loading: true, color: "Neutral" });
 		if (this.has("helpdesk.agent")) kpis.push({ key: "tickets", title: "Offene Tickets", icon: "sap-icon://headset", value: "…", to: "/it-center/helpdesk", loading: true, color: "Neutral" });
 		m.setProperty("/kpis", kpis);
 		const set = (key: string, value: string, extra: Record<string, unknown> = {}) => {
@@ -95,6 +97,10 @@ export default class Start extends BaseController {
 			this.has("bauakten.read") ? get<ApprovalResponse[]>("approvals", { scope: "mine", status: "pending" }).then((list) => {
 				m.setProperty("/approvals", list.slice(0, 5));
 				set("approvals", String(list.length), list.length ? { color: "Critical" } : {});
+			}) : Promise.resolve(),
+			this.has("absence.request") ? get<{ pendingApprovals: number; remindersDue: number }>("hr/summary").then((h) => {
+				set("vacation", String(h.pendingApprovals), h.pendingApprovals ? { color: "Critical" } : {});
+				set("hrDeadlines", String(h.remindersDue), h.remindersDue ? { color: "Critical" } : {});
 			}) : Promise.resolve(),
 			this.has("helpdesk.agent") ? get<TicketSummary[]>("tickets", { filter: "open" }).then((t) => {
 				const blocked = t.filter((x) => x.reporterBlocked).length;

@@ -11,7 +11,7 @@ namespace EstrichOne.Api.Modules.Helpdesk;
 
 public sealed record CreateTicketInput(
     Guid Id, string Title, string? Description, TicketCategory Category, TicketSource Source, bool ReporterBlocked, Guid? BauakteId,
-    JsonNode? Diagnostics, IReadOnlyList<Guid>? AttachmentFileIds);
+    JsonNode? Diagnostics, IReadOnlyList<Guid>? AttachmentFileIds, TicketPriority? Priority = null);
 
 public enum TicketFailure
 {
@@ -113,6 +113,10 @@ public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakte
         {
             ticket = Ticket.Create(input.Id, await NextNumberAsync(now, cancellationToken), input.Title, input.Description, input.Category,
                 input.Source, input.ReporterBlocked, reporterUserId, reporterName, deviceId, input.BauakteId, diagnostics, attachments, now);
+            if (input.Priority is { } priority)
+            {
+                ticket.Prioritize(priority);
+            }
         }
         catch (ArgumentException exception)
         {

@@ -32,6 +32,6 @@
         "settings": { "bundleName": "estrichone.i18n.i18n", "supportedLocales": [""], "fallbackLocale": "" }
       }
     },
-    "resources": { "css": [{ "uri": "css/style.css" }] }
+    "resources": { "css": [{ "uri": "css/style.css" }, { "uri": "css/planning.css" }] }
   }
 }

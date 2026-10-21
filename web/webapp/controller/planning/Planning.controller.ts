@@ -14,10 +14,12 @@ import { draftOf, newDraft, openAssignment, planningChanged, planningLookups } f
 import { session } from "../../util/session";
 import { startDrag, type BoardData, type Lane } from "../../control/PlanBoard";
 import type { AssignmentView, BacklogItem, CrewResponse, DirectoryUser, PlanningRange } from "../../util/models";
+import { openEventDialog } from "../../util/calendarDialog";
+import { download, type CalendarOccurrence } from "../../util/planningModels";
 
 type Mode = "tag" | "woche" | "monat";
 const modes: Mode[] = ["tag", "woche", "monat"];
-const titles: Record<Mode, string> = { tag: "Tageseinteilung", woche: "Kolonnenplanung", monat: "Kalender" };
+const titles: Record<Mode, string> = { tag: "Tageseinteilung", woche: "Kolonnenplanung", monat: "Monatsplan" };
 const defaults: Record<string, Mode> = { planning: "woche", calendar: "monat", dayPlan: "tag" };
 const short = (d: string) => parseDay(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
 const weekday = (d: string) => parseDay(d).toLocaleDateString("de-DE", { weekday: "short" });
@@ -212,6 +214,7 @@ export default class Planning extends BaseController {
 			rows: m.getProperty("/rows") === "mitarbeiter" && mode !== "monat" ? "people" : "crews",
 			days, today: isoDay(new Date()), month: this.anchor().slice(0, 7), canPlan: m.getProperty("/canPlan") === true,
 			lanes: this.lanes(assignments), assignments, absences: this.range?.absences ?? [],
+			appointments: (this.range as (PlanningRange & { appointments?: CalendarOccurrence[] | null }) | null)?.appointments ?? [],
 		};
 		m.setProperty("/board", board);
 		const warnings = assignments.filter((a) => a.warnings.length > 0).length;
@@ -248,6 +251,24 @@ export default class Planning extends BaseController {
 		const days = this.days();
 		const today = isoDay(new Date());
 		void openAssignment(newDraft(days.includes(today) ? today : days[0], null));
+	}
+
+	/** C1: Termin ohne Bauvorhaben (Schulung, Werkstatt …) – landet im Kalender und erscheint im Plan der Teilnehmer. */
+	onNewEvent(): void {
+		const days = this.days();
+		const today = isoDay(new Date());
+		const day = days.includes(today) ? today : days[0];
+		const start = parseDay(day);
+		start.setHours(7, 0, 0, 0);
+		void openEventDialog({ defaults: { start, end: new Date(start.getTime() + 2 * 3600_000) } });
+	}
+
+	onOpenEvent(e: Event): void {
+		void openEventDialog({
+			eventId: String(e.getParameter("eventId" as never)),
+			occurrenceDate: String(e.getParameter("occurrenceDate" as never) || "") || null,
+			occurrenceStart: String(e.getParameter("start" as never)),
+		});
 	}
 
 	/** Einsatz auf anderen Tag, andere Kolonne oder anderen Mitarbeiter ziehen; zusätzliche Mitarbeiter und Geräte bleiben erhalten. */
@@ -356,10 +377,7 @@ export default class Planning extends BaseController {
 		const days = this.days();
 		const day = this.mode() === "tag";
 		const rows = this.model().getProperty("/rows") === "mitarbeiter" ? "people" : "crews";
-		const a = document.createElement("a");
-		a.href = `/api/v1/planning/print.pdf?mode=${day ? "day" : "week"}&from=${day ? days[0] : mondayOf(days[0])}&rows=${rows}&weekend=${this.model().getProperty("/fullWeek") === true}`;
-		a.download = "";
-		a.click();
+		download(`/api/v1/planning/print.pdf?mode=${day ? "day" : "week"}&from=${day ? days[0] : mondayOf(days[0])}&rows=${rows}&weekend=${this.model().getProperty("/fullWeek") === true}`).catch((error: unknown) => this.showError(error));
 	}
 
 
