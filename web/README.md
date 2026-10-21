@@ -19,6 +19,13 @@ Lieferanten, Bestellungen. Benutzer, Rollen und Rechtematrix, Stammdaten (Textba
 Bauakten-Vorlagen), Geräte mit QR-Einrichtung, Helpdesk, Sicherung, Firmendaten, Protokoll.
 Systemhinweise der Hosting-Konsole als Banner, Wartungsseite bei Wartung (503 `MAINTENANCE`).
 
+Seit Runde 3: Hochladen in 4-MB-Teilen mit Wiederholung und Fortsetzen (auch hinter Proxys mit Größengrenze),
+gleitende Sitzung mit Anmeldedialog ohne Datenverlust, Hochladen und Vorschau im Dialog (mit Aktenkopf), Kontakte und
+Beteiligte, „Letzte Aktivitäten“, „Mir zuweisen“, digitales Abnahmeprotokoll mit Unterschriften und Kundenfreigabe
+per Link (öffentliche Seite `/abnahme/:token`), Systemeinstellungen (Firmenlogo, Nummernkreis, Status-Automatik,
+Freigaben, Sitzungen, Karte, Darstellung, PDF-Layout, Module), Zugangsbrief nach DIN 5008, alle Ausdrucke als
+Server-PDF und automatisch in der Bauakte abgelegt, Dokumentenbaum Kunde → Bauakte → Dokumentart.
+
 ## Aufbau
 
 ```
