@@ -101,8 +101,20 @@ export default class Employee extends BaseController {
 		return (e.getSource() as Control).getBindingContext("view")?.getObject() as T;
 	}
 
+	private editing = false;
+
 	async onEdit(): Promise<void> {
-		const saved = await openEmployeeForm(this.model().getProperty("/e") as EmployeeDetail);
+		// Nicht doppelt öffnen; Fehler beim Laden der Auswahllisten sichtbar machen statt still kein Formular zu zeigen.
+		if (this.editing) return;
+		this.editing = true;
+		let saved: EmployeeDetail | null = null;
+		try {
+			saved = await openEmployeeForm(this.model().getProperty("/e") as EmployeeDetail);
+		} catch (error) {
+			this.showError(error);
+		} finally {
+			this.editing = false;
+		}
 		if (saved) {
 			this.apply(saved);
 			this.toast("Gespeichert");

@@ -29,8 +29,13 @@ test('Personal: aus Benutzerkonten übernehmen, Stammdaten, Qualifikation mit Ab
   await row.getByText('Anna Admin').click();
   await expect(page).toHaveURL(/\/personal\//);
 
-  await page.getByRole('button', { name: 'Bearbeiten' }).click();
-  const form = await dialog(page, /bearbeiten$/);
+  // Erst nach dem Laden klicken; ein Klick während des Neuaufbaus der Kopfzeile kann verloren gehen (schnelle CI).
+  await expect(pageTitle(page)).toContainText('Anna Admin');
+  const form = page.getByRole('dialog', { name: /bearbeiten$/ });
+  await expect(async () => {
+    if (!(await form.isVisible())) await page.getByRole('button', { name: 'Bearbeiten' }).click();
+    await expect(form).toBeVisible({ timeout: 3000 });
+  }).toPass({ timeout: 20_000 });
   await form.getByLabel('Personalnummer').fill('P-001');
   await form.getByLabel('Handy').fill('0171 2345678');
   await form.getByRole('textbox', { name: 'Ort' }).fill('Landshut');
