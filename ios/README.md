@@ -14,6 +14,24 @@ und Poolgeräte folgen mit AP-11.
 Kunde anrufen und Route starten aus der Akte. Designsystem: `Design/ActionButtons.swift` (`EstrichButtonStyle`,
 `ActionTileStyle`, `IconButtonStyle`), Tokens in `Design/Theme.swift`.
 
+## Demomodus und Hinweise für die App-Prüfung (App Review)
+
+Auf dem Startbildschirm führt **„Demo ausprobieren – ohne Server“** ohne Eingaben in eine voll bedienbare App mit
+Beispieldaten (drei Bauakten mit Kunden, Fotos, Lieferschein-PDF, Bautagebuch, Erstbegehung, Aufgaben, Einsätze,
+eine Meldung an die IT). Der „Server“ läuft dabei im App-Prozess (`Support/LocalServer.swift`, Daten in
+`Support/DemoContent.swift`): **es wird nichts über das Netzwerk gesendet**, Änderungen bleiben auf dem Gerät. Ein grünes
+Band oben kennzeichnet den Demomodus; „Beenden“ (dort oder unter Mehr) löscht alle Demodaten und führt zurück zur
+Einrichtung. Kamera, Dokumentenscanner und Videoaufnahme funktionieren auch im Demomodus (lokal gespeichert).
+
+Text für die App-Review-Notizen (App Store Connect):
+
+> EstrichONE connects to a self-hosted company server. To review the app without a server, tap
+> “Demo ausprobieren – ohne Server” on the first screen. The app then runs with local sample data only; nothing is sent
+> over the network. Tap “Beenden” in the green bar to leave the demo. Camera, microphone and location are only used
+> on explicit user action (photos, document scanner, videos, site address).
+
+UI-Test: `BauakteUITests.testDemoModeWithoutServer`.
+
 ## Aufbau
 
 | Pfad | Inhalt |

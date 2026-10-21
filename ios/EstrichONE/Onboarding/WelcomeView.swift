@@ -4,6 +4,7 @@ import SwiftUI
 /// Schritt 1: Begrüßung mit den beiden Wegen zum Server.
 struct WelcomeView: View {
     @Binding var path: [OnboardingStep]
+    @Environment(AppModel.self) private var model
     @State private var isScanning = false
     @State private var cameraDenied = false
 
@@ -61,6 +62,15 @@ struct WelcomeView: View {
                     .primaryActionStyle()
                     .accessibilityIdentifier("enterAddressButton")
                 }
+
+                // Ohne eigenen Server ausprobieren (auch für die App-Prüfung): Beispieldaten, nichts wird gesendet.
+                Button {
+                    model.requestDemo(true)
+                } label: {
+                    Label("Demo ausprobieren – ohne Server", systemImage: "play.rectangle")
+                }
+                .estrichButton(.tertiary, size: .regular, fullWidth: true)
+                .accessibilityIdentifier("tryDemoButton")
             }
         }
         .padding(.horizontal, 24)

@@ -65,6 +65,30 @@ final class AppModel {
     private var pendingTokens: TokenResponse?
     private var backgroundSince: Date?
 
+    /// Wechsel in den Demomodus (`true`) bzw. zurück (`false`); setzt die App-Sitzung.
+    var onDemoRequest: ((Bool) -> Void)?
+
+    var isDemo: Bool { environment.isDemo }
+
+    /// „Demo ausprobieren“: richtet das Gerät ohne Eingaben mit dem Demoserver ein und meldet „Max Huber“ an.
+    func startDemo() async {
+        guard environment.isDemo else { return }
+        if active != nil { return }
+        guard let address = try? ServerAddress.parse(AppEnvironment.demoServerAddress),
+              case let .success(server) = await checker.check(address) else { return }
+        do {
+            try confirm(server, enrollment: nil)
+            chooseKind(.personal)
+            try await signIn(login: "m.huber", password: "demo")
+        } catch {
+            notice = "Der Demomodus konnte nicht gestartet werden."
+        }
+    }
+
+    func requestDemo(_ start: Bool) {
+        onDemoRequest?(start)
+    }
+
     init(environment: AppEnvironment) {
         self.environment = environment
         serverStore = ServerStore(defaults: environment.defaults)

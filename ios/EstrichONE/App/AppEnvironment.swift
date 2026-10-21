@@ -17,13 +17,21 @@ struct AppEnvironment {
     let poolInactivityTimeout: TimeInterval
     /// UI-Tests überspringen Face ID (im Simulator nicht bedienbar).
     let skipsDeviceOwnerAuthentication: Bool
+    /// Demomodus: Beispieldaten im App-Prozess, kein Netzwerk.
+    var isDemo = false
+
+    /// Merker, dass die App im Demomodus läuft (übersteht einen Neustart).
+    static let demoFlagKey = "estrichone.demoMode"
+    static let demoServerAddress = "demo.estrichone.app"
 
     static func live() -> AppEnvironment {
         #if DEBUG
         if let environment = UITestSupport.makeEnvironment() {
+            if UserDefaults.standard.bool(forKey: demoFlagKey) { return demo() }
             return environment
         }
         #endif
+        if UserDefaults.standard.bool(forKey: demoFlagKey) { return demo() }
         return AppEnvironment(
             defaults: .standard,
             // Ohne Cookies und ohne Zwischenspeicher.
@@ -34,6 +42,28 @@ struct AppEnvironment {
             personalLockAfter: 15 * 60,
             poolInactivityTimeout: 5 * 60,
             skipsDeviceOwnerAuthentication: false)
+    }
+
+    /// Demomodus für die App-Prüfung und zum Ausprobieren: eigener Daten- und Schlüsselbereich, Server im App-Prozess
+    /// mit Beispieldaten. Nichts wird gesendet.
+    static func demo() -> AppEnvironment {
+        let suite = "de.estrichone.demo"
+        let info = """
+        {"product":"EstrichONE","serverName":"EstrichONE Demo – Estrichbau Muster GmbH","serverVersion":"0.1.0","apiVersions":["v1"],
+         "minClientVersion":"0.1.0","authMethods":["local"],"instanceEpoch":"0193a1b2-de00-7000-8000-000000000001","setupRequired":false}
+        """
+        var environment = AppEnvironment(
+            defaults: UserDefaults(suiteName: suite) ?? .standard,
+            transport: FakeServer(serverInfoStatus: 200, serverInfoBody: info, password: "demo", newDeviceStatus: "active",
+                                  demo: DemoContent.make()),
+            secrets: KeychainSecretStore(service: suite),
+            storageRoot: URL.applicationSupportDirectory.appending(path: "EstrichONE-Demo", directoryHint: .isDirectory),
+            pinIterations: 1_000,
+            personalLockAfter: 15 * 60,
+            poolInactivityTimeout: 5 * 60,
+            skipsDeviceOwnerAuthentication: true)
+        environment.isDemo = true
+        return environment
     }
 
     var appVersion: SemanticVersion {

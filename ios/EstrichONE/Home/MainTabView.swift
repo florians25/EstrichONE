@@ -10,6 +10,7 @@ struct MainTabView: View {
         case more
     }
 
+    @Environment(AppModel.self) private var model
     @State private var selection: Tab = .today
     @State private var captureMode: CaptureMode = .photo
 
@@ -31,6 +32,9 @@ struct MainTabView: View {
                 .tabItem { Label("Mehr", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
         }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if model.isDemo { DemoBanner { model.requestDemo(false) } }
+        }
     }
 }
 
@@ -47,5 +51,28 @@ struct NewBauakteButton: View {
         .padding(.trailing, 16)
         .padding(.bottom, 12)
         .accessibilityIdentifier("newBauakteButton")
+    }
+}
+
+/// Deutliche Kennzeichnung des Demomodus mit „Beenden“.
+struct DemoBanner: View {
+    let end: () -> Void
+
+    var body: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "play.rectangle.fill").accessibilityHidden(true)
+            Text("Demo · Beispieldaten, nichts wird gesendet").font(.footnote.weight(.semibold))
+                .accessibilityIdentifier("demoBanner")
+            Spacer()
+            Button("Beenden", action: end)
+                .font(.footnote.weight(.bold))
+                .foregroundStyle(Theme.onAccent)
+                .frame(minHeight: 32)
+                .accessibilityIdentifier("endDemoButton")
+        }
+        .foregroundStyle(Theme.onAccent)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 6)
+        .background(Theme.accent)
     }
 }

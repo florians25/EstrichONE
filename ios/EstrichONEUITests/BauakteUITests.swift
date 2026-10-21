@@ -244,4 +244,30 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(status.label.contains("1 Mangel"), status.label)
         XCTAssertTrue(app.text(containing: "Heizkreis Bad undicht").waitForExistence(timeout: 5) || app.reveal(app.text(containing: "Heizkreis Bad undicht")))
     }
+
+    @MainActor
+    func testDemoModeWithoutServer() {
+        continueAfterFailure = false
+        let app = XCUIApplication()
+        app.launchEnvironment = ["ESTRICHONE_UITEST": "1", "ESTRICHONE_UITEST_KEEP": "0"]
+        app.launch()
+        XCTAssertTrue(app.element("welcomeTitle").waitForExistence(timeout: 20))
+        app.tap("tryDemoButton")
+
+        // Ohne Eingaben angemeldet, deutlich als Demo gekennzeichnet, mit Beispieldaten.
+        XCTAssertTrue(app.element("demoBanner").waitForExistence(timeout: 30), app.debugDescription)
+        XCTAssertTrue(app.element("newBauakteTile").waitForExistence(timeout: 20))
+        app.tapElement(app.tabBars.buttons["Bauakten"].firstMatch, "Reiter Bauakten")
+        let efh = app.staticTexts["EFH Schneider, Neubau"].firstMatch
+        XCTAssertTrue(efh.waitForExistence(timeout: 20), app.debugDescription)
+        app.tapElement(efh, "EFH Schneider")
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15))
+        XCTAssertTrue(app.reveal(app.element("photoGrid")), app.debugDescription)
+        let document = app.descendants(matching: .any).matching(NSPredicate(format: "identifier BEGINSWITH %@", "document-Lieferschein")).firstMatch
+        XCTAssertTrue(document.waitForExistence(timeout: 5) || app.reveal(document), app.debugDescription)
+
+        // Verlassen: zurück zur Einrichtung, Demodaten gelöscht.
+        app.tap("endDemoButton")
+        XCTAssertTrue(app.element("welcomeTitle").waitForExistence(timeout: 20), app.debugDescription)
+    }
 }

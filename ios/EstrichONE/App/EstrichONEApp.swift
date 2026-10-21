@@ -3,22 +3,49 @@ import SwiftUI
 
 @main
 struct EstrichONEApp: App {
-    @State private var model = AppModel(environment: .live())
+    @State private var session = AppSession()
     @Environment(\.scenePhase) private var scenePhase
 
     var body: some Scene {
         WindowGroup {
             RootView()
-                .environment(model)
-                .onOpenURL { model.handle(url: $0) }
+                .environment(session.model)
+                .id(session.generation)
+                .onOpenURL { session.model.handle(url: $0) }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
-            case .background: model.didEnterBackground(at: .now)
-            case .active: model.didBecomeActive(at: .now)
+            case .background: session.model.didEnterBackground(at: .now)
+            case .active: session.model.didBecomeActive(at: .now)
             default: break
             }
         }
+    }
+}
+
+/// Hält das App-Modell und tauscht es beim Wechsel in den bzw. aus dem Demomodus aus.
+@MainActor
+@Observable
+final class AppSession {
+    private(set) var model: AppModel
+    private(set) var generation = 0
+
+    init() {
+        model = AppModel(environment: .live())
+        connect()
+    }
+
+    private func connect() {
+        model.onDemoRequest = { [weak self] start in self?.switchDemo(start) }
+    }
+
+    private func switchDemo(_ start: Bool) {
+        UserDefaults.standard.set(start, forKey: AppEnvironment.demoFlagKey)
+        if !start { model.resetApp() }
+        model = AppModel(environment: start ? .demo() : .live())
+        connect()
+        generation += 1
+        if start { Task { await model.startDemo() } }
     }
 }
 
