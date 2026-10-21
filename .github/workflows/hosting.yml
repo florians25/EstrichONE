@@ -35,7 +35,7 @@ jobs:
           ! grep -q "has the following vulnerable packages" vulnerable.txt
       - name: Shellcheck
         run: shellcheck hosting/deploy/*.sh hosting/scripts/*.sh
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
@@ -83,7 +83,7 @@ jobs:
           for i in $(seq 1 60); do curl -sf http://localhost:5090/health && break; sleep 1; done
           echo "E2E_SETUP_CODE=$(docker logs console 2>&1 | grep -o 'Einrichtungscode: [A-Z0-9-]*' | tail -1 | cut -d' ' -f2)" >> "$GITHUB_ENV"
           curl -sI http://localhost:5090/ | grep -i "content-security-policy: default-src 'self'; script-src 'self';"
-      - uses: actions/setup-node@v5
+      - uses: actions/setup-node@v7
         with:
           node-version: 24
           cache: npm
