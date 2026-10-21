@@ -42,6 +42,9 @@ public sealed class Employee : IVersionedEntity
 
     public DateOnly? EntryDate { get; private set; }
     public DateOnly? ExitDate { get; private set; }
+
+    /// <summary>Ende der Probezeit (Erinnerung in den Fristen).</summary>
+    public DateOnly? ProbationEnd { get; private set; }
     public EmploymentType EmploymentType { get; private set; }
 
     /// <summary>Arbeitszeitmodell, z. B. „Vollzeit 40 h, Mo–Fr“ oder „Saison (Mär–Nov)“.</summary>
@@ -128,6 +131,16 @@ public sealed class Employee : IVersionedEntity
         VacationCarryOver = vacationCarryOver;
     }
 
+    public void ChangeProbation(DateOnly? probationEnd)
+    {
+        if (probationEnd is { } end && EntryDate is { } entry && end < entry)
+        {
+            throw new ArgumentException("Das Ende der Probezeit liegt vor dem Eintritt.", nameof(probationEnd));
+        }
+
+        ProbationEnd = probationEnd;
+    }
+
     public void ChangeRate(decimal? hourlyRate)
     {
         if (hourlyRate is < 0 or > 1000)
@@ -144,13 +157,13 @@ public sealed class Employee : IVersionedEntity
 
     public IReadOnlyList<DayOfWeek> WorkDayList => Enumerable.Range(0, 7).Where(bit => (WorkDays & (1 << bit)) != 0).Select(bit => (DayOfWeek)bit).ToList();
 
-    /// <summary>Arbeitstage eines Zeitraums nach dem Arbeitszeitmodell (ohne Feiertage).</summary>
-    public int WorkingDays(DateOnly from, DateOnly to)
+    /// <summary>Arbeitstage eines Zeitraums nach dem Arbeitszeitmodell, ohne gesetzliche Feiertage.</summary>
+    public int WorkingDays(DateOnly from, DateOnly to, IReadOnlySet<DateOnly>? holidays = null)
     {
         var count = 0;
         for (var day = from; day <= to; day = day.AddDays(1))
         {
-            if ((WorkDays & (1 << (int)day.DayOfWeek)) != 0)
+            if ((WorkDays & (1 << (int)day.DayOfWeek)) != 0 && holidays?.Contains(day) != true)
             {
                 count++;
             }

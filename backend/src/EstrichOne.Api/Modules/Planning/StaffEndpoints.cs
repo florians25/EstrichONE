@@ -32,7 +32,9 @@ public sealed record EmployeeDocumentView(
 /// <param name="Entitlement">Anspruch im Jahr (anteilig bei Ein-/Austritt im Jahr nicht gekürzt – das entscheidet das Büro).</param>
 /// <param name="Taken">Urlaubstage (Arbeitstage nach Arbeitszeitmodell) bis heute.</param>
 /// <param name="Planned">Urlaubstage ab morgen im selben Jahr.</param>
-public sealed record VacationSummary(int Year, decimal Entitlement, decimal CarryOver, decimal Taken, decimal Planned, decimal Remaining, int SickDays);
+/// <param name="Requested">Arbeitstage in offenen Anträgen (noch nicht genehmigt, nicht abgezogen).</param>
+public sealed record VacationSummary(
+    int Year, decimal Entitlement, decimal CarryOver, decimal Taken, decimal Planned, decimal Remaining, int SickDays, decimal Requested = 0);
 
 public sealed record EmployeeDetail(
     Guid Id, string? PersonnelNumber, string FirstName, string LastName, string DisplayName, string? JobTitle, EmploymentType EmploymentType,
@@ -41,7 +43,7 @@ public sealed record EmployeeDetail(
     string? WorkTimeModel, decimal? WeeklyHours, IReadOnlyList<DayOfWeek> WorkDays, decimal? HourlyRate, decimal VacationDaysPerYear,
     decimal VacationCarryOver, string? Notes, bool IsActive, IReadOnlyList<CrewRef> Crews, IReadOnlyList<QualificationView> Qualifications,
     IReadOnlyList<EquipmentView> Equipment, IReadOnlyList<EmployeeDocumentView> Documents, IReadOnlyList<AbsenceView> Absences, VacationSummary Vacation,
-    bool CanManage, long Version);
+    bool CanManage, DateOnly? ProbationEnd, long Version);
 
 public sealed record SaveEmployeeRequest(
     [property: MaxLength(100)] string? FirstName, [property: Required, MaxLength(100)] string LastName, [property: MaxLength(20)] string? PersonnelNumber,
@@ -51,7 +53,8 @@ public sealed record SaveEmployeeRequest(
     DateOnly? BirthDate = null, [property: MaxLength(200)] string? EmergencyContactName = null, [property: MaxLength(50)] string? EmergencyContactPhone = null,
     [property: MaxLength(50)] string? EmergencyContactRelation = null, DateOnly? EntryDate = null, DateOnly? ExitDate = null,
     [property: MaxLength(100)] string? WorkTimeModel = null, decimal? WeeklyHours = null, IReadOnlyList<DayOfWeek>? WorkDays = null,
-    decimal? HourlyRate = null, decimal VacationDaysPerYear = 30, decimal VacationCarryOver = 0, [property: MaxLength(4000)] string? Notes = null);
+    decimal? HourlyRate = null, decimal VacationDaysPerYear = 30, decimal VacationCarryOver = 0, [property: MaxLength(4000)] string? Notes = null,
+    DateOnly? ProbationEnd = null);
 
 public sealed record SaveQualificationRequest(
     QualificationKind Kind, [property: Required, MaxLength(100)] string Name, [property: MaxLength(50)] string? Number, DateOnly? IssuedOn, DateOnly? ExpiresOn,
@@ -86,43 +89,43 @@ internal static class StaffEndpoints
         var staff = api.MapGroup("/staff").WithTags("Personal");
         staff.MapGet("/employees", ListAsync).WithName("ListEmployees")
             .WithSummary("Mitarbeiter (status = active | former | all, search), mit Kolonnen, Resturlaub und ablaufenden Qualifikationen")
-            .RequirePermission(Permissions.StaffRead);
+            .RequirePermission(Permissions.HrRead);
         staff.MapGet("/employees/{id:guid}", GetAsync).WithName("GetEmployee").ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(Permissions.StaffRead);
+            .RequirePermission(Permissions.HrRead);
         staff.MapPut("/employees/{id:guid}", SaveAsync).WithName("SaveEmployee")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequirePermission(Permissions.StaffManage);
+            .RequirePermission(Permissions.HrManage);
         staff.MapDelete("/employees/{id:guid}", DeleteAsync).WithName("DeleteEmployee")
             .WithSummary("Mitarbeiter mit Qualifikationen, Geräten und Dokumentverweisen löschen (Benutzerkonto bleibt)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.HrManage);
         staff.MapPost("/employees/import-users", ImportAsync).WithName("ImportEmployeesFromUsers")
             .WithSummary("Für alle aktiven Benutzerkonten ohne Personalstamm einen Mitarbeiter anlegen")
-            .RequirePermission(Permissions.StaffManage);
+            .RequirePermission(Permissions.HrManage);
 
         staff.MapPut("/employees/{id:guid}/qualifications/{qualificationId:guid}", SaveQualificationAsync).WithName("SaveEmployeeQualification")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
         staff.MapDelete("/employees/{id:guid}/qualifications/{qualificationId:guid}", DeleteQualificationAsync).WithName("DeleteEmployeeQualification")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.HrManage);
         staff.MapPut("/employees/{id:guid}/equipment/{equipmentId:guid}", SaveEquipmentAsync).WithName("SaveEmployeeEquipment")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
         staff.MapDelete("/employees/{id:guid}/equipment/{equipmentId:guid}", DeleteEquipmentAsync).WithName("DeleteEmployeeEquipment")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.HrManage);
         staff.MapPut("/employees/{id:guid}/documents/{documentId:guid}", AddDocumentAsync).WithName("AddEmployeeDocument")
             .WithSummary("Hochgeladene Datei (POST /files ohne Bauakte) als Personaldokument ablegen")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
         staff.MapDelete("/employees/{id:guid}/documents/{documentId:guid}", DeleteDocumentAsync).WithName("DeleteEmployeeDocument")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.HrManage);
         staff.MapPut("/employees/{id:guid}/crews", SetCrewsAsync).WithName("SetEmployeeCrews")
             .WithSummary("Kolonnenzugehörigkeit setzen (nur mit verknüpftem Benutzerkonto)")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
         staff.MapPut("/employees/{id:guid}/absences/{absenceId:guid}", SaveAbsenceAsync).WithName("SaveEmployeeAbsence")
             .WithSummary("Urlaub, Krankheit, Schulung eintragen (nur mit verknüpftem Benutzerkonto; erscheint in der Planung)")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
         staff.MapDelete("/employees/{id:guid}/absences/{absenceId:guid}", DeleteAbsenceAsync).WithName("DeleteEmployeeAbsence")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.StaffManage);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.HrManage);
         staff.MapGet("/qualifications/expiring", ExpiringAsync).WithName("ListExpiringQualifications")
             .WithSummary("Abgelaufene und bald ablaufende Qualifikationen und Führerscheine (days = Vorlauf, Standard 60)")
-            .RequirePermission(Permissions.StaffRead);
+            .RequirePermission(Permissions.HrRead);
     }
 
     private static DateOnly Today(TimeProvider clock) => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Berlin).DateTime);
@@ -130,36 +133,13 @@ internal static class StaffEndpoints
     private static QualificationView ToView(EmployeeQualification q, DateOnly today) =>
         new(q.Id, q.Kind, q.Name, q.Number, q.IssuedOn, q.ExpiresOn, q.Notes, q.ExpiresOn < today, q.ExpiresOn >= today && q.ExpiresOn <= today.AddDays(60));
 
-    private static VacationSummary Vacation(Employee e, IEnumerable<Absence> absences, DateOnly today)
-    {
-        var start = new DateOnly(today.Year, 1, 1);
-        var end = new DateOnly(today.Year, 12, 31);
-        decimal taken = 0, planned = 0;
-        var sick = 0;
-        foreach (var a in absences.Where(a => a.To >= start && a.From <= end))
-        {
-            var from = a.From < start ? start : a.From;
-            var to = a.To > end ? end : a.To;
-            if (a.Kind == AbsenceKind.Vacation)
-            {
-                taken += to < today ? e.WorkingDays(from, to) : from > today ? 0 : e.WorkingDays(from, today);
-                planned += from > today ? e.WorkingDays(from, to) : to > today ? e.WorkingDays(today.AddDays(1), to) : 0;
-            }
-            else if (a.Kind == AbsenceKind.Sick)
-            {
-                sick += e.WorkingDays(from, to > today ? today : to);
-            }
-        }
-
-        return new VacationSummary(today.Year, e.VacationDaysPerYear, e.VacationCarryOver, taken, planned,
-            e.VacationDaysPerYear + e.VacationCarryOver - taken - planned, Math.Max(0, sick));
-    }
-
     private static async Task<Ok<List<EmployeeListItem>>> ListAsync(
-        EstrichOneDbContext db, IUserPermissions permissions, TimeProvider clock, CancellationToken cancellationToken,
+        EstrichOneDbContext db, IUserPermissions permissions, HrService hr, TimeProvider clock, CancellationToken cancellationToken,
         [FromQuery] string? status = null, [FromQuery] string? search = null)
     {
         var today = Today(clock);
+        var holidays = await hr.HolidaysAsync(new DateOnly(today.Year, 1, 1), new DateOnly(today.Year, 12, 31), cancellationToken);
+        var maySeeSickness = await hr.MaySeeSicknessAsync(cancellationToken);
         var query = db.Set<Employee>().AsNoTracking();
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -185,7 +165,7 @@ internal static class StaffEndpoints
         var absences = await db.Set<Absence>().AsNoTracking().Where(a => userIds.Contains(a.UserId) && a.To >= yearStart).ToListAsync(cancellationToken);
         var qualifications = await db.Set<EmployeeQualification>().AsNoTracking()
             .Where(q => ids.Contains(q.EmployeeId) && q.ExpiresOn != null && q.ExpiresOn <= today.AddDays(60)).ToListAsync(cancellationToken);
-        var showRate = await permissions.HasAsync(Permissions.StaffManage, cancellationToken);
+        var showRate = await permissions.HasAsync(Permissions.HrManage, cancellationToken);
 
         return TypedResults.Ok(employees.Select(e =>
         {
@@ -194,25 +174,27 @@ internal static class StaffEndpoints
             return new EmployeeListItem(e.Id, e.PersonnelNumber, e.DisplayName, e.FirstName, e.LastName, e.JobTitle, e.EmploymentType, e.Phone, e.Mobile,
                 e.Email, e.City, e.UserId, e.UserId is { } u ? users.GetValueOrDefault(u) : null, e.IsActiveOn(today), e.EntryDate, e.ExitDate,
                 e.UserId is { } member ? crews.Where(c => c.MemberUserIds.Contains(member)).Select(c => new CrewRef(c.Id, c.Name, c.Color)).ToList() : [],
-                showRate ? e.HourlyRate : null, Vacation(e, own, today).Remaining, own.FirstOrDefault(a => a.Covers(today))?.Kind, expiring.Count,
+                showRate ? e.HourlyRate : null, HrService.Vacation(e, own, today, holidays, maySeeSickness).Remaining,
+                own.FirstOrDefault(a => a.Covers(today)) is { } away ? HrService.Mask(away.Kind, maySeeSickness) : null, expiring.Count,
                 expiring.Select(q => q.ExpiresOn).Min(), e.Version);
         }).ToList());
     }
 
     private static async Task<Results<Ok<EmployeeDetail>, ProblemHttpResult>> GetAsync(
-        Guid id, EstrichOneDbContext db, IUserPermissions permissions, IStoredFiles files, TimeProvider clock, CancellationToken cancellationToken)
+        Guid id, EstrichOneDbContext db, IUserPermissions permissions, IStoredFiles files, HrService hr, TimeProvider clock, CancellationToken cancellationToken)
     {
         var employee = await db.Set<Employee>().AsNoTracking().SingleOrDefaultAsync(e => e.Id == id, cancellationToken);
         return employee is null
             ? NotFound("Mitarbeiter nicht gefunden")
-            : TypedResults.Ok(await DetailAsync(employee, db, permissions, files, clock, cancellationToken));
+            : TypedResults.Ok(await DetailAsync(employee, db, permissions, files, hr, clock, cancellationToken));
     }
 
     private static async Task<EmployeeDetail> DetailAsync(
-        Employee e, EstrichOneDbContext db, IUserPermissions permissions, IStoredFiles files, TimeProvider clock, CancellationToken cancellationToken)
+        Employee e, EstrichOneDbContext db, IUserPermissions permissions, IStoredFiles files, HrService hr, TimeProvider clock, CancellationToken cancellationToken)
     {
         var today = Today(clock);
-        var manage = await permissions.HasAsync(Permissions.StaffManage, cancellationToken);
+        var holidays = await hr.HolidaysAsync(new DateOnly(today.Year, 1, 1), new DateOnly(today.Year, 12, 31), cancellationToken);
+        var manage = await permissions.HasAsync(Permissions.HrManage, cancellationToken);
         var user = e.UserId is { } uid ? await db.Set<User>().AsNoTracking().SingleOrDefaultAsync(u => u.Id == uid, cancellationToken) : null;
         var crews = e.UserId is { } member
             ? await db.Set<Crew>().AsNoTracking().Where(c => c.MemberUserIds.Contains(member)).OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
@@ -238,12 +220,25 @@ internal static class StaffEndpoints
             equipment.Select(q => new EquipmentView(q.Id, q.ResourceId, q.Name, q.SerialNumber, q.IssuedOn, q.ReturnedOn, q.Notes)).ToList(),
             documents.Select(d => new EmployeeDocumentView(d.Id, d.FileId, d.Category, d.Title, info.GetValueOrDefault(d.FileId)?.OriginalName,
                 info.GetValueOrDefault(d.FileId)?.ContentType, info.GetValueOrDefault(d.FileId)?.SizeBytes ?? 0, d.ValidUntil, d.AddedAt)).ToList(),
-            absences.Select(a => new AbsenceView(a.Id, a.UserId, e.DisplayName, a.From, a.To, a.Kind, a.Note)).ToList(),
-            Vacation(e, absences, today), manage, e.Version);
+            absences.Select(a => new AbsenceView(a.Id, a.UserId, e.DisplayName, a.From, a.To, HrService.Mask(a.Kind, manage),
+                a.Kind == AbsenceKind.Sick && !manage ? null : a.Note)).ToList(),
+            HrService.Vacation(e, absences, today, holidays, manage, await RequestedDaysAsync(e, db, holidays, cancellationToken)), manage, e.ProbationEnd, e.Version);
+    }
+
+    private static async Task<decimal> RequestedDaysAsync(Employee e, EstrichOneDbContext db, IReadOnlySet<DateOnly> holidays, CancellationToken cancellationToken)
+    {
+        if (e.UserId is not { } userId)
+        {
+            return 0;
+        }
+
+        var pending = await db.Set<AbsenceRequest>().AsNoTracking()
+            .Where(r => r.UserId == userId && r.Status == AbsenceRequestStatus.Pending && r.Kind == AbsenceKind.Vacation).ToListAsync(cancellationToken);
+        return pending.Sum(r => e.WorkingDays(r.From, r.To, holidays));
     }
 
     private static async Task<Results<Ok<EmployeeDetail>, ProblemHttpResult>> SaveAsync(
-        Guid id, SaveEmployeeRequest request, EstrichOneDbContext db, IUserPermissions permissions, IStoredFiles files, TimeProvider clock,
+        Guid id, SaveEmployeeRequest request, EstrichOneDbContext db, IUserPermissions permissions, IStoredFiles files, HrService hr, TimeProvider clock,
         CancellationToken cancellationToken)
     {
         if (request.UserId is { } userId)
@@ -279,11 +274,12 @@ internal static class StaffEndpoints
             employee.ChangeEmergencyContact(request.EmergencyContactName, request.EmergencyContactPhone, request.EmergencyContactRelation);
             employee.ChangeEmployment(request.EntryDate, request.ExitDate, request.WorkTimeModel, request.WeeklyHours, request.WorkDays,
                 request.VacationDaysPerYear, request.VacationCarryOver);
+            employee.ChangeProbation(request.ProbationEnd);
             employee.ChangeRate(request.HourlyRate);
             employee.ChangeNotes(request.Notes);
             employee.LinkUser(request.UserId);
             await db.SaveChangesAsync(cancellationToken);
-            return TypedResults.Ok(await DetailAsync(employee, db, permissions, files, clock, cancellationToken));
+            return TypedResults.Ok(await DetailAsync(employee, db, permissions, files, hr, clock, cancellationToken));
         }
         catch (ArgumentException exception)
         {
@@ -557,10 +553,11 @@ internal static class StaffEndpoints
         title: "Ungültige Angaben", detail: detail, extensions: new Dictionary<string, object?> { ["code"] = "VALIDATION_FAILED" });
 }
 
-/// <summary>Personaldokumente sind für „Personalstamm pflegen“ lesbar (auch wenn jemand anderes sie hochgeladen hat).</summary>
+/// <summary>Personaldokumente und AU-Bescheinigungen sind für „Personalstamm pflegen“ lesbar (auch wenn jemand anderes sie hochgeladen hat).</summary>
 internal sealed class EmployeeDocumentGrant(EstrichOneDbContext db, IUserPermissions permissions) : IFileReadGrant
 {
     public async Task<bool> CanReadAsync(Guid fileId, CancellationToken cancellationToken) =>
-        await db.Set<EmployeeDocument>().AnyAsync(d => d.FileId == fileId, cancellationToken)
-        && await permissions.HasAsync(Permissions.StaffManage, cancellationToken);
+        (await db.Set<EmployeeDocument>().AnyAsync(d => d.FileId == fileId, cancellationToken)
+            || await db.Set<Absence>().AnyAsync(a => a.CertificateFileId == fileId, cancellationToken))
+        && await permissions.HasAsync(Permissions.HrManage, cancellationToken);
 }

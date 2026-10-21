@@ -49,6 +49,24 @@ public sealed class ApiFactory(string connectionString, IReadOnlyDictionary<stri
             Npgsql.NpgsqlConnection.ClearPool(connection);
         }
 
+        // Datenbank der Testklasse wieder entfernen – sonst wächst der Testlauf auf mehrere GB (Plattenplatz, CI).
+        try
+        {
+            var builder = new Npgsql.NpgsqlConnectionStringBuilder(connectionString);
+            var database = builder.Database;
+            builder.Database = "postgres";
+            builder.Pooling = false;
+            await using var admin = new Npgsql.NpgsqlConnection(builder.ConnectionString);
+            await admin.OpenAsync();
+            await using var command = admin.CreateCommand();
+            command.CommandText = $"DROP DATABASE IF EXISTS \"{database}\" WITH (FORCE)";
+            await command.ExecuteNonQueryAsync();
+        }
+        catch (Npgsql.NpgsqlException)
+        {
+            // Aufräumen ist nur ein Zusatz.
+        }
+
         if (Directory.Exists(FilesRoot))
         {
             Directory.Delete(FilesRoot, recursive: true);

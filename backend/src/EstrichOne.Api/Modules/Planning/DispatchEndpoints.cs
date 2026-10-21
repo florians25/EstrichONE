@@ -158,6 +158,7 @@ public sealed class DispatchService(
         var absenceText = new Dictionary<AbsenceKind, string>
         {
             [AbsenceKind.Vacation] = "Urlaub", [AbsenceKind.Sick] = "krank", [AbsenceKind.Training] = "Schulung", [AbsenceKind.Other] = "abwesend",
+            [AbsenceKind.SpecialLeave] = "Sonderurlaub", [AbsenceKind.School] = "Berufsschule",
         };
         var people = users.Select(u =>
         {

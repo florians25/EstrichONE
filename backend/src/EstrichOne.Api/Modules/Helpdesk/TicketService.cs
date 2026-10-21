@@ -55,6 +55,8 @@ public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakte
         [nameof(TicketStatus.Resolved)] = "Gelöst", [nameof(TicketStatus.Closed)] = "Geschlossen",
     };
 
+    public static string StatusName(TicketStatus status) => StatusText.GetValueOrDefault(status.ToString()) ?? status.ToString();
+
     private static readonly Dictionary<string, string> PriorityText = new()
     {
         [nameof(TicketPriority.Low)] = "Niedrig", [nameof(TicketPriority.Normal)] = "Normal", [nameof(TicketPriority.High)] = "Hoch",

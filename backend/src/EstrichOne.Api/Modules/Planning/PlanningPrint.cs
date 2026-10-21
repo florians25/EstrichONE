@@ -29,6 +29,7 @@ internal static class PlanningPrint
     private static readonly Dictionary<AbsenceKind, string> AbsenceText = new()
     {
         [AbsenceKind.Vacation] = "Urlaub", [AbsenceKind.Sick] = "krank", [AbsenceKind.Training] = "Schulung", [AbsenceKind.Other] = "abwesend",
+        [AbsenceKind.SpecialLeave] = "Sonderurlaub", [AbsenceKind.School] = "Berufsschule",
     };
 
     public static void Map(RouteGroupBuilder planning) =>

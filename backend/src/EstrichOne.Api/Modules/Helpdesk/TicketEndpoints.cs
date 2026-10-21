@@ -166,8 +166,8 @@ internal static class TicketEndpoints
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> UpdateAsync(
-        Guid id, UpdateTicketRequest request, TicketService tickets, EstrichOneDbContext db, ICurrentUser currentUser, TimeProvider clock,
-        CancellationToken cancellationToken)
+        Guid id, UpdateTicketRequest request, TicketService tickets, TicketNotifier notifier, EstrichOneDbContext db, ICurrentUser currentUser,
+        TimeProvider clock, CancellationToken cancellationToken)
     {
         var ticket = await db.Set<Ticket>().SingleOrDefaultAsync(t => t.Id == id, cancellationToken);
         if (ticket is null)
@@ -223,11 +223,16 @@ internal static class TicketEndpoints
 
         ticket.Touch(now);
         await db.SaveChangesAsync(cancellationToken);
+        if (request.Status is not null)
+        {
+            await notifier.NotifyAsync(ticket, request.Status is TicketStatus.Resolved or TicketStatus.Closed ? ticket.Resolution : null, cancellationToken);
+        }
+
         return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: true, cancellationToken));
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> CommentAsync(
-        Guid id, AddTicketCommentRequest request, TicketService tickets, EstrichOneDbContext db, ICurrentUser currentUser,
+        Guid id, AddTicketCommentRequest request, TicketService tickets, TicketNotifier notifier, EstrichOneDbContext db, ICurrentUser currentUser,
         IUserPermissions permissions, TimeProvider clock, CancellationToken cancellationToken)
     {
         var (ticket, isAgent) = await FindVisibleAsync(id, db, currentUser, permissions, cancellationToken, tracking: true);
@@ -266,6 +271,11 @@ internal static class TicketEndpoints
 
         ticket.Touch(now);
         await db.SaveChangesAsync(cancellationToken);
+        if (!request.IsInternal)
+        {
+            await notifier.NotifyAsync(ticket, request.Text, cancellationToken);
+        }
+
         return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken));
     }
 

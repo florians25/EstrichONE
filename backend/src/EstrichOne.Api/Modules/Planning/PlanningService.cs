@@ -23,15 +23,15 @@ public sealed record AbsenceView(Guid Id, Guid UserId, string UserName, DateOnly
 /// <param name="Appointments">Termine aus den Kalendern mit Teilnehmern oder Kolonnen (Termine ohne Bauvorhaben im Plan).</param>
 public sealed record PlanningRange(
     DateOnly From, DateOnly To, IReadOnlyList<AssignmentView> Assignments, IReadOnlyList<AbsenceView> Absences,
-    IReadOnlyList<CalendarOccurrence>? Appointments = null);
+    IReadOnlyList<CalendarOccurrence>? Appointments = null, IReadOnlyList<Holiday>? Holidays = null);
 
 /// <summary>Einsätze lesen und auf Konflikte prüfen (Doppelbelegung von Personen und Geräten, Abwesenheiten).</summary>
-public sealed class PlanningService(EstrichOneDbContext db, CalendarService calendar)
+public sealed class PlanningService(EstrichOneDbContext db, CalendarService calendar, HrService hr)
 {
     private static readonly Dictionary<AbsenceKind, string> AbsenceNames = new()
     {
         [AbsenceKind.Vacation] = "im Urlaub", [AbsenceKind.Sick] = "krankgemeldet", [AbsenceKind.Training] = "auf Schulung",
-        [AbsenceKind.Other] = "abwesend",
+        [AbsenceKind.Other] = "abwesend", [AbsenceKind.SpecialLeave] = "im Sonderurlaub", [AbsenceKind.School] = "in der Berufsschule",
     };
 
     public async Task<PlanningRange> RangeAsync(DateOnly from, DateOnly to, Guid? onlyForUser, CancellationToken cancellationToken)
@@ -58,6 +58,10 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
             shown = shown.Where(o => o.People.Any(p => p.Id == me)).ToList();
         }
 
+        var maySeeSickness = await hr.MaySeeSicknessAsync(cancellationToken);
+        var settings = await hr.SettingsAsync(cancellationToken);
+        var holidays = Enumerable.Range(from.Year, to.Year - from.Year + 1).SelectMany(y => GermanHolidays.For(y, settings.State))
+            .Where(h => h.Date >= from && h.Date <= to).ToList();
         var userIds = assignments.SelectMany(PeopleOf).Concat(absences.Select(a => a.UserId)).Distinct().ToList();
         var users = await db.Set<User>().AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
         var resourceIds = assignments.SelectMany(a => a.ResourceIds).Distinct().ToList();
@@ -97,7 +101,7 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
 
                 if (allAbsences.FirstOrDefault(abs => abs.UserId == person && abs.Covers(a.Day)) is { } absence)
                 {
-                    warnings.Add($"{Name(person)} ist {AbsenceNames[absence.Kind]}.");
+                    warnings.Add($"{Name(person)} ist {AbsenceNames[HrService.Mask(absence.Kind, maySeeSickness)]}.");
                 }
 
                 if (busy.FirstOrDefault(o => o.Start < dayEnd && dayStart < o.End && o.People.Any(p => p.Id == person)) is { } appointment)
@@ -126,7 +130,8 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
         }).ToList();
 
         return new PlanningRange(from, to, views,
-            absences.OrderBy(a => a.From).Select(a => new AbsenceView(a.Id, a.UserId, Name(a.UserId), a.From, a.To, a.Kind, a.Note)).ToList(), shown);
+            absences.OrderBy(a => a.From).Select(a => new AbsenceView(a.Id, a.UserId, Name(a.UserId), a.From, a.To, HrService.Mask(a.Kind, maySeeSickness),
+                a.Kind == AbsenceKind.Sick && !maySeeSickness ? null : a.Note)).ToList(), shown, holidays);
     }
 
     public static bool TryParseDay(string? value, out DateOnly day) =>

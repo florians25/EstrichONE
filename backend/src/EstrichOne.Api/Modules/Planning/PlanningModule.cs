@@ -12,6 +12,7 @@ public sealed class PlanningModule : IModule
     {
         services.AddScoped<PlanningService>();
         services.AddScoped<CalendarService>();
+        services.AddScoped<HrService>();
         services.AddScoped<DispatchService>();
         services.AddScoped<IFileReadGrant, EmployeeDocumentGrant>();
         services.AddScoped<IDataInitializer, CalendarSeed>();
@@ -25,5 +26,6 @@ public sealed class PlanningModule : IModule
         CalendarEndpoints.Map(api);
         DispatchEndpoints.Map(api);
         StaffEndpoints.Map(api);
+        HrEndpoints.Map(api);
     }
 }

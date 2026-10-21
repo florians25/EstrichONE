@@ -3003,6 +3003,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("CertificateFileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("certificate_file_id");
+
                     b.Property<DateOnly>("From")
                         .HasColumnType("date")
                         .HasColumnName("from");
@@ -3018,6 +3022,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("note");
 
+                    b.Property<Guid?>("RequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("request_id");
+
                     b.Property<DateOnly>("To")
                         .HasColumnType("date")
                         .HasColumnName("to");
@@ -3029,12 +3037,103 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.HasKey("Id")
                         .HasName("pk_absences");
 
+                    b.HasIndex("CertificateFileId")
+                        .HasDatabaseName("ix_absences_certificate_file_id");
+
                     b.HasIndex("UserId", "From", "To")
                         .HasDatabaseName("ix_absences_user_id_from_to");
 
                     b.ToTable("absences", null, t =>
                         {
                             t.HasCheckConstraint("ck_absences_range", "\"to\" >= \"from\"");
+                        });
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.AbsenceRequest", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AbsenceId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("absence_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateTimeOffset?>("DecidedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("decided_at");
+
+                    b.Property<Guid?>("DecidedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("decided_by_user_id");
+
+                    b.Property<string>("DecisionComment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("decision_comment");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date")
+                        .HasColumnName("from");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTimeOffset>("RequestedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("requested_at");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date")
+                        .HasColumnName("to");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_absence_requests");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_absence_requests_user_id");
+
+                    b.HasIndex("Status", "From")
+                        .HasDatabaseName("ix_absence_requests_status_from");
+
+                    b.ToTable("absence_requests", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_absence_requests_range", "\"to\" >= \"from\"");
                         });
                 });
 
@@ -3488,6 +3587,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("postal_code");
 
+                    b.Property<DateOnly?>("ProbationEnd")
+                        .HasColumnType("date")
+                        .HasColumnName("probation_end");
+
                     b.Property<string>("Street")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
@@ -3698,6 +3801,36 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_employee_qualifications_expires_on");
 
                     b.ToTable("employee_qualifications", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.HrSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<int>("MaxCrewAbsencePercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("max_crew_absence_percent");
+
+                    b.Property<bool>("RemindAnniversaries")
+                        .HasColumnType("boolean")
+                        .HasColumnName("remind_anniversaries");
+
+                    b.Property<bool>("RemindBirthdays")
+                        .HasColumnType("boolean")
+                        .HasColumnName("remind_birthdays");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(2)
+                        .HasColumnType("character varying(2)")
+                        .HasColumnName("state");
+
+                    b.HasKey("Id")
+                        .HasName("pk_hr_settings");
+
+                    b.ToTable("hr_settings", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Resource", b =>
@@ -4354,6 +4487,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_absences_users_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.AbsenceRequest", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_absence_requests_users_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Assignment", b =>

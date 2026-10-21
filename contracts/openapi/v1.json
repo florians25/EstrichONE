@@ -7628,6 +7628,739 @@
         ]
       }
     },
+    "/api/v1/hr/settings": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "operationId": "GetHrSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HrSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Personal"
+        ],
+        "operationId": "SaveHrSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveHrSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HrSettingsResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/holidays": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Gesetzliche Feiertage eines Jahres im eingestellten Bundesland",
+        "operationId": "ListHolidays",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Holiday"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/vacation-plan": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Urlaubsplan: Zeilen = Mitarbeiter, Abwesenheiten und offene Anträge von–bis (höchstens 370 Tage), Feiertage",
+        "operationId": "GetVacationPlan",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VacationPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/vacation-plan.pdf": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Urlaubsplan als PDF (year, optional month; ohne Monat zwölf Seiten)",
+        "operationId": "VacationPlanPdf",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "month",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/me": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Eigener Resturlaub, eigene Anträge, Feiertage des Jahres",
+        "operationId": "GetMyVacation",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MyVacation"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/summary": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Startseite: wartende Anträge, eigene offene Anträge, fällige Fristen",
+        "operationId": "GetHrSummary",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HrSummary"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/absence-requests": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Anträge (scope = mine | pending | all); ohne Genehmigungsrecht nur die eigenen",
+        "operationId": "ListAbsenceRequests",
+        "parameters": [
+          {
+            "name": "scope",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AbsenceRequestView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/absence-requests/{id}": {
+      "put": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Urlaub beantragen (idempotent über die ID); Antwort mit Konflikthinweisen und Resturlaub danach",
+        "operationId": "SaveAbsenceRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAbsenceRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceRequestView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/absence-requests/{id}/decision": {
+      "post": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Genehmigen (wird Abwesenheit in Planung und Urlaubsplan) oder ablehnen, mit Kommentar",
+        "operationId": "DecideAbsenceRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DecideAbsenceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceRequestView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/absence-requests/{id}/cancel": {
+      "post": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Antrag zurückziehen (genehmigter Urlaub wird wieder freigegeben)",
+        "operationId": "CancelAbsenceRequest",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceRequestView"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/sick-notes": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Krankmeldungen eines Jahres (nur Personalverwaltung)",
+        "operationId": "ListSickNotes",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/SickNoteView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/sick-notes/{id}": {
+      "put": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Krankmeldung mit optionaler AU-Bescheinigung erfassen",
+        "operationId": "SaveSickNote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSickNoteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SickNoteView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Personal"
+        ],
+        "operationId": "DeleteSickNote",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/reminders": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Fristen: ablaufende Qualifikationen/Führerscheine/Unterweisungen, Probezeitende, Geburtstage, Jubiläen (days = Vorlauf)",
+        "operationId": "ListHrReminders",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 60
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HrReminder"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/calls": {
       "get": {
         "tags": [
@@ -10059,8 +10792,144 @@
           "vacation",
           "sick",
           "training",
-          "other"
+          "other",
+          "specialLeave",
+          "school"
         ]
+      },
+      "AbsenceRequestStatus": {
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "cancelled"
+        ]
+      },
+      "AbsenceRequestView": {
+        "required": [
+          "id",
+          "userId",
+          "userName",
+          "from",
+          "to",
+          "kind",
+          "note",
+          "status",
+          "workingDays",
+          "requestedByUserId",
+          "requestedByName",
+          "requestedAt",
+          "decidedByUserId",
+          "decidedByName",
+          "decidedAt",
+          "decisionComment",
+          "warnings",
+          "remainingAfter",
+          "canDecide",
+          "canCancel",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AbsenceKind"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/AbsenceRequestStatus"
+          },
+          "workingDays": {
+            "type": "number",
+            "format": "double"
+          },
+          "requestedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "requestedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "decidedByUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "decidedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "decidedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "decisionComment": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "remainingAfter": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "canDecide": {
+            "type": "boolean"
+          },
+          "canCancel": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "AbsenceView": {
         "required": [
@@ -13238,6 +14107,25 @@
           "saturday"
         ]
       },
+      "DecideAbsenceRequest": {
+        "required": [
+          "approve",
+          "comment"
+        ],
+        "type": "object",
+        "properties": {
+          "approve": {
+            "type": "boolean"
+          },
+          "comment": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "DecideApprovalRequest": {
         "type": "object",
         "properties": {
@@ -14086,6 +14974,7 @@
           "absences",
           "vacation",
           "canManage",
+          "probationEnd",
           "version"
         ],
         "type": "object",
@@ -14284,6 +15173,13 @@
           },
           "canManage": {
             "type": "boolean"
+          },
+          "probationEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           },
           "version": {
             "type": "integer",
@@ -14803,6 +15699,135 @@
           "awaitingUpload",
           "stored"
         ]
+      },
+      "Holiday": {
+        "required": [
+          "date",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "HrReminder": {
+        "required": [
+          "kind",
+          "employeeId",
+          "employeeName",
+          "date",
+          "text",
+          "severity"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "employeeName": {
+            "type": "string"
+          },
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "text": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          }
+        }
+      },
+      "HrSettingsResponse": {
+        "required": [
+          "state",
+          "stateName",
+          "states",
+          "maxCrewAbsencePercent",
+          "remindBirthdays",
+          "remindAnniversaries"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "type": "string"
+          },
+          "stateName": {
+            "type": "string"
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HrStateOption"
+            }
+          },
+          "maxCrewAbsencePercent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remindBirthdays": {
+            "type": "boolean"
+          },
+          "remindAnniversaries": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HrStateOption": {
+        "required": [
+          "key",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          }
+        }
+      },
+      "HrSummary": {
+        "required": [
+          "pendingApprovals",
+          "myPending",
+          "remindersDue",
+          "myRemaining"
+        ],
+        "type": "object",
+        "properties": {
+          "pendingApprovals": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "myPending": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "remindersDue": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "myRemaining": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
       },
       "HttpValidationProblemDetails": {
         "type": "object",
@@ -15529,6 +16554,46 @@
           }
         }
       },
+      "MyVacation": {
+        "required": [
+          "employeeId",
+          "vacation",
+          "requests",
+          "holidays"
+        ],
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "vacation": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VacationSummary"
+              }
+            ]
+          },
+          "requests": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AbsenceRequestView"
+            }
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Holiday"
+            }
+          }
+        }
+      },
       "NoteDto": {
         "required": [
           "id",
@@ -15979,6 +17044,15 @@
             ],
             "items": {
               "$ref": "#/components/schemas/CalendarOccurrence"
+            }
+          },
+          "holidays": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Holiday"
             }
           }
         }
@@ -16630,6 +17704,41 @@
         "properties": {
           "userId": {
             "type": "string",
+            "format": "uuid"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AbsenceKind"
+          },
+          "note": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SaveAbsenceRequestRequest": {
+        "required": [
+          "userId",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
             "format": "uuid"
           },
           "from": {
@@ -17458,6 +18567,13 @@
               "null",
               "string"
             ]
+          },
+          "probationEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -17513,6 +18629,32 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SaveHrSettingsRequest": {
+        "required": [
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "state": {
+            "maxLength": 2,
+            "minLength": 2,
+            "type": "string"
+          },
+          "maxCrewAbsencePercent": {
+            "type": "integer",
+            "format": "int32",
+            "default": 50
+          },
+          "remindBirthdays": {
+            "type": "boolean",
+            "default": true
+          },
+          "remindAnniversaries": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -17929,6 +19071,44 @@
           }
         }
       },
+      "SaveSickNoteRequest": {
+        "required": [
+          "userId",
+          "from",
+          "to",
+          "note",
+          "certificateFileId"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "note": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certificateFileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "SaveSupplierRequest": {
         "required": [
           "id",
@@ -18256,6 +19436,57 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "SickNoteView": {
+        "required": [
+          "id",
+          "userId",
+          "userName",
+          "from",
+          "to",
+          "workingDays",
+          "note",
+          "certificateFileId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "workingDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certificateFileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -19716,6 +20947,135 @@
           }
         }
       },
+      "VacationPlan": {
+        "required": [
+          "from",
+          "to",
+          "state",
+          "holidays",
+          "rows"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "state": {
+            "type": "string"
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Holiday"
+            }
+          },
+          "rows": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VacationPlanRow"
+            }
+          }
+        }
+      },
+      "VacationPlanEntry": {
+        "required": [
+          "from",
+          "to",
+          "kind",
+          "status",
+          "absenceId",
+          "requestId",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AbsenceKind"
+          },
+          "status": {
+            "type": "string"
+          },
+          "absenceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "requestId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "VacationPlanRow": {
+        "required": [
+          "employeeId",
+          "userId",
+          "name",
+          "crews",
+          "entries",
+          "vacationRemaining"
+        ],
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "crews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrewRef"
+            }
+          },
+          "entries": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/VacationPlanEntry"
+            }
+          },
+          "vacationRemaining": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
+      },
       "VacationSummary": {
         "required": [
           "year",
@@ -19755,6 +21115,11 @@
           "sickDays": {
             "type": "integer",
             "format": "int32"
+          },
+          "requested": {
+            "type": "number",
+            "format": "double",
+            "default": 0
           }
         }
       },

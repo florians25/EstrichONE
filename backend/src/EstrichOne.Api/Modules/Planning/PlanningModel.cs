@@ -101,6 +101,12 @@ public enum AbsenceKind
     Sick,
     Training,
     Other,
+
+    /// <summary>Sonderurlaub (Hochzeit, Umzug, Todesfall …) – zählt nicht vom Urlaubsanspruch.</summary>
+    SpecialLeave,
+
+    /// <summary>Berufsschule (Auszubildende).</summary>
+    School,
 }
 
 /// <summary>Abwesenheit eines Mitarbeiters (Tage einschließlich).</summary>
@@ -113,11 +119,18 @@ public sealed class Absence
     public AbsenceKind Kind { get; private set; }
     public string? Note { get; private set; }
 
+    /// <summary>Krankmeldung: AU-Bescheinigung (Datei ohne Bauakte, nur für die Personalverwaltung lesbar).</summary>
+    public Guid? CertificateFileId { get; private set; }
+
+    /// <summary>Aus einem genehmigten Urlaubsantrag entstanden.</summary>
+    public Guid? RequestId { get; private set; }
+
     private Absence()
     {
     }
 
-    public static Absence Create(Guid id, Guid userId, DateOnly from, DateOnly to, AbsenceKind kind, string? note)
+    public static Absence Create(Guid id, Guid userId, DateOnly from, DateOnly to, AbsenceKind kind, string? note, Guid? certificateFileId = null,
+        Guid? requestId = null)
     {
         if (to < from)
         {
@@ -129,7 +142,11 @@ public sealed class Absence
             throw new ArgumentException("Eine Abwesenheit dauert höchstens ein Jahr.", nameof(to));
         }
 
-        return new Absence { Id = id, UserId = userId, From = from, To = to, Kind = kind, Note = PlanningText.Optional(note, 500) };
+        return new Absence
+        {
+            Id = id, UserId = userId, From = from, To = to, Kind = kind, Note = PlanningText.Optional(note, 500),
+            CertificateFileId = kind == AbsenceKind.Sick ? certificateFileId : null, RequestId = requestId,
+        };
     }
 
     public bool Covers(DateOnly day) => From <= day && day <= To;
@@ -333,6 +350,7 @@ internal sealed class AbsenceConfiguration : IEntityTypeConfiguration<Absence>
         builder.Property(a => a.Id).ValueGeneratedNever();
         builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(20);
         builder.Property(a => a.Note).HasMaxLength(500);
+        builder.HasIndex(a => a.CertificateFileId);
         builder.HasOne<User>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(a => new { a.UserId, a.From, a.To });
     }
