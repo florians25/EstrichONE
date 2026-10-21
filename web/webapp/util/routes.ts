@@ -31,7 +31,9 @@ export const routes: RouteDef[] = [
 	{ name: "employee", pattern: "/personal/:id", view: "staff.Employee", permission: "hr.read", nav: "staff", title: "nav.staff" },
 	{ name: "dayPlan", pattern: "/planung/tageseinteilung", view: "planning.Planning", permission: "planning.read", nav: "dayPlan", title: "nav.dayPlan" },
 	{ name: "workPlan", pattern: "/planung/arbeitsplan", view: "planning.WorkPlan", permission: "planning.read", nav: "workPlan", title: "nav.workPlan" },
-	{ name: "resources", pattern: "/planung/ressourcen", view: "planning.Resources", permission: "planning.read", nav: "resources", title: "nav.resources" },
+	{ name: "crews", pattern: "/planung/kolonnen", view: "planning.Resources", permission: "planning.read", nav: "crews", title: "nav.crews" },
+	{ name: "devices2", pattern: "/planung/geraete", view: "planning.Resources", permission: "planning.read", nav: "vehicles", title: "nav.vehicles" },
+	{ name: "resources", pattern: "/planung/ressourcen", view: "planning.Resources", permission: "planning.read", nav: "crews", title: "nav.crews" },
 	{ name: "masterData", pattern: "/verwaltung/stammdaten", view: "admin.MasterData", permission: "bauakten.read", nav: "masterData", title: "nav.masterData" },
 	{ name: "roles", pattern: "/verwaltung/rollen", view: "admin.Roles", permission: "users.manage", nav: "roles", title: "nav.roles" },
 	{ name: "users", pattern: "/verwaltung/benutzer", view: "admin.Users", permission: "users.manage", nav: "users", title: "nav.users" },
@@ -87,7 +89,8 @@ export const navigation: NavEntry[] = [
 		key: "groupOffice", children: [
 			{ key: "customers", path: "/kunden", icon: "sap-icon://customer", permission: "contacts.read" },
 			{ key: "calls", path: "/anrufe", icon: "sap-icon://call", permission: "contacts.read" },
-			{ key: "resources", path: "/planung/ressourcen", icon: "sap-icon://shipping-status", permission: "planning.read" },
+			{ key: "crews", path: "/planung/kolonnen", icon: "sap-icon://group", permission: "planning.read" },
+			{ key: "vehicles", path: "/planung/geraete", icon: "sap-icon://shipping-status", permission: "planning.read" },
 		],
 	},
 	{
@@ -96,7 +99,7 @@ export const navigation: NavEntry[] = [
 			{ key: "vacationPlan", path: "/personal/urlaub?reiter=plan", icon: "sap-icon://calendar", permission: "hr.read" },
 			{ key: "vacationRequests", path: "/personal/urlaub?reiter=antraege", icon: "sap-icon://approvals", permission: "absence.approve" },
 			{ key: "sickNotes", path: "/personal/urlaub?reiter=krank", icon: "sap-icon://stethoscope", permission: "hr.manage" },
-			{ key: "hrReminders", path: "/personal/urlaub?reiter=fristen", icon: "sap-icon://alarm", permission: "hr.read" },
+			{ key: "hrReminders", path: "/personal/urlaub?reiter=fristen", icon: "sap-icon://certificate", permission: "hr.read" },
 			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 		],
 	},
@@ -125,6 +128,7 @@ export const navigation: NavEntry[] = [
 const vacationTabs: Record<string, string> = { plan: "vacationPlan", antraege: "vacationRequests", krank: "sickNotes", fristen: "hrReminders" };
 
 export function navKeyFor(nav: string | undefined, query: URLSearchParams): string {
+	if (nav === "crews" && query.get("reiter") === "geraete") return "vehicles";
 	if (nav === "vacation") return vacationTabs[query.get("reiter") ?? ""] ?? "vacation";
 	return nav ?? "";
 }

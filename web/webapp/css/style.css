@@ -261,3 +261,19 @@
 .eoHeadField .eoInline > .sapMFlexItem:first-child { min-width: 0; flex: 0 1 auto; overflow: hidden; }
 .eoMapButton.sapMBtn { height: 1.375rem; } .eoMapButton .sapMBtnInner { height: 1.375rem; min-height: 0; min-width: 1.75rem; }
 .eoHeadField .eoInline > .sapMFlexItem:last-child { flex: none; }
+
+/* SegmentedButton: Segmente so breit wie ihr Text, in Toolbars nicht schrumpfen (keine „Wo…“, „Mo…“). */
+.sapMSegB:not(.eoSegFill) { width: auto !important; flex-shrink: 0; }
+.sapMSegB:not(.eoSegFill) .sapMSegBBtn { width: auto !important; }
+.sapMSegB .sapMSegBBtnInner { overflow: visible; text-overflow: clip; }
+.sapMTB .sapMSegB:not(.eoSegFill) { flex-shrink: 0; min-width: max-content; }
+
+/* IconTabBar als reiner Inhaltswechsel (eigene Seiten je Reiter). */
+.eoNoTabHeader > .sapMITH, .eoNoTabHeader .sapMITBHead { display: none !important; }
+
+/* Farbauswahl: Punkt vor jedem Eintrag (Farbe per data-dot, Regeln aus forms.ts) und vor dem gewählten Wert. */
+li[data-dot]::before { content: ""; display: inline-block; flex: none; width: 0.875rem; height: 0.875rem; border-radius: 50%;
+	margin-right: 0.5rem; vertical-align: middle; box-shadow: 0 0 0 1px var(--sapGroup_ContentBorderColor); }
+li[data-dot] { display: flex; align-items: center; }
+.eoColorSelect .sapMSltLabel::before { content: ""; display: inline-block; width: 0.875rem; height: 0.875rem; border-radius: 50%;
+	margin-right: 0.5rem; vertical-align: middle; background: var(--eoDot, transparent); box-shadow: 0 0 0 1px var(--sapGroup_ContentBorderColor); }

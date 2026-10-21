@@ -51,7 +51,8 @@ export default class Vacation extends BaseController {
 
 	onInit(): void {
 		this.local({ tab: "mein", busy: false, subtitle: "", me: {}, meText: {}, myRequests: [], pending: [], grid: null, monthTitle: "", stateText: "",
-			holidayText: "", sickNotes: [], reminders: [], can: {} });
+			holidayText: "", sickNotes: [], reminders: [], can: {}, filter: { crew: "", kind: "", status: "" }, crewOptions: [],
+			kpi: { remaining: "–", pending: 0, away: 0, awayText: "" } });
 	}
 
 	onRouteMatched(match: RouteMatch): void {
@@ -82,9 +83,21 @@ export default class Vacation extends BaseController {
 			can.approve ? this.loadPending() : Promise.resolve(),
 			can.hrRead ? this.loadPlan() : Promise.resolve(),
 			can.hrRead ? get<Reminder[]>("hr/reminders", { days: 60 }).then((r) => m.setProperty("/reminders", r.map((x) => ({ ...x, icon: reminderIcons[x.kind] ?? "sap-icon://alarm" })))) : Promise.resolve(),
+			can.hrRead ? this.loadToday() : Promise.resolve(),
 			can.hrManage ? get<SickNote[]>("hr/sick-notes").then((s) => m.setProperty("/sickNotes", s.map((x) => ({ ...x, rangeText: `${date(x.from)} – ${date(x.to)}` })))) : Promise.resolve(),
 		]);
 		m.setProperty("/busy", false);
+		m.setProperty("/kpi/pending", (m.getProperty("/pending") as unknown[]).length);
+	}
+
+	/** Kennzahl „heute abwesend“ (genehmigte Abwesenheiten, Krankheit nur mit Recht sichtbar). */
+	private async loadToday(): Promise<void> {
+		const now = new Date();
+		const today = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+		const plan = await get<Plan>("hr/vacation-plan", { from: today, to: today });
+		const away = plan.rows.filter((r) => r.entries.some((e) => e.status === "approved" && e.from <= today && today <= e.to));
+		this.model().setProperty("/kpi/away", away.length);
+		this.model().setProperty("/kpi/awayText", away.map((r) => r.name).join(", "));
 	}
 
 	private requestRows(list: RequestView[]) {
@@ -105,6 +118,7 @@ export default class Vacation extends BaseController {
 			requested: num((v as VacationSummary & { requested?: number }).requested ?? 0), remaining: num(v.remaining) } : {});
 		m.setProperty("/myRequests", this.requestRows(me.requests));
 		m.setProperty("/subtitle", v ? `Resturlaub ${v.year}: ${num(v.remaining)} Tage` : "Urlaub beantragen und Anträge verfolgen");
+		m.setProperty("/kpi/remaining", v ? num(v.remaining) : "–");
 	}
 
 	private async loadPending(): Promise<void> {
@@ -131,16 +145,44 @@ export default class Vacation extends BaseController {
 		m.setProperty("/grid", {
 			days, today: `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`,
 			holidays: Object.fromEntries(plan.holidays.map((h) => [h.date, h.name])),
-			rows: plan.rows.map((r) => ({
-				userId: r.userId, employeeId: r.employeeId, name: r.name, sub: r.crews.map((c) => c.name).join(", ") || "ohne Kolonne",
-				remaining: r.vacationRemaining, entries: r.entries,
-			})),
+			rows: [],
 		} satisfies VacationGridData);
+		this.plan = plan;
+		const crews = [...new Set(plan.rows.flatMap((r) => r.crews.map((c) => c.name)))].sort((a, b) => a.localeCompare(b, "de"));
+		m.setProperty("/crewOptions", [{ key: "", text: "Alle Kolonnen" }, ...crews.map((c) => ({ key: c, text: c })), { key: "-", text: "Ohne Kolonne" }]);
+		this.renderPlan();
 		m.setProperty("/monthTitle", this.month.toLocaleDateString("de-DE", { month: "long", year: "numeric" }));
 		m.setProperty("/holidayText", plan.holidays.length ? `Feiertage: ${plan.holidays.map((h) => `${date(h.date)} ${h.name}`).join(" · ")}` : "Keine Feiertage in diesem Monat.");
 		const settings = await get<Settings>("hr/settings").catch(() => null);
 		m.setProperty("/stateText", settings ? `Feiertage: ${settings.stateName}` : "");
 	}
+
+	private plan: Plan | null = null;
+
+	/** Urlaubsplan filtern (Kolonne, Art, Status) und nach Kolonne gruppieren. */
+	private renderPlan(): void {
+		const m = this.model();
+		const plan = this.plan;
+		if (!plan) return;
+		const f = m.getProperty("/filter") as { crew: string; kind: string; status: string };
+		const groupOf = (r: PlanRow) => r.crews[0]?.name ?? "Ohne Kolonne";
+		const rows = plan.rows
+			.filter((r) => !f.crew || (f.crew === "-" ? r.crews.length === 0 : r.crews.some((c) => c.name === f.crew)))
+			.map((r) => ({
+				userId: r.userId, employeeId: r.employeeId, name: r.name, group: groupOf(r),
+				sub: r.crews.length > 1 ? `auch ${r.crews.slice(1).map((c) => c.name).join(", ")}` : "",
+				remaining: r.vacationRemaining,
+				entries: r.entries.filter((e) => (!f.kind || e.kind === f.kind) && (!f.status || e.status === f.status)),
+			}))
+			.filter((r) => !(f.kind || f.status) || r.entries.length > 0)
+			.sort((a, b) => (a.group === "Ohne Kolonne" ? 1 : 0) - (b.group === "Ohne Kolonne" ? 1 : 0) || a.group.localeCompare(b.group, "de") || a.name.localeCompare(b.name, "de"));
+		m.setProperty("/grid/rows", rows);
+		m.setProperty("/grid", { ...(m.getProperty("/grid") as VacationGridData) });
+	}
+
+	onPlanFilter(): void { this.renderPlan(); }
+
+	onKpiPending(): void { navQuery({ reiter: "antraege" }); }
 
 	private shiftMonth(delta: number): void {
 		this.month = new Date(this.month.getFullYear(), this.month.getMonth() + delta, 1);
@@ -220,7 +262,19 @@ export default class Vacation extends BaseController {
 		}
 	}
 
-	onApprove(e: Event): void { void this.decide(this.row<RequestView>(e), true); }
+	/** Genehmigen mit einem Klick; nur bei Hinweisen (Überschneidung, Kolonne dünn besetzt …) erst bestätigen. */
+	async onApprove(e: Event): Promise<void> {
+		const r = this.row<RequestView>(e);
+		if (r.warnings.length) {
+			await this.decide(r, true);
+			return;
+		}
+		if (await this.run(() => post<RequestView>(`hr/absence-requests/${r.id}/decision`, { approve: true, comment: null }))) {
+			this.toast(`Genehmigt: ${r.userName} – in Planung und Urlaubsplan übernommen`);
+			planningChanged();
+			await this.load();
+		}
+	}
 	onReject(e: Event): void { void this.decide(this.row<RequestView>(e), false); }
 
 	async onCancel(e: Event): Promise<void> {

@@ -23,7 +23,7 @@
 				</List>
 				<CheckBox text="Einsätze der Planung" selected="{view>/showAssignments}" select=".onToggleAssignments" tooltip="Einsätze auf Bauvorhaben mit anzeigen"/>
 				<Label text="Farben nach" labelFor="colorMode" class="sapUiSmallMarginTop"/>
-				<SegmentedButton id="colorMode" selectedKey="{view>/colorMode}" selectionChange=".onColorMode" width="100%">
+				<SegmentedButton id="colorMode" selectedKey="{view>/colorMode}" selectionChange=".onColorMode" width="100%" class="eoSegFill">
 					<items>
 						<SegmentedButtonItem key="calendar" text="Kalender"/>
 						<SegmentedButtonItem key="kind" text="Terminart"/>

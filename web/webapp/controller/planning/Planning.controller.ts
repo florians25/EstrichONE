@@ -112,7 +112,7 @@ export default class Planning extends BaseController {
 	onNext(): void { this.shift(1); }
 	onDay(e: Event): void { this.go({ ansicht: "tag", datum: String(e.getParameter("day" as never)) }); }
 	onRefresh(): void { void this.load(true); }
-	onResources(): void { this.nav("/planung/ressourcen"); }
+	onResources(): void { this.nav("/planung/kolonnen"); }
 	onFilter(): void { this.render(); }
 
 	private shift(direction: number): void {

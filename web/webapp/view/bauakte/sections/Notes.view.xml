@@ -50,10 +50,10 @@
 								<MenuButton icon="sap-icon://palette" type="Transparent" tooltip="Notiz einfärben">
 									<menu>
 										<Menu itemSelected=".onColor">
-											<MenuItem text="Gelb" key="yellow"/>
-											<MenuItem text="Rot" key="red"/>
-											<MenuItem text="Grün" key="green"/>
-											<MenuItem text="Blau" key="blue"/>
+											<MenuItem text="🟡 Gelb" key="yellow"/>
+											<MenuItem text="🔴 Rot" key="red"/>
+											<MenuItem text="🟢 Grün" key="green"/>
+											<MenuItem text="🔵 Blau" key="blue"/>
 										</Menu>
 									</menu>
 								</MenuButton>

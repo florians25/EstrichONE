@@ -246,7 +246,7 @@ export default class TeamPlanner extends BaseController {
 		} else if (k.type === "e") {
 			void openEventDialog({ eventId: k.id, occurrenceDate: k.occurrence, occurrenceStart: k.start ?? undefined });
 		} else {
-			this.nav("/planung/ressourcen?reiter=abwesenheiten");
+			this.nav("/personal/urlaub?reiter=plan");
 		}
 	}
 
@@ -375,7 +375,7 @@ export default class TeamPlanner extends BaseController {
 	onRowHeader(e: Event): void {
 		const row = e.getParameter("row" as never) as PlanningCalendarRow | null;
 		if (!row || this.model().getProperty("/rowsMode") !== "kolonnen") return;
-		this.nav("/planung/ressourcen");
+		this.nav("/planung/kolonnen");
 	}
 
 	onConflicts(): void {

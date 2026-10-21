@@ -3,15 +3,20 @@
 	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
 		<f:title>
 			<f:DynamicPageTitle>
-				<f:heading><Title text="Kolonnen und Geräte" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Stammdaten der Einsatzplanung"/></f:expandedContent>
+				<f:heading><Title text="{view>/title}" level="H1"/></f:heading>
+				<f:expandedContent>
+					<HBox alignItems="Center" wrap="Wrap">
+						<Text text="{view>/subtitle}" class="sapUiSmallMarginEnd"/>
+						<Link text="Abwesenheiten: Personal (HR) › Urlaubsplan" href="/personal/urlaub?reiter=plan" visible="{= ${session>/permissions/hr.read} === true }"/>
+					</HBox>
+				</f:expandedContent>
 				<f:actions>
 					<Button text="{view>/addText}" icon="sap-icon://add" type="Emphasized" press=".onAdd" visible="{= ${session>/permissions/planning.manage} === true }"/>
 				</f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<IconTabBar id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" stretchContentHeight="false" applyContentPadding="false">
+			<IconTabBar id="tabs" selectedKey="{view>/tab}" expandable="false" class="eoNoTabHeader" stretchContentHeight="false" applyContentPadding="false">
 				<items>
 					<IconTabFilter key="kolonnen" text="Kolonnen" count="{= ${view>/crews}.length }">
 						<Table items="{view>/crews}" busy="{view>/busy}" noDataText="Noch keine Kolonnen." popinLayout="GridSmall">
@@ -55,25 +60,6 @@
 										<Button text="Bearbeiten" type="Transparent" press=".onEditResource"/>
 										<Button text="{= ${view>isActive} ? 'Außer Betrieb' : 'Wieder verfügbar' }" type="Transparent" press=".onToggleResource"/>
 									</HBox>
-								</ColumnListItem>
-							</items>
-						</Table>
-					</IconTabFilter>
-					<IconTabFilter key="abwesenheiten" text="Abwesenheiten" count="{= ${view>/absences}.length }">
-						<Text text="Abwesenheiten der nächsten 60 Tage" class="eoMuted sapUiSmallMargin"/>
-						<Table items="{view>/absences}" busy="{view>/busy}" noDataText="Keine Abwesenheiten eingetragen." popinLayout="GridSmall">
-							<columns>
-								<Column><Text text="Mitarbeiter"/></Column>
-								<Column width="9rem"><Text text="Art"/></Column>
-								<Column width="14rem"><Text text="Zeitraum"/></Column>
-								<Column width="9rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
-							</columns>
-							<items>
-								<ColumnListItem>
-									<Text text="{view>userName}"/>
-									<ObjectStatus text="{view>kindText}" state="{= ${view>kind} === 'sick' ? 'Error' : ${view>kind} === 'vacation' ? 'Information' : 'Warning' }" inverted="true"/>
-									<Text text="{view>rangeText}" class="eoTabular"/>
-									<Button text="Entfernen" icon="sap-icon://delete" type="Transparent" press=".onRemoveAbsence"/>
 								</ColumnListItem>
 							</items>
 						</Table>

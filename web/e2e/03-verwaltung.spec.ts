@@ -59,7 +59,7 @@ test('Gerät einrichten (QR-Code) und Sicherung zeigt ihren Zustand', async ({ p
 
 test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird angezeigt, Verschieben per Ziehen', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await nav(page, 'Kolonnen und Geräte').click();
+  await nav(page, 'Kolonnen').click();
   await page.getByRole('button', { name: 'Kolonne anlegen' }).click();
   const crew = page.getByRole('dialog', { name: 'Kolonne anlegen' });
   await crew.getByLabel('Name der Kolonne').fill('Kolonne Admin');
@@ -67,7 +67,7 @@ test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird an
   await crew.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Kolonne Admin/ })).toContainText('Anna Admin');
 
-  await page.getByRole('tab', { name: /Fahrzeuge und Geräte/ }).click();
+  await nav(page, 'Geräte & Fahrzeuge').click();
   await page.getByRole('button', { name: 'Fahrzeug oder Gerät hinzufügen' }).click();
   const resource = page.getByRole('dialog', { name: 'Fahrzeug oder Gerät hinzufügen' });
   await resource.getByLabel('Bezeichnung').fill('Mixokret 2');

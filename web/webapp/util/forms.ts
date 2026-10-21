@@ -26,6 +26,7 @@ import SimpleForm from "sap/ui/layout/form/SimpleForm";
 import CoreTitle from "sap/ui/core/Title";
 import Item from "sap/ui/core/Item";
 import ListItem from "sap/ui/core/ListItem";
+import CustomData from "sap/ui/core/CustomData";
 import SuggestionItem from "sap/m/SuggestionItem";
 import type Control from "sap/ui/core/Control";
 import type InputBase from "sap/m/InputBase";
@@ -266,7 +267,20 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 		case "select": {
 			const c = new Select(id, { selectedKey: (initial as string) ?? "", width: "100%", forceSelection: false });
 			if (!field.required) c.addItem(new Item({ key: "", text: field.placeholder ?? "–" }));
-			for (const o of field.options ?? []) c.addItem(new ListItem({ key: o.key, text: o.text, additionalText: o.additionalText }));
+			// Farbauswahl (Schlüssel = #RRGGBB): Farbpunkt in jedem Eintrag und im gewählten Wert.
+			const colors = (field.options ?? []).length > 0 && (field.options ?? []).every((o) => /^#[0-9a-f]{6}$/i.test(o.key));
+			for (const o of field.options ?? []) {
+				const item = new ListItem({ key: o.key, text: o.text, additionalText: o.additionalText });
+				if (colors) item.addCustomData(new CustomData({ key: "dot", value: o.key, writeToDom: true }));
+				c.addItem(item);
+			}
+			if (colors) {
+				colorDots((field.options ?? []).map((o) => o.key));
+				c.addStyleClass("eoColorSelect");
+				const paint = () => (c.getDomRef() as HTMLElement | null)?.style.setProperty("--eoDot", c.getSelectedKey() || "transparent");
+				c.addEventDelegate({ onAfterRendering: paint });
+				c.attachChange(paint);
+			}
 			c.setSelectedKey((initial as string) ?? "");
 			c.attachChange(() => notify(c.getSelectedKey() || null));
 			return { field, control: c, read: () => c.getSelectedKey() || null, write: (v) => c.setSelectedKey((v as string) ?? "") };
@@ -542,4 +556,15 @@ function listField(id: string, field: Field, initial: unknown, notify: (v: unkno
 	};
 	write(initial);
 	return { field, control: box, read, write };
+}
+
+/** CSS-Regeln für Farbpunkte in Auswahllisten (einmal je Farbe). */
+const dotted = new Set<string>();
+function colorDots(colors: string[]): void {
+	const fresh = colors.map((c) => c.toLowerCase()).filter((c) => !dotted.has(c));
+	if (fresh.length === 0) return;
+	const style = document.createElement("style");
+	style.textContent = fresh.map((c) => `li[data-dot="${c}" i]::before { background: ${c}; }`).join("\n");
+	document.head.append(style);
+	for (const c of fresh) dotted.add(c);
 }

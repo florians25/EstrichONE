@@ -8,6 +8,8 @@ export interface VacationGridRow {
 	name: string;
 	sub: string;
 	remaining: number | null;
+	/** Gruppe (Kolonne): bei Wechsel eine Zwischenzeile. */
+	group?: string;
 	entries: { from: string; to: string; kind: string; status: string; note: string | null }[];
 }
 
@@ -76,7 +78,17 @@ export default class VacationGrid extends Control {
 		const thead = el("thead");
 		thead.append(head);
 		const body = el("tbody");
+		let group: string | undefined;
 		for (const row of data.rows) {
+			if (row.group !== undefined && row.group !== group) {
+				group = row.group;
+				const gr = el("tr", "eoVacGroup");
+				const gh = el("th", undefined, group);
+				gh.colSpan = data.days.length + 2;
+				gh.scope = "colgroup";
+				gr.append(gh);
+				body.append(gr);
+			}
 			const tr = el("tr");
 			const name = el("th", "eoVacName");
 			name.scope = "row";

@@ -16,7 +16,7 @@ test('Bildschirmfotos', async ({ page }) => {
   const pages: [string, string][] = [
     ['/bauakten', 'bauakten'], ['/tagesuebersicht', 'today'], ['/bauakten/karte', 'sitemap'], ['/planung', 'planning'],
     ['/planung/tageseinteilung', 'planning-day'], ['/planung/kalender', 'planning-month'], ['/planung/arbeitsplan', 'workplan'],
-    ['/planung/ressourcen', 'resources'], ['/anfragen', 'inquiries'], ['/anrufe', 'calls'], ['/kunden', 'customers'],
+    ['/planung/kolonnen', 'crews'], ['/planung/geraete', 'vehicles'], ['/anfragen', 'inquiries'], ['/anrufe', 'calls'], ['/kunden', 'customers'],
     ['/bestellungen', 'orders'], ['/material', 'materials'], ['/lieferanten', 'suppliers'], ['/verwaltung/benutzer', 'users'],
     ['/it-center/geraete', 'devices'], ['/it-center/helpdesk', 'helpdesk'], ['/system/sicherung', 'backup'],
     ['/system/firmendaten', 'company'], ['/system/protokoll', 'audit'], ['/dokumente', 'dms'], ['/dokumente?reiter=freigaben', 'approvals'],

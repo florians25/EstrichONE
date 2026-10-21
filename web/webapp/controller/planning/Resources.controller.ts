@@ -2,17 +2,14 @@ import BaseController from "../BaseController";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type { RouteMatch } from "../../util/router";
-import { del, get, put } from "../../util/api";
+import { get, put } from "../../util/api";
 import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
-import { addDays, isoDay } from "../../util/days";
-import { date } from "../../util/format";
-import { absenceKinds, options, resourceKinds } from "../../util/labels";
+import { options, resourceKinds } from "../../util/labels";
 import { planningChanged, planningLookups } from "../../util/assignmentDialog";
-import type { AbsenceView, CrewResponse, DirectoryUser, PlanningRange, ResourceResponse } from "../../util/models";
+import type { CrewResponse, DirectoryUser, ResourceResponse } from "../../util/models";
 
-const tabs = ["kolonnen", "geraete", "abwesenheiten"];
-const addTexts: Record<string, string> = { kolonnen: "Kolonne anlegen", geraete: "Fahrzeug oder Gerät hinzufügen", abwesenheiten: "Abwesenheit eintragen" };
+const addTexts: Record<string, string> = { kolonnen: "Kolonne anlegen", geraete: "Fahrzeug oder Gerät hinzufügen" };
 /** Gut unterscheidbare Kolonnenfarben (auch in dunklen Themes lesbar). */
 const crewColors = [
 	{ key: "#0064D9", text: "Blau" }, { key: "#188918", text: "Grün" }, { key: "#E76500", text: "Orange" }, { key: "#AA0808", text: "Rot" },
@@ -26,37 +23,31 @@ export default class Resources extends BaseController {
 	private crewList: CrewResponse[] = [];
 
 	onInit(): void {
-		this.local({ tab: "kolonnen", addText: addTexts.kolonnen, crews: [], resources: [], absences: [], busy: false });
+		this.local({ tab: "kolonnen", title: "Kolonnen", subtitle: "", addText: addTexts.kolonnen, crews: [], resources: [], busy: false });
 	}
 
 	onRouteMatched(match: RouteMatch): void {
-		const tab = match.query.get("reiter") ?? "";
-		const key = tabs.includes(tab) ? tab : "kolonnen";
+		// Eigene Seiten: /planung/kolonnen und /planung/geraete (alt: /planung/ressourcen?reiter=geraete).
+		const key = match.path.startsWith("/planung/geraete") || match.query.get("reiter") === "geraete" ? "geraete" : "kolonnen";
 		this.model().setProperty("/tab", key);
+		this.model().setProperty("/title", key === "geraete" ? "Geräte & Fahrzeuge" : "Kolonnen");
+		this.model().setProperty("/subtitle", key === "geraete" ? "Fahrzeuge, Pumpen und Maschinen für die Einsatzplanung" : "Kolonnen mit Kolonnenführer und Mitgliedern");
 		this.model().setProperty("/addText", addTexts[key]);
 		void this.load();
 	}
 
-	onTab(e: Event): void {
-		const key = String(e.getParameter("key" as never));
-		this.model().setProperty("/addText", addTexts[key]);
-		this.setQuery({ reiter: key === "kolonnen" ? null : key });
-	}
 
 	private async load(): Promise<void> {
 		this.model().setProperty("/busy", true);
-		const today = isoDay(new Date());
-		const [lookups, people, range] = await Promise.all([
+		const [lookups, people] = await Promise.all([
 			this.run(() => planningLookups(true)),
 			this.run(() => get<DirectoryUser[]>("directory/users")),
-			this.run(() => get<PlanningRange>("planning/range", { from: today, to: addDays(today, 60) })),
 		]);
 		this.people = people ?? [];
 		this.crewList = lookups?.crews ?? [];
 		const m = this.model();
 		m.setProperty("/crews", this.crewList.map((c) => ({ ...c, leaderName: this.name(c.leaderUserId), memberNames: c.memberUserIds.map((id) => this.name(id)).join(", ") || "–" })));
 		m.setProperty("/resources", (lookups?.resources ?? []).map((r) => ({ ...r, kindText: resourceKinds[r.kind] ?? r.kind })));
-		m.setProperty("/absences", (range?.absences ?? []).map((a) => ({ ...a, kindText: absenceKinds[a.kind] ?? a.kind, rangeText: `${date(a.from)} – ${date(a.to)}` })));
 		m.setProperty("/busy", false);
 	}
 
@@ -81,7 +72,6 @@ export default class Resources extends BaseController {
 	onAdd(): void {
 		const tab = String(this.model().getProperty("/tab"));
 		if (tab === "geraete") void this.editResource(null);
-		else if (tab === "abwesenheiten") void this.addAbsence();
 		else void this.editCrew(null);
 	}
 
@@ -148,31 +138,5 @@ export default class Resources extends BaseController {
 		const r = this.row<ResourceResponse>(e);
 		const done = await this.run(async () => { await this.putResource(r.id, { ...r, isActive: !r.isActive }); return true; });
 		if (done !== undefined) await this.saved(r.isActive ? "Außer Betrieb gesetzt" : "Wieder verfügbar");
-	}
-
-	private async addAbsence(): Promise<void> {
-		const today = isoDay(new Date());
-		const ok = await openForm<boolean>({
-			title: "Abwesenheit eintragen", submitText: "Eintragen", initial: { kind: "vacation", from: today, to: today },
-			fields: [
-				{ key: "userId", label: "Mitarbeiter", type: "combo", required: true, options: this.activePeople() },
-				{ key: "kind", label: "Art", type: "select", options: options(absenceKinds) },
-				{ key: "from", label: "Von", type: "date", required: true },
-				{ key: "to", label: "Bis", type: "date", required: true, validate: (v, all) => (String(v) < String(all.from) ? "Das Ende liegt vor dem Beginn." : null) },
-				{ key: "note", label: "Notiz (optional)", maxLength: 200 },
-			],
-			submit: async (v) => {
-				await put(`planning/absences/${uuidv7()}`, { userId: v.userId, kind: v.kind, from: v.from, to: v.to, note: (v.note as string) || null });
-				return true;
-			},
-		});
-		if (ok) await this.saved("Abwesenheit eingetragen");
-	}
-
-	async onRemoveAbsence(e: Event): Promise<void> {
-		const a = this.row<AbsenceView>(e);
-		if (!(await this.confirm(`Abwesenheit von ${a.userName} (${date(a.from)} – ${date(a.to)}) entfernen?`, { action: "Entfernen", danger: true }))) return;
-		const done = await this.run(async () => { await del(`planning/absences/${a.id}`); return true; });
-		if (done !== undefined) await this.saved("Abwesenheit entfernt");
 	}
 }

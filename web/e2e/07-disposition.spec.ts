@@ -104,10 +104,14 @@ test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankm
   await page.getByRole('tab', { name: /Anträge/ }).click();
   const row = page.getByRole('row', { name: /Sommerferien/ });
   await expect(row).toBeVisible();
+  // Ein Klick genügt; nur bei Hinweisen (z. B. Kolonne dünn besetzt) folgt eine Bestätigung.
   await row.getByRole('button', { name: 'Genehmigen' }).click();
-  const decide = await dialog(page, /genehmigen$/);
-  await decide.getByLabel('Kommentar').fill('Gute Erholung!');
-  await decide.getByRole('button', { name: 'Genehmigen' }).click();
+  const decide = page.getByRole('dialog', { name: /genehmigen$/ });
+  await expect(toast(page).or(decide).first()).toBeVisible();
+  if (await decide.isVisible()) {
+    await decide.getByLabel('Kommentar').fill('Gute Erholung!');
+    await decide.getByRole('button', { name: 'Genehmigen' }).click();
+  }
   await expect(toast(page)).toContainText('Genehmigt');
 
   await page.getByRole('tab', { name: 'Mein Urlaub' }).click();

@@ -15,7 +15,7 @@
 					type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
 				<HBox wrap="Wrap" class="sapUiSmallMarginBottom eoEntryRow">
 					<Link text="Kunden" href="/kunden"/><Link text="Lieferanten" href="/lieferanten"/><Link text="Materialstamm" href="/material"/>
-					<Link text="Kolonnen und Geräte" href="/planung/ressourcen"/><Link text="Benutzer" href="/verwaltung/benutzer"/>
+					<Link text="Kolonnen" href="/planung/kolonnen"/><Link text="Geräte &amp; Fahrzeuge" href="/planung/geraete"/><Link text="Benutzer" href="/verwaltung/benutzer"/>
 					<Link text="Rollen und Rechte" href="/verwaltung/rollen"/><Link text="Firmendaten" href="/system/firmendaten"/>
 				</HBox>
 				<IconTabBar selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false">

@@ -4,7 +4,16 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="Urlaub und Abwesenheiten" level="H1"/></f:heading>
-				<f:expandedContent><Text text="{view>/subtitle}"/></f:expandedContent>
+				<f:expandedContent>
+					<FlexBox wrap="Wrap" alignItems="End" class="eoVacKpis">
+						<VBox><Label text="Mein Resturlaub"/><ObjectNumber number="{view>/kpi/remaining}" unit="Tage" emphasized="true"/></VBox>
+						<VBox visible="{view>/can/approve}"><Label text="Offene Anträge"/>
+							<Link text="{view>/kpi/pending}" press=".onKpiPending" class="eoKpiLink"/></VBox>
+						<VBox visible="{view>/can/hrRead}"><Label text="Heute abwesend"/>
+							<Text text="{view>/kpi/away}" tooltip="{view>/kpi/awayText}" class="eoKpiValue"/></VBox>
+					</FlexBox>
+				</f:expandedContent>
+				<f:snappedContent><Text text="{view>/subtitle}"/></f:snappedContent>
 				<f:actions>
 					<Button text="Urlaub beantragen" icon="sap-icon://general-leave-request" type="Emphasized" press=".onRequest"/>
 					<Button text="Krankmeldung erfassen" icon="sap-icon://add" press=".onSickNote" visible="{view>/can/hrManage}"/>
@@ -92,6 +101,14 @@
 								<Button icon="sap-icon://navigation-right-arrow" tooltip="Nächster Monat" press=".onNextMonth"/>
 								<Button text="Heute" press=".onThisMonth"/>
 								<ToolbarSpacer/>
+								<Select selectedKey="{view>/filter/crew}" items="{view>/crewOptions}" change=".onPlanFilter" tooltip="Kolonne" width="12rem">
+									<core:Item key="{view>key}" text="{view>text}"/></Select>
+								<Select selectedKey="{view>/filter/kind}" change=".onPlanFilter" tooltip="Art" width="10rem">
+									<core:Item key="" text="Alle Arten"/><core:Item key="vacation" text="Urlaub"/><core:Item key="sick" text="Krank"/>
+									<core:Item key="training" text="Schulung"/><core:Item key="school" text="Berufsschule"/><core:Item key="specialLeave" text="Sonderurlaub"/>
+									<core:Item key="other" text="Abwesend"/></Select>
+								<Select selectedKey="{view>/filter/status}" change=".onPlanFilter" tooltip="Status" width="10rem">
+									<core:Item key="" text="Alle Status"/><core:Item key="approved" text="Genehmigt"/><core:Item key="pending" text="Beantragt"/></Select>
 								<Text text="{view>/stateText}" class="eoMuted"/>
 								<Button text="PDF Monat" icon="sap-icon://pdf-attachment" press=".onPdfMonth"/>
 								<Button text="PDF Jahr" icon="sap-icon://pdf-attachment" press=".onPdfYear"/>
@@ -104,6 +121,7 @@
 								<Text text="A Abwesend" class="eoVac-other"/>
 								<Text text="schraffiert: beantragt" class="eoVacPending"/>
 								<Text text="Wochenende / Feiertag" class="eoVacHoliday"/>
+								<Text text="heute" class="eoVacTodayLegend"/>
 							</HBox>
 							<eo:VacationGrid data="{view>/grid}" cellPress=".onCell"/>
 							<Text text="{view>/holidayText}" class="eoMuted sapUiTinyMarginTop"/>

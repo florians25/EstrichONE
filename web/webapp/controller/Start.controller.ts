@@ -21,9 +21,9 @@ const groups: { label: string; tiles: Tile[] }[] = [
 	{ label: "Planung", tiles: [
 		{ label: "Kolonnenplanung", icon: "sap-icon://gantt-bars", to: "/planung", permission: "planning.read" },
 		{ label: "Arbeitsplan", icon: "sap-icon://list", to: "/planung/arbeitsplan", permission: "planning.read" },
-		{ label: "Kolonnen", icon: "sap-icon://group", to: "/planung/ressourcen?reiter=kolonnen", permission: "planning.read" },
-		{ label: "Fahrzeuge und Geräte", icon: "sap-icon://shipping-status", to: "/planung/ressourcen?reiter=geraete", permission: "planning.read" },
-		{ label: "Abwesenheiten", icon: "sap-icon://general-leave-request", to: "/planung/ressourcen?reiter=abwesenheiten", permission: "planning.read" },
+		{ label: "Kolonnen", icon: "sap-icon://group", to: "/planung/kolonnen", permission: "planning.read" },
+		{ label: "Geräte & Fahrzeuge", icon: "sap-icon://shipping-status", to: "/planung/geraete", permission: "planning.read" },
+		{ label: "Abwesenheiten", icon: "sap-icon://general-leave-request", to: "/personal/urlaub?reiter=plan", permission: "hr.read" },
 	] },
 	{ label: "Material", tiles: [
 		{ label: "Bestellungen", icon: "sap-icon://cart", to: "/bestellungen", permission: "materials.read" },

@@ -100,3 +100,8 @@
 .eoVacNegative { color: var(--sapNegativeTextColor); font-weight: 700; }
 .eoVacLegend .sapMText { display: inline-block; padding: 0.125rem 0.5rem; margin: 0 0.375rem 0.25rem 0; border-radius: 0.25rem; font-size: var(--sapFontSmallSize); }
 @media print { .eoVacationGrid { overflow: visible; border: 0; } .eoVacName { position: static; } }
+.eoVacGroup th { text-align: left; padding: 0.375rem 0.5rem; background: var(--sapList_GroupHeaderBackground); color: var(--sapList_GroupHeaderTextColor);
+	font-weight: bold; border-bottom: 1px solid var(--sapList_GroupHeaderBorderColor); position: sticky; left: 0; }
+.eoVacTodayLegend { box-shadow: inset 2px 0 0 var(--sapContent_FocusColor), inset -2px 0 0 var(--sapContent_FocusColor); }
+.eoVacKpis { gap: 2rem; margin-top: 0.25rem; }
+.eoKpiLink, .eoKpiValue { font-size: 1.5rem !important; font-weight: bold; }

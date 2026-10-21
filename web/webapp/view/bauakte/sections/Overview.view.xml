@@ -87,12 +87,7 @@
 				<columns><Column><Text text="Dokument"/></Column><Column width="10rem"><Text text="Freigabe durch"/></Column></columns>
 				<items><ColumnListItem type="Navigation" press=".onOpenDoc"><Text text="{ov>name}" wrapping="false"/><Text text="{ov>assignee}"/></ColumnListItem></items>
 			</Table>
-			<Table items="{ov>/activity}" noDataText="{i18n>overview.noActivity}" class="eoDenseTable">
-				<headerToolbar><OverflowToolbar style="Clear"><Title text="{i18n>overview.activity}" level="H3"/><ToolbarSpacer/>
-					<Button text="Alle" type="Transparent" press=".onActivities"/></OverflowToolbar></headerToolbar>
-				<columns><Column width="9rem"><Text text="Zeit"/></Column><Column><Text text="Aktivität"/></Column></columns>
-				<items><ColumnListItem><Text text="{path: 'ov>at', formatter: 'fmt.dateTime'}"/><Text text="{ov>text}"/></ColumnListItem></items>
-			</Table>
+			<!-- Letzte Aktivitäten: über Aktionen › „Letzte Aktivitäten …“ und im Reiter Notizen &amp; Verlauf. -->
 			<Table items="{ov>/pinned}" visible="{= ${ov>/pinned}.length > 0 }" class="eoDenseTable">
 				<headerToolbar><OverflowToolbar style="Clear"><Title text="{i18n>overview.pinned}" level="H3"/></OverflowToolbar></headerToolbar>
 				<columns><Column><Text text="Notiz"/></Column></columns>

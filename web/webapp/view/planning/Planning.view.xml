@@ -96,7 +96,7 @@
 								<Button icon="sap-icon://decline" tooltip="Schließen" type="Transparent" press=".onBacklog"/>
 							</Toolbar>
 						</headerToolbar>
-						<SegmentedButton selectedKey="{view>/backlogMode}" selectionChange=".onBacklogFilter" width="100%">
+						<SegmentedButton selectedKey="{view>/backlogMode}" selectionChange=".onBacklogFilter" width="100%" class="eoSegFill">
 							<items>
 								<SegmentedButtonItem key="free" text="{= ${view>/backlogCounts/free} + ' frei' }"/>
 								<SegmentedButtonItem key="planned" text="{= ${view>/backlogCounts/planned} + ' verplant' }"/>

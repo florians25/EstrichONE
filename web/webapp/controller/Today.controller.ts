@@ -53,7 +53,7 @@ export default class Today extends BaseController {
 		const warnings = assignments.filter((a) => a.warnings.length).length;
 		m.setProperty("/kpis", [
 			{ title: "Einsätze heute", value: String(assignments.length), icon: "sap-icon://appointment-2", color: "Neutral", to: "/planung/tageseinteilung" },
-			{ title: "Abwesend", value: String(range?.absences.length ?? 0), icon: "sap-icon://general-leave-request", color: "Neutral", to: "/planung/ressourcen?reiter=abwesenheiten" },
+			{ title: "Abwesend", value: String(range?.absences.length ?? 0), icon: "sap-icon://general-leave-request", color: "Neutral", to: "/personal/urlaub?reiter=plan" },
 			{ title: "Hinweise in der Planung", value: String(warnings), icon: "sap-icon://alert", color: warnings ? "Critical" : "Neutral", to: "/planung" },
 			{ title: "Wiedervorlagen fällig", value: String(value(due, []).length), icon: "sap-icon://call", color: "Neutral", to: "/anrufe" },
 			{ title: "Offene Anfragen", value: String(value(inquiries, []).length), icon: "sap-icon://inbox", color: "Neutral", to: "/anfragen" },
