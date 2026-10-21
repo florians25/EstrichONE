@@ -9,4 +9,7 @@ public interface IGeneratedDocuments
     /// <summary>Speichert mit dem nächsten SaveChanges; liefert die Datei-ID.</summary>
     Task<Guid> StoreAsync(Guid bauakteId, Guid uploadedBy, string fileName, byte[] pdf, string category, string? folder, string? caption,
         CancellationToken cancellationToken);
+
+    /// <summary>PDF ohne Bauakte ablegen (z. B. Onboarding-Unterlagen für die Mitarbeiterakte); mit dem nächsten SaveChanges.</summary>
+    Task<Guid> StoreLooseAsync(Guid uploadedBy, string fileName, byte[] pdf, CancellationToken cancellationToken);
 }

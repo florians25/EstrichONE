@@ -14,4 +14,11 @@ internal sealed class GeneratedDocuments(FileService files, IAuditLog audit, Tim
         audit.Record("bauakte.file_added", uploadedBy, "bauakte", bauakteId.ToString(), new Dictionary<string, string?> { ["kind"] = "Document", ["generated"] = "true" });
         return file.Id;
     }
+
+    public async Task<Guid> StoreLooseAsync(Guid uploadedBy, string fileName, byte[] pdf, CancellationToken cancellationToken)
+    {
+        var name = string.Join("-", fileName.Split(Path.GetInvalidFileNameChars(), StringSplitOptions.RemoveEmptyEntries)).Trim();
+        var file = await files.StoreGeneratedAsync(null, uploadedBy, name, "application/pdf", pdf, null, null, null, clock.GetUtcNow(), cancellationToken);
+        return file.Id;
+    }
 }

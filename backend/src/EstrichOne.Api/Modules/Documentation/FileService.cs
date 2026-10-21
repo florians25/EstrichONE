@@ -75,7 +75,7 @@ public sealed class FileService(
     /// Vom Server erzeugte Datei (z. B. Abnahmeprotokoll als PDF) direkt als fertiges Dokument der Bauakte ablegen.
     /// Gespeichert wird mit dem nächsten <c>SaveChanges</c>; die Datei liegt dann schon am Zielort.
     /// </summary>
-    public async Task<FileRecord> StoreGeneratedAsync(Guid bauakteId, Guid uploadedBy, string originalName, string contentType, byte[] content,
+    public async Task<FileRecord> StoreGeneratedAsync(Guid? bauakteId, Guid uploadedBy, string originalName, string contentType, byte[] content,
         string? category, string? folder, string? caption, DateTimeOffset now, CancellationToken cancellationToken)
     {
         var id = Guid.CreateVersion7(now);

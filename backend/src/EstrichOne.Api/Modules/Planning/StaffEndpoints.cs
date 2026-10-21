@@ -68,6 +68,28 @@ public sealed record AddEmployeeDocumentRequest(Guid FileId, EmployeeDocumentCat
 
 public sealed record SetEmployeeCrewsRequest(IReadOnlyList<Guid> CrewIds);
 
+/// <summary>
+/// Onboarding: ohne verknüpftes Konto entweder neu anlegen (<paramref name="UserName"/>, <paramref name="RoleIds"/>) oder ein
+/// vorhandenes verknüpfen (<paramref name="LinkUserId"/>); mit Konto wird ein neues Einmalpasswort vergeben.
+/// </summary>
+/// <param name="DeviceCode">Optional ein vorher erzeugter Geräte-Einrichtungscode (POST /devices/enrollment-codes) für das Handy.</param>
+/// <param name="DeviceQrPng">QR-Code dazu als PNG (Base64), höchstens 200 kB.</param>
+/// <param name="SendEmail">Unterlagen zusätzlich per E-Mail an den Mitarbeiter (wenn eine Adresse und ein E-Mail-Konto vorhanden sind).</param>
+public sealed record EmployeeOnboardingRequest(
+    [property: MaxLength(64)] string? UserName = null,
+    IReadOnlyList<Guid>? RoleIds = null,
+    [property: MaxLength(320), EmailAddress] string? Email = null,
+    Guid? LinkUserId = null,
+    [property: MaxLength(40)] string? DeviceCode = null,
+    [property: MaxLength(500)] string? DeviceLink = null,
+    DateTimeOffset? DeviceCodeExpiresAt = null,
+    [property: MaxLength(280_000)] string? DeviceQrPng = null,
+    bool SendEmail = false);
+
+/// <param name="OneTimePassword">Nur in dieser Antwort sichtbar; Wechsel bei der ersten Anmeldung.</param>
+/// <param name="DocumentFileId">Onboarding-PDF in der Mitarbeiterakte (Dokumente).</param>
+public sealed record EmployeeOnboardingResponse(Guid UserId, string UserName, string OneTimePassword, bool CreatedAccount, Guid DocumentFileId, bool Emailed);
+
 public sealed record SaveEmployeeAbsenceRequest(DateOnly From, DateOnly To, AbsenceKind Kind, [property: MaxLength(500)] string? Note);
 
 /// <summary>Ablaufende Qualifikationen und Führerscheine aller aktiven Mitarbeiter.</summary>
@@ -115,6 +137,10 @@ internal static class StaffEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
         staff.MapDelete("/employees/{id:guid}/documents/{documentId:guid}", DeleteDocumentAsync).WithName("DeleteEmployeeDocument")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.HrManage);
+        staff.MapPost("/employees/{id:guid}/onboarding", OnboardingAsync).WithName("OnboardEmployee")
+            .WithSummary("Benutzerkonto anlegen/verknüpfen bzw. neues Einmalpasswort; Onboarding-PDF (DIN 5008) in die Mitarbeiterakte, optional per E-Mail")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission(Permissions.HrManage).RequirePermission(Permissions.UsersManage);
         staff.MapPut("/employees/{id:guid}/crews", SetCrewsAsync).WithName("SetEmployeeCrews")
             .WithSummary("Kolonnenzugehörigkeit setzen (nur mit verknüpftem Benutzerkonto)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
@@ -446,6 +472,95 @@ internal static class StaffEndpoints
         await db.Set<EmployeeDocument>().Where(d => d.Id == documentId && d.EmployeeId == id).ExecuteDeleteAsync(cancellationToken) == 0
             ? NotFound("Dokument nicht gefunden")
             : TypedResults.NoContent();
+
+    private static async Task<Results<Ok<EmployeeOnboardingResponse>, ProblemHttpResult>> OnboardingAsync(
+        Guid id, EmployeeOnboardingRequest request, EstrichOneDbContext db, IUserOnboarding onboarding, IGeneratedDocuments generated,
+        ICurrentUser currentUser, TimeProvider clock, HttpRequest http, CancellationToken cancellationToken)
+    {
+        var employee = await db.Set<Employee>().SingleOrDefaultAsync(e => e.Id == id, cancellationToken);
+        if (employee is null)
+        {
+            return NotFound("Mitarbeiter nicht gefunden");
+        }
+
+        byte[]? qr = null;
+        if (!string.IsNullOrWhiteSpace(request.DeviceQrPng))
+        {
+            try
+            {
+                qr = Convert.FromBase64String(request.DeviceQrPng.Contains(',', StringComparison.Ordinal) ? request.DeviceQrPng[(request.DeviceQrPng.IndexOf(',') + 1)..] : request.DeviceQrPng);
+            }
+            catch (FormatException)
+            {
+                return Validation("Der QR-Code ist kein gültiges Bild.");
+            }
+
+            if (qr.Length < 8 || qr[0] != 0x89 || qr[1] != (byte)'P')
+            {
+                return Validation("Der QR-Code muss ein PNG-Bild sein.");
+            }
+        }
+
+        OnboardingAccount account;
+        var created = false;
+        if (employee.UserId is { } linked)
+        {
+            account = await onboarding.NewPasswordAsync(linked, cancellationToken);
+        }
+        else if (request.LinkUserId is { } link)
+        {
+            if (await db.Set<Employee>().AnyAsync(e => e.UserId == link && e.Id != id, cancellationToken))
+            {
+                return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Benutzerkonto bereits verknüpft",
+                    detail: "Dieses Benutzerkonto gehört schon zu einem anderen Mitarbeiter.", extensions: new Dictionary<string, object?> { ["code"] = "USER_LINKED" });
+            }
+
+            account = await onboarding.NewPasswordAsync(link, cancellationToken);
+            if (account.UserId is not null)
+            {
+                employee.LinkUser(link);
+            }
+        }
+        else
+        {
+            if (string.IsNullOrWhiteSpace(request.UserName) || request.RoleIds is not { Count: > 0 })
+            {
+                return Validation("Bitte Benutzername und mindestens eine Rolle angeben.");
+            }
+
+            account = await onboarding.CreateAccountAsync(employee.DisplayName, request.UserName.Trim(), request.Email ?? employee.Email, request.RoleIds, cancellationToken);
+            if (account.UserId is { } newId)
+            {
+                employee.LinkUser(newId);
+                created = true;
+            }
+        }
+
+        if (account.UserId is not { } userId || account.Password is not { } password)
+        {
+            return account.ErrorCode == "USER_EXISTS"
+                ? TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Benutzer existiert bereits", detail: account.Error,
+                    extensions: new Dictionary<string, object?> { ["code"] = "USER_EXISTS" })
+                : account.ErrorCode == "USER_NOT_FOUND" ? NotFound("Benutzerkonto nicht gefunden") : Validation(account.Error ?? "Ungültige Angaben.");
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+
+        var crews = await db.Set<Crew>().AsNoTracking().Where(c => c.IsActive && c.MemberUserIds.Contains(userId)).Select(c => c.Name).ToListAsync(cancellationToken);
+        var contact = await db.Set<User>().AsNoTracking().Where(u => u.Id == currentUser.UserId).Select(u => new { u.DisplayName, u.Phone, u.Email })
+            .SingleOrDefaultAsync(cancellationToken);
+        var serverUrl = onboarding.ServerUrl(http);
+        var pdf = await onboarding.RenderAsync(userId, password, serverUrl, new OnboardingDetails(employee.JobTitle, crews, employee.EntryDate,
+            contact?.DisplayName, contact?.Phone, contact?.Email, string.IsNullOrWhiteSpace(request.DeviceCode) ? null : request.DeviceCode.Trim(),
+            request.DeviceLink, request.DeviceCodeExpiresAt, qr), cancellationToken);
+        var now = clock.GetUtcNow();
+        var fileId = await generated.StoreLooseAsync(currentUser.UserId, $"Onboarding {employee.DisplayName} {Today(clock):yyyy-MM-dd}.pdf", pdf, cancellationToken);
+        db.Add(EmployeeDocument.Create(Guid.CreateVersion7(now), id, fileId, EmployeeDocumentCategory.Other,
+            $"Onboarding-Unterlagen ({(created ? "neues Konto" : "neues Einmalpasswort")})", null, currentUser.UserId, now));
+        await db.SaveChangesAsync(cancellationToken);
+        var emailed = request.SendEmail && await onboarding.MailAsync(userId, pdf, serverUrl, cancellationToken);
+        return TypedResults.Ok(new EmployeeOnboardingResponse(userId, account.UserName ?? "", password, created, fileId, emailed));
+    }
 
     private static async Task<Results<Ok<List<CrewRef>>, ProblemHttpResult>> SetCrewsAsync(
         Guid id, SetEmployeeCrewsRequest request, EstrichOneDbContext db, CancellationToken cancellationToken)

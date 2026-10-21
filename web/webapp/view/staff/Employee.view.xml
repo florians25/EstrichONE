@@ -10,6 +10,8 @@
 				<uxap:snappedContent><Text text="{view>/headline}"/></uxap:snappedContent>
 				<uxap:actions>
 					<Button text="Bearbeiten" icon="sap-icon://edit" type="Emphasized" press=".onEdit" visible="{view>/e/canManage}"/>
+					<Button text="{= ${view>/e/userId} ? 'Onboarding-PDF erneut erzeugen' : 'Benutzerkonto anlegen' }" icon="{= ${view>/e/userId} ? 'sap-icon://pdf-attachment' : 'sap-icon://add-employee' }"
+						press=".onOnboarding" visible="{= ${view>/e/canManage} &amp;&amp; ${view>/canOnboard} === true }"/>
 					<Button text="Löschen" icon="sap-icon://delete" type="Transparent" press=".onDelete" visible="{view>/e/canManage}"/>
 				</uxap:actions>
 			</uxap:ObjectPageDynamicHeaderTitle>

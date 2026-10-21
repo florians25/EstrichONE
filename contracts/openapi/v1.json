@@ -8341,6 +8341,86 @@
         ]
       }
     },
+    "/api/v1/staff/employees/{id}/onboarding": {
+      "post": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Benutzerkonto anlegen/verknüpfen bzw. neues Einmalpasswort; Onboarding-PDF (DIN 5008) in die Mitarbeiterakte, optional per E-Mail",
+        "operationId": "OnboardEmployee",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EmployeeOnboardingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EmployeeOnboardingResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/staff/employees/{id}/crews": {
       "put": {
         "tags": [
@@ -17302,6 +17382,107 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "EmployeeOnboardingRequest": {
+        "type": "object",
+        "properties": {
+          "userName": {
+            "maxLength": 64,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "roleIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "email": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "linkUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "deviceCode": {
+            "maxLength": 40,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deviceLink": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deviceCodeExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "deviceQrPng": {
+            "maxLength": 280000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sendEmail": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "EmployeeOnboardingResponse": {
+        "required": [
+          "userId",
+          "userName",
+          "oneTimePassword",
+          "createdAccount",
+          "documentFileId",
+          "emailed"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "oneTimePassword": {
+            "type": "string"
+          },
+          "createdAccount": {
+            "type": "boolean"
+          },
+          "documentFileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "emailed": {
+            "type": "boolean"
           }
         }
       },

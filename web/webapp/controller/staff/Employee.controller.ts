@@ -10,6 +10,7 @@ import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
 import { openEmployeeForm } from "../../util/employeeForm";
 import { fileUrl, uploadLoose } from "../../util/looseUpload";
+import { canOnboard, openOnboarding } from "../../util/onboarding";
 import { planningChanged, planningLookups } from "../../util/assignmentDialog";
 import type { RouteMatch } from "../../util/router";
 import {
@@ -34,6 +35,7 @@ export default class Employee extends BaseController {
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {
 		this.id = match.params.id;
+		this.model().setProperty("/canOnboard", canOnboard());
 		await this.load();
 		const section = sections[match.query.get("abschnitt") ?? ""];
 		if (section) (this.byId("objectPage") as ObjectPageLayout).setSelectedSection(this.byId(section) as ObjectPageSection);
@@ -129,6 +131,18 @@ export default class Employee extends BaseController {
 		if (await this.run(async () => { await del(`staff/employees/${e.id}`); return true; })) {
 			this.toast("Mitarbeiter gelöscht");
 			this.nav("/personal", true);
+		}
+	}
+
+	/** Benutzerkonto anlegen/verknüpfen bzw. Onboarding-PDF mit neuem Einmalpasswort erneut erzeugen. */
+	async onOnboarding(): Promise<void> {
+		try {
+			if (await openOnboarding(this.model().getProperty("/e") as EmployeeDetail)) {
+				planningChanged();
+				await this.load();
+			}
+		} catch (error) {
+			this.showError(error);
 		}
 	}
 

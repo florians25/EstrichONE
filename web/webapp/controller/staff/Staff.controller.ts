@@ -9,6 +9,7 @@ import { get, post } from "../../util/api";
 import { absenceKinds } from "../../util/labels";
 import { date } from "../../util/format";
 import { openEmployeeForm } from "../../util/employeeForm";
+import { canOnboard, openOnboarding } from "../../util/onboarding";
 import { employmentTypes, qualificationKinds, type EmployeeListItem, type ExpiringQualification } from "../../util/planningModels";
 
 const number = (v: number) => v.toLocaleString("de-DE", { maximumFractionDigits: 1 });
@@ -69,6 +70,8 @@ export default class Staff extends BaseController {
 		const saved = await openEmployeeForm(null);
 		if (saved) {
 			this.toast("Mitarbeiter angelegt");
+			// Zweiter Schritt: direkt das Benutzerkonto mit Onboarding-PDF (abbrechbar, später auf der Mitarbeiterseite möglich).
+			if (canOnboard()) await openOnboarding(saved).catch((error: unknown) => this.showError(error));
 			this.nav(`/personal/${saved.id}`);
 		}
 	}
