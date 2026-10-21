@@ -29,7 +29,7 @@ public sealed record BauakteDetail(
     double? Latitude, double? Longitude, string? Description, Guid? CustomerId, string? TemplateKey,
     Guid? ResponsibleUserId, Guid CreatedByUserId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Version,
     DateOnly? PlannedStart = null, DateOnly? PlannedEnd = null, string? SiteContactName = null, string? SiteContactPhone = null,
-    string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null);
+    string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null, BauakteProject? Project = null);
 
 /// <summary>Anlage mit vom Client erzeugter ID (UUIDv7, ADR 0006). Pflicht ist nur <see cref="Title"/>.</summary>
 public sealed record CreateBauakteRequest(
@@ -43,7 +43,10 @@ public sealed record CreateBauakteRequest(
     [property: MaxLength(4000)] string? Description = null,
     Guid? CustomerId = null,
     [property: MaxLength(50)] string? TemplateKey = null,
-    BauakteStatus? Status = null);
+    BauakteStatus? Status = null,
+    BauakteProject? Project = null,
+    DateOnly? PlannedStart = null,
+    DateOnly? PlannedEnd = null);
 
 /// <summary>Ersetzt alle bearbeitbaren Felder. Version per <c>If-Match</c>.</summary>
 public sealed record UpdateBauakteRequest(
@@ -63,7 +66,8 @@ public sealed record UpdateBauakteRequest(
     [property: MaxLength(50)] string? SiteContactPhone = null,
     [property: MaxLength(320), EmailAddress] string? SiteContactEmail = null,
     [property: MaxLength(2000)] string? SiteNotes = null,
-    [property: MaxLength(500)] string? CancellationReason = null);
+    [property: MaxLength(500)] string? CancellationReason = null,
+    BauakteProject? Project = null);
 
 /// <summary>Löschen bestätigt der Benutzer mit seinem Passwort (02: „Löschen mit Passwortbestätigung“).</summary>
 public sealed record DeleteBauakteRequest([property: Required, MaxLength(1024)] string Password);
@@ -212,9 +216,15 @@ internal static class BauakteEndpoints
             return Validation("Id und Bezeichnung sind erforderlich.");
         }
 
+        if (request.Project?.Normalize().Validate() is { } projectError)
+        {
+            return Validation(projectError, "INVALID_PROJECT");
+        }
+
         var (bauakte, outcome) = await commands.CreateAsync(new NewBauakte(request.Id, request.Title, request.Street,
             request.PostalCode, request.City, request.Latitude, request.Longitude, request.Description, request.CustomerId,
-            request.TemplateKey, request.Status == BauakteStatus.Inquiry ? BauakteStatus.Inquiry : BauakteStatus.Planned), cancellationToken);
+            request.TemplateKey, request.Status == BauakteStatus.Inquiry ? BauakteStatus.Inquiry : BauakteStatus.Planned,
+            request.Project, request.PlannedStart, request.PlannedEnd), cancellationToken);
 
         switch (outcome)
         {
@@ -284,6 +294,16 @@ internal static class BauakteEndpoints
         bauakte.Schedule(request.PlannedStart, request.PlannedEnd);
         bauakte.ChangeSiteContact(request.SiteContactName, request.SiteContactPhone, request.SiteContactEmail);
         bauakte.ChangeSiteNotes(request.SiteNotes);
+        if (request.Project is { } project)
+        {
+            if (project.Normalize().Validate() is { } projectError)
+            {
+                return Validation(projectError, "INVALID_PROJECT");
+            }
+
+            bauakte.ChangeProject(project);
+        }
+
         bauakte.ChangeAddress(request.Street, request.PostalCode, request.City, request.Latitude, request.Longitude);
         bauakte.Describe(request.Description);
         bauakte.AssignCustomer(request.CustomerId);
@@ -367,6 +387,7 @@ internal static class BauakteEndpoints
         Change("siteContact", Join(before.SiteContactName, before.SiteContactPhone, before.SiteContactEmail),
             Join(after.SiteContactName, after.SiteContactPhone, after.SiteContactEmail));
         Change("siteNotes", before.SiteNotes, after.SiteNotes);
+        Change("project", ProjectText(before.Project), ProjectText(after.Project));
         var fields = details.Keys.Where(k => k.EndsWith(".from", StringComparison.Ordinal)).Select(k => k[..^5]).ToList();
         if (fields.Count > 0)
         {
@@ -375,10 +396,16 @@ internal static class BauakteEndpoints
         }
     }
 
+    private static string? ProjectText(BauakteProject? p) => p is null || p == BauakteProject.Empty ? null : string.Join(" · ", new[]
+    {
+        p.ObjectType, p.TotalArea is { } a ? $"{a:0.##} m²" : null, p.ScreedType, p.Construction,
+        p.NominalThicknessMm is { } t ? $"{t} mm" : null, p.StrengthClass, p.UnderfloorHeating == true ? "Fußbodenheizung" : null,
+    }.Where(x => !string.IsNullOrWhiteSpace(x)));
+
     internal static BauakteDetail ToDetail(Bauakte b) => new(
         b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.Latitude, b.Longitude, b.Description,
         b.CustomerId, b.TemplateKey, b.ResponsibleUserId, b.CreatedByUserId, b.CreatedAt, b.UpdatedAt, b.Version,
-        b.PlannedStart, b.PlannedEnd, b.SiteContactName, b.SiteContactPhone, b.SiteContactEmail, b.SiteNotes, b.CancellationReason);
+        b.PlannedStart, b.PlannedEnd, b.SiteContactName, b.SiteContactPhone, b.SiteContactEmail, b.SiteNotes, b.CancellationReason, b.Project);
 
     /// <summary>Nicht sichtbare und nicht vorhandene Bauakten sind von außen nicht unterscheidbar.</summary>
     private static ProblemHttpResult NotFound() =>

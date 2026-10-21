@@ -13670,6 +13670,16 @@
               "null",
               "string"
             ]
+          },
+          "project": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BauakteProject"
+              }
+            ]
           }
         }
       },
@@ -14060,6 +14070,119 @@
           "subcontractor",
           "other"
         ]
+      },
+      "BauakteProject": {
+        "type": "object",
+        "properties": {
+          "objectType": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "totalArea": {
+            "maximum": 1000000,
+            "minimum": 0,
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "screedType": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "construction": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "nominalThicknessMm": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "strengthClass": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "underfloorHeating": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "heatingType": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "insulation": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "insulationThicknessMm": {
+            "maximum": 1000,
+            "minimum": 0,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "floors": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "priority": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteAccess": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "waterOnSite": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "powerOnSite": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
       },
       "BauakteStatus": {
         "enum": [
@@ -15082,6 +15205,30 @@
                 "$ref": "#/components/schemas/BauakteStatus"
               }
             ]
+          },
+          "project": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BauakteProject"
+              }
+            ]
+          },
+          "plannedStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "plannedEnd": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
           }
         }
       },
@@ -22172,6 +22319,16 @@
             "type": [
               "null",
               "string"
+            ]
+          },
+          "project": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BauakteProject"
+              }
             ]
           }
         }

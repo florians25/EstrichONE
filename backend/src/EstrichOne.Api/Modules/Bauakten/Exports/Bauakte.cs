@@ -55,6 +55,9 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
     /// <summary>Begründung bei Status <see cref="BauakteStatus.Cancelled"/>.</summary>
     public string? CancellationReason { get; private set; }
 
+    /// <summary>Kennwerte des Bauvorhabens (Fläche, Estrichart, Aufbau …).</summary>
+    public BauakteProject Project { get; private set; } = BauakteProject.Empty;
+
     public List<BauakteSection> Sections { get; private set; } = [];
     public List<BauakteMember> Members { get; private set; } = [];
 
@@ -150,6 +153,17 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 
     public void Describe(string? description) => Description = description;
+
+    public void ChangeProject(BauakteProject project)
+    {
+        var normalized = project.Normalize();
+        if (normalized.Validate() is { } error)
+        {
+            throw new ArgumentException(error, nameof(project));
+        }
+
+        Project = normalized;
+    }
 
     public void AssignCustomer(Guid? customerId) => CustomerId = customerId;
 

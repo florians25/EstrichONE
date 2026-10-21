@@ -12,18 +12,16 @@
 					</Breadcrumbs>
 				</uxap:breadcrumbs>
 				<uxap:expandedHeading>
-					<HBox alignItems="Center" class="eoAkteTitle">
-						<Avatar src="sap-icon://folder-full" displaySize="S" class="sapUiSmallMarginEnd" backgroundColor="Accent6" decorative="true"/>
-						<VBox>
-							<HBox alignItems="Center" wrap="Wrap">
-								<Text text="{= ${akte>/bauakte/number} || 'ohne Nummer' }" class="eoAkteNumber sapUiTinyMarginEnd"/>
-								<ObjectStatus text="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}"
-									state="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusState'}" inverted="true"
-									icon="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusIcon'}"/>
-							</HBox>
+					<VBox class="eoAkteTitle">
+						<HBox alignItems="Center" wrap="Wrap" class="eoTitleLine">
+							<Text text="{= ${akte>/bauakte/number} || 'ohne Nummer' }" class="eoAkteNumber"/>
 							<Title id="bauakteTitle" text="{akte>/bauakte/title}" level="H1" wrapping="true" titleStyle="H3"/>
-						</VBox>
-					</HBox>
+							<ObjectStatus text="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusText'}"
+								state="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusState'}" inverted="true"
+								icon="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusIcon'}"/>
+						</HBox>
+						<Text text="{akte>/subtitle}" class="eoMuted"/>
+					</VBox>
 				</uxap:expandedHeading>
 				<uxap:snappedHeading>
 					<HBox alignItems="Center">
@@ -89,56 +87,60 @@
 		</uxap:headerTitle>
 		<uxap:headerContent>
 			<VBox width="100%">
-				<FlexBox class="eoHeaderGrid" wrap="Wrap" alignItems="Stretch">
-					<VBox class="eoFact">
-						<Label text="{i18n>akte.customer}"/>
-						<Link text="{= ${akte>/customer/name} || '–' }" href="/kunden?kunde={akte>/customer/id}" enabled="{= !!${akte>/customer} }" emphasized="true" wrapping="true"/>
-						<Link text="{akte>/phone}" href="tel:{akte>/phone}" visible="{= !!${akte>/phone} }" class="eoTabular"/>
-						<Link text="{akte>/mail}" href="mailto:{akte>/mail}" visible="{= !!${akte>/mail} }" wrapping="true"/>
-					</VBox>
-					<VBox class="eoFact">
-						<Label text="{i18n>akte.site}"/>
-						<Text text="{akte>/bauakte/street}" visible="{= !!${akte>/bauakte/street} }"/>
-						<Text text="{= (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }"/>
-						<Link text="{i18n>akte.route}" href="{akte>/routeUrl}" target="_blank" visible="{= !!${akte>/routeUrl} }"/>
-					</VBox>
-					<VBox class="eoFact">
-						<Label text="Team"/>
-						<Button id="assignButton" text="{i18n>akte.assigned}: {akte>/assignedText}" icon="sap-icon://employee-pane" press=".onAssign"
-							enabled="{akte>/canEdit}" type="Transparent" class="eoFactButton"/>
-						<Text text="Angelegt: {akte>/createdText}" class="eoMuted"/>
-					</VBox>
-					<VBox class="eoFact">
-						<Label text="{i18n>akte.period}"/>
-						<Text text="{akte>/periodText}"/>
-						<Label text="{i18n>akte.next}" class="sapUiTinyMarginTop"/>
-						<Text text="{akte>/kpi/nextText}" wrapping="true"/>
-					</VBox>
-					<HBox class="eoFact eoKpis">
-						<VBox class="eoKpi">
-							<Label text="{i18n>akte.area}"/>
-							<ObjectNumber number="{akte>/kpi/area}" unit="m²" emphasized="true"/>
-							<Text text="{= ${akte>/kpi/screeds} || '' }" class="eoMuted" wrapping="true"/>
-						</VBox>
-						<VBox class="eoKpi">
-							<Label text="{i18n>akte.openWork}"/>
-							<ObjectNumber number="{akte>/kpi/openWork}" state="{= ${akte>/kpi/overdue} > 0 ? 'Error' : 'None' }" emphasized="true"/>
-							<ObjectStatus text="{akte>/kpi/defectsText}" state="Warning" visible="{= ${akte>/kpi/defects} > 0 }"/>
-						</VBox>
-						<VBox class="eoKpi">
-							<Label text="{i18n>akte.documentation}"/>
-							<Text text="{akte>/kpi/filesText}"/>
-							<ObjectStatus text="{akte>/kpi/readyText}" state="{akte>/kpi/readyState}" visible="{= !!${akte>/kpi/readyText} }"/>
-						</VBox>
-					</HBox>
-					<eo:LeafletMap id="miniMap" height="7.5rem" width="15rem" zoom="14" interactive="false" markers="{akte>/markers}"
-						visible="{= ${akte>/markers}.length > 0 }" class="eoFactMap"/>
-				</FlexBox>
-				<VBox items="{akte>/hints}" class="sapUiTinyMarginTop">
-					<MessageStrip text="{akte>text}" type="{akte>type}" showIcon="true" class="sapUiTinyMarginBottom">
+			<HBox wrap="Wrap" alignItems="Center" class="eoHintBadges eoBadgeRow">
+				<HBox items="{akte>/projectBadges}" wrap="Wrap" class="eoHintBadges">
+					<ObjectStatus text="{akte>text}" state="{akte>state}" icon="{akte>icon}" inverted="true"/>
+				</HBox>
+				<ObjectStatus text="{akte>/approvalsText}" state="Warning" inverted="true" icon="sap-icon://pending" visible="{= !!${akte>/approvalsText} }"/>
+				<HBox items="{akte>/hints}" wrap="Wrap" class="eoHintBadges">
+					<ObjectStatus text="{akte>text}" state="{akte>type}" inverted="true" tooltip="{akte>text}">
 						<customData><core:CustomData key="role" value="listitem" writeToDom="true"/></customData>
-					</MessageStrip>
-				</VBox>
+					</ObjectStatus>
+				</HBox>
+			</HBox>
+			<FlexBox class="eoHeadRow" alignItems="Start" justifyContent="SpaceBetween" width="100%">
+				<FlexBox class="eoHeadFields" wrap="Wrap">
+					<VBox class="eoHeadField">
+						<Label text="{i18n>akte.customer}"/>
+						<Link text="{= ${akte>/customer/name} || '–' }" href="/kunden?kunde={akte>/customer/id}" enabled="{= !!${akte>/customer} }" wrapping="false"/>
+					</VBox>
+					<VBox class="eoHeadField eoHeadWide">
+						<Label text="{i18n>akte.site}"/>
+						<HBox alignItems="Center" class="eoInline">
+							<Text text="{akte>/placeText}" wrapping="false" tooltip="{akte>/placeText}"/>
+							<Button icon="sap-icon://map" type="Transparent" press=".onShowMap" class="eoMapButton" tooltip="Karte" text=""/>
+						</HBox>
+					</VBox>
+					<VBox class="eoHeadField">
+						<Label text="Zuständig"/>
+						<Button id="assignButton" text="{i18n>akte.assigned}: {akte>/assignedText}" press=".onAssign"
+							enabled="{akte>/canEdit}" type="Transparent" class="eoFactButton"/>
+					</VBox>
+					<VBox class="eoHeadField eoHeadWide">
+						<Label text="{i18n>akte.next}"/>
+						<Text text="{akte>/kpi/nextText}" wrapping="false" tooltip="{akte>/kpi/nextText}"/>
+					</VBox>
+					<VBox class="eoHeadField">
+						<Label text="Angelegt"/>
+						<Text text="{akte>/createdText}" wrapping="false"/>
+					</VBox>
+				</FlexBox>
+				<HBox class="eoKpis">
+					<VBox class="eoKpi" alignItems="End">
+						<Label text="Offen"/>
+						<ObjectNumber number="{akte>/kpi/openWork}" unit="{= ${akte>/kpi/defects} > 0 ? '(' + ${akte>/kpi/defects} + ' Mängel)' : '' }"
+							state="{= ${akte>/kpi/overdue} > 0 ? 'Error' : ${akte>/kpi/defects} > 0 ? 'Warning' : 'None' }" class="eoKpiNumber"/>
+					</VBox>
+					<VBox class="eoKpi" alignItems="End">
+						<Label text="Fläche"/>
+						<ObjectNumber number="{akte>/kpi/area}" unit="m²" class="eoKpiNumber"/>
+					</VBox>
+					<VBox class="eoKpi" alignItems="End">
+						<Label text="Fotos / Dokumente"/>
+						<ObjectNumber number="{= ${akte>/kpi/photos} === undefined ? '–' : ${akte>/kpi/photos} + ' / ' + ${akte>/kpi/docs} }" class="eoKpiNumber"/>
+					</VBox>
+				</HBox>
+			</FlexBox>
 			</VBox>
 		</uxap:headerContent>
 		<uxap:sections>

@@ -645,6 +645,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(10)")
                         .HasColumnName("postal_code");
 
+                    b.Property<string>("Project")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("project");
+
                     b.Property<Guid?>("ResponsibleUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("responsible_user_id");

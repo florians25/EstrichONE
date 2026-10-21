@@ -15,6 +15,8 @@ import { session } from "../../../util/session";
 import { openLightbox } from "../../../util/lightbox";
 import { openActivityDialog } from "../../../util/activityDialog";
 import { akteContextOf } from "../../../util/akteHeader";
+import { openForm } from "../../../util/forms";
+import { projectFields, projectFromValues } from "../../../util/project";
 
 /** Übersicht: Objektbilder, Standort (im Büro per Klick setzen), Kennzahlen, Notizen, Aufgaben, Stammdaten, Aktivitäten. @namespace estrichone.controller.bauakte.sections */
 export default class Overview extends SectionBase {
@@ -22,7 +24,7 @@ export default class Overview extends SectionBase {
 	private photos: FileResponse[] = [];
 
 	protected init(): void {
-		const model = new JSONModel({ hero: [], markers: [], picking: false, picked: null, hasLocation: false, pinned: [], work: [], activity: [], approvals: [], latestDocs: [] });
+		const model = new JSONModel({ hero: [], upcoming: [], markers: [], picking: false, picked: null, hasLocation: false, pinned: [], work: [], activity: [], approvals: [], latestDocs: [] });
 		model.setSizeLimit(1000);
 		this.v().setModel(model, "ov");
 	}
@@ -98,8 +100,13 @@ export default class Overview extends SectionBase {
 			}
 		}
 		if (planning.status === "fulfilled" && planning.value) {
-			const next = planning.value.assignments.filter((a) => a.day >= today)
-				.sort((a, b) => (a.day + (a.startTime ?? "")).localeCompare(b.day + (b.startTime ?? "")))[0];
+			const upcoming = planning.value.assignments.filter((a) => a.day >= today)
+				.sort((a, b) => (a.day + (a.startTime ?? "")).localeCompare(b.day + (b.startTime ?? "")));
+			const next = upcoming[0];
+			m.setProperty("/upcoming", upcoming.slice(0, 5).map((a) => ({
+				dayText: parseDay(a.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }),
+				time: a.startTime?.slice(0, 5) ?? "", kind: assignmentKinds[a.kind]?.text ?? a.activity ?? "", crew: a.crewName ?? "",
+			})));
 			m.setProperty("/nextValue", next ? parseDay(next.day).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) : "–");
 			m.setProperty("/nextFooter", next ? `${next.startTime?.slice(0, 5) ?? ""} ${assignmentKinds[next.kind]?.text ?? ""}${next.crewName ? ` · ${next.crewName}` : ""}` : "nicht eingeplant");
 		}
@@ -188,5 +195,16 @@ export default class Overview extends SectionBase {
 	onOpenDoc(event: Event): void {
 		const id = (event.getSource() as Control).getBindingContext("ov")?.getProperty("id") as string;
 		navTo(`/bauakten/${this.bauakteId}/datei/${id}?abschnitt=dokumente`);
+	}
+
+	/** Kennwerte des Bauvorhabens bearbeiten (Fläche, Estrich, Aufbau, Zugang). */
+	async onEditProject(): Promise<void> {
+		const b = this.bauakte();
+		const initial = { ...(b.project ?? {}) } as Record<string, unknown>;
+		const saved = await openForm<BauakteDetail>({
+			title: "Kennwerte bearbeiten", width: "40rem", initial, fields: projectFields(),
+			submit: (v) => saveBauakte(this.bauakte(), { project: projectFromValues(v) }),
+		});
+		if (saved) this.toast("Gespeichert");
 	}
 }

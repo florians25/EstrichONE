@@ -30,6 +30,9 @@ import { runAcceptance } from "../../util/acceptanceFlow";
 import { openInitialInspectionWizard } from "../../util/inspectionWizard";
 import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
+import { catalog, type BauakteTemplate } from "../../util/catalog";
+import { projectBadges, projectView } from "../../util/project";
+import LeafletMap from "../../control/LeafletMap";
 
 /** Abschnitte der Objektseite: Schlüssel (Adresse ?abschnitt=…) → eingebettete View. */
 const sections: Record<string, string> = {
@@ -163,6 +166,16 @@ export default class ObjectController extends BaseController {
 		m.setProperty("/routeUrl", b.latitude !== null && b.longitude !== null
 			? `https://www.openstreetmap.org/directions?to=${b.latitude}%2C${b.longitude}`
 			: place !== "–" ? `https://www.openstreetmap.org/search?query=${encodeURIComponent(place)}` : "");
+		m.setProperty("/placeText", place);
+		m.setProperty("/projectView", projectView(b.project));
+		m.setProperty("/projectBadges", projectBadges(b.project));
+		m.setProperty("/subtitle", "Bauakte");
+		if (b.templateKey) {
+			void catalog<BauakteTemplate>("bauakteTemplate").then((list) => {
+				const t = list.find((x) => x.id === b.templateKey);
+				if (t && this.cur()?.id === b.id) m.setProperty("/subtitle", `Bauakte · Vorlage ${t.name}`);
+			}).catch(() => undefined);
+		}
 		m.setProperty("/periodText", b.plannedStart || b.plannedEnd ? `${date(b.plannedStart)} – ${date(b.plannedEnd)}` : "–");
 		m.setProperty("/markers", b.latitude !== null && b.longitude !== null
 			? [{ id: b.id, latitude: b.latitude, longitude: b.longitude, color: statusMarkerColors[b.status], label: b.title }] : []);
@@ -224,6 +237,9 @@ export default class ObjectController extends BaseController {
 	private async loadHints(): Promise<void> {
 		const hints = await get<BauakteHint[]>(`bauakten/${this.id}/hints`).catch(() => [] as BauakteHint[]);
 		this.m().setProperty("/hints", hints.map((h) => ({ text: h.text, type: hintTypes[h.severity] ?? "Information" })));
+		void get<{ items: unknown[] }>("documents", { bauakteId: this.id, approval: "pending" })
+			.then((r) => this.m().setProperty("/approvalsText", r.items.length ? `${r.items.length} Freigabe${r.items.length === 1 ? "" : "n"} ausstehend` : ""))
+			.catch(() => this.m().setProperty("/approvalsText", ""));
 	}
 
 	/** Kennzahlen im Kopf: Fläche, offene Aufgaben/Mängel, Dateien, Belegreife, nächster Einsatz. */
@@ -251,6 +267,8 @@ export default class ObjectController extends BaseController {
 			const photos = files.value.filter((f) => f.kind === "photo").length;
 			const docs = files.value.filter((f) => f.kind === "document").length;
 			kpi.filesText = `${photos} Fotos · ${docs} Dokumente`;
+			kpi.photos = photos;
+			kpi.docs = docs;
 		}
 		if (inspections.status === "fulfilled") {
 			const cm = inspections.value.filter((i) => i.kind === "cmMeasurement").sort((a, b) => b.performedAt.localeCompare(a.performedAt))[0];
@@ -486,5 +504,24 @@ export default class ObjectController extends BaseController {
 
 	onClose(): void {
 		this.nav("/bauakten");
+	}
+
+	/** Baustelle auf der Karte im Dialog (die Karte gehört nicht in den Kopf). */
+	onShowMap(): void {
+		const markers = this.m().getProperty("/markers") as unknown[];
+		const route = this.m().getProperty("/routeUrl") as string;
+		const dialog = new Dialog({
+			title: `Karte – ${this.m().getProperty("/placeText") as string}`, contentWidth: "48rem", resizable: true, draggable: true,
+			content: markers.length
+				? [new LeafletMap({ height: "28rem", width: "100%", zoom: 15, markers } as unknown as ConstructorParameters<typeof LeafletMap>[0])]
+				: [new Text({ text: "Für diese Baustelle ist noch kein Standort gesetzt. In der Übersicht unter „Standort“ festlegen." }).addStyleClass("sapUiSmallMargin")],
+			buttons: [
+				...(route ? [new Button({ text: "Route planen", icon: "sap-icon://map-3", press: () => window.open(route, "_blank", "noopener") })] : []),
+				new Button({ text: "Schließen", press: () => dialog.close() }),
+			],
+			afterClose: () => dialog.destroy(),
+		});
+		this.getView()!.addDependent(dialog);
+		dialog.open();
 	}
 }

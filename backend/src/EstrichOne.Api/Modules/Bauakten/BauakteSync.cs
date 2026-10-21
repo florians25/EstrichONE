@@ -25,7 +25,7 @@ internal sealed class BauakteSync(
 {
     private static readonly HashSet<string> EditableFields =
         ["title", "status", "street", "postalCode", "city", "latitude", "longitude", "description", "customerId", "responsibleUserId",
-            "siteContactName", "siteContactPhone", "siteContactEmail", "siteNotes"];
+            "siteContactName", "siteContactPhone", "siteContactEmail", "siteNotes", "project"];
 
     public IReadOnlyCollection<string> OperationTypes { get; } =
         ["bauakte.create", "bauakte.update", "bauakte.setStatus", "bauakte.delete", "note.create", "note.update", "note.delete"];
@@ -58,7 +58,9 @@ internal sealed class BauakteSync(
         var (bauakte, outcome) = await commands.CreateAsync(new NewBauakte(op.EntityId, title,
             SyncPayload.Read<string>(p, "street"), SyncPayload.Read<string>(p, "postalCode"), SyncPayload.Read<string>(p, "city"),
             SyncPayload.Read<double?>(p, "latitude"), SyncPayload.Read<double?>(p, "longitude"), SyncPayload.Read<string>(p, "description"),
-            SyncPayload.Read<Guid?>(p, "customerId"), SyncPayload.Read<string>(p, "templateKey")), cancellationToken);
+            SyncPayload.Read<Guid?>(p, "customerId"), SyncPayload.Read<string>(p, "templateKey"),
+            Project: ReadProject(p["project"]),
+            PlannedStart: SyncPayload.Read<DateOnly?>(p, "plannedStart"), PlannedEnd: SyncPayload.Read<DateOnly?>(p, "plannedEnd")), cancellationToken);
 
         return outcome switch
         {
@@ -67,6 +69,23 @@ internal sealed class BauakteSync(
             _ => new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: bauakte!.Version,
                 Entity: SyncPayload.ToNode(BauakteEndpoints.ToDetail(bauakte))),
         };
+    }
+
+    /// <summary>„project“ als Objekt; unbekannte Auswahlwerte werden als Validierungsfehler gemeldet.</summary>
+    private static BauakteProject? ReadProject(JsonNode? node)
+    {
+        if (node is null)
+        {
+            return null;
+        }
+
+        var project = node.Deserialize<BauakteProject>(SyncPayload.Json)?.Normalize();
+        if (project?.Validate() is { } error)
+        {
+            throw new SyncValidationException(error);
+        }
+
+        return project;
     }
 
     private async Task<SyncOperationResult> UpdateBauakteAsync(SyncOperation op, CancellationToken cancellationToken)
@@ -140,6 +159,9 @@ internal sealed class BauakteSync(
                     break;
                 case "siteNotes":
                     bauakte.ChangeSiteNotes(value?.GetValue<string>());
+                    break;
+                case "project":
+                    bauakte.ChangeProject(ReadProject(value) ?? BauakteProject.Empty);
                     break;
                 case "customerId":
                     var customerId = value.Deserialize<Guid?>(SyncPayload.Json);

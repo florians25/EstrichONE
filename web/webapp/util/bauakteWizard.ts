@@ -6,6 +6,7 @@
  *  2. Bauvorhaben und Baustelle – Baustellenadresse auf Wunsch vom Kunden übernehmen.
  *  3. Prüfen und anlegen.
  */
+import { projectView, projectWizardControls } from "./project";
 import Dialog from "sap/m/Dialog";
 import { loadSystemSettings } from "./systemSettings";
 import Button from "sap/m/Button";
@@ -232,6 +233,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		const t = templates.find((x) => x.id === template.getSelectedKey());
 		if (t?.content.description && !site.description.getValue().trim()) site.description.setValue(t.content.description);
 	});
+	const kennwerte = projectWizardControls("new");
 	const projectStep = new WizardStep("newStepProject", {
 		title: "Bauvorhaben", icon: "sap-icon://building", validated: false,
 		content: [form([
@@ -244,6 +246,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			new Label({ text: "PLZ", labelFor: site.postalCode }), site.postalCode,
 			new Label({ text: "Ort", labelFor: site.city }), site.city,
 			new Label({ text: "Beschreibung", labelFor: site.description }), site.description,
+			...kennwerte.content,
 		])],
 	});
 
@@ -266,6 +269,9 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		summary.addItem(line("Anlegen als", kind.getSelectedKey() === "inquiry" ? "Anfrage" : "Bauakte (Auftrag)"));
 		const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
 		if (chosenTemplate) summary.addItem(line("Vorlage", `${chosenTemplate.name}${chosenTemplate.content.rooms?.length ? ` – legt ${chosenTemplate.content.rooms.length} Räume an` : ""}`));
+		const pv = projectView(kennwerte.read());
+		summary.addItem(line("Kennwerte", [pv.objectType, pv.totalArea, pv.screedType, pv.construction, pv.thickness, pv.strengthClass]
+			.filter((x) => x !== "–").join(" · ")));
 		summary.addItem(line("Baustelle", [site.street.getValue().trim(), [site.postalCode.getValue().trim(), site.city.getValue().trim()].filter(Boolean).join(" ")].filter(Boolean).join(", ")));
 	};
 
@@ -379,6 +385,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					postalCode: site.postalCode.getValue().trim() || null, city: site.city.getValue().trim() || null,
 					description: site.description.getValue().trim() || null, status,
 					templateKey: template.getSelectedKey() || null,
+					project: kennwerte.read(), plannedStart: kennwerte.period().start, plannedEnd: kennwerte.period().end,
 				});
 				const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
 				for (const [index, room] of (chosenTemplate?.content.rooms ?? []).entries()) {

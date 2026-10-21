@@ -1,3 +1,4 @@
+import type { BauakteProject } from "./project";
 /** Typen der EstrichONE-API v1 (contracts/openapi/v1.json). Feldnamen 1:1 wie im Vertrag. */
 
 export interface UserSummary {
@@ -91,6 +92,8 @@ export interface BauakteDetail extends BauakteListItem {
   siteContactEmail: string | null;
   siteNotes: string | null;
   cancellationReason: string | null;
+  /** Kennwerte des Bauvorhabens (Sync-Feld „project“). */
+  project?: BauakteProject | null;
 }
 
 export type BauakteHintSeverity = "info" | "success" | "warning" | "danger";

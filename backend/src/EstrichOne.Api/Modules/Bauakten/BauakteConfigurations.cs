@@ -1,3 +1,4 @@
+using System.Text.Json;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Contacts.Exports;
@@ -9,6 +10,11 @@ namespace EstrichOne.Api.Modules.Bauakten;
 
 internal sealed class BauakteConfiguration : IEntityTypeConfiguration<Bauakte>
 {
+    private static readonly JsonSerializerOptions ProjectJson = new(JsonSerializerDefaults.Web)
+    {
+        DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull,
+    };
+
     public void Configure(EntityTypeBuilder<Bauakte> builder)
     {
         builder.ToTable("bauakten");
@@ -27,6 +33,9 @@ internal sealed class BauakteConfiguration : IEntityTypeConfiguration<Bauakte>
         builder.Property(bauakte => bauakte.SiteContactEmail).HasMaxLength(320);
         builder.Property(bauakte => bauakte.SiteNotes).HasMaxLength(2000);
         builder.Property(bauakte => bauakte.CancellationReason).HasMaxLength(500);
+        builder.Property(bauakte => bauakte.Project).HasColumnType("jsonb").HasConversion(
+            project => JsonSerializer.Serialize(project, ProjectJson),
+            json => JsonSerializer.Deserialize<BauakteProject>(json, ProjectJson) ?? BauakteProject.Empty);
         builder.HasIndex(bauakte => bauakte.PlannedStart);
 
         builder.HasIndex(bauakte => bauakte.Number).IsUnique().HasFilter("number IS NOT NULL");

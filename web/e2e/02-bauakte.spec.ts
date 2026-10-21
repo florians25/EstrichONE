@@ -40,7 +40,7 @@ test('Anfrage mit neuem Kunden im Assistenten, Dublettenprüfung, als Auftrag ü
   await expect(page.getByRole('link', { name: 'Familie Kraus' })).toBeVisible();
   await page.getByRole('button', { name: 'Als Auftrag übernehmen' }).click();
   await expect(page.getByRole('button', { name: /Status: Geplant/ })).toBeVisible();
-  await expect(page.locator('.sapMMsgStrip').filter({ hasText: 'Erstbegehung noch nicht ausgeführt.' }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.locator('.eoHintBadges').getByText('Erstbegehung noch nicht ausgeführt.', { exact: false }).filter({ visible: true }).first()).toBeVisible();
 
   // Gleicher Kunde frei eingegeben: Dublettenprüfung bietet den vorhandenen Kunden an.
   await page.getByLabel('Neue Akte').click();
@@ -165,7 +165,7 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
 
   // Mehrfachauswahl: ZIP und Löschen
   await openSection(page, 'Dokumente');
-  const rows = page.locator('.sapMListTbl tbody tr').filter({ hasText: '.pdf' });
+  const rows = page.locator('.sapMListTbl tbody tr').filter({ hasText: '.pdf' }).filter({ visible: true });
   await expect(rows).toHaveCount(2);
   await rows.nth(0).locator('.sapMCb').click();
   await rows.nth(1).locator('.sapMCb').click();
@@ -222,6 +222,7 @@ test('Zentrale Dokumentverwaltung: Ordner, Suche, Freigabe anfordern, ablehnen m
   // Erneut anfordern (in der Bauakte) und freigeben – Verlauf bleibt vollständig.
   await page.getByRole('tab', { name: /Ablage/ }).click();
   await table.getByRole('link', { name: 'Angebot 2026-117 v2.pdf' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Details' }).click();
   await expect(page).toHaveURL(/\/datei\//);
   await expect(page.getByRole('heading', { name: 'Angebot 2026-117 v2.pdf' })).toBeVisible();
   await page.locator('.sapFDynamicPageTitle').getByRole('button', { name: 'Freigabe anfordern' }).click();
@@ -452,7 +453,7 @@ test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async
   const cancel = page.getByRole('dialog', { name: 'Bauakte stornieren' });
   await cancel.getByLabel('Stornogrund').fill('Kunde hat verschoben');
   await cancel.getByRole('button', { name: 'Stornieren' }).click();
-  await expect(page.locator('.sapMMsgStrip').filter({ hasText: 'Storniert: Kunde hat verschoben' }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.locator('.eoHintBadges').getByText('Storniert: Kunde hat verschoben', { exact: false }).filter({ visible: true }).first()).toBeVisible();
   await page.getByRole('button', { name: 'Aktionen' }).click();
   await page.getByRole('menuitem', { name: 'Storno aufheben' }).click();
   await expect(page.getByRole('button', { name: /Status: Geplant/ })).toBeVisible();

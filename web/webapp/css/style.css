@@ -84,7 +84,7 @@
 .eoSheet .num { text-align: right; font-variant-numeric: tabular-nums; }
 .eoSheet .muted { color: #555; }
 .eoSheet .head { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 2px solid #0B2D5B; padding-bottom: 0.75rem; }
-.eoSheet .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1.5rem; }
+.eoSheet .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.25rem 1rem; }
 .eoSheet .photos { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.5rem; }
 .eoSheet .photos figure { margin: 0; break-inside: avoid; }
 .eoSheet .photos img { width: 100%; aspect-ratio: 4 / 3; object-fit: cover; border: 1px solid #ddd; }
@@ -206,14 +206,29 @@
 
 /* Kopf der Bauakte: kompakt, klar gegliedert */
 .eoAkteNumber { font-weight: 600; color: var(--sapContent_LabelColor); }
-.eoHeaderGrid { gap: 0.75rem 1.5rem; }
-.eoFact { min-width: 11rem; max-width: 18rem; }
-.eoFact > .sapMLabel { margin-bottom: 0.125rem; }
-.eoFactButton.sapMBtn { margin-left: -0.5rem; height: auto; }
-.eoFactButton .sapMBtnInner { height: auto; white-space: normal; text-align: left; }
-.eoKpis { gap: 1.25rem; max-width: none; padding-left: 1.25rem; border-left: 1px solid var(--sapGroup_ContentBorderColor); }
-.eoKpi { min-width: 6rem; }
-.eoFactMap { border-radius: 0.5rem; overflow: hidden; }
+.eoTitleLine { gap: 0.5rem 0.75rem; }
+.eoHeadRow { gap: 1rem 2rem; flex-wrap: wrap; }
+.eoHeadFields { flex: 1 1 36rem; display: grid !important; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.25rem 1.5rem; }
+.eoHeadField { min-width: 0; }
+.eoHeadField > .sapMLabel { color: var(--sapContent_LabelColor); }
+.eoHeadField .sapMText, .eoHeadField .sapMLnk { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.eoHeadWide { grid-column: span 1; }
+@media (min-width: 1280px) { .eoHeadFields { grid-template-columns: 0.9fr 1.5fr 1.2fr 1.3fr 1.1fr; } }
+.eoFactButton.sapMBtn { height: 1.375rem; margin-left: -0.5rem; max-width: calc(100% + 0.5rem); }
+.eoFactButton .sapMBtnInner { height: 1.375rem; min-height: 0; text-align: left; }
+.eoFactButton .sapMBtnContent { line-height: 1.375rem; }
+.eoKpis { gap: 1.5rem; flex: none; margin-left: auto; }
+.eoKpi { min-width: 4.5rem; }
+.eoKpiNumber .sapMObjectNumberText { font-size: 1.25rem; line-height: 1.5rem; font-weight: 400; }
+.eoKpiNumber .sapMObjectNumberUnit { font-size: 0.75rem; }
+.eoHintBadges { gap: 0.375rem; }
+.eoHintBadges:empty { display: none; }
+.eoDenseForm .sapUiFormTitle { border-bottom: none; }
+.eoDenseForm .sapUiFormCLElement { margin-bottom: 0; }
+.eoOverviewGrid .eoDenseTable .sapMListTblCell { padding-top: 0.25rem; padding-bottom: 0.25rem; }
+.eoInline { gap: 0.5rem; }
+.eoThumbs { gap: 0.375rem; }
+.eoThumb img { object-fit: cover; border-radius: 0.25rem; }
 
 /* Übersicht der Bauakte: Raster ohne Lücken, Karten je Zeile gleich hoch */
 .eoOverviewGrid > .sapFCard { height: 100%; }
@@ -235,3 +250,14 @@
 .eoPublicLead { font-size: 1.125rem; font-weight: 600; margin-top: 0.25rem; }
 .eoPublicLogo { max-width: 16rem; object-fit: contain; }
 .eoPublicDecision { padding: 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.5rem; }
+.eoDenseForm .sapUiRespGridSpanXL5.sapUiFormElementLbl, .eoDenseForm .sapUiFormElementLbl { padding-top: 0.125rem; }
+.eoDenseForm .sapUiRespGrid > div { margin-top: 0 !important; margin-bottom: 0.125rem !important; }
+.eoDenseForm .sapMLabel { color: var(--sapContent_LabelColor); }
+.eoHintBadges .sapMObjStatus { max-width: 24rem; }
+.eoHintBadges .sapMObjStatusText { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; max-width: 100%; vertical-align: bottom; }
+.eoBadgeRow { margin-bottom: 0.5rem; gap: 0.375rem; }
+.eoBadgeRow:not(:has(.sapMObjStatus:not(.sapUiHidden))) { display: none; }
+.eoHeadField .eoInline { min-width: 0; gap: 0.25rem; }
+.eoHeadField .eoInline > .sapMFlexItem:first-child { min-width: 0; flex: 0 1 auto; overflow: hidden; }
+.eoMapButton.sapMBtn { height: 1.375rem; } .eoMapButton .sapMBtnInner { height: 1.375rem; min-height: 0; min-width: 1.75rem; }
+.eoHeadField .eoInline > .sapMFlexItem:last-child { flex: none; }

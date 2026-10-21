@@ -61,7 +61,7 @@
 											<HBox alignItems="Center">
 												<core:Icon src="{view>icon}" size="1.25rem" class="sapUiSmallMarginEnd"/>
 												<VBox>
-													<Link text="{view>file/originalName}" href="{view>openHref}" wrapping="true"/>
+													<Link text="{view>file/originalName}" press=".onOpenDoc" wrapping="true"/>
 													<Text text="{view>file/caption}" visible="{= !!${view>file/caption} }" class="eoMuted"/>
 												</VBox>
 											</HBox>

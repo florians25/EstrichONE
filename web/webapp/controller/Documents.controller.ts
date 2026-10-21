@@ -9,6 +9,9 @@ import { fileIcon } from "../util/documents";
 import { dateTime } from "../util/format";
 import { approvalStatus, cancelApproval, decideApproval, requestApproval, type ApprovalResponse, type ApprovalStatus } from "../util/approvals";
 import type { BauaktePage, FileResponse } from "../util/models";
+import type JSONModel from "sap/ui/model/json/JSONModel";
+import { navTo } from "../util/navigation";
+import { openPreview } from "../util/previewDialog";
 
 interface DocumentListItem {
 	file: FileResponse;
@@ -210,5 +213,18 @@ export default class Documents extends BaseController {
 			void this.loadApprovals();
 			void this.load();
 		}
+	}
+
+	/** Dokument im Modal öffnen (Vorschau, blättern); „Details“ führt zu Fassungen und Freigabe. */
+	onOpenDoc(event: Event): void {
+		const ctx = (event.getSource() as Control).getBindingContext("view");
+		const item = ctx?.getObject() as { file: FileResponse; openHref: string } | undefined;
+		if (!item) return;
+		const items = (this.getView()!.getModel("view") as JSONModel).getProperty("/items") as { file: FileResponse; openHref: string }[];
+		const files = items.map((i) => i.file);
+		openPreview({
+			files, index: Math.max(0, files.findIndex((f) => f.id === item.file.id)), context: null,
+			onDetails: (file) => navTo(`/bauakten/${file.bauakteId}/datei/${file.id}?abschnitt=dokumente`),
+		});
 	}
 }

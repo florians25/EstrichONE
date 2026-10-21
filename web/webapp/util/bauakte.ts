@@ -2,6 +2,7 @@
 import EventBus from "sap/ui/core/EventBus";
 import { ApiError, put } from "./api";
 import type { BauakteDetail, BauakteStatus } from "./models";
+import type { BauakteProject } from "./project";
 
 export interface BauakteChanges {
 	title?: string;
@@ -21,6 +22,7 @@ export interface BauakteChanges {
 	siteContactEmail?: string | null;
 	siteNotes?: string | null;
 	cancellationReason?: string | null;
+	project?: BauakteProject | null;
 }
 
 export const VERSION_CONFLICT =
