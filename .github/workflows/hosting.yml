@@ -59,7 +59,7 @@ jobs:
           docker run --rm --entrypoint sh estrichone/hosting:ci -c 'docker --version && docker compose version && ls /app/templates /app/wwwroot/brand && test -f /app/wwwroot/index.html'
       - name: Image sichern
         run: docker save estrichone/hosting:ci | gzip -1 > hosting-image.tar.gz
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: hosting-image
           path: hosting-image.tar.gz
@@ -101,7 +101,7 @@ jobs:
         run: docker logs console
       - name: Bildschirmfotos
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hosting-e2e
           path: hosting/ui/test-results
