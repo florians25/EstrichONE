@@ -118,6 +118,17 @@ chown -R "$API_UID:$API_UID" "$DATA/files" "$DATA/backup-status" "$DATA/backup-s
 
 echo "Images laden und Dienste starten …"
 docker compose -p estrichone pull --quiet --ignore-pull-failures
+
+# Datenbank zuerst starten und das Passwort aus der .env setzen. Hilft, wenn die .env neu erzeugt wurde, das
+# Datenverzeichnis aber noch mit einem älteren Passwort angelegt ist (sonst: „password authentication failed“).
+# Im Container ist der lokale Zugang ohne Passwort erlaubt (Standard des postgres-Images).
+docker compose -p estrichone up -d --remove-orphans --wait postgres
+DB_USER="${POSTGRES_USER:-estrichone}"
+case "$POSTGRES_PASSWORD$DB_USER" in *"'"*|*'"'*) fail "Datenbank-Benutzer/-Passwort enthalten Anführungszeichen." ;; esac
+docker compose -p estrichone exec -T postgres psql -q -v ON_ERROR_STOP=1 -U "$DB_USER" -d "${POSTGRES_DB:-estrichone}" \
+  -c "ALTER USER \"$DB_USER\" PASSWORD '$POSTGRES_PASSWORD';" >/dev/null \
+  || fail "Datenbank-Passwort konnte nicht abgeglichen werden (siehe: docker compose -p estrichone logs postgres)."
+
 docker compose -p estrichone up -d --remove-orphans
 
 URL="$ESTRICHONE_PUBLIC_URL"
