@@ -18,6 +18,7 @@ import SegmentedButton from "sap/m/SegmentedButton";
 import SegmentedButtonItem from "sap/m/SegmentedButtonItem";
 import MessageStrip from "sap/m/MessageStrip";
 import Text from "sap/m/Text";
+import InvisibleText from "sap/ui/core/InvisibleText";
 import VBox from "sap/m/VBox";
 import HBox from "sap/m/HBox";
 import FlexItemData from "sap/m/FlexItemData";
@@ -518,7 +519,8 @@ function listField(id: string, field: Field, initial: unknown, notify: (v: unkno
 		for (const o of phones ? phoneKinds : []) kind!.addItem(new Item({ key: o.key, text: o.text }));
 		const value = new Input({ value: row.value, width: "100%", type: phones ? "Tel" : "Email", maxLength: phones ? 50 : 320,
 			placeholder: phones ? `Nummer ${n}` : `E-Mail ${n}`, liveChange: () => notify(read()) });
-		value.setTooltip(`${phones ? "Telefonnummer" : "E-Mail-Adresse"} ${n}`);
+		const name = new InvisibleText({ text: `${phones ? "Telefonnummer" : "E-Mail-Adresse"} ${n}` });
+		value.addAriaLabelledBy(name);
 		const label = new Input({ value: row.label, width: "9rem", maxLength: 50, placeholder: "Bezeichnung (optional)", tooltip: `Bezeichnung ${n}` });
 		const line = new HBox({ alignItems: "Center", width: "100%", renderType: "Bare" });
 		const entry = { row, kind, value, label, line };
@@ -526,7 +528,7 @@ function listField(id: string, field: Field, initial: unknown, notify: (v: unkno
 			press: () => { rows.splice(rows.indexOf(entry), 1); box.removeItem(line); line.destroy(); notify(read()); } });
 		if (kind) line.addItem(kind.addStyleClass("sapUiTinyMarginEnd"));
 		value.setLayoutData(new FlexItemData({ growFactor: 1 }));
-		line.addItem(value).addItem(label.addStyleClass("sapUiTinyMarginBegin")).addItem(remove);
+		line.addItem(name).addItem(value).addItem(label.addStyleClass("sapUiTinyMarginBegin")).addItem(remove);
 		rows.push(entry);
 		box.insertItem(line, rows.length - 1);
 	};
