@@ -852,6 +852,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -2186,6 +2196,81 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings": {
+      "get": {
+        "tags": [
+          "Einstellungen"
+        ],
+        "summary": "Einstellungen der Installation (für alle Angemeldeten lesbar: Karte, Darstellung, Vorgaben)",
+        "operationId": "GetSystemSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Einstellungen"
+        ],
+        "operationId": "SaveSystemSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveSystemSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemSettingsResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -7584,6 +7669,20 @@
           }
         }
       },
+      "AppearanceSettings": {
+        "type": "object",
+        "properties": {
+          "defaultTheme": {
+            "type": "string"
+          },
+          "density": {
+            "type": "string"
+          },
+          "showCompanyLogo": {
+            "type": "boolean"
+          }
+        }
+      },
       "ApprovalResponse": {
         "required": [
           "id",
@@ -7710,6 +7809,25 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "ApprovalSettings": {
+        "type": "object",
+        "properties": {
+          "defaultDueDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "defaultRoleId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "requireCommentOnApprove": {
+            "type": "boolean"
           }
         }
       },
@@ -8157,6 +8275,24 @@
           },
           "runRequested": {
             "type": "boolean"
+          }
+        }
+      },
+      "BauakteDefaults": {
+        "type": "object",
+        "properties": {
+          "assignCreator": {
+            "type": "boolean"
+          },
+          "warnMissingInspection": {
+            "type": "boolean"
+          },
+          "defaultTemplateId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -10473,6 +10609,21 @@
           }
         }
       },
+      "MapSettings": {
+        "type": "object",
+        "properties": {
+          "tileUrl": {
+            "type": "string"
+          },
+          "attribution": {
+            "type": "string"
+          },
+          "maxZoom": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "MaterialCategory": {
         "enum": [
           "screed",
@@ -10607,6 +10758,31 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "NotificationSettings": {
+        "type": "object",
+        "properties": {
+          "approvalRequested": {
+            "type": "boolean"
+          },
+          "approvalDecided": {
+            "type": "boolean"
+          },
+          "helpdeskUpdates": {
+            "type": "boolean"
+          },
+          "newUserLetterByEmail": {
+            "type": "boolean"
+          }
+        }
+      },
+      "NumberingSettings": {
+        "type": "object",
+        "properties": {
+          "bauaktePattern": {
+            "type": "string"
           }
         }
       },
@@ -10854,6 +11030,30 @@
           "delivered",
           "cancelled"
         ]
+      },
+      "PdfSettings": {
+        "type": "object",
+        "properties": {
+          "showCompanyLogo": {
+            "type": "boolean"
+          },
+          "showEstrichOneLogo": {
+            "type": "boolean"
+          },
+          "accentColor": {
+            "type": "string"
+          },
+          "footerText": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "photosPerRow": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
       },
       "PermissionInfo": {
         "required": [
@@ -12348,6 +12548,24 @@
           }
         }
       },
+      "SaveSystemSettingsRequest": {
+        "required": [
+          "settings"
+        ],
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/SystemSettings"
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "ScreedBinder": {
         "enum": [
           "cement",
@@ -12459,6 +12677,19 @@
           },
           "setupRequired": {
             "type": "boolean"
+          }
+        }
+      },
+      "SessionSettings": {
+        "type": "object",
+        "properties": {
+          "idleHours": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rememberDays": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -12853,6 +13084,51 @@
           "serverTime": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "SystemSettings": {
+        "type": "object",
+        "properties": {
+          "session": {
+            "$ref": "#/components/schemas/SessionSettings"
+          },
+          "map": {
+            "$ref": "#/components/schemas/MapSettings"
+          },
+          "numbering": {
+            "$ref": "#/components/schemas/NumberingSettings"
+          },
+          "bauakte": {
+            "$ref": "#/components/schemas/BauakteDefaults"
+          },
+          "approvals": {
+            "$ref": "#/components/schemas/ApprovalSettings"
+          },
+          "notifications": {
+            "$ref": "#/components/schemas/NotificationSettings"
+          },
+          "appearance": {
+            "$ref": "#/components/schemas/AppearanceSettings"
+          },
+          "pdf": {
+            "$ref": "#/components/schemas/PdfSettings"
+          }
+        }
+      },
+      "SystemSettingsResponse": {
+        "required": [
+          "settings",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "settings": {
+            "$ref": "#/components/schemas/SystemSettings"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -13784,6 +14060,10 @@
           "password": {
             "maxLength": 128,
             "type": "string"
+          },
+          "rememberMe": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -13949,6 +14229,9 @@
     },
     {
       "name": "Stammdaten"
+    },
+    {
+      "name": "Einstellungen"
     },
     {
       "name": "Kontakte"

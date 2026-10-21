@@ -9,11 +9,13 @@ public sealed class OrganizationModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ICompanyProfiles, CompanyProfiles>();
+        services.AddScoped<ISystemSettings, SystemSettingsStore>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)
     {
         CompanyEndpoints.Map(api);
         CatalogEndpoints.Map(api);
+        SystemSettingsEndpoints.Map(api);
     }
 }

@@ -20,6 +20,7 @@ import StandardListItem from "sap/m/StandardListItem";
 import type UI5Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import { get, onSessionEnded } from "../util/api";
+import { relogin } from "../util/relogin";
 import { initials } from "../util/format";
 import { setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
@@ -69,10 +70,15 @@ export default class AppController extends BaseController {
 		this.v().setModel(notices.model, "notices");
 		notices.start();
 		session.model.attachPropertyChange(() => this.refreshShell());
-		onSessionEnded((reason) => {
+		onSessionEnded(async (reason) => {
+			// Während der Arbeit: Anmeldedialog über der Seite, die Anfrage wird danach wiederholt.
+			if (reason === "expired" && session.data.user && (await relogin())) {
+				return true;
+			}
 			session.clear();
 			this.resetPages();
 			this.nav(`/anmelden?grund=${reason === "disabled" ? "gesperrt" : "abgelaufen"}`, true);
+			return false;
 		});
 		window.addEventListener("online", () => this.model().setProperty("/online", true));
 		window.addEventListener("offline", () => this.model().setProperty("/online", false));

@@ -77,10 +77,11 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Shellcheck
         run: shellcheck web/scripts/e2e.sh
-      - name: PostgreSQL + API + Web-Image starten, Playwright
+      - name: PostgreSQL + API + Web-Image hinter Nginx (10-MB-Grenze wie Nginx Proxy Manager), Playwright
         working-directory: web
         env:
           WEB_IMAGE: estrichone/web:ci
+          E2E_PROXY: nginx
           SCREENSHOTS: "1"
         run: scripts/e2e.sh
       - name: Bildschirmfotos sichern

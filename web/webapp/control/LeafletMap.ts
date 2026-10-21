@@ -3,6 +3,7 @@ import type RenderManager from "sap/ui/core/RenderManager";
 import includeStylesheet from "sap/ui/dom/includeStylesheet";
 import type { MetadataOptions } from "sap/ui/core/Element";
 import L from "leaflet";
+import { mapTiles } from "../util/systemSettings";
 
 export interface MapMarker {
 	id: string;
@@ -83,10 +84,17 @@ export default class LeafletMap extends Control {
 			const interactive = this.getInteractive();
 			this.map = L.map(this.host, { zoomControl: interactive, dragging: interactive, scrollWheelZoom: interactive, doubleClickZoom: interactive,
 				attributionControl: true, keyboard: interactive }).setView(fallbackCenter, 6);
-			L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-				maxZoom: 19,
-				attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">OpenStreetMap</a>-Mitwirkende',
-			}).addTo(this.map);
+			const map = this.map;
+			void mapTiles().then((tiles) => {
+				// Die Kachelserver verlangen einen Referer (OSM-Nutzungsbedingungen); die Seite selbst sendet sonst keinen.
+				L.tileLayer(tiles.tileUrl, {
+					maxZoom: tiles.maxZoom,
+					attribution: tiles.attribution,
+					referrerPolicy: "strict-origin-when-cross-origin",
+					crossOrigin: false,
+				} as L.TileLayerOptions).addTo(map);
+				map.attributionControl.setPrefix('<a href="https://leafletjs.com" target="_blank" rel="noopener">Leaflet</a>');
+			});
 			this.layer = L.layerGroup().addTo(this.map);
 			this.map.on("click", (event: L.LeafletMouseEvent) => {
 				if (this.getPickMode()) {

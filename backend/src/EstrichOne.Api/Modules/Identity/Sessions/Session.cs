@@ -39,8 +39,12 @@ public sealed class Session
     {
     }
 
-    public Session(Guid userId, ClientKind clientKind, string? clientName, DateTimeOffset now, TimeSpan maxLifetime)
+    /// <summary>Web: „angemeldet bleiben“ gewählt (längere Leerlaufzeit).</summary>
+    public bool Persistent { get; private set; }
+
+    public Session(Guid userId, ClientKind clientKind, string? clientName, DateTimeOffset now, TimeSpan maxLifetime, bool persistent = false)
     {
+        Persistent = persistent;
         Id = Guid.CreateVersion7(now);
         UserId = userId;
         ClientKind = clientKind;

@@ -100,17 +100,92 @@ public sealed class WebSessionTests(PostgresFixture postgres) : IAsyncLifetime
         refresh.Headers.Add("X-XSRF-TOKEN", csrf);
         using var response = await browser.SendAsync(refresh, Ct);
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        // Der CSRF-Token bleibt beim Erneuern gleich (parallel laufende Anfragen scheitern sonst).
         var newCsrf = SetCookies(response).Single(c => c.Name == "XSRF-TOKEN").Value.ToString();
-        newCsrf.ShouldNotBe(csrf);
+        newCsrf.ShouldBe(csrf);
         (await response.Content.ReadFromJsonAsync<WebSessionResponse>(TestJson.Options, Ct))!.User.UserName.ShouldBe("buero");
 
         // Nach Ablauf des Zugriffstokens trägt das erneuerte Cookie.
         _factory.Clock.Advance(TimeSpan.FromMinutes(11));
-        (await browser.GetAsync(new Uri("/api/v1/auth/me", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        using var expired = await browser.GetAsync(new Uri("/api/v1/auth/me", UriKind.Relative), Ct);
+        expired.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await expired.ReadProblemAsync()).Code.ShouldBe("ACCESS_TOKEN_EXPIRED");
         using var again = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/web/refresh");
         again.Headers.Add("X-XSRF-TOKEN", newCsrf);
         (await browser.SendAsync(again, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await browser.GetAsync(new Uri("/api/v1/auth/me", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task AccessCookie_LivesAsLongAsTheSession_SoTheClientCanRefreshAfterIdle()
+    {
+        using var browser = Browser();
+        using var response = await browser.PostAsJsonAsync("/api/v1/auth/web/login",
+            new { login = "buero", password = AuthClient.DefaultPassword }, Ct);
+        var cookies = SetCookies(response).ToDictionary(c => c.Name.ToString());
+
+        cookies["eo_at"].Expires.ShouldBe(cookies["eo_rt"].Expires);
+        // Standard ohne „angemeldet bleiben“: 12 Stunden Leerlauf.
+        (cookies["eo_rt"].Expires!.Value - _factory.Clock.GetUtcNow()).ShouldBe(TimeSpan.FromHours(12), TimeSpan.FromMinutes(1));
+    }
+
+    [Fact]
+    public async Task Session_SlidesWithActivity_EndsAfterIdle_RememberMeKeepsLonger()
+    {
+        var (browser, csrf) = await SignedInAsync();
+        using var _ = browser;
+
+        async Task<HttpStatusCode> RefreshAsync(HttpClient client, string token)
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/web/refresh");
+            request.Headers.Add("X-XSRF-TOKEN", token);
+            using var response = await client.SendAsync(request, Ct);
+            return response.StatusCode;
+        }
+
+        // Aktiv: alle 11 Stunden erneuert – länger als die Leerlaufzeit am Stück, trotzdem angemeldet.
+        _factory.Clock.Advance(TimeSpan.FromHours(11));
+        (await RefreshAsync(browser, csrf)).ShouldBe(HttpStatusCode.OK);
+        _factory.Clock.Advance(TimeSpan.FromHours(11));
+        (await RefreshAsync(browser, csrf)).ShouldBe(HttpStatusCode.OK);
+
+        // Leerlauf über 12 Stunden: abgelaufen.
+        _factory.Clock.Advance(TimeSpan.FromHours(13));
+        (await RefreshAsync(browser, csrf)).ShouldBe(HttpStatusCode.Unauthorized);
+
+        using var remembered = Browser();
+        using var login = await remembered.PostAsJsonAsync("/api/v1/auth/web/login",
+            new { login = "buero", password = AuthClient.DefaultPassword, rememberMe = true }, Ct);
+        var token = SetCookies(login).Single(c => c.Name == "XSRF-TOKEN").Value.ToString();
+        _factory.Clock.Advance(TimeSpan.FromDays(5));
+        (await RefreshAsync(remembered, token)).ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ConcurrentRefresh_FromSecondTab_DoesNotEndTheSession()
+    {
+        // Zwei Tabs senden denselben Refresh-Token fast gleichzeitig.
+        using var tab = Browser();
+        using var login = await tab.PostAsJsonAsync("/api/v1/auth/web/login",
+            new { login = "buero", password = AuthClient.DefaultPassword }, Ct);
+        var tabCsrf = SetCookies(login).Single(c => c.Name == "XSRF-TOKEN").Value.ToString();
+        var rt = SetCookies(login).Single(c => c.Name == "eo_rt").Value.ToString();
+
+        HttpRequestMessage Refresh()
+        {
+            var request = new HttpRequestMessage(HttpMethod.Post, "/api/v1/auth/web/refresh");
+            request.Headers.Add("X-XSRF-TOKEN", tabCsrf);
+            request.Headers.Add("Cookie", $"eo_rt={rt}; XSRF-TOKEN={tabCsrf}");
+            return request;
+        }
+
+        using var raw = _factory.CreateClient(new WebApplicationFactoryClientOptions { BaseAddress = new Uri("https://localhost"), HandleCookies = false });
+        using var r1 = Refresh();
+        (await raw.SendAsync(r1, Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var r2 = Refresh();
+        using var second = await raw.SendAsync(r2, Ct);
+        second.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        second.Headers.Contains("Set-Cookie").ShouldBeFalse();
     }
 
     [Fact]

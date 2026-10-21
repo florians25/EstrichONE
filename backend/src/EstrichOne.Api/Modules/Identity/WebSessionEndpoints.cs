@@ -12,7 +12,8 @@ namespace EstrichOne.Api.Modules.Identity;
 
 public sealed record WebLoginRequest(
     [property: Required, MaxLength(320)] string Login,
-    [property: Required, MaxLength(PasswordPolicy.MaxLength)] string Password);
+    [property: Required, MaxLength(PasswordPolicy.MaxLength)] string Password,
+    bool RememberMe = false);
 
 public sealed record WebSessionResponse(UserSummary User, bool MustChangePassword, DateTimeOffset AccessTokenExpiresAt);
 
@@ -42,7 +43,7 @@ internal static class WebSessionEndpoints
 
         web.MapPost("/refresh", RefreshAsync).WithName("WebRefresh")
             .WithSummary("Sitzung im Browser verlängern (Refresh-Cookie, CSRF-Header erforderlich)")
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status401Unauthorized).ProducesProblem(StatusCodes.Status409Conflict)
             .AllowAnonymous().RequireRateLimiting(AuthEndpoints.RateLimitPolicy);
 
         web.MapPost("/logout", LogoutAsync).WithName("WebLogout")
@@ -54,7 +55,8 @@ internal static class WebSessionEndpoints
         WebLoginRequest request, LoginService login, HttpContext http, CancellationToken cancellationToken)
     {
         var result = await login.LoginAsync(request.Login, request.Password, ClientKind.Web,
-            Truncate(http.Request.Headers.UserAgent.ToString(), 100), http.Connection.RemoteIpAddress?.ToString(), cancellationToken);
+            Truncate(http.Request.Headers.UserAgent.ToString(), 100), http.Connection.RemoteIpAddress?.ToString(), cancellationToken,
+            request.RememberMe);
 
         if (result.Failure == LoginFailure.LockedOut)
         {
@@ -70,7 +72,7 @@ internal static class WebSessionEndpoints
         }
 
         var tokens = result.Tokens!;
-        SetCookies(http, tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken, tokens.RefreshTokenExpiresAt);
+        SetCookies(http, tokens.AccessToken, tokens.RefreshToken, tokens.RefreshTokenExpiresAt, newCsrfToken: true);
         return TypedResults.Ok(new WebSessionResponse(AuthEndpoints.Summarize(result.User!), result.MustChangePassword, tokens.AccessTokenExpiresAt));
     }
 
@@ -84,7 +86,14 @@ internal static class WebSessionEndpoints
         }
 
         var refreshToken = http.Request.Cookies[RefreshCookie];
-        var (tokens, _) = refreshToken is null ? (null, null) : await sessions.RefreshAsync(refreshToken, null, cancellationToken);
+        var (tokens, failure) = refreshToken is null ? (null, null) : await sessions.RefreshAsync(refreshToken, null, cancellationToken);
+        if (failure == RefreshFailure.Concurrent)
+        {
+            // Ein anderer Tab hat soeben erneuert; dessen Cookies gelten. Nichts löschen, der Client wiederholt einfach.
+            return AuthEndpoints.Problem(StatusCodes.Status409Conflict, "REFRESH_IN_PROGRESS", "Bereits erneuert",
+                "Die Sitzung wurde gerade in einem anderen Fenster erneuert.");
+        }
+
         if (tokens is null)
         {
             ClearCookies(http);
@@ -92,7 +101,7 @@ internal static class WebSessionEndpoints
                 "Die Sitzung ist abgelaufen. Bitte neu anmelden.");
         }
 
-        SetCookies(http, tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken, tokens.RefreshTokenExpiresAt);
+        SetCookies(http, tokens.AccessToken, tokens.RefreshToken, tokens.RefreshTokenExpiresAt, newCsrfToken: false);
         var user = await db.Set<Session>().Where(s => s.Id == tokens.SessionId)
             .Join(db.Set<User>(), s => s.UserId, u => u.Id, (_, u) => u)
             .AsNoTracking().SingleAsync(cancellationToken);
@@ -124,12 +133,20 @@ internal static class WebSessionEndpoints
             && CryptographicOperations.FixedTimeEquals(System.Text.Encoding.UTF8.GetBytes(cookie), System.Text.Encoding.UTF8.GetBytes(header));
     }
 
-    private static void SetCookies(HttpContext http, string accessToken, DateTimeOffset accessExpires, string refreshToken, DateTimeOffset refreshExpires)
+    /// <summary>
+    /// Das Zugriffs-Cookie lebt so lange wie die Sitzung: Ist nur das Token abgelaufen, meldet der Server
+    /// ACCESS_TOKEN_EXPIRED und der Client erneuert still – statt ohne Cookie als „nicht angemeldet“ zu gelten.
+    /// Der CSRF-Token bleibt beim Erneuern gleich, damit parallel laufende Anfragen nicht scheitern.
+    /// </summary>
+    private static void SetCookies(HttpContext http, string accessToken, string refreshToken, DateTimeOffset refreshExpires, bool newCsrfToken)
     {
         var cookies = http.Response.Cookies;
-        cookies.Append(AccessCookie, accessToken, Options("/api", accessExpires, httpOnly: true));
+        cookies.Append(AccessCookie, accessToken, Options("/api", refreshExpires, httpOnly: true));
         cookies.Append(RefreshCookie, refreshToken, Options(RefreshPath, refreshExpires, httpOnly: true));
-        cookies.Append(CsrfCookie, Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32)), Options("/", refreshExpires, httpOnly: false));
+        var csrf = !newCsrfToken && http.Request.Cookies[CsrfCookie] is { Length: 64 } existing
+            ? existing
+            : Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+        cookies.Append(CsrfCookie, csrf, Options("/", refreshExpires, httpOnly: false));
     }
 
     private static void ClearCookies(HttpContext http)

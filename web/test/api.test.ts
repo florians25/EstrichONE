@@ -1,5 +1,8 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, onSessionEnded, problemMessage } from '../webapp/util/api';
+import { api, ApiError, NetworkError, onSessionEnded, problemMessage, setRetryDelay } from '../webapp/util/api';
+import { uploadError } from '../webapp/util/upload';
+
+setRetryDelay(1);
 
 const problem = (status: number, body: object) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/problem+json' } });
@@ -39,7 +42,43 @@ describe('api', () => {
     expect(String(fetch.mock.calls[1][0])).toContain('/api/v1/auth/web/refresh');
   });
 
-  it('erklärt Netzwerkfehler', () => {
-    expect(problemMessage(new TypeError('Failed to fetch'))).toContain('nicht erreichbar');
+  it('erneuert auch, wenn das Zugriffs-Cookie schon abgelaufen ist (Code UNAUTHORIZED)', async () => {
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(problem(401, { code: 'UNAUTHORIZED' }))
+      .mockResolvedValueOnce(new Response(null, { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify([1]), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetch);
+    await expect(api<number[]>('bauakten')).resolves.toEqual([1]);
+  });
+
+  it('wiederholt die Anfrage nach erneuter Anmeldung im Dialog (keine verlorenen Eingaben)', async () => {
+    onSessionEnded(() => Promise.resolve(true));
+    const fetch = vi.fn()
+      .mockResolvedValueOnce(problem(401, { code: 'UNAUTHORIZED' }))
+      .mockResolvedValueOnce(problem(401, { code: 'SESSION_EXPIRED' }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ saved: true }), { status: 200, headers: { 'Content-Type': 'application/json' } }));
+    vi.stubGlobal('fetch', fetch);
+    await expect(api('notes', { method: 'POST', body: {} })).resolves.toEqual({ saved: true });
+    expect(fetch).toHaveBeenCalledTimes(3);
+  });
+
+  it('wiederholt lesende Anfragen nach kurzen Aussetzern, schreibende nicht', async () => {
+    const ok = () => new Response(JSON.stringify({ ok: 1 }), { status: 200, headers: { 'Content-Type': 'application/json' } });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(new Response('', { status: 502 })).mockResolvedValueOnce(ok()));
+    await expect(api('bauakten')).resolves.toEqual({ ok: 1 });
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValueOnce(new TypeError('Failed to fetch')).mockResolvedValueOnce(ok()));
+    await expect(api('notes', { method: 'POST', body: {} })).rejects.toBeInstanceOf(NetworkError);
+  });
+
+  it('erklärt Netzwerkfehler und verwechselt Programmfehler nicht damit', () => {
+    expect(problemMessage(new NetworkError())).toContain('nicht erreichbar');
+    expect(problemMessage(new TypeError("Cannot read properties of undefined (reading 'x')"))).toContain('unerwarteter Fehler');
+  });
+
+  it('nennt beim Hochladen die Ursache statt „nicht erreichbar“', () => {
+    expect(uploadError(413, {}).message).toContain('client_max_body_size');
+    expect(uploadError(0, {}).message).toContain('unterbrochen');
+    expect(uploadError(0, { code: 'TIMEOUT' }).message).toContain('Zeitüberschreitung');
+    expect(uploadError(422, { detail: 'Dateityp nicht erlaubt.' }).message).toBe('Dateityp nicht erlaubt.');
   });
 });

@@ -27,7 +27,11 @@ export class ApiError extends Error {
 	}
 }
 
-type Listener = (reason: "expired" | "disabled") => void;
+/**
+ * Reaktion auf eine beendete Sitzung. Liefert `true`, wenn der Benutzer sich (z. B. im Anmeldedialog) erneut
+ * angemeldet hat – dann wird die Anfrage wiederholt, ohne dass Eingaben verloren gehen.
+ */
+type Listener = (reason: "expired" | "disabled") => boolean | Promise<boolean> | void;
 let sessionEnded: Listener = () => undefined;
 let refreshing: Promise<boolean> | null = null;
 
@@ -52,15 +56,27 @@ export function csrfHeaders(method: string): Record<string, string> {
 	return token && !["GET", "HEAD", "OPTIONS"].includes(method) ? { "X-XSRF-TOKEN": decodeURIComponent(token) } : {};
 }
 
+/** Die Anfrage hat den Server nicht erreicht (kein Netz, Proxy bricht ab, Zeitüberschreitung). */
+export class NetworkError extends Error {
+	constructor(message = "Der Server ist nicht erreichbar.") {
+		super(message);
+	}
+}
+
 /** Verständliche Meldung zu jedem Fehler (für MessageBox und Formulare). */
 export function problemMessage(error: unknown): string {
 	if (error instanceof ApiError) {
 		return error.message;
 	}
-	if (error instanceof TypeError) {
-		return "Der Server ist nicht erreichbar. Bitte die Verbindung prüfen und erneut versuchen.";
+	if (error instanceof NetworkError || (error instanceof TypeError && /fetch|network|load failed/i.test(error.message))) {
+		return typeof navigator !== "undefined" && navigator.onLine === false
+			? "Keine Internetverbindung. Bitte die Verbindung prüfen und erneut versuchen."
+			: error instanceof NetworkError && error.message !== "Der Server ist nicht erreichbar."
+				? error.message
+				: "Der Server ist nicht erreichbar. Bitte die Verbindung prüfen und erneut versuchen.";
 	}
-	return "Ein unerwarteter Fehler ist aufgetreten.";
+	const detail = error instanceof Error && error.message ? ` (${error.message})` : "";
+	return `Ein unerwarteter Fehler ist aufgetreten${detail}. Bitte die Seite neu laden und erneut versuchen.`;
 }
 
 async function toError(response: Response): Promise<ApiError> {
@@ -75,15 +91,44 @@ async function toError(response: Response): Promise<ApiError> {
 	return new ApiError(response.status, problem?.code, message, problem);
 }
 
-/** Sitzung einmal erneuern – auch bei parallelen Anfragen nur einmal. */
-function refresh(): Promise<boolean> {
+/**
+ * Sitzung einmal erneuern – auch bei parallelen Anfragen nur einmal. 409 heißt: ein anderer Tab hat gerade erneuert,
+ * die Cookies sind schon neu; die Anfrage kann einfach wiederholt werden.
+ */
+export function refreshSession(): Promise<boolean> {
 	refreshing ??= fetch("/api/v1/auth/web/refresh", { method: "POST", credentials: "same-origin", headers: csrfHeaders("POST") })
-		.then((r) => r.ok)
+		.then((r) => r.ok || r.status === 409)
 		.catch(() => false)
 		.finally(() => {
 			refreshing = null;
 		});
 	return refreshing;
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+/**
+ * Lesende Anfragen überstehen kurze Aussetzer (Netz, Neustart des Servers, 502/503/504 vom Proxy) mit zwei
+ * Wiederholungen; schreibende Anfragen werden nie automatisch wiederholt.
+ */
+async function sendWithRetry(send: () => Promise<Response>, method: string): Promise<Response> {
+	const idempotent = method === "GET" || method === "HEAD";
+	for (let attempt = 0; ; attempt++) {
+		try {
+			const response = await send();
+			const transient = [502, 503, 504].includes(response.status) && response.headers.get("Content-Type")?.includes("problem") !== true;
+			if (!idempotent || !transient || attempt >= 2) return response;
+		} catch (error) {
+			if (!idempotent || attempt >= 2) throw error;
+		}
+		await wait(retryDelay * (attempt + 1));
+	}
+}
+
+let retryDelay = 800;
+/** Nur für Tests: Wartezeit zwischen Wiederholungen. */
+export function setRetryDelay(ms: number): void {
+	retryDelay = ms;
 }
 
 export type Query = Record<string, string | number | boolean | null | undefined>;
@@ -125,18 +170,23 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 				...options.headers,
 			},
 			body: options.raw ?? (options.body !== undefined ? JSON.stringify(options.body) : undefined),
+		}).catch(() => {
+			throw new NetworkError();
 		});
 
-	let response = await send();
+	let response = await sendWithRetry(send, method);
 	if (response.status === 401 && !url.startsWith("/api/v1/auth/web/")) {
-		const error = await toError(response);
-		if (error.code === "ACCESS_TOKEN_EXPIRED" && (await refresh())) {
+		let error = await toError(response);
+		// Abgelaufenes oder (nach Ablauf des Cookies) fehlendes Zugriffstoken: still erneuern und wiederholen.
+		if (error.code !== "USER_DISABLED" && (await refreshSession())) {
 			response = await send();
-		} else {
-			if (!options.quiet) {
-				sessionEnded(error.code === "USER_DISABLED" ? "disabled" : "expired");
+			if (response.status === 401) error = await toError(response);
+		}
+		if (response.status === 401) {
+			if (options.quiet || !(await sessionEnded(error.code === "USER_DISABLED" ? "disabled" : "expired"))) {
+				throw error;
 			}
-			throw error;
+			response = await send();
 		}
 	}
 	if (!response.ok) {

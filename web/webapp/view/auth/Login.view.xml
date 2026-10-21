@@ -17,6 +17,7 @@
 			</Input>
 			<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
 			<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit"/>
+			<CheckBox id="loginRemember" text="{i18n>login.remember}" selected="{view>/remember}" class="sapUiTinyMarginTop"/>
 			<MessageStrip id="loginError" text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginTop">
 				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
 			</MessageStrip>

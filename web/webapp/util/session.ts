@@ -60,8 +60,8 @@ class Session {
 		}
 	}
 
-	async signIn(login: string, password: string): Promise<void> {
-		const session = await post<WebSessionResponse>("auth/web/login", { login, password });
+	async signIn(login: string, password: string, rememberMe = false): Promise<void> {
+		const session = await post<WebSessionResponse>("auth/web/login", { login, password, rememberMe });
 		this.model.setProperty("/user", session.user);
 		this.model.setProperty("/mustChangePassword", session.mustChangePassword);
 		await this.loadPermissions();

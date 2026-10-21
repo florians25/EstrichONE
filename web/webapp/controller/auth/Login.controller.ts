@@ -6,13 +6,14 @@ import { problemMessage } from "../../util/api";
 import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
 import { logos } from "../../util/theme";
+import { readRemember, writeRemember } from "../../util/relogin";
 
 /** @namespace estrichone.controller.auth */
 export default class Login extends BaseController {
 	private target = "/";
 
 	onInit(): void {
-		this.local({ login: "", password: "", error: "", busy: false, reason: "", logo: logos(Theming.getTheme()).horizontal });
+		this.local({ login: "", password: "", remember: readRemember(), error: "", busy: false, reason: "", logo: logos(Theming.getTheme()).horizontal });
 		Theming.attachApplied(() => this.model().setProperty("/logo", logos(Theming.getTheme()).horizontal));
 	}
 
@@ -38,7 +39,9 @@ export default class Login extends BaseController {
 		model.setProperty("/busy", true);
 		model.setProperty("/error", "");
 		try {
-			await session.signIn(login, password);
+			const remember = model.getProperty("/remember") === true;
+			writeRemember(remember);
+			await session.signIn(login, password, remember);
 			model.setProperty("/password", "");
 			this.nav(this.target.startsWith("/") && !this.target.startsWith("//") ? this.target : "/", true);
 		} catch (error) {

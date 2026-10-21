@@ -1930,6 +1930,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_seen_at");
 
+                    b.Property<bool>("Persistent")
+                        .HasColumnType("boolean")
+                        .HasColumnName("persistent");
+
                     b.Property<string>("RevokeReason")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
@@ -2411,6 +2415,36 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_company_profile_singleton", "id = 1");
                         });
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Organization.SystemSettingsRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_system_settings");
+
+                    b.ToTable("system_settings", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Absence", b =>

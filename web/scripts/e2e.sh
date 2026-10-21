@@ -3,6 +3,8 @@
 # PostgreSQL (Docker) + API + UI5-Entwicklungsserver (ui5 serve mit Proxy auf die API), dann Playwright.
 # UI5_SERVE überschreibt den Aufruf des Entwicklungsservers (z. B. in einem Container mit anderem Node.js).
 # WEB_IMAGE=estrichone/web:… testet stattdessen das fertige Image (Caddy, HTTPS, CSP) wie im Betrieb.
+# Zusätzlich E2E_PROXY=nginx: Caddy in der Betriebsart „proxy“ hinter Nginx mit client_max_body_size 10m
+# (wie Nginx Proxy Manager mit knapper Größengrenze).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 API_PORT=5080
@@ -19,7 +21,8 @@ cleanup() {
     tail -n 30 "$WORK/api.log" >&2 || true
   fi
   for pid in "${PIDS[@]}"; do kill "$pid" 2>/dev/null || true; done
-  if [[ -n "$CLEANUP_CONTAINER" ]]; then docker rm -f "$CLEANUP_CONTAINER" >/dev/null 2>&1 || true; fi
+  # shellcheck disable=SC2086 # mehrere Containernamen
+  if [[ -n "$CLEANUP_CONTAINER" ]]; then docker rm -f $CLEANUP_CONTAINER >/dev/null 2>&1 || true; fi
   docker rm -f "$DB_CONTAINER" >/dev/null 2>&1 || true
   rm -rf "$WORK"
 }
@@ -33,6 +36,7 @@ until docker exec "$DB_CONTAINER" pg_isready -U estrichone -d estrichone >/dev/n
 export ConnectionStrings__Default="Host=localhost;Port=$DB_PORT;Database=estrichone;Username=estrichone;Password=estrichone"
 export ASPNETCORE_URLS="http://localhost:$API_PORT"
 export EstrichOne__PublicUrl="${WEB_IMAGE:+https://localhost:8443}"
+if [[ -n "${WEB_IMAGE:-}" && "${E2E_PROXY:-}" == "nginx" ]]; then EstrichOne__PublicUrl="http://localhost:8089"; fi
 [[ -n "$EstrichOne__PublicUrl" ]] || EstrichOne__PublicUrl="http://localhost:4200"
 export EstrichOne__ServerName="Estrichbau E2E GmbH"
 export EstrichOne__Files__RootPath="$WORK/files"
@@ -55,11 +59,35 @@ cd "$ROOT/web"
 if [[ -n "${WEB_IMAGE:-}" ]]; then
   # Gleiches Caddyfile wie im Betrieb, nur mit lokaler API-Adresse.
   sed "s/api:8080/localhost:$API_PORT/g" "$ROOT/deploy/Caddyfile" >"$WORK/Caddyfile"
-  docker rm -f estrichone-web-e2e >/dev/null 2>&1 || true
-  docker run -d --name estrichone-web-e2e --network host -e ESTRICHONE_DOMAIN=localhost -e ESTRICHONE_HTTPS_PORT=8443 -e ESTRICHONE_HTTP_PORT=8088 \
-    -v "$WORK/Caddyfile:/etc/caddy/Caddyfile:ro" "$WEB_IMAGE" >/dev/null
-  CLEANUP_CONTAINER=estrichone-web-e2e
-  export E2E_BASE_URL=https://localhost:8443
+  docker rm -f estrichone-web-e2e estrichone-proxy-e2e >/dev/null 2>&1 || true
+  if [[ "${E2E_PROXY:-}" == "nginx" ]]; then
+    docker run -d --name estrichone-web-e2e --network host -e ESTRICHONE_MODE=proxy -e ESTRICHONE_HTTP_PORT=8088 \
+      -v "$WORK/Caddyfile:/etc/caddy/Caddyfile:ro" "$WEB_IMAGE" >/dev/null
+    cat >"$WORK/nginx.conf" <<'NGINX'
+events {}
+http {
+  client_max_body_size 10m;
+  server {
+    listen 8089;
+    location / {
+      proxy_pass http://127.0.0.1:8088;
+      proxy_http_version 1.1;
+      proxy_set_header Host $http_host;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Forwarded-Proto $scheme;
+    }
+  }
+}
+NGINX
+    docker run -d --name estrichone-proxy-e2e --network host -v "$WORK/nginx.conf:/etc/nginx/nginx.conf:ro" nginx:1.27-alpine >/dev/null
+    CLEANUP_CONTAINER="estrichone-web-e2e estrichone-proxy-e2e"
+    export E2E_BASE_URL=http://localhost:8089
+  else
+    docker run -d --name estrichone-web-e2e --network host -e ESTRICHONE_DOMAIN=localhost -e ESTRICHONE_HTTPS_PORT=8443 -e ESTRICHONE_HTTP_PORT=8088 \
+      -v "$WORK/Caddyfile:/etc/caddy/Caddyfile:ro" "$WEB_IMAGE" >/dev/null
+    CLEANUP_CONTAINER=estrichone-web-e2e
+    export E2E_BASE_URL=https://localhost:8443
+  fi
   for _ in $(seq 1 60); do
     curl -skf --noproxy localhost "$E2E_BASE_URL/" >/dev/null && break
     sleep 1

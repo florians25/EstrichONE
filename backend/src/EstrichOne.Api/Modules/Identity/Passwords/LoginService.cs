@@ -28,7 +28,7 @@ public sealed class LoginService(
     IAuditLog audit)
 {
     public async Task<LoginResult> LoginAsync(string login, string password, ClientKind clientKind, string? clientName,
-        string? ipAddress, CancellationToken cancellationToken)
+        string? ipAddress, CancellationToken cancellationToken, bool rememberMe = false)
     {
         var settings = options.Value;
         var now = clock.GetUtcNow();
@@ -71,7 +71,7 @@ public sealed class LoginService(
 
         await db.Set<FailedLogin>().Where(f => f.NormalizedLogin == normalized).ExecuteDeleteAsync(cancellationToken);
         user.RecordLogin(now);
-        var tokens = sessions.Start(user, clientKind, clientName);
+        var tokens = await sessions.StartAsync(user, clientKind, clientName, rememberMe, cancellationToken);
         audit.Record(AuditActions.LoginSucceeded, user.Id, "session", tokens.SessionId.ToString(),
             new Dictionary<string, string?> { ["client"] = clientKind.ToString() });
         await db.SaveChangesAsync(cancellationToken);

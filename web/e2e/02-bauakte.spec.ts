@@ -375,6 +375,13 @@ test('Prüfungen und Bautagebuch aus der App erscheinen in der Bauakte', async (
 });
 
 test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page }) => {
+  // Kachelserver verlangen einen Referer (OSM: sonst „403 Access blocked“).
+  const referers: string[] = [];
+  const pixel = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
+  await page.route('https://tile.openstreetmap.org/**', (route) => {
+    referers.push(route.request().headers()['referer'] ?? '');
+    return route.fulfill({ status: 200, contentType: 'image/png', body: pixel });
+  });
   await signIn(page, 'admin', adminPassword);
   await openAkte(page);
   await expect(page.getByText('Offene Aufgaben und Mängel').first()).toBeVisible();
@@ -385,6 +392,9 @@ test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page
   await expect(toast(page)).toContainText('Standort gespeichert');
   await expect(page.getByRole('button', { name: 'Standort ändern' })).toBeVisible();
   await expect(page.locator('.leaflet-interactive').first()).toBeVisible();
+  await expect(page.locator('img.leaflet-tile').first()).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
+  expect(referers.length).toBeGreaterThan(0);
+  expect(referers.every((r) => r.startsWith(new URL(page.url()).origin))).toBe(true);
 });
 
 test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async ({ page }) => {
