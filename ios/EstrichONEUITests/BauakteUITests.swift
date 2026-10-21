@@ -201,8 +201,10 @@ final class BauakteUITests: XCTestCase {
     @MainActor
     func testReportProblemWithDiagnosticsPreview() {
         let app = launchSignedIn()
-        // Hinweis des Betreibers als Banner auf der Startseite.
+        // Hinweis des Betreibers als Banner auf der Startseite, darunter „Wer fährt wohin“ für heute.
         XCTAssertTrue(app.text(containing: "Neue App-Version").waitForExistence(timeout: 20), app.debugDescription)
+        let dispatch = app.text(containing: "Halle Gewerbering")
+        XCTAssertTrue(dispatch.waitForExistence(timeout: 15) || app.reveal(dispatch), app.debugDescription)
         app.tapElement(app.tabBars.buttons["Mehr"].firstMatch, "Reiter Mehr")
         app.tap("reportProblemButton")
         app.type("Fotos werden nicht übertragen", into: "ticketTitleField")
@@ -211,5 +213,35 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.staticTexts["Fehlercodes"].waitForExistence(timeout: 10))
         app.tap("sendTicketButton")
         XCTAssertTrue(app.alerts["Meldung gespeichert"].waitForExistence(timeout: 15))
+    }
+
+    @MainActor
+    func testInitialInspectionRightAfterCreationAndProtocol() {
+        let app = launchSignedIn()
+        app.tap("newBauakteTile")
+        app.chooseSegment("Assistent")
+        app.tap("newCustomerButton")
+        app.type("Familie Berger", into: "customerNameField")
+        app.tap("wizardNextButton")
+        app.type("EFH Berger", into: "newTitleField")
+        app.tap("wizardNextButton")
+
+        // Beim Kunden vor Ort: Anlegen und direkt die Erstbegehung durchführen.
+        app.tapElement(app.reveal("createAndInspectButton"), "createAndInspectButton")
+        app.tap("startInspectionButton", timeout: 20)
+        for (check, answer) in [("substrate", "ok"), ("edgeInsulation", "ok"), ("heatingPressureTest", "notOk"),
+                                ("access", "ok"), ("utilities", "notApplicable")] {
+            app.tap("answer-\(check)-\(answer)")
+        }
+        app.type("Heizkreis Bad undicht, Kunde informiert", into: "inspectionRemarksField")
+        app.tap("finishInspectionButton")
+
+        // Anzeige: Protokoll mit Ergebnis und Notizen.
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
+        app.tapElement(app.reveal("inspectionProtocolLink"), "inspectionProtocolLink")
+        let status = app.element("inspectionStatus")
+        XCTAssertTrue(status.waitForExistence(timeout: 10), app.debugDescription)
+        XCTAssertTrue(status.label.contains("1 Mangel"), status.label)
+        XCTAssertTrue(app.text(containing: "Heizkreis Bad undicht").waitForExistence(timeout: 5) || app.reveal(app.text(containing: "Heizkreis Bad undicht")))
     }
 }

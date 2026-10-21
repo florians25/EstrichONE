@@ -12,9 +12,12 @@ struct HomeView: View {
     @State private var creating = false
     @State private var reporting = false
     @State private var captureFor: Bauakte?
+    @State private var inspectFor: Bauakte?
     @State private var planning: MyPlanning.Snapshot?
     @State private var openTasks = 0
+    @State private var tasks: [WorkItem] = []
     @State private var recent: [Bauakte] = []
+    @State private var dispatch: DispatchData.Day?
 
     var body: some View {
         NavigationStack(path: $path) {
@@ -32,6 +35,12 @@ struct HomeView: View {
                         .padding(.horizontal)
                     TodayAssignments(snapshot: planning) { path.append(.bauakte($0)) }
                         .padding(.horizontal)
+                    dispatchCard
+                        .padding(.horizontal)
+                    if !tasks.isEmpty {
+                        tasksCard
+                            .padding(.horizontal)
+                    }
                     navigation
                         .padding(.horizontal)
                     if !recent.isEmpty {
@@ -60,6 +69,9 @@ struct HomeView: View {
                     }
                 }
                 .padding(.bottom, 24)
+                // iPad: Inhalte nicht über die ganze Breite ziehen.
+                .frame(maxWidth: 860)
+                .frame(maxWidth: .infinity)
             }
             .background(Theme.surfaceAlt)
             .toolbar(.hidden, for: .navigationBar)
@@ -69,16 +81,19 @@ struct HomeView: View {
                 case .tasks: MyTasksView()
                 case .week: MyWeekView()
                 case .sync: if let sync = model.active?.sync { SyncView(sync: sync) }
+                case .dispatch: DispatchView()
                 }
             }
             .sheet(isPresented: $creating) {
-                NewBauakteView { id, photograph in
+                NewBauakteView { id, next in
                     creating = false
                     path.append(.bauakte(id))
-                    if photograph {
+                    if next != .open {
                         Task {
+                            // Erst wenn das Anlageblatt geschlossen ist, Kamera bzw. Erstbegehung öffnen.
                             try? await Task.sleep(for: .milliseconds(600))
-                            captureFor = try? await model.active?.service?.bauakte(id)
+                            let created = try? await model.active?.service?.bauakte(id)
+                            if next == .photograph { captureFor = created } else { inspectFor = created }
                         }
                     }
                 }
@@ -86,6 +101,9 @@ struct HomeView: View {
             .sheet(isPresented: $reporting) { ReportProblemView { reporting = false } }
             .fullScreenCover(item: $captureFor) { bauakte in
                 CameraView(bauakte: bauakte) { _ in captureFor = nil }
+            }
+            .sheet(item: $inspectFor) { bauakte in
+                InitialInspectionView(bauakte: bauakte) { inspectFor = nil }
             }
             .task(id: model.active?.sync?.revision) { await reload() }
             .refreshable {
@@ -102,6 +120,7 @@ struct HomeView: View {
                 Label("Neue Bauakte", systemImage: "folder.badge.plus")
             }
             .buttonStyle(ActionTileStyle(rank: .primary))
+            .keyboardShortcut("n", modifiers: .command)
             .accessibilityIdentifier("newBauakteTile")
             Button { openCapture(.photo) } label: {
                 Label("Foto", systemImage: "camera.fill")
@@ -116,12 +135,83 @@ struct HomeView: View {
         }
     }
 
+    /// „Wer fährt wohin“ heute: die ersten Einsätze aller Kolonnen, Rest über „Alle“.
+    private var dispatchCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionTitle("Wer fährt wohin – heute")
+                Spacer()
+                Button("Alle") { path.append(.dispatch) }
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityIdentifier("dispatchAllButton")
+            }
+            VStack(spacing: 0) {
+                let assignments = dispatch?.assignments ?? []
+                if assignments.isEmpty {
+                    Text(dispatch?.message ?? (dispatch == nil ? "Planung wird geladen …" : "Heute ist nichts eingeplant."))
+                        .font(.subheadline).foregroundStyle(Theme.textSecondary)
+                        .padding(.horizontal, 14)
+                        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
+                }
+                ForEach(Array(assignments.prefix(4).enumerated()), id: \.element.id) { index, assignment in
+                    if index > 0 { Divider().padding(.leading, 14) }
+                    Button { path.append(.bauakte(assignment.bauakteId)) } label: {
+                        DispatchRow(assignment: assignment, isMine: assignment.people.contains { $0.id == model.active?.user.id })
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(RowButtonStyle())
+                }
+                if assignments.count > 4 {
+                    Divider().padding(.leading, 14)
+                    Button { path.append(.dispatch) } label: {
+                        Text("\(assignments.count - 4) weitere Einsätze")
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.actionPrimary)
+                            .padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                    }
+                    .buttonStyle(RowButtonStyle())
+                }
+            }
+            .card()
+        }
+        .accessibilityIdentifier("dispatchCard")
+    }
+
+    /// Offene Aufgaben und Mängel (die drei dringendsten) zum direkten Abhaken.
+    private var tasksCard: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .firstTextBaseline) {
+                SectionTitle("Offene Aufgaben")
+                Spacer()
+                Button("Alle (\(openTasks))") { path.append(.tasks) }.font(.subheadline.weight(.semibold))
+            }
+            VStack(spacing: 0) {
+                ForEach(Array(tasks.prefix(3).enumerated()), id: \.element.id) { index, item in
+                    if index > 0 { Divider().padding(.leading, 14) }
+                    WorkItemRow(item: item, showsBauakte: nil) {
+                        Task {
+                            try? await model.active?.service?.setStatus(item.isDone ? .open : .done, of: item.id)
+                            model.active?.sync?.localChangeMade()
+                            await reload()
+                        }
+                    }
+                    .padding(.horizontal, 10).padding(.vertical, 2)
+                }
+            }
+            .card()
+        }
+    }
+
     private var navigation: some View {
         VStack(spacing: 0) {
             NavigationRow(title: "Bauakten", symbol: "folder.fill", color: Theme.navyLight) { openTab(.bauakten) }
             Divider().padding(.leading, 54)
             NavigationRow(title: "Meine Aufgaben", symbol: "checklist", color: Color(hex: 0xE07A1F), badge: openTasks) { path.append(.tasks) }
                 .accessibilityIdentifier("myTasksTile")
+            Divider().padding(.leading, 54)
+            NavigationRow(title: "Wer fährt wohin", symbol: "car.2.fill", color: Color(hex: 0x0E7490)) { path.append(.dispatch) }
+                .accessibilityIdentifier("dispatchRow")
             Divider().padding(.leading, 54)
             NavigationRow(title: "Meine Woche", symbol: "calendar", color: Color(hex: 0x2F80ED)) { path.append(.week) }
                 .accessibilityIdentifier("myWeekTile")
@@ -136,7 +226,9 @@ struct HomeView: View {
     private func reload() async {
         guard let service = model.active?.service else { return }
         recent = Array(((try? await service.recentBauakten()) ?? []).prefix(3))
-        openTasks = ((try? await service.myWorkItems()) ?? []).count
+        tasks = (try? await service.myWorkItems()) ?? []
+        openTasks = tasks.count
+        dispatch = await DispatchData.load(day: CalendarDay.string(.now), model: model)
         if let store = model.active?.sync?.store {
             planning = await MyPlanning(store: store).load(using: model.active?.client)
         }
@@ -148,6 +240,7 @@ enum HomeRoute: Hashable {
     case tasks
     case week
     case sync
+    case dispatch
 }
 
 /// Zeile wie in den Einstellungen: farbiges Symbol, Titel, Zähler, Pfeil. 44 pt Mindesthöhe.

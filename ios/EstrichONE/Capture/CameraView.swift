@@ -26,8 +26,9 @@ struct CameraView: View {
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var flash = false
 
-    init(bauakte: Bauakte, allowsChangingBauakte: Bool = true, onFinish: @escaping (Int) -> Void) {
+    init(bauakte: Bauakte, allowsChangingBauakte: Bool = true, caption: String = "", onFinish: @escaping (Int) -> Void) {
         _bauakte = State(initialValue: bauakte)
+        _caption = State(initialValue: caption)
         self.allowsChangingBauakte = allowsChangingBauakte
         self.onFinish = onFinish
     }

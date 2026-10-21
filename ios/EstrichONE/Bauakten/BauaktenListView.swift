@@ -4,70 +4,101 @@ import SwiftUI
 /// Reiter „Bauakten“ mit lokaler Suche über Nummer, Bezeichnung und Adresse (funktioniert offline).
 struct BauaktenListView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var search = ""
     @State private var bauakten: [Bauakte] = []
     @State private var customers: [UUID: String] = [:]
     @State private var path: [UUID] = []
+    @State private var selection: UUID?
     @State private var creating = false
     @State private var captureFor: Bauakte?
+    @State private var inspectFor: Bauakte?
 
     var body: some View {
-        NavigationStack(path: $path) {
-            List {
-                if let sync = model.active?.sync {
-                    SyncStatusBar(sync: sync).listRowInsets(EdgeInsets())
-                }
-                if bauakten.isEmpty {
-                    Text(search.isEmpty ? "Noch keine Bauakten auf diesem Gerät." : "Keine Bauakte gefunden.")
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                ForEach(bauakten) { bauakte in
-                    NavigationLink(value: bauakte.id) {
-                        BauakteRow(bauakte: bauakte, customerName: bauakte.customerId.flatMap { customers[$0] })
-                    }
-                    .swipeActions(edge: .leading) {
-                        Button { captureFor = bauakte } label: { Label("Foto", systemImage: "camera.fill") }
-                            .tint(Theme.accentPressed)
-                    }
-                    .contextMenu {
-                        Button("Foto aufnehmen", systemImage: "camera") { captureFor = bauakte }
-                        if let url = MapsLink.url(for: bauakte) {
-                            Link(destination: url) { Label("Route starten", systemImage: "car") }
+        Group {
+            if sizeClass == .regular {
+                // iPad: Liste links, Bauakte rechts (Querformat zweispaltig, Hochformat einblendbar).
+                NavigationSplitView {
+                    list
+                        .navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 440)
+                } detail: {
+                    NavigationStack {
+                        if let selection {
+                            BauakteDetailView(bauakteId: selection).id(selection)
+                        } else {
+                            ContentUnavailableView("Bauakte wählen", systemImage: "folder",
+                                                   description: Text("Links eine Bauakte antippen oder mit ⌘N eine neue anlegen."))
                         }
                     }
                 }
-            }
-            .listStyle(.plain)
-            .navigationTitle("Bauakten")
-            .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
-            .navigationDestination(for: UUID.self) { BauakteDetailView(bauakteId: $0) }
-            .safeAreaInset(edge: .bottom, alignment: .trailing) {
-                NewBauakteButton { creating = true }
-            }
-            .sheet(isPresented: $creating) {
-                NewBauakteView { id, photograph in
-                    creating = false
-                    path.append(id)
-                    if photograph {
-                        Task {
-                            // Erst wenn das Anlageblatt geschlossen ist, die Kamera öffnen.
-                            try? await Task.sleep(for: .milliseconds(600))
-                            captureFor = try? await model.active?.service?.bauakte(id)
-                        }
-                    }
+                .navigationSplitViewStyle(.balanced)
+            } else {
+                NavigationStack(path: $path) {
+                    list
+                        .navigationDestination(for: UUID.self) { BauakteDetailView(bauakteId: $0) }
                 }
             }
-            .fullScreenCover(item: $captureFor) { bauakte in
-                CameraView(bauakte: bauakte) { _ in captureFor = nil }
-            }
-            .task(id: "\(search)|\(model.active?.sync?.revision ?? 0)") {
-                guard let service = model.active?.service else { return }
-                bauakten = (try? await service.bauakten(search: search)) ?? []
-                let contacts = (try? await service.contacts()) ?? []
-                customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
-            }
-            .refreshable { await model.active?.sync?.run() }
         }
+        .sheet(isPresented: $creating) {
+            NewBauakteView { id, next in
+                creating = false
+                if sizeClass == .regular { selection = id } else { path.append(id) }
+                if next != .open {
+                    Task {
+                        // Erst wenn das Anlageblatt geschlossen ist, Kamera bzw. Erstbegehung öffnen.
+                        try? await Task.sleep(for: .milliseconds(600))
+                        let created = try? await model.active?.service?.bauakte(id)
+                        if next == .photograph { captureFor = created } else { inspectFor = created }
+                    }
+                }
+            }
+        }
+        .fullScreenCover(item: $captureFor) { bauakte in
+            CameraView(bauakte: bauakte) { _ in captureFor = nil }
+        }
+        .sheet(item: $inspectFor) { bauakte in
+            InitialInspectionView(bauakte: bauakte) { inspectFor = nil }
+        }
+        .task(id: "\(search)|\(model.active?.sync?.revision ?? 0)") {
+            guard let service = model.active?.service else { return }
+            bauakten = (try? await service.bauakten(search: search)) ?? []
+            let contacts = (try? await service.contacts()) ?? []
+            customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+        }
+    }
+
+    private var list: some View {
+        List(selection: sizeClass == .regular ? $selection : .constant(nil)) {
+            if let sync = model.active?.sync {
+                SyncStatusBar(sync: sync).listRowInsets(EdgeInsets())
+            }
+            if bauakten.isEmpty {
+                Text(search.isEmpty ? "Noch keine Bauakten auf diesem Gerät." : "Keine Bauakte gefunden.")
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(bauakten) { bauakte in
+                NavigationLink(value: bauakte.id) {
+                    BauakteRow(bauakte: bauakte, customerName: bauakte.customerId.flatMap { customers[$0] })
+                }
+                .swipeActions(edge: .leading) {
+                    Button { captureFor = bauakte } label: { Label("Foto", systemImage: "camera.fill") }
+                        .tint(Theme.accentPressed)
+                }
+                .contextMenu {
+                    Button("Foto aufnehmen", systemImage: "camera") { captureFor = bauakte }
+                    if let url = MapsLink.url(for: bauakte) {
+                        Link(destination: url) { Label("Route starten", systemImage: "car") }
+                    }
+                }
+            }
+        }
+        .listStyle(.plain)
+        .navigationTitle("Bauakten")
+        .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
+        .safeAreaInset(edge: .bottom, alignment: .trailing) {
+            NewBauakteButton { creating = true }
+        }
+        .refreshable { await model.active?.sync?.run() }
     }
 }
 

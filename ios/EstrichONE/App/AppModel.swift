@@ -252,6 +252,8 @@ final class AppModel {
 
     func didEnterBackground(at date: Date) {
         backgroundSince = date
+        // Noch nicht übertragene Fotos und Änderungen in der Hintergrundzeit des Systems senden.
+        active?.sync?.runInBackground()
         // Poolgeräte sperren beim Bildschirm-Aus sofort (11, Abschnitt 4.1).
         if isPoolDevice { lock() }
     }
@@ -342,6 +344,8 @@ final class AppModel {
         active = nil
         switch end {
         case .signedOut:
+            // Lokale Daten (auch noch nicht übertragene) bleiben im Tresor und werden nach der Anmeldung gesendet.
+            notice = "Die Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an – Ihre Daten auf diesem Gerät bleiben erhalten."
             screen = .signIn(userName: userName)
         case .deviceRevoked:
             // Das Gerät gibt es serverseitig nicht mehr: lokale Daten sind wertlos und werden gelöscht.

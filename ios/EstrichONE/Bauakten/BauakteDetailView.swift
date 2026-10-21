@@ -97,8 +97,7 @@ struct BauakteDetailView: View {
                 }
                 .filePreview($previewing)
             } else {
-                ContentUnavailableView("Bauakte nicht gefunden", systemImage: "folder.badge.questionmark",
-                                       description: Text("Sie ist auf diesem Gerät nicht (mehr) vorhanden."))
+                MissingBauakteView(bauakteId: bauakteId) { await reload() }
             }
         }
         .task(id: model.active?.sync?.revision) { await reload() }
@@ -317,10 +316,24 @@ struct BauakteDetailView: View {
                 Text("Noch keine Erstbegehung oder CM-Messung.").foregroundStyle(Theme.textSecondary)
             }
             ForEach(inspections) { inspection in
-                InspectionRow(inspection: inspection, performerName: inspection.performedByUserId.flatMap { names[$0] })
+                if inspection.kind == .initialInspection, let bauakte {
+                    NavigationLink {
+                        InspectionProtocolView(inspection: inspection, bauakte: bauakte,
+                                               performerName: inspection.performedByUserId.flatMap { names[$0] })
+                    } label: {
+                        InspectionRow(inspection: inspection, performerName: inspection.performedByUserId.flatMap { names[$0] })
+                    }
+                    .accessibilityIdentifier("inspectionProtocolLink")
+                } else {
+                    InspectionRow(inspection: inspection, performerName: inspection.performedByUserId.flatMap { names[$0] })
+                }
             }
         } header: {
-            Text("Prüfungen (\(inspections.count))")
+            SectionHeader("Prüfungen", count: inspections.count) {
+                Button { form = .initialInspection } label: { Label("Erstbegehung", systemImage: "plus") }
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityIdentifier("addInspectionButton")
+            }
         }
     }
 
@@ -586,6 +599,74 @@ private struct PhotoPage: View {
             image = await model.active?.thumbnails?.fullImage(for: file)
             if let image { loaded(image) }
             done = true
+        }
+    }
+}
+
+/// Bauakte fehlt auf dem Gerät (z. B. eingeplant, aber noch nicht übertragen, oder nicht zugewiesen): laden oder
+/// „Mir zuweisen“ statt einer leeren Seite.
+struct MissingBauakteView: View {
+    let bauakteId: UUID
+    let reload: () async -> Void
+
+    @Environment(AppModel.self) private var model
+    @State private var working = false
+    @State private var message: String?
+    @State private var triedLoading = false
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(triedLoading ? "Bauakte nicht verfügbar" : "Bauakte wird geladen …", systemImage: "folder.badge.questionmark")
+        } description: {
+            Text(message ?? (triedLoading
+                ? "Sie ist Ihnen nicht zugewiesen oder noch nicht übertragen. Sie können sie sich selbst zuweisen."
+                : "Die Bauakte liegt noch nicht auf diesem Gerät."))
+        } actions: {
+            if triedLoading {
+                Button {
+                    Task { await assignToMe() }
+                } label: {
+                    ActionLabel("Mir zuweisen", systemImage: "person.badge.plus", isBusy: working)
+                }
+                .estrichButton(.primary, size: .regular)
+                .disabled(working)
+                .accessibilityIdentifier("assignToMeButton")
+                Button {
+                    Task { await load() }
+                } label: {
+                    Label("Erneut laden", systemImage: "arrow.clockwise")
+                }
+                .estrichButton(.tertiary)
+                .disabled(working)
+            } else {
+                ProgressView()
+            }
+        }
+        .task { await load() }
+    }
+
+    private func load() async {
+        guard let sync = model.active?.sync else { return }
+        working = true
+        defer { working = false }
+        let outcome = await sync.load(bauakte: bauakteId)
+        await reload()
+        triedLoading = true
+        message = outcome == .offline ? "Ohne Verbindung kann die Bauakte nicht geladen werden. Bitte später erneut versuchen." : nil
+    }
+
+    private func assignToMe() async {
+        guard let active = model.active, let sync = active.sync else { return }
+        working = true
+        defer { working = false }
+        do throws(APIError) {
+            try await active.client.assignToMe(bauakteId)
+            _ = await sync.load(bauakte: bauakteId)
+            await reload()
+        } catch {
+            message = error == .offline
+                ? "Ohne Verbindung nicht möglich. Bitte später erneut versuchen."
+                : (error.status == 404 ? "Diese Bauakte können Sie sich nicht selbst zuweisen. Bitte im Büro melden." : error.message)
         }
     }
 }

@@ -1,6 +1,7 @@
 import EstrichCore
 import Foundation
 import Observation
+import UIKit
 
 /// Steuert die Synchronisation des angemeldeten Benutzers (15, Abschnitt 1): beim Anmelden und App-Start,
 /// 2 Sekunden nach jeder lokalen Änderung, regelmäßig im Vordergrund und nach Fehlern mit wachsendem Abstand.
@@ -20,8 +21,14 @@ final class SyncController {
     /// Hinweise des Betreibers (Ankündigungen, Wartung); zuletzt abgerufener Stand.
     private(set) var notices: SystemNotices?
 
+    /// Fortschritt laufender Uploads (Bytes und Anzahl Dateien), solange etwas hochgeladen wird.
+    private(set) var uploadProgress: (sent: Int64, total: Int64, files: Int)?
+
     private var debounce: Task<Void, Never>?
     private var loop: Task<Void, Never>?
+    private var progressPoll: Task<Void, Never>?
+    /// Während eines Laufs kam eine lokale Änderung dazu: direkt danach noch einmal synchronisieren.
+    private var rerunRequested = false
     private var consecutiveFailures = 0
     private var inMaintenance = false
 
@@ -51,10 +58,10 @@ final class SyncController {
     func start() {
         loop?.cancel()
         loop = Task { [weak self] in
-            // Erster Lauf mit Sichtbarkeitsliste (Rechteentzug), danach regelmäßig.
-            await self?.run(includeScope: true)
+            // Jeder Lauf mit Sichtbarkeitsliste: Rechteentzug und neu sichtbare Bauakten (z. B. eingeplant) sofort.
+            await self?.run()
             while !Task.isCancelled {
-                let delay = self?.nextDelay ?? 300
+                let delay = self?.nextDelay ?? 120
                 try? await Task.sleep(for: .seconds(delay))
                 await self?.run()
             }
@@ -80,9 +87,20 @@ final class SyncController {
         }
     }
 
-    func run(includeScope: Bool = false) async {
+    func run(includeScope: Bool = true) async {
+        if isRunning {
+            rerunRequested = true
+            return
+        }
         isRunning = true
-        let outcome = await engine.synchronize(includeScope: includeScope)
+        startProgressPolling()
+        var outcome = await engine.synchronize(includeScope: includeScope)
+        while rerunRequested, outcome == .completed {
+            rerunRequested = false
+            outcome = await engine.synchronize(includeScope: false)
+        }
+        rerunRequested = false
+        progressPoll?.cancel()
         lastOutcome = outcome
         // Nur Codes und Zahlen ins Diagnoseprotokoll (14, Abschnitt 3).
         switch outcome {
@@ -110,13 +128,76 @@ final class SyncController {
 
     func refreshSummary() async {
         summary = try? await store.summary()
+        await refreshUploadProgress()
     }
 
-    /// 5 Minuten im Normalfall; nach Fehlern 1 s, 2 s, 4 s … bis 15 Minuten, mit Zufallsanteil.
+    /// Eine Bauakte sofort vollständig vom Server laden (z. B. nach „Mir zuweisen“ oder wenn sie noch fehlt).
+    func load(bauakte id: UUID) async -> SyncOutcome {
+        let outcome = await engine.load(bauakte: id)
+        revision += 1
+        return outcome
+    }
+
+    /// Abgelehnte Operation erneut senden (z. B. nach Klärung im Büro oder „Mir zuweisen“).
+    func retry(_ operation: OutboxOperation) async {
+        try? await store.retryRejected(operation)
+        localChangeMade()
+    }
+
+    /// Fehlgeschlagene Uploads erneut versuchen.
+    func retryUploads() async {
+        _ = try? await store.retryFailedUploads()
+        localChangeMade()
+    }
+
+    /// Beim Wechsel in den Hintergrund: noch laufende Übertragungen (z. B. Fotos) mit der Hintergrundzeit des
+    /// Systems abschließen, statt sie bis zum nächsten Öffnen liegen zu lassen.
+    func runInBackground() {
+        guard summary.map({ !$0.isSettled }) ?? true else { return }
+        let application = UIApplication.shared
+        let task = BackgroundTask()
+        task.identifier = application.beginBackgroundTask(withName: "EstrichONE-Synchronisation") {
+            MainActor.assumeIsolated { task.end() }
+        }
+        Task {
+            await run(includeScope: false)
+            task.end()
+        }
+    }
+
+    private func startProgressPolling() {
+        progressPoll?.cancel()
+        progressPoll = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.refreshUploadProgress()
+                try? await Task.sleep(for: .seconds(1))
+            }
+        }
+    }
+
+    private func refreshUploadProgress() async {
+        let active = ((try? await store.uploads()) ?? []).filter { $0.state == .waiting || $0.state == .uploading }
+        uploadProgress = active.isEmpty ? nil
+            : (active.reduce(0) { $0 + $1.uploadedBytes }, active.reduce(0) { $0 + $1.size }, active.count)
+    }
+
+    /// 2 Minuten im Normalfall; nach Fehlern 1 s, 2 s, 4 s … bis 15 Minuten, mit Zufallsanteil.
     private var nextDelay: Double {
         if inMaintenance { return 120 }
-        guard consecutiveFailures > 0 else { return 300 }
+        guard consecutiveFailures > 0 else { return 120 }
         let base = min(900, pow(2, Double(consecutiveFailures - 1)))
         return base + Double.random(in: 0...(base / 2))
+    }
+}
+
+/// Hintergrundzeit des Systems; wird genau einmal beendet.
+@MainActor
+private final class BackgroundTask {
+    var identifier = UIBackgroundTaskIdentifier.invalid
+
+    func end() {
+        guard identifier != .invalid else { return }
+        UIApplication.shared.endBackgroundTask(identifier)
+        identifier = .invalid
     }
 }

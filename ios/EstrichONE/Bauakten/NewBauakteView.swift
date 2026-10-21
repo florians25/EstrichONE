@@ -7,8 +7,16 @@ import SwiftUI
 /// um (die Wahl bleibt gespeichert). Pflicht sind Bezeichnung und Kunde – vorhanden oder neu erfasst; ein neuer
 /// Kunde wird mit der Bauakte übertragen und verknüpft.
 struct NewBauakteView: View {
-    /// Neue Bauakte angelegt; `true`, wenn direkt fotografiert werden soll.
-    let onCreated: (UUID, Bool) -> Void
+    /// Was nach der Anlage geschieht.
+    enum Next {
+        case open
+        case photograph
+        /// Man ist beim Kunden vor Ort: gleich die Erstbegehung der neuen Bauakte durchführen.
+        case inspect
+    }
+
+    /// Neue (oder ähnliche, vorhandene) Bauakte; danach öffnen, fotografieren oder Erstbegehung durchführen.
+    let onCreated: (UUID, Next) -> Void
 
     enum Mode: String, CaseIterable, Identifiable {
         case wizard
@@ -195,8 +203,19 @@ struct NewBauakteView: View {
             LabeledContent("Bauvorhaben", value: input.title.isEmpty ? "–" : input.title)
             LabeledContent("Kunde", value: customer?.name ?? newCustomer.map { "\($0.name) (neu)" } ?? "–")
             LabeledContent("Baustelle", value: addressLine ?? "noch ohne Adresse")
+            Button {
+                Task { await create(next: .inspect) }
+            } label: {
+                Label("Anlegen und Erstbegehung jetzt durchführen", systemImage: "checklist")
+            }
+            .estrichButton(.secondary, size: .regular, fullWidth: true)
+            .listRowBackground(Color.clear)
+            .disabled(saving)
+            .accessibilityIdentifier("createAndInspectButton")
         } header: {
             Text("Übersicht")
+        } footer: {
+            Text("Beim Kunden vor Ort? Die Erstbegehung lässt sich direkt anschließen – auch ohne Verbindung.")
         }
     }
 
@@ -206,7 +225,7 @@ struct NewBauakteView: View {
             Section {
                 ForEach(similar) { bauakte in
                     Button {
-                        onCreated(bauakte.id, false)
+                        onCreated(bauakte.id, .open)
                     } label: {
                         Label {
                             VStack(alignment: .leading) {
@@ -245,14 +264,14 @@ struct NewBauakteView: View {
                         .accessibilityIdentifier("wizardBackButton")
                 }
                 Button {
-                    Task { await create(photograph: false) }
+                    Task { await create(next: .open) }
                 } label: {
                     Label("Anlegen", systemImage: "checkmark")
                 }
                 .estrichButton(.secondary, size: .regular, fullWidth: true)
                 .accessibilityIdentifier("createButton")
                 Button {
-                    Task { await create(photograph: true) }
+                    Task { await create(next: .photograph) }
                 } label: {
                     Label("Anlegen + Foto", systemImage: "camera.fill")
                 }
@@ -357,7 +376,7 @@ struct NewBauakteView: View {
         similar = (try? await service.similar(to: candidate)) ?? []
     }
 
-    private func create(photograph: Bool) async {
+    private func create(next: Next) async {
         guard let service = model.active?.service else { return }
         if let problem = problem(upTo: .details) {
             errorMessage = problem
@@ -370,7 +389,7 @@ struct NewBauakteView: View {
         do throws(BauakteError) {
             let id = try await service.create(data, newCustomer: newCustomer)
             model.active?.sync?.localChangeMade()
-            onCreated(id, photograph)
+            onCreated(id, next)
         } catch {
             errorMessage = error.message
         }

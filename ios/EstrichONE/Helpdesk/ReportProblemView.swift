@@ -229,21 +229,20 @@ struct TicketDetailView: View {
                     if let resolution = detail.resolution { LabeledContent("Lösung", value: resolution) }
                 }
                 Section("Verlauf") {
-                    if detail.comments.isEmpty { Text("Noch keine Antwort.").foregroundStyle(Theme.textSecondary) }
-                    ForEach(detail.comments) { comment in
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(comment.text)
-                            Text([comment.authorName, comment.createdAt.formatted(date: .abbreviated, time: .shortened)].compactMap { $0 }
-                                .joined(separator: " · "))
-                                .font(.caption).foregroundStyle(Theme.textSecondary)
-                        }
+                    if detail.timeline.isEmpty { Text("Noch keine Antwort.").foregroundStyle(Theme.textSecondary) }
+                    ForEach(Array(detail.timeline.enumerated()), id: \.offset) { _, item in
+                        TicketTimelineRow(item: item, isOwn: { comment in comment.authorUserId == model.active?.user.id })
                     }
                 }
                 if detail.summary.status != .closed {
                     Section {
-                        TextField("Antwort", text: $reply, axis: .vertical)
-                        Button("Antwort senden") { Task { await send() } }
+                        TextField("Antwort an den Support", text: $reply, axis: .vertical)
+                            .lineLimit(2...6)
+                            .accessibilityIdentifier("ticketReplyField")
+                        Button { Task { await send() } } label: { Label("Antwort senden", systemImage: "paperplane.fill") }
+                            .estrichButton(.primary)
                             .disabled(reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .accessibilityIdentifier("sendReplyButton")
                         if detail.summary.status == .resolved {
                             Button("Problem besteht weiter – wieder öffnen") { Task { await reopen() } }
                         }
@@ -282,6 +281,41 @@ struct TicketDetailView: View {
             detail = try await model.active?.client.reopen(ticketId)
         } catch {
             self.error = error.message
+        }
+    }
+}
+
+/// Eintrag im Ticketverlauf: Antworten als Sprechblase (eigene rechts), Ereignisse als ruhige Zeile mit Symbol.
+struct TicketTimelineRow: View {
+    let item: TicketDetail.TimelineItem
+    let isOwn: (TicketComment) -> Bool
+
+    var body: some View {
+        switch item {
+        case let .comment(comment):
+            let own = isOwn(comment)
+            VStack(alignment: own ? .trailing : .leading, spacing: 3) {
+                Text(comment.text)
+                    .padding(.horizontal, 12).padding(.vertical, 8)
+                    .background(own ? Theme.navyBackground : Theme.neutralBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                    .foregroundStyle(own ? Theme.navyText : .primary)
+                Text([own ? "Sie" : comment.authorName, comment.createdAt.formatted(date: .abbreviated, time: .shortened)]
+                    .compactMap { $0 }.joined(separator: " · "))
+                    .font(.caption2).foregroundStyle(Theme.textSecondary)
+            }
+            .frame(maxWidth: .infinity, alignment: own ? .trailing : .leading)
+            .listRowSeparator(.hidden)
+            .accessibilityElement(children: .combine)
+        case let .event(event):
+            Label {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(event.text).font(.footnote)
+                    Text(event.at.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(Theme.textSecondary)
+                }
+            } icon: {
+                Image(systemName: event.kind == "created" ? "plus.circle" : "arrow.triangle.swap").foregroundStyle(Theme.textSecondary)
+            }
+            .listRowSeparator(.hidden)
         }
     }
 }

@@ -184,6 +184,17 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                       "email":"info@huber.example","notes":null,"version":1}}],
              "cursor":"1:0","hasMore":false,"visibleBauakteIds":null}
             """)
+        case "/api/v1/planning/range", "/api/v1/planning/mine":
+            let today = CalendarDay.string(Date())
+            return (200, """
+            {"from":"\(today)","to":"\(today)","assignments":[{"id":"0193a1b2-0000-7000-8000-0000000a0001","day":"\(today)",
+              "startTime":"07:00:00","activity":"Estrich einbringen","bauakteId":"0193a1b2-0000-7000-8000-0000000b0001",
+              "bauakteNumber":"2026-090","bauakteTitle":"Halle Gewerbering","bauakteAddress":"Gewerbering 3, 84030 Ergolding",
+              "crewName":"Kolonne Huber","people":[{"id":"\(currentUserId)","name":"Max Huber"}],"resources":[],"notes":null,"warnings":[]}],
+             "absences":[]}
+            """)
+        case "/api/v1/sync/snapshot":
+            return (200, #"{"changes":[],"missing":[]}"#)
         case "/api/v1/system/notices":
             return (200, """
             {"announcements":[{"id":"uitest-1","title":"Neue App-Version","text":"Dokumente lassen sich jetzt direkt scannen.",

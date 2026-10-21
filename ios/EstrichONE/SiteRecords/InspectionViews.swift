@@ -99,6 +99,8 @@ struct ReadinessLabel: View {
 /// „Keine Erstbegehung notwendig“ verlangt eine Begründung.
 struct InitialInspectionView: View {
     let bauakte: Bauakte
+    /// Korrektur einer vorhandenen Erstbegehung: Werte werden übernommen, gespeichert wird eine neue Fassung.
+    var correcting: Inspection?
     let onDone: () -> Void
 
     @Environment(AppModel.self) private var model
@@ -107,6 +109,9 @@ struct InitialInspectionView: View {
     @State private var remarks = ""
     @State private var photoIds: [UUID] = []
     @State private var capturing = false
+    /// Beschriftung der nächsten Fotos (z. B. der Prüfpunkt, zu dem sie gehören).
+    @State private var captureCaption = ""
+    @State private var signing = false
     @State private var captureStarted = Date.now
     @State private var error: String?
     @SwiftUI.AppStorage("inspectionMode") private var mode: NewBauakteView.Mode = .wizard
@@ -132,7 +137,7 @@ struct InitialInspectionView: View {
                 .background(.bar)
                 .accessibilityIdentifier("inspectionModePicker")
             }
-            .navigationTitle("Erstbegehung")
+            .navigationTitle(correcting == nil ? "Erstbegehung" : "Erstbegehung korrigieren")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: onDone) }
@@ -142,12 +147,39 @@ struct InitialInspectionView: View {
                 }
             }
             .fullScreenCover(isPresented: $capturing) {
-                CameraView(bauakte: bauakte, allowsChangingBauakte: false) { _ in
+                CameraView(bauakte: bauakte, allowsChangingBauakte: false, caption: captureCaption) { _ in
                     capturing = false
                     Task { await collectPhotos() }
                 }
             }
             .sensoryFeedback(.selection, trigger: step)
+            .sheet(isPresented: $signing) {
+                SignatureView { png in
+                    signing = false
+                    if let png { Task { await addSignature(png) } }
+                }
+            }
+            .onAppear(perform: prefill)
+        }
+    }
+
+    /// Bei einer Korrektur die bisherigen Angaben übernehmen.
+    private func prefill() {
+        guard let correcting, checks.isEmpty, remarks.isEmpty else { return }
+        notRequired = correcting.notRequired
+        checks = correcting.checks
+        remarks = correcting.remarks ?? ""
+        photoIds = correcting.photoFileIds
+    }
+
+    private func addSignature(_ png: Data) async {
+        guard let service = model.active?.service else { return }
+        if let id = try? await service.addPhoto(png, to: bauakte.id, capturedAt: .now, contentType: "image/png",
+                                                caption: InspectionProtocol.signatureCaption) {
+            photoIds.append(id)
+            signatureIds.insert(id)
+            photoCaptions[id] = InspectionProtocol.signatureCaption
+            model.active?.sync?.localChangeMade()
         }
     }
 
@@ -207,6 +239,17 @@ struct InitialInspectionView: View {
                     } footer: {
                         Text(check.title).font(.title3.weight(.semibold)).foregroundStyle(.primary).padding(.top, 4)
                     }
+                    Section {
+                        Button {
+                            captureCaption = check.title
+                            captureStarted = .now
+                            capturing = true
+                        } label: {
+                            let count = photoCount(for: check)
+                            Label(count == 0 ? "Foto zu diesem Punkt" : "\(count) Fotos zu diesem Punkt – weitere", systemImage: "camera")
+                        }
+                        .accessibilityIdentifier("checkPhotoButton")
+                    }
                 } else {
                     finishSections
                 }
@@ -250,19 +293,42 @@ struct InitialInspectionView: View {
             }
             Section {
                 Button {
+                    captureCaption = ""
                     captureStarted = .now
                     capturing = true
                 } label: {
                     Label(photoIds.isEmpty ? "Fotos aufnehmen (z. B. Zählerstand)" : "\(photoIds.count) Fotos – weitere aufnehmen",
                           systemImage: "camera")
                 }
+                Button {
+                    signing = true
+                } label: {
+                    Label(hasSignature ? "Unterschrift des Kunden erneut erfassen" : "Unterschrift des Kunden", systemImage: "signature")
+                }
+                .accessibilityIdentifier("signatureButton")
+            } header: {
+                Text("Fotos und Unterschrift")
             }
         }
-        Section(notRequired ? "Begründung *" : "Bemerkung (optional)") {
-            TextField(notRequired ? "Warum ist keine Erstbegehung notwendig?" : "z. B. Randdämmung im Bad fehlt", text: $remarks, axis: .vertical)
-                .lineLimit(2...6)
+        Section {
+            TextField(notRequired ? "Warum ist keine Erstbegehung notwendig?" : "Freie Notizen: Besonderheiten, Absprachen mit dem Kunden, Maße …",
+                      text: $remarks, axis: .vertical)
+                .lineLimit(4...14)
                 .accessibilityIdentifier("inspectionRemarksField")
+        } header: {
+            Text(notRequired ? "Begründung *" : "Notizen")
         }
+    }
+
+    private var hasSignature: Bool {
+        !signatureIds.isEmpty
+    }
+
+    @State private var signatureIds: Set<UUID> = []
+    @State private var photoCaptions: [UUID: String] = [:]
+
+    private func photoCount(for check: InitialCheck) -> Int {
+        photoIds.filter { photoCaptions[$0] == check.title }.count
     }
 
     private func symbol(for result: CheckResult) -> String {
@@ -316,17 +382,20 @@ struct InitialInspectionView: View {
     /// Fotos, die seit dem Öffnen der Kamera zu dieser Bauakte gespeichert wurden, gehören zur Erstbegehung.
     private func collectPhotos() async {
         guard let service = model.active?.service else { return }
-        let new = ((try? await service.files(of: bauakte.id)) ?? [])
-            .filter { $0.isPhoto && ($0.capturedAt ?? .distantPast) >= captureStarted.addingTimeInterval(-1) }
-            .map(\.id)
+        let files = (try? await service.files(of: bauakte.id)) ?? []
+        let new = files.filter { $0.isPhoto && ($0.capturedAt ?? .distantPast) >= captureStarted.addingTimeInterval(-1) }.map(\.id)
         photoIds = Array(Set(photoIds + new))
+        for file in files where photoIds.contains(file.id) {
+            photoCaptions[file.id] = file.caption
+            if file.caption == InspectionProtocol.signatureCaption { signatureIds.insert(file.id) }
+        }
     }
 
     private func save() async {
         guard let service = model.active?.service else { return }
         do throws(SiteRecordError) {
             try await service.addInitialInspection(to: bauakte.id, notRequired: notRequired, checks: checks, photoFileIds: photoIds,
-                                                   remarks: remarks)
+                                                   remarks: remarks, corrects: correcting?.id)
             model.active?.sync?.localChangeMade()
             onDone()
         } catch {

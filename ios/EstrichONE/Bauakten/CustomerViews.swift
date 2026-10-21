@@ -363,7 +363,9 @@ struct CustomerChooser: View {
         let local = (try? await active.service?.similarCustomers(to: newCustomer)) ?? []
         similar = local
         let name = newCustomer.name.trimmingCharacters(in: .whitespaces)
-        guard name.count >= 3, let remote = try? await active.client.searchContacts(name, limit: 5), !Task.isCancelled else { return }
+        guard name.count >= 3 || (newCustomer.phone ?? "").count >= 6 || (newCustomer.email ?? "").contains("@") else { return }
+        // Online: Dublettenprüfung des Servers (Name, Telefon, E-Mail, Adresse) über alle Kunden.
+        guard let remote = try? await active.client.contactDuplicates(of: newCustomer), !Task.isCancelled else { return }
         similar = Self.merged(local, remote)
     }
 

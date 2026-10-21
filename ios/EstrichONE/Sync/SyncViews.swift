@@ -38,6 +38,11 @@ struct SyncStatusBar: View {
         if sync.isOffline {
             return ("Offline – Änderungen werden gespeichert", "wifi.slash", Theme.textSecondary, Theme.surfaceAlt)
         }
+        if let progress = sync.uploadProgress, progress.total > 0 {
+            let percent = Int((Double(progress.sent) / Double(progress.total) * 100).rounded())
+            return ("\(progress.files) \(progress.files == 1 ? "Datei wird" : "Dateien werden") hochgeladen · \(percent) %",
+                    "arrow.up.circle", Theme.textSecondary, Theme.surfaceAlt)
+        }
         if let summary, !summary.isSettled {
             let count = summary.pendingOperations + summary.pendingUploads
             return ("\(count) \(count == 1 ? "Änderung wird" : "Änderungen werden") übertragen", "arrow.triangle.2.circlepath", Theme.textSecondary, Theme.surfaceAlt)
@@ -90,6 +95,28 @@ struct SyncView: View {
                         VStack(alignment: .leading, spacing: 4) {
                             Text(Self.describe(operation)).font(.headline)
                             Text(operation.errorMessage ?? operation.errorCode ?? "Vom Server abgelehnt").foregroundStyle(Theme.error)
+                            HStack(spacing: 8) {
+                                Button {
+                                    Task {
+                                        await sync.retry(operation)
+                                        await reload()
+                                    }
+                                } label: {
+                                    Label("Erneut senden", systemImage: "arrow.clockwise")
+                                }
+                                .estrichButton(.secondary)
+                                .accessibilityIdentifier("retryOperationButton")
+                                Button(role: .destructive) {
+                                    Task {
+                                        try? await sync.store.discardRejected(operation)
+                                        await reload()
+                                    }
+                                } label: {
+                                    Label("Verwerfen", systemImage: "trash")
+                                }
+                                .estrichButton(.destructive)
+                            }
+                            .padding(.top, 2)
                         }
                         .swipeActions {
                             Button("Verwerfen", role: .destructive) {
@@ -146,7 +173,7 @@ struct SyncView: View {
                 Section {
                     ForEach(openUploads, id: \.fileId) { upload in
                         VStack(alignment: .leading, spacing: 6) {
-                            Text(upload.state == .failed ? "Upload fehlgeschlagen" : "Foto wird übertragen")
+                            Text(upload.state == .failed ? "Upload fehlgeschlagen" : "Datei wird übertragen")
                                 .foregroundStyle(upload.state == .failed ? Theme.error : .primary)
                             ProgressView(value: Double(upload.uploadedBytes), total: Double(max(upload.size, 1)))
                             Text("\(ByteCountFormatter.string(fromByteCount: upload.uploadedBytes, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: upload.size, countStyle: .file))")
@@ -155,6 +182,20 @@ struct SyncView: View {
                     }
                 } header: {
                     Text("Dateien")
+                } footer: {
+                    if openUploads.contains(where: { $0.state == .failed }) {
+                        Button {
+                            Task {
+                                await sync.retryUploads()
+                                await reload()
+                            }
+                        } label: {
+                            Label("Fehlgeschlagene Uploads erneut versuchen", systemImage: "arrow.clockwise")
+                        }
+                        .estrichButton(.secondary)
+                        .accessibilityIdentifier("retryUploadsButton")
+                        .padding(.top, 6)
+                    }
                 }
             }
         }

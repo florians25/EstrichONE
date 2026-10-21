@@ -61,6 +61,7 @@ private struct EstrichButtonBody: View {
                    minHeight: size == .regular ? Theme.controlHeight : Theme.compactControlHeight)
             .background { background(pressed: pressed) }
             .contentShape(shape)
+            .hoverEffect(.highlight)
             .scaleEffect(pressed ? 0.97 : 1)
             .opacity(isEnabled ? 1 : 0.45)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
@@ -150,6 +151,7 @@ private struct ActionTileBody: View {
                 }
             }
             .contentShape(shape)
+            .hoverEffect(.highlight)
             .scaleEffect(pressed ? 0.95 : 1)
             .opacity(isEnabled ? 1 : 0.45)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
@@ -198,6 +200,7 @@ struct IconButtonStyle: ButtonStyle {
                 Circle().fill(rank == .primary ? Theme.navyLight : (rank == .accent ? Theme.accent : (pressed ? Theme.secondaryFillPressed : Theme.secondaryFill)))
             }
             .contentShape(Circle())
+            .hoverEffect(.highlight)
             .scaleEffect(pressed ? 0.92 : 1)
             .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
             .sensoryFeedback(.impact(weight: .light, intensity: 0.7), trigger: pressed) { _, isPressed in isPressed }

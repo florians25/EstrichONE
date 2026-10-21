@@ -43,6 +43,7 @@ struct NewBauakteButton: View {
             Label("Neue Bauakte", systemImage: "plus")
         }
         .buttonStyle(EstrichButtonStyle(rank: .primary, size: .regular))
+        .keyboardShortcut("n", modifiers: .command)
         .padding(.trailing, 16)
         .padding(.bottom, 12)
         .accessibilityIdentifier("newBauakteButton")
