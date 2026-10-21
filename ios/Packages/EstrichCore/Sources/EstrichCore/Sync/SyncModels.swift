@@ -10,6 +10,8 @@ public enum EntityType: String, CaseIterable, Sendable {
     case screedType
     case diaryEntry
     case inspection
+    /// Abnahmeprotokoll (`acceptance.create`); danach nur noch vom Server geändert (Kundenfreigabe, PDF).
+    case acceptance
     /// Nur ausgehend (eigene Meldungen bis zur Übertragung); der Server liefert Tickets nicht über den Feed.
     case ticket
 

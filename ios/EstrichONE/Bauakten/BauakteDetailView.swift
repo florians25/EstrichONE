@@ -18,6 +18,7 @@ struct BauakteDetailView: View {
     @State private var addingNote = false
     @State private var diary: [DiaryEntry] = []
     @State private var inspections: [Inspection] = []
+    @State private var acceptances: [Acceptance] = []
     @State private var form: CaptureForm?
     @State private var capturing = false
     @State private var scanning = false
@@ -33,7 +34,7 @@ struct BauakteDetailView: View {
 
     /// Was über das „Erfassen“-Menü bzw. die Aktionsleiste erfasst wird.
     private enum CaptureForm: String, Identifiable {
-        case task, defect, diary, cmMeasurement, initialInspection
+        case task, defect, diary, cmMeasurement, initialInspection, acceptance
         var id: String { rawValue }
     }
 
@@ -49,6 +50,7 @@ struct BauakteDetailView: View {
                     diarySection
                     workSection
                     inspectionSection
+                    acceptanceSection
                     noteSection
                     Section {
                         NavigationLink {
@@ -96,6 +98,7 @@ struct BauakteDetailView: View {
                     case .diary: NewDiaryEntryView(bauakteId: bauakteId) { self.form = nil }
                     case .cmMeasurement: NewCmMeasurementView(bauakteId: bauakteId) { self.form = nil }
                     case .initialInspection: InitialInspectionView(bauakte: bauakte) { self.form = nil }
+                    case .acceptance: NewAcceptanceView(bauakte: bauakte, customerName: customer?.name) { self.form = nil }
                     }
                 }
                 .filePreview($previewing)
@@ -378,6 +381,28 @@ struct BauakteDetailView: View {
         }
     }
 
+    private var acceptanceSection: some View {
+        Section {
+            if acceptances.isEmpty {
+                Text("Noch kein Abnahmeprotokoll.").foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(acceptances) { acceptance in
+                NavigationLink {
+                    AcceptanceDetailView(acceptanceId: acceptance.id, bauakteId: bauakteId)
+                } label: {
+                    AcceptanceRow(acceptance: acceptance)
+                }
+                .accessibilityIdentifier("acceptanceLink")
+            }
+        } header: {
+            SectionHeader("Abnahme", count: acceptances.count) {
+                Button { form = .acceptance } label: { Label("Abnahme", systemImage: "plus") }
+                    .font(.subheadline.weight(.semibold))
+                    .accessibilityIdentifier("addAcceptanceButton")
+            }
+        }
+    }
+
     private var noteSection: some View {
         Section {
             if notes.isEmpty {
@@ -403,6 +428,7 @@ struct BauakteDetailView: View {
         workItems = (try? await service.workItems(of: bauakteId)) ?? []
         diary = (try? await service.diary(of: bauakteId)) ?? []
         inspections = (try? await service.inspections(of: bauakteId)) ?? []
+        acceptances = (try? await service.acceptances(of: bauakteId)) ?? []
         customer = if let id = bauakte?.customerId { try? await service.contact(id) } else { nil }
         let directory = (try? await service.cachedDirectory()) ?? []
         names = Dictionary(directory.map { ($0.id, $0.displayName) }, uniquingKeysWith: { first, _ in first })

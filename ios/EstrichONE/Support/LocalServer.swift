@@ -145,6 +145,17 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                     entity["isPinned"] = false
                     entity["createdAt"] = APIDate.format(Date())
                 }
+                if type == "acceptance.create" {
+                    // Wie der Server: Unterschriften nur als Kennzeichen; beide vorhanden → abgeschlossen (ohne PDF im Demomodus).
+                    let client = (entity["clientSignature"] as? [String: Any])?["png"] is String
+                    let contractor = (entity["contractorSignature"] as? [String: Any])?["png"] is String
+                    entity["clientSignature"] = nil
+                    entity["contractorSignature"] = nil
+                    entity["hasClientSignature"] = client
+                    entity["hasContractorSignature"] = contractor
+                    entity["performedByUserId"] = currentUserId
+                    entity["state"] = client && contractor ? "completed" : "recorded"
+                }
                 if (operation["type"] as? String) == "bauakte.create" {
                     entity["number"] = "2026-0\(10 + counter)"
                     entity["status"] = "planned"

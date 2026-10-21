@@ -222,6 +222,34 @@ struct LiveServerTests {
         #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-% – belegreif.") })
     }
 
+    @Test("Abnahmeprotokoll über den echten Server: Mangel mit Frist, beide Unterschriften, PDF; zweites Protokoll mit Kundenlink")
+    func acceptanceProtocol() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let bauakte = try await service.create(NewBauakte(title: "Abnahme Integrationstest"))
+        // Gültiges PNG (1 × 1 Pixel), wie es die Unterschriftsfläche liefert.
+        let png = try #require(Data(base64Encoded: "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII="))
+        let signed = try await service.addAcceptance(NewAcceptance(
+            clientName: "Herr Schneider", contractorName: "Huber Estrich", scope: "Zementestrich EG", result: .acceptedWithReservations,
+            defects: [AcceptanceDefect(title: "Fuge Bad nacharbeiten", dueDate: "2026-11-15")], clientSignature: png, contractorSignature: png),
+            to: bauakte)
+        let open = try await service.addAcceptance(NewAcceptance(result: .accepted, contractorSignature: png), to: bauakte)
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled)
+
+        let done = try #require(try await service.acceptance(signed))
+        #expect(done.syncState == .synced && done.isSigned && done.result == .acceptedWithReservations)
+        #expect(done.defectWorkItemIds.count == 1)
+        #expect(done.state == .completed && done.pdfFileId != nil)
+        #expect(try await service.workItems(of: bauakte).contains { $0.kind == .defect && $0.dueDate == "2026-11-15" })
+
+        let link = try await device.client.customerLink(for: open, email: nil)
+        #expect(link.url.contains("/") && !link.emailed)
+        _ = await device.engine.synchronize()
+        #expect(try await service.acceptance(open)?.state == .awaitingCustomer)
+        #expect(try await service.acceptance(open)?.hasClientSignature == false)
+    }
+
     @Test("Neuer Kunde bei der Schnellanlage, gescanntes Dokument und Fotobeschriftung über den echten Server")
     func customerAndDocuments() async throws {
         let device = try await syncingAccount()

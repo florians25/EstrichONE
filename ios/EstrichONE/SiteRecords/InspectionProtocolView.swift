@@ -268,6 +268,7 @@ private struct ResultChip: View {
 
 /// Unterschrift mit Finger oder Apple Pencil (PencilKit); liefert ein PNG oder `nil` bei Abbruch.
 struct SignatureView: View {
+    var title = "Unterschrift des Kunden"
     let onDone: (Data?) -> Void
     @State private var canvas = PKCanvasView()
     @State private var isEmpty = true
@@ -292,7 +293,7 @@ struct SignatureView: View {
                 Spacer()
             }
             .padding()
-            .navigationTitle("Unterschrift des Kunden")
+            .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { onDone(nil) } }

@@ -246,6 +246,37 @@ final class BauakteUITests: XCTestCase {
     }
 
     @MainActor
+    func testAcceptanceProtocolWithDefectAndSignatures() {
+        let app = launchSignedIn()
+        createBauakte("Abnahme Wagner", in: app)
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
+        app.tapElement(app.reveal("addAcceptanceButton"), "addAcceptanceButton")
+
+        // Ergebnis mit Vorbehalt, ein Mangel mit Frist, beide Unterschriften.
+        app.chooseSegment("Mit Vorbehalt")
+        app.tapElement(app.reveal("addAcceptanceDefectButton"), "addAcceptanceDefectButton")
+        app.type("Fuge Bad nacharbeiten", into: "acceptanceDefectField")
+        app.dismissKeyboard()
+        for side in ["signClientButton", "signContractorButton"] {
+            app.tapElement(app.reveal(side), side)
+            let canvas = app.element("signatureCanvas")
+            XCTAssertTrue(canvas.waitForExistence(timeout: 10), app.debugDescription)
+            canvas.swipeRight()
+            canvas.swipeLeft()
+            app.tap("applySignatureButton")
+        }
+        app.tap("saveAcceptanceButton")
+
+        // In der Bauakte: Protokoll mit Mangel; nach der Übertragung abgeschlossen und als PDF abgelegt.
+        XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
+        app.tapElement(app.reveal("acceptanceLink"), "acceptanceLink")
+        XCTAssertTrue(app.text(containing: "Fuge Bad nacharbeiten").waitForExistence(timeout: 10), app.debugDescription)
+        let pdf = app.element("acceptancePdfButton")
+        XCTAssertTrue(pdf.waitForExistence(timeout: 90) || app.reveal(pdf), app.debugDescription)
+        XCTAssertTrue(app.text(containing: "Abgeschlossen").exists, app.debugDescription)
+    }
+
+    @MainActor
     func testDemoModeWithoutServer() {
         continueAfterFailure = false
         let app = XCUIApplication()

@@ -86,4 +86,42 @@ struct SiteRecordTests {
         #expect(server.entity(id)?["kind"]?.string == "initialInspection")
         #expect(server.entity(id)?["notes"]?.string?.contains("\n") == true)
     }
+
+    @Test("Abnahme: Ergebnis Pflicht, Vorbehalt nur mit Mangel oder Notiz, Mängel als Aufgaben mit Frist vor dem Protokoll gesendet")
+    func acceptance() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine) = try makeService(server: server)
+        let bauakte = try await service.create(NewBauakte(title: "EFH"))
+        let png = Data([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]) + Data(repeating: 0, count: 32)
+
+        await #expect(throws: AcceptanceError.resultRequired) {
+            try await service.addAcceptance(NewAcceptance(), to: bauakte)
+        }
+        await #expect(throws: AcceptanceError.reservationsRequired) {
+            try await service.addAcceptance(NewAcceptance(result: .acceptedWithReservations, defects: [AcceptanceDefect(title: "  ")]), to: bauakte)
+        }
+        await #expect(throws: AcceptanceError.invalidSignature) {
+            try await service.addAcceptance(NewAcceptance(result: .accepted, clientSignature: Data("kein png".utf8)), to: bauakte)
+        }
+
+        let id = try await service.addAcceptance(NewAcceptance(
+            location: "Ahornweg 3", clientName: "Herr Schneider", contractorName: "Huber Estrich", scope: "Zementestrich EG und OG",
+            result: .acceptedWithReservations, notes: "Restarbeiten Treppe", photoFileIds: [],
+            defects: [AcceptanceDefect(title: "Fuge Bad nacharbeiten", dueDate: "2026-11-15")],
+            clientSignature: png, contractorSignature: png), to: bauakte)
+        let local = try #require(try await service.acceptances(of: bauakte).first)
+        #expect(local.id == id && local.result == .acceptedWithReservations && local.isSigned)
+        #expect(local.defectWorkItemIds.count == 1)
+        let defect = try #require(try await service.workItems(of: bauakte).first)
+        #expect(defect.kind == .defect && defect.dueDate == "2026-11-15" && local.defectWorkItemIds == [defect.id])
+
+        _ = await engine.synchronize()
+        let sent = try #require(server.entity(id))
+        #expect(sent["result"]?.string == "acceptedWithReservations")
+        #expect(sent["clientSignature"]?["png"]?.string == png.base64EncodedString())
+        #expect(sent["defectWorkItemIds"]?.array?.first?.string == defect.id.key)
+        #expect(server.entity(defect.id)?["kind"]?.string == "defect")
+        #expect(try await service.acceptances(of: bauakte).first?.syncState == .synced)
+    }
 }
+

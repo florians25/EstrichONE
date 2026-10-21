@@ -221,6 +221,7 @@ struct SyncView: View {
         case .screedType: "Estrichart"
         case .diaryEntry: "Bautagebuch-Eintrag"
         case .inspection: "Prüfung"
+        case .acceptance: "Abnahmeprotokoll"
         case .ticket: "Meldung an die IT"
         }
         let action = operation.type.split(separator: ".").last ?? ""
