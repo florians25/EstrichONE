@@ -133,7 +133,8 @@ struct BauakteDetailView: View {
                         .accessibilityIdentifier("bauakteNumber")
                     Spacer()
                     Menu {
-                        ForEach(BauakteStatus.allCases.filter { $0 != bauakte.status && $0 != .cancelled }, id: \.self) { status in
+                        ForEach(BauakteStatus.allCases.filter { $0 != bauakte.status && $0 != .cancelled
+                                                                 && !(bauakte.status == .cancelled && $0 == .completed) }, id: \.self) { status in
                             Button(status.title) { Task { await change(to: status) } }
                         }
                         if bauakte.status != .cancelled {
@@ -500,7 +501,7 @@ struct PhotoThumbnail: View {
                         .accessibilityLabel(file.syncState == .problem ? "Problem bei der Übertragung" : "Wird übertragen")
                 }
             }
-            .task(id: file.id) {
+            .task(id: "\(file.id)|\(file.isStoredOnServer)|\(file.syncState)") {
                 // Videos: keine Vorschaubild-Variante – nicht das ganze Video laden.
                 guard !file.isVideo else { return }
                 image = await model.active?.thumbnails?.thumbnail(for: file, size: 120)
@@ -638,7 +639,7 @@ private struct PhotoPage: View {
     var body: some View {
         ZStack {
             if let image {
-                Image(uiImage: image).resizable().scaledToFit()
+                ZoomableImage(image: image)
             } else if done {
                 Text("Das Foto ist auf diesem Gerät nicht verfügbar und noch nicht auf dem Server.")
                     .foregroundStyle(.white).multilineTextAlignment(.center).padding()
@@ -647,7 +648,7 @@ private struct PhotoPage: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .task(id: file.id) {
+        .task(id: "\(file.id)|\(file.isStoredOnServer)") {
             image = await model.active?.thumbnails?.fullImage(for: file)
             if let image { loaded(image) }
             done = true
@@ -720,5 +721,53 @@ struct MissingBauakteView: View {
                 ? "Ohne Verbindung nicht möglich. Bitte später erneut versuchen."
                 : (error.status == 404 ? "Diese Bauakte können Sie sich nicht selbst zuweisen. Bitte im Büro melden." : error.message)
         }
+    }
+}
+
+/// Foto mit Zoom: Aufziehen mit zwei Fingern, Doppeltippen, verschieben im vergrößerten Zustand. Unvergrößert bleibt
+/// das Wischen zum Blättern frei.
+struct ZoomableImage: View {
+    let image: UIImage
+    @State private var scale: CGFloat = 1
+    @State private var lastScale: CGFloat = 1
+    @State private var offset: CGSize = .zero
+    @State private var lastOffset: CGSize = .zero
+
+    var body: some View {
+        Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .scaleEffect(scale)
+            .offset(offset)
+            .gesture(
+                MagnifyGesture()
+                    .onChanged { value in scale = min(6, max(1, lastScale * value.magnification)) }
+                    .onEnded { _ in
+                        lastScale = scale
+                        if scale <= 1 { reset() }
+                    }
+            )
+            .simultaneousGesture(
+                DragGesture()
+                    .onChanged { value in
+                        offset = CGSize(width: lastOffset.width + value.translation.width, height: lastOffset.height + value.translation.height)
+                    }
+                    .onEnded { _ in lastOffset = offset },
+                including: scale > 1 ? .all : .none
+            )
+            .onTapGesture(count: 2) {
+                withAnimation(.spring(response: 0.3)) {
+                    if scale > 1 { reset() } else { scale = 2.5; lastScale = 2.5 }
+                }
+            }
+            .accessibilityAddTraits(.isImage)
+            .accessibilityHint("Doppeltippen zum Vergrößern")
+    }
+
+    private func reset() {
+        scale = 1
+        lastScale = 1
+        offset = .zero
+        lastOffset = .zero
     }
 }

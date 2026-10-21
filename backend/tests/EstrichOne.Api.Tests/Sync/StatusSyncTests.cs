@@ -74,6 +74,10 @@ public sealed class StatusSyncTests(PostgresFixture postgres) : IAsyncLifetime
         afterCancel.Status.ShouldBe(SyncOperationStatus.Rejected);
         afterCancel.Code.ShouldBe("ALREADY_CANCELLED");
 
+        // Storniert → Abgeschlossen gibt es nicht (gemeinsame Regel mit dem Web).
+        var notAllowed = (await SetAsync(_office, id, new { status = "completed", baseStatus = "cancelled" })).Result;
+        notAllowed.Code.ShouldBe("STATUS_NOT_ALLOWED");
+
         // Wer die Stornierung kennt, darf bewusst reaktivieren.
         (await SetAsync(_office, id, new { status = "planned", baseStatus = "cancelled" })).Result.Status.ShouldBe(SyncOperationStatus.Applied);
     }

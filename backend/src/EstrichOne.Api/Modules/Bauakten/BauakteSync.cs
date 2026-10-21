@@ -221,6 +221,12 @@ internal sealed class BauakteSync(
                 $"Der Status wurde inzwischen auf „{BauakteHistoryEndpoints.StatusName(bauakte.Status)}“ geändert. Bitte prüfen und erneut wählen.") with { Entity = entity };
         }
 
+        if (status != BauakteStatus.Cancelled && !BauakteStatusRules.CanChange(bauakte.Status, status))
+        {
+            return SyncOperationResult.Rejected(op.OpId, "STATUS_NOT_ALLOWED",
+                $"Von „{BauakteHistoryEndpoints.StatusName(bauakte.Status)}“ ist der Wechsel auf „{BauakteHistoryEndpoints.StatusName(status)}“ nicht möglich.") with { Entity = entity };
+        }
+
         var before = BauakteEndpoints.ToDetail(bauakte);
         if (status == BauakteStatus.Cancelled)
         {

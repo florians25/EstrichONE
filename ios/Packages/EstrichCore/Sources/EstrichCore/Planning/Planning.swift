@@ -107,6 +107,8 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         public let startTime: String?
         public let endTime: String?
         public let crewName: String?
+        /// Farbe der Kolonne als `#RRGGBB`.
+        public let crewColor: String?
         public let notes: String?
 
         public var id: UUID { assignmentId }
@@ -125,6 +127,8 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         public let jobs: [Job]
         public let people: [Ref]
         public let vehicles: [Ref]
+        /// Eingeplante Kolonnen (Disposition nach Kolonnen).
+        public let crews: [Ref]
         public let warnings: [String]
         public let navigationUrl: String?
 
@@ -140,6 +144,15 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         public let note: String?
     }
 
+    /// Kolonne mit Farbe und Mitgliedern; `siteIds` = Baustellen des Tages.
+    public struct Crew: Codable, Equatable, Sendable, Identifiable {
+        public let id: UUID
+        public let name: String
+        public let color: String?
+        public let memberNames: [String]
+        public let siteIds: [UUID]
+    }
+
     public struct Vehicle: Codable, Equatable, Sendable, Identifiable {
         public let id: UUID
         public let name: String
@@ -151,6 +164,7 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
     public let sites: [Site]
     public let people: [Person]
     public let vehicles: [Vehicle]
+    public let crews: [Crew]
     public let mySiteIds: [UUID]
     public let canPlan: Bool
 
@@ -166,6 +180,51 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
     /// Personen ohne Einsatz an diesem Tag (für die Schnellplanung).
     public var unassignedPeople: [Person] { people.filter { $0.siteIds.isEmpty } }
     public var unassignedVehicles: [Vehicle] { vehicles.filter { $0.siteIds.isEmpty } }
+    public var unassignedCrews: [Crew] { crews.filter { $0.siteIds.isEmpty } }
+}
+
+// Tolerant lesen: fehlende Listen gelten als leer (der Server stellt die Disposition gerade auf Kolonnen um).
+extension DispatchBoard {
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        day = try c.decode(String.self, forKey: .day)
+        sites = try c.decodeIfPresent([Site].self, forKey: .sites) ?? []
+        people = try c.decodeIfPresent([Person].self, forKey: .people) ?? []
+        vehicles = try c.decodeIfPresent([Vehicle].self, forKey: .vehicles) ?? []
+        crews = try c.decodeIfPresent([Crew].self, forKey: .crews) ?? []
+        mySiteIds = try c.decodeIfPresent([UUID].self, forKey: .mySiteIds) ?? []
+        canPlan = try c.decodeIfPresent(Bool.self, forKey: .canPlan) ?? false
+    }
+}
+
+extension DispatchBoard.Site {
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        bauakteId = try c.decode(UUID.self, forKey: .bauakteId)
+        number = try c.decodeIfPresent(String.self, forKey: .number)
+        title = try c.decode(String.self, forKey: .title)
+        address = try c.decodeIfPresent(String.self, forKey: .address)
+        siteContactName = try c.decodeIfPresent(String.self, forKey: .siteContactName)
+        siteContactPhone = try c.decodeIfPresent(String.self, forKey: .siteContactPhone)
+        startTime = try c.decodeIfPresent(String.self, forKey: .startTime)
+        jobs = try c.decodeIfPresent([DispatchBoard.Job].self, forKey: .jobs) ?? []
+        people = try c.decodeIfPresent([DispatchBoard.Ref].self, forKey: .people) ?? []
+        vehicles = try c.decodeIfPresent([DispatchBoard.Ref].self, forKey: .vehicles) ?? []
+        crews = try c.decodeIfPresent([DispatchBoard.Ref].self, forKey: .crews) ?? []
+        warnings = try c.decodeIfPresent([String].self, forKey: .warnings) ?? []
+        navigationUrl = try c.decodeIfPresent(String.self, forKey: .navigationUrl)
+    }
+}
+
+extension DispatchBoard.Crew {
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        color = try c.decodeIfPresent(String.self, forKey: .color)
+        memberNames = try c.decodeIfPresent([String].self, forKey: .memberNames) ?? []
+        siteIds = try c.decodeIfPresent([UUID].self, forKey: .siteIds) ?? []
+    }
 }
 
 /// Person oder Fahrzeug auf eine andere Baustelle setzen (`null` = herausnehmen).
@@ -173,6 +232,7 @@ public struct DispatchMove: Encodable, Sendable {
     public enum Target: String, Encodable, Sendable {
         case person
         case vehicle
+        case crew
     }
 
     public let target: Target
