@@ -110,33 +110,29 @@ private struct UnitField<Field: View>: View {
     }
 }
 
-/// Abschnitt „Basisdaten“ in der Bauakte: alle Werte des Bauvorhabens und der geplante Zeitraum.
+/// Abschnitt „Basisdaten“ in der Bauakte: alle Werte des Bauvorhabens und der geplante Zeitraum als Beschriftung/Wert-Paare
+/// in zwei Spalten (iPad drei), mit Symbolen und Leerzustand.
 struct ProjectSection: View {
     let bauakte: Bauakte
     let edit: () -> Void
+    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
-        let project = bauakte.project
+        let items = Self.items(bauakte)
         Section {
-            if project.isEmpty, bauakte.plannedStart == nil {
-                Text("Noch keine Angaben zum Bauvorhaben.").foregroundStyle(Theme.textSecondary)
+            if items.isEmpty {
+                Button(action: edit) {
+                    Label("Fläche, Estrich und Aufbau erfassen", systemImage: "square.and.pencil")
+                }
+            } else {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .topLeading), count: sizeClass == .regular ? 3 : 2),
+                          alignment: .leading, spacing: 12) {
+                    ForEach(items, id: \.title) { item in
+                        InfoCell(title: item.title, value: item.value, symbol: item.symbol)
+                    }
+                }
+                .padding(.vertical, 4)
             }
-            if let start = bauakte.plannedStart {
-                LabeledContent("Geplant", value: [start, bauakte.plannedEnd].compactMap { $0.flatMap(Self.date) }.joined(separator: " – "))
-            }
-            row("Objektart", project.objectType?.title)
-            row("Fläche", project.totalArea.map { "\($0.formatted(.number.precision(.fractionLength(0...2)))) m²" })
-            row("Geschosse", project.floors)
-            row("Estrichart", project.screedType?.title)
-            row("Aufbau", project.construction?.title)
-            row("Nenndicke", project.nominalThicknessMm.map { "\($0) mm" })
-            row("Festigkeitsklasse", project.strengthClass)
-            row("Fußbodenheizung", project.underfloorHeating.map { $0 ? ["ja", project.heatingType].compactMap { $0 }.joined(separator: ", ") : "nein" })
-            row("Dämmung", [project.insulation, project.insulationThicknessMm.map { "\($0) mm" }].compactMap { $0 }.joined(separator: ", "))
-            row("Wasser vor Ort", project.waterOnSite.map { $0 ? "ja" : "nein" })
-            row("Strom vor Ort", project.powerOnSite.map { $0 ? "ja" : "nein" })
-            row("Zufahrt", project.siteAccess)
-            row("Priorität", project.priority?.title)
         } header: {
             SectionHeader("Basisdaten") {
                 Button(action: edit) { Label("Bearbeiten", systemImage: "pencil") }
@@ -147,15 +143,54 @@ struct ProjectSection: View {
         .accessibilityIdentifier("projectSection")
     }
 
-    @ViewBuilder
-    private func row(_ title: String, _ value: String?) -> some View {
-        if let value, !value.isEmpty {
-            LabeledContent(title, value: value)
+    static func items(_ bauakte: Bauakte) -> [(title: String, value: String, symbol: String)] {
+        let project = bauakte.project
+        func yesNo(_ value: Bool?) -> String? { value.map { $0 ? "ja" : "nein" } }
+        let rows: [(String, String?, String)] = [
+            ("Geplant", BauakteDetailView.period(bauakte), "calendar"),
+            ("Objektart", project.objectType?.title, "house"),
+            ("Fläche", project.totalArea.map { "\($0.formatted(.number.precision(.fractionLength(0...2)))) m²" }, "square.dashed"),
+            ("Geschosse", project.floors, "building.2"),
+            ("Estrichart", project.screedType?.title, "square.stack.3d.up"),
+            ("Aufbau", project.construction?.title, "square.3.layers.3d"),
+            ("Nenndicke", project.nominalThicknessMm.map { "\($0) mm" }, "ruler"),
+            ("Festigkeit", project.strengthClass, "scalemass"),
+            ("Fußbodenheizung", project.underfloorHeating.map { $0 ? ["ja", project.heatingType].compactMap { $0 }.joined(separator: ", ") : "nein" }, "flame"),
+            ("Dämmung", [project.insulation, project.insulationThicknessMm.map { "\($0) mm" }].compactMap { $0 }.joined(separator: ", "), "square.split.1x2"),
+            ("Wasser", yesNo(project.waterOnSite), "drop"),
+            ("Strom", yesNo(project.powerOnSite), "bolt"),
+            ("Priorität", project.priority?.title, "flag"),
+            ("Zufahrt", project.siteAccess, "car"),
+        ]
+        return rows.compactMap { title, value, symbol in
+            guard let value, !value.isEmpty else { return nil }
+            return (title: title, value: value, symbol: symbol)
         }
     }
+}
 
-    private static func date(_ text: String) -> String? {
-        CalendarDay.date(text)?.formatted(date: .abbreviated, time: .omitted)
+/// Beschriftung über Wert, mit kleinem Symbol – für Karten mit mehreren Spalten.
+struct InfoCell: View {
+    let title: String
+    let value: String
+    var symbol: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 4) {
+                if let symbol { Image(systemName: symbol).imageScale(.small) }
+                Text(title)
+            }
+            .font(.caption.weight(.medium))
+            .foregroundStyle(Theme.textSecondary)
+            Text(value)
+                .font(.subheadline)
+                .foregroundStyle(Color.primary)
+                .multilineTextAlignment(.leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
     }
 }
 

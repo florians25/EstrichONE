@@ -22,6 +22,8 @@ struct HomeView: View {
     @State private var recent: [Bauakte] = []
     @State private var dispatch: DispatchData.Day?
     @State private var bauakten: [UUID: Bauakte] = [:]
+    /// „2026-041 · EFH Schneider“ je Bauakte der offenen Aufgaben.
+    @State private var taskBauakten: [UUID: String] = [:]
 
     private var isWide: Bool { sizeClass == .regular }
 
@@ -253,7 +255,7 @@ struct HomeView: View {
                     .padding(.horizontal, 14).padding(.top, 10)
                     ForEach(group.sites) { site in
                         DispatchSiteRow(site: site, isMine: dispatch?.board?.mySiteIds.contains(site.id) == true)
-                            .padding(.leading, 34).padding(.trailing, 14).padding(.vertical, 6)
+                            .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 6)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }
                 }
@@ -285,15 +287,16 @@ struct HomeView: View {
                 }
                 VStack(spacing: 0) {
                     ForEach(Array(tasks.prefix(isWide ? 5 : 3).enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider().padding(.leading, 14) }
-                        WorkItemRow(item: item, showsBauakte: nil) {
+                        if index > 0 { Divider().padding(.leading, 58) }
+                        WorkItemRow(item: item, showsBauakte: item.bauakteId.flatMap { taskBauakten[$0] },
+                                    onOpen: item.bauakteId.map { id in { path.append(.bauakte(id)) } }) {
                             Task {
                                 try? await model.active?.service?.setStatus(item.isDone ? .open : .done, of: item.id)
                                 model.active?.sync?.localChangeMade()
                                 await reload()
                             }
                         }
-                        .padding(.horizontal, 10).padding(.vertical, 2)
+                        .padding(.leading, 4).padding(.trailing, 14)
                     }
                 }
                 .card()
@@ -367,6 +370,13 @@ struct HomeView: View {
             if let bauakte = try? await service.bauakte(id) { loaded[id] = bauakte }
         }
         bauakten = loaded
+        var names: [UUID: String] = [:]
+        for id in Set(tasks.compactMap(\.bauakteId)) {
+            if let bauakte = loaded[id] ?? (try? await service.bauakte(id)) {
+                names[id] = [bauakte.number, bauakte.title].compactMap { $0 }.joined(separator: " · ")
+            }
+        }
+        taskBauakten = names
     }
 }
 
@@ -710,6 +720,7 @@ struct MyTasksView: View {
     @Environment(AppModel.self) private var model
     @State private var items: [WorkItem] = []
     @State private var titles: [UUID: String] = [:]
+    @State private var opened: UUID?
 
     var body: some View {
         List {
@@ -717,12 +728,14 @@ struct MyTasksView: View {
                 ContentUnavailableView("Keine offenen Aufgaben", systemImage: "checkmark.circle", description: Text("Alles erledigt."))
             }
             ForEach(items) { item in
-                WorkItemRow(item: item, showsBauakte: item.bauakteId.flatMap { titles[$0] }) {
+                WorkItemRow(item: item, showsBauakte: item.bauakteId.flatMap { titles[$0] },
+                            onOpen: item.bauakteId.map { id in { opened = id } }) {
                     Task { await toggle(item) }
                 }
             }
         }
         .navigationTitle("Meine Aufgaben")
+        .navigationDestination(item: $opened) { BauakteDetailView(bauakteId: $0) }
         .task(id: model.active?.sync?.revision) { await reload() }
     }
 

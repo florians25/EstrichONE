@@ -6,46 +6,73 @@ struct WorkItemRow: View {
     let item: WorkItem
     var assigneeName: String?
     var showsBauakte: String?
+    /// Öffnet die zugehörige Bauakte (Startseite, „Meine Aufgaben“); dann mit Pfeil rechts.
+    var onOpen: (() -> Void)?
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: 10) {
             Button(action: onToggle) {
                 Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.title2)
+                    .font(.title3)
                     .foregroundStyle(item.isDone ? Theme.success : Theme.textSecondary)
-                    .frame(minWidth: 44, minHeight: 44)
+                    .frame(width: 44, height: 44)
             }
             .buttonStyle(.plain)
             .accessibilityLabel(item.isDone ? "Wieder öffnen" : "Als erledigt markieren")
             .accessibilityIdentifier("toggleWorkItem-\(item.title)")
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(item.title)
-                    .strikethrough(item.isDone)
-                    .foregroundStyle(item.isDone ? Theme.textSecondary : Color.primary)
-                HStack(spacing: 8) {
-                    if item.kind == .defect {
-                        Label("Mangel", systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(Theme.hint)
+            if let onOpen {
+                Button(action: onOpen) {
+                    HStack(alignment: .center, spacing: 8) {
+                        details
+                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                     }
-                    if let due = item.dueDate.flatMap({ CalendarDay.date($0) }) {
-                        Label(due.formatted(.dateTime.day().month(.abbreviated)), systemImage: "calendar")
-                            .foregroundStyle(item.isDue(on: CalendarDay.string(.now)) ? Theme.error : Theme.textSecondary)
-                    }
-                    if let assigneeName {
-                        Label(assigneeName, systemImage: "person")
-                            .foregroundStyle(Theme.textSecondary)
-                    }
+                    .contentShape(Rectangle())
                 }
-                .font(.caption)
-                if let showsBauakte {
-                    Text(showsBauakte).font(.caption).foregroundStyle(Theme.textSecondary)
-                }
-                SyncStateBadge(state: item.syncState)
+                .buttonStyle(.plain)
+            } else {
+                details
             }
-            .accessibilityElement(children: .combine)
         }
+    }
+
+    /// Titel, darunter Art und Fälligkeit (überfällig rot), danach Bezug und Zuständige grau – streng linksbündig.
+    private var details: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(item.title)
+                .font(.body)
+                .strikethrough(item.isDone)
+                .foregroundStyle(item.isDone ? Theme.textSecondary : Color.primary)
+                .lineLimit(2)
+            let due = item.dueDate.flatMap { CalendarDay.date($0) }
+            if item.kind == .defect || due != nil {
+                HStack(spacing: 6) {
+                    if item.kind == .defect {
+                        Text("Mangel")
+                            .font(.caption2.weight(.bold))
+                            .foregroundStyle(Theme.hint)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Theme.hintBackground, in: Capsule())
+                    }
+                    if let due {
+                        Label(due.formatted(.dateTime.day().month(.abbreviated)), systemImage: "calendar")
+                            .labelStyle(TightLabelStyle())
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(item.isDue(on: CalendarDay.string(.now)) && !item.isDone ? Theme.error : Theme.textSecondary)
+                    }
+                }
+            }
+            let context = [showsBauakte, assigneeName].compactMap { $0 }.joined(separator: " · ")
+            if !context.isEmpty {
+                Text(context).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+            }
+            SyncStateBadge(state: item.syncState)
+        }
+        .multilineTextAlignment(.leading)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .combine)
     }
 }
 

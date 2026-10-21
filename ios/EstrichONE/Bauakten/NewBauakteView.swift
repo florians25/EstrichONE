@@ -17,6 +17,13 @@ struct NewBauakteView: View {
 
     /// Neue (oder ähnliche, vorhandene) Bauakte; danach öffnen, fotografieren oder Erstbegehung durchführen.
     let onCreated: (UUID, Next) -> Void
+    /// Aus der Kundenkartei: dieser Kunde ist schon gewählt.
+    var initialCustomer: Contact?
+
+    init(initialCustomer: Contact? = nil, onCreated: @escaping (UUID, Next) -> Void) {
+        self.initialCustomer = initialCustomer
+        self.onCreated = onCreated
+    }
 
     enum Mode: String, CaseIterable, Identifiable {
         case wizard
@@ -107,7 +114,13 @@ struct NewBauakteView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) { bottomBar }
-            .onAppear { if mode == .form { titleFocused = true } }
+            .onAppear {
+                if customer == nil, newCustomer == nil, let initialCustomer {
+                    customer = initialCustomer
+                    if mode == .wizard { step = .site }
+                }
+                if mode == .form { titleFocused = true }
+            }
             .onChange(of: mode) { errorMessage = nil }
             .onChange(of: step) {
                 errorMessage = nil

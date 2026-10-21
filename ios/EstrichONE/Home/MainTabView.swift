@@ -6,6 +6,7 @@ struct MainTabView: View {
     enum Tab: Hashable {
         case today
         case bauakten
+        case customers
         case capture
         case more
     }
@@ -25,6 +26,9 @@ struct MainTabView: View {
             BauaktenListView()
                 .tabItem { Label("Bauakten", systemImage: "folder") }
                 .tag(Tab.bauakten)
+            CustomerDirectoryView()
+                .tabItem { Label("Kunden", systemImage: "person.2") }
+                .tag(Tab.customers)
             CaptureTabView(mode: $captureMode)
                 .tabItem { Label("Aufnehmen", systemImage: "camera") }
                 .tag(Tab.capture)
@@ -32,8 +36,20 @@ struct MainTabView: View {
                 .tabItem { Label("Mehr", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
         }
+        .modifier(SidebarAdaptable())
         .safeAreaInset(edge: .top, spacing: 0) {
             if model.isDemo { DemoBanner { model.requestDemo(false) } }
+        }
+    }
+}
+
+/// iPad ab iOS 18: Reiter als einblendbare Seitenleiste.
+private struct SidebarAdaptable: ViewModifier {
+    func body(content: Content) -> some View {
+        if #available(iOS 18, *) {
+            content.tabViewStyle(.sidebarAdaptable)
+        } else {
+            content
         }
     }
 }

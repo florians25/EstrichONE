@@ -95,4 +95,42 @@ public sealed class ContactSyncTests(PostgresFixture postgres) : IAsyncLifetime
         result.Status.ShouldBe(SyncOperationStatus.Rejected);
         result.Code.ShouldBe("PERMISSION_DENIED");
     }
+
+    [Fact]
+    public async Task Update_ChangesFieldsAndNumbers_KeepsOfficeChanges_AndNeedsEditRight()
+    {
+        var customer = Guid.CreateVersion7();
+        (await _office.PushAsync(SyncClient.Op("contact.create", customer, new { name = "Familie Kraus", city = "Landshut" })))
+            .Results.Single().Status.ShouldBe(SyncOperationStatus.Applied);
+
+        var updated = (await _office.PushAsync(SyncClient.Op("contact.update", customer, new
+        {
+            changes = new
+            {
+                name = "Familie Peter Kraus", preferredChannel = "mobile",
+                phones = new object[] { new { kind = "mobile", number = "0171 555", label = "Peter" }, new { kind = "landline", number = "0871 1" } },
+                emails = new object[] { new { address = "kraus@example.com", label = "privat" } },
+            },
+            @base = new { name = "Familie Kraus", preferredChannel = (string?)null, phones = Array.Empty<object>(), emails = Array.Empty<object>() },
+        }))).Results.Single();
+        updated.Status.ShouldBe(SyncOperationStatus.Applied);
+        updated.Entity.Text("name").ShouldBe("Familie Peter Kraus");
+        updated.Entity.Text("phone").ShouldBe("0171 555");
+        updated.Entity.Text("preferredChannel").ShouldBe("mobile");
+        updated.Entity.Text("city").ShouldBe("Landshut");
+
+        // Gerät kennt noch den alten Namen: Name bleibt wie im Büro, Ort wird übernommen.
+        var stale = (await _office.PushAsync(SyncClient.Op("contact.update", customer, new
+        {
+            changes = new { name = "Kraus", city = "Ergolding" },
+            @base = new { name = "Familie Kraus", city = "Landshut" },
+        }))).Results.Single();
+        stale.Status.ShouldBe(SyncOperationStatus.Conflict);
+        stale.Entity.Text("name").ShouldBe("Familie Peter Kraus");
+        stale.Entity.Text("city").ShouldBe("Ergolding");
+
+        var denied = (await _site.PushAsync(SyncClient.Op("contact.update", customer, new { changes = new { name = "X" }, @base = new { } }))).Results.Single();
+        denied.Code.ShouldBe("PERMISSION_DENIED");
+    }
 }
+

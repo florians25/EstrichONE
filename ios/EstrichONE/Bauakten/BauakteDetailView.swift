@@ -8,6 +8,7 @@ struct BauakteDetailView: View {
     let bauakteId: UUID
 
     @Environment(AppModel.self) private var model
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var bauakte: Bauakte?
     @State private var photos: [FileItem] = []
     @State private var documents: [FileItem] = []
@@ -128,70 +129,148 @@ struct BauakteDetailView: View {
 
     // MARK: Abschnitte
 
+    /// Kopf als weiche Karte im Markenblau: Nummer und Titel groß, Status als farbige Kapsel (Menü), Kurzangaben als
+    /// runde Chips, Schnellaktionen als runde Symbolknöpfe. iPad: Kunde, Baustelle und Zeitraum nebeneinander.
     private func header(_ bauakte: Bauakte) -> some View {
-        Section {
-            VStack(alignment: .leading, spacing: 6) {
-                HStack {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        let badges = bauakte.project.badges + [Self.period(bauakte)].compactMap { $0 }
+        return Section {
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(alignment: .center) {
                     Text(bauakte.number ?? "Neu · noch ohne Nummer")
                         .font(.subheadline.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(.white.opacity(0.75))
                         .accessibilityIdentifier("bauakteNumber")
                     Spacer()
-                    Menu {
-                        ForEach(BauakteStatus.allCases.filter { $0 != bauakte.status && $0 != .cancelled
-                                                                 && !(bauakte.status == .cancelled && $0 == .completed) }, id: \.self) { status in
-                            Button(status.title) { Task { await change(to: status) } }
-                        }
-                        if bauakte.status != .cancelled {
-                            Divider()
-                            Button("Stornieren …", systemImage: "xmark.circle", role: .destructive) {
-                                cancelReason = ""
-                                cancelling = true
-                            }
-                            .accessibilityIdentifier("cancelBauakteButton")
-                        }
-                    } label: {
-                        HStack(spacing: 4) {
-                            BauakteStatusChip(status: bauakte.status)
-                            Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(Theme.textSecondary)
-                        }
-                        .frame(minHeight: 44)
-                        .contentShape(Rectangle())
-                    }
-                    .accessibilityLabel("Status: \(bauakte.status.title). Ändern")
-                    .accessibilityIdentifier("statusMenu")
+                    statusMenu(bauakte)
                 }
                 Text(bauakte.title)
-                    .font(.title3.weight(.semibold))
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(.white)
+                    .multilineTextAlignment(.leading)
                     .accessibilityIdentifier("bauakteTitle")
                 if bauakte.status == .cancelled {
                     Label("Storniert: \(bauakte.cancellationReason ?? "ohne Angabe")", systemImage: "xmark.circle")
-                        .font(.footnote).foregroundStyle(Theme.error)
+                        .font(.footnote.weight(.semibold)).foregroundStyle(.white)
                 }
                 if let statusError {
-                    Text(statusError).font(.footnote).foregroundStyle(Theme.error)
+                    Text(statusError).font(.footnote).foregroundStyle(.white)
+                        .padding(8).background(Theme.error.opacity(0.8), in: RoundedRectangle(cornerRadius: 8))
                 }
-                if let description = bauakte.description {
-                    Text(description).font(.subheadline).foregroundStyle(Theme.textSecondary)
+                if sizeClass == .regular {
+                    HStack(alignment: .top, spacing: 24) {
+                        headerInfo("Kunde", customer?.name ?? "–", symbol: "person.crop.circle")
+                        headerInfo("Baustelle", bauakte.addressLine ?? "Adresse fehlt", symbol: "mappin.and.ellipse")
+                        headerInfo("Zeitraum", Self.period(bauakte) ?? "nicht geplant", symbol: "calendar")
+                    }
+                } else if let address = bauakte.addressLine {
+                    Label(address, systemImage: "mappin.and.ellipse").labelStyle(TightLabelStyle())
+                        .font(.footnote).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
                 }
-                let badges = bauakte.project.badges + [bauakte.plannedStart.flatMap { CalendarDay.date($0) }
-                    .map { "ab \($0.formatted(.dateTime.day().month(.abbreviated)))" }].compactMap { $0 }
-                if !badges.isEmpty {
+                if !bauakte.project.badges.isEmpty || (sizeClass != .regular && !badges.isEmpty) {
                     ChipFlow {
-                        ForEach(badges, id: \.self) { badge in
+                        ForEach(sizeClass == .regular ? bauakte.project.badges : badges, id: \.self) { badge in
                             Text(badge)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(Theme.navyText)
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background(Theme.secondaryFill, in: Capsule())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 10).padding(.vertical, 4)
+                                .background(.white.opacity(0.16), in: Capsule())
                         }
                     }
                     .accessibilityIdentifier("projectBadges")
                 }
-                SyncStateBadge(state: bauakte.syncState, showsSynced: true)
+                HStack(spacing: 12) {
+                    if let phone = ContactLink.phone(bauakte.siteContactPhone ?? customer?.phone) {
+                        Link(destination: phone) { roundAction("Anrufen", symbol: "phone.fill") }
+                            .accessibilityIdentifier("headerCallButton")
+                    }
+                    if let route = MapsLink.url(for: bauakte) {
+                        Link(destination: route) { roundAction("Route", symbol: "car.fill") }
+                            .accessibilityIdentifier("headerRouteButton")
+                    }
+                    Button { capturing = true } label: { roundAction("Foto", symbol: "camera.fill") }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("headerPhotoButton")
+                    Button { scanning = true } label: { roundAction("Scannen", symbol: "doc.viewfinder") }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("headerScanButton")
+                    Spacer(minLength: 0)
+                    SyncStateBadge(state: bauakte.syncState, showsSynced: true)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(.white, in: Capsule())
+                }
+                if let description = bauakte.description {
+                    Text(description).font(.subheadline).foregroundStyle(.white.opacity(0.85))
+                }
             }
-            .padding(.vertical, 2)
+            .padding(18)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                LinearGradient(colors: [Theme.navy, Theme.navyLight], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
+            .overlay(shape.strokeBorder(.white.opacity(0.08)))
+            .shadow(color: Theme.navy.opacity(0.18), radius: 12, y: 6)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
         }
+    }
+
+    private func statusMenu(_ bauakte: Bauakte) -> some View {
+        Menu {
+            ForEach(BauakteStatus.allCases.filter { $0 != bauakte.status && $0 != .cancelled
+                                                     && !(bauakte.status == .cancelled && $0 == .completed) }, id: \.self) { status in
+                Button(status.title) { Task { await change(to: status) } }
+            }
+            if bauakte.status != .cancelled {
+                Divider()
+                Button("Stornieren …", systemImage: "xmark.circle", role: .destructive) {
+                    cancelReason = ""
+                    cancelling = true
+                }
+                .accessibilityIdentifier("cancelBauakteButton")
+            }
+        } label: {
+            HStack(spacing: 4) {
+                BauakteStatusChip(status: bauakte.status)
+                Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(.white.opacity(0.8))
+            }
+            .padding(.leading, 2).padding(.trailing, 8).padding(.vertical, 2)
+            .background(.white.opacity(0.92), in: Capsule())
+            .frame(minHeight: 44)
+            .contentShape(Rectangle())
+        }
+        .accessibilityLabel("Status: \(bauakte.status.title). Ändern")
+        .accessibilityIdentifier("statusMenu")
+    }
+
+    private func headerInfo(_ title: String, _ value: String, symbol: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Label(title, systemImage: symbol).labelStyle(TightLabelStyle())
+                .font(.caption.weight(.semibold)).foregroundStyle(.white.opacity(0.7))
+            Text(value).font(.subheadline.weight(.medium)).foregroundStyle(.white).lineLimit(2)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func roundAction(_ title: String, symbol: String) -> some View {
+        Image(systemName: symbol)
+            .font(.body.weight(.semibold))
+            .foregroundStyle(.white)
+            .frame(width: 44, height: 44)
+            .background(.white.opacity(0.16), in: Circle())
+            .overlay(Circle().strokeBorder(.white.opacity(0.25)))
+            .contentShape(Circle())
+            .hoverEffect(.highlight)
+            .accessibilityLabel(title)
+    }
+
+    /// „2.–6. Nov.“ bzw. „ab 2. Nov.“
+    static func period(_ bauakte: Bauakte) -> String? {
+        guard let start = bauakte.plannedStart.flatMap({ CalendarDay.date($0) }) else { return nil }
+        let format = Date.FormatStyle.dateTime.day().month(.abbreviated)
+        if let end = bauakte.plannedEnd.flatMap({ CalendarDay.date($0) }), end != start {
+            return "\(start.formatted(format)) – \(end.formatted(format))"
+        }
+        return "ab \(start.formatted(format))"
     }
 
     /// Aktionsleiste im Inhalt statt unterer Werkzeugleiste: die Leiste läge unter Tab-Leiste und schwebender

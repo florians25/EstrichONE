@@ -280,7 +280,7 @@ public struct BauakteService: Sendable {
         return values.compactMap { $0.string.flatMap(UUID.init(uuidString:)) }
     }
 
-    private func remember(_ id: UUID, key: String) async throws {
+    func remember(_ id: UUID, key: String) async throws {
         var ids = try await ids(forKey: key).filter { $0 != id }
         ids.insert(id, at: 0)
         try await store.setMeta(key, try JSONValue.array(ids.prefix(10).map { JSONValue($0) }).encoded())

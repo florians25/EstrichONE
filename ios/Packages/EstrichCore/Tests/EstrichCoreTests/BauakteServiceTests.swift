@@ -355,6 +355,47 @@ struct BauakteServiceTests {
 
 @Suite("Kunden in der Schnellanlage")
 struct CustomerTests {
+    @Test("Kundenkartei: Anlage mit mehreren Nummern und Adressen, Änderung nur der geänderten Felder, Bauakten des Kunden")
+    func customerCard() async throws {
+        let server = SimulatedSyncServer()
+        let directory = FileManager.default.temporaryDirectory.appending(path: "kartei-\(UUID().uuidString)")
+        let key = SymmetricKey(size: .bits256)
+        let store = LocalStore(database: try EncryptedDatabase(url: directory.appending(path: "data.sealed"), key: key, migrations: LocalStore.schema))
+        let files = FileVault(directory: directory.appending(path: "files"), key: key)
+        let service = BauakteService(store: store, files: files, userId: UUID.v7())
+        let engine = SyncEngine(store: store, transport: server, files: files)
+
+        var edit = CustomerEdit(name: "Familie Kraus")
+        edit.city = "Landshut"
+        edit.phones = [ContactPhone(kind: .mobile, number: "0171 555", label: "Peter"), ContactPhone(kind: .landline, number: "0871 1")]
+        edit.emails = [ContactEmail(address: "kraus@example.com")]
+        edit.preferredChannel = .mobile
+        await #expect(throws: BauakteError.invalidEmail) {
+            var bad = edit
+            bad.emails = [ContactEmail(address: "kein-at")]
+            try await service.saveCustomer(bad)
+        }
+        let id = try await service.saveCustomer(edit)
+        let bauakte = try await service.create(NewBauakte(title: "EFH Kraus", customerId: id))
+        _ = try await service.create(NewBauakte(title: "Andere"))
+        _ = await engine.synchronize()
+        let synced = try #require(try await service.contact(id))
+        #expect(synced.phones.count == 2 && synced.phone == "0171 555" && synced.preferredChannel == .mobile)
+        #expect(server.entity(id)?["phones"]?.array?.first?["kind"]?.string == "mobile")
+
+        var changed = CustomerEdit(synced)
+        changed.notes = "Hund im Garten"
+        changed.phones.removeLast()
+        try await service.saveCustomer(changed, id: id)
+        let pending = try await store.operations().last { $0.entityType == .contact }
+        #expect(pending?.type == "contact.update")
+        #expect(Set(pending?.payload["changes"]?.object?.keys.map { $0 } ?? []) == ["notes", "phones"])
+        _ = await engine.synchronize()
+        #expect(server.entity(id)?["notes"]?.string == "Hund im Garten")
+        #expect(try await service.contact(id)?.phones.count == 1)
+        #expect(try await service.bauakten(ofCustomer: id).map(\.id) == [bauakte])
+    }
+
     @Test("Suche über Name und Kundennummer; zuletzt gewählte Kunden zuerst")
     func customers() async throws {
         let server = SimulatedSyncServer()

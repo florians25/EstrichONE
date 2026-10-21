@@ -222,6 +222,31 @@ struct LiveServerTests {
         #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-% – belegreif.") })
     }
 
+    @Test("Kundenkartei über den echten Server: Anlage mit mehreren Nummern, Änderung per contact.update")
+    func customerCard() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        var edit = CustomerEdit(name: "Kartei Integrationstest")
+        edit.phones = [ContactPhone(kind: .mobile, number: "0171 999"), ContactPhone(kind: .office, number: "0871 999", label: "Büro")]
+        edit.emails = [ContactEmail(address: "kartei@example.com", label: "privat")]
+        edit.preferredChannel = .mobile
+        let id = try await service.saveCustomer(edit)
+        #expect(await device.engine.synchronize() == .completed)
+        var synced = try #require(try await service.contact(id))
+        #expect(synced.syncState == .synced && synced.phones.map(\.number) == ["0171 999", "0871 999"] && synced.preferredChannel == .mobile)
+
+        var changed = CustomerEdit(synced)
+        changed.city = "Landshut"
+        changed.notes = "Zweite Zeile\nmit Umbruch"
+        changed.phones.removeFirst()
+        try await service.saveCustomer(changed, id: id)
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled)
+        synced = try #require(try await service.contact(id))
+        #expect(synced.city == "Landshut" && synced.phones.map(\.number) == ["0871 999"] && synced.phone == "0871 999")
+        #expect(synced.emails.first?.label == "privat")
+    }
+
     @Test("Bauvorhaben über den echten Server: Werte und Zeitraum bei der Anlage, Änderung per bauakte.update")
     func projectValues() async throws {
         let device = try await syncingAccount()

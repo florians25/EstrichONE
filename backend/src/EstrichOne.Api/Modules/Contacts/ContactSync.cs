@@ -1,3 +1,5 @@
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Contacts.Exports;
@@ -14,10 +16,19 @@ namespace EstrichOne.Api.Modules.Contacts;
 /// </summary>
 internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permissions) : ISyncOperationHandler
 {
-    public IReadOnlyCollection<string> OperationTypes { get; } = ["contact.create"];
+    /// <summary>Felder, die <c>contact.update</c> ändern darf (feldweise zusammengeführt wie bei der Bauakte).</summary>
+    private static readonly HashSet<string> EditableFields =
+        ["kind", "name", "street", "postalCode", "city", "notes", "phones", "emails", "salutation", "title", "preferredChannel", "website"];
+
+    public IReadOnlyCollection<string> OperationTypes { get; } = ["contact.create", "contact.update"];
 
     public async Task<SyncOperationResult> ApplyAsync(SyncOperation op, CancellationToken cancellationToken)
     {
+        if (op.Type == "contact.update")
+        {
+            return await UpdateAsync(op, cancellationToken);
+        }
+
         var granted = await permissions.GetAsync(cancellationToken);
         if (!granted.Contains(Permissions.ContactsEdit)
             && !(granted.Contains(Permissions.BauaktenCreate) && granted.Contains(Permissions.ContactsRead)))
@@ -75,6 +86,66 @@ internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permi
         db.Add(contact);
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: contact.Version,
+            Entity: SyncPayload.ToNode(ContactEndpoints.ToResponse(contact)));
+    }
+
+    /// <summary>
+    /// Kunden in der App bearbeiten (Recht <c>contacts.edit</c>): <c>changes</c>/<c>base</c> wie bei <c>bauakte.update</c>;
+    /// zwischenzeitlich im Büro geänderte Felder werden nicht überschrieben (FIELD_CONFLICT). Kundennummer, Steuerdaten,
+    /// abweichende Anschriften und Ansprechpartner pflegt weiterhin das Büro.
+    /// </summary>
+    private async Task<SyncOperationResult> UpdateAsync(SyncOperation op, CancellationToken cancellationToken)
+    {
+        if (!await permissions.HasAsync(Permissions.ContactsEdit, cancellationToken))
+        {
+            return SyncOperationResult.Rejected(op.OpId, "PERMISSION_DENIED", "Für diese Aktion fehlt die Berechtigung.");
+        }
+
+        var contact = await db.Set<Contact>().SingleOrDefaultAsync(c => c.Id == op.EntityId, cancellationToken);
+        if (contact is null)
+        {
+            return SyncOperationResult.Rejected(op.OpId, "NOT_FOUND", "Der Kontakt existiert nicht (mehr).");
+        }
+
+        var current = (JsonObject)SyncPayload.ToNode(ContactEndpoints.ToResponse(contact))!;
+        var (accepted, conflicts) = SyncPayload.Merge(op.Payload, current.ToDictionary(pair => pair.Key, pair => pair.Value), EditableFields);
+        var changes = (JsonObject)op.Payload["changes"]!;
+        T Value<T>(string field, T fallback) => accepted.Contains(field) ? changes[field].Deserialize<T>(SyncPayload.Json) ?? fallback : fallback;
+        string? Text(string field, string? fallback) => accepted.Contains(field) ? Clean(changes[field]?.GetValue<string>()) : fallback;
+
+        var name = Text("name", contact.Name) ?? throw new SyncValidationException("Bitte einen Namen angeben.");
+        var kind = Value("kind", contact.Kind);
+        var street = Text("street", contact.Street);
+        var postalCode = Text("postalCode", contact.PostalCode);
+        var city = Text("city", contact.City);
+        var notes = Text("notes", contact.Notes);
+        Validate(name, street, postalCode, city, null, null, notes);
+        var phones = accepted.Contains("phones") ? Value<List<ContactPhone>>("phones", []) : contact.Phones;
+        var emails = accepted.Contains("emails") ? Value<List<ContactEmail>>("emails", []) : contact.Emails;
+        if (phones.Count > 10 || emails.Count > 10 || phones.Any(x => x.Number is { Length: > 50 } || x.Label is { Length: > 50 })
+            || emails.Any(x => x.Address is { Length: > 320 } || x.Label is { Length: > 50 }
+                || (!string.IsNullOrWhiteSpace(x.Address) && !x.Address.Contains('@', StringComparison.Ordinal))))
+        {
+            throw new SyncValidationException("Zu viele, zu lange oder ungültige Telefonnummern/E-Mail-Adressen.");
+        }
+
+        var salutation = Text("salutation", contact.Salutation);
+        var title = Text("title", contact.Title);
+        var website = Text("website", contact.Website);
+        if (salutation is { Length: > 50 } || title is { Length: > 50 } || website is { Length: > 300 })
+        {
+            throw new SyncValidationException("Anrede, Titel oder Website ist zu lang.");
+        }
+
+        var channel = accepted.Contains("preferredChannel") ? Value<ContactChannel?>("preferredChannel", null) : contact.PreferredChannel;
+        contact.Update(kind, name, contact.CustomerNumber, street, postalCode, city, contact.Phone, contact.Email, notes);
+        contact.UpdateDetails(new ContactDetails(phones, emails, salutation, title, contact.BillingAddress, contact.DeliveryAddress,
+            contact.VatId, contact.TaxNumber, channel, contact.Birthday, website));
+        await db.SaveChangesAsync(cancellationToken);
+        return new SyncOperationResult(op.OpId, conflicts.Count == 0 ? SyncOperationStatus.Applied : SyncOperationStatus.Conflict,
+            Code: conflicts.Count == 0 ? null : "FIELD_CONFLICT",
+            Message: conflicts.Count == 0 ? null : "Einige Felder wurden inzwischen von jemand anderem geändert.",
+            Version: contact.Version, Conflicts: conflicts.Count == 0 ? null : conflicts,
             Entity: SyncPayload.ToNode(ContactEndpoints.ToResponse(contact)));
     }
 

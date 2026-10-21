@@ -397,57 +397,88 @@ enum DispatchData {
     }
 }
 
-/// Baustelle in „Wer fährt wohin“: Beginn, Bezeichnung, Einsätze, Adresse mit Navigation und Ansprechpartner.
+/// Baustelle in „Wer fährt wohin“: links Beginn (tabellarische Ziffern) und ggf. „Ich“, daneben Nummer und Titel in einer
+/// Zeile, darunter Tätigkeit und Zeitraum sowie die Adresse in Grau, Hinweise als kleine orange Kapsel; rechts ein kleiner
+/// Routen-Knopf. Die Kolonne steht nur dann als Kapsel dabei, wenn die Zeile nicht ohnehin unter ihrer Kolonne steht.
 struct DispatchSiteRow: View {
     let site: DispatchBoard.Site
     var isMine = false
+    var showsCrews = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
-            Text(site.startText ?? "–")
-                .font(.subheadline.monospacedDigit().weight(.bold))
-                .foregroundStyle(Theme.navyText)
-                .frame(width: 46, alignment: .leading)
-            NavigationLink(value: HomeRoute.bauakte(site.bauakteId)) {
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text([site.number, site.title].compactMap { $0 }.joined(separator: " · "))
-                            .font(.subheadline.weight(.semibold)).lineLimit(2)
-                        if isMine {
-                            Text("Ich").font(.caption2.weight(.bold)).foregroundStyle(Theme.onAccent)
-                                .padding(.horizontal, 6).padding(.vertical, 1)
-                                .background(Theme.accent, in: Capsule())
-                        }
-                    }
-                    if !site.crews.isEmpty {
-                        HStack(spacing: 8) {
-                            ForEach(site.crews) { crew in
-                                HStack(spacing: 4) {
-                                    Circle().fill(Color(hexString: crew.color) ?? Theme.accent).frame(width: 8, height: 8)
-                                    Text(crew.name).font(.caption.weight(.semibold))
-                                }
-                            }
-                        }
-                        .foregroundStyle(Theme.navyText)
-                    }
-                    ForEach(site.jobs) { job in
-                        Text([job.activity, job.crewName, [job.startText, job.endText].compactMap { $0 }.joined(separator: "–")]
-                            .compactMap { $0?.isEmpty == false ? $0 : nil }.joined(separator: " · "))
-                            .font(.footnote)
-                    }
-                    if let address = site.address {
-                        Label(address, systemImage: "mappin.and.ellipse").labelStyle(TightLabelStyle())
-                            .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
-                    }
-                    ForEach(site.warnings, id: \.self) { warning in
-                        Label(warning, systemImage: "exclamationmark.triangle").labelStyle(TightLabelStyle())
-                            .font(.caption).foregroundStyle(Theme.hint)
-                    }
+            VStack(alignment: .leading, spacing: 4) {
+                Text(site.startText ?? "–")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+                    .foregroundStyle(Color.primary)
+                if isMine {
+                    Text("Ich")
+                        .font(.caption2.weight(.bold))
+                        .foregroundStyle(Theme.onAccent)
+                        .padding(.horizontal, 6).padding(.vertical, 1)
+                        .background(Theme.accent, in: Capsule())
+                        .accessibilityLabel("Mein Einsatz")
                 }
             }
-            if let url = site.navigationUrl.flatMap(URL.init(string:)) {
-                Link(destination: url) { Label("Route starten", systemImage: "car.fill") }
-                    .buttonStyle(IconButtonStyle(rank: .primary))
+            .frame(width: 48, alignment: .leading)
+
+            NavigationLink(value: HomeRoute.bauakte(site.bauakteId)) {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text([site.number, site.title].compactMap { $0 }.joined(separator: " · "))
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Color.primary)
+                        .lineLimit(1)
+                        .truncationMode(.tail)
+                    ForEach(site.jobs) { job in
+                        Text([job.activity, [job.startText, job.endText].compactMap { $0 }.joined(separator: "–")]
+                            .filter { !$0.isEmpty }.joined(separator: " · "))
+                            .font(.footnote)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                    }
+                    if showsCrews, !site.crews.isEmpty {
+                        HStack(spacing: 6) {
+                            ForEach(site.crews) { crew in
+                                let tint = Color(hexString: crew.color) ?? Theme.accent
+                                HStack(spacing: 4) {
+                                    Circle().fill(tint).frame(width: 7, height: 7)
+                                    Text(crew.name).font(.caption2.weight(.semibold)).foregroundStyle(Color.primary)
+                                }
+                                .padding(.horizontal, 7).padding(.vertical, 2)
+                                .background(tint.opacity(0.14), in: Capsule())
+                            }
+                        }
+                    }
+                    if let address = site.address {
+                        Text(address).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                    }
+                    ForEach(site.warnings, id: \.self) { warning in
+                        Label(warning, systemImage: "exclamationmark.triangle.fill")
+                            .labelStyle(TightLabelStyle())
+                            .font(.caption2.weight(.semibold))
+                            .foregroundStyle(Theme.hint)
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Theme.hintBackground, in: Capsule())
+                            .lineLimit(2)
+                    }
+                }
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if let url = site.navigationUrl.flatMap(URL.init(string:)) ?? MapsLink.url(address: site.address) {
+                Link(destination: url) {
+                    Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(Theme.actionPrimary)
+                        .frame(width: 36, height: 36)
+                        .background(Theme.secondaryFill, in: Circle())
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("Route starten")
             }
         }
         .padding(.vertical, 2)

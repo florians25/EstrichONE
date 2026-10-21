@@ -111,6 +111,17 @@ public struct Contact: Identifiable, Equatable, Sendable {
     public let city: String?
     public let phone: String?
     public let email: String?
+    /// Alle Telefonnummern bzw. E-Mail-Adressen mit Art (erweiterte Kundendaten); ältere Stände: aus `phone`/`email`.
+    public let phones: [ContactPhone]
+    public let emails: [ContactEmail]
+    public let notes: String?
+    public let salutation: String?
+    public let title: String?
+    public let preferredChannel: ContactChannel?
+    public let website: String?
+    public let billingAddress: ContactAddress?
+    public let deliveryAddress: ContactAddress?
+    public let version: Int64?
     public let syncState: SyncState
 
     public init(_ entity: LocalEntity) {
@@ -122,8 +133,21 @@ public struct Contact: Identifiable, Equatable, Sendable {
         street = data["street"]?.string
         postalCode = data["postalCode"]?.string
         city = data["city"]?.string
-        phone = data["phone"]?.string
-        email = data["email"]?.string
+        let phones = (data["phones"]?.array ?? []).compactMap(ContactPhone.init(json:))
+        self.phones = phones.isEmpty ? (data["phone"]?.string).map { [ContactPhone(kind: .landline, number: $0)] } ?? [] : phones
+        let emails = (data["emails"]?.array ?? []).compactMap(ContactEmail.init(json:))
+        self.emails = emails.isEmpty ? (data["email"]?.string).map { [ContactEmail(address: $0)] } ?? [] : emails
+        // Erste Nummer bzw. Adresse (wie der Server sie ableitet).
+        phone = self.phones.first?.number
+        email = self.emails.first?.address
+        notes = data["notes"]?.string
+        salutation = data["salutation"]?.string
+        title = data["title"]?.string
+        preferredChannel = data["preferredChannel"]?.string.flatMap(ContactChannel.init(rawValue:))
+        website = data["website"]?.string
+        billingAddress = ContactAddress(json: data["billingAddress"])
+        deliveryAddress = ContactAddress(json: data["deliveryAddress"])
+        version = data["version"]?.number.map { Int64($0) }
         syncState = entity.syncState
     }
 
