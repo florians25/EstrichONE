@@ -104,9 +104,10 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.text(containing: "Huber Bau GmbH").exists)
         app.tap("wizardNextButton")
 
-        // Schritt 2 – Bauvorhaben und Baustelle, Schritt 3 – Übersicht.
+        // Schritt 2 – Bezeichnung und Baustelle, Schritt 3 – Bauvorhaben, Schritt 4 – Übersicht.
         app.type("EFH Schneider", into: "newTitleField")
         app.tap("wizardNextButton")
+        app.tap("wizardNextButton") // Bauvorhaben (optional)
         XCTAssertTrue(app.text(containing: "Huber Bau GmbH").waitForExistence(timeout: 10))
         app.tap("createButton")
 
@@ -225,6 +226,7 @@ final class BauakteUITests: XCTestCase {
         app.tap("wizardNextButton")
         app.type("EFH Berger", into: "newTitleField")
         app.tap("wizardNextButton")
+        app.tap("wizardNextButton") // Bauvorhaben (optional)
 
         // Beim Kunden vor Ort: Anlegen und direkt die Erstbegehung durchführen.
         app.tapElement(app.reveal("createAndInspectButton"), "createAndInspectButton")

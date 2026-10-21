@@ -11,9 +11,18 @@ public struct NewBauakte: Sendable {
     public var description: String?
     public var customerId: UUID?
     public var template: BauakteTemplate
+    /// Werte des Bauvorhabens (Fläche, Estrichart, Aufbau …).
+    public var project: BauakteProject
+    /// Geplanter Zeitraum im Format `JJJJ-MM-TT`.
+    public var plannedStart: String?
+    public var plannedEnd: String?
 
     public init(title: String, street: String? = nil, postalCode: String? = nil, city: String? = nil, latitude: Double? = nil,
-                longitude: Double? = nil, description: String? = nil, customerId: UUID? = nil, template: BauakteTemplate = .standard) {
+                longitude: Double? = nil, description: String? = nil, customerId: UUID? = nil, template: BauakteTemplate = .standard,
+                project: BauakteProject = BauakteProject(), plannedStart: String? = nil, plannedEnd: String? = nil) {
+        self.project = project
+        self.plannedStart = plannedStart
+        self.plannedEnd = plannedEnd
         self.title = title
         self.street = street
         self.postalCode = postalCode
@@ -72,11 +81,13 @@ public enum BauakteError: Error, Equatable, Sendable {
     case invalidEmail
     case tooLong(String)
     case cancellationReasonRequired
+    case invalidPeriod
     case storage
 
     public var message: String {
         switch self {
         case .titleRequired: "Bitte eine Bezeichnung eingeben."
+        case .invalidPeriod: "Das geplante Ende liegt vor dem Beginn."
         case .textRequired: "Bitte einen Text eingeben."
         case .customerNameRequired: "Bitte den Namen des Kunden eingeben."
         case .invalidEmail: "Die E-Mail-Adresse ist ungültig."
@@ -120,6 +131,7 @@ public struct BauakteService: Sendable {
     public func create(_ input: NewBauakte, newCustomer: NewCustomer? = nil) async throws(BauakteError) -> UUID {
         let title = input.title.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !title.isEmpty else { throw .titleRequired }
+        if let start = input.plannedStart, let end = input.plannedEnd, end < start { throw .invalidPeriod }
         var input = input
         if let newCustomer {
             input.customerId = try await createCustomer(newCustomer)
@@ -132,6 +144,8 @@ public struct BauakteService: Sendable {
             "title": .string(title), "street": clean(input.street), "postalCode": clean(input.postalCode), "city": clean(input.city),
             "latitude": JSONValue(input.latitude), "longitude": JSONValue(input.longitude), "description": clean(input.description),
             "customerId": JSONValue(input.customerId), "templateKey": .string(input.template.rawValue),
+            "project": input.project.isEmpty ? .null : input.project.json,
+            "plannedStart": JSONValue(input.plannedStart), "plannedEnd": JSONValue(input.plannedEnd),
         ]
         let timestamp = JSONValue.string(APIDate.format(now()))
         let local = JSONValue.object(payload).merging([
@@ -157,6 +171,15 @@ public struct BauakteService: Sendable {
         if status == .cancelled, reason?.isEmpty ?? true { throw .cancellationReasonRequired }
         do {
             try await store.setStatus(status.rawValue, reason: status == .cancelled ? reason.map { String($0.prefix(500)) } : nil, of: id)
+        } catch {
+            throw .storage
+        }
+    }
+
+    /// Werte des Bauvorhabens ändern (`bauakte.update` mit dem ganzen Objekt `project`).
+    public func updateProject(_ project: BauakteProject, of id: UUID) async throws(BauakteError) {
+        do {
+            try await store.update(.bauakte, id: id, changes: ["project": project.json])
         } catch {
             throw .storage
         }

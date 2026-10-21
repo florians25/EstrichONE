@@ -34,7 +34,7 @@ struct BauakteDetailView: View {
 
     /// Was über das „Erfassen“-Menü bzw. die Aktionsleiste erfasst wird.
     private enum CaptureForm: String, Identifiable {
-        case task, defect, diary, cmMeasurement, initialInspection, acceptance
+        case task, defect, diary, cmMeasurement, initialInspection, acceptance, project
         var id: String { rawValue }
     }
 
@@ -45,6 +45,7 @@ struct BauakteDetailView: View {
                     header(bauakte)
                     actionBar
                     contactSection(bauakte)
+                    ProjectSection(bauakte: bauakte) { form = .project }
                     photoSection
                     documentSection
                     diarySection
@@ -99,6 +100,7 @@ struct BauakteDetailView: View {
                     case .cmMeasurement: NewCmMeasurementView(bauakteId: bauakteId) { self.form = nil }
                     case .initialInspection: InitialInspectionView(bauakte: bauakte) { self.form = nil }
                     case .acceptance: NewAcceptanceView(bauakte: bauakte, customerName: customer?.name) { self.form = nil }
+                    case .project: EditProjectView(bauakte: bauakte) { self.form = nil; Task { await reload() } }
                     }
                 }
                 .filePreview($previewing)
@@ -171,6 +173,20 @@ struct BauakteDetailView: View {
                 }
                 if let description = bauakte.description {
                     Text(description).font(.subheadline).foregroundStyle(Theme.textSecondary)
+                }
+                let badges = bauakte.project.badges + [bauakte.plannedStart.flatMap { CalendarDay.date($0) }
+                    .map { "ab \($0.formatted(.dateTime.day().month(.abbreviated)))" }].compactMap { $0 }
+                if !badges.isEmpty {
+                    ChipFlow {
+                        ForEach(badges, id: \.self) { badge in
+                            Text(badge)
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(Theme.navyText)
+                                .padding(.horizontal, 8).padding(.vertical, 3)
+                                .background(Theme.secondaryFill, in: Capsule())
+                        }
+                    }
+                    .accessibilityIdentifier("projectBadges")
                 }
                 SyncStateBadge(state: bauakte.syncState, showsSynced: true)
             }

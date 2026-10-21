@@ -222,6 +222,32 @@ struct LiveServerTests {
         #expect(history.contains { $0.text.contains("0,3 CM-% bei Grenzwert 0,3 CM-% – belegreif.") })
     }
 
+    @Test("Bauvorhaben über den echten Server: Werte und Zeitraum bei der Anlage, Änderung per bauakte.update")
+    func projectValues() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        var project = BauakteProject()
+        project.objectType = .efh
+        project.totalArea = 182.5
+        project.screedType = .caf
+        project.construction = .heated
+        project.nominalThicknessMm = 45
+        project.underfloorHeating = true
+        let id = try await service.create(NewBauakte(title: "Bauvorhaben Integrationstest", project: project,
+                                                     plannedStart: "2026-11-02", plannedEnd: "2026-11-06"))
+        #expect(await device.engine.synchronize() == .completed)
+        var synced = try #require(try await service.bauakte(id))
+        #expect(synced.syncState == .synced && synced.project == project && synced.plannedStart == "2026-11-02" && synced.plannedEnd == "2026-11-06")
+
+        project.priority = .urgent
+        project.siteAccess = "Zufahrt über Hof"
+        try await service.updateProject(project, of: id)
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.summary().isSettled)
+        synced = try #require(try await service.bauakte(id))
+        #expect(synced.project == project)
+    }
+
     @Test("Abnahmeprotokoll über den echten Server: Mangel mit Frist, beide Unterschriften, PDF; zweites Protokoll mit Kundenlink")
     func acceptanceProtocol() async throws {
         let device = try await syncingAccount()

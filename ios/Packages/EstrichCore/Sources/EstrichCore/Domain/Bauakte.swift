@@ -58,6 +58,11 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     public let siteContactPhone: String?
     /// Begründung, falls storniert.
     public let cancellationReason: String?
+    /// Werte des Bauvorhabens (Fläche, Estrichart, Aufbau …).
+    public let project: BauakteProject
+    /// Geplanter Zeitraum (`JJJJ-MM-TT`).
+    public let plannedStart: String?
+    public let plannedEnd: String?
     public let updatedAt: Date?
     public let syncState: SyncState
 
@@ -78,6 +83,9 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
         siteContactName = data["siteContactName"]?.string
         siteContactPhone = data["siteContactPhone"]?.string
         cancellationReason = data["cancellationReason"]?.string
+        project = BauakteProject(data["project"])
+        plannedStart = data["plannedStart"]?.string
+        plannedEnd = data["plannedEnd"]?.string
         updatedAt = data["updatedAt"]?.string.flatMap(APIDate.parse)
         syncState = entity.syncState
     }

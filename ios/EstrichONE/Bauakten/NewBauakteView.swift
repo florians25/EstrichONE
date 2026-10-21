@@ -28,12 +28,14 @@ struct NewBauakteView: View {
     enum Step: Int, CaseIterable {
         case customer
         case site
+        case project
         case details
 
         var title: String {
             switch self {
             case .customer: "Kunde"
             case .site: "Baustelle"
+            case .project: "Bauvorhaben"
             case .details: "Übersicht"
             }
         }
@@ -79,6 +81,8 @@ struct NewBauakteView: View {
                     case .site:
                         titleSection
                         siteSection
+                    case .project:
+                        projectFields
                     case .details:
                         summarySection
                         kindSection
@@ -87,6 +91,7 @@ struct NewBauakteView: View {
                     titleSection
                     customerSection
                     siteSection
+                    projectFields
                     kindSection
                 }
                 similarSection
@@ -181,6 +186,11 @@ struct NewBauakteView: View {
         }
     }
 
+    /// Fläche, Estrich, Aufbau, vor Ort, Zeitraum – alles optional.
+    private var projectFields: some View {
+        ProjectFields(project: $input.project, plannedStart: $input.plannedStart, plannedEnd: $input.plannedEnd)
+    }
+
     private var kindSection: some View {
         Section {
             Picker("Art", selection: $input.template) {
@@ -203,6 +213,9 @@ struct NewBauakteView: View {
             LabeledContent("Bauvorhaben", value: input.title.isEmpty ? "–" : input.title)
             LabeledContent("Kunde", value: customer?.name ?? newCustomer.map { "\($0.name) (neu)" } ?? "–")
             LabeledContent("Baustelle", value: addressLine ?? "noch ohne Adresse")
+            if !input.project.badges.isEmpty {
+                LabeledContent("Bauvorhaben", value: input.project.badges.joined(separator: " · "))
+            }
             Button {
                 Task { await create(next: .inspect) }
             } label: {

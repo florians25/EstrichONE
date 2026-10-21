@@ -40,6 +40,41 @@ struct BauakteServiceTests {
         #expect(server.entity(id)?["postalCode"] == .null)
     }
 
+    @Test("Bauvorhaben: Werte und Zeitraum bei der Anlage, Änderung als ganzes project-Objekt, Kurzangaben für den Kopf")
+    func projectValues() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        var project = BauakteProject()
+        project.totalArea = 182.5
+        project.screedType = .ct
+        project.nominalThicknessMm = 50
+        project.construction = .heated
+        project.strengthClass = "  C25-F4 "
+        project.waterOnSite = true
+
+        await #expect(throws: BauakteError.invalidPeriod) {
+            try await service.create(NewBauakte(title: "EFH", plannedStart: "2026-11-10", plannedEnd: "2026-11-01"))
+        }
+        let id = try await service.create(NewBauakte(title: "EFH", project: project, plannedStart: "2026-11-02", plannedEnd: "2026-11-06"))
+        let local = try #require(try await service.bauakte(id))
+        #expect(local.project.totalArea == 182.5 && local.project.strengthClass == "C25-F4" && local.plannedEnd == "2026-11-06")
+        #expect(local.project.badges == ["182,5 m²", "CT 50 mm", "Heizestrich"])
+
+        _ = await engine.synchronize()
+        #expect(server.entity(id)?["project"]?["screedType"]?.string == "ct")
+        #expect(server.entity(id)?["project"]?["powerOnSite"] == .null)
+        #expect(server.entity(id)?["plannedStart"]?.string == "2026-11-02")
+
+        project.priority = .urgent
+        project.totalArea = nil
+        try await service.updateProject(project, of: id)
+        #expect(try await service.bauakte(id)?.project.priority == .urgent)
+        _ = await engine.synchronize()
+        #expect(server.entity(id)?["project"]?["priority"]?.string == "urgent")
+        #expect(server.entity(id)?["project"]?["totalArea"] == .null)
+        #expect(BauakteProject(.null).isEmpty)
+    }
+
     @Test("Doppelanlage: gleiche Adresse in anderer Schreibweise oder ähnlicher Name in der Nähe")
     func duplicates() async throws {
         let (service, _, _, _) = try makeService(server: SimulatedSyncServer())
