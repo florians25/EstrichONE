@@ -33,6 +33,12 @@ final class SimulatedSyncServer: SyncTransport, @unchecked Sendable {
         lock.withLock { record(type, id: id, data: data) }
     }
 
+    /// Datensatz, der dem Gerät über den Änderungsfeed nicht (mehr) geliefert wird – z. B. eine Bauakte, die erst
+    /// durch eine spätere Einplanung sichtbar wird.
+    func serverSideExisting(_ type: String, id: UUID, data: JSONValue) {
+        lock.withLock { entities[id.key] = (type, data, false) }
+    }
+
     func serverSideDelete(_ type: String, id: UUID) {
         lock.withLock {
             entities[id.key]?.deleted = true
@@ -91,6 +97,25 @@ final class SimulatedSyncServer: SyncTransport, @unchecked Sendable {
                 ? (visibleBauakten.map(Array.init) ?? entities.filter { $0.value.type == "bauakte" && !$0.value.deleted }.compactMap { UUID(uuidString: $0.key) })
                 : nil
             return PullResponse(changes: changes, cursor: "\(epoch):\(next)", hasMore: next < changeLog.count, visibleBauakteIds: visible)
+        }
+    }
+
+    func snapshot(_ bauakteIds: [UUID]) async throws(APIError) -> SnapshotResponse {
+        lock.withLock {
+            let wanted = Set(bauakteIds.filter { visibleBauakten?.contains($0) ?? true }.map(\.key))
+            var changes: [SyncChange] = []
+            var found = Set<String>()
+            for (key, entry) in entities where !entry.deleted {
+                guard let id = UUID(uuidString: key) else { continue }
+                let parent = entry.data["bauakteId"]?.string?.lowercased()
+                if entry.type == "bauakte", wanted.contains(key) {
+                    found.insert(key)
+                    changes.insert(SyncChange(entityType: "bauakte", id: id, deleted: false, data: entry.data), at: 0)
+                } else if let parent, wanted.contains(parent) {
+                    changes.append(SyncChange(entityType: entry.type, id: id, deleted: false, data: entry.data))
+                }
+            }
+            return SnapshotResponse(changes: changes, missing: bauakteIds.filter { !found.contains($0.key) })
         }
     }
 

@@ -86,4 +86,30 @@ struct HelpdeskTests {
         #expect(message == "EstrichONE ticket v1\n01a00000-0000-7000-8000-0000000000aa\n2026-10-20T08:00:00Z\n01a00000-0000-7000-8000-0000000000bb\n"
                 + "e5360dd7a389719821eb43b30b668577ad1288225b3fe35bf8a46ca141b8464c")
     }
+
+    @Test("Ticketverlauf: Antworten und Statuswechsel in zeitlicher Reihenfolge, interne Notizen ausgeblendet")
+    func ticketTimeline() throws {
+        let json = """
+        {"summary":{"id":"0193a1b2-0000-7000-8000-000000000001","number":"T-2026-0001","title":"Fotos fehlen","category":"sync",
+          "priority":"normal","status":"inProgress","reporterBlocked":false,"assigneeName":"IT","createdAt":"2026-10-20T08:00:00+00:00",
+          "lastActivityAt":"2026-10-20T10:00:00+00:00"},
+         "description":null,"resolution":null,
+         "comments":[{"id":"0193a1b2-0000-7000-8000-000000000002","authorUserId":"0193a1b2-0000-7000-8000-000000000003","authorName":"IT",
+            "text":"Bitte App neu starten","isInternal":false,"createdAt":"2026-10-20T09:30:00+00:00"},
+          {"id":"0193a1b2-0000-7000-8000-000000000004","authorUserId":"0193a1b2-0000-7000-8000-000000000003","authorName":"IT",
+            "text":"intern","isInternal":true,"createdAt":"2026-10-20T09:40:00+00:00"}],
+         "events":[{"actorUserId":null,"actorName":"Max Huber","kind":"created","fromValue":null,"toValue":"New","at":"2026-10-20T08:00:00+00:00"},
+          {"actorUserId":null,"actorName":"IT","kind":"status","fromValue":"New","toValue":"InProgress","at":"2026-10-20T09:00:00+00:00"}]}
+        """
+        let detail = try JSONCoding.decoder.decode(TicketDetail.self, from: Data(json.utf8))
+        #expect(detail.timeline.count == 3)
+        guard case let .event(created) = detail.timeline[0], case let .event(status) = detail.timeline[1],
+              case let .comment(answer) = detail.timeline[2] else {
+            Issue.record("Reihenfolge stimmt nicht")
+            return
+        }
+        #expect(created.text == "Max Huber hat die Meldung erstellt.")
+        #expect(status.text == "IT hat den Status auf „In Bearbeitung“ gesetzt.")
+        #expect(answer.text == "Bitte App neu starten")
+    }
 }

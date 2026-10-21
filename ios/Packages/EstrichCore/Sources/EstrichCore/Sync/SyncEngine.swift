@@ -4,6 +4,8 @@ import Foundation
 public protocol SyncTransport: Sendable {
     func push(_ operations: [PushOperation]) async throws(APIError) -> [PushResult]
     func pull(cursor: String?, includeScope: Bool) async throws(APIError) -> PullResponse
+    /// Vollständiger Stand der angegebenen Bauakten samt Inhalt (höchstens 50 je Aufruf).
+    func snapshot(_ bauakteIds: [UUID]) async throws(APIError) -> SnapshotResponse
     func uploadStatus(_ fileId: UUID) async throws(APIError) -> UploadStatus
     /// Lädt `chunk` ab Position `offset` hoch. Liefert die beim Server angekommenen Bytes und ob die Datei vollständig ist.
     func upload(_ fileId: UUID, chunk: Data, offset: Int64, total: Int64) async throws(APIError) -> (received: Int64, stored: Bool)
@@ -27,6 +29,10 @@ public struct APISyncTransport: SyncTransport {
         if let cursor { query.append(URLQueryItem(name: "cursor", value: cursor)) }
         if includeScope { query.append(URLQueryItem(name: "includeScope", value: "true")) }
         return try await client.get("sync/pull", query: query)
+    }
+
+    public func snapshot(_ bauakteIds: [UUID]) async throws(APIError) -> SnapshotResponse {
+        try await client.post("sync/snapshot", body: SnapshotRequest(bauakteIds: bauakteIds))
     }
 
     public func uploadStatus(_ fileId: UUID) async throws(APIError) -> UploadStatus {
@@ -135,9 +141,36 @@ public actor SyncEngine {
         }
     }
 
+    /// Bauakten, die laut Server sichtbar sind, dem Gerät aber fehlen (z. B. neu eingeplant oder zugewiesen), samt
+    /// Inhalt nachladen. Der Änderungsfeed allein liefert sie erst bei ihrer nächsten Änderung.
+    public func fillGaps(visible: [UUID]) async throws {
+        let known = Set(try await store.knownBauakteIds())
+        let missing = visible.filter { !known.contains($0) }
+        var index = 0
+        while index < missing.count {
+            let batch = Array(missing[index..<min(index + 50, missing.count)])
+            let snapshot = try await transport.snapshot(batch)
+            try await store.apply(snapshot: snapshot)
+            index += batch.count
+        }
+    }
+
+    /// Eine einzelne Bauakte sofort vollständig laden (z. B. nach „Mir zuweisen“).
+    public func load(bauakte id: UUID) async -> SyncOutcome {
+        do {
+            try await store.apply(snapshot: try await transport.snapshot([id]))
+            return .completed
+        } catch let error as APIError {
+            return error == .offline ? .offline : .failed(error)
+        } catch {
+            return .failed(.invalidResponse)
+        }
+    }
+
     private func pullAll(includeScope: Bool) async throws {
         var resynced = false
         var first = true
+        var visible: [UUID]?
         while true {
             let page: PullResponse
             do {
@@ -151,7 +184,11 @@ public actor SyncEngine {
             }
             first = false
             try await store.apply(page)
+            if let ids = page.visibleBauakteIds { visible = ids }
             guard page.hasMore else { break }
+        }
+        if let visible {
+            try await fillGaps(visible: visible)
         }
         // Nach einem Neuabgleich angekündigte Dateien sofort übertragen.
         if resynced, try await pushAll() == .completed {

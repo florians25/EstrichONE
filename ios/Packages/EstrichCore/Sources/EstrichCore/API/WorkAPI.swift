@@ -17,4 +17,25 @@ extension AuthorizedClient {
                                                                   URLQueryItem(name: "limit", value: String(limit))])
         return rows.compactMap(Contact.init(remote:))
     }
+
+    /// „Mir zuweisen“: sich selbst als Mitarbeiter der Bauakte eintragen. Danach mit `SyncEngine.load(bauakte:)` laden.
+    public func assignToMe(_ bauakteId: UUID) async throws(APIError) {
+        let _: JSONValue = try await post("bauakten/\(bauakteId.key)/members/me")
+    }
+
+    /// Mögliche Dubletten vor dem Anlegen eines Kunden (Server-Prüfung über Name, Telefon, E-Mail und Adresse).
+    public func contactDuplicates(of customer: NewCustomer) async throws(APIError) -> [Contact] {
+        var query: [URLQueryItem] = [URLQueryItem(name: "name", value: customer.name.trimmingCharacters(in: .whitespaces))]
+        for (name, value) in [("phone", customer.phone), ("email", customer.email), ("street", customer.street),
+                              ("postalCode", customer.postalCode), ("city", customer.city)] {
+            if let value, !value.trimmingCharacters(in: .whitespaces).isEmpty { query.append(URLQueryItem(name: name, value: value)) }
+        }
+        let rows: [JSONValue] = try await get("contacts/duplicates", query: query)
+        return rows.compactMap { row in row["contact"].flatMap(Contact.init(remote:)) }
+    }
+
+    /// Alle Einsätze eines Zeitraums („Wer fährt wohin“), Tage im Format `yyyy-MM-dd`.
+    public func planning(from: String, to: String) async throws(APIError) -> PlanningRange {
+        try await get("planning/range", query: [URLQueryItem(name: "from", value: from), URLQueryItem(name: "to", value: to)])
+    }
 }

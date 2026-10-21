@@ -118,6 +118,21 @@ public struct PullResponse: Codable, Sendable {
     public let visibleBauakteIds: [UUID]?
 }
 
+/// Stand ganzer Bauakten (`POST /sync/snapshot`): schließt Lücken, wenn eine Bauakte neu sichtbar wird.
+public struct SnapshotResponse: Codable, Sendable {
+    public let changes: [SyncChange]
+    public let missing: [UUID]
+
+    public init(changes: [SyncChange], missing: [UUID]) {
+        self.changes = changes
+        self.missing = missing
+    }
+}
+
+struct SnapshotRequest: Codable, Sendable {
+    let bauakteIds: [UUID]
+}
+
 public struct UploadStatus: Codable, Sendable {
     public let id: UUID
     public let receivedBytes: Int64

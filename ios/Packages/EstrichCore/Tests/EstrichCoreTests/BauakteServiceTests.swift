@@ -232,6 +232,44 @@ struct BauakteServiceTests {
         #expect(notices.upcomingMaintenance(at: after) == nil)
     }
 
+    @Test("Lücke im Feed: neu sichtbare Bauakte wird samt Inhalt nachgeladen, entzogene verschwindet")
+    func gapFilling() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        let planned = UUID.v7()
+        let note = UUID.v7()
+        server.serverSideExisting("bauakte", id: planned, data: ["id": JSONValue(planned), "title": "Eingeplant", "number": "2026-077", "version": 3])
+        server.serverSideExisting("note", id: note, data: ["id": JSONValue(note), "bauakteId": JSONValue(planned), "text": "Schlüssel beim Nachbarn"])
+
+        #expect(await engine.synchronize(includeScope: true) == .completed)
+        #expect(try await service.bauakte(planned)?.number == "2026-077")
+        #expect(try await service.notes(of: planned).map(\.text) == ["Schlüssel beim Nachbarn"])
+
+        server.visibleBauakten = []
+        #expect(await engine.synchronize(includeScope: true) == .completed)
+        #expect(try await service.bauakte(planned) == nil)
+        #expect(await engine.load(bauakte: planned) == .completed, "nicht sichtbar: nichts zu laden, kein Fehler")
+        #expect(try await service.bauakte(planned) == nil)
+    }
+
+    @Test("Abgelehnte Operation nach Klärung erneut senden; fehlgeschlagene Uploads erneut versuchen")
+    func retries() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        let bauakte = try await service.create(NewBauakte(title: "Wiederholen"))
+        server.rejectNext = ("BAUAKTE_NOT_FOUND", "Die Bauakte ist nicht sichtbar.")
+        #expect(await engine.synchronize() == .completed)
+        let rejected = try #require(try await service.store.operations().first)
+        #expect(rejected.state == .rejected)
+        #expect(try await service.bauakte(bauakte)?.syncState == .problem)
+
+        try await service.store.retryRejected(rejected)
+        #expect(await engine.synchronize() == .completed)
+        #expect(try await service.store.operations().isEmpty)
+        #expect(server.entity(bauakte) != nil)
+        #expect(try await service.store.retryFailedUploads() == 0)
+    }
+
     @Test("Dateinamen: Endung und Anzeigename")
     func fileNames() {
         let pdf = FileItem.splitName("Aufmaß EG.pdf")

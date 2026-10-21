@@ -314,6 +314,58 @@ public actor LocalStore {
         }
     }
 
+    /// Bauakten mit Serverstand auf dem Gerät.
+    public func knownBauakteIds() throws -> [UUID] {
+        try db.database.query("SELECT id FROM entity WHERE type = 'bauakte' AND server IS NOT NULL")
+            .compactMap { $0["id"]?.string.flatMap(UUID.init(uuidString:)) }
+    }
+
+    /// Übernimmt einen Snapshot (ohne Cursor zu verändern). Nicht mehr sichtbare Bauakten verschwinden samt Inhalt.
+    public func apply(snapshot: SnapshotResponse) throws {
+        try db.write { db in
+            for change in snapshot.changes {
+                guard let type = EntityType(rawValue: change.entityType) else { continue }
+                if change.deleted {
+                    try removeEntity(db, type, change.id)
+                } else if let data = change.data {
+                    try storeServerState(db, type, change.id, data)
+                }
+            }
+            for id in snapshot.missing {
+                let local = try db.query("SELECT server FROM entity WHERE type = 'bauakte' AND id = ?", [.text(id.key)]).first
+                if let server = local?["server"], server != .null {
+                    try removeEntity(db, .bauakte, id)
+                }
+            }
+        }
+    }
+
+    /// Abgelehnte Operation erneut senden (z. B. nachdem die Bauakte zugewiesen wurde). Neue `opId`, weil der Server
+    /// die Ablehnung der alten gespeichert hat.
+    public func retryRejected(_ operation: OutboxOperation) throws {
+        try db.write { db in
+            try db.execute("""
+                UPDATE outbox SET state = 'pending', op_id = ?, error_code = NULL, error_message = NULL WHERE seq = ? AND state = 'rejected'
+                """, [.text(UUID.v7(now: now()).key), .integer(operation.seq)])
+            if operation.type == "file.announce" {
+                try db.execute("UPDATE upload SET state = 'waiting', error_code = NULL WHERE file_id = ?", [.text(operation.entityId.key)])
+            }
+            try recompute(db, operation.entityType, operation.entityId)
+        }
+    }
+
+    /// Fehlgeschlagene Uploads erneut versuchen (dauerhafte Ablehnungen wie zu große Dateien ausgenommen).
+    @discardableResult
+    public func retryFailedUploads() throws -> Int {
+        try db.write { db in
+            try db.execute("""
+                UPDATE upload SET state = 'waiting', error_code = NULL
+                WHERE state = 'failed' AND COALESCE(error_code, '') NOT IN ('FILE_TOO_LARGE', 'TYPE_NOT_ALLOWED', 'LOCAL_FILE_MISSING')
+                  AND NOT EXISTS (SELECT 1 FROM outbox o WHERE o.entity_type = 'file' AND o.entity_id = upload.file_id AND o.state = 'rejected')
+                """)
+        }
+    }
+
     // MARK: Dateien
 
     /// Datei für den Upload vormerken (nach `create(.file, …, operation: "file.announce")`).

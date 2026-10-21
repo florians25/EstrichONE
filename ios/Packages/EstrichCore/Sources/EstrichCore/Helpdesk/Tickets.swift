@@ -59,11 +59,75 @@ public struct TicketComment: Decodable, Equatable, Identifiable, Sendable {
     public let createdAt: Date
 }
 
+/// Statuswechsel, Zuweisung und andere Ereignisse eines Tickets (`TicketEventDto`).
+public struct TicketEvent: Decodable, Equatable, Sendable {
+    public let actorName: String?
+    public let kind: String
+    public let fromValue: String?
+    public let toValue: String?
+    public let at: Date
+
+    /// Lesbarer Satz für den Verlauf.
+    public var text: String {
+        let who = actorName ?? "System"
+        switch kind {
+        case "created": return "\(who) hat die Meldung erstellt."
+        case "status", "statusChanged":
+            return "\(who) hat den Status auf „\(Self.status(toValue)?.title ?? toValue ?? "–")“ gesetzt."
+        case "assigned", "assignee", "assigneeChanged":
+            return toValue.map { "\(who) hat die Meldung \($0) zugewiesen." } ?? "\(who) hat die Zuweisung aufgehoben."
+        case "priority", "priorityChanged": return "\(who) hat die Priorität geändert."
+        case "category", "categoryChanged": return "\(who) hat die Kategorie geändert."
+        case "reopened": return "\(who) hat die Meldung wieder geöffnet."
+        case "resolved": return "\(who) hat eine Lösung eingetragen."
+        default: return "\(who): \(kind)"
+        }
+    }
+
+    /// Der Server schreibt Statuswerte als Enum-Namen („InProgress“), die App nutzt camelCase.
+    static func status(_ value: String?) -> TicketStatus? {
+        guard let value, let first = value.first else { return nil }
+        return TicketStatus(rawValue: first.lowercased() + value.dropFirst())
+    }
+}
+
 public struct TicketDetail: Decodable, Equatable, Sendable {
     public let summary: TicketSummary
     public let description: String?
     public let resolution: String?
     public let comments: [TicketComment]
+    public let events: [TicketEvent]
+
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        summary = try container.decode(TicketSummary.self, forKey: .summary)
+        description = try container.decodeIfPresent(String.self, forKey: .description)
+        resolution = try container.decodeIfPresent(String.self, forKey: .resolution)
+        comments = try container.decodeIfPresent([TicketComment].self, forKey: .comments) ?? []
+        events = (try? container.decodeIfPresent([TicketEvent].self, forKey: .events)) ?? []
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case summary, description, resolution, comments, events
+    }
+
+    /// Kommentare (ohne interne Notizen) und Ereignisse zeitlich sortiert.
+    public var timeline: [TimelineItem] {
+        (comments.filter { !$0.isInternal }.map { TimelineItem.comment($0) } + events.map { TimelineItem.event($0) })
+            .sorted { $0.date < $1.date }
+    }
+
+    public enum TimelineItem: Equatable, Sendable {
+        case comment(TicketComment)
+        case event(TicketEvent)
+
+        public var date: Date {
+            switch self {
+            case let .comment(comment): comment.createdAt
+            case let .event(event): event.at
+            }
+        }
+    }
 }
 
 /// Eingaben von „Problem melden“. Pflicht ist nur der Titel (14, Abschnitt 2).
