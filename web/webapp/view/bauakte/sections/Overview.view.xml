@@ -16,25 +16,12 @@
 			<Label text="Angelegt"/><Text text="{path: 'akte>/bauakte/createdAt', formatter: 'fmt.dateTime'}"/>
 			<Label text="Geändert"/><Text text="{path: 'akte>/bauakte/updatedAt', formatter: 'fmt.dateTime'}"/>
 			<Label text="Beschreibung"/><Text text="{= ${akte>/bauakte/description} || '–' }" class="eoPre"/>
-			<core:Title text="Bauvorhaben"/>
-			<Label text="Objektart"/><Text text="{akte>/projectView/objectType}"/>
-			<Label text="Geschosse"/><Text text="{akte>/projectView/floors}"/>
-			<Label text="Gesamtfläche"/><Text text="{akte>/projectView/totalArea}"/>
-			<Label text="Estrichart"/><Text text="{akte>/projectView/screedType}"/>
-			<Label text="Konstruktion"/><Text text="{akte>/projectView/construction}"/>
-			<Label text="Nenndicke"/><Text text="{akte>/projectView/thickness}"/>
-			<Label text="Festigkeit"/><Text text="{akte>/projectView/strengthClass}"/>
-			<Label text="Heizung"/><Text text="{akte>/projectView/heating}"/>
-			<Label text="Dämmung"/><Text text="{akte>/projectView/insulation}"/>
-			<Label text="Priorität"/><Text text="{akte>/projectView/priority}"/>
 			<core:Title text="{i18n>overview.siteData}"/>
 			<Label text="Straße"/><Text text="{= ${akte>/bauakte/street} || '–' }"/>
 			<Label text="PLZ / Ort"/><Text text="{= (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }"/>
 			<Label text="Kontakt"/><Text text="{= ${akte>/bauakte/siteContactName} || '–' }"/>
 			<Label text="Telefon"/><Link text="{akte>/phone}" href="tel:{akte>/phone}" visible="{= !!${akte>/phone} }"/>
 			<Label text="Koordinaten"/><Text text="{= ${ov>/coordinates} || '–' }"/>
-			<Label text="Zugang"/><Text text="{akte>/projectView/siteAccess}" class="eoPre"/>
-			<Label text="Versorgung"/><Text text="{akte>/projectView/utilities}"/>
 			<Label text="Hinweise"/><Text text="{= ${akte>/bauakte/siteNotes} || '–' }" class="eoPre"/>
 			<core:Title text="Termine"/>
 			<Label text="Beginn"/><Text text="{path: 'akte>/bauakte/plannedStart', formatter: 'fmt.date'}"/>
@@ -50,6 +37,19 @@
 			<Label text="{i18n>overview.photos}"/><Link text="{= ${ov>/photoText} || '0 Fotos' }" press=".onToPhotos"/>
 			<Label text="{i18n>overview.diary}"/><Text text="{= (${ov>/diaryCount} || '0') + ' · ' + (${ov>/diaryFooter} || '') }"/>
 		</form:SimpleForm>
+
+		<!-- Kennwerte des Bauvorhabens aus dem Formular-Schema (Formular-Designer der Stammdaten) -->
+		<form:Form formContainers="{akte>/projectGroups}" editable="false" class="eoDenseForm">
+			<form:layout>
+				<form:ResponsiveGridLayout columnsXL="4" columnsL="3" columnsM="2" labelSpanXL="5" labelSpanL="5" labelSpanM="5" labelSpanS="12"
+					emptySpanXL="0" emptySpanL="0" emptySpanM="0" adjustLabelSpan="false" singleContainerFullSize="false" breakpointXL="1400"/>
+			</form:layout>
+			<form:FormContainer title="{akte>label}" formElements="{path: 'akte>rows', templateShareable: false}">
+				<form:FormElement label="{akte>label}">
+					<Text text="{akte>value}"/>
+				</form:FormElement>
+			</form:FormContainer>
+		</form:Form>
 
 		<!-- Listen als kompakte Tabellen -->
 		<grid:CSSGrid gridTemplateColumns="repeat(auto-fit, minmax(26rem, 1fr))" gridGap="0.5rem 2rem" class="eoOverviewGrid">

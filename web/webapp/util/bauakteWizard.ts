@@ -6,7 +6,8 @@
  *  2. Bauvorhaben und Baustelle – Baustellenadresse auf Wunsch vom Kunden übernehmen.
  *  3. Prüfen und anlegen.
  */
-import { projectView, projectWizardControls } from "./project";
+import { schemaWizardControls } from "./project";
+import { bauakteSchema, displayValue, fieldsOf, writeValues, type FormSchema } from "./formSchema";
 import Dialog from "sap/m/Dialog";
 import { loadSystemSettings } from "./systemSettings";
 import Button from "sap/m/Button";
@@ -235,7 +236,16 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		const t = templates.find((x) => x.id === template.getSelectedKey());
 		if (t?.content.description && !site.description.getValue().trim()) site.description.setValue(t.content.description);
 	});
-	const kennwerte = projectWizardControls("new");
+	// Kennwerte aus dem Formular-Schema der Stammdaten (B7); Gruppen als Zwischenüberschriften.
+	let schema: FormSchema | null = null;
+	let kennwerte: ReturnType<typeof schemaWizardControls> | null = null;
+	const kennwerteForm = form([]);
+	void bauakteSchema().then((loaded) => {
+		if (!loaded) return;
+		schema = loaded;
+		kennwerte = schemaWizardControls(loaded, "new", () => validate());
+		for (const c of kennwerte.content) kennwerteForm.addContent(c);
+	});
 	const projectStep = new WizardStep("newStepProject", {
 		title: "Bauvorhaben", icon: "sap-icon://building", validated: false,
 		content: [form([
@@ -248,8 +258,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			new Label({ text: "PLZ", labelFor: site.postalCode }), site.postalCode,
 			new Label({ text: "Ort", labelFor: site.city }), site.city,
 			new Label({ text: "Beschreibung", labelFor: site.description }), site.description,
-			...kennwerte.content,
-		])],
+		]), kennwerteForm],
 	});
 
 	// ---- Schritt 3: Prüfen -------------------------------------------------------------------------------------------
@@ -271,9 +280,12 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		summary.addItem(line("Anlegen als", kind.getSelectedKey() === "inquiry" ? "Anfrage" : "Bauakte (Auftrag)"));
 		const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
 		if (chosenTemplate) summary.addItem(line("Vorlage", `${chosenTemplate.name}${chosenTemplate.content.rooms?.length ? ` – legt ${chosenTemplate.content.rooms.length} Räume an` : ""}`));
-		const pv = projectView(kennwerte.read());
-		summary.addItem(line("Kennwerte", [pv.objectType, pv.totalArea, pv.screedType, pv.construction, pv.thickness, pv.strengthClass]
-			.filter((x) => x !== "–").join(" · ")));
+		if (schema && kennwerte) {
+			const values = kennwerte.read();
+			const shown = fieldsOf(schema).filter((f) => values[f.key] !== null && values[f.key] !== undefined)
+				.map((f) => `${f.label}: ${displayValue(schema!, f, values[f.key])}`);
+			summary.addItem(line("Kennwerte", shown.join(" · ")));
+		}
 		summary.addItem(line("Baustelle", [site.street.getValue().trim(), [site.postalCode.getValue().trim(), site.city.getValue().trim()].filter(Boolean).join(" ")].filter(Boolean).join(", ")));
 	};
 
@@ -295,7 +307,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		c.email.setValueStateText("Bitte eine gültige E-Mail-Adresse angeben.");
 		const pendingDuplicates = !existing && candidates.length > 0 && checkedFor === fingerprint() && !forceNew.getSelected();
 		customerStep.setValidated(!!f.name && emailOk && !pendingDuplicates);
-		projectStep.setValidated(!!title.getValue().trim());
+		const missing = kennwerte?.missing() ?? [];
+		projectStep.setValidated(!!title.getValue().trim() && missing.length === 0);
 		updateButtons();
 	}
 
@@ -387,7 +400,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					postalCode: site.postalCode.getValue().trim() || null, city: site.city.getValue().trim() || null,
 					description: site.description.getValue().trim() || null, status,
 					templateKey: template.getSelectedKey() || null,
-					project: kennwerte.read(), plannedStart: kennwerte.period().start, plannedEnd: kennwerte.period().end,
+					...(schema && kennwerte ? writeValues(schema, kennwerte.read(), null) : {}),
 				});
 				const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
 				for (const [index, room] of (chosenTemplate?.content.rooms ?? []).entries()) {

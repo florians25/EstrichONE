@@ -2,6 +2,7 @@
  * Anmeldezustand im Browser: Benutzer und Rechte (Tokens nur in HttpOnly-Cookies). Als JSONModel „session“
  * an allen Views verfügbar, z. B. visible="{= ${session>/permissions/bauakten.create} }".
  */
+import { valueLists } from "./valueLists";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import { api, get, post } from "./api";
 import { loadSystemSettings } from "./systemSettings";
@@ -35,7 +36,7 @@ class Session {
 	}
 
 	private async loadPermissions(): Promise<void> {
-		const [list, settings] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true)]);
+		const [list, settings] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true)]);
 		// Abgeschaltete Module (Einstellungen → Module): Rechte des Moduls ausblenden – Navigation, Reiter und Kacheln verschwinden.
 		const modules = settings?.settings.modules ?? { materials: true };
 		const disabled = Object.entries(modules).filter(([, on]) => on === false).map(([key]) => `${key}.`);

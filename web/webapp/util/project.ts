@@ -13,6 +13,7 @@ import Title from "sap/m/Title";
 import type Control from "sap/ui/core/Control";
 import { area, parseNumber } from "./format";
 import type { Field } from "./forms";
+import type { FormSchema, SchemaField } from "./formSchema";
 
 export interface BauakteProject {
 	objectType?: string | null;
@@ -30,6 +31,8 @@ export interface BauakteProject {
 	siteAccess?: string | null;
 	waterOnSite?: boolean | null;
 	powerOnSite?: boolean | null;
+	/** Eigene Felder aus dem Formular-Designer. */
+	custom?: Record<string, unknown> | null;
 }
 
 export const objectTypes: Record<string, string> = {
@@ -177,5 +180,61 @@ export function projectWizardControls(prefix: string): { content: Control[]; rea
 			siteAccess: access.getValue().trim() || null, waterOnSite: water.getSelected() ? true : null, powerOnSite: power.getSelected() ? true : null,
 		}),
 		period: () => ({ start: start.getValue() || null, end: end.getValue() || null }),
+	};
+}
+
+/** Steuerelemente für den Anlage-Assistenten aus dem Formular-Schema (Gruppen als Zwischenüberschriften). */
+export function schemaWizardControls(schema: FormSchema, prefix: string, onChange: () => void):
+	{ content: Control[]; read: () => Record<string, unknown>; missing: () => string[] } {
+	const content: Control[] = [];
+	const readers: { field: SchemaField; read: () => unknown }[] = [];
+	for (const g of schema.groups) {
+		content.push(new Title({ text: g.label, level: "H5" }));
+		for (const f of g.fields) {
+			const id = `${prefix}F_${f.key}`;
+			let control: Control;
+			let read: () => unknown;
+			const options = f.list ? schema.lists[f.list] ?? [] : [];
+			switch (f.type) {
+				case "select": {
+					const sel = new Select(id, { width: "100%", forceSelection: false, items: [new Item({ key: "", text: "–" }), ...options.map((o) => new Item({ key: o.key, text: o.label }))] });
+					sel.attachChange(onChange);
+					control = sel; read = () => sel.getSelectedKey() || null; break;
+				}
+				case "boolean": {
+					const cb = new CheckBox(id, { text: f.label });
+					cb.attachSelect(onChange);
+					control = cb; read = () => (cb.getSelected() ? true : null); break;
+				}
+				case "date": {
+					const dp = new DatePicker(id, { width: "100%", valueFormat: "yyyy-MM-dd", displayFormat: "dd.MM.yyyy" });
+					dp.attachChange(onChange);
+					control = dp; read = () => dp.getValue() || null; break;
+				}
+				case "textarea": {
+					const ta = new TextArea(id, { rows: 2, width: "100%", maxLength: 2000, placeholder: f.help ?? "" });
+					ta.attachLiveChange(onChange);
+					control = ta; read = () => ta.getValue().trim() || null; break;
+				}
+				case "number": case "integer": {
+					const inp = new Input(id, { width: "100%", description: f.unit ?? "", fieldWidth: f.unit ? "70%" : "100%", textAlign: "End" });
+					inp.attachLiveChange(onChange);
+					control = inp; read = () => { const v = parseNumber(inp.getValue()); return v == null ? null : f.type === "integer" ? Math.round(v) : v; }; break;
+				}
+				default: {
+					const inp = new Input(id, { width: "100%", maxLength: 2000, placeholder: f.help ?? "", showSuggestion: options.length > 0,
+						suggestionItems: options.map((o) => new Item({ text: o.label })) });
+					inp.attachLiveChange(onChange);
+					control = inp; read = () => inp.getValue().trim() || null;
+				}
+			}
+			content.push(new Label({ text: f.type === "boolean" ? "" : f.label, labelFor: control, required: !!f.required }), control);
+			readers.push({ field: f, read });
+		}
+	}
+	return {
+		content,
+		read: () => Object.fromEntries(readers.map((r) => [r.field.key, r.read()])),
+		missing: () => readers.filter((r) => r.field.required && (r.read() === null || r.read() === "")).map((r) => r.field.label),
 	};
 }

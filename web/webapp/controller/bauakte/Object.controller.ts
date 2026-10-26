@@ -32,6 +32,7 @@ import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
 import { catalog, type BauakteTemplate } from "../../util/catalog";
 import { projectBadges, projectView } from "../../util/project";
+import { badges, bauakteSchema, viewGroups } from "../../util/formSchema";
 import { openMapDialog } from "../../util/mapDialog";
 
 /** Abschnitte der Objektseite: Schlüssel (Adresse ?abschnitt=…) → eingebettete View. */
@@ -169,6 +170,11 @@ export default class ObjectController extends BaseController {
 		m.setProperty("/placeText", place);
 		m.setProperty("/projectView", projectView(b.project));
 		m.setProperty("/projectBadges", projectBadges(b.project));
+		void bauakteSchema().then((schema) => {
+			if (!schema || this.cur()?.id !== b.id) return;
+			m.setProperty("/projectBadges", badges(schema, b));
+			m.setProperty("/projectGroups", viewGroups(schema, b));
+		});
 		m.setProperty("/subtitle", "Bauakte");
 		if (b.templateKey) {
 			void catalog<BauakteTemplate>("bauakteTemplate").then((list) => {

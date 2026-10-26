@@ -17,7 +17,7 @@ import { openActivityDialog } from "../../../util/activityDialog";
 import { akteContextOf } from "../../../util/akteHeader";
 import { openForm } from "../../../util/forms";
 import { openMapDialog } from "../../../util/mapDialog";
-import { projectFields, projectFromValues } from "../../../util/project";
+import { bauakteSchema, formFields, initialValues, writeValues } from "../../../util/formSchema";
 
 /** Übersicht: Objektbilder, Standort (im Büro per Klick setzen), Kennzahlen, Notizen, Aufgaben, Stammdaten, Aktivitäten. @namespace estrichone.controller.bauakte.sections */
 export default class Overview extends SectionBase {
@@ -198,13 +198,17 @@ export default class Overview extends SectionBase {
 		navTo(`/bauakten/${this.bauakteId}/datei/${id}?abschnitt=dokumente`);
 	}
 
-	/** Kennwerte des Bauvorhabens bearbeiten (Fläche, Estrich, Aufbau, Zugang). */
+	/** Kennwerte des Bauvorhabens bearbeiten – Felder aus dem Formular-Schema. */
 	async onEditProject(): Promise<void> {
+		const schema = await bauakteSchema();
+		if (!schema) return;
 		const b = this.bauakte();
-		const initial = { ...(b.project ?? {}) } as Record<string, unknown>;
 		const saved = await openForm<BauakteDetail>({
-			title: "Kennwerte bearbeiten", width: "40rem", initial, fields: projectFields(),
-			submit: (v) => saveBauakte(this.bauakte(), { project: projectFromValues(v) }),
+			title: "Kennwerte bearbeiten", width: "44rem", initial: initialValues(schema, b), fields: formFields(schema, b),
+			submit: (v) => {
+				const current = this.bauakte();
+				return saveBauakte(current, writeValues(schema, v, current.project));
+			},
 		});
 		if (saved) this.toast("Gespeichert");
 	}

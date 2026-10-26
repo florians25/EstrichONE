@@ -3,7 +3,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.masterData}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Textbausteine, Ordnervorlagen der Dokumentablage und Bauakten-Vorlagen"/></f:expandedContent>
+				<f:expandedContent><Text text="Wertelisten, Basisdaten-Formular, Textbausteine, Ordnervorlagen der Dokumentablage und Bauakten-Vorlagen"/></f:expandedContent>
 				<f:actions>
 					<Button text="{view>/addText}" icon="sap-icon://add" type="Emphasized" press=".onAdd" visible="{view>/canManage}"/>
 				</f:actions>
@@ -78,6 +78,85 @@
 										<HBox justifyContent="End">
 											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
 											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="valueList" text="Wertelisten" icon="sap-icon://list" count="{= ${view>/listItems}.length }">
+							<OverflowToolbar style="Clear">
+								<Label text="Liste" labelFor="listSelect"/>
+								<Select id="listSelect" selectedKey="{view>/list}" items="{view>/lists}" change=".onListChange" width="16rem">
+									<core:Item key="{view>key}" text="{view>text}"/>
+								</Select>
+								<ToolbarSpacer/>
+								<Button text="Neue Liste" icon="sap-icon://add-folder" press=".onNewList" visible="{view>/canManage}"/>
+							</OverflowToolbar>
+							<Table items="{view>/listItems}" noDataText="Diese Liste ist leer." popinLayout="GridSmall" class="eoDenseTable">
+								<columns>
+									<Column><Text text="Bezeichnung"/></Column>
+									<Column width="8rem"><Text text="Kurzform"/></Column>
+									<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Schlüssel"/></Column>
+									<Column width="6rem"><Text text="Aktiv"/></Column>
+									<Column width="10rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>label}"/>
+										<Text text="{= ${view>shortLabel} || '–' }"/>
+										<Text text="{view>key}" class="eoMuted eoTabular"/>
+										<Switch state="{view>isActive}" change=".onToggleItem" enabled="{view>/canManage}" customTextOn="Ja" customTextOff="Nein"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://navigation-up-arrow" type="Transparent" tooltip="Nach oben" press=".onMoveItem">
+												<customData><core:CustomData key="dir" value="-1"/></customData>
+											</Button>
+											<Button icon="sap-icon://navigation-down-arrow" type="Transparent" tooltip="Nach unten" press=".onMoveItem">
+												<customData><core:CustomData key="dir" value="1"/></customData>
+											</Button>
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Umbenennen" press=".onEditItem"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="form" text="Basisdaten-Formular" icon="sap-icon://form">
+							<MessageStrip text="Diese Felder fragt der Anlage-Assistent ab, zeigt die Übersicht unter den Basisdaten und nutzt die App. Eingebaute Felder lassen sich umbenennen, verschieben, als Pflicht oder Badge markieren; eigene Felder kommen hinzu."
+								type="Information" showIcon="true" class="sapUiTinyMarginBottom"/>
+							<OverflowToolbar style="Clear">
+								<Button text="Feld hinzufügen" icon="sap-icon://add" press=".onAddField" visible="{view>/canManage}"/>
+								<Button text="Gruppe anlegen" icon="sap-icon://add-folder" press=".onAddGroup" visible="{view>/canManage}"/>
+								<ToolbarSpacer/>
+								<Button text="Formular speichern" type="Emphasized" icon="sap-icon://save" press=".onSaveForm" enabled="{view>/formDirty}" visible="{view>/canManage}"/>
+							</OverflowToolbar>
+							<Table items="{view>/formRows}" popinLayout="GridSmall" class="eoDenseTable">
+								<columns>
+									<Column><Text text="Feld"/></Column>
+									<Column width="8rem"><Text text="Typ"/></Column>
+									<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Werteliste / Einheit"/></Column>
+									<Column width="5rem" hAlign="Center"><Text text="Pflicht"/></Column>
+									<Column width="5rem" hAlign="Center"><Text text="Badge"/></Column>
+									<Column width="12rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem highlight="{= ${view>group} ? 'Information' : 'None' }">
+										<VBox>
+											<Title text="{view>label}" level="H4" visible="{view>group}"/>
+											<Text text="{view>label}" visible="{= !${view>group} }"/>
+											<Text text="{= ${view>builtin} ? 'eingebaut' : 'eigenes Feld' }" class="eoMuted" visible="{= !${view>group} }"/>
+										</VBox>
+										<Text text="{view>typeText}"/>
+										<Text text="{view>listText}"/>
+										<CheckBox selected="{view>required}" visible="{= !${view>group} }" select=".onFormFlag" enabled="{view>/canManage}"/>
+										<CheckBox selected="{view>badge}" visible="{= !${view>group} }" select=".onFormFlag" enabled="{view>/canManage}"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://navigation-up-arrow" type="Transparent" tooltip="Nach oben" press=".onMoveRow">
+												<customData><core:CustomData key="dir" value="-1"/></customData>
+											</Button>
+											<Button icon="sap-icon://navigation-down-arrow" type="Transparent" tooltip="Nach unten" press=".onMoveRow">
+												<customData><core:CustomData key="dir" value="1"/></customData>
+											</Button>
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditRow"/>
+											<Button icon="sap-icon://delete" type="Transparent" tooltip="Entfernen" press=".onRemoveRow"/>
 										</HBox>
 									</ColumnListItem>
 								</items>
