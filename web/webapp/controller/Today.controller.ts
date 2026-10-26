@@ -143,7 +143,7 @@ export default class Today extends BaseController {
 		this.nav(`/it-center/helpdesk/${this.obj<TicketSummary>(event).id}`);
 	}
 
-	onToDay(): void { this.nav("/planung/tageseinteilung"); }
+	onToDay(): void { this.nav("/planung?ansicht=tag"); }
 	onToOrders(): void { this.nav("/bestellungen"); }
 	onToCalls(): void { this.nav("/anrufe"); }
 	onToInquiries(): void { this.nav("/anfragen"); }

@@ -17,6 +17,8 @@ export interface Lane {
 	sub: string;
 	/** Mitarbeiter, deren Abwesenheit die Zeile betrifft (Kolonnenmitglieder bzw. die Person selbst). */
 	userIds: string[];
+	/** Auslastung im sichtbaren Zeitraum (Kolonnen). */
+	load?: { percent: number; state: string; text: string } | null;
 }
 
 export interface BoardData {
@@ -308,6 +310,16 @@ export default class PlanBoard extends Control {
 			else sw.classList.add("eoSwatchEmpty");
 			const names = el("span", "eoPlanLaneText");
 			names.append(el("strong", undefined, lane.name), el("small", undefined, lane.sub));
+			if (lane.load) {
+				const bar = el("span", `eoLoad eoLoad${lane.load.state}`);
+				bar.title = lane.load.text;
+				bar.setAttribute("role", "meter");
+				bar.setAttribute("aria-label", `Auslastung ${lane.name}: ${lane.load.text}`);
+				const fill = el("span", "eoLoadFill");
+				fill.style.width = `${Math.min(100, lane.load.percent)}%`;
+				bar.append(fill, el("span", "eoLoadText", `${lane.load.percent} %`));
+				names.append(bar);
+			}
 			label.append(sw, names);
 			row.append(label);
 			for (const d of data.days) {

@@ -106,3 +106,12 @@
 .eoVacKpis { gap: 2rem; margin-top: 0.25rem; }
 .eoKpiLink, .eoKpiValue { font-size: 1.5rem !important; font-weight: bold; }
 .eoVacFilters { gap: 0.5rem; }
+
+/* Auslastung je Kolonne (grün < 80 %, gelb bis 100 %, rot darüber). */
+.eoLoad { position: relative; display: block; height: 0.875rem; margin-top: 0.25rem; max-width: 9rem; border-radius: 0.25rem;
+	background: var(--sapField_Background); box-shadow: inset 0 0 0 1px var(--sapField_BorderColor); overflow: hidden; }
+.eoLoadFill { position: absolute; inset: 0 auto 0 0; }
+.eoLoadSuccess .eoLoadFill { background: var(--sapPositiveElementColor); }
+.eoLoadWarning .eoLoadFill { background: var(--sapCriticalElementColor); }
+.eoLoadError .eoLoadFill { background: var(--sapNegativeElementColor); }
+.eoLoadText { position: relative; display: block; font-size: 0.6875rem; line-height: 0.875rem; text-align: center; color: var(--sapTextColor); font-weight: bold; }

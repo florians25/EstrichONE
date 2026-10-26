@@ -1,6 +1,7 @@
 import BaseController from "../BaseController";
 import EventBus from "sap/ui/core/EventBus";
 import { get } from "../../util/api";
+import { download } from "../../util/planningModels";
 import { addDays, isoDay } from "../../util/days";
 import { longDay, timeRange } from "../../util/format";
 import { absenceKinds, assignmentKinds } from "../../util/labels";
@@ -27,6 +28,15 @@ export default class WorkPlan extends BaseController {
 	onRouteMatched(): void { void this.load(); }
 	onRefresh(): void { void this.load(); }
 	onPrint(): void { window.print(); }
+
+	/** Arbeitsplan als PDF vom Server (gleicher Zeitraum und Filter wie die Ansicht). */
+	onPdf(): void {
+		const m = this.model();
+		const query = new URLSearchParams({ from: isoDay(new Date()), days: String(m.getProperty("/length")) });
+		if (m.getProperty("/crew")) query.set("crewId", String(m.getProperty("/crew")));
+		if (m.getProperty("/mine") === true) query.set("mine", "true");
+		download(`/api/v1/planning/work-plan.pdf?${query.toString()}`).catch((error: unknown) => this.showError(error));
+	}
 	onFilter(): void { void this.load(); }
 
 	private async load(): Promise<void> {

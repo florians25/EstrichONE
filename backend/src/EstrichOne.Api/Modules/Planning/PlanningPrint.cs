@@ -32,11 +32,73 @@ internal static class PlanningPrint
         [AbsenceKind.SpecialLeave] = "Sonderurlaub", [AbsenceKind.School] = "Berufsschule",
     };
 
-    public static void Map(RouteGroupBuilder planning) =>
+    public static void Map(RouteGroupBuilder planning)
+    {
         planning.MapGet("/print.pdf", CreateAsync).WithName("PlanningPdf")
             .WithSummary("Kolonnenplan als PDF: mode=week|day, from (Tag bzw. Montag), rows=crews|people, weekend=true|false")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .RequirePermission(Permissions.PlanningRead);
+        planning.MapGet("/work-plan.pdf", WorkPlanAsync).WithName("WorkPlanPdf")
+            .WithSummary("Arbeitsplan als PDF: from (Standard heute), days (1–31, Standard 7), crewId, mine=true (nur eigene Einsätze)")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .RequirePermission(Permissions.PlanningRead);
+    }
+
+    /// <summary>Arbeitsplan: je Tag die Einsätze mit Uhrzeit, Baustelle, Tätigkeit, Kolonne/Team und Geräten; Abwesende (ohne Gründe).</summary>
+    private static async Task<FileContentHttpResult> WorkPlanAsync(
+        PlanningService service, IPdfBranding branding, ICurrentUser currentUser, TimeProvider clock, CancellationToken cancellationToken,
+        [FromQuery] DateOnly? from = null, [FromQuery] int? days = null, [FromQuery] Guid? crewId = null, [FromQuery] bool mine = false)
+    {
+        var start = from ?? DateOnly.FromDateTime(clock.GetLocalNow().Date);
+        var count = Math.Clamp(days ?? 7, 1, 31);
+        var end = start.AddDays(count - 1);
+        var range = await service.RangeAsync(start, end, mine ? currentUser.UserId : null, cancellationToken);
+        var company = await branding.GetAsync(cancellationToken);
+        var title = $"Arbeitsplan {start:dd.MM.} – {end:dd.MM.yyyy}";
+        var (document, section) = Create(title, "Planung", company, landscape: true);
+        section.AddParagraph(title, StyleNames.Heading1);
+        var assignments = range.Assignments.Where(a => crewId is null || a.CrewId == crewId).ToList();
+        for (var d = start; d <= end; d = d.AddDays(1))
+        {
+            var day = d;
+            var jobs = assignments.Where(a => a.Day == day).OrderBy(a => a.StartTime ?? TimeOnly.MinValue).ThenBy(a => a.CrewName).ToList();
+            var away = range.Absences.Where(a => a.From <= day && day <= a.To).Select(a => a.UserName).Distinct().ToList();
+            if (jobs.Count == 0 && away.Count == 0 && (day.DayOfWeek is DayOfWeek.Saturday or DayOfWeek.Sunday))
+            {
+                continue;
+            }
+
+            var heading = section.AddParagraph(day.ToString("dddd, dd.MM.yyyy", German), StyleNames.Heading2);
+            heading.Format.KeepWithNext = true;
+            if (jobs.Count == 0)
+            {
+                section.AddParagraph("Keine Einsätze.").Style = "Muted";
+            }
+            else
+            {
+                var table = AddTable(section, ("Zeit", 2.3, ParagraphAlignment.Left), ("Baustelle", 8.4, ParagraphAlignment.Left),
+                    ("Tätigkeit", 6.0, ParagraphAlignment.Left), ("Kolonne / Team", 6.0, ParagraphAlignment.Left), ("Geräte", 4.0, ParagraphAlignment.Left));
+                foreach (var a in jobs)
+                {
+                    AddRow(table,
+                        a.StartTime is { } s ? $"{s:HH\\:mm}{(a.EndTime is { } e ? $"–{e:HH\\:mm}" : string.Empty)}" : "ganztags",
+                        string.Join("\n", new[] { $"{a.BauakteNumber} {a.BauakteTitle}".Trim(), a.BauakteAddress }.Where(v => !string.IsNullOrWhiteSpace(v))),
+                        a.Activity,
+                        string.Join("\n", new[] { a.CrewName, string.Join(", ", a.People.Select(p => p.Name)) }.Where(v => !string.IsNullOrWhiteSpace(v))),
+                        a.Resources.Count > 0 ? string.Join(", ", a.Resources.Select(r => r.Name)) : "–");
+                }
+            }
+
+            if (away.Count > 0)
+            {
+                var p = section.AddParagraph($"Abwesend: {string.Join(", ", away)}");
+                p.Style = "Muted";
+                p.Format.SpaceBefore = Unit.FromPoint(3);
+            }
+        }
+
+        return TypedResults.File(Render(document), "application/pdf", $"Arbeitsplan {start:yyyy-MM-dd}.pdf");
+    }
 
     private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> CreateAsync(
         PlanningService service, EstrichOneDbContext db, IPdfBranding branding, TimeProvider clock, CancellationToken cancellationToken,

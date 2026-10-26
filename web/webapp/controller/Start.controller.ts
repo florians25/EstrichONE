@@ -70,7 +70,7 @@ export default class Start extends BaseController {
 			.filter((g) => g.tiles.length > 0));
 		const kpis: Record<string, unknown>[] = [];
 		const count = (page: BauaktePage) => (page.nextCursor ? "100+" : String(page.items.length));
-		if (this.has("planning.read")) kpis.push({ key: "assignments", title: "Einsätze heute", icon: "sap-icon://appointment-2", value: "…", to: "/planung/tageseinteilung", loading: true, color: "Neutral" });
+		if (this.has("planning.read")) kpis.push({ key: "assignments", title: "Einsätze heute", icon: "sap-icon://appointment-2", value: "…", to: "/planung?ansicht=tag", loading: true, color: "Neutral" });
 		if (this.has("bauakten.read")) {
 			kpis.push({ key: "inquiries", title: "Offene Anfragen", subtitle: "Bauakten im Status Anfrage", icon: "sap-icon://inbox", value: "…", to: "/bauakten?status=inquiry", loading: true, color: "Neutral" });
 			kpis.push({ key: "running", title: "Baustellen in Ausführung", icon: "sap-icon://process", value: "…", to: "/bauakten?status=inProgress", loading: true, color: "Good" });

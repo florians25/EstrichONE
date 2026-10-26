@@ -250,9 +250,9 @@ test('Wer fährt wohin: Baustellen den Kolonnen zuordnen (Ziehen und Auswahl), m
   await expect(pageTitle(page)).toHaveText('Wer fährt wohin');
   await expect(page.getByText(/von \d+ Kolonnen eingeteilt/).filter({ visible: true }).first()).toBeVisible();
 
-  // Vorrat: Kraus ist am Montag ohne Kolonne (die Kolonne wurde in 03 auf Mittwoch verschoben).
+  // Vorrat: alle aktiven Baustellen; Kraus ist (noch) nicht bei der neuen Kolonne.
   const poolSite = page.locator('.eoDispatchSitePool .eoDispatchPerson').filter({ hasText: 'Anfrage Familie Kraus' }).first();
-  await expect(poolSite).toContainText('ohne Kolonne');
+  await expect(poolSite).toBeVisible();
   const ost = page.locator('.eoDispatchLane').filter({ hasText: ostName });
   const admin = page.locator('.eoDispatchLane').filter({ hasText: 'Kolonne Admin' });
 

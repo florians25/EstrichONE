@@ -178,7 +178,7 @@ export default class Dispatch extends BaseController {
 		}));
 		if (!updated) return false;
 		this.board = updated;
-		this.render();
+		await this.loadPool();
 		EventBus.getInstance().publish("estrichone", "planningChanged", { source: "dispatch" });
 		if (quiet) return true;
 		const site = updated.sites.find((s) => s.bauakteId === (toBauakteId ?? fromBauakteId))?.title ?? "Baustelle";
@@ -289,7 +289,7 @@ export default class Dispatch extends BaseController {
 		});
 		if (result) {
 			this.board = result;
-			this.render();
+			await this.loadPool();
 			planningChanged();
 		}
 	}
@@ -396,7 +396,7 @@ export default class Dispatch extends BaseController {
 		});
 		if (result) {
 			this.board = result;
-			this.render();
+			await this.loadPool();
 			MessageToast.show("Baustelle zugeordnet");
 			planningChanged();
 		}

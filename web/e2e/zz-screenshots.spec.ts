@@ -15,7 +15,7 @@ test('Bildschirmfotos', async ({ page }) => {
   await shot(page, 'start', true);
   const pages: [string, string][] = [
     ['/bauakten', 'bauakten'], ['/tagesuebersicht', 'today'], ['/bauakten/karte', 'sitemap'], ['/planung', 'planning'],
-    ['/planung/tageseinteilung', 'planning-day'], ['/planung/kalender', 'planning-month'], ['/planung/arbeitsplan', 'workplan'],
+    ['/planung?ansicht=tag', 'planning-day'], ['/planung/kalender', 'planning-month'], ['/planung/arbeitsplan', 'workplan'],
     ['/planung/kolonnen', 'crews'], ['/planung/geraete', 'vehicles'], ['/anfragen', 'inquiries'], ['/anrufe', 'calls'], ['/kunden', 'customers'],
     ['/bestellungen', 'orders'], ['/material', 'materials'], ['/lieferanten', 'suppliers'], ['/verwaltung/benutzer', 'users'],
     ['/it-center/geraete', 'devices'], ['/it-center/helpdesk', 'helpdesk'], ['/system/sicherung', 'backup'],

@@ -7,6 +7,7 @@
 				<f:expandedContent><Text text="Wer ist wann wo – mit Navigation und Druck"/></f:expandedContent>
 				<f:actions>
 					<Button text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh"/>
+					<Button text="PDF" icon="sap-icon://pdf-attachment" press=".onPdf" tooltip="Arbeitsplan als PDF"/>
 					<Button text="Drucken" icon="sap-icon://print" press=".onPrint"/>
 				</f:actions>
 			</f:DynamicPageTitle>

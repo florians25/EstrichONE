@@ -3,11 +3,13 @@ import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type { RouteMatch } from "../../util/router";
 import { get, put } from "../../util/api";
+import { isoDay } from "../../util/days";
+import { crewLoad } from "../../util/utilization";
 import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
 import { options, resourceKinds } from "../../util/labels";
 import { planningChanged, planningLookups } from "../../util/assignmentDialog";
-import type { CrewResponse, DirectoryUser, ResourceResponse } from "../../util/models";
+import type { CrewResponse, DirectoryUser, PlanningRange, ResourceResponse } from "../../util/models";
 
 const addTexts: Record<string, string> = { kolonnen: "Kolonne anlegen", geraete: "Fahrzeug oder Gerät hinzufügen" };
 /** Gut unterscheidbare Kolonnenfarben (auch in dunklen Themes lesbar). */
@@ -39,14 +41,20 @@ export default class Resources extends BaseController {
 
 	private async load(): Promise<void> {
 		this.model().setProperty("/busy", true);
-		const [lookups, people] = await Promise.all([
+		// Auslastung der laufenden Woche (Mo–Fr).
+		const now = new Date();
+		const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
+		const week = Array.from({ length: 5 }, (_, i) => isoDay(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)));
+		const [lookups, people, range] = await Promise.all([
 			this.run(() => planningLookups(true)),
 			this.run(() => get<DirectoryUser[]>("directory/users")),
+			get<PlanningRange>("planning/range", { from: week[0], to: week[4] }).catch(() => null),
 		]);
 		this.people = people ?? [];
 		this.crewList = lookups?.crews ?? [];
 		const m = this.model();
-		m.setProperty("/crews", this.crewList.map((c) => ({ ...c, leaderName: this.name(c.leaderUserId), memberNames: c.memberUserIds.map((id) => this.name(id)).join(", ") || "–" })));
+		m.setProperty("/crews", this.crewList.map((c) => ({ ...c, leaderName: this.name(c.leaderUserId), memberNames: c.memberUserIds.map((id) => this.name(id)).join(", ") || "–",
+			load: crewLoad(c.id, range?.assignments ?? [], week) })));
 		m.setProperty("/resources", (lookups?.resources ?? []).map((r) => ({ ...r, kindText: resourceKinds[r.kind] ?? r.kind })));
 		m.setProperty("/busy", false);
 	}

@@ -58,7 +58,8 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
             shown = shown.Where(o => o.People.Any(p => p.Id == me)).ToList();
         }
 
-        var maySeeSickness = await hr.MaySeeSicknessAsync(cancellationToken);
+        // Datenschutz: In der Planung heißt jede Krankheit „abwesend“ – Einzelheiten nur in der HR-Ansicht (Personal).
+        const bool maySeeSickness = false;
         var settings = await hr.SettingsAsync(cancellationToken);
         var holidays = Enumerable.Range(from.Year, to.Year - from.Year + 1).SelectMany(y => GermanHolidays.For(y, settings.State))
             .Where(h => h.Date >= from && h.Date <= to).ToList();

@@ -24,6 +24,7 @@
 								<Column><Text text="Kolonne"/></Column>
 								<Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kolonnenführer"/></Column>
 								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Mitglieder"/></Column>
+								<Column width="11rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Auslastung (Woche)"/></Column>
 								<Column width="7rem"><Text text="Status"/></Column>
 								<Column width="14rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
 							</columns>
@@ -32,6 +33,8 @@
 									<HBox alignItems="Center"><eo:Swatch color="{view>color}"/><Text text="{view>name}"/></HBox>
 									<Text text="{view>leaderName}"/>
 									<Text text="{view>memberNames}"/>
+									<ProgressIndicator percentValue="{= Math.min(100, ${view>load/percent}) }" displayValue="{view>load/percent} %" state="{view>load/state}"
+										tooltip="{view>load/text}" showValue="true" height="1.25rem"/>
 									<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }" inverted="true"/>
 									<HBox justifyContent="End">
 										<Button text="Bearbeiten" type="Transparent" press=".onEditCrew"/>

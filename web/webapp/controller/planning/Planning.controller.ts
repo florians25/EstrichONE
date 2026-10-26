@@ -1,3 +1,4 @@
+import { crewLoad } from "../../util/utilization";
 import BaseController from "../BaseController";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
@@ -74,6 +75,12 @@ export default class Planning extends BaseController {
 	private changed(): void { void this.load(true); }
 
 	onRouteMatched(match: RouteMatch): void {
+		// „Tageseinteilung“ ist die Tag-Ansicht der Kolonnenplanung (alte Adresse leitet weiter).
+		if (match.route.name === "dayPlan") {
+			const datum = match.query.get("datum");
+			this.nav(`/planung?ansicht=tag${datum ? `&datum=${datum}` : ""}`, true);
+			return;
+		}
 		this.routeName = match.route.name;
 		const m = this.model();
 		const mode = match.query.get("ansicht") as Mode | null;
@@ -195,7 +202,7 @@ export default class Planning extends BaseController {
 			const count = assignments.filter((a) => a.crewId === c.id).length;
 			const members = [...new Set([c.leaderUserId, ...c.memberUserIds].filter((x): x is string => !!x))];
 			return {
-				id: c.id, name: c.name, color: c.color, userIds: members,
+				id: c.id, name: c.name, color: c.color, userIds: members, load: this.mode() === "monat" ? null : crewLoad(c.id, this.range?.assignments ?? [], this.days()),
 				sub: `${count === 0 ? "Kapazität offen" : `${count} ${count === 1 ? "Einsatz" : "Einsätze"}`}${members.length ? ` · ${members.map(name).join(", ")}` : ""}`,
 			};
 		});

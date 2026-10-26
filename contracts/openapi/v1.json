@@ -6446,6 +6446,62 @@
         ]
       }
     },
+    "/api/v1/planning/work-plan.pdf": {
+      "get": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Arbeitsplan als PDF: from (Standard heute), days (1–31, Standard 7), crewId, mine=true (nur eigene Einsätze)",
+        "operationId": "WorkPlanPdf",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date"
+            }
+          },
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "crewId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "mine",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/planning/resources": {
       "get": {
         "tags": [
