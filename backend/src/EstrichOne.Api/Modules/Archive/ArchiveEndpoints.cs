@@ -11,7 +11,7 @@ namespace EstrichOne.Api.Modules.Archive;
 
 public sealed record ArchiveConnectionDto(
     string Address, string ServerName, string ServerVersion, string CaFingerprint, string FingerprintDisplay, DateTimeOffset PairedAt,
-    DateTimeOffset? LastContactAt, string? LastError, bool AutoArchive, string? NotifyEmail);
+    DateTimeOffset? LastContactAt, string? LastError, bool AutoArchive, string? NotifyEmail, int? DossierAfterMonths);
 
 public sealed record ArchiveCounts(int Pending, int Archived, int Failed);
 
@@ -19,7 +19,7 @@ public sealed record ArchiveOverview(bool Connected, ArchiveConnectionDto? Conne
 
 public sealed record PairArchiveRequest(string Address, string Code);
 
-public sealed record ArchiveSettingsRequest(bool AutoArchive, string? NotifyEmail);
+public sealed record ArchiveSettingsRequest(bool AutoArchive, string? NotifyEmail, int? DossierAfterMonths = null);
 
 public sealed record ArchiveRecordDto(
     Guid Id, Guid FileId, Guid? BauakteId, string DocumentType, string DocumentTypeLabel, string Name, string Sha256, long SizeBytes,
@@ -66,7 +66,7 @@ internal static class ArchiveEndpoints
         r.LastError, r.CreatedAt, r.ArchivedAt, r.RetainUntil, r.LedgerSeq, r.LedgerHash, r.ArchiveServerName);
 
     private static ArchiveConnectionDto ToDto(ArchiveConnection c) => new(c.Address, c.ServerName, c.ServerVersion, c.CaFingerprint,
-        PeerClient.FormatFingerprint(c.CaFingerprint), c.PairedAt, c.LastContactAt, c.LastError, c.AutoArchive, c.NotifyEmail);
+        PeerClient.FormatFingerprint(c.CaFingerprint), c.PairedAt, c.LastContactAt, c.LastError, c.AutoArchive, c.NotifyEmail, c.DossierAfterMonths);
 
     private static async Task<Ok<ArchiveOverview>> StatusAsync(ArchiveService service, EstrichOneDbContext db, bool? live,
         CancellationToken cancellationToken)
@@ -121,7 +121,7 @@ internal static class ArchiveEndpoints
             return Problem(422, "VALIDATION_FAILED", "Ungültige Angaben", "Die E-Mail-Adresse für Benachrichtigungen ist ungültig.");
         }
 
-        connection.Configure(request.AutoArchive, request.NotifyEmail);
+        connection.Configure(request.AutoArchive, request.NotifyEmail, request.DossierAfterMonths);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(ToDto(connection));
     }

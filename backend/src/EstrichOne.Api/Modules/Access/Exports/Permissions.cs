@@ -40,6 +40,7 @@ public static class Permissions
     public const string BackupManage = "backup.manage";
     public const string SettingsManage = "settings.manage";
     public const string AuditRead = "audit.read";
+    public const string ArchiveUnlock = "archive.unlock";
 
     public static IReadOnlyList<PermissionInfo> All { get; } =
     [
@@ -77,6 +78,7 @@ public static class Permissions
         new(BackupManage, "System", "Backups verwalten"),
         new(SettingsManage, "System", "Firmendaten und Einstellungen ändern"),
         new(AuditRead, "System", "Audit-Log einsehen"),
+        new(ArchiveUnlock, "System", "Archivierte Bauakten zum Bearbeiten entsperren (mit Passwort)"),
     ];
 
     public static bool Exists(string code) => All.Any(permission => permission.Code == code);

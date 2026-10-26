@@ -16,6 +16,7 @@ public sealed class BackupModule : IModule
         services.AddOptions<BackupSettings>().Bind(configuration.GetSection(BackupSettings.SectionName));
         services.AddSingleton<BackupStatusReader>();
         services.AddScoped<BackupTargetService>();
+        services.AddScoped<Exports.IBackupMonitoring, BackupMonitoring>();
         services.AddHealthChecks().AddCheck<BackupHealthCheck>("backup", tags: ["ready"]);
     }
 

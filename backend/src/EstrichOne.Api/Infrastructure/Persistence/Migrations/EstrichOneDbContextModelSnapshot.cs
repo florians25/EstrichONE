@@ -140,6 +140,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<int?>("DossierAfterMonths")
+                        .HasColumnType("integer")
+                        .HasColumnName("dossier_after_months");
+
                     b.Property<DateTimeOffset?>("LastContactAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_contact_at");
@@ -340,6 +344,111 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         {
                             t.HasCheckConstraint("ck_archive_rules_years", "retention_years BETWEEN 1 AND 30");
                         });
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Archive.Dossier", b =>
+                {
+                    b.Property<Guid>("BauakteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
+                    b.Property<DateTimeOffset?>("AvailableUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("available_until");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("FilesDone")
+                        .HasColumnType("integer")
+                        .HasColumnName("files_done");
+
+                    b.Property<int>("FilesTotal")
+                        .HasColumnType("integer")
+                        .HasColumnName("files_total");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<string>("ManifestHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("manifest_hash");
+
+                    b.Property<Guid>("RequestedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("requested_by_user_id");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("status");
+
+                    b.Property<Guid?>("UnlockedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("unlocked_by_user_id");
+
+                    b.Property<DateTimeOffset?>("UnlockedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("unlocked_until");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer")
+                        .HasColumnName("version");
+
+                    b.HasKey("BauakteId")
+                        .HasName("pk_archive_dossiers");
+
+                    b.ToTable("archive_dossiers", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Archive.MonitoringSample", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("id");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Id"));
+
+                    b.Property<DateTimeOffset>("At")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("at");
+
+                    b.Property<string>("Source")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("source");
+
+                    b.Property<long>("TotalBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("total_bytes");
+
+                    b.Property<long>("UsedBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("used_bytes");
+
+                    b.HasKey("Id")
+                        .HasName("pk_monitoring_samples");
+
+                    b.HasIndex("Source", "At")
+                        .HasDatabaseName("ix_monitoring_samples_source_at");
+
+                    b.ToTable("monitoring_samples", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Audit.AuditEvent", b =>

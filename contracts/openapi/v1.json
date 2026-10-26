@@ -12009,6 +12009,246 @@
           }
         ]
       }
+    },
+    "/api/v1/archive/dossiers": {
+      "get": {
+        "tags": [
+          "Aktenarchiv"
+        ],
+        "summary": "Archivierte Akten (Platzhalter für Listen; optional ids=a,b)",
+        "operationId": "GetDossiers",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DossierDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/dossiers/{bauakteId}": {
+      "get": {
+        "tags": [
+          "Aktenarchiv"
+        ],
+        "operationId": "GetDossier",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DossierDto"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Aktenarchiv"
+        ],
+        "summary": "Akte komplett archivieren und aus dem Produktivsystem auslagern (bzw. neue Fassung)",
+        "operationId": "ArchiveDossier",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DossierDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/dossiers/{bauakteId}/restore": {
+      "post": {
+        "tags": [
+          "Aktenarchiv"
+        ],
+        "summary": "Akte vom Archivserver holen; danach 5 Tage im Produktivsystem (nur Ansicht)",
+        "operationId": "RestoreDossier",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DossierDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/archive/dossiers/{bauakteId}/unlock": {
+      "post": {
+        "tags": [
+          "Aktenarchiv"
+        ],
+        "summary": "Archivierte Akte mit Passwort zum Bearbeiten entsperren; danach neue Fassung im Archiv",
+        "operationId": "UnlockDossier",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UnlockDossierRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DossierDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/monitoring": {
+      "get": {
+        "tags": [
+          "Überwachung"
+        ],
+        "summary": "Produktivsystem, Archivserver und Backup-Ziele: Platten (Belegung, Trend), Dienste, letzte Läufe",
+        "operationId": "GetMonitoring",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MonitoringOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
     }
   },
   "components": {
@@ -12827,7 +13067,8 @@
           "lastContactAt",
           "lastError",
           "autoArchive",
-          "notifyEmail"
+          "notifyEmail",
+          "dossierAfterMonths"
         ],
         "type": "object",
         "properties": {
@@ -12871,6 +13112,13 @@
               "null",
               "string"
             ]
+          },
+          "dossierAfterMonths": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -13208,6 +13456,13 @@
               "null",
               "string"
             ]
+          },
+          "dossierAfterMonths": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -16438,6 +16693,49 @@
           }
         }
       },
+      "DiskInfo": {
+        "required": [
+          "usedBytes",
+          "freeBytes",
+          "totalBytes",
+          "usedPercent",
+          "growthBytesPerDay",
+          "daysUntilFull"
+        ],
+        "type": "object",
+        "properties": {
+          "usedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "freeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "totalBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "usedPercent": {
+            "type": "number",
+            "format": "double"
+          },
+          "growthBytesPerDay": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "daysUntilFull": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "DispatchAbsentMember": {
         "required": [
           "id",
@@ -17125,6 +17423,92 @@
             }
           }
         }
+      },
+      "DossierDto": {
+        "required": [
+          "bauakteId",
+          "number",
+          "title",
+          "status",
+          "version",
+          "filesDone",
+          "filesTotal",
+          "archivedAt",
+          "availableUntil",
+          "unlockedUntil",
+          "lastError",
+          "readOnly"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DossierStatus"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "filesDone": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "filesTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "archivedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "availableUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "unlockedUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "readOnly": {
+            "type": "boolean"
+          }
+        }
+      },
+      "DossierStatus": {
+        "enum": [
+          "archiving",
+          "archived",
+          "restoring",
+          "available",
+          "unlocked"
+        ]
       },
       "EmployeeDetail": {
         "required": [
@@ -18774,6 +19158,99 @@
             "type": "boolean"
           }
         }
+      },
+      "MonitoredSystem": {
+        "required": [
+          "key",
+          "name",
+          "level",
+          "disk",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/MonitorLevel"
+          },
+          "disk": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/DiskInfo"
+              }
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonitorItem"
+            }
+          }
+        }
+      },
+      "MonitoringOverview": {
+        "required": [
+          "level",
+          "at",
+          "systems",
+          "warnings"
+        ],
+        "type": "object",
+        "properties": {
+          "level": {
+            "$ref": "#/components/schemas/MonitorLevel"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "systems": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MonitoredSystem"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "MonitorItem": {
+        "required": [
+          "label",
+          "value",
+          "level"
+        ],
+        "type": "object",
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {
+            "type": "string"
+          },
+          "level": {
+            "$ref": "#/components/schemas/MonitorLevel"
+          }
+        }
+      },
+      "MonitorLevel": {
+        "enum": [
+          "ok",
+          "warning",
+          "critical"
+        ]
       },
       "MoveAssignmentRequest": {
         "required": [
@@ -23054,6 +23531,25 @@
           }
         }
       },
+      "UnlockDossierRequest": {
+        "required": [
+          "password",
+          "hours"
+        ],
+        "type": "object",
+        "properties": {
+          "password": {
+            "type": "string"
+          },
+          "hours": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "UpdateBauakteRequest": {
         "required": [
           "title",
@@ -24229,6 +24725,12 @@
     },
     {
       "name": "Archiv"
+    },
+    {
+      "name": "Aktenarchiv"
+    },
+    {
+      "name": "Überwachung"
     }
   ]
 }

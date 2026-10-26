@@ -183,6 +183,95 @@ public sealed class ArchiveTests(PostgresFixture postgres) : IAsyncLifetime
         retry.StatusCode.ShouldBe(HttpStatusCode.OK);
     }
 
+    [Fact]
+    public async Task Dossier_ArchivedEvicted_RestoredFor5Days_ReadOnlyUntilUnlocked_RearchivedAsNewVersion()
+    {
+        await PairAsync();
+        var (fileId, content) = await UploadDocumentAsync("plan", "Plan-EG.pdf");
+        using var start = await _admin.PostAsync(new Uri($"/api/v1/archive/dossiers/{_bauakteId}", UriKind.Relative), null);
+        start.StatusCode.ShouldBe(HttpStatusCode.OK, await start.Content.ReadAsStringAsync());
+        await DossiersAsync();
+        var first = await DossierAsync();
+        first.Status.ShouldBe(DossierStatus.Archived, first.ToString());
+
+        // Ausgelagert: Inhalt nicht im Produktivsystem, Akte schreibgeschützt.
+        using (var evicted = await _admin.GetAsync(new Uri($"/api/v1/files/{fileId}/content", UriKind.Relative)))
+        {
+            evicted.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+            (await evicted.Content.ReadAsStringAsync()).ShouldContain("ARCHIVE_EVICTED");
+        }
+
+        (await PatchAsync()).ShouldBe((HttpStatusCode)423);
+
+        // Abrufen → 5 Tage verfügbar (nur Ansicht) → danach wieder entfernt.
+        using (var _ = await _admin.PostAsync(new Uri($"/api/v1/archive/dossiers/{_bauakteId}/restore", UriKind.Relative), null))
+        {
+        }
+
+        await DossiersAsync();
+        (await DossierAsync()).Status.ShouldBe(DossierStatus.Available);
+        (await _admin.GetByteArrayAsync(new Uri($"/api/v1/files/{fileId}/content", UriKind.Relative))).ShouldBe(content);
+        (await PatchAsync()).ShouldBe((HttpStatusCode)423);
+        _factory.Clock.Advance(TimeSpan.FromDays(5.5));
+        await ReloginAsync();
+        await DossiersAsync();
+        (await DossierAsync()).Status.ShouldBe(DossierStatus.Archived);
+        using (var again = await _admin.GetAsync(new Uri($"/api/v1/files/{fileId}/content", UriKind.Relative)))
+        {
+            again.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        }
+
+        // Entsperren nur mit Passwort, danach neue Fassung im Archiv.
+        using (var _ = await _admin.PostAsync(new Uri($"/api/v1/archive/dossiers/{_bauakteId}/restore", UriKind.Relative), null))
+        {
+        }
+
+        await DossiersAsync();
+        using (var wrong = await _admin.PostAsJsonAsync($"/api/v1/archive/dossiers/{_bauakteId}/unlock", new { password = "falsch" }))
+        {
+            wrong.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        }
+
+        using (var unlock = await _admin.PostAsJsonAsync($"/api/v1/archive/dossiers/{_bauakteId}/unlock", new { password = AuthClient.DefaultPassword, hours = 2 }))
+        {
+            unlock.StatusCode.ShouldBe(HttpStatusCode.OK);
+        }
+
+        (await PatchAsync()).ShouldNotBe((HttpStatusCode)423);
+        _factory.Clock.Advance(TimeSpan.FromHours(3));
+        await ReloginAsync();
+        await DossiersAsync();
+        await DossiersAsync();
+        var dossier = await DossierAsync();
+        dossier.Status.ShouldBe(DossierStatus.Archived);
+        dossier.Version.ShouldBe(2);
+
+        var monitoring = (await _admin.GetFromJsonAsync<MonitoringOverview>("/api/v1/system/monitoring", TestJson.Options))!;
+        monitoring.Systems.ShouldContain(s => s.Key == "archive" && s.Disk != null);
+        monitoring.Systems.ShouldContain(s => s.Key == "production");
+    }
+
+    private async Task ReloginAsync()
+    {
+        using var client = _factory.CreateClient();
+        _admin.WithToken((await client.LoginOkAsync("admin")).AccessToken);
+    }
+
+    private async Task<HttpStatusCode> PatchAsync()
+    {
+        using var response = await _admin.PatchAsJsonAsync($"/api/v1/bauakten/{_bauakteId}", new { });
+        return response.StatusCode;
+    }
+
+    private async Task DossiersAsync()
+    {
+        await using var scope = _factory.Services.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<DossierService>().ProcessAsync(CancellationToken.None);
+    }
+
+    private async Task<DossierDto> DossierAsync() =>
+        (await _admin.GetFromJsonAsync<DossierDto>($"/api/v1/archive/dossiers/{_bauakteId}", TestJson.Options))!;
+
     private async Task PairAsync()
     {
         using var paired = await _admin.PostAsJsonAsync("/api/v1/archive/pair", new { address = _archive.Address, code = _archive.NewCode() });

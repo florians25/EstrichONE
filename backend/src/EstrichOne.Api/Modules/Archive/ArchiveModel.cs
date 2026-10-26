@@ -53,6 +53,9 @@ public sealed class ArchiveConnection : IAuditedEntity
     /// <summary>Benachrichtigung bei Fehlern (E-Mail), optional.</summary>
     public string? NotifyEmail { get; private set; }
 
+    /// <summary>Abgeschlossene Bauakten nach so vielen Monaten komplett auslagern (null = nur manuell).</summary>
+    public int? DossierAfterMonths { get; private set; }
+
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
 
@@ -67,8 +70,9 @@ public sealed class ArchiveConnection : IAuditedEntity
         ClientId = clientId, ProtectedToken = protectedToken, PairedByUserId = userId, PairedAt = at, LastContactAt = at,
     };
 
-    public void Configure(bool autoArchive, string? notifyEmail)
+    public void Configure(bool autoArchive, string? notifyEmail, int? dossierAfterMonths)
     {
+        DossierAfterMonths = dossierAfterMonths is > 0 and <= 240 ? dossierAfterMonths : null;
         AutoArchive = autoArchive;
         NotifyEmail = string.IsNullOrWhiteSpace(notifyEmail) ? null : notifyEmail.Trim();
     }

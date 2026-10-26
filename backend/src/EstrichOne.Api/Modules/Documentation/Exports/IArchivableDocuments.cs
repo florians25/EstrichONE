@@ -29,4 +29,13 @@ public interface IArchivableDocuments
 
     /// <summary>Inhalt öffnen (Original); null, wenn nicht vorhanden.</summary>
     Task<Stream?> OpenAsync(Guid fileId, CancellationToken cancellationToken);
+
+    /// <summary>Liegt der Inhalt im Produktivsystem (nicht ausgelagert)?</summary>
+    Task<bool> HasContentAsync(Guid fileId, CancellationToken cancellationToken);
+
+    /// <summary>Inhalt und Vorschauen aus dem Produktivsystem entfernen (Aktenarchivierung). Metadaten bleiben.</summary>
+    Task EvictAsync(Guid fileId, CancellationToken cancellationToken);
+
+    /// <summary>Inhalt aus dem Archiv zurückspielen; prüft die SHA-256 und erzeugt Vorschauen neu.</summary>
+    Task<bool> RestoreAsync(Guid fileId, Stream content, CancellationToken cancellationToken);
 }

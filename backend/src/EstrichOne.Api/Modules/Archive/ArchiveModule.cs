@@ -12,6 +12,9 @@ public sealed class ArchiveModule : IModule
     {
         services.AddScoped<ArchiveService>();
         services.AddSingleton<ArchiveSignal>();
+        services.AddScoped<DossierService>();
+        services.AddScoped<MonitoringService>();
+        services.AddTransient<IStartupFilter, DossierLockStartupFilter>();
         // EstrichOne:Archive:Worker=false schaltet den Hintergrunddienst ab (Tests steuern den Ablauf selbst).
         if (!string.Equals(configuration["EstrichOne:Archive:Worker"], "false", StringComparison.OrdinalIgnoreCase))
         {
@@ -19,5 +22,10 @@ public sealed class ArchiveModule : IModule
         }
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => ArchiveEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        ArchiveEndpoints.Map(api);
+        DossierEndpoints.Map(api);
+        MonitoringEndpoints.Map(api);
+    }
 }

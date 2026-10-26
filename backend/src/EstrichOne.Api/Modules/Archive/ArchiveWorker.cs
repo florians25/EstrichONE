@@ -33,7 +33,7 @@ internal sealed partial class ArchiveWorker(IServiceScopeFactory scopes, Archive
         {
             try
             {
-                await signal.WaitAsync(TimeSpan.FromMinutes(1), stoppingToken);
+                await signal.WaitAsync(TimeSpan.FromSeconds(30), stoppingToken);
             }
             catch (OperationCanceledException)
             {
@@ -49,6 +49,9 @@ internal sealed partial class ArchiveWorker(IServiceScopeFactory scopes, Archive
                 {
                 }
 
+                var dossiers = scope.ServiceProvider.GetRequiredService<DossierService>();
+                await dossiers.StartByRuleAsync(stoppingToken);
+                await dossiers.ProcessAsync(stoppingToken);
                 await service.WriteStatusFileAsync(stoppingToken);
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
