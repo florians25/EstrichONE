@@ -30,7 +30,7 @@ import { runAcceptance } from "../../util/acceptanceFlow";
 import { openInitialInspectionWizard } from "../../util/inspectionWizard";
 import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
-import { catalog, type BauakteTemplate } from "../../util/catalog";
+import { catalog, type BauakteTemplate, type TextBlock } from "../../util/catalog";
 import { projectBadges, projectView } from "../../util/project";
 import { badges, bauakteSchema, viewGroups } from "../../util/formSchema";
 import { openMapDialog } from "../../util/mapDialog";
@@ -527,5 +527,39 @@ export default class ObjectController extends BaseController {
 			return;
 		}
 		window.open(URL.createObjectURL(await head.blob()), "_blank", "noopener");
+	}
+
+	/** Schreiben an den Kunden nach DIN 5008 aus Textbausteinen (B10); PDF landet unter Kundendokumente/Schreiben. */
+	async onLetter(): Promise<void> {
+		const blocks = await catalog<TextBlock>("textBlock").catch(() => [] as TextBlock[]);
+		const customer = this.m().getProperty("/customer") as ContactResponse | null;
+		const result = await openForm<{ fileId: string; emailed: boolean; emailTo: string | null }>({
+			title: "Schreiben an den Kunden", width: "44rem",
+			intro: "Platzhalter: {Kunde}, {Bauvorhaben}, {Nummer}, {Baustelle}, {Beginn}. Absätze mit einer Leerzeile trennen.",
+			initial: { salutation: "Sehr geehrte Damen und Herren,", sendEmail: false, emailTo: customer?.email ?? "" },
+			fields: [
+				{ key: "block", label: "Textbaustein einfügen", type: "select", placeholder: "–", options: blocks.filter((b) => b.isActive).map((b) => ({ key: b.id, text: b.name })),
+					onChange: (v, form) => {
+						const b = blocks.find((x) => x.id === v);
+						if (!b) return;
+						const body = String(form.get("body") ?? "").trim();
+						form.set("body", body ? `${body}\n\n${b.content.text}` : b.content.text);
+						if (!String(form.get("subject") ?? "").trim()) form.set("subject", b.name);
+					} },
+				{ key: "subject", label: "Betreff", required: true, maxLength: 200, placeholder: "z. B. Terminbestätigung Estricharbeiten {Bauvorhaben}" },
+				{ key: "salutation", label: "Anrede", maxLength: 200 },
+				{ key: "body", label: "Text", type: "textarea", rows: 10, required: true, maxLength: 20000 },
+				{ key: "sendEmail", label: "Zusätzlich per E-Mail senden (PDF im Anhang)", type: "switch" },
+				{ key: "emailTo", label: "E-Mail an", type: "email", maxLength: 320 },
+			],
+			submit: (v) => post(`bauakten/${this.id}/letters`, {
+				subject: v.subject, body: v.body, salutation: v.salutation || null, sendEmail: !!v.sendEmail, emailTo: v.emailTo || null,
+			}),
+		});
+		if (!result) return;
+		this.toast(result.emailed ? `Schreiben abgelegt und an ${result.emailTo} gesendet` : "Schreiben unter Kundendokumente/Schreiben abgelegt");
+		window.open(`/api/v1/files/${result.fileId}/content`, "_blank", "noopener");
+		akte.invalidate?.(this.id);
+		EventBus.getInstance().publish("bauakte", "changed", { id: this.id });
 	}
 }

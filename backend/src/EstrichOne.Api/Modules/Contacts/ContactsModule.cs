@@ -13,5 +13,9 @@ public sealed class ContactsModule : IModule
         services.AddScoped<ISyncOperationHandler, ContactSync>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => ContactEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        ContactEndpoints.Map(api);
+        ContactMailingEndpoints.Map(api);
+    }
 }

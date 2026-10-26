@@ -40,5 +40,6 @@ public sealed class DocumentationModule : IModule
         DocumentEndpoints.Map(api);
         BauakteReportEndpoints.Map(api);
         AcceptanceEndpoints.Map(api);
+        CustomerLetterEndpoints.Map(api);
     }
 }

@@ -45,6 +45,7 @@
 						</HBox>
 						<HBox visible="{= ${session>/permissions/contacts.edit} === true }">
 							<Button text="Erledigt" icon="sap-icon://accept" type="Transparent" press=".onDone" visible="{view>followUp}"/>
+							<Button icon="sap-icon://task" type="Transparent" tooltip="Als Aufgabe in die Bauakte" press=".onToTask"/>
 							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
 							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
 						</HBox>

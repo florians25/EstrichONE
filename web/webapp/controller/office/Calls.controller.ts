@@ -8,6 +8,8 @@ import { isoDay } from "../../util/days";
 import { date } from "../../util/format";
 import type { CallResponse } from "../../util/models";
 import { openQuickCall } from "../../util/quickCall";
+import { openForm } from "../../util/forms";
+import { uuidv7 } from "../../util/ids";
 
 /** Anrufe: Gesprächsnotizen mit Wiedervorlage (wie „Anrufe“ in Estrich Web). @namespace estrichone.controller.office */
 export default class Calls extends BaseController {
@@ -62,5 +64,27 @@ export default class Calls extends BaseController {
 			await this.run(() => del(`calls/${c.id}`));
 			void this.load();
 		}
+	}
+
+	/** Telefonnotiz → Aufgabe in der Bauakte (B10): Titel aus Betreff/Anrufer, Fälligkeit aus der Wiedervorlage. */
+	async onToTask(event: Event): Promise<void> {
+		const c = this.obj(event);
+		const saved = await openForm<unknown>({
+			title: "Aufgabe aus Anruf", width: "32rem",
+			initial: {
+				bauakteId: c.bauakteId, title: (c.subject ?? `Rückruf ${caller(c)}`).slice(0, 200),
+				dueDate: (c as CallResponse & { dueDate?: string | null }).dueDate ?? null,
+			},
+			fields: [
+				{ key: "bauakteId", label: "Bauakte", type: "bauakte", required: true },
+				{ key: "title", label: "Aufgabe", required: true, maxLength: 200 },
+				{ key: "kind", label: "Art", type: "segmented", options: [{ key: "task", text: "Aufgabe" }, { key: "defect", text: "Mangel" }] },
+				{ key: "dueDate", label: "Fällig am", type: "date" },
+			],
+			submit: (v) => post("work-items", {
+				id: uuidv7(), bauakteId: v.bauakteId, kind: v.kind || "task", title: String(v.title).trim(), dueDate: v.dueDate || null, assigneeUserId: null,
+			}),
+		});
+		if (saved !== null) this.toast("Aufgabe in der Bauakte angelegt");
 	}
 }

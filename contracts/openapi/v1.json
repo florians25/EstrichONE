@@ -170,6 +170,55 @@
         ]
       }
     },
+    "/api/v1/contacts/mailing": {
+      "post": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Serien-E-Mail an ausgewählte Kunden (je Kunde eine eigene Mail an die erste E-Mail-Adresse)",
+        "operationId": "SendContactMailing",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ContactMailingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactMailingResult"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{id}/history": {
       "get": {
         "tags": [
@@ -554,6 +603,76 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/letters": {
+      "post": {
+        "tags": [
+          "Bautagebuch und Prüfungen"
+        ],
+        "summary": "Schreiben an den Kunden als PDF (DIN 5008) in der Bauakte ablegen (Kundendokumente/Schreiben), optional per E-Mail senden",
+        "operationId": "CreateCustomerLetter",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CustomerLetterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerLetterResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -16060,6 +16179,56 @@
           "person"
         ]
       },
+      "ContactMailingRequest": {
+        "required": [
+          "contactIds",
+          "subject",
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "contactIds": {
+            "maxItems": 500,
+            "minItems": 1,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "subject": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "body": {
+            "maxLength": 20000,
+            "type": "string"
+          }
+        }
+      },
+      "ContactMailingResult": {
+        "required": [
+          "queued",
+          "withoutEmail",
+          "mailConfigured"
+        ],
+        "type": "object",
+        "properties": {
+          "queued": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "withoutEmail": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "mailConfigured": {
+            "type": "boolean"
+          }
+        }
+      },
       "ContactPersonResponse": {
         "required": [
           "id",
@@ -16729,6 +16898,68 @@
           "rejected",
           null
         ]
+      },
+      "CustomerLetterRequest": {
+        "required": [
+          "subject",
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "subject": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "body": {
+            "maxLength": 20000,
+            "type": "string"
+          },
+          "salutation": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sendEmail": {
+            "type": "boolean",
+            "default": false
+          },
+          "emailTo": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CustomerLetterResult": {
+        "required": [
+          "fileId",
+          "fileName",
+          "emailed",
+          "emailTo"
+        ],
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "emailed": {
+            "type": "boolean"
+          },
+          "emailTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "DayOfWeek": {
         "enum": [
@@ -25455,6 +25686,9 @@
       "name": "Verzeichnis"
     },
     {
+      "name": "Kontakte"
+    },
+    {
       "name": "Bauakten"
     },
     {
@@ -25465,6 +25699,9 @@
     },
     {
       "name": "Ausdrucke"
+    },
+    {
+      "name": "Bautagebuch und Prüfungen"
     },
     {
       "name": "Aufgaben"
@@ -25492,12 +25729,6 @@
     },
     {
       "name": "Einstellungen"
-    },
-    {
-      "name": "Kontakte"
-    },
-    {
-      "name": "Bautagebuch und Prüfungen"
     },
     {
       "name": "Freigaben"

@@ -60,6 +60,7 @@
 								<MenuItem text="Abnahmeprotokoll erstellen …" icon="sap-icon://signature" press=".onAcceptance"
 									visible="{= ${session>/permissions/inspections.write} === true }"/>
 								<MenuItem text="Erstbegehungsprotokoll (PDF)" icon="sap-icon://inspection" press=".onInspectionPdf"/>
+								<MenuItem text="Schreiben an den Kunden …" icon="sap-icon://letter" press=".onLetter" visible="{akte>/canEdit}"/>
 								<MenuItem text="Archivnachweis …" icon="sap-icon://attachment-zip-file" press=".onArchiveProof"/>
 								<MenuItem text="Bauakte als PDF (mit Fotos)" icon="sap-icon://pdf-attachment" press=".onPdf" startsSection="true"/>
 								<MenuItem text="{i18n>akte.report}" icon="sap-icon://print" press=".onReport"/>

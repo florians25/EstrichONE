@@ -8,12 +8,14 @@
 				<f:actions>
 					<u:FileUploader id="importFile" buttonOnly="true" buttonText="CSV importieren" icon="sap-icon://upload" fileType="csv,txt"
 						change=".onImport" visible="{= ${session>/permissions/contacts.edit} === true }" sameFilenameAllowed="true" style="Transparent"/>
+					<Button text="Serien-E-Mail" icon="sap-icon://email" press=".onMailing" visible="{= ${session>/permissions/contacts.edit} === true }"
+						tooltip="E-Mail an die ausgewählten Kunden (Häkchen in der Liste)"/>
 					<Button text="Neuer Kunde" icon="sap-icon://add-employee" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/contacts.edit} === true }"/>
 				</f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<Table items="{view>/items}" busy="{view>/busy}" sticky="HeaderToolbar,ColumnHeaders" noDataText="Keine Kunden gefunden." popinLayout="GridSmall"
+			<Table id="customerTable" mode="{= ${session>/permissions/contacts.edit} === true ? 'MultiSelect' : 'None' }" items="{view>/items}" busy="{view>/busy}" sticky="HeaderToolbar,ColumnHeaders" noDataText="Keine Kunden gefunden." popinLayout="GridSmall"
 				growing="true" growingThreshold="100">
 				<headerToolbar>
 					<OverflowToolbar>

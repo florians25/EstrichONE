@@ -3,7 +3,9 @@ import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type FileUploader from "sap/ui/unified/FileUploader";
 import MessageBox from "sap/m/MessageBox";
-import { api, get } from "../util/api";
+import { api, get, post } from "../util/api";
+import type Table from "sap/m/Table";
+import { openForm } from "../util/forms";
 import { openCustomerForm } from "../util/customerForm";
 import type { ContactResponse } from "../util/models";
 import type { RouteMatch } from "../util/router";
@@ -122,5 +124,33 @@ export default class Customers extends BaseController {
 				}
 			},
 		});
+	}
+
+	/** Serien-E-Mail an die ausgewählten Kunden (B10); Platzhalter {Name} und {Anrede}. */
+	async onMailing(): Promise<void> {
+		const table = this.byId("customerTable") as Table;
+		const selected = table.getSelectedItems().map((i) => i.getBindingContext("view")?.getObject() as ContactResponse).filter(Boolean);
+		if (!selected.length) {
+			this.toast("Bitte zuerst Kunden in der Liste auswählen (Häkchen).");
+			return;
+		}
+		const result = await openForm<{ queued: number; withoutEmail: string[]; mailConfigured: boolean }>({
+			title: `Serien-E-Mail an ${selected.length} Kunde${selected.length === 1 ? "" : "n"}`, width: "40rem",
+			intro: "Jeder Kunde erhält eine eigene E-Mail. Platzhalter: {Anrede} (z. B. „Sehr geehrte Frau Kraus“) und {Name}.",
+			initial: { body: "{Anrede},\n\n\n\nMit freundlichen Grüßen" },
+			fields: [
+				{ key: "subject", label: "Betreff", required: true, maxLength: 200 },
+				{ key: "body", label: "Text", type: "textarea", rows: 10, required: true, maxLength: 20000 },
+			],
+			submit: (v) => post("contacts/mailing", { contactIds: selected.map((c) => c.id), subject: v.subject, body: v.body }),
+		});
+		if (!result) return;
+		if (!result.mailConfigured) {
+			MessageBox.warning("Es ist noch kein E-Mail-Konto eingerichtet (System → E-Mail). Es wurde nichts versendet.");
+			return;
+		}
+		table.removeSelections(true);
+		const missing = result.withoutEmail.length ? ` – ohne E-Mail-Adresse: ${result.withoutEmail.join(", ")}` : "";
+		MessageBox.information(`${result.queued} E-Mail(s) in den Versand gegeben${missing}.`, { title: "Serien-E-Mail" });
 	}
 }
