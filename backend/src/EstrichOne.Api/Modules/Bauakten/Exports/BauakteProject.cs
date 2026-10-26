@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.ComponentModel.DataAnnotations;
 
 namespace EstrichOne.Api.Modules.Bauakten.Exports;
@@ -22,17 +23,15 @@ public sealed record BauakteProject(
     [property: MaxLength(20)] string? Priority = null,
     [property: MaxLength(1000)] string? SiteAccess = null,
     bool? WaterOnSite = null,
-    bool? PowerOnSite = null)
+    bool? PowerOnSite = null,
+    IReadOnlyDictionary<string, JsonElement>? Custom = null)
 {
     public static readonly BauakteProject Empty = new();
 
-    /// <summary>Erlaubte Schlüssel der Auswahlfelder.</summary>
-    public static readonly IReadOnlyDictionary<string, string[]> Allowed = new Dictionary<string, string[]>
+    /// <summary>Auswahlfelder, die gegen die Wertelisten der Stammdaten geprüft werden.</summary>
+    public static readonly IReadOnlyDictionary<string, Func<BauakteProject, string?>> ListFields = new Dictionary<string, Func<BauakteProject, string?>>
     {
-        ["objectType"] = ["efh", "mfh", "commercial", "industrial", "public", "renovation", "other"],
-        ["screedType"] = ["ct", "caf", "as", "dry", "other"],
-        ["construction"] = ["bonded", "separatingLayer", "floating", "heated"],
-        ["priority"] = ["low", "normal", "high", "urgent"],
+        ["objectType"] = p => p.ObjectType, ["screedType"] = p => p.ScreedType, ["construction"] = p => p.Construction, ["priority"] = p => p.Priority,
     };
 
     /// <summary>Leerzeichen entfernen, leere Texte zu null; unbekannte Auswahlwerte lehnt <see cref="Validate"/> ab.</summary>
@@ -41,19 +40,42 @@ public sealed record BauakteProject(
         ObjectType = Blank(ObjectType), ScreedType = Blank(ScreedType), Construction = Blank(Construction),
         StrengthClass = Blank(StrengthClass)?.ToUpperInvariant(), HeatingType = Blank(HeatingType), Insulation = Blank(Insulation),
         Floors = Blank(Floors), Priority = Blank(Priority), SiteAccess = Blank(SiteAccess),
+        Custom = Custom is { Count: > 0 } ? Custom.Where(c => c.Value.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined))
+            .ToDictionary(c => c.Key, c => c.Value) : null,
     };
 
-    public string? Validate()
+    /// <summary>Form der Werte prüfen (Wertelisten prüft der Aufrufer, siehe <see cref="ListFields"/>).</summary>
+    public string? ValidateShape()
     {
-        foreach (var (field, value) in new[] { ("objectType", ObjectType), ("screedType", ScreedType), ("construction", Construction), ("priority", Priority) })
+        if (TotalArea is < 0 || NominalThicknessMm is < 0 || InsulationThicknessMm is < 0)
         {
-            if (value is not null && !Allowed[field].Contains(value))
+            return "Negative Werte sind nicht zulässig.";
+        }
+
+        if (Custom is null)
+        {
+            return null;
+        }
+
+        if (Custom.Count > 50)
+        {
+            return "Höchstens 50 eigene Felder.";
+        }
+
+        foreach (var (key, value) in Custom)
+        {
+            if (key.Length is 0 or > 40 || !key.All(c => char.IsAsciiLetterOrDigit(c) || c == '_'))
             {
-                return $"Unbekannter Wert „{value}“ für {field}.";
+                return $"Ungültiger Feldname „{key}“.";
+            }
+
+            if (value.ValueKind is JsonValueKind.Object or JsonValueKind.Array || (value.ValueKind == JsonValueKind.String && value.GetString()!.Length > 2000))
+            {
+                return $"Ungültiger Wert für „{key}“ (Text bis 2000 Zeichen, Zahl, Ja/Nein oder Datum).";
             }
         }
 
-        return TotalArea is < 0 || NominalThicknessMm is < 0 || InsulationThicknessMm is < 0 ? "Negative Werte sind nicht zulässig." : null;
+        return null;
     }
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

@@ -209,14 +209,14 @@ internal static class BauakteEndpoints
     }
 
     private static async Task<Results<Created<BauakteDetail>, Ok<BauakteDetail>, ProblemHttpResult>> CreateAsync(
-        CreateBauakteRequest request, BauakteCommands commands, HttpContext http, CancellationToken cancellationToken)
+        CreateBauakteRequest request, BauakteCommands commands, BauakteProjectValidator projectValidator, HttpContext http, CancellationToken cancellationToken)
     {
         if (request.Id == Guid.Empty || string.IsNullOrWhiteSpace(request.Title))
         {
             return Validation("Id und Bezeichnung sind erforderlich.");
         }
 
-        if (request.Project?.Normalize().Validate() is { } projectError)
+        if (request.Project is { } newProject && await projectValidator.ValidateAsync(newProject, cancellationToken) is { } projectError)
         {
             return Validation(projectError, "INVALID_PROJECT");
         }
@@ -245,7 +245,7 @@ internal static class BauakteEndpoints
 
     private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, HttpContext http,
-        CancellationToken cancellationToken)
+        BauakteProjectValidator projectValidator, CancellationToken cancellationToken)
     {
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
@@ -296,7 +296,7 @@ internal static class BauakteEndpoints
         bauakte.ChangeSiteNotes(request.SiteNotes);
         if (request.Project is { } project)
         {
-            if (project.Normalize().Validate() is { } projectError)
+            if (await projectValidator.ValidateAsync(project, cancellationToken) is { } projectError)
             {
                 return Validation(projectError, "INVALID_PROJECT");
             }

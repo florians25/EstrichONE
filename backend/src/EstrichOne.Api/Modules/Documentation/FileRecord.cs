@@ -1,3 +1,4 @@
+using EstrichOne.Api.Modules.Organization.Exports;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
@@ -30,6 +31,10 @@ public static class DocumentCategories
     {
         "offer", "order", "invoice", "plan", "delivery", "acceptance", "protocol", "customer", "office", "other",
     };
+
+    /// <summary>Eingebaute Dokumentart oder in den Stammdaten angelegte (Werteliste „documentCategory“).</summary>
+    public static async Task<bool> IsKnownAsync(string category, IValueLists valueLists, CancellationToken cancellationToken) =>
+        All.Contains(category) || await valueLists.ContainsAsync(ValueLists.DocumentCategory, category, cancellationToken);
 }
 
 public enum FileState
@@ -131,7 +136,8 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
 
     public void Describe(string? caption) => Caption = caption;
 
-    public void Categorize(string? category) => Category = category is null || DocumentCategories.All.Contains(category)
+    /// <summary>Dokumentart setzen; geprüft wird vorher gegen <see cref="DocumentCategories.IsKnownAsync"/>.</summary>
+    public void Categorize(string? category) => Category = category is null || category.Length <= 40
         ? category
         : throw new ArgumentException("Unbekannte Dokumentart.", nameof(category));
 

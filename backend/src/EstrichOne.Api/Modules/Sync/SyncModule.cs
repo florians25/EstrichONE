@@ -17,6 +17,8 @@ public sealed class SyncModule : IModule
         ("acceptance_protocols", "acceptance", "bauakte_id"),
         ("contacts", "contact", null),
         ("screed_types", "screedType", null),
+        ("value_list_items", "valueListItem", null),
+        ("form_schemas", "formSchema", null),
     ];
 
     public void AddServices(IServiceCollection services, IConfiguration configuration)

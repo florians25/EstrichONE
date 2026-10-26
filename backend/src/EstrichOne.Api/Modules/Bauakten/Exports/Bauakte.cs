@@ -157,7 +157,7 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
     public void ChangeProject(BauakteProject project)
     {
         var normalized = project.Normalize();
-        if (normalized.Validate() is { } error)
+        if (normalized.ValidateShape() is { } error)
         {
             throw new ArgumentException(error, nameof(project));
         }

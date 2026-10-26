@@ -1,3 +1,4 @@
+using EstrichOne.Api.Modules.Organization.Exports;
 using System.ComponentModel.DataAnnotations;
 using System.Globalization;
 using EstrichOne.Api.Infrastructure.Http;
@@ -120,9 +121,9 @@ internal static class FileEndpoints
     }
 
     private static async Task<Results<Created<FileResponse>, Ok<FileResponse>, ProblemHttpResult>> AnnounceAsync(
-        AnnounceFileRequest request, FileService service, EstrichOneDbContext db, CancellationToken cancellationToken)
+        AnnounceFileRequest request, FileService service, EstrichOneDbContext db, IValueLists valueLists, CancellationToken cancellationToken)
     {
-        if (request.Category is { } category && !DocumentCategories.All.Contains(category))
+        if (request.Category is { } category && !await DocumentCategories.IsKnownAsync(category, valueLists, cancellationToken))
         {
             return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Unbekannte Dokumentart.");
         }
@@ -168,14 +169,14 @@ internal static class FileEndpoints
     }
 
     private static async Task<Results<Ok<FileResponse>, ProblemHttpResult>> UpdateAsync(
-        Guid id, UpdateFileRequest request, FileService service, EstrichOneDbContext db, CancellationToken cancellationToken)
+        Guid id, UpdateFileRequest request, FileService service, EstrichOneDbContext db, IValueLists valueLists, CancellationToken cancellationToken)
     {
         if (await service.FindReadableAsync(id, cancellationToken) is null)
         {
             return ProblemFor(FileFailure.NotFound);
         }
 
-        if (request.Category is { } category && !DocumentCategories.All.Contains(category))
+        if (request.Category is { } category && !await DocumentCategories.IsKnownAsync(category, valueLists, cancellationToken))
         {
             return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Unbekannte Dokumentart.");
         }
@@ -203,14 +204,14 @@ internal static class FileEndpoints
 
     private static async Task<Results<Ok<FileResponse>, ProblemHttpResult>> UpdateDetailsAsync(
         Guid id, UpdateFileDetailsRequest request, FileService service, EstrichOneDbContext db, IBauakteRooms rooms,
-        IWorkItemReferences workItems, CancellationToken cancellationToken)
+        IWorkItemReferences workItems, IValueLists valueLists, CancellationToken cancellationToken)
     {
         if (await service.FindReadableAsync(id, cancellationToken) is null)
         {
             return ProblemFor(FileFailure.NotFound);
         }
 
-        if (request.Category is { } category && !DocumentCategories.All.Contains(category))
+        if (request.Category is { } category && !await DocumentCategories.IsKnownAsync(category, valueLists, cancellationToken))
         {
             return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Unbekannte Dokumentart.");
         }

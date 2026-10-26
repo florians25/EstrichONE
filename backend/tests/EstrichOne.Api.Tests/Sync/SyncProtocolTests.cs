@@ -51,7 +51,7 @@ public sealed class SyncProtocolTests(PostgresFixture postgres) : IAsyncLifetime
 
         Guid[] ours = [bauakte, note, task, file];
         var (changes, cursor) = await _site.PullUntilAsync(null, all => ours.All(id => all.Any(c => c.Id == id)));
-        changes.Select(c => c.EntityType).ShouldBeSubsetOf(["bauakte", "note", "workItem", "file", "screedType", "contact"]);
+        changes.Select(c => c.EntityType).ShouldBeSubsetOf(["bauakte", "note", "workItem", "file", "screedType", "contact", "valueListItem", "formSchema"]);
         changes.Single(c => c.Id == bauakte).Data.Text("title").ShouldBe("EFH Müller, Neubau");
         changes.Single(c => c.Id == note).Data.Text("text").ShouldBe("Estrich am Freitag");
 

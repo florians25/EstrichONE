@@ -21,7 +21,8 @@ internal sealed class BauakteSync(
     IUserPermissions permissions,
     ICurrentUser currentUser,
     IBauakteHistory history,
-    TimeProvider clock) : ISyncOperationHandler
+    TimeProvider clock,
+    BauakteProjectValidator projectValidator) : ISyncOperationHandler
 {
     private static readonly HashSet<string> EditableFields =
         ["title", "status", "street", "postalCode", "city", "latitude", "longitude", "description", "customerId", "responsibleUserId",
@@ -59,7 +60,7 @@ internal sealed class BauakteSync(
             SyncPayload.Read<string>(p, "street"), SyncPayload.Read<string>(p, "postalCode"), SyncPayload.Read<string>(p, "city"),
             SyncPayload.Read<double?>(p, "latitude"), SyncPayload.Read<double?>(p, "longitude"), SyncPayload.Read<string>(p, "description"),
             SyncPayload.Read<Guid?>(p, "customerId"), SyncPayload.Read<string>(p, "templateKey"),
-            Project: ReadProject(p["project"]),
+            Project: await ReadProjectAsync(p["project"], cancellationToken),
             PlannedStart: SyncPayload.Read<DateOnly?>(p, "plannedStart"), PlannedEnd: SyncPayload.Read<DateOnly?>(p, "plannedEnd")), cancellationToken);
 
         return outcome switch
@@ -72,7 +73,7 @@ internal sealed class BauakteSync(
     }
 
     /// <summary>„project“ als Objekt; unbekannte Auswahlwerte werden als Validierungsfehler gemeldet.</summary>
-    private static BauakteProject? ReadProject(JsonNode? node)
+    private async Task<BauakteProject?> ReadProjectAsync(JsonNode? node, CancellationToken cancellationToken)
     {
         if (node is null)
         {
@@ -80,7 +81,7 @@ internal sealed class BauakteSync(
         }
 
         var project = node.Deserialize<BauakteProject>(SyncPayload.Json)?.Normalize();
-        if (project?.Validate() is { } error)
+        if (project is not null && await projectValidator.ValidateAsync(project, cancellationToken) is { } error)
         {
             throw new SyncValidationException(error);
         }
@@ -161,7 +162,7 @@ internal sealed class BauakteSync(
                     bauakte.ChangeSiteNotes(value?.GetValue<string>());
                     break;
                 case "project":
-                    bauakte.ChangeProject(ReadProject(value) ?? BauakteProject.Empty);
+                    bauakte.ChangeProject(await ReadProjectAsync(value, cancellationToken) ?? BauakteProject.Empty);
                     break;
                 case "customerId":
                     var customerId = value.Deserialize<Guid?>(SyncPayload.Json);

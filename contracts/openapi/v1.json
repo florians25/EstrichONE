@@ -2590,6 +2590,204 @@
         ]
       }
     },
+    "/api/v1/value-lists": {
+      "get": {
+        "tags": [
+          "Stammdaten"
+        ],
+        "summary": "Wertelisten (Estricharten, Konstruktionen, Objektarten, Festigkeitsklassen, Dokumentarten, Prioritäten …)",
+        "operationId": "ListValueLists",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ValueListItemResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/value-lists/{id}": {
+      "put": {
+        "tags": [
+          "Stammdaten"
+        ],
+        "summary": "Eintrag anlegen oder ändern (Bezeichnung, Kurzform, Reihenfolge, aktiv); der Schlüssel ist nach dem Anlegen fest.",
+        "operationId": "SaveValueListItem",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveValueListItemRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ValueListItemResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/forms/{key}": {
+      "get": {
+        "tags": [
+          "Stammdaten"
+        ],
+        "summary": "Formular-Schema (z. B. „bauakte“: Basisdaten) mit den aktiven Wertelisten der Auswahlfelder",
+        "operationId": "GetFormSchema",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSchemaResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Stammdaten"
+        ],
+        "summary": "Formular-Designer: Gruppen und Felder speichern (eingebaute Felder und eigene Felder)",
+        "operationId": "SaveFormSchema",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveFormSchemaRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FormSchemaResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/contacts": {
       "get": {
         "tags": [
@@ -14917,6 +15115,12 @@
               "null",
               "boolean"
             ]
+          },
+          "custom": {
+            "type": [
+              "null",
+              "object"
+            ]
           }
         }
       },
@@ -18563,6 +18767,131 @@
           "stored"
         ]
       },
+      "FormSchemaField": {
+        "required": [
+          "key",
+          "label",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "type": {
+            "maxLength": 20,
+            "type": "string"
+          },
+          "path": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "list": {
+            "maxLength": 40,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unit": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "required": {
+            "type": "boolean",
+            "default": false
+          },
+          "help": {
+            "maxLength": 300,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "badge": {
+            "type": "boolean",
+            "default": false
+          },
+          "builtin": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "FormSchemaGroup": {
+        "required": [
+          "key",
+          "label",
+          "fields"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormSchemaField"
+            }
+          }
+        }
+      },
+      "FormSchemaResponse": {
+        "required": [
+          "id",
+          "key",
+          "version",
+          "groups"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormSchemaGroup"
+            }
+          },
+          "lists": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "$ref": "#/components/schemas/ValueListOption"
+              }
+            }
+          }
+        }
+      },
       "Holiday": {
         "required": [
           "date",
@@ -22029,6 +22358,20 @@
           }
         }
       },
+      "SaveFormSchemaRequest": {
+        "required": [
+          "groups"
+        ],
+        "type": "object",
+        "properties": {
+          "groups": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FormSchemaGroup"
+            }
+          }
+        }
+      },
       "SaveHrSettingsRequest": {
         "required": [
           "state"
@@ -22598,6 +22941,44 @@
               "integer"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "SaveValueListItemRequest": {
+        "required": [
+          "list",
+          "key",
+          "label"
+        ],
+        "type": "object",
+        "properties": {
+          "list": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "key": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "shortLabel": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -24665,6 +25046,73 @@
             "type": "number",
             "format": "double",
             "default": 0
+          }
+        }
+      },
+      "ValueListItemResponse": {
+        "required": [
+          "id",
+          "list",
+          "key",
+          "label",
+          "shortLabel",
+          "sortOrder",
+          "isActive",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "list": {
+            "type": "string"
+          },
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "shortLabel": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ValueListOption": {
+        "required": [
+          "key",
+          "label",
+          "shortLabel"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "shortLabel": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

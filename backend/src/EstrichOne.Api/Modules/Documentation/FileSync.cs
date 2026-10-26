@@ -1,3 +1,4 @@
+using EstrichOne.Api.Modules.Organization.Exports;
 using System.Text.Json.Nodes;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
@@ -7,7 +8,7 @@ using Microsoft.EntityFrameworkCore;
 namespace EstrichOne.Api.Modules.Documentation;
 
 /// <summary>Dateien sind unveränderlich: Sync kennt nur Ankündigen und Löschen (docs/reengineering/15, Abschnitt 2).</summary>
-internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserPermissions permissions, TimeProvider clock) : ISyncOperationHandler
+internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserPermissions permissions, TimeProvider clock, IValueLists valueLists) : ISyncOperationHandler
 {
     /// <summary>Nach der Ankündigung änderbar: nur Beschriftung und (bei Dokumenten) Dokumentart; der Inhalt bleibt unveränderlich.</summary>
     private static readonly HashSet<string> EditableFields = ["caption", "category"];
@@ -46,7 +47,7 @@ internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserP
 
         var p = op.Payload;
         var kind = SyncPayload.Read<FileKind>(p, "kind");
-        var category = Category(SyncPayload.Read<string>(p, "category"), kind);
+        var category = await CategoryAsync(SyncPayload.Read<string>(p, "category"), kind, cancellationToken);
         var sha = SyncPayload.Read<string>(p, "sha256") ?? string.Empty;
         var size = SyncPayload.Read<long>(p, "sizeBytes");
         if (sha.Length != 64 || size <= 0)
@@ -105,7 +106,7 @@ internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserP
             }
             else
             {
-                file.Categorize(Category(value, file.Kind));
+                file.Categorize(await CategoryAsync(value, file.Kind, cancellationToken));
             }
         }
 
@@ -115,14 +116,14 @@ internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserP
     }
 
     /// <summary>Dokumentart nur für Dokumente und nur aus der festen Liste.</summary>
-    private static string? Category(string? category, FileKind kind)
+    private async Task<string?> CategoryAsync(string? category, FileKind kind, CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(category) || kind != FileKind.Document)
         {
             return null;
         }
 
-        return DocumentCategories.All.Contains(category)
+        return await DocumentCategories.IsKnownAsync(category, valueLists, cancellationToken)
             ? category
             : throw new SyncValidationException($"Unbekannte Dokumentart „{category}“.");
     }

@@ -3419,6 +3419,46 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Organization.FormSchema", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Definition")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("definition");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("key");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_form_schemas");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasDatabaseName("ix_form_schemas_key");
+
+                    b.ToTable("form_schemas", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Organization.SystemSettingsRow", b =>
                 {
                     b.Property<int>("Id")
@@ -3447,6 +3487,66 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasName("pk_system_settings");
 
                     b.ToTable("system_settings", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Organization.ValueListItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("label");
+
+                    b.Property<string>("List")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("list");
+
+                    b.Property<string>("ShortLabel")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("short_label");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_value_list_items");
+
+                    b.HasIndex("List", "Key")
+                        .IsUnique()
+                        .HasDatabaseName("ix_value_list_items_list_key");
+
+                    b.ToTable("value_list_items", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Absence", b =>
