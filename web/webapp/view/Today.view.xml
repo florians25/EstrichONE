@@ -11,10 +11,13 @@
 		</f:title>
 		<f:header>
 			<f:DynamicPageHeader pinnable="false">
-				<FlexBox class="eoTiles" items="{view>/kpis}">
-					<GenericTile header="{view>title}" frameType="OneByHalf" press=".onKpi" state="{= ${view>loading} ? 'Loading' : 'Loaded' }">
-						<TileContent><NumericContent value="{view>value}" icon="{view>icon}" valueColor="{view>color}" withMargin="false"/></TileContent>
-					</GenericTile>
+				<!-- Kennzahlen als kompakte, anklickbare Chips in einer Zeile -->
+				<FlexBox class="eoKpiChips" items="{view>/kpis}" wrap="Wrap">
+					<GenericTag text="{view>title}" design="StatusIconHidden" press=".onKpi"
+						status="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'None' }">
+						<ObjectNumber number="{view>value}" emphasized="true"
+							state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'None' }"/>
+					</GenericTag>
 				</FlexBox>
 			</f:DynamicPageHeader>
 		</f:header>
@@ -42,7 +45,7 @@
 							</items>
 						</Table>
 					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/contacts.read} === true }">
+					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/contacts.read} === true &amp;&amp; ${view>/due}.length > 0 }">
 						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://call"/><Title text="Wiedervorlagen fällig" level="H2"/>
 							<ToolbarSpacer/><Link text="Anrufe" href="/anrufe"/></OverflowToolbar></headerToolbar>
 						<List items="{view>/due}" noDataText="Keine fälligen Wiedervorlagen." showSeparators="Inner">
@@ -54,7 +57,7 @@
 							</CustomListItem>
 						</List>
 					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/bauakten.read} === true }">
+					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/bauakten.read} === true &amp;&amp; ${view>/approvals}.length > 0 }">
 						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://approvals"/><Title text="Freigaben für mich" level="H2"/>
 							<ToolbarSpacer/><Link text="Alle" href="/dokumente?reiter=freigaben"/></OverflowToolbar></headerToolbar>
 						<List items="{view>/approvals}" noDataText="Keine Freigaben offen." showSeparators="Inner">
@@ -62,14 +65,14 @@
 								type="Navigation" press=".onApproval"/>
 						</List>
 					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/work.read} === true }">
+					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/work.read} === true &amp;&amp; ${view>/work}.length > 0 }">
 						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://task"/><Title text="Meine Aufgaben und Mängel" level="H2"/></OverflowToolbar></headerToolbar>
 						<List items="{view>/work}" noDataText="Keine offenen Aufgaben." showSeparators="Inner">
 							<StandardListItem title="{view>title}" icon="{= ${view>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"
 								info="{path: 'view>dueDate', formatter: 'fmt.date'}" infoState="{path: 'view>dueDate', formatter: 'fmt.overdueState'}" type="Navigation" press=".onWork"/>
 						</List>
 					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/helpdesk.agent} === true }">
+					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/helpdesk.agent} === true &amp;&amp; ${view>/tickets}.length > 0 }">
 						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://headset"/><Title text="Neue Tickets" level="H2"/>
 							<ToolbarSpacer/><Link text="Helpdesk" href="/it-center/helpdesk"/></OverflowToolbar></headerToolbar>
 						<List items="{view>/tickets}" noDataText="Keine neuen Tickets." showSeparators="Inner">
@@ -91,7 +94,7 @@
 								info="{path: 'view>status', formatter: 'fmt.orderStatusText'}" type="Navigation" press=".onOrder"/>
 						</List>
 					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/contacts.read} === true }">
+					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/contacts.read} === true &amp;&amp; ${view>/inquiries}.length > 0 }">
 						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://inbox"/><Title text="Offene Anfragen" level="H2"/>
 							<ToolbarSpacer/><Link text="Anfragen" href="/anfragen"/></OverflowToolbar></headerToolbar>
 						<List items="{view>/inquiries}" noDataText="Keine offenen Anfragen." showSeparators="Inner">
@@ -107,6 +110,7 @@
 					</Panel>
 				</grid:CSSGrid>
 				<!-- System-Status als schmale Zeile -->
+				<MessageStrip text="{view>/emptyText}" type="Success" showIcon="true" visible="{= !!${view>/emptyText} }" class="sapUiSmallMarginTop"/>
 				<FlexBox items="{view>/system}" wrap="Wrap" alignItems="Center" class="eoSystemRow" visible="{= ${view>/system}.length > 0 }">
 					<HBox alignItems="Center" class="eoSystemItem">
 						<ObjectStatus text="{view>label}: {view>text}" state="{view>state}" icon="{view>icon}"/>

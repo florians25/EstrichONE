@@ -79,6 +79,15 @@ export default class Today extends BaseController {
 		m.setProperty("/approvals", myApprovals.slice(0, 6));
 		const newTickets = value(tickets, []).filter((t) => t.status === "new" || t.reporterBlocked);
 		m.setProperty("/tickets", newTickets.slice(0, 6));
+		// Leere Bereiche nicht als eigene Kästen zeigen, sondern in einer Zeile zusammenfassen.
+		const empty = [
+			this.has("contacts.read") && !(m.getProperty("/due") as unknown[]).length && "Wiedervorlagen",
+			this.has("bauakten.read") && !myApprovals.length && "Freigaben",
+			this.has("work.read") && !(m.getProperty("/work") as unknown[]).length && "Aufgaben und Mängel",
+			this.has("helpdesk.agent") && !newTickets.length && "Tickets",
+			this.has("contacts.read") && !(m.getProperty("/inquiries") as unknown[]).length && "Anfragen",
+		].filter(Boolean);
+		m.setProperty("/emptyText", empty.length ? `Nichts offen: ${empty.join(", ")}.` : "");
 		set("assignments", assignments.length);
 		set("work", m.getProperty("/work").length, true);
 		set("approvals", myApprovals.length, true);

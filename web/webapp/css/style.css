@@ -305,3 +305,8 @@ li[data-dot] { display: flex; align-items: center; }
 .eoSiteIcon { font-size: 1.5rem; color: var(--sapContent_IconColor); }
 .eoPhotoStrip { gap: 0.25rem; max-width: 50rem; overflow-x: auto; }
 .eoPhotoStrip .eoThumb, .eoPhotoStrip img { object-fit: cover; border-radius: 0.25rem; cursor: pointer; }
+
+/* Tagesübersicht: Kennzahlen als Chips */
+.eoKpiChips { gap: 0.5rem; }
+.eoKpiChips .sapMGenericTag { margin: 0; height: 2.25rem; }
+.eoKpiChips .sapMGenericTag .sapMObjectNumberText { font-size: 1.125rem; }
