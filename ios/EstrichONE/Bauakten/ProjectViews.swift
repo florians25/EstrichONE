@@ -338,6 +338,9 @@ struct SchemaProjectFields: View {
             }
         case .boolean:
             Toggle(title(field), isOn: Binding { current.bool ?? false } set: { values = FormSchema.setting(.bool($0), for: field, in: values) })
+        case .check:
+            // Prüfpunkte gibt es nur in der Erstbegehung; dort eigene Darstellung.
+            EmptyView()
         case .date:
             let date = current.string.flatMap { CalendarDay.date($0) }
             Toggle(title(field), isOn: Binding { date != nil } set: { on in
