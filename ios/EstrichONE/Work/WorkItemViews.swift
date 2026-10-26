@@ -1,7 +1,7 @@
 import EstrichCore
 import SwiftUI
 
-/// Zeile einer Aufgabe bzw. eines Mangels mit Abhaken. Art und Zustand stehen immer auch als Text da (05, Abschnitt 2.3).
+/// Zeile einer Aufgabe bzw. eines Mangels mit Abhaken (große Tippfläche). Art und Zustand stehen immer auch als Text da.
 struct WorkItemRow: View {
     let item: WorkItem
     var assigneeName: String?
@@ -11,22 +11,24 @@ struct WorkItemRow: View {
     let onToggle: () -> Void
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: Space.xs) {
             Button(action: onToggle) {
                 Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.title3)
-                    .foregroundStyle(item.isDone ? Theme.success : Theme.textSecondary)
-                    .frame(width: 44, height: 44)
+                    .font(.title2.weight(.regular))
+                    .foregroundStyle(item.isDone ? Theme.success : (item.kind == .defect ? Theme.warning : Theme.textTertiary))
+                    .frame(width: 48, height: 48)
+                    .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
+            .sensoryFeedback(.success, trigger: item.isDone) { _, done in done }
             .accessibilityLabel(item.isDone ? "Wieder öffnen" : "Als erledigt markieren")
             .accessibilityIdentifier("toggleWorkItem-\(item.title)")
 
             if let onOpen {
                 Button(action: onOpen) {
-                    HStack(alignment: .center, spacing: 8) {
+                    HStack(alignment: .center, spacing: Space.s) {
                         details
-                        Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                        Chevron()
                     }
                     .contentShape(Rectangle())
                 }
@@ -37,41 +39,39 @@ struct WorkItemRow: View {
         }
     }
 
-    /// Titel, darunter Art und Fälligkeit (überfällig rot), danach Bezug und Zuständige grau – streng linksbündig.
+    /// Titel, darunter Art und Fälligkeit (überfällig rot), danach Bezug und Zuständige – streng linksbündig.
     private var details: some View {
-        VStack(alignment: .leading, spacing: 3) {
+        VStack(alignment: .leading, spacing: 4) {
             Text(item.title)
-                .font(.body)
+                .font(Typo.body)
                 .strikethrough(item.isDone)
-                .foregroundStyle(item.isDone ? Theme.textSecondary : Color.primary)
-                .lineLimit(2)
+                .foregroundStyle(item.isDone ? Theme.textSecondary : Theme.textPrimary)
+                .lineLimit(3)
             let due = item.dueDate.flatMap { CalendarDay.date($0) }
             if item.kind == .defect || due != nil {
-                HStack(spacing: 6) {
+                HStack(spacing: Space.s) {
                     if item.kind == .defect {
-                        Text("Mangel")
-                            .font(.caption2.weight(.bold))
-                            .foregroundStyle(Theme.hint)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Theme.hintBackground, in: Capsule())
+                        Chip(text: "Mangel", symbol: "exclamationmark.triangle.fill", tone: .warning)
                     }
                     if let due {
-                        Label(due.formatted(.dateTime.day().month(.abbreviated)), systemImage: "calendar")
+                        let overdue = item.isDue(on: CalendarDay.string(.now)) && !item.isDone
+                        Label(overdue ? "fällig \(due.formatted(.dateTime.day().month(.abbreviated)))" : "bis \(due.formatted(.dateTime.day().month(.abbreviated)))",
+                              systemImage: "calendar")
                             .labelStyle(TightLabelStyle())
-                            .font(.caption.monospacedDigit())
-                            .foregroundStyle(item.isDue(on: CalendarDay.string(.now)) && !item.isDone ? Theme.error : Theme.textSecondary)
+                            .font(Typo.metaStrong.monospacedDigit())
+                            .foregroundStyle(overdue ? Theme.danger : Theme.textSecondary)
                     }
                 }
             }
             let context = [showsBauakte, assigneeName].compactMap { $0 }.joined(separator: " · ")
             if !context.isEmpty {
-                Text(context).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                Text(context).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
             }
             SyncStateBadge(state: item.syncState)
         }
         .multilineTextAlignment(.leading)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.vertical, 6)
+        .padding(.vertical, Space.m)
         .accessibilityElement(children: .combine)
     }
 }

@@ -1,28 +1,28 @@
 import SwiftUI
 
-/// Rangstufe einer Schaltfläche. Je Bildschirm höchstens eine `primary`; `accent` nur für Aufnehmen (Foto, Scan).
+/// Rangstufe einer Schaltfläche. Je Bildschirmbereich höchstens eine `primary`.
 enum ButtonRank {
-    /// Gefüllt in Markenfarbe mit Verlauf und leichtem Schatten.
+    /// Gefüllt in Markenblau, weiße Schrift – die eine Hauptaktion.
     case primary
-    /// Gefüllt im Akzentgrün, dunkle Schrift.
+    /// Früher eigene Akzentfarbe; heute gleich `primary` (eine Akzentfarbe).
     case accent
-    /// Getönte Fläche, Schrift in Markenfarbe.
+    /// Zart getönt, Schrift in Markenblau – Nebenaktionen.
     case secondary
     /// Nur Schrift; beim Drücken eine getönte Fläche.
     case tertiary
-    /// Löschen, Verwerfen.
+    /// Löschen, Verwerfen, Stornieren.
     case destructive
 }
 
 enum ButtonSize {
-    /// 48 pt, Schrift `body`.
+    /// 52 pt – gut mit Handschuhen.
     case regular
-    /// 44 pt (Mindest-Tippfläche), Schrift `subheadline`.
+    /// 44 pt (Mindest-Tippfläche), in Zeilen und Leisten.
     case compact
 }
 
-/// Schaltflächen von EstrichONE: prägnant, kompakt, mit deutlichem Druckzustand und leichter Haptik.
-/// Dynamic Type: Die Höhe ist eine Mindesthöhe, Beschriftungen dürfen umbrechen.
+/// Schaltflächen von EstrichONE: Kapselform, klare Rangfolge, deutlicher Druckzustand mit leichter Haptik.
+/// Dynamic Type: Die Höhe ist eine Mindesthöhe; Beschriftungen dürfen in zwei Zeilen umbrechen.
 struct EstrichButtonStyle: ButtonStyle {
     var rank: ButtonRank = .primary
     var size: ButtonSize = .regular
@@ -41,13 +41,8 @@ private struct EstrichButtonBody: View {
 
     @Environment(\.isEnabled) private var isEnabled
 
-    private var shape: RoundedRectangle {
-        RoundedRectangle(cornerRadius: size == .regular ? Theme.cornerRadius : 11, style: .continuous)
-    }
-
     var body: some View {
         let pressed = configuration.isPressed
-        let hapticOnPress = rank != .tertiary
         configuration.label
             .font(size == .regular ? .body.weight(.semibold) : .subheadline.weight(.semibold))
             .labelStyle(TightLabelStyle())
@@ -55,55 +50,39 @@ private struct EstrichButtonBody: View {
             .lineLimit(2)
             .foregroundStyle(foreground)
             .tint(foreground)
-            .padding(.horizontal, size == .regular ? 18 : 14)
+            .padding(.horizontal, size == .regular ? 20 : 14)
             .padding(.vertical, 6)
-            .frame(maxWidth: fullWidth ? .infinity : nil,
-                   minHeight: size == .regular ? Theme.controlHeight : Theme.compactControlHeight)
-            .background { background(pressed: pressed) }
-            .contentShape(shape)
+            .frame(maxWidth: fullWidth ? .infinity : nil, minHeight: size == .regular ? Size.button : Size.minTap)
+            .background { Capsule().fill(fill(pressed: pressed)) }
+            .contentShape(Capsule())
             .hoverEffect(.highlight)
             .scaleEffect(pressed ? 0.97 : 1)
-            .opacity(isEnabled ? 1 : 0.45)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
-            .sensoryFeedback(.impact(weight: .light, intensity: 0.7), trigger: pressed) { _, isPressed in
-                isPressed && hapticOnPress
+            .opacity(isEnabled ? 1 : 0.4)
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: pressed)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: pressed) { _, isPressed in
+                isPressed && rank != .tertiary
             }
     }
 
     private var foreground: Color {
         switch rank {
-        case .primary: .white
-        case .accent: Theme.onAccent
-        case .secondary, .tertiary: Theme.actionPrimary
-        case .destructive: Theme.error
+        case .primary, .accent: Theme.onAccent
+        case .secondary, .tertiary: Theme.accent
+        case .destructive: Theme.danger
         }
     }
 
-    @ViewBuilder
-    private func background(pressed: Bool) -> some View {
+    private func fill(pressed: Bool) -> Color {
         switch rank {
-        case .primary:
-            shape
-                .fill(LinearGradient(colors: [Theme.brandFillTop, Theme.brandFillBottom], startPoint: .top, endPoint: .bottom))
-                .overlay(shape.fill(.black.opacity(pressed ? 0.18 : 0)))
-                .overlay(shape.strokeBorder(.white.opacity(0.14), lineWidth: 1))
-                .shadow(color: Theme.navy.opacity(pressed ? 0.1 : 0.28), radius: pressed ? 2 : 6, y: pressed ? 1 : 3)
-        case .accent:
-            shape
-                .fill(pressed ? Theme.accentPressed : Theme.accent)
-                .overlay(shape.strokeBorder(.white.opacity(0.25), lineWidth: 1))
-                .shadow(color: Theme.accent.opacity(pressed ? 0.1 : 0.35), radius: pressed ? 2 : 6, y: pressed ? 1 : 3)
-        case .secondary:
-            shape.fill(pressed ? Theme.secondaryFillPressed : Theme.secondaryFill)
-        case .tertiary:
-            shape.fill(pressed ? Theme.secondaryFill : .clear)
-        case .destructive:
-            shape.fill(Theme.errorBackground.opacity(pressed ? 1 : 0.8))
+        case .primary, .accent: pressed ? Theme.accentPressed : Theme.accentFill
+        case .secondary: pressed ? Theme.fillStrong : Theme.accentSoft
+        case .tertiary: pressed ? Theme.fill : .clear
+        case .destructive: pressed ? Theme.fillStrong : Theme.dangerSoft
         }
     }
 }
 
-/// Symbol und Text dicht beieinander, Symbol etwas kleiner (wie in iOS-Systemschaltflächen).
+/// Symbol und Text dicht beieinander (wie in Systemschaltflächen).
 struct TightLabelStyle: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 7) {
@@ -115,8 +94,8 @@ struct TightLabelStyle: LabelStyle {
     }
 }
 
-/// Aktion als kleine Kachel: Symbol über kurzer Beschriftung (wie die Aktionsleiste in Karten oder Kontakte).
-/// Für Aktionsleisten mit 3–4 gleichrangigen Aktionen; 56 pt hoch.
+/// Aktion als Kachel: Symbol über kurzer Beschriftung. Für Leisten mit 3–5 gleichrangigen Aktionen (Foto, Tagebuch …);
+/// 64 pt hoch, auf Karten wie auf dem Seitenhintergrund lesbar.
 struct ActionTileStyle: ButtonStyle {
     var rank: ButtonRank = .secondary
 
@@ -132,51 +111,41 @@ private struct ActionTileBody: View {
 
     var body: some View {
         let pressed = configuration.isPressed
-        let shape = RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+        let prominent = rank == .primary || rank == .accent
+        let shape = RoundedRectangle(cornerRadius: Radius.l, style: .continuous)
         configuration.label
-            .labelStyle(VerticalLabelStyle())
-            .foregroundStyle(foreground)
-            .frame(maxWidth: .infinity, minHeight: 56)
+            .labelStyle(VerticalLabelStyle(iconTint: prominent ? Theme.onAccent : Theme.accent))
+            .foregroundStyle(prominent ? Theme.onAccent : Theme.textPrimary)
+            .frame(maxWidth: .infinity, minHeight: 64)
             .background {
-                switch rank {
-                case .primary:
-                    shape.fill(Theme.brandFillBottom)
-                        .overlay(shape.fill(.black.opacity(pressed ? 0.18 : 0)))
-                default:
-                    shape.fill(pressed ? Theme.secondaryFillPressed : Theme.secondaryFill)
-                }
+                shape.fill(prominent ? (pressed ? Theme.accentPressed : Theme.accentFill) : (pressed ? Theme.fillStrong : Theme.fill))
             }
             .contentShape(shape)
             .hoverEffect(.highlight)
-            .scaleEffect(pressed ? 0.95 : 1)
-            .opacity(isEnabled ? 1 : 0.45)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
-            .sensoryFeedback(.impact(weight: .light, intensity: 0.7), trigger: pressed) { _, isPressed in isPressed }
-    }
-
-    private var foreground: Color {
-        switch rank {
-        case .primary: .white
-        case .destructive: Theme.error
-        default: Theme.actionPrimary
-        }
+            .scaleEffect(pressed ? 0.96 : 1)
+            .opacity(isEnabled ? 1 : 0.4)
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: pressed)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: pressed) { _, isPressed in isPressed }
     }
 }
 
 private struct VerticalLabelStyle: LabelStyle {
+    let iconTint: Color
+
     func makeBody(configuration: Configuration) -> some View {
-        VStack(spacing: 4) {
+        VStack(spacing: 5) {
             configuration.icon
-                .font(.system(.title3).weight(.semibold))
-                .frame(height: 22)
+                .font(.title3.weight(SymbolWeight.control))
+                .foregroundStyle(iconTint)
+                .frame(height: 24)
                 .accessibilityHidden(true)
             configuration.title
-                .font(.caption.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .lineLimit(1)
-                .minimumScaleFactor(0.8)
+                .minimumScaleFactor(0.75)
         }
-        .padding(.horizontal, 4)
-        .padding(.vertical, 7)
+        .padding(.horizontal, 6)
+        .padding(.vertical, 8)
     }
 }
 
@@ -186,23 +155,24 @@ struct IconButtonStyle: ButtonStyle {
 
     func makeBody(configuration: Configuration) -> some View {
         let pressed = configuration.isPressed
+        let prominent = rank == .primary || rank == .accent
         configuration.label
             .labelStyle(.iconOnly)
-            .font(.body.weight(.semibold))
-            .foregroundStyle(rank == .primary ? Color.white : (rank == .accent ? Theme.onAccent : Theme.actionPrimary))
-            .frame(width: 44, height: 44)
+            .font(.body.weight(SymbolWeight.control))
+            .foregroundStyle(prominent ? Theme.onAccent : (rank == .destructive ? Theme.danger : Theme.accent))
+            .frame(width: Size.minTap, height: Size.minTap)
             .background {
-                Circle().fill(rank == .primary ? Theme.navyLight : (rank == .accent ? Theme.accent : (pressed ? Theme.secondaryFillPressed : Theme.secondaryFill)))
+                Circle().fill(prominent ? (pressed ? Theme.accentPressed : Theme.accentFill) : (pressed ? Theme.fillStrong : Theme.accentSoft))
             }
             .contentShape(Circle())
             .hoverEffect(.highlight)
             .scaleEffect(pressed ? 0.92 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: pressed)
-            .sensoryFeedback(.impact(weight: .light, intensity: 0.7), trigger: pressed) { _, isPressed in isPressed }
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: pressed)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: pressed) { _, isPressed in isPressed }
     }
 }
 
-/// Beschriftung für Aktionsschaltflächen über die ganze Breite (Einrichtung, Anmeldung, Formulare).
+/// Beschriftung für Schaltflächen über die ganze Breite (Einrichtung, Anmeldung, Formulare), optional mit Ladeanzeige.
 struct ActionLabel: View {
     let title: LocalizedStringKey
     let systemImage: String?
@@ -229,6 +199,15 @@ struct ActionLabel: View {
     }
 }
 
+/// Zeilen in Karten: beim Drücken grau hinterlegt wie Listenzeilen.
+struct RowButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .background(configuration.isPressed ? Theme.fill : .clear)
+            .contentShape(Rectangle())
+    }
+}
+
 extension View {
     /// Hauptaktion über die ganze Breite.
     func primaryActionStyle() -> some View {
@@ -245,7 +224,7 @@ extension View {
         buttonStyle(EstrichButtonStyle(rank: rank, size: size, fullWidth: fullWidth))
     }
 
-    /// Bedienelement über Kamerabild oder Navy-Kopf: ab iOS 26 Liquid Glass, davor eine dunkle, deckende Kapsel.
+    /// Bedienelement über Kamerabild oder Foto: ab iOS 26 Liquid Glass, davor eine dunkle, deckende Kapsel.
     @ViewBuilder
     func overlayControlStyle() -> some View {
         #if compiler(>=6.2)
@@ -260,7 +239,7 @@ extension View {
     }
 }
 
-/// Dunkle Kapsel für Bedienelemente auf Fotos und farbigen Flächen (vor iOS 26).
+/// Dunkle Kapsel für Bedienelemente auf Fotos (vor iOS 26).
 struct OverlayControlStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -268,11 +247,11 @@ struct OverlayControlStyle: ButtonStyle {
             .labelStyle(TightLabelStyle())
             .foregroundStyle(.white)
             .padding(.horizontal, 14)
-            .frame(minHeight: 44)
+            .frame(minHeight: Size.minTap)
             .background(.black.opacity(configuration.isPressed ? 0.7 : 0.5), in: Capsule())
             .overlay(Capsule().strokeBorder(.white.opacity(0.2)))
             .contentShape(Capsule())
             .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.7), value: configuration.isPressed)
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
     }
 }

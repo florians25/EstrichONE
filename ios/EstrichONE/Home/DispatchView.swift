@@ -491,7 +491,7 @@ struct SiteDrag {
     var text: String { "estrichone-site|\(bauakteId.uuidString)|\(fromCrewId?.uuidString ?? "")" }
 }
 
-/// Laden und Zwischenspeichern der Tafel (auch für die Startseite).
+/// Laden und Zwischenspeichern der Tafel (auch für die Startseite). Offline bleibt der zuletzt geladene Stand des Tages.
 enum DispatchData {
     struct Day: Equatable {
         let board: DispatchBoard?
@@ -501,26 +501,39 @@ enum DispatchData {
         let message: String?
     }
 
+    private static func key(_ day: String) -> String { "dispatch_board_\(day)" }
+
+    /// Zuletzt gespeicherter Stand des Tages – ohne Netz, sofort.
+    @MainActor
+    static func cached(day: String, model: AppModel) async -> Day? {
+        guard let store = model.active?.sync?.store,
+              let text = try? await store.meta(key(day)),
+              let cached = try? JSONCoding.decoder.decode(StoredBoard.self, from: Data(text.utf8)) else { return nil }
+        return Day(board: cached.board, loadedAt: cached.loadedAt, isCurrent: false, message: nil)
+    }
+
     @MainActor
     static func load(day: String, model: AppModel) async -> Day? {
         guard let active = model.active else { return nil }
-        let key = "dispatch_board_\(day)"
         do throws(APIError) {
             let board = try await active.client.dispatch(day: day)
-            if let encoded = try? JSONCoding.encoder.encode(board) {
-                try? await active.sync?.store.setMeta(key, String(decoding: encoded, as: UTF8.self))
+            if let encoded = try? JSONCoding.encoder.encode(StoredBoard(board: board, loadedAt: .now)) {
+                try? await active.sync?.store.setMeta(key(day), String(decoding: encoded, as: UTF8.self))
             }
             return Day(board: board, loadedAt: .now, isCurrent: true, message: nil)
         } catch {
             if error.status == 403 {
                 return Day(board: nil, loadedAt: .now, isCurrent: true, message: "Für die Planung fehlt Ihnen die Berechtigung.")
             }
-            if let text = try? await active.sync?.store.meta(key),
-               let cached = try? JSONCoding.decoder.decode(DispatchBoard.self, from: Data(text.utf8)) {
-                return Day(board: cached, loadedAt: .now, isCurrent: false, message: nil)
-            }
+            if let cached = await cached(day: day, model: model) { return cached }
             return Day(board: nil, loadedAt: .now, isCurrent: false, message: "Ohne Verbindung ist die Planung für diesen Tag nicht verfügbar.")
         }
+    }
+
+    /// Gespeicherte Tafel mit Ladezeitpunkt (ältere Stände ohne Zeitpunkt werden einfach neu geladen).
+    private struct StoredBoard: Codable {
+        let board: DispatchBoard
+        let loadedAt: Date
     }
 }
 
@@ -614,53 +627,5 @@ struct DispatchSiteRow: View {
             }
         }
         .padding(.vertical, 2)
-    }
-}
-
-/// Einfacher Fließumbruch für Chips.
-struct ChipFlow<Content: View>: View {
-    @ViewBuilder let content: () -> Content
-
-    var body: some View {
-        FlowLayout(spacing: 6) { content() }
-    }
-}
-
-private struct FlowLayout: Layout {
-    var spacing: CGFloat
-
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        let width = proposal.width ?? 320
-        var x: CGFloat = 0
-        var y: CGFloat = 0
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > 0, x + size.width > width {
-                x = 0
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
-        return CGSize(width: width, height: y + rowHeight)
-    }
-
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x = bounds.minX
-        var y = bounds.minY
-        var rowHeight: CGFloat = 0
-        for subview in subviews {
-            let size = subview.sizeThatFits(.unspecified)
-            if x > bounds.minX, x + size.width > bounds.maxX {
-                x = bounds.minX
-                y += rowHeight + spacing
-                rowHeight = 0
-            }
-            subview.place(at: CGPoint(x: x, y: y), proposal: ProposedViewSize(size))
-            x += size.width + spacing
-            rowHeight = max(rowHeight, size.height)
-        }
     }
 }

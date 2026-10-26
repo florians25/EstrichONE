@@ -124,8 +124,8 @@ jobs:
     timeout-minutes: 30
     if: github.event_name != 'pull_request'
     env:
-      IPHONE_SCENES: "heute,baustellen,bauakte,kunden,kundenkarte,erfassen,mehr,sync,wartung"
-      IPAD_SCENES: "heute,bauakte,kunden"
+      IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,bereich-tagebuch,bereich-basisdaten,bereich-kontakte,bereich-notizen,erfassen,neu-1,erstbegehung,abnahme,kunden,kundenkarte,disposition,mehr,sync,wartung"
+      IPAD_SCENES: "heute,baustellen,bauakte,kunden,disposition"
     steps:
       - uses: actions/checkout@v5
         with:
@@ -145,7 +145,7 @@ jobs:
           echo "run=$run" >> "$GITHUB_OUTPUT"
           echo "Screenshots: $run"
 
-      - name: Xcode wählen, Simulatoren starten
+      - name: Xcode wählen, Simulatoren wählen
         id: sims
         if: steps.changes.outputs.run == 'true'
         run: |
@@ -165,8 +165,6 @@ jobs:
           PAD=$(pick '^iPad Pro 11'); [ -n "$PAD" ] || PAD=$(pick '^iPad Air 11'); [ -n "$PAD" ] || PAD=$(pick '^iPad')
           test -n "$PHONE"
           xcrun simctl list devices available | grep -E "$PHONE|${PAD:-none}"
-          xcrun simctl boot "$PHONE"
-          if [ -n "$PAD" ]; then xcrun simctl boot "$PAD" || true; fi
           echo "phone=$PHONE" >> "$GITHUB_OUTPUT"
           echo "pad=$PAD" >> "$GITHUB_OUTPUT"
 
@@ -192,16 +190,21 @@ jobs:
         run: |
           APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/EstrichONE.app"
           SHOTS="$RUNNER_TEMP/shots"
-          DEVICES="$PHONE"
-          if [ "$IPAD_INPUT" != "false" ] && [ -n "$PAD" ]; then DEVICES="$PHONE $PAD"; fi
-          for device in $DEVICES; do
-            xcrun simctl bootstatus "$device" -b >/dev/null
-            xcrun simctl status_bar "$device" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+          WITH_PAD=false
+          if [ "$IPAD_INPUT" != "false" ] && [ -n "$PAD" ]; then WITH_PAD=true; fi
+          # Simulatoren erst nach dem Build starten (sonst bremst der erste Start den Build stark).
+          prepare() {
+            xcrun simctl bootstatus "$1" -b >/dev/null
+            xcrun simctl status_bar "$1" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
               --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
-            xcrun simctl install "$device" "$APP"
-          done
+            xcrun simctl install "$1" "$APP"
+          }
+          xcrun simctl boot "$PHONE"
+          if [ "$WITH_PAD" = "true" ]; then xcrun simctl boot "$PAD" || true; fi
+          prepare "$PHONE"
           bash ios/scripts/screenshots.sh "$PHONE" iphone "${SCENES_INPUT:-$IPHONE_SCENES}" "$SHOTS" 1
-          if [ "$DEVICES" != "$PHONE" ]; then
+          if [ "$WITH_PAD" = "true" ]; then
+            prepare "$PAD"
             bash ios/scripts/screenshots.sh "$PAD" ipad "$IPAD_SCENES" "$SHOTS" 1
           fi
           ls "$SHOTS" | wc -l

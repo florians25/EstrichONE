@@ -1,46 +1,78 @@
 import EstrichCore
 import SwiftUI
 
-/// Status einer Bauakte: Farbe, Symbol und Text gemeinsam (05, Abschnitt 2.3).
-struct BauakteStatusChip: View {
-    let status: BauakteStatus
-
-    var body: some View {
-        Label(status.title, systemImage: symbol)
-            .labelStyle(TightLabelStyle())
-            .font(.caption2.weight(.semibold))
-            .imageScale(.small)
-            .strikethrough(status == .cancelled)
-            .lineLimit(1)
-            .foregroundStyle(colors.foreground)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 3)
-            .background(colors.background, in: Capsule())
+extension BauakteStatus {
+    /// Gedämpfte Statusfarbe: grau (Anfrage, geplant), Markenblau (in Ausführung), Bernstein (Trocknung),
+    /// Grün (abgeschlossen), Rot (storniert). Immer zusammen mit dem Text.
+    var tint: Color {
+        switch self {
+        case .inquiry: Theme.textTertiary
+        case .planned: Theme.textSecondary
+        case .inProgress: Theme.accent
+        case .drying: Theme.warning
+        case .completed: Theme.success
+        case .cancelled: Theme.danger
+        }
     }
 
-    private var symbol: String {
-        switch status {
+    var symbol: String {
+        switch self {
         case .inquiry: "questionmark.circle"
         case .planned: "calendar"
-        case .inProgress: "hammer.fill"
+        case .inProgress: "hammer"
         case .drying: "hourglass"
-        case .completed: "checkmark.circle.fill"
+        case .completed: "checkmark.circle"
         case .cancelled: "xmark.circle"
         }
     }
 
-    private var colors: (foreground: Color, background: Color) {
-        switch status {
-        case .inquiry, .cancelled: (Theme.neutral, Theme.neutralBackground)
-        case .planned: (Theme.info, Theme.infoBackground)
-        case .inProgress: (Theme.navyText, Theme.navyBackground)
-        case .drying: (Theme.hint, Theme.hintBackground)
-        case .completed: (Theme.success, Theme.successBackground)
+    /// Kurz für Listen und Kapseln.
+    var shortTitle: String {
+        self == .drying ? "Trocknung" : title
+    }
+
+    /// Reihenfolge in Listen: was gerade läuft, zuerst.
+    var sortRank: Int {
+        switch self {
+        case .inProgress: 0
+        case .drying: 1
+        case .planned: 2
+        case .inquiry: 3
+        case .completed: 4
+        case .cancelled: 5
         }
     }
 }
 
-/// Übertragungszustand eines Datensatzes (15, Abschnitt 4): ● gespeichert · ✓ übertragen · ⚠ Problem.
+/// Status als Punkt und Text (ohne Fläche) – für Zeilen.
+struct StatusLabel: View {
+    let status: BauakteStatus
+
+    var body: some View {
+        HStack(spacing: 6) {
+            StatusDot(color: status.tint)
+            Text(status.shortTitle)
+                .strikethrough(status == .cancelled)
+        }
+        .font(Typo.metaStrong)
+        .foregroundStyle(Theme.textSecondary)
+        .lineLimit(1)
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Status: \(status.title)")
+    }
+}
+
+/// Status als Kapsel (Kopf, Karten).
+struct BauakteStatusChip: View {
+    let status: BauakteStatus
+
+    var body: some View {
+        Chip(text: status.shortTitle, dot: status.tint, tone: .neutral)
+            .accessibilityLabel("Status: \(status.title)")
+    }
+}
+
+/// Übertragungszustand eines Datensatzes (15, Abschnitt 4): wartet · übertragen · Problem.
 struct SyncStateBadge: View {
     let state: SyncState
     var showsSynced = false
@@ -48,19 +80,19 @@ struct SyncStateBadge: View {
     var body: some View {
         switch state {
         case .pending:
-            // Nur Symbol: wird übertragen (Text für VoiceOver).
             Image(systemName: "arrow.up.circle")
-                .font(.caption)
-                .foregroundStyle(Theme.textSecondary)
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(Theme.textTertiary)
                 .accessibilityLabel("Wird übertragen")
         case .problem:
             Label("Problem bei der Übertragung", systemImage: "exclamationmark.triangle.fill")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Theme.error)
+                .labelStyle(TightLabelStyle())
+                .font(Typo.metaStrong)
+                .foregroundStyle(Theme.danger)
         case .synced:
             if showsSynced {
                 Image(systemName: "checkmark.icloud")
-                    .font(.caption)
+                    .font(.footnote.weight(.semibold))
                     .foregroundStyle(Theme.success)
                     .accessibilityLabel("Übertragen")
             }
@@ -68,47 +100,55 @@ struct SyncStateBadge: View {
     }
 }
 
-/// Zeile einer Bauakte in Listen: Bezeichnung und Status, darunter Nummer und Adresse – zwei ruhige Zeilen.
+/// Zeile einer Bauakte: Bezeichnung, darunter Nummer und Ort, dann Status und Kunde; optional der heutige Einsatz.
 struct BauakteRow: View {
     let bauakte: Bauakte
     var customerName: String?
+    /// „Heute 07:00 · Kolonne Huber“
+    var today: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
+        VStack(alignment: .leading, spacing: 5) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text(bauakte.title)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(.primary)
+                    .font(Typo.headline)
+                    .foregroundStyle(Theme.textPrimary)
                     .lineLimit(2)
-                Spacer(minLength: 4)
-                BauakteStatusChip(status: bauakte.status)
-            }
-            HStack(spacing: 4) {
-                Text(bauakte.number ?? "Neu · noch ohne Nummer")
-                    .monospacedDigit()
-                    .fontWeight(.medium)
-                if let address = bauakte.addressLine {
-                    Text("·")
-                    Text(address).lineLimit(1)
+                    .multilineTextAlignment(.leading)
+                Spacer(minLength: Space.xs)
+                if bauakte.syncState != .synced {
+                    SyncStateBadge(state: bauakte.syncState)
                 }
             }
-            .font(.caption)
-            .foregroundStyle(Theme.textSecondary)
-            if let customerName {
-                Label(customerName, systemImage: "person")
+            Text([bauakte.number ?? "Neu", bauakte.addressLine ?? "ohne Adresse"].joined(separator: " · "))
+                .font(Typo.subhead)
+                .monospacedDigit()
+                .foregroundStyle(Theme.textSecondary)
+                .lineLimit(1)
+            HStack(spacing: Space.s) {
+                StatusLabel(status: bauakte.status)
+                if let customerName {
+                    Text(customerName)
+                        .font(Typo.meta)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+            }
+            if let today {
+                Label(today, systemImage: "calendar.badge.clock")
                     .labelStyle(TightLabelStyle())
-                    .font(.caption)
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(Typo.metaStrong)
+                    .foregroundStyle(Theme.accent)
                     .lineLimit(1)
             }
-            SyncStateBadge(state: bauakte.syncState)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Space.xs)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .accessibilityElement(children: .combine)
     }
 }
 
-/// Abschnittsüberschrift mit Anzahl und optionaler Aktion rechts (z. B. „+ Eintrag“).
+/// Abschnittsüberschrift in Listen mit Anzahl und optionaler Aktion rechts (z. B. „+ Eintrag“).
 struct SectionHeader<Trailing: View>: View {
     let title: String
     let count: Int?
@@ -136,70 +176,12 @@ extension SectionHeader where Trailing == EmptyView {
     }
 }
 
-/// Fortschritt eines Assistenten: nummerierte Schritte, erledigte mit Haken, der aktuelle hervorgehoben.
+/// Fortschritt eines Assistenten (ältere Aufrufer); Darstellung wie `StepProgress`.
 struct WizardProgress: View {
     let steps: [String]
     let current: Int
 
     var body: some View {
-        HStack(spacing: 6) {
-            ForEach(Array(steps.enumerated()), id: \.offset) { index, title in
-                HStack(spacing: 5) {
-                    ZStack {
-                        Circle().fill(index <= current ? Theme.navyLight : Theme.secondaryFill)
-                        if index < current {
-                            Image(systemName: "checkmark").font(.caption2.weight(.bold)).foregroundStyle(.white)
-                        } else {
-                            Text("\(index + 1)").font(.caption2.weight(.bold))
-                                .foregroundStyle(index == current ? Color.white : Theme.textSecondary)
-                        }
-                    }
-                    .frame(width: 22, height: 22)
-                    Text(title)
-                        .font(.caption.weight(index == current ? .semibold : .regular))
-                        .foregroundStyle(index == current ? Color.primary : Theme.textSecondary)
-                        .lineLimit(1)
-                }
-                if index < steps.count - 1 {
-                    Capsule().fill(index < current ? Theme.navyLight : Theme.line).frame(height: 2)
-                }
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Schritt \(current + 1) von \(steps.count): \(steps[min(current, steps.count - 1)])")
-        .accessibilityIdentifier("wizardProgress")
-    }
-}
-
-
-/// Platzhalter beim ersten Laden (graue Balken statt Springen), respektiert „Bewegung reduzieren“.
-struct SkeletonList: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var pulse = false
-
-    var body: some View {
-        List {
-            Section {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("2026-000").font(.subheadline)
-                    Text("Bauvorhaben wird geladen").font(.title2.weight(.bold))
-                    Text("Straße 1, 00000 Ort").font(.subheadline)
-                    Text("Kunde · Ansprechpartner").font(.subheadline)
-                }
-                .padding(.vertical, 4)
-            }
-            Section {
-                ForEach(0..<6, id: \.self) { _ in
-                    HStack { Text("Bereich der Bauakte"); Spacer(); Text("0") }.frame(minHeight: 44)
-                }
-            }
-        }
-        .redacted(reason: .placeholder)
-        .opacity(pulse ? 0.55 : 1)
-        .onAppear {
-            guard !reduceMotion else { return }
-            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
-        }
-        .accessibilityLabel("Wird geladen")
+        StepProgress(steps: steps, current: current)
     }
 }

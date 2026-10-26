@@ -1,70 +1,95 @@
 import EstrichCore
 import SwiftUI
 
-/// Zentrales „Erfassen“: alles, was auf der Baustelle neu entsteht, an einer Stelle – Foto, Scan, Bautagebuch,
-/// Erstbegehung, Abnahme, Mangel, neue Bauakte. Die Baustelle wird bei Bedarf gewählt (heutige zuerst).
+/// „Erfassen“: alles, was auf der Baustelle neu entsteht, an einer Stelle. Oben die Baustelle (heutiger Einsatz bzw.
+/// zuletzt geöffnet, jederzeit änderbar), darunter große Kacheln – ein Tipp, und es geht los. Ohne gewählte Baustelle
+/// wird sie vor der Aktion abgefragt.
 struct CaptureHub: View {
     let onDone: () -> Void
 
     @Environment(AppModel.self) private var model
-    @State private var cameraMode: CaptureMode?
-    @State private var picking: SiteTask?
+    @State private var site: Bauakte?
     @State private var todayIds: [UUID] = []
-    @State private var diaryFor: Bauakte?
-    @State private var inspectFor: Bauakte?
-    @State private var acceptanceFor: Bauakte?
-    @State private var defectFor: Bauakte?
+    @State private var isToday = false
+    @State private var picking: SiteTask?
+    @State private var sheet: Activity?
+    @State private var cover: Activity?
     @State private var creating = false
     @State private var created: UUID?
+    @State private var toast: String?
+
+    /// Aktion für eine Baustelle.
+    private struct Activity: Identifiable {
+        let task: SiteTask
+        let bauakte: Bauakte
+        var id: String { "\(task.rawValue)-\(bauakte.id)" }
+    }
+
+    private struct OpenTarget: Identifiable {
+        let id: UUID
+    }
+
+    private let columns = [GridItem(.flexible(), spacing: Space.s), GridItem(.flexible(), spacing: Space.s)]
 
     var body: some View {
         NavigationStack {
-            List {
-                Section {
-                    row("Foto", "camera", id: "hubPhoto") { cameraMode = .photo }
-                    row("Dokument scannen", "doc.viewfinder", id: "hubScan") { cameraMode = .document }
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.l) {
+                    siteCard
+                    LazyVGrid(columns: columns, spacing: Space.s) {
+                        tile(.photo, symbol: "camera.fill", title: "Foto", subtitle: "Serie mit Beschriftung", id: "hubPhoto")
+                        tile(.scan, symbol: "doc.viewfinder", title: "Dokument scannen", subtitle: "Lieferschein, Plan", id: "hubScan")
+                        tile(.diary, symbol: "book", title: "Bautagebuch", subtitle: "Eintrag für heute", id: "hubDiary")
+                        tile(.defect, symbol: "exclamationmark.triangle", title: "Mangel melden", subtitle: "mit Frist", id: "hubDefect")
+                        tile(.inspection, symbol: "checklist", title: "Erstbegehung", subtitle: "Prüfpunkte vor Ort", id: "hubInspection")
+                        tile(.acceptance, symbol: "signature", title: "Abnahme", subtitle: "mit Unterschrift", id: "hubAcceptance")
+                        tile(.task, symbol: "checklist.unchecked", title: "Aufgabe", subtitle: "für mich oder andere", id: "hubTask")
+                        tile(.measurement, symbol: "drop", title: "CM-Messung", subtitle: "Belegreife prüfen", id: "hubMeasurement")
+                        tile(.video, symbol: "video", title: "Video", subtitle: "kurze Aufnahme", id: "hubVideo")
+                        tile(.note, symbol: "square.and.pencil", title: "Notiz", subtitle: "für alle in der Akte", id: "hubNote")
+                    }
+                    Button { creating = true } label: { Label("Neue Bauakte anlegen", systemImage: "folder.badge.plus") }
+                        .estrichButton(.secondary, size: .regular, fullWidth: true)
+                        .accessibilityIdentifier("newBauakteTile")
                 }
-                Section {
-                    row("Bautagebuch", "book", id: "hubDiary") { picking = .diary }
-                    row("Erstbegehung", "checklist", id: "hubInspection") { picking = .inspection }
-                    row("Abnahme", "signature", id: "hubAcceptance") { picking = .acceptance }
-                    row("Mangel melden", "exclamationmark.triangle", id: "hubDefect") { picking = .defect }
-                }
-                Section {
-                    row("Neue Bauakte", "folder.badge.plus", id: "newBauakteTile") { creating = true }
-                }
+                .padding(Space.l)
             }
+            .background(Theme.canvas)
             .navigationTitle("Erfassen")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Schließen", action: onDone) } }
-            .task {
-                if let store = model.active?.sync?.store {
-                    todayIds = (await MyPlanning(store: store).cached())?.assignments(on: CalendarDay.string(.now)).map(\.bauakteId) ?? []
-                }
-            }
-            .fullScreenCover(item: Binding(get: { cameraMode.map(CameraTarget.init) }, set: { cameraMode = $0?.mode })) { target in
-                CaptureTabView(mode: Binding(get: { target.mode }, set: { cameraMode = $0 })) { cameraMode = nil }
-            }
+            .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig", action: onDone) } }
+            .task { await preselect() }
             .sheet(item: $picking) { task in
-                BauakteQuickPicker(task: task, todayIds: todayIds) { bauakte in
+                BauakteQuickPicker(title: task == .open ? "Baustelle wählen" : "\(task.title) – Baustelle", todayIds: todayIds) { bauakte in
                     picking = nil
                     guard let bauakte else { return }
+                    site = bauakte
+                    isToday = todayIds.contains(bauakte.id)
+                    guard task != .open else { return }
                     Task {
+                        // Erst wenn die Auswahl geschlossen ist, das nächste Blatt öffnen.
                         try? await Task.sleep(for: .milliseconds(450))
-                        switch task {
-                        case .diary: diaryFor = bauakte
-                        case .inspection: inspectFor = bauakte
-                        case .acceptance: acceptanceFor = bauakte
-                        case .defect: defectFor = bauakte
-                        case .open: created = bauakte.id
-                        }
+                        start(task, for: bauakte)
                     }
                 }
             }
-            .sheet(item: $diaryFor) { bauakte in NewDiaryEntryView(bauakteId: bauakte.id) { diaryFor = nil } }
-            .sheet(item: $inspectFor) { bauakte in InspectionEntryView(bauakte: bauakte) { inspectFor = nil } }
-            .sheet(item: $acceptanceFor) { bauakte in NewAcceptanceView(bauakte: bauakte) { acceptanceFor = nil } }
-            .sheet(item: $defectFor) { bauakte in NewWorkItemView(bauakteId: bauakte.id, initialKind: .defect) { defectFor = nil } }
+            .fullScreenCover(item: $cover) { activity in
+                switch activity.task {
+                case .scan:
+                    ScanFlowView(bauakte: activity.bauakte) { saved in
+                        cover = nil
+                        if saved { toast = "Dokument gespeichert" }
+                    }
+                default:
+                    CameraView(bauakte: activity.bauakte) { count in
+                        cover = nil
+                        if count > 0 { toast = count == 1 ? "Foto gespeichert" : "\(count) Fotos gespeichert" }
+                    }
+                }
+            }
+            .sheet(item: $sheet) { activity in
+                form(activity)
+            }
             .sheet(isPresented: $creating) {
                 NewBauakteView { id, _ in
                     creating = false
@@ -80,34 +105,128 @@ struct CaptureHub: View {
                         .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Fertig") { created = nil } } }
                 }
             }
+            .toast($toast)
         }
+        .presentationDetents([.fraction(0.8), .large])
     }
 
-    private struct CameraTarget: Identifiable {
-        let mode: CaptureMode
-        var id: String { "\(mode)" }
-    }
+    // MARK: Baustelle
 
-    private struct OpenTarget: Identifiable {
-        let id: UUID
-    }
-
-    private func row(_ title: String, _ symbol: String, id: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            HStack(spacing: 14) {
-                Image(systemName: symbol)
-                    .font(.title3)
-                    .foregroundStyle(Theme.actionPrimary)
-                    .frame(width: 32)
-                    .accessibilityHidden(true)
-                Text(title).font(.body.weight(.medium)).foregroundStyle(Color.primary)
-                Spacer()
-                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+    private var siteCard: some View {
+        Button { picking = .open } label: {
+            HStack(spacing: Space.m) {
+                IconBadge(symbol: "building.2", size: 40)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(site == nil ? "Baustelle" : (isToday ? "Für den heutigen Einsatz" : "Für die Baustelle"))
+                        .font(Typo.label)
+                        .foregroundStyle(Theme.textSecondary)
+                    Text(site?.title ?? "Noch keine gewählt")
+                        .font(Typo.headline)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.leading)
+                    if let site {
+                        Text([site.number, site.addressLine].compactMap { $0 }.joined(separator: " · "))
+                            .font(Typo.subhead)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(1)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(site == nil ? "Wählen" : "Ändern")
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(Theme.accent)
             }
-            .frame(minHeight: 52)
-            .contentShape(Rectangle())
+            .padding(Space.l)
+            .card()
+            .contentShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
         }
         .buttonStyle(.plain)
+        .accessibilityIdentifier("hubSite")
+    }
+
+    private func tile(_ task: SiteTask, symbol: String, title: String, subtitle: String, id: String) -> some View {
+        Button {
+            if let site { start(task, for: site) } else { picking = task }
+        } label: {
+            VStack(alignment: .leading, spacing: Space.s) {
+                IconBadge(symbol: symbol, size: 36)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title)
+                        .font(Typo.subheadStrong)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                    Text(subtitle)
+                        .font(Typo.meta)
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
+                }
+            }
+            .padding(Space.m + 2)
+            .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
+            .card(radius: Radius.l)
+            .contentShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        }
+        .buttonStyle(TileButtonStyle())
         .accessibilityIdentifier(id)
+    }
+
+    // MARK: Ablauf
+
+    private func start(_ task: SiteTask, for bauakte: Bauakte) {
+        switch task {
+        case .photo, .scan: cover = Activity(task: task, bauakte: bauakte)
+        case .open: site = bauakte
+        default: sheet = Activity(task: task, bauakte: bauakte)
+        }
+    }
+
+    @ViewBuilder
+    private func form(_ activity: Activity) -> some View {
+        let bauakte = activity.bauakte
+        switch activity.task {
+        case .diary: NewDiaryEntryView(bauakteId: bauakte.id) { finish("Eintrag gespeichert") }
+        case .defect: NewWorkItemView(bauakteId: bauakte.id, initialKind: .defect) { finish(nil) }
+        case .task: NewWorkItemView(bauakteId: bauakte.id, initialKind: .task) { finish(nil) }
+        case .note: NewNoteView(bauakteId: bauakte.id) { finish(nil) }
+        case .inspection: InspectionEntryView(bauakte: bauakte) { finish(nil) }
+        case .acceptance: NewAcceptanceView(bauakte: bauakte) { finish(nil) }
+        case .measurement: NewCmMeasurementView(bauakteId: bauakte.id) { finish(nil) }
+        case .video: VideoCaptureView(bauakte: bauakte) { saved in finish(saved ? "Video gespeichert" : nil) }
+        case .photo, .scan, .open: EmptyView()
+        }
+    }
+
+    private func finish(_ message: String?) {
+        sheet = nil
+        if let message { toast = message }
+    }
+
+    /// Heutiger Einsatz, sonst die zuletzt geöffnete Baustelle.
+    private func preselect() async {
+        guard site == nil, let service = model.active?.service else { return }
+        todayIds = await TodayContext.bauakteIds(model: model)
+        if let id = todayIds.first, let bauakte = try? await service.bauakte(id) {
+            site = bauakte
+            isToday = true
+        } else if let recent = try? await service.recentBauakten(limit: 1).first {
+            site = recent
+        }
+    }
+}
+
+/// Kachel mit Druckzustand (leicht kleiner, abgedunkelt) und Haptik.
+struct TileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .overlay {
+                RoundedRectangle(cornerRadius: Radius.l, style: .continuous)
+                    .fill(Color.black.opacity(configuration.isPressed ? 0.06 : 0))
+            }
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: configuration.isPressed) { _, pressed in pressed }
     }
 }

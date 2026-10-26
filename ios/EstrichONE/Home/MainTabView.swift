@@ -1,7 +1,8 @@
 import EstrichCore
 import SwiftUI
 
-/// Hauptnavigation (07, Abschnitt 2). Ab iOS 26 erscheint die Tab-Leiste automatisch in Liquid Glass.
+/// Hauptnavigation: Heute · Baustellen · Erfassen · Kunden · Mehr. „Erfassen“ öffnet ein Aktionsblatt und bleibt auf dem
+/// bisherigen Reiter. Ab iOS 26 erscheint die Leiste in Liquid Glass; auf dem iPad als einblendbare Seitenleiste.
 struct MainTabView: View {
     enum Tab: Hashable {
         case today
@@ -14,31 +15,24 @@ struct MainTabView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.shotScene) private var shotScene
     @State private var selection: Tab = .today
-    @State private var previous: Tab = .today
-    @State private var captureMode: CaptureMode = .photo
     @State private var showsCaptureHub = false
 
     var body: some View {
         TabView(selection: Binding(get: { selection }, set: { tab in
-            // „Erfassen“ öffnet das Aktionsblatt und bleibt auf dem bisherigen Reiter.
             if tab == .capture {
                 showsCaptureHub = true
             } else {
                 selection = tab
-                previous = tab
             }
         })) {
-            HomeView(openTab: { selection = $0 }, openCapture: { mode in
-                captureMode = mode
-                showsCaptureHub = true
-            })
+            HomeView { showsCaptureHub = true }
                 .tabItem { Label("Heute", systemImage: "sun.max") }
                 .tag(Tab.today)
             BauaktenListView()
                 .tabItem { Label("Baustellen", systemImage: "building.2") }
                 .tag(Tab.bauakten)
             Color.clear
-                .tabItem { Label("Erfassen", systemImage: "plus.circle.fill") }
+                .tabItem { Label("Erfassen", systemImage: "plus.circle") }
                 .tag(Tab.capture)
                 .accessibilityIdentifier("captureTab")
             CustomerDirectoryView()
@@ -49,34 +43,33 @@ struct MainTabView: View {
                 .tag(Tab.more)
         }
         .modifier(SidebarAdaptable())
-        .task { applyShotScene() }
         .sheet(isPresented: $showsCaptureHub) {
             CaptureHub { showsCaptureHub = false }
-                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
-        .safeAreaInset(edge: .top, spacing: 0) {
-            VStack(spacing: 0) {
-                if model.isDemo { DemoBanner { model.requestDemo(false) } }
-                if let sync = model.active?.sync, let message = sync.maintenanceMessage ?? sync.notices?.maintenance.flatMap({ $0.active ? ($0.message ?? "Der Server wird gewartet.") : nil }) {
-                    MaintenanceBanner(message: message)
-                }
-            }
+        .task { applyShotScene() }
+    }
+
+    /// Screenshot-Modus: passenden Reiter wählen bzw. „Erfassen“ öffnen.
+    private func applyShotScene() {
+        guard let scene = shotScene else { return }
+        switch ShotRoute.tab(for: scene) {
+        case .capture: showsCaptureHub = true
+        case let tab: selection = tab
         }
     }
 }
 
-extension MainTabView {
-    /// Screenshot-Modus: passenden Reiter wählen bzw. „Erfassen“ öffnen.
-    private func applyShotScene() {
-        guard let scene = shotScene else { return }
-        if scene.hasPrefix("baustellen") || scene.hasPrefix("bauakte") {
-            selection = .bauakten
-        } else if scene.hasPrefix("kunde") {
-            selection = .customers
-        } else if scene.hasPrefix("mehr") || scene.hasPrefix("sync") {
-            selection = .more
-        } else if scene.hasPrefix("erfassen") {
-            showsCaptureHub = true
+/// Zuordnung der Screenshot-Bildschirme zu den Reitern.
+enum ShotRoute {
+    static func tab(for scene: String) -> MainTabView.Tab {
+        let prefix = scene.split(separator: "-").first.map(String.init) ?? scene
+        switch prefix {
+        case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "raum", "tagebuch", "mangel": return .bauakten
+        case "kunden", "kundenkarte": return .customers
+        case "mehr", "sync", "meldung", "aufgaben", "woche", "disposition": return .more
+        case "erfassen": return .capture
+        default: return .today
         }
     }
 }
@@ -92,72 +85,57 @@ private struct SidebarAdaptable: ViewModifier {
     }
 }
 
-/// Schwebende Hauptaktion „Neue Bauakte“ unten rechts im Daumenbereich.
-struct NewBauakteButton: View {
-    let action: () -> Void
+/// Gemeinsame Werkzeugleiste der Reiter-Startseiten: im Demomodus eine Kennzeichnung mit „Beenden“, bei Wartung ein
+/// Hinweis. Nichts liegt über der Statusleiste oder verdeckt Inhalte.
+struct RootToolbar: ViewModifier {
+    @Environment(AppModel.self) private var model
+    @State private var explainsMaintenance = false
 
-    var body: some View {
-        Button(action: action) {
-            Label("Neue Bauakte", systemImage: "plus")
-        }
-        .buttonStyle(EstrichButtonStyle(rank: .primary, size: .regular))
-        .keyboardShortcut("n", modifiers: .command)
-        .padding(.trailing, 16)
-        .padding(.bottom, 12)
-        .accessibilityIdentifier("newBauakteButton")
-    }
-}
-
-/// Wartung des Servers deutlich über allen Seiten: Erfasstes bleibt auf dem Gerät und wird danach übertragen.
-struct MaintenanceBanner: View {
-    let message: String
-
-    var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "wrench.and.screwdriver.fill").font(.title3).accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Wartung").font(.subheadline.weight(.bold))
-                Text("\(message) Sie können weiterarbeiten – alles bleibt auf dem Gerät und wird danach übertragen.")
-                    .font(.footnote)
-                    .fixedSize(horizontal: false, vertical: true)
+    func body(content: Content) -> some View {
+        content
+            .toolbar {
+                if model.isDemo {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Menu {
+                            Section("Demomodus – Beispieldaten, es wird nichts gesendet.") {
+                                Button("Demo beenden", systemImage: "xmark.circle", role: .destructive) { model.requestDemo(false) }
+                                    .accessibilityIdentifier("endDemoButton")
+                            }
+                        } label: {
+                            Text("Demo")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Theme.accent)
+                        }
+                        .accessibilityLabel("Demomodus")
+                        .accessibilityIdentifier("demoBanner")
+                    }
+                }
+                if let message = maintenanceMessage {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { explainsMaintenance = true } label: {
+                            Label("Wartung", systemImage: "wrench.and.screwdriver.fill")
+                                .foregroundStyle(Theme.warning)
+                        }
+                        .accessibilityIdentifier("maintenanceBanner")
+                        .accessibilityHint(message)
+                    }
+                }
             }
-            Spacer(minLength: 0)
-        }
-        .foregroundStyle(Color(hex: 0x3B2300))
-        .padding(12)
-        .background(Color(hex: 0xFCD34D), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
-        .accessibilityElement(children: .combine)
-        .accessibilityIdentifier("maintenanceBanner")
+            .alert("Wartung des Servers", isPresented: $explainsMaintenance) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("\(maintenanceMessage ?? "Der Server wird gewartet.")\n\nSie können weiterarbeiten – alles bleibt auf dem Gerät und wird danach übertragen.")
+            }
+    }
+
+    private var maintenanceMessage: String? {
+        guard let sync = model.active?.sync else { return nil }
+        if let message = sync.maintenanceMessage { return message }
+        if let maintenance = sync.notices?.maintenance, maintenance.active { return maintenance.message ?? "Der Server wird gewartet." }
+        return nil
     }
 }
 
-/// Kennzeichnung des Demomodus als schmale Kapsel mit „Beenden“.
-struct DemoBanner: View {
-    let end: () -> Void
-
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "play.rectangle.fill").accessibilityHidden(true)
-            Text("Demo · Beispieldaten, nichts wird gesendet")
-                .font(.footnote.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.85)
-                .accessibilityIdentifier("demoBanner")
-            Spacer(minLength: 4)
-            Button("Beenden", action: end)
-                .font(.footnote.weight(.bold))
-                .padding(.horizontal, 10)
-                .frame(minHeight: 30)
-                .background(Theme.onAccent.opacity(0.12), in: Capsule())
-                .accessibilityIdentifier("endDemoButton")
-        }
-        .foregroundStyle(Theme.onAccent)
-        .padding(.leading, 14).padding(.trailing, 4)
-        .padding(.vertical, 4)
-        .background(Theme.accent, in: Capsule())
-        .padding(.horizontal, 16)
-        .padding(.vertical, 4)
-    }
+extension View {
+    func rootToolbar() -> some View { modifier(RootToolbar()) }
 }
