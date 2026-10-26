@@ -34,6 +34,7 @@ import { catalog, type BauakteTemplate, type TextBlock } from "../../util/catalo
 import { projectBadges, projectView } from "../../util/project";
 import { badges, bauakteSchema, viewGroups } from "../../util/formSchema";
 import { openMapDialog } from "../../util/mapDialog";
+import { dossierStrip } from "../../util/dossier";
 
 /** Abschnitte der Objektseite: Schlüssel (Adresse ?abschnitt=…) → eingebettete View. */
 const sections: Record<string, string> = {
@@ -237,6 +238,7 @@ export default class ObjectController extends BaseController {
 		]);
 		this.m().setProperty("/members", members);
 		this.m().setProperty("/customer", customer);
+		void this.showDossier(b.id);
 		this.updateContactFacts();
 		EventBus.getInstance().publish("bauakte", "side", { id: b.id });
 	}
@@ -561,5 +563,14 @@ export default class ObjectController extends BaseController {
 		window.open(`/api/v1/files/${result.fileId}/content`, "_blank", "noopener");
 		akte.invalidate?.(this.id);
 		EventBus.getInstance().publish("bauakte", "changed", { id: this.id });
+	}
+
+	/** Aktenarchiv: Zustand ausgelagerter Akten mit „Akte abrufen“ / „Entsperren“ im Kopf. */
+	private async showDossier(id: string): Promise<void> {
+		const box = this.byId("dossierBox") as VBox;
+		const strip = await dossierStrip(id, () => void this.onReload());
+		if (id !== this.id) { strip?.destroy(); return; }
+		box.destroyItems();
+		if (strip) box.addItem(strip);
 	}
 }

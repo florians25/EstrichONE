@@ -70,6 +70,7 @@ export const navigation: NavEntry[] = [
 			{ key: "documents", path: "/dokumente", icon: "sap-icon://documents", permission: "bauakten.read" },
 			{ key: "inquiries", path: "/anfragen", icon: "sap-icon://inbox", permission: "contacts.read" },
 			{ key: "siteMap", path: "/bauakten/karte", icon: "sap-icon://map-2", permission: "bauakten.read" },
+			{ key: "oldFiles", path: "/bauakten?status=old", icon: "sap-icon://attachment-zip-file", permission: "bauakten.read" },
 		],
 	},
 	{

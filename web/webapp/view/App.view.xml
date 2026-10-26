@@ -26,8 +26,8 @@
 					<f:additionalContent>
 						<Image id="companyLogo" src="{view>/companyLogo}" height="1.75rem" visible="{= !!${view>/companyLogo} }" alt="Firmenlogo"
 							decorative="false" class="eoShellCompanyLogo"/>
-						<SearchField id="globalSearch" width="20rem" placeholder="{i18n>shell.searchPlaceholder}"
-							search=".onSearch" ariaLabelledBy="globalSearchLabel"/>
+						<SearchField id="globalSearch" width="26rem" placeholder="Suchen: Bauakten, Altakten, Kunden, Dokumente …" class="eoShellSearch"
+							search=".onSearch" suggest=".onSuggest" enableSuggestions="true" ariaLabelledBy="globalSearchLabel"/>
 						<OverflowToolbarButton id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakte}" icon="sap-icon://add-document" type="Emphasized"
 							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }"/>
 						<OverflowToolbarButton id="phoneButton" text="{i18n>shell.phone}" tooltip="{i18n>shell.phone}" icon="sap-icon://outgoing-call" press=".onQuickCall"

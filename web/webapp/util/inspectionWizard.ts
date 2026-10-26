@@ -28,6 +28,9 @@ import { post, problemMessage, syncPush } from "./api";
 import { uploadFile } from "./upload";
 import { uuidv7 } from "./ids";
 import { checkTitles } from "./labels";
+import SimpleForm from "sap/ui/layout/form/SimpleForm";
+import { formSchema as getSchema } from "./formSchema";
+import { schemaWizardControls } from "./project";
 import { dateTime } from "./format";
 import type { FileResponse, Inspection } from "./models";
 
@@ -70,17 +73,42 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 	});
 
 	// 2 · Prüfpunkte
+	// Prüfpunkte und Messwerte aus dem Formular „Erstbegehung“ der Stammdaten (sonst die bisherigen festen Punkte).
 	const checks: Record<string, { result: SegmentedButton; note: Input }> = {};
-	const checkRows = Object.entries(checkTitles).map(([key, title]) => {
+	const titles: Record<string, string> = { ...checkTitles };
+	const checkBox = new VBox();
+	const valuesForm = new SimpleForm({ editable: true, layout: "ResponsiveGridLayout", labelSpanL: 4, labelSpanM: 4, labelSpanS: 12, columnsL: 1, columnsM: 1 });
+	let schemaVersion: number | null = null;
+	let valueControls: ReturnType<typeof schemaWizardControls> | null = null;
+	const addCheck = (key: string, title: string) => {
+		titles[key] = title;
 		const result = new SegmentedButton(`inspCheck-${key}`, {
 			selectedKey: corrects?.checks[key] ?? "ok",
 			items: results.map((r) => new SegmentedButtonItem({ key: r.key, text: r.text })),
 		});
-		const note = new Input(`inspNote-${key}`, { placeholder: "Notiz (bei Mangel: was genau?)", width: "100%", maxLength: 300 });
+		const note = new Input(`inspNote-${key}`, { placeholder: "Notiz (bei Mangel: was genau?)", width: "100%", maxLength: 300,
+			value: (corrects as (typeof corrects & { checkRemarks?: Record<string, string> }) | null)?.checkRemarks?.[key] ?? "" });
 		checks[key] = { result, note };
-		return new VBox({ items: [new Label({ text: title, labelFor: result, design: "Bold" }), result, note] }).addStyleClass("sapUiSmallMarginBottom eoCheckRow");
+		checkBox.addItem(new VBox({ items: [new Label({ text: title, labelFor: result, design: "Bold" }), result, note] }).addStyleClass("sapUiSmallMarginBottom eoCheckRow"));
+	};
+	void getSchema("erstbegehung").then((schema) => {
+		if (!schema) {
+			for (const [key, title] of Object.entries(checkTitles)) addCheck(key, title);
+			return;
+		}
+		schemaVersion = schema.version;
+		for (const g of schema.groups) {
+			const own = g.fields.filter((f) => f.type === "check");
+			if (own.length) checkBox.addItem(new Title({ text: g.label, level: "H5" }).addStyleClass("sapUiSmallMarginBottom"));
+			for (const f of own) addCheck(f.key, f.label);
+		}
+		const valueSchema = { ...schema, groups: schema.groups.map((g) => ({ ...g, fields: g.fields.filter((f) => f.type !== "check") })).filter((g) => g.fields.length) };
+		if (valueSchema.groups.length) {
+			valueControls = schemaWizardControls(valueSchema, "insp", () => undefined);
+			for (const c of valueControls.content) valuesForm.addContent(c);
+		}
 	});
-	const checksStep = new WizardStep("inspStepChecks", { title: "Prüfpunkte", icon: "sap-icon://checklist-item", validated: true, content: [new VBox({ items: checkRows })] });
+	const checksStep = new WizardStep("inspStepChecks", { title: "Prüfpunkte", icon: "sap-icon://checklist-item", validated: true, content: [new VBox({ items: [checkBox, valuesForm] })] });
 
 	// 3 · Fotos
 	const photoList = new List("inspPhotos", { mode: "MultiSelect", noDataText: "Noch keine Fotos in der Bauakte – hier direkt aufnehmen oder hochladen.", growing: true, growingThreshold: 30 });
@@ -139,7 +167,7 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 		}
 		defectBox.addItem(new Text({ text: "Beanstandete Punkte als Mangel in der Bauakte anlegen (erscheinen unter „Aufgaben & Mängel“):" }).addStyleClass("sapUiSmallMarginBottom"));
 		for (const [key, c] of failed) {
-			const text = `${checkTitles[key]}: ${c.note.getValue().trim() || "beanstandet bei der Erstbegehung"}`;
+			const text = `${titles[key]}: ${c.note.getValue().trim() || "beanstandet bei der Erstbegehung"}`;
 			const box = new CheckBox({ text, selected: true, wrapping: true });
 			defectChecks.push({ key, box, text });
 			defectBox.addItem(box);
@@ -167,7 +195,7 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 		}
 		for (const [key, c] of Object.entries(checks)) {
 			const r = results.find((x) => x.key === c.result.getSelectedKey());
-			summary.addItem(new Text({ text: `${checkTitles[key]}: ${r?.text ?? "–"}${c.note.getValue().trim() ? ` – ${c.note.getValue().trim()}` : ""}` }));
+			summary.addItem(new Text({ text: `${titles[key]}: ${r?.text ?? "–"}${c.note.getValue().trim() ? ` – ${c.note.getValue().trim()}` : ""}` }));
 		}
 		summary.addItem(new Text({ text: `${selectedPhotos().length} Fotos · ${defectChecks.filter((d) => d.box.getSelected()).length} Mängel werden angelegt` }).addStyleClass("eoMuted sapUiTinyMarginTop"));
 	};
@@ -239,14 +267,14 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 		strip.setVisible(false);
 		try {
 			const off = notRequired.getState();
-			const notes = Object.entries(checks).filter(([, c]) => c.note.getValue().trim())
-				.map(([key, c]) => `${checkTitles[key]}: ${c.note.getValue().trim()}`);
-			const text = off ? reason.getValue().trim() : [remarks.getValue().trim(), ...notes].filter(Boolean).join("\n");
+			const checkRemarks = Object.fromEntries(Object.entries(checks).filter(([, c]) => c.note.getValue().trim()).map(([key, c]) => [key, c.note.getValue().trim()]));
+			const values = Object.fromEntries(Object.entries(valueControls?.read() ?? {}).filter(([, v]) => v !== null && v !== ""));
+			const text = off ? reason.getValue().trim() : remarks.getValue().trim();
 			const at = performedAt.getValue();
 			await syncPush("inspection.create", uuidv7(), {
 				bauakteId, kind: "initialInspection", notRequired: off,
 				checks: off ? {} : Object.fromEntries(Object.entries(checks).map(([k, c]) => [k, c.result.getSelectedKey()])),
-				remarks: text || null, notes: freeNotes.getValue().trim() || null, photoFileIds: off ? [] : selectedPhotos(), correctsInspectionId: corrects?.id ?? null,
+				remarks: text || null, notes: freeNotes.getValue().trim() || null, values: off ? {} : values, checkRemarks: off ? {} : checkRemarks, schemaVersion, photoFileIds: off ? [] : selectedPhotos(), correctsInspectionId: corrects?.id ?? null,
 				performedAt: at ? new Date(at).toISOString() : null,
 			}, uuidv7());
 			if (!off) {

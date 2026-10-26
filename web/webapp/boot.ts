@@ -11,6 +11,10 @@ if (Theming.getTheme() !== theme) {
 	Theming.setTheme(theme);
 }
 followSystem();
+// Aktuelles Theme als Attribut, damit das Stylesheet je Theme nachschärfen kann (z. B. kräftigere Icons in Quartz).
+const markTheme = () => { document.documentElement.dataset.eoTheme = Theming.getTheme(); };
+markTheme();
+Theming.attachApplied(markTheme);
 document.body.classList.add(storedDensity(Device.support.touch && !Device.system.desktop) === "compact" ? "sapUiSizeCompact" : "sapUiSizeCozy");
 
 new ComponentContainer({

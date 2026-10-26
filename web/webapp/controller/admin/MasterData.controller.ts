@@ -6,16 +6,30 @@ import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
 import { documentCategories, options } from "../../util/labels";
 import { listNames, valueLists, type ValueListItem } from "../../util/valueLists";
-import { bauakteSchema, fieldsOf, type FormSchema, type SchemaField, type SchemaFieldType } from "../../util/formSchema";
+import { bauakteSchema, formSchema, fieldsOf, type FormSchema, type SchemaField, type SchemaFieldType } from "../../util/formSchema";
 import { invalidateCatalog, roomsToText, textToRooms, type CatalogEntry, type CatalogKind, type TemplateRoom } from "../../util/catalog";
 
-type Tab = CatalogKind | "valueList" | "form";
+type Tab = CatalogKind | "valueList" | "form" | "inspectionForm";
 const addTexts: Record<Tab, string> = {
 	textBlock: "Textbaustein anlegen", folderTemplate: "Ordnervorlage anlegen", bauakteTemplate: "Vorlage anlegen",
-	valueList: "Eintrag anlegen", form: "Feld hinzufügen",
+	valueList: "Eintrag anlegen", form: "Feld hinzufügen", inspectionForm: "Prüfpunkt oder Feld hinzufügen",
+};
+const tabTitles: Record<Tab, string> = {
+	valueList: "Wertelisten", form: "Formular: Basisdaten", inspectionForm: "Formular: Erstbegehung", textBlock: "Textbausteine",
+	folderTemplate: "Ordnervorlagen der Dokumentablage", bauakteTemplate: "Bauakten-Vorlagen",
+};
+const formHints: Record<string, string> = {
+	bauakte: "Diese Felder fragt der Anlage-Assistent ab, zeigt die Übersicht unter den Basisdaten und nutzt die App. Eingebaute Felder lassen sich umbenennen, verschieben, als Pflicht oder Badge markieren; eigene Felder kommen hinzu.",
+	erstbegehung: "Prüfpunkte (in Ordnung / Mangel / entfällt) und Angaben der Erstbegehung in Web und App. Angaben mit Ziel ergänzen beim Speichern automatisch die Basisdaten der Bauakte (z. B. gemessene Fläche → Gesamtfläche).",
+};
+/** Eingebaute Prüfpunkte der Erstbegehung. */
+const inspectionBuiltins: Record<string, { label: string; type: SchemaFieldType }> = {
+	substrate: { label: "Untergrund tragfähig, eben und sauber", type: "check" }, edgeInsulation: { label: "Randdämmstreifen vorhanden", type: "check" },
+	heatingPressureTest: { label: "Heizung: Druckprüfung erfolgt", type: "check" }, access: { label: "Zufahrt und Pumpenstandort geklärt", type: "check" },
+	utilities: { label: "Wasser und Strom vor Ort", type: "check" },
 };
 const typeTexts: Record<SchemaFieldType, string> = {
-	text: "Text", textarea: "Langer Text", number: "Zahl", integer: "Ganze Zahl", select: "Auswahl", boolean: "Ja/Nein", date: "Datum",
+	check: "Prüfpunkt", text: "Text", textarea: "Langer Text", number: "Zahl", integer: "Ganze Zahl", select: "Auswahl", boolean: "Ja/Nein", date: "Datum",
 };
 /** Eingebaute Felder der Bauakte (Server legt Typ und Ablage fest). */
 const builtinFields: Record<string, { label: string; type: SchemaFieldType; list?: string; unit?: string }> = {
@@ -39,7 +53,7 @@ interface FormRow { group: boolean; gi: number; fi: number; label: string; typeT
  */
 export default class MasterData extends BaseController {
 	onInit(): void {
-		this.local({ tab: "textBlock", addText: addTexts.textBlock, canManage: false, textBlock: [], folderTemplate: [], bauakteTemplate: [],
+		this.local({ tab: "textBlock", addText: addTexts.textBlock, tabTitle: tabTitles.textBlock, formHint: "", canManage: false, textBlock: [], folderTemplate: [], bauakteTemplate: [],
 			list: "screedType", lists: [], listItems: [], formRows: [], formDirty: false });
 	}
 
@@ -68,10 +82,29 @@ export default class MasterData extends BaseController {
 		await Promise.all([this.loadLists(), this.loadForm()]);
 	}
 
+	onNav(e: Event): void {
+		const item = e.getParameter("listItem" as never) as unknown as Control;
+		const tab = item?.data("tab") as Tab | undefined;
+		if (!tab) return;
+		const m = this.model();
+		m.setProperty("/tab", tab);
+		m.setProperty("/addText", addTexts[tab]);
+		m.setProperty("/tabTitle", tabTitles[tab]);
+		if (tab === "form" || tab === "inspectionForm") void this.loadForm();
+	}
+
+	onLink(e: Event): void {
+		this.nav(String((e.getSource() as Control).data("href")));
+	}
+
+	private formKey(): string {
+		return this.model().getProperty("/tab") === "inspectionForm" ? "erstbegehung" : "bauakte";
+	}
+
 	onAdd(): void {
 		const tab = this.model().getProperty("/tab") as Tab;
 		if (tab === "valueList") void this.editItem(null);
-		else if (tab === "form") void this.onAddField();
+		else if (tab === "form" || tab === "inspectionForm") void this.onAddField();
 		else void this.edit(tab, null);
 	}
 
@@ -84,6 +117,7 @@ export default class MasterData extends BaseController {
 		const m = this.model();
 		const keys = [...new Set([...Object.keys(listNames), ...this.items.map((i) => i.list)])];
 		m.setProperty("/lists", keys.map((key) => ({ key, text: listNames[key] ?? key })));
+		m.setProperty("/listCount", keys.length);
 		this.showList();
 	}
 
@@ -161,9 +195,16 @@ export default class MasterData extends BaseController {
 	// ---- Formular-Designer (B7) ---------------------------------------------------------------------------------
 
 	private schema: FormSchema | null = null;
+	private targets: { key: string; text: string }[] = [];
+
+	private inspection(): boolean { return this.formKey() === "erstbegehung"; }
 
 	private async loadForm(): Promise<void> {
-		this.schema = await bauakteSchema(true);
+		const key = this.formKey();
+		this.schema = await formSchema(key, true);
+		this.targets = key === "erstbegehung" ? fieldsOf((await bauakteSchema()) ?? { groups: [] } as unknown as FormSchema).filter((f) => f.path)
+			.map((f) => ({ key: f.path, text: f.label })) : [];
+		this.model().setProperty("/formHint", formHints[key]);
 		this.model().setProperty("/formDirty", false);
 		this.showForm();
 	}
@@ -174,7 +215,8 @@ export default class MasterData extends BaseController {
 			rows.push({ group: true, gi, fi: -1, label: g.label, typeText: "Gruppe", listText: `${g.fields.length} Felder`, required: false, badge: false, builtin: false });
 			g.fields.forEach((f, fi) => rows.push({
 				group: false, gi, fi, label: f.label, typeText: typeTexts[f.type] ?? f.type,
-				listText: f.list ? listNames[f.list] ?? f.list : f.unit ?? "", required: !!f.required, badge: !!f.badge, builtin: !!f.builtin,
+				listText: [f.list ? listNames[f.list] ?? f.list : f.unit ?? "", f.target ? `→ ${this.targets.find((t) => t.key === f.target)?.text ?? f.target}` : ""].filter(Boolean).join(" "),
+				required: !!f.required, badge: this.inspection() ? !!f.photos : !!f.badge, builtin: !!f.builtin,
 			}));
 		});
 		this.model().setProperty("/formRows", rows);
@@ -193,7 +235,7 @@ export default class MasterData extends BaseController {
 		const r = this.rowOf(e);
 		const f = this.schema!.groups[r.gi].fields[r.fi];
 		f.required = r.required;
-		f.badge = r.badge;
+		if (this.inspection()) f.photos = r.badge; else f.badge = r.badge;
 		this.model().setProperty("/formDirty", true);
 	}
 
@@ -265,12 +307,15 @@ export default class MasterData extends BaseController {
 	/** Dialog für ein Feld: eingebaut (nur Beschriftung, Pflicht, Badge, Hinweis) oder eigenes Feld. */
 	private async fieldDialog(f: SchemaField | null): Promise<(Partial<SchemaField> & { group?: string }) | null> {
 		const used = new Set(fieldsOf(this.schema!).map((x) => x.key));
-		const freeBuiltins = Object.entries(builtinFields).filter(([k]) => !used.has(k));
+		const inspection = this.inspection();
+		const builtins = inspection ? inspectionBuiltins : builtinFields;
+		const freeBuiltins = Object.entries(builtins).filter(([k]) => !used.has(k));
 		const lists = [...new Set([...Object.keys(listNames), ...this.items.map((i) => i.list)])].map((key) => ({ key, text: listNames[key] ?? key }));
 		const result = await openForm<Record<string, unknown>>({
 			title: f ? `Feld „${f.label}“ bearbeiten` : "Feld hinzufügen", width: "34rem",
-			initial: f ? { label: f.label, type: f.type, list: f.list ?? "", unit: f.unit ?? "", help: f.help ?? "", required: !!f.required, badge: !!f.badge }
-				: { source: freeBuiltins.length ? freeBuiltins[0][0] : "custom", type: "text", group: this.schema!.groups[this.schema!.groups.length - 1].key },
+			initial: f ? { label: f.label, type: f.type, list: f.list ?? "", unit: f.unit ?? "", help: f.help ?? "", required: !!f.required, badge: !!f.badge,
+				photos: !!f.photos, target: f.target ?? "" }
+				: { source: freeBuiltins.length ? freeBuiltins[0][0] : "custom", type: inspection ? "check" : "text", group: this.schema!.groups[this.schema!.groups.length - 1].key },
 			fields: [
 				...(f ? [] : [
 					{ key: "source", label: "Feld", type: "select" as const, required: true,
@@ -279,41 +324,45 @@ export default class MasterData extends BaseController {
 				]),
 				{ key: "label", label: "Beschriftung", maxLength: 100, help: f?.builtin || !f ? "Bei eingebauten Feldern leer lassen für die Standardbeschriftung." : undefined },
 				...(f?.builtin ? [] : [
-					{ key: "type", label: "Typ (eigenes Feld)", type: "select" as const, options: Object.entries(typeTexts).map(([key, text]) => ({ key, text })) },
+					{ key: "type", label: "Typ (eigenes Feld)", type: "select" as const,
+						options: Object.entries(typeTexts).filter(([key]) => inspection || key !== "check").map(([key, text]) => ({ key, text })) },
+					...(inspection ? [{ key: "target", label: "Ergänzt in den Basisdaten", type: "select" as const, options: this.targets, placeholder: "– nicht übernehmen –",
+						help: "Der erfasste Wert wird beim Speichern der Erstbegehung in dieses Feld der Bauakte übernommen." }] : []),
 					{ key: "list", label: "Werteliste (bei Auswahl)", type: "select" as const, options: lists, placeholder: "–" },
 					{ key: "unit", label: "Einheit", maxLength: 20, placeholder: "z. B. m, mm, m²" },
 				]),
 				{ key: "help", label: "Hinweis", maxLength: 300 },
 				{ key: "required", label: "Pflichtfeld", type: "switch" as const },
-				{ key: "badge", label: "Im Kopf als Badge zeigen", type: "switch" as const },
+				inspection ? { key: "photos", label: "Fotos je Punkt", type: "switch" as const } : { key: "badge", label: "Im Kopf als Badge zeigen", type: "switch" as const },
 			],
 			submit: async (x) => x,
 		});
 		if (!result) return null;
 		const s = (k: string) => String(result[k] ?? "").trim();
 		if (f) {
-			return { label: s("label") || f.label, help: s("help") || null, required: !!result.required, badge: !!result.badge,
-				...(f.builtin ? {} : { type: (s("type") || f.type) as SchemaFieldType, list: s("list") || null, unit: s("unit") || null }) };
+			return { label: s("label") || f.label, help: s("help") || null, required: !!result.required, badge: !!result.badge, photos: !!result.photos,
+				...(f.builtin ? {} : { type: (s("type") || f.type) as SchemaFieldType, list: s("list") || null, unit: s("unit") || null, target: s("target") || null }) };
 		}
 		const source = s("source");
 		if (source !== "custom") {
-			const b = builtinFields[source];
+			const b = builtins[source] as { label: string; type: SchemaFieldType; list?: string; unit?: string };
 			return { key: source, label: s("label") || b.label, type: b.type, path: "", list: b.list ?? null, unit: b.unit ?? null, help: s("help") || null,
-				required: !!result.required, badge: !!result.badge, builtin: true, group: s("group") };
+				required: !!result.required, badge: !!result.badge, photos: !!result.photos, builtin: true, group: s("group") };
 		}
 		const label = s("label");
 		if (!label) { this.toast("Bitte eine Beschriftung angeben."); return null; }
 		let key = keyOf(label).replace(/[^A-Za-z0-9_]/g, "_").replace(/^[^A-Za-z]+/, "") || "feld";
-		while (used.has(key) || key in builtinFields) key = `${key}_2`;
-		const type = (s("type") || "text") as SchemaFieldType;
+		while (used.has(key) || key in builtins) key = `${key}_2`;
+		const type = (s("type") || (inspection ? "check" : "text")) as SchemaFieldType;
 		if (type === "select" && !s("list")) { this.toast("Für eine Auswahl bitte eine Werteliste wählen."); return null; }
-		return { key, label, type, path: `project.custom.${key}`, list: type === "select" ? s("list") : null, unit: s("unit") || null, help: s("help") || null,
-			required: !!result.required, badge: !!result.badge, builtin: false, group: s("group") };
+		return { key, label, type, path: inspection ? "" : `project.custom.${key}`, list: type === "select" ? s("list") : null, unit: s("unit") || null, help: s("help") || null,
+			required: !!result.required, badge: !inspection && !!result.badge, photos: inspection && !!result.photos, builtin: false, group: s("group"),
+			target: inspection && type !== "check" ? s("target") || null : null };
 	}
 
 	async onSaveForm(): Promise<void> {
 		if (!this.schema) return;
-		const saved = await this.run(() => put<FormSchema>("forms/bauakte", { groups: this.schema!.groups }));
+		const saved = await this.run(() => put<FormSchema>(`forms/${this.formKey()}`, { groups: this.schema!.groups }));
 		if (saved) {
 			this.toast("Formular gespeichert");
 			await this.loadForm();

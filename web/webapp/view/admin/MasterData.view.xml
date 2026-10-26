@@ -3,87 +3,41 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.masterData}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Wertelisten, Basisdaten-Formular, Textbausteine, Ordnervorlagen der Dokumentablage und Bauakten-Vorlagen"/></f:expandedContent>
+				<f:expandedContent><Text text="Auswahllisten, Formulare für Basisdaten und Erstbegehung, Textbausteine und Vorlagen"/></f:expandedContent>
 				<f:actions>
-					<Button text="{view>/addText}" icon="sap-icon://add" type="Emphasized" press=".onAdd" visible="{view>/canManage}"/>
+					<Button text="{view>/addText}" icon="sap-icon://add" type="Emphasized" press=".onAdd" visible="{= ${view>/canManage} &amp;&amp; !!${view>/addText} }"/>
 				</f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
 			<VBox>
-				<MessageStrip text="Kunden, Lieferanten, Material, Kolonnen, Geräte, Benutzer und Rollen werden auf ihren eigenen Seiten gepflegt (Links unten)."
-					type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
-				<HBox wrap="Wrap" class="sapUiSmallMarginBottom eoEntryRow">
-					<Link text="Kunden" href="/kunden"/><Link text="Lieferanten" href="/lieferanten"/><Link text="Materialstamm" href="/material"/>
-					<Link text="Kolonnen" href="/planung/kolonnen"/><Link text="Geräte &amp; Fahrzeuge" href="/planung/geraete"/><Link text="Benutzer" href="/verwaltung/benutzer"/>
-					<Link text="Rollen und Rechte" href="/verwaltung/rollen"/><Link text="Firmendaten" href="/system/firmendaten"/>
-				</HBox>
-				<IconTabBar selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false">
-					<items>
-						<IconTabFilter key="textBlock" text="Textbausteine" icon="sap-icon://text" count="{= ${view>/textBlock}.length }">
-							<Table items="{view>/textBlock}" noDataText="Noch keine Textbausteine." popinLayout="GridSmall">
-								<columns>
-									<Column width="14rem"><Text text="Name"/></Column>
-									<Column><Text text="Text"/></Column>
-									<Column width="7rem"><Text text="Status"/></Column>
-									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
-								</columns>
-								<items>
-									<ColumnListItem>
-										<Text text="{view>name}"/>
-										<Text text="{view>content/text}" maxLines="3"/>
-										<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }"/>
-										<HBox justifyContent="End">
-											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
-											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
-										</HBox>
-									</ColumnListItem>
-								</items>
-							</Table>
-						</IconTabFilter>
-						<IconTabFilter key="folderTemplate" text="Ordnervorlagen" icon="sap-icon://folder" count="{= ${view>/folderTemplate}.length }">
-							<Table items="{view>/folderTemplate}" noDataText="Noch keine Ordnervorlagen – Unterordner werden dann in jeder Bauakte angeboten." popinLayout="GridSmall">
-								<columns>
-									<Column width="14rem"><Text text="Name"/></Column>
-									<Column width="12rem"><Text text="Dokumentart"/></Column>
-									<Column><Text text="Unterordner"/></Column>
-									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
-								</columns>
-								<items>
-									<ColumnListItem>
-										<Text text="{view>name}"/>
-										<Text text="{view>categoryText}"/>
-										<Text text="{view>foldersText}"/>
-										<HBox justifyContent="End">
-											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
-											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
-										</HBox>
-									</ColumnListItem>
-								</items>
-							</Table>
-						</IconTabFilter>
-						<IconTabFilter key="bauakteTemplate" text="Bauakten-Vorlagen" icon="sap-icon://copy" count="{= ${view>/bauakteTemplate}.length }">
-							<Table items="{view>/bauakteTemplate}" noDataText="Noch keine Vorlagen – bei der Anlage einer Bauakte wählbar (Beschreibung und Räume)." popinLayout="GridSmall">
-								<columns>
-									<Column width="14rem"><Text text="Name"/></Column>
-									<Column><Text text="Beschreibung"/></Column>
-									<Column><Text text="Räume"/></Column>
-									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
-								</columns>
-								<items>
-									<ColumnListItem>
-										<Text text="{view>name}"/>
-										<Text text="{view>content/description}" maxLines="2"/>
-										<Text text="{view>roomsText}"/>
-										<HBox justifyContent="End">
-											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
-											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
-										</HBox>
-									</ColumnListItem>
-								</items>
-							</Table>
-						</IconTabFilter>
-						<IconTabFilter key="valueList" text="Wertelisten" icon="sap-icon://list" count="{= ${view>/listItems}.length }">
+				<FlexBox class="eoMasterData" alignItems="Start">
+					<VBox class="eoMdNav" width="16rem">
+						<List mode="SingleSelectMaster" selectionChange=".onNav" class="eoMdNavList" showSeparators="None">
+							<GroupHeaderListItem title="Auswahllisten"/>
+							<StandardListItem title="Wertelisten" icon="sap-icon://list" selected="{= ${view>/tab} === 'valueList' }" info="{= String(${view>/listCount} || '') }"><customData><core:CustomData key="tab" value="valueList"/></customData></StandardListItem>
+							<GroupHeaderListItem title="Formulare"/>
+							<StandardListItem title="Basisdaten" icon="sap-icon://form" selected="{= ${view>/tab} === 'form' }"><customData><core:CustomData key="tab" value="form"/></customData></StandardListItem>
+							<StandardListItem title="Erstbegehung" icon="sap-icon://inspection" selected="{= ${view>/tab} === 'inspectionForm' }"><customData><core:CustomData key="tab" value="inspectionForm"/></customData></StandardListItem>
+							<GroupHeaderListItem title="Vorlagen und Texte"/>
+							<StandardListItem title="Textbausteine" icon="sap-icon://text" selected="{= ${view>/tab} === 'textBlock' }" info="{= String(${view>/textBlock}.length) }"><customData><core:CustomData key="tab" value="textBlock"/></customData></StandardListItem>
+							<StandardListItem title="Ordnervorlagen" icon="sap-icon://folder" selected="{= ${view>/tab} === 'folderTemplate' }" info="{= String(${view>/folderTemplate}.length) }"><customData><core:CustomData key="tab" value="folderTemplate"/></customData></StandardListItem>
+							<StandardListItem title="Bauakten-Vorlagen" icon="sap-icon://copy" selected="{= ${view>/tab} === 'bauakteTemplate' }" info="{= String(${view>/bauakteTemplate}.length) }"><customData><core:CustomData key="tab" value="bauakteTemplate"/></customData></StandardListItem>
+							<GroupHeaderListItem title="Weitere Stammdaten"/>
+							<StandardListItem title="Kunden" icon="sap-icon://customer" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/kunden"/></customData></StandardListItem>
+							<StandardListItem title="Lieferanten" icon="sap-icon://supplier" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/lieferanten"/></customData></StandardListItem>
+							<StandardListItem title="Materialstamm" icon="sap-icon://product" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/material"/></customData></StandardListItem>
+							<StandardListItem title="Kolonnen" icon="sap-icon://group" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/planung/kolonnen"/></customData></StandardListItem>
+							<StandardListItem title="Geräte und Fahrzeuge" icon="sap-icon://shipping-status" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/planung/geraete"/></customData></StandardListItem>
+							<StandardListItem title="Benutzer" icon="sap-icon://employee" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/verwaltung/benutzer"/></customData></StandardListItem>
+							<StandardListItem title="Rollen und Rechte" icon="sap-icon://role" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/verwaltung/rollen"/></customData></StandardListItem>
+							<StandardListItem title="Firmendaten" icon="sap-icon://building" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/system/firmendaten"/></customData></StandardListItem>
+						</List>
+					</VBox>
+					<VBox class="eoMdContent">
+						<layoutData><FlexItemData growFactor="1" minWidth="0"/></layoutData>
+						<Title text="{view>/tabTitle}" level="H2" class="sapUiSmallMarginBottom"/>
+					<VBox visible="{= ${view>/tab} === 'valueList' }" class="eoMdPane">
 							<OverflowToolbar style="Clear">
 								<Label text="Liste" labelFor="listSelect"/>
 								<Select id="listSelect" selectedKey="{view>/list}" items="{view>/lists}" change=".onListChange" width="16rem">
@@ -118,9 +72,9 @@
 									</ColumnListItem>
 								</items>
 							</Table>
-						</IconTabFilter>
-						<IconTabFilter key="form" text="Basisdaten-Formular" icon="sap-icon://form">
-							<MessageStrip text="Diese Felder fragt der Anlage-Assistent ab, zeigt die Übersicht unter den Basisdaten und nutzt die App. Eingebaute Felder lassen sich umbenennen, verschieben, als Pflicht oder Badge markieren; eigene Felder kommen hinzu."
+											</VBox>
+					<VBox visible="{= ${view>/tab} === 'form' || ${view>/tab} === 'inspectionForm' }" class="eoMdPane">
+							<MessageStrip text="{view>/formHint}"
 								type="Information" showIcon="true" class="sapUiTinyMarginBottom"/>
 							<OverflowToolbar style="Clear">
 								<Button text="Feld hinzufügen" icon="sap-icon://add" press=".onAddField" visible="{view>/canManage}"/>
@@ -128,24 +82,22 @@
 								<ToolbarSpacer/>
 								<Button text="Formular speichern" type="Emphasized" icon="sap-icon://save" press=".onSaveForm" enabled="{view>/formDirty}" visible="{view>/canManage}"/>
 							</OverflowToolbar>
-							<Table items="{view>/formRows}" popinLayout="GridSmall" class="eoDenseTable">
+							<Table items="{view>/formRows}" popinLayout="GridSmall" contextualWidth="Auto" class="eoDenseTable">
 								<columns>
 									<Column><Text text="Feld"/></Column>
-									<Column width="8rem"><Text text="Typ"/></Column>
-									<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Werteliste / Einheit"/></Column>
-									<Column width="5rem" hAlign="Center"><Text text="Pflicht"/></Column>
-									<Column width="5rem" hAlign="Center"><Text text="Badge"/></Column>
-									<Column width="12rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+									<Column width="7rem"><Text text="Typ"/></Column>
+									<Column width="4rem" hAlign="Center"><Text text="Pflicht"/></Column>
+									<Column width="4rem" hAlign="Center"><Text text="{= ${view>/tab} === 'inspectionForm' ? 'Fotos' : 'Badge' }"/></Column>
+									<Column width="9.5rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
 								</columns>
 								<items>
 									<ColumnListItem highlight="{= ${view>group} ? 'Information' : 'None' }">
 										<VBox>
 											<Title text="{view>label}" level="H4" visible="{view>group}"/>
 											<Text text="{view>label}" visible="{= !${view>group} }"/>
-											<Text text="{= ${view>builtin} ? 'eingebaut' : 'eigenes Feld' }" class="eoMuted" visible="{= !${view>group} }"/>
+											<Text text="{= (${view>builtin} ? 'eingebaut' : 'eigenes Feld') + (${view>listText} ? ' · ' + ${view>listText} : '') }" class="eoMuted" visible="{= !${view>group} }"/>
 										</VBox>
 										<Text text="{view>typeText}"/>
-										<Text text="{view>listText}"/>
 										<CheckBox selected="{view>required}" visible="{= !${view>group} }" select=".onFormFlag" enabled="{view>/canManage}"/>
 										<CheckBox selected="{view>badge}" visible="{= !${view>group} }" select=".onFormFlag" enabled="{view>/canManage}"/>
 										<HBox justifyContent="End">
@@ -161,9 +113,72 @@
 									</ColumnListItem>
 								</items>
 							</Table>
-						</IconTabFilter>
-					</items>
-				</IconTabBar>
+											</VBox>
+					<VBox visible="{= ${view>/tab} === 'textBlock' }" class="eoMdPane">
+							<Table items="{view>/textBlock}" noDataText="Noch keine Textbausteine." popinLayout="GridSmall">
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column><Text text="Text"/></Column>
+									<Column width="7rem"><Text text="Status"/></Column>
+									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>name}"/>
+										<Text text="{view>content/text}" maxLines="3"/>
+										<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
+											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+											</VBox>
+					<VBox visible="{= ${view>/tab} === 'folderTemplate' }" class="eoMdPane">
+							<Table items="{view>/folderTemplate}" noDataText="Noch keine Ordnervorlagen – Unterordner werden dann in jeder Bauakte angeboten." popinLayout="GridSmall">
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column width="12rem"><Text text="Dokumentart"/></Column>
+									<Column><Text text="Unterordner"/></Column>
+									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>name}"/>
+										<Text text="{view>categoryText}"/>
+										<Text text="{view>foldersText}"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
+											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+											</VBox>
+					<VBox visible="{= ${view>/tab} === 'bauakteTemplate' }" class="eoMdPane">
+							<Table items="{view>/bauakteTemplate}" noDataText="Noch keine Vorlagen – bei der Anlage einer Bauakte wählbar (Beschreibung und Räume)." popinLayout="GridSmall">
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column><Text text="Beschreibung"/></Column>
+									<Column><Text text="Räume"/></Column>
+									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>name}"/>
+										<Text text="{view>content/description}" maxLines="2"/>
+										<Text text="{view>roomsText}"/>
+										<HBox justifyContent="End">
+											<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit"/>
+											<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+											</VBox>
+					</VBox>
+				</FlexBox>
 			</VBox>
 		</f:content>
 	</f:DynamicPage>

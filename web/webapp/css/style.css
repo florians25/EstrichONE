@@ -310,3 +310,29 @@ li[data-dot] { display: flex; align-items: center; }
 .eoKpiChips { gap: 0.5rem; }
 .eoKpiChips .sapMGenericTag { margin: 0; height: 2.25rem; }
 .eoKpiChips .sapMGenericTag .sapMObjectNumberText { font-size: 1.125rem; }
+
+/* Stammdaten: Kategorien links, Inhalt rechts */
+.eoMasterData { gap: 1.5rem; }
+.eoMdNav { flex: none; position: sticky; top: 0; border-right: 1px solid var(--sapGroup_ContentBorderColor); padding-right: 0.5rem; }
+.eoMdNavList .sapMLIB { min-height: 2.5rem; }
+.eoMdContent { min-width: 0; }
+@media (max-width: 900px) { .eoMasterData.sapMFlexBox { flex-direction: column; } .eoMdNav { width: 100% !important; border-right: none; position: static; } }
+
+/* Quartz (sap_fiori_3*): die Symbolschrift ist sehr dünn – Konturen leicht verstärken */
+html[data-eo-theme^="sap_fiori_3"] .sapUiIcon::before,
+html[data-eo-theme^="sap_fiori_3"] .sapUiIcon[data-sap-ui-icon-content]::before { -webkit-text-stroke: 0.45px currentColor; }
+html[data-eo-theme^="sap_fiori_3"] .sapTntNLI .sapUiIcon::before,
+html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0.6px currentColor; }
+
+/* Globale Suche mittig in der Kopfleiste */
+@media (min-width: 1100px) {
+	.eoShellSearch.sapMSF { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 1; }
+}
+
+/* Abstände: einheitliche Luft zwischen Blöcken, Meldungen und Formularabschnitten */
+.sapMMsgStrip + .sapMMsgStrip { margin-top: 0.5rem; }
+.sapUiForm .sapUiFormTitle { margin-bottom: 0.25rem; }
+.sapUiForm .sapUiFormContainerTitle + .sapUiFormElement, .sapUiFormResGrid > div > .sapUiRespGrid { row-gap: 0.25rem; }
+.sapFDynamicPageContent > .sapMVBox > .sapMTable + .sapMTable, .sapFDynamicPageContent .sapMPanel + .sapMPanel { margin-top: 1rem; }
+.sapMOTB.sapMTB + .sapMListTbl, .sapMOTB.sapMTB + .sapMList { margin-top: 0.25rem; }
+.eoOverviewGrid { margin-top: 1rem; }

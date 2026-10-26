@@ -133,6 +133,22 @@ internal static class BauakteEndpoints
         }
 
         // Wie in JSON (camelCase, „inquiry“) oder als Enum-Name; Unbekanntes ist ein Fehler, kein stiller Filterverzicht.
+        // „active“: laufende Akten (Hauptliste); „old“: Altakten (abgeschlossen oder storniert).
+        if (status == "all")
+        {
+            status = null;
+        }
+        else if (status == "active")
+        {
+            query = query.Where(b => b.Status != BauakteStatus.Completed && b.Status != BauakteStatus.Cancelled);
+            status = null;
+        }
+        else if (status == "old")
+        {
+            query = query.Where(b => b.Status == BauakteStatus.Completed || b.Status == BauakteStatus.Cancelled);
+            status = null;
+        }
+
         if (status is not null)
         {
             if (!Enum.TryParse<BauakteStatus>(status, ignoreCase: true, out var wanted) || int.TryParse(status, out _))

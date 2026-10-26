@@ -33,13 +33,13 @@
 					</FlexBox>
 					<IconTabHeader id="statusTabs" selectedKey="{view>/statusKey}" select=".onStatus" mode="Inline" backgroundDesign="Transparent">
 						<items>
-							<IconTabFilter key="all" text="{i18n>common.all}"/>
+							<IconTabFilter key="all" text="Laufend"/>
 							<IconTabFilter key="inquiry" text="Anfrage"/>
 							<IconTabFilter key="planned" text="Geplant"/>
 							<IconTabFilter key="inProgress" text="In Ausführung"/>
 							<IconTabFilter key="drying" text="Belegreif / Trocknung"/>
-							<IconTabFilter key="completed" text="Abgeschlossen"/>
-							<IconTabFilter key="cancelled" text="Storniert"/>
+							<IconTabSeparator/>
+							<IconTabFilter key="old" text="Altakten" icon="sap-icon://attachment-zip-file" iconColor="Neutral"/>
 						</items>
 					</IconTabHeader>
 				</VBox>

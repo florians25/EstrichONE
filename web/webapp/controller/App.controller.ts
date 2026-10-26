@@ -10,6 +10,9 @@ import NavigationListItem from "sap/tnt/NavigationListItem";
 import NavigationListGroup from "sap/tnt/NavigationListGroup";
 import type { SideNavigation$ItemSelectEvent } from "sap/tnt/SideNavigation";
 import type { SearchField$SearchEvent } from "sap/m/SearchField";
+import type SearchField from "sap/m/SearchField";
+import type Event from "sap/ui/base/Event";
+import SuggestionItem from "sap/m/SuggestionItem";
 import type { ShellBar$AvatarPressedEvent, ShellBar$NotificationsPressedEvent } from "sap/f/ShellBar";
 import Theming from "sap/ui/core/Theming";
 import Menu from "sap/m/Menu";
@@ -196,9 +199,43 @@ export default class AppController extends BaseController {
 	}
 
 	onSearch(event: SearchField$SearchEvent): void {
+		const item = event.getParameter("suggestionItem") as SuggestionItem | undefined;
+		if (item?.getKey()) {
+			this.nav(item.getKey());
+			(event.getSource() as SearchField).setValue("");
+			return;
+		}
 		const value = String(event.getParameter("query") ?? "").trim();
 		if (event.getParameter("clearButtonPressed")) return;
-		this.nav(value ? `/bauakten?search=${encodeURIComponent(value)}` : "/bauakten");
+		this.nav(value ? `/bauakten?search=${encodeURIComponent(value)}&status=all` : "/bauakten");
+	}
+
+	private suggestSeq = 0;
+
+	/** Globale Suche: Bauakten (auch Altakten), Kunden und Dokumente als Vorschläge. */
+	async onSuggest(event: Event): Promise<void> {
+		const field = event.getSource() as SearchField;
+		const value = String(event.getParameter("suggestValue" as never) ?? "").trim();
+		const seq = ++this.suggestSeq;
+		if (value.length < 2) {
+			field.destroySuggestionItems();
+			return;
+		}
+		const has = (p: string) => session.has(p);
+		const [akten, kunden, docs] = await Promise.all([
+			has("bauakten.read") ? get<{ items: { id: string; number: string | null; title: string; city: string | null; status: string }[] }>("bauakten", { search: value, limit: 5, status: "all" }).catch(() => ({ items: [] })) : { items: [] },
+			has("contacts.read") ? get<{ items?: { id: string; name: string; city: string | null }[] } | { id: string; name: string; city: string | null }[]>("contacts", { search: value, limit: 5 }).catch(() => []) : [],
+			has("bauakten.read") ? get<{ items: { file: { id: string; bauakteId: string | null; originalName: string }; bauakteNumber: string | null }[] }>("documents", { search: value, limit: 5 }).catch(() => ({ items: [] })) : { items: [] },
+		]);
+		if (seq !== this.suggestSeq) return;
+		field.destroySuggestionItems();
+		const add = (text: string, description: string, icon: string, key: string) =>
+			field.addSuggestionItem(new SuggestionItem({ text, description, icon, key }));
+		for (const a of akten.items) add(`${a.number ?? "neu"} · ${a.title}`, `Bauakte${a.city ? ` · ${a.city}` : ""}`, "sap-icon://folder-full", `/bauakten/${a.id}`);
+		const contacts = Array.isArray(kunden) ? kunden : kunden.items ?? [];
+		for (const c of contacts.slice(0, 5)) add(c.name, `Kunde${c.city ? ` · ${c.city}` : ""}`, "sap-icon://customer", `/kunden/${c.id}`);
+		for (const d of docs.items) if (d.file.bauakteId) add(d.file.originalName, `Dokument · ${d.bauakteNumber ?? ""}`, "sap-icon://document", `/bauakten/${d.file.bauakteId}/datei/${d.file.id}?abschnitt=dokumente`);
+		field.suggest();
 	}
 
 	onNewBauakte(): void {

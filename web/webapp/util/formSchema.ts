@@ -8,7 +8,7 @@ import type { Field } from "./forms";
 import type { BauakteDetail } from "./models";
 import type { BauakteProject } from "./project";
 
-export type SchemaFieldType = "text" | "textarea" | "number" | "integer" | "select" | "boolean" | "date";
+export type SchemaFieldType = "text" | "textarea" | "number" | "integer" | "select" | "boolean" | "date" | "check";
 
 export interface SchemaField {
 	key: string;
@@ -21,22 +21,31 @@ export interface SchemaField {
 	help?: string | null;
 	badge?: boolean;
 	builtin?: boolean;
+	/** Erstbegehung: Fotos je Punkt anbieten. */
+	photos?: boolean;
+	/** Erstbegehung: Ziel in den Basisdaten (z. B. project.totalArea). */
+	target?: string | null;
 }
 
 export interface SchemaGroup { key: string; label: string; fields: SchemaField[] }
 export interface ListOption { key: string; label: string; shortLabel: string | null }
 export interface FormSchema { id: string; key: string; version: number; groups: SchemaGroup[]; lists: Record<string, ListOption[]> }
 
-let cached: Promise<FormSchema | null> | null = null;
+const cached = new Map<string, Promise<FormSchema | null>>();
+
+/** Formular-Schema der Stammdaten („bauakte“, „erstbegehung“), zwischengespeichert. */
+export function formSchema(key: string, force = false): Promise<FormSchema | null> {
+	if (force || !cached.has(key)) {
+		cached.set(key, get<FormSchema>(`forms/${key}`).catch(() => {
+			cached.delete(key);
+			return null;
+		}));
+	}
+	return cached.get(key)!;
+}
 
 export function bauakteSchema(force = false): Promise<FormSchema | null> {
-	if (force || !cached) {
-		cached = get<FormSchema>("forms/bauakte").catch(() => {
-			cached = null;
-			return null;
-		});
-	}
-	return cached;
+	return formSchema("bauakte", force);
 }
 
 /** Wert eines Feldes aus der Bauakte lesen (path: project.x, project.custom.x oder Feld der Bauakte). */

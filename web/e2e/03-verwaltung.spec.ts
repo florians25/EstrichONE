@@ -174,7 +174,7 @@ test('Stammdaten: Textbaustein, Ordnervorlage und Bauakten-Vorlage', async ({ pa
   await dialog.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Untergrund besenrein/ })).toBeVisible();
 
-  await page.getByRole('tab', { name: /Bauakten-Vorlagen/ }).click();
+  await page.locator('.eoMdNavList').getByText('Bauakten-Vorlagen', { exact: true }).click();
   await page.getByRole('button', { name: 'Vorlage anlegen' }).click();
   dialog = page.getByRole('dialog', { name: 'Vorlage anlegen' });
   await dialog.getByLabel('Name', { exact: true }).fill('EFH Heizestrich');

@@ -89,6 +89,7 @@
 		</uxap:headerTitle>
 		<uxap:headerContent>
 			<VBox width="100%">
+			<VBox id="dossierBox" renderType="Bare"/>
 			<HBox wrap="Wrap" alignItems="Center" class="eoHintBadges eoBadgeRow">
 				<HBox items="{akte>/projectBadges}" wrap="Wrap" class="eoHintBadges">
 					<ObjectStatus text="{akte>text}" state="{akte>state}" icon="{akte>icon}" inverted="true"/>
