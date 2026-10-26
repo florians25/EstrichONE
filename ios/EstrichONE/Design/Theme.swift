@@ -12,15 +12,16 @@ enum Theme {
     static let actionPrimary = Color.dynamic(light: 0x174A8B, dark: 0x6FA8F5)
 
     /// Gefüllte Hauptschaltfläche: Verlauf von oben nach unten.
-    static let brandFillTop = Color.dynamic(light: 0x1C5398, dark: 0x2E6BB8)
-    static let brandFillBottom = Color.dynamic(light: 0x0B2D5B, dark: 0x174A8B)
+    // Ruhiges Farbsystem: eine Akzentfarbe (Markenblau) für Aktionen, sonst neutrale Flächen.
+    static let brandFillTop = Color.dynamic(light: 0x174A8B, dark: 0x2B62AD)
+    static let brandFillBottom = Color.dynamic(light: 0x174A8B, dark: 0x2B62AD)
     /// Akzent für „Aufnehmen“ (Foto, Scan) – Text darauf immer dunkel (`onAccent`, Kontrast > 7 : 1).
-    static let accent = Color(hex: 0x3CCB7F)
-    static let accentPressed = Color(hex: 0x2FB36D)
-    static let onAccent = Color(hex: 0x05331C)
-    /// Nebenaktion: getönte Fläche in Markenfarbe.
-    static let secondaryFill = Color.dynamic(light: 0xE6EDF7, dark: 0x1B2738)
-    static let secondaryFillPressed = Color.dynamic(light: 0xD3DFEF, dark: 0x25344A)
+    static let accent = Color.dynamic(light: 0x174A8B, dark: 0x3B7DD8)
+    static let accentPressed = Color.dynamic(light: 0x0B2D5B, dark: 0x2B62AD)
+    static let onAccent = Color.white
+    /// Nebenaktion: neutrale Fläche.
+    static let secondaryFill = Color.dynamic(light: 0xEEF0F3, dark: 0x2A2C31)
+    static let secondaryFillPressed = Color.dynamic(light: 0xE0E3E8, dark: 0x36393F)
 
     static let textSecondary = Color.dynamic(light: 0x4B5563, dark: 0xC3CAD4)
     static let surfaceAlt = Color(uiColor: .systemGroupedBackground)

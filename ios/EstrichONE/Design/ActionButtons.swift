@@ -140,12 +140,8 @@ private struct ActionTileBody: View {
             .background {
                 switch rank {
                 case .primary:
-                    shape.fill(LinearGradient(colors: [Theme.brandFillTop, Theme.brandFillBottom], startPoint: .top, endPoint: .bottom))
+                    shape.fill(Theme.brandFillBottom)
                         .overlay(shape.fill(.black.opacity(pressed ? 0.18 : 0)))
-                        .shadow(color: Theme.navy.opacity(pressed ? 0.1 : 0.25), radius: pressed ? 2 : 5, y: pressed ? 1 : 2)
-                case .accent:
-                    shape.fill(pressed ? Theme.accentPressed : Theme.accent)
-                        .shadow(color: Theme.accent.opacity(pressed ? 0.1 : 0.3), radius: pressed ? 2 : 5, y: pressed ? 1 : 2)
                 default:
                     shape.fill(pressed ? Theme.secondaryFillPressed : Theme.secondaryFill)
                 }
@@ -161,7 +157,6 @@ private struct ActionTileBody: View {
     private var foreground: Color {
         switch rank {
         case .primary: .white
-        case .accent: Theme.onAccent
         case .destructive: Theme.error
         default: Theme.actionPrimary
         }

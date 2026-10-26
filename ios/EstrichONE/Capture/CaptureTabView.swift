@@ -29,6 +29,8 @@ enum CaptureMode: String, CaseIterable, Identifiable {
 /// Reiter „Aufnehmen“ (09, W-2): Fotos oder Dokument, Bauakte ist vorausgewählt (zuletzt geöffnet). 2–3 Tipps.
 struct CaptureTabView: View {
     @Binding var mode: CaptureMode
+    /// Aus „Erfassen“ geöffnet: Schließen-Knopf anzeigen.
+    var onClose: (() -> Void)?
 
     @Environment(AppModel.self) private var model
     @State private var recent: [Bauakte] = []
@@ -89,6 +91,11 @@ struct CaptureTabView: View {
                 }
             }
             .navigationTitle("Aufnehmen")
+            .toolbar {
+                if let onClose {
+                    ToolbarItem(placement: .cancellationAction) { Button("Fertig", action: onClose) }
+                }
+            }
             .searchable(text: $search, prompt: "Bauakte suchen")
             .fullScreenCover(item: $captureFor) { bauakte in
                 CameraView(bauakte: bauakte) { count in

@@ -6,37 +6,52 @@ struct MainTabView: View {
     enum Tab: Hashable {
         case today
         case bauakten
-        case customers
         case capture
+        case customers
         case more
     }
 
     @Environment(AppModel.self) private var model
     @State private var selection: Tab = .today
+    @State private var previous: Tab = .today
     @State private var captureMode: CaptureMode = .photo
+    @State private var showsCaptureHub = false
 
     var body: some View {
-        TabView(selection: $selection) {
+        TabView(selection: Binding(get: { selection }, set: { tab in
+            // „Erfassen“ öffnet das Aktionsblatt und bleibt auf dem bisherigen Reiter.
+            if tab == .capture {
+                showsCaptureHub = true
+            } else {
+                selection = tab
+                previous = tab
+            }
+        })) {
             HomeView(openTab: { selection = $0 }, openCapture: { mode in
                 captureMode = mode
-                selection = .capture
+                showsCaptureHub = true
             })
-                .tabItem { Label("Start", systemImage: "house") }
+                .tabItem { Label("Heute", systemImage: "sun.max") }
                 .tag(Tab.today)
             BauaktenListView()
-                .tabItem { Label("Bauakten", systemImage: "folder") }
+                .tabItem { Label("Baustellen", systemImage: "building.2") }
                 .tag(Tab.bauakten)
+            Color.clear
+                .tabItem { Label("Erfassen", systemImage: "plus.circle.fill") }
+                .tag(Tab.capture)
+                .accessibilityIdentifier("captureTab")
             CustomerDirectoryView()
                 .tabItem { Label("Kunden", systemImage: "person.2") }
                 .tag(Tab.customers)
-            CaptureTabView(mode: $captureMode)
-                .tabItem { Label("Aufnehmen", systemImage: "camera") }
-                .tag(Tab.capture)
             MoreView()
                 .tabItem { Label("Mehr", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
         }
         .modifier(SidebarAdaptable())
+        .sheet(isPresented: $showsCaptureHub) {
+            CaptureHub { showsCaptureHub = false }
+                .presentationDetents([.medium, .large])
+        }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 if model.isDemo { DemoBanner { model.requestDemo(false) } }

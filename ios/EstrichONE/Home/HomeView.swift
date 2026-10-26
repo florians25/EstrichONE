@@ -55,22 +55,18 @@ struct HomeView: View {
                             }
                             .frame(maxWidth: .infinity, alignment: .leading)
                             VStack(alignment: .leading, spacing: 18) {
-                                quickActions
                                 tasksSection
                                 recentSection
-                                navigation
                             }
                             .frame(width: 340)
                         }
                         .padding(.horizontal, 20)
                     } else {
                         VStack(alignment: .leading, spacing: 18) {
-                            quickActions
                             todaySection
                             tomorrowSection
                             dispatchCard
                             tasksSection
-                            navigation
                             recentSection
                         }
                         .padding(.horizontal)
@@ -129,6 +125,7 @@ struct HomeView: View {
                         case .diary: diaryFor = bauakte
                         case .inspection: inspectFor = bauakte
                         case .acceptance: acceptanceFor = bauakte
+                        case .defect: break
                         }
                     }
                 }
@@ -591,7 +588,7 @@ struct TodayJobCard: View {
 
 /// Hauptaktion der Startseite, die eine Baustelle braucht.
 enum SiteTask: String, Identifiable {
-    case open, diary, inspection, acceptance
+    case open, diary, inspection, acceptance, defect
     var id: String { rawValue }
     var title: String {
         switch self {
@@ -599,6 +596,7 @@ enum SiteTask: String, Identifiable {
         case .diary: "Bautagebuch – Baustelle"
         case .inspection: "Erstbegehung – Baustelle"
         case .acceptance: "Abnahme – Baustelle"
+        case .defect: "Mangel – Baustelle"
         }
     }
 }
@@ -679,10 +677,9 @@ struct NavigationRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: symbol)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.white)
+                    .font(.body)
+                    .foregroundStyle(Theme.actionPrimary)
                     .frame(width: 28, height: 28)
-                    .background(color, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                     .accessibilityHidden(true)
                 Text(title)
                     .foregroundStyle(.primary)
@@ -731,21 +728,21 @@ struct HomeHeader: View {
         let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 8) {
-                BrandMark(onDark: true)
+                BrandMark(onDark: colorScheme == .dark)
                     .frame(width: 22, height: 22)
                     .accessibilityHidden(true)
                 Text(model.server?.info.serverName ?? "EstrichONE")
                     .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.white.opacity(0.8))
+                    .foregroundStyle(Theme.textSecondary)
                     .lineLimit(1)
                 Spacer(minLength: 8)
                 if model.isPoolDevice {
                     Button { model.lock() } label: {
                         Image(systemName: "person.2.fill")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Theme.actionPrimary)
                             .frame(width: 40, height: 40)
-                            .background(.white.opacity(0.14), in: Circle())
+                            .background(Theme.secondaryFill, in: Circle())
                     }
                     .accessibilityLabel("Person wechseln")
                     .accessibilityIdentifier("switchUserButton")
@@ -754,15 +751,15 @@ struct HomeHeader: View {
             if let user = model.active?.user {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("\(greeting), \(Self.firstName(user.displayName))")
-                        .font(.largeTitle.weight(.bold))
-                        .foregroundStyle(.white)
+                        .font(.title.weight(.bold))
+                        .foregroundStyle(Color.primary)
                         .lineLimit(2)
                         .minimumScaleFactor(0.8)
                         .accessibilityLabel(user.displayName)
                         .accessibilityIdentifier("currentUserName")
                     Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
                         .font(.subheadline)
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
             HStack(spacing: 8) { metrics }
@@ -770,11 +767,10 @@ struct HomeHeader: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background {
-            shape.fill(LinearGradient(colors: colorScheme == .dark ? [Color(hex: 0x0A2246), Color(hex: 0x123A6E)] : [Theme.navy, Theme.navyLight],
-                                      startPoint: .topLeading, endPoint: .bottomTrailing))
+            shape.fill(Theme.card)
         }
-        .overlay(shape.strokeBorder(.white.opacity(colorScheme == .dark ? 0.08 : 0)))
-        .shadow(color: Theme.navy.opacity(colorScheme == .dark ? 0 : 0.22), radius: 16, y: 8)
+        .overlay(shape.strokeBorder(Theme.line.opacity(0.5)))
+        
         .padding(.horizontal, sizeClass == .regular ? 20 : 16)
         .padding(.top, 8)
     }
@@ -834,13 +830,12 @@ private struct MetricCapsule: View {
                 Text(label).font(.subheadline)
             }
         }
-        .foregroundStyle(.white)
+        .foregroundStyle(Color.primary)
         .lineLimit(1)
         .fixedSize()
         .padding(.horizontal, 12)
         .frame(minHeight: 36)
-        .background(.white.opacity(0.14), in: Capsule())
-        .overlay(Capsule().strokeBorder(.white.opacity(0.18)))
+        .background(Theme.secondaryFill, in: Capsule())
         .accessibilityElement(children: .combine)
     }
 }
