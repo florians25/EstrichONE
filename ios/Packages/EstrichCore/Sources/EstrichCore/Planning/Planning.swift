@@ -152,8 +152,18 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         public let assignmentId: UUID?
         public let activity: String?
         public let startTime: String?
+        public let endTime: String?
 
         public var startText: String? { startTime.map { String($0.prefix(5)) } }
+        public var endText: String? { endTime.map { String($0.prefix(5)) } }
+        /// „07:00–12:00“ bzw. „ab 07:00“.
+        public var timeText: String? {
+            switch (startText, endText) {
+            case let (start?, end?): "\(start)–\(end)"
+            case let (start?, nil): "ab \(start)"
+            default: nil
+            }
+        }
     }
 
     public struct VehicleRef: Codable, Equatable, Sendable, Identifiable {
@@ -178,8 +188,11 @@ public struct DispatchBoard: Codable, Equatable, Sendable {
         public let vehicles: [VehicleRef]
         public let siteIds: [UUID]
         public let absentMembers: [AbsentMember]
+        /// Nur bei zeitlicher Überschneidung („Überschneidung: A und B.“).
+        public let warnings: [String]
 
-        public var isDoubleBooked: Bool { siteIds.count > 1 }
+        /// Mehrere Baustellen am Tag sind normal; ein Hinweis nur bei Überschneidung.
+        public var isDoubleBooked: Bool { !warnings.isEmpty }
     }
 
     public struct Vehicle: Codable, Equatable, Sendable, Identifiable {
@@ -256,6 +269,7 @@ extension DispatchBoard.Crew {
         vehicles = try c.decodeIfPresent([DispatchBoard.VehicleRef].self, forKey: .vehicles) ?? []
         siteIds = try c.decodeIfPresent([UUID].self, forKey: .siteIds) ?? []
         absentMembers = try c.decodeIfPresent([DispatchBoard.AbsentMember].self, forKey: .absentMembers) ?? []
+        warnings = try c.decodeIfPresent([String].self, forKey: .warnings) ?? []
     }
 }
 
@@ -273,11 +287,14 @@ public struct DispatchMove: Encodable, Sendable {
     public let toBauakteId: UUID?
     public let fromBauakteId: UUID?
     public let keep: Bool
-    /// Nur Kolonne: Tätigkeit und Beginn (`HH:mm:ss`) für den neuen Einsatz.
+    /// Nur Kolonne: Tätigkeit, Beginn und Ende (`HH:mm:ss`). `keep` mit der aktuellen Baustelle ändert nur diese Angaben.
     public let activity: String?
     public let startTime: String?
+    public let endTime: String?
 
-    public init(target: Target, id: UUID, to: UUID?, from: UUID?, keep: Bool = false, activity: String? = nil, startTime: String? = nil) {
+    public init(target: Target, id: UUID, to: UUID?, from: UUID?, keep: Bool = false, activity: String? = nil, startTime: String? = nil,
+                endTime: String? = nil) {
+        self.endTime = endTime
         self.target = target
         self.id = id
         self.toBauakteId = to
@@ -293,8 +310,27 @@ extension AuthorizedClient {
         try await get("planning/dispatch/\(day)")
     }
 
+    /// Alle aktiven Bauakten für „Baustelle zuordnen …“ (eingeteilte zuerst).
+    public func dispatchPool(day: String, search: String?, limit: Int = 50) async throws(APIError) -> [DispatchPoolEntry] {
+        var query = [URLQueryItem(name: "limit", value: String(limit))]
+        if let search, !search.isEmpty { query.append(URLQueryItem(name: "search", value: search)) }
+        return try await get("planning/dispatch/\(day)/pool", query: query)
+    }
+
     /// Schnellplanung (Recht `planning.manage`): liefert die neue Tafel.
     public func move(_ move: DispatchMove, on day: String) async throws(APIError) -> DispatchBoard {
         try await post("planning/dispatch/\(day)/moves", body: move)
     }
+}
+
+/// Bauakte im Vorrat für die Disposition.
+public struct DispatchPoolEntry: Decodable, Equatable, Sendable, Identifiable {
+    public let bauakteId: UUID
+    public let number: String?
+    public let title: String
+    public let address: String?
+    public let status: String?
+    public let crewIds: [UUID]
+
+    public var id: UUID { bauakteId }
 }

@@ -296,7 +296,8 @@ struct HomeView: View {
                     }
                     .padding(.horizontal, 14).padding(.top, 10)
                     ForEach(group.sites) { site in
-                        DispatchSiteRow(site: site, isMine: dispatch?.board?.mySiteIds.contains(site.id) == true)
+                        DispatchSiteRow(site: site, isMine: dispatch?.board?.mySiteIds.contains(site.id) == true,
+                                        slot: group.crew.flatMap { crew in site.crews.first { $0.id == crew.id } })
                             .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 6)
                             .frame(maxWidth: .infinity, alignment: .leading)
                     }

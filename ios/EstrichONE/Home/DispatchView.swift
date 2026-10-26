@@ -15,6 +15,8 @@ struct DispatchView: View {
     @State private var loading = false
     @State private var moveError: String?
     @State private var assigningTo: DispatchBoard.Crew?
+    /// Zeit wählen: neue Zuordnung oder Zeit eines vorhandenen Einsatzes ändern.
+    @State private var timing: CrewTiming?
 
     var body: some View {
         Group {
@@ -37,11 +39,24 @@ struct DispatchView: View {
         .sensoryFeedback(.success, trigger: data?.board)
         .sheet(item: $assigningTo) { crew in
             if let board = data?.board {
-                AssignSiteView(crew: crew, board: board) { bauakteId in
+                AssignSiteView(crew: crew, board: board, day: CalendarDay.string(day)) { choice in
                     assigningTo = nil
-                    if let bauakteId { Task { await assign(bauakteId, to: crew.id, from: nil) } }
+                    guard let choice else { return }
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(450))
+                        let (start, end) = board.suggestedTime(for: crew)
+                        timing = CrewTiming(crew: crew, bauakteId: choice.id, title: choice.title, isNew: true, start: start, end: end)
+                    }
                 }
             }
+        }
+        .sheet(item: $timing) { item in
+            CrewTimeSheet(timing: item) { result in
+                timing = nil
+                guard let result else { return }
+                Task { await setTime(result) }
+            }
+            .presentationDetents([.medium])
         }
     }
 
@@ -88,7 +103,7 @@ struct DispatchView: View {
 
     @ViewBuilder
     private func siteRow(_ site: DispatchBoard.Site, crew: DispatchBoard.Crew?, board: DispatchBoard) -> some View {
-        DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id))
+        DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id), slot: crew.flatMap { c in site.crews.first { $0.id == c.id } })
             .contextMenu { if board.canPlan { moveMenu(site, crew: crew, board: board) } }
             .swipeActions(edge: .trailing) {
                 if board.canPlan, let crew {
@@ -117,6 +132,13 @@ struct DispatchView: View {
             }
         }
         if let crew {
+            Button("Zeit ändern …", systemImage: "clock") {
+                let slot = site.crews.first { $0.id == crew.id }
+                timing = CrewTiming(crew: crew, bauakteId: site.id, title: site.title, isNew: false,
+                                    start: CrewTiming.date(slot?.startTime) ?? CrewTiming.date("07:00:00")!,
+                                    end: CrewTiming.date(slot?.endTime))
+            }
+            .accessibilityIdentifier("changeCrewTime")
             Button("Aus \(crew.name) nehmen", systemImage: "minus.circle", role: .destructive) {
                 Task { await assign(site.id, to: nil, from: crew.id) }
             }
@@ -145,7 +167,8 @@ struct DispatchView: View {
             ScrollView {
                 VStack(spacing: 8) {
                     ForEach(sites) { site in
-                        DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id))
+                        DispatchSiteRow(site: site, isMine: board.mySiteIds.contains(site.id),
+                                        slot: crew.flatMap { c in site.crews.first { $0.id == c.id } })
                             .padding(10)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .card()
@@ -216,6 +239,20 @@ struct DispatchView: View {
         data = await DispatchData.load(day: CalendarDay.string(day), model: model)
     }
 
+    /// Neue Zuordnung mit Zeit bzw. Zeit eines Einsatzes ändern (`keep` + aktuelle Baustelle).
+    private func setTime(_ item: CrewTiming) async {
+        guard let client = model.active?.client else { return }
+        do throws(APIError) {
+            let board = try await client.move(DispatchMove(target: .crew, id: item.crew.id, to: item.bauakteId, from: nil, keep: true,
+                                                           startTime: CrewTiming.text(item.start), endTime: item.end.map(CrewTiming.text)),
+                                              on: CalendarDay.string(day))
+            data = DispatchData.Day(board: board, loadedAt: .now, isCurrent: true, message: nil)
+            moveError = nil
+        } catch {
+            moveError = error == .offline ? "Planen geht nur mit Verbindung zum Server." : error.message
+        }
+    }
+
     /// Baustelle einer Kolonne zuordnen (`to`), aus einer Kolonne nehmen (`from`) oder beides (verschieben).
     private func assign(_ bauakteId: UUID, to crewId: UUID?, from oldCrewId: UUID?) async {
         guard let client = model.active?.client else { return }
@@ -241,6 +278,17 @@ extension DispatchBoard {
     /// Baustellen einer Kolonne an diesem Tag (meine zuerst, dann nach Beginn).
     func crewSites(_ crew: Crew) -> [Site] {
         sortedSites.filter { site in crew.siteIds.contains(site.id) || site.crews.contains { $0.id == crew.id } }
+            .sorted { lhs, rhs in
+                (lhs.crews.first { $0.id == crew.id }?.startTime ?? "99") < (rhs.crews.first { $0.id == crew.id }?.startTime ?? "99")
+            }
+    }
+
+    /// Vorschlag für eine neue Baustelle: Beginn nach dem letzten Einsatz der Kolonne (sonst 07:00), Dauer 4 Stunden.
+    func suggestedTime(for crew: Crew) -> (start: Date, end: Date?) {
+        let slots = sites.compactMap { $0.crews.first { $0.id == crew.id } }
+        let latest = slots.compactMap { $0.endTime ?? $0.startTime }.max()
+        let start = CrewTiming.date(latest) ?? CrewTiming.date("07:00:00")!
+        return (start, Calendar.current.date(byAdding: .hour, value: 4, to: start))
     }
 
     /// Baustellen, denen noch keine Kolonne zugeordnet ist.
@@ -278,6 +326,10 @@ struct CrewHeader: View {
                 if !details.isEmpty {
                     Text(details.joined(separator: " · ")).font(.caption).foregroundStyle(Theme.textSecondary)
                 }
+                ForEach(crew.warnings, id: \.self) { warning in
+                    Label(warning, systemImage: "exclamationmark.triangle.fill").labelStyle(TightLabelStyle())
+                        .font(.caption.weight(.semibold)).foregroundStyle(Theme.hint)
+                }
                 if !crew.absentMembers.isEmpty {
                     Text("fehlt: " + crew.absentMembers.map { [$0.name, $0.note].compactMap { $0 }.joined(separator: " – ") }.joined(separator: ", "))
                         .font(.caption).foregroundStyle(Theme.hint)
@@ -290,40 +342,43 @@ struct CrewHeader: View {
     }
 }
 
-/// Auswahl einer Baustelle für eine Kolonne: Baustellen des Tages und aktive Bauakten auf dem Gerät, mit Suche.
+/// Auswahl einer Baustelle für eine Kolonne: alle aktiven Bauakten vom Server (eingeteilte zuerst), mit Suche;
+/// ohne Verbindung die Bauakten auf dem Gerät.
 struct AssignSiteView: View {
+    struct Choice { let id: UUID; let title: String }
+
     let crew: DispatchBoard.Crew
     let board: DispatchBoard
-    let onDone: (UUID?) -> Void
+    let day: String
+    let onDone: (Choice?) -> Void
 
     @Environment(AppModel.self) private var model
     @State private var search = ""
-    @State private var bauakten: [Bauakte] = []
+    @State private var entries: [DispatchPoolEntry] = []
+    @State private var offline: [Bauakte] = []
 
     var body: some View {
         NavigationStack {
             List {
-                let daySites = board.sortedSites.filter { !crew.siteIds.contains($0.id) && matches([$0.number, $0.title, $0.address]) }
-                if !daySites.isEmpty {
-                    Section("Baustellen des Tages") {
-                        ForEach(daySites) { site in
-                            Button { onDone(site.id) } label: {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text([site.number, site.title].compactMap { $0 }.joined(separator: " · ")).font(.subheadline.weight(.semibold))
-                                    Text(site.crews.isEmpty ? "ohne Kolonne" : site.crews.map(\.name).joined(separator: ", "))
-                                        .font(.caption).foregroundStyle(Theme.textSecondary)
-                                }
-                            }
+                let crewNames = Dictionary(board.crews.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+                ForEach(entries.filter { !$0.crewIds.contains(crew.id) }) { entry in
+                    Button { onDone(Choice(id: entry.bauakteId, title: entry.title)) } label: {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text([entry.number, entry.title].compactMap { $0 }.joined(separator: " · ")).font(.subheadline.weight(.semibold))
+                            let names = entry.crewIds.compactMap { crewNames[$0] }
+                            Text([entry.address, names.isEmpty ? nil : "eingeteilt: " + names.joined(separator: ", ")].compactMap { $0 }
+                                .joined(separator: " · "))
+                                .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                 }
-                let known = Set(board.sites.map(\.id))
-                let others = bauakten.filter { !known.contains($0.id) }
-                if !others.isEmpty {
-                    Section("Weitere aktive Bauakten") {
-                        ForEach(others) { bauakte in
-                            Button { onDone(bauakte.id) } label: { BauakteRow(bauakte: bauakte) }
-                        }
+                if entries.isEmpty {
+                    ForEach(offline) { bauakte in
+                        Button { onDone(Choice(id: bauakte.id, title: bauakte.title)) } label: { BauakteRow(bauakte: bauakte) }
+                            .buttonStyle(.plain)
                     }
                 }
             }
@@ -332,15 +387,87 @@ struct AssignSiteView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { onDone(nil) } } }
             .task(id: search) {
-                let all = (try? await model.active?.service?.bauakten(search: search.isEmpty ? nil : search)) ?? []
-                bauakten = all.filter { [BauakteStatus.planned, .inProgress, .drying].contains($0.status) }
+                try? await Task.sleep(for: .milliseconds(250))
+                if let client = model.active?.client, let pool = try? await client.dispatchPool(day: day, search: search) {
+                    entries = pool
+                } else {
+                    entries = []
+                    let all = (try? await model.active?.service?.bauakten(search: search.isEmpty ? nil : search)) ?? []
+                    offline = all.filter { [BauakteStatus.planned, .inProgress, .drying].contains($0.status) }
+                }
             }
         }
     }
+}
 
-    private func matches(_ fields: [String?]) -> Bool {
-        let query = search.trimmingCharacters(in: .whitespaces).lowercased()
-        return query.isEmpty || fields.compactMap { $0?.lowercased() }.contains { $0.contains(query) }
+/// Einsatz einer Kolonne auf einer Baustelle mit Beginn und Ende.
+struct CrewTiming: Identifiable {
+    let crew: DispatchBoard.Crew
+    let bauakteId: UUID
+    let title: String
+    let isNew: Bool
+    var start: Date
+    var end: Date?
+
+    var id: String { "\(crew.id)-\(bauakteId)" }
+
+    static func date(_ time: String?) -> Date? {
+        guard let time else { return nil }
+        let parts = time.split(separator: ":").compactMap { Int($0) }
+        guard parts.count >= 2 else { return nil }
+        return Calendar.current.date(bySettingHour: parts[0], minute: parts[1], second: 0, of: Date())
+    }
+
+    static func text(_ date: Date) -> String {
+        let parts = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return String(format: "%02d:%02d:00", parts.hour ?? 0, parts.minute ?? 0)
+    }
+}
+
+/// Beginn und Ende mit einfachen Zeitwählern (Vorschlag vorbelegt).
+struct CrewTimeSheet: View {
+    @State var timing: CrewTiming
+    let onDone: (CrewTiming?) -> Void
+    @State private var hasEnd: Bool
+
+    init(timing: CrewTiming, onDone: @escaping (CrewTiming?) -> Void) {
+        _timing = State(initialValue: timing)
+        _hasEnd = State(initialValue: timing.end != nil)
+        self.onDone = onDone
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    LabeledContent("Kolonne", value: timing.crew.name)
+                    LabeledContent("Baustelle", value: timing.title)
+                }
+                Section {
+                    DatePicker("Beginn", selection: $timing.start, displayedComponents: .hourAndMinute)
+                    Toggle("Ende festlegen", isOn: $hasEnd)
+                    if hasEnd {
+                        DatePicker("Ende", selection: Binding {
+                            timing.end ?? Calendar.current.date(byAdding: .hour, value: 4, to: timing.start) ?? timing.start
+                        } set: { timing.end = $0 }, in: timing.start..., displayedComponents: .hourAndMinute)
+                    }
+                }
+            }
+            .navigationTitle(timing.isNew ? "Einplanen" : "Zeit ändern")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { onDone(nil) } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(timing.isNew ? "Einplanen" : "Sichern") {
+                        var result = timing
+                        if !hasEnd { result.end = nil }
+                        else if result.end == nil { result.end = Calendar.current.date(byAdding: .hour, value: 4, to: result.start) }
+                        onDone(result)
+                    }
+                    .accessibilityIdentifier("saveCrewTime")
+                }
+            }
+        }
     }
 }
 
@@ -404,13 +531,18 @@ struct DispatchSiteRow: View {
     let site: DispatchBoard.Site
     var isMine = false
     var showsCrews = false
+    /// Einsatz der Kolonne, unter der die Zeile steht: deren Zeitspanne statt des frühesten Beginns.
+    var slot: DispatchBoard.SiteCrew?
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 4) {
-                Text(site.startText ?? "–")
+                Text(slot?.startText ?? site.startText ?? "–")
                     .font(.subheadline.monospacedDigit().weight(.semibold))
                     .foregroundStyle(Color.primary)
+                if let end = slot?.endText {
+                    Text("bis \(end)").font(.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                }
                 if isMine {
                     Text("Ich")
                         .font(.caption2.weight(.bold))
