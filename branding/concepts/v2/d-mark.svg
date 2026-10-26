@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="EstrichONE">
+  <defs><linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B2E66"/><stop offset="1" stop-color="#061536"/></linearGradient><radialGradient id="g" cx=".2" cy=".05" r=".95"><stop offset="0" stop-color="#0062CC" stop-opacity=".75"/><stop offset="1" stop-color="#0062CC" stop-opacity="0"/></radialGradient><linearGradient id="w" gradientUnits="userSpaceOnUse" x1="0" y1="20" x2="0" y2="80"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#CFE5FF"/></linearGradient></defs>
+  <path d="M26 22H34A4 4 0 0 1 38 26V34A4 4 0 0 1 34 38H26A4 4 0 0 1 22 34V26A4 4 0 0 1 26 22Z" fill="#061536"/>
+  <path d="M46 22H54A4 4 0 0 1 58 26V34A4 4 0 0 1 54 38H46A4 4 0 0 1 42 34V26A4 4 0 0 1 46 22Z" fill="#061536"/>
+  <path d="M66 22H74A4 4 0 0 1 78 26V34A4 4 0 0 1 74 38H66A4 4 0 0 1 62 34V26A4 4 0 0 1 66 22Z" fill="#061536"/>
+  <path d="M26 42H34A4 4 0 0 1 38 46V54A4 4 0 0 1 34 58H26A4 4 0 0 1 22 54V46A4 4 0 0 1 26 42Z" fill="#061536"/>
+  <path d="M46 42H54A4 4 0 0 1 58 46V54A4 4 0 0 1 54 58H46A4 4 0 0 1 42 54V46A4 4 0 0 1 46 42Z" fill="#0062CC"/>
+  <path d="M65 50A5 5 0 1 0 75 50A5 5 0 1 0 65 50Z" fill="#0062CC"/>
+  <path d="M26 62H34A4 4 0 0 1 38 66V74A4 4 0 0 1 34 78H26A4 4 0 0 1 22 74V66A4 4 0 0 1 26 62Z" fill="#061536"/>
+  <path d="M46 62H54A4 4 0 0 1 58 66V74A4 4 0 0 1 54 78H46A4 4 0 0 1 42 74V66A4 4 0 0 1 46 62Z" fill="#061536"/>
+  <path d="M66 62H74A4 4 0 0 1 78 66V74A4 4 0 0 1 74 78H66A4 4 0 0 1 62 74V66A4 4 0 0 1 66 62Z" fill="#061536"/>
+</svg>

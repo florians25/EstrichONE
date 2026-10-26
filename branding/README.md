@@ -1,33 +1,39 @@
 # EstrichONE – Logo und Markenzeichen
 
-![Präsentation](png/presentation.png)
+![Präsentation](png/presentation-v2.png)
 
-## Idee: das Libellen-E
+## Idee: das E1-Monogramm (Runde 2)
 
-Das Zeichen ist ein „E“ aus dem Estrichaufbau: der obere Arm ist die glatt abgezogene Estrichoberfläche,
-der untere die tragende Decke, der Rücken der Randdämmstreifen. Der Mittelstrich ist die **Libelle einer
-Wasserwaage** mit grüner Blase – eben und belegreif, das Versprechen jedes Estrichbetriebs.
-Die Form ist ein reines Monogramm im 100er-Raster und bleibt bis 16 px als „E“ lesbar.
+Ein „E“, dessen Rücken oben den Anstrich einer **„1“** trägt – *Estrich* und *ONE* in einem Zeichen.
+Der Mittelstrich ist als Kapsel abgesetzt: die **Libelle** der Wasserwaage, das Ausgleichen, das Ebene.
+Raster 100 × 100, Flaggenwinkel 37° (4 : 3), Rücken 13, Arme und Flagge 12, Außenecken 3,5, Innenecken 1,5;
+optischer Ausgleich +3 nach rechts (die Flagge ist leichter als der Rücken). Für 16/32 px gibt es eine
+eigene, auf das 16-px-Pixelraster gelegte Kleinform (`logo-small.svg`).
 
-Vier Konzepte wurden verglichen, siehe [concepts/overview.png](concepts/overview.png); gewählt wurde A.
+Konzepte: Runde 2 in [concepts/overview-v2.png](concepts/overview-v2.png) (sechs Richtungen, gewählt C),
+Runde 1 (Libellen-E, abgelöst) in [concepts/overview.png](concepts/overview.png).
 
-## Farben
+## Farben – NEU in Runde 2
+
+> **Geändert:** Die Markenfarben sind jetzt Nachtblau + **eine Akzentfarbe Markenblau** (passend zur
+> AccentColor der Apps). Das bisherige Navy `#0B2D5B`/`#174A8B`, Himmelblau `#8EC5FF` und das Grün `#3CCB7F`
+> gehören **nicht mehr** zum Logo.
 
 | Name | Wert | Verwendung |
 |---|---|---|
-| Estrich-Navy | `#0B2D5B` | Primärfarbe, Kachel (Verlauf unten rechts), Schrift „Estrich“ auf hell |
-| Navy hell | `#174A8B` | Kachel (Verlauf oben links), Schrift „ONE“ auf hell |
-| Libellenblau | `#2F6DB5` | Libelle der Bildmarke auf hellen Flächen (**neu**) |
-| Himmelblau | `#8EC5FF` | Libelle auf dunklen Flächen und in der Kachel, „ONE“ auf dunkel |
-| Blasengrün | `#3CCB7F` | Blase, sparsamer Akzent (Status „bereit“, Hervorhebung) |
-| Weiß | `#FFFFFF` | E in der Kachel, Schrift auf dunkel |
+| Nachtblau | `#061536` | Kachel (Verlauf unten), Zeichen und „Estrich“ auf hellem Grund |
+| Nachtblau hell | `#0B2E66` | Kachel (Verlauf oben), Android-Hintergrund |
+| **Markenblau** | `#0062CC` | Akzent: Libelle auf hell, „ONE“ auf hell, Licht in der Kachel (= AccentColor hell) |
+| Markenblau hell | `#4DA3FF` | Libelle und „ONE“ auf dunklem Grund (= AccentColor dunkel) |
+| Eis | `#CFE5FF` | Verlaufsende des Zeichens in der Kachel |
+| Weiß | `#FFFFFF` | Zeichen in der Kachel, Schrift auf dunkel |
 
-Die bisherigen Werte (`#0B2D5B`, `#174A8B`, `#3CCB7F`, `#8EC5FF`) bleiben unverändert gültig; neu ist nur
-`#2F6DB5` für die freistehende Bildmarke auf hellem Grund. Kachelverlauf: linear 135° von `#174A8B` nach `#0B2D5B`.
+Kachel: linearer Verlauf von oben `#0B2E66` nach unten `#061536`, darüber ein radiales Markenblau-Licht von oben
+links, eine feine Glanzkante oben und ein weicher Schatten unter dem Zeichen (nur App-Symbol, nicht in der Bildmarke).
 
 ## Schrift der Wortmarke
 
-**Inter Tight** (SIL Open Font License 1.1): „Estrich“ SemiBold 600, „ONE“ ExtraBold 800, Laufweite −12/1000 em.
+**Inter Tight** (SIL Open Font License 1.1): „Estrich“ SemiBold 600, „ONE“ ExtraBold 800, Laufweite −14/1000 em.
 Die Wortmarke liegt in allen SVGs als Pfade vor – keine Abhängigkeit von installierten Schriften.
 Die Schriftdateien und Lizenzen liegen in `fonts/` (nur für die Erzeugung).
 
@@ -36,7 +42,7 @@ Die Schriftdateien und Lizenzen liegen in `fonts/` (nur für die Erzeugung).
 | Datei | Zweck |
 |---|---|
 | `logo.svg` | App-Symbol, abgerundete Kachel (Superellipse) – Web, Desktop, ShellBar auf allen Nicht-HC-Themes |
-| `logo-small.svg` | Kleinform für 16–32 px (auf das 16-px-Pixelraster gelegt, ohne Blase) – `favicon.svg`, ICO 16/24/32 |
+| `logo-small.svg` | Kleinform für 16–32 px (auf das 16-px-Pixelraster gelegt, ohne Glanz und Schatten) – `favicon.svg`, ICO 16/24/32 |
 | `logo-square.svg` | App-Symbol vollflächig ohne Rundung – iOS/Android maskieren selbst |
 | `logo-mark.svg` | Bildmarke transparent, farbig, für helle Flächen |
 | `logo-mark-dark.svg` | Bildmarke transparent, farbig, für dunkle Flächen |
@@ -44,18 +50,18 @@ Die Schriftdateien und Lizenzen liegen in `fonts/` (nur für die Erzeugung).
 | `logo-horizontal.svg` | Kachel + Wortmarke, für helle Flächen |
 | `logo-horizontal-white.svg` | Bildmarke + Wortmarke, für dunkle Flächen |
 | `logo-horizontal-mono-black.svg` / `-mono-white.svg` | Lockup einfarbig |
-| `png/` | Vorschauen (`logo-512/1024.png`, `logo-horizontal*.png`, `presentation.png`) |
-| `concepts/` | Konzeptentwürfe und Vergleichstafel `overview.png` |
+| `png/` | Vorschauen (`logo-512/1024.png`, `logo-horizontal*.png`, `presentation-v2.png`) |
+| `concepts/` | Konzeptentwürfe: Runde 1 `overview.png`, Runde 2 `v2/` und `overview-v2.png` |
 
 ### Erzeugte Plattform-Dateien (`./build.sh`)
 
 - Web `web/public/`: `favicon.ico` (16/32/48), `favicon.svg` (= `logo-small.svg`), `apple-touch-icon.png` (180, ohne Alpha),
   `icon-192.png`, `icon-512.png`, `logo.svg`, `logo-mark*.svg`, `logo-horizontal*.svg`
 - Windows `desktop/src/EstrichOne.Desktop/Assets/`: `EstrichONE.ico` (16–256), `logo.png` (256, Kachel), `logo-mark.png` (64, Bildmarke für hell)
-- iOS `AppIcon.appiconset/AppIcon.png` (1024, ohne Alpha)
-- Android `res/drawable/ic_launcher_{foreground,background,monochrome}.xml` (adaptiv, 108 dp; das E liegt im sicheren 66-dp-Kreis)
+- iOS `AppIcon.appiconset/AppIcon.png` (1024, ohne Alpha), `BrandMark.imageset` (`logo-mark.svg`, dunkel: `logo-mark-dark.svg`), `BrandMarkOnDark.imageset` (`logo-mark-dark.svg`)
+- Android `res/drawable/ic_launcher_{foreground,background,monochrome}.xml` (adaptiv, 108 dp; weitester Punkt 27 dp vom Mittelpunkt, also im sicheren 66-dp-Kreis)
 
-`./build.sh --concepts` erzeugt zusätzlich die Vergleichstafel. Benötigt: Python 3 mit `fonttools` und `uharfbuzz`,
+`./build.sh --concepts` erzeugt zusätzlich die Vergleichstafeln. Benötigt: Python 3 mit `fonttools` und `uharfbuzz`,
 Chromium (`CHROME=` oder Playwright-Pfad), ImageMagick. Alle SVGs entstehen aus `tools/final.py` – dort ändern, nicht in den SVGs.
 
 ## OpenUI5-Themes
@@ -78,11 +84,11 @@ Chromium (`CHROME=` oder Playwright-Pfad), ImageMagick. Alle SVGs entstehen aus 
 **Do**
 - Dateien unverändert verwenden; Größe nur proportional ändern.
 - Auf dunklen Flächen die `-white`/`-dark`-Varianten, in High-Contrast-Themes die einfarbigen nehmen.
-- Ausreichend Kontrast: Kachel auf Flächen heller als `#2A3F5A` oder dunkler als `#0E1726` problemlos.
+- Auf sehr dunklem Nachtblau-Grund die freistehende Bildmarke (`logo-mark-dark.svg`) statt der Kachel verwenden.
 
 **Don't**
 - Kein Verzerren, Drehen, Schatten, Leuchten oder Umranden.
-- Farben nicht austauschen, die Blase nicht in anderen Farben einfärben (außer einfarbige Varianten).
+- Farben nicht austauschen; die Libelle ist immer Markenblau (außer in den einfarbigen Varianten). Kein Grün.
 - Wortmarke nicht in anderer Schrift nachsetzen, „ONE“ nicht klein schreiben.
-- Das E nicht ohne Libelle verwenden und die Kachel nicht mit eckigen Ecken nachbauen (iOS/Android maskieren selbst).
+- Die Flagge der „1“ nie abschneiden, das Zeichen nicht ohne Libelle verwenden, die Kachel nicht eckig nachbauen (iOS/Android maskieren selbst).
 - Farbige Bildmarke nicht auf unruhige Fotos stellen – dann die Kachel verwenden.

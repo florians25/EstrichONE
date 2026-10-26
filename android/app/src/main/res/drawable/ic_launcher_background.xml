@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Hintergrund des App-Symbols: Navy-Verlauf wie branding/logo.svg. Erzeugt von branding/tools/final.py. -->
+<!-- Hintergrund des App-Symbols: Nachtblau-Verlauf wie branding/logo.svg. Erzeugt von branding/tools/final.py. -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <gradient android:angle="315" android:startColor="#174A8B" android:endColor="#0B2D5B" android:type="linear" />
+    <gradient android:angle="270" android:startColor="#0B2E66" android:endColor="#061536" android:type="linear" />
 </shape>

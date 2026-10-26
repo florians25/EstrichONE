@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" role="img" aria-label="EstrichONE">
+  <defs><linearGradient id="t" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0B2E66"/><stop offset="1" stop-color="#061536"/></linearGradient><radialGradient id="g" cx=".2" cy=".05" r=".95"><stop offset="0" stop-color="#0062CC" stop-opacity=".75"/><stop offset="1" stop-color="#0062CC" stop-opacity="0"/></radialGradient><linearGradient id="w" gradientUnits="userSpaceOnUse" x1="0" y1="20" x2="0" y2="80"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#CFE5FF"/></linearGradient></defs>
+  <path d="M32 33H68A17 17 0 0 1 85 50V50A17 17 0 0 1 68 67H32A17 17 0 0 1 15 50V50A17 17 0 0 1 32 33Z" fill="none" stroke="#061536" stroke-width="8"/>
+  <path d="M38 41V59M62 41V59" stroke="#061536" stroke-width="4" stroke-linecap="round" opacity=".55"/>
+  <path d="M42 50A8 8 0 1 0 58 50A8 8 0 1 0 42 50Z" fill="#0062CC"/>
+</svg>

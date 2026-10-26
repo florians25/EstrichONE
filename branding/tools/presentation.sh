@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Präsentationsgrafik des endgültigen Logos: branding/png/presentation.png
+# Präsentationsgrafik des endgültigen Logos: branding/png/presentation-v2.png
 #   branding/tools/presentation.sh   (wird von build.sh aufgerufen)
 set -euo pipefail
 cd "$(dirname "$0")/.."
@@ -33,7 +33,7 @@ shell = "".join(f'''<div class="theme" style="background:{pg};border-color:{bd}"
   <span style="color:{tx}">Baustellen</span></div><div class="tn" style="color:{ptx}">{name}<small>{mark}</small></div></div>''' for name, sh, pg, tx, bd, mark, ptx in themes)
 sizes = "".join(f'<figure><img src="r{s}.png" width="{s}"><figcaption>{s}</figcaption></figure>' for s in (256, 128, 64, 48, 32, 24, 16))
 marks = "".join(f'<div class="mk" style="background:{bg}"><img src="{f}" height="120"><span style="color:{c}">{f}</span></div>' for f, bg, c in (
-  ("logo-mark.svg", "#FFFFFF", "#556B82"), ("logo-mark-dark.svg", "#0B2D5B", "#8EC5FF"),
+  ("logo-mark.svg", "#FFFFFF", "#556B82"), ("logo-mark-dark.svg", "#061536", "#4DA3FF"),
   ("logo-mark-white.svg", "#000000", "#FFFFFF"), ("logo-mark-black.svg", "#FFFFFF", "#000000")))
 page = f'''<!doctype html><html><head><meta charset="utf-8"><style>
 *{{box-sizing:border-box}} body{{margin:0;width:2400px;background:#EEF1F5;font-family:"DejaVu Sans",sans-serif;color:#1D2D3E}}
@@ -51,10 +51,10 @@ figure{{margin:0;text-align:center}} figcaption{{font-size:14px;color:#7A8A9A;ma
 .mk span{{font-size:14px}}
 .ctx{{display:grid;grid-template-columns:1.2fr 1fr 1fr 1fr;gap:24px}}
 .card{{border-radius:16px;height:380px;overflow:hidden;position:relative}}
-.login{{background:linear-gradient(135deg,#174A8B,#0B2D5B);display:flex;align-items:center;justify-content:center}}
+.login{{background:linear-gradient(135deg,#0B2E66,#061536);display:flex;align-items:center;justify-content:center}}
 .login .box{{background:#fff;border-radius:14px;width:440px;padding:34px;box-shadow:0 18px 50px #0006}}
-.login .box img{{height:46px}} .in{{height:38px;border:1px solid #C3CCD6;border-radius:8px;margin-top:16px}} .btn{{height:40px;border-radius:8px;background:#0B2D5B;margin-top:20px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px}}
-.phone{{background:linear-gradient(160deg,#7AA6D8,#2B4E7E);display:flex;gap:34px;align-items:center;justify-content:center}}
+.login .box img{{height:46px}} .in{{height:38px;border:1px solid #C3CCD6;border-radius:8px;margin-top:16px}} .btn{{height:40px;border-radius:8px;background:#061536;margin-top:20px;color:#fff;display:flex;align-items:center;justify-content:center;font-size:15px}}
+.phone{{background:linear-gradient(160deg,#F3D2C1 0%,#A9B8E6 45%,#33427A 100%);display:flex;gap:34px;align-items:center;justify-content:center}}
 .app{{text-align:center;color:#fff;font-size:15px}} .app img{{display:block;margin-bottom:8px}}
 .ios img{{width:120px;height:120px;border-radius:27px}} .andr img{{width:120px;height:120px;border-radius:50%}}
 .win{{background:#DDE5EE;display:flex;flex-direction:column}} .titlebar{{height:44px;background:#F3F5F8;display:flex;align-items:center;gap:10px;padding:0 14px;font-size:14px}}
@@ -65,7 +65,7 @@ figure{{margin:0;text-align:center}} figcaption{{font-size:14px;color:#7A8A9A;ma
 .page{{background:#fff;flex:1;display:flex;flex-direction:column}} .ub{{height:52px;border-bottom:1px solid #E5E9EE;display:flex;align-items:center;gap:12px;padding:0 16px}}
 .cap{{font-size:14px;color:#7A8A9A;margin-top:10px}}
 </style></head><body>
-<div class="hero"><div style="background:#fff"><img src="logo-horizontal.svg"></div><div style="background:#0B2D5B"><img src="logo-horizontal-white.svg"></div></div>
+<div class="hero"><div style="background:#fff"><img src="logo-horizontal.svg"></div><div style="background:#061536"><img src="logo-horizontal-white.svg"></div></div>
 <div class="band"><h3>Auf allen OpenUI5-Themes (ShellBar)</h3><div class="themes">{shell}</div></div>
 <div class="band row"><div><h3>App-Symbol in Größen</h3><div class="sizes">{sizes}</div></div>
 <div><h3>Bildmarke ohne Fläche</h3><div class="marks">{marks}</div></div></div>
@@ -78,5 +78,5 @@ figure{{margin:0;text-align:center}} figcaption{{font-size:14px;color:#7A8A9A;ma
 open(f"{tmp}/presentation.html", "w").write(page)
 PY
 mkdir -p png
-./render.sh "$tmp/presentation.html" png/presentation.png 2400 1840
-echo "png/presentation.png geschrieben."
+./render.sh "$tmp/presentation.html" png/presentation-v2.png 2400 1840
+echo "png/presentation-v2.png geschrieben."

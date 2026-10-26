@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Einfarbiges Zeichen für Themensymbole (Android 13+), Blase ausgespart. Erzeugt von branding/tools/final.py – nicht von Hand ändern. -->
+<!-- Einfarbiges Zeichen für Themensymbole (Android 13+). Erzeugt von branding/tools/final.py, nicht von Hand ändern. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="108dp" android:height="108dp" android:viewportWidth="108" android:viewportHeight="108">
     <group android:scaleX="0.72" android:scaleY="0.72" android:translateX="18" android:translateY="18">
-        <path android:fillColor="#FFFFFF" android:pathData="M30 24H70A4 4 0 0 1 74 28V32A4 4 0 0 1 70 36H40.5A1.5 1.5 0 0 0 39 37.5V62.5A1.5 1.5 0 0 0 40.5 64H70A4 4 0 0 1 74 68V72A4 4 0 0 1 70 76H30A4 4 0 0 1 26 72V28A4 4 0 0 1 30 24Z" />
-        <path android:fillColor="#FFFFFF" android:fillType="evenOdd" android:pathData="M51 44H68A6 6 0 0 1 74 50V50A6 6 0 0 1 68 56H51A6 6 0 0 1 45 50V50A6 6 0 0 1 51 44ZM55.9 50A3.6 3.6 0 1 0 63.1 50A3.6 3.6 0 1 0 55.9 50Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M34.76 25.68Q37 24 39.8 24L75.5 24Q79 24 79 27.5L79 32.5Q79 36 75.5 36L51.5 36Q50 36 50 37.5L50 62.5Q50 64 51.5 64L75.5 64Q79 64 79 67.5L79 72.5Q79 76 75.5 76L40.5 76Q37 76 37 72.5L37 40.5Q37 39 35.8 39.9L29.88 44.34Q28.2 45.6 26.94 43.92L22.26 37.68Q21 36 22.68 34.74Z" />
+        <path android:fillColor="#FFFFFF" android:pathData="M62 44H73A6 6 0 0 1 79 50V50A6 6 0 0 1 73 56H62A6 6 0 0 1 56 50V50A6 6 0 0 1 62 44Z" />
     </group>
 </vector>

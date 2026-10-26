@@ -18,7 +18,7 @@ python3 tools/final.py   # SVGs in branding/ + Android-Vektoren
 # Groß: Lanczos aus 1024. Kleinform (auf 16-px-Raster gelegt): Box-Filter, damit Kanten pixelgenau bleiben.
 big() { convert "$1" -filter Lanczos -resize "$2x$2" -strip "$3"; }
 tiny() { convert "$tmp/small.png" -filter Box -resize "$1x$1" -strip "$2"; }
-noalpha() { convert "$1" -filter Lanczos -resize "$2x$2" -background '#0B2D5B' -alpha remove -alpha off -strip "$3"; }
+noalpha() { convert "$1" -filter Lanczos -resize "$2x$2" -background '#061536' -alpha remove -alpha off -strip "$3"; }
 
 # Web
 pub="$root/web/public"
@@ -43,6 +43,11 @@ big "$tmp/round.png" 256 "$assets/logo.png"
 # iOS (eine Größe, Xcode erzeugt den Rest; ohne Transparenz)
 noalpha "$tmp/square.png" 1024 "$root/ios/EstrichONE/Resources/Assets.xcassets/AppIcon.appiconset/AppIcon.png"
 
+# iOS-Bildmarken (Vektor, für SwiftUI Image("BrandMark") / Image("BrandMarkOnDark"))
+xc="$root/ios/EstrichONE/Resources/Assets.xcassets"
+cp logo-mark.svg logo-mark-dark.svg "$xc/BrandMark.imageset/"
+cp logo-mark-dark.svg "$xc/BrandMarkOnDark.imageset/"
+
 # Vorschau für Dokumentation und Release
 mkdir -p png
 big "$tmp/round.png" 512 png/logo-512.png
@@ -53,5 +58,5 @@ import re;w=float(re.search(r'viewBox=\"0 0 ([\d.]+)',open('logo-horizontal.svg'
 import re;w=float(re.search(r'viewBox=\"0 0 ([\d.]+)',open('logo-horizontal-white.svg').read()).group(1));print(round(1200*100/w))")"
 tools/presentation.sh
 
-if [[ "${1:-}" == "--concepts" ]]; then tools/overview.sh; fi
+if [[ "${1:-}" == "--concepts" ]]; then tools/overview.sh; tools/overview2.sh; fi
 echo "Symbole erzeugt."
