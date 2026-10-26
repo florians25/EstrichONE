@@ -16,7 +16,7 @@ public struct ValueListItem: Equatable, Sendable, Identifiable {
         self.list = list
         self.key = key
         label = data["label"]?.string ?? key
-        short = data["short"]?.string
+        short = data["shortLabel"]?.string ?? data["short"]?.string
         sortOrder = data["sortOrder"]?.number.map { Int($0) } ?? 0
         isActive = data["isActive"]?.bool ?? true
     }

@@ -247,6 +247,23 @@ struct LiveServerTests {
         #expect(synced.emails.first?.label == "privat")
     }
 
+    @Test("Formular-Schema und Wertelisten über den echten Server; Anlage mit Werten aus dem Schema")
+    func formSchemaLive() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        #expect(await device.engine.synchronize() == .completed)
+        let schema = try #require(await service.formSchema(using: device.client))
+        #expect(!schema.fields.isEmpty)
+        let lists = await service.valueLists()
+        #expect(lists.label("screedType", "ct") != nil)
+        let area = try #require(schema.fields.first { $0.key == "totalArea" })
+        let values = FormSchema.setting(.number(120), for: area, in: [:])
+        let id = try await service.create(NewBauakte(title: "Schema Integrationstest", projectData: values))
+        #expect(await device.engine.synchronize() == .completed)
+        let synced = try #require(try await service.bauakte(id))
+        #expect(synced.syncState == .synced && synced.project.totalArea == 120)
+    }
+
     @Test("Bauvorhaben über den echten Server: Werte und Zeitraum bei der Anlage, Änderung per bauakte.update")
     func projectValues() async throws {
         let device = try await syncingAccount()

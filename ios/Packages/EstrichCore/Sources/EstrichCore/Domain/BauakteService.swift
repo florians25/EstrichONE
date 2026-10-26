@@ -21,7 +21,9 @@ public struct NewBauakte: Sendable {
 
     public init(title: String, street: String? = nil, postalCode: String? = nil, city: String? = nil, latitude: Double? = nil,
                 longitude: Double? = nil, description: String? = nil, customerId: UUID? = nil, template: BauakteTemplate = .standard,
-                project: BauakteProject = BauakteProject(), plannedStart: String? = nil, plannedEnd: String? = nil) {
+                project: BauakteProject = BauakteProject(), plannedStart: String? = nil, plannedEnd: String? = nil,
+                projectData: [String: JSONValue]? = nil) {
+        self.projectData = projectData
         self.project = project
         self.plannedStart = plannedStart
         self.plannedEnd = plannedEnd
