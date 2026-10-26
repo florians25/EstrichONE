@@ -22949,6 +22949,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "followUpOf": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -23368,6 +23375,24 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "caseId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "isFollowUp": {
+            "type": "boolean",
+            "default": false
+          },
+          "recordedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
