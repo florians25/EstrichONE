@@ -1,23 +1,25 @@
 import SwiftUI
 import UIKit
 
-/// Farb- und Maßtokens (docs/reengineering/05-designsystem.md), Markenfarben Navy #0B2D5B / #174A8B, Akzent #3CCB7F.
+/// Farb- und Maßtokens. Marke: Nachtblau #061536 (hell #0B2E66), Markenblau #0062CC als einzige Akzentfarbe
+/// (auf dunklem Grund #4DA3FF), Eis #CFE5FF.
 ///
 /// Normale Schrift steht nie in `brandBlue` (3,98 : 1 auf Weiß), sondern in `actionPrimary`.
 /// Alle Farben haben eine Variante für den Dunkelmodus; Maße folgen den iOS-Standardgrößen (Tippfläche ≥ 44 pt).
 enum Theme {
-    static let navy = Color(hex: 0x0B2D5B)
-    static let navyLight = Color(hex: 0x174A8B)
-    static let brandBlue = Color(hex: 0x007BFF)
-    static let actionPrimary = Color.dynamic(light: 0x174A8B, dark: 0x6FA8F5)
+    static let navy = Color(hex: 0x061536)
+    static let navyLight = Color(hex: 0x0B2E66)
+    static let brandBlue = Color.dynamic(light: 0x0062CC, dark: 0x4DA3FF)
+    static let ice = Color(hex: 0xCFE5FF)
+    static let actionPrimary = Color.dynamic(light: 0x0062CC, dark: 0x4DA3FF)
 
     /// Gefüllte Hauptschaltfläche: Verlauf von oben nach unten.
     // Ruhiges Farbsystem: eine Akzentfarbe (Markenblau) für Aktionen, sonst neutrale Flächen.
-    static let brandFillTop = Color.dynamic(light: 0x174A8B, dark: 0x2B62AD)
-    static let brandFillBottom = Color.dynamic(light: 0x174A8B, dark: 0x2B62AD)
+    static let brandFillTop = Color.dynamic(light: 0x0062CC, dark: 0x0062CC)
+    static let brandFillBottom = Color.dynamic(light: 0x0062CC, dark: 0x0062CC)
     /// Akzent für „Aufnehmen“ (Foto, Scan) – Text darauf immer dunkel (`onAccent`, Kontrast > 7 : 1).
-    static let accent = Color.dynamic(light: 0x174A8B, dark: 0x3B7DD8)
-    static let accentPressed = Color.dynamic(light: 0x0B2D5B, dark: 0x2B62AD)
+    static let accent = Color.dynamic(light: 0x0062CC, dark: 0x4DA3FF)
+    static let accentPressed = Color.dynamic(light: 0x0B2E66, dark: 0x0062CC)
     static let onAccent = Color.white
     /// Nebenaktion: neutrale Fläche.
     static let secondaryFill = Color.dynamic(light: 0xEEF0F3, dark: 0x2A2C31)
@@ -34,12 +36,12 @@ enum Theme {
     static let errorBackground = Color.dynamic(light: 0xFEE2E2, dark: 0x450A0A)
     static let hint = Color.dynamic(light: 0xB45309, dark: 0xFCD34D)
     static let hintBackground = Color.dynamic(light: 0xFEF3C7, dark: 0x451A03)
-    static let info = Color.dynamic(light: 0x174A8B, dark: 0x93C5FD)
+    static let info = Color.dynamic(light: 0x0062CC, dark: 0x4DA3FF)
     static let infoBackground = Color.dynamic(light: 0xE0EFFF, dark: 0x172554)
     static let neutral = Color.dynamic(light: 0x4B5563, dark: 0xD1D5DB)
     static let neutralBackground = Color.dynamic(light: 0xF3F4F6, dark: 0x1F2937)
-    static let navyBackground = Color.dynamic(light: 0xDCE6F5, dark: 0x1B2E4D)
-    static let navyText = Color.dynamic(light: 0x0B2D5B, dark: 0xDCE6F5)
+    static let navyBackground = Color.dynamic(light: 0xCFE5FF, dark: 0x0B2E66)
+    static let navyText = Color.dynamic(light: 0x061536, dark: 0xCFE5FF)
 
     /// Standardhöhe von Schaltflächen (iOS „large“).
     static let controlHeight: CGFloat = 48
