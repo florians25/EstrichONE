@@ -179,6 +179,12 @@ test('Terminkalender: wiederkehrender Termin mit Teilnehmer, Agenda, Monat, Kale
   await page.locator('.eoCalendarList').getByRole('checkbox', { name: 'Firmenkalender' }).click();
   await expect(page.locator('.sapMSinglePCAppointment, .sapUiCalendarApp').filter({ hasText: 'Baubesprechung Büro' })).toHaveCount(0);
   await page.locator('.eoCalendarList').getByRole('checkbox', { name: 'Firmenkalender' }).click();
+  // Zurück zur Woche und erneut Monat/Woche: früher „duplicate id …vWeek--item“.
+  for (const name of ['Woche', 'Monat', 'Woche']) {
+    await page.getByRole('option', { name, exact: true }).filter({ visible: true }).first().click();
+    await expect(page).toHaveURL(new RegExp(`ansicht=${name.toLowerCase()}`));
+  }
+  await expect(page.getByText(/unerwarteter Fehler|duplicate id/)).toHaveCount(0);
 });
 
 test('Kolonnenplanung: ohne Bauvorhaben wird ein Termin angelegt (C1) und erscheint im Plan', async ({ page }) => {

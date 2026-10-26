@@ -1,4 +1,5 @@
 import BaseController from "../BaseController";
+import Element from "sap/ui/core/Element";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import EventBus from "sap/ui/core/EventBus";
@@ -110,6 +111,9 @@ export default class Calendar extends BaseController {
 		const current = spc.getViews()[0];
 		if (current !== wanted) {
 			spc.removeAllViews();
+			// removeAllViews() entfernt die Umschalt-Einträge („<Ansicht>--item“) nur, ohne sie zu zerstören – beim erneuten
+			// Hinzufügen derselben Ansicht gäbe es sonst eine doppelte ID („duplicate id …vWeek--item“).
+			for (const view of Object.values(this.views)) Element.getElementById(`${view.getId()}--item`)?.destroy();
 			spc.addView(wanted);
 			spc.setSelectedView(wanted);
 		}

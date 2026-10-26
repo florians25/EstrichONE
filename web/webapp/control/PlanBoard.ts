@@ -170,6 +170,7 @@ export default class PlanBoard extends Control {
 			}
 		});
 		b.dataset.id = a.id;
+		b.dataset.flipKey = `assignment:${a.id}`;
 		b.dataset.lane = data.rows === "people" ? "" : a.crewId ?? "";
 		const color = safeColor(a.crewColor) || safeColor(kind?.color);
 		if (color && !a.warnings.length) b.style.borderLeftColor = color;

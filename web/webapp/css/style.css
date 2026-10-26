@@ -336,3 +336,15 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .sapFDynamicPageContent > .sapMVBox > .sapMTable + .sapMTable, .sapFDynamicPageContent .sapMPanel + .sapMPanel { margin-top: 1rem; }
 .sapMOTB.sapMTB + .sapMListTbl, .sapMOTB.sapMTB + .sapMList { margin-top: 0.25rem; }
 .eoOverviewGrid { margin-top: 1rem; }
+
+/* Legenden (Plantafel, Teamplaner, Kalender): Einträge schrumpfen nicht, fester Abstand. */
+.eoPlanLegend { gap: 0.375rem 1.25rem !important; }
+.eoPlanLegend > * { flex: none !important; margin-right: 0 !important; }
+.eoPlanLegend .sapMText { white-space: nowrap; overflow: visible; }
+
+/* SegmentedButton als Inline-Flex: Breite = Inhalt, Nachbarn in Werkzeugleisten überlappen nicht. */
+.sapMSegB:not(.eoSegFill) { display: inline-flex !important; }
+.sapMSegB:not(.eoSegFill) > .sapMSegBBtn { flex: none; float: none; }
+/* Werkzeugleisten: etwas Luft zwischen Gruppen (Schalter, Auswahl, Beschriftung). */
+.sapMTB > .sapMSwitch, .sapMTB > .sapMSegB { margin-right: 0.5rem; }
+.sapMTB > .sapMLabel { margin-right: 0.5rem; }

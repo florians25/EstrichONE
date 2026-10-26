@@ -133,3 +133,10 @@ body.is-dragging, body.is-dragging * { -webkit-user-select: none !important; use
 .eoDropOver, .eoPlanDrop { outline: 2px dashed var(--sapButton_Emphasized_Background) !important; outline-offset: -2px;
 	background: color-mix(in srgb, var(--sapButton_Emphasized_Background) 12%, transparent) !important; }
 .eoDragging, .eoPlanDragging { opacity: 0.4; }
+/* Ziehen: sanfte Übergänge (aus bei „Bewegung reduzieren“). */
+[data-drop], [data-dropsite], [data-dragkind], .eoPlanMovable { transition: background-color 120ms ease, outline-color 120ms ease, opacity 150ms ease, box-shadow 150ms ease; }
+.eoDragGhostCard { will-change: left, top, transform; }
+@media (prefers-reduced-motion: reduce) {
+	[data-drop], [data-dropsite], [data-dragkind], .eoPlanMovable { transition: none; }
+	.eoDragGhostCard { transform: none; }
+}
