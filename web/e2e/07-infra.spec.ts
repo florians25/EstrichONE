@@ -81,7 +81,7 @@ test('Überwachung und Aktenarchiv: Systeme mit Plattenbelegung, Liste der ausge
   await signIn(page, 'admin', adminPassword);
   await page.goto('/system/ueberwachung');
   await expect(pageTitle(page)).toHaveText('Überwachung');
-  await expect(page.getByText('Produktivsystem (EstrichONE-Server)')).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByText('Produktivsystem (EstrichONE-Server)', { exact: true })).toBeVisible({ timeout: 30_000 });
   await page.goto('/system/aktenarchiv');
   await expect(pageTitle(page)).toHaveText('Aktenarchiv');
   await expect(page.getByRole('button', { name: 'Bauakte archivieren …' })).toBeVisible();
