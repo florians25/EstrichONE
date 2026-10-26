@@ -644,6 +644,8 @@ struct PhotoViewer: View {
     @State private var editingCaption = false
     @State private var captionDraft = ""
     @State private var confirmDiscard = false
+    /// Recht `files.delete`: auch übertragene Fotos löschen.
+    @State private var canDeleteTransferred = false
     @State private var images: [UUID: UIImage] = [:]
 
     init(photos: [FileItem], selection: UUID, onChange: @escaping () -> Void) {
@@ -695,10 +697,11 @@ struct PhotoViewer: View {
                                 .tint(.white)
                             }
                             Spacer()
-                            if current.syncState == .pending {
+                            if current.syncState == .pending || canDeleteTransferred {
                                 Button(role: .destructive) { confirmDiscard = true } label: {
-                                    Label("Verwerfen", systemImage: "trash")
+                                    Label("Löschen", systemImage: "trash")
                                 }
+                                .accessibilityIdentifier("deletePhotoButton")
                                 .overlayControlStyle()
                                 .tint(.red)
                             }
@@ -727,10 +730,17 @@ struct PhotoViewer: View {
                 Button("Sichern") { Task { await saveCaption() } }
                 Button("Abbrechen", role: .cancel) {}
             }
-            .confirmationDialog("Foto verwerfen?", isPresented: $confirmDiscard, titleVisibility: .visible) {
+            .confirmationDialog("Foto löschen?", isPresented: $confirmDiscard, titleVisibility: .visible) {
                 Button("Foto löschen", role: .destructive) { Task { await discard() } }
             } message: {
-                Text("Das Foto ist noch nicht übertragen und wird nur auf diesem Gerät gelöscht.")
+                Text(current?.syncState == .pending
+                     ? "Das Foto ist noch nicht übertragen und wird nur auf diesem Gerät gelöscht."
+                     : "Das Foto wird aus der Bauakte gelöscht – auch im Büro.")
+            }
+            .task {
+                if let store = model.active?.sync?.store {
+                    canDeleteTransferred = await MyPermissions(store: store).load(using: model.active?.client).contains("files.delete")
+                }
             }
         }
     }
@@ -746,7 +756,7 @@ struct PhotoViewer: View {
 
     private func discard() async {
         guard let current, let service = model.active?.service else { return }
-        if (try? await service.discardUnsentFile(current.id)) == true {
+        if (try? await service.deleteFile(current.id)) != nil {
             model.active?.sync?.localChangeMade()
             onChange()
             dismiss()

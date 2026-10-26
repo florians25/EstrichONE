@@ -484,6 +484,14 @@ public struct BauakteService: Sendable {
         return true
     }
 
+    /// Foto oder Datei löschen: noch nicht übertragene sofort (nur auf dem Gerät), übertragene über `file.delete`
+    /// (Recht `files.delete`, prüft der Server).
+    public func deleteFile(_ fileId: UUID) async throws {
+        if try await discardUnsentFile(fileId) { return }
+        try await store.delete(.file, id: fileId)
+        files.remove(fileId)
+    }
+
     /// Dokumente der Bauakte, neueste zuerst.
     public func documents(of bauakteId: UUID) async throws -> [FileItem] {
         try await files(of: bauakteId).filter(\.isDocument)

@@ -38,15 +38,7 @@ struct SyncStatusBar: View {
         if sync.isOffline {
             return ("Offline – Änderungen werden gespeichert", "wifi.slash", Theme.textSecondary, Theme.surfaceAlt)
         }
-        if let progress = sync.uploadProgress, progress.total > 0 {
-            let percent = Int((Double(progress.sent) / Double(progress.total) * 100).rounded())
-            return ("\(progress.files) \(progress.files == 1 ? "Datei wird" : "Dateien werden") hochgeladen · \(percent) %",
-                    "arrow.up.circle", Theme.textSecondary, Theme.surfaceAlt)
-        }
-        if let summary, !summary.isSettled {
-            let count = summary.pendingOperations + summary.pendingUploads
-            return ("\(count) \(count == 1 ? "Änderung wird" : "Änderungen werden") übertragen", "arrow.triangle.2.circlepath", Theme.textSecondary, Theme.surfaceAlt)
-        }
+        // Laufende Übertragung zeigt nur das Symbol im Kopf bzw. an den Einträgen – keine eigene Textzeile.
         return nil
     }
 }

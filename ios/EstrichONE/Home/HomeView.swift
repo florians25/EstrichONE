@@ -677,9 +677,11 @@ struct HomeHeader: View {
         }
         .buttonStyle(.plain)
         Button(action: onSync) {
-            MetricCapsule(symbol: syncState.symbol, value: nil, label: syncState.text)
+            MetricCapsule(symbol: syncState.symbol, value: nil, label: "")
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("Abgleich: \(syncState.text)")
+        .accessibilityIdentifier("syncStatusIcon")
     }
 
     private var syncState: (symbol: String, text: String) {
@@ -716,7 +718,9 @@ private struct MetricCapsule: View {
             if let value {
                 Text(value).font(.subheadline.weight(.bold).monospacedDigit())
             }
-            Text(label).font(.subheadline)
+            if !label.isEmpty {
+                Text(label).font(.subheadline)
+            }
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 12)

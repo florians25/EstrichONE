@@ -48,18 +48,21 @@ struct SyncStateBadge: View {
     var body: some View {
         switch state {
         case .pending:
-            Label(showsSynced ? "Auf diesem Gerät gespeichert · wird übertragen" : "Wird übertragen", systemImage: "arrow.up.circle")
+            // Nur Symbol: wird übertragen (Text für VoiceOver).
+            Image(systemName: "arrow.up.circle")
                 .font(.caption)
                 .foregroundStyle(Theme.textSecondary)
+                .accessibilityLabel("Wird übertragen")
         case .problem:
             Label("Problem bei der Übertragung", systemImage: "exclamationmark.triangle.fill")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(Theme.error)
         case .synced:
             if showsSynced {
-                Label("Übertragen", systemImage: "checkmark.circle")
+                Image(systemName: "checkmark.icloud")
                     .font(.caption)
                     .foregroundStyle(Theme.success)
+                    .accessibilityLabel("Übertragen")
             }
         }
     }

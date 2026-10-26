@@ -197,6 +197,11 @@ struct BauakteServiceTests {
         #expect(await engine.synchronize() == .completed)
         #expect(try await service.discardUnsentFile(kept) == false)
         #expect(try await service.files(of: bauakte).map(\.id) == [kept])
+
+        // Übertragenes Foto löschen: sofort ausgeblendet, file.delete in der Outbox.
+        try await service.deleteFile(kept)
+        #expect(try await service.files(of: bauakte).isEmpty)
+        #expect(try await service.store.operations().last?.type == "file.delete")
     }
 
     @Test("Scan als PDF: Titel, Dokumentart, offline gespeichert und wie Fotos hochgeladen")
