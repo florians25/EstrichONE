@@ -22,6 +22,7 @@ struct CustomerDirectoryView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
     @Environment(\.openURL) private var openURL
+    @Environment(\.shotScene) private var shotScene
     @State private var search = ""
     @State private var filter: Filter = .all
     @State private var contacts: [Contact] = []
@@ -156,6 +157,11 @@ struct CustomerDirectoryView: View {
         guard let service = model.active?.service else { return }
         let query = search.trimmingCharacters(in: .whitespaces)
         contacts = (try? await service.contacts(search: query.isEmpty ? nil : query)) ?? []
+        // Screenshot-Modus: Kundenkarte des Privatkunden öffnen.
+        if shotScene == "kundenkarte", path.isEmpty, selection == nil,
+           let first = contacts.first(where: { !$0.isCompany }) ?? contacts.first {
+            if sizeClass == .regular { selection = first.id } else { path.append(first.id) }
+        }
     }
 
     static func letter(of name: String) -> String {

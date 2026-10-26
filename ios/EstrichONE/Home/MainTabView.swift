@@ -12,6 +12,7 @@ struct MainTabView: View {
     }
 
     @Environment(AppModel.self) private var model
+    @Environment(\.shotScene) private var shotScene
     @State private var selection: Tab = .today
     @State private var previous: Tab = .today
     @State private var captureMode: CaptureMode = .photo
@@ -48,6 +49,7 @@ struct MainTabView: View {
                 .tag(Tab.more)
         }
         .modifier(SidebarAdaptable())
+        .task { applyShotScene() }
         .sheet(isPresented: $showsCaptureHub) {
             CaptureHub { showsCaptureHub = false }
                 .presentationDetents([.medium, .large])
@@ -59,6 +61,22 @@ struct MainTabView: View {
                     MaintenanceBanner(message: message)
                 }
             }
+        }
+    }
+}
+
+extension MainTabView {
+    /// Screenshot-Modus: passenden Reiter wählen bzw. „Erfassen“ öffnen.
+    private func applyShotScene() {
+        guard let scene = shotScene else { return }
+        if scene.hasPrefix("baustellen") || scene.hasPrefix("bauakte") {
+            selection = .bauakten
+        } else if scene.hasPrefix("kunde") {
+            selection = .customers
+        } else if scene.hasPrefix("mehr") || scene.hasPrefix("sync") {
+            selection = .more
+        } else if scene.hasPrefix("erfassen") {
+            showsCaptureHub = true
         }
     }
 }

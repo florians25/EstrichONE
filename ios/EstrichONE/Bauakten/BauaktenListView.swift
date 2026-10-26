@@ -5,6 +5,7 @@ import SwiftUI
 struct BauaktenListView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.shotScene) private var shotScene
     @State private var search = ""
     /// Abgeschlossene und stornierte Bauakten stehen unter „Altakten“, nicht in der Hauptliste.
     @State private var showsArchive = false
@@ -70,6 +71,11 @@ struct BauaktenListView: View {
             bauakten = showsArchive ? archived : all.filter { $0.status != .completed && $0.status != .cancelled }
             let contacts = (try? await service.contacts()) ?? []
             customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
+            // Screenshot-Modus: die laufende Baustelle öffnen.
+            if shotScene?.hasPrefix("bauakte") == true, path.isEmpty, selection == nil,
+               let first = bauakten.first(where: { $0.status == .inProgress }) ?? bauakten.first {
+                if sizeClass == .regular { selection = first.id } else { path.append(first.id) }
+            }
         }
     }
 

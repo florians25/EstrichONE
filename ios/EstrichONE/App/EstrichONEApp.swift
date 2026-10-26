@@ -10,6 +10,7 @@ struct EstrichONEApp: App {
         WindowGroup {
             RootView()
                 .environment(session.model)
+                .environment(\.shotScene, session.shotScene)
                 .id(session.generation)
                 .onOpenURL { session.model.handle(url: $0) }
         }
@@ -29,10 +30,37 @@ struct EstrichONEApp: App {
 final class AppSession {
     private(set) var model: AppModel
     private(set) var generation = 0
+    #if DEBUG
+    /// Screenshot-Modus (Launch-Argument `-EstrichShots`), nur in Debug-Builds.
+    let director: ScreenshotDirector?
+    #endif
 
     init() {
+        #if DEBUG
+        director = ScreenshotDirector.fromLaunchArguments()
+        if let director {
+            ScreenshotDirector.resetDemoData()
+            UserDefaults.standard.set(true, forKey: AppEnvironment.demoFlagKey)
+            model = AppModel(environment: .demo())
+            connect()
+            Task { await model.startDemo() }
+            Task { [weak self] in
+                await director.run { self?.model }
+            }
+            return
+        }
+        #endif
         model = AppModel(environment: .live())
         connect()
+    }
+
+    /// Bildschirm des Screenshot-Modus (sonst `nil`).
+    var shotScene: String? {
+        #if DEBUG
+        director?.current
+        #else
+        nil
+        #endif
     }
 
     private func connect() {
@@ -52,6 +80,7 @@ final class AppSession {
 struct RootView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.shotScene) private var shotScene
 
     var body: some View {
         @Bindable var model = model
@@ -98,7 +127,9 @@ struct RootView: View {
         case .waitingForApproval:
             WaitingForApprovalView()
         case .home:
+            // Screenshot-Modus: je Bildschirm frisch aufbauen (Blätter und Navigation zurücksetzen).
             MainTabView()
+                .id(shotScene ?? "")
         case let .blocked(end):
             BlockedView(end: end)
         }

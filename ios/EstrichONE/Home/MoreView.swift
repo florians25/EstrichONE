@@ -4,6 +4,8 @@ import SwiftUI
 /// Reiter „Mehr“: Person, Synchronisation, Hilfe, Gerät, Server, Benutzerwechsel, Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.shotScene) private var shotScene
+    @State private var showsSync = false
     @State private var confirmSignOut = false
     @State private var confirmReset = false
     @State private var unsentBeforeSignOut = 0
@@ -148,6 +150,10 @@ struct MoreView: View {
                 Text("Die App vergisst Server, Gerät und alle Personen. Das Gerät muss danach neu eingerichtet werden.")
             }
             .refreshable { await model.refreshDeviceStatus() }
+            .navigationDestination(isPresented: $showsSync) {
+                if let sync = model.active?.sync { SyncView(sync: sync) }
+            }
+            .task { if shotScene == "sync" { showsSync = true } }
             .sheet(isPresented: $reporting) {
                 ReportProblemView { reporting = false }
             }

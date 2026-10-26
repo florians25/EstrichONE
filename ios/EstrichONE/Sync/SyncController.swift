@@ -181,6 +181,17 @@ final class SyncController {
             : (active.reduce(0) { $0 + $1.uploadedBytes }, active.reduce(0) { $0 + $1.size }, active.count)
     }
 
+    #if DEBUG
+    /// Screenshot-Modus: Wartung des Servers vortäuschen (`nil` beendet sie wieder).
+    func simulateMaintenance(_ message: String?) {
+        if let message {
+            lastOutcome = .maintenance(message: message)
+        } else if case .maintenance = lastOutcome {
+            lastOutcome = .completed
+        }
+    }
+    #endif
+
     /// 2 Minuten im Normalfall; nach Fehlern 1 s, 2 s, 4 s … bis 15 Minuten, mit Zufallsanteil.
     private var nextDelay: Double {
         if inMaintenance { return 120 }

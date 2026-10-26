@@ -1,7 +1,16 @@
 name: iOS
 
 on:
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      scenes:
+        description: "Screenshots: Bildschirme (kommagetrennt, leer = Standardliste)"
+        required: false
+        default: ""
+      ipad:
+        description: "Screenshots auch auf dem iPad"
+        type: boolean
+        default: true
   push:
     branches: ["**", "!dependabot/**"]
     paths: ["ios/**", "contracts/**", "backend/src/**", ".github/workflows/ios.yml"]
@@ -106,3 +115,109 @@ jobs:
             ${{ runner.temp }}/EstrichONE.xcresult
             ${{ runner.temp }}/xcodebuild-*.log
           retention-days: 7
+
+  # Visuelle Prüfung: Die App zeigt im Demomodus (Screenshot-Modus, nur Debug-Builds) ihre Bildschirme nacheinander,
+  # aufgenommen auf iPhone und iPad, hell und dunkel. Läuft parallel zu den Tests und nur bei Änderungen an der App.
+  screenshots:
+    name: Screenshots (Simulator, Demomodus)
+    runs-on: macos-15
+    timeout-minutes: 30
+    if: github.event_name != 'pull_request'
+    env:
+      IPHONE_SCENES: "heute,baustellen,bauakte,kunden,kundenkarte,erfassen,mehr,sync,wartung"
+      IPAD_SCENES: "heute,bauakte,kunden"
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Nur bei Änderungen an der App
+        id: changes
+        env:
+          BEFORE: ${{ github.event.before }}
+        run: |
+          run=true
+          if [ "$GITHUB_EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
+            if ! git diff --name-only "$BEFORE" "$GITHUB_SHA" | grep -qE '^(ios/EstrichONE/|ios/project\.yml|ios/scripts/|\.github/workflows/ios\.yml)'; then
+              run=false
+            fi
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "Screenshots: $run"
+
+      - name: Xcode wählen, Simulatoren starten
+        id: sims
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          xcodebuild -version
+          pick() {
+            xcrun simctl list devices available --json | jq -r --arg re "$1" '
+              [.devices | to_entries[]
+                | select(.key | test("SimRuntime\\.iOS-"))
+                | {version: (.key | capture("iOS-(?<maj>[0-9]+)-(?<min>[0-9]+)") | [(.maj | tonumber), (.min | tonumber)]),
+                   devices: [.value[] | select(.name | test($re))]}
+                | select(.devices | length > 0)]
+              | sort_by(.version) | last | .devices[0].udid // empty'
+          }
+          PHONE=$(pick '^iPhone 17 Pro$'); [ -n "$PHONE" ] || PHONE=$(pick '^iPhone [0-9]+ Pro$'); [ -n "$PHONE" ] || PHONE=$(pick '^iPhone')
+          PAD=$(pick '^iPad Pro 11'); [ -n "$PAD" ] || PAD=$(pick '^iPad Air 11'); [ -n "$PAD" ] || PAD=$(pick '^iPad')
+          test -n "$PHONE"
+          xcrun simctl list devices available | grep -E "$PHONE|${PAD:-none}"
+          xcrun simctl boot "$PHONE"
+          if [ -n "$PAD" ]; then xcrun simctl boot "$PAD" || true; fi
+          echo "phone=$PHONE" >> "$GITHUB_OUTPUT"
+          echo "pad=$PAD" >> "$GITHUB_OUTPUT"
+
+      - name: Debug-Build für den Simulator
+        if: steps.changes.outputs.run == 'true'
+        working-directory: ios
+        run: |
+          brew install xcodegen >/dev/null
+          xcodegen generate
+          set -o pipefail
+          xcodebuild build -project EstrichONE.xcodeproj -scheme EstrichONE -configuration Debug \
+            -destination "id=${{ steps.sims.outputs.phone }}" -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning:|\*\* BUILD" || true
+          grep -q "\*\* BUILD SUCCEEDED \*\*" "$RUNNER_TEMP/build.log"
+
+      - name: Screenshots aufnehmen
+        if: steps.changes.outputs.run == 'true'
+        env:
+          PHONE: ${{ steps.sims.outputs.phone }}
+          PAD: ${{ steps.sims.outputs.pad }}
+          SCENES_INPUT: ${{ inputs.scenes }}
+          IPAD_INPUT: ${{ inputs.ipad }}
+        run: |
+          APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/EstrichONE.app"
+          SHOTS="$RUNNER_TEMP/shots"
+          DEVICES="$PHONE"
+          if [ "$IPAD_INPUT" != "false" ] && [ -n "$PAD" ]; then DEVICES="$PHONE $PAD"; fi
+          for device in $DEVICES; do
+            xcrun simctl bootstatus "$device" -b >/dev/null
+            xcrun simctl status_bar "$device" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+              --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+            xcrun simctl install "$device" "$APP"
+          done
+          bash ios/scripts/screenshots.sh "$PHONE" iphone "${SCENES_INPUT:-$IPHONE_SCENES}" "$SHOTS" 1
+          if [ "$DEVICES" != "$PHONE" ]; then
+            bash ios/scripts/screenshots.sh "$PAD" ipad "$IPAD_SCENES" "$SHOTS" 1
+          fi
+          ls "$SHOTS" | wc -l
+
+      - name: Screenshots sichern
+        if: steps.changes.outputs.run == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-screenshots
+          path: ${{ runner.temp }}/shots
+          retention-days: 7
+
+      # Zuletzt, damit die Bilder am Ende des Protokolls stehen (ios/scripts/shots-to-log.py).
+      - name: Screenshots ins Protokoll
+        if: steps.changes.outputs.run == 'true'
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pillow
+          "$RUNNER_TEMP/venv/bin/python" ios/scripts/shots-to-log.py "$RUNNER_TEMP/shots"
