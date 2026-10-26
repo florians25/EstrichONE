@@ -1,10 +1,10 @@
 import EstrichCore
 import SwiftUI
 
-/// Startseite als Arbeitsplatz für den Tag: Kopf in Navy mit Person und Gerät, Schnellaktionen,
-/// „Meine Einsätze heute“ als große Karten mit Anruf, Route und Sprung in die Akte, Vorschau auf morgen,
-/// „Wer fährt wohin“, offene Aufgaben und zuletzt geöffnete Bauakten.
-/// iPhone: eine Spalte. iPad: Dashboard mit Hauptspalte (Einsätze, Disposition) und Seitenspalte (Aktionen, Aufgaben, Navigation).
+/// Heute-Seite: kompakter Kopf (Begrüßung, Datum, Abgleich), Hinweise nur wenn vorhanden, drei gleich große
+/// Schnellzugriffe (Wer fährt wohin, Aufgaben, Meine Woche), „Mein Einsatz heute“ als aufgeräumte Karten mit
+/// Akte · Anrufen · Route, darunter kompakt Morgen, offene Aufgaben und zuletzt geöffnet – ohne Wiederholungen.
+/// iPad: Einsätze links, der Rest rechts.
 struct HomeView: View {
     let openTab: (MainTabView.Tab) -> Void
     var openCapture: (CaptureMode) -> Void = { _ in }
@@ -12,69 +12,60 @@ struct HomeView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var path: [HomeRoute] = []
-    @State private var creating = false
-    @State private var reporting = false
-    @State private var captureFor: Bauakte?
-    @State private var inspectFor: Bauakte?
-    /// Hauptaktion, für die noch die Baustelle gewählt wird.
-    @State private var siteTask: SiteTask?
-    @State private var diaryFor: Bauakte?
-    @State private var acceptanceFor: Bauakte?
     @State private var planning: MyPlanning.Snapshot?
-    @State private var openTasks = 0
+    @State private var dispatch: DispatchData.Day?
     @State private var tasks: [WorkItem] = []
     @State private var recent: [Bauakte] = []
-    @State private var dispatch: DispatchData.Day?
     @State private var bauakten: [UUID: Bauakte] = [:]
     /// „2026-041 · EFH Schneider“ je Bauakte der offenen Aufgaben.
     @State private var taskBauakten: [UUID: String] = [:]
+    @State private var loaded = false
 
     private var isWide: Bool { sizeClass == .regular }
+
+    private var jobs: [TodayJob] {
+        TodayJob.make(assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
+    }
+
+    private var tomorrow: [Assignment] {
+        let day = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
+        return planning?.assignments(on: CalendarDay.string(day)) ?? []
+    }
 
     var body: some View {
         NavigationStack(path: $path) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 18) {
-                    HomeHeader(todayCount: planning == nil && dispatch == nil ? nil : TodayJob.make(
-                                   assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten).count,
-                               openTasks: openTasks, onTasks: { path.append(.tasks) }, onSync: { path.append(.sync) })
-                    if let sync = model.active?.sync {
-                        VStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        HomeHeader { path.append(.sync) }
+                        if let sync = model.active?.sync {
                             SyncStatusBar(sync: sync)
                                 .clipShape(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
                             SystemNoticesBanner(sync: sync)
                         }
-                        .padding(.horizontal)
                     }
+                    quickLinks
                     if isWide {
-                        HStack(alignment: .top, spacing: 20) {
-                            VStack(alignment: .leading, spacing: 18) {
-                                todaySection
+                        HStack(alignment: .top, spacing: 24) {
+                            todaySection.frame(maxWidth: .infinity, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 24) {
                                 tomorrowSection
-                                dispatchCard
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 18) {
                                 tasksSection
                                 recentSection
                             }
-                            .frame(width: 340)
+                            .frame(width: 360)
                         }
-                        .padding(.horizontal, 20)
                     } else {
-                        VStack(alignment: .leading, spacing: 18) {
-                            todaySection
-                            tomorrowSection
-                            dispatchCard
-                            tasksSection
-                            recentSection
-                        }
-                        .padding(.horizontal)
+                        todaySection
+                        tomorrowSection
+                        tasksSection
+                        recentSection
                     }
                 }
-                .padding(.bottom, 24)
-                // Großes iPad quer: Inhalte nicht beliebig breit ziehen.
-                .frame(maxWidth: 1280)
+                .padding(.horizontal, isWide ? 24 : 16)
+                .padding(.top, 8)
+                .padding(.bottom, 32)
+                .frame(maxWidth: 1200)
                 .frame(maxWidth: .infinity)
             }
             .background(Theme.surfaceAlt)
@@ -90,52 +81,6 @@ struct HomeView: View {
                 case .dispatch: DispatchView()
                 }
             }
-            .sheet(isPresented: $creating) {
-                NewBauakteView { id, next in
-                    creating = false
-                    path.append(.bauakte(id))
-                    if next != .open {
-                        Task {
-                            // Erst wenn das Anlageblatt geschlossen ist, Kamera bzw. Erstbegehung öffnen.
-                            try? await Task.sleep(for: .milliseconds(600))
-                            let created = try? await model.active?.service?.bauakte(id)
-                            if next == .photograph { captureFor = created } else { inspectFor = created }
-                        }
-                    }
-                }
-            }
-            .sheet(isPresented: $reporting) { ReportProblemView { reporting = false } }
-            .fullScreenCover(item: $captureFor) { bauakte in
-                CameraView(bauakte: bauakte) { _ in captureFor = nil }
-            }
-            .sheet(item: $inspectFor) { bauakte in
-                InspectionEntryView(bauakte: bauakte) { inspectFor = nil }
-            }
-            .sheet(item: $siteTask) { task in
-                BauakteQuickPicker(task: task, todayIds: TodayJob.make(
-                    assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
-                    .map(\.bauakteId)) { bauakte in
-                    siteTask = nil
-                    guard let bauakte else { return }
-                    Task {
-                        // Erst wenn die Auswahl geschlossen ist, das nächste Blatt öffnen.
-                        try? await Task.sleep(for: .milliseconds(450))
-                        switch task {
-                        case .open: path.append(.bauakte(bauakte.id))
-                        case .diary: diaryFor = bauakte
-                        case .inspection: inspectFor = bauakte
-                        case .acceptance: acceptanceFor = bauakte
-                        case .defect: break
-                        }
-                    }
-                }
-            }
-            .sheet(item: $diaryFor) { bauakte in
-                NewDiaryEntryView(bauakteId: bauakte.id) { diaryFor = nil }
-            }
-            .sheet(item: $acceptanceFor) { bauakte in
-                NewAcceptanceView(bauakte: bauakte) { acceptanceFor = nil }
-            }
             .task(id: model.active?.sync?.revision) { await reload() }
             .refreshable {
                 await model.active?.sync?.run()
@@ -146,127 +91,66 @@ struct HomeView: View {
 
     // MARK: Abschnitte
 
-    /// Schnellaktionen: anlegen (Hauptaktion), fotografieren und scannen. iPad: zwei Spalten mit „Problem melden“.
-    private var quickActions: some View {
-        let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: isWide ? 2 : 3)
-        return VStack(spacing: 10) {
-            LazyVGrid(columns: columns, spacing: 10) {
-                Button { openToday() } label: { Label("Meine Baustelle", systemImage: "hammer.fill") }
-                    .buttonStyle(ActionTileStyle(rank: .primary))
-                    .accessibilityIdentifier("myTodayTile")
-                Button { openCapture(.photo) } label: { Label("Foto", systemImage: "camera.fill") }
-                    .buttonStyle(ActionTileStyle(rank: .accent))
-                    .accessibilityIdentifier("photoTile")
-                Button { openCapture(.document) } label: { Label("Scannen", systemImage: "doc.viewfinder") }
-                    .buttonStyle(ActionTileStyle(rank: .secondary))
-                    .accessibilityIdentifier("scanTile")
-                Button { siteTask = .diary } label: { Label("Bautagebuch", systemImage: "book.fill") }
-                    .buttonStyle(ActionTileStyle(rank: .secondary))
-                    .accessibilityIdentifier("diaryTile")
-                Button { siteTask = .inspection } label: { Label("Erstbegehung", systemImage: "checklist") }
-                    .buttonStyle(ActionTileStyle(rank: .secondary))
-                    .accessibilityIdentifier("inspectionTile")
-                Button { siteTask = .acceptance } label: { Label("Abnahme", systemImage: "signature") }
-                    .buttonStyle(ActionTileStyle(rank: .secondary))
-                    .accessibilityIdentifier("acceptanceTile")
-            }
-            Button { creating = true } label: { ActionLabel("Neue Bauakte", systemImage: "folder.badge.plus") }
-                .estrichButton(.secondary, size: .regular, fullWidth: true)
-                .keyboardShortcut("n", modifiers: .command)
-                .accessibilityIdentifier("newBauakteTile")
+    /// Drei gleich große, beschriftete Schnellzugriffe.
+    private var quickLinks: some View {
+        HStack(spacing: 10) {
+            QuickLink(title: "Wer fährt wohin", symbol: "car.2") { path.append(.dispatch) }
+                .accessibilityIdentifier("dispatchRow")
+            QuickLink(title: "Aufgaben", symbol: "checklist", badge: tasks.count) { path.append(.tasks) }
+                .accessibilityIdentifier("myTasksTile")
+            QuickLink(title: "Meine Woche", symbol: "calendar") { path.append(.week) }
+                .accessibilityIdentifier("myWeekTile")
         }
     }
 
-    /// Baustelle von heute öffnen; ohne Einsatz heute: auswählen.
-    private func openToday() {
-        let jobs = TodayJob.make(assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
-        if let first = jobs.first, Set(jobs.map(\.bauakteId)).count == 1 {
-            path.append(.bauakte(first.bauakteId))
-        } else {
-            siteTask = .open
-        }
-    }
-
-    /// „Meine Einsätze heute“: aus meiner Planung, ergänzt um Kolonne, Ansprechpartner und Route aus „Wer fährt wohin“
-    /// sowie den Status der Akte. Ohne eigene Planung, aber mit Baustellen meiner Kolonne: diese Baustellen.
     private var todaySection: some View {
-        let jobs = TodayJob.make(
-            assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [],
-            board: dispatch?.board, bauakten: bauakten)
-        return VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline) {
-                SectionTitle("Meine Einsätze heute")
+                SectionTitle("Mein Einsatz heute")
                 Spacer()
                 if let planning, !planning.isCurrent {
-                    Label("Stand \(planning.loadedAt.formatted(date: .abbreviated, time: .shortened))", systemImage: "wifi.slash")
+                    Label("Stand \(planning.loadedAt.formatted(date: .omitted, time: .shortened))", systemImage: "wifi.slash")
                         .labelStyle(TightLabelStyle())
                         .font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
             }
-            if jobs.isEmpty, planning == nil, dispatch == nil {
-                // Erstes Laden: Platzhalter statt Springen.
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("08:00–12:00").font(.title3.weight(.bold))
-                    Text("Einsatz wird geladen").font(.headline)
-                    Text("Baustelle, Adresse und Kolonne").font(.subheadline)
+            if !loaded {
+                TodayJobCard.placeholder
+            } else if jobs.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Label("Heute ist für Sie nichts eingeplant.", systemImage: "calendar")
+                        .font(.body)
+                    if let next = tomorrow.first {
+                        Text("Morgen: \([next.startText, next.bauakteTitle].compactMap { $0 }.joined(separator: " · "))")
+                            .font(.subheadline).foregroundStyle(Theme.textSecondary)
+                    }
                 }
-                .padding(14)
+                .padding(16)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .card()
-                .redacted(reason: .placeholder)
-            } else if jobs.isEmpty {
-                Label("Heute ist für Sie nichts eingeplant.",
-                      systemImage: "calendar")
-                    .font(.subheadline)
-                    .foregroundStyle(Theme.textSecondary)
-                    .padding(.horizontal, 14)
-                    .frame(maxWidth: .infinity, minHeight: 52, alignment: .leading)
-                    .card()
             } else {
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 300), spacing: 12, alignment: .top)], spacing: 12) {
-                    ForEach(jobs) { job in
-                        TodayJobCard(job: job) { path.append(.bauakte(job.bauakteId)) }
-                    }
+                ForEach(jobs) { job in
+                    TodayJobCard(job: job) { path.append(.bauakte(job.bauakteId)) }
                 }
             }
         }
         .accessibilityIdentifier("todayAssignments")
     }
 
-    /// Kurzer Blick auf morgen: Uhrzeit, Baustelle, Tätigkeit.
+    /// Morgen: eine Zeile je Einsatz (nur wenn heute etwas ansteht; sonst steht morgen schon im Leerzustand).
     @ViewBuilder
     private var tomorrowSection: some View {
-        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: .now) ?? .now
-        let items = planning?.assignments(on: CalendarDay.string(tomorrow)) ?? []
-        if !items.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
-                HStack(alignment: .firstTextBaseline) {
-                    SectionTitle("Morgen, \(tomorrow.formatted(.dateTime.weekday(.wide)))")
-                    Spacer()
-                    Button("Meine Woche") { path.append(.week) }
-                        .font(.subheadline.weight(.semibold))
-                }
+        let items = tomorrow
+        if loaded, !items.isEmpty, !jobs.isEmpty || items.count > 1 {
+            VStack(alignment: .leading, spacing: 10) {
+                SectionTitle("Morgen")
                 VStack(spacing: 0) {
                     ForEach(Array(items.prefix(4).enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider().padding(.leading, 70) }
-                        Button { path.append(.bauakte(item.bauakteId)) } label: {
-                            HStack(spacing: 12) {
-                                Text(item.startText ?? "–")
-                                    .font(.subheadline.monospacedDigit().weight(.semibold))
-                                    .foregroundStyle(Theme.navyText)
-                                    .frame(width: 46, alignment: .leading)
-                                VStack(alignment: .leading, spacing: 1) {
-                                    Text(item.bauakteTitle).font(.subheadline.weight(.semibold)).lineLimit(1)
-                                    Text([item.activity, item.crewName].compactMap { $0 }.joined(separator: " · "))
-                                        .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
-                                }
-                                Spacer(minLength: 0)
-                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
-                            }
-                            .padding(.horizontal, 14).padding(.vertical, 9)
-                            .contentShape(Rectangle())
+                        if index > 0 { Divider().padding(.leading, 72) }
+                        compactRow(time: item.startText, title: item.bauakteTitle,
+                                   subtitle: [item.activity, item.crewName].compactMap { $0 }.joined(separator: " · ")) {
+                            path.append(.bauakte(item.bauakteId))
                         }
-                        .buttonStyle(RowButtonStyle())
                     }
                 }
                 .card()
@@ -275,71 +159,17 @@ struct HomeView: View {
         }
     }
 
-    /// „Wer fährt wohin“: je Kolonne ihre Baustellen des Tages, meine markiert; alles über „Alle“.
-    private var dispatchCard: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .firstTextBaseline) {
-                SectionTitle("Wer fährt wohin – heute")
-                Spacer()
-                Button("Alle") { path.append(.dispatch) }
-                    .font(.subheadline.weight(.semibold))
-                    .accessibilityIdentifier("dispatchAllButton")
-            }
-            VStack(alignment: .leading, spacing: 0) {
-                let groups = dispatch?.board?.crewGroups ?? []
-                let total = dispatch?.board?.sites.count ?? 0
-                if groups.isEmpty {
-                    Text(dispatch?.message ?? (dispatch == nil ? "Planung wird geladen …" : "Heute ist nichts eingeplant."))
-                        .font(.subheadline).foregroundStyle(Theme.textSecondary)
-                        .padding(.horizontal, 14)
-                        .frame(maxWidth: .infinity, minHeight: 48, alignment: .leading)
-                }
-                ForEach(Array(groups.prefix(isWide ? 6 : 4).enumerated()), id: \.offset) { index, group in
-                    if index > 0 { Divider() }
-                    Group {
-                        if let crew = group.crew, let board = dispatch?.board {
-                            CrewHeader(crew: crew, board: board)
-                        } else {
-                            Text(dispatch?.board?.crews.isEmpty == false ? "Ohne Kolonne" : "Baustellen")
-                                .font(.subheadline.weight(.bold)).foregroundStyle(Theme.textSecondary)
-                        }
-                    }
-                    .padding(.horizontal, 14).padding(.top, 10)
-                    ForEach(group.sites) { site in
-                        DispatchSiteRow(site: site, isMine: dispatch?.board?.mySiteIds.contains(site.id) == true,
-                                        slot: group.crew.flatMap { crew in site.crews.first { $0.id == crew.id } })
-                            .padding(.leading, 14).padding(.trailing, 8).padding(.vertical, 6)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                if groups.count > (isWide ? 6 : 4) {
-                    Divider()
-                    Button { path.append(.dispatch) } label: {
-                        Text("Alle \(total) Baustellen ansehen")
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(Theme.actionPrimary)
-                            .padding(.horizontal, 14).frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
-                    }
-                    .buttonStyle(RowButtonStyle())
-                }
-            }
-            .padding(.bottom, 6)
-            .card()
-        }
-        .accessibilityIdentifier("dispatchCard")
-    }
-
-    /// Offene Aufgaben und Mängel (die dringendsten) zum direkten Abhaken.
     @ViewBuilder
     private var tasksSection: some View {
         if !tasks.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .firstTextBaseline) {
                     SectionTitle("Offene Aufgaben")
                     Spacer()
-                    Button("Alle (\(openTasks))") { path.append(.tasks) }.font(.subheadline.weight(.semibold))
+                    Button("Alle (\(tasks.count))") { path.append(.tasks) }.font(.subheadline.weight(.semibold))
                 }
                 VStack(spacing: 0) {
-                    ForEach(Array(tasks.prefix(isWide ? 5 : 3).enumerated()), id: \.element.id) { index, item in
+                    ForEach(Array(tasks.prefix(3).enumerated()), id: \.element.id) { index, item in
                         if index > 0 { Divider().padding(.leading, 58) }
                         WorkItemRow(item: item, showsBauakte: item.bauakteId.flatMap { taskBauakten[$0] },
                                     onOpen: item.bauakteId.map { id in { path.append(.bauakte(id)) } }) {
@@ -357,23 +187,23 @@ struct HomeView: View {
         }
     }
 
+    /// Zuletzt geöffnet, ohne die Baustellen, die oben schon als Einsatz stehen.
     @ViewBuilder
     private var recentSection: some View {
-        if !recent.isEmpty {
-            VStack(alignment: .leading, spacing: 8) {
+        let shown = Set(jobs.map(\.bauakteId))
+        let items = recent.filter { !shown.contains($0.id) }.prefix(3)
+        if !items.isEmpty {
+            VStack(alignment: .leading, spacing: 10) {
                 SectionTitle("Zuletzt geöffnet")
                 VStack(spacing: 0) {
-                    ForEach(Array(recent.enumerated()), id: \.element.id) { index, bauakte in
-                        if index > 0 { Divider().padding(.leading, 14) }
+                    ForEach(Array(items.enumerated()), id: \.element.id) { index, bauakte in
+                        if index > 0 { Divider().padding(.leading, 16) }
                         Button { path.append(.bauakte(bauakte.id)) } label: {
                             HStack(spacing: 10) {
                                 BauakteRow(bauakte: bauakte)
-                                Image(systemName: "chevron.right")
-                                    .font(.footnote.weight(.semibold))
-                                    .foregroundStyle(.tertiary)
+                                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
                             }
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
+                            .padding(.horizontal, 16).padding(.vertical, 10)
                             .contentShape(Rectangle())
                         }
                         .buttonStyle(RowButtonStyle())
@@ -384,50 +214,95 @@ struct HomeView: View {
         }
     }
 
-    private var navigation: some View {
-        VStack(spacing: 0) {
-            NavigationRow(title: "Meine Aufgaben", symbol: "checklist", color: Color(hex: 0xE07A1F), badge: openTasks) { path.append(.tasks) }
-                .accessibilityIdentifier("myTasksTile")
-            Divider().padding(.leading, 54)
-            NavigationRow(title: "Wer fährt wohin", symbol: "car.2.fill", color: Color(hex: 0x0E7490)) { path.append(.dispatch) }
-                .accessibilityIdentifier("dispatchRow")
-            Divider().padding(.leading, 54)
-            NavigationRow(title: "Meine Woche", symbol: "calendar", color: Color(hex: 0x2F80ED)) { path.append(.week) }
-                .accessibilityIdentifier("myWeekTile")
-            if !isWide {
-                Divider().padding(.leading, 54)
-                NavigationRow(title: "Problem melden", symbol: "exclamationmark.bubble.fill", color: Color(hex: 0xC2410C)) { reporting = true }
+    private func compactRow(time: String?, title: String, subtitle: String, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            HStack(spacing: 12) {
+                Text(time ?? "–")
+                    .font(.subheadline.monospacedDigit().weight(.semibold))
+                    .frame(width: 48, alignment: .leading)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(.subheadline.weight(.semibold)).lineLimit(1)
+                    if !subtitle.isEmpty {
+                        Text(subtitle).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                    }
+                }
+                Spacer(minLength: 0)
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
+            .padding(.horizontal, 16).padding(.vertical, 10)
+            .contentShape(Rectangle())
         }
-        .card()
+        .buttonStyle(RowButtonStyle())
     }
 
     private func reload() async {
         guard let service = model.active?.service else { return }
-        recent = Array(((try? await service.recentBauakten()) ?? []).prefix(isWide ? 5 : 3))
+        // Zuerst alles Lokale (sofort sichtbar), danach die Planung vom Server.
+        recent = Array(((try? await service.recentBauakten()) ?? []).prefix(6))
         tasks = (try? await service.myWorkItems()) ?? []
-        openTasks = tasks.count
+        if let store = model.active?.sync?.store, planning == nil {
+            planning = await MyPlanning(store: store).cached()
+        }
+        loaded = loaded || planning != nil
         dispatch = await DispatchData.load(day: CalendarDay.string(.now), model: model)
         if let store = model.active?.sync?.store {
             planning = await MyPlanning(store: store).load(using: model.active?.client)
         }
-        // Status und Ansprechpartner der heutigen Akten aus der lokalen Ablage.
+        loaded = true
         var ids = Set((planning?.assignments(on: CalendarDay.string(.now)) ?? []).map(\.bauakteId))
         ids.formUnion(dispatch?.board?.mySiteIds ?? [])
-        var loaded: [UUID: Bauakte] = [:]
+        ids.formUnion(tasks.compactMap(\.bauakteId))
+        var loadedAkten: [UUID: Bauakte] = [:]
         for id in ids {
-            if let bauakte = try? await service.bauakte(id) { loaded[id] = bauakte }
+            if let bauakte = try? await service.bauakte(id) { loadedAkten[id] = bauakte }
         }
-        bauakten = loaded
+        bauakten = loadedAkten
         var names: [UUID: String] = [:]
-        for id in Set(tasks.compactMap(\.bauakteId)) {
-            var found = loaded[id]
-            if found == nil { found = try? await service.bauakte(id) }
-            if let bauakte = found {
+        for item in tasks {
+            if let id = item.bauakteId, let bauakte = loadedAkten[id] {
                 names[id] = [bauakte.number, bauakte.title].compactMap { $0 }.joined(separator: " · ")
             }
         }
         taskBauakten = names
+    }
+}
+
+/// Schnellzugriff: Symbol über Text, gleich groß, ruhig; optional mit Zähler.
+struct QuickLink: View {
+    let title: String
+    let symbol: String
+    var badge = 0
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 6) {
+                Image(systemName: symbol)
+                    .font(.title3)
+                    .foregroundStyle(Theme.actionPrimary)
+                    .frame(height: 24)
+                    .overlay(alignment: .topTrailing) {
+                        if badge > 0 {
+                            Text("\(badge)")
+                                .font(.caption2.weight(.bold).monospacedDigit())
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5).padding(.vertical, 1)
+                                .background(Theme.actionPrimary, in: Capsule())
+                                .offset(x: 14, y: -6)
+                        }
+                    }
+                Text(title)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(Color.primary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+            .frame(maxWidth: .infinity, minHeight: 72)
+            .background(Theme.card, in: RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+            .contentShape(RoundedRectangle(cornerRadius: Theme.cardRadius, style: .continuous))
+        }
+        .buttonStyle(RowButtonStyle())
+        .accessibilityLabel(badge > 0 ? "\(title), \(badge) offen" : title)
     }
 }
 
@@ -511,60 +386,51 @@ struct TodayJob: Identifiable {
     }
 }
 
-/// Karte für einen Einsatz: Zeit und Status, Tätigkeit, Baustelle, Kolonne in ihrer Farbe, Hinweise und
-/// die drei Handgriffe vor Ort – Anrufen, Route, Akte öffnen.
+/// Karte für einen Einsatz: Uhrzeit groß links, Baustelle, Adresse, Kolonne (Punkt + Name), Tätigkeit, Hinweise;
+/// darunter drei gleich große Aktionen Akte · Anrufen · Route.
 struct TodayJobCard: View {
     let job: TodayJob
     let open: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 12) {
             Button(action: open) {
-                VStack(alignment: .leading, spacing: 6) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text(job.timeText)
-                            .font(.title3.monospacedDigit().weight(.bold))
-                            .foregroundStyle(Theme.navyText)
-                        Spacer(minLength: 8)
-                        if let status = job.status { BauakteStatusChip(status: status) }
-                    }
-                    Text(job.activity).font(.headline).foregroundStyle(.primary)
-                    Text([job.number, job.title].compactMap { $0 }.joined(separator: " · "))
-                        .font(.subheadline).foregroundStyle(.primary).lineLimit(2)
-                    if let address = job.address {
-                        Label(address, systemImage: "mappin.and.ellipse").labelStyle(TightLabelStyle())
-                            .font(.footnote).foregroundStyle(Theme.textSecondary).lineLimit(2)
-                    }
-                    if job.crewName != nil || !job.team.isEmpty {
-                        VStack(alignment: .leading, spacing: 4) {
-                            if let crew = job.crewName {
-                                HStack(spacing: 5) {
-                                    Circle().fill(job.crewColor ?? Theme.accent).frame(width: 9, height: 9)
-                                    Text(crew).font(.caption.weight(.semibold))
-                                }
-                                .padding(.horizontal, 8).padding(.vertical, 3)
-                                .background((job.crewColor ?? Theme.accent).opacity(0.14), in: Capsule())
-                            }
-                            if !job.team.isEmpty {
-                                Text(job.team.joined(separator: ", "))
-                                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
-                            }
+                HStack(alignment: .top, spacing: 14) {
+                    VStack(alignment: .leading, spacing: 0) {
+                        Text(job.startText ?? "–")
+                            .font(.title2.monospacedDigit().weight(.bold))
+                        if let end = job.endText {
+                            Text("bis \(end)").font(.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
                         }
                     }
-                    if let contact = job.contactName {
-                        Label(contact, systemImage: "person.crop.circle").labelStyle(TightLabelStyle())
-                            .font(.caption).foregroundStyle(Theme.textSecondary)
+                    .frame(width: 72, alignment: .leading)
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text([job.number, job.title].compactMap { $0 }.joined(separator: " · "))
+                            .font(.headline)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                        if let address = job.address {
+                            Text(address).font(.subheadline).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                        }
+                        HStack(spacing: 6) {
+                            if let crew = job.crewName {
+                                Circle().fill(job.crewColor ?? Theme.textSecondary).frame(width: 8, height: 8)
+                                Text(crew).font(.subheadline.weight(.medium))
+                                Text("·").foregroundStyle(Theme.textSecondary)
+                            }
+                            Text(job.activity).font(.subheadline).foregroundStyle(Theme.textSecondary)
+                        }
+                        .lineLimit(1)
+                        if job.status != nil, let status = job.status, status == .cancelled {
+                            Text("Bauakte storniert").font(.caption.weight(.semibold)).foregroundStyle(Theme.error)
+                        }
+                        ForEach(job.warnings, id: \.self) { warning in
+                            Label(warning, systemImage: "exclamationmark.triangle").labelStyle(TightLabelStyle())
+                                .font(.caption.weight(.medium)).foregroundStyle(Theme.hint)
+                        }
                     }
-                    if let notes = job.notes?.compactText {
-                        Label("Notiz: \(notes)", systemImage: "text.bubble").labelStyle(TightLabelStyle())
-                            .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)
-                    }
-                    ForEach(job.warnings, id: \.self) { warning in
-                        Label(warning, systemImage: "exclamationmark.triangle.fill").labelStyle(TightLabelStyle())
-                            .font(.caption.weight(.medium)).foregroundStyle(Theme.hint)
-                    }
+                    Spacer(minLength: 0)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -572,28 +438,41 @@ struct TodayJobCard: View {
 
             HStack(spacing: 8) {
                 Button(action: open) { Label("Akte", systemImage: "folder") }
-                    .estrichButton(.primary)
+                    .estrichButton(.secondary, size: .compact, fullWidth: true)
                     .accessibilityIdentifier("todayJobOpen")
-                if let phone = job.phone {
-                    Link(destination: phone) { Label("Anrufen", systemImage: "phone.fill") }
-                        .estrichButton(.secondary)
-                        .accessibilityIdentifier("todayJobCall")
-                }
-                if let route = job.route {
-                    Link(destination: route) { Label("Route", systemImage: "car.fill") }
-                        .estrichButton(.secondary)
-                        .accessibilityIdentifier("todayJobRoute")
-                }
-                Spacer(minLength: 0)
+                action("Anrufen", "phone", job.phone, id: "todayJobCall")
+                action("Route", "arrow.triangle.turn.up.right.diamond", job.route, id: "todayJobRoute")
             }
+            .lineLimit(1)
         }
-        .padding(14)
-        .padding(.leading, 4)
+        .padding(16)
         .card()
-        .overlay(alignment: .leading) {
-            UnevenRoundedRectangle(topLeadingRadius: Theme.cardRadius, bottomLeadingRadius: Theme.cardRadius)
-                .fill(job.crewColor ?? Theme.accent).frame(width: 5)
+    }
+
+    @ViewBuilder
+    private func action(_ title: String, _ symbol: String, _ url: URL?, id: String) -> some View {
+        if let url {
+            Link(destination: url) { Label(title, systemImage: symbol) }
+                .estrichButton(.secondary, size: .compact, fullWidth: true)
+                .accessibilityIdentifier(id)
+        } else {
+            Button {} label: { Label(title, systemImage: symbol) }
+                .estrichButton(.secondary, size: .compact, fullWidth: true)
+                .disabled(true)
         }
+    }
+
+    /// Platzhalter beim ersten Laden.
+    static var placeholder: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("08:00  Baustelle wird geladen").font(.title3.weight(.bold))
+            Text("Straße 1, 00000 Ort").font(.subheadline)
+            Text("Kolonne · Tätigkeit").font(.subheadline)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .card()
+        .redacted(reason: .placeholder)
     }
 }
 
@@ -723,93 +602,74 @@ struct RowButtonStyle: ButtonStyle {
     }
 }
 
-/// Kopf in Navy: Marke, Server, Person, Gerät; Benutzerwechsel auf Poolgeräten.
+/// Kompakter Kopf: Begrüßung und Datum in einer Zeile, rechts Abgleich (antippen = Details) und – auf Poolgeräten –
+/// Personenwechsel als Symbol.
 struct HomeHeader: View {
-    /// Heutige Einsätze bzw. offene Aufgaben (nil = noch nicht geladen).
-    var todayCount: Int?
-    var openTasks: Int?
-    var onTasks: () -> Void = {}
     var onSync: () -> Void = {}
 
     @Environment(AppModel.self) private var model
-    @Environment(\.horizontalSizeClass) private var sizeClass
-    @Environment(\.colorScheme) private var colorScheme
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 28, style: .continuous)
-        VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 8) {
-                BrandMark(onDark: colorScheme == .dark)
-                    .frame(width: 22, height: 22)
-                    .accessibilityHidden(true)
-                Text(model.server?.info.serverName ?? "EstrichONE")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(Theme.textSecondary)
-                    .lineLimit(1)
-                Spacer(minLength: 8)
-                if model.isPoolDevice {
-                    Button { model.lock() } label: {
-                        Image(systemName: "person.2.fill")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(Theme.actionPrimary)
-                            .frame(width: 40, height: 40)
-                            .background(Theme.secondaryFill, in: Circle())
-                    }
-                    .accessibilityLabel("Person wechseln")
-                    .accessibilityIdentifier("switchUserButton")
-                }
-            }
+        HStack(alignment: .center, spacing: 10) {
             if let user = model.active?.user {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(greeting), \(Self.firstName(user.displayName))")
-                        .font(.title.weight(.bold))
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(2)
-                        .minimumScaleFactor(0.8)
-                        .accessibilityLabel(user.displayName)
-                        .accessibilityIdentifier("currentUserName")
-                    Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                        .font(.subheadline)
-                        .foregroundStyle(Theme.textSecondary)
+                ViewThatFits(in: .horizontal) {
+                    HStack(alignment: .firstTextBaseline, spacing: 8) {
+                        greetingText(user)
+                        dateText
+                    }
+                    VStack(alignment: .leading, spacing: 0) {
+                        greetingText(user)
+                        dateText
+                    }
                 }
             }
-            HStack(spacing: 8) { metrics }
+            Spacer(minLength: 4)
+            Button(action: onSync) {
+                Image(systemName: syncState.symbol)
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(syncState.tint)
+                    .frame(width: 40, height: 40)
+                    .background(Theme.card, in: Circle())
+            }
+            .accessibilityLabel("Abgleich: \(syncState.text)")
+            .accessibilityIdentifier("syncStatusIcon")
+            if model.isPoolDevice {
+                Button { model.lock() } label: {
+                    Image(systemName: "person.2")
+                        .font(.body.weight(.semibold))
+                        .foregroundStyle(Theme.actionPrimary)
+                        .frame(width: 40, height: 40)
+                        .background(Theme.card, in: Circle())
+                }
+                .accessibilityLabel("Person wechseln")
+                .accessibilityIdentifier("switchUserButton")
+            }
         }
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background {
-            shape.fill(Theme.card)
-        }
-        .overlay(shape.strokeBorder(Theme.line.opacity(0.5)))
-        
-        .padding(.horizontal, sizeClass == .regular ? 20 : 16)
-        .padding(.top, 8)
     }
 
-    @ViewBuilder
-    private var metrics: some View {
-        MetricCapsule(symbol: "calendar", value: todayCount.map(String.init) ?? "–", label: "heute")
-            .accessibilityLabel("\(todayCount ?? 0) Einsätze heute")
-        Button(action: onTasks) {
-            MetricCapsule(symbol: "checklist", value: openTasks.map(String.init) ?? "–", label: "offen")
-                .accessibilityLabel("\(openTasks ?? 0) offene Aufgaben")
-        }
-        .buttonStyle(.plain)
-        Button(action: onSync) {
-            MetricCapsule(symbol: syncState.symbol, value: nil, label: "")
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel("Abgleich: \(syncState.text)")
-        .accessibilityIdentifier("syncStatusIcon")
+    private func greetingText(_ user: UserSummary) -> some View {
+        Text("\(greeting), \(Self.firstName(user.displayName))")
+            .font(.title2.weight(.bold))
+            .lineLimit(1)
+            .minimumScaleFactor(0.8)
+            .accessibilityLabel(user.displayName)
+            .accessibilityIdentifier("currentUserName")
     }
 
-    private var syncState: (symbol: String, text: String) {
-        guard let sync = model.active?.sync else { return ("icloud.slash", "Nicht verbunden") }
-        if sync.isRunning { return ("arrow.triangle.2.circlepath", "Wird abgeglichen") }
-        if sync.isOffline { return ("wifi.slash", "Offline") }
-        if sync.summary?.hasProblems == true { return ("exclamationmark.icloud", "Bitte prüfen") }
-        if let summary = sync.summary, !summary.isSettled { return ("icloud.and.arrow.up", "Wird übertragen") }
-        return ("checkmark.icloud", "Aktuell")
+    private var dateText: some View {
+        Text(Date.now.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)))
+            .font(.subheadline)
+            .foregroundStyle(Theme.textSecondary)
+            .lineLimit(1)
+    }
+
+    private var syncState: (symbol: String, text: String, tint: Color) {
+        guard let sync = model.active?.sync else { return ("icloud.slash", "nicht verbunden", Theme.textSecondary) }
+        if sync.isRunning { return ("arrow.triangle.2.circlepath", "wird abgeglichen", Theme.actionPrimary) }
+        if sync.isOffline { return ("wifi.slash", "offline", Theme.textSecondary) }
+        if sync.summary?.hasProblems == true { return ("exclamationmark.icloud", "bitte prüfen", Theme.error) }
+        if let summary = sync.summary, !summary.isSettled { return ("icloud.and.arrow.up", "wird übertragen", Theme.actionPrimary) }
+        return ("checkmark.icloud", "aktuell", Theme.textSecondary)
     }
 
     private var greeting: String {
@@ -822,32 +682,6 @@ struct HomeHeader: View {
 
     static func firstName(_ name: String) -> String {
         name.split(separator: " ").first.map(String.init) ?? name
-    }
-}
-
-/// Kennzahl als Glas-Kapsel auf dem dunkelblauen Kopf.
-private struct MetricCapsule: View {
-    let symbol: String
-    let value: String?
-    let label: String
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Image(systemName: symbol).font(.subheadline.weight(.semibold))
-            if let value {
-                Text(value).font(.subheadline.weight(.bold).monospacedDigit())
-            }
-            if !label.isEmpty {
-                Text(label).font(.subheadline)
-            }
-        }
-        .foregroundStyle(Color.primary)
-        .lineLimit(1)
-        .fixedSize()
-        .padding(.horizontal, 12)
-        .frame(minHeight: 36)
-        .background(Theme.secondaryFill, in: Capsule())
-        .accessibilityElement(children: .combine)
     }
 }
 
