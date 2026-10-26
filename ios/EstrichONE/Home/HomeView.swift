@@ -203,8 +203,19 @@ struct HomeView: View {
                         .font(.caption2).foregroundStyle(Theme.textSecondary)
                 }
             }
-            if jobs.isEmpty {
-                Label(planning == nil && dispatch == nil ? "Planung wird geladen …" : "Heute ist für Sie nichts eingeplant.",
+            if jobs.isEmpty, planning == nil, dispatch == nil {
+                // Erstes Laden: Platzhalter statt Springen.
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("08:00–12:00").font(.title3.weight(.bold))
+                    Text("Einsatz wird geladen").font(.headline)
+                    Text("Baustelle, Adresse und Kolonne").font(.subheadline)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .card()
+                .redacted(reason: .placeholder)
+            } else if jobs.isEmpty {
+                Label("Heute ist für Sie nichts eingeplant.",
                       systemImage: "calendar")
                     .font(.subheadline)
                     .foregroundStyle(Theme.textSecondary)

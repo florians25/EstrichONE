@@ -25,6 +25,17 @@ struct MoreView: View {
                     }
                 }
 
+                Section {
+                    NavigationLink { MyTasksView() } label: { Label("Meine Aufgaben", systemImage: "checklist") }
+                        .accessibilityIdentifier("myTasksTile")
+                    NavigationLink { DispatchView() } label: { Label("Wer fährt wohin", systemImage: "car.2") }
+                        .accessibilityIdentifier("dispatchRow")
+                    NavigationLink { MyWeekView() } label: { Label("Meine Woche", systemImage: "calendar") }
+                        .accessibilityIdentifier("myWeekTile")
+                } header: {
+                    Text("Planung und Aufgaben")
+                }
+
                 if let user = model.active?.user {
                     Section {
                         HStack(spacing: 14) {
@@ -113,6 +124,15 @@ struct MoreView: View {
                 }
             }
             .navigationTitle("Mehr")
+            .navigationDestination(for: HomeRoute.self) { route in
+                switch route {
+                case let .bauakte(id): BauakteDetailView(bauakteId: id)
+                case .tasks: MyTasksView()
+                case .week: MyWeekView()
+                case .sync: if let sync = model.active?.sync { SyncView(sync: sync) }
+                case .dispatch: DispatchView()
+                }
+            }
             .confirmationDialog("Abmelden?", isPresented: $confirmSignOut, titleVisibility: .visible) {
                 Button(unsentBeforeSignOut > 0 ? "Trotzdem abmelden und Daten löschen" : "Abmelden", role: .destructive) {
                     Task { await model.signOut() }

@@ -170,3 +170,36 @@ struct WizardProgress: View {
         .accessibilityIdentifier("wizardProgress")
     }
 }
+
+
+/// Platzhalter beim ersten Laden (graue Balken statt Springen), respektiert „Bewegung reduzieren“.
+struct SkeletonList: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var pulse = false
+
+    var body: some View {
+        List {
+            Section {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("2026-000").font(.subheadline)
+                    Text("Bauvorhaben wird geladen").font(.title2.weight(.bold))
+                    Text("Straße 1, 00000 Ort").font(.subheadline)
+                    Text("Kunde · Ansprechpartner").font(.subheadline)
+                }
+                .padding(.vertical, 4)
+            }
+            Section {
+                ForEach(0..<6, id: \.self) { _ in
+                    HStack { Text("Bereich der Bauakte"); Spacer(); Text("0") }.frame(minHeight: 44)
+                }
+            }
+        }
+        .redacted(reason: .placeholder)
+        .opacity(pulse ? 0.55 : 1)
+        .onAppear {
+            guard !reduceMotion else { return }
+            withAnimation(.easeInOut(duration: 0.9).repeatForever(autoreverses: true)) { pulse = true }
+        }
+        .accessibilityLabel("Wird geladen")
+    }
+}

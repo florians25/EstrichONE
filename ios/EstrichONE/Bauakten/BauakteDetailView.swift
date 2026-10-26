@@ -21,6 +21,8 @@ struct BauakteDetailView: View {
     @State private var inspections: [Inspection] = []
     @State private var acceptances: [Acceptance] = []
     @State private var showsInspectionPDF = false
+    @State private var loaded = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedArea: Area?
     @State private var toast: String?
     @State private var todayAssignments: [Assignment] = []
@@ -65,10 +67,12 @@ struct BauakteDetailView: View {
                 .overlay(alignment: .bottom) {
                     if let toast {
                         Label(toast, systemImage: "checkmark.circle.fill")
+                            .symbolEffect(.bounce, value: toast)
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
+                            .foregroundStyle(Color.primary)
                             .padding(.horizontal, 16).padding(.vertical, 12)
-                            .background(Theme.success, in: Capsule())
+                            .background(.regularMaterial, in: Capsule())
+                            .overlay(Capsule().strokeBorder(Theme.line.opacity(0.6)))
                             .padding(.horizontal).padding(.bottom, 16)
                             .transition(.move(edge: .bottom).combined(with: .opacity))
                             .accessibilityIdentifier("bauakteToast")
@@ -138,10 +142,13 @@ struct BauakteDetailView: View {
                 } message: {
                     Text("Die Bauakte bleibt mit Verlauf erhalten. Löschen ist nur im Büro möglich.")
                 }
+            } else if !loaded {
+                SkeletonList()
             } else {
                 MissingBauakteView(bauakteId: bauakteId) { await reload() }
             }
         }
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: loaded)
         .task(id: model.active?.sync?.revision) { await reload() }
         .task {
             try? await model.active?.service?.markOpened(bauakteId)
@@ -153,110 +160,113 @@ struct BauakteDetailView: View {
 
     // MARK: Abschnitte
 
-    /// Kopf als weiche Karte im Markenblau: Nummer und Titel groß, Status als farbige Kapsel (Menü), Kurzangaben als
-    /// runde Chips, Schnellaktionen als runde Symbolknöpfe. iPad: Kunde, Baustelle und Zeitraum nebeneinander.
+    /// Kopf als dichte, ruhige Übersicht: was, wo, wer, Status, Kenndaten, Zeitraum und nächster Einsatz, offene Punkte,
+    /// letzte Änderung. Adresse antippen = Route, Kunde/Ansprechpartner antippen = Anruf.
     private func header(_ bauakte: Bauakte) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
-        let projectBadges = schema?.badges(for: bauakte.projectData, lists: lists) ?? bauakte.project.badges
-        let badges = projectBadges + [Self.period(bauakte)].compactMap { $0 }
+        let facts = schema?.badges(for: bauakte.projectData, lists: lists) ?? bauakte.project.badges
+        let openItems = workItems.filter { !$0.isDone }
+        let openDefects = openItems.filter { $0.kind == .defect }.count
         return Section {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .center) {
                     Text(bauakte.number ?? "Neu · noch ohne Nummer")
                         .font(.subheadline.monospacedDigit().weight(.semibold))
-                        .foregroundStyle(.white.opacity(0.75))
+                        .foregroundStyle(Theme.textSecondary)
                         .accessibilityIdentifier("bauakteNumber")
                     if bauakte.syncState != .synced {
-                        SyncStateBadge(state: bauakte.syncState).colorScheme(.dark)
+                        SyncStateBadge(state: bauakte.syncState)
                     }
                     Spacer()
                     statusMenu(bauakte)
                 }
                 Text(bauakte.title)
                     .font(.title2.weight(.bold))
-                    .foregroundStyle(.white)
                     .multilineTextAlignment(.leading)
                     .accessibilityIdentifier("bauakteTitle")
                 if bauakte.status == .cancelled {
                     Label("Storniert: \(bauakte.cancellationReason ?? "ohne Angabe")", systemImage: "xmark.circle")
-                        .font(.footnote.weight(.semibold)).foregroundStyle(.white)
+                        .font(.footnote.weight(.semibold)).foregroundStyle(Theme.error)
                 }
                 if let statusError {
-                    Text(statusError).font(.footnote).foregroundStyle(.white)
-                        .padding(8).background(Theme.error.opacity(0.8), in: RoundedRectangle(cornerRadius: 8))
+                    Text(statusError).font(.footnote).foregroundStyle(Theme.error)
                 }
-                if sizeClass == .regular {
-                    HStack(alignment: .top, spacing: 24) {
-                        headerInfo("Kunde", customer?.name ?? "–", symbol: "person.crop.circle")
-                        headerInfo("Baustelle", bauakte.addressLine ?? "Adresse fehlt", symbol: "mappin.and.ellipse")
-                        headerInfo("Zeitraum", Self.period(bauakte) ?? "nicht geplant", symbol: "calendar")
+                VStack(alignment: .leading, spacing: 8) {
+                    if let address = bauakte.addressLine {
+                        factRow("mappin.and.ellipse", address, link: MapsLink.url(for: bauakte), linkSymbol: "arrow.triangle.turn.up.right.circle")
+                    } else {
+                        factRow("mappin.slash", "Adresse fehlt", tint: Theme.hint)
                     }
-                } else if let address = bauakte.addressLine {
-                    Label(address, systemImage: "mappin.and.ellipse").labelStyle(TightLabelStyle())
-                        .font(.footnote).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
+                    if let customer {
+                        factRow(customer.isCompany ? "building.2" : "person", customer.name,
+                                link: ContactLink.phone(customer.phone), linkSymbol: "phone.circle")
+                    }
+                    if let name = bauakte.siteContactName ?? bauakte.siteContactPhone {
+                        factRow("person.badge.shield.checkmark", "Vor Ort: \(name)",
+                                link: ContactLink.phone(bauakte.siteContactPhone), linkSymbol: "phone.circle")
+                    }
+                    ForEach(todayAssignments) { assignment in
+                        factRow("calendar.badge.clock",
+                                ["Heute", assignment.startText.map { "ab \($0)" }, assignment.activity, assignment.crewName]
+                                    .compactMap { $0 }.joined(separator: " · "))
+                        ForEach(assignment.warnings, id: \.self) { warning in
+                            factRow("exclamationmark.triangle", warning, tint: Theme.hint)
+                        }
+                    }
+                    if let period = Self.period(bauakte), todayAssignments.isEmpty {
+                        factRow("calendar", "Geplant: \(period)")
+                    }
+                    if !openItems.isEmpty {
+                        factRow("checklist", openDefects > 0 ? "\(openItems.count) offen, davon \(openDefects) Mängel" : "\(openItems.count) Aufgaben offen",
+                                tint: openDefects > 0 ? Theme.hint : nil)
+                    }
+                    if let updated = bauakte.updatedAt {
+                        factRow("clock", "Zuletzt geändert \(updated.formatted(.relative(presentation: .named)))")
+                    }
                 }
-                if !projectBadges.isEmpty || (sizeClass != .regular && !badges.isEmpty) {
+                if !facts.isEmpty {
                     ChipFlow {
-                        ForEach(sizeClass == .regular ? projectBadges : badges, id: \.self) { badge in
-                            Text(badge)
+                        ForEach(facts, id: \.self) { fact in
+                            Text(fact)
                                 .font(.caption.weight(.semibold))
-                                .foregroundStyle(.white)
-                                .padding(.horizontal, 10).padding(.vertical, 4)
-                                .background(.white.opacity(0.16), in: Capsule())
+                                .padding(.horizontal, 8).padding(.vertical, 4)
+                                .background(Theme.secondaryFill, in: Capsule())
                         }
                     }
                     .accessibilityIdentifier("projectBadges")
-                }
-                if let customer, sizeClass != .regular {
-                    HStack(spacing: 10) {
-                        Label(customer.name, systemImage: customer.isCompany ? "building.2" : "person.crop.circle")
-                            .labelStyle(TightLabelStyle())
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                            .lineLimit(1)
-                        Spacer(minLength: 4)
-                        if let phone = ContactLink.phone(customer.phone) {
-                            Link(destination: phone) { roundAction("Kunde anrufen", symbol: "phone.fill") }
-                                .accessibilityIdentifier("headerCallButton")
-                        }
-                    }
-                }
-                ForEach(todayAssignments) { assignment in
-                    VStack(alignment: .leading, spacing: 2) {
-                        Label("Heute \(assignment.startText.map { "ab \($0)" } ?? "")", systemImage: "calendar.badge.clock")
-                            .labelStyle(TightLabelStyle())
-                            .font(.caption.weight(.bold)).foregroundStyle(.white.opacity(0.8))
-                        Text([assignment.activity, assignment.crewName].compactMap { $0 }.joined(separator: " · "))
-                            .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
-                        ForEach(assignment.warnings, id: \.self) { warning in
-                            Label(warning, systemImage: "exclamationmark.triangle.fill").labelStyle(TightLabelStyle())
-                                .font(.caption.weight(.semibold)).foregroundStyle(Color(hex: 0xFCD34D))
-                        }
-                    }
-                    .padding(10)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
                 if latestInitialInspection != nil {
                     Button { showsInspectionPDF = true } label: {
                         Label("Erstbegehungsprotokoll (PDF)", systemImage: "doc.richtext")
                             .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 12)
-                            .frame(minHeight: 40)
-                            .background(.white.opacity(0.14), in: Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.borderless)
                     .accessibilityIdentifier("headerInspectionPDFButton")
                 }
             }
-            .padding(16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(colors: [Theme.navy, Theme.navyLight], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
-            .overlay(shape.strokeBorder(.white.opacity(0.08)))
-            .shadow(color: Theme.navy.opacity(0.18), radius: 12, y: 6)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
+            .padding(.vertical, 4)
+        }
+    }
+
+    /// Eine Zeile der Kopfübersicht: Symbol, Text, optional ein Knopf (Route, Anruf).
+    private func factRow(_ symbol: String, _ text: String, link: URL? = nil, linkSymbol: String = "", tint: Color? = nil) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            Image(systemName: symbol)
+                .font(.subheadline)
+                .foregroundStyle(tint ?? Theme.textSecondary)
+                .frame(width: 20)
+                .accessibilityHidden(true)
+            Text(text)
+                .font(.subheadline)
+                .foregroundStyle(tint ?? Color.primary)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 4)
+            if let link {
+                Link(destination: link) {
+                    Image(systemName: linkSymbol).font(.title2).foregroundStyle(Theme.actionPrimary)
+                }
+                .frame(minWidth: 44, minHeight: 32)
+                .accessibilityLabel(linkSymbol.hasPrefix("phone") ? "Anrufen" : "Route starten")
+            }
         }
     }
 
@@ -275,17 +285,28 @@ struct BauakteDetailView: View {
                 .accessibilityIdentifier("cancelBauakteButton")
             }
         } label: {
-            HStack(spacing: 4) {
-                BauakteStatusChip(status: bauakte.status)
-                Image(systemName: "chevron.down").font(.caption2.weight(.bold)).foregroundStyle(.white.opacity(0.8))
+            HStack(spacing: 6) {
+                Circle().fill(Self.statusColor(bauakte.status)).frame(width: 8, height: 8)
+                Text(bauakte.status.title).font(.subheadline.weight(.semibold)).foregroundStyle(Color.primary)
+                Image(systemName: "chevron.up.chevron.down").font(.caption2.weight(.bold)).foregroundStyle(Theme.textSecondary)
             }
-            .padding(.leading, 2).padding(.trailing, 8).padding(.vertical, 2)
-            .background(.white.opacity(0.92), in: Capsule())
-            .frame(minHeight: 44)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 10)
+            .frame(minHeight: 36)
+            .background(Theme.secondaryFill, in: Capsule())
+            .contentShape(Capsule())
         }
         .accessibilityLabel("Status: \(bauakte.status.title). Ändern")
         .accessibilityIdentifier("statusMenu")
+    }
+
+    static func statusColor(_ status: BauakteStatus) -> Color {
+        switch status {
+        case .inquiry, .planned: Theme.textSecondary
+        case .inProgress: Theme.actionPrimary
+        case .drying: Theme.hint
+        case .completed: Theme.success
+        case .cancelled: Theme.error
+        }
     }
 
     private func headerInfo(_ title: String, _ value: String, symbol: String) -> some View {
@@ -560,38 +581,29 @@ struct BauakteDetailView: View {
         List {
             header(bauakte)
             Section {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
-                    Button { capturing = true } label: { Label("Foto", systemImage: "camera.fill") }
+                // Kompakte Aktionsleiste: gleichartige Knöpfe, Foto als einzige hervorgehobene Aktion.
+                HStack(spacing: 8) {
+                    Button { capturing = true } label: { Label("Foto", systemImage: "camera") }
                         .buttonStyle(ActionTileStyle(rank: .primary))
                         .accessibilityIdentifier("addPhotoButton")
                     Button { scanning = true } label: { Label("Scannen", systemImage: "doc.viewfinder") }
                         .buttonStyle(ActionTileStyle())
                         .accessibilityIdentifier("scanDocumentButton")
-                    Button { form = .diary } label: { Label("Bautagebuch", systemImage: "book.fill") }
+                    Button { form = .diary } label: { Label("Tagebuch", systemImage: "book") }
                         .buttonStyle(ActionTileStyle())
                         .accessibilityIdentifier("addDiaryButton")
-                    Button { form = .initialInspection } label: { Label("Erstbegehung", systemImage: "checklist") }
-                        .buttonStyle(ActionTileStyle())
-                        .accessibilityIdentifier("addInspectionButton")
-                    Button { form = .acceptance } label: { Label("Abnahme", systemImage: "signature") }
-                        .buttonStyle(ActionTileStyle())
-                        .accessibilityIdentifier("addAcceptanceButton")
-                    Button { form = .defect } label: { Label("Mangel melden", systemImage: "exclamationmark.triangle.fill") }
+                    Button { form = .defect } label: { Label("Mangel", systemImage: "exclamationmark.triangle") }
                         .buttonStyle(ActionTileStyle())
                         .accessibilityIdentifier("addDefectButton")
-                    if let phone = ContactLink.phone(bauakte.siteContactPhone ?? customer?.phone) {
-                        Link(destination: phone) { Label("Anrufen", systemImage: "phone.fill") }
-                            .buttonStyle(ActionTileStyle())
-                    }
-                    if let route = MapsLink.url(for: bauakte) {
-                        Link(destination: route) { Label("Route", systemImage: "car.fill") }
-                            .buttonStyle(ActionTileStyle())
-                            .accessibilityIdentifier("navigateButton")
-                    }
                     Menu {
+                        Button("Erstbegehung", systemImage: "checklist") { form = .initialInspection }
+                            .accessibilityIdentifier("addInspectionButton")
+                        Button("Abnahme", systemImage: "signature") { form = .acceptance }
+                            .accessibilityIdentifier("addAcceptanceButton")
+                        Divider()
                         Button("Notiz schreiben", systemImage: "square.and.pencil") { addingNote = true }
                         Button("Video aufnehmen", systemImage: "video") { recordingVideo = true }
-                        Button("Aufgabe anlegen", systemImage: "checklist") { form = .task }
+                        Button("Aufgabe anlegen", systemImage: "checklist.unchecked") { form = .task }
                         Button("CM-Messung", systemImage: "drop") { form = .cmMeasurement }
                     } label: {
                         Label("Mehr", systemImage: "ellipsis")
@@ -625,12 +637,11 @@ struct BauakteDetailView: View {
     private func areaRow(_ area: Area, _ bauakte: Bauakte) -> some View {
         HStack(spacing: 14) {
             Image(systemName: area.symbol)
-                .font(.body.weight(.semibold))
-                .foregroundStyle(.white)
-                .frame(width: 32, height: 32)
-                .background(area.color, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+                .font(.body)
+                .foregroundStyle(Theme.actionPrimary)
+                .frame(width: 28)
                 .accessibilityHidden(true)
-            Text(area.title).font(.body.weight(.semibold)).foregroundStyle(Color.primary)
+            Text(area.title).font(.body).foregroundStyle(Color.primary)
             Spacer(minLength: 4)
             if let count = count(area, bauakte) {
                 Text(count).font(.subheadline).foregroundStyle(count == "Kunde fehlt" || count == "Angaben fehlen" ? Theme.hint : Theme.textSecondary)
@@ -735,6 +746,7 @@ struct BauakteDetailView: View {
     private func reload() async {
         guard let service = model.active?.service else { return }
         bauakte = try? await service.bauakte(bauakteId)
+        loaded = true
         let files = (try? await service.files(of: bauakteId)) ?? []
         photos = files.filter { $0.isPhoto || $0.isVideo }
         documents = files.filter(\.isDocument).sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
