@@ -60,7 +60,7 @@ struct BauaktenListView: View {
             CameraView(bauakte: bauakte) { _ in captureFor = nil }
         }
         .sheet(item: $inspectFor) { bauakte in
-            InitialInspectionView(bauakte: bauakte) { inspectFor = nil }
+            InspectionEntryView(bauakte: bauakte) { inspectFor = nil }
         }
         .task(id: "\(search)|\(showsArchive)|\(model.active?.sync?.revision ?? 0)") {
             guard let service = model.active?.service else { return }

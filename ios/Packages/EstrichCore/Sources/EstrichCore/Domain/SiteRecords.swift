@@ -164,6 +164,12 @@ public struct Inspection: Identifiable, Equatable, Sendable {
     public let measuredCmPercent: Double?
     public let limitCmPercent: Double?
     public let isReadyForCovering: Bool?
+    /// Erstbegehung nach Schema: Prüfpunkte mit beliebigen Schlüsseln, Werte, Bemerkungen und Fotos je Punkt.
+    public let checkResults: [String: CheckResult]
+    public let values: [String: JSONValue]
+    public let checkRemarks: [String: String]
+    public let checkPhotos: [String: [UUID]]
+    public let schemaVersion: Int?
     public let syncState: SyncState
 
     public init(_ entity: LocalEntity) {
@@ -184,6 +190,15 @@ public struct Inspection: Identifiable, Equatable, Sendable {
             }
         }
         self.checks = checks
+        var results: [String: CheckResult] = [:]
+        for (key, value) in data["checks"]?.object ?? [:] {
+            if let result = value.string.flatMap(CheckResult.init(rawValue:)) { results[key] = result }
+        }
+        checkResults = results
+        values = data["values"]?.object ?? [:]
+        checkRemarks = (data["checkRemarks"]?.object ?? [:]).compactMapValues { $0.string }
+        checkPhotos = (data["checkPhotos"]?.object ?? [:]).mapValues { ($0.array ?? []).compactMap { $0.string.flatMap(UUID.init(uuidString:)) } }
+        schemaVersion = data["schemaVersion"]?.number.map { Int($0) }
         photoFileIds = (data["photoFileIds"]?.array ?? []).compactMap { $0.string.flatMap(UUID.init(uuidString:)) }
         location = data["location"]?.string
         binder = data["binder"]?.string.flatMap(ScreedBinderKind.init(rawValue:))
@@ -206,7 +221,7 @@ public struct Inspection: Identifiable, Equatable, Sendable {
     }
 
     /// Erstbegehung mit mindestens einem Mangel.
-    public var hasDefects: Bool { checks.values.contains(.notOk) }
+    public var hasDefects: Bool { checkResults.values.contains(.notOk) }
 }
 
 public enum SiteRecordError: Error, Equatable, Sendable {
@@ -215,6 +230,7 @@ public enum SiteRecordError: Error, Equatable, Sendable {
     case reasonRequired
     case checksRequired
     case invalidMeasurement
+    case fieldRequired(String)
     case storage
 
     public var message: String {
@@ -224,6 +240,7 @@ public enum SiteRecordError: Error, Equatable, Sendable {
         case .reasonRequired: "Bitte begründen, warum keine Erstbegehung notwendig ist."
         case .checksRequired: "Bitte mindestens einen Prüfpunkt bewerten."
         case .invalidMeasurement: "Der Messwert muss zwischen 0 und 20 CM-% liegen."
+        case let .fieldRequired(label): "Bitte noch angeben: \(label)."
         case .storage: "Die Daten konnten auf diesem Gerät nicht gespeichert werden."
         }
     }

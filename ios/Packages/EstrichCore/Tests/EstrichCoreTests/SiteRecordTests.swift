@@ -123,5 +123,38 @@ struct SiteRecordTests {
         #expect(server.entity(defect.id)?["kind"]?.string == "defect")
         #expect(try await service.acceptances(of: bauakte).first?.syncState == .synced)
     }
+
+    @Test("Erstbegehung nach Schema: Pflichtfelder, Werte, Bemerkungen und Fotos je Prüfpunkt werden gesendet")
+    func schemaInspection() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine) = try makeService(server: server)
+        let bauakte = try await service.create(NewBauakte(title: "EFH"))
+        let schema = FormSchema(key: "erstbegehung", version: 2, groups: [
+            FormSchema.Group(key: "pruef", label: "Prüfpunkte", fields: [
+                FormSchema.Field(key: "substrate", label: "Untergrund", type: .check, path: "substrate", required: true, photos: true),
+                FormSchema.Field(key: "kellerfenster", label: "Kellerfenster dicht", type: .check, path: "kellerfenster"),
+            ]),
+            FormSchema.Group(key: "werte", label: "Messwerte", fields: [
+                FormSchema.Field(key: "measuredArea", label: "Fläche", type: .number, path: "measuredArea", required: true, unit: "m²",
+                                 target: "project.totalArea"),
+            ]),
+        ])
+        await #expect(throws: SiteRecordError.fieldRequired("Untergrund")) {
+            try await service.addSchemaInspection(to: bauakte, schema: schema, notRequired: false, checks: ["kellerfenster": .ok],
+                                                  values: [:], checkRemarks: [:], checkPhotos: [:], photoFileIds: [], remarks: nil)
+        }
+        let photo = UUID.v7()
+        let id = try await service.addSchemaInspection(
+            to: bauakte, schema: schema, notRequired: false, checks: ["substrate": .notOk, "kellerfenster": .ok],
+            values: ["measuredArea": .number(118.5)], checkRemarks: ["substrate": " Risse im Flur ", "kellerfenster": " "],
+            checkPhotos: ["substrate": [photo]], photoFileIds: [], remarks: nil)
+        let local = try #require(try await service.inspections(of: bauakte).first)
+        #expect(local.hasDefects && local.checkResults["kellerfenster"] == .ok && local.schemaVersion == 2)
+        #expect(local.checkRemarks == ["substrate": "Risse im Flur"] && local.checkPhotos["substrate"] == [photo])
+        #expect(local.photoFileIds == [photo] && local.values["measuredArea"]?.number == 118.5)
+        _ = await engine.synchronize()
+        #expect(server.entity(id)?["values"]?["measuredArea"]?.number == 118.5)
+        #expect(server.entity(id)?["checks"]?["kellerfenster"]?.string == "ok")
+    }
 }
 

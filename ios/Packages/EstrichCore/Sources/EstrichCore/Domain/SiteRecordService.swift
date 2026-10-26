@@ -60,6 +60,37 @@ extension BauakteService {
         ], remarks: remarks, notes: notes, corrects: corrects)
     }
 
+    /// Erstbegehung nach dem Schema des Büros (`inspection.create` mit `values`, `checkRemarks`, `checkPhotos`, `schemaVersion`).
+    @discardableResult
+    public func addSchemaInspection(to bauakteId: UUID, schema: FormSchema, notRequired: Bool, checks: [String: CheckResult],
+                                    values: [String: JSONValue], checkRemarks: [String: String], checkPhotos: [String: [UUID]],
+                                    photoFileIds: [UUID], remarks: String?, notes: String? = nil,
+                                    corrects: UUID? = nil) async throws(SiteRecordError) -> UUID {
+        let reason = remarks?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        if notRequired, reason.isEmpty { throw .reasonRequired }
+        if !notRequired {
+            if checks.isEmpty, values.isEmpty { throw .checksRequired }
+            let missing = schema.fields.filter { field in
+                field.required && (field.type == .check ? checks[field.key] == nil : FormSchema.isEmpty(values[field.key] ?? .null))
+            }
+            if let first = missing.first { throw .fieldRequired(first.label) }
+        }
+        let remarksJSON = checkRemarks.compactMapValues { text -> JSONValue? in
+            let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            return trimmed.isEmpty ? nil : .string(trimmed)
+        }
+        let allPhotos = Array(Set(photoFileIds + checkPhotos.values.flatMap { $0 }))
+        return try await createInspection(bauakteId, kind: .initialInspection, fields: [
+            "notRequired": .bool(notRequired),
+            "checks": .object(notRequired ? [:] : checks.mapValues { .string($0.rawValue) }),
+            "values": .object(notRequired ? [:] : values.filter { $0.value != .null }),
+            "checkRemarks": .object(remarksJSON),
+            "checkPhotos": .object(checkPhotos.filter { !$0.value.isEmpty }.mapValues { .array($0.map { JSONValue($0) }) }),
+            "photoFileIds": .array(allPhotos.map { JSONValue($0) }),
+            "schemaVersion": .number(Double(schema.version)),
+        ], remarks: remarks, notes: notes, corrects: corrects)
+    }
+
     private func createInspection(_ bauakteId: UUID, kind: InspectionKind, fields: [String: JSONValue], remarks: String?,
                                   notes: String?, corrects: UUID?) async throws(SiteRecordError) -> UUID {
         let id = UUID.v7(now: currentDate())

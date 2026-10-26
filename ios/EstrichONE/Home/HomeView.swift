@@ -113,7 +113,7 @@ struct HomeView: View {
                 CameraView(bauakte: bauakte) { _ in captureFor = nil }
             }
             .sheet(item: $inspectFor) { bauakte in
-                InitialInspectionView(bauakte: bauakte) { inspectFor = nil }
+                InspectionEntryView(bauakte: bauakte) { inspectFor = nil }
             }
             .sheet(item: $siteTask) { task in
                 BauakteQuickPicker(task: task, todayIds: TodayJob.make(

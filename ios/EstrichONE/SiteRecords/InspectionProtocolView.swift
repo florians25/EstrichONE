@@ -19,6 +19,8 @@ struct InspectionProtocolView: View {
     var opensPDF = false
 
     @Environment(AppModel.self) private var model
+    @State private var schema: FormSchema?
+    @State private var lists = ValueLists([])
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var photos: [FileItem] = []
     @State private var selected: InitialCheck?
@@ -31,7 +33,7 @@ struct InspectionProtocolView: View {
 
     var body: some View {
         Group {
-            if sizeClass == .regular, !inspection.notRequired {
+            if sizeClass == .regular, !inspection.notRequired, inspection.schemaVersion == nil {
                 HStack(spacing: 0) {
                     List(selection: $selected) {
                         summarySection
@@ -46,7 +48,13 @@ struct InspectionProtocolView: View {
             } else {
                 List {
                     summarySection
-                    if !inspection.notRequired { checksSection(selectable: false) }
+                    if !inspection.notRequired {
+                        if inspection.schemaVersion != nil {
+                            SchemaInspectionResultSections(inspection: inspection, schema: schema, lists: lists)
+                        } else {
+                            checksSection(selectable: false)
+                        }
+                    }
                     notesSection
                     otherPhotosSection
                 }
@@ -68,13 +76,18 @@ struct InspectionProtocolView: View {
             }
         }
         .sheet(isPresented: $correcting) {
-            InitialInspectionView(bauakte: bauakte, correcting: inspection) { correcting = false }
+            InspectionEntryView(bauakte: bauakte, correcting: inspection) { correcting = false }
         }
         .sheet(item: $viewing) { file in
             PhotoViewer(photos: photos, selection: file.id) { Task { await loadPhotos() } }
         }
         .quickLookPreview($pdfURL)
         .task { if opensPDF, pdfURL == nil { await openPDF() } }
+        .task {
+            guard inspection.schemaVersion != nil, let service = model.active?.service else { return }
+            schema = await service.formSchema(key: "erstbegehung", using: nil)
+            lists = await service.valueLists()
+        }
         .alert("PDF nicht verfügbar", isPresented: Binding(get: { pdfMessage != nil }, set: { if !$0 { pdfMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {

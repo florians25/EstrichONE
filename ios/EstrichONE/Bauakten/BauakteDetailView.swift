@@ -123,7 +123,7 @@ struct BauakteDetailView: View {
                     case .defect: NewWorkItemView(bauakteId: bauakteId, initialKind: .defect) { self.form = nil }
                     case .diary: NewDiaryEntryView(bauakteId: bauakteId) { self.form = nil }
                     case .cmMeasurement: NewCmMeasurementView(bauakteId: bauakteId) { self.form = nil }
-                    case .initialInspection: InitialInspectionView(bauakte: bauakte) { self.form = nil }
+                    case .initialInspection: InspectionEntryView(bauakte: bauakte) { self.form = nil }
                     case .acceptance: NewAcceptanceView(bauakte: bauakte, customerName: customer?.name) { self.form = nil }
                     case .project: EditProjectView(bauakte: bauakte, schema: schema, lists: lists) { self.form = nil; Task { await reload() } }
                     }

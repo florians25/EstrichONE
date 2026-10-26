@@ -58,6 +58,8 @@ public struct ValueLists: Equatable, Sendable {
 public struct FormSchema: Equatable, Sendable {
     public enum FieldType: String, Sendable {
         case text, textarea, number, integer, select, boolean, date
+        /// Prüfpunkt (Erstbegehung): ok / nicht ok / entfällt, mit optionaler Bemerkung.
+        case check
     }
 
     public struct Field: Equatable, Sendable, Identifiable {
@@ -71,7 +73,26 @@ public struct FormSchema: Equatable, Sendable {
         public let unit: String?
         public let help: String?
         public let badge: Bool
+        /// Erstbegehung: Fotos je Punkt anbieten.
+        public let photos: Bool
+        /// Erstbegehung: Basisdaten-Pfad, in den der Server den Wert übernimmt (z. B. `project.totalArea`).
+        public let target: String?
         public var id: String { path }
+
+        public init(key: String, label: String, type: FieldType, list: String? = nil, path: String, required: Bool = false,
+                    unit: String? = nil, help: String? = nil, badge: Bool = false, photos: Bool = false, target: String? = nil) {
+            self.key = key
+            self.label = label
+            self.type = type
+            self.list = list
+            self.path = path
+            self.required = required
+            self.unit = unit
+            self.help = help
+            self.badge = badge
+            self.photos = photos
+            self.target = target
+        }
 
         /// Weg innerhalb von `project`: `["totalArea"]` bzw. `["custom", "fliesen"]`.
         public var projectPath: [String] {
@@ -85,6 +106,18 @@ public struct FormSchema: Equatable, Sendable {
         public let label: String
         public let fields: [Field]
         public var id: String { key }
+
+        public init(key: String, label: String, fields: [Field]) {
+            self.key = key
+            self.label = label
+            self.fields = fields
+        }
+    }
+
+    public init(key: String, version: Int, groups: [Group]) {
+        self.key = key
+        self.version = version
+        self.groups = groups
     }
 
     public let key: String
@@ -101,7 +134,8 @@ public struct FormSchema: Equatable, Sendable {
                 guard let key = field["key"]?.string, let type = field["type"]?.string.flatMap(FieldType.init(rawValue:)) else { return nil }
                 return Field(key: key, label: field["label"]?.string ?? key, type: type, list: field["list"]?.string,
                              path: field["path"]?.string ?? "project.custom.\(key)", required: field["required"]?.bool ?? false,
-                             unit: field["unit"]?.string, help: field["help"]?.string, badge: field["badge"]?.bool ?? false)
+                             unit: field["unit"]?.string, help: field["help"]?.string, badge: field["badge"]?.bool ?? false,
+                             photos: field["photos"]?.bool ?? false, target: field["target"]?.string)
             }
             return Group(key: key, label: group["label"]?.string ?? key, fields: fields)
         }
@@ -179,17 +213,22 @@ public struct FormSchema: Equatable, Sendable {
 extension BauakteService {
     /// Schema der Basisdaten: aus dem Sync, sonst der zuletzt geladene Stand; `nil` = feste Felder verwenden.
     public func formSchema(using client: AuthorizedClient? = nil) async -> FormSchema? {
-        if let synced = try? await store.entities(.formSchema).first(where: { $0.data["key"]?.string == "bauakte" }),
+        await formSchema(key: "bauakte", using: client)
+    }
+
+    /// Formular-Schema (`bauakte`, `erstbegehung`): aus dem Sync, sonst vom Server (zwischengespeichert), sonst `nil`.
+    public func formSchema(key: String, using client: AuthorizedClient?) async -> FormSchema? {
+        if let synced = try? await store.entities(.formSchema).first(where: { $0.data["key"]?.string == key }),
            let schema = FormSchema(synced.data) {
             return schema
         }
-        if let client, let fresh: JSONValue = try? await client.get("forms/bauakte"), let schema = FormSchema(fresh) {
+        if let client, let fresh: JSONValue = try? await client.get("forms/\(key)"), let schema = FormSchema(fresh) {
             if let data = try? JSONCoding.encoder.encode(fresh) {
-                try? await store.setMeta("form_schema_bauakte", String(decoding: data, as: UTF8.self))
+                try? await store.setMeta("form_schema_\(key)", String(decoding: data, as: UTF8.self))
             }
             return schema
         }
-        guard let text = (try? await store.meta("form_schema_bauakte")) ?? nil,
+        guard let text = (try? await store.meta("form_schema_\(key)")) ?? nil,
               let cached = try? JSONCoding.decoder.decode(JSONValue.self, from: Data(text.utf8)) else { return nil }
         return FormSchema(cached)
     }
