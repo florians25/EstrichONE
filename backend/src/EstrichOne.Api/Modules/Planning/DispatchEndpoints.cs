@@ -243,7 +243,8 @@ public sealed class DispatchService(
         var names = users.ToDictionary(u => u.Id, u => u.DisplayName);
         var crewList = crews.Select(c =>
         {
-            var crewVehicles = issued.Where(i => c.MemberUserIds.Contains(i.UserId)).Select(i => i.ResourceId).Distinct()
+            // Fest zugeordnete Fahrzeuge der Kolonne und an Mitglieder ausgegebene.
+            var crewVehicles = vehicles.Where(v => v.CrewId == c.Id).Select(v => v.Id).Concat(issued.Where(i => c.MemberUserIds.Contains(i.UserId)).Select(i => i.ResourceId)).Distinct()
                 .Select(id => vehicles.FirstOrDefault(v => v.Id == id)).Where(v => v is { Kind: ResourceKind.Vehicle })
                 .Select(v => new ResourceRef(v!.Id, v.Name, v.Kind)).ToList();
             var absent = people.Where(p => c.MemberUserIds.Contains(p.Id) && p.Note is not null)

@@ -15,6 +15,7 @@ public sealed class PlanningModule : IModule
         services.AddScoped<HrService>();
         services.AddScoped<DispatchService>();
         services.AddScoped<IFileReadGrant, EmployeeDocumentGrant>();
+        services.AddScoped<IFileReadGrant, ResourceFileGrant>();
         services.AddScoped<IDataInitializer, CalendarSeed>();
         services.AddScoped<IBauakteHintSource, PlanningHints>();
         services.AddScoped<IBauakteVisibilitySource, PlanningVisibility>();

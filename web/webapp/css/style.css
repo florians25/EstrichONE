@@ -273,7 +273,7 @@
 .sapMTB .sapMSegB:not(.eoSegFill) { flex-shrink: 0; min-width: max-content; }
 
 /* IconTabBar als reiner Inhaltswechsel (eigene Seiten je Reiter). */
-.eoNoTabHeader > .sapMITH, .eoNoTabHeader .sapMITBHead { display: none !important; }
+.eoNoTabHeader > .sapMITH, .eoNoTabHeader > .sapMITBHead { display: none !important; }
 
 /* Farbauswahl: Punkt vor jedem Eintrag (Farbe per data-dot, Regeln aus forms.ts) und vor dem gewählten Wert. */
 li[data-dot]::before { content: ""; display: inline-block; flex: none; width: 0.875rem; height: 0.875rem; border-radius: 50%;

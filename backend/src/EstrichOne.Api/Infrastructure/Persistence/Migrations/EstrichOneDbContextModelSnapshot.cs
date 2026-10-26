@@ -3555,6 +3555,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<Guid?>("CaseId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("case_id");
+
                     b.Property<Guid?>("CertificateFileId")
                         .HasColumnType("uuid")
                         .HasColumnName("certificate_file_id");
@@ -3574,6 +3578,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)")
                         .HasColumnName("note");
 
+                    b.Property<DateTimeOffset?>("RecordedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("recorded_at");
+
                     b.Property<Guid?>("RequestId")
                         .HasColumnType("uuid")
                         .HasColumnName("request_id");
@@ -3588,6 +3596,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_absences");
+
+                    b.HasIndex("CaseId")
+                        .HasDatabaseName("ix_absences_case_id");
 
                     b.HasIndex("CertificateFileId")
                         .HasDatabaseName("ix_absences_certificate_file_id");
@@ -4395,10 +4406,27 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
 
+                    b.Property<Guid?>("CrewId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("crew_id");
+
+                    b.PrimitiveCollection<List<Guid>>("DocumentFileIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("document_file_ids");
+
                     b.Property<string>("Identifier")
                         .HasMaxLength(50)
                         .HasColumnType("character varying(50)")
                         .HasColumnName("identifier");
+
+                    b.Property<Guid?>("ImageFileId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("image_file_id");
+
+                    b.Property<DateOnly?>("InspectionDue")
+                        .HasColumnType("date")
+                        .HasColumnName("inspection_due");
 
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
@@ -4409,6 +4437,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("kind");
+
+                    b.Property<string>("LicenseClass")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("license_class");
+
+                    b.Property<string>("Model")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("model");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -4421,6 +4459,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("notes");
 
+                    b.Property<DateOnly?>("ServiceDue")
+                        .HasColumnType("date")
+                        .HasColumnName("service_due");
+
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
@@ -4432,6 +4474,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_resources");
+
+                    b.HasIndex("CrewId")
+                        .HasDatabaseName("ix_resources_crew_id");
 
                     b.ToTable("resources", (string)null);
                 });
@@ -5177,6 +5222,15 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_employee_qualifications_employees_employee_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Resource", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Planning.Crew", null)
+                        .WithMany()
+                        .HasForeignKey("CrewId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_resources_crews_crew_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Sync.ProcessedOperation", b =>

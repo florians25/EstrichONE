@@ -440,6 +440,13 @@ export interface ResourceResponse {
   notes: string | null;
   isActive: boolean;
   version: number;
+  model?: string | null;
+  licenseClass?: string | null;
+  inspectionDue?: string | null;
+  serviceDue?: string | null;
+  imageFileId?: string | null;
+  documentFileIds?: string[] | null;
+  crewId?: string | null;
 }
 
 export interface CrewResponse {

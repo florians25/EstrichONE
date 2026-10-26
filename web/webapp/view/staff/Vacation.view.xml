@@ -133,9 +133,9 @@
 						<VBox class="sapUiSmallMargin">
 							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In der Planung erscheint nur „abwesend“."
 								type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
-							<Table items="{view>/sickNotes}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
+							<Table items="{path: 'view>/sickNotes', sorter: [{path: 'caseLabel', group: true}, {path: 'from'}]}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
 								<columns>
-									<Column><Text text="Mitarbeiter"/></Column>
+									<Column><Text text="Eintrag"/></Column>
 									<Column><Text text="Zeitraum"/></Column>
 									<Column width="6rem" hAlign="End"><Text text="Arbeitstage"/></Column>
 									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Notiz"/></Column>
@@ -143,8 +143,8 @@
 									<Column width="5rem" hAlign="End"><Text text=""/></Column>
 								</columns>
 								<items>
-									<ColumnListItem>
-										<Text text="{view>userName}"/>
+									<ColumnListItem type="Navigation" press=".onSickDetail">
+										<Text text="{view>kindText}"/>
 										<Text text="{view>rangeText}"/>
 										<Text text="{view>workingDays}"/>
 										<Text text="{= ${view>note} || '' }"/>

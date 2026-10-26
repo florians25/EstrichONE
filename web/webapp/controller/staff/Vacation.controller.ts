@@ -4,7 +4,11 @@ import type Control from "sap/ui/core/Control";
 import MessageBox from "sap/m/MessageBox";
 import Button from "sap/m/Button";
 import { del, get, post, put } from "../../util/api";
-import { date } from "../../util/format";
+import { date, dateTime } from "../../util/format";
+import Dialog from "sap/m/Dialog";
+import List from "sap/m/List";
+import StandardListItem from "sap/m/StandardListItem";
+import Text from "sap/m/Text";
 import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
 import { session } from "../../util/session";
@@ -22,7 +26,11 @@ interface RequestView {
 interface PlanRow { employeeId: string | null; userId: string; name: string; crews: { name: string }[]; entries: VacationGridData["rows"][number]["entries"]; vacationRemaining: number | null }
 interface Plan { from: string; to: string; state: string; holidays: { date: string; name: string }[]; rows: PlanRow[] }
 interface Reminder { kind: string; employeeId: string; employeeName: string; date: string; text: string; severity: string }
-interface SickNote { id: string; userId: string; userName: string; from: string; to: string; workingDays: number; note: string | null; certificateFileId: string | null }
+interface SickNote {
+	id: string; userId: string; userName: string; from: string; to: string; workingDays: number; note: string | null; certificateFileId: string | null;
+	caseId?: string | null; isFollowUp?: boolean; recordedAt?: string | null;
+}
+const isoNext = (d: string) => { const x = new Date(`${d}T00:00:00`); x.setDate(x.getDate() + 1); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`; };
 interface Settings { state: string; stateName: string; states: { key: string; name: string }[]; maxCrewAbsencePercent: number; remindBirthdays: boolean; remindAnniversaries: boolean }
 
 const tabs = ["mein", "antraege", "plan", "krank", "fristen"];
@@ -84,7 +92,16 @@ export default class Vacation extends BaseController {
 			can.hrRead ? this.loadPlan() : Promise.resolve(),
 			can.hrRead ? get<Reminder[]>("hr/reminders", { days: 60 }).then((r) => m.setProperty("/reminders", r.map((x) => ({ ...x, icon: reminderIcons[x.kind] ?? "sap-icon://lateness" })))) : Promise.resolve(),
 			can.hrRead ? this.loadToday() : Promise.resolve(),
-			can.hrManage ? get<SickNote[]>("hr/sick-notes").then((s) => m.setProperty("/sickNotes", s.map((x) => ({ ...x, rangeText: `${date(x.from)} – ${date(x.to)}` })))) : Promise.resolve(),
+			can.hrManage ? get<SickNote[]>("hr/sick-notes").then((s) => {
+				// Nach Krankheitsfall gruppiert (Erstmeldung + Folgebescheinigungen).
+				const first = new Map<string, SickNote>();
+				for (const x of [...s].sort((a, b) => a.from.localeCompare(b.from))) if (!first.has(x.caseId ?? x.id)) first.set(x.caseId ?? x.id, x);
+				m.setProperty("/sickNotes", s.map((x) => {
+					const f = first.get(x.caseId ?? x.id) ?? x;
+					return { ...x, rangeText: `${date(x.from)} – ${date(x.to)}`, kindText: x.isFollowUp ? "Folgebescheinigung" : "Erstmeldung",
+						caseLabel: `${f.userName} · seit ${date(f.from)}` };
+				}));
+			}) : Promise.resolve(),
 		]);
 		m.setProperty("/busy", false);
 		m.setProperty("/kpi/pending", (m.getProperty("/pending") as unknown[]).length);
@@ -289,13 +306,21 @@ export default class Vacation extends BaseController {
 
 	// ---- Krankmeldungen --------------------------------------------------------------------------------------------
 
-	async onSickNote(): Promise<void> {
+	onSickNote(): void { void this.sickNoteForm({}); }
+
+	/** Krankmeldung erfassen, bearbeiten oder Folgebescheinigung (eigener Eintrag im selben Fall). */
+	private async sickNoteForm(o: { existing?: SickNote; followUpOf?: SickNote }): Promise<void> {
 		const people = (await session.people()).filter((p) => p.isActive);
+		const base = o.existing ?? o.followUpOf;
+		const next = o.followUpOf ? isoNext(o.followUpOf.to) : undefined;
 		let file: File | null = null;
 		const saved = await openForm<SickNote>({
-			title: "Krankmeldung erfassen", width: "32rem", intro: "Vertraulich – nur für die Personalverwaltung sichtbar.",
+			title: o.existing ? "Krankmeldung bearbeiten" : o.followUpOf ? `Folgebescheinigung: ${o.followUpOf.userName}` : "Krankmeldung erfassen", width: "32rem",
+			intro: o.followUpOf ? `Verlängerung der Krankmeldung vom ${date(o.followUpOf.from)} – ${date(o.followUpOf.to)} (gleicher Krankheitsfall).`
+				: "Vertraulich – nur für die Personalverwaltung sichtbar.",
+			initial: { userId: base?.userId, from: o.existing?.from ?? next, to: o.existing?.to ?? null, note: o.existing?.note ?? "" },
 			fields: [
-				{ key: "userId", label: "Mitarbeiter", type: "select", required: true, options: people.map((p) => ({ key: p.id, text: p.displayName })) },
+				{ key: "userId", label: "Mitarbeiter", type: "select", required: true, editable: !base, options: people.map((p) => ({ key: p.id, text: p.displayName })) },
 				{ key: "from", label: "Von", type: "date", required: true },
 				{ key: "to", label: "Bis einschließlich", type: "date", required: true,
 					validate: (v, all) => (v && all.from && String(v) < String(all.from) ? "Das Ende liegt vor dem Beginn." : null) },
@@ -303,7 +328,7 @@ export default class Vacation extends BaseController {
 			],
 			extra: () => {
 				const button = new Button({
-					text: "AU-Bescheinigung anhängen", icon: "sap-icon://attachment",
+					text: o.existing?.certificateFileId ? "AU-Bescheinigung ersetzen" : "AU-Bescheinigung anhängen", icon: "sap-icon://attachment",
 					press: () => {
 						const input = document.createElement("input");
 						input.type = "file";
@@ -318,15 +343,49 @@ export default class Vacation extends BaseController {
 				return [button];
 			},
 			submit: async (v) => {
-				const certificateFileId = file ? await uploadLoose(file) : null;
-				return put<SickNote>(`hr/sick-notes/${uuidv7()}`, { userId: v.userId, from: v.from, to: v.to, note: v.note || null, certificateFileId });
+				const certificateFileId = file ? await uploadLoose(file) : o.existing?.certificateFileId ?? null;
+				return put<SickNote>(`hr/sick-notes/${o.existing?.id ?? uuidv7()}`, {
+					userId: base?.userId ?? v.userId, from: v.from, to: v.to, note: v.note || null, certificateFileId, followUpOf: o.followUpOf?.id ?? null,
+				});
 			},
 		});
 		if (saved) {
-			this.toast("Krankmeldung erfasst");
+			this.toast(o.followUpOf ? "Folgebescheinigung erfasst" : o.existing ? "Krankmeldung gespeichert" : "Krankmeldung erfasst");
 			planningChanged();
 			await this.load();
 		}
+	}
+
+	/** Detailfenster eines Krankheitsfalls: Zeitraum, Arbeitstage, AU, Notizen und Verlauf (Erstmeldung, Folgebescheinigungen). */
+	onSickDetail(e: Event): void {
+		const s = this.row<SickNote>(e);
+		const all = (this.model().getProperty("/sickNotes") as SickNote[]).filter((x) => (x.caseId ?? x.id) === (s.caseId ?? s.id))
+			.sort((a, b) => a.from.localeCompare(b.from));
+		const first = all[0] ?? s;
+		const last = all[all.length - 1] ?? s;
+		const days = all.reduce((sum, x) => sum + x.workingDays, 0);
+		const list = new List({ headerText: "Verlauf", items: all.map((x, i) => new StandardListItem({
+			title: `${i === 0 ? "Erstmeldung" : `Folgebescheinigung ${i}`}: ${date(x.from)} – ${date(x.to)} (${x.workingDays} AT)`,
+			description: [x.note, x.recordedAt ? `erfasst ${dateTime(x.recordedAt)}` : null].filter(Boolean).join(" · "),
+			info: x.certificateFileId ? "AU vorhanden" : "AU fehlt", infoState: x.certificateFileId ? "Success" : "Warning",
+			icon: "sap-icon://stethoscope", type: x.certificateFileId ? "Active" : "Inactive",
+			press: () => { if (x.certificateFileId) window.open(fileUrl(x.certificateFileId), "_blank", "noopener"); },
+		})) });
+		const dialog = new Dialog({
+			title: `Krankmeldung ${s.userName}`, contentWidth: "36rem",
+			content: [
+				new Text({ text: `Zeitraum ${date(first.from)} – ${date(last.to)} · ${days} Arbeitstage · ${all.length > 1 ? `${all.length - 1} Folgebescheinigung(en)` : "Erstmeldung"}` })
+					.addStyleClass("sapUiSmallMargin"),
+				list,
+			],
+			buttons: [
+				new Button({ text: "Folgebescheinigung", icon: "sap-icon://add", type: "Emphasized", press: () => { dialog.close(); void this.sickNoteForm({ followUpOf: last }); } }),
+				new Button({ text: "Bearbeiten", icon: "sap-icon://edit", press: () => { dialog.close(); void this.sickNoteForm({ existing: s }); } }),
+				new Button({ text: "Schließen", press: () => dialog.close() }),
+			],
+			afterClose: () => dialog.destroy(),
+		});
+		dialog.open();
 	}
 
 	onCertificate(e: Event): void {

@@ -669,6 +669,14 @@ internal static class StaffEndpoints
 }
 
 /// <summary>Personaldokumente und AU-Bescheinigungen sind für „Personalstamm pflegen“ lesbar (auch wenn jemand anderes sie hochgeladen hat).</summary>
+/// <summary>Bild und Dokumente von Fahrzeugen/Geräten lesen alle mit Planungsrecht.</summary>
+internal sealed class ResourceFileGrant(EstrichOneDbContext db, IUserPermissions permissions) : IFileReadGrant
+{
+    public async Task<bool> CanReadAsync(Guid fileId, CancellationToken cancellationToken) =>
+        await db.Set<Resource>().AnyAsync(r => r.ImageFileId == fileId || r.DocumentFileIds.Contains(fileId), cancellationToken)
+        && await permissions.HasAsync(Permissions.PlanningRead, cancellationToken);
+}
+
 internal sealed class EmployeeDocumentGrant(EstrichOneDbContext db, IUserPermissions permissions) : IFileReadGrant
 {
     public async Task<bool> CanReadAsync(Guid fileId, CancellationToken cancellationToken) =>

@@ -39,10 +39,14 @@ public sealed record SaveAbsenceRequestRequest(Guid? UserId, DateOnly From, Date
 
 public sealed record DecideAbsenceRequest(bool Approve, [property: MaxLength(1000)] string? Comment);
 
-public sealed record SickNoteView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, int WorkingDays, string? Note, Guid? CertificateFileId);
+/// <param name="CaseId">Krankheitsfall (ID der Erstmeldung); Folgebescheinigungen haben dieselbe CaseId.</param>
+public sealed record SickNoteView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, int WorkingDays, string? Note, Guid? CertificateFileId,
+    Guid? CaseId = null, bool IsFollowUp = false, DateTimeOffset? RecordedAt = null);
 
 /// <param name="CertificateFileId">AU-Bescheinigung: vorher ohne Bauakte hochgeladene eigene Datei (POST /files).</param>
-public sealed record SaveSickNoteRequest(Guid UserId, DateOnly From, DateOnly To, [property: MaxLength(500)] string? Note, Guid? CertificateFileId);
+/// <param name="FollowUpOf">Folgebescheinigung zu dieser Krankmeldung (eigener Eintrag im selben Fall).</param>
+public sealed record SaveSickNoteRequest(Guid UserId, DateOnly From, DateOnly To, [property: MaxLength(500)] string? Note, Guid? CertificateFileId,
+    Guid? FollowUpOf = null);
 
 /// <param name="Kind">qualification, probation, birthday, anniversary, document</param>
 /// <param name="Severity">error (abgelaufen), warning (bald), info</param>
@@ -512,11 +516,13 @@ internal static class HrEndpoints
         var users = await db.Set<User>().AsNoTracking().Where(u => ids.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
         var employees = await db.Set<Employee>().AsNoTracking().Where(e => e.UserId != null && ids.Contains(e.UserId.Value)).ToDictionaryAsync(e => e.UserId!.Value, cancellationToken);
         return TypedResults.Ok(items.Select(a => new SickNoteView(a.Id, a.UserId, users.GetValueOrDefault(a.UserId) ?? "Unbekannt", a.From, a.To,
-            employees.GetValueOrDefault(a.UserId)?.WorkingDays(a.From, a.To, holidays) ?? Weekdays(a.From, a.To, holidays), a.Note, a.CertificateFileId)).ToList());
+            employees.GetValueOrDefault(a.UserId)?.WorkingDays(a.From, a.To, holidays) ?? Weekdays(a.From, a.To, holidays), a.Note, a.CertificateFileId,
+            a.CaseId ?? a.Id, a.CaseId is { } c && c != a.Id, a.RecordedAt)).ToList());
     }
 
     private static async Task<Results<Ok<SickNoteView>, ProblemHttpResult>> SaveSickNoteAsync(
-        Guid id, SaveSickNoteRequest request, EstrichOneDbContext db, IStoredFiles files, ICurrentUser currentUser, HrService hr, CancellationToken cancellationToken)
+        Guid id, SaveSickNoteRequest request, EstrichOneDbContext db, IStoredFiles files, ICurrentUser currentUser, HrService hr, TimeProvider clock,
+        CancellationToken cancellationToken)
     {
         var user = await db.Set<User>().AsNoTracking().SingleOrDefaultAsync(u => u.Id == request.UserId, cancellationToken);
         if (user is null)
@@ -539,9 +545,27 @@ internal static class HrEndpoints
             }
         }
 
+        Guid? caseId = existing?.CaseId;
+        if (request.FollowUpOf is { } parentId && existing is null)
+        {
+            var parent = await db.Set<Absence>().AsNoTracking().SingleOrDefaultAsync(a => a.Id == parentId && a.Kind == AbsenceKind.Sick, cancellationToken);
+            if (parent is null || parent.UserId != request.UserId)
+            {
+                return Validation("Die Erstmeldung zu dieser Folgebescheinigung wurde nicht gefunden.");
+            }
+
+            if (request.From < parent.From)
+            {
+                return Validation("Die Folgebescheinigung beginnt vor der Erstmeldung.");
+            }
+
+            caseId = parent.CaseId ?? parent.Id;
+        }
+
         try
         {
-            var absence = Absence.Create(id, request.UserId, request.From, request.To, AbsenceKind.Sick, request.Note, request.CertificateFileId);
+            var absence = Absence.Create(id, request.UserId, request.From, request.To, AbsenceKind.Sick, request.Note, request.CertificateFileId,
+                caseId: caseId, recordedAt: existing?.RecordedAt ?? clock.GetUtcNow());
             if (existing is not null)
             {
                 db.Remove(existing);
@@ -552,7 +576,8 @@ internal static class HrEndpoints
             var holidays = await hr.HolidaysAsync(absence.From, absence.To, cancellationToken);
             var employee = await db.Set<Employee>().AsNoTracking().SingleOrDefaultAsync(e => e.UserId == request.UserId, cancellationToken);
             return TypedResults.Ok(new SickNoteView(absence.Id, absence.UserId, user.DisplayName, absence.From, absence.To,
-                employee?.WorkingDays(absence.From, absence.To, holidays) ?? Weekdays(absence.From, absence.To, holidays), absence.Note, absence.CertificateFileId));
+                employee?.WorkingDays(absence.From, absence.To, holidays) ?? Weekdays(absence.From, absence.To, holidays), absence.Note, absence.CertificateFileId,
+                absence.CaseId, absence.CaseId is { } c && c != absence.Id, absence.RecordedAt));
         }
         catch (ArgumentException exception)
         {

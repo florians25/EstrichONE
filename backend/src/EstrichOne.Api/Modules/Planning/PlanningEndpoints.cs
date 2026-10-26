@@ -9,11 +9,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Planning;
 
-public sealed record ResourceResponse(Guid Id, ResourceKind Kind, string Name, string? Identifier, string? Notes, bool IsActive, long Version);
+public sealed record ResourceResponse(Guid Id, ResourceKind Kind, string Name, string? Identifier, string? Notes, bool IsActive, long Version,
+    string? Model = null, string? LicenseClass = null, DateOnly? InspectionDue = null, DateOnly? ServiceDue = null, Guid? ImageFileId = null,
+    IReadOnlyList<Guid>? DocumentFileIds = null, Guid? CrewId = null);
 
 public sealed record SaveResourceRequest(
     ResourceKind Kind, [property: Required, MaxLength(100)] string Name, [property: MaxLength(50)] string? Identifier,
-    [property: MaxLength(2000)] string? Notes, bool IsActive = true);
+    [property: MaxLength(2000)] string? Notes, bool IsActive = true,
+    [property: MaxLength(100)] string? Model = null, [property: MaxLength(20)] string? LicenseClass = null,
+    DateOnly? InspectionDue = null, DateOnly? ServiceDue = null, Guid? ImageFileId = null,
+    [property: MaxLength(50)] IReadOnlyList<Guid>? DocumentFileIds = null, Guid? CrewId = null);
 
 public sealed record CrewResponse(Guid Id, string Name, Guid? LeaderUserId, IReadOnlyList<Guid> MemberUserIds, string? Color, bool IsActive,
     int SortOrder, long Version);
@@ -90,7 +95,8 @@ internal static class PlanningEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.PlanningManage);
     }
 
-    private static ResourceResponse ToResponse(Resource r) => new(r.Id, r.Kind, r.Name, r.Identifier, r.Notes, r.IsActive, r.Version);
+    private static ResourceResponse ToResponse(Resource r) => new(r.Id, r.Kind, r.Name, r.Identifier, r.Notes, r.IsActive, r.Version,
+        r.Model, r.LicenseClass, r.InspectionDue, r.ServiceDue, r.ImageFileId, r.DocumentFileIds, r.CrewId);
 
     private static CrewResponse ToResponse(Crew c) => new(c.Id, c.Name, c.LeaderUserId, c.MemberUserIds, c.Color, c.IsActive, c.SortOrder, c.Version);
 
@@ -107,6 +113,13 @@ internal static class PlanningEndpoints
             }
 
             resource.Update(request.Kind, request.Name, request.Identifier, request.Notes, request.IsActive);
+            if (request.CrewId is { } crewId && !await db.Set<Crew>().AnyAsync(c => c.Id == crewId, cancellationToken))
+            {
+                return Validation("Unbekannte Kolonne.");
+            }
+
+            resource.UpdateDetails(request.Model, request.LicenseClass, request.InspectionDue, request.ServiceDue, request.ImageFileId,
+                request.DocumentFileIds ?? resource.DocumentFileIds, request.CrewId);
             await db.SaveChangesAsync(cancellationToken);
             return TypedResults.Ok(ToResponse(resource));
         }

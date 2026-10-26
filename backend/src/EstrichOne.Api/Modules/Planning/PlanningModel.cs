@@ -26,6 +26,25 @@ public sealed class Resource : IVersionedEntity
     public string? Notes { get; private set; }
     public bool IsActive { get; private set; } = true;
 
+    /// <summary>Typ bzw. Modell, z. B. „Sprinter 316 CDI“ oder „Estrichpumpe P 700“.</summary>
+    public string? Model { get; private set; }
+
+    /// <summary>Nötige Führerscheinklasse (Fahrzeuge), z. B. „C1E“.</summary>
+    public string? LicenseClass { get; private set; }
+
+    /// <summary>Nächste Hauptuntersuchung (TÜV) bzw. Prüfung (UVV, Maschinen).</summary>
+    public DateOnly? InspectionDue { get; private set; }
+
+    /// <summary>Nächste Wartung bzw. Inspektion.</summary>
+    public DateOnly? ServiceDue { get; private set; }
+    public Guid? ImageFileId { get; private set; }
+
+    /// <summary>Dokumente (Fahrzeugschein, Prüfberichte, Rechnungen) – hochgeladene Dateien ohne Bauakte.</summary>
+    public List<Guid> DocumentFileIds { get; private set; } = [];
+
+    /// <summary>Feste Zuordnung zu einer Kolonne (wird in Planung und „Wer fährt wohin“ vorgeschlagen).</summary>
+    public Guid? CrewId { get; private set; }
+
     public long Version { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -48,6 +67,18 @@ public sealed class Resource : IVersionedEntity
         Identifier = PlanningText.Optional(identifier, 50);
         Notes = PlanningText.Optional(notes, 2000);
         IsActive = isActive;
+    }
+
+    public void UpdateDetails(string? model, string? licenseClass, DateOnly? inspectionDue, DateOnly? serviceDue, Guid? imageFileId,
+        IReadOnlyCollection<Guid> documentFileIds, Guid? crewId)
+    {
+        Model = PlanningText.Optional(model, 100);
+        LicenseClass = PlanningText.Optional(licenseClass, 20);
+        InspectionDue = inspectionDue;
+        ServiceDue = serviceDue;
+        ImageFileId = imageFileId;
+        DocumentFileIds = documentFileIds.Distinct().Take(50).ToList();
+        CrewId = crewId;
     }
 }
 
@@ -125,12 +156,18 @@ public sealed class Absence
     /// <summary>Aus einem genehmigten Urlaubsantrag entstanden.</summary>
     public Guid? RequestId { get; private set; }
 
+    /// <summary>Krankheitsfall: ID der Erstmeldung; Folgebescheinigungen sind eigene Einträge im selben Fall.</summary>
+    public Guid? CaseId { get; private set; }
+
+    /// <summary>Erfasst am (Verlauf der Krankmeldungen; bei älteren Einträgen leer).</summary>
+    public DateTimeOffset? RecordedAt { get; private set; }
+
     private Absence()
     {
     }
 
     public static Absence Create(Guid id, Guid userId, DateOnly from, DateOnly to, AbsenceKind kind, string? note, Guid? certificateFileId = null,
-        Guid? requestId = null)
+        Guid? requestId = null, Guid? caseId = null, DateTimeOffset? recordedAt = null)
     {
         if (to < from)
         {
@@ -146,6 +183,7 @@ public sealed class Absence
         {
             Id = id, UserId = userId, From = from, To = to, Kind = kind, Note = PlanningText.Optional(note, 500),
             CertificateFileId = kind == AbsenceKind.Sick ? certificateFileId : null, RequestId = requestId,
+            CaseId = kind == AbsenceKind.Sick ? caseId ?? id : null, RecordedAt = recordedAt,
         };
     }
 
@@ -339,6 +377,10 @@ internal sealed class ResourceConfiguration : IEntityTypeConfiguration<Resource>
         builder.Property(r => r.Name).HasMaxLength(100);
         builder.Property(r => r.Identifier).HasMaxLength(50);
         builder.Property(r => r.Notes).HasMaxLength(2000);
+        builder.Property(r => r.Model).HasMaxLength(100);
+        builder.Property(r => r.LicenseClass).HasMaxLength(20);
+        builder.Property(r => r.DocumentFileIds).HasColumnType("uuid[]");
+        builder.HasOne<Crew>().WithMany().HasForeignKey(r => r.CrewId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -366,6 +408,7 @@ internal sealed class AbsenceConfiguration : IEntityTypeConfiguration<Absence>
         builder.Property(a => a.Kind).HasConversion<string>().HasMaxLength(20);
         builder.Property(a => a.Note).HasMaxLength(500);
         builder.HasIndex(a => a.CertificateFileId);
+        builder.HasIndex(a => a.CaseId);
         builder.HasOne<User>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(a => new { a.UserId, a.From, a.To });
     }

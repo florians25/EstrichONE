@@ -21025,6 +21025,56 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "licenseClass": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "inspectionDue": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceDue": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "imageFileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "documentFileIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "crewId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -22667,6 +22717,59 @@
           "isActive": {
             "type": "boolean",
             "default": true
+          },
+          "model": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "licenseClass": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "inspectionDue": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "serviceDue": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "imageFileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "documentFileIds": {
+            "maxItems": 50,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "crewId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
