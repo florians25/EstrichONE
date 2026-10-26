@@ -40,7 +40,7 @@ internal static class ArchiveEndpoints
         archive.MapDelete("/connection", UnpairAsync).WithName("UnpairArchive").RequirePermission(Permissions.SettingsManage);
         archive.MapPut("/settings", SettingsAsync).WithName("UpdateArchiveSettings").RequirePermission(Permissions.SettingsManage);
         archive.MapGet("/rules", (ArchiveService service, CancellationToken ct) => RulesAsync(service, ct))
-            .WithName("GetArchiveRules").RequirePermission(Permissions.SettingsManage);
+            .WithName("GetArchiveRules").RequirePermission(Permissions.BauaktenRead);
         archive.MapPut("/rules", UpdateRulesAsync).WithName("UpdateArchiveRules").RequirePermission(Permissions.SettingsManage);
         archive.MapGet("/records", RecordsAsync).WithName("GetArchiveRecords").RequirePermission(Permissions.SettingsManage);
         archive.MapPost("/records/{id:guid}/retry", RetryAsync).WithName("RetryArchiveRecord").RequirePermission(Permissions.SettingsManage);

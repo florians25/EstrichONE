@@ -98,12 +98,16 @@ export default class Documents extends SectionBase {
 	}
 
 	protected async load(): Promise<void> {
-		const [files, approvals, templates] = await Promise.all([
+		const [files, approvals, templates, archived, rules] = await Promise.all([
 			akte.files(this.bauakteId),
 			get<{ items: { file: { id: string }; approvalStatus: ApprovalStatus | null; approvalAssignee: string | null }[] }>("documents", { bauakteId: this.bauakteId, limit: 1000 })
 				.catch(() => ({ items: [] })),
 			catalog<FolderTemplate>("folderTemplate"),
+			get<{ fileId: string; status: "Pending" | "Archived" | "Failed" | string; retainUntil: string | null }[]>(`archive/bauakten/${this.bauakteId}`).catch(() => []),
+			get<{ documentType: string; enabled: boolean; trigger: string; retentionYears: number }[]>("archive/rules").catch(() => []),
 		]);
+		const archiveById = new Map(archived.map((r) => [r.fileId, r]));
+		const ruleOf = new Map(rules.map((r) => [r.documentType, r]));
 		this.templateFolders = templates.flatMap((t) => (t.content.folders ?? []).map((f) => `${t.content.category}/${f}`));
 		const byId = new Map(approvals.items.map((i) => [i.file.id, i]));
 		this.rows = documentRows(files).map((r) => {
@@ -112,6 +116,7 @@ export default class Documents extends SectionBase {
 				...r, icon: fileIcon(r.contentType, r.originalName), approvalStatus: a?.approvalStatus ?? null,
 				approvalText: a?.approvalStatus ? `${approvalStatus[a.approvalStatus].text}${a.approvalStatus === "pending" && a.approvalAssignee ? ` (${a.approvalAssignee})` : ""}` : "",
 				approvalState: a?.approvalStatus ? approvalStatus[a.approvalStatus].state : "None",
+				...archiveInfo(archiveById.get(r.id), ruleOf.get(r.kind === "document" ? r.category ?? "other" : r.kind), rules.length > 0),
 			};
 		});
 		this.refreshTree();
@@ -369,4 +374,23 @@ export default class Documents extends SectionBase {
 		});
 		dialog.open();
 	}
+}
+
+const triggerTexts: Record<string, string> = {
+	OnUpload: "nach dem Hochladen", onUpload: "nach dem Hochladen", OnApproval: "nach der Freigabe", onApproval: "nach der Freigabe",
+	OnBauakteCompleted: "bei Abschluss der Bauakte", onBauakteCompleted: "bei Abschluss der Bauakte", Manual: "nur manuell", manual: "nur manuell",
+};
+
+/** Archivstatus je Dokument (B5): archiviert / wird archiviert / nicht archivpflichtig. */
+function archiveInfo(record: { status: string; retainUntil: string | null } | undefined, rule: { enabled: boolean; trigger: string; retentionYears: number } | undefined,
+	known: boolean): { archiveIcon: string; archiveText: string; archiveColor: string } {
+	const status = record?.status.toLowerCase();
+	if (status === "archived") return { archiveIcon: "sap-icon://locked", archiveText: `Archiviert${record?.retainUntil ? ` (aufbewahrt bis ${new Date(record.retainUntil).toLocaleDateString("de-DE")})` : ""}`, archiveColor: "Positive" };
+	if (status === "pending") return { archiveIcon: "sap-icon://pending", archiveText: "Wird archiviert", archiveColor: "Critical" };
+	if (status === "failed") return { archiveIcon: "sap-icon://alert", archiveText: "Archivierung fehlgeschlagen – wird wiederholt", archiveColor: "Negative" };
+	if (!known) return { archiveIcon: "", archiveText: "", archiveColor: "Default" };
+	if (rule?.enabled && rule.trigger.toLowerCase() !== "manual") {
+		return { archiveIcon: "sap-icon://history", archiveText: `Archivpflichtig (${rule.retentionYears} Jahre) – wird ${triggerTexts[rule.trigger] ?? ""} archiviert`, archiveColor: "Neutral" };
+	}
+	return { archiveIcon: "sap-icon://unlocked", archiveText: "Nicht archivpflichtig", archiveColor: "Default" };
 }

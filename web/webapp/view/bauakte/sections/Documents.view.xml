@@ -58,6 +58,8 @@
 					<ColumnListItem type="Inactive" highlight="{= ${doc>superseded} ? 'None' : 'Information' }">
 						<HBox alignItems="Center">
 							<core:Icon src="{doc>icon}" size="1.25rem" class="sapUiSmallMarginEnd"/>
+							<core:Icon src="{doc>archiveIcon}" size="0.875rem" color="{doc>archiveColor}" tooltip="{doc>archiveText}" visible="{= !!${doc>archiveIcon} }"
+								class="sapUiTinyMarginEnd eoArchiveIcon" alt="{doc>archiveText}" useIconTooltip="false"/>
 							<VBox>
 								<Link text="{doc>originalName}" press=".onPreview" wrapping="true" enabled="{= ${doc>state} === 'stored' }"/>
 								<Text text="{doc>caption}" visible="{= !!${doc>caption} }" class="eoMuted"/>

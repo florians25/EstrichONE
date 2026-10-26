@@ -33,6 +33,8 @@
 			<Label text="Prüfungen"/>
 			<ObjectStatus text="{= (${ov>/inspectionValue} || '–') + ' ' + (${ov>/inspectionScale} || '') + ' · ' + (${ov>/inspectionFooter} || '') }"
 				state="{= ${ov>/inspectionColor} === 'Good' ? 'Success' : ${ov>/inspectionColor} === 'Critical' ? 'Warning' : 'None' }"/>
+			<Label text="Erstbegehung" visible="{= !!${ov>/hasInitial} }"/>
+			<Link text="Protokoll (PDF) öffnen" href="/api/v1/bauakten/{akte>/bauakte/id}/initial-inspection.pdf" target="_blank" visible="{= !!${ov>/hasInitial} }"/>
 			<Label text="{i18n>overview.documents}"/><Link text="{= (${ov>/documentCount} || '0') + ' · ' + (${ov>/documentFooter} || '') }" press=".onToDocuments"/>
 			<Label text="{i18n>overview.photos}"/><Link text="{= ${ov>/photoText} || '0 Fotos' }" press=".onToPhotos"/>
 			<Label text="{i18n>overview.diary}"/><Text text="{= (${ov>/diaryCount} || '0') + ' · ' + (${ov>/diaryFooter} || '') }"/>

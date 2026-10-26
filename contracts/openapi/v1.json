@@ -5194,6 +5194,57 @@
         ]
       }
     },
+    "/api/v1/bauakten/{id}/initial-inspection.pdf": {
+      "get": {
+        "tags": [
+          "Bautagebuch und Prüfungen"
+        ],
+        "summary": "Erstbegehungsprotokoll als PDF (neueste Erstbegehung; mit inspectionId eine bestimmte Prüfung)",
+        "operationId": "InitialInspectionPdf",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "inspectionId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/files/{fileId}/approvals": {
       "get": {
         "tags": [

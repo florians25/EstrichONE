@@ -88,6 +88,7 @@ export default class Overview extends SectionBase {
 			const sorted = [...inspections.value].sort((a, b) => b.performedAt.localeCompare(a.performedAt));
 			const cm = sorted.find((i) => i.kind === "cmMeasurement");
 			const initial = sorted.find((i) => i.kind === "initialInspection");
+			m.setProperty("/hasInitial", !!initial);
 			if (cm) {
 				m.setProperty("/inspectionValue", cmNumber(cm.measuredCmPercent));
 				m.setProperty("/inspectionScale", "CM-%");

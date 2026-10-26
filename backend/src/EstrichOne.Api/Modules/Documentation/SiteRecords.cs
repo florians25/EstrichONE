@@ -283,6 +283,39 @@ internal static class SiteRecordEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
         group.MapGet("/inspections", ListInspectionsAsync).WithName("ListInspections").WithSummary("Prüfungen (neueste zuerst)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
+        group.MapGet("/initial-inspection.pdf", InitialInspectionPdfAsync).WithName("InitialInspectionPdf")
+            .WithSummary("Erstbegehungsprotokoll als PDF (neueste Erstbegehung; mit inspectionId eine bestimmte Prüfung)")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
+    }
+
+    private static async Task<IResult> InitialInspectionPdfAsync(
+        Guid id, IBauakteAccess access, EstrichOneDbContext db, BauakteReportBuilder builder, CancellationToken cancellationToken,
+        [Microsoft.AspNetCore.Mvc.FromQuery] Guid? inspectionId = null)
+    {
+        if (!await access.CanReadAsync(id, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        var inspection = await db.Set<Inspection>().AsNoTracking()
+            .Where(i => i.BauakteId == id && (inspectionId == null ? i.Kind == InspectionKind.InitialInspection : i.Id == inspectionId))
+            .OrderByDescending(i => i.PerformedAt).FirstOrDefaultAsync(cancellationToken);
+        if (inspection is null)
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Noch keine Erstbegehung",
+                detail: "Für diese Bauakte ist noch keine Erstbegehung erfasst.");
+        }
+
+        var result = await builder.BuildAsync(id, new HashSet<string>(["pruefungen", "fotos"], StringComparer.OrdinalIgnoreCase), 20,
+            cancellationToken, inspection.Id);
+        if (result is null)
+        {
+            return NotFound();
+        }
+
+        var day = inspection.PerformedAt.ToOffset(TimeSpan.FromHours(1)).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        return TypedResults.File(result.Value.Pdf, "application/pdf", $"Erstbegehungsprotokoll {day}.pdf");
     }
 
     private static async Task<Results<Ok<List<DiaryEntryDto>>, ProblemHttpResult>> ListDiaryAsync(

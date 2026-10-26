@@ -517,4 +517,15 @@ export default class ObjectController extends BaseController {
 	onShowMap(): void {
 		openMapDialog(this.m().getProperty("/placeText") as string, this.m().getProperty("/markers") as unknown[], this.m().getProperty("/routeUrl") as string);
 	}
+
+	/** Erstbegehungsprotokoll (neueste Erstbegehung) als PDF in neuem Tab. */
+	async onInspectionPdf(): Promise<void> {
+		const url = `/api/v1/bauakten/${this.id}/initial-inspection.pdf`;
+		const head = await fetch(url, { method: "GET", credentials: "same-origin" }).catch(() => null);
+		if (!head || head.status === 404) {
+			this.toast("Für diese Bauakte ist noch keine Erstbegehung erfasst.");
+			return;
+		}
+		window.open(URL.createObjectURL(await head.blob()), "_blank", "noopener");
+	}
 }
