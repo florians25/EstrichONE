@@ -90,3 +90,13 @@ struct CardBackground: ViewModifier {
 extension View {
     func card() -> some View { modifier(CardBackground()) }
 }
+
+extension String {
+    /// Für die Anzeige: ohne Leerzeichen und Leerzeilen am Anfang und Ende, höchstens eine Leerzeile am Stück;
+    /// `nil`, wenn nichts übrig bleibt (dann wird kein Platz reserviert).
+    var compactText: String? {
+        var text = trimmingCharacters(in: .whitespacesAndNewlines)
+        while text.contains("\n\n\n") { text = text.replacingOccurrences(of: "\n\n\n", with: "\n\n") }
+        return text.isEmpty ? nil : text
+    }
+}

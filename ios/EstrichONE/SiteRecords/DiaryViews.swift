@@ -131,7 +131,7 @@ struct DiaryRow: View {
                 }
             }
             .foregroundStyle(Theme.textSecondary)
-            Text(entry.text)
+            Text(entry.text.compactText ?? "")
             HStack(spacing: 8) {
                 if let authorName { Text(authorName) }
                 if let workers = entry.workersPresent { Text("\(workers) anwesend") }

@@ -548,7 +548,7 @@ struct TodayJobCard: View {
                             .font(.caption).foregroundStyle(Theme.textSecondary)
                     }
                     if let notes = job.notes, !notes.isEmpty {
-                        Text(notes).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)
+                        Text(notes.compactText ?? "").font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)
                     }
                     ForEach(job.warnings, id: \.self) { warning in
                         Label(warning, systemImage: "exclamationmark.triangle.fill").labelStyle(TightLabelStyle())

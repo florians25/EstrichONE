@@ -54,7 +54,7 @@ struct NoteRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(note.text)
+            Text(note.text.compactText ?? "")
             HStack(spacing: 6) {
                 if note.isPinned {
                     Label("Angeheftet", systemImage: "pin.fill").labelStyle(.iconOnly).foregroundStyle(Theme.hint)
@@ -97,7 +97,7 @@ struct HistoryView: View {
                 ForEach(entries.indices, id: \.self) { index in
                     let entry = entries[index]
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(entry.text)
+                        Text(entry.text.compactText ?? "")
                         Text(entry.at.formatted(date: .abbreviated, time: .shortened))
                             .font(.caption).foregroundStyle(Theme.textSecondary)
                     }

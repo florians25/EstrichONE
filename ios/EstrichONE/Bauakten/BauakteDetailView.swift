@@ -21,6 +21,9 @@ struct BauakteDetailView: View {
     @State private var inspections: [Inspection] = []
     @State private var acceptances: [Acceptance] = []
     @State private var showsInspectionPDF = false
+    @State private var selectedArea: Area?
+    @State private var toast: String?
+    @State private var todayAssignments: [Assignment] = []
     @State private var schema: FormSchema?
     @State private var lists = ValueLists([])
     @State private var form: CaptureForm?
@@ -45,28 +48,33 @@ struct BauakteDetailView: View {
     var body: some View {
         Group {
             if let bauakte {
-                List {
-                    header(bauakte)
-                    actionBar
-                    contactSection(bauakte)
-                    ProjectSection(bauakte: bauakte, schema: schema, lists: lists) { form = .project }
-                    photoSection
-                    documentSection
-                    diarySection
-                    workSection
-                    inspectionSection
-                    acceptanceSection
-                    noteSection
-                    Section {
-                        NavigationLink {
-                            HistoryView(bauakteId: bauakteId)
-                        } label: {
-                            Label("Verlauf", systemImage: "clock.arrow.circlepath")
+                Group {
+                    if sizeClass == .regular {
+                        // iPad: Überblick und Bereiche links, Inhalt des Bereichs rechts.
+                        HStack(spacing: 0) {
+                            overview(bauakte)
+                                .frame(width: 420)
+                            Divider()
+                            areaContent(selectedArea ?? .media, bauakte: bauakte)
+                                .frame(maxWidth: .infinity)
                         }
-                        .accessibilityIdentifier("historyLink")
+                    } else {
+                        overview(bauakte)
                     }
                 }
-                .listSectionSpacing(.compact)
+                .overlay(alignment: .bottom) {
+                    if let toast {
+                        Label(toast, systemImage: "checkmark.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 16).padding(.vertical, 12)
+                            .background(Theme.success, in: Capsule())
+                            .padding(.horizontal).padding(.bottom, 16)
+                            .transition(.move(edge: .bottom).combined(with: .opacity))
+                            .accessibilityIdentifier("bauakteToast")
+                    }
+                }
+                .animation(.spring(response: 0.35), value: toast)
                 .navigationDestination(isPresented: $showsInspectionPDF) {
                     if let inspection = latestInitialInspection {
                         InspectionProtocolView(inspection: inspection, bauakte: bauakte,
@@ -76,10 +84,17 @@ struct BauakteDetailView: View {
                 .navigationTitle(bauakte.number ?? "Neue Bauakte")
                 .navigationBarTitleDisplayMode(.inline)
                 .fullScreenCover(isPresented: $capturing) {
-                    CameraView(bauakte: bauakte) { _ in capturing = false }
+                    CameraView(bauakte: bauakte) { count in
+                        capturing = false
+                        if count > 0 { show(count == 1 ? "Foto gespeichert – wird übertragen, sobald Netz da ist."
+                                                       : "\(count) Fotos gespeichert – werden übertragen, sobald Netz da ist.") }
+                    }
                 }
                 .fullScreenCover(isPresented: $scanning) {
-                    ScanFlowView(bauakte: bauakte) { _ in scanning = false }
+                    ScanFlowView(bauakte: bauakte) { saved in
+                        scanning = false
+                        if saved { show("Dokument gespeichert – wird übertragen, sobald Netz da ist.") }
+                    }
                 }
                 .fullScreenCover(item: $viewing) { file in
                     PhotoViewer(photos: photos.filter(\.isPhoto), selection: file.id) { Task { await reload() } }
@@ -189,21 +204,36 @@ struct BauakteDetailView: View {
                     }
                     .accessibilityIdentifier("projectBadges")
                 }
+                if let customer, sizeClass != .regular {
+                    HStack(spacing: 10) {
+                        Label(customer.name, systemImage: customer.isCompany ? "building.2" : "person.crop.circle")
+                            .labelStyle(TightLabelStyle())
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        if let phone = ContactLink.phone(customer.phone) {
+                            Link(destination: phone) { roundAction("Kunde anrufen", symbol: "phone.fill") }
+                                .accessibilityIdentifier("headerCallButton")
+                        }
+                    }
+                }
+                ForEach(todayAssignments) { assignment in
+                    VStack(alignment: .leading, spacing: 2) {
+                        Label("Heute \(assignment.startText.map { "ab \($0)" } ?? "")", systemImage: "calendar.badge.clock")
+                            .labelStyle(TightLabelStyle())
+                            .font(.caption.weight(.bold)).foregroundStyle(.white.opacity(0.8))
+                        Text([assignment.activity, assignment.crewName].compactMap { $0 }.joined(separator: " · "))
+                            .font(.subheadline.weight(.semibold)).foregroundStyle(.white)
+                        ForEach(assignment.warnings, id: \.self) { warning in
+                            Label(warning, systemImage: "exclamationmark.triangle.fill").labelStyle(TightLabelStyle())
+                                .font(.caption.weight(.semibold)).foregroundStyle(Color(hex: 0xFCD34D))
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                }
                 HStack(spacing: 12) {
-                    if let phone = ContactLink.phone(bauakte.siteContactPhone ?? customer?.phone) {
-                        Link(destination: phone) { roundAction("Anrufen", symbol: "phone.fill") }
-                            .accessibilityIdentifier("headerCallButton")
-                    }
-                    if let route = MapsLink.url(for: bauakte) {
-                        Link(destination: route) { roundAction("Route", symbol: "car.fill") }
-                            .accessibilityIdentifier("headerRouteButton")
-                    }
-                    Button { capturing = true } label: { roundAction("Foto", symbol: "camera.fill") }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("headerPhotoButton")
-                    Button { scanning = true } label: { roundAction("Scannen", symbol: "doc.viewfinder") }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("headerScanButton")
                     if latestInitialInspection != nil {
                         Button { showsInspectionPDF = true } label: { roundAction("Erstbegehung (PDF)", symbol: "doc.richtext") }
                             .buttonStyle(.plain)
@@ -214,9 +244,7 @@ struct BauakteDetailView: View {
                         .padding(.horizontal, 8).padding(.vertical, 4)
                         .background(.white, in: Capsule())
                 }
-                if let description = bauakte.description {
-                    Text(description).font(.subheadline).foregroundStyle(.white.opacity(0.85))
-                }
+
             }
             .padding(18)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -286,40 +314,6 @@ struct BauakteDetailView: View {
             return "\(start.formatted(format)) – \(end.formatted(format))"
         }
         return "ab \(start.formatted(format))"
-    }
-
-    /// Aktionsleiste im Inhalt statt unterer Werkzeugleiste: die Leiste läge unter Tab-Leiste und schwebender
-    /// „Neue Bauakte“-Schaltfläche (iOS 26).
-    private var actionBar: some View {
-        Section {
-            HStack(spacing: 8) {
-                Button { capturing = true } label: { Label("Foto", systemImage: "camera.fill") }
-                    .buttonStyle(ActionTileStyle(rank: .accent))
-                    .accessibilityIdentifier("addPhotoButton")
-                Button { scanning = true } label: { Label("Scannen", systemImage: "doc.viewfinder") }
-                    .buttonStyle(ActionTileStyle(rank: .primary))
-                    .accessibilityIdentifier("scanDocumentButton")
-                Button { form = .diary } label: { Label("Tagebuch", systemImage: "book.fill") }
-                    .buttonStyle(ActionTileStyle())
-                    .accessibilityIdentifier("addDiaryButton")
-                Button { addingNote = true } label: { Label("Notiz", systemImage: "square.and.pencil") }
-                    .buttonStyle(ActionTileStyle())
-                    .accessibilityIdentifier("addNoteButton")
-                Menu {
-                    Button("Video", systemImage: "video") { recordingVideo = true }
-                    Button("Aufgabe", systemImage: "checklist") { form = .task }
-                    Button("Mangel", systemImage: "exclamationmark.triangle") { form = .defect }
-                    Button("CM-Messung", systemImage: "drop") { form = .cmMeasurement }
-                    Button("Erstbegehung", systemImage: "checkmark.rectangle.stack") { form = .initialInspection }
-                } label: {
-                    Label("Mehr", systemImage: "plus")
-                }
-                .buttonStyle(ActionTileStyle())
-                .accessibilityIdentifier("addMenu")
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
-        }
     }
 
     private func contactSection(_ bauakte: Bauakte) -> some View {
@@ -491,6 +485,194 @@ struct BauakteDetailView: View {
         }
     }
 
+    // MARK: Überblick und Bereiche
+
+    /// Bereiche der Bauakte – alle Daten, verständlich gegliedert.
+    enum Area: String, CaseIterable, Identifiable {
+        case site, media, work, diary, protocols, contacts, notes
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .site: "Baustelle & Estrich"
+            case .media: "Fotos & Dokumente"
+            case .work: "Aufgaben & Mängel"
+            case .diary: "Bautagebuch"
+            case .protocols: "Protokolle"
+            case .contacts: "Kontakte"
+            case .notes: "Notizen & Verlauf"
+            }
+        }
+        var symbol: String {
+            switch self {
+            case .site: "house.fill"
+            case .media: "photo.on.rectangle.angled"
+            case .work: "checklist"
+            case .diary: "book.fill"
+            case .protocols: "doc.text.fill"
+            case .contacts: "person.2.fill"
+            case .notes: "note.text"
+            }
+        }
+        var color: Color {
+            switch self {
+            case .site: Theme.navyLight
+            case .media: Color(hex: 0x0E7490)
+            case .work: Color(hex: 0xE07A1F)
+            case .diary: Color(hex: 0x6D28D9)
+            case .protocols: Color(hex: 0x1F9D63)
+            case .contacts: Color(hex: 0x2F80ED)
+            case .notes: Color(hex: 0x64748B)
+            }
+        }
+    }
+
+    private func count(_ area: Area, _ bauakte: Bauakte) -> String? {
+        switch area {
+        case .site: return nil
+        case .media: return photos.count + documents.count > 0 ? "\(photos.count + documents.count)" : nil
+        case .work:
+            let open = workItems.filter { !$0.isDone }.count
+            return open > 0 ? "\(open) offen" : (workItems.isEmpty ? nil : "erledigt")
+        case .diary: return diary.isEmpty ? nil : "\(diary.count)"
+        case .protocols: return inspections.count + acceptances.count > 0 ? "\(inspections.count + acceptances.count)" : nil
+        case .contacts: return customer == nil ? "Kunde fehlt" : nil
+        case .notes: return notes.isEmpty ? nil : "\(notes.count)"
+        }
+    }
+
+    /// Kopf, große Aktions-Kacheln und die Bereiche als große Listeneinträge.
+    private func overview(_ bauakte: Bauakte) -> some View {
+        List {
+            header(bauakte)
+            Section {
+                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
+                    Button { capturing = true } label: { Label("Foto", systemImage: "camera.fill") }
+                        .buttonStyle(ActionTileStyle(rank: .accent))
+                        .accessibilityIdentifier("addPhotoButton")
+                    Button { scanning = true } label: { Label("Dokument scannen", systemImage: "doc.viewfinder") }
+                        .buttonStyle(ActionTileStyle(rank: .primary))
+                        .accessibilityIdentifier("scanDocumentButton")
+                    Button { form = .diary } label: { Label("Bautagebuch", systemImage: "book.fill") }
+                        .buttonStyle(ActionTileStyle())
+                        .accessibilityIdentifier("addDiaryButton")
+                    Button { form = .initialInspection } label: { Label("Erstbegehung", systemImage: "checklist") }
+                        .buttonStyle(ActionTileStyle())
+                        .accessibilityIdentifier("addInspectionButton")
+                    Button { form = .acceptance } label: { Label("Abnahme", systemImage: "signature") }
+                        .buttonStyle(ActionTileStyle())
+                        .accessibilityIdentifier("addAcceptanceButton")
+                    Button { form = .defect } label: { Label("Mangel melden", systemImage: "exclamationmark.triangle.fill") }
+                        .buttonStyle(ActionTileStyle())
+                        .accessibilityIdentifier("addDefectButton")
+                    if let phone = ContactLink.phone(bauakte.siteContactPhone ?? customer?.phone) {
+                        Link(destination: phone) { Label("Anrufen", systemImage: "phone.fill") }
+                            .buttonStyle(ActionTileStyle())
+                    }
+                    if let route = MapsLink.url(for: bauakte) {
+                        Link(destination: route) { Label("Route", systemImage: "car.fill") }
+                            .buttonStyle(ActionTileStyle())
+                            .accessibilityIdentifier("navigateButton")
+                    }
+                    Menu {
+                        Button("Notiz schreiben", systemImage: "square.and.pencil") { addingNote = true }
+                        Button("Video aufnehmen", systemImage: "video") { recordingVideo = true }
+                        Button("Aufgabe anlegen", systemImage: "checklist") { form = .task }
+                        Button("CM-Messung", systemImage: "drop") { form = .cmMeasurement }
+                    } label: {
+                        Label("Mehr", systemImage: "ellipsis")
+                    }
+                    .buttonStyle(ActionTileStyle())
+                    .accessibilityIdentifier("addMenu")
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+            }
+            Section {
+                ForEach(Area.allCases) { area in
+                    if sizeClass == .regular {
+                        Button { selectedArea = area } label: { areaRow(area, bauakte) }
+                            .buttonStyle(.plain)
+                            .listRowBackground((selectedArea ?? .media) == area ? Theme.secondaryFill : nil)
+                    } else {
+                        NavigationLink {
+                            areaContent(area, bauakte: bauakte)
+                        } label: {
+                            areaRow(area, bauakte)
+                        }
+                    }
+                }
+            }
+        }
+        .listSectionSpacing(.compact)
+    }
+
+    private func areaRow(_ area: Area, _ bauakte: Bauakte) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: area.symbol)
+                .font(.body.weight(.semibold))
+                .foregroundStyle(.white)
+                .frame(width: 38, height: 38)
+                .background(area.color, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .accessibilityHidden(true)
+            Text(area.title).font(.body.weight(.semibold)).foregroundStyle(Color.primary)
+            Spacer(minLength: 4)
+            if let count = count(area, bauakte) {
+                Text(count).font(.subheadline).foregroundStyle(area == .contacts ? Theme.hint : Theme.textSecondary)
+            }
+            if sizeClass == .regular {
+                Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+            }
+        }
+        .frame(minHeight: 52)
+        .contentShape(Rectangle())
+        .accessibilityIdentifier("area-\(area.rawValue)")
+    }
+
+    /// Inhalt eines Bereichs als eigene Seite (iPhone) bzw. rechte Spalte (iPad).
+    private func areaContent(_ area: Area, bauakte: Bauakte) -> some View {
+        List {
+            switch area {
+            case .site:
+                ProjectSection(bauakte: bauakte, schema: schema, lists: lists) { form = .project }
+                if let description = bauakte.description?.compactText {
+                    Section("Beschreibung") { Text(description) }
+                }
+            case .media:
+                photoSection
+                documentSection
+            case .work:
+                workSection
+            case .diary:
+                diarySection
+            case .protocols:
+                inspectionSection
+                acceptanceSection
+            case .contacts:
+                contactSection(bauakte)
+            case .notes:
+                noteSection
+                Section {
+                    NavigationLink {
+                        HistoryView(bauakteId: bauakteId)
+                    } label: {
+                        Label("Verlauf – wer hat was wann geändert", systemImage: "clock.arrow.circlepath")
+                    }
+                    .accessibilityIdentifier("historyLink")
+                }
+            }
+        }
+        .navigationTitle(area.title)
+        .navigationBarTitleDisplayMode(.inline)
+    }
+
+    private func show(_ message: String) {
+        toast = message
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if toast == message { toast = nil }
+        }
+    }
+
     /// Neueste Erstbegehung (Korrekturen sind neuere Fassungen).
     private var latestInitialInspection: Inspection? {
         inspections.first { $0.kind == .initialInspection }
@@ -544,6 +726,10 @@ struct BauakteDetailView: View {
         diary = (try? await service.diary(of: bauakteId)) ?? []
         inspections = (try? await service.inspections(of: bauakteId)) ?? []
         acceptances = (try? await service.acceptances(of: bauakteId)) ?? []
+        if let store = model.active?.sync?.store {
+            todayAssignments = (await MyPlanning(store: store).cached())?.assignments(on: CalendarDay.string(.now))
+                .filter { $0.bauakteId == bauakteId } ?? []
+        }
         if schema == nil { schema = await service.formSchema(using: model.active?.client) }
         lists = await service.valueLists()
         customer = if let id = bauakte?.customerId { try? await service.contact(id) } else { nil }

@@ -172,7 +172,7 @@ struct InspectionProtocolView: View {
     private var notesSection: some View {
         Section("Notizen") {
             if let notes = inspection.notes, !notes.isEmpty {
-                Text(notes).textSelection(.enabled).accessibilityIdentifier("inspectionNotes")
+                Text(notes.compactText ?? "").textSelection(.enabled).accessibilityIdentifier("inspectionNotes")
             } else {
                 Text("Keine Notizen.").foregroundStyle(Theme.textSecondary)
             }

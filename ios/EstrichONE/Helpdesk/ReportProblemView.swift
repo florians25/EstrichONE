@@ -225,8 +225,18 @@ struct TicketDetailView: View {
                     Text(detail.summary.title).font(.headline)
                     LabeledContent("Nummer", value: detail.summary.number)
                     LabeledContent("Status") { TicketStatusText(status: detail.summary.status) }
-                    if let description = detail.description { Text(description).foregroundStyle(Theme.textSecondary) }
-                    if let resolution = detail.resolution { LabeledContent("Lösung", value: resolution) }
+                    if let description = detail.description?.compactText {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Beschreibung").font(.caption).foregroundStyle(Theme.textSecondary)
+                            Text(description)
+                        }
+                    }
+                    if let resolution = detail.resolution?.compactText {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("Lösung").font(.caption).foregroundStyle(Theme.textSecondary)
+                            Text(resolution)
+                        }
+                    }
                 }
                 Section("Verlauf") {
                     if detail.history.isEmpty { Text("Noch keine Antwort.").foregroundStyle(Theme.textSecondary) }

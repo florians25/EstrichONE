@@ -295,7 +295,7 @@ struct CustomerCardView: View {
                             Link(destination: url) { Label(website, systemImage: "globe") }
                         }
                         if let notes = contact.notes {
-                            Text(notes).font(.subheadline)
+                            Text(notes.compactText ?? "").font(.subheadline)
                         }
                     }
                 }

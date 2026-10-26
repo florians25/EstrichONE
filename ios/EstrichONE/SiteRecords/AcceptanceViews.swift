@@ -275,7 +275,7 @@ struct AcceptanceDetailView: View {
                     LabeledContent("Auftragnehmer", value: acceptance.contractorName ?? "–")
                 }
                 if let scope = acceptance.scope {
-                    Section("Abgenommene Leistung") { Text(scope) }
+                    Section("Abgenommene Leistung") { Text(scope.compactText ?? "") }
                 }
                 if !defects.isEmpty {
                     Section("Mängel") {
@@ -285,7 +285,7 @@ struct AcceptanceDetailView: View {
                     }
                 }
                 if let notes = acceptance.notes {
-                    Section("Notizen") { Text(notes) }
+                    Section("Notizen") { Text(notes.compactText ?? "") }
                 }
                 Section("Unterschriften") {
                     signature("Auftraggeber", acceptance.hasClientSignature)
