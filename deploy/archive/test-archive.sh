@@ -147,6 +147,27 @@ api -o "$WORK/export.zip" https://localhost/api/v1/archive/export
 grep -q "$SHA" "$WORK/export/sha256sums.txt" || { echo "Rechnung fehlt im Export"; exit 1; }
 docker exec eo-test-archive estrichone-archive verify >/dev/null
 
+log "Aktenarchivierung: Bauakte komplett auslagern, Platzhalter, Abruf, Schreibschutz"
+api -X POST -o /dev/null "https://localhost/api/v1/archive/dossiers/$BAUAKTE"
+for _ in $(seq 1 60); do
+  STATE="$(api "https://localhost/api/v1/archive/dossiers/$BAUAKTE" | json "['status']")"
+  [[ "$STATE" == "archived" ]] && break
+  sleep 2
+done
+[[ "$STATE" == "archived" ]] || { echo "Akte nicht ausgelagert ($STATE)"; exit 1; }
+CODE_EVICTED="$("${CURL_NOFAIL[@]}" "${AUTH[@]}" -o /dev/null -w '%{http_code}' "https://localhost/api/v1/files/$FILE/content")"
+[[ "$CODE_EVICTED" == "409" ]] || { echo "Ausgelagerte Datei noch im Produktivsystem ($CODE_EVICTED)"; exit 1; }
+api -X POST -o /dev/null "https://localhost/api/v1/archive/dossiers/$BAUAKTE/restore"
+for _ in $(seq 1 60); do
+  STATE="$(api "https://localhost/api/v1/archive/dossiers/$BAUAKTE" | json "['status']")"
+  [[ "$STATE" == "available" ]] && break
+  sleep 2
+done
+[[ "$STATE" == "available" ]] || { echo "Akte nicht abgerufen ($STATE)"; exit 1; }
+[[ "$(api "https://localhost/api/v1/files/$FILE/content" | sha256sum | cut -d' ' -f1)" == "$SHA" ]] || { echo "Abgerufene Datei verändert"; exit 1; }
+LOCKED="$("${CURL_NOFAIL[@]}" "${AUTH[@]}" -o /dev/null -w '%{http_code}' -X PATCH -H 'Content-Type: application/json' -d '{}' "https://localhost/api/v1/bauakten/$BAUAKTE")"
+[[ "$LOCKED" == "423" ]] || { echo "Archivierte Akte nicht schreibgeschützt ($LOCKED)"; exit 1; }
+
 log "Backup-Ziel koppeln (Adresse = IP) und dorthin sichern"
 TARGET_IP="$(ip_of eo-test-target)"
 TARGET="$(api -H 'Content-Type: application/json' https://localhost/api/v1/backup/targets -d "{\"address\":\"$TARGET_IP\",\"code\":\"$TARGET_CODE\"}")"
@@ -171,4 +192,7 @@ RESULT="$(api -H 'Content-Type: application/json' https://localhost/api/v1/mail/
 [[ "$(json "['ok']" <<<"$RESULT")" == "True" ]] || { echo "Testmail fehlgeschlagen: $RESULT"; exit 1; }
 curl -sS --noproxy '*' http://localhost:18025/api/v1/messages | python3 -c "import sys,json; m=json.load(sys.stdin)['messages']; assert any(x['Subject']=='Testmail von EstrichONE' for x in m), m"
 
-log "Archiv, Backup-Ziel und E-Mail erfolgreich geprüft"
+log "Überwachung"
+api https://localhost/api/v1/system/monitoring | python3 -c "import sys,json; o=json.load(sys.stdin); keys=[s['key'] for s in o['systems']]; assert 'production' in keys and 'archive' in keys and any(k.startswith('backup:') for k in keys), keys; print(o['level'], keys)"
+
+log "Archiv, Aktenarchivierung, Backup-Ziel, Überwachung und E-Mail erfolgreich geprüft"

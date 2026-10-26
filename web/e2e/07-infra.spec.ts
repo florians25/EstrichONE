@@ -76,3 +76,13 @@ test('Backup-Ziele: Anleitung mit Installationsbefehl, Kopplungsdialog', async (
   await page.getByRole('button', { name: 'Koppeln', exact: true }).click();
   await expect(page.getByText('nicht erreichbar', { exact: false })).toBeVisible({ timeout: 30_000 });
 });
+
+test('Überwachung und Aktenarchiv: Systeme mit Plattenbelegung, Liste der ausgelagerten Akten', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await page.goto('/system/ueberwachung');
+  await expect(pageTitle(page)).toHaveText('Überwachung');
+  await expect(page.getByText('Produktivsystem (EstrichONE-Server)')).toBeVisible({ timeout: 30_000 });
+  await page.goto('/system/aktenarchiv');
+  await expect(pageTitle(page)).toHaveText('Aktenarchiv');
+  await expect(page.getByRole('button', { name: 'Bauakte archivieren …' })).toBeVisible();
+});

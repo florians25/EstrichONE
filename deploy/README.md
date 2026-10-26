@@ -217,6 +217,14 @@ sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/floria
 Dann **System → Backup-Ziele → „Backup-Ziel koppeln“** und den **Notfallzugang** herunterladen und mit dem
 Backup-Passwort aufbewahren. Ausführlich: [backup-target/README.md](backup-target/README.md).
 
+## Überwachung
+
+**System → Überwachung** zeigt Produktivsystem, Archivserver und alle Backup-Ziele: Plattenbelegung, freier Platz und
+Trend (Zuwachs pro Tag, „voll in ca. … Tagen“), Dienste (Datenbank, Sicherung, Archiv-Warteschlange, Erreichbarkeit),
+letzte Sicherung, letzte Archivierung und letzte Archivprüfung. Warnschwellen: Platte ab 85 % (kritisch ab 95 % oder
+voll in weniger als 14 Tagen), Sicherung älter als 36 Stunden, Archivprüfung mit Abweichungen. Bei Warnungen erscheint
+ein Hinweis auf der Startseite (für Benutzer mit dem Recht „Backups verwalten“).
+
 ## E-Mail-Konto
 
 **System → E-Mail:** SMTP-Server (z. B. `smtp.ionos.de`, `smtp.office365.com`, `smtp.strato.de`), Port und

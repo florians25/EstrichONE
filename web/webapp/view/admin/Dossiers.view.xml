@@ -1,0 +1,40 @@
+<mvc:View controllerName="estrichone.controller.admin.Dossiers" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.dossiers}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Komplett ausgelagerte Bauakten: liegen dauerhaft auf dem Archivserver, beim Abruf 5 Tage im System (nur Ansicht), Änderungen erst nach Entsperren mit Passwort."/></f:expandedContent>
+				<f:actions>
+					<Button text="Bauakte archivieren …" icon="sap-icon://inbox" type="Emphasized" press=".onArchive"/>
+					<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<Table id="dossiers" items="{view>/items}" busy="{view>/busy}" growing="true" growingThreshold="100" noDataText="Noch keine Bauakte ausgelagert. Automatisch: System → Archiv → „Akten auslagern nach … Monaten“.">
+				<columns>
+					<Column><Text text="Bauakte"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zustand"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Archiviert"/></Column>
+					<Column hAlign="End" width="16rem"><Text text=""/></Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Navigation" press=".onOpen">
+						<ObjectIdentifier title="{view>number} {view>title}" text="Fassung {view>version}"/>
+						<VBox>
+							<ObjectStatus text="{view>stateText}" state="{view>state}"/>
+							<Text text="{view>detail}" wrapping="true"/>
+							<ProgressIndicator visible="{view>busy}" percentValue="{view>percent}" displayValue="{view>filesDone} / {view>filesTotal}" height="1rem" width="12rem"/>
+						</VBox>
+						<Text text="{view>archived}"/>
+						<HBox justifyContent="End">
+							<Button text="Abrufen" visible="{= ${view>status} === 'archived' }" press=".onRestore"/>
+							<Button text="Entsperren" visible="{= ${view>status} === 'available' &amp;&amp; ${session>/permissions/archive.unlock} === true }" press=".onUnlock" class="sapUiTinyMarginBegin"/>
+							<Button text="Jetzt neu archivieren" visible="{= ${view>status} === 'unlocked' }" press=".onRearchive" class="sapUiTinyMarginBegin"/>
+						</HBox>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

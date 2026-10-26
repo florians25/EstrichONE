@@ -6,6 +6,7 @@ export type ArchiveRecordStatus = "pending" | "archived" | "failed";
 export interface ArchiveConnectionDto {
 	address: string; serverName: string; serverVersion: string; caFingerprint: string; fingerprintDisplay: string;
 	pairedAt: string; lastContactAt: string | null; lastError: string | null; autoArchive: boolean; notifyEmail: string | null;
+	dossierAfterMonths: number | null;
 }
 
 export interface ArchiveVerification {
@@ -72,3 +73,28 @@ export const recordStatus: Record<ArchiveRecordStatus, { text: string; state: st
 	archived: { text: "Archiviert", state: "Success" },
 	failed: { text: "Fehlgeschlagen – wird erneut versucht", state: "Error" },
 };
+
+export type DossierStatus = "archiving" | "archived" | "restoring" | "available" | "unlocked";
+
+export interface DossierDto {
+	bauakteId: string; number: string | null; title: string; status: DossierStatus; version: number; filesDone: number; filesTotal: number;
+	archivedAt: string | null; availableUntil: string | null; unlockedUntil: string | null; lastError: string | null; readOnly: boolean;
+}
+
+export const dossierStatus: Record<DossierStatus, { text: string; state: string }> = {
+	archiving: { text: "Wird archiviert", state: "Information" },
+	archived: { text: "Archiviert (ausgelagert)", state: "None" },
+	restoring: { text: "Wird abgerufen", state: "Information" },
+	available: { text: "Abgerufen – nur Ansicht", state: "Success" },
+	unlocked: { text: "Entsperrt – Änderungen möglich", state: "Warning" },
+};
+
+export type MonitorLevel = "ok" | "warning" | "critical";
+
+export interface MonitoredSystem {
+	key: string; name: string; level: MonitorLevel;
+	disk: { usedBytes: number; freeBytes: number; totalBytes: number; usedPercent: number; growthBytesPerDay: number | null; daysUntilFull: number | null } | null;
+	items: { label: string; value: string; level: MonitorLevel }[];
+}
+
+export interface MonitoringOverview { level: MonitorLevel; at: string; systems: MonitoredSystem[]; warnings: string[] }

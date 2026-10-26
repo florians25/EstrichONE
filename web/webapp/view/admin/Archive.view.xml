@@ -33,6 +33,11 @@
 				</form:SimpleForm>
 				<form:SimpleForm visible="{view>/o/connected}" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Einstellungen" width="48rem">
 					<Label text="Automatisch archivieren" labelFor="arAuto"/><Switch id="arAuto" state="{view>/settings/autoArchive}" customTextOn="An" customTextOff="Aus"/>
+					<Label text="Akten auslagern nach (Monaten)" labelFor="arMonths"/>
+					<VBox>
+						<StepInput id="arMonths" value="{view>/settings/dossierAfterMonths}" min="0" max="240" width="10rem"/>
+						<Text text="Abgeschlossene Bauakten werden nach dieser Zeit komplett archiviert und aus dem System entfernt (0 = nur manuell, System → Aktenarchiv)."/>
+					</VBox>
 					<Label text="Bei Fehlern benachrichtigen" labelFor="arMail"/><Input id="arMail" value="{view>/settings/notifyEmail}" type="Email" placeholder="z. B. buero@firma.de (E-Mail-Konto nötig)"/>
 					<Label/><HBox><Button text="{i18n>common.save}" icon="sap-icon://save" press=".onSaveSettings"/><Button text="Entkoppeln" icon="sap-icon://broken-link" type="Transparent" press=".onUnpair" class="sapUiSmallMarginBegin"/></HBox>
 				</form:SimpleForm>

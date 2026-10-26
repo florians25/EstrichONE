@@ -109,6 +109,9 @@ export default class Start extends BaseController {
 			this.has("backup.manage") ? get<BackupStatusResponse>("backup/status").then((b) => m.setProperty("/backup", b.lastSuccess
 				? { text: b.healthy ? "Aktuell" : "Veraltet", state: b.healthy ? "Success" : "Warning", detail: `Letzte erfolgreiche Sicherung: ${dateTime(b.lastSuccess.at)}` }
 				: { text: "Bisher wurde keine Sicherung abgeschlossen.", state: "Error", detail: b.summary })) : Promise.resolve(),
+			// Überwachung (System → Überwachung): Hinweis nur bei Warnung
+			this.has("backup.manage") ? get<{ level: string; warnings: string[] }>("system/monitoring").then((o) => m.setProperty("/monitor",
+				o.level === "ok" ? null : { type: o.level === "critical" ? "Error" : "Warning", text: o.warnings.slice(0, 3).join(" · ") })).catch(() => undefined) : Promise.resolve(),
 		]);
 		m.setProperty("/busy", false);
 	}

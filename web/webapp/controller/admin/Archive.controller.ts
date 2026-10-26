@@ -37,7 +37,7 @@ export default class Archive extends BaseController {
 		m.setProperty("/rules", rules ?? []);
 		const c = o.connection;
 		m.setProperty("/pairedText", c ? dateTime(c.pairedAt) : "");
-		m.setProperty("/settings", { autoArchive: c?.autoArchive ?? true, notifyEmail: c?.notifyEmail ?? "" });
+		m.setProperty("/settings", { autoArchive: c?.autoArchive ?? true, notifyEmail: c?.notifyEmail ?? "", dossierAfterMonths: c?.dossierAfterMonths ?? 0 });
 		m.setProperty("/contact", c?.lastError
 			? { text: `Fehler · zuletzt erreicht ${dateTime(c.lastContactAt)}`, state: "Error" }
 			: { text: o.server ? `Erreichbar · ${dateTime(c?.lastContactAt)}` : `Nicht erreichbar · zuletzt ${dateTime(c?.lastContactAt)}`, state: o.server ? "Success" : "Warning" });
@@ -93,8 +93,10 @@ export default class Archive extends BaseController {
 	}
 
 	async onSaveSettings(): Promise<void> {
-		const s = this.model().getProperty("/settings") as { autoArchive: boolean; notifyEmail: string };
-		await this.run(() => put("archive/settings", { autoArchive: s.autoArchive, notifyEmail: s.notifyEmail?.trim() || null }), "Gespeichert");
+		const s = this.model().getProperty("/settings") as { autoArchive: boolean; notifyEmail: string; dossierAfterMonths: number };
+		const months = Math.round(Number(s.dossierAfterMonths) || 0);
+		await this.run(() => put("archive/settings", { autoArchive: s.autoArchive, notifyEmail: s.notifyEmail?.trim() || null,
+			dossierAfterMonths: months > 0 ? months : null }), "Gespeichert");
 	}
 
 	async onSaveRules(): Promise<void> {

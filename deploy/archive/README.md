@@ -65,6 +65,22 @@ Manuell: im Dialog „Archivnachweis“ (Bauakte bzw. Dokument) → „Jetzt arc
 wiederholt EstrichONE automatisch (1, 5, 15, 60 Minuten, danach alle 6 Stunden). Optional geht eine E-Mail an eine
 Adresse aus „Bei Fehlern benachrichtigen“.
 
+## Komplette Bauakten auslagern (Aktenarchiv)
+
+Abgeschlossene Bauakten können **komplett** auf den Archivserver wandern und werden danach aus dem Produktivsystem
+entfernt – das hält den Server klein. In Listen und Suche bleibt die Akte als Platzhalter („archiviert“) sichtbar.
+
+- **Automatisch:** System → Archiv → „Akten auslagern nach … Monaten“ (abgeschlossene Bauakten). **Manuell:**
+  System → **Aktenarchiv** → „Bauakte archivieren …“.
+- Übertragen werden alle Dokumente, Fotos und Videos (je mit Prüfsumme) und der Datenstand der Akte als eigene,
+  unveränderbare Fassung. Erst wenn alles bestätigt ist, werden die Inhalte lokal gelöscht.
+- **Abrufen:** „Akte abrufen“ holt alles zurück (Fortschritt sichtbar). Danach ist die Akte **5 Tage** im System
+  (nur Ansicht) und wird dann automatisch wieder entfernt. Auf dem Archivserver bleibt sie **immer**.
+- **Ändern:** nur nach „Entsperren“ mit dem eigenen Passwort (Recht „Archivierte Bauakten entsperren“, wird
+  protokolliert). Nach 8 Stunden bzw. „Jetzt neu archivieren“ geht die Akte als **neue Fassung** wieder ins Archiv.
+- Hinweis: Die strukturierten Daten (Bauakte, Räume, Notizen …) bleiben schreibgeschützt in der Datenbank – sie sind
+  klein; ausgelagert werden die Dateiinhalte. Der vollständige Datenstand liegt zusätzlich je Fassung im Archiv.
+
 ## Wie die Unveränderbarkeit funktioniert
 
 - Jedes Dokument wird mit seiner **SHA-256-Prüfsumme** übertragen; der Archivserver nimmt es nur an, wenn die

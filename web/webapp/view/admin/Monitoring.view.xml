@@ -1,0 +1,37 @@
+<mvc:View controllerName="estrichone.controller.admin.Monitoring" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.monitoring}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{view>/subtitle}"/></f:expandedContent>
+				<f:actions><Button icon="sap-icon://refresh" text="Aktualisieren" press=".onRefresh"/></f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox busy="{view>/busy}">
+				<MessageStrip visible="{= ${view>/o/level} !== 'ok' &amp;&amp; !!${view>/o} }" type="{= ${view>/o/level} === 'critical' ? 'Error' : 'Warning' }" showIcon="true"
+					text="{view>/warningText}" class="sapUiSmallMarginBottom"/>
+				<MessageStrip visible="{= ${view>/o/level} === 'ok' }" type="Success" showIcon="true" text="Alle Systeme in Ordnung." class="sapUiSmallMarginBottom"/>
+				<List items="{view>/systems}" showSeparators="All">
+					<CustomListItem>
+						<VBox class="sapUiSmallMargin">
+							<HBox alignItems="Center" justifyContent="SpaceBetween">
+								<Title text="{view>name}" level="H3"/>
+								<ObjectStatus text="{view>levelText}" state="{view>state}" inverted="true"/>
+							</HBox>
+							<ProgressIndicator visible="{= !!${view>disk} }" percentValue="{view>disk/usedPercent}" displayValue="{view>diskText}" state="{view>diskState}" width="100%" class="sapUiTinyMarginTop"/>
+							<List items="{path: 'view>items', templateShareable: false}" showSeparators="None" backgroundDesign="Transparent">
+								<CustomListItem>
+									<HBox>
+										<Text text="{view>label}:" width="14rem"/>
+										<ObjectStatus text="{view>value}" state="{view>state}"/>
+									</HBox>
+								</CustomListItem>
+							</List>
+						</VBox>
+					</CustomListItem>
+				</List>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>
