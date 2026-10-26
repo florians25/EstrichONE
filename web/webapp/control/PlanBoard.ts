@@ -1,3 +1,4 @@
+import { justDragged, trackDrag } from "../util/pointerDrag";
 import Control from "sap/ui/core/Control";
 import type RenderManager from "sap/ui/core/RenderManager";
 import type { MetadataOptions } from "sap/ui/core/Element";
@@ -60,61 +61,16 @@ function icon(name: string): HTMLElement {
 
 export type DragPayload = { kind: "assignment"; id: string; lane: string } | { kind: "bauakte"; bauakte: { id: string; label: string } };
 
-let lastDragEnd = 0;
-const justDragged = () => Date.now() - lastDragEnd < 300;
-
-/**
- * Ziehen mit Zeigerereignissen (Maus, Stift, Touch) statt HTML5-Drag&Drop: Innerhalb der UI5-Seitencontainer
- * startet Chromium kein natives Ziehen zuverlässig. Abgelegt wird auf Zellen mit data-drop der Plantafel.
- */
+/** Ziehen mit dem gemeinsamen Kern (Schwelle, Geist, Auto-Scroll, Escape); abgelegt wird auf Zellen mit data-drop. */
 export function startDrag(event: PointerEvent, source: HTMLElement, payload: DragPayload): void {
-	if (event.button !== 0 || (event.target as HTMLElement).closest("a, input, textarea, select")) return;
-	const startX = event.clientX;
-	const startY = event.clientY;
-	let ghost: HTMLElement | null = null;
-	let over: HTMLElement | null = null;
-	const cellAt = (x: number, y: number) => {
-		ghost?.style.setProperty("display", "none");
-		const hit = document.elementFromPoint(x, y) as HTMLElement | null;
-		ghost?.style.setProperty("display", "");
-		return hit?.closest<HTMLElement>("[data-drop]") ?? null;
-	};
-	const move = (e: PointerEvent) => {
-		if (!ghost) {
-			if (Math.abs(e.clientX - startX) + Math.abs(e.clientY - startY) < 6) return;
-			ghost = source.cloneNode(true) as HTMLElement;
-			ghost.classList.add("eoPlanGhost");
-			ghost.style.width = `${Math.min(source.getBoundingClientRect().width, 260)}px`;
-			document.body.append(ghost);
-			source.classList.add("eoPlanDragging");
-		}
-		ghost.style.left = `${e.clientX + 8}px`;
-		ghost.style.top = `${e.clientY + 8}px`;
-		const cell = cellAt(e.clientX, e.clientY);
-		if (cell !== over) {
-			over?.classList.remove("eoPlanDrop");
-			cell?.classList.add("eoPlanDrop");
-			over = cell;
-		}
-		e.preventDefault();
-	};
-	const end = (e: PointerEvent) => {
-		window.removeEventListener("pointermove", move, true);
-		window.removeEventListener("pointerup", end, true);
-		window.removeEventListener("pointercancel", end, true);
-		if (!ghost) return;
-		ghost.remove();
-		source.classList.remove("eoPlanDragging");
-		over?.classList.remove("eoPlanDrop");
-		lastDragEnd = Date.now();
-		const cell = e.type === "pointerup" ? cellAt(e.clientX, e.clientY) : null;
-		const boardDom = cell?.closest<HTMLElement>(".eoPlanBoard");
-		const board = boardDom ? (Element.getElementById(boardDom.id) as PlanBoard | undefined) : undefined;
-		if (cell && board) board.handleDrop(payload, cell);
-	};
-	window.addEventListener("pointermove", move, true);
-	window.addEventListener("pointerup", end, true);
-	window.addEventListener("pointercancel", end, true);
+	trackDrag(event, source, {
+		target: "[data-drop]", overClass: "eoPlanDrop", draggingClass: "eoPlanDragging",
+		onDrop: (cell) => {
+			const boardDom = cell.closest<HTMLElement>(".eoPlanBoard");
+			const board = boardDom ? (Element.getElementById(boardDom.id) as PlanBoard | undefined) : undefined;
+			if (board) board.handleDrop(payload, cell);
+		},
+	});
 }
 
 /**

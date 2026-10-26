@@ -115,3 +115,21 @@
 .eoLoadWarning .eoLoadFill { background: var(--sapCriticalElementColor); }
 .eoLoadError .eoLoadFill { background: var(--sapNegativeElementColor); }
 .eoLoadText { position: relative; display: block; font-size: 0.6875rem; line-height: 0.875rem; text-align: center; color: var(--sapTextColor); font-weight: bold; }
+
+/* Ziehen: nichts markieren, Griff, Geist mit Karteninhalt, deutliche Ablagezone. */
+[data-dragkind], .eoPlanMovable { -webkit-user-select: none; user-select: none; touch-action: none; cursor: grab; }
+[data-dragkind] a, .eoPlanMovable a, [data-dragkind] img { -webkit-user-drag: none; user-drag: none; }
+body.is-dragging, body.is-dragging * { -webkit-user-select: none !important; user-select: none !important; cursor: grabbing !important; }
+.eoDispatchCard[data-dragkind], .eoDispatchPerson[data-dragkind] { position: relative; }
+.eoDispatchCard[data-dragkind]::before, .eoDispatchPerson[data-dragkind]::before, .eoPlanMovable::after {
+	content: "⠿"; position: absolute; color: var(--sapContent_IconColor); opacity: 0.55; font-size: 0.875rem; line-height: 1; pointer-events: none; }
+.eoDispatchCard[data-dragkind]::before { left: 0.2rem; top: 50%; transform: translateY(-50%); }
+.eoDispatchCard[data-dragkind] { padding-left: 1rem !important; }
+.eoDispatchPerson[data-dragkind]::before { left: 0.15rem; top: 50%; transform: translateY(-50%); }
+.eoPlanMovable { position: relative; }
+.eoPlanMovable::after { right: 0.25rem; top: 0.25rem; }
+.eoDragGhostCard { position: fixed; z-index: 2000; pointer-events: none; opacity: 0.85; transform: rotate(-1.5deg);
+	box-shadow: var(--sapContent_Shadow3, 0 8px 24px rgba(0, 0, 0, 0.25)); border-radius: 0.5rem; background: var(--sapTile_Background); list-style: none; }
+.eoDropOver, .eoPlanDrop { outline: 2px dashed var(--sapButton_Emphasized_Background) !important; outline-offset: -2px;
+	background: color-mix(in srgb, var(--sapButton_Emphasized_Background) 12%, transparent) !important; }
+.eoDragging, .eoPlanDragging { opacity: 0.4; }

@@ -362,7 +362,7 @@ export default class Planning extends BaseController {
 			const dom = item.getDomRef() as HTMLElement | null;
 			if (!dom || dom.dataset.drag) continue;
 			dom.dataset.drag = "1";
-			dom.classList.add("eoBacklogDraggable");
+			dom.classList.add("eoBacklogDraggable", "eoPlanMovable");
 			dom.addEventListener("pointerdown", (ev) => {
 				const b = item.getBindingContext("view")?.getObject() as BacklogItem | undefined;
 				if (b) startDrag(ev, dom, { kind: "bauakte", bauakte: { id: b.bauakteId, label: `${b.number ?? "neu"} · ${b.title}` } });
