@@ -1,0 +1,64 @@
+<mvc:View controllerName="estrichone.controller.admin.Notices" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.notices}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Ankündigungen (Banner im Web, Hinweis in den Apps, optional per E-Mail) und Wartungsmodus dieser Instanz"/></f:expandedContent>
+				<f:actions>
+					<Button text="Neue Ankündigung" icon="sap-icon://add" type="Emphasized" press=".onNew"/>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox busy="{view>/busy}">
+				<Panel backgroundDesign="Solid" class="sapUiSmallMarginBottom">
+					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://wrench"/><Title text="Wartungsmodus" level="H2"/></OverflowToolbar></headerToolbar>
+					<VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+						<ObjectStatus text="{view>/maintenance/text}" state="{view>/maintenance/state}" icon="sap-icon://wrench" class="sapUiTinyMarginBottom"/>
+						<Text text="{view>/maintenance/detail}" visible="{= !!${view>/maintenance/detail} }" class="eoMuted"/>
+						<MessageStrip text="Während der Wartung können sich Benutzer nicht anmelden bzw. erhalten „Wartungsarbeiten“; Administratoren arbeiten weiter, wenn erlaubt."
+							type="Information" showIcon="true" class="sapUiSmallMarginTopBottom"/>
+						<HBox wrap="Wrap" class="eoSystemItem">
+							<Button text="Wartung planen …" icon="sap-icon://appointment-2" press=".onPlanMaintenance"/>
+							<Button text="Jetzt starten …" icon="sap-icon://media-play" type="Reject" press=".onStartMaintenance" visible="{= !${view>/maintenance/running} }"/>
+							<Button text="{= ${view>/maintenance/running} ? 'Wartung beenden' : 'Planung verwerfen' }" icon="sap-icon://stop" press=".onEndMaintenance"
+								visible="{= ${view>/maintenance/has} }"/>
+						</HBox>
+					</VBox>
+				</Panel>
+				<Table items="{view>/announcements}" noDataText="Keine Ankündigungen der Instanz." popinLayout="GridSmall" class="sapUiSmallMarginBottom">
+					<headerToolbar><OverflowToolbar><Title text="Ankündigungen dieser Instanz" level="H2"/></OverflowToolbar></headerToolbar>
+					<columns>
+						<Column><Text text="Titel"/></Column>
+						<Column width="8rem"><Text text="Art"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zeitraum"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zielgruppe"/></Column>
+						<Column width="8rem"><Text text="Status"/></Column>
+						<Column width="7rem" hAlign="End"><Text text=""/></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<VBox><Text text="{view>title}" class="eoStrong"/><Text text="{view>text}" class="eoMuted"/></VBox>
+							<ObjectStatus text="{view>severityText}" state="{view>severityState}" inverted="true"/>
+							<Text text="{view>period}"/>
+							<Text text="{view>target}"/>
+							<ObjectStatus text="{view>statusText}" state="{view>statusState}"/>
+							<HBox justifyContent="End">
+								<Button icon="sap-icon://edit" type="Transparent" tooltip="{= 'Bearbeiten: ' + ${view>title} }" press=".onEdit"/>
+								<Button icon="sap-icon://delete" type="Transparent" tooltip="{= 'Löschen: ' + ${view>title} }" press=".onDelete"/>
+							</HBox>
+						</ColumnListItem>
+					</items>
+				</Table>
+				<Panel backgroundDesign="Solid" headerText="Hinweise des Betreibers (Hosting-Konsole) – nur lesen" visible="{= ${view>/console}.length > 0 || !!${view>/consoleMaintenance} }">
+					<Text text="{view>/consoleMaintenance}" visible="{= !!${view>/consoleMaintenance} }" class="sapUiSmallMarginBeginEnd"/>
+					<List items="{view>/console}" showSeparators="Inner">
+						<StandardListItem title="{view>title}" description="{view>text}" info="{view>period}" infoState="{view>severityState}" icon="sap-icon://message-warning"/>
+					</List>
+				</Panel>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

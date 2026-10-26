@@ -140,6 +140,40 @@ public sealed class SystemNoticeEndpointTests(PostgresFixture postgres) : IAsync
     }
 
     [Fact]
+    public async Task InstanzAdmins_SetzenEigeneHinweise_KonsoleBleibtGetrennt_ZielgruppeNachRolle()
+    {
+        using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        using var admin = await _factory.CreateClientAsAsync("chefin", StandardRoles.AdministratorId);
+        (await PutAsync(new { announcements = new[] { new { id = "konsole", title = "Betreiber", text = "Update", severity = "info" } } }, Token))
+            .ShouldBe(HttpStatusCode.NoContent);
+
+        // Ohne settings.manage: verboten.
+        using var denied = await worker.PutAsJsonAsync("/api/v1/system/notices/admin/announcements/a1", new { title = "X", text = "Y", severity = "info" }, Ct);
+        denied.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+
+        using var all = await admin.PutAsJsonAsync("/api/v1/system/notices/admin/announcements/a1", new { title = "Betriebsfeier", text = "Freitag 14 Uhr", severity = "info" }, Ct);
+        all.StatusCode.ShouldBe(HttpStatusCode.OK);
+        using var office = await admin.PutAsJsonAsync("/api/v1/system/notices/admin/announcements/a2",
+            new { title = "Nur Büro", text = "Monatsabschluss", severity = "warning", roleIds = new[] { StandardRoles.OfficeId } }, Ct);
+        office.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        var seen = await worker.GetFromJsonAsync<SystemNoticesResponse>("/api/v1/system/notices", TestJson.Options, Ct);
+        seen!.Announcements.Select(a => (a.Title, a.Source)).ShouldBe([("Betreiber", "console"), ("Betriebsfeier", "instance")], ignoreOrder: true);
+
+        var overview = await admin.GetFromJsonAsync<AdminNoticesResponse>("/api/v1/system/notices/admin", TestJson.Options, Ct);
+        overview!.Instance.Announcements.Count.ShouldBe(2);
+        overview.Console.Announcements.ShouldHaveSingleItem().Id.ShouldBe("konsole");
+
+        // Wartung der Instanz sperrt Benutzer, Administratoren arbeiten weiter.
+        var now = _factory.Clock.GetUtcNow();
+        (await admin.PutAsJsonAsync("/api/v1/system/notices/admin/maintenance", new { message = "Umzug", startsAt = now.AddMinutes(-1), endsAt = now.AddHours(1), adminsMayWork = true }, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+        (await worker.GetAsync(new Uri("/api/v1/bauakten", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        (await admin.DeleteAsync(new Uri("/api/v1/system/notices/admin/maintenance", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await worker.GetAsync(new Uri("/api/v1/bauakten", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
     public async Task OhneSchluessel_IstSetzenAbgeschaltet()
     {
         await using var factory = await ApiFactory.CreateMigratedAsync(postgres);

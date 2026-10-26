@@ -10786,6 +10786,195 @@
         }
       }
     },
+    "/api/v1/system/notices/admin": {
+      "get": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "summary": "Hinweise und Wartung der Instanz (bearbeitbar) und der Hosting-Konsole (nur lesen)",
+        "operationId": "GetAdminNotices",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AdminNoticesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/notices/admin/announcements/{id}": {
+      "put": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "summary": "Ankündigung anlegen oder ändern; optional per E-Mail an alle aktiven Benutzer (bzw. die Zielgruppe)",
+        "operationId": "SaveAdminAnnouncement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAnnouncementRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SaveAnnouncementResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "operationId": "DeleteAdminAnnouncement",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/system/notices/admin/maintenance": {
+      "put": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "summary": "Wartung der Instanz planen oder sofort starten (Beginn ≤ jetzt)",
+        "operationId": "SetAdminMaintenance",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MaintenanceWindow"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MaintenanceWindow"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "summary": "Wartung der Instanz beenden bzw. Planung verwerfen",
+        "operationId": "EndAdminMaintenance",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/backup/status": {
       "get": {
         "tags": [
@@ -12306,6 +12495,30 @@
               "type": "string",
               "format": "uuid"
             }
+          }
+        }
+      },
+      "AdminNoticesResponse": {
+        "required": [
+          "instance",
+          "console",
+          "consoleManaged",
+          "serverTime"
+        ],
+        "type": "object",
+        "properties": {
+          "instance": {
+            "$ref": "#/components/schemas/SystemNoticesDocument"
+          },
+          "console": {
+            "$ref": "#/components/schemas/SystemNoticesDocument"
+          },
+          "consoleManaged": {
+            "type": "boolean"
+          },
+          "serverTime": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
@@ -18417,6 +18630,12 @@
           },
           "adminsMayWork": {
             "type": "boolean"
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20048,6 +20267,75 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "SaveAnnouncementRequest": {
+        "required": [
+          "title",
+          "text",
+          "severity",
+          "startsAt",
+          "endsAt"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "startsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "endsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "roleIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "notify": {
+            "type": "boolean",
+            "default": false
+          },
+          "sendEmail": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "SaveAnnouncementResponse": {
+        "required": [
+          "announcement",
+          "sentEmails"
+        ],
+        "type": "object",
+        "properties": {
+          "announcement": {
+            "$ref": "#/components/schemas/SystemAnnouncement"
+          },
+          "sentEmails": {
+            "type": "integer",
+            "format": "int32"
           }
         }
       },
@@ -22177,6 +22465,26 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "roleIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notify": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

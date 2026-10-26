@@ -3134,6 +3134,36 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("suppliers", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Notices.InstanceNoticesRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_instance_notices");
+
+                    b.ToTable("instance_notices", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Organization.CatalogEntry", b =>
                 {
                     b.Property<Guid>("Id")

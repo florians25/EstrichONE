@@ -1,6 +1,12 @@
 using System.Security.Cryptography;
 using System.Text;
 using EstrichOne.Api.Infrastructure.Modules;
+using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Access.Exports;
+using EstrichOne.Api.Modules.Audit.Exports;
+using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Mail.Exports;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
 
@@ -26,7 +32,18 @@ public sealed partial class NoticesModule : IModule
     {
         var notices = api.MapGroup("/system/notices").WithTags("Systemhinweise");
 
-        notices.MapGet("/", (NoticeStore store) => TypedResults.Ok(store.ForClients()))
+        notices.MapGet("/", async (NoticeStore store, HttpContext http, IServiceProvider services, CancellationToken ct) =>
+            {
+                // Angemeldet: auch Hinweise an die eigenen Rollen.
+                IReadOnlyCollection<Guid>? roles = null;
+                if (http.User.Identity?.IsAuthenticated == true)
+                {
+                    var userId = services.GetRequiredService<ICurrentUser>().UserId;
+                    roles = await services.GetRequiredService<IRoleAssignments>().GetRoleIdsAsync(userId, ct);
+                }
+
+                return TypedResults.Ok(store.ForClients(roles));
+            })
             .WithName("GetSystemNotices")
             .WithSummary("Aktuelle Ankündigungen und geplante bzw. laufende Wartung (ohne Anmeldung lesbar)")
             .AllowAnonymous();
@@ -59,6 +76,98 @@ public sealed partial class NoticesModule : IModule
             .WithName("SetSystemNotices")
             .WithSummary("Systemhinweise vollständig ersetzen – nur Hosting-Konsole (Authorization: Bearer <Instanz-Schlüssel>)")
             .AllowAnonymous();
+
+        // Administratoren der Instanz (Recht settings.manage): eigene Hinweise und Wartung; die der Konsole nur lesen.
+        var admin = notices.MapGroup("/admin").RequirePermission(Permissions.SettingsManage);
+        admin.MapGet("/", (NoticeStore store, IOptions<NoticeSettings> options, TimeProvider clock) =>
+                TypedResults.Ok(new AdminNoticesResponse(store.Instance, store.Current, !string.IsNullOrWhiteSpace(options.Value.ManagementToken), clock.GetUtcNow())))
+            .WithName("GetAdminNotices").WithSummary("Hinweise und Wartung der Instanz (bearbeitbar) und der Hosting-Konsole (nur lesen)");
+        admin.MapPut("/announcements/{id}", SaveAnnouncementAsync).WithName("SaveAdminAnnouncement")
+            .WithSummary("Ankündigung anlegen oder ändern; optional per E-Mail an alle aktiven Benutzer (bzw. die Zielgruppe)")
+            .ProducesValidationProblem();
+        admin.MapDelete("/announcements/{id}", async Task<Results<NoContent, NotFound>> (string id, NoticeStore store, IAuditLog audit,
+                ICurrentUser current, EstrichOneDbContext db, CancellationToken ct) =>
+            {
+                var doc = store.Instance;
+                if (doc.Announcements.All(a => a.Id != id))
+                {
+                    return TypedResults.NotFound();
+                }
+
+                await store.ReplaceInstanceAsync(doc with { Announcements = doc.Announcements.Where(a => a.Id != id).ToList() }, ct);
+                audit.Record("notices.announcement_deleted", current.UserId, "notice", id);
+                await db.SaveChangesAsync(ct);
+                return TypedResults.NoContent();
+            })
+            .WithName("DeleteAdminAnnouncement");
+        admin.MapPut("/maintenance", async Task<Results<Ok<MaintenanceWindow>, ValidationProblem>> (MaintenanceWindow window, NoticeStore store,
+                IAuditLog audit, ICurrentUser current, EstrichOneDbContext db, CancellationToken ct) =>
+            {
+                var doc = store.Instance with { Maintenance = window with { Message = string.IsNullOrWhiteSpace(window.Message) ? null : window.Message.Trim() } };
+                var errors = Validate(doc);
+                if (errors.Count > 0)
+                {
+                    return TypedResults.ValidationProblem(errors);
+                }
+
+                await store.ReplaceInstanceAsync(doc, ct);
+                audit.Record("notices.maintenance_set", current.UserId, "notice", "maintenance", new Dictionary<string, string?>
+                {
+                    ["startsAt"] = window.StartsAt.ToString("O"), ["endsAt"] = window.EndsAt?.ToString("O"), ["adminsMayWork"] = window.AdminsMayWork.ToString(),
+                });
+                await db.SaveChangesAsync(ct);
+                return TypedResults.Ok(doc.Maintenance!);
+            })
+            .WithName("SetAdminMaintenance").WithSummary("Wartung der Instanz planen oder sofort starten (Beginn ≤ jetzt)");
+        admin.MapDelete("/maintenance", async (NoticeStore store, IAuditLog audit, ICurrentUser current, EstrichOneDbContext db, CancellationToken ct) =>
+            {
+                await store.ReplaceInstanceAsync(store.Instance with { Maintenance = null }, ct);
+                audit.Record("notices.maintenance_ended", current.UserId, "notice", "maintenance");
+                await db.SaveChangesAsync(ct);
+                return TypedResults.NoContent();
+            })
+            .WithName("EndAdminMaintenance").WithSummary("Wartung der Instanz beenden bzw. Planung verwerfen");
+    }
+
+    private static async Task<Results<Ok<SaveAnnouncementResponse>, ValidationProblem>> SaveAnnouncementAsync(
+        string id, SaveAnnouncementRequest request, NoticeStore store, IAuditLog audit, ICurrentUser current, IMailService mail,
+        EstrichOneDbContext db, IRoleAssignments roles, CancellationToken ct)
+    {
+        var announcement = new SystemAnnouncement(id, request.Title?.Trim() ?? "", request.Text?.Trim() ?? "", request.Severity, request.StartsAt, request.EndsAt,
+            request.RoleIds is { Count: > 0 } ? request.RoleIds.Distinct().ToList() : null, "instance", request.Notify);
+        var doc = store.Instance;
+        var existed = doc.Announcements.Any(a => a.Id == id);
+        doc = doc with { Announcements = [.. doc.Announcements.Where(a => a.Id != id), announcement] };
+        var errors = Validate(doc);
+        if (errors.Count > 0)
+        {
+            return TypedResults.ValidationProblem(errors);
+        }
+
+        await store.ReplaceInstanceAsync(doc, ct);
+        audit.Record(existed ? "notices.announcement_updated" : "notices.announcement_created", current.UserId, "notice", id,
+            new Dictionary<string, string?> { ["title"] = announcement.Title, ["severity"] = announcement.Severity, ["email"] = request.SendEmail.ToString() });
+        await db.SaveChangesAsync(ct);
+
+        var sent = 0;
+        if (request.SendEmail && await mail.IsConfiguredAsync(ct))
+        {
+            var users = await db.Set<User>().AsNoTracking().Where(u => u.IsActive && u.Email != null).Select(u => new { u.Id, u.Email }).ToListAsync(ct);
+            foreach (var user in users)
+            {
+                if (announcement.RoleIds is { Count: > 0 } target && !(await roles.GetRoleIdsAsync(user.Id, ct)).Any(target.Contains))
+                {
+                    continue;
+                }
+
+                if (await mail.QueueAsync(new MailRequest(user.Email!, announcement.Title, announcement.Text, "notice", $"notice:{id}"), ct) is not null)
+                {
+                    sent++;
+                }
+            }
+        }
+
+        return TypedResults.Ok(new SaveAnnouncementResponse(announcement, sent));
     }
 
     private static bool IsAuthorized(string header, string token)

@@ -45,6 +45,7 @@ export const routes: RouteDef[] = [
 	{ name: "backupTargets", pattern: "/system/backup-ziele", view: "admin.BackupTargets", permission: "backup.manage", nav: "backupTargets", title: "nav.backupTargets" },
 	{ name: "archive", pattern: "/system/archiv", view: "admin.Archive", permission: "settings.manage", nav: "archive", title: "nav.archive" },
 	{ name: "mail", pattern: "/system/e-mail", view: "admin.Mail", permission: "settings.manage", nav: "mail", title: "nav.mail" },
+	{ name: "notices", pattern: "/system/hinweise", view: "admin.Notices", permission: "settings.manage", nav: "notices", title: "nav.notices" },
 	{ name: "company", pattern: "/system/firmendaten", view: "admin.Company", permission: "settings.manage", nav: "company", title: "nav.company" },
 	{ name: "audit", pattern: "/system/protokoll", view: "admin.Audit", permission: "audit.read", nav: "audit", title: "nav.audit" },
 ];
@@ -120,6 +121,7 @@ export const navigation: NavEntry[] = [
 			{ key: "backupTargets", path: "/system/backup-ziele", icon: "sap-icon://it-host", permission: "backup.manage" },
 			{ key: "archive", path: "/system/archiv", icon: "sap-icon://inbox", permission: "settings.manage" },
 			{ key: "mail", path: "/system/e-mail", icon: "sap-icon://email", permission: "settings.manage" },
+			{ key: "notices", path: "/system/hinweise", icon: "sap-icon://message-warning", permission: "settings.manage" },
 			{ key: "audit", path: "/system/protokoll", icon: "sap-icon://activities", permission: "audit.read" },
 		],
 	},
