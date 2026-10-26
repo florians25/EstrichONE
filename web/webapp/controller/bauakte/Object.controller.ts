@@ -32,7 +32,7 @@ import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
 import { catalog, type BauakteTemplate } from "../../util/catalog";
 import { projectBadges, projectView } from "../../util/project";
-import LeafletMap from "../../control/LeafletMap";
+import { openMapDialog } from "../../util/mapDialog";
 
 /** Abschnitte der Objektseite: Schlüssel (Adresse ?abschnitt=…) → eingebettete View. */
 const sections: Record<string, string> = {
@@ -192,6 +192,7 @@ export default class ObjectController extends BaseController {
 		const members = (m.getProperty("/members") as BauakteMember[]) ?? [];
 		const responsible = session.name(b?.responsibleUserId);
 		m.setProperty("/responsibleName", responsible);
+		m.setProperty("/createdDate", b ? new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt)) : "");
 		m.setProperty("/createdText", b ? `${session.name(b.createdByUserId)} · ${new Intl.DateTimeFormat("de-DE", { dateStyle: "medium" }).format(new Date(b.createdAt))}` : "");
 		m.setProperty("/assignedText", members.length === 0 ? responsible : members.length === 1 ? members[0].displayName : `${responsible} +${members.length - 1}`);
 		const me = session.userId;
@@ -508,20 +509,6 @@ export default class ObjectController extends BaseController {
 
 	/** Baustelle auf der Karte im Dialog (die Karte gehört nicht in den Kopf). */
 	onShowMap(): void {
-		const markers = this.m().getProperty("/markers") as unknown[];
-		const route = this.m().getProperty("/routeUrl") as string;
-		const dialog = new Dialog({
-			title: `Karte – ${this.m().getProperty("/placeText") as string}`, contentWidth: "48rem", resizable: true, draggable: true,
-			content: markers.length
-				? [new LeafletMap({ height: "28rem", width: "100%", zoom: 15, markers } as unknown as ConstructorParameters<typeof LeafletMap>[0])]
-				: [new Text({ text: "Für diese Baustelle ist noch kein Standort gesetzt. In der Übersicht unter „Standort“ festlegen." }).addStyleClass("sapUiSmallMargin")],
-			buttons: [
-				...(route ? [new Button({ text: "Route planen", icon: "sap-icon://map-3", press: () => window.open(route, "_blank", "noopener") })] : []),
-				new Button({ text: "Schließen", press: () => dialog.close() }),
-			],
-			afterClose: () => dialog.destroy(),
-		});
-		this.getView()!.addDependent(dialog);
-		dialog.open();
+		openMapDialog(this.m().getProperty("/placeText") as string, this.m().getProperty("/markers") as unknown[], this.m().getProperty("/routeUrl") as string);
 	}
 }

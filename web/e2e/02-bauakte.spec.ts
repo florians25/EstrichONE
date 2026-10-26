@@ -107,7 +107,7 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   });
   await expect(toast(page)).toContainText('2 Dateien hochgeladen.');
   await expect(upload).toBeHidden();
-  const table = page.locator('.sapMList').filter({ hasText: 'Angebote (2)' }).last();
+  const table = page.locator('.eoDocTablePane').filter({ hasText: 'Angebote (2)' }).last();
   await expect(table.getByRole('link', { name: 'Angebot.pdf' })).toBeVisible();
   await expect(page.locator('.sapMTreeItemBase').filter({ hasText: 'Angebote (2)' })).toBeVisible();
 
@@ -400,6 +400,7 @@ test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page
   await page.getByRole('button', { name: 'Standort speichern' }).click();
   await expect(toast(page)).toContainText('Standort gespeichert');
   await expect(page.getByRole('button', { name: 'Standort ändern' })).toBeVisible();
+  await page.getByRole('button', { name: 'Karte', exact: true }).filter({ visible: true }).last().click();
   await expect(page.locator('.leaflet-interactive').filter({ visible: true }).first()).toBeVisible();
   await expect(page.locator('img.leaflet-tile').first()).toHaveAttribute('referrerpolicy', 'strict-origin-when-cross-origin');
   expect(referers.length).toBeGreaterThan(0);
@@ -442,7 +443,7 @@ test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async
   await expect(activities.getByText(/„Frau Lehner“ als Architekt hinzugefügt/)).toBeVisible();
   await activities.getByRole('button', { name: 'Schließen' }).click();
 
-  await page.getByRole('button', { name: /Zugewiesen:/ }).click();
+  await page.locator('[id$="--assignButton"]').filter({ visible: true }).first().click();
   const assign = page.getByRole('dialog', { name: 'Bauakte zuweisen' });
   await expect(assign.getByRole('combobox', { name: 'Zugewiesene Mitarbeiter' })).toBeVisible();
   await assign.getByRole('button', { name: 'Zuweisen' }).click();

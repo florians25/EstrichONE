@@ -16,6 +16,7 @@ import { openLightbox } from "../../../util/lightbox";
 import { openActivityDialog } from "../../../util/activityDialog";
 import { akteContextOf } from "../../../util/akteHeader";
 import { openForm } from "../../../util/forms";
+import { openMapDialog } from "../../../util/mapDialog";
 import { projectFields, projectFromValues } from "../../../util/project";
 
 /** Übersicht: Objektbilder, Standort (im Büro per Klick setzen), Kennzahlen, Notizen, Aufgaben, Stammdaten, Aktivitäten. @namespace estrichone.controller.bauakte.sections */
@@ -59,7 +60,7 @@ export default class Overview extends SectionBase {
 		if (files.status === "fulfilled") {
 			this.photos = files.value.filter((f) => f.kind === "photo" && f.state === "stored");
 			m.setProperty("/photoText", `${this.photos.length} ${this.photos.length === 1 ? "Foto" : "Fotos"}`);
-			m.setProperty("/hero", this.photos.slice(0, 8).map((p) => ({
+			m.setProperty("/hero", [...this.photos].sort((a, b) => (b.capturedAt ?? b.createdAt).localeCompare(a.capturedAt ?? a.createdAt)).slice(0, 10).map((p) => ({
 				id: p.id, url: `/api/v1/files/${p.id}/content?variant=${p.variants === "ready" ? "display" : "original"}`,
 				alt: p.caption ?? `Foto vom ${dateTime(p.capturedAt ?? p.createdAt)}`,
 			})));
@@ -206,5 +207,17 @@ export default class Overview extends SectionBase {
 			submit: (v) => saveBauakte(this.bauakte(), { project: projectFromValues(v) }),
 		});
 		if (saved) this.toast("Gespeichert");
+	}
+
+	onShowMap(): void {
+		const b = this.bauakte();
+		const place = [b.street, [b.postalCode, b.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "Baustelle";
+		openMapDialog(place, this.ov().getProperty("/markers") as unknown[],
+			b.latitude !== null && b.longitude !== null ? `https://www.openstreetmap.org/directions?to=${b.latitude}%2C${b.longitude}` : null);
+	}
+
+	onOpenPhoto(event: Event): void {
+		const id = (event.getSource() as Control).getBindingContext("ov")?.getProperty("id") as string;
+		openLightbox(this.photos, Math.max(0, this.photos.findIndex((p) => p.id === id)));
 	}
 }

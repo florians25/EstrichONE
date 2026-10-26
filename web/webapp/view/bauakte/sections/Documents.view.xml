@@ -1,8 +1,8 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Documents" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
 	xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout"
 	core:require="{fmt: 'estrichone/model/formatter'}">
-	<FlexBox id="docLayout" wrap="Wrap" alignItems="Start" width="100%">
-		<VBox class="sapUiSmallMarginEnd" width="17rem">
+	<FlexBox id="docLayout" wrap="Wrap" alignItems="Start" width="100%" class="eoDocLayout">
+		<VBox class="sapUiSmallMarginEnd eoDocTreePane" width="15rem">
 			<layoutData><FlexItemData shrinkFactor="0"/></layoutData>
 			<OverflowToolbar style="Clear">
 				<Title text="{i18n>docs.folders}" level="H3"/>
@@ -15,36 +15,37 @@
 			</Tree>
 			<core:InvisibleText id="foldersLabel" text="{i18n>docs.folders}"/>
 		</VBox>
-		<VBox>
-			<layoutData><FlexItemData growFactor="1" baseSize="30rem"/></layoutData>
-			<Table id="docTable" items="{path: 'doc>/rows', templateShareable: false}" mode="MultiSelect" selectionChange=".onSelection"
-				sticky="HeaderToolbar,ColumnHeaders" growing="true" growingThreshold="100" noDataText="{doc>/noData}" popinLayout="GridSmall"
+		<VBox class="eoDocTablePane">
+			<layoutData><FlexItemData growFactor="1" shrinkFactor="1" baseSize="0" minWidth="0"/></layoutData>
+			<OverflowToolbar style="Clear">
+				<Title text="{doc>/title}" level="H3"/>
+				<ToolbarSpacer/>
+				<Button id="docUpload" text="{i18n>docs.uploadButton}" icon="sap-icon://upload" type="Emphasized" press=".onUpload"
+					visible="{= ${session>/permissions/files.upload} === true }">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				</Button>
+				<SearchField width="11rem" placeholder="{i18n>docs.search}" liveChange=".onSearch" value="{doc>/query}">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				</SearchField>
+			</OverflowToolbar>
+			<OverflowToolbar style="Clear" class="eoDocActions">
+				<ToolbarSpacer/>
+				<Select selectedKey="{doc>/sort}" change=".refreshRows" tooltip="{i18n>docs.sort}" ariaLabelledBy="sortLabel">
+					<core:Item key="newest" text="Neueste zuerst"/>
+					<core:Item key="oldest" text="Älteste zuerst"/>
+					<core:Item key="name" text="Name A–Z"/>
+					<core:Item key="size" text="Größte zuerst"/>
+					<core:Item key="category" text="Nach Ablage"/>
+				</Select>
+				<ToggleButton text="{i18n>docs.allVersions}" pressed="{doc>/allVersions}" press=".refreshRows" icon="sap-icon://history"/>
+				<Button text="{i18n>docs.download}" icon="sap-icon://download" enabled="{= ${doc>/selectedCount} > 0 }" press=".onDownloadSelected"/>
+				<Button text="{i18n>docs.move}" icon="sap-icon://move" enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.upload} === true }" press=".onMoveSelected"/>
+				<Button text="{i18n>common.delete}" icon="sap-icon://delete" type="Reject"
+					enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.delete} === true }" press=".onDeleteSelected"/>
+			</OverflowToolbar>
+			<Table id="docTable" contextualWidth="Auto" items="{path: 'doc>/rows', templateShareable: false}" mode="MultiSelect" selectionChange=".onSelection"
+				sticky="ColumnHeaders" growing="true" growingThreshold="100" noDataText="{doc>/noData}" popinLayout="GridSmall"
 				class="eoDropTarget">
-				<headerToolbar>
-					<OverflowToolbar>
-						<Title text="{doc>/title}" level="H3"/>
-						<ToolbarSpacer/>
-						<Button id="docUpload" text="{i18n>docs.uploadButton}" icon="sap-icon://upload" type="Emphasized" press=".onUpload"
-							visible="{= ${session>/permissions/files.upload} === true }">
-							<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
-						</Button>
-						<SearchField width="14rem" placeholder="{i18n>docs.search}" liveChange=".onSearch" value="{doc>/query}">
-							<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
-						</SearchField>
-						<Select selectedKey="{doc>/sort}" change=".refreshRows" tooltip="{i18n>docs.sort}" ariaLabelledBy="sortLabel">
-							<core:Item key="newest" text="Neueste zuerst"/>
-							<core:Item key="oldest" text="Älteste zuerst"/>
-							<core:Item key="name" text="Name A–Z"/>
-							<core:Item key="size" text="Größte zuerst"/>
-							<core:Item key="category" text="Nach Ablage"/>
-						</Select>
-						<ToggleButton text="{i18n>docs.allVersions}" pressed="{doc>/allVersions}" press=".refreshRows" icon="sap-icon://history"/>
-						<Button text="{i18n>docs.download}" icon="sap-icon://download" enabled="{= ${doc>/selectedCount} > 0 }" press=".onDownloadSelected"/>
-						<Button text="{i18n>docs.move}" icon="sap-icon://move" enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.upload} === true }" press=".onMoveSelected"/>
-						<Button text="{i18n>common.delete}" icon="sap-icon://delete" type="Reject"
-							enabled="{= ${doc>/selectedCount} > 0 &amp;&amp; ${session>/permissions/files.delete} === true }" press=".onDeleteSelected"/>
-					</OverflowToolbar>
-				</headerToolbar>
 				<columns>
 					<Column><Text text="{i18n>docs.file}"/></Column>
 					<Column width="5rem" hAlign="Center" minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>docs.version}"/></Column>

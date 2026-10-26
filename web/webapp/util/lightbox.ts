@@ -4,7 +4,7 @@
  */
 import Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
-import Carousel from "sap/m/Carousel";
+import FlexBox from "sap/m/FlexBox";
 import Image from "sap/m/Image";
 import Text from "sap/m/Text";
 import Label from "sap/m/Label";
@@ -34,11 +34,14 @@ export function openLightbox(photos: FileResponse[], start: number, options: Lig
 	const list = photos.filter((p) => p.state === "stored");
 	if (list.length === 0) return;
 	let index = Math.max(0, Math.min(start, list.length - 1));
-	const carousel = new Carousel({
-		height: "72vh", width: "100%", loop: true, showPageIndicator: list.length > 1, pageIndicatorPlacement: "Bottom",
-		pages: list.map((p) => new Image({ src: url(p, "display"), alt: p.caption ?? `Foto vom ${dateTime(p.capturedAt ?? p.createdAt)}`,
-			decorative: false, lazyLoading: true, densityAware: false }).addStyleClass("eoLightboxImage")),
-	});
+	// Ein Bild statt sap.m.Carousel: das Carousel schob die Bilder im Dialog aus dem sichtbaren Bereich (schwarze Fläche).
+	const image = new Image({ decorative: false, densityAware: false }).addStyleClass("eoLightboxImage");
+	const stage = new FlexBox({ items: [image], justifyContent: "Center", alignItems: "Center", height: "72vh", width: "100%" })
+		.addStyleClass("eoLightboxStage");
+	const go = (to: number) => {
+		index = (to + list.length) % list.length;
+		show();
+	};
 	const title = new Title({ level: "H2", wrapping: true });
 	const captured = new Text();
 	const author = new Text();
@@ -78,17 +81,16 @@ export function openLightbox(photos: FileResponse[], start: number, options: Lig
 		download.setHref(`${url(f, "original")}${url(f, "original").includes("?") ? "&" : "?"}download=1`);
 		download.data("name", f.originalName);
 		counter.setText(`${index + 1} von ${list.length}`);
+		image.setSrc(url(f, "display"));
+		image.setAlt(f.caption ?? `Foto vom ${dateTime(f.capturedAt ?? f.createdAt)}`);
+		// Nachbarbilder vorladen, damit das Blättern sofort reagiert.
+		for (const n of [index + 1, index - 1]) if (list.length > 1) new window.Image().src = url(list[(n + list.length) % list.length], "display");
 	};
 	download.attachPress(() => {
 		const a = document.createElement("a");
 		a.href = `/api/v1/files/${list[index].id}/content`;
 		a.download = list[index].originalName;
 		a.click();
-	});
-	carousel.attachPageChanged((event) => {
-		const id = event.getParameter("newActivePageId");
-		index = Math.max(0, carousel.getPages().findIndex((p) => p.getId() === id));
-		show();
 	});
 
 	const side = new VBox({
@@ -103,10 +105,10 @@ export function openLightbox(photos: FileResponse[], start: number, options: Lig
 		contentHeight: "82vh",
 		resizable: true,
 		horizontalScrolling: false,
-		content: [new HBox({ items: [new VBox({ items: [carousel], layoutData: new FlexItemData({ growFactor: 1 }) }), side], wrap: "NoWrap" })],
+		content: [new HBox({ items: [new VBox({ items: [stage], layoutData: new FlexItemData({ growFactor: 1 }) }), side], wrap: "NoWrap" })],
 		buttons: [
-			new Button({ icon: "sap-icon://navigation-left-arrow", tooltip: "Vorheriges Foto", text: "Zurück", press: () => carousel.previous() }),
-			new Button({ icon: "sap-icon://navigation-right-arrow", tooltip: "Nächstes Foto", text: "Weiter", press: () => carousel.next() }),
+			new Button({ icon: "sap-icon://navigation-left-arrow", tooltip: "Vorheriges Foto", text: "Zurück", press: () => go(index - 1), enabled: list.length > 1 }),
+			new Button({ icon: "sap-icon://navigation-right-arrow", tooltip: "Nächstes Foto", text: "Weiter", press: () => go(index + 1), enabled: list.length > 1 }),
 			new Button({ text: "Schließen", type: "Emphasized", press: () => dialog.close() }),
 		],
 		afterClose: () => dialog.destroy(),
@@ -114,10 +116,9 @@ export function openLightbox(photos: FileResponse[], start: number, options: Lig
 	dialog.addStyleClass("eoLightbox");
 	dialog.attachBrowserEvent("keydown", (event: KeyboardEvent) => {
 		if ((event.target as HTMLElement).tagName === "INPUT") return;
-		if (event.key === "ArrowRight") carousel.next();
-		if (event.key === "ArrowLeft") carousel.previous();
+		if (event.key === "ArrowRight") go(index + 1);
+		if (event.key === "ArrowLeft") go(index - 1);
 	});
-	carousel.setActivePage(carousel.getPages()[index]);
 	show();
 	dialog.open();
 }

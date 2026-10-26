@@ -95,36 +95,37 @@
 			</Table>
 		</grid:CSSGrid>
 
-		<!-- Standort und Bilder kompakt nebeneinander -->
-		<grid:CSSGrid gridTemplateColumns="repeat(auto-fit, minmax(26rem, 1fr))" gridGap="0.5rem 2rem" class="sapUiSmallMarginTop">
-			<VBox>
-				<OverflowToolbar style="Clear">
+		<!-- Standort und neueste Bilder: eine kompakte Zeile, Karte im Dialog -->
+		<FlexBox wrap="Wrap" alignItems="Center" justifyContent="SpaceBetween" class="eoSiteStrip">
+			<HBox alignItems="Center" class="eoInline">
+				<core:Icon src="sap-icon://map" class="eoSiteIcon"/>
+				<VBox>
 					<Title text="{i18n>overview.location}" level="H3"/>
-					<Text text="{= (${akte>/bauakte/street} || '') + ' ' + (${akte>/bauakte/city} || '') }" class="eoMuted"/>
-					<ToolbarSpacer/>
-					<Button text="{= ${ov>/hasLocation} ? ${i18n>overview.changeLocation} : ${i18n>overview.setLocation} }" icon="sap-icon://locate-me"
-						press=".onPick" visible="{= ${akte>/canEdit} === true &amp;&amp; !${ov>/picking} }" type="Transparent"/>
-					<Button text="{i18n>common.cancel}" press=".onPickCancel" visible="{ov>/picking}"/>
-					<Button text="{i18n>overview.saveLocation}" type="Emphasized" press=".onPickSave" visible="{ov>/picking}" enabled="{= !!${ov>/picked} }"/>
-				</OverflowToolbar>
-				<MessageStrip text="{i18n>overview.pickHint}" type="Information" showIcon="true" visible="{ov>/picking}" class="sapUiTinyMarginBottom"/>
-				<eo:LeafletMap id="siteMap" height="11rem" markers="{ov>/markers}" pickMode="{ov>/picking}" pick=".onPicked"
-					visible="{= ${ov>/hasLocation} || ${ov>/picking} }"/>
-				<Text text="{i18n>overview.noLocationText}" visible="{= !${ov>/hasLocation} &amp;&amp; !${ov>/picking} }" class="eoMuted"/>
-			</VBox>
-			<VBox>
-				<OverflowToolbar style="Clear">
-					<Title text="{i18n>overview.photos}" level="H3"/>
-					<Text text="{ov>/photoText}" class="eoMuted"/>
-					<ToolbarSpacer/>
-					<Button text="Alle" type="Transparent" press=".onGallery" visible="{= ${ov>/hero}.length > 0 }"/>
-					<Button text="{i18n>overview.addPhoto}" type="Transparent" press=".onToPhotos" visible="{= ${ov>/hero}.length === 0 }"/>
-				</OverflowToolbar>
-				<FlexBox items="{ov>/hero}" wrap="Wrap" class="eoThumbs">
-					<Image src="{ov>url}" alt="{ov>alt}" width="6.5rem" height="6.5rem" press=".onGallery" decorative="false" class="eoThumb"/>
-				</FlexBox>
-				<Text text="{i18n>overview.noPhotosText}" visible="{= ${ov>/hero}.length === 0 }" class="eoMuted"/>
-			</VBox>
-		</grid:CSSGrid>
+					<Text text="{= (${akte>/bauakte/street} || '') + ' ' + (${akte>/bauakte/postalCode} || '') + ' ' + (${akte>/bauakte/city} || '') }" visible="{ov>/hasLocation}"/>
+					<Text text="{i18n>overview.noLocation}" visible="{= !${ov>/hasLocation} }" class="eoMuted"/>
+				</VBox>
+				<Button text="Karte" icon="sap-icon://map" press=".onShowMap" visible="{ov>/hasLocation}"/>
+				<Button text="{= ${ov>/hasLocation} ? ${i18n>overview.changeLocation} : ${i18n>overview.setLocation} }" icon="sap-icon://locate-me"
+					press=".onPick" visible="{= ${akte>/canEdit} === true &amp;&amp; !${ov>/picking} }" type="Transparent"/>
+			</HBox>
+			<HBox alignItems="Center" class="eoInline">
+				<VBox alignItems="End">
+					<Title text="Neueste Bilder" level="H3"/>
+					<Link text="{= ${ov>/hero}.length ? 'Alle ' + ${ov>/photoText} : ${i18n>overview.addPhoto} }" press=".onToPhotos"/>
+				</VBox>
+				<HBox items="{ov>/hero}" class="eoPhotoStrip">
+					<Image src="{ov>url}" alt="{ov>alt}" width="4.5rem" height="4.5rem" press=".onOpenPhoto" decorative="false" class="eoThumb"/>
+				</HBox>
+			</HBox>
+		</FlexBox>
+		<VBox visible="{ov>/picking}" class="sapUiSmallMarginTop">
+			<OverflowToolbar style="Clear">
+				<MessageStrip text="{i18n>overview.pickHint}" type="Information" showIcon="true"/>
+				<ToolbarSpacer/>
+				<Button text="{i18n>common.cancel}" press=".onPickCancel"/>
+				<Button text="{i18n>overview.saveLocation}" type="Emphasized" press=".onPickSave" enabled="{= !!${ov>/picked} }"/>
+			</OverflowToolbar>
+			<eo:LeafletMap id="siteMap" height="18rem" markers="{ov>/markers}" pickMode="{ov>/picking}" pick=".onPicked"/>
+		</VBox>
 	</VBox>
 </mvc:View>

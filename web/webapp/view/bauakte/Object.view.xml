@@ -107,22 +107,22 @@
 					<VBox class="eoHeadField eoHeadWide">
 						<Label text="{i18n>akte.site}"/>
 						<HBox alignItems="Center" class="eoInline">
-							<Text text="{akte>/placeText}" wrapping="false" tooltip="{akte>/placeText}"/>
+							<Text text="{akte>/placeText}" wrapping="true" maxLines="2" tooltip="{akte>/placeText}"/>
 							<Button icon="sap-icon://map" type="Transparent" press=".onShowMap" class="eoMapButton" tooltip="Karte" text=""/>
 						</HBox>
 					</VBox>
 					<VBox class="eoHeadField">
 						<Label text="Zuständig"/>
-						<Button id="assignButton" text="{i18n>akte.assigned}: {akte>/assignedText}" press=".onAssign"
+						<Button id="assignButton" text="{akte>/assignedText}" tooltip="{i18n>akte.assigned}: {akte>/assignedText}" press=".onAssign"
 							enabled="{akte>/canEdit}" type="Transparent" class="eoFactButton"/>
 					</VBox>
 					<VBox class="eoHeadField eoHeadWide">
 						<Label text="{i18n>akte.next}"/>
-						<Text text="{akte>/kpi/nextText}" wrapping="false" tooltip="{akte>/kpi/nextText}"/>
+						<Text text="{akte>/kpi/nextText}" wrapping="true" maxLines="2" tooltip="{akte>/kpi/nextText}"/>
 					</VBox>
 					<VBox class="eoHeadField">
 						<Label text="Angelegt"/>
-						<Text text="{akte>/createdText}" wrapping="false"/>
+						<Text text="{akte>/createdDate}" tooltip="{akte>/createdText}" wrapping="false"/>
 					</VBox>
 				</FlexBox>
 				<HBox class="eoKpis">
