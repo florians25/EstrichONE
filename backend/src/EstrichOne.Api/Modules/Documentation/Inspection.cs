@@ -67,6 +67,18 @@ public sealed class Inspection : IVersionedEntity
     public Dictionary<string, CheckResult> Checks { get; private set; } = [];
     public List<Guid> PhotoFileIds { get; private set; } = [];
 
+    /// <summary>Werte der übrigen Felder aus dem Erstbegehungs-Formular (Schlüssel → Wert).</summary>
+    public Dictionary<string, JsonElement> Values { get; private set; } = [];
+
+    /// <summary>Bemerkung je Prüfpunkt.</summary>
+    public Dictionary<string, string> CheckRemarks { get; private set; } = [];
+
+    /// <summary>Fotos je Prüfpunkt.</summary>
+    public Dictionary<string, List<Guid>> CheckPhotos { get; private set; } = [];
+
+    /// <summary>Fassung des Formular-Schemas bei der Erfassung (leer bei älteren Erstbegehungen).</summary>
+    public long? SchemaVersion { get; private set; }
+
     // CM-Messung
     public string? Location { get; private set; }
     public ScreedBinderKind? Binder { get; private set; }
@@ -103,10 +115,11 @@ public sealed class Inspection : IVersionedEntity
         IReadOnlyDictionary<string, CheckResult> checks, IReadOnlyList<Guid> photoFileIds, string? remarks, Guid? correctsInspectionId,
         string? notes = null)
     {
-        var unknown = checks.Keys.Except(InitialChecks).ToList();
-        if (unknown.Count > 0)
+        // Prüfpunkte kommen aus dem Formular-Schema (Stammdaten); nur die Form der Schlüssel wird geprüft.
+        var unknown = checks.Keys.Where(k => k.Length is 0 or > 40 || !k.All(c => char.IsAsciiLetterOrDigit(c) || c == '_')).ToList();
+        if (unknown.Count > 0 || checks.Count > 100)
         {
-            throw new ArgumentException($"Unbekannte Prüfpunkte: {string.Join(", ", unknown)}.", nameof(checks));
+            throw new ArgumentException($"Ungültige Prüfpunkte: {string.Join(", ", unknown)}.", nameof(checks));
         }
 
         if (!notRequired && checks.Count == 0)
@@ -126,6 +139,23 @@ public sealed class Inspection : IVersionedEntity
             PhotoFileIds = photoFileIds.Distinct().Take(50).ToList(), Remarks = CleanRemarks(remarks), CorrectsInspectionId = correctsInspectionId,
             Notes = CleanNotes(notes),
         };
+    }
+
+    /// <summary>Werte, Bemerkungen und Fotos je Punkt aus dem konfigurierbaren Formular übernehmen (nur beim Anlegen).</summary>
+    public void Capture(IReadOnlyDictionary<string, JsonElement>? values, IReadOnlyDictionary<string, string>? remarks,
+        IReadOnlyDictionary<string, List<Guid>>? photos, long? schemaVersion)
+    {
+        if (values is { Count: > 200 } || remarks is { Count: > 100 } || photos is { Count: > 100 })
+        {
+            throw new ArgumentException("Zu viele Felder in der Erstbegehung.", nameof(values));
+        }
+
+        Values = values?.Where(v => v.Value.ValueKind is not (JsonValueKind.Null or JsonValueKind.Undefined or JsonValueKind.Object or JsonValueKind.Array)
+                && (v.Value.ValueKind != JsonValueKind.String || v.Value.GetString()!.Length <= 4000))
+            .ToDictionary(v => v.Key, v => v.Value.Clone()) ?? [];
+        CheckRemarks = remarks?.Where(r => !string.IsNullOrWhiteSpace(r.Value)).ToDictionary(r => r.Key, r => r.Value.Trim()[..Math.Min(r.Value.Trim().Length, 2000)]) ?? [];
+        CheckPhotos = photos?.ToDictionary(r => r.Key, r => r.Value.Distinct().Take(20).ToList()) ?? [];
+        SchemaVersion = schemaVersion;
     }
 
     public static Inspection CreateCmMeasurement(Guid id, Guid bauakteId, Guid userId, DateTimeOffset performedAt, string location,
@@ -203,6 +233,21 @@ internal sealed class InspectionConfiguration : IEntityTypeConfiguration<Inspect
                 (a, b) => a!.Count == b!.Count && !a.Except(b).Any(),
                 checks => checks.Aggregate(0, (hash, pair) => HashCode.Combine(hash, pair.Key, pair.Value)),
                 checks => new Dictionary<string, CheckResult>(checks)));
+        builder.Property(inspection => inspection.Values).HasColumnType("jsonb").HasConversion(
+            v => JsonSerializer.Serialize(v, ChecksJson),
+            json => JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json, ChecksJson) ?? new Dictionary<string, JsonElement>(),
+            new ValueComparer<Dictionary<string, JsonElement>>((a, b) => JsonSerializer.Serialize(a, ChecksJson) == JsonSerializer.Serialize(b, ChecksJson),
+                v => JsonSerializer.Serialize(v, ChecksJson).GetHashCode(StringComparison.Ordinal), v => new Dictionary<string, JsonElement>(v)));
+        builder.Property(inspection => inspection.CheckRemarks).HasColumnType("jsonb").HasConversion(
+            v => JsonSerializer.Serialize(v, ChecksJson),
+            json => JsonSerializer.Deserialize<Dictionary<string, string>>(json, ChecksJson) ?? new Dictionary<string, string>(),
+            new ValueComparer<Dictionary<string, string>>((a, b) => JsonSerializer.Serialize(a, ChecksJson) == JsonSerializer.Serialize(b, ChecksJson),
+                v => JsonSerializer.Serialize(v, ChecksJson).GetHashCode(StringComparison.Ordinal), v => new Dictionary<string, string>(v)));
+        builder.Property(inspection => inspection.CheckPhotos).HasColumnType("jsonb").HasConversion(
+            v => JsonSerializer.Serialize(v, ChecksJson),
+            json => JsonSerializer.Deserialize<Dictionary<string, List<Guid>>>(json, ChecksJson) ?? new Dictionary<string, List<Guid>>(),
+            new ValueComparer<Dictionary<string, List<Guid>>>((a, b) => JsonSerializer.Serialize(a, ChecksJson) == JsonSerializer.Serialize(b, ChecksJson),
+                v => JsonSerializer.Serialize(v, ChecksJson).GetHashCode(StringComparison.Ordinal), v => v.ToDictionary(x => x.Key, x => x.Value.ToList())));
         builder.Property(inspection => inspection.PhotoFileIds).HasColumnType("uuid[]");
         builder.Ignore(inspection => inspection.LimitCmPercent);
         builder.Ignore(inspection => inspection.IsReadyForCovering);

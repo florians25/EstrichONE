@@ -59,7 +59,7 @@ internal static class BauakteReportEndpoints
 
 internal sealed class BauakteReportBuilder(
     EstrichOneDbContext db, IBauakteReportSource bauakten, IWorkReportSource work, IPdfBranding branding, LocalFileStorage storage,
-    ICurrentUser currentUser, IAuditLog audit, TimeProvider clock, ILogger<BauakteReportBuilder> logger)
+    ICurrentUser currentUser, IAuditLog audit, TimeProvider clock, ILogger<BauakteReportBuilder> logger, IFormSchemas forms, IValueLists valueLists)
 {
     public static readonly IReadOnlySet<string> AllParts =
         new HashSet<string>(["uebersicht", "raeume", "tagebuch", "pruefungen", "maengel", "fotos"], StringComparer.OrdinalIgnoreCase);
@@ -223,16 +223,40 @@ internal sealed class BauakteReportBuilder(
                 }
 
                 var table = AddTable(section, ("Prüfpunkt", 11.2, ParagraphAlignment.Left), ("Ergebnis", 6.0, ParagraphAlignment.Left));
-                foreach (var (key, text) in CheckTitles)
+                // Prüfpunkte in der Reihenfolge des Formulars (Stammdaten), ältere Punkte mit ihren festen Bezeichnungen.
+                var schemaFields = await forms.FieldsAsync(FormSchemaKeys.Erstbegehung, cancellationToken);
+                var titles = schemaFields.Where(f => f.Type == "check").Select(f => (f.Key, f.Label))
+                    .Concat(CheckTitles.Select(c => (c.Key, c.Value))).Concat(i.Checks.Keys.Select(k => (k, k))).DistinctBy(c => c.Item1).ToList();
+                foreach (var (key, text) in titles)
                 {
                     if (i.Checks.TryGetValue(key, out var result))
                     {
-                        var row = AddRow(table, text, result switch { CheckResult.Ok => "in Ordnung", CheckResult.NotOk => "Mangel", _ => "entfällt" });
+                        var checkLabel = i.CheckRemarks.TryGetValue(key, out var remark) ? $"{text} – {remark}" : text;
+                        var row = AddRow(table, checkLabel, result switch { CheckResult.Ok => "in Ordnung", CheckResult.NotOk => "Mangel", _ => "entfällt" });
                         if (result == CheckResult.NotOk)
                         {
                             row.Cells[1].Format.Font.Color = Color.FromRgb(0xAA, 0x08, 0x08);
                             row.Cells[1].Format.Font.Bold = true;
                         }
+                    }
+                }
+
+                if (i.Values.Count > 0)
+                {
+                    var lists = await valueLists.GetAllAsync(cancellationToken);
+                    var values = AddTable(section, ("Angabe", 11.2, ParagraphAlignment.Left), ("Wert", 6.0, ParagraphAlignment.Left));
+                    foreach (var f in schemaFields.Where(f => f.Type != "check" && i.Values.ContainsKey(f.Key))
+                        .Concat(i.Values.Keys.Where(k => schemaFields.All(f => f.Key != k)).Select(k => new FormFieldInfo(k, k, "text", null, null))))
+                    {
+                        var v = i.Values[f.Key];
+                        var text = v.ValueKind switch
+                        {
+                            System.Text.Json.JsonValueKind.True => "ja",
+                            System.Text.Json.JsonValueKind.False => "nein",
+                            System.Text.Json.JsonValueKind.Number => $"{v.GetDecimal().ToString("0.##", PdfReport.German)}{(f.Unit is null ? "" : $" {f.Unit}")}",
+                            _ => f.List is not null && lists.TryGetValue(f.List, out var l) ? l.FirstOrDefault(e => e.Key == v.GetString())?.Label ?? v.GetString() ?? "" : v.GetString() ?? "",
+                        };
+                        AddRow(values, f.Label, text);
                     }
                 }
 

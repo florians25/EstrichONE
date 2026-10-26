@@ -14,6 +14,7 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<IBauakteAccess, BauakteAccess>();
         services.AddScoped<IDataInitializer, ScreedTypeSeed>();
         services.AddScoped<BauakteProjectValidator>();
+        services.AddScoped<IBauakteDataFill, BauakteDataFill>();
         services.AddScoped<IBauakteHistory, BauakteHistory>();
         services.AddScoped<BauakteCommands>();
         services.AddScoped<IBauakteHintSource, BauakteOwnHints>();

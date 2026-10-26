@@ -2,7 +2,9 @@ using System.Net;
 using System.Net.Http.Json;
 using EstrichOne.Api.Modules.Access;
 using EstrichOne.Api.Modules.Organization;
+using EstrichOne.Api.Modules.Sync.Exports;
 using EstrichOne.Api.Tests.Support;
+using EstrichOne.Api.Tests.Sync;
 
 namespace EstrichOne.Api.Tests.Organization;
 
@@ -44,5 +46,25 @@ public sealed class ValueListAndFormTests(PostgresFixture postgres) : IAsyncLife
         var body = await saved.Content.ReadFromJsonAsync<FormSchemaResponse>(TestJson.Options, Ct);
         body!.Groups[^1].Fields[0].Path.ShouldBe("project.custom.zufahrt");
         body.Groups[0].Fields[0].Builtin.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task InitialInspection_FillsBasisdaten_FromSchemaTargets()
+    {
+        using var admin = await _factory.CreateClientAsAsync("admin", StandardRoles.AdministratorId);
+        var schema = await admin.GetFromJsonAsync<FormSchemaResponse>("/api/v1/forms/erstbegehung", TestJson.Options, Ct);
+        schema!.Groups.SelectMany(g => g.Fields).ShouldContain(f => f.Key == "measuredArea" && f.Target == "project.totalArea");
+
+        var id = Guid.CreateVersion7();
+        (await admin.PostAsJsonAsync("/api/v1/bauakten", new { id, title = "EFH Messung" }, Ct)).EnsureSuccessStatusCode();
+        var result = await admin.PushAsync(SyncClient.Op("inspection.create", Guid.CreateVersion7(), new
+        {
+            bauakteId = id, kind = "initialInspection", checks = new { substrate = "ok" },
+            values = new { measuredArea = 87.5, screedType = "caf" }, checkRemarks = new { substrate = "eben" }, schemaVersion = schema.Version,
+        }));
+        result.Results[0].Status.ShouldBe(SyncOperationStatus.Applied);
+        var body = await admin.GetStringAsync($"/api/v1/bauakten/{id}", Ct);
+        body.ShouldContain("\"totalArea\":87.5");
+        body.ShouldContain("\"screedType\":\"caf\"");
     }
 }

@@ -19107,6 +19107,17 @@
           "builtin": {
             "type": "boolean",
             "default": false
+          },
+          "photos": {
+            "type": "boolean",
+            "default": false
+          },
+          "target": {
+            "maxLength": 80,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -19534,6 +19545,41 @@
               "null",
               "string"
             ]
+          },
+          "values": {
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "checkRemarks": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "checkPhotos": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string",
+                "format": "uuid"
+              }
+            }
+          },
+          "schemaVersion": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },

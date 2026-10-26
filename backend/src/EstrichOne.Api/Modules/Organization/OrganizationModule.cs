@@ -14,6 +14,7 @@ public sealed class OrganizationModule : IModule
         services.AddScoped<ISystemSettings, SystemSettingsStore>();
         services.AddScoped<IPdfBranding, PdfBranding>();
         services.AddScoped<IValueLists, ValueListStore>();
+        services.AddScoped<IFormSchemas, FormSchemaStore>();
         services.AddScoped<IDataInitializer, ValueListSeed>();
         services.AddScoped<IDataInitializer, FormSchemaSeed>();
         services.AddScoped<ISyncEntitySource, ValueListItemSource>();

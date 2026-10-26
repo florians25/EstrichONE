@@ -2115,6 +2115,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("binder");
 
+                    b.Property<string>("CheckPhotos")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("check_photos");
+
+                    b.Property<string>("CheckRemarks")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("check_remarks");
+
                     b.Property<string>("Checks")
                         .IsRequired()
                         .HasColumnType("jsonb")
@@ -2174,6 +2184,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("remarks");
 
+                    b.Property<long?>("SchemaVersion")
+                        .HasColumnType("bigint")
+                        .HasColumnName("schema_version");
+
                     b.Property<int?>("ThicknessMm")
                         .HasColumnType("integer")
                         .HasColumnName("thickness_mm");
@@ -2181,6 +2195,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
+
+                    b.Property<string>("Values")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("values");
 
                     b.Property<long>("Version")
                         .IsConcurrencyToken()

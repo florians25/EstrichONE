@@ -1,3 +1,5 @@
+using EstrichOne.Api.Modules.Organization.Exports;
+using System.Text.Json;
 using System.Globalization;
 using System.Text.Json.Nodes;
 using EstrichOne.Api.Infrastructure.Persistence;
@@ -26,11 +28,12 @@ public sealed record InspectionDto(
     Guid Id, Guid BauakteId, InspectionKind Kind, Guid PerformedByUserId, DateTimeOffset PerformedAt, Guid? CorrectsInspectionId,
     string? Remarks, bool NotRequired, IReadOnlyDictionary<string, CheckResult> Checks, IReadOnlyList<Guid> PhotoFileIds,
     string? Location, ScreedBinderKind? Binder, bool? Heated, int? ThicknessMm, decimal? MeasuredCmPercent, decimal? LimitCmPercent,
-    bool? IsReadyForCovering, long Version, string? Notes = null)
+    bool? IsReadyForCovering, long Version, string? Notes = null, IReadOnlyDictionary<string, JsonElement>? Values = null,
+    IReadOnlyDictionary<string, string>? CheckRemarks = null, IReadOnlyDictionary<string, List<Guid>>? CheckPhotos = null, long? SchemaVersion = null)
 {
     public static InspectionDto From(Inspection i) => new(i.Id, i.BauakteId, i.Kind, i.PerformedByUserId, i.PerformedAt,
         i.CorrectsInspectionId, i.Remarks, i.NotRequired, i.Checks, i.PhotoFileIds, i.Location, i.Binder, i.Heated, i.ThicknessMm,
-        i.MeasuredCmPercent, i.LimitCmPercent, i.IsReadyForCovering, i.Version, i.Notes);
+        i.MeasuredCmPercent, i.LimitCmPercent, i.IsReadyForCovering, i.Version, i.Notes, i.Values, i.CheckRemarks, i.CheckPhotos, i.SchemaVersion);
 }
 
 /// <summary>Bautagebuch (anfügen, Verfasser ändert) und Prüfungen (nur anlegen) über den Sync.</summary>
@@ -179,6 +182,18 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
         var kind = SyncPayload.Read<InspectionKind>(p, "kind");
         var remarks = SyncPayload.Read<string>(p, "remarks");
         var notes = SyncPayload.Read<string>(p, "notes");
+        if (kind == InspectionKind.InitialInspection && SyncPayload.Read<Dictionary<string, CheckResult>>(p, "checks") is { Count: > 0 } sent)
+        {
+            // Prüfpunkte aus dem Formular der Stammdaten (und die bisherigen festen Punkte).
+            var known = (await services.GetRequiredService<IFormSchemas>().FieldsAsync(FormSchemaKeys.Erstbegehung, cancellationToken))
+                .Where(f => f.Type == "check").Select(f => f.Key).Concat(Inspection.InitialChecks).ToHashSet();
+            var unknown = sent.Keys.Where(k => !known.Contains(k)).ToList();
+            if (unknown.Count > 0)
+            {
+                throw new SyncValidationException($"Unbekannte Prüfpunkte: {string.Join(", ", unknown)}.");
+            }
+        }
+
         var inspection = kind switch
         {
             InspectionKind.InitialInspection => Inspection.CreateInitial(op.EntityId, bauakteId, userId, performedAt,
@@ -191,7 +206,24 @@ internal sealed class SiteRecordSync(EstrichOneDbContext db, IBauakteAccess acce
                 remarks, corrects, notes),
         };
 
+        if (inspection.Kind == InspectionKind.InitialInspection)
+        {
+            inspection.Capture(SyncPayload.Read<Dictionary<string, JsonElement>>(p, "values"), SyncPayload.Read<Dictionary<string, string>>(p, "checkRemarks"),
+                SyncPayload.Read<Dictionary<string, List<Guid>>>(p, "checkPhotos"), SyncPayload.Read<long?>(p, "schemaVersion"));
+        }
+
         db.Add(inspection);
+        if (inspection.Kind == InspectionKind.InitialInspection && inspection.Values.Count > 0)
+        {
+            // Basisdaten aus der Erstbegehung ergänzen (Zuordnung Feld → Basisdaten-Pfad im Formular-Schema).
+            var targets = await services.GetRequiredService<IFormSchemas>().TargetsAsync(FormSchemaKeys.Erstbegehung, cancellationToken);
+            var fill = inspection.Values.Where(v => targets.ContainsKey(v.Key)).ToDictionary(v => targets[v.Key], v => v.Value);
+            if (fill.Count > 0)
+            {
+                await services.GetRequiredService<IBauakteDataFill>().ApplyAsync(bauakteId, fill, "Erstbegehung", cancellationToken);
+            }
+        }
+
         var details = new Dictionary<string, string?> { ["kind"] = inspection.Kind.ToString() };
         if (inspection.Kind == InspectionKind.CmMeasurement)
         {
