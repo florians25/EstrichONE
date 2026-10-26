@@ -291,39 +291,45 @@ struct NewBauakteView: View {
 
     /// Unten: im Assistenten Zurück/Weiter, im letzten Schritt bzw. im Formular die beiden Anlage-Schaltflächen.
     private var bottomBar: some View {
-        HStack(spacing: 10) {
+        // Alle Schaltflächen gleich groß, einzeilig.
+        VStack(spacing: 8) {
             if mode == .wizard, step != .details {
-                if step != .customer {
-                    Button { goBack() } label: { Label("Zurück", systemImage: "chevron.left") }
-                        .estrichButton(.secondary, size: .regular)
-                        .accessibilityIdentifier("wizardBackButton")
+                HStack(spacing: 10) {
+                    if step != .customer {
+                        Button { goBack() } label: { Label("Zurück", systemImage: "chevron.left") }
+                            .estrichButton(.secondary, size: .regular, fullWidth: true)
+                            .accessibilityIdentifier("wizardBackButton")
+                    }
+                    Button { goNext() } label: { Label("Weiter", systemImage: "chevron.right") }
+                        .estrichButton(.primary, size: .regular, fullWidth: true)
+                        .accessibilityIdentifier("wizardNextButton")
                 }
-                Button { goNext() } label: { Label("Weiter", systemImage: "chevron.right") }
-                    .estrichButton(.primary, size: .regular, fullWidth: true)
-                    .accessibilityIdentifier("wizardNextButton")
             } else {
-                if mode == .wizard {
-                    Button { goBack() } label: { Image(systemName: "chevron.left") }
-                        .estrichButton(.secondary, size: .regular)
-                        .accessibilityLabel("Zurück")
-                        .accessibilityIdentifier("wizardBackButton")
+                HStack(spacing: 10) {
+                    if mode == .wizard {
+                        Button { goBack() } label: { Label("Zurück", systemImage: "chevron.left") }
+                            .estrichButton(.secondary, size: .regular, fullWidth: true)
+                            .accessibilityIdentifier("wizardBackButton")
+                    }
+                    Button {
+                        Task { await create(next: .open) }
+                    } label: {
+                        Label("Anlegen", systemImage: "checkmark")
+                    }
+                    .estrichButton(.secondary, size: .regular, fullWidth: true)
+                    .accessibilityIdentifier("createButton")
                 }
-                Button {
-                    Task { await create(next: .open) }
-                } label: {
-                    Label("Anlegen", systemImage: "checkmark")
-                }
-                .estrichButton(.secondary, size: .regular, fullWidth: true)
-                .accessibilityIdentifier("createButton")
                 Button {
                     Task { await create(next: .photograph) }
                 } label: {
-                    Label("Anlegen + Foto", systemImage: "camera.fill")
+                    Label("Anlegen und fotografieren", systemImage: "camera.fill")
                 }
                 .estrichButton(.primary, size: .regular, fullWidth: true)
                 .accessibilityIdentifier("createAndPhotographButton")
             }
         }
+        .lineLimit(1)
+        .minimumScaleFactor(0.8)
         .disabled(saving)
         .padding(.horizontal, 16)
         .padding(.vertical, 8)

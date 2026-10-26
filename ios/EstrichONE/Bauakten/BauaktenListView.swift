@@ -6,6 +6,9 @@ struct BauaktenListView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var search = ""
+    /// Abgeschlossene und stornierte Bauakten stehen unter „Altakten“, nicht in der Hauptliste.
+    @State private var showsArchive = false
+    @State private var archivedCount = 0
     @State private var bauakten: [Bauakte] = []
     @State private var customers: [UUID: String] = [:]
     @State private var path: [UUID] = []
@@ -59,9 +62,12 @@ struct BauaktenListView: View {
         .sheet(item: $inspectFor) { bauakte in
             InitialInspectionView(bauakte: bauakte) { inspectFor = nil }
         }
-        .task(id: "\(search)|\(model.active?.sync?.revision ?? 0)") {
+        .task(id: "\(search)|\(showsArchive)|\(model.active?.sync?.revision ?? 0)") {
             guard let service = model.active?.service else { return }
-            bauakten = (try? await service.bauakten(search: search)) ?? []
+            let all = (try? await service.bauakten(search: search)) ?? []
+            let archived = all.filter { $0.status == .completed || $0.status == .cancelled }
+            archivedCount = archived.count
+            bauakten = showsArchive ? archived : all.filter { $0.status != .completed && $0.status != .cancelled }
             let contacts = (try? await service.contacts()) ?? []
             customers = Dictionary(contacts.map { ($0.id, $0.name) }, uniquingKeysWith: { first, _ in first })
         }
@@ -79,11 +85,20 @@ struct BauaktenListView: View {
 
     @ViewBuilder
     private var rows: some View {
+        Picker("Ansicht", selection: $showsArchive) {
+            Text("Laufend").tag(false)
+            Text(archivedCount > 0 && !showsArchive ? "Altakten (\(archivedCount))" : "Altakten").tag(true)
+        }
+        .pickerStyle(.segmented)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .accessibilityIdentifier("archiveToggle")
         if let sync = model.active?.sync {
             SyncStatusBar(sync: sync).listRowInsets(EdgeInsets())
         }
         if bauakten.isEmpty {
-            Text(search.isEmpty ? "Noch keine Bauakten auf diesem Gerät." : "Keine Bauakte gefunden.")
+            Text(search.isEmpty ? (showsArchive ? "Keine abgeschlossenen Bauakten auf diesem Gerät." : "Noch keine laufenden Bauakten auf diesem Gerät.")
+                 : "Keine Bauakte gefunden.")
                 .foregroundStyle(Theme.textSecondary)
         }
         ForEach(bauakten) { bauakte in

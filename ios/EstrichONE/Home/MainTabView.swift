@@ -38,7 +38,12 @@ struct MainTabView: View {
         }
         .modifier(SidebarAdaptable())
         .safeAreaInset(edge: .top, spacing: 0) {
-            if model.isDemo { DemoBanner { model.requestDemo(false) } }
+            VStack(spacing: 0) {
+                if model.isDemo { DemoBanner { model.requestDemo(false) } }
+                if let sync = model.active?.sync, let message = sync.maintenanceMessage ?? sync.notices?.maintenance.flatMap({ $0.active ? ($0.message ?? "Der Server wird gewartet.") : nil }) {
+                    MaintenanceBanner(message: message)
+                }
+            }
         }
     }
 }
@@ -67,6 +72,31 @@ struct NewBauakteButton: View {
         .padding(.trailing, 16)
         .padding(.bottom, 12)
         .accessibilityIdentifier("newBauakteButton")
+    }
+}
+
+/// Wartung des Servers deutlich über allen Seiten: Erfasstes bleibt auf dem Gerät und wird danach übertragen.
+struct MaintenanceBanner: View {
+    let message: String
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 10) {
+            Image(systemName: "wrench.and.screwdriver.fill").font(.title3).accessibilityHidden(true)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Wartung").font(.subheadline.weight(.bold))
+                Text("\(message) Sie können weiterarbeiten – alles bleibt auf dem Gerät und wird danach übertragen.")
+                    .font(.footnote)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 0)
+        }
+        .foregroundStyle(Color(hex: 0x3B2300))
+        .padding(12)
+        .background(Color(hex: 0xFCD34D), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("maintenanceBanner")
     }
 }
 
