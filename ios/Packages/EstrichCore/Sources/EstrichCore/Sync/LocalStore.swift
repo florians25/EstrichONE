@@ -541,6 +541,8 @@ public actor LocalStore {
         case .diaryEntry: ["text"]
         case .inspection: ["location", "remarks"]
         case .acceptance: ["clientName", "scope", "location"]
+        case .valueListItem: ["list", "key", "label"]
+        case .formSchema: ["key"]
         case .ticket: ["title"]
         }
         let search = searchFields.compactMap { data[$0]?.string }.joined(separator: " ").lowercased()

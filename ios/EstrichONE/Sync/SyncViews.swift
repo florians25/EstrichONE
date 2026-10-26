@@ -214,6 +214,8 @@ struct SyncView: View {
         case .diaryEntry: "Bautagebuch-Eintrag"
         case .inspection: "Prüfung"
         case .acceptance: "Abnahmeprotokoll"
+        case .valueListItem: "Werteliste"
+        case .formSchema: "Formular"
         case .ticket: "Meldung an die IT"
         }
         let action = operation.type.split(separator: ".").last ?? ""

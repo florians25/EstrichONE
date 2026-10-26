@@ -60,6 +60,8 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     public let cancellationReason: String?
     /// Werte des Bauvorhabens (Fläche, Estrichart, Aufbau …).
     public let project: BauakteProject
+    /// `project` unverändert (auch eigene Felder unter `custom`) für das Formular aus dem Schema.
+    public let projectData: [String: JSONValue]
     /// Geplanter Zeitraum (`JJJJ-MM-TT`).
     public let plannedStart: String?
     public let plannedEnd: String?
@@ -84,6 +86,7 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
         siteContactPhone = data["siteContactPhone"]?.string
         cancellationReason = data["cancellationReason"]?.string
         project = BauakteProject(data["project"])
+        projectData = data["project"]?.object ?? [:]
         plannedStart = data["plannedStart"]?.string
         plannedEnd = data["plannedEnd"]?.string
         updatedAt = data["updatedAt"]?.string.flatMap(APIDate.parse)

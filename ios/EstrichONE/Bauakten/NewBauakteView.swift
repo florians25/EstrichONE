@@ -62,6 +62,9 @@ struct NewBauakteView: View {
     @State private var errorMessage: String?
     @State private var saving = false
     @State private var location = LocationProvider()
+    /// Formular-Schema des Büros (offline: zuletzt geladener Stand); ohne Schema die festen Felder.
+    @State private var schema: FormSchema?
+    @State private var lists = ValueLists([])
     @FocusState private var titleFocused: Bool
 
     var body: some View {
@@ -129,6 +132,11 @@ struct NewBauakteView: View {
             .task(id: "\(input.title)|\(input.street ?? "")|\(input.city ?? "")|\(input.latitude ?? 0)") { await findSimilar() }
             .sensoryFeedback(.error, trigger: errorMessage) { _, new in new != nil }
             .sensoryFeedback(.selection, trigger: step)
+            .task {
+                guard let service = model.active?.service else { return }
+                schema = await service.formSchema(using: model.active?.client)
+                lists = await service.valueLists()
+            }
         }
         .presentationDetents([.large])
     }
@@ -200,8 +208,19 @@ struct NewBauakteView: View {
     }
 
     /// Fläche, Estrich, Aufbau, vor Ort, Zeitraum – alles optional.
+    @ViewBuilder
     private var projectFields: some View {
-        ProjectFields(project: $input.project, plannedStart: $input.plannedStart, plannedEnd: $input.plannedEnd)
+        if let schema {
+            SchemaProjectFields(schema: schema, lists: lists, values: Binding { input.projectData ?? [:] } set: { input.projectData = $0 })
+            PlannedPeriodSection(plannedStart: $input.plannedStart, plannedEnd: $input.plannedEnd)
+        } else {
+            ProjectFields(project: $input.project, plannedStart: $input.plannedStart, plannedEnd: $input.plannedEnd)
+        }
+    }
+
+    private var projectBadges: [String] {
+        if let schema { return schema.badges(for: input.projectData ?? [:], lists: lists) }
+        return input.project.badges
     }
 
     private var kindSection: some View {
@@ -226,8 +245,8 @@ struct NewBauakteView: View {
             LabeledContent("Bauvorhaben", value: input.title.isEmpty ? "–" : input.title)
             LabeledContent("Kunde", value: customer?.name ?? newCustomer.map { "\($0.name) (neu)" } ?? "–")
             LabeledContent("Baustelle", value: addressLine ?? "noch ohne Adresse")
-            if !input.project.badges.isEmpty {
-                LabeledContent("Bauvorhaben", value: input.project.badges.joined(separator: " · "))
+            if !projectBadges.isEmpty {
+                LabeledContent("Bauvorhaben", value: projectBadges.joined(separator: " · "))
             }
             Button {
                 Task { await create(next: .inspect) }
@@ -341,6 +360,10 @@ struct NewBauakteView: View {
         }
         if step.rawValue >= Step.site.rawValue, input.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             return BauakteError.titleRequired.message
+        }
+        if step.rawValue >= Step.project.rawValue, let schema {
+            let missing = schema.missingRequired(in: input.projectData ?? [:])
+            if !missing.isEmpty { return "Bitte noch angeben: \(missing.joined(separator: ", "))." }
         }
         return nil
     }

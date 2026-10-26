@@ -21,6 +21,8 @@ struct BauakteDetailView: View {
     @State private var inspections: [Inspection] = []
     @State private var acceptances: [Acceptance] = []
     @State private var showsInspectionPDF = false
+    @State private var schema: FormSchema?
+    @State private var lists = ValueLists([])
     @State private var form: CaptureForm?
     @State private var capturing = false
     @State private var scanning = false
@@ -47,7 +49,7 @@ struct BauakteDetailView: View {
                     header(bauakte)
                     actionBar
                     contactSection(bauakte)
-                    ProjectSection(bauakte: bauakte) { form = .project }
+                    ProjectSection(bauakte: bauakte, schema: schema, lists: lists) { form = .project }
                     photoSection
                     documentSection
                     diarySection
@@ -108,7 +110,7 @@ struct BauakteDetailView: View {
                     case .cmMeasurement: NewCmMeasurementView(bauakteId: bauakteId) { self.form = nil }
                     case .initialInspection: InitialInspectionView(bauakte: bauakte) { self.form = nil }
                     case .acceptance: NewAcceptanceView(bauakte: bauakte, customerName: customer?.name) { self.form = nil }
-                    case .project: EditProjectView(bauakte: bauakte) { self.form = nil; Task { await reload() } }
+                    case .project: EditProjectView(bauakte: bauakte, schema: schema, lists: lists) { self.form = nil; Task { await reload() } }
                     }
                 }
                 .filePreview($previewing)
@@ -140,7 +142,8 @@ struct BauakteDetailView: View {
     /// runde Chips, Schnellaktionen als runde Symbolknöpfe. iPad: Kunde, Baustelle und Zeitraum nebeneinander.
     private func header(_ bauakte: Bauakte) -> some View {
         let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
-        let badges = bauakte.project.badges + [Self.period(bauakte)].compactMap { $0 }
+        let projectBadges = schema?.badges(for: bauakte.projectData, lists: lists) ?? bauakte.project.badges
+        let badges = projectBadges + [Self.period(bauakte)].compactMap { $0 }
         return Section {
             VStack(alignment: .leading, spacing: 12) {
                 HStack(alignment: .center) {
@@ -174,9 +177,9 @@ struct BauakteDetailView: View {
                     Label(address, systemImage: "mappin.and.ellipse").labelStyle(TightLabelStyle())
                         .font(.footnote).foregroundStyle(.white.opacity(0.85)).lineLimit(2)
                 }
-                if !bauakte.project.badges.isEmpty || (sizeClass != .regular && !badges.isEmpty) {
+                if !projectBadges.isEmpty || (sizeClass != .regular && !badges.isEmpty) {
                     ChipFlow {
-                        ForEach(sizeClass == .regular ? bauakte.project.badges : badges, id: \.self) { badge in
+                        ForEach(sizeClass == .regular ? projectBadges : badges, id: \.self) { badge in
                             Text(badge)
                                 .font(.caption.weight(.semibold))
                                 .foregroundStyle(.white)
@@ -541,6 +544,8 @@ struct BauakteDetailView: View {
         diary = (try? await service.diary(of: bauakteId)) ?? []
         inspections = (try? await service.inspections(of: bauakteId)) ?? []
         acceptances = (try? await service.acceptances(of: bauakteId)) ?? []
+        if schema == nil { schema = await service.formSchema(using: model.active?.client) }
+        lists = await service.valueLists()
         customer = if let id = bauakte?.customerId { try? await service.contact(id) } else { nil }
         let directory = (try? await service.cachedDirectory()) ?? []
         names = Dictionary(directory.map { ($0.id, $0.displayName) }, uniquingKeysWith: { first, _ in first })

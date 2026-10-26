@@ -94,3 +94,32 @@ struct DispatchCrewTests {
         #expect(pool.first?.title == "EFH")
     }
 }
+
+@Suite("Basisdaten aus dem Formular-Schema")
+struct FormSchemaTests {
+    @Test("Schema lesen, Pflichtfelder, eigene Felder unter custom, Kurzangaben mit Werteliste und Einheit")
+    func schema() throws {
+        let json = try JSONCoding.decoder.decode(JSONValue.self, from: Data("""
+        {"key":"bauakte","version":3,"groups":[{"key":"estrich","label":"Estrich","fields":[
+          {"key":"totalArea","label":"Fläche","type":"number","path":"project.totalArea","required":true,"unit":"m²","badge":true,"builtin":true},
+          {"key":"screedType","label":"Estrichart","type":"select","list":"screedType","path":"project.screedType","required":false,"badge":true,"builtin":true},
+          {"key":"fliesen","label":"Fliesenleger","type":"text","path":"project.custom.fliesen","required":true,"builtin":false},
+          {"key":"heizung","label":"Fußbodenheizung","type":"boolean","path":"project.underfloorHeating","badge":true,"builtin":true}]}]}
+        """.utf8))
+        let schema = try #require(FormSchema(json))
+        #expect(schema.fields.count == 4 && schema.version == 3)
+        var project: [String: JSONValue] = [:]
+        #expect(schema.missingRequired(in: project) == ["Fläche", "Fliesenleger"])
+        project = FormSchema.setting(.number(182.5), for: schema.fields[0], in: project)
+        project = FormSchema.setting(.string("ct"), for: schema.fields[1], in: project)
+        project = FormSchema.setting(.string("Huber"), for: schema.fields[2], in: project)
+        project = FormSchema.setting(.bool(true), for: schema.fields[3], in: project)
+        #expect(schema.missingRequired(in: project).isEmpty)
+        #expect(project["custom"]?["fliesen"]?.string == "Huber")
+        let lists = ValueLists([ValueListItem(list: "screedType", key: "ct", label: "Zementestrich CT", short: "CT"),
+                                ValueListItem(list: "screedType", key: "as", label: "Gussasphalt", isActive: false)])
+        #expect(schema.badges(for: project, lists: lists) == ["182,5 m²", "CT", "Fußbodenheizung"])
+        #expect(lists.options("screedType").map(\.key) == ["ct"])
+        #expect(lists.options("screedType", keeping: "as").count == 2)
+    }
+}

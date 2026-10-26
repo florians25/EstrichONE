@@ -16,6 +16,8 @@ public struct NewBauakte: Sendable {
     /// Geplanter Zeitraum im Format `JJJJ-MM-TT`.
     public var plannedStart: String?
     public var plannedEnd: String?
+    /// Werte aus dem Formular-Schema (inkl. `custom`); hat Vorrang vor `project`.
+    public var projectData: [String: JSONValue]?
 
     public init(title: String, street: String? = nil, postalCode: String? = nil, city: String? = nil, latitude: Double? = nil,
                 longitude: Double? = nil, description: String? = nil, customerId: UUID? = nil, template: BauakteTemplate = .standard,
@@ -144,7 +146,7 @@ public struct BauakteService: Sendable {
             "title": .string(title), "street": clean(input.street), "postalCode": clean(input.postalCode), "city": clean(input.city),
             "latitude": JSONValue(input.latitude), "longitude": JSONValue(input.longitude), "description": clean(input.description),
             "customerId": JSONValue(input.customerId), "templateKey": .string(input.template.rawValue),
-            "project": input.project.isEmpty ? .null : input.project.json,
+            "project": input.projectData.map { JSONValue.object($0) } ?? (input.project.isEmpty ? .null : input.project.json),
             "plannedStart": JSONValue(input.plannedStart), "plannedEnd": JSONValue(input.plannedEnd),
         ]
         let timestamp = JSONValue.string(APIDate.format(now()))
