@@ -16,6 +16,10 @@ struct HomeView: View {
     @State private var reporting = false
     @State private var captureFor: Bauakte?
     @State private var inspectFor: Bauakte?
+    /// Hauptaktion, für die noch die Baustelle gewählt wird.
+    @State private var siteTask: SiteTask?
+    @State private var diaryFor: Bauakte?
+    @State private var acceptanceFor: Bauakte?
     @State private var planning: MyPlanning.Snapshot?
     @State private var openTasks = 0
     @State private var tasks: [WorkItem] = []
@@ -109,6 +113,30 @@ struct HomeView: View {
             .sheet(item: $inspectFor) { bauakte in
                 InitialInspectionView(bauakte: bauakte) { inspectFor = nil }
             }
+            .sheet(item: $siteTask) { task in
+                BauakteQuickPicker(task: task, todayIds: TodayJob.make(
+                    assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
+                    .map(\.bauakteId)) { bauakte in
+                    siteTask = nil
+                    guard let bauakte else { return }
+                    Task {
+                        // Erst wenn die Auswahl geschlossen ist, das nächste Blatt öffnen.
+                        try? await Task.sleep(for: .milliseconds(450))
+                        switch task {
+                        case .open: path.append(.bauakte(bauakte.id))
+                        case .diary: diaryFor = bauakte
+                        case .inspection: inspectFor = bauakte
+                        case .acceptance: acceptanceFor = bauakte
+                        }
+                    }
+                }
+            }
+            .sheet(item: $diaryFor) { bauakte in
+                NewDiaryEntryView(bauakteId: bauakte.id) { diaryFor = nil }
+            }
+            .sheet(item: $acceptanceFor) { bauakte in
+                NewAcceptanceView(bauakte: bauakte) { acceptanceFor = nil }
+            }
             .task(id: model.active?.sync?.revision) { await reload() }
             .refreshable {
                 await model.active?.sync?.run()
@@ -122,29 +150,41 @@ struct HomeView: View {
     /// Schnellaktionen: anlegen (Hauptaktion), fotografieren und scannen. iPad: zwei Spalten mit „Problem melden“.
     private var quickActions: some View {
         let columns = Array(repeating: GridItem(.flexible(), spacing: 10), count: isWide ? 2 : 3)
-        return LazyVGrid(columns: columns, spacing: 10) {
-            Button { creating = true } label: {
-                Label("Neue Bauakte", systemImage: "folder.badge.plus")
+        return VStack(spacing: 10) {
+            LazyVGrid(columns: columns, spacing: 10) {
+                Button { openToday() } label: { Label("Meine Baustelle", systemImage: "hammer.fill") }
+                    .buttonStyle(ActionTileStyle(rank: .primary))
+                    .accessibilityIdentifier("myTodayTile")
+                Button { openCapture(.photo) } label: { Label("Foto", systemImage: "camera.fill") }
+                    .buttonStyle(ActionTileStyle(rank: .accent))
+                    .accessibilityIdentifier("photoTile")
+                Button { openCapture(.document) } label: { Label("Scannen", systemImage: "doc.viewfinder") }
+                    .buttonStyle(ActionTileStyle(rank: .secondary))
+                    .accessibilityIdentifier("scanTile")
+                Button { siteTask = .diary } label: { Label("Bautagebuch", systemImage: "book.fill") }
+                    .buttonStyle(ActionTileStyle(rank: .secondary))
+                    .accessibilityIdentifier("diaryTile")
+                Button { siteTask = .inspection } label: { Label("Erstbegehung", systemImage: "checklist") }
+                    .buttonStyle(ActionTileStyle(rank: .secondary))
+                    .accessibilityIdentifier("inspectionTile")
+                Button { siteTask = .acceptance } label: { Label("Abnahme", systemImage: "signature") }
+                    .buttonStyle(ActionTileStyle(rank: .secondary))
+                    .accessibilityIdentifier("acceptanceTile")
             }
-            .buttonStyle(ActionTileStyle(rank: .primary))
-            .keyboardShortcut("n", modifiers: .command)
-            .accessibilityIdentifier("newBauakteTile")
-            Button { openCapture(.photo) } label: {
-                Label("Foto", systemImage: "camera.fill")
-            }
-            .buttonStyle(ActionTileStyle(rank: .accent))
-            .accessibilityIdentifier("photoTile")
-            Button { openCapture(.document) } label: {
-                Label("Scannen", systemImage: "doc.viewfinder")
-            }
-            .buttonStyle(ActionTileStyle(rank: .secondary))
-            .accessibilityIdentifier("scanTile")
-            if isWide {
-                Button { reporting = true } label: {
-                    Label("Problem melden", systemImage: "exclamationmark.bubble")
-                }
-                .buttonStyle(ActionTileStyle(rank: .secondary))
-            }
+            Button { creating = true } label: { ActionLabel("Neue Bauakte", systemImage: "folder.badge.plus") }
+                .estrichButton(.secondary, size: .regular, fullWidth: true)
+                .keyboardShortcut("n", modifiers: .command)
+                .accessibilityIdentifier("newBauakteTile")
+        }
+    }
+
+    /// Baustelle von heute öffnen; ohne Einsatz heute: auswählen.
+    private func openToday() {
+        let jobs = TodayJob.make(assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
+        if let first = jobs.first, Set(jobs.map(\.bauakteId)).count == 1 {
+            path.append(.bauakte(first.bauakteId))
+        } else {
+            siteTask = .open
         }
     }
 
@@ -345,8 +385,6 @@ struct HomeView: View {
             Divider().padding(.leading, 54)
             NavigationRow(title: "Meine Woche", symbol: "calendar", color: Color(hex: 0x2F80ED)) { path.append(.week) }
                 .accessibilityIdentifier("myWeekTile")
-            Divider().padding(.leading, 54)
-            NavigationRow(title: "Synchronisation", symbol: "arrow.triangle.2.circlepath", color: Color(hex: 0x1F9D63)) { path.append(.sync) }
             if !isWide {
                 Divider().padding(.leading, 54)
                 NavigationRow(title: "Problem melden", symbol: "exclamationmark.bubble.fill", color: Color(hex: 0xC2410C)) { reporting = true }
@@ -546,6 +584,76 @@ struct TodayJobCard: View {
             UnevenRoundedRectangle(topLeadingRadius: Theme.cardRadius, bottomLeadingRadius: Theme.cardRadius)
                 .fill(job.crewColor ?? Theme.accent).frame(width: 5)
         }
+    }
+}
+
+/// Hauptaktion der Startseite, die eine Baustelle braucht.
+enum SiteTask: String, Identifiable {
+    case open, diary, inspection, acceptance
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .open: "Baustelle öffnen"
+        case .diary: "Bautagebuch – Baustelle"
+        case .inspection: "Erstbegehung – Baustelle"
+        case .acceptance: "Abnahme – Baustelle"
+        }
+    }
+}
+
+/// Baustelle wählen: heutige Einsätze zuerst, dann zuletzt geöffnete und alle aktiven, mit Suche.
+struct BauakteQuickPicker: View {
+    let task: SiteTask
+    let todayIds: [UUID]
+    let onDone: (Bauakte?) -> Void
+
+    @Environment(AppModel.self) private var model
+    @State private var search = ""
+    @State private var today: [Bauakte] = []
+    @State private var others: [Bauakte] = []
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if !today.isEmpty, search.isEmpty {
+                    Section("Heute") { rows(today) }
+                }
+                Section(search.isEmpty ? "Weitere Baustellen" : "Treffer") {
+                    if others.isEmpty {
+                        Text("Keine Bauakte gefunden.").foregroundStyle(Theme.textSecondary)
+                    }
+                    rows(others)
+                }
+            }
+            .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
+            .navigationTitle(task.title)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { onDone(nil) } } }
+            .task(id: search) { await load() }
+        }
+    }
+
+    private func rows(_ list: [Bauakte]) -> some View {
+        ForEach(list) { bauakte in
+            Button { onDone(bauakte) } label: {
+                HStack {
+                    BauakteRow(bauakte: bauakte)
+                    Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private func load() async {
+        guard let service = model.active?.service else { return }
+        let all = (try? await service.bauakten(search: search.isEmpty ? nil : search)) ?? []
+        let active = all.filter { $0.status != .cancelled && $0.status != .completed }
+        let todaySet = Set(todayIds)
+        var seen = Set<UUID>()
+        today = todayIds.filter { seen.insert($0).inserted }.compactMap { id in all.first { $0.id == id } }
+        others = active.filter { !todaySet.contains($0.id) || !search.isEmpty }
     }
 }
 

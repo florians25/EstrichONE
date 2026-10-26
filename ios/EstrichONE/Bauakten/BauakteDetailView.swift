@@ -20,6 +20,7 @@ struct BauakteDetailView: View {
     @State private var diary: [DiaryEntry] = []
     @State private var inspections: [Inspection] = []
     @State private var acceptances: [Acceptance] = []
+    @State private var showsInspectionPDF = false
     @State private var form: CaptureForm?
     @State private var capturing = false
     @State private var scanning = false
@@ -64,6 +65,12 @@ struct BauakteDetailView: View {
                     }
                 }
                 .listSectionSpacing(.compact)
+                .navigationDestination(isPresented: $showsInspectionPDF) {
+                    if let inspection = latestInitialInspection {
+                        InspectionProtocolView(inspection: inspection, bauakte: bauakte,
+                                               performerName: inspection.performedByUserId.flatMap { names[$0] }, opensPDF: true)
+                    }
+                }
                 .navigationTitle(bauakte.number ?? "Neue Bauakte")
                 .navigationBarTitleDisplayMode(.inline)
                 .fullScreenCover(isPresented: $capturing) {
@@ -194,6 +201,11 @@ struct BauakteDetailView: View {
                     Button { scanning = true } label: { roundAction("Scannen", symbol: "doc.viewfinder") }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("headerScanButton")
+                    if latestInitialInspection != nil {
+                        Button { showsInspectionPDF = true } label: { roundAction("Erstbegehung (PDF)", symbol: "doc.richtext") }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("headerInspectionPDFButton")
+                    }
                     Spacer(minLength: 0)
                     SyncStateBadge(state: bauakte.syncState, showsSynced: true)
                         .padding(.horizontal, 8).padding(.vertical, 4)
@@ -474,6 +486,11 @@ struct BauakteDetailView: View {
                     .accessibilityIdentifier("addInspectionButton")
             }
         }
+    }
+
+    /// Neueste Erstbegehung (Korrekturen sind neuere Fassungen).
+    private var latestInitialInspection: Inspection? {
+        inspections.first { $0.kind == .initialInspection }
     }
 
     private var acceptanceSection: some View {

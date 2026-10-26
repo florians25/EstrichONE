@@ -15,6 +15,8 @@ struct InspectionProtocolView: View {
     let inspection: Inspection
     let bauakte: Bauakte
     var performerName: String?
+    /// Direkt das PDF öffnen (Schnellzugriff aus dem Kopf der Bauakte).
+    var opensPDF = false
 
     @Environment(AppModel.self) private var model
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -72,6 +74,7 @@ struct InspectionProtocolView: View {
             PhotoViewer(photos: photos, selection: file.id) { Task { await loadPhotos() } }
         }
         .quickLookPreview($pdfURL)
+        .task { if opensPDF, pdfURL == nil { await openPDF() } }
         .alert("PDF nicht verfügbar", isPresented: Binding(get: { pdfMessage != nil }, set: { if !$0 { pdfMessage = nil } })) {
             Button("OK", role: .cancel) {}
         } message: {
