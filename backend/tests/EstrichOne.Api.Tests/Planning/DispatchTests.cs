@@ -171,10 +171,18 @@ public sealed class DispatchTests(PostgresFixture postgres) : IAsyncLifetime
         efhSite.Crews.Select(c => c.Name).ShouldBe(["Kolonne Nord", "Kolonne Süd"], ignoreOrder: true);
         efhSite.Crews.Single(c => c.Id == sued).Activity.ShouldBe("Randdämmung stellen");
 
-        // Zusätzlich auf die Halle (keep) → Kolonne doppelt am Tag: Hinweis.
+        // Zusätzlich auf die Halle (keep): mehrere Baustellen am Tag; Überschneidung nur bei gleicher Zeit.
         board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = sued, toBauakteId = halle, keep = true });
         board.Crews.Single(c => c.Id == sued).SiteIds.Count.ShouldBe(2);
-        board.Sites.Single(s => s.BauakteId == halle).Warnings.ShouldContain(w => w.Contains("Kolonne Süd") && w.Contains("EFH Müller"));
+        board.Crews.Single(c => c.Id == sued).Warnings.ShouldNotBeNull().ShouldContain(w => w.StartsWith("Überschneidung"));
+        board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = sued, toBauakteId = efh, keep = true, startTime = "07:00:00", endTime = "11:00:00" });
+        board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = sued, toBauakteId = halle, keep = true, startTime = "12:00:00", endTime = "16:00:00" });
+        var sued2 = board.Crews.Single(c => c.Id == sued);
+        sued2.Warnings.ShouldNotBeNull().ShouldBeEmpty();
+        sued2.SiteIds.ShouldBe([efh, halle]);
+        board.Sites.Single(s => s.BauakteId == halle).Crews.Single(c => c.Id == sued).EndTime.ShouldBe(new TimeOnly(16, 0));
+        var pool = await office.GetFromJsonAsync<List<DispatchPoolSite>>("/api/v1/planning/dispatch/2026-11-05/pool?search=Halle", TestJson.Options, Ct);
+        pool!.ShouldHaveSingleItem().CrewIds.ShouldContain(sued);
 
         // Von der Halle wieder herausnehmen.
         board = await SendAsync<DispatchBoard>(office, HttpMethod.Post, moves, new { target = "crew", id = sued, toBauakteId = (Guid?)null, fromBauakteId = halle });

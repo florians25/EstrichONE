@@ -7683,6 +7683,73 @@
         ]
       }
     },
+    "/api/v1/planning/dispatch/{day}/pool": {
+      "get": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Vorrat „Baustellen“: alle aktiven Bauakten (search, limit), mit den an dem Tag eingeteilten Kolonnen",
+        "operationId": "GetDispatchPool",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "search",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/DispatchPoolSite"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/planning/dispatch/{day}/print.pdf": {
       "get": {
         "tags": [
@@ -16913,6 +16980,15 @@
             "items": {
               "$ref": "#/components/schemas/DispatchAbsentMember"
             }
+          },
+          "warnings": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -17027,6 +17103,13 @@
               "string"
             ],
             "format": "time"
+          },
+          "endTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
           }
         }
       },
@@ -17080,6 +17163,48 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "DispatchPoolSite": {
+        "required": [
+          "bauakteId",
+          "number",
+          "title",
+          "address",
+          "status",
+          "crewIds"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "$ref": "#/components/schemas/BauakteStatus"
+          },
+          "crewIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -17225,6 +17350,13 @@
             "type": "string"
           },
           "startTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "endTime": {
             "type": [
               "null",
               "string"

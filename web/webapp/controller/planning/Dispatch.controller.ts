@@ -14,13 +14,19 @@ import { addDays, isoDay, parseDay } from "../../util/days";
 import { openForm } from "../../util/forms";
 import { planningChanged } from "../../util/assignmentDialog";
 import { enablePointerDrag, type DragSource } from "../../util/pointerDrag";
-import { parseLocal, type DispatchBoard, type DispatchSite } from "../../util/planningModels";
+import { parseLocal, type DispatchBoard, type DispatchPoolSite, type DispatchSite } from "../../util/planningModels";
 import { download, navQuery } from "../../util/planningModels";
 
 type Target = "person" | "vehicle" | "crew";
 const hm = (value: string) => parseLocal(value).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
 
-interface LaneSite { bauakteId: string; title: string; crewId: string; crewName: string; activity: string; startTime: string | null }
+interface LaneSite { bauakteId: string; title: string; crewId: string; crewName: string; activity: string; startTime: string | null; endTime: string | null }
+const hhmm = (t: string | null) => (t ? t.slice(0, 5) : "");
+const addHours = (t: string | null, h: number): string | null => {
+	if (!t) return null;
+	const [hh, mm] = t.split(":").map(Number);
+	return `${String(Math.min(hh + h, 20)).padStart(2, "0")}:${String(mm).padStart(2, "0")}:00`;
+};
 
 /**
  * „Wer fährt wohin“ (C3): Kolonnen des Tages als feste Bahnen, darin die zugeordneten Baustellen. Baustellen aus dem
@@ -31,6 +37,8 @@ interface LaneSite { bauakteId: string; title: string; crewId: string; crewName:
  */
 export default class Dispatch extends BaseController {
 	private board: DispatchBoard | null = null;
+	private pool: DispatchPoolSite[] = [];
+	private poolTimer: ReturnType<typeof setTimeout> | undefined;
 
 	onInit(): void {
 		this.local({ day: isoDay(new Date()), dayKey: "heute", subtitle: "", search: "", busy: false, error: "", board: { canPlan: false },
@@ -81,7 +89,19 @@ export default class Dispatch extends BaseController {
 	onPrev(): void { this.go(addDays(String(this.model().getProperty("/day")), -1)); }
 	onNext(): void { this.go(addDays(String(this.model().getProperty("/day")), 1)); }
 	onRefresh(): void { void this.load(); }
-	onSearch(): void { this.render(); }
+	/** Suche: Kolonnen/Baustellen im Plan sofort, Vorrat (alle aktiven Bauakten) über den Server. */
+	onSearch(): void {
+		this.render();
+		clearTimeout(this.poolTimer);
+		this.poolTimer = setTimeout(() => void this.loadPool(), 300);
+	}
+
+	private async loadPool(): Promise<void> {
+		const m = this.model();
+		this.pool = await get<DispatchPoolSite[]>(`planning/dispatch/${m.getProperty("/day")}/pool`, { search: String(m.getProperty("/search") ?? "") || undefined })
+			.catch(() => this.pool);
+		this.render();
+	}
 	onPrint(): void { window.print(); }
 
 	onPdf(): void {
@@ -93,7 +113,10 @@ export default class Dispatch extends BaseController {
 		m.setProperty("/busy", true);
 		m.setProperty("/error", "");
 		try {
-			this.board = await get<DispatchBoard>(`planning/dispatch/${m.getProperty("/day")}`);
+			[this.board, this.pool] = await Promise.all([
+				get<DispatchBoard>(`planning/dispatch/${m.getProperty("/day")}`),
+				get<DispatchPoolSite[]>(`planning/dispatch/${m.getProperty("/day")}/pool`, { search: String(m.getProperty("/search") ?? "") || undefined }),
+			]);
 		} catch (error) {
 			m.setProperty("/error", (error as Error).message);
 		}
@@ -110,19 +133,23 @@ export default class Dispatch extends BaseController {
 		const busyElsewhere = new Map(b.people.map((p) => [p.id, p.siteIds.length]));
 		const sites = new Map(b.sites.map((s) => [s.bauakteId, s]));
 		m.setProperty("/board", b);
-		m.setProperty("/lanes", b.crews.map((c) => ({
+		m.setProperty("/lanes", b.crews.filter((c) => match(c.name, c.leaderName, ...c.siteIds.map((id) => sites.get(id)?.title))).map((c) => ({
 			...c,
 			info: [c.leaderName ? `Leitung: ${c.leaderName}` : null, `${c.memberCount} Mitarbeiter`].filter(Boolean).join(" · "),
 			vehicleText: c.vehicles.map((v) => v.name).join(", "),
 			absentText: c.absentMembers.length ? `Fehlt: ${c.absentMembers.map((a) => `${a.name} (${a.note})`).join(", ")}` : "",
+			warningText: (c.warnings ?? []).join(" "),
 			sites: c.siteIds.map((id) => sites.get(id)).filter((s): s is DispatchSite => !!s).map((s) => {
 				const job = s.crews.find((x) => x.id === c.id);
 				return { bauakteId: s.bauakteId, number: s.number, title: s.title, address: s.address, crewId: c.id, crewName: c.name,
-					startTime: job?.startTime ?? null, activity: job?.activity ?? "" };
+					startTime: job?.startTime ?? null, endTime: job?.endTime ?? null, activity: job?.activity ?? "",
+					timeText: job?.startTime ? `${hhmm(job.startTime)}${job.endTime ? `–${hhmm(job.endTime)}` : ""}` : "–" };
 			}),
 		})));
-		m.setProperty("/pool", b.sites.filter((s) => match(s.title, s.number, s.address, ...s.crews.map((c) => c.name))).map((s) => ({
-			...s, crewCount: s.crews.length, crewText: s.crews.length ? s.crews.map((c) => c.name).join(", ") : "ohne Kolonne",
+		// Vorrat: alle aktiven Bauakten (Server), am Tag eingeteilte zuerst.
+		const crewName = new Map(b.crews.map((c) => [c.id, c.name]));
+		m.setProperty("/pool", this.pool.map((s) => ({
+			...s, crewCount: s.crewIds.length, crewText: s.crewIds.length ? s.crewIds.map((id) => crewName.get(id) ?? "Kolonne").join(", ") : "ohne Kolonne",
 		})));
 		m.setProperty("/unassigned", b.sites.filter((s) => s.crews.length === 0).length);
 		m.setProperty("/sites", b.sites.map((s) => ({
@@ -166,13 +193,17 @@ export default class Dispatch extends BaseController {
 	/** Baustelle einer Kolonne zuordnen (zusätzlich zu anderen Kolonnen); Tätigkeit und Beginn von einem vorhandenen Einsatz. */
 	private assign(crewId: string, bauakteId: string): Promise<boolean> {
 		const job = this.board?.sites.find((s) => s.bauakteId === bauakteId)?.jobs[0];
-		return this.move("crew", crewId, bauakteId, null, { keep: true, activity: job?.activity ?? null, startTime: job?.startTime ?? null });
+		// Weitere Baustelle der Kolonne: nach dem letzten Einsatz beginnen (Ende des letzten bzw. +4 Stunden).
+		const crew = this.board?.crews.find((c) => c.id === crewId);
+		const last = crew?.siteIds.map((id) => this.board?.sites.find((s) => s.bauakteId === id)?.crews.find((c) => c.id === crewId)).filter(Boolean).at(-1);
+		const after = last ? (last.endTime ?? addHours(last.startTime, 4)) : null;
+		return this.move("crew", crewId, bauakteId, null, { keep: true, activity: job?.activity ?? null, startTime: after ?? job?.startTime ?? null });
 	}
 
 	/** Baustelle von einer Kolonne zur anderen: dort mit gleicher Tätigkeit und Beginn anlegen, hier entfernen. */
 	private async reassign(fromCrewId: string, toCrewId: string, bauakteId: string): Promise<void> {
 		const job = this.board?.sites.find((s) => s.bauakteId === bauakteId)?.crews.find((c) => c.id === fromCrewId);
-		if (await this.move("crew", toCrewId, bauakteId, null, { keep: true, activity: job?.activity ?? null, startTime: job?.startTime ?? null }, true)) {
+		if (await this.move("crew", toCrewId, bauakteId, null, { keep: true, activity: job?.activity ?? null, startTime: job?.startTime ?? null, endTime: job?.endTime ?? null }, true)) {
 			await this.move("crew", fromCrewId, null, bauakteId, {}, true);
 			const site = this.board?.sites.find((s) => s.bauakteId === bauakteId)?.title ?? "Baustelle";
 			MessageToast.show(`${site} → ${this.board?.crews.find((c) => c.id === toCrewId)?.name ?? "Kolonne"}`);
@@ -234,7 +265,7 @@ export default class Dispatch extends BaseController {
 					press: () => this.chooseCrew(`${item.title}: andere Kolonne`, (crewId) => void this.reassign(item.crewId, crewId, item.bauakteId), item.crewId) }),
 				new Button({ text: "Weitere Kolonne zuordnen", icon: "sap-icon://add",
 					press: () => this.chooseCrew(`${item.title}: weitere Kolonne`, (crewId) => void this.assign(crewId, item.bauakteId), item.crewId) }),
-				new Button({ text: "Tätigkeit und Beginn", icon: "sap-icon://edit", press: () => void this.editJob(item) }),
+				new Button({ text: "Tätigkeit und Uhrzeit", icon: "sap-icon://edit", press: () => void this.editJob(item) }),
 				new Button({ text: "Von Kolonne entfernen", icon: "sap-icon://decline", type: "Reject", press: () => void this.move("crew", item.crewId, null, item.bauakteId) }),
 			],
 			afterClose: () => setTimeout(() => sheet.destroy(), 0),
@@ -244,14 +275,16 @@ export default class Dispatch extends BaseController {
 
 	private async editJob(item: LaneSite): Promise<void> {
 		const result = await openForm<DispatchBoard>({
-			title: `${item.crewName}: Tätigkeit und Beginn`, width: "30rem",
-			initial: { activity: item.activity, startTime: item.startTime },
+			title: `${item.crewName}: Tätigkeit und Uhrzeit`, width: "30rem",
+			initial: { activity: item.activity, startTime: item.startTime, endTime: item.endTime },
 			fields: [
 				{ key: "activity", label: "Tätigkeit", required: true, maxLength: 200 },
 				{ key: "startTime", label: "Beginn vor Ort", type: "time" },
+				{ key: "endTime", label: "Ende (optional)", type: "time",
+					validate: (v, all) => (v && all.startTime && String(v) <= String(all.startTime) ? "Das Ende muss nach dem Beginn liegen." : null) },
 			],
 			submit: (v) => post<DispatchBoard>(`planning/dispatch/${this.model().getProperty("/day")}/moves`, {
-				target: "crew", id: item.crewId, toBauakteId: item.bauakteId, keep: true, activity: v.activity, startTime: v.startTime || null,
+				target: "crew", id: item.crewId, toBauakteId: item.bauakteId, keep: true, activity: v.activity, startTime: v.startTime || null, endTime: v.endTime || null,
 			}),
 		});
 		if (result) {

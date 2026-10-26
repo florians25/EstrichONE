@@ -43,10 +43,10 @@
 						<Panel class="eoDispatchSitePool">
 							<customData><core:CustomData key="dropsite" value="pool" writeToDom="true"/></customData>
 							<headerToolbar>
-								<Toolbar><Title text="{= 'Baustellen (' + ${view>/unassigned} + ' ohne Kolonne)' }" level="H3"/><ToolbarSpacer/>
+								<Toolbar><Title text="{= 'Baustellen (' + ${view>/pool}.length + ' aktiv)' }" level="H3"/><ToolbarSpacer/>
 									<Button icon="sap-icon://add" tooltip="Weitere Baustelle zuordnen" press=".onAddSite" visible="{view>/board/canPlan}"/></Toolbar>
 							</headerToolbar>
-							<List items="{view>/pool}" noDataText="An diesem Tag ist keine Baustelle geplant – über + eine Bauakte zuordnen." showSeparators="Inner">
+							<List items="{view>/pool}" noDataText="Keine aktive Bauakte gefunden." showSeparators="Inner">
 								<CustomListItem class="eoDispatchPerson" highlight="{= ${view>crewCount} === 0 ? 'Warning' : 'None' }">
 									<customData>
 										<core:CustomData key="dragkind" value="site" writeToDom="true"/>
@@ -80,7 +80,8 @@
 									<Text text="{view>info}" class="eoMuted sapUiTinyMarginEnd"/>
 									<ObjectStatus text="{view>vehicleText}" icon="sap-icon://shipping-status" visible="{= !!${view>vehicleText} }" class="sapUiTinyMarginEnd"/>
 									<ObjectStatus text="{view>absentText}" state="Warning" icon="sap-icon://general-leave-request" visible="{= !!${view>absentText} }" class="sapUiTinyMarginEnd"/>
-									<ObjectStatus text="{= ${view>sites}.length + ' Baustellen am Tag' }" state="Warning" icon="sap-icon://alert" visible="{= ${view>sites}.length > 1 }"/>
+									<ObjectStatus text="{= ${view>sites}.length + ' Baustellen am Tag' }" state="Information" visible="{= ${view>sites}.length > 1 }" class="sapUiTinyMarginEnd"/>
+									<ObjectStatus text="{view>warningText}" state="Warning" icon="sap-icon://alert" visible="{= !!${view>warningText} }"/>
 								</HBox>
 								<FlexBox items="{path: 'view>sites', templateShareable: false}" wrap="Wrap" class="eoDispatchGrid">
 									<VBox class="eoDispatchCard eoDispatchChip" width="17rem">
@@ -90,7 +91,7 @@
 											<core:CustomData key="dragfrom" value="{view>crewId}" writeToDom="true"/>
 										</customData>
 										<HBox alignItems="Start">
-											<ObjectStatus text="{= ${view>startTime} ? ${view>startTime}.slice(0, 5) : '–' }" state="Information" inverted="true" class="sapUiTinyMarginEnd eoTabular"/>
+											<ObjectStatus text="{view>timeText}" state="Information" inverted="true" class="sapUiTinyMarginEnd eoTabular"/>
 											<VBox class="eoGrow">
 												<Link text="{= (${view>number} ? ${view>number} + ' · ' : '') + ${view>title} }" href="{= '/bauakten/' + ${view>bauakteId} }" emphasized="true" wrapping="true"/>
 												<Text text="{view>address}" visible="{= !!${view>address} }" class="eoMuted" wrapping="true"/>

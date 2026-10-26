@@ -18,17 +18,21 @@ public sealed record DispatchJob(
 public sealed record DispatchPerson(Guid Id, string Name, Guid? CrewId, string? CrewName, string? CrewColor, IReadOnlyList<Guid> SiteIds, string? Note);
 
 /// <summary>Kolonne an einer Baustelle (Einsatz der Kolonne an dem Tag).</summary>
-public sealed record DispatchSiteCrew(Guid Id, string Name, string? Color, Guid AssignmentId, string Activity, TimeOnly? StartTime);
+public sealed record DispatchSiteCrew(Guid Id, string Name, string? Color, Guid AssignmentId, string Activity, TimeOnly? StartTime, TimeOnly? EndTime = null);
+
+/// <summary>Vorrat „Baustellen“: alle aktiven Bauakten (Anfrage bis Trocknung) mit den Kolonnen, die dort am Tag eingeteilt sind.</summary>
+public sealed record DispatchPoolSite(Guid BauakteId, string? Number, string Title, string? Address, BauakteStatus Status, IReadOnlyList<Guid> CrewIds);
 
 public sealed record DispatchAbsentMember(Guid Id, string Name, string Note);
 
 /// <summary>Kolonne des Tages für die Schnelleinsatzplanung.</summary>
 /// <param name="Vehicles">Fahrzeuge der Kolonne: an Mitglieder ausgegebene Fahrzeuge (Personalakte, Geräte/Fahrzeuge).</param>
-/// <param name="SiteIds">Baustellen, auf denen die Kolonne an dem Tag eingesetzt ist (mehr als eine = Hinweis).</param>
+/// <param name="SiteIds">Baustellen der Kolonne an dem Tag, nach Beginn sortiert (mehrere sind möglich).</param>
+/// <param name="Warnings">Hinweise, z. B. zeitliche Überschneidung zweier Einsätze der Kolonne.</param>
 /// <param name="AbsentMembers">Mitglieder, die an dem Tag abwesend sind oder einen Termin haben.</param>
 public sealed record DispatchCrew(
     Guid Id, string Name, string? Color, string? LeaderName, int MemberCount, IReadOnlyList<ResourceRef> Vehicles, IReadOnlyList<Guid> SiteIds,
-    IReadOnlyList<DispatchAbsentMember> AbsentMembers);
+    IReadOnlyList<DispatchAbsentMember> AbsentMembers, IReadOnlyList<string>? Warnings = null);
 
 public sealed record DispatchVehicle(Guid Id, string Name, ResourceKind Kind, string? Identifier, IReadOnlyList<Guid> SiteIds);
 
@@ -67,7 +71,7 @@ public enum DispatchTarget
 /// <param name="Activity">Tätigkeit (Kolonne: für den Einsatz an der Ziel-Baustelle, auch beim Verlegen), sonst falls auf der Ziel-Baustelle an dem Tag noch kein Einsatz geplant ist (Standard: „Estrich einbringen“).</param>
 public sealed record DispatchMoveRequest(
     DispatchTarget Target, Guid Id, Guid? ToBauakteId, Guid? FromBauakteId = null, bool Keep = false,
-    [property: MaxLength(200)] string? Activity = null, TimeOnly? StartTime = null);
+    [property: MaxLength(200)] string? Activity = null, TimeOnly? StartTime = null, TimeOnly? EndTime = null);
 
 /// <summary>
 /// „Wer fährt wohin“ (Schnelleinsatzplanung): Kolonnen – im Detail auch einzelne Mitarbeiter und Fahrzeuge – für
@@ -86,6 +90,9 @@ internal static class DispatchEndpoints
             .WithSummary("Kolonne, Person oder Fahrzeug auf eine Baustelle einteilen bzw. abziehen; Antwort ist die neue Tafel")
             .ProducesProblem(StatusCodes.Status400BadRequest).ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.PlanningManage);
+        group.MapGet("/{day}/pool", PoolAsync).WithName("GetDispatchPool")
+            .WithSummary("Vorrat „Baustellen“: alle aktiven Bauakten (search, limit), mit den an dem Tag eingeteilten Kolonnen")
+            .ProducesProblem(StatusCodes.Status400BadRequest).RequirePermission(Permissions.PlanningRead);
         group.MapGet("/{day}/print.pdf", DispatchPrint.CreateAsync).WithName("DispatchPdf")
             .WithSummary("Wer fährt wohin als PDF (Aushang, Fahrerliste)")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
@@ -124,6 +131,38 @@ internal static class DispatchEndpoints
         return TypedResults.Ok(await service.BoardAsync(date, cancellationToken));
     }
 
+    private static async Task<Results<Ok<List<DispatchPoolSite>>, ProblemHttpResult>> PoolAsync(
+        string day, EstrichOneDbContext db, IBauakteAccess access, TimeProvider clock, CancellationToken cancellationToken,
+        [Microsoft.AspNetCore.Mvc.FromQuery] string? search = null, [Microsoft.AspNetCore.Mvc.FromQuery] int? limit = null)
+    {
+        if (!TryDay(day, clock, out var date))
+        {
+            return InvalidDay();
+        }
+
+        var active = new[] { BauakteStatus.Inquiry, BauakteStatus.Planned, BauakteStatus.InProgress, BauakteStatus.Drying };
+        var query = (await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken)).Where(b => active.Contains(b.Status));
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var pattern = "%" + search.Trim().Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal) + "%";
+            query = query.Where(b => EF.Functions.ILike(b.Title, pattern, "\\") || (b.Number != null && EF.Functions.ILike(b.Number, pattern, "\\"))
+                || (b.City != null && EF.Functions.ILike(b.City, pattern, "\\")) || (b.Street != null && EF.Functions.ILike(b.Street, pattern, "\\")));
+        }
+
+        var akten = await query.OrderByDescending(b => b.UpdatedAt).Take(Math.Clamp(limit ?? 200, 1, 500))
+            .Select(b => new { b.Id, b.Number, b.Title, b.Street, b.PostalCode, b.City, b.Status }).ToListAsync(cancellationToken);
+        var ids = akten.Select(a => a.Id).ToList();
+        var crews = (await db.Set<Assignment>().AsNoTracking().Where(a => a.Day == date && a.CrewId != null && ids.Contains(a.BauakteId))
+                .Select(a => new { a.BauakteId, CrewId = a.CrewId!.Value }).ToListAsync(cancellationToken))
+            .ToLookup(a => a.BauakteId, a => a.CrewId);
+        return TypedResults.Ok(akten.Select(b =>
+        {
+            var place = string.Join(" ", new[] { b.PostalCode, b.City }.Where(s => !string.IsNullOrEmpty(s)));
+            var address = string.Join(", ", new[] { b.Street, place }.Where(s => !string.IsNullOrEmpty(s)));
+            return new DispatchPoolSite(b.Id, b.Number, b.Title, address.Length > 0 ? address : null, b.Status, crews[b.Id].Distinct().ToList());
+        }).OrderBy(s => s.CrewIds.Count > 0 ? 0 : 1).ToList());
+    }
+
     private static async Task<Results<Ok<DispatchBoard>, ProblemHttpResult>> MoveAsync(
         string day, DispatchMoveRequest request, DispatchService service, TimeProvider clock, CancellationToken cancellationToken)
     {
@@ -158,16 +197,6 @@ public sealed class DispatchService(
             var address = string.Join(", ", new[] { b.Street, place }.Where(s => !string.IsNullOrEmpty(s)));
             var people = jobs.SelectMany(a => a.People).DistinctBy(p => p.Id).OrderBy(p => p.Name, StringComparer.CurrentCulture).ToList();
             var warnings = jobs.SelectMany(a => a.Warnings).ToList();
-            foreach (var crewJob in jobs.Where(a => a.CrewId is not null).DistinctBy(a => a.CrewId))
-            {
-                var elsewhere = range.Assignments.Where(o => o.CrewId == crewJob.CrewId && o.BauakteId != g.Key && visible.ContainsKey(o.BauakteId))
-                    .Select(o => visible[o.BauakteId].Title).Distinct().ToList();
-                if (elsewhere.Count > 0)
-                {
-                    warnings.Add($"Kolonne {crewJob.CrewName} ist an dem Tag auch auf {string.Join(", ", elsewhere)} eingeplant.");
-                }
-            }
-
             warnings = warnings.Distinct().ToList();
             if (people.Count == 0)
             {
@@ -182,7 +211,7 @@ public sealed class DispatchService(
                 jobs.Select(a => new DispatchJob(a.Id, a.Kind, a.Activity, a.StartTime, a.EndTime, a.CrewId, a.CrewName, a.CrewColor, a.Notes)).ToList(),
                 people, jobs.SelectMany(a => a.Resources).DistinctBy(r => r.Id).ToList(), warnings, navigation,
                 jobs.Where(a => a.CrewId is not null).DistinctBy(a => a.CrewId)
-                    .Select(a => new DispatchSiteCrew(a.CrewId!.Value, a.CrewName ?? string.Empty, a.CrewColor, a.Id, a.Activity, a.StartTime)).ToList());
+                    .Select(a => new DispatchSiteCrew(a.CrewId!.Value, a.CrewName ?? string.Empty, a.CrewColor, a.Id, a.Activity, a.StartTime, a.EndTime)).ToList());
         }).OrderBy(s => s.StartTime ?? TimeOnly.MaxValue).ThenBy(s => s.Title, StringComparer.CurrentCulture).ToList();
 
         var appointments = (range.Appointments ?? []).Select(o => new DispatchAppointment(o.EventId, o.Title, o.Location, o.Start, o.End, o.AllDay, o.People)).ToList();
@@ -219,9 +248,28 @@ public sealed class DispatchService(
                 .Select(v => new ResourceRef(v!.Id, v.Name, v.Kind)).ToList();
             var absent = people.Where(p => c.MemberUserIds.Contains(p.Id) && p.Note is not null)
                 .Select(p => new DispatchAbsentMember(p.Id, p.Name, p.Note!)).ToList();
+            // Einsätze der Kolonne nach Uhrzeit; ohne Ende gilt der Rest des Tages, ohne Beginn der ganze Tag.
+            var jobs = sites.SelectMany(s => s.Crews.Where(x => x.Id == c.Id).Select(x => (Site: s, Job: x)))
+                .OrderBy(j => j.Job.StartTime ?? TimeOnly.MinValue).ToList();
+            var warnings = new List<string>();
+            for (var i = 0; i < jobs.Count; i++)
+            {
+                for (var k = i + 1; k < jobs.Count; k++)
+                {
+                    var (a, b) = (jobs[i].Job, jobs[k].Job);
+                    var aStart = a.StartTime ?? TimeOnly.MinValue;
+                    var aEnd = a.EndTime ?? TimeOnly.MaxValue;
+                    var bStart = b.StartTime ?? TimeOnly.MinValue;
+                    var bEnd = b.EndTime ?? TimeOnly.MaxValue;
+                    if (aStart < bEnd && bStart < aEnd)
+                    {
+                        warnings.Add($"Überschneidung: {jobs[i].Site.Title} und {jobs[k].Site.Title}.");
+                    }
+                }
+            }
+
             return new DispatchCrew(c.Id, c.Name, c.Color, c.LeaderUserId is { } leader && names.TryGetValue(leader, out var n) ? n : null,
-                c.MemberUserIds.Count(names.ContainsKey), crewVehicles,
-                sites.Where(s => s.Crews.Any(x => x.Id == c.Id)).Select(s => s.BauakteId).ToList(), absent);
+                c.MemberUserIds.Count(names.ContainsKey), crewVehicles, jobs.Select(j => j.Site.BauakteId).Distinct().ToList(), absent, warnings);
         }).ToList();
         return new DispatchBoard(day, sites, people, vehicleList, appointments, mine, await permissions.HasAsync(Permissions.PlanningManage, cancellationToken),
             crewList);
@@ -360,14 +408,14 @@ public sealed class DispatchService(
                     target = Assignment.Create(Guid.CreateVersion7(), to);
                     target.Update(day, request.StartTime ?? template?.StartTime ?? new TimeOnly(7, 0),
                         string.IsNullOrWhiteSpace(request.Activity) ? template?.Activity ?? "Estrich einbringen" : request.Activity,
-                        request.Id, [], [], null, template?.Kind ?? AssignmentKind.Screed);
+                        request.Id, [], [], null, template?.Kind ?? AssignmentKind.Screed, request.EndTime);
                     db.Add(target);
                 }
-                else if (!string.IsNullOrWhiteSpace(request.Activity) || request.StartTime is not null)
+                else if (!string.IsNullOrWhiteSpace(request.Activity) || request.StartTime is not null || request.EndTime is not null)
                 {
+                    var end = request.EndTime ?? (request.StartTime is { } s && target.EndTime is { } e && e <= s ? null : target.EndTime);
                     target.Update(day, request.StartTime ?? target.StartTime, string.IsNullOrWhiteSpace(request.Activity) ? target.Activity : request.Activity,
-                        target.CrewId, target.UserIds, target.ResourceIds, target.Notes, target.Kind,
-                        request.StartTime is { } s && target.EndTime is { } e && e <= s ? null : target.EndTime, target.ExcludedUserIds);
+                        target.CrewId, target.UserIds, target.ResourceIds, target.Notes, target.Kind, end, target.ExcludedUserIds);
                 }
             }
 

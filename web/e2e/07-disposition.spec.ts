@@ -251,7 +251,7 @@ test('Wer fährt wohin: Baustellen den Kolonnen zuordnen (Ziehen und Auswahl), m
   await expect(page.getByText(/von \d+ Kolonnen eingeteilt/).filter({ visible: true }).first()).toBeVisible();
 
   // Vorrat: Kraus ist am Montag ohne Kolonne (die Kolonne wurde in 03 auf Mittwoch verschoben).
-  const poolSite = page.locator('.eoDispatchSitePool .eoDispatchPerson').filter({ hasText: 'Kraus' });
+  const poolSite = page.locator('.eoDispatchSitePool .eoDispatchPerson').filter({ hasText: 'Anfrage Familie Kraus' }).first();
   await expect(poolSite).toContainText('ohne Kolonne');
   const ost = page.locator('.eoDispatchLane').filter({ hasText: ostName });
   const admin = page.locator('.eoDispatchLane').filter({ hasText: 'Kolonne Admin' });
@@ -271,11 +271,11 @@ test('Wer fährt wohin: Baustellen den Kolonnen zuordnen (Ziehen und Auswahl), m
 
   // Tätigkeit und Beginn der Baustelle in der Kolonne.
   await card.getByRole('button', { name: /Aktionen/ }).click();
-  await page.getByRole('button', { name: 'Tätigkeit und Beginn' }).click();
-  const form = await dialog(page, /Tätigkeit und Beginn/);
+  await page.getByRole('button', { name: 'Tätigkeit und Uhrzeit' }).click();
+  const form = await dialog(page, /Tätigkeit und Uhrzeit/);
   await form.getByLabel('Tätigkeit').fill('Randdämmung stellen');
   await form.getByLabel('Beginn vor Ort').fill('06:30');
-  await form.getByRole('heading', { name: /Tätigkeit und Beginn/ }).click();
+  await form.getByRole('heading', { name: /Tätigkeit und Uhrzeit/ }).click();
   await form.getByRole('button', { name: 'Speichern' }).click();
   await expect(card).toContainText('06:30');
 

@@ -47,10 +47,11 @@ export interface DispatchSite {
 	siteContactName: string | null; siteContactPhone: string | null; startTime: string | null; jobs: DispatchJob[]; people: PersonRef[];
 	vehicles: ResourceRef[]; warnings: string[]; navigationUrl: string | null; crews: DispatchSiteCrew[];
 }
-export interface DispatchSiteCrew { id: string; name: string; color: string | null; assignmentId: string; activity: string; startTime: string | null }
+export interface DispatchSiteCrew { id: string; name: string; color: string | null; assignmentId: string; activity: string; startTime: string | null; endTime: string | null }
+export interface DispatchPoolSite { bauakteId: string; number: string | null; title: string; address: string | null; status: string; crewIds: string[] }
 export interface DispatchCrew {
 	id: string; name: string; color: string | null; leaderName: string | null; memberCount: number; vehicles: ResourceRef[]; siteIds: string[];
-	absentMembers: { id: string; name: string; note: string }[];
+	absentMembers: { id: string; name: string; note: string }[]; warnings: string[] | null;
 }
 export interface DispatchPerson { id: string; name: string; crewId: string | null; crewName: string | null; crewColor: string | null; siteIds: string[]; note: string | null }
 export interface DispatchVehicle { id: string; name: string; kind: ResourceRef["kind"]; identifier: string | null; siteIds: string[] }
