@@ -98,15 +98,7 @@ struct CustomerDirectoryView: View {
         }
         .navigationTitle("Kunden")
         .searchable(text: $search, prompt: "Name, Ort oder Telefon")
-        .safeAreaInset(edge: .top, spacing: 0) {
-            Picker("Filter", selection: $filter) {
-                ForEach(Filter.allCases) { Text($0.title).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            .padding(.horizontal).padding(.vertical, 6)
-            .background(.bar)
-            .accessibilityIdentifier("customerFilter")
-        }
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { creating = true } label: { Label("Neuer Kunde", systemImage: "person.crop.circle.badge.plus") }
@@ -118,6 +110,13 @@ struct CustomerDirectoryView: View {
 
     @ViewBuilder
     private var rows: some View {
+        Picker("Filter", selection: $filter) {
+            ForEach(Filter.allCases) { Text($0.title).tag($0) }
+        }
+        .pickerStyle(.segmented)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .accessibilityIdentifier("customerFilter")
         if filtered.isEmpty {
             ContentUnavailableView(search.isEmpty ? "Noch keine Kunden auf diesem Gerät" : "Kein Kunde gefunden",
                                    systemImage: "person.2",

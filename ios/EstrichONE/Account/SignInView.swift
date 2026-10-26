@@ -53,10 +53,6 @@ struct SignInView: View {
                             .foregroundStyle(Theme.textSecondary)
                     }
 
-                    if let server = model.server, !server.info.authMethods.contains("local") {
-                        StatusMessage(kind: .error, text: "Dieser Server erlaubt nur die Anmeldung mit Microsoft. Diese Anmeldung folgt in einer späteren App-Version.")
-                    }
-
                     field("Anmeldename oder E-Mail") {
                         TextField("m.huber", text: $login)
                             .textContentType(Self.loginContentType)

@@ -166,6 +166,9 @@ struct BauakteDetailView: View {
                         .font(.subheadline.monospacedDigit().weight(.semibold))
                         .foregroundStyle(.white.opacity(0.75))
                         .accessibilityIdentifier("bauakteNumber")
+                    if bauakte.syncState != .synced {
+                        SyncStateBadge(state: bauakte.syncState).colorScheme(.dark)
+                    }
                     Spacer()
                     statusMenu(bauakte)
                 }
@@ -233,20 +236,20 @@ struct BauakteDetailView: View {
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .background(.white.opacity(0.12), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                 }
-                HStack(spacing: 12) {
-                    if latestInitialInspection != nil {
-                        Button { showsInspectionPDF = true } label: { roundAction("Erstbegehung (PDF)", symbol: "doc.richtext") }
-                            .buttonStyle(.plain)
-                            .accessibilityIdentifier("headerInspectionPDFButton")
+                if latestInitialInspection != nil {
+                    Button { showsInspectionPDF = true } label: {
+                        Label("Erstbegehungsprotokoll (PDF)", systemImage: "doc.richtext")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 12)
+                            .frame(minHeight: 40)
+                            .background(.white.opacity(0.14), in: Capsule())
                     }
-                    Spacer(minLength: 0)
-                    SyncStateBadge(state: bauakte.syncState, showsSynced: true)
-                        .padding(.horizontal, 8).padding(.vertical, 4)
-                        .background(.white, in: Capsule())
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("headerInspectionPDFButton")
                 }
-
             }
-            .padding(18)
+            .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(
                 LinearGradient(colors: [Theme.navy, Theme.navyLight], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
@@ -526,17 +529,29 @@ struct BauakteDetailView: View {
         }
     }
 
+    /// Zähler bzw. Kurzinfo je Bereich – immer gefüllt, damit man ohne Öffnen sieht, was drin ist.
     private func count(_ area: Area, _ bauakte: Bauakte) -> String? {
         switch area {
-        case .site: return nil
-        case .media: return photos.count + documents.count > 0 ? "\(photos.count + documents.count)" : nil
+        case .site:
+            let filled = schema.map { ProjectSection.items(bauakte, schema: $0, lists: lists).count } ?? ProjectSection.items(bauakte).count
+            return filled == 0 ? "Angaben fehlen" : "\(filled) Angaben"
+        case .media:
+            return "\(photos.count) Fotos · \(documents.count) Dok."
         case .work:
             let open = workItems.filter { !$0.isDone }.count
-            return open > 0 ? "\(open) offen" : (workItems.isEmpty ? nil : "erledigt")
-        case .diary: return diary.isEmpty ? nil : "\(diary.count)"
-        case .protocols: return inspections.count + acceptances.count > 0 ? "\(inspections.count + acceptances.count)" : nil
-        case .contacts: return customer == nil ? "Kunde fehlt" : nil
-        case .notes: return notes.isEmpty ? nil : "\(notes.count)"
+            return workItems.isEmpty ? "keine" : (open > 0 ? "\(open) offen" : "alles erledigt")
+        case .diary:
+            guard let last = diary.first.flatMap({ CalendarDay.date($0.day) }) else { return "noch kein Eintrag" }
+            let calendar = Calendar.current
+            let when = calendar.isDateInToday(last) ? "heute" : calendar.isDateInYesterday(last) ? "gestern"
+                : last.formatted(.dateTime.day().month(.abbreviated))
+            return "letzter Eintrag \(when)"
+        case .protocols:
+            return inspections.count + acceptances.count == 0 ? "keine" : "\(inspections.count + acceptances.count)"
+        case .contacts:
+            return customer?.name ?? "Kunde fehlt"
+        case .notes:
+            return notes.isEmpty ? "keine" : "\(notes.count)"
         }
     }
 
@@ -547,10 +562,10 @@ struct BauakteDetailView: View {
             Section {
                 LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 3), spacing: 10) {
                     Button { capturing = true } label: { Label("Foto", systemImage: "camera.fill") }
-                        .buttonStyle(ActionTileStyle(rank: .accent))
-                        .accessibilityIdentifier("addPhotoButton")
-                    Button { scanning = true } label: { Label("Dokument scannen", systemImage: "doc.viewfinder") }
                         .buttonStyle(ActionTileStyle(rank: .primary))
+                        .accessibilityIdentifier("addPhotoButton")
+                    Button { scanning = true } label: { Label("Scannen", systemImage: "doc.viewfinder") }
+                        .buttonStyle(ActionTileStyle())
                         .accessibilityIdentifier("scanDocumentButton")
                     Button { form = .diary } label: { Label("Bautagebuch", systemImage: "book.fill") }
                         .buttonStyle(ActionTileStyle())
@@ -604,6 +619,7 @@ struct BauakteDetailView: View {
             }
         }
         .listSectionSpacing(.compact)
+        .contentMargins(.top, 4, for: .scrollContent)
     }
 
     private func areaRow(_ area: Area, _ bauakte: Bauakte) -> some View {
@@ -611,19 +627,20 @@ struct BauakteDetailView: View {
             Image(systemName: area.symbol)
                 .font(.body.weight(.semibold))
                 .foregroundStyle(.white)
-                .frame(width: 38, height: 38)
-                .background(area.color, in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .frame(width: 32, height: 32)
+                .background(area.color, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
                 .accessibilityHidden(true)
             Text(area.title).font(.body.weight(.semibold)).foregroundStyle(Color.primary)
             Spacer(minLength: 4)
             if let count = count(area, bauakte) {
-                Text(count).font(.subheadline).foregroundStyle(area == .contacts ? Theme.hint : Theme.textSecondary)
+                Text(count).font(.subheadline).foregroundStyle(count == "Kunde fehlt" || count == "Angaben fehlen" ? Theme.hint : Theme.textSecondary)
+                    .lineLimit(1)
             }
             if sizeClass == .regular {
                 Image(systemName: "chevron.right").font(.footnote.weight(.semibold)).foregroundStyle(.tertiary)
             }
         }
-        .frame(minHeight: 52)
+        .frame(minHeight: 44)
         .contentShape(Rectangle())
         .accessibilityIdentifier("area-\(area.rawValue)")
     }

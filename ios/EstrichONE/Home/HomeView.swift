@@ -82,6 +82,8 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .background(Theme.surfaceAlt)
+            // Ohne Navigationsleiste: Statusleiste mit Material hinterlegen, damit nichts darunter durchläuft.
+            .safeAreaInset(edge: .top, spacing: 0) { Color.clear.frame(height: 0).background(.bar) }
             .toolbar(.hidden, for: .navigationBar)
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
@@ -376,8 +378,6 @@ struct HomeView: View {
 
     private var navigation: some View {
         VStack(spacing: 0) {
-            NavigationRow(title: "Bauakten", symbol: "folder.fill", color: Theme.navyLight) { openTab(.bauakten) }
-            Divider().padding(.leading, 54)
             NavigationRow(title: "Meine Aufgaben", symbol: "checklist", color: Color(hex: 0xE07A1F), badge: openTasks) { path.append(.tasks) }
                 .accessibilityIdentifier("myTasksTile")
             Divider().padding(.leading, 54)
@@ -528,7 +528,7 @@ struct TodayJobCard: View {
                             .font(.footnote).foregroundStyle(Theme.textSecondary).lineLimit(2)
                     }
                     if job.crewName != nil || !job.team.isEmpty {
-                        HStack(spacing: 6) {
+                        VStack(alignment: .leading, spacing: 4) {
                             if let crew = job.crewName {
                                 HStack(spacing: 5) {
                                     Circle().fill(job.crewColor ?? Theme.accent).frame(width: 9, height: 9)
@@ -539,7 +539,7 @@ struct TodayJobCard: View {
                             }
                             if !job.team.isEmpty {
                                 Text(job.team.joined(separator: ", "))
-                                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(2)
                             }
                         }
                     }
@@ -547,8 +547,9 @@ struct TodayJobCard: View {
                         Label(contact, systemImage: "person.crop.circle").labelStyle(TightLabelStyle())
                             .font(.caption).foregroundStyle(Theme.textSecondary)
                     }
-                    if let notes = job.notes, !notes.isEmpty {
-                        Text(notes.compactText ?? "").font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)
+                    if let notes = job.notes?.compactText {
+                        Label("Notiz: \(notes)", systemImage: "text.bubble").labelStyle(TightLabelStyle())
+                            .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(3)
                     }
                     ForEach(job.warnings, id: \.self) { warning in
                         Label(warning, systemImage: "exclamationmark.triangle.fill").labelStyle(TightLabelStyle())
@@ -740,10 +741,13 @@ struct HomeHeader: View {
                 Spacer(minLength: 8)
                 if model.isPoolDevice {
                     Button { model.lock() } label: {
-                        Label("Wechseln", systemImage: "person.2")
+                        Image(systemName: "person.2.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 40, height: 40)
+                            .background(.white.opacity(0.14), in: Circle())
                     }
-                    .overlayControlStyle()
-                    .tint(.white)
+                    .accessibilityLabel("Person wechseln")
                     .accessibilityIdentifier("switchUserButton")
                 }
             }
@@ -761,10 +765,7 @@ struct HomeHeader: View {
                         .foregroundStyle(.white.opacity(0.75))
                 }
             }
-            ViewThatFits(in: .horizontal) {
-                HStack(spacing: 8) { metrics }
-                VStack(alignment: .leading, spacing: 8) { metrics }
-            }
+            HStack(spacing: 8) { metrics }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -780,9 +781,11 @@ struct HomeHeader: View {
 
     @ViewBuilder
     private var metrics: some View {
-        MetricCapsule(symbol: "calendar", value: todayCount.map(String.init) ?? "–", label: todayCount == 1 ? "Einsatz heute" : "Einsätze heute")
+        MetricCapsule(symbol: "calendar", value: todayCount.map(String.init) ?? "–", label: "heute")
+            .accessibilityLabel("\(todayCount ?? 0) Einsätze heute")
         Button(action: onTasks) {
-            MetricCapsule(symbol: "checklist", value: openTasks.map(String.init) ?? "–", label: "offene Aufgaben")
+            MetricCapsule(symbol: "checklist", value: openTasks.map(String.init) ?? "–", label: "offen")
+                .accessibilityLabel("\(openTasks ?? 0) offene Aufgaben")
         }
         .buttonStyle(.plain)
         Button(action: onSync) {
@@ -832,6 +835,8 @@ private struct MetricCapsule: View {
             }
         }
         .foregroundStyle(.white)
+        .lineLimit(1)
+        .fixedSize()
         .padding(.horizontal, 12)
         .frame(minHeight: 36)
         .background(.white.opacity(0.14), in: Capsule())
