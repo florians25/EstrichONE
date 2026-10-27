@@ -16,6 +16,7 @@ public sealed class SyncModule : IModule
         ("inspections", "inspection", "bauakte_id"),
         ("acceptance_protocols", "acceptance", "bauakte_id"),
         ("rooms", "room", "bauakte_id"),
+        ("bauakte_parties", "bauakteParty", "bauakte_id"),
         ("contacts", "contact", null),
         ("screed_types", "screedType", null),
         ("value_list_items", "valueListItem", null),
