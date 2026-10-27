@@ -369,8 +369,8 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoQuickGroups { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: 0.5rem 1.5rem; padding: 0.75rem 1rem 1rem; }
 .eoQuickGroup { display: flex; flex-direction: column; min-width: 0; }
 .eoQuickTitle { margin: 0 0 0.25rem 0.5rem; color: var(--sapContent_LabelColor) !important; }
-.eoQuickLink.sapMBtn { width: 100%; justify-content: flex-start; }
-.eoQuickLink .sapMBtnInner { width: 100%; justify-content: flex-start; text-align: left; }
+.eoQuickLink.sapMBtn { width: auto; max-width: 100%; align-self: flex-start; }
+.eoQuickLink .sapMBtnInner { text-align: left; }
 .eoQuickLink .sapMBtnContent { overflow: visible; }
 /* Legenden unter Plantafel/Teamplaner: Luft zur Statusleiste */
 .eoPlanLegend { padding-bottom: 0.5rem; }
