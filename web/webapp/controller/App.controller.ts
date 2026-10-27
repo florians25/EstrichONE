@@ -85,7 +85,9 @@ export default class AppController extends BaseController {
 			this.nav(`/anmelden?grund=${reason === "disabled" ? "gesperrt" : "abgelaufen"}`, true);
 			return false;
 		});
-		document.addEventListener("estrichone-logo", () => void this.loadCompanyLogo());
+		document.addEventListener("estrichone-logo", () => void this.loadAppearance());
+		// Helpdesk: Ticket gelesen oder beantwortet – Zähler sofort aktualisieren.
+		document.addEventListener("estrichone-notices", () => { if (session.data.user) void this.loadNotices(); });
 		// Module oder Rechte geändert (Einstellungen): Navigation sofort anpassen.
 		document.addEventListener("estrichone-permissions", () => this.refreshShell());
 		window.addEventListener("online", () => this.model().setProperty("/online", true));
@@ -118,17 +120,13 @@ export default class AppController extends BaseController {
 	/** Navigation, Avatar und Hinweise an Benutzer und Rechte anpassen. */
 	private logoUser = "-";
 
-	/** Firmenlogo zusätzlich in der Kopfzeile (Einstellungen → Darstellung). */
-	private async loadCompanyLogo(): Promise<void> {
-		if (!session.data.user) {
-			this.model().setProperty("/companyLogo", "");
-			return;
-		}
-		const [settings, info] = await Promise.all([
-			loadSystemSettings(),
-			get<{ hasLogo: boolean; updatedAt: string | null }>("company/logo/info").catch(() => ({ hasLogo: false, updatedAt: null })),
-		]);
-		const show = info.hasLogo && settings?.settings.appearance.showCompanyLogo !== false;
+	/**
+	 * Darstellungsvorgaben der Installation (Theme, Dichte). Das Firmenlogo erscheint bewusst nicht in der Kopfzeile –
+	 * dort steht nur das EstrichONE-Logo; das Firmenlogo nutzen PDFs und Briefe.
+	 */
+	private async loadAppearance(): Promise<void> {
+		if (!session.data.user) return;
+		const settings = await loadSystemSettings();
 		// Vorgabe der Installation, solange auf diesem Gerät nichts Eigenes gewählt ist.
 		const own = hasOwnChoice();
 		const appearance = settings?.settings.appearance;
@@ -139,14 +137,13 @@ export default class AppController extends BaseController {
 			document.body.classList.toggle("sapUiSizeCompact", appearance.density === "compact");
 			document.body.classList.toggle("sapUiSizeCozy", appearance.density === "cozy");
 		}
-		this.model().setProperty("/companyLogo", show ? `/api/v1/company/logo?v=${encodeURIComponent(info.updatedAt ?? "")}` : "");
 	}
 
 	private refreshShell(): void {
 		notices.sessionChanged();
 		if (this.logoUser !== (session.data.user?.id ?? "")) {
 			this.logoUser = session.data.user?.id ?? "";
-			void this.loadCompanyLogo();
+			void this.loadAppearance();
 		}
 		const data = session.data;
 		this.model().setProperty("/initials", initials(data.user?.displayName));
@@ -364,9 +361,19 @@ export default class AppController extends BaseController {
 				}
 			}));
 		}
+		// Neue Antworten in eigenen bzw. zu bearbeitenden Tickets (für alle Benutzer).
+		const unreadIds = new Set<string>();
+		const unreadTask = get<{ count: number; items: { id: string; number: string; title: string }[] }>("tickets/unread").then((unread) => {
+			for (const t of unread.items.slice(0, 10)) {
+				unreadIds.add(t.id);
+				items.push({ title: `${t.number}: ${t.title}`, description: this.t("notice.ticketReply"), icon: "sap-icon://comment",
+					path: `/it-center/helpdesk/${t.id}`, priority: "Medium" });
+			}
+		}).catch(() => undefined);
+		tasks.push(unreadTask);
 		if (session.has("helpdesk.agent")) {
-			tasks.push(get<TicketSummary[]>("tickets", { filter: "open" }).then((tickets) => {
-				for (const t of tickets.filter((x) => x.status === "new" || x.reporterBlocked).slice(0, 10)) {
+			tasks.push(unreadTask.then(() => get<TicketSummary[]>("tickets", { filter: "open" })).then((tickets) => {
+				for (const t of tickets.filter((x) => (x.status === "new" || x.reporterBlocked) && !unreadIds.has(x.id)).slice(0, 10)) {
 					items.push({ title: `${t.number}: ${t.title}`, description: t.reporterBlocked ? this.t("notice.blocked") : this.t("notice.newTicket"),
 						icon: "sap-icon://headset", path: `/it-center/helpdesk/${t.id}`, priority: t.reporterBlocked ? "High" : "Medium" });
 				}

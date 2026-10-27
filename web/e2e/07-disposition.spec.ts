@@ -334,8 +334,8 @@ test('Helpdesk: Verlauf als Zeitleiste mit Anhang in der Antwort', async ({ page
   await expect(timeline).toContainText('Bitte App neu starten – siehe Bild.');
   await expect(timeline.getByRole('link', { name: 'anleitung.jpg' })).toBeVisible();
 
+  // Schnellaktion: Priorität wirkt sofort (ohne Speichern).
   await choose(page, page.getByLabel('Priorität', { exact: true }), 'Hoch');
-  await page.getByRole('button', { name: 'Speichern', exact: true }).click();
   await expect(timeline).toContainText('Priorität: Normal → Hoch');
   await page.getByRole('option', { name: 'Nur Nachrichten' }).click();
   await expect(timeline).not.toContainText('Priorität: Normal → Hoch');

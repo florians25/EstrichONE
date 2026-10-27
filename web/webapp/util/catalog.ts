@@ -16,7 +16,7 @@ export interface CatalogEntry<T = Record<string, unknown>> {
 	version: number;
 }
 
-export type TextBlock = CatalogEntry<{ text: string }>;
+export type TextBlock = CatalogEntry<{ text: string; usage?: string[] }>;
 export type FolderTemplate = CatalogEntry<{ category: string; folders: string[] }>;
 export type BauakteTemplate = CatalogEntry<{ description?: string | null; rooms?: TemplateRoom[] }>;
 
@@ -28,6 +28,15 @@ export function catalog<T extends CatalogEntry>(kind: CatalogKind, force = false
 	const data = get<CatalogEntry[]>("catalog", { kind, active: true }).catch(() => [] as CatalogEntry[]);
 	cache.set(kind, { at: Date.now(), data });
 	return data as Promise<T[]>;
+}
+
+/**
+ * Textbausteine für einen Zweck: „helpdesk“ nur die für IT-Antworten markierten, „general“ alle übrigen
+ * (Notizen, Tagesberichte, Protokolle).
+ */
+export async function textBlocks(usage: "helpdesk" | "general"): Promise<TextBlock[]> {
+	const blocks = await catalog<TextBlock>("textBlock");
+	return blocks.filter((b) => (b.content.usage ?? []).includes("helpdesk") === (usage === "helpdesk"));
 }
 
 export function invalidateCatalog(): void {

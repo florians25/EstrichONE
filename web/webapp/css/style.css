@@ -240,7 +240,31 @@
 .eoChanges { font-size: 0.875rem; color: var(--sapContent_LabelColor); }
 .eoTeamChip { padding: 0.25rem 0.75rem 0.25rem 0.25rem; border-radius: 1.5rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
 .eoContactGrid > .sapFCard { height: 100%; }
-.eoShellCompanyLogo { max-width: 10rem; object-fit: contain; margin-right: 0.5rem; }
+/* Kontakte der Bauakte: Gruppen nach Rolle, ruhige Karten mit Aktionen unten */
+.eoContactsBar.sapMTB { padding: 0; border-bottom: none; }
+.eoContactsBar .sapMObjectNumber { margin-left: 0.25rem; }
+/* Gruppen fließen als Spalten (je Gruppe Kopf + Karten untereinander) – kompakt auch bei wenigen Kontakten je Rolle */
+.eoContactGroups.sapMFlexBox { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 1rem 0.75rem; align-items: start; margin-top: 0.75rem; }
+.eoContactGroup { min-width: 0; }
+.eoContactGroupHead { gap: 0.5rem; margin-bottom: 0.5rem; }
+.eoContactGroupIcon { color: var(--sapContent_IconColor); font-size: 1rem; }
+.eoContactGroupCount { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); padding: 0 0.375rem; border-radius: 0.75rem;
+	background: var(--sapNeutralBackgroundColor, var(--sapList_AlternatingBackground)); line-height: 1.25rem; }
+.eoContactCard .sapFCardHeader { padding-bottom: 0.5rem; }
+.eoContactCard[data-primary="true"] { box-shadow: inset 0 3px 0 var(--sapBrandColor), var(--sapContent_Shadow0); }
+.eoContactBody { padding: 0 1rem 0.25rem; box-sizing: border-box; height: 100%; }
+.eoContactBadges { gap: 0.25rem 0; margin-bottom: 0.5rem; }
+.eoRoleBadge.sapMObjStatusInverted { background: var(--sapList_AlternatingBackground, #f5f6f7); }
+.eoContactLines { gap: 0.375rem; }
+.eoContactLine { gap: 0.625rem; min-width: 0; }
+.eoContactLineIcon { color: var(--sapContent_IconColor); margin-top: 0.125rem; flex: none; }
+.eoContactLineText { min-width: 0; }
+.eoContactLineText .sapMLnk, .eoContactLineText .sapMText { overflow-wrap: anywhere; }
+.eoContactLineLabel.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
+.eoContactNote { margin-top: 0.5rem; color: var(--sapContent_LabelColor); }
+.eoContactActions { margin-top: auto; padding-top: 0.5rem; border-top: 1px solid var(--sapGroup_ContentBorderColor); margin-top: 0.75rem; }
+.eoContactsEmpty { padding: 2rem 1rem; border: 1px dashed var(--sapGroup_ContentBorderColor); border-radius: 0.75rem; margin-top: 1rem; }
+.eoContactsEmptyText { max-width: 34rem; margin-top: 0.25rem; }
 .eoLogoPreview { max-width: 20rem; object-fit: contain; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.25rem; padding: 0.25rem; background: #fff; }
 .eoSignature { position: relative; border: 1px solid var(--sapField_BorderColor); border-radius: 0.5rem; background: #fff; touch-action: none; }
 .eoSignature canvas { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
@@ -327,6 +351,8 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 /* Globale Suche mittig in der Kopfleiste */
 @media (min-width: 1100px) {
 	.eoShellSearch.sapMSF { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 1; }
+	/* „Neue Bauakte“ direkt rechts neben dem zentrierten Suchfeld (26rem breit) */
+	.eoShellNew.sapMBtn { position: absolute; left: calc(50% + 13.5rem); top: 50%; transform: translateY(-50%); margin: 0; z-index: 1; }
 }
 
 /* Abstände: einheitliche Luft zwischen Blöcken, Meldungen und Formularabschnitten */
@@ -406,3 +432,57 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeading, .sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeadingInner { min-width: 0; }
 .sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeading { flex: 1 1 0 !important; }
 .sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainActions { flex: 0 0 auto !important; max-width: 60%; }
+
+/* Helpdesk: Master-Detail (Liste links, Ticket rechts) */
+.eoHelpdesk { height: 100%; background: var(--sapBackgroundColor); }
+.eoHdMaster { width: 23rem; min-width: 19rem; flex: none; border-right: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); height: 100%; }
+.eoHdMasterHead { padding: 1rem 1rem 0.75rem; border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
+.eoHdFilters { width: 100%; }
+.eoHdFilters > .sapMFlexItem { min-width: 0; }
+.eoHdFilters .sapMSlt { min-width: 0; max-width: 100%; }
+.eoHdList .sapMLIB { padding: 0; }
+.eoHdItem { padding: 0.625rem 1rem; width: 100%; box-sizing: border-box; gap: 0.125rem; min-width: 0; }
+.eoHdNumber.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
+.eoHdAge.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); white-space: nowrap; }
+.eoHdItemTitle.sapMText { color: var(--sapTextColor); }
+.sapMLIB[data-unread="true"] .eoHdItemTitle.sapMText { font-weight: 700; }
+.eoHdUnreadDot { color: var(--sapBrandColor); margin-right: 0.375rem; }
+.eoHdItemMeta { gap: 0.25rem 0.625rem; margin-top: 0.125rem; }
+.eoHdWho.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+.eoHdCount.sapMText { padding: 0.5rem 1rem; color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); border-top: 1px solid var(--sapGroup_ContentBorderColor); }
+.eoHdDetail { min-width: 0; height: 100%; background: var(--sapGroup_ContentBackground); }
+.eoHdEmptyText { max-width: 28rem; margin-top: 0.25rem; }
+.eoHdHead { padding: 1rem 1.5rem 0.5rem; border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
+.eoHdTags { gap: 0.5rem; }
+.eoHdTitle { margin: 0.25rem 0 0.75rem; }
+.eoHdFacts { gap: 0.5rem 2rem; margin-bottom: 0.5rem; }
+.eoHdFact { min-width: 7rem; }
+.eoHdFact .sapMLabel { font-size: var(--sapFontSmallSize); }
+.eoHdActions.sapMTB { padding: 0; border: none; height: auto; min-height: 2.5rem; flex-wrap: wrap; }
+.eoHdActLabel.sapMLabel { margin-left: 0.5rem; }
+.eoHdActions .eoHdActLabel.sapMLabel:first-child { margin-left: 0; }
+.eoHdResolved { margin: 0.25rem 0 0.5rem; }
+.eoHdScroll { background: var(--sapBackgroundColor); }
+.eoHdScrollInner { padding: 1rem 1.5rem; max-width: 60rem; box-sizing: border-box; }
+.eoHdDetail .eoHdComposer { padding: 0.75rem 1.5rem; border-top: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); position: relative; }
+.eoHdDetail .eoHdComposer[data-internal="true"] { background: var(--sapWarningBackground, #fef7f1); }
+.eoHdDetail .eoHdComposer.eoDropActive { outline: 2px dashed var(--sapBrandColor); outline-offset: -6px; background: var(--sapInformationBackgroundColor, #f5faff); }
+@media (max-width: 1000px) {
+	.eoHelpdesk { flex-direction: column; }
+	.eoHdMaster { width: 100%; height: auto; max-height: 45%; border-right: none; border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
+}
+
+/* SAP Cards (Übersicht der Bauakte, Startseite): ruhig, gleiche Höhe, Inhalt als kurze Liste */
+.eoOverviewCards, .eoKpiCards { margin: 0.25rem 0 1rem; }
+.eoOverviewCards .sapFCard, .eoKpiCards .sapFCard { overflow: hidden; }
+.eoCardList.sapMList .sapMLIB { padding: 0 1rem; min-height: 2rem; border-bottom: none; }
+.eoCardList.sapMList .sapMListNoData { padding: 0.5rem 1rem; color: var(--sapContent_LabelColor); }
+.eoCardRow { width: 100%; min-width: 0; gap: 0.5rem; }
+.eoCardRowMain { min-width: 0; gap: 0.5rem; flex: 1 1 auto; }
+.eoCardRowMain .sapMText, .eoCardRow > .sapMText { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.eoCardRowIcon { color: var(--sapContent_IconColor); flex: none; }
+.eoCardRowDay.sapMText { color: var(--sapContent_LabelColor); flex: none; min-width: 5.5rem; }
+.eoCardRowSide.sapMText { flex: 0 1 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
+.eoCardBody { padding: 0 1rem 0.75rem; box-sizing: border-box; }
+.eoCardPhotos { gap: 0.375rem; padding: 0 1rem 0.75rem; overflow: hidden; }
+.eoKpiCards .sapFCardNumericHeader .sapFCardNumericIndicators { margin-top: 0.25rem; }

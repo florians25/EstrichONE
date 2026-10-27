@@ -25,7 +25,8 @@ export default class Overview extends SectionBase {
 	private photos: FileResponse[] = [];
 
 	protected init(): void {
-		const model = new JSONModel({ hero: [], upcoming: [], markers: [], picking: false, picked: null, hasLocation: false, pinned: [], work: [], activity: [], approvals: [], latestDocs: [] });
+		const model = new JSONModel({ hero: [], upcoming: [], markers: [], picking: false, picked: null, hasLocation: false, pinned: [], work: [], activity: [], approvals: [], latestDocs: [],
+			workTop: [], upcomingTop: [], latestTop: [], heroTop: [], nextValue: "–", nextWeekday: "", diaryText: "" });
 		model.setSizeLimit(1000);
 		this.v().setModel(model, "ov");
 	}
@@ -60,13 +61,18 @@ export default class Overview extends SectionBase {
 		if (files.status === "fulfilled") {
 			this.photos = files.value.filter((f) => f.kind === "photo" && f.state === "stored");
 			m.setProperty("/photoText", `${this.photos.length} ${this.photos.length === 1 ? "Foto" : "Fotos"}`);
+			m.setProperty("/photoCount", String(this.photos.length));
+			const lastPhoto = this.photos.map((p) => p.capturedAt ?? p.createdAt).sort().pop() ?? null;
+			m.setProperty("/photoFooter", lastPhoto ? `zuletzt ${date(lastPhoto)}` : "noch keine");
 			m.setProperty("/hero", [...this.photos].sort((a, b) => (b.capturedAt ?? b.createdAt).localeCompare(a.capturedAt ?? a.createdAt)).slice(0, 10).map((p) => ({
 				id: p.id, url: `/api/v1/files/${p.id}/content?variant=${p.variants === "ready" ? "display" : "original"}`,
 				alt: p.caption ?? `Foto vom ${dateTime(p.capturedAt ?? p.createdAt)}`,
 			})));
+			m.setProperty("/heroTop", (m.getProperty("/hero") as object[]).slice(0, 4));
 			const docs = files.value.filter((f) => f.kind === "document");
 			m.setProperty("/latestDocs", [...docs].filter((d) => d.state === "stored").sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 5)
 				.map((d) => ({ ...d, icon: fileIcon(d.contentType, d.originalName) })));
+			m.setProperty("/latestTop", (m.getProperty("/latestDocs") as object[]).slice(0, 3));
 			m.setProperty("/documentCount", String(docs.length));
 			m.setProperty("/documentFooter", docs.length ? `zuletzt ${date(docs.map((d) => d.createdAt).sort().pop() ?? null)}` : "noch keine");
 		}
@@ -80,6 +86,7 @@ export default class Overview extends SectionBase {
 			m.setProperty("/overdue", overdue);
 			m.setProperty("/workFooter", [open.filter((w) => w.kind === "defect").length + " Mängel", overdue ? `${overdue} überfällig` : ""].filter(Boolean).join(" · "));
 			m.setProperty("/work", open.slice(0, 6));
+			m.setProperty("/workTop", [...open].sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999")).slice(0, 3));
 		}
 		if (notes.status === "fulfilled") {
 			m.setProperty("/pinned", notes.value.filter((n) => n.isPinned));
@@ -109,6 +116,8 @@ export default class Overview extends SectionBase {
 				dayText: parseDay(a.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" }),
 				time: a.startTime?.slice(0, 5) ?? "", kind: assignmentKinds[a.kind]?.text ?? a.activity ?? "", crew: a.crewName ?? "",
 			})));
+			m.setProperty("/upcomingTop", (m.getProperty("/upcoming") as object[]).slice(0, 3));
+			m.setProperty("/nextWeekday", next ? parseDay(next.day).toLocaleDateString("de-DE", { weekday: "long" }) : "");
 			m.setProperty("/nextValue", next ? parseDay(next.day).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" }) : "–");
 			m.setProperty("/nextFooter", next ? `${next.startTime?.slice(0, 5) ?? ""} ${assignmentKinds[next.kind]?.text ?? ""}${next.crewName ? ` · ${next.crewName}` : ""}` : "nicht eingeplant");
 		}
@@ -119,6 +128,7 @@ export default class Overview extends SectionBase {
 			m.setProperty("/diaryCount", String(diary.value.length));
 			const last = [...diary.value].sort((a, b) => b.day.localeCompare(a.day))[0];
 			m.setProperty("/diaryFooter", last ? `zuletzt ${date(last.day)}` : "noch kein Eintrag");
+			m.setProperty("/diaryText", `Bautagebuch: ${diary.value.length} ${diary.value.length === 1 ? "Eintrag" : "Einträge"}${last ? ` · zuletzt ${date(last.day)}` : ""}`);
 		}
 	}
 

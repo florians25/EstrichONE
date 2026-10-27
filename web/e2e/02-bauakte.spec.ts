@@ -43,7 +43,7 @@ test('Anfrage mit neuem Kunden im Assistenten, Dublettenprüfung, als Auftrag ü
   await expect(page.locator('.eoHintBadges').getByText('Erstbegehung noch nicht ausgeführt.', { exact: false }).filter({ visible: true }).first()).toBeVisible();
 
   // Gleicher Kunde frei eingegeben: Dublettenprüfung bietet den vorhandenen Kunden an.
-  await page.getByLabel('Neue Akte').click();
+  await page.locator('[id$="newBauakteButton"]').click();
   const second = page.getByRole('dialog', { name: 'Neue Bauakte' });
   await second.getByLabel('Telefon (Kunde)').fill('0871/123456');
   await second.getByLabel('Name des Kunden').fill('Kraus');
@@ -393,7 +393,7 @@ test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page
   });
   await signIn(page, 'admin', adminPassword);
   await openAkte(page);
-  await expect(page.getByText('Offene Aufgaben und Mängel').first()).toBeVisible();
+  await expect(page.locator('.eoOverviewCards').getByText('Aufgaben und Mängel').first()).toBeVisible();
   await expect(page.getByText('Baustellendaten')).toBeVisible();
   await page.getByRole('button', { name: 'Standort festlegen' }).click();
   await page.locator('.eoMap').last().click({ position: { x: 200, y: 100 } });
@@ -417,24 +417,34 @@ test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async
   await openSection(page, 'Kontakte');
   const site = page.locator('.sapFCard').filter({ hasText: 'Ansprechpartner vor Ort' }).filter({ visible: true }).first();
   await site.getByRole('button', { name: 'Bearbeiten' }).click();
-  const contact = page.getByRole('dialog', { name: 'Baustellenkontakt bearbeiten' });
-  await contact.getByLabel('Ansprechpartner vor Ort').fill('Herr Bauer (Bauleitung)');
+  const contact = page.getByRole('dialog', { name: 'Ansprechpartner vor Ort bearbeiten' });
+  await contact.getByLabel('Name', { exact: true }).fill('Herr Bauer (Bauleitung)');
   await contact.getByLabel('Telefon').fill('0171 2345678');
   await contact.getByLabel('Hinweise / Behinderungen').fill('Schlüssel beim Nachbarn Nr. 5');
   await contact.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.sapFCard').filter({ hasText: 'Herr Bauer (Bauleitung)' }).first()).toContainText('Schlüssel beim Nachbarn Nr. 5');
 
-  // Schnellerfassung eines Beteiligten mit Rolle
-  await page.getByRole('button', { name: 'Kontakt erfassen' }).click();
-  const quick = page.getByRole('dialog', { name: 'Kontakt erfassen' });
+  // Neuen Beteiligten mit Rolle erfassen (Kontaktkarte mit klickbarer Nummer, Gruppe nach Rolle)
+  await page.getByRole('button', { name: 'Kontakt hinzufügen' }).filter({ visible: true }).first().click();
+  await page.getByRole('menuitem', { name: 'Neuen Kontakt erfassen …' }).click();
+  const quick = page.getByRole('dialog', { name: 'Neuen Kontakt erfassen' });
   await choose(page, quick.getByLabel('Rolle'), 'Architekt');
   await quick.getByLabel('Name', { exact: true }).fill('Frau Lehner');
   await quick.getByLabel('Firma').fill('Architekturbüro Lehner');
-  await quick.getByLabel('Telefon').fill('0871 12345');
+  await quick.getByLabel('Telefon', { exact: true }).fill('0871 12345');
+  await quick.getByLabel('Mobil', { exact: true }).fill('0171 9876543');
   await quick.getByRole('button', { name: 'Speichern' }).click();
   const architect = page.locator('.sapFCard').filter({ hasText: 'Frau Lehner' }).filter({ visible: true }).first();
   await expect(architect).toContainText('Architekt');
-  await expect(architect.getByRole('button', { name: /0871 12345/ })).toBeVisible();
+  await expect(architect.getByRole('link', { name: /0871 12345/ })).toHaveAttribute('href', 'tel:087112345');
+  await expect(architect.getByRole('link', { name: /0171 9876543/ })).toBeVisible();
+  await expect(page.locator('.eoContactGroup').filter({ hasText: 'Planung' }).filter({ visible: true }).first()).toContainText('Frau Lehner');
+
+  // Hauptkontakt markieren und Rolle ändern über das Kartenmenü
+  await architect.getByRole('button', { name: 'Mehr zum Kontakt' }).click();
+  await page.getByRole('menuitem', { name: 'Als Hauptkontakt markieren' }).click();
+  await expect(toast(page)).toContainText('ist jetzt Hauptkontakt');
+  await expect(page.locator('.sapFCard').filter({ hasText: 'Frau Lehner' }).filter({ visible: true }).first()).toContainText('Hauptkontakt');
 
   // Letzte Aktivitäten im eigenen Fenster
   await page.getByRole('button', { name: 'Aktionen' }).click();

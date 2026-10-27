@@ -30,7 +30,7 @@ import { runAcceptance } from "../../util/acceptanceFlow";
 import { openInitialInspectionWizard } from "../../util/inspectionWizard";
 import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
-import { catalog, type BauakteTemplate, type TextBlock } from "../../util/catalog";
+import { catalog, textBlocks, type BauakteTemplate, type TextBlock } from "../../util/catalog";
 import { projectBadges, projectView } from "../../util/project";
 import { badges, bauakteSchema, viewGroups } from "../../util/formSchema";
 import { openMapDialog } from "../../util/mapDialog";
@@ -533,7 +533,7 @@ export default class ObjectController extends BaseController {
 
 	/** Schreiben an den Kunden nach DIN 5008 aus Textbausteinen (B10); PDF landet unter Kundendokumente/Schreiben. */
 	async onLetter(): Promise<void> {
-		const blocks = await catalog<TextBlock>("textBlock").catch(() => [] as TextBlock[]);
+		const blocks = await textBlocks("general").catch(() => [] as TextBlock[]);
 		const customer = this.m().getProperty("/customer") as ContactResponse | null;
 		const result = await openForm<{ fileId: string; emailed: boolean; emailTo: string | null }>({
 			title: "Schreiben an den Kunden", width: "44rem",

@@ -1,57 +1,187 @@
-<mvc:View controllerName="estrichone.controller.admin.Helpdesk" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+<mvc:View controllerName="estrichone.controller.admin.Helpdesk" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
 	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
-		<f:title>
-			<f:DynamicPageTitle>
-				<f:heading><Title text="{i18n>nav.helpdesk}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="{= ${view>/agent} ? 'Gemeldete Probleme aus den Apps und dem Büro – am längsten wartende zuerst' : 'Ihre IT-Meldungen mit Verlauf' }"/></f:expandedContent>
-				<f:actions><Button id="newTicket" text="Neues Ticket" icon="sap-icon://add" type="Emphasized" press=".onNew"/></f:actions>
-			</f:DynamicPageTitle>
-		</f:title>
-		<f:content>
-			<Table items="{view>/items}" busy="{view>/busy}" noDataText="{= ${view>/agent} ? 'Keine Tickets in dieser Ansicht.' : 'Sie haben noch kein Ticket gemeldet.' }" sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
-				<headerToolbar>
-					<OverflowToolbar visible="{view>/agent}">
-						<SegmentedButton selectedKey="{view>/filter}" selectionChange=".onFilter">
+	<FlexBox id="helpdesk" height="100%" renderType="Bare" class="eoHelpdesk" alignItems="Stretch">
+		<!-- Liste: Suche, Status-Segmente, Kategorie, Sortierung -->
+		<FlexBox direction="Column" renderType="Bare" class="eoHdMaster">
+			<VBox class="eoHdMasterHead">
+				<HBox justifyContent="SpaceBetween" alignItems="Center">
+					<Title id="hdTitle" text="{i18n>nav.helpdesk}" level="H1"/>
+					<Button id="newTicket" text="Neues Ticket" icon="sap-icon://add" type="Emphasized" press=".onNew"/>
+				</HBox>
+				<Text text="{= ${view>/agent} ? 'Gemeldete Probleme aus Apps und Büro' : 'Ihre IT-Meldungen mit Verlauf' }" class="eoMuted sapUiTinyMarginBottom"/>
+				<SearchField id="hdSearch" value="{view>/query}" liveChange=".onQuery" placeholder="Nummer, Titel, Melder …" width="100%"/>
+				<SegmentedButton id="hdSegments" selectedKey="{view>/filter}" selectionChange=".onFilter" width="100%" class="sapUiTinyMarginTop"
+					items="{view>/segments}">
+					<items><SegmentedButtonItem key="{view>key}" text="{view>text}"/></items>
+				</SegmentedButton>
+				<HBox class="eoHdFilters sapUiTinyMarginTop">
+					<Select selectedKey="{view>/category}" change=".onFilter" items="{view>/categories}" width="100%" ariaLabelledBy="hdCatLabel">
+						<core:Item key="{view>key}" text="{view>text}"/>
+						<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+					</Select>
+					<Select selectedKey="{view>/sort}" change=".onSort" width="100%" ariaLabelledBy="hdSortLabel" class="sapUiTinyMarginBegin">
+						<core:Item key="waiting" text="Wartet am längsten"/>
+						<core:Item key="recent" text="Neueste Aktivität"/>
+						<core:Item key="priority" text="Priorität"/>
+						<core:Item key="number" text="Nummer"/>
+						<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+					</Select>
+				</HBox>
+			</VBox>
+			<ScrollContainer vertical="true" horizontal="false" height="100%" class="eoHdListScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<List id="hdList" items="{view>/visible}" mode="SingleSelectMaster" selectionChange=".onSelect" busy="{view>/busy}" busyIndicatorDelay="300"
+					noDataText="{view>/noData}" class="eoHdList" showSeparators="Inner">
+					<CustomListItem type="Active" highlight="{= ${view>reporterBlocked} ? 'Error' : 'None' }" selected="{= ${view>id} === ${view>/selectedId} }">
+						<customData><core:CustomData key="unread" value="{= ${view>hasUnread} ? 'true' : 'false' }" writeToDom="true"/></customData>
+						<VBox class="eoHdItem">
+							<HBox justifyContent="SpaceBetween" alignItems="Center">
+								<HBox alignItems="Center">
+									<core:Icon src="sap-icon://circle-task-2" size="0.5rem" class="eoHdUnreadDot" visible="{view>hasUnread}" tooltip="Neue Antwort"/>
+									<Text text="{view>number}" class="eoHdNumber eoTabular"/>
+								</HBox>
+								<Text text="{path: 'view>lastActivityAt', formatter: 'fmt.waiting'}" class="eoHdAge eoTabular"/>
+							</HBox>
+							<Text text="{view>title}" maxLines="2" class="eoHdItemTitle"/>
+							<HBox alignItems="Center" wrap="Wrap" class="eoHdItemMeta">
+								<ObjectStatus text="{path: 'view>status', formatter: 'fmt.ticketStatusText'}" state="{path: 'view>status', formatter: 'fmt.ticketStatusState'}"/>
+								<ObjectStatus text="{path: 'view>priority', formatter: 'fmt.ticketPriorityText'}" state="{path: 'view>priority', formatter: 'fmt.ticketPriorityState'}"
+									icon="sap-icon://high-priority" visible="{= ${view>priority} === 'high' || ${view>priority} === 'urgent' }"/>
+								<ObjectStatus text="Kann nicht arbeiten" state="Error" inverted="true" visible="{view>reporterBlocked}"/>
+								<Text text="{view>who}" class="eoHdWho" wrapping="false"/>
+							</HBox>
+						</VBox>
+					</CustomListItem>
+				</List>
+			</ScrollContainer>
+			<Text text="{view>/countText}" class="eoHdCount"/>
+		</FlexBox>
+
+		<!-- Ticket: Kopf mit Schnellaktionen, Verlauf, Antwortfeld -->
+		<FlexBox direction="Column" renderType="Bare" class="eoHdDetail">
+			<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+			<VBox visible="{= !${view>/t} }" alignItems="Center" justifyContent="Center" height="100%" class="eoHdEmpty">
+				<core:Icon src="sap-icon://headset" size="3rem" class="eoMuted" decorative="true"/>
+				<Title text="{= ${view>/items}.length ? 'Ticket auswählen' : 'Keine Tickets' }" level="H3" class="sapUiSmallMarginTop"/>
+				<Text text="{= ${view>/agent} ? 'Links ein Ticket wählen – Verlauf, Antwort und Schnellaktionen erscheinen hier.' : 'Probleme mit App, Gerät oder Büro-IT? Melden Sie sie mit „Neues Ticket“ – die IT antwortet hier.' }"
+					textAlign="Center" wrapping="true" class="eoMuted eoHdEmptyText"/>
+			</VBox>
+			<VBox visible="{= !!${view>/t} }" class="eoHdHead" busy="{view>/detailBusy}" busyIndicatorDelay="300">
+				<HBox id="ticketTags" alignItems="Center" wrap="Wrap" class="ticketTags eoHdTags">
+					<Text text="{view>/t/summary/number}" class="eoHdNumber eoTabular"/>
+					<ObjectStatus text="{path: 'view>/t/summary/status', formatter: 'fmt.ticketStatusText'}" state="{path: 'view>/t/summary/status', formatter: 'fmt.ticketStatusState'}" inverted="true"/>
+					<ObjectStatus text="{path: 'view>/t/summary/priority', formatter: 'fmt.ticketPriorityText'}" state="{path: 'view>/t/summary/priority', formatter: 'fmt.ticketPriorityState'}"
+						icon="sap-icon://high-priority"/>
+					<ObjectStatus text="Kann nicht arbeiten" state="Error" inverted="true" visible="{= !!${view>/t/summary/reporterBlocked} }"/>
+				</HBox>
+				<Title id="ticketTitle" text="{view>/t/summary/title}" level="H2" wrapping="true" class="eoHdTitle"/>
+				<FlexBox wrap="Wrap" class="eoHdFacts" items="{view>/facts}">
+					<VBox class="eoHdFact">
+						<Label text="{view>label}"/>
+						<ObjectStatus text="{view>value}" state="{view>state}" icon="{view>icon}"/>
+					</VBox>
+				</FlexBox>
+				<OverflowToolbar style="Clear" class="eoHdActions" visible="{view>/agent}">
+					<Label text="Status" labelFor="tStatus" class="eoHdActLabel"/>
+					<Select id="tStatus" selectedKey="{view>/edit/status}" items="{view>/statusOptions}" change=".onQuickStatus" width="10rem">
+						<core:Item key="{view>key}" text="{view>text}"/>
+					</Select>
+					<Label text="Priorität" labelFor="tPriority" class="eoHdActLabel"/>
+					<Select id="tPriority" selectedKey="{view>/edit/priority}" items="{view>/priorityOptions}" change=".onQuickPriority" width="8rem">
+						<core:Item key="{view>key}" text="{view>text}"/>
+					</Select>
+					<Label text="Kategorie" labelFor="tCategory" class="eoHdActLabel"/>
+					<Select id="tCategory" selectedKey="{view>/edit/category}" items="{view>/categoryOptions}" change=".onQuickCategory" width="10rem">
+						<core:Item key="{view>key}" text="{view>text}"/>
+					</Select>
+					<Label text="Zuständig" labelFor="tAssignee" class="eoHdActLabel"/>
+					<Select id="tAssignee" selectedKey="{view>/edit/assignee}" items="{view>/people}" forceSelection="false" change=".onQuickAssignee" width="11rem">
+						<core:Item key="{view>key}" text="{view>text}"/>
+					</Select>
+					<ToolbarSpacer/>
+					<Button text="Mir zuweisen" icon="sap-icon://employee" press=".onMine" visible="{= ${view>/t/summary/assigneeUserId} !== ${view>/me} }"/>
+				</OverflowToolbar>
+				<HBox visible="{= !${view>/agent} &amp;&amp; ${view>/t/summary/status} === 'resolved' }" alignItems="Center" class="eoHdResolved">
+					<MessageStrip text="{view>/resolvedText}"
+						type="Success" showIcon="true">
+						<layoutData><FlexItemData growFactor="1"/></layoutData>
+					</MessageStrip>
+					<Button text="Wieder öffnen" icon="sap-icon://refresh" press=".onReopen" class="sapUiSmallMarginBegin"/>
+				</HBox>
+			</VBox>
+			<ScrollContainer id="hdScroll" vertical="true" horizontal="false" height="100%" visible="{= !!${view>/t} }" class="eoHdScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<VBox class="eoHdScrollInner">
+					<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginBottom">
+						<Title text="Verlauf" level="H3"/>
+						<SegmentedButton selectedKey="{view>/show}" selectionChange=".onShow">
 							<items>
-								<SegmentedButtonItem key="open" text="Offen"/>
-								<SegmentedButtonItem key="mine" text="Mir zugewiesen"/>
-								<SegmentedButtonItem key="unassigned" text="Nicht zugewiesen"/>
-								<SegmentedButtonItem key="all" text="Alle"/>
+								<SegmentedButtonItem key="all" text="Alles"/>
+								<SegmentedButtonItem key="talk" text="Nur Nachrichten"/>
 							</items>
 						</SegmentedButton>
-						<ToolbarSpacer/>
-						<Select selectedKey="{view>/category}" change=".onFilter" items="{view>/categories}" ariaLabelledBy="catLabel2">
-							<core:Item key="{view>key}" text="{view>text}"/>
-						</Select>
-					</OverflowToolbar>
-				</headerToolbar>
-				<columns>
-					<Column width="8rem"><Text text="Nummer"/></Column>
-					<Column><Text text="Problem"/></Column>
-					<Column width="9rem"><Text text="Status"/></Column>
-					<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Priorität"/></Column>
-					<Column width="10rem" minScreenWidth="Desktop" demandPopin="true" visible="{view>/agent}"><Text text="Melder"/></Column>
-					<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuständig"/></Column>
-					<Column width="7rem" hAlign="End"><Text text="{= ${view>/agent} ? 'Wartet seit' : 'Letzte Änderung' }"/></Column>
-				</columns>
-				<items>
-					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${view>reporterBlocked} ? 'Error' : 'None' }">
-						<Link text="{view>number}" href="/it-center/helpdesk/{view>id}" class="eoTabular"/>
-						<VBox>
-							<HBox alignItems="Center"><Text text="{view>title}" class="sapUiTinyMarginEnd"/>
-								<ObjectStatus text="Kann nicht arbeiten" state="Error" inverted="true" visible="{view>reporterBlocked}"/></HBox>
-							<Text text="{path: 'view>category', formatter: 'fmt.ticketCategoryText'}" class="eoMuted"/>
+					</HBox>
+					<Panel headerText="Diagnosedaten ({= ${view>/diagnostics}.length })" expandable="true" expanded="false" visible="{= ${view>/agent} &amp;&amp; ${view>/diagnostics}.length > 0 }"
+						class="sapUiSmallMarginBottom eoHdDiag">
+						<List items="{view>/diagnostics}"><StandardListItem title="{view>key}" description="{view>value}" wrapping="true"/></List>
+					</Panel>
+					<VBox id="timeline" items="{view>/timeline}" class="eoTimeline">
+						<VBox class="eoTimelineItem">
+							<customData><core:CustomData key="tone" value="{view>tone}" writeToDom="true"/></customData>
+							<core:Icon src="{view>icon}" class="eoTimelineDot" tooltip="{view>kindText}"/>
+							<VBox class="eoTimelineBubble" visible="{view>bubble}">
+								<customData><core:CustomData key="who" value="{view>who}" writeToDom="true"/></customData>
+								<HBox justifyContent="SpaceBetween" wrap="Wrap">
+									<Text text="{view>headline}" class="eoStrong"/>
+									<Text text="{path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
+								</HBox>
+								<Text text="{view>text}" class="eoPre" visible="{= !!${view>text} }"/>
+								<FlexBox items="{path: 'view>attachments', templateShareable: false}" wrap="Wrap" class="eoTimelineAttachments" visible="{= ${view>attachments}.length > 0 }">
+									<VBox alignItems="Center" width="6rem">
+										<Image src="{view>thumb}" width="5.5rem" height="5.5rem" class="eoPhoto" press=".onAttachment" alt="{view>name}" decorative="false" visible="{view>image}"/>
+										<core:Icon src="sap-icon://document" size="2.5rem" visible="{= !${view>image} }" press=".onAttachment" tooltip="{view>name}"/>
+										<Link text="{view>name}" press=".onAttachment" wrapping="true" textAlign="Center"/>
+									</VBox>
+								</FlexBox>
+							</VBox>
+							<HBox class="eoTimelineEvent" visible="{= !${view>bubble} }" wrap="Wrap">
+								<Text text="{view>summary}" class="eoStrong sapUiTinyMarginEnd"/>
+								<Text text="{view>actorName} · {path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
+							</HBox>
+							<Text text="{view>eventText}" class="eoPre eoMuted" visible="{= !${view>bubble} &amp;&amp; !!${view>eventText} }"/>
 						</VBox>
-						<ObjectStatus text="{path: 'view>status', formatter: 'fmt.ticketStatusText'}" state="{path: 'view>status', formatter: 'fmt.ticketStatusState'}"/>
-						<ObjectStatus text="{path: 'view>priority', formatter: 'fmt.ticketPriorityText'}" state="{path: 'view>priority', formatter: 'fmt.ticketPriorityState'}"/>
-						<Text text="{= ${view>reporterDisplayName} || '–' }"/>
-						<Text text="{= ${view>assigneeName} || 'nicht zugewiesen' }"/>
-						<Text text="{path: 'view>lastActivityAt', formatter: 'fmt.waiting'}" class="eoTabular"/>
-					</ColumnListItem>
-				</items>
-			</Table>
-		</f:content>
-	</f:DynamicPage>
-	<core:InvisibleText id="catLabel2" text="Kategorie"/>
+					</VBox>
+				</VBox>
+			</ScrollContainer>
+			<VBox id="composer" visible="{= !!${view>/t} &amp;&amp; ${view>/t/summary/status} !== 'closed' }" class="eoReplyBar eoHdComposer">
+				<customData><core:CustomData key="internal" value="{= ${view>/internal} ? 'true' : 'false' }" writeToDom="true"/></customData>
+				<TextArea id="reply" value="{view>/reply}" valueLiveUpdate="true" rows="3" width="100%" growing="true" growingMaxLines="10"
+					placeholder="{= ${view>/internal} ? 'Interne Notiz (nur für die Bearbeitung) …' : ${view>/agent} ? 'Antwort an den Melder … (Dateien hierher ziehen oder Strg+V)' : 'Nachricht an die IT … (Dateien hierher ziehen oder Strg+V)' }"
+					ariaLabelledBy="replyLabel"/>
+				<core:InvisibleText id="replyLabel" text="Antwort oder Notiz"/>
+				<FlexBox items="{view>/pending}" wrap="Wrap" class="eoTimelineAttachments" visible="{= ${view>/pending}.length > 0 }">
+					<Button text="{view>name}" icon="sap-icon://decline" iconFirst="false" type="Transparent" press=".onRemovePending" tooltip="{= ${view>name} + ' entfernen' }"/>
+				</FlexBox>
+				<FlexBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap">
+					<HBox alignItems="Center" wrap="Wrap">
+						<Button text="Datei anhängen" icon="sap-icon://attachment" type="Transparent" press=".onAttach" visible="{view>/canUpload}"/>
+						<MenuButton text="Textbaustein" icon="sap-icon://text" type="Transparent" visible="{= ${view>/agent} &amp;&amp; ${view>/blocks}.length > 0 }">
+							<menu>
+								<Menu items="{view>/blocks}" itemSelected=".onTextBlock">
+									<MenuItem text="{view>name}">
+										<customData><core:CustomData key="text" value="{view>content/text}"/></customData>
+									</MenuItem>
+								</Menu>
+							</menu>
+						</MenuButton>
+						<CheckBox text="Interne Notiz (für den Melder unsichtbar)" selected="{view>/internal}" visible="{view>/agent}"/>
+					</HBox>
+					<Button text="{= ${view>/internal} ? 'Notiz speichern' : ${view>/agent} ? 'Antwort senden' : 'Senden' }" type="Emphasized" icon="sap-icon://paper-plane"
+						enabled="{= !!${view>/reply}.trim() || ${view>/pending}.length > 0 }" press=".onComment" tooltip="Senden (Strg+Enter)"/>
+				</FlexBox>
+			</VBox>
+		</FlexBox>
+	</FlexBox>
+	<core:InvisibleText id="hdCatLabel" text="Kategorie"/>
+	<core:InvisibleText id="hdSortLabel" text="Sortierung"/>
 </mvc:View>

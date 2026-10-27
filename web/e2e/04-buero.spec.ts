@@ -20,7 +20,7 @@ test('IT-Ticket als normaler Benutzer im Web anlegen (Kategorie, Priorität, Bil
   await dialog.getByRole('button', { name: 'Ticket anlegen' }).click();
 
   await expect(page).toHaveURL(/\/it-center\/helpdesk\/[0-9a-f-]{36}/);
-  await expect(pageTitle(page)).toHaveText('Tablet zeigt keine Pläne an');
+  await expect(page.locator('[id$="ticketTitle"]')).toHaveText('Tablet zeigt keine Pläne an');
   await expect(page.locator('#ticketTags, [id$="ticketTags"]').getByText('Hoch')).toBeVisible();
   await expect(page.locator('.eoTimeline').getByAltText('bildschirm.jpg')).toBeVisible();
   // Keine Bearbeitungsfunktionen für Melder.
@@ -30,9 +30,12 @@ test('IT-Ticket als normaler Benutzer im Web anlegen (Kategorie, Priorität, Bil
   await page.getByRole('button', { name: 'Senden', exact: true }).click();
   await expect(page.locator('.eoTimeline').getByText('Neustart hat nicht geholfen.')).toBeVisible();
 
-  await page.getByRole('link', { name: 'Helpdesk' }).click();
-  const row = page.getByRole('row', { name: /Tablet zeigt keine Pläne an/ });
+  // Liste links („Meine Tickets“) mit Priorität; Suche filtert.
+  const row = page.locator('[id$="hdList"] li').filter({ hasText: 'Tablet zeigt keine Pläne an' });
   await expect(row).toContainText('Hoch');
+  await page.locator('[id$="hdSearch"] input').fill('gibt es nicht');
+  await expect(row).toHaveCount(0);
+  await page.locator('[id$="hdSearch"] input').fill('');
 });
 
 test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async ({ page }) => {
@@ -44,8 +47,8 @@ test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async
   expect(created.status).toBe(201);
 
   await nav(page, 'Helpdesk').click();
-  await expect(pageTitle(page)).toHaveText('Helpdesk');
-  const row = page.getByRole('row', { name: /Drucker im Büro druckt nicht/ });
+  await expect(page.locator('[id$="hdTitle"]')).toHaveText('Helpdesk');
+  const row = page.locator('[id$="hdList"] li').filter({ hasText: 'Drucker im Büro druckt nicht' });
   await expect(row.getByText('Kann nicht arbeiten')).toBeVisible();
   await row.getByText('Drucker im Büro druckt nicht').click();
   await expect(page).toHaveURL(/\/it-center\/helpdesk\//);

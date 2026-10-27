@@ -391,7 +391,10 @@ export default class MasterData extends BaseController {
 			{ key: "isActive", label: "Aktiv", type: "switch" as const },
 		];
 		const fields = kind === "textBlock"
-			? [...common.slice(0, 1), { key: "text", label: "Text", type: "textarea" as const, rows: 6, required: true, maxLength: 4000 }, ...common.slice(1)]
+			? [...common.slice(0, 1), { key: "text", label: "Text", type: "textarea" as const, rows: 6, required: true, maxLength: 4000 },
+				{ key: "usage", label: "Verwendung", type: "select" as const, options: [{ key: "general", text: "Notizen, Tagesberichte, Protokolle" },
+					{ key: "helpdesk", text: "Helpdesk-Antworten (IT)" }], help: "Im Helpdesk ersetzt {Melder} den Namen und {Ticket} die Nummer." },
+				...common.slice(1)]
 			: kind === "folderTemplate"
 				? [...common.slice(0, 1), { key: "category", label: "Dokumentart", type: "select" as const, options: options(documentCategories) },
 					{ key: "folders", label: "Unterordner (eine Zeile je Ordner)", type: "textarea" as const, rows: 6, required: true }, ...common.slice(1)]
@@ -402,12 +405,12 @@ export default class MasterData extends BaseController {
 			title: entry ? `${entry.name} bearbeiten` : addTexts[kind], submitText: "Speichern", width: "40rem",
 			initial: {
 				name: entry?.name ?? "", sortOrder: entry?.sortOrder ?? 0, isActive: entry?.isActive ?? true,
-				text: c.text ?? "", category: c.category ?? "offer", folders: ((c.folders as string[]) ?? []).join("\n"),
+				text: c.text ?? "", usage: ((c.usage as string[] | undefined) ?? []).includes("helpdesk") ? "helpdesk" : "general", category: c.category ?? "offer", folders: ((c.folders as string[]) ?? []).join("\n"),
 				description: c.description ?? "", rooms: roomsToText(c.rooms as TemplateRoom[] | undefined),
 			},
 			fields,
 			submit: (v) => {
-				const content = kind === "textBlock" ? { text: String(v.text).trim() }
+				const content = kind === "textBlock" ? { text: String(v.text).trim(), ...(v.usage === "helpdesk" ? { usage: ["helpdesk"] } : {}) }
 					: kind === "folderTemplate" ? { category: v.category, folders: String(v.folders).split("\n").map((f) => f.trim()).filter(Boolean) }
 						: { description: String(v.description ?? "").trim() || null, rooms: textToRooms(String(v.rooms ?? "")) };
 				return put<CatalogEntry>(`catalog/${entry?.id ?? uuidv7()}`, {

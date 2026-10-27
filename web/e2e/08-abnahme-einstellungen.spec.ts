@@ -40,7 +40,9 @@ test('Einstellungen: Materialmodul ab- und wieder einschalten, Firmenlogo hochla
   await page.getByRole('button', { name: 'Logo hochladen …' }).click();
   await (await chooser).setFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
   await expect(page.locator('.sapMMessageToast').last()).toContainText('Logo gespeichert');
-  await expect(page.locator('img[id$="companyLogo"]')).toBeVisible();
+  // Firmenlogo nur in der Vorschau (für PDFs/Briefe), nicht in der Kopfleiste.
+  await expect(page.locator('img.eoLogoPreview').first()).toBeVisible();
+  await expect(page.locator('.sapFShellBar img[id$="companyLogo"]')).toHaveCount(0);
 });
 
 test('Abnahmeprotokoll: Freigabe per Link durch den Kunden, PDF unter „Abnahmen“', async ({ page, browser }) => {

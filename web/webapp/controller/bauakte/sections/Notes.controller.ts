@@ -1,7 +1,7 @@
 import SectionBase from "./SectionBase";
 import ActionSheet from "sap/m/ActionSheet";
 import Button from "sap/m/Button";
-import { catalog, type TextBlock } from "../../../util/catalog";
+import { textBlocks } from "../../../util/catalog";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
@@ -54,7 +54,7 @@ export default class Notes extends SectionBase {
 	/** Textbaustein aus den Stammdaten an den Notiztext anhängen. */
 	async onTextBlock(event: Event): Promise<void> {
 		const source = event.getSource() as Control;
-		const blocks = await catalog<TextBlock>("textBlock");
+		const blocks = await textBlocks("general");
 		const sheet = new ActionSheet({
 			title: "Textbaustein einfügen", placement: "Top",
 			buttons: blocks.length

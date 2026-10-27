@@ -1,13 +1,112 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Overview" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
-	xmlns:grid="sap.ui.layout.cssgrid" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
+	xmlns:grid="sap.ui.layout.cssgrid" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control" xmlns:f="sap.f" xmlns:card="sap.f.cards"
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<VBox class="eoOverview" width="100%">
+		<!-- Kennzahlen als SAP Cards: numerischer Kopf mit Zustand, Inhalt als kurze Liste – Raster mit gleicher Höhe -->
+		<f:GridContainer id="overviewCards" snapToRow="true" class="eoOverviewCards">
+			<f:layout>
+				<f:GridContainerSettings rowSize="4.25rem" columnSize="15rem" gap="0.75rem"/>
+			</f:layout>
+			<f:Card height="100%" visible="{= ${session>/permissions/work.read} === true }">
+				<f:layoutData><f:GridContainerItemLayoutData rows="3" columns="1"/></f:layoutData>
+				<f:header>
+					<card:NumericHeader title="Aufgaben und Mängel" subtitle="offen" number="{= ${ov>/openWork} || '0' }" iconSrc="sap-icon://task"
+						state="{= ${ov>/overdue} > 0 ? 'Critical' : 'Neutral' }" details="{= ${ov>/workFooter} || 'nichts offen' }" detailsMaxLines="1" press=".onToWork"/>
+				</f:header>
+				<f:content>
+					<List items="{ov>/workTop}" showSeparators="None" noDataText="Keine offenen Aufgaben oder Mängel." class="eoCardList">
+						<CustomListItem type="Active" press=".onToWork">
+							<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoCardRow">
+								<HBox alignItems="Center" class="eoCardRowMain">
+									<core:Icon src="{= ${ov>kind} === 'defect' ? 'sap-icon://warning2' : 'sap-icon://task' }" class="eoCardRowIcon"/>
+									<Text text="{ov>title}" wrapping="false"/>
+								</HBox>
+								<ObjectStatus text="{path: 'ov>dueDate', formatter: 'fmt.date'}" state="{path: 'ov>dueDate', formatter: 'fmt.overdueState'}" class="eoNoShrink"/>
+							</HBox>
+						</CustomListItem>
+					</List>
+				</f:content>
+			</f:Card>
+			<f:Card height="100%" visible="{= ${session>/permissions/planning.read} === true }">
+				<f:layoutData><f:GridContainerItemLayoutData rows="3" columns="1"/></f:layoutData>
+				<f:header>
+					<card:NumericHeader title="Nächster Einsatz" subtitle="{= ${ov>/nextValue} === '–' ? 'nicht eingeplant' : ${ov>/nextWeekday} }"
+						number="{ov>/nextValue}" iconSrc="sap-icon://appointment-2" state="Neutral" details="{ov>/nextFooter}" detailsMaxLines="1" press=".onToAssignments"/>
+				</f:header>
+				<f:content>
+					<List items="{ov>/upcomingTop}" showSeparators="None" noDataText="Keine Einsätze geplant." class="eoCardList">
+						<CustomListItem type="Active" press=".onToAssignments">
+							<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoCardRow">
+								<HBox alignItems="Center" class="eoCardRowMain">
+									<Text text="{ov>dayText}" class="eoCardRowDay eoTabular" wrapping="false"/>
+									<Text text="{ov>kind}" wrapping="false"/>
+								</HBox>
+								<Text text="{ov>crew}" wrapping="false" class="eoMuted eoCardRowSide"/>
+							</HBox>
+						</CustomListItem>
+					</List>
+				</f:content>
+			</f:Card>
+			<f:Card height="100%">
+				<f:layoutData><f:GridContainerItemLayoutData rows="3" columns="1"/></f:layoutData>
+				<f:header>
+					<card:NumericHeader title="Prüfungen" subtitle="Belegreife" number="{= ${ov>/inspectionValue} || '–' }" scale="{ov>/inspectionScale}"
+						iconSrc="sap-icon://measure" state="{= ${ov>/inspectionColor} === 'Good' ? 'Good' : ${ov>/inspectionColor} === 'Critical' ? 'Critical' : 'Neutral' }"
+						details="{ov>/inspectionFooter}" detailsMaxLines="1" press=".onToDocumentation"/>
+				</f:header>
+				<f:content>
+					<VBox class="eoCardBody">
+						<HBox alignItems="Center" class="eoCardRow">
+							<core:Icon src="sap-icon://inspection" class="eoCardRowIcon"/>
+							<Text text="{= ${ov>/hasInitial} ? 'Erstbegehung dokumentiert' : 'Erstbegehung noch offen' }"/>
+						</HBox>
+						<Link text="Protokoll der Erstbegehung (PDF)" href="/api/v1/bauakten/{akte>/bauakte/id}/initial-inspection.pdf" target="_blank"
+							visible="{= !!${ov>/hasInitial} }" class="sapUiTinyMarginTop"/>
+						<HBox alignItems="Center" class="eoCardRow sapUiTinyMarginTop">
+							<core:Icon src="sap-icon://notes" class="eoCardRowIcon"/>
+							<Text text="{ov>/diaryText}" wrapping="false"/>
+						</HBox>
+					</VBox>
+				</f:content>
+			</f:Card>
+			<f:Card height="100%">
+				<f:layoutData><f:GridContainerItemLayoutData rows="3" columns="1"/></f:layoutData>
+				<f:header>
+					<card:NumericHeader title="{i18n>overview.documents}" subtitle="in der Bauakte" number="{= ${ov>/documentCount} || '0' }" iconSrc="sap-icon://document"
+						state="{= ${ov>/approvals}.length > 0 ? 'Critical' : 'Neutral' }"
+						details="{= ${ov>/approvals}.length > 0 ? ${ov>/approvals}.length + ' warten auf Freigabe' : ${ov>/documentFooter} }" detailsMaxLines="1" press=".onToDocuments"/>
+				</f:header>
+				<f:content>
+					<List items="{ov>/latestTop}" showSeparators="None" noDataText="Noch keine Dokumente." class="eoCardList">
+						<CustomListItem type="Active" press=".onOpenDoc">
+							<HBox alignItems="Center" class="eoCardRow">
+								<core:Icon src="{ov>icon}" class="eoCardRowIcon"/>
+								<Text text="{ov>originalName}" wrapping="false"/>
+							</HBox>
+						</CustomListItem>
+					</List>
+				</f:content>
+			</f:Card>
+			<f:Card height="100%">
+				<f:layoutData><f:GridContainerItemLayoutData rows="3" columns="1"/></f:layoutData>
+				<f:header>
+					<card:NumericHeader title="{i18n>overview.photos}" subtitle="Fotos und Videos" number="{= ${ov>/photoCount} || '0' }" iconSrc="sap-icon://camera"
+						state="Neutral" details="{= ${ov>/photoFooter} || 'noch keine' }" detailsMaxLines="1" press=".onToPhotos"/>
+				</f:header>
+				<f:content>
+					<HBox items="{ov>/heroTop}" class="eoCardPhotos">
+						<Image src="{ov>url}" alt="{ov>alt}" width="4rem" height="4rem" press=".onOpenPhoto" decorative="false" class="eoThumb"/>
+					</HBox>
+				</f:content>
+			</f:Card>
+		</f:GridContainer>
+
 		<!-- Kerndaten in Spalten über die volle Breite -->
 		<OverflowToolbar style="Clear" height="2rem">
 			<ToolbarSpacer/>
 			<Button text="Kennwerte bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditProject" visible="{= ${akte>/canEdit} === true }"/>
 		</OverflowToolbar>
-		<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="4" columnsL="3" columnsM="2" labelSpanXL="5" labelSpanL="5" labelSpanM="5" labelSpanS="12" emptySpanXL="0" emptySpanL="0" emptySpanM="0" adjustLabelSpan="false" singleContainerFullSize="false" breakpointXL="1400"
+		<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="3" columnsL="3" columnsM="2" labelSpanXL="5" labelSpanL="5" labelSpanM="5" labelSpanS="12" emptySpanXL="0" emptySpanL="0" emptySpanM="0" adjustLabelSpan="false" singleContainerFullSize="false" breakpointXL="1400"
 			class="eoDenseForm">
 			<core:Title text="{i18n>overview.base}"/>
 			<Label text="Bauakte"/><Text text="{= ${akte>/bauakte/number} || '–' }"/>
@@ -27,17 +126,6 @@
 			<Label text="Beginn"/><Text text="{path: 'akte>/bauakte/plannedStart', formatter: 'fmt.date'}"/>
 			<Label text="Ende"/><Text text="{path: 'akte>/bauakte/plannedEnd', formatter: 'fmt.date'}"/>
 			<Label text="Nächster"/><Text text="{= ${ov>/nextValue} === '–' || !${ov>/nextValue} ? 'nicht eingeplant' : ${ov>/nextValue} + ' ' + ${ov>/nextFooter} }"/>
-			<core:Title text="Dokumentation"/>
-			<Label text="Offen"/>
-			<Link text="{= (${ov>/openWork} || '–') + (${ov>/workFooter} ? ' · ' + ${ov>/workFooter} : '') }" press=".onToWork"/>
-			<Label text="Prüfungen"/>
-			<ObjectStatus text="{= (${ov>/inspectionValue} || '–') + ' ' + (${ov>/inspectionScale} || '') + ' · ' + (${ov>/inspectionFooter} || '') }"
-				state="{= ${ov>/inspectionColor} === 'Good' ? 'Success' : ${ov>/inspectionColor} === 'Critical' ? 'Warning' : 'None' }"/>
-			<Label text="Erstbegehung" visible="{= !!${ov>/hasInitial} }"/>
-			<Link text="Protokoll (PDF) öffnen" href="/api/v1/bauakten/{akte>/bauakte/id}/initial-inspection.pdf" target="_blank" visible="{= !!${ov>/hasInitial} }"/>
-			<Label text="{i18n>overview.documents}"/><Link text="{= (${ov>/documentCount} || '0') + ' · ' + (${ov>/documentFooter} || '') }" press=".onToDocuments"/>
-			<Label text="{i18n>overview.photos}"/><Link text="{= ${ov>/photoText} || '0 Fotos' }" press=".onToPhotos"/>
-			<Label text="{i18n>overview.diary}"/><Text text="{= (${ov>/diaryCount} || '0') + ' · ' + (${ov>/diaryFooter} || '') }"/>
 		</form:SimpleForm>
 
 		<!-- Kennwerte des Bauvorhabens aus dem Formular-Schema (Formular-Designer der Stammdaten) -->
@@ -55,34 +143,6 @@
 
 		<!-- Listen als kompakte Tabellen -->
 		<grid:CSSGrid gridTemplateColumns="repeat(auto-fit, minmax(26rem, 1fr))" gridGap="0.5rem 2rem" class="eoOverviewGrid">
-			<Table items="{ov>/work}" noDataText="Keine offenen Aufgaben oder Mängel." visible="{= ${session>/permissions/work.read} === true }"
-				class="eoDenseTable" popinLayout="GridSmall">
-				<headerToolbar><OverflowToolbar style="Clear"><Title text="{i18n>overview.openWorkList}" level="H3"/><ToolbarSpacer/>
-					<Button text="Alle" type="Transparent" press=".onToWork"/></OverflowToolbar></headerToolbar>
-				<columns><Column width="6rem"><Text text="Art"/></Column><Column><Text text="Titel"/></Column><Column width="7rem" hAlign="End"><Text text="Fällig"/></Column></columns>
-				<items><ColumnListItem>
-					<ObjectStatus text="{= ${ov>kind} === 'defect' ? 'Mangel' : 'Aufgabe' }" state="{= ${ov>kind} === 'defect' ? 'Warning' : 'Information' }"/>
-					<Text text="{ov>title}" wrapping="false"/>
-					<ObjectStatus text="{path: 'ov>dueDate', formatter: 'fmt.date'}" state="{path: 'ov>dueDate', formatter: 'fmt.overdueState'}"/>
-				</ColumnListItem></items>
-			</Table>
-			<Table items="{ov>/upcoming}" noDataText="Keine Einsätze geplant." visible="{= ${session>/permissions/planning.read} === true }" class="eoDenseTable">
-				<headerToolbar><OverflowToolbar style="Clear"><Title text="Nächste Einsätze" level="H3"/><ToolbarSpacer/>
-					<Button text="Alle" type="Transparent" press=".onToAssignments"/></OverflowToolbar></headerToolbar>
-				<columns><Column width="7rem"><Text text="Tag"/></Column><Column width="4rem"><Text text="Beginn"/></Column><Column><Text text="Tätigkeit"/></Column><Column><Text text="Kolonne"/></Column></columns>
-				<items><ColumnListItem>
-					<Text text="{ov>dayText}"/><Text text="{ov>time}"/><Text text="{ov>kind}" wrapping="false"/><Text text="{ov>crew}" wrapping="false"/>
-				</ColumnListItem></items>
-			</Table>
-			<Table items="{ov>/latestDocs}" noDataText="Noch keine Dokumente." class="eoDenseTable">
-				<headerToolbar><OverflowToolbar style="Clear"><Title text="Neueste Dokumente" level="H3"/><ToolbarSpacer/>
-					<Button text="Alle" type="Transparent" press=".onToDocuments"/></OverflowToolbar></headerToolbar>
-				<columns><Column><Text text="Dokument"/></Column><Column width="9rem" hAlign="End"><Text text="Abgelegt"/></Column></columns>
-				<items><ColumnListItem type="Navigation" press=".onOpenDoc">
-					<HBox alignItems="Center"><core:Icon src="{ov>icon}" class="sapUiTinyMarginEnd"/><Text text="{ov>originalName}" wrapping="false"/></HBox>
-					<Text text="{path: 'ov>createdAt', formatter: 'fmt.dateTime'}"/>
-				</ColumnListItem></items>
-			</Table>
 			<Table items="{ov>/approvals}" visible="{= ${ov>/approvals}.length > 0 }" class="eoDenseTable">
 				<headerToolbar><OverflowToolbar style="Clear"><Title text="Warten auf Freigabe" level="H3"/>
 					<ObjectStatus text="{= ${ov>/approvals}.length }" state="Warning" inverted="true"/></OverflowToolbar></headerToolbar>

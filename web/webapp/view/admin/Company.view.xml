@@ -105,7 +105,6 @@
 							<SegmentedButton id="setDensity" selectedKey="{view>/s/appearance/density}">
 								<items><SegmentedButtonItem key="compact" text="Kompakt"/><SegmentedButtonItem key="cozy" text="Komfortabel (Touch)"/></items>
 							</SegmentedButton>
-							<Label text="Firmenlogo in der Kopfzeile"/><Switch state="{view>/s/appearance/showCompanyLogo}" customTextOn=" " customTextOff=" "/>
 							<core:Title text="Karte"/>
 							<Label text="Kachelserver" labelFor="setTiles"/>
 							<Input id="setTiles" value="{view>/s/map/tileUrl}" placeholder="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maxLength="300"/>

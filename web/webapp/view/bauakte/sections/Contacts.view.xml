@@ -1,34 +1,111 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Contacts" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
 	xmlns:card="sap.f.cards" xmlns:grid="sap.ui.layout.cssgrid" xmlns:core="sap.ui.core">
-	<VBox>
-		<FlexBox wrap="Wrap" justifyContent="SpaceBetween" alignItems="Center" class="eoEntryRow">
-			<Title text="Kontakte und Beteiligte ({= ${ct>/cards}.length })" level="H3"/>
-			<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow eoNoShrink" visible="{akte>/canEdit}">
-				<Button text="Kontakt erfassen" icon="sap-icon://add-contact" type="Emphasized" press=".onQuickAdd"/>
-				<Button text="Aus Kundenstamm übernehmen" icon="sap-icon://customer" press=".onFromContacts" visible="{= ${session>/permissions/contacts.read} === true }"/>
-			</FlexBox>
-		</FlexBox>
-		<grid:CSSGrid items="{ct>/cards}" gridTemplateColumns="repeat(auto-fill, minmax(19rem, 1fr))" gridGap="1rem" class="eoContactGrid sapUiSmallMarginTop">
-			<f:Card>
-				<f:header>
-					<card:Header title="{ct>name}" subtitle="{ct>company}" iconSrc="{ct>icon}" iconDisplayShape="Circle"/>
-				</f:header>
-				<f:content>
-					<VBox width="100%" class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
-						<ObjectStatus text="{ct>roleText}" state="{ct>roleState}" inverted="true" class="sapUiTinyMarginBottom"/>
-						<Text text="{ct>address}" visible="{= !!${ct>address} }" wrapping="true"/>
-						<Text text="{ct>note}" visible="{= !!${ct>note} }" wrapping="true" class="eoPre eoMuted sapUiTinyMarginTop"/>
-						<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow sapUiSmallMarginTop">
-							<Button icon="sap-icon://call" text="{ct>phone}" visible="{= !!${ct>phone} }" press=".onCall" tooltip="Anrufen"/>
-							<Button icon="sap-icon://email" text="E-Mail" visible="{= !!${ct>email} }" press=".onMail" tooltip="{ct>email}"/>
-							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditCard" visible="{= ${ct>editable} &amp;&amp; ${akte>/canEdit} }"/>
-							<Button icon="sap-icon://delete" type="Transparent" tooltip="Entfernen" press=".onRemoveCard" visible="{= ${ct>removable} &amp;&amp; ${akte>/canEdit} }"/>
-						</FlexBox>
-					</VBox>
-				</f:content>
-			</f:Card>
-		</grid:CSSGrid>
-		<Title text="Team" level="H3" class="sapUiMediumMarginTop sapUiTinyMarginBottom"/>
+	<VBox class="eoContacts">
+		<OverflowToolbar style="Clear" class="eoContactsBar">
+			<Title text="Kontakte und Beteiligte" level="H3"/>
+			<ObjectNumber number="{ct>/count}" class="eoMuted"/>
+			<ToolbarSpacer/>
+			<SearchField id="contactSearch" width="16rem" placeholder="Name, Firma, Telefon …" liveChange=".onFilter" value="{ct>/query}"
+				visible="{= ${ct>/count} > 3 }" ariaLabelledBy="contactSearchLabel">
+				<layoutData><OverflowToolbarLayoutData priority="NeverOverflow" shrinkable="true" minWidth="10rem"/></layoutData>
+			</SearchField>
+			<MenuButton id="addContact" text="Kontakt hinzufügen" icon="sap-icon://add-contact" type="Emphasized" visible="{akte>/canEdit}">
+				<menu>
+					<Menu>
+						<MenuItem text="Bestehenden Kontakt suchen …" icon="sap-icon://search" press=".onFromContacts"
+							visible="{= ${session>/permissions/contacts.read} === true }"/>
+						<MenuItem text="Neuen Kontakt erfassen …" icon="sap-icon://add-contact" press=".onQuickAdd"/>
+					</Menu>
+				</menu>
+				<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+			</MenuButton>
+		</OverflowToolbar>
+		<core:InvisibleText id="contactSearchLabel" text="Kontakte filtern"/>
+
+		<VBox items="{ct>/groups}" class="eoContactGroups" renderType="Bare">
+			<VBox class="eoContactGroup">
+				<HBox alignItems="Center" class="eoContactGroupHead">
+					<core:Icon src="{ct>icon}" class="eoContactGroupIcon" decorative="true"/>
+					<Title text="{ct>title}" level="H4"/>
+					<Text text="{ct>count}" class="eoContactGroupCount"/>
+				</HBox>
+				<grid:CSSGrid items="{path: 'ct>cards', templateShareable: false}" gridTemplateColumns="minmax(0, 1fr)"
+					gridGap="0.75rem" class="eoContactGrid">
+					<f:Card class="eoContactCard">
+						<f:customData><core:CustomData key="primary" value="{= ${ct>primary} ? 'true' : 'false' }" writeToDom="true"/></f:customData>
+						<f:header>
+							<card:Header title="{ct>name}" subtitle="{ct>subtitle}" iconInitials="{ct>initials}" iconSrc="{ct>avatarIcon}"
+								iconDisplayShape="{= ${ct>isCompany} ? 'Square' : 'Circle' }" iconBackgroundColor="{ct>avatarColor}"/>
+						</f:header>
+						<f:content>
+							<VBox width="100%" class="eoContactBody">
+								<HBox alignItems="Center" wrap="Wrap" class="eoContactBadges">
+									<ObjectStatus text="{ct>roleText}" state="None" inverted="true" class="eoRoleBadge"/>
+									<ObjectStatus text="Hauptkontakt" icon="sap-icon://favorite" state="Information" visible="{ct>primary}" class="sapUiTinyMarginBegin"/>
+									<ObjectStatus text="Kundenstamm {ct>customerNumber}" icon="sap-icon://customer" visible="{ct>linked}" class="sapUiTinyMarginBegin eoMuted"/>
+								</HBox>
+								<VBox items="{path: 'ct>lines', templateShareable: false}" class="eoContactLines">
+									<HBox alignItems="Start" class="eoContactLine">
+										<core:Icon src="{ct>icon}" class="eoContactLineIcon" tooltip="{ct>kind}"/>
+										<VBox class="eoContactLineText">
+											<Link text="{ct>text}" href="{ct>href}" target="{ct>target}" wrapping="true" visible="{= !!${ct>href} }"/>
+											<Text text="{ct>text}" wrapping="true" visible="{= !${ct>href} }"/>
+											<Text text="{ct>label}" visible="{= !!${ct>label} }" class="eoContactLineLabel"/>
+										</VBox>
+									</HBox>
+								</VBox>
+								<Text text="{ct>note}" visible="{= !!${ct>note} }" wrapping="true" class="eoPre eoContactNote"/>
+								<Text text="{ct>empty}" visible="{= !!${ct>empty} }" wrapping="true" class="eoMuted eoContactNote"/>
+								<HBox justifyContent="End" alignItems="Center" class="eoContactActions" visible="{akte>/canEdit}">
+									<Button text="Bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditCard"/>
+									<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="Mehr zum Kontakt" visible="{ct>removable}">
+										<menu>
+											<Menu itemSelected=".onCardAction">
+												<MenuItem text="{= ${ct>primary} ? 'Nicht mehr Hauptkontakt' : 'Als Hauptkontakt markieren' }" icon="sap-icon://favorite">
+													<customData><core:CustomData key="action" value="primary"/></customData>
+												</MenuItem>
+												<MenuItem text="Rolle ändern" icon="sap-icon://role" items="{path: 'ct>/roleItems', templateShareable: false}">
+													<customData><core:CustomData key="action" value="role"/></customData>
+													<items>
+														<MenuItem text="{ct>text}">
+															<customData><core:CustomData key="role" value="{ct>key}"/></customData>
+														</MenuItem>
+													</items>
+												</MenuItem>
+												<MenuItem text="Im Kundenstamm öffnen" icon="sap-icon://customer" visible="{ct>linked}">
+													<customData><core:CustomData key="action" value="open"/></customData>
+												</MenuItem>
+												<MenuItem text="Aus Bauakte entfernen" icon="sap-icon://delete" startsSection="true">
+													<customData><core:CustomData key="action" value="remove"/></customData>
+												</MenuItem>
+											</Menu>
+										</menu>
+									</MenuButton>
+								</HBox>
+							</VBox>
+						</f:content>
+					</f:Card>
+				</grid:CSSGrid>
+			</VBox>
+		</VBox>
+
+		<VBox visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} }" alignItems="Center" class="eoContactsEmpty">
+			<core:Icon src="sap-icon://address-book" size="2.5rem" class="eoMuted" decorative="true"/>
+			<Title text="Noch keine weiteren Beteiligten" level="H4" class="sapUiSmallMarginTop"/>
+			<Text text="Erfassen Sie Bauleiter, Architekt, Lieferanten oder den Ansprechpartner vor Ort – mit Telefon und E-Mail griffbereit für Büro und Baustelle."
+				textAlign="Center" wrapping="true" class="eoMuted eoContactsEmptyText"/>
+			<HBox class="sapUiSmallMarginTop eoEntryRow" visible="{akte>/canEdit}" justifyContent="Center" wrap="Wrap">
+				<Button text="Bestehenden Kontakt suchen" icon="sap-icon://search" press=".onFromContacts" visible="{= ${session>/permissions/contacts.read} === true }"/>
+				<Button text="Neuen Kontakt erfassen" icon="sap-icon://add-contact" press=".onQuickAdd"/>
+			</HBox>
+		</VBox>
+		<Text text="Keine Kontakte zu „{ct>/query}“." visible="{= !!${ct>/query} &amp;&amp; ${ct>/groups}.length === 0 }" class="eoMuted sapUiSmallMarginTop"/>
+
+		<HBox alignItems="Center" class="eoContactGroupHead sapUiMediumMarginTop">
+			<core:Icon src="sap-icon://group" class="eoContactGroupIcon" decorative="true"/>
+			<Title text="Team im Betrieb" level="H4"/>
+			<Text text="{= ${ct>/team}.length }" class="eoContactGroupCount"/>
+		</HBox>
 		<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow" items="{ct>/team}">
 			<HBox alignItems="Center" class="eoTeamChip">
 				<Avatar initials="{ct>initials}" displaySize="XS" class="sapUiTinyMarginEnd"/>
@@ -38,6 +115,8 @@
 				</VBox>
 			</HBox>
 		</FlexBox>
-		<Button text="{i18n>contacts.assign}" icon="sap-icon://add-employee" press=".onAssign" visible="{akte>/canEdit}" class="sapUiTinyMarginTop"/>
+		<Text text="Noch niemand zugewiesen." visible="{= ${ct>/team}.length === 0 }" class="eoMuted"/>
+		<Button text="{i18n>contacts.assign}" icon="sap-icon://add-employee" press=".onAssign" visible="{akte>/canEdit}" class="sapUiTinyMarginTop"
+			type="Transparent"/>
 	</VBox>
 </mvc:View>

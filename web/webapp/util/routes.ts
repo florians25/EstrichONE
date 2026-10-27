@@ -41,7 +41,7 @@ export const routes: RouteDef[] = [
 	{ name: "users", pattern: "/verwaltung/benutzer", view: "admin.Users", permission: "users.manage", nav: "users", title: "nav.users" },
 	{ name: "devices", pattern: "/it-center/geraete", view: "admin.Devices", permission: "devices.read", nav: "devices", title: "nav.devices" },
 	{ name: "helpdesk", pattern: "/it-center/helpdesk", view: "admin.Helpdesk", nav: "helpdesk", title: "nav.helpdesk" },
-	{ name: "ticket", pattern: "/it-center/helpdesk/:id", view: "admin.Ticket", nav: "helpdesk", title: "nav.helpdesk" },
+	{ name: "ticket", pattern: "/it-center/helpdesk/:id", view: "admin.Helpdesk", nav: "helpdesk", title: "nav.helpdesk" },
 	{ name: "backup", pattern: "/system/sicherung", view: "admin.Backup", permission: "backup.manage", nav: "backup", title: "nav.backup" },
 	{ name: "backupTargets", pattern: "/system/backup-ziele", view: "admin.BackupTargets", permission: "backup.manage", nav: "backupTargets", title: "nav.backupTargets" },
 	{ name: "archive", pattern: "/system/archiv", view: "admin.Archive", permission: "settings.manage", nav: "archive", title: "nav.archive" },
