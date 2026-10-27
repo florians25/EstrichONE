@@ -12,7 +12,7 @@ struct DispatchView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.shotScene) private var shotScene
     @Environment(\.horizontalSizeClass) private var sizeClass
-    @State private var day = Calendar.current.startOfDay(for: .now)
+    @State private var day: Date
     @State private var plan: DayPlan?
     @State private var loadedAt: Date?
     @State private var isCurrent = true
@@ -26,6 +26,11 @@ struct DispatchView: View {
     @State private var choosingDate = false
     @State private var editMode: EditMode = .inactive
     @State private var showsPending = false
+    @State private var releasing = false
+
+    init(initialDay: Date = Calendar.current.startOfDay(for: .now)) {
+        _day = State(initialValue: Calendar.current.startOfDay(for: initialDay))
+    }
 
     private var dayText: String { CalendarDay.string(day) }
 
@@ -108,6 +113,7 @@ struct DispatchView: View {
             }
             .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
             .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
         }
     }
 
@@ -133,12 +139,17 @@ struct DispatchView: View {
                     ? "Freigegeben \(when) · \(release.changedCount) \(release.changedCount == 1 ? "Änderung" : "Änderungen") seit Freigabe"
                     : "Freigegeben \(when) von \(release.releasedByName)"
                 lines.append(AnyView(NoticeLine(tone: release.changedCount > 0 ? .warning : .success, text: text,
-                                                symbol: release.changedCount > 0 ? "arrow.triangle.2.circlepath" : "checkmark.seal")))
+                                                symbol: release.changedCount > 0 ? "arrow.triangle.2.circlepath" : "checkmark.seal",
+                                                actionTitle: plan.canPlan ? (release.changedCount > 0 ? "Erneut freigeben" : "Freigabe") : nil,
+                                                action: plan.canPlan ? { sheet = .release } : nil)
+                    .accessibilityIdentifier("releaseStatus")))
                 for removed in release.removed {
                     lines.append(AnyView(NoticeLine(tone: .neutral, text: "Entfallen: \(removed.title) – \(removed.activity)", symbol: "minus.circle")))
                 }
             } else {
-                lines.append(AnyView(NoticeLine(tone: .neutral, text: "Entwurf – noch nicht freigegeben", symbol: "pencil.and.outline")))
+                lines.append(AnyView(NoticeLine(tone: .neutral, text: "Entwurf – noch nicht freigegeben", symbol: "pencil.and.outline",
+                                                actionTitle: plan.canPlan ? "Freigeben" : nil, action: plan.canPlan ? { sheet = .release } : nil)
+                    .accessibilityIdentifier("releaseStatus")))
             }
         }
         for warning in notice {
@@ -150,11 +161,12 @@ struct DispatchView: View {
     @ViewBuilder
     private func crewSection(_ crew: DayPlan.Crew, plan: DayPlan) -> some View {
         Section {
-            CrewCardHeader(crew: crew, canPlan: plan.canPlan) { action in
+            CrewCardHeader(crew: crew, canPlan: plan.canPlan && !editMode.isEditing, canSwapCrews: plan.crews.count > 1) { action in
                 switch action {
                 case .assign: sheet = .assign(crew: crew)
                 case .swapPerson: sheet = .swap(crew: crew, vehicle: false)
                 case .swapVehicle: sheet = .swap(crew: crew, vehicle: true)
+                case .swapCrews: sheet = .swapCrews(crew: crew)
                 }
             }
             .listRowBackground(crew.isMine ? Theme.accentSoft : Theme.surface)
@@ -185,6 +197,12 @@ struct DispatchView: View {
                     Button("Entfernen", systemImage: "trash", role: .destructive) { removing = stop }
                     Button("Verschieben", systemImage: "arrow.right.circle") { sheet = .move(stop: stop, crewId: crew?.id) }
                         .tint(Theme.accentFill)
+                    if crew != nil {
+                        Button("Freier Tag", systemImage: "calendar.badge.plus") {
+                            Task { await perform(.nextFreeDay(id: stop.assignmentId, title: stop.title)) }
+                        }
+                        .tint(Theme.success)
+                    }
                 }
             }
             .swipeActions(edge: .leading) {
@@ -199,8 +217,13 @@ struct DispatchView: View {
             }
             .contextMenu {
                 if plan.canPlan {
-                    Button("Verschieben …", systemImage: "arrow.right.circle") { sheet = .move(stop: stop, crewId: crew?.id) }
-                    Button("Uhrzeit ändern …", systemImage: "clock") { sheet = .move(stop: stop, crewId: crew?.id) }
+                    Button("Verschieben", systemImage: "arrow.right.circle") { sheet = .move(stop: stop, crewId: crew?.id) }
+                    Button("Uhrzeit ändern", systemImage: "clock") { sheet = .move(stop: stop, crewId: crew?.id) }
+                    if crew != nil {
+                        Button("Auf nächsten freien Tag", systemImage: "calendar.badge.plus") {
+                            Task { await perform(.nextFreeDay(id: stop.assignmentId, title: stop.title)) }
+                        }
+                    }
                     Button("Aus dem Plan nehmen", systemImage: "trash", role: .destructive) { removing = stop }
                 }
             }
@@ -250,6 +273,16 @@ struct DispatchView: View {
                 SwapRosterSheet(crew: crew, day: dayText, plan: plan, vehicle: vehicle) { change in
                     self.sheet = nil
                     if let change { Task { await perform(change) } }
+                }
+            case let .swapCrews(crew):
+                SwapCrewsSheet(crew: crew, day: dayText, plan: plan) { change in
+                    self.sheet = nil
+                    if let change { Task { await perform(change) } }
+                }
+            case .release:
+                ReleasePlanSheet(day: day, plan: plan) { action in
+                    self.sheet = nil
+                    if let action { Task { await release(action) } }
                 }
             }
         }
@@ -308,6 +341,9 @@ struct DispatchView: View {
             case "dispo-verschieben":
                 if let stop = plan?.crews.flatMap(\.stops).first { sheet = .move(stop: stop, crewId: plan?.crew(of: stop.assignmentId)?.id) }
             case "dispo-tauschen": sheet = .swap(crew: crew, vehicle: false)
+            case "dispo-fahrzeug": sheet = .swap(crew: crew, vehicle: true)
+            case "dispo-kolonnen": sheet = .swapCrews(crew: crew)
+            case "dispo-freigabe": sheet = .release
             default: break
             }
         }
@@ -324,6 +360,9 @@ struct DispatchView: View {
                 plan = fresh
             }
             toast = Self.doneText(change)
+            if let movedTo = result.movedTo {
+                toast = "Verschoben auf \(CalendarDay.date(movedTo)?.formatted(.dateTime.weekday(.wide).day().month()) ?? movedTo)"
+            }
             await load()
             notice = result.warnings
         } catch {
@@ -344,6 +383,26 @@ struct DispatchView: View {
         case .remove: "Aus dem Plan genommen"
         case .order: "Reihenfolge gesichert"
         case .swap: "Besetzung geändert"
+        case .nextFreeDay: "Auf den nächsten freien Tag gelegt"
+        case .swapCrews: "Kolonnen getauscht"
+        }
+    }
+
+    /// Freigeben bzw. Freigabe zurücknehmen – nur online (hält den aktuellen Stand fest).
+    private func release(_ action: ReleasePlanSheet.Action) async {
+        guard let client = model.active?.client else { return }
+        do throws(APIError) {
+            switch action {
+            case let .release(from, to, note):
+                let infos = try await client.releasePlan(from: from, to: to, note: note)
+                toast = infos.count > 1 ? "\(infos.count) Tage freigegeben" : "Plan freigegeben"
+            case let .withdraw(day):
+                try await client.withdrawRelease(day: day)
+                toast = "Freigabe zurückgenommen"
+            }
+            await load()
+        } catch {
+            toast = error == .offline ? "Freigeben geht nur mit Verbindung." : (error.serverMessage ?? error.message)
         }
     }
 
@@ -358,12 +417,16 @@ enum PlanSheet: Identifiable {
     case assign(crew: DayPlan.Crew)
     case move(stop: DayPlan.Stop, crewId: UUID?)
     case swap(crew: DayPlan.Crew, vehicle: Bool)
+    case swapCrews(crew: DayPlan.Crew)
+    case release
 
     var id: String {
         switch self {
         case let .assign(crew): "assign-\(crew.id)"
         case let .move(stop, _): "move-\(stop.id)"
         case let .swap(crew, vehicle): "swap-\(crew.id)-\(vehicle)"
+        case let .swapCrews(crew): "swap-crews-\(crew.id)"
+        case .release: "release"
         }
     }
 }
@@ -420,10 +483,11 @@ struct DayStrip: View {
 
 /// Kopf einer Kolonne: Farbe, Name, „Meine Kolonne“, Leitung, Besetzung (Abwesende markiert), Fahrzeuge, Konflikte.
 struct CrewCardHeader: View {
-    enum Action { case assign, swapPerson, swapVehicle }
+    enum Action { case assign, swapPerson, swapVehicle, swapCrews }
 
     let crew: DayPlan.Crew
     let canPlan: Bool
+    var canSwapCrews = true
     let action: (Action) -> Void
 
     var body: some View {
@@ -433,18 +497,8 @@ struct CrewCardHeader: View {
                 Text(crew.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
                 if crew.isMine { Chip(text: "Meine Kolonne", symbol: "person.fill", tone: .accent) }
                 Spacer(minLength: 0)
-                if canPlan {
-                    Menu {
-                        Button("Baustelle zuweisen", systemImage: "plus") { action(.assign) }
-                        Button("Mitarbeiter tauschen …", systemImage: "person.2.badge.gearshape") { action(.swapPerson) }
-                        Button("Fahrzeug tauschen …", systemImage: "truck.box") { action(.swapVehicle) }
-                    } label: {
-                        Image(systemName: "ellipsis.circle").font(.title3).frame(width: Size.minTap, height: Size.minTap)
-                    }
-                    .accessibilityLabel("Aktionen für \(crew.name)")
-                    .accessibilityIdentifier("crewMenu-\(crew.name)")
-                }
             }
+            .frame(minHeight: 30)
             if !crew.members.isEmpty {
                 FlowLayout(spacing: 6) {
                     ForEach(crew.members) { member in
@@ -469,10 +523,48 @@ struct CrewCardHeader: View {
                     .font(Typo.metaStrong)
                     .foregroundStyle(Theme.warning)
             }
+            if canPlan {
+                // Tauschen direkt sichtbar (kein verstecktes „…“-Menü), Beschriftung immer vollständig.
+                FlowLayout(spacing: Space.s) {
+                    CrewActionButton(title: "Mitarbeiter tauschen", symbol: "person.2.badge.gearshape") { action(.swapPerson) }
+                        .accessibilityIdentifier("swapPerson-\(crew.name)")
+                    CrewActionButton(title: "Fahrzeug tauschen", symbol: "truck.box") { action(.swapVehicle) }
+                        .accessibilityIdentifier("swapVehicle-\(crew.name)")
+                    if canSwapCrews {
+                        CrewActionButton(title: "Kolonnen tauschen", symbol: "arrow.left.arrow.right") { action(.swapCrews) }
+                            .accessibilityIdentifier("swapCrews-\(crew.name)")
+                    }
+                }
+                .padding(.top, Space.xxs)
+            }
         }
         .padding(.vertical, Space.xs)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("crew-\(crew.name)")
+    }
+}
+
+/// Kleine Schaltfläche im Kopf einer Kolonne: Symbol und vollständiger Text (bricht bei großer Schrift um statt zu kürzen).
+private struct CrewActionButton: View {
+    let title: String
+    let symbol: String
+    let action: () -> Void
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .labelStyle(TightLabelStyle())
+                .font(Typo.subheadStrong)
+                .foregroundStyle(Theme.accent)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, Space.m)
+                .padding(.vertical, Space.s)
+                .frame(minHeight: 36)
+                .background(Theme.surface.opacity(0.9), in: RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Radius.s, style: .continuous).strokeBorder(Theme.separator))
+                .contentShape(RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
+        }
+        .buttonStyle(.borderless)
     }
 }
 

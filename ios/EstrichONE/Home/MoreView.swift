@@ -4,7 +4,7 @@ import SwiftUI
 /// Reiter „Mehr“: Person und Abgleich oben, dann Planung, Hilfe, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     enum Route: String, Identifiable, Hashable {
-        case sync, tasks, dispatch, week, tickets
+        case sync, tasks, dispatch, week, tickets, inbox
         var id: String { rawValue }
     }
 
@@ -16,6 +16,9 @@ struct MoreView: View {
     @State private var unsentBeforeSignOut = 0
     @State private var reporting = false
     @State private var unreadTickets = 0
+    @State private var push = PushCenter.shared
+    @State private var confirmDeletion = false
+    @State private var deletionRequested = false
 
     var body: some View {
         NavigationStack {
@@ -41,6 +44,14 @@ struct MoreView: View {
                             .accessibilityIdentifier("syncLink")
                         }
                     }
+                }
+
+                Section {
+                    Button { route = .inbox } label: {
+                        row("Benachrichtigungen", symbol: "bell", detail: push.unreadCount > 0 ? "\(push.unreadCount) neu" : pushDetail,
+                            detailTint: push.unreadCount > 0 ? Theme.accent : Theme.textSecondary)
+                    }
+                    .accessibilityIdentifier("inboxRow")
                 }
 
                 Section("Planung und Aufgaben") {
@@ -107,8 +118,15 @@ struct MoreView: View {
                         row("Abmelden", symbol: "rectangle.portrait.and.arrow.right", tint: Theme.danger, titleColor: Theme.danger, chevron: false)
                     }
                     .accessibilityIdentifier("signOutButton")
+                    if model.active != nil {
+                        Button(role: .destructive) { confirmDeletion = true } label: {
+                            row("Konto löschen beantragen", symbol: "person.crop.circle.badge.xmark", tint: Theme.danger, titleColor: Theme.danger,
+                                chevron: false)
+                        }
+                        .accessibilityIdentifier("requestAccountDeletion")
+                    }
                 } footer: {
-                    Text("Abmelden beendet die Sitzung auf dem Server und löscht Ihre Daten auf diesem Gerät.")
+                    Text("Abmelden beendet die Sitzung auf dem Server und löscht Ihre Daten auf diesem Gerät. Ihr Benutzerkonto verwaltet Ihr Betrieb – die Löschung beantragen Sie hier, die Administration führt sie aus.")
                 }
 
                 Section {
@@ -127,6 +145,7 @@ struct MoreView: View {
                 case .dispatch: DispatchView()
                 case .week: MyWeekView()
                 case .tickets: MyTicketsView()
+                case .inbox: NotificationInboxView()
                 }
             }
             .navigationDestination(for: HomeRoute.self) { route in
@@ -136,6 +155,7 @@ struct MoreView: View {
                 case .week: MyWeekView()
                 case .sync: if let sync = model.active?.sync { SyncView(sync: sync) }
                 case .dispatch: DispatchView()
+                case .inbox: NotificationInboxView()
                 }
             }
             .confirmationDialog("Abmelden?", isPresented: $confirmSignOut, titleVisibility: .visible) {
@@ -146,6 +166,16 @@ struct MoreView: View {
                 if unsentBeforeSignOut > 0 {
                     Text("\(unsentBeforeSignOut) Änderungen sind noch nicht übertragen. Beim Abmelden gehen sie verloren. Besser: Verbindung herstellen und warten, bis alles übertragen ist.")
                 }
+            }
+            .confirmationDialog("Konto löschen beantragen?", isPresented: $confirmDeletion, titleVisibility: .visible) {
+                Button("Löschung beantragen", role: .destructive) { Task { await requestDeletion() } }
+            } message: {
+                Text("Die Administration Ihres Betriebs erhält einen Antrag über den Helpdesk und löscht Ihr Benutzerkonto samt persönlicher Daten (gesetzliche Aufbewahrungspflichten ausgenommen). Bis dahin können Sie die App weiter nutzen.")
+            }
+            .alert("Antrag gestellt", isPresented: $deletionRequested) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Der Antrag liegt im Helpdesk. Zum sofortigen Entfernen Ihrer Daten von diesem Gerät: Abmelden.")
             }
             .confirmationDialog("App zurücksetzen?", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("Alle Daten auf diesem Gerät löschen", role: .destructive) { model.resetApp() }
@@ -197,13 +227,32 @@ struct MoreView: View {
     private func applyShotScene() {
         switch shotScene {
         case "sync": route = .sync
+        case "postfach": route = .inbox
         case "disposition": route = .dispatch
         case "aufgaben": route = .tasks
         case "woche": route = .week
         case "meldung", "meldung-detail", "meldung-bearbeitung": route = .tickets
-        case "dispo-zuweisen", "dispo-verschieben", "dispo-tauschen": route = .dispatch
+        case "dispo-zuweisen", "dispo-verschieben", "dispo-tauschen", "dispo-fahrzeug", "dispo-kolonnen", "dispo-freigabe": route = .dispatch
         default: break
         }
+    }
+
+    private var pushDetail: String? {
+        switch push.permission {
+        case .allowed: "Push an"
+        case .denied: "Push aus"
+        default: nil
+        }
+    }
+
+    /// Apple-Vorgabe 5.1.1(v): Löschung des Kontos aus der App heraus anstoßen. Konten legt der Betrieb an; der Antrag
+    /// geht als Meldung an die Administration (offline vorgemerkt), die das Konto im Web löscht.
+    private func requestDeletion() async {
+        let name = model.active?.user.displayName ?? ""
+        _ = try? await model.report(NewTicket(title: "Antrag auf Löschung meines Benutzerkontos",
+                                              description: "\(name) beantragt in der App die Löschung des eigenen Benutzerkontos und der persönlichen Daten.",
+                                              category: .access), includeDiagnostics: false, attachments: [])
+        deletionRequested = true
     }
 
     static func describe(_ status: DeviceStatus) -> String {

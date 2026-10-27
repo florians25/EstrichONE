@@ -232,7 +232,8 @@ struct CameraView: View {
     private func save(_ data: Data) async {
         guard let service = model.active?.service else { return }
         do {
-            try await service.addPhoto(data, to: bauakte.id, capturedAt: .now, caption: caption.isEmpty ? nil : caption)
+            let prepared = await Task.detached(priority: .userInitiated) { PhotoCompressor.prepare(data) }.value
+            try await service.addPhoto(prepared, to: bauakte.id, capturedAt: .now, caption: caption.isEmpty ? nil : caption)
             count += 1
             lastThumbnail = await Task.detached { UIImage(data: data)?.preparingThumbnail(of: CGSize(width: 120, height: 120)) }.value
             errorMessage = nil
@@ -244,9 +245,9 @@ struct CameraView: View {
 
     private func importPicked(_ items: [PhotosPickerItem]) async {
         for item in items {
-            guard let data = try? await item.loadTransferable(type: Data.self), let image = UIImage(data: data),
-                  let jpeg = image.jpegData(compressionQuality: 0.85) else { continue }
-            await save(jpeg)
+            // Aufnahmedaten (Datum, Ort) bleiben erhalten; HEIC wird zu JPEG, große Bilder auf 4096 px (PhotoCompressor).
+            guard let data = try? await item.loadTransferable(type: Data.self), UIImage(data: data) != nil else { continue }
+            await save(data)
         }
         pickerItems = []
     }

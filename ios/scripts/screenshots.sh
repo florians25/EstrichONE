@@ -41,8 +41,10 @@ crash_report() {
 # Startet die App mit den noch fehlenden Bildschirmen.
 launch() {
   rm -f "$STATE" "$NEXT"
+  # APPSTORE=1: Aufnahmen für den App Store ohne Demo-Kennzeichnung.
   xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" \
-    -EstrichShots "$1" -AppleLanguages "(de)" -AppleLocale de_DE >/dev/null
+    -EstrichShots "$1" -EstrichAppStore "$( [ "${APPSTORE:-0}" = "1" ] && echo YES || echo NO )" \
+    -AppleLanguages "(de)" -AppleLocale de_DE >/dev/null
 }
 
 IFS=',' read -r -a LIST <<< "$SCENES"

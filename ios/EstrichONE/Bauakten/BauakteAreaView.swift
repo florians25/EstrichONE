@@ -188,7 +188,8 @@ struct BauakteAreaView: View {
                 PhotoGrid(photos: content.photos) { file in
                     if file.isVideo { playing = file } else { viewing = file }
                 }
-                .listRowInsets(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 4))
+                // Abstand zum Zeilenrand, damit die Rundung der Fotos zur Rundung der Gruppe passt (nichts wirkt abgeschnitten).
+                .listRowInsets(EdgeInsets(top: Space.m, leading: Space.m, bottom: Space.m, trailing: Space.m))
             }
         } header: {
             Text("Fotos und Videos (\(content.photos.count))")

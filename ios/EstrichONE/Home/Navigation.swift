@@ -8,6 +8,7 @@ enum HomeRoute: Hashable {
     case week
     case sync
     case dispatch
+    case inbox
 }
 
 /// Aktion, für die noch die Baustelle gewählt wird.

@@ -3,6 +3,7 @@ import SwiftUI
 
 @main
 struct EstrichONEApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) private var appDelegate
     @State private var session = AppSession()
     @Environment(\.scenePhase) private var scenePhase
 

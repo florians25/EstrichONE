@@ -18,6 +18,7 @@ struct MainTabView: View {
     @State private var showsCaptureHub = false
     /// Meldungen mit neuer Antwort der IT (Abzeichen am Reiter „Mehr“).
     @State private var unreadTickets = 0
+    @State private var push = PushCenter.shared
 
     var body: some View {
         TabView(selection: Binding(get: { selection }, set: { tab in
@@ -51,7 +52,22 @@ struct MainTabView: View {
                 .presentationDragIndicator(.visible)
         }
         .task { applyShotScene() }
-        .task(id: model.active?.sync?.revision) { unreadTickets = await TicketReadState.unreadCount(model: model) }
+        .task(id: model.active?.sync?.revision) {
+            unreadTickets = await TicketReadState.unreadCount(model: model)
+            if let inbox = try? await model.active?.client.notifications() { push.setUnread(inbox.unreadCount) }
+        }
+        .task { push.refreshPermission() }
+        // Neues APNs-Token (oder nach der Anmeldung) beim Server registrieren.
+        .task(id: push.token) { await push.upload(model: model) }
+        // Angetippte Benachrichtigung: Objekt als Blatt über dem aktuellen Reiter öffnen.
+        .sheet(item: $push.pendingRoute) { route in
+            NavigationStack {
+                NotificationTargetView(route: route)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) { Button("Schließen") { push.pendingRoute = nil } }
+                    }
+            }
+        }
     }
 
     /// Screenshot-Modus: passenden Reiter wählen bzw. „Erfassen“ öffnen.
@@ -71,7 +87,7 @@ enum ShotRoute {
         switch prefix {
         case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "raum", "tagebuch", "mangel", "basisdaten", "protokoll", "kontakt": return .bauakten
         case "kunden", "kundenkarte": return .customers
-        case "mehr", "sync", "meldung", "aufgaben", "woche", "disposition", "dispo": return .more
+        case "mehr", "sync", "meldung", "aufgaben", "woche", "disposition", "dispo", "postfach": return .more
         case "erfassen": return .capture
         default: return .today
         }
@@ -100,7 +116,7 @@ struct RootToolbar: ViewModifier {
     func body(content: Content) -> some View {
         content
             .toolbar {
-                if model.isDemo {
+                if model.isDemo, !ShotOptions.hidesDemoMarks {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
                             Section("Demomodus – Beispieldaten, es wird nichts gesendet.") {

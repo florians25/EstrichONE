@@ -241,6 +241,7 @@ final class AppModel {
     func signOut() async {
         guard let active, let accounts else { return }
         active.sync?.stop()
+        await PushCenter.shared.unregister(client: active.client)
         self.active = nil
         await accounts.signOut(active.account, client: active.client)
         deviceState = accounts.state

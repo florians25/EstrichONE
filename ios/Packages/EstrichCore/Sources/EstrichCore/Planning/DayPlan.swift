@@ -213,6 +213,10 @@ public enum PlanChange: Codable, Equatable, Sendable {
     case order(crewId: UUID, day: String, assignmentIds: [UUID], startTimes: [String?])
     /// Mitarbeiter bzw. Fahrzeug der Kolonne für den Tag tauschen.
     case swap(crewId: UUID, day: String, fromUserId: UUID?, toUserId: UUID?, fromResourceId: UUID?, toResourceId: UUID?, text: String)
+    /// Einsatz auf den nächsten freien Arbeitstag seiner Kolonne legen (`POST /assignments/{id}/next-free-day`).
+    case nextFreeDay(id: UUID, title: String)
+    /// Zwei Kolonnen tauschen am Tag ihre Baustellen (`POST /days/{day}/swap-crews`).
+    case swapCrews(day: String, crewA: UUID, crewB: UUID, text: String)
 
     /// Kurzer Satz für die Liste der vorgemerkten Änderungen.
     public var summary: String {
@@ -224,6 +228,8 @@ public enum PlanChange: Codable, Equatable, Sendable {
         case let .remove(_, title): "\(title) aus dem Plan nehmen"
         case let .order(_, day, ids, _): "Reihenfolge von \(ids.count) Baustellen (\(Self.dayText(day)))"
         case let .swap(_, _, _, _, _, _, text): text
+        case let .nextFreeDay(_, title): "\(title) auf den nächsten freien Tag legen"
+        case let .swapCrews(_, _, _, text): text
         }
     }
 
@@ -235,6 +241,8 @@ public enum PlanChange: Codable, Equatable, Sendable {
         case .remove: nil
         case let .order(_, day, _, _): day
         case let .swap(_, day, _, _, _, _, _): day
+        case .nextFreeDay: nil
+        case let .swapCrews(day, _, _, _): day
         }
     }
 
@@ -252,6 +260,13 @@ public struct PlanChangeResult: Equatable, Sendable {
     public let warnings: [String]
     /// Neuer Tagesplan, wenn der Endpunkt ihn liefert.
     public let plan: DayPlan?
+    /// Neuer Tag des Einsatzes (nächster freier Tag).
+    public var movedTo: String?
+}
+
+/// Antwort von `POST /planning/assignments/{id}/next-free-day` (nur der neue Tag wird gebraucht).
+private struct MovedAssignment: Decodable, Sendable {
+    let day: String
 }
 
 /// Ergebnis von `POST /planning/batch`.
@@ -365,7 +380,14 @@ extension AuthorizedClient {
                                    "toResourceId": JSONValue(toResource), "exchange": true]
             let plan: DayPlan = try await post("planning/crews/\(crewId.key)/days/\(day)/swap", body: JSONBody(value: body))
             return PlanChangeResult(warnings: [], plan: plan)
-        default:
+        case let .nextFreeDay(id, _):
+            let moved: MovedAssignment = try await post("planning/assignments/\(id.key)/next-free-day", body: JSONBody(value: [:]))
+            return PlanChangeResult(warnings: [], plan: nil, movedTo: moved.day)
+        case let .swapCrews(day, crewA, crewB, _):
+            let plan: DayPlan = try await post("planning/days/\(day)/swap-crews",
+                                               body: JSONBody(value: ["crewA": JSONValue(crewA), "crewB": JSONValue(crewB)]))
+            return PlanChangeResult(warnings: [], plan: plan)
+        case .assign, .move, .remove:
             let result: PlanBatchResult = try await post("planning/batch",
                                                          body: JSONBody(value: ["operations": .array(change.batchOperations ?? [])]))
             return PlanChangeResult(warnings: result.warnings, plan: nil)
@@ -405,7 +427,7 @@ extension PlanChange {
             return [.object(op)]
         case let .remove(id, _):
             return [["op": "delete", "id": JSONValue(id)]]
-        case .order, .swap:
+        case .order, .swap, .nextFreeDay, .swapCrews:
             return nil
         }
     }

@@ -11,6 +11,10 @@ on:
         description: "Screenshots auch auf dem iPad"
         type: boolean
         default: true
+      appstore:
+        description: "App-Store-Screenshots (iPhone 6,9 Zoll und iPad 13 Zoll, volle Auflösung)"
+        type: boolean
+        default: false
   push:
     branches: ["**", "!dependabot/**"]
     paths: ["ios/**", "contracts/**", "backend/src/**", ".github/workflows/ios.yml"]
@@ -132,7 +136,7 @@ jobs:
     env:
       DEVICE: ${{ matrix.device }}
       IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-mitte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,protokoll,bereich-tagebuch,bereich-raeume,raum,bereich-basisdaten,bereich-kontakte,bereich-notizen,kunden,kundenkarte,disposition,mehr,sync,wartung"
-      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,start,start-adresse,anmelden,heute-gross,bauakte-gross"
+      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,dispo-fahrzeug,dispo-kolonnen,dispo-freigabe,postfach,start,start-adresse,anmelden,heute-gross,bauakte-gross"
       IPAD_SCENES: "heute,baustellen,bauakte,bereich-kontakte,kunden,disposition,meldung-detail"
     steps:
       - uses: actions/checkout@v5
@@ -233,3 +237,85 @@ jobs:
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --quiet pillow
           "$RUNNER_TEMP/venv/bin/python" ios/scripts/shots-to-log.py "$RUNNER_TEMP/shots"
+
+  # App-Store-Screenshots in Originalauflösung (hell, Demomodus ohne Kennzeichnung): iPhone 6,9 Zoll (1320 × 2868) und
+  # iPad 13 Zoll (2064 × 2752). Nur von Hand (Eingabe „appstore“) oder mit „[appstore]“ in der Commit-Nachricht.
+  # Rahmen, Überschriften und die 6,5-Zoll-Fassung entstehen danach mit ImageMagick (ios/AppStore/README.md).
+  appstore:
+    name: App-Store-Screenshots ${{ matrix.device == 'ipad13' && 'iPad 13"' || 'iPhone 6,9"' }}
+    runs-on: macos-15
+    timeout-minutes: 25
+    if: (github.event_name == 'workflow_dispatch' && inputs.appstore) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[appstore]'))
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iphone69, ipad13]
+    env:
+      DEVICE: ${{ matrix.device }}
+      APPSTORE: "1"
+      APPSTORE_SCENES: "heute,bauakte,bereich-fotos,disposition,dispo-freigabe,erstbegehung,meldung-detail,kundenkarte"
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Xcode wählen, Simulator wählen
+        id: sim
+        run: |
+          XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
+          sudo xcode-select -s "$XCODE"
+          pick() {
+            xcrun simctl list devices available --json | jq -r --arg re "$1" '
+              [.devices | to_entries[]
+                | select(.key | test("SimRuntime\\.iOS-"))
+                | {version: (.key | capture("iOS-(?<maj>[0-9]+)-(?<min>[0-9]+)") | [(.maj | tonumber), (.min | tonumber)]),
+                   devices: [.value[] | select(.name | test($re))]}
+                | select(.devices | length > 0)]
+              | sort_by(.version) | last | .devices[0].udid // empty'
+          }
+          if [ "$DEVICE" = "ipad13" ]; then
+            UDID=$(pick '^iPad Pro 13'); [ -n "$UDID" ] || UDID=$(pick '^iPad Air 13')
+          else
+            UDID=$(pick '^iPhone 17 Pro Max$'); [ -n "$UDID" ] || UDID=$(pick '^iPhone 16 Pro Max$'); [ -n "$UDID" ] || UDID=$(pick '^iPhone [0-9]+ Pro Max$')
+          fi
+          test -n "$UDID"
+          xcrun simctl list devices available | grep "$UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
+
+      - name: Debug-Build für den Simulator
+        working-directory: ios
+        run: |
+          brew install xcodegen >/dev/null
+          xcodegen generate
+          set -o pipefail
+          xcodebuild build -project EstrichONE.xcodeproj -scheme EstrichONE -configuration Debug \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath "$RUNNER_TEMP/dd" \
+            CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= | tee "$RUNNER_TEMP/build.log" | grep -E "error:|\*\* BUILD" || true
+          grep -q "\*\* BUILD SUCCEEDED \*\*" "$RUNNER_TEMP/build.log"
+
+      - name: Screenshots aufnehmen
+        timeout-minutes: 12
+        env:
+          UDID: ${{ steps.sim.outputs.udid }}
+        run: |
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b >/dev/null
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+            --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$UDID" "$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/EstrichONE.app"
+          bash ios/scripts/screenshots.sh "$UDID" "$DEVICE" "$APPSTORE_SCENES" "$RUNNER_TEMP/shots" 0
+          for f in "$RUNNER_TEMP"/shots/*.png; do sips -g pixelWidth -g pixelHeight "$f" | tail -2 | tr '\n' ' '; echo " $(basename "$f")"; done
+
+      - name: Screenshots sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: appstore-${{ matrix.device }}
+          path: ${{ runner.temp }}/shots
+          retention-days: 30
+
+      # Volle Auflösung als AVIF (Qualität 90) ins Protokoll – Artefakte lassen sich nicht überall laden.
+      - name: Screenshots ins Protokoll
+        if: always()
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pillow
+          "$RUNNER_TEMP/venv/bin/python" ios/scripts/shots-to-log.py "$RUNNER_TEMP/shots" 4000 4000 90

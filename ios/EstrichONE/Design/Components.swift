@@ -180,7 +180,7 @@ struct Chip: View {
         HStack(spacing: 5) {
             if let dot { StatusDot(color: dot, size: 7) }
             if let symbol { Image(systemName: symbol).imageScale(.small).accessibilityHidden(true) }
-            Text(text).lineLimit(1)
+            Text(text).lineLimit(2).fixedSize(horizontal: false, vertical: true)
         }
         .font(Typo.labelStrong)
         .foregroundStyle(foreground)

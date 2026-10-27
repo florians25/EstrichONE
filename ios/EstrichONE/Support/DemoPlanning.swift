@@ -74,14 +74,15 @@ final class DemoPlanning {
     private var assignments: [String: Assignment] = [:]
     /// Freigegebener Stand: Einsatz → Version (heute um 6:30 freigegeben).
     private var released: [String: Int] = [:]
+    /// Freigegebene Tage: Zeitpunkt, von wem, Hinweis.
+    private var releases: [String: (at: Date, by: String, note: String?)] = [:]
     private let today: String
-    private let releasedAt: Date
 
     init(now: Date = Date()) {
         let calendar = Calendar.current
         func day(_ offset: Int) -> String { CalendarDay.string(calendar.date(byAdding: .day, value: offset, to: now) ?? now) }
         today = day(0)
-        releasedAt = calendar.date(bySettingHour: 6, minute: 30, second: 0, of: now) ?? now
+        releases[today] = (calendar.date(bySettingHour: 6, minute: 30, second: 0, of: now) ?? now, "Sabine Wagner (Büro)", nil)
         func add(_ number: Int, _ offset: Int, _ crew: Int?, _ site: String, _ start: String?, _ end: String?, _ activity: String,
                  notes: String? = nil, sequence: Int) {
             assignments[Self.id(number)] = Assignment(day: day(offset), crewId: crew.map { Self.id($0) }, bauakteId: site, start: start,
@@ -130,7 +131,7 @@ final class DemoPlanning {
     private func stop(_ id: String, _ a: Assignment, order: Int, crew: Crew?) -> [String: Any] {
         let site = sites[a.bauakteId]
         var change: Any = NSNull()
-        if a.day == today {
+        if releases[a.day] != nil {
             if released[id] == nil { change = "new" } else if released[id] != a.version { change = "changed" }
         }
         let members: [String] = crew.map { self.roster($0, a.day).members } ?? []
@@ -165,13 +166,13 @@ final class DemoPlanning {
         let free = people.keys.filter { !rostered.contains($0) && absence($0, on: day) == nil }.sorted { people[$0]! < people[$1]! }
         let absent = people.keys.filter { absence($0, on: day) != nil }
         let changed = assignments.filter { $0.value.day == day && released[$0.key] != $0.value.version }.count
-        let removed: [[String: Any]] = day == today
+        let removed: [[String: Any]] = day == today && releases[day] != nil
             ? released.keys.filter { assignments[$0] == nil }.map { ["assignmentId": $0, "version": 1, "title": "Anbau Weber", "crewName": "Kolonne Kaya",
                                                                    "activity": "Erstbegehung"] as [String: Any] }
             : []
         var release: Any = NSNull()
-        if day == today {
-            release = ["day": day, "releasedAt": APIDate.format(releasedAt), "releasedByName": "Sabine Wagner (Büro)", "note": NSNull(),
+        if let info = releases[day] {
+            release = ["day": day, "releasedAt": APIDate.format(info.at), "releasedByName": info.by, "note": info.note ?? NSNull(),
                        "changedCount": changed + removed.count, "removed": removed] as [String: Any]
         }
         return [
@@ -301,6 +302,67 @@ final class DemoPlanning {
             current.vehicles.append(to)
         }
         rosters["\(crewId)|\(day)"] = (current.members, current.vehicles)
+        return dayPlan(day)
+    }
+
+    // MARK: Freigabe, nächster freier Tag, Kolonnen tauschen
+
+    /// `POST /planning/releases`: hält den Stand der Tage `from`…`to` fest.
+    func release(_ body: [String: Any], by name: String) -> (Int, Any) {
+        guard let from = (body["from"] as? String).flatMap({ CalendarDay.date($0) }), let to = (body["to"] as? String).flatMap({ CalendarDay.date($0) }),
+              from <= to else {
+            return (422, ["status": 422, "title": "Ungültige Angaben", "detail": "Zeitraum prüfen.", "code": "VALIDATION_FAILED"])
+        }
+        let note = (body["note"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+        var infos: [[String: Any]] = []
+        var date = from
+        while date <= to, infos.count < 62 {
+            let day = CalendarDay.string(date)
+            releases[day] = (Date(), name, note)
+            for (key, value) in assignments where value.day == day { released[key] = value.version }
+            if day == today { released.removeValue(forKey: Self.id(3010)) }
+            infos.append(["day": day, "releasedAt": APIDate.format(Date()), "releasedByName": name, "note": note ?? NSNull(),
+                          "changedCount": 0, "removed": [Any]()])
+            date = Calendar.current.date(byAdding: .day, value: 1, to: date) ?? to.addingTimeInterval(86_400)
+        }
+        return (200, infos)
+    }
+
+    /// `DELETE /planning/releases/{day}`: Tag wieder als Entwurf.
+    func withdrawRelease(_ day: String) {
+        releases.removeValue(forKey: day)
+    }
+
+    /// `POST /planning/assignments/{id}/next-free-day`: nächster Arbeitstag (Mo–Fr), an dem die Kolonne nichts hat.
+    func nextFreeDay(_ id: String) -> (Int, [String: Any]) {
+        guard var a = assignments[id] else { return notFound(nil) }
+        guard let crew = a.crewId else {
+            return (422, ["status": 422, "title": "Ungültige Angaben", "detail": "Dieser Einsatz hat keine Kolonne.", "code": "VALIDATION_FAILED"])
+        }
+        let calendar = Calendar.current
+        var date = CalendarDay.date(a.day) ?? Date()
+        for _ in 0..<90 {
+            date = calendar.date(byAdding: .day, value: 1, to: date) ?? date
+            let day = CalendarDay.string(date)
+            guard !calendar.isDateInWeekend(date), !assignments.values.contains(where: { $0.crewId == crew && $0.day == day }) else { continue }
+            a.day = day
+            a.sequence = 1
+            a.version += 1
+            assignments[id] = a
+            return (200, ["id": id, "day": day, "bauakteId": a.bauakteId, "activity": a.activity, "crewId": crew, "version": a.version])
+        }
+        return (422, ["status": 422, "title": "Ungültige Angaben", "detail": "In den nächsten 90 Tagen ist kein Tag frei.", "code": "VALIDATION_FAILED"])
+    }
+
+    /// `POST /planning/days/{day}/swap-crews`: zwei Kolonnen tauschen am Tag ihre Baustellen.
+    func swapCrews(day: String, body: [String: Any]) -> [String: Any] {
+        let first = (body["crewA"] as? String)?.lowercased()
+        let second = (body["crewB"] as? String)?.lowercased()
+        for (key, var value) in assignments where value.day == day && (value.crewId == first || value.crewId == second) {
+            value.crewId = value.crewId == first ? second : first
+            value.version += 1
+            assignments[key] = value
+        }
         return dayPlan(day)
     }
 

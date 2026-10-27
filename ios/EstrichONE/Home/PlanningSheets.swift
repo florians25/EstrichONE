@@ -109,7 +109,7 @@ struct AssignStopSheet: View {
                                     VStack(alignment: .leading, spacing: 2) {
                                         Text(choice.title).font(Typo.body).foregroundStyle(Theme.textPrimary)
                                         if let subtitle = choice.subtitle {
-                                            Text(subtitle).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                                            Text(subtitle).font(Typo.meta).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
                                         }
                                     }
                                     Spacer()
@@ -325,31 +325,27 @@ struct SwapRosterSheet: View {
         NavigationStack {
             Form {
                 Section(vehicle ? "Bisheriges Fahrzeug" : "Wer fällt aus?") {
-                    Picker(vehicle ? "Fahrzeug" : "Mitarbeiter", selection: $outgoing) {
-                        Text(vehicle ? "Keins (zusätzlich)" : "Niemand (zusätzlich)").tag(UUID?.none)
-                        ForEach(outOptions) { option in
-                            Text(option.detail.map { "\(option.name) – \($0)" } ?? option.name).tag(UUID?.some(option.id))
-                        }
+                    choiceRow(vehicle ? "Keins (zusätzlich)" : "Niemand (zusätzlich)", detail: nil, selected: outgoing == nil) { outgoing = nil }
+                    ForEach(outOptions) { option in
+                        choiceRow(option.name, detail: option.detail, selected: outgoing == option.id) { outgoing = option.id }
                     }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
                 }
                 Section {
-                    Picker(vehicle ? "Fahrzeug" : "Mitarbeiter", selection: $incoming) {
-                        Text("Bitte wählen").tag(UUID?.none)
-                        ForEach(inOptions) { option in
-                            Text(option.detail.map { "\(option.name) – \($0)" } ?? option.name).tag(UUID?.some(option.id))
-                        }
+                    if inOptions.isEmpty {
+                        Text(vehicle ? "Keine weiteren Fahrzeuge oder Geräte." : "Niemand frei oder in einer anderen Kolonne verfügbar.")
+                            .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                     }
-                    .pickerStyle(.inline)
-                    .labelsHidden()
+                    ForEach(inOptions) { option in
+                        choiceRow(option.name, detail: option.detail, selected: incoming == option.id) { incoming = option.id }
+                    }
                 } header: {
                     Text(vehicle ? "Stattdessen" : "Wer kommt dafür?")
                 } footer: {
-                    Text(vehicle ? "Gilt nur für diesen Tag." : "Gilt nur für diesen Tag. Ist die Person in einer anderen Kolonne, wechselt die ausfallende Person im Gegenzug dorthin.")
+                    Text(vehicle ? "Gilt nur für diesen Tag. Ist das Fahrzeug bei einer anderen Kolonne, bekommt diese im Gegenzug das bisherige."
+                                 : "Gilt nur für diesen Tag. Ist die Person in einer anderen Kolonne, wechselt die ausfallende Person im Gegenzug dorthin.")
                 }
             }
-            .navigationTitle(vehicle ? "Fahrzeug" : "Besetzung")
+            .navigationTitle(vehicle ? "Fahrzeug tauschen" : "Mitarbeiter tauschen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }
@@ -365,6 +361,35 @@ struct SwapRosterSheet: View {
             }
         }
         .presentationDetents([.large])
+    }
+
+    /// Auswahlzeile: Name vollständig (mehrzeilig statt „…“), Zusatz darunter, Haken rechts.
+    private func choiceRow(_ name: String, detail: String?, selected: Bool, select: @escaping () -> Void) -> some View {
+        Button(action: select) {
+            HStack(spacing: Space.m) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(name)
+                        .font(Typo.body)
+                        .foregroundStyle(Theme.textPrimary)
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let detail {
+                        Text(detail)
+                            .font(Typo.subhead)
+                            .foregroundStyle(Theme.textSecondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Image(systemName: "checkmark")
+                    .font(.body.weight(.semibold))
+                    .foregroundStyle(Theme.accent)
+                    .opacity(selected ? 1 : 0)
+                    .accessibilityHidden(true)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityAddTraits(selected ? .isSelected : [])
     }
 
     private var outOptions: [Option] {
@@ -404,5 +429,181 @@ struct SwapRosterSheet: View {
         return vehicle
             ? .swap(crewId: crew.id, day: day, fromUserId: nil, toUserId: nil, fromResourceId: outgoing, toResourceId: incoming, text: text)
             : .swap(crewId: crew.id, day: day, fromUserId: outgoing, toUserId: incoming, fromResourceId: nil, toResourceId: nil, text: text)
+    }
+}
+
+/// Zwei Kolonnen tauschen für den Tag ihre Baustellen (`POST /planning/days/{day}/swap-crews`).
+struct SwapCrewsSheet: View {
+    let crew: DayPlan.Crew
+    let day: String
+    let plan: DayPlan
+    let done: (PlanChange?) -> Void
+
+    @State private var other: UUID?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("\(crew.name) hat") { stops(crew) }
+                Section {
+                    ForEach(plan.crews.filter { $0.id != crew.id }) { candidate in
+                        Button { other = candidate.id } label: {
+                            HStack(alignment: .top, spacing: Space.m) {
+                                RoundedRectangle(cornerRadius: 2, style: .continuous)
+                                    .fill(Color(hexString: candidate.color) ?? Theme.accent)
+                                    .frame(width: 4, height: 22)
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(candidate.name).font(Typo.bodyStrong).foregroundStyle(Theme.textPrimary)
+                                    stops(candidate)
+                                }
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                Image(systemName: "checkmark")
+                                    .font(.body.weight(.semibold))
+                                    .foregroundStyle(Theme.accent)
+                                    .opacity(other == candidate.id ? 1 : 0)
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("swapWith-\(candidate.name)")
+                    }
+                } header: {
+                    Text("Tauschen mit")
+                } footer: {
+                    Text("Die Baustellen beider Kolonnen wechseln für diesen Tag die Kolonne – Besetzung und Fahrzeuge bleiben.")
+                }
+            }
+            .navigationTitle("Kolonnen tauschen")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Tauschen") {
+                        guard let other, let target = plan.crew(other) else { return }
+                        done(.swapCrews(day: day, crewA: crew.id, crewB: other, text: "\(crew.name) ↔ \(target.name) tauschen"))
+                    }
+                    .disabled(other == nil)
+                    .accessibilityIdentifier("confirmSwapCrews")
+                }
+            }
+            .onAppear { if other == nil { other = plan.crews.first { $0.id != crew.id && !$0.stops.isEmpty }?.id } }
+        }
+        .presentationDetents([.large])
+    }
+
+    @ViewBuilder
+    private func stops(_ crew: DayPlan.Crew) -> some View {
+        if crew.stops.isEmpty {
+            Text("Keine Baustelle").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+        }
+        ForEach(crew.stops) { stop in
+            Text("\(stop.startText ?? "–") · \(stop.title)")
+                .font(Typo.subhead.monospacedDigit())
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+}
+
+/// Plan freigeben (Recht `planning.manage`): Zeitraum ab dem gewählten Tag, Hinweis für die Mitarbeiter, Änderungen seit
+/// der letzten Freigabe; Freigabe zurücknehmen, wenn der Tag schon freigegeben ist.
+struct ReleasePlanSheet: View {
+    enum Action {
+        case release(from: String, to: String, note: String?)
+        case withdraw(day: String)
+    }
+
+    let day: Date
+    let plan: DayPlan
+    let done: (Action?) -> Void
+
+    @State private var until = Date.now
+    @State private var note = ""
+    @State private var confirmWithdraw = false
+
+    private var changed: [(stop: DayPlan.Stop, crew: String)] {
+        plan.crews.flatMap { crew in crew.stops.filter(\.isChanged).map { (stop: $0, crew: crew.name) } }
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    if let release = plan.release {
+                        LabeledContent("Freigegeben", value: release.releasedAt.formatted(date: .abbreviated, time: .shortened))
+                        LabeledContent("Von", value: release.releasedByName)
+                        if let text = release.note { LabeledContent("Hinweis", value: text) }
+                    } else {
+                        Label("Noch nicht freigegeben – Mitarbeiter sehen den Plan als vorläufig.", systemImage: "clock")
+                            .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                    }
+                } header: {
+                    Text(day.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                }
+                Section {
+                    DatePicker("Freigeben bis", selection: $until, in: day..., displayedComponents: .date)
+                    TextField("Hinweis an die Mitarbeiter (optional)", text: $note, axis: .vertical)
+                        .lineLimit(2...5)
+                } header: {
+                    Text("Freigabe")
+                } footer: {
+                    Text("Hält den aktuellen Stand fest. Spätere Änderungen werden danach als „Neu“ bzw. „Geändert“ markiert.")
+                }
+                Section(plan.release == nil ? "Umfang" : "Änderungen seit der Freigabe") {
+                    if plan.release == nil {
+                        Text("\(plan.stopCount) \(plan.stopCount == 1 ? "Einsatz" : "Einsätze") in \(plan.crews.filter { !$0.stops.isEmpty }.count) Kolonnen")
+                            .font(Typo.subhead)
+                    } else if changed.isEmpty && (plan.release?.removed.isEmpty ?? true) {
+                        Label("Keine Änderungen", systemImage: "checkmark.circle").font(Typo.subhead).foregroundStyle(Theme.success)
+                    }
+                    if plan.release != nil {
+                        ForEach(changed, id: \.stop.id) { entry in
+                            changeRow(entry.stop.change == "new" ? "Neu" : "Geändert", "\(entry.stop.timeText) · \(entry.stop.title)",
+                                      "\(entry.crew) · \(entry.stop.activity)")
+                        }
+                        ForEach(plan.release?.removed ?? [], id: \.assignmentId) { removed in
+                            changeRow("Entfällt", removed.title, [removed.crewName, removed.activity].compactMap { $0 }.joined(separator: " · "))
+                        }
+                    }
+                }
+                if plan.release != nil {
+                    Section {
+                        Button("Freigabe zurücknehmen", role: .destructive) { confirmWithdraw = true }
+                            .accessibilityIdentifier("withdrawRelease")
+                    } footer: {
+                        Text("Der Tag gilt danach wieder als vorläufig.")
+                    }
+                }
+            }
+            .navigationTitle("Plan freigeben")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(plan.release == nil ? "Freigeben" : "Erneut freigeben") {
+                        done(.release(from: CalendarDay.string(day), to: CalendarDay.string(max(day, until)), note: note))
+                    }
+                    .accessibilityIdentifier("confirmRelease")
+                }
+            }
+            .confirmationDialog("Freigabe zurücknehmen?", isPresented: $confirmWithdraw, titleVisibility: .visible) {
+                Button("Zurücknehmen", role: .destructive) { done(.withdraw(day: CalendarDay.string(day))) }
+            }
+            .onAppear {
+                until = day
+                note = plan.release?.note ?? ""
+            }
+        }
+        .presentationDetents([.large])
+    }
+
+    private func changeRow(_ kind: String, _ title: String, _ detail: String) -> some View {
+        HStack(alignment: .top, spacing: Space.m) {
+            Chip(text: kind, tone: kind == "Entfällt" ? .danger : .accent)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(Typo.subheadStrong).fixedSize(horizontal: false, vertical: true)
+                Text(detail).font(Typo.meta).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
     }
 }

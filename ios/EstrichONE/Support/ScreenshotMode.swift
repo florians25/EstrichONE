@@ -15,6 +15,18 @@ extension EnvironmentValues {
     }
 }
 
+/// Aufnahmen für den App Store (Launch-Argument `-EstrichAppStore YES`, nur Debug-Builds): ohne Demo-Kennzeichnung,
+/// damit die Bilder die App wie im Betrieb zeigen. In Release-Builds immer `false`.
+enum ShotOptions {
+    static var hidesDemoMarks: Bool {
+        #if DEBUG
+        UserDefaults.standard.bool(forKey: "EstrichAppStore")
+        #else
+        false
+        #endif
+    }
+}
+
 #if DEBUG
 /// Automatische Screenshots für die visuelle Prüfung in der CI (ios/scripts/screenshots.sh). Nur in Debug-Builds.
 ///
@@ -96,6 +108,7 @@ final class ScreenshotDirector {
 
     /// Blätter und Seitenwechsel brauchen etwas länger, bis alles steht.
     private static func settleMilliseconds(_ scene: String) -> Int {
+        if scene == "postfach" { return 2600 }
         let sheets = ["erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-"]
         if scene.hasSuffix("-quer") { return 3200 }
         // Bereiche öffnen sich nach dem Laden der Bauakte per Navigation – die Animation braucht etwas länger.

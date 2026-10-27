@@ -25,6 +25,7 @@ struct HomeView: View {
     @State private var diaryFor: Bauakte?
     @State private var defectFor: Bauakte?
     @State private var toast: String?
+    @State private var push = PushCenter.shared
 
     private var isWide: Bool { sizeClass == .regular }
 
@@ -51,6 +52,7 @@ struct HomeView: View {
                             dateLine
                             notices
                         }
+                        quickAccess
                         if isWide {
                             HStack(alignment: .top, spacing: Space.xl) {
                                 VStack(alignment: .leading, spacing: Space.section) {
@@ -59,7 +61,6 @@ struct HomeView: View {
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 VStack(alignment: .leading, spacing: Space.section) {
-                                    metrics
                                     tasksSection
                                     tomorrowSection
                                     recentSection
@@ -68,7 +69,6 @@ struct HomeView: View {
                             }
                         } else {
                             todaySection
-                            metrics
                             dispatchSection
                             tasksSection
                             tomorrowSection
@@ -92,6 +92,9 @@ struct HomeView: View {
             .navigationTitle("Heute")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { syncButton }
+                ToolbarItem(placement: .primaryAction) {
+                    NotificationBell(count: push.unreadCount) { path.append(.inbox) }
+                }
             }
             .rootToolbar(showsMaintenance: false)
             .navigationDestination(for: HomeRoute.self) { route in
@@ -101,6 +104,7 @@ struct HomeView: View {
                 case .week: MyWeekView()
                 case .sync: if let sync = model.active?.sync { SyncView(sync: sync) }
                 case .dispatch: DispatchView()
+                case .inbox: NotificationInboxView()
                 }
             }
             .task(id: model.active?.sync?.revision) { await reload() }
@@ -148,7 +152,7 @@ struct HomeView: View {
 
     @ViewBuilder
     private var notices: some View {
-        if model.isDemo {
+        if model.isDemo, !ShotOptions.hidesDemoMarks {
             NoticeLine(tone: .info, text: "Demomodus: Beispieldaten, es wird nichts gesendet.", symbol: "play.rectangle.fill",
                        actionTitle: "Beenden") { model.requestDemo(false) }
         }
@@ -252,28 +256,38 @@ struct HomeView: View {
         }
     }
 
-    // MARK: Kennzahlen
+    // MARK: Schnellzugriff
 
-    private var metrics: some View {
-        let tasks = items.filter { $0.kind != .defect }.count
+    /// Die drei wichtigsten Wege des Tages als große Kacheln direkt oben (nicht erst unter „Mehr“):
+    /// Meine Aufgaben (mit Mängeln), Wer fährt wohin, Meine Woche.
+    private var quickAccess: some View {
+        let tasks = items.count
         let defects = items.filter { $0.kind == .defect }.count
-        return HStack(spacing: Space.s) {
+        let crews = dispatch?.board?.crewGroups.count ?? 0
+        return HStack(alignment: .top, spacing: Space.s) {
             Button { path.append(.tasks) } label: {
-                MetricTile(value: loaded ? "\(tasks)" : "–", label: tasks == 1 ? "offene Aufgabe" : "offene Aufgaben", symbol: "checklist")
+                QuickAccessTile(symbol: "checklist", title: "Meine Aufgaben", value: loaded ? "\(tasks)" : "–",
+                                detail: defects > 0 ? (defects == 1 ? "davon 1 Mangel" : "davon \(defects) Mängel") : "offen",
+                                detailTint: defects > 0 ? Theme.warning : Theme.textSecondary)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("myTasksTile")
-            Button { path.append(.tasks) } label: {
-                MetricTile(value: loaded ? "\(defects)" : "–", label: defects == 1 ? "offener Mangel" : "offene Mängel",
-                           symbol: "exclamationmark.triangle", tint: defects > 0 ? Theme.warning : Theme.accent)
+            Button { path.append(.dispatch) } label: {
+                QuickAccessTile(symbol: "car.2", title: "Wer fährt wohin", value: dispatch == nil ? "–" : "\(crews)",
+                                detail: crews == 1 ? "Kolonne heute" : "Kolonnen heute")
             }
             .buttonStyle(.plain)
+            .accessibilityIdentifier("dispatchTile")
             Button { path.append(.week) } label: {
-                MetricTile(value: planning == nil ? "–" : "\(weekCount)", label: "Einsätze in 7 Tagen", symbol: "calendar")
+                QuickAccessTile(symbol: "calendar", title: "Meine Woche", value: planning == nil ? "–" : "\(weekCount)",
+                                detail: weekCount == 1 ? "Einsatz in 7 Tagen" : "Einsätze in 7 Tagen")
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("myWeekTile")
         }
+        .fixedSize(horizontal: false, vertical: true)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("quickAccess")
     }
 
     // MARK: Wer fährt wohin
@@ -326,7 +340,7 @@ struct HomeView: View {
                         Text([slot?.startText ?? site.startText, site.title].compactMap { $0 }.joined(separator: " · "))
                             .font(Typo.subhead.monospacedDigit())
                             .foregroundStyle(Theme.textSecondary)
-                            .lineLimit(1)
+                            .fixedSize(horizontal: false, vertical: true)
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -381,9 +395,11 @@ struct HomeView: View {
                                     .foregroundStyle(Theme.textPrimary)
                                     .frame(width: 52, alignment: .leading)
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(item.bauakteTitle).font(Typo.body).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                                    Text(item.bauakteTitle).font(Typo.body).foregroundStyle(Theme.textPrimary)
+                                        .fixedSize(horizontal: false, vertical: true)
                                     Text([item.activity, item.crewName].compactMap { $0 }.joined(separator: " · "))
-                                        .font(Typo.subhead).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                                        .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                                        .fixedSize(horizontal: false, vertical: true)
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 Chevron()
@@ -478,5 +494,44 @@ struct HomeView: View {
 
     static func firstName(_ name: String) -> String {
         name.split(separator: " ").first.map(String.init) ?? name
+    }
+}
+
+/// Große Kachel im Schnellzugriff der Heute-Seite: Symbol, Zahl, Titel und kurzer Zusatz – Titel vollständig (zweizeilig).
+struct QuickAccessTile: View {
+    let symbol: String
+    let title: String
+    let value: String
+    let detail: String
+    var detailTint: Color = Theme.textSecondary
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(alignment: .center) {
+                IconBadge(symbol: symbol, size: 34)
+                Spacer(minLength: Space.xs)
+                Text(value)
+                    .font(Typo.metric)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(2, reservesSpace: true)
+                    .fixedSize(horizontal: false, vertical: true)
+                Text(detail)
+                    .font(Typo.meta)
+                    .foregroundStyle(detailTint)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(Space.m)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        .card(radius: Radius.l)
+        .contentShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        .accessibilityElement(children: .combine)
     }
 }

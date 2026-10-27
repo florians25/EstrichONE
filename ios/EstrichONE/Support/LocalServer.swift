@@ -37,6 +37,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private lazy var planning = DemoPlanning()
     /// Meldungen im Demomodus (Helpdesk).
     private lazy var helpdesk = DemoHelpdesk(userId: currentUserId)
+    /// Postfach im Demomodus (Benachrichtigungen).
+    private lazy var notifications = DemoNotifications()
 
     init(serverInfoStatus: Int, serverInfoBody: String, password: String, newDeviceStatus: String, demo: DemoContent? = nil) {
         self.serverInfoStatus = serverInfoStatus
@@ -197,6 +199,27 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         case "/api/v1/planning/batch" where demo != nil:
             let (status, result) = planning.batch(body)
             return json(status, result)
+        case "/api/v1/planning/releases" where demo != nil && method == "POST":
+            let (status, result) = planning.release(body, by: "Max Huber")
+            return json(status, result)
+        case let releasePath where demo != nil && method == "DELETE" && releasePath.hasPrefix("/api/v1/planning/releases/"):
+            planning.withdrawRelease(String(releasePath.dropFirst("/api/v1/planning/releases/".count)))
+            return (204, "")
+        case let movePath where demo != nil && movePath.hasPrefix("/api/v1/planning/assignments/") && movePath.hasSuffix("/next-free-day"):
+            let (status, result) = planning.nextFreeDay(movePath.split(separator: "/").map(String.init)[4].lowercased())
+            return json(status, result)
+        case let swapPath where demo != nil && swapPath.hasPrefix("/api/v1/planning/days/") && swapPath.hasSuffix("/swap-crews"):
+            return json(200, planning.swapCrews(day: swapPath.split(separator: "/").map(String.init)[4], body: body))
+        case "/api/v1/notifications" where demo != nil:
+            return json(200, notifications.inbox())
+        case "/api/v1/notifications/read-all" where demo != nil:
+            notifications.markAllRead()
+            return (204, "")
+        case let notificationPath where demo != nil && notificationPath.hasPrefix("/api/v1/notifications/devices"):
+            return (204, "")
+        case let notificationPath where demo != nil && notificationPath.hasPrefix("/api/v1/notifications/") && notificationPath.hasSuffix("/read"):
+            notifications.markRead(notificationPath.split(separator: "/").map(String.init)[3].lowercased())
+            return (204, "")
         case "/api/v1/planning/backlog" where demo != nil:
             return json(200, planning.backlog())
         case "/api/v1/planning/resources" where demo != nil:
