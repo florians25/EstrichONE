@@ -15,7 +15,7 @@ namespace EstrichOne.Api.Modules.Access;
 /// </summary>
 public sealed class AccessLetterService(IPdfBranding branding, IMailService mail, IOptions<EstrichOneOptions> options, TimeProvider clock)
 {
-    public string ServerUrl(HttpRequest request) => (options.Value.PublicUrl?.ToString() ?? $"{request.Scheme}://{request.Host}").TrimEnd('/');
+    public string ServerUrl(HttpRequest request) => PublicAddress.Resolve(options.Value, request);
 
     public async Task<byte[]> RenderAsync(User user, string password, string serverUrl, bool reset, CancellationToken cancellationToken,
         OnboardingDetails? onboarding = null)

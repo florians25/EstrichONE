@@ -219,7 +219,7 @@ internal static class DeviceEndpoints
 
     private static async Task<Ok<EnrollmentCodeResponse>> CreateEnrollmentCodeAsync(
         CreateEnrollmentCodeRequest request, EstrichOneDbContext db, ICurrentUser currentUser, IAuditLog audit,
-        IOptions<EstrichOneOptions> options, TimeProvider clock, CancellationToken cancellationToken)
+        IOptions<EstrichOneOptions> options, TimeProvider clock, HttpContext http, CancellationToken cancellationToken)
     {
         var (entity, code) = EnrollmentCode.Create(request.Kind, request.DeviceName, currentUser.UserId, clock.GetUtcNow());
         db.Add(entity);
@@ -228,9 +228,8 @@ internal static class DeviceEndpoints
         await db.SaveChangesAsync(cancellationToken);
 
         var kind = entity.Kind == DeviceKind.Pool ? "pool" : "personal";
-        var link = options.Value.PublicUrl is { } url
-            ? $"estrichone://enroll?v=1&server={Uri.EscapeDataString(url.ToString().TrimEnd('/'))}&code={code}&type={kind}"
-            : null;
+        var server = PublicAddress.Resolve(options.Value, http.Request);
+        var link = $"estrichone://enroll?v=1&server={Uri.EscapeDataString(server)}&code={code}&type={kind}";
         return TypedResults.Ok(new EnrollmentCodeResponse(code, entity.Kind, entity.DeviceName, entity.ExpiresAt, link));
     }
 
