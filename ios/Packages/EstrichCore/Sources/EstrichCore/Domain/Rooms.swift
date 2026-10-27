@@ -112,9 +112,17 @@ public enum RoomError: Error, Equatable, Sendable {
     case invalidThickness
     case invalidInsulation
     case storage
+    /// „Nur Ansicht“: Server länger nicht erreichbar, Ändern gesperrt.
+    case readOnly
+
+    static func from(_ error: any Error) -> Self {
+        if let error = error as? Self { return error }
+        return error is ReadOnlyModeError ? .readOnly : .storage
+    }
 
     public var message: String {
         switch self {
+        case .readOnly: ReadOnlyModeError.message
         case .nameRequired: "Bitte den Raum benennen (z. B. „Bad OG“)."
         case .invalidArea: "Die Fläche muss zwischen 0 und 100 000 m² liegen."
         case .invalidThickness: "Die Estrichdicke muss zwischen 10 und 300 mm liegen."
@@ -177,7 +185,7 @@ extension BauakteService {
         do {
             try await store.create(.room, id: id, data: local, payload: payload)
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }
@@ -191,7 +199,7 @@ extension BauakteService {
         do {
             try await store.update(.room, id: room.id, changes: changes)
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 
@@ -199,7 +207,7 @@ extension BauakteService {
         do {
             try await store.delete(.room, id: id)
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 }

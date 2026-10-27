@@ -4,7 +4,7 @@ import SwiftUI
 /// Reiter „Mehr“: Person und Abgleich oben, dann Planung, Hilfe, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     enum Route: String, Identifiable, Hashable {
-        case sync, tasks, dispatch, week, tickets, inbox
+        case sync, tasks, dispatch, week, tickets, inbox, chat
         var id: String { rawValue }
     }
 
@@ -52,6 +52,13 @@ struct MoreView: View {
                             detailTint: push.unreadCount > 0 ? Theme.accent : Theme.textSecondary)
                     }
                     .accessibilityIdentifier("inboxRow")
+                    if let chat = model.active?.sync?.chat, chat.isAvailable {
+                        Button { route = .chat } label: {
+                            row("Chat", symbol: "bubble.left.and.bubble.right", detail: chat.unreadCount > 0 ? "\(chat.unreadCount) neu" : nil,
+                                detailTint: Theme.accent)
+                        }
+                        .accessibilityIdentifier("chatRow")
+                    }
                 }
 
                 Section("Planung und Aufgaben") {
@@ -147,6 +154,7 @@ struct MoreView: View {
                 case .week: MyWeekView()
                 case .tickets: MyTicketsView()
                 case .inbox: NotificationInboxView()
+                case .chat: ChatListView()
                 }
             }
             .navigationDestination(for: HomeRoute.self) { route in
@@ -157,6 +165,7 @@ struct MoreView: View {
                 case .sync: if let sync = model.active?.sync { SyncView(sync: sync) }
                 case .dispatch: DispatchView()
                 case .inbox: NotificationInboxView()
+                case .chat: ChatListView()
                 }
             }
             .confirmationDialog("Abmelden?", isPresented: $confirmSignOut, titleVisibility: .visible) {
@@ -226,6 +235,7 @@ struct MoreView: View {
         case "sync": route = .sync
         case "mehr-zuruecksetzen": confirmReset = true
         case "postfach": route = .inbox
+        case "chat", "chat-verlauf": route = .chat
         case "disposition": route = .dispatch
         case "aufgaben": route = .tasks
         case "woche": route = .week

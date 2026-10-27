@@ -88,6 +88,14 @@ public enum BauakteError: Error, Equatable, Sendable {
     case cancellationReasonRequired
     case invalidPeriod
     case storage
+    /// „Nur Ansicht“: Server länger nicht erreichbar, Ändern gesperrt.
+    case readOnly
+
+    /// Fehler beim lokalen Speichern: „Nur Ansicht“ verständlich melden, sonst allgemein.
+    public static func from(_ error: any Error) -> BauakteError {
+        if let error = error as? BauakteError { return error }
+        return error is ReadOnlyModeError ? .readOnly : .storage
+    }
 
     public var message: String {
         switch self {
@@ -100,6 +108,7 @@ public enum BauakteError: Error, Equatable, Sendable {
         case let .tooLong(field): "Die Angabe „\(field)“ ist zu lang."
         case .cancellationReasonRequired: "Bitte einen Stornogrund angeben."
         case .storage: "Die Daten konnten auf diesem Gerät nicht gespeichert werden."
+        case .readOnly: ReadOnlyModeError.message
         }
     }
 }
@@ -166,7 +175,7 @@ public struct BauakteService: Sendable {
                 try await remember(customer, key: "recent_customers")
             }
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }
@@ -178,7 +187,7 @@ public struct BauakteService: Sendable {
         do {
             try await store.setStatus(status.rawValue, reason: status == .cancelled ? reason.map { String($0.prefix(500)) } : nil, of: id)
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 
@@ -187,7 +196,7 @@ public struct BauakteService: Sendable {
         do {
             try await store.update(.bauakte, id: id, changes: ["project": project.json])
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 
@@ -228,7 +237,7 @@ public struct BauakteService: Sendable {
             try await store.create(.contact, id: id, data: local, payload: payload)
             try await remember(id, key: "recent_customers")
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }
@@ -312,7 +321,7 @@ public struct BauakteService: Sendable {
         do {
             try await store.create(.note, id: id, data: local, payload: payload)
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }
@@ -363,7 +372,7 @@ public struct BauakteService: Sendable {
         do {
             try await store.create(.workItem, id: id, data: local, payload: payload)
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }
@@ -446,7 +455,7 @@ public struct BauakteService: Sendable {
         do {
             sha = try files.store(content, for: id)
         } catch {
-            throw .storage
+            throw .from(error)
         }
         let fileExtension = contentType == "application/pdf" ? "pdf" : (contentType == "image/png" ? "png" : "jpg")
         let payload: [String: JSONValue] = [
@@ -463,7 +472,7 @@ public struct BauakteService: Sendable {
             try await store.enqueueUpload(fileId: id, size: Int64(content.count), sha256: sha, contentType: contentType)
         } catch {
             files.remove(id)
-            throw .storage
+            throw .from(error)
         }
         return id
     }

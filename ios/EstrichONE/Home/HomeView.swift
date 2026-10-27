@@ -92,6 +92,11 @@ struct HomeView: View {
             .navigationTitle("Heute")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { syncButton }
+                if let chat = model.active?.sync?.chat, chat.isAvailable {
+                    ToolbarItem(placement: .primaryAction) {
+                        ChatToolbarButton(count: chat.unreadCount) { path.append(.chat) }
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     NotificationBell(count: shotScene == "heute-glocke" ? 128 : push.unreadCount) { path.append(.inbox) }
                 }
@@ -105,6 +110,7 @@ struct HomeView: View {
                 case .sync: if let sync = model.active?.sync { SyncView(sync: sync) }
                 case .dispatch: DispatchView()
                 case .inbox: NotificationInboxView()
+                case .chat: ChatListView()
                 }
             }
             .task(id: model.active?.sync?.revision) { await reload() }

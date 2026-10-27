@@ -232,9 +232,17 @@ public enum SiteRecordError: Error, Equatable, Sendable {
     case invalidMeasurement
     case fieldRequired(String)
     case storage
+    /// „Nur Ansicht“: Server länger nicht erreichbar, Ändern gesperrt.
+    case readOnly
+
+    static func from(_ error: any Error) -> Self {
+        if let error = error as? Self { return error }
+        return error is ReadOnlyModeError ? .readOnly : .storage
+    }
 
     public var message: String {
         switch self {
+        case .readOnly: ReadOnlyModeError.message
         case .textRequired: "Bitte beschreiben, was heute auf der Baustelle geschah."
         case .locationRequired: "Bitte den Messort (Raum) angeben."
         case .reasonRequired: "Bitte begründen, warum keine Erstbegehung notwendig ist."

@@ -21,12 +21,22 @@ final class SyncController {
     /// Hinweise des Betreibers (Ankündigungen, Wartung); zuletzt abgerufener Stand.
     private(set) var notices: SystemNotices?
 
+    /// Zustand von Backup- und Archivserver (rote/gelbe Hinweise), zuletzt abgerufener Stand.
+    private(set) var health: SystemHealth?
+    /// Chat-Modul: aktiv und erlaubt, ungelesene Nachrichten (`nil`, solange unbekannt).
+    private(set) var chat: ChatStatus?
+    /// „Nur Ansicht“ nach 5 Minuten ohne Server (Erfassen und Ändern gesperrt).
+    private(set) var isReadOnly = false
+    /// Zeitpunkt der letzten Serverantwort, die Übersteuerung „auf eigene Gefahr“ und ob der Server gerade fehlt.
+    private(set) var connection = ReadOnlyPolicy()
+
     /// Fortschritt laufender Uploads (Bytes und Anzahl Dateien), solange etwas hochgeladen wird.
     private(set) var uploadProgress: (sent: Int64, total: Int64, files: Int)?
 
     private var debounce: Task<Void, Never>?
     private var loop: Task<Void, Never>?
     private var progressPoll: Task<Void, Never>?
+    private var clock: Task<Void, Never>?
     /// Während eines Laufs kam eine lokale Änderung dazu: direkt danach noch einmal synchronisieren.
     private var rerunRequested = false
     private var consecutiveFailures = 0
@@ -38,9 +48,62 @@ final class SyncController {
         files = FileVault(directory: directory.appending(path: "files"), key: account.dataKey)
         engine = SyncEngine(store: store, transport: APISyncTransport(client: client), files: files)
         self.client = client
+        let store = store
+        Task { [weak self] in
+            // Letzte Serververbindung aus der vorigen Sitzung: „Nur Ansicht“ auch nach einem Neustart ohne Netz.
+            if let text = try? await store.meta(Self.lastContactKey), let date = APIDate.parse(text) {
+                self?.restoreLastContact(date)
+            }
+        }
+    }
+
+    private static let lastContactKey = "last_server_contact"
+
+    private func restoreLastContact(_ date: Date) {
+        if connection.lastContact == nil { connection.lastContact = date }
     }
 
     var isOffline: Bool { lastOutcome == .offline }
+
+    /// Wartung sperrt die App (nur Nicht-Administratoren bekommen 503 `MAINTENANCE`); die Outbox bleibt erhalten.
+    var isMaintenanceLocked: Bool {
+        if case .maintenance = lastOutcome { return true }
+        return false
+    }
+
+    /// Geplantes Ende der laufenden Wartung (aus den Systemhinweisen).
+    var maintenanceEnd: Date? { notices?.maintenance?.end }
+
+    /// Rote/gelbe Hinweise zu Backup- und Archivserver, die jetzt gelten.
+    var healthBanners: [HealthBanner] { health?.banners() ?? [] }
+
+    /// „Trotzdem offline arbeiten (auf eigene Gefahr)“ – gilt bis zum nächsten erfolgreichen Abgleich.
+    func overrideReadOnly() {
+        connection.overridden = true
+        DiagnosticsLog.shared.record("READ_ONLY_OVERRIDDEN")
+        Task { await evaluateConnection() }
+    }
+
+    /// Übersteuerung zurücknehmen: wieder „Nur Ansicht“, solange der Server fehlt.
+    func endReadOnlyOverride() {
+        connection.overridden = false
+        Task { await evaluateConnection() }
+    }
+
+    /// Lesemodus neu bewerten (alle 15 Sekunden und nach jedem Lauf) und an die lokale Datenhaltung weitergeben.
+    func evaluateConnection(now: Date = .now) async {
+        let readOnly = connection.isReadOnly(at: now)
+        if readOnly != isReadOnly {
+            isReadOnly = readOnly
+            DiagnosticsLog.shared.record(readOnly ? "READ_ONLY_ON" : "READ_ONLY_OFF")
+        }
+        await store.setReadOnly(readOnly)
+    }
+
+    /// Chat-Status neu laden (Modul an/aus, ungelesen).
+    func refreshChat() async {
+        if let fresh = try? await client.chatStatus() { chat = fresh }
+    }
 
     /// Server in Wartung: Synchronisation pausiert, Arbeiten auf dem Gerät geht weiter.
     var maintenanceMessage: String? {
@@ -53,10 +116,17 @@ final class SyncController {
     /// Hinweise neu laden (Start, Vordergrund, mit jeder Synchronisation). Ohne Verbindung bleibt der letzte Stand.
     func refreshNotices() async {
         if let fresh = try? await client.systemNotices() { notices = fresh }
+        do throws(APIError) {
+            health = try await client.systemHealth()
+        } catch {
+            // Ohne Verbindung bleibt der letzte Stand; Wartung zeigt keine Backup-Hinweise.
+            if error.code == "MAINTENANCE" { health = nil }
+        }
     }
 
     func start() {
         loop?.cancel()
+        startClock()
         loop = Task { [weak self] in
             // Jeder Lauf mit Sichtbarkeitsliste: Rechteentzug und neu sichtbare Bauakten (z. B. eingeplant) sofort.
             await self?.run()
@@ -71,8 +141,21 @@ final class SyncController {
     func stop() {
         loop?.cancel()
         debounce?.cancel()
+        clock?.cancel()
         loop = nil
         debounce = nil
+        clock = nil
+    }
+
+    /// Uhr für „Nur Ansicht“: Die 5 Minuten laufen auch ohne neuen Abgleich ab.
+    private func startClock() {
+        clock?.cancel()
+        clock = Task { [weak self] in
+            while !Task.isCancelled {
+                await self?.evaluateConnection()
+                try? await Task.sleep(for: .seconds(15))
+            }
+        }
     }
 
     /// Nach einer lokalen Änderung: entprellt synchronisieren.
@@ -120,8 +203,14 @@ final class SyncController {
             inMaintenance = false
             consecutiveFailures = outcome == .completed ? 0 : consecutiveFailures + 1
         }
+        connection.record(outcome, at: .now)
+        if let contact = connection.lastContact, !connection.unreachable {
+            try? await store.setMeta(Self.lastContactKey, APIDate.format(contact))
+        }
+        await evaluateConnection()
         await refreshSummary()
         await refreshNotices()
+        if !isMaintenanceLocked, !connection.unreachable { await refreshChat() }
         revision += 1
         isRunning = false
     }
@@ -190,14 +279,40 @@ final class SyncController {
             lastOutcome = .completed
         }
     }
+
+    /// Screenshot-Modus: Server seit `minutes` Minuten nicht erreichbar (`nil` = verbunden).
+    func simulateOutage(minutes: Double?) {
+        if let minutes {
+            connection = ReadOnlyPolicy(lastContact: Date.now.addingTimeInterval(-minutes * 60), unreachable: true)
+            lastOutcome = .offline
+        } else {
+            connection = ReadOnlyPolicy(lastContact: .now)
+            if lastOutcome == .offline { lastOutcome = .completed }
+        }
+        Task { await evaluateConnection() }
+    }
+
+    /// Screenshot-Modus: Zustand der Sicherung vorgeben.
+    func simulateHealth(_ value: SystemHealth?) {
+        health = value
+    }
     #endif
+
+    /// Demomodus: Der Server ist seit über 5 Minuten weg (Vorführung von „Nur Ansicht“, ohne 5 Minuten zu warten).
+    func backdateLastContact(minutes: Double) {
+        connection.lastContact = Date.now.addingTimeInterval(-minutes * 60)
+        Task { await evaluateConnection() }
+    }
 
     /// 2 Minuten im Normalfall; nach Fehlern 1 s, 2 s, 4 s … bis 15 Minuten, mit Zufallsanteil.
     private var nextDelay: Double {
-        if inMaintenance { return 120 }
+        // Wartung: alle 30 Sekunden nachfragen, damit die Sperre nach dem Ende zügig fällt.
+        if inMaintenance { return 30 }
         guard consecutiveFailures > 0 else { return 120 }
         let base = min(900, pow(2, Double(consecutiveFailures - 1)))
-        return base + Double.random(in: 0...(base / 2))
+        let delay = base + Double.random(in: 0...(base / 2))
+        // Ohne Verbindung höchstens 30 Sekunden: „Nur Ansicht“ endet bald nach der Rückkehr des Servers.
+        return connection.unreachable ? min(delay, 30) : delay
     }
 }
 

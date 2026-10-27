@@ -16,6 +16,20 @@ final class DemoNotifications {
     }
 
     private var items: [Item] = [
+        Item(id: "0193a1b2-de00-7000-8000-00000000a010", category: "chat", urgency: "normal", title: "Neue Nachricht von Sabine Wagner",
+             body: "Büro – Sabine Wagner", link: "/chat/\(DemoChat.office)", minutesAgo: 14, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a011", category: "defect", urgency: "high", title: "Mangel Ihnen zugewiesen",
+             body: "Randfuge Flur EG offen · Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)/maengel", minutesAgo: 25, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a012", category: "comment", urgency: "normal", title: "Kommentar in Ihrer Bauakte",
+             body: "Sabine Wagner: Bitte Fotos der Dämmung vor dem Einbau.", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 70, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a013", category: "approval", urgency: "normal", title: "Dokument zur Genehmigung",
+             body: "Aufmaß Haus B · MFH Isarpark", link: "/bauakten/\(DemoContent.isarpark)", minutesAgo: 110, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a014", category: "acceptance", urgency: "normal", title: "Abnahme unterschrieben",
+             body: "EFH Schneider · ohne Mängel", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 60 * 5, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a015", category: "leave", urgency: "low", title: "Urlaubsantrag genehmigt",
+             body: "Mo 16.11. bis Fr 20.11.", link: "/urlaub", minutesAgo: 60 * 8, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a016", category: "maintenance", urgency: "normal", title: "Wartung angekündigt",
+             body: "Samstag 6:00 bis 7:30 Uhr – EstrichONE ist dann nicht erreichbar.", link: "", minutesAgo: 60 * 20, read: true),
         Item(id: "0193a1b2-de00-7000-8000-00000000a001", category: "plan", urgency: "high", title: "Plan für morgen freigegeben",
              body: "Kolonne Huber: 07:30 Praxis Dr. Maier, 10:30 EFH Schneider.", link: "/planung/wer-faehrt-wohin?tag=morgen", minutesAgo: 12, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a002", category: "ticket", urgency: "normal", title: "Antwort zu T-2026-0007",

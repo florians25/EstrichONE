@@ -19,16 +19,18 @@ struct MainTabView: View {
     /// Meldungen mit neuer Antwort der IT (Abzeichen am Reiter „Mehr“).
     @State private var unreadTickets = 0
     @State private var push = PushCenter.shared
+    /// Erfassen im Modus „Nur Ansicht“: erst bestätigen lassen.
+    @State private var confirmsOverride = false
 
     var body: some View {
         TabView(selection: Binding(get: { selection }, set: { tab in
             if tab == .capture {
-                showsCaptureHub = true
+                if model.active?.sync?.isReadOnly == true { confirmsOverride = true } else { showsCaptureHub = true }
             } else {
                 selection = tab
             }
         })) {
-            HomeView { showsCaptureHub = true }
+            HomeView { if model.active?.sync?.isReadOnly == true { confirmsOverride = true } else { showsCaptureHub = true } }
                 .tabItem { Label("Heute", systemImage: "sun.max") }
                 .tag(Tab.today)
             BauaktenListView()
@@ -44,9 +46,14 @@ struct MainTabView: View {
             MoreView()
                 .tabItem { Label("Mehr", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
-                .badge(unreadTickets)
+                .badge(unreadTickets + (model.active?.sync?.chat?.isAvailable == true ? model.active?.sync?.chat?.unreadCount ?? 0 : 0))
         }
         .modifier(SidebarAdaptable())
+        // Backup-/Archiv-Störung und „Nur Ansicht“ über allen Reitern.
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let sync = model.active?.sync { SystemStatusStrip(sync: sync) }
+        }
+        .readOnlyOverrideDialog(isPresented: $confirmsOverride, sync: model.active?.sync)
         .sheet(isPresented: $showsCaptureHub) {
             CaptureHub { showsCaptureHub = false }
                 .presentationDragIndicator(.visible)
@@ -93,7 +100,7 @@ enum ShotRoute {
         switch prefix {
         case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "raum", "tagebuch", "mangel", "basisdaten", "protokoll", "kontakt": return .bauakten
         case "kunden", "kundenkarte": return .customers
-        case "mehr", "sync", "meldung", "aufgaben", "woche", "disposition", "dispo", "postfach": return .more
+        case "mehr", "sync", "meldung", "aufgaben", "woche", "disposition", "dispo", "postfach", "chat": return .more
         case "erfassen": return .capture
         default: return .today
         }
@@ -132,6 +139,7 @@ struct RootToolbar: ViewModifier {
                                 Button("Demo beenden", systemImage: "xmark.circle", role: .destructive) { model.requestDemo(false) }
                                     .accessibilityIdentifier("endDemoButton")
                             }
+                            DemoDisruptionMenu()
                         } label: {
                             Text("Demo")
                                 .font(.subheadline.weight(.semibold))
@@ -155,7 +163,7 @@ struct RootToolbar: ViewModifier {
             .alert("Wartung des Servers", isPresented: $explainsMaintenance) {
                 Button("OK", role: .cancel) {}
             } message: {
-                Text("\(maintenanceMessage ?? "Der Server wird gewartet.")\n\nSie können weiterarbeiten – alles bleibt auf dem Gerät und wird danach übertragen.")
+                Text("\(maintenanceMessage ?? "Der Server wird gewartet.")\n\nAls Administrator können Sie weiterarbeiten; für alle anderen ist die App bis zum Ende der Wartung gesperrt.")
             }
     }
 
@@ -169,4 +177,60 @@ struct RootToolbar: ViewModifier {
 
 extension View {
     func rootToolbar(showsMaintenance: Bool = true) -> some View { modifier(RootToolbar(showsMaintenance: showsMaintenance)) }
+}
+
+/// Demomodus: Störungen vorführen, wie sie im Betrieb auftreten können. Der Demoserver antwortet dann wie der echte.
+private struct DemoDisruptionMenu: View {
+    @Environment(AppModel.self) private var model
+    @State private var state = DemoSwitchState()
+
+    var body: some View {
+        Section("Störungen vorführen") {
+            Toggle("Backup-Server ausgefallen", systemImage: "externaldrive.badge.exclamationmark", isOn: binding(.backup))
+            Toggle("Archiv-Server ausgefallen", systemImage: "archivebox", isOn: binding(.archive))
+            Toggle("Server nicht erreichbar (Nur Ansicht)", systemImage: "wifi.slash", isOn: binding(.outage))
+            Button("Wartung starten (sperrt die App)", systemImage: "wrench.and.screwdriver") {
+                DemoSwitches.shared.startMaintenance()
+                refresh()
+            }
+        }
+    }
+
+    private enum Switch {
+        case backup, archive, outage
+    }
+
+    private func binding(_ which: Switch) -> Binding<Bool> {
+        Binding(get: {
+            _ = state.tick
+            switch which {
+            case .backup: return DemoSwitches.shared.backupDown
+            case .archive: return DemoSwitches.shared.archiveDown
+            case .outage: return DemoSwitches.shared.outage
+            }
+        }, set: { value in
+            switch which {
+            case .backup: DemoSwitches.shared.backupDown = value
+            case .archive: DemoSwitches.shared.archiveDown = value
+            case .outage: DemoSwitches.shared.outage = value
+            }
+            state.tick += 1
+            refresh(outageStarted: which == .outage && value)
+        })
+    }
+
+    private func refresh(outageStarted: Bool = false) {
+        guard let sync = model.active?.sync else { return }
+        Task {
+            await sync.run()
+            // „Nur Ansicht“ greift nach 5 Minuten ohne Server; für die Vorführung wird die Zeit vorgespult.
+            if outageStarted { sync.backdateLastContact(minutes: 6) }
+        }
+    }
+}
+
+@MainActor
+@Observable
+private final class DemoSwitchState {
+    var tick = 0
 }

@@ -114,6 +114,7 @@ final class AppSession {
     }
 
     private func switchDemo(_ start: Bool) {
+        DemoSwitches.shared.reset()
         UserDefaults.standard.set(start, forKey: AppEnvironment.demoFlagKey)
         if !start { model.resetApp() }
         model = AppModel(environment: start ? .demo() : .live())
@@ -189,6 +190,14 @@ struct RootView: View {
             // Screenshot-Modus: je Bildschirm frisch aufbauen (Blätter und Navigation zurücksetzen).
             MainTabView()
                 .id(shotScene ?? "")
+                // Wartung sperrt die App (nur Nicht-Administratoren bekommen 503 MAINTENANCE); die Outbox bleibt.
+                .overlay {
+                    if let sync = model.active?.sync, sync.isMaintenanceLocked {
+                        MaintenanceLockView(sync: sync)
+                            .transition(.opacity)
+                    }
+                }
+                .animation(.default, value: model.active?.sync?.isMaintenanceLocked)
         case let .blocked(end):
             BlockedView(end: end)
         }

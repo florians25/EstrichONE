@@ -207,7 +207,7 @@ extension BauakteService {
             try await remember(newId, key: "recent_customers")
             return newId
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 

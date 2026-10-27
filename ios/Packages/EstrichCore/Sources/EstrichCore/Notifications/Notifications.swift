@@ -93,6 +93,8 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
     /// Planung („Wer fährt wohin“) für einen Tag (`JJJJ-MM-TT`), `nil` = heute.
     case planning(day: String?)
     case tasks
+    /// Chat: Unterhaltung (`nil` = Liste der Unterhaltungen).
+    case chat(UUID?)
     case inbox
 
     public var id: Self { self }
@@ -107,6 +109,7 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         case let ("ticket"?, id?): self = .ticket(id)
         case ("assignment"?, _), ("plan"?, _), ("planday"?, _), ("planning"?, _): self = .planning(day: nil)
         case ("workitem"?, _), ("task"?, _): self = .tasks
+        case let ("chatconversation"?, id), let ("chat"?, id): self = .chat(id)
         case ("approval"?, _): self = .inbox
         default:
             guard link != nil else { return nil }
@@ -129,6 +132,7 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         case "helpdesk", "tickets", "ticket", "meldungen": return id.map { .ticket($0) }
         case "planung", "planning", "plan", "disposition": return .planning(day: day ?? parts.dropFirst().last.flatMap { $0.count == 10 ? $0 : nil })
         case "aufgaben", "tasks": return .tasks
+        case "chat", "nachrichten", "messenger": return .chat(id)
         case "benachrichtigungen", "notifications", "postfach": return .inbox
         default: return nil
         }

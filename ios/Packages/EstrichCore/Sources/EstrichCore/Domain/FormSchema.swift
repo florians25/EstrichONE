@@ -244,7 +244,7 @@ extension BauakteService {
         do {
             try await store.update(.bauakte, id: id, changes: ["project": .object(json)])
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 }

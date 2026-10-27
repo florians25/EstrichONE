@@ -167,16 +167,7 @@ struct NotificationRow: View {
         .accessibilityValue(item.isRead ? "" : "ungelesen")
     }
 
-    private var symbol: String {
-        switch item.category {
-        case "plan", "planning": "calendar.badge.clock"
-        case "ticket", "helpdesk": "bubble.left.and.text.bubble.right"
-        case "approval": "checkmark.seal"
-        case "assignment": "folder.badge.person.crop"
-        case "deadline": "clock.badge.exclamationmark"
-        default: "megaphone"
-        }
-    }
+    private var symbol: String { NotificationKind.symbol(for: item.category) }
 }
 
 /// Ziel einer Benachrichtigung: Bauakte, Meldung, Planung des Tages, Aufgaben oder Postfach.
@@ -189,6 +180,8 @@ struct NotificationTargetView: View {
         case let .ticket(id): TicketDetailView(ticketId: id)
         case let .planning(day): DispatchView(initialDay: Self.date(day))
         case .tasks: MyTasksView()
+        case let .chat(id?): ChatConversationView(conversationId: id)
+        case .chat(nil): ChatListView()
         case .inbox: NotificationInboxView()
         }
     }
@@ -262,5 +255,32 @@ struct CountBadge: View {
             .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 1.2).padding(-1.2))
             .accessibilityHidden(true)
             .transition(.scale.combined(with: .opacity))
+    }
+}
+
+/// Symbol je Art der Benachrichtigung (docs/benachrichtigungen.md). Unbekannte Arten zeigen das Megafon.
+enum NotificationKind {
+    static func symbol(for category: String?) -> String {
+        let key = (category ?? "").lowercased()
+        switch key {
+        case "plan", "planning", "planchange", "planning.changed", "planning.released": return "calendar.badge.clock"
+        case "ticket", "helpdesk": return "bubble.left.and.text.bubble.right"
+        case "chat", "chatmessage", "chat.message": return "bubble.left.and.bubble.right"
+        case "approval", "approval.requested", "approval.decided", "document.approval": return "checkmark.seal"
+        case "assignment", "bauakte", "bauakte.assigned": return "folder.badge.person.crop"
+        case "defect", "defect.assigned", "mangel": return "exclamationmark.triangle"
+        case "comment", "reply", "bauakte.comment": return "text.bubble"
+        case "acceptance", "acceptance.signed", "abnahme": return "signature"
+        case "leave", "absence", "vacation", "leave.decided": return "sun.max"
+        case "maintenance", "maintenance.announced": return "wrench.and.screwdriver"
+        case "backup", "backup.failed", "backup.succeeded", "archive", "archive.failed", "system": return "externaldrive.badge.checkmark"
+        case "deadline": return "clock.badge.exclamationmark"
+        default:
+            if key.hasPrefix("backup") || key.hasPrefix("archive") { return "externaldrive" }
+            if key.hasPrefix("chat") { return "bubble.left.and.bubble.right" }
+            if key.hasPrefix("defect") { return "exclamationmark.triangle" }
+            if key.hasPrefix("leave") { return "sun.max" }
+            return "megaphone"
+        }
     }
 }

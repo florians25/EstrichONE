@@ -225,7 +225,7 @@ extension BauakteService {
             try await store.save(.bauakteParty, id: partyId, payload: edit.fields.merging(["bauakteId": JSONValue(bauakteId)]) { $1 })
             return partyId
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 
@@ -234,7 +234,7 @@ extension BauakteService {
         do {
             try await store.delete(.bauakteParty, id: id)
         } catch {
-            throw .storage
+            throw .from(error)
         }
     }
 

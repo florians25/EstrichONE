@@ -52,6 +52,7 @@ final class ScreenshotDirector {
 
     /// Frischer Demomodus: Einstellungen, Daten und Geräteschlüssel der Demo löschen.
     static func resetDemoData() {
+        DemoSwitches.shared.reset()
         let suite = "de.estrichone.demo"
         UserDefaults().removePersistentDomain(forName: suite)
         try? FileManager.default.removeItem(at: URL.applicationSupportDirectory.appending(path: "EstrichONE-Demo", directoryHint: .isDirectory))
@@ -106,6 +107,17 @@ final class ScreenshotDirector {
         } else {
             sync?.simulateMaintenance(nil)
         }
+        // „stoerung“: Backup- und Archivserver ausgefallen, Server seit 12 Minuten nicht erreichbar (Nur Ansicht).
+        if scene.hasPrefix("stoerung") {
+            let now = Date()
+            sync?.simulateHealth(SystemHealth(
+                backupTarget: .init(configured: true, reachable: false, lastSuccessAt: now.addingTimeInterval(-31 * 3600), severity: "critical"),
+                archive: .init(configured: true, reachable: false, lastSuccessAt: now.addingTimeInterval(-9 * 86400), severity: "warning")))
+            sync?.simulateOutage(minutes: 12)
+        } else {
+            sync?.simulateHealth(nil)
+            sync?.simulateOutage(minutes: nil)
+        }
     }
 
     /// Blätter und Seitenwechsel brauchen etwas länger, bis alles steht.
@@ -114,7 +126,7 @@ final class ScreenshotDirector {
         let sheets = ["erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-"]
         if scene.hasSuffix("-quer") { return 3200 }
         // Bereiche öffnen sich nach dem Laden der Bauakte per Navigation – die Animation braucht etwas länger.
-        if scene.hasPrefix("bereich-") || scene == "protokoll" { return 2800 }
+        if scene.hasPrefix("bereich-") || scene == "protokoll" || scene.hasPrefix("chat") { return 2800 }
         if scene == "kontakt-neu" || scene.hasPrefix("dispo-") { return 3400 }
         return sheets.contains { scene.hasPrefix($0) } ? 2800 : 2000
     }

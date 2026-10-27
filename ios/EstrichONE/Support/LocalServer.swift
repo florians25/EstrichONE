@@ -39,6 +39,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private lazy var helpdesk = DemoHelpdesk(userId: currentUserId)
     /// Postfach im Demomodus (Benachrichtigungen).
     private lazy var notifications = DemoNotifications()
+    /// Chat im Demomodus.
+    private lazy var chat = DemoChat(userId: currentUserId)
 
     init(serverInfoStatus: Int, serverInfoBody: String, password: String, newDeviceStatus: String, demo: DemoContent? = nil) {
         self.serverInfoStatus = serverInfoStatus
@@ -57,6 +59,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     func send(_ request: URLRequest) async throws -> (Data, HTTPURLResponse) {
         try await Task.sleep(for: .milliseconds(150))
         let path = request.url?.path() ?? ""
+        if demo != nil, let interrupted = try demoDisruption(path, request: request) { return interrupted }
         let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
         if let raw = demoFile(path, method: request.httpMethod ?? "GET") {
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
@@ -74,6 +77,18 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         }
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
         return (Data(json.utf8), response)
+    }
+
+    /// Vorgeführte Störungen (Menü „Demo“): Server nicht erreichbar bzw. Wartung (503 `MAINTENANCE`, wie MaintenanceGate).
+    private func demoDisruption(_ path: String, request: URLRequest) throws -> (Data, HTTPURLResponse)? {
+        let switches = DemoSwitches.shared
+        if switches.outage { throw URLError(.cannotConnectToHost) }
+        guard switches.maintenance else { return nil }
+        let open = ["/api/v1/system/notices", "/api/v1/server-info", "/api/v1/auth"]
+        guard !open.contains(where: { path.hasPrefix($0) }) else { return nil }
+        let body = #"{"status":503,"title":"Wartungsarbeiten","detail":"Update auf Version 0.2 – EstrichONE ist in Kürze wieder verfügbar.","code":"MAINTENANCE","endsAt":"\#(APIDate.format(switches.maintenanceEndsAt))"}"#
+        let response = HTTPURLResponse(url: request.url!, statusCode: 503, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/problem+json"])!
+        return (Data(body.utf8), response)
     }
 
     /// Inhalte der Beispieldateien und das Bauakte-PDF im Demomodus.
@@ -210,6 +225,30 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return json(status, result)
         case let swapPath where demo != nil && swapPath.hasPrefix("/api/v1/planning/days/") && swapPath.hasSuffix("/swap-crews"):
             return json(200, planning.swapCrews(day: swapPath.split(separator: "/").map(String.init)[4], body: body))
+        case "/api/v1/system/health-banner" where demo != nil:
+            return json(200, DemoSwitches.shared.health())
+        case "/api/v1/system/notices" where demo != nil && DemoSwitches.shared.maintenance:
+            let end = APIDate.format(DemoSwitches.shared.maintenanceEndsAt)
+            return (200, #"{"announcements":[],"maintenance":{"active":true,"message":"Update auf Version 0.2 – EstrichONE ist in Kürze wieder verfügbar.","startsAt":"\#(APIDate.format(Date()))","endsAt":"\#(end)","adminsMayWork":true},"serverTime":"\#(APIDate.format(Date()))"}"#)
+        case "/api/v1/chat/status" where demo != nil:
+            return json(200, chat.status())
+        case "/api/v1/chat/conversations" where demo != nil:
+            return json(200, chat.list())
+        case let chatPath where demo != nil && chatPath.hasPrefix("/api/v1/chat/conversations/"):
+            // /api/v1/chat/conversations/{id}/messages|read
+            let parts = chatPath.split(separator: "/").map(String.init)
+            guard parts.count == 6 else { return problem(404, "NOT_FOUND", "Nicht gefunden") }
+            let id = parts[4].lowercased()
+            switch (parts[5], method) {
+            case ("messages", "POST"):
+                let (status, message) = chat.send(body["text"] as? String ?? "", to: id)
+                return json(status, message)
+            case ("messages", _): return json(200, chat.messages(of: id))
+            case ("read", _):
+                chat.markRead(id)
+                return (204, "")
+            default: return problem(404, "NOT_FOUND", "Nicht gefunden")
+            }
         case "/api/v1/notifications" where demo != nil:
             return json(200, notifications.inbox())
         case "/api/v1/notifications/read-all" where demo != nil:

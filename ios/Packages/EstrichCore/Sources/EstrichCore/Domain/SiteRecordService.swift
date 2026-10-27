@@ -24,7 +24,7 @@ extension BauakteService {
         do {
             try await store.create(.diaryEntry, id: id, data: local, payload: payload)
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }
@@ -104,7 +104,7 @@ extension BauakteService {
         do {
             try await store.create(.inspection, id: id, data: local, payload: payload.object ?? [:])
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }

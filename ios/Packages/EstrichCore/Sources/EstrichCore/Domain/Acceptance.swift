@@ -158,9 +158,17 @@ public enum AcceptanceError: Error, Equatable, Sendable {
     case reservationsRequired
     case invalidSignature
     case storage
+    /// „Nur Ansicht“: Server länger nicht erreichbar, Ändern gesperrt.
+    case readOnly
+
+    static func from(_ error: any Error) -> Self {
+        if let error = error as? Self { return error }
+        return error is ReadOnlyModeError ? .readOnly : .storage
+    }
 
     public var message: String {
         switch self {
+        case .readOnly: ReadOnlyModeError.message
         case .resultRequired: "Bitte das Ergebnis der Abnahme wählen."
         case .reservationsRequired: "Bei Vorbehalt oder Verweigerung bitte mindestens einen Mangel oder eine Notiz erfassen."
         case .invalidSignature: "Die Unterschrift ist zu groß oder kein PNG-Bild."
@@ -196,7 +204,7 @@ extension BauakteService {
             do throws(BauakteError) {
                 defectIds.append(try await addWorkItem(NewWorkItem(kind: .defect, title: defect.title, dueDate: defect.dueDate, bauakteId: bauakteId)))
             } catch {
-                throw .storage
+                throw .from(error)
             }
         }
         func text(_ value: String?) -> JSONValue {
@@ -225,7 +233,7 @@ extension BauakteService {
         do {
             try await store.create(.acceptance, id: id, data: local, payload: payload)
         } catch {
-            throw .storage
+            throw .from(error)
         }
         return id
     }

@@ -107,10 +107,22 @@ public actor LocalStore {
 
     // MARK: Lokal ändern
 
+    /// „Nur Ansicht“ (`ReadOnlyPolicy`): neue Änderungen werden abgewiesen, der Abgleich läuft weiter.
+    public private(set) var isReadOnly = false
+
+    public func setReadOnly(_ readOnly: Bool) {
+        isReadOnly = readOnly
+    }
+
+    private func ensureWritable() throws {
+        if isReadOnly { throw ReadOnlyModeError() }
+    }
+
     /// Legt einen Datensatz an. `data` ist die lokale Darstellung (wie vom Server), `payload` die Nutzdaten der
     /// Operation `<typ>.create` bzw. `file.announce`.
     public func create(_ type: EntityType, id: UUID, data: JSONValue, payload: [String: JSONValue],
                        operation: String? = nil) throws {
+        try ensureWritable()
         try db.write { db in
             try db.execute("""
                 INSERT INTO entity (type, id, server, local, parent_id, search, sort_key) VALUES (?, ?, NULL, ?, ?, ?, ?)
@@ -124,6 +136,7 @@ public actor LocalStore {
     /// Änderungen werden zusammengefasst; je Feld bleibt der älteste `base`-Wert erhalten.
     public func update(_ type: EntityType, id: UUID, changes: [String: JSONValue]) throws {
         guard !changes.isEmpty else { return }
+        try ensureWritable()
         try db.write { db in
             guard let row = try db.query("SELECT * FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)]).first,
                   let localText = row["local"]?.string else { return }
@@ -160,6 +173,7 @@ public actor LocalStore {
     /// Status einer Bauakte ändern bzw. stornieren (`bauakte.setStatus`). `baseStatus` ist der Stand des Geräts –
     /// der Server lehnt ab, wenn sich der Status inzwischen anders geändert hat.
     public func setStatus(_ status: String, reason: String?, of bauakteId: UUID) throws {
+        try ensureWritable()
         try db.write { db in
             guard let row = try db.query("SELECT * FROM entity WHERE type = 'bauakte' AND id = ?", [.text(bauakteId.key)]).first,
                   let localText = row["local"]?.string else { return }
@@ -175,6 +189,7 @@ public actor LocalStore {
     /// Eine noch nicht gesendete Speicherung desselben Datensatzes wird ersetzt; `baseVersion` ist der zuletzt bekannte
     /// Serverstand (der Server lehnt ab, wenn inzwischen jemand anderes geändert hat).
     public func save(_ type: EntityType, id: UUID, payload: [String: JSONValue]) throws {
+        try ensureWritable()
         let operation = "\(type.operationPrefix).save"
         try db.write { db in
             let row = try db.query("SELECT server, local FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)]).first
@@ -205,6 +220,7 @@ public actor LocalStore {
 
     /// Löscht einen Datensatz. Nie gesendete Anlagen verschwinden ohne Serverkontakt.
     public func delete(_ type: EntityType, id: UUID) throws {
+        try ensureWritable()
         try db.write { db in
             let unsentCreate = try db.query("""
                 SELECT seq FROM outbox WHERE entity_type = ? AND entity_id = ? AND state = 'pending'
@@ -435,6 +451,7 @@ public actor LocalStore {
 
     /// Datei für den Upload vormerken (nach `create(.file, …, operation: "file.announce")`).
     public func enqueueUpload(fileId: UUID, size: Int64, sha256: String, contentType: String) throws {
+        try ensureWritable()
         try db.write { db in
             try db.execute("""
                 INSERT OR REPLACE INTO upload (file_id, size, sha256, content_type, state, created_at) VALUES (?, ?, ?, ?, 'waiting', ?)

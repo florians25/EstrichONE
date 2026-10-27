@@ -238,6 +238,8 @@ struct CameraView: View {
             lastThumbnail = await Task.detached { UIImage(data: data)?.preparingThumbnail(of: CGSize(width: 120, height: 120)) }.value
             errorMessage = nil
             model.active?.sync?.localChangeMade()
+        } catch is ReadOnlyModeError {
+            errorMessage = ReadOnlyModeError.message
         } catch {
             errorMessage = "Das Foto konnte nicht gespeichert werden. Bitte freien Speicher prüfen."
         }
