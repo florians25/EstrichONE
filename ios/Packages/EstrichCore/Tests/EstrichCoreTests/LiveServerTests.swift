@@ -423,4 +423,80 @@ struct LiveServerTests {
         let offline = try #require(await planning.cached())
         #expect(offline.assignments(on: today) == mine)
     }
+
+    @Test("Kontakte der Bauakte über den echten Server: offline anlegen, Hauptkontakt wechseln, entfernen (bauakteParty.save/delete)")
+    func partiesLive() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let bauakte = try await service.create(NewBauakte(title: "Kontakte Integrationstest", city: "Landshut"))
+        let manager = try await service.saveParty(PartyEdit(role: .siteManager, name: "Anna Lechner", company: "Lechner Bau", phone: "0871 1",
+                                                            mobile: "0171 2", email: "a@lechner.example", isPrimary: true), bauakteId: bauakte)
+        let site = try await service.saveParty(PartyEdit(role: .siteContact, name: "Poldi Huber", street: "Ahornweg 3", postalCode: "84028",
+                                                         city: "Landshut"), bauakteId: bauakte)
+        #expect(await device.engine.synchronize() == .completed)
+        #expect(try await device.store.operations().isEmpty)
+
+        struct Party: Decodable { let id: UUID; let name: String; let isPrimary: Bool; let mobile: String?; let address: String? }
+        var parties: [Party] = try await device.client.get("bauakten/\(bauakte.key)/parties")
+        #expect(parties.first?.id == manager && parties.first?.isPrimary == true && parties.first?.mobile == "0171 2")
+        #expect(parties.first { $0.id == site }?.address?.contains("Ahornweg 3") == true)
+
+        var edit = PartyEdit(try #require(try await device.store.entity(.bauakteParty, site)))
+        edit.isPrimary = true
+        try await service.saveParty(edit, id: site, bauakteId: bauakte)
+        #expect(await device.engine.synchronize() == .completed)
+        parties = try await device.client.get("bauakten/\(bauakte.key)/parties")
+        #expect(parties.first?.id == site && parties.filter(\.isPrimary).count == 1)
+        #expect(try await service.parties(of: bauakte).first?.id == site)
+
+        try await service.deleteParty(manager)
+        #expect(await device.engine.synchronize() == .completed)
+        parties = try await device.client.get("bauakten/\(bauakte.key)/parties")
+        #expect(parties.map(\.id) == [site])
+    }
+
+    @Test("Schnelldisposition über den echten Server: zuweisen mit Konfliktprüfung, Reihenfolge, verschieben, entfernen")
+    func quickDispatchLive() async throws {
+        let device = try await syncingAccount()
+        let service = BauakteService(store: device.store, files: device.files, userId: device.userId)
+        let first = try await service.create(NewBauakte(title: "Dispo A Integrationstest", city: "Landshut"))
+        let second = try await service.create(NewBauakte(title: "Dispo B Integrationstest", city: "Ergolding"))
+        #expect(await device.engine.synchronize() == .completed)
+
+        let crewId = UUID.v7()
+        let crewBody = try JSONSerialization.data(withJSONObject: [
+            "name": "Kolonne CI \(crewId.key.prefix(4))", "leaderUserId": device.userId.key, "memberUserIds": [device.userId.key], "color": "#0062CC",
+        ])
+        let _: JSONValue = try await device.client.send(APIRequest(method: "PUT", path: "planning/crews/\(crewId.key)", body: crewBody,
+                                                                   contentType: "application/json"))
+        let calendar = Calendar.current
+        let day = CalendarDay.string(calendar.date(byAdding: .day, value: 20, to: Date())!)
+        let next = CalendarDay.string(calendar.date(byAdding: .day, value: 21, to: Date())!)
+        let a = UUID.v7()
+        let b = UUID.v7()
+        let assignA = PlanChange.assign(id: a, bauakteId: first, title: "Dispo A", crewId: crewId, day: day, activity: "Estrich einbringen",
+                                        startTime: "07:00:00", endTime: "11:00:00")
+        _ = try await device.client.check(assignA)
+        _ = try await device.client.apply(assignA)
+        _ = try await device.client.apply(.assign(id: b, bauakteId: second, title: "Dispo B", crewId: crewId, day: day, activity: "Erstbegehung",
+                                                   startTime: "12:00:00", endTime: nil))
+        var plan = try await device.client.dayPlan(day)
+        var crew = try #require(plan.crew(crewId))
+        #expect(crew.stops.map(\.assignmentId) == [a, b] && crew.stops.first?.timeText == "07:00–11:00")
+        #expect(plan.canPlan && crew.isMine)
+
+        // Reihenfolge tauschen, Uhrzeiten bleiben in der Reihenfolge.
+        let ordered = try await device.client.apply(.order(crewId: crewId, day: day, assignmentIds: [b, a], startTimes: ["07:00:00", "12:00:00"]))
+        crew = try #require(ordered.plan?.crew(crewId))
+        #expect(crew.stops.map(\.assignmentId) == [b, a] && crew.stops.first?.startText == "07:00")
+
+        _ = try await device.client.apply(.move(id: a, title: "Dispo A", day: next, crewId: nil, startTime: "08:00:00", endTime: nil, setTime: true))
+        plan = try await device.client.dayPlan(next)
+        #expect(plan.crew(crewId)?.stops.first { $0.assignmentId == a }?.startText == "08:00")
+
+        _ = try await device.client.apply(.remove(id: a, title: "Dispo A"))
+        _ = try await device.client.apply(.remove(id: b, title: "Dispo B"))
+        #expect(try await device.client.dayPlan(next).crew(crewId)?.stops.isEmpty ?? true)
+        #expect(try await device.client.dayPlan(day).crew(crewId)?.stops.isEmpty ?? true)
+    }
 }
