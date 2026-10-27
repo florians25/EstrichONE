@@ -132,7 +132,7 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             {
                 await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Sicherung fehlgeschlagen",
                     $"{run.Message} ({Local(run.At)}). Bitte im Backup Center prüfen.", link, "backup", null, NotificationUrgency.High,
-                    $"backup:run:{run.At:O}"), cancellationToken);
+                    $"backup:run:{run.At:O}", NotificationEvents.BackupFailed), cancellationToken);
             }
             else if (backup.NotifyOnSuccess)
             {
@@ -143,7 +143,7 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
                     run.Targets is { } t ? $"{t} Ziel{(t == 1 ? "" : "e")}" : null,
                 }.Where(v => v is not null));
                 await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Sicherung erfolgreich",
-                    $"{Local(run.At)} · {details}", link, "backup", null, NotificationUrgency.Low, $"backup:run:{run.At:O}"), cancellationToken);
+                    $"{Local(run.At)} · {details}", link, "backup", null, NotificationUrgency.Low, $"backup:run:{run.At:O}", NotificationEvents.BackupSucceeded), cancellationToken);
             }
         }
         else if (backup.LastRun is { } seen && _lastRunNotified is null)
@@ -158,14 +158,14 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             var day = (int)Math.Max(0, (now - anchor).TotalDays);
             await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Backup-Server ausgefallen oder nicht erreichbar",
                 $"Letztes Backup {Local(health.Backup.LastSuccessAt)}. Backup-Ziele und Backup-Dienst prüfen.", link, "backup", null,
-                NotificationUrgency.High, $"backup:outage:{anchor:O}:{day}"), cancellationToken);
+                NotificationUrgency.High, $"backup:outage:{anchor:O}:{day}", NotificationEvents.BackupTargetDown), cancellationToken);
             _backupOutageNotified = true;
         }
         else if (_backupOutageNotified)
         {
             _backupOutageNotified = false;
             await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Backup wieder in Ordnung",
-                $"Letztes Backup {Local(health.Backup.LastSuccessAt)}.", link, "backup", null, NotificationUrgency.Low), cancellationToken);
+                $"Letztes Backup {Local(health.Backup.LastSuccessAt)}.", link, "backup", null, NotificationUrgency.Low, Event: NotificationEvents.BackupTargetDown), cancellationToken);
         }
 
         if (health.Archive.Severity == "warning")
@@ -174,14 +174,14 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             var day = (int)Math.Max(0, (now - anchor).TotalDays);
             await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Archiv-Server nicht erreichbar",
                 $"Letzte Archivierung {Local(health.Archive.LastSuccessAt)}. Dokumente werden zurückgehalten und später übertragen.", "/system/archiv",
-                "archive", null, NotificationUrgency.Normal, $"archive:outage:{anchor:O}:{day}"), cancellationToken);
+                "archive", null, NotificationUrgency.Normal, $"archive:outage:{anchor:O}:{day}", NotificationEvents.ArchiveDown), cancellationToken);
             _archiveOutageNotified = true;
         }
         else if (_archiveOutageNotified)
         {
             _archiveOutageNotified = false;
             await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Archiv-Server wieder erreichbar", null, "/system/archiv",
-                "archive", null, NotificationUrgency.Low), cancellationToken);
+                "archive", null, NotificationUrgency.Low, Event: NotificationEvents.ArchiveDown), cancellationToken);
         }
     }
 
