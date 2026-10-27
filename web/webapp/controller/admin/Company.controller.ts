@@ -1,7 +1,7 @@
 import BaseController from "../BaseController";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
-import { api, del, get, put } from "../../util/api";
+import { api, del, get, post, put } from "../../util/api";
 import { catalog } from "../../util/catalog";
 import type { CompanyResponse, RoleResponse } from "../../util/models";
 import { resetCompany } from "../../util/orderDialogs";
@@ -11,6 +11,23 @@ import { themes } from "../../util/theme";
 import type { RouteMatch } from "../../util/router";
 import { sendTest, type PushSettings } from "../../util/notifications";
 import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
+
+interface StorageStats {
+	kinds: { kind: string; files: number; bytes: number; uploadedBytes: number; optimized: number }[];
+	storedBytes: number;
+	savedBytes: number;
+	duplicateFiles: number;
+	duplicateBytes: number;
+	originalsDiskBytes: number;
+	variantsDiskBytes: number;
+	freeDiskBytes: number | null;
+	candidates: number;
+	job: { running: boolean; processed: number; optimized: number; savedBytes: number; skipped: number; failed: number; startedAt: string | null; finishedAt: string | null };
+}
+
+const bytes = (n: number) => n >= 1024 ** 3 ? `${(n / 1024 ** 3).toLocaleString("de-DE", { maximumFractionDigits: 1 })} GB`
+	: n >= 1024 ** 2 ? `${(n / 1024 ** 2).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`
+	: `${Math.round(n / 1024).toLocaleString("de-DE")} KB`;
 
 interface PushForm extends PushSettings {
 	vapidSubjectInput: string;
@@ -57,6 +74,7 @@ export default class Company extends BaseController {
 		this.model().setProperty("/busy", true);
 		try {
 			void this.loadPush();
+			void this.loadStorage();
 			const [c, settings, logo, templates, roles] = await Promise.all([
 				get<CompanyResponse>("company"),
 				loadSystemSettings(true),
@@ -100,6 +118,43 @@ export default class Company extends BaseController {
 			removeApnsKey: p.removeApnsKey, showContent: p.showContent, version: p.version,
 		});
 		this.model().setProperty("/push", this.pushForm(saved));
+	}
+
+	private storageTimer: ReturnType<typeof setTimeout> | undefined;
+
+	private async loadStorage(): Promise<void> {
+		const stats = await get<StorageStats>("files/storage").catch(() => null);
+		if (!stats) return;
+		const kinds: Record<string, string> = { photo: "Fotos", video: "Videos", document: "Dokumente" };
+		const job = stats.job;
+		this.model().setProperty("/storage", {
+			...stats,
+			storedText: `${bytes(stats.storedBytes)} in ${stats.kinds.reduce((n, k) => n + k.files, 0)} Dateien`,
+			savedText: stats.savedBytes > 0 ? `${bytes(stats.savedBytes)} durch Verdichtung` : "noch nichts",
+			duplicateText: stats.duplicateFiles ? `${stats.duplicateFiles} Dateien teilen sich die Ablage (${bytes(stats.duplicateBytes)} gespart)` : "keine",
+			diskText: `Originale ${bytes(stats.originalsDiskBytes)}, Vorschaustufen ${bytes(stats.variantsDiskBytes)}${stats.freeDiskBytes != null ? ` · frei ${bytes(stats.freeDiskBytes)}` : ""}`,
+			kinds: stats.kinds.map((k) => ({ ...k, label: kinds[k.kind] ?? k.kind, bytesText: bytes(k.bytes), uploadedText: bytes(k.uploadedBytes) })),
+			jobText: job.running ? `läuft: ${job.processed} geprüft, ${job.optimized} verdichtet (${bytes(job.savedBytes)} gespart)`
+				: job.finishedAt ? `zuletzt: ${job.optimized} verdichtet, ${bytes(job.savedBytes)} gespart, ${job.skipped} übersprungen${job.failed ? `, ${job.failed} Fehler` : ""}`
+				: "bisher nicht gelaufen",
+		});
+		clearTimeout(this.storageTimer);
+		if (job.running) this.storageTimer = setTimeout(() => void this.loadStorage(), 2000);
+	}
+
+	async onOptimizeStorage(): Promise<void> {
+		if (!(await this.confirm("Bestehende Fotos und PDFs jetzt im Hintergrund verdichten? Archivierte Dateien bleiben unverändert. Die Arbeit läuft weiter, auch wenn Sie die Seite verlassen.",
+			{ title: "Nachverdichten", action: "Starten" }))) return;
+		try {
+			await post("files/storage/optimize");
+			await this.loadStorage();
+		} catch (error) {
+			this.showError(error);
+		}
+	}
+
+	onStorageRefresh(): void {
+		void this.loadStorage();
 	}
 
 	onApnsEnvironment(event: SegmentedButton$SelectionChangeEvent): void {

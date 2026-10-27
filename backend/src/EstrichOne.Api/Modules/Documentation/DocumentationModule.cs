@@ -14,6 +14,9 @@ public sealed class DocumentationModule : IModule
         services.AddSingleton<LocalFileStorage>();
         services.AddSingleton(Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions { SingleReader = true }));
         services.AddScoped<FileService>();
+        services.AddSingleton<MediaOptimizer>();
+        services.AddSingleton<StorageOptimizationJob>();
+        services.AddHostedService(sp => sp.GetRequiredService<StorageOptimizationJob>());
         services.AddScoped<Exports.IStoredFiles, StoredFiles>();
         services.AddScoped<ApprovalService>();
         services.AddScoped<Exports.IArchivableDocuments, ArchivableDocuments>();
@@ -35,6 +38,7 @@ public sealed class DocumentationModule : IModule
     public void MapEndpoints(IEndpointRouteBuilder api)
     {
         FileEndpoints.Map(api);
+        StorageEndpoints.Map(api);
         SiteRecordEndpoints.Map(api);
         ApprovalEndpoints.Map(api);
         DocumentEndpoints.Map(api);

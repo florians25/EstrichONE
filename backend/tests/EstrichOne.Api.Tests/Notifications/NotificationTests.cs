@@ -234,4 +234,19 @@ public sealed class NotificationTests(PostgresFixture postgres) : IAsyncLifetime
         item.ObjectId.ShouldBe(bauakte.Id);
         (await office.GetFromJsonAsync<NotificationInbox>("/api/v1/notifications", TestJson.Options, Ct))!.Items.ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task Sending_IsRateLimitedPerUser()
+    {
+        var (office, officeId) = await AsAsync("buero", StandardRoles.OfficeId);
+        var statuses = new List<HttpStatusCode>();
+        for (var i = 0; i < 21; i++)
+        {
+            using var response = await office.PostAsJsonAsync("/api/v1/notifications/send", new { title = $"Nachricht {i}", userIds = new[] { officeId } }, Ct);
+            statuses.Add(response.StatusCode);
+        }
+
+        statuses.Take(20).ShouldAllBe(s => s == HttpStatusCode.OK);
+        statuses[20].ShouldBe(HttpStatusCode.TooManyRequests);
+    }
 }

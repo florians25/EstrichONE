@@ -33,7 +33,9 @@ public sealed class FileService(
     IUserPermissions permissions,
     ITicketAttachments tickets,
     IEnumerable<Exports.IFileReadGrant> grants,
-    IBauakteAutoStatus autoStatus)
+    IBauakteAutoStatus autoStatus,
+    MediaOptimizer optimizer,
+    Organization.Exports.ISystemSettings systemSettings)
 {
     public async Task<(FileRecord? File, bool Created, FileFailure? Failure)> AnnounceAsync(
         Guid id, Guid? bauakteId, FileKind kind, string originalName, string contentType, long sizeBytes, string sha256,
@@ -171,9 +173,31 @@ public sealed class FileService(
             return (file, 0, FileFailure.TypeNotAllowed);
         }
 
+        // Speicherschonend: Fotos/PDFs verdichten (Einstellungen → Speicher), danach Dubletten zusammenlegen.
+        var media = (await systemSettings.GetAsync(cancellationToken)).Media;
+        if (detected is "image/jpeg" or "application/pdf")
+        {
+            var original = await File.ReadAllBytesAsync(storage.PartialPath(id), cancellationToken);
+            if (optimizer.Optimize(original, detected, file.Kind, media) is { } optimized)
+            {
+                await File.WriteAllBytesAsync(storage.PartialPath(id), optimized.Content, cancellationToken);
+                file.ReplaceContent(Convert.ToHexStringLower(SHA256.HashData(optimized.Content)), optimized.Content.Length, optimized.ContentType);
+            }
+        }
+
         var key = LocalFileStorage.OriginalKey(file.Id, file.CreatedAt);
-        storage.Commit(id, key);
-        file.MarkStored(key, detected, ContentSniffer.HasVariants(detected));
+        var duplicate = await DuplicateKeyAsync(file, cancellationToken);
+        if (duplicate is not null)
+        {
+            storage.DiscardPartial(id);
+            key = duplicate;
+        }
+        else
+        {
+            storage.Commit(id, key);
+        }
+
+        file.MarkStored(key, file.DetectedContentType ?? detected, ContentSniffer.HasVariants(detected));
         if (file.Kind == FileKind.Photo && file.BauakteId is { } photoBauakte)
         {
             // Erstes Foto vor Ort: „Geplant“ wird ggf. automatisch „In Ausführung“ (Einstellungen).
@@ -187,6 +211,15 @@ public sealed class FileService(
         }
 
         return (file, file.SizeBytes, null);
+    }
+
+    /// <summary>Gleiche Prüfsumme und Größe bereits in der Ablage (auch in anderen Bauakten): deren Datei mitbenutzen.</summary>
+    private async Task<string?> DuplicateKeyAsync(FileRecord file, CancellationToken cancellationToken)
+    {
+        var keys = await db.Set<FileRecord>().IgnoreQueryFilters().AsNoTracking()
+            .Where(f => f.Id != file.Id && f.Sha256 == file.Sha256 && f.SizeBytes == file.SizeBytes && f.State == FileState.Stored && f.StorageKey != null)
+            .Select(f => f.StorageKey!).Distinct().Take(5).ToListAsync(cancellationToken);
+        return keys.FirstOrDefault(k => File.Exists(storage.PathOf(k)));
     }
 
     public async Task<long?> ReceivedBytesAsync(Guid id, CancellationToken cancellationToken)

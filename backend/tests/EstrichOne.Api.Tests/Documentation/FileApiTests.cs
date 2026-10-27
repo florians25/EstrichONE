@@ -6,6 +6,7 @@ using EstrichOne.Api.Modules.Access;
 using EstrichOne.Api.Modules.Bauakten;
 using EstrichOne.Api.Modules.Documentation;
 using EstrichOne.Api.Tests.Support;
+using Microsoft.Extensions.DependencyInjection;
 using NetVips;
 
 namespace EstrichOne.Api.Tests.Documentation;
@@ -41,11 +42,19 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
         (await upload.Content.ReadFromJsonAsync<FileResponse>(TestJson.Options, TestContext.Current.CancellationToken))!.State.ShouldBe(FileState.Stored);
 
         var original = await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), TestContext.Current.CancellationToken);
-        original.ShouldBe(jpeg);
+        var stored = (await _worker.GetFromJsonAsync<FileResponse>($"/api/v1/files/{id}", TestJson.Options, TestContext.Current.CancellationToken))!;
+        Convert.ToHexStringLower(SHA256.HashData(original)).ShouldBe(stored.Sha256, "Prüfsumme beschreibt den gespeicherten (ggf. verdichteten) Inhalt.");
+        stored.SizeBytes.ShouldBe(original.Length);
+        using (var check = Image.NewFromBuffer(original))
+        {
+            (check.Width, check.Height).ShouldBe((3000, 2000));
+        }
 
         var thumb = await WaitForVariantAsync(id, "thumb");
         using var image = Image.NewFromBuffer(thumb);
-        Math.Max(image.Width, image.Height).ShouldBe(400);
+        Math.Max(image.Width, image.Height).ShouldBe(320);
+        using var large = Image.NewFromBuffer(await WaitForVariantAsync(id, "large"));
+        Math.Max(large.Width, large.Height).ShouldBe(2560);
         image.GetFields().ShouldNotContain("exif-data", "Varianten enthalten keine Metadaten (z. B. GPS).");
     }
 
@@ -327,6 +336,145 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
         }
 
         return _worker.PutAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), body);
+    }
+
+    /// <summary>Kamera-Foto: groß, hohe Qualität, EXIF-Ausrichtung 6 (hochkant), Aufnahmezeit und GPS.</summary>
+    private static byte[] CreateCameraJpeg(int width, int height)
+    {
+        using var noise = Image.Gaussnoise(width, height, sigma: 30, mean: 128);
+        using var rgb = noise.Bandjoin((noise * 0.8) + 20, (noise * 0.6) + 40).Cast(Enums.BandFormat.Uchar);
+        using var tagged = rgb.Mutate(m =>
+        {
+            m.Set(GValue.GIntType, "orientation", 6);
+            m.Set(GValue.GStrType, "exif-ifd2-DateTimeOriginal", "2026:10:20 08:15:00");
+            m.Set(GValue.GStrType, "exif-ifd3-GPSLatitudeRef", "N");
+            m.Set(GValue.GStrType, "exif-ifd3-GPSLatitude", "48/1 32/1 1200/100");
+        });
+        return tagged.JpegsaveBuffer(q: 97, keep: Enums.ForeignKeep.Exif);
+    }
+
+    [Fact]
+    public async Task CameraPhoto_IsStoredSmaller_Rotated_LimitedTo4096_WithExifKept_AndAnnounceStaysIdempotent()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var jpeg = CreateCameraJpeg(5200, 3000);
+        var id = await AnnounceAsync(jpeg, FileKind.Photo, "IMG_4711.jpg");
+
+        using var upload = await UploadAsync(id, jpeg);
+        upload.StatusCode.ShouldBe(HttpStatusCode.OK, await upload.Content.ReadAsStringAsync(ct));
+        var file = (await upload.Content.ReadFromJsonAsync<FileResponse>(TestJson.Options, ct))!;
+        var stored = await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), ct);
+
+        file.SizeBytes.ShouldBe(stored.Length);
+        stored.Length.ShouldBeLessThan(jpeg.Length / 2);
+        using var image = Image.NewFromBuffer(stored);
+        (image.Width, image.Height).ShouldBe((2363, 4096), "EXIF-Ausrichtung angewendet, lange Kante begrenzt");
+        image.Contains("orientation").ShouldBeTrue();
+        ((int)image.Get("orientation")).ShouldBe(1);
+        ((string)image.Get("exif-ifd2-DateTimeOriginal")).ShouldStartWith("2026:10:20 08:15:00");
+        ((string)image.Get("exif-ifd3-GPSLatitudeRef")).ShouldStartWith("N");
+
+        // Wiederholte Ankündigung mit dem Original (App nach Verbindungsabbruch) gilt weiter als dieselbe Datei.
+        using var repeat = await AnnounceRawAsync(id, jpeg, FileKind.Photo);
+        repeat.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task SamePhotoTwice_SharesStorage()
+    {
+        var jpeg = CreateCameraJpeg(1200, 900);
+        var first = await AnnounceAsync(jpeg, FileKind.Photo, "a.jpg");
+        (await UploadAsync(first, jpeg)).EnsureSuccessStatusCode();
+        var second = await AnnounceAsync(jpeg, FileKind.Photo, "a-kopie.jpg");
+        (await UploadAsync(second, jpeg)).EnsureSuccessStatusCode();
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var db = scope.ServiceProvider.GetRequiredService<EstrichOne.Api.Infrastructure.Persistence.EstrichOneDbContext>();
+        var keys = db.Set<FileRecord>().Where(f => f.Id == first || f.Id == second).Select(f => f.StorageKey).ToList();
+        keys.Distinct().ShouldHaveSingleItem();
+        (await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{second}/content", UriKind.Relative), TestContext.Current.CancellationToken)).Length
+            .ShouldBeGreaterThan(0);
+    }
+
+    private static byte[] CreateUncompressedPdf(bool signed = false)
+    {
+        using var document = new PdfSharp.Pdf.PdfDocument();
+        document.Options.CompressContentStreams = false;
+        document.Options.NoCompression = true;
+        for (var p = 0; p < 3; p++)
+        {
+            var page = document.AddPage();
+            using var gfx = PdfSharp.Drawing.XGraphics.FromPdfPage(page);
+            for (var line = 0; line < 120; line++)
+            {
+                gfx.DrawLine(PdfSharp.Drawing.XPens.Black, 20, 20 + (line * 6), 560, 20 + (line * 6) + (p * 2));
+                gfx.DrawRectangle(PdfSharp.Drawing.XPens.Gray, 30 + line, 30 + line, 100, 50);
+            }
+        }
+
+        using var output = new MemoryStream();
+        document.Save(output, closeStream: false);
+        var bytes = output.ToArray();
+        return signed ? [.. bytes, .. System.Text.Encoding.ASCII.GetBytes("%/ByteRange [0 0 0 0]\n")] : bytes;
+    }
+
+    [Fact]
+    public async Task Pdf_IsCompressedLosslessly_ButSignedPdfStaysUntouched()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var pdf = CreateUncompressedPdf();
+        var signed = CreateUncompressedPdf(signed: true);
+        var id = await AnnounceAsync(pdf, FileKind.Document, "Aufmaß.pdf", "application/pdf");
+        var signedId = await AnnounceAsync(signed, FileKind.Document, "Vertrag-signiert.pdf", "application/pdf");
+        (await UploadAsync(id, pdf)).EnsureSuccessStatusCode();
+        (await UploadAsync(signedId, signed)).EnsureSuccessStatusCode();
+
+        var stored = await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{id}/content", UriKind.Relative), ct);
+        stored.Length.ShouldBeLessThan(pdf.Length / 2);
+        using (var reopened = PdfSharp.Pdf.IO.PdfReader.Open(new MemoryStream(stored), PdfSharp.Pdf.IO.PdfDocumentOpenMode.Import))
+        {
+            reopened.PageCount.ShouldBe(3);
+        }
+
+        (await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{signedId}/content", UriKind.Relative), ct)).ShouldBe(signed);
+    }
+
+    [Fact]
+    public async Task StorageStats_ShowSavings_AndOptimizationJobRuns_KeepOriginalSettingIsHonoured()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var admin = await _factory.CreateClientAsAsync("chefin", StandardRoles.AdministratorId);
+        var settings = (await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>("/api/v1/settings", ct))!;
+        settings["settings"]!["media"]!["keepOriginalPhotos"] = true;
+        (await admin.PutAsJsonAsync("/api/v1/settings", new { settings = settings["settings"], version = (long)settings["version"]! }, ct)).EnsureSuccessStatusCode();
+
+        var kept = CreateCameraJpeg(1000, 800);
+        var keptId = await AnnounceAsync(kept, FileKind.Photo, "unveraendert.jpg");
+        (await UploadAsync(keptId, kept)).EnsureSuccessStatusCode();
+        (await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{keptId}/content", UriKind.Relative), ct)).ShouldBe(kept);
+
+        settings = (await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonObject>("/api/v1/settings", ct))!;
+        settings["settings"]!["media"]!["keepOriginalPhotos"] = false;
+        (await admin.PutAsJsonAsync("/api/v1/settings", new { settings = settings["settings"], version = (long)settings["version"]! }, ct)).EnsureSuccessStatusCode();
+
+        using var start = await admin.PostAsync(new Uri("/api/v1/files/storage/optimize", UriKind.Relative), null, ct);
+        start.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        StorageStats stats;
+        var attempts = 0;
+        do
+        {
+            await Task.Delay(200, ct);
+            stats = (await admin.GetFromJsonAsync<StorageStats>("/api/v1/files/storage", TestJson.Options, ct))!;
+        }
+        while (stats.Job.Running && ++attempts < 100);
+
+        stats.Job.Optimized.ShouldBe(1);
+        stats.SavedBytes.ShouldBeGreaterThan(0);
+        stats.Candidates.ShouldBe(0);
+        stats.Kinds.Single(k => k.Kind == FileKind.Photo).Optimized.ShouldBe(1);
+        (await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{keptId}/content", UriKind.Relative), ct)).Length.ShouldBeLessThan(kept.Length);
+        using var forbidden = await _worker.GetAsync(new Uri("/api/v1/files/storage", UriKind.Relative), ct);
+        forbidden.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     private static byte[] CreateJpeg(int width, int height)

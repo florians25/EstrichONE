@@ -6,14 +6,14 @@ using NetVips;
 namespace EstrichOne.Api.Modules.Documentation;
 
 /// <summary>
-/// Erzeugt Bildvarianten im Hintergrund: <c>thumb</c> (400 px) und <c>display</c> (2048 px), WebP, ohne Metadaten
+/// Erzeugt Bildvarianten im Hintergrund: <c>thumb</c> (320 px), <c>display</c> (1280 px) und <c>large</c> (2560 px), WebP, ohne Metadaten
 /// (EXIF/GPS bleiben nur im Original). Reagiert sofort auf neue Uploads und arbeitet nach einem Neustart
 /// liegengebliebene Dateien ab.
 /// </summary>
 internal sealed partial class VariantWorker(
     Channel<Guid> queue, IServiceScopeFactory scopes, LocalFileStorage storage, ILogger<VariantWorker> logger) : BackgroundService
 {
-    public static readonly (string Name, int Size)[] Sizes = [("thumb", 400), ("display", 2048)];
+    public static readonly (string Name, int Size)[] Sizes = [("thumb", 320), ("display", 1280), ("large", 2560)];
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
@@ -47,8 +47,10 @@ internal sealed partial class VariantWorker(
             var original = await File.ReadAllBytesAsync(storage.PathOf(file.StorageKey), cancellationToken);
             foreach (var (name, size) in Sizes)
             {
+                // Kleine Stufen etwas höher, große etwas niedriger komprimiert: scharf am Bildschirm, wenig Speicher.
                 using var image = Image.ThumbnailBuffer(original, size, height: size, size: Enums.Size.Down);
-                await storage.WriteVariantAsync(id, name, image.WebpsaveBuffer(q: 80, keep: Enums.ForeignKeep.None), cancellationToken);
+                await storage.WriteVariantAsync(id, name, image.WebpsaveBuffer(q: size <= 400 ? 82 : size <= 1400 ? 80 : 78, effort: 5,
+                    smartSubsample: true, keep: Enums.ForeignKeep.None), cancellationToken);
             }
 
             file.SetVariants(VariantState.Ready);

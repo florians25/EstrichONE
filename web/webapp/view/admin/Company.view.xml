@@ -165,6 +165,69 @@
 							<StepInput id="setPhotos" value="{view>/s/pdf/photosPerRow}" min="1" max="3" width="8rem"/>
 						</form:SimpleForm>
 					</IconTabFilter>
+					<IconTabFilter key="speicher" text="Speicher">
+						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
+							<core:Title text="Fotos und Dokumente speicherschonend ablegen"/>
+							<Label text=""/>
+							<Text text="Gilt für alle Uploads aus Web und Apps. Fotos werden als JPEG mit mozjpeg neu kodiert, nach EXIF gedreht und bei Bedarf verkleinert; Aufnahmezeit und GPS bleiben erhalten. Vorschaustufen 320, 1280 und 2560 Pixel (WebP)." class="eoMuted"/>
+							<Label text="Fotos unverändert speichern"/>
+							<Switch id="mediaKeep" state="{view>/s/media/keepOriginalPhotos}" customTextOn=" " customTextOff=" "/>
+							<Label text="Bildqualität (JPEG)" labelFor="mediaQuality"/>
+							<HBox alignItems="Center" class="eoSystemItem">
+								<StepInput id="mediaQuality" value="{view>/s/media/photoQuality}" min="60" max="95" step="1" width="8rem" enabled="{= !${view>/s/media/keepOriginalPhotos} }"/>
+								<Text text="{= ${view>/s/media/photoQuality} >= 88 ? 'sehr hoch – große Dateien' : ${view>/s/media/photoQuality} >= 78 ? 'empfohlen: scharf, etwa ein Drittel der Kameragröße' : 'sparsam – feine Details leiden' }" class="eoMuted"/>
+							</HBox>
+							<Label text="Längste Kante" labelFor="mediaEdge"/>
+							<Select id="mediaEdge" selectedKey="{path: 'view>/s/media/photoMaxEdge', type: 'sap.ui.model.type.Integer'}" width="16rem" enabled="{= !${view>/s/media/keepOriginalPhotos} }">
+								<core:Item key="2048" text="2048 px (Bildschirm)"/>
+								<core:Item key="3072" text="3072 px"/>
+								<core:Item key="4096" text="4096 px (empfohlen, Druck A4)"/>
+								<core:Item key="6144" text="6144 px"/>
+								<core:Item key="8192" text="8192 px (kaum Begrenzung)"/>
+							</Select>
+							<Label text="PDFs verlustfrei verdichten"/>
+							<VBox>
+								<Switch id="mediaPdf" state="{view>/s/media/optimizePdfs}" customTextOn=" " customTextOff=" "/>
+								<Text text="Unkomprimierte Inhalte werden gepackt, Unbenutztes entfernt. Signierte oder verschlüsselte PDFs und Office-Dateien bleiben bitgenau." class="eoMuted"/>
+							</VBox>
+							<core:Title text="Belegung"/>
+							<Label text="Gespeichert"/>
+							<Text text="{view>/storage/storedText}"/>
+							<Label text="Gespart"/>
+							<ObjectStatus text="{view>/storage/savedText}" state="Success"/>
+							<Label text="Dubletten"/>
+							<Text text="{view>/storage/duplicateText}"/>
+							<Label text="Auf dem Datenträger"/>
+							<Text text="{view>/storage/diskText}"/>
+							<Label text=""/>
+							<Table items="{view>/storage/kinds}" class="eoDenseTable" width="34rem">
+								<columns>
+									<Column><Text text="Art"/></Column>
+									<Column hAlign="End"><Text text="Dateien"/></Column>
+									<Column hAlign="End"><Text text="Gespeichert"/></Column>
+									<Column hAlign="End"><Text text="Hochgeladen"/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<Text text="{view>label}"/><Text text="{view>files}" class="eoTabular"/><Text text="{view>bytesText}" class="eoTabular"/>
+										<Text text="{view>uploadedText}" class="eoTabular"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+							<core:Title text="Bestehende Dateien nachverdichten"/>
+							<Label text="Kandidaten"/>
+							<Text text="{= ${view>/storage/candidates} + ' Fotos/PDFs noch nicht verdichtet (archivierte bleiben unverändert)' }"/>
+							<Label text="Status"/>
+							<ObjectStatus text="{view>/storage/jobText}" state="{= ${view>/storage/job/running} ? 'Information' : 'None' }"
+								icon="{= ${view>/storage/job/running} ? 'sap-icon://synchronize' : '' }"/>
+							<Label text=""/>
+							<HBox class="eoSystemItem">
+								<Button id="mediaOptimize" text="Jetzt nachverdichten" icon="sap-icon://compare" press=".onOptimizeStorage"
+									enabled="{= !${view>/storage/job/running} &amp;&amp; ${view>/storage/candidates} > 0 }"/>
+								<Button text="Aktualisieren" icon="sap-icon://refresh" type="Transparent" press=".onStorageRefresh"/>
+							</HBox>
+						</form:SimpleForm>
+					</IconTabFilter>
 					<IconTabFilter key="module" text="Module">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Module ein- und ausschalten"/>

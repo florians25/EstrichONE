@@ -27,7 +27,7 @@ export interface LightboxOptions {
 	onChanged?: (file: FileResponse) => void;
 }
 
-const url = (f: FileResponse, variant: "display" | "thumb" | "original") =>
+const url = (f: FileResponse, variant: "large" | "display" | "thumb" | "original") =>
 	`/api/v1/files/${f.id}/content${variant === "original" ? "" : `?variant=${f.variants === "ready" ? variant : "original"}`}`;
 
 export function openLightbox(photos: FileResponse[], start: number, options: LightboxOptions = {}): void {
@@ -81,10 +81,10 @@ export function openLightbox(photos: FileResponse[], start: number, options: Lig
 		download.setHref(`${url(f, "original")}${url(f, "original").includes("?") ? "&" : "?"}download=1`);
 		download.data("name", f.originalName);
 		counter.setText(`${index + 1} von ${list.length}`);
-		image.setSrc(url(f, "display"));
+		image.setSrc(url(f, "large"));
 		image.setAlt(f.caption ?? `Foto vom ${dateTime(f.capturedAt ?? f.createdAt)}`);
 		// Nachbarbilder vorladen, damit das Blättern sofort reagiert.
-		for (const n of [index + 1, index - 1]) if (list.length > 1) new window.Image().src = url(list[(n + list.length) % list.length], "display");
+		for (const n of [index + 1, index - 1]) if (list.length > 1) new window.Image().src = url(list[(n + list.length) % list.length], "large");
 	};
 	download.attachPress(() => {
 		const a = document.createElement("a");

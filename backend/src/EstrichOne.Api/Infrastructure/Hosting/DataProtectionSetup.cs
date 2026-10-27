@@ -28,7 +28,17 @@ public static class DataProtectionSetup
             });
         try
         {
-            Directory.CreateDirectory(path);
+            // Schlüsselring nur für den Dienstbenutzer lesbar (0700); er liegt in der Dateiablage und ist Teil der Sicherung.
+            if (OperatingSystem.IsWindows())
+            {
+                Directory.CreateDirectory(path);
+            }
+            else
+            {
+                Directory.CreateDirectory(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+                File.SetUnixFileMode(path, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
+
             builder.PersistKeysToFileSystem(new DirectoryInfo(path));
         }
         catch (Exception exception) when (exception is IOException or UnauthorizedAccessException)

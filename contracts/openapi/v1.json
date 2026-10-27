@@ -4986,7 +4986,7 @@
         "tags": [
           "Dateien"
         ],
-        "summary": "Inhalt (variant = original | display | thumb); unterstützt Range für Videos",
+        "summary": "Inhalt (variant = original | large (2560 px) | display (1280 px) | thumb (320 px)); unterstützt Range für Videos",
         "operationId": "DownloadFile",
         "parameters": [
           {
@@ -5310,6 +5310,74 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/storage": {
+      "get": {
+        "tags": [
+          "Dateien"
+        ],
+        "summary": "Speicherbelegung je Art, Ersparnis durch Verdichtung und Dubletten",
+        "operationId": "GetStorageStats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageStats"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/storage/optimize": {
+      "post": {
+        "tags": [
+          "Dateien"
+        ],
+        "summary": "Bestehende Fotos und PDFs im Hintergrund nachverdichten (archivierte Dateien bleiben unverändert)",
+        "operationId": "StartStorageOptimization",
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StorageJobStatus"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -12896,7 +12964,7 @@
         "tags": [
           "Benachrichtigungen"
         ],
-        "summary": "Nachricht an Personen, Rollen, Kolonnen oder alle senden",
+        "summary": "Nachricht an Personen, Rollen, Kolonnen oder alle senden (höchstens 20 je 10 Minuten)",
         "operationId": "SendNotification",
         "requestBody": {
           "content": {
@@ -12921,6 +12989,16 @@
           },
           "422": {
             "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -22434,6 +22512,25 @@
           }
         }
       },
+      "MediaSettings": {
+        "type": "object",
+        "properties": {
+          "photoQuality": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "photoMaxEdge": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "keepOriginalPhotos": {
+            "type": "boolean"
+          },
+          "optimizePdfs": {
+            "type": "boolean"
+          }
+        }
+      },
       "ModuleSettings": {
         "type": "object",
         "properties": {
@@ -27051,6 +27148,157 @@
           }
         }
       },
+      "StorageJobStatus": {
+        "required": [
+          "running",
+          "processed",
+          "optimized",
+          "savedBytes",
+          "skipped",
+          "failed",
+          "startedAt",
+          "finishedAt",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "running": {
+            "type": "boolean"
+          },
+          "processed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "optimized": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "savedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StorageKindStats": {
+        "required": [
+          "kind",
+          "files",
+          "bytes",
+          "uploadedBytes",
+          "optimized"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/FileKind"
+          },
+          "files": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "uploadedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "optimized": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "StorageStats": {
+        "required": [
+          "kinds",
+          "storedBytes",
+          "savedBytes",
+          "duplicateFiles",
+          "duplicateBytes",
+          "originalsDiskBytes",
+          "variantsDiskBytes",
+          "freeDiskBytes",
+          "candidates",
+          "job"
+        ],
+        "type": "object",
+        "properties": {
+          "kinds": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/StorageKindStats"
+            }
+          },
+          "storedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "savedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "duplicateFiles": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duplicateBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "originalsDiskBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "variantsDiskBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "freeDiskBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "candidates": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "job": {
+            "$ref": "#/components/schemas/StorageJobStatus"
+          }
+        }
+      },
       "Stream": {
         "type": "string",
         "format": "binary"
@@ -27417,6 +27665,9 @@
           },
           "modules": {
             "$ref": "#/components/schemas/ModuleSettings"
+          },
+          "media": {
+            "$ref": "#/components/schemas/MediaSettings"
           }
         }
       },

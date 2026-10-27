@@ -17,6 +17,7 @@ export interface SystemSettings {
 	appearance: { defaultTheme: string; density: "compact" | "cozy"; showCompanyLogo: boolean };
 	pdf: { showCompanyLogo: boolean; showEstrichOneLogo: boolean; accentColor: string; footerText: string | null; photosPerRow: number };
 	modules: { materials: boolean };
+	media: { photoQuality: number; photoMaxEdge: number; keepOriginalPhotos: boolean; optimizePdfs: boolean };
 }
 
 export interface SystemSettingsResponse {

@@ -11,6 +11,7 @@ public sealed class ArchiveModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ArchiveService>();
+        services.AddScoped<Documentation.Exports.IFileArchiveState, FileArchiveState>();
         services.AddSingleton<ArchiveSignal>();
         services.AddScoped<DossierService>();
         services.AddScoped<MonitoringService>();

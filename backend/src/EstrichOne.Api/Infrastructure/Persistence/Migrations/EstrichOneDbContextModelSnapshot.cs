@@ -2078,6 +2078,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("updated_at");
 
+                    b.Property<string>("UploadSha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("upload_sha256")
+                        .IsFixedLength();
+
+                    b.Property<long?>("UploadSizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("upload_size_bytes");
+
                     b.Property<Guid>("UploadedByUserId")
                         .HasColumnType("uuid")
                         .HasColumnName("uploaded_by_user_id");
@@ -2105,6 +2115,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Sha256")
                         .HasDatabaseName("ix_files_sha256");
+
+                    b.HasIndex("StorageKey")
+                        .HasDatabaseName("ix_files_storage_key");
 
                     b.HasIndex("UploadedByUserId")
                         .HasDatabaseName("ix_files_uploaded_by_user_id");

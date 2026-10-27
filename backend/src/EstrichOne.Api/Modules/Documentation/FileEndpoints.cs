@@ -87,7 +87,7 @@ internal static class FileEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         files.MapGet("/{id:guid}/content", DownloadAsync).WithName("DownloadFile")
-            .WithSummary("Inhalt (variant = original | display | thumb); unterstützt Range für Videos")
+            .WithSummary("Inhalt (variant = original | large (2560 px) | display (1280 px) | thumb (320 px)); unterstützt Range für Videos")
             .Produces(StatusCodes.Status200OK, contentType: "application/octet-stream")
             .ProducesProblem(StatusCodes.Status404NotFound);
 
@@ -392,12 +392,19 @@ internal static class FileEndpoints
             return ProblemFor(FileFailure.NotFound);
         }
 
-        if (variant is "thumb" or "display")
+        if (variant is "thumb" or "display" or "large")
         {
             switch (file.Variants)
             {
                 case VariantState.Ready:
-                    return TypedResults.PhysicalFile(storage.VariantPath(id, variant), "image/webp", enableRangeProcessing: true);
+                    // Ältere Dateien haben noch keine Stufe „large“: dann die größte vorhandene.
+                    var path = storage.VariantPath(id, variant);
+                    if (variant == "large" && !File.Exists(path))
+                    {
+                        path = storage.VariantPath(id, "display");
+                    }
+
+                    return TypedResults.PhysicalFile(path, "image/webp", enableRangeProcessing: true);
                 case VariantState.Pending:
                     return Problem(StatusCodes.Status404NotFound, "VARIANT_PENDING", "Die Vorschau wird gerade erzeugt.");
                 case VariantState.NotApplicable:
@@ -408,7 +415,7 @@ internal static class FileEndpoints
         }
         else if (variant != "original")
         {
-            return Problem(StatusCodes.Status400BadRequest, "UNKNOWN_VARIANT", "Erlaubt: original, display, thumb.");
+            return Problem(StatusCodes.Status400BadRequest, "UNKNOWN_VARIANT", "Erlaubt: original, large, display, thumb.");
         }
 
         var contentType = file.DetectedContentType switch

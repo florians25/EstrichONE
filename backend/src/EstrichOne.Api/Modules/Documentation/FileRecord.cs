@@ -61,6 +61,10 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
 
     /// <summary>SHA-256 des Inhalts als Kleinbuchstaben-Hex (64 Zeichen), vom Client vorab gemeldet und beim Upload geprüft.</summary>
     public string Sha256 { get; private set; } = string.Empty;
+
+    /// <summary>SHA-256 und Größe wie hochgeladen, falls der Server den Inhalt verdichtet hat (sonst <c>null</c>).</summary>
+    public string? UploadSha256 { get; private set; }
+    public long? UploadSizeBytes { get; private set; }
     public string? StorageKey { get; private set; }
 
     /// <summary>Aus dem Inhalt ermittelter Typ (maßgeblich für die Auslieferung, nicht die Client-Angabe).</summary>
@@ -130,9 +134,23 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
 
     public void SetVariants(VariantState state) => Variants = state;
 
+    /// <summary>Verdichteter Inhalt ersetzt den hochgeladenen; Prüfsumme und Größe beziehen sich danach auf die Ablage.</summary>
+    public void ReplaceContent(string sha256, long sizeBytes, string detectedContentType)
+    {
+        UploadSha256 ??= Sha256;
+        UploadSizeBytes ??= SizeBytes;
+        Sha256 = sha256.ToLowerInvariant();
+        SizeBytes = sizeBytes;
+        DetectedContentType = detectedContentType;
+    }
+
+    /// <summary>Gleicher Inhalt liegt schon in der Ablage: dieselbe Datei verwenden statt einer Kopie.</summary>
+    public void ShareStorage(string storageKey) => StorageKey = storageKey;
+
     /// <summary>Gleiche ID, gleicher Inhalt → wiederholte Ankündigung (z. B. nach Verbindungsabbruch).</summary>
     public bool IsSameAnnouncement(Guid? bauakteId, FileKind kind, string sha256, long sizeBytes) =>
-        BauakteId == bauakteId && Kind == kind && string.Equals(Sha256, sha256, StringComparison.OrdinalIgnoreCase) && SizeBytes == sizeBytes;
+        BauakteId == bauakteId && Kind == kind && string.Equals(UploadSha256 ?? Sha256, sha256, StringComparison.OrdinalIgnoreCase)
+        && (UploadSizeBytes ?? SizeBytes) == sizeBytes;
 
     public void Describe(string? caption) => Caption = caption;
 
@@ -207,6 +225,7 @@ internal sealed class FileRecordConfiguration : IEntityTypeConfiguration<FileRec
         builder.Property(file => file.OriginalName).HasMaxLength(255);
         builder.Property(file => file.ContentType).HasMaxLength(100);
         builder.Property(file => file.Sha256).HasMaxLength(64).IsFixedLength();
+        builder.Property(file => file.UploadSha256).HasMaxLength(64).IsFixedLength();
         builder.Property(file => file.StorageKey).HasMaxLength(200);
         builder.Property(file => file.DetectedContentType).HasMaxLength(100);
         builder.Property(file => file.Variants).HasConversion<string>().HasMaxLength(20);
@@ -219,5 +238,6 @@ internal sealed class FileRecordConfiguration : IEntityTypeConfiguration<FileRec
         builder.HasOne<User>().WithMany().HasForeignKey(file => file.UploadedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(file => new { file.BauakteId, file.Kind });
         builder.HasIndex(file => file.Sha256);
+        builder.HasIndex(file => file.StorageKey);
     }
 }

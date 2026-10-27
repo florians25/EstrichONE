@@ -103,15 +103,17 @@ internal static class NotificationEndpoints
         group.MapGet("/devices", DevicesAsync).WithName("ListPushDevices").WithSummary("Eigene Geräte und Browser mit Pushnachrichten");
         group.MapPost("/devices", RegisterAsync).WithName("RegisterPushDevice")
             .WithSummary("Gerätetoken (iOS/Android) bzw. Web-Push-Abo registrieren oder auffrischen")
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequireRateLimiting(NotificationsModule.DeviceRateLimitPolicy);
         group.MapDelete("/devices/{id:guid}", RemoveDeviceAsync).WithName("RemovePushDevice").ProducesProblem(StatusCodes.Status404NotFound);
         group.MapDelete("/devices", RemoveDeviceByTokenAsync).WithName("RemovePushDeviceByToken")
             .WithSummary("Abmelden per Token (z. B. beim Abmelden in der App)");
-        group.MapPost("/test", TestAsync).WithName("SendTestNotification").WithSummary("Testnachricht an sich selbst (Postfach und Push)");
+        group.MapPost("/test", TestAsync).WithName("SendTestNotification").WithSummary("Testnachricht an sich selbst (Postfach und Push)")
+            .RequireRateLimiting(NotificationsModule.SendRateLimitPolicy);
 
         group.MapPost("/send", SendAsync).WithName("SendNotification")
-            .WithSummary("Nachricht an Personen, Rollen, Kolonnen oder alle senden")
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.NotificationsSend);
+            .WithSummary("Nachricht an Personen, Rollen, Kolonnen oder alle senden (höchstens 20 je 10 Minuten)")
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status429TooManyRequests)
+            .RequirePermission(Permissions.NotificationsSend).RequireRateLimiting(NotificationsModule.SendRateLimitPolicy);
         group.MapGet("/audiences", AudiencesAsync).WithName("GetNotificationAudiences").WithSummary("Rollen und Kolonnen als Empfänger")
             .RequirePermission(Permissions.NotificationsSend);
         group.MapGet("/sent", SentAsync).WithName("ListSentNotifications").WithSummary("Verlauf der gesendeten Nachrichten mit Zustellstatus")

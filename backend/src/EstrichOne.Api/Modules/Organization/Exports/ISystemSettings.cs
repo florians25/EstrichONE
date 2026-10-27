@@ -17,6 +17,7 @@ public sealed record SystemSettings
     public AppearanceSettings Appearance { get; init; } = new();
     public PdfSettings Pdf { get; init; } = new();
     public ModuleSettings Modules { get; init; } = new();
+    public MediaSettings Media { get; init; } = new();
 
     /// <summary>Werte auf erlaubte Bereiche begrenzen (auch für alte oder von Hand geänderte Daten).</summary>
     public SystemSettings Normalize() => this with
@@ -30,6 +31,7 @@ public sealed record SystemSettings
         Appearance = (Appearance ?? new()).Normalize(),
         Pdf = (Pdf ?? new()).Normalize(),
         Modules = Modules ?? new(),
+        Media = (Media ?? new()).Normalize(),
     };
 
     internal static string? Text(string? value, int max) =>
@@ -120,6 +122,27 @@ public enum AutoStartTrigger
 
     /// <summary>Was zuerst eintritt.</summary>
     Both,
+}
+
+/// <summary>
+/// Speicherschonende Ablage (docs/speicher.md): Fotos als JPEG (mozjpeg, Trellis-Quantisierung) mit begrenzter langer Kante,
+/// EXIF-Ausrichtung angewendet, Aufnahmedaten und GPS bleiben erhalten; PDFs verlustfrei verdichtet. Gilt für Web und Apps.
+/// </summary>
+public sealed record MediaSettings
+{
+    /// <summary>JPEG-Qualität für Fotos (60–95). 82 ist am Bildschirm und im Ausdruck nicht vom Original zu unterscheiden.</summary>
+    public int PhotoQuality { get; init; } = 82;
+
+    /// <summary>Längste Kante gespeicherter Fotos in Pixeln (2048–8192); größere Fotos werden verkleinert.</summary>
+    public int PhotoMaxEdge { get; init; } = 4096;
+
+    /// <summary>Fotos unverändert speichern (keine Verkleinerung, keine Neukodierung).</summary>
+    public bool KeepOriginalPhotos { get; init; }
+
+    /// <summary>PDFs verlustfrei verdichten (Streams komprimieren, Unbenutztes entfernen; signierte PDFs bleiben unverändert).</summary>
+    public bool OptimizePdfs { get; init; } = true;
+
+    public MediaSettings Normalize() => this with { PhotoQuality = Math.Clamp(PhotoQuality, 60, 95), PhotoMaxEdge = Math.Clamp(PhotoMaxEdge, 2048, 8192) };
 }
 
 /// <summary>Abschaltbare Module. Daten bleiben beim Abschalten erhalten.</summary>

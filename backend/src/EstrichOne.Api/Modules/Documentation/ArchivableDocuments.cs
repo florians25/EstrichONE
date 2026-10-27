@@ -50,7 +50,10 @@ internal sealed class ArchivableDocuments(EstrichOneDbContext db, LocalFileStora
             return;
         }
 
-        foreach (var path in VariantWorker.Sizes.Select(size => storage.VariantPath(fileId, size.Name)).Prepend(storage.PathOf(key)))
+        // Dubletten teilen sich die Ablage: das Original nur löschen, wenn keine andere Datei es benutzt.
+        var shared = await db.Set<FileRecord>().IgnoreQueryFilters().AnyAsync(f => f.StorageKey == key && f.Id != fileId, cancellationToken);
+        var paths = VariantWorker.Sizes.Select(size => storage.VariantPath(fileId, size.Name));
+        foreach (var path in shared ? paths : paths.Prepend(storage.PathOf(key)))
         {
             if (File.Exists(path))
             {
