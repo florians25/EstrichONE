@@ -23,6 +23,7 @@ export const routes: RouteDef[] = [
 	{ name: "suppliers", pattern: "/lieferanten", view: "materials.Suppliers", permission: "materials.read", nav: "suppliers", title: "nav.suppliers" },
 	{ name: "customers", pattern: "/kunden", view: "Customers", permission: "contacts.read", nav: "customers", title: "nav.customers" },
 	{ name: "customer", pattern: "/kunden/:id", view: "Customer", permission: "contacts.read", nav: "customers", title: "nav.customers" },
+	{ name: "cockpit", pattern: "/planung/cockpit", view: "planning.Cockpit", permission: "planning.read", nav: "cockpit", title: "nav.cockpit" },
 	{ name: "planning", pattern: "/planung", view: "planning.Planning", permission: "planning.read", nav: "planning", title: "nav.planning" },
 	{ name: "calendar", pattern: "/planung/kalender", view: "planning.Calendar", permission: "planning.read", nav: "calendar", title: "nav.calendar" },
 	{ name: "teamPlanner", pattern: "/planung/teamplaner", view: "planning.TeamPlanner", permission: "planning.read", nav: "teamPlanner", title: "nav.teamPlanner" },
@@ -75,6 +76,7 @@ export const navigation: NavEntry[] = [
 	},
 	{
 		key: "groupPlanning", children: [
+			{ key: "cockpit", path: "/planung/cockpit", icon: "sap-icon://manager-insight", permission: "planning.read" },
 			{ key: "planning", path: "/planung", icon: "sap-icon://gantt-bars", permission: "planning.read" },
 			{ key: "teamPlanner", path: "/planung/teamplaner", icon: "sap-icon://time-entry-request", permission: "planning.read" },
 			{ key: "dispatch", path: "/planung/wer-faehrt-wohin", icon: "sap-icon://journey-arrive", permission: "planning.read" },
