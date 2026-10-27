@@ -236,29 +236,57 @@ struct NewAcceptanceView: View {
     }
 }
 
-/// Zeile in der Bauakte: Datum, Ergebnis, Stand und Übertragungszustand.
+/// Zeile in der Bauakte: Ergebnis mit Symbol, Stand des Protokolls, Mängel, Datum und Übertragungszustand.
 struct AcceptanceRow: View {
     let acceptance: Acceptance
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text("Abnahme").font(.subheadline.weight(.semibold))
-                AcceptanceResultChip(result: acceptance.result)
-                Spacer()
-                SyncStateBadge(state: acceptance.syncState)
+        HStack(alignment: .top, spacing: Space.m) {
+            IconBadge(symbol: "signature", tint: acceptance.result.tint, background: acceptance.result.soft)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                    Text("Abnahme").font(Typo.bodyStrong).foregroundStyle(Theme.textPrimary)
+                    AcceptanceResultChip(result: acceptance.result)
+                    Spacer(minLength: Space.s)
+                    SyncStateBadge(state: acceptance.syncState)
+                }
+                Text(acceptance.syncState == .synced ? acceptance.state.title : "Wird übertragen")
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.textSecondary)
+                if !acceptance.defectWorkItemIds.isEmpty {
+                    let count = acceptance.defectWorkItemIds.count
+                    Label("\(count) \(count == 1 ? "Mangel" : "Mängel") mit Frist", systemImage: "exclamationmark.triangle.fill")
+                        .labelStyle(TightLabelStyle())
+                        .font(Typo.subheadStrong)
+                        .foregroundStyle(Theme.warning)
+                }
                 if let date = acceptance.performedAt {
-                    Text(date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(Theme.textSecondary)
+                    Text(date.formatted(.dateTime.day().month(.abbreviated).year().hour().minute()))
+                        .font(Typo.meta)
+                        .foregroundStyle(Theme.textSecondary)
                 }
             }
-            Text(acceptance.syncState == .synced ? acceptance.state.title : "Wird übertragen")
-                .font(.caption).foregroundStyle(Theme.textSecondary)
-            if !acceptance.defectWorkItemIds.isEmpty {
-                Label("\(acceptance.defectWorkItemIds.count) Mangel/Mängel mit Frist", systemImage: "exclamationmark.triangle")
-                    .font(.caption).foregroundStyle(Theme.hint)
-            }
         }
+        .padding(.vertical, Space.xs)
         .accessibilityElement(children: .combine)
+    }
+}
+
+extension AcceptanceResult {
+    var tint: Color {
+        switch self {
+        case .accepted: Theme.success
+        case .acceptedWithReservations: Theme.warning
+        case .refused: Theme.danger
+        }
+    }
+
+    var soft: Color {
+        switch self {
+        case .accepted: Theme.successSoft
+        case .acceptedWithReservations: Theme.warningSoft
+        case .refused: Theme.dangerSoft
+        }
     }
 }
 
@@ -266,16 +294,7 @@ struct AcceptanceResultChip: View {
     let result: AcceptanceResult
 
     var body: some View {
-        let color: Color = switch result {
-        case .accepted: Theme.success
-        case .acceptedWithReservations: Theme.hint
-        case .refused: Theme.error
-        }
-        Text(result.title)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(color)
-            .padding(.horizontal, 7).padding(.vertical, 2)
-            .background(color.opacity(0.14), in: Capsule())
+        Chip(text: result.title, tone: result == .accepted ? .success : result == .refused ? .danger : .warning)
     }
 }
 

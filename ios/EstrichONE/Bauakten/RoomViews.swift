@@ -159,11 +159,12 @@ struct RoomRow: View {
         HStack(spacing: Space.m) {
             VStack(alignment: .leading, spacing: 3) {
                 Text(room.name).font(Typo.body).foregroundStyle(Theme.textPrimary)
-                let details: [String?] = [
+                let parts: [String?] = [
                     room.areaSquareMeters.map { "\($0.formatted(.number.precision(.fractionLength(0...2)))) m²" },
                     room.thicknessMillimeters.map { "\($0) mm" },
                     room.underfloorHeating ? "Fußbodenheizung" : nil,
-                ].compactMap { $0 }
+                ]
+                let details = parts.compactMap { $0 }
                 Text(details.isEmpty ? "noch ohne Maße" : details.joined(separator: " · "))
                     .font(Typo.subhead.monospacedDigit())
                     .foregroundStyle(Theme.textSecondary)

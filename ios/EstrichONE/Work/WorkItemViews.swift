@@ -39,6 +39,17 @@ struct WorkItemRow: View {
         }
     }
 
+    /// „heute fällig“, „morgen fällig“, „überfällig seit 24. Okt.“, sonst „bis 30. Okt.“ – heute und überfällig rot.
+    static func dueText(_ due: Date, done: Bool, now: Date = .now) -> (text: String, urgent: Bool) {
+        let calendar = Calendar.current
+        let date = due.formatted(.dateTime.day().month(.abbreviated))
+        if done { return ("bis \(date)", false) }
+        if calendar.isDate(due, inSameDayAs: now) { return ("heute fällig", true) }
+        if due < calendar.startOfDay(for: now) { return ("überfällig seit \(date)", true) }
+        if calendar.isDateInTomorrow(due) { return ("morgen fällig", false) }
+        return ("bis \(date)", false)
+    }
+
     /// Titel, darunter Art und Fälligkeit (überfällig rot), danach Bezug und Zuständige – streng linksbündig.
     private var details: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -54,12 +65,11 @@ struct WorkItemRow: View {
                         Chip(text: "Mangel", symbol: "exclamationmark.triangle.fill", tone: .warning)
                     }
                     if let due {
-                        let overdue = item.isDue(on: CalendarDay.string(.now)) && !item.isDone
-                        Label(overdue ? "fällig \(due.formatted(.dateTime.day().month(.abbreviated)))" : "bis \(due.formatted(.dateTime.day().month(.abbreviated)))",
-                              systemImage: "calendar")
+                        let label = Self.dueText(due, done: item.isDone)
+                        Label(label.text, systemImage: "calendar")
                             .labelStyle(TightLabelStyle())
                             .font(Typo.metaStrong.monospacedDigit())
-                            .foregroundStyle(overdue ? Theme.danger : Theme.textSecondary)
+                            .foregroundStyle(label.urgent ? Theme.danger : Theme.textSecondary)
                     }
                 }
             }

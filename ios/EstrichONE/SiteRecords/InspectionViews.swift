@@ -424,52 +424,71 @@ struct InitialInspectionView: View {
     }
 }
 
+/// Zeile einer Prüfung: Art mit Symbol, Ergebnis in einer Zeile (Farbe + Text), Bemerkung, wann/wer/Fotos.
 struct InspectionRow: View {
     let inspection: Inspection
     var performerName: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack {
-                Text(inspection.kind.title).font(.subheadline.weight(.semibold))
-                if inspection.correctsInspectionId != nil {
-                    Text("Korrektur").font(.caption).foregroundStyle(Theme.textSecondary)
+        HStack(alignment: .top, spacing: Space.m) {
+            IconBadge(symbol: inspection.kind == .cmMeasurement ? "drop.fill" : "checklist", tint: result.tint, background: result.background)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                    Text(title).font(Typo.bodyStrong).foregroundStyle(Theme.textPrimary)
+                    if inspection.correctsInspectionId != nil { Chip(text: "Korrektur") }
+                    Spacer(minLength: Space.s)
+                    SyncStateBadge(state: inspection.syncState)
                 }
-                Spacer()
-                if let date = inspection.performedAt {
-                    Text(date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(Theme.textSecondary)
+                Label(result.text, systemImage: result.symbol)
+                    .labelStyle(TightLabelStyle())
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(result.tint)
+                    .accessibilityIdentifier(inspection.kind == .cmMeasurement ? "readinessLabel" : "inspectionResult")
+                if let remarks = inspection.remarks?.compactText {
+                    Text(remarks).font(Typo.subhead).foregroundStyle(Theme.textSecondary).lineLimit(2)
                 }
-            }
-            switch inspection.kind {
-            case .cmMeasurement:
-                if let measured = inspection.measuredCmPercent, let limit = inspection.limitCmPercent {
-                    Text("\(inspection.location ?? "–"): \(measured.formatted(.number.precision(.fractionLength(1...2)))) CM-% (Grenzwert \(limit.formatted(.number.precision(.fractionLength(1)))))")
-                        .monospacedDigit()
-                }
-                if let ready = inspection.isReadyForCovering {
-                    ReadinessLabel(isReady: ready)
-                }
-            case .initialInspection:
-                if inspection.notRequired {
-                    Text("Nicht notwendig").foregroundStyle(Theme.textSecondary)
-                } else if inspection.hasDefects {
-                    Label("\(inspection.checks.values.filter { $0 == .notOk }.count) Mangel/Mängel festgestellt", systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(Theme.hint)
-                } else {
-                    Label("Alle geprüften Punkte in Ordnung", systemImage: "checkmark.circle").foregroundStyle(Theme.success)
-                }
-                if !inspection.photoFileIds.isEmpty {
-                    Text("\(inspection.photoFileIds.count) Fotos").font(.caption).foregroundStyle(Theme.textSecondary)
+                if !meta.isEmpty {
+                    Text(meta).font(Typo.meta).foregroundStyle(Theme.textSecondary)
                 }
             }
-            if let remarks = inspection.remarks {
-                Text(remarks).font(.callout).foregroundStyle(Theme.textSecondary)
-            }
-            if let performerName {
-                Text(performerName).font(.caption).foregroundStyle(Theme.textSecondary)
-            }
-            SyncStateBadge(state: inspection.syncState)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Space.xs)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var title: String {
+        switch inspection.kind {
+        case .initialInspection: "Erstbegehung"
+        case .cmMeasurement: ["CM-Messung", inspection.location?.compactText].compactMap { $0 }.joined(separator: " · ")
+        }
+    }
+
+    private var result: (text: String, symbol: String, tint: Color, background: Color) {
+        switch inspection.kind {
+        case .cmMeasurement:
+            let value = inspection.measuredCmPercent.map { "\($0.formatted(.number.precision(.fractionLength(1...2)))) CM-%" }
+            let limit = inspection.limitCmPercent.map { " (Grenze \($0.formatted(.number.precision(.fractionLength(1...2)))))" } ?? ""
+            switch inspection.isReadyForCovering {
+            case true?: return ([value.map { $0 + limit }, "belegreif"].compactMap { $0 }.joined(separator: " – "), "checkmark.seal.fill",
+                                Theme.success, Theme.successSoft)
+            case false?: return ([value.map { $0 + limit }, "noch nicht belegreif"].compactMap { $0 }.joined(separator: " – "), "hourglass",
+                                 Theme.warning, Theme.warningSoft)
+            case nil: return (value ?? "Messwert fehlt", "drop", Theme.textSecondary, Theme.fill)
+            }
+        case .initialInspection:
+            if inspection.notRequired { return ("Nicht notwendig", "minus.circle", Theme.textSecondary, Theme.fill) }
+            let defects = inspection.checkResults.values.filter { $0 == .notOk }.count
+            if defects > 0 {
+                return ("\(defects) \(defects == 1 ? "Mangel" : "Mängel") festgestellt", "exclamationmark.triangle.fill", Theme.warning, Theme.warningSoft)
+            }
+            return ("Alle geprüften Punkte in Ordnung", "checkmark.circle.fill", Theme.success, Theme.successSoft)
+        }
+    }
+
+    /// „26. Okt., 07:40 · Max Huber · 3 Fotos“
+    private var meta: String {
+        let photos = inspection.photoFileIds.count + inspection.checkPhotos.values.reduce(0) { $0 + $1.count }
+        return [inspection.performedAt?.formatted(.dateTime.day().month(.abbreviated).hour().minute()), performerName,
+                photos == 0 ? nil : "\(photos) \(photos == 1 ? "Foto" : "Fotos")"].compactMap { $0 }.joined(separator: " · ")
     }
 }
