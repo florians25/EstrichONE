@@ -23,6 +23,8 @@ struct BauakteAreaView: View {
     @State private var showsDone = false
     @State private var choosingCustomer = false
     @State private var showsHistory = false
+    @State private var editingRoom: RoomEditing?
+    @State private var deletingRoom: Room?
 
     private var bauakte: Bauakte { content.bauakte }
 
@@ -39,6 +41,7 @@ struct BauakteAreaView: View {
             case .media: media
             case .work: work
             case .diary: diary
+            case .rooms: rooms
             case .protocols: protocols
             case .project: project
             case .contacts: contacts
@@ -64,6 +67,19 @@ struct BauakteAreaView: View {
                 choosingCustomer = false
                 Task { await assign(contact) }
             })
+        }
+        .sheet(item: $editingRoom) { editing in
+            RoomEditView(bauakteId: bauakte.id, room: editing.room, defaults: RoomInput(defaults: bauakte.project), floors: floorChoices) { message in
+                editingRoom = nil
+                if let message { toast = message }
+                Task { await reload() }
+            }
+        }
+        .confirmationDialog("Raum löschen?", isPresented: Binding { deletingRoom != nil } set: { if !$0 { deletingRoom = nil } },
+                            titleVisibility: .visible, presenting: deletingRoom) { room in
+            Button("„\(room.name)“ löschen", role: .destructive) { Task { await delete(room) } }
+        } message: { _ in
+            Text("Der Raum wird aus der Bauakte entfernt – auch im Büro.")
         }
         .navigationDestination(isPresented: $showsHistory) { HistoryView(bauakteId: bauakte.id) }
         .filePreview($previewing)
@@ -92,6 +108,9 @@ struct BauakteAreaView: View {
             } label: { Label("Hinzufügen", systemImage: "plus") }
         case .diary:
             Button { action = .diary } label: { Label("Neuer Eintrag", systemImage: "plus") }
+        case .rooms:
+            Button { editingRoom = RoomEditing() } label: { Label("Raum hinzufügen", systemImage: "plus") }
+                .accessibilityIdentifier("addRoomButton")
         case .protocols:
             Menu {
                 Button(BauakteAction.inspection.title, systemImage: "checklist") { action = .inspection }
@@ -218,6 +237,90 @@ struct BauakteAreaView: View {
                 Text(CalendarDay.date(entry.day)?.formatted(.dateTime.weekday(.wide).day().month(.wide).year()) ?? entry.day)
             }
         }
+    }
+
+    // MARK: Räume und Flächen
+
+    @ViewBuilder
+    private var rooms: some View {
+        if content.rooms.isEmpty {
+            Section {
+                EmptyStateView(symbol: "square.split.2x2", title: "Noch keine Räume",
+                               message: "Räume mit Fläche, Estrichdicke und Heizung erfassen – die Summen rechnet die App.",
+                               actionTitle: "Raum hinzufügen", actionSymbol: "plus") { editingRoom = RoomEditing() }
+            }
+        } else {
+            Section {
+                RoomTotalsView(rooms: content.rooms)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
+            } footer: {
+                if let planned = bauakte.project.totalArea {
+                    let measured = RoomTotals(content.rooms).area
+                    Text("Laut Basisdaten \(planned.formatted(.number.precision(.fractionLength(0...1)))) m² – in Räumen erfasst \(measured.formatted(.number.precision(.fractionLength(0...1)))) m².")
+                }
+            }
+            ForEach(roomFloors) { group in
+                Section {
+                    ForEach(group.rooms) { room in
+                        roomRow(room)
+                    }
+                } header: {
+                    HStack {
+                        Text(group.name)
+                        Spacer()
+                        Text("\(RoomTotals(group.rooms).area.formatted(.number.precision(.fractionLength(0...1)))) m²").monospacedDigit()
+                    }
+                }
+            }
+        }
+    }
+
+    private func roomRow(_ room: Room) -> some View {
+        Button { editingRoom = RoomEditing(room: room) } label: { RoomRow(room: room) }
+            .buttonStyle(.plain)
+            .accessibilityIdentifier("room-\(room.name)")
+            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                if let next = room.status.next {
+                    Button { Task { await setStatus(next, of: room) } } label: { Label(next.title, systemImage: next.symbol) }
+                        .tint(next == .ready ? Theme.success : Theme.accentFill)
+                }
+            }
+            .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                Button(role: .destructive) { deletingRoom = room } label: { Label("Löschen", systemImage: "trash") }
+            }
+            .contextMenu {
+                Button("Bearbeiten", systemImage: "pencil") { editingRoom = RoomEditing(room: room) }
+                Picker("Stand", selection: Binding { room.status } set: { status in Task { await setStatus(status, of: room) } }) {
+                    ForEach(RoomStatus.allCases) { status in Label(status.title, systemImage: status.symbol).tag(status) }
+                }
+                Button("Löschen", systemImage: "trash", role: .destructive) { deletingRoom = room }
+            }
+    }
+
+    /// Räume je Geschoss in Bauabfolge.
+    private var roomFloors: [RoomFloorGroup] {
+        var groups: [RoomFloorGroup] = []
+        for room in content.rooms {
+            let name = room.floor?.compactText ?? "Ohne Geschoss"
+            if let index = groups.firstIndex(where: { $0.name == name }) {
+                groups[index].rooms.append(room)
+            } else {
+                groups.append(RoomFloorGroup(name: name, rooms: [room]))
+            }
+        }
+        return groups
+    }
+
+    /// Geschosse zur Auswahl: aus den Basisdaten („KG, EG, OG“), sonst die üblichen, plus bereits verwendete.
+    private var floorChoices: [String] {
+        let planned = (bauakte.project.floors ?? "").split(whereSeparator: { $0 == "," || $0 == ";" || $0 == "/" })
+            .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+        var result = planned.isEmpty ? ["KG", "EG", "OG", "DG"] : planned
+        for floor in content.rooms.compactMap({ $0.floor?.compactText }) where !result.contains(floor) {
+            result.append(floor)
+        }
+        return Array(result.prefix(5))
     }
 
     // MARK: Protokolle
@@ -394,11 +497,49 @@ struct BauakteAreaView: View {
         await reload()
     }
 
+    private func setStatus(_ status: RoomStatus, of room: Room) async {
+        var input = RoomInput(room)
+        input.status = status
+        do throws(RoomError) {
+            try await model.active?.service?.updateRoom(room, to: input)
+            model.active?.sync?.localChangeMade()
+            toast = "\(room.name): \(status.title)"
+        } catch {
+            toast = error.message
+        }
+        await reload()
+    }
+
+    private func delete(_ room: Room) async {
+        do throws(RoomError) {
+            try await model.active?.service?.deleteRoom(room.id)
+            model.active?.sync?.localChangeMade()
+            toast = "Raum gelöscht"
+        } catch {
+            toast = error.message
+        }
+        deletingRoom = nil
+        await reload()
+    }
+
     private func assign(_ contact: Contact) async {
         try? await model.active?.service?.assignCustomer(contact.id, to: bauakte.id)
         model.active?.sync?.localChangeMade()
         await reload()
     }
+}
+
+/// Räume eines Geschosses.
+private struct RoomFloorGroup: Identifiable {
+    let name: String
+    var rooms: [Room]
+    var id: String { name }
+}
+
+/// Raum im Bearbeitungsblatt: neu (ohne Raum) oder vorhanden.
+private struct RoomEditing: Identifiable {
+    let id = UUID()
+    var room: Room?
 }
 
 /// Seitentitel nur, wenn der Bereich eine eigene Seite ist.

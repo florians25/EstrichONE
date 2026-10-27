@@ -42,14 +42,36 @@ struct NewAcceptanceView: View {
                             .accessibilityIdentifier("acceptanceError")
                     }
                 }
-                Section("Ergebnis") {
-                    Picker("Ergebnis", selection: $result) {
-                        ForEach(AcceptanceResult.allCases) { Text($0.title).tag(Optional($0)) }
+                Section {
+                    VStack(alignment: .leading, spacing: Space.xs) {
+                        Text(bauakte.title).font(Typo.title).foregroundStyle(Theme.textPrimary)
+                        Text([bauakte.number, bauakte.addressLine].compactMap { $0 }.joined(separator: " · "))
+                            .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                     }
-                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: Space.s, leading: Space.xs, bottom: Space.s, trailing: Space.xs))
+                }
+                Section {
+                    HStack(spacing: Space.s) {
+                        ChoiceButton(title: "Abgenommen", symbol: "checkmark.seal.fill", isSelected: result == .accepted, tone: .success) {
+                            result = .accepted
+                        }
+                        ChoiceButton(title: "Mit Vorbehalt", symbol: "exclamationmark.triangle.fill", isSelected: result == .acceptedWithReservations,
+                                     tone: .warning) {
+                            result = .acceptedWithReservations
+                        }
+                        ChoiceButton(title: "Verweigert", symbol: "xmark.octagon.fill", isSelected: result == .refused, tone: .danger) {
+                            result = .refused
+                        }
+                    }
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
                     .accessibilityIdentifier("acceptanceResultPicker")
+                } header: {
+                    Text("Ergebnis")
+                } footer: {
                     if result == .acceptedWithReservations || result == .refused {
-                        Text("Bitte die Mängel bzw. Vorbehalte unten erfassen.").font(.footnote).foregroundStyle(Theme.textSecondary)
+                        Text("Bitte die Mängel bzw. Vorbehalte unten erfassen – jeder wird als Aufgabe mit Frist angelegt.")
                     }
                 }
                 Section("Teilnehmer") {
@@ -94,11 +116,18 @@ struct NewAcceptanceView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: onDone) }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern") { Task { await save() } }
-                        .disabled(saving)
-                        .accessibilityIdentifier("saveAcceptanceButton")
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button { Task { await save() } } label: {
+                    ActionLabel("Abnahme sichern", systemImage: "checkmark", isBusy: saving)
                 }
+                .primaryActionStyle()
+                .disabled(saving)
+                .accessibilityIdentifier("saveAcceptanceButton")
+                .padding(.horizontal, Space.l)
+                .padding(.top, Space.m)
+                .padding(.bottom, Space.s)
+                .background(.bar)
             }
             .fullScreenCover(isPresented: $capturing) {
                 CameraView(bauakte: bauakte, allowsChangingBauakte: false, caption: "Abnahme") { _ in
@@ -153,18 +182,25 @@ struct NewAcceptanceView: View {
 
     private func signatureRow(_ side: Side, data: Data?) -> some View {
         Button { signing = side } label: {
-            HStack {
-                Label(side == .client ? "Auftraggeber" : "Auftragnehmer", systemImage: "signature")
+            HStack(spacing: Space.m) {
+                IconBadge(symbol: data == nil ? "signature" : "checkmark.seal.fill", tint: data == nil ? Theme.accent : Theme.success,
+                          background: (data == nil ? Theme.accent : Theme.success).opacity(0.12))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(side == .client ? "Auftraggeber" : "Auftragnehmer").font(Typo.body).foregroundStyle(Theme.textPrimary)
+                    Text(data == nil ? "Noch nicht unterschrieben" : "Unterschrieben").font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                }
                 Spacer()
                 if let data, let image = UIImage(data: data) {
-                    Image(uiImage: image).resizable().scaledToFit().frame(height: 34)
-                        .background(Color.white, in: RoundedRectangle(cornerRadius: 4))
-                    Image(systemName: "checkmark.circle.fill").foregroundStyle(Theme.success)
+                    Image(uiImage: image).resizable().scaledToFit().frame(height: 38)
+                        .padding(4)
+                        .background(Color.white, in: RoundedRectangle(cornerRadius: Radius.xs))
                 } else {
-                    Text("Unterschreiben").foregroundStyle(Theme.actionPrimary)
+                    Text("Unterschreiben").font(Typo.subheadStrong).foregroundStyle(Theme.accent)
                 }
             }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.plain)
         .accessibilityIdentifier(side == .client ? "signClientButton" : "signContractorButton")
     }
 

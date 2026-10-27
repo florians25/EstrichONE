@@ -46,10 +46,29 @@ struct NewBauakteView: View {
             case .details: "Übersicht"
             }
         }
+
+        var question: String {
+            switch self {
+            case .customer: "Für wen bauen wir?"
+            case .site: "Wo ist die Baustelle?"
+            case .project: "Was wird gebaut?"
+            case .details: "Alles richtig?"
+            }
+        }
+
+        var hint: String {
+            switch self {
+            case .customer: "Vorhandenen Kunden suchen oder neu erfassen – auch ohne Verbindung."
+            case .site: "Bezeichnung und Adresse. Den Standort übernimmt die App auf Knopfdruck."
+            case .project: "Fläche, Estrich und Aufbau – alles optional und später ergänzbar."
+            case .details: "Kurz prüfen und anlegen. Übertragen wird automatisch, sobald Netz da ist."
+            }
+        }
     }
 
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.shotScene) private var shotScene
     @SwiftUI.AppStorage("newBauakteMode") private var mode: Mode = .wizard
     @State private var step: Step = .customer
     @State private var input = NewBauakte(title: "")
@@ -70,20 +89,23 @@ struct NewBauakteView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section {
-                    Picker("Darstellung", selection: $mode) {
-                        ForEach(Mode.allCases) { Text($0.title).tag($0) }
-                    }
-                    .pickerStyle(.segmented)
-                    .accessibilityIdentifier("newBauakteModePicker")
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-                }
                 if mode == .wizard {
                     Section {
-                        WizardProgress(steps: Step.allCases.map(\.title), current: step.rawValue)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 4, trailing: 0))
+                        VStack(alignment: .leading, spacing: Space.m) {
+                            StepProgress(steps: Step.allCases.map(\.title), current: step.rawValue)
+                            VStack(alignment: .leading, spacing: Space.xs) {
+                                Text(step.question)
+                                    .font(Typo.title)
+                                    .foregroundStyle(Theme.textPrimary)
+                                    .accessibilityAddTraits(.isHeader)
+                                Text(step.hint)
+                                    .font(Typo.subhead)
+                                    .foregroundStyle(Theme.textSecondary)
+                                    .fixedSize(horizontal: false, vertical: true)
+                            }
+                        }
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: Space.s, leading: Space.xs, bottom: Space.s, trailing: Space.xs))
                     }
                     switch step {
                     case .customer:
@@ -115,8 +137,20 @@ struct NewBauakteView: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Abbrechen") { dismiss() }
                 }
+                ToolbarItem(placement: .primaryAction) {
+                    Menu {
+                        Picker("Darstellung", selection: $mode) {
+                            Label("Schritt für Schritt", systemImage: "list.number").tag(Mode.wizard)
+                            Label("Alles auf einer Seite", systemImage: "list.bullet").tag(Mode.form)
+                        }
+                    } label: {
+                        Label("Darstellung", systemImage: "slider.horizontal.3")
+                    }
+                    .accessibilityIdentifier("newBauakteModePicker")
+                }
             }
             .safeAreaInset(edge: .bottom) { bottomBar }
+            .task { await applyShotScene() }
             .onAppear {
                 if customer == nil, newCustomer == nil, let initialCustomer {
                     customer = initialCustomer
@@ -331,9 +365,31 @@ struct NewBauakteView: View {
         .lineLimit(1)
         .minimumScaleFactor(0.8)
         .disabled(saving)
-        .padding(.horizontal, 16)
-        .padding(.vertical, 8)
+        .padding(.horizontal, Space.l)
+        .padding(.top, Space.m)
+        .padding(.bottom, Space.s)
         .background(.bar)
+    }
+
+    /// Screenshot-Modus: Schritt „neu-2“ … „neu-4“ mit Beispieleingaben zeigen.
+    private func applyShotScene() async {
+        guard let scene = shotScene, scene.hasPrefix("neu-"), let number = Int(scene.dropFirst(4)), number > 1,
+              let service = model.active?.service else { return }
+        mode = .wizard
+        if customer == nil {
+            customer = ((try? await service.contacts()) ?? []).first { !$0.isCompany }
+        }
+        input.title = "EFH Brunner, Neubau"
+        input.street = "Birkenweg 14"
+        input.postalCode = "84036"
+        input.city = "Landshut"
+        if number >= 3 {
+            input.project.objectType = .efh
+            input.project.totalArea = 168
+            input.projectData = ["objectType": .string("efh"), "totalArea": .number(168), "screedType": .string("ct"),
+                                 "nominalThicknessMm": .number(65), "underfloorHeating": .bool(true)]
+        }
+        step = Step(rawValue: min(number - 1, Step.details.rawValue)) ?? .site
     }
 
     // MARK: Ablauf

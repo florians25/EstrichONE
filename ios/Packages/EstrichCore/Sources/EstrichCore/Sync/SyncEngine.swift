@@ -168,7 +168,8 @@ public actor SyncEngine {
     }
 
     private func pullAll(includeScope: Bool) async throws {
-        var resynced = false
+        // Neue Datensatzarten nach einem App-Update: einmal vollständig neu abgleichen.
+        var resynced = try await store.beginResyncForNewTypesIfNeeded()
         var first = true
         var visible: [UUID]?
         while true {

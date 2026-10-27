@@ -61,6 +61,10 @@ struct SchemaInspectionView: View {
 
     private static let general = "__general"
 
+    @Environment(\.shotScene) private var shotScene
+
+    private var checkFields: [FormSchema.Field] { schema.fields.filter { $0.type == .check } }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -68,7 +72,12 @@ struct SchemaInspectionView: View {
                     Section { StatusMessage(kind: .error, text: error).accessibilityIdentifier("inspectionError") }
                 }
                 Section {
-                    Toggle("Erstbegehung nicht notwendig", isOn: $notRequired)
+                    progressHeader
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: Space.s, leading: Space.xs, bottom: Space.s, trailing: Space.xs))
+                }
+                Section {
+                    Toggle("Erstbegehung nicht notwendig", isOn: $notRequired.animation())
                     if notRequired {
                         TextField("Begründung (Pflicht)", text: $reason, axis: .vertical).lineLimit(2...4)
                     }
@@ -95,9 +104,10 @@ struct SchemaInspectionView: View {
                 }
                 Section {
                     Button { capture(Self.general) } label: {
-                        Label(photos.isEmpty ? "Weitere Fotos" : "Weitere Fotos (\(photos.count))", systemImage: "camera")
+                        Label(photos.isEmpty ? "Weitere Fotos aufnehmen" : "Weitere Fotos (\(photos.count))", systemImage: "camera")
                     }
                     Button { signing = true } label: { Label("Unterschrift des Kunden", systemImage: "signature") }
+                        .accessibilityIdentifier("signatureButton")
                 } header: {
                     Text("Fotos und Unterschrift")
                 }
@@ -106,12 +116,20 @@ struct SchemaInspectionView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen", action: onDone) }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Sichern") { Task { await save() } }
-                        .disabled(saving)
-                        .accessibilityIdentifier("saveInspectionButton")
-                }
             }
+            .safeAreaInset(edge: .bottom) {
+                Button { Task { await save() } } label: {
+                    ActionLabel("Erstbegehung sichern", systemImage: "checkmark", isBusy: saving)
+                }
+                .primaryActionStyle()
+                .disabled(saving)
+                .accessibilityIdentifier("saveInspectionButton")
+                .padding(.horizontal, Space.l)
+                .padding(.top, Space.m)
+                .padding(.bottom, Space.s)
+                .background(.bar)
+            }
+            .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
             .fullScreenCover(item: Binding(get: { capturingFor.map(CaptureTarget.init) }, set: { capturingFor = $0?.id })) { target in
                 CameraView(bauakte: bauakte, allowsChangingBauakte: false, caption: caption(for: target.id)) { _ in
                     capturingFor = nil
@@ -127,7 +145,36 @@ struct SchemaInspectionView: View {
             .task {
                 lists = await model.active?.service?.valueLists() ?? ValueLists([])
                 prefill()
+                if shotScene == "erstbegehung", checks.isEmpty {
+                    // Screenshot-Modus: ein Teil ist schon geprüft, ein Mangel mit Bemerkung.
+                    for (index, field) in checkFields.prefix(3).enumerated() {
+                        checks[field.key] = index == 2 ? .notOk : .ok
+                    }
+                    if checkFields.count > 2 { remarks[checkFields[2].key] = "Druckprotokoll fehlt noch – Heizungsbauer angerufen." }
+                }
             }
+        }
+    }
+
+    /// Fortschritt: geprüfte Punkte, festgestellte Mängel.
+    private var progressHeader: some View {
+        let done = checkFields.filter { checks[$0.key] != nil }.count
+        let defects = checkFields.filter { checks[$0.key] == .notOk }.count
+        return VStack(alignment: .leading, spacing: Space.s) {
+            HStack(alignment: .firstTextBaseline) {
+                Text(bauakte.title)
+                    .font(Typo.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                Spacer()
+                if defects > 0 {
+                    Chip(text: defects == 1 ? "1 Mangel" : "\(defects) Mängel", symbol: "exclamationmark.triangle.fill", tone: .warning)
+                }
+            }
+            ProgressBar(value: checkFields.isEmpty ? 0 : Double(done) / Double(checkFields.count), tint: defects > 0 ? Theme.warning : Theme.accent)
+            Text(notRequired ? "Keine Erstbegehung notwendig – bitte begründen." : "\(done) von \(checkFields.count) Prüfpunkten bewertet")
+                .font(Typo.meta)
+                .foregroundStyle(Theme.textSecondary)
         }
     }
 
@@ -136,31 +183,45 @@ struct SchemaInspectionView: View {
     }
 
     private func checkRow(_ field: FormSchema.Field) -> some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(field.required ? "\(field.label) *" : field.label).font(.body.weight(.semibold))
-            if let help = field.help {
-                Text(help).font(.caption).foregroundStyle(Theme.textSecondary)
+        let selection = checks[field.key]
+        let photoCount = checkPhotos[field.key]?.count ?? 0
+        return VStack(alignment: .leading, spacing: Space.m) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text(field.required ? "\(field.label) *" : field.label)
+                    .font(Typo.bodyStrong)
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+                if let help = field.help {
+                    Text(help).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                }
             }
-            Picker(field.label, selection: Binding<CheckResult?>(get: { checks[field.key] }, set: { checks[field.key] = $0 })) {
-                ForEach(CheckResult.allCases) { Text($0.title).tag(Optional($0)) }
+            HStack(spacing: Space.s) {
+                ChoiceButton(title: "In Ordnung", symbol: "checkmark.circle.fill", isSelected: selection == .ok, tone: .success) {
+                    checks[field.key] = selection == .ok ? nil : .ok
+                }
+                ChoiceButton(title: "Mangel", symbol: "exclamationmark.triangle.fill", isSelected: selection == .notOk, tone: .warning) {
+                    checks[field.key] = selection == .notOk ? nil : .notOk
+                }
+                ChoiceButton(title: "Entfällt", symbol: "minus.circle.fill", isSelected: selection == .notApplicable, tone: .neutral) {
+                    checks[field.key] = selection == .notApplicable ? nil : .notApplicable
+                }
             }
-            .pickerStyle(.segmented)
-            .labelsHidden()
+            .accessibilityElement(children: .contain)
             .accessibilityIdentifier("check-\(field.key)")
-            if checks[field.key] == .notOk || !(remarks[field.key] ?? "").isEmpty {
-                TextField("Bemerkung", text: Binding(get: { remarks[field.key] ?? "" }, set: { remarks[field.key] = $0 }), axis: .vertical)
+            if selection == .notOk || !(remarks[field.key] ?? "").isEmpty {
+                TextField("Was ist mangelhaft?", text: Binding(get: { remarks[field.key] ?? "" }, set: { remarks[field.key] = $0 }), axis: .vertical)
                     .lineLimit(1...4)
+                    .padding(Space.m)
+                    .background(Theme.fill, in: RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
             }
             if field.photos {
                 Button { capture(field.key) } label: {
-                    let count = checkPhotos[field.key]?.count ?? 0
-                    Label(count == 0 ? "Foto zu diesem Punkt" : "\(count) Foto(s) – weitere", systemImage: "camera")
-                        .font(.subheadline.weight(.semibold))
+                    Label(photoCount == 0 ? "Foto zu diesem Punkt" : "\(photoCount) \(photoCount == 1 ? "Foto" : "Fotos") – weitere", systemImage: "camera")
                 }
-                .buttonStyle(.borderless)
+                .estrichButton(.secondary)
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, Space.s)
     }
 
     /// Wertefelder einer Gruppe als eigenes Mini-Schema (flache Werte, Hinweis auf Übernahme in die Basisdaten).

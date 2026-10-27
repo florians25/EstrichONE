@@ -216,17 +216,3 @@ struct CaptureHub: View {
         }
     }
 }
-
-/// Kachel mit Druckzustand (leicht kleiner, abgedunkelt) und Haptik.
-struct TileButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .overlay {
-                RoundedRectangle(cornerRadius: Radius.l, style: .continuous)
-                    .fill(Color.black.opacity(configuration.isPressed ? 0.06 : 0))
-            }
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
-            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: configuration.isPressed) { _, pressed in pressed }
-    }
-}

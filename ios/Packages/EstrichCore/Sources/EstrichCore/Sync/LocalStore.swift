@@ -292,10 +292,27 @@ public actor LocalStore {
 
     /// Server wurde wiederhergestellt oder Cursor ungültig: vollständiger Neuabgleich, Outbox bleibt.
     public func beginFullResync() throws {
+        try db.write { db in try Self.beginFullResync(db) }
+    }
+
+    private static func beginFullResync(_ db: SQLiteDatabase) throws {
+        try db.execute("DELETE FROM meta WHERE key = 'cursor'")
+        try db.execute("UPDATE entity SET seen = 0 WHERE server IS NOT NULL")
+        try db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('full_resync', '1')")
+    }
+
+    /// Datensatzarten, die diese App-Version aus dem Änderungsfeed übernimmt (mit jedem Cursor gespeichert).
+    static let feedTypes = EntityType.allCases.map(\.rawValue).sorted().joined(separator: ",")
+
+    /// Nach einem App-Update mit neuen Datensatzarten (z. B. Räume): Ältere Versionen haben sie im Feed übersprungen
+    /// und der Cursor steht dahinter – darum einmal vollständig neu abgleichen (Outbox bleibt). `true`, wenn begonnen.
+    public func beginResyncForNewTypesIfNeeded() throws -> Bool {
         try db.write { db in
-            try db.execute("DELETE FROM meta WHERE key = 'cursor'")
-            try db.execute("UPDATE entity SET seen = 0 WHERE server IS NOT NULL")
-            try db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('full_resync', '1')")
+            guard try db.scalar("SELECT value FROM meta WHERE key = 'cursor'").string != nil else { return false }
+            let known = Set((try db.scalar("SELECT value FROM meta WHERE key = 'feed_types'").string ?? "").split(separator: ",").map(String.init))
+            guard !Set(EntityType.allCases.map(\.rawValue)).isSubset(of: known) else { return false }
+            try Self.beginFullResync(db)
+            return true
         }
     }
 
@@ -321,6 +338,7 @@ public actor LocalStore {
                 }
             }
             try db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('cursor', ?)", [.text(page.cursor)])
+            try db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('feed_types', ?)", [.text(Self.feedTypes)])
             if !page.hasMore {
                 try finishFullResyncIfNeeded(db)
                 try db.execute("INSERT OR REPLACE INTO meta (key, value) VALUES ('last_sync', ?)", [.text(APIDate.format(now()))])
@@ -544,6 +562,7 @@ public actor LocalStore {
         case .valueListItem: ["list", "key", "label"]
         case .formSchema: ["key"]
         case .ticket: ["title"]
+        case .room: ["name", "floor", "notes"]
         }
         let search = searchFields.compactMap { data[$0]?.string }.joined(separator: " ").lowercased()
         let sortKey = data["performedAt"]?.string ?? data["day"]?.string.map { $0 + (data["createdAt"]?.string ?? "") }

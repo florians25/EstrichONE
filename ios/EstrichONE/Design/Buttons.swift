@@ -199,6 +199,74 @@ struct ActionLabel: View {
     }
 }
 
+/// Kachel mit Druckzustand (leicht kleiner, abgedunkelt) und Haptik.
+struct TileButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .overlay {
+                RoundedRectangle(cornerRadius: Radius.l, style: .continuous)
+                    .fill(Color.black.opacity(configuration.isPressed ? 0.06 : 0))
+            }
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(.spring(response: 0.25, dampingFraction: 0.75), value: configuration.isPressed)
+            .sensoryFeedback(.impact(weight: .light, intensity: 0.6), trigger: configuration.isPressed) { _, pressed in pressed }
+    }
+}
+
+/// Große Auswahl (z. B. „In Ordnung / Mangel / Entfällt“, Ergebnis der Abnahme): gut mit Handschuhen, die gewählte
+/// Option deutlich getönt und umrandet – Farbe, Symbol und Text gemeinsam.
+struct ChoiceButton: View {
+    let title: String
+    let symbol: String
+    let isSelected: Bool
+    var tone: Chip.Tone = .accent
+    let action: () -> Void
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
+        Button(action: action) {
+            VStack(spacing: 4) {
+                Image(systemName: symbol)
+                    .font(.body.weight(SymbolWeight.control))
+                    .accessibilityHidden(true)
+                Text(title)
+                    .font(Typo.metaStrong)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .foregroundStyle(isSelected ? foreground : Theme.textSecondary)
+            .background(isSelected ? background : Theme.fill, in: shape)
+            .overlay(shape.strokeBorder(isSelected ? foreground.opacity(0.55) : .clear, lineWidth: 1.5))
+            .contentShape(shape)
+        }
+        .buttonStyle(TileButtonStyle())
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .sensoryFeedback(.selection, trigger: isSelected)
+    }
+
+    private var foreground: Color {
+        switch tone {
+        case .neutral: Theme.textPrimary
+        case .accent: Theme.accent
+        case .success: Theme.success
+        case .warning: Theme.warning
+        case .danger: Theme.danger
+        }
+    }
+
+    private var background: Color {
+        switch tone {
+        case .neutral: Theme.fillStrong
+        case .accent: Theme.accentSoft
+        case .success: Theme.successSoft
+        case .warning: Theme.warningSoft
+        case .danger: Theme.dangerSoft
+        }
+    }
+}
+
 /// Zeilen in Karten: beim Drücken grau hinterlegt wie Listenzeilen.
 struct RowButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {

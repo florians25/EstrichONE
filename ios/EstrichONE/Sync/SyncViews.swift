@@ -54,32 +54,8 @@ struct SyncView: View {
     var body: some View {
         List {
             Section {
-                LabeledContent("Zuletzt vollständig") {
-                    if let date = sync.summary?.lastSuccessfulSync {
-                        Text(date, format: .relative(presentation: .named))
-                    } else {
-                        Text("noch nie")
-                    }
-                }
-                if sync.isOffline {
-                    Label("Keine Verbindung. Alles ist auf dem Gerät gespeichert und wird übertragen, sobald der Server erreichbar ist.", systemImage: "wifi.slash")
-                        .foregroundStyle(Theme.textSecondary)
-                }
-                Button {
-                    Task { await sync.run(includeScope: true) }
-                } label: {
-                    HStack {
-                        Label("Jetzt synchronisieren", systemImage: "arrow.triangle.2.circlepath")
-                        if sync.isRunning {
-                            Spacer()
-                            ProgressView()
-                        }
-                    }
-                }
-                .disabled(sync.isRunning)
-                .accessibilityIdentifier("syncNowButton")
+                statusCard
             }
-
             let rejected = operations.filter { $0.state == .rejected }
             if !rejected.isEmpty {
                 Section {
@@ -151,13 +127,15 @@ struct SyncView: View {
             let pending = operations.filter { $0.state != .rejected }
             Section {
                 if pending.isEmpty {
-                    Text("Alle Änderungen sind übertragen.").foregroundStyle(Theme.textSecondary)
+                    Label("Alle Änderungen sind übertragen.", systemImage: "checkmark.circle")
+                        .foregroundStyle(Theme.textSecondary)
                 }
                 ForEach(pending, id: \.seq) { operation in
-                    Text(Self.describe(operation))
+                    Label(Self.describe(operation), systemImage: "arrow.up.circle")
+                        .foregroundStyle(Theme.textPrimary)
                 }
             } header: {
-                Text("Ausstehend")
+                Text("Ausstehend (\(pending.count))")
             }
 
             let openUploads = uploads.filter { $0.state != .done }
@@ -191,9 +169,60 @@ struct SyncView: View {
                 }
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle("Synchronisation")
         .task(id: sync.revision) { await reload() }
         .refreshable { await sync.run(includeScope: true) }
+    }
+
+    private var state: (symbol: String, title: String, detail: String, tint: Color) {
+        let last = sync.summary?.lastSuccessfulSync.map { "Zuletzt vollständig \($0.formatted(.relative(presentation: .named)))" }
+            ?? "Noch kein vollständiger Abgleich"
+        if sync.isRunning { return ("arrow.triangle.2.circlepath", "Wird abgeglichen …", last, Theme.accent) }
+        if let message = sync.maintenanceMessage {
+            return ("wrench.and.screwdriver.fill", "Server in Wartung", "\(message) Alles bleibt auf dem Gerät und wird danach übertragen.", Theme.warning)
+        }
+        if sync.isOffline {
+            return ("icloud.slash", "Offline", "Keine Verbindung. Alles ist auf dem Gerät gespeichert und wird übertragen, sobald der Server erreichbar ist.",
+                    Theme.textSecondary)
+        }
+        if sync.summary?.hasProblems == true { return ("exclamationmark.icloud.fill", "Bitte prüfen", "Einige Änderungen wurden nicht übernommen – Details unten.", Theme.danger) }
+        if let summary = sync.summary, !summary.isSettled {
+            let count = summary.pendingOperations + summary.pendingUploads
+            return ("icloud.and.arrow.up", count == 1 ? "1 Änderung wartet" : "\(count) Änderungen warten", last, Theme.accent)
+        }
+        return ("checkmark.icloud.fill", "Alles übertragen", last, Theme.success)
+    }
+
+    private var statusCard: some View {
+        let current = state
+        return VStack(alignment: .leading, spacing: Space.l) {
+            HStack(spacing: Space.m) {
+                IconBadge(symbol: current.symbol, tint: current.tint, background: current.tint.opacity(0.12), size: 52)
+                    .symbolEffect(.pulse, isActive: sync.isRunning)
+                VStack(alignment: .leading, spacing: 3) {
+                    Text(current.title).font(Typo.headline).foregroundStyle(Theme.textPrimary)
+                    Text(current.detail).font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            if let progress = sync.uploadProgress, progress.total > 0 {
+                VStack(alignment: .leading, spacing: Space.xs) {
+                    ProgressBar(value: Double(progress.sent) / Double(progress.total))
+                    Text("\(progress.files) \(progress.files == 1 ? "Datei" : "Dateien") · \(ByteCountFormatter.string(fromByteCount: progress.sent, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: progress.total, countStyle: .file))")
+                        .font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                }
+            }
+            Button {
+                Task { await sync.run(includeScope: true) }
+            } label: {
+                ActionLabel("Jetzt synchronisieren", systemImage: "arrow.triangle.2.circlepath", isBusy: sync.isRunning)
+            }
+            .primaryActionStyle()
+            .disabled(sync.isRunning)
+            .accessibilityIdentifier("syncNowButton")
+        }
+        .padding(.vertical, Space.s)
     }
 
     private func reload() async {
@@ -217,6 +246,7 @@ struct SyncView: View {
         case .valueListItem: "Werteliste"
         case .formSchema: "Formular"
         case .ticket: "Meldung an die IT"
+        case .room: "Raum"
         }
         let action = operation.type.split(separator: ".").last ?? ""
         return switch action {

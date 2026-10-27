@@ -32,6 +32,7 @@ struct DispatchView: View {
             }
         }
         .overlay { if loading && data == nil { ProgressView() } }
+        .listStyle(.insetGrouped)
         .navigationTitle("Wer fährt wohin")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: CalendarDay.string(day)) { await load() }
@@ -65,6 +66,8 @@ struct DispatchView: View {
     private var list: some View {
         List {
             Section { dayBar }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             statusLines
             if let message = data?.message {
                 Text(message).foregroundStyle(Theme.textSecondary)
@@ -202,20 +205,37 @@ struct DispatchView: View {
     // MARK: Gemeinsam
 
     private var dayBar: some View {
-        VStack(spacing: 6) {
-            HStack(spacing: 8) {
-                Button { shift(-1) } label: { Label("Vorheriger Tag", systemImage: "chevron.left") }
-                    .buttonStyle(IconButtonStyle())
+        HStack(spacing: Space.s) {
+            Button { shift(-1) } label: { Label("Vorheriger Tag", systemImage: "chevron.left") }
+                .buttonStyle(IconButtonStyle())
+            VStack(spacing: 2) {
+                Text(dayTitle)
+                    .font(Typo.headline)
+                    .foregroundStyle(Theme.textPrimary)
                 DatePicker("Tag", selection: $day, displayedComponents: .date)
                     .labelsHidden()
-                    .frame(maxWidth: .infinity)
-                Button { shift(1) } label: { Label("Nächster Tag", systemImage: "chevron.right") }
-                    .buttonStyle(IconButtonStyle())
+                    .datePickerStyle(.compact)
             }
+            .frame(maxWidth: .infinity)
+            Button { shift(1) } label: { Label("Nächster Tag", systemImage: "chevron.right") }
+                .buttonStyle(IconButtonStyle())
+        }
+        .padding(.vertical, Space.xs)
+        .overlay(alignment: .topTrailing) {
             if !Calendar.current.isDateInToday(day) {
                 Button("Heute") { day = .now }
+                    .font(Typo.subheadStrong)
+                    .padding(.trailing, 56)
             }
         }
+    }
+
+    private var dayTitle: String {
+        let calendar = Calendar.current
+        if calendar.isDateInToday(day) { return "Heute" }
+        if calendar.isDateInTomorrow(day) { return "Morgen" }
+        if calendar.isDateInYesterday(day) { return "Gestern" }
+        return day.formatted(.dateTime.weekday(.wide))
     }
 
     @ViewBuilder
@@ -305,38 +325,42 @@ extension DispatchBoard {
     }
 }
 
-/// Kopf einer Kolonne: Farbe, Name, Leitung, Stärke, Fahrzeuge, Abwesende, Hinweis bei Doppelbelegung.
+/// Kopf einer Kolonne: Farbe, Name, Leitung, Stärke, Fahrzeuge, Abwesende, Hinweis bei Überschneidung.
 struct CrewHeader: View {
     let crew: DispatchBoard.Crew
     let board: DispatchBoard
 
     var body: some View {
-        HStack(alignment: .top, spacing: 8) {
-            Circle().fill(Color(hexString: crew.color) ?? Theme.accent).frame(width: 12, height: 12).padding(.top, 3)
+        HStack(alignment: .top, spacing: Space.s) {
+            StatusDot(color: Color(hexString: crew.color) ?? Theme.accent, size: 12)
+                .padding(.top, 4)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
-                    Text(crew.name).font(.subheadline.weight(.bold)).foregroundStyle(Theme.navyText)
+                    Text(crew.name).font(Typo.subheadStrong).foregroundStyle(Theme.textPrimary)
                     if crew.isDoubleBooked {
-                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.hint)
-                            .accessibilityLabel("Mehrere Baustellen")
+                        Image(systemName: "exclamationmark.triangle.fill").foregroundStyle(Theme.warning)
+                            .accessibilityLabel("Zeitliche Überschneidung")
                     }
                 }
                 let details = [crew.leaderName, crew.memberCount > 0 ? "\(crew.memberCount) Pers." : nil,
                                crew.vehicles.isEmpty ? nil : crew.vehicles.map(\.name).joined(separator: ", ")].compactMap { $0 }
                 if !details.isEmpty {
-                    Text(details.joined(separator: " · ")).font(.caption).foregroundStyle(Theme.textSecondary)
+                    Text(details.joined(separator: " · ")).font(Typo.meta).foregroundStyle(Theme.textSecondary)
                 }
                 ForEach(crew.warnings, id: \.self) { warning in
                     Label(warning, systemImage: "exclamationmark.triangle.fill").labelStyle(TightLabelStyle())
-                        .font(.caption.weight(.semibold)).foregroundStyle(Theme.hint)
+                        .font(Typo.metaStrong).foregroundStyle(Theme.warning)
                 }
                 if !crew.absentMembers.isEmpty {
-                    Text("fehlt: " + crew.absentMembers.map { [$0.name, $0.note].compactMap { $0 }.joined(separator: " – ") }.joined(separator: ", "))
-                        .font(.caption).foregroundStyle(Theme.hint)
+                    Label("fehlt: " + crew.absentMembers.map { [$0.name, $0.note].compactMap { $0 }.joined(separator: " – ") }.joined(separator: ", "),
+                          systemImage: "person.fill.xmark")
+                        .labelStyle(TightLabelStyle())
+                        .font(Typo.meta).foregroundStyle(Theme.warning)
                 }
             }
         }
         .textCase(nil)
+        .padding(.bottom, Space.xs)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("crew-\(crew.name)")
     }
@@ -537,9 +561,8 @@ enum DispatchData {
     }
 }
 
-/// Baustelle in „Wer fährt wohin“: links Beginn (tabellarische Ziffern) und ggf. „Ich“, daneben Nummer und Titel in einer
-/// Zeile, darunter Tätigkeit und Zeitraum sowie die Adresse in Grau, Hinweise als kleine orange Kapsel; rechts ein kleiner
-/// Routen-Knopf. Die Kolonne steht nur dann als Kapsel dabei, wenn die Zeile nicht ohnehin unter ihrer Kolonne steht.
+/// Baustelle in „Wer fährt wohin“: links Beginn und Ende (gleich breite Ziffern) und ggf. „Ich“, daneben Nummer und Titel,
+/// Tätigkeit, Adresse und Hinweise – streng linksbündig; rechts ein Routen-Knopf.
 struct DispatchSiteRow: View {
     let site: DispatchBoard.Site
     var isMine = false
@@ -548,63 +571,45 @@ struct DispatchSiteRow: View {
     var slot: DispatchBoard.SiteCrew?
 
     var body: some View {
-        HStack(alignment: .top, spacing: 12) {
+        HStack(alignment: .top, spacing: Space.m) {
             VStack(alignment: .leading, spacing: 4) {
                 Text(slot?.startText ?? site.startText ?? "–")
-                    .font(.subheadline.monospacedDigit().weight(.semibold))
-                    .foregroundStyle(Color.primary)
+                    .font(Typo.bodyStrong.monospacedDigit())
+                    .foregroundStyle(Theme.textPrimary)
                 if let end = slot?.endText {
-                    Text("bis \(end)").font(.caption.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                    Text("bis \(end)").font(Typo.meta.monospacedDigit()).foregroundStyle(Theme.textSecondary)
                 }
                 if isMine {
-                    Text("Ich")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Theme.onAccent)
-                        .padding(.horizontal, 6).padding(.vertical, 1)
-                        .background(Theme.accent, in: Capsule())
+                    Chip(text: "Ich", tone: .accent)
                         .accessibilityLabel("Mein Einsatz")
                 }
             }
-            .frame(width: 48, alignment: .leading)
+            .frame(width: 56, alignment: .leading)
 
             NavigationLink(value: HomeRoute.bauakte(site.bauakteId)) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text([site.number, site.title].compactMap { $0 }.joined(separator: " · "))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.primary)
-                        .lineLimit(1)
-                        .truncationMode(.tail)
+                        .font(Typo.subheadStrong)
+                        .foregroundStyle(Theme.textPrimary)
+                        .lineLimit(2)
                     ForEach(site.jobs) { job in
-                        Text([job.activity, [job.startText, job.endText].compactMap { $0 }.joined(separator: "–")]
-                            .filter { !$0.isEmpty }.joined(separator: " · "))
-                            .font(.footnote)
+                        Text(job.activity)
+                            .font(Typo.subhead)
                             .foregroundStyle(Theme.textSecondary)
                             .lineLimit(2)
                     }
                     if showsCrews, !site.crews.isEmpty {
                         HStack(spacing: 6) {
                             ForEach(site.crews) { crew in
-                                let tint = Color(hexString: crew.color) ?? Theme.accent
-                                HStack(spacing: 4) {
-                                    Circle().fill(tint).frame(width: 7, height: 7)
-                                    Text(crew.name).font(.caption2.weight(.semibold)).foregroundStyle(Color.primary)
-                                }
-                                .padding(.horizontal, 7).padding(.vertical, 2)
-                                .background(tint.opacity(0.14), in: Capsule())
+                                Chip(text: crew.name, dot: Color(hexString: crew.color) ?? Theme.accent)
                             }
                         }
                     }
                     if let address = site.address {
-                        Text(address).font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                        Text(address).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
                     }
                     ForEach(site.warnings, id: \.self) { warning in
-                        Label(warning, systemImage: "exclamationmark.triangle.fill")
-                            .labelStyle(TightLabelStyle())
-                            .font(.caption2.weight(.semibold))
-                            .foregroundStyle(Theme.hint)
-                            .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Theme.hintBackground, in: Capsule())
-                            .lineLimit(2)
+                        Chip(text: warning, symbol: "exclamationmark.triangle.fill", tone: .warning)
                     }
                 }
                 .multilineTextAlignment(.leading)
@@ -614,18 +619,11 @@ struct DispatchSiteRow: View {
             .buttonStyle(.plain)
 
             if let url = site.navigationUrl.flatMap(URL.init(string:)) ?? MapsLink.url(address: site.address) {
-                Link(destination: url) {
-                    Image(systemName: "arrow.triangle.turn.up.right.diamond.fill")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Theme.actionPrimary)
-                        .frame(width: 36, height: 36)
-                        .background(Theme.secondaryFill, in: Circle())
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel("Route starten")
+                Link(destination: url) { Label("Route starten", systemImage: "arrow.triangle.turn.up.right.diamond.fill") }
+                    .buttonStyle(IconButtonStyle())
+                    .accessibilityLabel("Route starten")
             }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Space.xs)
     }
 }

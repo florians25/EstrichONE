@@ -17,6 +17,8 @@ public enum EntityType: String, CaseIterable, Sendable {
     case formSchema
     /// Nur ausgehend (eigene Meldungen bis zur Übertragung); der Server liefert Tickets nicht über den Feed.
     case ticket
+    /// Raum mit Fläche und Estrichaufbau (`room.create`, `room.update`, `room.delete`).
+    case room
 
     /// Präfix der Operationstypen (`bauakte.create`, `workitem.update`, `diary.create`).
     var operationPrefix: String {

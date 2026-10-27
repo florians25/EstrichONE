@@ -3,9 +3,9 @@ import ContactsUI
 import EstrichCore
 import SwiftUI
 
-/// Kundenkartei: Suche (Name, Ort, Telefon), Filter Firma/Privat, alphabetischer Index, Wischaktionen (Anrufen,
-/// Nachricht, E-Mail, Route). Offline lesbar aus der verschlüsselten Ablage; Anlage und Änderung über die Synchronisation.
-/// iPad: Liste links, Kundenkarte rechts.
+/// Kundenkartei: Suche (Name, Ort, Telefon), Filter Firma/Privat, alphabetische Abschnitte mit Index, Wischaktionen
+/// (Anrufen, Nachricht, E-Mail, Route). Offline lesbar aus der verschlüsselten Ablage; Anlage und Änderung über die
+/// Synchronisation. iPad: Liste links, Kundenkarte rechts.
 struct CustomerDirectoryView: View {
     enum Filter: String, CaseIterable, Identifiable {
         case all, companies, people
@@ -26,6 +26,9 @@ struct CustomerDirectoryView: View {
     @State private var search = ""
     @State private var filter: Filter = .all
     @State private var contacts: [Contact] = []
+    /// Laufende Baustellen je Kunde.
+    @State private var running: [UUID: Int] = [:]
+    @State private var loaded = false
     @State private var selection: UUID?
     @State private var path: [UUID] = []
     @State private var creating = false
@@ -34,7 +37,7 @@ struct CustomerDirectoryView: View {
         Group {
             if sizeClass == .regular {
                 NavigationSplitView {
-                    list.navigationSplitViewColumnWidth(min: 300, ideal: 360, max: 440)
+                    list.navigationSplitViewColumnWidth(min: 320, ideal: 380, max: 460)
                 } detail: {
                     NavigationStack {
                         if let selection {
@@ -74,7 +77,8 @@ struct CustomerDirectoryView: View {
 
     private var groups: [(letter: String, contacts: [Contact])] {
         let grouped = Dictionary(grouping: filtered) { Self.letter(of: $0.name) }
-        return grouped.keys.sorted { $0 == "#" ? false : ($1 == "#" ? true : $0 < $1) }.map { ($0, grouped[$0] ?? []) }
+        return grouped.keys.sorted { $0 == "#" ? false : ($1 == "#" ? true : $0 < $1) }
+            .map { ($0, (grouped[$0] ?? []).sorted { $0.name.localizedCompare($1.name) == .orderedAscending }) }
     }
 
     @ViewBuilder
@@ -87,9 +91,9 @@ struct CustomerDirectoryView: View {
                     List { rows }
                 }
             }
-            .listStyle(.plain)
+            .listStyle(.insetGrouped)
             .overlay(alignment: .trailing) {
-                if groups.count > 3, search.isEmpty {
+                if groups.count > 4, search.isEmpty {
                     LetterIndex(letters: groups.map(\.letter)) { letter in
                         withAnimation { proxy.scrollTo("section-\(letter)", anchor: .top) }
                     }
@@ -98,56 +102,94 @@ struct CustomerDirectoryView: View {
             }
         }
         .navigationTitle("Kunden")
-        .searchable(text: $search, prompt: "Name, Ort oder Telefon")
-        .navigationBarTitleDisplayMode(.large)
+        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Name, Ort oder Telefon")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
-                Button { creating = true } label: { Label("Neuer Kunde", systemImage: "person.crop.circle.badge.plus") }
+                Button { creating = true } label: { Label("Neuer Kunde", systemImage: "plus") }
                     .accessibilityIdentifier("newCustomerToolbarButton")
             }
         }
+        .rootToolbar()
         .refreshable { await model.active?.sync?.run() }
     }
 
     @ViewBuilder
     private var rows: some View {
-        Picker("Filter", selection: $filter) {
-            ForEach(Filter.allCases) { Text($0.title).tag($0) }
+        Section {
+            Picker("Filter", selection: $filter) {
+                ForEach(Filter.allCases) { Text($0.title).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets())
+            .accessibilityIdentifier("customerFilter")
         }
-        .pickerStyle(.segmented)
-        .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
-        .accessibilityIdentifier("customerFilter")
-        if filtered.isEmpty {
-            ContentUnavailableView(search.isEmpty ? "Noch keine Kunden auf diesem Gerät" : "Kein Kunde gefunden",
-                                   systemImage: "person.2",
-                                   description: Text(search.isEmpty ? "Kunden erscheinen nach der Synchronisation oder lassen sich hier anlegen." : "Andere Schreibweise versuchen."))
+        if !loaded {
+            Section {
+                ForEach(0..<6, id: \.self) { _ in
+                    HStack(spacing: Space.m) {
+                        Circle().fill(Theme.fillStrong).frame(width: 44, height: 44)
+                        VStack(alignment: .leading, spacing: Space.s) {
+                            SkeletonBar(width: 160, height: 14)
+                            SkeletonBar(width: 110, height: 11)
+                        }
+                    }
+                    .padding(.vertical, Space.xs)
+                }
+            }
+            .pulsing()
+        } else if filtered.isEmpty {
+            if search.isEmpty {
+                ContentUnavailableView {
+                    Label("Noch keine Kunden", systemImage: "person.2")
+                } description: {
+                    Text("Kunden erscheinen nach der Synchronisation oder lassen sich hier anlegen – auch ohne Verbindung.")
+                } actions: {
+                    Button { creating = true } label: { Label("Neuer Kunde", systemImage: "plus") }
+                        .estrichButton(.primary, size: .regular)
+                }
+                .listRowBackground(Color.clear)
+            } else {
+                ContentUnavailableView.search(text: search)
+                    .listRowBackground(Color.clear)
+            }
         }
         ForEach(groups, id: \.letter) { group in
             Section {
                 ForEach(group.contacts) { contact in
                     NavigationLink(value: contact.id) {
-                        CustomerRow(contact: contact)
+                        CustomerRow(contact: contact, running: running[contact.id] ?? 0)
                     }
                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        if let url = ContactLink.phone(contact.phone) {
-                            Button { openURL(url) } label: { Label("Anrufen", systemImage: "phone.fill") }.tint(Theme.success)
+                        if let url = ContactLink.phone(CustomerCardView.preferredPhone(contact)) {
+                            Button { openURL(url) } label: { Label("Anrufen", systemImage: "phone.fill") }.tint(Theme.accentFill)
                         }
-                        if let url = Self.messageURL(contact) {
-                            Button { openURL(url) } label: { Label("Nachricht", systemImage: "message.fill") }.tint(Theme.navyLight)
+                        if let url = CustomerDirectoryView.messageURL(contact) {
+                            Button { openURL(url) } label: { Label("Nachricht", systemImage: "message.fill") }.tint(Theme.textSecondary)
                         }
                     }
                     .swipeActions(edge: .trailing) {
                         if let url = ContactLink.email(contact.email) {
-                            Button { openURL(url) } label: { Label("E-Mail", systemImage: "envelope.fill") }.tint(Theme.navy)
+                            Button { openURL(url) } label: { Label("E-Mail", systemImage: "envelope.fill") }.tint(Theme.textSecondary)
                         }
                         if let url = MapsLink.url(address: contact.addressLine) {
-                            Button { openURL(url) } label: { Label("Route", systemImage: "car.fill") }.tint(Theme.accentPressed)
+                            Button { openURL(url) } label: { Label("Route", systemImage: "car.fill") }.tint(Theme.textTertiary)
+                        }
+                    }
+                    .contextMenu {
+                        if let url = ContactLink.phone(CustomerCardView.preferredPhone(contact)) {
+                            Button("Anrufen", systemImage: "phone") { openURL(url) }
+                        }
+                        if let url = ContactLink.email(contact.email) {
+                            Button("E-Mail schreiben", systemImage: "envelope") { openURL(url) }
+                        }
+                        if let url = MapsLink.url(address: contact.addressLine) {
+                            Button("Route starten", systemImage: "car") { openURL(url) }
                         }
                     }
                 }
             } header: {
-                Text(group.letter).font(.subheadline.weight(.bold))
+                Text(group.letter)
             }
             .id("section-\(group.letter)")
         }
@@ -157,6 +199,13 @@ struct CustomerDirectoryView: View {
         guard let service = model.active?.service else { return }
         let query = search.trimmingCharacters(in: .whitespaces)
         contacts = (try? await service.contacts(search: query.isEmpty ? nil : query)) ?? []
+        let bauakten = (try? await service.bauakten()) ?? []
+        var counts: [UUID: Int] = [:]
+        for bauakte in bauakten where bauakte.status != .completed && bauakte.status != .cancelled {
+            if let customer = bauakte.customerId { counts[customer, default: 0] += 1 }
+        }
+        running = counts
+        loaded = true
         // Screenshot-Modus: Kundenkarte des Privatkunden öffnen.
         if shotScene == "kundenkarte", path.isEmpty, selection == nil,
            let first = contacts.first(where: { !$0.isCompany }) ?? contacts.first {
@@ -177,50 +226,44 @@ struct CustomerDirectoryView: View {
     }
 }
 
-/// Listenzeile: Initialen, Name, darunter Ort · Kundennummer · erste Nummer; Firma als kleines Badge.
+/// Listenzeile: Avatar, Name, darunter Ort und Kundennummer; rechts die Zahl laufender Baustellen.
 struct CustomerRow: View {
     let contact: Contact
+    var running = 0
 
     var body: some View {
-        HStack(spacing: 12) {
-            CustomerAvatar(contact: contact, size: 40)
+        HStack(spacing: Space.m) {
+            Avatar(name: contact.name, isCompany: contact.isCompany, size: 44)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(contact.name).font(.body.weight(.semibold)).lineLimit(1)
-                    if contact.isCompany {
-                        Text("Firma").font(.caption2.weight(.bold)).foregroundStyle(Theme.navyText)
-                            .padding(.horizontal, 6).padding(.vertical, 1)
-                            .background(Theme.navyBackground, in: Capsule())
-                    }
-                }
-                let details = [contact.city, contact.customerNumber, contact.phone].compactMap { $0?.isEmpty == false ? $0 : nil }
+                Text(contact.name)
+                    .font(Typo.headline)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                let details = [contact.isCompany ? "Firma" : nil, contact.city, contact.customerNumber].compactMap { $0?.isEmpty == false ? $0 : nil }
                 Text(details.isEmpty ? "Keine weiteren Angaben" : details.joined(separator: " · "))
-                    .font(.caption).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.textSecondary)
+                    .lineLimit(1)
             }
-            Spacer(minLength: 0)
+            Spacer(minLength: Space.s)
+            if running > 0 {
+                Chip(text: running == 1 ? "1 Baustelle" : "\(running) Baustellen", tone: .accent)
+            }
             SyncStateBadge(state: contact.syncState)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Space.xs)
         .accessibilityElement(children: .combine)
         .accessibilityIdentifier("customerRow-\(contact.name)")
     }
 }
 
+/// Avatar eines Kunden (ältere Aufrufer).
 struct CustomerAvatar: View {
     let contact: Contact
     var size: CGFloat = 44
 
     var body: some View {
-        ZStack {
-            Circle().fill(LinearGradient(colors: [Theme.navyLight, Theme.navy], startPoint: .topLeading, endPoint: .bottomTrailing))
-            if contact.isCompany {
-                Image(systemName: "building.2.fill").font(.system(size: size * 0.4)).foregroundStyle(.white)
-            } else {
-                Text(LocalUser.initials(of: contact.name)).font(.system(size: size * 0.38, weight: .semibold)).foregroundStyle(.white)
-            }
-        }
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
+        Avatar(name: contact.name, isCompany: contact.isCompany, size: size)
     }
 }
 
@@ -234,7 +277,7 @@ private struct LetterIndex: View {
             ForEach(letters, id: \.self) { letter in
                 Button(letter) { jump(letter) }
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(Theme.actionPrimary)
+                    .foregroundStyle(Theme.accent)
                     .frame(width: 20, height: 16)
                     .accessibilityLabel("Zu \(letter) springen")
             }
@@ -244,15 +287,16 @@ private struct LetterIndex: View {
     }
 }
 
-/// Kundenkarte im Visitenkarten-Stil: Avatar, Name, Art und Kundennummer, bevorzugter Kontaktweg, runde Schnellaktionen;
-/// darunter alle Nummern und E-Mail-Adressen mit Art, Anschriften mit Route, Notizen und die Bauakten des Kunden.
+/// Kundenkarte wie in der Kontakte-App: großer Avatar, Name, Art und Kundennummer, runde Schnellaktionen mit
+/// Beschriftung; darunter alle Nummern und E-Mail-Adressen, Anschriften mit Route, Notizen und die Bauakten des Kunden.
 struct CustomerCardView: View {
     let contactId: UUID
 
     @Environment(AppModel.self) private var model
-    @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.openURL) private var openURL
     @State private var contact: Contact?
     @State private var bauakten: [Bauakte] = []
+    @State private var loaded = false
     @State private var editing = false
     @State private var creatingBauakte = false
     @State private var openedBauakte: UUID?
@@ -261,14 +305,16 @@ struct CustomerCardView: View {
     var body: some View {
         List {
             if let contact {
-                Section { card(contact) }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets(top: 4, leading: 0, bottom: 8, trailing: 0))
+                Section {
+                    header(contact)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: Space.s, trailing: 0))
                 if !contact.phones.isEmpty {
                     Section("Telefon") {
                         ForEach(contact.phones) { phone in
                             if let url = ContactLink.phone(phone.number) {
-                                Link(destination: url) {
+                                Button { openURL(url) } label: {
                                     channelRow(title: [phone.kind.title, phone.label].compactMap { $0 }.joined(separator: " · "), value: phone.number,
                                                symbol: phone.kind == .mobile ? "iphone" : (phone.kind == .fax ? "faxmachine" : "phone"),
                                                preferred: Self.isPreferred(phone, contact))
@@ -281,7 +327,7 @@ struct CustomerCardView: View {
                     Section("E-Mail") {
                         ForEach(contact.emails) { email in
                             if let url = ContactLink.email(email.address) {
-                                Link(destination: url) {
+                                Button { openURL(url) } label: {
                                     channelRow(title: email.label ?? "E-Mail", value: email.address, symbol: "envelope",
                                                preferred: contact.preferredChannel == .email && email == contact.emails.first)
                                 }
@@ -299,15 +345,12 @@ struct CustomerCardView: View {
                         if let website = contact.website, let url = URL(string: website.hasPrefix("http") ? website : "https://\(website)") {
                             Link(destination: url) { Label(website, systemImage: "globe") }
                         }
-                        if let notes = contact.notes {
-                            Text(notes.compactText ?? "").font(.subheadline)
+                        if let notes = contact.notes?.compactText {
+                            Label(notes, systemImage: "text.bubble").font(Typo.subhead)
                         }
                     }
                 }
                 Section {
-                    if bauakten.isEmpty {
-                        Text("Noch keine Bauakte auf diesem Gerät.").foregroundStyle(Theme.textSecondary)
-                    }
                     ForEach(bauakten) { bauakte in
                         NavigationLink {
                             BauakteDetailView(bauakteId: bauakte.id)
@@ -322,10 +365,15 @@ struct CustomerCardView: View {
                 } header: {
                     Text("Bauakten (\(bauakten.count))")
                 }
-            } else {
+            } else if loaded {
                 ContentUnavailableView("Kunde nicht auf diesem Gerät", systemImage: "person.crop.circle.badge.questionmark")
+                    .listRowBackground(Color.clear)
+            } else {
+                Section { SkeletonCard(lines: 3) }
+                    .listRowBackground(Color.clear)
             }
         }
+        .listStyle(.insetGrouped)
         .navigationTitle(contact?.name ?? "Kunde")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -334,8 +382,8 @@ struct CustomerCardView: View {
                     Menu {
                         Button("Bearbeiten", systemImage: "pencil") { editing = true }
                         Button("In Kontakte übernehmen", systemImage: "person.crop.circle.badge.plus") { exporting = true }
-                        if let url = ContactLink.phone(contact.phone) {
-                            Link(destination: url) { Label("Anrufen", systemImage: "phone") }
+                        if let url = ContactLink.phone(Self.preferredPhone(contact)) {
+                            Button("Anrufen", systemImage: "phone") { openURL(url) }
                         }
                     } label: {
                         Label("Aktionen", systemImage: "ellipsis.circle")
@@ -368,87 +416,87 @@ struct CustomerCardView: View {
         .task(id: model.active?.sync?.revision) { await reload() }
     }
 
-    private func card(_ contact: Contact) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
-        return VStack(alignment: .leading, spacing: 14) {
-            HStack(spacing: 14) {
-                CustomerAvatar(contact: contact, size: 64)
-                    .overlay(Circle().strokeBorder(.white.opacity(0.6), lineWidth: 2))
-                VStack(alignment: .leading, spacing: 3) {
-                    let prefix = [contact.salutation, contact.title].compactMap { $0 }.joined(separator: " ")
-                    if !prefix.isEmpty {
-                        Text(prefix).font(.caption).foregroundStyle(.white.opacity(0.75))
-                    }
-                    Text(contact.name).font(.title2.weight(.bold)).foregroundStyle(.white)
-                        .multilineTextAlignment(.leading)
-                        .accessibilityIdentifier("customerCardName")
-                    Text([contact.isCompany ? "Firma" : "Privat", contact.customerNumber.map { "Kd.-Nr. \($0)" } ?? "noch ohne Kundennummer"]
-                        .joined(separator: " · "))
-                        .font(.footnote).foregroundStyle(.white.opacity(0.8))
+    private func header(_ contact: Contact) -> some View {
+        VStack(spacing: Space.m) {
+            Avatar(name: contact.name, isCompany: contact.isCompany, size: 84)
+            VStack(spacing: Space.xs) {
+                let prefix = [contact.salutation, contact.title].compactMap { $0 }.joined(separator: " ")
+                if !prefix.isEmpty, prefix != contact.name.split(separator: " ").first.map(String.init) {
+                    Text(prefix).font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                }
+                Text(contact.name)
+                    .font(Typo.title)
+                    .foregroundStyle(Theme.textPrimary)
+                    .multilineTextAlignment(.center)
+                    .accessibilityIdentifier("customerCardName")
+                Text([contact.isCompany ? "Firma" : "Privat", contact.customerNumber.map { "Kd.-Nr. \($0)" } ?? "noch ohne Kundennummer"]
+                    .joined(separator: " · "))
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.textSecondary)
+                if let channel = contact.preferredChannel {
+                    Chip(text: "Bevorzugt: \(channel.title)", symbol: "star.fill", tone: .accent)
+                        .padding(.top, 2)
                 }
             }
-            if let channel = contact.preferredChannel {
-                Label("Bevorzugt: \(channel.title)", systemImage: "star.fill")
-                    .labelStyle(TightLabelStyle())
-                    .font(.caption.weight(.semibold)).foregroundStyle(.white)
-                    .padding(.horizontal, 10).padding(.vertical, 4)
-                    .background(.white.opacity(0.16), in: Capsule())
+            HStack(spacing: Space.s) {
+                quickAction("Anrufen", "phone.fill", ContactLink.phone(Self.preferredPhone(contact)))
+                quickAction("Nachricht", "message.fill", CustomerDirectoryView.messageURL(contact))
+                quickAction("E-Mail", "envelope.fill", ContactLink.email(contact.email))
+                quickAction("Route", "car.fill", MapsLink.url(address: contact.addressLine))
             }
-            HStack(spacing: 12) {
-                round("Anrufen", "phone.fill", ContactLink.phone(Self.preferredPhone(contact)))
-                round("Nachricht", "message.fill", CustomerDirectoryView.messageURL(contact))
-                round("E-Mail", "envelope.fill", ContactLink.email(contact.email))
-                round("Route", "car.fill", MapsLink.url(address: contact.addressLine))
-                Spacer(minLength: 0)
-                SyncStateBadge(state: contact.syncState)
-            }
+            SyncStateBadge(state: contact.syncState)
         }
-        .padding(18)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(LinearGradient(colors: [Theme.navy, Theme.navyLight], startPoint: .topLeading, endPoint: .bottomTrailing), in: shape)
-        .shadow(color: Theme.navy.opacity(0.18), radius: 12, y: 6)
+        .frame(maxWidth: .infinity)
+        .padding(.top, Space.s)
     }
 
-    @ViewBuilder
-    private func round(_ title: String, _ symbol: String, _ url: URL?) -> some View {
-        if let url {
-            Link(destination: url) {
-                Image(systemName: symbol)
-                    .font(.body.weight(.semibold)).foregroundStyle(.white)
-                    .frame(width: 44, height: 44)
-                    .background(.white.opacity(0.16), in: Circle())
-                    .overlay(Circle().strokeBorder(.white.opacity(0.25)))
-            }
-            .accessibilityLabel(title)
+    /// Schnellaktion wie in der Kontakte-App; ohne Ziel ausgegraut.
+    private func quickAction(_ title: String, _ symbol: String, _ url: URL?) -> some View {
+        Button {
+            if let url { openURL(url) }
+        } label: {
+            Label(title, systemImage: symbol)
         }
+        .buttonStyle(ActionTileStyle())
+        .disabled(url == nil)
+        .accessibilityLabel(title)
     }
 
     private func channelRow(title: String, value: String, symbol: String, preferred: Bool) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: symbol).foregroundStyle(Theme.navyText).frame(width: 28)
+        HStack(spacing: Space.m) {
+            Image(systemName: symbol)
+                .font(.body.weight(SymbolWeight.content))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: 26)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.caption).foregroundStyle(Theme.textSecondary)
-                Text(value).font(.body).foregroundStyle(Theme.actionPrimary)
+                Text(title).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                Text(value).font(Typo.body).foregroundStyle(Theme.accent)
             }
             Spacer(minLength: 0)
             if preferred {
-                Image(systemName: "star.fill").foregroundStyle(Theme.hint).accessibilityLabel("Bevorzugt")
+                Image(systemName: "star.fill").foregroundStyle(Theme.warning).accessibilityLabel("Bevorzugt")
             }
         }
+        .contentShape(Rectangle())
     }
 
     @ViewBuilder
     private func addressRow(_ title: String, _ value: String?) -> some View {
-        HStack(spacing: 12) {
-            Image(systemName: "mappin.and.ellipse").foregroundStyle(Theme.navyText).frame(width: 28)
+        HStack(spacing: Space.m) {
+            Image(systemName: "mappin.and.ellipse")
+                .font(.body.weight(SymbolWeight.content))
+                .foregroundStyle(Theme.textSecondary)
+                .frame(width: 26)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.caption).foregroundStyle(Theme.textSecondary)
-                Text(value ?? "Keine Anschrift hinterlegt").font(.body)
-                    .foregroundStyle(value == nil ? Theme.textSecondary : Color.primary)
+                Text(title).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                Text(value ?? "Keine Anschrift hinterlegt").font(Typo.body)
+                    .foregroundStyle(value == nil ? Theme.textSecondary : Theme.textPrimary)
             }
             Spacer(minLength: 0)
             if let url = MapsLink.url(address: value) {
-                Link(destination: url) { Label("Route", systemImage: "car.fill") }
+                Link(destination: url) { Label("Route", systemImage: "arrow.triangle.turn.up.right.diamond.fill") }
                     .buttonStyle(IconButtonStyle())
             }
         }
@@ -457,7 +505,9 @@ struct CustomerCardView: View {
     private func reload() async {
         guard let service = model.active?.service else { return }
         contact = try? await service.contact(contactId)
-        bauakten = (try? await service.bauakten(ofCustomer: contactId)) ?? []
+        bauakten = ((try? await service.bauakten(ofCustomer: contactId)) ?? [])
+            .sorted { ($0.status.sortRank, $0.number ?? "") < ($1.status.sortRank, $1.number ?? "") }
+        loaded = true
     }
 
     static func preferredPhone(_ contact: Contact) -> String? {

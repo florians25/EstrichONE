@@ -14,6 +14,8 @@ struct BauakteContent {
     var diary: [DiaryEntry] = []
     var inspections: [Inspection] = []
     var acceptances: [Acceptance] = []
+    /// Räume mit Fläche und Estrichaufbau.
+    var rooms: [Room] = []
     /// Einsätze aus der Planung ab heute (zuletzt geladener Stand).
     var assignments: [Assignment] = []
     /// Namen für Verfasser und Zuständige.
@@ -40,6 +42,7 @@ struct BauakteContent {
         content.diary = (try? await service.diary(of: id)) ?? []
         content.inspections = (try? await service.inspections(of: id)) ?? []
         content.acceptances = (try? await service.acceptances(of: id)) ?? []
+        content.rooms = (try? await service.rooms(of: id)) ?? []
         content.customer = if let customerId = bauakte.customerId { try? await service.contact(customerId) } else { nil }
         if let store = model.active?.sync?.store {
             let today = CalendarDay.string(.now)
@@ -122,7 +125,7 @@ struct ActivityEntry: Identifiable {
 
 /// Bereiche einer Bauakte – alle Daten, verständlich gegliedert.
 enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
-    case media, work, diary, protocols, project, contacts, notes
+    case media, work, diary, rooms, protocols, project, contacts, notes
 
     var id: String { rawValue }
 
@@ -131,6 +134,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case .media: "Fotos & Dokumente"
         case .work: "Aufgaben & Mängel"
         case .diary: "Bautagebuch"
+        case .rooms: "Räume & Flächen"
         case .protocols: "Protokolle"
         case .project: "Basisdaten"
         case .contacts: "Kontakte"
@@ -143,6 +147,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case .media: "photo.on.rectangle"
         case .work: "checklist"
         case .diary: "book"
+        case .rooms: "square.split.2x2"
         case .protocols: "doc.text"
         case .project: "list.bullet.rectangle"
         case .contacts: "person.2"
@@ -156,6 +161,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case "bereich-fotos": .media
         case "bereich-aufgaben": .work
         case "bereich-tagebuch": .diary
+        case "bereich-raeume": .rooms
         case "bereich-protokolle": .protocols
         case "bereich-basisdaten": .project
         case "bereich-kontakte": .contacts
@@ -183,6 +189,13 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
             let when = calendar.isDateInToday(last) ? "heute" : calendar.isDateInYesterday(last) ? "gestern"
                 : last.formatted(.dateTime.day().month(.abbreviated))
             return ("\(content.diary.count) \(content.diary.count == 1 ? "Eintrag" : "Einträge") · zuletzt \(when)", false)
+        case .rooms:
+            guard !content.rooms.isEmpty else { return ("noch keine Räume", false) }
+            let totals = RoomTotals(content.rooms)
+            let area = totals.area.formatted(.number.precision(.fractionLength(0...1)))
+            let done = totals.laid + totals.ready
+            let progress = done == 0 ? nil : done == totals.count ? "alle eingebracht" : "\(done) eingebracht"
+            return (["\(totals.count) \(totals.count == 1 ? "Raum" : "Räume")", "\(area) m²", progress].compactMap { $0 }.joined(separator: " · "), false)
         case .protocols:
             let inspection = content.latestInitialInspection == nil ? "Erstbegehung offen" : "Erstbegehung erfasst"
             let acceptance = content.acceptances.isEmpty ? "keine Abnahme" : "\(content.acceptances.count) Abnahme"

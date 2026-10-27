@@ -124,7 +124,7 @@ jobs:
     timeout-minutes: 30
     if: github.event_name != 'pull_request'
     env:
-      IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,bereich-tagebuch,bereich-basisdaten,bereich-kontakte,bereich-notizen,erfassen,neu-1,erstbegehung,abnahme,kunden,kundenkarte,disposition,mehr,sync,wartung"
+      IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,bereich-tagebuch,bereich-raeume,bereich-basisdaten,bereich-kontakte,bereich-notizen,erfassen,neu-1,erstbegehung,abnahme,kunden,kundenkarte,disposition,mehr,sync,wartung"
       IPAD_SCENES: "heute,baustellen,bauakte,kunden,disposition"
     steps:
       - uses: actions/checkout@v5
@@ -182,6 +182,7 @@ jobs:
 
       - name: Screenshots aufnehmen
         if: steps.changes.outputs.run == 'true'
+        timeout-minutes: 16
         env:
           PHONE: ${{ steps.sims.outputs.phone }}
           PAD: ${{ steps.sims.outputs.pad }}
@@ -192,25 +193,28 @@ jobs:
           SHOTS="$RUNNER_TEMP/shots"
           WITH_PAD=false
           if [ "$IPAD_INPUT" != "false" ] && [ -n "$PAD" ]; then WITH_PAD=true; fi
-          # Simulatoren erst nach dem Build starten (sonst bremst der erste Start den Build stark).
+          # Simulatoren erst nach dem Build und nacheinander starten: Zwei gleichzeitig brauchen auf dem Runner
+          # wegen knappen Arbeitsspeichers ein Vielfaches (zuletzt 20 Minuten bis zum ersten Bild).
           prepare() {
+            local begin=$SECONDS
+            xcrun simctl boot "$1" 2>/dev/null || true
             xcrun simctl bootstatus "$1" -b >/dev/null
             xcrun simctl status_bar "$1" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
               --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
             xcrun simctl install "$1" "$APP"
+            echo "Simulator $1 bereit nach $(( SECONDS - begin )) s"
           }
-          xcrun simctl boot "$PHONE"
-          if [ "$WITH_PAD" = "true" ]; then xcrun simctl boot "$PAD" || true; fi
           prepare "$PHONE"
           bash ios/scripts/screenshots.sh "$PHONE" iphone "${SCENES_INPUT:-$IPHONE_SCENES}" "$SHOTS" 1
           if [ "$WITH_PAD" = "true" ]; then
+            xcrun simctl shutdown "$PHONE" || true
             prepare "$PAD"
             bash ios/scripts/screenshots.sh "$PAD" ipad "$IPAD_SCENES" "$SHOTS" 1
           fi
           ls "$SHOTS" | wc -l
 
       - name: Screenshots sichern
-        if: steps.changes.outputs.run == 'true'
+        if: always() && steps.changes.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: ios-screenshots
@@ -219,7 +223,7 @@ jobs:
 
       # Zuletzt, damit die Bilder am Ende des Protokolls stehen (ios/scripts/shots-to-log.py).
       - name: Screenshots ins Protokoll
-        if: steps.changes.outputs.run == 'true'
+        if: always() && steps.changes.outputs.run == 'true'
         run: |
           python3 -m venv "$RUNNER_TEMP/venv"
           "$RUNNER_TEMP/venv/bin/pip" install --quiet pillow
