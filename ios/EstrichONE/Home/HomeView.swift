@@ -126,13 +126,24 @@ struct HomeView: View {
 
     // MARK: Kopf und Hinweise
 
+    /// Begrüßung als eigene, größere Zeile, darunter das Datum in ruhiger Schrift – bricht bei großer Schrift sauber um.
     private var dateLine: some View {
-        let name = model.active.map { " · \(greeting), \(Self.firstName($0.user.displayName))" } ?? ""
-        return Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)) + name)
-            .font(Typo.subheadStrong)
-            .foregroundStyle(Theme.textSecondary)
-            .padding(.horizontal, Space.xs)
-            .accessibilityIdentifier("currentUserName")
+        VStack(alignment: .leading, spacing: Space.xxs) {
+            if let active = model.active {
+                Text("\(greeting), \(Self.firstName(active.user.displayName))")
+                    .font(Typo.section)
+                    .foregroundStyle(Theme.textPrimary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                .font(Typo.subhead)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.horizontal, Space.xs)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("currentUserName")
     }
 
     @ViewBuilder
