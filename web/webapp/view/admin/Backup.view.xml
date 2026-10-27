@@ -63,7 +63,7 @@
 												<Text text="{view>size}"/>
 												<Text text="{view>shortId}"/>
 												<HBox justifyContent="End">
-													<Button text="Datei …" icon="sap-icon://document" type="Transparent" press=".onRestoreFile" tooltip="Einzelne Datei (Foto, Dokument) aus dieser Sicherung zurückholen"
+													<Button icon="sap-icon://document" type="Transparent" press=".onRestoreFile" tooltip="Einzelne Datei (Foto, Dokument) aus dieser Sicherung zurückholen"
 														enabled="{= !${view>/restore/active} }"/>
 													<Button text="Wiederherstellen" icon="sap-icon://undo" press=".onRestoreFull" enabled="{= !${view>/restore/active} }" class="sapUiTinyMarginBegin"/>
 												</HBox>

@@ -68,6 +68,7 @@ log "Sichern und Kopie auf die „USB-Platte“"
 compose exec -T backup estrichone-backup run
 rm -rf "$USB" && cp -a "$DIR/backup-repository" "$USB"
 KEY="$(sed -n 's/^RESTIC_PASSWORD=//p' "$DIR/.env")"
+NAME_LINE="$(grep '^ESTRICHONE_SERVER_NAME=' "$DIR/.env")"
 # So wie vom Notfallblatt abgeschrieben: in Viererblöcken
 GROUPED="$(sed 's/.\{4\}/& /g; s/ $//' <<<"$KEY")"
 
@@ -87,7 +88,7 @@ AUTH=(-H "Authorization: Bearer $(login)")
 [[ "$(api "${AUTH[@]}" "$URL/api/v1/files/$FILE/content" | sha256sum | cut -d' ' -f1)" == "$SHA" ]] || { echo "Foto fehlt oder verändert"; exit 1; }
 SETTINGS="$(api "${AUTH[@]}" "$URL/api/v1/backup/settings")"
 [[ "$(json "['dailyTime']" <<<"$SETTINGS")" == "20:15" && "$(json "['keepDaily']" <<<"$SETTINGS")" == "30" ]] || { echo "Einstellungen fehlen: $SETTINGS"; exit 1; }
-grep -q '^ESTRICHONE_SERVER_NAME="Worst Case GmbH"$' "$DIR/.env" || { echo ".env nicht aus der Sicherung"; exit 1; }
+grep -qxF "$NAME_LINE" "$DIR/.env" || { echo ".env nicht aus der Sicherung"; exit 1; }
 [[ "$(sed -n 's/^RESTIC_PASSWORD=//p' "$DIR/.env")" == "$KEY" ]] || { echo "Backup-Passwort nicht übernommen"; exit 1; }
 [[ "$(api "$URL/api/v1/server-info" | json "['instanceEpoch']")" != "$EPOCH_BEFORE" ]] || { echo "instanceEpoch unverändert"; exit 1; }
 compose exec -T backup estrichone-backup run >/dev/null

@@ -66,7 +66,7 @@ export default class Backup extends BaseController {
 			this.model().setProperty("/test", info(s.lastRestoreTest));
 			if (first || !this.model().getProperty("/p")) await this.loadSettings();
 			this.snapshots = await get<BackupSnapshotsResponse>("backup/snapshots");
-			this.model().setProperty("/repositories", this.snapshots.repositories.map((r) => ({ key: r.key, label: r.label || r.key })));
+			this.model().setProperty("/repositories", this.snapshots.repositories.map((r) => ({ key: r.key, label: r.key === "primary" ? "Hauptziel (auf diesem Server)" : r.key === "secondary" ? `Zweites Ziel (${r.label})` : r.label || r.key })));
 			this.showSnapshots();
 			if (first) {
 				const server = await get<{ serverVersion: string }>("server-info");
