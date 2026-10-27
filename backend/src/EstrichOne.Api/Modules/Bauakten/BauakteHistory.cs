@@ -142,6 +142,8 @@ internal static class BauakteHistoryEndpoints
             {
                 "added" => $"{actor} hat „{Detail("name")}“ als {PartyRole(Detail("role"))} hinzugefügt.",
                 "removed" => $"{actor} hat „{Detail("name")}“ ({PartyRole(Detail("role"))}) entfernt.",
+                "roleChanged" => $"{actor} hat „{Detail("name")}“ jetzt als {PartyRole(Detail("role"))} eingetragen.",
+                "primary" => $"{actor} hat „{Detail("name")}“ ({PartyRole(Detail("role"))}) als Hauptkontakt markiert.",
                 _ => $"{actor} hat den Kontakt „{Detail("name")}“ ({PartyRole(Detail("role"))}) geändert.",
             },
             "bauakte.diary_added" => $"{actor} hat das Bautagebuch für den {Day(Detail("day"))} ergänzt.",

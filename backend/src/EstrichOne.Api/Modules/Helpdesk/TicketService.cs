@@ -38,7 +38,7 @@ public sealed record TicketEventDto(Guid? ActorUserId, string? ActorName, string
 public sealed record TicketSummary(
     Guid Id, string Number, string Title, TicketCategory Category, TicketPriority Priority, TicketStatus Status, bool ReporterBlocked,
     Guid? ReporterUserId, string? ReporterDisplayName, Guid? AssigneeUserId, string? AssigneeName, TicketSource Source,
-    DateTimeOffset CreatedAt, DateTimeOffset LastActivityAt, long Version);
+    DateTimeOffset CreatedAt, DateTimeOffset LastActivityAt, long Version, bool HasUnread = false);
 
 /// <param name="Diagnostics">Die vom Melder freigegebenen Diagnosedaten (unverändert).</param>
 public sealed record TicketDetail(
@@ -140,11 +140,13 @@ public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakte
         return string.Create(CultureInfo.InvariantCulture, $"T-{year}-{rows.Single():0000}");
     }
 
-    public async Task<IReadOnlyList<TicketSummary>> SummariesAsync(IQueryable<Ticket> query, CancellationToken cancellationToken)
+    public async Task<IReadOnlyList<TicketSummary>> SummariesAsync(IQueryable<Ticket> query, CancellationToken cancellationToken,
+        Func<IReadOnlyCollection<Guid>, Task<Dictionary<Guid, DateTimeOffset>>>? unread = null)
     {
         var tickets = await query.AsNoTracking().ToListAsync(cancellationToken);
         var names = await NamesAsync(tickets.SelectMany(t => new[] { t.ReporterUserId, t.AssigneeUserId }), cancellationToken);
-        return tickets.Select(t => Summarize(t, names)).ToList();
+        var news = unread is null || tickets.Count == 0 ? [] : await unread(tickets.Select(t => t.Id).ToList());
+        return tickets.Select(t => Summarize(t, names) with { HasUnread = news.ContainsKey(t.Id) }).ToList();
     }
 
     public async Task<TicketDetail> DetailAsync(Ticket ticket, bool includeInternal, CancellationToken cancellationToken)

@@ -32,6 +32,7 @@ public sealed class BauaktenModule : IModule
         services.AddScoped<ISyncOperationHandler, RoomSync>();
         services.AddScoped<ISyncEntitySource, RoomSource>();
         services.AddScoped<ISyncEntitySource, BauaktePartySource>();
+        services.AddScoped<ISyncOperationHandler, BauaktePartySync>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)

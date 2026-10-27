@@ -14,6 +14,7 @@ public sealed class HelpdeskModule : IModule
     {
         services.AddScoped<TicketService>();
         services.AddScoped<TicketNotifier>();
+        services.AddScoped<TicketReadState>();
         services.AddScoped<ITicketAttachments>(provider => provider.GetRequiredService<TicketService>());
         services.AddScoped<IFileReadGrant, TicketAttachmentGrant>();
         services.AddScoped<ISyncOperationHandler, TicketSync>();

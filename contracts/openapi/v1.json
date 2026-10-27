@@ -4483,7 +4483,7 @@
         "tags": [
           "Bauakten"
         ],
-        "summary": "Beteiligte (Bauherr, Bauleiter, Architekt, Lieferant …), nach Rolle sortiert",
+        "summary": "Beteiligte (Bauherr, Bauleiter, Architekt, Lieferant …): Hauptkontakt zuerst, dann nach Rolle sortiert",
         "operationId": "ListBauakteParties",
         "parameters": [
           {
@@ -4536,7 +4536,7 @@
         "tags": [
           "Bauakten"
         ],
-        "summary": "Beteiligten anlegen oder ändern (aus dem Kundenstamm verknüpft oder frei erfasst)",
+        "summary": "Beteiligten anlegen oder ändern (aus dem Kundenstamm verknüpft oder frei erfasst); auch Rolle und Hauptkontakt",
         "operationId": "SaveBauakteParty",
         "parameters": [
           {
@@ -4627,6 +4627,128 @@
           "Bauakten"
         ],
         "operationId": "DeleteBauakteParty",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "partyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BauaktePartyResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/parties/{partyId}/primary": {
+      "post": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Als Hauptkontakt der Bauakte markieren (ein bisheriger Hauptkontakt verliert die Markierung)",
+        "operationId": "SetBauaktePartyPrimary",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "partyId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BauaktePartyResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Markierung als Hauptkontakt entfernen",
+        "operationId": "ClearBauaktePartyPrimary",
         "parameters": [
           {
             "name": "id",
@@ -6478,6 +6600,78 @@
             }
           }
         }
+      }
+    },
+    "/api/v1/tickets/unread": {
+      "get": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Tickets mit neuen Antworten oder Änderungen seit dem letzten Ansehen (Zähler in Kopfleiste und App)",
+        "operationId": "GetUnreadTickets",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketUnreadResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tickets/{id}/seen": {
+      "post": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Ticket als gelesen markieren (geschieht auch beim Abruf des Tickets)",
+        "operationId": "MarkTicketSeen",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/api/v1/tickets/mine": {
@@ -15948,6 +16142,68 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "mobile": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "street": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isPrimary": {
+            "type": "boolean",
+            "default": false
+          },
+          "phones": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactPhone"
+            }
+          },
+          "emails": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ContactEmail"
+            }
+          },
+          "contactKind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ContactKind"
+              }
+            ]
+          },
+          "customerNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -23450,6 +23706,40 @@
               "integer"
             ],
             "format": "int64"
+          },
+          "mobile": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "street": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postalCode": {
+            "maxLength": 10,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "city": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isPrimary": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -26121,6 +26411,10 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "hasUnread": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -26197,6 +26491,54 @@
             "items": {
               "type": "string",
               "format": "uuid"
+            }
+          }
+        }
+      },
+      "TicketUnreadItem": {
+        "required": [
+          "id",
+          "number",
+          "title",
+          "status",
+          "lastActivityAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/TicketStatus"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TicketUnreadResponse": {
+        "required": [
+          "count",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketUnreadItem"
             }
           }
         }

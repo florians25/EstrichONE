@@ -81,6 +81,11 @@ internal static class TicketEndpoints
             .WithSummary("Problem melden ohne Anmeldung – nur von eingerichteten, nicht gesperrten Geräten mit Gerätesignatur")
             .ProducesProblem(StatusCodes.Status401Unauthorized).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .AllowAnonymous().RequireRateLimiting(DeviceRateLimitPolicy);
+        group.MapGet("/unread", UnreadAsync).WithName("GetUnreadTickets")
+            .WithSummary("Tickets mit neuen Antworten oder Änderungen seit dem letzten Ansehen (Zähler in Kopfleiste und App)").AllowPendingDevice();
+        group.MapPost("/{id:guid}/seen", SeenAsync).WithName("MarkTicketSeen")
+            .WithSummary("Ticket als gelesen markieren (geschieht auch beim Abruf des Tickets)")
+            .ProducesProblem(StatusCodes.Status404NotFound).AllowPendingDevice();
         group.MapGet("/mine", MineAsync).WithName("ListMyTickets").WithSummary("Eigene Meldungen").AllowPendingDevice();
         group.MapGet("/", ListAsync).WithName("ListTickets").WithSummary("Tickets für die Bearbeitung").RequirePermission(Permissions.HelpdeskAgent);
         group.MapGet("/{id:guid}", GetAsync).WithName("GetTicket").WithSummary("Ticket mit Verlauf (interne Notizen nur für die Bearbeitung)")
@@ -130,12 +135,38 @@ internal static class TicketEndpoints
     }
 
     private static async Task<Ok<IReadOnlyList<TicketSummary>>> MineAsync(
-        TicketService tickets, EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken) =>
+        TicketService tickets, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken) =>
         TypedResults.Ok(await tickets.SummariesAsync(
-            db.Set<Ticket>().Where(t => t.ReporterUserId == currentUser.UserId).OrderByDescending(t => t.CreatedAt).Take(100), cancellationToken));
+            db.Set<Ticket>().Where(t => t.ReporterUserId == currentUser.UserId).OrderByDescending(t => t.CreatedAt).Take(100), cancellationToken,
+            ids => reads.UnreadAsync(currentUser.UserId, isAgent: false, ids, cancellationToken)));
+
+    private static async Task<Ok<TicketUnreadResponse>> UnreadAsync(
+        TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions, CancellationToken cancellationToken)
+    {
+        var isAgent = await permissions.HasAsync(Permissions.HelpdeskAgent, cancellationToken);
+        var unread = await reads.UnreadAsync(currentUser.UserId, isAgent, null, cancellationToken);
+        var ids = unread.Keys.ToList();
+        var items = (await db.Set<Ticket>().AsNoTracking().Where(t => ids.Contains(t.Id)).ToListAsync(cancellationToken))
+            .Select(t => new TicketUnreadItem(t.Id, t.Number, t.Title, t.Status, unread[t.Id]))
+            .OrderByDescending(t => t.LastActivityAt).ToList();
+        return TypedResults.Ok(new TicketUnreadResponse(items.Count, items.Take(50).ToList()));
+    }
+
+    private static async Task<Results<NoContent, ProblemHttpResult>> SeenAsync(
+        Guid id, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions, CancellationToken cancellationToken)
+    {
+        var (ticket, _) = await FindVisibleAsync(id, db, currentUser, permissions, cancellationToken);
+        if (ticket is null)
+        {
+            return NotFound();
+        }
+
+        await reads.MarkSeenAsync(id, currentUser.UserId, cancellationToken);
+        return TypedResults.NoContent();
+    }
 
     private static async Task<Ok<IReadOnlyList<TicketSummary>>> ListAsync(
-        TicketService tickets, EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken,
+        TicketService tickets, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken,
         string? filter = null, string? category = null)
     {
         // Werte wie in JSON (camelCase, z. B. „unassigned“, „officeIt“) oder als Enum-Name.
@@ -156,14 +187,23 @@ internal static class TicketEndpoints
 
         // Am längsten wartende zuerst; „Ich kann nicht arbeiten“ vorneweg.
         return TypedResults.Ok(await tickets.SummariesAsync(
-            query.OrderByDescending(t => t.ReporterBlocked).ThenBy(t => t.LastActivityAt).Take(500), cancellationToken));
+            query.OrderByDescending(t => t.ReporterBlocked).ThenBy(t => t.LastActivityAt).Take(500), cancellationToken,
+            ids => reads.UnreadAsync(currentUser.UserId, isAgent: true, ids, cancellationToken)));
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> GetAsync(
-        Guid id, TicketService tickets, EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions, CancellationToken cancellationToken)
+        Guid id, TicketService tickets, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions,
+        CancellationToken cancellationToken)
     {
         var (ticket, isAgent) = await FindVisibleAsync(id, db, currentUser, permissions, cancellationToken);
-        return ticket is null ? NotFound() : TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken));
+        if (ticket is null)
+        {
+            return NotFound();
+        }
+
+        // Ansehen gilt als gelesen.
+        await reads.MarkSeenAsync(id, currentUser.UserId, cancellationToken);
+        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken));
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> UpdateAsync(

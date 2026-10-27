@@ -630,6 +630,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("bauakte_id");
 
+                    b.Property<string>("City")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("city");
+
                     b.Property<string>("Company")
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)")
@@ -648,6 +653,15 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(320)")
                         .HasColumnName("email");
 
+                    b.Property<bool>("IsPrimary")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_primary");
+
+                    b.Property<string>("Mobile")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("mobile");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -664,11 +678,21 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(50)")
                         .HasColumnName("phone");
 
+                    b.Property<string>("PostalCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("postal_code");
+
                     b.Property<string>("Role")
                         .IsRequired()
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("role");
+
+                    b.Property<string>("Street")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("street");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -2471,6 +2495,29 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasName("pk_ticket_number_sequences");
 
                     b.ToTable("ticket_number_sequences", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketRead", b =>
+                {
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("SeenAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("seen_at");
+
+                    b.HasKey("TicketId", "UserId")
+                        .HasName("pk_ticket_reads");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_ticket_reads_user_id");
+
+                    b.ToTable("ticket_reads", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Exports.User", b =>
@@ -5137,6 +5184,23 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_ticket_events_tickets_ticket_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketRead", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_reads_tickets_ticket_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_reads_user_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Passwords.LocalCredential", b =>

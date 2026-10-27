@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Json;
 using EstrichOne.Api.Modules.Access;
+using EstrichOne.Api.Modules.Sync.Exports;
 using EstrichOne.Api.Tests.Support;
 using EstrichOne.Api.Tests.Sync;
 
@@ -46,5 +47,41 @@ public sealed class PartySyncTests(PostgresFixture postgres) : IAsyncLifetime
             .ShouldBe(HttpStatusCode.OK);
         var (removed, _) = await office.PullUntilAsync(cursor, all => all.Any(c => c.Id == manager && c.Deleted));
         removed.Last(c => c.Id == manager).Deleted.ShouldBeTrue();
+    }
+
+    [Fact]
+    public async Task PartiesFromTheApp_SaveAndDelete_WithPermissionAndVisibility()
+    {
+        using var office = await _factory.CreateClientAsAsync("buero", StandardRoles.OfficeId);
+        var bauakte = Guid.CreateVersion7();
+        (await office.PostAsJsonAsync("/api/v1/bauakten", new { id = bauakte, title = "EFH Kraus" }, Ct)).EnsureSuccessStatusCode();
+
+        var party = Guid.CreateVersion7();
+        var saved = (await office.PushAsync(SyncClient.Op("bauakteParty.save", party, new
+        {
+            bauakteId = bauakte, role = "siteManager", name = "Anna Lechner", mobile = "0171 555", street = "Ländgasse 5", city = "Landshut", isPrimary = true,
+        }))).Results.Single();
+        saved.Status.ShouldBe(SyncOperationStatus.Applied);
+        saved.Entity.Text("mobile").ShouldBe("0171 555");
+        saved.Entity.Text("city").ShouldBe("Landshut");
+
+        // Rolle ändern (bauakteId darf fehlen, der Eintrag kennt seine Bauakte).
+        var changed = (await office.PushAsync(SyncClient.Op("bauakteParty.save", party, new { role = "architect", name = "Anna Lechner" }))).Results.Single();
+        changed.Status.ShouldBe(SyncOperationStatus.Applied);
+        var list = await office.GetFromJsonAsync<List<EstrichOne.Api.Modules.Bauakten.BauaktePartyResponse>>($"/api/v1/bauakten/{bauakte}/parties",
+            TestJson.Options, Ct);
+        list!.Single().Role.ShouldBe(EstrichOne.Api.Modules.Bauakten.BauaktePartyRole.Architect);
+        list!.Single().IsPrimary.ShouldBeTrue();
+
+        var invalid = (await office.PushAsync(SyncClient.Op("bauakteParty.save", Guid.CreateVersion7(), new { bauakteId = bauakte, role = "other" }))).Results.Single();
+        invalid.Code.ShouldBe("VALIDATION_FAILED");
+
+        // Baustelle ohne Zuweisung: Bauakte unsichtbar.
+        using var site = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        (await site.PushAsync(SyncClient.Op("bauakteParty.delete", party, new { }))).Results.Single().Code.ShouldBe("NOT_FOUND");
+
+        (await office.PushAsync(SyncClient.Op("bauakteParty.delete", party, new { }))).Results.Single().Status.ShouldBe(SyncOperationStatus.Applied);
+        (await office.GetFromJsonAsync<List<EstrichOne.Api.Modules.Bauakten.BauaktePartyResponse>>($"/api/v1/bauakten/{bauakte}/parties",
+            TestJson.Options, Ct))!.ShouldBeEmpty();
     }
 }
