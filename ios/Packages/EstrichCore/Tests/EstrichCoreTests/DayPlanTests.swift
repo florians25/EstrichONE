@@ -85,14 +85,18 @@ struct DayPlanTests {
         let transport = RoutingTransport()
         transport.on("POST", "/api/v1/planning/batch") { request in
             let operations = request.jsonBody()["operations"] as? [[String: Any]] ?? []
-            if operations.first?["op"] as? String == "delete" { return .problem(404, code: "NOT_FOUND", detail: "Der Einsatz existiert nicht mehr.") }
+            let kind = operations.first?["op"] as? String
+            if kind == "delete" { return .problem(404, code: "NOT_FOUND", detail: "Der Einsatz existiert nicht mehr.") }
             let assignmentBody = operations.first?["assignment"] as? [String: Any]
-            #expect(operations.first?["op"] as? String == "upsert" && assignmentBody?["crewId"] as? String == Self.crew)
-            #expect(assignmentBody?["day"] as? String == "2026-11-02" && assignmentBody?["startTime"] as? String == "07:00:00")
+            let crewId = assignmentBody?["crewId"] as? String, day = assignmentBody?["day"] as? String
+            let start = assignmentBody?["startTime"] as? String
+            #expect(kind == "upsert" && crewId == Self.crew)
+            #expect(day == "2026-11-02" && start == "07:00:00")
             return .json(#"{"assignments":[],"deletedIds":[],"warnings":["Max Huber ist im Urlaub."],"dryRun":false}"#)
         }
         transport.on("PUT", "/api/v1/planning/crews/\(Self.crew)/days/2026-11-02/order") { request in
-            #expect((request.jsonBody()["assignmentIds"] as? [String])?.first == Self.stopB)
+            let first = (request.jsonBody()["assignmentIds"] as? [String])?.first
+            #expect(first == Self.stopB)
             return .json(Self.json)
         }
         let result = await outbox.flush(using: makeClient(transport))
@@ -106,17 +110,10 @@ struct DayPlanTests {
     @Test("Verschieben auf anderen Tag und andere Kolonne, Tausch in der Tagesbesetzung")
     func moveAndSwap() async throws {
         let transport = RoutingTransport()
-        transport.on("POST", "/api/v1/planning/batch") { request in
-            let op = (request.jsonBody()["operations"] as? [[String: Any]])?.first ?? [:]
-            #expect(op["op"] as? String == "move" && op["day"] as? String == "2026-11-03" && op["changeCrew"] as? Bool == true)
-            #expect(op["crewId"] as? String == Self.other && op["setTime"] as? Bool == true && op["startTime"] as? String == "08:00:00")
-            return .json(#"{"assignments":[],"deletedIds":[],"warnings":[],"dryRun":\#(request.jsonBody()["dryRun"] as? Bool ?? false)}"#)
+        transport.on("POST", "/api/v1/planning/batch") { _ in
+            .json(#"{"assignments":[],"deletedIds":[],"warnings":[],"dryRun":false}"#)
         }
-        transport.on("POST", "/api/v1/planning/crews/\(Self.crew)/days/2026-11-02/swap") { request in
-            #expect(request.jsonBody()["fromUserId"] as? String == "01a00000-0000-7000-8000-0000000000a2")
-            #expect(request.jsonBody()["toUserId"] as? String == "01a00000-0000-7000-8000-0000000000a3")
-            return .json(Self.json)
-        }
+        transport.on("POST", "/api/v1/planning/crews/\(Self.crew)/days/2026-11-02/swap") { _ in .json(Self.json) }
         let client = makeClient(transport)
         let move = PlanChange.move(id: UUID(uuidString: Self.stopA)!, title: "Halle Nord", day: "2026-11-03", crewId: UUID(uuidString: Self.other)!,
                                    startTime: "08:00:00", endTime: nil, setTime: true)
@@ -127,5 +124,12 @@ struct DayPlanTests {
                                    text: "Jonas Wirth statt Tobias Lang")
         #expect(try await client.apply(swap).plan?.crews.count == 2)
         #expect(swap.summary == "Jonas Wirth statt Tobias Lang")
+        let bodies = transport.requests.map { $0.jsonBody() }
+        let move0 = (bodies[0]["operations"] as? [[String: Any]])?.first ?? [:]
+        #expect(bodies[0]["dryRun"] as? Bool == true && bodies[1]["dryRun"] as? Bool != true)
+        #expect(move0["op"] as? String == "move" && move0["day"] as? String == "2026-11-03" && move0["changeCrew"] as? Bool == true)
+        #expect(move0["crewId"] as? String == Self.other && move0["setTime"] as? Bool == true && move0["startTime"] as? String == "08:00:00")
+        #expect(bodies[2]["fromUserId"] as? String == "01a00000-0000-7000-8000-0000000000a2")
+        #expect(bodies[2]["toUserId"] as? String == "01a00000-0000-7000-8000-0000000000a3")
     }
 }

@@ -125,15 +125,18 @@ struct HelpdeskTests {
         let transport = RoutingTransport()
         let detail = #"{"summary":\#(Self.summary.replacingOccurrences(of: "%@", with: "2026-11-02T08:00:00Z")),"description":null,"resolution":null,"comments":[],"events":[]}"#
         transport.on("GET", "/api/v1/tickets") { request in
-            #expect(request.url?.query()?.contains("filter=unassigned") == true)
+            let query = request.url?.query() ?? ""
+            #expect(query.contains("filter=unassigned"))
             return .json("[" + Self.summary.replacingOccurrences(of: "%@", with: "2026-11-02T08:00:00Z") + "]")
         }
         transport.on("PATCH", "/api/v1/tickets/01a00000-0000-7000-8000-0000000000f1") { request in
-            #expect(request.jsonBody()["status"] as? String == "inProgress" && (request.jsonBody()["assigneeUserId"] as? String)?.lowercased() == Samples.userId.key)
+            let status = request.jsonBody()["status"] as? String, assignee = (request.jsonBody()["assigneeUserId"] as? String)?.lowercased()
+            #expect(status == "inProgress" && assignee == Samples.userId.key)
             return .json(detail)
         }
         transport.on("POST", "/api/v1/files") { request in
-            #expect(request.jsonBody()["kind"] as? String == "photo" && request.jsonBody()["sizeBytes"] as? Int == 3)
+            let kind = request.jsonBody()["kind"] as? String, size = request.jsonBody()["sizeBytes"] as? Int
+            #expect(kind == "photo" && size == 3)
             return .json("{}")
         }
         transport.on("PUT", "/api/v1/files/") { _ in .json("{}") }
