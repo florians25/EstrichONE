@@ -212,7 +212,7 @@ struct PartyEditView: View {
                     Section { Text(error).foregroundStyle(Theme.danger) }
                 }
             }
-            .navigationTitle(party == nil ? "Kontakt hinzufügen" : "Kontakt bearbeiten")
+            .navigationTitle(party == nil ? "Neuer Kontakt" : "Kontakt")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }

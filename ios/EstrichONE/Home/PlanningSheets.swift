@@ -78,7 +78,7 @@ struct AssignStopSheet: View {
         NavigationStack {
             Form {
                 if let selected {
-                    Section("Baustelle") {
+                    Section("\(crew.name) · \(day.formatted(.dateTime.weekday(.abbreviated).day().month()))") {
                         HStack {
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(selected.title).font(Typo.bodyStrong)
@@ -119,12 +119,12 @@ struct AssignStopSheet: View {
                             .accessibilityIdentifier("pool-\(choice.title)")
                         }
                     } header: {
-                        Text("Bauvorhaben wählen")
+                        Text("Bauvorhaben für \(crew.name) · \(day.formatted(.dateTime.weekday(.abbreviated).day().month()))")
                     }
                 }
             }
             .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Bauvorhaben suchen")
-            .navigationTitle("\(crew.name) · \(day.formatted(.dateTime.weekday(.abbreviated).day().month()))")
+            .navigationTitle("Zuweisen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }
@@ -240,7 +240,9 @@ struct MoveStopSheet: View {
                         if hasEnd { DatePicker("Ende", selection: $end, in: start..., displayedComponents: .hourAndMinute) }
                     }
                 }
-                Section("Prüfung") { ConflictPreview(warnings: warnings, checking: checking) }
+                if change != nil {
+                    Section("Prüfung") { ConflictPreview(warnings: warnings, checking: checking) }
+                }
             }
             .navigationTitle("Verschieben")
             .navigationBarTitleDisplayMode(.inline)
@@ -347,7 +349,7 @@ struct SwapRosterSheet: View {
                     Text(vehicle ? "Gilt nur für diesen Tag." : "Gilt nur für diesen Tag. Ist die Person in einer anderen Kolonne, wechselt die ausfallende Person im Gegenzug dorthin.")
                 }
             }
-            .navigationTitle(vehicle ? "Fahrzeug tauschen" : "Mitarbeiter tauschen")
+            .navigationTitle(vehicle ? "Fahrzeug" : "Besetzung")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }

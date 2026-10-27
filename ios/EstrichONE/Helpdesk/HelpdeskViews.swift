@@ -72,6 +72,7 @@ struct MyTicketsView: View {
                 .pickerStyle(.segmented)
             }
             .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
             .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
             if !waiting.isEmpty {
                 Section("Wartet auf Übertragung") {
