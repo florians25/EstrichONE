@@ -18,10 +18,10 @@ struct ServerConfirmView: View {
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Server")
-                        .font(.subheadline.weight(.medium))
+                        .font(Typo.subheadStrong)
                         .foregroundStyle(Theme.textSecondary)
                     Text(server.info.serverName)
-                        .font(.title2.weight(.semibold))
+                        .font(Typo.title)
                         .fixedSize(horizontal: false, vertical: true)
                         .accessibilityIdentifier("confirmServerName")
                 }
@@ -81,7 +81,8 @@ struct ServerDetails: View {
             Divider()
             row("Anmeldung", Self.describe(server.info.authMethods))
         }
-        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        // Auf weißem Seitenhintergrund: getönte Fläche statt Weiß auf Weiß.
+        .background(Theme.fill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
     }
 
     private func row(_ title: LocalizedStringKey, _ value: String) -> some View {

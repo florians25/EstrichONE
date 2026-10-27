@@ -18,13 +18,13 @@ struct ServerEntryView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: Space.l) {
                 Text("Mit welchem Server soll sich die App verbinden?")
-                    .font(.title2.weight(.semibold))
+                    .font(Typo.title)
                     .fixedSize(horizontal: false, vertical: true)
                     .accessibilityAddTraits(.isHeader)
 
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Serveradresse")
-                        .font(.subheadline.weight(.medium))
+                        .font(Typo.subheadStrong)
                         .foregroundStyle(Theme.textSecondary)
 
                     TextField("estrichone.meinefirma.de", text: $input)
@@ -36,10 +36,10 @@ struct ServerEntryView: View {
                         .focused($fieldFocused)
                         .onSubmit { Task { await check() } }
                         .padding(.horizontal, 14)
-                        .frame(minHeight: 52)
-                        .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                        .frame(minHeight: Size.button)
+                        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                         .overlay {
-                            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                            RoundedRectangle(cornerRadius: Radius.m, style: .continuous)
                                 .strokeBorder(errorMessage == nil ? Theme.separator : Theme.danger, lineWidth: 1)
                         }
                         .disabled(isChecking)

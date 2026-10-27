@@ -19,7 +19,7 @@ struct PINEntryView: View {
                 if let user {
                     VStack(spacing: 8) {
                         Initials(text: user.initials)
-                        Text(user.displayName).font(.title2.weight(.semibold))
+                        Text(user.displayName).font(Typo.title)
                         Text("Geräte-PIN eingeben").font(.callout).foregroundStyle(Theme.textSecondary)
                     }
                 }

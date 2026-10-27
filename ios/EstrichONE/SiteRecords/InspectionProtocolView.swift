@@ -107,13 +107,17 @@ struct InspectionProtocolView: View {
                     Text(statusText).font(Typo.headline).foregroundStyle(Theme.textPrimary).accessibilityIdentifier("inspectionStatus")
                     Text([inspection.performedAt?.formatted(date: .long, time: .shortened), performerName].compactMap { $0 }.joined(separator: " · "))
                         .font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                    if inspection.correctsInspectionId != nil {
+                        Label("Korrigierte Fassung", systemImage: "pencil.circle")
+                            .labelStyle(TightLabelStyle())
+                            .font(Typo.meta)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                SyncStateBadge(state: inspection.syncState, showsSynced: true)
             }
             .padding(.vertical, Space.xs)
-            if inspection.correctsInspectionId != nil {
-                Label("Korrigierte Fassung", systemImage: "pencil.circle").font(Typo.meta).foregroundStyle(Theme.textSecondary)
-            }
-            SyncStateBadge(state: inspection.syncState, showsSynced: true)
         } header: {
             Text(bauakte.number.map { "\($0) · \(bauakte.title)" } ?? bauakte.title)
         }

@@ -65,16 +65,6 @@ struct StatusLabel: View {
     }
 }
 
-/// Status als Kapsel (Kopf, Karten).
-struct BauakteStatusChip: View {
-    let status: BauakteStatus
-
-    var body: some View {
-        Chip(text: status.shortTitle, dot: status.tint, tone: .neutral)
-            .accessibilityLabel("Status: \(status.title)")
-    }
-}
-
 /// Übertragungszustand eines Datensatzes (15, Abschnitt 4): wartet · übertragen · Problem.
 struct SyncStateBadge: View {
     let state: SyncState

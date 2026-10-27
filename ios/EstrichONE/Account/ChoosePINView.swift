@@ -14,7 +14,7 @@ struct ChoosePINView: View {
             Spacer(minLength: 12)
             VStack(spacing: 8) {
                 Text(firstEntry == nil ? "Geräte-PIN festlegen" : "PIN wiederholen")
-                    .font(.title2.weight(.semibold))
+                    .font(Typo.title)
                     .accessibilityIdentifier("choosePINTitle")
                 Text("Mit dieser PIN melden Sie sich künftig auf diesem Gerät an. Sie gilt nur hier und wird nicht an den Server übertragen.")
                     .font(.callout)

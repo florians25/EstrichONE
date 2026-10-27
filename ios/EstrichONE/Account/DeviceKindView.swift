@@ -11,7 +11,7 @@ struct DeviceKindView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.l) {
                     Text("Wie wird dieses Gerät genutzt?")
-                        .font(.title2.weight(.semibold))
+                        .font(Typo.title)
                         .accessibilityAddTraits(.isHeader)
 
                     option(.personal, title: "Persönliches Gerät", symbol: "person",
@@ -69,9 +69,9 @@ struct DeviceKindView: View {
             }
             .padding(16)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+            .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                RoundedRectangle(cornerRadius: Radius.l, style: .continuous)
                     .strokeBorder(selected ? Theme.accent : Theme.separator, lineWidth: selected ? 2 : 1)
             }
         }

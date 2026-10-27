@@ -266,16 +266,6 @@ struct CustomerRow: View {
     }
 }
 
-/// Avatar eines Kunden (ältere Aufrufer).
-struct CustomerAvatar: View {
-    let contact: Contact
-    var size: CGFloat = 44
-
-    var body: some View {
-        Avatar(name: contact.name, isCompany: contact.isCompany, size: size)
-    }
-}
-
 /// Seitlicher Buchstaben-Index zum Springen.
 private struct LetterIndex: View {
     let letters: [String]

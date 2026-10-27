@@ -9,7 +9,7 @@ struct AppLockView: View {
         VStack(spacing: 24) {
             Spacer()
             BrandMark().frame(width: 72, height: 72).accessibilityHidden(true)
-            Text("EstrichONE ist gesperrt").font(.title2.weight(.semibold))
+            Text("EstrichONE ist gesperrt").font(Typo.title)
             Spacer()
             Button {
                 Task { await model.unlockPersonal() }
@@ -38,7 +38,7 @@ struct WaitingForApprovalView: View {
                 .foregroundStyle(Theme.accent)
                 .accessibilityHidden(true)
             Text("Wartet auf Freigabe")
-                .font(.title2.weight(.semibold))
+                .font(Typo.title)
                 .accessibilityIdentifier("waitingTitle")
             Text("Ihre Administration wurde benachrichtigt. Sie können die App nutzen, sobald das Gerät freigegeben ist. Die App prüft das automatisch.")
                 .font(.body)
