@@ -50,6 +50,14 @@ struct NotificationInboxView: View {
         .navigationTitle("Benachrichtigungen")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .secondaryAction) {
+                NavigationLink {
+                    NotificationPreferencesView()
+                } label: {
+                    Label("Benachrichtigungsarten", systemImage: "slider.horizontal.3")
+                }
+                .accessibilityIdentifier("notificationPreferences")
+            }
             if push.unreadCount > 0 {
                 ToolbarItem(placement: .primaryAction) {
                     Button("Alle gelesen") { Task { await markAllRead() } }
@@ -264,6 +272,9 @@ enum NotificationKind {
         let key = (category ?? "").lowercased()
         switch key {
         case "plan", "planning", "planchange", "planning.changed", "planning.released": return "calendar.badge.clock"
+        case "work", "work.assigned": return "checklist"
+        case "message", "office.message": return "megaphone"
+        case "system": return "server.rack"
         case "ticket", "helpdesk": return "bubble.left.and.text.bubble.right"
         case "chat", "chatmessage", "chat.message": return "bubble.left.and.bubble.right"
         case "approval", "approval.requested", "approval.decided", "document.approval": return "checkmark.seal"
@@ -271,9 +282,9 @@ enum NotificationKind {
         case "defect", "defect.assigned", "mangel": return "exclamationmark.triangle"
         case "comment", "reply", "bauakte.comment": return "text.bubble"
         case "acceptance", "acceptance.signed", "abnahme": return "signature"
-        case "leave", "absence", "vacation", "leave.decided": return "sun.max"
+        case "leave", "absence", "vacation", "leave.decided", "absence.decided": return "sun.max"
         case "maintenance", "maintenance.announced": return "wrench.and.screwdriver"
-        case "backup", "backup.failed", "backup.succeeded", "archive", "archive.failed", "system": return "externaldrive.badge.checkmark"
+        case "backup", "backup.failed", "backup.succeeded", "archive", "archive.failed": return "externaldrive.badge.checkmark"
         case "deadline": return "clock.badge.exclamationmark"
         default:
             if key.hasPrefix("backup") || key.hasPrefix("archive") { return "externaldrive" }

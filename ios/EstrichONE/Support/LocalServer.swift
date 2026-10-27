@@ -256,6 +256,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             }
         case "/api/v1/notifications" where demo != nil:
             return json(200, notifications.inbox())
+        case "/api/v1/notifications/preferences" where demo != nil:
+            return json(200, method == "PUT" ? notifications.savePreferences(body) : notifications.preferenceList())
         case "/api/v1/notifications/read-all" where demo != nil:
             notifications.markAllRead()
             return (204, "")

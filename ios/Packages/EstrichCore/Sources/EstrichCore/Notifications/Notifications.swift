@@ -188,3 +188,74 @@ extension AuthorizedClient {
         let _: NoContent = try await send(APIRequest(method: "DELETE", path: "notifications/devices", query: [URLQueryItem(name: "token", value: token)]))
     }
 }
+
+/// Auswahl je Ereignis (`GET/PUT /notifications/preferences`, docs/benachrichtigungen.md): aus, nur Postfach oder
+/// Postfach und Push. Pflicht-Ereignisse lassen sich nicht abbestellen, nur die Pushnachricht lässt sich abschalten.
+public struct NotificationPreference: Codable, Equatable, Sendable, Identifiable {
+    public enum Delivery: String, Codable, Sendable, CaseIterable {
+        case off, inbox, push
+    }
+
+    public let event: String
+    public let group: String
+    public let label: String
+    public let description: String?
+    public let adminOnly: Bool
+    public let mandatory: Bool
+    public var delivery: Delivery
+
+    public var id: String { event }
+
+    public init(event: String, group: String, label: String, description: String?, adminOnly: Bool, mandatory: Bool, delivery: Delivery) {
+        self.event = event
+        self.group = group
+        self.label = label
+        self.description = description
+        self.adminOnly = adminOnly
+        self.mandatory = mandatory
+        self.delivery = delivery
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        event = try c.decode(String.self, forKey: .event)
+        group = try c.decodeIfPresent(String.self, forKey: .group) ?? "Allgemein"
+        label = try c.decodeIfPresent(String.self, forKey: .label) ?? event
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        adminOnly = try c.decodeIfPresent(Bool.self, forKey: .adminOnly) ?? false
+        mandatory = try c.decodeIfPresent(Bool.self, forKey: .mandatory) ?? false
+        delivery = (try? c.decode(Delivery.self, forKey: .delivery)) ?? .push
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case event, group, label, description, adminOnly, mandatory, delivery
+    }
+}
+
+private struct NotificationPreferenceList: Codable, Sendable {
+    let items: [NotificationPreference]
+}
+
+private struct NotificationPreferenceChange: Encodable, Sendable {
+    let event: String
+    let delivery: NotificationPreference.Delivery
+}
+
+private struct NotificationPreferenceChanges: Encodable, Sendable {
+    let items: [NotificationPreferenceChange]
+}
+
+extension AuthorizedClient {
+    public func notificationPreferences() async throws(APIError) -> [NotificationPreference] {
+        let list: NotificationPreferenceList = try await get("notifications/preferences")
+        return list.items
+    }
+
+    /// Speichert geänderte Einträge und liefert den neuen Stand.
+    public func saveNotificationPreferences(_ items: [NotificationPreference]) async throws(APIError) -> [NotificationPreference] {
+        let body = NotificationPreferenceChanges(items: items.map { NotificationPreferenceChange(event: $0.event, delivery: $0.delivery) })
+        let response: NotificationPreferenceList = try await send(APIRequest(
+            method: "PUT", path: "notifications/preferences", body: try? JSONCoding.encoder.encode(body), contentType: "application/json"))
+        return response.items
+    }
+}
