@@ -27,6 +27,11 @@ struct DispatchView: View {
     @State private var editMode: EditMode = .inactive
     @State private var showsPending = false
     @State private var releasing = false
+    /// Verfügbare Breite: ab etwa iPad-Hochformat Kolonnen als Karten nebeneinander.
+    @State private var width: CGFloat = 0
+
+    /// Breite Darstellung (iPad): Kolonnen als Raster; zum Sortieren wieder die Liste (Ziehen nur dort).
+    private var usesBoard: Bool { sizeClass == .regular && width >= 680 && !editMode.isEditing && plan != nil }
 
     init(initialDay: Date = Calendar.current.startOfDay(for: .now)) {
         _day = State(initialValue: Calendar.current.startOfDay(for: initialDay))
@@ -35,32 +40,14 @@ struct DispatchView: View {
     private var dayText: String { CalendarDay.string(day) }
 
     var body: some View {
-        List {
-            Section {
-                DayStrip(day: $day) { choosingDate = true }
-            }
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
-            statusSection
-            if let plan {
-                ForEach(plan.sortedCrews) { crew in crewSection(crew, plan: plan) }
-                if !plan.withoutCrew.isEmpty {
-                    Section {
-                        ForEach(plan.withoutCrew) { stop in stopRow(stop, crew: nil, plan: plan) }
-                    } header: {
-                        Text("Ohne Kolonne")
-                    }
-                }
-                peopleSection(plan)
-            } else if !loading, let message {
-                Section { EmptyStateView(symbol: "calendar.badge.exclamationmark", title: "Keine Planung", message: message) }
+        Group {
+            if usesBoard, let plan {
+                board(plan)
+            } else {
+                list
             }
         }
-        .listStyle(.insetGrouped)
-        .listSectionSpacing(.compact)
-        .environment(\.editMode, $editMode)
-        .frame(maxWidth: sizeClass == .regular ? 820 : .infinity)
-        .frame(maxWidth: .infinity)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .background(Theme.canvas)
         .overlay { if loading && plan == nil { ProgressView() } }
         .navigationTitle("Wer fährt wohin")
@@ -102,6 +89,137 @@ struct DispatchView: View {
         .sensoryFeedback(.success, trigger: plan)
     }
 
+    /// Liste (iPhone, schmale Fenster, Reihenfolge ändern).
+    private var list: some View {
+        List {
+            Section {
+                DayStrip(day: $day) { choosingDate = true }
+            }
+            .listRowBackground(Color.clear)
+            .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+            statusSection
+            if let plan {
+                ForEach(plan.sortedCrews) { crew in crewSection(crew, plan: plan) }
+                if !plan.withoutCrew.isEmpty {
+                    Section {
+                        ForEach(plan.withoutCrew) { stop in stopRow(stop, crew: nil, plan: plan) }
+                    } header: {
+                        Text("Ohne Kolonne")
+                    }
+                }
+                peopleSection(plan)
+            } else if !loading, let message {
+                Section { EmptyStateView(symbol: "calendar.badge.exclamationmark", title: "Keine Planung", message: message) }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
+        .environment(\.editMode, $editMode)
+    }
+
+    /// Raster für breite Bildschirme: je Kolonne eine Karte, nebeneinander (iPad hoch zwei, quer drei Spalten).
+    private func board(_ plan: DayPlan) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Space.l) {
+                DayStrip(day: $day) { choosingDate = true }
+                let lines = statusLines
+                ForEach(lines.indices, id: \.self) { index in lines[index] }
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 340), spacing: Space.l, alignment: .top)],
+                          alignment: .leading, spacing: Space.l) {
+                    ForEach(plan.sortedCrews) { crew in crewCard(crew, plan: plan) }
+                    if !plan.withoutCrew.isEmpty {
+                        boardCard {
+                            Text("Ohne Kolonne").font(Typo.headline).padding(Space.m)
+                            stopList(plan.withoutCrew, crew: nil, plan: plan)
+                        }
+                    }
+                    peopleCard(plan)
+                }
+            }
+            .padding(.horizontal, Space.l)
+            .padding(.bottom, Space.xl)
+        }
+        .accessibilityIdentifier("dispatchBoard")
+    }
+
+    private func crewCard(_ crew: DayPlan.Crew, plan: DayPlan) -> some View {
+        boardCard {
+            CrewCardHeader(crew: crew, canPlan: plan.canPlan, canSwapCrews: plan.crews.count > 1) { action in
+                switch action {
+                case .assign: sheet = .assign(crew: crew)
+                case .swapPerson: sheet = .swap(crew: crew, vehicle: false)
+                case .swapVehicle: sheet = .swap(crew: crew, vehicle: true)
+                case .swapCrews: sheet = .swapCrews(crew: crew)
+                }
+            }
+            .padding(Space.m)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(crew.isMine ? Theme.accentSoft : Theme.surface)
+            if crew.stops.isEmpty {
+                Divider()
+                Text(crew.available.isEmpty ? "Heute nicht besetzt" : "Noch keine Baustelle")
+                    .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                    .padding(Space.m)
+            } else {
+                Divider()
+                stopList(crew.stops, crew: crew, plan: plan)
+            }
+            if plan.canPlan {
+                Divider()
+                Button { sheet = .assign(crew: crew) } label: {
+                    Label("Baustelle zuweisen", systemImage: "plus")
+                        .font(Typo.subheadStrong)
+                        .frame(maxWidth: .infinity, minHeight: 44, alignment: .leading)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(Theme.accent)
+                .padding(.horizontal, Space.m)
+                .accessibilityIdentifier("assign-\(crew.name)")
+            }
+        }
+    }
+
+    /// Baustellen einer Karte; Aktionen über das Kontextmenü (lange drücken bzw. Rechtsklick).
+    private func stopList(_ stops: [DayPlan.Stop], crew: DayPlan.Crew?, plan: DayPlan) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            ForEach(Array(stops.enumerated()), id: \.element.id) { index, stop in
+                if index > 0 { Divider().padding(.leading, Space.m) }
+                stopRow(stop, crew: crew, plan: plan)
+                    .padding(.horizontal, Space.m)
+                    .padding(.vertical, Space.s)
+                    .background(Theme.surface)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func peopleCard(_ plan: DayPlan) -> some View {
+        if !plan.free.isEmpty || !plan.absent.isEmpty {
+            boardCard {
+                VStack(alignment: .leading, spacing: Space.s) {
+                    Text("Mitarbeiter").font(Typo.headline)
+                    if !plan.free.isEmpty {
+                        Label("Frei: \(plan.free.map(\.name).joined(separator: ", "))", systemImage: "person.badge.clock")
+                    }
+                    if !plan.absent.isEmpty {
+                        Label("Abwesend: \(plan.absent.map { "\($0.name) (\($0.absenceNote ?? "abwesend"))" }.joined(separator: ", "))",
+                              systemImage: "person.fill.xmark")
+                    }
+                }
+                .font(Typo.subhead)
+                .padding(Space.m)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
+    }
+
+    private func boardCard<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+        VStack(alignment: .leading, spacing: 0) { content() }
+            .background(Theme.surface)
+            .clipShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+    }
+
     // MARK: Abschnitte
 
     @ViewBuilder
@@ -133,22 +251,23 @@ struct DispatchView: View {
             lines.append(AnyView(NoticeLine(tone: .info, text: "Feiertag: \(holiday)", symbol: "calendar")))
         }
         if let plan, plan.stopCount > 0 || plan.release != nil {
+            // Eine ruhige Statuszeile: Freigabestand, kleine Schaltfläche, entfallene Einsätze zum Aufklappen.
             if let release = plan.release {
                 let when = release.releasedAt.formatted(.dateTime.day().month(.abbreviated).hour().minute())
-                let text = release.changedCount > 0
-                    ? "Freigegeben \(when) · \(release.changedCount) \(release.changedCount == 1 ? "Änderung" : "Änderungen") seit Freigabe"
-                    : "Freigegeben \(when) von \(release.releasedByName)"
-                lines.append(AnyView(NoticeLine(tone: release.changedCount > 0 ? .warning : .success, text: text,
-                                                symbol: release.changedCount > 0 ? "arrow.triangle.2.circlepath" : "checkmark.seal",
-                                                actionTitle: plan.canPlan ? "Freigabe" : nil,
-                                                action: plan.canPlan ? { sheet = .release } : nil)
+                let changed = release.changedCount
+                lines.append(AnyView(PlanStatusBar(
+                    tone: changed > 0 ? .warning : .success,
+                    symbol: changed > 0 ? "arrow.triangle.2.circlepath" : "checkmark.seal.fill",
+                    title: "Freigegeben \(when)",
+                    detail: changed > 0 ? "\(changed) \(changed == 1 ? "Änderung" : "Änderungen") seit Freigabe" : "von \(release.releasedByName)",
+                    actionTitle: plan.canPlan ? "Freigabe" : nil,
+                    action: plan.canPlan ? { sheet = .release } : nil,
+                    removed: release.removed.map { "\($0.title) – \($0.activity)" })
                     .accessibilityIdentifier("releaseStatus")))
-                for removed in release.removed {
-                    lines.append(AnyView(NoticeLine(tone: .neutral, text: "Entfallen: \(removed.title) – \(removed.activity)", symbol: "minus.circle")))
-                }
             } else {
-                lines.append(AnyView(NoticeLine(tone: .neutral, text: "Entwurf – noch nicht freigegeben", symbol: "pencil.and.outline",
-                                                actionTitle: plan.canPlan ? "Freigeben" : nil, action: plan.canPlan ? { sheet = .release } : nil)
+                lines.append(AnyView(PlanStatusBar(
+                    tone: .neutral, symbol: "pencil.and.outline", title: "Entwurf", detail: "Noch nicht freigegeben",
+                    actionTitle: plan.canPlan ? "Freigeben" : nil, action: plan.canPlan ? { sheet = .release } : nil, removed: [])
                     .accessibilityIdentifier("releaseStatus")))
             }
         }
@@ -490,81 +609,169 @@ struct CrewCardHeader: View {
     var canSwapCrews = true
     let action: (Action) -> Void
 
+    /// Besetzung ohne Abwesende (die stehen als Hinweis darunter).
+    private var memberText: String {
+        crew.members.filter { $0.absenceNote == nil }
+            .map { $0.name + ($0.name == crew.leaderName ? " (Leitung)" : "") }
+            .joined(separator: ", ")
+    }
+
     var body: some View {
-        VStack(alignment: .leading, spacing: Space.s) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: Space.s) {
-                RoundedRectangle(cornerRadius: 2).fill(Color(hexString: crew.color) ?? Theme.accent).frame(width: 4, height: 22)
+                RoundedRectangle(cornerRadius: 2).fill(Color(hexString: crew.color) ?? Theme.accent).frame(width: 4, height: 20)
                 Text(crew.name).font(Typo.headline).foregroundStyle(Theme.textPrimary)
-                if crew.isMine { Chip(text: "Meine Kolonne", symbol: "person.fill", tone: .accent) }
-                Spacer(minLength: 0)
-            }
-            .frame(minHeight: 30)
-            if !crew.members.isEmpty {
-                FlowLayout(spacing: 6) {
-                    ForEach(crew.members) { member in
-                        if let note = member.absenceNote {
-                            Chip(text: "\(member.name) · \(note)", symbol: "person.fill.xmark", tone: .warning)
-                        } else {
-                            Chip(text: member.name + (member.name == crew.leaderName ? " (Leitung)" : ""), tone: .neutral)
-                        }
-                    }
-                    ForEach(crew.vehicles) { vehicle in
-                        Chip(text: vehicle.name, symbol: vehicle.kind == "vehicle" ? "car.fill" : "wrench.and.screwdriver.fill", tone: .neutral)
-                    }
-                    if crew.rosterChanged { Chip(text: "Besetzung geändert", symbol: "arrow.triangle.swap", tone: .accent) }
+                if crew.isMine {
+                    Text("Meine")
+                        .font(Typo.labelStrong)
+                        .foregroundStyle(Theme.accent)
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 2)
+                        .background(Theme.accentSoft, in: Capsule())
+                        .accessibilityLabel("Meine Kolonne")
                 }
+                Spacer(minLength: Space.s)
+                if canPlan { adjustMenu }
+            }
+            .frame(minHeight: 32)
+            // Besetzung und Geräte als ruhige Textzeilen statt vieler Chips.
+            if !memberText.isEmpty {
+                rosterLine(memberText, symbol: "person.2.fill")
+            }
+            if !crew.vehicles.isEmpty {
+                rosterLine(crew.vehicles.map(\.name).joined(separator: " · "), symbol: "truck.box.fill")
+            }
+            ForEach(crew.members.filter { $0.absenceNote != nil }) { member in
+                rosterLine("\(member.name) · \(member.absenceNote ?? "abwesend")", symbol: "person.fill.xmark", tint: Theme.warning)
+            }
+            if crew.rosterChanged {
+                rosterLine("Besetzung geändert", symbol: "arrow.triangle.swap", tint: Theme.accent)
             }
             if let note = crew.rosterNote {
                 Text(note).font(Typo.meta).foregroundStyle(Theme.textSecondary)
             }
             ForEach(crew.conflicts, id: \.self) { warning in
-                Label(warning, systemImage: "exclamationmark.triangle.fill")
-                    .labelStyle(TightLabelStyle())
-                    .font(Typo.metaStrong)
-                    .foregroundStyle(Theme.warning)
-            }
-            if canPlan {
-                // Tauschen direkt sichtbar (kein verstecktes „…“-Menü), Beschriftung immer vollständig.
-                FlowLayout(spacing: Space.s) {
-                    CrewActionButton(title: "Mitarbeiter tauschen", symbol: "person.2.badge.gearshape") { action(.swapPerson) }
-                        .accessibilityIdentifier("swapPerson-\(crew.name)")
-                    CrewActionButton(title: "Fahrzeug tauschen", symbol: "truck.box") { action(.swapVehicle) }
-                        .accessibilityIdentifier("swapVehicle-\(crew.name)")
-                    if canSwapCrews {
-                        CrewActionButton(title: "Kolonnen tauschen", symbol: "arrow.left.arrow.right") { action(.swapCrews) }
-                            .accessibilityIdentifier("swapCrews-\(crew.name)")
-                    }
-                }
-                .padding(.top, Space.xxs)
+                rosterLine(warning, symbol: "exclamationmark.triangle.fill", tint: Theme.warning)
             }
         }
-        .padding(.vertical, Space.xs)
+        .padding(.vertical, Space.xxs)
         .accessibilityElement(children: .contain)
         .accessibilityIdentifier("crew-\(crew.name)")
     }
-}
 
-/// Kleine Schaltfläche im Kopf einer Kolonne: Symbol und vollständiger Text (bricht bei großer Schrift um statt zu kürzen).
-private struct CrewActionButton: View {
-    let title: String
-    let symbol: String
-    let action: () -> Void
+    private func rosterLine(_ text: String, symbol: String, tint: Color = Theme.textSecondary) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: symbol)
+                .font(.caption2)
+                .foregroundStyle(tint)
+                .frame(width: 16)
+                .accessibilityHidden(true)
+            Text(text)
+                .font(Typo.meta)
+                .foregroundStyle(tint)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.leading, 12)
+    }
 
-    var body: some View {
-        Button(action: action) {
-            Label(title, systemImage: symbol)
+    /// Eine kleine Schaltfläche statt drei großer: Tauschen und Zuweisen im Menü, jeweils voll beschriftet.
+    private var adjustMenu: some View {
+        Menu {
+            Button("Baustelle zuweisen", systemImage: "plus") { action(.assign) }
+            Section("Tauschen") {
+                Button("Mitarbeiter tauschen", systemImage: "person.2.badge.gearshape") { action(.swapPerson) }
+                    .accessibilityIdentifier("swapPerson-\(crew.name)")
+                Button("Fahrzeug tauschen", systemImage: "truck.box") { action(.swapVehicle) }
+                    .accessibilityIdentifier("swapVehicle-\(crew.name)")
+                if canSwapCrews {
+                    Button("Kolonnen tauschen", systemImage: "arrow.left.arrow.right") { action(.swapCrews) }
+                        .accessibilityIdentifier("swapCrews-\(crew.name)")
+                }
+            }
+        } label: {
+            Label("Anpassen", systemImage: "slider.horizontal.3")
                 .labelStyle(TightLabelStyle())
                 .font(Typo.metaStrong)
                 .foregroundStyle(Theme.accent)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, Space.s + 2)
-                .padding(.vertical, Space.xs + 2)
-                .frame(minHeight: 32)
-                .background(Theme.surface.opacity(0.9), in: RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: Radius.s, style: .continuous).strokeBorder(Theme.separator))
-                .contentShape(RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(Theme.accentSoft, in: Capsule())
+                .fixedSize()
         }
         .buttonStyle(.borderless)
+        .accessibilityIdentifier("crewMenu-\(crew.name)")
+    }
+}
+
+/// Freigabestand des Tages als eine kompakte Zeile: Symbol, Stand, kleine Schaltfläche; entfallene Einsätze aufklappbar.
+struct PlanStatusBar: View {
+    let tone: Callout.Tone
+    let symbol: String
+    let title: String
+    var detail: String?
+    var actionTitle: String?
+    var action: (() -> Void)?
+    var removed: [String] = []
+    @State private var showsRemoved = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(alignment: .center, spacing: 10) {
+                Image(systemName: symbol)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(tone.foreground)
+                    .frame(width: 20)
+                    .accessibilityHidden(true)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(title).font(Typo.metaStrong).foregroundStyle(Theme.textPrimary)
+                    if let detail {
+                        Text(detail).font(Typo.meta).foregroundStyle(tone == .warning ? tone.foreground : Theme.textSecondary)
+                    }
+                }
+                .fixedSize(horizontal: false, vertical: true)
+                Spacer(minLength: Space.s)
+                if let actionTitle, let action {
+                    Button(actionTitle, action: action)
+                        .font(Typo.metaStrong)
+                        .buttonStyle(.bordered)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.small)
+                        .tint(Theme.accent)
+                        .fixedSize()
+                }
+            }
+            if !removed.isEmpty {
+                Button {
+                    withAnimation(.snappy) { showsRemoved.toggle() }
+                } label: {
+                    HStack(spacing: 6) {
+                        Image(systemName: "minus.circle").frame(width: 20)
+                        Text("\(removed.count) \(removed.count == 1 ? "Einsatz" : "Einsätze") entfallen")
+                        Image(systemName: "chevron.down")
+                            .font(.caption2.weight(.semibold))
+                            .rotationEffect(.degrees(showsRemoved ? 180 : 0))
+                    }
+                    .font(Typo.meta)
+                    .foregroundStyle(Theme.textSecondary)
+                    .frame(minHeight: 28)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("removedToggle")
+                if showsRemoved {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ForEach(removed, id: \.self) { line in
+                            Text(line).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                        }
+                    }
+                    .padding(.leading, 30)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+        .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        .accessibilityElement(children: .contain)
     }
 }
 

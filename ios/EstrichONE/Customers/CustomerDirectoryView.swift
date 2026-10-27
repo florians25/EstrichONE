@@ -301,78 +301,39 @@ struct CustomerCardView: View {
     @State private var openedBauakte: UUID?
     @State private var exporting = false
 
+    /// Breite Darstellung (iPad): Kontaktdaten links, Bauakten rechts.
+    @State private var width: CGFloat = 0
+    @Environment(\.horizontalSizeClass) private var sizeClass
+    private var isWide: Bool { sizeClass == .regular && width >= 700 }
+
     var body: some View {
-        List {
-            if let contact {
-                Section {
-                    header(contact)
+        Group {
+            if isWide, let contact {
+                HStack(alignment: .top, spacing: 0) {
+                    List { contactSections(contact) }
+                        .listStyle(.insetGrouped)
+                    List { bauaktenSection(contact) }
+                        .listStyle(.insetGrouped)
+                        .frame(width: max(320, width * 0.42))
                 }
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: Space.s, trailing: 0))
-                if !contact.phones.isEmpty {
-                    Section("Telefon") {
-                        ForEach(contact.phones) { phone in
-                            if let url = ContactLink.phone(phone.number) {
-                                Button { openURL(url) } label: {
-                                    channelRow(title: [phone.kind.title, phone.label].compactMap { $0 }.joined(separator: " · "), value: phone.number,
-                                               symbol: phone.kind == .mobile ? "iphone" : (phone.kind == .fax ? "faxmachine" : "phone"),
-                                               preferred: Self.isPreferred(phone, contact))
-                                }
-                            }
-                        }
-                    }
-                }
-                if !contact.emails.isEmpty {
-                    Section("E-Mail") {
-                        ForEach(contact.emails) { email in
-                            if let url = ContactLink.email(email.address) {
-                                Button { openURL(url) } label: {
-                                    channelRow(title: email.label ?? "E-Mail", value: email.address, symbol: "envelope",
-                                               preferred: contact.preferredChannel == .email && email == contact.emails.first)
-                                }
-                            }
-                        }
-                    }
-                }
-                Section("Anschrift") {
-                    addressRow("Anschrift", contact.addressLine)
-                    if let billing = contact.billingAddress?.line { addressRow("Rechnung", billing) }
-                    if let delivery = contact.deliveryAddress?.line { addressRow("Lieferung", delivery) }
-                }
-                if contact.website != nil || contact.notes != nil {
-                    Section("Weitere Angaben") {
-                        if let website = contact.website, let url = URL(string: website.hasPrefix("http") ? website : "https://\(website)") {
-                            Link(destination: url) { Label(website, systemImage: "globe") }
-                        }
-                        if let notes = contact.notes?.compactText {
-                            Label(notes, systemImage: "text.bubble").font(Typo.subhead)
-                        }
-                    }
-                }
-                Section {
-                    ForEach(bauakten) { bauakte in
-                        NavigationLink {
-                            BauakteDetailView(bauakteId: bauakte.id)
-                        } label: {
-                            BauakteRow(bauakte: bauakte)
-                        }
-                    }
-                    Button { creatingBauakte = true } label: {
-                        Label("Neue Bauakte für \(contact.name)", systemImage: "folder.badge.plus")
-                    }
-                    .accessibilityIdentifier("newBauakteForCustomerButton")
-                } header: {
-                    Text("Bauakten (\(bauakten.count))")
-                }
-            } else if loaded {
-                ContentUnavailableView("Kunde nicht auf diesem Gerät", systemImage: "person.crop.circle.badge.questionmark")
-                    .listRowBackground(Color.clear)
+                .background(Color(uiColor: .systemGroupedBackground))
             } else {
-                Section { SkeletonCard(lines: 3) }
-                    .listRowBackground(Color.clear)
+                List {
+                    if let contact {
+                        contactSections(contact)
+                        bauaktenSection(contact)
+                    } else if loaded {
+                        ContentUnavailableView("Kunde nicht auf diesem Gerät", systemImage: "person.crop.circle.badge.questionmark")
+                            .listRowBackground(Color.clear)
+                    } else {
+                        Section { SkeletonCard(lines: 3) }
+                            .listRowBackground(Color.clear)
+                    }
+                }
+                .listStyle(.insetGrouped)
             }
         }
-        .listStyle(.insetGrouped)
+        .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .navigationTitle(contact?.name ?? "Kunde")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -413,6 +374,75 @@ struct CustomerCardView: View {
         }
         .navigationDestination(item: $openedBauakte) { BauakteDetailView(bauakteId: $0) }
         .task(id: model.active?.sync?.revision) { await reload() }
+    }
+
+
+    @ViewBuilder
+    private func contactSections(_ contact: Contact) -> some View {
+        Section {
+            header(contact)
+        }
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: Space.s, trailing: 0))
+        if !contact.phones.isEmpty {
+            Section("Telefon") {
+                ForEach(contact.phones) { phone in
+                    if let url = ContactLink.phone(phone.number) {
+                        Button { openURL(url) } label: {
+                            channelRow(title: [phone.kind.title, phone.label].compactMap { $0 }.joined(separator: " · "), value: phone.number,
+                                       symbol: phone.kind == .mobile ? "iphone" : (phone.kind == .fax ? "faxmachine" : "phone"),
+                                       preferred: Self.isPreferred(phone, contact))
+                        }
+                    }
+                }
+            }
+        }
+        if !contact.emails.isEmpty {
+            Section("E-Mail") {
+                ForEach(contact.emails) { email in
+                    if let url = ContactLink.email(email.address) {
+                        Button { openURL(url) } label: {
+                            channelRow(title: email.label ?? "E-Mail", value: email.address, symbol: "envelope",
+                                       preferred: contact.preferredChannel == .email && email == contact.emails.first)
+                        }
+                    }
+                }
+            }
+        }
+        Section("Anschrift") {
+            addressRow("Anschrift", contact.addressLine)
+            if let billing = contact.billingAddress?.line { addressRow("Rechnung", billing) }
+            if let delivery = contact.deliveryAddress?.line { addressRow("Lieferung", delivery) }
+        }
+        if contact.website != nil || contact.notes != nil {
+            Section("Weitere Angaben") {
+                if let website = contact.website, let url = URL(string: website.hasPrefix("http") ? website : "https://\(website)") {
+                    Link(destination: url) { Label(website, systemImage: "globe") }
+                }
+                if let notes = contact.notes?.compactText {
+                    Label(notes, systemImage: "text.bubble").font(Typo.subhead)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func bauaktenSection(_ contact: Contact) -> some View {
+        Section {
+            ForEach(bauakten) { bauakte in
+                NavigationLink {
+                    BauakteDetailView(bauakteId: bauakte.id)
+                } label: {
+                    BauakteRow(bauakte: bauakte)
+                }
+            }
+            Button { creatingBauakte = true } label: {
+                Label("Neue Bauakte für \(contact.name)", systemImage: "folder.badge.plus")
+            }
+            .accessibilityIdentifier("newBauakteForCustomerButton")
+        } header: {
+            Text("Bauakten (\(bauakten.count))")
+        }
     }
 
     private func header(_ contact: Contact) -> some View {

@@ -48,6 +48,19 @@ launch() {
 }
 
 IFS=',' read -r -a LIST <<< "$SCENES"
+
+# „…-quer“ (iPad): Simulator-Fenster öffnen und per Tastenkürzel (⌘→ / ⌘←) drehen; simctl kann nicht drehen.
+ROTATED=0
+if [[ ",$SCENES," == *-quer,* ]]; then
+  open -a Simulator --args -CurrentDeviceUDID "$UDID" || true
+  sleep 6
+fi
+rotate() {
+  osascript -e 'tell application "Simulator" to activate' \
+    -e "tell application \"System Events\" to key code $1 using command down" >/dev/null 2>&1 \
+    || echo "::warning::$PREFIX: Drehen des Simulators nicht möglich (Bedienungshilfen-Recht für osascript?)"
+  sleep 3
+}
 start=$(date +%s)
 count=0
 index=0
@@ -63,6 +76,9 @@ while [ $index -lt ${#LIST[@]} ]; do
     ready:*)
       name=${state#ready:}
       rm -f "$STATE"
+      # „…-quer“: ins Querformat drehen (bleibt für folgende „-quer“-Bildschirme), sonst zurück ins Hochformat.
+      if [[ "$name" == *-quer ]] && [ $ROTATED = 0 ]; then rotate 124; ROTATED=1; fi
+      if [[ "$name" != *-quer ]] && [ $ROTATED = 1 ]; then rotate 123; ROTATED=0; fi
       # „…-gross“: mit sehr großer Schrift (Bedienungshilfen) aufnehmen.
       if [[ "$name" == *-gross ]]; then
         xcrun simctl ui "$UDID" content_size accessibility-large >/dev/null 2>&1

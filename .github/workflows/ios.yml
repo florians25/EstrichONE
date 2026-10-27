@@ -136,8 +136,8 @@ jobs:
     env:
       DEVICE: ${{ matrix.device }}
       IPHONE_SCENES: "heute,heute-glocke,heute-unten,baustellen,bauakte,bauakte-mitte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,protokoll,bereich-tagebuch,bereich-raeume,raum,bereich-basisdaten,bereich-kontakte,bereich-notizen,kunden,kundenkarte,disposition,mehr,sync,wartung"
-      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,dispo-fahrzeug,dispo-kolonnen,dispo-freigabe,postfach,start,start-adresse,anmelden,warten,zuruecksetzen,mehr-zuruecksetzen,heute-gross,bauakte-gross"
-      IPAD_SCENES: "heute,heute-glocke,baustellen,bauakte,bereich-kontakte,kunden,disposition,meldung-detail,mehr-zuruecksetzen,anmelden,heute-quer,baustellen-quer,bauakte-quer,kunden-quer,disposition-quer,aufgaben-quer,meldung-detail-quer"
+      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,dispo-fahrzeug,dispo-kolonnen,dispo-freigabe,postfach,start,start-adresse,anmelden,warten,zuruecksetzen,heute-gross,bauakte-gross,disposition,mehr-zuruecksetzen"
+      IPAD_SCENES: "heute,heute-glocke,baustellen,bauakte,bereich-kontakte,kunden,disposition,meldung-detail,anmelden,heute-quer,baustellen-quer,bauakte-quer,kunden-quer,disposition-quer,meldung-detail-quer,mehr-zuruecksetzen"
     steps:
       - uses: actions/checkout@v5
         with:
