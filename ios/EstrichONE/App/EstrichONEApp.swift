@@ -110,6 +110,7 @@ struct RootView: View {
         // Screenshot-Modus (nur Debug): Einrichtung und Anmeldung zeigen, obwohl die Demo angemeldet ist.
         switch shotScene {
         case "start": OnboardingView()
+        case "start-adresse": OnboardingView(initialPath: [.address(nil)])
         case "anmelden": SignInView(prefilledUserName: "m.huber")
         default: screen
         }

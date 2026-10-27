@@ -34,15 +34,13 @@ struct RoomEditView: View {
                         .accessibilityIdentifier("roomNameField")
                     VStack(alignment: .leading, spacing: Space.s) {
                         TextField("Geschoss", text: $input.floor)
-                        HStack(spacing: Space.s) {
+                        ChipFlow(spacing: Space.s) {
                             ForEach(floors, id: \.self) { floor in
-                                Button(floor) { input.floor = floor }
-                                    .font(Typo.subheadStrong)
-                                    .padding(.horizontal, Space.m)
-                                    .frame(minHeight: 36)
-                                    .background(input.floor == floor ? Theme.accentSoft : Theme.fill, in: Capsule())
-                                    .foregroundStyle(input.floor == floor ? Theme.accent : Theme.textSecondary)
-                                    .buttonStyle(.plain)
+                                Button { input.floor = floor } label: {
+                                    SelectableChipLabel(title: floor, isSelected: input.floor == floor)
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityAddTraits(input.floor == floor ? .isSelected : [])
                             }
                         }
                     }

@@ -223,6 +223,12 @@ struct BauakteDetailView: View {
                              subtitle: "Ansprechpartner vor Ort", link: ContactLink.phone(bauakte.siteContactPhone),
                              linkTitle: "Ansprechpartner anrufen", linkSymbol: "phone.fill"))
         }
+        // Bauleitung – auf der Baustelle der häufigste Anruf nach dem Kunden.
+        if let manager = content.parties.first(where: { $0.role == .siteManager }) {
+            list.append(Fact(id: "manager", symbol: "person.badge.key", title: manager.name,
+                             subtitle: [manager.role.title, manager.company].compactMap { $0 }.joined(separator: " · "),
+                             link: ContactLink.phone(manager.phone), linkTitle: "\(manager.role.title) anrufen", linkSymbol: "phone.fill"))
+        }
         if let next = content.nextAssignmentText {
             list.append(Fact(id: "next", symbol: "calendar.badge.clock", title: next.title, subtitle: next.subtitle))
         } else if let period = Self.period(bauakte) {

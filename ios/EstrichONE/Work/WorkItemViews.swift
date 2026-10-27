@@ -96,7 +96,7 @@ struct NewWorkItemView: View {
     @State private var kind: WorkItemKind = .task
     @State private var title = ""
     @State private var details = ""
-    @State private var hasDueDate = false
+    @State private var due: DueChoice = .none
     @State private var dueDate = Date.now
     @State private var assignee: UUID?
     @State private var people: [DirectoryUser] = []
@@ -120,11 +120,26 @@ struct NewWorkItemView: View {
                         .lineLimit(2...6)
                 }
 
-                Section {
-                    Toggle("Fällig am", isOn: $hasDueDate.animation())
-                    if hasDueDate {
-                        DatePicker("Datum", selection: $dueDate, displayedComponents: .date)
+                // Frist mit einem Tipp – die häufigsten Fristen als Kapseln, ein eigenes Datum nur bei Bedarf.
+                Section("Frist") {
+                    ChipFlow(spacing: Space.s) {
+                        ForEach(DueChoice.allCases) { choice in
+                            Button { withAnimation { due = choice } } label: {
+                                SelectableChipLabel(title: choice.title, isSelected: due == choice)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(due == choice ? .isSelected : [])
+                        }
                     }
+                    .padding(.vertical, Space.xs)
+                    .sensoryFeedback(.selection, trigger: due)
+                    .accessibilityIdentifier("dueChoices")
+                    if due == .custom {
+                        DatePicker("Datum", selection: $dueDate, in: Calendar.current.startOfDay(for: .now)..., displayedComponents: .date)
+                    }
+                }
+
+                Section {
                     Picker("Zuständig", selection: $assignee) {
                         Text("Ich").tag(model.active?.user.id)
                         Text("Niemand").tag(UUID?.none)
@@ -161,12 +176,42 @@ struct NewWorkItemView: View {
         guard let service = model.active?.service else { return }
         do throws(BauakteError) {
             try await service.addWorkItem(NewWorkItem(kind: kind, title: title, description: details,
-                                                      dueDate: hasDueDate ? CalendarDay.string(dueDate) : nil,
+                                                      dueDate: due.date(custom: dueDate).map { CalendarDay.string($0) },
                                                       assigneeUserId: assignee, bauakteId: bauakteId))
             model.active?.sync?.localChangeMade()
             onDone()
         } catch {
             self.error = error.message
+        }
+    }
+}
+
+/// Frist einer neuen Aufgabe bzw. eines neuen Mangels.
+enum DueChoice: String, CaseIterable, Identifiable {
+    case none, today, tomorrow, threeDays, week, custom
+
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .none: "Ohne Frist"
+        case .today: "Heute"
+        case .tomorrow: "Morgen"
+        case .threeDays: "In 3 Tagen"
+        case .week: "In 1 Woche"
+        case .custom: "Datum …"
+        }
+    }
+
+    func date(custom: Date, now: Date = .now) -> Date? {
+        let calendar = Calendar.current
+        switch self {
+        case .none: return nil
+        case .today: return now
+        case .tomorrow: return calendar.date(byAdding: .day, value: 1, to: now)
+        case .threeDays: return calendar.date(byAdding: .day, value: 3, to: now)
+        case .week: return calendar.date(byAdding: .day, value: 7, to: now)
+        case .custom: return custom
         }
     }
 }

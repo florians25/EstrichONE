@@ -101,21 +101,17 @@ struct InspectionProtocolView: View {
 
     private var summarySection: some View {
         Section {
-            HStack(spacing: 12) {
-                Image(systemName: statusSymbol)
-                    .font(.title3)
-                    .foregroundStyle(statusColor)
-                    .frame(width: 36, height: 36)
-                    .background(statusColor.opacity(0.15), in: Circle())
-                    .accessibilityHidden(true)
+            HStack(spacing: Space.m) {
+                IconBadge(symbol: statusSymbol, tint: statusColor, background: statusColor.opacity(0.14), size: 44)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(statusText).font(.headline).accessibilityIdentifier("inspectionStatus")
+                    Text(statusText).font(Typo.headline).foregroundStyle(Theme.textPrimary).accessibilityIdentifier("inspectionStatus")
                     Text([inspection.performedAt?.formatted(date: .long, time: .shortened), performerName].compactMap { $0 }.joined(separator: " · "))
-                        .font(.caption).foregroundStyle(Theme.textSecondary)
+                        .font(Typo.meta).foregroundStyle(Theme.textSecondary)
                 }
             }
+            .padding(.vertical, Space.xs)
             if inspection.correctsInspectionId != nil {
-                Label("Korrigierte Fassung", systemImage: "pencil.circle").font(.footnote).foregroundStyle(Theme.textSecondary)
+                Label("Korrigierte Fassung", systemImage: "pencil.circle").font(Typo.meta).foregroundStyle(Theme.textSecondary)
             }
             SyncStateBadge(state: inspection.syncState, showsSynced: true)
         } header: {

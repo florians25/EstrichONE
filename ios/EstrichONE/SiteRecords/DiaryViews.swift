@@ -31,43 +31,32 @@ struct NewDiaryEntryView: View {
                         .lineLimit(4...12)
                         .focused($focused)
                         .accessibilityIdentifier("diaryTextField")
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 6) {
-                            ForEach(Self.phrases, id: \.self) { phrase in
-                                Button {
-                                    append(phrase)
-                                } label: {
-                                    Label(phrase, systemImage: "plus")
-                                }
-                                .estrichButton(.secondary)
+                    // Alle Textbausteine auf einen Blick (umbrechend statt seitlich zu wischen), groß genug für Handschuhe.
+                    ChipFlow(spacing: Space.s) {
+                        ForEach(Self.phrases, id: \.self) { phrase in
+                            Button { append(phrase) } label: {
+                                SelectableChipLabel(title: phrase, symbol: "plus", isSelected: false)
                             }
+                            .buttonStyle(.plain)
                         }
-                        .padding(.vertical, 2)
                     }
+                    .padding(.vertical, Space.xs)
                     .accessibilityIdentifier("diaryPhrases")
                 }
-                Section("Wetter (optional)") {
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack {
-                            ForEach(DiaryWeather.allCases) { option in
-                                Button {
-                                    weather = weather == option ? nil : option
-                                } label: {
-                                    Label(option.title, systemImage: option.symbol)
-                                        .labelStyle(TightLabelStyle())
-                                        .font(.subheadline.weight(.medium))
-                                        .padding(.horizontal, 12)
-                                        .frame(minHeight: 36)
-                                        .background(weather == option ? Theme.accentSoft : Theme.fill, in: Capsule())
-                                        .foregroundStyle(weather == option ? Theme.accent : Theme.textSecondary)
-                                        .padding(.vertical, 4)
-                                        .contentShape(Rectangle())
-                                }
-                                .buttonStyle(.plain)
-                                .accessibilityAddTraits(weather == option ? .isSelected : [])
+                Section("Wetter und Anwesende (optional)") {
+                    ChipFlow(spacing: Space.s) {
+                        ForEach(DiaryWeather.allCases) { option in
+                            Button {
+                                weather = weather == option ? nil : option
+                            } label: {
+                                SelectableChipLabel(title: option.title, symbol: option.symbol, isSelected: weather == option)
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityAddTraits(weather == option ? .isSelected : [])
                         }
                     }
+                    .padding(.vertical, Space.xs)
+                    .sensoryFeedback(.selection, trigger: weather)
                     Toggle("Temperatur erfassen", isOn: $recordsTemperature.animation())
                     if recordsTemperature {
                         Stepper("\(temperature) °C", value: $temperature, in: -20...45)

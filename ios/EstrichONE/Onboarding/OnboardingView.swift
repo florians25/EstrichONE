@@ -10,6 +10,8 @@ enum OnboardingStep: Hashable {
 }
 
 struct OnboardingView: View {
+    /// Screenshot-Modus: direkt mit einem Schritt beginnen (z. B. Adresse eingeben).
+    var initialPath: [OnboardingStep] = []
     @Environment(AppModel.self) private var model
     @State private var path: [OnboardingStep] = []
 
@@ -25,6 +27,7 @@ struct OnboardingView: View {
                     }
                 }
         }
+        .onAppear { if path.isEmpty, !initialPath.isEmpty { path = initialPath } }
         .onChange(of: model.pendingEnrollment, initial: true) { _, link in
             guard let link else { return }
             model.pendingEnrollment = nil

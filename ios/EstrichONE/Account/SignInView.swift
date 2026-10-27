@@ -36,16 +36,22 @@ struct SignInView: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: Space.l) {
-                    VStack(alignment: .leading, spacing: 4) {
+                    VStack(alignment: .leading, spacing: Space.s) {
+                        BrandMark()
+                            .frame(width: 52, height: 52)
+                            .accessibilityHidden(true)
                         Text("Anmelden")
-                            .font(.largeTitle.weight(.bold))
+                            .font(Typo.display)
+                            .foregroundStyle(Theme.textPrimary)
                             .accessibilityAddTraits(.isHeader)
                         if let server = model.server {
-                            Text(server.info.serverName)
-                                .font(.callout)
+                            Label(server.info.serverName, systemImage: "building.2")
+                                .labelStyle(TightLabelStyle())
+                                .font(Typo.subheadStrong)
                                 .foregroundStyle(Theme.textSecondary)
                         }
                     }
+                    .padding(.bottom, Space.s)
 
                     if model.hasEnrollmentCode {
                         Label("Einrichtungscode erkannt – das Gerät wird nach der Anmeldung sofort freigegeben.", systemImage: "qrcode")
@@ -88,14 +94,14 @@ struct SignInView: View {
                     .accessibilityIdentifier("signInButton")
 
                     Button("Passwort vergessen?") { showsPasswordHelp = true }
-                        .font(.callout)
+                        .font(Typo.subheadStrong)
                         .tint(Theme.accent)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
 
                     if model.canReportWithoutSignIn {
                         Button("Anmeldung klappt nicht? Problem melden") { reporting = true }
-                            .font(.callout)
+                            .font(Typo.subheadStrong)
                             .tint(Theme.accent)
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 44)
@@ -140,16 +146,17 @@ struct SignInView: View {
     }
 
     private func field(_ title: LocalizedStringKey, @ViewBuilder content: () -> some View) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: Space.s - 2) {
             Text(title)
-                .font(.subheadline.weight(.medium))
+                .font(Typo.subheadStrong)
                 .foregroundStyle(Theme.textSecondary)
             content()
-                .padding(.horizontal, 14)
-                .frame(minHeight: 52)
-                .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+                .font(Typo.body)
+                .padding(.horizontal, Space.m + 2)
+                .frame(minHeight: Size.button)
+                .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: Radius.m, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1)
                 }
                 .disabled(isWorking)
         }

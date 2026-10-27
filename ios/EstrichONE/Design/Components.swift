@@ -454,6 +454,29 @@ struct LabeledField<Field: View>: View {
     }
 }
 
+/// Auswählbare Kapsel (Textbaustein, Wetter, Geschoss): mindestens 44 pt hoch, gewählt in Akzentfarbe.
+struct SelectableChipLabel: View {
+    let title: String
+    var symbol: String?
+    let isSelected: Bool
+
+    var body: some View {
+        HStack(spacing: 6) {
+            if let symbol {
+                Image(systemName: symbol).imageScale(.small).accessibilityHidden(true)
+            }
+            Text(title).lineLimit(1)
+        }
+        .font(Typo.subheadStrong)
+        .padding(.horizontal, Space.m + 2)
+        .frame(minHeight: Size.minTap)
+        .background(isSelected ? Theme.accentSoft : Theme.fill, in: Capsule())
+        .overlay(Capsule().strokeBorder(isSelected ? Theme.accent.opacity(0.5) : .clear, lineWidth: 1.5))
+        .foregroundStyle(isSelected ? Theme.accent : Theme.textPrimary)
+        .contentShape(Capsule())
+    }
+}
+
 /// Knapper Hinweis in einer Zeile (z. B. Demomodus): Symbol, Text, optional eine Aktion rechts – nimmt kaum Platz weg.
 struct NoticeLine: View {
     let tone: Callout.Tone

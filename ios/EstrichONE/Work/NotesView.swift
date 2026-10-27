@@ -53,19 +53,28 @@ struct NoteRow: View {
     var authorName: String?
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(note.text.compactText ?? "")
-            HStack(spacing: 6) {
-                if note.isPinned {
-                    Label("Angeheftet", systemImage: "pin.fill").labelStyle(.iconOnly).foregroundStyle(Theme.warning)
-                }
-                Text([authorName, note.createdAt?.formatted(date: .abbreviated, time: .shortened)].compactMap { $0 }.joined(separator: " · "))
+        VStack(alignment: .leading, spacing: Space.xs) {
+            if note.isPinned {
+                Label("Angeheftet", systemImage: "pin.fill")
+                    .labelStyle(TightLabelStyle())
+                    .font(Typo.labelStrong)
+                    .foregroundStyle(Theme.accent)
             }
-            .font(.caption)
-            .foregroundStyle(Theme.textSecondary)
-            SyncStateBadge(state: note.syncState)
+            Text(note.text.trimmingCharacters(in: .whitespacesAndNewlines))
+                .font(Typo.body)
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: Space.s) {
+                Text([authorName, note.createdAt?.formatted(.dateTime.day().month(.abbreviated).hour().minute())].compactMap { $0 }
+                    .joined(separator: " · "))
+                    .font(Typo.meta)
+                    .foregroundStyle(Theme.textSecondary)
+                Spacer(minLength: 0)
+                SyncStateBadge(state: note.syncState)
+            }
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Space.xs)
+        .accessibilityElement(children: .combine)
     }
 }
 

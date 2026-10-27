@@ -25,6 +25,8 @@ struct BauakteAreaView: View {
     @State private var choosingCustomer = false
     @State private var showsHistory = false
     @State private var editingRoom: RoomEditing?
+    /// Screenshot-Modus „protokoll“: Protokoll der Erstbegehung geöffnet.
+    @State private var openedInspection: UUID?
     @State private var deletingRoom: Room?
 
     private var bauakte: Bauakte { content.bauakte }
@@ -84,13 +86,23 @@ struct BauakteAreaView: View {
             Text("Der Raum wird aus der Bauakte entfernt – auch im Büro.")
         }
         .navigationDestination(isPresented: $showsHistory) { HistoryView(bauakteId: bauakte.id) }
+        .navigationDestination(item: $openedInspection) { id in
+            if let inspection = content.inspections.first(where: { $0.id == id }) {
+                InspectionProtocolView(inspection: inspection, bauakte: bauakte,
+                                       performerName: inspection.performedByUserId.flatMap { content.names[$0] })
+            }
+        }
         .filePreview($previewing)
         .toast($toast)
         .task {
-            // Screenshot-Modus „raum“: einen Raum zum Bearbeiten öffnen.
+            // Screenshot-Modus „raum“: einen Raum zum Bearbeiten öffnen; „protokoll“: Protokoll der Erstbegehung.
             if shotScene == "raum", area == .rooms, editingRoom == nil, let room = content.rooms.first(where: { $0.notes != nil }) ?? content.rooms.first {
                 try? await Task.sleep(for: .milliseconds(400))
                 editingRoom = RoomEditing(room: room)
+            }
+            if shotScene == "protokoll", area == .protocols, openedInspection == nil, let inspection = content.latestInitialInspection {
+                try? await Task.sleep(for: .milliseconds(400))
+                openedInspection = inspection.id
             }
         }
         .refreshable {

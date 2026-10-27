@@ -165,7 +165,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case "bereich-aufgaben": .work
         case "bereich-tagebuch": .diary
         case "bereich-raeume", "raum": .rooms
-        case "bereich-protokolle": .protocols
+        case "bereich-protokolle", "protokoll": .protocols
         case "bereich-basisdaten": .project
         case "bereich-kontakte": .contacts
         case "bereich-notizen": .notes
