@@ -32,19 +32,19 @@ final class DemoHelpdesk {
         tickets = [
             Entry(id: DemoContent.ticketId, number: "T-2026-0007", title: "Fotos werden nicht übertragen",
                   description: "Seit gestern bleiben Fotos auf „Wird übertragen“ stehen.", category: "sync", priority: "normal",
-                  status: "waitingForReporter", reporterId: userId, reporterName: "Max Huber", assigneeId: "it", assigneeName: "IT-Support",
+                  status: "waitingForReporter", reporterId: userId, reporterName: "Max Huber", assigneeId: "0193a1b2-de00-7000-8000-00000000a0a1", assigneeName: "IT-Support",
                   createdAt: ago(60 * 26), lastActivityAt: ago(35), timeline: []),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c002", number: "T-2026-0009", title: "Drucker im Büro druckt nur leere Seiten",
                   description: "Der Etagendrucker im 1. OG zieht Papier ein, druckt aber nichts.", category: "officeIt", priority: "high",
-                  status: "inProgress", reporterId: "office", reporterName: "Sabine Wagner", assigneeId: userId, assigneeName: "Max Huber",
+                  status: "inProgress", reporterId: "0193a1b2-de00-7000-8000-00000000a0a2", reporterName: "Sabine Wagner", assigneeId: userId, assigneeName: "Max Huber",
                   createdAt: ago(60 * 3), lastActivityAt: ago(50), timeline: []),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c003", number: "T-2026-0010", title: "Tablet Kolonne Kaya: Display gesprungen",
                   description: "Beim Abladen heruntergefallen, Touch reagiert unten nicht mehr.", category: "deviceDefect", priority: "urgent",
-                  status: "new", reporterId: "kaya", reporterName: "Emre Kaya", assigneeId: nil, assigneeName: nil,
+                  status: "new", reporterId: "0193a1b2-de00-7000-8000-000000004005", reporterName: "Emre Kaya", assigneeId: nil, assigneeName: nil,
                   createdAt: ago(18), lastActivityAt: ago(18), timeline: []),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c004", number: "T-2026-0004", title: "Zugang für neuen Mitarbeiter",
                   description: "Jonas Wirth braucht einen Zugang für die App.", category: "access", priority: "normal", status: "resolved",
-                  reporterId: userId, reporterName: "Max Huber", assigneeId: "it", assigneeName: "IT-Support",
+                  reporterId: userId, reporterName: "Max Huber", assigneeId: "0193a1b2-de00-7000-8000-00000000a0a1", assigneeName: "IT-Support",
                   createdAt: ago(60 * 24 * 6), lastActivityAt: ago(60 * 24 * 5), timeline: []),
         ]
         for index in tickets.indices {
