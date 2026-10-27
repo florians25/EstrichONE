@@ -49,20 +49,28 @@ final class DemoSwitches: @unchecked Sendable {
         maintenance = true
     }
 
-    /// `GET /system/health-banner` im Demomodus.
+    /// `GET /system/health-banner` im Demomodus (Aufbau wie docs/backup.md).
     func health() -> [String: Any] {
         let now = Date()
+        let lastBackup = now.addingTimeInterval(backupDown ? -31 * 3600 : -5 * 3600)
+        let lastArchive = now.addingTimeInterval(archiveDown ? -9 * 86400 : -86400)
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.dateFormat = "dd.MM.yyyy HH:mm 'Uhr'"
+        var banners: [[String: Any]] = []
+        if backupDown {
+            banners.append(["key": "backup", "severity": "critical",
+                            "text": "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup \(formatter.string(from: lastBackup))). Bitte geben Sie umgehend Ihrem Admin Bescheid."])
+        }
+        if archiveDown {
+            banners.append(["key": "archive", "severity": "warning",
+                            "text": "Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung \(formatter.string(from: lastArchive))). Bitte informieren Sie Ihren Admin."])
+        }
         return [
-            "backupTarget": [
-                "configured": true, "reachable": !backupDown,
-                "lastSuccessAt": APIDate.format(now.addingTimeInterval(backupDown ? -31 * 3600 : -5 * 3600)),
-                "severity": backupDown ? "critical" : "ok",
-            ],
-            "archive": [
-                "configured": true, "reachable": !archiveDown,
-                "lastSuccessAt": APIDate.format(now.addingTimeInterval(archiveDown ? -9 * 86400 : -86400)),
-                "severity": archiveDown ? "warning" : "ok",
-            ],
+            "backup": ["configured": true, "reachable": !backupDown, "lastSuccessAt": APIDate.format(lastBackup), "severity": backupDown ? "critical" : "ok"],
+            "archive": ["configured": true, "reachable": !archiveDown, "lastSuccessAt": APIDate.format(lastArchive), "severity": archiveDown ? "warning" : "ok"],
+            "banners": banners,
+            "checkedAt": APIDate.format(now),
         ]
     }
 }

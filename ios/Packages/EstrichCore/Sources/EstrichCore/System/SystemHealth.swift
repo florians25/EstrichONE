@@ -48,20 +48,34 @@ public struct SystemHealth: Decodable, Sendable, Equatable {
 
     public let backupTarget: Target?
     public let archive: Target?
+    /// Fertige Hinweise des Servers (Reihenfolge = Wichtigkeit, Text unverändert anzeigen). `nil` bei älteren Servern.
+    public let serverBanners: [HealthBanner]?
 
-    public init(backupTarget: Target?, archive: Target?) {
+    public init(backupTarget: Target?, archive: Target?, serverBanners: [HealthBanner]? = nil) {
         self.backupTarget = backupTarget
         self.archive = archive
+        self.serverBanners = serverBanners
+    }
+
+    private struct BannerDTO: Decodable {
+        let key: String?
+        let severity: String?
+        let text: String?
     }
 
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         backupTarget = try c.decodeIfPresent(Target.self, forKey: .backupTarget) ?? c.decodeIfPresent(Target.self, forKey: .backup)
         archive = try c.decodeIfPresent(Target.self, forKey: .archive) ?? c.decodeIfPresent(Target.self, forKey: .archiveTarget)
+        serverBanners = (try? c.decodeIfPresent([BannerDTO].self, forKey: .banners))?.compactMap { item in
+            guard let text = item.text, !text.isEmpty else { return nil }
+            let critical = ["critical", "error", "danger", "red"].contains(item.severity?.lowercased() ?? "")
+            return HealthBanner(level: critical ? .critical : .warning, text: text, key: item.key)
+        }
     }
 
     private enum CodingKeys: String, CodingKey {
-        case backupTarget, backup, archive, archiveTarget
+        case backupTarget, backup, archive, archiveTarget, banners
     }
 
     /// Letztes Backup älter als 26 Stunden gilt als Ausfall (mindestens ein Voll-Backup täglich).
@@ -69,6 +83,8 @@ public struct SystemHealth: Decodable, Sendable, Equatable {
 
     /// Hinweise, die jetzt gelten: zuerst rot (Backup), dann gelb (Archiv).
     public func banners(at now: Date = Date(), timeZone: TimeZone = .current) -> [HealthBanner] {
+        // Der Server entscheidet (docs/backup.md): genau seine Hinweise zeigen, leer = keiner.
+        if let serverBanners { return serverBanners }
         var result: [HealthBanner] = []
         if let backupTarget, backupTarget.isFailing(at: now, maxAge: Self.maxBackupAge) {
             let when = Self.format(backupTarget.lastSuccessAt, timeZone: timeZone)
@@ -83,13 +99,13 @@ public struct SystemHealth: Decodable, Sendable, Equatable {
         return result
     }
 
-    /// `27.10.2026 03:15` bzw. `unbekannt`.
+    /// `27.10.2026 03:15 Uhr` (wie der Server) bzw. `unbekannt`.
     static func format(_ date: Date?, timeZone: TimeZone) -> String {
         guard let date else { return "unbekannt" }
         let formatter = DateFormatter()
         formatter.locale = Locale(identifier: "de_DE")
         formatter.timeZone = timeZone
-        formatter.dateFormat = "dd.MM.yyyy HH:mm"
+        formatter.dateFormat = "dd.MM.yyyy HH:mm 'Uhr'"
         return formatter.string(from: date)
     }
 }
@@ -103,11 +119,15 @@ public struct HealthBanner: Sendable, Equatable, Identifiable {
 
     public let level: Level
     public let text: String
-    public var id: String { level == .critical ? "backup" : "archive" }
+    /// `backup` oder `archive`.
+    public let key: String
 
-    public init(level: Level, text: String) {
+    public var id: String { key }
+
+    public init(level: Level, text: String, key: String? = nil) {
         self.level = level
         self.text = text
+        self.key = key ?? (level == .critical ? "backup" : "archive")
     }
 }
 

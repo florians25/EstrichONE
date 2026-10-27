@@ -221,6 +221,7 @@ private struct DemoDisruptionMenu: View {
 
     private func refresh(outageStarted: Bool = false) {
         guard let sync = model.active?.sync else { return }
+        sync.forceHealthRefresh()
         Task {
             await sync.run()
             // „Nur Ansicht“ greift nach 5 Minuten ohne Server; für die Vorführung wird die Zeit vorgespult.

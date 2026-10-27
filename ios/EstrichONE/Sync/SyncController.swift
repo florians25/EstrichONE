@@ -116,13 +116,26 @@ final class SyncController {
     /// Hinweise neu laden (Start, Vordergrund, mit jeder Synchronisation). Ohne Verbindung bleibt der letzte Stand.
     func refreshNotices() async {
         if let fresh = try? await client.systemNotices() { notices = fresh }
+        // Backup-/Archivstatus höchstens alle 5 Minuten (der Server speichert ihn zwischen), sofort nach dem Wiederverbinden.
+        let reconnected = healthFetchedWhileUnreachable && !connection.unreachable
+        if let last = healthFetchedAt, Date.now.timeIntervalSince(last) < 270, !reconnected { return }
         do throws(APIError) {
             health = try await client.systemHealth()
+            healthFetchedAt = .now
+            healthFetchedWhileUnreachable = false
         } catch {
-            // Ohne Verbindung bleibt der letzte Stand; Wartung zeigt keine Backup-Hinweise.
-            if error.code == "MAINTENANCE" { health = nil }
+            // Ohne Verbindung bleibt der letzte Stand.
+            healthFetchedWhileUnreachable = true
         }
     }
+
+    /// Beim nächsten Lauf den Backup-/Archivstatus sicher neu laden (z. B. nach einer Änderung im Demomodus).
+    func forceHealthRefresh() {
+        healthFetchedAt = nil
+    }
+
+    private var healthFetchedAt: Date?
+    private var healthFetchedWhileUnreachable = false
 
     func start() {
         loop?.cancel()
