@@ -151,18 +151,23 @@ struct DispatchView: View {
     // MARK: iPad: Kolonnen als Spalten
 
     private func columns(_ board: DispatchBoard) -> some View {
-        // Drei Kolonnen passen nebeneinander (iPad hochkant), weitere per Wischen.
-        ScrollView(.horizontal) {
-            HStack(alignment: .top, spacing: 14) {
-                ForEach(board.crews) { crew in
-                    column(title: { CrewHeader(crew: crew, board: board) }, sites: board.crewSites(crew), crew: crew, board: board)
+        // So viele Kolonnen nebeneinander, wie lesbar breit Platz haben (iPad hochkant zwei, quer drei), weitere per Wischen.
+        GeometryReader { proxy in
+            let visible = max(1, min(3, Int((proxy.size.width - 2 * Space.l) / 340)))
+            ScrollView(.horizontal) {
+                HStack(alignment: .top, spacing: 14) {
+                    ForEach(board.crews) { crew in
+                        column(title: { CrewHeader(crew: crew, board: board) }, sites: board.crewSites(crew), crew: crew, board: board)
+                            .containerRelativeFrame(.horizontal, count: visible, spacing: 14)
+                    }
+                    column(title: { Text("Ohne Kolonne").font(Typo.subheadStrong).foregroundStyle(Theme.textSecondary) },
+                           sites: board.sitesWithoutCrew, crew: nil, board: board)
+                        .containerRelativeFrame(.horizontal, count: visible, spacing: 14)
                 }
-                column(title: { Text("Ohne Kolonne").font(Typo.subheadStrong).foregroundStyle(Theme.textSecondary) },
-                       sites: board.sitesWithoutCrew, crew: nil, board: board)
+                .padding(.vertical)
             }
-            .padding(.vertical)
+            .contentMargins(.horizontal, Space.l, for: .scrollContent)
         }
-        .contentMargins(.horizontal, Space.l, for: .scrollContent)
     }
 
     private func column<Title: View>(@ViewBuilder title: () -> Title, sites: [DispatchBoard.Site], crew: DispatchBoard.Crew?,
@@ -196,7 +201,6 @@ struct DispatchView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(10)
         .background(Theme.fill.opacity(0.7), in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
-        .containerRelativeFrame(.horizontal, count: 3, spacing: 14)
         .dropDestination(for: String.self) { items, _ in
             guard board.canPlan, let drag = items.first.flatMap(SiteDrag.init(text:)), drag.fromCrewId != crew?.id else { return false }
             Task { await assign(drag.bauakteId, to: crew?.id, from: drag.fromCrewId) }
