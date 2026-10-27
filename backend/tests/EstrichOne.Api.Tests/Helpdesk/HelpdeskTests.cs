@@ -243,4 +243,22 @@ public sealed class HelpdeskTests(PostgresFixture postgres) : IAsyncLifetime
         (await agent.GetAsync(new Uri($"/api/v1/files/{file}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
         (await colleague.GetAsync(new Uri($"/api/v1/files/{file}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
+
+    [Fact]
+    public async Task OfflineTicket_TakesPriorityFromTheApp()
+    {
+        using var reporter = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        using var agent = await _factory.CreateClientAsAsync("it", StandardRoles.ItAdministratorId);
+        var urgent = Guid.CreateVersion7();
+        var plain = Guid.CreateVersion7();
+
+        var result = await reporter.PushAsync(
+            SyncClient.Op("ticket.create", urgent, new { title = "Tablet defekt", category = "deviceDefect", source = "ios", priority = "high" }),
+            SyncClient.Op("ticket.create", plain, new { title = "Frage zur App", category = "other", source = "ios" }));
+
+        result.Results.ShouldAllBe(r => r.Status == SyncOperationStatus.Applied);
+        var tickets = await agent.GetFromJsonAsync<List<TicketSummary>>("/api/v1/tickets?filter=all", TestJson.Options, Ct);
+        tickets!.Single(t => t.Id == urgent).Priority.ShouldBe(TicketPriority.High);
+        tickets!.Single(t => t.Id == plain).Priority.ShouldBe(TicketPriority.Normal);
+    }
 }

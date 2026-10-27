@@ -112,4 +112,43 @@ struct HelpdeskTests {
         #expect(server.history.map(\.text) == ["Foto anbei"])
         #expect(server.history.first?.attachmentFileIds.count == 1)
     }
+
+    private static let summary = """
+        {"id":"01a00000-0000-7000-8000-0000000000f1","number":"T-2026-0007","title":"Drucker","category":"officeIt","priority":"high",
+         "status":"waitingForReporter","reporterBlocked":false,"reporterUserId":null,"reporterDisplayName":"Max Huber","assigneeUserId":null,
+         "assigneeName":null,"source":"ios","createdAt":"2026-11-02T07:00:00Z","lastActivityAt":"%@","version":2}
+        """
+
+    @Test("Bearbeitung: Liste nach Filter, Status/Priorität/Zuweisung, Antwort mit Bild; neue Antworten erkennt die App")
+    func agentAndUnread() async throws {
+        let (store, _, _, _) = try makeStore()
+        let transport = RoutingTransport()
+        let detail = #"{"summary":\#(Self.summary.replacingOccurrences(of: "%@", with: "2026-11-02T08:00:00Z")),"description":null,"resolution":null,"comments":[],"events":[]}"#
+        transport.on("GET", "/api/v1/tickets") { request in
+            #expect(request.url?.query()?.contains("filter=unassigned") == true)
+            return .json("[" + Self.summary.replacingOccurrences(of: "%@", with: "2026-11-02T08:00:00Z") + "]")
+        }
+        transport.on("PATCH", "/api/v1/tickets/01a00000-0000-7000-8000-0000000000f1") { request in
+            #expect(request.jsonBody()["status"] as? String == "inProgress" && (request.jsonBody()["assigneeUserId"] as? String)?.lowercased() == Samples.userId.key)
+            return .json(detail)
+        }
+        transport.on("POST", "/api/v1/files") { request in
+            #expect(request.jsonBody()["kind"] as? String == "photo" && request.jsonBody()["sizeBytes"] as? Int == 3)
+            return .json("{}")
+        }
+        transport.on("PUT", "/api/v1/files/") { _ in .json("{}") }
+        let client = AuthorizedClient(api: APIClient(server: Samples.server, transport: transport), session: StoredSession(Samples.tokens()), keys: nil,
+                                      persist: { _ in }, ended: { _ in })
+        let tickets = try await client.agentTickets(filter: "unassigned")
+        #expect(tickets.first?.reporterDisplayName == "Max Huber" && tickets.first?.priority.title == "Hoch" && tickets.first?.isOpen == true)
+        let updated = try await client.updateTicket(tickets[0].id, TicketUpdate(status: .inProgress, assigneeUserId: Samples.userId))
+        #expect(updated.summary.number == "T-2026-0007")
+
+        let read = TicketReadState(store: store)
+        #expect(await read.unread(tickets).isEmpty)
+        let later = try JSONCoding.decoder.decode(TicketSummary.self, from: Data(Self.summary.replacingOccurrences(of: "%@", with: "2026-11-02T09:30:00Z").utf8))
+        #expect(await read.unread([later]) == [later.id])
+        await read.markRead([later])
+        #expect(await read.unread([later]).isEmpty)
+    }
 }

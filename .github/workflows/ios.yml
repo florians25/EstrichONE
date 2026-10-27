@@ -132,8 +132,8 @@ jobs:
     env:
       DEVICE: ${{ matrix.device }}
       IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-mitte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,protokoll,bereich-tagebuch,bereich-raeume,raum,bereich-basisdaten,bereich-kontakte,bereich-notizen,kunden,kundenkarte,disposition,mehr,sync,wartung"
-      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung-detail,start,start-adresse,anmelden,heute-gross,bauakte-gross"
-      IPAD_SCENES: "heute,baustellen,bauakte,kunden,disposition"
+      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,start,start-adresse,anmelden,heute-gross,bauakte-gross"
+      IPAD_SCENES: "heute,baustellen,bauakte,bereich-kontakte,kunden,disposition,meldung-detail"
     steps:
       - uses: actions/checkout@v5
         with:

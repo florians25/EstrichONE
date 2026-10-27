@@ -6,6 +6,7 @@ namespace EstrichOne.Api.Modules.Helpdesk;
 /// <summary>
 /// „Problem melden“ offline: Die App legt das Ticket als Outbox-Operation an; Anhänge laufen über die normale
 /// Upload-Warteschlange (Dateien ohne Bauakte). Die Operation ist über ihre opId genau einmal wirksam (14, AK-1).
+/// Optional <c>priority</c> (low, normal, high, urgent) wie beim Anlegen im Web.
 /// </summary>
 internal sealed class TicketSync(TicketService tickets, ICurrentUser currentUser, ISessionDevices sessions) : ISyncOperationHandler
 {
@@ -17,7 +18,7 @@ internal sealed class TicketSync(TicketService tickets, ICurrentUser currentUser
         var input = new CreateTicketInput(op.EntityId, SyncPayload.Read<string>(p, "title") ?? string.Empty, SyncPayload.Read<string>(p, "description"),
             SyncPayload.Read<TicketCategory?>(p, "category") ?? TicketCategory.Other, SyncPayload.Read<TicketSource?>(p, "source") ?? TicketSource.Ios,
             SyncPayload.Read<bool>(p, "reporterBlocked"), SyncPayload.Read<Guid?>(p, "bauakteId"), p["diagnostics"]?.DeepClone(),
-            SyncPayload.Read<List<Guid>>(p, "attachmentFileIds"));
+            SyncPayload.Read<List<Guid>>(p, "attachmentFileIds"), SyncPayload.Read<TicketPriority?>(p, "priority"));
         var deviceId = await sessions.GetCurrentSessionDeviceAsync(cancellationToken);
         var (ticket, _, failure, message) = await tickets.CreateAsync(input, currentUser.UserId, null, deviceId, cancellationToken);
         if (ticket is null)

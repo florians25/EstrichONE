@@ -28,6 +28,8 @@ struct BauakteAreaView: View {
     /// Screenshot-Modus „protokoll“: Protokoll der Erstbegehung geöffnet.
     @State private var openedInspection: UUID?
     @State private var deletingRoom: Room?
+    @State private var editingParty: PartyEditing?
+    @State private var removingParty: BauakteParty?
 
     private var bauakte: Bauakte { content.bauakte }
 
@@ -72,6 +74,19 @@ struct BauakteAreaView: View {
                 Task { await assign(contact) }
             })
         }
+        .sheet(item: $editingParty) { editing in
+            PartyEditView(bauakteId: bauakte.id, party: editing.party) { message in
+                editingParty = nil
+                if let message { toast = message }
+                Task { await reload() }
+            }
+        }
+        .confirmationDialog("Kontakt entfernen?", isPresented: Binding { removingParty != nil } set: { if !$0 { removingParty = nil } },
+                            titleVisibility: .visible, presenting: removingParty) { party in
+            Button("„\(party.name)“ entfernen", role: .destructive) { Task { await remove(party) } }
+        } message: { _ in
+            Text("Der Kontakt wird aus dieser Bauakte entfernt. Im Kundenstamm bleibt er erhalten.")
+        }
         .sheet(item: $editingRoom) { editing in
             RoomEditView(bauakteId: bauakte.id, room: editing.room, defaults: RoomInput(defaults: bauakte.project), floors: floorChoices) { message in
                 editingRoom = nil
@@ -99,6 +114,10 @@ struct BauakteAreaView: View {
             if shotScene == "raum", area == .rooms, editingRoom == nil, let room = content.rooms.first(where: { $0.notes != nil }) ?? content.rooms.first {
                 try? await Task.sleep(for: .milliseconds(400))
                 editingRoom = RoomEditing(room: room)
+            }
+            if shotScene == "kontakt-neu", area == .contacts, editingParty == nil {
+                try? await Task.sleep(for: .milliseconds(400))
+                editingParty = PartyEditing()
             }
             if shotScene == "protokoll", area == .protocols, openedInspection == nil, let inspection = content.latestInitialInspection {
                 try? await Task.sleep(for: .milliseconds(400))
@@ -144,7 +163,13 @@ struct BauakteAreaView: View {
             Button("Bearbeiten") { action = .project }
                 .accessibilityIdentifier("editProjectButton")
         case .contacts:
-            Button { choosingCustomer = true } label: { Label(content.customer == nil ? "Kunde zuordnen" : "Kunde ändern", systemImage: "person.crop.circle.badge.plus") }
+            Menu {
+                Button("Kontakt hinzufügen", systemImage: "person.badge.plus") { editingParty = PartyEditing() }
+                    .accessibilityIdentifier("addPartyButton")
+                Button(content.customer == nil ? "Kunde zuordnen" : "Kunde ändern", systemImage: "person.crop.circle.badge.plus") {
+                    choosingCustomer = true
+                }
+            } label: { Label("Hinzufügen", systemImage: "plus") }
         case .notes:
             Button { action = .note } label: { Label("Neue Notiz", systemImage: "plus") }
         }
@@ -454,17 +479,7 @@ struct BauakteAreaView: View {
         } header: {
             Text("Vor Ort")
         }
-        if !content.parties.isEmpty {
-            Section {
-                ForEach(content.parties) { party in
-                    PartyRow(party: party)
-                }
-            } header: {
-                Text("Beteiligte (\(content.parties.count))")
-            } footer: {
-                Text("Bauherr, Bauleitung, Planer und Lieferanten pflegt das Büro.")
-            }
-        }
+        partySections
         Section {
             DetailRow(bauakte.addressLine ?? "Adresse fehlt", subtitle: bauakte.hasLocation ? "Standort gespeichert" : nil,
                       symbol: "mappin.and.ellipse", titleColor: bauakte.addressLine == nil ? Theme.warning : Theme.textPrimary) {
@@ -556,65 +571,83 @@ struct BauakteAreaView: View {
         await reload()
     }
 
+    // MARK: Kontakte der Bauakte
+
+    /// Hauptkontakt zuerst, dann nach Rolle gruppiert (Bauherr, Ansprechpartner vor Ort, Bauleiter, Architekt …).
+    @ViewBuilder
+    private var partySections: some View {
+        let parties = content.parties
+        if parties.isEmpty {
+            Section {
+                EmptyStateView(symbol: "person.2", title: "Noch keine Kontakte",
+                               message: "Bauleiter, Architekt, Ansprechpartner vor Ort – mit Nummer und Anschrift griffbereit auf der Baustelle.",
+                               actionTitle: "Kontakt hinzufügen", actionSymbol: "person.badge.plus") { editingParty = PartyEditing() }
+            } header: {
+                Text("Kontakte")
+            }
+        } else {
+            let groups = PartyRole.allCases.compactMap { role -> (PartyRole, [BauakteParty])? in
+                let members = parties.filter { $0.role == role && !$0.isPrimary }
+                return members.isEmpty ? nil : (role, members)
+            }
+            if let primary = parties.first(where: \.isPrimary) {
+                Section {
+                    partyCard(primary)
+                } header: {
+                    Text("Hauptkontakt")
+                }
+            }
+            ForEach(groups, id: \.0) { role, members in
+                Section {
+                    ForEach(members) { partyCard($0) }
+                } header: {
+                    Text(members.count == 1 ? role.title : "\(role.title) (\(members.count))")
+                }
+            }
+            Section {
+                Button { editingParty = PartyEditing() } label: { Label("Kontakt hinzufügen", systemImage: "person.badge.plus") }
+            }
+        }
+    }
+
+    private func partyCard(_ party: BauakteParty) -> some View {
+        PartyCard(party: party,
+                  onEdit: { editingParty = PartyEditing(party: party) },
+                  onRole: { role in Task { await change(party) { $0.role = role } } },
+                  onPrimary: { Task { await change(party) { $0.isPrimary = true } } },
+                  onRemove: { removingParty = party })
+    }
+
+    private func change(_ party: BauakteParty, _ update: (inout PartyEdit) -> Void) async {
+        guard let service = model.active?.service, let entity = try? await service.store.entity(.bauakteParty, party.id) else { return }
+        var edit = PartyEdit(entity)
+        update(&edit)
+        do throws(BauakteError) {
+            try await service.saveParty(edit, id: party.id, bauakteId: bauakte.id)
+            model.active?.sync?.localChangeMade()
+            toast = edit.isPrimary && !party.isPrimary ? "\(party.name) ist Hauptkontakt" : "\(party.name): \(edit.role.title)"
+        } catch {
+            toast = error.message
+        }
+        await reload()
+    }
+
+    private func remove(_ party: BauakteParty) async {
+        do throws(BauakteError) {
+            try await model.active?.service?.deleteParty(party.id)
+            model.active?.sync?.localChangeMade()
+            toast = "Kontakt entfernt"
+        } catch {
+            toast = error.message
+        }
+        removingParty = nil
+        await reload()
+    }
+
     private func assign(_ contact: Contact) async {
         try? await model.active?.service?.assignCustomer(contact.id, to: bauakte.id)
         model.active?.sync?.localChangeMade()
         await reload()
-    }
-}
-
-/// Beteiligter: Rolle, Name und Firma, Anruf mit einem Tipp; E-Mail und Nummer im Kontextmenü.
-struct PartyRow: View {
-    let party: BauakteParty
-    @Environment(\.openURL) private var openURL
-
-    var body: some View {
-        HStack(spacing: Space.m) {
-            Avatar(name: party.company ?? party.name, isCompany: party.company != nil, size: 40)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(party.role.title)
-                    .font(Typo.labelStrong)
-                    .foregroundStyle(Theme.accent)
-                Text(party.name)
-                    .font(Typo.body)
-                    .foregroundStyle(Theme.textPrimary)
-                if let company = party.company, company != party.name {
-                    Text(company)
-                        .font(Typo.subhead)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-                if let phone = party.phone {
-                    Text(phone)
-                        .font(Typo.subhead.monospacedDigit())
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                }
-                if let note = party.note?.compactText {
-                    Text(note).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(2)
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            if let url = ContactLink.phone(party.phone) {
-                Button { openURL(url) } label: { Label("\(party.name) anrufen", systemImage: "phone.fill") }
-                    .buttonStyle(IconButtonStyle())
-            } else if let url = ContactLink.email(party.email) {
-                Button { openURL(url) } label: { Label("E-Mail an \(party.name)", systemImage: "envelope.fill") }
-                    .buttonStyle(IconButtonStyle())
-            }
-        }
-        .padding(.vertical, Space.xxs)
-        .contextMenu {
-            if let url = ContactLink.phone(party.phone) {
-                Button("Anrufen", systemImage: "phone") { openURL(url) }
-            }
-            if let url = ContactLink.email(party.email) {
-                Button("E-Mail schreiben", systemImage: "envelope") { openURL(url) }
-            }
-            if let phone = party.phone {
-                Button("Nummer kopieren", systemImage: "doc.on.doc") { UIPasteboard.general.string = phone }
-            }
-        }
     }
 }
 

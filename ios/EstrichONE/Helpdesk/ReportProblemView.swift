@@ -15,6 +15,7 @@ struct ReportProblemView: View {
     @State private var details = ""
     @State private var category: TicketCategory = .other
     @State private var blocked = false
+    @State private var priority: TicketPriority = .normal
     @State private var includeDiagnostics = true
     @State private var reporterName = ""
     @State private var diagnostics: DiagnosticsReport?
@@ -44,6 +45,11 @@ struct ReportProblemView: View {
                         .lineLimit(3...8)
                     Picker("Kategorie", selection: $category) {
                         ForEach(TicketCategory.allCases) { Text($0.title).tag($0) }
+                    }
+                    if !withoutSignIn {
+                        Picker("Priorität", selection: $priority) {
+                            ForEach(TicketPriority.allCases) { Text($0.title).tag($0) }
+                        }
                     }
                     Toggle("Dringend – ich kann nicht arbeiten", isOn: $blocked)
                 }
@@ -120,7 +126,8 @@ struct ReportProblemView: View {
     private func send() async {
         sending = true
         defer { sending = false }
-        let ticket = NewTicket(title: title, description: details, category: category, reporterBlocked: blocked)
+        let ticket = NewTicket(title: title, description: details, category: category, reporterBlocked: blocked,
+                               priority: blocked ? .urgent : priority)
         do throws(TicketError) {
             if withoutSignIn {
                 sentNumber = try await model.reportWithoutSignIn(ticket, reporterName: reporterName, includeDiagnostics: includeDiagnostics)
@@ -130,241 +137,6 @@ struct ReportProblemView: View {
             }
         } catch {
             self.error = error.message
-        }
-    }
-}
-
-/// Eigene Meldungen: lokal wartende und die Liste vom Server mit Status und Antworten.
-struct MyTicketsView: View {
-    @Environment(AppModel.self) private var model
-    @Environment(\.shotScene) private var shotScene
-    @State private var tickets: [TicketSummary] = []
-    @State private var waiting: [(id: UUID, title: String)] = []
-    @State private var offline = false
-    /// Screenshot-Modus „meldung-detail“: erste Meldung geöffnet.
-    @State private var opened: UUID?
-
-    var body: some View {
-        List {
-            if !waiting.isEmpty {
-                Section("Wartet auf Übertragung") {
-                    ForEach(waiting, id: \.id) { item in
-                        Label(item.title, systemImage: "arrow.up.circle").foregroundStyle(Theme.textSecondary)
-                    }
-                }
-            }
-            Section {
-                if offline {
-                    Label("Die Liste ist nur mit Verbindung zum Server verfügbar.", systemImage: "wifi.slash").foregroundStyle(Theme.textSecondary)
-                } else if tickets.isEmpty {
-                    Text("Keine Meldungen.").foregroundStyle(Theme.textSecondary)
-                }
-                ForEach(tickets) { ticket in
-                    NavigationLink {
-                        TicketDetailView(ticketId: ticket.id)
-                    } label: {
-                        VStack(alignment: .leading, spacing: Space.xs) {
-                            Text(ticket.title)
-                                .font(Typo.body)
-                                .foregroundStyle(Theme.textPrimary)
-                                .lineLimit(2)
-                            HStack(spacing: Space.s) {
-                                Text(ticket.number).font(Typo.meta.monospacedDigit()).foregroundStyle(Theme.textSecondary)
-                                TicketStatusChip(status: ticket.status)
-                            }
-                        }
-                        .padding(.vertical, Space.xxs)
-                    }
-                }
-            }
-        }
-        .navigationTitle("Meine Meldungen")
-        .navigationDestination(item: $opened) { id in TicketDetailView(ticketId: id) }
-        .task(id: model.active?.sync?.revision) { await load() }
-        .refreshable { await load() }
-    }
-
-    private func load() async {
-        let local = (try? await model.helpdesk?.localReports()) ?? []
-        waiting = local.filter { $0.state != .synced }.map { ($0.id, $0.title) }
-        guard let client = model.active?.client else { return }
-        do throws(APIError) {
-            tickets = try await client.myTickets()
-            offline = false
-            if shotScene == "meldung-detail", opened == nil { opened = tickets.first?.id }
-        } catch {
-            offline = true
-        }
-    }
-}
-
-/// Stand einer Meldung als Kapsel: wartet auf mich (gelb), gelöst (grün), sonst ruhig.
-struct TicketStatusChip: View {
-    let status: TicketStatus
-
-    var body: some View {
-        Chip(text: status.title, symbol: symbol, tone: tone)
-            .accessibilityLabel("Status: \(status.title)")
-    }
-
-    private var tone: Chip.Tone {
-        switch status {
-        case .new, .inProgress: .accent
-        case .waitingForReporter: .warning
-        case .resolved, .closed: .success
-        }
-    }
-
-    private var symbol: String {
-        switch status {
-        case .new: "tray"
-        case .inProgress: "wrench.and.screwdriver"
-        case .waitingForReporter: "questionmark.bubble"
-        case .resolved: "checkmark.circle"
-        case .closed: "lock"
-        }
-    }
-}
-
-/// Ein Ticket aus Sicht des Melders: öffentliche Antworten, eigene Antwort, „Wieder öffnen“ nach „Gelöst“.
-struct TicketDetailView: View {
-    let ticketId: UUID
-
-    @Environment(AppModel.self) private var model
-    @State private var detail: TicketDetail?
-    @State private var reply = ""
-    @State private var error: String?
-
-    var body: some View {
-        List {
-            if let detail {
-                // Kopf als eine Zeile: Nummer und Stand, Titel, Beschreibung – ohne leere Felder dazwischen.
-                Section {
-                    VStack(alignment: .leading, spacing: Space.s) {
-                        HStack(spacing: Space.s) {
-                            Text(detail.summary.number)
-                                .font(Typo.subheadStrong.monospacedDigit())
-                                .foregroundStyle(Theme.textSecondary)
-                            Spacer(minLength: Space.s)
-                            TicketStatusChip(status: detail.summary.status)
-                        }
-                        Text(detail.summary.title)
-                            .font(Typo.section)
-                            .foregroundStyle(Theme.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                        if let description = detail.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
-                            Text(description)
-                                .font(Typo.body)
-                                .foregroundStyle(Theme.textPrimary)
-                                .fixedSize(horizontal: false, vertical: true)
-                        }
-                    }
-                    .padding(.vertical, Space.xs)
-                    if let resolution = detail.resolution?.trimmingCharacters(in: .whitespacesAndNewlines), !resolution.isEmpty {
-                        Callout(tone: .success, title: "Lösung", message: resolution, symbol: "checkmark.seal.fill")
-                            .listRowInsets(EdgeInsets(top: Space.s, leading: Space.s, bottom: Space.s, trailing: Space.s))
-                    }
-                }
-                Section("Verlauf") {
-                    if detail.history.isEmpty { Text("Noch keine Antwort.").foregroundStyle(Theme.textSecondary) }
-                    ForEach(detail.history) { entry in
-                        TicketTimelineRow(entry: entry, isOwn: entry.isReporter || (entry.actorUserId != nil && entry.actorUserId == model.active?.user.id))
-                    }
-                }
-                if detail.summary.status != .closed {
-                    Section {
-                        TextField("Antwort an den Support", text: $reply, axis: .vertical)
-                            .lineLimit(2...6)
-                            .accessibilityIdentifier("ticketReplyField")
-                        Button { Task { await send() } } label: { Label("Antwort senden", systemImage: "paperplane.fill") }
-                            .estrichButton(.primary)
-                            .disabled(reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
-                            .accessibilityIdentifier("sendReplyButton")
-                        if detail.summary.status == .resolved {
-                            Button("Problem besteht weiter – wieder öffnen") { Task { await reopen() } }
-                        }
-                    }
-                }
-                if let error { Text(error).foregroundStyle(Theme.danger) }
-            } else if let error {
-                Section {
-                    Label(error, systemImage: "wifi.slash").foregroundStyle(Theme.textSecondary)
-                }
-            } else {
-                Section {
-                    HStack(spacing: Space.s) {
-                        ProgressView()
-                        Text("Wird geladen …").foregroundStyle(Theme.textSecondary)
-                    }
-                }
-            }
-        }
-        .navigationTitle(detail?.summary.number ?? "Meldung")
-        .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
-        .refreshable { await load() }
-    }
-
-    private func load() async {
-        do throws(APIError) {
-            detail = try await model.active?.client.ticket(ticketId)
-        } catch {
-            self.error = error.message
-        }
-    }
-
-    private func send() async {
-        do throws(APIError) {
-            detail = try await model.active?.client.comment(on: ticketId, text: reply)
-            reply = ""
-        } catch {
-            self.error = error.message
-        }
-    }
-
-    private func reopen() async {
-        do throws(APIError) {
-            detail = try await model.active?.client.reopen(ticketId)
-        } catch {
-            self.error = error.message
-        }
-    }
-}
-
-/// Eintrag im Ticketverlauf: Antworten als Sprechblase (eigene rechts), Ereignisse als ruhige Zeile mit Symbol.
-struct TicketTimelineRow: View {
-    let entry: TicketTimelineEntry
-    let isOwn: Bool
-
-    var body: some View {
-        if let text = entry.text, entry.isComment {
-            VStack(alignment: isOwn ? .trailing : .leading, spacing: 3) {
-                Text(text)
-                    .font(Typo.body)
-                    .padding(.horizontal, Space.m).padding(.vertical, Space.s)
-                    .background(isOwn ? Theme.accentSoft : Theme.fill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
-                    .foregroundStyle(Theme.textPrimary)
-                if !entry.attachmentFileIds.isEmpty {
-                    Label("\(entry.attachmentFileIds.count) \(entry.attachmentFileIds.count == 1 ? "Anhang" : "Anhänge")", systemImage: "paperclip")
-                        .labelStyle(TightLabelStyle()).font(.caption).foregroundStyle(Theme.textSecondary)
-                }
-                Text([isOwn ? "Sie" : entry.actorName, entry.at.formatted(date: .abbreviated, time: .shortened)]
-                    .compactMap { $0 }.joined(separator: " · "))
-                    .font(.caption2).foregroundStyle(Theme.textSecondary)
-            }
-            .frame(maxWidth: .infinity, alignment: isOwn ? .trailing : .leading)
-            .listRowSeparator(.hidden)
-            .accessibilityElement(children: .combine)
-        } else {
-            Label {
-                VStack(alignment: .leading, spacing: 1) {
-                    Text(entry.summary).font(.footnote)
-                    Text(entry.at.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(Theme.textSecondary)
-                }
-            } icon: {
-                Image(systemName: entry.kind == "created" ? "plus.circle" : "arrow.triangle.swap").foregroundStyle(Theme.textSecondary)
-            }
-            .listRowSeparator(.hidden)
         }
     }
 }

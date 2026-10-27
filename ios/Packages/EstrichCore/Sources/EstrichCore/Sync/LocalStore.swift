@@ -171,13 +171,46 @@ public actor LocalStore {
         }
     }
 
+    /// Legt an oder ersetzt vollständig (`<typ>.save`, z. B. `bauakteParty.save`): `payload` enthält alle Felder.
+    /// Eine noch nicht gesendete Speicherung desselben Datensatzes wird ersetzt; `baseVersion` ist der zuletzt bekannte
+    /// Serverstand (der Server lehnt ab, wenn inzwischen jemand anderes geändert hat).
+    public func save(_ type: EntityType, id: UUID, payload: [String: JSONValue]) throws {
+        let operation = "\(type.operationPrefix).save"
+        try db.write { db in
+            let row = try db.query("SELECT server, local FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)]).first
+            let server = try row?["server"]?.string.map(JSONValue.decode)
+            let pending = try db.query("""
+                SELECT * FROM outbox WHERE entity_type = ? AND entity_id = ? AND state = 'pending' AND type = ? ORDER BY seq DESC LIMIT 1
+                """, [.text(type.rawValue), .text(id.key), .text(operation)]).first.map(makeOperation)
+            if let pending {
+                try replacePayload(db, pending, with: .object(payload))
+            } else {
+                try insertOperation(db, type: operation, entityType: type, entityId: id,
+                                    baseVersion: server?["version"]?.number.map(Int64.init), payload: .object(payload))
+            }
+            if row == nil {
+                let local = JSONValue.object(payload).merging(["id": JSONValue(id), "version": 0])
+                try db.execute("""
+                    INSERT INTO entity (type, id, server, local, parent_id, search, sort_key) VALUES (?, ?, NULL, ?, ?, ?, ?)
+                    """, [.text(type.rawValue), .text(id.key), .text(try local.encoded())] + derived(type, local))
+            } else if server == nil {
+                let local = try JSONValue.decode(row?["local"]?.string ?? "{}").merging(payload)
+                try db.execute("UPDATE entity SET local = ?, parent_id = ?, search = ?, sort_key = ? WHERE type = ? AND id = ?",
+                               [.text(try local.encoded())] + derived(type, local) + [.text(type.rawValue), .text(id.key)])
+            } else {
+                try recompute(db, type, id)
+            }
+        }
+    }
+
     /// Löscht einen Datensatz. Nie gesendete Anlagen verschwinden ohne Serverkontakt.
     public func delete(_ type: EntityType, id: UUID) throws {
         try db.write { db in
             let unsentCreate = try db.query("""
                 SELECT seq FROM outbox WHERE entity_type = ? AND entity_id = ? AND state = 'pending'
-                  AND (type LIKE '%.create' OR type = 'file.announce')
-                """, [.text(type.rawValue), .text(id.key)]).first
+                  AND (type LIKE '%.create' OR type = 'file.announce'
+                       OR (type LIKE '%.save' AND EXISTS (SELECT 1 FROM entity WHERE type = ? AND id = ? AND server IS NULL)))
+                """, [.text(type.rawValue), .text(id.key), .text(type.rawValue), .text(id.key)]).first
             if unsentCreate != nil {
                 try db.execute("DELETE FROM outbox WHERE entity_type = ? AND entity_id = ?", [.text(type.rawValue), .text(id.key)])
                 try db.execute("DELETE FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)])
@@ -508,6 +541,9 @@ public actor LocalStore {
     static func applyLocally(_ operation: OutboxOperation, to local: JSONValue) -> JSONValue {
         if operation.type.hasSuffix(".update") {
             return local.merging(operation.payload["changes"]?.object ?? [:])
+        }
+        if operation.type.hasSuffix(".save") {
+            return local.merging(operation.payload.object ?? [:])
         }
         if operation.type.hasSuffix(".setStatus"), let status = operation.payload["status"] {
             return local.merging(["status": status, "cancellationReason": status.string == "cancelled" ? operation.payload["reason"] ?? .null : .null])

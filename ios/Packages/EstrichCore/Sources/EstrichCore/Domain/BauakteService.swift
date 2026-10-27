@@ -82,6 +82,7 @@ public enum BauakteError: Error, Equatable, Sendable {
     case titleRequired
     case textRequired
     case customerNameRequired
+    case nameRequired
     case invalidEmail
     case tooLong(String)
     case cancellationReasonRequired
@@ -94,6 +95,7 @@ public enum BauakteError: Error, Equatable, Sendable {
         case .invalidPeriod: "Das geplante Ende liegt vor dem Beginn."
         case .textRequired: "Bitte einen Text eingeben."
         case .customerNameRequired: "Bitte den Namen des Kunden eingeben."
+        case .nameRequired: "Bitte einen Namen eingeben."
         case .invalidEmail: "Die E-Mail-Adresse ist ungültig."
         case let .tooLong(field): "Die Angabe „\(field)“ ist zu lang."
         case .cancellationReasonRequired: "Bitte einen Stornogrund angeben."

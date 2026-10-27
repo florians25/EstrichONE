@@ -1,4 +1,13 @@
 import Foundation
+#if canImport(CryptoKit)
+import CryptoKit
+#else
+import Crypto
+#endif
+
+enum SHA256Hex {
+    static func digest(_ data: Data) -> String { SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() }
+}
 
 public enum TicketCategory: String, CaseIterable, Identifiable, Codable, Sendable {
     case signIn, sync, appError, deviceDefect, officeIt, access, other
@@ -32,8 +41,18 @@ public enum TicketStatus: String, CaseIterable, Codable, Sendable {
     }
 }
 
-public enum TicketPriority: String, Codable, Sendable {
+public enum TicketPriority: String, CaseIterable, Identifiable, Codable, Sendable {
     case low, normal, high, urgent
+
+    public var id: String { rawValue }
+    public var title: String {
+        switch self {
+        case .low: "Niedrig"
+        case .normal: "Normal"
+        case .high: "Hoch"
+        case .urgent: "Dringend"
+        }
+    }
 }
 
 /// Ticket in Listen (`TicketSummary` des Servers).
@@ -48,6 +67,11 @@ public struct TicketSummary: Decodable, Equatable, Identifiable, Sendable {
     public let assigneeName: String?
     public let createdAt: Date
     public let lastActivityAt: Date
+    public var reporterDisplayName: String? = nil
+    public var assigneeUserId: UUID? = nil
+
+    /// Offen = noch nicht gelöst oder geschlossen.
+    public var isOpen: Bool { status != .resolved && status != .closed }
 }
 
 public struct TicketComment: Decodable, Equatable, Identifiable, Sendable {
@@ -189,12 +213,15 @@ public struct NewTicket: Sendable {
     public var category: TicketCategory
     /// „Dringend – ich kann nicht arbeiten“.
     public var reporterBlocked: Bool
+    public var priority: TicketPriority?
 
-    public init(title: String, description: String? = nil, category: TicketCategory = .other, reporterBlocked: Bool = false) {
+    public init(title: String, description: String? = nil, category: TicketCategory = .other, reporterBlocked: Bool = false,
+                priority: TicketPriority? = nil) {
         self.title = title
         self.description = description
         self.category = category
         self.reporterBlocked = reporterBlocked
+        self.priority = priority
     }
 
     var cleanTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -252,6 +279,7 @@ public struct HelpdeskService: Sendable {
         let payload: [String: JSONValue] = [
             "title": .string(ticket.cleanTitle), "description": JSONValue(ticket.cleanDescription), "category": .string(ticket.category.rawValue),
             "reporterBlocked": .bool(ticket.reporterBlocked), "source": .string(source),
+            "priority": JSONValue((ticket.priority ?? (ticket.reporterBlocked ? .urgent : nil))?.rawValue),
             "diagnostics": diagnostics.map { .object($0.payload) } ?? .null, "attachmentFileIds": .array(attachmentIds),
         ]
         let local = JSONValue.object(payload).merging([
@@ -280,10 +308,99 @@ extension AuthorizedClient {
         try await get("tickets/\(id.key)")
     }
 
-    public func comment(on id: UUID, text: String) async throws(APIError) -> TicketDetail {
-        try await post("tickets/\(id.key)/comments", body: CommentBody(text: text, isInternal: false))
+    public func comment(on id: UUID, text: String, attachmentFileIds: [UUID] = [], isInternal: Bool = false) async throws(APIError) -> TicketDetail {
+        try await post("tickets/\(id.key)/comments", body: CommentBody(text: text, isInternal: isInternal, attachmentFileIds: attachmentFileIds))
     }
 
+    /// Tickets für die Bearbeitung (Recht `helpdesk.agent`): `open`, `mine`, `unassigned`, `all`.
+    public func agentTickets(filter: String = "open") async throws(APIError) -> [TicketSummary] {
+        try await get("tickets", query: [URLQueryItem(name: "filter", value: filter)])
+    }
+
+    /// Status, Priorität, Zuweisung, Lösung ändern (Bearbeitung).
+    public func updateTicket(_ id: UUID, _ change: TicketUpdate) async throws(APIError) -> TicketDetail {
+        let body: Data
+        do { body = try JSONCoding.encoder.encode(change) } catch { throw .invalidResponse }
+        return try await send(APIRequest(method: "PATCH", path: "tickets/\(id.key)", body: body, contentType: "application/json"))
+    }
+
+    /// Bild als eigene Datei ohne Bauakte hochladen (für Antworten mit Anhang): ankündigen, Inhalt senden.
+    public func uploadLooseImage(_ jpeg: Data, name: String = "Foto.jpg", now: Date = Date()) async throws(APIError) -> UUID {
+        let id = UUID.v7(now: now)
+        let announce = AnnounceLooseFile(id: id, bauakteId: nil, kind: "photo", originalName: name, contentType: "image/jpeg",
+                                         sizeBytes: Int64(jpeg.count), sha256: SHA256Hex.digest(jpeg), capturedAt: now)
+        let _: JSONValue = try await post("files", body: announce)
+        let _: JSONValue = try await send(APIRequest(method: "PUT", path: "files/\(id.key)/content", body: jpeg, contentType: "image/jpeg"))
+        return id
+    }
+}
+
+/// Änderung eines Tickets durch die Bearbeitung (`UpdateTicketRequest`); `nil` = unverändert.
+public struct TicketUpdate: Encodable, Sendable {
+    public var status: TicketStatus?
+    public var priority: TicketPriority?
+    public var category: TicketCategory?
+    public var assigneeUserId: UUID?
+    public var unassign: Bool
+    public var resolution: String?
+
+    public init(status: TicketStatus? = nil, priority: TicketPriority? = nil, category: TicketCategory? = nil, assigneeUserId: UUID? = nil,
+                unassign: Bool = false, resolution: String? = nil) {
+        self.status = status
+        self.priority = priority
+        self.category = category
+        self.assigneeUserId = assigneeUserId
+        self.unassign = unassign
+        self.resolution = resolution
+    }
+}
+
+struct AnnounceLooseFile: Encodable, Sendable {
+    let id: UUID
+    let bauakteId: UUID?
+    let kind: String
+    let originalName: String
+    let contentType: String
+    let sizeBytes: Int64
+    let sha256: String
+    let capturedAt: Date
+}
+
+/// Gelesen-Stand der eigenen Meldungen: Neue Antworten der IT erkennt die App am Zeitpunkt der letzten Aktivität.
+public struct TicketReadState: Sendable {
+    public let store: LocalStore
+
+    public init(store: LocalStore) { self.store = store }
+
+    private func seen() async -> [String: Date] {
+        guard let text = try? await store.meta("ticket_seen"), let data = text.data(using: .utf8) else { return [:] }
+        return (try? JSONCoding.decoder.decode([String: Date].self, from: data)) ?? [:]
+    }
+
+    /// Tickets mit Aktivität nach dem letzten Öffnen (beim ersten Laden gilt alles als gelesen).
+    public func unread(_ tickets: [TicketSummary]) async -> Set<UUID> {
+        let seen = await seen()
+        if seen.isEmpty {
+            await markRead(tickets)
+            return []
+        }
+        return Set(tickets.filter { ticket in
+            guard let last = seen[ticket.id.key] else { return ticket.status == .waitingForReporter }
+            return ticket.lastActivityAt > last.addingTimeInterval(1)
+        }.map(\.id))
+    }
+
+    public func markRead(_ tickets: [TicketSummary]) async {
+        var seen = await seen()
+        for ticket in tickets { seen[ticket.id.key] = max(seen[ticket.id.key] ?? .distantPast, ticket.lastActivityAt) }
+        if seen.isEmpty { seen["_"] = Date() }
+        if let data = try? JSONCoding.encoder.encode(seen) {
+            try? await store.setMeta("ticket_seen", String(decoding: data, as: UTF8.self))
+        }
+    }
+}
+
+extension AuthorizedClient {
     public func reopen(_ id: UUID) async throws(APIError) -> TicketDetail {
         try await post("tickets/\(id.key)/reopen")
     }
@@ -292,6 +409,7 @@ extension AuthorizedClient {
 struct CommentBody: Encodable, Sendable {
     let text: String
     let isInternal: Bool
+    var attachmentFileIds: [UUID] = []
 }
 
 /// „Problem melden“ ohne Anmeldung (14, Abschnitt 5): Das eingerichtete Gerät signiert die Meldung.

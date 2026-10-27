@@ -296,16 +296,19 @@ struct DemoContent: Sendable {
         ]
         // Beteiligte am EFH Schneider (gepflegt im Büro).
         func party(_ number: Int, _ role: String, _ name: String, company: String? = nil, phone: String? = nil, email: String? = nil,
-                   note: String? = nil) -> [String: Any] {
+                   note: String? = nil, mobile: String? = nil, street: String? = nil, city: String? = nil, primary: Bool = false) -> [String: Any] {
             change("bauakteParty", ["id": String(format: "0193a1b2-de00-7000-8000-00000000%04d", 4000 + number), "bauakteId": Self.efh,
                                     "role": role, "name": name, "company": company ?? NSNull(), "phone": phone ?? NSNull(),
                                     "email": email ?? NSNull(), "note": note ?? NSNull(), "contactId": NSNull(), "version": 1,
-                                    "updatedAt": time(-86_400 * 6)])
+                                    "mobile": mobile ?? NSNull(), "street": street ?? NSNull(), "postalCode": city == nil ? NSNull() : "84028",
+                                    "city": city ?? NSNull(), "isPrimary": primary, "updatedAt": time(-86_400 * 6)])
         }
         result += [
-            party(1, "architect", "Anna Lechner", company: "Lechner Architekten", phone: "0871 430 22 10", email: "lechner@architekten.example"),
-            party(2, "siteManager", "Stefan Wimmer", company: "Wimmer Hausbau GmbH", phone: "0171 445 56 67",
-                  note: "Bauleitung – Abnahme der Estricharbeiten"),
+            party(1, "architect", "Anna Lechner", company: "Lechner Architekten", phone: "0871 430 22 10", email: "lechner@architekten.example",
+                  street: "Neustadt 18", city: "Landshut"),
+            party(2, "siteManager", "Stefan Wimmer", company: "Wimmer Hausbau GmbH", phone: "0871 445 56 0",
+                  email: "s.wimmer@wimmer-hausbau.example", note: "Bauleitung – Abnahme der Estricharbeiten", mobile: "0171 445 56 67",
+                  street: "Gewerbestraße 4", city: "Landshut", primary: true),
             party(3, "other", "Haustechnik Bauer GmbH", phone: "0871 66 12 0", note: "Heizung: Druckprobe vor dem Einbringen"),
             party(4, "supplier", "Transportbeton Isar GmbH", phone: "0871 77 88 0", note: "Disposition ab 6 Uhr"),
         ]
@@ -494,24 +497,6 @@ struct DemoContent: Sendable {
           "warnings":["Zufahrt nur bis 7,5 t"]}],
          "absences":[]}
         """
-    }
-
-    func tickets(now: String) -> (list: String, detail: String) {
-        let summary = """
-        {"id":"\(Self.ticketId)","number":"T-2026-0007","title":"Fotos werden nicht übertragen","category":"sync","priority":"normal",
-         "status":"waitingForReporter","reporterBlocked":false,"assigneeName":"IT-Support","createdAt":"\(now)","lastActivityAt":"\(now)"}
-        """
-        let detail = """
-        {"summary":\(summary),"description":"Seit gestern bleiben Fotos auf „Wird übertragen“ stehen.","resolution":null,
-         "comments":[],"events":[],
-         "timeline":[{"id":"0193a1b2-de00-7000-8000-000000006001","at":"\(now)","kind":"created","actorUserId":"\(Self.userId)",
-           "actorName":"Max Huber","summary":"Max Huber hat die Meldung erstellt.","text":null,"fromValue":null,"toValue":"New",
-           "isInternal":false,"isReporter":true,"attachmentFileIds":[]},
-          {"id":"0193a1b2-de00-7000-8000-000000006002","at":"\(now)","kind":"comment","actorUserId":null,"actorName":"IT-Support",
-           "summary":"IT-Support hat geantwortet.","text":"Bitte einmal die App öffnen und im WLAN warten, bis die Synchronisation fertig ist.",
-           "fromValue":null,"toValue":null,"isInternal":false,"isReporter":false,"attachmentFileIds":[]}]}
-        """
-        return ("[\(summary)]", detail)
     }
 }
 

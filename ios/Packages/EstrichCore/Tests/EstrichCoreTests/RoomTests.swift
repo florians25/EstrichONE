@@ -150,4 +150,59 @@ struct PartyTests {
         #expect(await engine.synchronize() == .completed)
         #expect(try await service.parties(of: bauakte).isEmpty)
     }
+
+    @Test("Kontakte in der App pflegen: anlegen, ändern, Hauptkontakt wechseln, entfernen – offline über bauakteParty.save/delete")
+    func editParties() async throws {
+        let server = SimulatedSyncServer()
+        let directory = FileManager.default.temporaryDirectory.appending(path: "parties-\(UUID().uuidString)")
+        let key = SymmetricKey(size: .bits256)
+        let store = LocalStore(database: try EncryptedDatabase(url: directory.appending(path: "data.sealed"), key: key, migrations: LocalStore.schema))
+        let files = FileVault(directory: directory.appending(path: "files"), key: key)
+        let service = BauakteService(store: store, files: files, userId: UUID.v7())
+        let engine = SyncEngine(store: store, transport: server, files: files)
+        let bauakte = try await service.create(NewBauakte(title: "EFH Kraus"))
+
+        await #expect(throws: BauakteError.nameRequired) { try await service.saveParty(PartyEdit(name: " "), bauakteId: bauakte) }
+        await #expect(throws: BauakteError.invalidEmail) {
+            try await service.saveParty(PartyEdit(name: "Anna", email: "kein-at"), bauakteId: bauakte)
+        }
+
+        let anna = try await service.saveParty(PartyEdit(role: .siteManager, name: " Anna Lechner ", company: "Lechner Bau", phone: "0171 555",
+                                                         isPrimary: true), bauakteId: bauakte)
+        let poldi = try await service.saveParty(PartyEdit(role: .siteContact, name: "Poldi", mobile: "0160 1"), bauakteId: bauakte)
+        // Vor dem Senden geändert: dieselbe Speicherung wird ersetzt, nicht verdoppelt.
+        var edit = PartyEdit(try #require(try await store.entity(.bauakteParty, poldi)))
+        edit.name = "Leopold Huber"
+        try await service.saveParty(edit, id: poldi, bauakteId: bauakte)
+        #expect(try await store.operations().filter { $0.entityType == .bauakteParty }.map(\.type) == ["bauakteParty.save", "bauakteParty.save"])
+
+        var parties = try await service.parties(of: bauakte)
+        #expect(parties.map(\.id) == [anna, poldi])
+        #expect(parties[0].name == "Anna Lechner" && parties[0].initials == "AL" && parties[0].isPrimary && parties[0].syncState == .pending)
+        #expect(parties[1].allPhones.map(\.number) == ["0160 1"] && parties[1].name == "Leopold Huber")
+
+        #expect(await engine.synchronize() == .completed)
+        #expect(server.entity(poldi)?["name"]?.string == "Leopold Huber")
+        #expect(server.entity(anna)?["bauakteId"]?.string == bauakte.key)
+
+        // Hauptkontakt wechseln: der bisherige verliert die Markierung.
+        edit = PartyEdit(try #require(try await store.entity(.bauakteParty, poldi)))
+        edit.isPrimary = true
+        edit.role = .client
+        try await service.saveParty(edit, id: poldi, bauakteId: bauakte)
+        parties = try await service.parties(of: bauakte)
+        #expect(parties.map(\.id) == [poldi, anna] && parties[0].role == .client && !parties[1].isPrimary)
+        #expect(await engine.synchronize() == .completed)
+        #expect(server.entity(anna)?["isPrimary"]?.bool == false && server.entity(poldi)?["isPrimary"]?.bool == true)
+
+        try await service.deleteParty(anna)
+        #expect(try await service.parties(of: bauakte).map(\.id) == [poldi])
+        #expect(await engine.synchronize() == .completed)
+        #expect(server.entity(anna)?.object == nil)
+
+        // Nie gesendet und wieder entfernt: verschwindet ohne Serverkontakt.
+        let draft = try await service.saveParty(PartyEdit(name: "Entwurf"), bauakteId: bauakte)
+        try await service.deleteParty(draft)
+        #expect(try await store.operations().isEmpty)
+    }
 }

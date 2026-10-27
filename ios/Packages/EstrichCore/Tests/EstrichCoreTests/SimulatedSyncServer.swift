@@ -197,6 +197,17 @@ final class SimulatedSyncServer: SyncTransport, @unchecked Sendable {
             if type == "file" { data = data.merging(["state": "awaitingUpload"]) }
             record(type, id: id, data: data)
             return PushResult(opId: operation.opId, status: .applied, code: nil, message: nil, version: 1, conflicts: nil, entity: data)
+        case "save":
+            // Vollständig ersetzen (bauakteParty.save); baseVersion schützt vor fremden Änderungen.
+            let current = entities[id.key]?.data
+            let version = (current?["version"]?.number ?? 0) + 1
+            if let current, let base = operation.baseVersion, Double(base) != current["version"]?.number {
+                return PushResult(opId: operation.opId, status: .rejected, code: "VERSION_CONFLICT", message: "Inzwischen geändert",
+                                  version: nil, conflicts: nil, entity: current)
+            }
+            let data = JSONValue.object(payload).merging(["id": JSONValue(id), "version": .number(version)])
+            record(type, id: id, data: data)
+            return PushResult(opId: operation.opId, status: .applied, code: nil, message: nil, version: Int64(version), conflicts: nil, entity: data)
         case "setStatus":
             guard var current = entities[id.key]?.data else {
                 return PushResult(opId: operation.opId, status: .rejected, code: "NOT_FOUND", message: "Nicht gefunden", version: nil, conflicts: nil, entity: nil)

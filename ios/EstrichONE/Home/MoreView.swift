@@ -15,6 +15,7 @@ struct MoreView: View {
     @State private var confirmReset = false
     @State private var unsentBeforeSignOut = 0
     @State private var reporting = false
+    @State private var unreadTickets = 0
 
     var body: some View {
         NavigationStack {
@@ -54,7 +55,11 @@ struct MoreView: View {
                 Section("Hilfe") {
                     Button { reporting = true } label: { row("Problem melden", symbol: "exclamationmark.bubble", chevron: false) }
                         .accessibilityIdentifier("reportProblemButton")
-                    Button { route = .tickets } label: { row("Meine Meldungen", symbol: "tray.full") }
+                    Button { route = .tickets } label: {
+                        row("Helpdesk", symbol: "tray.full", detail: unreadTickets > 0 ? "\(unreadTickets) neu" : nil,
+                            detailTint: Theme.accent)
+                    }
+                    .accessibilityIdentifier("helpdeskRow")
                 }
 
                 if model.isDemo {
@@ -152,6 +157,9 @@ struct MoreView: View {
                 ReportProblemView { reporting = false }
             }
             .task { applyShotScene() }
+            .task(id: "\(model.active?.sync?.revision ?? 0)|\(route == nil)") {
+                if route == nil { unreadTickets = await TicketReadState.unreadCount(model: model) }
+            }
         }
     }
 
@@ -192,7 +200,8 @@ struct MoreView: View {
         case "disposition": route = .dispatch
         case "aufgaben": route = .tasks
         case "woche": route = .week
-        case "meldung", "meldung-detail": route = .tickets
+        case "meldung", "meldung-detail", "meldung-bearbeitung": route = .tickets
+        case "dispo-zuweisen", "dispo-verschieben", "dispo-tauschen": route = .dispatch
         default: break
         }
     }

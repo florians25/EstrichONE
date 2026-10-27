@@ -16,6 +16,8 @@ struct MainTabView: View {
     @Environment(\.shotScene) private var shotScene
     @State private var selection: Tab = .today
     @State private var showsCaptureHub = false
+    /// Meldungen mit neuer Antwort der IT (Abzeichen am Reiter „Mehr“).
+    @State private var unreadTickets = 0
 
     var body: some View {
         TabView(selection: Binding(get: { selection }, set: { tab in
@@ -41,6 +43,7 @@ struct MainTabView: View {
             MoreView()
                 .tabItem { Label("Mehr", systemImage: "ellipsis.circle") }
                 .tag(Tab.more)
+                .badge(unreadTickets)
         }
         .modifier(SidebarAdaptable())
         .sheet(isPresented: $showsCaptureHub) {
@@ -48,6 +51,7 @@ struct MainTabView: View {
                 .presentationDragIndicator(.visible)
         }
         .task { applyShotScene() }
+        .task(id: model.active?.sync?.revision) { unreadTickets = await TicketReadState.unreadCount(model: model) }
     }
 
     /// Screenshot-Modus: passenden Reiter wählen bzw. „Erfassen“ öffnen.
@@ -65,9 +69,9 @@ enum ShotRoute {
     static func tab(for scene: String) -> MainTabView.Tab {
         let prefix = scene.split(separator: "-").first.map(String.init) ?? scene
         switch prefix {
-        case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "raum", "tagebuch", "mangel", "basisdaten", "protokoll": return .bauakten
+        case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "raum", "tagebuch", "mangel", "basisdaten", "protokoll", "kontakt": return .bauakten
         case "kunden", "kundenkarte": return .customers
-        case "mehr", "sync", "meldung", "aufgaben", "woche", "disposition": return .more
+        case "mehr", "sync", "meldung", "aufgaben", "woche", "disposition", "dispo": return .more
         case "erfassen": return .capture
         default: return .today
         }

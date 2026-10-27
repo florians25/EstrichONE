@@ -16,7 +16,7 @@ struct BauakteContent {
     var acceptances: [Acceptance] = []
     /// Räume mit Fläche und Estrichaufbau.
     var rooms: [Room] = []
-    /// Beteiligte (Bauherr, Bauleiter, Architekt, Lieferant …), gepflegt im Büro.
+    /// Kontakte der Bauakte (Bauherr, Bauleiter, Architekt, Lieferant …), in der App und im Büro gepflegt.
     var parties: [BauakteParty] = []
     /// Einsätze aus der Planung ab heute (zuletzt geladener Stand).
     var assignments: [Assignment] = []
@@ -167,7 +167,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case "bereich-raeume", "raum": .rooms
         case "bereich-protokolle", "protokoll": .protocols
         case "bereich-basisdaten": .project
-        case "bereich-kontakte": .contacts
+        case "bereich-kontakte", "kontakt-neu": .contacts
         case "bereich-notizen": .notes
         default: nil
         }
@@ -206,7 +206,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case .project:
             return projectCount == 0 ? ("Angaben fehlen", true) : ("\(projectCount) Angaben", false)
         case .contacts:
-            let parties = content.parties.isEmpty ? nil : "\(content.parties.count) \(content.parties.count == 1 ? "Beteiligter" : "Beteiligte")"
+            let parties = content.parties.isEmpty ? nil : "\(content.parties.count) \(content.parties.count == 1 ? "Kontakt" : "Kontakte")"
             guard let customer = content.customer else { return ([parties, "Kunde fehlt"].compactMap { $0 }.joined(separator: " · "), true) }
             return ([customer.name, parties].compactMap { $0 }.joined(separator: " · "), false)
         case .notes:

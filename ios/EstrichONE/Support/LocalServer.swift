@@ -23,6 +23,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private var counter = 0
     /// Angekündigte Dateien: Größe und empfangene Bytes.
     private var files: [String: (size: Int, received: Int)] = [:]
+    /// Im Demomodus hochgeladene Inhalte (Anhänge im Helpdesk), damit die App sie wieder anzeigen kann.
+    private var uploaded: [String: Data] = [:]
     /// Zuletzt gemeldeter Stand je Datensatz, damit Änderungen (`*.update`) zusammengeführt zurückkommen.
     private var entities: [String: [String: Any]] = [:]
     private var currentUserId = "0193a1b2-0000-7000-8000-00000000aaaa"
@@ -31,6 +33,10 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private let demo: DemoContent?
     /// Typ der Beispieldatensätze (für den ersten Abgleich).
     private var demoTypes: [String: String] = [:]
+    /// Planung im Demomodus (Wer fährt wohin, Schnelldisposition).
+    private lazy var planning = DemoPlanning()
+    /// Meldungen im Demomodus (Helpdesk).
+    private lazy var helpdesk = DemoHelpdesk(userId: currentUserId)
 
     init(serverInfoStatus: Int, serverInfoBody: String, password: String, newDeviceStatus: String, demo: DemoContent? = nil) {
         self.serverInfoStatus = serverInfoStatus
@@ -54,11 +60,15 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
             return (raw, response)
         }
+        if demo != nil, request.httpMethod == "PUT", path.hasPrefix("/api/v1/files/"), path.hasSuffix("/content"), let content = request.httpBody {
+            let id = String(path.split(separator: "/")[3]).lowercased()
+            lock.withLock { uploaded[id] = content }
+        }
         let cursor = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?
             .queryItems?.first { $0.name == "cursor" }?.value
         let (status, json) = lock.withLock {
             path.hasPrefix("/api/v1/files/") ? routeFile(path, method: request.httpMethod ?? "GET", bytes: request.httpBody?.count ?? 0)
-                                             : route(path, body: body, cursor: cursor)
+                                             : route(path, method: request.httpMethod ?? "GET", body: body, cursor: cursor)
         }
         let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
         return (Data(json.utf8), response)
@@ -70,10 +80,11 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         if path.hasPrefix("/api/v1/bauakten/"), path.hasSuffix("/report.pdf") { return demo.pdf }
         let parts = path.split(separator: "/")
         guard parts.count >= 5, parts[2] == "files", parts.last == "content" else { return nil }
-        return demo.content(of: String(parts[3]).lowercased())
+        let id = String(parts[3]).lowercased()
+        return demo.content(of: id) ?? lock.withLock { uploaded[id] }
     }
 
-    private func route(_ path: String, body: [String: Any], cursor: String?) -> (Int, String) {
+    private func route(_ path: String, method: String, body: [String: Any], cursor: String?) -> (Int, String) {
         counter += 1
         switch path {
         case "/api/v1/server-info":
@@ -135,10 +146,13 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                 }
                 var entity = operation["payload"] as? [String: Any] ?? [:]
                 entity["id"] = operation["entityId"]
-                entity["version"] = 1
+                entity["version"] = type.hasSuffix(".save") ? ((entities[entityId]?["version"] as? Int) ?? 0) + 1 : 1
                 if type == "workitem.create" {
                     entity["status"] = "open"
                     entity["createdByUserId"] = currentUserId
+                }
+                if type == "ticket.create", demo != nil {
+                    helpdesk.add(id: entityId, payload: entity)
                 }
                 if type == "note.create" {
                     entity["authorUserId"] = currentUserId
@@ -178,10 +192,44 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             let page: [String: Any] = ["changes": changes, "cursor": "demo:1", "hasMore": false, "visibleBauakteIds": NSNull()]
             let json = (try? JSONSerialization.data(withJSONObject: page)).map { String(decoding: $0, as: UTF8.self) }
             return (200, json ?? #"{"changes":[],"cursor":"demo:1","hasMore":false,"visibleBauakteIds":null}"#)
-        case "/api/v1/tickets/mine" where demo != nil:
-            return (200, demo?.tickets(now: APIDate.format(Date())).list ?? "[]")
-        case "/api/v1/tickets/\(DemoContent.ticketId)" where demo != nil:
-            return (200, demo?.tickets(now: APIDate.format(Date())).detail ?? "{}")
+        case let dayPath where demo != nil && dayPath.hasPrefix("/api/v1/planning/day/"):
+            return json(200, planning.dayPlan(String(dayPath.dropFirst("/api/v1/planning/day/".count))))
+        case "/api/v1/planning/batch" where demo != nil:
+            let (status, result) = planning.batch(body)
+            return json(status, result)
+        case "/api/v1/planning/backlog" where demo != nil:
+            return json(200, planning.backlog())
+        case "/api/v1/planning/resources" where demo != nil:
+            return json(200, planning.resources())
+        case let crewPath where demo != nil && crewPath.hasPrefix("/api/v1/planning/crews/"):
+            // /api/v1/planning/crews/{id}/days/{day}/order|swap
+            let parts = crewPath.split(separator: "/").map(String.init)
+            guard parts.count == 8 else { return problem(404, "NOT_FOUND", "Nicht gefunden") }
+            return json(200, parts[7] == "order" ? planning.order(crewId: parts[4].lowercased(), day: parts[6], body: body)
+                                                 : planning.swap(crewId: parts[4].lowercased(), day: parts[6], body: body))
+        case "/api/v1/access/me/permissions" where demo != nil:
+            // Demo als Bauleiter mit Planung und IT-Bearbeitung, damit alle Funktionen sichtbar sind.
+            return json(200, ["bauakten.read", "bauakten.edit", "bauakten.create", "contacts.read", "planning.read", "planning.manage",
+                              "helpdesk.agent"])
+        case "/api/v1/files" where demo != nil:
+            // Eigene Datei ohne Bauakte ankündigen (Anhang einer Antwort im Helpdesk).
+            if let id = (body["id"] as? String)?.lowercased() { files[id] = ((body["sizeBytes"] as? Int) ?? 0, 0) }
+            return json(200, body)
+        case "/api/v1/tickets" where demo != nil:
+            return json(200, helpdesk.list(all: true))
+        case let ticketPath where demo != nil && ticketPath.hasPrefix("/api/v1/tickets/"):
+            let parts = ticketPath.split(separator: "/").map(String.init)
+            switch (parts.count, parts.last) {
+            case (4, "mine"): return json(200, helpdesk.list(all: false))
+            case (4, "device"): return (200, #"{"number":"T-2026-0001"}"#)
+            case (4, _) where method == "PATCH":
+                return helpdesk.update(parts[3].lowercased(), body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
+            case (4, _): return helpdesk.detail(parts[3].lowercased()).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
+            case (5, "comments"): return helpdesk.comment(parts[3].lowercased(), body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
+            case (5, "reopen"): return helpdesk.update(parts[3].lowercased(), body: ["status": "inProgress"]).map { json(200, $0) }
+                ?? problem(404, "NOT_FOUND", "Nicht gefunden")
+            default: return problem(404, "NOT_FOUND", "Nicht gefunden")
+            }
         case let demoPath where demo != nil && demoPath.hasPrefix("/api/v1/planning/dispatch/"):
             return (200, demo?.dispatchBoard(day: CalendarDay.string(Date())) ?? "{}")
         case "/api/v1/planning/mine" where demo != nil, "/api/v1/planning/range" where demo != nil:
@@ -273,6 +321,11 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
          "status":"\(status)","model":null,"osVersion":null,"appVersion":null,"assignedUserId":null,
          "registeredAt":"2026-10-20T06:10:24.7660538+00:00","approvedAt":null,"lastSeenAt":null,"version":1}
         """
+    }
+
+    private func json(_ status: Int, _ object: Any) -> (Int, String) {
+        let data = (try? JSONSerialization.data(withJSONObject: object)) ?? Data("{}".utf8)
+        return (status, String(decoding: data, as: UTF8.self))
     }
 
     private func problem(_ status: Int, _ code: String, _ detail: String) -> (Int, String) {
