@@ -9,7 +9,7 @@ Fertige Bilder für App Store Connect in exakt Apples Pixelmaßen, je Gerät ach
 | `screenshots/ipad-13/` | 2064 × 2752 | iPad 13" (Pflicht, da die App auch auf dem iPad läuft) |
 
 Je Ordner gerahmte Bilder (Markenhintergrund, Überschrift, Geräterahmen) und unter `roh/` die unveränderte Aufnahme –
-beides ist zulässig; empfohlen sind die gerahmten. PNG, ohne Alphakanal, hell, Deutsch, Statusleiste 9:41.
+beides ist zulässig; empfohlen sind die gerahmten. JPEG (Qualität 94, ohne Farbunterabtastung), ohne Alphakanal, hell, Deutsch, Statusleiste 9:41.
 
 ## Neu erzeugen
 

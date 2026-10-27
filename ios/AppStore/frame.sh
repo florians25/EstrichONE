@@ -24,7 +24,7 @@ SUBS=("Einsatz, Route und Aufgaben – auch offline" "Fotos, Bautagebuch, Mänge
       "Kolonnen, Fahrzeuge und Baustellen in Fahrtreihenfolge" "Zuweisen, tauschen, freigeben – mit Konfliktprüfung"
       "Prüfpunkte, Fotos und Unterschrift als PDF" "Problem melden, Antworten im Verlauf" "Anrufen, schreiben, Route starten")
 
-# frame <roh.png> <breite> <höhe> <titel> <unterzeile> <ziel.png> <eckradius-anteil>
+# frame <roh.png> <breite> <höhe> <titel> <unterzeile> <ziel.jpg> <eckradius-anteil>
 frame() {
   local src=$1 w=$2 h=$3 title=$4 sub=$5 out=$6 corner=$7
   local base sw sh srcw srch top title_pt sub_pt radius bezel
@@ -55,7 +55,7 @@ frame() {
     "$TMP/title.png" -gravity north -geometry "+0+$(( base * 8 / 100 ))" -compose over -composite \
     "$TMP/sub.png" -gravity north -geometry "+0+$(( base * 8 / 100 + title_pt * 135 / 100 ))" -compose over -composite \
     "$TMP/device-shadow.png" -gravity north -geometry "+0+$(( top - bezel ))" -compose over -composite \
-    -alpha off -strip "PNG24:$out"
+    -alpha off -strip -quality 94 -sampling-factor 4:4:4 "$out"
 }
 
 mkdir -p "$OUT"/{iphone-6.9,iphone-6.5,ipad-13}/roh
@@ -65,21 +65,21 @@ for index in "${!SCENES[@]}"; do
   phone="$IN/iphone69-$scene-hell.png"
   pad="$IN/ipad13-$scene-hell.png"
   if [ -f "$phone" ]; then
-    "$IM" "$phone" -resize '1320x2868!' -alpha off -strip "PNG24:$OUT/iphone-6.9/roh/$number-$scene.png"
+    "$IM" "$phone" -resize '1320x2868!' -alpha off -strip -quality 94 -sampling-factor 4:4:4 "$OUT/iphone-6.9/roh/$number-$scene.jpg"
     # 6,5": gleiche Breite anteilig (1284×2790), oben und unten je 6 px beschnitten.
-    "$IM" "$phone" -resize '1284x2790!' -gravity center -crop '1284x2778+0+0' +repage -alpha off -strip "PNG24:$OUT/iphone-6.5/roh/$number-$scene.png"
-    frame "$phone" 1320 2868 "${TITLES[$index]}" "${SUBS[$index]}" "$OUT/iphone-6.9/$number-$scene.png" 70
-    frame "$phone" 1284 2778 "${TITLES[$index]}" "${SUBS[$index]}" "$OUT/iphone-6.5/$number-$scene.png" 70
+    "$IM" "$phone" -resize '1284x2790!' -gravity center -crop '1284x2778+0+0' +repage -alpha off -strip -quality 94 -sampling-factor 4:4:4 "$OUT/iphone-6.5/roh/$number-$scene.jpg"
+    frame "$phone" 1320 2868 "${TITLES[$index]}" "${SUBS[$index]}" "$OUT/iphone-6.9/$number-$scene.jpg" 70
+    frame "$phone" 1284 2778 "${TITLES[$index]}" "${SUBS[$index]}" "$OUT/iphone-6.5/$number-$scene.jpg" 70
   fi
   if [ -f "$pad" ]; then
-    "$IM" "$pad" -resize '2064x2752!' -alpha off -strip "PNG24:$OUT/ipad-13/roh/$number-$scene.png"
-    frame "$pad" 2064 2752 "${TITLES[$index]}" "${SUBS[$index]}" "$OUT/ipad-13/$number-$scene.png" 28
+    "$IM" "$pad" -resize '2064x2752!' -alpha off -strip -quality 94 -sampling-factor 4:4:4 "$OUT/ipad-13/roh/$number-$scene.jpg"
+    frame "$pad" 2064 2752 "${TITLES[$index]}" "${SUBS[$index]}" "$OUT/ipad-13/$number-$scene.jpg" 28
   fi
 done
 
-# Prüfung: exakte Pixelmaße, kein Alphakanal.
+# Prüfung: exakte Pixelmaße, kein Alphakanal (JPEG, Qualität 94, ohne Farbunterabtastung – von Apple akzeptiert).
 status=0
-for file in "$OUT"/*/*.png "$OUT"/*/roh/*.png; do
+for file in "$OUT"/*/*.jpg "$OUT"/*/roh/*.jpg; do
   [ -f "$file" ] || continue
   read -r fw fh alpha < <("$IM" "$file" -format '%w %h %A\n' info:)
   case "$file" in
@@ -92,5 +92,5 @@ for file in "$OUT"/*/*.png "$OUT"/*/roh/*.png; do
     status=1
   fi
 done
-echo "Fertig: $(find "$OUT" -name '*.png' | wc -l) Bilder in $OUT"
+echo "Fertig: $(find "$OUT" -name '*.jpg' | wc -l) Bilder in $OUT"
 exit $status

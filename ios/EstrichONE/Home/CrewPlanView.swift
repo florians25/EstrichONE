@@ -140,7 +140,7 @@ struct DispatchView: View {
                     : "Freigegeben \(when) von \(release.releasedByName)"
                 lines.append(AnyView(NoticeLine(tone: release.changedCount > 0 ? .warning : .success, text: text,
                                                 symbol: release.changedCount > 0 ? "arrow.triangle.2.circlepath" : "checkmark.seal",
-                                                actionTitle: plan.canPlan ? (release.changedCount > 0 ? "Erneut freigeben" : "Freigabe") : nil,
+                                                actionTitle: plan.canPlan ? "Freigabe" : nil,
                                                 action: plan.canPlan ? { sheet = .release } : nil)
                     .accessibilityIdentifier("releaseStatus")))
                 for removed in release.removed {
