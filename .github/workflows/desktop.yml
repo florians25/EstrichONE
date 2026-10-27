@@ -69,12 +69,12 @@ jobs:
           Start-Sleep -Seconds 3
           if (Test-Path $exe) { throw "Deinstallation hat $exe nicht entfernt" }
           "Installation, Start und Deinstallation in Ordnung."
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: EstrichONE-Windows-x64
           path: ${{ runner.temp }}\out
           retention-days: 14
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: Bildschirmfoto-Windows
