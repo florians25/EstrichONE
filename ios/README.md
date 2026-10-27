@@ -108,9 +108,10 @@ Debug-Builds haben einen Screenshot-Modus (`EstrichONE/Support/ScreenshotMode.sw
 Datei in ihrem Datencontainer meldet sie, wann ein Bildschirm steht. `scripts/screenshots.sh` nimmt im Simulator
 jeden Bildschirm hell (und dunkel) auf, meldet Abstürze mit Absturzbericht und Hänger und macht mit dem nächsten weiter.
 
-Die CI (`.github/workflows/ios.yml`, Job „Screenshots“) läuft bei Änderungen an der App auf iPhone (hell und dunkel) und
-iPad (hell) parallel, lädt die Bilder als Artefakt hoch und schreibt sie verkleinert ins Protokoll
-(`scripts/shots-to-log.py`). Von Hand: Workflow „iOS“ starten, optional mit eigener Liste von Bildschirmen.
+Die CI (`.github/workflows/ios.yml`, Job „Screenshots“) läuft bei Änderungen an der App parallel auf drei Runnern:
+iPhone in zwei Hälften (Seiten bzw. Formulare, Einrichtung und große Schrift; hell und dunkel) und iPad (hell). Jeder
+Lauf lädt die Bilder als Artefakt hoch und schreibt sie verkleinert ins Protokoll (`scripts/shots-to-log.py`). Von Hand:
+Workflow „iOS“ starten, optional mit eigener Liste von Bildschirmen (dann nur die erste iPhone-Hälfte).
 
 Bildschirme: `heute`, `heute-unten`, `baustellen`, `bauakte`, `bauakte-unten`, `bereich-fotos`, `bereich-aufgaben`,
 `bereich-protokolle`, `bereich-tagebuch`, `bereich-raeume`, `bereich-basisdaten`, `bereich-kontakte`, `bereich-notizen`,

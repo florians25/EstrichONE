@@ -120,17 +120,19 @@ jobs:
   # iPhone (hell und dunkel) und iPad (hell) laufen parallel auf eigenen Runnern – zwei Simulatoren auf einem Runner
   # brauchen wegen knappen Arbeitsspeichers ein Vielfaches. Nur bei Änderungen an der App, parallel zu den Tests.
   screenshots:
-    name: Screenshots ${{ matrix.device == 'ipad' && 'iPad' || 'iPhone' }} (Simulator, Demomodus)
+    name: Screenshots ${{ matrix.device == 'ipad' && 'iPad' || (matrix.device == 'iphone2' && 'iPhone 2/2' || 'iPhone 1/2') }} (Simulator, Demomodus)
     runs-on: macos-15
     timeout-minutes: 25
     if: github.event_name != 'pull_request'
     strategy:
       fail-fast: false
       matrix:
-        device: [iphone, ipad]
+        # iPhone in zwei Hälften (Seiten bzw. Formulare, Einrichtung, große Schrift), damit jeder Lauf unter 15 Minuten bleibt.
+        device: [iphone, iphone2, ipad]
     env:
       DEVICE: ${{ matrix.device }}
-      IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-mitte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,protokoll,bereich-tagebuch,bereich-raeume,raum,bereich-basisdaten,bereich-kontakte,bereich-notizen,tagebuch-neu,mangel-neu,basisdaten-neu,erfassen,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,kunden,kundenkarte,disposition,aufgaben,woche,mehr,sync,meldung-detail,wartung,start,start-adresse,anmelden,heute-gross,bauakte-gross"
+      IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-mitte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,protokoll,bereich-tagebuch,bereich-raeume,raum,bereich-basisdaten,bereich-kontakte,bereich-notizen,kunden,kundenkarte,disposition,mehr,sync,wartung"
+      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung-detail,start,start-adresse,anmelden,heute-gross,bauakte-gross"
       IPAD_SCENES: "heute,baustellen,bauakte,kunden,disposition"
     steps:
       - uses: actions/checkout@v5
@@ -142,6 +144,7 @@ jobs:
         env:
           BEFORE: ${{ github.event.before }}
           IPAD_INPUT: ${{ inputs.ipad }}
+          SCENES_INPUT: ${{ inputs.scenes }}
         run: |
           run=true
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
@@ -150,6 +153,8 @@ jobs:
             fi
           fi
           if [ "$DEVICE" = "ipad" ] && [ "$IPAD_INPUT" = "false" ]; then run=false; fi
+          # Eigene Liste beim Start von Hand: nur die erste iPhone-Hälfte nimmt sie auf.
+          if [ "$DEVICE" = "iphone2" ] && [ -n "$SCENES_INPUT" ]; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
           echo "Screenshots ($DEVICE): $run"
 
@@ -206,11 +211,11 @@ jobs:
             --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
           xcrun simctl install "$UDID" "$APP"
           echo "Simulator bereit nach $(( SECONDS - begin )) s"
-          if [ "$DEVICE" = "ipad" ]; then
-            bash ios/scripts/screenshots.sh "$UDID" ipad "$IPAD_SCENES" "$RUNNER_TEMP/shots" 0
-          else
-            bash ios/scripts/screenshots.sh "$UDID" iphone "${SCENES_INPUT:-$IPHONE_SCENES}" "$RUNNER_TEMP/shots" 1
-          fi
+          case "$DEVICE" in
+            ipad) bash ios/scripts/screenshots.sh "$UDID" ipad "$IPAD_SCENES" "$RUNNER_TEMP/shots" 0 ;;
+            iphone2) bash ios/scripts/screenshots.sh "$UDID" iphone "$IPHONE_SCENES_2" "$RUNNER_TEMP/shots" 1 ;;
+            *) bash ios/scripts/screenshots.sh "$UDID" iphone "${SCENES_INPUT:-$IPHONE_SCENES}" "$RUNNER_TEMP/shots" 1 ;;
+          esac
           ls "$RUNNER_TEMP/shots" | wc -l
 
       - name: Screenshots sichern
