@@ -142,9 +142,10 @@ Die App ist für Pushnachrichten vorbereitet (`EstrichONE/App/PushNotifications.
   Abgelehnt: Hinweis mit Weg in die Einstellungen; alles bleibt im Postfach.
 - **APNs-Registrierung** nach Zustimmung; das Gerätetoken geht an `POST /api/v1/notifications/devices`
   (`platform: "ios"`, `sandbox` = Debug-Build, Bundle-ID, Gerätename, App-Version). Beim Abmelden
-  `DELETE /api/v1/notifications/devices/{token}`. Server-Seite und Einrichtung: `docs/benachrichtigungen.md`.
+  `DELETE /api/v1/notifications/devices?token=…`. Server-Seite und Einrichtung: `docs/benachrichtigungen.md`.
 - **Tippen** auf eine Pushnachricht öffnet das Objekt (Bauakte, Meldung, Planung des Tages, Aufgaben) – Link aus dem
-  Payload (`link`, z. B. `/bauakten/{id}`) oder `objectType`/`objectId`; Zuordnung in `NotificationRoute` (getestet).
+  Payload (`link`, z. B. `/bauakten/{id}`, `/it-center/helpdesk/{id}`, `/planung/wer-faehrt-wohin?tag=…`) oder
+  `objectType`/`objectId`; Zuordnung in `NotificationRoute` (getestet). `notificationId` wird dabei als gelesen markiert.
 - **Postfach** mit Glocke und Zahl auf der Heute-Seite, Eintrag unter Mehr, Abzeichen am App-Symbol; gelesen/ungelesen,
   „Alle gelesen“. Im Vordergrund erscheinen Pushnachrichten als Banner.
 - **Demomodus:** Beispiel-Benachrichtigungen im Postfach; „Beispiel senden“ zeigt nach wenigen Sekunden eine echte lokale

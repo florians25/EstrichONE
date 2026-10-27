@@ -105,8 +105,9 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         switch (objectType?.lowercased(), objectId) {
         case let ("bauakte"?, id?): self = .bauakte(id)
         case let ("ticket"?, id?): self = .ticket(id)
-        case ("assignment"?, _), ("plan"?, _), ("planday"?, _): self = .planning(day: nil)
+        case ("assignment"?, _), ("plan"?, _), ("planday"?, _), ("planning"?, _): self = .planning(day: nil)
         case ("workitem"?, _), ("task"?, _): self = .tasks
+        case ("approval"?, _): self = .inbox
         default:
             guard link != nil else { return nil }
             self = .inbox
@@ -118,7 +119,8 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         // estrichone://bauakte/{id} → host „bauakte“ + Pfad; https://server/bauakten/{id} → nur Pfad.
         var parts = components.path.split(separator: "/").map(String.init)
         if components.scheme == "estrichone", let host = components.host { parts.insert(host, at: 0) }
-        if parts.first == "app" { parts.removeFirst() }
+        // Präfixe der Weboberfläche ohne eigene Bedeutung („/app/…“, „/it-center/helpdesk/…“).
+        while let first = parts.first, ["app", "it-center"].contains(first.lowercased()) { parts.removeFirst() }
         guard let head = parts.first?.lowercased() else { return nil }
         let id = parts.dropFirst().first.flatMap { UUID(uuidString: $0) }
         let day = components.queryItems?.first { $0.name == "day" || $0.name == "tag" }?.value
@@ -177,8 +179,8 @@ extension AuthorizedClient {
         let _: NoContent = try await post("notifications/devices", body: registration)
     }
 
-    /// Meldet das Gerät ab (beim Abmelden oder wenn Pushnachrichten ausgeschaltet werden).
+    /// Meldet das Gerät ab (beim Abmelden oder wenn Pushnachrichten ausgeschaltet werden): `DELETE /notifications/devices?token=`.
     public func unregisterPushDevice(token: String) async throws(APIError) {
-        let _: NoContent = try await send(APIRequest(method: "DELETE", path: "notifications/devices/\(token)"))
+        let _: NoContent = try await send(APIRequest(method: "DELETE", path: "notifications/devices", query: [URLQueryItem(name: "token", value: token)]))
     }
 }

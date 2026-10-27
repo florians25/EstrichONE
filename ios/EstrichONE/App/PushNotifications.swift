@@ -25,6 +25,8 @@ final class PushCenter {
     private(set) var registrationError: String?
     /// Ziel einer angetippten Benachrichtigung, das die Hauptansicht öffnet.
     var pendingRoute: NotificationRoute?
+    /// Angetippte Benachrichtigung, die beim Server als gelesen markiert wird.
+    var pendingReadId: UUID?
     /// Ungelesene Einträge im Postfach (Glocke, Abzeichen am App-Symbol).
     private(set) var unreadCount = 0
 
@@ -104,7 +106,8 @@ final class PushCenter {
     }
 
     /// Angetippte Benachrichtigung öffnen.
-    func open(link: String?, objectType: String?, objectId: String?) {
+    func open(link: String?, objectType: String?, objectId: String?, notificationId: String?) {
+        pendingReadId = notificationId.flatMap { UUID(uuidString: $0) }
         pendingRoute = NotificationRoute(link: link, objectType: objectType, objectId: objectId.flatMap { UUID(uuidString: $0) }) ?? .inbox
     }
 
@@ -115,7 +118,7 @@ final class PushCenter {
         content.body = "Kolonne Huber: 07:30 Praxis Dr. Maier, 10:30 EFH Schneider."
         content.sound = .default
         content.threadIdentifier = "plan"
-        content.userInfo = ["link": "/planung?day=morgen", "category": "plan"]
+        content.userInfo = ["link": "/planung/wer-faehrt-wohin?tag=morgen", "category": "planning"]
         let trigger = UNTimeIntervalNotificationTrigger(timeInterval: 4, repeats: false)
         UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: trigger)) { _ in }
     }
@@ -136,8 +139,9 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
         let link = info["link"] as? String
         let objectType = info["objectType"] as? String
         let objectId = info["objectId"] as? String
+        let notificationId = info["notificationId"] as? String
         Task { @MainActor in
-            PushCenter.shared.open(link: link, objectType: objectType, objectId: objectId)
+            PushCenter.shared.open(link: link, objectType: objectType, objectId: objectId, notificationId: notificationId)
         }
         completionHandler()
     }

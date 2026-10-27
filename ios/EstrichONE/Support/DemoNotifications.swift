@@ -17,7 +17,7 @@ final class DemoNotifications {
 
     private var items: [Item] = [
         Item(id: "0193a1b2-de00-7000-8000-00000000a001", category: "plan", urgency: "high", title: "Plan für morgen freigegeben",
-             body: "Kolonne Huber: 07:30 Praxis Dr. Maier, 10:30 EFH Schneider.", link: "/planung?day=morgen", minutesAgo: 12, read: false),
+             body: "Kolonne Huber: 07:30 Praxis Dr. Maier, 10:30 EFH Schneider.", link: "/planung/wer-faehrt-wohin?tag=morgen", minutesAgo: 12, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a002", category: "ticket", urgency: "normal", title: "Antwort zu T-2026-0007",
              body: "IT-Support: Bitte einmal die App öffnen und im WLAN warten.", link: "/helpdesk/\(DemoContent.ticketId)", minutesAgo: 47, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a003", category: "broadcast", urgency: "normal", title: "Nachricht aus dem Büro",

@@ -15,6 +15,8 @@ struct NotificationTests {
         #expect(NotificationRoute(link: "/bauakten/\(id.uuidString.lowercased())") == .bauakte(id))
         #expect(NotificationRoute(link: "estrichone://bauakte/\(id.uuidString)") == .bauakte(id))
         #expect(NotificationRoute(link: "https://estrich.example/app/helpdesk/\(id.uuidString)") == .ticket(id))
+        #expect(NotificationRoute(link: "/it-center/helpdesk/\(id.uuidString)") == .ticket(id))
+        #expect(NotificationRoute(link: "/planung/wer-faehrt-wohin?tag=2026-11-03") == .planning(day: "2026-11-03"))
         #expect(NotificationRoute(link: "/planung/cockpit?day=2026-11-04") == .planning(day: "2026-11-04"))
         #expect(NotificationRoute(link: nil, objectType: "Bauakte", objectId: id) == .bauakte(id))
         #expect(NotificationRoute(link: "/irgendwo") == .inbox)
@@ -37,7 +39,7 @@ struct NotificationTests {
         let crewA = UUID(uuidString: "0193a1b2-0000-7000-8000-0000000c0001")!
         let crewB = UUID(uuidString: "0193a1b2-0000-7000-8000-0000000c0002")!
         transport.on("POST", "/api/v1/notifications/devices", reply: .noContent)
-        transport.on("DELETE", "/api/v1/notifications/devices/abc123", reply: .noContent)
+        transport.on("DELETE", "/api/v1/notifications/devices", reply: .noContent)
         transport.on("POST", "/api/v1/planning/releases",
                      reply: .json(#"[{"day":"2026-11-04","releasedAt":"2026-11-03T16:00:00Z","releasedByName":"Büro","note":"Bitte beachten","changedCount":0,"removed":[]}]"#))
         transport.on("DELETE", "/api/v1/planning/releases/2026-11-04", reply: .noContent)
@@ -58,6 +60,7 @@ struct NotificationTests {
         let swapped = try await client.apply(.swapCrews(day: "2026-11-04", crewA: crewA, crewB: crewB, text: "Huber ↔ Kaya"))
         #expect(swapped.plan?.day == "2026-11-04")
 
+        #expect(transport.requests[1].url?.query() == "token=abc123")
         let bodies = transport.requests.map { $0.jsonBody() }
         #expect(bodies[0]["platform"] as? String == "ios" && bodies[0]["token"] as? String == "abc123" && bodies[0]["sandbox"] as? Bool == true)
         #expect(bodies[2]["from"] as? String == "2026-11-04" && bodies[2]["note"] as? String == "Bitte beachten")

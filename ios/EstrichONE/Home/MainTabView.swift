@@ -59,6 +59,12 @@ struct MainTabView: View {
         .task { push.refreshPermission() }
         // Neues APNs-Token (oder nach der Anmeldung) beim Server registrieren.
         .task(id: push.token) { await push.upload(model: model) }
+        .task(id: push.pendingReadId) {
+            guard let id = push.pendingReadId, let client = model.active?.client else { return }
+            try? await client.markNotificationRead(id)
+            push.pendingReadId = nil
+            if let inbox = try? await client.notifications() { push.setUnread(inbox.unreadCount) }
+        }
         // Angetippte Benachrichtigung: Objekt als Blatt über dem aktuellen Reiter öffnen.
         .sheet(item: $push.pendingRoute) { route in
             NavigationStack {
