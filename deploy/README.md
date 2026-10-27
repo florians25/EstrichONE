@@ -133,7 +133,10 @@ curl https://<adresse>/health/ready   # 200 = API und Datenbank bereit
 
 ## Sicherung (Backup)
 
-Der Dienst `backup` sichert **täglich um 22:30** (`BACKUP_TIME`) Datenbank und Dateien verschlüsselt mit restic.
+Ausführlich – Topologien (RZ ↔ zuhause), Backup Center, Wiederherstellen, Worst Case, Notfallblatt: **[docs/backup.md](../docs/backup.md)**.
+
+Der Dienst `backup` sichert **täglich um 22:30** (`BACKUP_TIME`, im Backup Center änderbar) voll: Datenbank, Dateien,
+Schlüsselbund und Konfiguration, verschlüsselt mit restic; optional zusätzlich inkrementell.
 Sonntags kommen dazu: Aufbewahrungsregeln anwenden, Integrität prüfen und **eine echte Wiederherstellung in eine
 Testdatenbank**. Den Zustand zeigt `GET /api/v1/backup/status` (später das Backup Center). `/health/ready` meldet
 „Degraded“, wenn die letzte erfolgreiche Sicherung älter als 36 Stunden ist.
@@ -144,8 +147,9 @@ Testdatenbank**. Den Zustand zeigt `GET /api/v1/backup/status` (später das Back
 | `ESTRICHONE_BACKUP_DIR` | Hauptziel auf dem Host, idealerweise zweite Festplatte oder eingebundenes NAS |
 | `BACKUP_REPOSITORY_2` | **dringend empfohlen:** zweites Ziel an anderem Ort, z. B. `sftp:backup@nas2.firma.de:/estrichone` (Schlüssel in `ESTRICHONE_SSH_DIR`) |
 
-Gesichert werden Datenbank und Dateien. **Nicht** gesichert wird die `.env` (Passwörter). Sie gehört getrennt in
-einen Passwortmanager.
+Eine Kopie der `.env` (`data/config/estrichone.env`, von setup.sh bzw. dem Installer angelegt) ist Teil jeder Sicherung –
+damit kann der Installer-Modus `restore` einen neuen Server vollständig einrichten. Das Backup-Passwort selbst gehört
+zusätzlich auf das Notfallblatt (Backup Center → Notfall) bzw. in einen Passwortmanager.
 
 ```bash
 docker compose exec backup estrichone-backup run           # jetzt sichern
@@ -154,6 +158,9 @@ docker compose exec backup estrichone-backup check 100%    # alles vollständig 
 ```
 
 ## Wiederherstellen (auch auf einem neuen Server)
+
+Am einfachsten: im Backup Center (*Sicherungen* → *Wiederherstellen*) bzw. auf einem neuen Server mit dem Installer-Modus
+`restore` ([docs/backup.md](../docs/backup.md#worst-case-server-komplett-ausgefallen)). Von Hand mit diesem Repository:
 
 Voraussetzungen: Docker, dieses Repository, die gesicherte `.env` (bzw. `RESTIC_PASSWORD`) und Zugriff auf das
 Backup-Ziel.

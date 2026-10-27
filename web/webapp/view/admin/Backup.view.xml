@@ -4,22 +4,119 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.backup}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Datenbank und Dateien, verschlüsselt mit Prüfsummen"/></f:expandedContent>
+				<f:expandedContent><Text text="Täglich eine Vollsicherung: Datenbank, Einstellungen und Schlüssel, Fotos, Dokumente, Videos – verschlüsselt, mit Prüfsummen"/></f:expandedContent>
 				<f:actions>
+					<Button text="Notfallblatt" icon="sap-icon://print" press=".onEmergencySheet" enabled="{= !!${view>/s/configured} }"/>
 					<Button text="{= ${view>/s/runRequested} ? 'Sicherung angefordert …' : 'Jetzt sichern' }" icon="sap-icon://upload-to-cloud" type="Emphasized"
-						enabled="{= !!${view>/s} &amp;&amp; !${view>/s/runRequested} &amp;&amp; ${view>/s/configured} }" press=".onRun"/>
+						enabled="{= !!${view>/s} &amp;&amp; !${view>/s/runRequested} &amp;&amp; ${view>/s/configured} &amp;&amp; !${view>/restore/active} }" press=".onRun"/>
 				</f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
 			<VBox visible="{= !!${view>/s} }">
-				<MessageStrip text="{view>/s/summary}" type="{= ${view>/s/healthy} ? 'Success' : 'Error' }" showIcon="true" class="sapUiSmallMarginBottom"/>
-				<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Verlauf">
-					<Label text="Letzte Sicherung"/><ObjectStatus text="{view>/run/text}" state="{view>/run/state}"/>
-					<Label text="Letzte erfolgreiche"/><ObjectStatus text="{view>/success/text}" state="{view>/success/state}"/>
-					<Label text="Integritätsprüfung"/><ObjectStatus text="{view>/check/text}" state="{view>/check/state}"/>
-					<Label text="Wiederherstellungstest"/><ObjectStatus text="{view>/restore/text}" state="{view>/restore/state}"/>
-				</form:SimpleForm>
+				<MessageStrip text="{view>/restore/text}" type="{view>/restore/type}" showIcon="true" class="sapUiSmallMarginBottom" visible="{= !!${view>/restore/text} }"/>
+				<ProgressIndicator percentValue="{view>/restore/percent}" displayValue="{view>/restore/phase}" state="Information" visible="{= !!${view>/restore/active} }"
+					class="sapUiSmallMarginBottom"/>
+				<MessageStrip text="{view>/s/summary}" type="{= ${view>/s/healthy} ? 'Success' : ${view>/s/configured} ? 'Error' : 'Warning' }" showIcon="true"
+					class="sapUiSmallMarginBottom"/>
+				<IconTabBar id="tabs" selectedKey="{view>/tab}" expandable="false" applyContentPadding="false" headerBackgroundDesign="Transparent">
+					<items>
+						<IconTabFilter key="status" text="Übersicht">
+							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Verlauf">
+								<Label text="Letzte Sicherung"/><ObjectStatus text="{view>/run/text}" state="{view>/run/state}"/>
+								<Label text="Letzte erfolgreiche"/><ObjectStatus text="{view>/success/text}" state="{view>/success/state}"/>
+								<Label text="Integritätsprüfung"/><ObjectStatus text="{view>/check/text}" state="{view>/check/state}"/>
+								<Label text="Wiederherstellungstest"/><ObjectStatus text="{view>/test/text}" state="{view>/test/state}"/>
+								<Label text="Zeitplan"/><Text text="{view>/planText}"/>
+							</form:SimpleForm>
+							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Inhalt jeder Sicherung">
+								<Label text="Daten"/><Text text="Datenbank (alle Bauakten, Kontakte, Planung, Zeiten, Benutzer, Archiv-Nachweise)"/>
+								<Label text="Dateien"/><Text text="Fotos, Dokumente, Videos, Pläne – Originale und Vorschaubilder"/>
+								<Label text="Einstellungen"/><Text text="Konfiguration des Servers (.env), Zeitplan, Backup-Ziele, Schlüsselbund (Anmeldungen, Push-Schlüssel – verschlüsselt)"/>
+								<Label text="Schutz"/><Text text="AES-256 mit Repository-Passwort, Prüfsumme je Block, wöchentliche Prüfung und Probe-Wiederherstellung"/>
+							</form:SimpleForm>
+						</IconTabFilter>
+						<IconTabFilter key="snapshots" text="Sicherungen" count="{view>/snapshotCount}">
+							<VBox class="sapUiSmallMarginTop">
+								<HBox alignItems="Center" class="sapUiTinyMarginBottom">
+									<Label text="Quelle" class="sapUiSmallMarginEnd"/>
+									<Select selectedKey="{view>/source}" items="{view>/repositories}" change=".onSource" width="22rem">
+										<core:Item key="{view>key}" text="{view>label}"/>
+									</Select>
+								</HBox>
+								<Table items="{view>/snapshots}" noDataText="Noch keine Sicherung – die Liste füllt der Backup-Dienst nach jedem Lauf." growing="true" growingThreshold="30"
+									sticky="ColumnHeaders">
+									<columns>
+										<Column><Text text="Zeitpunkt"/></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Dateien"/></Column>
+										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Umfang · neu"/></Column>
+										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Kennung"/></Column>
+										<Column hAlign="End"><Text text=""/></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<cells>
+												<ObjectIdentifier title="{view>when}" text="{view>age}"/>
+												<ObjectStatus text="{= ${view>kind} === 'full' ? 'Vollsicherung' : 'Inkrementell' }" state="{= ${view>kind} === 'full' ? 'Success' : 'None' }"/>
+												<Text text="{view>files}"/>
+												<Text text="{view>size}"/>
+												<Text text="{view>shortId}"/>
+												<HBox justifyContent="End">
+													<Button text="Datei …" icon="sap-icon://document" type="Transparent" press=".onRestoreFile" tooltip="Einzelne Datei (Foto, Dokument) aus dieser Sicherung zurückholen"
+														enabled="{= !${view>/restore/active} }"/>
+													<Button text="Wiederherstellen" icon="sap-icon://undo" press=".onRestoreFull" enabled="{= !${view>/restore/active} }" class="sapUiTinyMarginBegin"/>
+												</HBox>
+											</cells>
+										</ColumnListItem>
+									</items>
+								</Table>
+							</VBox>
+						</IconTabFilter>
+						<IconTabFilter key="settings" text="Zeitplan und Meldungen">
+							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Zeitplan">
+								<Label text="Tägliche Vollsicherung um" required="true"/>
+								<TimePicker value="{view>/p/dailyTime}" valueFormat="HH:mm" displayFormat="HH:mm" width="10rem"/>
+								<Label text="Zusätzlich inkrementell"/>
+								<Select selectedKey="{view>/p/incrementalKey}" width="16rem">
+									<core:Item key="0" text="aus"/>
+									<core:Item key="1" text="stündlich"/>
+									<core:Item key="2" text="alle 2 Stunden"/>
+									<core:Item key="4" text="alle 4 Stunden"/>
+									<core:Item key="6" text="alle 6 Stunden"/>
+									<core:Item key="12" text="alle 12 Stunden"/>
+								</Select>
+								<Label text="Wöchentliche Probe-Wiederherstellung"/><Switch state="{view>/p/weeklyRestoreTest}" customTextOn="Ja" customTextOff="Nein"/>
+							</form:SimpleForm>
+							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Aufbewahrung (lokales Hauptziel)">
+								<Label text="Tägliche Stände"/><StepInput value="{view>/p/keepDaily}" min="7" max="365" width="10rem"/>
+								<Label text="Wöchentliche Stände"/><StepInput value="{view>/p/keepWeekly}" min="0" max="520" width="10rem"/>
+								<Label text="Monatliche Stände"/><StepInput value="{view>/p/keepMonthly}" min="0" max="240" width="10rem"/>
+								<Label text="Jährliche Stände"/><StepInput value="{view>/p/keepYearly}" min="0" max="30" width="10rem"/>
+								<Label text=""/><Text text="Gekoppelte Backup-Ziele sind „nur anhängen“ und behalten alles (Schutz vor Verschlüsselungstrojanern)."/>
+							</form:SimpleForm>
+							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Pushnachrichten an Administratoren (Recht backup.manage)">
+								<Label text="Meldungen"/><Switch state="{view>/p/notifyAdmins}" customTextOn="Ein" customTextOff="Aus"/>
+								<Label text="Auch erfolgreiche Sicherungen"/><Switch state="{view>/p/notifyOnSuccess}" enabled="{view>/p/notifyAdmins}" customTextOn="Ja" customTextOff="Nein"/>
+								<Label text=""/><Text text="Fehler, Ausfall des Backup- oder Archiv-Servers (einmal, dann täglich) und „wieder in Ordnung“ werden immer gemeldet, solange Meldungen eingeschaltet sind."/>
+								<Label text=""/><Button text="Speichern" type="Emphasized" press=".onSaveSettings" width="10rem"/>
+							</form:SimpleForm>
+						</IconTabFilter>
+						<IconTabFilter key="emergency" text="Notfall">
+							<VBox class="sapUiSmallMargin">
+								<MessageStrip type="Warning" showIcon="true" class="sapUiSmallMarginBottom"
+									text="Notfallblatt jetzt ausdrucken und getrennt vom Server aufbewahren (Tresor). Es enthält den Wiederherstellungsschlüssel – ohne ihn sind die Sicherungen wertlos."/>
+								<Title text="Server komplett ausgefallen – Neuinstallation aus der Sicherung" level="H3" class="sapUiTinyMarginBottom"/>
+								<Text text="1. Neuen Linux-Server mit Docker bereitstellen und die Domain auf ihn zeigen lassen. 2. Den Befehl unten ausführen. 3. Quelle (Ordner oder Zugang vom Notfallblatt) und Wiederherstellungsschlüssel eingeben – der Installer holt die letzte Sicherung, stellt alles her und startet EstrichONE."/>
+								<Input value="{view>/restoreCommand}" editable="false" class="sapUiSmallMarginTopBottom"/>
+								<HBox>
+									<Button text="Notfallblatt (PDF)" icon="sap-icon://print" type="Emphasized" press=".onEmergencySheet"/>
+									<Button text="Befehl kopieren" icon="sap-icon://copy" press=".onCopyCommand" class="sapUiTinyMarginBegin"/>
+								</HBox>
+							</VBox>
+						</IconTabFilter>
+					</items>
+				</IconTabBar>
 			</VBox>
 		</f:content>
 	</f:DynamicPage>

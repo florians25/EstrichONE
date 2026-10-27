@@ -34,6 +34,24 @@
 		reverse_proxy api:8080
 	}
 
+	# Server nicht erreichbar (Neustart, Absturz, Update): API-Aufrufe bekommen Problem-JSON, Seiten die Störungsseite
+	# (deploy/fallback, docs/backup.md). Antworten der API selbst – auch 503 MAINTENANCE – reicht Caddy unverändert durch.
+	handle_errors 502 503 504 {
+		@api path /api/* /health/*
+		handle @api {
+			header Content-Type "application/problem+json; charset=utf-8"
+			header Retry-After 30
+			header Cache-Control no-store
+			respond `{"type":"about:blank","title":"Server nicht erreichbar","status":{err.status_code},"detail":"EstrichONE ist gerade nicht erreichbar. Bitte in Kürze erneut versuchen.","code":"SERVER_UNAVAILABLE"}` {err.status_code}
+		}
+		handle {
+			root * /srv
+			header Cache-Control no-store
+			rewrite * /stoerung.html
+			file_server
+		}
+	}
+
 	handle /health/* {
 		reverse_proxy api:8080
 	}

@@ -56,6 +56,12 @@ public static class ArchiveServer
         {
             builder.Services.AddSingleton<RestServerHost>();
             builder.Services.AddHostedService(provider => provider.GetRequiredService<RestServerHost>());
+            // „Ziel zieht“: zuhause hinter NAT – verbindet sich ausgehend mit dem Server und spiegelt dessen Repository.
+            if (options.PullFrom is not null || File.Exists(options.PathOf(MirrorPuller.ConfigFile)))
+            {
+                builder.Services.AddSingleton<MirrorPuller>();
+                builder.Services.AddHostedService(provider => provider.GetRequiredService<MirrorPuller>());
+            }
         }
 
         builder.WebHost.ConfigureKestrel(kestrel =>

@@ -5,12 +5,12 @@ import MessageBox from "sap/m/MessageBox";
 import { apiUrl, del, get, post } from "../../util/api";
 import { dateTime, fileSize } from "../../util/format";
 import { openForm } from "../../util/forms";
-import type { BackupTargetDto } from "../../util/infraModels";
+import type { BackupMirrorDto, BackupMirrorsResponse, BackupTargetDto, CreateBackupMirrorResponse } from "../../util/infraModels";
 
 /** Backup Center › Backup-Ziele: koppeln per Code, Status je Ziel, Notfallzugang. @namespace estrichone.controller.admin */
 export default class BackupTargets extends BaseController {
 	onInit(): void {
-		this.local({ items: [], busy: false });
+		this.local({ items: [], busy: false, mirrors: [], mirrorsAvailable: false });
 	}
 
 	onRouteMatched(): void { void this.load(); }
@@ -19,6 +19,7 @@ export default class BackupTargets extends BaseController {
 
 	private async load(): Promise<void> {
 		this.model().setProperty("/busy", true);
+		void this.loadMirrors();
 		const items = await this.run(() => get<BackupTargetDto[]>("backup/targets"));
 		this.model().setProperty("/busy", false);
 		this.model().setProperty("/items", (items ?? []).map((t) => ({
@@ -33,6 +34,44 @@ export default class BackupTargets extends BaseController {
 				: "Ziel gerade nicht erreichbar",
 			remoteState: !t.remote ? "Warning" : t.remote.appendOnly && t.remote.serverRunning ? "Success" : "Warning",
 		})));
+	}
+
+	private async loadMirrors(): Promise<void> {
+		const r = await this.run(() => get<BackupMirrorsResponse>("backup/mirrors"));
+		this.model().setProperty("/mirrorsAvailable", r?.available ?? false);
+		this.model().setProperty("/mirrors", (r?.mirrors ?? []).map((m) => ({
+			...m,
+			title: m.targetName ? `${m.name} (${m.targetName})` : m.name,
+			stateText: !m.paired ? `Wartet auf Kopplung – Code gültig bis ${dateTime(m.codeExpiresAt)}`
+				: m.reachable ? `Verbunden · zuletzt gemeldet ${dateTime(m.lastSeenAt)}` : `Nicht erreichbar – zuletzt gemeldet ${m.lastSeenAt ? dateTime(m.lastSeenAt) : "nie"}`,
+			state: !m.paired ? "Information" : m.reachable && !m.lastReport?.error ? "Success" : "Error",
+			detail: m.lastReport
+				? `${m.lastReport.snapshots} Sicherungsstände · ${fileSize(m.lastReport.bytes)} gespiegelt${m.lastReport.diskFreeBytes != null ? ` · ${fileSize(m.lastReport.diskFreeBytes)} frei` : ""}${m.lastReport.error ? ` · Fehler: ${m.lastReport.error}` : ""}`
+				: "Noch kein Abgleich",
+		})));
+	}
+
+	async onCreateMirror(): Promise<void> {
+		const result = await openForm<CreateBackupMirrorResponse>({
+			title: "Backup-Ziel, das zieht", submitText: "Code erzeugen",
+			fields: [
+				{ key: "intro", type: "info", label: "Erzeugt einen Einmal-Code (24 Stunden gültig) und den Befehl für den Rechner zuhause." },
+				{ key: "name", label: "Bezeichnung", placeholder: "z. B. NAS zuhause" },
+			],
+			submit: (v) => post<CreateBackupMirrorResponse>("backup/mirrors", { name: String(v.name ?? "").trim() || null }),
+		});
+		if (result) {
+			MessageBox.information(`Auf dem Rechner zuhause (Linux mit Docker) einmal ausführen:\n\n${result.command}\n\nKopplungscode: ${result.code}\n\n`
+				+ "Der Rechner holt danach stündlich neue Sicherungen und meldet sich hier.", { title: "Befehl für das Backup-Ziel" });
+			void this.loadMirrors();
+		}
+	}
+
+	async onRemoveMirror(e: Event): Promise<void> {
+		const m = (e.getSource() as Control).getBindingContext("view")?.getObject() as BackupMirrorDto;
+		if (!await this.confirm(`„${m.name}“ entfernen? Der Rechner kann danach nichts mehr abrufen; seine Kopie bleibt dort erhalten.`, { action: "Entfernen", danger: true })) return;
+		await this.run(() => del(`backup/mirrors/${m.id}`), "Entfernt");
+		void this.loadMirrors();
 	}
 
 	private row(e: Event): BackupTargetDto {

@@ -9,11 +9,22 @@
 # Betriebsart: -e ESTRICHONE_MODE=proxy  – hinter Nginx Proxy Manager o. Ä.: nur HTTP auf 8181, HTTPS macht der Proxy
 #              -e ESTRICHONE_MODE=direkt – Caddy macht HTTPS selbst (8143) und leitet 8181 dorthin weiter
 # Erneut ausführen = auf die Version dieses Installers aktualisieren; Daten und .env bleiben erhalten.
+#
+# Neuinstallation aus einer Sicherung (Server ausgefallen, neue Hardware) – Notfallblatt aus dem Backup Center bereithalten:
+#   docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone:/opt/estrichone \
+#     ghcr.io/florians25/estrichone-installer:<version> restore
+#   Ohne Rückfragen: -e ESTRICHONE_RESTORE_FROM=/mnt/usb/estrichone-backup (Ordner auf diesem Rechner) bzw.
+#     rest:https://… / sftp:… (Zugang vom Notfallblatt), -e ESTRICHONE_RESTORE_FINGERPRINT=… (nur rest:https),
+#     -e ESTRICHONE_BACKUP_PASSWORD=… (Wiederherstellungsschlüssel), optional -e ESTRICHONE_DOMAIN=… (neue Adresse).
+# Deutsche Anführungszeichen („…“) in Meldungen sind beabsichtigt.
+# shellcheck disable=SC1111,SC1112
 set -eu
 
 # Weitere Rechner: Archivserver bzw. Backup-Ziel (siehe peer.sh)
+RESTORE=0
 case "${1:-}" in
   archiv|archive|backup-ziel|backup-target) exec estrichone-peer "$@" ;;
+  restore|wiederherstellen) RESTORE=1 ;;
 esac
 
 DIR=/opt/estrichone
@@ -55,6 +66,60 @@ docker version >/dev/null 2>&1 || fail "Docker ist über den Socket nicht erreic
   || fail "Bitte das Installationsverzeichnis einbinden: -v /opt/estrichone:/opt/estrichone (gleicher Pfad innen und außen)."
 
 echo "EstrichONE $VERSION – Installation nach $DIR"
+REGISTRY_PREFIX="${ESTRICHONE_REGISTRY:-ghcr.io/florians25}"
+
+# Neuinstallation aus einer Sicherung: Konfiguration (.env) aus der neuesten Sicherung holen, danach weiter wie ein Update.
+if [ "$RESTORE" = "1" ]; then
+  if [ -f "$DIR/.env" ] && [ "${ESTRICHONE_RESTORE_FORCE:-}" != "1" ]; then
+    fail "In $DIR gibt es schon eine Installation. Wiederherstellen in eine bestehende Installation: Backup Center → Sicherungen → „Wiederherstellen“ (oder -e ESTRICHONE_RESTORE_FORCE=1)."
+  fi
+  echo
+  echo "Wiederherstellung aus einer Sicherung – bitte das Notfallblatt bereithalten."
+  ask ESTRICHONE_RESTORE_FROM "Quelle: Ordner auf diesem Rechner (z. B. /mnt/usb/estrichone-backup) oder Zugang vom Notfallblatt (rest:https://… bzw. sftp:…)" ""
+  [ -n "$ESTRICHONE_RESTORE_FROM" ] || fail "Keine Quelle angegeben."
+  if [ -z "${ESTRICHONE_BACKUP_PASSWORD:-}" ] && [ -t 0 ]; then
+    printf 'Wiederherstellungsschlüssel (Repository-Passwort, Leerzeichen egal): '
+    stty -echo 2>/dev/null || true; read -r ESTRICHONE_BACKUP_PASSWORD || true; stty echo 2>/dev/null || true; echo
+  fi
+  [ -n "${ESTRICHONE_BACKUP_PASSWORD:-}" ] || fail "Kein Wiederherstellungsschlüssel angegeben."
+  BACKUP_IMAGE="$REGISTRY_PREFIX/estrichone-backup:$VERSION"
+  docker pull -q "$BACKUP_IMAGE" >/dev/null 2>&1 || docker image inspect "$BACKUP_IMAGE" >/dev/null 2>&1 || fail "Image $BACKUP_IMAGE nicht verfügbar."
+  mkdir -p "$DIR/ssh"
+  RESTORE_REPO="$ESTRICHONE_RESTORE_FROM"
+  set -- --rm -e RESTIC_CACHE_DIR=/tmp/cache -e BACKUP_REPOSITORY=/unused
+  case "$ESTRICHONE_RESTORE_FROM" in
+    /*)
+      set -- "$@" -v "$ESTRICHONE_RESTORE_FROM:/restore-source:ro"
+      RESTORE_REPO=/restore-source
+      RESTORE_MOUNT="$ESTRICHONE_RESTORE_FROM:/restore-source:ro"
+      ;;
+    rest:https://*)
+      ask ESTRICHONE_RESTORE_FINGERPRINT "Fingerabdruck des Backup-Ziels (vom Notfallblatt)" ""
+      [ -n "$ESTRICHONE_RESTORE_FINGERPRINT" ] || fail "Ohne Fingerabdruck kann dem Backup-Ziel nicht vertraut werden."
+      HOSTPORT="$(echo "$ESTRICHONE_RESTORE_FROM" | sed 's#^rest:https://##; s#^[^@]*@##; s#/.*##')"
+      docker run --rm "$BACKUP_IMAGE" pin-ca "https://$HOSTPORT" "$ESTRICHONE_RESTORE_FINGERPRINT" > "$DIR/ssh/restore-ca.pem" \
+        || fail "Zertifikat des Backup-Ziels nicht bestätigt (Adresse und Fingerabdruck prüfen)."
+      chmod 644 "$DIR/ssh/restore-ca.pem"
+      set -- "$@" -v "$DIR/ssh/restore-ca.pem:/tmp/restore-ca.pem:ro" -e RESTIC_CACERT=/tmp/restore-ca.pem
+      RESTORE_CACERT=/home/backup/.ssh/restore-ca.pem
+      ;;
+  esac
+  # Schlüssel so wie eingegeben versuchen, sonst ohne Leerzeichen (Notfallblatt gruppiert in Viererblöcke).
+  found=""
+  for candidate in "$ESTRICHONE_BACKUP_PASSWORD" "$(printf '%s' "$ESTRICHONE_BACKUP_PASSWORD" | tr -d ' ')"; do
+    if docker run "$@" -e RESTIC_PASSWORD="$candidate" -e RESTORE_FROM="$RESTORE_REPO" "$BACKUP_IMAGE" dump-config > "$DIR/.env.wiederherstellung" 2>"$DIR/.wiederherstellung.log"; then
+      found=1; ESTRICHONE_BACKUP_PASSWORD="$candidate"; break
+    fi
+  done
+  [ -n "$found" ] || { cat "$DIR/.wiederherstellung.log" >&2; rm -f "$DIR/.env.wiederherstellung" "$DIR/.wiederherstellung.log"; \
+    fail "Sicherung nicht lesbar: Quelle oder Wiederherstellungsschlüssel falsch (Meldung oben)."; }
+  rm -f "$DIR/.wiederherstellung.log"
+  grep -q '^POSTGRES_PASSWORD=' "$DIR/.env.wiederherstellung" || fail "Die gesicherte Konfiguration ist unvollständig."
+  umask 077; mv "$DIR/.env.wiederherstellung" "$DIR/.env"; umask 022
+  # Gesicherte Quelle mit dem neuen Server: Schlüssel muss zum Repository passen (falls die .env einen anderen hätte).
+  set_env RESTIC_PASSWORD "$ESTRICHONE_BACKUP_PASSWORD"
+  echo "Konfiguration aus der Sicherung übernommen (Domain $(sed -n 's/^ESTRICHONE_DOMAIN=//p' "$DIR/.env"))."
+fi
 cp /installer/compose.yml /installer/compose.override.yml /installer/compose.proxy.yml "$DIR/"
 # Einfaches Aktualisieren: sudo /opt/estrichone/update.sh [VERSION]
 cp /installer/update.sh "$DIR/update.sh" && chmod 755 "$DIR/update.sh"
@@ -124,10 +189,12 @@ esac
 cd "$DIR"
 set -a; . ./.env; set +a
 DATA="${ESTRICHONE_DATA_DIR:-./data}"
-mkdir -p "$DATA/postgres" "$DATA/caddy/data" "$DATA/caddy/config" "$DATA/files" "$DATA/backup-status" \
+mkdir -p "$DATA/postgres" "$DATA/caddy/data" "$DATA/caddy/config" "$DATA/files" "$DATA/config" "$DATA/backup-status" \
   "$DATA/backup-staging" "$DATA/restic-cache" "${ESTRICHONE_BACKUP_DIR:-./backup-repository}" "${ESTRICHONE_SSH_DIR:-./ssh}" \
   "${ESTRICHONE_ARCHIVE_DIR:-./archive}"
-chown -R "$API_UID:$API_UID" "$DATA/files" "$DATA/backup-status" "$DATA/backup-staging" "$DATA/restic-cache" \
+# Kopie der Konfiguration für das Backup (Teil jeder Sicherung; Grundlage für die Neuinstallation per „restore“).
+(umask 077 && cp .env "$DATA/config/estrichone.env")
+chown -R "$API_UID:$API_UID" "$DATA/files" "$DATA/config" "$DATA/backup-status" "$DATA/backup-staging" "$DATA/restic-cache" \
   "${ESTRICHONE_BACKUP_DIR:-./backup-repository}" "${ESTRICHONE_ARCHIVE_DIR:-./archive}"
 
 echo "Images laden und Dienste starten …"
@@ -142,6 +209,15 @@ case "$POSTGRES_PASSWORD$DB_USER" in *"'"*|*'"'*) fail "Datenbank-Benutzer/-Pass
 docker compose -p estrichone exec -T postgres psql -q -v ON_ERROR_STOP=1 -U "$DB_USER" -d "${POSTGRES_DB:-estrichone}" \
   -c "ALTER USER \"$DB_USER\" PASSWORD '$POSTGRES_PASSWORD';" >/dev/null \
   || fail "Datenbank-Passwort konnte nicht abgeglichen werden (siehe: docker compose -p estrichone logs postgres)."
+
+if [ "$RESTORE" = "1" ]; then
+  echo "Sicherung wird eingespielt (Datenbank, Dateien, Fotos, Dokumente, Einstellungen, Schlüssel) …"
+  set -- run --rm -e RESTORE_FROM="$RESTORE_REPO"
+  [ -n "${RESTORE_MOUNT:-}" ] && set -- "$@" -v "$RESTORE_MOUNT"
+  [ -n "${RESTORE_CACERT:-}" ] && set -- "$@" -e RESTIC_CACERT="$RESTORE_CACERT"
+  docker compose -p estrichone --profile restore "$@" restore "${ESTRICHONE_RESTORE_SNAPSHOT:-latest}" \
+    || fail "Wiederherstellung fehlgeschlagen (Meldung oben). Die Daten der Sicherung sind unverändert."
+fi
 
 docker compose -p estrichone up -d --remove-orphans
 
@@ -160,7 +236,13 @@ else
   echo "EstrichONE läuft: $URL   (HTTP-Port $ESTRICHONE_HTTP_PORT leitet weiter)"
 fi
 
-if [ "$FIRST" = "1" ]; then
+if [ "$RESTORE" = "1" ]; then
+  echo
+  echo "======================================================================"
+  echo " Wiederherstellung abgeschlossen. Anmelden wie bisher; die Apps gleichen automatisch neu ab."
+  echo " Im Backup Center prüfen: Sicherungsziele, ggf. Backup-Ziele neu koppeln, neues Notfallblatt drucken."
+  echo "======================================================================"
+elif [ "$FIRST" = "1" ]; then
   echo
   echo "======================================================================"
   echo " BACKUP-PASSWORT – jetzt notieren und AUSSERHALB des Servers aufbewahren:"

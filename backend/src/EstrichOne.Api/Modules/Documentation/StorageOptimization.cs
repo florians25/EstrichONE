@@ -148,15 +148,40 @@ internal sealed partial class StorageOptimizationJob(IServiceScopeFactory scopes
                     // Erst daneben schreiben, dann atomar ersetzen; die Datenbank folgt sofort.
                     var temporary = path + ".opt";
                     await File.WriteAllBytesAsync(temporary, optimized.Content, cancellationToken);
-                    file.ReplaceContent(Convert.ToHexStringLower(SHA256.HashData(optimized.Content)), optimized.Content.Length, optimized.ContentType);
-                    var regenerate = file.Variants != VariantState.NotApplicable;
-                    if (regenerate)
+                    var sha = Convert.ToHexStringLower(SHA256.HashData(optimized.Content));
+                    var regenerate = false;
+                    void Apply()
                     {
-                        file.SetVariants(VariantState.Pending);
+                        file.ReplaceContent(sha, optimized.Content.Length, optimized.ContentType);
+                        regenerate = file.Variants != VariantState.NotApplicable;
+                        if (regenerate)
+                        {
+                            file.SetVariants(VariantState.Pending);
+                        }
                     }
 
+                    Apply();
                     File.Move(temporary, path, overwrite: true);
-                    await db.SaveChangesAsync(cancellationToken);
+                    // Der Vorschaubild-Dienst kann denselben Eintrag gerade aktualisieren (Version): neu laden und erneut anwenden,
+                    // damit Datei auf der Platte und Prüfsumme in der Datenbank nie auseinanderlaufen.
+                    for (var attempt = 1; ; attempt++)
+                    {
+                        try
+                        {
+                            await db.SaveChangesAsync(cancellationToken);
+                            break;
+                        }
+                        catch (DbUpdateConcurrencyException conflict) when (attempt < 5)
+                        {
+                            foreach (var entry in conflict.Entries)
+                            {
+                                await entry.ReloadAsync(cancellationToken);
+                            }
+
+                            Apply();
+                        }
+                    }
+
                     if (regenerate)
                     {
                         variantQueue.Writer.TryWrite(file.Id);

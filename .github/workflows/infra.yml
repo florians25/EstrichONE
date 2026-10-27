@@ -29,7 +29,7 @@ jobs:
             docker build -q -f "docker/$image.Dockerfile" -t "estrichone/$image:ci" .
           done
       - name: Shellcheck
-        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/update.sh deploy/backup/estrichone-backup
+        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh
       - name: Archiv koppeln, archivieren, Unveränderbarkeit, Löschsperre, Export, Backup-Ziel, Testmail
         env:
           ESTRICHONE_VERSION: ci
@@ -73,6 +73,10 @@ jobs:
         run: |
           ! sudo /opt/estrichone/update.sh 9.9.9 2> err.log
           grep -q "gibt es nicht" err.log
+      - name: Worst Case – Server weg, Neuinstallation per Installer-Modus restore, Backup-Ziel, das zieht
+        run: |
+          shellcheck deploy/backup/test-installer-restore.sh
+          sudo -E VERSION="$VERSION" deploy/backup/test-installer-restore.sh
       - name: Archivserver und Backup-Ziel mit einem Befehl (zweimal = Update)
         run: |
           for role in archiv backup-ziel; do

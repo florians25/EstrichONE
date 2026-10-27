@@ -34,6 +34,27 @@
 						</HBox>
 					</CustomListItem>
 				</List>
+				<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiMediumMarginTop sapUiTinyMarginBottom">
+					<VBox>
+						<Title text="Backup-Ziele, die ziehen" level="H2"/>
+						<Text text="Für ein Ziel ohne feste Adresse (zuhause hinter dem Router), wenn dieser Server öffentlich erreichbar ist (z. B. im Rechenzentrum): Das Ziel verbindet sich selbst und holt die verschlüsselten Sicherungen – keine Portfreigabe nötig."/>
+					</VBox>
+					<Button text="Ziel, das zieht, hinzufügen" icon="sap-icon://add" press=".onCreateMirror" enabled="{view>/mirrorsAvailable}"/>
+				</HBox>
+				<MessageStrip type="Information" showIcon="true" visible="{= !${view>/mirrorsAvailable} }" class="sapUiSmallMarginBottom"
+					text="Nur mit lokalem Hauptziel (BACKUP_REPOSITORY=/repository, Standard) und laufendem Backup-Dienst verfügbar."/>
+				<List items="{view>/mirrors}" noDataText="Kein Ziel, das zieht." showSeparators="All">
+					<CustomListItem>
+						<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
+							<VBox>
+								<Title text="{view>title}" level="H3"/>
+								<ObjectStatus text="{view>stateText}" state="{view>state}" class="sapUiTinyMarginTop"/>
+								<Text text="{view>detail}" class="sapUiTinyMarginTop"/>
+							</VBox>
+							<Button text="Entfernen" icon="sap-icon://delete" type="Transparent" press=".onRemoveMirror"/>
+						</HBox>
+					</CustomListItem>
+				</List>
 			</VBox>
 		</f:content>
 	</f:DynamicPage>

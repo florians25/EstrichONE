@@ -1,16 +1,20 @@
 #!/usr/bin/env bash
 # EstrichONE Backup-Werkzeug (läuft im Container „backup“ bzw. „restore“).
 #
-#   estrichone-backup schedule        Dauerbetrieb: täglich sichern, wöchentlich prüfen, aufräumen, Wiederherstellung testen
-#   estrichone-backup run             jetzt sichern
+#   estrichone-backup schedule        Dauerbetrieb: täglich voll sichern (optional zusätzlich inkrementell), wöchentlich
+#                                     prüfen, aufräumen, Wiederherstellung testen; Anforderungen aus dem Backup Center
+#   estrichone-backup run [full|incremental]   jetzt sichern (Standard: full = alle Dateien neu lesen)
 #   estrichone-backup snapshots       Sicherungen auflisten
 #   estrichone-backup check           Integrität prüfen (Stichprobe der Daten)
 #   estrichone-backup restore-test    Sicherung testweise in eine temporäre Datenbank einspielen
 #   estrichone-backup restore [ID]    WIEDERHERSTELLEN (Standard: latest) – nur im Dienst „restore“
+#   estrichone-backup dump-config     estrichone.env aus der neuesten Sicherung ausgeben (Installer-Modus „restore“)
+#   estrichone-backup pin-ca URL FP   CA eines Backup-Ziels holen und gegen den Fingerabdruck FP prüfen (gibt PEM aus)
 #
 # Konfiguration über Umgebungsvariablen (siehe deploy/.env.example):
 #   RESTIC_PASSWORD, BACKUP_REPOSITORY (Pflicht), BACKUP_REPOSITORY_2 (optional), BACKUP_TIME (HH:MM),
-#   PGHOST, PGDATABASE, PGUSER, PGPASSWORD, FILES_DIR, STATUS_DIR
+#   PGHOST, PGDATABASE, PGUSER, PGPASSWORD, FILES_DIR, STATUS_DIR, CONFIG_DIR
+# Zeitplan und Aufbewahrung aus dem Backup Center: $STATUS_DIR/settings.env (überschreibt die Umgebung).
 # Deutsche Anführungszeichen („…“) in Meldungen sind beabsichtigt.
 # shellcheck disable=SC1111,SC1112
 set -euo pipefail
@@ -18,9 +22,21 @@ set -euo pipefail
 FILES_DIR="${FILES_DIR:-/data/files}"
 STATUS_DIR="${STATUS_DIR:-/status}"
 STAGING_DIR="${STAGING_DIR:-/tmp/estrichone-backup}"
+CONFIG_DIR="${CONFIG_DIR:-/config}"
 BACKUP_TIME="${BACKUP_TIME:-22:30}"
-KEEP="--keep-daily ${KEEP_DAILY:-14} --keep-weekly ${KEEP_WEEKLY:-8} --keep-monthly ${KEEP_MONTHLY:-12} --keep-yearly ${KEEP_YEARLY:-3}"
+BACKUP_INTERVAL_HOURS="${BACKUP_INTERVAL_HOURS:-0}"
+RESTORE_TEST="${RESTORE_TEST:-1}"
 TAG="estrichone"
+
+# Zeitplan/Aufbewahrung aus dem Backup Center (von der API geprüft: nur Ziffern und HH:MM).
+load_settings() {
+  if [[ -f "$STATUS_DIR/settings.env" ]]; then
+    # shellcheck disable=SC1091
+    . "$STATUS_DIR/settings.env"
+  fi
+  KEEP="--keep-daily ${KEEP_DAILY:-14} --keep-weekly ${KEEP_WEEKLY:-8} --keep-monthly ${KEEP_MONTHLY:-12} --keep-yearly ${KEEP_YEARLY:-3}"
+}
+load_settings
 
 # Leert ein Verzeichnis, ohne es selbst zu entfernen (es kann ein Mount-Punkt sein).
 reset_dir() { mkdir -p "$1"; find "$1" -mindepth 1 -delete; }
@@ -91,21 +107,38 @@ ensure_repository() {
   fi
 }
 
+# Konfiguration für die Neuinstallation: .env-Kopie, Zeitplan, Backup-Ziele, ziehende Ziele (alles im verschlüsselten Repository).
+stage_config() {
+  local dir="$STAGING_DIR/config"
+  mkdir -p "$dir"
+  [[ -f "$CONFIG_DIR/estrichone.env" ]] && cp "$CONFIG_DIR/estrichone.env" "$dir/estrichone.env"
+  local item
+  for item in settings.json settings.env targets mirrors; do
+    [[ -e "$STATUS_DIR/$item" ]] && cp -R "$STATUS_DIR/$item" "$dir/"
+  done
+  return 0
+}
+
 cmd_run() {
-  local started; started="$(date +%s)"
-  write_status lastRun "$(result_json running 'Sicherung läuft')"
+  local kind="${1:-full}" started; started="$(date +%s)"
+  [[ "$kind" == "full" || "$kind" == "incremental" ]] || fail "Art muss full oder incremental sein."
+  write_status lastRun "$(result_json running 'Sicherung läuft' "\"kind\":\"$kind\"")"
   reset_dir "$STAGING_DIR"
-  log "Datenbank-Dump …"
+  log "Datenbank-Dump ($kind) …"
   if ! pg_dump --format=custom --no-owner --file="$STAGING_DIR/database.dump"; then
-    write_status lastRun "$(result_json failed 'Datenbank-Dump fehlgeschlagen')"
+    write_status lastRun "$(result_json failed 'Datenbank-Dump fehlgeschlagen' "\"kind\":\"$kind\"")"
     fail "pg_dump fehlgeschlagen"
   fi
+  stage_config
+  # Vollsicherung: alle Dateien neu lesen und prüfen (--force), nicht nur geänderte (inkrementell).
+  local force=()
+  [[ "$kind" == "full" ]] && force=(--force)
 
   local repo summary errors=0 target_started
   while read -r repo; do
     target_started="$(date +%s)"
-    if ensure_repository "$repo" && summary="$(cd "$STAGING_DIR" && rr "$repo" backup --tag "$TAG" --json --host estrichone \
-        database.dump "$FILES_DIR" | tail -n 1)"; then
+    if ensure_repository "$repo" && summary="$(cd "$STAGING_DIR" && rr "$repo" backup --tag "$TAG" --tag "$kind" "${force[@]}" --json \
+        --host estrichone database.dump config "$FILES_DIR" | tail -n 1)"; then
       log "Fertig ($(label "$repo")): Snapshot $(grep -o '"snapshot_id":"[0-9a-f]*"' <<<"$summary" | cut -d'"' -f4)"
       [[ "$repo" == target:* ]] && write_status "target-${repo#target:}" \
         "$(result_json succeeded 'Sicherung erfolgreich' "\"durationSeconds\":$(( $(date +%s) - target_started ))")"
@@ -118,13 +151,47 @@ cmd_run() {
   reset_dir "$STAGING_DIR"
 
   local duration=$(( $(date +%s) - started ))
+  write_snapshots || true
   if [[ $errors -gt 0 ]]; then
-    write_status lastRun "$(result_json failed "Sicherung in $errors Ziel(en) fehlgeschlagen" "\"durationSeconds\":$duration")"
+    write_status lastRun "$(result_json failed "Sicherung in $errors Ziel(en) fehlgeschlagen" "\"durationSeconds\":$duration,\"kind\":\"$kind\"")"
     fail "Sicherung unvollständig"
   fi
-  local result; result="$(result_json succeeded 'Sicherung erfolgreich' "\"durationSeconds\":$duration,\"targets\":$(repositories | wc -l)")"
+  local result; result="$(result_json succeeded 'Sicherung erfolgreich' "\"durationSeconds\":$duration,\"targets\":$(repositories | wc -l),\"kind\":\"$kind\"")"
   write_status lastRun "$result"
   write_status lastSuccess "$result"
+}
+
+# Kennung einer Quelle für das Backup Center: primary, secondary oder target:<id>
+repo_key() {
+  if [[ "$1" == target:* ]]; then echo "$1"
+  elif [[ -n "${BACKUP_REPOSITORY_2:-}" && "$1" == "$BACKUP_REPOSITORY_2" ]]; then echo secondary
+  else echo primary
+  fi
+}
+
+repo_for_key() {
+  case "$1" in
+    primary) echo "$BACKUP_REPOSITORY" ;;
+    secondary) [[ -n "${BACKUP_REPOSITORY_2:-}" ]] || fail "Kein zweites Ziel eingerichtet."; echo "$BACKUP_REPOSITORY_2" ;;
+    target:*) [[ -f "$STATUS_DIR/targets/${1#target:}.conf" ]] || fail "Backup-Ziel ${1#target:} unbekannt."; echo "$1" ;;
+    *) fail "Unbekannte Quelle: $1" ;;
+  esac
+}
+
+# Liste der Sicherungen je Ziel für das Backup Center (snapshots.json)
+write_snapshots() {
+  local repo first=1 json list name
+  json="{\"at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"repositories\":["
+  while read -r repo; do
+    list="$(rr "$repo" snapshots --tag "$TAG" --json 2>/dev/null)" || continue
+    [[ -n "$list" ]] || list="[]"
+    # shellcheck disable=SC1003
+    name="$(label "$repo" | tr -d '"\\' | sed 's/:[^:@/]*@/:***@/')"
+    [[ $first -eq 1 ]] || json+=","
+    first=0
+    json+="{\"key\":\"$(repo_key "$repo")\",\"label\":\"$name\",\"snapshots\":$list}"
+  done < <(repositories)
+  write_status snapshots "$json]}"
 }
 
 cmd_snapshots() {
@@ -185,6 +252,7 @@ cmd_restore_test() {
 }
 
 # Vollständige Wiederherstellung: Dateien und Datenbank aus einem Snapshot. Nur mit gestoppter API ausführen.
+# Lesend ohne Sperre (--no-lock): die Quelle darf schreibgeschützt sein (USB-Platte, Kopie vom Spiegel).
 cmd_restore() {
   local snapshot="${1:-latest}"
   [[ "${ESTRICHONE_RESTORE_MODE:-}" == "1" ]] || fail "Wiederherstellung nur über den Dienst „restore“ (docker compose --profile restore run --rm restore)."
@@ -194,11 +262,11 @@ cmd_restore() {
   rm -rf "$dir" && mkdir -p "$dir"
 
   log "Prüfe Snapshot $snapshot in $(label "$repo") …"
-  rr "$repo" snapshots --tag "$TAG" "$snapshot" >/dev/null || fail "Snapshot $snapshot nicht gefunden."
-  rr "$repo" check --read-data-subset=5% || fail "Repository beschädigt – Wiederherstellung abgebrochen."
+  rr "$repo" --no-lock snapshots --tag "$TAG" "$snapshot" >/dev/null || fail "Snapshot $snapshot nicht gefunden."
+  rr "$repo" --no-lock check --read-data-subset=5% || fail "Repository beschädigt – Wiederherstellung abgebrochen."
 
   log "Stelle Daten wieder her …"
-  rr "$repo" restore "$snapshot" --tag "$TAG" --target "$dir"
+  rr "$repo" --no-lock restore "$snapshot" --tag "$TAG" --target "$dir"
   local dump; dump="$(find "$dir" -name database.dump | head -n 1)"
   [[ -f "$dump" ]] || fail "Im Snapshot fehlt der Datenbank-Dump."
 
@@ -214,11 +282,145 @@ cmd_restore() {
     find "$FILES_DIR" -mindepth 1 -delete
     cp -a "$restored_files/." "$FILES_DIR/"
   fi
+
+  local config; config="$(find "$dir" -maxdepth 3 -type d -name config ! -path "*$FILES_DIR*" | head -n 1)"
+  if [[ -n "$config" && -d "$STATUS_DIR" ]]; then
+    local item
+    for item in settings.json settings.env targets mirrors; do
+      [[ -e "$config/$item" ]] && { rm -rf "${STATUS_DIR:?}/$item"; cp -R "$config/$item" "$STATUS_DIR/"; }
+    done
+  fi
   rm -rf "$dir"
 
   local count; count="$(psql -tA -c 'SELECT count(*) FROM bauakten')"
   local files; files="$(find "$FILES_DIR" -type f -path '*/originals/*' | wc -l)"
   log "Wiederherstellung abgeschlossen: $count Bauakten, $files Originaldateien. API jetzt starten: docker compose up -d"
+}
+
+# Fortschritt für das Backup Center (restore.json); die API setzt am Ende „completed“.
+restore_status() { # status phase percent message
+  local now; now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  write_status restore "{\"status\":\"$1\",\"scope\":\"$RESTORE_SCOPE\",\"snapshot\":\"$RESTORE_SNAPSHOT\",\"phase\":\"$2\",\"percent\":$3,\"message\":\"$4\",\"at\":\"$now\",\"startedAt\":\"$RESTORE_STARTED\"}"
+  log "Wiederherstellung: $2 ($3 %)"
+}
+
+# Wiederherstellung aus dem Backup Center bei laufendem System (API sperrt währenddessen alle Aufrufe).
+# Datenbank: in eine neue Datenbank einspielen und dann tauschen – die alte bleibt als <name>_vor_wiederherstellung erhalten.
+cmd_restore_request() {
+  local request="$STATUS_DIR/requests/restore.env"
+  RESTORE_SNAPSHOT="" RESTORE_SOURCE="" RESTORE_SCOPE="" RESTORE_FILE=""
+  # shellcheck disable=SC1090
+  . "$request"
+  rm -f "$request"
+  RESTORE_STARTED="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  [[ "$RESTORE_SNAPSHOT" =~ ^([0-9a-f]{8,64}|latest)$ && "$RESTORE_SCOPE" =~ ^(full|file)$ ]] \
+    || { restore_status failed "Abgebrochen" 0 "Ungültige Anforderung"; return 1; }
+  local repo; repo="$(repo_for_key "${RESTORE_SOURCE:-primary}")" || { restore_status failed "Abgebrochen" 0 "Quelle unbekannt"; return 1; }
+  local dir="$STAGING_DIR/restore"
+  rm -rf "$dir" && mkdir -p "$dir"
+
+  if [[ "$RESTORE_SCOPE" == "file" ]]; then
+    [[ "$RESTORE_FILE" =~ ^[0-9a-f]{32}$ ]] || { restore_status failed "Abgebrochen" 0 "Ungültige Datei"; return 1; }
+    restore_status running "Datei wird geholt" 30 "Einzelne Datei wird wiederhergestellt"
+    if ! rr "$repo" --no-lock restore "$RESTORE_SNAPSHOT" --tag "$TAG" --target "$dir" \
+        --include "$FILES_DIR/originals/*/*/$RESTORE_FILE" --include "$FILES_DIR/variants/${RESTORE_FILE}_*" >/dev/null; then
+      restore_status failed "Fehlgeschlagen" 30 "Datei nicht in dieser Sicherung"; return 1
+    fi
+    local found=0 file rel
+    while IFS= read -r file; do
+      rel="${file#"$dir$FILES_DIR"/}"
+      mkdir -p "$FILES_DIR/$(dirname "$rel")"
+      cp -a "$file" "$FILES_DIR/$rel"
+      found=$((found + 1))
+    done < <(find "$dir" -type f)
+    rm -rf "$dir"
+    if [[ $found -eq 0 ]]; then restore_status failed "Fehlgeschlagen" 100 "Datei nicht in dieser Sicherung"; return 1; fi
+    restore_status completed "Abgeschlossen" 100 "Datei wiederhergestellt ($found Datei(en) inkl. Vorschaubilder)"
+    return 0
+  fi
+
+  restore_status running "Sicherung prüfen" 5 "Sicherung wird geprüft"
+  rr "$repo" --no-lock snapshots --tag "$TAG" "$RESTORE_SNAPSHOT" >/dev/null \
+    || { restore_status failed "Abgebrochen" 5 "Sicherung nicht gefunden – nichts verändert"; return 1; }
+  rr "$repo" --no-lock check --read-data-subset=2% >/dev/null \
+    || { restore_status failed "Abgebrochen" 10 "Repository beschädigt – nichts verändert"; return 1; }
+  restore_status running "Daten holen" 20 "Datenbank und Dateien werden aus der Sicherung geholt"
+  rr "$repo" --no-lock restore "$RESTORE_SNAPSHOT" --tag "$TAG" --target "$dir" >/dev/null \
+    || { restore_status failed "Abgebrochen" 20 "Sicherung nicht lesbar – nichts verändert"; return 1; }
+  local dump; dump="$(find "$dir" -name database.dump | head -n 1)"
+  [[ -f "$dump" ]] || { restore_status failed "Abgebrochen" 40 "Im Snapshot fehlt der Datenbank-Dump – nichts verändert"; return 1; }
+
+  restore_status running "Datenbank einspielen" 50 "Datenbank wird in eine neue Datenbank eingespielt"
+  local fresh="${PGDATABASE}_wiederherstellung" previous="${PGDATABASE}_vor_wiederherstellung"
+  if ! { psql -v ON_ERROR_STOP=1 -q -d postgres -c "DROP DATABASE IF EXISTS $fresh" -c "CREATE DATABASE $fresh" \
+      && pg_restore --no-owner --exit-on-error --dbname="$fresh" "$dump" \
+      && psql -v ON_ERROR_STOP=1 -q -d "$fresh" -c "UPDATE system_state SET instance_epoch = gen_random_uuid()"; }; then
+    psql -q -d postgres -c "DROP DATABASE IF EXISTS $fresh"
+    restore_status failed "Abgebrochen" 50 "Datenbank nicht einspielbar – nichts verändert"; return 1
+  fi
+
+  restore_status running "Datenbank tauschen" 75 "Neue Datenbank wird aktiviert"
+  psql -q -d postgres -c "DROP DATABASE IF EXISTS $previous" >/dev/null
+  local swapped=0 attempt
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    psql -q -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname IN ('$PGDATABASE', '$fresh') AND pid <> pg_backend_pid()" >/dev/null
+    if psql -q -d postgres -c "ALTER DATABASE $PGDATABASE RENAME TO $previous" 2>/dev/null; then swapped=1; break; fi
+    log "Datenbank noch in Benutzung – Versuch $attempt"; sleep 1
+  done
+  [[ $swapped -eq 1 ]] || { restore_status failed "Abgebrochen" 75 "Datenbank ließ sich nicht tauschen – nichts verändert"; return 1; }
+  for attempt in 1 2 3 4 5 6 7 8 9 10; do
+    psql -q -d postgres -c "SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = '$fresh' AND pid <> pg_backend_pid()" >/dev/null
+    if psql -q -d postgres -c "ALTER DATABASE $fresh RENAME TO $PGDATABASE" 2>/dev/null; then swapped=2; break; fi
+    sleep 1
+  done
+  if [[ $swapped -ne 2 ]]; then
+    psql -q -d postgres -c "ALTER DATABASE $previous RENAME TO $PGDATABASE" >/dev/null 2>&1 || true
+    restore_status failed "Abgebrochen" 80 "Neue Datenbank ließ sich nicht aktivieren – alter Stand bleibt"; return 1
+  fi
+
+  restore_status running "Dateien zurückspielen" 85 "Fotos, Dokumente und Videos werden zurückgespielt"
+  local restored_files; restored_files="$(find "$dir" -type d -path "*${FILES_DIR}" | head -n 1)"
+  if [[ -n "$restored_files" ]]; then
+    # Schlüsselbund nur ergänzen (laufende Sitzungen bleiben gültig), alles andere ersetzen.
+    if [[ -d "$restored_files/.keys" ]]; then
+      mkdir -p "$FILES_DIR/.keys"
+      cp -a -n "$restored_files/.keys/." "$FILES_DIR/.keys/" 2>/dev/null || true
+      rm -rf "$restored_files/.keys"
+    fi
+    find "$FILES_DIR" -mindepth 1 -maxdepth 1 ! -name .keys -exec rm -rf {} +
+    cp -a "$restored_files/." "$FILES_DIR/"
+  fi
+  local config; config="$(find "$dir" -maxdepth 3 -type d -name config ! -path "*$FILES_DIR*" | head -n 1)"
+  if [[ -n "$config" ]]; then
+    local item
+    for item in settings.json settings.env; do
+      [[ -e "$config/$item" ]] && cp "$config/$item" "$STATUS_DIR/$item"
+    done
+  fi
+  rm -rf "$dir"
+  restore_status restored "Datenbankschema aktualisieren" 95 "Daten zurückgespielt – EstrichONE aktualisiert das Datenbankschema"
+}
+
+# .env der gesicherten Installation (Neuinstallation per Installer-Modus „restore“); RESTORE_FROM = Quelle.
+cmd_dump_config() {
+  local repo="${RESTORE_FROM:-$BACKUP_REPOSITORY}" path listing
+  # Meldungen nach stderr – stdout ist die .env.
+  listing="$(rr "$repo" --no-lock ls latest --tag "$TAG")" || { log "FEHLER: Sicherung nicht lesbar (Quelle oder Schlüssel falsch)." >&2; exit 1; }
+  path="$(grep -m 1 '/config/estrichone.env$' <<<"$listing")" \
+    || { log "FEHLER: Keine Konfiguration (config/estrichone.env) in der neuesten Sicherung – .env von Hand anlegen." >&2; exit 1; }
+  rr "$repo" --no-lock dump latest --tag "$TAG" "$path"
+}
+
+# CA eines Backup-Ziels ohne Vertrauen holen und gegen den Fingerabdruck vom Notfallblatt prüfen.
+cmd_pin_ca() {
+  local url="${1:?Adresse fehlt}" expected; expected="$(tr -d ' :' <<<"${2:?Fingerabdruck fehlt}" | tr 'A-F' 'a-f')"
+  local json pem actual
+  json="$(curl -fsS -k --max-time 20 "${url%/}/pair/hello")" || fail "Backup-Ziel $url nicht erreichbar."
+  pem="$(sed -n 's/.*"caCertificatePem":"\([^"]*\)".*/\1/p' <<<"$json" | sed 's/\\n/\n/g; s/\\r//g; s/\\u002B/+/g; s/\\\//\//g')"
+  [[ -n "$pem" ]] || fail "Antwort enthält kein Zertifikat."
+  actual="$(openssl x509 -outform der <<<"$pem" | sha256sum | cut -d' ' -f1)"
+  [[ "$actual" == "$expected" ]] || fail "Fingerabdruck stimmt nicht (erwartet $expected, erhalten $actual) – Abbruch."
+  printf '%s\n' "$pem"
 }
 
 seconds_until() { # HH:MM → Sekunden bis zum nächsten Zeitpunkt (Ortszeit, ohne GNU date)
@@ -230,37 +432,57 @@ seconds_until() { # HH:MM → Sekunden bis zum nächsten Zeitpunkt (Ortszeit, oh
 }
 
 cmd_schedule() {
-  log "Backup-Dienst gestartet. Tägliche Sicherung um $BACKUP_TIME ($(date +%Z))."
+  log "Backup-Dienst gestartet. Tägliche Vollsicherung um $BACKUP_TIME ($(date +%Z)), inkrementell alle ${BACKUP_INTERVAL_HOURS} h (0 = aus)."
   repositories >/dev/null
   mkdir -p "$STATUS_DIR/requests"
+  write_snapshots || true
+  local last_run; last_run="$(date +%s)"
   while true; do
+    load_settings
     local wait; wait="$(seconds_until "$BACKUP_TIME")"
-    # In kurzen Schritten warten, damit „Jetzt sichern“ aus dem Backup Center schnell greift.
+    # In kurzen Schritten warten, damit Anforderungen aus dem Backup Center schnell greifen.
     while (( wait > 0 )); do
+      if [[ -f "$STATUS_DIR/requests/restore.env" ]]; then
+        log "Wiederherstellung auf Anforderung aus dem Backup Center"
+        cmd_restore_request || true
+      fi
       if [[ -f "$STATUS_DIR/requests/backup-now" ]]; then
         rm -f "$STATUS_DIR/requests/backup-now"
         log "Sicherung auf Anforderung aus dem Backup Center"
-        cmd_run || true
+        cmd_run full || true
+        last_run="$(date +%s)"
+      fi
+      if (( BACKUP_INTERVAL_HOURS > 0 && $(date +%s) - last_run >= BACKUP_INTERVAL_HOURS * 3600 && wait > 1800 )); then
+        cmd_run incremental || true
+        last_run="$(date +%s)"
       fi
       sleep 30; wait=$(( wait - 30 ))
+      # Zeitplan im Backup Center geändert: neu rechnen.
+      if [[ "$STATUS_DIR/settings.env" -nt "$STAGING_DIR/.settings-seen" ]] 2>/dev/null; then
+        touch "$STAGING_DIR/.settings-seen"; load_settings; wait="$(seconds_until "$BACKUP_TIME")"
+      fi
     done
-    cmd_run || true
+    cmd_run full || true
+    last_run="$(date +%s)"
     if [[ "$(date +%u)" == "7" ]]; then
       cmd_prune || true
       cmd_check "10%" || true
-      cmd_restore_test || true
+      [[ "$RESTORE_TEST" == "1" ]] && { cmd_restore_test || true; }
     fi
   done
 }
 
 case "${1:-schedule}" in
   schedule) cmd_schedule ;;
-  run) cmd_run ;;
+  run) cmd_run "${2:-full}" ;;
+  restore-request) cmd_restore_request ;;
+  dump-config) cmd_dump_config ;;
+  pin-ca) cmd_pin_ca "${2:-}" "${3:-}" ;;
   snapshots) cmd_snapshots ;;
   prune) cmd_prune ;;
   check) cmd_check "${2:-10%}" ;;
   restore-test) cmd_restore_test ;;
   restore) cmd_restore "${2:-latest}" ;;
-  -h|--help|help) sed -n '2,13p' "$0" ;;
+  -h|--help|help) sed -n '2,17p' "$0" ;;
   *) fail "Unbekannter Befehl: $1 (Hilfe: estrichone-backup help)" ;;
 esac

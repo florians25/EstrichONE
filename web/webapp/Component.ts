@@ -17,5 +17,9 @@ export default class Component extends UIComponent {
 		super.init();
 		this.setModel(new JSONModel(Device), "device");
 		this.setModel(session.model, "session");
+		// Service Worker auch ohne Push-Opt-in: zeigt ohne Verbindung die Störungsseite (docs/backup.md, B8).
+		if ("serviceWorker" in navigator && window.isSecureContext) {
+			void navigator.serviceWorker.register("/sw.js", { scope: "/" }).catch(() => undefined);
+		}
 	}
 }

@@ -32,6 +32,17 @@ public sealed class ArchiveOptions
     public int RestServerPort { get; init; } = 8000;
     public bool AppendOnly { get; init; } = true;
 
+    /// <summary>Backup-Ziel, das zieht: Adresse des EstrichONE-Servers (z. B. https://estrichone.firma.de), leer = aus.</summary>
+    public string? PullFrom { get; init; }
+
+    /// <summary>Einmal-Code aus dem Backup Center (nur für die erste Kopplung).</summary>
+    public string? PullCode { get; init; }
+
+    /// <summary>Optional: SHA-256-Fingerabdruck eines Zertifikats der Kette (eigenes Zertifikat statt öffentlicher CA).</summary>
+    public string? PullFingerprint { get; init; }
+
+    public TimeSpan PullInterval { get; init; } = TimeSpan.FromMinutes(60);
+
     public string RoleName => Role == ServerRole.Archive ? "archive" : "backup-target";
     public string RoleTitle => Role == ServerRole.Archive ? "Archivserver" : "Backup-Ziel";
 
@@ -57,6 +68,10 @@ public sealed class ArchiveOptions
             MinRetentionYears = Math.Clamp(Int(get("ESTRICHONE_MIN_RETENTION_YEARS"), 0), 0, 30),
             AppendOnly = !string.Equals(get("ESTRICHONE_APPEND_ONLY"), "false", StringComparison.OrdinalIgnoreCase),
             RestServerPath = get("ESTRICHONE_REST_SERVER") ?? "/usr/local/bin/rest-server",
+            PullFrom = get("ESTRICHONE_PULL_FROM") is { Length: > 0 } from ? from.Trim().TrimEnd('/') : null,
+            PullCode = get("ESTRICHONE_PULL_CODE") is { Length: > 0 } code ? code.Trim() : null,
+            PullFingerprint = get("ESTRICHONE_PULL_FINGERPRINT") is { Length: > 0 } fp ? fp : null,
+            PullInterval = TimeSpan.FromMinutes(Math.Clamp(Int(get("ESTRICHONE_PULL_INTERVAL_MINUTES"), 60), 5, 1440)),
         };
     }
 

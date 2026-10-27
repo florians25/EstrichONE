@@ -229,14 +229,11 @@ internal sealed class BackupTargetService(
             Repository:     {repository}
             Fingerabdruck:  {PeerClient.FormatFingerprint(target.CaFingerprint)}
 
-            Wiederherstellen auf einem neuen Server (zusätzlich nötig: RESTIC_PASSWORD aus der alten .env):
-            1. EstrichONE wie gewohnt installieren und die alte .env zurückkopieren (bzw. RESTIC_PASSWORD eintragen).
-            2. Den Zertifikatsblock unten als Datei ssh/backup-ziel-ca.pem im Installationsverzeichnis speichern.
-            3. cd /opt/estrichone && sudo docker compose -p estrichone stop api
-            4. sudo docker compose -p estrichone --profile restore run --rm \
-                 -e RESTORE_FROM='{repository}' \
-                 -e RESTIC_CACERT=/home/backup/.ssh/backup-ziel-ca.pem restore latest
-            5. sudo docker compose -p estrichone up -d
+            Wiederherstellen auf einem neuen Server (zusätzlich nötig: Wiederherstellungsschlüssel vom Notfallblatt bzw. RESTIC_PASSWORD):
+              sudo mkdir -p /opt/estrichone && sudo docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock \
+                -v /opt/estrichone:/opt/estrichone ghcr.io/florians25/estrichone-installer:<version> restore
+            Als Quelle das Repository oben eingeben, als Fingerabdruck den oben genannten. Der Installer prüft das Zertifikat
+            gegen den Fingerabdruck, holt die neueste Sicherung, stellt alles wieder her und startet EstrichONE (docs/backup.md).
 
             {target.CaCertificatePem.Trim()}
 

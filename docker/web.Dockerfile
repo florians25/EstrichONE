@@ -10,4 +10,6 @@ RUN npm run build
 
 FROM caddy:2
 COPY --from=build /src/dist /srv
+# Störungs- und Wartungsseite (Caddy bei 502/503/504, Service Worker ohne Verbindung)
+COPY deploy/fallback/ /srv/
 COPY deploy/Caddyfile /etc/caddy/Caddyfile

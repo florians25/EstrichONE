@@ -98,3 +98,23 @@ export interface MonitoredSystem {
 }
 
 export interface MonitoringOverview { level: MonitorLevel; at: string; systems: MonitoredSystem[]; warnings: string[] }
+
+/** Backup Center: Zeitplan, Sicherungen, Wiederherstellung, Ziele, die ziehen (docs/backup.md). */
+export interface BackupPreferences {
+	dailyTime: string; incrementalEveryHours: number; keepDaily: number; keepWeekly: number; keepMonthly: number; keepYearly: number;
+	notifyAdmins: boolean; notifyOnSuccess: boolean; weeklyRestoreTest: boolean;
+}
+export interface BackupSnapshot { id: string; shortId: string; time: string; kind: "full" | "incremental"; files: number | null; bytes: number | null; addedBytes: number | null }
+export interface BackupRepositorySnapshots { key: string; label: string; snapshots: BackupSnapshot[] }
+export interface BackupSnapshotsResponse { updatedAt: string | null; repositories: BackupRepositorySnapshots[] }
+export interface RestoreProgress {
+	status: "requested" | "running" | "restored" | "completed" | "failed"; scope: "full" | "file"; snapshot: string; phase: string; percent: number;
+	message: string; at: string; startedAt: string | null; requestedBy: string | null;
+}
+export interface BackupMirrorReport { snapshots: number; bytes: number; lastSnapshotAt: string | null; diskFreeBytes: number | null; diskTotalBytes: number | null; version: string | null; error: string | null; filesCopied: number | null }
+export interface BackupMirrorDto {
+	id: string; name: string; targetName: string | null; createdAt: string; paired: boolean; codeExpiresAt: string | null; lastSeenAt: string | null;
+	reachable: boolean; lastReport: BackupMirrorReport | null;
+}
+export interface BackupMirrorsResponse { available: boolean; mirrors: BackupMirrorDto[] }
+export interface CreateBackupMirrorResponse { mirror: BackupMirrorDto; code: string; serverUrl: string; command: string }

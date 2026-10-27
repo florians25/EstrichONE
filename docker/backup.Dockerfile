@@ -5,8 +5,8 @@ FROM restic/restic:0.18.0 AS restic
 
 FROM postgres:17-alpine
 COPY --from=restic /usr/bin/restic /usr/local/bin/restic
-# SSH-Client nur für SFTP-Sicherungsziele.
-RUN apk add --no-cache openssh-client \
+# SSH-Client für SFTP-Sicherungsziele; curl und openssl für das Prüfen der CA eines Backup-Ziels (Wiederherstellung).
+RUN apk add --no-cache openssh-client curl openssl \
  && adduser -D -u 1654 -h /home/backup backup
 COPY deploy/backup/estrichone-backup /usr/local/bin/estrichone-backup
 ENV TZ=Europe/Berlin

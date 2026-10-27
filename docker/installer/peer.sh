@@ -7,6 +7,9 @@
 # Optionen (-e …): ESTRICHONE_PORT=8443 (Backup-Ziel: 8444), ESTRICHONE_NAME="Archiv Keller", ESTRICHONE_ADDRESS=192.168.1.50 (sonst automatisch),
 #   ESTRICHONE_DATA_DIR=/srv/archiv (Ordner auf dem Rechner statt Docker-Volume), ESTRICHONE_MIN_RETENTION_YEARS=10 (nur Archiv),
 #   ESTRICHONE_NEW_CODE=1 (neuen Kopplungscode ausgeben, z. B. für eine weitere EstrichONE-Installation).
+# Backup-Ziel, das zieht (zuhause hinter NAT/ohne feste IP, Server z. B. im Rechenzentrum – docs/backup.md):
+#   -e ESTRICHONE_PULL_FROM=https://estrichone.firma.de -e ESTRICHONE_PULL_CODE=<Code aus dem Backup Center>
+#   optional -e ESTRICHONE_PULL_FINGERPRINT=<SHA-256> (eigenes Zertifikat) und -e ESTRICHONE_PULL_INTERVAL_MINUTES=60
 # Erneut ausführen = aktualisieren (Daten, Zertifikat und Kopplungen bleiben).
 # Deutsche Anführungszeichen („…“) in Meldungen sind beabsichtigt.
 # shellcheck disable=SC1111,SC1112
@@ -58,6 +61,13 @@ set -- -d --name "$NAME" --restart unless-stopped -p "$PORT:8443" -v "$DATA:/dat
   -e "ESTRICHONE_ADDRESS=${ADDRESS}" --read-only --tmpfs /tmp --security-opt no-new-privileges:true --cap-drop ALL
 [ -n "${ESTRICHONE_NAME:-}" ] && set -- "$@" -e "ESTRICHONE_NAME=$ESTRICHONE_NAME"
 [ -n "${ESTRICHONE_MIN_RETENTION_YEARS:-}" ] && set -- "$@" -e "ESTRICHONE_MIN_RETENTION_YEARS=$ESTRICHONE_MIN_RETENTION_YEARS"
+if [ "$ROLE" = "backup-target" ] && [ -n "${ESTRICHONE_PULL_FROM:-}" ]; then
+  set -- "$@" -e "ESTRICHONE_PULL_FROM=$ESTRICHONE_PULL_FROM"
+  [ -n "${ESTRICHONE_PULL_CODE:-}" ] && set -- "$@" -e "ESTRICHONE_PULL_CODE=$ESTRICHONE_PULL_CODE"
+  [ -n "${ESTRICHONE_PULL_FINGERPRINT:-}" ] && set -- "$@" -e "ESTRICHONE_PULL_FINGERPRINT=$ESTRICHONE_PULL_FINGERPRINT"
+  [ -n "${ESTRICHONE_PULL_INTERVAL_MINUTES:-}" ] && set -- "$@" -e "ESTRICHONE_PULL_INTERVAL_MINUTES=$ESTRICHONE_PULL_INTERVAL_MINUTES"
+  [ -n "${ESTRICHONE_NETWORK:-}" ] && set -- "$@" --network "$ESTRICHONE_NETWORK"
+fi
 docker run "$@" "$IMAGE" >/dev/null
 
 # Warten, bis der Dienst läuft, dann Kopplungscode ermitteln.
@@ -91,6 +101,11 @@ fi
 echo " Fingerabdruck:     $FINGERPRINT"
 echo "                    (zeigt EstrichONE nach dem Koppeln ebenfalls an – muss übereinstimmen)"
 echo "======================================================================"
+if [ "$ROLE" = "backup-target" ] && [ -n "${ESTRICHONE_PULL_FROM:-}" ]; then
+  echo
+  echo " Dieses Backup-Ziel ZIEHT die Sicherungen von $ESTRICHONE_PULL_FROM (ausgehend, keine Portfreigabe nötig)."
+  echo " Stand im Backup Center unter „Backup-Ziele, die ziehen“. Die Kopplung oben (Adresse/Code) ist dafür nicht nötig."
+fi
 echo
 echo "Aktualisieren: denselben Befehl erneut ausführen.  Protokoll: sudo docker logs $NAME"
 [ "$ROLE" = "archive" ] && echo "Prüfung jetzt: sudo docker exec $NAME estrichone-archive verify"

@@ -1,6 +1,32 @@
-/* EstrichONE Service Worker: nur Pushnachrichten (kein Offline-Cache). Inhalt ist Ende-zu-Ende verschlüsselt (RFC 8291). */
-self.addEventListener('install', () => self.skipWaiting());
-self.addEventListener('activate', (event) => event.waitUntil(self.clients.claim()));
+/* EstrichONE Service Worker: Pushnachrichten (Inhalt Ende-zu-Ende verschlüsselt, RFC 8291) und Offline-Seite.
+ * Kein Offline-Cache der App: nur die Störungsseite (deploy/fallback) wird vorgehalten und bei Seitenaufrufen ohne
+ * Verbindung gezeigt; sie kehrt von selbst zurück, sobald der Server wieder antwortet (docs/backup.md). */
+const OFFLINE_CACHE = 'estrichone-offline-v1';
+const OFFLINE_FILES = ['/stoerung.html', '/stoerung.js', '/logo-mark.svg', '/favicon.svg'];
+self.addEventListener('install', (event) => event.waitUntil((async () => {
+  try {
+    const cache = await caches.open(OFFLINE_CACHE);
+    await cache.addAll(OFFLINE_FILES);
+  } catch {
+    // Ohne Störungsseite (z. B. Entwicklungsserver) weiter wie bisher.
+  }
+  await self.skipWaiting();
+})()));
+self.addEventListener('activate', (event) => event.waitUntil((async () => {
+  for (const key of await caches.keys()) if (key.startsWith('estrichone-offline-') && key !== OFFLINE_CACHE) await caches.delete(key);
+  await self.clients.claim();
+})()));
+
+self.addEventListener('fetch', (event) => {
+  const request = event.request;
+  if (request.mode !== 'navigate') {
+    if (OFFLINE_FILES.includes(new URL(request.url).pathname)) {
+      event.respondWith(fetch(request).catch(async () => (await caches.match(request)) || Response.error()));
+    }
+    return;
+  }
+  event.respondWith(fetch(request).catch(async () => (await caches.match('/stoerung.html')) || Response.error()));
+});
 
 self.addEventListener('push', (event) => {
   let data = {};
