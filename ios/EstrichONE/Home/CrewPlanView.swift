@@ -138,7 +138,7 @@ struct DispatchView: View {
                     lines.append(AnyView(NoticeLine(tone: .neutral, text: "Entfallen: \(removed.title) – \(removed.activity)", symbol: "minus.circle")))
                 }
             } else {
-                lines.append(AnyView(NoticeLine(tone: .neutral, text: "Noch nicht freigegeben – vorläufiger Stand", symbol: "clock")))
+                lines.append(AnyView(NoticeLine(tone: .neutral, text: "Entwurf – noch nicht freigegeben", symbol: "pencil.and.outline")))
             }
         }
         for warning in notice {
