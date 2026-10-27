@@ -298,6 +298,12 @@ jobs:
         run: |
           xcrun simctl boot "$UDID" 2>/dev/null || true
           xcrun simctl bootstatus "$UDID" -b >/dev/null
+          # System auf Deutsch (Datum in der Statusleiste des iPad), dann neu starten.
+          xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLanguages -array de-DE
+          xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLocale -string de_DE
+          xcrun simctl shutdown "$UDID"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b >/dev/null
           xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
             --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
           xcrun simctl install "$UDID" "$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/EstrichONE.app"

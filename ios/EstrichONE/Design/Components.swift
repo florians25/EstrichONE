@@ -499,21 +499,22 @@ struct NoticeLine: View {
                 Text(text)
                     .font(Typo.subhead)
                     .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
-                    .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
+                    // Immer vollständig (mehrzeilig), nie mit „…“ gekürzt.
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
                     .font(Typo.subheadStrong)
                     .foregroundStyle(Theme.accent)
+                    .fixedSize()
                     .frame(minHeight: Size.minTap)
                     .contentShape(Rectangle())
             }
         }
         .padding(.leading, Space.m)
         .padding(.trailing, actionTitle == nil ? Space.m : Space.s)
-        .padding(.vertical, actionTitle == nil || typeSize.isAccessibilitySize ? Space.s + 2 : 0)
+        .padding(.vertical, actionTitle == nil || typeSize.isAccessibilitySize ? Space.s + 2 : Space.xxs)
         .frame(minHeight: Size.minTap)
         .background(tone.background, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
         .accessibilityElement(children: .combine)

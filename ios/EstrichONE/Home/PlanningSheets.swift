@@ -345,7 +345,7 @@ struct SwapRosterSheet: View {
                                  : "Gilt nur für diesen Tag. Ist die Person in einer anderen Kolonne, wechselt die ausfallende Person im Gegenzug dorthin.")
                 }
             }
-            .navigationTitle(vehicle ? "Fahrzeug tauschen" : "Mitarbeiter tauschen")
+            .navigationTitle(vehicle ? "Fahrzeug" : "Mitarbeiter")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }
@@ -473,7 +473,7 @@ struct SwapCrewsSheet: View {
                     Text("Die Baustellen beider Kolonnen wechseln für diesen Tag die Kolonne – Besetzung und Fahrzeuge bleiben.")
                 }
             }
-            .navigationTitle("Kolonnen tauschen")
+            .navigationTitle("Kolonnen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }

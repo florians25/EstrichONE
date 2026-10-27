@@ -134,7 +134,7 @@ struct DispatchView: View {
         }
         if let plan, plan.stopCount > 0 || plan.release != nil {
             if let release = plan.release {
-                let when = release.releasedAt.formatted(date: .abbreviated, time: .shortened)
+                let when = release.releasedAt.formatted(.dateTime.day().month(.abbreviated).hour().minute())
                 let text = release.changedCount > 0
                     ? "Freigegeben \(when) · \(release.changedCount) \(release.changedCount == 1 ? "Änderung" : "Änderungen") seit Freigabe"
                     : "Freigegeben \(when) von \(release.releasedByName)"
@@ -554,12 +554,12 @@ private struct CrewActionButton: View {
         Button(action: action) {
             Label(title, systemImage: symbol)
                 .labelStyle(TightLabelStyle())
-                .font(Typo.subheadStrong)
+                .font(Typo.metaStrong)
                 .foregroundStyle(Theme.accent)
                 .fixedSize(horizontal: false, vertical: true)
-                .padding(.horizontal, Space.m)
-                .padding(.vertical, Space.s)
-                .frame(minHeight: 36)
+                .padding(.horizontal, Space.s + 2)
+                .padding(.vertical, Space.xs + 2)
+                .frame(minHeight: 32)
                 .background(Theme.surface.opacity(0.9), in: RoundedRectangle(cornerRadius: Radius.s, style: .continuous))
                 .overlay(RoundedRectangle(cornerRadius: Radius.s, style: .continuous).strokeBorder(Theme.separator))
                 .contentShape(RoundedRectangle(cornerRadius: Radius.s, style: .continuous))

@@ -267,20 +267,20 @@ struct HomeView: View {
         return HStack(alignment: .top, spacing: Space.s) {
             Button { path.append(.tasks) } label: {
                 QuickAccessTile(symbol: "checklist", title: "Meine Aufgaben", value: loaded ? "\(tasks)" : "–",
-                                detail: defects > 0 ? (defects == 1 ? "davon 1 Mangel" : "davon \(defects) Mängel") : "offen",
+                                detail: defects > 0 ? (defects == 1 ? "1 Mangel" : "\(defects) Mängel") : "offen",
                                 detailTint: defects > 0 ? Theme.warning : Theme.textSecondary)
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("myTasksTile")
             Button { path.append(.dispatch) } label: {
                 QuickAccessTile(symbol: "car.2", title: "Wer fährt wohin", value: dispatch == nil ? "–" : "\(crews)",
-                                detail: crews == 1 ? "Kolonne heute" : "Kolonnen heute")
+                                detail: "heute")
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("dispatchTile")
             Button { path.append(.week) } label: {
                 QuickAccessTile(symbol: "calendar", title: "Meine Woche", value: planning == nil ? "–" : "\(weekCount)",
-                                detail: weekCount == 1 ? "Einsatz in 7 Tagen" : "Einsätze in 7 Tagen")
+                                detail: "nächste 7 Tage")
             }
             .buttonStyle(.plain)
             .accessibilityIdentifier("myWeekTile")

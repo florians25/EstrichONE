@@ -210,9 +210,8 @@ struct NotificationBell: View {
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: count > 0 ? "bell.badge" : "bell")
-                .symbolRenderingMode(count > 0 ? .palette : .monochrome)
-                .foregroundStyle(count > 0 ? Theme.danger : Theme.accent, Theme.accent)
+            Image(systemName: "bell")
+                .foregroundStyle(Theme.accent)
                 .overlay(alignment: .topTrailing) {
                     if count > 0 {
                         Text(count > 99 ? "99+" : "\(count)")

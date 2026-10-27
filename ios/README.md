@@ -117,7 +117,13 @@ Bildschirme: `heute`, `heute-unten`, `baustellen`, `bauakte`, `bauakte-unten`, `
 `bereich-protokolle`, `bereich-tagebuch`, `bereich-raeume`, `bereich-basisdaten`, `bereich-kontakte`, `bereich-notizen`,
 `erfassen`, `neu-1` … `neu-4` (Anlage-Assistent), `erstbegehung`, `abnahme`, `kunden`, `kundenkarte`, `disposition`,
 `mehr`, `sync`, `meldung`, `meldung-detail`, `aufgaben`, `woche`, `wartung` (Wartungshinweis), `start` (Willkommen),
-`anmelden`.
+`anmelden`, `postfach` (Benachrichtigungen), `dispo-zuweisen`, `dispo-verschieben`, `dispo-tauschen`, `dispo-fahrzeug`,
+`dispo-kolonnen`, `dispo-freigabe`.
+
+**App-Store-Screenshots:** Job „App-Store-Screenshots“ (Workflow „iOS“ von Hand mit `appstore` starten oder
+`[appstore]` in der Commit-Nachricht) nimmt acht Motive in Originalauflösung auf – iPhone 6,9 Zoll (1320 × 2868) und
+iPad 13 Zoll (2064 × 2752), hell, ohne Demo-Kennzeichnung (`-EstrichAppStore YES`). Rahmen, Überschriften und die
+6,5-Zoll-Fassung: `AppStore/README.md`.
 
 ## Akzeptanzkriterien aus 10 – Stand
 
@@ -126,6 +132,42 @@ Bildschirme: `heute`, `heute-unten`, `baustellen`, `bauakte`, `bauakte-unten`, `
 | AK-2 (ungültiges Zertifikat nicht einrichtbar) | Die Zertifikatsprüfung übernimmt das System (ATS, im Release ohne Ausnahmen); die App bietet kein „Trotzdem fortfahren“. Zuordnung der TLS-Fehler: `ServerConnectionCheckerTests`. **Offen:** Gegenprobe mit einem echten selbstsignierten Server auf einem Gerät (manuell, Protokoll). |
 | AK-4 (abgelaufener/benutzter Einrichtungscode) | **AP-11:** Der Server stellt Einrichtungscodes erst mit der Geräteregistrierung aus. Die App liest den Code bereits aus dem QR-Code. |
 | AK-1 (≤ 60 s bis zur Startseite) | nach AP-11 messbar (braucht die Anmeldung) |
+
+## Benachrichtigungen (Push, APNs)
+
+Die App ist für Pushnachrichten vorbereitet (`EstrichONE/App/PushNotifications.swift`, Postfach
+`EstrichONE/Home/NotificationViews.swift`, API in `Packages/EstrichCore/Sources/EstrichCore/Notifications/`):
+
+- **Berechtigung** erst auf Wunsch (Postfach bzw. Mehr › Benachrichtigungen › „Aktivieren“), nie ungefragt beim Start.
+  Abgelehnt: Hinweis mit Weg in die Einstellungen; alles bleibt im Postfach.
+- **APNs-Registrierung** nach Zustimmung; das Gerätetoken geht an `POST /api/v1/notifications/devices`
+  (`platform: "ios"`, `sandbox` = Debug-Build, Bundle-ID, Gerätename, App-Version). Beim Abmelden
+  `DELETE /api/v1/notifications/devices/{token}`. Server-Seite und Einrichtung: `docs/benachrichtigungen.md`.
+- **Tippen** auf eine Pushnachricht öffnet das Objekt (Bauakte, Meldung, Planung des Tages, Aufgaben) – Link aus dem
+  Payload (`link`, z. B. `/bauakten/{id}`) oder `objectType`/`objectId`; Zuordnung in `NotificationRoute` (getestet).
+- **Postfach** mit Glocke und Zahl auf der Heute-Seite, Eintrag unter Mehr, Abzeichen am App-Symbol; gelesen/ungelesen,
+  „Alle gelesen“. Im Vordergrund erscheinen Pushnachrichten als Banner.
+- **Demomodus:** Beispiel-Benachrichtigungen im Postfach; „Beispiel senden“ zeigt nach wenigen Sekunden eine echte lokale
+  Mitteilung (ohne Server), deren Tippen „Wer fährt wohin“ für morgen öffnet.
+
+**Was Sie bei Apple bzw. in Xcode einmalig einrichten müssen:**
+
+1. Apple Developer › *Certificates, Identifiers & Profiles* › *Identifiers*: App-ID `de.estrichone.EstrichONE` (bzw. Ihre
+   eigene Bundle-ID) mit der Capability **Push Notifications** anlegen/aktivieren.
+2. *Keys*: einen **APNs-Schlüssel** (.p8, „Apple Push Notifications service“) erzeugen; Key-ID und Team-ID notieren. Der
+   Schlüssel wird nur einmal angezeigt – sicher ablegen. Im EstrichONE-Server unter Einstellungen › Benachrichtigungen
+   (bzw. `.env`) .p8-Inhalt, Key-ID, Team-ID, Bundle-ID und Umgebung (Sandbox für Xcode-Builds, Produktion für
+   TestFlight/App Store) eintragen.
+3. Xcode: `xcodegen generate`, dann im Ziel *EstrichONE* › *Signing & Capabilities* das eigene Team wählen. Die
+   Capability „Push Notifications“ ist über `EstrichONE/Config/EstrichONE.entitlements` (`aps-environment`) bereits
+   eingetragen; beim Archivieren für TestFlight/App Store setzt Xcode automatisch `production`.
+4. Hintergrund-Aktualisierung ist nicht nötig (Pushnachrichten mit sichtbarem Hinweis). Ohne Schritt 1–3 läuft die App
+   unverändert – Benachrichtigungen erscheinen dann nur im Postfach.
+
+## Sicherheit und App-Store-Veröffentlichung
+
+Exportkonformität, Krypto-Inventar, Datenschutz-Manifest (`EstrichONE/Resources/PrivacyInfo.xcprivacy`), Nutzungstexte,
+Kontolöschung, Review-Hinweise und die vollständige Checkliste mit Store-Texten: **`APPSTORE.md`**.
 
 ## Signierung und Verteilung
 
