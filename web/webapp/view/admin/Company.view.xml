@@ -93,6 +93,46 @@
 							<Label text="Zugangsbrief neuer Benutzer"/><Switch state="{view>/s/notifications/newUserLetterByEmail}" customTextOn=" " customTextOff=" "/>
 							<Label text=""/><Link text="E-Mail-Konto einrichten" href="/system/e-mail"/>
 						</form:SimpleForm>
+						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem"
+							visible="{= !!${view>/push} }">
+							<core:Title text="Pushnachrichten und Postfach"/>
+							<Label text=""/>
+							<Text text="Jede Benachrichtigung landet im Postfach (Glocke). Zusätzlich als Pushnachricht im Browser (Web Push) und in der iOS-App (APNs)." class="eoMuted"/>
+							<Label text="Web Push (Browser)"/><Switch id="pushWeb" state="{view>/push/webPushEnabled}" customTextOn=" " customTextOff=" "/>
+							<Label text="Inhalt in Pushnachrichten zeigen"/>
+							<VBox>
+								<Switch id="pushContent" state="{view>/push/showContent}" customTextOn=" " customTextOff=" "/>
+								<Text text="Aus: Auf dem Sperrbildschirm steht nur „Neue Benachrichtigung“; der Inhalt erscheint nach dem Öffnen." class="eoMuted"/>
+							</VBox>
+							<Label text="Kontakt für Push-Dienste" labelFor="pushSubject"/>
+							<Input id="pushSubject" value="{view>/push/vapidSubjectInput}" maxLength="200" placeholder="{view>/push/vapidSubject}"/>
+							<Label text="Registrierte Geräte"/>
+							<Text text="{= ${view>/push/webDevices} + ' Browser · ' + ${view>/push/iosDevices} + ' iPhone/iPad · ' + ${view>/push/androidDevices} + ' Android' }"/>
+							<core:Title text="Apple Push (APNs) für die iOS-App"/>
+							<Label text="Status"/>
+							<ObjectStatus id="pushApnsStatus" text="{= ${view>/push/apnsReady} ? 'Eingerichtet' + (${view>/push/apnsFromEnvironment} ? ' (aus .env)' : '') : 'Nicht eingerichtet – App erhält nur das Postfach' }"
+								state="{= ${view>/push/apnsReady} ? 'Success' : 'None' }" icon="{= ${view>/push/apnsReady} ? 'sap-icon://sys-enter-2' : 'sap-icon://hint' }"/>
+							<Label text="APNs verwenden"/><Switch id="pushApns" state="{view>/push/apnsEnabled}" customTextOn=" " customTextOff=" "/>
+							<Label text="Key-ID" labelFor="pushKeyId"/><Input id="pushKeyId" value="{view>/push/apnsKeyId}" maxLength="10" width="12rem" placeholder="ABC123DEFG"/>
+							<Label text="Team-ID" labelFor="pushTeamId"/><Input id="pushTeamId" value="{view>/push/apnsTeamId}" maxLength="10" width="12rem" placeholder="Team-ID (10 Zeichen)"/>
+							<Label text="Bundle-ID der App" labelFor="pushBundle"/><Input id="pushBundle" value="{view>/push/apnsBundleId}" maxLength="200" placeholder="de.estrichone.app"/>
+							<Label text="Umgebung"/>
+							<SegmentedButton selectedKey="{= ${view>/push/apnsProduction} ? 'prod' : 'sandbox' }" selectionChange=".onApnsEnvironment">
+								<items><SegmentedButtonItem key="prod" text="Produktion (App Store, TestFlight)"/><SegmentedButtonItem key="sandbox" text="Sandbox (Xcode)"/></items>
+							</SegmentedButton>
+							<Label text="Schlüssel (.p8)"/>
+							<HBox alignItems="Center" wrap="Wrap" class="eoSystemItem">
+								<ObjectStatus text="{= ${view>/push/apnsKey} ? 'Neuer Schlüssel ausgewählt – wird beim Speichern verschlüsselt abgelegt' : ${view>/push/apnsKeyStored} ? 'Gespeichert (verschlüsselt)' : 'Kein Schlüssel' }"
+									state="{= ${view>/push/apnsKey} || ${view>/push/apnsKeyStored} ? 'Success' : 'Warning' }"/>
+								<Button text=".p8-Datei wählen …" icon="sap-icon://upload" press=".onApnsKey"/>
+								<Button text="Entfernen" type="Transparent" press=".onApnsKeyRemove" visible="{= ${view>/push/apnsKeyStored} &amp;&amp; !${view>/push/apnsFromEnvironment} }"/>
+							</HBox>
+							<Label text=""/>
+							<HBox class="eoSystemItem">
+								<Button text="Testnachricht an mich" icon="sap-icon://paper-plane" press=".onPushTest"/>
+								<Link text="Anleitung (docs/benachrichtigungen.md)" href="https://github.com/florians25/EstrichONE/blob/main/docs/benachrichtigungen.md" target="_blank"/>
+							</HBox>
+						</form:SimpleForm>
 					</IconTabFilter>
 					<IconTabFilter key="darstellung" text="Darstellung und Karte">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">

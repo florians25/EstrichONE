@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.Start" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:l="sap.ui.layout"
-	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	xmlns:core="sap.ui.core" xmlns:card="sap.f.cards" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
 	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
 		<f:title>
 			<f:DynamicPageTitle>
@@ -11,21 +11,37 @@
 				</f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
-		<f:header>
-			<f:DynamicPageHeader pinnable="false">
-				<!-- Kennzahlen als ruhige Kopf-Fakten: Beschriftung, große Zahl (anklickbar), kurzer Hinweis -->
-				<FlexBox class="eoKpiBar" items="{view>/kpis}" wrap="Wrap" renderType="Bare">
-					<VBox class="eoKpiItem" renderType="Bare">
-						<Label text="{view>title}" wrapping="true"/>
-						<ObjectStatus text="{view>value}" active="true" press=".onTile" class="eoKpiFigure"
-							state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'Information' }"
-							tooltip="{view>title} öffnen"/>
-						<Text text="{= ${view>footer} || ${view>subtitle} || '' }" class="eoKpiHint" visible="{= !!(${view>footer} || ${view>subtitle}) }" wrapping="true"/>
-					</VBox>
-				</FlexBox>
-			</f:DynamicPageHeader>
-		</f:header>
 		<f:content>
+			<VBox renderType="Bare" class="eoStartBody">
+			<!-- SAP Cards: Kennzahl im Kopf (NumericHeader), darunter die wichtigsten Einträge; Raster mit gleicher Höhe -->
+			<f:GridContainer id="startCards" items="{path: 'view>/cards', templateShareable: false}" snapToRow="true" class="eoStartCards">
+				<f:layout><f:GridContainerSettings columnSize="17rem" minColumnSize="15rem" maxColumnSize="30rem" rowSize="4rem" gap="1rem"/></f:layout>
+				<f:layoutXL><f:GridContainerSettings columns="6" columnSize="16rem" minColumnSize="13rem" maxColumnSize="30rem" rowSize="4rem" gap="1rem"/></f:layoutXL>
+				<f:layoutL><f:GridContainerSettings columns="3" columnSize="17rem" minColumnSize="15rem" maxColumnSize="30rem" rowSize="4rem" gap="1rem"/></f:layoutL>
+				<f:layoutM><f:GridContainerSettings columns="2" columnSize="17rem" minColumnSize="15rem" maxColumnSize="30rem" rowSize="4rem" gap="1rem"/></f:layoutM>
+				<f:layoutS><f:GridContainerSettings columns="1" columnSize="17rem" minColumnSize="15rem" maxColumnSize="40rem" rowSize="4rem" gap="0.75rem"/></f:layoutS>
+				<f:Card height="100%" class="eoStartCard">
+					<f:layoutData><f:GridContainerItemLayoutData rows="3" columns="1"/></f:layoutData>
+					<f:header>
+						<card:NumericHeader title="{view>title}" subtitle="{view>subtitle}" number="{view>value}" iconSrc="{view>icon}" state="{view>state}"
+							details="{view>details}" detailsMaxLines="1" press=".onTile"/>
+					</f:header>
+					<f:content>
+						<List items="{path: 'view>rows', templateShareable: false}" showSeparators="None" noDataText="{view>empty}" busy="{view>loading}"
+							busyIndicatorDelay="0" class="eoCardList">
+							<CustomListItem type="Active" press=".onRow">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoCardRow" renderType="Bare">
+									<HBox alignItems="Center" class="eoCardRowMain" renderType="Bare">
+										<core:Icon src="{view>icon}" class="eoCardRowIcon" visible="{= !!${view>icon} }"/>
+										<Text text="{view>text}" wrapping="false" tooltip="{view>text}"/>
+									</HBox>
+									<ObjectStatus text="{view>side}" state="{view>sideState}" class="eoNoShrink" visible="{= !!${view>side} }"/>
+								</HBox>
+							</CustomListItem>
+						</List>
+					</f:content>
+				</f:Card>
+			</f:GridContainer>
 			<FlexBox class="eoStartGrid" renderType="Bare">
 				<Panel headerText="Schnellzugriff" backgroundDesign="Solid" class="eoCardPanel">
 					<FlexBox items="{view>/groups}" wrap="Wrap" class="eoQuickGroups" renderType="Bare">
@@ -38,34 +54,6 @@
 					</FlexBox>
 				</Panel>
 				<VBox renderType="Bare" class="eoSideStack">
-					<Panel visible="{= ${session>/permissions/planning.read} === true }" backgroundDesign="Solid" class="eoCardPanel">
-						<headerToolbar>
-							<OverflowToolbar style="Clear">
-								<Title text="{i18n>start.today}" level="H2"/>
-								<ToolbarSpacer/>
-								<Link text="{i18n>start.weekPlan}" href="/planung"/>
-							</OverflowToolbar>
-						</headerToolbar>
-						<List items="{view>/assignments}" noDataText="{i18n>start.nothingToday}" busy="{view>/busy}" showSeparators="Inner" class="eoCompactList">
-							<StandardListItem title="{view>bauakteNumber} {view>bauakteTitle}" description="{view>activity} · {view>crewName}"
-								info="{path: 'view>startTime', formatter: 'fmt.time'}" infoState="{= ${view>warnings}.length ? 'Warning' : 'None' }"
-								type="Navigation" press=".onAssignment" icon="{path: 'view>kind', formatter: 'fmt.kindIcon'}" wrapping="true"
-								tooltip="{= ${view>warnings}.length ? ${view>warnings}.length + ' Hinweise' : '' }"/>
-						</List>
-					</Panel>
-					<Panel visible="{= ${view>/approvals}.length > 0 }" backgroundDesign="Solid" class="eoCardPanel">
-						<headerToolbar>
-							<OverflowToolbar style="Clear">
-								<Title text="Warten auf Genehmigung" level="H2"/>
-								<ToolbarSpacer/>
-								<Link text="Alle Freigaben" href="/dokumente?reiter=freigaben"/>
-							</OverflowToolbar>
-						</headerToolbar>
-						<List items="{view>/approvals}" showSeparators="Inner" class="eoCompactList">
-							<StandardListItem title="{view>fileName}" description="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} + ' · von ' + ${view>requestedByName} }"
-								icon="sap-icon://approvals" type="Navigation" press=".onApproval" wrapping="true"/>
-						</List>
-					</Panel>
 					<Panel visible="{= ${session>/permissions/backup.manage} === true &amp;&amp; !!${view>/backup} }" backgroundDesign="Solid" class="eoCardPanel">
 						<headerToolbar>
 							<OverflowToolbar style="Clear">
@@ -80,8 +68,15 @@
 							<MessageStrip visible="{= !!${view>/monitor} }" type="{view>/monitor/type}" text="{view>/monitor/text}" showIcon="true" class="sapUiSmallMarginTop"/>
 						</VBox>
 					</Panel>
+					<Panel visible="{= ${view>/kpis}.length > 0 }" backgroundDesign="Solid" class="eoCardPanel">
+						<headerToolbar><OverflowToolbar style="Clear"><Title text="Kennzahlen" level="H2"/></OverflowToolbar></headerToolbar>
+						<List items="{view>/kpis}" showSeparators="Inner" class="eoCompactList">
+							<StandardListItem title="{view>title}" info="{view>value}" infoState="{view>infoState}" icon="{view>icon}" type="Navigation" press=".onTile"/>
+						</List>
+					</Panel>
 				</VBox>
 			</FlexBox>
+			</VBox>
 		</f:content>
 	</f:DynamicPage>
 </mvc:View>

@@ -38,6 +38,14 @@ import { openQuickCall } from "../util/quickCall";
 import { openBauakteWizard } from "../util/bauakteWizard";
 import type { CallResponse, DeviceResponse, TicketSummary, WorkItemDto } from "../util/models";
 import { isoDay } from "../util/days";
+import Button from "sap/m/Button";
+import Toolbar from "sap/m/Toolbar";
+import ToolbarSpacer from "sap/m/ToolbarSpacer";
+import Title from "sap/m/Title";
+import GroupHeaderListItem from "sap/m/GroupHeaderListItem";
+import NotificationListItem from "sap/m/NotificationListItem";
+import { CATEGORY_ICONS, inbox, markAllRead, markRead, refreshWebPush, relativeTime, type NotificationItem } from "../util/notifications";
+import { openNotificationPreferences } from "../util/notificationPreferences";
 
 interface Notice {
 	title: string;
@@ -66,7 +74,7 @@ export default class AppController extends BaseController {
 			navKey: "",
 			today: new Date().toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
 			online: true,
-			notifications: { count: "", items: [] as Notice[] },
+			notifications: { count: "", items: [] as Notice[], inbox: [] as NotificationItem[], unread: 0 },
 		});
 		Theming.attachApplied(() => {
 			this.model().setProperty("/logo", logos(Theming.getTheme()).shell);
@@ -90,6 +98,11 @@ export default class AppController extends BaseController {
 		document.addEventListener("estrichone-notices", () => { if (session.data.user) void this.loadNotices(); });
 		// Module oder Rechte geändert (Einstellungen): Navigation sofort anpassen.
 		document.addEventListener("estrichone-permissions", () => this.refreshShell());
+		// Service Worker: neue Pushnachricht (Glocke sofort aktualisieren) bzw. Klick auf eine Benachrichtigung.
+		navigator.serviceWorker?.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
+			if (event.data?.type === "estrichone-notification" && session.data.user) void this.loadNotices();
+			if (event.data?.type === "estrichone-open" && event.data.url) this.nav(event.data.url);
+		});
 		window.addEventListener("online", () => this.model().setProperty("/online", true));
 		window.addEventListener("offline", () => this.model().setProperty("/online", false));
 		// Nur die aktuelle Seite bleibt im DOM (Seiten bleiben im Speicher erhalten): eindeutige Beschriftungen,
@@ -250,6 +263,7 @@ export default class AppController extends BaseController {
 			title: session.data.user?.displayName ?? "",
 			items: [
 				new MenuItem({ text: this.t("settings.title"), icon: "sap-icon://action-settings", press: () => openSettings() }),
+				new MenuItem({ text: this.t("inbox.preferences"), icon: "sap-icon://bell", press: () => openNotificationPreferences() }),
 				new MenuItem({ text: this.t("password.title"), icon: "sap-icon://key", press: () => this.nav("/konto/passwort") }),
 				new MenuItem({ text: this.t("shell.signOut"), icon: "sap-icon://log", startsSection: true, press: () => void this.signOut() }),
 			],
@@ -316,6 +330,14 @@ export default class AppController extends BaseController {
 			void session.people();
 			this.refreshShell();
 			this.startNotices();
+			// Aus einer Pushnachricht geöffnet: als gelesen markieren.
+			const nid = match.query.get("nid");
+			if (nid) {
+				void markRead(nid).then(() => this.loadNotices()).catch(() => undefined);
+				const query = new URLSearchParams(window.location.search);
+				query.delete("nid");
+				window.history.replaceState(window.history.state, "", window.location.pathname + (query.size ? `?${query.toString()}` : ""));
+			}
 		}
 		const root = this.el<App>("root");
 		const containerId = route.public ? "authNav" : route.bare ? "bareNav" : "content";
@@ -345,6 +367,7 @@ export default class AppController extends BaseController {
 
 	private startNotices(): void {
 		if (this.noticeTimer) return;
+		void refreshWebPush();
 		void this.loadNotices();
 		this.noticeTimer = setInterval(() => void this.loadNotices(), 120_000);
 	}
@@ -353,6 +376,9 @@ export default class AppController extends BaseController {
 		const items: Notice[] = [];
 		const today = isoDay(new Date());
 		const tasks: Promise<void>[] = [];
+		// Postfach: Ereignisse und Nachrichten aus dem Büro. Hinweise zu denselben Objekten werden nicht doppelt gezeigt.
+		const box = await inbox({ limit: 8 }).catch(() => ({ items: [] as NotificationItem[], unreadCount: 0 }));
+		const covered = new Set(box.items.filter((n) => !n.readAt && n.objectId).map((n) => n.objectId));
 		if (session.has("contacts.read")) {
 			tasks.push(get<CallResponse[]>("calls", { due: true }).then((calls) => {
 				for (const c of calls.slice(0, 10)) {
@@ -366,6 +392,7 @@ export default class AppController extends BaseController {
 		const unreadTask = get<{ count: number; items: { id: string; number: string; title: string }[] }>("tickets/unread").then((unread) => {
 			for (const t of unread.items.slice(0, 10)) {
 				unreadIds.add(t.id);
+				if (covered.has(t.id)) continue;
 				items.push({ title: `${t.number}: ${t.title}`, description: this.t("notice.ticketReply"), icon: "sap-icon://comment",
 					path: `/it-center/helpdesk/${t.id}`, priority: "Medium" });
 			}
@@ -390,33 +417,79 @@ export default class AppController extends BaseController {
 		}
 		if (session.has("work.read")) {
 			tasks.push(get<WorkItemDto[]>("work-items/mine").then((work) => {
-				for (const w of work.filter((x) => x.status !== "done" && x.dueDate && x.dueDate < today).slice(0, 10)) {
+				for (const w of work.filter((x) => x.status !== "done" && x.dueDate && x.dueDate < today && !covered.has(x.id)).slice(0, 10)) {
 					items.push({ title: `${this.t("notice.overdue")}: ${w.title}`, description: w.dueDate ?? "", icon: "sap-icon://alert",
 						path: w.bauakteId ? `/bauakten/${w.bauakteId}?abschnitt=aufgaben` : "/tagesuebersicht", priority: "High" });
 				}
 			}));
 		}
 		await Promise.allSettled(tasks);
-		this.model().setProperty("/notifications", { count: items.length ? String(items.length) : "", items });
+		const total = box.unreadCount + items.length;
+		this.model().setProperty("/notifications", { count: total ? String(total > 99 ? "99+" : total) : "", items, inbox: box.items, unread: box.unreadCount });
+		if ("setAppBadge" in navigator) void (navigator as Navigator & { setAppBadge(n: number): Promise<void> }).setAppBadge(box.unreadCount).catch(() => undefined);
 	}
 
+	/** Glocke: Postfach (neueste 8) und Hinweise; Aktionen „Alle gelesen“, „Alle anzeigen“, „Nachricht senden“, Einstellungen. */
 	onNotifications(event: ShellBar$NotificationsPressedEvent): void {
-		const items = (this.model().getProperty("/notifications/items") as Notice[]) ?? [];
-		const list = new List({ noDataText: this.t("notice.none") });
-		for (const n of items) {
-			list.addItem(new StandardListItem({
-				title: n.title, description: n.description, icon: n.icon, type: "Navigation", wrapping: true,
-				highlight: n.priority === "High" ? "Error" : n.priority === "Medium" ? "Warning" : "None",
+		const data = this.model().getProperty("/notifications") as { items: Notice[]; inbox: NotificationItem[]; unread: number };
+		const list = new List({ noDataText: this.t("notice.none"), showSeparators: "Inner" });
+		list.addStyleClass("eoNotificationList");
+		const open = (path: string | null) => {
+			popover.close();
+			if (path) this.nav(path);
+		};
+		list.addItem(new GroupHeaderListItem({ title: data.unread ? this.t("inbox.unread", [data.unread]) : this.t("inbox.title") }));
+		if (!data.inbox.length) {
+			list.addItem(new StandardListItem({ title: this.t("inbox.empty"), type: "Inactive" }));
+		}
+		for (const n of data.inbox) {
+			list.addItem(new NotificationListItem({
+				title: n.title, description: n.body ?? "", datetime: relativeTime(n.createdAt), unread: !n.readAt,
+				priority: n.urgency === "high" ? "High" : "None", authorName: n.senderName ?? "", authorPicture: CATEGORY_ICONS[n.category],
+				showCloseButton: false, truncate: true, showButtons: false,
 				press: () => {
-					popover.close();
-					this.nav(n.path);
+					if (!n.readAt) void markRead(n.id).then(() => this.loadNotices()).catch(() => undefined);
+					open(n.link ?? "/benachrichtigungen");
 				},
 			}));
 		}
-		const popover = new ResponsivePopover({
-			title: this.t("notice.title"), contentWidth: "26rem", placement: "Bottom", content: [list],
+		if (data.items.length) {
+			list.addItem(new GroupHeaderListItem({ title: this.t("notice.title") }));
+			for (const n of data.items) {
+				list.addItem(new StandardListItem({
+					title: n.title, description: n.description, icon: n.icon, type: "Navigation", wrapping: true,
+					highlight: n.priority === "High" ? "Error" : n.priority === "Medium" ? "Warning" : "None",
+					press: () => open(n.path),
+				}));
+			}
+		}
+		const header = new Toolbar({
+			content: [new Title({ text: this.t("inbox.popoverTitle"), level: "H2" }), new ToolbarSpacer(),
+				new Button({ text: this.t("inbox.markAll"), type: "Transparent", enabled: data.unread > 0, press: async () => {
+					await markAllRead().catch((error: unknown) => this.showError(error));
+					popover.close();
+					void this.loadNotices();
+				} }),
+				new Button({ icon: "sap-icon://action-settings", type: "Transparent", tooltip: this.t("inbox.preferences"), press: () => {
+					popover.close();
+					openNotificationPreferences();
+				} }),
+			],
+		});
+		const footer = new Toolbar({
+			content: [
+				new Button({ text: this.t("inbox.showAll"), type: "Transparent", press: () => open("/benachrichtigungen") }),
+				new ToolbarSpacer(),
+				...(session.has("notifications.send")
+					? [new Button({ text: this.t("inbox.send"), icon: "sap-icon://paper-plane", type: "Transparent", press: () => open("/verwaltung/nachrichten?neu=1") })]
+					: []),
+			],
+		});
+		const popover: ResponsivePopover = new ResponsivePopover({
+			customHeader: header, contentWidth: "28rem", contentHeight: "auto", placement: "Bottom", content: [list], footer,
 			afterClose: () => popover.destroy(),
 		});
+		popover.addStyleClass("eoNotificationPopover");
 		this.v().addDependent(popover);
 		popover.openBy(event.getParameter("button") as Control);
 	}

@@ -9,6 +9,14 @@ import { session } from "../../util/session";
 import { loadSystemSettings, saveSystemSettings, type SystemSettings } from "../../util/systemSettings";
 import { themes } from "../../util/theme";
 import type { RouteMatch } from "../../util/router";
+import { sendTest, type PushSettings } from "../../util/notifications";
+import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
+
+interface PushForm extends PushSettings {
+	vapidSubjectInput: string;
+	apnsKey: string | null;
+	removeApnsKey: boolean;
+}
 
 interface LogoInfo {
 	hasLogo: boolean;
@@ -48,6 +56,7 @@ export default class Company extends BaseController {
 		if (tab) this.model().setProperty("/tab", tab);
 		this.model().setProperty("/busy", true);
 		try {
+			void this.loadPush();
 			const [c, settings, logo, templates, roles] = await Promise.all([
 				get<CompanyResponse>("company"),
 				loadSystemSettings(true),
@@ -69,6 +78,67 @@ export default class Company extends BaseController {
 			this.showError(error);
 		} finally {
 			this.model().setProperty("/busy", false);
+		}
+	}
+
+	private async loadPush(): Promise<void> {
+		const push = await get<PushSettings>("notifications/settings").catch(() => null);
+		this.model().setProperty("/push", push ? this.pushForm(push) : null);
+	}
+
+	private pushForm(push: PushSettings): PushForm {
+		const defaultSubject = push.vapidSubject;
+		return { ...push, vapidSubjectInput: defaultSubject.startsWith("mailto:") || defaultSubject.startsWith("https://") ? defaultSubject : "", apnsKey: null, removeApnsKey: false };
+	}
+
+	private async savePush(): Promise<void> {
+		const p = this.model().getProperty("/push") as PushForm | null;
+		if (!p) return;
+		const saved = await put<PushSettings>("notifications/settings", {
+			webPushEnabled: p.webPushEnabled, vapidSubject: p.vapidSubjectInput || null, apnsEnabled: p.apnsEnabled, apnsKeyId: p.apnsKeyId || null,
+			apnsTeamId: p.apnsTeamId || null, apnsBundleId: p.apnsBundleId || null, apnsProduction: p.apnsProduction, apnsKey: p.apnsKey,
+			removeApnsKey: p.removeApnsKey, showContent: p.showContent, version: p.version,
+		});
+		this.model().setProperty("/push", this.pushForm(saved));
+	}
+
+	onApnsEnvironment(event: SegmentedButton$SelectionChangeEvent): void {
+		this.model().setProperty("/push/apnsProduction", event.getParameter("item")?.getKey() === "prod");
+	}
+
+	onApnsKey(): void {
+		const input = document.createElement("input");
+		input.type = "file";
+		input.accept = ".p8,application/pkcs8,text/plain";
+		input.addEventListener("change", async () => {
+			const file = input.files?.[0];
+			if (!file) return;
+			const text = await file.text();
+			if (!text.includes("BEGIN PRIVATE KEY")) {
+				this.toast("Das ist keine .p8-Datei von Apple (PRIVATE KEY erwartet).");
+				return;
+			}
+			this.model().setProperty("/push/apnsKey", text);
+			this.model().setProperty("/push/removeApnsKey", false);
+			const id = /AuthKey_([A-Z0-9]{10})\.p8/i.exec(file.name)?.[1];
+			if (id && !this.model().getProperty("/push/apnsKeyId")) this.model().setProperty("/push/apnsKeyId", id.toUpperCase());
+		});
+		input.click();
+	}
+
+	onApnsKeyRemove(): void {
+		this.model().setProperty("/push/apnsKey", null);
+		this.model().setProperty("/push/removeApnsKey", true);
+		this.model().setProperty("/push/apnsKeyStored", false);
+	}
+
+	async onPushTest(): Promise<void> {
+		try {
+			await sendTest();
+			this.toast("Testnachricht gesendet – Postfach und Pushnachricht prüfen.");
+			document.dispatchEvent(new CustomEvent("estrichone-notices"));
+		} catch (error) {
+			this.showError(error);
 		}
 	}
 
@@ -97,6 +167,7 @@ export default class Company extends BaseController {
 			const [savedCompany, savedSettings] = await Promise.all([
 				put<CompanyResponse>("company", { ...c, email: c.email || null }),
 				saveSystemSettings(clean, this.version),
+				this.savePush(),
 			]);
 			resetCompany();
 			this.version = savedSettings.version;

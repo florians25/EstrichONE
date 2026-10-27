@@ -9,6 +9,8 @@ export const routes: RouteDef[] = [
 	{ name: "orderPrint", pattern: "/bestellungen/:id/druck", view: "materials.OrderPrint", bare: true, permission: "materials.read", title: "orders.print" },
 	{ name: "report", pattern: "/bauakten/:id/bericht", view: "bauakte.Report", bare: true, permission: "bauakten.read", title: "report.title" },
 	{ name: "start", pattern: "/start", view: "Start", nav: "start", title: "nav.start" },
+	{ name: "inbox", pattern: "/benachrichtigungen", view: "Inbox", nav: "inbox", title: "nav.inbox" },
+	{ name: "messages", pattern: "/verwaltung/nachrichten", view: "admin.Messages", permission: "notifications.send", nav: "messages", title: "nav.messages" },
 	{ name: "password", pattern: "/konto/passwort", view: "auth.ChangePassword", title: "password.title" },
 	{ name: "today", pattern: "/tagesuebersicht", view: "Today", permission: "bauakten.read", nav: "today", title: "nav.today" },
 	{ name: "siteMap", pattern: "/bauakten/karte", view: "SiteMap", permission: "bauakten.read", nav: "siteMap", title: "nav.siteMap" },
@@ -95,6 +97,7 @@ export const navigation: NavEntry[] = [
 		key: "groupOffice", children: [
 			{ key: "customers", path: "/kunden", icon: "sap-icon://customer", permission: "contacts.read" },
 			{ key: "calls", path: "/anrufe", icon: "sap-icon://call", permission: "contacts.read" },
+			{ key: "messages", path: "/verwaltung/nachrichten", icon: "sap-icon://paper-plane", permission: "notifications.send" },
 			{ key: "crews", path: "/planung/kolonnen", icon: "sap-icon://group", permission: "planning.read" },
 			{ key: "vehicles", path: "/planung/geraete", icon: "sap-icon://shipping-status", permission: "planning.read" },
 		],

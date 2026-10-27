@@ -485,3 +485,18 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoCardRowSide.sapMText { flex: 0 1 auto; max-width: 45%; overflow: hidden; text-overflow: ellipsis; }
 .eoCardBody { padding: 0 1rem 0.75rem; box-sizing: border-box; }
 .eoCardPhotos { gap: 0.375rem; padding: 0 1rem 0.75rem; overflow: hidden; }
+
+/* Startseite: SAP Cards oben (gleiche Höhe), ruhige Zahlen, kurze Listen */
+.eoStartCards { margin: 0 0 1.25rem; }
+.eoStartCards .sapFCard { overflow: hidden; }
+.eoStartCards .sapFCardNumericHeader .sapFCardHeaderMainPart { gap: 0.25rem; }
+.eoStartCards .sapFCardNumericHeader .sapMNCValueScr { font-size: 2rem; }
+.eoStartCards .eoCardList.sapMList .sapMLIB { min-height: 2rem; }
+.eoNoShrink { flex: none; }
+.eoGap > * + * { margin-top: 0.5rem; }
+.eoStatusRow { gap: 0.25rem 1rem; }
+/* Glocke: Postfach und Hinweise */
+.eoNotificationPopover .sapMPopoverCont { max-height: 70vh; }
+.eoNotificationList .sapMNLI { border-bottom: 1px solid var(--sapList_BorderColor); }
+.eoInbox { max-width: 72rem; }
+.eoReadBar.sapMPI { margin: 0.25rem 0 0; max-width: 7rem; }

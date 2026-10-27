@@ -206,8 +206,9 @@ test('Zentrale Dokumentverwaltung: Ordner, Suche, Freigabe anfordern, ablehnen m
 
   // Dashboard zeigt die offene Freigabe.
   await nav(page, 'Übersicht').click();
-  await expect(page.getByText('Warten auf Genehmigung').filter({ visible: true }).first()).toBeVisible();
-  await page.getByRole('link', { name: 'Alle Freigaben' }).click();
+  const approvalsCard = page.locator('.eoStartCards .sapFCard').filter({ hasText: 'Warten auf Genehmigung' });
+  await expect(approvalsCard).toContainText('Angebot 2026-117 v2.pdf');
+  await approvalsCard.locator('.sapFCardHeader').click();
   const inbox = page.locator('.sapMITBContainerContent');
   await expect(inbox.getByText('„Bitte Preise prüfen“')).toBeVisible();
   await inbox.getByRole('button', { name: 'Ablehnen' }).first().click();
@@ -393,7 +394,9 @@ test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page
   });
   await signIn(page, 'admin', adminPassword);
   await openAkte(page);
-  await expect(page.locator('.eoOverviewCards').getByText('Aufgaben und Mängel').first()).toBeVisible();
+  // Übersicht ohne große Karten: kompakte Tabellen (offene Aufgaben, Einsätze, Dokumente).
+  await expect(page.locator('.sapFCard').filter({ visible: true })).toHaveCount(0);
+  await expect(page.getByText('Offene Aufgaben und Mängel').first()).toBeVisible();
   await expect(page.getByText('Baustellendaten')).toBeVisible();
   await page.getByRole('button', { name: 'Standort festlegen' }).click();
   await page.locator('.eoMap').last().click({ position: { x: 200, y: 100 } });

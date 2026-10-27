@@ -1,0 +1,133 @@
+<mvc:View controllerName="estrichone.controller.admin.Messages" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+	xmlns:form="sap.ui.layout.form" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.messages}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Nachrichten an einzelne Personen, Rollen, Kolonnen oder alle – im Postfach und als Pushnachricht in App und Browser."/></f:expandedContent>
+				<f:actions>
+					<Button id="messageNew" text="Neue Nachricht" icon="sap-icon://paper-plane" type="Emphasized" press=".onNew"/>
+					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<Table id="sentTable" items="{view>/sent}" noDataText="Noch keine Nachrichten gesendet." popinLayout="GridSmall" sticky="ColumnHeaders">
+				<headerToolbar>
+					<OverflowToolbar style="Clear">
+						<Title text="Gesendet" level="H2"/>
+						<ToolbarSpacer/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<columns>
+					<Column><Text text="Nachricht"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true" width="14rem"><Text text="Empfänger"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true" width="10rem"><Text text="Gesendet"/></Column>
+					<Column width="9rem"><Text text="Gelesen"/></Column>
+					<Column minScreenWidth="Desktop" demandPopin="true" width="13rem">
+						<Text text="Zustellung" tooltip="Push: vom Push-Dienst angenommen · Postfach: kein Gerät mit Pushnachrichten · Fehler: Push abgelehnt"/>
+					</Column>
+				</columns>
+				<items>
+					<ColumnListItem type="Navigation" press=".onDetail" highlight="{= ${view>urgency} === 'high' ? 'Warning' : 'None' }">
+						<VBox>
+							<Text text="{view>title}" class="eoStrong" wrapping="true"/>
+							<Text text="{view>body}" maxLines="2" class="eoMuted"/>
+						</VBox>
+						<Text text="{view>audience}" wrapping="true"/>
+						<VBox><Text text="{view>when}"/><Text text="{view>senderName}" class="eoMuted"/></VBox>
+						<VBox renderType="Bare">
+							<Text text="{view>readText}" class="eoTabular"/>
+							<ProgressIndicator percentValue="{view>readPercent}" showValue="false" state="None" height="0.375rem" displayOnly="true" class="eoReadBar"/>
+						</VBox>
+						<HBox wrap="Wrap" class="eoStatusRow">
+							<ObjectStatus text="{= 'Push ' + ${view>pushed} }" state="Success" visible="{= ${view>pushed} > 0 }"/>
+							<ObjectStatus text="{= 'Postfach ' + ${view>inAppOnly} }" visible="{= ${view>inAppOnly} > 0 }"/>
+							<ObjectStatus text="{= 'Fehler ' + ${view>failed} }" state="Error" visible="{= ${view>failed} > 0 }"/>
+							<ObjectStatus text="{= 'Wartet ' + ${view>pending} }" state="Information" visible="{= ${view>pending} > 0 }"/>
+						</HBox>
+					</ColumnListItem>
+				</items>
+			</Table>
+		</f:content>
+		<f:dependents>
+			<Dialog id="composeDialog" title="Neue Nachricht" contentWidth="40rem" resizable="true" draggable="true" afterClose=".onComposeClosed">
+				<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="3" labelSpanS="12" columnsL="1" columnsM="1">
+					<Label text="Empfänger"/>
+					<SegmentedButton id="composeAll" selectedKey="{view>/c/mode}">
+						<items>
+							<SegmentedButtonItem key="pick" text="Auswählen"/>
+							<SegmentedButtonItem key="all" text="{= 'Alle Benutzer (' + ${view>/audiences/activeUsers} + ')' }"/>
+						</items>
+					</SegmentedButton>
+					<Label text="Personen" labelFor="composeUsers" visible="{= ${view>/c/mode} === 'pick' }"/>
+					<MultiComboBox id="composeUsers" selectedKeys="{view>/c/userIds}" items="{view>/people}" visible="{= ${view>/c/mode} === 'pick' }"
+						placeholder="Namen eingeben …" showSelectAll="false">
+						<core:Item key="{view>id}" text="{view>displayName}"/>
+					</MultiComboBox>
+					<Label text="Rollen" labelFor="composeRoles" visible="{= ${view>/c/mode} === 'pick' }"/>
+					<MultiComboBox id="composeRoles" selectedKeys="{view>/c/roleIds}" items="{view>/audiences/roles}" visible="{= ${view>/c/mode} === 'pick' }">
+						<core:ListItem key="{view>id}" text="{view>name}" additionalText="{= ${view>members} + ' Pers.' }"/>
+					</MultiComboBox>
+					<Label text="Kolonnen" labelFor="composeCrews" visible="{= ${view>/c/mode} === 'pick' }"/>
+					<MultiComboBox id="composeCrews" selectedKeys="{view>/c/crewIds}" items="{view>/audiences/crews}" visible="{= ${view>/c/mode} === 'pick' }">
+						<core:ListItem key="{view>id}" text="{view>name}" additionalText="{= ${view>members} + ' Pers.' }"/>
+					</MultiComboBox>
+					<Label text="Titel" labelFor="composeTitle" required="true"/>
+					<Input id="composeTitle" value="{view>/c/title}" maxLength="200" placeholder="z. B. Morgen Treffpunkt 6:30 Uhr am Lager" valueLiveUpdate="true"/>
+					<Label text="Text" labelFor="composeBody"/>
+					<TextArea id="composeBody" value="{view>/c/body}" maxLength="2000" rows="5" growing="true" growingMaxLines="12" showExceededText="true" width="100%"/>
+					<Label text="Dringlichkeit" labelFor="composeUrgency"/>
+					<SegmentedButton id="composeUrgency" selectedKey="{view>/c/urgency}">
+						<items>
+							<SegmentedButtonItem key="low" text="Niedrig"/>
+							<SegmentedButtonItem key="normal" text="Normal"/>
+							<SegmentedButtonItem key="high" text="Dringend"/>
+						</items>
+					</SegmentedButton>
+					<Label text="Verknüpfung" labelFor="composeLink"/>
+					<Select id="composeLink" selectedKey="{view>/c/link}" width="100%">
+						<core:Item key="" text="Keine (nur Text)"/>
+						<core:Item key="/planung/wer-faehrt-wohin" text="Wer fährt wohin"/>
+						<core:Item key="/tagesuebersicht" text="Tagesübersicht"/>
+						<core:Item key="/personal/urlaub" text="Urlaub"/>
+						<core:Item key="/it-center/helpdesk" text="Helpdesk"/>
+						<core:Item key="/start" text="Übersicht"/>
+					</Select>
+				</form:SimpleForm>
+				<MessageStrip text="Pushnachrichten erscheinen auf dem Sperrbildschirm. Bitte keine vertraulichen Inhalte (Gesundheit, Preise, Passwörter)."
+					type="Information" showIcon="true" class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom"/>
+				<beginButton><Button id="composeSend" text="Senden" icon="sap-icon://paper-plane" type="Emphasized" press=".onSendMessage"
+					enabled="{= !!${view>/c/title} &amp;&amp; (${view>/c/mode} === 'all' || ${view>/c/userIds}.length + ${view>/c/roleIds}.length + ${view>/c/crewIds}.length > 0) }"/></beginButton>
+				<endButton><Button text="Abbrechen" press=".onComposeCancel"/></endButton>
+			</Dialog>
+			<Dialog id="detailDialog" title="{view>/detail/title}" contentWidth="40rem" contentHeight="60%" resizable="true" draggable="true">
+				<VBox class="sapUiSmallMargin">
+					<Text text="{view>/detail/body}" visible="{= !!${view>/detail/body} }" class="sapUiSmallMarginBottom"/>
+					<HBox wrap="Wrap" class="eoStatusRow">
+						<ObjectStatus title="Empfänger" text="{view>/detail/recipients}"/>
+						<ObjectStatus title="Gelesen" text="{view>/detail/read}" state="Information"/>
+						<ObjectStatus title="Push" text="{view>/detail/pushed}" state="Success"/>
+						<ObjectStatus title="Nur Postfach" text="{view>/detail/inAppOnly}"/>
+						<ObjectStatus title="Fehler" text="{view>/detail/failed}" state="{= ${view>/detail/failed} > 0 ? 'Error' : 'None' }"/>
+					</HBox>
+				</VBox>
+				<Table items="{view>/detail/list}" sticky="ColumnHeaders">
+					<columns>
+						<Column><Text text="Person"/></Column>
+						<Column width="10rem"><Text text="Gelesen"/></Column>
+						<Column width="13rem"><Text text="Zustellung"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<Text text="{view>name}"/>
+							<Text text="{view>readText}"/>
+							<ObjectStatus text="{view>stateText}" state="{view>state}" tooltip="{view>pushError}"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+				<endButton><Button text="Schließen" press=".onDetailClose"/></endButton>
+			</Dialog>
+		</f:dependents>
+	</f:DynamicPage>
+</mvc:View>

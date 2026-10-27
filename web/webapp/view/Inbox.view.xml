@@ -1,0 +1,56 @@
+<mvc:View controllerName="estrichone.controller.Inbox" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.inbox}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Ereignisse zu Ihren Bauakten, Freigaben, Plänen, Tickets und Fristen sowie Nachrichten aus dem Büro."/></f:expandedContent>
+				<f:snappedContent><Text text="{= ${view>/unread} + ' ungelesen' }"/></f:snappedContent>
+				<f:actions>
+					<Button id="inboxReadAll" text="Alle gelesen" icon="sap-icon://complete" press=".onReadAll" enabled="{= ${view>/unread} > 0 }"/>
+					<Button text="Einrichten" icon="sap-icon://action-settings" press=".onPreferences"/>
+					<Button text="Nachricht senden" icon="sap-icon://paper-plane" type="Emphasized" press=".onSend" visible="{= ${session>/permissions/notifications.send} === true }"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox renderType="Bare">
+			<List id="inboxList" items="{view>/items}" growing="false" noDataText="{= ${view>/filter} === 'unread' ? 'Keine ungelesenen Benachrichtigungen.' : 'Noch keine Benachrichtigungen.' }"
+				showSeparators="Inner" class="eoInbox">
+				<headerToolbar>
+					<OverflowToolbar style="Clear">
+						<SegmentedButton selectedKey="{view>/filter}" selectionChange=".onFilter">
+							<items>
+								<SegmentedButtonItem key="all" text="Alle"/>
+								<SegmentedButtonItem key="unread" text="{= 'Ungelesen (' + ${view>/unread} + ')' }"/>
+							</items>
+						</SegmentedButton>
+						<ToolbarSpacer/>
+						<Label text="Art" labelFor="inboxCategory"/>
+						<Select id="inboxCategory" selectedKey="{view>/category}" change=".onFilter" width="12rem">
+							<core:Item key="" text="Alle Arten"/>
+							<core:Item key="message" text="Nachrichten"/>
+							<core:Item key="planning" text="Planung"/>
+							<core:Item key="bauakte" text="Bauakten"/>
+							<core:Item key="approval" text="Freigaben"/>
+							<core:Item key="ticket" text="Helpdesk"/>
+							<core:Item key="deadline" text="Fristen"/>
+							<core:Item key="system" text="System"/>
+						</Select>
+					</OverflowToolbar>
+				</headerToolbar>
+				<NotificationListItem title="{view>title}" description="{view>body}" datetime="{view>when}" unread="{= !${view>readAt} }"
+					priority="{= ${view>urgency} === 'high' ? 'High' : 'None' }" authorName="{view>author}" authorPicture="{view>icon}"
+					showCloseButton="true" close=".onDelete" truncate="false" press=".onOpen">
+					<buttons>
+						<Button text="{= ${view>readAt} ? 'Als ungelesen markieren' : 'Als gelesen markieren' }" press=".onToggleRead"/>
+						<Button text="Öffnen" press=".onOpen" visible="{= !!${view>link} }"/>
+					</buttons>
+				</NotificationListItem>
+			</List>
+			<FlexBox justifyContent="Center" class="sapUiSmallMarginTop" renderType="Bare">
+				<Button text="Ältere laden" visible="{view>/more}" press=".onMore" type="Transparent"/>
+			</FlexBox>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>
