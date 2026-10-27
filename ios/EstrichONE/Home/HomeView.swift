@@ -93,7 +93,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { syncButton }
             }
-            .rootToolbar()
+            .rootToolbar(showsMaintenance: false)
             .navigationDestination(for: HomeRoute.self) { route in
                 switch route {
                 case let .bauakte(id): BauakteDetailView(bauakteId: id)
@@ -138,8 +138,8 @@ struct HomeView: View {
     @ViewBuilder
     private var notices: some View {
         if model.isDemo {
-            Callout(tone: .info, title: "Demomodus", message: "Beispieldaten – es wird nichts gesendet. Alles lässt sich gefahrlos ausprobieren.",
-                    symbol: "play.rectangle.fill", actionTitle: "Demo beenden") { model.requestDemo(false) }
+            NoticeLine(tone: .info, text: "Demomodus: Beispieldaten, es wird nichts gesendet.", symbol: "play.rectangle.fill",
+                       actionTitle: "Beenden") { model.requestDemo(false) }
         }
         if let sync = model.active?.sync {
             if let message = sync.maintenanceMessage {

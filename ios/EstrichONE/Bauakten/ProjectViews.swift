@@ -120,36 +120,39 @@ private struct UnitField<Field: View>: View {
     }
 }
 
-/// Abschnitt „Basisdaten“ in der Bauakte: alle Werte des Bauvorhabens und der geplante Zeitraum als Beschriftung/Wert-Paare
-/// in zwei Spalten (iPad drei), mit Symbolen und Leerzustand.
+/// Abschnitt „Basisdaten“ in der Bauakte: alle Werte des Bauvorhabens und der geplante Zeitraum als Zeilen
+/// (Bezeichnung links, Wert rechts) mit Symbolen, sonst ein Leerzustand mit „Basisdaten erfassen“.
 struct ProjectSection: View {
     let bauakte: Bauakte
     var schema: FormSchema?
     var lists = ValueLists([])
     let edit: () -> Void
-    @Environment(\.horizontalSizeClass) private var sizeClass
 
     var body: some View {
         let items = schema.map { Self.items(bauakte, schema: $0, lists: lists) } ?? Self.items(bauakte)
         Section {
             if items.isEmpty {
-                Button(action: edit) {
-                    Label("Fläche, Estrich und Aufbau erfassen", systemImage: "square.and.pencil")
-                }
+                EmptyStateView(symbol: "list.bullet.rectangle", title: "Noch keine Basisdaten",
+                               message: "Fläche, Estrichart, Dicke und Heizung – für Kolonne und Büro auf einen Blick.",
+                               actionTitle: "Basisdaten erfassen", actionSymbol: "square.and.pencil", action: edit)
             } else {
-                LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 12, alignment: .topLeading), count: sizeClass == .regular ? 3 : 2),
-                          alignment: .leading, spacing: 12) {
-                    ForEach(items, id: \.title) { item in
-                        InfoCell(title: item.title, value: item.value, symbol: item.symbol)
+                // Wie in den Einstellungen: Bezeichnung links, Wert rechts – schnell zu überfliegen, auch mit großer Schrift.
+                ForEach(items, id: \.title) { item in
+                    LabeledContent {
+                        Text(item.value)
+                            .font(Typo.body)
+                            .foregroundStyle(Theme.textPrimary)
+                            .multilineTextAlignment(.trailing)
+                    } label: {
+                        Label {
+                            Text(item.title).foregroundStyle(Theme.textSecondary)
+                        } icon: {
+                            Image(systemName: item.symbol).foregroundStyle(Theme.accent)
+                        }
                     }
+                    .font(Typo.body)
+                    .accessibilityElement(children: .combine)
                 }
-                .padding(.vertical, 4)
-            }
-        } header: {
-            SectionHeader("Basisdaten") {
-                Button(action: edit) { Label("Bearbeiten", systemImage: "pencil") }
-                    .font(.subheadline.weight(.semibold))
-                    .accessibilityIdentifier("editProjectButton")
             }
         }
         .accessibilityIdentifier("projectSection")
@@ -187,31 +190,6 @@ struct ProjectSection: View {
             guard let value, !value.isEmpty else { return nil }
             return (title: title, value: value, symbol: symbol)
         }
-    }
-}
-
-/// Beschriftung über Wert, mit kleinem Symbol – für Karten mit mehreren Spalten.
-struct InfoCell: View {
-    let title: String
-    let value: String
-    var symbol: String?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                if let symbol { Image(systemName: symbol).imageScale(.small) }
-                Text(title)
-            }
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Theme.textSecondary)
-            Text(value)
-                .font(.subheadline)
-                .foregroundStyle(Color.primary)
-                .multilineTextAlignment(.leading)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .combine)
     }
 }
 

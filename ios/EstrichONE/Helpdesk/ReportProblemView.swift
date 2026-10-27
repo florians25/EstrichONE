@@ -137,9 +137,12 @@ struct ReportProblemView: View {
 /// Eigene Meldungen: lokal wartende und die Liste vom Server mit Status und Antworten.
 struct MyTicketsView: View {
     @Environment(AppModel.self) private var model
+    @Environment(\.shotScene) private var shotScene
     @State private var tickets: [TicketSummary] = []
     @State private var waiting: [(id: UUID, title: String)] = []
     @State private var offline = false
+    /// Screenshot-Modus „meldung-detail“: erste Meldung geöffnet.
+    @State private var opened: UUID?
 
     var body: some View {
         List {
@@ -160,19 +163,23 @@ struct MyTicketsView: View {
                     NavigationLink {
                         TicketDetailView(ticketId: ticket.id)
                     } label: {
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: Space.xs) {
                             Text(ticket.title)
-                            HStack {
-                                Text(ticket.number).monospacedDigit()
-                                TicketStatusText(status: ticket.status)
+                                .font(Typo.body)
+                                .foregroundStyle(Theme.textPrimary)
+                                .lineLimit(2)
+                            HStack(spacing: Space.s) {
+                                Text(ticket.number).font(Typo.meta.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                                TicketStatusChip(status: ticket.status)
                             }
-                            .font(.caption)
                         }
+                        .padding(.vertical, Space.xxs)
                     }
                 }
             }
         }
         .navigationTitle("Meine Meldungen")
+        .navigationDestination(item: $opened) { id in TicketDetailView(ticketId: id) }
         .task(id: model.active?.sync?.revision) { await load() }
         .refreshable { await load() }
     }
@@ -184,18 +191,28 @@ struct MyTicketsView: View {
         do throws(APIError) {
             tickets = try await client.myTickets()
             offline = false
+            if shotScene == "meldung-detail", opened == nil { opened = tickets.first?.id }
         } catch {
             offline = true
         }
     }
 }
 
-struct TicketStatusText: View {
+/// Stand einer Meldung als Kapsel: wartet auf mich (gelb), gelöst (grün), sonst ruhig.
+struct TicketStatusChip: View {
     let status: TicketStatus
 
     var body: some View {
-        Label(status.title, systemImage: symbol)
-            .foregroundStyle(status == .waitingForReporter ? Theme.hint : status == .resolved || status == .closed ? Theme.success : Theme.textSecondary)
+        Chip(text: status.title, symbol: symbol, tone: tone)
+            .accessibilityLabel("Status: \(status.title)")
+    }
+
+    private var tone: Chip.Tone {
+        switch status {
+        case .new, .inProgress: .accent
+        case .waitingForReporter: .warning
+        case .resolved, .closed: .success
+        }
     }
 
     private var symbol: String {
@@ -221,21 +238,31 @@ struct TicketDetailView: View {
     var body: some View {
         List {
             if let detail {
+                // Kopf als eine Zeile: Nummer und Stand, Titel, Beschreibung – ohne leere Felder dazwischen.
                 Section {
-                    Text(detail.summary.title).font(.headline)
-                    LabeledContent("Nummer", value: detail.summary.number)
-                    LabeledContent("Status") { TicketStatusText(status: detail.summary.status) }
-                    if let description = detail.description?.compactText {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Beschreibung").font(.caption).foregroundStyle(Theme.textSecondary)
+                    VStack(alignment: .leading, spacing: Space.s) {
+                        HStack(spacing: Space.s) {
+                            Text(detail.summary.number)
+                                .font(Typo.subheadStrong.monospacedDigit())
+                                .foregroundStyle(Theme.textSecondary)
+                            Spacer(minLength: Space.s)
+                            TicketStatusChip(status: detail.summary.status)
+                        }
+                        Text(detail.summary.title)
+                            .font(Typo.section)
+                            .foregroundStyle(Theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                        if let description = detail.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
                             Text(description)
+                                .font(Typo.body)
+                                .foregroundStyle(Theme.textPrimary)
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
-                    if let resolution = detail.resolution?.compactText {
-                        VStack(alignment: .leading, spacing: 4) {
-                            Text("Lösung").font(.caption).foregroundStyle(Theme.textSecondary)
-                            Text(resolution)
-                        }
+                    .padding(.vertical, Space.xs)
+                    if let resolution = detail.resolution?.trimmingCharacters(in: .whitespacesAndNewlines), !resolution.isEmpty {
+                        Callout(tone: .success, title: "Lösung", message: resolution, symbol: "checkmark.seal.fill")
+                            .listRowInsets(EdgeInsets(top: Space.s, leading: Space.s, bottom: Space.s, trailing: Space.s))
                     }
                 }
                 Section("Verlauf") {
@@ -258,9 +285,18 @@ struct TicketDetailView: View {
                         }
                     }
                 }
-                if let error { Text(error).foregroundStyle(Theme.error) }
+                if let error { Text(error).foregroundStyle(Theme.danger) }
+            } else if let error {
+                Section {
+                    Label(error, systemImage: "wifi.slash").foregroundStyle(Theme.textSecondary)
+                }
             } else {
-                ProgressView()
+                Section {
+                    HStack(spacing: Space.s) {
+                        ProgressView()
+                        Text("Wird geladen …").foregroundStyle(Theme.textSecondary)
+                    }
+                }
             }
         }
         .navigationTitle(detail?.summary.number ?? "Meldung")
@@ -304,9 +340,10 @@ struct TicketTimelineRow: View {
         if let text = entry.text, entry.isComment {
             VStack(alignment: isOwn ? .trailing : .leading, spacing: 3) {
                 Text(text)
-                    .padding(.horizontal, 12).padding(.vertical, 8)
-                    .background(isOwn ? Theme.navyBackground : Theme.neutralBackground, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
-                    .foregroundStyle(isOwn ? Theme.navyText : .primary)
+                    .font(Typo.body)
+                    .padding(.horizontal, Space.m).padding(.vertical, Space.s)
+                    .background(isOwn ? Theme.accentSoft : Theme.fill, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
+                    .foregroundStyle(Theme.textPrimary)
                 if !entry.attachmentFileIds.isEmpty {
                     Label("\(entry.attachmentFileIds.count) \(entry.attachmentFileIds.count == 1 ? "Anhang" : "Anhänge")", systemImage: "paperclip")
                         .labelStyle(TightLabelStyle()).font(.caption).foregroundStyle(Theme.textSecondary)

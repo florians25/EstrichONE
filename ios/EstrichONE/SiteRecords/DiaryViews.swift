@@ -115,31 +115,47 @@ struct NewDiaryEntryView: View {
 struct DiaryRow: View {
     let entry: DiaryEntry
     var authorName: String?
+    /// Datum in der Zeile, wenn kein Abschnittskopf es zeigt.
+    var showsDate = false
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(spacing: 8) {
-                Text(CalendarDay.date(entry.day)?.formatted(date: .complete, time: .omitted) ?? entry.day)
-                    .font(.subheadline.weight(.semibold))
-                Spacer()
+        VStack(alignment: .leading, spacing: Space.s) {
+            HStack(spacing: Space.s) {
+                if showsDate {
+                    Text(Self.dayTitle(entry.day)).font(Typo.subheadStrong).foregroundStyle(Theme.textSecondary)
+                }
                 if let weather = entry.weather {
-                    Label(weather.title, systemImage: weather.symbol).labelStyle(.iconOnly)
-                        .accessibilityLabel(weather.title)
+                    Chip(text: weather.title, symbol: weather.symbol)
                 }
                 if let temperature = entry.temperatureCelsius {
-                    Text("\(temperature) °C").monospacedDigit()
+                    Chip(text: "\(temperature) °C", symbol: "thermometer.medium")
                 }
+                Spacer(minLength: 0)
+                SyncStateBadge(state: entry.syncState)
             }
-            .foregroundStyle(Theme.textSecondary)
-            Text(entry.text.compactText ?? "")
-            HStack(spacing: 8) {
-                if let authorName { Text(authorName) }
-                if let workers = entry.workersPresent { Text("\(workers) anwesend") }
+            Text(entry.text.trimmingCharacters(in: .whitespacesAndNewlines))
+                .font(Typo.body)
+                .foregroundStyle(Theme.textPrimary)
+                .fixedSize(horizontal: false, vertical: true)
+            let people = entry.workersPresent.map { "\($0) \($0 == 1 ? "Person" : "Personen") vor Ort" }
+            let meta = [authorName, people].compactMap { $0 }
+            if !meta.isEmpty {
+                Text(meta.joined(separator: " · ")).font(Typo.meta).foregroundStyle(Theme.textSecondary)
             }
-            .font(.caption)
-            .foregroundStyle(Theme.textSecondary)
-            SyncStateBadge(state: entry.syncState)
         }
-        .padding(.vertical, 2)
+        .padding(.vertical, Space.xs)
+        .accessibilityElement(children: .combine)
+    }
+
+    /// „Heute · Montag, 26. Oktober“, „Gestern · …“, sonst „Freitag, 23. Oktober“ (Jahr nur, wenn nicht das laufende).
+    static func dayTitle(_ day: String, now: Date = .now) -> String {
+        guard let date = CalendarDay.date(day) else { return day }
+        let calendar = Calendar.current
+        let sameYear = calendar.component(.year, from: date) == calendar.component(.year, from: now)
+        let text = sameYear ? date.formatted(.dateTime.weekday(.wide).day().month(.wide))
+                            : date.formatted(.dateTime.weekday(.wide).day().month(.wide).year())
+        if calendar.isDateInToday(date) { return "Heute · \(text)" }
+        if calendar.isDateInYesterday(date) { return "Gestern · \(text)" }
+        return text
     }
 }

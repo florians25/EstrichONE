@@ -88,6 +88,8 @@ private struct SidebarAdaptable: ViewModifier {
 /// Gemeinsame Werkzeugleiste der Reiter-Startseiten: im Demomodus eine Kennzeichnung mit „Beenden“, bei Wartung ein
 /// Hinweis. Nichts liegt über der Statusleiste oder verdeckt Inhalte.
 struct RootToolbar: ViewModifier {
+    /// Wartungssymbol oben links; die Heute-Seite zeigt die Wartung selbst (Hinweis und Abgleich-Symbol).
+    var showsMaintenance = true
     @Environment(AppModel.self) private var model
     @State private var explainsMaintenance = false
 
@@ -110,7 +112,7 @@ struct RootToolbar: ViewModifier {
                         .accessibilityIdentifier("demoBanner")
                     }
                 }
-                if let message = maintenanceMessage {
+                if showsMaintenance, let message = maintenanceMessage {
                     ToolbarItem(placement: .topBarLeading) {
                         Button { explainsMaintenance = true } label: {
                             Label("Wartung", systemImage: "wrench.and.screwdriver.fill")
@@ -137,5 +139,5 @@ struct RootToolbar: ViewModifier {
 }
 
 extension View {
-    func rootToolbar() -> some View { modifier(RootToolbar()) }
+    func rootToolbar(showsMaintenance: Bool = true) -> some View { modifier(RootToolbar(showsMaintenance: showsMaintenance)) }
 }

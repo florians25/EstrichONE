@@ -151,16 +151,18 @@ struct DispatchView: View {
     // MARK: iPad: Kolonnen als Spalten
 
     private func columns(_ board: DispatchBoard) -> some View {
+        // Drei Kolonnen passen nebeneinander (iPad hochkant), weitere per Wischen.
         ScrollView(.horizontal) {
             HStack(alignment: .top, spacing: 14) {
                 ForEach(board.crews) { crew in
                     column(title: { CrewHeader(crew: crew, board: board) }, sites: board.crewSites(crew), crew: crew, board: board)
                 }
-                column(title: { Text("Ohne Kolonne").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.textSecondary) },
+                column(title: { Text("Ohne Kolonne").font(Typo.subheadStrong).foregroundStyle(Theme.textSecondary) },
                        sites: board.sitesWithoutCrew, crew: nil, board: board)
             }
-            .padding()
+            .padding(.vertical)
         }
+        .contentMargins(.horizontal, Space.l, for: .scrollContent)
     }
 
     private func column<Title: View>(@ViewBuilder title: () -> Title, sites: [DispatchBoard.Site], crew: DispatchBoard.Crew?,
@@ -191,10 +193,10 @@ struct DispatchView: View {
                 }
             }
         }
-        .frame(width: 300)
         .frame(maxHeight: .infinity, alignment: .top)
         .padding(10)
-        .background(Color(uiColor: .secondarySystemGroupedBackground).opacity(0.6), in: RoundedRectangle(cornerRadius: Theme.cardRadius))
+        .background(Theme.fill.opacity(0.7), in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        .containerRelativeFrame(.horizontal, count: 3, spacing: 14)
         .dropDestination(for: String.self) { items, _ in
             guard board.canPlan, let drag = items.first.flatMap(SiteDrag.init(text:)), drag.fromCrewId != crew?.id else { return false }
             Task { await assign(drag.bauakteId, to: crew?.id, from: drag.fromCrewId) }
@@ -577,14 +579,18 @@ struct DispatchSiteRow: View {
                     .font(Typo.bodyStrong.monospacedDigit())
                     .foregroundStyle(Theme.textPrimary)
                 if let end = slot?.endText {
-                    Text("bis \(end)").font(Typo.meta.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                    Text("bis \(end)")
+                        .font(Typo.meta.monospacedDigit())
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                 }
                 if isMine {
                     Chip(text: "Ich", tone: .accent)
                         .accessibilityLabel("Mein Einsatz")
                 }
             }
-            .frame(width: 56, alignment: .leading)
+            .frame(width: 64, alignment: .leading)
 
             NavigationLink(value: HomeRoute.bauakte(site.bauakteId)) {
                 VStack(alignment: .leading, spacing: 3) {

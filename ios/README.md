@@ -11,23 +11,29 @@ und Poolgeräte folgen mit AP-11.
 **Baustellenfunktionen:** Schnellanlage einer Bauakte mit Kunde (vorhandenen suchen oder neu erfassen, offline
 über `contact.create` vor `bauakte.create`), Foto-Serien mit Beschriftung und Zuordnung, Dokumentenscanner
 (VisionKit, mehrseitig, PDF mit Texterkennung, Dokumentart), Dokumente per QuickLook, Bautagebuch mit Textbausteinen,
-Kunde anrufen und Route starten aus der Akte. Designsystem: `Design/ActionButtons.swift` (`EstrichButtonStyle`,
-`ActionTileStyle`, `IconButtonStyle`), Tokens in `Design/Theme.swift`.
+Kunde anrufen und Route starten aus der Akte, Räume und Flächen, Beteiligte, Erstbegehung, Abnahme, CM-Messung.
+
+**Designsystem** (`EstrichONE/Design/`): Farben, Abstände (8-pt-Raster), Radien und Größen in `Theme.swift` (eine
+Akzentfarbe Markenblau, gedämpfte Statusfarben, hell und dunkel), Schriftstufen mit Dynamic Type in `Typography.swift`,
+Schaltflächen in `Buttons.swift` (`EstrichButtonStyle` primär/sekundär/tertiär, `ActionTileStyle`, `IconButtonStyle`,
+`ChoiceButton`), Bausteine in `Components.swift` (Karte, Zeilen, Kennzahl, Kapsel, Hinweis, Leerzustand) und
+`Feedback.swift` (Platzhalter beim Laden, Fortschritt, Bestätigung). Neue Bildschirme verwenden nur diese Bausteine.
 
 ## Demomodus und Hinweise für die App-Prüfung (App Review)
 
 Auf dem Startbildschirm führt **„Demo ausprobieren – ohne Server“** ohne Eingaben in eine voll bedienbare App mit
-Beispieldaten (drei Bauakten mit Kunden, Fotos, Lieferschein-PDF, Bautagebuch, Erstbegehung, Aufgaben, Einsätze,
-eine Meldung an die IT). Der „Server“ läuft dabei im App-Prozess (`Support/LocalServer.swift`, Daten in
-`Support/DemoContent.swift`): **es wird nichts über das Netzwerk gesendet**, Änderungen bleiben auf dem Gerät. Ein grünes
-Band oben kennzeichnet den Demomodus; „Beenden“ (dort oder unter Mehr) löscht alle Demodaten und führt zurück zur
-Einrichtung. Kamera, Dokumentenscanner und Videoaufnahme funktionieren auch im Demomodus (lokal gespeichert).
+Beispieldaten (sechs Bauakten in allen Ständen mit Kunden, Fotos, Lieferschein-PDF, Bautagebuch, Erstbegehung,
+CM-Messung, Räumen, Beteiligten, Aufgaben, Einsätzen der Woche, „Wer fährt wohin“ mit drei Kolonnen und einer Meldung an
+die IT). Der „Server“ läuft dabei im App-Prozess (`Support/LocalServer.swift`, Daten in `Support/DemoContent.swift`):
+**es wird nichts über das Netzwerk gesendet**, Änderungen bleiben auf dem Gerät. Die Kennzeichnung „Demo“ oben links
+und ein Hinweis auf der Heute-Seite zeigen den Demomodus; „Beenden“ (dort, im Menü „Demo“ oder unter Mehr) löscht alle
+Demodaten und führt zurück zur Einrichtung. Kamera, Dokumentenscanner und Videoaufnahme funktionieren auch im Demomodus (lokal gespeichert).
 
 Text für die App-Review-Notizen (App Store Connect):
 
 > EstrichONE connects to a self-hosted company server. To review the app without a server, tap
 > “Demo ausprobieren – ohne Server” on the first screen. The app then runs with local sample data only; nothing is sent
-> over the network. Tap “Beenden” in the green bar to leave the demo. Camera, microphone and location are only used
+> over the network. Tap “Demo” (top left) and “Demo beenden” to leave the demo. Camera, microphone and location are only used
 > on explicit user action (photos, document scanner, videos, site address).
 
 UI-Test: `BauakteUITests.testDemoModeWithoutServer`.
@@ -94,6 +100,23 @@ liefert die App feste Antworten; `testDemoModeWithoutServer` nutzt den Demomodus
 CI: `.github/workflows/ios.yml` – EstrichCore unter Linux gegen einen echten Server (ca. 3 Minuten) und unter macOS,
 App-Build (Debug) mit den Unit-Tests der App im Simulator sowie ein Release-Build ohne Signatur. Die UI-Tests laufen
 bewusst nicht in der CI.
+
+## Screenshots (visuelle Prüfung)
+
+Debug-Builds haben einen Screenshot-Modus (`EstrichONE/Support/ScreenshotMode.swift`): Mit dem Startargument
+`-EstrichShots heute,bauakte,…` startet die App im Demomodus und zeigt die genannten Bildschirme nacheinander; über eine
+Datei in ihrem Datencontainer meldet sie, wann ein Bildschirm steht. `scripts/screenshots.sh` nimmt im Simulator
+jeden Bildschirm hell (und dunkel) auf, meldet Abstürze mit Absturzbericht und Hänger und macht mit dem nächsten weiter.
+
+Die CI (`.github/workflows/ios.yml`, Job „Screenshots“) läuft bei Änderungen an der App auf iPhone (hell und dunkel) und
+iPad (hell) parallel, lädt die Bilder als Artefakt hoch und schreibt sie verkleinert ins Protokoll
+(`scripts/shots-to-log.py`). Von Hand: Workflow „iOS“ starten, optional mit eigener Liste von Bildschirmen.
+
+Bildschirme: `heute`, `heute-unten`, `baustellen`, `bauakte`, `bauakte-unten`, `bereich-fotos`, `bereich-aufgaben`,
+`bereich-protokolle`, `bereich-tagebuch`, `bereich-raeume`, `bereich-basisdaten`, `bereich-kontakte`, `bereich-notizen`,
+`erfassen`, `neu-1` … `neu-4` (Anlage-Assistent), `erstbegehung`, `abnahme`, `kunden`, `kundenkarte`, `disposition`,
+`mehr`, `sync`, `meldung`, `meldung-detail`, `aufgaben`, `woche`, `wartung` (Wartungshinweis), `start` (Willkommen),
+`anmelden`.
 
 ## Akzeptanzkriterien aus 10 – Stand
 

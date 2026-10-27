@@ -294,6 +294,21 @@ struct DemoContent: Sendable {
             item("0193a1b2-de00-7000-8000-000000002002", Self.halle, kind: "task", title: "Zufahrt mit Bauleitung klären", due: 2),
             item("0193a1b2-de00-7000-8000-000000002005", Self.praxis, kind: "task", title: "CM-Messung Behandlungsraum 2", due: 2),
         ]
+        // Beteiligte am EFH Schneider (gepflegt im Büro).
+        func party(_ number: Int, _ role: String, _ name: String, company: String? = nil, phone: String? = nil, email: String? = nil,
+                   note: String? = nil) -> [String: Any] {
+            change("bauakteParty", ["id": String(format: "0193a1b2-de00-7000-8000-00000000%04d", 4000 + number), "bauakteId": Self.efh,
+                                    "role": role, "name": name, "company": company ?? NSNull(), "phone": phone ?? NSNull(),
+                                    "email": email ?? NSNull(), "note": note ?? NSNull(), "contactId": NSNull(), "version": 1,
+                                    "updatedAt": time(-86_400 * 6)])
+        }
+        result += [
+            party(1, "architect", "Anna Lechner", company: "Lechner Architekten", phone: "0871 430 22 10", email: "lechner@architekten.example"),
+            party(2, "siteManager", "Stefan Wimmer", company: "Wimmer Hausbau GmbH", phone: "0171 445 56 67",
+                  note: "Bauleitung – Abnahme der Estricharbeiten"),
+            party(3, "other", "Haustechnik Bauer GmbH", phone: "0871 66 12 0", note: "Heizung: Druckprobe vor dem Einbringen"),
+            party(4, "supplier", "Transportbeton Isar GmbH", phone: "0871 77 88 0", note: "Disposition ab 6 Uhr"),
+        ]
         // EFH Schneider: EG heute eingebracht, OG folgt – zusammen die 142,5 m² aus den Basisdaten.
         result += [
             room(1, "EG", "Wohnen/Essen", area: 41.2, laid: true),

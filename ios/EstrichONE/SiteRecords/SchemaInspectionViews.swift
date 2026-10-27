@@ -348,7 +348,7 @@ struct SchemaInspectionResultSections: View {
                 Text(remark).font(.subheadline).foregroundStyle(Theme.textSecondary)
             }
             if let count = inspection.checkPhotos[key]?.count, count > 0 {
-                Label("\(count) Foto(s)", systemImage: "photo").font(.caption).foregroundStyle(Theme.textSecondary)
+                Label("\(count) \(count == 1 ? "Foto" : "Fotos")", systemImage: "photo").font(.caption).foregroundStyle(Theme.textSecondary)
             }
         }
     }

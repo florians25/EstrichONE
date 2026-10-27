@@ -519,8 +519,11 @@ public actor LocalStore {
         try db.execute("DELETE FROM entity WHERE type = ? AND id = ?", [.text(type.rawValue), .text(id.key)])
         try db.execute("DELETE FROM conflict WHERE entity_type = ? AND entity_id = ?", [.text(type.rawValue), .text(id.key)])
         if type == .bauakte {
-            // Notizen, Dateien und Aufgaben folgen ihrer Bauakte.
-            try db.execute("DELETE FROM entity WHERE parent_id = ? AND type IN ('note', 'file', 'workItem')", [.text(id.key)])
+            // Der Inhalt folgt seiner Bauakte (Notizen, Dateien, Aufgaben, Tagebuch, Prüfungen, Abnahmen, Räume, Beteiligte).
+            try db.execute("""
+                DELETE FROM entity WHERE parent_id = ? AND type IN ('note', 'file', 'workItem', 'diaryEntry', 'inspection', 'acceptance', 'room',
+                'bauakteParty')
+                """, [.text(id.key)])
         }
     }
 
@@ -563,6 +566,7 @@ public actor LocalStore {
         case .formSchema: ["key"]
         case .ticket: ["title"]
         case .room: ["name", "floor", "notes"]
+        case .bauakteParty: ["name", "company", "phone", "email"]
         }
         let search = searchFields.compactMap { data[$0]?.string }.joined(separator: " ").lowercased()
         let sortKey = data["performedAt"]?.string ?? data["day"]?.string.map { $0 + (data["createdAt"]?.string ?? "") }

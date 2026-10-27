@@ -107,6 +107,16 @@ struct RootView: View {
 
     @ViewBuilder
     private var content: some View {
+        // Screenshot-Modus (nur Debug): Einrichtung und Anmeldung zeigen, obwohl die Demo angemeldet ist.
+        switch shotScene {
+        case "start": OnboardingView()
+        case "anmelden": SignInView(prefilledUserName: "m.huber")
+        default: screen
+        }
+    }
+
+    @ViewBuilder
+    private var screen: some View {
         switch model.screen {
         case .onboarding:
             OnboardingView()

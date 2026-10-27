@@ -116,3 +116,38 @@ struct RoomTests {
         #expect(try await service.store.operations().isEmpty)
     }
 }
+
+@Suite("Beteiligte")
+struct PartyTests {
+    @Test("Beteiligte aus dem Feed: nach Rolle sortiert, verknüpfte mit Name und Telefon aus dem Kundenstamm, verschwinden mit der Bauakte")
+    func partiesFromFeed() async throws {
+        let server = SimulatedSyncServer()
+        let directory = FileManager.default.temporaryDirectory.appending(path: "parties-\(UUID().uuidString)")
+        let key = SymmetricKey(size: .bits256)
+        let store = LocalStore(database: try EncryptedDatabase(url: directory.appending(path: "data.sealed"), key: key, migrations: LocalStore.schema))
+        let files = FileVault(directory: directory.appending(path: "files"), key: key)
+        let service = BauakteService(store: store, files: files, userId: UUID.v7())
+        let engine = SyncEngine(store: store, transport: server, files: files)
+
+        let bauakte = UUID.v7()
+        let contact = UUID.v7()
+        let supplier = UUID.v7()
+        let architect = UUID.v7()
+        server.serverSideChange("bauakte", id: bauakte, data: ["id": JSONValue(bauakte), "title": "EFH", "status": "planned", "version": 1])
+        server.serverSideChange("contact", id: contact, data: ["id": JSONValue(contact), "name": "Lechner Architekten", "phone": "0871 1234", "version": 1])
+        server.serverSideChange("bauakteParty", id: supplier, data: ["id": JSONValue(supplier), "bauakteId": JSONValue(bauakte), "role": "supplier",
+                                                                   "name": "Transportbeton Isar", "phone": "0871 999", "version": 1])
+        server.serverSideChange("bauakteParty", id: architect, data: ["id": JSONValue(architect), "bauakteId": JSONValue(bauakte), "role": "architect",
+                                                                    "contactId": JSONValue(contact), "name": "alt", "version": 1])
+        #expect(await engine.synchronize() == .completed)
+
+        let parties = try await service.parties(of: bauakte)
+        #expect(parties.map(\.id) == [architect, supplier])
+        #expect(parties[0].name == "Lechner Architekten" && parties[0].phone == "0871 1234" && parties[0].role.title == "Architekt")
+        #expect(parties[1].phone == "0871 999" && parties[1].role == .supplier)
+
+        server.serverSideDelete("bauakte", id: bauakte)
+        #expect(await engine.synchronize() == .completed)
+        #expect(try await service.parties(of: bauakte).isEmpty)
+    }
+}

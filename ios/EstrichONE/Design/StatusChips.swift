@@ -47,15 +47,18 @@ extension BauakteStatus {
 /// Status als Punkt und Text (ohne Fläche) – für Zeilen.
 struct StatusLabel: View {
     let status: BauakteStatus
+    /// Ausgewählte Zeile (iPad-Seitenleiste): Text und Punkt weiß auf Akzentfarbe.
+    @Environment(\.backgroundProminence) private var prominence
 
     var body: some View {
+        let selected = prominence == .increased
         HStack(spacing: 6) {
-            StatusDot(color: status.tint)
+            StatusDot(color: selected ? .white : status.tint)
             Text(status.shortTitle)
                 .strikethrough(status == .cancelled)
         }
         .font(Typo.metaStrong)
-        .foregroundStyle(Theme.textSecondary)
+        .foregroundStyle(selected ? Color.white.opacity(0.9) : Theme.textSecondary)
         .lineLimit(1)
         .accessibilityElement(children: .combine)
         .accessibilityLabel("Status: \(status.title)")
@@ -106,13 +109,18 @@ struct BauakteRow: View {
     var customerName: String?
     /// „Heute 07:00 · Kolonne Huber“
     var today: String?
+    @Environment(\.backgroundProminence) private var prominence
+
+    /// Ausgewählte Zeile (iPad-Seitenleiste): weiß auf Akzentfarbe statt Grau auf Blau.
+    private var selected: Bool { prominence == .increased }
+    private var secondary: Color { selected ? Color.white.opacity(0.85) : Theme.textSecondary }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                 Text(bauakte.title)
                     .font(Typo.headline)
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(selected ? Color.white : Theme.textPrimary)
                     .lineLimit(2)
                     .multilineTextAlignment(.leading)
                 Spacer(minLength: Space.xs)
@@ -123,14 +131,14 @@ struct BauakteRow: View {
             Text([bauakte.number ?? "Neu", bauakte.addressLine ?? "ohne Adresse"].joined(separator: " · "))
                 .font(Typo.subhead)
                 .monospacedDigit()
-                .foregroundStyle(Theme.textSecondary)
+                .foregroundStyle(secondary)
                 .lineLimit(1)
             HStack(spacing: Space.s) {
                 StatusLabel(status: bauakte.status)
                 if let customerName {
                     Text(customerName)
                         .font(Typo.meta)
-                        .foregroundStyle(Theme.textSecondary)
+                        .foregroundStyle(secondary)
                         .lineLimit(1)
                 }
             }
@@ -138,7 +146,7 @@ struct BauakteRow: View {
                 Label(today, systemImage: "calendar.badge.clock")
                     .labelStyle(TightLabelStyle())
                     .font(Typo.metaStrong)
-                    .foregroundStyle(Theme.accent)
+                    .foregroundStyle(selected ? Color.white : Theme.accent)
                     .lineLimit(1)
             }
         }

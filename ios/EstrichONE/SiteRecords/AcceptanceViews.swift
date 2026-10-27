@@ -64,8 +64,7 @@ struct NewAcceptanceView: View {
                             result = .refused
                         }
                     }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: Space.s, leading: Space.s, bottom: Space.s, trailing: Space.s))
                     .accessibilityIdentifier("acceptanceResultPicker")
                 } header: {
                     Text("Ergebnis")
@@ -74,13 +73,20 @@ struct NewAcceptanceView: View {
                         Text("Bitte die Mängel bzw. Vorbehalte unten erfassen – jeder wird als Aufgabe mit Frist angelegt.")
                     }
                 }
-                Section("Teilnehmer") {
-                    TextField("Auftraggeber (Name)", text: $clientName)
-                        .textContentType(.name)
-                        .accessibilityIdentifier("acceptanceClientField")
-                    TextField("Auftragnehmer (Name, Firma)", text: $contractorName)
-                        .accessibilityIdentifier("acceptanceContractorField")
-                    TextField("Ort", text: $location)
+                // Beschriftung bleibt sichtbar, auch wenn die Felder vorausgefüllt sind.
+                Section("Teilnehmer und Ort") {
+                    LabeledField("Auftraggeber") {
+                        TextField("Name", text: $clientName)
+                            .textContentType(.name)
+                            .accessibilityIdentifier("acceptanceClientField")
+                    }
+                    LabeledField("Auftragnehmer") {
+                        TextField("Name, Firma", text: $contractorName)
+                            .accessibilityIdentifier("acceptanceContractorField")
+                    }
+                    LabeledField("Ort") {
+                        TextField("Adresse der Baustelle", text: $location)
+                    }
                 }
                 Section("Abgenommene Leistung") {
                     TextField("z. B. Zementestrich CT-C25-F4, EG und OG", text: $scope, axis: .vertical)
@@ -93,7 +99,7 @@ struct NewAcceptanceView: View {
                         captureStarted = .now
                         capturing = true
                     } label: {
-                        Label(photoIds.isEmpty ? "Fotos aufnehmen" : "\(photoIds.count) Foto(s) – weitere aufnehmen", systemImage: "camera")
+                        Label(photoIds.isEmpty ? "Fotos aufnehmen" : "\(photoIds.count) \(photoIds.count == 1 ? "Foto" : "Fotos") – weitere aufnehmen", systemImage: "camera")
                     }
                 } header: {
                     Text("Fotos")

@@ -151,30 +151,42 @@ struct RoomEditView: View {
     }
 }
 
-/// Zeile eines Raums: Name, Fläche und Aufbau, Stand als Kapsel.
+/// Zeile eines Raums wie eine Tabellenzeile: Name links, Fläche rechts; darunter Aufbau und Stand; Notiz.
 struct RoomRow: View {
     let room: Room
 
     var body: some View {
-        HStack(spacing: Space.m) {
-            VStack(alignment: .leading, spacing: 3) {
-                Text(room.name).font(Typo.body).foregroundStyle(Theme.textPrimary)
-                let parts: [String?] = [
-                    room.areaSquareMeters.map { "\($0.formatted(.number.precision(.fractionLength(0...2)))) m²" },
-                    room.thicknessMillimeters.map { "\($0) mm" },
-                    room.underfloorHeating ? "Fußbodenheizung" : nil,
-                ]
+        VStack(alignment: .leading, spacing: 3) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                Text(room.name)
+                    .font(Typo.body)
+                    .foregroundStyle(Theme.textPrimary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                if let area = room.areaSquareMeters {
+                    Text("\(area.formatted(.number.precision(.fractionLength(0...2)))) m²")
+                        .font(Typo.bodyStrong.monospacedDigit())
+                        .foregroundStyle(Theme.textPrimary)
+                }
+                SyncStateBadge(state: room.syncState)
+            }
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                let parts: [String?] = [room.thicknessMillimeters.map { "\($0) mm" }, room.underfloorHeating ? "Fußbodenheizung" : nil]
                 let details = parts.compactMap { $0 }
-                Text(details.isEmpty ? "noch ohne Maße" : details.joined(separator: " · "))
+                Text(details.isEmpty ? "Aufbau noch offen" : details.joined(separator: " · "))
                     .font(Typo.subhead.monospacedDigit())
                     .foregroundStyle(Theme.textSecondary)
-                if let notes = room.notes?.compactText {
-                    Text(notes).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                HStack(spacing: 5) {
+                    StatusDot(color: room.status.tint, size: 7)
+                    Text(room.status.title)
                 }
+                .font(Typo.metaStrong)
+                .foregroundStyle(Theme.textSecondary)
+                .fixedSize()
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            Chip(text: room.status.title, dot: room.status.tint)
-            SyncStateBadge(state: room.syncState)
+            if let notes = room.notes?.compactText {
+                Text(notes).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(2)
+            }
         }
         .padding(.vertical, Space.xs)
         .contentShape(Rectangle())

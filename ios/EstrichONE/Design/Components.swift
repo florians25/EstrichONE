@@ -201,7 +201,8 @@ struct Chip: View {
 
     private var background: Color {
         switch tone {
-        case .neutral: Theme.fill
+        // Auch auf dem grauen Seitenhintergrund sichtbar (nicht nur auf weißen Karten).
+        case .neutral: Theme.fillStrong
         case .accent: Theme.accentSoft
         case .success: Theme.successSoft
         case .warning: Theme.warningSoft
@@ -402,6 +403,89 @@ struct Callout: View {
         .padding(Space.m + 2)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(tone.background, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Meldet, ob eine Seite über ihren Kopf hinaus gescrollt ist – dann zeigt die Navigationsleiste den Titel
+/// (wie Kontakte). Unter iOS 17 steht der Titel immer in der Leiste.
+struct ScrolledPastHeader: ViewModifier {
+    @Binding var isScrolled: Bool
+    var threshold: CGFloat = 72
+
+    func body(content: Content) -> some View {
+        if #available(iOS 18.0, *) {
+            content.onScrollGeometryChange(for: Bool.self) { geometry in
+                geometry.contentOffset.y + geometry.contentInsets.top > threshold
+            } action: { _, scrolled in
+                isScrolled = scrolled
+            }
+        } else {
+            content.onAppear { isScrolled = true }
+        }
+    }
+}
+
+extension View {
+    func scrolledPastHeader(_ isScrolled: Binding<Bool>, threshold: CGFloat = 72) -> some View {
+        modifier(ScrolledPastHeader(isScrolled: isScrolled, threshold: threshold))
+    }
+}
+
+/// Eingabefeld in Formularen mit kleiner Beschriftung darüber – bleibt lesbar, wenn das Feld schon ausgefüllt ist.
+struct LabeledField<Field: View>: View {
+    let title: String
+    @ViewBuilder let field: () -> Field
+
+    init(_ title: String, @ViewBuilder field: @escaping () -> Field) {
+        self.title = title
+        self.field = field
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(Typo.label)
+                .foregroundStyle(Theme.textSecondary)
+            field()
+                .font(Typo.body)
+        }
+        .padding(.vertical, 2)
+    }
+}
+
+/// Knapper Hinweis in einer Zeile (z. B. Demomodus): Symbol, Text, optional eine Aktion rechts – nimmt kaum Platz weg.
+struct NoticeLine: View {
+    let tone: Callout.Tone
+    let text: String
+    var symbol: String?
+    var actionTitle: String?
+    var action: (() -> Void)?
+
+    var body: some View {
+        HStack(spacing: Space.s) {
+            Image(systemName: symbol ?? tone.symbol)
+                .font(.subheadline.weight(SymbolWeight.control))
+                .foregroundStyle(tone.foreground)
+                .accessibilityHidden(true)
+            Text(text)
+                .font(Typo.subhead)
+                .foregroundStyle(Theme.textPrimary)
+                .lineLimit(2)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let actionTitle, let action {
+                Button(actionTitle, action: action)
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(Theme.accent)
+                    .frame(minHeight: Size.minTap)
+                    .contentShape(Rectangle())
+            }
+        }
+        .padding(.leading, Space.m)
+        .padding(.trailing, actionTitle == nil ? Space.m : Space.s)
+        .padding(.vertical, actionTitle == nil ? Space.s + 2 : 0)
+        .frame(minHeight: Size.minTap)
+        .background(tone.background, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
         .accessibilityElement(children: .combine)
     }
 }

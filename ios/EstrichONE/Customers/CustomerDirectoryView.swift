@@ -92,6 +92,7 @@ struct CustomerDirectoryView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
             .overlay(alignment: .trailing) {
                 if groups.count > 4, search.isEmpty {
                     LetterIndex(letters: groups.map(\.letter)) { letter in
@@ -206,8 +207,8 @@ struct CustomerDirectoryView: View {
         }
         running = counts
         loaded = true
-        // Screenshot-Modus: Kundenkarte des Privatkunden öffnen.
-        if shotScene == "kundenkarte", path.isEmpty, selection == nil,
+        // Screenshot-Modus: Kundenkarte des Privatkunden öffnen (iPad: auch bei „kunden“ rechts eine Karte zeigen).
+        if shotScene == "kundenkarte" || (shotScene == "kunden" && sizeClass == .regular), path.isEmpty, selection == nil,
            let first = contacts.first(where: { !$0.isCompany }) ?? contacts.first {
             if sizeClass == .regular { selection = first.id } else { path.append(first.id) }
         }
@@ -230,25 +231,33 @@ struct CustomerDirectoryView: View {
 struct CustomerRow: View {
     let contact: Contact
     var running = 0
+    /// Ausgewählte Zeile (iPad-Seitenleiste): weiß auf Akzentfarbe.
+    @Environment(\.backgroundProminence) private var prominence
 
     var body: some View {
+        let selected = prominence == .increased
         HStack(spacing: Space.m) {
             Avatar(name: contact.name, isCompany: contact.isCompany, size: 44)
             VStack(alignment: .leading, spacing: 2) {
                 Text(contact.name)
                     .font(Typo.headline)
-                    .foregroundStyle(Theme.textPrimary)
-                    .lineLimit(1)
+                    .foregroundStyle(selected ? Color.white : Theme.textPrimary)
+                    .lineLimit(2)
                 let details = [contact.isCompany ? "Firma" : nil, contact.city, contact.customerNumber].compactMap { $0?.isEmpty == false ? $0 : nil }
                 Text(details.isEmpty ? "Keine weiteren Angaben" : details.joined(separator: " · "))
                     .font(Typo.subhead)
-                    .foregroundStyle(Theme.textSecondary)
+                    .foregroundStyle(selected ? Color.white.opacity(0.85) : Theme.textSecondary)
                     .lineLimit(1)
+                // Laufende Baustellen unter dem Namen statt als Kapsel daneben – so wird in schmalen Spalten nichts abgeschnitten.
+                if running > 0 {
+                    Label(running == 1 ? "1 laufende Baustelle" : "\(running) laufende Baustellen", systemImage: "building.2")
+                        .labelStyle(TightLabelStyle())
+                        .font(Typo.metaStrong)
+                        .foregroundStyle(selected ? Color.white : Theme.accent)
+                        .lineLimit(1)
+                }
             }
             Spacer(minLength: Space.s)
-            if running > 0 {
-                Chip(text: running == 1 ? "1 Baustelle" : "\(running) Baustellen", tone: .accent)
-            }
             SyncStateBadge(state: contact.syncState)
         }
         .padding(.vertical, Space.xs)

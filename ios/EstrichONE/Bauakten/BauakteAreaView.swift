@@ -49,6 +49,7 @@ struct BauakteAreaView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .listSectionSpacing(.compact)
         .modifier(AreaTitle(title: area.title, embedded: embedded))
         .toolbar { ToolbarItem(placement: .primaryAction) { addMenu } }
         .bauakteActions(bauakte, customerName: content.customer?.name, schema: schema, lists: lists, action: $action) { message in
@@ -234,7 +235,7 @@ struct BauakteAreaView: View {
             Section {
                 DiaryRow(entry: entry, authorName: entry.authorUserId.flatMap { content.names[$0] })
             } header: {
-                Text(CalendarDay.date(entry.day)?.formatted(.dateTime.weekday(.wide).day().month(.wide).year()) ?? entry.day)
+                Text(DiaryRow.dayTitle(entry.day))
             }
         }
     }
@@ -256,8 +257,7 @@ struct BauakteAreaView: View {
                     .listRowInsets(EdgeInsets())
             } footer: {
                 if let planned = bauakte.project.totalArea {
-                    let measured = RoomTotals(content.rooms).area
-                    Text("Laut Basisdaten \(planned.formatted(.number.precision(.fractionLength(0...1)))) m² – in Räumen erfasst \(measured.formatted(.number.precision(.fractionLength(0...1)))) m².")
+                    Text(Self.areaComparison(planned: planned, measured: RoomTotals(content.rooms).area))
                 }
             }
             ForEach(roomFloors) { group in
@@ -296,6 +296,15 @@ struct BauakteAreaView: View {
                 }
                 Button("Löschen", systemImage: "trash", role: .destructive) { deletingRoom = room }
             }
+    }
+
+    /// Fläche der Räume gegen die Fläche aus den Basisdaten – fällt eine Lücke auf, steht sie da.
+    static func areaComparison(planned: Double, measured: Double) -> String {
+        func m2(_ value: Double) -> String { "\(value.formatted(.number.precision(.fractionLength(0...1)))) m²" }
+        let gap = planned - measured
+        if abs(gap) < 0.05 { return "Passt zur Fläche aus den Basisdaten (\(m2(planned)))." }
+        return gap > 0 ? "Laut Basisdaten \(m2(planned)) – in den Räumen fehlen noch \(m2(gap))."
+                       : "In den Räumen \(m2(-gap)) mehr als in den Basisdaten (\(m2(planned)))."
     }
 
     /// Räume je Geschoss in Bauabfolge.
@@ -380,13 +389,11 @@ struct BauakteAreaView: View {
 
     @ViewBuilder
     private var project: some View {
-        ProjectSection(bauakte: bauakte, schema: schema, lists: lists) { action = .project }
         if let description = bauakte.description?.compactText {
             Section("Beschreibung") { Text(description).font(Typo.body) }
         }
-        if let period = BauakteDetailView.period(bauakte) {
-            Section("Geplanter Zeitraum") { Label(period, systemImage: "calendar") }
-        }
+        // Der geplante Zeitraum steht als erste Zeile in den Basisdaten.
+        ProjectSection(bauakte: bauakte, schema: schema, lists: lists) { action = .project }
     }
 
     // MARK: Kontakte
@@ -426,6 +433,17 @@ struct BauakteAreaView: View {
             }
         } header: {
             Text("Vor Ort")
+        }
+        if !content.parties.isEmpty {
+            Section {
+                ForEach(content.parties) { party in
+                    PartyRow(party: party)
+                }
+            } header: {
+                Text("Beteiligte (\(content.parties.count))")
+            } footer: {
+                Text("Bauherr, Bauleitung, Planer und Lieferanten pflegt das Büro.")
+            }
         }
         Section {
             DetailRow(bauakte.addressLine ?? "Adresse fehlt", subtitle: bauakte.hasLocation ? "Standort gespeichert" : nil,
@@ -478,13 +496,9 @@ struct BauakteAreaView: View {
         }
         Section {
             Button { showsHistory = true } label: {
-                HStack {
-                    Label("Verlauf – wer hat was wann geändert", systemImage: "clock.arrow.circlepath")
-                        .foregroundStyle(Theme.textPrimary)
-                    Spacer()
-                    Chevron()
-                }
+                DetailRow("Änderungsverlauf", subtitle: "Wer hat was wann geändert", symbol: "clock.arrow.circlepath") { Chevron() }
             }
+            .buttonStyle(.plain)
             .accessibilityIdentifier("historyLink")
         }
     }
@@ -526,6 +540,55 @@ struct BauakteAreaView: View {
         try? await model.active?.service?.assignCustomer(contact.id, to: bauakte.id)
         model.active?.sync?.localChangeMade()
         await reload()
+    }
+}
+
+/// Beteiligter: Rolle, Name und Firma, Anruf mit einem Tipp; E-Mail und Nummer im Kontextmenü.
+struct PartyRow: View {
+    let party: BauakteParty
+    @Environment(\.openURL) private var openURL
+
+    var body: some View {
+        HStack(spacing: Space.m) {
+            Avatar(name: party.company ?? party.name, isCompany: party.company != nil, size: 40)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(party.role.title)
+                    .font(Typo.labelStrong)
+                    .foregroundStyle(Theme.accent)
+                Text(party.name)
+                    .font(Typo.body)
+                    .foregroundStyle(Theme.textPrimary)
+                let details = [party.company == party.name ? nil : party.company, party.phone].compactMap { $0 }
+                if !details.isEmpty {
+                    Text(details.joined(separator: " · "))
+                        .font(Typo.subhead)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+                if let note = party.note?.compactText {
+                    Text(note).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(2)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if let url = ContactLink.phone(party.phone) {
+                Button { openURL(url) } label: { Label("\(party.name) anrufen", systemImage: "phone.fill") }
+                    .buttonStyle(IconButtonStyle())
+            } else if let url = ContactLink.email(party.email) {
+                Button { openURL(url) } label: { Label("E-Mail an \(party.name)", systemImage: "envelope.fill") }
+                    .buttonStyle(IconButtonStyle())
+            }
+        }
+        .padding(.vertical, Space.xxs)
+        .contextMenu {
+            if let url = ContactLink.phone(party.phone) {
+                Button("Anrufen", systemImage: "phone") { openURL(url) }
+            }
+            if let url = ContactLink.email(party.email) {
+                Button("E-Mail schreiben", systemImage: "envelope") { openURL(url) }
+            }
+            if let phone = party.phone {
+                Button("Nummer kopieren", systemImage: "doc.on.doc") { UIPasteboard.general.string = phone }
+            }
+        }
     }
 }
 

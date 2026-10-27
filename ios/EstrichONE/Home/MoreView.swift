@@ -42,19 +42,6 @@ struct MoreView: View {
                     }
                 }
 
-                if model.isDemo {
-                    Section {
-                        Button(role: .destructive) { model.requestDemo(false) } label: {
-                            row("Demo beenden", symbol: "xmark.circle", tint: Theme.danger, titleColor: Theme.danger, chevron: false)
-                        }
-                        .accessibilityIdentifier("endDemoButton")
-                    } header: {
-                        Text("Demomodus")
-                    } footer: {
-                        Text("Beispieldaten – es wird nichts gesendet. Beenden löscht die Demodaten und führt zurück zur Einrichtung.")
-                    }
-                }
-
                 Section("Planung und Aufgaben") {
                     Button { route = .tasks } label: { row("Meine Aufgaben", symbol: "checklist") }
                         .accessibilityIdentifier("myTasksTile")
@@ -68,6 +55,19 @@ struct MoreView: View {
                     Button { reporting = true } label: { row("Problem melden", symbol: "exclamationmark.bubble", chevron: false) }
                         .accessibilityIdentifier("reportProblemButton")
                     Button { route = .tickets } label: { row("Meine Meldungen", symbol: "tray.full") }
+                }
+
+                if model.isDemo {
+                    Section {
+                        Button(role: .destructive) { model.requestDemo(false) } label: {
+                            row("Demo beenden", symbol: "xmark.circle", tint: Theme.danger, titleColor: Theme.danger, chevron: false)
+                        }
+                        .accessibilityIdentifier("endDemoButton")
+                    } header: {
+                        Text("Demomodus")
+                    } footer: {
+                        Text("Beispieldaten – es wird nichts gesendet. Beenden löscht die Demodaten und führt zurück zur Einrichtung.")
+                    }
                 }
 
                 if let registration = model.deviceRegistration {
@@ -192,7 +192,7 @@ struct MoreView: View {
         case "disposition": route = .dispatch
         case "aufgaben": route = .tasks
         case "woche": route = .week
-        case "meldung": route = .tickets
+        case "meldung", "meldung-detail": route = .tickets
         default: break
         }
     }

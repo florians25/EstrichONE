@@ -16,6 +16,8 @@ struct BauakteContent {
     var acceptances: [Acceptance] = []
     /// Räume mit Fläche und Estrichaufbau.
     var rooms: [Room] = []
+    /// Beteiligte (Bauherr, Bauleiter, Architekt, Lieferant …), gepflegt im Büro.
+    var parties: [BauakteParty] = []
     /// Einsätze aus der Planung ab heute (zuletzt geladener Stand).
     var assignments: [Assignment] = []
     /// Namen für Verfasser und Zuständige.
@@ -43,6 +45,7 @@ struct BauakteContent {
         content.inspections = (try? await service.inspections(of: id)) ?? []
         content.acceptances = (try? await service.acceptances(of: id)) ?? []
         content.rooms = (try? await service.rooms(of: id)) ?? []
+        content.parties = (try? await service.parties(of: id)) ?? []
         content.customer = if let customerId = bauakte.customerId { try? await service.contact(customerId) } else { nil }
         if let store = model.active?.sync?.store {
             let today = CalendarDay.string(.now)
@@ -203,7 +206,9 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case .project:
             return projectCount == 0 ? ("Angaben fehlen", true) : ("\(projectCount) Angaben", false)
         case .contacts:
-            return content.customer.map { ($0.name, false) } ?? ("Kunde fehlt", true)
+            let parties = content.parties.isEmpty ? nil : "\(content.parties.count) \(content.parties.count == 1 ? "Beteiligter" : "Beteiligte")"
+            guard let customer = content.customer else { return ([parties, "Kunde fehlt"].compactMap { $0 }.joined(separator: " · "), true) }
+            return ([customer.name, parties].compactMap { $0 }.joined(separator: " · "), false)
         case .notes:
             return (content.notes.isEmpty ? "keine Notizen" : "\(content.notes.count) \(content.notes.count == 1 ? "Notiz" : "Notizen")", false)
         }

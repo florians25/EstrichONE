@@ -30,6 +30,7 @@ struct BauakteDetailView: View {
     @State private var pdfURL: URL?
     @State private var loadingPDF = false
     @State private var pdfMessage: String?
+    @State private var showsNavigationTitle = false
 
     var body: some View {
         Group {
@@ -81,7 +82,8 @@ struct BauakteDetailView: View {
                 MissingBauakteView(bauakteId: bauakteId) { await reload() }
             }
         }
-        .navigationTitle(content?.bauakte.number ?? "Bauakte")
+        // Titel erst in der Leiste, wenn der Kopf weggescrollt ist – sonst stünde er doppelt da.
+        .navigationTitle(showsNavigationTitle ? (content?.bauakte.title ?? "Bauakte") : "")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: model.active?.sync?.revision) { await reload() }
         .task {
@@ -117,6 +119,7 @@ struct BauakteDetailView: View {
                 .padding(.top, Space.s)
                 .padding(.bottom, Space.xxl)
             }
+            .scrolledPastHeader($showsNavigationTitle)
             .background(Theme.canvas)
             .task(id: loaded) {
                 guard loaded, shotScene == "bauakte-unten" else { return }

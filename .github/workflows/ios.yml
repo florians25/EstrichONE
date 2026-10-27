@@ -116,15 +116,21 @@ jobs:
             ${{ runner.temp }}/xcodebuild-*.log
           retention-days: 7
 
-  # Visuelle Prüfung: Die App zeigt im Demomodus (Screenshot-Modus, nur Debug-Builds) ihre Bildschirme nacheinander,
-  # aufgenommen auf iPhone und iPad, hell und dunkel. Läuft parallel zu den Tests und nur bei Änderungen an der App.
+  # Visuelle Prüfung: Die App zeigt im Demomodus (Screenshot-Modus, nur Debug-Builds) ihre Bildschirme nacheinander.
+  # iPhone (hell und dunkel) und iPad (hell) laufen parallel auf eigenen Runnern – zwei Simulatoren auf einem Runner
+  # brauchen wegen knappen Arbeitsspeichers ein Vielfaches. Nur bei Änderungen an der App, parallel zu den Tests.
   screenshots:
-    name: Screenshots (Simulator, Demomodus)
+    name: Screenshots ${{ matrix.device == 'ipad' && 'iPad' || 'iPhone' }} (Simulator, Demomodus)
     runs-on: macos-15
-    timeout-minutes: 30
+    timeout-minutes: 25
     if: github.event_name != 'pull_request'
+    strategy:
+      fail-fast: false
+      matrix:
+        device: [iphone, ipad]
     env:
-      IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,bereich-tagebuch,bereich-raeume,bereich-basisdaten,bereich-kontakte,bereich-notizen,erfassen,neu-1,erstbegehung,abnahme,kunden,kundenkarte,disposition,mehr,sync,wartung"
+      DEVICE: ${{ matrix.device }}
+      IPHONE_SCENES: "heute,heute-unten,baustellen,bauakte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,bereich-tagebuch,bereich-raeume,bereich-basisdaten,bereich-kontakte,bereich-notizen,erfassen,neu-1,erstbegehung,abnahme,kunden,kundenkarte,disposition,mehr,sync,meldung-detail,wartung,start,anmelden"
       IPAD_SCENES: "heute,baustellen,bauakte,kunden,disposition"
     steps:
       - uses: actions/checkout@v5
@@ -135,6 +141,7 @@ jobs:
         id: changes
         env:
           BEFORE: ${{ github.event.before }}
+          IPAD_INPUT: ${{ inputs.ipad }}
         run: |
           run=true
           if [ "$GITHUB_EVENT_NAME" = "push" ] && [ -n "$BEFORE" ] && git cat-file -e "$BEFORE^{commit}" 2>/dev/null; then
@@ -142,11 +149,12 @@ jobs:
               run=false
             fi
           fi
+          if [ "$DEVICE" = "ipad" ] && [ "$IPAD_INPUT" = "false" ]; then run=false; fi
           echo "run=$run" >> "$GITHUB_OUTPUT"
-          echo "Screenshots: $run"
+          echo "Screenshots ($DEVICE): $run"
 
-      - name: Xcode wählen, Simulatoren wählen
-        id: sims
+      - name: Xcode wählen, Simulator wählen
+        id: sim
         if: steps.changes.outputs.run == 'true'
         run: |
           XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
@@ -161,12 +169,14 @@ jobs:
                 | select(.devices | length > 0)]
               | sort_by(.version) | last | .devices[0].udid // empty'
           }
-          PHONE=$(pick '^iPhone 17 Pro$'); [ -n "$PHONE" ] || PHONE=$(pick '^iPhone [0-9]+ Pro$'); [ -n "$PHONE" ] || PHONE=$(pick '^iPhone')
-          PAD=$(pick '^iPad Pro 11'); [ -n "$PAD" ] || PAD=$(pick '^iPad Air 11'); [ -n "$PAD" ] || PAD=$(pick '^iPad')
-          test -n "$PHONE"
-          xcrun simctl list devices available | grep -E "$PHONE|${PAD:-none}"
-          echo "phone=$PHONE" >> "$GITHUB_OUTPUT"
-          echo "pad=$PAD" >> "$GITHUB_OUTPUT"
+          if [ "$DEVICE" = "ipad" ]; then
+            UDID=$(pick '^iPad Pro 11'); [ -n "$UDID" ] || UDID=$(pick '^iPad Air 11'); [ -n "$UDID" ] || UDID=$(pick '^iPad')
+          else
+            UDID=$(pick '^iPhone 17 Pro$'); [ -n "$UDID" ] || UDID=$(pick '^iPhone [0-9]+ Pro$'); [ -n "$UDID" ] || UDID=$(pick '^iPhone')
+          fi
+          test -n "$UDID"
+          xcrun simctl list devices available | grep "$UDID"
+          echo "udid=$UDID" >> "$GITHUB_OUTPUT"
 
       - name: Debug-Build für den Simulator
         if: steps.changes.outputs.run == 'true'
@@ -176,48 +186,38 @@ jobs:
           xcodegen generate
           set -o pipefail
           xcodebuild build -project EstrichONE.xcodeproj -scheme EstrichONE -configuration Debug \
-            -destination "id=${{ steps.sims.outputs.phone }}" -derivedDataPath "$RUNNER_TEMP/dd" \
+            -destination "id=${{ steps.sim.outputs.udid }}" -derivedDataPath "$RUNNER_TEMP/dd" \
             CODE_SIGN_STYLE=Manual CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM= | tee "$RUNNER_TEMP/build.log" | grep -E "error:|warning:|\*\* BUILD" || true
           grep -q "\*\* BUILD SUCCEEDED \*\*" "$RUNNER_TEMP/build.log"
 
       - name: Screenshots aufnehmen
         if: steps.changes.outputs.run == 'true'
-        timeout-minutes: 16
+        timeout-minutes: 14
         env:
-          PHONE: ${{ steps.sims.outputs.phone }}
-          PAD: ${{ steps.sims.outputs.pad }}
+          UDID: ${{ steps.sim.outputs.udid }}
           SCENES_INPUT: ${{ inputs.scenes }}
-          IPAD_INPUT: ${{ inputs.ipad }}
         run: |
           APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/EstrichONE.app"
-          SHOTS="$RUNNER_TEMP/shots"
-          WITH_PAD=false
-          if [ "$IPAD_INPUT" != "false" ] && [ -n "$PAD" ]; then WITH_PAD=true; fi
-          # Simulatoren erst nach dem Build und nacheinander starten: Zwei gleichzeitig brauchen auf dem Runner
-          # wegen knappen Arbeitsspeichers ein Vielfaches (zuletzt 20 Minuten bis zum ersten Bild).
-          prepare() {
-            local begin=$SECONDS
-            xcrun simctl boot "$1" 2>/dev/null || true
-            xcrun simctl bootstatus "$1" -b >/dev/null
-            xcrun simctl status_bar "$1" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
-              --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
-            xcrun simctl install "$1" "$APP"
-            echo "Simulator $1 bereit nach $(( SECONDS - begin )) s"
-          }
-          prepare "$PHONE"
-          bash ios/scripts/screenshots.sh "$PHONE" iphone "${SCENES_INPUT:-$IPHONE_SCENES}" "$SHOTS" 1
-          if [ "$WITH_PAD" = "true" ]; then
-            xcrun simctl shutdown "$PHONE" || true
-            prepare "$PAD"
-            bash ios/scripts/screenshots.sh "$PAD" ipad "$IPAD_SCENES" "$SHOTS" 1
+          # Simulator erst nach dem Build starten (sonst bremst der erste Start den Build stark).
+          begin=$SECONDS
+          xcrun simctl boot "$UDID" 2>/dev/null || true
+          xcrun simctl bootstatus "$UDID" -b >/dev/null
+          xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
+            --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
+          xcrun simctl install "$UDID" "$APP"
+          echo "Simulator bereit nach $(( SECONDS - begin )) s"
+          if [ "$DEVICE" = "ipad" ]; then
+            bash ios/scripts/screenshots.sh "$UDID" ipad "$IPAD_SCENES" "$RUNNER_TEMP/shots" 0
+          else
+            bash ios/scripts/screenshots.sh "$UDID" iphone "${SCENES_INPUT:-$IPHONE_SCENES}" "$RUNNER_TEMP/shots" 1
           fi
-          ls "$SHOTS" | wc -l
+          ls "$RUNNER_TEMP/shots" | wc -l
 
       - name: Screenshots sichern
         if: always() && steps.changes.outputs.run == 'true'
         uses: actions/upload-artifact@v4
         with:
-          name: ios-screenshots
+          name: ios-screenshots-${{ matrix.device }}
           path: ${{ runner.temp }}/shots
           retention-days: 7
 
