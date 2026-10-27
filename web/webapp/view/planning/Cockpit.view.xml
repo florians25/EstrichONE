@@ -50,12 +50,11 @@
 							<Menu>
 								<MenuItem text="Wochenplan (PDF)" icon="sap-icon://pdf-attachment" press=".onPdfWeek"/>
 								<MenuItem text="Tagesplan (PDF)" icon="sap-icon://pdf-attachment" press=".onPdfDay"/>
-								<MenuItem text="Wer fährt wohin (PDF)" icon="sap-icon://journey-arrive" press=".onPdfDispatch"/>
 							</Menu>
 						</menu>
 						<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
 					</MenuButton>
-					<Button text="{= ${view>/kpi/changed} > 0 ? 'Änderungen freigeben (' + ${view>/kpi/changed} + ')' : 'Plan freigeben' }" icon="sap-icon://paper-plane" type="Emphasized" press=".onRelease" visible="{view>/canPlan}" tooltip="Plan für Mitarbeiter freigeben („Wer fährt wohin“ in der App)">
+					<Button text="{= ${view>/kpi/changed} > 0 ? 'Änderungen freigeben (' + ${view>/kpi/changed} + ')' : 'Plan freigeben' }" icon="sap-icon://paper-plane" type="Emphasized" press=".onRelease" visible="{view>/canPlan}" tooltip="Plan für Mitarbeiter freigeben (Einsätze in der App, Benachrichtigung der Betroffenen)">
 						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 					</Button>
 				</OverflowToolbar>

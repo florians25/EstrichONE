@@ -1,6 +1,6 @@
 /**
- * Konto → Benachrichtigungen: Pushnachrichten für diesen Browser ein/aus, Testnachricht, eigene Geräte (Browser, iPhone,
- * iPad) mit letzter Zustellung; Geräte lassen sich entfernen.
+ * Konto → Benachrichtigungen: je Ereignis „Aus“, „Postfach“ oder „Postfach und Push“ (abbestellen), Pushnachrichten
+ * für diesen Browser ein/aus, Testnachricht, eigene Geräte (Browser, iPhone, iPad) mit letzter Zustellung.
  */
 import Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
@@ -15,9 +15,16 @@ import StandardListItem from "sap/m/StandardListItem";
 import Title from "sap/m/Title";
 import MessageToast from "sap/m/MessageToast";
 import MessageBox from "sap/m/MessageBox";
+import IconTabBar from "sap/m/IconTabBar";
+import IconTabFilter from "sap/m/IconTabFilter";
+import CustomListItem from "sap/m/CustomListItem";
+import GroupHeaderListItem from "sap/m/GroupHeaderListItem";
+import SegmentedButton from "sap/m/SegmentedButton";
+import SegmentedButtonItem from "sap/m/SegmentedButtonItem";
 import { problemMessage } from "./api";
 import {
-	disableWebPush, enableWebPush, myDevices, relativeTime, removeDevice, sendTest, webPushStatus, type PushDevice, type WebPushStatus,
+	disableWebPush, enableWebPush, myDevices, preferences, relativeTime, removeDevice, savePreferences, sendTest, webPushStatus,
+	type NotificationDelivery, type NotificationPreference, type PushDevice, type WebPushStatus,
 } from "./notifications";
 
 const STATUS_TEXTS: Record<WebPushStatus, string> = {
@@ -34,6 +41,61 @@ const PLATFORM: Record<PushDevice["platform"], { icon: string; text: string }> =
 	ios: { icon: "sap-icon://iphone", text: "iPhone/iPad" },
 	android: { icon: "sap-icon://iphone-2", text: "Android" },
 };
+
+/** Liste der Ereignisse mit Auswahl je Zeile; speichert sofort. */
+function eventList(): { list: List; load: () => Promise<void> } {
+	const list = new List({ noDataText: "Wird geladen …", showSeparators: "Inner", growing: false }).addStyleClass("eoPrefList");
+	const load = async () => {
+		let items: NotificationPreference[];
+		try {
+			items = (await preferences()).items;
+		} catch (error) {
+			list.setNoDataText(problemMessage(error));
+			return;
+		}
+		list.destroyItems();
+		let group = "";
+		for (const item of items) {
+			if (item.group !== group) {
+				group = item.group;
+				list.addItem(new GroupHeaderListItem({ title: group }));
+			}
+			const choice = new SegmentedButton({
+				selectedKey: item.delivery,
+				items: [
+					new SegmentedButtonItem({ key: "off", text: "Aus", enabled: !item.mandatory,
+						tooltip: item.mandatory ? "Pflichtmeldung – nicht abbestellbar" : "Abbestellt: weder Postfach noch Push" }),
+					new SegmentedButtonItem({ key: "inbox", text: "Postfach", tooltip: "Nur im Postfach (Glocke), keine Pushnachricht" }),
+					new SegmentedButtonItem({ key: "push", text: "Push", tooltip: "Postfach und Pushnachricht" }),
+				],
+				selectionChange: async () => {
+					const delivery = choice.getSelectedKey() as NotificationDelivery;
+					try {
+						await savePreferences([{ event: item.event, delivery }]);
+						item.delivery = delivery;
+						MessageToast.show(`${item.label}: ${delivery === "off" ? "abbestellt" : delivery === "inbox" ? "nur Postfach" : "Postfach und Push"}`);
+					} catch (error) {
+						choice.setSelectedKey(item.delivery);
+						MessageBox.error(problemMessage(error));
+					}
+				},
+			});
+			list.addItem(new CustomListItem({
+				content: [new HBox({
+					alignItems: "Center", justifyContent: "SpaceBetween", wrap: "Wrap",
+					items: [
+						new VBox({ items: [
+							new Label({ text: item.label + (item.mandatory ? " (Pflicht)" : ""), design: "Bold", wrapping: true }),
+							new Text({ text: item.description }).addStyleClass("eoMuted"),
+						] }).addStyleClass("eoPrefText"),
+						choice,
+					],
+				}).addStyleClass("eoPrefRow")],
+			}));
+		}
+	};
+	return { list, load };
+}
 
 export function openNotificationPreferences(): void {
 	const strip = new MessageStrip({ showIcon: true, type: "Information" });
@@ -79,19 +141,31 @@ export function openNotificationPreferences(): void {
 		await refresh();
 	});
 
+	const events = eventList();
 	const dialog = new Dialog({
 		title: "Benachrichtigungen",
-		contentWidth: "34rem",
+		contentWidth: "46rem",
+		contentHeight: "34rem",
 		resizable: true,
-		content: [new VBox({
+		content: [new IconTabBar({
+			expandable: false, stretchContentHeight: true, applyContentPadding: false,
 			items: [
-				new HBox({ alignItems: "Center", justifyContent: "SpaceBetween", items: [label, toggle] }),
-				strip,
-				new Title({ text: "Meine Geräte", level: "H3" }).addStyleClass("sapUiSmallMarginTop"),
-				new Text({ text: "Browser und Apps, an die Pushnachrichten gehen. Antippen zum Entfernen." }).addStyleClass("eoMuted"),
-				devices,
+				new IconTabFilter({ key: "events", text: "Ereignisse", content: [new VBox({ items: [
+					new Text({ text: "Wählen Sie je Ereignis, ob es ins Postfach kommt und ob zusätzlich eine Pushnachricht erscheint. Pflichtmeldungen (Büro, Wartung, Störungen) lassen sich nicht abbestellen." })
+						.addStyleClass("eoMuted sapUiSmallMarginBottom"),
+					events.list,
+				] }).addStyleClass("sapUiSmallMargin")] }),
+				new IconTabFilter({ key: "devices", text: "Push und Geräte", content: [new VBox({
+					items: [
+						new HBox({ alignItems: "Center", justifyContent: "SpaceBetween", items: [label, toggle] }),
+						strip,
+						new Title({ text: "Meine Geräte", level: "H3" }).addStyleClass("sapUiSmallMarginTop"),
+						new Text({ text: "Browser und Apps, an die Pushnachrichten gehen. Antippen zum Entfernen." }).addStyleClass("eoMuted"),
+						devices,
+					],
+				}).addStyleClass("sapUiSmallMargin eoGap")] }),
 			],
-		}).addStyleClass("sapUiSmallMargin eoGap")],
+		})],
 		buttons: [
 			new Button({ text: "Testnachricht senden", icon: "sap-icon://paper-plane", press: async () => {
 				try {
@@ -109,4 +183,5 @@ export function openNotificationPreferences(): void {
 	});
 	dialog.open();
 	void refresh();
+	void events.load();
 }

@@ -5,7 +5,8 @@ import Filter from "sap/ui/model/Filter";
 import FilterOperator from "sap/ui/model/FilterOperator";
 import type ListBinding from "sap/ui/model/ListBinding";
 import type Table from "sap/m/Table";
-import { get, post, postForBlob, put } from "../../util/api";
+import { api, get, post, postForBlob, put } from "../../util/api";
+import MessageBox from "sap/m/MessageBox";
 import { openForm } from "../../util/forms";
 import type { RoleResponse, UserListItem, UserWithPassword } from "../../util/models";
 
@@ -17,7 +18,10 @@ export default class Users extends BaseController {
 		this.local({ items: [], busy: false, oneTime: null });
 	}
 
-	onRouteMatched(): void { void this.load(); }
+	onRouteMatched(): void {
+		void this.load();
+		void get("chat/admin/settings").then(() => this.model().setProperty("/chatAdmin", true)).catch(() => this.model().setProperty("/chatAdmin", false));
+	}
 
 	private async load(): Promise<void> {
 		this.model().setProperty("/busy", true);
@@ -127,6 +131,30 @@ export default class Users extends BaseController {
 		if (!(await this.confirm("Die Person wird sofort auf allen Geräten abgemeldet.", { title: `${u.displayName} sperren?`, action: "Sperren", danger: true }))) return;
 		await this.run(() => post(`users/${u.id}/deactivate`));
 		void this.load();
+	}
+
+	/** Betroffenenrechte: Chatdaten einer Person als JSON ausgeben oder vollständig löschen (Audit ohne Inhalte). */
+	async onChatData(e: Event): Promise<void> {
+		const u = this.row(e);
+		const action = await new Promise<string>((resolve) => {
+			MessageBox.show(`Chatdaten von ${u.displayName}: Auskunft (Art. 15 DSGVO) als JSON-Datei oder Löschung aller Nachrichten, Einzelchats und Mitgliedschaften (Art. 17 DSGVO).`, {
+				title: "Chatdaten", actions: ["Exportieren", "Alles löschen", MessageBox.Action.CANCEL], emphasizedAction: "Exportieren",
+				onClose: (a: string) => resolve(a),
+			});
+		});
+		if (action === "Exportieren") {
+			const data = await this.run(() => get<unknown>(`chat/admin/users/${u.id}/export`));
+			if (!data) return;
+			const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+			const a = Object.assign(document.createElement("a"), { href: url, download: `chatdaten-${u.userName}-${new Date().toISOString().slice(0, 10)}.json` });
+			a.click();
+			setTimeout(() => URL.revokeObjectURL(url), 10_000);
+		} else if (action === "Alles löschen") {
+			if (!(await this.confirm("Alle Nachrichten der Person, ihre Einzelchats und Gruppenmitgliedschaften werden endgültig gelöscht.",
+				{ title: `Chatdaten von ${u.displayName} löschen?`, action: "Endgültig löschen", danger: true }))) return;
+			const result = await this.run(() => api<{ deletedMessages: number; removedMemberships: number }>(`chat/admin/users/${u.id}/messages`, { method: "DELETE" }));
+			if (result) this.toast(`${result.deletedMessages} Nachrichten und ${result.removedMemberships} Mitgliedschaften gelöscht`);
+		}
 	}
 
 	async onUnlock(e: Event): Promise<void> {

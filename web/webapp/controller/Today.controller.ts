@@ -35,7 +35,7 @@ export default class Today extends BaseController {
 		const today = isoDay(new Date());
 		m.setProperty("/today", longDay(today));
 		const kpis = [
-			this.has("planning.read") && { key: "assignments", title: "Einsätze heute", icon: "sap-icon://appointment-2", to: "/planung/wer-faehrt-wohin" },
+			this.has("planning.read") && { key: "assignments", title: "Einsätze heute", icon: "sap-icon://appointment-2", to: "/planung/cockpit?ansicht=day" },
 			this.has("work.read") && { key: "work", title: "Offene Aufgaben / Mängel", icon: "sap-icon://task", to: "/tagesuebersicht" },
 			this.has("bauakten.read") && { key: "approvals", title: "Freigaben für mich", icon: "sap-icon://approvals", to: "/dokumente?reiter=freigaben" },
 			this.has("contacts.read") && { key: "due", title: "Wiedervorlagen fällig", icon: "sap-icon://call", to: "/anrufe" },

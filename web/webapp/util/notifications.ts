@@ -2,9 +2,9 @@
  * Postfach und Pushnachrichten (docs/benachrichtigungen.md): Typen, Abfragen und Web Push im Browser
  * (Service Worker /sw.js, VAPID-Schlüssel vom Server, Abo als Gerät „web“ registrieren).
  */
-import { del, get, post } from "./api";
+import { api, del, get, post } from "./api";
 
-export type NotificationCategory = "message" | "ticket" | "approval" | "planning" | "bauakte" | "deadline" | "system";
+export type NotificationCategory = "message" | "ticket" | "approval" | "planning" | "bauakte" | "deadline" | "system" | "chat" | "work" | "absence";
 export type NotificationUrgency = "low" | "normal" | "high";
 export type PushState = "pending" | "sent" | "noDevice" | "inAppOnly" | "failed" | "expired";
 
@@ -87,10 +87,14 @@ export const CATEGORY_ICONS: Record<NotificationCategory, string> = {
 	bauakte: "sap-icon://folder-full",
 	deadline: "sap-icon://lateness",
 	system: "sap-icon://bell",
+	chat: "sap-icon://discussion-2",
+	work: "sap-icon://task",
+	absence: "sap-icon://general-leave-request",
 };
 
 export const CATEGORY_TEXTS: Record<NotificationCategory, string> = {
 	message: "Nachricht", ticket: "Helpdesk", approval: "Freigabe", planning: "Planung", bauakte: "Bauakte", deadline: "Frist", system: "System",
+	chat: "Chat", work: "Aufgabe", absence: "Urlaub",
 };
 
 export const PUSH_STATE_TEXTS: Record<PushState, string> = {
@@ -211,3 +215,21 @@ export async function refreshWebPush(): Promise<void> {
 		// Zusatz – nie stören.
 	}
 }
+
+/** Zustellung je Ereignis (Konto → Benachrichtigungen). */
+export type NotificationDelivery = "off" | "inbox" | "push";
+
+export interface NotificationPreference {
+	event: string;
+	group: string;
+	label: string;
+	description: string;
+	adminOnly: boolean;
+	mandatory: boolean;
+	delivery: NotificationDelivery;
+}
+
+export const preferences = () => get<{ items: NotificationPreference[] }>("notifications/preferences");
+
+export const savePreferences = (items: { event: string; delivery: NotificationDelivery }[]) =>
+	api<{ items: NotificationPreference[] }>("notifications/preferences", { method: "PUT", body: { items } });

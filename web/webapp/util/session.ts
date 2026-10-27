@@ -36,9 +36,10 @@ class Session {
 	}
 
 	private async loadPermissions(): Promise<void> {
-		const [list, settings] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true)]);
+		const [list, settings, , chat] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true),
+			get<{ enabled: boolean }>("chat/status").catch(() => ({ enabled: false }))]);
 		// Abgeschaltete Module (Einstellungen → Module): Rechte des Moduls ausblenden – Navigation, Reiter und Kacheln verschwinden.
-		const modules = settings?.settings.modules ?? { materials: true };
+		const modules = { ...(settings?.settings.modules ?? { materials: true }), chat: chat.enabled };
 		const disabled = Object.entries(modules).filter(([, on]) => on === false).map(([key]) => `${key}.`);
 		this.model.setProperty("/modules", modules);
 		this.model.setProperty("/permissions", Object.fromEntries(list.filter((p) => !disabled.some((d) => p.startsWith(d))).map((p) => [p, true])));

@@ -100,7 +100,7 @@ export default class Start extends BaseController {
 
 		const cards: StartCard[] = [];
 		if (this.has("work.read")) cards.push(this.card("work", "Meine Aufgaben", "offen", "sap-icon://task", "/tagesuebersicht", "Nichts offen – gut gemacht."));
-		if (this.has("planning.read")) cards.push(this.card("assignments", "Einsätze heute", new Date().toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" }), "sap-icon://appointment-2", "/planung/wer-faehrt-wohin", "Heute ist nichts eingeplant."));
+		if (this.has("planning.read")) cards.push(this.card("assignments", "Einsätze heute", new Date().toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "2-digit" }), "sap-icon://appointment-2", "/planung/cockpit?ansicht=day", "Heute ist nichts eingeplant."));
 		if (this.has("bauakten.read")) cards.push(this.card("approvals", "Warten auf Genehmigung", "Freigaben für mich", "sap-icon://approvals", "/dokumente?reiter=freigaben", "Keine Freigaben offen."));
 		// Helpdesk-Bearbeitung sieht offene Tickets, alle anderen an dieser Stelle ihr Postfach (sechs Karten = volle Raster-Zeilen).
 		if (this.has("helpdesk.agent")) cards.push(this.card("tickets", "Offene Tickets", "Helpdesk", "sap-icon://headset", "/it-center/helpdesk", "Keine offenen Tickets."));

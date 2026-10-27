@@ -247,72 +247,20 @@ test('Teamplaner: Zeilen je Kolonne und Mitarbeiter, Einsatz mit Uhrzeit, Versch
   expect((await download).suggestedFilename()).toMatch(/^Tageseinteilung \d{4}-\d{2}-\d{2}\.pdf$/);
 });
 
-test('Wer fährt wohin: Baustellen den Kolonnen zuordnen (Ziehen und Auswahl), mehrere Kolonnen je Baustelle, Tätigkeit/Beginn, entfernen, Fahrzeug im Detail, PDF und App-Endpunkt', async ({ page }) => {
+test('Wer fährt wohin: nicht mehr im Web (Navigation, alte Links ins Cockpit), Planungs-API und PDF für die App bleiben', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  const ostName = `Kolonne Ost ${Math.floor(Math.random() * 900) + 100}`;
-  const crew = await apiCall(page, 'PUT', `/api/v1/planning/crews/${crypto.randomUUID()}`, { name: ostName, color: '#2e7d32', memberUserIds: [] });
-  expect(crew.status).toBeLessThan(300);
+  await expect(page.getByText('Wer fährt wohin', { exact: true })).toHaveCount(0);
+
+  // Alter Link aus einer Pushnachricht: landet im Cockpit (Tagesansicht des Tages).
   await page.goto(`/planung/wer-faehrt-wohin?tag=${monday()}`);
-  await expect(pageTitle(page)).toHaveText('Wer fährt wohin');
-  await expect(page.getByText(/von \d+ Kolonnen eingeteilt/).filter({ visible: true }).first()).toBeVisible();
+  await expect(page).toHaveURL(new RegExp(`/planung/cockpit\\?ansicht=day&datum=${monday()}`));
 
-  // Vorrat: alle aktiven Baustellen; Kraus ist (noch) nicht bei der neuen Kolonne.
-  const poolSite = page.locator('.eoDispatchSitePool .eoDispatchPerson').filter({ hasText: 'Anfrage Familie Kraus' }).first();
-  await expect(poolSite).toBeVisible();
-  const ost = page.locator('.eoDispatchLane').filter({ hasText: ostName });
-  const admin = page.locator('.eoDispatchLane').filter({ hasText: 'Kolonne Admin' });
-
-  // Per Ziehen der neuen Kolonne zuordnen.
-  await poolSite.dragTo(ost);
-  await expect(toast(page)).toContainText(`→ ${ostName}`);
-  const card = ost.locator('.eoDispatchCard').filter({ hasText: 'Kraus' });
-  await expect(card).toBeVisible();
-
-  // Zusätzlich über „Kolonne zuordnen…“ der Kolonne Admin – eine Baustelle, zwei Kolonnen.
-  await poolSite.getByRole('button', { name: /Kolonne zuordnen/ }).click();
-  await page.getByRole('dialog').getByText('Kolonne Admin', { exact: true }).click();
-  await expect(admin.locator('.eoDispatchCard').filter({ hasText: 'Kraus' })).toBeVisible();
-  await expect(poolSite).toContainText(ostName);
-  await expect(poolSite).toContainText('Kolonne Admin');
-
-  // Tätigkeit und Beginn der Baustelle in der Kolonne.
-  await card.getByRole('button', { name: /Aktionen/ }).click();
-  await page.getByRole('button', { name: 'Tätigkeit und Uhrzeit' }).click();
-  const form = await dialog(page, /Tätigkeit und Uhrzeit/);
-  await form.getByLabel('Tätigkeit').fill('Randdämmung stellen');
-  await form.getByLabel('Beginn vor Ort').fill('06:30');
-  await form.getByRole('heading', { name: /Tätigkeit und Uhrzeit/ }).click();
-  await form.getByRole('button', { name: 'Speichern' }).click();
-  await expect(card).toContainText('06:30');
-
-  // Zurück in den Vorrat ziehen entfernt die Zuordnung zu dieser Kolonne; Kolonne Admin behält die Baustelle.
-  await card.dragTo(page.locator('.eoDispatchSitePool'));
-  await expect(toast(page)).toContainText(`von ${ostName} entfernt`);
-  await expect(ost.locator('.eoDispatchCard')).toHaveCount(0);
-  await expect(admin.locator('.eoDispatchCard').filter({ hasText: 'Kraus' })).toBeVisible();
-
-  // Einzelnes Fahrzeug nur im Detailbereich.
-  await page.getByText('Details: einzelne Mitarbeiter und Fahrzeuge je Baustelle').click();
-  const detail = page.locator('.eoDispatchDetailCard').filter({ hasText: 'Kraus' });
-  await detail.getByRole('button', { name: 'Fahrzeug', exact: true }).click();
-  await page.getByRole('dialog').getByText('Mixokret 2', { exact: true }).click();
-  await expect(detail.getByRole('button', { name: 'Mixokret 2' })).toBeVisible();
-
-  const download = page.waitForEvent('download');
-  await page.getByRole('button', { name: 'PDF', exact: true }).click();
-  // Headless-Chromium verwirft Dateinamen mit Umlaut – Inhalt und Server-Dateinamen prüfen.
-  const fs = await import('node:fs/promises');
-  expect((await fs.readFile((await (await download).path())!)).subarray(0, 5).toString()).toBe('%PDF-');
-  const disposition = await page.evaluate(async (d) => (await fetch(`/api/v1/planning/dispatch/${d}/print.pdf`)).headers.get('content-disposition'), monday());
-  expect(decodeURIComponent(disposition ?? '')).toContain(`Wer fährt wohin ${monday()}.pdf`);
-
-  // Derselbe Endpunkt wie für die iOS-App: Kolonnen mit Baustellen, Baustellen mit Kolonnen.
-  const board = await apiCall<{ sites: { title: string; crews: { name: string }[]; people: { name: string }[] }[]; crews: { name: string; siteIds: string[] }[]; mySiteIds: string[] }>(
-    page, 'GET', `/api/v1/planning/dispatch/${monday()}`);
+  // Derselbe Endpunkt wie für die iOS-App bleibt erhalten.
+  const board = await apiCall<{ sites: unknown[]; crews: unknown[]; mySiteIds: string[] }>(page, 'GET', `/api/v1/planning/dispatch/${monday()}`);
   expect(board.status).toBe(200);
-  expect(board.json.sites.some((s) => s.title.includes('Kraus') && s.crews.some((c) => c.name === 'Kolonne Admin'))).toBe(true);
-  expect(board.json.crews.find((c) => c.name === ostName)?.siteIds).toEqual([]);
-  expect(board.json.mySiteIds.length).toBeGreaterThan(0);
+  expect(Array.isArray(board.json.crews)).toBe(true);
+  const pdf = await page.evaluate(async (d) => (await fetch(`/api/v1/planning/dispatch/${d}/print.pdf`)).status, monday());
+  expect(pdf).toBe(200);
 });
 
 test('Helpdesk: Verlauf als Zeitleiste mit Anhang in der Antwort', async ({ page }) => {

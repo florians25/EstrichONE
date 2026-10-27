@@ -28,6 +28,11 @@
 							search=".onSearch" suggest=".onSuggest" enableSuggestions="true" ariaLabelledBy="globalSearchLabel"/>
 						<Button id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakteTooltip}" icon="sap-icon://add-document" type="Emphasized"
 							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }" class="eoShellNew"/>
+						<Button id="chatButton" icon="sap-icon://discussion-2" tooltip="{= ${view>/chatUnread} > 0 ? 'Chat – ' + ${view>/chatUnread} + ' ungelesen' : 'Chat' }"
+							type="Transparent" press=".onChat" visible="{= ${session>/permissions/chat.use} === true }" class="eoShellChat">
+							<customData><BadgeCustomData key="badge" value="{= ${view>/chatUnread} > 99 ? '99+' : String(${view>/chatUnread}) }"
+								visible="{= ${view>/chatUnread} > 0 }"/></customData>
+						</Button>
 						<OverflowToolbarButton id="phoneButton" text="{i18n>shell.phone}" tooltip="{i18n>shell.phone}" icon="sap-icon://outgoing-call" press=".onQuickCall"
 							visible="{= ${session>/permissions/contacts.edit} === true }"/>
 					</f:additionalContent>
@@ -46,6 +51,9 @@
 			</tnt:sideContent>
 			<tnt:mainContents>
 				<FlexBox direction="Column" height="100%" renderType="Bare" class="eoMain">
+					<VBox items="{notices>/health}" visible="{= ${notices>/health}.length > 0 }" class="eoNoticeBar">
+						<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" customIcon="{notices>icon}" class="eoNotice eoHealthBanner"/>
+					</VBox>
 					<MessageStrip text="{notices>/adminHint}" type="Error" showIcon="true" visible="{= !!${notices>/adminHint} }"
 						customIcon="sap-icon://wrench" class="eoNotice eoAdminMaintenance"/>
 					<VBox items="{notices>/banners}" class="eoNoticeBar" visible="{= ${notices>/banners}.length > 0 }">
@@ -85,6 +93,20 @@
 							visible="{notices>/canBypass}"/>
 					</HBox>
 					<Text text="Die Seite prüft automatisch alle 30 Sekunden und arbeitet danach weiter." class="eoMuted sapUiSmallMarginTop"/>
+				</VBox>
+			</additionalContent>
+		</IllustratedMessage>
+	</FlexBox>
+	<FlexBox id="outageOverlay" visible="{= ${notices>/outage} &amp;&amp; !${notices>/page} }" direction="Column" alignItems="Center" justifyContent="Center"
+		class="eoMaintenance eoOutage" renderType="Bare">
+		<Image src="{view>/loginLogo}" alt="EstrichONE" height="3rem" class="sapUiMediumMarginBottom"/>
+		<IllustratedMessage illustrationType="sapIllus-UnableToLoad" title="{notices>/outageTitle}" description="{notices>/outageText}"
+			enableDefaultTitleAndDescription="false">
+			<additionalContent>
+				<VBox alignItems="Center">
+					<Text text="{notices>/outageSince}" class="sapUiSmallMarginBottom"/>
+					<Button text="Jetzt erneut versuchen" icon="sap-icon://refresh" type="Emphasized" press=".onOutageRetry" busy="{notices>/checking}"/>
+					<Text text="{notices>/outageNext}" class="eoMuted sapUiSmallMarginTop"/>
 				</VBox>
 			</additionalContent>
 		</IllustratedMessage>

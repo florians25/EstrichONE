@@ -33,7 +33,10 @@
 							<core:Item key="bauakte" text="Bauakten"/>
 							<core:Item key="approval" text="Freigaben"/>
 							<core:Item key="ticket" text="Helpdesk"/>
+							<core:Item key="work" text="Aufgaben und Mängel"/>
 							<core:Item key="deadline" text="Fristen"/>
+							<core:Item key="absence" text="Urlaub"/>
+							<core:Item key="chat" text="Chat"/>
 							<core:Item key="system" text="System"/>
 						</Select>
 					</OverflowToolbar>

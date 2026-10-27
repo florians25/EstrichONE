@@ -1129,7 +1129,6 @@ export default class CockpitController extends BaseController {
 			title: `Einsätze ${longDay(day)} – Karte und Fahrtreihenfolge`, contentWidth: "64rem", resizable: true, draggable: true,
 			content: [new HBox({ items: [new VBox({ items: [map], width: "100%" }).addStyleClass("eoGrow"), side] }).addStyleClass("eoCkMapLayout")],
 			buttons: [
-				new Button({ text: "Wer fährt wohin", icon: "sap-icon://journey-arrive", press: () => { dialog.close(); this.nav(`/planung/wer-faehrt-wohin?tag=${day}`); } }),
 				new Button({ text: "Schließen", press: () => dialog.close() }),
 			],
 			afterClose: () => dialog.destroy(),
@@ -1198,9 +1197,5 @@ export default class CockpitController extends BaseController {
 
 	onPdfDay(): void {
 		download(`/api/v1/planning/print.pdf?mode=day&from=${this.pdfDay()}&rows=crews&weekend=false`).catch((error: unknown) => this.showError(error));
-	}
-
-	onPdfDispatch(): void {
-		download(`/api/v1/planning/dispatch/${this.pdfDay()}/print.pdf`).catch((error: unknown) => this.showError(error));
 	}
 }

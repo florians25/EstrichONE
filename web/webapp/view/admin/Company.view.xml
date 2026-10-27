@@ -235,6 +235,25 @@
 							<Switch id="modMaterials" state="{view>/s/modules/materials}" customTextOn=" " customTextOff=" "/>
 							<Label text=""/><Text text="Abgeschaltete Module verschwinden aus Navigation, Bauakte und Übersichten. Die Daten bleiben erhalten und sind nach dem Einschalten wieder da." class="eoMuted"/>
 						</form:SimpleForm>
+						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem"
+							visible="{= !!${view>/chat} }">
+							<core:Title text="Chat (Büro und Mitarbeiter)"/>
+							<Label text="Chat einschalten" labelFor="modChat"/>
+							<Switch id="modChat" state="{view>/chat/enabled}" customTextOn=" " customTextOff=" "/>
+							<Label text=""/><Text text="Mini-Chat nur mit Text, Einzel- und Gruppenchats (auch je Kolonne). Standard ist aus: Ein Chat unter Beschäftigten ist mit dem Betriebsrat abzustimmen (§ 87 BetrVG) und ins Verzeichnis der Verarbeitungstätigkeiten aufzunehmen." class="eoMuted"/>
+							<Label text="Löschfrist (Tage)" labelFor="chatRetention"/>
+							<StepInput id="chatRetention" value="{view>/chat/retentionDays}" min="7" max="730" step="1" largerStep="30" width="9rem"/>
+							<Label text="Vorschau in Pushnachrichten" labelFor="chatPreview"/>
+							<Switch id="chatPreview" state="{view>/chat/showPreview}" customTextOn=" " customTextOff=" "/>
+							<Label text=""/><Text text="Aus (empfohlen): Sperrbildschirm und Postfach zeigen nur „Neue Nachricht von …“. An: die ersten 120 Zeichen stehen in Push und Postfach." class="eoMuted"/>
+							<Label text="Mitarbeiter untereinander" labelFor="chatWorkers"/>
+							<Switch id="chatWorkers" state="{view>/chat/workersCanChatEachOther}" customTextOn=" " customTextOff=" "/>
+							<Label text=""/><Text text="Aus: Mitarbeiter ohne Recht „Chat verwalten“ können Einzelchats nur mit dem Büro beginnen." class="eoMuted"/>
+							<Label text="Bestand"/>
+							<Text text="{view>/chat/conversations} Unterhaltungen · {view>/chat/messages} Nachrichten (verschlüsselt){= ${view>/chat/lastCleanupAt} ? ' · letzte Löschung ' + ${view>/chat/cleanupText} : '' }"/>
+							<Label text="Betroffenenrechte"/>
+							<Text text="Auskunft und Löschung je Person: Verwaltung → Benutzer → Sprechblase in der Zeile der Person. Rechte: „Chat nutzen“ und „Chat verwalten“ (Rollen)." class="eoMuted"/>
+						</form:SimpleForm>
 					</IconTabFilter>
 					<IconTabFilter key="system" text="System">
 						<List>

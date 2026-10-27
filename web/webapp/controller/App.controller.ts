@@ -31,6 +31,7 @@ import { setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
 import { navKeyFor, navigation, routes, type NavEntry } from "../util/routes";
 import { notices } from "../util/notices";
+import { chatStatus } from "../util/chat";
 import { session } from "../util/session";
 import { logos } from "../util/theme";
 import { openSettings } from "../util/settings";
@@ -65,6 +66,7 @@ export default class AppController extends BaseController {
 	private readonly views = new Map<string, Promise<View>>();
 	private sequence = 0;
 	private noticeTimer: ReturnType<typeof setInterval> | undefined;
+	private chatTimer: ReturnType<typeof setInterval> | undefined;
 
 	onInit(): void {
 		this.local({
@@ -75,6 +77,7 @@ export default class AppController extends BaseController {
 			today: new Date().toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", year: "numeric" }),
 			online: true,
 			notifications: { count: "", items: [] as Notice[], inbox: [] as NotificationItem[], unread: 0 },
+			chatUnread: 0,
 		});
 		Theming.attachApplied(() => {
 			this.model().setProperty("/logo", logos(Theming.getTheme()).shell);
@@ -98,9 +101,10 @@ export default class AppController extends BaseController {
 		document.addEventListener("estrichone-notices", () => { if (session.data.user) void this.loadNotices(); });
 		// Module oder Rechte geändert (Einstellungen): Navigation sofort anpassen.
 		document.addEventListener("estrichone-permissions", () => this.refreshShell());
+		document.addEventListener("estrichone-chat", () => void this.loadChat());
 		// Service Worker: neue Pushnachricht (Glocke sofort aktualisieren) bzw. Klick auf eine Benachrichtigung.
 		navigator.serviceWorker?.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
-			if (event.data?.type === "estrichone-notification" && session.data.user) void this.loadNotices();
+			if (event.data?.type === "estrichone-notification" && session.data.user) { void this.loadNotices(); void this.loadChat(); }
 			if (event.data?.type === "estrichone-open" && event.data.url) this.nav(event.data.url);
 		});
 		window.addEventListener("online", () => this.model().setProperty("/online", true));
@@ -124,6 +128,7 @@ export default class AppController extends BaseController {
 
 	onExit(): void {
 		clearInterval(this.noticeTimer);
+		clearInterval(this.chatTimer);
 	}
 
 	private el<T>(id: string): T {
@@ -314,6 +319,10 @@ export default class AppController extends BaseController {
 			return;
 		}
 		const { route } = match;
+		if (route.redirect) {
+			this.nav(route.redirect(match.query), true);
+			return;
+		}
 		if (!route.public) {
 			if (!user) {
 				this.nav(`/anmelden?ziel=${encodeURIComponent(match.path + window.location.search)}`, true);
@@ -369,7 +378,23 @@ export default class AppController extends BaseController {
 		if (this.noticeTimer) return;
 		void refreshWebPush();
 		void this.loadNotices();
+		void this.loadChat();
 		this.noticeTimer = setInterval(() => void this.loadNotices(), 120_000);
+		this.chatTimer = setInterval(() => void this.loadChat(), 30_000);
+	}
+
+	/** Ungelesene Chatnachrichten (Badge an der Sprechblase in der Kopfzeile). */
+	private async loadChat(): Promise<void> {
+		if (!session.data.user || !session.has("chat.use")) {
+			this.model().setProperty("/chatUnread", 0);
+			return;
+		}
+		const status = await chatStatus().catch(() => null);
+		this.model().setProperty("/chatUnread", status?.unreadCount ?? 0);
+	}
+
+	onChat(): void {
+		this.nav("/chat");
 	}
 
 	private async loadNotices(): Promise<void> {
@@ -505,5 +530,9 @@ export default class AppController extends BaseController {
 
 	onMaintenanceRecheck(): void {
 		void notices.recheck();
+	}
+
+	onOutageRetry(): void {
+		void notices.retryOutage();
 	}
 }

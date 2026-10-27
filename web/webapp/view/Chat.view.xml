@@ -1,0 +1,85 @@
+<mvc:View controllerName="estrichone.controller.Chat" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" height="100%">
+	<FlexBox id="chatRoot" height="100%" renderType="Bare" class="eoChat">
+		<!-- Unterhaltungen -->
+		<VBox class="eoChatSide" renderType="Bare">
+			<HBox alignItems="Center" justifyContent="SpaceBetween" class="eoChatSideHead" renderType="Bare">
+				<Title text="Chat" level="H2" titleStyle="H4"/>
+				<HBox renderType="Bare">
+					<Button icon="sap-icon://add-employee" tooltip="Neuer Einzelchat" type="Transparent" press=".onNewDirect" ariaLabelledBy="chatNewDirectLabel"/>
+					<Button icon="sap-icon://add-contact" tooltip="Neue Gruppe" type="Transparent" press=".onNewGroup" visible="{view>/canAdmin}"
+						ariaLabelledBy="chatNewGroupLabel"/>
+				</HBox>
+			</HBox>
+			<SearchField id="chatSearch" placeholder="Unterhaltungen durchsuchen" liveChange=".onSearch" class="eoChatSearch" ariaLabelledBy="chatSearchLabel"/>
+			<ScrollContainer vertical="true" horizontal="false" height="100%" class="eoChatSideScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<List id="chatList" items="{view>/filtered}" mode="SingleSelectMaster" selectionChange=".onSelect" showSeparators="None"
+					noDataText="{= ${view>/loaded} ? 'Noch keine Unterhaltungen. Mit „Neuer Einzelchat“ beginnen.' : 'Wird geladen …' }" class="eoChatConvList">
+					<CustomListItem selected="{= ${view>id} === ${view>/activeId} }" class="eoChatConv" type="Active">
+						<customData><core:CustomData key="unread" value="{= ${view>unreadCount} > 0 ? 'yes' : 'no' }" writeToDom="true"/></customData>
+						<HBox alignItems="Center" class="eoChatConvRow" renderType="Bare">
+							<Avatar initials="{view>initials}" src="{view>icon}" displaySize="S" backgroundColor="{view>accent}" class="eoChatAvatar"
+								decorative="true"/>
+							<VBox class="eoChatConvText" renderType="Bare">
+								<HBox justifyContent="SpaceBetween" alignItems="Baseline" renderType="Bare">
+									<Text text="{view>title}" wrapping="false" class="eoChatConvTitle"/>
+									<Text text="{view>time}" wrapping="false" class="eoChatConvTime"/>
+								</HBox>
+								<HBox justifyContent="SpaceBetween" alignItems="Center" renderType="Bare">
+									<Text text="{view>preview}" wrapping="false" class="eoChatConvPreview"/>
+									<HBox renderType="Bare" alignItems="Center">
+										<core:Icon src="sap-icon://bell-2" visible="{view>muted}" class="eoChatMuted" tooltip="Stumm geschaltet"/>
+										<Text text="{view>unreadCount}" visible="{= ${view>unreadCount} > 0 }" class="eoChatBadge"/>
+									</HBox>
+								</HBox>
+							</VBox>
+						</HBox>
+					</CustomListItem>
+				</List>
+			</ScrollContainer>
+			<Text text="{view>/retentionHint}" class="eoChatRetention"/>
+		</VBox>
+
+		<!-- Verlauf -->
+		<VBox class="eoChatPane" renderType="Bare">
+			<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+			<IllustratedMessage visible="{= !${view>/activeId} }" illustrationType="sapIllus-NoActivities" illustrationSize="Scene"
+				title="Wählen Sie eine Unterhaltung" enableDefaultTitleAndDescription="false" class="eoChatEmpty"
+				description="Nachrichten sind nur Text, werden verschlüsselt gespeichert und nach {view>/retentionDays} Tagen automatisch gelöscht.">
+				<additionalContent>
+					<Button text="Neuer Einzelchat" icon="sap-icon://add-employee" type="Emphasized" press=".onNewDirect"/>
+				</additionalContent>
+			</IllustratedMessage>
+			<HBox visible="{= !!${view>/activeId} }" alignItems="Center" class="eoChatHead" renderType="Bare">
+				<Button icon="sap-icon://nav-back" type="Transparent" press=".onBack" tooltip="Zur Liste" class="eoChatBack"/>
+				<Avatar initials="{view>/active/initials}" src="{view>/active/icon}" displaySize="S" backgroundColor="{view>/active/accent}" decorative="true"
+					class="eoChatAvatar"/>
+				<VBox class="eoChatHeadText" renderType="Bare">
+					<Title text="{view>/active/title}" level="H3" titleStyle="H5" wrapping="false"/>
+					<Text text="{view>/active/subtitle}" wrapping="false" class="eoMuted eoChatHeadSub"/>
+				</VBox>
+				<Button icon="{= ${view>/active/muted} ? 'sap-icon://bell-2' : 'sap-icon://bell' }" type="Transparent" press=".onMute"
+					tooltip="{= ${view>/active/muted} ? 'Hinweise wieder einschalten' : 'Stumm schalten (keine Hinweise)' }"/>
+				<Button icon="sap-icon://group" type="Transparent" press=".onMembers" tooltip="Mitglieder und Lesestatus"/>
+				<Button icon="sap-icon://delete" type="Transparent" press=".onDeleteConversation" tooltip="Unterhaltung löschen" visible="{view>/canAdmin}"/>
+			</HBox>
+			<ScrollContainer id="chatScroll" visible="{= !!${view>/activeId} }" vertical="true" horizontal="false" height="100%" class="eoChatScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<core:HTML id="chatMessages" content="&lt;div class='eoChatLog'&gt;&lt;/div&gt;" preferDOM="false" sanitizeContent="false"/>
+			</ScrollContainer>
+			<HBox visible="{= !!${view>/activeId} }" alignItems="End" class="eoChatComposer" renderType="Bare">
+				<TextArea id="chatInput" value="{view>/draft}" valueLiveUpdate="true" growing="true" growingMaxLines="6" rows="1" width="100%"
+					placeholder="Nachricht schreiben …" maxLength="4000" showExceededText="false" class="eoChatInput" ariaLabelledBy="chatInputLabel">
+					<layoutData><FlexItemData growFactor="1"/></layoutData>
+				</TextArea>
+				<Button id="chatSend" icon="sap-icon://paper-plane" type="Emphasized" press=".onSend" enabled="{= ${view>/draft}.trim().length > 0 }"
+					tooltip="Senden (Enter)" class="eoChatSend"/>
+			</HBox>
+			<Text visible="{= !!${view>/activeId} }" text="Enter senden · Umschalt+Enter neue Zeile · nur Text" class="eoChatHint"/>
+		</VBox>
+	</FlexBox>
+	<core:InvisibleText id="chatNewDirectLabel" text="Neuer Einzelchat"/>
+	<core:InvisibleText id="chatNewGroupLabel" text="Neue Gruppe"/>
+	<core:InvisibleText id="chatSearchLabel" text="Unterhaltungen durchsuchen"/>
+	<core:InvisibleText id="chatInputLabel" text="Nachricht"/>
+</mvc:View>

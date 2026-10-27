@@ -88,7 +88,6 @@
 					<Label text="Verknüpfung" labelFor="composeLink"/>
 					<Select id="composeLink" selectedKey="{view>/c/link}" width="100%">
 						<core:Item key="" text="Keine (nur Text)"/>
-						<core:Item key="/planung/wer-faehrt-wohin" text="Wer fährt wohin"/>
 						<core:Item key="/tagesuebersicht" text="Tagesübersicht"/>
 						<core:Item key="/personal/urlaub" text="Urlaub"/>
 						<core:Item key="/it-center/helpdesk" text="Helpdesk"/>

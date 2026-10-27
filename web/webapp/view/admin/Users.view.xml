@@ -52,6 +52,7 @@
 								<Button icon="sap-icon://key" tooltip="Passwort zurücksetzen" type="Transparent" press=".onReset"/>
 								<Button icon="sap-icon://locked" tooltip="Sperren" type="Transparent" press=".onLock" visible="{view>isActive}"/>
 								<Button icon="sap-icon://unlocked" tooltip="Entsperren" type="Transparent" press=".onUnlock" visible="{= !${view>isActive} }"/>
+								<Button icon="sap-icon://discussion-2" tooltip="Chatdaten (Auskunft, Löschung)" type="Transparent" press=".onChatData" visible="{view>/chatAdmin}"/>
 							</HBox>
 						</ColumnListItem>
 					</items>

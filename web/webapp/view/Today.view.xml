@@ -27,7 +27,7 @@
 					<!-- Einsätze heute nach Kolonne: doppelte Breite -->
 					<Panel backgroundDesign="Solid" class="eoTodayPanel eoTodayWide" visible="{= ${session>/permissions/planning.read} === true }">
 						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://appointment-2"/><Title text="Einsätze heute" level="H2"/>
-							<ToolbarSpacer/><Link text="Wer fährt wohin" href="/planung/wer-faehrt-wohin"/><Link text="Tagesansicht" href="/planung?ansicht=tag"/></OverflowToolbar></headerToolbar>
+							<ToolbarSpacer/><Link text="Cockpit" href="/planung/cockpit?ansicht=day"/><Link text="Tagesansicht" href="/planung?ansicht=tag"/></OverflowToolbar></headerToolbar>
 						<Table items="{path: 'view>/assignments', sorter: {path: 'crewLabel', group: true}}" noDataText="Heute ist nichts eingeplant." class="eoDenseTable" popinLayout="GridSmall">
 							<columns>
 								<Column width="5.5rem"><Text text="Zeit"/></Column>

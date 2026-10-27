@@ -42,6 +42,13 @@ export function onMaintenance(listener: (problem: Problem | undefined) => void):
 	maintenanceHit = listener;
 }
 
+let unreachableHit: () => void = () => undefined;
+
+/** Server nicht erreichbar (Netzwerkfehler, 502/504, 503 ohne Wartung): Störungsseite prüft und zeigt sich ggf. */
+export function onUnreachable(listener: () => void): void {
+	unreachableHit = listener;
+}
+
 /** Wird vom Anmeldezustand gesetzt: was passiert, wenn die Sitzung endet. */
 export function onSessionEnded(listener: Listener): void {
 	sessionEnded = listener;
@@ -176,7 +183,16 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 			throw new NetworkError();
 		});
 
-	let response = await sendWithRetry(send, method);
+	let response: Response;
+	try {
+		response = await sendWithRetry(send, method);
+	} catch (error) {
+		if (error instanceof NetworkError) unreachableHit();
+		throw error;
+	}
+	if ([502, 504].includes(response.status) || (response.status === 503 && response.headers.get("Content-Type")?.includes("problem") !== true)) {
+		unreachableHit();
+	}
 	if (response.status === 401 && !url.startsWith("/api/v1/auth/web/")) {
 		let error = await toError(response);
 		// Abgelaufenes oder (nach Ablauf des Cookies) fehlendes Zugriffstoken: still erneuern und wiederholen.

@@ -10,6 +10,8 @@ export const routes: RouteDef[] = [
 	{ name: "report", pattern: "/bauakten/:id/bericht", view: "bauakte.Report", bare: true, permission: "bauakten.read", title: "report.title" },
 	{ name: "start", pattern: "/start", view: "Start", nav: "start", title: "nav.start" },
 	{ name: "inbox", pattern: "/benachrichtigungen", view: "Inbox", nav: "inbox", title: "nav.inbox" },
+	{ name: "chat", pattern: "/chat", view: "Chat", permission: "chat.use", nav: "chat", title: "nav.chat" },
+	{ name: "chatConversation", pattern: "/chat/:id", view: "Chat", permission: "chat.use", nav: "chat", title: "nav.chat" },
 	{ name: "messages", pattern: "/verwaltung/nachrichten", view: "admin.Messages", permission: "notifications.send", nav: "messages", title: "nav.messages" },
 	{ name: "password", pattern: "/konto/passwort", view: "auth.ChangePassword", title: "password.title" },
 	{ name: "today", pattern: "/tagesuebersicht", view: "Today", permission: "bauakten.read", nav: "today", title: "nav.today" },
@@ -29,7 +31,9 @@ export const routes: RouteDef[] = [
 	{ name: "planning", pattern: "/planung", view: "planning.Planning", permission: "planning.read", nav: "planning", title: "nav.planning" },
 	{ name: "calendar", pattern: "/planung/kalender", view: "planning.Calendar", permission: "planning.read", nav: "calendar", title: "nav.calendar" },
 	{ name: "teamPlanner", pattern: "/planung/teamplaner", view: "planning.TeamPlanner", permission: "planning.read", nav: "teamPlanner", title: "nav.teamPlanner" },
-	{ name: "dispatch", pattern: "/planung/wer-faehrt-wohin", view: "planning.Dispatch", permission: "planning.read", nav: "dispatch", title: "nav.dispatch" },
+	// „Wer fährt wohin“ gibt es nur noch in der App (API bleibt); Links aus Pushnachrichten führen ins Cockpit.
+	{ name: "dispatch", pattern: "/planung/wer-faehrt-wohin", view: "planning.Cockpit", permission: "planning.read", nav: "cockpit", title: "nav.cockpit",
+		redirect: (query) => `/planung/cockpit${query.get("tag") ? `?ansicht=day&datum=${encodeURIComponent(query.get("tag")!)}` : ""}` },
 	{ name: "vacation", pattern: "/personal/urlaub", view: "staff.Vacation", permission: "absence.request", nav: "vacation", title: "nav.vacation" },
 	{ name: "staff", pattern: "/personal", view: "staff.Staff", permission: "hr.read", nav: "staff", title: "nav.staff" },
 	{ name: "employee", pattern: "/personal/:id", view: "staff.Employee", permission: "hr.read", nav: "staff", title: "nav.staff" },
@@ -66,6 +70,7 @@ export interface NavEntry {
 /** Gruppierte Seitennavigation (Texte: i18n „nav.<key>“). */
 export const navigation: NavEntry[] = [
 	{ key: "start", path: "/start", icon: "sap-icon://home" },
+	{ key: "chat", path: "/chat", icon: "sap-icon://discussion-2", permission: "chat.use" },
 	{
 		key: "groupOrders", children: [
 			{ key: "today", path: "/tagesuebersicht", icon: "sap-icon://date-time", permission: "bauakten.read" },
@@ -81,7 +86,6 @@ export const navigation: NavEntry[] = [
 			{ key: "cockpit", path: "/planung/cockpit", icon: "sap-icon://manager-insight", permission: "planning.read" },
 			{ key: "planning", path: "/planung", icon: "sap-icon://gantt-bars", permission: "planning.read" },
 			{ key: "teamPlanner", path: "/planung/teamplaner", icon: "sap-icon://time-entry-request", permission: "planning.read" },
-			{ key: "dispatch", path: "/planung/wer-faehrt-wohin", icon: "sap-icon://journey-arrive", permission: "planning.read" },
 			{ key: "calendar", path: "/planung/kalender", icon: "sap-icon://calendar", permission: "planning.read" },
 			{ key: "workPlan", path: "/planung/arbeitsplan", icon: "sap-icon://list", permission: "planning.read" },
 		],

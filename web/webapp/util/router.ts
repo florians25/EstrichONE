@@ -18,6 +18,8 @@ export interface RouteDef {
 	nav?: string;
 	/** Titel für Browser-Reiter und Kopfzeile (i18n-Schlüssel). */
 	title?: string;
+	/** Alte Adresse: auf diese Adresse umleiten (z. B. Links aus Pushnachrichten der Apps). */
+	redirect?: (query: URLSearchParams) => string;
 }
 
 export interface RouteMatch {

@@ -10,6 +10,7 @@ import { loadSystemSettings, saveSystemSettings, type SystemSettings } from "../
 import { themes } from "../../util/theme";
 import type { RouteMatch } from "../../util/router";
 import { sendTest, type PushSettings } from "../../util/notifications";
+import { chatSettings, saveChatSettings, type ChatSettings } from "../../util/chat";
 import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
 
 interface StorageStats {
@@ -74,6 +75,7 @@ export default class Company extends BaseController {
 		this.model().setProperty("/busy", true);
 		try {
 			void this.loadPush();
+			void this.loadChat();
 			void this.loadStorage();
 			const [c, settings, logo, templates, roles] = await Promise.all([
 				get<CompanyResponse>("company"),
@@ -97,6 +99,19 @@ export default class Company extends BaseController {
 		} finally {
 			this.model().setProperty("/busy", false);
 		}
+	}
+
+	private async loadChat(): Promise<void> {
+		const chat = await chatSettings().catch(() => null);
+		this.model().setProperty("/chat", chat ? { ...chat, cleanupText: chat.lastCleanupAt ? new Date(chat.lastCleanupAt).toLocaleString("de-DE") : "" } : null);
+	}
+
+	private async saveChat(): Promise<void> {
+		const c = this.model().getProperty("/chat") as ChatSettings | null;
+		if (!c) return;
+		const saved = await saveChatSettings({ enabled: c.enabled, retentionDays: Number(c.retentionDays), showPreview: c.showPreview,
+			workersCanChatEachOther: c.workersCanChatEachOther, version: c.version });
+		this.model().setProperty("/chat", { ...saved, cleanupText: saved.lastCleanupAt ? new Date(saved.lastCleanupAt).toLocaleString("de-DE") : "" });
 	}
 
 	private async loadPush(): Promise<void> {
@@ -223,6 +238,7 @@ export default class Company extends BaseController {
 				put<CompanyResponse>("company", { ...c, email: c.email || null }),
 				saveSystemSettings(clean, this.version),
 				this.savePush(),
+				this.saveChat(),
 			]);
 			resetCompany();
 			this.version = savedSettings.version;
