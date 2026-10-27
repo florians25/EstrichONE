@@ -306,7 +306,10 @@ struct TicketDetailView: View {
 
     private func isOwn(_ entry: TicketTimelineEntry) -> Bool {
         if let user = model.active?.user.id, let actor = entry.actorUserId { return actor == user }
-        return isAgent ? !entry.isReporter : entry.isReporter
+        // Ohne Benutzer-ID: Bin ich der Melder, sind die Einträge des Melders meine – sonst die der Bearbeitung.
+        let reporter = detail?.summary.reporterDisplayName
+        let iAmReporter = reporter == nil || reporter == model.active?.user.displayName
+        return iAmReporter ? entry.isReporter : !entry.isReporter
     }
 
     private func header(_ detail: TicketDetail) -> some View {
