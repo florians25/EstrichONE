@@ -98,6 +98,8 @@ final class ScreenshotDirector {
     private static func settleMilliseconds(_ scene: String) -> Int {
         let sheets = ["erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu"]
         if scene.hasSuffix("-quer") { return 3200 }
+        // Bereiche öffnen sich nach dem Laden der Bauakte per Navigation – die Animation braucht etwas länger.
+        if scene.hasPrefix("bereich-") || scene == "protokoll" { return 2800 }
         return sheets.contains { scene.hasPrefix($0) } ? 2800 : 2000
     }
 
