@@ -62,8 +62,18 @@ public struct ChatMessage: Decodable, Sendable, Equatable, Identifiable {
     public let text: String
     public let createdAt: Date
     public var state: State
+    /// Eigene Nachricht (vom Server gesetzt; `nil` bei älteren Antworten – dann zählt der Absender).
+    public let mine: Bool?
+    /// Gelöscht: Text entfernt, Platzhalter bleibt.
+    public let deleted: Bool
+    /// Gruppen, eigene Nachrichten: gelesen von `readBy` der `recipients` Empfänger.
+    public let readBy: Int
+    public let recipients: Int
+    /// ID aus der Warteschlange der App (doppeltes Senden ist unschädlich).
+    public let clientMessageId: UUID?
 
-    public init(id: UUID, conversationId: UUID?, senderId: UUID?, senderName: String?, text: String, createdAt: Date, state: State) {
+    public init(id: UUID, conversationId: UUID?, senderId: UUID?, senderName: String?, text: String, createdAt: Date, state: State,
+                mine: Bool? = nil, deleted: Bool = false, readBy: Int = 0, recipients: Int = 0, clientMessageId: UUID? = nil) {
         self.id = id
         self.conversationId = conversationId
         self.senderId = senderId
@@ -71,6 +81,16 @@ public struct ChatMessage: Decodable, Sendable, Equatable, Identifiable {
         self.text = text
         self.createdAt = createdAt
         self.state = state
+        self.mine = mine
+        self.deleted = deleted
+        self.readBy = readBy
+        self.recipients = recipients
+        self.clientMessageId = clientMessageId
+    }
+
+    /// Eigene Nachricht: laut Server bzw. über den Absender.
+    public func isMine(userId: UUID?) -> Bool {
+        mine ?? (senderId != nil && senderId == userId)
     }
 
     public init(from decoder: any Decoder) throws {
@@ -79,9 +99,14 @@ public struct ChatMessage: Decodable, Sendable, Equatable, Identifiable {
         conversationId = try? c.decodeIfPresent(UUID.self, forKey: .conversationId)
         senderId = (try? c.decodeIfPresent(UUID.self, forKey: .senderId)) ?? (try? c.decodeIfPresent(UUID.self, forKey: .senderUserId))
         senderName = try c.decodeIfPresent(String.self, forKey: .senderName)
-        text = try c.decodeIfPresent(String.self, forKey: .text) ?? c.decodeIfPresent(String.self, forKey: .body) ?? ""
+        deleted = (try? c.decodeIfPresent(Bool.self, forKey: .deleted)) ?? false
+        text = (try? c.decodeIfPresent(String.self, forKey: .text)) ?? (try? c.decodeIfPresent(String.self, forKey: .body)) ?? ""
+        mine = try? c.decodeIfPresent(Bool.self, forKey: .mine)
+        readBy = (try? c.decodeIfPresent(Int.self, forKey: .readBy)) ?? 0
+        recipients = (try? c.decodeIfPresent(Int.self, forKey: .recipients)) ?? 0
+        clientMessageId = try? c.decodeIfPresent(UUID.self, forKey: .clientMessageId)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? c.decodeIfPresent(Date.self, forKey: .sentAt) ?? Date()
-        if let raw = try? c.decodeIfPresent(String.self, forKey: .state), let known = State(rawValue: raw.lowercased()) {
+        if let raw = (try? c.decodeIfPresent(String.self, forKey: .status)) ?? (try? c.decodeIfPresent(String.self, forKey: .state)), let known = State(rawValue: raw.lowercased()) {
             state = known
         } else if (try? c.decodeIfPresent(Date.self, forKey: .readAt)) != nil || (try? c.decodeIfPresent(Bool.self, forKey: .readByAll)) == true {
             state = .read
@@ -93,7 +118,8 @@ public struct ChatMessage: Decodable, Sendable, Equatable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, conversationId, senderId, senderUserId, senderName, text, body, createdAt, sentAt, state, readAt, deliveredAt, readByAll, deliveredToAll
+        case id, conversationId, senderId, senderUserId, senderName, text, body, createdAt, sentAt, state, status, readAt, deliveredAt, readByAll, deliveredToAll
+        case mine, deleted, readBy, recipients, clientMessageId
     }
 }
 
@@ -130,14 +156,20 @@ public struct ChatConversation: Decodable, Sendable, Equatable, Identifiable, Ha
         kind = (try c.decodeIfPresent(String.self, forKey: .kind) ?? c.decodeIfPresent(String.self, forKey: .type) ?? "group").lowercased()
         members = (try? c.decodeIfPresent([ChatMember].self, forKey: .members)) ?? []
         let last = try? c.decodeIfPresent(ChatMessage.self, forKey: .lastMessage)
-        lastMessageText = last?.text ?? (try? c.decodeIfPresent(String.self, forKey: .lastMessageText)) ?? nil
-        lastMessageSender = last?.senderName
-        lastMessageAt = last?.createdAt ?? (try? c.decodeIfPresent(Date.self, forKey: .lastMessageAt)) ?? nil
+        if let last {
+            lastMessageText = last.deleted ? "Nachricht gelöscht" : last.text
+            lastMessageSender = last.mine == true ? "Ich" : last.senderName
+        } else {
+            lastMessageText = (try? c.decodeIfPresent(String.self, forKey: .lastMessageText)) ?? nil
+            lastMessageSender = nil
+        }
+        lastMessageAt = (try? c.decodeIfPresent(Date.self, forKey: .lastActivityAt)) ?? last?.createdAt
+            ?? (try? c.decodeIfPresent(Date.self, forKey: .lastMessageAt))
         unreadCount = try c.decodeIfPresent(Int.self, forKey: .unreadCount) ?? 0
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, title, name, kind, type, members, lastMessage, lastMessageText, lastMessageAt, unreadCount
+        case id, title, name, kind, type, members, lastMessage, lastMessageText, lastMessageAt, lastActivityAt, unreadCount
     }
 
     public static func == (lhs: ChatConversation, rhs: ChatConversation) -> Bool {
@@ -184,6 +216,10 @@ private struct ChatSendBody: Encodable, Sendable {
 
 private struct ChatEmptyBody: Encodable, Sendable {}
 
+private struct ChatDirectBody: Encodable, Sendable {
+    let userId: String
+}
+
 extension AuthorizedClient {
     /// Modul aktiv und Recht vorhanden? Kennt der Server den Chat nicht (404) oder ist er aus (403), ist er nicht verfügbar.
     public func chatStatus() async throws(APIError) -> ChatStatus {
@@ -201,11 +237,22 @@ extension AuthorizedClient {
         return list.items
     }
 
-    /// Verlauf, älteste zuerst.
-    public func chatMessages(_ conversationId: UUID, limit: Int = 100) async throws(APIError) -> [ChatMessage] {
-        let list: ChatList<ChatMessage> = try await get("chat/conversations/\(conversationId.key)/messages",
-                                                         query: [URLQueryItem(name: "limit", value: String(limit))])
+    /// Verlauf, älteste zuerst. Mit `after` nur neue Nachrichten seit dem letzten Abruf (Polling, docs/chat.md).
+    public func chatMessages(_ conversationId: UUID, limit: Int = 50, after: Date? = nil) async throws(APIError) -> [ChatMessage] {
+        var query = [URLQueryItem(name: "limit", value: String(limit))]
+        if let after { query.append(URLQueryItem(name: "after", value: APIDate.format(after))) }
+        let list: ChatList<ChatMessage> = try await get("chat/conversations/\(conversationId.key)/messages", query: query)
         return list.items.sorted { $0.createdAt < $1.createdAt }
+    }
+
+    /// Personen, mit denen ein Einzelchat möglich ist.
+    public func chatContacts() async throws(APIError) -> [ChatMember] {
+        try await get("chat/contacts")
+    }
+
+    /// Einzelchat öffnen (vorhandenen oder neuen).
+    public func startDirectChat(with userId: UUID) async throws(APIError) -> ChatConversation {
+        try await post("chat/conversations/direct", body: ChatDirectBody(userId: userId.key))
     }
 
     /// Sendet eine Textnachricht. `clientMessageId` macht doppeltes Senden (Wiederholung nach Zeitüberschreitung) unschädlich.

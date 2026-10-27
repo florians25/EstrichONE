@@ -91,6 +91,17 @@ struct SystemStateTests {
          {"id":"0193a1b2-0000-7000-8000-0000000c0b03","text":"Bis gleich","createdAt":"2026-10-27T06:03:00Z","state":"delivered"}]
         """.utf8)).items
         #expect(messages.map(\.state) == [.read, .delivered])
+        // Aufbau laut docs/chat.md (ChatMessageResponse).
+        let real = try JSONCoding.decoder.decode(ChatList<ChatMessage>.self, from: Data("""
+        {"items":[{"id":"0193a1b2-0000-7000-8000-0000000c0b04","conversationId":"0193a1b2-0000-7000-8000-0000000c0a01",
+          "senderUserId":"0193a1b2-0000-7000-8000-0000000c0c01","senderName":"Max Huber","text":"Halle 2 ist fertig.",
+          "createdAt":"2026-10-28T07:12:03Z","mine":true,"deleted":false,"status":"read","readBy":3,"recipients":5,"clientMessageId":null},
+         {"id":"0193a1b2-0000-7000-8000-0000000c0b05","conversationId":"0193a1b2-0000-7000-8000-0000000c0a01",
+          "senderUserId":"0193a1b2-0000-7000-8000-0000000c0c02","senderName":"Büro","text":null,"createdAt":"2026-10-28T07:13:00Z",
+          "mine":false,"deleted":true,"status":null,"readBy":0,"recipients":0}],"hasMore":false,"members":[]}
+        """.utf8)).items
+        #expect(real[0].isMine(userId: nil) && real[0].state == .read && real[0].readBy == 3 && real[0].recipients == 5)
+        #expect(!real[1].isMine(userId: nil) && real[1].deleted && real[1].text.isEmpty)
         #expect(ChatLimits.clean("  \n ") == nil && ChatLimits.clean(" Hallo ") == "Hallo")
         let id = UUID(uuidString: "0193a1b2-0000-7000-8000-0000000c0a01")!
         #expect(NotificationRoute(link: "/chat/\(id.key)") == .chat(id))

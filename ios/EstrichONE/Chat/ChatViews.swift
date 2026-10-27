@@ -10,6 +10,7 @@ struct ChatListView: View {
     @State private var loaded = false
     @State private var failure: String?
     @State private var open: ChatConversation?
+    @State private var startsChat = false
 
     var body: some View {
         List {
@@ -44,6 +45,22 @@ struct ChatListView: View {
         .navigationBarTitleDisplayMode(.inline)
         .navigationDestination(item: $open) { conversation in
             ChatConversationView(conversationId: conversation.id, title: conversation.title, isGroup: conversation.isGroup)
+        }
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Neuer Chat", systemImage: "square.and.pencil") { startsChat = true }
+                    .accessibilityIdentifier("newChatButton")
+            }
+        }
+        .sheet(isPresented: $startsChat) {
+            NewChatSheet { conversation in
+                startsChat = false
+                Task {
+                    await load()
+                    open = conversation
+                }
+            }
+            .presentationDetents([.medium, .large])
         }
         .task(id: model.active?.sync?.revision) { await load() }
         .task {
@@ -169,8 +186,8 @@ struct ChatConversationView: View {
                                 .background(Theme.fill, in: Capsule())
                                 .padding(.vertical, Space.s)
                         }
-                        MessageBubble(message: message, isMine: message.senderId == userId,
-                                      showsSender: isGroup && message.senderId != userId && startsRun(at: index),
+                        MessageBubble(message: message, isMine: message.isMine(userId: userId), isGroup: isGroup,
+                                      showsSender: isGroup && !message.isMine(userId: userId) && startsRun(at: index),
                                       retry: message.state == .failed ? { Task { await resend(message) } } : nil)
                             .padding(.top, startsRun(at: index) ? Space.s : 0)
                             .id(message.id)
@@ -197,11 +214,14 @@ struct ChatConversationView: View {
                 withAnimation(.snappy) { proxy.scrollTo("end", anchor: .bottom) }
             }
             .task {
-                await load()
+                await load(full: true)
                 proxy.scrollTo("end", anchor: .bottom)
+                // Neue Nachrichten alle 5 Sekunden (`after`), Zustell-/Lesestand alle 30 Sekunden vollständig.
+                var round = 0
                 while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(4))
-                    await load()
+                    try? await Task.sleep(for: .seconds(5))
+                    round += 1
+                    await load(full: round % 6 == 0)
                 }
             }
         }
@@ -253,13 +273,20 @@ struct ChatConversationView: View {
         return previous.senderId != current.senderId || current.createdAt.timeIntervalSince(previous.createdAt) > 600 || showsDay(at: index)
     }
 
-    private func load() async {
+    private func load(full: Bool) async {
         guard let client = model.active?.client else { return }
         do throws(APIError) {
-            let fresh = try await client.chatMessages(conversationId)
-            let hadUnread = fresh.contains { $0.senderId != userId } && fresh.last?.id != messages.last?.id
-            messages = fresh
-            pending.removeAll { item in fresh.contains { $0.id == item.id } }
+            let after = full ? nil : messages.last?.createdAt
+            let fresh = try await client.chatMessages(conversationId, after: after)
+            let hadUnread = fresh.contains { !$0.isMine(userId: userId) && !messages.map(\.id).contains($0.id) }
+            if full {
+                messages = fresh
+            } else {
+                for message in fresh {
+                    if let index = messages.firstIndex(where: { $0.id == message.id }) { messages[index] = message } else { messages.append(message) }
+                }
+            }
+            pending.removeAll { item in fresh.contains { $0.id == item.id || $0.clientMessageId == item.id } }
             failure = nil
             if hadUnread || !loaded {
                 try? await client.markChatRead(conversationId)
@@ -280,7 +307,7 @@ struct ChatConversationView: View {
         guard let text = ChatLimits.clean(draft), let userId else { return }
         draft = ""
         let local = ChatMessage(id: UUID(), conversationId: conversationId, senderId: userId, senderName: model.active?.user.displayName,
-                                text: text, createdAt: .now, state: .sending)
+                                text: text, createdAt: .now, state: .sending, mine: true)
         pending.append(local)
         await deliver(local)
     }
@@ -297,7 +324,7 @@ struct ChatConversationView: View {
         do throws(APIError) {
             let stored = try await client.sendChatMessage(message.text, to: conversationId, clientMessageId: message.id)
             pending.removeAll { $0.id == message.id }
-            if !messages.contains(where: { $0.id == stored.id }) { messages.append(stored) }
+            if let index = messages.firstIndex(where: { $0.id == stored.id }) { messages[index] = stored } else { messages.append(stored) }
         } catch {
             if let index = pending.firstIndex(where: { $0.id == message.id }) { pending[index].state = .failed }
             failure = error == .offline ? "Nicht gesendet – keine Verbindung. Tippen Sie auf die Nachricht, um es erneut zu versuchen."
@@ -310,6 +337,7 @@ struct ChatConversationView: View {
 private struct MessageBubble: View {
     let message: ChatMessage
     let isMine: Bool
+    var isGroup = false
     let showsSender: Bool
     var retry: (() -> Void)?
 
@@ -324,12 +352,22 @@ private struct MessageBubble: View {
                         .padding(.horizontal, Space.m)
                 }
                 VStack(alignment: .trailing, spacing: 2) {
-                    Text(message.text)
-                        .font(Typo.body)
-                        .foregroundStyle(isMine ? Theme.onAccent : Theme.textPrimary)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .textSelection(.enabled)
+                    if message.deleted {
+                        Label("Nachricht gelöscht", systemImage: "nosign")
+                            .font(Typo.body.italic())
+                            .foregroundStyle(isMine ? Theme.onAccent.opacity(0.8) : Theme.textSecondary)
+                    } else {
+                        Text(message.text)
+                            .font(Typo.body)
+                            .foregroundStyle(isMine ? Theme.onAccent : Theme.textPrimary)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    }
                     HStack(spacing: 3) {
+                        // Gruppen: „gelesen 3/5“, solange noch nicht alle gelesen haben.
+                        if isMine, isGroup, message.recipients > 1, message.state != .read, message.readBy > 0 {
+                            Text("gelesen \(message.readBy)/\(message.recipients) ·")
+                        }
                         Text(message.createdAt.formatted(date: .omitted, time: .shortened))
                         if isMine { stateMark }
                     }
@@ -352,7 +390,7 @@ private struct MessageBubble: View {
             if !isMine { Spacer(minLength: 48) }
         }
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(isMine ? "Ich" : (message.senderName ?? "")): \(message.text)")
+        .accessibilityLabel("\(isMine ? "Ich" : (message.senderName ?? "")): \(message.deleted ? "Nachricht gelöscht" : message.text)")
         .accessibilityValue(stateText)
     }
 
@@ -427,5 +465,86 @@ struct ChatToolbarButton: View {
         }
         .accessibilityLabel(count > 0 ? "Chat, \(count) ungelesen" : "Chat")
         .accessibilityIdentifier("chatButton")
+    }
+}
+
+/// Neuer Einzelchat: Person wählen (nur Betriebsangehörige mit Chat-Recht, docs/chat.md).
+private struct NewChatSheet: View {
+    let opened: (ChatConversation) -> Void
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    @State private var contacts: [ChatMember] = []
+    @State private var search = ""
+    @State private var loaded = false
+    @State private var failure: String?
+    @State private var busy: UUID?
+
+    var body: some View {
+        NavigationStack {
+            List {
+                if let failure {
+                    NoticeLine(tone: .danger, text: failure)
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+                ForEach(filtered) { person in
+                    Button {
+                        Task { await start(person) }
+                    } label: {
+                        HStack(spacing: Space.m) {
+                            Avatar(name: person.displayName, size: 34)
+                            Text(person.displayName)
+                                .font(Typo.body)
+                                .foregroundStyle(Theme.textPrimary)
+                            Spacer()
+                            if busy == person.id { ProgressView() }
+                        }
+                        .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(busy != nil)
+                }
+                if loaded, filtered.isEmpty, failure == nil {
+                    Text(search.isEmpty ? "Keine Personen verfügbar." : "Keine Treffer.")
+                        .font(Typo.subhead)
+                        .foregroundStyle(Theme.textSecondary)
+                }
+            }
+            .overlay { if !loaded { ProgressView() } }
+            .searchable(text: $search, prompt: "Person suchen")
+            .navigationTitle("Neuer Chat")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+            }
+            .task { await load() }
+        }
+    }
+
+    private var filtered: [ChatMember] {
+        let term = search.trimmingCharacters(in: .whitespaces)
+        let list = contacts.filter { $0.id != model.active?.user.id }
+        return term.isEmpty ? list : list.filter { $0.displayName.localizedCaseInsensitiveContains(term) }
+    }
+
+    private func load() async {
+        guard let client = model.active?.client else { return }
+        do throws(APIError) {
+            contacts = try await client.chatContacts().sorted { $0.displayName.localizedCompare($1.displayName) == .orderedAscending }
+        } catch {
+            failure = error.serverMessage ?? error.message
+        }
+        loaded = true
+    }
+
+    private func start(_ person: ChatMember) async {
+        guard let client = model.active?.client else { return }
+        busy = person.id
+        do throws(APIError) {
+            opened(try await client.startDirectChat(with: person.id))
+        } catch {
+            failure = error.serverMessage ?? error.message
+        }
+        busy = nil
     }
 }

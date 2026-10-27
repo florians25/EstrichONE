@@ -234,6 +234,11 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return json(200, chat.status())
         case "/api/v1/chat/conversations" where demo != nil:
             return json(200, chat.list())
+        case "/api/v1/chat/contacts" where demo != nil:
+            return json(200, chat.contacts())
+        case "/api/v1/chat/conversations/direct" where demo != nil:
+            let (status, item) = chat.direct(with: body["userId"] as? String ?? "")
+            return json(status, item)
         case let chatPath where demo != nil && chatPath.hasPrefix("/api/v1/chat/conversations/"):
             // /api/v1/chat/conversations/{id}/messages|read
             let parts = chatPath.split(separator: "/").map(String.init)

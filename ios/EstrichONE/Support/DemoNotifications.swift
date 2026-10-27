@@ -17,7 +17,7 @@ final class DemoNotifications {
 
     private var items: [Item] = [
         Item(id: "0193a1b2-de00-7000-8000-00000000a010", category: "chat", urgency: "normal", title: "Neue Nachricht von Sabine Wagner",
-             body: "Büro – Sabine Wagner", link: "/chat/\(DemoChat.office)", minutesAgo: 14, read: false),
+             body: "Sabine Wagner (Büro)", link: "/chat/\(DemoChat.office)", minutesAgo: 14, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a011", category: "defect", urgency: "high", title: "Mangel Ihnen zugewiesen",
              body: "Randfuge Flur EG offen · Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)/maengel", minutesAgo: 25, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a012", category: "comment", urgency: "normal", title: "Kommentar in Ihrer Bauakte",

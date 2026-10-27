@@ -109,7 +109,7 @@ final class DemoChat {
     init(userId: String) {
         self.userId = userId
         conversations = [
-            Conversation(id: Self.office, title: "Büro – Sabine Wagner", kind: "direct", unread: 2),
+            Conversation(id: Self.office, title: "Sabine Wagner (Büro)", kind: "direct", unread: 2),
             Conversation(id: Self.crew, title: "Kolonne Huber", kind: "group", unread: 1),
             Conversation(id: Self.colleague, title: "Lukas Brandl", kind: "direct", unread: 0),
         ]
@@ -190,10 +190,37 @@ final class DemoChat {
     }
 
     private func json(_ message: Message) -> [String: Any] {
-        [
-            "id": message.id, "conversationId": message.conversationId, "senderId": message.senderId, "senderName": message.senderName,
-            "text": message.text, "createdAt": APIDate.format(message.createdAt),
-            "state": message.readAt != nil ? "read" : (message.senderId == userId ? "delivered" : "read"),
+        let mine = message.senderId == userId
+        let recipients = message.conversationId == Self.crew ? 4 : 1
+        return [
+            "id": message.id, "conversationId": message.conversationId, "senderUserId": message.senderId, "senderName": message.senderName,
+            "text": message.text, "createdAt": APIDate.format(message.createdAt), "mine": mine, "deleted": false,
+            "status": mine ? (message.readAt != nil ? "read" : "delivered") : NSNull(),
+            "readBy": mine && message.readAt != nil ? recipients : 0, "recipients": mine ? recipients : 0,
         ]
+    }
+
+    /// `GET /chat/contacts`
+    func contacts() -> [[String: Any]] {
+        [["id": Self.officeUser, "name": "Sabine Wagner"], ["id": Self.lukas, "name": "Lukas Brandl"],
+         ["id": "0193a1b2-de00-7000-8000-00000000a0a3", "name": "Thomas Gruber"]]
+    }
+
+    /// `POST /chat/conversations/direct`: vorhandenen Einzelchat oder neuen.
+    func direct(with personId: String) -> (Int, [String: Any]) {
+        let target: String
+        switch personId.lowercased() {
+        case Self.officeUser: target = Self.office
+        case Self.lukas: target = Self.colleague
+        default:
+            target = "0193a1b2-de00-7000-8000-00000000d004"
+            if !conversations.contains(where: { $0.id == target }) {
+                conversations.append(Conversation(id: target, title: "Thomas Gruber", kind: "direct", unread: 0))
+            }
+        }
+        guard let item = (list()["items"] as? [[String: Any]])?.first(where: { $0["id"] as? String == target }) else {
+            return (404, ["code": "NOT_FOUND", "detail": "Nicht gefunden"])
+        }
+        return (200, item)
     }
 }
