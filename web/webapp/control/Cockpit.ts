@@ -103,6 +103,14 @@ export default class Cockpit extends Control {
 	};
 
 	private scroll: HTMLElement | null = null;
+	private scrolledFor = "";
+
+	/** Daten setzen ohne Neurendern durch UI5 (sonst ginge die Scrollposition verloren); gezeichnet wird per DOM. */
+	setData(value: CockpitRender | null): this {
+		this.setProperty("data", value, true);
+		this.draw();
+		return this;
+	}
 
 	private dataValue(): CockpitRender | null { return this.getProperty("data") as CockpitRender | null; }
 
@@ -123,8 +131,22 @@ export default class Cockpit extends Control {
 		const { scrollLeft, scrollTop } = this.scroll;
 		const focused = (document.activeElement as HTMLElement | null)?.dataset?.id;
 		this.scroll.replaceChildren(data.mode === "day" ? this.timeline(data) : this.grid(data));
-		this.scroll.scrollLeft = scrollLeft;
-		this.scroll.scrollTop = scrollTop;
+		const key = `${data.mode}|${data.days[0]?.day}`;
+		if (key !== this.scrolledFor) {
+			// Neuer Zeitraum: an den Anfang bzw. zu heute (Monat, 2 Wochen) scrollen.
+			this.scrolledFor = key;
+			const box = this.scroll;
+			box.scrollLeft = 0;
+			box.scrollTop = 0;
+			requestAnimationFrame(() => {
+				const today = box.querySelector<HTMLElement>(".eoCkDayHead.eoCkToday");
+				const lane = box.querySelector<HTMLElement>(".eoCkCorner");
+				if (today && lane && today.offsetLeft + today.offsetWidth > box.clientWidth) box.scrollLeft = Math.max(0, today.offsetLeft - lane.offsetWidth - 8);
+			});
+		} else {
+			this.scroll.scrollLeft = scrollLeft;
+			this.scroll.scrollTop = scrollTop;
+		}
 		if (focused) this.scroll.querySelector<HTMLElement>(`[data-id="${CSS.escape(focused)}"]`)?.focus({ preventScroll: true });
 	}
 
@@ -154,8 +176,8 @@ export default class Cockpit extends Control {
 		grid.setAttribute("role", "grid");
 		grid.setAttribute("aria-label", "Planungsraster Kolonnen und Tage");
 		const [work, off] = data.mode === "month" ? ["minmax(2.5rem, 1fr)", "minmax(1.5rem, 0.5fr)"]
-			: data.mode === "twoWeeks" ? ["minmax(5.25rem, 1fr)", "minmax(2.25rem, 0.3fr)"] : ["minmax(6.25rem, 1fr)", "minmax(2.75rem, 0.35fr)"];
-		grid.style.gridTemplateColumns = `minmax(8.5rem, ${data.mode === "month" ? 1.6 : 1.5}fr) ${data.days.map((d) => (d.isWorkday || this.inDay(data, d.day) ? work : off)).join(" ")}`;
+			: data.mode === "twoWeeks" ? ["minmax(5.25rem, 1fr)", "minmax(2.25rem, 0.3fr)"] : ["minmax(6.25rem, 1fr)", "minmax(2.5rem, 0.3fr)"];
+		grid.style.gridTemplateColumns = `${data.mode === "month" ? "minmax(10.5rem, 12rem)" : "minmax(8.25rem, 1.4fr)"} ${data.days.map((d) => (d.isWorkday || this.inDay(data, d.day) ? work : off)).join(" ")}`;
 		const head = el("div", "eoCkRow eoCkHead");
 		head.setAttribute("role", "row");
 		const corner = el("div", "eoCkLane eoCkCorner", data.mode === "month" ? "Kolonne" : "Kolonne / Tag");
@@ -175,11 +197,13 @@ export default class Cockpit extends Control {
 		const link = el("button", "eoCkDayLink");
 		link.type = "button";
 		link.title = `${longDay(d.day)} als Zeitachse öffnen`;
-		link.append(el("span", "eoCkWd", weekday(d.day)), el("span", "eoCkDate", data.mode === "month" ? String(parseDay(d.day).getDate()) : shortDay(d.day)));
+		const narrow = data.mode === "month" || (!d.isWorkday && !this.inDay(data, d.day));
+		link.append(el("span", "eoCkWd", weekday(d.day)), el("span", "eoCkDate", narrow ? String(parseDay(d.day).getDate()) : shortDay(d.day)));
+		if (narrow && data.mode !== "month") link.classList.add("eoCkDayNarrow");
 		link.addEventListener("click", () => this.fireEvent("dayPress", { day: d.day }));
 		cell.append(link);
 		if (d.holiday) {
-			const h = el("span", "eoCkHoliday", data.mode === "month" ? "F" : d.holiday);
+			const h = narrow ? icon("sap-icon://flag", "eoCkIcon eoCkHoliday") : el("span", "eoCkHoliday", d.holiday);
 			h.title = d.holiday;
 			cell.append(h);
 		}
@@ -473,10 +497,10 @@ export default class Cockpit extends Control {
 				const left = Math.max(0, ((start - from * 60) / span) * 100);
 				const width = Math.max(4, Math.min(100 - left, ((end - start) / span) * 100));
 				const card = this.card(data, a, { left, width });
-				card.style.top = `${0.375 + lane * 3.875}rem`;
+				card.style.top = `${0.375 + lane * 4.125}rem`;
 				track.append(card);
 			}
-			track.style.minHeight = `${Math.max(1, lanesEnd.length) * 3.875 + 1.25}rem`;
+			track.style.minHeight = `${Math.max(1, lanesEnd.length) * 4.125 + 1.25}rem`;
 			track.addEventListener("contextmenu", (e) => {
 				if ((e.target as HTMLElement).closest(".eoCkCard")) return;
 				e.preventDefault();

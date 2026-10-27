@@ -88,17 +88,17 @@
 							<SegmentedButtonItem key="all" text="Alle offenen"/>
 						</items>
 					</SegmentedButton>
+					<SearchField value="{view>/pool/search}" liveChange=".onPoolFilter" placeholder="Name, Ort, Kunde" width="100%"/>
 					<HBox class="eoCkPoolTools" renderType="Bare">
-						<SearchField value="{view>/pool/search}" liveChange=".onPoolFilter" placeholder="Name, Ort, Kunde" width="100%"/>
-						<Select selectedKey="{view>/pool/sort}" change=".onPoolFilter" width="7.75rem" ariaLabelledBy="ckSort" tooltip="Sortierung">
-							<core:Item key="urgency" text="Dringend"/>
+						<Text text="{view>/poolFacts}" class="eoMuted eoCkPoolFacts"/>
+						<Select selectedKey="{view>/pool/sort}" change=".onPoolFilter" width="8.75rem" ariaLabelledBy="ckSort" tooltip="Sortierung">
+							<core:Item key="urgency" text="Dringlichkeit"/>
 							<core:Item key="date" text="Termin"/>
 							<core:Item key="area" text="Fläche"/>
 							<core:Item key="city" text="Ort"/>
 						</Select>
 						<core:InvisibleText id="ckSort" text="Sortierung"/>
 					</HBox>
-					<Text text="{view>/poolFacts}" class="eoMuted eoCkPoolFacts"/>
 					<ScrollContainer vertical="true" horizontal="false" height="100%" class="eoCkPoolScroll">
 						<eo:CockpitBacklog items="{view>/poolItems}" canPlan="{view>/canPlan}" plan=".onPoolPlan" open=".onPoolOpen"/>
 					</ScrollContainer>

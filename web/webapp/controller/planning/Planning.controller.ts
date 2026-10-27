@@ -120,6 +120,7 @@ export default class Planning extends BaseController {
 	onDay(e: Event): void { this.go({ ansicht: "tag", datum: String(e.getParameter("day" as never)) }); }
 	onRefresh(): void { void this.load(true); }
 	onResources(): void { this.nav("/planung/kolonnen"); }
+	onCockpit(): void { this.nav(`/planung/cockpit?ansicht=${this.mode() === "tag" ? "day" : this.mode() === "monat" ? "month" : "week"}&datum=${this.anchor()}`); }
 	onFilter(): void { this.render(); }
 
 	private shift(direction: number): void {

@@ -16,6 +16,7 @@
 					</MenuButton>
 					<Button text="{= ${view>/mode} === 'tag' ? 'Tages-PDF' : 'Wochen-PDF' }" icon="sap-icon://pdf-attachment" press=".onPdf" tooltip="Plan als PDF für Aushang oder Kolonnen"/>
 					<Button text="{= 'Baustellen-Vorrat (' + ${view>/backlogCounts/free} + ' frei)' }" icon="sap-icon://inbox" press=".onBacklog" type="{= ${view>/backlogOpen} ? 'Emphasized' : 'Default' }"/>
+					<Button text="Cockpit" icon="sap-icon://manager-insight" press=".onCockpit" tooltip="Disponenten-Cockpit: Vorrat, Kapazität, Tagesbesetzung, Freigabe"/>
 					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
 					<Button icon="sap-icon://settings" tooltip="Kolonnen und Geräte" press=".onResources"/>
 				</f:actions>
