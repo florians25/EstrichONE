@@ -129,16 +129,20 @@ final class DemoPlanning {
 
     private func stop(_ id: String, _ a: Assignment, order: Int, crew: Crew?) -> [String: Any] {
         let site = sites[a.bauakteId]
-        let change: Any = a.day != today ? NSNull() : (released[id] == nil ? "new" : (released[id] != a.version ? "changed" : NSNull()))
-        let roster = crew.map { roster($0, a.day) }
+        var change: Any = NSNull()
+        if a.day == today {
+            if released[id] == nil { change = "new" } else if released[id] != a.version { change = "changed" }
+        }
+        let members: [String] = crew.map { self.roster($0, a.day).members } ?? []
+        let cars: [String] = crew.map { self.roster($0, a.day).vehicles } ?? []
         return [
             "assignmentId": id, "order": order, "sequence": a.sequence, "startTime": a.start ?? NSNull(), "endTime": a.end ?? NSNull(),
             "kind": "screed", "activity": a.activity, "bauakteId": a.bauakteId, "number": site?.number ?? NSNull(), "title": site?.title ?? "",
             "address": site?.address ?? NSNull(), "latitude": site?.latitude ?? NSNull(), "longitude": site?.longitude ?? NSNull(),
             "siteContactName": site?.contactName ?? NSNull(), "siteContactPhone": site?.contactPhone ?? NSNull(), "navigationUrl": NSNull(),
             "notes": a.notes ?? NSNull(),
-            "people": (roster?.members ?? []).map { ["id": $0, "name": people[$0] ?? ""] as [String: Any] },
-            "resources": (roster?.vehicles ?? []).map { ["id": $0, "name": vehicles[$0]?.name ?? "", "kind": vehicles[$0]?.kind ?? "vehicle"] as [String: Any] },
+            "people": members.map { ["id": $0, "name": people[$0] ?? ""] as [String: Any] },
+            "resources": cars.map { ["id": $0, "name": vehicles[$0]?.name ?? "", "kind": vehicles[$0]?.kind ?? "vehicle"] as [String: Any] },
             "warnings": [String](), "change": change, "version": a.version,
         ]
     }
@@ -165,10 +169,11 @@ final class DemoPlanning {
             ? released.keys.filter { assignments[$0] == nil }.map { ["assignmentId": $0, "version": 1, "title": "Anbau Weber", "crewName": "Kolonne Kaya",
                                                                    "activity": "Erstbegehung"] as [String: Any] }
             : []
-        let release: Any = day == today
-            ? ["day": day, "releasedAt": APIDate.format(releasedAt), "releasedByName": "Sabine Wagner (Büro)", "note": NSNull(),
-               "changedCount": changed + removed.count, "removed": removed] as [String: Any]
-            : NSNull()
+        var release: Any = NSNull()
+        if day == today {
+            release = ["day": day, "releasedAt": APIDate.format(releasedAt), "releasedByName": "Sabine Wagner (Büro)", "note": NSNull(),
+                       "changedCount": changed + removed.count, "removed": removed] as [String: Any]
+        }
         return [
             "day": day, "holiday": NSNull(), "release": release, "canPlan": true,
             "myCrewIds": crews.filter { roster($0, day).members.contains(DemoContent.userId) }.map(\.id),
