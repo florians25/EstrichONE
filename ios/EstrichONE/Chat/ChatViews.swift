@@ -387,6 +387,7 @@ private struct MessageBubble: View {
                         .foregroundStyle(Theme.danger)
                 }
             }
+            .frame(maxWidth: 540, alignment: isMine ? .trailing : .leading)
             if !isMine { Spacer(minLength: 48) }
         }
         .accessibilityElement(children: .combine)

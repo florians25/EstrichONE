@@ -227,7 +227,7 @@ final class SyncController {
         await evaluateConnection()
         await refreshSummary()
         await refreshNotices()
-        if !isMaintenanceLocked, !connection.unreachable { await refreshChat() }
+        if !isMaintenanceLocked, outcome != .offline { await refreshChat() }
         revision += 1
         isRunning = false
     }

@@ -61,6 +61,7 @@ struct MainTabView: View {
         .task { applyShotScene() }
         .task(id: model.active?.sync?.revision) {
             unreadTickets = await TicketReadState.unreadCount(model: model)
+            if let sync = model.active?.sync, sync.chat == nil { await sync.refreshChat() }
             if let inbox = try? await model.active?.client.notifications() { push.setUnread(inbox.unreadCount) }
         }
         .task { push.refreshPermission() }
