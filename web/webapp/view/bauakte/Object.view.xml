@@ -20,7 +20,7 @@
 								state="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusState'}" inverted="true"
 								icon="{path: 'akte>/bauakte/status', formatter: 'fmt.bauakteStatusIcon'}"/>
 						</HBox>
-						<Text text="{akte>/subtitle}" class="eoMuted"/>
+						<Text text="{akte>/subtitle}" class="eoMuted" visible="{= !!${akte>/subtitle} }"/>
 					</VBox>
 				</uxap:expandedHeading>
 				<uxap:snappedHeading>

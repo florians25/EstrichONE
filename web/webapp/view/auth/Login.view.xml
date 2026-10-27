@@ -4,7 +4,7 @@
 		<VBox class="eoAuthCard" width="26rem">
 			<Image src="{view>/logo}" alt="EstrichONE" height="3rem" class="eoAuthLogo" decorative="false" error=".onLogoError"/>
 			<Title text="{i18n>login.title}" level="H1" titleStyle="H3" class="sapUiSmallMarginTop"/>
-			<Text text="{session>/server/serverName}" class="eoMuted sapUiTinyMarginBottom"/>
+			<Text text="{session>/server/serverName}" class="eoMuted sapUiMediumMarginBottom"/>
 			<MessageStrip text="{i18n>login.expired}" type="Information" showIcon="true" visible="{= ${view>/reason} === 'abgelaufen' }" class="sapUiSmallMarginBottom"/>
 			<MessageStrip text="{i18n>login.locked}" type="Error" showIcon="true" visible="{= ${view>/reason} === 'gesperrt' }" class="sapUiSmallMarginBottom"/>
 			<MessageStrip type="Warning" showIcon="true" visible="{= ${session>/server/setupRequired} === true }" class="sapUiSmallMarginBottom"

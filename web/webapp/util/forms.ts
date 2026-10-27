@@ -535,12 +535,13 @@ function listField(id: string, field: Field, initial: unknown, notify: (v: unkno
 			placeholder: phones ? `Nummer ${n}` : `E-Mail ${n}`, liveChange: () => notify(read()) });
 		const name = new InvisibleText({ text: `${phones ? "Telefonnummer" : "E-Mail-Adresse"} ${n}` });
 		value.addAriaLabelledBy(name);
-		const label = new Input({ value: row.label, width: "9rem", maxLength: 50, placeholder: "Bezeichnung (optional)", tooltip: `Bezeichnung ${n}` });
+		const label = new Input({ value: row.label, width: "9rem", maxLength: 50, placeholder: "Bezeichnung", tooltip: `Bezeichnung ${n} (optional, z. B. Büro)` });
 		const line = new HBox({ alignItems: "Center", width: "100%", renderType: "Bare" });
 		const entry = { row, kind, value, label, line };
 		const remove = new Button({ icon: "sap-icon://decline", type: "Transparent", tooltip: `${phones ? "Nummer" : "Adresse"} entfernen`,
 			press: () => { rows.splice(rows.indexOf(entry), 1); box.removeItem(line); line.destroy(); notify(read()); } });
-		if (kind) line.addItem(kind.addStyleClass("sapUiTinyMarginEnd"));
+		if (kind) line.addItem(kind.addStyleClass("sapUiTinyMarginEnd").setLayoutData(new FlexItemData({ shrinkFactor: 0 })));
+		label.setLayoutData(new FlexItemData({ shrinkFactor: 0 }));
 		value.setLayoutData(new FlexItemData({ growFactor: 1 }));
 		line.addItem(name).addItem(value).addItem(label.addStyleClass("sapUiTinyMarginBegin")).addItem(remove);
 		rows.push(entry);

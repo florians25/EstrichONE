@@ -176,11 +176,11 @@ export default class ObjectController extends BaseController {
 			m.setProperty("/projectBadges", badges(schema, b));
 			m.setProperty("/projectGroups", viewGroups(schema, b));
 		});
-		m.setProperty("/subtitle", "Bauakte");
+		m.setProperty("/subtitle", "");
 		if (b.templateKey) {
 			void catalog<BauakteTemplate>("bauakteTemplate").then((list) => {
 				const t = list.find((x) => x.id === b.templateKey);
-				if (t && this.cur()?.id === b.id) m.setProperty("/subtitle", `Bauakte · Vorlage ${t.name}`);
+				if (t && this.cur()?.id === b.id) m.setProperty("/subtitle", `Vorlage: ${t.name}`);
 			}).catch(() => undefined);
 		}
 		m.setProperty("/periodText", b.plannedStart || b.plannedEnd ? `${date(b.plannedStart)} – ${date(b.plannedEnd)}` : "–");

@@ -5,14 +5,14 @@
 			<f:DynamicPageTitle>
 				<f:breadcrumbs><Breadcrumbs currentLocationText="{view>/t/summary/number}"><Link text="{i18n>nav.helpdesk}" href="/it-center/helpdesk"/></Breadcrumbs></f:breadcrumbs>
 				<f:heading><Title text="{view>/t/summary/title}" level="H1" wrapping="true"/></f:heading>
-				<f:content>
+				<f:expandedContent>
 					<HBox id="ticketTags" alignItems="Center" wrap="Wrap" class="ticketTags">
 						<ObjectStatus text="{view>/t/summary/number}" class="sapUiSmallMarginEnd eoTabular"/>
 						<ObjectStatus text="{path: 'view>/t/summary/status', formatter: 'fmt.ticketStatusText'}" state="{path: 'view>/t/summary/status', formatter: 'fmt.ticketStatusState'}" inverted="true" class="sapUiSmallMarginEnd"/>
 						<ObjectStatus text="{path: 'view>/t/summary/priority', formatter: 'fmt.ticketPriorityText'}" state="{path: 'view>/t/summary/priority', formatter: 'fmt.ticketPriorityState'}" class="sapUiSmallMarginEnd"/>
 						<ObjectStatus text="Kann nicht arbeiten" state="Error" inverted="true" visible="{= !!${view>/t/summary/reporterBlocked} }"/>
 					</HBox>
-				</f:content>
+				</f:expandedContent>
 				<f:actions>
 					<Button text="Mir zuweisen" icon="sap-icon://employee" press=".onMine" visible="{= ${view>/agent} &amp;&amp; ${view>/t/summary/assigneeUserId} !== ${view>/me} }"/>
 					<Button text="Wieder öffnen" icon="sap-icon://refresh" press=".onReopen" visible="{= !${view>/agent} &amp;&amp; ${view>/t/summary/status} === 'resolved' }"/>

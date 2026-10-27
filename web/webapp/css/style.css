@@ -400,3 +400,9 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoKpiFigure.sapMObjStatusActive:hover .sapMObjStatusText { text-decoration: underline !important; }
 .eoKpiBar { column-gap: 2rem; }
 .eoKpiItem { max-width: 12rem; }
+/* Kopf der Bauakte: langer Titel bricht um, statt die Aktionen (Status, Abschließen, Bearbeiten) ins Überlaufmenü zu drängen */
+.eoAkteTitle, .eoTitleLine, .eoTitleLine > .sapMFlexItem { min-width: 0; }
+.eoTitleLine .sapMTitle { white-space: normal; }
+.sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeading, .sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeadingInner { min-width: 0; }
+.sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeading { flex: 1 1 0 !important; }
+.sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainActions { flex: 0 0 auto !important; max-width: 60%; }
