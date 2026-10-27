@@ -5,6 +5,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Options;
 
 namespace EstrichOne.Api.Modules.Backup;
 
@@ -16,7 +17,11 @@ public sealed class BackupModule : IModule
         services.AddOptions<BackupSettings>().Bind(configuration.GetSection(BackupSettings.SectionName));
         services.AddSingleton<BackupStatusReader>();
         services.AddScoped<BackupTargetService>();
+        services.AddSingleton<BackupOperations>();
+        services.AddSingleton<BackupMirrorStore>();
+        services.AddScoped<EmergencySheetService>();
         services.AddScoped<Exports.IBackupMonitoring, BackupMonitoring>();
+        services.AddHostedService<RestoreFinisher>();
         services.AddHealthChecks().AddCheck<BackupHealthCheck>("backup", tags: ["ready"]);
     }
 
@@ -96,5 +101,7 @@ public sealed class BackupModule : IModule
             })
             .WithName("GetBackupTargetRecovery").WithSummary("Notfallzugang (Repository, Zertifikat, Anleitung) zum Aufbewahren")
             .RequirePermission(Permissions.BackupManage);
+
+        BackupCenterEndpoints.Map(backup);
     }
 }

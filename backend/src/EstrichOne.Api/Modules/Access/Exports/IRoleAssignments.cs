@@ -12,6 +12,9 @@ public interface IRoleAssignments
     /// <summary>Aktive Benutzer einer Rolle (z. B. Benachrichtigung bei Freigaben an eine Rolle).</summary>
     Task<IReadOnlyList<Guid>> GetUserIdsInRoleAsync(Guid roleId, CancellationToken cancellationToken);
 
+    /// <summary>Aktive Benutzer mit einem Recht über irgendeine ihrer Rollen (z. B. Backup-Meldungen an alle mit backup.manage).</summary>
+    Task<IReadOnlyList<Guid>> GetUserIdsWithPermissionAsync(string permission, CancellationToken cancellationToken);
+
     /// <summary>Namen aller Rollen (Anzeige).</summary>
     Task<IReadOnlyDictionary<Guid, string>> GetRoleNamesAsync(CancellationToken cancellationToken);
 

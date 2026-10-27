@@ -136,3 +136,15 @@ Die App öffnet beim Tippen `link` (Deep Link) und markiert `notificationId` per
 - Links sind nur relative Pfade der eigenen Oberfläche (kein offener Weiterleiter).
 - Private Schlüssel (VAPID, APNs) nur verschlüsselt in der Datenbank, nie in Antworten oder Protokollen.
 - Gesendete Nachrichten werden im Audit-Log vermerkt (`notifications.sent`).
+
+## Backup, Archiv und Status-Banner (Paket infra)
+
+| Ereignis | Empfänger | Kategorie |
+|---|---|---|
+| Sicherung erfolgreich (kurz: Art, Dauer, Ziele) bzw. fehlgeschlagen (dringend) – nach jedem Lauf, abschaltbar im Backup Center → Zeitplan | alle mit Recht `backup.manage` | `system` |
+| Backup-Server ausgefallen/nicht erreichbar bzw. letzte Sicherung älter als 26 h – einmal, dann täglich; „wieder in Ordnung“ | alle mit Recht `backup.manage` | `system` (dringend) |
+| Archivserver nicht erreichbar – einmal, dann täglich; „wieder erreichbar“ | alle mit Recht `backup.manage` | `system` |
+
+Das rote bzw. gelbe Banner für **alle** Benutzer liefert `GET /api/v1/system/health-banner` (Felder, Texte und Regeln:
+[docs/backup.md](backup.md#status-banner-und-wartung-für-alle-clients-web-shell-ios-android)); Wartungssperre der Apps
+(`503`, `code = MAINTENANCE`) ebenda.

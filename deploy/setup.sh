@@ -50,7 +50,7 @@ else
       -e "s|^RESTIC_PASSWORD=.*|RESTIC_PASSWORD=${BACKUP_PASSWORD}|" \
       .env.example > .env
   umask 022
-  echo ".env angelegt (nur für root lesbar). Bitte zusätzlich sicher verwahren – sie ist nicht Teil des Backups."
+  echo ".env angelegt (nur für root lesbar). Eine Kopie ist Teil jeder Sicherung (data/config); das Backup-Passwort zusätzlich getrennt aufbewahren."
   echo
   echo "======================================================================"
   echo " BACKUP-PASSWORT – jetzt notieren und AUSSERHALB des Servers aufbewahren:"
@@ -69,8 +69,10 @@ DATA_DIR="${ESTRICHONE_DATA_DIR:-./data}"
 BACKUP_DIR="${ESTRICHONE_BACKUP_DIR:-./backup-repository}"
 SSH_DIR="${ESTRICHONE_SSH_DIR:-./ssh}"
 ARCHIVE_DIR="${ESTRICHONE_ARCHIVE_DIR:-./archive}"
-APP_DIRS=("$DATA_DIR/files" "$DATA_DIR/backup-status" "$DATA_DIR/backup-staging" "$DATA_DIR/restic-cache" "$BACKUP_DIR" "$ARCHIVE_DIR")
+APP_DIRS=("$DATA_DIR/files" "$DATA_DIR/config" "$DATA_DIR/backup-status" "$DATA_DIR/backup-staging" "$DATA_DIR/restic-cache" "$BACKUP_DIR" "$ARCHIVE_DIR")
 mkdir -p "$DATA_DIR/postgres" "$DATA_DIR/caddy/data" "$DATA_DIR/caddy/config" "$SSH_DIR" "${APP_DIRS[@]}"
+# Kopie der Konfiguration für das Backup (Teil jeder Sicherung, für die Neuinstallation per Installer „restore“).
+(umask 077 && cp .env "$DATA_DIR/config/estrichone.env")
 if [[ $(id -u) -eq 0 ]]; then
   # API und Backup laufen ohne root als UID $API_UID.
   chown -R "$API_UID:$API_UID" "${APP_DIRS[@]}"

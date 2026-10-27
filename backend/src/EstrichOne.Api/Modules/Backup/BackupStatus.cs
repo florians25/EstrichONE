@@ -15,6 +15,24 @@ public sealed class BackupSettings
 
     /// <summary>Ab diesem Alter der letzten erfolgreichen Sicherung meldet <c>/health/ready</c> „Degraded“.</summary>
     public TimeSpan MaxAge { get; set; } = TimeSpan.FromHours(36);
+
+    /// <summary>Repository-Passwort (RESTIC_PASSWORD) – nur für das Notfallblatt; leer = Blatt ohne Schlüssel.</summary>
+    public string? RepositoryPassword { get; set; }
+
+    /// <summary>Hauptziel wie in der .env (BACKUP_REPOSITORY), für das Notfallblatt.</summary>
+    public string? Repository { get; set; }
+
+    /// <summary>Zweites Ziel (BACKUP_REPOSITORY_2), für das Notfallblatt.</summary>
+    public string? Repository2 { get; set; }
+
+    /// <summary>Host-Pfad des lokalen Repositorys (ESTRICHONE_BACKUP_DIR), für das Notfallblatt.</summary>
+    public string? HostBackupDir { get; set; }
+
+    /// <summary>Lokales Repository nur lesend eingebunden (z. B. <c>/repository</c>) – Quelle für Backup-Ziele, die ziehen.</summary>
+    public string? RepositoryPath { get; set; }
+
+    /// <summary>Installer-Image für den Wiederherstellungsbefehl auf dem Notfallblatt.</summary>
+    public string InstallerImage { get; set; } = "ghcr.io/florians25/estrichone-installer";
 }
 
 public sealed record BackupRunInfo(string Status, string Message, DateTimeOffset At, JsonNode? Details);

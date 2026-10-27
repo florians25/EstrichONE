@@ -39,6 +39,12 @@ internal sealed class RoleAssignments(EstrichOneDbContext db) : IRoleAssignments
             .Join(db.Set<User>().Where(user => user.IsActive), userRole => userRole.UserId, user => user.Id, (userRole, _) => userRole.UserId)
             .ToListAsync(cancellationToken);
 
+    public async Task<IReadOnlyList<Guid>> GetUserIdsWithPermissionAsync(string permission, CancellationToken cancellationToken) =>
+        await db.Set<RoleGrant>().Where(grant => grant.Permission == permission)
+            .Join(db.Set<UserRole>(), grant => grant.RoleId, userRole => userRole.RoleId, (_, userRole) => userRole.UserId)
+            .Join(db.Set<User>().Where(user => user.IsActive), id => id, user => user.Id, (id, _) => id)
+            .Distinct().ToListAsync(cancellationToken);
+
     public async Task<IReadOnlyDictionary<Guid, string>> GetRoleNamesAsync(CancellationToken cancellationToken) =>
         await db.Set<Role>().AsNoTracking().ToDictionaryAsync(role => role.Id, role => role.Name, cancellationToken);
 

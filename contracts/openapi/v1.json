@@ -787,6 +787,35 @@
         ]
       }
     },
+    "/api/v1/system/health-banner": {
+      "get": {
+        "tags": [
+          "Überwachung"
+        ],
+        "summary": "Status-Banner für alle Clients: Backup-Server (rot) und Archivserver (gelb), nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.",
+        "operationId": "GetHealthBanner",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HealthBannerResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/auth/login": {
       "post": {
         "tags": [
@@ -13427,6 +13456,370 @@
         ]
       }
     },
+    "/api/v1/backup/settings": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Zeitplan (tägliche Vollsicherung, inkrementell), Aufbewahrung, Meldungen",
+        "operationId": "GetBackupSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupPreferences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Backup Center"
+        ],
+        "operationId": "SaveBackupSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/BackupPreferences"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupPreferences"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/snapshots": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Sicherungen je Ziel (vom Backup-Dienst nach jedem Lauf aktualisiert)",
+        "operationId": "GetBackupSnapshots",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupSnapshotsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/restore": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Fortschritt der laufenden bzw. letzten Wiederherstellung",
+        "operationId": "GetRestoreProgress",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreProgress"
+                }
+              }
+            }
+          },
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Wiederherstellen: ganzes System (Wartungsmodus, Bestätigung „WIEDERHERSTELLEN“) oder eine einzelne Datei",
+        "operationId": "RequestRestore",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RestoreRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RestoreProgress"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/emergency-sheet": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Notfallblatt (PDF): Wiederherstellungsschlüssel, Sicherungsziele, Befehl für die Neuinstallation",
+        "operationId": "GetEmergencySheet",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/mirrors": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "operationId": "GetBackupMirrors",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BackupMirrorsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Backup-Ziel, das zieht, anlegen: Einmal-Code (24 h) und Befehl für den Rechner zuhause",
+        "operationId": "CreateBackupMirror",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateBackupMirrorRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreateBackupMirrorResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/mirrors/{id}": {
+      "delete": {
+        "tags": [
+          "Backup Center"
+        ],
+        "operationId": "RemoveBackupMirror",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/mirror/pair": {
+      "post": {
+        "tags": [
+          "Backup-Spiegel"
+        ],
+        "operationId": "PairBackupMirror",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MirrorPairRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/MirrorPairResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/mail/settings": {
       "get": {
         "tags": [
@@ -15391,6 +15784,40 @@
           }
         }
       },
+      "ArchiveHealth": {
+        "required": [
+          "configured",
+          "reachable",
+          "lastSuccessAt",
+          "severity",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "lastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "ArchiveOverview": {
         "required": [
           "connected",
@@ -16158,6 +16585,254 @@
           }
         }
       },
+      "BackupHealth": {
+        "required": [
+          "configured",
+          "reachable",
+          "lastSuccessAt",
+          "severity",
+          "message",
+          "restoreRunning"
+        ],
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean"
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "lastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "restoreRunning": {
+            "type": "boolean"
+          }
+        }
+      },
+      "BackupMirrorDto": {
+        "required": [
+          "id",
+          "name",
+          "targetName",
+          "createdAt",
+          "paired",
+          "codeExpiresAt",
+          "lastSeenAt",
+          "reachable",
+          "lastReport"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "targetName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "paired": {
+            "type": "boolean"
+          },
+          "codeExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "lastReport": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/BackupMirrorReport"
+              }
+            ]
+          }
+        }
+      },
+      "BackupMirrorReport": {
+        "required": [
+          "snapshots",
+          "bytes",
+          "lastSnapshotAt",
+          "diskFreeBytes",
+          "diskTotalBytes",
+          "version",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshots": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "lastSnapshotAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "diskFreeBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "diskTotalBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "filesCopied": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "BackupMirrorsResponse": {
+        "required": [
+          "available",
+          "mirrors"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "mirrors": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupMirrorDto"
+            }
+          }
+        }
+      },
+      "BackupPreferences": {
+        "type": "object",
+        "properties": {
+          "dailyTime": {
+            "type": "string",
+            "default": "22:30"
+          },
+          "incrementalEveryHours": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "keepDaily": {
+            "type": "integer",
+            "format": "int32",
+            "default": 14
+          },
+          "keepWeekly": {
+            "type": "integer",
+            "format": "int32",
+            "default": 8
+          },
+          "keepMonthly": {
+            "type": "integer",
+            "format": "int32",
+            "default": 12
+          },
+          "keepYearly": {
+            "type": "integer",
+            "format": "int32",
+            "default": 3
+          },
+          "notifyAdmins": {
+            "type": "boolean",
+            "default": true
+          },
+          "notifyOnSuccess": {
+            "type": "boolean",
+            "default": true
+          },
+          "weeklyRestoreTest": {
+            "type": "boolean",
+            "default": true
+          }
+        }
+      },
+      "BackupRepositorySnapshots": {
+        "required": [
+          "key",
+          "label",
+          "snapshots"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "snapshots": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupSnapshot"
+            }
+          }
+        }
+      },
       "BackupRunInfo": {
         "required": [
           "status",
@@ -16186,6 +16861,76 @@
                 "$ref": "#/components/schemas/JsonNode"
               }
             ]
+          }
+        }
+      },
+      "BackupSnapshot": {
+        "required": [
+          "id",
+          "shortId",
+          "time",
+          "kind",
+          "files",
+          "bytes",
+          "addedBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "shortId": {
+            "type": "string"
+          },
+          "time": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "files": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "bytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "addedBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
+      "BackupSnapshotsResponse": {
+        "required": [
+          "updatedAt",
+          "repositories"
+        ],
+        "type": "object",
+        "properties": {
+          "updatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "repositories": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BackupRepositorySnapshots"
+            }
           }
         }
       },
@@ -18723,6 +19468,43 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CreateBackupMirrorRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CreateBackupMirrorResponse": {
+        "required": [
+          "mirror",
+          "code",
+          "serverUrl",
+          "command"
+        ],
+        "type": "object",
+        "properties": {
+          "mirror": {
+            "$ref": "#/components/schemas/BackupMirrorDto"
+          },
+          "code": {
+            "type": "string"
+          },
+          "serverUrl": {
+            "type": "string"
+          },
+          "command": {
+            "type": "string"
           }
         }
       },
@@ -21701,6 +22483,52 @@
           }
         }
       },
+      "HealthBanner": {
+        "required": [
+          "key",
+          "severity",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "severity": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
+      "HealthBannerResponse": {
+        "required": [
+          "backup",
+          "archive",
+          "banners",
+          "checkedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "backup": {
+            "$ref": "#/components/schemas/BackupHealth"
+          },
+          "archive": {
+            "$ref": "#/components/schemas/ArchiveHealth"
+          },
+          "banners": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HealthBanner"
+            }
+          },
+          "checkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Holiday": {
         "required": [
           "date",
@@ -22528,6 +23356,39 @@
           },
           "optimizePdfs": {
             "type": "boolean"
+          }
+        }
+      },
+      "MirrorPairRequest": {
+        "required": [
+          "code",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "MirrorPairResponse": {
+        "required": [
+          "id",
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "token": {
+            "type": "string"
           }
         }
       },
@@ -24586,6 +25447,91 @@
               "string"
             ],
             "format": "uuid"
+          }
+        }
+      },
+      "RestoreProgress": {
+        "required": [
+          "status",
+          "scope",
+          "snapshot",
+          "phase",
+          "percent",
+          "message",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "snapshot": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "percent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": "string"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "requestedBy": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          }
+        }
+      },
+      "RestoreRequest": {
+        "required": [
+          "snapshot"
+        ],
+        "type": "object",
+        "properties": {
+          "snapshot": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string",
+            "default": "primary"
+          },
+          "scope": {
+            "type": "string",
+            "default": "full"
+          },
+          "fileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "confirmation": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -29414,6 +30360,9 @@
       "name": "Material"
     },
     {
+      "name": "Überwachung"
+    },
+    {
       "name": "Anmeldung"
     },
     {
@@ -29474,6 +30423,9 @@
       "name": "Backup Center"
     },
     {
+      "name": "Backup-Spiegel"
+    },
+    {
       "name": "E-Mail"
     },
     {
@@ -29481,9 +30433,6 @@
     },
     {
       "name": "Aktenarchiv"
-    },
-    {
-      "name": "Überwachung"
     }
   ]
 }

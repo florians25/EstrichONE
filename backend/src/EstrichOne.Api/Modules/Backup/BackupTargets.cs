@@ -243,6 +243,19 @@ internal sealed class BackupTargetService(
             """;
     }
 
+    /// <summary>Zugänge aller gekoppelten Ziele für das Notfallblatt (Repository mit Zugangsdaten, Fingerabdruck).</summary>
+    public async Task<IReadOnlyList<(string Name, string Address, string Repository, string Fingerprint)>> RecoveryEntriesAsync(CancellationToken cancellationToken)
+    {
+        var targets = await db.Set<BackupTarget>().AsNoTracking().OrderBy(t => t.PairedAt).ToListAsync(cancellationToken);
+        return [.. targets.Select(target =>
+        {
+            var password = protection.CreateProtector(PasswordPurpose).Unprotect(target.ProtectedRestPassword);
+            var address = new Uri(target.Address);
+            return (target.Name, target.Address, $"rest:https://{target.RestUsername}:{password}@{address.Authority}{target.RestPath}",
+                PeerClient.FormatFingerprint(target.CaFingerprint));
+        })];
+    }
+
     private HttpClient Client(BackupTarget target, TimeSpan timeout) =>
         PeerClient.CreateClient(new Uri(target.Address), target.CaCertificatePem,
             protection.CreateProtector(TokenPurpose).Unprotect(target.ProtectedToken), timeout);

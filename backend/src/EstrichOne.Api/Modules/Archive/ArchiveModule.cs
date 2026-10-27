@@ -15,6 +15,12 @@ public sealed class ArchiveModule : IModule
         services.AddSingleton<ArchiveSignal>();
         services.AddScoped<DossierService>();
         services.AddScoped<MonitoringService>();
+        services.AddSingleton<SystemHealthMonitor>();
+        if (!string.Equals(configuration["EstrichOne:Health:Worker"], "false", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHostedService<SystemHealthWorker>();
+        }
+
         services.AddTransient<IStartupFilter, DossierLockStartupFilter>();
         // EstrichOne:Archive:Worker=false schaltet den Hintergrunddienst ab (Tests steuern den Ablauf selbst).
         if (!string.Equals(configuration["EstrichOne:Archive:Worker"], "false", StringComparison.OrdinalIgnoreCase))
@@ -28,5 +34,6 @@ public sealed class ArchiveModule : IModule
         ArchiveEndpoints.Map(api);
         DossierEndpoints.Map(api);
         MonitoringEndpoints.Map(api);
+        SystemHealthEndpoints.Map(api);
     }
 }
