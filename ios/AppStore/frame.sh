@@ -48,9 +48,12 @@ frame() {
   "$IM" "$TMP/device.png" \( +clone -background '#000814' -shadow "45x$((base / 40))+0+$((base / 60))" \) +swap \
     -background none -layers merge +repage "$TMP/device-shadow.png"
   # Hintergrund mit Verlauf, Texte zentriert, Gerät unten.
+  # Texte passen sich der Breite an (höchstens 90 %), nie abgeschnitten.
+  "$IM" -background none -fill white -font "$BOLD" -size "$(( w * 90 / 100 ))x$(( title_pt * 125 / 100 ))" -gravity center label:"$title" "$TMP/title.png"
+  "$IM" -background none -fill '#CFE5FF' -font "$MEDIUM" -size "$(( w * 90 / 100 ))x$(( sub_pt * 135 / 100 ))" -gravity center label:"$sub" "$TMP/sub.png"
   "$IM" -size "${w}x${h}" gradient:'#0B2E66'-'#061536' \
-    -font "$BOLD" -pointsize "$title_pt" -fill white -gravity north -annotate "+0+$(( base * 8 / 100 ))" "$title" \
-    -font "$MEDIUM" -pointsize "$sub_pt" -fill '#CFE5FF' -gravity north -annotate "+0+$(( base * 8 / 100 + title_pt * 13 / 10 ))" "$sub" \
+    "$TMP/title.png" -gravity north -geometry "+0+$(( base * 8 / 100 ))" -compose over -composite \
+    "$TMP/sub.png" -gravity north -geometry "+0+$(( base * 8 / 100 + title_pt * 135 / 100 ))" -compose over -composite \
     "$TMP/device-shadow.png" -gravity north -geometry "+0+$(( top - bezel ))" -compose over -composite \
     -alpha off -strip "PNG24:$out"
 }

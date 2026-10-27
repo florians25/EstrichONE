@@ -575,12 +575,12 @@ struct ReleasePlanSheet: View {
                     }
                 }
             }
-            .navigationTitle("Plan freigeben")
+            .navigationTitle("Freigabe")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { done(nil) } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button(plan.release == nil ? "Freigeben" : "Erneut freigeben") {
+                    Button("Freigeben") {
                         done(.release(from: CalendarDay.string(day), to: CalendarDay.string(max(day, until)), note: note))
                     }
                     .accessibilityIdentifier("confirmRelease")
