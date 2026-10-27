@@ -37,10 +37,10 @@ struct BauakteDetailView: View {
         Group {
             if let content {
                 GeometryReader { proxy in
-                    if proxy.size.width >= 900 {
+                    if proxy.size.width >= 780 {
                         HStack(spacing: 0) {
                             overview(content, wide: true)
-                                .frame(width: min(460, proxy.size.width * 0.45))
+                                .frame(width: min(460, proxy.size.width * 0.46))
                             Divider()
                             BauakteAreaView(area: wideArea, content: content, schema: schema, lists: lists, embedded: true) { await reload() }
                                 .id(wideArea)

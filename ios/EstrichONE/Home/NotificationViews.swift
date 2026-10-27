@@ -212,32 +212,32 @@ struct NotificationBell: View {
     let count: Int
     let action: () -> Void
 
-    private var trailingSpace: CGFloat {
+    /// Breite der Schaltfläche: Glocke plus Platz für den Zähler („99+“ ragt weiter nach rechts).
+    private var width: CGFloat {
         switch UnreadBadge.text(count)?.count ?? 0 {
-        case 0: 0
-        case 1: 8
-        case 2: 12
-        default: 19
+        case 0: 22
+        case 1: 28
+        case 2: 32
+        default: 38
         }
     }
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "bell")
-                .font(.system(size: 17, weight: .medium))
-                .foregroundStyle(Theme.accent)
-                .frame(width: 22, height: 22)
-                // Platz für den Zähler oben rechts – innerhalb der Schaltfläche, damit die Leiste nichts abschneidet.
-                // Breite Zähler („12“, „99+“) rücken weiter nach rechts und verdecken die Glocke nicht.
-                .padding(.top, count > 0 ? 5 : 0)
-                .padding(.trailing, trailingSpace)
-                .overlay(alignment: .topTrailing) {
-                    if let text = UnreadBadge.text(count) {
-                        CountBadge(text: text)
-                    }
+            // Alles innerhalb von 22 pt Höhe: Die Werkzeugleiste (Liquid Glass) beschneidet höhere Inhalte.
+            ZStack(alignment: .topTrailing) {
+                Image(systemName: "bell")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(Theme.accent)
+                    .frame(width: 20, height: 20)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: count > 0 ? .bottomLeading : .center)
+                if let text = UnreadBadge.text(count) {
+                    CountBadge(text: text)
                 }
-                .contentShape(Rectangle())
-                .animation(.snappy, value: count)
+            }
+            .frame(width: width, height: 22)
+            .contentShape(Rectangle())
+            .animation(.snappy, value: count)
         }
         .accessibilityLabel(count > 0 ? UnreadBadge.accessibilityLabel(count) : "Benachrichtigungen")
         .accessibilityHint("Öffnet das Postfach")
@@ -252,14 +252,14 @@ struct CountBadge: View {
 
     var body: some View {
         Text(text)
-            .font(.system(size: 10, weight: .bold, design: .rounded).monospacedDigit())
+            .font(.system(size: 9.5, weight: .bold, design: .rounded).monospacedDigit())
             .foregroundStyle(.white)
             .lineLimit(1)
             .fixedSize()
-            .padding(.horizontal, text.count > 1 ? 4 : 0)
-            .frame(minWidth: 16, minHeight: 16)
+            .padding(.horizontal, text.count > 1 ? 3.5 : 0)
+            .frame(minWidth: 15, minHeight: 15)
             .background(Capsule().fill(Theme.badge))
-            .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 1.5).padding(-1.5))
+            .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 1.2).padding(-1.2))
             .accessibilityHidden(true)
             .transition(.scale.combined(with: .opacity))
     }

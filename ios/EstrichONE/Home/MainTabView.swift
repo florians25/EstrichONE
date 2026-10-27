@@ -104,7 +104,10 @@ enum ShotRoute {
 private struct SidebarAdaptable: ViewModifier {
     func body(content: Content) -> some View {
         if #available(iOS 18, *) {
+            // Standard ist die Reiterleiste oben (volle Breite für Listen und Details, auch quer); die Seitenleiste
+            // lässt sich über die Schaltfläche links in der Leiste einblenden.
             content.tabViewStyle(.sidebarAdaptable)
+                .defaultAdaptableTabBarPlacement(.tabBar)
         } else {
             content
         }
