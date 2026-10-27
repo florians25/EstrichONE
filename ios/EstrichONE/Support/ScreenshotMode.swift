@@ -96,7 +96,7 @@ final class ScreenshotDirector {
 
     /// Blätter und Seitenwechsel brauchen etwas länger, bis alles steht.
     private static func settleMilliseconds(_ scene: String) -> Int {
-        let sheets = ["erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum-neu", "basisdaten-neu"]
+        let sheets = ["erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu"]
         if scene.hasSuffix("-quer") { return 3200 }
         return sheets.contains { scene.hasPrefix($0) } ? 2800 : 2000
     }

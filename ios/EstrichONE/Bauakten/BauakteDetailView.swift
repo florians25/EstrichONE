@@ -108,6 +108,7 @@ struct BauakteDetailView: View {
                     facts(content)
                     actionBar
                     openPoints(content)
+                        .id("openPoints")
                     photoStrip(content)
                     keyData(content)
                     areas(content, wide: wide)
@@ -122,9 +123,10 @@ struct BauakteDetailView: View {
             .scrolledPastHeader($showsNavigationTitle)
             .background(Theme.canvas)
             .task(id: loaded) {
-                guard loaded, shotScene == "bauakte-unten" else { return }
+                // Screenshot-Modus: Mitte (offene Punkte, Fotos, Kenndaten) bzw. unten (alle Bereiche).
+                guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "openPoints" : nil else { return }
                 try? await Task.sleep(for: .milliseconds(300))
-                proxy.scrollTo("areas", anchor: .top)
+                proxy.scrollTo(target, anchor: .top)
             }
         }
     }

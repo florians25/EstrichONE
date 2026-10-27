@@ -14,6 +14,7 @@ struct BauakteAreaView: View {
 
     @Environment(AppModel.self) private var model
     @Environment(\.openURL) private var openURL
+    @Environment(\.shotScene) private var shotScene
     @State private var action: BauakteAction?
     @State private var toast: String?
     @State private var viewing: FileItem?
@@ -85,6 +86,13 @@ struct BauakteAreaView: View {
         .navigationDestination(isPresented: $showsHistory) { HistoryView(bauakteId: bauakte.id) }
         .filePreview($previewing)
         .toast($toast)
+        .task {
+            // Screenshot-Modus „raum“: einen Raum zum Bearbeiten öffnen.
+            if shotScene == "raum", area == .rooms, editingRoom == nil, let room = content.rooms.first(where: { $0.notes != nil }) ?? content.rooms.first {
+                try? await Task.sleep(for: .milliseconds(400))
+                editingRoom = RoomEditing(room: room)
+            }
+        }
         .refreshable {
             await model.active?.sync?.run()
             await reload()

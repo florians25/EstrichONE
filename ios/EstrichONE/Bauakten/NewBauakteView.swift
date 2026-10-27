@@ -315,7 +315,7 @@ struct NewBauakteView: View {
                         } icon: {
                             Image(systemName: "exclamationmark.triangle.fill")
                         }
-                        .foregroundStyle(Theme.hint)
+                        .foregroundStyle(Theme.warning)
                     }
                     .accessibilityIdentifier("similarBauakte")
                 }

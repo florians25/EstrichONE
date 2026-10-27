@@ -64,9 +64,9 @@ struct CustomerSummary: View {
         HStack(spacing: 12) {
             Image(systemName: contact.isCompany ? "building.2.fill" : "person.fill")
                 .font(.subheadline)
-                .foregroundStyle(Theme.navyText)
+                .foregroundStyle(Theme.accent)
                 .frame(width: 34, height: 34)
-                .background(Theme.navyBackground, in: Circle())
+                .background(Theme.accentSoft, in: Circle())
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(contact.name)
@@ -228,14 +228,14 @@ struct SimilarCustomersSection: View {
                         HStack {
                             CustomerSummary(contact: contact, showsActions: false)
                                 .foregroundStyle(.primary)
-                            Text("Verwenden").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.actionPrimary)
+                            Text("Verwenden").font(.subheadline.weight(.semibold)).foregroundStyle(Theme.accent)
                         }
                     }
                     .accessibilityIdentifier("useSimilarCustomer")
                 }
             } header: {
                 Label("Bereits vorhanden?", systemImage: "exclamationmark.triangle.fill")
-                    .foregroundStyle(Theme.hint)
+                    .foregroundStyle(Theme.warning)
             }
         }
     }

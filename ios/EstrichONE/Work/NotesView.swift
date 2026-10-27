@@ -19,7 +19,7 @@ struct NewNoteView: View {
                     .focused($focused)
                     .accessibilityIdentifier("noteTextField")
                 if let error {
-                    Text(error).foregroundStyle(Theme.error)
+                    Text(error).foregroundStyle(Theme.danger)
                 }
             }
             .navigationTitle("Neue Notiz")
@@ -57,7 +57,7 @@ struct NoteRow: View {
             Text(note.text.compactText ?? "")
             HStack(spacing: 6) {
                 if note.isPinned {
-                    Label("Angeheftet", systemImage: "pin.fill").labelStyle(.iconOnly).foregroundStyle(Theme.hint)
+                    Label("Angeheftet", systemImage: "pin.fill").labelStyle(.iconOnly).foregroundStyle(Theme.warning)
                 }
                 Text([authorName, note.createdAt?.formatted(date: .abbreviated, time: .shortened)].compactMap { $0 }.joined(separator: " · "))
             }

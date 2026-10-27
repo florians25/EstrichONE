@@ -38,7 +38,7 @@ struct NewAcceptanceView: View {
             Form {
                 if let error {
                     Section {
-                        Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.error)
+                        Label(error, systemImage: "exclamationmark.triangle.fill").foregroundStyle(Theme.danger)
                             .accessibilityIdentifier("acceptanceError")
                     }
                 }
@@ -411,7 +411,7 @@ struct AcceptanceDetailView: View {
                     .accessibilityIdentifier("customerLinkResult")
                 }
                 if let linkError {
-                    Label(linkError, systemImage: "exclamationmark.triangle").foregroundStyle(Theme.error)
+                    Label(linkError, systemImage: "exclamationmark.triangle").foregroundStyle(Theme.danger)
                 }
             }
         } header: {

@@ -59,7 +59,7 @@ struct VideoCaptureView: View {
                         LabeledContent("Länge", value: Duration.seconds(prepared.duration).formatted(.time(pattern: .minuteSecond)))
                         LabeledContent("Größe", value: ByteCountFormatter.string(fromByteCount: prepared.size, countStyle: .file))
                         if prepared.wasTrimmed {
-                            Label("Auf die ersten 2 Minuten gekürzt.", systemImage: "scissors").foregroundStyle(Theme.hint)
+                            Label("Auf die ersten 2 Minuten gekürzt.", systemImage: "scissors").foregroundStyle(Theme.warning)
                         }
                         TextField("Beschriftung, z. B. Estrich wird eingebracht", text: $caption)
                             .accessibilityIdentifier("videoCaptionField")

@@ -51,7 +51,7 @@ struct NewCmMeasurementView: View {
                     TextField("z. B. Messung nach 28 Tagen", text: $remarks, axis: .vertical)
                 }
                 if let error {
-                    Text(error).foregroundStyle(Theme.error)
+                    Text(error).foregroundStyle(Theme.danger)
                 }
             }
             .navigationTitle("CM-Messung")
@@ -86,7 +86,7 @@ struct ReadinessLabel: View {
     var body: some View {
         Label(isReady ? "Belegreif" : "Noch nicht belegreif", systemImage: isReady ? "checkmark.seal.fill" : "hourglass")
             .font(.subheadline.weight(.semibold))
-            .foregroundStyle(isReady ? Theme.success : Theme.hint)
+            .foregroundStyle(isReady ? Theme.success : Theme.warning)
             // Ein Element mit dem Text vorlesen, nicht den Symbolnamen („Überprüft“).
             .accessibilityElement(children: .ignore)
             .accessibilityLabel(isReady ? "Belegreif" : "Noch nicht belegreif")
@@ -394,7 +394,7 @@ struct InitialInspectionView: View {
                         .accessibilityIdentifier("inspectionRemarksField")
                 }
                 if let error {
-                    Text(error).foregroundStyle(Theme.error).accessibilityIdentifier("inspectionError")
+                    Text(error).foregroundStyle(Theme.danger).accessibilityIdentifier("inspectionError")
                 }
             }
     }

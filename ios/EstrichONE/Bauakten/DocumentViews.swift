@@ -12,9 +12,9 @@ struct DocumentRow: View {
         HStack(spacing: 12) {
             Image(systemName: file.category?.symbol ?? (file.isPDF ? "doc.richtext" : "doc"))
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Theme.navyText)
+                .foregroundStyle(Theme.accent)
                 .frame(width: 34, height: 40)
-                .background(Theme.navyBackground, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
+                .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: 7, style: .continuous))
                 .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(file.displayName)

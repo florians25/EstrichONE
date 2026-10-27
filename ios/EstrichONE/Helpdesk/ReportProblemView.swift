@@ -71,7 +71,7 @@ struct ReportProblemView: View {
                     Text("Nie enthalten: Passwörter, PINs, Inhalte von Bauakten, Notizen, Fotos, Kunden und Adressen.")
                 }
                 if let error {
-                    Text(error).foregroundStyle(Theme.error).accessibilityIdentifier("ticketError")
+                    Text(error).foregroundStyle(Theme.danger).accessibilityIdentifier("ticketError")
                 }
             }
             .navigationTitle("Problem melden")

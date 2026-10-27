@@ -82,7 +82,7 @@ struct CaptureTabView: View {
                             HStack {
                                 BauakteRow(bauakte: bauakte)
                                 Image(systemName: mode.symbol)
-                                    .foregroundStyle(Theme.actionPrimary)
+                                    .foregroundStyle(Theme.accent)
                                     .accessibilityHidden(true)
                             }
                         }
@@ -152,7 +152,7 @@ struct BauaktePickerView: View {
                     HStack {
                         BauakteRow(bauakte: bauakte)
                         if bauakte.id == selected {
-                            Image(systemName: "checkmark").foregroundStyle(Theme.actionPrimary).fontWeight(.semibold)
+                            Image(systemName: "checkmark").foregroundStyle(Theme.accent).fontWeight(.semibold)
                         }
                     }
                 }

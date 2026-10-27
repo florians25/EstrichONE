@@ -29,14 +29,14 @@ struct SyncStatusBar: View {
     private var statusLine: (text: String, symbol: String, color: Color, background: Color)? {
         let summary = sync.summary
         if summary?.hasProblems == true {
-            return ("Problem bei der Übertragung – antippen für Details", "exclamationmark.triangle.fill", Theme.error, Theme.errorBackground)
+            return ("Problem bei der Übertragung – antippen für Details", "exclamationmark.triangle.fill", Theme.danger, Theme.dangerSoft)
         }
         if let message = sync.maintenanceMessage {
             return ("Wartung: \(message) Änderungen bleiben auf dem Gerät und werden danach übertragen.", "wrench.and.screwdriver.fill",
-                    Theme.hint, Theme.hintBackground)
+                    Theme.warning, Theme.warningSoft)
         }
         if sync.isOffline {
-            return ("Offline – Änderungen werden gespeichert", "wifi.slash", Theme.textSecondary, Theme.surfaceAlt)
+            return ("Offline – Änderungen werden gespeichert", "wifi.slash", Theme.textSecondary, Theme.canvas)
         }
         // Laufende Übertragung zeigt nur das Symbol im Kopf bzw. an den Einträgen – keine eigene Textzeile.
         return nil
@@ -62,7 +62,7 @@ struct SyncView: View {
                     ForEach(rejected, id: \.seq) { operation in
                         VStack(alignment: .leading, spacing: 4) {
                             Text(Self.describe(operation)).font(.headline)
-                            Text(operation.errorMessage ?? operation.errorCode ?? "Vom Server abgelehnt").foregroundStyle(Theme.error)
+                            Text(operation.errorMessage ?? operation.errorCode ?? "Vom Server abgelehnt").foregroundStyle(Theme.danger)
                             HStack(spacing: 8) {
                                 Button {
                                     Task {
@@ -144,7 +144,7 @@ struct SyncView: View {
                     ForEach(openUploads, id: \.fileId) { upload in
                         VStack(alignment: .leading, spacing: 6) {
                             Text(upload.state == .failed ? "Upload fehlgeschlagen" : "Datei wird übertragen")
-                                .foregroundStyle(upload.state == .failed ? Theme.error : .primary)
+                                .foregroundStyle(upload.state == .failed ? Theme.danger : .primary)
                             ProgressView(value: Double(upload.uploadedBytes), total: Double(max(upload.size, 1)))
                             Text("\(ByteCountFormatter.string(fromByteCount: upload.uploadedBytes, countStyle: .file)) von \(ByteCountFormatter.string(fromByteCount: upload.size, countStyle: .file))")
                                 .font(.footnote).foregroundStyle(Theme.textSecondary)
@@ -247,6 +247,7 @@ struct SyncView: View {
         case .formSchema: "Formular"
         case .ticket: "Meldung an die IT"
         case .room: "Raum"
+        case .bauakteParty: "Beteiligter"
         }
         let action = operation.type.split(separator: ".").last ?? ""
         return switch action {
@@ -292,11 +293,11 @@ struct SystemNoticesBanner: View {
             if let maintenance = notices?.maintenance, maintenance.active, sync.maintenanceMessage == nil {
                 NoticeCard(symbol: "wrench.and.screwdriver.fill", title: "Wartung läuft",
                            text: [maintenance.message, Self.window(maintenance)].compactMap { $0 }.joined(separator: " · "),
-                           foreground: Theme.hint, background: Theme.hintBackground, onDismiss: nil)
+                           foreground: Theme.warning, background: Theme.warningSoft, onDismiss: nil)
             } else if let upcoming = notices?.upcomingMaintenance(), !dismissed.contains("maintenance") {
                 NoticeCard(symbol: "calendar.badge.exclamationmark", title: "Geplante Wartung",
                            text: [Self.window(upcoming), upcoming.message].compactMap { $0 }.joined(separator: " · "),
-                           foreground: Theme.hint, background: Theme.hintBackground) { dismissed.insert("maintenance") }
+                           foreground: Theme.warning, background: Theme.warningSoft) { dismissed.insert("maintenance") }
             }
             ForEach(announcements) { announcement in
                 NoticeCard(symbol: Self.symbol(announcement.severity), title: announcement.title, text: announcement.text,
@@ -326,17 +327,17 @@ struct SystemNoticesBanner: View {
 
     static func foreground(_ severity: SystemNotices.Announcement.Severity) -> Color {
         switch severity {
-        case .info: Theme.info
-        case .warning: Theme.hint
-        case .critical: Theme.error
+        case .info: Theme.accent
+        case .warning: Theme.warning
+        case .critical: Theme.danger
         }
     }
 
     static func background(_ severity: SystemNotices.Announcement.Severity) -> Color {
         switch severity {
-        case .info: Theme.infoBackground
-        case .warning: Theme.hintBackground
-        case .critical: Theme.errorBackground
+        case .info: Theme.accentSoft
+        case .warning: Theme.warningSoft
+        case .critical: Theme.dangerSoft
         }
     }
 }
@@ -373,7 +374,7 @@ private struct NoticeCard: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(background, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+        .background(background, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
         .accessibilityElement(children: .contain)
     }
 }

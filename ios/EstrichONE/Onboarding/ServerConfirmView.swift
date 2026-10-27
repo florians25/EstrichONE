@@ -13,7 +13,7 @@ struct ServerConfirmView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 StatusMessage(kind: .success, text: "Verbindung geprüft. Der Server ist erreichbar und verwendet ein gültiges Zertifikat.")
 
                 VStack(alignment: .leading, spacing: 4) {

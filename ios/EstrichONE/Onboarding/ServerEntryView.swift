@@ -16,7 +16,7 @@ struct ServerEntryView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: Theme.spacing) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 Text("Mit welchem Server soll sich die App verbinden?")
                     .font(.title2.weight(.semibold))
                     .fixedSize(horizontal: false, vertical: true)
@@ -40,7 +40,7 @@ struct ServerEntryView: View {
                         .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                         .overlay {
                             RoundedRectangle(cornerRadius: 10, style: .continuous)
-                                .strokeBorder(errorMessage == nil ? Theme.line : Theme.error, lineWidth: 1)
+                                .strokeBorder(errorMessage == nil ? Theme.separator : Theme.danger, lineWidth: 1)
                         }
                         .disabled(isChecking)
                         .accessibilityLabel("Serveradresse")

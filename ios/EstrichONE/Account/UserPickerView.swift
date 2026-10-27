@@ -9,7 +9,7 @@ struct UserPickerView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.spacing) {
+                VStack(alignment: .leading, spacing: Space.l) {
                     Text("Wer arbeitet mit dem Gerät?")
                         .font(.title2.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)

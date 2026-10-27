@@ -12,7 +12,7 @@ struct WelcomeView: View {
         VStack(spacing: 0) {
             Spacer(minLength: 24)
 
-            VStack(alignment: .leading, spacing: Theme.spacing) {
+            VStack(alignment: .leading, spacing: Space.l) {
                 BrandMark()
                     .frame(width: 72, height: 72)
                     .accessibilityHidden(true)

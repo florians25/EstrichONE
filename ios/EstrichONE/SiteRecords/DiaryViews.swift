@@ -58,8 +58,8 @@ struct NewDiaryEntryView: View {
                                         .font(.subheadline.weight(.medium))
                                         .padding(.horizontal, 12)
                                         .frame(minHeight: 36)
-                                        .background(weather == option ? Theme.navyBackground : Theme.neutralBackground, in: Capsule())
-                                        .foregroundStyle(weather == option ? Theme.navyText : Theme.neutral)
+                                        .background(weather == option ? Theme.accentSoft : Theme.fill, in: Capsule())
+                                        .foregroundStyle(weather == option ? Theme.accent : Theme.textSecondary)
                                         .padding(.vertical, 4)
                                         .contentShape(Rectangle())
                                 }

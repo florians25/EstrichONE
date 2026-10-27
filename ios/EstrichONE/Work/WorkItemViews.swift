@@ -135,7 +135,7 @@ struct NewWorkItemView: View {
                 }
 
                 if let error {
-                    Text(error).foregroundStyle(Theme.error).accessibilityIdentifier("workItemError")
+                    Text(error).foregroundStyle(Theme.danger).accessibilityIdentifier("workItemError")
                 }
             }
             .navigationTitle(kind == .defect ? "Neuer Mangel" : "Neue Aufgabe")

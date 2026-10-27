@@ -35,7 +35,7 @@ struct SignInView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.spacing) {
+                VStack(alignment: .leading, spacing: Space.l) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text("Anmelden")
                             .font(.largeTitle.weight(.bold))
@@ -89,14 +89,14 @@ struct SignInView: View {
 
                     Button("Passwort vergessen?") { showsPasswordHelp = true }
                         .font(.callout)
-                        .tint(Theme.actionPrimary)
+                        .tint(Theme.accent)
                         .frame(maxWidth: .infinity)
                         .frame(minHeight: 44)
 
                     if model.canReportWithoutSignIn {
                         Button("Anmeldung klappt nicht? Problem melden") { reporting = true }
                             .font(.callout)
-                            .tint(Theme.actionPrimary)
+                            .tint(Theme.accent)
                             .frame(maxWidth: .infinity)
                             .frame(minHeight: 44)
                             .accessibilityIdentifier("reportWithoutSignInButton")
@@ -149,7 +149,7 @@ struct SignInView: View {
                 .frame(minHeight: 52)
                 .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.line, lineWidth: 1)
+                    RoundedRectangle(cornerRadius: 10, style: .continuous).strokeBorder(Theme.separator, lineWidth: 1)
                 }
                 .disabled(isWorking)
         }

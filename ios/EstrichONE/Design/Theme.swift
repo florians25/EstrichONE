@@ -54,33 +54,6 @@ enum Theme {
     static let warningSoft = Color.dynamic(light: 0xFFF3DD, dark: 0x2E2410)
     static let danger = Color.dynamic(light: 0xC0262D, dark: 0xFF7B7B)
     static let dangerSoft = Color.dynamic(light: 0xFDECEC, dark: 0x351617)
-
-    // MARK: Übergang – alte Namen, auf die neuen Tokens abgebildet (werden mit der Umstellung entfernt)
-
-    static let actionPrimary = accent
-    static let card = surface
-    static let surfaceAlt = canvas
-    static let line = separator
-    static let hint = warning
-    static let hintBackground = warningSoft
-    static let error = danger
-    static let errorBackground = dangerSoft
-    static let successBackground = successSoft
-    static let info = accent
-    static let infoBackground = accentSoft
-    static let neutral = textSecondary
-    static let neutralBackground = fill
-    static let navyBackground = accentSoft
-    static let navyText = Color.dynamic(light: 0x0B2E66, dark: 0xCFE5FF)
-    static let secondaryFill = fill
-    static let secondaryFillPressed = fillStrong
-    static let brandFillTop = accentFill
-    static let brandFillBottom = accentFill
-    static let spacing: CGFloat = Space.l
-    static let cornerRadius: CGFloat = Radius.m
-    static let cardRadius: CGFloat = Radius.xl
-    static let controlHeight: CGFloat = Size.button
-    static let compactControlHeight: CGFloat = Size.minTap
 }
 
 /// Abstände im 4-/8-Punkt-Raster.

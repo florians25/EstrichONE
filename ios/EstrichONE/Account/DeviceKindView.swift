@@ -9,7 +9,7 @@ struct DeviceKindView: View {
     var body: some View {
         NavigationStack {
             ScrollView {
-                VStack(alignment: .leading, spacing: Theme.spacing) {
+                VStack(alignment: .leading, spacing: Space.l) {
                     Text("Wie wird dieses Gerät genutzt?")
                         .font(.title2.weight(.semibold))
                         .accessibilityAddTraits(.isHeader)
@@ -54,7 +54,7 @@ struct DeviceKindView: View {
             HStack(alignment: .top, spacing: 14) {
                 Image(systemName: selected ? "largecircle.fill.circle" : "circle")
                     .font(.title3)
-                    .foregroundStyle(selected ? Theme.actionPrimary : Theme.textSecondary)
+                    .foregroundStyle(selected ? Theme.accent : Theme.textSecondary)
                     .accessibilityHidden(true)
                 VStack(alignment: .leading, spacing: 4) {
                     Label(title, systemImage: symbol)
@@ -72,7 +72,7 @@ struct DeviceKindView: View {
             .background(Color(uiColor: .secondarySystemBackground), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
             .overlay {
                 RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .strokeBorder(selected ? Theme.actionPrimary : Theme.line, lineWidth: selected ? 2 : 1)
+                    .strokeBorder(selected ? Theme.accent : Theme.separator, lineWidth: selected ? 2 : 1)
             }
         }
         .buttonStyle(.plain)

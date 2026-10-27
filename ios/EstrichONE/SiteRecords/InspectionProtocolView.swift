@@ -230,7 +230,7 @@ struct InspectionProtocolView: View {
     }
 
     private var statusColor: Color {
-        inspection.notRequired ? Theme.neutral : (inspection.hasDefects ? Theme.hint : Theme.success)
+        inspection.notRequired ? Theme.textSecondary : (inspection.hasDefects ? Theme.warning : Theme.success)
     }
 
     private func loadPhotos() async {
@@ -269,10 +269,10 @@ private struct ResultChip: View {
 
     var body: some View {
         let (text, foreground, background): (String, Color, Color) = switch result {
-        case .ok: ("In Ordnung", Theme.success, Theme.successBackground)
-        case .notOk: ("Mangel", Theme.hint, Theme.hintBackground)
-        case .notApplicable: ("Entfällt", Theme.neutral, Theme.neutralBackground)
-        case nil: ("Nicht geprüft", Theme.neutral, Theme.neutralBackground)
+        case .ok: ("In Ordnung", Theme.success, Theme.successSoft)
+        case .notOk: ("Mangel", Theme.warning, Theme.warningSoft)
+        case .notApplicable: ("Entfällt", Theme.textSecondary, Theme.fill)
+        case nil: ("Nicht geprüft", Theme.textSecondary, Theme.fill)
         }
         Text(text)
             .font(.caption.weight(.semibold))
@@ -296,9 +296,9 @@ struct SignatureView: View {
                 SignatureCanvas(canvas: canvas) { isEmpty = $0 }
                     .frame(height: 260)
                     .background(Color.white, in: RoundedRectangle(cornerRadius: 12))
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.line))
+                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Theme.separator))
                     .overlay(alignment: .bottom) {
-                        Rectangle().fill(Theme.line).frame(height: 1).padding(.horizontal, 24).padding(.bottom, 56)
+                        Rectangle().fill(Theme.separator).frame(height: 1).padding(.horizontal, 24).padding(.bottom, 56)
                     }
                     .accessibilityIdentifier("signatureCanvas")
                 Button("Löschen", role: .destructive) {

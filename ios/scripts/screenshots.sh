@@ -61,6 +61,11 @@ while [ $index -lt ${#LIST[@]} ]; do
     ready:*)
       name=${state#ready:}
       rm -f "$STATE"
+      # „…-gross“: mit sehr großer Schrift (Bedienungshilfen) aufnehmen.
+      if [[ "$name" == *-gross ]]; then
+        xcrun simctl ui "$UDID" content_size accessibility-large >/dev/null 2>&1
+        sleep 2
+      fi
       xcrun simctl io "$UDID" screenshot --type=png "$OUT/$PREFIX-$name-hell.png" >/dev/null 2>&1
       if [ "$DARK" = "1" ]; then
         xcrun simctl ui "$UDID" appearance dark
@@ -68,6 +73,10 @@ while [ $index -lt ${#LIST[@]} ]; do
         xcrun simctl io "$UDID" screenshot --type=png "$OUT/$PREFIX-$name-dunkel.png" >/dev/null 2>&1
         xcrun simctl ui "$UDID" appearance light
         sleep 0.4
+      fi
+      if [[ "$name" == *-gross ]]; then
+        xcrun simctl ui "$UDID" content_size large >/dev/null 2>&1
+        sleep 1
       fi
       count=$((count + 1))
       echo "  $PREFIX: $name ($(( $(date +%s) - start )) s)"

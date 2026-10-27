@@ -341,7 +341,7 @@ struct SchemaInspectionResultSections: View {
                 if let result = inspection.checkResults[key] {
                     Text(result.title)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(result == .notOk ? Theme.error : result == .ok ? Theme.success : Theme.textSecondary)
+                        .foregroundStyle(result == .notOk ? Theme.danger : result == .ok ? Theme.success : Theme.textSecondary)
                 }
             }
             if let remark = inspection.checkRemarks[key]?.compactText {

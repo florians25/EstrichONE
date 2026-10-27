@@ -15,15 +15,15 @@ struct StatusMessage: View {
 
         var foreground: Color {
             switch self {
-            case .error: Theme.error
+            case .error: Theme.danger
             case .success: Theme.success
             }
         }
 
         var background: Color {
             switch self {
-            case .error: Theme.errorBackground
-            case .success: Theme.successBackground
+            case .error: Theme.dangerSoft
+            case .success: Theme.successSoft
             }
         }
     }

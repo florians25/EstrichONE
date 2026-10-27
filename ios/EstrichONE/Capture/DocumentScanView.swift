@@ -275,7 +275,7 @@ private struct ScanPageThumbnail: View {
                 }
             }
             .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
-            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.line))
+            .overlay(RoundedRectangle(cornerRadius: 6, style: .continuous).strokeBorder(Theme.separator))
             .task(id: page.id) {
                 let data = page.jpeg
                 image = await Task.detached { UIImage(data: data)?.preparingThumbnail(of: CGSize(width: 96, height: 128)) }.value

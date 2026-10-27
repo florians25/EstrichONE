@@ -26,7 +26,7 @@ struct DispatchView: View {
                     statusLines.padding(.horizontal)
                     columns(board)
                 }
-                .background(Theme.surfaceAlt)
+                .background(Theme.canvas)
             } else {
                 list
             }
@@ -184,7 +184,7 @@ struct DispatchView: View {
                         Text(board.canPlan ? "Baustelle hierher ziehen" : "Keine Baustelle")
                             .font(.footnote).foregroundStyle(Theme.textSecondary)
                             .frame(maxWidth: .infinity, minHeight: 60)
-                            .overlay(RoundedRectangle(cornerRadius: Theme.cardRadius).strokeBorder(Theme.line, style: StrokeStyle(lineWidth: 1, dash: [5])))
+                            .overlay(RoundedRectangle(cornerRadius: Radius.xl).strokeBorder(Theme.separator, style: StrokeStyle(lineWidth: 1, dash: [5])))
                     }
                     if board.canPlan, let crew {
                         Button { assigningTo = crew } label: { Label("Baustelle zuordnen …", systemImage: "plus") }
