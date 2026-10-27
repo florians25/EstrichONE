@@ -91,6 +91,9 @@ Der Client fasst mehrere ungesendete Änderungen desselben Datensatzes zusammen,
 | `file.announce` | `bauakteId`, `kind`*, `originalName`*, `contentType`*, `sizeBytes`*, `sha256`*, `capturedAt`, `latitude`, `longitude`, `caption`, `category` (nur `document`: `offer`/`order`/`invoice`/`plan`/`delivery`/`acceptance`/`customer`/`office`/`other`) | `files.upload` | danach Upload (Abschnitt 6) |
 | `file.update` | `changes`/`base`: `caption`, `category` | `files.upload` + sichtbar | Abschnitt 3; der Inhalt bleibt unveränderlich |
 | `file.delete` | – | `files.delete` + sichtbar | Tombstone |
+| `room.create` | `bauakteId`*, `name`* (1–100 Zeichen), `floor`, `areaSquareMeters` (0–100 000), `thicknessMillimeters` (10–300), `insulationMillimeters` (0–500), `underfloorHeating`, `status` (`planned`/`laid`/`ready`), `notes`, `screedTypeId`, `sectionId` | `bauakten.edit` + Bauakte sichtbar | Räume und Flächen der Bauakte (wie im Büro). Gleiche ID derselben Bauakte: bestätigt |
+| `room.update` | `changes`/`base`: Felder wie bei `room.create` außer `bauakteId` | `bauakten.edit` + sichtbar | Abschnitt 3 |
+| `room.delete` | – | `bauakten.edit` + sichtbar | Tombstone |
 
 \* Pflichtfeld. Werte im JSON-Format der API: Aufzählungen als camelCase-Text, Zeitpunkte ISO 8601 mit Zeitzone.
 
@@ -111,7 +114,9 @@ Der Client fasst mehrere ungesendete Änderungen desselben Datensatzes zusammen,
 
 - **Ohne Cursor** liefert der Abruf den vollständigen aktuellen Stand aller sichtbaren Datensätze (Erstabgleich).
 - Der Feed enthält **je Datensatz nur den letzten Stand**. Eine zwischenzeitlich mehrfach geänderte Bauakte kommt einmal.
-- **Entitätstypen v1:** `bauakte`, `note`, `file`, `workItem`, `contact` (nur mit `contacts.read`), `screedType`.
+- **Entitätstypen v1:** `bauakte`, `note`, `file`, `workItem`, `contact` (nur mit `contacts.read`), `screedType`, `room`.
+- **Neue Entitätstypen:** Ältere Clients überspringen unbekannte Typen. Der iOS-Client merkt sich, welche Typen er beim
+  letzten Abruf kannte, und gleicht nach einem Update, das neue Typen versteht, einmal ohne Cursor neu ab (Outbox bleibt).
 - **Sichtbarkeit:** wie in der API (`bauakten.read_all` oder Mitglied bzw. zuständig). Notizen, Dateien und Aufgaben
   folgen ihrer Bauakte.
 - **`includeScope=true`:** liefert alle aktuell sichtbaren Bauakten-IDs. Lokale Bauakten, die nicht (mehr) darin
