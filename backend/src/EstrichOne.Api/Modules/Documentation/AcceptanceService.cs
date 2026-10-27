@@ -29,6 +29,7 @@ public sealed class AcceptanceService(
     LocalFileStorage storage,
     IOptions<EstrichOneOptions> options,
     TimeProvider clock,
+    Notifications.Exports.INotifier notifier,
     ILogger<AcceptanceService> logger)
 {
     private const string EntityType = "bauakte";
@@ -99,6 +100,15 @@ public sealed class AcceptanceService(
         {
             await FinalizeAsync(protocol, null, cancellationToken);
         }
+
+        // Team der Bauakte: nur Ergebnis und Bauakte, nie Kommentar oder Name des Kunden.
+        var info = await bauakten.GetAsync(protocol.BauakteId, cancellationToken);
+        await notifier.NotifyAsync(await bauakten.TeamUserIdsAsync(protocol.BauakteId, cancellationToken),
+            new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Bauakte,
+                approve ? "Abnahme vom Kunden unterschrieben" : "Abnahme vom Kunden abgelehnt",
+                info is null ? null : $"{info.Number} {info.Title}".Trim(), $"/bauakten/{protocol.BauakteId}", "bauakte", protocol.BauakteId,
+                approve ? Notifications.Exports.NotificationUrgency.Normal : Notifications.Exports.NotificationUrgency.High,
+                Event: Notifications.Exports.NotificationEvents.AcceptanceSigned), cancellationToken);
     }
 
     /// <summary>PDF erzeugen, unter „Abnahmen“ ablegen und – ohne Vorbehalt und offene Mängel – die Bauakte abschließen.</summary>

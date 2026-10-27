@@ -15,4 +15,7 @@ public sealed record BauakteReportInfo(
 public interface IBauakteReportSource
 {
     Task<BauakteReportInfo?> GetAsync(Guid bauakteId, CancellationToken cancellationToken);
+
+    /// <summary>Zuständige Person und Mitglieder (Empfänger von Benachrichtigungen zur Bauakte).</summary>
+    Task<IReadOnlyList<Guid>> TeamUserIdsAsync(Guid bauakteId, CancellationToken cancellationToken);
 }

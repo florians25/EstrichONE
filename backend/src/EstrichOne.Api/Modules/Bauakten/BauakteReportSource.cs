@@ -13,6 +13,13 @@ internal sealed class BauakteReportSource(EstrichOneDbContext db) : IBauakteRepo
         [RoomStatus.Planned] = "geplant", [RoomStatus.Laid] = "eingebracht", [RoomStatus.Ready] = "belegreif",
     };
 
+    public async Task<IReadOnlyList<Guid>> TeamUserIdsAsync(Guid bauakteId, CancellationToken cancellationToken)
+    {
+        var bauakte = await db.Set<Bauakte>().AsNoTracking().Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == bauakteId, cancellationToken);
+        return bauakte is null ? [] : bauakte.Members.Select(m => m.UserId).Append(bauakte.ResponsibleUserId ?? Guid.Empty)
+            .Where(id => id != Guid.Empty).Distinct().ToList();
+    }
+
     public async Task<BauakteReportInfo?> GetAsync(Guid bauakteId, CancellationToken cancellationToken)
     {
         var bauakte = await db.Set<Bauakte>().AsNoTracking().Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == bauakteId, cancellationToken);

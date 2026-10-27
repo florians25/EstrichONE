@@ -80,6 +80,16 @@ public sealed record SavePushSettingsRequest(
     bool ShowContent = true,
     long? Version = null);
 
+/// <param name="Delivery">Gewählte Zustellung (ohne Auswahl „push“).</param>
+public sealed record NotificationPreferenceItem(
+    string Event, string Group, string Label, string Description, bool AdminOnly, bool Mandatory, NotificationDelivery Delivery);
+
+public sealed record NotificationPreferencesResponse(IReadOnlyList<NotificationPreferenceItem> Items);
+
+public sealed record NotificationPreferenceChange([property: Required, MaxLength(50)] string Event, NotificationDelivery Delivery);
+
+public sealed record SaveNotificationPreferencesRequest([property: Required] IReadOnlyList<NotificationPreferenceChange> Items);
+
 /// <summary>
 /// Postfach je Benutzer, Geräte für Pushnachrichten, Versand durch das Büro (Recht „notifications.send“) und die
 /// Push-Einrichtung (Recht „settings.manage“). Siehe docs/benachrichtigungen.md.
@@ -107,6 +117,10 @@ internal static class NotificationEndpoints
         group.MapDelete("/devices/{id:guid}", RemoveDeviceAsync).WithName("RemovePushDevice").ProducesProblem(StatusCodes.Status404NotFound);
         group.MapDelete("/devices", RemoveDeviceByTokenAsync).WithName("RemovePushDeviceByToken")
             .WithSummary("Abmelden per Token (z. B. beim Abmelden in der App)");
+        group.MapGet("/preferences", PreferencesAsync).WithName("GetNotificationPreferences")
+            .WithSummary("Eigene Auswahl je Ereignis: aus, nur Postfach oder Postfach und Push");
+        group.MapPut("/preferences", SavePreferencesAsync).WithName("SaveNotificationPreferences")
+            .WithSummary("Ereignisse abbestellen oder Push abschalten").ProducesProblem(StatusCodes.Status422UnprocessableEntity);
         group.MapPost("/test", TestAsync).WithName("SendTestNotification").WithSummary("Testnachricht an sich selbst (Postfach und Push)")
             .RequireRateLimiting(NotificationsModule.SendRateLimitPolicy);
 
@@ -156,6 +170,72 @@ internal static class NotificationEndpoints
 
     internal static NotificationResponse ToResponse(Notification n, string? sender) =>
         new(n.Id, n.Category, n.Urgency, n.Title, n.Body, n.Link, n.ObjectType, n.ObjectId, sender, n.CreatedAt, n.ReadAt);
+
+    private static async Task<Ok<NotificationPreferencesResponse>> PreferencesAsync(
+        EstrichOneDbContext db, ICurrentUser user, IUserPermissions permissions, CancellationToken cancellationToken) =>
+        TypedResults.Ok(await LoadPreferencesAsync(db, user.UserId, permissions, cancellationToken));
+
+    private static async Task<NotificationPreferencesResponse> LoadPreferencesAsync(
+        EstrichOneDbContext db, Guid userId, IUserPermissions permissions, CancellationToken cancellationToken)
+    {
+        var granted = await permissions.GetAsync(cancellationToken);
+        var admin = granted.Contains(Permissions.BackupManage) || granted.Contains(Permissions.SettingsManage);
+        var saved = await db.Set<NotificationPreference>().AsNoTracking().Where(p => p.UserId == userId)
+            .ToDictionaryAsync(p => p.Event, p => p.Delivery, cancellationToken);
+        var items = NotificationEvents.All.Where(e => admin || !e.AdminOnly)
+            .Select(e =>
+            {
+                var delivery = saved.GetValueOrDefault(e.Code, NotificationDelivery.Push);
+                return new NotificationPreferenceItem(e.Code, e.Group, e.Label, e.Description, e.AdminOnly, e.Mandatory,
+                    e.Mandatory && delivery == NotificationDelivery.Off ? NotificationDelivery.Inbox : delivery);
+            }).ToList();
+        return new NotificationPreferencesResponse(items);
+    }
+
+    private static async Task<Results<Ok<NotificationPreferencesResponse>, ProblemHttpResult>> SavePreferencesAsync(
+        SaveNotificationPreferencesRequest request, EstrichOneDbContext db, ICurrentUser user, IUserPermissions permissions, TimeProvider clock,
+        CancellationToken cancellationToken)
+    {
+        foreach (var change in request.Items)
+        {
+            var info = NotificationEvents.Find(change.Event);
+            if (info is null)
+            {
+                return Validation($"Unbekanntes Ereignis „{change.Event}“.");
+            }
+
+            if (info.Mandatory && change.Delivery == NotificationDelivery.Off)
+            {
+                return Validation($"„{info.Label}“ lässt sich nicht abbestellen – nur die Pushnachricht kann aus.");
+            }
+        }
+
+        var now = clock.GetUtcNow();
+        var codes = request.Items.Select(i => i.Event).Distinct().ToList();
+        var rows = await db.Set<NotificationPreference>().Where(p => p.UserId == user.UserId && codes.Contains(p.Event))
+            .ToDictionaryAsync(p => p.Event, cancellationToken);
+        foreach (var change in request.Items.GroupBy(i => i.Event).Select(g => g.Last()))
+        {
+            if (rows.TryGetValue(change.Event, out var row))
+            {
+                if (change.Delivery == NotificationDelivery.Push)
+                {
+                    db.Remove(row);
+                }
+                else
+                {
+                    row.Set(change.Delivery, now);
+                }
+            }
+            else if (change.Delivery != NotificationDelivery.Push)
+            {
+                db.Add(NotificationPreference.Create(user.UserId, change.Event, change.Delivery, now));
+            }
+        }
+
+        await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok(await LoadPreferencesAsync(db, user.UserId, permissions, cancellationToken));
+    }
 
     private static async Task<Ok<UnreadCountResponse>> UnreadAsync(EstrichOneDbContext db, ICurrentUser user, CancellationToken cancellationToken) =>
         TypedResults.Ok(new UnreadCountResponse(await db.Set<Notification>().CountAsync(n => n.UserId == user.UserId && n.ReadAt == null, cancellationToken)));
@@ -364,10 +444,23 @@ internal static class NotificationEndpoints
         var senderName = await db.Set<User>().AsNoTracking().Where(u => u.Id == user.UserId).Select(u => u.DisplayName).SingleOrDefaultAsync(cancellationToken)
             ?? "Unbekannt";
         var now = clock.GetUtcNow();
-        var message = new NotificationRequest(NotificationCategory.Message, request.Title, request.Body, request.Link, Urgency: request.Urgency);
+        var message = new NotificationRequest(NotificationCategory.Message, request.Title, request.Body, request.Link, Urgency: request.Urgency,
+            Event: NotificationEvents.OfficeMessage);
         var broadcast = NotificationBroadcast.Create(user.UserId, senderName, message, string.Join(", ", parts), active.Count, now);
         db.Add(broadcast);
-        db.AddRange(active.Select(id => Notification.Create(id, message, now, user.UserId, broadcast.Id)));
+        var inboxOnly = await db.Set<NotificationPreference>().AsNoTracking()
+            .Where(p => active.Contains(p.UserId) && p.Event == NotificationEvents.OfficeMessage && p.Delivery != NotificationDelivery.Push)
+            .Select(p => p.UserId).ToListAsync(cancellationToken);
+        db.AddRange(active.Select(id =>
+        {
+            var row = Notification.Create(id, message, now, user.UserId, broadcast.Id);
+            if (inboxOnly.Contains(id))
+            {
+                row.SetPush(PushState.InAppOnly, now, "Push für Nachrichten aus dem Büro abbestellt");
+            }
+
+            return row;
+        }));
         audit.Record("notifications.sent", user.UserId, "notification_broadcast", broadcast.Id.ToString(),
             new Dictionary<string, string?> { ["recipients"] = active.Count.ToString(System.Globalization.CultureInfo.InvariantCulture), ["audience"] = broadcast.Audience });
         await db.SaveChangesAsync(cancellationToken);

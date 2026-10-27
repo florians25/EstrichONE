@@ -57,9 +57,33 @@ internal sealed partial class Notifier(EstrichOneDbContext db, ICurrentUser curr
                 return;
             }
 
+            // Abbestellte Ereignisse je Benutzer (Konto → Benachrichtigungen); Pflicht-Ereignisse kommen immer ins Postfach.
+            var eventCode = notification.Event ?? NotificationEvents.Default(notification.Category);
+            var info = NotificationEvents.Find(eventCode);
+            var preferences = await db.Set<NotificationPreference>().AsNoTracking()
+                .Where(p => active.Contains(p.UserId) && p.Event == eventCode).ToDictionaryAsync(p => p.UserId, p => p.Delivery, cancellationToken);
+            if (info?.Mandatory != true)
+            {
+                active = active.Where(id => preferences.GetValueOrDefault(id, NotificationDelivery.Push) != NotificationDelivery.Off).ToList();
+            }
+
+            if (active.Count == 0)
+            {
+                return;
+            }
+
             // Eigener Kontext-Zustand: nur die neuen Einträge speichern, nichts vom Aufrufer mitnehmen.
             var now = clock.GetUtcNow();
-            var rows = active.Select(id => Notification.Create(id, notification, now, actor)).ToList();
+            var rows = active.Select(id =>
+            {
+                var row = Notification.Create(id, notification, now, actor);
+                if (preferences.GetValueOrDefault(id, NotificationDelivery.Push) != NotificationDelivery.Push)
+                {
+                    row.SetPush(PushState.InAppOnly, now, "Push für dieses Ereignis abbestellt");
+                }
+
+                return row;
+            }).ToList();
             db.AddRange(rows);
             try
             {
@@ -80,6 +104,13 @@ internal sealed partial class Notifier(EstrichOneDbContext db, ICurrentUser curr
             // Benachrichtigung ist Zusatz – die fachliche Änderung ist gespeichert.
             LogFailed(logger, exception, notification.Category.ToString());
         }
+    }
+
+    public async Task MarkReadAsync(Guid userId, string objectType, Guid objectId, CancellationToken cancellationToken)
+    {
+        var now = clock.GetUtcNow();
+        await db.Set<Notification>().Where(n => n.UserId == userId && n.ObjectType == objectType && n.ObjectId == objectId && n.ReadAt == null)
+            .ExecuteUpdateAsync(s => s.SetProperty(n => n.ReadAt, now), cancellationToken);
     }
 
     private Guid? Actor()

@@ -524,9 +524,11 @@ internal static class CockpitEndpoints
             return Problem(StatusCodes.Status400BadRequest, "Ungültiger Zeitraum", "Höchstens 62 Tage auf einmal freigeben.", "INVALID_RANGE");
         }
 
-        var update = await db.Set<PlanRelease>().AnyAsync(r => r.Day >= request.From && r.Day <= request.To, cancellationToken);
+        var previous = await db.Set<PlanRelease>().AsNoTracking().Where(r => r.Day >= request.From && r.Day <= request.To).ToListAsync(cancellationToken);
         var released = await cockpit.ReleaseAsync(request.From, request.To, request.Note, cancellationToken);
-        await PlanningNotifications.ReleasedAsync(planning, notifier, request.From, request.To, update, cancellationToken);
+        await PlanningNotifications.ReleasedAsync(planning, notifier, request.From, request.To,
+            previous.Count == 0 ? null : previous.SelectMany(r => r.Items()).GroupBy(i => i.AssignmentId).ToDictionary(g => g.Key, g => g.First().Version),
+            cancellationToken);
         return TypedResults.Ok(released);
     }
 

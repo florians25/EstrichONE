@@ -3,6 +3,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Notifications.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -70,7 +71,7 @@ internal static class WorkEndpoints
 
     private static async Task<Results<Created<WorkItemDto>, Ok<WorkItemDto>, ProblemHttpResult>> CreateAsync(
         CreateWorkItemRequest request, IBauakteAccess access, IBauakteHistory history, ICurrentUser currentUser, EstrichOneDbContext db,
-        CancellationToken cancellationToken)
+        INotifier notifier, IBauakteReportSource bauakten, CancellationToken cancellationToken)
     {
         if (request.BauakteId is { } bauakteId && !await access.CanReadAsync(bauakteId, cancellationToken))
         {
@@ -108,12 +109,13 @@ internal static class WorkEndpoints
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await NotifyAssignedAsync(item, null, notifier, bauakten, cancellationToken);
         return TypedResults.Created($"/api/v1/work-items/{item.Id}", WorkItemDto.From(item));
     }
 
     private static async Task<Results<Ok<WorkItemDto>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateWorkItemRequest request, IBauakteAccess access, IBauakteHistory history, EstrichOneDbContext db, TimeProvider clock,
-        CancellationToken cancellationToken)
+        INotifier notifier, IBauakteReportSource bauakten, CancellationToken cancellationToken)
     {
         var item = await db.Set<WorkItem>().SingleOrDefaultAsync(w => w.Id == id, cancellationToken);
         if (item is null || (item.BauakteId is { } bauakteId && !await access.CanReadAsync(bauakteId, cancellationToken)))
@@ -122,6 +124,7 @@ internal static class WorkEndpoints
                 extensions: new Dictionary<string, object?> { ["code"] = "NOT_FOUND" });
         }
 
+        var previousAssignee = item.AssigneeUserId;
         var assignee = request.Unassign ? null : request.AssigneeUserId ?? item.AssigneeUserId;
         if (request.AssigneeUserId is { } newAssignee && !await db.Set<User>().AnyAsync(u => u.Id == newAssignee && u.IsActive, cancellationToken))
         {
@@ -148,7 +151,26 @@ internal static class WorkEndpoints
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        await NotifyAssignedAsync(item, previousAssignee, notifier, bauakten, cancellationToken);
         return TypedResults.Ok(WorkItemDto.From(item));
+    }
+
+    /// <summary>Neu zugewiesene Person benachrichtigen (nur Titel und Bauakte, nie die Beschreibung).</summary>
+    private static async Task NotifyAssignedAsync(WorkItem item, Guid? previousAssignee, INotifier notifier, IBauakteReportSource bauakten,
+        CancellationToken cancellationToken)
+    {
+        if (item.AssigneeUserId is not { } assignee || assignee == previousAssignee || item.Status == WorkItemStatus.Done)
+        {
+            return;
+        }
+
+        var info = item.BauakteId is { } id ? await bauakten.GetAsync(id, cancellationToken) : null;
+        var defect = item.Kind == WorkItemKind.Defect;
+        await notifier.NotifyAsync([assignee], new NotificationRequest(NotificationCategory.Work,
+            defect ? "Mangel zugewiesen" : "Aufgabe zugewiesen",
+            info is null ? item.Title : $"{item.Title} · {info.Number} {info.Title}".Trim(),
+            item.BauakteId is { } b ? $"/bauakten/{b}" : "/start", "workItem", item.Id, defect ? NotificationUrgency.High : NotificationUrgency.Normal,
+            Event: NotificationEvents.WorkAssigned), cancellationToken);
     }
 
     private static string? Clean(string? text) => string.IsNullOrWhiteSpace(text) ? null : text.Trim();

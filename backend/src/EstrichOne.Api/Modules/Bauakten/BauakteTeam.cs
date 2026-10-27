@@ -84,7 +84,8 @@ internal static class BauakteTeamEndpoints
         await db.SaveChangesAsync(cancellationToken);
         var added = wanted.Where(u => !current.Contains(u) && u != responsible).ToList();
         await notifier.NotifyAsync(added, new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Bauakte,
-            "Neue Bauakte zugewiesen", $"{bauakte.Number} {bauakte.Title}".Trim(), $"/bauakten/{bauakte.Id}", "bauakte", bauakte.Id), cancellationToken);
+            "Neue Bauakte zugewiesen", $"{bauakte.Number} {bauakte.Title}".Trim(), $"/bauakten/{bauakte.Id}", "bauakte", bauakte.Id,
+            Event: Notifications.Exports.NotificationEvents.BauakteAssigned), cancellationToken);
         return TypedResults.Ok(await MembersAsync(db, bauakte, cancellationToken));
     }
 

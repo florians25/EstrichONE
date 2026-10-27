@@ -42,6 +42,8 @@ public static class Permissions
     public const string AuditRead = "audit.read";
     public const string ArchiveUnlock = "archive.unlock";
     public const string NotificationsSend = "notifications.send";
+    public const string ChatUse = "chat.use";
+    public const string ChatAdmin = "chat.admin";
 
     public static IReadOnlyList<PermissionInfo> All { get; } =
     [
@@ -77,6 +79,8 @@ public static class Permissions
         new(DevicesSelfEnroll, "IT Center", "Eigenes persönliches Gerät ohne Freigabe einrichten"),
         new(HelpdeskAgent, "IT Center", "Supporttickets bearbeiten"),
         new(NotificationsSend, "Verwaltung", "Nachrichten und Pushnachrichten an Benutzer, Rollen und Kolonnen senden"),
+        new(ChatUse, "Chat", "Chat nutzen: Einzel- und Gruppenunterhaltungen mit Kollegen und Büro (wenn das Modul aktiv ist)"),
+        new(ChatAdmin, "Chat", "Chat verwalten: Gruppen anlegen, Einstellungen, Export und Löschung für Betroffenenrechte"),
         new(BackupManage, "System", "Backups verwalten"),
         new(SettingsManage, "System", "Firmendaten und Einstellungen ändern"),
         new(AuditRead, "System", "Audit-Log einsehen"),

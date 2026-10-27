@@ -207,6 +207,35 @@ public sealed class PushSettingsRow : IVersionedEntity
     public DateTimeOffset UpdatedAt { get; set; }
 }
 
+/// <summary>Abweichende Zustellung eines Ereignisses für einen Benutzer (ohne Zeile gilt „Postfach und Push“).</summary>
+public sealed class NotificationPreference
+{
+    public Guid UserId { get; private set; }
+    public string Event { get; private set; } = string.Empty;
+    public NotificationDelivery Delivery { get; private set; }
+    public DateTimeOffset UpdatedAt { get; private set; }
+
+    public static NotificationPreference Create(Guid userId, string eventCode, NotificationDelivery delivery, DateTimeOffset now) =>
+        new() { UserId = userId, Event = eventCode, Delivery = delivery, UpdatedAt = now };
+
+    public void Set(NotificationDelivery delivery, DateTimeOffset now)
+    {
+        Delivery = delivery;
+        UpdatedAt = now;
+    }
+}
+
+internal sealed class NotificationPreferenceConfiguration : IEntityTypeConfiguration<NotificationPreference>
+{
+    public void Configure(EntityTypeBuilder<NotificationPreference> builder)
+    {
+        builder.ToTable("notification_preferences");
+        builder.HasKey(p => new { p.UserId, p.Event });
+        builder.Property(p => p.Event).HasMaxLength(50);
+        builder.Property(p => p.Delivery).HasConversion<string>().HasMaxLength(10);
+    }
+}
+
 /// <summary>Links nur als relative Pfade der eigenen Oberfläche (kein offener Weiterleiter, keine fremden Adressen).</summary>
 public static class NotificationLinks
 {

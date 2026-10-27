@@ -21,14 +21,19 @@ internal sealed class CrewAudience(EstrichOneDbContext db) : INotificationAudien
     }
 }
 
-/// <summary>Benachrichtigt die eingeplanten Mitarbeiter, wenn ihr Plan freigegeben oder nach Änderungen erneut freigegeben wird.</summary>
+/// <summary>
+/// Benachrichtigt die eingeplanten Mitarbeiter, wenn ihr Plan freigegeben wird (gebündelt: eine Nachricht je Person und Freigabe).
+/// Bei einer erneuten Freigabe nur die Personen, deren Einsätze sich seit der letzten Freigabe geändert haben oder neu sind.
+/// </summary>
 internal static class PlanningNotifications
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
-    public static async Task ReleasedAsync(PlanningService planning, INotifier notifier, DateOnly from, DateOnly to, bool update,
-        CancellationToken cancellationToken)
+    /// <param name="previous">Einsätze (ID → Version) der vorigen Freigabe; <c>null</c> = erste Freigabe.</param>
+    public static async Task ReleasedAsync(PlanningService planning, INotifier notifier, DateOnly from, DateOnly to,
+        IReadOnlyDictionary<Guid, long>? previous, CancellationToken cancellationToken)
     {
+        var update = previous is not null;
         var range = await planning.RangeAsync(from, to, null, cancellationToken);
         var byPerson = range.Assignments
             .SelectMany(a => a.People.Select(p => (p.Id, Assignment: a)))
@@ -36,7 +41,13 @@ internal static class PlanningNotifications
         var period = from == to ? from.ToString("ddd, dd.MM.", German) : $"{from.ToString("dd.MM.", German)}–{to.ToString("dd.MM.", German)}";
         foreach (var person in byPerson)
         {
-            var items = person.OrderBy(a => a.Day).ThenBy(a => a.Sequence).ToList();
+            var items = person.OrderBy(a => a.Day).ThenBy(a => a.Sequence)
+                .Where(a => previous is null || !previous.TryGetValue(a.Id, out var version) || version != a.Version).ToList();
+            if (items.Count == 0)
+            {
+                continue; // Für diese Person hat sich nichts geändert.
+            }
+
             var lines = items.Take(3).Select(a => (from == to ? string.Empty : a.Day.ToString("ddd dd.MM.", German) + ": ") + a.BauakteTitle).ToList();
             if (items.Count > 3)
             {
@@ -48,7 +59,8 @@ internal static class PlanningNotifications
                 update ? $"Plan geändert: {period}" : $"Plan freigegeben: {period}",
                 string.Join("\n", lines),
                 $"/planung/wer-faehrt-wohin?tag={items[0].Day:yyyy-MM-dd}",
-                "plan", null, update ? NotificationUrgency.High : NotificationUrgency.Normal), cancellationToken);
+                "plan", null, update ? NotificationUrgency.High : NotificationUrgency.Normal,
+                Event: update ? NotificationEvents.PlanChanged : NotificationEvents.PlanReleased), cancellationToken);
         }
     }
 }

@@ -232,7 +232,7 @@ internal static class OfficeEndpoints
 
     private static async Task<Results<Created<NoteDto>, Ok<NoteDto>, ProblemHttpResult>> CreateNoteAsync(
         Guid id, CreateNoteRequest request, IBauakteAccess access, IBauakteHistory history, ICurrentUser currentUser, EstrichOneDbContext db,
-        CancellationToken cancellationToken)
+        IBauakteReportSource bauakten, Notifications.Exports.INotifier notifier, CancellationToken cancellationToken)
     {
         if (!await access.CanReadAsync(id, cancellationToken))
         {
@@ -261,6 +261,15 @@ internal static class OfficeEndpoints
         db.Add(note);
         history.Record(id, BauakteHistoryActions.NoteAdded);
         await db.SaveChangesAsync(cancellationToken);
+
+        // Team der Bauakte: Hinweis ohne Notiztext (kann sensible Inhalte enthalten). Ein Eintrag je Bauakte und Tag.
+        var info = await bauakten.GetAsync(id, cancellationToken);
+        var author = await db.Set<User>().AsNoTracking().Where(u => u.Id == currentUser.UserId).Select(u => u.DisplayName).SingleOrDefaultAsync(cancellationToken);
+        await notifier.NotifyAsync(await bauakten.TeamUserIdsAsync(id, cancellationToken), new Notifications.Exports.NotificationRequest(
+            Notifications.Exports.NotificationCategory.Bauakte, $"Neue Notiz von {author ?? "einem Kollegen"}",
+            info is null ? null : $"{info.Number} {info.Title}".Trim(), $"/bauakten/{id}", "bauakte", id,
+            DedupKey: $"note:{id}:{DateOnly.FromDateTime(DateTime.UtcNow):yyyyMMdd}:{currentUser.UserId:N}",
+            Event: Notifications.Exports.NotificationEvents.BauakteComment), cancellationToken);
         return TypedResults.Created($"/api/v1/bauakten/{id}/notes", NoteDto.From(note));
     }
 

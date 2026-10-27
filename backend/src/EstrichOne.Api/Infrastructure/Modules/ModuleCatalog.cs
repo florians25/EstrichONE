@@ -4,6 +4,7 @@ using EstrichOne.Api.Modules.Audit;
 using EstrichOne.Api.Modules.Backup;
 using EstrichOne.Api.Modules.Bauakten;
 using EstrichOne.Api.Modules.Calls;
+using EstrichOne.Api.Modules.Chat;
 using EstrichOne.Api.Modules.Contacts;
 using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Documentation;
@@ -44,6 +45,7 @@ public static class ModuleCatalog
         new SyncModule(),
         new NoticesModule(),
         new NotificationsModule(),
+        new ChatModule(),
         new BackupModule(),
         new MailModule(),
         new ArchiveModule(),

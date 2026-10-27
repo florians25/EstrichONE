@@ -378,7 +378,8 @@ internal static class HrEndpoints
 
     private static async Task<Results<Ok<AbsenceRequestView>, ProblemHttpResult>> DecideAsync(
         Guid id, DecideAbsenceRequest request, EstrichOneDbContext db, HrService hr, IUserPermissions permissions, ICurrentUser currentUser,
-        IMailService mail, IOptions<EstrichOneOptions> options, TimeProvider clock, CancellationToken cancellationToken)
+        IMailService mail, IOptions<EstrichOneOptions> options, TimeProvider clock, Notifications.Exports.INotifier notifier,
+        CancellationToken cancellationToken)
     {
         var item = await db.Set<AbsenceRequest>().SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
         if (item is null)
@@ -406,6 +407,12 @@ internal static class HrEndpoints
 
         item.Decide(request.Approve, request.Comment, currentUser.UserId, clock.GetUtcNow(), absenceId);
         await db.SaveChangesAsync(cancellationToken);
+
+        // Postfach/Push: nur Zeitraum und Ergebnis, nie der Kommentar.
+        var period = $"{item.From.ToString("dd.MM.", CultureInfo.GetCultureInfo("de-DE"))} – {item.To.ToString("dd.MM.yyyy", CultureInfo.GetCultureInfo("de-DE"))}";
+        await notifier.NotifyAsync([item.UserId], new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Absence,
+            request.Approve ? "Urlaubsantrag genehmigt" : "Urlaubsantrag abgelehnt", period, "/personal/urlaub", "absenceRequest", item.Id,
+            Event: Notifications.Exports.NotificationEvents.AbsenceDecided), cancellationToken);
 
         // Benachrichtigung an den Mitarbeiter (nur wenn ein E-Mail-Konto eingerichtet ist).
         var user = await db.Set<User>().AsNoTracking().SingleAsync(u => u.Id == item.UserId, cancellationToken);

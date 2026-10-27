@@ -21,8 +21,17 @@ public enum NotificationCategory
     /// <summary>Frist (fällige Aufgabe).</summary>
     Deadline,
 
-    /// <summary>System (Testnachricht, Wartung).</summary>
+    /// <summary>System (Testnachricht, Wartung, Backup- und Archivstörung).</summary>
     System,
+
+    /// <summary>Neue Chatnachricht (Modul Chat).</summary>
+    Chat,
+
+    /// <summary>Aufgabe oder Mangel zugewiesen.</summary>
+    Work,
+
+    /// <summary>Urlaubsantrag entschieden.</summary>
+    Absence,
 }
 
 public enum NotificationUrgency
@@ -38,6 +47,7 @@ public enum NotificationUrgency
 /// </summary>
 /// <param name="Link">Relativer Pfad der Weboberfläche, z. B. <c>/bauakten/{id}</c> (Apps leiten daraus den Deep Link ab).</param>
 /// <param name="DedupKey">Gleicher Schlüssel für denselben Benutzer erzeugt keine zweite Benachrichtigung (z. B. Fristen).</param>
+/// <param name="Event">Ereignis aus <see cref="NotificationEvents"/> – danach richtet sich, ob der Empfänger es abbestellt hat.</param>
 public sealed record NotificationRequest(
     NotificationCategory Category,
     string Title,
@@ -46,7 +56,8 @@ public sealed record NotificationRequest(
     string? ObjectType = null,
     Guid? ObjectId = null,
     NotificationUrgency Urgency = NotificationUrgency.Normal,
-    string? DedupKey = null);
+    string? DedupKey = null,
+    string? Event = null);
 
 /// <summary>Benachrichtigungen ins Postfach legen und (falls eingerichtet) als Push zustellen.</summary>
 public interface INotifier
@@ -56,6 +67,89 @@ public interface INotifier
     /// Die handelnde Person selbst wird nicht benachrichtigt. Fehler werden protokolliert, nie geworfen.
     /// </summary>
     Task NotifyAsync(IEnumerable<Guid> userIds, NotificationRequest notification, CancellationToken cancellationToken);
+
+    /// <summary>Einträge eines Benutzers zu einem Objekt als gelesen markieren (z. B. Chat gelesen → Hinweis gelesen).</summary>
+    Task MarkReadAsync(Guid userId, string objectType, Guid objectId, CancellationToken cancellationToken);
+}
+
+/// <summary>Zustellung je Ereignis und Benutzer (Konto → Benachrichtigungen).</summary>
+public enum NotificationDelivery
+{
+    /// <summary>Abbestellt: weder Postfach noch Push.</summary>
+    Off,
+
+    /// <summary>Nur im Postfach (Glocke), keine Pushnachricht.</summary>
+    Inbox,
+
+    /// <summary>Postfach und Pushnachricht.</summary>
+    Push,
+}
+
+/// <param name="AdminOnly">Nur für Administratoren relevant (Backup, Archiv).</param>
+/// <param name="Mandatory">Nicht abbestellbar (z. B. Wartung, Nachrichten aus dem Büro); nur Push lässt sich abschalten.</param>
+public sealed record NotificationEventInfo(string Code, string Group, string Label, string Description, bool AdminOnly = false, bool Mandatory = false);
+
+/// <summary>Ereigniskatalog. Jeder Benutzer kann je Ereignis „aus“, „nur Postfach“ oder „Postfach und Push“ wählen.</summary>
+public static class NotificationEvents
+{
+    public const string BauakteAssigned = "bauakte.assigned";
+    public const string BauakteComment = "bauakte.comment";
+    public const string WorkAssigned = "work.assigned";
+    public const string Deadline = "deadline.due";
+    public const string ApprovalRequested = "approval.requested";
+    public const string ApprovalDecided = "approval.decided";
+    public const string AcceptanceSigned = "acceptance.signed";
+    public const string PlanReleased = "planning.released";
+    public const string PlanChanged = "planning.changed";
+    public const string AbsenceDecided = "absence.decided";
+    public const string TicketUpdated = "ticket.updated";
+    public const string ChatMessage = "chat.message";
+    public const string OfficeMessage = "office.message";
+    public const string MaintenanceAnnounced = "system.maintenance";
+    public const string BackupSucceeded = "backup.succeeded";
+    public const string BackupFailed = "backup.failed";
+    public const string BackupTargetDown = "backup.target_down";
+    public const string ArchiveDown = "archive.down";
+    public const string Test = "system.test";
+
+    public static IReadOnlyList<NotificationEventInfo> All { get; } =
+    [
+        new(BauakteAssigned, "Bauakten", "Bauakte mir zugewiesen", "Sie wurden Mitglied oder zuständig für eine Bauakte."),
+        new(BauakteComment, "Bauakten", "Notiz in meiner Bauakte", "Jemand hat eine Notiz in einer Bauakte geschrieben, in der Sie Mitglied oder zuständig sind."),
+        new(AcceptanceSigned, "Bauakten", "Abnahme unterschrieben", "Ein Abnahmeprotokoll Ihrer Bauakte wurde unterschrieben."),
+        new(WorkAssigned, "Aufgaben", "Aufgabe oder Mangel mir zugewiesen", "Ihnen wurde eine Aufgabe oder ein Mangel zugewiesen."),
+        new(Deadline, "Aufgaben", "Fristen", "Zugewiesene Aufgaben und Mängel sind heute oder morgen fällig oder überfällig."),
+        new(ApprovalRequested, "Freigaben", "Dokument zur Genehmigung", "Ein Dokument wartet auf Ihre Freigabe."),
+        new(ApprovalDecided, "Freigaben", "Genehmigung erteilt oder abgelehnt", "Über Ihre Freigabeanfrage wurde entschieden."),
+        new(PlanReleased, "Planung", "Plan freigegeben", "Ihr Einsatzplan wurde freigegeben (eine Nachricht je Freigabe, gebündelt)."),
+        new(PlanChanged, "Planung", "Planänderung für mich", "Nach der Freigabe haben sich Ihre Einsätze geändert."),
+        new(AbsenceDecided, "Personal", "Urlaubsantrag genehmigt oder abgelehnt", "Ihr Urlaubsantrag wurde entschieden."),
+        new(TicketUpdated, "Support", "Supportticket", "Antwort oder Statusänderung an Ihrem Ticket."),
+        new(ChatMessage, "Chat", "Neue Chatnachricht", "Neue Nachricht in einer Unterhaltung (stumm geschaltete Unterhaltungen ausgenommen)."),
+        new(OfficeMessage, "Büro", "Nachricht aus dem Büro", "Vom Büro gesendete Nachrichten.", Mandatory: true),
+        new(MaintenanceAnnounced, "System", "Wartung angekündigt", "Eine Wartung wurde geplant oder beginnt.", Mandatory: true),
+        new(BackupSucceeded, "System", "Backup erfolgreich", "Kurze Meldung nach jeder erfolgreichen Sicherung.", AdminOnly: true),
+        new(BackupFailed, "System", "Backup fehlgeschlagen", "Eine Sicherung ist fehlgeschlagen.", AdminOnly: true, Mandatory: true),
+        new(BackupTargetDown, "System", "Backup-Server nicht erreichbar", "Das Backup-Ziel ist ausgefallen oder die letzte Sicherung ist zu alt.", AdminOnly: true, Mandatory: true),
+        new(ArchiveDown, "System", "Archiv-Server nicht erreichbar", "Der Archivserver ist ausgefallen oder nicht erreichbar.", AdminOnly: true, Mandatory: true),
+    ];
+
+    public static NotificationEventInfo? Find(string? code) => code is null ? null : All.FirstOrDefault(e => e.Code == code);
+
+    /// <summary>Ereignis für ältere Aufrufer ohne <see cref="NotificationRequest.Event"/>.</summary>
+    public static string Default(NotificationCategory category) => category switch
+    {
+        NotificationCategory.Message => OfficeMessage,
+        NotificationCategory.Ticket => TicketUpdated,
+        NotificationCategory.Approval => ApprovalRequested,
+        NotificationCategory.Planning => PlanReleased,
+        NotificationCategory.Bauakte => BauakteAssigned,
+        NotificationCategory.Deadline => Deadline,
+        NotificationCategory.Chat => ChatMessage,
+        NotificationCategory.Work => WorkAssigned,
+        NotificationCategory.Absence => AbsenceDecided,
+        _ => Test,
+    };
 }
 
 /// <summary>Fälliges mit Frist (z. B. Aufgaben), das die Fristen-Prüfung einmal je Tag meldet.</summary>

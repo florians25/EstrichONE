@@ -7,17 +7,42 @@ nichts bricht ab.
 
 ## Ereignisse
 
-| Ereignis | Empfänger | Kategorie |
-|---|---|---|
-| Antwort/Statusänderung an einem Helpdesk-Ticket | Melder bzw. zuständige Person | `ticket` |
-| Dokumentfreigabe angefordert | zugewiesene Person bzw. alle Mitglieder der Rolle | `approval` (dringend) |
-| Dokumentfreigabe entschieden | anfragende Person | `approval` |
-| Plan freigegeben / erneut freigegeben („Plan geändert“) | alle eingeplanten Mitarbeiter der Tage | `planning` |
-| Zuweisung zu einer Bauakte (Mitglied oder zuständig) | die neu zugewiesene Person | `bauakte` |
-| Frist: zugewiesene Aufgabe/Mangel heute oder morgen fällig, überfällig (höchstens 7 Tage, einmal je Tag) | zugewiesene Person | `deadline` |
-| Nachricht aus dem Büro | ausgewählte Personen, Rollen, Kolonnen oder alle | `message` |
+Jedes Ereignis hat einen festen Code. Jeder Benutzer wählt je Ereignis unter **Konto → Benachrichtigungen**
+„Aus“, „Nur Postfach“ oder „Postfach und Push“ (Standard). Pflicht-Ereignisse lassen sich nicht abbestellen, nur
+die Pushnachricht lässt sich abschalten.
 
-Die handelnde Person selbst wird nie benachrichtigt.
+| Code | Ereignis | Empfänger | Kategorie |
+|---|---|---|---|
+| `bauakte.assigned` | Bauakte zugewiesen (Mitglied oder zuständig) | neu zugewiesene Person | `bauakte` |
+| `bauakte.comment` | Neue Notiz in meiner Bauakte (ohne Notiztext; höchstens eine je Bauakte, Autor und Tag) | Zuständige(r) und Mitglieder | `bauakte` |
+| `acceptance.signed` | Abnahme vom Kunden unterschrieben bzw. abgelehnt | Zuständige(r) und Mitglieder | `bauakte` |
+| `work.assigned` | Aufgabe oder Mangel mir zugewiesen (Web/API; nicht beim Offline-Sync) | zugewiesene Person | `work` |
+| `deadline.due` | Frist: zugewiesene Aufgabe/Mangel heute oder morgen fällig, überfällig (höchstens 7 Tage, einmal je Tag) | zugewiesene Person | `deadline` |
+| `approval.requested` | Dokument zur Genehmigung | zugewiesene Person bzw. alle Mitglieder der Rolle | `approval` (dringend) |
+| `approval.decided` | Genehmigung erteilt oder abgelehnt | anfragende Person | `approval` |
+| `planning.released` | Plan freigegeben (gebündelt: eine Nachricht je Person und Freigabe) | alle eingeplanten Mitarbeiter | `planning` |
+| `planning.changed` | Planänderung für mich nach Freigabe – nur Personen, deren Einsätze neu sind oder sich geändert haben | betroffene Mitarbeiter | `planning` (dringend) |
+| `absence.decided` | Urlaubsantrag genehmigt oder abgelehnt (ohne Kommentar) | antragstellende Person | `absence` |
+| `ticket.updated` | Antwort/Statusänderung an einem Helpdesk-Ticket | Melder bzw. zuständige Person | `ticket` |
+| `chat.message` | Neue Chatnachricht (siehe docs/chat.md; höchstens eine je Unterhaltung und 10 Minuten, solange ungelesen) | Mitglieder (außer stumm geschaltet) | `chat` |
+| `office.message` | Nachricht aus dem Büro (**Pflicht**) | ausgewählte Personen, Rollen, Kolonnen oder alle | `message` |
+| `system.maintenance` | Wartung angekündigt (**Pflicht**) | alle aktiven Benutzer | `system` (dringend) |
+| `backup.succeeded` | Backup erfolgreich (nur Administratoren) | Recht `backup.manage` | `system` |
+| `backup.failed` | Backup fehlgeschlagen (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
+| `backup.target_down` | Backup-Server nicht erreichbar / letzte Sicherung zu alt (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
+| `archive.down` | Archiv-Server nicht erreichbar (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
+
+Die handelnde Person selbst wird nie benachrichtigt. Module übergeben den Code in `NotificationRequest.Event`
+(Katalog `NotificationEvents` in `Modules/Notifications/Exports/INotifier.cs`); die Backup-/Archiv-Ereignisse löst das
+Backup-Modul aus (docs/backup.md).
+
+### Abbestellen (je Benutzer)
+| Methode | Pfad | Zweck |
+|---|---|---|
+| GET | `/notifications/preferences` | `items: [{ event, group, label, description, adminOnly, mandatory, delivery }]` – Admin-Ereignisse nur für Benutzer mit `backup.manage` oder `settings.manage` |
+| PUT | `/notifications/preferences` | `{ items: [{ event, delivery }] }` mit `delivery` ∈ `off`, `inbox`, `push`; Pflicht-Ereignis auf `off` → 422 |
+
+„Nur Postfach“ legt den Eintrag an, versendet aber keine Pushnachricht (`pushState: inAppOnly`).
 
 ## API (alle unter `/api/v1`, Anmeldung erforderlich)
 
@@ -34,7 +59,10 @@ Die handelnde Person selbst wird nie benachrichtigt.
 Eintrag: `id, category, urgency (low|normal|high), title, body, link, objectType, objectId, senderName, createdAt, readAt`.
 `link` ist immer ein relativer Pfad der Weboberfläche (z. B. `/bauakten/{id}`, `/it-center/helpdesk/{id}`,
 `/planung/wer-faehrt-wohin?tag=2026-11-03`); Apps bilden daraus ihren Deep Link. `objectType` ∈ `bauakte`, `ticket`,
-`approval`, `plan`, `workItem`.
+`approval`, `plan`, `workItem`, `chat`, `absenceRequest`, `maintenance`. Kategorien: `message`, `ticket`, `approval`,
+`planning`, `bauakte`, `deadline`, `system`, `chat`, `work`, `absence` (Apps sollten unbekannte Werte tolerieren).
+Der Link `/planung/wer-faehrt-wohin?tag=…` bleibt für die Apps erhalten; die Weboberfläche leitet ihn auf die
+Einsatzplanung um (die Seite „Wer fährt wohin“ gibt es im Web nicht mehr).
 
 ### Geräte (Push-Token)
 | Methode | Pfad | Zweck |

@@ -341,7 +341,8 @@ internal static class BauakteEndpoints
         if (bauakte.ResponsibleUserId is { } responsible && responsible != previousResponsible)
         {
             await notifier.NotifyAsync([responsible], new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Bauakte,
-                "Bauakte übernommen – Sie sind zuständig", $"{bauakte.Number} {bauakte.Title}".Trim(), $"/bauakten/{bauakte.Id}", "bauakte", bauakte.Id),
+                "Bauakte übernommen – Sie sind zuständig", $"{bauakte.Number} {bauakte.Title}".Trim(), $"/bauakten/{bauakte.Id}", "bauakte", bauakte.Id,
+            Event: Notifications.Exports.NotificationEvents.BauakteAssigned),
                 cancellationToken);
         }
 

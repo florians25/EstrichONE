@@ -101,7 +101,7 @@ public sealed partial class NoticesModule : IModule
             })
             .WithName("DeleteAdminAnnouncement");
         admin.MapPut("/maintenance", async Task<Results<Ok<MaintenanceWindow>, ValidationProblem>> (MaintenanceWindow window, NoticeStore store,
-                IAuditLog audit, ICurrentUser current, EstrichOneDbContext db, CancellationToken ct) =>
+                IAuditLog audit, ICurrentUser current, EstrichOneDbContext db, Notifications.Exports.INotifier notifier, CancellationToken ct) =>
             {
                 var doc = store.Instance with { Maintenance = window with { Message = string.IsNullOrWhiteSpace(window.Message) ? null : window.Message.Trim() } };
                 var errors = Validate(doc);
@@ -116,6 +116,18 @@ public sealed partial class NoticesModule : IModule
                     ["startsAt"] = window.StartsAt.ToString("O"), ["endsAt"] = window.EndsAt?.ToString("O"), ["adminsMayWork"] = window.AdminsMayWork.ToString(),
                 });
                 await db.SaveChangesAsync(ct);
+
+                // Alle aktiven Benutzer: Wartung angekündigt (Pflicht-Ereignis; Push lässt sich je Benutzer abschalten).
+                var german = System.Globalization.CultureInfo.GetCultureInfo("de-DE");
+                var berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
+                var start = TimeZoneInfo.ConvertTime(window.StartsAt, berlin);
+                var end = window.EndsAt is { } e ? TimeZoneInfo.ConvertTime(e, berlin) : (DateTimeOffset?)null;
+                var users = await db.Set<User>().AsNoTracking().Where(u => u.IsActive).Select(u => u.Id).ToListAsync(ct);
+                await notifier.NotifyAsync(users, new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.System,
+                    "Wartung angekündigt: " + start.ToString("ddd, dd.MM. HH:mm", german) + (end is { } x ? " – " + x.ToString("HH:mm", german) : string.Empty) + " Uhr",
+                    doc.Maintenance!.Message ?? "EstrichONE ist in dieser Zeit nicht nutzbar.", null, "maintenance", null, Notifications.Exports.NotificationUrgency.High,
+                    DedupKey: "maintenance:" + window.StartsAt.ToUnixTimeSeconds().ToString(System.Globalization.CultureInfo.InvariantCulture),
+                    Event: Notifications.Exports.NotificationEvents.MaintenanceAnnounced), ct);
                 return TypedResults.Ok(doc.Maintenance!);
             })
             .WithName("SetAdminMaintenance").WithSummary("Wartung der Instanz planen oder sofort starten (Beginn ≤ jetzt)");

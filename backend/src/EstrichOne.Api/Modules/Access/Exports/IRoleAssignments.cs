@@ -15,6 +15,9 @@ public interface IRoleAssignments
     /// <summary>Aktive Benutzer mit einem Recht über irgendeine ihrer Rollen (z. B. Backup-Meldungen an alle mit backup.manage).</summary>
     Task<IReadOnlyList<Guid>> GetUserIdsWithPermissionAsync(string permission, CancellationToken cancellationToken);
 
+    /// <summary>Recht einer Rolle hinzufügen, falls es fehlt (z. B. Ersteinrichtung eines Moduls). Speichert sofort.</summary>
+    Task GrantAsync(Guid roleId, string permission, CancellationToken cancellationToken);
+
     /// <summary>Namen aller Rollen (Anzeige).</summary>
     Task<IReadOnlyDictionary<Guid, string>> GetRoleNamesAsync(CancellationToken cancellationToken);
 

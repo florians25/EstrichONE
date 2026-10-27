@@ -27,7 +27,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
             Notifications.Exports.NotificationCategory.Ticket,
             $"Ticket {ticket.Number}: {(ticket.ReporterUserId == userId ? "neue Antwort" : "Rückmeldung des Melders")}",
             $"{ticket.Title} · {TicketService.StatusName(ticket.Status)}",
-            $"/it-center/helpdesk/{ticket.Id}", "ticket", ticket.Id), cancellationToken);
+            $"/it-center/helpdesk/{ticket.Id}", "ticket", ticket.Id, Event: Notifications.Exports.NotificationEvents.TicketUpdated), cancellationToken);
 
         try
         {
