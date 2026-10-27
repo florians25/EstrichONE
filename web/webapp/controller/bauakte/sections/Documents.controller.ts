@@ -127,7 +127,7 @@ export default class Documents extends SectionBase {
 		const tree = folderTree(this.rows, [...this.extraFolders, ...this.templateFolders]);
 		// Gleiche Gliederung wie die zentrale Dokumentverwaltung: Kunde → Bauakte → Dokumentarten.
 		const data = (this.v().getModel("akte") as JSONModel | undefined)?.getData() as { bauakte?: { number: string | null; title: string }; customer?: { name: string } | null } | undefined;
-		if (data?.bauakte) tree.text = `${data.bauakte.number ?? "neu"} · ${data.bauakte.title}`;
+		if (data?.bauakte) tree.text = `Bauakte ${data.bauakte.number ?? "(neu)"}`;
 		const root = { key: "__customer", text: data?.customer?.name ?? "Ohne Kunde", icon: "sap-icon://customer", count: tree.count, category: null, folder: null, nodes: [tree] };
 		this.doc().setProperty("/tree", [root]);
 		setTimeout(() => (this.v().byId("folderTree") as Tree).expandToLevel(3), 0);

@@ -16,7 +16,7 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<IconTabBar id="tabs" selectedKey="{view>/tab}" expandable="false" class="eoNoTabHeader" stretchContentHeight="false" applyContentPadding="false">
+			<IconTabBar headerMode="Inline" id="tabs" selectedKey="{view>/tab}" expandable="false" class="eoNoTabHeader" stretchContentHeight="false" applyContentPadding="false">
 				<items>
 					<IconTabFilter key="kolonnen" text="Kolonnen" count="{= ${view>/crews}.length }">
 						<Table items="{view>/crews}" busy="{view>/busy}" noDataText="Noch keine Kolonnen." popinLayout="GridSmall">
@@ -45,20 +45,20 @@
 						</Table>
 					</IconTabFilter>
 					<IconTabFilter key="geraete" text="Fahrzeuge und Geräte" count="{= ${view>/resources}.length }">
-						<IconTabBar selectedKey="{view>/deviceTab}" expandable="false" applyContentPadding="false" stretchContentHeight="false" class="eoInnerTabs">
+						<IconTabBar headerMode="Inline" selectedKey="{view>/deviceTab}" expandable="false" applyContentPadding="false" stretchContentHeight="false" class="eoInnerTabs">
 							<items>
-								<IconTabFilter key="fahrzeuge" text="Fahrzeuge" icon="sap-icon://shipping-status" count="{= ${view>/vehicles}.length }">
-								<Table items="{view>/vehicles}" busy="{view>/busy}" noDataText="Noch keine Fahrzeuge." popinLayout="GridSmall">
+								<IconTabFilter key="fahrzeuge" text="Fahrzeuge" count="{= ${view>/vehicles}.length }">
+								<Table contextualWidth="Auto" items="{view>/vehicles}" busy="{view>/busy}" noDataText="Noch keine Fahrzeuge." popinLayout="GridSmall">
 									<columns>
-										<Column width="4rem"><Text text=""/></Column>
+										<Column width="3rem"><Text text=""/></Column>
 										<Column><Text text="Bezeichnung"/></Column>
 										<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kennzeichen"/></Column>
-										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Typ / Führerschein"/></Column>
+										<Column minScreenWidth="70rem" demandPopin="true"><Text text="Typ / Führerschein"/></Column>
 										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="TÜV"/></Column>
-										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Wartung"/></Column>
-										<Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Kolonne"/></Column>
+										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Wartung"/></Column>
+										<Column width="9rem" minScreenWidth="62rem" demandPopin="true"><Text text="Kolonne"/></Column>
 										<Column width="8rem"><Text text="Status"/></Column>
-										<Column width="17rem" hAlign="End"><Text text="Aktionen"/></Column>
+										<Column width="8rem" hAlign="End"><Text text="Aktionen"/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>
@@ -70,27 +70,27 @@
 											<ObjectStatus text="{view>service/text}" state="{view>service/state}"/>
 											<Text text="{view>crewName}"/>
 											<ObjectStatus text="{= ${view>isActive} ? 'Verfügbar' : 'Außer Betrieb' }" state="{= ${view>isActive} ? 'Success' : 'None' }" inverted="true"/>
-											<HBox justifyContent="End">
-												<Button text="{= 'Dokumente (' + ${view>docCount} + ')' }" type="Transparent" press=".onDocuments"/>
-												<Button text="Bearbeiten" type="Transparent" press=".onEditResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
-												<Button text="{= ${view>isActive} ? 'Außer Betrieb' : 'Verfügbar' }" type="Transparent" press=".onToggleResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
+											<HBox class="eoActions">
+												<Button icon="sap-icon://attachment" text="{= ${view>docCount} > 0 ? String(${view>docCount}) : '' }" tooltip="{= 'Dokumente (' + ${view>docCount} + ')' }" type="Transparent" press=".onDocuments"/>
+												<Button icon="sap-icon://edit" tooltip="Bearbeiten" type="Transparent" press=".onEditResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
+												<Button icon="{= ${view>isActive} ? 'sap-icon://status-inactive' : 'sap-icon://status-positive' }" tooltip="{= ${view>isActive} ? 'Außer Betrieb setzen' : 'Wieder verfügbar' }" type="Transparent" press=".onToggleResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
 											</HBox>
 										</ColumnListItem>
 									</items>
 								</Table>
 								</IconTabFilter>
-								<IconTabFilter key="maschinen" text="Pumpen &amp; Maschinen" icon="sap-icon://wrench" count="{= ${view>/machines}.length }">
-								<Table items="{view>/machines}" busy="{view>/busy}" noDataText="Noch keine Pumpen oder Maschinen." popinLayout="GridSmall">
+								<IconTabFilter key="maschinen" text="Pumpen &amp; Maschinen" count="{= ${view>/machines}.length }">
+								<Table contextualWidth="Auto" items="{view>/machines}" busy="{view>/busy}" noDataText="Noch keine Pumpen oder Maschinen." popinLayout="GridSmall">
 									<columns>
-										<Column width="4rem"><Text text=""/></Column>
+										<Column width="3rem"><Text text=""/></Column>
 										<Column><Text text="Bezeichnung"/></Column>
 										<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Seriennummer"/></Column>
-										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Art / Typ"/></Column>
+										<Column minScreenWidth="70rem" demandPopin="true"><Text text="Art / Typ"/></Column>
 										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Prüfung"/></Column>
-										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Wartung"/></Column>
-										<Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Kolonne"/></Column>
+										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Wartung"/></Column>
+										<Column width="9rem" minScreenWidth="62rem" demandPopin="true"><Text text="Kolonne"/></Column>
 										<Column width="8rem"><Text text="Status"/></Column>
-										<Column width="17rem" hAlign="End"><Text text="Aktionen"/></Column>
+										<Column width="8rem" hAlign="End"><Text text="Aktionen"/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>
@@ -102,10 +102,10 @@
 											<ObjectStatus text="{view>service/text}" state="{view>service/state}"/>
 											<Text text="{view>crewName}"/>
 											<ObjectStatus text="{= ${view>isActive} ? 'Verfügbar' : 'Außer Betrieb' }" state="{= ${view>isActive} ? 'Success' : 'None' }" inverted="true"/>
-											<HBox justifyContent="End">
-												<Button text="{= 'Dokumente (' + ${view>docCount} + ')' }" type="Transparent" press=".onDocuments"/>
-												<Button text="Bearbeiten" type="Transparent" press=".onEditResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
-												<Button text="{= ${view>isActive} ? 'Außer Betrieb' : 'Verfügbar' }" type="Transparent" press=".onToggleResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
+											<HBox class="eoActions">
+												<Button icon="sap-icon://attachment" text="{= ${view>docCount} > 0 ? String(${view>docCount}) : '' }" tooltip="{= 'Dokumente (' + ${view>docCount} + ')' }" type="Transparent" press=".onDocuments"/>
+												<Button icon="sap-icon://edit" tooltip="Bearbeiten" type="Transparent" press=".onEditResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
+												<Button icon="{= ${view>isActive} ? 'sap-icon://status-inactive' : 'sap-icon://status-positive' }" tooltip="{= ${view>isActive} ? 'Außer Betrieb setzen' : 'Wieder verfügbar' }" type="Transparent" press=".onToggleResource" visible="{= ${session>/permissions/planning.manage} === true }"/>
 											</HBox>
 										</ColumnListItem>
 									</items>

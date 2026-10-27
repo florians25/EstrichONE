@@ -13,10 +13,12 @@
 		</f:title>
 		<f:header>
 			<f:DynamicPageHeader pinnable="false">
-				<FlexBox class="eoTiles" items="{view>/kpis}">
-					<GenericTile header="{view>title}" frameType="OneByHalf">
-						<TileContent><NumericContent value="{view>value}" icon="{view>icon}" valueColor="{view>color}" withMargin="false"/></TileContent>
-					</GenericTile>
+				<FlexBox class="eoKpiBar" items="{view>/kpis}" wrap="Wrap" renderType="Bare">
+					<VBox class="eoKpiItem" renderType="Bare">
+						<Label text="{view>title}" wrapping="true"/>
+						<ObjectNumber number="{view>value}" class="eoKpiFigure"
+							state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'None' }"/>
+					</VBox>
 				</FlexBox>
 			</f:DynamicPageHeader>
 		</f:header>
@@ -24,7 +26,7 @@
 			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Bestellungen in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
 				<headerToolbar>
 					<OverflowToolbar>
-						<Title text="{= ${view>/items}.length } Bestellungen" level="H2"/>
+						<Title text="{= ${view>/items}.length === 1 ? '1 Bestellung' : ${view>/items}.length + ' Bestellungen' }" level="H2"/>
 						<ToolbarSpacer/>
 						<SegmentedButton selectedKey="{view>/view}" selectionChange=".onRefresh">
 							<items>

@@ -312,7 +312,7 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 		case "emails":
 			return listField(id, field, initial, notify);
 				case "switch": {
-			const c = new Switch(id, { state: !!initial, customTextOn: "Ja", customTextOff: "Nein" });
+			const c = new Switch(id, { state: !!initial, customTextOn: " ", customTextOff: " " });
 			c.attachChange(() => notify(c.getState()));
 			return { field, control: c, read: () => c.getState(), write: (v) => c.setState(!!v) };
 		}

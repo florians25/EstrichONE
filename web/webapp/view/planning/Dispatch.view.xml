@@ -29,7 +29,7 @@
 					<core:InvisibleText id="dispatchDayLabel" text="Tag"/>
 					<Button icon="sap-icon://navigation-right-arrow" tooltip="Nächster Tag" press=".onNext"/>
 					<ToolbarSpacer/>
-					<SearchField value="{view>/search}" liveChange=".onSearch" placeholder="Baustelle oder Kolonne suchen" width="16rem"/>
+					<SearchField value="{view>/search}" liveChange=".onSearch" placeholder="Baustelle oder Kolonne suchen" width="19rem"/>
 				</FlexBox>
 			</f:DynamicPageHeader>
 		</f:header>

@@ -1,6 +1,6 @@
 <mvc:View controllerName="estrichone.controller.Start" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:l="sap.ui.layout"
 	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="sapUiNoContentPadding">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title id="startTitle" text="{view>/greeting}" level="H1" wrapping="true"/></f:heading>
@@ -13,31 +13,32 @@
 		</f:title>
 		<f:header>
 			<f:DynamicPageHeader pinnable="false">
-				<FlexBox class="eoTiles" items="{view>/kpis}">
-					<GenericTile header="{view>title}" subheader="{view>subtitle}" frameType="OneByOne" press=".onTile" tooltip="{view>title}"
-						state="{= ${view>loading} ? 'Loading' : 'Loaded' }">
-						<TileContent footer="{view>footer}">
-							<NumericContent value="{view>value}" icon="{view>icon}" withMargin="false" valueColor="{view>color}"/>
-						</TileContent>
-					</GenericTile>
+				<!-- Kennzahlen als ruhige Kopf-Fakten: Beschriftung, große Zahl (anklickbar), kurzer Hinweis -->
+				<FlexBox class="eoKpiBar" items="{view>/kpis}" wrap="Wrap" renderType="Bare">
+					<VBox class="eoKpiItem" renderType="Bare">
+						<Label text="{view>title}" wrapping="true"/>
+						<ObjectStatus text="{view>value}" active="true" press=".onTile" class="eoKpiFigure"
+							state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'Information' }"
+							tooltip="{view>title} öffnen"/>
+						<Text text="{= ${view>footer} || ${view>subtitle} || '' }" class="eoKpiHint" visible="{= !!(${view>footer} || ${view>subtitle}) }" wrapping="true"/>
+					</VBox>
 				</FlexBox>
 			</f:DynamicPageHeader>
 		</f:header>
 		<f:content>
-			<l:Grid defaultSpan="XL8 L8 M12 S12" class="sapUiSmallMarginTop" containerQuery="true">
-				<VBox items="{view>/groups}">
-					<layoutData><l:GridData span="XL8 L8 M12 S12"/></layoutData>
-					<Panel headerText="{view>label}" class="sapUiSmallMarginBottom" backgroundDesign="Solid">
-						<FlexBox class="eoTiles" items="{path: 'view>tiles', templateShareable: false}">
-							<GenericTile header="{view>label}" frameType="OneByOne" press=".onTile" ariaLabel="{view>label}" sizeBehavior="Small">
-								<TileContent><ImageContent src="{view>icon}"/></TileContent>
-							</GenericTile>
-						</FlexBox>
-					</Panel>
-				</VBox>
-				<VBox>
-					<layoutData><l:GridData span="XL4 L4 M12 S12"/></layoutData>
-					<Panel headerText="{i18n>start.today}" visible="{= ${session>/permissions/planning.read} === true }" backgroundDesign="Solid" class="sapUiSmallMarginBottom">
+			<FlexBox class="eoStartGrid" renderType="Bare">
+				<Panel headerText="Schnellzugriff" backgroundDesign="Solid" class="eoCardPanel">
+					<FlexBox items="{view>/groups}" wrap="Wrap" class="eoQuickGroups" renderType="Bare">
+						<VBox class="eoQuickGroup" renderType="Bare">
+							<Title text="{view>label}" level="H3" titleStyle="H6" class="eoQuickTitle"/>
+							<VBox items="{path: 'view>tiles', templateShareable: false}" renderType="Bare">
+								<Button text="{view>label}" icon="{view>icon}" type="Transparent" press=".onTile" class="eoQuickLink"/>
+							</VBox>
+						</VBox>
+					</FlexBox>
+				</Panel>
+				<VBox renderType="Bare" class="eoSideStack">
+					<Panel visible="{= ${session>/permissions/planning.read} === true }" backgroundDesign="Solid" class="eoCardPanel">
 						<headerToolbar>
 							<OverflowToolbar style="Clear">
 								<Title text="{i18n>start.today}" level="H2"/>
@@ -45,35 +46,42 @@
 								<Link text="{i18n>start.weekPlan}" href="/planung"/>
 							</OverflowToolbar>
 						</headerToolbar>
-						<List items="{view>/assignments}" noDataText="{i18n>start.nothingToday}" busy="{view>/busy}">
-							<ObjectListItem title="{view>bauakteNumber} {view>bauakteTitle}" number="{path: 'view>startTime', formatter: 'fmt.time'}"
-								type="Navigation" press=".onAssignment" icon="{path: 'view>kind', formatter: 'fmt.kindIcon'}">
-								<attributes>
-									<ObjectAttribute text="{view>activity}"/>
-									<ObjectAttribute text="{view>crewName}"/>
-								</attributes>
-								<firstStatus><ObjectStatus text="{= ${view>warnings}.length ? ${view>warnings}.length + ' Hinweise' : '' }" state="Warning"/></firstStatus>
-							</ObjectListItem>
+						<List items="{view>/assignments}" noDataText="{i18n>start.nothingToday}" busy="{view>/busy}" showSeparators="Inner" class="eoCompactList">
+							<StandardListItem title="{view>bauakteNumber} {view>bauakteTitle}" description="{view>activity} · {view>crewName}"
+								info="{path: 'view>startTime', formatter: 'fmt.time'}" infoState="{= ${view>warnings}.length ? 'Warning' : 'None' }"
+								type="Navigation" press=".onAssignment" icon="{path: 'view>kind', formatter: 'fmt.kindIcon'}" wrapping="true"
+								tooltip="{= ${view>warnings}.length ? ${view>warnings}.length + ' Hinweise' : '' }"/>
 						</List>
 					</Panel>
-					<Panel headerText="Warten auf Genehmigung" visible="{= ${view>/approvals}.length > 0 }" backgroundDesign="Solid" class="sapUiSmallMarginBottom">
-						<List items="{view>/approvals}">
+					<Panel visible="{= ${view>/approvals}.length > 0 }" backgroundDesign="Solid" class="eoCardPanel">
+						<headerToolbar>
+							<OverflowToolbar style="Clear">
+								<Title text="Warten auf Genehmigung" level="H2"/>
+								<ToolbarSpacer/>
+								<Link text="Alle Freigaben" href="/dokumente?reiter=freigaben"/>
+							</OverflowToolbar>
+						</headerToolbar>
+						<List items="{view>/approvals}" showSeparators="Inner" class="eoCompactList">
 							<StandardListItem title="{view>fileName}" description="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} + ' · von ' + ${view>requestedByName} }"
-								icon="sap-icon://approvals" type="Navigation" press=".onApproval"/>
+								icon="sap-icon://approvals" type="Navigation" press=".onApproval" wrapping="true"/>
 						</List>
-						<Link text="Alle Freigaben" href="/dokumente?reiter=freigaben" class="sapUiTinyMarginTop"/>
 					</Panel>
-					<Panel headerText="{i18n>start.backup}" visible="{= ${session>/permissions/backup.manage} === true &amp;&amp; !!${view>/backup} }" backgroundDesign="Solid">
-						<MessageStrip visible="{= !!${view>/monitor} }" type="{view>/monitor/type}" text="{view>/monitor/text}" showIcon="true" class="sapUiTinyMarginBottom"
-							/>
-						<FlexBox alignItems="Center" wrap="Wrap" class="eoSystemItem">
+					<Panel visible="{= ${session>/permissions/backup.manage} === true &amp;&amp; !!${view>/backup} }" backgroundDesign="Solid" class="eoCardPanel">
+						<headerToolbar>
+							<OverflowToolbar style="Clear">
+								<Title text="{i18n>start.backup}" level="H2"/>
+								<ToolbarSpacer/>
+								<Link text="{i18n>common.open}" href="/system/sicherung"/>
+							</OverflowToolbar>
+						</headerToolbar>
+						<VBox class="eoPanelBody" renderType="Bare">
 							<ObjectStatus text="{view>/backup/text}" state="{view>/backup/state}" icon="sap-icon://upload-to-cloud"/>
-							<Text text="{view>/backup/detail}"/>
-							<Link text="{i18n>common.open}" href="/system/sicherung"/>
-						</FlexBox>
+							<Text text="{view>/backup/detail}" class="eoMuted"/>
+							<MessageStrip visible="{= !!${view>/monitor} }" type="{view>/monitor/type}" text="{view>/monitor/text}" showIcon="true" class="sapUiSmallMarginTop"/>
+						</VBox>
 					</Panel>
 				</VBox>
-			</l:Grid>
+			</FlexBox>
 		</f:content>
 	</f:DynamicPage>
 </mvc:View>

@@ -35,7 +35,7 @@
 						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Rollen"/></Column>
 						<Column width="7rem"><Text text="Status"/></Column>
 						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Letzte Anmeldung"/></Column>
-						<Column width="22rem" hAlign="End"><Text text="Aktionen"/></Column>
+						<Column width="13rem" hAlign="End"><Text text="Aktionen"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem>
@@ -47,11 +47,11 @@
 							<Text text="{view>roleText}"/>
 							<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Gesperrt' }" state="{= ${view>isActive} ? 'Success' : 'Error' }" inverted="true"/>
 							<Text text="{path: 'view>lastLoginAt', formatter: 'fmt.dateTime'}" class="eoTabular"/>
-							<HBox justifyContent="End" wrap="Wrap">
+							<HBox class="eoActions">
 								<Button text="Bearbeiten" type="Transparent" press=".onEdit"/>
-								<Button text="Passwort zurücksetzen" icon="sap-icon://key" type="Transparent" press=".onReset"/>
-								<Button text="Sperren" icon="sap-icon://locked" type="Transparent" press=".onLock" visible="{view>isActive}"/>
-								<Button text="Entsperren" icon="sap-icon://unlocked" type="Transparent" press=".onUnlock" visible="{= !${view>isActive} }"/>
+								<Button icon="sap-icon://key" tooltip="Passwort zurücksetzen" type="Transparent" press=".onReset"/>
+								<Button icon="sap-icon://locked" tooltip="Sperren" type="Transparent" press=".onLock" visible="{view>isActive}"/>
+								<Button icon="sap-icon://unlocked" tooltip="Entsperren" type="Transparent" press=".onUnlock" visible="{= !${view>isActive} }"/>
 							</HBox>
 						</ColumnListItem>
 					</items>

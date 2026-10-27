@@ -20,7 +20,7 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<VBox height="100%" renderType="Bare" class="eoTeamPlanner">
+			<VBox renderType="Bare" class="eoTeamPlanner">
 				<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiTinyMarginBottom"/>
 				<MessageStrip text="{view>/conflictText}" type="Warning" showIcon="true" visible="{= ${view>/conflicts}.length > 0 }" class="sapUiTinyMarginBottom">
 					<link><Link text="Anzeigen" press=".onConflicts"/></link>
@@ -28,7 +28,7 @@
 				<PlanningCalendar id="pc" startDate="{view>/startDate}" viewKey="{view>/viewKey}" rows="{path: 'view>/rows', templateShareable: false}"
 					appointmentsVisualization="Filled" showWeekNumbers="true" firstDayOfWeek="1" stickyHeader="true" showEmptyIntervalHeaders="false"
 					groupAppointmentsMode="Expanded" busy="{view>/busy}" busyIndicatorDelay="200" appointmentSelect=".onSelect" startDateChange=".onStartDateChange"
-					viewChange=".onViewChange" intervalSelect=".onInterval" rowHeaderPress=".onRowHeader" height="100%" class="eoPlanningCalendar"
+					viewChange=".onViewChange" intervalSelect=".onInterval" rowHeaderPress=".onRowHeader" class="eoPlanningCalendar"
 					noDataText="Keine Kolonnen bzw. Mitarbeiter – unter „Kolonnen und Geräte“ anlegen.">
 					<toolbarContent>
 						<SegmentedButton selectedKey="{view>/rowsMode}" selectionChange=".onRowsMode">

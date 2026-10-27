@@ -5,7 +5,7 @@
 		headerContentPinnable="true" toggleHeaderOnTitleClick="true" navigate=".onSectionNavigate" showEditHeaderButton="false"
 		sectionTitleLevel="H2" enableLazyLoading="false">
 		<uxap:headerTitle>
-			<uxap:ObjectPageDynamicHeaderTitle id="headerTitle">
+			<uxap:ObjectPageDynamicHeaderTitle id="headerTitle" areaShrinkRatio="3:1:0.3">
 				<uxap:breadcrumbs>
 					<Breadcrumbs currentLocationText="{= ${akte>/bauakte/number} || 'Neue Bauakte' }">
 						<Link text="{i18n>nav.bauakten}" href="/bauakten"/>
@@ -105,7 +105,7 @@
 				<FlexBox class="eoHeadFields" wrap="Wrap">
 					<VBox class="eoHeadField">
 						<Label text="{i18n>akte.customer}"/>
-						<Link text="{= ${akte>/customer/name} || '–' }" href="/kunden/{akte>/customer/id}" enabled="{= !!${akte>/customer} }" wrapping="false"/>
+						<Link text="{= ${akte>/customer/name} || '–' }" href="/kunden/{akte>/customer/id}" enabled="{= !!${akte>/customer} }" wrapping="true" class="eoClamp2"/>
 					</VBox>
 					<VBox class="eoHeadField eoHeadWide">
 						<Label text="{i18n>akte.site}"/>

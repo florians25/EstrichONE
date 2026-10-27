@@ -125,7 +125,7 @@
 			</IconTabFilter>
 			<!-- Berichte -->
 			<!-- Abnahmen -->
-			<IconTabFilter id="abnahmenTab" key="abnahmen" text="Abnahmen" icon="sap-icon://approvals" count="{dc>/acceptanceCount}">
+			<IconTabFilter id="abnahmenTab" key="abnahmen" text="Abnahmen" count="{dc>/acceptanceCount}">
 				<OverflowToolbar style="Clear">
 					<Title text="Abnahmeprotokolle" level="H3"/>
 					<ToolbarSpacer/>

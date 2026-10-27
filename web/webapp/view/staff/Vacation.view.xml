@@ -23,9 +23,9 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<IconTabBar id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false" busy="{view>/busy}">
+			<IconTabBar headerMode="Inline" id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false" busy="{view>/busy}">
 				<items>
-					<IconTabFilter key="mein" text="Mein Urlaub" icon="sap-icon://person-placeholder">
+					<IconTabFilter key="mein" text="Mein Urlaub">
 						<VBox class="sapUiSmallMargin">
 							<MessageStrip text="Für Ihr Konto ist noch kein Personalstamm angelegt – der Resturlaub wird angezeigt, sobald das Büro ihn anlegt."
 								type="Information" showIcon="true" visible="{= !${view>/me/employeeId} }" class="sapUiSmallMarginBottom"/>
@@ -60,7 +60,7 @@
 							</Table>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="antraege" text="Anträge" icon="sap-icon://approvals" count="{= ${view>/pending}.length }" visible="{view>/can/approve}">
+					<IconTabFilter key="antraege" text="Anträge" count="{= ${view>/pending}.length }" visible="{view>/can/approve}">
 						<VBox class="sapUiSmallMargin">
 							<Table id="pendingTable" items="{view>/pending}" noDataText="Keine offenen Anträge." popinLayout="GridSmall">
 								<headerToolbar>
@@ -93,7 +93,7 @@
 							</Table>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="plan" text="Urlaubsplan" icon="sap-icon://calendar" visible="{view>/can/hrRead}">
+					<IconTabFilter key="plan" text="Urlaubsplan" visible="{view>/can/hrRead}">
 						<VBox class="sapUiSmallMargin">
 							<OverflowToolbar class="eoNoPrint">
 								<Button icon="sap-icon://navigation-left-arrow" tooltip="Vorheriger Monat" press=".onPrevMonth"/>
@@ -129,7 +129,7 @@
 							<Text text="{view>/holidayText}" class="eoMuted sapUiTinyMarginTop"/>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="krank" text="Krankmeldungen" icon="sap-icon://stethoscope" visible="{view>/can/hrManage}" count="{= ${view>/sickNotes}.length }">
+					<IconTabFilter key="krank" text="Krankmeldungen" visible="{view>/can/hrManage}" count="{= ${view>/sickNotes}.length }">
 						<VBox class="sapUiSmallMargin">
 							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In der Planung erscheint nur „abwesend“."
 								type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
@@ -155,7 +155,7 @@
 							</Table>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="fristen" text="Fristen" icon="sap-icon://lateness" visible="{view>/can/hrRead}" count="{= ${view>/reminders}.length }">
+					<IconTabFilter key="fristen" text="Fristen" visible="{view>/can/hrRead}" count="{= ${view>/reminders}.length }">
 						<VBox class="sapUiSmallMargin">
 							<List items="{view>/reminders}" noDataText="Keine Fristen in den nächsten 60 Tagen.">
 								<StandardListItem title="{view>employeeName}" description="{view>text}" info="{path: 'view>date', formatter: 'fmt.date'}"

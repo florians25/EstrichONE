@@ -15,11 +15,11 @@
 			<List id="callList" items="{view>/items}" busy="{view>/busy}" noDataText="Keine Anrufe in dieser Ansicht." growing="true" growingThreshold="100">
 				<headerToolbar>
 					<OverflowToolbar>
-						<Title text="{= ${view>/items}.length } Anrufe" level="H2"/>
+						<Title text="{= ${view>/items}.length === 1 ? '1 Anruf' : ${view>/items}.length + ' Anrufe' }" level="H2"/>
 						<ToolbarSpacer/>
 						<SearchField width="18rem" placeholder="Name, Firma, Telefon, Betreff" search=".onSearch" value="{view>/search}"/>
 						<Label text="Nur fällige Wiedervorlagen" labelFor="onlyDue"/>
-						<Switch id="onlyDue" state="{view>/onlyDue}" change=".onSearch"/>
+						<Switch customTextOn=" " customTextOff=" " id="onlyDue" state="{view>/onlyDue}" change=".onSearch"/>
 					</OverflowToolbar>
 				</headerToolbar>
 				<CustomListItem class="call-row" highlight="{= ${view>followUp} ? (${view>overdue} ? 'Error' : 'Warning') : 'None' }">

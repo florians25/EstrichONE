@@ -24,7 +24,7 @@
 					visible="{= ${session>/permissions/files.upload} === true }">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</Button>
-				<SearchField width="11rem" placeholder="{i18n>docs.search}" liveChange=".onSearch" value="{doc>/query}">
+				<SearchField width="14rem" placeholder="{i18n>docs.search}" liveChange=".onSearch" value="{doc>/query}">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</SearchField>
 			</OverflowToolbar>

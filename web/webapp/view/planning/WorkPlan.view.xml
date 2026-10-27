@@ -18,7 +18,7 @@
 					<SegmentedButton selectedKey="{view>/length}" selectionChange=".onFilter">
 						<items><SegmentedButtonItem key="7" text="7 Tage"/><SegmentedButtonItem key="14" text="14 Tage"/></items>
 					</SegmentedButton>
-					<Switch state="{view>/mine}" change=".onFilter" ariaLabelledBy="mineLabel"/>
+					<Switch customTextOn=" " customTextOff=" " state="{view>/mine}" change=".onFilter" ariaLabelledBy="mineLabel"/>
 					<Label id="mineLabel" text="Nur meine Einsätze"/>
 					<Select selectedKey="{view>/crew}" change=".onFilter" items="{view>/crewOptions}" width="14rem" ariaLabelledBy="crewLabel">
 						<core:Item key="{view>key}" text="{view>text}"/>
@@ -36,7 +36,7 @@
 							</Toolbar>
 						</headerToolbar>
 						<HBox wrap="Wrap" items="{view>absences}" visible="{= ${view>absences}.length > 0 }" class="sapUiTinyMarginBottom">
-							<ObjectStatus text="{view>text}" state="Warning" inverted="true" class="sapUiTinyMarginEnd"/>
+							<ObjectStatus text="{view>text}" state="Warning" icon="sap-icon://general-leave-request" class="sapUiSmallMarginEnd"/>
 						</HBox>
 						<Text text="Keine Einsätze." class="eoMuted" visible="{= ${view>items}.length === 0 }"/>
 						<List items="{view>items}" visible="{= ${view>items}.length > 0 }" showSeparators="Inner">

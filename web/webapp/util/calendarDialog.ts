@@ -130,7 +130,7 @@ export async function openEventDialog(options: { eventId?: string; occurrenceDat
 	const kind = new Select(`${id}-kind`, { width: "100%" });
 	for (const [key, k] of Object.entries(calendarEventKinds)) kind.addItem(new ListItem({ key, text: k.text, icon: k.icon }));
 	kind.setSelectedKey(detail?.kind ?? d?.kind ?? "appointment");
-	const allDay = new Switch(`${id}-allday`, { state: allDayInitial, customTextOn: "Ja", customTextOff: "Nein" });
+	const allDay = new Switch(`${id}-allday`, { state: allDayInitial, customTextOn: " ", customTextOff: " " });
 	const startDay = new DatePicker(`${id}-startday`, { value: day(start), valueFormat: "yyyy-MM-dd", displayFormat: "dd.MM.yyyy", width: "100%" });
 	const startTime = new TimePicker(`${id}-starttime`, { value: clock(start), valueFormat: "HH:mm:ss", displayFormat: "HH:mm", minutesStep: 5, width: "100%", support2400: false });
 	const endDay = new DatePicker(`${id}-endday`, { value: day(end), valueFormat: "yyyy-MM-dd", displayFormat: "dd.MM.yyyy", width: "100%" });

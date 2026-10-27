@@ -48,13 +48,11 @@
 								<SegmentedButtonItem key="mitarbeiter" text="Mitarbeiter" icon="sap-icon://employee"/>
 							</items>
 						</SegmentedButton>
-						<HBox alignItems="Center" visible="{= ${view>/mode} === 'woche' }">
-							<Switch state="{view>/fullWeek}" change=".onFullWeek" ariaLabelledBy="weekLabel" customTextOn=" " customTextOff=" "/>
-							<Label id="weekLabel" text="Mit Wochenende"/>
-						</HBox>
+						<CheckBox text="Wochenende" selected="{view>/fullWeek}" select=".onFullWeek" visible="{= ${view>/mode} === 'woche' }"
+							tooltip="Samstag und Sonntag anzeigen"/>
 					</FlexBox>
 					<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow sapUiTinyMarginTop">
-						<ComboBox selectedKey="{view>/filter/bauakte}" items="{view>/bauakteOptions}" placeholder="Alle Bauakten" width="16rem" selectionChange=".onFilter" change=".onFilter" ariaLabelledBy="fBauakte">
+						<ComboBox selectedKey="{view>/filter/bauakte}" items="{view>/bauakteOptions}" placeholder="Alle Bauakten" width="14rem" selectionChange=".onFilter" change=".onFilter" ariaLabelledBy="fBauakte">
 							<core:Item key="{view>key}" text="{view>text}"/>
 						</ComboBox>
 						<core:InvisibleText id="fBauakte" text="Auftrag"/>
@@ -70,7 +68,7 @@
 							<core:Item key="{view>key}" text="{view>text}"/>
 						</Select>
 						<core:InvisibleText id="fKind" text="Terminart"/>
-						<SearchField value="{view>/filter/search}" liveChange=".onFilter" placeholder="Suche im Plan" width="14rem"/>
+						<SearchField value="{view>/filter/search}" liveChange=".onFilter" placeholder="Suche im Plan" width="12rem"/>
 					</FlexBox>
 				</VBox>
 			</f:DynamicPageHeader>

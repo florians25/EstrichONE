@@ -40,7 +40,7 @@ export function openQuickCall(): void {
 	const notes = new TextArea("quickNotes", { rows: 6, width: "100%", placeholder: "Worum geht es? Was wurde besprochen?" });
 	const customer = customerInput("quickCustomer", null, undefined);
 	const bauakte = bauakteInput("quickBauakte", null, undefined);
-	const followUp = new Switch("quickFollowUp", { customTextOn: "Ja", customTextOff: "Nein" });
+	const followUp = new Switch("quickFollowUp", { customTextOn: " ", customTextOff: " " });
 	const due = new DatePicker("quickDue", { valueFormat: "yyyy-MM-dd", displayFormat: "dd.MM.yyyy", width: "100%" });
 	const strip = new MessageStrip({ type: "Error", showIcon: true, visible: false });
 

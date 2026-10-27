@@ -57,12 +57,12 @@
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column width="7rem"><Text text="{i18n>bauakten.number}"/></Column>
+						<Column width="6rem"><Text text="{i18n>bauakten.number}"/></Column>
 						<Column><Text text="{i18n>bauakten.title}"/></Column>
 						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>bauakten.site}"/></Column>
-						<Column minScreenWidth="Desktop" demandPopin="true" width="11rem"><Text text="{i18n>bauakten.responsible}"/></Column>
-						<Column width="12rem" minScreenWidth="Phone" demandPopin="true"><Text text="{i18n>bauakten.status}"/></Column>
-						<Column minScreenWidth="Desktop" demandPopin="true" width="10rem" hAlign="End"><Text text="{i18n>bauakten.updated}"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true" width="9rem"><Text text="{i18n>bauakten.responsible}"/></Column>
+						<Column width="9.5rem" minScreenWidth="Phone" demandPopin="true"><Text text="{i18n>bauakten.status}"/></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true" width="9rem" hAlign="End"><Text text="{i18n>bauakten.updated}"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem type="Navigation" press=".onOpen" highlight="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}">

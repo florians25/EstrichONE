@@ -41,7 +41,7 @@ export default class Staff extends BaseController {
 		this.items = items ?? [];
 		m.setProperty("/expiring", expiring ?? []);
 		const expired = (expiring ?? []).filter((x) => x.qualification.expired).length;
-		m.setProperty("/expiringText", `${(expiring ?? []).length} Qualifikationen oder Führerscheine laufen in den nächsten 60 Tagen ab${expired ? ` (${expired} bereits abgelaufen)` : ""}.`);
+		m.setProperty("/expiringText", `${(expiring ?? []).length === 1 ? "1 Qualifikation oder Führerschein läuft" : `${(expiring ?? []).length} Qualifikationen oder Führerscheine laufen`} in den nächsten 60 Tagen ab${expired ? ` (${expired} bereits abgelaufen)` : ""}.`);
 		m.setProperty("/busy", false);
 		this.render();
 	}

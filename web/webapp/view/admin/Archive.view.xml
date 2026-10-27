@@ -32,7 +32,7 @@
 					<Label text="Warteschlange"/><Text text="{view>/o/counts/archived} archiviert · {view>/o/counts/pending} wartend · {view>/o/counts/failed} fehlgeschlagen"/>
 				</form:SimpleForm>
 				<form:SimpleForm visible="{view>/o/connected}" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Einstellungen" width="48rem">
-					<Label text="Automatisch archivieren" labelFor="arAuto"/><Switch id="arAuto" state="{view>/settings/autoArchive}" customTextOn="An" customTextOff="Aus"/>
+					<Label text="Automatisch archivieren" labelFor="arAuto"/><Switch id="arAuto" state="{view>/settings/autoArchive}" customTextOn=" " customTextOff=" "/>
 					<Label text="Akten auslagern nach (Monaten)" labelFor="arMonths"/>
 					<VBox>
 						<StepInput id="arMonths" value="{view>/settings/dossierAfterMonths}" min="0" max="240" width="10rem"/>
@@ -62,7 +62,7 @@
 				<items>
 					<ColumnListItem>
 						<Text text="{view>label}"/>
-						<Switch state="{view>enabled}" customTextOn="Ja" customTextOff="Nein"/>
+						<Switch state="{view>enabled}" customTextOn=" " customTextOff=" "/>
 						<StepInput value="{view>retentionYears}" min="1" max="30" width="8rem" enabled="{view>enabled}"/>
 						<Select selectedKey="{view>trigger}" enabled="{view>enabled}" width="100%">
 							<core:Item key="onUpload" text="Sofort nach dem Hochladen"/>

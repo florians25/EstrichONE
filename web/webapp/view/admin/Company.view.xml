@@ -11,7 +11,7 @@
 		<f:content>
 			<IconTabBar id="settingsTabs" selectedKey="{view>/tab}" expandable="false" headerMode="Inline" stretchContentHeight="false" applyContentPadding="true">
 				<items>
-					<IconTabFilter key="firma" text="Firma" icon="sap-icon://building">
+					<IconTabFilter key="firma" text="Firma">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" maxContainerCols="1" width="52rem">
 							<core:Title text="Firmendaten (Briefkopf)"/>
 							<Label text="Firmenname" labelFor="coName" required="true"/><Input id="coName" value="{view>/c/name}" maxLength="200"/>
@@ -34,14 +34,14 @@
 							</VBox>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="bauakte" text="Bauakten" icon="sap-icon://folder-full">
+					<IconTabFilter key="bauakte" text="Bauakten">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Nummernkreis"/>
 							<Label text="Aufbau der Aktennummer" labelFor="setPattern"/>
 							<Input id="setPattern" value="{view>/s/numbering/bauaktePattern}" maxLength="40" valueLiveUpdate="true"
 								description="z. B. {JJJJ}-{NNN} → {view>/patternExample}"/>
 							<core:Title text="Vorgaben für neue Bauakten"/>
-							<Label text="Hinweis „Erstbegehung fehlt“"/><Switch state="{view>/s/bauakte/warnMissingInspection}" customTextOn="Ja" customTextOff="Nein"/>
+							<Label text="Hinweis „Erstbegehung fehlt“"/><Switch state="{view>/s/bauakte/warnMissingInspection}" customTextOn=" " customTextOff=" "/>
 							<Label text="Vorgeschlagene Vorlage" labelFor="setTemplate"/>
 							<Select id="setTemplate" selectedKey="{view>/s/bauakte/defaultTemplateId}" items="{view>/templates}" forceSelection="false">
 								<core:Item key="{view>key}" text="{view>text}"/>
@@ -54,12 +54,12 @@
 								<core:Item key="firstSiteActivity" text="Bei erster Aktivität vor Ort (Foto, Bautagebuch, Erstbegehung)"/>
 								<core:Item key="manual" text="Nur von Hand"/>
 							</Select>
-							<Label text="Nach Abnahme abschließen"/><Switch id="setAutoComplete" state="{view>/s/bauakte/autoCompleteAfterAcceptance}" customTextOn="Ja" customTextOff="Nein"/>
+							<Label text="Nach Abnahme abschließen"/><Switch id="setAutoComplete" state="{view>/s/bauakte/autoCompleteAfterAcceptance}" customTextOn=" " customTextOff=" "/>
 							<Label text="Freigabelink für Kunden gültig" labelFor="setLinkDays"/>
 							<StepInput id="setLinkDays" value="{view>/s/bauakte/acceptanceLinkDays}" min="1" max="60" description="Tage" width="12rem"/>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="dokumente" text="Dokumente und Freigaben" icon="sap-icon://approvals">
+					<IconTabFilter key="dokumente" text="Dokumente und Freigaben">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Freigaben"/>
 							<Label text="Vorgeschlagene Frist" labelFor="setDueDays"/>
@@ -68,13 +68,13 @@
 							<Select id="setRole" selectedKey="{view>/s/approvals/defaultRoleId}" items="{view>/roles}" forceSelection="false">
 								<core:Item key="{view>key}" text="{view>text}"/>
 							</Select>
-							<Label text="Kommentar beim Freigeben verlangen"/><Switch state="{view>/s/approvals/requireCommentOnApprove}" customTextOn="Ja" customTextOff="Nein"/>
+							<Label text="Kommentar beim Freigeben verlangen"/><Switch state="{view>/s/approvals/requireCommentOnApprove}" customTextOn=" " customTextOff=" "/>
 							<core:Title text="Ordner und Dokumentarten"/>
 							<Label text=""/><Link text="Ordnervorlagen und Bauakten-Vorlagen in den Stammdaten pflegen" href="/verwaltung/stammdaten"/>
 							<Label text=""/><Link text="Aufbewahrung im Archiv (Fristen je Dokumentart)" href="/system/archiv"/>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="sitzungen" text="Anmeldung" icon="sap-icon://locked">
+					<IconTabFilter key="sitzungen" text="Anmeldung">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Sitzungen im Browser"/>
 							<Label text="Abmelden nach Leerlauf" labelFor="setIdle"/>
@@ -84,17 +84,17 @@
 							<Label text=""/><Text text="Bei Aktivität verlängert sich die Sitzung von selbst. Läuft sie ab, erscheint ein Anmeldedialog – Eingaben bleiben erhalten." class="eoMuted"/>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="benachrichtigungen" text="Benachrichtigungen" icon="sap-icon://bell">
+					<IconTabFilter key="benachrichtigungen" text="Benachrichtigungen">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="E-Mails (wirksam, sobald ein E-Mail-Konto eingerichtet ist)"/>
-							<Label text="Freigabe angefordert"/><Switch state="{view>/s/notifications/approvalRequested}" customTextOn="Ja" customTextOff="Nein"/>
-							<Label text="Freigabe entschieden"/><Switch state="{view>/s/notifications/approvalDecided}" customTextOn="Ja" customTextOff="Nein"/>
-							<Label text="Helpdesk-Meldungen"/><Switch state="{view>/s/notifications/helpdeskUpdates}" customTextOn="Ja" customTextOff="Nein"/>
-							<Label text="Zugangsbrief neuer Benutzer"/><Switch state="{view>/s/notifications/newUserLetterByEmail}" customTextOn="Ja" customTextOff="Nein"/>
+							<Label text="Freigabe angefordert"/><Switch state="{view>/s/notifications/approvalRequested}" customTextOn=" " customTextOff=" "/>
+							<Label text="Freigabe entschieden"/><Switch state="{view>/s/notifications/approvalDecided}" customTextOn=" " customTextOff=" "/>
+							<Label text="Helpdesk-Meldungen"/><Switch state="{view>/s/notifications/helpdeskUpdates}" customTextOn=" " customTextOff=" "/>
+							<Label text="Zugangsbrief neuer Benutzer"/><Switch state="{view>/s/notifications/newUserLetterByEmail}" customTextOn=" " customTextOff=" "/>
 							<Label text=""/><Link text="E-Mail-Konto einrichten" href="/system/e-mail"/>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="darstellung" text="Darstellung und Karte" icon="sap-icon://palette">
+					<IconTabFilter key="darstellung" text="Darstellung und Karte">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Darstellung (Vorgabe für neue Benutzer)"/>
 							<Label text="Farbschema" labelFor="setTheme"/>
@@ -105,7 +105,7 @@
 							<SegmentedButton id="setDensity" selectedKey="{view>/s/appearance/density}">
 								<items><SegmentedButtonItem key="compact" text="Kompakt"/><SegmentedButtonItem key="cozy" text="Komfortabel (Touch)"/></items>
 							</SegmentedButton>
-							<Label text="Firmenlogo in der Kopfzeile"/><Switch state="{view>/s/appearance/showCompanyLogo}" customTextOn="Ja" customTextOff="Nein"/>
+							<Label text="Firmenlogo in der Kopfzeile"/><Switch state="{view>/s/appearance/showCompanyLogo}" customTextOn=" " customTextOff=" "/>
 							<core:Title text="Karte"/>
 							<Label text="Kachelserver" labelFor="setTiles"/>
 							<Input id="setTiles" value="{view>/s/map/tileUrl}" placeholder="https://tile.openstreetmap.org/{z}/{x}/{y}.png" maxLength="300"/>
@@ -113,11 +113,11 @@
 							<Label text=""/><Text text="Der öffentliche OpenStreetMap-Server ist für geringe Nutzung gedacht. Bei vielen Benutzern einen eigenen oder kommerziellen Kachelserver (HTTPS) eintragen." class="eoMuted"/>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="pdf" text="PDF-Layout" icon="sap-icon://pdf-attachment">
+					<IconTabFilter key="pdf" text="PDF-Layout">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Ausdrucke (Bauakte, Abnahme, Planung, Benutzerbrief)"/>
-							<Label text="Firmenlogo im Kopf"/><Switch state="{view>/s/pdf/showCompanyLogo}" customTextOn="Ja" customTextOff="Nein"/>
-							<Label text="EstrichONE-Logo in der Fußzeile"/><Switch state="{view>/s/pdf/showEstrichOneLogo}" customTextOn="Ja" customTextOff="Nein"/>
+							<Label text="Firmenlogo im Kopf"/><Switch state="{view>/s/pdf/showCompanyLogo}" customTextOn=" " customTextOff=" "/>
+							<Label text="EstrichONE-Logo in der Fußzeile"/><Switch state="{view>/s/pdf/showEstrichOneLogo}" customTextOn=" " customTextOff=" "/>
 							<Label text="Akzentfarbe" labelFor="setAccent"/>
 							<Input id="setAccent" value="{view>/s/pdf/accentColor}" maxLength="7" width="8rem" placeholder="#1F4E79"/>
 							<Label text="Zusätzliche Fußzeile" labelFor="setFooter"/>
@@ -126,15 +126,15 @@
 							<StepInput id="setPhotos" value="{view>/s/pdf/photosPerRow}" min="1" max="3" width="8rem"/>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="module" text="Module" icon="sap-icon://puzzle">
+					<IconTabFilter key="module" text="Module">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
 							<core:Title text="Module ein- und ausschalten"/>
 							<Label text="Material (Material, Lieferanten, Bestellungen)" labelFor="modMaterials"/>
-							<Switch id="modMaterials" state="{view>/s/modules/materials}" customTextOn="An" customTextOff="Aus"/>
+							<Switch id="modMaterials" state="{view>/s/modules/materials}" customTextOn=" " customTextOff=" "/>
 							<Label text=""/><Text text="Abgeschaltete Module verschwinden aus Navigation, Bauakte und Übersichten. Die Daten bleiben erhalten und sind nach dem Einschalten wieder da." class="eoMuted"/>
 						</form:SimpleForm>
 					</IconTabFilter>
-					<IconTabFilter key="system" text="System" icon="sap-icon://it-system">
+					<IconTabFilter key="system" text="System">
 						<List>
 							<StandardListItem title="Sicherung" description="Backup Center, Wiederherstellung" icon="sap-icon://upload-to-cloud" type="Navigation" press=".onLink" custom:path="/system/sicherung" xmlns:custom="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"/>
 							<StandardListItem title="Backup-Ziele" description="Sicherung auf anderer Hardware" icon="sap-icon://it-host" type="Navigation" press=".onLink" custom:path="/system/backup-ziele" xmlns:custom="http://schemas.sap.com/sapui5/extension/sap.ui.core.CustomData/1"/>

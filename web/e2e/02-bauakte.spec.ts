@@ -127,7 +127,7 @@ test('Dokumente: Ablage, Mehrfach-Upload, Umbenennen, Unterordner, Fassungen, Vo
   await folder.getByRole('textbox').fill('Ausschreibung');
   await folder.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByText('Angebote / Ausschreibung (0)')).toBeVisible();
-  await page.locator('.sapMTreeItemBase').filter({ hasText: /Anfrage Familie Kraus, Heizestrich \(/ }).first().click();
+  await page.locator('.sapMTreeItemBase').filter({ hasText: /^Bauakte \S+ \(/ }).first().click();
   const lv = page.getByRole('row').filter({ hasText: 'Leistungsverzeichnis.pdf' });
   await rowMenu(page, lv, 'Verschieben …');
   const move = page.getByRole('dialog', { name: /verschieben/ });

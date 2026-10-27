@@ -5,7 +5,7 @@
 .eoPlanEvent { border-style: dashed; border-left-style: solid; background: var(--sapList_Background); }
 
 /* Teamplaner */
-.eoTeamPlanner { height: 100%; }
+.eoTeamPlanner { min-height: 100%; }
 .eoPlanningCalendar .sapUiCalendarApp { border-radius: var(--sapElement_BorderCornerRadius); }
 
 /* Wer fährt wohin */

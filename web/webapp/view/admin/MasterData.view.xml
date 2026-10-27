@@ -59,7 +59,7 @@
 										<Text text="{view>label}"/>
 										<Text text="{= ${view>shortLabel} || '–' }"/>
 										<Text text="{view>key}" class="eoMuted eoTabular"/>
-										<Switch state="{view>isActive}" change=".onToggleItem" enabled="{view>/canManage}" customTextOn="Ja" customTextOff="Nein"/>
+										<Switch state="{view>isActive}" change=".onToggleItem" enabled="{view>/canManage}" customTextOn=" " customTextOff=" "/>
 										<HBox justifyContent="End">
 											<Button icon="sap-icon://navigation-up-arrow" type="Transparent" tooltip="Nach oben" press=".onMoveItem">
 												<customData><core:CustomData key="dir" value="-1"/></customData>

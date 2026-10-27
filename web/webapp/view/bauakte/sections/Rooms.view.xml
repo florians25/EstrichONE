@@ -1,19 +1,13 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Rooms" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<VBox>
-		<FlexBox wrap="Wrap" class="eoTiles sapUiSmallMarginBottom" alignItems="Center">
-			<GenericTile header="{i18n>rooms.total}" frameType="TwoByHalf" class="eoRoomTotal">
-				<TileContent><NumericContent value="{rm>/total}" scale="m²" withMargin="false" icon="sap-icon://measure"/></TileContent>
-			</GenericTile>
-			<GenericTile header="{i18n>rooms.heated}" frameType="TwoByHalf">
-				<TileContent><NumericContent value="{rm>/heated}" scale="m²" withMargin="false" icon="sap-icon://temperature"/></TileContent>
-			</GenericTile>
-			<GenericTile header="{i18n>rooms.count}" frameType="TwoByHalf">
-				<TileContent footer="{rm>/progress}"><NumericContent value="{rm>/count}" withMargin="false" icon="sap-icon://grid"/></TileContent>
-			</GenericTile>
-			<GenericTile header="{i18n>rooms.volume}" frameType="TwoByHalf">
-				<TileContent footer="{i18n>rooms.volumeHint}"><NumericContent value="{rm>/volume}" scale="m³" withMargin="false" icon="sap-icon://product"/></TileContent>
-			</GenericTile>
+		<FlexBox wrap="Wrap" class="eoKpiBar eoKpiBarInline" renderType="Bare">
+			<VBox class="eoKpiItem" renderType="Bare"><Label text="{i18n>rooms.total}"/><ObjectNumber number="{rm>/total}" unit="m²" class="eoKpiFigure"/></VBox>
+			<VBox class="eoKpiItem" renderType="Bare"><Label text="{i18n>rooms.heated}"/><ObjectNumber number="{rm>/heated}" unit="m²" class="eoKpiFigure"/></VBox>
+			<VBox class="eoKpiItem" renderType="Bare"><Label text="{i18n>rooms.count}"/><ObjectNumber number="{rm>/count}" class="eoKpiFigure"/>
+				<Text text="{rm>/progress}" class="eoKpiHint" visible="{= !!${rm>/progress} }"/></VBox>
+			<VBox class="eoKpiItem" renderType="Bare"><Label text="{i18n>rooms.volume}"/><ObjectNumber number="{rm>/volume}" unit="m³" class="eoKpiFigure"/>
+				<Text text="{i18n>rooms.volumeHint}" class="eoKpiHint"/></VBox>
 		</FlexBox>
 		<Table id="roomTable" items="{path: 'rm>/rooms', sorter: {path: 'sectionName', group: true}}" noDataText="{i18n>rooms.none}"
 			sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">

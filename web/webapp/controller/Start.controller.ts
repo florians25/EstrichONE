@@ -47,7 +47,7 @@ const groups: { label: string; tiles: Tile[] }[] = [
 	] },
 ];
 
-/** Startseite: Kennzahlen, Programmkacheln nach Fachgruppen, heutige Einsätze und Sicherung. @namespace estrichone.controller */
+/** Startseite: Kennzahlen, Schnellzugriff nach Fachgruppen, heutige Einsätze und Sicherung. @namespace estrichone.controller */
 export default class Start extends BaseController {
 	onInit(): void {
 		this.local({ greeting: "", today: "", kpis: [], groups: [], assignments: [] as AssignmentView[], approvals: [], backup: null, busy: false });
@@ -104,7 +104,7 @@ export default class Start extends BaseController {
 			}) : Promise.resolve(),
 			this.has("helpdesk.agent") ? get<TicketSummary[]>("tickets", { filter: "open" }).then((t) => {
 				const blocked = t.filter((x) => x.reporterBlocked).length;
-				set("tickets", String(t.length), blocked ? { footer: `${blocked} können nicht arbeiten`, color: "Critical" } : {});
+				set("tickets", String(t.length), blocked ? { footer: `${blocked} ${blocked === 1 ? "kann" : "können"} nicht arbeiten`, color: "Critical" } : {});
 			}) : Promise.resolve(),
 			this.has("backup.manage") ? get<BackupStatusResponse>("backup/status").then((b) => m.setProperty("/backup", b.lastSuccess
 				? { text: b.healthy ? "Aktuell" : "Veraltet", state: b.healthy ? "Success" : "Warning", detail: `Letzte erfolgreiche Sicherung: ${dateTime(b.lastSuccess.at)}` }

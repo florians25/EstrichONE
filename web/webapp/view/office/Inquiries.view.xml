@@ -14,7 +14,7 @@
 			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Anfragen in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
 				<headerToolbar>
 					<OverflowToolbar>
-						<Title text="{= ${view>/items}.length } Anfragen" level="H2"/>
+						<Title text="{= ${view>/items}.length === 1 ? '1 Anfrage' : ${view>/items}.length + ' Anfragen' }" level="H2"/>
 						<ToolbarSpacer/>
 						<SegmentedButton selectedKey="{view>/tab}" selectionChange=".onTab">
 							<items>

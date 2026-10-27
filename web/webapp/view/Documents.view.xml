@@ -11,9 +11,9 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<IconTabBar id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false">
+			<IconTabBar headerMode="Inline" id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false">
 				<items>
-					<IconTabFilter key="ablage" text="Ablage" icon="sap-icon://documents" count="{view>/facets/total}">
+					<IconTabFilter key="ablage" text="Ablage" count="{view>/facets/total}">
 						<FlexBox alignItems="Start" class="eoDmsLayout">
 							<VBox width="19rem" class="eoDmsFolders">
 								<Title id="dmsTreeTitle" text="Ordner" level="H3" class="sapUiTinyMarginBottom"/>
@@ -45,16 +45,16 @@
 									</Select>
 									<core:InvisibleText id="dmsSort" text="Sortierung"/>
 								</FlexBox>
-								<Table id="docTable" items="{view>/items}" busy="{view>/busy}" growing="true" growingThreshold="50" popinLayout="GridSmall"
+								<Table id="docTable" contextualWidth="Auto" items="{view>/items}" busy="{view>/busy}" growing="true" growingThreshold="50" popinLayout="GridSmall"
 									noDataText="Keine Dokumente in dieser Auswahl.">
 									<columns>
 										<Column><Text text="Dokument"/></Column>
-										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Bauakte"/></Column>
-										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Ablage"/></Column>
-										<Column width="4.5rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Fassung"/></Column>
+										<Column minScreenWidth="50rem" demandPopin="true"><Text text="Bauakte"/></Column>
+										<Column width="9rem" minScreenWidth="40rem" demandPopin="true"><Text text="Ablage"/></Column>
+										<Column width="4.5rem" hAlign="Center" minScreenWidth="56rem" demandPopin="true"><Text text="Fassung"/></Column>
 										<Column width="11rem"><Text text="Freigabe"/></Column>
-										<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Hochgeladen"/></Column>
-										<Column width="8rem" hAlign="End"><Text text=""/></Column>
+										<Column width="10rem" minScreenWidth="62rem" demandPopin="true"><Text text="Hochgeladen"/></Column>
+										<Column width="5.5rem" hAlign="End"><Text text=""/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>
@@ -90,7 +90,7 @@
 							</VBox>
 						</FlexBox>
 					</IconTabFilter>
-					<IconTabFilter key="freigaben" text="Freigaben" icon="sap-icon://approvals" count="{= ${view>/mine}.length }" iconColor="Critical">
+					<IconTabFilter key="freigaben" text="Freigaben" count="{= ${view>/mine}.length }" iconColor="Critical">
 						<Title text="Warten auf meine Freigabe" level="H3" class="sapUiSmallMarginTop sapUiSmallMarginBegin"/>
 						<List items="{view>/mine}" noDataText="Nichts zu tun – keine offenen Freigaben." class="sapUiTinyMarginTop">
 							<CustomListItem>

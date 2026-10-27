@@ -19,7 +19,7 @@
 						</HBox>
 						<ToolbarSpacer/>
 						<Label text="Auch abgeschlossene" labelFor="showAll"/>
-						<Switch id="showAll" state="{view>/all}" change=".onAll"/>
+						<Switch customTextOn=" " customTextOff=" " id="showAll" state="{view>/all}" change=".onAll"/>
 					</OverflowToolbar>
 				</VBox>
 			</l:fixContent>

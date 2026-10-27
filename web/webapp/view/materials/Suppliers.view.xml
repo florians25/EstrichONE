@@ -12,10 +12,10 @@
 			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Noch keine Lieferanten angelegt." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
 				<headerToolbar>
 					<OverflowToolbar>
-						<Title text="{= ${view>/items}.length } Lieferanten" level="H2"/>
+						<Title text="{= ${view>/items}.length === 1 ? '1 Lieferant' : ${view>/items}.length + ' Lieferanten' }" level="H2"/>
 						<ToolbarSpacer/>
 						<Label text="Inaktive anzeigen" labelFor="inactiveSup"/>
-						<Switch id="inactiveSup" state="{view>/inactive}" change=".onInactive"/>
+						<Switch customTextOn=" " customTextOff=" " id="inactiveSup" state="{view>/inactive}" change=".onInactive"/>
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>

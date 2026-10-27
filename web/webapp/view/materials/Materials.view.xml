@@ -15,12 +15,12 @@
 					<OverflowToolbar>
 						<Title text="{= ${view>/shown}.length } Artikel" level="H2"/>
 						<ToolbarSpacer/>
-						<SearchField width="16rem" placeholder="Bezeichnung, Art.-Nr., Lieferant" liveChange=".refresh" value="{view>/search}"/>
+						<SearchField width="19rem" placeholder="Bezeichnung, Art.-Nr., Lieferant" liveChange=".refresh" value="{view>/search}"/>
 						<Select selectedKey="{view>/category}" change=".refresh" items="{view>/categories}" ariaLabelledBy="catLabel">
 							<core:Item key="{view>key}" text="{view>text}"/>
 						</Select>
 						<Label text="Inaktive anzeigen" labelFor="inactive"/>
-						<Switch id="inactive" state="{view>/inactive}" change=".onInactive"/>
+						<Switch customTextOn=" " customTextOff=" " id="inactive" state="{view>/inactive}" change=".onInactive"/>
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>

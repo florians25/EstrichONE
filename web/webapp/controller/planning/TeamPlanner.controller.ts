@@ -204,7 +204,7 @@ export default class TeamPlanner extends BaseController {
 				};
 			});
 			rows.push({
-				key: "none", title: "Einzelne Mitarbeiter", text: "Einsätze und Termine ohne Kolonne", icon: "sap-icon://person-placeholder",
+				key: "none", title: "Einzelne Mitarbeiter", text: "ohne Kolonne", icon: "sap-icon://person-placeholder",
 				appointments: [...assignments.filter((a) => !a.crewId).map((a) => this.assignmentAppt(a)),
 					...events.filter((o) => o.crews.length === 0).map((o) => this.eventAppt(o))],
 				headers: [],
@@ -225,7 +225,7 @@ export default class TeamPlanner extends BaseController {
 		m.setProperty("/conflictText", `${conflicts.length} ${conflicts.length === 1 ? "Einsatz hat" : "Einsätze haben"} Konflikte (Doppelbelegung, Abwesenheit oder Termin zur selben Zeit).`);
 		const { from, to } = this.days();
 		m.setProperty("/subtitle", `${byPeople ? "Mitarbeiter" : "Kolonnen"} · ${from === to ? parseDay(from).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" })
-			: `${parseDay(from).toLocaleDateString("de-DE")} – ${parseDay(to).toLocaleDateString("de-DE")}`} · ${assignments.length} Einsätze, ${(this.range?.appointments ?? []).length} Termine`);
+			: `${parseDay(from).toLocaleDateString("de-DE")} – ${parseDay(to).toLocaleDateString("de-DE")}`} · ${assignments.length} ${assignments.length === 1 ? "Einsatz" : "Einsätze"}, ${(this.range?.appointments ?? []).length} ${(this.range?.appointments ?? []).length === 1 ? "Termin" : "Termine"}`);
 	}
 
 	// ---- Bearbeiten -------------------------------------------------------------------------------------------------

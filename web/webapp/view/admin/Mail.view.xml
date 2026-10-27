@@ -15,7 +15,7 @@
 						<MessageStrip visible="{= ${view>/s/lastTestAt} !== null }" type="{= ${view>/s/lastTestOk} ? 'Success' : 'Error' }" showIcon="true" class="sapUiSmallMargin"
 							text="{= ${view>/s/lastTestOk} ? 'Letzte Testmail erfolgreich.' : 'Letzte Testmail fehlgeschlagen: ' + ${view>/s/lastTestError} }"/>
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="48rem" busy="{view>/busy}">
-							<Label text="E-Mail-Versand" labelFor="mlEnabled"/><Switch id="mlEnabled" state="{view>/s/enabled}" customTextOn="An" customTextOff="Aus"/>
+							<Label text="E-Mail-Versand" labelFor="mlEnabled"/><Switch id="mlEnabled" state="{view>/s/enabled}" customTextOn=" " customTextOff=" "/>
 							<Label text="SMTP-Server" labelFor="mlHost" required="true"/><Input id="mlHost" value="{view>/s/host}" placeholder="z. B. smtp.ionos.de, smtp.office365.com" maxLength="253"/>
 							<Label text="Port" labelFor="mlPort"/><StepInput id="mlPort" value="{view>/s/port}" min="1" max="65535" width="10rem"/>
 							<Label text="Verschlüsselung" labelFor="mlSec"/>
