@@ -484,18 +484,25 @@ struct NoticeLine: View {
     var symbol: String?
     var actionTitle: String?
     var action: (() -> Void)?
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
-        HStack(spacing: Space.s) {
-            Image(systemName: symbol ?? tone.symbol)
-                .font(.subheadline.weight(SymbolWeight.control))
-                .foregroundStyle(tone.foreground)
-                .accessibilityHidden(true)
-            Text(text)
-                .font(Typo.subhead)
-                .foregroundStyle(Theme.textPrimary)
-                .lineLimit(2)
-                .frame(maxWidth: .infinity, alignment: .leading)
+        // Sehr große Schrift: Aktion unter den Text statt daneben.
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xs))
+                                                  : AnyLayout(HStackLayout(spacing: Space.s))
+        layout {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                Image(systemName: symbol ?? tone.symbol)
+                    .font(.subheadline.weight(SymbolWeight.control))
+                    .foregroundStyle(tone.foreground)
+                    .accessibilityHidden(true)
+                Text(text)
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(typeSize.isAccessibilitySize ? nil : 2)
+                    .fixedSize(horizontal: false, vertical: typeSize.isAccessibilitySize)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
             if let actionTitle, let action {
                 Button(actionTitle, action: action)
                     .font(Typo.subheadStrong)
@@ -506,7 +513,7 @@ struct NoticeLine: View {
         }
         .padding(.leading, Space.m)
         .padding(.trailing, actionTitle == nil ? Space.m : Space.s)
-        .padding(.vertical, actionTitle == nil ? Space.s + 2 : 0)
+        .padding(.vertical, actionTitle == nil || typeSize.isAccessibilitySize ? Space.s + 2 : 0)
         .frame(minHeight: Size.minTap)
         .background(tone.background, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
         .accessibilityElement(children: .combine)

@@ -62,8 +62,7 @@ struct RoomEditView: View {
                                          tone: status == .ready ? .success : status == .laid ? .accent : .neutral) { input.status = status }
                         }
                     }
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: Space.s, leading: Space.s, bottom: Space.s, trailing: Space.s))
                 } header: {
                     Text("Stand")
                 }

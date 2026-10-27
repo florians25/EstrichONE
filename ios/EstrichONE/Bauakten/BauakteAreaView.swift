@@ -578,11 +578,17 @@ struct PartyRow: View {
                 Text(party.name)
                     .font(Typo.body)
                     .foregroundStyle(Theme.textPrimary)
-                let details = [party.company == party.name ? nil : party.company, party.phone].compactMap { $0 }
-                if !details.isEmpty {
-                    Text(details.joined(separator: " · "))
+                if let company = party.company, company != party.name {
+                    Text(company)
                         .font(Typo.subhead)
                         .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
+                }
+                if let phone = party.phone {
+                    Text(phone)
+                        .font(Typo.subhead.monospacedDigit())
+                        .foregroundStyle(Theme.textSecondary)
+                        .lineLimit(1)
                 }
                 if let note = party.note?.compactText {
                     Text(note).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(2)

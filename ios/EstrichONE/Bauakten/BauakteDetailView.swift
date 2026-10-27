@@ -12,6 +12,7 @@ struct BauakteDetailView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.shotScene) private var shotScene
     @Environment(\.openURL) private var openURL
+    @Environment(\.dynamicTypeSize) private var typeSize
     @State private var content: BauakteContent?
     @State private var loaded = false
     @State private var schema: FormSchema?
@@ -134,14 +135,19 @@ struct BauakteDetailView: View {
     private func header(_ content: BauakteContent) -> some View {
         let bauakte = content.bauakte
         let badges = schema?.badges(for: bauakte.projectData, lists: lists) ?? bauakte.project.badges
+        // Sehr große Schrift: Stand unter die Nummer statt daneben.
+        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
+                                                  : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
         return VStack(alignment: .leading, spacing: Space.s) {
-            HStack(alignment: .center, spacing: Space.s) {
-                Text(bauakte.number ?? "Neu · noch ohne Nummer")
-                    .font(Typo.subheadStrong.monospacedDigit())
-                    .foregroundStyle(Theme.textSecondary)
-                    .accessibilityIdentifier("bauakteNumber")
-                SyncStateBadge(state: bauakte.syncState)
-                Spacer(minLength: Space.s)
+            layout {
+                HStack(spacing: Space.s) {
+                    Text(bauakte.number ?? "Neu · noch ohne Nummer")
+                        .font(Typo.subheadStrong.monospacedDigit())
+                        .foregroundStyle(Theme.textSecondary)
+                        .accessibilityIdentifier("bauakteNumber")
+                    SyncStateBadge(state: bauakte.syncState)
+                }
+                if !typeSize.isAccessibilitySize { Spacer(minLength: Space.s) }
                 statusMenu(bauakte)
             }
             Text(bauakte.title)
@@ -501,6 +507,8 @@ struct BauakteDetailView: View {
                 Text(bauakte.status.shortTitle)
                     .font(Typo.subheadStrong)
                     .foregroundStyle(Theme.textPrimary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
                 Image(systemName: "chevron.up.chevron.down")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(Theme.textSecondary)

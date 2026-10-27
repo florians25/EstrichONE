@@ -95,6 +95,7 @@ struct TodayJobCard: View {
     /// Bauakte liegt auf dem Gerät (sonst nur Öffnen, das lädt sie nach).
     var canCapture = true
     let perform: (Action) -> Void
+    @Environment(\.dynamicTypeSize) private var typeSize
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.m) {
@@ -151,11 +152,14 @@ struct TodayJobCard: View {
 
     private var heading: some View {
         VStack(alignment: .leading, spacing: Space.xs) {
-            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+            // Sehr große Schrift: Stand unter die Uhrzeit statt daneben (nichts wird abgeschnitten).
+            let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.xs))
+                                                      : AnyLayout(HStackLayout(alignment: .firstTextBaseline, spacing: Space.s))
+            layout {
                 Text(job.timeText)
                     .font(Typo.time)
                     .foregroundStyle(Theme.textPrimary)
-                Spacer(minLength: Space.s)
+                if !typeSize.isAccessibilitySize { Spacer(minLength: Space.s) }
                 if let status = job.status { StatusLabel(status: status) }
             }
             HStack(alignment: .firstTextBaseline, spacing: Space.s) {

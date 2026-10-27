@@ -35,11 +35,16 @@ final class BauakteUITests: XCTestCase {
     /// Das Anlageblatt muss bereits offen sein.
     @MainActor
     private func fillQuickForm(_ title: String, in app: XCUIApplication, photograph: Bool = false) {
-        app.chooseSegment("Formular")
+        // Darstellung „Alles auf einer Seite“ (Menü oben rechts).
+        app.tapElement(app.buttons["Darstellung"].firstMatch, "Darstellung")
+        app.tapElement(app.buttons["Alles auf einer Seite"].firstMatch, "Alles auf einer Seite")
         app.type(title, into: "newTitleField")
         app.tap("newCustomerButton")
         app.type("Familie \(title)", into: "customerNameField")
-        app.tap(photograph ? "createAndPhotographButton" : "createButton")
+        if photograph {
+            app.tapElement(app.reveal("afterCreatePhotograph"), "afterCreatePhotograph")
+        }
+        app.tap("createButton")
     }
 
     /// Bauakte über die Startseite anlegen; danach ist ihre Ansicht offen.
@@ -230,6 +235,7 @@ final class BauakteUITests: XCTestCase {
 
         // Beim Kunden vor Ort: Anlegen und direkt die Erstbegehung durchführen.
         app.tapElement(app.reveal("createAndInspectButton"), "createAndInspectButton")
+        app.tap("createButton")
         app.tap("startInspectionButton", timeout: 20)
         for (check, answer) in [("substrate", "ok"), ("edgeInsulation", "ok"), ("heatingPressureTest", "notOk"),
                                 ("access", "ok"), ("utilities", "notApplicable")] {

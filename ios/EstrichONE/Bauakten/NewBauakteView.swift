@@ -80,6 +80,8 @@ struct NewBauakteView: View {
     @State private var similar: [Bauakte] = []
     @State private var errorMessage: String?
     @State private var saving = false
+    /// Was gleich nach der Anlage geschieht (eine Hauptschaltfläche „Anlegen“ statt drei gleichrangiger).
+    @State private var afterCreation: Next = .open
     @State private var location = LocationProvider()
     /// Formular-Schema des Büros (offline: zuletzt geladener Stand); ohne Schema die festen Felder.
     @State private var schema: FormSchema?
@@ -125,6 +127,7 @@ struct NewBauakteView: View {
                     siteSection
                     projectFields
                     kindSection
+                    afterCreationSection
                 }
                 similarSection
                 if let errorMessage {
@@ -274,25 +277,35 @@ struct NewBauakteView: View {
         }
     }
 
+    @ViewBuilder
     private var summarySection: some View {
         Section {
             LabeledContent("Bauvorhaben", value: input.title.isEmpty ? "–" : input.title)
             LabeledContent("Kunde", value: customer?.name ?? newCustomer.map { "\($0.name) (neu)" } ?? "–")
             LabeledContent("Baustelle", value: addressLine ?? "noch ohne Adresse")
             if !projectBadges.isEmpty {
-                LabeledContent("Bauvorhaben", value: projectBadges.joined(separator: " · "))
+                LabeledContent("Kenndaten", value: projectBadges.joined(separator: " · "))
             }
-            Button {
-                Task { await create(next: .inspect) }
-            } label: {
-                Label("Anlegen und Erstbegehung jetzt durchführen", systemImage: "checklist")
-            }
-            .estrichButton(.secondary, size: .regular, fullWidth: true)
-            .listRowBackground(Color.clear)
-            .disabled(saving)
-            .accessibilityIdentifier("createAndInspectButton")
         } header: {
             Text("Übersicht")
+        }
+        afterCreationSection
+    }
+
+    /// Was nach „Anlegen“ geschieht: Akte öffnen, fotografieren oder gleich die Erstbegehung.
+    private var afterCreationSection: some View {
+        Section {
+            HStack(spacing: Space.s) {
+                ChoiceButton(title: "Akte öffnen", symbol: "folder", isSelected: afterCreation == .open) { afterCreation = .open }
+                    .accessibilityIdentifier("afterCreateOpen")
+                ChoiceButton(title: "Fotografieren", symbol: "camera", isSelected: afterCreation == .photograph) { afterCreation = .photograph }
+                    .accessibilityIdentifier("afterCreatePhotograph")
+                ChoiceButton(title: "Erstbegehung", symbol: "checklist", isSelected: afterCreation == .inspect) { afterCreation = .inspect }
+                    .accessibilityIdentifier("createAndInspectButton")
+            }
+            .listRowInsets(EdgeInsets(top: Space.s, leading: Space.s, bottom: Space.s, trailing: Space.s))
+        } header: {
+            Text("Gleich danach")
         } footer: {
             Text("Beim Kunden vor Ort? Die Erstbegehung lässt sich direkt anschließen – auch ohne Verbindung.")
         }
@@ -346,20 +359,13 @@ struct NewBauakteView: View {
                             .accessibilityIdentifier("wizardBackButton")
                     }
                     Button {
-                        Task { await create(next: .open) }
+                        Task { await create(next: afterCreation) }
                     } label: {
                         Label("Anlegen", systemImage: "checkmark")
                     }
-                    .estrichButton(.secondary, size: .regular, fullWidth: true)
+                    .estrichButton(.primary, size: .regular, fullWidth: true)
                     .accessibilityIdentifier("createButton")
                 }
-                Button {
-                    Task { await create(next: .photograph) }
-                } label: {
-                    Label("Anlegen und fotografieren", systemImage: "camera.fill")
-                }
-                .estrichButton(.primary, size: .regular, fullWidth: true)
-                .accessibilityIdentifier("createAndPhotographButton")
             }
         }
         .lineLimit(1)
