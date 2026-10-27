@@ -13,7 +13,7 @@ settings:
     SWIFT_VERSION: "6.0"
     MARKETING_VERSION: "0.1.0"
     CURRENT_PROJECT_VERSION: "1"
-    DEVELOPMENT_TEAM: ""
+    DEVELOPMENT_TEAM: 9GVGJKZ9H5
     # Simulator ohne Entwicklerkonto: lokal signieren, damit der Schlüsselbund nutzbar ist.
     "CODE_SIGN_IDENTITY[sdk=iphonesimulator*]": "-"
     ENABLE_USER_SCRIPT_SANDBOXING: YES

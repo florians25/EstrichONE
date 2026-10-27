@@ -49,7 +49,7 @@ Registrierung:
 
 ```json
 // iOS (Token als Hex-Text aus didRegisterForRemoteNotificationsWithDeviceToken)
-{ "platform": "ios", "token": "a1b2…", "sandbox": false, "bundleId": "de.estrichone.app", "deviceName": "iPhone Lukas", "appVersion": "0.1.0" }
+{ "platform": "ios", "token": "a1b2…", "sandbox": false, "bundleId": "de.estrichone.EstrichONE", "deviceName": "iPhone Lukas", "appVersion": "0.1.0" }
 // Browser (PushSubscription.toJSON())
 { "platform": "web", "token": "<endpoint>", "p256dh": "<keys.p256dh>", "auth": "<keys.auth>", "deviceName": "Chrome unter Windows" }
 // Android (FCM-Token; Versand über FCM ist noch nicht angebunden – nur Postfach)
@@ -93,12 +93,16 @@ Inhalt nicht.
 
 ## APNs (iOS-App)
 
+Voreingestellt (deploy/compose.yml): Team-ID `9GVGJKZ9H5`, Key-ID `HT48M8LMF3`, Bundle-ID `de.estrichone.EstrichONE`.
+Es fehlt nur noch der `.p8`-Schlüssel: unter **Einstellungen → Benachrichtigungen → Apple Push (APNs)** hochladen,
+APNs einschalten, speichern, „Testnachricht“. Xcode-Builds melden sich automatisch als Sandbox-Gerät an.
+
 Benötigt ein Apple Developer Program-Konto.
 
 1. **Apple Developer → Certificates, Identifiers & Profiles → Keys → +**: Name „EstrichONE Push“, Haken bei
    **Apple Push Notifications service (APNs)**, anlegen, `.p8` herunterladen (nur einmal möglich!). Key-ID notieren.
 2. Team-ID: oben rechts im Developer-Konto (10 Zeichen).
-3. Bundle-ID der App (z. B. `de.estrichone.app`), Capability **Push Notifications** muss für diese App-ID aktiv sein
+3. Bundle-ID der App (z. B. `de.estrichone.EstrichONE`), Capability **Push Notifications** muss für diese App-ID aktiv sein
    (siehe `ios/README.md`).
 4. In EstrichONE: **Einstellungen → Benachrichtigungen → Apple Push (APNs)**: Key-ID, Team-ID, Bundle-ID eintragen,
    `.p8` hochladen, „Produktion“ für App Store/TestFlight, „Sandbox“ für Xcode-Builds. Speichern, dann „Testnachricht“.

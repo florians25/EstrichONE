@@ -115,7 +115,7 @@
 							<Label text="APNs verwenden"/><Switch id="pushApns" state="{view>/push/apnsEnabled}" customTextOn=" " customTextOff=" "/>
 							<Label text="Key-ID" labelFor="pushKeyId"/><Input id="pushKeyId" value="{view>/push/apnsKeyId}" maxLength="10" width="12rem" placeholder="ABC123DEFG"/>
 							<Label text="Team-ID" labelFor="pushTeamId"/><Input id="pushTeamId" value="{view>/push/apnsTeamId}" maxLength="10" width="12rem" placeholder="Team-ID (10 Zeichen)"/>
-							<Label text="Bundle-ID der App" labelFor="pushBundle"/><Input id="pushBundle" value="{view>/push/apnsBundleId}" maxLength="200" placeholder="de.estrichone.app"/>
+							<Label text="Bundle-ID der App" labelFor="pushBundle"/><Input id="pushBundle" value="{view>/push/apnsBundleId}" maxLength="200" placeholder="de.estrichone.EstrichONE"/>
 							<Label text="Umgebung"/>
 							<SegmentedButton selectedKey="{= ${view>/push/apnsProduction} ? 'prod' : 'sandbox' }" selectionChange=".onApnsEnvironment">
 								<items><SegmentedButtonItem key="prod" text="Produktion (App Store, TestFlight)"/><SegmentedButtonItem key="sandbox" text="Sandbox (Xcode)"/></items>

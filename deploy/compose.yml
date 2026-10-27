@@ -82,9 +82,9 @@ services:
       EstrichOne__Backup__StatusPath: /status
       # Pushnachrichten an iOS (APNs, docs/benachrichtigungen.md) – alternativ in Einstellungen → Benachrichtigungen.
       EstrichOne__Push__VapidSubject: ${ESTRICHONE_PUSH_CONTACT:-}
-      EstrichOne__Push__ApnsKeyId: ${ESTRICHONE_APNS_KEY_ID:-}
-      EstrichOne__Push__ApnsTeamId: ${ESTRICHONE_APNS_TEAM_ID:-}
-      EstrichOne__Push__ApnsBundleId: ${ESTRICHONE_APNS_BUNDLE_ID:-}
+      EstrichOne__Push__ApnsKeyId: ${ESTRICHONE_APNS_KEY_ID:-HT48M8LMF3}
+      EstrichOne__Push__ApnsTeamId: ${ESTRICHONE_APNS_TEAM_ID:-9GVGJKZ9H5}
+      EstrichOne__Push__ApnsBundleId: ${ESTRICHONE_APNS_BUNDLE_ID:-de.estrichone.EstrichONE}
       EstrichOne__Push__ApnsKeyPath: ${ESTRICHONE_APNS_KEY_PATH:-}
       EstrichOne__Push__ApnsProduction: ${ESTRICHONE_APNS_PRODUCTION:-true}
     volumes:
