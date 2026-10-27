@@ -233,6 +233,9 @@ public sealed class Assignment : IVersionedEntity
     public List<Guid> ResourceIds { get; private set; } = [];
     public string? Notes { get; private set; }
 
+    /// <summary>Fahrtreihenfolge innerhalb der Kolonne am Tag (1 = erste Baustelle; 0 = nach Uhrzeit).</summary>
+    public int Sequence { get; private set; }
+
     public long Version { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -330,6 +333,8 @@ public sealed class Assignment : IVersionedEntity
         StartTime is { } s ? (s, EndTime ?? TimeOnly.MaxValue) : (TimeOnly.MinValue, TimeOnly.MaxValue);
 
     public void MoveTo(Guid bauakteId) => BauakteId = bauakteId;
+
+    public void SetSequence(int sequence) => Sequence = Math.Clamp(sequence, 0, 999);
 }
 
 internal static class PlanningText

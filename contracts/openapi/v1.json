@@ -8216,6 +8216,784 @@
         ]
       }
     },
+    "/api/v1/planning/cockpit": {
+      "get": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Disponenten-Cockpit: Kolonnen × Tage mit Tagesbesetzung, Fahrzeugen, Auslastung, Konflikten und Freigabestand (höchstens 62 Tage)",
+        "operationId": "GetPlanningCockpit",
+        "parameters": [
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CockpitBoard"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/day/{day}": {
+      "get": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Wer fährt wohin je Kolonne: Besetzung, Fahrzeuge, Baustellen in Reihenfolge mit Uhrzeit, Ansprechpartner, Freigabe (day = JJJJ-MM-TT, heute, morgen)",
+        "operationId": "GetDayPlan",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/batch": {
+      "post": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Mehrere Einsätze auf einmal anlegen, verschieben, umsortieren oder löschen (alles oder nichts); dryRun = nur Konflikte prüfen",
+        "operationId": "ApplyPlanBatch",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlanBatchRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanBatchResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/check": {
+      "post": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Konfliktprüfung ohne Speichern (Doppelbelegung, Abwesenheit, Gerät belegt, Termin); id = vorhandener Einsatz beim Ändern",
+        "operationId": "CheckAssignment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAssignmentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlanCheckResult"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/assignments/{id}/next-free-day": {
+      "post": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Einsatz auf den nächsten freien Arbeitstag seiner Kolonne verschieben",
+        "operationId": "MoveAssignmentToNextFreeDay",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AssignmentView"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/crews/{crewId}/days/{day}/roster": {
+      "put": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Tagesbesetzung einer Kolonne setzen (Mitglieder, Fahrzeuge/Geräte, Notiz)",
+        "operationId": "SaveCrewRoster",
+        "parameters": [
+          {
+            "name": "crewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveRosterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CockpitCell"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Tagesbesetzung zurücksetzen (wieder Stammbesetzung)",
+        "operationId": "ResetCrewRoster",
+        "parameters": [
+          {
+            "name": "crewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/crews/{crewId}/days/{day}/swap": {
+      "post": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Mitarbeiter oder Fahrzeug der Kolonne für den Tag tauschen; Antwort ist der Tagesplan",
+        "operationId": "SwapCrewRoster",
+        "parameters": [
+          {
+            "name": "crewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapRosterRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/crews/{crewId}/days/{day}/order": {
+      "put": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Fahrtreihenfolge (und optional Uhrzeiten) der Baustellen einer Kolonne am Tag; Antwort ist der Tagesplan",
+        "operationId": "OrderCrewStops",
+        "parameters": [
+          {
+            "name": "crewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OrderStopsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/days/{day}/swap-crews": {
+      "post": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Alle Einsätze zweier Kolonnen an einem Tag tauschen; Antwort ist der Tagesplan",
+        "operationId": "SwapCrews",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SwapCrewsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DayPlan"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/releases": {
+      "post": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Plan für Tage freigeben (Mitarbeiter sehen ihn als verbindlich, spätere Änderungen werden markiert)",
+        "operationId": "ReleasePlan",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ReleasePlanRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PlanReleaseInfo"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/planning/releases/{day}": {
+      "delete": {
+        "tags": [
+          "Planung"
+        ],
+        "summary": "Freigabe eines Tages zurücknehmen",
+        "operationId": "WithdrawPlanRelease",
+        "parameters": [
+          {
+            "name": "day",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/staff/employees": {
       "get": {
         "tags": [
@@ -14161,6 +14939,17 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "change": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -15941,6 +16730,245 @@
           "other"
         ]
       },
+      "CockpitBoard": {
+        "required": [
+          "from",
+          "to",
+          "days",
+          "crews",
+          "assignments",
+          "absences",
+          "appointments",
+          "canPlan"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CockpitDay"
+            }
+          },
+          "crews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CockpitCrew"
+            }
+          },
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentView"
+            }
+          },
+          "absences": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AbsenceView"
+            }
+          },
+          "appointments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CalendarOccurrence"
+            }
+          },
+          "canPlan": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CockpitCell": {
+        "required": [
+          "day",
+          "members",
+          "vehicles",
+          "rosterChanged",
+          "rosterNote",
+          "assignmentIds",
+          "plannedMinutes",
+          "capacityMinutes",
+          "availableMembers",
+          "warnings"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CockpitMember"
+            }
+          },
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceRef"
+            }
+          },
+          "rosterChanged": {
+            "type": "boolean"
+          },
+          "rosterNote": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignmentIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "plannedMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "capacityMinutes": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "availableMembers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "CockpitCrew": {
+        "required": [
+          "id",
+          "name",
+          "color",
+          "leaderUserId",
+          "leaderName",
+          "members",
+          "vehicles",
+          "cells"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "leaderUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "leaderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            }
+          },
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceRef"
+            }
+          },
+          "cells": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CockpitCell"
+            }
+          }
+        }
+      },
+      "CockpitDay": {
+        "required": [
+          "day",
+          "isWorkday",
+          "holiday",
+          "release"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "isWorkday": {
+            "type": "boolean"
+          },
+          "holiday": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "release": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlanReleaseInfo"
+              }
+            ]
+          }
+        }
+      },
+      "CockpitMember": {
+        "required": [
+          "id",
+          "name",
+          "absenceNote"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "absenceNote": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "CompanyLogoInfo": {
         "required": [
           "hasLogo",
@@ -16971,6 +17999,295 @@
           "friday",
           "saturday"
         ]
+      },
+      "DayPlan": {
+        "required": [
+          "day",
+          "holiday",
+          "release",
+          "canPlan",
+          "myCrewIds",
+          "crews",
+          "withoutCrew",
+          "absent",
+          "free"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "holiday": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "release": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/PlanReleaseInfo"
+              }
+            ]
+          },
+          "canPlan": {
+            "type": "boolean"
+          },
+          "myCrewIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "crews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayPlanCrew"
+            }
+          },
+          "withoutCrew": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayPlanStop"
+            }
+          },
+          "absent": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CockpitMember"
+            }
+          },
+          "free": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            }
+          }
+        }
+      },
+      "DayPlanCrew": {
+        "required": [
+          "id",
+          "name",
+          "color",
+          "leaderName",
+          "members",
+          "vehicles",
+          "rosterChanged",
+          "rosterNote",
+          "isMine",
+          "stops",
+          "warnings"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "leaderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "members": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CockpitMember"
+            }
+          },
+          "vehicles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceRef"
+            }
+          },
+          "rosterChanged": {
+            "type": "boolean"
+          },
+          "rosterNote": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isMine": {
+            "type": "boolean"
+          },
+          "stops": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DayPlanStop"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "DayPlanStop": {
+        "required": [
+          "assignmentId",
+          "order",
+          "sequence",
+          "startTime",
+          "endTime",
+          "kind",
+          "activity",
+          "bauakteId",
+          "number",
+          "title",
+          "address",
+          "latitude",
+          "longitude",
+          "siteContactName",
+          "siteContactPhone",
+          "navigationUrl",
+          "notes",
+          "people",
+          "resources",
+          "warnings",
+          "change",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "order": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "sequence": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "startTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "endTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AssignmentKind"
+          },
+          "activity": {
+            "type": "string"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "title": {
+            "type": "string"
+          },
+          "address": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "latitude": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "longitude": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "siteContactName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteContactPhone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "navigationUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "notes": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PersonRef"
+            }
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ResourceRef"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "change": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
       },
       "DecideAbsenceRequest": {
         "required": [
@@ -20546,6 +21863,35 @@
           "cancelled"
         ]
       },
+      "OrderStopsRequest": {
+        "required": [
+          "assignmentIds"
+        ],
+        "type": "object",
+        "properties": {
+          "assignmentIds": {
+            "maxItems": 50,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "startTimes": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": [
+                "null",
+                "string"
+              ],
+              "format": "time"
+            }
+          }
+        }
+      },
       "PairArchiveRequest": {
         "required": [
           "address",
@@ -20635,6 +21981,72 @@
           }
         }
       },
+      "PlanBatchRequest": {
+        "required": [
+          "operations"
+        ],
+        "type": "object",
+        "properties": {
+          "operations": {
+            "maxItems": 200,
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanOperation"
+            }
+          },
+          "dryRun": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "PlanBatchResult": {
+        "required": [
+          "assignments",
+          "deletedIds",
+          "warnings",
+          "dryRun"
+        ],
+        "type": "object",
+        "properties": {
+          "assignments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AssignmentView"
+            }
+          },
+          "deletedIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "dryRun": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PlanCheckResult": {
+        "required": [
+          "warnings"
+        ],
+        "type": "object",
+        "properties": {
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "PlanningRange": {
         "required": [
           "from",
@@ -20681,6 +22093,154 @@
             "items": {
               "$ref": "#/components/schemas/Holiday"
             }
+          }
+        }
+      },
+      "PlanOperation": {
+        "required": [
+          "op",
+          "id"
+        ],
+        "type": "object",
+        "properties": {
+          "op": {
+            "$ref": "#/components/schemas/PlanOperationKind"
+          },
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "assignment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SaveAssignmentRequest"
+              }
+            ]
+          },
+          "day": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "changeCrew": {
+            "type": "boolean",
+            "default": false
+          },
+          "crewId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "setTime": {
+            "type": "boolean",
+            "default": false
+          },
+          "startTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "endTime": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "time"
+          },
+          "sequence": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "PlanOperationKind": {
+        "enum": [
+          "upsert",
+          "move",
+          "delete"
+        ]
+      },
+      "PlanReleaseInfo": {
+        "required": [
+          "day",
+          "releasedAt",
+          "releasedByName",
+          "note",
+          "changedCount",
+          "removed"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "releasedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "releasedByName": {
+            "type": "string"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "changedCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "removed": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PlanReleaseItem"
+            }
+          }
+        }
+      },
+      "PlanReleaseItem": {
+        "required": [
+          "assignmentId",
+          "version",
+          "title",
+          "crewName",
+          "activity"
+        ],
+        "type": "object",
+        "properties": {
+          "assignmentId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "title": {
+            "type": "string"
+          },
+          "crewName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "activity": {
+            "type": "string"
           }
         }
       },
@@ -21237,6 +22797,31 @@
           },
           "enrollmentCode": {
             "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ReleasePlanRequest": {
+        "required": [
+          "from",
+          "to",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "note": {
+            "maxLength": 500,
             "type": [
               "null",
               "string"
@@ -23218,6 +24803,45 @@
           }
         }
       },
+      "SaveRosterRequest": {
+        "required": [
+          "memberUserIds",
+          "resourceIds",
+          "note"
+        ],
+        "type": "object",
+        "properties": {
+          "memberUserIds": {
+            "maxItems": 50,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "resourceIds": {
+            "maxItems": 20,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "note": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SaveSectionRequest": {
         "required": [
           "id",
@@ -23844,6 +25468,60 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "SwapCrewsRequest": {
+        "required": [
+          "crewA",
+          "crewB"
+        ],
+        "type": "object",
+        "properties": {
+          "crewA": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "crewB": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "SwapRosterRequest": {
+        "type": "object",
+        "properties": {
+          "fromUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "toUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "fromResourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "toResourceId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "exchange": {
+            "type": "boolean",
+            "default": true
           }
         }
       },

@@ -16,7 +16,7 @@ public sealed record AssignmentView(
     string? BauakteAddress, Guid? CrewId, string? CrewName, string? CrewColor, IReadOnlyList<PersonRef> People,
     IReadOnlyList<ResourceRef> Resources, string? Notes, IReadOnlyList<string> Warnings, long Version,
     AssignmentKind Kind = AssignmentKind.Screed, TimeOnly? EndTime = null, BauakteStatus? BauakteStatus = null,
-    IReadOnlyList<Guid>? ExcludedUserIds = null);
+    IReadOnlyList<Guid>? ExcludedUserIds = null, int Sequence = 0, string? Change = null);
 
 public sealed record AbsenceView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, AbsenceKind Kind, string? Note);
 
@@ -39,8 +39,17 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
         var assignments = await db.Set<Assignment>().AsNoTracking().Where(a => a.Day >= from && a.Day <= to).ToListAsync(cancellationToken);
         var crews = await db.Set<Crew>().AsNoTracking().ToDictionaryAsync(c => c.Id, cancellationToken);
         var absences = await db.Set<Absence>().AsNoTracking().Where(a => a.From <= to && a.To >= from).ToListAsync(cancellationToken);
+        var rosters = (await db.Set<CrewDay>().AsNoTracking().Where(d => d.Day >= from && d.Day <= to).ToListAsync(cancellationToken))
+            .ToDictionary(d => (d.CrewId, d.Day));
+        var releases = (await db.Set<PlanRelease>().AsNoTracking().Where(r => r.Day >= from && r.Day <= to).ToListAsync(cancellationToken))
+            .ToDictionary(r => r.Day, r => r.Items().ToDictionary(i => i.AssignmentId, i => i.Version));
 
-        IReadOnlyList<Guid> PeopleOf(Assignment a) => a.PeopleWith(a.CrewId is { } crewId && crews.TryGetValue(crewId, out var crew) ? crew.MemberUserIds : []);
+        // Tagesbesetzung (CrewDay) ersetzt an dem Tag die Stammbesetzung der Kolonne.
+        IReadOnlyList<Guid> PeopleOf(Assignment a) => a.PeopleWith(a.CrewId is { } crewId
+            ? rosters.TryGetValue((crewId, a.Day), out var roster) ? roster.MemberUserIds : crews.TryGetValue(crewId, out var crew) ? crew.MemberUserIds : []
+            : []);
+        IReadOnlyList<Guid> ResourcesOf(Assignment a) => a.CrewId is { } c && rosters.TryGetValue((c, a.Day), out var r)
+            ? a.ResourceIds.Union(r.ResourceIds).ToList() : a.ResourceIds;
 
         if (onlyForUser is { } userId)
         {
@@ -65,7 +74,7 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
             .Where(h => h.Date >= from && h.Date <= to).ToList();
         var userIds = assignments.SelectMany(PeopleOf).Concat(absences.Select(a => a.UserId)).Distinct().ToList();
         var users = await db.Set<User>().AsNoTracking().Where(u => userIds.Contains(u.Id)).ToDictionaryAsync(u => u.Id, u => u.DisplayName, cancellationToken);
-        var resourceIds = assignments.SelectMany(a => a.ResourceIds).Distinct().ToList();
+        var resourceIds = assignments.SelectMany(ResourcesOf).Distinct().ToList();
         var resources = await db.Set<Resource>().AsNoTracking().Where(r => resourceIds.Contains(r.Id)).ToDictionaryAsync(r => r.Id, cancellationToken);
         var bauakteIds = assignments.Select(a => a.BauakteId).Distinct().ToList();
         var bauakten = await db.Set<Bauakte>().AsNoTracking().Where(b => bauakteIds.Contains(b.Id)).ToDictionaryAsync(b => b.Id, cancellationToken);
@@ -80,7 +89,7 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
 
         string Name(Guid id) => users.GetValueOrDefault(id) ?? "Unbekannt";
 
-        var views = assignments.OrderBy(a => a.Day).ThenBy(a => a.StartTime).ThenBy(a => a.Activity).Select(a =>
+        var views = assignments.OrderBy(a => a.Day).ThenBy(a => a.Sequence == 0 ? int.MaxValue : a.Sequence).ThenBy(a => a.StartTime).ThenBy(a => a.Activity).Select(a =>
         {
             var warnings = new List<string>();
             var people = PeopleOf(a);
@@ -111,9 +120,9 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
                 }
             }
 
-            foreach (var resourceId in a.ResourceIds)
+            foreach (var resourceId in ResourcesOf(a))
             {
-                if (allOfDays.Any(other => Overlaps(other) && other.ResourceIds.Contains(resourceId)))
+                if (allOfDays.Any(other => Overlaps(other) && ResourcesOf(other).Contains(resourceId)))
                 {
                     warnings.Add($"{(resources.TryGetValue(resourceId, out var r) ? r.Name : "Ein Gerät")} ist an diesem Tag mehrfach eingeplant.");
                 }
@@ -127,7 +136,8 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
                 string.IsNullOrEmpty(address) ? null : address, a.CrewId, crew?.Name, crew?.Color,
                 people.Select(id => new PersonRef(id, Name(id))).OrderBy(p => p.Name, StringComparer.CurrentCulture).ToList(),
                 a.ResourceIds.Where(resources.ContainsKey).Select(id => new ResourceRef(id, resources[id].Name, resources[id].Kind)).ToList(),
-                a.Notes, warnings.Distinct().ToList(), a.Version, a.Kind, a.EndTime, bauakte?.Status, a.ExcludedUserIds);
+                a.Notes, warnings.Distinct().ToList(), a.Version, a.Kind, a.EndTime, bauakte?.Status, a.ExcludedUserIds, a.Sequence,
+                releases.TryGetValue(a.Day, out var released) ? released.TryGetValue(a.Id, out var version) ? version == a.Version ? null : "changed" : "new" : null);
         }).ToList();
 
         return new PlanningRange(from, to, views,

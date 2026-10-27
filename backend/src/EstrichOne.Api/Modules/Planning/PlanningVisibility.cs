@@ -18,7 +18,8 @@ internal sealed class PlanningVisibility(EstrichOneDbContext db, TimeProvider cl
         return db.Set<Assignment>()
             .Where(a => a.Day >= since)
             .Where(a => a.UserIds.Contains(userId)
-                || (a.CrewId != null && db.Set<Crew>().Any(c => c.Id == a.CrewId && (c.LeaderUserId == userId || c.MemberUserIds.Contains(userId)))))
+                || (a.CrewId != null && db.Set<Crew>().Any(c => c.Id == a.CrewId && (c.LeaderUserId == userId || c.MemberUserIds.Contains(userId))))
+                || (a.CrewId != null && db.Set<CrewDay>().Any(d => d.CrewId == a.CrewId && d.Day == a.Day && d.MemberUserIds.Contains(userId))))
             .Select(a => a.BauakteId);
     }
 
