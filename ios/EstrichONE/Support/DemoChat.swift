@@ -143,13 +143,16 @@ final class DemoChat {
 
     func list() -> [String: Any] {
         settle()
-        let items: [[String: Any]] = conversations.map { conversation in
+        func last(_ conversation: Conversation) -> Message? {
+            messages.filter { $0.conversationId == conversation.id }.max { $0.createdAt < $1.createdAt }
+        }
+        let ordered = conversations.sorted { (last($0)?.createdAt ?? .distantPast) > (last($1)?.createdAt ?? .distantPast) }
+        var items: [[String: Any]] = []
+        for conversation in ordered {
             var item: [String: Any] = ["id": conversation.id, "title": conversation.title, "kind": conversation.kind, "unreadCount": conversation.unread]
-            if let last = messages.filter({ $0.conversationId == conversation.id }).max(by: { $0.createdAt < $1.createdAt }) {
-                item["lastMessage"] = json(last)
-            }
-            return item
-        }.sorted { (($0["lastMessage"] as? [String: Any])?["createdAt"] as? String ?? "") > (($1["lastMessage"] as? [String: Any])?["createdAt"] as? String ?? "") }
+            if let message = last(conversation) { item["lastMessage"] = json(message) }
+            items.append(item)
+        }
         return ["items": items]
     }
 

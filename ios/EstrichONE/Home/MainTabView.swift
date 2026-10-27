@@ -23,6 +23,9 @@ struct MainTabView: View {
     @State private var confirmsOverride = false
 
     var body: some View {
+        // Backup-/Archiv-Störung und „Nur Ansicht“ über allen Reitern (Navigationsleisten darunter).
+        VStack(spacing: 0) {
+        if let sync = model.active?.sync { SystemStatusStrip(sync: sync) }
         TabView(selection: Binding(get: { selection }, set: { tab in
             if tab == .capture {
                 if model.active?.sync?.isReadOnly == true { confirmsOverride = true } else { showsCaptureHub = true }
@@ -49,9 +52,6 @@ struct MainTabView: View {
                 .badge(unreadTickets + (model.active?.sync?.chat?.isAvailable == true ? model.active?.sync?.chat?.unreadCount ?? 0 : 0))
         }
         .modifier(SidebarAdaptable())
-        // Backup-/Archiv-Störung und „Nur Ansicht“ über allen Reitern.
-        .safeAreaInset(edge: .top, spacing: 0) {
-            if let sync = model.active?.sync { SystemStatusStrip(sync: sync) }
         }
         .readOnlyOverrideDialog(isPresented: $confirmsOverride, sync: model.active?.sync)
         .sheet(isPresented: $showsCaptureHub) {

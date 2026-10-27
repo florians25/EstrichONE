@@ -24,6 +24,11 @@ struct SystemStatusStrip: View {
                     }
                 }
             }
+            // Farbe der ersten Zeile hinter der Statusleiste.
+            .background(alignment: .top) {
+                (banners.first.map { $0.level == .critical ? Theme.dangerSoft : Theme.warningSoft } ?? Theme.fill)
+                    .ignoresSafeArea(edges: .top)
+            }
             .readOnlyOverrideDialog(isPresented: $confirmsOverride, sync: sync)
         }
     }
@@ -133,8 +138,10 @@ struct MaintenanceLockView: View {
                             .fixedSize(horizontal: false, vertical: true)
                     }
                     VStack(spacing: 0) {
-                        row("Voraussichtlich bis", value: endText, symbol: "clock")
-                        InsetDivider()
+                        if sync.maintenanceEnd != nil {
+                            row("Voraussichtlich bis", value: endText, symbol: "clock")
+                            InsetDivider()
+                        }
                         row("Auf diesem Gerät", value: pendingText, symbol: "lock.shield")
                         InsetDivider()
                         row("Zuletzt geprüft", value: checkedAt.formatted(date: .omitted, time: .shortened) + " Uhr", symbol: "arrow.clockwise")

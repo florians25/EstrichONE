@@ -170,7 +170,7 @@ struct HomeView: View {
             } else if sync.summary?.hasProblems == true {
                 Callout(tone: .danger, title: "Übertragung prüfen", message: "Einige Änderungen wurden nicht übernommen.",
                         actionTitle: "Details ansehen") { path.append(.sync) }
-            } else if sync.isOffline {
+            } else if sync.isOffline, !sync.isReadOnly, !sync.connection.isLongOffline(at: .now) {
                 Callout(tone: .neutral, title: "Offline", message: "Alles wird auf dem Gerät gespeichert und übertragen, sobald wieder Verbindung besteht.",
                         symbol: "wifi.slash")
             }

@@ -95,7 +95,11 @@ final class SyncController {
         let readOnly = connection.isReadOnly(at: now)
         if readOnly != isReadOnly {
             isReadOnly = readOnly
-            DiagnosticsLog.shared.record(readOnly ? "READ_ONLY_ON" : "READ_ONLY_OFF")
+            if readOnly {
+                DiagnosticsLog.shared.record("READ_ONLY_ON")
+            } else {
+                DiagnosticsLog.shared.record("READ_ONLY_OFF")
+            }
         }
         await store.setReadOnly(readOnly)
     }

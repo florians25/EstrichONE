@@ -80,7 +80,7 @@ private struct ConversationRow: View {
                 if conversation.isGroup {
                     Image(systemName: "person.3.fill").font(.system(size: 14, weight: .semibold))
                 } else {
-                    Text(LocalUser.initials(of: conversation.title)).font(.system(size: 15, weight: .semibold, design: .rounded))
+                    Text(LocalUser.initials(of: conversation.title.filter { $0.isLetter || $0 == " " })).font(.system(size: 15, weight: .semibold, design: .rounded))
                 }
             }
             .foregroundStyle(Theme.accent)

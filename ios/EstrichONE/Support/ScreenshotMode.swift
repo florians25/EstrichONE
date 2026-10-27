@@ -111,8 +111,8 @@ final class ScreenshotDirector {
         if scene.hasPrefix("stoerung") {
             let now = Date()
             sync?.simulateHealth(SystemHealth(
-                backupTarget: .init(configured: true, reachable: false, lastSuccessAt: now.addingTimeInterval(-31 * 3600), severity: "critical"),
-                archive: .init(configured: true, reachable: false, lastSuccessAt: now.addingTimeInterval(-9 * 86400), severity: "warning")))
+                backupTarget: SystemHealth.Target(configured: true, reachable: false, lastSuccessAt: now.addingTimeInterval(-31 * 3600), severity: "critical"),
+                archive: SystemHealth.Target(configured: true, reachable: false, lastSuccessAt: now.addingTimeInterval(-9 * 86400), severity: "warning")))
             sync?.simulateOutage(minutes: 12)
         } else {
             sync?.simulateHealth(nil)
