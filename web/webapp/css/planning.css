@@ -141,158 +141,309 @@ body.is-dragging, body.is-dragging * { -webkit-user-select: none !important; use
 	.eoDragGhostCard { transform: none; }
 }
 
-/* ---- Disponenten-Cockpit (W6): ruhig, Fiori-Raster, nur Theme-Parameter ---- */
+/* ---- Disponenten-Cockpit: ruhiges Fiori-Raster (Planning Calendar/Gantt), nur Theme-Parameter ---- */
 .eoCkPage .sapMPageEnableScrolling, .eoCkPage section { overflow: hidden; }
-.eoCkLayout { display: flex; flex-direction: column; height: 100%; box-sizing: border-box; padding: 0.25rem 1rem 0.75rem; gap: 0.25rem; background: var(--sapBackgroundColor); }
-.eoCkToolbar, .eoCkNavbar { flex: 0 0 auto; padding: 0 !important; border: none; background: transparent; }
-.eoCkPageTitle { margin-right: 0.75rem; }
-.eoCkPeriodText { color: var(--sapContent_LabelColor); white-space: nowrap; }
-.eoCkKpis { flex: 0 0 auto; display: flex; align-items: stretch; gap: 0; margin: 0.125rem 0 0.25rem; background: var(--sapGroup_ContentBackground);
-	border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius); }
-.eoCkKpi { display: flex; flex-direction: column; justify-content: center; padding: 0.375rem 1rem; border-right: 1px solid var(--sapGroup_TitleBorderColor); min-width: 7rem; }
-.eoCkKpi .sapMLabel { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); }
-.eoCkKpiValue, .eoCkKpiValue .sapMObjStatusText { font-size: var(--sapFontLargeSize); font-variant-numeric: tabular-nums; }
-.eoCkHint { display: flex; flex: 1 1 18rem; padding: 0.375rem 1rem; color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); min-width: 0; }
-.eoCkHint .sapMText { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); }
-.eoCkSelBar { display: flex; position: absolute; z-index: 6; left: 50%; bottom: 1.25rem; transform: translateX(-50%); gap: 0.125rem; padding: 0.25rem 0.5rem;
+.eoCkLayout { --eo-ck-line: var(--sapList_BorderColor); --eo-ck-line-soft: color-mix(in srgb, var(--sapList_BorderColor) 55%, transparent);
+	--eo-ck-today: color-mix(in srgb, var(--sapSelectedColor, var(--sapBrandColor)) 6%, transparent);
+	--eo-ck-off: color-mix(in srgb, var(--sapNeutralBackgroundColor, var(--sapList_AlternatingBackground)) 55%, transparent);
+	display: flex; flex-direction: column; height: 100%; box-sizing: border-box; padding: 0.5rem 1rem 0.75rem; gap: 0.5rem; background: var(--sapBackgroundColor); }
+
+/* Kopf: Titel, Kennzahlen, Aktionen */
+.eoCkHeader { flex: 0 0 auto; display: flex; align-items: center; gap: 1rem; flex-wrap: nowrap; min-width: 0; }
+.eoCkTitleBlock { display: flex; flex-direction: column; min-width: 0; flex: 0 1 auto; }
+.eoCkPageTitle.sapMTitle { font-size: var(--sapFontHeader4Size, 1.25rem); }
+.eoCkPeriodText.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); white-space: nowrap; }
+.eoCkKpis { display: flex; align-items: stretch; gap: 0; flex: 0 1 auto; min-width: 0; flex-wrap: nowrap; overflow: hidden; }
+.eoCkKpi { display: flex; flex-direction: column; justify-content: center; gap: 0.0625rem; padding: 0 1rem; border-left: 1px solid var(--sapGroup_TitleBorderColor); min-width: 0; }
+.eoCkKpi .sapMLabel { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); white-space: nowrap; }
+.eoCkKpiValue.sapMText, .eoCkKpiValue .sapMObjStatusText { font-size: var(--sapFontLargeSize); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.eoCkKpiLink.sapMLnk { font-size: var(--sapFontLargeSize); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.eoCkKpiLink.eoCkKpiBad.sapMLnk { color: var(--sapNegativeTextColor); }
+.eoCkActions.sapMTB { flex: 1 1 0; min-width: 12rem; height: auto; padding: 0; background: transparent; border: none; }
+.eoCkActions .eoCkSep, .eoCkToolbar .eoCkSep { width: 1px; align-self: stretch; margin: 0.375rem 0.25rem; background: var(--sapToolbar_SeparatorColor, var(--sapGroup_TitleBorderColor)); }
+
+/* Werkzeugleiste: Zeitraum links, Filter Mitte, Darstellung/Ansicht rechts */
+.eoCkToolbar.sapMTB { flex: 0 0 auto; height: auto; min-height: 2.75rem; padding: 0.25rem 0.5rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius);
+	background: var(--sapGroup_ContentBackground); box-shadow: none; }
+.eoCkPeriodLabel.sapMText { font-weight: bold; font-size: var(--sapFontLargeSize); margin: 0 0.5rem 0 0.25rem; white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.eoCkSelBar { display: flex; position: absolute; z-index: 6; left: 50%; bottom: 1.25rem; transform: translateX(-50%); gap: 0.125rem; padding: 0.25rem 0.5rem; align-items: center;
 	background: var(--sapPageFooter_Background, var(--sapGroup_ContentBackground)); border: 1px solid var(--sapGroup_ContentBorderColor);
 	border-radius: var(--sapElement_BorderCornerRadius); box-shadow: var(--sapContent_Shadow2); animation: eoCkRise 160ms ease-out; white-space: nowrap; max-width: calc(100% - 2rem); overflow: hidden; }
-.eoCkCard.eoDragGhostCard, .eoCkBl.eoDragGhostCard { position: fixed; opacity: 0.97; animation: none; transition: none; box-shadow: var(--sapContent_Shadow2); background: var(--sapTile_Background); }
-.eoCkSelText { font-weight: bold; margin-right: 0.5rem; }
+.eoCkSelText { font-weight: bold; margin: 0 0.5rem; }
 .eoCkBody { display: flex; flex: 1 1 auto; min-height: 0; gap: 0.75rem; }
-.eoCkPool { display: flex; flex-direction: column; flex: 0 0 17.5rem; min-height: 0; gap: 0.375rem; padding: 0.5rem; box-sizing: border-box;
+
+/* Vorrat */
+.eoCkPool { display: flex; flex-direction: column; flex: 0 0 18.5rem; min-height: 0; gap: 0.5rem; padding: 0.625rem 0.625rem 0; box-sizing: border-box;
 	background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius); }
-.eoCkPoolHead { display: flex; justify-content: space-between; gap: 0.25rem; min-width: 0; }
+.eoCkPoolHead { display: flex; justify-content: space-between; align-items: center; gap: 0.25rem; min-width: 0; }
 .eoCkPoolHead .sapMTitle { overflow: hidden; text-overflow: ellipsis; }
+.eoCkPoolCount { flex: 0 0 auto; margin-left: 0.375rem; padding: 0 0.4375rem; min-width: 1.25rem; box-sizing: border-box; text-align: center; border-radius: 0.625rem;
+	font-size: var(--sapFontSmallSize); line-height: 1.25rem; font-weight: bold; background: var(--sapNeutralBackgroundColor, var(--sapList_HeaderBackground)); color: var(--sapTextColor); }
+.eoCkPoolTitle { display: flex; align-items: center; min-width: 0; }
 .eoCkPoolTools { display: flex; gap: 0.5rem; align-items: center; justify-content: space-between; }
 .eoCkPoolTools .sapMText { white-space: nowrap; }
-.eoCkPoolFacts { font-size: var(--sapFontSmallSize); }
-.eoCkPoolScroll { flex: 1 1 auto; min-height: 0; }
+.eoCkPoolFacts.sapMText { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); overflow: hidden; text-overflow: ellipsis; }
 .eoCkMain { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; min-height: 0; position: relative; }
-.eoCkPoolOpen { align-self: flex-start; }
+.eoCkPoolRail { display: flex; flex-direction: column; align-items: center; gap: 0.5rem; flex: 0 0 2.5rem; padding: 0.375rem 0; box-sizing: border-box;
+	background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius); }
+.eoCkPoolRailText.sapMText { writing-mode: vertical-rl; transform: rotate(180deg); font-weight: bold; color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
 .eoCk { flex: 1 1 auto; min-height: 0; display: flex; }
 .eoCkScroll { flex: 1 1 auto; overflow: auto; min-height: 0; background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor);
-	border-radius: var(--sapElement_BorderCornerRadius); overscroll-behavior: contain; }
-.eoCkGrid { display: grid; }
+	border-radius: var(--sapElement_BorderCornerRadius); overscroll-behavior: contain; scrollbar-gutter: stable; }
+
+/* Raster */
+.eoCkGrid { display: grid; min-width: min-content; }
 .eoCkRow { display: contents; }
-.eoCkHead > * { position: sticky; top: 0; z-index: 3; background: var(--sapList_HeaderBackground); border-bottom: 1px solid var(--sapList_BorderColor); }
-.eoCkLane { position: sticky; left: 0; z-index: 2; display: flex; gap: 0.5rem; padding: 0.5rem; box-sizing: border-box; background: var(--sapList_HeaderBackground);
-	border-right: 1px solid var(--sapList_BorderColor); border-bottom: 1px solid var(--sapList_BorderColor); min-width: 0; }
-.eoCkHead .eoCkLane, .eoCkCorner { z-index: 4; align-items: center; color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
-.eoCkSwatch { flex: 0 0 4px; align-self: stretch; border-radius: 2px; background: var(--sapNeutralElementColor); }
-.eoCkLaneText { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; flex: 1 1 auto; }
-.eoCkLaneName { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.eoCkLaneSub { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.eoCkLoad, .eoCkCap { position: relative; height: 4px; border-radius: 2px; background: var(--sapField_BorderColor); overflow: hidden; flex: 0 0 auto; }
-.eoCkLoad { margin-top: 0.25rem; }
-.eoCkLoad > span, .eoCkCap > span { position: absolute; inset: 0 auto 0 0; border-radius: 2px; transition: width 240ms cubic-bezier(0.2, 0, 0, 1); }
+.eoCkHead > * { position: sticky; top: 0; z-index: 3; background: var(--sapList_HeaderBackground); border-bottom: 1px solid var(--eo-ck-line); }
+.eoCkLane { position: sticky; left: 0; z-index: 2; display: flex; gap: 0.5rem; padding: 0.625rem 0.75rem 0.625rem 0.625rem; box-sizing: border-box; background: var(--sapGroup_ContentBackground);
+	border-right: 1px solid var(--eo-ck-line); border-bottom: 1px solid var(--eo-ck-line); min-width: 0; }
+.eoCkHead .eoCkLane, .eoCkCorner { z-index: 4; flex-direction: column; justify-content: flex-end; gap: 0; background: var(--sapList_HeaderBackground); }
+.eoCkCornerTitle { font-weight: bold; font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); text-transform: uppercase; letter-spacing: 0.02em; }
+.eoCkCornerSub { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); line-height: 1.3; }
+.eoCkSwatch { flex: 0 0 0.625rem; height: 0.625rem; margin-top: 0.3125rem; border-radius: 50%; background: var(--sapNeutralElementColor); box-shadow: 0 0 0 2px color-mix(in srgb, currentColor 0%, var(--sapGroup_ContentBackground)); }
+.eoCkLaneText { display: flex; flex-direction: column; gap: 0.1875rem; min-width: 0; flex: 1 1 auto; }
+.eoCkLaneName { font-size: var(--sapFontSize); line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: break-word; hyphens: auto; }
+.eoCkLaneSub { display: block; color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eoCkLanePeople { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.eoCkLaneIcon { margin-right: 0.3125rem; color: var(--sapContent_IconColor); font-size: 0.75rem; }
+.eoCkLoadRow { display: flex; align-items: center; gap: 0.5rem; margin-top: 0.125rem; }
+.eoCkLoad, .eoCkCap { position: relative; height: 0.25rem; border-radius: 0.125rem; background: color-mix(in srgb, var(--sapField_BorderColor) 35%, transparent); overflow: hidden; flex: 1 1 auto; }
+.eoCkLoad > span, .eoCkCap > span { position: absolute; inset: 0 auto 0 0; border-radius: 0.125rem; transition: width 240ms cubic-bezier(0.2, 0, 0, 1); }
+.eoCkLoadText { flex: 0 0 auto; font-size: var(--sapFontSmallSize); font-variant-numeric: tabular-nums; font-weight: bold; min-width: 2.5rem; text-align: right; }
 .eoCkLoadOk > span { background: var(--sapPositiveElementColor); }
 .eoCkLoadHigh > span { background: var(--sapCriticalElementColor); }
 .eoCkLoadOver > span { background: var(--sapNegativeElementColor); }
-.eoCkDayHead { display: flex; flex-direction: column; align-items: flex-start; gap: 0.125rem; padding: 0.375rem 0.5rem; box-sizing: border-box; min-width: 0; overflow: hidden;
-	border-right: 1px solid var(--sapList_BorderColor); }
-.eoCkDayLink { all: unset; cursor: pointer; display: flex; gap: 0.375rem; align-items: baseline; border-radius: 0.25rem; }
-.eoCkDayLink:hover .eoCkDate { color: var(--sapLinkColor); text-decoration: underline; }
-.eoCkDayLink:focus-visible { outline: 2px solid var(--sapContent_FocusColor); }
-.eoCkWd { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
-.eoCkDate { font-weight: bold; font-variant-numeric: tabular-nums; }
-.eoCk-month .eoCkDayLink, .eoCkDayNarrow { flex-direction: column; gap: 0; align-items: center; }
-.eoCk-month .eoCkDayHead { align-items: center; padding: 0.25rem 0.125rem; }
-.eoCkHoliday { font-size: var(--sapFontSmallSize); color: var(--sapCriticalTextColor); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
-.eoCkRelease { font-size: var(--sapFontSmallSize); color: var(--sapPositiveTextColor); white-space: nowrap; }
+.eoCkLoadText.eoCkLoadOk, .eoCkCapText.eoCkLoadOk { color: var(--sapContent_LabelColor); }
+.eoCkLoadText.eoCkLoadHigh, .eoCkCapText.eoCkLoadHigh { color: var(--sapCriticalTextColor); }
+.eoCkLoadText.eoCkLoadOver, .eoCkCapText.eoCkLoadOver { color: var(--sapNegativeTextColor); }
+
+/* Tageskopf */
+.eoCkDayHead { display: flex; flex-direction: column; align-items: flex-start; justify-content: flex-end; gap: 0.25rem; padding: 0.375rem 0.5rem 0.4375rem; box-sizing: border-box; min-width: 0; overflow: hidden;
+	border-right: 1px solid var(--eo-ck-line-soft); }
+.eoCkDayLink { all: unset; cursor: pointer; display: flex; flex-direction: column; gap: 0; border-radius: 0.375rem; padding: 0 0.25rem; margin: 0 -0.25rem; }
+.eoCkDayLink:hover { background: var(--sapList_Hover_Background); }
+.eoCkDayLink:focus-visible { outline: 2px solid var(--sapContent_FocusColor); outline-offset: 1px; }
+.eoCkWd { color: var(--sapContent_LabelColor); font-size: 0.6875rem; text-transform: uppercase; letter-spacing: 0.04em; line-height: 1.2; }
+.eoCkDateRow { display: flex; align-items: baseline; gap: 0.25rem; }
+.eoCkDate { font-size: var(--sapFontHeader5Size, 1rem); font-weight: bold; font-variant-numeric: tabular-nums; line-height: 1.5rem; color: var(--sapTextColor); }
+.eoCkMonth { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); }
+.eoCkPast .eoCkDate { color: var(--sapContent_LabelColor); font-weight: normal; }
+.eoCkToday .eoCkDate { display: inline-block; min-width: 1.5rem; height: 1.5rem; padding: 0 0.25rem; box-sizing: border-box; text-align: center; border-radius: 0.75rem;
+	background: var(--sapSelectedColor, var(--sapBrandColor)); color: var(--sapContent_ContrastTextColor, #fff); }
+.eoCkToday .eoCkWd { color: var(--sapSelectedColor, var(--sapBrandColor)); font-weight: bold; }
+.eoCkDayNarrow { align-items: center; padding-left: 0.125rem; padding-right: 0.125rem; }
+.eoCkDayNarrow .eoCkDayLink { align-items: center; margin: 0; padding: 0 0.125rem; }
+.eoCkDayStatus { display: flex; gap: 0.375rem; align-items: center; min-width: 0; max-width: 100%; min-height: 1rem; }
+.eoCkHoliday { font-size: var(--sapFontSmallSize); color: var(--sapCriticalTextColor); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.eoCkHolidayIcon { color: var(--sapCriticalElementColor); font-size: 0.75rem; }
+.eoCkRelease { display: inline-flex; align-items: center; gap: 0.25rem; font-size: var(--sapFontSmallSize); color: var(--sapPositiveTextColor); white-space: nowrap; min-width: 0; }
+.eoCkRelease .eoCkIcon { font-size: 0.75rem; }
+.eoCkReleaseText { overflow: hidden; text-overflow: ellipsis; }
 .eoCkReleaseChanged { color: var(--sapCriticalTextColor); }
-.eoCkToday.eoCkDayHead { box-shadow: inset 0 -3px 0 var(--sapSelectedColor); }
-.eoCkOff { background: var(--sapList_AlternatingBackground); }
+.eoCkReleaseDraft { color: var(--sapContent_LabelColor); }
+.eoCkHead .eoCkToday.eoCkDayHead { box-shadow: inset 0 -2px 0 var(--sapSelectedColor, var(--sapBrandColor)); }
+
+/* Zellen */
+.eoCkOff:not(.eoCkDayHead) { background: repeating-linear-gradient(135deg, transparent 0 6px, var(--eo-ck-off) 6px 7px), var(--sapList_AlternatingBackground); }
 .eoCkHead .eoCkOff { background: var(--sapList_HeaderBackground); }
-.eoCkCell { position: relative; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; min-height: 4.5rem; padding: 0.375rem 0.375rem 1.5rem;
-	box-sizing: border-box; border-right: 1px solid var(--sapList_BorderColor); border-bottom: 1px solid var(--sapList_BorderColor); transition: background-color 120ms;
-	overflow: clip; overflow-clip-margin: 0.25rem; }
-.eoCkOff.eoCkDayHead { padding-left: 0.25rem; padding-right: 0.25rem; }
-.eoCkCell.eoCkToday { background: var(--sapList_SelectionBackgroundColor); }
-.eoCk-month .eoCkCell { padding: 0.25rem 0.125rem 1.25rem; gap: 0.125rem; }
-.eoCkConflict { box-shadow: inset 3px 0 0 var(--sapNegativeElementColor); }
-.eoCkOver { background: var(--sapList_Hover_Background) !important; outline: 2px dashed var(--sapContent_FocusColor); outline-offset: -3px; }
-.eoCkSpan { background: var(--sapList_Hover_Background) !important; box-shadow: inset 0 0 0 2px var(--sapContent_FocusColor); }
-.eoCkFacts, .eoCkTFacts { display: flex; flex-wrap: wrap; gap: 0.25rem; align-items: center; min-width: 0; }
-.eoCkTFacts { position: absolute; right: 0.375rem; bottom: 0.125rem; z-index: 1; }
-.eoCkAbsent { font-size: var(--sapFontSmallSize); padding: 0 0.375rem; border-radius: 0.5rem; background: var(--sapWarningBackground); border: 1px solid var(--sapWarningBorderColor);
-	color: var(--sapTextColor); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; box-sizing: border-box; }
-.eoCkRoster { color: var(--sapInformativeElementColor); font-size: var(--sapFontSmallSize); }
-.eoCkWarnBtn { all: unset; cursor: pointer; font-size: var(--sapFontSmallSize); color: var(--sapNegativeTextColor); padding: 0 0.25rem; border-radius: 0.25rem; white-space: nowrap; }
-.eoCkWarnBtn:hover { background: var(--sapErrorBackground); }
+.eoCkCell { position: relative; display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; min-height: 5.25rem; padding: 0.375rem 0.375rem 1.875rem;
+	box-sizing: border-box; border-right: 1px solid var(--eo-ck-line-soft); border-bottom: 1px solid var(--eo-ck-line); transition: background-color 120ms, box-shadow 120ms; }
+.eoCkCell.eoCkToday { background: var(--eo-ck-today); }
+.eoCk-month .eoCkCell { padding: 0.375rem 0.1875rem 1.375rem; gap: 0.1875rem; min-height: 4.25rem; }
+.eoCkCell > .eoCkCap { position: absolute; left: 0; right: 0; top: 0; height: 0.1875rem; border-radius: 0; background: transparent; }
+.eoCkCell > .eoCkCap > span { border-radius: 0 0.125rem 0.125rem 0; }
+.eoCkCapText { flex: 0 0 auto; font-size: 0.6875rem; font-weight: bold; font-variant-numeric: tabular-nums; white-space: nowrap; line-height: 1.125rem; }
+.eoCkConflict { box-shadow: inset 2px 0 0 var(--sapNegativeElementColor); }
+.eoCkFacts, .eoCkTFacts { display: flex; flex-wrap: wrap; gap: 0.25rem 0.375rem; align-items: center; min-width: 0; }
+.eoCk-month .eoCkFacts { gap: 0.125rem; justify-content: center; }
+.eoCkTFacts { margin-top: 0.25rem; }
+.eoCkAbsent { display: inline-flex; align-items: center; gap: 0.25rem; font-size: 0.6875rem; line-height: 1.125rem; padding: 0 0.375rem; border-radius: 0.5625rem;
+	background: var(--sapWarningBackground); color: var(--sapTextColor); max-width: 100%; box-sizing: border-box; min-width: 0; }
+.eoCkAbsent .eoCkIcon { color: var(--sapCriticalElementColor); font-size: 0.6875rem; }
+.eoCkAbsentText { overflow-wrap: anywhere; min-width: 0; }
+.eoCkAbsent { line-height: 1.2; padding-top: 0.0625rem; padding-bottom: 0.0625rem; }
+.eoCkAbsentMini { padding: 0.0625rem 0.1875rem; }
+.eoCkRoster { display: inline-flex; align-items: center; gap: 0.25rem; color: var(--sapInformativeElementColor); font-size: 0.75rem; }
+.eoCkWarnBtn { all: unset; cursor: pointer; display: inline-flex; align-items: center; gap: 0.1875rem; flex: 0 0 auto; font-size: 0.6875rem; font-weight: bold; line-height: 1.125rem;
+	color: var(--sapNegativeTextColor); background: var(--sapErrorBackground); padding: 0 0.375rem; border-radius: 0.5625rem; white-space: nowrap; }
+.eoCkWarnBtn .eoCkIcon { font-size: 0.6875rem; }
+.eoCkWarnMini { padding: 0 0.1875rem; }
+.eoCkWarnBtn:hover { box-shadow: inset 0 0 0 1px var(--sapNegativeElementColor); }
 .eoCkWarnBtn:focus-visible { outline: 2px solid var(--sapContent_FocusColor); }
-.eoCkIcon { display: inline-block; width: 1em; text-align: center; }
-.eoCkCard { --eo-kind: var(--sapNeutralElementColor); position: relative; display: flex; flex-direction: column; gap: 0.0625rem; box-sizing: border-box; min-width: 0;
-	padding: 0.25rem 0.5rem 0.3125rem 0.4375rem; border: 1px solid var(--sapTile_BorderColor); border-left: 3px solid var(--eo-kind); border-radius: 0.375rem;
-	background: var(--sapTile_Background); box-shadow: var(--sapContent_Shadow0); cursor: pointer; outline: none;
+.eoCkIcon { display: inline-block; width: 1em; text-align: center; flex: 0 0 auto; }
+
+/* Einsatzkarten: Terminart als Farbleiste und zarte Tönung, Text vollständig lesbar */
+.eoCkCard { --eo-kind: var(--sapNeutralElementColor); position: relative; display: flex; flex-direction: column; gap: 0.125rem; box-sizing: border-box; min-width: 0;
+	padding: 0.3125rem 0.5rem 0.375rem 0.5625rem; border: 1px solid color-mix(in srgb, var(--eo-kind) 22%, var(--sapTile_BorderColor)); border-radius: 0.375rem;
+	background: linear-gradient(90deg, var(--eo-kind) 0 0.1875rem, transparent 0.1875rem), color-mix(in srgb, var(--eo-kind) 6%, var(--sapTile_Background));
+	box-shadow: var(--sapContent_Shadow0); cursor: pointer; outline: none; color: var(--sapTextColor);
 	transition: box-shadow 140ms, transform 140ms, opacity 140ms, background-color 140ms; animation: eoCkFade 180ms ease-out;
 	-webkit-user-select: none; user-select: none; -webkit-touch-callout: none; }
-.eoCkCard:hover { box-shadow: var(--sapContent_Shadow1); background: var(--sapTile_Hover_Background); }
+.eoCkCard:hover { box-shadow: var(--sapContent_Shadow1); border-color: color-mix(in srgb, var(--eo-kind) 45%, var(--sapTile_BorderColor)); }
 .eoCkCard:focus-visible { box-shadow: 0 0 0 2px var(--sapContent_FocusColor); }
 .eoCkMovable { cursor: grab; touch-action: none; }
-.eoCkSelected { background: var(--sapList_SelectionBackgroundColor) !important; border-color: var(--sapSelectedColor); box-shadow: 0 0 0 1px var(--sapSelectedColor); }
-.eoCkDragging { opacity: 0.35; transform: scale(0.98); }
-.eoCkDim { opacity: 0.3; }
-.eoCkWarn { background: linear-gradient(var(--sapErrorBackground), var(--sapErrorBackground)) left top / 100% 2px no-repeat, var(--sapTile_Background); }
-.eoCkCardTop { display: flex; align-items: center; gap: 0.25rem; min-width: 0; }
-.eoCkTime { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.eoCkSeq { flex: 0 0 auto; min-width: 1rem; height: 1rem; line-height: 1rem; text-align: center; border-radius: 0.5rem; font-size: 0.6875rem; font-weight: bold;
-	background: var(--sapButton_Lite_Background); border: 1px solid var(--sapButton_BorderColor); color: var(--sapContent_LabelColor); }
-.eoCkChange { flex: 0 0 auto; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--sapCriticalElementColor); }
+.eoCkSelected, .eoCkSelected:hover { border-color: var(--sapSelectedColor, var(--sapBrandColor)); box-shadow: 0 0 0 1px var(--sapSelectedColor, var(--sapBrandColor)), var(--sapContent_Shadow1);
+	background: linear-gradient(90deg, var(--eo-kind) 0 0.1875rem, transparent 0.1875rem), var(--sapList_SelectionBackgroundColor); }
+.eoCkDragging { opacity: 0.4; outline: 1px dashed var(--sapContent_ForegroundBorderColor); outline-offset: -1px; }
+.eoCkDim { opacity: 0.28; }
+.eoCkCardTop { display: flex; align-items: center; gap: 0.3125rem; min-width: 0; }
+/* Schmale Karten (2 Wochen, 13 Zoll): Nebensächliches weglassen statt Text abzuschneiden. */
+.eoCkGrid .eoCkCard:not(.eoCkCompact) { container-type: inline-size; }
+@container (max-width: 6.5rem) { .eoCkKindIcon, .eoCkSeq { display: none; } .eoCkCardTop { gap: 0.1875rem; } }
+.eoCkTime { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.eoCkSeq { flex: 0 0 auto; min-width: 1rem; height: 1rem; line-height: 1rem; padding: 0 0.1875rem; box-sizing: border-box; text-align: center; border-radius: 0.5rem; font-size: 0.6875rem; font-weight: bold;
+	background: var(--eo-kind); color: var(--sapContent_ContrastTextColor, #fff); }
+.eoCkMarks { display: inline-flex; align-items: center; gap: 0.25rem; margin-left: auto; flex: 0 0 auto; padding-left: 0.25rem; }
+.eoCkChange { flex: 0 0 auto; width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--sapCriticalElementColor); box-shadow: 0 0 0 2px var(--sapTile_Background); }
 .eoCkChange-new { background: var(--sapInformativeElementColor); }
-.eoCkWarnIcon { color: var(--sapNegativeElementColor); font-size: var(--sapFontSmallSize); margin-left: auto; }
-.eoCkTitle { font-weight: bold; font-size: var(--sapFontSize); line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: break-word; hyphens: auto; }
-.eoCkSub { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.eoCkCompact { padding: 0.0625rem 0.25rem 0.0625rem 0.25rem; border-left-width: 2px; border-radius: 0.25rem; }
-.eoCk-week .eoCkTitle, .eoCk-twoWeeks .eoCkTitle { -webkit-line-clamp: 3; }
-.eoCkCompact .eoCkTitle { font-size: var(--sapFontSmallSize); -webkit-line-clamp: 1; font-weight: normal; }
-.eoCkCompact .eoCkTime { font-size: 0.6875rem; }
-.eoCkCompact .eoCkCardTop:empty, .eoCkCompact .eoCkTime:empty { display: none; }
+.eoCkWarnIcon { color: var(--sapNegativeElementColor); font-size: 0.75rem; }
+.eoCkTitle { font-weight: bold; font-size: var(--sapFontSize); line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow-wrap: break-word; hyphens: auto; }
+.eoCk-week .eoCkTitle { -webkit-line-clamp: 8; }
+.eoCk-twoWeeks .eoCkTitle { -webkit-line-clamp: 4; }
+.eoCk-week .eoCkSub { -webkit-line-clamp: 4; }
+.eoCk-twoWeeks .eoCkSub { -webkit-line-clamp: 1; }
+.eoCkSub { font-size: var(--sapFontSmallSize); line-height: 1.3; color: var(--sapContent_LabelColor); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow-wrap: break-word; hyphens: auto; }
+.eoCkKindIcon { color: var(--eo-kind); font-size: 0.75rem; }
+.eoCkWarn { border-color: color-mix(in srgb, var(--sapNegativeElementColor) 45%, var(--sapTile_BorderColor)); }
+/* Kompakt: eine Zeile je Einsatz */
+.eoCkCompact { padding: 0.125rem 0.375rem 0.125rem 0.4375rem; border-radius: 0.25rem; gap: 0; }
+.eoCkCardLine { display: flex; align-items: center; gap: 0.3125rem; min-width: 0; }
+.eoCkCompact .eoCkTitle { -webkit-line-clamp: 1; font-size: var(--sapFontSmallSize); font-weight: 600; line-height: 1.35; display: block; white-space: nowrap; text-overflow: ellipsis; min-width: 0; flex: 1 1 auto; }
+.eoCkCompact .eoCkTime { font-size: 0.6875rem; flex: 0 0 auto; }
+.eoCk-month .eoCkCompact { padding: 0.0625rem 0.25rem 0.0625rem 0.375rem; }
+.eoCk-month .eoCkCompact .eoCkTitle { font-weight: normal; font-size: 0.6875rem; }
+.eoCk-month .eoCkMarks { display: none; }
+.eoCkDense .eoCkCell { min-height: 3.5rem; padding-bottom: 1.5rem; gap: 0.1875rem; }
 .eoCkGrip { position: absolute; top: 0; right: 0; bottom: 0; width: 0.5rem; cursor: ew-resize; border-radius: 0 0.375rem 0.375rem 0; touch-action: none; }
-.eoCkCard:hover .eoCkGrip { background: linear-gradient(90deg, transparent 2px, var(--sapContent_ForegroundBorderColor) 2px, var(--sapContent_ForegroundBorderColor) 4px, transparent 4px); }
+.eoCkCard:hover .eoCkGrip { background: linear-gradient(90deg, transparent 2px, var(--sapContent_ForegroundBorderColor) 2px, var(--sapContent_ForegroundBorderColor) 4px, transparent 4px) center / 100% 1.25rem no-repeat; }
 body.eoCkResizing, body.eoCkResizing * { cursor: ew-resize !important; }
-.eoCkAdd { all: unset; position: absolute; right: 0.25rem; bottom: 0.125rem; width: 1.5rem; height: 1.25rem; text-align: center; border-radius: 0.25rem;
-	color: var(--sapContent_IconColor); opacity: 0; cursor: pointer; transition: opacity 120ms; }
+.eoCkAdd { all: unset; position: absolute; left: 0.375rem; right: 0.375rem; bottom: 0.3125rem; height: 1.375rem; display: flex; align-items: center; justify-content: center; gap: 0.25rem;
+	border: 1px dashed var(--sapContent_ForegroundBorderColor); border-radius: 0.25rem; font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor);
+	opacity: 0; cursor: pointer; transition: opacity 120ms; box-sizing: border-box; }
+.eoCkAddMini { left: auto; right: 0.1875rem; bottom: 0.1875rem; width: 1.25rem; height: 1.125rem; border: none; }
+.eoCkAdd .eoCkIcon { font-size: 0.75rem; }
 .eoCkCell:hover .eoCkAdd, .eoCkAdd:focus-visible { opacity: 1; }
-.eoCkAdd:hover { background: var(--sapButton_Lite_Hover_Background); }
+.eoCkAdd:hover { background: var(--sapButton_Lite_Hover_Background); color: var(--sapButton_Lite_TextColor); border-color: var(--sapButton_Lite_TextColor, var(--sapContent_ForegroundBorderColor)); }
 .eoCkAdd:focus-visible { outline: 2px solid var(--sapContent_FocusColor); }
+body.is-dragging .eoCkAdd { opacity: 0 !important; }
 .eoCkEmpty { grid-column: 1 / -1; padding: 1.5rem; color: var(--sapContent_LabelColor); }
+
+/* Ziehen: klare Ablageziele und Geist mit Zielangabe */
+body.eoCkDragActive .eoCk [data-drop] { transition: background-color 80ms, box-shadow 80ms; }
+.eoCkOver, .eoCkTrack.eoCkOver { background: color-mix(in srgb, var(--sapContent_FocusColor) 9%, var(--sapGroup_ContentBackground)) !important;
+	box-shadow: inset 0 0 0 2px var(--sapContent_FocusColor) !important; }
+.eoCkSpan { background: color-mix(in srgb, var(--sapContent_FocusColor) 9%, var(--sapGroup_ContentBackground)) !important; box-shadow: inset 0 0 0 2px var(--sapContent_FocusColor); }
+.eoCkGhost.eoDragGhostCard { position: fixed; z-index: 2000; opacity: 1; animation: none; transition: none; overflow: visible;
+	box-shadow: 0 0.75rem 1.75rem rgba(0, 0, 0, 0.22), 0 0 0 1px var(--sapContent_FocusColor); }
+.eoCkCard.eoCkGhost { background: linear-gradient(90deg, var(--eo-kind) 0 0.1875rem, transparent 0.1875rem), var(--sapTile_Background); }
+.eoCkGhostHint { margin: 0.375rem -0.5rem -0.375rem -0.5625rem; padding: 0.25rem 0.5rem; font-size: 0.6875rem; font-weight: bold; color: var(--sapContent_ContrastTextColor, #fff);
+	background: var(--sapContent_FocusColor); border-radius: 0 0 0.3125rem 0.3125rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eoCkBl.eoCkGhost .eoCkGhostHint { grid-column: 1 / -1; margin: 0.375rem -0.75rem -0.5625rem -0.875rem; }
+.eoCkGhostCopy .eoCkGhostHint { background: var(--sapPositiveElementColor); }
+.eoCkGhostAway { opacity: 0.85 !important; }
+.eoCkGhostAway .eoCkGhostHint { background: var(--sapNeutralElementColor); }
+.eoCkGhostCount { position: absolute; top: -0.5rem; right: -0.5rem; min-width: 1.375rem; height: 1.375rem; line-height: 1.375rem; padding: 0 0.25rem; box-sizing: border-box; border-radius: 0.6875rem;
+	text-align: center; font-size: var(--sapFontSmallSize); font-weight: bold; background: var(--sapContent_FocusColor); color: var(--sapContent_ContrastTextColor, #fff); box-shadow: var(--sapContent_Shadow1); }
+.eoCkDropMark { position: absolute; top: 0.375rem; bottom: 0.375rem; z-index: 0; border: 2px dashed var(--sapContent_FocusColor); border-radius: 0.375rem; box-sizing: border-box;
+	background: color-mix(in srgb, var(--sapContent_FocusColor) 12%, transparent); font-size: 0.6875rem; font-weight: bold; color: var(--sapContent_FocusColor); padding: 0.125rem 0.375rem;
+	pointer-events: none; white-space: nowrap; overflow: hidden; }
+
 /* Zeitachse (Tag) */
-.eoCkTimeline { display: grid; grid-template-columns: minmax(8.75rem, 12rem) minmax(40rem, 1fr); position: relative; }
+.eoCkTimeline { display: grid; grid-template-columns: minmax(10rem, 13rem) minmax(calc(var(--eo-hours) * 4.75rem), 1fr); position: relative; min-width: min-content; }
 .eoCkTRow { display: contents; }
 .eoCkScale { position: sticky; top: 0; z-index: 3; display: grid; grid-template-columns: repeat(var(--eo-hours), 1fr); background: var(--sapList_HeaderBackground);
-	border-bottom: 1px solid var(--sapList_BorderColor); }
-.eoCkHour { padding: 0.5rem 0.25rem; font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); border-left: 1px solid var(--sapList_BorderColor); font-variant-numeric: tabular-nums; }
-.eoCkTrack { position: relative; border-bottom: 1px solid var(--sapList_BorderColor); min-height: 4rem; padding-bottom: 1.25rem;
-	background-image: repeating-linear-gradient(90deg, var(--sapList_BorderColor) 0 1px, transparent 1px calc(100% / var(--eo-hours))); }
-.eoCkTrack .eoCkCard { position: absolute; height: 3.75rem; overflow: hidden; justify-content: center; transition: left 200ms cubic-bezier(0.2, 0, 0, 1), width 120ms, box-shadow 140ms; }
-.eoCkTrack .eoCkTitle { -webkit-line-clamp: 1; }
-.eoCkHasNow .eoCkTrack::after { content: ""; position: absolute; top: 0; bottom: 0; left: var(--eo-now, -10px); width: 2px; background: var(--sapNegativeElementColor); opacity: 0.6; pointer-events: none; }
-/* Vorrat */
-.eoCkBacklog { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.125rem 0.125rem 0.5rem; }
-.eoCkBl { display: flex; flex-direction: column; gap: 0.125rem; padding: 0.5rem 0.625rem; border: 1px solid var(--sapTile_BorderColor); border-left: 3px solid var(--sapNeutralElementColor);
-	border-radius: 0.375rem; background: var(--sapTile_Background); box-shadow: var(--sapContent_Shadow0); outline: none; transition: box-shadow 140ms, background-color 140ms;
+	border-bottom: 1px solid var(--eo-ck-line); }
+.eoCkHour { padding: 0.75rem 0.375rem 0.5rem; font-size: var(--sapFontSmallSize); color: var(--sapTextColor); border-left: 1px solid var(--eo-ck-line-soft); font-variant-numeric: tabular-nums; }
+.eoCkHourOff { color: var(--sapContent_LabelColor); }
+.eoCkNowTag { position: absolute; bottom: 0; transform: translate(-50%, 50%); z-index: 4; padding: 0 0.3125rem; border-radius: 0.5rem; font-size: 0.6875rem; line-height: 1rem; font-weight: bold;
+	background: var(--sapNegativeElementColor); color: var(--sapContent_ContrastTextColor, #fff); font-variant-numeric: tabular-nums; }
+.eoCkTrack { position: relative; border-bottom: 1px solid var(--eo-ck-line); min-height: 4.5rem;
+	background-image:
+		linear-gradient(90deg, var(--eo-ck-off) 0 var(--eo-work-from, 0%), transparent var(--eo-work-from, 0%) var(--eo-work-to, 100%), var(--eo-ck-off) var(--eo-work-to, 100%)),
+		repeating-linear-gradient(90deg, var(--eo-ck-line-soft) 0 1px, transparent 1px calc(100% / var(--eo-hours))),
+		repeating-linear-gradient(90deg, transparent 0 calc(50% / var(--eo-hours)), color-mix(in srgb, var(--eo-ck-line-soft) 45%, transparent) calc(50% / var(--eo-hours)) calc(50% / var(--eo-hours) + 1px), transparent calc(50% / var(--eo-hours) + 1px) calc(100% / var(--eo-hours))); }
+.eoCkTrack .eoCkCard { position: absolute; z-index: 1; height: 3.875rem; overflow: hidden; justify-content: flex-start; transition: left 200ms cubic-bezier(0.2, 0, 0, 1), width 120ms, box-shadow 140ms; }
+.eoCkTrack .eoCkTitle { -webkit-line-clamp: 1; display: block; white-space: nowrap; text-overflow: ellipsis; }
+.eoCkTrack .eoCkSub { -webkit-line-clamp: 1; display: block; white-space: nowrap; text-overflow: ellipsis; }
+.eoCkResizingCard { box-shadow: 0 0 0 2px var(--sapContent_FocusColor) !important; }
+.eoCkHasNow .eoCkTrack::after { content: ""; position: absolute; top: 0; bottom: 0; left: var(--eo-now, -10px); width: 2px; background: var(--sapNegativeElementColor); opacity: 0.7; pointer-events: none; z-index: 2; }
+
+/* Vorrat: gut scanbare Liste */
+.eoCkBacklogHost { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; margin: 0 -0.625rem; }
+.eoCkBacklog { display: flex; flex-direction: column; flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; border-top: 1px solid var(--sapGroup_TitleBorderColor); }
+.eoCkBlChips { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0 0.625rem 0.5rem; }
+.eoCkChip { all: unset; display: inline-flex; align-items: center; gap: 0.3125rem; padding: 0 0.5rem; height: 1.5rem; border-radius: 0.75rem; cursor: pointer; box-sizing: border-box;
+	font-size: var(--sapFontSmallSize); color: var(--sapTextColor); border: 1px solid var(--sapButton_BorderColor); background: var(--sapButton_Background); white-space: nowrap; }
+.eoCkChip:hover { background: var(--sapButton_Hover_Background); }
+.eoCkChip:focus-visible { outline: 2px solid var(--sapContent_FocusColor); outline-offset: 1px; }
+.eoCkChip[aria-pressed=true] { background: var(--sapButton_Selected_Background, var(--sapList_SelectionBackgroundColor)); color: var(--sapButton_Selected_TextColor, var(--sapTextColor));
+	border-color: var(--sapButton_Selected_BorderColor, var(--sapSelectedColor)); }
+.eoCkChip b { font-variant-numeric: tabular-nums; }
+.eoCkChipDot { width: 0.5rem; height: 0.5rem; border-radius: 50%; background: var(--sapNeutralElementColor); }
+.eoCkChip-overdue .eoCkChipDot { background: var(--sapNegativeElementColor); }
+.eoCkChip-soon .eoCkChipDot { background: var(--sapCriticalElementColor); }
+.eoCkChip-later .eoCkChipDot { background: var(--sapInformativeElementColor); }
+.eoCkBlGroup { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; padding: 0.375rem 0.75rem; font-size: var(--sapFontSmallSize); font-weight: bold;
+	color: var(--sapContent_LabelColor); background: var(--sapList_HeaderBackground); border-bottom: 1px solid var(--sapList_BorderColor); text-transform: uppercase; letter-spacing: 0.02em; }
+.eoCkBl { position: relative; display: grid; grid-template-columns: 1fr auto; column-gap: 0.5rem; row-gap: 0.125rem; padding: 0.5rem 0.75rem 0.5625rem 0.875rem;
+	border-bottom: 1px solid var(--sapList_BorderColor); background: var(--sapList_Background, var(--sapGroup_ContentBackground)); outline: none; transition: background-color 120ms;
 	-webkit-user-select: none; user-select: none; }
-.eoCkBl:hover { box-shadow: var(--sapContent_Shadow1); background: var(--sapTile_Hover_Background); }
-.eoCkBl:focus-visible { box-shadow: 0 0 0 2px var(--sapContent_FocusColor); }
-.eoCkBl-overdue { border-left-color: var(--sapNegativeElementColor); }
-.eoCkBl-soon { border-left-color: var(--sapCriticalElementColor); }
-.eoCkBl-later { border-left-color: var(--sapInformativeElementColor); }
-.eoCkBlTop { display: flex; justify-content: space-between; gap: 0.5rem; align-items: baseline; min-width: 0; }
-.eoCkBlTitle { font-weight: bold; color: var(--sapLinkColor); text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.eoCkBl::before { content: ""; position: absolute; left: 0.3125rem; top: 0.5rem; bottom: 0.5rem; width: 0.1875rem; border-radius: 0.125rem; background: var(--sapNeutralElementColor); }
+.eoCkBl:hover { background: var(--sapList_Hover_Background); }
+.eoCkBl:focus-visible { box-shadow: inset 0 0 0 2px var(--sapContent_FocusColor); }
+.eoCkBl.eoCkGhost { width: 17rem; border: 1px solid var(--sapContent_FocusColor); border-radius: 0.375rem; background: var(--sapTile_Background); }
+.eoCkBl-overdue::before { background: var(--sapNegativeElementColor); }
+.eoCkBl-soon::before { background: var(--sapCriticalElementColor); }
+.eoCkBl-later::before { background: var(--sapInformativeElementColor); }
+.eoCkBlTitle { grid-column: 1; font-weight: bold; color: var(--sapLinkColor); text-decoration: none; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+	overflow-wrap: anywhere; min-width: 0; }
 .eoCkBlTitle:hover { text-decoration: underline; }
-.eoCkBlArea { flex: 0 0 auto; font-size: var(--sapFontSmallSize); font-variant-numeric: tabular-nums; color: var(--sapContent_LabelColor); }
-.eoCkBlMeta { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.eoCkBlFoot { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
-.eoCkDue { font-size: var(--sapFontSmallSize); white-space: nowrap; }
-.eoCkDue-overdue { color: var(--sapNegativeTextColor); }
-.eoCkDue-soon { color: var(--sapCriticalTextColor); }
-.eoCkDue-later, .eoCkDue-none { color: var(--sapContent_LabelColor); }
+.eoCkBlArea { grid-column: 2; grid-row: 1; align-self: start; font-size: var(--sapFontSmallSize); font-variant-numeric: tabular-nums; color: var(--sapTextColor); font-weight: bold; white-space: nowrap; line-height: 1.6; }
+.eoCkBlMeta { grid-column: 1 / -1; font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eoCkBlFoot { grid-column: 1 / -1; display: flex; align-items: center; gap: 0.5rem; min-width: 0; margin-top: 0.125rem; }
+.eoCkDue { display: inline-flex; align-items: center; font-size: 0.6875rem; font-weight: bold; white-space: nowrap; padding: 0 0.375rem; line-height: 1.125rem; border-radius: 0.5625rem; }
+.eoCkDue-overdue { color: var(--sapNegativeTextColor); background: var(--sapErrorBackground); }
+.eoCkDue-soon { color: var(--sapCriticalTextColor); background: var(--sapWarningBackground); }
+.eoCkDue-later { color: var(--sapInformativeTextColor, var(--sapContent_LabelColor)); background: var(--sapInformationBackground); }
+.eoCkDue-none { color: var(--sapContent_LabelColor); background: var(--sapNeutralBackgroundColor, var(--sapList_HeaderBackground)); font-weight: normal; }
 .eoCkBlPlanned { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1 1 auto; }
-.eoCkBlPlan { all: unset; margin-left: auto; flex: 0 0 auto; width: 1.75rem; height: 1.5rem; text-align: center; border-radius: 0.25rem; cursor: pointer; color: var(--sapButton_Lite_TextColor); }
+.eoCkBlPlan { all: unset; margin-left: auto; flex: 0 0 auto; display: inline-flex; align-items: center; gap: 0.25rem; height: 1.5rem; padding: 0 0.5rem; border-radius: 0.25rem; cursor: pointer;
+	font-size: var(--sapFontSmallSize); color: var(--sapButton_Lite_TextColor); opacity: 0.75; }
+.eoCkBl:hover .eoCkBlPlan, .eoCkBlPlan:focus-visible { opacity: 1; }
 .eoCkBlPlan:hover { background: var(--sapButton_Lite_Hover_Background); }
 .eoCkBlPlan:focus-visible { outline: 2px solid var(--sapContent_FocusColor); }
-.eoCkBlEmpty { padding: 1rem 0.5rem; color: var(--sapContent_LabelColor); text-align: center; }
+.eoCkBlEmpty { padding: 1.5rem 0.75rem; color: var(--sapContent_LabelColor); text-align: center; }
+
+/* Schnellansicht (Popover) */
+.eoCkQv { width: 100%; }
+.eoCkQv .eoCkQvBody { display: grid; }
+.eoCkQvHead { padding: 0.875rem 1rem 0.75rem; border-bottom: 1px solid var(--sapGroup_TitleBorderColor); box-shadow: inset 0.25rem 0 0 var(--eo-kind, var(--sapNeutralElementColor)); }
+.eoCkQvKind { display: flex; align-items: center; gap: 0.375rem; font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); margin-bottom: 0.25rem; }
+.eoCkQvKind .sapUiIcon { color: var(--eo-kind, var(--sapContent_IconColor)); }
+.eoCkQvTitle.sapMTitle { white-space: normal; overflow-wrap: anywhere; }
+.eoCkQvSub.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); margin-top: 0.125rem; }
+.eoCkQvBody { padding: 0.5rem 1rem 0.75rem; display: grid; grid-template-columns: 6.5rem 1fr; gap: 0.4375rem 0.75rem; align-items: baseline; }
+.eoCkQvBody > .sapMLabel { color: var(--sapContent_LabelColor); }
+.eoCkQvBody .sapMText, .eoCkQvBody .sapMLnk { overflow-wrap: anywhere; }
+.eoCkQvWarn { grid-column: 1 / -1; }
+.eoCkQvFoot.sapMTB { border-top: 1px solid var(--sapGroup_TitleBorderColor); }
+
+/* Legende und Tastaturhilfe */
+.eoCkLegend { padding: 0.75rem 1rem 1rem; width: 22rem; max-width: calc(100vw - 2rem); box-sizing: border-box; }
+.eoCkLegendTitle { font-size: var(--sapFontSmallSize); font-weight: bold; color: var(--sapContent_LabelColor); text-transform: uppercase; letter-spacing: 0.03em; margin: 0.75rem 0 0.375rem; }
+.eoCkLegendTitle:first-child { margin-top: 0; }
+.eoCkLegendGrid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.375rem 0.75rem; }
+.eoCkLegendItem { display: flex; align-items: center; gap: 0.5rem; font-size: var(--sapFontSmallSize); min-width: 0; }
+.eoCkLegendSw { flex: 0 0 auto; width: 0.875rem; height: 0.875rem; border-radius: 0.1875rem; box-sizing: border-box; }
+.eoCkLegendBar { flex: 0 0 auto; width: 1.5rem; height: 0.25rem; border-radius: 0.125rem; }
+.eoCkKeys { width: 100%; border-collapse: collapse; font-size: var(--sapFontSize); }
+.eoCkKeys td { padding: 0.375rem 0.5rem; border-bottom: 1px solid var(--sapList_BorderColor); vertical-align: top; }
+.eoCkKeys td:first-child { white-space: nowrap; width: 1%; }
+.eoCkKeys kbd { display: inline-block; min-width: 1rem; padding: 0 0.375rem; margin: 0 0.125rem; border: 1px solid var(--sapButton_BorderColor); border-bottom-width: 2px; border-radius: 0.25rem;
+	font-family: var(--sapFontFamily); font-size: var(--sapFontSmallSize); line-height: 1.375rem; text-align: center; background: var(--sapButton_Background); color: var(--sapTextColor); }
+.eoCkKeysGroup td { padding-top: 0.875rem; font-weight: bold; color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); text-transform: uppercase; letter-spacing: 0.03em; }
+
 /* Kontextmenü */
 .eoCkMenu { position: fixed; z-index: 3000; min-width: 14rem; max-width: 22rem; padding: 0.25rem 0; background: var(--sapGroup_ContentBackground);
 	border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius); box-shadow: var(--sapContent_Shadow2);
@@ -312,6 +463,8 @@ body.eoCkResizing, body.eoCkResizing * { cursor: ew-resize !important; }
 @keyframes eoCkRise { from { opacity: 0; transform: translate(-50%, 6px); } to { opacity: 1; transform: translate(-50%, 0); } }
 @keyframes eoCkMenuIn { from { opacity: 0; transform: translateY(-4px) scale(0.98); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .eoCkCard, .eoCkMenu, .eoCkSelBar, .eoCkTrack .eoCkCard { animation: none; transition: none; } }
-@media (max-width: 94rem) { .eoCkPool { flex-basis: 15.5rem; } .eoCkBody { gap: 0.5rem; } .eoCkCell { padding-left: 0.3125rem; padding-right: 0.3125rem; } }
-@media (max-width: 64rem) { .eoCkPool { flex-basis: 14rem; } .eoCkHint { display: none; } }
+@media (max-width: 100rem) { .eoCkPool { flex-basis: 16.5rem; } .eoCkBody { gap: 0.5rem; } .eoCkKpi { padding: 0 0.75rem; } }
+@media (max-width: 90rem) { .eoCkKpiOptional { display: none; } .eoCkPool { flex-basis: 15.5rem; } .eoCkCell { padding-left: 0.3125rem; padding-right: 0.3125rem; }
+	.eoCkCard { padding-left: 0.5rem; padding-right: 0.375rem; } }
+@media (max-width: 64rem) { .eoCkPool { flex-basis: 14rem; } .eoCkKpis { display: none; } }
 @media (max-width: 40rem) { .eoCkBody { flex-direction: column; } .eoCkPool { flex: 0 0 14rem; } }

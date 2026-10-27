@@ -10,7 +10,7 @@ function monday(): string {
   return iso(d);
 }
 
-test('Disponenten-Cockpit: Raster, Verschieben per Ziehen mit Rückgängig, Tagesbesetzung, Konflikte, Freigabe', async ({ page }) => {
+test('Disponenten-Cockpit: Raster, Verschieben per Ziehen mit Rückgängig, Schnellansicht, Tagesbesetzung, Konflikte, Freigabe, Legende', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await nav(page, 'Disponenten-Cockpit').click();
   await expect(page.locator('.eoCkPageTitle')).toHaveText('Disponenten-Cockpit');
@@ -30,9 +30,19 @@ test('Disponenten-Cockpit: Raster, Verschieben per Ziehen mit Rückgängig, Tage
   await expect(toast(page)).toContainText('Kolonne Admin');
   await expect(target.locator('.eoCkCard', { hasText: title }).first()).toBeVisible();
   await expect(source.locator('.eoCkCard')).toHaveCount(before - 1);
-  await page.locator('.eoCkKpis').click();
+  await page.locator('.eoCkTitleBlock').click();
   await page.keyboard.press('Control+z');
   await expect(source.locator('.eoCkCard')).toHaveCount(before);
+
+  // Klick auf einen Einsatz: Schnellansicht mit Details und Aktionen.
+  await source.locator('.eoCkCard', { hasText: title }).first().click();
+  const quick = page.locator('.eoCkQv');
+  await expect(quick).toBeVisible();
+  await expect(quick.locator('.eoCkQvTitle')).toHaveText(title);
+  await expect(quick).toContainText('Kontakt');
+  await expect(page.locator('.eoCkQvPopover').getByRole('button', { name: 'Bearbeiten' })).toBeVisible();
+  await page.keyboard.press('Escape');
+  await expect(quick).toBeHidden();
   const tueCell = cells.nth(1);
 
   // Kontextmenü der Zelle: Tagesbesetzung.
@@ -44,13 +54,30 @@ test('Disponenten-Cockpit: Raster, Verschieben per Ziehen mit Rückgängig, Tage
   await expect(toast(page)).toContainText('Tagesbesetzung');
 
   // Konflikte im Zeitraum und Freigabe.
-  await page.locator('.eoCkToolbar').getByRole('button', { name: /^\d+ Konflikte$/ }).click();
+  await page.locator('.eoCkActions').getByRole('button', { name: /^\d+ Konflikte?$/ }).click();
   await expect(page.getByRole('dialog', { name: 'Konflikte im Zeitraum' })).toBeVisible();
   await page.getByRole('dialog').getByRole('button', { name: 'Schließen' }).click();
-  await page.locator('.eoCkToolbar').getByRole('button', { name: /freigeben/ }).click();
+  await page.locator('.eoCkActions').getByRole('button', { name: /freigeben/ }).click();
   const release = page.getByRole('dialog', { name: 'Plan freigeben' });
   await release.getByRole('button', { name: 'Freigeben' }).click();
   await expect(toast(page)).toContainText('Plan freigegeben');
+
+  // Legende und Bedienungshilfe (Taste ?).
+  await page.locator('.eoCkToolbar [title="Legende"]').click();
+  await expect(page.locator('.eoCkLegend')).toContainText('Terminarten');
+  await page.keyboard.press('Escape');
+  await page.locator('.eoCkTitleBlock').click();
+  await page.keyboard.press('?');
+  const help = page.getByRole('dialog', { name: 'Bedienung des Cockpits' });
+  await expect(help).toContainText('Strg');
+  await help.getByRole('button', { name: 'Schließen' }).click();
+
+  // Kompakte Karten bleiben bedienbar.
+  const compact = page.locator('.eoCkToolbar [title^="Kompakt"]');
+  await compact.click();
+  await expect(page.locator('.eoCkCard.eoCkCompact').first()).toBeVisible();
+  await compact.click();
+  await expect(page.locator('.eoCkCard.eoCkCompact')).toHaveCount(0);
 
   // Zeitachse des Tages.
   await page.getByRole('option', { name: 'Tag', exact: true }).click();

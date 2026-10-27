@@ -6,7 +6,7 @@ import Element from "sap/ui/core/Element";
 import IconPool from "sap/ui/core/IconPool";
 import { assignmentKinds } from "../util/labels";
 import { parseDay } from "../util/days";
-import { hhmm, minutes, ofTime, toTime, type CockpitCell, type CockpitCrew, type CockpitDay, type PlanAssignment } from "../util/cockpitModels";
+import { hhmm, hours, minutes, ofTime, toTime, type CockpitCell, type CockpitCrew, type CockpitDay, type PlanAssignment } from "../util/cockpitModels";
 
 export type CockpitMode = "week" | "twoWeeks" | "month" | "day";
 
@@ -24,6 +24,8 @@ export interface CockpitRender {
 	canPlan: boolean;
 	/** Zeitachse der Tagesansicht (Stunden). */
 	hours: [number, number];
+	/** Kompakte Karten (eine Zeile) in Woche und 2 Wochen. */
+	compact?: boolean;
 }
 
 export interface MenuItem { text: string; icon?: string; action?: () => void; danger?: boolean; disabled?: boolean; children?: MenuItem[] }
@@ -35,10 +37,14 @@ export type CockpitPayload =
 
 const NO_CREW = "-";
 const SNAP = 15;
+/** Kernarbeitszeit (Zeitachse: außerhalb dezent schattiert). */
+const WORK: [number, number] = [7, 17];
 const safeColor = (c: string | null | undefined) => (c && /^#[0-9a-fA-F]{3,8}$/.test(c) ? c : "");
-const shortDay = (d: string) => parseDay(d).toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit" });
-const weekday = (d: string) => parseDay(d).toLocaleDateString("de-DE", { weekday: "short" });
+const weekday = (d: string) => parseDay(d).toLocaleDateString("de-DE", { weekday: "short" }).replace(".", "");
+const monthShort = (d: string) => parseDay(d).toLocaleDateString("de-DE", { month: "short" }).replace(".", "");
 const longDay = (d: string) => parseDay(d).toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long" });
+const shortLabel = (d: string) => parseDay(d).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" });
+const firstName = (n: string) => n.split(" ")[0];
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, cls?: string, text?: string): HTMLElementTagNameMap[K] {
 	const e = document.createElement(tag);
@@ -58,15 +64,52 @@ export function icon(name: string, cls = "eoCkIcon"): HTMLElement {
 	return span;
 }
 
-/** Ziehen starten (Karten im Raster, Bauvorhaben im Vorrat); abgelegt wird auf Zellen mit data-drop. */
-export function startCockpitDrag(event: PointerEvent, source: HTMLElement, payload: CockpitPayload): void {
+const controlOf = (node: HTMLElement): Cockpit | undefined => {
+	const host = node.closest<HTMLElement>(".eoCk");
+	return host ? (Element.getElementById(host.id) as Cockpit | undefined) : undefined;
+};
+
+/**
+ * Ziehen starten (Karten im Raster, Bauvorhaben im Vorrat); abgelegt wird auf Zellen mit data-drop.
+ * Der Geist zeigt Ziel und Art (Verschieben, Kopieren mit Strg, Einplanen) sowie die Anzahl bei Mehrfachauswahl;
+ * in der Zeitachse markiert ein Schatten die künftige Lage.
+ */
+export function startCockpitDrag(event: PointerEvent, source: HTMLElement, payload: CockpitPayload, count = 1): void {
+	let last: Cockpit | undefined;
 	trackDrag(event, source, {
 		target: "[data-drop]", overClass: "eoCkOver", draggingClass: "eoCkDragging",
-		onDrop: (cell, e) => {
-			const host = cell.closest<HTMLElement>(".eoCk");
-			const control = host ? (Element.getElementById(host.id) as Cockpit | undefined) : undefined;
-			control?.handleDrop(payload, cell, e);
+		onStart: (ghost) => {
+			ghost.classList.add("eoCkGhost");
+			// Schmale Karten (2 Wochen, Monat) im Geist lesbar breit zeigen.
+			ghost.style.width = `${Math.max(parseFloat(ghost.style.width) || 0, 232)}px`;
+			ghost.classList.remove("eoCkCompact", "eoCkSelected", "eoCkDim");
+			for (const g of ghost.querySelectorAll(".eoCkGrip, .eoCkBlPlan")) g.remove();
+			if (count > 1) ghost.append(el("span", "eoCkGhostCount", String(count)));
+			ghost.append(el("div", "eoCkGhostHint", "Auf Kolonne und Tag ziehen"));
+			document.body.classList.add("eoCkDragActive");
 		},
+		onOver: (target, e, ghost) => {
+			const copy = payload.kind === "assignment" && (e.ctrlKey || e.metaKey || e.altKey);
+			ghost.classList.toggle("eoCkGhostCopy", copy);
+			ghost.classList.toggle("eoCkGhostAway", !target);
+			const control = target ? controlOf(target) : undefined;
+			if (last && last !== control) last.clearPreview();
+			last = control;
+			const hint = ghost.querySelector<HTMLElement>(".eoCkGhostHint");
+			if (!hint) return;
+			if (!target || !control) {
+				hint.textContent = "Loslassen bricht ab";
+				return;
+			}
+			const time = control.preview(payload, target, e);
+			const verb = payload.kind === "bauakte" ? "Einplanen" : copy ? "Kopieren" : "Verschieben";
+			hint.textContent = `${verb}: ${target.dataset.dropLabel ?? ""}${time ? ` · ${time}` : ""}`;
+		},
+		onEnd: () => {
+			last?.clearPreview();
+			document.body.classList.remove("eoCkDragActive");
+		},
+		onDrop: (cell, e) => controlOf(cell)?.handleDrop(payload, cell, e),
 	});
 }
 
@@ -133,7 +176,7 @@ export default class Cockpit extends Control {
 		this.scroll.replaceChildren(data.mode === "day" ? this.timeline(data) : this.grid(data));
 		const key = `${data.mode}|${data.days[0]?.day}`;
 		if (key !== this.scrolledFor) {
-			// Neuer Zeitraum: an den Anfang bzw. zu heute (Monat, 2 Wochen) scrollen.
+			// Neuer Zeitraum: an den Anfang bzw. zu heute (Monat, 2 Wochen) bzw. zur aktuellen Uhrzeit (Tag) scrollen.
 			this.scrolledFor = key;
 			const box = this.scroll;
 			box.scrollLeft = 0;
@@ -142,6 +185,15 @@ export default class Cockpit extends Control {
 				const today = box.querySelector<HTMLElement>(".eoCkDayHead.eoCkToday");
 				const lane = box.querySelector<HTMLElement>(".eoCkCorner");
 				if (today && lane && today.offsetLeft + today.offsetWidth > box.clientWidth) box.scrollLeft = Math.max(0, today.offsetLeft - lane.offsetWidth - 8);
+				// Zeitachse: ab Arbeitsbeginn bzw. eine Stunde vor jetzt.
+				const scale = box.querySelector<HTMLElement>(".eoCkScale");
+				if (data.mode === "day" && scale && box.scrollWidth > box.clientWidth) {
+					const hoursEls = scale.querySelectorAll<HTMLElement>(".eoCkHour");
+					const now = new Date().getHours() - 1;
+					const target = data.days[0]?.day === data.today && now > WORK[0] ? now : WORK[0];
+					const h = hoursEls[Math.max(0, target - data.hours[0])];
+					if (h) box.scrollLeft = Math.max(0, h.offsetLeft - 8);
+				}
 			});
 		} else {
 			this.scroll.scrollLeft = scrollLeft;
@@ -162,6 +214,9 @@ export default class Cockpit extends Control {
 
 	focusCard(id: string): void { this.scroll?.querySelector<HTMLElement>(`.eoCkCard[data-id="${CSS.escape(id)}"]`)?.focus(); }
 
+	/** DOM der Karte (für die Schnellansicht). */
+	cardDom(id: string): HTMLElement | null { return this.scroll?.querySelector<HTMLElement>(`.eoCkCard[data-id="${CSS.escape(id)}"]`) ?? null; }
+
 	// ---- Raster (Woche, 2 Wochen, Monat) ------------------------------------------------------------------------------
 
 	private inCell(data: CockpitRender, crewId: string | null, day: string): PlanAssignment[] {
@@ -171,17 +226,22 @@ export default class Cockpit extends Control {
 
 	private inDay(data: CockpitRender, day: string): boolean { return data.assignments.some((a) => a.day === day); }
 
+	private compact(data: CockpitRender): boolean { return data.mode === "month" || data.compact === true; }
+
 	private grid(data: CockpitRender): HTMLElement {
-		const grid = el("div", `eoCkGrid eoCk-${data.mode}`);
+		const grid = el("div", `eoCkGrid eoCk-${data.mode}${data.compact ? " eoCkDense" : ""}`);
 		grid.setAttribute("role", "grid");
 		grid.setAttribute("aria-label", "Planungsraster Kolonnen und Tage");
-		const [work, off] = data.mode === "month" ? ["minmax(2.5rem, 1fr)", "minmax(1.5rem, 0.5fr)"]
-			: data.mode === "twoWeeks" ? ["minmax(5.25rem, 1fr)", "minmax(2.25rem, 0.3fr)"] : ["minmax(6.25rem, 1fr)", "minmax(2.5rem, 0.3fr)"];
-		grid.style.gridTemplateColumns = `${data.mode === "month" ? "minmax(10.5rem, 12rem)" : "minmax(8.25rem, 1.4fr)"} ${data.days.map((d) => (d.isWorkday || this.inDay(data, d.day) ? work : off)).join(" ")}`;
+		const [work, off] = data.mode === "month" ? ["minmax(2.5rem, 1fr)", "minmax(1.5rem, 0.45fr)"]
+			: data.mode === "twoWeeks" ? ["minmax(5.5rem, 1fr)", "minmax(2.25rem, 0.25fr)"] : ["minmax(6.5rem, 1fr)", "minmax(2.5rem, 0.25fr)"];
+		const lane = data.mode === "month" ? "minmax(9.5rem, 0.9fr)" : data.mode === "twoWeeks" ? "minmax(9rem, 1.1fr)" : "minmax(9.5rem, 1.15fr)";
+		grid.style.gridTemplateColumns = `${lane} ${data.days.map((d) => (d.isWorkday || this.inDay(data, d.day) ? work : off)).join(" ")}`;
 		const head = el("div", "eoCkRow eoCkHead");
 		head.setAttribute("role", "row");
-		const corner = el("div", "eoCkLane eoCkCorner", data.mode === "month" ? "Kolonne" : "Kolonne / Tag");
+		const corner = el("div", "eoCkLane eoCkCorner");
 		corner.setAttribute("role", "columnheader");
+		const count = data.crews.length;
+		corner.append(el("span", "eoCkCornerTitle", "Kolonne"), el("span", "eoCkCornerSub", `${count} ${count === 1 ? "Kolonne" : "Kolonnen"} · Auslastung`));
 		head.append(corner);
 		for (const d of data.days) head.append(this.dayHead(data, d));
 		grid.append(head);
@@ -192,30 +252,43 @@ export default class Cockpit extends Control {
 	}
 
 	private dayHead(data: CockpitRender, d: CockpitDay): HTMLElement {
-		const cell = el("div", `eoCkDayHead${d.day === data.today ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}`);
+		const isToday = d.day === data.today;
+		const narrow = data.mode === "month" || (!d.isWorkday && !this.inDay(data, d.day));
+		const cell = el("div", `eoCkDayHead${isToday ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}${d.day < data.today ? " eoCkPast" : ""}${narrow ? " eoCkDayNarrow" : ""}`);
 		cell.setAttribute("role", "columnheader");
 		const link = el("button", "eoCkDayLink");
 		link.type = "button";
-		link.title = `${longDay(d.day)} als Zeitachse öffnen`;
-		const narrow = data.mode === "month" || (!d.isWorkday && !this.inDay(data, d.day));
-		link.append(el("span", "eoCkWd", weekday(d.day)), el("span", "eoCkDate", narrow ? String(parseDay(d.day).getDate()) : shortDay(d.day)));
-		if (narrow && data.mode !== "month") link.classList.add("eoCkDayNarrow");
+		link.title = `${longDay(d.day)}${isToday ? " (heute)" : ""} – als Zeitachse öffnen`;
+		link.setAttribute("aria-label", `${longDay(d.day)}${isToday ? ", heute" : ""}${d.holiday ? `, ${d.holiday}` : ""}`);
+		const date = el("span", "eoCkDateRow");
+		date.append(el("span", "eoCkDate", String(parseDay(d.day).getDate())));
+		if (!narrow) date.append(el("span", "eoCkMonth", monthShort(d.day)));
+		link.append(el("span", "eoCkWd", weekday(d.day)), date);
 		link.addEventListener("click", () => this.fireEvent("dayPress", { day: d.day }));
 		cell.append(link);
+		const status = el("div", "eoCkDayStatus");
 		if (d.holiday) {
-			const h = narrow ? icon("sap-icon://flag", "eoCkIcon eoCkHoliday") : el("span", "eoCkHoliday", d.holiday);
-			h.title = d.holiday;
-			cell.append(h);
+			const h = narrow ? icon("sap-icon://flag", "eoCkIcon eoCkHolidayIcon") : el("span", "eoCkHoliday", d.holiday);
+			h.title = `Feiertag: ${d.holiday}`;
+			status.append(h);
 		}
 		if (d.release) {
 			const changed = d.release.changedCount;
 			const badge = el("span", `eoCkRelease${changed ? " eoCkReleaseChanged" : ""}`);
 			badge.append(icon(changed ? "sap-icon://edit" : "sap-icon://accept"));
-			if (data.mode !== "month") badge.append(document.createTextNode(changed ? ` ${changed} geändert` : " freigegeben"));
+			const tight = data.mode === "twoWeeks";
+			if (!narrow && (!tight || changed)) badge.append(el("span", "eoCkReleaseText", changed ? (tight ? String(changed) : `${changed} geändert`) : "freigegeben"));
 			badge.title = `Freigegeben ${new Date(d.release.releasedAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })} von ${d.release.releasedByName}`
-				+ (changed ? ` – seither ${changed} ${changed === 1 ? "Änderung" : "Änderungen"}` : "");
-			cell.append(badge);
+				+ (changed ? ` – seither ${changed} ${changed === 1 ? "Änderung" : "Änderungen"}` : "") + (d.release.note ? `\nHinweis: ${d.release.note}` : "");
+			status.append(badge);
+		} else if (d.isWorkday && d.day >= data.today && this.inDay(data, d.day)) {
+			const draft = el("span", "eoCkRelease eoCkReleaseDraft");
+			draft.append(icon("sap-icon://pending"));
+			if (!narrow && data.mode !== "twoWeeks") draft.append(el("span", "eoCkReleaseText", "Entwurf"));
+			draft.title = "Noch nicht freigegeben (Entwurf)";
+			status.append(draft);
 		}
+		if (status.childElementCount) cell.append(status);
 		return cell;
 	}
 
@@ -225,24 +298,39 @@ export default class Cockpit extends Control {
 		const sw = el("span", "eoCkSwatch");
 		if (crew && safeColor(crew.color)) sw.style.background = safeColor(crew.color);
 		const text = el("div", "eoCkLaneText");
-		text.append(el("strong", "eoCkLaneName", crew ? crew.name : "Ohne Kolonne"));
+		const name = el("strong", "eoCkLaneName", crew ? crew.name : "Ohne Kolonne");
+		name.title = crew?.name ?? "Einsätze einzelner Mitarbeiter";
+		text.append(name);
 		if (crew) {
-			const members = crew.members.filter((m) => m.id !== crew.leaderUserId).map((m) => m.name.split(" ")[0]).join(", ");
-			const sub = el("small", "eoCkLaneSub", [crew.leaderName ? `${crew.leaderName.split(" ")[0]} (Ltg.)` : "", members].filter(Boolean).join(" · ") || "keine Mitglieder");
-			sub.title = crew.members.map((m) => m.name).join(", ");
+			const others = crew.members.filter((m) => m.id !== crew.leaderUserId).map((m) => firstName(m.name));
+			const people = [crew.leaderName ? `${firstName(crew.leaderName)} (Ltg.)` : "", ...others].filter(Boolean).join(", ");
+			const sub = el("small", "eoCkLaneSub eoCkLanePeople");
+			sub.append(icon("sap-icon://group", "eoCkIcon eoCkLaneIcon"), document.createTextNode(people || "keine Mitglieder"));
+			sub.title = crew.members.map((m) => m.name).join(", ") || "keine Mitglieder";
 			text.append(sub);
-			if (crew.vehicles.length) text.append(el("small", "eoCkLaneSub", crew.vehicles.map((v) => v.name).join(", ")));
+			if (crew.vehicles.length && data.mode !== "month") {
+				const v = el("small", "eoCkLaneSub");
+				v.append(icon("sap-icon://shipping-status", "eoCkIcon eoCkLaneIcon"), document.createTextNode(crew.vehicles.map((x) => x.name).join(", ")));
+				v.title = crew.vehicles.map((x) => x.name).join(", ");
+				text.append(v);
+			}
 			const planned = crew.cells.reduce((s, c) => s + this.planned(data, crew.id, c.day), 0);
 			const capacity = crew.cells.reduce((s, c) => s + c.capacityMinutes, 0);
 			const percent = capacity ? Math.round((planned / capacity) * 100) : planned ? 100 : 0;
+			const load = el("div", "eoCkLoadRow");
 			const bar = el("div", `eoCkLoad ${this.loadState(percent)}`);
-			bar.setAttribute("role", "img");
+			bar.setAttribute("role", "meter");
+			bar.setAttribute("aria-valuemin", "0");
+			bar.setAttribute("aria-valuemax", "100");
+			bar.setAttribute("aria-valuenow", String(Math.min(100, percent)));
 			bar.setAttribute("aria-label", `Auslastung ${percent} %`);
-			bar.title = `Auslastung im Zeitraum: ${percent} % (${Math.round(planned / 60)} von ${Math.round(capacity / 60)} h)`;
 			const fill = el("span");
 			fill.style.width = `${Math.min(100, percent)}%`;
 			bar.append(fill);
-			text.append(bar);
+			const pct = el("span", `eoCkLoadText ${this.loadState(percent)}`, `${percent} %`);
+			load.append(bar, pct);
+			load.title = `Auslastung im Zeitraum: ${percent} % – ${hours(planned)} von ${hours(capacity)} h verplant`;
+			text.append(load);
 		} else {
 			text.append(el("small", "eoCkLaneSub", "Einzelne Mitarbeiter"));
 		}
@@ -266,68 +354,83 @@ export default class Cockpit extends Control {
 		return row;
 	}
 
+	private conflictButton(warnings: string[], crewId: string, day: string, mini = false): HTMLElement {
+		const w = el("button", `eoCkWarnBtn${mini ? " eoCkWarnMini" : ""}`);
+		w.type = "button";
+		w.append(icon("sap-icon://alert"));
+		if (!mini) w.append(el("span", "eoCkWarnCount", String(warnings.length)));
+		w.title = `${warnings.length} ${warnings.length === 1 ? "Konflikt" : "Konflikte"}:\n${warnings.join("\n")}`;
+		w.setAttribute("aria-label", `${warnings.length} Konflikte: ${warnings.join(" ")}`);
+		w.addEventListener("click", (e) => { e.stopPropagation(); this.fireEvent("cellInfo", { crewId, day }); });
+		return w;
+	}
+
 	private cell(data: CockpitRender, crew: CockpitCrew | null, d: CockpitDay, info: CockpitCell | null): HTMLElement {
 		const crewId = crew?.id ?? null;
 		const jobs = this.inCell(data, crewId, d.day);
-		const cell = el("div", `eoCkCell${d.day === data.today ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}`);
+		const month = data.mode === "month";
+		const cell = el("div", `eoCkCell${d.day === data.today ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}${d.day < data.today ? " eoCkPast" : ""}`);
 		cell.setAttribute("role", "gridcell");
 		cell.dataset.drop = "1";
 		cell.dataset.crew = crewId ?? NO_CREW;
 		cell.dataset.day = d.day;
+		cell.dataset.dropLabel = `${crew?.name ?? "Ohne Kolonne"}, ${shortLabel(d.day)}`;
 		const label = `${crew?.name ?? "Ohne Kolonne"}, ${longDay(d.day)}`;
 		cell.setAttribute("aria-label", `${label}: ${jobs.length ? `${jobs.length} ${jobs.length === 1 ? "Einsatz" : "Einsätze"}` : "frei"}`);
-		if (info && crew && (data.mode !== "month" || jobs.length)) {
+		if (info && crew) {
 			const planned = jobs.reduce((s, a) => s + minutes(a.startTime, a.endTime), 0);
 			const percent = info.capacityMinutes ? Math.round((planned / info.capacityMinutes) * 100) : planned ? 101 : 0;
-			const meter = el("div", `eoCkCap ${this.loadState(percent)}`);
-			const fill = el("span");
-			fill.style.width = `${Math.min(100, percent)}%`;
-			meter.append(fill);
-			meter.title = info.capacityMinutes
-				? `${Math.round(planned / 60 * 10) / 10} von ${info.capacityMinutes / 60} h verplant · ${info.availableMembers} von ${info.members.length} verfügbar`
-				: info.availableMembers === 0 && info.members.length ? "Niemand aus der Kolonne verfügbar" : "Kein Arbeitstag";
-			cell.append(meter);
 			const absent = info.members.filter((m) => m.absenceNote);
-			const warnings = info.warnings;
-			if (absent.length || info.rosterChanged || warnings.length) {
-				const facts = el("div", "eoCkFacts");
-				if (data.mode !== "month") {
-					for (const m of absent) {
-						const chip = el("span", "eoCkAbsent", `${m.name.split(" ")[0]}: ${m.absenceNote}`);
-						chip.title = `${m.name}: ${m.absenceNote}`;
-						facts.append(chip);
-					}
-				} else if (absent.length) {
-					const chip = el("span", "eoCkAbsent", String(absent.length));
-					chip.title = absent.map((m) => `${m.name}: ${m.absenceNote}`).join("\n");
-					facts.append(chip);
-				}
-				if (info.rosterChanged) {
-					const r = el("span", "eoCkRoster");
-					r.append(icon("sap-icon://person-placeholder"));
-					r.title = `Tagesbesetzung: ${info.members.map((m) => m.name).join(", ") || "niemand"}${info.vehicles.length ? ` · ${info.vehicles.map((v) => v.name).join(", ")}` : ""}${info.rosterNote ? ` · ${info.rosterNote}` : ""}`;
-					facts.append(r);
-				}
-				if (warnings.length && jobs.length) {
-					const w = el("button", "eoCkWarnBtn");
-					w.type = "button";
-					w.append(icon("sap-icon://alert"), document.createTextNode(` ${warnings.length}`));
-					w.title = warnings.join("\n");
-					w.setAttribute("aria-label", `${warnings.length} Konflikte: ${warnings.join(" ")}`);
-					w.addEventListener("click", (e) => { e.stopPropagation(); this.fireEvent("cellInfo", { crewId: crewId ?? "", day: d.day }); });
-					facts.append(w);
-					cell.classList.add("eoCkConflict");
-				}
-				cell.append(facts);
+			const nobody = info.members.length > 0 && info.availableMembers === 0;
+			const tip = info.capacityMinutes
+				? `${hours(planned)} von ${hours(info.capacityMinutes)} h verplant (${percent} %) · ${info.availableMembers} von ${info.members.length} Mitarbeitern verfügbar`
+				: nobody ? `Niemand aus der Kolonne verfügbar – ${hours(planned)} h verplant` : `Kein Arbeitstag – ${hours(planned)} h verplant`;
+			// Auslastung als schmaler Balken oben in der Zelle (nur wenn etwas geplant ist).
+			if (planned > 0) {
+				const meter = el("div", `eoCkCap ${this.loadState(percent)}`);
+				const fill = el("span");
+				fill.style.width = `${Math.min(100, percent)}%`;
+				meter.append(fill);
+				meter.title = tip;
+				meter.setAttribute("role", "meter");
+				meter.setAttribute("aria-label", tip);
+				cell.append(meter);
 			}
+			const facts = el("div", "eoCkFacts");
+			if (!month && planned > 0) {
+				const cap = el("span", `eoCkCapText ${this.loadState(percent)}`, info.capacityMinutes ? `${hours(planned)}/${hours(info.capacityMinutes)} h` : `${hours(planned)} h`);
+				cap.title = tip;
+				facts.append(cap);
+			}
+			if (info.warnings.length && jobs.length) {
+				facts.append(this.conflictButton(info.warnings, crewId ?? "", d.day, month));
+				cell.classList.add("eoCkConflict");
+			}
+			if (info.rosterChanged) {
+				const r = el("span", "eoCkRoster");
+				r.append(icon("sap-icon://switch-classes"));
+				r.title = `Tagesbesetzung: ${info.members.map((m) => m.name).join(", ") || "niemand"}${info.vehicles.length ? ` · ${info.vehicles.map((v) => v.name).join(", ")}` : ""}${info.rosterNote ? ` · ${info.rosterNote}` : ""}`;
+				r.setAttribute("aria-label", r.title);
+				facts.append(r);
+			}
+			if (absent.length && (d.isWorkday || jobs.length)) {
+				const chip = el("span", `eoCkAbsent${month ? " eoCkAbsentMini" : ""}`);
+				chip.append(icon("sap-icon://employee-rejections"));
+				if (!month) chip.append(el("span", "eoCkAbsentText", absent.map((m) => `${firstName(m.name)}: ${m.absenceNote}`).join(" · ")));
+				chip.title = absent.map((m) => `${m.name}: ${m.absenceNote}`).join("\n");
+				chip.setAttribute("aria-label", `Abwesend: ${chip.title}`);
+				facts.append(chip);
+			}
+			if (facts.childElementCount) cell.append(facts);
 		}
 		for (const a of jobs) cell.append(this.card(data, a));
 		if (data.canPlan) {
-			const add = el("button", "eoCkAdd");
+			const add = el("button", `eoCkAdd${month ? " eoCkAddMini" : ""}`);
 			add.type = "button";
 			add.append(icon("sap-icon://add"));
+			if (!month) add.append(el("span", "eoCkAddText", "Einsatz"));
 			add.setAttribute("aria-label", `Einsatz planen: ${label}`);
-			add.title = "Einsatz planen";
+			add.title = "Einsatz planen (oder Doppelklick in die Zelle)";
 			add.addEventListener("click", () => this.fireEvent("add", { crewId: crewId ?? "", day: d.day }));
 			cell.append(add);
 		}
@@ -337,47 +440,70 @@ export default class Cockpit extends Control {
 			this.fireEvent("menu", { assignmentId: "", crewId: crewId ?? "", day: d.day, x: e.clientX, y: e.clientY });
 		});
 		cell.addEventListener("dblclick", (e) => {
-			if (!(e.target as HTMLElement).closest(".eoCkCard") && data.canPlan) this.fireEvent("add", { crewId: crewId ?? "", day: d.day });
+			if (!(e.target as HTMLElement).closest(".eoCkCard, button") && data.canPlan) this.fireEvent("add", { crewId: crewId ?? "", day: d.day });
 		});
 		return cell;
 	}
 
 	private card(data: CockpitRender, a: PlanAssignment, timeline?: { left: number; width: number }): HTMLElement {
-		const compact = data.mode === "month";
+		const compact = !timeline && this.compact(data);
 		const kind = assignmentKinds[a.kind];
-		const card = el("div", `eoCkCard${compact ? " eoCkCompact" : ""}${a.warnings.length ? " eoCkWarn" : ""}`);
+		const card = el("div", `eoCkCard${compact ? " eoCkCompact" : ""}${a.warnings.length ? " eoCkWarn" : ""}${a.change ? ` eoCkChanged-${a.change}` : ""}`);
 		card.dataset.id = a.id;
 		card.dataset.flipKey = `ck:${a.id}`;
 		card.tabIndex = 0;
 		card.setAttribute("role", "button");
+		card.setAttribute("aria-haspopup", "dialog");
 		const selected = data.selected.includes(a.id);
 		if (selected) card.classList.add("eoCkSelected");
 		if (data.dimmed.includes(a.id)) card.classList.add("eoCkDim");
 		card.setAttribute("aria-pressed", String(selected));
 		const time = a.startTime ? `${hhmm(a.startTime)}${a.endTime ? `–${hhmm(a.endTime)}` : ""}` : "ganztags";
 		const title = `${a.bauakteNumber ? `${a.bauakteNumber} · ` : ""}${a.bauakteTitle}`;
+		const city = a.bauakteAddress?.split(",").pop()?.trim().replace(/^\d{5}\s*/, "") ?? "";
 		card.setAttribute("aria-label", `${a.activity}, ${title}, ${time}${a.warnings.length ? `, ${a.warnings.length} Hinweise` : ""}${a.change ? ", geändert seit Freigabe" : ""}`);
 		card.title = [title, `${a.activity} · ${time}`, a.bauakteAddress ?? "", a.people.length ? `Team: ${a.people.map((p) => p.name).join(", ")}` : "",
 			a.resources.length ? `Geräte: ${a.resources.map((r) => r.name).join(", ")}` : "", ...a.warnings.map((w) => `⚠ ${w}`),
-			a.change ? (a.change === "new" ? "Neu seit Freigabe" : "Geändert seit Freigabe") : ""].filter(Boolean).join("\n");
+			a.change ? (a.change === "new" ? "Neu seit Freigabe" : "Geändert seit Freigabe") : "", "Klick: Details · Doppelklick: bearbeiten"].filter(Boolean).join("\n");
 		if (safeColor(kind?.color)) card.style.setProperty("--eo-kind", safeColor(kind?.color));
 		if (timeline) {
 			card.style.left = `${timeline.left}%`;
 			card.style.width = `${timeline.width}%`;
 		}
-		const top = el("div", "eoCkCardTop");
-		if (a.sequence && !compact) top.append(el("span", "eoCkSeq", String(a.sequence)));
-		if (!compact) top.append(el("span", "eoCkTime", time));
+		const marks = el("span", "eoCkMarks");
 		if (a.change) {
 			const dot = el("span", `eoCkChange eoCkChange-${a.change}`);
 			dot.title = a.change === "new" ? "Neu seit Freigabe" : "Geändert seit Freigabe";
-			top.append(dot);
+			marks.append(dot);
 		}
-		if (a.warnings.length && !compact) top.append(icon("sap-icon://alert", "eoCkIcon eoCkWarnIcon"));
-		if (top.childElementCount) card.append(top);
-		card.append(el("span", "eoCkTitle", a.bauakteTitle));
-		if (!compact) {
-			const city = a.bauakteAddress?.split(",").pop()?.trim().replace(/^\d{5}\s*/, "") ?? "";
+		if (a.warnings.length) {
+			const w = icon("sap-icon://alert", "eoCkIcon eoCkWarnIcon");
+			w.title = a.warnings.join("\n");
+			marks.append(w);
+		}
+		if (compact) {
+			const line = el("div", "eoCkCardLine");
+			if (data.mode !== "month" && a.startTime) line.append(el("span", "eoCkTime", hhmm(a.startTime)));
+			line.append(el("span", "eoCkTitle", a.bauakteTitle));
+			if (marks.childElementCount) line.append(marks);
+			card.append(line);
+		} else {
+			const top = el("div", "eoCkCardTop");
+			if (a.sequence) {
+				const seq = el("span", "eoCkSeq", String(a.sequence));
+				seq.title = `${a.sequence}. Station der Fahrtreihenfolge`;
+				top.append(seq);
+			}
+			if (kind) {
+				const k = icon(kind.icon, "eoCkIcon eoCkKindIcon");
+				k.title = kind.text;
+				top.append(k);
+			}
+			const t = el("span", "eoCkTime", data.mode === "twoWeeks" && !timeline && a.startTime ? hhmm(a.startTime) : time);
+			t.title = time;
+			top.append(t);
+			if (marks.childElementCount) top.append(marks);
+			card.append(top, el("span", "eoCkTitle", a.bauakteTitle));
 			card.append(el("span", "eoCkSub", [a.activity, city].filter(Boolean).join(" · ")));
 		}
 		if (data.canPlan) {
@@ -385,14 +511,16 @@ export default class Cockpit extends Control {
 			if (data.mode === "week" || data.mode === "twoWeeks" || timeline) {
 				const grip = el("span", "eoCkGrip");
 				grip.dataset.nodrag = "1";
-				grip.title = timeline ? "Dauer ziehen" : "Kante ziehen: auf weitere Tage ausdehnen";
+				grip.title = timeline ? "Ende ziehen: Dauer ändern" : "Kante ziehen: auf weitere Tage ausdehnen";
 				grip.addEventListener("pointerdown", (e) => (timeline ? this.resizeTime(e, card, a, data) : this.extendDays(e, card, a)));
 				card.append(grip);
 			}
 			card.addEventListener("pointerdown", (e) => {
 				if ((e.target as HTMLElement).closest(".eoCkGrip")) return;
 				const rect = card.getBoundingClientRect();
-				startCockpitDrag(e, card, { kind: "assignment", id: a.id, grabOffset: e.clientX - rect.left });
+				const current = this.dataValue();
+				const count = current?.selected.includes(a.id) ? current.selected.length : 1;
+				startCockpitDrag(e, card, { kind: "assignment", id: a.id, grabOffset: e.clientX - rect.left }, count);
 			});
 		}
 		card.addEventListener("click", (e) => {
@@ -456,12 +584,31 @@ export default class Cockpit extends Control {
 		wrap.setAttribute("role", "grid");
 		wrap.setAttribute("aria-label", `Zeitachse ${longDay(day.day)}`);
 		wrap.style.setProperty("--eo-hours", String(to - from));
+		// Außerhalb der Kernarbeitszeit dezent schattiert.
+		wrap.style.setProperty("--eo-work-from", `${((WORK[0] - from) / (to - from)) * 100}%`);
+		wrap.style.setProperty("--eo-work-to", `${((WORK[1] - from) / (to - from)) * 100}%`);
 		const head = el("div", "eoCkTRow eoCkHead");
-		head.append(el("div", "eoCkLane eoCkCorner", longDay(day.day)));
+		const corner = el("div", "eoCkLane eoCkCorner");
+		corner.append(el("span", "eoCkCornerTitle", longDay(day.day)), el("span", "eoCkCornerSub", day.holiday ? `Feiertag: ${day.holiday}` : day.release
+			? (day.release.changedCount ? `Freigegeben · ${day.release.changedCount} geändert` : "Freigegeben") : "Entwurf – noch nicht freigegeben"));
+		head.append(corner);
 		const scale = el("div", "eoCkScale");
-		for (let h = from; h < to; h++) scale.append(el("span", "eoCkHour", `${String(h).padStart(2, "0")}:00`));
+		for (let h = from; h < to; h++) scale.append(el("span", `eoCkHour${h < WORK[0] || h >= WORK[1] ? " eoCkHourOff" : ""}`, `${String(h).padStart(2, "0")}:00`));
 		head.append(scale);
 		wrap.append(head);
+		let nowPercent = -1;
+		if (day.day === data.today) {
+			const now = new Date();
+			const m = now.getHours() * 60 + now.getMinutes();
+			if (m > from * 60 && m < to * 60) {
+				nowPercent = ((m - from * 60) / span) * 100;
+				wrap.style.setProperty("--eo-now", `${nowPercent}%`);
+				wrap.classList.add("eoCkHasNow");
+				const tag = el("span", "eoCkNowTag", `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`);
+				tag.style.left = `${nowPercent}%`;
+				scale.append(tag);
+			}
+		}
 		const lanes: (CockpitCrew | null)[] = [...data.crews, ...(data.noCrewLane ? [null] : [])];
 		for (const crew of lanes) {
 			const row = el("div", "eoCkTRow");
@@ -470,24 +617,29 @@ export default class Cockpit extends Control {
 			track.dataset.drop = "1";
 			track.dataset.crew = crew?.id ?? NO_CREW;
 			track.dataset.day = day.day;
+			track.dataset.dropLabel = crew?.name ?? "Ohne Kolonne";
 			track.setAttribute("aria-label", `${crew?.name ?? "Ohne Kolonne"}, Zeitachse`);
 			const info = crew?.cells[0];
-			const absent = info?.members.filter((m) => m.absenceNote) ?? [];
-			if (absent.length || info?.warnings.length) {
-				const facts = el("div", "eoCkTFacts");
-				for (const m of absent) facts.append(el("span", "eoCkAbsent", `${m.name}: ${m.absenceNote}`));
-				if (info?.warnings.length && this.inCell(data, crew?.id ?? null, day.day).length) {
-					const w = el("button", "eoCkWarnBtn");
-					w.type = "button";
-					w.append(icon("sap-icon://alert"), document.createTextNode(` ${info.warnings.length}`));
-					w.title = info.warnings.join("\n");
-					w.addEventListener("click", () => this.fireEvent("cellInfo", { crewId: crew?.id ?? "", day: day.day }));
-					facts.append(w);
-				}
-				track.append(facts);
-			}
 			const jobs = this.inCell(data, crew?.id ?? null, day.day);
-			// Ganztägige Einsätze ohne Uhrzeit: über die ganze Breite (Reihe oben), zeitliche darunter in Spuren ohne Überlappung.
+			const absent = info?.members.filter((m) => m.absenceNote) ?? [];
+			if (absent.length || (info?.warnings.length && jobs.length) || info?.rosterChanged) {
+				// Hinweise des Tages im (stehenden) Kolonnenkopf, damit sie beim waagrechten Scrollen sichtbar bleiben.
+				const facts = el("div", "eoCkTFacts");
+				for (const m of absent) {
+					const chip = el("span", "eoCkAbsent");
+					chip.append(icon("sap-icon://employee-rejections"), el("span", "eoCkAbsentText", `${m.name}: ${m.absenceNote}`));
+					facts.append(chip);
+				}
+				if (info?.rosterChanged) {
+					const r = el("span", "eoCkRoster");
+					r.append(icon("sap-icon://switch-classes"), el("span", "eoCkAbsentText", "Tagesbesetzung"));
+					r.title = `Tagesbesetzung: ${info.members.map((m) => m.name).join(", ") || "niemand"}${info.rosterNote ? ` · ${info.rosterNote}` : ""}`;
+					facts.append(r);
+				}
+				if (info?.warnings.length && jobs.length) facts.append(this.conflictButton(info.warnings, crew?.id ?? "", day.day));
+				row.querySelector(".eoCkLaneText")?.append(facts);
+			}
+			// Ganztägige Einsätze ohne Uhrzeit: über die ganze Breite, zeitliche in Spuren ohne Überlappung.
 			const lanesEnd: number[] = [];
 			for (const a of jobs) {
 				const start = a.startTime ? ofTime(a.startTime) : from * 60;
@@ -497,26 +649,20 @@ export default class Cockpit extends Control {
 				const left = Math.max(0, ((start - from * 60) / span) * 100);
 				const width = Math.max(4, Math.min(100 - left, ((end - start) / span) * 100));
 				const card = this.card(data, a, { left, width });
-				card.style.top = `${0.375 + lane * 4.125}rem`;
+				card.style.top = `${0.5 + lane * 4.375}rem`;
 				track.append(card);
 			}
-			track.style.minHeight = `${Math.max(1, lanesEnd.length) * 4.125 + 1.25}rem`;
+			track.style.minHeight = `${Math.max(1, lanesEnd.length) * 4.375 + 0.625}rem`;
 			track.addEventListener("contextmenu", (e) => {
 				if ((e.target as HTMLElement).closest(".eoCkCard")) return;
 				e.preventDefault();
 				this.fireEvent("menu", { assignmentId: "", crewId: crew?.id ?? "", day: day.day, x: e.clientX, y: e.clientY });
 			});
 			track.addEventListener("dblclick", (e) => {
-				if (!(e.target as HTMLElement).closest(".eoCkCard") && data.canPlan) this.fireEvent("add", { crewId: crew?.id ?? "", day: day.day });
+				if (!(e.target as HTMLElement).closest(".eoCkCard, button") && data.canPlan) this.fireEvent("add", { crewId: crew?.id ?? "", day: day.day });
 			});
 			row.append(track);
 			wrap.append(row);
-		}
-		const now = new Date();
-		if (day.day === data.today) {
-			const m = now.getHours() * 60 + now.getMinutes();
-			if (m > from * 60 && m < to * 60) wrap.style.setProperty("--eo-now", `${((m - from * 60) / span) * 100}%`);
-			wrap.classList.add("eoCkHasNow");
 		}
 		return wrap;
 	}
@@ -538,6 +684,7 @@ export default class Cockpit extends Control {
 		const track = card.closest<HTMLElement>(".eoCkTrack");
 		if (!track) return;
 		document.body.classList.add("is-dragging", "eoCkResizing");
+		card.classList.add("eoCkResizingCard");
 		const [from, to] = data.hours;
 		const span = (to - from) * 60;
 		const start = a.startTime ? ofTime(a.startTime) : from * 60;
@@ -552,20 +699,52 @@ export default class Cockpit extends Control {
 			window.removeEventListener("pointermove", move, true);
 			window.removeEventListener("pointerup", up, true);
 			document.body.classList.remove("is-dragging", "eoCkResizing");
+			card.classList.remove("eoCkResizingCard");
 			this.fireEvent("retime", { id: a.id, start: toTime(start), end: toTime(end) });
 		};
 		window.addEventListener("pointermove", move, true);
 		window.addEventListener("pointerup", up, true);
 	}
 
+	/** Startzeit beim Ablegen auf einer Zeitachse (Griffpunkt berücksichtigt). */
+	private dropStart(payload: CockpitPayload, track: HTMLElement, x: number): number {
+		const offset = payload.kind === "assignment" ? payload.grabOffset : 0;
+		return this.timeAt(track, x - offset);
+	}
+
+	/** Vorschau beim Ziehen: in der Zeitachse ein Schatten an der künftigen Lage; liefert ggf. die Uhrzeit für den Geist. */
+	preview(payload: CockpitPayload, target: HTMLElement, event: PointerEvent): string {
+		if (!target.classList.contains("eoCkTrack")) {
+			this.clearPreview();
+			return "";
+		}
+		const data = this.dataValue();
+		if (!data) return "";
+		const [from, to] = data.hours;
+		const span = (to - from) * 60;
+		const start = this.dropStart(payload, target, event.clientX);
+		const a = payload.kind === "assignment" ? data.assignments.find((x) => x.id === payload.id) : undefined;
+		const length = a ? minutes(a.startTime, a.endTime) : 480;
+		const end = Math.min(to * 60, start + length);
+		let mark = target.querySelector<HTMLElement>(":scope > .eoCkDropMark");
+		if (!mark) {
+			this.clearPreview();
+			mark = el("div", "eoCkDropMark");
+			target.append(mark);
+		}
+		mark.style.left = `${((start - from * 60) / span) * 100}%`;
+		mark.style.width = `${Math.max(2, ((end - start) / span) * 100)}%`;
+		mark.textContent = `${hhmm(toTime(start))}–${hhmm(toTime(end))}`;
+		return `${hhmm(toTime(start))} Uhr`;
+	}
+
+	clearPreview(): void { for (const m of this.scroll?.querySelectorAll(".eoCkDropMark") ?? []) m.remove(); }
+
 	/** Ablegen auf Zelle bzw. Zeitachse (aufgerufen vom Zieh-Kern). */
 	handleDrop(payload: CockpitPayload, target: HTMLElement, event: PointerEvent): void {
+		this.clearPreview();
 		const crew = target.dataset.crew ?? NO_CREW;
-		let start = "";
-		if (target.classList.contains("eoCkTrack")) {
-			const offset = payload.kind === "assignment" ? payload.grabOffset : 0;
-			start = toTime(this.timeAt(target, event.clientX - offset));
-		}
+		const start = target.classList.contains("eoCkTrack") ? toTime(this.dropStart(payload, target, event.clientX)) : "";
 		this.fireEvent("drop", { payload, crewId: crew === NO_CREW ? "" : crew, day: target.dataset.day ?? "", copy: event.ctrlKey || event.metaKey || event.altKey, start });
 	}
 

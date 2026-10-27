@@ -2,84 +2,119 @@
 	xmlns:eo="estrichone.control" height="100%">
 	<Page id="page" showHeader="false" enableScrolling="false" class="eoCkPage">
 		<VBox height="100%" renderType="Bare" class="eoCkLayout">
-			<OverflowToolbar class="eoCkToolbar" style="Clear">
-				<Title text="Disponenten-Cockpit" level="H1" class="eoCkPageTitle"/>
-				<Text text="{view>/period}" class="eoCkPeriodText eoTabular"/>
+			<!-- Kopf: Titel und Zeitraum, Kennzahlen, Aktionen -->
+			<HBox class="eoCkHeader" renderType="Bare">
+				<VBox class="eoCkTitleBlock" renderType="Bare">
+					<Title text="Disponenten-Cockpit" level="H1" class="eoCkPageTitle" wrapping="false"/>
+					<Text text="{view>/subtitle}" class="eoCkPeriodText eoTabular" wrapping="false"/>
+				</VBox>
+				<HBox class="eoCkKpis" renderType="Bare">
+					<VBox class="eoCkKpi" renderType="Bare" tooltip="Bauvorhaben ohne kommenden Einsatz (Vorrat)">
+						<Label text="Ungeplant"/>
+						<HBox alignItems="Baseline" renderType="Bare" class="eoCkKpiRow">
+							<Text text="{view>/kpi/unplanned}" class="eoCkKpiValue"/>
+							<ObjectStatus text="{= ${view>/kpi/overdue} > 0 ? ${view>/kpi/overdue} + ' überfällig' : '' }" state="Error" class="sapUiTinyMarginBegin" visible="{= ${view>/kpi/overdue} > 0 }"/>
+						</HBox>
+					</VBox>
+					<VBox class="eoCkKpi" renderType="Bare" tooltip="Einsätze im angezeigten Zeitraum">
+						<Label text="Einsätze"/>
+						<Text text="{view>/kpi/assignments}" class="eoCkKpiValue"/>
+					</VBox>
+					<VBox class="eoCkKpi" renderType="Bare" tooltip="Verplante Stunden aller Kolonnen gegenüber ihrer Kapazität (8 h je verfügbarem Arbeitstag)">
+						<Label text="Auslastung"/>
+						<ObjectStatus text="{view>/kpi/loadText}" state="{view>/kpi/loadState}" class="eoCkKpiValue"/>
+					</VBox>
+					<VBox class="eoCkKpi eoCkKpiOptional" renderType="Bare" tooltip="Freigabestand der Arbeitstage ab heute">
+						<Label text="Freigabe"/>
+						<ObjectStatus text="{view>/kpi/releaseText}" state="{view>/kpi/releaseState}" class="eoCkKpiValue"/>
+					</VBox>
+				</HBox>
+				<OverflowToolbar class="eoCkActions" style="Clear" ariaLabelledBy="ckActions">
+					<core:InvisibleText id="ckActions" text="Aktionen"/>
+					<ToolbarSpacer/>
+					<Button icon="sap-icon://undo" type="Transparent" tooltip="{= 'Rückgängig' + (${view>/undoText} ? ': ' + ${view>/undoText} : '') + ' (Strg+Z)' }" enabled="{= !!${view>/undoText} }" press=".onUndo" visible="{view>/canPlan}">
+						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+					</Button>
+					<Button icon="sap-icon://redo" type="Transparent" tooltip="{= 'Wiederholen' + (${view>/redoText} ? ': ' + ${view>/redoText} : '') + ' (Strg+Y)' }" enabled="{= !!${view>/redoText} }" press=".onRedo" visible="{view>/canPlan}">
+						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+					</Button>
+					<ToolbarSeparator visible="{view>/canPlan}"/>
+					<Button text="{= ${view>/kpi/conflicts} + (${view>/kpi/conflicts} === 1 ? ' Konflikt' : ' Konflikte') }" icon="sap-icon://alert" type="{= ${view>/kpi/conflicts} > 0 ? 'Critical' : 'Transparent' }" press=".onConflicts" tooltip="Alle Konflikte im Zeitraum mit Erklärung">
+						<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
+					</Button>
+					<Button text="Karte" icon="sap-icon://map-2" type="Transparent" press=".onMap" tooltip="Einsätze des Tages auf der Karte, Fahrtreihenfolge je Kolonne">
+						<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
+					</Button>
+					<MenuButton text="Drucken" icon="sap-icon://print" type="Transparent">
+						<menu>
+							<Menu>
+								<MenuItem text="Wochenplan (PDF)" icon="sap-icon://pdf-attachment" press=".onPdfWeek"/>
+								<MenuItem text="Tagesplan (PDF)" icon="sap-icon://pdf-attachment" press=".onPdfDay"/>
+								<MenuItem text="Wer fährt wohin (PDF)" icon="sap-icon://journey-arrive" press=".onPdfDispatch"/>
+							</Menu>
+						</menu>
+						<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
+					</MenuButton>
+					<Button text="{= ${view>/kpi/changed} > 0 ? 'Änderungen freigeben (' + ${view>/kpi/changed} + ')' : 'Plan freigeben' }" icon="sap-icon://paper-plane" type="Emphasized" press=".onRelease" visible="{view>/canPlan}" tooltip="Plan für Mitarbeiter freigeben („Wer fährt wohin“ in der App)">
+						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+					</Button>
+				</OverflowToolbar>
+			</HBox>
+			<!-- Werkzeugleiste: Zeitraum, Suche und Filter, Darstellung, Ansicht -->
+			<OverflowToolbar class="eoCkToolbar" style="Clear" ariaLabelledBy="ckToolbar">
+				<Button text="Heute" press=".onToday" tooltip="Zu heute springen (T)">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				</Button>
+				<Button icon="sap-icon://navigation-left-arrow" type="Transparent" tooltip="Zurück (Bild ↑)" press=".onPrev">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				</Button>
+				<Button icon="sap-icon://navigation-right-arrow" type="Transparent" tooltip="Weiter (Bild ↓)" press=".onNext">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				</Button>
+				<Button id="ckPeriod" text="{view>/period}" icon="sap-icon://calendar" iconFirst="false" type="Transparent" press=".onPickOpen" tooltip="Datum wählen" class="eoCkPeriodBtn">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				</Button>
+				<DatePicker id="ckPicker" value="{view>/anchor}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" hideInput="true" change=".onPick" ariaLabelledBy="ckPick" showFooter="false"/>
+				<core:InvisibleText id="ckPick" text="Datum wählen"/>
+				<core:InvisibleText id="ckToolbar" text="Zeitraum, Filter und Ansicht"/>
 				<ToolbarSpacer/>
-				<Button icon="sap-icon://undo" tooltip="{= 'Rückgängig' + (${view>/undoText} ? ': ' + ${view>/undoText} : '') + ' (Strg+Z)' }" enabled="{= !!${view>/undoText} }" press=".onUndo" visible="{view>/canPlan}">
+				<SearchField value="{view>/filter/search}" liveChange=".onFilter" placeholder="Im Plan suchen" width="12rem" tooltip="Bauvorhaben, Ort, Tätigkeit, Kolonne oder Mitarbeiter (blendet andere ab)">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow" minWidth="9rem" shrinkable="true"/></layoutData>
+				</SearchField>
+				<Button id="ckFilterBtn" text="{= ${view>/filterCount} > 0 ? 'Filter (' + ${view>/filterCount} + ')' : 'Filter' }" icon="sap-icon://filter" type="{= ${view>/filterCount} > 0 ? 'Attention' : 'Default' }" press=".onFilterOpen" tooltip="Kolonnen, Region, Status">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</Button>
-				<Button icon="sap-icon://redo" tooltip="{= 'Wiederholen' + (${view>/redoText} ? ': ' + ${view>/redoText} : '') + ' (Strg+Y)' }" enabled="{= !!${view>/redoText} }" press=".onRedo" visible="{view>/canPlan}">
-					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				<ToolbarSeparator/>
+				<ToggleButton icon="sap-icon://text-align-justified" pressed="{view>/compact}" press=".onCompact" type="Transparent" tooltip="Kompakt: eine Zeile je Einsatz" enabled="{= ${view>/mode} === 'week' || ${view>/mode} === 'twoWeeks' }">
+					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
+				</ToggleButton>
+				<Button icon="sap-icon://palette" type="Transparent" tooltip="Legende" press=".onLegend">
+					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
 				</Button>
-				<Button text="{= ${view>/kpi/conflicts} + ' Konflikte' }" icon="sap-icon://alert" type="{= ${view>/kpi/conflicts} > 0 ? 'Critical' : 'Default' }" press=".onConflicts" tooltip="Alle Konflikte im Zeitraum mit Erklärung"/>
-				<Button text="Karte" icon="sap-icon://map-2" press=".onMap" tooltip="Einsätze des Tages auf der Karte, Fahrtreihenfolge je Kolonne"/>
-				<MenuButton text="Drucken" icon="sap-icon://print">
-					<menu>
-						<Menu>
-							<MenuItem text="Wochenplan (PDF)" icon="sap-icon://pdf-attachment" press=".onPdfWeek"/>
-							<MenuItem text="Tagesplan (PDF)" icon="sap-icon://pdf-attachment" press=".onPdfDay"/>
-							<MenuItem text="Wer fährt wohin (PDF)" icon="sap-icon://journey-arrive" press=".onPdfDispatch"/>
-						</Menu>
-					</menu>
-				</MenuButton>
-				<Button text="{= ${view>/kpi/changed} > 0 ? 'Änderungen freigeben (' + ${view>/kpi/changed} + ')' : 'Plan freigeben' }" icon="sap-icon://paper-plane" type="Emphasized" press=".onRelease" visible="{view>/canPlan}" tooltip="Plan für Mitarbeiter freigeben („Wer fährt wohin“ in der App)">
-					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				<Button icon="sap-icon://keyboard-and-mouse" type="Transparent" tooltip="Bedienung (?)" press=".onKeys">
+					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
 				</Button>
-				<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
-			</OverflowToolbar>
-			<OverflowToolbar class="eoCkNavbar" style="Clear">
-				<SegmentedButton selectedKey="{view>/mode}" selectionChange=".onMode">
+				<Button icon="sap-icon://refresh" type="Transparent" tooltip="Neu laden" press=".onRefresh">
+					<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
+				</Button>
+				<SegmentedButton selectedKey="{view>/mode}" selectionChange=".onMode" class="sapUiTinyMarginBegin">
 					<items>
-						<SegmentedButtonItem key="day" text="Tag"/>
+						<SegmentedButtonItem key="day" text="Tag" tooltip="Zeitachse eines Tages"/>
 						<SegmentedButtonItem key="week" text="Woche"/>
 						<SegmentedButtonItem key="twoWeeks" text="2 Wochen"/>
 						<SegmentedButtonItem key="month" text="Monat"/>
 					</items>
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</SegmentedButton>
-				<Button icon="sap-icon://navigation-left-arrow" tooltip="Zurück" press=".onPrev">
-					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
-				</Button>
-				<Button text="Heute" press=".onToday">
-					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
-				</Button>
-				<Button icon="sap-icon://navigation-right-arrow" tooltip="Weiter" press=".onNext">
-					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
-				</Button>
-				<DatePicker value="{view>/anchor}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" width="9rem" change=".onPick" ariaLabelledBy="ckPick"/>
-				<core:InvisibleText id="ckPick" text="Datum wählen"/>
-				<ToolbarSpacer/>
-				<MultiComboBox selectedKeys="{view>/filter/crews}" items="{view>/crewOptions}" placeholder="Alle Kolonnen" width="13rem" selectionFinish=".onFilter" ariaLabelledBy="ckCrew">
-					<core:Item key="{view>key}" text="{view>text}"/>
-				</MultiComboBox>
-				<core:InvisibleText id="ckCrew" text="Kolonnen"/>
-				<Select selectedKey="{view>/filter/region}" items="{view>/regionOptions}" width="10rem" change=".onFilter" ariaLabelledBy="ckRegion">
-					<core:Item key="{view>key}" text="{view>text}"/>
-				</Select>
-				<core:InvisibleText id="ckRegion" text="Region"/>
-				<Select selectedKey="{view>/filter/status}" items="{view>/statusOptions}" width="10rem" change=".onFilter" ariaLabelledBy="ckStatus">
-					<core:Item key="{view>key}" text="{view>text}"/>
-				</Select>
-				<core:InvisibleText id="ckStatus" text="Status"/>
-				<SearchField value="{view>/filter/search}" liveChange=".onFilter" placeholder="Im Plan suchen" width="12rem"/>
 			</OverflowToolbar>
-			<HBox class="eoCkKpis" wrap="Wrap" renderType="Bare">
-				<VBox class="eoCkKpi" renderType="Bare"><Label text="Ungeplant"/><Text text="{view>/kpi/unplanned}" class="eoCkKpiValue"/></VBox>
-				<VBox class="eoCkKpi" renderType="Bare"><Label text="Davon überfällig"/><ObjectStatus text="{view>/kpi/overdue}" state="{= ${view>/kpi/overdue} > 0 ? 'Error' : 'None' }" class="eoCkKpiValue"/></VBox>
-				<VBox class="eoCkKpi" renderType="Bare"><Label text="Einsätze im Zeitraum"/><Text text="{view>/kpi/assignments}" class="eoCkKpiValue"/></VBox>
-				<VBox class="eoCkKpi" renderType="Bare"><Label text="Auslastung Kolonnen"/><ObjectStatus text="{view>/kpi/loadText}" state="{view>/kpi/loadState}" class="eoCkKpiValue"/></VBox>
-				<VBox class="eoCkKpi" renderType="Bare"><Label text="Freigabe"/><ObjectStatus text="{view>/kpi/releaseText}" state="{view>/kpi/releaseState}" class="eoCkKpiValue"/></VBox>
-				<HBox class="eoCkHint" alignItems="Center" renderType="Bare" visible="{view>/canPlan}">
-					<core:Icon src="sap-icon://hint" class="sapUiTinyMarginEnd"/>
-					<Text text="Ziehen = verschieben · Strg+Ziehen = kopieren · Kante ziehen = mehrtägig · Strg+Klick = Mehrfachauswahl · Rechtsklick = Schnellaktionen"/>
-				</HBox>
-			</HBox>
-			<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiTinyMarginBottom"/>
+			<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }"/>
 			<HBox class="eoCkBody" renderType="Bare">
 				<VBox class="eoCkPool" renderType="Bare" visible="{view>/poolOpen}">
-					<HBox alignItems="Center" class="eoCkPoolHead" renderType="Bare">
-						<Title text="{= 'Ungeplante Bauvorhaben (' + ${view>/poolCount} + ')' }" level="H2" wrapping="false"/>
+					<HBox class="eoCkPoolHead" renderType="Bare">
+						<HBox class="eoCkPoolTitle" renderType="Bare" alignItems="Center">
+							<Title text="Vorrat" level="H2" wrapping="false" tooltip="Ungeplante Bauvorhaben"/>
+							<Text text="{view>/poolCount}" class="eoCkPoolCount" tooltip="Bauvorhaben ohne kommenden Einsatz"/>
+						</HBox>
 						<Button icon="sap-icon://close-command-field" type="Transparent" tooltip="Vorrat ausblenden" press=".onTogglePool"/>
 					</HBox>
 					<SegmentedButton selectedKey="{view>/pool/mode}" selectionChange=".onPoolFilter" width="100%" class="eoSegFill">
@@ -88,9 +123,9 @@
 							<SegmentedButtonItem key="all" text="Alle offenen"/>
 						</items>
 					</SegmentedButton>
-					<SearchField value="{view>/pool/search}" liveChange=".onPoolFilter" placeholder="Name, Ort, Kunde" width="100%"/>
+					<SearchField value="{view>/pool/search}" liveChange=".onPoolFilter" placeholder="Name, Nummer, Ort, Kunde" width="100%"/>
 					<HBox class="eoCkPoolTools" renderType="Bare">
-						<Text text="{view>/poolFacts}" class="eoMuted eoCkPoolFacts"/>
+						<Text text="{view>/poolFacts}" class="eoCkPoolFacts" wrapping="false"/>
 						<Select selectedKey="{view>/pool/sort}" change=".onPoolFilter" width="8.75rem" ariaLabelledBy="ckSort" tooltip="Sortierung">
 							<core:Item key="urgency" text="Dringlichkeit"/>
 							<core:Item key="date" text="Termin"/>
@@ -99,19 +134,20 @@
 						</Select>
 						<core:InvisibleText id="ckSort" text="Sortierung"/>
 					</HBox>
-					<ScrollContainer vertical="true" horizontal="false" height="100%" class="eoCkPoolScroll">
-						<eo:CockpitBacklog items="{view>/poolItems}" canPlan="{view>/canPlan}" plan=".onPoolPlan" open=".onPoolOpen"/>
-					</ScrollContainer>
+					<eo:CockpitBacklog items="{view>/poolItems}" counts="{view>/poolCounts}" urgency="{view>/pool/urgency}" grouped="{= ${view>/pool/sort} === 'urgency' }"
+						canPlan="{view>/canPlan}" plan=".onPoolPlan" open=".onPoolOpen" urgencyChange=".onPoolUrgency"/>
+				</VBox>
+				<VBox class="eoCkPoolRail" renderType="Bare" visible="{= !${view>/poolOpen} }" alignItems="Center">
+					<Button icon="sap-icon://open-command-field" type="Transparent" tooltip="Vorrat einblenden" press=".onTogglePool" class="eoCkPoolOpen"/>
+					<Text text="{= 'Vorrat · ' + ${view>/poolCount} }" class="eoCkPoolRailText" wrapping="false"/>
 				</VBox>
 				<VBox class="eoCkMain" renderType="Bare" busy="{view>/busy}" busyIndicatorDelay="400">
-					<Button icon="sap-icon://open-command-field" text="Vorrat" press=".onTogglePool" visible="{= !${view>/poolOpen} }" class="eoCkPoolOpen" type="Transparent"/>
 					<eo:Cockpit id="cockpit" data="{view>/render}" drop=".onDrop" open=".onOpen" select=".onSelect" menu=".onMenu" extend=".onExtend"
 						retime=".onRetime" dayPress=".onDayPress" add=".onAdd" cellInfo=".onCellInfo"/>
-					<HBox class="eoCkSelBar" alignItems="Center" visible="{= ${view>/selectedCount} > 0 }" renderType="Bare">
-						<Text text="{= ${view>/selectedCount} + (${view>/selectedCount} === 1 ? ' Einsatz ausgewählt' : ' Einsätze ausgewählt') }" class="eoCkSelText"/>
+					<HBox class="eoCkSelBar" alignItems="Center" visible="{= ${view>/selectedCount} > 1 }" renderType="Bare">
+						<Text text="{= ${view>/selectedCount} + ' Einsätze ausgewählt' }" class="eoCkSelText" wrapping="false"/>
 						<Button text="Einen Tag früher" icon="sap-icon://close-command-field" press=".onShiftBack" type="Transparent" visible="{view>/canPlan}"/>
 						<Button text="Einen Tag später" icon="sap-icon://open-command-field" press=".onShiftForward" type="Transparent" visible="{view>/canPlan}"/>
-						<Button text="Nächster freier Tag" icon="sap-icon://appointment" press=".onNextFree" type="Transparent" visible="{view>/canPlan}"/>
 						<Button text="Löschen" icon="sap-icon://delete" press=".onDeleteSelected" type="Transparent" visible="{view>/canPlan}"/>
 						<Button text="Auswahl aufheben" press=".onClearSelection" type="Transparent"/>
 					</HBox>

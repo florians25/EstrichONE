@@ -17,6 +17,12 @@ export interface TrackOptions {
 	/** Klasse der Quelle während des Ziehens. */
 	draggingClass?: string;
 	onDrop: (target: HTMLElement, event: PointerEvent) => void;
+	/** Optional: Geist nach dem Erzeugen anpassen (z. B. Anzahl, Beschriftung). */
+	onStart?: (ghost: HTMLElement) => void;
+	/** Optional: bei jeder Bewegung mit aktuellem Ziel (oder null) – z. B. Zielbeschriftung, Kopieren-Hinweis. */
+	onOver?: (target: HTMLElement | null, event: PointerEvent, ghost: HTMLElement) => void;
+	/** Optional: nach jedem Ende (Ablegen oder Abbruch). */
+	onEnd?: () => void;
 }
 
 const THRESHOLD = 5;
@@ -169,6 +175,7 @@ export function trackDrag(event: PointerEvent, source: HTMLElement, options: Tra
 		ghost.style.left = `${gx}px`;
 		ghost.style.top = `${gy}px`;
 		document.body.append(ghost);
+		options.onStart?.(ghost);
 		if (!reduced()) ghost.animate([{ transform: "rotate(0) scale(1)", opacity: 1 }, { transform: "rotate(-1.5deg) scale(1.03)", opacity: 0.9 }], { duration: 140, easing: "ease-out" });
 		if (options.draggingClass) source.classList.add(options.draggingClass);
 	};
@@ -180,6 +187,7 @@ export function trackDrag(event: PointerEvent, source: HTMLElement, options: Tra
 		}
 		if (!follow) follow = requestAnimationFrame(smooth);
 		highlight(e.clientX, e.clientY);
+		if (ghost) options.onOver?.(over, e, ghost);
 		if (!frame) frame = requestAnimationFrame(autoScroll);
 		e.preventDefault();
 	};
@@ -193,6 +201,7 @@ export function trackDrag(event: PointerEvent, source: HTMLElement, options: Tra
 		if (follow) cancelAnimationFrame(follow);
 		document.body.classList.remove("is-dragging");
 		if (!ghost) return false;
+		options.onEnd?.();
 		const g = ghost;
 		ghost = null;
 		settle(g, (to ?? source).getBoundingClientRect(), () => {

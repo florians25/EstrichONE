@@ -73,6 +73,9 @@ export function minutes(start: string | null, end: string | null): number {
 	return Math.max(30, m(end) - m(start));
 }
 
+/** Stunden mit deutschem Komma, z. B. „5,5“ (auf eine Nachkommastelle). */
+export const hours = (min: number): string => (Math.round(min / 6) / 10).toLocaleString("de-DE");
+
 export const hhmm = (t: string | null | undefined): string => (t ? t.slice(0, 5) : "");
 export const toTime = (min: number): string => `${String(Math.floor(min / 60)).padStart(2, "0")}:${String(min % 60).padStart(2, "0")}:00`;
 export const ofTime = (t: string): number => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5));

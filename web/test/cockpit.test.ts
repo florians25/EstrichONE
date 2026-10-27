@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cockpitDays, minutes, toSave, toTime, urgencyOf, type PlanAssignment } from '../webapp/util/cockpitModels';
+import { cockpitDays, hours, minutes, toSave, toTime, urgencyOf, type PlanAssignment } from '../webapp/util/cockpitModels';
 
 describe('Disponenten-Cockpit', () => {
   it('Tage je Ansicht', () => {
@@ -19,6 +19,9 @@ describe('Disponenten-Cockpit', () => {
     expect(minutes('13:00:00', null)).toBe(180);
     expect(minutes('07:00:00', '11:30:00')).toBe(270);
     expect(toTime(390)).toBe('06:30:00');
+    expect(hours(330)).toBe('5,5');
+    expect(hours(480)).toBe('8');
+    expect(hours(20)).toBe('0,3');
   });
 
   it('Dringlichkeit im Vorrat', () => {

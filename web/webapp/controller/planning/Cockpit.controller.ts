@@ -18,23 +18,30 @@ import CustomListItem from "sap/m/CustomListItem";
 import StandardListItem from "sap/m/StandardListItem";
 import ObjectStatus from "sap/m/ObjectStatus";
 import Title from "sap/m/Title";
+import Popover from "sap/m/Popover";
+import Link from "sap/m/Link";
+import MessageStrip from "sap/m/MessageStrip";
+import OverflowToolbar from "sap/m/OverflowToolbar";
+import ToolbarSpacer from "sap/m/ToolbarSpacer";
+import Icon from "sap/ui/core/Icon";
+import HTML from "sap/ui/core/HTML";
 import Item from "sap/ui/core/Item";
 import type { RouteMatch } from "../../util/router";
 import { del, get, post, put } from "../../util/api";
 import { addDays, isoDay, isoWeek, mondayOf, parseDay } from "../../util/days";
 import { area } from "../../util/format";
-import { bauakteStatus, flowStatuses } from "../../util/labels";
+import { assignmentKinds, bauakteStatus, flowStatuses } from "../../util/labels";
 import { uuidv7 } from "../../util/ids";
 import { draftOf, newDraft, openAssignment, planningLookups } from "../../util/assignmentDialog";
 import { session } from "../../util/session";
 import { download } from "../../util/planningModels";
-import type { BacklogItem, CrewResponse, DirectoryUser, ResourceResponse } from "../../util/models";
+import type { BacklogItem, BauakteDetail, CrewResponse, DirectoryUser, ResourceResponse } from "../../util/models";
 import type Cockpit from "../../control/Cockpit";
 import type { CockpitMode, CockpitPayload, CockpitRender, MenuItem } from "../../control/Cockpit";
-import type { BacklogCard } from "../../control/CockpitBacklog";
+import type { BacklogCard, Urgency } from "../../control/CockpitBacklog";
 import LeafletMap from "../../control/LeafletMap";
 import {
-	cockpitDays, hhmm, minutes, ofTime, toSave, toTime, urgencyOf, type CockpitBoard, type DayPlan, type PlanAssignment, type PlanBatchResult, type PlanOperation,
+	cockpitDays, hhmm, hours, minutes, ofTime, toSave, toTime, urgencyOf, type CockpitBoard, type DayPlan, type PlanAssignment, type PlanBatchResult, type PlanOperation,
 	type PlanReleaseInfo, type SaveAssignment,
 } from "../../util/cockpitModels";
 
@@ -63,18 +70,21 @@ export default class CockpitController extends BaseController {
 	private selected: string[] = [];
 	private loadSeq = 0;
 	private keyHandler = (e: KeyboardEvent) => this.onKey(e);
+	private quick: Popover | null = null;
+	private legend: Popover | null = null;
 
 	onInit(): void {
 		this.local({
-			mode: "week", anchor: isoDay(new Date()), period: "", canPlan: false, busy: false, error: "", render: null,
+			mode: "week", anchor: isoDay(new Date()), period: "", subtitle: "", filterCount: 0, compact: false, canPlan: false, busy: false, error: "", render: null,
 			filter: { crews: [], region: "", status: "", search: "" }, crewOptions: [], regionOptions: [], statusOptions: [],
-			pool: { mode: "free", search: "", sort: "urgency" }, poolItems: [], poolCount: 0, poolFacts: "", poolOpen: true,
+			pool: { mode: "free", search: "", sort: "urgency", urgency: [] }, poolItems: [], poolCounts: {}, poolCount: 0, poolFacts: "", poolOpen: true,
 			kpi: { unplanned: 0, overdue: 0, assignments: 0, loadText: "–", loadState: "None", releaseText: "–", releaseState: "None", conflicts: 0, changed: 0 },
 			undoText: "", redoText: "", selectedCount: 0,
 		});
 		this.model().setProperty("/statusOptions", [{ key: "", text: "Alle Status" }, ...flowStatuses.map((s) => ({ key: s, text: bauakteStatus[s].text }))]);
 		try {
 			if (window.localStorage.getItem("eo.cockpit.pool") === "0") this.model().setProperty("/poolOpen", false);
+			if (window.localStorage.getItem("eo.cockpit.compact") === "1") this.model().setProperty("/compact", true);
 		} catch { /* Speicher nicht verfügbar */ }
 		EventBus.getInstance().subscribe("estrichone", "planningChanged", this.changed, this);
 		document.addEventListener("keydown", this.keyHandler);
@@ -83,6 +93,7 @@ export default class CockpitController extends BaseController {
 	onExit(): void {
 		EventBus.getInstance().unsubscribe("estrichone", "planningChanged", this.changed, this);
 		document.removeEventListener("keydown", this.keyHandler);
+		this.quick?.destroy();
 	}
 
 	private changed(): void { void this.load(true); }
@@ -123,6 +134,46 @@ export default class CockpitController extends BaseController {
 	onDayPress(e: Event): void { this.go({ ansicht: "day", datum: String(e.getParameter("day" as never)) }); }
 	onRefresh(): void { void this.load(true, true); }
 	onFilter(): void { this.render(); }
+
+	onPickOpen(e: Event): void {
+		const picker = this.byId("ckPicker") as unknown as { openBy?: (dom: HTMLElement) => void };
+		const dom = (e.getSource() as Button).getDomRef() as HTMLElement | null;
+		if (picker.openBy && dom) picker.openBy(dom);
+	}
+
+	/** Filter (Kolonnen, Region, Status) als Popover – hält die Werkzeugleiste auch auf 13 Zoll übersichtlich. */
+	onFilterOpen(e: Event): void {
+		const m = this.model();
+		const crews = new MultiComboBox({ width: "100%", placeholder: "Alle Kolonnen", selectedKeys: m.getProperty("/filter/crews") as string[],
+			items: (m.getProperty("/crewOptions") as { key: string; text: string }[]).map((o) => new Item({ key: o.key, text: o.text })),
+			selectionFinish: () => { m.setProperty("/filter/crews", crews.getSelectedKeys()); this.render(); } });
+		const region = new Select({ width: "100%", selectedKey: String(m.getProperty("/filter/region") ?? ""),
+			items: (m.getProperty("/regionOptions") as { key: string; text: string }[]).map((o) => new Item({ key: o.key, text: o.text })),
+			change: () => { m.setProperty("/filter/region", region.getSelectedKey()); this.render(); this.renderPool(); } });
+		const status = new Select({ width: "100%", selectedKey: String(m.getProperty("/filter/status") ?? ""),
+			items: (m.getProperty("/statusOptions") as { key: string; text: string }[]).map((o) => new Item({ key: o.key, text: o.text })),
+			change: () => { m.setProperty("/filter/status", status.getSelectedKey()); this.render(); } });
+		const popover = new Popover({
+			title: "Filter", placement: "Bottom", contentWidth: "20rem",
+			content: [new VBox({ items: [
+				new Label({ text: "Kolonnen", labelFor: crews }), crews,
+				new Label({ text: "Region (PLZ-Bereich, gilt auch für den Vorrat)", labelFor: region, wrapping: true }).addStyleClass("sapUiSmallMarginTop"), region,
+				new Label({ text: "Status der Bauakte", labelFor: status }).addStyleClass("sapUiSmallMarginTop"), status,
+				new Text({ text: "Ausgefilterte Einsätze werden abgeschwächt angezeigt; Kolonnen werden ausgeblendet." }).addStyleClass("eoMuted sapUiSmallMarginTop"),
+			] }).addStyleClass("sapUiSmallMargin")],
+			footer: new OverflowToolbar({ content: [new ToolbarSpacer(),
+				new Button({ text: "Zurücksetzen", press: () => {
+					m.setProperty("/filter", { ...(m.getProperty("/filter") as object), crews: [], region: "", status: "" });
+					popover.close();
+					this.render();
+					this.renderPool();
+				} }),
+				new Button({ text: "Schließen", type: "Emphasized", press: () => popover.close() })] }),
+			afterClose: () => popover.destroy(),
+		});
+		this.v().addDependent(popover);
+		popover.openBy(e.getSource() as Button);
+	}
 
 	private shift(direction: number): void {
 		const mode = this.mode();
@@ -173,9 +224,20 @@ export default class CockpitController extends BaseController {
 		const mode = this.mode();
 		const first = days[0];
 		const last = days[days.length - 1];
-		this.model().setProperty("/period", mode === "day" ? longDay(first)
+		const year = parseDay(last).getFullYear();
+		const range = `${short(first)} – ${short(last)}${year !== new Date().getFullYear() ? ` ${year}` : ""}`;
+		this.model().setProperty("/period", mode === "day" ? parseDay(first).toLocaleDateString("de-DE", { weekday: "long", day: "numeric", month: "long", year: "numeric" })
 			: mode === "month" ? parseDay(first).toLocaleDateString("de-DE", { month: "long", year: "numeric" })
-				: `KW ${isoWeek(first)}${mode === "twoWeeks" ? `–${isoWeek(last)}` : ""} · ${short(first)} – ${short(last)}${parseDay(last).getFullYear() !== new Date().getFullYear() ? ` ${parseDay(last).getFullYear()}` : ""}`);
+				: `KW ${isoWeek(first)}${mode === "twoWeeks" ? `–${isoWeek(last)}` : ""} · ${range}`);
+	}
+
+	/** Untertitel im Kopf: Ansicht, Kolonnen, Stand. */
+	private subtitle(): void {
+		const board = this.board;
+		const view = { day: "Zeitachse eines Tages", week: "Wochenplan", twoWeeks: "Zwei Wochen", month: "Monatsübersicht" }[this.mode()];
+		const crews = board?.crews.length ?? 0;
+		const time = new Date().toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" });
+		this.model().setProperty("/subtitle", `${view} · ${crews} ${crews === 1 ? "Kolonne" : "Kolonnen"} · Stand ${time} Uhr${this.canPlan() ? "" : " · nur Ansicht"}`);
 	}
 
 	private regionOf(a: { bauakteAddress?: string | null; postalCode?: string | null }): string {
@@ -191,6 +253,7 @@ export default class CockpitController extends BaseController {
 		const q = (f.search ?? "").trim().toLowerCase();
 		const crewFilter = new Set(f.crews ?? []);
 		const crews = board.crews.filter((c) => !crewFilter.size || crewFilter.has(c.id));
+		m.setProperty("/filterCount", (crewFilter.size ? 1 : 0) + (f.region ? 1 : 0) + (f.status ? 1 : 0));
 		const dimmed = board.assignments.filter((a) => (q && ![a.bauakteNumber, a.bauakteTitle, a.bauakteAddress, a.activity, a.crewName, ...a.people.map((p) => p.name)]
 			.some((v) => v?.toLowerCase().includes(q)))
 			|| (f.status && a.bauakteStatus !== f.status) || (f.region && this.regionOf(a) !== f.region)).map((a) => a.id);
@@ -198,6 +261,7 @@ export default class CockpitController extends BaseController {
 			mode: this.mode(), days: board.days, today: isoDay(new Date()), crews,
 			noCrewLane: (!crewFilter.size || crewFilter.has("-")) && (board.assignments.some((a) => !a.crewId) || crews.length === 0 || this.mode() === "day"),
 			assignments: board.assignments, selected: this.selected, dimmed, canPlan: m.getProperty("/canPlan") === true, hours: [6, 19],
+			compact: m.getProperty("/compact") === true,
 		};
 		m.setProperty("/render", render);
 		this.cockpit()?.draw();
@@ -205,6 +269,7 @@ export default class CockpitController extends BaseController {
 		const regions = new Set([...board.assignments.map((a) => this.regionOf(a)), ...this.backlog.map((b) => this.regionOf(b))].filter(Boolean));
 		m.setProperty("/regionOptions", [{ key: "", text: "Alle Regionen" }, ...[...regions].sort().map((r) => ({ key: r, text: `PLZ ${r}…` }))]);
 		this.kpis();
+		this.subtitle();
 		this.selectionChanged();
 	}
 
@@ -229,7 +294,7 @@ export default class CockpitController extends BaseController {
 			+ board.assignments.filter((a) => !a.crewId).reduce((s, a) => s + a.warnings.length, 0);
 		m.setProperty("/kpi", {
 			unplanned: free.length, overdue: free.filter((b) => urgencyOf(b, today) === "overdue").length, assignments: board.assignments.length,
-			loadText: capacity ? `${percent} % (${Math.round(planned / 60)} von ${Math.round(capacity / 60)} h)` : "–",
+			loadText: capacity ? `${percent} % · ${hours(planned)}/${hours(capacity)} h` : "–",
 			loadState: percent > 100 ? "Error" : percent >= 85 ? "Warning" : "Success",
 			releaseText: !releasable.length ? "–" : changed ? `${changed} ${changed === 1 ? "Änderung" : "Änderungen"} seit Freigabe`
 				: `${released.length} von ${releasable.length} Tagen freigegeben`,
@@ -242,6 +307,17 @@ export default class CockpitController extends BaseController {
 
 	onPoolFilter(): void { this.renderPool(); }
 
+	onPoolUrgency(e: Event): void {
+		this.model().setProperty("/pool/urgency", e.getParameter("urgency" as never) as Urgency[]);
+		this.renderPool();
+	}
+
+	onCompact(): void {
+		const on = this.model().getProperty("/compact") === true;
+		try { window.localStorage.setItem("eo.cockpit.compact", on ? "1" : "0"); } catch { /* egal */ }
+		this.render();
+	}
+
 	onTogglePool(): void {
 		const m = this.model();
 		const open = !m.getProperty("/poolOpen");
@@ -251,15 +327,20 @@ export default class CockpitController extends BaseController {
 
 	private renderPool(): void {
 		const m = this.model();
-		const pool = m.getProperty("/pool") as { mode: string; search: string; sort: string };
+		const pool = m.getProperty("/pool") as { mode: string; search: string; sort: string; urgency: Urgency[] };
+		const wanted = new Set(pool.urgency ?? []);
 		const q = (pool.search ?? "").trim().toLowerCase();
 		const region = String(m.getProperty("/filter/region") ?? "");
 		const today = isoDay(new Date());
 		const rank = { overdue: 0, soon: 1, later: 2, none: 3 };
-		const items = this.backlog
+		const matching = this.backlog
 			.filter((b) => (pool.mode === "all" || b.upcomingAssignments === 0)
 				&& (!region || this.regionOf(b) === region)
-				&& (!q || [b.number, b.title, b.city, b.customerName, b.street].some((v) => v?.toLowerCase().includes(q))))
+				&& (!q || [b.number, b.title, b.city, b.customerName, b.street, b.postalCode].some((v) => v?.toLowerCase().includes(q))));
+		const counts: Record<Urgency, number> = { overdue: 0, soon: 0, later: 0, none: 0 };
+		for (const b of matching) counts[urgencyOf(b, today)] += 1;
+		m.setProperty("/poolCounts", counts);
+		const items = matching.filter((b) => !wanted.size || wanted.has(urgencyOf(b, today)))
 			.sort((x, y) => pool.sort === "area" ? y.totalAreaSquareMeters - x.totalAreaSquareMeters
 				: pool.sort === "city" ? (x.city ?? "~").localeCompare(y.city ?? "~")
 					: pool.sort === "date" ? (x.plannedStart ?? "9999").localeCompare(y.plannedStart ?? "9999")
@@ -523,9 +604,14 @@ export default class CockpitController extends BaseController {
 	onSelect(e: Event): void {
 		const id = String(e.getParameter("id" as never));
 		const toggle = e.getParameter("toggle" as never) === true;
-		if (toggle) this.selected = this.selected.includes(id) ? this.selected.filter((x) => x !== id) : [...this.selected, id];
-		else this.selected = this.selected.length === 1 && this.selected[0] === id ? [] : [id];
+		if (toggle) {
+			this.selected = this.selected.includes(id) ? this.selected.filter((x) => x !== id) : [...this.selected, id];
+			this.quick?.close();
+		} else {
+			this.selected = [id];
+		}
 		this.selectionChanged();
+		if (!toggle) this.openQuick(id);
 	}
 
 	private selectionChanged(): void {
@@ -538,6 +624,166 @@ export default class CockpitController extends BaseController {
 	onClearSelection(): void {
 		this.selected = [];
 		this.selectionChanged();
+	}
+
+	// ---- Schnellansicht (Popover) ------------------------------------------------------------------------------------
+
+	/** Schnellansicht eines Einsatzes an der Karte: Bauakte, Termin, Adresse mit Navigation, Kontakt, Fläche, Team, Notizen, Aktionen. */
+	private openQuick(id: string): void {
+		const a = this.find(id);
+		const dom = this.cockpit()?.cardDom(id);
+		if (!a || !dom) return;
+		this.quick?.destroy();
+		const kind = assignmentKinds[a.kind];
+		const can = this.canPlan();
+		const backlog = this.backlog.find((b) => b.bauakteId === a.bauakteId);
+		const time = a.startTime ? `${hhmm(a.startTime)}${a.endTime ? `–${hhmm(a.endTime)}` : ""} Uhr` : "ganztags";
+		const body = new VBox({ renderType: "Bare" }).addStyleClass("eoCkQvBody");
+		const row = (label: string, ...controls: (Text | Link | HBox | VBox)[]) => {
+			body.addItem(new Label({ text: label }));
+			body.addItem(controls.length === 1 ? controls[0] : new VBox({ renderType: "Bare", items: controls }));
+		};
+		row("Termin", new Text({ text: `${longDay(a.day)} · ${time}` }));
+		row("Kolonne", new Text({ text: a.crewName ?? "Ohne Kolonne" }));
+		row("Tätigkeit", new Text({ text: a.activity || kind?.text || "–" }));
+		const address = new VBox({ renderType: "Bare", items: [new Text({ text: a.bauakteAddress ?? "keine Adresse hinterlegt" })] });
+		row("Adresse", address);
+		const contact = new VBox({ renderType: "Bare", items: [new Text({ text: "…" }).addStyleClass("eoMuted")] });
+		row("Kontakt", contact);
+		const areaText = new Text({ text: backlog && backlog.totalAreaSquareMeters > 0 ? `${area(backlog.totalAreaSquareMeters)}${backlog.screedTypes.length ? ` · ${backlog.screedTypes.join(", ")}` : ""}` : "…" });
+		row("Fläche", areaText);
+		row("Team", new Text({ text: a.people.length ? a.people.map((p) => p.name).join(", ") : "niemand zugeordnet" }));
+		if (a.resources.length) row("Geräte", new Text({ text: a.resources.map((r) => r.name).join(", ") }));
+		const notes = new Text({ text: a.notes || "–", wrapping: true, maxLines: 6 });
+		row("Notizen", notes);
+		const extra: (MessageStrip)[] = [];
+		if (a.warnings.length) extra.push(new MessageStrip({ type: "Warning", showIcon: true, text: a.warnings.join(" · ") }).addStyleClass("eoCkQvWarn"));
+		if (a.change) extra.push(new MessageStrip({ type: "Information", showIcon: true, text: a.change === "new" ? "Neu seit der letzten Freigabe – Mitarbeiter sehen ihn nach erneutem Freigeben als verbindlich." : "Geändert seit der letzten Freigabe." }).addStyleClass("eoCkQvWarn"));
+		for (const x of extra) body.addItem(x);
+		const head = new VBox({
+			renderType: "Bare",
+			items: [
+				new HBox({ renderType: "Bare", items: [new Icon({ src: kind?.icon ?? "sap-icon://appointment-2", size: "0.875rem" }), new Text({ text: kind?.text ?? "Einsatz" })] }).addStyleClass("eoCkQvKind"),
+				new Title({ text: a.bauakteTitle, level: "H3", wrapping: true }).addStyleClass("eoCkQvTitle"),
+				new Text({ text: [a.bauakteNumber, a.bauakteStatus ? bauakteStatus[a.bauakteStatus]?.text : ""].filter(Boolean).join(" · ") }).addStyleClass("eoCkQvSub"),
+			],
+		}).addStyleClass("eoCkQvHead");
+		const close = () => popover.close();
+		const edit = new Button({ text: "Bearbeiten", type: "Emphasized", tooltip: "Einsatz bearbeiten (Doppelklick oder Enter auf der Karte)", press: () => { close(); void openAssignment(draftOf(a, this.crews)); } });
+		const footer = new OverflowToolbar({
+			content: [
+				edit,
+				new Button({ text: "Bauakte", icon: "sap-icon://folder-blank", tooltip: "Bauakte öffnen", press: () => { close(); this.nav(`/bauakten/${a.bauakteId}`); } }),
+				new ToolbarSpacer(),
+				new Button({ icon: "sap-icon://close-command-field", type: "Transparent", tooltip: "Einen Tag früher (Alt+←)", enabled: can, press: () => { close(); void this.shiftSelected(-1); } }),
+				new Button({ icon: "sap-icon://open-command-field", type: "Transparent", tooltip: "Einen Tag später (Alt+→)", enabled: can, press: () => { close(); void this.shiftSelected(1); } }),
+				new Button({ icon: "sap-icon://appointment", type: "Transparent", tooltip: a.crewId ? "Auf nächsten freien Tag der Kolonne (N)" : "Nächster freier Tag nur mit Kolonne", enabled: can && !!a.crewId, press: () => { close(); void this.nextFree(a); } }),
+				new Button({ icon: "sap-icon://delete", type: "Transparent", tooltip: "Entfernen (Entf)", enabled: can, press: () => { close(); void this.onDeleteSelected(); } }),
+			],
+		}).addStyleClass("eoCkQvFoot");
+		const popover = new Popover({
+			showHeader: false, placement: "Auto", contentWidth: "25rem", horizontalScrolling: false, modal: false, initialFocus: edit,
+			ariaLabelledBy: [], content: [new VBox({ renderType: "Bare", items: [head, body] }).addStyleClass("eoCkQv")], footer,
+			afterClose: () => { if (this.quick === popover) this.quick = null; popover.destroy(); },
+		});
+		popover.addStyleClass("eoCkQvPopover");
+		popover.addEventDelegate({ onAfterRendering: () => {
+			const root = popover.getDomRef() as HTMLElement | null;
+			if (root && kind) root.style.setProperty("--eo-kind", kind.color);
+		} });
+		this.quick = popover;
+		this.v().addDependent(popover);
+		popover.openBy(dom as unknown as Button);
+		// Details nachladen: Kontakt, Navigation, Fläche.
+		void Promise.all([
+			get<BauakteDetail>(`bauakten/${a.bauakteId}`).catch(() => null),
+			get<DayPlan>(`planning/day/${a.day}`).catch(() => null),
+		]).then(([detail, plan]) => {
+			if (popover.isDestroyed()) return;
+			const stop = plan ? [...plan.crews.flatMap((c) => c.stops), ...plan.withoutCrew].find((x) => x.assignmentId === a.id) : undefined;
+			const name = detail?.siteContactName ?? stop?.siteContactName ?? null;
+			const phone = detail?.siteContactPhone ?? stop?.siteContactPhone ?? null;
+			contact.destroyItems();
+			if (!name && !phone && !detail?.siteContactEmail) contact.addItem(new Text({ text: "kein Ansprechpartner vor Ort hinterlegt" }).addStyleClass("eoMuted"));
+			if (name) contact.addItem(new Text({ text: name }));
+			if (phone) contact.addItem(new Link({ text: phone, href: `tel:${phone.replace(/[^\d+]/g, "")}` }));
+			if (detail?.siteContactEmail) contact.addItem(new Link({ text: detail.siteContactEmail, href: `mailto:${detail.siteContactEmail}` }));
+			if (stop?.navigationUrl) address.addItem(new Link({ text: "Route planen", href: stop.navigationUrl, target: "_blank", rel: "noopener" } as never));
+			if (areaText.getText() === "…") {
+				const total = Number(detail?.project?.totalArea ?? 0);
+				areaText.setText(total > 0 ? area(total) : "nicht erfasst");
+			}
+			if (!a.notes && detail?.siteNotes) notes.setText(`Baustelle: ${detail.siteNotes}`);
+		});
+	}
+
+	// ---- Legende und Bedienung -----------------------------------------------------------------------------------------
+
+	onLegend(e: Event): void {
+		if (this.legend?.isOpen()) {
+			this.legend.close();
+			return;
+		}
+		const esc = (t: string) => t.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c] ?? c);
+		const sw = (style: string, text: string, cls = "eoCkLegendSw") => `<div class="eoCkLegendItem"><span class="${cls}" style="${style}"></span><span>${esc(text)}</span></div>`;
+		const kinds = Object.values(assignmentKinds).map((k) => sw(`background:${k.color}`, k.text)).join("");
+		const html = `<div class="eoCkLegend">
+			<div class="eoCkLegendTitle">Terminarten (Farbleiste der Karte)</div><div class="eoCkLegendGrid">${kinds}</div>
+			<div class="eoCkLegendTitle">Auslastung (Balken je Zelle und Kolonne)</div><div class="eoCkLegendGrid">
+				${sw("background:var(--sapPositiveElementColor)", "unter 85 %", "eoCkLegendBar")}${sw("background:var(--sapCriticalElementColor)", "85 – 100 %", "eoCkLegendBar")}
+				${sw("background:var(--sapNegativeElementColor)", "überbucht (> 8 h)", "eoCkLegendBar")}${sw("background:color-mix(in srgb, var(--sapField_BorderColor) 35%, transparent)", "frei", "eoCkLegendBar")}</div>
+			<div class="eoCkLegendTitle">Kennzeichen</div><div class="eoCkLegendGrid">
+				${sw("background:var(--sapInformativeElementColor);border-radius:50%;width:.5rem;height:.5rem", "neu seit Freigabe")}
+				${sw("background:var(--sapCriticalElementColor);border-radius:50%;width:.5rem;height:.5rem", "geändert seit Freigabe")}
+				${sw("background:var(--sapErrorBackground);box-shadow:inset 2px 0 0 var(--sapNegativeElementColor)", "Konflikt in der Zelle")}
+				${sw("background:var(--sapWarningBackground)", "Abwesenheit")}
+				${sw("background:var(--sapSelectedColor);border-radius:50%", "heute")}
+				${sw("background:repeating-linear-gradient(135deg,transparent 0 3px,var(--sapList_BorderColor) 3px 4px)", "Wochenende / Feiertag")}
+				${sw("box-shadow:inset 0 0 0 2px var(--sapContent_FocusColor)", "Ablageziel beim Ziehen")}
+				${sw("background:var(--sapPositiveElementColor)", "Kopieren (Strg beim Ziehen)")}</div>
+			<div class="eoCkLegendTitle">Freigabe (Tageskopf)</div><div class="eoCkLegendGrid">
+				<div class="eoCkLegendItem"><span class="eoCkRelease">✓ freigegeben</span></div><div class="eoCkLegendItem"><span class="eoCkRelease eoCkReleaseChanged">✎ n geändert</span></div>
+				<div class="eoCkLegendItem"><span class="eoCkRelease eoCkReleaseDraft">◷ Entwurf</span></div></div></div>`;
+		const popover = new Popover({
+			title: "Legende", placement: "Bottom", contentWidth: "22rem", content: [new HTML({ content: html, sanitizeContent: false })],
+			afterClose: () => { popover.destroy(); if (this.legend === popover) this.legend = null; },
+		});
+		this.legend = popover;
+		this.v().addDependent(popover);
+		popover.openBy(e.getSource() as Button);
+	}
+
+	onKeys(): void {
+		const rows: [string, string][] = [
+			["#Maus", ""],
+			["Klick", "Schnellansicht mit Details und Aktionen"],
+			["Doppelklick", "Einsatz bearbeiten; in einer leeren Zelle: neuen Einsatz planen"],
+			["Ziehen", "Einsatz verschieben (Tag, Kolonne; in der Zeitachse auch Uhrzeit)"],
+			["<kbd>Strg</kbd> + Ziehen", "Einsatz kopieren"],
+			["Kante ziehen", "Woche: auf weitere Tage ausdehnen · Zeitachse: Dauer ändern"],
+			["<kbd>Strg</kbd> + Klick", "Mehrfachauswahl (gemeinsam ziehen, verschieben, löschen)"],
+			["Rechtsklick", "Schnellaktionen für Einsatz bzw. Zelle (Tagesbesetzung, Kolonne tauschen …)"],
+			["Vorrat ziehen", "Bauvorhaben auf Kolonne und Tag einplanen"],
+			["#Tastatur", ""],
+			["<kbd>Enter</kbd>", "Einsatz bearbeiten"],
+			["<kbd>Leertaste</kbd>", "Einsatz zur Auswahl hinzufügen/entfernen"],
+			["<kbd>Umschalt</kbd> + <kbd>F10</kbd>", "Kontextmenü"],
+			["<kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd>", "Auswahl einen Tag früher / später"],
+			["<kbd>N</kbd>", "Auswahl auf den nächsten freien Tag"],
+			["<kbd>Entf</kbd>", "Auswahl entfernen"],
+			["<kbd>Esc</kbd>", "Auswahl aufheben, Ziehen abbrechen"],
+			["<kbd>Strg</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd>", "Rückgängig / Wiederholen"],
+			["<kbd>T</kbd>", "Zu heute springen"],
+			["<kbd>Bild ↑</kbd> / <kbd>Bild ↓</kbd>", "Vorheriger / nächster Zeitraum"],
+			["<kbd>?</kbd>", "Diese Hilfe"],
+		];
+		const html = `<table class="eoCkKeys">${rows.map(([k, v]) => (k.startsWith("#") ? `<tr class="eoCkKeysGroup"><td colspan="2">${k.slice(1)}</td></tr>` : `<tr><td>${k}</td><td>${v}</td></tr>`)).join("")}</table>`;
+		const dialog = new Dialog({
+			title: "Bedienung des Cockpits", contentWidth: "34rem", content: [new HTML({ content: `<div class="sapUiSmallMargin">${html}</div>`, sanitizeContent: false })],
+			endButton: new Button({ text: "Schließen", press: () => dialog.close() }), afterClose: () => dialog.destroy(),
+		});
+		this.v().addDependent(dialog);
+		dialog.open();
 	}
 
 	onOpen(e: Event): void {
@@ -717,6 +963,12 @@ export default class CockpitController extends BaseController {
 		const key = e.key.toLowerCase();
 		if (ctrl && key === "z" && !e.shiftKey) { e.preventDefault(); void this.onUndo(); return; }
 		if (ctrl && (key === "y" || (key === "z" && e.shiftKey))) { e.preventDefault(); void this.onRedo(); return; }
+		if (!ctrl && !e.altKey) {
+			if (e.key === "?") { e.preventDefault(); this.onKeys(); return; }
+			if (key === "t") { e.preventDefault(); this.onToday(); return; }
+			if (e.key === "PageUp") { e.preventDefault(); this.onPrev(); return; }
+			if (e.key === "PageDown") { e.preventDefault(); this.onNext(); return; }
+		}
 		if (!this.selected.length) return;
 		if (e.key === "Delete") { e.preventDefault(); void this.onDeleteSelected(); }
 		else if (e.key === "Escape") { this.onClearSelection(); }
