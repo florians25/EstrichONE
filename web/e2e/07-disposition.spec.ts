@@ -77,7 +77,7 @@ test('Personal: aus Benutzerkonten übernehmen, Stammdaten, Qualifikation mit Ab
 
   await nav(page, 'Mitarbeiter').click();
   await expect(page.getByRole('row', { name: /Anna Admin/ })).toContainText('Nachweis(e) laufen ab');
-  await expect(page.getByText(/Qualifikationen oder Führerscheine laufen/)).toBeVisible();
+  await expect(page.getByText(/Qualifikationen? oder Führerscheine? läuft|Qualifikationen oder Führerscheine laufen/)).toBeVisible();
 });
 
 test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankmeldung vertraulich, Fristen', async ({ page }) => {

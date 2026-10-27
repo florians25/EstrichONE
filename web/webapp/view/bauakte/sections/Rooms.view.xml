@@ -2,7 +2,7 @@
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<VBox>
 		<FlexBox wrap="Wrap" class="eoKpiBar eoKpiBarInline" renderType="Bare">
-			<VBox class="eoKpiItem" renderType="Bare"><Label text="{i18n>rooms.total}"/><ObjectNumber number="{rm>/total}" unit="m²" class="eoKpiFigure"/></VBox>
+			<VBox class="eoKpiItem eoRoomTotal" renderType="Bare"><Label text="{i18n>rooms.total}"/><ObjectNumber number="{rm>/total}" unit="m²" class="eoKpiFigure"/></VBox>
 			<VBox class="eoKpiItem" renderType="Bare"><Label text="{i18n>rooms.heated}"/><ObjectNumber number="{rm>/heated}" unit="m²" class="eoKpiFigure"/></VBox>
 			<VBox class="eoKpiItem" renderType="Bare"><Label text="{i18n>rooms.count}"/><ObjectNumber number="{rm>/count}" class="eoKpiFigure"/>
 				<Text text="{rm>/progress}" class="eoKpiHint" visible="{= !!${rm>/progress} }"/></VBox>
