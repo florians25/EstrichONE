@@ -30,6 +30,8 @@ public final class InMemorySecretStore: SecretStore, @unchecked Sendable {
 /// Schlüsselbund mit `WhenUnlockedThisDeviceOnly`: nicht in Backups, nicht auf andere Geräte übertragbar.
 public struct KeychainSecretStore: SecretStore {
     private let service: String
+    /// Dienst (`kSecAttrService`) der Einträge.
+    public var serviceName: String { service }
 
     public init(service: String = "de.estrichone.device") {
         self.service = service
@@ -65,6 +67,31 @@ public struct KeychainSecretStore: SecretStore {
 
     private func baseQuery(_ key: String) -> [String: Any] {
         [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: service, kSecAttrAccount as String: key]
+    }
+}
+#endif
+
+#if canImport(Security)
+extension KeychainSecretStore {
+    /// Sind unter diesem Dienst Einträge gespeichert (z. B. Reste einer früheren Installation)?
+    public var hasItems: Bool {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: serviceName,
+                                    kSecMatchLimit as String: kSecMatchLimitOne, kSecReturnAttributes as String: true]
+        var result: CFTypeRef?
+        let status = SecItemCopyMatching(query as CFDictionary, &result)
+        // Gesperrtes Gerät: Einträge existieren, sind nur gerade nicht lesbar.
+        return status == errSecSuccess || status == errSecInteractionNotAllowed
+    }
+
+    /// Löscht alle Einträge dieses Dienstes – nur über Klasse und Dienst, unabhängig von Schlüsselnamen früherer Versionen.
+    public func removeAll() throws {
+        let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword, kSecAttrService as String: serviceName]
+        // iOS löscht alle passenden Einträge auf einmal; zur Sicherheit wiederholen, bis nichts mehr da ist.
+        for _ in 0..<8 {
+            let status = SecItemDelete(query as CFDictionary)
+            if status == errSecItemNotFound { return }
+            guard status == errSecSuccess else { throw SecretStoreError(status: status) }
+        }
     }
 }
 #endif

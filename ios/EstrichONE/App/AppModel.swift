@@ -67,6 +67,8 @@ final class AppModel {
 
     /// Wechsel in den Demomodus (`true`) bzw. zurück (`false`); setzt die App-Sitzung.
     var onDemoRequest: ((Bool) -> Void)?
+    /// „App zurücksetzen“: Die App-Sitzung löscht alles (`AppWipe`) und baut das Modell neu auf.
+    var onResetRequest: (() -> Void)?
 
     var isDemo: Bool { environment.isDemo }
 
@@ -260,6 +262,36 @@ final class AppModel {
         screen = .onboarding
     }
 
+    /// „App zurücksetzen“ von jedem Bildschirm: alles löschen und neu einrichten (`AppSession.reset`).
+    /// Ohne App-Sitzung (Tests) nur der Zustand im Modell.
+    func requestReset() {
+        if let onResetRequest {
+            onResetRequest()
+        } else {
+            resetApp()
+        }
+    }
+
+    /// Vor dem Löschen: Synchronisation stoppen, Push beim Server abmelden (höchstens 3 Sekunden), alles Offene
+    /// freigeben. Danach hält das Modell keine Datenbank und keinen Schlüssel mehr.
+    func shutdownForWipe() async {
+        let current = active
+        active = nil
+        current?.sync?.stop()
+        if let client = current?.client, !isDemo {
+            await PushCenter.shared.unregister(client: client, timeout: .seconds(3))
+        }
+        accounts = nil
+        server = nil
+        deviceState = DeviceState()
+        requestedKind = nil
+        enrollmentCode = nil
+        pendingTokens = nil
+        pendingEnrollment = nil
+        screen = .onboarding
+    }
+
+    /// Nur der Zustand im Modell und die Daten des aktuellen Bereichs (Server ändern vor der Registrierung, Demo beenden).
     func resetApp() {
         accounts?.eraseDevice()
         serverStore.clear()
@@ -326,7 +358,7 @@ final class AppModel {
 
         guard server == nil else {
             // Ein Serverwechsel darf nie nebenbei über einen Link passieren (10, Abschnitt 2).
-            notice = "Diese App ist bereits mit einem Server verbunden. Zum Wechsel die App unter „Einstellungen“ zurücksetzen."
+            notice = "Diese App ist bereits mit einem Server verbunden. Zum Wechsel unter „Mehr“ › „App zurücksetzen“ alles löschen und neu einrichten."
             return
         }
         pendingEnrollment = link

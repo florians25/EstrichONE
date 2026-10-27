@@ -93,7 +93,7 @@ struct HomeView: View {
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { syncButton }
                 ToolbarItem(placement: .primaryAction) {
-                    NotificationBell(count: push.unreadCount) { path.append(.inbox) }
+                    NotificationBell(count: shotScene == "heute-glocke" ? 128 : push.unreadCount) { path.append(.inbox) }
                 }
             }
             .rootToolbar(showsMaintenance: false)

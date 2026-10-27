@@ -9,28 +9,40 @@ struct EstrichONEApp: App {
 
     var body: some Scene {
         WindowGroup {
-            RootView()
-                .environment(session.model)
-                .environment(\.shotScene, session.shotScene)
-                .id(session.generation)
-                .onOpenURL { session.model.handle(url: $0) }
+            Group {
+                if session.isResetting {
+                    // Während des Löschens keine Ansicht, die noch Daten des alten Modells hält.
+                    ResettingView()
+                } else {
+                    RootView()
+                        .environment(session.model)
+                        .environment(\.shotScene, session.shotScene)
+                        .id(session.generation)
+                }
+            }
+            .onOpenURL { session.model.handle(url: $0) }
         }
         .onChange(of: scenePhase) { _, phase in
             switch phase {
             case .background: session.model.didEnterBackground(at: .now)
-            case .active: session.model.didBecomeActive(at: .now)
+            case .active:
+                // Schalter in der Einstellungen-App, während die App im Hintergrund lag.
+                if session.resetIfRequestedInSettings() { break }
+                session.model.didBecomeActive(at: .now)
             default: break
             }
         }
     }
 }
 
-/// Hält das App-Modell und tauscht es beim Wechsel in den bzw. aus dem Demomodus aus.
+/// Hält das App-Modell und tauscht es beim Wechsel in den bzw. aus dem Demomodus und beim Zurücksetzen aus.
 @MainActor
 @Observable
 final class AppSession {
     private(set) var model: AppModel
     private(set) var generation = 0
+    /// Zurücksetzen läuft: Die Oberfläche zeigt nur den Fortschritt.
+    private(set) var isResetting = false
     #if DEBUG
     /// Screenshot-Modus (Launch-Argument `-EstrichShots`), nur in Debug-Builds.
     let director: ScreenshotDirector?
@@ -51,8 +63,13 @@ final class AppSession {
             return
         }
         #endif
+        // Vor dem Öffnen von Daten: Schalter aus der Einstellungen-App oder Reste einer früheren Installation.
+        let wiped = AppWipe.launchCheck()
         model = AppModel(environment: .live())
         connect()
+        if wiped == .settingsSwitch {
+            model.notice = "Die App wurde wie in den Einstellungen gewünscht zurückgesetzt. Bitte neu einrichten."
+        }
     }
 
     /// Bildschirm des Screenshot-Modus (sonst `nil`).
@@ -66,6 +83,34 @@ final class AppSession {
 
     private func connect() {
         model.onDemoRequest = { [weak self] start in self?.switchDemo(start) }
+        model.onResetRequest = { [weak self] in self?.reset() }
+    }
+
+    /// Schalter „Beim nächsten Start zurücksetzen“ wurde gesetzt, während die App lief: gleich zurücksetzen.
+    func resetIfRequestedInSettings() -> Bool {
+        #if DEBUG
+        if director != nil { return false }
+        #endif
+        guard UserDefaults.standard.bool(forKey: DeviceWipe.resetOnLaunchKey) else { return false }
+        reset()
+        return true
+    }
+
+    /// App zurücksetzen: Sync stoppen und Push abmelden, Oberfläche abbauen, alles löschen, frisches Modell (Einrichtung).
+    private func reset() {
+        guard !isResetting else { return }
+        isResetting = true
+        let previous = model
+        Task {
+            await previous.shutdownForWipe()
+            // Der Oberfläche einen Moment geben, die alten Ansichten (und damit offene Daten) freizugeben.
+            try? await Task.sleep(for: .milliseconds(400))
+            AppWipe.eraseLocalData()
+            model = AppModel(environment: .live())
+            connect()
+            generation += 1
+            isResetting = false
+        }
     }
 
     private func switchDemo(_ start: Bool) {
@@ -113,6 +158,8 @@ struct RootView: View {
         case "start": OnboardingView()
         case "start-adresse": OnboardingView(initialPath: [.address(nil)])
         case "anmelden": SignInView(prefilledUserName: "m.huber")
+        case "warten": WaitingForApprovalView()
+        case "zuruecksetzen": ResettingView()
         default: screen
         }
     }

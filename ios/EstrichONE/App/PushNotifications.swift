@@ -97,11 +97,29 @@ final class PushCenter {
         try? await client.unregisterPushDevice(token: token)
     }
 
-    /// Ungelesene Anzahl übernehmen und das Abzeichen am App-Symbol setzen.
+    /// Zurücksetzen der App: Abmelden beim Server, höchstens `timeout` lang (ohne Netz soll das Löschen nicht hängen).
+    func unregister(client: AuthorizedClient, timeout: Duration) async {
+        let work = Task { await unregister(client: client) }
+        let deadline = Task {
+            try? await Task.sleep(for: timeout)
+            work.cancel()
+        }
+        await work.value
+        deadline.cancel()
+    }
+
+    /// Nach dem Zurücksetzen: kein Zähler, keine wartenden Ziele. Das APNs-Token gehört zum Gerät und bleibt.
+    func resetAfterWipe() {
+        unreadCount = 0
+        pendingRoute = nil
+        pendingReadId = nil
+    }
+
+    /// Ungelesene Anzahl übernehmen und das Abzeichen am App-Symbol setzen (gleiche Zahl wie an der Glocke).
     func setUnread(_ count: Int) {
-        unreadCount = count
+        unreadCount = UnreadBadge.appBadge(count)
         if permission == .allowed {
-            UNUserNotificationCenter.current().setBadgeCount(count) { _ in }
+            UNUserNotificationCenter.current().setBadgeCount(unreadCount) { _ in }
         }
     }
 

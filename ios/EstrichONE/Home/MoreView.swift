@@ -131,8 +131,9 @@ struct MoreView: View {
 
                 Section {
                     Button("App zurücksetzen", role: .destructive) { confirmReset = true }
+                        .accessibilityIdentifier("resetAppButton")
                 } footer: {
-                    Text("EstrichONE \(AppEnvironment.appVersionText)")
+                    Text("Löscht alles auf diesem Gerät (Server, Gerät, Personen, Fotos, Einstellungen) und startet bei der Einrichtung. Startet die App nicht mehr richtig: Einstellungen-App › EstrichONE › „Beim nächsten Start zurücksetzen“.\n\nEstrichONE \(AppEnvironment.appVersionText)")
                 }
             }
             .listStyle(.insetGrouped)
@@ -177,11 +178,7 @@ struct MoreView: View {
             } message: {
                 Text("Der Antrag liegt im Helpdesk. Zum sofortigen Entfernen Ihrer Daten von diesem Gerät: Abmelden.")
             }
-            .confirmationDialog("App zurücksetzen?", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Alle Daten auf diesem Gerät löschen", role: .destructive) { model.resetApp() }
-            } message: {
-                Text("Die App vergisst Server, Gerät und alle Personen. Das Gerät muss danach neu eingerichtet werden.")
-            }
+            .resetAppConfirmation(isPresented: $confirmReset)
             .refreshable { await model.refreshDeviceStatus() }
             .sheet(isPresented: $reporting) {
                 ReportProblemView { reporting = false }
@@ -227,6 +224,7 @@ struct MoreView: View {
     private func applyShotScene() {
         switch shotScene {
         case "sync": route = .sync
+        case "mehr-zuruecksetzen": confirmReset = true
         case "postfach": route = .inbox
         case "disposition": route = .dispatch
         case "aufgaben": route = .tasks

@@ -18,6 +18,7 @@ struct AppLockView: View {
             }
             .primaryActionStyle()
             .accessibilityIdentifier("unlockButton")
+            ResetAppButton()
         }
         .padding(24)
         .frame(maxWidth: 560)
@@ -55,6 +56,7 @@ struct WaitingForApprovalView: View {
                 ActionLabel("Abmelden")
             }
             .secondaryActionStyle()
+            ResetAppButton()
         }
         .padding(24)
         .frame(maxWidth: 560)
@@ -95,6 +97,7 @@ struct BlockedView: View {
                 ActionLabel(end == .deviceRevoked ? "Neu einrichten" : "Zurück")
             }
             .primaryActionStyle()
+            ResetAppButton()
         }
         .padding(24)
         .frame(maxWidth: 560)

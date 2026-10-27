@@ -54,6 +54,8 @@ enum Theme {
     static let warningSoft = Color.dynamic(light: 0xFFF3DD, dark: 0x2E2410)
     static let danger = Color.dynamic(light: 0xC0262D, dark: 0xFF7B7B)
     static let dangerSoft = Color.dynamic(light: 0xFDECEC, dark: 0x351617)
+    /// Zähler (Glocke, ungelesen): weiße Ziffern mit mindestens 4,5 : 1 Kontrast, hell wie dunkel.
+    static let badge = Color.dynamic(light: 0xD70015, dark: 0xE0353F)
 }
 
 /// Abstände im 4-/8-Punkt-Raster.

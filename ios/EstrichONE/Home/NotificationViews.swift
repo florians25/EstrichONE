@@ -204,28 +204,53 @@ struct NotificationTargetView: View {
 }
 
 /// Glocke mit Zahl der ungelesenen Benachrichtigungen (Werkzeugleiste der Heute-Seite).
+///
+/// Der Zähler sitzt innerhalb der Schaltfläche (oben rechts an der Glocke), damit ihn die Werkzeugleiste nicht
+/// abschneidet: rund bei einer Ziffer, Kapsel bei „12“ oder „99+“, mit Rand in Hintergrundfarbe für Kontrast hell
+/// und dunkel. Gleiche Zahl wie am App-Symbol (`PushCenter.setUnread`).
 struct NotificationBell: View {
     let count: Int
     let action: () -> Void
 
     var body: some View {
         Button(action: action) {
-            Image(systemName: "bell")
+            Image(systemName: count > 0 ? "bell.fill" : "bell")
+                .font(.system(size: 19, weight: .medium))
                 .foregroundStyle(Theme.accent)
+                .frame(width: 26, height: 26)
+                // Platz für den Zähler oben rechts – innerhalb der Schaltfläche.
+                .padding(.top, count > 0 ? 6 : 0)
+                .padding(.trailing, count > 0 ? 9 : 0)
                 .overlay(alignment: .topTrailing) {
-                    if count > 0 {
-                        Text(count > 99 ? "99+" : "\(count)")
-                            .font(.caption2.weight(.bold).monospacedDigit())
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 4)
-                            .frame(minWidth: 17, minHeight: 17)
-                            .background(Theme.danger, in: Capsule())
-                            .offset(x: 10, y: -8)
-                            .fixedSize()
+                    if let text = UnreadBadge.text(count) {
+                        CountBadge(text: text)
                     }
                 }
+                .contentShape(Rectangle())
+                .animation(.snappy, value: count)
         }
-        .accessibilityLabel(count > 0 ? "Benachrichtigungen, \(count) ungelesen" : "Benachrichtigungen")
+        .accessibilityLabel(count > 0 ? UnreadBadge.accessibilityLabel(count) : "Benachrichtigungen")
+        .accessibilityHint("Öffnet das Postfach")
         .accessibilityIdentifier("notificationBell")
+    }
+}
+
+/// Runder Zähler (Glocke, Listen): weiße Ziffern auf kräftigem Rot, Rand in Hintergrundfarbe, feste Größe auch bei
+/// großer Schrift (die Zahl steht zusätzlich im Bedienungshilfen-Label).
+struct CountBadge: View {
+    let text: String
+
+    var body: some View {
+        Text(text)
+            .font(.system(size: 11, weight: .bold, design: .rounded).monospacedDigit())
+            .foregroundStyle(.white)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.horizontal, text.count > 1 ? 4.5 : 0)
+            .frame(minWidth: 18, minHeight: 18)
+            .background(Capsule().fill(Theme.badge))
+            .overlay(Capsule().strokeBorder(Color(uiColor: .systemBackground), lineWidth: 1.5).padding(-1.5))
+            .accessibilityHidden(true)
+            .transition(.scale.combined(with: .opacity))
     }
 }

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>PreferenceSpecifiers</key>
+	<array>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Zurücksetzen</string>
+			<key>FooterText</key>
+			<string>Beim nächsten Start löscht EstrichONE alle Daten auf diesem Gerät (Server, Gerät, Personen, Fotos, Schlüssel, Einstellungen) und beginnt mit der Einrichtung. Für den Fall, dass die App selbst nicht mehr bis zu „Mehr › App zurücksetzen“ kommt. Noch nicht übertragene Daten gehen dabei verloren.</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Beim nächsten Start zurücksetzen</string>
+			<key>Key</key>
+			<string>estrichone.resetOnNextLaunch</string>
+			<key>DefaultValue</key>
+			<false/>
+		</dict>
+	</array>
+</dict>
+</plist>

@@ -107,6 +107,12 @@ struct SignInView: View {
                             .frame(minHeight: 44)
                             .accessibilityIdentifier("reportWithoutSignInButton")
                     }
+
+                    // Notausgang: Anmeldung klappt gar nicht (falscher Server, kaputte Daten) – alles löschen, neu einrichten.
+                    if model.deviceRegistration != nil {
+                        ResetAppButton()
+                            .frame(maxWidth: .infinity)
+                    }
                 }
                 .padding(24)
                 .frame(maxWidth: 560)

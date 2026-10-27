@@ -1,5 +1,6 @@
 import EstrichCore
 import SwiftUI
+import UIKit
 
 /// Name des Bildschirms, den der Screenshot-Modus gerade zeigt (z. B. „bauakte“, „neu-2“); sonst `nil`.
 /// Ansichten lesen den Wert, um für die Aufnahme den passenden Zustand herzustellen (Reiter, geöffnete Seite, Blatt).
@@ -78,8 +79,12 @@ final class ScreenshotDirector {
         model()?.active?.sync?.stop()
         try? await Task.sleep(for: .milliseconds(800))
         for scene in scenes {
-            prepare(scene, model: model())
-            current = scene
+            // „…-quer“: gleicher Bildschirm im Querformat (nur iPad).
+            let landscape = scene.hasSuffix("-quer")
+            let base = landscape ? String(scene.dropLast(5)) : scene
+            orient(landscape: landscape)
+            prepare(base, model: model())
+            current = base
             try? await Task.sleep(for: .milliseconds(Self.settleMilliseconds(scene)))
             write("ready:\(scene)")
             var polls = 0
@@ -94,6 +99,17 @@ final class ScreenshotDirector {
         }
         current = nil
         write("done")
+    }
+
+    /// Dreht das iPad ins Quer- bzw. Hochformat (die Aufnahme des Simulators bleibt hochkant, das Bild wird gedreht).
+    private func orient(landscape: Bool) {
+        guard UIDevice.current.userInterfaceIdiom == .pad,
+              let windowScene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene }).first else { return }
+        let wanted: UIInterfaceOrientationMask = landscape ? .landscapeRight : .portrait
+        windowScene.keyWindow?.rootViewController?.setNeedsUpdateOfSupportedInterfaceOrientations()
+        windowScene.requestGeometryUpdate(.iOS(interfaceOrientations: wanted)) { error in
+            print("ScreenshotDirector: Drehen nicht möglich: \(error)")
+        }
     }
 
     /// Zustand außerhalb der Ansichten (z. B. Wartung des Servers).

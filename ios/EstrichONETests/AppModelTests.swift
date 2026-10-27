@@ -173,4 +173,32 @@ struct AppModelTests {
         #expect(AppModel(environment: environment()).screen == .onboarding)
         #expect(!FileManager.default.fileExists(atPath: root.path()))
     }
+
+    @Test("App zurücksetzen geht an die App-Sitzung; Herunterfahren gibt Sync, Tresor und Server frei")
+    func requestReset() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        try model.confirm(try await verifiedServer(), enrollment: nil)
+        model.chooseKind(.personal)
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        #expect(model.active != nil)
+
+        var requests = 0
+        model.onResetRequest = { requests += 1 }
+        model.requestReset()
+        #expect(requests == 1)
+
+        await model.shutdownForWipe()
+        #expect(model.active == nil)
+        #expect(model.accounts == nil)
+        #expect(model.server == nil)
+        #expect(model.screen == .onboarding)
+    }
+
+    @Test("Zähler an der Glocke wie am App-Symbol")
+    func unreadBadge() {
+        #expect(UnreadBadge.text(7) == "7")
+        #expect(UnreadBadge.text(250) == "99+")
+        #expect(UnreadBadge.appBadge(250) == 250)
+    }
 }

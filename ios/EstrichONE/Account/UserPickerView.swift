@@ -67,11 +67,7 @@ struct UserPickerView: View {
                     }
                 }
             }
-            .confirmationDialog("App zurücksetzen?", isPresented: $confirmReset, titleVisibility: .visible) {
-                Button("Alle Daten auf diesem Gerät löschen", role: .destructive) { model.resetApp() }
-            } message: {
-                Text("Die App vergisst Server, Gerät und alle Personen. Das Gerät muss danach neu eingerichtet werden.")
-            }
+            .resetAppConfirmation(isPresented: $confirmReset)
         }
     }
 }
