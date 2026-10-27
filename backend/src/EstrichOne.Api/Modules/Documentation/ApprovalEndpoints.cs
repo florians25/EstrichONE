@@ -173,13 +173,16 @@ internal static class ApprovalEndpoints
 /// <summary>Entscheiden, zurückziehen und Antworten mit Namen aufbereiten.</summary>
 internal sealed class ApprovalService(EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions, IRoleAssignments roles,
     IBauakteAccess access, IAuditLog audit, TimeProvider clock, IMailService mail, IBauakteReportSource bauakten,
-    Organization.Exports.ISystemSettings settings, ILogger<ApprovalService> logger)
+    Organization.Exports.ISystemSettings settings, Notifications.Exports.INotifier notifier, ILogger<ApprovalService> logger)
 {
     /// <summary>E-Mail an die Person bzw. alle Mitglieder der Rolle (wenn eingerichtet und eingeschaltet).</summary>
     public async Task NotifyRequestedAsync(FileApproval approval, string fileName, CancellationToken cancellationToken)
     {
         var recipients = approval.AssigneeUserId is { } user ? [user] : approval.AssigneeRoleId is { } role ? await roles.GetUserIdsInRoleAsync(role, cancellationToken) : [];
         var info = await bauakten.GetAsync(approval.BauakteId, cancellationToken);
+        await notifier.NotifyAsync(recipients, new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Approval,
+            "Freigabe angefordert", info is null ? fileName : $"{fileName} · {info.Number} {info.Title}".Trim(),
+            $"/bauakten/{approval.BauakteId}", "approval", approval.Id, Notifications.Exports.NotificationUrgency.High), cancellationToken);
         await SendAsync(MailTemplateKeys.ApprovalRequested, recipients.Where(r => r != currentUser.UserId), approval, new Dictionary<string, string?>
         {
             ["dokument"] = fileName, ["bauakte"] = info is null ? null : $"{info.Number} {info.Title}".Trim(), ["nachricht"] = approval.Message,
@@ -190,6 +193,9 @@ internal sealed class ApprovalService(EstrichOneDbContext db, ICurrentUser curre
     {
         var file = await db.Set<FileRecord>().AsNoTracking().Where(f => f.Id == approval.FileId).Select(f => f.OriginalName).SingleOrDefaultAsync(cancellationToken);
         var info = await bauakten.GetAsync(approval.BauakteId, cancellationToken);
+        await notifier.NotifyAsync([approval.RequestedByUserId], new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Approval,
+            approval.Status == ApprovalStatus.Approved ? "Dokument freigegeben" : "Freigabe abgelehnt",
+            info is null ? file : $"{file} · {info.Number} {info.Title}".Trim(), $"/bauakten/{approval.BauakteId}", "approval", approval.Id), cancellationToken);
         await SendAsync(MailTemplateKeys.ApprovalDecided, [approval.RequestedByUserId], approval, new Dictionary<string, string?>
         {
             ["dokument"] = file, ["bauakte"] = info is null ? null : $"{info.Number} {info.Title}".Trim(),

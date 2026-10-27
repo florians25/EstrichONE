@@ -12438,6 +12438,712 @@
         ]
       }
     },
+    "/api/v1/notifications": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Eigenes Postfach, neueste zuerst; unread=true nur ungelesene",
+        "operationId": "ListNotifications",
+        "parameters": [
+          {
+            "name": "unread",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "before",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationInbox"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/unread-count": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "GetUnreadNotificationCount",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/read": {
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "MarkNotificationRead",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}/unread": {
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "MarkNotificationUnread",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/read-all": {
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "MarkAllNotificationsRead",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnreadCountResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/{id}": {
+      "delete": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "DeleteNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/push-config": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Öffentlicher VAPID-Schlüssel und ob APNs eingerichtet ist",
+        "operationId": "GetPushClientConfig",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushClientConfig"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/devices": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Eigene Geräte und Browser mit Pushnachrichten",
+        "operationId": "ListPushDevices",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PushDeviceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Gerätetoken (iOS/Android) bzw. Web-Push-Abo registrieren oder auffrischen",
+        "operationId": "RegisterPushDevice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RegisterPushDeviceRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushDeviceResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Abmelden per Token (z. B. beim Abmelden in der App)",
+        "operationId": "RemovePushDeviceByToken",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/devices/{id}": {
+      "delete": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "RemovePushDevice",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/test": {
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Testnachricht an sich selbst (Postfach und Push)",
+        "operationId": "SendTestNotification",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/send": {
+      "post": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Nachricht an Personen, Rollen, Kolonnen oder alle senden",
+        "operationId": "SendNotification",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SendNotificationRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/audiences": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Rollen und Kolonnen als Empfänger",
+        "operationId": "GetNotificationAudiences",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationAudiences"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/sent": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "summary": "Verlauf der gesendeten Nachrichten mit Zustellstatus",
+        "operationId": "ListSentNotifications",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/BroadcastResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/sent/{id}": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "GetSentNotification",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BroadcastDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/notifications/settings": {
+      "get": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "GetPushSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Benachrichtigungen"
+        ],
+        "operationId": "SavePushSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SavePushSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PushSettingsResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/backup/status": {
       "get": {
         "tags": [
@@ -15164,6 +15870,27 @@
           }
         }
       },
+      "AudienceOption": {
+        "required": [
+          "id",
+          "name",
+          "members"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "members": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "AuditLogItem": {
         "required": [
           "id",
@@ -16348,6 +17075,144 @@
           "completed",
           "cancelled"
         ]
+      },
+      "BroadcastDetail": {
+        "required": [
+          "broadcast",
+          "recipients"
+        ],
+        "type": "object",
+        "properties": {
+          "broadcast": {
+            "$ref": "#/components/schemas/BroadcastResponse"
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/BroadcastRecipient"
+            }
+          }
+        }
+      },
+      "BroadcastRecipient": {
+        "required": [
+          "userId",
+          "name",
+          "readAt",
+          "pushState",
+          "pushedAt",
+          "pushError"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "readAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "pushState": {
+            "$ref": "#/components/schemas/PushState"
+          },
+          "pushedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "pushError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "BroadcastResponse": {
+        "required": [
+          "id",
+          "title",
+          "body",
+          "link",
+          "urgency",
+          "audience",
+          "senderName",
+          "createdAt",
+          "recipients",
+          "read",
+          "pushed",
+          "inAppOnly",
+          "failed",
+          "pending"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "urgency": {
+            "$ref": "#/components/schemas/NotificationUrgency"
+          },
+          "audience": {
+            "type": "string"
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "recipients": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "read": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pushed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inAppOnly": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pending": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
       },
       "CalendarEditScope": {
         "enum": [
@@ -21849,6 +22714,135 @@
           }
         }
       },
+      "NotificationAudiences": {
+        "required": [
+          "roles",
+          "crews",
+          "activeUsers"
+        ],
+        "type": "object",
+        "properties": {
+          "roles": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AudienceOption"
+            }
+          },
+          "crews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AudienceOption"
+            }
+          },
+          "activeUsers": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "NotificationCategory": {
+        "enum": [
+          "message",
+          "ticket",
+          "approval",
+          "planning",
+          "bauakte",
+          "deadline",
+          "system"
+        ]
+      },
+      "NotificationInbox": {
+        "required": [
+          "items",
+          "unreadCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            }
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "NotificationResponse": {
+        "required": [
+          "id",
+          "category",
+          "urgency",
+          "title",
+          "body",
+          "link",
+          "objectType",
+          "objectId",
+          "senderName",
+          "createdAt",
+          "readAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "category": {
+            "$ref": "#/components/schemas/NotificationCategory"
+          },
+          "urgency": {
+            "$ref": "#/components/schemas/NotificationUrgency"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "objectType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "objectId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "senderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "NotificationSettings": {
         "type": "object",
         "properties": {
@@ -21865,6 +22859,13 @@
             "type": "boolean"
           }
         }
+      },
+      "NotificationUrgency": {
+        "enum": [
+          "low",
+          "normal",
+          "high"
+        ]
       },
       "NumberingSettings": {
         "type": "object",
@@ -22773,6 +23774,91 @@
           }
         }
       },
+      "PushClientConfig": {
+        "required": [
+          "webPushEnabled",
+          "vapidPublicKey",
+          "apnsEnabled",
+          "showContent"
+        ],
+        "type": "object",
+        "properties": {
+          "webPushEnabled": {
+            "type": "boolean"
+          },
+          "vapidPublicKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsEnabled": {
+            "type": "boolean"
+          },
+          "showContent": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PushDeviceResponse": {
+        "required": [
+          "id",
+          "platform",
+          "deviceName",
+          "appVersion",
+          "sandbox",
+          "createdAt",
+          "lastSeenAt",
+          "lastSuccessAt",
+          "lastError"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/PushPlatform"
+          },
+          "deviceName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "appVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sandbox": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSeenAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastSuccessAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "PushOperation": {
         "required": [
           "opId",
@@ -22807,6 +23893,13 @@
           }
         }
       },
+      "PushPlatform": {
+        "enum": [
+          "ios",
+          "android",
+          "web"
+        ]
+      },
       "PushRequest": {
         "required": [
           "operations"
@@ -22835,6 +23928,103 @@
             }
           }
         }
+      },
+      "PushSettingsResponse": {
+        "required": [
+          "webPushEnabled",
+          "vapidPublicKey",
+          "vapidSubject",
+          "apnsEnabled",
+          "apnsKeyId",
+          "apnsTeamId",
+          "apnsBundleId",
+          "apnsProduction",
+          "apnsKeyStored",
+          "apnsFromEnvironment",
+          "apnsReady",
+          "showContent",
+          "webDevices",
+          "iosDevices",
+          "androidDevices",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "webPushEnabled": {
+            "type": "boolean"
+          },
+          "vapidPublicKey": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "vapidSubject": {
+            "type": "string"
+          },
+          "apnsEnabled": {
+            "type": "boolean"
+          },
+          "apnsKeyId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsTeamId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsBundleId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsProduction": {
+            "type": "boolean"
+          },
+          "apnsKeyStored": {
+            "type": "boolean"
+          },
+          "apnsFromEnvironment": {
+            "type": "boolean"
+          },
+          "apnsReady": {
+            "type": "boolean"
+          },
+          "showContent": {
+            "type": "boolean"
+          },
+          "webDevices": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "iosDevices": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "androidDevices": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "PushState": {
+        "enum": [
+          "pending",
+          "sent",
+          "noDevice",
+          "inAppOnly",
+          "failed",
+          "expired"
+        ]
       },
       "QualificationKind": {
         "enum": [
@@ -23053,6 +24243,61 @@
           },
           "enrollmentCode": {
             "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "RegisterPushDeviceRequest": {
+        "required": [
+          "platform",
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "platform": {
+            "$ref": "#/components/schemas/PushPlatform"
+          },
+          "token": {
+            "maxLength": 2000,
+            "type": "string"
+          },
+          "p256dh": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "auth": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sandbox": {
+            "type": "boolean",
+            "default": false
+          },
+          "bundleId": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deviceName": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "appVersion": {
+            "maxLength": 50,
             "type": [
               "null",
               "string"
@@ -24839,6 +26084,73 @@
           }
         }
       },
+      "SavePushSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "webPushEnabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "vapidSubject": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsEnabled": {
+            "type": "boolean",
+            "default": false
+          },
+          "apnsKeyId": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsTeamId": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsBundleId": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "apnsProduction": {
+            "type": "boolean",
+            "default": true
+          },
+          "apnsKey": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "removeApnsKey": {
+            "type": "boolean",
+            "default": false
+          },
+          "showContent": {
+            "type": "boolean",
+            "default": true
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "SaveQualificationRequest": {
         "required": [
           "kind",
@@ -25399,6 +26711,69 @@
           "sortOrder": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "SendNotificationRequest": {
+        "required": [
+          "title"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "body": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "link": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "urgency": {
+            "$ref": "#/components/schemas/NotificationUrgency"
+          },
+          "userIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "roleIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "crewIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "all": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -26591,6 +27966,18 @@
               "null",
               "integer"
             ],
+            "format": "int32"
+          }
+        }
+      },
+      "UnreadCountResponse": {
+        "required": [
+          "count"
+        ],
+        "type": "object",
+        "properties": {
+          "count": {
+            "type": "integer",
             "format": "int32"
           }
         }
@@ -27828,6 +29215,9 @@
     },
     {
       "name": "Systemhinweise"
+    },
+    {
+      "name": "Benachrichtigungen"
     },
     {
       "name": "Backup Center"

@@ -14,6 +14,7 @@ public sealed class WorkModule : IModule
         services.AddScoped<Exports.IWorkReportSource, WorkReportSource>();
         services.AddScoped<IBauakteHintSource, WorkHints>();
         services.AddScoped<ISyncEntitySource, WorkItemSource>();
+        services.AddScoped<Notifications.Exports.IDeadlineSource, WorkDeadlines>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api) => WorkEndpoints.Map(api);

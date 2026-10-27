@@ -516,14 +516,18 @@ internal static class CockpitEndpoints
     }
 
     private static async Task<Results<Ok<IReadOnlyList<PlanReleaseInfo>>, ProblemHttpResult>> ReleaseAsync(
-        ReleasePlanRequest request, CockpitService cockpit, CancellationToken cancellationToken)
+        ReleasePlanRequest request, CockpitService cockpit, PlanningService planning, EstrichOneDbContext db,
+        Notifications.Exports.INotifier notifier, CancellationToken cancellationToken)
     {
         if (request.To < request.From || request.To.DayNumber - request.From.DayNumber > 62)
         {
             return Problem(StatusCodes.Status400BadRequest, "Ungültiger Zeitraum", "Höchstens 62 Tage auf einmal freigeben.", "INVALID_RANGE");
         }
 
-        return TypedResults.Ok(await cockpit.ReleaseAsync(request.From, request.To, request.Note, cancellationToken));
+        var update = await db.Set<PlanRelease>().AnyAsync(r => r.Day >= request.From && r.Day <= request.To, cancellationToken);
+        var released = await cockpit.ReleaseAsync(request.From, request.To, request.Note, cancellationToken);
+        await PlanningNotifications.ReleasedAsync(planning, notifier, request.From, request.To, update, cancellationToken);
+        return TypedResults.Ok(released);
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> WithdrawAsync(string day, EstrichOneDbContext db, TimeProvider clock, CancellationToken cancellationToken)

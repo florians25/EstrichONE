@@ -41,6 +41,7 @@ public static class Permissions
     public const string SettingsManage = "settings.manage";
     public const string AuditRead = "audit.read";
     public const string ArchiveUnlock = "archive.unlock";
+    public const string NotificationsSend = "notifications.send";
 
     public static IReadOnlyList<PermissionInfo> All { get; } =
     [
@@ -75,6 +76,7 @@ public static class Permissions
         new(DevicesWipe, "IT Center", "EstrichONE-Daten auf Geräten löschen"),
         new(DevicesSelfEnroll, "IT Center", "Eigenes persönliches Gerät ohne Freigabe einrichten"),
         new(HelpdeskAgent, "IT Center", "Supporttickets bearbeiten"),
+        new(NotificationsSend, "Verwaltung", "Nachrichten und Pushnachrichten an Benutzer, Rollen und Kolonnen senden"),
         new(BackupManage, "System", "Backups verwalten"),
         new(SettingsManage, "System", "Firmendaten und Einstellungen ändern"),
         new(AuditRead, "System", "Audit-Log einsehen"),

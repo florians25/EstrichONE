@@ -12,7 +12,7 @@ namespace EstrichOne.Api.Modules.Helpdesk;
 /// oder den Status ändert; an die zuständige Person, wenn der Melder antwortet. Ohne E-Mail-Konto passiert nichts.
 /// </summary>
 public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IOptions<EstrichOneOptions> options, ICurrentUser currentUser,
-    ILogger<TicketNotifier> logger)
+    Notifications.Exports.INotifier notifier, ILogger<TicketNotifier> logger)
 {
     public async Task NotifyAsync(Ticket ticket, string? comment, CancellationToken cancellationToken)
     {
@@ -21,6 +21,13 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
         {
             return;
         }
+
+        // Postfach und Push: nur Nummer und Status, nie der Kommentartext (kann sensible Inhalte enthalten).
+        await notifier.NotifyAsync([userId], new Notifications.Exports.NotificationRequest(
+            Notifications.Exports.NotificationCategory.Ticket,
+            $"Ticket {ticket.Number}: {(ticket.ReporterUserId == userId ? "neue Antwort" : "Rückmeldung des Melders")}",
+            $"{ticket.Title} · {TicketService.StatusName(ticket.Status)}",
+            $"/it-center/helpdesk/{ticket.Id}", "ticket", ticket.Id), cancellationToken);
 
         try
         {

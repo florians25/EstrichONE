@@ -261,7 +261,7 @@ internal static class BauakteEndpoints
 
     private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, HttpContext http,
-        BauakteProjectValidator projectValidator, CancellationToken cancellationToken)
+        BauakteProjectValidator projectValidator, Notifications.Exports.INotifier notifier, CancellationToken cancellationToken)
     {
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
@@ -323,6 +323,7 @@ internal static class BauakteEndpoints
         bauakte.ChangeAddress(request.Street, request.PostalCode, request.City, request.Latitude, request.Longitude);
         bauakte.Describe(request.Description);
         bauakte.AssignCustomer(request.CustomerId);
+        var previousResponsible = bauakte.ResponsibleUserId;
         bauakte.AssignResponsible(request.ResponsibleUserId);
         RecordChanges(history, before, ToDetail(bauakte));
 
@@ -335,6 +336,13 @@ internal static class BauakteEndpoints
             // Zwischen Lesen und Schreiben hat jemand anderes geändert.
             var current = await db.Set<Bauakte>().AsNoTracking().SingleAsync(b => b.Id == id, cancellationToken);
             return VersionConflict(current);
+        }
+
+        if (bauakte.ResponsibleUserId is { } responsible && responsible != previousResponsible)
+        {
+            await notifier.NotifyAsync([responsible], new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Bauakte,
+                "Bauakte übernommen – Sie sind zuständig", $"{bauakte.Number} {bauakte.Title}".Trim(), $"/bauakten/{bauakte.Id}", "bauakte", bauakte.Id),
+                cancellationToken);
         }
 
         SetETag(http, bauakte.Version);

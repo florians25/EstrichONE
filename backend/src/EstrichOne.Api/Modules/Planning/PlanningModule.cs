@@ -21,6 +21,7 @@ public sealed class PlanningModule : IModule
         services.AddScoped<IBauakteHintSource, PlanningHints>();
         services.AddScoped<IBauakteVisibilitySource, PlanningVisibility>();
         services.AddScoped<IBauakteScheduleSource, PlanningSchedule>();
+        services.AddScoped<Notifications.Exports.INotificationAudience, CrewAudience>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)
