@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.Start" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:l="sap.ui.layout"
-	xmlns:core="sap.ui.core" xmlns:card="sap.f.cards" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
 	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
 		<f:title>
 			<f:DynamicPageTitle>
@@ -13,20 +13,16 @@
 		</f:title>
 		<f:header>
 			<f:DynamicPageHeader pinnable="false">
-				<!-- Kennzahlen als SAP Cards (numerischer Kopf, anklickbar) in einem Raster gleicher Höhe -->
-				<f:GridContainer id="kpiCards" items="{view>/kpis}" snapToRow="true" class="eoKpiCards">
-					<f:layout>
-						<f:GridContainerSettings rowSize="4.5rem" columnSize="15rem" gap="0.75rem"/>
-					</f:layout>
-					<f:Card height="100%" class="eoKpiCard">
-						<f:layoutData><f:GridContainerItemLayoutData rows="2" columns="1"/></f:layoutData>
-						<f:header>
-							<card:NumericHeader title="{view>title}" subtitle="{view>subtitle}" number="{view>value}" iconSrc="{view>icon}"
-								state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Critical' : ${view>color} === 'Good' ? 'Good' : 'Neutral' }"
-								details="{view>footer}" detailsMaxLines="1" press=".onTile"/>
-						</f:header>
-					</f:Card>
-				</f:GridContainer>
+				<!-- Kennzahlen als ruhige Kopf-Fakten: Beschriftung, große Zahl (anklickbar), kurzer Hinweis -->
+				<FlexBox class="eoKpiBar" items="{view>/kpis}" wrap="Wrap" renderType="Bare">
+					<VBox class="eoKpiItem" renderType="Bare">
+						<Label text="{view>title}" wrapping="true"/>
+						<ObjectStatus text="{view>value}" active="true" press=".onTile" class="eoKpiFigure"
+							state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'Information' }"
+							tooltip="{view>title} öffnen"/>
+						<Text text="{= ${view>footer} || ${view>subtitle} || '' }" class="eoKpiHint" visible="{= !!(${view>footer} || ${view>subtitle}) }" wrapping="true"/>
+					</VBox>
+				</FlexBox>
 			</f:DynamicPageHeader>
 		</f:header>
 		<f:content>
