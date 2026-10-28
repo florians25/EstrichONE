@@ -1,0 +1,35 @@
+EstrichONE is the field app for screed and flooring contractors – for site managers, crews and the office. It connects to your company's own EstrichONE server and keeps working without a network: everything is stored encrypted on the device and synced as soon as you are back online.
+
+TODAY AT A GLANCE
+• Your job with address, route, contact person and on-site notes
+• Quick access to my tasks, who drives where and my week
+• Notifications when the plan is released or changed
+
+SITE FILES ALWAYS WITH YOU
+• Photos and videos with captions, scan documents to PDF
+• Site diary, defects, tasks and notes
+• Initial inspection with checkpoints, handover with signature as PDF
+• CM moisture measurements, rooms with areas and floor build-up, parties and contacts
+
+DISPATCH ON THE GO
+• Who drives where: crews, vehicles and sites in driving order
+• Quick dispatch: assign a site, move it, put it on the next free day
+• Swap workers, vehicles or whole crews – with conflict check
+• Release the plan and see every change since the release
+
+COMMUNICATION
+• Chat between office and site – one-to-one and crew chats
+• Helpdesk: report a problem with a photo, follow the answers
+• Push notifications for assignments, plan changes and releases
+• Customer directory with call, message, email and route
+
+RELIABLE AND SECURE
+• Your data stays on your company's server – not with us
+• Protection against data loss: read-only mode when the server has been unreachable for a while
+• Notices during maintenance and when backups fail
+• Encrypted storage on the device, unlock with Face ID or PIN
+• Personal devices and shared devices with user switching
+• No tracking, no ads
+
+Try it without a server: tap “Demo ausprobieren” on the start screen.
+Production use requires an EstrichONE server (free, self-hosted). The app interface is in German.

@@ -1,0 +1,9 @@
+EstrichONE ist eine Baustellen-App für Estrichbetriebe. Sie verbindet sich mit einem Server, den jeder Betrieb selbst betreibt; deshalb gibt es keine öffentliche Registrierung.
+
+So prüfen Sie die App ohne Server: Auf dem ersten Bildschirm „Demo ausprobieren – ohne Server“ tippen. Die App läuft dann ausschließlich mit lokalen Beispieldaten; es werden keine Daten über das Netzwerk gesendet. Alle Funktionen sind nutzbar: Heute-Seite, Bauakte (Fotos, Dokumentenscanner, Videos, Bautagebuch, Erstbegehung und Abnahme mit Unterschrift), Disposition („Wer fährt wohin“: zuweisen, verschieben, Mitarbeiter/Fahrzeuge/Kolonnen tauschen, Plan freigeben), Kunden, Chat, Helpdesk und Benachrichtigungen (Mehr › Benachrichtigungen › „Beispiel senden“ zeigt nach wenigen Sekunden eine lokale Beispielmitteilung). Unter „Demo“ › „Störungen vorführen“ lassen sich Wartungsmodus, Server-Ausfall und Backup-Warnungen zeigen. Beenden: „Demo“ (oben links) › „Demo beenden“.
+
+Berechtigungen werden nur bei ausdrücklicher Aktion abgefragt: Kamera (Fotos, Dokumentenscanner, QR-Code zur Einrichtung), Mikrofon (Videoaufnahme), Standort (Baustellenadresse übernehmen), Kontakte (Kunden in Kontakte sichern), Mitteilungen, Face ID (Entsperren auf persönlichen Geräten).
+
+Benutzerkonten legt die Administration des Betriebs an. Die Löschung des eigenen Kontos kann in der App beantragt werden (Mehr › „Konto löschen beantragen“); die Administration löscht daraufhin Konto und personenbezogene Daten. Abmelden entfernt sofort alle Daten vom Gerät.
+
+Verschlüsselung: ausschließlich Standardverfahren von iOS (HTTPS/TLS, CryptoKit AES-GCM, Schlüsselbund). ITSAppUsesNonExemptEncryption = NO.

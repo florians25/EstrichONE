@@ -1,0 +1,8 @@
+Erste Version von EstrichONE:
+• Heute: Ihr Einsatz mit Route, Aufgaben und Wer fährt wohin
+• Bauakte offline: Fotos, Scans, Bautagebuch, Mängel, Räume
+• Erstbegehung und Abnahme mit Unterschrift als PDF
+• Wer fährt wohin mit Schnelldisposition und Freigabe
+• Chat mit Büro und Kolonnen, Benachrichtigungen
+• Kunden mit Anruf, E-Mail und Route
+• Helpdesk: Problem melden direkt aus der App

@@ -1,0 +1,35 @@
+EstrichONE ist die Baustellen-App für Estrichbetriebe – für Bauleitung, Kolonnen und Büro. Die App verbindet sich mit dem EstrichONE-Server Ihres Betriebs und funktioniert auch ohne Netz: Alles wird verschlüsselt auf dem Gerät gespeichert und übertragen, sobald wieder Verbindung besteht.
+
+HEUTE AUF EINEN BLICK
+• Mein Einsatz mit Adresse, Route und Ansprechpartner
+• Schnellzugriff auf Meine Aufgaben, Wer fährt wohin und Meine Woche
+• Benachrichtigungen, wenn der Plan freigegeben oder geändert wird
+
+BAUAKTE IMMER DABEI
+• Fotos und Videos mit Beschriftung, Dokumente scannen als PDF
+• Bautagebuch, Mängel, Aufgaben und Notizen
+• Erstbegehung mit Prüfpunkten, Abnahme mit Unterschrift als PDF
+• CM-Messung, Räume mit Flächen und Estrichaufbau
+• Beteiligte und Kontakte verwalten – anrufen, schreiben, Route starten
+
+DISPOSITION UNTERWEGS
+• Wer fährt wohin: Kolonnen, Fahrzeuge und Baustellen in Fahrtreihenfolge
+• Schnelldisposition: Baustelle zuweisen, verschieben, auf den nächsten freien Tag legen
+• Mitarbeiter, Fahrzeuge oder ganze Kolonnen tauschen – mit Konfliktprüfung
+• Plan freigeben und Änderungen seit der Freigabe im Blick behalten
+
+KOMMUNIKATION
+• Chat zwischen Büro und Baustelle – Einzel- und Kolonnenchats
+• Helpdesk: Problem melden mit Foto, Antworten im Verlauf
+• Pushnachrichten zu Zuweisungen, Planänderungen und Freigaben
+
+ZUVERLÄSSIG UND SICHER
+• Ihre Daten liegen auf dem Server Ihres Betriebs – nicht bei uns
+• Verschlüsselte Ablage auf dem Gerät, Entsperren mit Face ID oder PIN
+• Schutz vor Datenverlust: „Nur Ansicht“, wenn der Server länger nicht erreichbar ist
+• Hinweise bei Wartung und bei Ausfall der Datensicherung
+• Persönliche Geräte und Poolgeräte mit Benutzerwechsel
+• Kein Tracking, keine Werbung
+
+Zum Ausprobieren ohne Server: „Demo ausprobieren“ auf dem Startbildschirm.
+Für den Betrieb wird ein EstrichONE-Server benötigt (kostenlos, selbst gehostet).

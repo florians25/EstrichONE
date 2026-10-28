@@ -1,0 +1,8 @@
+First release of EstrichONE:
+• Today: your job with route, tasks and who drives where
+• Offline site files: photos, scans, diary, defects, rooms
+• Initial inspection and handover with signature as PDF
+• Who drives where, with quick dispatch and plan release
+• Chat with office and crews, notifications
+• Customers with call, email and route
+• Helpdesk: report a problem right from the app
