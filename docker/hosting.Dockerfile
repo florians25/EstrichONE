@@ -24,7 +24,7 @@ ARG ESTRICHONE_VERSION=0.1.0
 RUN rm -rf hosting/src/EstrichOne.Hosting/wwwroot && dotnet publish hosting/src/EstrichOne.Hosting/EstrichOne.Hosting.csproj \
       --configuration Release --no-restore --output /app -p:Version=${ESTRICHONE_VERSION} -p:UseAppHost=false
 
-FROM docker:28-cli AS dockercli
+FROM docker:29-cli AS dockercli
 
 FROM mcr.microsoft.com/dotnet/aspnet:10.0
 # Docker-CLI und Compose-Plugin (statische Binärdateien) – gesteuert wird der Docker-Daemon des Hosts über den Socket.
