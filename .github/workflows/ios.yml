@@ -35,7 +35,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
@@ -49,7 +49,7 @@ jobs:
     runs-on: macos-15
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Neuestes Xcode wählen
         run: |
@@ -139,7 +139,7 @@ jobs:
       IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,dispo-fahrzeug,dispo-kolonnen,dispo-freigabe,postfach,start,start-adresse,anmelden,warten,zuruecksetzen,heute-gross,bauakte-gross,disposition,mehr-zuruecksetzen"
       IPAD_SCENES: "heute,heute-glocke,baustellen,bauakte,bereich-kontakte,kunden,disposition,meldung-detail,anmelden,stoerung,chat-verlauf,wartung,heute-quer,baustellen-quer,bauakte-quer,kunden-quer,disposition-quer,meldung-detail-quer,mehr-zuruecksetzen"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
 
@@ -255,7 +255,7 @@ jobs:
       APPSTORE: "1"
       APPSTORE_SCENES: "heute,bauakte,bereich-fotos,disposition,dispo-zuweisen,erstbegehung,chat-verlauf,kundenkarte,meldung-detail"
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
 
       - name: Xcode wählen, Simulator wählen
         id: sim
