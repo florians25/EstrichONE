@@ -122,7 +122,7 @@ backdrop() {
 portrait() {
   local src=$1 w=$2 h=$3 title=$4 sub=$5 out=$6 corner=$7 base title_pt sub_pt top sw sh srcw srch th
   read -r srcw srch < <("$IM" "$src" -format '%w %h\n' info:)
-  base=$(( w < h * 46 / 100 ? w : h * 46 / 100 ))
+  base=$(( w < h * 55 / 100 ? w : h * 55 / 100 ))
   title_pt=$(( base * 74 / 1000 ))
   sub_pt=$(( base * 36 / 1000 ))
   text "$BOLD" "$title_pt" white "$(( w * 88 / 100 ))" "$title" "$TMP/title.png"
@@ -195,5 +195,7 @@ for index in "${!SCENES[@]}"; do
   echo "  $number $scene"
 done
 
-check "$OUT"
+status=0
+check "$OUT" || status=1
 echo "Fertig: $(find "$OUT/upload" "$OUT/roh" "$OUT/banner-1920x886" -name '*.jpg' | wc -l) Bilder in $OUT"
+exit $status
