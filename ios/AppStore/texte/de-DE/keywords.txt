@@ -1,1 +1,1 @@
-Estrich,Bauakte,Baustelle,Disposition,Bautagebuch,Abnahme,Kolonne,Handwerk,Fußboden,Bauleiter,Mängel
+Estrich,Bauakte,Baustelle,Disposition,Bautagebuch,Abnahme,Kolonne,Handwerk,Fußboden,Bauleiter,Bau

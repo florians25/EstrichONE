@@ -167,7 +167,7 @@ Maßgeblich sind die Dateien in `AppStore/texte/de-DE/` (englisch: `texte/en-US/
 > Für den Betrieb wird ein EstrichONE-Server benötigt (kostenlos, selbst gehostet).
 
 **Schlüsselwörter** (max. 100 Zeichen, Komma ohne Leerzeichen):
-`Estrich,Bauakte,Baustelle,Disposition,Bautagebuch,Abnahme,Kolonne,Handwerk,Fußboden,Bauleiter,Mängel`
+`Estrich,Bauakte,Baustelle,Disposition,Bautagebuch,Abnahme,Kolonne,Handwerk,Fußboden,Bauleiter,Bau`
 
 **Neuerungen dieser Version** (0.1.0):
 > Erste Version von EstrichONE:
