@@ -14779,6 +14779,219 @@
         }
       }
     },
+    "/api/v1/backup/peer-updates": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Installierte und verfügbare Version je Zusatzserver, Stand des letzten Auftrags",
+        "operationId": "GetPeerUpdates",
+        "parameters": [
+          {
+            "name": "live",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerUpdatesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/peer-updates/{key}/update": {
+      "post": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Zusatzserver aktualisieren (Standard: Version dieses Servers; nie neuer). Läuft auf dem Rechner mit Rücksprung bei Fehlern.",
+        "operationId": "RequestPeerUpdate",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RequestPeerUpdateRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerUpdateDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/peer-updates/update-all": {
+      "post": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Alle veralteten Zusatzserver mit Updater aktualisieren (optional nur kind=backup-target,backup-mirror bzw. archive)",
+        "operationId": "RequestAllPeerUpdates",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerUpdateAllResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/backup/peer-updates/{key}/auto": {
+      "put": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Nach einem Update dieses Servers automatisch mitaktualisieren (ein/aus)",
+        "operationId": "SetPeerAutoUpdate",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PeerAutoUpdateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PeerUpdateDto"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/mail/settings": {
       "get": {
         "tags": [
@@ -25696,6 +25909,160 @@
           }
         }
       },
+      "PeerAutoUpdateRequest": {
+        "required": [
+          "autoUpdate"
+        ],
+        "type": "object",
+        "properties": {
+          "autoUpdate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PeerUpdateAllResponse": {
+        "required": [
+          "requested",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "requested": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PeerUpdateDto"
+            }
+          }
+        }
+      },
+      "PeerUpdateDto": {
+        "required": [
+          "key",
+          "kind",
+          "name",
+          "installedVersion",
+          "availableVersion",
+          "updateAvailable",
+          "updaterAvailable",
+          "updaterVersion",
+          "reachable",
+          "lastCheckedAt",
+          "status",
+          "targetVersion",
+          "previousVersion",
+          "message",
+          "requestedAt",
+          "finishedAt",
+          "autoUpdate",
+          "localCommand"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "installedVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "availableVersion": {
+            "type": "string"
+          },
+          "updateAvailable": {
+            "type": "boolean"
+          },
+          "updaterAvailable": {
+            "type": "boolean"
+          },
+          "updaterVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reachable": {
+            "type": "boolean"
+          },
+          "lastCheckedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string"
+          },
+          "targetVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "previousVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "autoUpdate": {
+            "type": "boolean"
+          },
+          "localCommand": {
+            "type": "string"
+          }
+        }
+      },
+      "PeerUpdatesResponse": {
+        "required": [
+          "currentVersion",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "currentVersion": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PeerUpdateDto"
+            }
+          }
+        }
+      },
       "PermissionInfo": {
         "required": [
           "code",
@@ -26862,6 +27229,20 @@
               "string"
             ],
             "format": "date"
+          }
+        }
+      },
+      "RequestPeerUpdateRequest": {
+        "required": [
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

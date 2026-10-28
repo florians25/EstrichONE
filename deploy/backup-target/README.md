@@ -43,7 +43,11 @@ sudo docker compose -p estrichone up -d
 - **Speicherplatz:** Weil das Ziel nichts löschen lässt, wächst es langsam (nur Änderungen werden übertragen,
   Fotos also nur einmal). Wird es voll: auf dem Zielrechner ein weiteres Backup-Ziel (neue Platte) einrichten und
   koppeln, das alte abkoppeln und aufbewahren.
-- **Aktualisieren:** Installationsbefehl erneut ausführen; Sicherungen und Kopplung bleiben.
+- **Aktualisieren:** im EstrichONE-Server unter *System → Backup-Ziele* mit **Aktualisieren** (Fernaktualisierung über
+  den Updater-Container `estrichone-backup-target-updater`, mit Rücksprung, wenn die neue Version nicht gesund wird –
+  docs/backup.md, „Zusatzserver aktualisieren“) oder am Rechner den Installationsbefehl erneut ausführen. Sicherungen und
+  Kopplung bleiben. Ziele, die vor der Fernaktualisierung eingerichtet wurden: einmal lokal mit dem aktuellen Installer
+  aktualisieren, danach per Knopfdruck.
 - **Protokoll:** `sudo docker logs estrichone-backup-target`
 - **Neuer Kopplungscode:** `sudo docker exec estrichone-backup-target estrichone-archive pair`
 - Port **8444** (Standard des Installers; der Archivserver nutzt 8443) muss vom EstrichONE-Server aus erreichbar sein. Kein Port-Forwarding ins Internet nötig.

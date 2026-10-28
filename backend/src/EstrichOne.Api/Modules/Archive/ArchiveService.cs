@@ -140,6 +140,19 @@ internal sealed partial class ArchiveService(
         await db.SaveChangesAsync(cancellationToken);
     }
 
+    /// <summary>Gekoppelter Archivserver für die Fernaktualisierung (Backup-Modul, docs/backup.md).</summary>
+    public async Task<IReadOnlyList<Backup.Exports.UpdatablePeer>> UpdatablePeersAsync(CancellationToken cancellationToken)
+    {
+        if (await ConnectionAsync(cancellationToken) is not { } connection)
+        {
+            return [];
+        }
+
+        var token = protection.CreateProtector(ProtectorPurpose).Unprotect(connection.ProtectedToken);
+        return [new Backup.Exports.UpdatablePeer("archive", "archive", connection.ServerName, "archive", connection.ClientId,
+            Infrastructure.Peers.PeerUpdateOrders.Sha256(token), timeout => Client(connection, timeout), connection.ServerVersion, "/system/archiv")];
+    }
+
     public HttpClient Client(ArchiveConnection connection, TimeSpan timeout) =>
         PeerClient.CreateClient(new Uri(connection.Address), connection.CaCertificatePem,
             protection.CreateProtector(ProtectorPurpose).Unprotect(connection.ProtectedToken), timeout);

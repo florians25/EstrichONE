@@ -27,9 +27,11 @@ public sealed class ArchiveServerHost : IAsyncDisposable
 
     public static async Task<ArchiveServerHost> StartAsync(ServerRole role = ServerRole.Archive, int minRetentionYears = 0)
     {
+        var data = Path.Combine(Path.GetTempPath(), "estrichone-archive-tests", Guid.NewGuid().ToString("N"));
         var options = new ArchiveOptions
         {
-            DataPath = Path.Combine(Path.GetTempPath(), "estrichone-archive-tests", Guid.NewGuid().ToString("N")),
+            DataPath = data,
+            UpdatePath = Path.Combine(data, "update"),
             Role = role,
             Port = FreePort(),
             Name = role == ServerRole.Archive ? "Archiv Test" : "Backup-Ziel Test",
@@ -37,10 +39,14 @@ public sealed class ArchiveServerHost : IAsyncDisposable
             RestServerPath = "/nicht/vorhanden/rest-server",
         };
         Directory.CreateDirectory(options.DataPath);
+        Directory.CreateDirectory(options.UpdatePath);
         var app = ArchiveServer.Build(options, []);
         await app.StartAsync();
         return new ArchiveServerHost(app, options);
     }
+
+    /// <summary>Spielt den Updater-Container: Lebenszeichen schreiben.</summary>
+    public void UpdaterHeartbeat(string version = "0.1.0") => File.WriteAllText(Path.Combine(Options.UpdatePath, "updater"), $"version={version}\n");
 
     public string NewCode() => Services.GetRequiredService<ClientRegistry>().NewPairingCode().Code;
 

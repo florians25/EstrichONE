@@ -17,7 +17,7 @@ public sealed record PairResponse(string ClientId, string Token, string ServerPr
 
 public sealed record StatusResponse(string Role, string Name, string Version, DateTimeOffset Now, string ClientId, string ClientName,
     DateTimeOffset PairedAt, ArchiveStatistics? Archive, VerificationReport? LastVerification, long? DiskFreeBytes, long? DiskTotalBytes,
-    BackupRepositoryStatus? Backup);
+    BackupRepositoryStatus? Backup, UpdateState? Update = null);
 
 public sealed record BackupRepositoryStatus(string Repository, long Bytes, int Snapshots, DateTimeOffset? LastSnapshotAt, bool AppendOnly,
     bool ServerRunning);
@@ -45,6 +45,7 @@ public static class ArchiveServer
         builder.Services.AddSingleton<TlsCertificates>();
         builder.Services.AddSingleton<ClientRegistry>();
         builder.Services.AddSingleton<AdminToken>();
+        builder.Services.AddSingleton<RemoteUpdater>();
         builder.Services.AddHttpClient("rest-server", http => http.Timeout = Timeout.InfiniteTimeSpan)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler { AllowAutoRedirect = false, UseProxy = false });
         if (options.Role == ServerRole.Archive)
@@ -137,7 +138,7 @@ public static class ArchiveServer
             return await next(context);
         });
 
-        api.MapGet("/status", (HttpContext http, IServiceProvider services, TimeProvider clock) =>
+        api.MapGet("/status", (HttpContext http, IServiceProvider services, TimeProvider clock, RemoteUpdater updater) =>
         {
             var client = Client(http);
             var drive = TryDrive(options.DataPath);
@@ -151,7 +152,22 @@ public static class ArchiveServer
             }
 
             return Results.Json(new StatusResponse(options.RoleName, options.Name, Version, clock.GetUtcNow(), client.Id, client.Name, client.PairedAt,
-                store?.Statistics(client.Id), store?.LatestVerification(), drive?.AvailableFreeSpace, drive?.TotalSize, backup));
+                store?.Statistics(client.Id), store?.LatestVerification(), drive?.AvailableFreeSpace, drive?.TotalSize, backup, updater.Status()));
+        });
+
+        // Fernaktualisierung: signierter Auftrag des gekoppelten Servers (nur Version), ausgeführt vom Updater-Container.
+        api.MapGet("/update", (RemoteUpdater updater) => Results.Json(updater.Status()));
+        api.MapPost("/update", (UpdateOrder order, HttpContext http, RemoteUpdater updater, ILoggerFactory logs) =>
+        {
+            var client = Client(http);
+            if (updater.Accept(order, client.TokenSha256, client.Id) is { } rejected)
+            {
+                logs.CreateLogger("Aktualisierung").LogWarning("Auftrag von „{Client}“ abgelehnt: {Code}", client.Name, rejected.Code);
+                return Problem(rejected.Status, rejected.Code, rejected.Message);
+            }
+
+            logs.CreateLogger("Aktualisierung").LogInformation("Auftrag von „{Client}“: Aktualisierung auf {Version}.", client.Name, order.Version);
+            return Results.Json(updater.Status(), statusCode: 202);
         });
 
         api.MapDelete("/pairing", (HttpContext http, ClientRegistry clients) =>

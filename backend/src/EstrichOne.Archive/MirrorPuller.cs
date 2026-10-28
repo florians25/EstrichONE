@@ -11,7 +11,7 @@ namespace EstrichOne.Archive;
 /// es wird nie etwas gelöscht oder überschrieben; jede Datei wird gegen ihren Namen (SHA-256) geprüft. Gegenstück:
 /// backend/src/EstrichOne.Api/Modules/Backup/BackupMirror.cs. Der Server kennt danach Stand, Plattenplatz und Erreichbarkeit.
 /// </summary>
-public sealed partial class MirrorPuller(ArchiveOptions options, ILogger<MirrorPuller> logger) : BackgroundService
+public sealed partial class MirrorPuller(ArchiveOptions options, RemoteUpdater updater, ILogger<MirrorPuller> logger) : BackgroundService
 {
     public const string ConfigFile = "pull.json";
     private static readonly string[] Types = ["keys", "data", "index", "snapshots"];
@@ -21,9 +21,10 @@ public sealed partial class MirrorPuller(ArchiveOptions options, ILogger<MirrorP
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
+        var nextSync = DateTimeOffset.MinValue;
         while (!stoppingToken.IsCancellationRequested)
         {
-            var wait = options.PullInterval;
+            var wait = options.CheckInInterval < options.PullInterval ? options.CheckInInterval : options.PullInterval;
             try
             {
                 var config = await ConfigAsync(stoppingToken);
@@ -33,13 +34,20 @@ public sealed partial class MirrorPuller(ArchiveOptions options, ILogger<MirrorP
                 }
                 else
                 {
-                    await SyncAsync(config, stoppingToken);
+                    if (DateTimeOffset.UtcNow >= nextSync)
+                    {
+                        await SyncAsync(config, stoppingToken);
+                        nextSync = DateTimeOffset.UtcNow + options.PullInterval;
+                    }
+
+                    // Zwischen den Abgleichen kurz melden und Aufträge (Fernaktualisierung) abholen – ausgehend, ohne Portfreigabe.
+                    await CheckInAsync(config, stoppingToken);
                 }
             }
             catch (Exception exception) when (exception is not OperationCanceledException)
             {
                 LogFailed(logger, exception.Message);
-                wait = TimeSpan.FromMinutes(5);
+                wait = TimeSpan.FromMinutes(Math.Min(5, Math.Max(1, wait.TotalMinutes)));
             }
 
             try
@@ -50,6 +58,43 @@ public sealed partial class MirrorPuller(ArchiveOptions options, ILogger<MirrorP
             {
                 break;
             }
+        }
+    }
+
+    /// <summary>Meldet Version und Stand der Aktualisierung; nimmt einen signierten Auftrag an und legt ihn für den Updater ab.</summary>
+    internal async Task CheckInAsync(PullConfig config, CancellationToken cancellationToken)
+    {
+        using var http = Client(config.Server, config.Token);
+        UpdateRejection? rejected = null;
+        string? rejectedId = null;
+        for (var round = 0; round < 2; round++)
+        {
+            using var response = await http.PostAsJsonAsync("/api/v1/backup/mirror/checkin", new
+            {
+                version = ArchiveServer.Version, update = updater.Status(), rejectedRequestId = rejectedId, rejectedMessage = rejected?.Message,
+            }, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return; // Server ohne Fernaktualisierung (ältere Version)
+            }
+
+            response.EnsureSuccessStatusCode();
+            var answer = await response.Content.ReadFromJsonAsync<CheckInAnswer>(Json, cancellationToken);
+            if (answer?.Order is not { } order || rejectedId is not null)
+            {
+                return;
+            }
+
+            rejected = updater.Accept(order, ClientRegistry.Sha256(config.Token), config.Id);
+            if (rejected is null)
+            {
+                LogUpdateAccepted(logger, order.Version);
+                return;
+            }
+
+            // Ablehnung sofort zurückmelden, damit der Server nicht bis zur Zeitüberschreitung wartet.
+            LogUpdateRejected(logger, rejected.Code);
+            rejectedId = order.Id;
         }
     }
 
@@ -213,6 +258,14 @@ public sealed partial class MirrorPuller(ArchiveOptions options, ILogger<MirrorP
     private sealed record PairResult(string Id, string Token);
 
     private sealed record RemoteFile(string Name, long Size);
+
+    private sealed record CheckInAnswer(UpdateOrder? Order);
+
+    [LoggerMessage(Level = LogLevel.Information, Message = "Auftrag vom Server: Aktualisierung auf {Version} – der Updater übernimmt.")]
+    private static partial void LogUpdateAccepted(ILogger logger, string version);
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Auftrag vom Server abgelehnt: {Code}")]
+    private static partial void LogUpdateRejected(ILogger logger, string code);
 
     [LoggerMessage(Level = LogLevel.Information, Message = "Spiegel gekoppelt mit {Server}.")]
     private static partial void LogPaired(ILogger logger, string server);

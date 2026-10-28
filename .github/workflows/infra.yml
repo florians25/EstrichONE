@@ -29,7 +29,7 @@ jobs:
             docker build -q -f "docker/$image.Dockerfile" -t "estrichone/$image:ci" .
           done
       - name: Shellcheck
-        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh
+        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh deploy/backup-target/test-remote-update.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh
       - name: Archiv koppeln, archivieren, Unveränderbarkeit, Löschsperre, Export, Backup-Ziel, Testmail
         env:
           ESTRICHONE_VERSION: ci
@@ -77,6 +77,20 @@ jobs:
         run: |
           shellcheck deploy/backup/test-installer-restore.sh
           sudo -E VERSION="$VERSION" deploy/backup/test-installer-restore.sh
+      - name: Fernaktualisierung der Zusatzserver – alte Version, Rücksprung bei Fehler, Update mit erhaltenen Daten, Ziel, das zieht
+        env:
+          OLD_VERSION: 0.1.98-ci
+          BROKEN_VERSION: 0.1.98-ci.2
+        run: |
+          shellcheck deploy/backup-target/test-remote-update.sh
+          # Alte Test-Version (gleicher Code, ältere Versionsnummer) und eine Version, deren Container nie gesund wird.
+          docker build -q -f docker/backup-target.Dockerfile --build-arg ESTRICHONE_VERSION="$OLD_VERSION" -t "ghcr.io/florians25/estrichone-backup-target:$OLD_VERSION" .
+          printf 'FROM ghcr.io/florians25/estrichone-backup-target:%s\nENV ESTRICHONE_ROLE=kaputt\n' "$VERSION" \
+            | docker build -q -t "ghcr.io/florians25/estrichone-backup-target:$BROKEN_VERSION" -
+          for v in "$OLD_VERSION" "$BROKEN_VERSION"; do
+            docker build -q -f docker/installer/Dockerfile --build-arg ESTRICHONE_VERSION="$v" -t "ghcr.io/florians25/estrichone-installer:$v" .
+          done
+          sudo -E VERSION="$VERSION" deploy/backup-target/test-remote-update.sh
       - name: Archivserver und Backup-Ziel mit einem Befehl (zweimal = Update)
         run: |
           for role in archiv backup-ziel; do

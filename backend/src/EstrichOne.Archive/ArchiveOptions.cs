@@ -43,6 +43,12 @@ public sealed class ArchiveOptions
 
     public TimeSpan PullInterval { get; init; } = TimeSpan.FromMinutes(60);
 
+    /// <summary>Verzeichnis, das sich der Dienst mit dem Updater teilt (Fernaktualisierung, siehe <see cref="RemoteUpdater"/>).</summary>
+    public string UpdatePath { get; init; } = "/update";
+
+    /// <summary>Ziel, das zieht: so oft beim Server nach Aufträgen (Aktualisierung) fragen.</summary>
+    public TimeSpan CheckInInterval { get; init; } = TimeSpan.FromMinutes(2);
+
     public string RoleName => Role == ServerRole.Archive ? "archive" : "backup-target";
     public string RoleTitle => Role == ServerRole.Archive ? "Archivserver" : "Backup-Ziel";
 
@@ -72,6 +78,8 @@ public sealed class ArchiveOptions
             PullCode = get("ESTRICHONE_PULL_CODE") is { Length: > 0 } code ? code.Trim() : null,
             PullFingerprint = get("ESTRICHONE_PULL_FINGERPRINT") is { Length: > 0 } fp ? fp : null,
             PullInterval = TimeSpan.FromMinutes(Math.Clamp(Int(get("ESTRICHONE_PULL_INTERVAL_MINUTES"), 60), 5, 1440)),
+            UpdatePath = get("ESTRICHONE_UPDATE_DIR") is { Length: > 0 } update ? update : "/update",
+            CheckInInterval = TimeSpan.FromSeconds(Math.Clamp(Int(get("ESTRICHONE_CHECKIN_SECONDS"), 120), 10, 3600)),
         };
     }
 

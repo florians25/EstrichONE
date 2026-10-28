@@ -22,6 +22,8 @@ COPY --from=build /app ./
 COPY --from=rest-server /usr/bin/rest-server /usr/local/bin/rest-server
 # Datenverzeichnis gehört dem App-Benutzer, damit ein benanntes Docker-Volume ohne weitere Schritte beschreibbar ist.
 COPY --from=build --chown=1654:1654 /src/global.json /data/.keep
+# Gemeinsames Verzeichnis mit dem Updater-Container (Fernaktualisierung, docker/installer/peer.sh).
+COPY --from=build --chown=1654:1654 /src/global.json /update/.keep
 ENV ESTRICHONE_ROLE=backup-target \
     ESTRICHONE_DATA=/data \
     PATH=/app:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \

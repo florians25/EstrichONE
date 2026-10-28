@@ -163,6 +163,68 @@ Foto (SHA-256), Einstellungen, `.env` und neue `instanceEpoch` geprüft; danach 
 dessen Spiegel mit `restic check --read-data` vollständig geprüft. Wiederherstellung im laufenden System (ganzes System und
 Datei, mit Sperre) und Totalverlust per Dienst `restore`: `deploy/backup/test-backup-restore.sh` (Workflow *Backend*).
 
+## Zusatzserver aktualisieren (Fernaktualisierung)
+
+Backup-Ziele, Backup-Ziele, die ziehen, und der Archivserver laufen auf eigener Hardware. Sie lassen sich vom Hauptserver
+aus aktualisieren – ohne Anmeldung am jeweiligen Rechner:
+
+- **Weboberfläche** (Recht `backup.manage`): *System → Backup-Ziele* (Abschnitt „Aktualisierung der Zusatzserver“) bzw.
+  *System → Archiv*. Je Rechner: installierte Version, verfügbare Version (= Version dieses Servers), Stand des letzten
+  Auftrags, Knopf **Aktualisieren** sowie **Alle aktualisieren**, Schalter **automatisch mitaktualisieren**.
+- **Nach einem Update des Hauptservers** prüft der Server binnen weniger Minuten (danach stündlich) alle Zusatzserver:
+  Rechner mit „automatisch mitaktualisieren“ werden beauftragt, für die übrigen bekommen die Administratoren einmal je
+  Version die Benachrichtigung `peer.update_available` mit Link auf die Seite.
+
+### Ablauf und Sicherheit
+
+1. Der Server erteilt einen **Auftrag mit nur einer Versionsnummer**. Erlaubt sind ausschließlich gültige
+   Versionsnummern (SemVer, z. B. `0.1.0-preview.23`) **bis einschließlich der eigenen Version**; Tags wie `latest`,
+   Image-Namen oder Optionen werden abgelehnt (422). Der Auftrag ist per HMAC-SHA-256 signiert (Schlüssel: SHA-256 des
+   Kopplungs-Tokens, gebunden an Rolle, Kopplung, Auftrags-ID, Zielversion und Serverversion) und gilt 10 Minuten.
+2. **Zustellung:** an Backup-Ziele und den Archivserver über die bestehende gekoppelte Verbindung mit gepinntem Zertifikat
+   (`POST /api/v1/update` am Zusatzserver, Bearer-Token der Kopplung). Ein **Ziel, das zieht**, holt den Auftrag selbst ab:
+   es meldet sich alle 2 Minuten ausgehend (`POST /backup/mirror/checkin`, Bearer-Spiegel-Token) – keine Portfreigabe nötig.
+3. Der Zusatzserver prüft Signatur, Alter, Version (nicht neuer als der Server, **nicht älter als installiert** – Zurückstufen
+   nur am Rechner selbst) und legt die Versionsnummer in das Volume `estrichone-<rolle>-update`. Der Dienst selbst hat
+   weiterhin weder Shell noch Docker-Zugriff.
+4. Der **Updater** daneben (Container `estrichone-<rolle>-updater`, Installer-Image mit Docker-Socket) startet den
+   Installer **der Zielversion** im Aktualisierungsmodus. Das Image ergibt sich fest aus Registry und Rolle:
+   `ghcr.io/florians25/estrichone-backup-target:<version>` bzw. `…/estrichone-archive:<version>`.
+5. Der Installer hält den laufenden Container an (umbenannt in `…-vorher`), startet die neue Version mit **denselben
+   Volumes und Optionen** und prüft die Gesundheit (läuft, startet nicht ständig neu, eingebauter Gesundheitstest zweimal
+   in Folge, höchstens 120 s). **Gesund** → alter Container wird entfernt, der Updater auf die neue Version gebracht.
+   **Nicht gesund** → neuer Container weg, vorige Version läuft wieder (**Rücksprung**, Daten unverändert).
+6. Ergebnis (`succeeded`, `rolled_back`, `failed` mit Meldung) geht beim nächsten Abruf (alle 30 s) bzw. beim nächsten
+   Melden des ziehenden Ziels an den Server. Ohne Rückmeldung nach 30 Minuten gilt der Auftrag als fehlgeschlagen.
+
+Protokoll: jeder Auftrag und jedes Ergebnis im Audit (`peer.update.requested`, `peer.update.succeeded`,
+`peer.update.rolled_back`, `peer.update.failed`, `peer.update.auto_changed`). Benachrichtigungen an alle mit
+`backup.manage`: `peer.update_succeeded` (Erfolg) und `peer.update_failed` (Fehler oder Rücksprung, Pflicht-Ereignis) –
+siehe docs/benachrichtigungen.md.
+
+### Einmalig: bestehende Zusatzserver umstellen
+
+Rechner, die vor dieser Version eingerichtet wurden, haben noch keinen Updater. **Einmal am Rechner selbst** den
+Installer der aktuellen Version mit denselben Optionen wie bei der Einrichtung ausführen, z. B.:
+
+```bash
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:<version> backup-ziel
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:<version> archiv
+# Ziel, das zieht: wie bei der Einrichtung zusätzlich -e ESTRICHONE_PULL_FROM=https://… (Code nicht mehr nötig)
+```
+
+Die Weboberfläche zeigt den passenden Befehl, solange ein Rechner keinen Updater meldet. Danach geht jedes weitere
+Update per Knopfdruck. Abschalten: `-e ESTRICHONE_REMOTE_UPDATE=aus` (der Updater-Container wird entfernt). Am Rechner
+selbst aktualisieren geht weiterhin (Installationsbefehl erneut ausführen – ebenfalls mit Rücksprung bei Fehlern).
+
+Hinweis: Der Updater hat – wie der Installer – Zugriff auf den Docker-Socket dieses Rechners. Er nimmt aber nur die
+Versionsnummer aus dem Auftrag; was gestartet wird, legen der Installer und die beim Einrichten gewählten Optionen fest.
+
+In der CI getestet (`deploy/backup-target/test-remote-update.sh`, Workflow *Infrastruktur*): Backup-Ziel mit alter
+Test-Version einrichten und koppeln, sichern → ungültige/zu neue Versionen abgelehnt → Update auf eine Version, die nie
+gesund wird → Rücksprung → Update auf die CI-Version → gesund, Sicherungen und Kopplung erhalten, erneute Sicherung,
+Benachrichtigungen; danach dasselbe für ein Ziel, das zieht.
+
 ## Notfallblatt
 
 `GET /api/v1/backup/emergency-sheet` (PDF, Recht `backup.manage`, im Audit protokolliert): Betrieb, Server-Adresse, Version,
@@ -183,10 +245,15 @@ Je gekoppeltem Backup-Ziel gibt es zusätzlich den Notfallzugang als Text (`/bac
 | GET | `/backup/emergency-sheet` | Notfallblatt (PDF) |
 | GET/POST/DELETE | `/backup/targets…` | Backup-Ziele koppeln/entfernen, Notfallzugang |
 | GET/POST/DELETE | `/backup/mirrors…` | Backup-Ziele, die ziehen (Code + Befehl) |
+| GET | `/backup/peer-updates` | Zusatzserver: installierte/verfügbare Version, Updater, letzter Auftrag (`?live=false` ohne Abfrage) |
+| POST | `/backup/peer-updates/{key}/update` | Aktualisieren (`{ "version": null }` = Version dieses Servers); 202, 409 läuft schon, 422 Version |
+| POST | `/backup/peer-updates/update-all` | alle veralteten Zusatzserver mit Updater (optional `?kind=archive`) |
+| PUT | `/backup/peer-updates/{key}/auto` | `{ "autoUpdate": true }` – nach Updates des Servers automatisch mitaktualisieren |
 | GET | `/system/monitoring` | Platten, Trends, Dienste aller Systeme |
 
 Protokoll für ziehende Ziele (Bearer-Spiegel-Token, nicht für Menschen): `POST /backup/mirror/pair`, `GET /backup/mirror/repo/config`,
-`GET /backup/mirror/repo/{keys|snapshots|index|data}/[name]`, `POST /backup/mirror/report`.
+`GET /backup/mirror/repo/{keys|snapshots|index|data}/[name]`, `POST /backup/mirror/report`, `POST /backup/mirror/checkin`
+(Version, Stand der Aktualisierung; Antwort `{ order }` mit signiertem Auftrag oder `null`).
 
 ## Status-Banner und Wartung für alle Clients (Web-Shell, iOS, Android)
 

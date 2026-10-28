@@ -6,6 +6,8 @@ import { apiUrl, del, get, post, put } from "../../util/api";
 import { date, dateTime, fileSize } from "../../util/format";
 import { openForm } from "../../util/forms";
 import { recordStatus } from "../../util/infraModels";
+import { PeerUpdatePanel } from "../../util/peerUpdatePanel";
+import type { PeerUpdateDto } from "../../util/peerUpdates";
 import type { ArchiveConnectionDto, ArchiveOverview, ArchiveRecordDto, ArchiveRuleDto, ArchiveVerification } from "../../util/infraModels";
 
 /** Kurzform eines Prüfprotokolls für Anzeige und Meldung. */
@@ -18,8 +20,26 @@ export function verificationText(v: ArchiveVerification | null): { text: string;
 
 /** System › Archiv: Archivserver koppeln, Regeln je Dokumentart, Warteschlange und Nachweis, Prüfung, Export. @namespace estrichone.controller.admin */
 export default class Archive extends BaseController {
+	private peers!: PeerUpdatePanel;
+
 	onInit(): void {
-		this.local({ o: null, busy: false, rules: [], records: [], filter: "", settings: { autoArchive: true, notifyEmail: "" }, stats: {}, contact: {} });
+		this.local({ o: null, busy: false, rules: [], records: [], filter: "", settings: { autoArchive: true, notifyEmail: "" }, stats: {}, contact: {},
+			peers: PeerUpdatePanel.initial() });
+		this.peers = new PeerUpdatePanel({ model: () => this.model(), run: (w, s) => this.run(w, s), confirm: (t, o) => this.confirm(t, o) }, ["archive"]);
+	}
+
+	onExit(): void { this.peers.stop(); }
+
+	onPeerUpdate(e: Event): void { void this.peers.update(this.peerRowOf(e)); }
+
+	onPeerUpdateAll(): void { void this.peers.updateAll(); }
+
+	onPeerAuto(e: Event): void { void this.peers.setAuto(this.peerRowOf(e), Boolean((e as Event<{ state: boolean }>).getParameter("state"))); }
+
+	onPeerCommand(e: Event): void { this.peers.showCommand(this.peerRowOf(e)); }
+
+	private peerRowOf(e: Event): PeerUpdateDto {
+		return (e.getSource() as Control).getBindingContext("view")?.getObject() as PeerUpdateDto;
 	}
 
 	onRouteMatched(): void { void this.load(); }
@@ -34,6 +54,8 @@ export default class Archive extends BaseController {
 		m.setProperty("/busy", false);
 		if (!o) return;
 		m.setProperty("/o", o);
+		// Fernaktualisierung braucht zusätzlich das Recht backup.manage.
+		if (o.connected && this.has("backup.manage")) void this.peers.load();
 		m.setProperty("/rules", rules ?? []);
 		const c = o.connection;
 		m.setProperty("/pairedText", c ? dateTime(c.pairedAt) : "");

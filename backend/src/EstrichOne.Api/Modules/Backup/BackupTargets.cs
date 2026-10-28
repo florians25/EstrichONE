@@ -253,6 +253,15 @@ internal sealed class BackupTargetService(
         })];
     }
 
+    /// <summary>Gekoppelte Ziele für die Fernaktualisierung (Verbindung mit gepinntem Zertifikat).</summary>
+    public async Task<IReadOnlyList<Exports.UpdatablePeer>> UpdatablePeersAsync(CancellationToken cancellationToken)
+    {
+        var targets = await db.Set<BackupTarget>().AsNoTracking().OrderBy(t => t.PairedAt).ToListAsync(cancellationToken);
+        return [.. targets.Select(target => new Exports.UpdatablePeer($"target-{target.Id:N}", "backup-target", target.Name, "backup-target", target.ClientId,
+            PeerUpdateOrders.Sha256(protection.CreateProtector(TokenPurpose).Unprotect(target.ProtectedToken)),
+            timeout => Client(target, timeout), target.ServerVersion, "/system/backup-ziele"))];
+    }
+
     private HttpClient Client(BackupTarget target, TimeSpan timeout) =>
         PeerClient.CreateClient(new Uri(target.Address), target.CaCertificatePem,
             protection.CreateProtector(TokenPurpose).Unprotect(target.ProtectedToken), timeout);

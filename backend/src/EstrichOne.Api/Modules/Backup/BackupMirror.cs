@@ -39,6 +39,18 @@ public sealed class BackupMirrorStore(IOptions<BackupSettings> options, TimeProv
         return [.. Directory.EnumerateFiles(dir, "*.json").Select(Read).OfType<MirrorRecord>().OrderBy(m => m.CreatedAt).Select(ToDto)];
     }
 
+    /// <summary>Gekoppelte Spiegel mit Token-Hash (Schlüssel für signierte Aufträge) und zuletzt gemeldeter Version.</summary>
+    public IReadOnlyList<(string Id, string Name, string TokenHash, string? Version)> PairedForUpdates()
+    {
+        if (Dir is not { } dir || !Directory.Exists(dir))
+        {
+            return [];
+        }
+
+        return [.. Directory.EnumerateFiles(dir, "*.json").Select(Read).OfType<MirrorRecord>().Where(m => m.TokenHash is not null).OrderBy(m => m.CreatedAt)
+            .Select(m => (m.Id, m.TargetName is { } t ? $"{m.Name} ({t})" : m.Name, m.TokenHash!, m.LastReport?.Version))];
+    }
+
     /// <summary>Neuen Spiegel anlegen; der Code gilt 24 Stunden und einmal.</summary>
     public (BackupMirrorDto Mirror, string Code)? Create(string name)
     {

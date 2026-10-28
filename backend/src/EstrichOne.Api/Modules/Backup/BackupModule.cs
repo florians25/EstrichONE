@@ -22,6 +22,14 @@ public sealed class BackupModule : IModule
         services.AddScoped<EmergencySheetService>();
         services.AddScoped<Exports.IBackupMonitoring, BackupMonitoring>();
         services.AddHostedService<RestoreFinisher>();
+        services.AddScoped<BackupPeerSource>();
+        services.AddScoped<Exports.IUpdatablePeerSource>(provider => provider.GetRequiredService<BackupPeerSource>());
+        services.AddScoped<PeerUpdateService>();
+        // EstrichOne:Backup:PeerUpdateWorker=false schaltet die Nachverfolgung ab (Tests steuern den Ablauf selbst).
+        if (!string.Equals(configuration["EstrichOne:Backup:PeerUpdateWorker"], "false", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHostedService<PeerUpdateWorker>();
+        }
         services.AddHealthChecks().AddCheck<BackupHealthCheck>("backup", tags: ["ready"]);
     }
 
@@ -103,5 +111,6 @@ public sealed class BackupModule : IModule
             .RequirePermission(Permissions.BackupManage);
 
         BackupCenterEndpoints.Map(backup);
+        PeerUpdateEndpoints.Map(backup);
     }
 }

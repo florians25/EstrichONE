@@ -11,6 +11,7 @@ public sealed class ArchiveModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ArchiveService>();
+        services.AddScoped<Backup.Exports.IUpdatablePeerSource, ArchiveUpdatablePeers>();
         services.AddScoped<Documentation.Exports.IFileArchiveState, FileArchiveState>();
         services.AddSingleton<ArchiveSignal>();
         services.AddScoped<DossierService>();
@@ -36,4 +37,10 @@ public sealed class ArchiveModule : IModule
         MonitoringEndpoints.Map(api);
         SystemHealthEndpoints.Map(api);
     }
+}
+
+/// <summary>Archivserver für die Fernaktualisierung (Auftrag und Anzeige im Backup-Modul).</summary>
+internal sealed class ArchiveUpdatablePeers(ArchiveService archive) : Backup.Exports.IUpdatablePeerSource
+{
+    public Task<IReadOnlyList<Backup.Exports.UpdatablePeer>> ListAsync(CancellationToken cancellationToken) => archive.UpdatablePeersAsync(cancellationToken);
 }

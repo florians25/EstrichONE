@@ -110,6 +110,9 @@ public static class NotificationEvents
     public const string BackupFailed = "backup.failed";
     public const string BackupTargetDown = "backup.target_down";
     public const string ArchiveDown = "archive.down";
+    public const string PeerUpdateAvailable = "peer.update_available";
+    public const string PeerUpdateSucceeded = "peer.update_succeeded";
+    public const string PeerUpdateFailed = "peer.update_failed";
     public const string Test = "system.test";
 
     public static IReadOnlyList<NotificationEventInfo> All { get; } =
@@ -132,6 +135,9 @@ public static class NotificationEvents
         new(BackupFailed, "System", "Backup fehlgeschlagen", "Eine Sicherung ist fehlgeschlagen.", AdminOnly: true, Mandatory: true),
         new(BackupTargetDown, "System", "Backup-Server nicht erreichbar", "Das Backup-Ziel ist ausgefallen oder die letzte Sicherung ist zu alt.", AdminOnly: true, Mandatory: true),
         new(ArchiveDown, "System", "Archiv-Server nicht erreichbar", "Der Archivserver ist ausgefallen oder nicht erreichbar.", AdminOnly: true, Mandatory: true),
+        new(PeerUpdateAvailable, "System", "Zusatzserver aktualisieren", "Nach einem Update dieses Servers: Backup-Ziel oder Archivserver hat noch die ältere Version.", AdminOnly: true),
+        new(PeerUpdateSucceeded, "System", "Zusatzserver aktualisiert", "Die Fernaktualisierung eines Backup-Ziels oder Archivservers war erfolgreich.", AdminOnly: true),
+        new(PeerUpdateFailed, "System", "Aktualisierung eines Zusatzservers fehlgeschlagen", "Fernaktualisierung fehlgeschlagen oder zurückgerollt (vorige Version läuft wieder).", AdminOnly: true, Mandatory: true),
     ];
 
     public static NotificationEventInfo? Find(string? code) => code is null ? null : All.FirstOrDefault(e => e.Code == code);

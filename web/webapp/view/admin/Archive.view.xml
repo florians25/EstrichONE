@@ -42,6 +42,39 @@
 					<Label/><HBox><Button text="{i18n>common.save}" icon="sap-icon://save" press=".onSaveSettings"/><Button text="Entkoppeln" icon="sap-icon://broken-link" type="Transparent" press=".onUnpair" class="sapUiSmallMarginBegin"/></HBox>
 				</form:SimpleForm>
 			</VBox>
+			<VBox visible="{= ${view>/peers/items}.length > 0 }" class="sapUiSmallMarginBottom">
+				<HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="sapUiTinyMarginBottom">
+					<VBox>
+						<Title text="Aktualisierung der Zusatzserver" level="H2"/>
+						<Text text="Per Fernaktualisierung auf die Version dieses Servers ({view>/peers/current}) bringen – Daten bleiben, bei Problemen springt der Rechner automatisch auf die bisherige Version zurück."/>
+					</VBox>
+					<Button text="Alle aktualisieren ({view>/peers/updatable})" icon="sap-icon://download-from-cloud" type="Emphasized"
+						enabled="{= ${view>/peers/updatable} > 0 }" press=".onPeerUpdateAll"/>
+				</HBox>
+				<MessageStrip type="Warning" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${view>/peers/outdated} > 0 }"
+					text="{view>/peers/outdated} Zusatzserver laufen noch mit einer älteren Version als dieser Server ({view>/peers/current})."/>
+				<List items="{view>/peers/items}" showSeparators="All">
+					<CustomListItem>
+						<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
+						<VBox>
+							<Title text="{view>name}" level="H3"/>
+							<Text text="{view>kindText} · {view>versionText} · {view>reachText}"/>
+							<ObjectStatus text="{view>stateText}" state="{view>state}" class="sapUiTinyMarginTop"/>
+							<Text text="Noch ohne Updater: einmal am Rechner mit dem aktuellen Installer aktualisieren, danach per Knopfdruck." visible="{view>needsLocal}" class="sapUiTinyMarginTop"/>
+							<HBox alignItems="Center" class="sapUiTinyMarginTop">
+								<Switch state="{view>autoUpdate}" customTextOn=" " customTextOff=" " change=".onPeerAuto" tooltip="Automatisch mitaktualisieren"/>
+								<Text text="nach Updates dieses Servers automatisch mitaktualisieren" class="sapUiTinyMarginBegin"/>
+							</HBox>
+						</VBox>
+						<HBox>
+							<BusyIndicator size="1rem" visible="{view>active}" class="sapUiTinyMarginEnd"/>
+							<Button text="Aktualisieren" icon="sap-icon://download-from-cloud" type="Emphasized" visible="{view>canUpdate}" press=".onPeerUpdate"/>
+							<Button text="Befehl für den Rechner" icon="sap-icon://command-line-interfaces" visible="{view>needsLocal}" press=".onPeerCommand"/>
+						</HBox>
+						</HBox>
+					</CustomListItem>
+				</List>
+			</VBox>
 			<Table id="rules" items="{view>/rules}" headerText="Aufbewahrung je Dokumentart" class="sapUiSmallMarginBottom" growing="false">
 				<headerToolbar>
 					<OverflowToolbar>

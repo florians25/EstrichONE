@@ -6,11 +6,30 @@ import { apiUrl, del, get, post } from "../../util/api";
 import { dateTime, fileSize } from "../../util/format";
 import { openForm } from "../../util/forms";
 import type { BackupMirrorDto, BackupMirrorsResponse, BackupTargetDto, CreateBackupMirrorResponse } from "../../util/infraModels";
+import { PeerUpdatePanel } from "../../util/peerUpdatePanel";
+import type { PeerUpdateDto } from "../../util/peerUpdates";
 
 /** Backup Center › Backup-Ziele: koppeln per Code, Status je Ziel, Notfallzugang. @namespace estrichone.controller.admin */
 export default class BackupTargets extends BaseController {
+	private peers!: PeerUpdatePanel;
+
 	onInit(): void {
-		this.local({ items: [], busy: false, mirrors: [], mirrorsAvailable: false });
+		this.local({ items: [], busy: false, mirrors: [], mirrorsAvailable: false, peers: PeerUpdatePanel.initial() });
+		this.peers = new PeerUpdatePanel({ model: () => this.model(), run: (w, s) => this.run(w, s), confirm: (t, o) => this.confirm(t, o) }, ["backup-target", "backup-mirror"]);
+	}
+
+	onExit(): void { this.peers.stop(); }
+
+	onPeerUpdate(e: Event): void { void this.peers.update(this.peerRowOf(e)); }
+
+	onPeerUpdateAll(): void { void this.peers.updateAll(); }
+
+	onPeerAuto(e: Event): void { void this.peers.setAuto(this.peerRowOf(e), Boolean((e as Event<{ state: boolean }>).getParameter("state"))); }
+
+	onPeerCommand(e: Event): void { this.peers.showCommand(this.peerRowOf(e)); }
+
+	private peerRowOf(e: Event): PeerUpdateDto {
+		return (e.getSource() as Control).getBindingContext("view")?.getObject() as PeerUpdateDto;
 	}
 
 	onRouteMatched(): void { void this.load(); }
@@ -20,6 +39,7 @@ export default class BackupTargets extends BaseController {
 	private async load(): Promise<void> {
 		this.model().setProperty("/busy", true);
 		void this.loadMirrors();
+		void this.peers.load();
 		const items = await this.run(() => get<BackupTargetDto[]>("backup/targets"));
 		this.model().setProperty("/busy", false);
 		this.model().setProperty("/items", (items ?? []).map((t) => ({

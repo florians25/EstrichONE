@@ -58,6 +58,9 @@ test('Archiv: falscher Code wird abgelehnt, mit richtigem Code gekoppelt, Regeln
 
   await expect(page.getByText('Archiv E2E (', { exact: false })).toBeVisible();
   await expect(page.getByText('Erreichbar', { exact: false })).toBeVisible();
+  // Fernaktualisierung: installierte und verfügbare Version des gekoppelten Archivservers.
+  await expect(page.getByText('Aktualisierung der Zusatzserver')).toBeVisible();
+  await expect(page.getByText(/Installiert \S+ · verfügbar \S+/)).toBeVisible();
   await page.getByRole('button', { name: 'Regeln speichern' }).click();
   await expect(toast(page)).toContainText('Regeln gespeichert');
 

@@ -31,10 +31,13 @@ die Pushnachricht lässt sich abschalten.
 | `backup.failed` | Backup fehlgeschlagen (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
 | `backup.target_down` | Backup-Server nicht erreichbar / letzte Sicherung zu alt (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
 | `archive.down` | Archiv-Server nicht erreichbar (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
+| `peer.update_available` | Nach einem Update des Servers: Zusatzserver (Backup-Ziel, Archivserver) noch auf älterer Version – einmal je Version (nur Administratoren) | Recht `backup.manage` | `system` |
+| `peer.update_succeeded` | Fernaktualisierung eines Zusatzservers erfolgreich (nur Administratoren) | Recht `backup.manage` | `system` |
+| `peer.update_failed` | Fernaktualisierung fehlgeschlagen oder zurückgerollt – vorige Version läuft wieder (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` (dringend) |
 
 Die handelnde Person selbst wird nie benachrichtigt. Module übergeben den Code in `NotificationRequest.Event`
-(Katalog `NotificationEvents` in `Modules/Notifications/Exports/INotifier.cs`); die Backup-/Archiv-Ereignisse löst das
-Backup-Modul aus (docs/backup.md).
+(Katalog `NotificationEvents` in `Modules/Notifications/Exports/INotifier.cs`); die Backup-/Archiv-Ereignisse und die der
+Fernaktualisierung (`peer.*`) löst das Backup-Modul aus (docs/backup.md).
 
 ### Abbestellen (je Benutzer)
 | Methode | Pfad | Zweck |
@@ -59,7 +62,7 @@ Backup-Modul aus (docs/backup.md).
 Eintrag: `id, category, urgency (low|normal|high), title, body, link, objectType, objectId, senderName, createdAt, readAt`.
 `link` ist immer ein relativer Pfad der Weboberfläche (z. B. `/bauakten/{id}`, `/it-center/helpdesk/{id}`,
 `/planung/wer-faehrt-wohin?tag=2026-11-03`); Apps bilden daraus ihren Deep Link. `objectType` ∈ `bauakte`, `ticket`,
-`approval`, `plan`, `workItem`, `chat`, `absenceRequest`, `maintenance`. Kategorien: `message`, `ticket`, `approval`,
+`approval`, `plan`, `workItem`, `chat`, `absenceRequest`, `maintenance`, `peerUpdate`. Kategorien: `message`, `ticket`, `approval`,
 `planning`, `bauakte`, `deadline`, `system`, `chat`, `work`, `absence` (Apps sollten unbekannte Werte tolerieren).
 Der Link `/planung/wer-faehrt-wohin?tag=…` bleibt für die Apps erhalten; die Weboberfläche leitet ihn auf die
 Einsatzplanung um (die Seite „Wer fährt wohin“ gibt es im Web nicht mehr).

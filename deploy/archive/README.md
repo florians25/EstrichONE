@@ -122,7 +122,11 @@ sudo docker exec estrichone-archive estrichone-archive status  # gekoppelte Serv
 sudo docker exec estrichone-archive estrichone-archive verify  # Prüfung jetzt
 ```
 
-**Aktualisieren:** den Installationsbefehl von oben einfach erneut ausführen. Daten, Zertifikat und Kopplungen bleiben.
+**Aktualisieren:** im EstrichONE-Server unter *System → Archiv* mit **Aktualisieren** – der Updater-Container
+`estrichone-archive-updater` holt die Version des Servers, tauscht den Container und springt zurück, wenn die neue
+Version nicht gesund wird (docs/backup.md, „Zusatzserver aktualisieren“). Oder am Rechner den Installationsbefehl von
+oben erneut ausführen. Daten, Zertifikat und Kopplungen bleiben. Archivserver, die vor der Fernaktualisierung eingerichtet
+wurden: einmal lokal mit dem aktuellen Installer aktualisieren, danach per Knopfdruck.
 
 **Sichern:** Alle Daten liegen im Docker-Volume `estrichone-archive` (bzw. mit `-e ESTRICHONE_DATA_DIR=/srv/archiv` in
 einem Ordner). Dieses Volume gehört zusätzlich auf eine zweite Platte – das Archiv ist sonst nur einmal vorhanden.
