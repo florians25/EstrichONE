@@ -15,6 +15,7 @@ import Column from "sap/m/Column";
 import ColumnListItem from "sap/m/ColumnListItem";
 import Text from "sap/m/Text";
 import Title from "sap/m/Title";
+import { formTitle } from "./formLayout";
 import Link from "sap/m/Link";
 import ObjectStatus from "sap/m/ObjectStatus";
 import MessageStrip from "sap/m/MessageStrip";
@@ -171,12 +172,12 @@ export async function openOrderEditor(editing: OrderEditing): Promise<OrderRespo
 	const form = new SimpleForm({
 		editable: true, layout: "ResponsiveGridLayout", columnsL: 2, columnsXL: 2, columnsM: 1, labelSpanL: 4, labelSpanXL: 4, labelSpanM: 4,
 		content: [
-			new Title({ text: "Lieferant und Bauakte" }),
+			formTitle("Lieferant und Bauakte"),
 			new Label({ text: "Lieferant", labelFor: supplier, required: true }), supplier,
 			new Label({ text: "Bauakte (optional)", labelFor: bauakte.control }), bauakte.control,
 			new Label({ text: "Liefertermin", labelFor: date }), date,
 			new Label({ text: "Zeitfenster", labelFor: time }), time,
-			new Title({ text: "Lieferadresse" }),
+			formTitle("Lieferadresse"),
 			new Label({ text: "Lieferadresse: Straße", labelFor: street }), street,
 			new Label({ text: "PLZ", labelFor: postal }), postal,
 			new Label({ text: "Ort", labelFor: city }), city,

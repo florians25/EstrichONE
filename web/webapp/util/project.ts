@@ -9,7 +9,7 @@ import CheckBox from "sap/m/CheckBox";
 import TextArea from "sap/m/TextArea";
 import DatePicker from "sap/m/DatePicker";
 import Label from "sap/m/Label";
-import Title from "sap/m/Title";
+import { formTitle } from "./formLayout";
 import type Control from "sap/ui/core/Control";
 import { area, parseNumber } from "./format";
 import type { Field } from "./forms";
@@ -152,7 +152,7 @@ export function projectWizardControls(prefix: string): { content: Control[]; rea
 	const int = (i: Input) => { const v = parseNumber(i.getValue()); return v == null ? null : Math.round(v); };
 	return {
 		content: [
-			new Title({ text: "Estrich-Kennwerte", level: "H5" }),
+			formTitle("Estrich-Kennwerte"),
 			l("Objektart", objectType), objectType,
 			l("Gesamtfläche", totalArea), totalArea,
 			l("Estrichart", screedType), screedType,
@@ -189,7 +189,7 @@ export function schemaWizardControls(schema: FormSchema, prefix: string, onChang
 	const content: Control[] = [];
 	const readers: { field: SchemaField; read: () => unknown }[] = [];
 	for (const g of schema.groups) {
-		content.push(new Title({ text: g.label, level: "H5" }));
+		content.push(formTitle(g.label));
 		for (const f of g.fields) {
 			const id = `${prefix}F_${f.key}`;
 			let control: Control;

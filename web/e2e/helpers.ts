@@ -116,3 +116,49 @@ export async function rowMenu(page: Page, row: Locator, item: string) {
     await entry.click({ timeout: 2500 });
   }).toPass({ timeout: 30_000 });
 }
+
+/**
+ * Layout-Prüfung aller sichtbaren Formulare (SimpleForm) unterhalb von `scope`: Abschnittsüberschriften stehen
+ * linksbündig über ihrem ersten Feld (Bounding-Box-Vergleich), nicht als Feld im Raster, in bearbeitbaren
+ * Formularen nicht nebeneinander und die erste Überschrift nicht abgeschnitten. Liefert die gefundenen Abweichungen.
+ */
+export async function formLayoutIssues(scope: Locator): Promise<string[]> {
+  return scope.evaluate((root) => {
+    const issues: string[] = [];
+    const box = (e: Element) => e.getBoundingClientRect();
+    const shown = (e: Element) => { const r = box(e); return r.width > 0 && r.height > 0 && getComputedStyle(e).visibility !== 'hidden'; };
+    const name = (e: Element) => `„${(e.textContent ?? '').trim().slice(0, 40)}“`;
+    for (const form of Array.from(root.querySelectorAll('.sapUiForm'))) {
+      if (!shown(form)) continue;
+      const own = (e: Element) => e.closest('.sapUiForm') === form;
+      for (const t of Array.from(form.querySelectorAll('.sapMTitle:not(.sapUiFormTitle)'))) {
+        const inner = t.closest('.sapMTB, .sapMIBar, .sapMPanelHdr, .sapUiFormTitle, .sapMList, .sapMFlexBox');
+        if (!own(t) || !shown(t) || (inner && form.contains(inner))) continue;
+        issues.push(`Überschrift ${name(t)} steht als Feld im Formular statt als Abschnittstitel`);
+      }
+      const titles = Array.from(form.querySelectorAll('.sapUiFormTitle')).filter((t) => own(t) && shown(t));
+      for (const t of titles) {
+        const container = t.parentElement!;
+        const fields = Array.from(container.querySelectorAll('.sapUiFormElementLbl, .sapMLabel, .sapMInputBase, .sapMSlt, .sapMCb, .sapMSwt, .sapMSegB, .sapMText'))
+          .filter((e) => !t.contains(e) && !e.contains(t) && shown(e) && e.closest('.sapUiForm') === form);
+        if (!fields.length) continue;
+        const tr = box(t);
+        const top = Math.min(...fields.map((f) => box(f).top));
+        const left = Math.min(...fields.map((f) => box(f).left));
+        if (tr.bottom > top + 1) issues.push(`Überschrift ${name(t)} steht nicht über ihrem Abschnitt (unten ${Math.round(tr.bottom)} > erstes Feld ${Math.round(top)})`);
+        if (tr.left > left + 24) issues.push(`Überschrift ${name(t)} nicht linksbündig (links ${Math.round(tr.left)}, Felder ab ${Math.round(left)})`);
+        const scroller = t.closest('.sapMDialogScroll, .sapMWizardStepContainer, .sapFDynamicPageContentWrapper, .sapMPageEnableScrolling');
+        if (scroller && scroller.scrollTop === 0 && tr.top < box(scroller).top - 1) issues.push(`Überschrift ${name(t)} oben abgeschnitten`);
+      }
+      if (form.classList.contains('sapUiFormEdit')) {
+        for (let i = 0; i < titles.length; i++) {
+          for (let j = i + 1; j < titles.length; j++) {
+            const a = box(titles[i]); const b = box(titles[j]);
+            if (Math.abs(a.top - b.top) < 4) issues.push(`Überschriften ${name(titles[i])} und ${name(titles[j])} stehen nebeneinander`);
+          }
+        }
+      }
+    }
+    return issues;
+  });
+}

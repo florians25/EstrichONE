@@ -30,6 +30,7 @@ import VBox from "sap/m/VBox";
 import ObjectStatus from "sap/m/ObjectStatus";
 import SuggestionItem from "sap/m/SuggestionItem";
 import SimpleForm from "sap/ui/layout/form/SimpleForm";
+import { formTitle } from "./formLayout";
 import type Control from "sap/ui/core/Control";
 import { ValueState } from "sap/ui/core/library";
 import { get, post, problemMessage, put } from "./api";
@@ -252,7 +253,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			new Label({ text: "Bauvorhaben", labelFor: title, required: true }), title,
 			new Label({ text: "Anlegen als", labelFor: kind }), kind,
 			new Label({ text: "Vorlage", labelFor: template }), template,
-			new Title({ text: "Baustelle", level: "H5" }),
+			formTitle("Baustelle"),
 			new Label({ text: "" }), copy,
 			new Label({ text: "Straße", labelFor: site.street }), site.street,
 			new Label({ text: "PLZ", labelFor: site.postalCode }), site.postalCode,

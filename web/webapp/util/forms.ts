@@ -339,7 +339,7 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 		case "section": {
 			// sap.ui.core.Title beginnt in der SimpleForm eine neue Gruppe mit Überschrift über die volle Breite;
 			// sap.m.Title würde wie ein Feld neben das vorige Feld gesetzt.
-			const c = new CoreTitle(id, { text: field.label, level: "H5" });
+			const c = new CoreTitle(id, { text: field.label });
 			return { field, control: c as unknown as Control, read: () => undefined, write: () => undefined };
 		}
 		case "info": {
