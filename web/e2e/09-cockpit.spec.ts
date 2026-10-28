@@ -72,12 +72,29 @@ test('Disponenten-Cockpit: Raster, Verschieben per Ziehen mit Rückgängig, Schn
   await expect(help).toContainText('Strg');
   await help.getByRole('button', { name: 'Schließen' }).click();
 
+  // Wochenende: standardmäßig Mo–Fr, Umschalter unter „Darstellung“ blendet Sa/So ein (Taste W ebenso).
+  const heads = page.locator('.eoCkHead .eoCkDayHead');
+  const viewBtn = page.locator('.eoCkToolbar').getByRole('button', { name: /Mo–Fr/ });
+  await expect(viewBtn).toBeVisible();
+  expect(await heads.count()).toBeLessThan(7);
+  await expect(heads.first()).toContainText('Mo');
+  await viewBtn.click();
+  const weekend = page.locator('.eoCkOpt', { hasText: 'Wochenende anzeigen' }).locator('.sapMSwt');
+  await weekend.click();
+  await expect(heads).toHaveCount(7);
+  await expect(page.locator('.eoCkToolbar').getByRole('button', { name: /Mo–So/ })).toBeVisible();
+
   // Kompakte Karten bleiben bedienbar.
-  const compact = page.locator('.eoCkToolbar [title^="Kompakt"]');
+  const compact = page.locator('.eoCkOpt', { hasText: 'Kompakte Karten' }).locator('.sapMSwt');
   await compact.click();
   await expect(page.locator('.eoCkCard.eoCkCompact').first()).toBeVisible();
   await compact.click();
   await expect(page.locator('.eoCkCard.eoCkCompact')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await page.locator('.eoCkTitleBlock').click();
+  await page.keyboard.press('w');
+  await expect(page.locator('.eoCkToolbar').getByRole('button', { name: /Mo–Fr/ })).toBeVisible();
+  expect(await heads.count()).toBeLessThan(7);
 
   // Zeitachse des Tages.
   await page.getByRole('option', { name: 'Tag', exact: true }).click();

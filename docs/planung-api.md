@@ -62,3 +62,11 @@ ist der Neue bei einer anderen Kolonne, wechselt er von dort, und mit `exchange`
 `POST /releases` hält den Stand der Einsätze je Tag fest. Danach geänderte oder neue Einsätze tragen `change`, entfernte stehen in
 `release.removed`. Erneutes Freigeben setzt den Stand neu. Der Plan bleibt für Mitarbeiter auch vor der Freigabe sichtbar
 (als Entwurf zu kennzeichnen: `release == null`); Push-Benachrichtigungen gibt es noch nicht – Apps zeigen `changedCount` an.
+
+### Wochenende im Web-Cockpit
+
+Das Cockpit lädt immer den vollen Zeitraum (Mo–So bzw. den ganzen Monat), zeigt Sa/So aber standardmäßig nicht an
+(Umschalter „Darstellung → Wochenende anzeigen“, Taste W; gemerkt je Benutzer im Browser unter `eo.cockpit.weekend.<userId>`).
+Samstage und Sonntage mit Einsätzen bleiben trotzdem sichtbar und sind im Tageskopf als „Wochenende“ markiert; die
+Tagesansicht blättert ohne Wochenende von Freitag auf Montag, „einen Tag später“ verschiebt entsprechend. Der Wochenplan-PDF
+(`/print.pdf?weekend=`) folgt der Einstellung.

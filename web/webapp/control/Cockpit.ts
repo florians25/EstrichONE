@@ -6,7 +6,7 @@ import Element from "sap/ui/core/Element";
 import IconPool from "sap/ui/core/IconPool";
 import { assignmentKinds } from "../util/labels";
 import { parseDay } from "../util/days";
-import { hhmm, hours, minutes, ofTime, toTime, type CockpitCell, type CockpitCrew, type CockpitDay, type PlanAssignment } from "../util/cockpitModels";
+import { hhmm, hours, isWeekend, minutes, ofTime, toTime, type CockpitCell, type CockpitCrew, type CockpitDay, type PlanAssignment } from "../util/cockpitModels";
 
 export type CockpitMode = "week" | "twoWeeks" | "month" | "day";
 
@@ -26,6 +26,8 @@ export interface CockpitRender {
 	hours: [number, number];
 	/** Kompakte Karten (eine Zeile) in Woche und 2 Wochen. */
 	compact?: boolean;
+	/** Wochenende (Sa/So) eingeblendet; sonst erscheinen nur Wochenendtage mit Einsätzen. */
+	weekend?: boolean;
 }
 
 export interface MenuItem { text: string; icon?: string; action?: () => void; danger?: boolean; disabled?: boolean; children?: MenuItem[] }
@@ -232,16 +234,16 @@ export default class Cockpit extends Control {
 		const grid = el("div", `eoCkGrid eoCk-${data.mode}${data.compact ? " eoCkDense" : ""}`);
 		grid.setAttribute("role", "grid");
 		grid.setAttribute("aria-label", "Planungsraster Kolonnen und Tage");
-		const [work, off] = data.mode === "month" ? ["minmax(2.5rem, 1fr)", "minmax(1.5rem, 0.45fr)"]
-			: data.mode === "twoWeeks" ? ["minmax(5.5rem, 1fr)", "minmax(2.25rem, 0.25fr)"] : ["minmax(6.5rem, 1fr)", "minmax(2.5rem, 0.25fr)"];
-		const lane = data.mode === "month" ? "minmax(9.5rem, 0.9fr)" : data.mode === "twoWeeks" ? "minmax(9rem, 1.1fr)" : "minmax(9.5rem, 1.15fr)";
+		const [work, off] = data.mode === "month" ? ["minmax(2.75rem, 1fr)", "minmax(1.75rem, 0.5fr)"]
+			: data.mode === "twoWeeks" ? ["minmax(6rem, 1fr)", "minmax(2.5rem, 0.3fr)"] : ["minmax(6.5rem, 1fr)", "minmax(3rem, 0.3fr)"];
+		const lane = data.mode === "week" ? "minmax(var(--eo-ck-lane, 9rem), 13.5rem)" : "minmax(var(--eo-ck-lane, 9rem), 11.5rem)";
 		grid.style.gridTemplateColumns = `${lane} ${data.days.map((d) => (d.isWorkday || this.inDay(data, d.day) ? work : off)).join(" ")}`;
 		const head = el("div", "eoCkRow eoCkHead");
 		head.setAttribute("role", "row");
 		const corner = el("div", "eoCkLane eoCkCorner");
 		corner.setAttribute("role", "columnheader");
 		const count = data.crews.length;
-		corner.append(el("span", "eoCkCornerTitle", "Kolonne"), el("span", "eoCkCornerSub", `${count} ${count === 1 ? "Kolonne" : "Kolonnen"} · Auslastung`));
+		corner.append(el("span", "eoCkCornerTitle", `${count} ${count === 1 ? "Kolonne" : "Kolonnen"}`), el("span", "eoCkCornerSub", "Auslastung im Zeitraum"));
 		head.append(corner);
 		for (const d of data.days) head.append(this.dayHead(data, d));
 		grid.append(head);
@@ -254,7 +256,7 @@ export default class Cockpit extends Control {
 	private dayHead(data: CockpitRender, d: CockpitDay): HTMLElement {
 		const isToday = d.day === data.today;
 		const narrow = data.mode === "month" || (!d.isWorkday && !this.inDay(data, d.day));
-		const cell = el("div", `eoCkDayHead${isToday ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}${d.day < data.today ? " eoCkPast" : ""}${narrow ? " eoCkDayNarrow" : ""}`);
+		const cell = el("div", `eoCkDayHead${isToday ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}${d.day < data.today ? " eoCkPast" : ""}${narrow ? " eoCkDayNarrow" : ""}${this.weekStart(data, d.day)}`);
 		cell.setAttribute("role", "columnheader");
 		const link = el("button", "eoCkDayLink");
 		link.type = "button";
@@ -267,6 +269,12 @@ export default class Cockpit extends Control {
 		link.addEventListener("click", () => this.fireEvent("dayPress", { day: d.day }));
 		cell.append(link);
 		const status = el("div", "eoCkDayStatus");
+		if (!data.weekend && isWeekend(d.day) && data.mode !== "day") {
+			// Wochenende ist ausgeblendet, dieser Tag erscheint nur wegen seiner Einsätze.
+			const we = narrow ? icon("sap-icon://appointment", "eoCkIcon eoCkWeekendIcon") : el("span", "eoCkWeekendTag", "Wochenende");
+			we.title = "Wochenende ist ausgeblendet – dieser Tag wird angezeigt, weil Einsätze geplant sind (Darstellung → Wochenende anzeigen, Taste W).";
+			status.append(we);
+		}
 		if (d.holiday) {
 			const h = narrow ? icon("sap-icon://flag", "eoCkIcon eoCkHolidayIcon") : el("span", "eoCkHoliday", d.holiday);
 			h.title = `Feiertag: ${d.holiday}`;
@@ -281,10 +289,9 @@ export default class Cockpit extends Control {
 			badge.title = `Freigegeben ${new Date(d.release.releasedAt).toLocaleString("de-DE", { dateStyle: "short", timeStyle: "short" })} von ${d.release.releasedByName}`
 				+ (changed ? ` – seither ${changed} ${changed === 1 ? "Änderung" : "Änderungen"}` : "") + (d.release.note ? `\nHinweis: ${d.release.note}` : "");
 			status.append(badge);
-		} else if (d.isWorkday && d.day >= data.today && this.inDay(data, d.day)) {
+		} else if (d.isWorkday && d.day >= data.today && this.inDay(data, d.day) && data.mode === "week") {
 			const draft = el("span", "eoCkRelease eoCkReleaseDraft");
-			draft.append(icon("sap-icon://pending"));
-			if (!narrow && data.mode !== "twoWeeks") draft.append(el("span", "eoCkReleaseText", "Entwurf"));
+			draft.append(el("span", "eoCkReleaseText", "Entwurf"));
 			draft.title = "Noch nicht freigegeben (Entwurf)";
 			status.append(draft);
 		}
@@ -305,7 +312,7 @@ export default class Cockpit extends Control {
 			const others = crew.members.filter((m) => m.id !== crew.leaderUserId).map((m) => firstName(m.name));
 			const people = [crew.leaderName ? `${firstName(crew.leaderName)} (Ltg.)` : "", ...others].filter(Boolean).join(", ");
 			const sub = el("small", "eoCkLaneSub eoCkLanePeople");
-			sub.append(icon("sap-icon://group", "eoCkIcon eoCkLaneIcon"), document.createTextNode(people || "keine Mitglieder"));
+			sub.append(document.createTextNode(people || "keine Mitglieder"));
 			sub.title = crew.members.map((m) => m.name).join(", ") || "keine Mitglieder";
 			text.append(sub);
 			if (crew.vehicles.length && data.mode !== "month") {
@@ -328,6 +335,7 @@ export default class Cockpit extends Control {
 			fill.style.width = `${Math.min(100, percent)}%`;
 			bar.append(fill);
 			const pct = el("span", `eoCkLoadText ${this.loadState(percent)}`, `${percent} %`);
+			pct.append(el("span", "eoCkLoadHours", ` · ${hours(planned)}/${hours(capacity)} h`));
 			load.append(bar, pct);
 			load.title = `Auslastung im Zeitraum: ${percent} % – ${hours(planned)} von ${hours(capacity)} h verplant`;
 			text.append(load);
@@ -344,6 +352,13 @@ export default class Cockpit extends Control {
 
 	private loadState(percent: number): string {
 		return percent > 100 ? "eoCkLoadOver" : percent >= 85 ? "eoCkLoadHigh" : "eoCkLoadOk";
+	}
+
+	/** Wochenbeginn (Montag bzw. erster Tag nach ausgeblendetem Wochenende) in 2 Wochen und Monat: dezente Trennlinie. */
+	private weekStart(data: CockpitRender, day: string): string {
+		if (data.mode === "week" || data.mode === "day") return "";
+		const i = data.days.findIndex((d) => d.day === day);
+		return i > 0 && parseDay(day).getDay() === 1 ? " eoCkWeekStart" : "";
 	}
 
 	private crewRow(data: CockpitRender, crew: CockpitCrew | null): HTMLElement {
@@ -369,7 +384,7 @@ export default class Cockpit extends Control {
 		const crewId = crew?.id ?? null;
 		const jobs = this.inCell(data, crewId, d.day);
 		const month = data.mode === "month";
-		const cell = el("div", `eoCkCell${d.day === data.today ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}${d.day < data.today ? " eoCkPast" : ""}`);
+		const cell = el("div", `eoCkCell${d.day === data.today ? " eoCkToday" : ""}${d.isWorkday ? "" : " eoCkOff"}${d.day < data.today ? " eoCkPast" : ""}${this.weekStart(data, d.day)}`);
 		cell.setAttribute("role", "gridcell");
 		cell.dataset.drop = "1";
 		cell.dataset.crew = crewId ?? NO_CREW;
@@ -402,10 +417,6 @@ export default class Cockpit extends Control {
 				cap.title = tip;
 				facts.append(cap);
 			}
-			if (info.warnings.length && jobs.length) {
-				facts.append(this.conflictButton(info.warnings, crewId ?? "", d.day, month));
-				cell.classList.add("eoCkConflict");
-			}
 			if (info.rosterChanged) {
 				const r = el("span", "eoCkRoster");
 				r.append(icon("sap-icon://switch-classes"));
@@ -420,6 +431,10 @@ export default class Cockpit extends Control {
 				chip.title = absent.map((m) => `${m.name}: ${m.absenceNote}`).join("\n");
 				chip.setAttribute("aria-label", `Abwesend: ${chip.title}`);
 				facts.append(chip);
+			}
+			if (info.warnings.length && jobs.length) {
+				facts.append(this.conflictButton(info.warnings, crewId ?? "", d.day, month));
+				cell.classList.add("eoCkConflict");
 			}
 			if (facts.childElementCount) cell.append(facts);
 		}

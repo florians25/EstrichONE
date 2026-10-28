@@ -104,7 +104,7 @@ export default class CockpitBacklog extends Control {
 		for (const g of groups) {
 			const chip = document.createElement("button");
 			chip.type = "button";
-			chip.className = `eoCkChip eoCkChip-${g.key}`;
+			chip.className = `eoCkChip eoCkChip-${g.key}${!counts[g.key] && !active.has(g.key) ? " eoCkChipZero" : ""}`;
 			chip.setAttribute("aria-pressed", String(active.has(g.key)));
 			chip.title = `${g.text}: nur diese anzeigen (erneut klicken hebt den Filter auf)`;
 			const dot = document.createElement("span");

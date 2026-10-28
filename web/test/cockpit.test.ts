@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cockpitDays, hours, minutes, toSave, toTime, urgencyOf, type PlanAssignment } from '../webapp/util/cockpitModels';
+import { cockpitDays, hours, isWeekend, stepDay, visibleDays, minutes, toSave, toTime, urgencyOf, type PlanAssignment } from '../webapp/util/cockpitModels';
 
 describe('Disponenten-Cockpit', () => {
   it('Tage je Ansicht', () => {
@@ -41,5 +41,24 @@ describe('Disponenten-Cockpit', () => {
     expect(save.userIds).toEqual(['u2']);
     expect(save.resourceIds).toEqual(['r']);
     expect(toSave({ ...a, crewId: null }, []).userIds).toEqual(['u1', 'u2']);
+  });
+
+  it('Wochenende: standardmäßig ausgeblendet, Sa/So mit Einsätzen bleiben sichtbar', () => {
+    const week = cockpitDays('week', '2026-10-28').map((day) => ({ day }));
+    expect(isWeekend('2026-10-31')).toBe(true);
+    expect(isWeekend('2026-10-30')).toBe(false);
+    expect(visibleDays(week, [], false).map((d) => d.day)).toEqual(['2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30']);
+    expect(visibleDays(week, [{ day: '2026-10-31' }], false).map((d) => d.day).at(-1)).toBe('2026-10-31');
+    expect(visibleDays(week, [{ day: '2026-10-31' }], false)).toHaveLength(6);
+    expect(visibleDays(week, [], true)).toHaveLength(7);
+    expect(visibleDays([{ day: '2026-11-01' }], [], false)).toHaveLength(1);
+    const month = cockpitDays('month', '2026-10-10').map((day) => ({ day }));
+    expect(visibleDays(month, [], false)).toHaveLength(22);
+  });
+
+  it('Tagesansicht blättert ohne Wochenende von Freitag auf Montag', () => {
+    expect(stepDay('2026-10-30', 1, false)).toBe('2026-11-02');
+    expect(stepDay('2026-11-02', -1, false)).toBe('2026-10-30');
+    expect(stepDay('2026-10-30', 1, true)).toBe('2026-10-31');
   });
 });

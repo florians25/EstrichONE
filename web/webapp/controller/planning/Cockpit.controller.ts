@@ -23,6 +23,7 @@ import Link from "sap/m/Link";
 import MessageStrip from "sap/m/MessageStrip";
 import OverflowToolbar from "sap/m/OverflowToolbar";
 import ToolbarSpacer from "sap/m/ToolbarSpacer";
+import Switch from "sap/m/Switch";
 import Icon from "sap/ui/core/Icon";
 import HTML from "sap/ui/core/HTML";
 import Item from "sap/ui/core/Item";
@@ -41,7 +42,7 @@ import type { CockpitMode, CockpitPayload, CockpitRender, MenuItem } from "../..
 import type { BacklogCard, Urgency } from "../../control/CockpitBacklog";
 import LeafletMap from "../../control/LeafletMap";
 import {
-	cockpitDays, hhmm, hours, minutes, ofTime, toSave, toTime, urgencyOf, type CockpitBoard, type DayPlan, type PlanAssignment, type PlanBatchResult, type PlanOperation,
+	cockpitDays, stepDay, visibleDays, hhmm, hours, minutes, ofTime, toSave, toTime, urgencyOf, type CockpitBoard, type DayPlan, type PlanAssignment, type PlanBatchResult, type PlanOperation,
 	type PlanReleaseInfo, type SaveAssignment,
 } from "../../util/cockpitModels";
 
@@ -75,7 +76,7 @@ export default class CockpitController extends BaseController {
 
 	onInit(): void {
 		this.local({
-			mode: "week", anchor: isoDay(new Date()), period: "", subtitle: "", filterCount: 0, compact: false, canPlan: false, busy: false, error: "", render: null,
+			mode: "week", anchor: isoDay(new Date()), period: "", subtitle: "", filterCount: 0, compact: false, weekend: false, canPlan: false, busy: false, error: "", render: null,
 			filter: { crews: [], region: "", status: "", search: "" }, crewOptions: [], regionOptions: [], statusOptions: [],
 			pool: { mode: "free", search: "", sort: "urgency", urgency: [] }, poolItems: [], poolCounts: {}, poolCount: 0, poolFacts: "", poolOpen: true,
 			kpi: { unplanned: 0, overdue: 0, assignments: 0, loadText: "–", loadState: "None", releaseText: "–", releaseState: "None", conflicts: 0, changed: 0 },
@@ -105,8 +106,16 @@ export default class CockpitController extends BaseController {
 		m.setProperty("/mode", mode && modes.includes(mode) ? mode : "week");
 		m.setProperty("/anchor", /^\d{4}-\d{2}-\d{2}$/.test(date) ? date : isoDay(new Date()));
 		m.setProperty("/canPlan", session.has("planning.manage"));
+		m.setProperty("/weekend", this.readWeekend());
 		void this.load(true, true);
 	}
+
+	/** „Wochenende anzeigen“ je Benutzer (Standard: aus). */
+	private weekendKey(): string { return `eo.cockpit.weekend.${session.userId ?? "-"}`; }
+	private readWeekend(): boolean {
+		try { return window.localStorage.getItem(this.weekendKey()) === "1"; } catch { return false; }
+	}
+	private showWeekend(): boolean { return this.model().getProperty("/weekend") === true; }
 
 	private mode(): CockpitMode { return this.model().getProperty("/mode") as CockpitMode; }
 	private anchor(): string { return String(this.model().getProperty("/anchor")); }
@@ -181,7 +190,7 @@ export default class CockpitController extends BaseController {
 			const d = parseDay(this.anchor());
 			this.go({ datum: isoDay(new Date(d.getFullYear(), d.getMonth() + direction, 1)) });
 		} else {
-			this.go({ datum: addDays(this.anchor(), direction * (mode === "day" ? 1 : mode === "week" ? 7 : 14)) });
+			this.go({ datum: mode === "day" ? stepDay(this.anchor(), direction, this.showWeekend()) : addDays(this.anchor(), direction * (mode === "week" ? 7 : 14)) });
 		}
 	}
 
@@ -220,8 +229,10 @@ export default class CockpitController extends BaseController {
 		this.renderPool();
 	}
 
-	private header(days: string[]): void {
+	private header(all: string[]): void {
 		const mode = this.mode();
+		const days = mode === "day" ? all : visibleDays(all.map((day) => ({ day })), this.board?.assignments ?? [], this.showWeekend()).map((d) => d.day);
+		if (!days.length) return;
 		const first = days[0];
 		const last = days[days.length - 1];
 		const year = parseDay(last).getFullYear();
@@ -257,11 +268,14 @@ export default class CockpitController extends BaseController {
 		const dimmed = board.assignments.filter((a) => (q && ![a.bauakteNumber, a.bauakteTitle, a.bauakteAddress, a.activity, a.crewName, ...a.people.map((p) => p.name)]
 			.some((v) => v?.toLowerCase().includes(q)))
 			|| (f.status && a.bauakteStatus !== f.status) || (f.region && this.regionOf(a) !== f.region)).map((a) => a.id);
+		const mode = this.mode();
+		const days = mode === "day" ? board.days : visibleDays(board.days, board.assignments, this.showWeekend());
+		this.header(board.days.map((d) => d.day));
 		const render: CockpitRender = {
-			mode: this.mode(), days: board.days, today: isoDay(new Date()), crews,
+			mode, days, today: isoDay(new Date()), crews,
 			noCrewLane: (!crewFilter.size || crewFilter.has("-")) && (board.assignments.some((a) => !a.crewId) || crews.length === 0 || this.mode() === "day"),
 			assignments: board.assignments, selected: this.selected, dimmed, canPlan: m.getProperty("/canPlan") === true, hours: [6, 19],
-			compact: m.getProperty("/compact") === true,
+			compact: m.getProperty("/compact") === true, weekend: this.showWeekend(),
 		};
 		m.setProperty("/render", render);
 		this.cockpit()?.draw();
@@ -295,7 +309,7 @@ export default class CockpitController extends BaseController {
 		m.setProperty("/kpi", {
 			unplanned: free.length, overdue: free.filter((b) => urgencyOf(b, today) === "overdue").length, assignments: board.assignments.length,
 			loadText: capacity ? `${percent} % · ${hours(planned)}/${hours(capacity)} h` : "–",
-			loadState: percent > 100 ? "Error" : percent >= 85 ? "Warning" : "Success",
+			loadState: percent > 100 ? "Error" : "None",
 			releaseText: !releasable.length ? "–" : changed ? `${changed} ${changed === 1 ? "Änderung" : "Änderungen"} seit Freigabe`
 				: `${released.length} von ${releasable.length} Tagen freigegeben`,
 			releaseState: changed ? "Warning" : releasable.length && released.length === releasable.length ? "Success" : "None",
@@ -316,6 +330,35 @@ export default class CockpitController extends BaseController {
 		const on = this.model().getProperty("/compact") === true;
 		try { window.localStorage.setItem("eo.cockpit.compact", on ? "1" : "0"); } catch { /* egal */ }
 		this.render();
+	}
+
+	/** Wochenende (Sa/So) ein- oder ausblenden; je Benutzer gemerkt. */
+	onWeekend(): void {
+		const on = !this.showWeekend();
+		this.model().setProperty("/weekend", on);
+		try { window.localStorage.setItem(this.weekendKey(), on ? "1" : "0"); } catch { /* egal */ }
+		this.render();
+	}
+
+	/** Darstellung: Wochenende und kompakte Karten (Schalter, sofort wirksam). */
+	onViewOptions(e: Event): void {
+		const m = this.model();
+		const row = (text: string, state: boolean, change: () => void, hint: string) => new VBox({ items: [
+			new HBox({ justifyContent: "SpaceBetween", alignItems: "Center", items: [new Label({ text, wrapping: true }), new Switch({ state, customTextOn: " ", customTextOff: " ", change, tooltip: text })] }),
+			new Text({ text: hint }).addStyleClass("eoMuted eoCkOptHint"),
+		] }).addStyleClass("eoCkOpt");
+		const popover = new Popover({
+			title: "Darstellung", placement: "Bottom", contentWidth: "21rem",
+			content: [new VBox({ items: [
+				row("Wochenende anzeigen (Sa/So)", this.showWeekend(), () => this.onWeekend(),
+					"Aus: Woche Mo–Fr. Samstage und Sonntage mit Einsätzen bleiben trotzdem sichtbar."),
+				row("Kompakte Karten", m.getProperty("/compact") === true, () => { m.setProperty("/compact", !(m.getProperty("/compact") === true)); this.onCompact(); },
+					"Eine Zeile je Einsatz (Woche, 2 Wochen) – mehr Überblick bei vielen Einsätzen."),
+			] }).addStyleClass("sapUiSmallMargin")],
+			afterClose: () => popover.destroy(),
+		});
+		this.v().addDependent(popover);
+		popover.openBy(e.getSource() as Button);
 	}
 
 	onTogglePool(): void {
@@ -730,20 +773,21 @@ export default class CockpitController extends BaseController {
 		const html = `<div class="eoCkLegend">
 			<div class="eoCkLegendTitle">Terminarten (Farbleiste der Karte)</div><div class="eoCkLegendGrid">${kinds}</div>
 			<div class="eoCkLegendTitle">Auslastung (Balken je Zelle und Kolonne)</div><div class="eoCkLegendGrid">
-				${sw("background:var(--sapPositiveElementColor)", "unter 85 %", "eoCkLegendBar")}${sw("background:var(--sapCriticalElementColor)", "85 – 100 %", "eoCkLegendBar")}
+				${sw("background:color-mix(in srgb, var(--sapContent_LabelColor) 55%, transparent)", "verplant (bis 8 h)", "eoCkLegendBar")}${sw("background:var(--sapCriticalElementColor)", "Kolonne ab 85 % im Zeitraum", "eoCkLegendBar")}
 				${sw("background:var(--sapNegativeElementColor)", "überbucht (> 8 h)", "eoCkLegendBar")}${sw("background:color-mix(in srgb, var(--sapField_BorderColor) 35%, transparent)", "frei", "eoCkLegendBar")}</div>
 			<div class="eoCkLegendTitle">Kennzeichen</div><div class="eoCkLegendGrid">
 				${sw("background:var(--sapInformativeElementColor);border-radius:50%;width:.5rem;height:.5rem", "neu seit Freigabe")}
 				${sw("background:var(--sapCriticalElementColor);border-radius:50%;width:.5rem;height:.5rem", "geändert seit Freigabe")}
-				${sw("background:var(--sapErrorBackground);box-shadow:inset 2px 0 0 var(--sapNegativeElementColor)", "Konflikt in der Zelle")}
-				${sw("background:var(--sapWarningBackground)", "Abwesenheit")}
+				${sw("background:var(--sapErrorBackground);border-radius:.4375rem;box-shadow:inset 0 0 0 1px var(--sapNegativeElementColor)", "Konflikt in der Zelle (Zahl)")}
+				${sw("background:var(--sapCriticalElementColor);border-radius:50%;width:.5rem;height:.5rem", "Abwesenheit")}
 				${sw("background:var(--sapSelectedColor);border-radius:50%", "heute")}
-				${sw("background:repeating-linear-gradient(135deg,transparent 0 3px,var(--sapList_BorderColor) 3px 4px)", "Wochenende / Feiertag")}
+				${sw("background:color-mix(in srgb, var(--sapNeutralBackgroundColor, var(--sapList_AlternatingBackground)) 55%, transparent);box-shadow:inset 0 0 0 1px var(--sapList_BorderColor)", "Wochenende / Feiertag")}
 				${sw("box-shadow:inset 0 0 0 2px var(--sapContent_FocusColor)", "Ablageziel beim Ziehen")}
 				${sw("background:var(--sapPositiveElementColor)", "Kopieren (Strg beim Ziehen)")}</div>
 			<div class="eoCkLegendTitle">Freigabe (Tageskopf)</div><div class="eoCkLegendGrid">
 				<div class="eoCkLegendItem"><span class="eoCkRelease">✓ freigegeben</span></div><div class="eoCkLegendItem"><span class="eoCkRelease eoCkReleaseChanged">✎ n geändert</span></div>
-				<div class="eoCkLegendItem"><span class="eoCkRelease eoCkReleaseDraft">◷ Entwurf</span></div></div></div>`;
+				<div class="eoCkLegendItem"><span class="eoCkRelease eoCkReleaseDraft">Entwurf</span></div></div>
+			<div class="eoCkLegendTitle">Wochenende</div><div class="eoCkLegendText">Standardmäßig Mo–Fr (umschalten unter „Mo–Fr“ bzw. Taste W). Samstage und Sonntage mit Einsätzen werden trotzdem angezeigt und als „Wochenende“ markiert.</div></div>`;
 		const popover = new Popover({
 			title: "Legende", placement: "Bottom", contentWidth: "22rem", content: [new HTML({ content: html, sanitizeContent: false })],
 			afterClose: () => { popover.destroy(); if (this.legend === popover) this.legend = null; },
@@ -774,6 +818,7 @@ export default class CockpitController extends BaseController {
 			["<kbd>Esc</kbd>", "Auswahl aufheben, Ziehen abbrechen"],
 			["<kbd>Strg</kbd> + <kbd>Z</kbd> / <kbd>Y</kbd>", "Rückgängig / Wiederholen"],
 			["<kbd>T</kbd>", "Zu heute springen"],
+			["<kbd>W</kbd>", "Wochenende ein-/ausblenden"],
 			["<kbd>Bild ↑</kbd> / <kbd>Bild ↓</kbd>", "Vorheriger / nächster Zeitraum"],
 			["<kbd>?</kbd>", "Diese Hilfe"],
 		];
@@ -802,7 +847,7 @@ export default class CockpitController extends BaseController {
 		const group = this.selected.map((id) => this.find(id)).filter((a): a is PlanAssignment => !!a);
 		if (!group.length || !this.canPlan()) return;
 		await this.perform(`${group.length === 1 ? `„${group[0].bauakteTitle}“` : `${group.length} Einsätze`} ${delta > 0 ? "einen Tag später" : "einen Tag früher"}`,
-			group.map((a) => ({ op: "move", id: a.id, day: addDays(a.day, delta) }) as PlanOperation), group.map((a) => this.restoreOp(a)));
+			group.map((a) => ({ op: "move", id: a.id, day: stepDay(a.day, delta, this.showWeekend()) }) as PlanOperation), group.map((a) => this.restoreOp(a)));
 	}
 
 	onShiftBack(): void { void this.shiftSelected(-1); }
@@ -966,6 +1011,7 @@ export default class CockpitController extends BaseController {
 		if (!ctrl && !e.altKey) {
 			if (e.key === "?") { e.preventDefault(); this.onKeys(); return; }
 			if (key === "t") { e.preventDefault(); this.onToday(); return; }
+			if (key === "w") { e.preventDefault(); this.onWeekend(); return; }
 			if (e.key === "PageUp") { e.preventDefault(); this.onPrev(); return; }
 			if (e.key === "PageDown") { e.preventDefault(); this.onNext(); return; }
 		}
@@ -1192,10 +1238,10 @@ export default class CockpitController extends BaseController {
 	}
 
 	onPdfWeek(): void {
-		download(`/api/v1/planning/print.pdf?mode=week&from=${mondayOf(this.days()[0])}&rows=crews&weekend=false`).catch((error: unknown) => this.showError(error));
+		download(`/api/v1/planning/print.pdf?mode=week&from=${mondayOf(this.days()[0])}&rows=crews&weekend=${this.showWeekend()}`).catch((error: unknown) => this.showError(error));
 	}
 
 	onPdfDay(): void {
-		download(`/api/v1/planning/print.pdf?mode=day&from=${this.pdfDay()}&rows=crews&weekend=false`).catch((error: unknown) => this.showError(error));
+		download(`/api/v1/planning/print.pdf?mode=day&from=${this.pdfDay()}&rows=crews&weekend=${this.showWeekend()}`).catch((error: unknown) => this.showError(error));
 	}
 }

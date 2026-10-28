@@ -39,7 +39,8 @@
 						<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 					</Button>
 					<ToolbarSeparator visible="{view>/canPlan}"/>
-					<Button text="{= ${view>/kpi/conflicts} + (${view>/kpi/conflicts} === 1 ? ' Konflikt' : ' Konflikte') }" icon="sap-icon://alert" type="{= ${view>/kpi/conflicts} > 0 ? 'Critical' : 'Transparent' }" press=".onConflicts" tooltip="Alle Konflikte im Zeitraum mit Erklärung">
+					<Button text="{= ${view>/kpi/conflicts} + (${view>/kpi/conflicts} === 1 ? ' Konflikt' : ' Konflikte') }" icon="sap-icon://alert" type="Transparent" class="eoCkConflictBtn" press=".onConflicts" tooltip="Alle Konflikte im Zeitraum mit Erklärung">
+						<customData><core:CustomData key="conflicts" value="{= ${view>/kpi/conflicts} > 0 ? 'ja' : 'nein' }" writeToDom="true"/></customData>
 						<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
 					</Button>
 					<Button text="Karte" icon="sap-icon://map-2" type="Transparent" press=".onMap" tooltip="Einsätze des Tages auf der Karte, Fahrtreihenfolge je Kolonne">
@@ -60,6 +61,9 @@
 				</OverflowToolbar>
 			</HBox>
 			<!-- Werkzeugleiste: Zeitraum, Suche und Filter, Darstellung, Ansicht -->
+			<DatePicker id="ckPicker" value="{view>/anchor}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" hideInput="true" change=".onPick" ariaLabelledBy="ckPick" showFooter="false" class="eoCkPickerHost"/>
+			<core:InvisibleText id="ckPick" text="Datum wählen"/>
+			<core:InvisibleText id="ckToolbar" text="Zeitraum, Filter und Ansicht"/>
 			<OverflowToolbar class="eoCkToolbar" style="Clear" ariaLabelledBy="ckToolbar">
 				<Button text="Heute" press=".onToday" tooltip="Zu heute springen (T)">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
@@ -73,30 +77,27 @@
 				<Button id="ckPeriod" text="{view>/period}" icon="sap-icon://calendar" iconFirst="false" type="Transparent" press=".onPickOpen" tooltip="Datum wählen" class="eoCkPeriodBtn">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</Button>
-				<DatePicker id="ckPicker" value="{view>/anchor}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" hideInput="true" change=".onPick" ariaLabelledBy="ckPick" showFooter="false"/>
-				<core:InvisibleText id="ckPick" text="Datum wählen"/>
-				<core:InvisibleText id="ckToolbar" text="Zeitraum, Filter und Ansicht"/>
 				<ToolbarSpacer/>
-				<SearchField value="{view>/filter/search}" liveChange=".onFilter" placeholder="Im Plan suchen" width="12rem" tooltip="Bauvorhaben, Ort, Tätigkeit, Kolonne oder Mitarbeiter (blendet andere ab)">
+				<SearchField value="{view>/filter/search}" liveChange=".onFilter" placeholder="Im Plan suchen" width="10rem" tooltip="Bauvorhaben, Ort, Tätigkeit, Kolonne oder Mitarbeiter (blendet andere ab)">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow" minWidth="9rem" shrinkable="true"/></layoutData>
 				</SearchField>
 				<Button id="ckFilterBtn" text="{= ${view>/filterCount} > 0 ? 'Filter (' + ${view>/filterCount} + ')' : 'Filter' }" icon="sap-icon://filter" type="{= ${view>/filterCount} > 0 ? 'Attention' : 'Default' }" press=".onFilterOpen" tooltip="Kolonnen, Region, Status">
 					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
 				</Button>
-				<ToolbarSeparator/>
-				<ToggleButton icon="sap-icon://text-align-justified" pressed="{view>/compact}" press=".onCompact" type="Transparent" tooltip="Kompakt: eine Zeile je Einsatz" enabled="{= ${view>/mode} === 'week' || ${view>/mode} === 'twoWeeks' }">
-					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
-				</ToggleButton>
+				<Button id="ckViewBtn" icon="sap-icon://action-settings" type="Transparent" press=".onViewOptions" text="{= ${view>/weekend} ? 'Mo–So' : 'Mo–Fr' }"
+					tooltip="Darstellung: Wochenende anzeigen (W), kompakte Karten" class="eoCkViewBtn" visible="{= ${view>/mode} !== 'day' }">
+					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+				</Button>
 				<Button icon="sap-icon://palette" type="Transparent" tooltip="Legende" press=".onLegend">
-					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
+					<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
 				</Button>
 				<Button icon="sap-icon://keyboard-and-mouse" type="Transparent" tooltip="Bedienung (?)" press=".onKeys">
-					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
+					<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
 				</Button>
 				<Button icon="sap-icon://refresh" type="Transparent" tooltip="Neu laden" press=".onRefresh">
 					<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
 				</Button>
-				<SegmentedButton selectedKey="{view>/mode}" selectionChange=".onMode" class="sapUiTinyMarginBegin">
+				<SegmentedButton selectedKey="{view>/mode}" selectionChange=".onMode">
 					<items>
 						<SegmentedButtonItem key="day" text="Tag" tooltip="Zeitachse eines Tages"/>
 						<SegmentedButtonItem key="week" text="Woche"/>

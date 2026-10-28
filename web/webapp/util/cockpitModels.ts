@@ -95,6 +95,26 @@ export function cockpitDays(mode: "day" | "week" | "twoWeeks" | "month", anchor:
 	return Array.from({ length: count }, (_, i) => addDays(first, i));
 }
 
+/** Samstag oder Sonntag. */
+export const isWeekend = (day: string): boolean => { const d = parseDay(day).getDay(); return d === 0 || d === 6; };
+
+/**
+ * Sichtbare Tage im Raster: Sa/So nur, wenn das Wochenende eingeblendet ist – oder wenn dort Einsätze liegen
+ * (die gehen sonst unbemerkt verloren). Die Tagesansicht zeigt immer ihren Tag.
+ */
+export function visibleDays<T extends { day: string }>(days: T[], assignments: { day: string }[], showWeekend: boolean): T[] {
+	if (showWeekend || days.length <= 1) return days;
+	const busy = new Set(assignments.map((a) => a.day));
+	return days.filter((d) => !isWeekend(d.day) || busy.has(d.day));
+}
+
+/** Nächster bzw. vorheriger Tag der Tagesansicht; ohne Wochenende werden Sa/So übersprungen. */
+export function stepDay(day: string, direction: number, showWeekend: boolean): string {
+	let next = addDays(day, direction);
+	while (!showWeekend && isWeekend(next)) next = addDays(next, direction);
+	return next;
+}
+
 /** Dringlichkeit eines Bauvorhabens im Vorrat nach geplantem Beginn. */
 export function urgencyOf(b: { plannedStart: string | null }, today: string): "overdue" | "soon" | "later" | "none" {
 	if (!b.plannedStart) return "none";
