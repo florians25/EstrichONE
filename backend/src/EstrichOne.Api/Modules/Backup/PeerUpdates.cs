@@ -172,7 +172,7 @@ internal sealed class BackupPeerSource(BackupTargetService targets, BackupMirror
 /// <summary>Aufträge erteilen, zustellen bzw. bereithalten, Rückmeldungen auswerten, Administratoren benachrichtigen.</summary>
 internal sealed partial class PeerUpdateService(
     EstrichOneDbContext db, IEnumerable<IUpdatablePeerSource> sources, TimeProvider clock, INotifier notifier, IRoleAssignments roles,
-    IAuditLog audit, IOptions<BackupSettings> settings, ILogger<PeerUpdateService> logger)
+    IAuditLog audit, IOptions<BackupSettings> settings, IServiceScopeFactory scopes, ILogger<PeerUpdateService> logger)
 {
     /// <summary>Ohne Rückmeldung gilt ein Auftrag danach als fehlgeschlagen.</summary>
     public static readonly TimeSpan RunTimeout = TimeSpan.FromMinutes(30);
@@ -464,8 +464,22 @@ internal sealed partial class PeerUpdateService(
                 NotificationEvents.PeerUpdateFailed),
             _ => ("Aktualisierung fehlgeschlagen", $"{row.Name}: {row.Message}", NotificationUrgency.High, NotificationEvents.PeerUpdateFailed),
         };
-        await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, title, body, peer.Link, "peerUpdate", null, urgency,
-            $"peer-update:{row.RequestId}", code), cancellationToken);
+        var notification = new NotificationRequest(NotificationCategory.System, title, body, peer.Link, "peerUpdate", null, urgency,
+            $"peer-update:{row.RequestId}", code);
+
+        // Das Ergebnis meldet der Rechner, nicht die Person, die gerade die Seite ansieht: ohne angemeldeten Benutzer zustellen,
+        // sonst würde der Notifier sie als „handelnde Person“ auslassen.
+        Task send;
+        using (ExecutionContext.SuppressFlow())
+        {
+            send = Task.Run(async () =>
+            {
+                await using var scope = scopes.CreateAsyncScope();
+                await scope.ServiceProvider.GetRequiredService<INotifier>().NotifyAsync(admins, notification, cancellationToken);
+            }, cancellationToken);
+        }
+
+        await send;
     }
 
     private async Task<List<(UpdatablePeer Peer, PeerUpdate Row)>> LoadAsync(CancellationToken cancellationToken)

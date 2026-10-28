@@ -157,7 +157,8 @@ public sealed class PeerUpdateTests(PostgresFixture postgres) : IAsyncLifetime
         // … die neue Version wird nicht gesund: Rücksprung auf die vorige.
         await File.WriteAllTextAsync(Path.Combine(_target.Options.UpdatePath, "result"),
             $"id={requestId}\nstatus=rolled_back\nversion=0.0.9\nprevious=0.0.9\nmessage=Neuer Container nicht gesund – vorige Version läuft wieder.\n");
-        await PollAsync();
+        // Ergebnis kommt hier über die Seite (Live-Abfrage durch den Admin) – er wird trotzdem benachrichtigt.
+        (await _admin.GetFromJsonAsync<PeerUpdatesResponse>("/api/v1/backup/peer-updates", TestJson.Options))!.Items.Single().Status.ShouldBe("rolled_back");
         var rolledBack = await ItemAsync(key);
         rolledBack.Status.ShouldBe("rolled_back");
         rolledBack.Message.ShouldBe("Neuer Container nicht gesund – vorige Version läuft wieder.");
