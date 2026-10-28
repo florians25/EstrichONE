@@ -253,7 +253,7 @@ jobs:
     env:
       DEVICE: ${{ matrix.device }}
       APPSTORE: "1"
-      APPSTORE_SCENES: "heute,bauakte,bereich-fotos,disposition,dispo-freigabe,erstbegehung,meldung-detail,kundenkarte"
+      APPSTORE_SCENES: "heute,bauakte,bereich-fotos,disposition,dispo-zuweisen,erstbegehung,chat-verlauf,kundenkarte,meldung-detail"
     steps:
       - uses: actions/checkout@v5
 
@@ -305,8 +305,16 @@ jobs:
           xcrun simctl boot "$UDID"
           xcrun simctl bootstatus "$UDID" -b >/dev/null
           xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
-            --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
-          xcrun simctl install "$UDID" "$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/EstrichONE.app"
+            --cellularMode active --cellularBars 4 --batteryState discharging --batteryLevel 100 --operatorName ""
+          APP="$RUNNER_TEMP/dd/Build/Products/Debug-iphonesimulator/EstrichONE.app"
+          # iPad: Vollbild ohne Fenstergriff (iPadOS 26 zeigt sonst unten rechts den Griff zum Ändern der Fenstergröße).
+          # Nur dieser Aufnahme-Build – die ausgelieferte App bleibt in Fenstern und Split View nutzbar.
+          if [ "$DEVICE" = "ipad13" ]; then
+            /usr/libexec/PlistBuddy -c "Add :UIRequiresFullScreen bool true" "$APP/Info.plist" 2>/dev/null \
+              || /usr/libexec/PlistBuddy -c "Set :UIRequiresFullScreen true" "$APP/Info.plist"
+            codesign --force --sign - --preserve-metadata=entitlements "$APP" >/dev/null 2>&1 || true
+          fi
+          xcrun simctl install "$UDID" "$APP"
           bash ios/scripts/screenshots.sh "$UDID" "$DEVICE" "$APPSTORE_SCENES" "$RUNNER_TEMP/shots" 0
           for f in "$RUNNER_TEMP"/shots/*.png; do sips -g pixelWidth -g pixelHeight "$f" | tail -2 | tr '\n' ' '; echo " $(basename "$f")"; done
 

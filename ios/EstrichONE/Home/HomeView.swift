@@ -491,7 +491,8 @@ struct HomeView: View {
     }
 
     private var greeting: String {
-        switch Calendar.current.component(.hour, from: .now) {
+        // Aufnahmen (Statusleiste 9:41): passender Gruß unabhängig von der Uhrzeit des Aufnahmerechners.
+        switch shotScene == nil ? Calendar.current.component(.hour, from: .now) : 9 {
         case 4..<11: "Guten Morgen"
         case 11..<17: "Guten Tag"
         default: "Guten Abend"
