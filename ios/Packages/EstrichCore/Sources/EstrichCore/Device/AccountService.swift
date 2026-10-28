@@ -206,6 +206,23 @@ public final class AccountService: @unchecked Sendable {
         return UnlockedAccount(user: session.user, session: session, dataKey: dataKey)
     }
 
+    /// Persönliches Gerät, Entsperren per Face ID/Touch ID/Gerätecode: Der Datenschlüssel kommt aus dem Schlüsselbund
+    /// (Zugriffsschutz durch das System, `UnlockKeyStore`); damit wird die gespeicherte Sitzung geöffnet.
+    public func unlock(userId: UUID, dataKey: SymmetricKey) throws(AccountError) -> UnlockedAccount {
+        var state = self.state
+        guard let index = state.users.firstIndex(where: { $0.id == userId }) else { throw .vault(.unreadable) }
+        let session: StoredSession
+        do {
+            let sealed = try Data(contentsOf: storage.userDirectory(userId).appending(path: "session.sealed"))
+            session = try JSONCoding.decoder.decode(StoredSession.self, from: UserVault.decrypt(sealed, with: dataKey))
+        } catch {
+            throw .vault(.unreadable)
+        }
+        state.users[index].lastUsedAt = now()
+        try save(state)
+        return UnlockedAccount(user: session.user, session: session, dataKey: dataKey)
+    }
+
     /// Speichert erneuerte Tokens im Tresor.
     public func store(_ session: StoredSession, dataKey: SymmetricKey) throws(AccountError) {
         do {

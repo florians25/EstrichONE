@@ -1,4 +1,9 @@
 import Foundation
+#if canImport(CryptoKit)
+import CryptoKit
+#else
+import Crypto
+#endif
 import Testing
 @testable import EstrichCore
 
@@ -57,6 +62,39 @@ struct AccountServiceTests {
         #expect(transport.count("POST", "/api/v1/devices/register") == 1)
         #expect(transport.count("POST", "/api/v1/devices/attach") == 1)
         try? storage.eraseAll()
+    }
+
+    @Test("Persönliches Gerät: mit dem Datenschlüssel aus dem Schlüsselbund entsperren, ohne Passwort")
+    func unlockWithDataKey() async throws {
+        transport.on("POST", "/api/v1/devices/register", reply: .json(Samples.deviceJSON(kind: "personal", status: "active"), status: 201))
+        let service = makeService()
+        _ = try await service.bindDevice(tokens: Samples.tokens(), kind: .personal, enrollmentCode: nil, description: description)
+        let created = try service.createVault(for: Samples.tokens(), pin: nil)
+
+        let unlocked = try service.unlock(userId: Samples.userId, dataKey: created.dataKey)
+
+        #expect(unlocked.session.refreshToken == "eor1_refresh")
+        #expect(unlocked.user.displayName == "Max Huber")
+        #expect(throws: AccountError.vault(.unreadable)) { try service.unlock(userId: Samples.userId, dataKey: SymmetricKey(size: .bits256)) }
+        try? storage.eraseAll()
+    }
+
+    @Test("Sperre: Verzögerung und Face ID gespeichert, Standard 15 Minuten")
+    func lockPreferences() throws {
+        let defaults = try #require(UserDefaults(suiteName: "lock-\(UUID().uuidString)"))
+        #expect(AppLockPreferences.load(from: defaults).delay == .fifteenMinutes)
+        #expect(AppLockPreferences.load(from: defaults).biometricUnlock)
+
+        AppLockPreferences(biometricUnlock: false, delay: .oneMinute).save(to: defaults)
+        let loaded = AppLockPreferences.load(from: defaults)
+        let start = Date()
+
+        #expect(!loaded.biometricUnlock)
+        #expect(!loaded.shouldLock(backgroundSince: start, now: start.addingTimeInterval(59)))
+        #expect(loaded.shouldLock(backgroundSince: start, now: start.addingTimeInterval(60)))
+        #expect(AppLockPreferences(delay: .immediately).locksOnBackground)
+        #expect(BiometryEnrollment.hasChanged(stored: Data([1]), current: Data([2])))
+        #expect(!BiometryEnrollment.hasChanged(stored: nil, current: Data([2])))
     }
 
     @Test("Poolgerät verlangt eine gültige PIN")

@@ -904,6 +904,16 @@
                 }
               }
             }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
           }
         }
       }
@@ -29465,6 +29475,10 @@
             "format": "int32"
           },
           "rememberDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "deviceIdleDays": {
             "type": "integer",
             "format": "int32"
           }

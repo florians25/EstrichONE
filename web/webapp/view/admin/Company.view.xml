@@ -82,6 +82,10 @@
 							<Label text="„Angemeldet bleiben“" labelFor="setRemember"/>
 							<StepInput id="setRemember" value="{view>/s/session/rememberDays}" min="1" max="90" description="Tage" width="12rem"/>
 							<Label text=""/><Text text="Bei Aktivität verlängert sich die Sitzung von selbst. Läuft sie ab, erscheint ein Anmeldedialog – Eingaben bleiben erhalten." class="eoMuted"/>
+							<core:Title text="Apps auf Smartphones und Tablets"/>
+							<Label text="Angemeldet bleiben ohne Nutzung" labelFor="setDeviceIdle"/>
+							<StepInput id="setDeviceIdle" value="{view>/s/session/deviceIdleDays}" min="7" max="365" description="Tage" width="12rem"/>
+							<Label text=""/><Text text="Registrierte Geräte bleiben angemeldet, solange die App innerhalb dieser Frist genutzt wird; entsperrt wird mit Face ID/Touch ID, Gerätecode oder Pool-PIN. Das Passwort ist erst nach Ablauf, Abmelden, Passwortwechsel oder Sperren des Geräts wieder nötig." class="eoMuted"/>
 						</form:SimpleForm>
 					</IconTabFilter>
 					<IconTabFilter key="benachrichtigungen" text="Benachrichtigungen">

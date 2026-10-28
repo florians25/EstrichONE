@@ -128,6 +128,48 @@ struct AppModelTests {
         #expect(model.screen == .appLocked)
     }
 
+    @Test("Sperren nach: „Sofort“ sperrt beim Verlassen, „1 Stunde“ erst danach – entsperrt ohne Passwort")
+    func lockDelayPreference() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        try model.confirm(try await verifiedServer(), enrollment: nil)
+        model.chooseKind(.personal)
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        let start = Date.now
+
+        model.setLockDelay(.oneHour)
+        model.didEnterBackground(at: start)
+        model.didBecomeActive(at: start.addingTimeInterval(30 * 60))
+        #expect(model.screen == .home)
+
+        model.setLockDelay(.immediately)
+        model.didEnterBackground(at: start)
+        #expect(model.screen == .appLocked)
+        await model.unlockPersonal()
+        #expect(model.screen == .home)
+
+        // Die Wahl übersteht einen Neustart.
+        let restarted = AppModel(environment: environment())
+        #expect(restarted.lockPreferences.delay == .immediately)
+        model.setBiometricUnlock(false)
+        #expect(!AppModel(environment: environment()).lockPreferences.biometricUnlock)
+    }
+
+    @Test("Sperren und Entsperren behalten denselben API-Zugang (keine doppelte Token-Erneuerung)")
+    func unlockReusesClient() async throws {
+        defer { cleanUp() }
+        let model = AppModel(environment: environment())
+        try model.confirm(try await verifiedServer(), enrollment: nil)
+        model.chooseKind(.personal)
+        try await model.signIn(login: "m.huber", password: "Richtig-2026")
+        let client = try #require(model.active?.client)
+
+        model.lock()
+        await model.unlockPersonal()
+
+        #expect(model.active?.client === client)
+    }
+
     @Test("Poolgerät ohne Einrichtungscode wartet auf Freigabe")
     func poolWaitsForApproval() async throws {
         defer { cleanUp() }

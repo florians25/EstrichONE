@@ -19,6 +19,7 @@ public static class AuditActions
     public const string LoginLockedOut = "auth.login.locked_out";
     public const string Logout = "auth.logout";
     public const string RefreshTokenReused = "auth.refresh.reused";
+    public const string RefreshTokenRecovered = "auth.refresh.recovered";
     public const string PasswordChanged = "auth.password.changed";
     public const string SessionRevoked = "auth.session.revoked";
 }

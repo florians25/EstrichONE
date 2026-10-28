@@ -63,7 +63,7 @@ internal static class AuthEndpoints
 
         auth.MapPost("/refresh", RefreshAsync)
             .WithName("RefreshTokens").WithSummary("Zugriffstoken erneuern (Refresh-Token wird dabei ersetzt)")
-            .ProducesProblem(StatusCodes.Status401Unauthorized)
+            .ProducesProblem(StatusCodes.Status401Unauthorized).ProducesProblem(StatusCodes.Status409Conflict)
             .AllowAnonymous().RequireRateLimiting(RefreshRateLimitPolicy);
 
         auth.MapPost("/logout", LogoutAsync)
@@ -115,6 +115,13 @@ internal static class AuthEndpoints
         }
 
         var (tokens, failure) = await sessions.RefreshAsync(request.RefreshToken, signature, cancellationToken);
+        if (failure == RefreshFailure.Concurrent)
+        {
+            // Gleichzeitige Erneuerung desselben Clients: nicht abmelden – der Client wiederholt mit seinem neuesten Token.
+            return Problem(StatusCodes.Status409Conflict, "REFRESH_IN_PROGRESS", "Bereits erneuert",
+                "Die Sitzung wurde soeben von einer anderen Anfrage erneuert.");
+        }
+
         if (tokens is null)
         {
             var (code, detail) = failure switch
@@ -124,6 +131,8 @@ internal static class AuthEndpoints
                 RefreshFailure.DeviceProofRequired => ("DEVICE_PROOF_INVALID", "Die Gerätesignatur fehlt oder ist ungültig."),
                 RefreshFailure.DeviceLocked => ("DEVICE_LOCKED", "Dieses Gerät ist gesperrt."),
                 RefreshFailure.DeviceRevoked => ("DEVICE_REVOKED", "Dieses Gerät wurde aus EstrichONE entfernt."),
+                RefreshFailure.PasswordChanged => ("PASSWORD_CHANGED", "Das Passwort wurde geändert. Bitte mit dem neuen Passwort anmelden."),
+                RefreshFailure.Revoked => ("SESSION_REVOKED", "Die Sitzung wurde beendet (abgemeldet). Bitte neu anmelden."),
                 RefreshFailure.SessionEnded or RefreshFailure.Expired => ("SESSION_EXPIRED", "Die Sitzung ist abgelaufen. Bitte neu anmelden."),
                 _ => ("INVALID_REFRESH_TOKEN", "Der Token ist ungültig."),
             };

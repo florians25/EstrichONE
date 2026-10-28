@@ -64,6 +64,15 @@ public sealed class Session
 
     public void Touch(DateTimeOffset now) => LastSeenAt = now;
 
+    /// <summary>Gleitende Gerätesitzung: verlängert das Ende auf <paramref name="until"/> (nie verkürzend).</summary>
+    public void ExtendUntil(DateTimeOffset until)
+    {
+        if (until > ExpiresAt)
+        {
+            ExpiresAt = until;
+        }
+    }
+
     public void BindDevice(Guid deviceId)
     {
         if (DeviceId is not null && DeviceId != deviceId)

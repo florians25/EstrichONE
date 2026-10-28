@@ -64,6 +64,15 @@ final class AppModel {
     /// Frisch angemeldet, Tresor noch nicht angelegt (Passwortwechsel, PIN-Wahl).
     private var pendingTokens: TokenResponse?
     private var backgroundSince: Date?
+    /// Ein API-Zugang je Person, auch über Sperren und Entsperren hinweg: Zwei Zugänge mit derselben Sitzung würden
+    /// denselben Refresh-Token einlösen (der Server wertete das früher als Diebstahl und meldete ab).
+    private var clients: [UUID: AuthorizedClient] = [:]
+    /// Sperre persönlicher Geräte (Mehr › Sperre und Face ID).
+    private(set) var lockPreferences: AppLockPreferences
+    /// Hinweis auf dem Sperrbildschirm (z. B. nach geänderter Biometrie).
+    private(set) var lockMessage: String?
+    private(set) var isUnlocking = false
+    private var unlockKeys: UnlockKeychain { UnlockKeychain(defaults: environment.defaults) }
 
     /// Wechsel in den Demomodus (`true`) bzw. zurück (`false`); setzt die App-Sitzung.
     var onDemoRequest: ((Bool) -> Void)?
@@ -94,6 +103,7 @@ final class AppModel {
     init(environment: AppEnvironment) {
         self.environment = environment
         serverStore = ServerStore(defaults: environment.defaults)
+        lockPreferences = AppLockPreferences.load(from: environment.defaults)
         checker = ServerConnectionChecker(transport: environment.transport, appVersion: environment.appVersion)
         if let server = serverStore.load() {
             open(server)
@@ -160,7 +170,7 @@ final class AppModel {
             screen = .choosePIN
         } else {
             pendingTokens = nil
-            activate(try accounts.createVault(for: tokens, pin: nil))
+            activate(try accounts.createVault(for: tokens, pin: nil), freshSession: true)
         }
     }
 
@@ -169,7 +179,7 @@ final class AppModel {
         let accounts = try requireAccounts()
         let account = try await Self.offMain { () throws(AccountError) in try accounts.createVault(for: tokens, pin: pin) }
         pendingTokens = nil
-        activate(account)
+        activate(account, freshSession: true)
     }
 
     // MARK: Entsperren
@@ -184,19 +194,72 @@ final class AppModel {
         }
     }
 
-    /// Persönliches Gerät: nach erfolgreicher Prüfung durch Face ID/Touch ID/Gerätecode.
+    /// Persönliches Gerät: Face ID/Touch ID bzw. Gerätecode geben den Datenschlüssel im Schlüsselbund frei
+    /// (`UnlockKeychain`); damit öffnet sich die gespeicherte Sitzung – ohne Passwort.
     func unlockPersonal() async {
         guard let user = deviceState.users.first else {
             screen = .signIn(userName: nil)
             return
         }
-        guard await environment.authenticateDeviceOwner() else { return }
+        // Nur ein Systemdialog zur Zeit (automatisch beim Erscheinen und per Schaltfläche).
+        guard !isUnlocking else { return }
+        isUnlocking = true
+        defer { isUnlocking = false }
+        let accounts: AccountService
         do throws(AccountError) {
-            activate(try requireAccounts().unlock(userId: user.id, pin: nil))
+            accounts = try requireAccounts()
+        } catch {
+            notice = error.message
+            return
+        }
+        if !environment.skipsDeviceOwnerAuthentication {
+            let biometryChanged = lockPreferences.biometricUnlock && unlockKeys.biometryChanged(userId: user.id)
+            switch await UnlockKeychain.load(userId: user.id, reason: "EstrichONE entsperren") {
+            case let .key(dataKey):
+                if let account = try? accounts.unlock(userId: user.id, dataKey: dataKey) {
+                    lockMessage = nil
+                    activate(account)
+                    if biometryChanged {
+                        // Nach geänderten Gesichtern/Fingern gilt Face ID erst wieder nach dem Gerätecode – der ist jetzt
+                        // eingegeben: Freigabe mit den aktuellen Merkmalen neu anlegen.
+                        unlockKeys.save(dataKey, userId: user.id, biometric: true)
+                        notice = "\(BiometryKind.current.name) wurde auf diesem Gerät geändert. EstrichONE hat deshalb einmal den Gerätecode verlangt; ab jetzt genügt wieder \(BiometryKind.current.name)."
+                    }
+                    return
+                }
+                // Freigabe passt nicht mehr zum Tresor: verwerfen und einmal über den Geräteschlüssel öffnen.
+                unlockKeys.remove(userId: user.id)
+            case .cancelled:
+                return
+            case .failed:
+                lockMessage = "Entsperren nicht möglich. Bitte erneut versuchen."
+                return
+            case .missing:
+                break
+            }
+            guard await environment.authenticateDeviceOwner() else { return }
+        }
+        do throws(AccountError) {
+            lockMessage = nil
+            activate(try accounts.unlock(userId: user.id, pin: nil))
         } catch {
             notice = error.message
             screen = .signIn(userName: user.userName)
         }
+    }
+
+    /// Mehr › Sperre: Face ID an/aus. Legt die Freigabe im Schlüsselbund mit der passenden Zugriffsregel neu an.
+    func setBiometricUnlock(_ enabled: Bool) {
+        lockPreferences.biometricUnlock = enabled
+        lockPreferences.save(to: environment.defaults)
+        if let active, !isPoolDevice, !environment.skipsDeviceOwnerAuthentication {
+            unlockKeys.save(active.account.dataKey, userId: active.user.id, biometric: enabled)
+        }
+    }
+
+    func setLockDelay(_ delay: LockDelay) {
+        lockPreferences.delay = delay
+        lockPreferences.save(to: environment.defaults)
     }
 
     func selectUser(_ user: LocalUser) {
@@ -245,6 +308,8 @@ final class AppModel {
         active.sync?.stop()
         await PushCenter.shared.unregister(client: active.client)
         self.active = nil
+        clients[active.user.id] = nil
+        unlockKeys.remove(userId: active.user.id)
         await accounts.signOut(active.account, client: active.client)
         deviceState = accounts.state
         screen = lockedScreen()
@@ -255,6 +320,7 @@ final class AppModel {
     /// Server und Daten bleiben bis dahin erhalten; wird ein anderer Server gewählt, werden die alten Daten gelöscht.
     func startReEnrollment() {
         active = nil
+        clients = [:]
         requestedKind = nil
         enrollmentCode = nil
         pendingTokens = nil
@@ -277,6 +343,7 @@ final class AppModel {
     func shutdownForWipe() async {
         let current = active
         active = nil
+        clients = [:]
         current?.sync?.stop()
         if let client = current?.client, !isDemo {
             await PushCenter.shared.unregister(client: client, timeout: .seconds(3))
@@ -293,6 +360,10 @@ final class AppModel {
 
     /// Nur der Zustand im Modell und die Daten des aktuellen Bereichs (Server ändern vor der Registrierung, Demo beenden).
     func resetApp() {
+        for user in deviceState.users {
+            unlockKeys.remove(userId: user.id)
+        }
+        clients = [:]
         accounts?.eraseDevice()
         serverStore.clear()
         accounts = nil
@@ -327,14 +398,14 @@ final class AppModel {
         backgroundSince = date
         // Noch nicht übertragene Fotos und Änderungen in der Hintergrundzeit des Systems senden.
         active?.sync?.runInBackground()
-        // Poolgeräte sperren beim Bildschirm-Aus sofort (11, Abschnitt 4.1).
-        if isPoolDevice { lock() }
+        // Poolgeräte sperren beim Bildschirm-Aus sofort (11, Abschnitt 4.1); persönliche Geräte, wenn „Sofort“ gewählt ist.
+        if isPoolDevice || lockPreferences.locksOnBackground { lock() }
     }
 
     func didBecomeActive(at date: Date) {
         defer { backgroundSince = nil }
         guard let since = backgroundSince, active != nil else { return }
-        if date.timeIntervalSince(since) >= environment.personalLockAfter {
+        if lockPreferences.shouldLock(backgroundSince: since, now: date) {
             lock()
         } else if let sync = active?.sync {
             Task { await sync.run() }
@@ -391,13 +462,22 @@ final class AppModel {
         return deviceState.users.isEmpty ? .signIn(userName: nil) : .appLocked
     }
 
-    private func activate(_ account: UnlockedAccount) {
+    /// - Parameter freshSession: nach einer Anmeldung mit Passwort (neue Sitzung, neuer Zugang).
+    private func activate(_ account: UnlockedAccount, freshSession: Bool = false) {
         guard let accounts else { return }
         let dataKey = account.dataKey
-        let client = AuthorizedClient(
+        // Derselbe Zugang wie vor dem Sperren (er kennt den neuesten Refresh-Token, auch wenn der Abgleich im
+        // Hintergrund ihn gerade erneuert). Nur nach einer neuen Anmeldung ein neuer.
+        let reusable = freshSession ? nil : clients[account.user.id]
+        let client = reusable ?? AuthorizedClient(
             api: accounts.api, session: account.session, keys: accounts.keys,
             persist: { session in _ = try? accounts.store(session, dataKey: dataKey) },
-            ended: { [weak self] end in await self?.handleSessionEnd(end) })
+            ended: { [weak self, userId = account.user.id] end in await self?.handleSessionEnd(end, userId: userId) })
+        clients[account.user.id] = client
+        if deviceState.registration?.kind == .personal, !environment.skipsDeviceOwnerAuthentication,
+           !unlockKeys.exists(userId: account.user.id) {
+            unlockKeys.save(dataKey, userId: account.user.id, biometric: lockPreferences.biometricUnlock)
+        }
         let sync = try? SyncController(account: account, client: client, storage: AppStorage(root: environment.storageRoot))
         if sync == nil {
             notice = "Die Daten auf diesem Gerät konnten nicht geöffnet werden. Bitte die App zurücksetzen oder die IT-Administration informieren."
@@ -411,22 +491,30 @@ final class AppModel {
         Task { await refreshDeviceStatus() }
     }
 
-    private func handleSessionEnd(_ end: SessionEnd) {
-        let userName = active?.user.userName
+    private func handleSessionEnd(_ end: SessionEnd, userId: UUID) {
+        clients[userId] = nil
+        // Endet die Sitzung einer anderen (gesperrten) Person auf einem Poolgerät, bleibt die aktuelle angemeldet.
+        if let active, active.user.id != userId { return }
+        // Poolgerät gesperrt: Die Benutzerauswahl bleibt; die Person merkt das Ende beim nächsten Entsperren.
+        if active == nil, isPoolDevice { return }
+        let userName = active?.user.userName ?? deviceState.users.first(where: { $0.id == userId })?.userName
         active?.sync?.stop()
         active = nil
-        switch end {
-        case .signedOut:
-            // Lokale Daten (auch noch nicht übertragene) bleiben im Tresor und werden nach der Anmeldung gesendet.
-            notice = "Die Anmeldung ist abgelaufen. Bitte melden Sie sich erneut an – Ihre Daten auf diesem Gerät bleiben erhalten."
+        if end.requiresPassword {
+            // Nur hier ist das Passwort nötig – mit Grund. Lokale Daten (auch noch nicht übertragene) bleiben im Tresor
+            // und werden nach der Anmeldung gesendet; Face ID gilt danach weiter.
+            notice = end.message + " Ihre Daten auf diesem Gerät bleiben erhalten."
             screen = .signIn(userName: userName)
+            return
+        }
+        switch end {
         case .deviceRevoked:
             // Das Gerät wurde im Büro entfernt: Registrierung vergessen, verschlüsselte Daten behalten. Nach der
             // Neueinrichtung (gleicher Server, gleiche Person) wird noch nicht Übertragenes gesendet.
             accounts?.forgetRegistration()
             deviceState = accounts?.state ?? DeviceState()
             screen = .blocked(end)
-        case .deviceLocked, .userDisabled:
+        default:
             screen = .blocked(end)
         }
     }

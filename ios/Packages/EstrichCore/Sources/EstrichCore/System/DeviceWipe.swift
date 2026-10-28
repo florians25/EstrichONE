@@ -12,7 +12,8 @@ import Foundation
 ///   einer früheren Installation und werden gelöscht.
 public enum DeviceWipe {
     /// Schlüsselbund-Dienste der App: Betrieb und Demomodus.
-    public static let keychainServices = ["de.estrichone.device", "de.estrichone.demo"]
+    /// `de.estrichone.unlock`: Face-ID-/Gerätecode-Freigabe des Datenschlüssels persönlicher Geräte.
+    public static let keychainServices = ["de.estrichone.device", "de.estrichone.demo", "de.estrichone.unlock"]
     /// Einstellungsbereich des Demomodus.
     public static let demoSuite = "de.estrichone.demo"
     /// Merker in den Standard-Einstellungen: Die App lief in dieser Installation schon einmal.

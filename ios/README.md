@@ -165,6 +165,30 @@ Die App ist für Pushnachrichten vorbereitet (`EstrichONE/App/PushNotifications.
 4. Hintergrund-Aktualisierung ist nicht nötig (Pushnachrichten mit sichtbarem Hinweis). Ohne Schritt 1–3 läuft die App
    unverändert – Benachrichtigungen erscheinen dann nur im Postfach.
 
+## Angemeldet bleiben, Face ID und Sperre
+
+- **Persönliches Gerät:** einmal mit Passwort anmelden, danach nur noch entsperren – mit Face ID/Touch ID oder dem
+  Gerätecode (Mehr › *Sperre und Face ID*: „Mit Face ID entsperren“ an/aus, „Sperren“ sofort/1/5/15/60 Minuten,
+  Standard 15). Nach einem Neustart der App ebenso.
+- **Sitzung:** gleitende Gerätesitzung auf dem Server. Jede Nutzung verlängert sie; erst nach *n* Tagen ohne Nutzung
+  ist wieder das Passwort nötig (Web › Einstellungen › Reiter „Anmeldung“ › Apps auf Smartphones und Tablets, Standard
+  90, 7–365). Die Erneuerung ist an die Gerätesignatur (Secure Enclave) gebunden.
+- **Robust gegen Funklöcher und Wettläufe:** Geht die Antwort einer Erneuerung verloren (App im Hintergrund beendet,
+  Netzabbruch), stellt der Server bei erneutem Vorlegen des alten Refresh-Tokens mit gültiger Gerätesignatur neu aus,
+  solange dessen Nachfolger unbenutzt ist (vorher: „Token wiederverwendet“ → Abmeldung). Ein `401 UNAUTHORIZED` einer
+  Anfrage, deren Zugriffstoken eine parallele Erneuerung gerade ersetzt hat, führt zu Erneuern und Wiederholen statt
+  zur Abmeldung; je Person gibt es genau einen API-Zugang, auch über Sperren/Entsperren hinweg.
+- **Passwort nur bei echtem Sitzungsende**, mit Grund: abgelaufen (Frist ohne Nutzung), Passwort geändert, abgemeldet
+  bzw. im IT Center beendet, aus Sicherheitsgründen beendet. Gerät gesperrt/entfernt oder Konto gesperrt zeigt den
+  Hinweisbildschirm. Lokale Daten bleiben erhalten.
+- **Schlüsselbund:** Der Datenschlüssel des Tresors (darin die Sitzung samt Refresh-Token) liegt zusätzlich als Eintrag
+  im Dienst `de.estrichone.unlock` mit `SecAccessControl` `[.biometryCurrentSet, .or, .devicePasscode]` (Face ID aus:
+  nur `.devicePasscode`), `WhenPasscodeSetThisDeviceOnly`. Werden Gesichter/Finger geändert, nimmt iOS Face ID für den
+  Eintrag nicht mehr an: einmal Gerätecode, dann legt die App ihn mit den neuen Merkmalen neu an (Abgleich über
+  `evaluatedPolicyDomainState`) und sagt das. Ohne Gerätecode gibt es keine Systemsperre; die App öffnet dann wie bisher
+  über den Geräteschlüssel. Abmelden und „App zurücksetzen“ löschen den Eintrag.
+- **Poolgeräte** unverändert: Benutzerauswahl und PIN, Sperre beim Verlassen und nach 5 Minuten Inaktivität.
+
 ## Sicherheit und App-Store-Veröffentlichung
 
 Exportkonformität, Krypto-Inventar, Datenschutz-Manifest (`EstrichONE/Resources/PrivacyInfo.xcprivacy`), Nutzungstexte,

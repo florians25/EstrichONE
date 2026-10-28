@@ -147,7 +147,7 @@ public sealed class AuthenticationTests(PostgresFixture postgres) : IAsyncLifeti
         using var me = await _client.GetAsync(new Uri("/api/v1/auth/me", UriKind.Relative), TestContext.Current.CancellationToken);
         me.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         using var refresh = await _client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = tokens.RefreshToken }, TestContext.Current.CancellationToken);
-        (await refresh.ReadProblemAsync()).Code.ShouldBe("SESSION_EXPIRED");
+        (await refresh.ReadProblemAsync()).Code.ShouldBe("SESSION_REVOKED");
     }
 
     [Fact]

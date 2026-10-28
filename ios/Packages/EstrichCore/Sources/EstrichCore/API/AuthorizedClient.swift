@@ -1,28 +1,67 @@
 import Foundation
 
-/// Grund, aus dem eine Sitzung serverseitig nicht mehr gilt (docs/reengineering/11, Abschnitt 5).
+/// Grund, aus dem eine Sitzung serverseitig nicht mehr gilt (docs/reengineering/11, Abschnitt 5). Nur dann verlangt die
+/// App wieder das Passwort – sonst genügt Face ID/Touch ID/Gerätecode bzw. die Pool-PIN.
 public enum SessionEnd: Equatable, Sendable {
+    /// Sitzung ungültig ohne genaueren Grund (z. B. Gerätesignatur passt nicht mehr).
     case signedOut
+    /// Länger nicht genutzt (Web-Einstellungen › Anmeldung › Apps).
+    case expired
+    /// Passwort geändert oder zurückgesetzt – alle Sitzungen der Person wurden beendet.
+    case passwordChanged
+    /// Abgemeldet bzw. im IT Center beendet.
+    case revoked
+    /// Anmeldedaten wurden doppelt verwendet – aus Sicherheitsgründen beendet.
+    case reused
     case userDisabled
     case deviceLocked
     case deviceRevoked
 
+    /// Codes der Erneuerung (`auth/refresh`).
     init?(code: String?) {
         switch code {
         case "USER_DISABLED": self = .userDisabled
         case "DEVICE_LOCKED": self = .deviceLocked
         case "DEVICE_REVOKED": self = .deviceRevoked
-        case "UNAUTHORIZED", "SESSION_EXPIRED", "REFRESH_TOKEN_REUSED", "INVALID_REFRESH_TOKEN", "DEVICE_PROOF_INVALID": self = .signedOut
+        case "SESSION_EXPIRED": self = .expired
+        case "PASSWORD_CHANGED": self = .passwordChanged
+        case "SESSION_REVOKED": self = .revoked
+        case "REFRESH_TOKEN_REUSED": self = .reused
+        case "INVALID_REFRESH_TOKEN", "DEVICE_PROOF_INVALID": self = .signedOut
         default: return nil
         }
     }
 
+    /// Codes einer gewöhnlichen Anfrage, die ohne Rückfrage feststehen. `UNAUTHORIZED` gehört nicht dazu: Das kann auch
+    /// ein Zugriffstoken sein, das eine parallele Erneuerung gerade ersetzt hat – darüber entscheidet die Erneuerung.
+    init?(requestCode code: String?) {
+        switch code {
+        case "USER_DISABLED": self = .userDisabled
+        case "DEVICE_LOCKED": self = .deviceLocked
+        case "DEVICE_REVOKED": self = .deviceRevoked
+        default: return nil
+        }
+    }
+
+    /// Erklärung für die Anmeldung mit Passwort.
     public var message: String {
         switch self {
-        case .signedOut: "Die Anmeldung ist abgelaufen. Bitte erneut anmelden."
+        case .signedOut: "Die Anmeldung auf diesem Gerät gilt nicht mehr. Bitte einmal mit Passwort anmelden."
+        case .expired: "Sie waren längere Zeit nicht angemeldet. Bitte einmal mit Passwort anmelden – danach genügt wieder Face ID bzw. der Gerätecode."
+        case .passwordChanged: "Ihr Passwort wurde geändert. Bitte mit dem neuen Passwort anmelden."
+        case .revoked: "Die Sitzung auf diesem Gerät wurde beendet (abgemeldet, z. B. im IT Center). Bitte erneut anmelden."
+        case .reused: "Die Sitzung wurde aus Sicherheitsgründen beendet. Bitte erneut anmelden."
         case .userDisabled: "Ihr Benutzerkonto ist gesperrt. Bitte an die Administration wenden."
         case .deviceLocked: "Dieses Gerät ist gesperrt. Bitte an die IT-Administration wenden."
         case .deviceRevoked: "Dieses Gerät wurde aus EstrichONE entfernt. Die App muss neu eingerichtet werden."
+        }
+    }
+
+    /// Mit Passwort neu anmelden (statt Hinweis „gesperrt“ bzw. „entfernt“).
+    public var requiresPassword: Bool {
+        switch self {
+        case .signedOut, .expired, .passwordChanged, .revoked, .reused: true
+        case .userDisabled, .deviceLocked, .deviceRevoked: false
         }
     }
 }
@@ -37,6 +76,8 @@ public actor AuthorizedClient {
     private let persist: @Sendable (StoredSession) async -> Void
     private let ended: @Sendable (SessionEnd) async -> Void
     private var refreshing: Task<Void, Error>?
+    private var hasEnded = false
+    private let retryDelayMilliseconds: Int
 
     /// - Parameters:
     ///   - keys: Geräteschlüssel, wenn die Sitzung an ein Gerät gebunden ist (Erneuerung nur mit Signatur).
@@ -44,8 +85,10 @@ public actor AuthorizedClient {
     ///   - ended: wird aufgerufen, wenn der Server die Sitzung nicht mehr akzeptiert.
     public init(api: APIClient, session: StoredSession, keys: DeviceKeys?,
                 now: @escaping @Sendable () -> Date = Date.init,
+                retryDelayMilliseconds: Int = 1_500,
                 persist: @escaping @Sendable (StoredSession) async -> Void,
                 ended: @escaping @Sendable (SessionEnd) async -> Void) {
+        self.retryDelayMilliseconds = retryDelayMilliseconds
         self.api = api
         self.session = session
         self.keys = keys
@@ -81,14 +124,26 @@ public actor AuthorizedClient {
         if session.accessTokenExpiresAt.timeIntervalSince(now()) < 60 {
             try await refresh()
         }
+        let token = session.accessToken
         do {
-            return try await call(api, session.accessToken)
-        } catch where error.code == "ACCESS_TOKEN_EXPIRED" {
-            try await refresh()
-            return try await call(api, session.accessToken)
+            return try await call(api, token)
+        } catch where error.status == 401 && SessionEnd(requestCode: error.code) == nil {
+            // Abgelaufen oder „UNAUTHORIZED“: Erneuern klärt, ob die Sitzung noch gilt. Hat eine parallele Anfrage das
+            // Token inzwischen schon ersetzt, genügt die Wiederholung mit dem neuen.
+            if session.accessToken == token {
+                try await refresh()
+            }
+            do {
+                return try await call(api, session.accessToken)
+            } catch {
+                if error.status == 401, let end = SessionEnd(requestCode: error.code) {
+                    await report(end)
+                }
+                throw error
+            }
         } catch {
-            if let end = SessionEnd(code: error.code), error.status == 401 {
-                await ended(end)
+            if error.status == 401, let end = SessionEnd(requestCode: error.code) {
+                await report(end)
             }
             throw error
         }
@@ -114,19 +169,35 @@ public actor AuthorizedClient {
         }
     }
 
+    /// Erneuert mit Gerätesignatur. Netzfehler beenden nichts (der alte Refresh-Token bleibt, der Server stellt bei
+    /// einer verlorenen Antwort neu aus); nur ein eindeutiger Code des Servers beendet die Sitzung.
     private func performRefresh() async throws {
-        let refreshToken = session.refreshToken
-        let signature = try keys.map { try DeviceProof.refresh(refreshToken, keys: $0) }
-        do {
-            let refreshed: RefreshResponse = try await api.post(
-                "auth/refresh", body: RefreshRequest(refreshToken: refreshToken, deviceSignature: signature))
-            session.apply(refreshed)
-            await persist(session)
-        } catch {
-            if let end = SessionEnd(code: error.code) {
-                await ended(end)
+        for attempt in 0..<2 {
+            let refreshToken = session.refreshToken
+            let signature = try keys.map { try DeviceProof.refresh(refreshToken, keys: $0) }
+            do {
+                let refreshed: RefreshResponse = try await api.post(
+                    "auth/refresh", body: RefreshRequest(refreshToken: refreshToken, deviceSignature: signature))
+                session.apply(refreshed)
+                await persist(session)
+                return
+            } catch where error.code == "REFRESH_IN_PROGRESS" && attempt == 0 {
+                // Gleichzeitig erneuert (zweite App-Instanz, Wiederholung): kurz warten, dann noch einmal.
+                try? await Task.sleep(for: .milliseconds(retryDelayMilliseconds))
+            } catch {
+                if let end = SessionEnd(code: error.code) {
+                    await report(end)
+                }
+                throw error
             }
-            throw error
         }
+        throw APIError.server(status: 409, code: "REFRESH_IN_PROGRESS", message: nil)
+    }
+
+    /// Meldet das Ende genau einmal, auch wenn mehrere Anfragen gleichzeitig scheitern.
+    private func report(_ end: SessionEnd) async {
+        guard !hasEnded else { return }
+        hasEnded = true
+        await ended(end)
     }
 }

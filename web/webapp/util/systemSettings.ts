@@ -5,7 +5,7 @@
 import { get, put } from "./api";
 
 export interface SystemSettings {
-	session: { idleHours: number; rememberDays: number };
+	session: { idleHours: number; rememberDays: number; deviceIdleDays: number };
 	map: { tileUrl: string; attribution: string; maxZoom: number };
 	numbering: { bauaktePattern: string };
 	bauakte: {

@@ -143,6 +143,97 @@ struct AuthorizedClientTests {
         await #expect(throws: APIError.self) {
             let _: DeviceResponse = try await client.get("devices/me")
         }
-        #expect(ended.values == [.signedOut])
+        #expect(ended.values == [.reused])
+    }
+
+    @Test("401 einer Anfrage mit soeben ersetztem Token: erneuern und wiederholen, nicht abmelden")
+    func unauthorizedAfterParallelRotation() async throws {
+        let transport = RoutingTransport()
+        transport.on("POST", "/api/v1/auth/refresh", reply: .json(Samples.refreshJSON(access: "eo1_neu", refresh: "eor1_neu")))
+        transport.on("GET", "/api/v1/devices/me") { request in
+            request.value(forHTTPHeaderField: "Authorization") == "Bearer eo1_neu"
+                ? .json(Samples.deviceJSON(kind: "personal", status: "active"))
+                : .problem(401, code: "UNAUTHORIZED")
+        }
+        let ended = Recorder<SessionEnd>()
+        let client = makeClient(transport, ended: ended)
+
+        let device: DeviceResponse = try await client.get("devices/me")
+
+        #expect(device.status == .active)
+        #expect(ended.values.isEmpty)
+        #expect(transport.count("POST", "/api/v1/auth/refresh") == 1)
+    }
+
+    @Test("beendete Sitzung: die Erneuerung nennt den Grund (Passwort geändert)")
+    func passwordChanged() async {
+        let transport = RoutingTransport()
+        transport.on("GET", "/api/v1/devices/me", reply: .problem(401, code: "UNAUTHORIZED"))
+        transport.on("POST", "/api/v1/auth/refresh", reply: .problem(401, code: "PASSWORD_CHANGED"))
+        let ended = Recorder<SessionEnd>()
+        let client = makeClient(transport, ended: ended)
+
+        await #expect(throws: APIError.self) {
+            let _: DeviceResponse = try await client.get("devices/me")
+        }
+        #expect(ended.values == [.passwordChanged])
+        #expect(SessionEnd.passwordChanged.requiresPassword)
+    }
+
+    @Test("Erneuerung ohne Netz beendet nichts; später klappt es mit demselben Refresh-Token")
+    func refreshOffline() async throws {
+        let transport = RoutingTransport()
+        transport.on("GET", "/api/v1/devices/me", reply: .json(Samples.deviceJSON(kind: "personal", status: "active")))
+        let ended = Recorder<SessionEnd>()
+        let client = makeClient(transport, accessExpiresIn: 0, ended: ended)
+
+        await #expect(throws: APIError.offline) {
+            let _: DeviceResponse = try await client.get("devices/me")
+        }
+        transport.on("POST", "/api/v1/auth/refresh") { request in
+            #expect(request.jsonBody()["refreshToken"] as? String == "eor1_refresh")
+            return .json(Samples.refreshJSON(access: "eo1_neu", refresh: "eor1_neu"))
+        }
+        let device: DeviceResponse = try await client.get("devices/me")
+
+        #expect(device.status == .active)
+        #expect(ended.values.isEmpty)
+    }
+
+    @Test("gleichzeitige Erneuerung (409) wird wiederholt statt abzumelden")
+    func refreshInProgress() async throws {
+        let transport = RoutingTransport()
+        let attempts = Recorder<Int>()
+        transport.on("POST", "/api/v1/auth/refresh") { _ in
+            attempts.append(1)
+            return attempts.values.count == 1
+                ? .problem(409, code: "REFRESH_IN_PROGRESS")
+                : .json(Samples.refreshJSON(access: "eo1_neu", refresh: "eor1_neu"))
+        }
+        transport.on("GET", "/api/v1/devices/me", reply: .json(Samples.deviceJSON(kind: "personal", status: "active")))
+        let ended = Recorder<SessionEnd>()
+        let session = StoredSession(Samples.tokens(Samples.tokenJSON(expiresIn: 0)))
+        let client = AuthorizedClient(api: APIClient(server: Samples.server, transport: transport), session: session, keys: keys,
+                                      retryDelayMilliseconds: 10, persist: { _ in }, ended: { ended.append($0) })
+
+        let _: DeviceResponse = try await client.get("devices/me")
+
+        #expect(attempts.values.count == 2)
+        #expect(ended.values.isEmpty)
+    }
+
+    @Test("Sitzungsende wird nur einmal gemeldet, auch bei vielen parallelen Anfragen")
+    func endReportedOnce() async {
+        let transport = RoutingTransport()
+        transport.on("GET", "/api/v1/devices/me", reply: .problem(401, code: "DEVICE_LOCKED"))
+        let ended = Recorder<SessionEnd>()
+        let client = makeClient(transport, ended: ended)
+
+        await withTaskGroup(of: Void.self) { group in
+            for _ in 0..<5 {
+                group.addTask { let _: DeviceResponse? = try? await client.get("devices/me") }
+            }
+        }
+        #expect(ended.values == [.deviceLocked])
     }
 }

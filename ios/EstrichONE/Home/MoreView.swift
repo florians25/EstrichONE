@@ -4,7 +4,7 @@ import SwiftUI
 /// Reiter „Mehr“: Person und Abgleich oben, dann Planung, Hilfe, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     enum Route: String, Identifiable, Hashable {
-        case sync, tasks, dispatch, week, tickets, inbox, chat
+        case sync, tasks, dispatch, week, tickets, inbox, chat, security
         var id: String { rawValue }
     }
 
@@ -98,6 +98,12 @@ struct MoreView: View {
                         LabeledContent("Name", value: registration.name)
                         LabeledContent("Nutzung", value: registration.kind == .pool ? "Poolgerät" : "Persönliches Gerät")
                         LabeledContent("Status", value: Self.describe(registration.status))
+                        if registration.kind == .personal, model.active != nil {
+                            Button { route = .security } label: {
+                                row(securityTitle, symbol: securitySymbol, detail: model.lockPreferences.delay.title)
+                            }
+                            .accessibilityIdentifier("lockSettingsRow")
+                        }
                     }
                 }
 
@@ -155,6 +161,7 @@ struct MoreView: View {
                 case .tickets: MyTicketsView()
                 case .inbox: NotificationInboxView()
                 case .chat: ChatListView()
+                case .security: LockSettingsView()
                 }
             }
             .navigationDestination(for: HomeRoute.self) { route in
@@ -233,6 +240,7 @@ struct MoreView: View {
     private func applyShotScene() {
         switch shotScene {
         case "sync": route = .sync
+        case "sicherheit": route = .security
         case "mehr-zuruecksetzen": confirmReset = true
         case "postfach": route = .inbox
         case "chat", "chat-verlauf": route = .chat
@@ -244,6 +252,13 @@ struct MoreView: View {
         default: break
         }
     }
+
+    /// „Sperre und Face ID“ – Bezeichnung nach der Biometrie des Geräts (Aufnahmen: wie auf einem iPhone mit Face ID).
+    private var securityBiometry: BiometryKind { shotScene != nil ? .faceID : BiometryKind.current }
+    private var securityTitle: String {
+        securityBiometry == .none ? "Sperre und Gerätecode" : "Sperre und \(securityBiometry.name)"
+    }
+    private var securitySymbol: String { securityBiometry == .none ? "lock" : securityBiometry.symbol }
 
     private var pushDetail: String? {
         switch push.permission {

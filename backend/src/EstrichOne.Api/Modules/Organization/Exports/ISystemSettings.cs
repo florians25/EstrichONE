@@ -38,13 +38,23 @@ public sealed record SystemSettings
         string.IsNullOrWhiteSpace(value) ? null : value.Trim().Length > max ? value.Trim()[..max] : value.Trim();
 }
 
-/// <summary>Web-Sitzung: gleitende Verlängerung bei Aktivität; „angemeldet bleiben“ hält länger.</summary>
+/// <summary>
+/// Web-Sitzung: gleitende Verlängerung bei Aktivität; „angemeldet bleiben“ hält länger.
+/// Apps auf registrierten Geräten (iOS/Android): gleitende Gerätesitzung – erst nach <see cref="DeviceIdleDays"/> Tagen
+/// ohne Nutzung ist wieder das Passwort nötig (Entsperren dazwischen per Face ID/Touch ID/Gerätecode bzw. Pool-PIN).
+/// </summary>
 public sealed record SessionSettings
 {
     public int IdleHours { get; init; } = 12;
     public int RememberDays { get; init; } = 30;
+    public int DeviceIdleDays { get; init; } = 90;
 
-    public SessionSettings Normalize() => this with { IdleHours = Math.Clamp(IdleHours, 1, 168), RememberDays = Math.Clamp(RememberDays, 1, 90) };
+    public SessionSettings Normalize() => this with
+    {
+        IdleHours = Math.Clamp(IdleHours, 1, 168),
+        RememberDays = Math.Clamp(RememberDays, 1, 90),
+        DeviceIdleDays = Math.Clamp(DeviceIdleDays is 0 ? 90 : DeviceIdleDays, 7, 365),
+    };
 }
 
 /// <summary>Kartenkacheln. Der Standard ist der OpenStreetMap-Server (Nutzungsbedingungen beachten).</summary>

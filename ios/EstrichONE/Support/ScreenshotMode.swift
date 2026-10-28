@@ -102,6 +102,10 @@ final class ScreenshotDirector {
     /// Zustand außerhalb der Ansichten (z. B. Wartung des Servers).
     private func prepare(_ scene: String, model: AppModel?) {
         let sync = model?.active?.sync
+        // „sitzung-beendet“: Passwort nur nach echtem Sitzungsende – mit Grund.
+        model?.notice = scene == "sitzung-beendet"
+            ? SessionEnd.passwordChanged.message + " Ihre Daten auf diesem Gerät bleiben erhalten."
+            : nil
         if scene.hasPrefix("wartung") {
             sync?.simulateMaintenance("Update auf Version 0.3 – voraussichtlich bis 7:30 Uhr.")
         } else {

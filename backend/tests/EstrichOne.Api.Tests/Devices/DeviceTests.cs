@@ -6,6 +6,7 @@ using EstrichOne.Api.Modules.Access;
 using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Devices.Exports;
 using EstrichOne.Api.Modules.Identity;
+using EstrichOne.Api.Modules.Organization;
 using EstrichOne.Api.Tests.Support;
 
 namespace EstrichOne.Api.Tests.Devices;
@@ -154,6 +155,121 @@ public sealed class DeviceTests(PostgresFixture postgres) : IAsyncLifetime
 
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
+
+    [Fact]
+    public async Task LostRefreshResponse_OfDevice_IsRecovered_InsteadOfEndingTheSession()
+    {
+        var phone = await LoginPhoneAsync("baustelle");
+        await phone.RegisterAsync(DeviceKind.Personal);
+        // Antwort geht verloren (Funkloch, App im Hintergrund beendet): Der Server hat rotiert, die App kennt nur T0.
+        using var lost = await RefreshAsync(phone, phone.Tokens.RefreshToken);
+        lost.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        _factory.Clock.Advance(TimeSpan.FromHours(6));
+        using var retry = await RefreshAsync(phone, phone.Tokens.RefreshToken);
+
+        retry.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var recovered = (await retry.Content.ReadFromJsonAsync<RefreshResponse>(TestJson.Options, TestContext.Current.CancellationToken))!;
+        using var me = await _factory.CreateClient().WithToken(recovered.AccessToken)
+            .GetAsync(new Uri("/api/v1/bauakten", UriKind.Relative), TestContext.Current.CancellationToken);
+        me.StatusCode.ShouldBe(HttpStatusCode.OK);
+        // Der verlorene Nachfolger ist verworfen; weiter geht es mit dem neuen Token.
+        using var next = await RefreshAsync(phone, recovered.RefreshToken);
+        next.StatusCode.ShouldBe(HttpStatusCode.OK);
+    }
+
+    [Fact]
+    public async Task ReusedRefreshToken_WhoseSuccessorWasUsed_StillEndsTheDeviceSession()
+    {
+        var phone = await LoginPhoneAsync("baustelle");
+        await phone.RegisterAsync(DeviceKind.Personal);
+        using var first = await RefreshAsync(phone, phone.Tokens.RefreshToken);
+        var t1 = (await first.Content.ReadFromJsonAsync<RefreshResponse>(TestJson.Options, TestContext.Current.CancellationToken))!;
+        using var second = await RefreshAsync(phone, t1.RefreshToken);
+        second.StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        _factory.Clock.Advance(TimeSpan.FromMinutes(5));
+        using var replay = await RefreshAsync(phone, phone.Tokens.RefreshToken);
+
+        replay.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await replay.ReadProblemAsync()).Code.ShouldBe("REFRESH_TOKEN_REUSED");
+    }
+
+    [Fact]
+    public async Task DeviceSession_IsSliding_EndsOnlyAfterConfiguredIdleDays()
+    {
+        var phone = await LoginPhoneAsync("baustelle");
+        await phone.RegisterAsync(DeviceKind.Personal);
+        var token = phone.Tokens.RefreshToken;
+        // 4 × 80 Tage Nutzung: weit über die frühere feste Höchstdauer (90 Tage) hinaus angemeldet.
+        for (var i = 0; i < 4; i++)
+        {
+            _factory.Clock.Advance(TimeSpan.FromDays(80));
+            using var response = await RefreshAsync(phone, token);
+            response.StatusCode.ShouldBe(HttpStatusCode.OK);
+            var refreshed = (await response.Content.ReadFromJsonAsync<RefreshResponse>(TestJson.Options, TestContext.Current.CancellationToken))!;
+            refreshed.RefreshTokenExpiresAt.ShouldBe(_factory.Clock.GetUtcNow().AddDays(90), TimeSpan.FromSeconds(1));
+            token = refreshed.RefreshToken;
+        }
+
+        _factory.Clock.Advance(TimeSpan.FromDays(91));
+        using var idle = await RefreshAsync(phone, token);
+        (await idle.ReadProblemAsync()).Code.ShouldBe("SESSION_EXPIRED");
+    }
+
+    [Fact]
+    public async Task DeviceIdleDays_ComeFromSettings()
+    {
+        using var admin = await _factory.CreateClientAsAsync("admin", StandardRoles.AdministratorId);
+        var settings = (await admin.GetFromJsonAsync<SystemSettingsResponse>("/api/v1/settings", TestJson.Options, TestContext.Current.CancellationToken))!;
+        settings.Settings.Session.DeviceIdleDays.ShouldBe(90);
+        var shorter = settings.Settings with { Session = settings.Settings.Session with { DeviceIdleDays = 10 } };
+        (await admin.PutAsJsonAsync("/api/v1/settings", new { settings = shorter, version = settings.Version }, TestContext.Current.CancellationToken))
+            .EnsureSuccessStatusCode();
+        var phone = await LoginPhoneAsync("baustelle");
+        await phone.RegisterAsync(DeviceKind.Personal);
+        phone.Tokens.RefreshTokenExpiresAt.ShouldBe(_factory.Clock.GetUtcNow().AddDays(10), TimeSpan.FromSeconds(5));
+
+        _factory.Clock.Advance(TimeSpan.FromDays(11));
+        using var idle = await RefreshAsync(phone, phone.Tokens.RefreshToken);
+        (await idle.ReadProblemAsync()).Code.ShouldBe("SESSION_EXPIRED");
+    }
+
+    [Fact]
+    public async Task EndedDeviceSession_TellsWhy()
+    {
+        var phone = await LoginPhoneAsync("baustelle");
+        await phone.RegisterAsync(DeviceKind.Personal);
+        using var web = _factory.CreateClient();
+        var office = await web.LoginOkAsync("baustelle");
+        (await web.WithToken(office.AccessToken).PostAsJsonAsync("/api/v1/auth/change-password",
+            new { currentPassword = AuthClient.DefaultPassword, newPassword = "Neue Passphrase 2026" }, TestContext.Current.CancellationToken))
+            .StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        using var refresh = await RefreshAsync(phone, phone.Tokens.RefreshToken);
+
+        refresh.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await refresh.ReadProblemAsync()).Code.ShouldBe("PASSWORD_CHANGED");
+    }
+
+    [Fact]
+    public async Task ConcurrentRefresh_WithoutDevice_IsConflict_NotLogout()
+    {
+        await _factory.CreateUserAsync("buero", roleIds: StandardRoles.OfficeId);
+        using var client = _factory.CreateClient();
+        var tokens = await client.LoginOkAsync("buero", clientKind: "desktop");
+        (await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = tokens.RefreshToken }, TestContext.Current.CancellationToken))
+            .EnsureSuccessStatusCode();
+
+        using var parallel = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = tokens.RefreshToken }, TestContext.Current.CancellationToken);
+
+        parallel.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        (await parallel.ReadProblemAsync()).Code.ShouldBe("REFRESH_IN_PROGRESS");
+    }
+
+    private Task<HttpResponseMessage> RefreshAsync(Phone phone, string refreshToken) =>
+        _factory.CreateClient().PostAsJsonAsync("/api/v1/auth/refresh",
+            new { refreshToken, deviceSignature = Sign(phone.Key, refreshToken) }, TestContext.Current.CancellationToken);
 
     private async Task<Phone> LoginPhoneAsync(string userName)
     {

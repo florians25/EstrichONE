@@ -24,6 +24,12 @@ public enum RefreshFailure
     Expired,
     Reused,
     SessionEnded,
+
+    /// <summary>Sitzung beendet, weil das Passwort geändert bzw. zurückgesetzt wurde.</summary>
+    PasswordChanged,
+
+    /// <summary>Sitzung abgemeldet bzw. im IT Center beendet.</summary>
+    Revoked,
     UserDisabled,
     DeviceProofRequired,
     DeviceLocked,
@@ -48,21 +54,34 @@ public sealed class SessionService(
         var now = clock.GetUtcNow();
         var session = new Session(user.Id, clientKind, clientName, now, Settings.SessionMaxLifetime, persistent);
         db.Add(session);
-        return Issue(session, now, await RefreshLifetimeAsync(session, cancellationToken));
+        var lifetime = await RefreshLifetimeAsync(session, cancellationToken);
+        if (session.RequiresDevice)
+        {
+            // Gerätesitzung: keine feste Höchstdauer, nur die Leerlaufzeit (gleitend, siehe RefreshAsync).
+            session.ExtendUntil(now + lifetime);
+        }
+
+        return Issue(session, now, lifetime);
     }
 
     /// <summary>
     /// Gleitende Sitzung: Jede Erneuerung (bei Aktivität spätestens alle paar Minuten) verlängert um die Leerlaufzeit.
-    /// Apps behalten die feste Laufzeit der Konfiguration.
+    /// Web: Leerlauf bzw. „angemeldet bleiben“; iOS/Android: Gerätesitzung (Einstellungen → Sitzungen, Standard 90 Tage);
+    /// Desktop: feste Laufzeit der Konfiguration.
     /// </summary>
     private async Task<TimeSpan> RefreshLifetimeAsync(Session session, CancellationToken cancellationToken)
     {
-        if (session.ClientKind != ClientKind.Web)
+        if (session.ClientKind is not (ClientKind.Web or ClientKind.Ios or ClientKind.Android))
         {
             return Settings.RefreshTokenLifetime;
         }
 
-        var configured = (await systemSettings.GetAsync(cancellationToken)).Session;
+        var configured = (await systemSettings.GetAsync(cancellationToken)).Session.Normalize();
+        if (session.RequiresDevice)
+        {
+            return TimeSpan.FromDays(configured.DeviceIdleDays);
+        }
+
         return session.Persistent ? TimeSpan.FromDays(configured.RememberDays) : TimeSpan.FromHours(configured.IdleHours);
     }
 
@@ -82,9 +101,14 @@ public sealed class SessionService(
         }
 
         var session = await db.Set<Session>().SingleAsync(s => s.Id == stored.SessionId, cancellationToken);
-        if (stored.UsedAt is not null)
+        if (!session.IsActive(now))
         {
-            // Innerhalb der Gnadenfrist: vermutlich zwei parallele Anfragen desselben Geräts – ablehnen, nicht bestrafen.
+            return (null, EndedFailure(session));
+        }
+
+        if (stored.UsedAt is not null && !await TryRecoverAsync(session, stored, refreshToken, deviceSignature, now, cancellationToken))
+        {
+            // Innerhalb der Gnadenfrist: vermutlich zwei parallele Anfragen desselben Clients – ablehnen, nicht bestrafen.
             if (now - stored.UsedAt.Value < Settings.RefreshReuseGracePeriod)
             {
                 return (null, RefreshFailure.Concurrent);
@@ -94,11 +118,6 @@ public sealed class SessionService(
             audit.Record(AuditActions.RefreshTokenReused, session.UserId, "session", session.Id.ToString());
             await db.SaveChangesAsync(cancellationToken);
             return (null, RefreshFailure.Reused);
-        }
-
-        if (!session.IsActive(now))
-        {
-            return (null, RefreshFailure.SessionEnded);
         }
 
         if (stored.ExpiresAt <= now)
@@ -136,10 +155,65 @@ public sealed class SessionService(
         }
 
         stored.MarkUsed(now);
-        var tokens = Issue(session, now, await RefreshLifetimeAsync(session, cancellationToken));
+        var lifetime = await RefreshLifetimeAsync(session, cancellationToken);
+        if (session.RequiresDevice)
+        {
+            session.ExtendUntil(now + lifetime);
+        }
+
+        var tokens = Issue(session, now, lifetime);
         await db.SaveChangesAsync(cancellationToken);
         return (tokens, null);
     }
+
+    /// <summary>
+    /// Gerätesitzung, deren letzte Antwort verloren ging (Funkloch, App im Hintergrund beendet) oder zwei Anfragen
+    /// desselben Geräts gleichzeitig: Der vorgelegte Token ist schon eingelöst, sein Nachfolger aber noch von niemandem
+    /// verwendet. Mit gültiger Signatur des Geräteschlüssels (Secure Enclave, nicht kopierbar) ist das kein Diebstahl –
+    /// der unbenutzte Nachfolger wird verworfen und neu ausgestellt, statt die Sitzung zu beenden.
+    /// Wurde der Nachfolger dagegen schon eingelöst, gilt weiter die Wiederverwendungserkennung.
+    /// </summary>
+    private async Task<bool> TryRecoverAsync(Session session, RefreshToken stored, string refreshToken, byte[]? deviceSignature,
+        DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        if (session.DeviceId is not { } deviceId || deviceSignature is null || stored.ExpiresAt <= now)
+        {
+            return false;
+        }
+
+        var newer = await db.Set<RefreshToken>()
+            .Where(token => token.SessionId == session.Id && token.CreatedAt >= stored.CreatedAt && token.Id != stored.Id)
+            .ToListAsync(cancellationToken);
+        if (newer.Count == 0 || newer.Any(token => token.UsedAt is not null))
+        {
+            return false;
+        }
+
+        var device = await db.Set<Device>().SingleAsync(d => d.Id == deviceId, cancellationToken);
+        if (!device.VerifyRefreshProof(refreshToken, deviceSignature))
+        {
+            return false;
+        }
+
+        foreach (var token in newer)
+        {
+            token.MarkUsed(now);
+        }
+
+        audit.Record(AuditActions.RefreshTokenRecovered, session.UserId, "session", session.Id.ToString());
+        return true;
+    }
+
+    /// <summary>Warum eine Sitzung nicht mehr gilt – damit die App den Grund nennen kann.</summary>
+    private static RefreshFailure EndedFailure(Session session) => session.RevokeReason switch
+    {
+        null => RefreshFailure.Expired,
+        "password_changed" or "password_reset" => RefreshFailure.PasswordChanged,
+        "user_disabled" => RefreshFailure.UserDisabled,
+        "device_retired" => RefreshFailure.DeviceRevoked,
+        "refresh_token_reused" => RefreshFailure.Reused,
+        _ => RefreshFailure.Revoked,
+    };
 
     public async Task RevokeAsync(Guid sessionId, string reason, Guid? actorUserId, CancellationToken cancellationToken)
     {

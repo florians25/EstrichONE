@@ -159,6 +159,8 @@ struct RootView: View {
         case "start": OnboardingView()
         case "start-adresse": OnboardingView(initialPath: [.address(nil)])
         case "anmelden": SignInView(prefilledUserName: "m.huber")
+        case "sitzung-beendet": SignInView(prefilledUserName: "m.huber")
+        case "gesperrt": AppLockView(preview: true)
         case "warten": WaitingForApprovalView()
         case "zuruecksetzen": ResettingView()
         default: screen
