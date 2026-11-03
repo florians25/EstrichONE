@@ -512,8 +512,14 @@ struct LiveServerTests {
         try await client.acknowledgeChatPrivacy(version: status.privacyNoticeVersion)
         #expect(try await client.chatStatus().privacyAccepted)
 
-        let group = try await client.createChatGroup(ChatGroupChange(title: "CI Chat \(UUID().uuidString.prefix(4))", description: "Integrationstest",
-                                                                     announcementOnly: false))
+        // Zweite Person (Büro, mit Chat-Recht) – eine Gruppe braucht mindestens eine weitere Person.
+        let suffix = UUID().uuidString.prefix(6).lowercased()
+        let userBody = try JSONSerialization.data(withJSONObject: [
+            "displayName": "Chat Kollege \(suffix)", "userName": "chat.\(suffix)", "roleIds": ["01a00000-0000-7000-8000-000000000002"],
+        ])
+        let colleague: LiveCreatedUser = try await client.send(APIRequest(method: "POST", path: "users", body: userBody, contentType: "application/json"))
+        let group = try await client.createChatGroup(ChatGroupChange(title: "CI Chat \(suffix)", description: "Integrationstest",
+                                                                     memberIds: [colleague.user.id], announcementOnly: false))
         #expect(group.chatKind == .group && group.canWrite)
         let detail = try await client.chatConversation(group.id)
         #expect(detail.canManage && detail.description == "Integrationstest" && detail.isAdmin(device.userId))
@@ -565,4 +571,12 @@ struct LiveServerTests {
         let request = try await client.streamRequest("chat/events")
         #expect(request.value(forHTTPHeaderField: "Accept") == "text/event-stream")
     }
+}
+
+private struct LiveCreatedUser: Decodable, Sendable {
+    struct User: Decodable, Sendable {
+        let id: UUID
+    }
+
+    let user: User
 }
