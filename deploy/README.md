@@ -191,6 +191,19 @@ Das Skript zeigt „Installiert → Neu“, **sichert vorher** (Backup-Dienst; b
 Dienste gesund sind, prüft die laufende Version und meldet klar Erfolg oder Fehler. Installationen vor 0.1.0 haben
 das Skript noch nicht: einmal den Installer-Befehl von oben mit der neuen Version ausführen, danach ist es da.
 
+**Sicherheitsupdates automatisch** (empfohlen, docs/sicherheit.md → „Sicherheitsupdates“):
+
+```bash
+sudo /opt/estrichone/update.sh --automatik sicherheit            # nur Sicherheitsupdates, nachts 02:00-05:00
+sudo /opt/estrichone/update.sh --automatik patch 01:00-04:00     # alle Fehlerbehebungen derselben Versionslinie
+sudo /opt/estrichone/update.sh --pruefen                         # nur nachsehen
+```
+
+Stündliche Prüfung per systemd-Timer (bzw. `/etc/cron.d`), Einspielen nur im Zeitfenster, Sicherung vorher. Neue
+Versionslinien (z. B. 0.1 → 0.2) werden nie automatisch eingespielt. Administratoren sehen im Web den Hinweis
+„Sicherheitsupdate verfügbar“. Für den Betrieb im Internet: Checkliste „Öffentlich betreiben“ in docs/sicherheit.md
+(Firewall, nur 443, Nginx-Proxy-Manager-Einstellungen, `ESTRICHONE_BIND`).
+
 Aus dem Quellcode:
 
 ```bash

@@ -31,6 +31,7 @@ import { setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
 import { navKeyFor, navigation, routes, type NavEntry } from "../util/routes";
 import { notices } from "../util/notices";
+import { updateHints } from "../util/updateHints";
 import { chatStatus } from "../util/chat";
 import { session } from "../util/session";
 import { logos } from "../util/theme";
@@ -84,6 +85,7 @@ export default class AppController extends BaseController {
 			this.model().setProperty("/loginLogo", logos(Theming.getTheme()).horizontal);
 		});
 		this.v().setModel(notices.model, "notices");
+		this.v().setModel(updateHints.model, "updates");
 		notices.start();
 		session.model.attachPropertyChange(() => this.refreshShell());
 		onSessionEnded(async (reason) => {
@@ -159,6 +161,7 @@ export default class AppController extends BaseController {
 
 	private refreshShell(): void {
 		notices.sessionChanged();
+		updateHints.sessionChanged();
 		if (this.logoUser !== (session.data.user?.id ?? "")) {
 			this.logoUser = session.data.user?.id ?? "";
 			void this.loadAppearance();
@@ -517,6 +520,11 @@ export default class AppController extends BaseController {
 		popover.addStyleClass("eoNotificationPopover");
 		this.v().addDependent(popover);
 		popover.openBy(event.getParameter("button") as Control);
+	}
+
+	/** Hinweis „Sicherheitsupdate verfügbar“ ausblenden (Sicherheitsupdates nur für diese Sitzung). */
+	onUpdateHintClose(): void {
+		updateHints.dismiss();
 	}
 
 	onNoticeClose(event: UI5Event): void {

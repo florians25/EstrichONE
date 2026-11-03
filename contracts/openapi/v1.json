@@ -787,6 +787,44 @@
         ]
       }
     },
+    "/api/v1/system/updates": {
+      "get": {
+        "tags": [
+          "Backup Center"
+        ],
+        "summary": "Stand der Aktualisierung: verfügbare (Sicherheits-)Updates derselben Versionslinie und automatische Updates des Servers",
+        "operationId": "GetUpdateStatus",
+        "parameters": [
+          {
+            "name": "refresh",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UpdateStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/system/health-banner": {
       "get": {
         "tags": [
@@ -19023,6 +19061,65 @@
           "both"
         ]
       },
+      "AutoUpdateStatus": {
+        "required": [
+          "mode",
+          "window",
+          "checkedAt",
+          "lastAt",
+          "lastFrom",
+          "lastTo",
+          "result",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "mode": {
+            "type": "string"
+          },
+          "window": {
+            "type": "string"
+          },
+          "checkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastFrom": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastTo": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "result": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "BacklogItem": {
         "required": [
           "bauakteId",
@@ -33837,6 +33934,91 @@
           }
         }
       },
+      "UpdateStatusResponse": {
+        "required": [
+          "installed",
+          "available",
+          "securityUpdate",
+          "latest",
+          "releaseName",
+          "releaseUrl",
+          "publishedAt",
+          "checkedAt",
+          "source",
+          "error",
+          "command",
+          "auto"
+        ],
+        "type": "object",
+        "properties": {
+          "installed": {
+            "type": "string"
+          },
+          "available": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "securityUpdate": {
+            "type": "boolean"
+          },
+          "latest": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "publishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "checkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "source": {
+            "type": "string"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "command": {
+            "type": "string"
+          },
+          "auto": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AutoUpdateStatus"
+              }
+            ]
+          }
+        }
+      },
       "UpdateTicketRequest": {
         "required": [
           "status",
@@ -34541,6 +34723,9 @@
       "name": "Material"
     },
     {
+      "name": "Backup Center"
+    },
+    {
       "name": "Überwachung"
     },
     {
@@ -34602,9 +34787,6 @@
     },
     {
       "name": "Chat"
-    },
-    {
-      "name": "Backup Center"
     },
     {
       "name": "Backup-Spiegel"

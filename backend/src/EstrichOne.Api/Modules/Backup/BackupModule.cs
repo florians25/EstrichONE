@@ -31,11 +31,14 @@ public sealed class BackupModule : IModule
             services.AddHostedService<PeerUpdateWorker>();
         }
         services.AddHealthChecks().AddCheck<BackupHealthCheck>("backup", tags: ["ready"]);
+        // Hinweis „Sicherheitsupdate verfügbar“ (Release-Feed, Stand von update.sh) – UpdateCheck.cs
+        UpdateCheckEndpoints.AddServices(services, configuration);
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)
     {
         var backup = api.MapGroup("/backup").WithTags("Backup Center");
+        UpdateCheckEndpoints.Map(api);
 
         backup.MapGet("/status", (BackupStatusReader reader) => TypedResults.Ok(reader.Read()))
             .WithName("GetBackupStatus").RequirePermission(Permissions.BackupManage);

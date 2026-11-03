@@ -56,6 +56,10 @@
 					</VBox>
 					<MessageStrip text="{notices>/adminHint}" type="Error" showIcon="true" visible="{= !!${notices>/adminHint} }"
 						customIcon="sap-icon://wrench" class="eoNotice eoAdminMaintenance"/>
+					<MessageStrip id="updateHint" text="{updates>/text}" type="{updates>/type}" showIcon="true" customIcon="sap-icon://locked"
+						visible="{updates>/visible}" showCloseButton="true" close=".onUpdateHintClose" class="eoNotice eoUpdateHint">
+						<link><Link text="Versionshinweise" href="{updates>/url}" target="_blank" visible="{= !!${updates>/url} }"/></link>
+					</MessageStrip>
 					<VBox items="{notices>/banners}" class="eoNoticeBar" visible="{= ${notices>/banners}.length > 0 }">
 						<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" showCloseButton="true" close=".onNoticeClose"
 							class="eoNotice"/>
