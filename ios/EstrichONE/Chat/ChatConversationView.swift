@@ -161,8 +161,11 @@ struct ChatConversationView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .principal) {
-                Button { showsInfo = true } label: { header }
-                    .buttonStyle(.plain)
+                header
+                    .contentShape(Rectangle())
+                    .onTapGesture { showsInfo = true }
+                    .accessibilityElement(children: .combine)
+                    .accessibilityAddTraits(.isButton)
                     .accessibilityIdentifier("chatInfoButton")
                     .accessibilityHint("Info zur Unterhaltung")
             }
