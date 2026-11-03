@@ -11,86 +11,187 @@ Internet ──80/443──▶ Caddy (estrichone-hosting-proxy) ──┬─ kon
                                                         └─ firma-b.example.de  ▶ estrichone-firma-b-caddy-1:8181 (Netz estrichone-firma-b-edge)
 ```
 
-## Funktionen
+## Installation – ein Befehl
 
-- **Mandanten**: anlegen (Firma, Kunden-Nr., Ansprechpartner, E-Mail, Telefon, Kürzel, Subdomain oder eigene Domain,
-  Tarif, Version), bearbeiten (Domain-/Tarifwechsel wird sofort angewendet), Notizen.
-- **Lebenszyklus**: bereitstellen, starten, stoppen, neu starten, auf Version X aktualisieren (einzeln oder alle, mit
-  Vorab-Sicherung), sperren (Wartungsseite, z. B. bei Zahlungsverzug; optional zusätzlich anhalten), entsperren,
-  jetzt sichern, löschen (doppelte Bestätigung, optional Endsicherung mit Schlüssel ins Archiv). Jeder Vorgang läuft
-  im Hintergrund mit Live-Protokoll.
-- **Betrieb**: Container-Zustand und Health je Dienst, `/health/ready`, laufende Version, Ersteinrichtung ausstehend
-  mit **Einrichtungscode** zum Weitergeben, CPU/RAM (docker stats), Speicherplatz, aktive Benutzer gegen Tariflimit,
-  Sicherungsstatus (restic: letzte Sicherung, Prüfung, Wiederherstellungstest), Protokolle (Dienst, Zeilen, Text- und
-  Stufenfilter, Live, Download), Sicherungsschlüssel anzeigen (mit Passwortabfrage, protokolliert).
-- **Hinweise und Wartung**: Ankündigungen (Titel, Text, Schweregrad, Zeitraum) und Wartungsfenster (Start/Ende,
-  Administratoren dürfen weiterarbeiten) an einzelne, ausgewählte oder alle Instanzen. Die Suite zeigt sie als Banner
-  bzw. Wartungsseite (Suite-Modul „Systemhinweise“, `GET /api/v1/system/notices`). Die Konsole gleicht jede Minute ab.
-- **Übersicht**: Kennzahlen (Mandanten aktiv/gesperrt/Fehler, veraltete Versionen, Speicher, Benutzer, veraltete
-  Sicherungen), Handlungsbedarf, Serverzustand, Versionen im Einsatz, letzte Ereignisse; Liste mit Suche und Filtern.
+```bash
+curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/hosting/install.sh | sudo bash
+```
+
+Der Assistent fragt mit sinnvollen Vorschlägen ab (Enter übernimmt den Vorschlag):
+
+| Frage | Vorschlag | Bedeutung |
+|---|---|---|
+| Datenverzeichnis | `/srv/estrichone-hosting` | Instanzen, Sicherungen, Konsole (gleicher Pfad im Container) |
+| Basis-Domain | Domain des Servers | Instanzen erhalten `<kürzel>.<basis-domain>` (Wildcard-DNS) |
+| Adresse der Konsole | `konsole.<basis-domain>` | |
+| Betriebsart | `direkt` | **direkt** = eigenes HTTPS auf 80/443 (mitgelieferter Caddy, Let's Encrypt) · **proxy** = hinter vorhandenem Proxy (z. B. Nginx Proxy Manager) – wie beim Suite-Installer |
+| Zertifikate | `acme` | Let's Encrypt; `internal` = eigene CA (Test), `off` = nur HTTP |
+| E-Mail | – | für Let's Encrypt und als Empfänger der Benachrichtigungen |
+| Administrator | `admin` | erstes Konto; das **Startpasswort** erzeugt der Installer |
+
+Fehlt Docker, bietet der Installer die Installation über get.docker.com an. Am Ende steht alles Nötige auf einen Blick:
+
+```
+  ───────────────────────────────────────────────────────────────────────────────
+  EstrichONE Hosting-Konsole läuft (ghcr.io/florians25/estrichone-hosting:latest)
+  ───────────────────────────────────────────────────────────────────────────────
+  Adresse:      https://konsole.estrichone-hosting.de
+  Notzugang:    http://127.0.0.1:8099  (nur auf dem Server bzw. per SSH-Tunnel …)
+  Benutzer:     admin
+  Startpasswort: k7Qm-Xa2p-RtZ9-wH4n
+  Daten:        /srv/estrichone-hosting  (.env nur für root lesbar …)
+  ───────────────────────────────────────────────────────────────────────────────
+  Nächste Schritte:
+   1. DNS: A/AAAA für konsole.… und Wildcard *.… auf diesen Server.
+   2. Ports 80 und 443 (TCP, 443 auch UDP) in der Firewall freigeben …
+   3. Konsole öffnen, anmelden, Einrichtungsassistent abschließen, erste Instanz anlegen.
+```
+
+**Ohne Rückfragen** (Automatisierung, CI): alle Antworten als Umgebungsvariablen, z. B.
+`curl -fsSL …/install.sh | sudo HOSTING_BASE_DOMAIN=estrichone-hosting.de HOSTING_ACME_EMAIL=admin@firma.de bash`.
+Weitere: `HOSTING_MODE`, `HOSTING_CONSOLE_DOMAIN`, `HOSTING_ROOT`, `HOSTING_ADMIN_USER`, `HOSTING_ADMIN_EMAIL`,
+`HOSTING_ADMIN_PASSWORD`, `HOSTING_TLS`, `HOSTING_HTTP_PORT`, `HOSTING_HTTPS_PORT`, `HOSTING_VERSION`,
+`HOSTING_ALLOWED_NETWORKS`, `HOSTING_INSTALL_DOCKER=1` (siehe Kopf von `install.sh` und `deploy/env.example`).
+
+Gleichwertig ohne Skript direkt mit Docker:
+
+```bash
+sudo docker run --rm -it -v /var/run/docker.sock:/var/run/docker.sock \
+  -v /srv/estrichone-hosting:/srv/estrichone-hosting ghcr.io/florians25/estrichone-hosting:latest install
+```
+
+### Verwalten, aktualisieren, reparieren, entfernen
+
+Der Installer richtet den Befehl `estrichone-hosting` auf dem Server ein:
+
+| Befehl | Wirkung |
+|---|---|
+| `sudo estrichone-hosting` | erneut ausführen = **Reparatur**: Compose-Datei, Verzeichnisse, Rechte, Container; `.env`, Konten und Instanzen bleiben |
+| `sudo estrichone-hosting update [VERSION]` | Konsole auf `latest` bzw. VERSION aktualisieren (auch per Knopf: Einstellungen → System → „Konsole aktualisieren“) |
+| `sudo estrichone-hosting status` | Container, Health und Zahl der Instanzen |
+| `sudo estrichone-hosting logs` | Protokoll der Konsole live |
+| `sudo estrichone-hosting reset-admin [BENUTZER]` | Notfall: neues Startpasswort, Zwei-Faktor aus, alle Sitzungen beendet |
+| `sudo estrichone-hosting uninstall` | Konsole und Proxy entfernen; Instanzen und Daten bleiben (erneut installieren stellt alles wieder her) |
+| `sudo estrichone-hosting uninstall --purge` | zusätzlich **alle Instanzen, Datenbanken und Sicherungen** löschen (Bestätigung „LÖSCHEN“) |
+
+## Erste Anmeldung: Einrichtungsassistent
+
+![Einrichtungsassistent](docs/bilder/01-einrichtung-passwort.png)
+
+Nach der ersten Anmeldung mit dem Startpasswort führt die Konsole durch:
+
+1. **Passwort** – eigenes Passwort (Pflicht bei Konten aus dem Installer, mindestens 12 Zeichen).
+2. **Zwei-Faktor** (optional, empfohlen) – QR-Code für Authenticator-Apps.
+3. **Standardversion** der Suite für neue Instanzen (Liste aus der Registry).
+4. **Sicherung** – optional ein zweites Sicherungsziel außerhalb des Servers (restic: `sftp:…`, `rest:https://…`, `s3:…`,
+   `b2:…`, `azure:…`, `gs:…`, `rclone:…`); je Instanz entsteht dort ein Unterordner, eingetragen als `BACKUP_REPOSITORY_2`.
+5. **Benachrichtigungen** – E-Mail (SMTP mit STARTTLS) und/oder Webhook (JSON mit `text`, passend für Slack/Mattermost/Teams),
+   mit Testnachricht.
+
+Alles bleibt unter **Einstellungen** änderbar (System, Benachrichtigungen; Assistent erneut öffnen).
+
+## Mandant anlegen (Assistent)
+
+![Mandanten-Assistent](docs/bilder/02-mandant-assistent-admin.png)
+
+**Mandanten → Mandant anlegen** (auch auf der Übersicht) führt in fünf Schritten durch:
+
+1. **Firma** – Name, Kundennummer, Ansprechpartner, E-Mail, Telefon, Notiz.
+2. **Adresse** – Kürzel (aus dem Firmennamen vorgeschlagen) und Subdomain `<kürzel>.<basis>` oder eigene Kunden-Domain
+   (Hinweis auf den nötigen CNAME).
+3. **Ressourcen** – Tarif mit Benutzer-, Speicher-, RAM- und CPU-Grenze; Version.
+4. **Erste Admin-Person** – Name, Benutzername (aus dem Namen vorgeschlagen), E-Mail.
+5. **Prüfen und anlegen**.
+
+Die Konsole legt Verzeichnis, `.env` mit Zufallspasswörtern, Netze und Proxy-Eintrag an, lädt die Images, startet die
+Instanz und richtet EstrichONE über dessen Ersteinrichtungs-API ein (Firma + erste Admin-Person mit Startpasswort).
+Auf der Detailseite liegt danach der **Zugangsbrief** (Adresse, Benutzername, Startpasswort – Öffnen nur nach erneuter
+Passwortabfrage, druckbar, kopierbar); nach der Übergabe „Verwerfen“. Ohne Admin-Person zeigt die Detailseite wie bisher
+den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
+
+![Zugangsbrief](docs/bilder/07-zugangsbrief.png)
+
+## Übersicht und Mandantenliste
+
+![Übersicht](docs/bilder/03-uebersicht.png)
+
+- **Übersicht**: Kennzahlen, **Zustand aller Instanzen** (online, Version, letzte Sicherung, Speicher, Zertifikat und
+  Domain, Hinweise; Probleme zuerst; Suche und Filter „Mit Hinweis“), Handlungsbedarf, Server, Versionen, Ereignisse.
+- **Mandanten**: Suche (Firma, Kürzel, Domain, Kd.-Nr.), Filter (Zustand, Fehler, veraltet, Sicherung, Zertifikat),
+  Spalten bis Zertifikat; **Massenaktionen** für ausgewählte Instanzen (neu starten, jetzt sichern, starten, stoppen) und
+  **Alle aktualisieren** (mit Vorab-Sicherung).
+- **Glocke** in der Kopfzeile: offene **Benachrichtigungen** (gestörte Instanz, Sicherung nicht aktuell,
+  Speicherkontingent, Zertifikat läuft ab/fehlt, Vorgang fehlgeschlagen, Docker nicht erreichbar, Speicherplatz knapp).
+  Ein Befund muss zwei Prüfungen (je 1 Minute) bestehen; Zustellung per E-Mail/Webhook beim Auftreten und beim Beheben.
+
+![Massenaktionen](docs/bilder/05-mandanten-massenaktion.png)
+
+## Instanz im Betrieb (Detailseite)
+
+![Detailseite](docs/bilder/04-mandant-detail.png)
+
+| Bereich | Funktionen |
+|---|---|
+| Kopf | Starten, Stoppen, Neu starten, **Aktualisieren** (Version wählen, Vorab-Sicherung), **Zurücknehmen**, Sperren/Entsperren, **Ankündigung** und **Wartung planen** nur für diese Instanz, Bearbeiten, Löschen |
+| Übersicht | Zugangsbrief, Einrichtungscode bzw. „Erste Admin-Person jetzt anlegen“, Stammdaten |
+| Betrieb | Container mit Health, CPU, RAM; `/health/ready`, Serverversion; **Domain und Zertifikat** (DNS-Auflösung, Aussteller, gültig bis – echter TLS-Handshake am Proxy, stündlich, bei Problemen alle 5 Minuten) |
+| Ressourcen | Speicher gegen Kontingent, aktive Benutzer gegen Tarif, CPU/RAM |
+| Sicherung | letzter Lauf, Prüfung, Wiederherstellungstest, Archivserver, Backup-Ziele; **Wiederherstellungspunkte** mit „Wiederherstellen …“; Jetzt sichern; Sicherungsschlüssel; **Export herunterladen** |
+| Protokolle, Vorgänge, Technik, Ereignisse | Logs je Dienst mit Filter/Live/Download, Vorgangsprotokolle, Compose-Projekt und Proxy-Ziel, Audit |
+
+![Sicherung und Wiederherstellung](docs/bilder/06-mandant-sicherung.png)
+
+**Aktualisieren mit Rücknahme:** Vor dem Wechsel sichert die Konsole die Instanz und merkt sich diesen Snapshot. Startet
+die neue Version nicht (`docker compose up --wait` scheitert), nimmt die Konsole die Aktualisierung **automatisch**
+zurück: alte Version, Datenbank und Dateien aus der Vorab-Sicherung, Start – der Vorgang ist „fehlgeschlagen“, die
+Instanz läuft wieder. Nach einer erfolgreichen Aktualisierung bleibt **Zurücknehmen** verfügbar (gleicher Ablauf per
+Knopf), bis zur nächsten Aktualisierung.
+
+**Wiederherstellen:** beliebigen Wiederherstellungspunkt wählen; die Konsole sichert vorher den aktuellen Stand, hält
+API, Web und Sicherung an, spielt mit dem Dienst `restore` der Suite Datenbank (Tausch über eine neue Datenbank) und
+Dateien zurück und startet die Instanz.
+
+**Export und Archiv:** „Export herunterladen“ liefert nach Passwortabfrage ein tar.gz mit Sicherungs-Repository,
+Schlüsseldatei (`instanz.env`) und Compose-Dateien (Einmal-Link, 10 Minuten gültig). Löschen mit **Endsicherung** legt
+dasselbe im **Archiv** ab (Seite „Archiv“: herunterladen, endgültig löschen mit Namensbestätigung). Wiederherstellen auf
+einem beliebigen Server mit dem Suite-Installer (Modus „restore“).
+
+## Weitere Funktionen
+
+- **Hinweise und Wartung**: Ankündigungen (Titel, Text, Schweregrad, Zeitraum) und Wartungsfenster (Administratoren
+  dürfen weiterarbeiten) an einzelne, ausgewählte oder alle Instanzen; die Suite zeigt sie als Banner bzw. Wartungsseite.
 - **Tarife**: Benutzer- und Speicherlimit (überwacht), RAM- und CPU-Grenze für die API (durchgesetzt), Preis.
-- **Ereignisprotokoll** aller Konsolenaktionen mit Suche, Zeitraum, Ergebnisfilter und CSV-Export.
-- **Sicherheit**: eigene Administratoren (Passwort-Hash PBKDF2, Sitzungscookie `__Host-` Secure/HttpOnly/SameSite=Strict,
-  CSRF-Token, Origin-Prüfung, Login-Rate-Limit je Adresse, Kontosperre nach 5 Fehlversuchen, TOTP-2FA mit QR-Code),
-  Ersteinrichtung per Einmal-Code im Protokoll, strikte CSP (nur eigene Skripte), Docker-Socket nur im Konsolen-Container.
-- **Oberfläche**: OpenUI5 (TypeScript, self-hosted), alle Themes der Version (Horizon, Horizon Dark, Fiori 3 + Dark,
-  Belize + Deep, alle High-Contrast-Varianten) mit „Systemeinstellung folgen“, Live-Umschaltung und Speicherung je
-  Benutzer; ausschließlich das EstrichONE-Logo (je Theme die passende Variante aus `branding/`).
-- **Selbst-Update** der Konsole über Einstellungen → System.
+- **Ereignisprotokoll** aller Aktionen (Konsole und Installer) mit Suche, Zeitraum, Ergebnisfilter, CSV-Export.
+- **Sicherheit**: eigene Administratoren (PBKDF2, `__Host-`-Cookie, CSRF, Rate-Limit, Kontosperre, TOTP), Passwortabfrage
+  vor Zugangsbrief/Export/Schlüssel, strikte CSP, optionale IP-Allowlist (siehe unten).
+- **Oberfläche**: OpenUI5 (self-hosted), alle Themes mit „Systemeinstellung folgen“, nur das EstrichONE-Logo.
 
 ## Voraussetzungen
 
-- Linux-Server mit Docker Engine ≥ 24 und Compose-Plugin; je Instanz grob 1 GB RAM und 0,5 vCPU zusätzlich.
-- Ports **80 und 443** frei (mitgelieferter Caddy) – oder ein vorhandener Reverse Proxy (siehe unten).
+- Linux-Server mit Docker Engine ≥ 24 und Compose-Plugin (sonst installiert der Installer Docker); je Instanz grob 1 GB
+  RAM und 0,5 vCPU zusätzlich.
+- Betriebsart **direkt**: Ports **80 und 443** frei. Betriebsart **proxy**: vorhandener Reverse Proxy (siehe unten).
 - **DNS**: A/AAAA-Eintrag für die Konsolen-Domain und ein **Wildcard-Eintrag** `*.<basis-domain>` auf den Server.
   Eigene Kunden-Domains per CNAME auf `<kürzel>.<basis-domain>`. Zertifikate holt Caddy automatisch (Let's Encrypt).
 - Viele Instanzen: jede braucht drei Docker-Netze. Für mehr als ~80 Instanzen in `/etc/docker/daemon.json` z. B.
   `"default-address-pools":[{"base":"10.200.0.0/14","size":24}]` setzen und Docker neu starten.
 
-## Installation (ein Befehl)
-
-```bash
-sudo docker run --rm -it \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v /srv/estrichone-hosting:/srv/estrichone-hosting \
-  ghcr.io/florians25/estrichone-hosting:latest install
-```
-
-Der Installer fragt Basis-Domain, Konsolen-Domain, Proxy-Art, Zertifikate und E-Mail für Let's Encrypt ab, legt
-`/srv/estrichone-hosting/.env` (nur root lesbar) und `compose.yml` an, startet Konsole und Proxy und zeigt den
-**Einrichtungscode** für den ersten Administrator. Ohne Rückfragen:
-`-e HOSTING_BASE_DOMAIN=estrichone-hosting.de -e HOSTING_ACME_EMAIL=admin@firma.de` (weitere Variablen siehe
-`deploy/env.example`). Den Code zeigt jederzeit `docker logs estrichone-hosting-console` (nur solange kein Administrator existiert).
-
-**Konsole aktualisieren:** in der Konsole unter Einstellungen → System → „Konsole aktualisieren“ oder denselben
-Befehl mit neuem Image-Tag erneut ausführen. `.env`, Datenbank und alle Mandanten bleiben erhalten.
-
 | Pfad | Inhalt |
 |---|---|
-| `/srv/estrichone-hosting/instances/<kürzel>/` | Compose-Dateien, `.env` (Passwörter, Sicherungsschlüssel), `data/`, `backup-repository/` |
+| `/srv/estrichone-hosting/instances/<kürzel>/` | Compose-Dateien, `.env` (Passwörter, Sicherungsschlüssel), `zugang.json` (bis zum Verwerfen), `data/`, `backup-repository/` |
 | `/srv/estrichone-hosting/proxy/` | von der Konsole erzeugtes Caddyfile und Wartungsseite |
 | `/srv/estrichone-hosting/console/` | Datenbank der Konsole (SQLite), Sitzungsschlüssel – nur root |
 | `/srv/estrichone-hosting/archive/` | Endsicherungen gelöschter Mandanten (restic-Repository + `instanz.env`) |
+| `/etc/estrichone-hosting.conf`, `/usr/local/bin/estrichone-hosting` | Datenverzeichnis und Verwaltungsbefehl (vom Installer) |
 
 | Port | Zweck |
 |---|---|
 | 80 / 443 (TCP, 443 auch UDP) | gemeinsamer Caddy: Konsole und alle Instanzen, HTTPS |
 | 127.0.0.1:8099 | Notzugang zur Konsole direkt auf dem Server (SSH-Tunnel) |
 
-## Ablauf: Mandant anlegen
-
-1. Konsole öffnen → **Mandanten** → **Mandant anlegen**.
-2. Firmenname eingeben – Kürzel und Subdomain werden vorgeschlagen (`estrichbau-muster` → `estrichbau-muster.<basis>`);
-   bei eigener Domain diese eintragen und beim Kunden einen CNAME setzen lassen.
-3. Tarif und Version wählen, **Anlegen**. Die Konsole legt Verzeichnis, `.env` mit Zufallspasswörtern, Netze und
-   Proxy-Eintrag an, lädt die Images und startet die Instanz (Live-Protokoll unter „Laufender Vorgang“).
-4. Sobald „Aktiv“: Im Abschnitt **Ersteinrichtung** steht der Einrichtungscode. Dem Kunden Adresse + Code geben;
-   er legt in EstrichONE über „Jetzt einrichten“ Firma und ersten Administrator an.
-5. Betrieb: Übersicht und Liste zeigen Zustand, Sicherungen und Limits; Aktionen auf der Detailseite.
-
 ## Anbindung an einen vorhandenen Proxy (Nginx Proxy Manager)
 
-Installer mit `HOSTING_PROXY=extern` und `HOSTING_PROXY_CONTAINER=<name des NPM-Containers>` ausführen. Der Caddy der
+Installer mit Betriebsart `proxy` (`HOSTING_MODE=proxy`) und `HOSTING_PROXY_CONTAINER=<name des NPM-Containers>` ausführen. Der Caddy der
 Konsole wird dann nicht gestartet; die Konsole verbindet den NPM-Container mit jedem Instanznetz. Je Mandant in NPM
 einen Proxy Host anlegen: Domain → `http://estrichone-<kürzel>-caddy-1:8181` (Detailseite → Technik → Proxy-Ziel),
 SSL mit Let's Encrypt und **Force SSL**, unter Advanced `client_max_body_size 600m;`. Für die Konsole:
@@ -119,7 +220,7 @@ dotnet test --solution EstrichOne.Hosting.slnx          # Unit- und Integrations
 cd ui && npm ci && npm run build                          # Oberfläche → ui/dist (in wwwroot kopieren)
 Hosting__Docker=fake Hosting__Root=/tmp/hosting dotnet run --project ../src/EstrichOne.Hosting   # Simulation
 npx playwright test                                       # E2E gegen http://localhost:5090
-IMAGE=estrichone/hosting:ci hosting/scripts/integration.sh  # echter Test mit Docker und Suite-Images
+IMAGE=estrichone/hosting:ci hosting/scripts/integration.sh  # echter Test: Ein-Befehl-Installation, Assistent, Update/Rücknahme, Restore, Deinstallation
 ```
 
 ## Archivserver und Backup-Ziele je Mandant
