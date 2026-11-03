@@ -39,6 +39,17 @@ jobs:
             title="EstrichONE ${TAG#v}"; [[ -n "$pre" ]] && title="EstrichONE ${TAG#v} (Vorabversion)"
             gh release create "$TAG" --title "$title" --notes-file "$notes" $pre --target "$GITHUB_SHA" --repo "$GITHUB_REPOSITORY"
           fi
+      - name: Benutzerhandbuch (Web) anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          pdf="docs/handbuch/EstrichONE-Handbuch-Web.pdf"
+          if [[ -f "$pdf" ]]; then
+            cp "$pdf" "$RUNNER_TEMP/EstrichONE-Handbuch-Web-$TAG.pdf"
+            gh release upload "$TAG" "$RUNNER_TEMP/EstrichONE-Handbuch-Web-$TAG.pdf" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            echo "Kein Handbuch unter $pdf – übersprungen."
+          fi
 
   windows:
     needs: create
