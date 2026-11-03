@@ -18,6 +18,7 @@ struct ChatConversationView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.shotScene) private var shotScene
     @Environment(\.openURL) private var openURL
+    @Environment(\.colorScheme) private var colorScheme
     @State private var messages: [ChatMessage] = []
     @State private var hasMore = false
     @State private var loadingOlder = false
@@ -162,6 +163,7 @@ struct ChatConversationView: View {
         .toolbar {
             ToolbarItem(placement: .principal) {
                 header
+                    .environment(\.colorScheme, colorScheme)
                     .contentShape(Rectangle())
                     .onTapGesture { showsInfo = true }
                     .accessibilityElement(children: .combine)
@@ -272,13 +274,15 @@ struct ChatConversationView: View {
         HStack(spacing: Space.s) {
             ChatAvatar(title: detail?.title ?? title ?? "Chat", kind: effectiveKind, avatarFileId: detail?.avatarFileId, size: 30)
             VStack(alignment: .leading, spacing: 0) {
+                // Feste Farben: Inhalte in der Werkzeugleiste passen sich sonst dem Hintergrund unter dem Glas an.
                 Text(detail?.title ?? title ?? "Chat")
                     .font(Typo.subheadStrong)
-                    .foregroundStyle(Theme.textPrimary)
+                    .foregroundStyle(colorScheme == .dark ? Color.white : Color.black)
                     .lineLimit(1)
                 Text(subtitle)
                     .font(.caption2)
-                    .foregroundStyle(chat?.typingName(in: conversationId) != nil ? Theme.accent : Theme.textSecondary)
+                    .foregroundStyle(chat?.typingName(in: conversationId) != nil ? Theme.accent
+                                     : (colorScheme == .dark ? Color(hex: 0xAEB5C0) : Color(hex: 0x4A5361)))
                     .lineLimit(1)
             }
         }
