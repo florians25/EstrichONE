@@ -17,7 +17,9 @@
 }
 
 (app) {
-	encode zstd gzip
+	# Echtzeit des Chats (Server-Sent Events) nie komprimieren – sonst puffert die Kompression den Strom.
+	@compress not path /api/v1/chat/events
+	encode @compress zstd gzip
 
 	header {
 		Strict-Transport-Security "max-age=31536000; includeSubDomains"
@@ -28,6 +30,13 @@
 
 	request_body {
 		max_size 600MB
+	}
+
+	# Chat-Echtzeit: sofort weiterreichen (flush), lange offen lassen; Nginx Proxy Manager davor beachtet X-Accel-Buffering.
+	handle /api/v1/chat/events {
+		reverse_proxy api:8080 {
+			flush_interval -1
+		}
 	}
 
 	handle /api/* {
@@ -62,7 +71,7 @@
 		header {
 			# Strikte CSP (docs/reengineering/17): nur eigene Skripte; Inline-Styles erzeugt Ant Design selbst.
 			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
-			Permissions-Policy "camera=(), microphone=(), geolocation=()"
+			Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"
 			X-Frame-Options "DENY"
 		}
 		@immutable path *.js *.css *.woff2

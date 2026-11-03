@@ -1397,11 +1397,93 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("calls", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("content_type");
+
+                    b.Property<Guid>("ConversationId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("conversation_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("HasThumbnail")
+                        .HasColumnType("boolean")
+                        .HasColumnName("has_thumbnail");
+
+                    b.Property<int?>("Height")
+                        .HasColumnType("integer")
+                        .HasColumnName("height");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid?>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<string>("ProtectedName")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("protected_name");
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("StorageKey")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<Guid>("UploadedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("uploaded_by_user_id");
+
+                    b.Property<int?>("Width")
+                        .HasColumnType("integer")
+                        .HasColumnName("width");
+
+                    b.HasKey("Id")
+                        .HasName("pk_chat_attachments");
+
+                    b.HasIndex("MessageId")
+                        .HasDatabaseName("ix_chat_attachments_message_id");
+
+                    b.HasIndex("ConversationId", "CreatedAt")
+                        .HasDatabaseName("ix_chat_attachments_conversation_id_created_at");
+
+                    b.ToTable("chat_attachments", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatConversation", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.Property<bool>("AnnouncementOnly")
+                        .HasColumnType("boolean")
+                        .HasColumnName("announcement_only");
+
+                    b.Property<Guid?>("BauakteId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -1415,10 +1497,24 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("crew_id");
 
+                    b.Property<string>("Description")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("description");
+
                     b.Property<string>("DirectKey")
                         .HasMaxLength(70)
                         .HasColumnType("character varying(70)")
                         .HasColumnName("direct_key");
+
+                    b.Property<string>("ImageKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("image_key");
+
+                    b.Property<DateTimeOffset?>("ImageUpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("image_updated_at");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -1437,6 +1533,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id")
                         .HasName("pk_chat_conversations");
+
+                    b.HasIndex("BauakteId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_chat_conversations_bauakte_id")
+                        .HasFilter("bauakte_id IS NOT NULL");
 
                     b.HasIndex("CrewId")
                         .HasDatabaseName("ix_chat_conversations_crew_id");
@@ -1467,6 +1568,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("boolean")
                         .HasColumnName("from_crew");
 
+                    b.Property<bool>("IsAdmin")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_admin");
+
                     b.Property<DateTimeOffset>("JoinedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("joined_at");
@@ -1474,6 +1579,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<bool>("Muted")
                         .HasColumnType("boolean")
                         .HasColumnName("muted");
+
+                    b.Property<DateTimeOffset?>("MutedUntil")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("muted_until");
 
                     b.Property<DateTimeOffset?>("ReadUpTo")
                         .HasColumnType("timestamp with time zone")
@@ -1510,10 +1619,40 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("deleted_at");
 
+                    b.Property<DateTimeOffset?>("EditedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("edited_at");
+
+                    b.Property<bool>("Forwarded")
+                        .HasColumnType("boolean")
+                        .HasColumnName("forwarded");
+
+                    b.PrimitiveCollection<Guid[]>("MentionedUserIds")
+                        .IsRequired()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("mentioned_user_ids");
+
+                    b.Property<DateTimeOffset?>("PinnedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("pinned_at");
+
+                    b.Property<Guid?>("PinnedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("pinned_by_user_id");
+
+                    b.Property<string>("ProtectedLocation")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)")
+                        .HasColumnName("protected_location");
+
                     b.Property<string>("ProtectedText")
                         .HasMaxLength(20000)
                         .HasColumnType("character varying(20000)")
                         .HasColumnName("protected_text");
+
+                    b.Property<Guid?>("ReplyToMessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("reply_to_message_id");
 
                     b.Property<Guid>("SenderUserId")
                         .HasColumnType("uuid")
@@ -1524,6 +1663,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedAt")
                         .HasDatabaseName("ix_chat_messages_created_at");
+
+                    b.HasIndex("ReplyToMessageId")
+                        .HasDatabaseName("ix_chat_messages_reply_to_message_id");
 
                     b.HasIndex("SenderUserId")
                         .HasDatabaseName("ix_chat_messages_sender_user_id");
@@ -1539,15 +1681,52 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("chat_messages", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatReaction", b =>
+                {
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("message_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Emoji")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)")
+                        .HasColumnName("emoji");
+
+                    b.HasKey("MessageId", "UserId")
+                        .HasName("pk_chat_reactions");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_chat_reactions_user_id");
+
+                    b.ToTable("chat_reactions", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatSettingsRow", b =>
                 {
                     b.Property<int>("Id")
                         .HasColumnType("integer")
                         .HasColumnName("id");
 
+                    b.Property<bool>("AttachmentsEnabled")
+                        .HasColumnType("boolean")
+                        .HasColumnName("attachments_enabled");
+
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<int>("EditWindowMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("edit_window_minutes");
 
                     b.Property<bool>("Enabled")
                         .HasColumnType("boolean")
@@ -1586,6 +1765,38 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasName("pk_chat_settings");
 
                     b.ToTable("chat_settings", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatUserSettings", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateTimeOffset?>("BlockedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("blocked_at");
+
+                    b.Property<Guid?>("BlockedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("blocked_by_user_id");
+
+                    b.Property<DateTimeOffset?>("PrivacyAcceptedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("privacy_accepted_at");
+
+                    b.Property<bool>("ReadReceipts")
+                        .HasColumnType("boolean")
+                        .HasColumnName("read_receipts");
+
+                    b.Property<bool>("ShowPreview")
+                        .HasColumnType("boolean")
+                        .HasColumnName("show_preview");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_chat_user_settings");
+
+                    b.ToTable("chat_user_settings", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.Contact", b =>
@@ -5645,6 +5856,22 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_calls_user_handled_by_user_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatAttachment", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Chat.ChatConversation", null)
+                        .WithMany()
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_chat_attachments_chat_conversation_conversation_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Chat.ChatMessage", null)
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_chat_attachments_chat_message_message_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatMember", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Chat.ChatConversation", null)
@@ -5663,6 +5890,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_chat_messages_chat_conversations_conversation_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Chat.ChatReaction", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Chat.ChatMessage", null)
+                        .WithMany()
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_chat_reactions_chat_messages_message_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.ContactPerson", b =>

@@ -72,6 +72,14 @@ internal sealed partial class Notifier(EstrichOneDbContext db, ICurrentUser curr
                 return;
             }
 
+            // Fortlaufende Hinweise (Chat): im Postfach nur der neueste je Objekt; schon zugestellte Vorgänger entfallen.
+            if (notification.ReplacePrevious && notification.ObjectType is { } replaceType && notification.ObjectId is { } replaceId)
+            {
+                await db.Set<Notification>()
+                    .Where(n => active.Contains(n.UserId) && n.ObjectType == replaceType && n.ObjectId == replaceId && n.PushState != PushState.Pending)
+                    .ExecuteDeleteAsync(cancellationToken);
+            }
+
             // Eigener Kontext-Zustand: nur die neuen Einträge speichern, nichts vom Aufrufer mitnehmen.
             var now = clock.GetUtcNow();
             var rows = active.Select(id =>
@@ -185,8 +193,11 @@ internal sealed partial class NotificationDispatcher(IServiceScopeFactory scopes
         var now = clock.GetUtcNow();
         var users = pending.Select(n => n.UserId).Distinct().ToList();
         var devices = await db.Set<PushDevice>().Where(d => users.Contains(d.UserId)).ToListAsync(cancellationToken);
-        var unread = await db.Set<Notification>().AsNoTracking().Where(n => users.Contains(n.UserId) && n.ReadAt == null)
-            .GroupBy(n => n.UserId).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);
+        // Badge: ungelesene Hinweise, Chat zählt je Unterhaltung einmal (= ungelesene Chats).
+        var unreadRows = await db.Set<Notification>().AsNoTracking().Where(n => users.Contains(n.UserId) && n.ReadAt == null)
+            .Select(n => new { n.UserId, n.Id, n.Category, n.ObjectId }).ToListAsync(cancellationToken);
+        var unread = unreadRows.GroupBy(n => n.UserId).ToDictionary(g => g.Key,
+            g => g.Select(n => n.Category == NotificationCategory.Chat && n.ObjectId is { } chat ? "c" + chat.ToString("N") : n.Id.ToString("N")).Distinct().Count());
 
         foreach (var notification in pending)
         {
@@ -207,7 +218,7 @@ internal sealed partial class NotificationDispatcher(IServiceScopeFactory scopes
                 config.ShowContent ? notification.Title : "Neue Benachrichtigung",
                 config.ShowContent ? Short(notification.Body) : "In EstrichONE öffnen",
                 notification.Link, notification.Category.ToString().ToLowerInvariant(), notification.Urgency.ToString().ToLowerInvariant(),
-                unread.GetValueOrDefault(notification.UserId));
+                unread.GetValueOrDefault(notification.UserId), notification.ObjectType, notification.ObjectId);
             var delivered = 0;
             var notConfigured = 0;
             string? lastError = null;

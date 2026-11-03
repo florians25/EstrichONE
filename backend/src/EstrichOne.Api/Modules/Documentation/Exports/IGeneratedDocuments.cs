@@ -12,4 +12,11 @@ public interface IGeneratedDocuments
 
     /// <summary>PDF ohne Bauakte ablegen (z. B. Onboarding-Unterlagen für die Mitarbeiterakte); mit dem nächsten SaveChanges.</summary>
     Task<Guid> StoreLooseAsync(Guid uploadedBy, string fileName, byte[] pdf, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Foto oder Dokument aus einem anderen Modul (z. B. Chat-Anhang „in Bauakte übernehmen“) als Datei der Bauakte ablegen.
+    /// Fotos erhalten Vorschauvarianten. Speichert sofort; liefert die Datei-ID.
+    /// </summary>
+    Task<Guid> StoreAttachmentAsync(Guid bauakteId, Guid uploadedBy, string fileName, string contentType, byte[] content, bool photo, string? caption,
+        CancellationToken cancellationToken);
 }

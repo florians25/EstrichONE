@@ -24,7 +24,7 @@ die Pushnachricht lässt sich abschalten.
 | `planning.changed` | Planänderung für mich nach Freigabe – nur Personen, deren Einsätze neu sind oder sich geändert haben | betroffene Mitarbeiter | `planning` (dringend) |
 | `absence.decided` | Urlaubsantrag genehmigt oder abgelehnt (ohne Kommentar) | antragstellende Person | `absence` |
 | `ticket.updated` | Antwort/Statusänderung an einem Helpdesk-Ticket | Melder bzw. zuständige Person | `ticket` |
-| `chat.message` | Neue Chatnachricht (siehe docs/chat.md; höchstens eine je Unterhaltung und 10 Minuten, solange ungelesen) | Mitglieder (außer stumm geschaltet) | `chat` |
+| `chat.message` | Neue Chatnachricht (siehe docs/chat.md; je Nachricht, im Postfach nur der neueste je Unterhaltung; APNs `thread-id` je Unterhaltung, aps.category `chat` mit Antwort-Aktion) | Mitglieder (außer stumm geschaltet; @Erwähnte immer) | `chat` |
 | `office.message` | Nachricht aus dem Büro (**Pflicht**) | ausgewählte Personen, Rollen, Kolonnen oder alle | `message` |
 | `system.maintenance` | Wartung angekündigt (**Pflicht**) | alle aktiven Benutzer | `system` (dringend) |
 | `backup.succeeded` | Backup erfolgreich (nur Administratoren) | Recht `backup.manage` | `system` |
@@ -153,9 +153,15 @@ Payload:
 {
   "aps": { "alert": { "title": "Plan freigegeben: Mo, 03.11.", "body": "Neubau Halle Ost" }, "sound": "default",
            "badge": 3, "thread-id": "planning", "mutable-content": 1 },
-  "notificationId": "0193…", "link": "/planung/wer-faehrt-wohin?tag=2026-11-03", "category": "planning"
+  "notificationId": "0193…", "link": "/planung/wer-faehrt-wohin?tag=2026-11-03", "category": "planning",
+  "objectType": "plan", "objectId": "0193…"
 }
 ```
+
+`thread-id` ist `<objectType>-<objectId ohne Bindestriche>` (Gruppierung je Objekt, z. B. je Chat-Unterhaltung), sonst
+die Kategorie. `apns-collapse-id` ist je Benachrichtigung eindeutig. Chat-Hinweise tragen zusätzlich
+`aps.category = "chat"` (Antwort-Aktion) und `conversationId` (docs/chat.md). `badge` zählt ungelesene Hinweise,
+Chat je Unterhaltung einmal. Web Push enthält dieselbe Gruppierung als `tag`.
 
 Die App öffnet beim Tippen `link` (Deep Link) und markiert `notificationId` per `POST /notifications/{id}/read`.
 

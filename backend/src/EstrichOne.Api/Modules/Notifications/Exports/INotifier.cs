@@ -48,6 +48,7 @@ public enum NotificationUrgency
 /// <param name="Link">Relativer Pfad der Weboberfläche, z. B. <c>/bauakten/{id}</c> (Apps leiten daraus den Deep Link ab).</param>
 /// <param name="DedupKey">Gleicher Schlüssel für denselben Benutzer erzeugt keine zweite Benachrichtigung (z. B. Fristen).</param>
 /// <param name="Event">Ereignis aus <see cref="NotificationEvents"/> – danach richtet sich, ob der Empfänger es abbestellt hat.</param>
+/// <param name="ReplacePrevious">Ältere, schon zugestellte Einträge zum selben Objekt ersetzen (Chat: Postfach zeigt nur den neuesten je Unterhaltung).</param>
 public sealed record NotificationRequest(
     NotificationCategory Category,
     string Title,
@@ -57,7 +58,8 @@ public sealed record NotificationRequest(
     Guid? ObjectId = null,
     NotificationUrgency Urgency = NotificationUrgency.Normal,
     string? DedupKey = null,
-    string? Event = null);
+    string? Event = null,
+    bool ReplacePrevious = false);
 
 /// <summary>Benachrichtigungen ins Postfach legen und (falls eingerichtet) als Push zustellen.</summary>
 public interface INotifier

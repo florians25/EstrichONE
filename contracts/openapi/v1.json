@@ -13632,6 +13632,16 @@
               }
             }
           },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Nicht angemeldet oder Token abgelaufen"
           }
@@ -13646,7 +13656,7 @@
         "tags": [
           "Chat"
         ],
-        "summary": "Unterhaltung mit allen Nachrichten löschen",
+        "summary": "Unterhaltung mit allen Nachrichten löschen (chat.admin oder Gruppenadmin)",
         "operationId": "DeleteChatConversation",
         "parameters": [
           {
@@ -13665,6 +13675,16 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -13970,6 +13990,141 @@
             "bearer": []
           }
         ]
+      },
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "GetChatMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Eigene Nachricht bearbeiten (Zeitfenster, „bearbeitet“)",
+        "operationId": "EditChatMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EditChatMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
       }
     },
     "/api/v1/chat/export": {
@@ -14014,6 +14169,1117 @@
                 }
               }
             }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/events": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Echtzeit (Server-Sent Events): Ereignisse mit IDs, Herzschlag alle 20 s, Ende nach 15 min (Client verbindet neu)",
+        "operationId": "StreamChatEvents",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{id}/typing": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "„… schreibt“ an die anderen Mitglieder",
+        "operationId": "ChatTyping",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/messages/{id}/reaction": {
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Eigene Reaktion setzen oder entfernen",
+        "operationId": "SetChatReaction",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatReactionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMessageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/messages/{id}/pin": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Nachricht anheften bzw. lösen",
+        "operationId": "PinChatMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatPinRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/messages/{id}/forward": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Nachricht (mit Anhängen) weiterleiten",
+        "operationId": "ForwardChatMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ForwardChatMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ForwardChatMessageResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{id}/attachments": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Foto oder PDF hochladen (Inhalt roh im Body, ?fileName=); wird verdichtet und verschlüsselt gespeichert",
+        "operationId": "UploadChatAttachment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "fileName",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/octet-stream": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "image/heic": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "application/pdf": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatAttachmentResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "413": {
+            "description": "Payload Too Large",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Medien und Dokumente der Unterhaltung",
+        "operationId": "ListChatMedia",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ChatAttachmentResponse"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/attachments/{id}/content": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Anhang (entschlüsselt); ?thumbnail=true für das Vorschaubild, ?download=true als Download",
+        "operationId": "DownloadChatAttachment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "thumbnail",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "download",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          },
+          {
+            "name": "variant",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/attachments/{id}/bauakte": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Anhang als Foto/Dokument in die Bauakte übernehmen",
+        "operationId": "CopyChatAttachmentToBauakte",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatAttachmentToBauakteRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatAttachmentToBauakteResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{id}/leave": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Gruppe verlassen",
+        "operationId": "LeaveChatGroup",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/conversations/{id}/image": {
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Gruppenbild setzen (Bild roh im Body)",
+        "operationId": "SetChatGroupImage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "image/jpeg": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "image/png": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            },
+            "image/webp": {
+              "schema": {
+                "type": "string",
+                "format": "byte"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatConversationSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "RemoveChatGroupImage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "GetChatGroupImage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/search": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Suche in eigenen Unterhaltungen (Texte liegen verschlüsselt vor)",
+        "operationId": "SearchChat",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "conversationId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatSearchResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/privacy-notice": {
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Datenschutzhinweis bestätigt (Fassung aus /chat/status privacyNoticeVersion)",
+        "operationId": "AcceptChatPrivacyNotice",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatPrivacyNoticeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/me/settings": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "operationId": "GetMyChatSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMySettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Vorschau in eigenen Pushnachrichten, Lesebestätigungen, Datenschutzhinweis bestätigt",
+        "operationId": "SaveMyChatSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveChatMySettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatMySettings"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/bauakten/{bauakteId}/group": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Baustellen-Gruppe einer Bauakte (für den Link in der Bauakte)",
+        "operationId": "GetBauakteChatGroup",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatBauakteGroup"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Baustellen-Gruppe anlegen (Team und Zuständige(r) der Bauakte automatisch)",
+        "operationId": "CreateBauakteChatGroup",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatConversationSummary"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChatConversationSummary"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/export/archive": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Eigene Chatdaten mit Anhängen als ZIP (Auskunft, Datenübertragbarkeit)",
+        "operationId": "ExportOwnChatArchive",
+        "responses": {
+          "200": {
+            "description": "OK"
           },
           "401": {
             "description": "Nicht angemeldet oder Token abgelaufen"
@@ -14188,6 +15454,102 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/admin/users/{userId}/block": {
+      "put": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Moderation: Person sperren (lesen ja, schreiben nein) bzw. entsperren",
+        "operationId": "BlockChatUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChatBlockRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/chat/admin/users/{userId}/export/archive": {
+      "get": {
+        "tags": [
+          "Chat"
+        ],
+        "summary": "Chatdaten einer Person mit Anhängen als ZIP",
+        "operationId": "ExportUserChatArchive",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
           },
           "404": {
             "description": "Not Found",
@@ -19830,6 +21192,167 @@
           }
         }
       },
+      "ChatAttachmentKind": {
+        "enum": [
+          "photo",
+          "document",
+          null
+        ]
+      },
+      "ChatAttachmentResponse": {
+        "required": [
+          "id",
+          "kind",
+          "fileName",
+          "contentType",
+          "sizeBytes",
+          "width",
+          "height",
+          "hasThumbnail",
+          "createdAt",
+          "messageId",
+          "uploadedByUserId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/ChatAttachmentKind"
+          },
+          "fileName": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "width": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "height": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "hasThumbnail": {
+            "type": "boolean"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "messageId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "uploadedByUserId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ChatAttachmentToBauakteRequest": {
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "caption": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ChatAttachmentToBauakteResponse": {
+        "required": [
+          "fileId",
+          "bauakteId"
+        ],
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          }
+        }
+      },
+      "ChatBauakteGroup": {
+        "required": [
+          "bauakteId",
+          "conversationId",
+          "title",
+          "member",
+          "members",
+          "canCreate"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "title": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "member": {
+            "type": "boolean"
+          },
+          "members": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "canCreate": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ChatBlockRequest": {
+        "required": [
+          "blocked"
+        ],
+        "type": "object",
+        "properties": {
+          "blocked": {
+            "type": "boolean"
+          }
+        }
+      },
       "ChatConversationDetail": {
         "required": [
           "conversation",
@@ -19849,6 +21372,21 @@
           },
           "canManage": {
             "type": "boolean"
+          },
+          "pinned": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageResponse"
+            }
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -19923,6 +21461,50 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "announcementOnly": {
+            "type": "boolean",
+            "default": false
+          },
+          "imageUpdatedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "mutedUntil": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "default": false
+          },
+          "canPost": {
+            "type": "boolean",
+            "default": true
+          },
+          "unreadMentions": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -20014,6 +21596,15 @@
               "null",
               "string"
             ]
+          },
+          "attachments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -20055,6 +21646,48 @@
           },
           "deleted": {
             "type": "boolean"
+          },
+          "attachment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChatAttachmentKind"
+              }
+            ]
+          },
+          "location": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "ChatLocation": {
+        "required": [
+          "latitude",
+          "longitude"
+        ],
+        "type": "object",
+        "properties": {
+          "latitude": {
+            "maximum": 90,
+            "minimum": -90,
+            "type": "number",
+            "format": "double"
+          },
+          "longitude": {
+            "maximum": 180,
+            "minimum": -180,
+            "type": "number",
+            "format": "double"
+          },
+          "label": {
+            "maxLength": 300,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20091,6 +21724,10 @@
           },
           "fromCrew": {
             "type": "boolean"
+          },
+          "isAdmin": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -20187,6 +21824,107 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "replyTo": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChatReplyPreview"
+              }
+            ]
+          },
+          "attachments": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ChatAttachmentResponse"
+            }
+          },
+          "reactions": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ChatReactionGroup"
+            }
+          },
+          "mentionedUserIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "editedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "forwarded": {
+            "type": "boolean",
+            "default": false
+          },
+          "pinnedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "location": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChatLocation"
+              }
+            ]
+          },
+          "canEdit": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "ChatMySettings": {
+        "required": [
+          "showPreview",
+          "readReceipts",
+          "privacyAcceptedAt",
+          "blocked",
+          "previewAllowedByAdmin"
+        ],
+        "type": "object",
+        "properties": {
+          "showPreview": {
+            "type": "boolean"
+          },
+          "readReceipts": {
+            "type": "boolean"
+          },
+          "privacyAcceptedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "blocked": {
+            "type": "boolean"
+          },
+          "previewAllowedByAdmin": {
+            "type": "boolean"
           }
         }
       },
@@ -20203,6 +21941,169 @@
           },
           "name": {
             "type": "string"
+          }
+        }
+      },
+      "ChatPinRequest": {
+        "required": [
+          "pinned"
+        ],
+        "type": "object",
+        "properties": {
+          "pinned": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ChatPrivacyNoticeRequest": {
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "integer",
+            "format": "int32",
+            "default": 1
+          }
+        }
+      },
+      "ChatReactionGroup": {
+        "required": [
+          "emoji",
+          "count",
+          "mine",
+          "names"
+        ],
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mine": {
+            "type": "boolean"
+          },
+          "names": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "ChatReactionRequest": {
+        "required": [
+          "emoji"
+        ],
+        "type": "object",
+        "properties": {
+          "emoji": {
+            "maxLength": 16,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "ChatReplyPreview": {
+        "required": [
+          "id",
+          "senderUserId",
+          "senderName",
+          "text",
+          "deleted",
+          "attachment"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deleted": {
+            "type": "boolean"
+          },
+          "attachment": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChatAttachmentKind"
+              }
+            ]
+          }
+        }
+      },
+      "ChatSearchHit": {
+        "required": [
+          "messageId",
+          "conversationId",
+          "conversationTitle",
+          "senderName",
+          "snippet",
+          "createdAt"
+        ],
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "conversationTitle": {
+            "type": "string"
+          },
+          "senderName": {
+            "type": "string"
+          },
+          "snippet": {
+            "type": "string"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "ChatSearchResponse": {
+        "required": [
+          "items",
+          "searched",
+          "truncated"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatSearchHit"
+            }
+          },
+          "searched": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "truncated": {
+            "type": "boolean"
           }
         }
       },
@@ -20250,6 +22151,25 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "editWindowMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "default": 15
+          },
+          "attachmentsEnabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "attachments": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "attachmentBytes": {
+            "type": "integer",
+            "format": "int64",
+            "default": 0
           }
         }
       },
@@ -20288,6 +22208,45 @@
           },
           "showPreview": {
             "type": "boolean"
+          },
+          "privacyAccepted": {
+            "type": "boolean",
+            "default": false
+          },
+          "blocked": {
+            "type": "boolean",
+            "default": false
+          },
+          "editWindowMinutes": {
+            "type": "integer",
+            "format": "int32",
+            "default": 15
+          },
+          "attachmentsEnabled": {
+            "type": "boolean",
+            "default": true
+          },
+          "maxAttachmentBytes": {
+            "type": "integer",
+            "format": "int64",
+            "default": 26214400
+          },
+          "readReceipts": {
+            "type": "boolean",
+            "default": true
+          },
+          "personalShowPreview": {
+            "type": "boolean",
+            "default": true
+          },
+          "realtime": {
+            "type": "string",
+            "default": "sse"
+          },
+          "privacyNoticeVersion": {
+            "type": "integer",
+            "format": "int32",
+            "default": 1
           }
         }
       },
@@ -21296,6 +23255,27 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "description": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "announcementOnly": {
+            "type": "boolean",
+            "default": false
+          },
+          "adminIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -23144,6 +25124,28 @@
           "unlocked"
         ]
       },
+      "EditChatMessageRequest": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 4000,
+            "type": "string"
+          },
+          "mentionIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "EmployeeDetail": {
         "required": [
           "id",
@@ -24141,6 +26143,35 @@
               "items": {
                 "$ref": "#/components/schemas/ValueListOption"
               }
+            }
+          }
+        }
+      },
+      "ForwardChatMessageRequest": {
+        "required": [
+          "conversationIds"
+        ],
+        "type": "object",
+        "properties": {
+          "conversationIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "ForwardChatMessageResponse": {
+        "required": [
+          "messages"
+        ],
+        "type": "object",
+        "properties": {
+          "messages": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChatMessageResponse"
             }
           }
         }
@@ -25247,6 +27278,22 @@
         "properties": {
           "muted": {
             "type": "boolean"
+          },
+          "minutes": {
+            "maximum": 525600,
+            "minimum": 1,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "until": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -28283,6 +30330,29 @@
           }
         }
       },
+      "SaveChatMySettingsRequest": {
+        "type": "object",
+        "properties": {
+          "showPreview": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "readReceipts": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "privacyAccepted": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "SaveChatSettingsRequest": {
         "required": [
           "enabled"
@@ -28313,6 +30383,17 @@
               "integer"
             ],
             "format": "int64"
+          },
+          "editWindowMinutes": {
+            "maximum": 1440,
+            "minimum": 0,
+            "type": "integer",
+            "format": "int32",
+            "default": 15
+          },
+          "attachmentsEnabled": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -29721,14 +31802,14 @@
         }
       },
       "SendChatMessageRequest": {
-        "required": [
-          "text"
-        ],
         "type": "object",
         "properties": {
           "text": {
             "maxLength": 4000,
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "clientMessageId": {
             "type": [
@@ -29736,6 +31817,63 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "replyToId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "attachmentIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "location": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/ChatLocation"
+              }
+            ]
+          },
+          "mentionIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "attachmentFileIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "mentionUserIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
           }
         }
       },
@@ -31576,6 +33714,29 @@
               "type": "string",
               "format": "uuid"
             }
+          },
+          "description": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "adminIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "announcementOnly": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },

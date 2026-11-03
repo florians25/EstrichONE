@@ -12,6 +12,8 @@ public sealed class ChatModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ChatService>();
+        services.AddSingleton<ChatHub>();
+        services.AddSingleton<ChatBlobs>();
         services.AddScoped<IDataInitializer, ChatSetup>();
         services.AddHostedService<ChatRetention>();
     }

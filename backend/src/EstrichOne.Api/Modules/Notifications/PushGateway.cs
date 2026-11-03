@@ -160,7 +160,16 @@ internal enum PushResult
 }
 
 /// <summary>Inhalt einer Pushnachricht. Bewusst knapp: Titel, kurzer Text, Link, IDs – nie Anhänge oder Kommentare.</summary>
-internal sealed record PushMessage(Guid NotificationId, string Title, string? Body, string? Link, string Category, string Urgency, int Badge);
+/// <param name="ObjectType">Objekt der Benachrichtigung (z. B. <c>chat</c>) – bestimmt Gruppierung (APNs thread-id) und Aktionen.</param>
+internal sealed record PushMessage(Guid NotificationId, string Title, string? Body, string? Link, string Category, string Urgency, int Badge,
+    string? ObjectType = null, Guid? ObjectId = null)
+{
+    /// <summary>Gruppierung auf dem Gerät: je Objekt (Chat: je Unterhaltung), sonst je Kategorie.</summary>
+    public string ThreadId => ObjectType is not null && ObjectId is { } id ? $"{ObjectType}-{id:N}" : Category;
+
+    /// <summary>APNs-Kategorie für Aktionen: <c>chat</c> = „Antworten“ (UNTextInputNotificationAction) und „Gelesen“.</summary>
+    public string? ActionCategory => ObjectType == "chat" ? "chat" : null;
+}
 
 /// <summary>Versand an Web-Push-Dienste und APNs (HTTP/2, Token-Anmeldung).</summary>
 internal sealed class PushGateway(IHttpClientFactory http, TimeProvider clock)
@@ -200,6 +209,7 @@ internal sealed class PushGateway(IHttpClientFactory http, TimeProvider clock)
         var payload = JsonSerializer.SerializeToUtf8Bytes(new
         {
             id = message.NotificationId, title = message.Title, body = message.Body, link = message.Link, category = message.Category, badge = message.Badge,
+            tag = message.ThreadId, objectType = message.ObjectType, objectId = message.ObjectId,
         }, Json);
         using var request = new HttpRequestMessage(HttpMethod.Post, endpoint)
         {
@@ -231,20 +241,29 @@ internal sealed class PushGateway(IHttpClientFactory http, TimeProvider clock)
 
         var sandbox = device.Sandbox || !config.ApnsProduction;
         var host = sandbox ? "https://api.sandbox.push.apple.com" : "https://api.push.apple.com";
-        var payload = JsonSerializer.SerializeToUtf8Bytes(new Dictionary<string, object?>
+        var aps = new Dictionary<string, object?>
         {
             ["aps"] = new Dictionary<string, object?>
             {
                 ["alert"] = new Dictionary<string, object?> { ["title"] = message.Title, ["body"] = message.Body },
                 ["sound"] = "default",
                 ["badge"] = message.Badge,
-                ["thread-id"] = message.Category,
+                ["thread-id"] = message.ThreadId,
                 ["mutable-content"] = 1,
             },
             ["notificationId"] = message.NotificationId,
             ["link"] = message.Link,
             ["category"] = message.Category,
-        }, Json);
+            ["objectType"] = message.ObjectType,
+            ["objectId"] = message.ObjectId,
+        };
+        if (message.ActionCategory is { } action)
+        {
+            ((Dictionary<string, object?>)aps["aps"]!)["category"] = action;
+            aps["conversationId"] = message.ObjectId;
+        }
+
+        var payload = JsonSerializer.SerializeToUtf8Bytes(aps, Json);
         using var request = new HttpRequestMessage(HttpMethod.Post, $"{host}/3/device/{Uri.EscapeDataString(device.Token)}")
         {
             Version = HttpVersion.Version20,

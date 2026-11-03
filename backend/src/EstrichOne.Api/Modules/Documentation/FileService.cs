@@ -78,11 +78,11 @@ public sealed class FileService(
     /// Gespeichert wird mit dem nächsten <c>SaveChanges</c>; die Datei liegt dann schon am Zielort.
     /// </summary>
     public async Task<FileRecord> StoreGeneratedAsync(Guid? bauakteId, Guid uploadedBy, string originalName, string contentType, byte[] content,
-        string? category, string? folder, string? caption, DateTimeOffset now, CancellationToken cancellationToken)
+        string? category, string? folder, string? caption, DateTimeOffset now, CancellationToken cancellationToken, FileKind kind = FileKind.Document)
     {
         var id = Guid.CreateVersion7(now);
         var sha = Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(content));
-        var file = FileRecord.Announce(id, bauakteId, FileKind.Document, originalName, contentType, content.Length, sha, uploadedBy);
+        var file = FileRecord.Announce(id, bauakteId, kind, originalName, contentType, content.Length, sha, uploadedBy);
         file.Categorize(category);
         file.MoveTo(folder);
         file.Describe(caption);
@@ -107,8 +107,13 @@ public sealed class FileService(
         var path = storage.PathOf(key);
         Directory.CreateDirectory(Path.GetDirectoryName(path)!);
         await File.WriteAllBytesAsync(path, content, cancellationToken);
-        file.MarkStored(key, contentType, needsVariants: false);
+        file.MarkStored(key, contentType, needsVariants: kind == FileKind.Photo && ContentSniffer.HasVariants(contentType));
         db.Add(file);
+        if (bauakteId is { } owner && kind == FileKind.Photo)
+        {
+            history.Record(owner, BauakteHistoryActions.FileAdded, new Dictionary<string, string?> { ["kind"] = kind.ToString() });
+        }
+
         return file;
     }
 
