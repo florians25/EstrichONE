@@ -96,6 +96,13 @@ public sealed partial class EstrichOneClient : IDisposable
         _tokens.SaveRefreshToken(tokens.RefreshToken);
         User = tokens.User;
         MustChangePassword = tokens.MustChangePassword;
+        // Einmalpasswort: Bis zum Wechsel gibt der Server nichts heraus (403 PASSWORD_CHANGE_REQUIRED).
+        if (MustChangePassword)
+        {
+            Permissions = new HashSet<string>();
+            return;
+        }
+
         await LoadPermissionsAsync(cancellationToken);
     }
 
@@ -108,7 +115,16 @@ public sealed partial class EstrichOneClient : IDisposable
         }
 
         User = await GetAsync<UserSummary>("auth/me", cancellationToken: cancellationToken);
-        await LoadPermissionsAsync(cancellationToken);
+        try
+        {
+            await LoadPermissionsAsync(cancellationToken);
+        }
+        catch (ApiException exception) when (exception.Code == PasswordChangeRequired)
+        {
+            MustChangePassword = true;
+            Permissions = new HashSet<string>();
+        }
+
         return true;
     }
 
@@ -134,8 +150,16 @@ public sealed partial class EstrichOneClient : IDisposable
     public async Task ChangePasswordAsync(string currentPassword, string newPassword, CancellationToken cancellationToken = default)
     {
         await SendAsync<object>(HttpMethod.Post, "auth/change-password", new { currentPassword, newPassword }, cancellationToken: cancellationToken);
+        var forced = MustChangePassword;
         MustChangePassword = false;
+        if (forced)
+        {
+            await LoadPermissionsAsync(cancellationToken);
+        }
     }
+
+    /// <summary>Serverseitige Pflicht zum Passwortwechsel (Einmalpasswort der Administration).</summary>
+    public const string PasswordChangeRequired = "PASSWORD_CHANGE_REQUIRED";
 
     private async Task LoadPermissionsAsync(CancellationToken cancellationToken) =>
         Permissions = (await GetAsync<List<string>>("access/me/permissions", cancellationToken: cancellationToken)).ToHashSet();
