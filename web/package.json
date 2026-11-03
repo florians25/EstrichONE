@@ -16,7 +16,7 @@
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "@openui5/types": "1.136.22",
+    "@openui5/types": "1.154.0",
     "@playwright/test": "1.56.1",
     "@types/leaflet": "1.9.20",
     "@types/qrcode": "1.5.6",
