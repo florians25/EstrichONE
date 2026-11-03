@@ -11,7 +11,7 @@
 import JSONModel from "sap/ui/model/json/JSONModel";
 import { onMaintenance, onUnreachable, type Problem } from "./api";
 import { session } from "./session";
-import { healthStrips, type HealthBanner } from "./health";
+import { addressStrip, healthStrips, type AddressCheck, type HealthBanner } from "./health";
 
 export interface Announcement {
 	id: string;
@@ -46,6 +46,15 @@ function dismissed(): Set<string> {
 		return new Set(JSON.parse(sessionStorage.getItem(dismissedKey) ?? "[]") as string[]);
 	} catch {
 		return new Set();
+	}
+}
+
+async function addressCheck(): Promise<AddressCheck | null> {
+	try {
+		const response = await fetch("/api/v1/system/address", { credentials: "same-origin", headers: { Accept: "application/json" } });
+		return response.ok ? ((await response.json()) as AddressCheck) : null;
+	} catch {
+		return null;
 	}
 }
 
@@ -101,7 +110,9 @@ class Notices {
 		try {
 			const response = await fetch("/api/v1/system/health-banner", { credentials: "same-origin", headers: { Accept: "application/json" } });
 			if (!response.ok) return;
-			this.model.setProperty("/health", healthStrips((await response.json()) as HealthBanner));
+			const strips = healthStrips((await response.json()) as HealthBanner);
+			const address = session.has("settings.manage") ? addressStrip(await addressCheck(), window.location.origin) : null;
+			this.model.setProperty("/health", address ? [...strips, address] : strips);
 		} catch {
 			// Server nicht erreichbar: letzten Stand behalten (Störungsseite übernimmt).
 		}
@@ -245,8 +256,10 @@ class Notices {
 		if (!this.started) return;
 		this.apply();
 		const user = session.data.user?.id ?? "";
-		if (user !== this.healthUser) {
-			this.healthUser = user;
+		// Schlüssel mit Verwaltungsrecht: Der Adresshinweis für Administratoren erscheint, sobald die Rechte geladen sind.
+		const key = user ? `${user}:${session.has("settings.manage")}` : "";
+		if (key !== this.healthUser) {
+			this.healthUser = key;
 			if (user) void this.refreshHealth();
 			else this.model.setProperty("/health", []);
 		}

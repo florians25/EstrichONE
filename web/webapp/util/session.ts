@@ -89,6 +89,9 @@ class Session {
 
 	async signIn(login: string, password: string, rememberMe = false, twoFactorCode?: string): Promise<void> {
 		const session = await post<WebSessionResponse>("auth/web/login", { login, password, rememberMe, twoFactorCode });
+		// Anmeldung angenommen, aber der Browser hat die Sitzungs-Cookies verworfen: sofort klar melden, statt dass jede
+		// Folgeanfrage mit 401 endet und die Anmeldung „hängt“ (Fehlerbild 0.1.0).
+		if (!hasSessionCookie()) throw cookieProblem();
 		this.model.setProperty("/user", session.user);
 		this.model.setProperty("/mustChangePassword", session.mustChangePassword);
 		await this.loadPermissions();
@@ -133,6 +136,22 @@ class Session {
 	name(userId: string | null | undefined): string {
 		return (userId && this.data.people.find((p) => p.id === userId)?.displayName) || "–";
 	}
+}
+
+/** Der CSRF-Cookie (nicht HttpOnly) kommt mit den Sitzungs-Cookies; fehlt er, hat der Browser sie nicht gespeichert. */
+export function hasSessionCookie(): boolean {
+	return document.cookie.split("; ").some((c) => c.startsWith("XSRF-TOKEN="));
+}
+
+/** Verständliche Ursache, warum der Browser die Anmeldung nicht behält. */
+export function cookieProblem(location: Pick<Location, "protocol" | "host"> = window.location): ApiError {
+	const insecure = location.protocol === "http:";
+	const message = insecure
+		? `Die Anmeldung wurde angenommen, aber der Browser speichert die Sitzung über die unverschlüsselte Adresse http://${location.host} nicht. `
+			+ "Bitte EstrichONE über die HTTPS-Adresse aufrufen (z. B. die Domain im Nginx Proxy Manager) – nicht direkt über IP und Port."
+		: "Die Anmeldung wurde angenommen, aber der Browser hat die Sitzung nicht gespeichert. Bitte Cookies für diese Seite erlauben "
+			+ "(privater Modus, Tracking-Schutz, Erweiterungen) sowie Datum und Uhrzeit dieses Geräts prüfen und es erneut versuchen.";
+	return new ApiError(0, "SESSION_COOKIE_REJECTED", message);
 }
 
 export const session = new Session();

@@ -37,6 +37,35 @@
         }
       }
     },
+    "/api/v1/system/address": {
+      "get": {
+        "tags": [
+          "Plattform"
+        ],
+        "summary": "Vergleicht die eingestellte öffentliche Adresse (ESTRICHONE_DOMAIN/PUBLIC_URL) mit der tatsächlich aufgerufenen",
+        "operationId": "GetAddressCheck",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AddressCheck"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/audit": {
       "get": {
         "tags": [
@@ -18340,6 +18369,32 @@
               "string"
             ],
             "format": "date"
+          }
+        }
+      },
+      "AddressCheck": {
+        "required": [
+          "configuredUrl",
+          "requestUrl",
+          "matches",
+          "https"
+        ],
+        "type": "object",
+        "properties": {
+          "configuredUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "requestUrl": {
+            "type": "string"
+          },
+          "matches": {
+            "type": "boolean"
+          },
+          "https": {
+            "type": "boolean"
           }
         }
       },

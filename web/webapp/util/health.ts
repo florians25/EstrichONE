@@ -49,3 +49,32 @@ export function healthTexts(health: HealthBanner | null | undefined, now = Date.
 	};
 }
 
+
+/** Antwort von GET /system/address (nur Administratoren). */
+export interface AddressCheck { configuredUrl: string | null; requestUrl: string; matches: boolean; https: boolean }
+
+/**
+ * Hinweis für Administratoren: Verbindung unverschlüsselt (Vorrang) bzw. eingestellte Adresse (ESTRICHONE_DOMAIN)
+ * weicht von der aufgerufenen ab. Die Anmeldung klappt trotzdem; Links in E-Mails, QR-Codes und Pushnachrichten
+ * zeigen aber auf die eingestellte Adresse.
+ */
+export function addressStrip(check: AddressCheck | null | undefined, origin: string): HealthStrip | null {
+	if (!check) return null;
+	if (!check.https && origin.startsWith("http:") && !/^http:\/\/(localhost|127\.|\[::1\])/.test(origin)) {
+		return {
+			key: "address", type: "Warning", icon: "sap-icon://locked",
+			text: `Unverschlüsselte Verbindung: EstrichONE wird über ${origin} aufgerufen. Passwörter und Daten gehen unverschlüsselt `
+				+ "durchs Netz. Bitte über die HTTPS-Adresse (z. B. Nginx Proxy Manager) aufrufen und den Port nur für den Proxy freigeben.",
+		};
+	}
+	if (!check.matches && check.configuredUrl) {
+		const host = new URL(origin).hostname;
+		return {
+			key: "address", type: "Warning", icon: "sap-icon://chain-link",
+			text: `Konfigurierte Adresse weicht ab: Der Server ist auf ${check.configuredUrl} eingestellt, aufgerufen wird ${origin}. `
+				+ "Links in E-Mails, QR-Codes und Pushnachrichten zeigen auf die eingestellte Adresse. Bitte den Installer erneut mit "
+				+ `-e ESTRICHONE_DOMAIN=${host} ausführen (bzw. ESTRICHONE_DOMAIN und ESTRICHONE_PUBLIC_URL in der .env anpassen).`,
+		};
+	}
+	return null;
+}

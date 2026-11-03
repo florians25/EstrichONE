@@ -5,6 +5,10 @@
 # WEB_IMAGE=estrichone/web:… testet stattdessen das fertige Image (Caddy, HTTPS, CSP) wie im Betrieb.
 # Zusätzlich E2E_PROXY=nginx: Caddy in der Betriebsart „proxy“ hinter Nginx mit client_max_body_size 10m
 # (wie Nginx Proxy Manager mit knapper Größengrenze).
+# E2E_PROXY=npm: Caddy „proxy“ hinter Nginx mit der Konfiguration, die Nginx Proxy Manager für einen Proxy Host erzeugt
+# (TLS mit eigenem Zertifikat, Force SSL, HTTP/2, HSTS, Block Common Exploits, Websockets, erweiterte Einstellungen)
+# unter https://app.estrichone.de:8443 – der Server ist absichtlich auf eine andere Domain eingestellt (Fehlerbild 0.1.0).
+# Aufruf: E2E_PROXY=npm WEB_IMAGE=… scripts/e2e.sh --config=playwright.proxy.config.ts
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 API_PORT=5080
@@ -37,6 +41,7 @@ export ConnectionStrings__Default="Host=localhost;Port=$DB_PORT;Database=estrich
 export ASPNETCORE_URLS="http://localhost:$API_PORT"
 export EstrichOne__PublicUrl="${WEB_IMAGE:+https://localhost:8443}"
 if [[ -n "${WEB_IMAGE:-}" && "${E2E_PROXY:-}" == "nginx" ]]; then EstrichOne__PublicUrl="http://localhost:8089"; fi
+if [[ -n "${WEB_IMAGE:-}" && "${E2E_PROXY:-}" == "npm" ]]; then EstrichOne__PublicUrl="https://estrichone.deinefirma.de"; export EstrichOne__TrustForwardedHeaders=true; fi
 [[ -n "$EstrichOne__PublicUrl" ]] || EstrichOne__PublicUrl="http://localhost:4200"
 export EstrichOne__ServerName="Estrichbau E2E GmbH"
 export EstrichOne__Files__RootPath="$WORK/files"
@@ -68,7 +73,81 @@ if [[ -n "${WEB_IMAGE:-}" ]]; then
   # Gleiches Caddyfile wie im Betrieb, nur mit lokaler API-Adresse.
   sed "s/api:8080/localhost:$API_PORT/g" "$ROOT/deploy/Caddyfile" >"$WORK/Caddyfile"
   docker rm -f estrichone-web-e2e estrichone-proxy-e2e >/dev/null 2>&1 || true
-  if [[ "${E2E_PROXY:-}" == "nginx" ]]; then
+  if [[ "${E2E_PROXY:-}" == "npm" ]]; then
+    # Wie der Docker-Installer mit -e ESTRICHONE_MODE=proxy -e ESTRICHONE_HTTP_PORT=… (compose.proxy.yml: private Netze vertraut).
+    docker run -d --name estrichone-web-e2e --network host -e ESTRICHONE_MODE=proxy -e ESTRICHONE_HTTP_PORT=8088 \
+      -e ESTRICHONE_DOMAIN=estrichone.deinefirma.de -e ESTRICHONE_TRUSTED_PROXIES=private_ranges \
+      -v "$WORK/Caddyfile:/etc/caddy/Caddyfile:ro" "$WEB_IMAGE" >/dev/null
+    openssl req -x509 -newkey rsa:2048 -nodes -days 2 -subj "/CN=app.estrichone.de" -addext "subjectAltName=DNS:app.estrichone.de" \
+      -keyout "$WORK/privkey.pem" -out "$WORK/fullchain.pem" 2>/dev/null
+    chmod 644 "$WORK/privkey.pem"
+    # Aufbau wie /data/nginx/proxy_host/1.conf von Nginx Proxy Manager (Vorlagen proxy_host.conf, proxy.conf,
+    # force-ssl.conf, block-exploits.conf) inkl. der erweiterten Einstellungen aus der Anleitung (docs/installation).
+    cat >"$WORK/nginx.conf" <<'NGINX'
+events {}
+http {
+  proxy_http_version 1.1;
+  proxy_set_header X-Forwarded-Scheme $scheme;
+  proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+  proxy_set_header Accept-Encoding "";
+  client_max_body_size 2000m;
+  map $http_x_forwarded_proto $x_forwarded_proto { "http" "http"; "https" "https"; default $scheme; }
+  map $http_x_forwarded_scheme $x_forwarded_scheme { "http" "http"; "https" "https"; default $scheme; }
+  map $scheme $hsts_header { https "max-age=63072000; preload"; }
+  server {
+    set $forward_scheme http;
+    set $server "127.0.0.1";
+    set $port 8088;
+    listen 8080;
+    listen 8443 ssl;
+    server_name app.estrichone.de;
+    http2 on;
+    ssl_certificate /etc/nginx/fullchain.pem;
+    ssl_certificate_key /etc/nginx/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    # Block Common Exploits (Auszug aus block-exploits.conf)
+    set $block_file_injections 0;
+    if ($query_string ~ "[a-zA-Z0-9_]=http://") { set $block_file_injections 1; }
+    if ($query_string ~ "[a-zA-Z0-9_]=(\.\.//?)+") { set $block_file_injections 1; }
+    if ($query_string ~ "[a-zA-Z0-9_]=/([a-z0-9_.]//?)+") { set $block_file_injections 1; }
+    if ($block_file_injections = 1) { return 403; }
+    if ($query_string ~ "(<|%3C).*script.*(>|%3E)") { return 403; }
+    add_header Strict-Transport-Security $hsts_header always;
+    # Force SSL
+    if ($scheme = "http") { return 301 https://$host$request_uri; }
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection $http_connection;
+    proxy_http_version 1.1;
+    # Erweitert (Anleitung): große Uploads, Echtzeit ohne Puffer
+    client_max_body_size 600m;
+    proxy_request_buffering off;
+    proxy_buffering off;
+    proxy_read_timeout 1h;
+    proxy_send_timeout 1h;
+    location / {
+      add_header Strict-Transport-Security $hsts_header always;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection $http_connection;
+      proxy_http_version 1.1;
+      add_header X-Served-By $host;
+      proxy_set_header Host $host;
+      proxy_set_header X-Forwarded-Scheme $x_forwarded_scheme;
+      proxy_set_header X-Forwarded-Proto $x_forwarded_proto;
+      proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+      proxy_set_header X-Real-IP $remote_addr;
+      proxy_pass $forward_scheme://$server:$port$request_uri;
+    }
+  }
+}
+NGINX
+    docker run -d --name estrichone-proxy-e2e --network host -v "$WORK/nginx.conf:/etc/nginx/nginx.conf:ro" \
+      -v "$WORK/fullchain.pem:/etc/nginx/fullchain.pem:ro" -v "$WORK/privkey.pem:/etc/nginx/privkey.pem:ro" nginx:1.27-alpine >/dev/null
+    CLEANUP_CONTAINER="estrichone-web-e2e estrichone-proxy-e2e"
+    export E2E_BASE_URL=https://app.estrichone.de:8443
+    # Direktaufruf am Proxy vorbei über eine Nicht-Loopback-Adresse (Browser behandelt sie als unsicheren Ursprung).
+    E2E_DIRECT_URL="http://$(hostname -I | awk '{print $1}'):8088"
+    export E2E_DIRECT_URL
+  elif [[ "${E2E_PROXY:-}" == "nginx" ]]; then
     docker run -d --name estrichone-web-e2e --network host -e ESTRICHONE_MODE=proxy -e ESTRICHONE_HTTP_PORT=8088 \
       -v "$WORK/Caddyfile:/etc/caddy/Caddyfile:ro" "$WEB_IMAGE" >/dev/null
     cat >"$WORK/nginx.conf" <<'NGINX'
@@ -97,7 +176,7 @@ NGINX
     export E2E_BASE_URL=https://localhost:8443
   fi
   for _ in $(seq 1 60); do
-    curl -skf --noproxy localhost "$E2E_BASE_URL/" >/dev/null && break
+    curl -skf --noproxy "*" --resolve app.estrichone.de:8443:127.0.0.1 "$E2E_BASE_URL/" >/dev/null && break
     sleep 1
   done
 else

@@ -20,7 +20,7 @@ public sealed record WebLoginRequest(
 public sealed record WebSessionResponse(UserSummary User, bool MustChangePassword, DateTimeOffset AccessTokenExpiresAt);
 
 /// <summary>
-/// Anmeldung im Browser (docs/reengineering/17, Abschnitt 2): Tokens nur in HttpOnly-, Secure-, SameSite=Strict-Cookies,
+/// Anmeldung im Browser (docs/reengineering/17, Abschnitt 2): Tokens nur in HttpOnly-, Secure- (siehe UseSecureCookies), SameSite=Strict-Cookies,
 /// nie im JavaScript, nie in <c>localStorage</c>. Zustandsändernde Anfragen mit Cookie verlangen zusätzlich den
 /// CSRF-Token aus dem Cookie <c>XSRF-TOKEN</c> im Header <c>X-XSRF-TOKEN</c> (Doppel-Absendung; Angular sendet ihn
 /// selbstständig).
@@ -134,30 +134,60 @@ internal static class WebSessionEndpoints
     private static void SetCookies(HttpContext http, string accessToken, string refreshToken, DateTimeOffset refreshExpires, bool newCsrfToken)
     {
         var cookies = http.Response.Cookies;
-        cookies.Append(AccessCookie, accessToken, Options("/api", refreshExpires, httpOnly: true));
-        cookies.Append(RefreshCookie, refreshToken, Options(RefreshPath, refreshExpires, httpOnly: true));
+        cookies.Append(AccessCookie, accessToken, Options(http, "/api", refreshExpires, httpOnly: true));
+        cookies.Append(RefreshCookie, refreshToken, Options(http, RefreshPath, refreshExpires, httpOnly: true));
         var csrf = !newCsrfToken && http.Request.Cookies[CsrfCookie] is { Length: 64 } existing
             ? existing
             : Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
-        cookies.Append(CsrfCookie, csrf, Options("/", refreshExpires, httpOnly: false));
+        cookies.Append(CsrfCookie, csrf, Options(http, "/", refreshExpires, httpOnly: false));
     }
 
     private static void ClearCookies(HttpContext http)
     {
-        http.Response.Cookies.Delete(AccessCookie, Options("/api", null, httpOnly: true));
-        http.Response.Cookies.Delete(RefreshCookie, Options(RefreshPath, null, httpOnly: true));
-        http.Response.Cookies.Delete(CsrfCookie, Options("/", null, httpOnly: false));
+        http.Response.Cookies.Delete(AccessCookie, Options(http, "/api", null, httpOnly: true));
+        http.Response.Cookies.Delete(RefreshCookie, Options(http, RefreshPath, null, httpOnly: true));
+        http.Response.Cookies.Delete(CsrfCookie, Options(http, "/", null, httpOnly: false));
     }
 
-    private static CookieOptions Options(string path, DateTimeOffset? expires, bool httpOnly) => new()
+    /// <summary>
+    /// Cookies sind immer host-only (ohne Domain-Attribut): Sie gelten genau für die Adresse, die der Browser aufruft –
+    /// auch wenn ESTRICHONE_DOMAIN/PublicUrl davon abweicht. Laufzeit zusätzlich als Max-Age (relativ), damit eine
+    /// falsch gehende Uhr auf Server oder Gerät die Cookies nicht sofort verfallen lässt.
+    /// </summary>
+    private static CookieOptions Options(HttpContext http, string path, DateTimeOffset? expires, bool httpOnly) => new()
     {
         Path = path,
         Expires = expires,
+        MaxAge = expires is { } until ? Clamp(until - http.RequestServices.GetRequiredService<TimeProvider>().GetUtcNow()) : null,
         HttpOnly = httpOnly,
-        Secure = true,
+        Secure = UseSecureCookies(http.Request),
         SameSite = SameSiteMode.Strict,
         IsEssential = true,
     };
+
+    private static TimeSpan Clamp(TimeSpan value) => value < TimeSpan.FromMinutes(1) ? TimeSpan.FromMinutes(1) : value;
+
+    /// <summary>
+    /// <c>Secure</c> immer, außer der Browser ruft EstrichONE nachweislich über unverschlüsseltes HTTP auf
+    /// (Anfrage selbst per HTTP und <c>Origin</c> bzw. <c>Referer</c> mit <c>http://</c>, z. B. <c>http://192.168.1.10:8181</c>).
+    /// Dort würde der Browser Secure-Cookies verwerfen: Die Anmeldung gelänge, jede Folgeanfrage wäre aber nicht angemeldet
+    /// (Sitzung „sofort beendet“). Über HTTPS – auch hinter Nginx Proxy Manager mit X-Forwarded-Proto – bleiben sie Secure.
+    /// </summary>
+    public static bool UseSecureCookies(HttpRequest request)
+    {
+        if (request.IsHttps)
+        {
+            return true;
+        }
+
+        var origin = request.Headers.Origin.ToString();
+        if (string.IsNullOrEmpty(origin) || origin == "null")
+        {
+            origin = request.Headers.Referer.ToString();
+        }
+
+        return !(Uri.TryCreate(origin, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttp);
+    }
 
     private static string? Truncate(string value, int length) =>
         string.IsNullOrWhiteSpace(value) ? null : value.Length <= length ? value : value[..length];

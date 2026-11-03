@@ -86,6 +86,12 @@ jobs:
           E2E_PROXY: nginx
           SCREENSHOTS: "1"
         run: scripts/e2e.sh
+      - name: Hinter Nginx Proxy Manager (TLS, Force SSL, HTTP/2, HSTS, abweichende Domain) – Einrichtung, Abmelden, erneute Anmeldung, Direktaufruf per IP
+        working-directory: web
+        env:
+          WEB_IMAGE: estrichone/web:ci
+          E2E_PROXY: npm
+        run: scripts/e2e.sh --config=playwright.proxy.config.ts
       - name: Bildschirmfotos sichern
         if: always()
         uses: actions/upload-artifact@v4
