@@ -459,20 +459,30 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
 
         using var start = await admin.PostAsync(new Uri("/api/v1/files/storage/optimize", UriKind.Relative), null, ct);
         start.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        // Auf das Ende des Auftrags warten (nicht nur auf „läuft nicht“); großzügig, weil die CI-Rechner unter Last stehen.
+        var deadline = DateTimeOffset.UtcNow.AddSeconds(60);
         StorageStats stats;
-        var attempts = 0;
         do
         {
-            await Task.Delay(200, ct);
+            await Task.Delay(100, ct);
             stats = (await admin.GetFromJsonAsync<StorageStats>("/api/v1/files/storage", TestJson.Options, ct))!;
         }
-        while (stats.Job.Running && ++attempts < 100);
+        while ((stats.Job.Running || stats.Job.FinishedAt is null) && DateTimeOffset.UtcNow < deadline);
 
-        stats.Job.Optimized.ShouldBe(1);
+        stats.Job.Running.ShouldBeFalse("Nachverdichten wurde nicht rechtzeitig fertig");
+        stats.Job.Message.ShouldBe("Fertig");
+        stats.Job.ShouldSatisfyAllConditions(
+            () => stats.Job.Optimized.ShouldBe(1, $"Status: {stats.Job}"),
+            () => stats.Job.Failed.ShouldBe(0, $"Status: {stats.Job}"));
+        stats.SavedBytes.ShouldBe(stats.Job.SavedBytes, "Statistik zeigt den Stand nach dem Auftrag");
         stats.SavedBytes.ShouldBeGreaterThan(0);
         stats.Candidates.ShouldBe(0);
         stats.Kinds.Single(k => k.Kind == FileKind.Photo).Optimized.ShouldBe(1);
-        (await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{keptId}/content", UriKind.Relative), ct)).Length.ShouldBeLessThan(kept.Length);
+        var optimized = await _worker.GetByteArrayAsync(new Uri($"/api/v1/files/{keptId}/content", UriKind.Relative), ct);
+        optimized.Length.ShouldBeLessThan(kept.Length);
+        var record = (await _worker.GetFromJsonAsync<FileResponse>($"/api/v1/files/{keptId}", TestJson.Options, ct))!;
+        Convert.ToHexStringLower(SHA256.HashData(optimized)).ShouldBe(record.Sha256, "Datei und Prüfsumme laufen nie auseinander");
+        record.SizeBytes.ShouldBe(optimized.Length);
         using var forbidden = await _worker.GetAsync(new Uri("/api/v1/files/storage", UriKind.Relative), ct);
         forbidden.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }

@@ -42,6 +42,9 @@ internal sealed partial class VariantWorker(
             return;
         }
 
+        // Die Stufen gehören zu genau diesem Inhalt (Prüfsumme). Wird die Datei währenddessen ersetzt (Nachverdichten),
+        // bleibt sie „ausstehend“ und wird erneut aus dem neuen Inhalt erzeugt.
+        var renderedSha = file.Sha256;
         try
         {
             var original = await File.ReadAllBytesAsync(storage.PathOf(file.StorageKey), cancellationToken);
@@ -73,8 +76,14 @@ internal sealed partial class VariantWorker(
             catch (DbUpdateConcurrencyException) when (attempt < 10)
             {
                 await db.Entry(file).ReloadAsync(cancellationToken);
-                if (file.DeletedAt is not null)
+                if (file.DeletedAt is not null || file.Sha256 != renderedSha)
                 {
+                    if (file is { DeletedAt: null, Variants: VariantState.Pending })
+                    {
+                        // Inhalt wurde ersetzt: neu einreihen, falls der Ersetzende es nicht schon getan hat (doppelt schadet nicht).
+                        queue.Writer.TryWrite(id);
+                    }
+
                     return;
                 }
 

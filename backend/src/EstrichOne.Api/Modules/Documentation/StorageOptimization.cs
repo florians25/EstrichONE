@@ -145,41 +145,70 @@ internal sealed partial class StorageOptimizationJob(IServiceScopeFactory scopes
                         continue;
                     }
 
-                    // Erst daneben schreiben, dann atomar ersetzen; die Datenbank folgt sofort.
+                    // Erst daneben schreiben. Datenbank und Datei wechseln gemeinsam: Zeile in einer Transaktion ändern (gesperrt),
+                    // Datei atomar ersetzen (Original als Sicherung daneben), dann bestätigen. Scheitert ein Schritt, kommt das
+                    // Original zurück bzw. die Transaktion wird verworfen – Datei und Prüfsumme laufen nie auseinander.
                     var temporary = path + ".opt";
+                    var backup = path + ".orig";
                     await File.WriteAllBytesAsync(temporary, optimized.Content, cancellationToken);
                     var sha = Convert.ToHexStringLower(SHA256.HashData(optimized.Content));
                     var regenerate = false;
-                    void Apply()
+                    var expected = file.Sha256;
+                    try
                     {
-                        file.ReplaceContent(sha, optimized.Content.Length, optimized.ContentType);
-                        regenerate = file.Variants != VariantState.NotApplicable;
-                        if (regenerate)
+                        await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
+                        void Apply()
                         {
-                            file.SetVariants(VariantState.Pending);
+                            file.ReplaceContent(sha, optimized.Content.Length, optimized.ContentType);
+                            regenerate = file.Variants != VariantState.NotApplicable;
+                            if (regenerate)
+                            {
+                                file.SetVariants(VariantState.Pending);
+                            }
                         }
-                    }
 
-                    Apply();
-                    File.Move(temporary, path, overwrite: true);
-                    // Der Vorschaubild-Dienst kann denselben Eintrag gerade aktualisieren (Version): neu laden und erneut anwenden,
-                    // damit Datei auf der Platte und Prüfsumme in der Datenbank nie auseinanderlaufen.
-                    for (var attempt = 1; ; attempt++)
-                    {
+                        Apply();
+                        // Der Vorschaubild-Dienst kann denselben Eintrag gerade aktualisieren (Version): neu laden und erneut anwenden.
+                        for (var attempt = 1; ; attempt++)
+                        {
+                            try
+                            {
+                                await db.SaveChangesAsync(cancellationToken);
+                                break;
+                            }
+                            catch (DbUpdateConcurrencyException conflict) when (attempt < 5)
+                            {
+                                foreach (var entry in conflict.Entries)
+                                {
+                                    await entry.ReloadAsync(cancellationToken);
+                                }
+
+                                if (file.DeletedAt is not null || file.UploadSha256 is not null || file.Sha256 != expected || file.StorageKey is null
+                                    || storage.PathOf(file.StorageKey) != path)
+                                {
+                                    // Inzwischen gelöscht, schon verdichtet oder umgezogen: nichts ersetzen.
+                                    throw new IOException("Datei wurde währenddessen geändert");
+                                }
+
+                                Apply();
+                            }
+                        }
+
+                        File.Replace(temporary, path, backup);
                         try
                         {
-                            await db.SaveChangesAsync(cancellationToken);
-                            break;
+                            await transaction.CommitAsync(CancellationToken.None);
                         }
-                        catch (DbUpdateConcurrencyException conflict) when (attempt < 5)
+                        catch
                         {
-                            foreach (var entry in conflict.Entries)
-                            {
-                                await entry.ReloadAsync(cancellationToken);
-                            }
-
-                            Apply();
+                            File.Move(backup, path, overwrite: true);
+                            throw;
                         }
+                    }
+                    finally
+                    {
+                        File.Delete(temporary);
+                        File.Delete(backup);
                     }
 
                     if (regenerate)
@@ -190,7 +219,7 @@ internal sealed partial class StorageOptimizationJob(IServiceScopeFactory scopes
                     var saved = original.Length - optimized.Content.Length;
                     Update(s => s with { Processed = s.Processed + 1, Optimized = s.Optimized + 1, SavedBytes = s.SavedBytes + saved });
                 }
-                catch (Exception exception) when (exception is IOException or DbUpdateException or UnauthorizedAccessException)
+                catch (Exception exception) when (exception is IOException or DbUpdateException or UnauthorizedAccessException or Npgsql.NpgsqlException)
                 {
                     LogFileFailed(logger, file.Id, exception.Message);
                     db.ChangeTracker.Clear();
@@ -223,6 +252,9 @@ internal static class StorageEndpoints
     private static async Task<Ok<StorageStats>> StatsAsync(EstrichOneDbContext db, LocalFileStorage storage, StorageOptimizationJob job,
         Microsoft.Extensions.Options.IOptions<FileStorageSettings> options, CancellationToken cancellationToken)
     {
+        // Stand des Auftrags zuerst lesen: meldet er „fertig“, sind seine Änderungen schon gespeichert und in den Zahlen unten
+        // enthalten. Später gelesen könnte er „fertig“ melden, während die Zahlen noch den Stand davor zeigen.
+        var status = job.Status;
         var stored = db.Set<FileRecord>().AsNoTracking().Where(f => f.State == FileState.Stored);
         var kinds = await stored.GroupBy(f => f.Kind).Select(g => new StorageKindStats(g.Key, g.Count(), g.Sum(f => f.SizeBytes),
             g.Sum(f => f.UploadSizeBytes ?? f.SizeBytes), g.Count(f => f.UploadSha256 != null))).ToListAsync(cancellationToken);
@@ -242,7 +274,7 @@ internal static class StorageEndpoints
 
         return TypedResults.Ok(new StorageStats(kinds.OrderBy(k => k.Kind).ToList(), kinds.Sum(k => k.Bytes), kinds.Sum(k => k.UploadedBytes - k.Bytes),
             shared.Sum(s => s.Count), shared.Sum(s => s.Bytes), DirectoryBytes(Path.Combine(root, "originals")), DirectoryBytes(Path.Combine(root, "variants")),
-            free, await StorageOptimizationJob.Candidates(db).CountAsync(cancellationToken), job.Status));
+            free, await StorageOptimizationJob.Candidates(db).CountAsync(cancellationToken), status));
     }
 
     private static long DirectoryBytes(string path)
