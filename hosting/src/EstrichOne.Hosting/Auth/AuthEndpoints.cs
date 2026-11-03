@@ -256,6 +256,7 @@ public static class AuthEndpoints
         }
 
         admin.PasswordHash = HashPassword(admin, request.NewPassword!);
+        admin.MustChangePassword = false;
         admin.SecurityStamp++;
         await db.SaveChangesAsync(cancellationToken);
         await SignInAsync(context, admin);

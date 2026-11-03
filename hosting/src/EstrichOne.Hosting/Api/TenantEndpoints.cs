@@ -149,7 +149,8 @@ public static partial class TenantEndpoints
         return Results.NoContent();
     }
 
-    private static async Task<IResult> RefreshAsync(Guid id, HostingDbContext db, StatusService status, CancellationToken cancellationToken)
+    private static async Task<IResult> RefreshAsync(Guid id, HostingDbContext db, StatusService status, CertificateService certificates,
+        CancellationToken cancellationToken)
     {
         var tenant = await db.Tenants.AsNoTracking().Include(t => t.Plan).FirstOrDefaultAsync(t => t.Id == id && t.State != TenantState.Deleted, cancellationToken);
         if (tenant is null)
@@ -157,7 +158,9 @@ public static partial class TenantEndpoints
             return ApiErrors.NotFound("Mandant nicht gefunden.");
         }
 
-        return Results.Ok(await status.CollectAsync(tenant, tenant.Plan!, forceUsage: true, cancellationToken));
+        var result = await status.CollectAsync(tenant, tenant.Plan!, forceUsage: true, cancellationToken);
+        await certificates.CheckAsync(tenant.Domain, cancellationToken);
+        return Results.Ok(result);
     }
 
     private static async Task<IResult> ActionAsync(Guid id, string action, ActionRequest? request, HostingDbContext db,
@@ -220,6 +223,23 @@ public static partial class TenantEndpoints
                 }
 
                 if (state is TenantState.Deleting) error = "Die Instanz wird bereits gelöscht.";
+                break;
+            case "restore":
+                plan = (OperationKind.Restore, new OperationParameters(Snapshot: request.Snapshot?.Trim(), BackupFirst: request.BackupFirst != false));
+                if (request.Snapshot?.Trim() is { } snapshot && snapshot != "latest" && !Recovery.SnapshotReader.IsSnapshotId(snapshot)) error = "Ungültige Sicherung.";
+                if (request.Confirm != true) error = "Bitte die Wiederherstellung ausdrücklich bestätigen – der aktuelle Datenstand wird ersetzt.";
+                if (state is not (TenantState.Running or TenantState.Failed or TenantState.Locked or TenantState.Stopped)) error = "Die Instanz kann in diesem Zustand nicht wiederhergestellt werden.";
+                break;
+            case "rollback":
+                plan = (OperationKind.Rollback, null);
+                if (string.IsNullOrEmpty(tenant.PreviousVersion)) error = "Es gibt keine Aktualisierung, die zurückgenommen werden kann.";
+                if (request.Confirm != true) error ??= "Bitte das Zurücksetzen ausdrücklich bestätigen.";
+                if (state is TenantState.Deleting or TenantState.Provisioning) error = "Die Instanz kann in diesem Zustand nicht zurückgesetzt werden.";
+                break;
+            case "initial-setup":
+                plan = (OperationKind.InitialSetup, null);
+                if (string.IsNullOrEmpty(tenant.FirstAdminUserName)) error = "Für diesen Mandanten ist keine erste Admin-Person hinterlegt.";
+                if (state is not (TenantState.Running or TenantState.Failed)) error = "Die Ersteinrichtung ist nur bei laufender Instanz möglich.";
                 break;
             default:
                 return ApiErrors.NotFound($"Unbekannte Aktion „{action}“.");

@@ -84,6 +84,11 @@ public static class HostingApp
         builder.Services.AddSingleton<ProxyManager>();
         builder.Services.AddSingleton<StatusService>();
         builder.Services.AddSingleton<OperationDispatcher>();
+        builder.Services.AddSingleton<EstrichOne.Hosting.Recovery.AccessLetters>();
+        builder.Services.AddSingleton<EstrichOne.Hosting.Recovery.Downloads>();
+        builder.Services.AddSingleton<CertificateService>();
+        builder.Services.AddHttpClient<EstrichOne.Hosting.Notifications.NotificationSender>(c => c.Timeout = TimeSpan.FromSeconds(15));
+        builder.Services.AddSingleton<EstrichOne.Hosting.Notifications.NotificationMonitor>();
         builder.Services.AddScoped<AuditLog>();
         builder.Services.AddScoped<OperationService>();
         builder.Services.AddScoped<TenantLifecycle>();
@@ -98,6 +103,8 @@ public static class HostingApp
         if (!builder.Configuration.GetValue<bool>("Hosting:DisableStatusCollector"))
         {
             builder.Services.AddHostedService<StatusCollector>();
+            builder.Services.AddHostedService<CertificateMonitor>();
+            builder.Services.AddHostedService(sp => sp.GetRequiredService<EstrichOne.Hosting.Notifications.NotificationMonitor>());
         }
 
         builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(o =>
@@ -197,6 +204,9 @@ public static class HostingApp
         TenantEndpoints.Map(app);
         AdministrationEndpoints.Map(app);
         EstrichOne.Hosting.Notices.NoticeEndpoints.Map(app);
+        RecoveryEndpoints.Map(app);
+        EstrichOne.Hosting.Notifications.NotificationEndpoints.Map(app);
+        EstrichOne.Hosting.Setup.SetupWizardEndpoints.Map(app);
         app.MapFallback("/api/{**rest}", () => ApiErrors.NotFound("Unbekannter API-Pfad."));
         return app;
     }

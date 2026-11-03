@@ -56,6 +56,17 @@ public sealed class Tenant
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? DeletedAt { get; set; }
+
+    /// <summary>Erste Admin-Person der Suite (legt die Konsole bei der Bereitstellung an, Zugangsbrief).</summary>
+    public string? FirstAdminName { get; set; }
+    public string? FirstAdminUserName { get; set; }
+    public string? FirstAdminEmail { get; set; }
+
+    /// <summary>Version vor der letzten Aktualisierung (Rückkehr per „Zurücksetzen“ möglich).</summary>
+    public string? PreviousVersion { get; set; }
+
+    /// <summary>Snapshot der Vorab-Sicherung der letzten Aktualisierung (Daten für das Zurücksetzen).</summary>
+    public string? RollbackSnapshot { get; set; }
 }
 
 public sealed class AdminUser
@@ -76,6 +87,9 @@ public sealed class AdminUser
     public string? Preferences { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAt { get; set; }
+
+    /// <summary>Vom Installer angelegt bzw. zurückgesetzt: Passwort bei der ersten Anmeldung ändern.</summary>
+    public bool MustChangePassword { get; set; }
 }
 
 public sealed class AuditEvent
@@ -103,6 +117,12 @@ public enum OperationKind
     Backup,
     Delete,
     Reconfigure,
+    /// <summary>Daten aus einer Sicherung (Snapshot) zurückspielen.</summary>
+    Restore,
+    /// <summary>Letzte Aktualisierung zurücknehmen: vorherige Version und Daten der Vorab-Sicherung.</summary>
+    Rollback,
+    /// <summary>Erste Admin-Person in der Suite anlegen (Ersteinrichtung über die Konsole).</summary>
+    InitialSetup,
 }
 
 public enum OperationStatus
@@ -170,4 +190,23 @@ public sealed class Notice
             .Where(g => g != Guid.Empty).ToHashSet();
 
     public bool AppliesTo(Guid tenantId) => AllTenants || Targets().Contains(tenantId);
+}
+
+/// <summary>Benachrichtigung über ein Problem (Instanz gestört, Sicherung veraltet, Zertifikat läuft ab …).</summary>
+public sealed class Notification
+{
+    public long Id { get; set; }
+    /// <summary>Eindeutiger Schlüssel des Befunds (z. B. <c>tenant:firma:health</c>); je Schlüssel höchstens ein offener Eintrag.</summary>
+    public required string Key { get; set; }
+    /// <summary><c>info</c>, <c>warning</c>, <c>critical</c>.</summary>
+    public string Severity { get; set; } = "warning";
+    public required string Title { get; set; }
+    public string Text { get; set; } = string.Empty;
+    public Guid? TenantId { get; set; }
+    public string? TenantSlug { get; set; }
+    public DateTime RaisedAt { get; set; } = DateTime.UtcNow;
+    public DateTime? ResolvedAt { get; set; }
+    public DateTime? ReadAt { get; set; }
+    /// <summary>Zustellung (E-Mail/Webhook) – Ergebnis zur Anzeige.</summary>
+    public string? Delivery { get; set; }
 }

@@ -31,9 +31,10 @@ public sealed class ConsoleApp : IAsyncDisposable
 
     public FakeDockerHost Docker => app.Services.GetRequiredService<FakeDockerHost>();
 
-    public static async Task<ConsoleApp> StartAsync(string proxy = "caddy")
+    public static async Task<ConsoleApp> StartAsync(string proxy = "caddy", Action<string>? prepareRoot = null)
     {
         var temp = new TempDirectory();
+        prepareRoot?.Invoke(temp.Path);
         var args = new[]
         {
             "--Hosting:Docker=fake",

@@ -14,7 +14,10 @@ public sealed record TenantInput(
     Guid? PlanId,
     string? Version,
     string? Notes,
-    bool? ProvisionNow);
+    bool? ProvisionNow,
+    string? FirstAdminName = null,
+    string? FirstAdminUserName = null,
+    string? FirstAdminEmail = null);
 
 public sealed record OperationSummary(Guid Id, OperationKind Kind, string Label, OperationStatus Status, string RequestedBy,
     DateTime QueuedAt, DateTime? StartedAt, DateTime? FinishedAt, string? Error);
@@ -51,7 +54,11 @@ public sealed record TenantListItem(
     OperationSummary? OpenOperation,
     string? LastError,
     DateTime CreatedAt,
-    DateTime? StatusAt);
+    DateTime? StatusAt,
+    string? PreviousVersion = null,
+    CertificateInfo? Certificate = null,
+    bool AccessLetterAvailable = false,
+    string? FirstAdminUserName = null);
 
 public sealed record TenantDetail(
     TenantListItem Summary,
@@ -84,7 +91,8 @@ public sealed record ActionRequest(
     string? ConfirmSlug,
     bool? Confirm,
     bool? FinalBackup,
-    bool? BackupFirst);
+    bool? BackupFirst,
+    string? Snapshot = null);
 
 public sealed record UpdateAllRequest(string? Version, bool? IncludeStopped, bool? BackupFirst);
 

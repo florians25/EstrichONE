@@ -100,7 +100,8 @@ public sealed class OperationWorker(
                     .ForEach(e => e.State = EntityState.Unchanged);
                 tenant.LastError = $"{label}: {exception.Message}";
                 // Sperre bleibt bestehen; sonst gilt die Instanz als fehlerhaft.
-                if (tenant.State != TenantState.Locked && operation.Kind != OperationKind.Backup)
+                // Automatisch zurückgesetzt: die Instanz läuft im vorherigen Stand weiter.
+                if (tenant.State != TenantState.Locked && operation.Kind != OperationKind.Backup && exception is not RolledBackException)
                 {
                     tenant.State = TenantState.Failed;
                 }

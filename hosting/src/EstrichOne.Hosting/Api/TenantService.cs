@@ -16,7 +16,9 @@ public sealed class TenantService(
     InstanceLayout layout,
     ConsoleSettings settings,
     IOptions<HostingOptions> options,
-    TimeProvider clock)
+    TimeProvider clock,
+    CertificateService certificates,
+    EstrichOne.Hosting.Recovery.AccessLetters letters)
 {
     private HostingOptions Settings => options.Value;
 
@@ -25,7 +27,8 @@ public sealed class TenantService(
 
     public sealed record ValidatedInput(
         string CompanyName, string? CustomerNumber, string? ContactName, string? ContactEmail, string? ContactPhone,
-        string Slug, string Domain, Guid PlanId, string Version, string? Notes);
+        string Slug, string Domain, Guid PlanId, string Version, string? Notes,
+        string? FirstAdminName = null, string? FirstAdminUserName = null, string? FirstAdminEmail = null);
 
     /// <summary>Prüft alle Eingaben; Kürzel und Domain müssen eindeutig sein (bei Änderung ohne den Mandanten selbst).</summary>
     public async Task<(ValidatedInput? Value, Dictionary<string, string> Errors)> ValidateAsync(TenantInput input, Tenant? existing,
@@ -82,9 +85,21 @@ public sealed class TenantService(
         var version = existing?.Version ?? (string.IsNullOrWhiteSpace(input.Version) ? await settings.GetDefaultVersionAsync(cancellationToken) : input.Version.Trim());
         if (Validation.CheckVersion(version) is { } versionError) errors["version"] = versionError;
 
+        // Erste Admin-Person (nur beim Anlegen): legt die Konsole nach der Bereitstellung in der Suite an.
+        string? adminName = null, adminUser = null, adminEmail = null;
+        if (existing is null && !string.IsNullOrWhiteSpace(input.FirstAdminUserName))
+        {
+            adminName = Blank(input.FirstAdminName);
+            adminUser = input.FirstAdminUserName.Trim().ToLowerInvariant();
+            adminEmail = Blank(input.FirstAdminEmail);
+            if (Validation.CheckText(adminName, "Der Name der Admin-Person", 120, true) is { } nameError) errors["firstAdminName"] = nameError;
+            if (Validation.CheckUserName(adminUser) is { } userError) errors["firstAdminUserName"] = userError;
+            if (Validation.CheckEmail(adminEmail, required: false) is { } adminEmailError) errors["firstAdminEmail"] = adminEmailError;
+        }
+
         return errors.Count > 0
             ? (null, errors)
-            : (new ValidatedInput(company!, customer, contact, email, phone, slug, domain, planId!.Value, version, notes), errors);
+            : (new ValidatedInput(company!, customer, contact, email, phone, slug, domain, planId!.Value, version, notes, adminName, adminUser, adminEmail), errors);
     }
 
     public Tenant Create(ValidatedInput input)
@@ -102,6 +117,9 @@ public sealed class TenantService(
             PlanId = input.PlanId,
             Version = input.Version,
             Notes = input.Notes,
+            FirstAdminName = input.FirstAdminName,
+            FirstAdminUserName = input.FirstAdminUserName,
+            FirstAdminEmail = input.FirstAdminEmail,
             State = TenantState.Provisioning,
             CreatedAt = now,
             UpdatedAt = now,
@@ -137,7 +155,8 @@ public sealed class TenantService(
             current.CpuPercent, current.MemoryBytes, current.DiskBytes, (long)plan.StorageGb * 1024 * 1024 * 1024,
             current.ActiveUsers, plan.MaxUsers, current.Backup?.Configured == true ? current.Backup.Healthy : null,
             current.Backup?.LastSuccess?.At, current.SetupRequired, open is null ? null : ToSummary(open), tenant.LastError, tenant.CreatedAt,
-            current.CollectedAt == DateTime.MinValue ? null : current.CollectedAt);
+            current.CollectedAt == DateTime.MinValue ? null : current.CollectedAt,
+            tenant.PreviousVersion, certificates.Get(tenant.Domain), letters.Exists(tenant.Slug), tenant.FirstAdminUserName);
     }
 
     public static OperationSummary ToSummary(Operation operation) =>

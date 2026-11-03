@@ -20,5 +20,11 @@ public static class DataSeeder
                 new Plan { Name = "Enterprise", Description = "Unbegrenzte Benutzer, großer Speicher", MaxUsers = 0, StorageGb = 500, MemoryMb = 4096, CpuLimit = 4, MonthlyPrice = 299 });
             await db.SaveChangesAsync(cancellationToken);
         }
+
+        var options = scope.ServiceProvider.GetRequiredService<Microsoft.Extensions.Options.IOptions<HostingOptions>>().Value;
+        if (await Setup.InitialAdmin.ApplyAsync(services, options, cancellationToken) is { } message)
+        {
+            scope.ServiceProvider.GetRequiredService<ILoggerFactory>().CreateLogger("EstrichOne.Hosting.Setup").LogWarning("{Message}", message);
+        }
     }
 }

@@ -62,6 +62,9 @@ public sealed class HostingOptions
     /// <summary>Intervall der Speicherplatz- und Benutzerzählung in Minuten.</summary>
     public int UsageIntervalMinutes { get; set; } = 10;
 
+    /// <summary>Intervall der Überwachung für Benachrichtigungen in Sekunden.</summary>
+    public int NotificationIntervalSeconds { get; set; } = 60;
+
     /// <summary>Gleichzeitig ausgeführte Vorgänge (verschiedene Mandanten).</summary>
     public int MaxParallelOperations { get; set; } = 2;
 

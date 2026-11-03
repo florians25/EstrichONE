@@ -21,9 +21,17 @@ public interface IInstanceProbe
 
     /// <summary>Setzt die Systemhinweise der Instanz (<c>PUT /api/v1/system/notices</c> mit Instanz-Schlüssel).</summary>
     Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken);
+
+    /// <summary>Ersteinrichtung der Suite (<c>POST /api/v1/setup</c>): Firma und erste Admin-Person mit dem Einrichtungscode.</summary>
+    Task<NoticePushResult> CompleteSetupAsync(string slug, SuiteSetupRequest request, CancellationToken cancellationToken);
 }
 
 public sealed record NoticePushResult(bool Success, int? StatusCode, string? Error);
+
+public sealed record SuiteSetupAdministrator(string DisplayName, string UserName, string? Email, string Password);
+
+/// <summary>Anfrage an <c>POST /api/v1/setup</c> der Suite (Felder wie <c>CompleteSetupRequest</c>).</summary>
+public sealed record SuiteSetupRequest(string SetupCode, string CompanyName, SuiteSetupAdministrator Administrator);
 
 /// <summary>Fragt die Instanz über ihr Edge-Netz direkt beim Caddy der Instanz ab (ohne den öffentlichen Proxy).</summary>
 public sealed class HttpInstanceProbe(HttpClient http) : IInstanceProbe
@@ -68,6 +76,24 @@ public sealed class HttpInstanceProbe(HttpClient http) : IInstanceProbe
         }
     }
 
+    public async Task<NoticePushResult> CompleteSetupAsync(string slug, SuiteSetupRequest request, CancellationToken cancellationToken)
+    {
+        var uri = new Uri($"http://{InstanceLayout.WebContainer(slug)}:{InstanceLayout.InstanceHttpPort}/api/v1/setup");
+        try
+        {
+            using var response = await http.PostAsJsonAsync(uri, request, cancellationToken);
+            var code = (int)response.StatusCode;
+            return response.IsSuccessStatusCode
+                ? new NoticePushResult(true, code, null)
+                : new NoticePushResult(false, code, $"HTTP {code}: {Shorten(await response.Content.ReadAsStringAsync(cancellationToken))}");
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new NoticePushResult(false, null, exception.Message);
+        }
+    }
+
     private static string Shorten(string text) => text.Trim() is { Length: > 200 } long_ ? long_[..200] : text.Trim();
 
     public async Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken)
@@ -102,6 +128,27 @@ public sealed class FakeInstanceProbe(IDockerHost docker, InstanceFiles files) :
     /// <summary>Zuletzt an eine Instanz gesendete Systemhinweise (für Tests und Vorführung).</summary>
     public System.Collections.Concurrent.ConcurrentDictionary<string, string> PushedNotices { get; } = new(StringComparer.Ordinal);
 
+    /// <summary>Eingerichtete Instanzen (Simulation von <c>POST /api/v1/setup</c>).</summary>
+    public System.Collections.Concurrent.ConcurrentDictionary<string, SuiteSetupRequest> CompletedSetups { get; } = new(StringComparer.Ordinal);
+
+    public async Task<NoticePushResult> CompleteSetupAsync(string slug, SuiteSetupRequest request, CancellationToken cancellationToken)
+    {
+        var containers = await docker.ListContainersAsync(InstanceLayout.ProjectName(slug), cancellationToken);
+        if (!containers.Any(c => c.Service == "api" && c.State == "running"))
+        {
+            return new NoticePushResult(false, null, "Instanz läuft nicht (Simulation)");
+        }
+
+        if (request.Administrator.Password.Length < 10)
+        {
+            return new NoticePushResult(false, 422, "Passwort zu kurz (Simulation)");
+        }
+
+        return CompletedSetups.TryAdd(slug, request)
+            ? new NoticePushResult(true, 201, null)
+            : new NoticePushResult(false, 409, "EstrichONE ist bereits eingerichtet.");
+    }
+
     public async Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken)
     {
         var containers = await docker.ListContainersAsync(InstanceLayout.ProjectName(slug), cancellationToken);
@@ -124,6 +171,6 @@ public sealed class FakeInstanceProbe(IDockerHost docker, InstanceFiles files) :
 
         var env = await files.ReadEnvAsync(slug, cancellationToken);
         return new ProbeResult(true, 200, "Healthy", env.GetValueOrDefault("ESTRICHONE_VERSION"),
-            env.GetValueOrDefault("ESTRICHONE_SERVER_NAME"), true, null);
+            env.GetValueOrDefault("ESTRICHONE_SERVER_NAME"), !CompletedSetups.ContainsKey(slug), null);
     }
 }

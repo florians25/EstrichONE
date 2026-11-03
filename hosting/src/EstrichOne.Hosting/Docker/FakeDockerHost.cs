@@ -8,7 +8,7 @@ namespace EstrichOne.Hosting.Docker;
 /// <summary>
 /// Simulierter Docker-Host für Tests und Vorführungen (<c>Hosting__Docker=fake</c>): bildet die Compose-Befehle der
 /// Konsole auf einen Zustand im Speicher ab. Die Oberfläche zeigt in diesem Modus deutlich „Simulation“ an.
-/// Eine Version mit „fehler“ im Namen lässt das Laden der Images scheitern (für Fehlerpfade in Tests).
+/// Eine Version mit „fehler“ im Namen lässt das Laden der Images scheitern, „startabbruch“ den Start (für Fehlerpfade in Tests).
 /// </summary>
 public sealed class FakeDockerHost : IDockerHost
 {
@@ -43,6 +43,12 @@ public sealed class FakeDockerHost : IDockerHost
     {
         Calls.Enqueue($"{project.Name} {string.Join(' ', arguments)}");
         var verb = arguments.Count > 0 ? arguments[0] : string.Empty;
+        if (verb == "--profile" && arguments.Count > 2)
+        {
+            // „--profile restore run --rm -T restore <snapshot>“: Wiederherstellung aus einer Sicherung.
+            verb = arguments[2];
+        }
+
         var env = ReadEnv(project.Directory);
         var version = env.GetValueOrDefault("ESTRICHONE_VERSION", "0.0.0");
         var registry = env.GetValueOrDefault("ESTRICHONE_REGISTRY", "ghcr.io/florians25");
@@ -64,6 +70,17 @@ public sealed class FakeDockerHost : IDockerHost
                 }
 
                 return new CommandResult(0, string.Empty, string.Empty);
+
+            case "run" when arguments.Contains("restore"):
+                await Task.Delay(StepDelay, cancellationToken);
+                Say($"Wiederherstellung von Snapshot {arguments[^1]} (Simulation): Datenbank getauscht, Dateien zurückgespielt.");
+                Restores.Enqueue($"{project.Name} {arguments[^1]}");
+                return new CommandResult(0, string.Empty, string.Empty);
+
+            case "up" when version.Contains("startabbruch", StringComparison.Ordinal) && !arguments.Contains("postgres"):
+                await Task.Delay(StepDelay, cancellationToken);
+                Say(" Container api Error dependency failed to start: container is unhealthy");
+                return new CommandResult(1, string.Empty, "dependency failed to start: container api is unhealthy");
 
             case "up":
                 var containers = projects.GetOrAdd(project.Name, _ => []);
@@ -138,6 +155,7 @@ public sealed class FakeDockerHost : IDockerHost
                     var repository = Path.Combine(project.Directory, "backup-repository");
                     Directory.CreateDirectory(repository);
                     await File.WriteAllTextAsync(Path.Combine(repository, "config"), "simulierte Sicherung", cancellationToken);
+                    await AppendSnapshotAsync(status, cancellationToken);
                     Say($"{at} Fertig: Snapshot 1a2b3c4d");
                 }
 
@@ -146,6 +164,27 @@ public sealed class FakeDockerHost : IDockerHost
             default:
                 return new CommandResult(0, string.Empty, string.Empty);
         }
+    }
+
+    /// <summary>Ausgeführte Wiederherstellungen „projekt snapshot“ (für Tests).</summary>
+    public ConcurrentQueue<string> Restores { get; } = new();
+
+    /// <summary>Schreibt <c>snapshots.json</c> wie der Backup-Dienst der Suite (restic snapshots --json je Repository).</summary>
+    private static async Task AppendSnapshotAsync(string statusDirectory, CancellationToken cancellationToken)
+    {
+        var path = Path.Combine(statusDirectory, "snapshots.json");
+        var list = new List<string>();
+        if (File.Exists(path))
+        {
+            using var document = System.Text.Json.JsonDocument.Parse(await File.ReadAllTextAsync(path, cancellationToken));
+            list.AddRange(document.RootElement.GetProperty("repositories")[0].GetProperty("snapshots").EnumerateArray().Select(e => e.GetRawText()));
+        }
+
+        var id = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(32));
+        var time = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ss.fffZ", CultureInfo.InvariantCulture);
+        list.Add($"{{\"time\":\"{time}\",\"id\":\"{id}\",\"short_id\":\"{id[..8]}\",\"tags\":[\"estrichone\"]}}");
+        var json = $"{{\"at\":\"{time}\",\"repositories\":[{{\"key\":\"lokal\",\"label\":\"/repository\",\"snapshots\":[{string.Join(',', list)}]}}]}}";
+        await File.WriteAllTextAsync(path, json, cancellationToken);
     }
 
     public Task<IReadOnlyList<ContainerInfo>> ListContainersAsync(string projectName, CancellationToken cancellationToken)

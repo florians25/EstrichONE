@@ -13,6 +13,7 @@ public sealed class HostingDbContext(DbContextOptions<HostingDbContext> options)
     public DbSet<Operation> Operations => Set<Operation>();
     public DbSet<Setting> Settings => Set<Setting>();
     public DbSet<Notice> Notices => Set<Notice>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
     {
@@ -70,6 +71,15 @@ public sealed class HostingDbContext(DbContextOptions<HostingDbContext> options)
             notice.Property(n => n.Title).HasMaxLength(120);
             notice.Property(n => n.Severity).HasMaxLength(10);
             notice.HasIndex(n => n.EndsAt);
+        });
+
+        modelBuilder.Entity<Notification>(notification =>
+        {
+            notification.Property(n => n.Key).HasMaxLength(160);
+            notification.Property(n => n.Title).HasMaxLength(200);
+            notification.Property(n => n.Severity).HasMaxLength(10);
+            notification.HasIndex(n => new { n.Key, n.ResolvedAt });
+            notification.HasIndex(n => n.RaisedAt);
         });
     }
 

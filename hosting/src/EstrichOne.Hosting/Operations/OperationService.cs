@@ -21,6 +21,9 @@ public sealed class OperationService(HostingDbContext db, OperationDispatcher qu
         [OperationKind.Backup] = "Sicherung",
         [OperationKind.Delete] = "Löschen",
         [OperationKind.Reconfigure] = "Konfiguration anwenden",
+        [OperationKind.Restore] = "Wiederherstellen",
+        [OperationKind.Rollback] = "Aktualisierung zurücknehmen",
+        [OperationKind.InitialSetup] = "Ersteinrichtung",
     };
 
     public Task<bool> HasOpenOperationAsync(Guid tenantId, CancellationToken cancellationToken) =>
@@ -53,6 +56,7 @@ public sealed class OperationService(HostingDbContext db, OperationDispatcher qu
         OperationKind.Update => $"Zielversion {parameters?.Version}{(parameters?.BackupFirst == true ? ", mit Vorab-Sicherung" : string.Empty)}",
         OperationKind.Lock => $"Grund: {parameters?.Reason}{(parameters?.StopInstance == true ? "; Instanz wird angehalten" : string.Empty)}",
         OperationKind.Delete => parameters?.FinalBackup == true ? "mit Endsicherung" : "ohne Endsicherung",
+        OperationKind.Restore => $"Sicherung {parameters?.Snapshot ?? "latest"}{(parameters?.BackupFirst == true ? ", vorher aktuellen Stand sichern" : string.Empty)}",
         _ => null,
     };
 }

@@ -5,6 +5,7 @@ using EstrichOne.Hosting.Domain;
 using EstrichOne.Hosting.Infrastructure;
 using EstrichOne.Hosting.Instances;
 using EstrichOne.Hosting.Proxy;
+using EstrichOne.Hosting.Recovery;
 using EstrichOne.Hosting.Status;
 using Microsoft.Extensions.Options;
 
@@ -22,8 +23,14 @@ public sealed class TenantLifecycle(
     StatusService status,
     HostingDbContext db,
     IOptions<HostingOptions> options,
-    TimeProvider clock)
+    TimeProvider clock,
+    IInstanceProbe probe,
+    AccessLetters letters,
+    ConsoleSettings consoleSettings)
 {
+    /// <summary>Dienste, die für das Zurückspielen einer Sicherung angehalten werden (Datenbank läuft weiter).</summary>
+    private static readonly string[] RestoreStopServices = ["api", "caddy", "backup"];
+
     private static readonly TimeSpan PullTimeout = TimeSpan.FromMinutes(20);
     private static readonly TimeSpan StopTimeout = TimeSpan.FromMinutes(5);
     private static readonly TimeSpan BackupTimeout = TimeSpan.FromHours(3);
@@ -95,6 +102,15 @@ public sealed class TenantLifecycle(
             case OperationKind.Delete:
                 await DeleteAsync(tenant, parameters.FinalBackup, log, cancellationToken);
                 return;
+            case OperationKind.Restore:
+                await RestoreAsync(tenant, plan, parameters.Snapshot, parameters.BackupFirst, log, cancellationToken);
+                break;
+            case OperationKind.Rollback:
+                await RollbackAsync(tenant, plan, log, cancellationToken);
+                break;
+            case OperationKind.InitialSetup:
+                await InitialSetupAsync(tenant, log, cancellationToken);
+                break;
             case OperationKind.Reconfigure:
                 await PrepareAsync(tenant, plan, log, cancellationToken);
                 if (tenant.State is TenantState.Running or TenantState.Failed
@@ -128,11 +144,65 @@ public sealed class TenantLifecycle(
         await UpAsync(tenant, log, cancellationToken);
         await SetStateAsync(tenant, TenantState.Running, cancellationToken);
         log.Write($"Instanz läuft. Öffentliche Adresse: {InstanceFiles.PublicUrl(tenant.Domain, Settings)}");
+        if (!string.IsNullOrEmpty(tenant.FirstAdminUserName))
+        {
+            await InitialSetupAsync(tenant, log, cancellationToken);
+            return;
+        }
+
         var code = await status.ReadSetupCodeAsync(tenant.Slug, cancellationToken);
         if (code is not null)
         {
             log.Write($"Einrichtungscode für den ersten Administrator: {code}");
         }
+    }
+
+    /// <summary>
+    /// Ersteinrichtung der Suite über deren API: Firma und erste Admin-Person mit Startpasswort anlegen (Einrichtungscode
+    /// aus dem API-Protokoll, wie ihn sonst der Kunde eingibt). Ergebnis ist der Zugangsbrief.
+    /// </summary>
+    private async Task InitialSetupAsync(Tenant tenant, OperationLog log, CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrEmpty(tenant.FirstAdminUserName) || string.IsNullOrEmpty(tenant.FirstAdminName))
+        {
+            throw new InvalidOperationException("Für diesen Mandanten ist keine erste Admin-Person hinterlegt.");
+        }
+
+        log.Write($"Ersteinrichtung: erste Admin-Person „{tenant.FirstAdminName}“ ({tenant.FirstAdminUserName}) anlegen …");
+        string? code = null;
+        for (var attempt = 0; attempt < 30 && code is null; attempt++)
+        {
+            var state = await probe.ProbeAsync(tenant.Slug, cancellationToken);
+            if (state.SetupRequired == false)
+            {
+                log.Write("Die Instanz ist bereits eingerichtet – nichts zu tun.");
+                return;
+            }
+
+            code = await status.ReadSetupCodeAsync(tenant.Slug, cancellationToken);
+            if (code is null)
+            {
+                await Task.Delay(Settings.IsFake ? TimeSpan.FromMilliseconds(50) : TimeSpan.FromSeconds(2), clock, cancellationToken);
+            }
+        }
+
+        if (code is null)
+        {
+            throw new InvalidOperationException("Kein Einrichtungscode im Protokoll der Instanz gefunden.");
+        }
+
+        var password = AccessLetters.GeneratePassword();
+        var result = await probe.CompleteSetupAsync(tenant.Slug, new SuiteSetupRequest(code, tenant.CompanyName,
+            new SuiteSetupAdministrator(tenant.FirstAdminName, tenant.FirstAdminUserName, tenant.FirstAdminEmail, password)), cancellationToken);
+        if (!result.Success)
+        {
+            throw new InvalidOperationException($"Ersteinrichtung der Instanz fehlgeschlagen: {result.Error}");
+        }
+
+        await letters.SaveAsync(tenant.Slug, new AccessLetter(tenant.CompanyName, InstanceFiles.PublicUrl(tenant.Domain, Settings),
+            tenant.FirstAdminName, tenant.FirstAdminUserName, tenant.FirstAdminEmail, password, clock.GetUtcNow().UtcDateTime), cancellationToken);
+        status.Forget(tenant.Slug);
+        log.Write("Erste Admin-Person angelegt. Der Zugangsbrief liegt auf der Detailseite bereit (Startpasswort nur dort).");
     }
 
     /// <summary>Dateien schreiben (Vorlagen, Hosting-Ergänzung, .env), Datenverzeichnisse und Edge-Netz vorbereiten.</summary>
@@ -142,6 +212,16 @@ public sealed class TenantLifecycle(
         log.Write(created
             ? $"Verzeichnis {layout.Directory(tenant.Slug)} mit neuer .env (zufällige Passwörter) angelegt."
             : $"Konfiguration in {layout.Directory(tenant.Slug)} aktualisiert (Passwörter unverändert).");
+        // Zweites Sicherungsziel (Einstellungen → Sicherung): nur verwalten, wenn in der Konsole festgelegt.
+        if (await consoleSettings.GetAsync(ConsoleSettings.SecondaryRepositoryKey, cancellationToken) is { } secondary)
+        {
+            var value = string.IsNullOrWhiteSpace(secondary) ? string.Empty : $"{secondary.TrimEnd('/')}/{tenant.Slug}";
+            await files.UpdateEnvAsync(tenant.Slug, new Dictionary<string, string> { ["BACKUP_REPOSITORY_2"] = value }, cancellationToken);
+            if (value.Length > 0)
+            {
+                log.Write("Zweites Sicherungsziel eingetragen.");
+            }
+        }
         await proxy.AttachAsync(tenant.Slug, cancellationToken);
         log.Write($"Netz {InstanceLayout.EdgeNetwork(tenant.Slug)} bereit, Proxy verbunden.");
     }
@@ -187,6 +267,10 @@ public sealed class TenantLifecycle(
             {
                 log.Write("Vorab-Sicherung mit der bisherigen Version …");
                 await BackupAsync(tenant, log, cancellationToken);
+                tenant.RollbackSnapshot = SnapshotReader.Read(StatusDirectory(tenant)) is [var newest, ..] ? newest.Id : null;
+                log.Write(tenant.RollbackSnapshot is null
+                    ? "Vorab-Sicherung erstellt (Snapshot-Liste nicht lesbar – Zurücksetzen nur ohne Datenstand)."
+                    : $"Vorab-Sicherung {tenant.RollbackSnapshot[..8]} – Grundlage für das Zurücksetzen.");
             }
             catch
             {
@@ -197,10 +281,29 @@ public sealed class TenantLifecycle(
             }
         }
 
+        if (!backupFirst || !wasRunning)
+        {
+            tenant.RollbackSnapshot = null;
+        }
+
+        tenant.PreviousVersion = previous;
         await SaveAsync(tenant, cancellationToken);
         if (wasRunning)
         {
-            await UpAsync(tenant, log, cancellationToken);
+            try
+            {
+                await UpAsync(tenant, log, cancellationToken);
+            }
+            catch (DockerException exception)
+            {
+                // Neue Version startet nicht: automatisch zurück auf den bisherigen Stand (Version + Daten der Vorab-Sicherung).
+                log.Write($"Start mit {version} fehlgeschlagen: {exception.Message}");
+                log.Write("Automatische Rücknahme der Aktualisierung …");
+                await RollbackAsync(tenant, plan, log, cancellationToken);
+                throw new RolledBackException(
+                    $"Aktualisierung auf {version} fehlgeschlagen ({exception.Message}). Automatisch auf {previous} zurückgesetzt – die Instanz läuft wieder.");
+            }
+
             if (tenant.State == TenantState.Failed)
             {
                 await SetStateAsync(tenant, TenantState.Running, cancellationToken);
@@ -210,6 +313,78 @@ public sealed class TenantLifecycle(
         {
             log.Write("Instanz ist angehalten – die neue Version wird beim nächsten Start aktiv.");
         }
+    }
+
+    private string StatusDirectory(Tenant tenant) => Path.Combine(layout.DataDirectory(tenant.Slug), "backup-status");
+
+    /// <summary>Letzte Aktualisierung zurücknehmen: vorherige Version, Daten der Vorab-Sicherung (falls vorhanden), starten.</summary>
+    private async Task RollbackAsync(Tenant tenant, Plan plan, OperationLog log, CancellationToken cancellationToken)
+    {
+        var target = tenant.PreviousVersion ?? throw new InvalidOperationException("Keine vorherige Version zum Zurücksetzen bekannt.");
+        var snapshot = tenant.RollbackSnapshot;
+        log.Write($"Zurücksetzen {tenant.Version} → {target}{(snapshot is null ? " (ohne Datenstand – keine Vorab-Sicherung)" : $" mit Datenstand {snapshot[..8]}")}.");
+        tenant.Version = target;
+        await PrepareAsync(tenant, plan, log, cancellationToken);
+        await ComposeAsync(tenant, ["pull", "--ignore-pull-failures"], PullTimeout, log, cancellationToken);
+        if (snapshot is not null)
+        {
+            await RestoreSnapshotAsync(tenant, snapshot, log, cancellationToken);
+        }
+
+        await UpAsync(tenant, log, cancellationToken);
+        tenant.PreviousVersion = null;
+        tenant.RollbackSnapshot = null;
+        if (tenant.State != TenantState.Locked)
+        {
+            await SetStateAsync(tenant, TenantState.Running, cancellationToken);
+        }
+
+        await SaveAsync(tenant, cancellationToken);
+        log.Write($"Version {target} läuft wieder.");
+    }
+
+    private async Task RestoreAsync(Tenant tenant, Plan plan, string? snapshot, bool backupFirst, OperationLog log, CancellationToken cancellationToken)
+    {
+        var available = SnapshotReader.Read(StatusDirectory(tenant));
+        var chosen = snapshot is null or "latest" ? (available.Count > 0 ? available[0] : null) : available.FirstOrDefault(s => s.Id == snapshot || s.ShortId == snapshot);
+        if (chosen is null)
+        {
+            throw new InvalidOperationException(snapshot is null or "latest" ? "Für diese Instanz gibt es noch keine Sicherung." : $"Sicherung {snapshot} nicht gefunden.");
+        }
+
+        log.Write($"Wiederherstellung des Stands vom {chosen.Time:yyyy-MM-dd HH:mm} UTC (Snapshot {chosen.ShortId}, {chosen.Repository}).");
+        var running = (await docker.ListContainersAsync(InstanceLayout.ProjectName(tenant.Slug), cancellationToken))
+            .Any(c => c.Service == "backup" && c.State == "running");
+        if (backupFirst && running)
+        {
+            log.Write("Sicherheitskopie des aktuellen Stands vor dem Zurückspielen …");
+            await BackupAsync(tenant, log, cancellationToken);
+        }
+
+        await PrepareAsync(tenant, plan, log, cancellationToken);
+        await RestoreSnapshotAsync(tenant, chosen.Id, log, cancellationToken);
+        await UpAsync(tenant, log, cancellationToken);
+        if (tenant.State is not TenantState.Locked)
+        {
+            await SetStateAsync(tenant, TenantState.Running, cancellationToken);
+        }
+
+        log.Write("Wiederherstellung abgeschlossen – die Suite aktualisiert beim Start das Datenbankschema.");
+    }
+
+    /// <summary>Dienst „restore“ der Suite: Datenbank in neue Datenbank einspielen und tauschen, Dateien zurückspielen.</summary>
+    private async Task RestoreSnapshotAsync(Tenant tenant, string snapshot, OperationLog log, CancellationToken cancellationToken)
+    {
+        if (!SnapshotReader.IsSnapshotId(snapshot))
+        {
+            throw new InvalidOperationException("Ungültige Snapshot-Kennung.");
+        }
+
+        log.Write("Dienste anhalten (Datenbank läuft weiter) …");
+        await ComposeAsync(tenant, ["stop", .. RestoreStopServices], StopTimeout, log, cancellationToken);
+        await ComposeAsync(tenant, ["up", "-d", "--wait", "postgres"], UpTimeout, log, cancellationToken);
+        log.Write($"Sicherung {snapshot[..8]} zurückspielen …");
+        await ComposeAsync(tenant, ["--profile", "restore", "run", "--rm", "-T", "restore", snapshot], BackupTimeout, log, cancellationToken);
     }
 
     private async Task LockAsync(Tenant tenant, OperationParameters parameters, OperationLog log, CancellationToken cancellationToken)
@@ -305,7 +480,7 @@ public sealed class TenantLifecycle(
         var result = await docker.ComposeAsync(layout.Project(tenant.Slug), arguments, timeout, line => log.Write("  " + line), cancellationToken);
         if (!result.Success)
         {
-            throw new DockerException($"docker compose {arguments[0]} fehlgeschlagen: {result.Summary}");
+            throw new DockerException($"docker compose {arguments.First(a => !a.StartsWith('-') && a != "restore")} fehlgeschlagen: {result.Summary}");
         }
     }
 
@@ -332,3 +507,6 @@ public sealed class TenantLifecycle(
         await db.SaveChangesAsync(cancellationToken);
     }
 }
+
+/// <summary>Vorgang fehlgeschlagen, Instanz aber automatisch auf den vorherigen Stand zurückgesetzt (läuft wieder).</summary>
+public sealed class RolledBackException(string message) : Exception(message);

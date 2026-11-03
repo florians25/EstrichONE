@@ -38,6 +38,9 @@ namespace EstrichOne.Hosting.Data.Migrations
                     b.Property<DateTime?>("LockedUntil")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("MustChangePassword")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("PasswordHash")
                         .IsRequired()
                         .HasColumnType("TEXT");
@@ -167,6 +170,58 @@ namespace EstrichOne.Hosting.Data.Migrations
                     b.HasIndex("EndsAt");
 
                     b.ToTable("Notices");
+                });
+
+            modelBuilder.Entity("EstrichOne.Hosting.Data.Notification", b =>
+                {
+                    b.Property<long>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Delivery")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("RaisedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Severity")
+                        .IsRequired()
+                        .HasMaxLength(10)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("TenantId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TenantSlug")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RaisedAt");
+
+                    b.HasIndex("Key", "ResolvedAt");
+
+                    b.ToTable("Notifications");
                 });
 
             modelBuilder.Entity("EstrichOne.Hosting.Data.Operation", b =>
@@ -307,6 +362,15 @@ namespace EstrichOne.Hosting.Data.Migrations
                         .HasMaxLength(253)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("FirstAdminEmail")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FirstAdminName")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FirstAdminUserName")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("LastError")
                         .HasColumnType("TEXT");
 
@@ -320,6 +384,12 @@ namespace EstrichOne.Hosting.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("PlanId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PreviousVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("RollbackSnapshot")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Slug")
