@@ -24,49 +24,7 @@ struct ChatListView: View {
     private var status: ChatStatus? { model.active?.sync?.chat }
 
     var body: some View {
-        List {
-            if let failure {
-                Section {
-                    NoticeLine(tone: .neutral, text: failure, symbol: "wifi.slash")
-                        .listRowInsets(EdgeInsets())
-                        .listRowBackground(Color.clear)
-                }
-            }
-            if !search.isEmpty {
-                searchResults
-            } else {
-                if loaded, conversations.isEmpty, failure == nil {
-                    Section {
-                        EmptyStateView(symbol: "bubble.left.and.bubble.right", title: "Noch keine Unterhaltungen",
-                                       message: "Sobald das Büro oder Ihre Kolonne schreibt, erscheint die Unterhaltung hier.")
-                    }
-                }
-                Section {
-                    ForEach(conversations) { conversation in
-                        Button { open = conversation } label: {
-                            ConversationRow(conversation: conversation, draft: drafts[conversation.id],
-                                            typing: chat?.typingName(in: conversation.id))
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityIdentifier("chatConversation")
-                        .swipeActions(edge: .trailing) {
-                            muteButton(conversation)
-                        }
-                        .swipeActions(edge: .leading) {
-                            if conversation.unreadCount > 0 {
-                                Button("Gelesen", systemImage: "checkmark.bubble") { Task { await markRead(conversation) } }
-                                    .tint(Theme.accentFill)
-                            }
-                        }
-                        .contextMenu { muteMenu(conversation) }
-                    }
-                } footer: {
-                    if !conversations.isEmpty {
-                        Text(footer)
-                    }
-                }
-            }
-        }
+        conversationList
         .listStyle(.insetGrouped)
         .overlay { if !loaded { ProgressView() } }
         .navigationTitle("Chat")
@@ -121,6 +79,52 @@ struct ChatListView: View {
             }
         }
         .refreshable { await load() }
+    }
+
+    private var conversationList: some View {
+        List {
+            if let failure {
+                Section {
+                    NoticeLine(tone: .neutral, text: failure, symbol: "wifi.slash")
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+            }
+            if !search.isEmpty {
+                searchResults
+            } else {
+                if loaded, conversations.isEmpty, failure == nil {
+                    Section {
+                        EmptyStateView(symbol: "bubble.left.and.bubble.right", title: "Noch keine Unterhaltungen",
+                                       message: "Sobald das Büro oder Ihre Kolonne schreibt, erscheint die Unterhaltung hier.")
+                    }
+                }
+                Section {
+                    ForEach(conversations) { conversation in
+                        Button { open = conversation } label: {
+                            ConversationRow(conversation: conversation, draft: drafts[conversation.id],
+                                            typing: chat?.typingName(in: conversation.id))
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("chatConversation")
+                        .swipeActions(edge: .trailing) {
+                            muteButton(conversation)
+                        }
+                        .swipeActions(edge: .leading) {
+                            if conversation.unreadCount > 0 {
+                                Button("Gelesen", systemImage: "checkmark.bubble") { Task { await markRead(conversation) } }
+                                    .tint(Theme.accentFill)
+                            }
+                        }
+                        .contextMenu { muteMenu(conversation) }
+                    }
+                } footer: {
+                    if !conversations.isEmpty {
+                        Text(footer)
+                    }
+                }
+            }
+        }
     }
 
     private var footer: String {

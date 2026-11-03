@@ -30,6 +30,46 @@ struct ChatInfoView: View {
     private var chatKind: ChatKind { detail?.chatKind ?? kind }
 
     var body: some View {
+        infoList
+        .listStyle(.insetGrouped)
+        .navigationTitle(chatKind == .direct ? "Kontaktinfo" : "Gruppeninfo")
+        .navigationBarTitleDisplayMode(.inline)
+        .overlay { if detail == nil, failure == nil { ProgressView() } }
+        .task { await load() }
+        .onChange(of: search) { _, text in if text.isEmpty { hits = [] } }
+        .onChange(of: avatarItem) { _, item in
+            guard let item else { return }
+            Task { await setAvatar(item) }
+        }
+        .navigationDestination(isPresented: $editing) {
+            if let detail {
+                ChatGroupEditor(mode: .edit(detail)) { _ in
+                    editing = false
+                    Task {
+                        await load()
+                        changed()
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $addingMembers) {
+            ChatMemberPicker(title: "Mitglieder hinzufügen", excluded: Set(detail?.members.map(\.id) ?? [])) { added in
+                addingMembers = false
+                Task { await update(ChatGroupChange(memberIds: (detail?.members.map(\.id) ?? []) + added.map(\.id)), message: "Hinzugefügt") }
+            }
+        }
+        .confirmationDialog("Gruppe verlassen?", isPresented: $confirmsLeave, titleVisibility: .visible) {
+            Button("Verlassen", role: .destructive) { Task { await leave() } }
+            Button("Abbrechen", role: .cancel) {}
+        } message: {
+            Text(chatKind == .crew || chatKind == .site
+                 ? "Sie erhalten keine Nachrichten mehr. Solange Sie zur Kolonne bzw. Bauakte gehören, kann die Verwaltung Sie wieder hinzufügen."
+                 : "Sie erhalten keine Nachrichten mehr aus dieser Gruppe.")
+        }
+        .toast($toast)
+    }
+
+    private var infoList: some View {
         List {
             Section {
                 VStack(spacing: Space.s) {
@@ -111,42 +151,6 @@ struct ChatInfoView: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
-        .navigationTitle(chatKind == .direct ? "Kontaktinfo" : "Gruppeninfo")
-        .navigationBarTitleDisplayMode(.inline)
-        .overlay { if detail == nil, failure == nil { ProgressView() } }
-        .task { await load() }
-        .onChange(of: search) { _, text in if text.isEmpty { hits = [] } }
-        .onChange(of: avatarItem) { _, item in
-            guard let item else { return }
-            Task { await setAvatar(item) }
-        }
-        .navigationDestination(isPresented: $editing) {
-            if let detail {
-                ChatGroupEditor(mode: .edit(detail)) { _ in
-                    editing = false
-                    Task {
-                        await load()
-                        changed()
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $addingMembers) {
-            ChatMemberPicker(title: "Mitglieder hinzufügen", excluded: Set(detail?.members.map(\.id) ?? [])) { added in
-                addingMembers = false
-                Task { await update(ChatGroupChange(memberIds: (detail?.members.map(\.id) ?? []) + added.map(\.id)), message: "Hinzugefügt") }
-            }
-        }
-        .confirmationDialog("Gruppe verlassen?", isPresented: $confirmsLeave, titleVisibility: .visible) {
-            Button("Verlassen", role: .destructive) { Task { await leave() } }
-            Button("Abbrechen", role: .cancel) {}
-        } message: {
-            Text(chatKind == .crew || chatKind == .site
-                 ? "Sie erhalten keine Nachrichten mehr. Solange Sie zur Kolonne bzw. Bauakte gehören, kann die Verwaltung Sie wieder hinzufügen."
-                 : "Sie erhalten keine Nachrichten mehr aus dieser Gruppe.")
-        }
-        .toast($toast)
     }
 
     private var subtitle: String {

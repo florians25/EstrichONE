@@ -72,47 +72,12 @@ struct ChatConversationView: View {
     private var pinnedMessage: ChatMessage? { messages.last { $0.pinned && !$0.deleted } }
 
     var body: some View {
+        presenting(configured(scrollArea))
+    }
+
+    private var scrollArea: some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 2) {
-                    if hasMore {
-                        ProgressView()
-                            .padding(.vertical, Space.m)
-                            .onAppear { Task { await loadOlder(proxy: proxy) } }
-                    }
-                    if loaded, all.isEmpty {
-                        Text(canWrite ? "Schreiben Sie die erste Nachricht." : "Noch keine Ankündigungen.")
-                            .font(Typo.subhead)
-                            .foregroundStyle(Theme.textSecondary)
-                            .padding(.top, Space.xxl)
-                    }
-                    let list = all
-                    ForEach(Array(list.enumerated()), id: \.element.id) { index, message in
-                        if showsDay(at: index, in: list) {
-                            Text(ChatTime.day(message.createdAt))
-                                .font(Typo.labelStrong)
-                                .foregroundStyle(Theme.textSecondary)
-                                .padding(.horizontal, Space.s + 2)
-                                .padding(.vertical, 4)
-                                .background(Theme.fill, in: Capsule())
-                                .padding(.vertical, Space.s)
-                        }
-                        bubble(message, startsRun: startsRun(at: index, in: list))
-                            .padding(.top, startsRun(at: index, in: list) ? Space.s : 0)
-                            .id(message.id)
-                    }
-                    if let name = chat?.typingName(in: conversationId) {
-                        TypingIndicator(name: name)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.top, Space.xs)
-                    }
-                    Color.clear.frame(height: 1).id("end")
-                }
-                .padding(.horizontal, Space.m)
-                .padding(.vertical, Space.s)
-                .frame(maxWidth: 760)
-                .frame(maxWidth: .infinity)
-            }
+            ScrollView { messageStack(proxy: proxy) }
             .scrollDismissesKeyboard(.interactively)
             .background(Theme.canvas)
             .overlay { if !loaded { ProgressView() } }
@@ -147,6 +112,51 @@ struct ChatConversationView: View {
                 }
             }
         }
+    }
+
+    private func messageStack(proxy: ScrollViewProxy) -> some View {
+        LazyVStack(spacing: 2) {
+            if hasMore {
+                ProgressView()
+                    .padding(.vertical, Space.m)
+                    .onAppear { Task { await loadOlder(proxy: proxy) } }
+            }
+            if loaded, all.isEmpty {
+                Text(canWrite ? "Schreiben Sie die erste Nachricht." : "Noch keine Ankündigungen.")
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.textSecondary)
+                    .padding(.top, Space.xxl)
+            }
+            let list = all
+            ForEach(Array(list.enumerated()), id: \.element.id) { index, message in
+                if showsDay(at: index, in: list) {
+                    Text(ChatTime.day(message.createdAt))
+                        .font(Typo.labelStrong)
+                        .foregroundStyle(Theme.textSecondary)
+                        .padding(.horizontal, Space.s + 2)
+                        .padding(.vertical, 4)
+                        .background(Theme.fill, in: Capsule())
+                        .padding(.vertical, Space.s)
+                }
+                bubble(message, startsRun: startsRun(at: index, in: list))
+                    .padding(.top, startsRun(at: index, in: list) ? Space.s : 0)
+                    .id(message.id)
+            }
+            if let name = chat?.typingName(in: conversationId) {
+                TypingIndicator(name: name)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.top, Space.xs)
+            }
+            Color.clear.frame(height: 1).id("end")
+        }
+        .padding(.horizontal, Space.m)
+        .padding(.vertical, Space.s)
+        .frame(maxWidth: 760)
+        .frame(maxWidth: .infinity)
+    }
+
+    private func configured<Content: View>(_ content: Content) -> some View {
+        content
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -197,6 +207,10 @@ struct ChatConversationView: View {
             guard !items.isEmpty else { return }
             Task { await importPhotos(items) }
         }
+    }
+
+    private func presenting<Content: View>(_ content: Content) -> some View {
+        content
         .fullScreenCover(isPresented: $showsCamera) {
             ChatCameraPicker { image in
                 showsCamera = false
