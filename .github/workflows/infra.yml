@@ -61,8 +61,9 @@ jobs:
       - name: Automatisches Sicherheitsupdate per update.sh (alte Installation → diese Version, mit Sicherung)
         run: |
           sudo cp docker/installer/update.sh /opt/estrichone/update.sh
-          # Release-Feed (Format der GitHub-API) mit dieser Version als Sicherheitsupdate derselben Versionslinie
-          python3 -c 'import json,sys; json.dump([{"tag_name":"v"+sys.argv[1],"name":"EstrichONE "+sys.argv[1],"draft":False,"prerelease":True,"body":"## Sicherheitsupdate\nCI"}], open("feed.json","w"), indent=2)' "$VERSION"
+          # Release-Feed (Format der GitHub-API) mit dieser Version als Sicherheitsupdate derselben Versionslinie – als reguläres
+          # Release, damit auch eine stabile Ausgangsversion (seit 0.1.0) es annimmt (Vorabversionen nur für Vorabinstallationen).
+          python3 -c 'import json,sys; json.dump([{"tag_name":"v"+sys.argv[1],"name":"EstrichONE "+sys.argv[1],"draft":False,"prerelease":False,"body":"## Sicherheitsupdate\nCI"}], open("feed.json","w"), indent=2)' "$VERSION"
           export ESTRICHONE_RELEASE_FEED="file://$PWD/feed.json"
           sudo -E /opt/estrichone/update.sh --pruefen | tee check.log
           grep -q "SICHERHEITSUPDATE verfügbar: .* → $VERSION" check.log
