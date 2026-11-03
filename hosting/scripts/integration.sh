@@ -80,7 +80,7 @@ sudo test -f "$ROOT/.env" || fail ".env fehlt"
 [[ "$(sudo stat -c %a "$ROOT/.env")" == "600" ]] || fail ".env ist nicht nur für root lesbar"
 sudo test ! -f "$ROOT/console/initial-admin.json" || fail "Startpasswort-Datei wurde nicht gelöscht"
 [[ -x /usr/local/bin/estrichone-hosting ]] || fail "Verwaltungsbefehl estrichone-hosting fehlt"
-sudo estrichone-hosting status | grep -q estrichone-hosting-console || fail "status zeigt die Konsole nicht"
+sudo estrichone-hosting status | grep estrichone-hosting-console >/dev/null || fail "status zeigt die Konsole nicht"
 
 log "Anmeldung mit dem Konto aus dem Installer, Passwortwechsel, Einrichtungsassistent"
 result="$(api POST /api/auth/login "{\"userName\":\"chefin\",\"password\":\"$START_PASSWORD\"}")"
@@ -148,14 +148,14 @@ jq -e '.backup.lastSuccess != null' <<<"$detail" >/dev/null || fail "Sicherungss
 log "Aktualisierung $SUITE_VERSION → $SUITE_VERSION_NEXT mit Vorab-Sicherung, danach Rücknahme"
 action update "{\"version\":\"$SUITE_VERSION_NEXT\",\"backupFirst\":true}" 1200
 wait_proxy /health/ready 200
-docker ps --filter "label=com.docker.compose.project=estrichone-$SLUG" --format '{{.Image}}' | grep -q "estrichone-api:$SUITE_VERSION_NEXT" \
+docker ps --filter "label=com.docker.compose.project=estrichone-$SLUG" --format '{{.Image}}' | grep "estrichone-api:$SUITE_VERSION_NEXT" >/dev/null \
   || fail "API läuft nicht mit $SUITE_VERSION_NEXT"
 snapshots="$(api GET "/api/tenants/$TENANT/snapshots" | sed '$d')"
 [[ "$(jq -r .previousVersion <<<"$snapshots")" == "$SUITE_VERSION" ]] || fail "Vorherige Version nicht vermerkt"
 [[ "$(jq -r .rollbackSnapshot <<<"$snapshots")" =~ ^[0-9a-f]{64}$ ]] || fail "Snapshot der Vorab-Sicherung fehlt: $snapshots"
 action rollback '{"confirm":true}' 1200
 wait_proxy /health/ready 200
-docker ps --filter "label=com.docker.compose.project=estrichone-$SLUG" --format '{{.Image}}' | grep -q "estrichone-api:$SUITE_VERSION\$" \
+docker ps --filter "label=com.docker.compose.project=estrichone-$SLUG" --format '{{.Image}}' | grep "estrichone-api:$SUITE_VERSION\$" >/dev/null \
   || fail "API läuft nach der Rücknahme nicht mit $SUITE_VERSION"
 suite_login petra "$SUITE_PASSWORD"
 
@@ -168,8 +168,8 @@ log "Export (Sicherungs-Repository + Schlüssel)"
 result="$(api POST "/api/tenants/$TENANT/export" '{"password":"ci-sehr-geheimes-passwort"}')"
 expect_status 200 "$result" "Export"
 curl -sS -b "$JAR" -o /tmp/export.tar.gz "$CONSOLE$(body "$result" | jq -r .url)"
-tar -tzf /tmp/export.tar.gz | grep -q '^instanz.env$' || fail "Export ohne instanz.env"
-tar -tzf /tmp/export.tar.gz | grep -q '^backup-repository/config$' || fail "Export ohne Sicherungs-Repository"
+tar -tzf /tmp/export.tar.gz | grep '^instanz.env$' >/dev/null || fail "Export ohne instanz.env"
+tar -tzf /tmp/export.tar.gz | grep '^backup-repository/config$' >/dev/null || fail "Export ohne Sicherungs-Repository"
 
 log "Löschen mit Endsicherung (doppelte Bestätigung)"
 result="$(api POST "/api/tenants/$TENANT/actions/delete" '{"confirm":true,"confirmSlug":"falsch"}')"
