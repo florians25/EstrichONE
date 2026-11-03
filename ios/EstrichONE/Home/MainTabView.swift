@@ -62,7 +62,7 @@ struct MainTabView: View {
         .task(id: model.active?.sync?.revision) {
             unreadTickets = await TicketReadState.unreadCount(model: model)
             if let sync = model.active?.sync, sync.chat == nil { await sync.refreshChat() }
-            if let inbox = try? await model.active?.client.notifications() { push.setUnread(inbox.unreadCount) }
+            if let inbox = try? await model.active?.client.notifications() { push.setUnread(inbox: inbox) }
         }
         .task { push.refreshPermission() }
         // Neues APNs-Token (oder nach der Anmeldung) beim Server registrieren.
@@ -71,7 +71,7 @@ struct MainTabView: View {
             guard let id = push.pendingReadId, let client = model.active?.client else { return }
             try? await client.markNotificationRead(id)
             push.pendingReadId = nil
-            if let inbox = try? await client.notifications() { push.setUnread(inbox.unreadCount) }
+            if let inbox = try? await client.notifications() { push.setUnread(inbox: inbox) }
         }
         // Angetippte Benachrichtigung: Objekt als Blatt über dem aktuellen Reiter öffnen.
         .sheet(item: $push.pendingRoute) { route in

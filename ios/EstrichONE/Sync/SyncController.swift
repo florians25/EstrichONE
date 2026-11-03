@@ -106,7 +106,10 @@ final class SyncController {
 
     /// Chat-Status neu laden (Modul an/aus, ungelesen).
     func refreshChat() async {
-        if let fresh = try? await client.chatStatus() { chat = fresh }
+        if let fresh = try? await client.chatStatus() {
+            chat = fresh
+            PushCenter.shared.setChatUnread(conversations: fresh.isAvailable ? fresh.unreadConversations : 0)
+        }
     }
 
     /// Server in Wartung: Synchronisation pausiert, Arbeiten auf dem Gerät geht weiter.

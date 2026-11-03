@@ -115,12 +115,105 @@ final class PushCenter {
         pendingReadId = nil
     }
 
-    /// Ungelesene Anzahl übernehmen und das Abzeichen am App-Symbol setzen (gleiche Zahl wie an der Glocke).
+    /// Ungelesene Anzahl übernehmen (Glocke) und das Abzeichen am App-Symbol setzen.
     func setUnread(_ count: Int) {
         unreadCount = UnreadBadge.appBadge(count)
+        applyBadge()
+    }
+
+    /// Postfach übernehmen: Chat-Hinweise zählen am App-Symbol nicht einzeln, sondern als ungelesene Unterhaltungen.
+    func setUnread(inbox: NotificationInbox) {
+        inboxChatUnread = inbox.items.filter { !$0.isRead && Self.isChat($0) }.count
+        setUnread(inbox.unreadCount)
+    }
+
+    /// Ungelesene Chats (Unterhaltungen mit neuen Nachrichten) für das Abzeichen am App-Symbol.
+    func setChatUnread(conversations: Int) {
+        guard chatUnreadConversations != conversations else { return }
+        chatUnreadConversations = conversations
+        applyBadge()
+    }
+
+    private var inboxChatUnread = 0
+    private(set) var chatUnreadConversations = 0
+
+    /// Zahl am App-Symbol: übrige ungelesene Hinweise plus ungelesene Chats.
+    var appBadge: Int { UnreadBadge.appBadge(max(0, unreadCount - inboxChatUnread) + chatUnreadConversations) }
+
+    private func applyBadge() {
         if permission == .allowed {
-            UNUserNotificationCenter.current().setBadgeCount(unreadCount) { _ in }
+            UNUserNotificationCenter.current().setBadgeCount(appBadge) { _ in }
         }
+    }
+
+    static func isChat(_ item: InboxNotification) -> Bool {
+        if case .chat = item.route { return true }
+        return item.category?.lowercased().hasPrefix("chat") == true
+    }
+
+    // MARK: Chat: Antworten aus der Mitteilung
+
+    /// Kategorie der Chat-Mitteilungen (APNs `aps.category`): „Antworten“ mit Texteingabe und „Gelesen“.
+    nonisolated static let chatCategory = "chat"
+    nonisolated static let replyAction = "chat.reply"
+    nonisolated static let readAction = "chat.read"
+
+    static func registerCategories() {
+        let reply = UNTextInputNotificationAction(identifier: replyAction, title: "Antworten", options: [.authenticationRequired],
+                                                  icon: UNNotificationActionIcon(systemImageName: "arrowshape.turn.up.left"),
+                                                  textInputButtonTitle: "Senden", textInputPlaceholder: "Nachricht")
+        let read = UNNotificationAction(identifier: readAction, title: "Als gelesen markieren", options: [],
+                                        icon: UNNotificationActionIcon(systemImageName: "checkmark.bubble"))
+        let chat = UNNotificationCategory(identifier: chatCategory, actions: [reply, read], intentIdentifiers: [],
+                                          hiddenPreviewsBodyPlaceholder: "Neue Nachricht", categorySummaryFormat: "%u weitere Nachrichten",
+                                          options: [.hiddenPreviewsShowTitle])
+        UNUserNotificationCenter.current().setNotificationCategories([chat])
+    }
+
+    /// Sendet die Antwort (`AppSession` setzt die Ausführung); `false`, wenn die App gesperrt ist.
+    var replyHandler: ((UUID, String) async -> ChatReplyOutcome)?
+    var readHandler: ((UUID) async -> Void)?
+
+    enum ChatReplyOutcome {
+        case sent, queued, locked, failed
+    }
+
+    func handleReply(_ text: String, conversationId: UUID) async {
+        let outcome = await replyHandler?(conversationId, text) ?? .locked
+        let content = UNMutableNotificationContent()
+        content.threadIdentifier = "chat-\(conversationId.key)"
+        content.userInfo = ["link": "/chat/\(conversationId.key)", "objectType": "chat", "objectId": conversationId.key]
+        switch outcome {
+        case .sent:
+            return
+        case .queued:
+            content.title = "Antwort wartet auf Verbindung"
+            content.body = "EstrichONE sendet sie, sobald der Server erreichbar ist."
+        case .locked:
+            pendingReplies[conversationId] = text
+            content.title = "Antwort nicht gesendet"
+            content.body = "EstrichONE ist gesperrt. Tippen Sie hier – Ihr Text steht dann im Eingabefeld."
+        case .failed:
+            pendingReplies[conversationId] = text
+            content.title = "Antwort nicht gesendet"
+            content.body = "Bitte öffnen Sie die Unterhaltung und senden Sie erneut."
+        }
+        try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
+    }
+
+    /// Nicht gesendete Antworten aus Mitteilungen; die Unterhaltung übernimmt sie als Entwurf.
+    var pendingReplies: [UUID: String] = [:]
+
+    func takePendingReply(for conversationId: UUID) -> String? {
+        pendingReplies.removeValue(forKey: conversationId)
+    }
+
+    nonisolated static func conversationId(from info: [AnyHashable: Any]) -> UUID? {
+        let objectId = (info["objectId"] as? String).flatMap { UUID(uuidString: $0) }
+            ?? (info["conversationId"] as? String).flatMap { UUID(uuidString: $0) }
+        let route = NotificationRoute(link: info["link"] as? String, objectType: (info["objectType"] as? String) ?? "chat", objectId: objectId)
+        if case let .chat(id?) = route { return id }
+        return (info["conversationId"] as? String).flatMap { UUID(uuidString: $0) }
     }
 
     /// Angetippte Benachrichtigung öffnen.
@@ -148,12 +241,38 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
                                 withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        // Die Unterhaltung ist gerade offen: keine Mitteilung, die Nachricht steht schon im Verlauf.
+        let info = notification.request.content.userInfo
+        if let open = VisibleChat.shared.id, notification.request.content.categoryIdentifier == PushCenter.chatCategory
+            || (info["objectType"] as? String)?.hasPrefix("chat") == true,
+           PushCenter.conversationId(from: info) == open {
+            completionHandler([])
+            return
+        }
         completionHandler([.banner, .list, .sound])
     }
 
     func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
                                 withCompletionHandler completionHandler: @escaping () -> Void) {
         let info = response.notification.request.content.userInfo
+        if response.actionIdentifier == PushCenter.replyAction || response.actionIdentifier == PushCenter.readAction {
+            let text = (response as? UNTextInputNotificationResponse)?.userText ?? ""
+            let isReply = response.actionIdentifier == PushCenter.replyAction
+            guard let conversationId = PushCenter.conversationId(from: info) else {
+                completionHandler()
+                return
+            }
+            let done = CompletionBox(completionHandler)
+            Task { @MainActor in
+                if isReply {
+                    await PushCenter.shared.handleReply(text, conversationId: conversationId)
+                } else {
+                    await PushCenter.shared.readHandler?(conversationId)
+                }
+                done.call()
+            }
+            return
+        }
         let link = info["link"] as? String
         let objectType = info["objectType"] as? String
         let objectId = info["objectId"] as? String
@@ -165,10 +284,18 @@ final class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate, @u
     }
 }
 
+/// Abschluss einer Mitteilungs-Aktion, der nach dem Senden aufgerufen wird.
+private final class CompletionBox: @unchecked Sendable {
+    private let action: () -> Void
+    init(_ action: @escaping () -> Void) { self.action = action }
+    func call() { action() }
+}
+
 /// Nimmt das APNs-Token entgegen und setzt den Delegate für Benachrichtigungen.
 final class AppDelegate: NSObject, UIApplicationDelegate {
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         UNUserNotificationCenter.current().delegate = NotificationDelegate.shared
+        PushCenter.registerCategories()
         return true
     }
 

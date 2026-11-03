@@ -107,7 +107,7 @@ struct NotificationInboxView: View {
         do throws(APIError) {
             let inbox = try await client.notifications()
             items = inbox.items.sorted { $0.createdAt > $1.createdAt }
-            push.setUnread(inbox.unreadCount)
+            push.setUnread(inbox: inbox)
             offline = false
         } catch {
             offline = error == .offline

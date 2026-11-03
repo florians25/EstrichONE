@@ -84,6 +84,17 @@ final class AppSession {
     private func connect() {
         model.onDemoRequest = { [weak self] start in self?.switchDemo(start) }
         model.onResetRequest = { [weak self] in self?.reset() }
+        // Antworten aus der Mitteilung gehen an die gerade angemeldete Person (gesperrt: nichts senden).
+        PushCenter.shared.replyHandler = { [weak self] conversationId, text in
+            guard let chat = self?.model.active?.chat else { return .locked }
+            let item = await chat.reply(text, to: conversationId)
+            return item
+        }
+        PushCenter.shared.readHandler = { [weak self] conversationId in
+            guard let active = self?.model.active else { return }
+            try? await active.client.markChatRead(conversationId)
+            await active.sync?.refreshChat()
+        }
     }
 
     /// Schalter „Beim nächsten Start zurücksetzen“ wurde gesetzt, während die App lief: gleich zurücksetzen.

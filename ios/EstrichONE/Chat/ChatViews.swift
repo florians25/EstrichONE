@@ -1,16 +1,27 @@
 import EstrichCore
 import SwiftUI
+import UIKit
 
-/// Chat zwischen Büro und Mitarbeitern (Modul „Chat“): Unterhaltungen wie in einem Messenger, nur Text.
-/// Nachrichten kommen direkt vom Server und bleiben nur im Arbeitsspeicher – auf dem Gerät wird nichts abgelegt.
+/// Chat des Betriebs (Modul „Chat“) – vertraut wie ein Messenger, ruhig wie die übrige App: Unterhaltungen mit Bild,
+/// letzter Nachricht, Entwurf, Stummschaltung und Erwähnungen; Suche über alle Chats; neue Einzelchats und Gruppen.
+/// Der Verlauf kommt direkt vom Server und bleibt nur im Arbeitsspeicher.
 struct ChatListView: View {
     @Environment(AppModel.self) private var model
     @Environment(\.shotScene) private var shotScene
     @State private var conversations: [ChatConversation] = []
+    @State private var drafts: [UUID: String] = [:]
     @State private var loaded = false
     @State private var failure: String?
     @State private var open: ChatConversation?
     @State private var startsChat = false
+    @State private var search = ""
+    @State private var hits: [ChatSearchHit] = []
+    @State private var searching = false
+    @State private var showsPrivacy = false
+    @State private var openHit: ChatSearchHit?
+
+    private var chat: ChatCenter? { model.active?.chat }
+    private var status: ChatStatus? { model.active?.sync?.chat }
 
     var body: some View {
         List {
@@ -21,21 +32,38 @@ struct ChatListView: View {
                         .listRowBackground(Color.clear)
                 }
             }
-            if loaded, conversations.isEmpty, failure == nil {
-                Section {
-                    EmptyStateView(symbol: "bubble.left.and.bubble.right", title: "Noch keine Unterhaltungen",
-                                   message: "Sobald das Büro oder Ihre Kolonne schreibt, erscheint die Unterhaltung hier.")
+            if !search.isEmpty {
+                searchResults
+            } else {
+                if loaded, conversations.isEmpty, failure == nil {
+                    Section {
+                        EmptyStateView(symbol: "bubble.left.and.bubble.right", title: "Noch keine Unterhaltungen",
+                                       message: "Sobald das Büro oder Ihre Kolonne schreibt, erscheint die Unterhaltung hier.")
+                    }
                 }
-            }
-            Section {
-                ForEach(conversations) { conversation in
-                    Button { open = conversation } label: { ConversationRow(conversation: conversation) }
+                Section {
+                    ForEach(conversations) { conversation in
+                        Button { open = conversation } label: {
+                            ConversationRow(conversation: conversation, draft: drafts[conversation.id],
+                                            typing: chat?.typingName(in: conversation.id))
+                        }
                         .buttonStyle(.plain)
                         .accessibilityIdentifier("chatConversation")
-                }
-            } footer: {
-                if !conversations.isEmpty {
-                    Text("Nur Text. Nachrichten werden verschlüsselt auf dem Server Ihres Betriebs gespeichert und nach der eingestellten Frist gelöscht.")
+                        .swipeActions(edge: .trailing) {
+                            muteButton(conversation)
+                        }
+                        .swipeActions(edge: .leading) {
+                            if conversation.unreadCount > 0 {
+                                Button("Gelesen", systemImage: "checkmark.bubble") { Task { await markRead(conversation) } }
+                                    .tint(Theme.accentFill)
+                            }
+                        }
+                        .contextMenu { muteMenu(conversation) }
+                    }
+                } footer: {
+                    if !conversations.isEmpty {
+                        Text(footer)
+                    }
                 }
             }
         }
@@ -43,8 +71,13 @@ struct ChatListView: View {
         .overlay { if !loaded { ProgressView() } }
         .navigationTitle("Chat")
         .navigationBarTitleDisplayMode(.inline)
+        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "In allen Chats suchen")
+        .task(id: search) { await runSearch() }
         .navigationDestination(item: $open) { conversation in
-            ChatConversationView(conversationId: conversation.id, title: conversation.title, isGroup: conversation.isGroup)
+            ChatConversationView(conversationId: conversation.id, title: conversation.title, kind: conversation.chatKind)
+        }
+        .navigationDestination(item: $openHit) { hit in
+            ChatConversationView(conversationId: hit.conversationId, title: hit.conversationTitle, focusMessage: hit.message.id)
         }
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
@@ -53,7 +86,7 @@ struct ChatListView: View {
             }
         }
         .sheet(isPresented: $startsChat) {
-            NewChatSheet { conversation in
+            NewChatSheet(canCreateGroups: status?.canAdmin == true) { conversation in
                 startsChat = false
                 Task {
                     await load()
@@ -62,73 +95,230 @@ struct ChatListView: View {
             }
             .presentationDetents([.medium, .large])
         }
+        .sheet(isPresented: $showsPrivacy) {
+            ChatPrivacyNotice(retentionDays: status?.retentionDays) {
+                ChatPrivacyNotice.acknowledge(userId: model.active?.user.id, version: status?.privacyNoticeVersion ?? 1)
+                showsPrivacy = false
+                if let client = model.active?.client, let version = status?.privacyNoticeVersion {
+                    Task { try? await client.acknowledgeChatPrivacy(version: version) }
+                }
+            }
+            .interactiveDismissDisabled()
+            .presentationDetents([.large])
+        }
         .task(id: model.active?.sync?.revision) { await load() }
-        .task {
-            // Liste auffrischen, solange sie sichtbar ist.
+        .onChange(of: chat?.eventCount) { _, _ in Task { await load() } }
+        .task(id: chat?.isLive) {
+            // Sicherheitsnetz: selten mit Echtzeit-Kanal, sonst alle 15 Sekunden.
             while !Task.isCancelled {
-                try? await Task.sleep(for: .seconds(15))
+                try? await Task.sleep(for: ChatPolling.listInterval(live: chat?.isLive == true))
                 await load()
+            }
+        }
+        .onAppear {
+            if shotScene == nil, !ChatPrivacyNotice.isAcknowledged(userId: model.active?.user.id, version: status?.privacyNoticeVersion ?? 1) {
+                showsPrivacy = true
             }
         }
         .refreshable { await load() }
     }
 
+    private var footer: String {
+        var text = "Nachrichten und Anhänge werden verschlüsselt auf dem Server Ihres Betriebs gespeichert"
+        if let days = status?.retentionDays { text += " und nach \(days) Tagen gelöscht" }
+        return text + ". Keine Sprachnachrichten – zum Diktieren auf das Mikrofon tippen."
+    }
+
+    @ViewBuilder
+    private var searchResults: some View {
+        let term = search.trimmingCharacters(in: .whitespaces).lowercased()
+        let titleMatches = conversations.filter { $0.title.lowercased().contains(term) }
+        if !titleMatches.isEmpty {
+            Section("Chats") {
+                ForEach(titleMatches) { conversation in
+                    Button { open = conversation } label: { ConversationRow(conversation: conversation, draft: drafts[conversation.id], typing: nil) }
+                        .buttonStyle(.plain)
+                }
+            }
+        }
+        Section("Nachrichten") {
+            if searching, hits.isEmpty {
+                HStack { Spacer(); ProgressView(); Spacer() }
+            } else if hits.isEmpty {
+                Text(term.count < 2 ? "Mindestens zwei Zeichen eingeben." : "Keine Nachrichten gefunden.")
+                    .font(Typo.subhead)
+                    .foregroundStyle(Theme.textSecondary)
+            }
+            ForEach(hits) { hit in
+                Button { openHit = hit } label: {
+                    VStack(alignment: .leading, spacing: 2) {
+                        HStack {
+                            Text(hit.conversationTitle).font(Typo.bodyStrong).foregroundStyle(Theme.textPrimary).lineLimit(1)
+                            Spacer()
+                            Text(ChatTime.short(hit.message.createdAt)).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                        }
+                        Text(highlighted(hit.message.summary, term: term))
+                            .font(Typo.subhead)
+                            .foregroundStyle(Theme.textSecondary)
+                            .lineLimit(2)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+            }
+        }
+    }
+
+    private func highlighted(_ text: String, term: String) -> AttributedString {
+        var attributed = AttributedString(text)
+        if !term.isEmpty, let range = attributed.range(of: term, options: .caseInsensitive) {
+            attributed[range].foregroundColor = Theme.textPrimary
+            attributed[range].font = Typo.subheadStrong
+        }
+        return attributed
+    }
+
+    @ViewBuilder
+    private func muteButton(_ conversation: ChatConversation) -> some View {
+        if conversation.isMuted() {
+            Button("Ton an", systemImage: "bell") { Task { await mute(conversation, nil, on: false) } }
+                .tint(Theme.textSecondary)
+        } else {
+            Button("Stumm", systemImage: "bell.slash") { Task { await mute(conversation, .eightHours, on: true) } }
+                .tint(Theme.textSecondary)
+        }
+    }
+
+    @ViewBuilder
+    private func muteMenu(_ conversation: ChatConversation) -> some View {
+        if conversation.isMuted() {
+            Button("Stummschaltung aufheben", systemImage: "bell") { Task { await mute(conversation, nil, on: false) } }
+        } else {
+            Menu("Stummschalten", systemImage: "bell.slash") {
+                ForEach(ChatMuteOption.allCases) { option in
+                    Button(option.title) { Task { await mute(conversation, option, on: true) } }
+                }
+            }
+        }
+        if conversation.unreadCount > 0 {
+            Button("Als gelesen markieren", systemImage: "checkmark.bubble") { Task { await markRead(conversation) } }
+        }
+    }
+
+    private func mute(_ conversation: ChatConversation, _ option: ChatMuteOption?, on: Bool) async {
+        guard let client = model.active?.client else { return }
+        do throws(APIError) {
+            try await client.muteChat(conversation.id, muted: on, until: option?.until())
+            if let index = conversations.firstIndex(where: { $0.id == conversation.id }) {
+                conversations[index].mutedUntil = on ? (option?.until() ?? .distantFuture) : nil
+            }
+        } catch {
+            failure = error.serverMessage ?? error.message
+        }
+    }
+
+    private func markRead(_ conversation: ChatConversation) async {
+        guard let client = model.active?.client else { return }
+        try? await client.markChatRead(conversation.id)
+        if let index = conversations.firstIndex(where: { $0.id == conversation.id }) { conversations[index].unreadCount = 0 }
+        await model.active?.sync?.refreshChat()
+    }
+
+    private func runSearch() async {
+        let term = search.trimmingCharacters(in: .whitespaces)
+        guard term.count >= 2, let client = model.active?.client else {
+            hits = []
+            return
+        }
+        searching = true
+        try? await Task.sleep(for: .milliseconds(300))
+        guard !Task.isCancelled else { return }
+        do throws(APIError) {
+            hits = try await client.searchChat(term)
+        } catch {
+            hits = []
+        }
+        searching = false
+    }
+
     private func load() async {
         guard let client = model.active?.client else { return }
         do throws(APIError) {
-            conversations = try await client.chatConversations().sorted { ($0.lastMessageAt ?? .distantPast) > ($1.lastMessageAt ?? .distantPast) }
+            let list = try await client.chatConversations()
+            conversations = list.sorted { lhs, rhs in
+                if lhs.pinned != rhs.pinned { return lhs.pinned }
+                return (lhs.lastMessageAt ?? .distantPast) > (rhs.lastMessageAt ?? .distantPast)
+            }
             failure = nil
-            if shotScene == "chat-verlauf", open == nil { open = conversations.first }
+            applyShotScene()
         } catch {
-            failure = error == .offline ? "Ohne Verbindung – der Chat lädt, sobald der Server erreichbar ist." : (error.serverMessage ?? error.message)
+            failure = error == .offline ? "Ohne Verbindung – der Chat lädt, sobald der Server erreichbar ist. Nachrichten, die Sie jetzt schreiben, werden danach gesendet."
+                                        : (error.serverMessage ?? error.message)
         }
+        if let chat { drafts = await chat.outbox.allDrafts() }
         loaded = true
+    }
+
+    private func applyShotScene() {
+        guard let shotScene, open == nil else { return }
+        switch shotScene {
+        case "chat-verlauf", "chat-anhang", "chat-diktat":
+            open = conversations.first { $0.chatKind == .site } ?? conversations.first
+        case "chat-gruppe":
+            open = conversations.first { $0.chatKind == .crew } ?? conversations.first
+        default: break
+        }
     }
 }
 
-/// Zeile einer Unterhaltung: Avatar, Titel, letzte Nachricht, Zeit und ungelesene Nachrichten.
+/// Zeile einer Unterhaltung: Bild, Titel, letzte Nachricht bzw. Entwurf, Zeit, ungelesen, stumm, Erwähnung.
 private struct ConversationRow: View {
     let conversation: ChatConversation
+    let draft: String?
+    let typing: String?
 
     var body: some View {
         HStack(spacing: Space.m) {
-            ZStack {
-                Circle().fill(Theme.accentSoft)
-                if conversation.isGroup {
-                    Image(systemName: "person.3.fill").font(.system(size: 14, weight: .semibold))
-                } else {
-                    Text(LocalUser.initials(of: conversation.title.filter { $0.isLetter || $0 == " " })).font(.system(size: 15, weight: .semibold, design: .rounded))
-                }
-            }
-            .foregroundStyle(Theme.accent)
-            .frame(width: 40, height: 40)
-            .accessibilityHidden(true)
+            ChatAvatar(title: conversation.title, kind: conversation.chatKind, avatarFileId: conversation.avatarFileId, size: 46)
             VStack(alignment: .leading, spacing: 2) {
-                HStack(alignment: .firstTextBaseline) {
+                HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
                     Text(conversation.title)
                         .font(conversation.unreadCount > 0 ? Typo.bodyStrong : Typo.body)
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(1)
+                    if conversation.chatKind == .announcement {
+                        Image(systemName: "megaphone.fill").font(.caption2).foregroundStyle(Theme.textTertiary).accessibilityHidden(true)
+                    }
                     Spacer(minLength: Space.s)
                     if let at = conversation.lastMessageAt {
                         Text(ChatTime.short(at))
                             .font(Typo.meta)
-                            .foregroundStyle(conversation.unreadCount > 0 ? Theme.accent : Theme.textSecondary)
+                            .foregroundStyle(conversation.unreadCount > 0 && !conversation.isMuted() ? Theme.accent : Theme.textSecondary)
                     }
                 }
-                HStack(alignment: .firstTextBaseline) {
-                    Text(preview)
+                HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+                    preview
                         .font(Typo.subhead)
-                        .foregroundStyle(Theme.textSecondary)
                         .lineLimit(2)
                     Spacer(minLength: Space.s)
+                    if conversation.isMuted() {
+                        Image(systemName: "bell.slash.fill").font(.caption).foregroundStyle(Theme.textTertiary).accessibilityLabel("stumm")
+                    }
+                    if conversation.mentioned, conversation.unreadCount > 0 {
+                        Text("@")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(.white)
+                            .frame(width: 20, height: 20)
+                            .background(Circle().fill(Theme.accentFill))
+                            .accessibilityLabel("Sie wurden erwähnt")
+                    }
                     if conversation.unreadCount > 0 {
                         Text("\(conversation.unreadCount)")
                             .font(.caption2.weight(.bold).monospacedDigit())
                             .foregroundStyle(.white)
                             .padding(.horizontal, 6)
                             .frame(minWidth: 20, minHeight: 20)
-                            .background(Capsule().fill(Theme.accentFill))
+                            .background(Capsule().fill(conversation.isMuted() ? Theme.textTertiary : Theme.accentFill))
                     }
                 }
             }
@@ -139,293 +329,57 @@ private struct ConversationRow: View {
         .accessibilityValue(conversation.unreadCount > 0 ? "\(conversation.unreadCount) ungelesen" : "")
     }
 
-    private var preview: String {
-        guard let text = conversation.lastMessageText else { return "Noch keine Nachrichten" }
+    @ViewBuilder
+    private var preview: some View {
+        if let typing {
+            Text("\(typing) schreibt …").foregroundStyle(Theme.accent)
+        } else if let draft, !draft.isEmpty {
+            (Text("Entwurf: ").foregroundStyle(Theme.danger) + Text(draft).foregroundStyle(Theme.textSecondary))
+        } else {
+            Text(previewText).foregroundStyle(Theme.textSecondary)
+        }
+    }
+
+    private var previewText: String {
+        guard let text = conversation.lastMessageText, !text.isEmpty else { return "Noch keine Nachrichten" }
         if conversation.isGroup, let sender = conversation.lastMessageSender { return "\(sender): \(text)" }
         return text
     }
 }
 
-/// Verlauf einer Unterhaltung mit Eingabezeile. Eigene Nachrichten rechts in Markenblau, andere links; je Nachricht
-/// Uhrzeit und Zustand (gesendet ✓, zugestellt ✓✓, gelesen ✓✓ blau). Neue Nachrichten werden alle 4 Sekunden abgeholt.
-struct ChatConversationView: View {
-    let conversationId: UUID
-    var title: String?
-    var isGroup = false
-
+/// Bild einer Unterhaltung: Gruppenbild, sonst Symbol der Art bzw. Initialen.
+struct ChatAvatar: View {
+    let title: String
+    let kind: ChatKind
+    var avatarFileId: UUID?
+    var size: CGFloat = 40
     @Environment(AppModel.self) private var model
-    @Environment(\.shotScene) private var shotScene
-    @State private var messages: [ChatMessage] = []
-    @State private var pending: [ChatMessage] = []
-    @State private var draft = ""
-    @State private var loaded = false
-    @State private var failure: String?
-    @State private var resolvedTitle: String?
-    @FocusState private var focused: Bool
-
-    private var userId: UUID? { model.active?.user.id }
-    private var all: [ChatMessage] { messages + pending }
+    @State private var image: UIImage?
 
     var body: some View {
-        ScrollViewReader { proxy in
-            ScrollView {
-                LazyVStack(spacing: 2) {
-                    if loaded, all.isEmpty {
-                        Text("Schreiben Sie die erste Nachricht.")
-                            .font(Typo.subhead)
-                            .foregroundStyle(Theme.textSecondary)
-                            .padding(.top, Space.xxl)
-                    }
-                    ForEach(Array(all.enumerated()), id: \.element.id) { index, message in
-                        if showsDay(at: index) {
-                            Text(ChatTime.day(message.createdAt))
-                                .font(Typo.labelStrong)
-                                .foregroundStyle(Theme.textSecondary)
-                                .padding(.horizontal, Space.s + 2)
-                                .padding(.vertical, 4)
-                                .background(Theme.fill, in: Capsule())
-                                .padding(.vertical, Space.s)
-                        }
-                        MessageBubble(message: message, isMine: message.isMine(userId: userId), isGroup: isGroup,
-                                      showsSender: isGroup && !message.isMine(userId: userId) && startsRun(at: index),
-                                      retry: message.state == .failed ? { Task { await resend(message) } } : nil)
-                            .padding(.top, startsRun(at: index) ? Space.s : 0)
-                            .id(message.id)
-                    }
-                    Color.clear.frame(height: 1).id("end")
-                }
-                .padding(.horizontal, Space.m)
-                .padding(.vertical, Space.s)
-                .frame(maxWidth: 760)
-                .frame(maxWidth: .infinity)
-            }
-            .scrollDismissesKeyboard(.interactively)
-            .background(Theme.canvas)
-            .overlay { if !loaded { ProgressView() } }
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if let failure {
-                    NoticeLine(tone: .neutral, text: failure, symbol: "wifi.slash")
-                        .padding(.horizontal, Space.m)
-                        .padding(.vertical, Space.xs)
-                }
-            }
-            .safeAreaInset(edge: .bottom, spacing: 0) { composer }
-            .onChange(of: all.count) { _, _ in
-                withAnimation(.snappy) { proxy.scrollTo("end", anchor: .bottom) }
-            }
-            .task {
-                await load(full: true)
-                proxy.scrollTo("end", anchor: .bottom)
-                // Neue Nachrichten alle 5 Sekunden (`after`), Zustell-/Lesestand alle 30 Sekunden vollständig.
-                var round = 0
-                while !Task.isCancelled {
-                    try? await Task.sleep(for: .seconds(5))
-                    round += 1
-                    await load(full: round % 6 == 0)
-                }
-            }
-        }
-        .navigationTitle(resolvedTitle ?? title ?? "Chat")
-        .navigationBarTitleDisplayMode(.inline)
-        .task { await resolveTitle() }
-        .onAppear { if shotScene == "chat-verlauf" { draft = "Alles klar, bis morgen!" } }
-    }
-
-    private var composer: some View {
-        HStack(alignment: .bottom, spacing: Space.s) {
-            TextField("Nachricht", text: $draft, axis: .vertical)
-                .lineLimit(1...5)
-                .font(Typo.body)
-                .focused($focused)
-                .padding(.horizontal, Space.m)
-                .padding(.vertical, 8)
-                .background(Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).strokeBorder(Theme.separator, lineWidth: 0.5))
-                .accessibilityIdentifier("chatInput")
-            Button {
-                Task { await send() }
-            } label: {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: 15, weight: .bold))
-                    .foregroundStyle(.white)
-                    .frame(width: 34, height: 34)
-                    .background(Circle().fill(ChatLimits.clean(draft) == nil ? Theme.fillStrong : Theme.accentFill))
-            }
-            .disabled(ChatLimits.clean(draft) == nil)
-            .padding(.bottom, 1)
-            .accessibilityLabel("Senden")
-            .accessibilityIdentifier("chatSend")
-        }
-        .padding(.horizontal, Space.m)
-        .padding(.vertical, Space.s)
-        .background(.bar)
-    }
-
-    private func showsDay(at index: Int) -> Bool {
-        guard index > 0 else { return true }
-        return !Calendar.current.isDate(all[index].createdAt, inSameDayAs: all[index - 1].createdAt)
-    }
-
-    /// Erste Nachricht einer Folge desselben Absenders (Abstand, Name in Gruppen).
-    private func startsRun(at index: Int) -> Bool {
-        guard index > 0 else { return true }
-        let previous = all[index - 1], current = all[index]
-        return previous.senderId != current.senderId || current.createdAt.timeIntervalSince(previous.createdAt) > 600 || showsDay(at: index)
-    }
-
-    private func load(full: Bool) async {
-        guard let client = model.active?.client else { return }
-        do throws(APIError) {
-            let after = full ? nil : messages.last?.createdAt
-            let fresh = try await client.chatMessages(conversationId, after: after)
-            let hadUnread = fresh.contains { !$0.isMine(userId: userId) && !messages.map(\.id).contains($0.id) }
-            if full {
-                messages = fresh
+        ZStack {
+            Circle().fill(Theme.accentSoft)
+            if let image {
+                Image(uiImage: image).resizable().scaledToFill()
+            } else if kind == .direct {
+                Text(LocalUser.initials(of: title.filter { $0.isLetter || $0 == " " }))
+                    .font(.system(size: size * 0.36, weight: .semibold, design: .rounded))
             } else {
-                for message in fresh {
-                    if let index = messages.firstIndex(where: { $0.id == message.id }) { messages[index] = message } else { messages.append(message) }
-                }
+                Image(systemName: kind.symbol).font(.system(size: size * 0.36, weight: .semibold))
             }
-            pending.removeAll { item in fresh.contains { $0.id == item.id || $0.clientMessageId == item.id } }
-            failure = nil
-            if hadUnread || !loaded {
-                try? await client.markChatRead(conversationId)
-                await model.active?.sync?.refreshChat()
+        }
+        .foregroundStyle(Theme.accent)
+        .frame(width: size, height: size)
+        .clipShape(Circle())
+        .accessibilityHidden(true)
+        .task(id: avatarFileId) {
+            guard let avatarFileId, let chat = model.active?.chat else {
+                image = nil
+                return
             }
-        } catch {
-            failure = error == .offline ? "Ohne Verbindung – Nachrichten werden geladen, sobald der Server erreichbar ist." : (error.serverMessage ?? error.message)
+            image = await chat.image(for: ChatAttachment(id: avatarFileId, kind: "photo", name: "Gruppenbild.jpg", contentType: "image/jpeg", sizeBytes: 0),
+                                     thumbnail: true)
         }
-        loaded = true
-    }
-
-    private func resolveTitle() async {
-        guard title == nil, let client = model.active?.client else { return }
-        resolvedTitle = (try? await client.chatConversations())?.first { $0.id == conversationId }?.title
-    }
-
-    private func send() async {
-        guard let text = ChatLimits.clean(draft), let userId else { return }
-        draft = ""
-        let local = ChatMessage(id: UUID(), conversationId: conversationId, senderId: userId, senderName: model.active?.user.displayName,
-                                text: text, createdAt: .now, state: .sending, mine: true)
-        pending.append(local)
-        await deliver(local)
-    }
-
-    private func resend(_ message: ChatMessage) async {
-        guard let index = pending.firstIndex(where: { $0.id == message.id }) else { return }
-        pending[index].state = .sending
-        await deliver(pending[index])
-    }
-
-    /// Senden mit der lokalen ID als `clientMessageId`: Wiederholen erzeugt keine doppelte Nachricht.
-    private func deliver(_ message: ChatMessage) async {
-        guard let client = model.active?.client else { return }
-        do throws(APIError) {
-            let stored = try await client.sendChatMessage(message.text, to: conversationId, clientMessageId: message.id)
-            pending.removeAll { $0.id == message.id }
-            if let index = messages.firstIndex(where: { $0.id == stored.id }) { messages[index] = stored } else { messages.append(stored) }
-        } catch {
-            if let index = pending.firstIndex(where: { $0.id == message.id }) { pending[index].state = .failed }
-            failure = error == .offline ? "Nicht gesendet – keine Verbindung. Tippen Sie auf die Nachricht, um es erneut zu versuchen."
-                                        : (error.serverMessage ?? error.message)
-        }
-    }
-}
-
-/// Sprechblase mit Zeit und Zustand. Abgerundet wie im Messenger, die Ecke zum Absender etwas spitzer.
-private struct MessageBubble: View {
-    let message: ChatMessage
-    let isMine: Bool
-    var isGroup = false
-    let showsSender: Bool
-    var retry: (() -> Void)?
-
-    var body: some View {
-        HStack {
-            if isMine { Spacer(minLength: 48) }
-            VStack(alignment: isMine ? .trailing : .leading, spacing: 2) {
-                if showsSender, let name = message.senderName {
-                    Text(name)
-                        .font(Typo.labelStrong)
-                        .foregroundStyle(Theme.accent)
-                        .padding(.horizontal, Space.m)
-                }
-                VStack(alignment: .trailing, spacing: 2) {
-                    if message.deleted {
-                        Label("Nachricht gelöscht", systemImage: "nosign")
-                            .font(Typo.body.italic())
-                            .foregroundStyle(isMine ? Theme.onAccent.opacity(0.8) : Theme.textSecondary)
-                    } else {
-                        Text(message.text)
-                            .font(Typo.body)
-                            .foregroundStyle(isMine ? Theme.onAccent : Theme.textPrimary)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .textSelection(.enabled)
-                    }
-                    HStack(spacing: 3) {
-                        // Gruppen: „gelesen 3/5“, solange noch nicht alle gelesen haben.
-                        if isMine, isGroup, message.recipients > 1, message.state != .read, message.readBy > 0 {
-                            Text("gelesen \(message.readBy)/\(message.recipients) ·")
-                        }
-                        Text(message.createdAt.formatted(date: .omitted, time: .shortened))
-                        if isMine { stateMark }
-                    }
-                    .font(.caption2.monospacedDigit())
-                    .foregroundStyle(isMine ? Theme.onAccent.opacity(0.75) : Theme.textSecondary)
-                }
-                .padding(.horizontal, Space.m)
-                .padding(.vertical, 7)
-                .background(isMine ? Theme.accentFill : Theme.surface, in: UnevenRoundedRectangle(
-                    topLeadingRadius: 18, bottomLeadingRadius: isMine ? 18 : 6, bottomTrailingRadius: isMine ? 6 : 18, topTrailingRadius: 18,
-                    style: .continuous))
-                .opacity(message.state == .sending ? 0.7 : 1)
-                .onTapGesture { retry?() }
-                if message.state == .failed {
-                    Label("Nicht gesendet – tippen zum Wiederholen", systemImage: "exclamationmark.circle.fill")
-                        .font(Typo.label)
-                        .foregroundStyle(Theme.danger)
-                }
-            }
-            .frame(maxWidth: 540, alignment: isMine ? .trailing : .leading)
-            if !isMine { Spacer(minLength: 48) }
-        }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(isMine ? "Ich" : (message.senderName ?? "")): \(message.deleted ? "Nachricht gelöscht" : message.text)")
-        .accessibilityValue(stateText)
-    }
-
-    @ViewBuilder
-    private var stateMark: some View {
-        switch message.state {
-        case .sending: Image(systemName: "clock")
-        case .sent: Image(systemName: "checkmark")
-        case .delivered: DoubleCheck()
-        case .read: DoubleCheck().foregroundStyle(Theme.ice)
-        case .failed: Image(systemName: "exclamationmark.circle")
-        }
-    }
-
-    private var stateText: String {
-        guard isMine else { return "" }
-        switch message.state {
-        case .sending: return "wird gesendet"
-        case .sent: return "gesendet"
-        case .delivered: return "zugestellt"
-        case .read: return "gelesen"
-        case .failed: return "nicht gesendet"
-        }
-    }
-}
-
-/// Zwei versetzte Häkchen (zugestellt bzw. gelesen).
-private struct DoubleCheck: View {
-    var body: some View {
-        ZStack(alignment: .leading) {
-            Image(systemName: "checkmark")
-            Image(systemName: "checkmark").offset(x: 4)
-        }
-        .padding(.trailing, 4)
     }
 }
 
@@ -469,8 +423,68 @@ struct ChatToolbarButton: View {
     }
 }
 
-/// Neuer Einzelchat: Person wählen (nur Betriebsangehörige mit Chat-Recht, docs/chat.md).
+/// Datenschutzhinweis beim ersten Öffnen (und nach einer Änderung des Hinweises).
+struct ChatPrivacyNotice: View {
+    let retentionDays: Int?
+    let accept: () -> Void
+
+    static func key(_ userId: UUID?) -> String { "chat.privacyNotice.\(userId?.key ?? "-")" }
+
+    static func isAcknowledged(userId: UUID?, version: Int) -> Bool {
+        UserDefaults.standard.integer(forKey: key(userId)) >= version
+    }
+
+    static func acknowledge(userId: UUID?, version: Int) {
+        UserDefaults.standard.set(version, forKey: key(userId))
+    }
+
+    var body: some View {
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: Space.l) {
+                    Image(systemName: "lock.shield")
+                        .font(.system(size: 44, weight: .regular))
+                        .foregroundStyle(Theme.accent)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, Space.l)
+                    Text("Chat im Betrieb").font(.title2.weight(.semibold)).frame(maxWidth: .infinity)
+                    point("server.rack", "Auf dem Server Ihres Betriebs", "Nachrichten, Fotos und Dokumente liegen verschlüsselt auf dem eigenen Server – nicht bei einem Messenger-Anbieter.")
+                    point("calendar.badge.clock", "Löschfrist",
+                          retentionDays.map { "Inhalte werden nach \($0) Tagen automatisch endgültig gelöscht." } ?? "Inhalte werden nach der im Betrieb eingestellten Frist automatisch gelöscht.")
+                    point("bell.badge", "Pushnachrichten", "Mitteilungen zeigen Absender und Chat. Der Text erscheint nur, wenn der Betrieb und Sie die Vorschau erlauben.")
+                    point("mic.slash", "Keine Sprachnachrichten", "Das Mikrofon dient nur dem Diktat: Die Erkennung läuft auf dem Gerät, die Aufnahme wird nie gespeichert oder gesendet.")
+                    point("person.badge.shield.checkmark", "Ihre Rechte", "Auskunft und Löschung Ihrer Chatdaten über die Verwaltung. Der Chat dient der Arbeit, nicht der Leistungs- oder Verhaltenskontrolle (Betriebsvereinbarung).")
+                }
+                .padding(.horizontal, Space.xl)
+                .padding(.bottom, Space.xl)
+                .frame(maxWidth: 560)
+                .frame(maxWidth: .infinity)
+            }
+            .safeAreaInset(edge: .bottom) {
+                Button("Verstanden", action: accept)
+                    .buttonStyle(EstrichButtonStyle(rank: .primary, fullWidth: true))
+                    .padding(.horizontal, Space.xl)
+                    .padding(.vertical, Space.m)
+                    .frame(maxWidth: 560)
+                    .accessibilityIdentifier("chatPrivacyAccept")
+            }
+        }
+    }
+
+    private func point(_ symbol: String, _ title: String, _ text: String) -> some View {
+        HStack(alignment: .top, spacing: Space.m) {
+            Image(systemName: symbol).font(.title3).foregroundStyle(Theme.accent).frame(width: 30)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title).font(Typo.bodyStrong)
+                Text(text).font(Typo.subhead).foregroundStyle(Theme.textSecondary).fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+}
+
+/// Neuer Chat: Person wählen (nur Betriebsangehörige mit Chat-Recht) oder – mit `chat.admin` – eine Gruppe anlegen.
 private struct NewChatSheet: View {
+    let canCreateGroups: Bool
     let opened: (ChatConversation) -> Void
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
@@ -479,6 +493,7 @@ private struct NewChatSheet: View {
     @State private var loaded = false
     @State private var failure: String?
     @State private var busy: UUID?
+    @State private var createsGroup = false
 
     var body: some View {
         NavigationStack {
@@ -488,27 +503,42 @@ private struct NewChatSheet: View {
                         .listRowInsets(EdgeInsets())
                         .listRowBackground(Color.clear)
                 }
-                ForEach(filtered) { person in
-                    Button {
-                        Task { await start(person) }
-                    } label: {
-                        HStack(spacing: Space.m) {
-                            Avatar(name: person.displayName, size: 34)
-                            Text(person.displayName)
-                                .font(Typo.body)
-                                .foregroundStyle(Theme.textPrimary)
-                            Spacer()
-                            if busy == person.id { ProgressView() }
+                if canCreateGroups, search.isEmpty {
+                    Section {
+                        Button { createsGroup = true } label: {
+                            Label("Neue Gruppe", systemImage: "person.3")
+                                .font(Typo.bodyStrong)
+                                .foregroundStyle(Theme.accent)
                         }
-                        .contentShape(Rectangle())
+                        .accessibilityIdentifier("newGroupButton")
+                    } footer: {
+                        Text("Gruppe, Kolonnen-, Baustellen- oder Ankündigungsgruppe. Mitglieder wählen Sie aus der Liste – keine Telefonnummern.")
                     }
-                    .buttonStyle(.plain)
-                    .disabled(busy != nil)
                 }
-                if loaded, filtered.isEmpty, failure == nil {
-                    Text(search.isEmpty ? "Keine Personen verfügbar." : "Keine Treffer.")
-                        .font(Typo.subhead)
-                        .foregroundStyle(Theme.textSecondary)
+                Section {
+                    ForEach(filtered) { person in
+                        Button {
+                            Task { await start(person) }
+                        } label: {
+                            HStack(spacing: Space.m) {
+                                Avatar(name: person.displayName, size: 34)
+                                VStack(alignment: .leading, spacing: 0) {
+                                    Text(person.displayName).font(Typo.body).foregroundStyle(Theme.textPrimary)
+                                    if let role = person.role { Text(role).font(Typo.meta).foregroundStyle(Theme.textSecondary) }
+                                }
+                                Spacer()
+                                if busy == person.id { ProgressView() }
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(busy != nil)
+                    }
+                    if loaded, filtered.isEmpty, failure == nil {
+                        Text(search.isEmpty ? "Keine Personen verfügbar." : "Keine Treffer.")
+                            .font(Typo.subhead)
+                            .foregroundStyle(Theme.textSecondary)
+                    }
                 }
             }
             .overlay { if !loaded { ProgressView() } }
@@ -517,6 +547,11 @@ private struct NewChatSheet: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
+            }
+            .navigationDestination(isPresented: $createsGroup) {
+                ChatGroupEditor(mode: .create) { conversation in
+                    if let conversation { opened(conversation) }
+                }
             }
             .task { await load() }
         }

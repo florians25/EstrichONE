@@ -32,6 +32,8 @@ struct ActiveAccount {
     let sync: SyncController?
     let service: BauakteService?
     let thumbnails: ThumbnailLoader?
+    /// Chat: Echtzeit-Kanal, Warteschlange und Entwürfe (`nil` ohne lokale Datenbank).
+    let chat: ChatCenter?
     var user: UserSummary { account.user }
 }
 
@@ -282,6 +284,12 @@ final class AppModel {
 
     // MARK: Sperren, Abmelden, Zurücksetzen
 
+    /// Angemeldete Person freigeben: Chat-Verbindung schließen, damit nichts weiterläuft.
+    private func releaseActive() {
+        active?.chat?.stop()
+        active = nil
+    }
+
     /// Sperrt den Tresor: Poolgerät zeigt die Benutzerauswahl, nie die letzte Sitzung (11, AK-2).
     func lock() {
         guard let active else { return }
@@ -291,7 +299,8 @@ final class AppModel {
             sync.stop()
             Task { await sync.run() }
         }
-        self.active = nil
+        active.chat?.stop()
+        releaseActive()
         screen = lockedScreen()
     }
 
@@ -307,7 +316,7 @@ final class AppModel {
         guard let active, let accounts else { return }
         active.sync?.stop()
         await PushCenter.shared.unregister(client: active.client)
-        self.active = nil
+        releaseActive()
         clients[active.user.id] = nil
         unlockKeys.remove(userId: active.user.id)
         await accounts.signOut(active.account, client: active.client)
@@ -319,7 +328,7 @@ final class AppModel {
     /// Entferntes Gerät neu einrichten: Server bestätigen bzw. neuen Einrichtungscode scannen oder eingeben, anmelden.
     /// Server und Daten bleiben bis dahin erhalten; wird ein anderer Server gewählt, werden die alten Daten gelöscht.
     func startReEnrollment() {
-        active = nil
+        releaseActive()
         clients = [:]
         requestedKind = nil
         enrollmentCode = nil
@@ -342,9 +351,10 @@ final class AppModel {
     /// freigeben. Danach hält das Modell keine Datenbank und keinen Schlüssel mehr.
     func shutdownForWipe() async {
         let current = active
-        active = nil
+        releaseActive()
         clients = [:]
         current?.sync?.stop()
+        current?.chat?.stop()
         if let client = current?.client, !isDemo {
             await PushCenter.shared.unregister(client: client, timeout: .seconds(3))
         }
@@ -367,7 +377,7 @@ final class AppModel {
         accounts?.eraseDevice()
         serverStore.clear()
         accounts = nil
-        active = nil
+        releaseActive()
         server = nil
         deviceState = DeviceState()
         requestedKind = nil
@@ -398,6 +408,7 @@ final class AppModel {
         backgroundSince = date
         // Noch nicht übertragene Fotos und Änderungen in der Hintergrundzeit des Systems senden.
         active?.sync?.runInBackground()
+        active?.chat?.stop()
         // Poolgeräte sperren beim Bildschirm-Aus sofort (11, Abschnitt 4.1); persönliche Geräte, wenn „Sofort“ gewählt ist.
         if isPoolDevice || lockPreferences.locksOnBackground { lock() }
     }
@@ -409,6 +420,7 @@ final class AppModel {
             lock()
         } else if let sync = active?.sync {
             Task { await sync.run() }
+            active?.chat?.start()
         }
     }
 
@@ -483,8 +495,11 @@ final class AppModel {
             notice = "Die Daten auf diesem Gerät konnten nicht geöffnet werden. Bitte die App zurücksetzen oder die IT-Administration informieren."
         }
         let service = sync.map { BauakteService(store: $0.store, files: $0.files, userId: account.user.id) }
+        let chat = sync.map { ChatCenter(client: client, store: $0.store, files: $0.files, userId: account.user.id,
+                                         userName: account.user.displayName, isDemo: isDemo) }
         active = ActiveAccount(account: account, client: client, sync: sync, service: service,
-                               thumbnails: service.map { ThumbnailLoader(service: $0, client: client) })
+                               thumbnails: service.map { ThumbnailLoader(service: $0, client: client) }, chat: chat)
+        chat?.start()
         deviceState = accounts.state
         sync?.start()
         screen = deviceState.registration?.status == .pending ? .waitingForApproval : .home
@@ -499,7 +514,7 @@ final class AppModel {
         if active == nil, isPoolDevice { return }
         let userName = active?.user.userName ?? deviceState.users.first(where: { $0.id == userId })?.userName
         active?.sync?.stop()
-        active = nil
+        releaseActive()
         if end.requiresPassword {
             // Nur hier ist das Passwort nötig – mit Grund. Lokale Daten (auch noch nicht übertragene) bleiben im Tresor
             // und werden nach der Anmeldung gesendet; Face ID gilt danach weiter.

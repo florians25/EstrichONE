@@ -61,6 +61,18 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         let path = request.url?.path() ?? ""
         if demo != nil, let interrupted = try demoDisruption(path, request: request) { return interrupted }
         let body = request.httpBody.flatMap { try? JSONSerialization.jsonObject(with: $0) as? [String: Any] } ?? [:]
+        if let demo, path.hasPrefix("/api/v1/chat/") {
+            // Chat im Demomodus: alle Endpunkte (docs/chat.md), Inhalte der Anhänge roh.
+            let query = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?.queryItems ?? []
+            let method = request.httpMethod ?? "GET"
+            let (status, object, raw) = lock.withLock {
+                chat.handle(method: method, path: String(path.dropFirst("/api/v1/chat/".count)), query: query, body: body, raw: request.httpBody, demo: demo)
+            }
+            let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: "HTTP/1.1", headerFields: nil)!
+            if let raw { return (raw, response) }
+            let data = object.flatMap { try? JSONSerialization.data(withJSONObject: $0) } ?? Data()
+            return (data, response)
+        }
         if let raw = demoFile(path, method: request.httpMethod ?? "GET") {
             let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
             return (raw, response)
@@ -230,30 +242,6 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         case "/api/v1/system/notices" where demo != nil && DemoSwitches.shared.maintenance:
             let end = APIDate.format(DemoSwitches.shared.maintenanceEndsAt)
             return (200, #"{"announcements":[],"maintenance":{"active":true,"message":"Update auf Version 0.2 – EstrichONE ist in Kürze wieder verfügbar.","startsAt":"\#(APIDate.format(Date()))","endsAt":"\#(end)","adminsMayWork":true},"serverTime":"\#(APIDate.format(Date()))"}"#)
-        case "/api/v1/chat/status" where demo != nil:
-            return json(200, chat.status())
-        case "/api/v1/chat/conversations" where demo != nil:
-            return json(200, chat.list())
-        case "/api/v1/chat/contacts" where demo != nil:
-            return json(200, chat.contacts())
-        case "/api/v1/chat/conversations/direct" where demo != nil:
-            let (status, item) = chat.direct(with: body["userId"] as? String ?? "")
-            return json(status, item)
-        case let chatPath where demo != nil && chatPath.hasPrefix("/api/v1/chat/conversations/"):
-            // /api/v1/chat/conversations/{id}/messages|read
-            let parts = chatPath.split(separator: "/").map(String.init)
-            guard parts.count == 6 else { return problem(404, "NOT_FOUND", "Nicht gefunden") }
-            let id = parts[4].lowercased()
-            switch (parts[5], method) {
-            case ("messages", "POST"):
-                let (status, message) = chat.send(body["text"] as? String ?? "", to: id)
-                return json(status, message)
-            case ("messages", _): return json(200, chat.messages(of: id))
-            case ("read", _):
-                chat.markRead(id)
-                return (204, "")
-            default: return problem(404, "NOT_FOUND", "Nicht gefunden")
-            }
         case "/api/v1/notifications" where demo != nil:
             return json(200, notifications.inbox())
         case "/api/v1/notifications/preferences" where demo != nil:

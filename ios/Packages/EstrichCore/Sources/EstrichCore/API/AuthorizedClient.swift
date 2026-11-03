@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(FoundationNetworking)
+import FoundationNetworking
+#endif
 
 /// Grund, aus dem eine Sitzung serverseitig nicht mehr gilt (docs/reengineering/11, Abschnitt 5). Nur dann verlangt die
 /// App wieder das Passwort – sonst genügt Face ID/Touch ID/Gerätecode bzw. die Pool-PIN.
@@ -117,6 +120,25 @@ public actor AuthorizedClient {
     public func refreshNow() async throws(APIError) {
         try await refresh()
     }
+
+    /// Angemeldete Anfrage für einen Datenstrom, den der Aufrufer selbst liest (Server-Sent Events des Chats).
+    /// Erneuert das Zugriffstoken vorher, wenn es bald abläuft.
+    public func streamRequest(_ path: String, accept: String = "text/event-stream", lastEventId: String? = nil) async throws(APIError) -> URLRequest {
+        if session.accessTokenExpiresAt.timeIntervalSince(now()) < 120 {
+            try await refresh()
+        }
+        var request = URLRequest(url: api.server.url(for: "api/v1/" + path))
+        request.httpMethod = "GET"
+        request.setValue(accept, forHTTPHeaderField: "Accept")
+        request.setValue("no-cache", forHTTPHeaderField: "Cache-Control")
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        if let lastEventId { request.setValue(lastEventId, forHTTPHeaderField: "Last-Event-ID") }
+        request.timeoutInterval = 3600
+        return request
+    }
+
+    /// Gültig bis (Zugriffstoken); Datenströme verbinden sich davor neu.
+    public var accessTokenExpiresAt: Date { session.accessTokenExpiresAt }
 
     private func perform<Response: Sendable>(
         _ call: @Sendable (APIClient, String) async throws(APIError) -> Response
