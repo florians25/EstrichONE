@@ -37,7 +37,8 @@ export default class SetupController extends BaseController {
 				get<WizardState>("/api/setup-wizard"),
 				get<{ versions: string[]; source: string; error?: string }>("/api/versions").catch(() => ({ versions: [] as string[], source: "–" }))
 			]);
-			await loadNotifications(this.notify);
+			// Mit Startpasswort sperrt der Server alles außer dem Passwortwechsel – Einstellungen erst danach laden.
+			if (!state.mustChangePassword) await loadNotifications(this.notify).catch(() => undefined);
 			this.setup.setData({
 				...this.setup.getData(), ...state, secondaryRepository: state.secondaryRepository ?? "",
 				versions: versions.versions, versionSource: versions.source, currentPassword: "", newPassword: "", repeatPassword: "", totp: null, totpCode: ""
@@ -88,7 +89,14 @@ export default class SetupController extends BaseController {
 			this.setup.setProperty("/repeatPassword", "");
 			if (!done) return;
 			this.setup.setProperty("/mustChangePassword", false);
+			this.getOwnerComponentTyped().session.setProperty("/mustChangePassword", false);
 			this.toast("Passwort geändert");
+			await loadNotifications(this.notify).catch(() => undefined);
+			const versions = await get<{ versions: string[]; source: string }>("/api/versions").catch(() => null);
+			if (versions) {
+				this.setup.setProperty("/versions", versions.versions);
+				this.setup.setProperty("/versionSource", versions.source);
+			}
 		}
 		if (step === 4) {
 			await this.finish(true);

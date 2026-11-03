@@ -254,12 +254,24 @@ public sealed class BetriebTests
         wizard.GetProperty("completed").GetBoolean().ShouldBeFalse();
         wizard.GetProperty("mustChangePassword").GetBoolean().ShouldBeTrue();
         wizard.GetProperty("notifications").GetProperty("emailTo").GetString().ShouldBe("chefin@hosting.test");
-        (await client.PostAsJsonAsync("/api/setup-wizard/complete", new { defaultVersion = "0.1.0-preview.5" }, Ct)).StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        // Startpasswort aktiv: alles außer Status, Abmelden und Passwort ändern wird serverseitig abgewiesen.
+        var blocked = await client.PostAsJsonAsync("/api/setup-wizard/complete", new { defaultVersion = "0.1.0-preview.5" }, Ct);
+        blocked.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await blocked.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("code").GetString().ShouldBe("PASSWORD_CHANGE_REQUIRED");
+        foreach (var path in new[] { "/api/tenants", "/api/dashboard", "/api/admins", "/api/settings", "/api/archives", "/api/notifications" })
+        {
+            (await client.GetAsync(path, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden, path);
+        }
+
+        (await client.PostAsJsonAsync("/api/tenants", new { companyName = "X" }, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await client.PostAsJsonAsync("/api/account/totp/begin", new { }, Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await client.GetAsync("/api/auth/state", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         (await client.PostAsJsonAsync("/api/account/password", new { currentPassword = "Start-Passwort-123", newPassword = ConsoleApp.Password }, Ct))
             .StatusCode.ShouldBe(HttpStatusCode.NoContent);
         await ConsoleApp.AddCsrfAsync(client);
         (await client.GetFromJsonAsync<JsonElement>("/api/setup-wizard", Ct)).GetProperty("mustChangePassword").GetBoolean().ShouldBeFalse();
+        (await client.GetAsync("/api/tenants", Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
 
         var bad = await client.PostAsJsonAsync("/api/setup-wizard/complete", new { secondaryRepository = "rm -rf /", notifications = new { webhookUrl = "ftp://x" } }, Ct);
         bad.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
@@ -296,6 +308,7 @@ public sealed class BetriebTests
         (await client.GetAsync("/api/tenants", Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
         var fresh = console.Client();
         (await fresh.PostAsJsonAsync("/api/auth/login", new { userName = "admin", password = "Notfall-Passwort-1" }, Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+        (await fresh.GetAsync("/api/tenants", Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
     }
 
     [Fact]
