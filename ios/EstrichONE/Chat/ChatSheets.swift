@@ -94,7 +94,7 @@ struct ChatForwardSheet: View {
                             if selected.contains(conversation.id) { selected.remove(conversation.id) } else { selected.insert(conversation.id) }
                         } label: {
                             HStack(spacing: Space.m) {
-                                ChatAvatar(title: conversation.title, kind: conversation.chatKind, avatarFileId: conversation.avatarFileId, size: 34)
+                                ChatAvatar(title: conversation.title, kind: conversation.chatKind, conversationId: conversation.id, imageVersion: conversation.imageUpdatedAt, size: 34)
                                 Text(conversation.title).font(Typo.body).foregroundStyle(Theme.textPrimary)
                                 Spacer()
                                 Image(systemName: selected.contains(conversation.id) ? "checkmark.circle.fill" : "circle")

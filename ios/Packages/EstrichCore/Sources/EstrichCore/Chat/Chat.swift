@@ -21,9 +21,12 @@ public struct ChatStatus: Decodable, Sendable, Equatable {
     public let editWindowMinutes: Int
     /// Stand des Datenschutzhinweises; die App zeigt ihn beim ersten Öffnen bzw. nach einer Änderung.
     public let privacyNoticeVersion: Int
+    /// Datenschutzhinweis schon bestätigt (Server).
+    public let privacyAccepted: Bool
 
     public init(enabled: Bool, canUse: Bool = true, canAdmin: Bool = false, unreadCount: Int = 0, unreadConversations: Int? = nil,
-                retentionDays: Int? = nil, showPreview: Bool = false, editWindowMinutes: Int = 15, privacyNoticeVersion: Int = 1) {
+                retentionDays: Int? = nil, showPreview: Bool = false, editWindowMinutes: Int = 15, privacyNoticeVersion: Int = 1,
+                privacyAccepted: Bool = false) {
         self.enabled = enabled
         self.canUse = canUse
         self.canAdmin = canAdmin
@@ -33,6 +36,7 @@ public struct ChatStatus: Decodable, Sendable, Equatable {
         self.showPreview = showPreview
         self.editWindowMinutes = editWindowMinutes
         self.privacyNoticeVersion = privacyNoticeVersion
+        self.privacyAccepted = privacyAccepted
     }
 
     public init(from decoder: any Decoder) throws {
@@ -46,11 +50,12 @@ public struct ChatStatus: Decodable, Sendable, Equatable {
         showPreview = (try? c.decodeIfPresent(Bool.self, forKey: .showPreview)) ?? false
         editWindowMinutes = (try? c.decodeIfPresent(Int.self, forKey: .editWindowMinutes)) ?? 15
         privacyNoticeVersion = (try? c.decodeIfPresent(Int.self, forKey: .privacyNoticeVersion)) ?? 1
+        privacyAccepted = (try? c.decodeIfPresent(Bool.self, forKey: .privacyAccepted)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
         case enabled, moduleEnabled, canUse, allowed, canAdmin, unreadCount, unread, unreadConversations, retentionDays, showPreview
-        case editWindowMinutes, privacyNoticeVersion
+        case editWindowMinutes, privacyNoticeVersion, privacyAccepted
     }
 
     public var isAvailable: Bool { enabled && canUse }
@@ -123,8 +128,9 @@ public struct ChatAttachment: Codable, Sendable, Equatable, Identifiable, Hashab
         id = try c.decodeIfPresent(UUID.self, forKey: .fileId) ?? c.decode(UUID.self, forKey: .id)
         contentType = (try? c.decodeIfPresent(String.self, forKey: .contentType)) ?? "application/octet-stream"
         kind = (try? c.decodeIfPresent(String.self, forKey: .kind)) ?? (contentType.hasPrefix("image/") ? "photo" : "document")
-        name = (try? c.decodeIfPresent(String.self, forKey: .name)) ?? (try? c.decodeIfPresent(String.self, forKey: .originalName))
-            ?? (try? c.decodeIfPresent(String.self, forKey: .fileName)) ?? (kind == "photo" ? "Foto.jpg" : "Dokument.pdf")
+        name = (try? c.decodeIfPresent(String.self, forKey: .fileName)) ?? (try? c.decodeIfPresent(String.self, forKey: .name))
+            ?? (try? c.decodeIfPresent(String.self, forKey: .originalName))
+            ?? (kind == "photo" ? "Foto.jpg" : "Dokument.pdf")
         sizeBytes = (try? c.decodeIfPresent(Int64.self, forKey: .sizeBytes)) ?? (try? c.decodeIfPresent(Int64.self, forKey: .size)) ?? 0
         width = try? c.decodeIfPresent(Int.self, forKey: .width)
         height = try? c.decodeIfPresent(Int.self, forKey: .height)
@@ -214,11 +220,11 @@ public struct ChatReplyPreview: Decodable, Sendable, Equatable, Hashable {
         senderName = try? c.decodeIfPresent(String.self, forKey: .senderName)
         deleted = (try? c.decodeIfPresent(Bool.self, forKey: .deleted)) ?? false
         text = (try? c.decodeIfPresent(String.self, forKey: .text)) ?? (try? c.decodeIfPresent(String.self, forKey: .excerpt)) ?? ""
-        attachmentKind = try? c.decodeIfPresent(String.self, forKey: .attachmentKind)
+        attachmentKind = (try? c.decodeIfPresent(String.self, forKey: .attachment)) ?? (try? c.decodeIfPresent(String.self, forKey: .attachmentKind))
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, messageId, senderName, text, excerpt, deleted, attachmentKind
+        case id, messageId, senderName, text, excerpt, deleted, attachmentKind, attachment
     }
 }
 
@@ -374,7 +380,7 @@ public struct ChatMessage: Decodable, Sendable, Equatable, Identifiable {
         } else if let people = try? c.decodeIfPresent([ChatMember].self, forKey: .mentions) {
             mentions = people.map(\.id)
         } else {
-            mentions = (try? c.decodeIfPresent([UUID].self, forKey: .mentionUserIds)) ?? []
+            mentions = (try? c.decodeIfPresent([UUID].self, forKey: .mentionedUserIds)) ?? (try? c.decodeIfPresent([UUID].self, forKey: .mentionUserIds)) ?? []
         }
         location = try? c.decodeIfPresent(ChatLocation.self, forKey: .location)
         let forwardedFrom = try? c.decodeIfPresent(UUID.self, forKey: .forwardedFromId)
@@ -386,7 +392,7 @@ public struct ChatMessage: Decodable, Sendable, Equatable, Identifiable {
     private enum CodingKeys: String, CodingKey {
         case id, conversationId, senderId, senderUserId, senderName, text, body, createdAt, sentAt, state, status, readAt, deliveredAt, readByAll, deliveredToAll
         case mine, deleted, readBy, recipients, clientMessageId
-        case attachments, replyTo, quote, reactions, editedAt, pinned, pinnedAt, mentions, mentionUserIds, location, forwarded, forwardedFromId, kind, type
+        case attachments, replyTo, quote, reactions, editedAt, pinned, pinnedAt, mentions, mentionUserIds, mentionedUserIds, location, forwarded, forwardedFromId, kind, type
     }
 }
 
@@ -449,8 +455,8 @@ public struct ChatConversation: Decodable, Sendable, Equatable, Identifiable, Ha
     public var mutedUntil: Date?
     /// Ungelesene Erwähnung der eigenen Person (durchbricht die Stummschaltung).
     public let mentioned: Bool
-    /// Gruppenbild (Datei-ID).
-    public let avatarFileId: UUID?
+    /// Stand des Gruppenbilds (`GET /chat/conversations/{id}/image`); `nil` = kein Bild.
+    public let imageUpdatedAt: Date?
     /// Verknüpfte Bauakte (Baustellengruppe).
     public let bauakteId: UUID?
     /// Eigene Person darf schreiben (Ankündigungsgruppen: nur Admins).
@@ -467,7 +473,7 @@ public struct ChatConversation: Decodable, Sendable, Equatable, Identifiable, Ha
     }
 
     public init(id: UUID, title: String, kind: String, members: [ChatMember] = [], lastMessageText: String?, lastMessageSender: String?,
-                lastMessageAt: Date?, unreadCount: Int, mutedUntil: Date? = nil, mentioned: Bool = false, avatarFileId: UUID? = nil,
+                lastMessageAt: Date?, unreadCount: Int, mutedUntil: Date? = nil, mentioned: Bool = false, imageUpdatedAt: Date? = nil,
                 bauakteId: UUID? = nil, canWrite: Bool = true, pinned: Bool = false) {
         self.id = id
         self.title = title
@@ -479,7 +485,7 @@ public struct ChatConversation: Decodable, Sendable, Equatable, Identifiable, Ha
         self.unreadCount = unreadCount
         self.mutedUntil = mutedUntil
         self.mentioned = mentioned
-        self.avatarFileId = avatarFileId
+        self.imageUpdatedAt = imageUpdatedAt
         self.bauakteId = bauakteId
         self.canWrite = canWrite
         self.pinned = pinned
@@ -489,7 +495,22 @@ public struct ChatConversation: Decodable, Sendable, Equatable, Identifiable, Ha
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         title = try c.decodeIfPresent(String.self, forKey: .title) ?? c.decodeIfPresent(String.self, forKey: .name) ?? "Unterhaltung"
-        kind = (try c.decodeIfPresent(String.self, forKey: .kind) ?? c.decodeIfPresent(String.self, forKey: .type) ?? "group").lowercased()
+        // Server: `direct` oder `group`; die Art ergibt sich aus Kolonne, Bauakte bzw. „nur Admins schreiben“.
+        let rawKind = (try c.decodeIfPresent(String.self, forKey: .kind) ?? c.decodeIfPresent(String.self, forKey: .type) ?? "group").lowercased()
+        let crew = try? c.decodeIfPresent(UUID.self, forKey: .crewId)
+        let site = try? c.decodeIfPresent(UUID.self, forKey: .bauakteId)
+        let announcementOnly = (try? c.decodeIfPresent(Bool.self, forKey: .announcementOnly)) ?? false
+        if rawKind == "direct" {
+            kind = "direct"
+        } else if announcementOnly {
+            kind = ChatKind.announcement.rawValue
+        } else if site != nil {
+            kind = ChatKind.site.rawValue
+        } else if crew != nil {
+            kind = ChatKind.crew.rawValue
+        } else {
+            kind = rawKind
+        }
         members = (try? c.decodeIfPresent([ChatMember].self, forKey: .members)) ?? []
         let last = try? c.decodeIfPresent(ChatMessage.self, forKey: .lastMessage)
         if let last {
@@ -511,20 +532,20 @@ public struct ChatConversation: Decodable, Sendable, Equatable, Identifiable, Ha
         }
         let mentionCount = (try? c.decodeIfPresent(Int.self, forKey: .unreadMentions)) ?? 0
         mentioned = (try? c.decodeIfPresent(Bool.self, forKey: .mentioned)) ?? (mentionCount > 0)
-        avatarFileId = (try? c.decodeIfPresent(UUID.self, forKey: .avatarFileId)) ?? (try? c.decodeIfPresent(UUID.self, forKey: .imageFileId))
-        bauakteId = try? c.decodeIfPresent(UUID.self, forKey: .bauakteId)
-        canWrite = (try? c.decodeIfPresent(Bool.self, forKey: .canWrite)) ?? (try? c.decodeIfPresent(Bool.self, forKey: .canPost)) ?? true
+        imageUpdatedAt = try? c.decodeIfPresent(Date.self, forKey: .imageUpdatedAt)
+        bauakteId = site
+        canWrite = (try? c.decodeIfPresent(Bool.self, forKey: .canPost)) ?? (try? c.decodeIfPresent(Bool.self, forKey: .canWrite)) ?? true
         pinned = (try? c.decodeIfPresent(Bool.self, forKey: .pinned)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
         case id, title, name, kind, type, members, lastMessage, lastMessageText, lastMessageAt, lastActivityAt, unreadCount
-        case muted, mutedUntil, mentioned, unreadMentions, avatarFileId, imageFileId, bauakteId, canWrite, canPost, pinned
+        case muted, mutedUntil, mentioned, unreadMentions, imageUpdatedAt, bauakteId, crewId, announcementOnly, canWrite, canPost, pinned
     }
 
     public static func == (lhs: ChatConversation, rhs: ChatConversation) -> Bool {
         lhs.id == rhs.id && lhs.unreadCount == rhs.unreadCount && lhs.lastMessageAt == rhs.lastMessageAt && lhs.title == rhs.title
-            && lhs.mutedUntil == rhs.mutedUntil && lhs.lastMessageText == rhs.lastMessageText && lhs.avatarFileId == rhs.avatarFileId
+            && lhs.mutedUntil == rhs.mutedUntil && lhs.lastMessageText == rhs.lastMessageText && lhs.imageUpdatedAt == rhs.imageUpdatedAt
     }
 
     public func hash(into hasher: inout Hasher) { hasher.combine(id) }
@@ -536,32 +557,33 @@ public struct ChatConversationDetail: Decodable, Sendable, Equatable {
     public let title: String
     public let kind: String
     public let description: String?
-    public let avatarFileId: UUID?
+    public let imageUpdatedAt: Date?
     public let members: [ChatMember]
     /// Eigene Person darf die Gruppe verwalten (Gruppenadmin oder `chat.admin`).
     public let canManage: Bool
     public let canWrite: Bool
-    /// Nur Admins schreiben (Ankündigungsgruppe).
+    /// Nur Admins schreiben (Ankündigungsgruppe, Server: `announcementOnly`).
     public let onlyAdminsWrite: Bool
     public let bauakteId: UUID?
     public let bauakteTitle: String?
     public let crewId: UUID?
     public let crewName: String?
     public var mutedUntil: Date?
-    /// Lesebestätigungen je Mitglied sichtbar (vom Betrieb abschaltbar).
+    /// Lesebestätigungen je Mitglied sichtbar.
     public let readReceipts: Bool
-    public let createdAt: Date?
+    /// Angeheftete Nachrichten.
+    public let pinned: [ChatMessage]
 
-    public var chatKind: ChatKind { onlyAdminsWrite ? .announcement : ChatKind(raw: kind) }
+    public var chatKind: ChatKind { ChatKind(raw: kind) }
 
-    public init(id: UUID, title: String, kind: String, description: String? = nil, avatarFileId: UUID? = nil, members: [ChatMember] = [],
+    public init(id: UUID, title: String, kind: String, description: String? = nil, imageUpdatedAt: Date? = nil, members: [ChatMember] = [],
                 canManage: Bool = false, canWrite: Bool = true, onlyAdminsWrite: Bool = false, bauakteId: UUID? = nil, bauakteTitle: String? = nil,
-                crewId: UUID? = nil, crewName: String? = nil, mutedUntil: Date? = nil, readReceipts: Bool = true, createdAt: Date? = nil) {
+                crewId: UUID? = nil, crewName: String? = nil, mutedUntil: Date? = nil, readReceipts: Bool = true, pinned: [ChatMessage] = []) {
         self.id = id
         self.title = title
         self.kind = kind
         self.description = description
-        self.avatarFileId = avatarFileId
+        self.imageUpdatedAt = imageUpdatedAt
         self.members = members
         self.canManage = canManage
         self.canWrite = canWrite
@@ -572,33 +594,41 @@ public struct ChatConversationDetail: Decodable, Sendable, Equatable {
         self.crewName = crewName
         self.mutedUntil = mutedUntil
         self.readReceipts = readReceipts
-        self.createdAt = createdAt
+        self.pinned = pinned
     }
 
+    /// Server: `{ conversation: {…}, members, canManage, pinned, bauakteTitle }`; ältere Form flach.
     public init(from decoder: any Decoder) throws {
         let c = try decoder.container(keyedBy: CodingKeys.self)
-        let base = try ChatConversation(from: decoder)
+        let base: ChatConversation
+        let head: KeyedDecodingContainer<CodingKeys>
+        if c.contains(.conversation) {
+            base = try c.decode(ChatConversation.self, forKey: .conversation)
+            head = try c.nestedContainer(keyedBy: CodingKeys.self, forKey: .conversation)
+        } else {
+            base = try ChatConversation(from: decoder)
+            head = c
+        }
         id = base.id
         title = base.title
         kind = base.kind
         mutedUntil = base.mutedUntil
-        avatarFileId = base.avatarFileId
+        imageUpdatedAt = base.imageUpdatedAt
         bauakteId = base.bauakteId
-        description = try? c.decodeIfPresent(String.self, forKey: .description)
-        members = (try? c.decodeIfPresent([ChatMember].self, forKey: .members)) ?? []
-        canManage = (try? c.decodeIfPresent(Bool.self, forKey: .canManage)) ?? false
-        onlyAdminsWrite = (try? c.decodeIfPresent(Bool.self, forKey: .onlyAdminsWrite)) ?? (try? c.decodeIfPresent(Bool.self, forKey: .announcement))
-            ?? (base.chatKind == .announcement)
         canWrite = base.canWrite
+        description = try? head.decodeIfPresent(String.self, forKey: .description)
+        members = (try? c.decodeIfPresent([ChatMember].self, forKey: .members)) ?? base.members
+        canManage = (try? c.decodeIfPresent(Bool.self, forKey: .canManage)) ?? false
+        onlyAdminsWrite = (try? head.decodeIfPresent(Bool.self, forKey: .announcementOnly)) ?? (base.chatKind == .announcement)
         bauakteTitle = try? c.decodeIfPresent(String.self, forKey: .bauakteTitle)
-        crewId = try? c.decodeIfPresent(UUID.self, forKey: .crewId)
-        crewName = try? c.decodeIfPresent(String.self, forKey: .crewName)
+        crewId = try? head.decodeIfPresent(UUID.self, forKey: .crewId)
+        crewName = try? head.decodeIfPresent(String.self, forKey: .crewName)
         readReceipts = (try? c.decodeIfPresent(Bool.self, forKey: .readReceipts)) ?? true
-        createdAt = try? c.decodeIfPresent(Date.self, forKey: .createdAt)
+        pinned = (try? c.decodeIfPresent([ChatMessage].self, forKey: .pinned)) ?? []
     }
 
     private enum CodingKeys: String, CodingKey {
-        case description, members, canManage, onlyAdminsWrite, announcement, bauakteTitle, crewId, crewName, readReceipts, createdAt
+        case conversation, description, members, canManage, announcementOnly, bauakteTitle, crewId, crewName, readReceipts, pinned
     }
 
     public func isAdmin(_ userId: UUID?) -> Bool { members.contains { $0.id == userId && $0.isAdmin } }
@@ -653,6 +683,12 @@ public struct ChatSearchHit: Decodable, Sendable, Identifiable, Equatable, Hasha
         let c = try decoder.container(keyedBy: CodingKeys.self)
         if let nested = try? c.decodeIfPresent(ChatMessage.self, forKey: .message) {
             message = nested
+        } else if let messageId = try? c.decode(UUID.self, forKey: .messageId) {
+            // Server: `{ messageId, conversationId, conversationTitle, senderName, snippet, createdAt }`.
+            message = ChatMessage(id: messageId, conversationId: try? c.decode(UUID.self, forKey: .conversationId),
+                                  senderId: nil, senderName: try? c.decodeIfPresent(String.self, forKey: .senderName),
+                                  text: (try? c.decodeIfPresent(String.self, forKey: .snippet)) ?? "",
+                                  createdAt: (try? c.decodeIfPresent(Date.self, forKey: .createdAt)) ?? Date(), state: .sent)
         } else {
             message = try ChatMessage(from: decoder)
         }
@@ -663,7 +699,7 @@ public struct ChatSearchHit: Decodable, Sendable, Identifiable, Equatable, Hasha
     public func hash(into hasher: inout Hasher) { hasher.combine(id) }
 
     private enum CodingKeys: String, CodingKey {
-        case message, conversationId, conversationTitle
+        case message, conversationId, conversationTitle, messageId, senderName, snippet, createdAt
     }
 }
 
@@ -815,14 +851,9 @@ private struct ChatMuteBody: Encodable, Sendable {
     let until: Date?
 }
 
-private struct ChatAttachmentAnnounce: Encodable, Sendable {
-    let id: String
-    let conversationId: String
-    let kind: String
-    let originalName: String
-    let contentType: String
-    let sizeBytes: Int64
-    let sha256: String
+private struct ChatToBauakteBody: Encodable, Sendable {
+    let bauakteId: String?
+    let caption: String?
 }
 
 /// Neue Gruppe bzw. Änderung einer Gruppe (`nil` = unverändert).
@@ -831,25 +862,18 @@ public struct ChatGroupChange: Encodable, Sendable, Equatable {
     public var description: String?
     public var memberIds: [String]?
     public var adminIds: [String]?
-    public var kind: String?
-    public var onlyAdminsWrite: Bool?
+    /// Nur Admins schreiben (Ankündigungsgruppe).
+    public var announcementOnly: Bool?
     public var crewId: String?
-    public var bauakteId: String?
-    public var avatarFileId: String?
-    public var removeAvatar: Bool?
 
-    public init(title: String? = nil, description: String? = nil, memberIds: [UUID]? = nil, adminIds: [UUID]? = nil, kind: ChatKind? = nil,
-                onlyAdminsWrite: Bool? = nil, crewId: UUID? = nil, bauakteId: UUID? = nil, avatarFileId: UUID? = nil, removeAvatar: Bool? = nil) {
+    public init(title: String? = nil, description: String? = nil, memberIds: [UUID]? = nil, adminIds: [UUID]? = nil,
+                announcementOnly: Bool? = nil, crewId: UUID? = nil) {
         self.title = title
         self.description = description
         self.memberIds = memberIds?.map(\.key)
         self.adminIds = adminIds?.map(\.key)
-        self.kind = kind?.rawValue
-        self.onlyAdminsWrite = onlyAdminsWrite
+        self.announcementOnly = announcementOnly
         self.crewId = crewId?.key
-        self.bauakteId = bauakteId?.key
-        self.avatarFileId = avatarFileId?.key
-        self.removeAvatar = removeAvatar
     }
 }
 
@@ -941,7 +965,13 @@ extension AuthorizedClient {
 
     /// Nachricht anheften bzw. lösen (oben in der Unterhaltung).
     public func pinChatMessage(_ id: UUID, pinned: Bool) async throws(APIError) -> ChatMessage {
-        try await post("chat/messages/\(id.key)/pin", body: ChatPinBody(pinned: pinned))
+        let _: NoContent = try await post("chat/messages/\(id.key)/pin", body: ChatPinBody(pinned: pinned))
+        return try await chatMessage(id)
+    }
+
+    /// Eine Nachricht (nach den Ereignissen `message.updated`, `reaction`, `message.deleted`).
+    public func chatMessage(_ id: UUID) async throws(APIError) -> ChatMessage {
+        try await get("chat/messages/\(id.key)")
     }
 
     /// In andere Unterhaltungen weiterleiten (Text, Anhänge und Standort, gekennzeichnet als „weitergeleitet“).
@@ -974,17 +1004,36 @@ extension AuthorizedClient {
         try await get("chat/attachments/\(id.key)/content", query: thumbnail ? [URLQueryItem(name: "variant", value: "thumb")] : [])
     }
 
-    /// Anhang hochladen: ankündigen (ID von der App, wiederholbar), dann den Inhalt senden. Der Server speichert ihn
-    /// verschlüsselt; ohne gesendete Nachricht verfällt er.
-    public func uploadChatAttachment(id: UUID, conversationId: UUID, kind: String, name: String, contentType: String, data: Data) async throws(APIError) {
-        let announce = ChatAttachmentAnnounce(id: id.key, conversationId: conversationId.key, kind: kind, originalName: name, contentType: contentType,
-                                              sizeBytes: Int64(data.count), sha256: SHA256Hex.digest(data))
-        do throws(APIError) {
-            let _: NoContent = try await post("chat/attachments", body: announce)
-        } catch where error.status == 409 {
-            // Schon angekündigt (Wiederholung aus der Warteschlange).
-        }
-        let _: NoContent = try await send(APIRequest(method: "PUT", path: "chat/attachments/\(id.key)/content", body: data, contentType: contentType))
+    /// Anhang hochladen (Foto/PDF roh): Der Server prüft den Typ, verdichtet, speichert verschlüsselt und vergibt die ID,
+    /// die beim Senden in `attachmentFileIds` steht. Nicht gesendete Uploads verfallen nach 24 Stunden.
+    public func uploadChatAttachment(conversationId: UUID, name: String, contentType: String, data: Data) async throws(APIError) -> ChatAttachment {
+        try await send(APIRequest(method: "POST", path: "chat/conversations/\(conversationId.key)/attachments",
+                                  query: [URLQueryItem(name: "fileName", value: name)], body: data, contentType: contentType))
+    }
+
+    /// Gruppenbild setzen (Bild roh; der Server verkleinert auf 256 px).
+    public func setChatGroupImage(_ conversationId: UUID, jpeg: Data) async throws(APIError) -> ChatConversation {
+        try await send(APIRequest(method: "PUT", path: "chat/conversations/\(conversationId.key)/image", body: jpeg, contentType: "image/jpeg"))
+    }
+
+    public func removeChatGroupImage(_ conversationId: UUID) async throws(APIError) {
+        let _: NoContent = try await send(APIRequest(method: "DELETE", path: "chat/conversations/\(conversationId.key)/image"))
+    }
+
+    public func chatGroupImage(_ conversationId: UUID) async throws(APIError) -> Data {
+        try await get("chat/conversations/\(conversationId.key)/image")
+    }
+
+    /// Baustellen-Gruppe der Bauakte anlegen bzw. die vorhandene öffnen (Team und Bauleitung automatisch).
+    public func openBauakteChatGroup(_ bauakteId: UUID) async throws(APIError) -> ChatConversation {
+        try await post("chat/bauakten/\(bauakteId.key)/group", body: ChatEmptyBody())
+    }
+
+    /// „In Bauakte übernehmen“ auf dem Server: Foto (mit Vorschauen) bzw. Dokument der Bauakte; ohne `bauakteId` die
+    /// Bauakte der Baustellen-Gruppe.
+    public func copyChatAttachmentToBauakte(_ attachmentId: UUID, bauakteId: UUID?, caption: String?) async throws(APIError) {
+        let _: NoContent = try await post("chat/attachments/\(attachmentId.key)/bauakte",
+                                          body: ChatToBauakteBody(bauakteId: bauakteId?.key, caption: caption))
     }
 
     /// Neue Gruppe (Gruppe, Kolonne, Baustelle, Ankündigungen).

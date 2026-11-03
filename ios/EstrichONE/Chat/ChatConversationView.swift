@@ -70,7 +70,7 @@ struct ChatConversationView: View {
         return messages + waiting
     }
 
-    private var pinnedMessage: ChatMessage? { messages.last { $0.pinned && !$0.deleted } }
+    private var pinnedMessage: ChatMessage? { messages.last { $0.pinned && !$0.deleted } ?? detail?.pinned.last { !$0.deleted } }
 
     var body: some View {
         presenting(configured(scrollArea))
@@ -203,7 +203,12 @@ struct ChatConversationView: View {
         .onChange(of: chat?.eventCount) { _, _ in
             guard let event = chat?.lastEvent else { return }
             if event.conversationId == nil || event.conversationId == conversationId {
-                Task { await load(full: event.kind != .message) }
+                if event.kind == .messageChanged, let id = event.messageId {
+                    // Bearbeitet, gelöscht, Reaktion, angeheftet: nur diese Nachricht neu holen.
+                    Task { await refreshMessage(id) }
+                } else {
+                    Task { await load(full: event.kind != .message) }
+                }
             }
             if event.kind == .conversation, event.conversationId == conversationId { Task { await loadDetail() } }
         }
@@ -272,7 +277,7 @@ struct ChatConversationView: View {
 
     private var header: some View {
         HStack(spacing: Space.s) {
-            ChatAvatar(title: detail?.title ?? title ?? "Chat", kind: effectiveKind, avatarFileId: detail?.avatarFileId, size: 30)
+            ChatAvatar(title: detail?.title ?? title ?? "Chat", kind: effectiveKind, conversationId: conversationId, imageVersion: detail?.imageUpdatedAt, size: 30)
             VStack(alignment: .leading, spacing: 0) {
                 // Feste Farben: Inhalte in der Werkzeugleiste passen sich sonst dem Hintergrund unter dem Glas an.
                 Text(detail?.title ?? title ?? "Chat")
@@ -735,6 +740,14 @@ struct ChatConversationView: View {
         messages.sort { $0.createdAt < $1.createdAt }
     }
 
+    private func refreshMessage(_ id: UUID) async {
+        guard let client = model.active?.client else { return }
+        if let fresh = try? await client.chatMessage(id) {
+            merge([fresh])
+            if fresh.pinned != (detail?.pinned.contains { $0.id == id } ?? false) { await loadDetail() }
+        }
+    }
+
     private func loadOlder(proxy: ScrollViewProxy) async {
         guard hasMore, !loadingOlder, let client = model.active?.client, let first = messages.first else { return }
         loadingOlder = true
@@ -857,6 +870,21 @@ struct ChatConversationView: View {
     /// auf dem Gerät, Upload über die normale Synchronisation – auch offline).
     private func save(_ target: SaveTarget, to bauakte: Bauakte) async {
         guard let chat, let service = model.active?.service else { return }
+        // Online: der Server übernimmt Foto bzw. Dokument direkt (mit Vorschauen, Kategorie „Chat“).
+        if let client = model.active?.client {
+            do throws(APIError) {
+                try await client.copyChatAttachmentToBauakte(target.attachment.id, bauakteId: bauakte.id,
+                                                             caption: target.message.text.isEmpty ? nil : target.message.text)
+                sync?.localChangeMade()
+                toast = "In „\(bauakte.title)“ übernommen"
+                return
+            } catch where error != .offline {
+                toast = "Übernehmen nicht möglich: \(error.serverMessage ?? error.message)"
+                return
+            } catch {
+                // Ohne Verbindung: auf dem Gerät ablegen, der Abgleich lädt später hoch.
+            }
+        }
         do {
             let data = try await chat.content(of: target.attachment)
             let sender = target.message.senderName.map { " von \($0)" } ?? ""

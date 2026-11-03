@@ -37,6 +37,9 @@ final class ChatCenter {
     private var images: [String: UIImage] = [:]
     private var imageOrder: [String] = []
     private var lastTypingSent: [UUID: Date] = [:]
+    private var statusRefresh: Task<Void, Never>?
+    /// Status (ungelesen, Badge) neu laden – setzt das App-Modell.
+    var refreshStatus: (() async -> Void)?
 
     init(client: AuthorizedClient, store: LocalStore, files: FileVault, userId: UUID, userName: String, isDemo: Bool) {
         self.client = client
@@ -138,6 +141,15 @@ final class ChatCenter {
             if let conversation = event.conversationId, event.kind == .message { typing[conversation] = nil }
             lastEvent = event
             eventCount += 1
+            // Badge: neue bzw. gelesene Nachrichten ändern die Zahl ungelesener Chats (entprellt).
+            if event.kind == .message || event.kind == .read || event.kind == .conversation || event.kind == .status {
+                statusRefresh?.cancel()
+                statusRefresh = Task { [weak self] in
+                    try? await Task.sleep(for: .seconds(1))
+                    guard !Task.isCancelled else { return }
+                    await self?.refreshStatus?()
+                }
+            }
         }
     }
 
@@ -255,6 +267,15 @@ final class ChatCenter {
             }
         }
         guard let data, let image = ThumbnailLoader.downsample(data, to: thumbnail ? 260 : 1400) else { return nil }
+        remember(image, key: key)
+        return image
+    }
+
+    /// Gruppenbild (Arbeitsspeicher, je Stand).
+    func groupImage(_ conversationId: UUID, version: Date) async -> UIImage? {
+        let key = "group-\(conversationId.uuidString)-\(version.timeIntervalSince1970)"
+        if let cached = images[key] { return cached }
+        guard let data = try? await client.chatGroupImage(conversationId), let image = UIImage(data: data) else { return nil }
         remember(image, key: key)
         return image
     }

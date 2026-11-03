@@ -74,7 +74,7 @@ struct ChatListView: View {
             }
         }
         .onAppear {
-            if shotScene == nil, !ChatPrivacyNotice.isAcknowledged(userId: model.active?.user.id, version: status?.privacyNoticeVersion ?? 1) {
+            if shotScene == nil, status?.privacyAccepted != true, !ChatPrivacyNotice.isAcknowledged(userId: model.active?.user.id, version: status?.privacyNoticeVersion ?? 1) {
                 showsPrivacy = true
             }
         }
@@ -283,7 +283,7 @@ private struct ConversationRow: View {
 
     var body: some View {
         HStack(spacing: Space.m) {
-            ChatAvatar(title: conversation.title, kind: conversation.chatKind, avatarFileId: conversation.avatarFileId, size: 46)
+            ChatAvatar(title: conversation.title, kind: conversation.chatKind, conversationId: conversation.id, imageVersion: conversation.imageUpdatedAt, size: 46)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
                     Text(conversation.title)
@@ -355,7 +355,9 @@ private struct ConversationRow: View {
 struct ChatAvatar: View {
     let title: String
     let kind: ChatKind
-    var avatarFileId: UUID?
+    var conversationId: UUID?
+    /// Stand des Gruppenbilds; `nil` = kein Bild.
+    var imageVersion: Date?
     var size: CGFloat = 40
     @Environment(AppModel.self) private var model
     @State private var image: UIImage?
@@ -376,13 +378,12 @@ struct ChatAvatar: View {
         .frame(width: size, height: size)
         .clipShape(Circle())
         .accessibilityHidden(true)
-        .task(id: avatarFileId) {
-            guard let avatarFileId, let chat = model.active?.chat else {
+        .task(id: imageVersion) {
+            guard let conversationId, let imageVersion, kind != .direct, let chat = model.active?.chat else {
                 image = nil
                 return
             }
-            image = await chat.image(for: ChatAttachment(id: avatarFileId, kind: "photo", name: "Gruppenbild.jpg", contentType: "image/jpeg", sizeBytes: 0),
-                                     thumbnail: true)
+            image = await chat.groupImage(conversationId, version: imageVersion)
         }
     }
 }

@@ -143,6 +143,8 @@ final class DemoChat {
     /// Angekündigte und hochgeladene Anhänge (nur im Arbeitsspeicher).
     private var files: [String: [String: Any]] = [:]
     private var contents: [String: Data] = [:]
+    private var demoContent: DemoContent?
+    private var imageStamp = Date().addingTimeInterval(-86400)
 
     init(userId: String) {
         self.userId = userId
@@ -170,10 +172,11 @@ final class DemoChat {
             Message(id: "0193a1b2-de00-7000-8000-0000000\(id)", conversationId: conversation, senderId: sender, senderName: nameMap[sender] ?? "",
                     text: text, createdAt: at(minutes), changedAt: at(minutes), readAt: read ? at(minutes - 1) : nil)
         }
-        let pdf = ["fileId": "0193a1b2-de00-7000-8000-00000000f001", "kind": "document", "originalName": "Lieferschein 4711.pdf",
-                   "contentType": "application/pdf", "sizeBytes": 184_320] as [String: Any]
+        let pdf = ["id": "0193a1b2-de00-7000-8000-00000000f001", "kind": "document", "fileName": "Lieferschein 4711.pdf",
+                   "contentType": "application/pdf", "sizeBytes": 184_320, "hasThumbnail": false] as [String: Any]
         func photo(_ id: String) -> [String: Any] {
-            ["fileId": id, "kind": "photo", "originalName": "Foto.jpg", "contentType": "image/jpeg", "sizeBytes": 412_000, "width": 1600, "height": 1200]
+            ["id": id, "kind": "photo", "fileName": "Foto.jpg", "contentType": "image/jpeg", "sizeBytes": 412_000, "width": 1600, "height": 1200,
+             "hasThumbnail": true]
         }
         var site = [
             message("0e101", Self.siteChat, Self.anna, "Guten Morgen zusammen! Schlüssel liegt ab 6:45 beim Empfang, Zufahrt über den Hof.", 60 * 20),
@@ -187,7 +190,8 @@ final class DemoChat {
         site[0].pinned = true
         site[2].attachments = [photo(Self.samplePhoto), photo("0193a1b2-de00-7000-8000-00000000a003")]
         site[2].reactions = [Self.anna: "👍", Self.officeUser: "👍"]
-        site[3].replyTo = ["id": site[2].id, "senderName": "Max Huber", "text": "Behandlungsraum 1 ist verlegt.", "attachmentKind": "photo"]
+        site[3].replyTo = ["id": site[2].id, "senderUserId": userId, "senderName": "Max Huber", "text": "Behandlungsraum 1 ist verlegt.",
+                           "deleted": false, "attachment": "photo"]
         site[3].editedAt = at(78)
         site[4].location = ["latitude": 48.3705, "longitude": 10.8978, "label": "Silo am Hof", "address": "Altstadt 12, Augsburg"]
         site[5].mentions = [userId]
@@ -215,27 +219,26 @@ final class DemoChat {
     /// `/api/v1/chat/…` – liefert Status und JSON (oder Rohdaten für Inhalte von Anhängen).
     func handle(method: String, path: String, query: [URLQueryItem], body: [String: Any], raw: Data?, demo: DemoContent?) -> (Int, Any?, Data?) {
         settle()
+        demoContent = demo
         let parts = path.split(separator: "/").map(String.init)
         func value(_ name: String) -> String? { query.first { $0.name == name }?.value }
         switch (method, parts.first ?? "", parts.count) {
         case ("GET", "status", 1): return (200, status(), nil)
         case ("GET", "contacts", 1): return (200, contacts(), nil)
         case ("GET", "crews", 1): return (200, [["id": Self.crewHuber, "name": "Kolonne Huber"], ["id": Self.crewBrandl, "name": "Kolonne Brandl"]], nil)
-        case ("GET", "search", 1): return (200, ["items": search(value("q") ?? "", in: value("conversationId"))], nil)
+        case ("GET", "search", 1):
+            let items = search(value("q") ?? "", in: value("conversationId"))
+            return (200, ["items": items, "searched": messages.count, "truncated": false], nil)
+        case ("POST", "bauakten", 3) where parts[2] == "group": return bauakteGroup(parts[1].lowercased())
+        case ("POST", "attachments", 3) where parts[2] == "bauakte":
+            return (200, ["fileId": UUID.v7().uuidString.lowercased(), "bauakteId": orNull(body["bauakteId"])], nil)
         case ("POST", "privacy-notice", 1): return (204, nil, nil)
         case ("GET", "events", 1): return (404, problem("NOT_FOUND"), nil)
         case ("GET", "conversations", 1): return (200, list(), nil)
         case ("POST", "conversations", 1): return create(body)
         case ("POST", "conversations", 2) where parts[1] == "direct": return direct(with: body["userId"] as? String ?? "")
         case (_, "conversations", 2): return conversation(parts[1].lowercased(), method: method, body: body)
-        case (_, "conversations", 3): return conversationAction(parts[1].lowercased(), parts[2], method: method, body: body, query: query)
-        case ("POST", "attachments", 1):
-            guard let id = (body["id"] as? String)?.lowercased() else { return (422, problem("VALIDATION_FAILED"), nil) }
-            files[id] = body
-            return (201, body, nil)
-        case ("PUT", "attachments", 3) where parts[2] == "content":
-            contents[parts[1].lowercased()] = raw ?? Data()
-            return (200, ["id": parts[1], "state": "stored"], nil)
+        case (_, "conversations", 3): return conversationAction(parts[1].lowercased(), parts[2], method: method, body: body, query: query, raw: raw)
         case ("GET", "attachments", 3) where parts[2] == "content":
             let id = parts[1].lowercased()
             guard let data = demo?.content(of: id) ?? contents[id] else { return (404, problem("NOT_FOUND"), nil) }
@@ -270,15 +273,18 @@ final class DemoChat {
     }
 
     private func summary(_ conversation: Conversation) -> [String: Any] {
+        // Form wie ChatConversationSummary (docs/chat.md): kind nur direct|group, Art über crewId/bauakteId/announcementOnly.
         var item: [String: Any] = [
-            "id": conversation.id, "title": conversation.title, "kind": conversation.kind, "unreadCount": conversation.unread,
-            "mentioned": conversation.mentioned && conversation.unread > 0, "canWrite": canWrite(conversation),
-            "members": conversation.members.map { ["id": $0, "name": names[$0] ?? ""] },
+            "id": conversation.id, "title": conversation.title, "kind": conversation.kind == "direct" ? "direct" : "group",
+            "unreadCount": conversation.unread, "unreadMentions": conversation.mentioned ? min(1, conversation.unread) : 0,
+            "canPost": canWrite(conversation), "isAdmin": conversation.admins.contains(userId), "announcementOnly": conversation.onlyAdminsWrite,
+            "members": conversation.members.map { ["id": $0, "name": names[$0] ?? ""] }, "description": orNull(conversation.description),
+            "crewId": orNull(conversation.crewId), "bauakteId": orNull(conversation.bauakteId),
+            "muted": (conversation.mutedUntil ?? .distantPast) > Date(), "lastActivityAt": APIDate.format(last(conversation)?.createdAt ?? Date()),
         ]
         if let message = last(conversation) { item["lastMessage"] = json(message) }
         if let until = conversation.mutedUntil, until > Date() { item["mutedUntil"] = APIDate.format(until) }
-        if let avatar = conversation.avatarFileId { item["avatarFileId"] = avatar }
-        if let bauakte = conversation.bauakteId { item["bauakteId"] = bauakte }
+        if conversation.avatarFileId != nil { item["imageUpdatedAt"] = APIDate.format(imageStamp) }
         return item
     }
 
@@ -286,26 +292,18 @@ final class DemoChat {
         !conversation.onlyAdminsWrite || conversation.admins.contains(userId)
     }
 
+    /// Form wie ChatConversationDetail: `{ conversation, members, canManage, pinned, bauakteTitle }`.
     private func detail(_ conversation: Conversation) -> [String: Any] {
-        var item = summary(conversation)
         let lastRead: [String: Date] = [Self.anna: Date(), Self.officeUser: Date(), Self.lukas: Date().addingTimeInterval(-3 * 3600),
                                         Self.jonas: Date().addingTimeInterval(-90 * 60), Self.thomas: Date().addingTimeInterval(-86400)]
-        item["members"] = conversation.members.map { id -> [String: Any] in
-            var member: [String: Any] = ["id": id, "name": names[id] ?? "", "isAdmin": conversation.admins.contains(id),
-                                         "automatic": conversation.kind == "crew" || conversation.kind == "site"]
-            if id == Self.anna { member["label"] = "Bauleitung" }
-            if id == Self.officeUser { member["label"] = "Büro" }
-            if let read = lastRead[id] { member["readUpTo"] = APIDate.format(read) }
-            return member
+        let members = conversation.members.map { id -> [String: Any] in
+            ["userId": id, "name": names[id] ?? "", "isAdmin": conversation.admins.contains(id),
+             "fromCrew": (conversation.kind == "crew" || conversation.kind == "site") && !conversation.admins.contains(id),
+             "readUpTo": orNull(lastRead[id].map(APIDate.format)), "deliveredUpTo": APIDate.format(Date())]
         }
-        item["description"] = orNull(conversation.description)
-        item["canManage"] = conversation.kind != "direct"
-        item["onlyAdminsWrite"] = conversation.onlyAdminsWrite
-        item["readReceipts"] = true
-        item["bauakteTitle"] = orNull(conversation.bauakteTitle)
-        item["crewId"] = orNull(conversation.crewId)
-        item["crewName"] = orNull(conversation.crewName)
-        return item
+        let pinned = messages.filter { $0.conversationId == conversation.id && $0.pinned && !$0.deleted }.map(json)
+        return ["conversation": summary(conversation), "members": members, "canManage": conversation.kind != "direct",
+                "pinned": pinned, "bauakteTitle": orNull(conversation.bauakteTitle)]
     }
 
     private func conversation(_ id: String, method: String, body: [String: Any]) -> (Int, Any?, Data?) {
@@ -324,14 +322,14 @@ final class DemoChat {
                 conversation.members = conversation.members.filter { set.contains($0) } + set.subtracting(conversation.members).sorted()
             }
             if let admins = body["adminIds"] as? [String] { conversation.admins = admins.map { $0.lowercased() } }
-            if let only = body["onlyAdminsWrite"] as? Bool { conversation.onlyAdminsWrite = only }
+            if let only = body["announcementOnly"] as? Bool { conversation.onlyAdminsWrite = only }
             if let avatar = body["avatarFileId"] as? String { conversation.avatarFileId = avatar.lowercased() }
             conversations[index] = conversation
         }
         return (200, detail(conversations[index]), nil)
     }
 
-    private func conversationAction(_ id: String, _ action: String, method: String, body: [String: Any], query: [URLQueryItem]) -> (Int, Any?, Data?) {
+    private func conversationAction(_ id: String, _ action: String, method: String, body: [String: Any], query: [URLQueryItem], raw: Data?) -> (Int, Any?, Data?) {
         guard let index = conversations.firstIndex(where: { $0.id == id && $0.members.contains(userId) }) else { return (404, problem("NOT_FOUND"), nil) }
         switch (method, action) {
         case ("POST", "messages"): return send(body, to: index)
@@ -343,6 +341,27 @@ final class DemoChat {
             if let before = date("before") { list = list.filter { $0.createdAt < before } }
             let hasMore = list.count > limit
             return (200, ["items": list.suffix(limit).map(json), "hasMore": hasMore, "members": detail(conversations[index])["members"] ?? []], nil)
+        case ("POST", "attachments"):
+            let id = UUID.v7().uuidString.lowercased()
+            let name = query.first { $0.name == "fileName" }?.value ?? "Datei"
+            let isPDF = raw?.starts(with: Data("%PDF".utf8)) == true || name.lowercased().hasSuffix(".pdf")
+            let file: [String: Any] = ["id": id, "kind": isPDF ? "document" : "photo", "fileName": name,
+                                       "contentType": isPDF ? "application/pdf" : "image/jpeg", "sizeBytes": raw?.count ?? 0,
+                                       "hasThumbnail": !isPDF, "createdAt": APIDate.format(Date()), "uploadedByUserId": userId]
+            files[id] = file
+            contents[id] = raw ?? Data()
+            return (201, file, nil)
+        case ("PUT", "image"):
+            conversations[index].avatarFileId = "upload-\(id)"
+            contents["image-\(id)"] = raw ?? Data()
+            imageStamp = Date()
+            return (200, summary(conversations[index]), nil)
+        case ("DELETE", "image"):
+            conversations[index].avatarFileId = nil
+            return (204, nil, nil)
+        case ("GET", "image"):
+            guard let avatar = conversations[index].avatarFileId else { return (404, problem("NOT_FOUND"), nil) }
+            return (200, nil, contents["image-\(id)"] ?? demoContent?.content(of: avatar))
         case ("POST", "read"):
             conversations[index].unread = 0
             conversations[index].mentioned = false
@@ -361,10 +380,15 @@ final class DemoChat {
         case ("POST", "typing"): return (204, nil, nil)
         case ("GET", "attachments"):
             let items = messages.filter { $0.conversationId == id && !$0.deleted }.sorted { $0.createdAt > $1.createdAt }.flatMap { message in
-                message.attachments.map { ["attachment": $0, "messageId": message.id, "senderName": message.senderName,
-                                           "createdAt": APIDate.format(message.createdAt)] as [String: Any] }
+                message.attachments.map { attachment -> [String: Any] in
+                    var item = attachment
+                    item["messageId"] = message.id
+                    item["createdAt"] = APIDate.format(message.createdAt)
+                    item["uploadedByUserId"] = message.senderId
+                    return item
+                }
             }
-            return (200, ["items": items], nil)
+            return (200, items, nil)
         default: return (404, problem("NOT_FOUND"), nil)
         }
     }
@@ -373,7 +397,7 @@ final class DemoChat {
         let conversation = conversations[index]
         guard canWrite(conversation) else { return (403, ["status": 403, "code": "PERMISSION_DENIED", "detail": "In dieser Gruppe schreiben nur Admins."], nil) }
         let text = (body["text"] as? String ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
-        let fileIds = (body["attachmentFileIds"] as? [String] ?? []).map { $0.lowercased() }
+        let fileIds = (body["attachmentFileIds"] as? [String] ?? body["attachmentIds"] as? [String] ?? []).map { $0.lowercased() }
         let location = body["location"] as? [String: Any]
         guard !text.isEmpty || !fileIds.isEmpty || location != nil else {
             return (422, ["status": 422, "code": "VALIDATION_FAILED", "detail": "Bitte einen Text eingeben oder etwas anhängen."], nil)
@@ -386,15 +410,13 @@ final class DemoChat {
                               text: String(text.prefix(ChatLimits.maxLength)), createdAt: now, changedAt: now)
         message.clientMessageId = body["clientMessageId"] as? String
         message.attachments = fileIds.compactMap { id in
-            guard let file = files[id] else { return nil }
-            return ["fileId": id, "kind": file["kind"] ?? "document", "originalName": file["originalName"] ?? "Datei",
-                    "contentType": file["contentType"] ?? "application/octet-stream", "sizeBytes": file["sizeBytes"] ?? 0]
+            files[id]
         }
         if let replyId = (body["replyToId"] as? String)?.lowercased(), let quoted = messages.first(where: { $0.id == replyId }) {
-            message.replyTo = ["id": quoted.id, "senderName": quoted.senderName, "text": quoted.text,
-                               "attachmentKind": orNull(quoted.attachments.first?["kind"])]
+            message.replyTo = ["id": quoted.id, "senderUserId": quoted.senderId, "senderName": quoted.senderName, "text": quoted.text,
+                               "deleted": quoted.deleted, "attachment": orNull(quoted.attachments.first?["kind"])]
         }
-        message.mentions = (body["mentionUserIds"] as? [String] ?? []).map { $0.lowercased() }
+        message.mentions = (body["mentionUserIds"] as? [String] ?? body["mentionIds"] as? [String] ?? []).map { $0.lowercased() }
         message.location = location
         messages.append(message)
         return (201, json(message), nil)
@@ -421,8 +443,12 @@ final class DemoChat {
             return (204, nil, nil)
         case ("PUT", "reaction"):
             if let emoji = body["emoji"] as? String, !emoji.isEmpty { messages[index].reactions[userId] = emoji } else { messages[index].reactions[userId] = nil }
+        case ("GET", nil):
+            return (200, json(messages[index]), nil)
         case ("POST", "pin"):
             messages[index].pinned = body["pinned"] as? Bool ?? true
+            messages[index].changedAt = now
+            return (204, nil, nil)
         case ("POST", "forward"):
             for target in (body["conversationIds"] as? [String] ?? []).map({ $0.lowercased() }) {
                 guard let conversation = conversations.first(where: { $0.id == target }), canWrite(conversation) else { continue }
@@ -448,11 +474,13 @@ final class DemoChat {
             allowed.contains(message.conversationId) && !message.deleted && !message.system
                 && (conversationId == nil || message.conversationId == conversationId?.lowercased())
                 && (message.text.lowercased().contains(needle)
-                    || message.attachments.contains { ($0["originalName"] as? String)?.lowercased().contains(needle) == true })
+                    || message.attachments.contains { ($0["fileName"] as? String)?.lowercased().contains(needle) == true })
         }
         .sorted { $0.createdAt > $1.createdAt }
         .map { message in
-            ["message": json(message), "conversationId": message.conversationId,
+            ["messageId": message.id, "conversationId": message.conversationId, "senderName": message.senderName,
+             "snippet": message.text.isEmpty ? (message.attachments.first?["fileName"] as? String ?? "") : message.text,
+             "createdAt": APIDate.format(message.createdAt),
              "conversationTitle": conversations.first { $0.id == message.conversationId }?.title ?? ""]
         }
     }
@@ -460,7 +488,7 @@ final class DemoChat {
     private func create(_ body: [String: Any]) -> (Int, Any?, Data?) {
         let title = (body["title"] as? String ?? "").trimmingCharacters(in: .whitespaces)
         guard !title.isEmpty else { return (422, ["status": 422, "code": "VALIDATION_FAILED", "detail": "Bitte einen Namen eingeben."], nil) }
-        let kind = body["kind"] as? String ?? "group"
+        let kind = body["crewId"] is String ? "crew" : (body["announcementOnly"] as? Bool == true ? "announcement" : "group")
         var members = [userId] + (body["memberIds"] as? [String] ?? []).map { $0.lowercased() }
         if kind == "crew" { members += [Self.lukas, Self.jonas] }
         if kind == "site" { members += [Self.anna, Self.officeUser] }
@@ -470,7 +498,7 @@ final class DemoChat {
         let id = UUID.v7().uuidString.lowercased()
         let bauakteId = (body["bauakteId"] as? String)?.lowercased()
         let conversation = Conversation(id: id, title: title, kind: kind, description: body["description"] as? String, members: unique,
-                                        admins: [userId], unread: 0, onlyAdminsWrite: kind == "announcement" || body["onlyAdminsWrite"] as? Bool == true,
+                                        admins: [userId], unread: 0, onlyAdminsWrite: kind == "announcement",
                                         bauakteId: bauakteId, bauakteTitle: bauakteId == nil ? nil : title,
                                         crewId: (body["crewId"] as? String)?.lowercased(), crewName: kind == "crew" ? title : nil)
         conversations.append(conversation)
@@ -478,12 +506,16 @@ final class DemoChat {
         return (201, summary(conversation), nil)
     }
 
-    private func system(in conversationId: String, _ text: String) {
-        let now = Date()
-        var message = Message(id: UUID.v7().uuidString.lowercased(), conversationId: conversationId, senderId: userId, senderName: "",
-                              text: text, createdAt: now, changedAt: now, readAt: now)
-        message.system = true
-        messages.append(message)
+    /// Der Server kennt keine Systemnachrichten; Änderungen an der Gruppe zeigt die Gruppeninfo.
+    private func system(in conversationId: String, _ text: String) {}
+
+    /// `POST /chat/bauakten/{id}/group`: Baustellen-Gruppe anlegen bzw. die vorhandene.
+    private func bauakteGroup(_ bauakteId: String) -> (Int, Any?, Data?) {
+        if let existing = conversations.first(where: { $0.bauakteId == bauakteId }) { return (200, summary(existing), nil) }
+        let conversation = Conversation(id: UUID.v7().uuidString.lowercased(), title: "Baustelle", kind: "site", members: [userId, Self.anna, Self.officeUser],
+                                        admins: [userId], unread: 0, bauakteId: bauakteId, bauakteTitle: "Baustelle")
+        conversations.append(conversation)
+        return (201, summary(conversation), nil)
     }
 
     /// Eigene Nachrichten gelten nach 4 Sekunden als gelesen; das Büro antwortet einmal nach 6 Sekunden.
@@ -509,11 +541,12 @@ final class DemoChat {
         var item: [String: Any] = [
             "id": message.id, "conversationId": message.conversationId, "senderUserId": message.senderId, "senderName": message.senderName,
             "text": message.deleted ? NSNull() as Any : message.text as Any, "createdAt": APIDate.format(message.createdAt), "mine": mine && !message.system,
-            "deleted": message.deleted, "kind": message.system ? "system" : "text",
+            "deleted": message.deleted,
             "status": mine ? (message.readAt != nil ? "read" : "delivered") as Any : NSNull() as Any,
             "readBy": mine && message.readAt != nil ? recipients : 0, "recipients": mine ? recipients : 0,
-            "attachments": message.attachments, "pinned": message.pinned, "forwarded": message.forwarded,
-            "mentionUserIds": message.mentions, "clientMessageId": orNull(message.clientMessageId),
+            "attachments": message.attachments, "pinnedAt": message.pinned ? APIDate.format(message.changedAt) as Any : NSNull() as Any,
+            "forwarded": message.forwarded, "mentionedUserIds": message.mentions, "clientMessageId": orNull(message.clientMessageId),
+            "canEdit": mine && Date().timeIntervalSince(message.createdAt) <= 15 * 60,
         ]
         var counts: [String: (Int, Bool, [String])] = [:]
         for (person, emoji) in message.reactions {

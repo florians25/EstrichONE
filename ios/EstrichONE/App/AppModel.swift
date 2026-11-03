@@ -499,6 +499,7 @@ final class AppModel {
                                          userName: account.user.displayName, isDemo: isDemo) }
         active = ActiveAccount(account: account, client: client, sync: sync, service: service,
                                thumbnails: service.map { ThumbnailLoader(service: $0, client: client) }, chat: chat)
+        if let sync { chat?.refreshStatus = { [weak sync] in await sync?.refreshChat() } }
         chat?.start()
         deviceState = accounts.state
         sync?.start()

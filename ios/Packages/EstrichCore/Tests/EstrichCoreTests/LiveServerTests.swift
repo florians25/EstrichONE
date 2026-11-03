@@ -499,4 +499,70 @@ struct LiveServerTests {
         #expect(try await device.client.dayPlan(next).crew(crewId)?.stops.isEmpty ?? true)
         #expect(try await device.client.dayPlan(day).crew(crewId)?.stops.isEmpty ?? true)
     }
+
+    @Test("Chat über den echten Server: Gruppe, Warteschlange mit PDF, Zitat, Erwähnung, Reaktion, Bearbeiten, Anheften, Suche, Medien, Stumm")
+    func chatLive() async throws {
+        let device = try await syncingAccount()
+        let client = device.client
+        // Modul einschalten (Administrator, Standard ist aus).
+        let settings = try JSONSerialization.data(withJSONObject: ["enabled": true, "retentionDays": 90, "showPreview": true, "editWindowMinutes": 15])
+        let _: NoContent = try await client.send(APIRequest(method: "PUT", path: "chat/admin/settings", body: settings, contentType: "application/json"))
+        let status = try await client.chatStatus()
+        #expect(status.isAvailable && status.canAdmin && status.editWindowMinutes == 15)
+        try await client.acknowledgeChatPrivacy(version: status.privacyNoticeVersion)
+        #expect(try await client.chatStatus().privacyAccepted)
+
+        let group = try await client.createChatGroup(ChatGroupChange(title: "CI Chat \(UUID().uuidString.prefix(4))", description: "Integrationstest",
+                                                                     announcementOnly: false))
+        #expect(group.chatKind == .group && group.canWrite)
+        let detail = try await client.chatConversation(group.id)
+        #expect(detail.canManage && detail.description == "Integrationstest" && detail.isAdmin(device.userId))
+
+        // Warteschlange: PDF hochladen, dann senden; doppeltes Senden derselben clientMessageId bleibt eine Nachricht.
+        let outbox = ChatOutbox(store: device.store, files: device.files)
+        let pdf = Data("%PDF-1.4\n1 0 obj<</Type/Catalog/Pages 2 0 R>>endobj 2 0 obj<</Type/Pages/Kids[]/Count 0>>endobj\ntrailer<</Root 1 0 R>>\n%%EOF\n".utf8)
+        let document = ChatOutboxItem.Attachment(id: UUID.v7(), kind: "document", name: "Aufmass.pdf", contentType: "application/pdf",
+                                                 sizeBytes: Int64(pdf.count))
+        let item = ChatOutboxItem(conversationId: group.id, text: "Aufmaß anbei", attachments: [document])
+        try await outbox.enqueue(item, contents: [document.id: pdf])
+        let flushed = await outbox.flush(client: client)
+        let failure = await outbox.items().first?.failure ?? (flushed.offline ? "offline" : "")
+        let first = try #require(flushed.sent.first, "nicht gesendet: \(failure)")
+        #expect(first.attachments.count == 1 && first.attachments.first?.isPhoto == false && first.clientMessageId == item.id)
+        let again = try await client.sendChatMessage(item.body, to: group.id)
+        #expect(again.id == first.id)
+
+        let content = try await client.chatAttachmentContent(try #require(first.attachments.first).id)
+        #expect(content.starts(with: Data("%PDF".utf8)))
+
+        // Antwort mit Zitat und Erwähnung, Standort.
+        let reply = try await client.sendChatMessage(ChatSendBody(text: "@Ich selbst passt", clientMessageId: UUID.v7(), replyToId: first.id,
+                                                                  mentionUserIds: [device.userId],
+                                                                  location: ChatLocation(latitude: 48.37, longitude: 10.89, label: "Baustelle")), to: group.id)
+        #expect(reply.replyTo?.id == first.id && reply.location?.label == "Baustelle")
+
+        let reacted = try await client.reactToChatMessage(first.id, emoji: "👍")
+        #expect(reacted.reactions.first { $0.emoji == "👍" }?.mine == true)
+        let edited = try await client.editChatMessage(first.id, text: "Aufmaß anbei (Halle 2)")
+        #expect(edited.text == "Aufmaß anbei (Halle 2)" && edited.editedAt != nil)
+        let pinned = try await client.pinChatMessage(first.id, pinned: true)
+        #expect(pinned.pinned)
+        #expect(try await client.chatConversation(group.id).pinned.contains { $0.id == first.id })
+
+        let page = try await client.chatPage(group.id, limit: 50)
+        #expect(page.items.count >= 2 && page.items.last?.id == reply.id)
+        let hits = try await client.searchChat("Halle 2", conversationId: group.id)
+        #expect(hits.contains { $0.message.id == first.id })
+        let media = try await client.chatMedia(group.id, kind: "document")
+        #expect(media.contains { $0.messageId == first.id })
+
+        try await client.muteChat(group.id, muted: true, until: Date().addingTimeInterval(3600))
+        #expect(try await client.chatConversations().first { $0.id == group.id }?.isMuted() == true)
+        try await client.muteChat(group.id, muted: false)
+        try await client.markChatRead(group.id)
+        try await client.deleteChatMessage(reply.id)
+        #expect(try await client.chatMessage(reply.id).deleted)
+        let request = try await client.streamRequest("chat/events")
+        #expect(request.value(forHTTPHeaderField: "Accept") == "text/event-stream")
+    }
 }
