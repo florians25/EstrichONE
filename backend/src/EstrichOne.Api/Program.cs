@@ -2,6 +2,7 @@ using EstrichOne.Api.Infrastructure.Hosting;
 using EstrichOne.Api.Infrastructure.Http;
 using EstrichOne.Api.Infrastructure.Modules;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Identity.Sessions;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.HttpOverrides;
 using Serilog;
@@ -74,6 +75,7 @@ app.UseExceptionHandler();
 app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseRateLimiter();
+app.UsePasswordChangeGate();
 app.UseAuthorization();
 app.UseSerilogRequestLogging(logging =>
 {

@@ -4,7 +4,7 @@
  */
 import { valueLists } from "./valueLists";
 import JSONModel from "sap/ui/model/json/JSONModel";
-import { api, get, post } from "./api";
+import { api, ApiError, get, post } from "./api";
 import { loadSystemSettings } from "./systemSettings";
 import type { DirectoryUser, ServerInfo, UserSummary, WebSessionResponse } from "./models";
 
@@ -36,6 +36,17 @@ class Session {
 	}
 
 	private async loadPermissions(): Promise<void> {
+		try {
+			await this.loadPermissionsNow();
+		} catch (error) {
+			// Einmalpasswort: Der Server gibt bis zum Wechsel nichts heraus – nur den Passwortwechsel anbieten.
+			if (!(error instanceof ApiError && error.code === "PASSWORD_CHANGE_REQUIRED")) throw error;
+			this.model.setProperty("/mustChangePassword", true);
+			this.model.setProperty("/permissions", {});
+		}
+	}
+
+	private async loadPermissionsNow(): Promise<void> {
 		const [list, settings, , chat, twoFactor] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true),
 			get<{ enabled: boolean }>("chat/status").catch(() => ({ enabled: false })),
 			get<{ restricted: boolean }>("auth/two-factor").catch(() => ({ restricted: false }))]);
@@ -95,7 +106,10 @@ class Session {
 
 	async changePassword(currentPassword: string, newPassword: string): Promise<void> {
 		await post("auth/change-password", { currentPassword, newPassword });
+		const forced = this.data.mustChangePassword;
 		this.model.setProperty("/mustChangePassword", false);
+		// Nach dem Pflichtwechsel gibt der Server Rechte und Einstellungen frei.
+		if (forced) await this.loadPermissions();
 	}
 
 	clear(): void {

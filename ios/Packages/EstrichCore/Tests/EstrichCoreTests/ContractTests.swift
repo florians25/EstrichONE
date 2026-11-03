@@ -84,7 +84,7 @@ struct ContractTests {
 
     @Test("Anfragetypen")
     func requests() throws {
-        try checkRequest("LoginRequest", sample: LoginRequest(login: "a", password: "b", client: "ios", clientName: nil))
+        try checkRequest("LoginRequest", sample: LoginRequest(login: "a", password: "b", client: "ios", clientName: nil, twoFactorCode: "123456"))
         try checkRequest("RefreshRequest", sample: RefreshRequest(refreshToken: "a", deviceSignature: nil))
         try checkRequest("ChangePasswordRequest", sample: ChangePasswordRequest(currentPassword: "a", newPassword: "b"))
         try checkRequest("RegisterDeviceRequest", sample: RegisterDeviceRequest(name: "a", platform: "ios", kind: .pool, publicKey: "k",

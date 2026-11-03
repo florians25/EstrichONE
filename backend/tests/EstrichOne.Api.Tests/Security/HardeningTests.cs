@@ -136,6 +136,8 @@ public sealed class HardeningTests(PostgresFixture postgres)
         // Proxy mit öffentlicher Adresse nur, wenn eingetragen.
         (await ClientIpAsync("172.18.0.3", "203.0.113.7, 198.51.100.5")).ShouldBe("198.51.100.5");
         (await ClientIpAsync("172.18.0.3", "203.0.113.7, 198.51.100.5", "198.51.100.5")).ShouldBe("203.0.113.7");
+        // Dieselbe Schreibweise wie für Caddy (ESTRICHONE_TRUSTED_PROXIES aus der .env, Compose gibt sie an beide).
+        (await ClientIpAsync("172.18.0.3", "203.0.113.7, 198.51.100.5", "private_ranges 198.51.100.5")).ShouldBe("203.0.113.7");
     }
 
     [Fact]

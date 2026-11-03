@@ -35,6 +35,12 @@ und Zertifikat übernimmt der vorhandene Reverse Proxy. Im Nginx Proxy Manager:
 `X-Forwarded-For`/`-Proto` werden nur von privaten Adressen (LAN, Docker-Netze) übernommen; die Protokolle zeigen
 dadurch die echte Client-Adresse.
 
+Läuft der Proxy auf einem anderen Rechner mit **öffentlicher** Adresse, diese in der `.env` eintragen –
+`ESTRICHONE_TRUSTED_PROXIES="private_ranges 203.0.113.5"` (mehrere Adressen/Netze mit Leerzeichen) bzw. beim Installer
+`-e ESTRICHONE_TRUSTED_PROXIES=203.0.113.5` (ergänzt `private_ranges` selbst). Die Liste gilt für Caddy **und** die API
+(`EstrichOne__TrustedProxies`): Ohne Eintrag sähen Anmeldesperre und Rate-Limits nur die Adresse des Proxys, mit einer
+zu großzügigen Liste (`0.0.0.0/0`) könnten Angreifer fremde Adressen vortäuschen. Danach `docker compose up -d`.
+
 ### Betriebsart `direkt` – ohne vorgeschalteten Proxy
 
 | Port | Zweck |

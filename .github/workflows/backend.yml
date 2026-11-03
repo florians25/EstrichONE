@@ -55,6 +55,13 @@ jobs:
         run: |
           POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose config --quiet
           POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose -f compose.yml -f compose.proxy.yml config --quiet
+          # Eine Liste vertrauenswürdiger Proxys für Caddy und API (docs/sicherheit.md, Betrieb)
+          config="$(POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci ESTRICHONE_TRUSTED_PROXIES='private_ranges 203.0.113.5' \
+            docker compose -f compose.yml -f compose.proxy.yml config --format json)"
+          echo "$config" | jq -e '.services.api.environment.EstrichOne__TrustedProxies == "private_ranges 203.0.113.5"
+            and .services.caddy.environment.ESTRICHONE_TRUSTED_PROXIES == "private_ranges 203.0.113.5"'
+          POSTGRES_PASSWORD=ci RESTIC_PASSWORD=ci docker compose -f compose.yml -f compose.proxy.yml config --format json \
+            | jq -e '.services.caddy.environment.ESTRICHONE_TRUSTED_PROXIES == "private_ranges" and .services.api.environment.EstrichOne__TrustedProxies == ""'
       - name: Shellcheck
         run: shellcheck deploy/*.sh deploy/backup/*
       - name: Stack starten und server-info abrufen

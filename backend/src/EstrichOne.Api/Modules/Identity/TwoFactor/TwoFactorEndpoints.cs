@@ -5,6 +5,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Identity.Passwords;
+using EstrichOne.Api.Modules.Identity.Sessions;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -37,15 +38,15 @@ internal static class TwoFactorEndpoints
     {
         var group = api.MapGroup("/auth/two-factor").WithTags("Anmeldung");
         group.MapGet("/", StatusAsync).WithName("GetTwoFactorStatus").WithSummary("Zwei-Faktor-Anmeldung des eigenen Kontos")
-            .AllowPendingDevice();
+            .AllowPendingDevice().AllowDuringPasswordChange();
         group.MapPost("/setup", SetupAsync).WithName("BeginTwoFactorSetup")
             .WithSummary("Einrichtung beginnen: neues Geheimnis (QR-Code); wirksam erst nach Bestätigung mit einem Code")
             .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status409Conflict)
-            .RequireRateLimiting(AuthEndpoints.RateLimitPolicy).AllowPendingDevice();
+            .RequireRateLimiting(AuthEndpoints.RateLimitPolicy).AllowPendingDevice().AllowDuringPasswordChange();
         group.MapPost("/enable", EnableAsync).WithName("EnableTwoFactor")
             .WithSummary("Einrichtung mit dem ersten Code aus der App bestätigen; liefert einmalig 10 Wiederherstellungscodes")
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .RequireRateLimiting(AuthEndpoints.RateLimitPolicy).AllowPendingDevice();
+            .RequireRateLimiting(AuthEndpoints.RateLimitPolicy).AllowPendingDevice().AllowDuringPasswordChange();
         group.MapPost("/recovery-codes", RenewCodesAsync).WithName("RenewTwoFactorRecoveryCodes")
             .WithSummary("Neue Wiederherstellungscodes (alte werden ungültig); Passwort und aktueller Code nötig")
             .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status409Conflict)

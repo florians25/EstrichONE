@@ -123,6 +123,18 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                 return problem(401, "INVALID_CREDENTIALS", "Anmeldename oder Passwort ist nicht korrekt.")
             }
             let login = (body["login"] as? String ?? "").lowercased()
+            // Konto mit Zwei-Faktor-Anmeldung (Demo und UI-Tests): Code 246810 oder Wiederherstellungscode abcde-23456.
+            if login.contains("berger") {
+                let code = (body["twoFactorCode"] as? String ?? "").replacingOccurrences(of: "-", with: "").lowercased()
+                if code.isEmpty {
+                    return problem(401, "TWO_FACTOR_REQUIRED", "Bitte den 6-stelligen Code aus der Authenticator-App oder einen Wiederherstellungscode eingeben.")
+                }
+                guard code == "246810" || code == "abcde23456" else {
+                    return problem(401, "TWO_FACTOR_INVALID", "Der Bestätigungscode ist falsch oder abgelaufen. Bitte den aktuellen Code aus der App eingeben.")
+                }
+                currentUserId = "0193a1b2-0000-7000-8000-00000000cccc"
+                return (200, tokens(userId: currentUserId, name: "Sabine Berger", userName: login))
+            }
             let name = login.contains("lukas") ? "Lukas Brandl" : "Max Huber"
             let id = login.contains("lukas") ? "0193a1b2-0000-7000-8000-00000000bbbb" : "0193a1b2-0000-7000-8000-00000000aaaa"
             currentUserId = id

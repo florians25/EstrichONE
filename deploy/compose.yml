@@ -102,6 +102,9 @@ services:
       EstrichOne__ServerName: ${ESTRICHONE_SERVER_NAME:-EstrichONE}
       EstrichOne__PublicUrl: ${ESTRICHONE_PUBLIC_URL:-https://${ESTRICHONE_DOMAIN:-localhost}}
       EstrichOne__TrustForwardedHeaders: "true"
+      # Dieselbe Liste wie für Caddy: Adressen vorgeschalteter Proxys mit öffentlicher IP (private Netze vertraut die API
+      # immer). Nur von ihnen übernimmt die API die Client-Adresse aus X-Forwarded-For (Sperre/Rate-Limit je IP).
+      EstrichOne__TrustedProxies: ${ESTRICHONE_TRUSTED_PROXIES:-}
       # Datenbankschema beim Start aktualisieren (ersetzt den früheren Dienst „migrate“, ADR 0003).
       EstrichOne__MigrateOnStartup: "true"
       EstrichOne__Backup__StatusPath: /status

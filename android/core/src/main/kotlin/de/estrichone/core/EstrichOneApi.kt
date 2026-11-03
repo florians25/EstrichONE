@@ -35,7 +35,35 @@ class MemorySessionStore : SessionStore {
 }
 
 @Serializable
-private data class LoginRequest(val login: String, val password: String, val client: String, val clientName: String?)
+private data class LoginRequest(
+    val login: String, val password: String, val client: String, val clientName: String?,
+    /** Nur nach 401 TWO_FACTOR_REQUIRED: Code der Authenticator-App oder Wiederherstellungscode. */
+    val twoFactorCode: String? = null,
+)
+
+@Serializable
+private data class ChangePasswordRequest(val currentPassword: String, val newPassword: String)
+
+/** Zweiter Schritt der Anmeldung (Zwei-Faktor-Anmeldung, docs/sicherheit.md). */
+object TwoFactorLogin {
+    const val REQUIRED = "TWO_FACTOR_REQUIRED"
+    const val INVALID = "TWO_FACTOR_INVALID"
+
+    /** Leerzeichen entfernen, Kleinschreibung (Wiederherstellungscodes); null, wenn nichts eingegeben wurde. */
+    fun normalize(code: String?): String? = code?.filterNot { it.isWhitespace() }?.lowercase()?.ifEmpty { null }
+
+    /** 6 Ziffern bzw. Wiederherstellungscode mit 10 Zeichen (Bindestrich optional). */
+    fun isComplete(code: String, recovery: Boolean): Boolean {
+        val cleaned = code.filterNot { it.isWhitespace() || it == '-' }
+        return if (recovery) cleaned.length == 10 && cleaned.all { it.isLetterOrDigit() } else cleaned.length == 6 && cleaned.all { it in '0'..'9' }
+    }
+}
+
+/** Anmeldung braucht (noch) einen Bestätigungscode. */
+val ApiException.requiresTwoFactorCode: Boolean get() = status == 401 && code == TwoFactorLogin.REQUIRED
+
+/** Bestätigungscode abgelehnt (falsch, abgelaufen oder bereits verwendet). */
+val ApiException.isInvalidTwoFactorCode: Boolean get() = status == 401 && code == TwoFactorLogin.INVALID
 
 @Serializable
 private data class RefreshRequest(val refreshToken: String, val deviceSignature: String?)
@@ -93,13 +121,23 @@ class EstrichOneApi(
 
     suspend fun serverInfo(): ServerInfo = send("GET", "server-info", null, authenticated = false)
 
-    /** Anmeldung mit Passwort; danach muss die Sitzung mit [bindDevice] an dieses Telefon gebunden werden. */
-    suspend fun signIn(login: String, password: String, clientName: String): TokenResponse {
-        val tokens: TokenResponse = send("POST", "auth/login", LoginRequest(login.trim(), password, "android", clientName), authenticated = false)
+    /**
+     * Anmeldung mit Passwort; danach muss die Sitzung mit [bindDevice] an dieses Telefon gebunden werden. Konten mit
+     * Zwei-Faktor-Anmeldung antworten ohne Code mit [ApiException.requiresTwoFactorCode] – dann mit [twoFactorCode] wiederholen.
+     * Das Erneuern ([restore]) braucht nie einen Code.
+     */
+    suspend fun signIn(login: String, password: String, clientName: String, twoFactorCode: String? = null): TokenResponse {
+        val tokens: TokenResponse = send("POST", "auth/login",
+            LoginRequest(login.trim(), password, "android", clientName, TwoFactorLogin.normalize(twoFactorCode)), authenticated = false)
         accessToken = tokens.accessToken
         store.refreshToken = tokens.refreshToken
         store.user = tokens.user
         return tokens
+    }
+
+    /** Pflichtwechsel nach einem Einmalpasswort (vor [bindDevice]); bis dahin lehnt der Server alles andere ab. */
+    suspend fun changePassword(current: String, new: String) {
+        send<Unit>("POST", "auth/change-password", ChangePasswordRequest(current, new))
     }
 
     /** Erstregistrierung (mit optionalem Einrichtungscode) oder Nachweis eines bereits registrierten Geräts. */

@@ -70,6 +70,7 @@ public sealed class TokenAuthenticationHandler(
                 session.DeviceId,
                 session.ClientKind,
                 UserActive = db.Set<User>().Where(user => user.Id == session.UserId).Select(user => user.IsActive).FirstOrDefault(),
+                MustChangePassword = db.Set<Passwords.LocalCredential>().Where(c => c.UserId == session.UserId).Select(c => c.MustChange).FirstOrDefault(),
                 DeviceStatus = db.Set<Device>().Where(device => device.Id == session.DeviceId).Select(device => (DeviceStatus?)device.Status).FirstOrDefault(),
             })
             .SingleOrDefaultAsync(Context.RequestAborted);
@@ -113,13 +114,18 @@ public sealed class TokenAuthenticationHandler(
             _ when match.ClientKind is ClientKind.Ios or ClientKind.Android => DeviceApprovedRequirement.Pending,
             _ => DeviceApprovedRequirement.NotRequired,
         };
-        var identity = new ClaimsIdentity(
-            [
-                new Claim(ClaimTypes.NameIdentifier, match.UserId.ToString()),
-                new Claim(SessionClaim, match.Id.ToString()),
-                new Claim(DeviceApprovedRequirement.ClaimType, deviceState),
-            ],
-            SchemeName);
+        List<Claim> claims =
+        [
+            new Claim(ClaimTypes.NameIdentifier, match.UserId.ToString()),
+            new Claim(SessionClaim, match.Id.ToString()),
+            new Claim(DeviceApprovedRequirement.ClaimType, deviceState),
+        ];
+        if (match.MustChangePassword)
+        {
+            claims.Add(new Claim(PasswordChangeGate.ClaimType, PasswordChangeGate.Required));
+        }
+
+        var identity = new ClaimsIdentity(claims, SchemeName);
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
     }
 

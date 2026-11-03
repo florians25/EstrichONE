@@ -49,6 +49,16 @@ export function onUnreachable(listener: () => void): void {
 	unreachableHit = listener;
 }
 
+let passwordChangeHit: () => void = () => undefined;
+
+/**
+ * Einmalpasswort noch aktiv: Der Server lehnt alles außer Passwortwechsel, Abmelden und Status mit 403
+ * PASSWORD_CHANGE_REQUIRED ab – die Oberfläche führt dann zum Passwortwechsel (auch nach einem Neuladen).
+ */
+export function onPasswordChangeRequired(listener: () => void): void {
+	passwordChangeHit = listener;
+}
+
 /** Wird vom Anmeldezustand gesetzt: was passiert, wenn die Sitzung endet. */
 export function onSessionEnded(listener: Listener): void {
 	sessionEnded = listener;
@@ -211,6 +221,9 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 		const error = await toError(response);
 		if (response.status === 503 && error.code === "MAINTENANCE") {
 			maintenanceHit(error.problem);
+		}
+		if (response.status === 403 && error.code === "PASSWORD_CHANGE_REQUIRED") {
+			passwordChangeHit();
 		}
 		throw error;
 	}

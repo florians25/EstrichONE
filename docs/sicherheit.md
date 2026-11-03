@@ -79,8 +79,10 @@ alle Texte maskiert.
 3. Rolle „IT-Administration“ und eigene Rollen mit `users.manage` prüfen – sie können keine Administratoren mehr
    übernehmen, aber weiterhin alle Konten mit weniger Rechten verwalten.
 4. Unbekannte Sitzungen unter *Anmeldung und Sicherheit* beenden; bei Verdacht „überall sonst abmelden“ und Passwort ändern.
-5. Steht der Reverse Proxy (NPM) auf einem anderen Rechner mit **öffentlicher** Adresse, diese Adresse zusätzlich der API
-   als `EstrichOne__TrustedProxies` geben (private Netze sind automatisch vertrauenswürdig).
+5. Steht der Reverse Proxy (NPM) auf einem anderen Rechner mit **öffentlicher** Adresse, diese Adresse in der `.env` als
+   `ESTRICHONE_TRUSTED_PROXIES="private_ranges 203.0.113.5"` eintragen (Installer: `-e ESTRICHONE_TRUSTED_PROXIES=203.0.113.5`)
+   und `docker compose up -d`. Compose gibt dieselbe Liste an Caddy und an die API (`EstrichOne__TrustedProxies`);
+   private Netze sind für die API immer vertrauenswürdig. Prüfung: `docker compose config` (CI, backend.yml).
 6. `security.txt` nennt die Meldestelle des Projekts; eigene Kontaktdaten können Betreiber über den Reverse Proxy ergänzen.
 
 ### iOS/Android/Windows-App und Zwei-Faktor-Anmeldung (für das jeweilige App-Paket)
@@ -94,12 +96,25 @@ alle Texte maskiert.
   `TWO_FACTOR_INVALID` (401): Code falsch/abgelaufen, Feld leeren, erneut fragen. `LOGIN_LOCKED` (429) wie bisher.
 - Status für eine Einstellungsseite: `GET /api/v1/auth/two-factor` (auch für noch nicht freigegebene Geräte);
   Einrichten über die App ist optional (`/setup`, `/enable` wie im Web), die Einrichtung im Web genügt.
-- Bis die iOS-App das Feld hat, gilt: Wer 2FA einschaltet, bleibt in der App angemeldet; nur eine neue Anmeldung in der
-  App ist bis dahin nicht möglich (Hinweis an Nutzer: App vor dem Einschalten anmelden bzw. angemeldet lassen).
+- **Umgesetzt (Nachtrag Runde 11):** iOS-App (persönliche Geräte und Benutzerwechsel am Poolgerät) und Android-App fragen
+  nach `TWO_FACTOR_REQUIRED` den Code ab (iOS: `.oneTimeCode`, Ziffernblock, sechste Ziffer prüft sofort; Umschalter
+  „Wiederherstellungscode verwenden“ mit Texttastatur), wiederholen dieselbe Anmeldung mit `twoFactorCode` und zeigen
+  `TWO_FACTOR_INVALID` am Feld an. Demomodus: Konto `s.berger` / `demo`, Code `246810` bzw. Wiederherstellungscode
+  `abcde-23456`. Tests: EstrichCore (`AccountServiceTests`, `LiveServerTests.oneTimePasswordAndTwoFactor` gegen den echten
+  Server im Linux-Job), UI-Test `testTwoFactorSignInOnPoolDevice`, Android `LiveServerTests.liveOneTimePasswordAndTwoFactor`.
+  Die Windows-App (Desktop) ist nicht Teil dieses Nachtrags.
 
 ### Bekannte Grenzen (App)
 
-- `mustChangePassword` (Einmalpasswort) wird nur von den Clients erzwungen, nicht serverseitig je Endpunkt.
+- ~~`mustChangePassword` nur von den Clients erzwungen~~ – **behoben (Nachtrag Runde 11):** Solange ein Einmalpasswort der
+  Administration aktiv ist, lehnt die API jeden angemeldeten Aufruf mit **403 `PASSWORD_CHANGE_REQUIRED`** ab – außer
+  Passwort ändern (auch vor der Gerätefreigabe, damit die Apps direkt nach der Anmeldung wechseln können), Abmelden,
+  `GET /auth/me` und Zwei-Faktor-Status/-Einrichtung (`/auth/two-factor`, `/setup`, `/enable`); öffentliche Endpunkte
+  bleiben unberührt. Der Zustand wird bei jeder Anfrage aus der Datenbank gelesen, nach dem Wechsel gilt dieselbe Sitzung
+  sofort voll (`PasswordChangeGateTests`). Web: führt nach Anmeldung, Neuladen oder jeder Antwort mit diesem Code zum
+  Pflichtwechsel (`api.test.ts`, E2E `03-verwaltung`); iOS/Android: Bildschirm „Neues Passwort“ vor der Gerätebindung.
+  Während einer laufenden Sitzung tritt der Fall praktisch nicht auf (Zurücksetzen beendet alle Sitzungen); die Apps zeigen
+  dann die Meldung des Servers.
 - Wer `settings.manage` hat, kann weiterhin Kartenserver, SMTP-Server und Archiv-/Backup-Adressen festlegen (Verbindungen
   vom Server zu frei wählbaren Zielen) – bewusst, da Administratorfunktion.
 - Bereits vor diesem Stand hochgeladene, sehr große Bilder werden nicht nachträglich geprüft (nur neue Uploads).
@@ -118,6 +133,7 @@ Credential Stuffing, Überlastung (Slowloris, Request-Fluten), bekannte CVEs in 
 | Keine Zeitgrenzen (Slowloris), Kopfzeilen bis 1 MB | mittel | `read_header 15s`, `idle 5m`, `read_body 30m` (große Videos), Kopfzeilen ≤ 64 KB; Anmelde-Anfragen ≤ 1 MB | Caddyfile beim Image-Bau geprüft (`caddy adapt`) |
 | `Server`/`Via`-Header verraten Software; Fehlerseiten mit `Server: Caddy` | niedrig | `-Server`, `-Via` auch auf Fehlerantworten | `infra.yml`: kein `Server:`/`Via:` |
 | Client-Adresse aus `X-Forwarded-For` von links gelesen | mittel | `trusted_proxies_strict` (von rechts, nur vertrauenswürdige Proxys), nur `X-Forwarded-For`; Proxy-Modus vertraut nur privaten Netzen | E2E hinter Nginx (web.yml) |
+| `ESTRICHONE_TRUSTED_PROXIES` erreichte nur Caddy: mit öffentlichem NPM sah die API weiter nur dessen Adresse (Sperre/Rate-Limit je IP trafen alle gemeinsam) | mittel | Compose gibt dieselbe `.env`-Liste als `EstrichOne__TrustedProxies` an die API (Schreibweise wie bei Caddy, `private_ranges` wird erkannt); Installer `-e ESTRICHONE_TRUSTED_PROXIES=…` prüft die Einträge (Nachtrag Runde 11) | backend.yml: `docker compose config`; `HardeningTests.ForwardedFor_OnlyFromTrustedProxies` |
 | PostgreSQL und Caddy ohne Härtung (schreibbares Dateisystem, alle Standard-Capabilities) | mittel | Beide `read_only` mit tmpfs, `no-new-privileges`, `cap_drop: ALL` (PostgreSQL nur CHOWN/DAC_OVERRIDE/FOWNER/SETUID/SETGID für den Einstieg, Caddy nur NET_BIND_SERVICE); bestehende Datenverzeichnisse laufen unverändert weiter | `infra.yml`: `docker inspect` aller Dienste nach dem Update einer alten Installation |
 | Keine Prozess-/Speichergrenzen, unbegrenzte Container-Protokolle (Platte voll) | mittel | `pids_limit`, großzügige `mem_limit` (`ESTRICHONE_MEMORY_*`), Log-Rotation 5 × 20 MB | wie oben |
 | Port 8181 (Proxy-Modus, nur HTTP) aus dem Internet erreichbar → Proxy und HTTPS umgehbar; Docker-Ports umgehen ufw | hoch (Konfiguration) | `ESTRICHONE_BIND` / Installer `-e ESTRICHONE_BIND_ADDRESS=…` bindet an eine Adresse; Checkliste unten (Firewall des Routers, `DOCKER-USER`) | Compose-Prüfung (backend.yml) |

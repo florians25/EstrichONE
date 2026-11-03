@@ -22,7 +22,7 @@ import List from "sap/m/List";
 import StandardListItem from "sap/m/StandardListItem";
 import type UI5Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
-import { get, onSessionEnded } from "../util/api";
+import { get, onPasswordChangeRequired, onSessionEnded } from "../util/api";
 import { relogin } from "../util/relogin";
 import { loadSystemSettings } from "../util/systemSettings";
 import { hasOwnChoice } from "../util/theme";
@@ -97,6 +97,12 @@ export default class AppController extends BaseController {
 			this.resetPages();
 			this.nav(`/anmelden?grund=${reason === "disabled" ? "gesperrt" : "abgelaufen"}`, true);
 			return false;
+		});
+		// Einmalpasswort (z. B. nach dem Zurücksetzen durch die Administration): zuerst ein eigenes Passwort festlegen.
+		onPasswordChangeRequired(() => {
+			if (!session.data.user || session.data.mustChangePassword) return;
+			session.model.setProperty("/mustChangePassword", true);
+			this.nav("/konto/passwort", true);
 		});
 		document.addEventListener("estrichone-logo", () => void this.loadAppearance());
 		// Helpdesk: Ticket gelesen oder beantwortet – Zähler sofort aktualisieren.
@@ -340,9 +346,12 @@ export default class AppController extends BaseController {
 				this.nav("/start", true);
 				return;
 			}
-			void session.people();
 			this.refreshShell();
-			this.startNotices();
+			// Bis zum Pflichtwechsel gibt der Server nichts heraus: keine Verzeichnis-/Hinweisabfragen.
+			if (!session.data.mustChangePassword) {
+				void session.people();
+				this.startNotices();
+			}
 			// Aus einer Pushnachricht geöffnet: als gelesen markieren.
 			const nid = match.query.get("nid");
 			if (nid) {

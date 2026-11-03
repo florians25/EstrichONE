@@ -44,6 +44,17 @@ class CoreTests {
         assertArrayEquals(ByteArray(31) + byteArrayOf(1) + ByteArray(31) + byteArrayOf(2), raw)
     }
 
+    @Test
+    @DisplayName("Zwei-Faktor-Code: Eingabe vollständig erst mit 6 Ziffern bzw. 10 Zeichen, Leerzeichen entfernt")
+    fun twoFactorCodeInput() {
+        assertEquals(true, TwoFactorLogin.isComplete("123 456", recovery = false))
+        assertEquals(false, TwoFactorLogin.isComplete("12345a", recovery = false))
+        assertEquals(true, TwoFactorLogin.isComplete("ABCDE-23456", recovery = true))
+        assertEquals(false, TwoFactorLogin.isComplete("abcde-2345", recovery = true))
+        assertEquals("abcde-23456", TwoFactorLogin.normalize(" ABCDE-23456 "))
+        assertEquals(null, TwoFactorLogin.normalize("  "))
+    }
+
     private fun rawToDer(raw: ByteArray): ByteArray {
         fun integer(part: ByteArray): ByteArray {
             val bytes = BigInteger(1, part).toByteArray()

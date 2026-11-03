@@ -157,6 +157,42 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertEqual(element("currentUserName", in: app).label, "Max Huber")
     }
 
+    /// Zwei-Faktor-Anmeldung beim Benutzerwechsel am Poolgerät: Code-Abfrage nach dem Passwort, falscher Code wird
+    /// angezeigt, Wiederherstellungscode über den Umschalter.
+    @MainActor
+    func testTwoFactorSignInOnPoolDevice() {
+        let app = launch()
+        XCTAssertTrue(element("welcomeTitle", in: app).waitForExistence(timeout: 20))
+        app.open(URL(string: "estrichone://enroll?v=1&server=https://estrichone.example.com&code=K7QX-M2PA&type=pool")!)
+        tap("useServerButton", in: app, timeout: 15)
+        signIn("m.huber", in: app)
+        enterPIN("482913", in: app)
+        enterPIN("482913", in: app)
+        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
+
+        tap("switchUserButton", in: app)
+        tap("addPersonButton", in: app)
+        signIn("s.berger", in: app)
+        let codeField = element("twoFactorCodeField", in: app)
+        XCTAssertTrue(codeField.waitForExistence(timeout: 15), "Keine Code-Abfrage\n\(app.debugDescription)")
+        XCTAssertTrue(element("twoFactorHint", in: app).label.contains("Authenticator-App"))
+        // Sechs Ziffern werden sofort geprüft.
+        type("111111", into: "twoFactorCodeField", in: app)
+        let error = element("signInError", in: app)
+        XCTAssertTrue(error.waitForExistence(timeout: 15))
+        XCTAssertTrue(error.label.contains("falsch oder abgelaufen"), error.label)
+
+        tap("twoFactorModeButton", in: app)
+        XCTAssertTrue(element("twoFactorHint", in: app).label.contains("Wiederherstellungscode"))
+        type("abcde-23456", into: "twoFactorCodeField", in: app)
+        tap("signInButton", in: app)
+        XCTAssertTrue(element("choosePINTitle", in: app).waitForExistence(timeout: 15))
+        enterPIN("573920", in: app)
+        enterPIN("573920", in: app)
+        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
+        XCTAssertEqual(element("currentUserName", in: app).label, "Sabine Berger")
+    }
+
     @MainActor
     func testPoolDeviceWithoutCodeWaitsForApproval() {
         let app = launch()

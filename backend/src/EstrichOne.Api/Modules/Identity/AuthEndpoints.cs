@@ -74,17 +74,19 @@ internal static class AuthEndpoints
 
         auth.MapPost("/logout", LogoutAsync)
             .WithName("Logout").WithSummary("Aktuelle Sitzung beenden")
-            .AllowPendingDevice();
+            .AllowPendingDevice().AllowDuringPasswordChange();
 
         auth.MapGet("/me", GetMeAsync)
             .WithName("GetCurrentUser").WithSummary("Angemeldeter Benutzer")
-            .AllowPendingDevice();
+            .AllowPendingDevice().AllowDuringPasswordChange();
 
         auth.MapPost("/change-password", ChangePasswordAsync)
             .WithName("ChangePassword").WithSummary("Eigenes Passwort ändern; beendet alle anderen Sitzungen")
             .ProducesValidationProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status403Forbidden)
-            .RequireRateLimiting(RateLimitPolicy);
+            .RequireRateLimiting(RateLimitPolicy)
+            // Apps wechseln das Einmalpasswort direkt nach der Anmeldung, bevor das Gerät gebunden/freigegeben ist.
+            .AllowPendingDevice().AllowDuringPasswordChange();
     }
 
     private static async Task<Results<Ok<TokenResponse>, ProblemHttpResult>> LoginAsync(

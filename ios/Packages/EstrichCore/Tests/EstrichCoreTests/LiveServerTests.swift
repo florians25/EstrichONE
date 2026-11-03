@@ -2,6 +2,11 @@ import Foundation
 #if canImport(FoundationNetworking)
 import FoundationNetworking
 #endif
+#if canImport(CryptoKit)
+import CryptoKit
+#else
+import Crypto
+#endif
 import Testing
 @testable import EstrichCore
 
@@ -57,6 +62,77 @@ struct LiveServerTests {
         await #expect(throws: APIError.self) {
             let _: DeviceResponse = try await client.get("devices/me")
         }
+    }
+
+    @Test("Einmalpasswort und Zwei-Faktor-Anmeldung: Pflichtwechsel serverseitig, Code-Abfrage, Wiederherstellungscode, Erneuern ohne Code")
+    func oneTimePasswordAndTwoFactor() async throws {
+        let admin = try await syncingAccount().client
+        let suffix = UUID().uuidString.prefix(6).lowercased()
+        let userName = "zf.\(suffix)"
+        let userBody = try JSONSerialization.data(withJSONObject: [
+            "displayName": "Zwei Faktor \(suffix)", "userName": userName, "roleIds": ["01a00000-0000-7000-8000-000000000002"],
+        ])
+        let created: LiveCreatedUserWithPassword = try await admin.send(APIRequest(method: "POST", path: "users", body: userBody, contentType: "application/json"))
+
+        // Einmalpasswort: Bis zum Wechsel lehnt der Server alles andere ab (auch die Geräteregistrierung).
+        let service = makeService()
+        let first = try await service.signIn(login: userName, password: created.oneTimePassword, clientName: "CI 2FA")
+        #expect(first.mustChangePassword)
+        do {
+            _ = try await service.bindDevice(tokens: first, kind: .personal, enrollmentCode: nil, description: description)
+            Issue.record("Gerät trotz Einmalpasswort registriert")
+        } catch {
+            guard case let .api(apiError) = error else { throw error }
+            #expect(apiError.status == 403 && apiError.code == "PASSWORD_CHANGE_REQUIRED")
+        }
+        let newPassword = "Zwei-Faktor-CI-2026!"
+        try await service.changePassword(tokens: first, current: created.oneTimePassword, new: newPassword)
+
+        // Zwei-Faktor einrichten (wie im Web) – mit der Sitzung, die gerade das Passwort gewechselt hat.
+        let setup: LiveTwoFactorSetup = try await service.api.post("auth/two-factor/setup", body: ["currentPassword": newPassword],
+                                                                   accessToken: first.accessToken)
+        let secret = try #require(LiveTotp.base32Decode(setup.secret))
+        let step = LiveTotp.step(Date())
+        let enabled: LiveRecoveryCodes = try await service.api.post("auth/two-factor/enable", body: ["code": LiveTotp.code(secret, step: step)],
+                                                                    accessToken: first.accessToken)
+        #expect(enabled.recoveryCodes.count == 10)
+
+        // Neue Anmeldung: ohne Code → TWO_FACTOR_REQUIRED, falscher Code → TWO_FACTOR_INVALID, richtiger Code → Sitzung.
+        do {
+            _ = try await service.signIn(login: userName, password: newPassword, clientName: "CI 2FA")
+            Issue.record("Anmeldung ohne Code angenommen")
+        } catch {
+            guard case let .api(apiError) = error else { throw error }
+            #expect(apiError.requiresTwoFactorCode)
+        }
+        do {
+            _ = try await service.signIn(login: userName, password: newPassword, clientName: "CI 2FA", twoFactorCode: LiveTotp.code(secret, step: step + 5))
+            Issue.record("Falscher Code angenommen")
+        } catch {
+            guard case let .api(apiError) = error else { throw error }
+            #expect(apiError.isInvalidTwoFactorCode)
+        }
+        let tokens = try await service.signIn(login: userName, password: newPassword, clientName: "CI 2FA",
+                                              twoFactorCode: LiveTotp.code(secret, step: step + 1))
+        #expect(!tokens.mustChangePassword)
+        _ = try await service.bindDevice(tokens: tokens, kind: .personal, enrollmentCode: nil, description: description)
+        let account = try service.createVault(for: tokens, pin: nil)
+        let client = authorized(service, account)
+        // Bestehende Sitzung: Erneuern (Gerätesignatur) braucht nie einen Code.
+        try await client.refreshNow()
+        #expect(await client.session.refreshToken != tokens.refreshToken)
+
+        // Wiederherstellungscode (groß geschrieben, wie abgetippt) gilt genau einmal.
+        let recovery = enabled.recoveryCodes[0].uppercased()
+        _ = try await makeService().signIn(login: userName, password: newPassword, clientName: "CI 2FA", twoFactorCode: recovery)
+        do {
+            _ = try await makeService().signIn(login: userName, password: newPassword, clientName: "CI 2FA", twoFactorCode: recovery)
+            Issue.record("Wiederherstellungscode zweimal angenommen")
+        } catch {
+            guard case let .api(apiError) = error else { throw error }
+            #expect(apiError.isInvalidTwoFactorCode)
+        }
+        await service.signOut(account, client: client)
     }
 
     @Test("Poolgerät per Einrichtungscode, zweite Person per Signatur, Code nur einmal")
@@ -570,6 +646,49 @@ struct LiveServerTests {
         #expect(try await client.chatMessage(reply.id).deleted)
         let request = try await client.streamRequest("chat/events")
         #expect(request.value(forHTTPHeaderField: "Accept") == "text/event-stream")
+    }
+}
+
+private struct LiveCreatedUserWithPassword: Decodable, Sendable {
+    let oneTimePassword: String
+}
+
+private struct LiveTwoFactorSetup: Decodable, Sendable {
+    let secret: String
+}
+
+private struct LiveRecoveryCodes: Decodable, Sendable {
+    let recoveryCodes: [String]
+}
+
+/// TOTP nach RFC 6238 (HMAC-SHA1, 6 Ziffern, 30 s) – wie eine Authenticator-App, nur für den Test.
+private enum LiveTotp {
+    static func step(_ date: Date) -> UInt64 { UInt64(date.timeIntervalSince1970) / 30 }
+
+    static func code(_ secret: Data, step: UInt64) -> String {
+        var counter = step.bigEndian
+        let message = withUnsafeBytes(of: &counter) { Data($0) }
+        let hash = Array(HMAC<Insecure.SHA1>.authenticationCode(for: message, using: SymmetricKey(data: secret)))
+        let offset = Int(hash[hash.count - 1] & 0x0F)
+        let binary = (UInt32(hash[offset] & 0x7F) << 24) | (UInt32(hash[offset + 1]) << 16) | (UInt32(hash[offset + 2]) << 8) | UInt32(hash[offset + 3])
+        return String(format: "%06u", binary % 1_000_000)
+    }
+
+    static func base32Decode(_ text: String) -> Data? {
+        let alphabet = Array("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567")
+        var buffer: UInt32 = 0
+        var bits = 0
+        var bytes: [UInt8] = []
+        for character in text.uppercased() where character != "=" && character != " " {
+            guard let value = alphabet.firstIndex(of: character) else { return nil }
+            buffer = (buffer << 5) | UInt32(value)
+            bits += 5
+            if bits >= 8 {
+                bits -= 8
+                bytes.append(UInt8((buffer >> UInt32(bits)) & 0xFF))
+            }
+        }
+        return Data(bytes)
     }
 }
 

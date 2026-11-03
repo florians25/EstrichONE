@@ -11,6 +11,7 @@ import de.estrichone.core.DeviceDescription
 import de.estrichone.core.DeviceKind
 import de.estrichone.core.DeviceStatus
 import de.estrichone.core.EstrichOneApi
+import de.estrichone.core.requiresTwoFactorCode
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
@@ -20,6 +21,12 @@ sealed interface Stage {
     data object Starting : Stage
     data class Server(val address: String = "") : Stage
     data class SignIn(val serverName: String, val lastLogin: String?) : Stage
+    /** Zweiter Schritt bei Konten mit Zwei-Faktor-Anmeldung; Anmeldedaten nur im Speicher bis zur Bestätigung. */
+    data class TwoFactor(val serverName: String, val login: String, val password: String, val enrollmentCode: String?) : Stage {
+        override fun toString() = "TwoFactor($login)"
+    }
+    /** Einmalpasswort der Administration: zuerst ein eigenes Passwort festlegen (serverseitig erzwungen). */
+    data class ChangePassword(val enrollmentCode: String?) : Stage
     data class Pending(val deviceName: String) : Stage
     data object Ready : Stage
 }
@@ -92,8 +99,36 @@ class AppModel(application: Application) : AndroidViewModel(application) {
         _stage.value = Stage.Server(sessions.server ?: "")
     }
 
-    fun signIn(login: String, password: String, enrollmentCode: String?) = run {
-        api.signIn(login, password, phone.name)
+    fun signIn(login: String, password: String, enrollmentCode: String?, twoFactorCode: String? = null) = run {
+        val tokens = try {
+            api.signIn(login, password, phone.name, twoFactorCode)
+        } catch (e: ApiException) {
+            if (!e.requiresTwoFactorCode) throw e
+            // Passwort stimmt, das Konto hat Zwei-Faktor-Anmeldung: Code abfragen und dieselbe Anmeldung wiederholen.
+            val serverName = (_stage.value as? Stage.SignIn)?.serverName ?: (_stage.value as? Stage.TwoFactor)?.serverName ?: sessions.server ?: ""
+            _stage.value = Stage.TwoFactor(serverName, login, password, enrollmentCode)
+            return@run
+        }
+        if (tokens.mustChangePassword) {
+            _stage.value = Stage.ChangePassword(enrollmentCode)
+            return@run
+        }
+        bind(enrollmentCode)
+    }
+
+    fun changePassword(current: String, new: String, repeated: String) = run {
+        val stage = _stage.value as? Stage.ChangePassword ?: return@run
+        if (new != repeated) throw IllegalArgumentException("Die beiden neuen Passwörter stimmen nicht überein.")
+        api.changePassword(current, new)
+        bind(stage.enrollmentCode)
+    }
+
+    fun cancelSignIn() {
+        _error.value = null
+        _stage.value = signInStage()
+    }
+
+    private suspend fun bind(enrollmentCode: String?) {
         try {
             api.bindDevice(DeviceKind.Personal, enrollmentCode, phone)
         } catch (e: ApiException) {

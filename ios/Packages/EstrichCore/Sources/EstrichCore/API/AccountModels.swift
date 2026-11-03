@@ -22,6 +22,45 @@ public struct LoginRequest: Encodable, Sendable {
     public let password: String
     public let client: String
     public let clientName: String?
+    /// Nur bei Konten mit Zwei-Faktor-Anmeldung, nach 401 `TWO_FACTOR_REQUIRED`: Code der Authenticator-App
+    /// (6 Ziffern) oder Wiederherstellungscode (`xxxxx-xxxxx`). Fehlt er, wird das Feld nicht gesendet.
+    public let twoFactorCode: String?
+
+    public init(login: String, password: String, client: String, clientName: String?, twoFactorCode: String? = nil) {
+        self.login = login
+        self.password = password
+        self.client = client
+        self.clientName = clientName
+        self.twoFactorCode = twoFactorCode
+    }
+}
+
+/// Zweiter Schritt der Anmeldung (Zwei-Faktor-Anmeldung, docs/sicherheit.md).
+public enum TwoFactorLogin {
+    /// Der Server verlangt einen Bestätigungscode: Code abfragen und dieselbe Anmeldung mit Code wiederholen.
+    public static let requiredCode = "TWO_FACTOR_REQUIRED"
+    /// Code falsch, abgelaufen oder bereits verwendet: Feld leeren und erneut fragen.
+    public static let invalidCode = "TWO_FACTOR_INVALID"
+
+    /// Leerzeichen entfernen, Kleinschreibung (Wiederherstellungscodes); `nil`, wenn nichts eingegeben wurde.
+    public static func normalize(_ code: String) -> String? {
+        let cleaned = code.filter { !$0.isWhitespace }.lowercased()
+        return cleaned.isEmpty ? nil : cleaned
+    }
+
+    /// Eingabe vollständig? 6 Ziffern bzw. Wiederherstellungscode mit 10 Zeichen (Bindestrich optional).
+    public static func isComplete(_ code: String, recovery: Bool) -> Bool {
+        let cleaned = code.filter { !$0.isWhitespace && $0 != "-" }
+        return recovery ? cleaned.count == 10 && cleaned.allSatisfy { $0.isLetter || $0.isNumber }
+            : cleaned.count == 6 && cleaned.allSatisfy { $0.isASCII && $0.isNumber }
+    }
+}
+
+public extension APIError {
+    /// Anmeldung braucht (noch) einen Bestätigungscode.
+    var requiresTwoFactorCode: Bool { status == 401 && code == TwoFactorLogin.requiredCode }
+    /// Bestätigungscode abgelehnt.
+    var isInvalidTwoFactorCode: Bool { status == 401 && code == TwoFactorLogin.invalidCode }
 }
 
 public struct TokenResponse: Codable, Sendable {

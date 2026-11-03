@@ -142,9 +142,11 @@ final class AppModel {
 
     // MARK: Schritt 4–5
 
-    func signIn(login: String, password: String) async throws(AccountError) {
+    /// Anmeldung; bei Konten mit Zwei-Faktor-Anmeldung zweiter Aufruf mit `twoFactorCode` (nach TWO_FACTOR_REQUIRED).
+    func signIn(login: String, password: String, twoFactorCode: String? = nil) async throws(AccountError) {
         let accounts = try requireAccounts()
-        let tokens = try await accounts.signIn(login: login, password: password, clientName: environment.deviceName(for: nil))
+        let tokens = try await accounts.signIn(login: login, password: password, clientName: environment.deviceName(for: nil),
+                                               twoFactorCode: twoFactorCode)
         if tokens.mustChangePassword {
             pendingTokens = tokens
             screen = .changePassword

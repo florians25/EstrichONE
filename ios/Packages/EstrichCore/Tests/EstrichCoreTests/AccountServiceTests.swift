@@ -45,6 +45,54 @@ struct AccountServiceTests {
         try? storage.eraseAll()
     }
 
+    @Test("Zwei-Faktor: ohne Code TWO_FACTOR_REQUIRED, dieselbe Anmeldung mit Code; falscher Code TWO_FACTOR_INVALID")
+    func twoFactorLogin() async throws {
+        transport.on("POST", "/api/v1/auth/login") { request in
+            let body = request.jsonBody()
+            switch body["twoFactorCode"] as? String {
+            case nil: return .problem(401, code: "TWO_FACTOR_REQUIRED", detail: "Bitte den 6-stelligen Code eingeben.")
+            case "123456", "abcde-23456": return .json(Samples.tokenJSON())
+            default: return .problem(401, code: "TWO_FACTOR_INVALID", detail: "Der Bestätigungscode ist falsch oder abgelaufen.")
+            }
+        }
+        let service = makeService()
+
+        await #expect(throws: AccountError.api(.server(status: 401, code: "TWO_FACTOR_REQUIRED", message: "Bitte den 6-stelligen Code eingeben."))) {
+            _ = try await service.signIn(login: "m.huber", password: "geheim", clientName: "iPhone")
+        }
+        do {
+            _ = try await service.signIn(login: "m.huber", password: "geheim", clientName: "iPhone", twoFactorCode: "654321")
+            Issue.record("Falscher Code wurde angenommen")
+        } catch {
+            guard case let .api(apiError) = error else { Issue.record("Unerwarteter Fehler \(error)"); return }
+            #expect(apiError.isInvalidTwoFactorCode)
+            #expect(!apiError.requiresTwoFactorCode)
+        }
+        // Leerzeichen aus dem Feld bzw. der Zwischenablage stören nicht; Wiederherstellungscodes klein.
+        let tokens = try await service.signIn(login: "m.huber", password: "geheim", clientName: "iPhone", twoFactorCode: " 123 456 ")
+        #expect(tokens.user.displayName == "Max Huber")
+        _ = try await service.signIn(login: "m.huber", password: "geheim", clientName: "iPhone", twoFactorCode: "ABCDE-23456")
+
+        let sent = transport.requests.map { $0.jsonBody() }
+        #expect(sent.count == 4)
+        #expect(!sent[0].keys.contains("twoFactorCode"))
+        #expect(sent.map { $0["password"] as? String } == Array(repeating: "geheim", count: 4))
+        #expect(sent[2]["twoFactorCode"] as? String == "123456")
+        #expect(sent[3]["twoFactorCode"] as? String == "abcde-23456")
+    }
+
+    @Test("Zwei-Faktor: Eingabe vollständig erst mit 6 Ziffern bzw. 10 Zeichen Wiederherstellungscode")
+    func twoFactorCodeInput() {
+        #expect(TwoFactorLogin.isComplete("123456", recovery: false))
+        #expect(TwoFactorLogin.isComplete("123 456", recovery: false))
+        #expect(!TwoFactorLogin.isComplete("12345", recovery: false))
+        #expect(!TwoFactorLogin.isComplete("12345a", recovery: false))
+        #expect(TwoFactorLogin.isComplete("abcde-23456", recovery: true))
+        #expect(TwoFactorLogin.isComplete("ABCDE23456", recovery: true))
+        #expect(!TwoFactorLogin.isComplete("abcde-2345", recovery: true))
+        #expect(TwoFactorLogin.normalize("  ") == nil)
+    }
+
     @Test("Weitere Anmeldung auf einem registrierten Gerät bindet per Signatur statt neu zu registrieren")
     func attach() async throws {
         transport.on("POST", "/api/v1/devices/register", reply: .json(Samples.deviceJSON(kind: "pool", status: "pending"), status: 201))

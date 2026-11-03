@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { api, ApiError, NetworkError, onSessionEnded, problemMessage, setRetryDelay } from '../webapp/util/api';
+import { api, ApiError, NetworkError, onPasswordChangeRequired, onSessionEnded, problemMessage, setRetryDelay } from '../webapp/util/api';
 import { uploadError } from '../webapp/util/upload';
 
 setRetryDelay(1);
@@ -11,6 +11,7 @@ const problem = (status: number, body: object) =>
 afterEach(() => {
   vi.unstubAllGlobals();
   onSessionEnded(() => undefined);
+  onPasswordChangeRequired(() => undefined);
 });
 
 describe('api', () => {
@@ -19,6 +20,24 @@ describe('api', () => {
     const error = await api('contacts').catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(problemMessage(error)).toBe('Bitte den Namen angeben.');
+  });
+
+  it('führt bei PASSWORD_CHANGE_REQUIRED zum Passwortwechsel, ohne die Sitzung zu beenden', async () => {
+    const required = vi.fn();
+    const ended = vi.fn();
+    onPasswordChangeRequired(required);
+    onSessionEnded(ended);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(problem(403, { code: 'PASSWORD_CHANGE_REQUIRED', detail: 'Bitte zuerst ein eigenes Passwort festlegen.' })));
+
+    const error = await api('bauakten').catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).code).toBe('PASSWORD_CHANGE_REQUIRED');
+    expect(required).toHaveBeenCalledTimes(1);
+    expect(ended).not.toHaveBeenCalled();
+
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(problem(403, { code: 'PERMISSION_DENIED' })));
+    await api('bauakten').catch(() => undefined);
+    expect(required).toHaveBeenCalledTimes(1);
   });
 
   it('meldet eine beendete Sitzung, außer bei der stillen Prüfung beim Start', async () => {

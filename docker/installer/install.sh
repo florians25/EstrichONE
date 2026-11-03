@@ -191,6 +191,25 @@ if [ -n "${ESTRICHONE_BIND_ADDRESS+x}" ]; then
        set_env ESTRICHONE_BIND "$ESTRICHONE_BIND_ADDRESS:" ;;
   esac
 fi
+# Vorgeschalteter Proxy mit öffentlicher Adresse (z. B. Nginx Proxy Manager auf einem anderen Rechner): dessen Adresse
+# vertrauen Caddy und die API gleichermaßen (X-Forwarded-For, Sperren und Rate-Limits je Client-Adresse):
+#   -e ESTRICHONE_TRUSTED_PROXIES="203.0.113.5 198.51.100.0/24"   (leer = Standard der Betriebsart)
+# Private Netze (Docker, LAN) bleiben in der Betriebsart proxy immer vertrauenswürdig.
+if [ -n "${ESTRICHONE_TRUSTED_PROXIES+x}" ]; then
+  proxies="$(echo "$ESTRICHONE_TRUSTED_PROXIES" | tr ',;' '  ' | xargs)"
+  for entry in $proxies; do
+    echo "$entry" | grep -Eq '^(private_ranges|[0-9]{1,3}(\.[0-9]{1,3}){3}(/[0-9]{1,2})?|[0-9A-Fa-f:]+(/[0-9]{1,3})?)$' \
+      || fail "Ungültiger Eintrag in ESTRICHONE_TRUSTED_PROXIES: $entry (IP-Adresse oder Netz in CIDR-Schreibweise)"
+  done
+  if [ -z "$proxies" ]; then
+    sed -i '/^ESTRICHONE_TRUSTED_PROXIES=/d' "$DIR/.env"
+  else
+    if grep -q '^ESTRICHONE_MODE=proxy' "$DIR/.env"; then
+      case " $proxies " in *" private_ranges "*) ;; *) proxies="private_ranges $proxies" ;; esac
+    fi
+    set_env ESTRICHONE_TRUSTED_PROXIES "\"$proxies\""
+  fi
+fi
 # Die .env enthält Datenbank- und Sicherungspasswort: nur root (auch bei älteren Installationen nachziehen).
 chmod 600 "$DIR/.env"
 

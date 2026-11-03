@@ -73,10 +73,14 @@ public final class AccountService: @unchecked Sendable {
 
     // MARK: Anmeldung
 
-    public func signIn(login: String, password: String, clientName: String) async throws(AccountError) -> TokenResponse {
+    /// Anmeldung mit Passwort. Bei Konten mit Zwei-Faktor-Anmeldung antwortet der Server ohne Code mit
+    /// `.api(.server(401, "TWO_FACTOR_REQUIRED", …))`; dann mit `twoFactorCode` wiederholen. Erneuern braucht nie einen Code.
+    public func signIn(login: String, password: String, clientName: String,
+                       twoFactorCode: String? = nil) async throws(AccountError) -> TokenResponse {
         do {
             return try await api.post("auth/login", body: LoginRequest(
-                login: login.trimmingCharacters(in: .whitespacesAndNewlines), password: password, client: "ios", clientName: clientName))
+                login: login.trimmingCharacters(in: .whitespacesAndNewlines), password: password, client: "ios", clientName: clientName,
+                twoFactorCode: twoFactorCode.flatMap(TwoFactorLogin.normalize)))
         } catch {
             throw .api(error)
         }

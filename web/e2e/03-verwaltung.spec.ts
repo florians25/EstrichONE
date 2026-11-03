@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminPassword, choose, nav, pageTitle, signIn, toast } from './helpers';
+import { adminPassword, apiCall, choose, nav, pageTitle, signIn, toast } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -32,6 +32,11 @@ test('Benutzer anlegen, Einmalpasswort, Pflichtwechsel bei der ersten Anmeldung'
   await expect(page.getByLabel('Anmeldename oder E-Mail')).toBeVisible();
   await signIn(page, 'l.brandl', password);
   await expect(page.getByText('Sie haben ein Einmalpasswort erhalten')).toBeVisible();
+  // Serverseitig erzwungen: auch nach Neuladen bzw. direktem Aufruf einer Seite bleibt nur der Passwortwechsel.
+  await page.goto('/bauakten');
+  await expect(page).toHaveURL(/\/konto\/passwort/);
+  await expect(page.getByText('Sie haben ein Einmalpasswort erhalten')).toBeVisible();
+  expect((await apiCall(page, 'GET', '/api/v1/bauakten')).status).toBe(403);
   await page.getByLabel('Bisheriges Passwort').fill(password);
   await page.getByLabel('Neues Passwort', { exact: true }).fill('Estrich-Lukas-2026!');
   await page.getByLabel('Neues Passwort wiederholen').fill('Estrich-Lukas-2026!');

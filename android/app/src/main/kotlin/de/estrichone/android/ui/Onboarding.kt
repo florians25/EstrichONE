@@ -48,6 +48,7 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import de.estrichone.android.AppModel
 import de.estrichone.android.Stage
+import de.estrichone.core.TwoFactorLogin
 
 /** Einstieg: je nach Stand Einrichtung, Anmeldung, Freigabe oder die App. */
 @Composable
@@ -57,6 +58,8 @@ fun Root(model: AppModel) {
         Stage.Starting -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         is Stage.Server -> OnboardingFrame(model) { ServerStep(model, s.address) }
         is Stage.SignIn -> OnboardingFrame(model) { SignInStep(model, s) }
+        is Stage.TwoFactor -> OnboardingFrame(model) { TwoFactorStep(model, s) }
+        is Stage.ChangePassword -> OnboardingFrame(model) { ChangePasswordStep(model) }
         is Stage.Pending -> OnboardingFrame(model) { PendingStep(model, s.deviceName) }
         Stage.Ready -> MainScreen(model)
     }
@@ -121,6 +124,73 @@ private fun SignInStep(model: AppModel, stage: Stage.SignIn) {
         onClick = { model.signIn(login, password, code.ifBlank { null }); password = "" },
         enabled = login.isNotBlank() && password.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
     ) { Text("Anmelden") }
+}
+
+/** Zweiter Schritt: Code aus der Authenticator-App oder Wiederherstellungscode (Umschalter). */
+@Composable
+private fun TwoFactorStep(model: AppModel, stage: Stage.TwoFactor) {
+    val busy by model.busy.collectAsState()
+    var code by rememberSaveable { mutableStateOf("") }
+    var recovery by rememberSaveable { mutableStateOf(false) }
+    val submit = {
+        if (!busy && TwoFactorLogin.isComplete(code, recovery)) {
+            model.signIn(stage.login, stage.password, stage.enrollmentCode, code)
+            code = ""
+        }
+    }
+    Text("Zwei-Faktor-Anmeldung", style = MaterialTheme.typography.titleMedium)
+    Text(
+        if (recovery) "Geben Sie einen Ihrer Wiederherstellungscodes ein (Format xxxxx-xxxxx). Jeder Code gilt nur einmal."
+        else "Ihr Konto ist zusätzlich geschützt. Geben Sie den 6-stelligen Code aus Ihrer Authenticator-App ein.",
+    )
+    OutlinedTextField(
+        code,
+        { value ->
+            code = value
+            model.clearError()
+            // Sechste Ziffer: sofort prüfen.
+            if (!recovery && TwoFactorLogin.isComplete(value, recovery = false)) submit()
+        },
+        label = { Text(if (recovery) "Wiederherstellungscode" else "Bestätigungscode") },
+        placeholder = { Text(if (recovery) "abcde-12345" else "123456") },
+        singleLine = true, modifier = Modifier.fillMaxWidth().semantics { contentDescription = "Bestätigungscode" },
+        keyboardOptions = KeyboardOptions(
+            keyboardType = if (recovery) KeyboardType.Ascii else KeyboardType.NumberPassword, imeAction = ImeAction.Done, autoCorrectEnabled = false,
+        ),
+        keyboardActions = KeyboardActions(onDone = { submit() }),
+    )
+    Button(onClick = { submit() }, enabled = !busy && TwoFactorLogin.isComplete(code, recovery), modifier = Modifier.fillMaxWidth()) {
+        Text("Bestätigen")
+    }
+    TextButton(onClick = { recovery = !recovery; code = ""; model.clearError() }) {
+        Text(if (recovery) "Code aus der Authenticator-App verwenden" else "Wiederherstellungscode verwenden")
+    }
+    TextButton(onClick = model::cancelSignIn) { Text("Andere Anmeldung") }
+}
+
+/** Pflichtwechsel nach einem Einmalpasswort der Administration. */
+@Composable
+private fun ChangePasswordStep(model: AppModel) {
+    val busy by model.busy.collectAsState()
+    var current by rememberSaveable { mutableStateOf("") }
+    var new by rememberSaveable { mutableStateOf("") }
+    var repeated by rememberSaveable { mutableStateOf("") }
+    Text("Neues Passwort", style = MaterialTheme.typography.titleMedium)
+    Text("Sie haben ein Einmalpasswort erhalten. Bitte legen Sie jetzt ein eigenes Passwort fest – mindestens 12 Zeichen.")
+    for ((label, value, set) in listOf(
+        Triple("Bisheriges Passwort", current) { v: String -> current = v },
+        Triple("Neues Passwort", new) { v: String -> new = v },
+        Triple("Neues Passwort wiederholen", repeated) { v: String -> repeated = v },
+    )) {
+        OutlinedTextField(value, set, label = { Text(label) }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+            visualTransformation = PasswordVisualTransformation(),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Next))
+    }
+    Button(
+        onClick = { model.changePassword(current, new, repeated) },
+        enabled = !busy && current.isNotEmpty() && new.isNotEmpty() && repeated.isNotEmpty(), modifier = Modifier.fillMaxWidth(),
+    ) { Text("Passwort ändern") }
+    TextButton(onClick = model::cancelSignIn) { Text("Abbrechen") }
 }
 
 @Composable
