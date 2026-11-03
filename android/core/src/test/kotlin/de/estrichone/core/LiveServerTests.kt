@@ -64,6 +64,7 @@ class LiveServerTests {
         // Administrator legt eine Person an (Einmalpasswort), über die Web-Schnittstelle der API.
         val admin = EstrichOneApi(server!!, MemorySessionStore(), SoftwareDeviceKeys())
         val adminTokens = admin.signIn(login, password, "Testtelefon", null)
+        admin.bindDevice(DeviceKind.Personal, null, phone) // Apps brauchen ein gebundenes, freigegebenes Gerät
         val userName = "zf.android.${System.nanoTime() % 100000}"
         val created = Live.post(server, "users", adminTokens.accessToken,
             """{"displayName":"Zwei Faktor Android","userName":"$userName","roleIds":["01a00000-0000-7000-8000-000000000002"]}""")
