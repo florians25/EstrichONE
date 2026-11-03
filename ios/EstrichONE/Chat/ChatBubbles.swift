@@ -134,7 +134,7 @@ struct MessageBubble: View {
             } else {
                 let photos = message.attachments.filter(\.isPhoto)
                 if !photos.isEmpty {
-                    PhotoGrid(photos: photos) { actions.openAttachment(message, $0) }
+                    ChatPhotoGrid(photos: photos) { actions.openAttachment(message, $0) }
                 }
                 ForEach(message.attachments.filter { !$0.isPhoto }) { document in
                     Button { actions.openAttachment(message, document) } label: { DocumentChip(attachment: document, onAccent: isMine) }
@@ -315,7 +315,7 @@ struct QuoteView: View {
 }
 
 /// Fotos einer Nachricht: eins groß, sonst ein Raster (höchstens vier, darüber „+n“).
-private struct PhotoGrid: View {
+private struct ChatPhotoGrid: View {
     let photos: [ChatAttachment]
     let open: (ChatAttachment) -> Void
 
