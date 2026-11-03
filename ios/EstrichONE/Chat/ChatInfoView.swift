@@ -74,7 +74,7 @@ struct ChatInfoView: View {
             Section {
                 VStack(spacing: Space.s) {
                     ZStack(alignment: .bottomTrailing) {
-                        ChatAvatar(title: detail?.title ?? fallbackTitle, kind: chatKind, avatarFileId: detail?.avatarFileId, size: 96)
+                        ChatAvatar(title: detail?.title ?? fallbackTitle, kind: chatKind, conversationId: conversationId, imageVersion: detail?.imageUpdatedAt, size: 96)
                         if canManage, chatKind != .direct {
                             PhotosPicker(selection: $avatarItem, matching: .images) {
                                 Image(systemName: "camera.fill")
@@ -110,9 +110,9 @@ struct ChatInfoView: View {
                 } footer: {
                     Text("Baustellengruppe: Team und Bauleitung der Bauakte sind automatisch Mitglied. Fotos lassen sich mit langem Drücken in die Bauakte übernehmen.")
                 }
-            } else if let crew = detail?.crewName {
+            } else if detail?.crewId != nil {
                 Section {
-                    Label(crew, systemImage: "truck.box")
+                    Label(detail?.crewName ?? detail?.title ?? "Kolonne", systemImage: "truck.box")
                 } footer: {
                     Text("Kolonnengruppe: Wer in der Kolonne ist, gehört automatisch dazu.")
                 }
@@ -287,11 +287,9 @@ struct ChatInfoView: View {
         guard let client = model.active?.client, let raw = try? await item.loadTransferable(type: Data.self) else { return }
         let jpeg = await Task.detached(priority: .userInitiated) { ChatImages.square(raw, side: 512) }.value
         guard let jpeg else { return }
-        let id = UUID.v7()
         do throws(APIError) {
-            try await client.uploadChatAttachment(id: id, conversationId: conversationId, kind: "avatar", name: "Gruppenbild.jpg",
-                                                  contentType: "image/jpeg", data: jpeg)
-            detail = try await client.updateChatGroup(conversationId, ChatGroupChange(avatarFileId: id))
+            _ = try await client.setChatGroupImage(conversationId, jpeg: jpeg)
+            detail = try await client.chatConversation(conversationId)
             toast = "Gruppenbild geändert"
             changed()
         } catch {
@@ -468,13 +466,25 @@ struct ChatGroupEditor: View {
         do throws(APIError) {
             switch mode {
             case .create:
-                let created = try await client.createChatGroup(ChatGroupChange(
-                    title: cleanTitle, description: cleanDescription.isEmpty ? nil : cleanDescription, memberIds: members.map(\.id), kind: kind,
-                    onlyAdminsWrite: onlyAdminsWrite, crewId: kind == .crew ? crewId : nil, bauakteId: kind == .site ? bauakte?.id : nil))
-                done(created)
+                if kind == .site, let bauakte {
+                    // Baustellen-Gruppe: der Server legt sie mit Team und Bauleitung an (bzw. öffnet die vorhandene).
+                    let created = try await client.openBauakteChatGroup(bauakte.id)
+                    let extra = members.map(\.id)
+                    if !extra.isEmpty || !cleanDescription.isEmpty || onlyAdminsWrite {
+                        _ = try? await client.updateChatGroup(created.id, ChatGroupChange(
+                            description: cleanDescription.isEmpty ? nil : cleanDescription,
+                            memberIds: extra.isEmpty ? nil : created.members.map(\.id) + extra, announcementOnly: onlyAdminsWrite ? true : nil))
+                    }
+                    done(created)
+                } else {
+                    let created = try await client.createChatGroup(ChatGroupChange(
+                        title: cleanTitle, description: cleanDescription.isEmpty ? nil : cleanDescription, memberIds: members.map(\.id),
+                        announcementOnly: onlyAdminsWrite, crewId: kind == .crew ? crewId : nil))
+                    done(created)
+                }
             case let .edit(detail):
                 _ = try await client.updateChatGroup(detail.id, ChatGroupChange(title: cleanTitle, description: cleanDescription,
-                                                                                 onlyAdminsWrite: onlyAdminsWrite))
+                                                                                 announcementOnly: onlyAdminsWrite))
                 done(nil)
             }
         } catch {

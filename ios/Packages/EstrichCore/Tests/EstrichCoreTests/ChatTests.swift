@@ -48,6 +48,30 @@ struct ChatTests {
         #expect(ChatMuteOption.hour.until(from: now) == now.addingTimeInterval(3600) && ChatMuteOption.always.until(from: now) == nil)
     }
 
+    @Test("Formen des Servers: Gruppeninfo verschachtelt, Art abgeleitet, Suchtreffer, Anhang")
+    func serverShapes() throws {
+        let detail = try JSONCoding.decoder.decode(ChatConversationDetail.self, from: Data("""
+        {"conversation":{"id":"0193a1b2-0000-7000-8000-0000000c0a03","kind":"group","title":"Praxis","crewId":null,"members":[],
+          "lastActivityAt":"2026-11-02T07:00:00Z","unreadCount":0,"muted":false,"description":"Baustelle","bauakteId":"0193a1b2-0000-7000-8000-0000000b0001",
+          "announcementOnly":false,"imageUpdatedAt":"2026-11-02T06:00:00Z","isAdmin":true,"canPost":true,"unreadMentions":0},
+         "members":[{"userId":"0193a1b2-0000-7000-8000-0000000c0c01","name":"Max","fromCrew":false,"isAdmin":true,"readUpTo":null}],
+         "canManage":true,"pinned":[],"bauakteTitle":"Praxis Dr. Maier"}
+        """.utf8))
+        #expect(detail.chatKind == .site && detail.canManage && detail.members.first?.isAdmin == true && detail.description == "Baustelle")
+        #expect(detail.imageUpdatedAt != nil && detail.bauakteTitle == "Praxis Dr. Maier")
+        let announcement = try JSONCoding.decoder.decode(ChatConversation.self, from: Data("""
+        {"id":"0193a1b2-0000-7000-8000-0000000c0a04","kind":"group","title":"Alle","announcementOnly":true,"canPost":false,"unreadCount":0}
+        """.utf8))
+        #expect(announcement.chatKind == .announcement && !announcement.canWrite)
+        let hits = try JSONCoding.decoder.decode(ChatList<ChatSearchHit>.self, from: Data("""
+        {"items":[{"messageId":"0193a1b2-0000-7000-8000-0000000c0b10","conversationId":"0193a1b2-0000-7000-8000-0000000c0a01",
+          "conversationTitle":"Kolonne","senderName":"Lukas","snippet":"… Pumpe 2 …","createdAt":"2026-11-02T07:12:03Z"}],"searched":10,"truncated":false}
+        """.utf8)).items
+        #expect(hits.first?.message.text == "… Pumpe 2 …" && hits.first?.conversationTitle == "Kolonne")
+        let attachment = try JSONCoding.decoder.decode(ChatAttachment.self, from: Data(#"{"id":"0193a1b2-0000-7000-8000-0000000c0f01","kind":"document","fileName":"Plan.pdf","contentType":"application/pdf","sizeBytes":5}"#.utf8))
+        #expect(attachment.name == "Plan.pdf" && !attachment.isPhoto)
+    }
+
     @Test("Bearbeiten nur eigene Nachrichten im Zeitfenster")
     func editWindow() {
         let me = UUID()
@@ -109,13 +133,16 @@ struct ChatTests {
         #expect(offline.offline && offline.sent.isEmpty)
         #expect(await outbox.items().count == 1)
 
-        transport.on("POST", "/api/v1/chat/attachments", reply: .json("{}"))
-        transport.on("PUT", "/api/v1/chat/attachments/\(photo.id.key)/content", reply: .json("{}"))
+        let serverPhoto = "0193a1b2-0000-7000-8000-0000000c0f99"
+        transport.on("POST", "/api/v1/chat/conversations/\(conversation.key)/attachments") { request in
+            #expect(request.url?.query?.contains("fileName=Foto.jpg") == true && request.httpBody == Data([1, 2, 3]))
+            return .json(#"{"id":"\#(serverPhoto)","kind":"photo","fileName":"Foto.jpg","contentType":"image/jpeg","sizeBytes":3}"#, status: 201)
+        }
         transport.on("POST", "/api/v1/chat/conversations/\(conversation.key)/messages") { request in
             let body = request.jsonBody()
             if body["text"] as? String == "Halle 2" {
                 #expect(body["clientMessageId"] as? String == item.id.key)
-                #expect(body["attachmentFileIds"] as? [String] == [photo.id.key])
+                #expect(body["attachmentFileIds"] as? [String] == [serverPhoto])
             }
             return .json(#"{"id":"0193a1b2-0000-7000-8000-0000000c0b77","text":"Halle 2","createdAt":"2026-11-02T07:12:03Z","mine":true,"status":"sent"}"#, status: 201)
         }
@@ -123,7 +150,7 @@ struct ChatTests {
         #expect(sent.sent.count == 1 && !sent.offline)
         #expect(await outbox.items().isEmpty)
         #expect(await outbox.content(of: photo.id) == nil)
-        #expect(transport.count("PUT", "/api/v1/chat/attachments/\(photo.id.key)/content") == 1)
+        #expect(transport.count("POST", "/api/v1/chat/conversations/\(conversation.key)/attachments") == 1)
 
         // Ablehnung: markiert, die nächste Nachricht geht trotzdem.
         let other = UUID()

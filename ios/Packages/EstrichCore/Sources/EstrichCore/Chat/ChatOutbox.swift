@@ -10,15 +10,18 @@ public struct ChatOutboxItem: Codable, Sendable, Equatable, Identifiable {
         public let name: String
         public let contentType: String
         public let sizeBytes: Int64
-        public var uploaded: Bool
+        /// ID beim Server nach dem Hochladen (die lokale `id` bleibt der Schlüssel im Tresor).
+        public var serverId: UUID?
 
-        public init(id: UUID, kind: String, name: String, contentType: String, sizeBytes: Int64, uploaded: Bool = false) {
+        public var uploaded: Bool { serverId != nil }
+
+        public init(id: UUID, kind: String, name: String, contentType: String, sizeBytes: Int64, serverId: UUID? = nil) {
             self.id = id
             self.kind = kind
             self.name = name
             self.contentType = contentType
             self.sizeBytes = sizeBytes
-            self.uploaded = uploaded
+            self.serverId = serverId
         }
 
         public var asAttachment: ChatAttachment {
@@ -58,7 +61,7 @@ public struct ChatOutboxItem: Codable, Sendable, Equatable, Identifiable {
     }
 
     public var body: ChatSendBody {
-        ChatSendBody(text: text, clientMessageId: id, attachmentFileIds: attachments.map(\.id), replyToId: replyToId,
+        ChatSendBody(text: text, clientMessageId: id, attachmentFileIds: attachments.map { $0.serverId ?? $0.id }, replyToId: replyToId,
                      mentionUserIds: mentionUserIds, location: location)
     }
 
@@ -161,9 +164,9 @@ public actor ChatOutbox {
                     guard let data = try? files.read(attachment.id) else {
                         throw APIError.server(status: 410, code: "ATTACHMENT_MISSING", message: "Der Anhang „\(attachment.name)“ ist auf dem Gerät nicht mehr vorhanden.")
                     }
-                    try await client.uploadChatAttachment(id: attachment.id, conversationId: item.conversationId, kind: attachment.kind,
-                                                           name: attachment.name, contentType: attachment.contentType, data: data)
-                    item.attachments[index].uploaded = true
+                    let stored = try await client.uploadChatAttachment(conversationId: item.conversationId, name: attachment.name,
+                                                                       contentType: attachment.contentType, data: data)
+                    item.attachments[index].serverId = stored.id
                     await replace(item)
                 }
                 let message = try await client.sendChatMessage(item.body, to: item.conversationId)
