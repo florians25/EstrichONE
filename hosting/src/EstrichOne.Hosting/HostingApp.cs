@@ -168,6 +168,8 @@ public static class HostingApp
 
         var app = builder.Build();
         app.UseForwardedHeaders();
+        // Optionale IP-Allowlist (Hosting__AllowedNetworks), vor allem anderen – auch vor Anmeldung und Oberfläche.
+        IpAllowlist.UseIpAllowlist(app, IpAllowlist.Parse(hosting.AllowedNetworks));
         app.UseSecurityHeaders();
         app.UseDefaultFiles();
         var contentTypes = new Microsoft.AspNetCore.StaticFiles.FileExtensionContentTypeProvider();

@@ -50,6 +50,12 @@ public sealed class HostingOptions
     /// <summary>Sitzungscookie ohne <c>Secure</c> – nur für lokale Tests über http://localhost.</summary>
     public bool InsecureCookies { get; set; }
 
+    /// <summary>
+    /// Optional: nur diese Adressen/Netze dürfen die Konsole aufrufen (Komma-getrennt, z. B. <c>203.0.113.7, 10.0.0.0/8</c>).
+    /// Leer = keine Einschränkung (Anmeldung, 2FA und Sperre gelten immer). Loopback (SSH-Tunnel) ist immer erlaubt.
+    /// </summary>
+    public string? AllowedNetworks { get; set; }
+
     /// <summary>Intervall der Statuserhebung in Sekunden.</summary>
     public int StatusIntervalSeconds { get; set; } = 30;
 

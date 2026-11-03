@@ -101,6 +101,11 @@ Sperren hält in diesem Modus die Weboberfläche der Instanz an (keine eigene Wa
 
 - Der Docker-Socket ist nur im Konsolen-Container eingebunden; wer die Konsole bedient, kann den Host steuern.
   Konsole nur Administratoren zugänglich machen, 2FA einschalten.
+- Optionale **IP-Allowlist**: `HOSTING_ALLOWED_NETWORKS=203.0.113.7,10.0.0.0/8` in der `.env` (bzw. beim Installer
+  `-e HOSTING_ALLOWED_NETWORKS=…`) – andere Adressen erhalten 403, auch für Anmeldung und Oberfläche. Gilt hinter dem
+  mitgelieferten Caddy bzw. Nginx Proxy Manager (private Netze) für die echte Client-Adresse; `127.0.0.1` (SSH-Tunnel
+  auf Port 8099) bleibt als Notzugang immer erlaubt. Ungültige Einträge verhindern den Start (Protokoll prüfen).
+- `.env` der Konsole und jeder Instanz nur für root lesbar (0600, der Installer zieht das bei jedem Lauf nach).
 - Docker wird ohne Shell mit Argumentlisten aufgerufen; Kürzel, Domains und Versionen werden streng geprüft.
 - Der Konsolen-Container läuft schreibgeschützt mit minimalen Capabilities (CHOWN, DAC_OVERRIDE, DAC_READ_SEARCH,
   FOWNER), um Datenverzeichnisse der Instanzen (UID 1654) anzulegen, zu messen und zu löschen.

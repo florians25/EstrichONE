@@ -23,6 +23,8 @@ services:
       Hosting__BackupRoot: ${HOSTING_BACKUP_ROOT:-}
       Hosting__Docker: ${HOSTING_DOCKER:-docker}
       Hosting__InsecureCookies: ${HOSTING_INSECURE_COOKIES:-false}
+      # Optional: nur diese Adressen/Netze dürfen die Konsole öffnen (z. B. „203.0.113.7, 10.0.0.0/8“); leer = alle.
+      Hosting__AllowedNetworks: ${HOSTING_ALLOWED_NETWORKS:-}
     volumes:
       # Docker-Socket nur in diesem Container. Achtung: Zugriff auf den Socket entspricht root-Rechten auf dem Host.
       - /var/run/docker.sock:/var/run/docker.sock

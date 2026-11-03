@@ -84,6 +84,10 @@ else
   FIRST=1
 fi
 
+# .env enthält Geheimnisse: nur root (auch bei älteren Installationen nachziehen).
+chmod 600 "$ROOT/.env"
+# Optionale IP-Allowlist der Konsole: -e HOSTING_ALLOWED_NETWORKS="203.0.113.7, 10.0.0.0/8" (leer = aus)
+[ -z "${HOSTING_ALLOWED_NETWORKS+x}" ] || set_env HOSTING_ALLOWED_NETWORKS "$(printf %s "$HOSTING_ALLOWED_NETWORKS" | tr -d " ")"
 mkdir -p "$ROOT/instances" "$ROOT/proxy" "$ROOT/proxy-data" "$ROOT/proxy-config" "$ROOT/archive" "$ROOT/console" "$ROOT/backups"
 chmod 700 "$ROOT/console" "$ROOT/archive"
 
