@@ -165,6 +165,26 @@ Die App ist für Pushnachrichten vorbereitet (`EstrichONE/App/PushNotifications.
 4. Hintergrund-Aktualisierung ist nicht nötig (Pushnachrichten mit sichtbarem Hinweis). Ohne Schritt 1–3 läuft die App
    unverändert – Benachrichtigungen erscheinen dann nur im Postfach.
 
+## Chat (Modul „Chat“, docs/chat.md)
+
+`EstrichONE/Chat/` (Oberfläche), `Packages/EstrichCore/Sources/EstrichCore/Chat/` (API, Echtzeit, Warteschlange, getestet).
+
+- **Echtzeit:** `ChatCenter` hält im Vordergrund `GET /api/v1/chat/events` (Server-Sent Events) offen und lädt bei
+  Ereignissen gezielt nach; ohne Kanal (Proxy puffert, älterer Server, Demomodus) fragt die App wie bisher ab
+  (Unterhaltung 5 s, Liste 15 s; mit Kanal nur noch 30 s/60 s als Sicherheitsnetz). Im Hintergrund wird getrennt.
+- **Pushnachrichten:** Kategorie `chat` (`aps.category`) mit „Antworten“ (Texteingabe direkt in der Mitteilung) und
+  „Als gelesen markieren“; gebündelt je Unterhaltung über `thread-id` des Servers. Tippen öffnet die Unterhaltung. Ist die
+  Unterhaltung offen, erscheint kein Banner. Antworten gehen über die Warteschlange; ist die App gesperrt (Tresor zu),
+  wird nichts gesendet – eine Mitteilung sagt das, der Text liegt beim Öffnen im Eingabefeld (nur bis die App beendet wird).
+  Abzeichen am App-Symbol: ungelesene Chats plus übrige ungelesene Hinweise des Postfachs.
+- **Offline:** Nachrichten samt Fotos/Dokumenten liegen verschlüsselt in der Benutzerdatenbank bzw. im Datei-Tresor
+  (`ChatOutbox`), bis der Server erreichbar ist (`clientMessageId` verhindert Doppelte). „Nur Ansicht“ sperrt das Schreiben
+  wie überall (Übersteuerung „auf eigene Gefahr“). Entwürfe je Unterhaltung liegen ebenfalls verschlüsselt lokal.
+- **Diktat statt Sprachnachrichten:** Mikrofon-Knopf im Eingabefeld, `SFSpeechRecognizer` (de-DE, `requiresOnDeviceRecognition`
+  wenn verfügbar, Zeichensetzung). Der Text landet bearbeitbar im Feld; Ton wird nie gespeichert oder gesendet.
+- **Fotos** werden wie in der Bauakte verkleinert (`PhotoCompressor`), Dokumente bis 25 MB; „In Bauakte übernehmen“ legt
+  das Foto/Dokument als eigenes der Bauakte ab (Upload über den normalen Abgleich, auch offline).
+
 ## Angemeldet bleiben, Face ID und Sperre
 
 - **Persönliches Gerät:** einmal mit Passwort anmelden, danach nur noch entsperren – mit Face ID/Touch ID oder dem

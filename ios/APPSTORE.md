@@ -107,7 +107,7 @@ Bilder neu erzeugen (nach UI-Änderungen): Commit-Nachricht mit `[appstore]` ode
 |---|---|
 | Exportkonformität `ITSAppUsesNonExemptEncryption = NO` | `EstrichONE/Config/Info.plist`, `Info-Debug.plist` |
 | Privacy Manifest (Required-Reason-APIs, erhobene Daten, kein Tracking) | `EstrichONE/Resources/PrivacyInfo.xcprivacy` |
-| Nutzungstexte Kamera, Mikrofon, Standort, Kontakte, Face ID, lokales Netzwerk, Fotos sichern | `project.yml` (`INFOPLIST_KEY_*`) |
+| Nutzungstexte Kamera, Mikrofon, Spracherkennung (Diktat im Chat), Standort, Kontakte, Face ID, lokales Netzwerk, Fotos sichern | `project.yml` (`INFOPLIST_KEY_*`) |
 | ATS ohne Ausnahmen im Release (nur HTTPS); `NSAllowsLocalNetworking` nur im Debug-Build | `Info.plist` / `Info-Debug.plist` |
 | Push-Entitlement, APNs-Registrierung, Postfach, Deep Links | `Config/EstrichONE.entitlements`, `App/PushNotifications.swift` |
 | Konto-Löschung in der App (Mehr › „Konto löschen beantragen“) | `Home/MoreView.swift` |
@@ -190,9 +190,9 @@ Anmeldung erforderlich: **NEIN** (nicht anhaken – der Demomodus braucht kein K
 
 > EstrichONE ist eine Baustellen-App für Estrichbetriebe. Sie verbindet sich mit einem Server, den jeder Betrieb selbst betreibt; deshalb gibt es keine öffentliche Registrierung.
 >
-> So prüfen Sie die App ohne Server: Auf dem ersten Bildschirm „Demo ausprobieren – ohne Server“ tippen. Die App läuft dann ausschließlich mit lokalen Beispieldaten; es werden keine Daten über das Netzwerk gesendet. Alle Funktionen sind nutzbar: Heute-Seite, Bauakte (Fotos, Dokumentenscanner, Videos, Bautagebuch, Erstbegehung und Abnahme mit Unterschrift), Disposition („Wer fährt wohin“: zuweisen, verschieben, Mitarbeiter/Fahrzeuge/Kolonnen tauschen, Plan freigeben), Kunden, Chat, Helpdesk und Benachrichtigungen (Mehr › Benachrichtigungen › „Beispiel senden“ zeigt nach wenigen Sekunden eine lokale Beispielmitteilung). Unter „Demo“ › „Störungen vorführen“ lassen sich Wartungsmodus, Server-Ausfall und Backup-Warnungen zeigen. Beenden: „Demo“ (oben links) › „Demo beenden“.
+> So prüfen Sie die App ohne Server: Auf dem ersten Bildschirm „Demo ausprobieren – ohne Server“ tippen. Die App läuft dann ausschließlich mit lokalen Beispieldaten; es werden keine Daten über das Netzwerk gesendet. Alle Funktionen sind nutzbar: Heute-Seite, Bauakte (Fotos, Dokumentenscanner, Videos, Bautagebuch, Erstbegehung und Abnahme mit Unterschrift), Disposition („Wer fährt wohin“: zuweisen, verschieben, Mitarbeiter/Fahrzeuge/Kolonnen tauschen, Plan freigeben), Kunden, Chat (Gruppen, Fotos, Dokumente, Standort, Reaktionen, Diktat über das Mikrofon im Eingabefeld – keine Sprachnachrichten), Helpdesk und Benachrichtigungen (Mehr › Benachrichtigungen › „Beispiel senden“ zeigt nach wenigen Sekunden eine lokale Beispielmitteilung). Unter „Demo“ › „Störungen vorführen“ lassen sich Wartungsmodus, Server-Ausfall und Backup-Warnungen zeigen. Beenden: „Demo“ (oben links) › „Demo beenden“.
 >
-> Berechtigungen werden nur bei ausdrücklicher Aktion abgefragt: Kamera (Fotos, Dokumentenscanner, QR-Code zur Einrichtung), Mikrofon (Videoaufnahme), Standort (Baustellenadresse übernehmen), Kontakte (Kunden in Kontakte sichern), Mitteilungen, Face ID (Entsperren auf persönlichen Geräten).
+> Berechtigungen werden nur bei ausdrücklicher Aktion abgefragt: Kamera (Fotos, Dokumentenscanner, QR-Code zur Einrichtung), Mikrofon und Spracherkennung (Videoaufnahme; Diktat im Chat – die Erkennung läuft wenn möglich auf dem Gerät, Ton wird nie gespeichert oder gesendet), Standort (Baustellenadresse übernehmen, Standort im Chat teilen), Kontakte (Kunden in Kontakte sichern), Mitteilungen, Face ID (Entsperren auf persönlichen Geräten).
 >
 > Benutzerkonten legt die Administration des Betriebs an. Die Löschung des eigenen Kontos kann in der App beantragt werden (Mehr › „Konto löschen beantragen“); die Administration löscht daraufhin Konto und personenbezogene Daten. Abmelden entfernt sofort alle Daten vom Gerät.
 >
@@ -215,12 +215,15 @@ Frage „Erfassen Sie oder Drittpartner Daten?“ → **Ja**. Für jeden Typ: *Z
 | Kennungen › Geräte-ID | `…DeviceID` | Geräteregistrierung (Gerätesperre, Poolgeräte); keine Werbe-ID |
 | Nutzerinhalte › Fotos oder Videos | `…PhotosorVideos` | Baustellenfotos und -videos in der Bauakte |
 | Nutzerinhalte › Kundensupport | `…CustomerSupport` | Meldungen an die IT („Problem melden“) |
-| Nutzerinhalte › Andere Nutzerinhalte | `…OtherUserContent` | Bautagebuch, Mängel, Protokolle, Unterschriften, Notizen, Chat |
-| Standort › Genauer Standort | `…PreciseLocation` | nur auf Knopfdruck: Adresse einer Baustelle, Aufnahmeort eines Fotos |
+| Nutzerinhalte › Andere Nutzerinhalte | `…OtherUserContent` | Bautagebuch, Mängel, Protokolle, Unterschriften, Notizen, Chat (Texte, Fotos, Dokumente) |
+| Standort › Genauer Standort | `…PreciseLocation` | nur auf Knopfdruck: Adresse einer Baustelle, Aufnahmeort eines Fotos, Standort im Chat teilen |
 | Diagnose › Andere Diagnosedaten | `…OtherDiagnosticData` | nur im freiwilligen Fehlerbericht (App-Version, Speicher, Abgleichstand) |
 
 Nicht erfasst: E-Mail/Telefon des Benutzers, Finanz-, Gesundheits-, Browser-, Such-, Kaufdaten, Kontakte des Adressbuchs
-(nur Schreiben auf Wunsch), Werbedaten. Required-Reason-APIs im Manifest: UserDefaults (`CA92.1`), Datei-Zeitstempel
+(nur Schreiben auf Wunsch), Werbedaten, **Audiodaten** – das Diktat im Chat (`NSSpeechRecognitionUsageDescription`,
+`NSMicrophoneUsageDescription`) erkennt Sprache über Apples Speech-Framework, auf dem Gerät, wo möglich
+(`requiresOnDeviceRecognition`); die App speichert und sendet keine Tonaufnahme, an den Server geht nur der bearbeitete
+Text. Sprachnachrichten gibt es nicht. Required-Reason-APIs im Manifest: UserDefaults (`CA92.1`), Datei-Zeitstempel
 (`C617.1`), freier Speicher (`7D9E.1`, nur Fehlerbericht).
 
 ## 5. Verschlüsselung und Exportkonformität

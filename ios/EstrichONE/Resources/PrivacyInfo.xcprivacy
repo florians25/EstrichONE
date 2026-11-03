@@ -7,6 +7,8 @@
   - UserDefaults CA92.1: Einstellungen der App selbst (Server, Demomodus, Ansichten).
   - FileTimestamp C617.1: Größe/Datum eigener Dateien im App-Container (Videos verkleinern, temporäre Dateien).
   - DiskSpace 7D9E.1: freier Speicher nur im freiwilligen Fehlerbericht („Problem melden“ mit Diagnosedaten).
+  Kein Audio: Das Diktat im Chat (Speech-Framework, auf dem Gerät wo möglich) speichert und sendet keine Tonaufnahme;
+  Chatinhalte (Text, Fotos, Dokumente, geteilter Standort) sind unter OtherUserContent, PhotosorVideos und PreciseLocation erfasst.
 -->
 <plist version="1.0">
 <dict>

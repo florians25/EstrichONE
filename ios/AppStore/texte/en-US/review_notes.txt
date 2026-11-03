@@ -3,13 +3,13 @@ EstrichONE is a field app for screed (floor) contractors. It connects to a self-
 HOW TO REVIEW
 1. On the first screen, tap "Demo ausprobieren – ohne Server" (Try demo – without server).
 2. The app signs in as the sample user "Max Huber" and runs with realistic local sample data only. Nothing is sent over the network.
-3. All features can be used: Today screen, site files (photos, document scanner, videos, site diary, initial inspection and handover with signature), dispatch ("Wer fährt wohin": assign, move, swap people/vehicles/crews, release the plan), customers, chat, helpdesk ("Problem melden") and the notification inbox.
+3. All features can be used: Today screen, site files (photos, document scanner, videos, site diary, initial inspection and handover with signature), dispatch ("Wer fährt wohin": assign, move, swap people/vehicles/crews, release the plan), customers, chat (groups, photos, documents, location, reactions, dictation via the microphone button in the input field – no voice messages), helpdesk ("Problem melden") and the notification inbox.
 4. Push notifications: Mehr › Benachrichtigungen › "Beispiel senden" shows a local sample notification after a few seconds.
 5. "Demo" menu (top left) › "Störungen vorführen" (show disruptions) simulates maintenance mode, server outage and backup warnings.
 6. To leave the demo: "Demo" (top left) › "Demo beenden".
 
 PERMISSIONS
-Requested only on explicit user action: camera (photos, document scanner, enrollment QR code), microphone (video recording), location (take over a site address or photo location), contacts (save a customer to Contacts), notifications (inbox), Face ID (unlock on personal devices), local network (company server on the LAN).
+Requested only on explicit user action: camera (photos, document scanner, enrollment QR code), microphone and speech recognition (video recording; dictation in chat – recognition runs on-device where supported, audio is never stored or sent by the app), location (take over a site address or photo location), contacts (save a customer to Contacts), notifications (inbox), Face ID (unlock on personal devices), local network (company server on the LAN).
 
 CHAT AND USER CONTENT
 Chat and helpdesk messages are only exchanged between employees of the same company on the company's own server. There is no contact with strangers or the public. Administrators manage and can remove accounts and content.

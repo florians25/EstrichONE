@@ -13,21 +13,26 @@ Für **jeden** der folgenden Datentypen gleich beantworten:
 | Bereich in App Store Connect | Datentyp | Manifest-Schlüssel | Wofür |
 |---|---|---|---|
 | Kontaktinformationen | Name | `NSPrivacyCollectedDataTypeName` | Anzeigename des Benutzers (vom Betrieb angelegt) |
-| Nutzerinhalte | Fotos oder Videos | `…PhotosorVideos` | Baustellenfotos und -videos in der Bauakte |
+| Nutzerinhalte | Fotos oder Videos | `…PhotosorVideos` | Baustellenfotos und -videos in der Bauakte, Fotos im Chat |
 | Nutzerinhalte | Kundensupport | `…CustomerSupport` | Meldungen an die IT („Problem melden“) |
-| Nutzerinhalte | Andere Nutzerinhalte | `…OtherUserContent` | Bautagebuch, Mängel, Protokolle, Unterschriften, Notizen, Chat |
+| Nutzerinhalte | Andere Nutzerinhalte | `…OtherUserContent` | Bautagebuch, Mängel, Protokolle, Unterschriften, Notizen, Chat (Texte, Dokumente) |
 | Kennungen | Nutzer-ID | `…UserID` | Benutzerkonto beim Server |
 | Kennungen | Geräte-ID | `…DeviceID` | Geräteregistrierung (Gerätesperre, Poolgeräte), keine Werbe-ID |
-| Standort | Genauer Standort | `…PreciseLocation` | nur auf Knopfdruck: Adresse einer Baustelle, Aufnahmeort eines Fotos |
+| Standort | Genauer Standort | `…PreciseLocation` | nur auf Knopfdruck: Adresse einer Baustelle, Aufnahmeort eines Fotos, Standort im Chat teilen |
 | Diagnose | Andere Diagnosedaten | `…OtherDiagnosticData` | nur im freiwilligen Fehlerbericht (App-Version, Speicher, Abgleichstand) |
 
 **Nicht** anhaken: E-Mail-Adresse, Telefonnummer, physische Adresse, Gesundheit, Fitness, Finanzinfos, Kontakte,
-E-Mails oder Textnachrichten*, Audiodaten, Gameplay, Browser-/Suchverlauf, Käufe, Nutzungsdaten, Absturzdaten,
+E-Mails oder Textnachrichten*, Audiodaten**, Gameplay, Browser-/Suchverlauf, Käufe, Nutzungsdaten, Absturzdaten,
 Leistungsdaten, sensible Daten, Werbedaten.
 
 \* Der Chat ist unter „Andere Nutzerinhalte“ erfasst (Nachrichten zwischen Mitarbeitern des Betriebs auf dessen eigenem
 Server). Wer es vorsichtiger möchte, hakt zusätzlich „Nutzerinhalte › E-Mails oder Textnachrichten“ mit denselben
 Antworten an – dann aber auch `NSPrivacyCollectedDataTypeEmailsOrTextMessages` im Manifest ergänzen, damit beides übereinstimmt.
+
+\*\* **Audiodaten nicht anhaken:** Das Diktat im Chat wandelt Sprache über Apples Spracherkennung in Text um – auf dem
+Gerät, wo es das unterstützt (`requiresOnDeviceRecognition`), sonst durch Apple. EstrichONE speichert und überträgt keine
+Tonaufnahmen; an den Server des Betriebs geht nur der Text, den die Person vor dem Senden bearbeitet und abschickt
+(Nachricht = „Andere Nutzerinhalte“). Es gibt keine Sprachnachrichten.
 
 Ergebnis in der Produktseite: „Mit dir verknüpfte Daten“ (Kontaktinfos, Nutzerinhalte, Kennungen, Standort, Diagnose),
 „Daten, die zum Tracking verwendet werden“: keine.
