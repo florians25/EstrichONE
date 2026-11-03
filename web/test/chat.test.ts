@@ -65,3 +65,36 @@ describe("Banner vom Server", () => {
 		expect(healthStrips({ banners: [] })).toEqual([]);
 	});
 });
+
+describe("Chat – Messenger-Funktionen", () => {
+	it("macht Links klickbar und maskiert alles andere", async () => {
+		const { richText } = await import("../webapp/util/chat");
+		const html = richText('Plan: https://example.org/plan?a=1&b=2. <script>x</script>', []);
+		expect(html).toContain('<a href="https://example.org/plan?a=1&amp;b=2"');
+		expect(html).toContain('rel="noopener noreferrer nofollow"');
+		expect(html).toContain("&lt;script&gt;");
+		expect(html).not.toContain("<script>");
+		expect(richText("javascript:alert(1)")).not.toContain("<a");
+	});
+
+	it("hebt @Erwähnungen hervor und findet ihre IDs", async () => {
+		const { mentionIdsIn, mentionQuery, richText } = await import("../webapp/util/chat");
+		expect(richText("@Lukas Berger bitte", ["Lukas Berger"])).toContain('<span class="eoChatMention">@Lukas Berger</span>');
+		expect(mentionIdsIn("Hallo @Lukas Berger", [{ id: "1", name: "Lukas Berger" }, { id: "2", name: "Max Huber" }])).toEqual(["1"]);
+		expect(mentionQuery("Hallo @Lu", 9)).toBe("Lu");
+		expect(mentionQuery("mail@firma", 10)).toBeNull();
+	});
+
+	it("prüft Anhänge und Zeitfenster", async () => {
+		const { checkFile, editMinutesLeft, formatBytes, previewText: preview } = await import("../webapp/util/chat");
+		expect(checkFile({ name: "a.jpg", type: "image/jpeg", size: 1000 }, 5000)).toBeNull();
+		expect(checkFile({ name: "a.exe", type: "application/x-msdownload", size: 10 }, 5000)).toContain("nur Fotos");
+		expect(checkFile({ name: "b.pdf", type: "application/pdf", size: 9000 }, 5000)).toContain("größer");
+		expect(formatBytes(1_572_864)).toBe("1,5 MB");
+		const created = new Date(Date.now() - 5 * 60_000).toISOString();
+		expect(editMinutesLeft(created, 15)).toBe(10);
+		expect(editMinutesLeft(created, 3)).toBe(0);
+		const c = { kind: "direct", members: [], lastMessage: { id: "m", senderUserId: "a", senderName: "A", text: null, createdAt: "", mine: false, deleted: false, attachment: "photo" } };
+		expect(preview(c as unknown as ChatConversation)).toBe("📷 Foto");
+	});
+});

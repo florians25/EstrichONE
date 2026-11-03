@@ -11,6 +11,7 @@ import Input from "sap/m/Input";
 import Label from "sap/m/Label";
 import Text from "sap/m/Text";
 import MessageStrip from "sap/m/MessageStrip";
+import MessageBox from "sap/m/MessageBox";
 import VBox from "sap/m/VBox";
 import { ValueState } from "sap/ui/core/library";
 import { get, post, problemMessage, put } from "../../util/api";
@@ -25,6 +26,7 @@ import type {
 } from "../../util/models";
 import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
+import { bauakteGroup, chatStatus, createBauakteGroup, type ChatBauakteGroup } from "../../util/chat";
 import { openActivityDialog } from "../../util/activityDialog";
 import { runAcceptance } from "../../util/acceptanceFlow";
 import { openInitialInspectionWizard } from "../../util/inspectionWizard";
@@ -188,6 +190,39 @@ export default class ObjectController extends BaseController {
 			? [{ id: b.id, latitude: b.latitude, longitude: b.longitude, color: statusMarkerColors[b.status], label: b.title }] : []);
 		this.updateContactFacts();
 		document.title = `${b.number ?? ""} ${b.title} – EstrichONE`.trim();
+		void this.loadChatGroup(b.id);
+	}
+
+	/** Baustellen-Chat: nur bei eingeschaltetem Chat und Recht; Link in die Gruppe bzw. Anlegen. */
+	private async loadChatGroup(bauakteId: string): Promise<void> {
+		const m = this.m();
+		if (m.getProperty("/chatGroupFor") === bauakteId) return;
+		m.setProperty("/chatGroupFor", bauakteId);
+		m.setProperty("/chatGroup", null);
+		const status = await chatStatus().catch(() => null);
+		if (!status?.canUse) return;
+		const group = await bauakteGroup(bauakteId).catch(() => null);
+		if (m.getProperty("/chatGroupFor") === bauakteId) m.setProperty("/chatGroup", group);
+	}
+
+	async onChatGroup(): Promise<void> {
+		const m = this.m();
+		const group = m.getProperty("/chatGroup") as ChatBauakteGroup | null;
+		if (!group) return;
+		if (group.conversationId && group.member) {
+			this.nav(`/chat/${group.conversationId}`);
+			return;
+		}
+		if (!group.canCreate) {
+			MessageBox.information("Die Baustellen-Gruppe gibt es schon, Sie sind aber kein Mitglied. Bitte an die Bauleitung wenden.");
+			return;
+		}
+		try {
+			const created = await createBauakteGroup(group.bauakteId);
+			this.nav(`/chat/${created.id}`);
+		} catch (error) {
+			this.showError(error);
+		}
 	}
 
 	private updateContactFacts(): void {

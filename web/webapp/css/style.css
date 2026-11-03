@@ -578,6 +578,127 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoChatSend.sapMBtn { height: 2.25rem; }
 .eoChatSend .sapMBtnInner { border-radius: 50%; width: 2.25rem; height: 2.25rem; min-width: 2.25rem; padding: 0; }
 .eoChatHint { padding: 0 1rem 0.375rem; font-size: 0.6875rem; color: var(--sapContent_LabelColor); background: var(--sapGroup_ContentBackground); }
+/* Chat – Messenger-Funktionen (Runde 10) */
+.eoChatSideTitle { gap: 0.375rem; }
+.eoChatLive { color: var(--sapPositiveColor); font-size: 0.75rem; }
+.eoChatConvTitleRow { gap: 0.3125rem; min-width: 0; }
+.eoChatKind { color: var(--sapContent_IconColor); font-size: 0.75rem; flex: 0 0 auto; }
+.eoChatHits { padding: 0.25rem 0 0.5rem; border-top: 1px solid var(--sapGroup_TitleBorderColor); }
+.eoChatHitsTitle { padding: 0.5rem 1rem 0.25rem; }
+.eoChatHitList .sapMLIB { padding: 0; }
+.eoChatHit { padding: 0.5rem 1rem; gap: 0.125rem; width: 100%; min-width: 0; box-sizing: border-box; }
+.eoChatHit > .sapMFlexBox { gap: 0.5rem; min-width: 0; }
+.eoChatHitText { font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); overflow: hidden; text-overflow: ellipsis;
+	display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+.eoChatHitText em, .sapMDialog .eoChatHit em { font-style: normal; background: var(--sapHighlightColor, #fff3b8); color: var(--sapTextColor);
+	background: color-mix(in srgb, var(--sapCriticalColor) 22%, transparent); border-radius: 0.125rem; padding: 0 0.0625rem; }
+.eoChatTyping { color: var(--sapPositiveTextColor, var(--sapPositiveColor)); font-style: italic; font-size: var(--sapFontSmallSize); }
+.eoChatPinned { gap: 0.625rem; padding: 0.375rem 1rem; background: var(--sapGroup_ContentBackground); border-bottom: 1px solid var(--sapGroup_TitleBorderColor);
+	box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04); }
+.eoChatPinIcon { color: var(--sapButton_Emphasized_Background); font-size: 0.875rem; }
+.eoChatPinnedText { min-width: 0; flex: 1 1 auto; }
+.eoChatPinnedLabel { font-size: 0.6875rem; font-weight: 600; color: var(--sapButton_Emphasized_Background); text-transform: uppercase; letter-spacing: 0.02em; }
+.eoChatPinnedText .sapMLnk { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; color: var(--sapTextColor); }
+.eoChatDropZone { flex: 1 1 0; min-height: 0; display: flex; flex-direction: column; position: relative; }
+.eoChatDropZone > .eoChatScroll { flex: 1 1 0; }
+.eoChatDropZone.eoChatDragging::after { content: "Fotos oder PDF hier ablegen"; position: absolute; inset: 0.75rem; display: flex; align-items: center;
+	justify-content: center; border: 2px dashed var(--sapButton_Emphasized_Background); border-radius: 0.75rem; font-weight: 600; z-index: 3;
+	color: var(--sapButton_Emphasized_Background); background: color-mix(in srgb, var(--sapBackgroundColor) 86%, transparent); pointer-events: none; }
+.eoChatFooter { background: var(--sapGroup_ContentBackground); border-top: 1px solid var(--sapGroup_TitleBorderColor); }
+.eoChatFooter .eoChatComposer { border-top: none; }
+.eoChatContext { gap: 0.625rem; margin: 0.5rem 1rem 0; padding: 0.375rem 0.25rem 0.375rem 0.75rem; border-radius: 0.5rem;
+	background: var(--sapBackgroundColor); border-left: 3px solid var(--sapButton_Emphasized_Background); }
+.eoChatContextIcon { color: var(--sapButton_Emphasized_Background); }
+.eoChatContextText { flex: 1 1 auto; min-width: 0; }
+.eoChatContextTitle { font-size: var(--sapFontSmallSize); font-weight: 600; color: var(--sapButton_Emphasized_Background); }
+.eoChatContextPreview { font-size: var(--sapFontSmallSize); }
+.eoChatPendingList { gap: 0.5rem; padding: 0.5rem 1rem 0; overflow-x: auto; }
+.eoChatPendingItem { position: relative; width: 4.5rem; flex: 0 0 auto; align-items: center; gap: 0.25rem; }
+.eoChatPendingThumb.sapFAvatar { width: 4rem; height: 4rem; border-radius: 0.5rem; }
+.eoChatPendingThumb img, .eoChatPendingThumb .sapFAvatarImageHolder { object-fit: cover; border-radius: 0.5rem; }
+.eoChatPendingName { font-size: 0.6875rem; max-width: 4.5rem; overflow: hidden; text-overflow: ellipsis; }
+.eoChatPendingRemove.sapMBtn { position: absolute; top: -0.375rem; right: -0.125rem; height: 1.5rem; }
+.eoChatPendingRemove .sapMBtnInner { min-width: 1.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; padding: 0;
+	background: var(--sapGroup_ContentBackground); box-shadow: var(--sapContent_Shadow1); }
+.eoChatReadOnly { margin: 0.5rem 1rem; }
+.eoChatTool.sapMBtn { height: 2.25rem; }
+.eoChatTool .sapMBtnInner { border-radius: 50%; width: 2.25rem; min-width: 2.25rem; height: 2.25rem; padding: 0; }
+.eoChatTool.sapMToggleBtnPressed .sapMBtnInner, .eoChatTool .sapMToggleBtnPressed { background: var(--sapNegativeColor) !important; color: #fff !important;
+	animation: eoChatPulse 1.4s ease-in-out infinite; }
+@keyframes eoChatPulse { 50% { box-shadow: 0 0 0 0.375rem color-mix(in srgb, var(--sapNegativeColor) 20%, transparent); } }
+.eoChatGlyph { font-family: "SAP-icons"; font-size: 1.125rem; line-height: 1; color: var(--sapContent_IconColor); flex: 0 0 auto; }
+.eoChatStart .eoChatGlyph, .eoChatStart { font-family: inherit; }
+.eoChatStart { display: flex; justify-content: center; gap: 0.375rem; }
+.eoChatStart::first-letter { font-family: "SAP-icons"; }
+.eoChatForwarded { font-size: 0.75rem; font-style: italic; color: var(--sapContent_LabelColor); margin-bottom: 0.1875rem; }
+.eoChatForwarded, .eoChatDeleted { font-family: var(--sapFontFamily); }
+.eoChatQuote { display: flex; flex-direction: column; align-items: flex-start; gap: 0.0625rem; width: 100%; box-sizing: border-box; margin: 0 0 0.3125rem;
+	padding: 0.3125rem 0.625rem; border: none; border-left: 3px solid var(--sapButton_Emphasized_Background); border-radius: 0.375rem; cursor: pointer;
+	font: inherit; text-align: left; color: inherit; background: color-mix(in srgb, var(--sapButton_Emphasized_Background) 8%, transparent); }
+.eoChatQuoteName { font-size: 0.75rem; font-weight: 600; color: var(--sapButton_Emphasized_Background); }
+.eoChatQuoteText { font-size: 0.8125rem; color: var(--sapContent_LabelColor); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 28rem; }
+.eoChatLink { color: var(--sapLinkColor); text-decoration: underline; text-underline-offset: 2px; overflow-wrap: anywhere; }
+.eoChatMention { color: var(--sapButton_Emphasized_Background); font-weight: 600; }
+.eoChatMentioned .eoChatBubble { box-shadow: inset 3px 0 0 var(--sapCriticalColor), 0 1px 1px rgba(0, 0, 0, 0.06); }
+.eoChatEdited { font-style: italic; margin-right: 0.25rem; }
+.eoChatPinMark { font-family: "SAP-icons"; font-size: 0.625rem; color: var(--sapButton_Emphasized_Background); margin-right: 0.125rem; }
+.eoChatFiles { display: flex; flex-direction: column; gap: 0.375rem; margin: 0.0625rem 0 0.25rem; }
+.eoChatPhotos { display: grid; gap: 0.1875rem; border-radius: 0.75rem; overflow: hidden; width: min(20rem, 62vw); }
+.eoChatPhotos2, .eoChatPhotos4 { grid-template-columns: 1fr 1fr; }
+.eoChatPhotos3 { grid-template-columns: 1fr 1fr; }
+.eoChatPhotos3 .eoChatPhoto:first-child { grid-column: span 2; }
+.eoChatPhoto { position: relative; display: block; padding: 0; border: none; cursor: zoom-in; background: var(--sapField_Background);
+	aspect-ratio: 1 / 1; overflow: hidden; }
+.eoChatPhotos1 .eoChatPhoto { aspect-ratio: 4 / 3; max-height: 22rem; }
+.eoChatPhoto img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
+.eoChatPhoto:hover img { transform: scale(1.02); }
+.eoChatPhotoMore { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: 600;
+	color: #fff; background: rgba(0, 0, 0, 0.45); }
+.eoChatUploading { opacity: 0.55; }
+.eoChatUploading img { width: 8rem; height: 6rem; object-fit: cover; border-radius: 0.5rem; }
+.eoChatBubblePhoto { padding: 0.25rem 0.25rem 0.3125rem; }
+.eoChatBubblePhoto .eoChatMeta { margin-right: 0.375rem; }
+.eoChatDoc, .eoChatLocation { display: flex; align-items: center; gap: 0.625rem; padding: 0.5rem 0.625rem; border-radius: 0.5rem; min-width: 14rem;
+	text-decoration: none; color: var(--sapTextColor); background: var(--sapBackgroundColor); border: 1px solid var(--sapGroup_TitleBorderColor); }
+.eoChatDoc:hover, .eoChatLocation:hover { border-color: var(--sapButton_Emphasized_Background); }
+.eoChatDoc > .eoChatGlyph:first-child { color: var(--sapNegativeColor); font-size: 1.5rem; }
+.eoChatLocation > .eoChatGlyph:first-child { color: var(--sapPositiveColor); font-size: 1.5rem; }
+.eoChatDocText { display: flex; flex-direction: column; min-width: 0; flex: 1 1 auto; }
+.eoChatDocName { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 18rem; }
+.eoChatDocSize { font-size: 0.75rem; color: var(--sapContent_LabelColor); }
+.eoChatDocDl { font-size: 0.875rem; }
+.eoChatTools { display: flex; gap: 0.125rem; opacity: 0; transition: opacity 0.12s; flex: 0 0 auto; }
+.eoChatMsg:hover .eoChatTools, .eoChatTools:focus-within { opacity: 1; }
+.eoChatTool2 { font-family: "SAP-icons"; font-size: 0.875rem; width: 1.75rem; height: 1.75rem; border-radius: 50%; border: none; cursor: pointer;
+	background: transparent; color: var(--sapContent_IconColor); }
+.eoChatTool2:hover { background: var(--sapButton_Lite_Hover_Background); color: var(--sapButton_Emphasized_Background); }
+.eoChatReactions { display: flex; flex-wrap: wrap; gap: 0.25rem; margin: -0.3125rem 0.5rem 0; position: relative; z-index: 1; }
+.eoChatReaction { display: inline-flex; align-items: center; gap: 0.1875rem; font: inherit; font-size: 0.8125rem; line-height: 1; cursor: pointer;
+	padding: 0.1875rem 0.4375rem; border-radius: 1rem; border: 1px solid var(--sapGroup_TitleBorderColor); background: var(--sapGroup_ContentBackground);
+	box-shadow: 0 1px 1px rgba(0, 0, 0, 0.06); }
+.eoChatReaction span { font-size: 0.6875rem; font-weight: 600; color: var(--sapContent_LabelColor); }
+.eoChatReactionMine { border-color: var(--sapButton_Emphasized_Background); background: var(--sapInformationBackground); }
+.eoChatPicker { display: flex; gap: 0.125rem; padding: 0.25rem; margin-top: 0.25rem; border-radius: 1.5rem; background: var(--sapGroup_ContentBackground);
+	box-shadow: var(--sapContent_Shadow2); position: relative; z-index: 2; }
+.eoChatPicker button { font-size: 1.25rem; width: 2.25rem; height: 2.25rem; border: none; border-radius: 50%; cursor: pointer; background: transparent;
+	transition: transform 0.1s; }
+.eoChatPicker button:hover { transform: scale(1.18); background: var(--sapButton_Lite_Hover_Background); }
+.eoChatFailedActions { display: flex; flex-direction: column; }
+.eoChatFlash .eoChatBubble { animation: eoChatFlash 1.6s ease-out; }
+@keyframes eoChatFlash { 0%, 30% { box-shadow: 0 0 0 3px var(--sapButton_Emphasized_Background); } 100% { box-shadow: 0 0 0 0 transparent; } }
+.eoChatMediaTabs .sapMITBContent { padding: 0.5rem 0.75rem; }
+.eoChatMediaGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(7.5rem, 1fr)); gap: 0.25rem; }
+.eoChatMediaTile { aspect-ratio: 1 / 1; padding: 0; border: none; cursor: zoom-in; overflow: hidden; border-radius: 0.25rem; background: var(--sapField_Background); }
+.eoChatMediaTile img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.eoChatInfo { padding: 0.75rem 1rem 0.5rem; gap: 0.5rem; }
+.eoChatInfoHead { gap: 0.25rem; padding: 0.5rem 0 0.25rem; }
+.eoChatInfoTitle { font-size: var(--sapFontHeader4Size); font-weight: 600; margin-top: 0.5rem; text-align: center; }
+.eoChatInfoSection { padding: 0.5rem 0; border-top: 1px solid var(--sapGroup_TitleBorderColor); }
+.eoChatInfoDescription { white-space: pre-wrap; }
+.eoChatSettingRow { gap: 1rem; padding: 0.625rem 0; border-bottom: 1px solid var(--sapGroup_TitleBorderColor); }
+.eoChatSettingText { flex: 1 1 auto; min-width: 0; }
+.eoChatSmall { font-size: var(--sapFontSmallSize); }
+.eoChatHitMeta { font-size: 0.75rem; }
 .eoPrefList .sapMCLI { padding: 0.5rem 1rem; }
 .eoPrefRow { gap: 0.75rem; width: 100%; }
 .eoPrefText { flex: 1 1 18rem; min-width: 0; }
@@ -588,6 +709,8 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 	.eoChatHasActive .eoChatPane { display: flex; }
 	.eoChatBack { display: inline-block; }
 	.eoChatRow { max-width: 90%; }
+	.eoChatTools { opacity: 1; }
+	.eoChatHead .sapMBtn:not(.eoChatBack) { min-width: 2rem; }
 }
 .eoHealthBanner .sapMMsgStripMessage { font-weight: 600; }
 .eoHealthBanner.sapMMsgStripError { border-width: 2px; }

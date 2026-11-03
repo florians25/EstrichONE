@@ -41,7 +41,9 @@ self.addEventListener('push', (event) => {
       body: data.body || '',
       icon: '/icon-192.png',
       badge: '/icon-192.png',
-      tag: data.id || undefined,
+      // Chat: je Unterhaltung eine Mitteilung (neueste ersetzt die vorige, meldet sich erneut).
+      tag: (data.objectType === "chat" && data.tag) || data.id || undefined,
+      renotify: data.objectType === "chat",
       lang: 'de',
       requireInteraction: data.urgency === 'high',
       data: { id: data.id, link: data.link || '/start' },

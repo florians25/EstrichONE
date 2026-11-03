@@ -52,6 +52,10 @@
 					<Button text="{i18n>akte.complete}" type="Success" icon="sap-icon://complete" press=".onComplete"
 						visible="{= ${akte>/canEdit} &amp;&amp; ['planned','inProgress','drying'].indexOf(${akte>/bauakte/status}) >= 0 }"/>
 					<Button id="assignMeButton" text="Mir zuweisen" icon="sap-icon://add-employee" press=".onAssignMe" visible="{= ${akte>/canAssignMe} === true }"/>
+					<Button id="chatGroupButton" text="{= ${akte>/chatGroup/conversationId} ? 'Baustellen-Chat' : 'Baustellen-Chat anlegen' }"
+						icon="sap-icon://discussion" press=".onChatGroup"
+						visible="{= !!${akte>/chatGroup} &amp;&amp; (${akte>/chatGroup/member} || ${akte>/chatGroup/canCreate}) }"
+						tooltip="{= ${akte>/chatGroup/conversationId} ? 'Gruppe mit Team und Bauleitung (' + ${akte>/chatGroup/members} + ' Mitglieder)' : 'Chatgruppe mit Team und Bauleitung dieser Bauakte anlegen' }"/>
 					<Button text="{i18n>common.edit}" icon="sap-icon://edit" press=".onEdit" visible="{akte>/canEdit}"/>
 					<MenuButton id="actionsButton" text="{i18n>common.actions}" icon="sap-icon://overflow">
 						<menu>
