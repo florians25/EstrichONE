@@ -9,7 +9,9 @@
 services:
   caddy:
     ports: !override
-      - "${ESTRICHONE_HTTP_PORT:-8181}:${ESTRICHONE_HTTP_PORT:-8181}"
+      # Nur für den Proxy: am besten an die Adresse binden, über die der Proxy kommt (ESTRICHONE_BIND=127.0.0.1: bzw. LAN-IP)
+      # oder Port 8181 in der Firewall des Netzes sperren – sonst wäre EstrichONE an HTTPS vorbei per HTTP erreichbar.
+      - "${ESTRICHONE_BIND:-}${ESTRICHONE_HTTP_PORT:-8181}:${ESTRICHONE_HTTP_PORT:-8181}"
     environment:
       ESTRICHONE_MODE: proxy
       # Nur von diesen Adressen werden X-Forwarded-For/-Proto übernommen (Docker-Netze, LAN).

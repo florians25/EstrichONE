@@ -1,14 +1,54 @@
+# Automatische Aktualisierungen (docs/sicherheit.md, Betrieb): Sicherheitsupdates kommen sofort als Pull Request
+# (Dependabot security updates), Versionsupdates wöchentlich gebündelt. Basis-Images sind mit Digest gepinnt –
+# Dependabot aktualisiert Tag und Digest gemeinsam; der Image-Scan (images.yml) prüft jeden Vorschlag.
 version: 2
 updates:
   - package-ecosystem: nuget
-    directory: /backend
-    schedule: { interval: weekly }
+    directories: [/backend, /hosting, /desktop]
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 10
     groups:
       dotnet:
         patterns: ["Microsoft.*", "System.*", "Npgsql*"]
+      weitere:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  - package-ecosystem: npm
+    directories: [/web, /hosting/ui]
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 10
+    groups:
+      ui5:
+        patterns: ["@ui5/*", "@openui5/*", "@sapui5/*", "ui5-*"]
+      weitere:
+        patterns: ["*"]
+        update-types: [minor, patch]
+
+  # Dockerfiles (Basis-Images) und Compose-Dateien (PostgreSQL)
   - package-ecosystem: docker
-    directory: /docker
-    schedule: { interval: weekly }
+    directories: [/docker, /docker/installer]
+    schedule: { interval: weekly, day: tuesday }
+    groups:
+      basis-images:
+        patterns: ["*"]
+    ignore:
+      # pg_dump im Backup-Image muss zur Serverversion (compose.yml) passen; .NET-Hauptversion nur mit dem Code zusammen.
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+      - dependency-name: dotnet/*
+        update-types: [version-update:semver-major]
+  - package-ecosystem: docker-compose
+    directories: [/deploy, /hosting/deploy]
+    schedule: { interval: weekly, day: tuesday }
+    ignore:
+      # Hauptversionen von PostgreSQL brauchen eine Datenmigration (pg_upgrade) – nur bewusst und mit Anleitung.
+      - dependency-name: postgres
+        update-types: [version-update:semver-major]
+
   - package-ecosystem: github-actions
     directory: /
     schedule: { interval: monthly }
+    groups:
+      actions:
+        patterns: ["*"]

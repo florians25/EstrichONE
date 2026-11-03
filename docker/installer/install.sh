@@ -180,6 +180,20 @@ else
   FIRST=1
 fi
 
+# Nur an eine Adresse des Servers binden (z. B. LAN-IP, über die der Nginx Proxy Manager kommt, oder 127.0.0.1):
+#   -e ESTRICHONE_BIND_ADDRESS=192.168.1.10   (leer bzw. „alle“ = alle Adressen, Standard)
+if [ -n "${ESTRICHONE_BIND_ADDRESS+x}" ]; then
+  case "$ESTRICHONE_BIND_ADDRESS" in
+    ""|alle|all) set_env ESTRICHONE_BIND "" ;;
+    *:*) echo "$ESTRICHONE_BIND_ADDRESS" | grep -Eq '^\[?[0-9A-Fa-f:]+\]?$' || fail "Ungültige Adresse: $ESTRICHONE_BIND_ADDRESS"
+         set_env ESTRICHONE_BIND "[$(echo "$ESTRICHONE_BIND_ADDRESS" | tr -d '[]')]:" ;;
+    *) echo "$ESTRICHONE_BIND_ADDRESS" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' || fail "Ungültige Adresse: $ESTRICHONE_BIND_ADDRESS"
+       set_env ESTRICHONE_BIND "$ESTRICHONE_BIND_ADDRESS:" ;;
+  esac
+fi
+# Die .env enthält Datenbank- und Sicherungspasswort: nur root (auch bei älteren Installationen nachziehen).
+chmod 600 "$DIR/.env"
+
 # Archivserver im selben Stack (nur ohne zweiten Rechner): -e ESTRICHONE_ARCHIVE=lokal; abschalten mit =aus
 case "${ESTRICHONE_ARCHIVE:-}" in
   lokal|local) set_env COMPOSE_PROFILES archive ;;
@@ -228,8 +242,11 @@ if [ "$ESTRICHONE_MODE" = "proxy" ]; then
   echo
   echo "Im Nginx Proxy Manager einen Proxy Host anlegen:"
   echo "  Domain: $ESTRICHONE_DOMAIN   →   Scheme http, Host <server-ip>, Port $ESTRICHONE_HTTP_PORT"
-  echo "  SSL: Let's-Encrypt-Zertifikat, Force SSL einschalten (die Anmeldung im Web braucht HTTPS)"
-  echo "  Für große Videos unter Advanced eintragen:  client_max_body_size 600m;"
+  echo "  SSL: Let's-Encrypt-Zertifikat, Force SSL, HTTP/2 und HSTS einschalten (die Anmeldung im Web braucht HTTPS)"
+  echo "  Details: Block Common Exploits und Websockets Support einschalten"
+  echo "  Advanced (große Videos, Chat-Echtzeit):"
+  echo "    client_max_body_size 600m;  proxy_request_buffering off;  proxy_buffering off;  proxy_read_timeout 1h;"
+  echo "  Port $ESTRICHONE_HTTP_PORT nur für den Proxy freigeben (Firewall bzw. -e ESTRICHONE_BIND_ADDRESS=…), siehe docs/sicherheit.md."
   echo
   echo "Danach erreichbar unter: $URL"
 else
@@ -281,6 +298,10 @@ if [ "${COMPOSE_PROFILES:-}" = "archive" ]; then
 fi
 echo
 echo "Aktualisieren später mit:  sudo /opt/estrichone/update.sh   (oder: sudo /opt/estrichone/update.sh <version>)"
+if ! grep -Eq '^ESTRICHONE_AUTO_UPDATE=(sicherheit|patch)$' "$DIR/.env"; then
+  echo "Sicherheitsupdates automatisch einspielen (empfohlen, nachts 02:00-05:00):"
+  echo "                            sudo /opt/estrichone/update.sh --automatik sicherheit"
+fi
 [ "$ESTRICHONE_MODE" = "proxy" ] || case "$ESTRICHONE_DOMAIN" in
   localhost|*[0-9].[0-9]*) echo; echo "Hinweis: Für $ESTRICHONE_DOMAIN stellt Caddy ein eigenes Zertifikat aus – der Browser warnt einmal." ;;
 esac

@@ -58,13 +58,57 @@ jobs:
           sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone:/opt/estrichone \
             -e ESTRICHONE_MODE=proxy -e ESTRICHONE_DOMAIN=localhost -e ESTRICHONE_NAME="CI" \
             "ghcr.io/florians25/estrichone-installer:$PREVIOUS"
-      - name: update.sh auf die lokal gebaute Version (mit Sicherung vorher)
+      - name: Automatisches Sicherheitsupdate per update.sh (alte Installation → diese Version, mit Sicherung)
         run: |
           sudo cp docker/installer/update.sh /opt/estrichone/update.sh
-          sudo /opt/estrichone/update.sh "$VERSION" | tee update.log
+          # Release-Feed (Format der GitHub-API) mit dieser Version als Sicherheitsupdate derselben Versionslinie
+          python3 -c 'import json,sys; json.dump([{"tag_name":"v"+sys.argv[1],"name":"EstrichONE "+sys.argv[1],"draft":False,"prerelease":True,"body":"## Sicherheitsupdate\nCI"}], open("feed.json","w"), indent=2)' "$VERSION"
+          export ESTRICHONE_RELEASE_FEED="file://$PWD/feed.json"
+          sudo -E /opt/estrichone/update.sh --pruefen | tee check.log
+          grep -q "SICHERHEITSUPDATE verfügbar: .* → $VERSION" check.log
+          sudo grep -q '"securityUpdate":true' /opt/estrichone/data/backup-status/update.json
+          # .env aus der alten Version: nach dem ersten Lauf von update.sh nur noch für root lesbar
+          test "$(sudo stat -c %a /opt/estrichone/.env)" = 600
+          sudo /opt/estrichone/update.sh --automatik sicherheit 00:00-23:59 | tee setup.log
+          systemctl is-enabled estrichone-update.timer
+          grep -q "^ESTRICHONE_AUTO_UPDATE=sicherheit$" <(sudo cat /opt/estrichone/.env)
+          # Außerhalb des Zeitfensters passiert nichts
+          sudo sed -i 's/^ESTRICHONE_AUTO_UPDATE_WINDOW=.*/ESTRICHONE_AUTO_UPDATE_WINDOW=02:00-03:00/' /opt/estrichone/.env
+          sudo -E ESTRICHONE_UPDATE_NOW=12:00 /opt/estrichone/update.sh --automatisch | tee wait.log
+          grep -q "wartet auf das Zeitfenster" wait.log
+          sudo sed -i 's/^ESTRICHONE_AUTO_UPDATE_WINDOW=.*/ESTRICHONE_AUTO_UPDATE_WINDOW=00:00-23:59/' /opt/estrichone/.env
+          sudo -E ESTRICHONE_UPDATE_NOW=12:00 /opt/estrichone/update.sh --automatisch | tee update.log
           grep -q "Update erfolgreich" update.log
           grep -q "^ESTRICHONE_VERSION=$VERSION$" <(sudo cat /opt/estrichone/.env)
           curl -fsS http://localhost:8181/api/v1/server-info | grep -q "\"serverVersion\":\"$VERSION"
+          sudo cat /opt/estrichone/data/backup-status/update.json
+          sudo grep -q '"result":"succeeded"' /opt/estrichone/data/backup-status/update.json
+          # Bereits aktuell: kein weiteres Update
+          sudo -E ESTRICHONE_UPDATE_NOW=12:00 /opt/estrichone/update.sh --automatisch | tee again.log
+          ! grep -q "Automatisches Update" again.log
+          sudo /opt/estrichone/update.sh --automatik aus
+          ! systemctl is-enabled estrichone-update.timer 2>/dev/null
+      - name: Gehärteter Stack nach dem Update (Rechte, Grenzen, nur Caddy mit Ports)
+        run: |
+          cd /opt/estrichone
+          for svc in postgres api backup caddy; do
+            id="$(sudo docker compose -p estrichone ps -q "$svc")"
+            sudo docker inspect "$id" --format "$svc ro={{.HostConfig.ReadonlyRootfs}} capdrop={{.HostConfig.CapDrop}} pids={{.HostConfig.PidsLimit}} mem={{.HostConfig.Memory}} sec={{.HostConfig.SecurityOpt}}" | tee -a hardening.log
+          done
+          ! grep -q "ro=false" hardening.log
+          grep -c "no-new-privileges:true" hardening.log | grep -qx 4
+          for svc in postgres api backup; do
+            test -z "$(sudo docker port "$(sudo docker compose -p estrichone ps -q "$svc")")" || { echo "$svc veröffentlicht Ports"; exit 1; }
+          done
+          # Rate-Limit der Anmelde-/Kopplungspfade (Caddy, 30/min je Adresse) liefert Problem-JSON mit Retry-After.
+          # Geprüft am Koppeln (ohne Anmeldung 401), damit die Sperre der API nach Fehlanmeldungen nicht greift.
+          for _ in $(seq 1 30); do curl -s -o /dev/null -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8181/api/v1/archive/pair; done
+          curl -s -D headers.txt -o body.json -X POST -H 'Content-Type: application/json' -d '{}' http://localhost:8181/api/v1/archive/pair
+          grep -q "^HTTP/1.1 429" headers.txt && grep -qi "^retry-after:" headers.txt && grep -q RATE_LIMITED body.json
+          ! grep -qi "^server:" headers.txt
+          curl -sI http://localhost:8181/api/v1/server-info | tee info.txt
+          ! grep -qi "^server:\|^via:" info.txt
+          sleep 61   # Zeitfenster des Rate-Limits ablaufen lassen (folgende Schritte melden sich an)
       - name: Vom Installer abgelegtes update.sh erneut ausführen (idempotent)
         run: |
           sudo /opt/estrichone/update.sh --ohne-sicherung "$VERSION" | tee update2.log

@@ -45,16 +45,40 @@ x-backup-environment: &backup-environment
   BACKUP_REPOSITORY_2: ${BACKUP_REPOSITORY_2:-}
   BACKUP_TIME: ${BACKUP_TIME:-22:30}
 
+# Härtung (docs/sicherheit.md, Betrieb): Dateisystem schreibgeschützt (nur Volumes und /tmp beschreibbar), keine
+# Capabilities, kein Rechtegewinn über setuid, Prozessgrenze gegen Fork-Bomben, Protokolle rotiert (Platte läuft nicht voll).
+# Speichergrenzen sind großzügig und über die .env anpassbar (ESTRICHONE_MEMORY_<DIENST>, z. B. ESTRICHONE_MEMORY_API=8g).
+# Kein Dienst bekommt den Docker-Socket – nur der Installer/update.sh (einmalig, auf Aufruf von root) braucht ihn.
+x-logging: &logging
+  logging:
+    driver: json-file
+    options:
+      max-size: 20m
+      max-file: "5"
+
 x-hardening: &hardening
   read_only: true
   tmpfs: [/tmp]
   security_opt: ["no-new-privileges:true"]
   cap_drop: [ALL]
+  pids_limit: 2048
+  <<: *logging
 
 services:
   postgres:
-    image: postgres:17-alpine
+    # Version und Digest fest (Dependabot schlägt Aktualisierungen vor; Nebenversionen 17.x sind datenkompatibel).
+    image: postgres:17.11-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
     restart: unless-stopped
+    <<: *logging
+    # Der Einstieg des Images läuft kurz als root (Rechte am Datenverzeichnis), dann als Benutzer postgres:
+    # nur die dafür nötigen Capabilities, Dateisystem schreibgeschützt bis auf Daten, Socket und /tmp.
+    read_only: true
+    tmpfs: [/tmp, /var/run/postgresql]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    cap_add: [CHOWN, DAC_OVERRIDE, FOWNER, SETGID, SETUID]
+    pids_limit: 1024
+    mem_limit: ${ESTRICHONE_MEMORY_POSTGRES:-4g}
     environment:
       POSTGRES_DB: ${POSTGRES_DB:-estrichone}
       POSTGRES_USER: ${POSTGRES_USER:-estrichone}
@@ -72,6 +96,7 @@ services:
   api:
     <<: [*api-image, *hardening]
     restart: unless-stopped
+    mem_limit: ${ESTRICHONE_MEMORY_API:-6g}
     environment:
       <<: *database
       EstrichOne__ServerName: ${ESTRICHONE_SERVER_NAME:-EstrichONE}
@@ -117,6 +142,7 @@ services:
   backup:
     <<: [*backup-image, *hardening]
     restart: unless-stopped
+    mem_limit: ${ESTRICHONE_MEMORY_BACKUP:-4g}
     environment:
       <<: *backup-environment
     volumes:
@@ -161,6 +187,7 @@ services:
     <<: [*archive-image, *hardening]
     profiles: [archive]
     restart: unless-stopped
+    mem_limit: ${ESTRICHONE_MEMORY_ARCHIVE:-2g}
     environment:
       ESTRICHONE_NAME: Archiv (im EstrichONE-Stack)
       ESTRICHONE_ADDRESS: archive
@@ -169,13 +196,18 @@ services:
     networks: [frontend]
 
   caddy:
-    <<: *web-image
+    <<: [*web-image, *hardening]
     restart: unless-stopped
+    # Einziger Dienst mit Ports nach außen; braucht nur das Recht, Ports unter 1024 zu öffnen.
+    cap_add: [NET_BIND_SERVICE]
+    mem_limit: ${ESTRICHONE_MEMORY_CADDY:-1g}
     # Caddy lauscht im Container auf denselben Ports wie außen, damit Weiterleitungen den richtigen Port nennen.
+    # ESTRICHONE_BIND (mit Doppelpunkt am Ende, z. B. „192.168.1.10:“) bindet nur an diese Adresse des Servers.
+    # Achtung: von Docker veröffentlichte Ports umgehen ufw/iptables-INPUT-Regeln (docs/sicherheit.md, Checkliste).
     ports:
-      - "${ESTRICHONE_HTTP_PORT:-80}:${ESTRICHONE_HTTP_PORT:-80}"
-      - "${ESTRICHONE_HTTPS_PORT:-443}:${ESTRICHONE_HTTPS_PORT:-443}"
-      - "${ESTRICHONE_HTTPS_PORT:-443}:${ESTRICHONE_HTTPS_PORT:-443}/udp"
+      - "${ESTRICHONE_BIND:-}${ESTRICHONE_HTTP_PORT:-80}:${ESTRICHONE_HTTP_PORT:-80}"
+      - "${ESTRICHONE_BIND:-}${ESTRICHONE_HTTPS_PORT:-443}:${ESTRICHONE_HTTPS_PORT:-443}"
+      - "${ESTRICHONE_BIND:-}${ESTRICHONE_HTTPS_PORT:-443}:${ESTRICHONE_HTTPS_PORT:-443}/udp"
     environment:
       ESTRICHONE_DOMAIN: ${ESTRICHONE_DOMAIN:-localhost}
       ESTRICHONE_HTTP_PORT: ${ESTRICHONE_HTTP_PORT:-80}
@@ -183,6 +215,10 @@ services:
       # direkt = Caddy macht HTTPS selbst; proxy = nur HTTP hinter einem vorhandenen Reverse Proxy (compose.proxy.yml)
       ESTRICHONE_MODE: ${ESTRICHONE_MODE:-direkt}
       ESTRICHONE_TRUSTED_PROXIES: ${ESTRICHONE_TRUSTED_PROXIES:-127.0.0.1/32}
+      # Rate-Limits je Client-Adresse und Minute (deploy/Caddyfile)
+      ESTRICHONE_RATE_LOGIN: ${ESTRICHONE_RATE_LOGIN:-30}
+      ESTRICHONE_RATE_SESSION: ${ESTRICHONE_RATE_SESSION:-300}
+      ESTRICHONE_RATE_API: ${ESTRICHONE_RATE_API:-3000}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ${ESTRICHONE_DATA_DIR:-./data}/caddy/data:/data

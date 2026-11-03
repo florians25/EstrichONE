@@ -1,6 +1,8 @@
 # EstrichONE-Installer: richtet die Suite mit einem `docker run` ein bzw. aktualisiert sie (siehe install.sh).
 # Build-Kontext ist die Repository-Wurzel.
-FROM docker:28-cli
+# Docker-CLI mit Compose-Plugin; Digest gepinnt, Alpine-Pakete beim Bau aktualisiert.
+FROM docker:29.9.2-cli@sha256:5e6baf67325a79f64ed3bed6863954d5e05d0f3d4e57cbdb14809346814bbfdb
+RUN apk upgrade --no-cache
 ARG ESTRICHONE_VERSION=dev
 ENV INSTALLER_VERSION=${ESTRICHONE_VERSION}
 COPY deploy/compose.yml deploy/compose.proxy.yml docker/installer/compose.override.yml /installer/

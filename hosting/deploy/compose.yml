@@ -44,7 +44,7 @@ services:
     networks: [hosting]
 
   proxy:
-    image: ${HOSTING_PROXY_IMAGE:-caddy:2}
+    image: ${HOSTING_PROXY_IMAGE:-caddy:2.11.7@sha256:36c24ad91a7ff7bc4c87fe22bfa8df3c4b18da0773d73fc12ee2c52b98c0bb7e}
     container_name: estrichone-hosting-proxy
     restart: unless-stopped
     # Nur mit COMPOSE_PROFILES=caddy (Standard); bei externem Proxy (Nginx Proxy Manager) entfällt dieser Dienst.

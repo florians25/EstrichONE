@@ -1,0 +1,73 @@
+name: Image-Scan
+
+# Alle ausgelieferten Images bauen und mit Trivy prüfen (docs/sicherheit.md, Betrieb):
+# Fehlschlag bei KRITISCHEN Schwachstellen, für die es eine Korrektur gibt (--ignore-unfixed); HOCH wird gemeldet.
+# Nächtlich zusätzlich gegen die aktuelle Schwachstellen-Datenbank (neue CVEs in gepinnten Basis-Images → Dependabot/Update).
+on:
+  schedule:
+    - cron: "41 3 * * *"
+  workflow_dispatch: {}
+  push:
+    branches: ["**", "!dependabot/**"]
+    paths: ["backend/src/**", "backend/Directory.*.props", "web/package*.json", "hosting/**", "docker/**", "deploy/**", "global.json", ".github/workflows/images.yml"]
+  pull_request:
+    paths: ["backend/src/**", "backend/Directory.*.props", "web/package*.json", "hosting/**", "docker/**", "deploy/**", "global.json", ".github/workflows/images.yml"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: images-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Trivy als Image mit festem Digest (keine Action mit verschiebbarem Tag).
+  TRIVY: aquasec/trivy:0.76.1@sha256:790fd66d1697395d8693d1acaa1ea702406a20f109b6fc7bac8db623eca6c06c
+
+jobs:
+  scan:
+    name: Trivy (${{ matrix.image }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [api, web, backup, archive, backup-target, installer, hosting]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Image bauen
+        run: |
+          file="docker/${{ matrix.image }}.Dockerfile"
+          [ "${{ matrix.image }}" = installer ] && file=docker/installer/Dockerfile
+          docker build -q -f "$file" -t "estrichone/${{ matrix.image }}:scan" .
+      - name: Schwachstellen-Datenbank zwischenspeichern
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/trivy
+          key: trivy-db-${{ github.run_id }}
+          restore-keys: trivy-db-
+      - name: Kritische, behebbare Schwachstellen (Fehlschlag)
+        run: |
+          mkdir -p ~/.cache/trivy
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ~/.cache/trivy:/root/.cache/trivy "$TRIVY" image \
+            --scanners vuln --severity CRITICAL --ignore-unfixed --exit-code 1 --no-progress --timeout 15m \
+            "estrichone/${{ matrix.image }}:scan"
+      - name: Hohe Schwachstellen (nur Bericht)
+        if: always()
+        run: |
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v ~/.cache/trivy:/root/.cache/trivy "$TRIVY" image \
+            --scanners vuln --severity HIGH --ignore-unfixed --exit-code 0 --no-progress --skip-db-update \
+            "estrichone/${{ matrix.image }}:scan" | tee "trivy-${{ matrix.image }}.txt"
+
+  upstream:
+    name: Trivy (unveränderte Fremd-Images, nur Bericht)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+      - name: PostgreSQL-Image aus deploy/compose.yml
+        run: |
+          image="$(sed -n 's/^    image: \(postgres:.*\)$/\1/p' deploy/compose.yml)"
+          echo "Prüfe $image"
+          docker run --rm -v /var/run/docker.sock:/var/run/docker.sock "$TRIVY" image \
+            --scanners vuln --severity CRITICAL,HIGH --ignore-unfixed --exit-code 0 --no-progress --timeout 15m "$image"
