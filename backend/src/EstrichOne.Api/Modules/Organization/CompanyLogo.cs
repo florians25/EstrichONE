@@ -117,11 +117,21 @@ internal static class CompanyLogoEndpoints
             }
         }
 
+        // Nur PNG, JPEG, WebP (Magic Bytes) und keine Bildbomben – SVG & Co. erreichen libvips gar nicht erst.
+        var bytes = buffer.ToArray();
+        var isImage = bytes is [0x89, (byte)'P', (byte)'N', (byte)'G', ..] or [0xFF, 0xD8, 0xFF, ..]
+            or [(byte)'R', (byte)'I', (byte)'F', (byte)'F', _, _, _, _, (byte)'W', (byte)'E', (byte)'B', (byte)'P', ..];
+        if (!isImage || !Infrastructure.Media.ImageSafety.IsWithinLimits(bytes))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity, title: "Kein Bild",
+                detail: "Bitte ein Logo als PNG, JPEG oder WebP hochladen (höchstens 100 Megapixel).", extensions: new Dictionary<string, object?> { ["code"] = "INVALID_IMAGE" });
+        }
+
         byte[] png;
         int width, height;
         try
         {
-            using var image = Image.ThumbnailBuffer(buffer.ToArray(), 1200, height: 400, size: Enums.Size.Down);
+            using var image = Image.ThumbnailBuffer(bytes, 1200, height: 400, size: Enums.Size.Down);
             png = image.PngsaveBuffer(compression: 9, keep: Enums.ForeignKeep.None);
             width = image.Width;
             height = image.Height;

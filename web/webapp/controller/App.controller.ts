@@ -273,6 +273,7 @@ export default class AppController extends BaseController {
 				new MenuItem({ text: this.t("settings.title"), icon: "sap-icon://action-settings", press: () => openSettings() }),
 				new MenuItem({ text: this.t("inbox.preferences"), icon: "sap-icon://bell", press: () => openNotificationPreferences() }),
 				new MenuItem({ text: this.t("password.title"), icon: "sap-icon://key", press: () => this.nav("/konto/passwort") }),
+				new MenuItem({ text: this.t("security.title"), icon: "sap-icon://shield", press: () => this.nav("/konto/sicherheit") }),
 				new MenuItem({ text: this.t("shell.signOut"), icon: "sap-icon://log", startsSection: true, press: () => void this.signOut() }),
 			],
 			// Erst nach der Auswahl aufräumen (das Ereignis kommt nach dem Schließen).

@@ -47,6 +47,7 @@ const groups: { label: string; tiles: Tile[] }[] = [
 		{ label: "Sicherung", icon: "sap-icon://upload-to-cloud", to: "/system/sicherung", permission: "backup.manage" },
 		{ label: "Protokoll", icon: "sap-icon://activities", to: "/system/protokoll", permission: "audit.read" },
 		{ label: "Passwort ändern", icon: "sap-icon://key", to: "/konto/passwort" },
+		{ label: "Anmeldung und Sicherheit", icon: "sap-icon://shield", to: "/konto/sicherheit" },
 	] },
 ];
 

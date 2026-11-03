@@ -36,6 +36,8 @@ jobs:
           path: ~/.ui5
           key: ui5-${{ hashFiles('web/ui5.yaml') }}
       - run: npm ci
+      - name: Bekannte Schwachstellen (npm audit – Laufzeit ab „moderate“, Build-Werkzeuge ab „high“)
+        run: npm run audit
       - name: Typprüfung (TypeScript, OpenUI5-Typen)
         run: npm run lint
       - name: Unit-Tests (Vitest)

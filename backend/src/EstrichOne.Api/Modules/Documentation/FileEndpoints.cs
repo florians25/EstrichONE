@@ -488,6 +488,8 @@ internal static class FileEndpoints
             "Der Inhalt passt nicht zur angekündigten Prüfsumme. Bitte erneut hochladen."),
         FileFailure.TypeNotAllowed => Problem(StatusCodes.Status422UnprocessableEntity, "FILE_TYPE_NOT_ALLOWED",
             "Dieser Dateityp ist nicht erlaubt."),
+        FileFailure.ImageTooLarge => Problem(StatusCodes.Status422UnprocessableEntity, "IMAGE_TOO_LARGE",
+            $"Das Bild ist zu groß (höchstens {Infrastructure.Media.ImageSafety.MaxPixels / 1_000_000} Megapixel, Kante bis {Infrastructure.Media.ImageSafety.MaxEdge} Pixel)."),
         _ => Problem(StatusCodes.Status400BadRequest, "BAD_REQUEST", "Ungültige Anfrage"),
     };
 

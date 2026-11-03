@@ -10,7 +10,7 @@ namespace EstrichOne.Api.Modules.Access;
 /// <summary>Kontoanlage und Onboarding-Unterlagen für den Personalstamm (nutzt Konten, Rollen und den Zugangsbrief).</summary>
 internal sealed class UserOnboarding(
     EstrichOneDbContext db, IUserAccounts accounts, IRoleAssignments roles, AccessLetterService letters, IMailService mail,
-    ICurrentUser current, IAuditLog audit) : IUserOnboarding
+    ICurrentUser current, IAuditLog audit, PrivilegeGuard guard) : IUserOnboarding
 {
     public string ServerUrl(HttpRequest request) => letters.ServerUrl(request);
 
@@ -21,6 +21,11 @@ internal sealed class UserOnboarding(
         if (ids.Count == 0 || await db.Set<Role>().CountAsync(r => ids.Contains(r.Id), cancellationToken) != ids.Count)
         {
             return new OnboardingAccount(null, null, null, "UNKNOWN_ROLE", "Bitte mindestens eine vorhandene Rolle wählen.");
+        }
+
+        if (!await guard.MayAssignRolesAsync(Guid.Empty, ids, cancellationToken))
+        {
+            return new OnboardingAccount(null, null, null, "PRIVILEGE_ESCALATION", "Sie können nur Rollen vergeben, deren Rechte Sie selbst vollständig haben.");
         }
 
         var password = accounts.GenerateOneTimePassword();
@@ -57,6 +62,11 @@ internal sealed class UserOnboarding(
         if (user is null)
         {
             return new OnboardingAccount(null, null, null, "USER_NOT_FOUND", "Benutzerkonto nicht gefunden.");
+        }
+
+        if (!await guard.MayManageUserAsync(userId, cancellationToken))
+        {
+            return new OnboardingAccount(null, null, null, "PRIVILEGE_ESCALATION", "Sie können nur Konten verwalten, deren Rechte Sie selbst vollständig haben.");
         }
 
         var password = await accounts.ResetPasswordAsync(userId, cancellationToken);

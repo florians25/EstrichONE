@@ -11,13 +11,27 @@
 				text="{i18n>login.setupRequired}">
 				<link><Link text="{i18n>login.setupLink}" href="/einrichtung"/></link>
 			</MessageStrip>
-			<Label text="{i18n>login.user}" labelFor="loginUser" required="true"/>
-			<Input id="loginUser" value="{view>/login}" valueLiveUpdate="true" width="100%" submit=".onSubmit">
-				<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
-			</Input>
-			<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
-			<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit"/>
-			<CheckBox id="loginRemember" text="{i18n>login.remember}" selected="{view>/remember}" class="sapUiTinyMarginTop"/>
+			<VBox visible="{= !${view>/needCode} }">
+				<Label text="{i18n>login.user}" labelFor="loginUser" required="true"/>
+				<Input id="loginUser" value="{view>/login}" valueLiveUpdate="true" width="100%" submit=".onSubmit">
+					<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
+				</Input>
+				<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
+				<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit"/>
+				<CheckBox id="loginRemember" text="{i18n>login.remember}" selected="{view>/remember}" class="sapUiTinyMarginTop"/>
+			</VBox>
+			<VBox visible="{view>/needCode}">
+				<Text text="{view>/login}" class="eoMuted"/>
+				<Label text="{i18n>login.code}" labelFor="loginCode" required="true" class="sapUiSmallMarginTop"/>
+				<Input id="loginCode" value="{view>/code}" valueLiveUpdate="true" width="100%" maxLength="32" submit=".onSubmit">
+					<customData>
+						<core:CustomData key="autocomplete" value="one-time-code" writeToDom="true"/>
+						<core:CustomData key="inputmode" value="text" writeToDom="true"/>
+					</customData>
+				</Input>
+				<Text text="{i18n>login.codeHint}" class="eoHelpText"/>
+				<Link text="{i18n>login.codeBack}" press=".onCodeBack" class="sapUiTinyMarginTop"/>
+			</VBox>
 			<MessageStrip id="loginError" text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginTop">
 				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
 			</MessageStrip>

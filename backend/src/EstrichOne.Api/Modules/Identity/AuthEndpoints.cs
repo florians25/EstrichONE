@@ -10,11 +10,17 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Identity;
 
+/// <param name="TwoFactorCode">
+/// Nur bei Konten mit Zwei-Faktor-Anmeldung: 6-stelliger Code aus der Authenticator-App oder ein
+/// Wiederherstellungscode. Fehlt er, antwortet der Server mit 401 <c>TWO_FACTOR_REQUIRED</c>; der Client fragt den
+/// Code ab und sendet die Anmeldung erneut. Nur die Anmeldung braucht ihn – Erneuerungen (Refresh) nicht.
+/// </param>
 public sealed record LoginRequest(
     [property: Required, MaxLength(320)] string Login,
     [property: Required, MaxLength(PasswordPolicy.MaxLength)] string Password,
     ClientKind Client,
-    [property: MaxLength(100)] string? ClientName);
+    [property: MaxLength(100)] string? ClientName,
+    [property: MaxLength(32)] string? TwoFactorCode = null);
 
 /// <param name="DeviceSignature">Base64; Pflicht, wenn die Sitzung an ein Gerät gebunden ist.</param>
 public sealed record RefreshRequest(
@@ -85,24 +91,38 @@ internal static class AuthEndpoints
         LoginRequest request, LoginService login, HttpContext http, CancellationToken cancellationToken)
     {
         var result = await login.LoginAsync(request.Login, request.Password, request.Client, request.ClientName,
-            http.Connection.RemoteIpAddress?.ToString(), cancellationToken);
-
-        if (result.Failure == LoginFailure.LockedOut)
+            http.Connection.RemoteIpAddress?.ToString(), cancellationToken, twoFactorCode: request.TwoFactorCode);
+        if (LoginProblem(result, http) is { } problem)
         {
-            http.Response.Headers.RetryAfter = ((int)result.RetryAfter!.Value.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return Problem(StatusCodes.Status429TooManyRequests, "LOGIN_LOCKED",
-                "Zu viele Fehlversuche", "Die Anmeldung ist vorübergehend gesperrt. Bitte später erneut versuchen.");
-        }
-
-        if (result.Failure is not null)
-        {
-            return Problem(StatusCodes.Status401Unauthorized, "INVALID_CREDENTIALS",
-                "Anmeldung fehlgeschlagen", "Anmeldename oder Passwort ist nicht korrekt.");
+            return problem;
         }
 
         var tokens = result.Tokens!;
         return TypedResults.Ok(new TokenResponse(tokens.AccessToken, tokens.AccessTokenExpiresAt, tokens.RefreshToken,
             tokens.RefreshTokenExpiresAt, Summarize(result.User!), result.MustChangePassword));
+    }
+
+    /// <summary>Gemeinsame Fehlerantworten der Anmeldung (App und Browser).</summary>
+    internal static ProblemHttpResult? LoginProblem(LoginResult result, HttpContext http)
+    {
+        switch (result.Failure)
+        {
+            case null:
+                return null;
+            case LoginFailure.LockedOut:
+                http.Response.Headers.RetryAfter = ((int)result.RetryAfter!.Value.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
+                return Problem(StatusCodes.Status429TooManyRequests, "LOGIN_LOCKED",
+                    "Zu viele Fehlversuche", "Die Anmeldung ist vorübergehend gesperrt. Bitte später erneut versuchen.");
+            case LoginFailure.TwoFactorRequired:
+                return Problem(StatusCodes.Status401Unauthorized, "TWO_FACTOR_REQUIRED", "Bestätigungscode erforderlich",
+                    "Bitte den 6-stelligen Code aus der Authenticator-App oder einen Wiederherstellungscode eingeben.");
+            case LoginFailure.TwoFactorInvalid:
+                return Problem(StatusCodes.Status401Unauthorized, "TWO_FACTOR_INVALID", "Code nicht korrekt",
+                    "Der Bestätigungscode ist falsch oder abgelaufen. Bitte den aktuellen Code aus der App eingeben.");
+            default:
+                return Problem(StatusCodes.Status401Unauthorized, "INVALID_CREDENTIALS",
+                    "Anmeldung fehlgeschlagen", "Anmeldename oder Passwort ist nicht korrekt.");
+        }
     }
 
     private static async Task<Results<Ok<RefreshResponse>, ProblemHttpResult>> RefreshAsync(

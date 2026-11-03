@@ -48,16 +48,8 @@ builder.Services.AddModules(builder.Configuration);
 
 if (options.TrustForwardedHeaders)
 {
-    builder.Services.Configure<ForwardedHeadersOptions>(forwarded =>
-    {
-        forwarded.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
-        // Die API ist im Docker-Stack nur über das interne Netz erreichbar; der Proxy hat keine feste IP.
-        forwarded.KnownIPNetworks.Clear();
-        forwarded.KnownProxies.Clear();
-        // Hinter einem weiteren Proxy (Nginx Proxy Manager) lautet die Kette „Client, Proxy“. Caddy übernimmt fremde
-        // Einträge nur von ESTRICHONE_TRUSTED_PROXIES; im Direktbetrieb steht dort deshalb nur der Client.
-        forwarded.ForwardLimit = 2;
-    });
+    // Nur private Netze (Caddy im Docker-Netz, NPM im LAN) und EstrichOne:TrustedProxies dürfen die Client-Adresse setzen.
+    builder.Services.Configure<ForwardedHeadersOptions>(forwarded => ForwardedHeadersSetup.Configure(forwarded, options));
 }
 
 var app = builder.Build();
@@ -84,10 +76,20 @@ app.UseAuthentication();
 app.UseRateLimiter();
 app.UseAuthorization();
 app.UseSerilogRequestLogging(logging =>
+{
     logging.GetLevel = (context, _, exception) =>
         exception is not null || context.Response.StatusCode >= 500 ? Serilog.Events.LogEventLevel.Error
         : context.Request.Path.StartsWithSegments("/health") ? Serilog.Events.LogEventLevel.Verbose
-        : Serilog.Events.LogEventLevel.Information);
+        : Serilog.Events.LogEventLevel.Information;
+    // Öffentliche Abnahme-Links enthalten das Zugangstoken im Pfad – im Log nur maskiert.
+    logging.GetMessageTemplateProperties = (context, path, elapsed, status) =>
+    [
+        new Serilog.Events.LogEventProperty("RequestMethod", new Serilog.Events.ScalarValue(context.Request.Method)),
+        new Serilog.Events.LogEventProperty("RequestPath", new Serilog.Events.ScalarValue(LogRedaction.Path(path))),
+        new Serilog.Events.LogEventProperty("StatusCode", new Serilog.Events.ScalarValue(status)),
+        new Serilog.Events.LogEventProperty("Elapsed", new Serilog.Events.ScalarValue(elapsed)),
+    ];
+});
 
 app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false }).AllowAnonymous();
 app.MapHealthChecks("/health/ready", new HealthCheckOptions { Predicate = check => check.Tags.Contains("ready") }).AllowAnonymous();

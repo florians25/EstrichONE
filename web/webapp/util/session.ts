@@ -36,8 +36,11 @@ class Session {
 	}
 
 	private async loadPermissions(): Promise<void> {
-		const [list, settings, , chat] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true),
-			get<{ enabled: boolean }>("chat/status").catch(() => ({ enabled: false }))]);
+		const [list, settings, , chat, twoFactor] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true),
+			get<{ enabled: boolean }>("chat/status").catch(() => ({ enabled: false })),
+			get<{ restricted: boolean }>("auth/two-factor").catch(() => ({ restricted: false }))]);
+		// Zwei-Faktor-Pflicht für Administratoren noch nicht erfüllt: Hinweis in der Kopfzeile (Verwaltungsrechte ruhen).
+		this.model.setProperty("/twoFactorRestricted", twoFactor.restricted);
 		// Abgeschaltete Module (Einstellungen → Module): Rechte des Moduls ausblenden – Navigation, Reiter und Kacheln verschwinden.
 		const modules = { ...(settings?.settings.modules ?? { materials: true }), chat: chat.enabled };
 		const disabled = Object.entries(modules).filter(([, on]) => on === false).map(([key]) => `${key}.`);
@@ -73,8 +76,8 @@ class Session {
 		}
 	}
 
-	async signIn(login: string, password: string, rememberMe = false): Promise<void> {
-		const session = await post<WebSessionResponse>("auth/web/login", { login, password, rememberMe });
+	async signIn(login: string, password: string, rememberMe = false, twoFactorCode?: string): Promise<void> {
+		const session = await post<WebSessionResponse>("auth/web/login", { login, password, rememberMe, twoFactorCode });
 		this.model.setProperty("/user", session.user);
 		this.model.setProperty("/mustChangePassword", session.mustChangePassword);
 		await this.loadPermissions();

@@ -17,6 +17,8 @@ public sealed class AccessModule : IModule
         services.AddScoped<IDataInitializer, StandardRoles>();
         services.AddScoped<IRoleAssignments, RoleAssignments>();
         services.AddScoped<UserAdministration>();
+        services.AddScoped<PrivilegeGuard>();
+        services.AddScoped<ITwoFactorPolicy, TwoFactorPolicy>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)

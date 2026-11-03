@@ -6,8 +6,13 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Access;
 
-/// <summary>Lädt die Rechte des angemeldeten Benutzers einmal je Anfrage.</summary>
-internal sealed class UserPermissions(EstrichOneDbContext db, ICurrentUser currentUser) : IUserPermissions
+/// <summary>
+/// Lädt die Rechte des angemeldeten Benutzers einmal je Anfrage. Ist die Zwei-Faktor-Pflicht für Administratoren
+/// eingeschaltet und für dieses Konto noch keine Zwei-Faktor-Anmeldung eingerichtet, fehlen die Verwaltungsrechte
+/// (<see cref="Permissions.Privileged"/>), bis sie eingerichtet ist (Konto → Sicherheit).
+/// </summary>
+internal sealed class UserPermissions(EstrichOneDbContext db, ICurrentUser currentUser, Organization.Exports.ISystemSettings settings,
+    ITwoFactorState twoFactor) : IUserPermissions
 {
     private IReadOnlySet<string>? _cache;
 
@@ -24,7 +29,15 @@ internal sealed class UserPermissions(EstrichOneDbContext db, ICurrentUser curre
             .Join(db.Set<RoleGrant>(), userRole => userRole.RoleId, grant => grant.RoleId, (_, grant) => grant.Permission)
             .Distinct()
             .ToListAsync(cancellationToken);
-        _cache = codes.ToHashSet(StringComparer.Ordinal);
+        var granted = codes.ToHashSet(StringComparer.Ordinal);
+        if (granted.Overlaps(Permissions.Privileged)
+            && (await settings.GetAsync(cancellationToken)).Session.RequireTwoFactorForAdmins
+            && !await twoFactor.IsEnabledAsync(userId, cancellationToken))
+        {
+            granted.ExceptWith(Permissions.Privileged);
+        }
+
+        _cache = granted;
         return _cache;
     }
 }

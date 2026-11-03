@@ -40,7 +40,7 @@ public sealed class PasswordTests
 
     [Theory]
     [InlineData("kurz", "zu wenig Zeichen")]
-    [InlineData("passwort123", "verbreitet")]
+    [InlineData("passwort1234", "verbreitet")]
     [InlineData("aaaaaaaaaaaaaa", "verschiedenen")]
     [InlineData("m.huber-2026-xyz", "Anmeldenamen")]
     public void Policy_RejectsWeakPasswords(string password, string reasonFragment)

@@ -19,6 +19,9 @@ public enum FileFailure
     ChecksumMismatch,
     TypeNotAllowed,
     BauakteNotFound,
+
+    /// <summary>Bild mit zu vielen Bildpunkten (Schutz vor Bildbomben, siehe ImageSafety).</summary>
+    ImageTooLarge,
 }
 
 /// <summary>Ankündigen, Hochladen (auch in Teilen), Prüfen und Freigeben von Dateien.</summary>
@@ -176,6 +179,12 @@ public sealed class FileService(
         {
             storage.DiscardPartial(id);
             return (file, 0, FileFailure.TypeNotAllowed);
+        }
+
+        if (detected.StartsWith("image/", StringComparison.Ordinal) && !Infrastructure.Media.ImageSafety.IsFileWithinLimits(storage.PartialPath(id)))
+        {
+            storage.DiscardPartial(id);
+            return (file, 0, FileFailure.ImageTooLarge);
         }
 
         // Speicherschonend: Fotos/PDFs verdichten (Einstellungen → Speicher), danach Dubletten zusammenlegen.

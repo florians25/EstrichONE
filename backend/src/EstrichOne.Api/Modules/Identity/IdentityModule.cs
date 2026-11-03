@@ -3,6 +3,7 @@ using EstrichOne.Api.Infrastructure.Modules;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Identity.Passwords;
 using EstrichOne.Api.Modules.Identity.Sessions;
+using EstrichOne.Api.Modules.Identity.TwoFactor;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.RateLimiting;
@@ -18,6 +19,8 @@ public sealed class IdentityModule : IModule
         services.AddSingleton<PasswordHasher>();
         services.AddScoped<SessionService>();
         services.AddScoped<LoginService>();
+        services.AddScoped<TwoFactorService>();
+        services.AddScoped<ITwoFactorState>(provider => provider.GetRequiredService<TwoFactorService>());
         services.AddScoped<IUserAccounts, UserAccounts>();
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddScoped<ISessionDevices, SessionDevices>();
@@ -52,6 +55,8 @@ public sealed class IdentityModule : IModule
     {
         AuthEndpoints.Map(api);
         WebSessionEndpoints.Map(api);
+        TwoFactorEndpoints.Map(api);
+        SessionEndpoints.Map(api);
         DirectoryEndpoints.Map(api);
     }
 }

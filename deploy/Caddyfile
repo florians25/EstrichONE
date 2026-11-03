@@ -136,8 +136,10 @@
 		root * /srv
 		header {
 			# Strikte CSP (docs/reengineering/17): nur eigene Skripte; Inline-Styles erzeugt Ant Design selbst.
-			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; connect-src 'self'; font-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
-			Permissions-Policy "camera=(self), microphone=(self), geolocation=(self)"
+			# OpenUI5 läuft ohne 'unsafe-eval'; Inline-Styles setzt UI5 selbst. Kartenkacheln: beliebiger HTTPS-Kachelserver (img-src https:).
+			Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; media-src 'self' blob:; connect-src 'self'; font-src 'self'; worker-src 'self'; manifest-src 'self'; frame-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; object-src 'none'"
+			Permissions-Policy "camera=(self), microphone=(self), geolocation=(self), payment=(), usb=(), serial=(), bluetooth=(), hid=(), midi=(), display-capture=(), browsing-topics=()"
+			Cross-Origin-Opener-Policy "same-origin"
 			X-Frame-Options "DENY"
 		}
 		@immutable path *.js *.css *.woff2

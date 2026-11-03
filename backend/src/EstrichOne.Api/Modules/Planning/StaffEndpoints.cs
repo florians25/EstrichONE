@@ -541,6 +541,9 @@ internal static class StaffEndpoints
             return account.ErrorCode == "USER_EXISTS"
                 ? TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Benutzer existiert bereits", detail: account.Error,
                     extensions: new Dictionary<string, object?> { ["code"] = "USER_EXISTS" })
+                : account.ErrorCode == "PRIVILEGE_ESCALATION"
+                    ? TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden, title: "Nicht erlaubt", detail: account.Error,
+                        extensions: new Dictionary<string, object?> { ["code"] = "PRIVILEGE_ESCALATION" })
                 : account.ErrorCode == "USER_NOT_FOUND" ? NotFound("Benutzerkonto nicht gefunden") : Validation(account.Error ?? "Ungültige Angaben.");
         }
 

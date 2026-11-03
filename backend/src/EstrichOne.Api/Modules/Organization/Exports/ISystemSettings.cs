@@ -49,6 +49,12 @@ public sealed record SessionSettings
     public int RememberDays { get; init; } = 30;
     public int DeviceIdleDays { get; init; } = 90;
 
+    /// <summary>
+    /// Konten mit Verwaltungsrechten (Benutzer, Rollen, Einstellungen, Backup, Geräte, Protokoll, Archiv) erhalten diese
+    /// Rechte erst mit eingerichteter Zwei-Faktor-Anmeldung. Anmelden und Einrichten bleibt immer möglich.
+    /// </summary>
+    public bool RequireTwoFactorForAdmins { get; init; }
+
     public SessionSettings Normalize() => this with
     {
         IdleHours = Math.Clamp(IdleHours, 1, 168),
@@ -58,7 +64,7 @@ public sealed record SessionSettings
 }
 
 /// <summary>Kartenkacheln. Der Standard ist der OpenStreetMap-Server (Nutzungsbedingungen beachten).</summary>
-public sealed record MapSettings
+public sealed partial record MapSettings
 {
     public const string DefaultTileUrl = "https://tile.openstreetmap.org/{z}/{x}/{y}.png";
     public const string DefaultAttribution = "© <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a>-Mitwirkende";
@@ -75,10 +81,51 @@ public sealed record MapSettings
         return this with
         {
             TileUrl = valid ? url! : DefaultTileUrl,
-            Attribution = SystemSettings.Text(Attribution, 300) ?? DefaultAttribution,
+            Attribution = SafeAttribution(SystemSettings.Text(Attribution, 300)) ?? DefaultAttribution,
             MaxZoom = Math.Clamp(MaxZoom, 10, 22),
         };
     }
+
+    /// <summary>
+    /// Die Quellenangabe erscheint als HTML in der Karte (Leaflet). Erlaubt sind nur Text und Links
+    /// <c>&lt;a href="https://…"&gt;…&lt;/a&gt;</c>; alles andere wird maskiert (kein gespeichertes XSS über die Einstellungen).
+    /// Idempotent: bereits maskierte Zeichen bleiben unverändert.
+    /// </summary>
+    internal static string? SafeAttribution(string? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        var builder = new System.Text.StringBuilder();
+        var last = 0;
+        foreach (System.Text.RegularExpressions.Match match in AttributionLink().Matches(value))
+        {
+            builder.Append(Escape(value[last..match.Index]));
+            builder.Append("<a href=\"").Append(Escape(match.Groups[1].Value)).Append("\">").Append(Escape(match.Groups[2].Value)).Append("</a>");
+            last = match.Index + match.Length;
+        }
+
+        builder.Append(Escape(value[last..]));
+        return builder.ToString();
+    }
+
+    private static string Escape(string text) => EntityOrSpecial().Replace(text, m => m.Value switch
+    {
+        "<" => "&lt;",
+        ">" => "&gt;",
+        "\"" => "&quot;",
+        "'" => "&#39;",
+        "&" => "&amp;",
+        _ => m.Value, // vorhandene Entität (&copy; &amp; &#169;) unverändert
+    });
+
+    [System.Text.RegularExpressions.GeneratedRegex("<a\\s+href=\"(https://[^\"<>\\s]+)\"\\s*>([^<>]*)</a>", System.Text.RegularExpressions.RegexOptions.IgnoreCase)]
+    private static partial System.Text.RegularExpressions.Regex AttributionLink();
+
+    [System.Text.RegularExpressions.GeneratedRegex("&(#[0-9]{1,7}|#x[0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,31});|[<>\"'&]")]
+    private static partial System.Text.RegularExpressions.Regex EntityOrSpecial();
 }
 
 /// <summary>Nummernkreis der Bauakten: {JJJJ} Jahr, {JJ} Jahr zweistellig, {N…} laufende Nummer mit Mindeststellen.</summary>

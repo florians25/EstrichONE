@@ -75,7 +75,7 @@ public sealed partial class NoticesModule : IModule
             })
             .WithName("SetSystemNotices")
             .WithSummary("Systemhinweise vollständig ersetzen – nur Hosting-Konsole (Authorization: Bearer <Instanz-Schlüssel>)")
-            .AllowAnonymous();
+            .AllowAnonymous().RequireRateLimiting("auth");
 
         // Administratoren der Instanz (Recht settings.manage): eigene Hinweise und Wartung; die der Konsole nur lesen.
         var admin = notices.MapGroup("/admin").RequirePermission(Permissions.SettingsManage);

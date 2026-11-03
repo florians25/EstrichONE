@@ -72,11 +72,18 @@ internal static class AccessEndpoints
 
     private static async Task<Results<NoContent, ProblemHttpResult>> SetUserRolesAsync(
         Guid userId, SetUserRolesRequest request, EstrichOneDbContext db, IRoleAssignments assignments,
-        IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
+        IAuditLog audit, ICurrentUser currentUser, PrivilegeGuard guard, CancellationToken cancellationToken)
     {
         if (!await db.Set<User>().AnyAsync(user => user.Id == userId, cancellationToken))
         {
             return Problem(StatusCodes.Status404NotFound, "USER_NOT_FOUND", "Benutzer nicht gefunden");
+        }
+
+        // Weder Rollen mit fremden Rechten vergeben noch einem Konto mit höheren Rechten Rollen nehmen.
+        if (!await guard.MayAssignRolesAsync(userId, request.RoleIds.Distinct().ToList(), cancellationToken)
+            || !await guard.MayManageUserAsync(userId, cancellationToken))
+        {
+            return PrivilegeGuard.Denied();
         }
 
         try
@@ -99,7 +106,8 @@ internal static class AccessEndpoints
     }
 
     private static async Task<Results<Ok<RoleResponse>, ProblemHttpResult>> SaveRoleAsync(
-        Guid id, SaveRoleRequest request, EstrichOneDbContext db, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
+        Guid id, SaveRoleRequest request, EstrichOneDbContext db, IAuditLog audit, ICurrentUser currentUser, PrivilegeGuard guard,
+        CancellationToken cancellationToken)
     {
         var name = request.Name.Trim();
         if (name.Length == 0)
@@ -120,6 +128,12 @@ internal static class AccessEndpoints
 
         var role = await db.Set<Role>().Include(r => r.Permissions).SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
         var before = role?.Permissions.Select(p => p.Permission).ToHashSet(StringComparer.Ordinal) ?? [];
+
+        // Nur Rechte vergeben bzw. Rollen ändern, die man selbst vollständig hat (keine Rechteausweitung über Rollen).
+        if (!await guard.CoversAsync(request.Permissions.Where(p => !before.Contains(p)), cancellationToken))
+        {
+            return PrivilegeGuard.Denied();
+        }
         if (role is null)
         {
             role = Role.Create(id, name, request.Description?.Trim(), isSystem: false, request.Permissions.Distinct());

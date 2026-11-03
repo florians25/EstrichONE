@@ -3,6 +3,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Documentation.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -59,6 +60,16 @@ internal static class ArchiveEndpoints
             .RequirePermission(Permissions.BauaktenEdit);
         archive.MapGet("/files/{fileId:guid}", FileRecordAsync).WithName("GetFileArchiveRecord").RequirePermission(Permissions.BauaktenRead);
         archive.MapPost("/files/{fileId:guid}", QueueFileAsync).WithName("ArchiveFile").RequirePermission(Permissions.BauaktenEdit);
+    }
+
+    /// <summary>Datei vorhanden und ihre Bauakte sichtbar (Dateien ohne Bauakte: nur mit Recht zum Lesen aller Bauakten).</summary>
+    private static async Task<bool> CanSeeFileAsync(Guid fileId, IArchivableDocuments documents, IBauakteAccess access, IUserPermissions permissions,
+        CancellationToken cancellationToken)
+    {
+        var document = await documents.Query().Where(d => d.FileId == fileId).Select(d => new { d.BauakteId }).SingleOrDefaultAsync(cancellationToken);
+        return document is not null && (document.BauakteId is { } bauakteId
+            ? await access.CanReadAsync(bauakteId, cancellationToken)
+            : await permissions.HasAsync(Permissions.BauaktenReadAll, cancellationToken));
     }
 
     internal static ArchiveRecordDto ToDto(ArchiveRecord r) => new(r.Id, r.FileId, r.BauakteId, r.DocumentType,
@@ -255,8 +266,14 @@ internal static class ArchiveEndpoints
     }
 
     private static async Task<Results<Ok<ArchiveRecordDto>, NoContent, ProblemHttpResult>> FileRecordAsync(Guid fileId,
-        EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken)
+        EstrichOneDbContext db, IBauakteAccess access, IArchivableDocuments documents, IUserPermissions permissions, CancellationToken cancellationToken)
     {
+        // Erst Sichtbarkeit der Datei prüfen – sonst verrät 204/404, ob eine fremde Datei archiviert ist.
+        if (!await CanSeeFileAsync(fileId, documents, access, permissions, cancellationToken))
+        {
+            return Problem(404, "NOT_FOUND", "Nicht gefunden", "Datei nicht gefunden.");
+        }
+
         var record = await db.Set<ArchiveRecord>().AsNoTracking().SingleOrDefaultAsync(r => r.FileId == fileId, cancellationToken);
         if (record is null)
         {
@@ -293,8 +310,14 @@ internal static class ArchiveEndpoints
     }
 
     private static async Task<Results<Ok<ArchiveRecordDto>, ProblemHttpResult>> QueueFileAsync(Guid fileId, ArchiveService service,
-        IBauakteAccess access, ICurrentUser user, ArchiveSignal signal, CancellationToken cancellationToken)
+        IBauakteAccess access, IArchivableDocuments documents, IUserPermissions permissions, ICurrentUser user, ArchiveSignal signal,
+        CancellationToken cancellationToken)
     {
+        // Vor dem Einreihen prüfen: fremde Dateien dürfen nicht archiviert (und damit unlöschbar) werden.
+        if (!await CanSeeFileAsync(fileId, documents, access, permissions, cancellationToken))
+        {
+            return Problem(404, "NOT_FOUND", "Nicht gefunden", "Datei nicht gefunden oder noch nicht vollständig hochgeladen.");
+        }
         if (await service.ConnectionAsync(cancellationToken) is null)
         {
             return NotConnected();

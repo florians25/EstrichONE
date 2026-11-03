@@ -22,6 +22,8 @@
     <!-- Schrift (SIL OFL 1.1) und Logo für PDF-Ausdrucke -->
     <EmbeddedResource Include="Infrastructure/Pdf/Assets/*.ttf" LogicalName="EstrichOne.Pdf.%(Filename)%(Extension)" />
     <EmbeddedResource Include="Infrastructure/Pdf/Assets/*.png" LogicalName="EstrichOne.Pdf.%(Filename)%(Extension)" />
+    <!-- Häufige/geleakte Passwörter (zxcvbn-ts, MIT) für PasswordPolicy -->
+    <EmbeddedResource Include="Modules/Identity/Passwords/Assets/common-passwords.txt.gz" LogicalName="EstrichOne.Identity.common-passwords.txt.gz" />
   </ItemGroup>
   <ItemGroup>
     <InternalsVisibleTo Include="EstrichOne.Api.Tests" />

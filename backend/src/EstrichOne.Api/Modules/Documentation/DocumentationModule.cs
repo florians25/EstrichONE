@@ -10,6 +10,8 @@ public sealed class DocumentationModule : IModule
 {
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
+        // libvips: nur JPEG/PNG/WebP/HEIF-Lader zulassen (SVG, PDF, TIFF … gesperrt).
+        Infrastructure.Media.ImageSafety.EnsureHardened();
         services.AddOptions<FileStorageSettings>().Bind(configuration.GetSection(FileStorageSettings.SectionName));
         services.AddSingleton<LocalFileStorage>();
         services.AddSingleton(Channel.CreateUnbounded<Guid>(new UnboundedChannelOptions { SingleReader = true }));

@@ -80,7 +80,7 @@ internal static class SystemSettingsEndpoints
         settings.MapGet("/", GetAsync).WithName("GetSystemSettings")
             .WithSummary("Einstellungen der Installation (für alle Angemeldeten lesbar: Karte, Darstellung, Vorgaben)");
         settings.MapPut("/", SaveAsync).WithName("SaveSystemSettings")
-            .ProducesProblem(StatusCodes.Status412PreconditionFailed)
+            .ProducesProblem(StatusCodes.Status412PreconditionFailed).ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.SettingsManage);
     }
 
@@ -91,9 +91,19 @@ internal static class SystemSettingsEndpoints
     }
 
     private static async Task<Results<Ok<SystemSettingsResponse>, ProblemHttpResult>> SaveAsync(
-        SaveSystemSettingsRequest request, EstrichOneDbContext db, IAuditLog audit, ICurrentUser currentUser, CancellationToken cancellationToken)
+        SaveSystemSettingsRequest request, EstrichOneDbContext db, IAuditLog audit, ICurrentUser currentUser, ITwoFactorState twoFactor,
+        CancellationToken cancellationToken)
     {
         var row = await db.Set<SystemSettingsRow>().SingleOrDefaultAsync(cancellationToken);
+        // Zwei-Faktor-Pflicht nur einschalten, wer sie selbst nutzt – sonst sperrt man sich die Einstellungen sofort selbst.
+        if (request.Settings.Session?.RequireTwoFactorForAdmins == true && !SystemSettingsStore.Parse(row?.Data).Session.RequireTwoFactorForAdmins
+            && !await twoFactor.IsEnabledAsync(currentUser.UserId, cancellationToken))
+        {
+            return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Erst selbst einrichten",
+                detail: "Bitte zuerst für das eigene Konto die Zwei-Faktor-Anmeldung einrichten (Konto → Anmeldung und Sicherheit), dann die Pflicht einschalten.",
+                extensions: new Dictionary<string, object?> { ["code"] = "TWO_FACTOR_SETUP_FIRST" });
+        }
+
         if (row is not null && request.Version is { } version && version != row.Version)
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status412PreconditionFailed, title: "Geändert",

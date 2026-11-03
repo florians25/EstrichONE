@@ -14,6 +14,7 @@ export const routes: RouteDef[] = [
 	{ name: "chatConversation", pattern: "/chat/:id", view: "Chat", permission: "chat.use", nav: "chat", title: "nav.chat" },
 	{ name: "messages", pattern: "/verwaltung/nachrichten", view: "admin.Messages", permission: "notifications.send", nav: "messages", title: "nav.messages" },
 	{ name: "password", pattern: "/konto/passwort", view: "auth.ChangePassword", title: "password.title" },
+	{ name: "security", pattern: "/konto/sicherheit", view: "auth.Security", title: "security.title" },
 	{ name: "today", pattern: "/tagesuebersicht", view: "Today", permission: "bauakten.read", nav: "today", title: "nav.today" },
 	{ name: "siteMap", pattern: "/bauakten/karte", view: "SiteMap", permission: "bauakten.read", nav: "siteMap", title: "nav.siteMap" },
 	{ name: "bauakten", pattern: "/bauakten", view: "bauakte.Fcl", permission: "bauakten.read", nav: "bauakten", title: "nav.bauakten" },

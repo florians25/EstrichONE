@@ -22,6 +22,13 @@ public static class AuditActions
     public const string RefreshTokenRecovered = "auth.refresh.recovered";
     public const string PasswordChanged = "auth.password.changed";
     public const string SessionRevoked = "auth.session.revoked";
+    public const string SessionsRevokedAll = "auth.session.revoked_all";
+    public const string BruteForceDetected = "auth.login.attack_detected";
+    public const string TwoFactorEnabled = "auth.two_factor.enabled";
+    public const string TwoFactorDisabled = "auth.two_factor.disabled";
+    public const string TwoFactorReset = "auth.two_factor.reset";
+    public const string RecoveryCodesRenewed = "auth.two_factor.recovery_codes_renewed";
+    public const string RecoveryCodeUsed = "auth.two_factor.recovery_code_used";
 }
 
 /// <summary>Ein gespeichertes Ereignis (Lesesicht, z. B. für den Verlauf einer Bauakte).</summary>

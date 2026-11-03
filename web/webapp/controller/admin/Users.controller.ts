@@ -126,6 +126,15 @@ export default class Users extends BaseController {
 		if (result) { this.model().setProperty("/oneTime", { ...result, reset: true }); void this.load(); }
 	}
 
+	/** Handy verloren: Zwei-Faktor-Anmeldung entfernen; die Person meldet sich mit Passwort an und richtet sie neu ein. */
+	async onResetTwoFactor(e: Event): Promise<void> {
+		const u = this.row(e);
+		if (!(await this.confirm("Die Person wird auf allen Geräten abgemeldet und kann sich danach nur mit dem Passwort anmelden, bis sie die Zwei-Faktor-Anmeldung neu einrichtet. Nur nach sicherer Prüfung der Identität (z. B. persönlich oder per Rückruf).",
+			{ title: `Zwei-Faktor-Anmeldung von ${u.displayName} zurücksetzen?`, action: "Zurücksetzen", danger: true }))) return;
+		await this.run(() => post(`users/${u.id}/two-factor/reset`), "Zwei-Faktor-Anmeldung zurückgesetzt");
+		void this.load();
+	}
+
 	async onLock(e: Event): Promise<void> {
 		const u = this.row(e);
 		if (!(await this.confirm("Die Person wird sofort auf allen Geräten abgemeldet.", { title: `${u.displayName} sperren?`, action: "Sperren", danger: true }))) return;

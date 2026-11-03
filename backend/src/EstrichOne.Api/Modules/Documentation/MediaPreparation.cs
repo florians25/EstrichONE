@@ -14,6 +14,11 @@ internal sealed partial class MediaPreparation(MediaOptimizer optimizer, Organiz
             return null;
         }
 
+        if (detected != "application/pdf" && !Infrastructure.Media.ImageSafety.IsWithinLimits(content))
+        {
+            return null;
+        }
+
         var media = (await systemSettings.GetAsync(cancellationToken)).Media;
         if (detected == "application/pdf")
         {
@@ -55,6 +60,11 @@ internal sealed partial class MediaPreparation(MediaOptimizer optimizer, Organiz
 
     public byte[]? Square(byte[] content, int size)
     {
+        if (!Infrastructure.Media.ImageSafety.IsWithinLimits(content))
+        {
+            return null;
+        }
+
         try
         {
             using var image = Image.ThumbnailBuffer(content, size, height: size, crop: Enums.Interesting.Centre);

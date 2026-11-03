@@ -30,7 +30,8 @@ public sealed class SmtpSender(IDataProtectionProvider protection)
             message.ReplyTo.Add(MailboxAddress.Parse(account.ReplyTo));
         }
 
-        message.Subject = subject;
+        // Betreff aus Vorlagen mit Benutzereingaben: keine Zeilenumbrüche (keine Kopfzeilen-Injektion).
+        message.Subject = subject.ReplaceLineEndings(" ");
         var builder = new BodyBuilder { TextBody = body };
         foreach (var attachment in attachments)
         {

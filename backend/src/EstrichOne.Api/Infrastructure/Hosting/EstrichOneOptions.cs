@@ -20,6 +20,13 @@ public sealed class EstrichOneOptions
     /// </summary>
     public bool TrustForwardedHeaders { get; set; }
 
+    /// <summary>
+    /// Zusätzliche vertrauenswürdige Proxys (IP oder CIDR, durch Komma/Leerzeichen getrennt), deren
+    /// <c>X-Forwarded-For</c> übernommen wird. Private Netze und Loopback sind immer vertrauenswürdig
+    /// (Caddy im Docker-Netz, Nginx Proxy Manager im LAN); nur ein Proxy mit öffentlicher Adresse gehört hierher.
+    /// </summary>
+    public string? TrustedProxies { get; set; }
+
     /// <summary>OpenAPI-Beschreibung unter <c>/api/openapi/v1.json</c> ausliefern.</summary>
     public bool ExposeOpenApi { get; set; } = true;
 

@@ -88,6 +88,16 @@ public static class Permissions
     ];
 
     public static bool Exists(string code) => All.Any(permission => permission.Code == code);
+
+    /// <summary>
+    /// Verwaltungsrechte mit Zugriff auf Konten, Rechte, Geräte, Sicherungen und Systemeinstellungen. Ist in den
+    /// Einstellungen „Zwei-Faktor-Anmeldung für Administratoren“ eingeschaltet, wirken sie erst mit eingerichteter
+    /// Zwei-Faktor-Anmeldung.
+    /// </summary>
+    public static IReadOnlySet<string> Privileged { get; } = new HashSet<string>(StringComparer.Ordinal)
+    {
+        UsersManage, RolesManage, SettingsManage, BackupManage, DevicesManage, DevicesWipe, AuditRead, ArchiveUnlock,
+    };
 }
 
 public sealed record PermissionInfo(string Code, string Group, string Description);

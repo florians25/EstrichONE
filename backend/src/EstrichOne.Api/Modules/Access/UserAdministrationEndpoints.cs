@@ -10,7 +10,7 @@ namespace EstrichOne.Api.Modules.Access;
 
 public sealed record UserListItem(
     Guid Id, string DisplayName, string UserName, string? Email, string? Phone, bool IsActive, DateTimeOffset? LastLoginAt,
-    IReadOnlyList<Guid> RoleIds, long Version);
+    IReadOnlyList<Guid> RoleIds, long Version, bool TwoFactorEnabled = false);
 
 public sealed record CreateUserRequest(
     [property: Required, MaxLength(User.MaxNameLength)] string DisplayName,
@@ -55,6 +55,29 @@ internal static class UserAdministrationEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict);
         users.MapPost("/{id:guid}/activate", (Guid id, UserAdministration admin, CancellationToken ct) => admin.SetActiveAsync(id, true, ct))
             .WithName("ActivateUser").ProducesProblem(StatusCodes.Status404NotFound);
+        users.MapPost("/{id:guid}/two-factor/reset", ResetTwoFactorAsync).WithName("ResetUserTwoFactor")
+            .WithSummary("Zwei-Faktor-Anmeldung zurücksetzen (Handy verloren); beendet alle Sitzungen des Benutzers")
+            .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status404NotFound);
+    }
+
+    private static async Task<Results<Ok<UserListItem>, ProblemHttpResult>> ResetTwoFactorAsync(
+        Guid id, ITwoFactorState twoFactor, UserAdministration admin, EstrichOneDbContext db, ICurrentUser current, IAuditLog audit,
+        PrivilegeGuard guard, CancellationToken cancellationToken)
+    {
+        if (!await db.Set<User>().AnyAsync(u => u.Id == id, cancellationToken))
+        {
+            return NotFound();
+        }
+
+        if (!await guard.MayManageUserAsync(id, cancellationToken))
+        {
+            return PrivilegeGuard.Denied();
+        }
+
+        await twoFactor.ResetAsync(id, cancellationToken);
+        audit.Record(AuditActions.TwoFactorReset, current.UserId, "user", id.ToString());
+        await db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok((await admin.ListAsync(id, cancellationToken)).Single());
     }
 
     private static async Task<Ok<List<UserListItem>>> ListAsync(UserAdministration admin, CancellationToken cancellationToken) =>
@@ -62,12 +85,17 @@ internal static class UserAdministrationEndpoints
 
     private static async Task<Results<Created<UserWithPassword>, ProblemHttpResult>> CreateAsync(
         CreateUserRequest request, IUserAccounts accounts, IRoleAssignments roles, UserAdministration admin, EstrichOneDbContext db,
-        ICurrentUser current, IAuditLog audit, AccessLetterService letters, HttpRequest http, CancellationToken cancellationToken)
+        ICurrentUser current, IAuditLog audit, AccessLetterService letters, PrivilegeGuard guard, HttpRequest http, CancellationToken cancellationToken)
     {
         var roleIds = request.RoleIds.Distinct().ToList();
         if (await db.Set<Role>().CountAsync(r => roleIds.Contains(r.Id), cancellationToken) != roleIds.Count)
         {
             return Problem(StatusCodes.Status422UnprocessableEntity, "UNKNOWN_ROLE", "Mindestens eine der Rollen existiert nicht.");
+        }
+
+        if (!await guard.MayAssignRolesAsync(Guid.Empty, roleIds, cancellationToken))
+        {
+            return PrivilegeGuard.Denied();
         }
 
         var password = accounts.GenerateOneTimePassword();
@@ -104,12 +132,18 @@ internal static class UserAdministrationEndpoints
 
     private static async Task<Results<Ok<UserListItem>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateUserRequest request, UserAdministration admin, EstrichOneDbContext db, ICurrentUser current, IAuditLog audit,
-        CancellationToken cancellationToken)
+        PrivilegeGuard guard, CancellationToken cancellationToken)
     {
         var user = await db.Set<User>().SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (user is null)
         {
             return NotFound();
+        }
+
+        // E-Mail ändern erlaubt „Passwort vergessen“-artige Übernahmen – nur bei Konten ohne höhere Rechte.
+        if (!await guard.MayManageUserAsync(id, cancellationToken))
+        {
+            return PrivilegeGuard.Denied();
         }
 
         var normalizedEmail = string.IsNullOrWhiteSpace(request.Email) ? null : User.Normalize(request.Email);
@@ -127,12 +161,17 @@ internal static class UserAdministrationEndpoints
 
     private static async Task<Results<Ok<UserWithPassword>, ProblemHttpResult>> ResetPasswordAsync(
         Guid id, IUserAccounts accounts, UserAdministration admin, EstrichOneDbContext db, ICurrentUser current, IAuditLog audit,
-        AccessLetterService letters, HttpRequest http, CancellationToken cancellationToken)
+        AccessLetterService letters, PrivilegeGuard guard, HttpRequest http, CancellationToken cancellationToken)
     {
         var user = await db.Set<User>().AsNoTracking().SingleOrDefaultAsync(u => u.Id == id, cancellationToken);
         if (user is null)
         {
             return NotFound();
+        }
+
+        if (!await guard.MayManageUserAsync(id, cancellationToken))
+        {
+            return PrivilegeGuard.Denied();
         }
 
         var password = await accounts.ResetPasswordAsync(id, cancellationToken);
@@ -170,7 +209,8 @@ internal static class UserAdministrationEndpoints
         TypedResults.Problem(statusCode: status, title: title, extensions: new Dictionary<string, object?> { ["code"] = code });
 }
 
-internal sealed class UserAdministration(EstrichOneDbContext db, IUserAccounts accounts, ICurrentUser current, IAuditLog audit)
+internal sealed class UserAdministration(EstrichOneDbContext db, IUserAccounts accounts, ICurrentUser current, IAuditLog audit,
+    PrivilegeGuard guard, ITwoFactorState twoFactor)
 {
     public async Task<List<UserListItem>> ListAsync(Guid? onlyId, CancellationToken cancellationToken)
     {
@@ -181,8 +221,9 @@ internal sealed class UserAdministration(EstrichOneDbContext db, IUserAccounts a
         var ids = users.Select(u => u.Id).ToList();
         var roles = (await db.Set<UserRole>().AsNoTracking().Where(r => ids.Contains(r.UserId)).ToListAsync(cancellationToken))
             .ToLookup(r => r.UserId, r => r.RoleId);
+        var withTwoFactor = await twoFactor.EnabledUsersAsync(cancellationToken);
         return users.Select(u => new UserListItem(u.Id, u.DisplayName, u.UserName, u.Email, u.Phone, u.IsActive, u.LastLoginAt,
-            roles[u.Id].ToList(), u.Version)).ToList();
+            roles[u.Id].ToList(), u.Version, withTwoFactor.Contains(u.Id))).ToList();
     }
 
     public async Task<Results<Ok<UserListItem>, ProblemHttpResult>> SetActiveAsync(Guid id, bool active, CancellationToken cancellationToken)
@@ -190,6 +231,11 @@ internal sealed class UserAdministration(EstrichOneDbContext db, IUserAccounts a
         if (!await db.Set<User>().AnyAsync(u => u.Id == id, cancellationToken))
         {
             return UserAdministrationEndpoints.NotFound();
+        }
+
+        if (!await guard.MayManageUserAsync(id, cancellationToken))
+        {
+            return PrivilegeGuard.Denied();
         }
 
         if (!active)

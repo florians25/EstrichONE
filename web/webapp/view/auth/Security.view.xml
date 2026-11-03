@@ -1,0 +1,59 @@
+<mvc:View controllerName="estrichone.controller.auth.Security" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>security.title}" level="H1"/></f:heading>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox class="sapUiSmallMargin" width="100%">
+				<VBox width="100%" maxWidth="48rem">
+					<Title text="{i18n>security.twoFactor}" level="H2" titleStyle="H4"/>
+					<Text text="{i18n>security.twoFactorIntro}" class="sapUiTinyMarginTop"/>
+					<MessageStrip id="tfaRestricted" text="{i18n>security.restricted}" type="Warning" showIcon="true" visible="{view>/status/restricted}" class="sapUiSmallMarginTop"/>
+					<MessageStrip text="{i18n>security.required}" type="Information" showIcon="true"
+						visible="{= ${view>/status/requiredByPolicy} &amp;&amp; !${view>/status/restricted} }" class="sapUiSmallMarginTop"/>
+					<ObjectStatus id="tfaState" class="sapUiSmallMarginTop" text="{view>/stateText}" state="{= ${view>/status/enabled} ? 'Success' : 'None' }"
+						icon="{= ${view>/status/enabled} ? 'sap-icon://locked' : 'sap-icon://unlocked' }"/>
+					<HBox class="sapUiSmallMarginTop" wrap="Wrap">
+						<Button id="tfaSetup" text="{i18n>security.setup}" type="Emphasized" icon="sap-icon://shield" press=".onSetup" visible="{= !${view>/status/enabled} }"/>
+						<Button text="{i18n>security.renew}" icon="sap-icon://refresh" press=".onRenew" visible="{view>/status/enabled}" class="sapUiTinyMarginEnd"/>
+						<Button text="{i18n>security.disable}" icon="sap-icon://decline" press=".onDisable" visible="{view>/status/enabled}"
+							enabled="{= !${view>/status/requiredByPolicy} }"/>
+					</HBox>
+				</VBox>
+				<Title text="{i18n>security.sessions}" level="H2" titleStyle="H4" class="sapUiMediumMarginTop"/>
+				<Text text="{i18n>security.sessionsIntro}" class="sapUiTinyMarginTop"/>
+				<Table id="sessions" items="{view>/sessions}" class="sapUiSmallMarginTop" noDataText="–" popinLayout="GridSmall">
+					<headerToolbar>
+						<OverflowToolbar>
+							<ToolbarSpacer/>
+							<Button id="signOutOthers" text="{i18n>security.signOutOthers}" icon="sap-icon://log" press=".onSignOutOthers"
+								enabled="{= ${view>/sessions}.length > 1 }"/>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="{i18n>security.client}"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>security.since}"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>security.lastSeen}"/></Column>
+						<Column hAlign="End" width="10rem"><Text text=""/></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<cells>
+								<VBox>
+									<Text text="{view>label}"/>
+									<ObjectStatus text="{i18n>security.thisSession}" state="Information" visible="{view>current}"/>
+								</VBox>
+								<Text text="{view>since}"/>
+								<Text text="{view>seen}"/>
+								<Button text="{i18n>security.signOutOne}" type="Transparent" icon="sap-icon://log" press=".onSignOutOne" visible="{= !${view>current} }"/>
+							</cells>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

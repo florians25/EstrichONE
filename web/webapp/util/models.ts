@@ -156,6 +156,8 @@ export interface UserListItem {
   lastLoginAt: string | null;
   roleIds: string[];
   version: number;
+  /** Zwei-Faktor-Anmeldung eingeschaltet. */
+  twoFactorEnabled?: boolean;
 }
 
 export interface UserWithPassword {

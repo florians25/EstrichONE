@@ -2,14 +2,14 @@
 
 | Bereich | Umsetzung |
 |---|---|
-| Passwörter | **Argon2id** (m = 19 MiB, t = 2, p = 1 – OWASP-Empfehlung), Salt 16 Byte, PHC-Format; ältere/schwächere Hashes werden bei der Anmeldung neu berechnet. Passwortregeln in `PasswordPolicy`. |
-| Anmeldung | Sperre nach 5 Fehlversuchen je Konto und 20 je IP-Adresse; zusätzlich Rate-Limit 20 Anfragen/Minute je IP auf `/auth` (einstellbar). Zeitkonstanter Vergleich, Dummy-Hash bei unbekannten Benutzern. |
+| Passwörter | **Argon2id** (m = 19 MiB, t = 2, p = 1 – OWASP-Empfehlung), Salt 16 Byte, PHC-Format; ältere/schwächere Hashes werden bei der Anmeldung neu berechnet. Passwortregeln in `PasswordPolicy`: mindestens 12 Zeichen, Abgleich mit ~49 000 häufigen/geleakten Passwörtern (offline), auch mit angehängten Ziffern/Zeichen. |
+| Anmeldung | **Zwei-Faktor-Anmeldung (TOTP)** mit Wiederherstellungscodes, für Administratoren erzwingbar. Sperre nach 5 Fehlversuchen je Konto (Name und E-Mail gemeinsam) und 20 je IP-Adresse, Alarm an die Benutzerverwaltung; zusätzlich Rate-Limit 20 Anfragen/Minute je IP auf `/auth` (einstellbar). Zeitkonstanter Vergleich, Dummy-Hash bei unbekannten Benutzern. |
 | Tokens | Keine JWTs: zufällige 256-Bit-Tokens (`eo1_…`/`eor1_…`), in der Datenbank nur als **SHA-256**; Sitzungen serverseitig widerrufbar (Abmelden, Sperren, Gerät löschen). Im Browser nur in `HttpOnly`-, `Secure`-, `SameSite=Strict`-Cookies, dazu XSRF-Token. |
 | Gespeicherte Geheimnisse | SMTP-Passwort, Zugänge zu Archivserver und Backup-Zielen, **APNs-Schlüssel (.p8)** und **VAPID-Schlüssel**: ASP.NET Data Protection mit **AES-256-GCM** (neue Schlüssel; ältere AES-256-CBC+HMAC-SHA256-Schlüssel bleiben lesbar und werden nach 90 Tagen turnusgemäß ersetzt). Schlüsselring in `data/files/.keys` (Verzeichnis 0700, Teil der verschlüsselten restic-Sicherung). Geheimnisse werden nie zurückgegeben oder protokolliert. |
 | Transport | Caddy: HTTPS (Let's Encrypt bzw. eigenes Zertifikat), HTTP → HTTPS, **HSTS** (1 Jahr, inkl. Subdomains), strikte **CSP** (`script-src 'self'`, `frame-ancestors 'none'`, `object-src 'none'`), `X-Content-Type-Options`, `Referrer-Policy`, `X-Frame-Options: DENY`, `Permissions-Policy`. API-Antworten: `default-src 'none'`, `Cross-Origin-Resource-Policy: same-origin`. |
 | Pushnachrichten | Inhalt nur Titel, kurzer Hinweis (≤ 180 Zeichen), Link, IDs – keine Kommentare, Ticket-Texte, Preise, Personaldaten; optional nur „Neue Benachrichtigung“. Web Push Ende-zu-Ende verschlüsselt (RFC 8291), VAPID-Anmeldung (ES256); APNs mit Token-Anmeldung (ES256). Web-Push-Endpunkte nur bei bekannten Push-Diensten per HTTPS (kein SSRF), Links nur relative Pfade. Versand höchstens 20 Nachrichten je 10 Minuten und Benutzer. |
-| Rechte | Jeder Endpunkt erfordert Anmeldung (Fallback-Richtlinie) und bei Apps ein freigegebenes Gerät; fachliche Rechte je Endpunkt (`RequirePermission`), Modulgrenzen per Architekturtest. Audit-Log für sicherheitsrelevante Aktionen. |
-| Dateien | Typprüfung am Inhalt (nicht an der Endung), Prüfsumme beim Upload, Benutzernamen nie im Dateisystem, Auslieferung mit passender CSP. |
+| Rechte | Jeder Endpunkt erfordert Anmeldung (Fallback-Richtlinie) und bei Apps ein freigegebenes Gerät; fachliche Rechte je Endpunkt (`RequirePermission`), automatischer Zugriffstest über alle Routen, keine Rechteausweitung über die Benutzer-/Rollenverwaltung, Modulgrenzen per Architekturtest. Audit-Log für sicherheitsrelevante Aktionen. |
+| Dateien | Typprüfung am Inhalt (nicht an der Endung), Bilder höchstens 100 Megapixel, nur JPEG/PNG/WebP/HEIF-Dekoder, Prüfsumme beim Upload, Benutzernamen nie im Dateisystem, Auslieferung mit passender CSP. |
 
 ## Geprüft und behoben in Runde 7
 - Data Protection auf **AES-256-GCM** umgestellt; Schlüsselverzeichnis nur für den Dienstbenutzer lesbar.
@@ -21,6 +21,88 @@
 - Der Schlüsselring liegt unverschlüsselt (aber 0700) im Datenverzeichnis; wer Root auf dem Server hat, kann
   Geheimnisse entschlüsseln. Für höhere Anforderungen ein Zertifikat zum Schutz des Schlüsselrings ergänzen.
 - Zertifikats-Pinning in den Apps wird bewusst nicht erzwungen (selbst gehostete Server, eigene Zertifikate).
+
+## App (Backend-API und Web) – Runde 11
+
+Bedrohungsmodell: API und Weboberfläche sind aus dem Internet erreichbar. Angreifer: anonyme Scanner und Bots
+(Credential Stuffing, Passwortraten, Ausnutzen anonymer Endpunkte), ein übernommenes Mitarbeiterkonto mit wenigen
+Rechten (Baustelle) bzw. mit Benutzerverwaltung (IT-Administration), präparierte Dateien (Bild-/Dekompressionsbomben,
+SVG/HTML), gespeichertes XSS über Einstellungen.
+
+Vorgehen: Alle rund 360 Routen (Methode + Pfad) der Routentabelle (auch die nicht in OpenAPI beschriebenen) automatisiert ohne Anmeldung,
+mit einem Konto ohne Rollen und als Baustellenkraft mit fremden IDs aufgerufen; Handler mit Objektbezug von Hand
+geprüft (Bauakten-Sichtbarkeit `IBauakteAccess`, Chat-Mitgliedschaft, Tickets, Benachrichtigungen, Dateien,
+Archiv, Sync, Peer-/Backup-/Hosting-Endpunkte); Abhängigkeiten mit `dotnet list package --vulnerable` und `npm audit`.
+
+| Befund | Schwere | Fix | Test |
+|---|---|---|---|
+| **Rechteausweitung über die Benutzerverwaltung:** Wer `users.manage` hat (Standardrolle „IT-Administration“), konnte sich selbst die Rolle Administrator geben, das Passwort bzw. die E-Mail eines Administrators ändern oder ihn sperren; wer `roles.manage` hat, konnte Rollen beliebige Rechte geben | **hoch** | `PrivilegeGuard`: Konten anderer nur bearbeiten, zurücksetzen, sperren bzw. Rollen vergeben, wenn man deren Verwaltungsrechte (Benutzer, Rollen, Einstellungen, Backup, Geräte, Protokoll, Archiv, Personalakte) selbst hat – die IT-Administration verwaltet weiter Büro- und Baustellenkonten, aber keine Administratoren; eigenes Konto: keine Rolle mit Rechten, die man nicht schon hat; neue Rechte in einer Rolle nur, wenn man sie selbst hat (gilt für Anlegen, Rollen setzen, Passwort/2FA zurücksetzen, E-Mail ändern, Sperren, Onboarding, Rollen speichern) → 403 `PRIVILEGE_ESCALATION` | `PrivilegeEscalationTests` |
+| Keine Zwei-Faktor-Anmeldung; ein erratenes/geleaktes Passwort genügte | **hoch** | TOTP nach RFC 6238 (SHA-1, 6 Ziffern, 30 s, ±1 Schritt, jeder Code nur einmal), Geheimnis mit Data Protection (AES-256-GCM) verschlüsselt, 10 Wiederherstellungscodes (nur SHA-256 gespeichert, je einmal). Einrichten/Ausschalten/Codes erneuern nur mit Passwort (+ Code). Falsche Codes zählen als Fehlversuch (Sperre). Pflicht für Konten mit Verwaltungsrechten einschaltbar (Einstellungen → Anmeldung): bis zur Einrichtung ruhen deren Verwaltungsrechte, Anmelden und Einrichten bleiben möglich; einschalten kann sie nur, wer 2FA selbst nutzt. Administrator kann 2FA eines Kontos zurücksetzen (Handy verloren, beendet alle Sitzungen) | `TwoFactorTests` (RFC-Testvektoren, Wiederverwendung, Wiederherstellungscode, Sperre, Pflicht, Zurücksetzen), Web-E2E `13-sicherheit.spec.ts` |
+| Sperre je Konto umgehbar: Anmeldename und E-Mail zählten getrennt (doppelt so viele Versuche) | mittel | Ein Zähler je Konto, egal mit welcher Kennung | `BruteForceTests` |
+| Keine Benachrichtigung bei Angriffen | mittel | Beim Erreichen der Sperre (Konto oder IP) Audit `auth.login.attack_detected` und Pflicht-Benachrichtigung „Anmeldeangriff erkannt“ an alle mit `users.manage` (höchstens 1× je Stunde und Konto/Adresse) | `BruteForceTests` |
+| Passwortrichtlinie: 10 Zeichen, nur ~90 verbotene Passwörter | mittel | Mindestens **12** Zeichen; Offline-Liste mit ~49 000 häufigen/geleakten Passwörtern (zxcvbn, MIT) plus deutsche Grundwörter; auch „verziert“ („Sommer2026!“, „P@ssw0rd2026“), doppelte Wörter, Wiederholungen und Folgen abgelehnt. Gilt beim Setzen – bestehende Passwörter bleiben gültig | `PasswordPolicyTests`, `PasswordTests` |
+| `X-Forwarded-For` von jeder Adresse übernommen: wäre die API (falsch veröffentlichter Port) direkt erreichbar, ließe sich die Sperre je IP mit gefälschten Adressen umgehen | mittel | Nur private Netze/Loopback (Caddy im Docker-Netz, NPM im LAN) und `EstrichOne__TrustedProxies` dürfen die Client-Adresse setzen | `HardeningTests.ForwardedFor_OnlyFromTrustedProxies` |
+| Bildbomben: ein kleines PNG mit 40 000 × 40 000 Pixeln wurde beim Erzeugen der Vorschau voll dekodiert (GB an Speicher) | mittel | Höchstens 100 Megapixel und 30 000 Pixel Kante (Kopf wird vor dem Dekodieren geprüft) bei Dateien, Chat-Anhängen, Gruppenbild, Logo → 422 `IMAGE_TOO_LARGE` | `HardeningTests` |
+| libvips lud jedes bekannte Format (SVG, PDF, TIFF, Matlab, FITS …) – große Angriffsfläche, Firmenlogo nahm alles an | mittel | Nur JPEG-, PNG-, WebP- und HEIF-Lader freigeschaltet (`ImageSafety`, `Operation.Block`); Logo nur PNG/JPEG/WebP nach Magic Bytes | `HardeningTests` |
+| Gespeichertes XSS: Quellenangabe der Karte (Einstellungen) wurde als HTML in Leaflet eingesetzt | mittel (nur mit `settings.manage`) | Nur Text und `<a href="https://…">…</a>`, alles andere maskiert (idempotent) | `HardeningTests.MapAttribution_*` |
+| Archiv: Einreihen einer fremden Datei (`POST /archive/files/{id}`) vor der Sichtbarkeitsprüfung; `GET` verriet, ob eine fremde Datei archiviert ist | niedrig | Sichtbarkeit der Datei zuerst prüfen (404) | `EndpointAccessTests.SiteWorker_WithForeignIds_*` |
+| Keine Übersicht der eigenen Anmeldungen, kein „überall abmelden“ | mittel | Konto → *Anmeldung und Sicherheit*: aktive Sitzungen (Browser/App, seit, zuletzt aktiv), einzeln oder „überall sonst abmelden“ (wirkt sofort, auch für Apps) | `SessionManagementTests`, E2E |
+| Öffentlicher Abnahme-Link (Token im Pfad) stand im Request-Log | niedrig | Pfad im Log maskiert (`/public/acceptances/***`) | `HardeningTests.RequestLog_*` |
+| Hosting-Schnittstelle `PUT /system/notices` ohne Rate-Limit | niedrig | Rate-Limit wie Anmeldung | – |
+| Abhängigkeiten: MailKit 4.18.1, ASP.NET/EF 10.0.13; npm-Werkzeuge (UI5-Tooling) mit 5 hohen und 26 mittleren Meldungen (pacote, sigstore, minimatch, glob, body-parser …) | mittel (nur Build-Werkzeuge) | MailKit 4.18.2, .NET-Pakete 10.0.14, ui5-tooling-modules 3.42, ui5-tooling-transpile 3.14, `overrides` auf gepatchte Versionen → `npm audit`: 0. Laufzeit-Pakete der Weboberfläche (leaflet, qrcode) ohne Meldung | CI: `backend.yml` bricht bei verwundbaren NuGet-Paketen ab, `web.yml` mit `npm run audit` (Laufzeit ab „moderate“, Werkzeuge ab „high“) |
+| CSP/Header | niedrig | CSP zusätzlich mit `media-src`, `worker-src`, `manifest-src`, `frame-src` (weiter ohne `unsafe-eval` und ohne Inline-Skripte), `Permissions-Policy` sperrt Zahlung, USB, Seriell, Bluetooth, HID, MIDI, Bildschirmaufnahme, Topics; `Cross-Origin-Opener-Policy: same-origin`; `/.well-known/security.txt` (RFC 9116) | `web/test/securityHeaders.test.ts` |
+
+Automatischer Zugriffstest (`backend/tests/…/Security/EndpointAccessTests.cs`): liest **alle** Routen aus der
+Routentabelle; ohne Anmeldung muss jede 401 liefern, mit einem Konto ohne Rollen jede 403 – außer den beiden
+begründeten Listen im Test (öffentlich bzw. mit eigenem Geheimnis: Anmeldung, Einrichtung, öffentlicher Abnahme-Link,
+Backup-Spiegel, Hosting-Konsole; ohne Recht: eigenes Konto, eigene Benachrichtigungen/Tickets/Sitzungen, Sync mit
+Prüfung je Objekt). Neue anonyme Endpunkte ohne Eintrag lassen den Test scheitern. Dazu greift eine Baustellenkraft
+mit den IDs fremder Bauakten, Dateien, Notizen, Aufgaben, Chats, Nachrichten, Anhänge, Tickets und
+Benachrichtigungen auf alle passenden Routen zu (nur 403/404 bzw. abgelehnte Eingaben) und nichts ändert sich.
+
+Geprüft und in Ordnung: Fallback-Richtlinie „angemeldet + freigegebenes Gerät“; Bauakten-Sichtbarkeit zentral über
+`IBauakteAccess` (Listen, Details, Dateien, Exporte, Berichte, Sync); Chat nur für Mitglieder; Tickets/Benachrichtigungen
+nur eigene; Cookies `HttpOnly`, `Secure`, `SameSite=Strict`, CSRF-Doppel-Token für alle schreibenden Cookie-Anfragen;
+Abmelden widerruft serverseitig; Fehlerantworten ohne Stacktrace (Problem-JSON mit `traceId`); keine Tokens/Passwörter
+in Logs (Query-Strings werden nicht protokolliert); Uploads mit Größenlimits je Endpunkt, Typ per Magic Bytes, Auslieferung
+von Nicht-Bildern als Download mit `nosniff` und `default-src 'none'`; ZIP-Importe gibt es nicht (Kontaktimport CSV,
+5 MB); PDF-Verdichtung lässt signierte/verschlüsselte PDFs unverändert; SQL ausschließlich über EF Core (parametrisiert);
+Web-Push nur an bekannte Push-Dienste per HTTPS; Peer-Endpunkte nur mit Kopplungstoken; Chat-Links nur `http(s)`,
+alle Texte maskiert.
+
+### Was Betreiber tun sollten
+
+1. **Zwei-Faktor-Anmeldung einrichten:** Konto (Benutzermenü) → *Anmeldung und Sicherheit* → *Einrichten*, QR-Code mit
+   einer Authenticator-App scannen, Wiederherstellungscodes ausdrucken.
+2. Danach **Pflicht für Administratoren** einschalten: *System → Firmendaten → Anmeldung → Zwei-Faktor-Anmeldung:
+   Pflicht für Administratoren*. Konten mit Verwaltungsrechten sehen dann einen Hinweis und richten 2FA ein.
+3. Rolle „IT-Administration“ und eigene Rollen mit `users.manage` prüfen – sie können keine Administratoren mehr
+   übernehmen, aber weiterhin alle Konten mit weniger Rechten verwalten.
+4. Unbekannte Sitzungen unter *Anmeldung und Sicherheit* beenden; bei Verdacht „überall sonst abmelden“ und Passwort ändern.
+5. Steht der Reverse Proxy (NPM) auf einem anderen Rechner mit **öffentlicher** Adresse, diese Adresse zusätzlich der API
+   als `EstrichOne__TrustedProxies` geben (private Netze sind automatisch vertrauenswürdig).
+6. `security.txt` nennt die Meldestelle des Projekts; eigene Kontaktdaten können Betreiber über den Reverse Proxy ergänzen.
+
+### iOS/Android/Windows-App und Zwei-Faktor-Anmeldung (für das jeweilige App-Paket)
+
+- Die Apps funktionieren mit 2FA-Konten weiter: **bestehende Sitzungen** laufen unverändert weiter, das Erneuern
+  (`POST /api/v1/auth/refresh`, Gerätesignatur) braucht nie einen Code. Ein Gerät fragt den Code nur bei einer **neuen
+  Anmeldung** (Erstanmeldung, nach Abmelden, Passwortwechsel, Gerät gesperrt oder nach Ablauf der Geräte-Leerlaufzeit).
+- Anmeldung: `POST /api/v1/auth/login` wie bisher; antwortet der Server **401 mit `code: "TWO_FACTOR_REQUIRED"`**, zeigt
+  die App ein Feld „Bestätigungscode“ (iOS: `textContentType = .oneTimeCode`, Tastatur Ziffern, aber auch
+  Wiederherstellungscodes `xxxxx-xxxxx` zulassen) und sendet dieselbe Anmeldung mit `twoFactorCode` erneut.
+  `TWO_FACTOR_INVALID` (401): Code falsch/abgelaufen, Feld leeren, erneut fragen. `LOGIN_LOCKED` (429) wie bisher.
+- Status für eine Einstellungsseite: `GET /api/v1/auth/two-factor` (auch für noch nicht freigegebene Geräte);
+  Einrichten über die App ist optional (`/setup`, `/enable` wie im Web), die Einrichtung im Web genügt.
+- Bis die iOS-App das Feld hat, gilt: Wer 2FA einschaltet, bleibt in der App angemeldet; nur eine neue Anmeldung in der
+  App ist bis dahin nicht möglich (Hinweis an Nutzer: App vor dem Einschalten anmelden bzw. angemeldet lassen).
+
+### Bekannte Grenzen (App)
+
+- `mustChangePassword` (Einmalpasswort) wird nur von den Clients erzwungen, nicht serverseitig je Endpunkt.
+- Wer `settings.manage` hat, kann weiterhin Kartenserver, SMTP-Server und Archiv-/Backup-Adressen festlegen (Verbindungen
+  vom Server zu frei wählbaren Zielen) – bewusst, da Administratorfunktion.
+- Bereits vor diesem Stand hochgeladene, sehr große Bilder werden nicht nachträglich geprüft (nur neue Uploads).
 
 ## Betrieb (öffentlich erreichbar) – Runde 11
 

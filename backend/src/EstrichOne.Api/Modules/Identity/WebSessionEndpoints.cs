@@ -10,10 +10,12 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Identity;
 
+/// <param name="TwoFactorCode">Code aus der Authenticator-App oder Wiederherstellungscode (siehe <see cref="LoginRequest"/>).</param>
 public sealed record WebLoginRequest(
     [property: Required, MaxLength(320)] string Login,
     [property: Required, MaxLength(PasswordPolicy.MaxLength)] string Password,
-    bool RememberMe = false);
+    bool RememberMe = false,
+    [property: MaxLength(32)] string? TwoFactorCode = null);
 
 public sealed record WebSessionResponse(UserSummary User, bool MustChangePassword, DateTimeOffset AccessTokenExpiresAt);
 
@@ -56,19 +58,10 @@ internal static class WebSessionEndpoints
     {
         var result = await login.LoginAsync(request.Login, request.Password, ClientKind.Web,
             Truncate(http.Request.Headers.UserAgent.ToString(), 100), http.Connection.RemoteIpAddress?.ToString(), cancellationToken,
-            request.RememberMe);
-
-        if (result.Failure == LoginFailure.LockedOut)
+            request.RememberMe, request.TwoFactorCode);
+        if (AuthEndpoints.LoginProblem(result, http) is { } problem)
         {
-            http.Response.Headers.RetryAfter = ((int)result.RetryAfter!.Value.TotalSeconds).ToString(System.Globalization.CultureInfo.InvariantCulture);
-            return AuthEndpoints.Problem(StatusCodes.Status429TooManyRequests, "LOGIN_LOCKED",
-                "Zu viele Fehlversuche", "Die Anmeldung ist vorübergehend gesperrt. Bitte später erneut versuchen.");
-        }
-
-        if (result.Failure is not null)
-        {
-            return AuthEndpoints.Problem(StatusCodes.Status401Unauthorized, "INVALID_CREDENTIALS",
-                "Anmeldung fehlgeschlagen", "Anmeldename oder Passwort ist nicht korrekt.");
+            return problem;
         }
 
         var tokens = result.Tokens!;

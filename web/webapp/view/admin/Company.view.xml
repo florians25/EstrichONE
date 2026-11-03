@@ -82,6 +82,10 @@
 							<Label text="„Angemeldet bleiben“" labelFor="setRemember"/>
 							<StepInput id="setRemember" value="{view>/s/session/rememberDays}" min="1" max="90" description="Tage" width="12rem"/>
 							<Label text=""/><Text text="Bei Aktivität verlängert sich die Sitzung von selbst. Läuft sie ab, erscheint ein Anmeldedialog – Eingaben bleiben erhalten." class="eoMuted"/>
+							<core:Title text="Zwei-Faktor-Anmeldung"/>
+							<Label text="Pflicht für Administratoren" labelFor="setTwoFactorAdmins"/>
+							<Switch id="setTwoFactorAdmins" state="{view>/s/session/requireTwoFactorForAdmins}" customTextOn="Ja" customTextOff="Nein"/>
+							<Label text=""/><Text text="Konten mit Verwaltungsrechten (Benutzer, Rollen, Einstellungen, Backup, Geräte, Protokoll, Archiv) nutzen diese Rechte erst, wenn sie unter „Anmeldung und Sicherheit“ eine Authenticator-App eingerichtet haben. Empfohlen, wenn EstrichONE aus dem Internet erreichbar ist. Vorher selbst einrichten!" class="eoMuted"/>
 							<core:Title text="Apps auf Smartphones und Tablets"/>
 							<Label text="Angemeldet bleiben ohne Nutzung" labelFor="setDeviceIdle"/>
 							<StepInput id="setDeviceIdle" value="{view>/s/session/deviceIdleDays}" min="7" max="365" description="Tage" width="12rem"/>

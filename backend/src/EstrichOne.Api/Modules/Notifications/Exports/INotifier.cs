@@ -116,6 +116,7 @@ public static class NotificationEvents
     public const string PeerUpdateSucceeded = "peer.update_succeeded";
     public const string PeerUpdateFailed = "peer.update_failed";
     public const string Test = "system.test";
+    public const string LoginAttack = "security.login_attack";
 
     public static IReadOnlyList<NotificationEventInfo> All { get; } =
     [
@@ -140,6 +141,7 @@ public static class NotificationEvents
         new(PeerUpdateAvailable, "System", "Zusatzserver aktualisieren", "Nach einem Update dieses Servers: Backup-Ziel oder Archivserver hat noch die ältere Version.", AdminOnly: true),
         new(PeerUpdateSucceeded, "System", "Zusatzserver aktualisiert", "Die Fernaktualisierung eines Backup-Ziels oder Archivservers war erfolgreich.", AdminOnly: true),
         new(PeerUpdateFailed, "System", "Aktualisierung eines Zusatzservers fehlgeschlagen", "Fernaktualisierung fehlgeschlagen oder zurückgerollt (vorige Version läuft wieder).", AdminOnly: true, Mandatory: true),
+        new(LoginAttack, "System", "Anmeldeangriff erkannt", "Viele falsche Anmeldungen für ein Konto oder von einer Adresse – die Anmeldung wurde vorübergehend gesperrt.", AdminOnly: true, Mandatory: true),
     ];
 
     public static NotificationEventInfo? Find(string? code) => code is null ? null : All.FirstOrDefault(e => e.Code == code);
