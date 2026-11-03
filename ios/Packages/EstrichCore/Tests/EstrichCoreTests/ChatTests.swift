@@ -150,7 +150,8 @@ struct ChatTests {
         #expect(sent.sent.count == 1 && !sent.offline)
         #expect(await outbox.items().isEmpty)
         #expect(await outbox.content(of: photo.id) == nil)
-        #expect(transport.count("POST", "/api/v1/chat/conversations/\(conversation.key)/attachments") == 1)
+        // Einmal ohne Verbindung versucht, einmal hochgeladen – danach nicht erneut.
+        #expect(transport.count("POST", "/api/v1/chat/conversations/\(conversation.key)/attachments") == 2)
 
         // Ablehnung: markiert, die nächste Nachricht geht trotzdem.
         let other = UUID()
