@@ -175,7 +175,7 @@ final class ChatCenter {
     func enqueue(_ item: ChatOutboxItem, contents: [UUID: Data]) async throws {
         try await outbox.enqueue(item, contents: contents)
         for (id, data) in contents where item.attachments.first(where: { $0.id == id })?.kind == "photo" {
-            if let image = ThumbnailLoader.downsample(data, to: 260) { remember(image, key: "\(id.key)-thumb") }
+            if let image = ThumbnailLoader.downsample(data, to: 260) { remember(image, key: "\(id.uuidString.lowercased())-thumb") }
         }
         await reloadQueue()
         await flush()
@@ -241,9 +241,9 @@ final class ChatCenter {
 
     /// Vorschaubild bzw. Foto eines Anhangs (Arbeitsspeicher; wartende Anhänge aus dem verschlüsselten Tresor).
     func image(for attachment: ChatAttachment, thumbnail: Bool) async -> UIImage? {
-        let key = "\(attachment.id.key)-\(thumbnail ? "thumb" : "full")"
+        let key = "\(attachment.id.uuidString.lowercased())-\(thumbnail ? "thumb" : "full")"
         if let cached = images[key] { return cached }
-        if thumbnail, let full = images["\(attachment.id.key)-full"] { return full }
+        if thumbnail, let full = images["\(attachment.id.uuidString.lowercased())-full"] { return full }
         var data = await outbox.content(of: attachment.id)
         if data == nil {
             do throws(APIError) {

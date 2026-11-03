@@ -249,7 +249,7 @@ struct ChatAttachmentViewer: View {
         }
         do throws(APIError) {
             let data = try await chat.content(of: attachment)
-            let folder = FileManager.default.temporaryDirectory.appending(path: "chat-\(attachment.id.key)", directoryHint: .isDirectory)
+            let folder = FileManager.default.temporaryDirectory.appending(path: "chat-\(attachment.id.uuidString.lowercased())", directoryHint: .isDirectory)
             try? FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             let url = folder.appending(path: attachment.name.replacingOccurrences(of: "/", with: "-"))
             try? data.write(to: url, options: [.atomic, .completeFileProtection])

@@ -181,8 +181,8 @@ final class PushCenter {
     func handleReply(_ text: String, conversationId: UUID) async {
         let outcome = await replyHandler?(conversationId, text) ?? .locked
         let content = UNMutableNotificationContent()
-        content.threadIdentifier = "chat-\(conversationId.key)"
-        content.userInfo = ["link": "/chat/\(conversationId.key)", "objectType": "chat", "objectId": conversationId.key]
+        content.threadIdentifier = "chat-\(conversationId.uuidString.lowercased())"
+        content.userInfo = ["link": "/chat/\(conversationId.uuidString.lowercased())", "objectType": "chat", "objectId": conversationId.uuidString.lowercased()]
         switch outcome {
         case .sent:
             return

@@ -428,7 +428,7 @@ struct ChatPrivacyNotice: View {
     let retentionDays: Int?
     let accept: () -> Void
 
-    static func key(_ userId: UUID?) -> String { "chat.privacyNotice.\(userId?.key ?? "-")" }
+    static func key(_ userId: UUID?) -> String { "chat.privacyNotice.\(userId?.uuidString.lowercased() ?? "-")" }
 
     static func isAcknowledged(userId: UUID?, version: Int) -> Bool {
         UserDefaults.standard.integer(forKey: key(userId)) >= version
