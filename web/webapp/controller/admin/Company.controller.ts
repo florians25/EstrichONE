@@ -244,7 +244,8 @@ export default class Company extends BaseController {
 			this.version = savedSettings.version;
 			m.setProperty("/c", savedCompany);
 			m.setProperty("/s", savedSettings.settings);
-			await session.reloadPermissions();
+			// Firmenname erscheint sofort in Kopfzeile, Statuszeile und Anmeldung (server-info liefert ihn als serverName).
+			await Promise.all([session.reloadPermissions(), session.loadServer()]);
 			this.toast("Einstellungen gespeichert");
 		} catch (error) {
 			this.showError(error);

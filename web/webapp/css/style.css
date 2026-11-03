@@ -351,9 +351,40 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 /* Globale Suche mittig in der Kopfleiste */
 @media (min-width: 1100px) {
 	.eoShellSearch.sapMSF { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 1; }
-	/* „Neue Bauakte“ direkt rechts neben dem zentrierten Suchfeld (26rem breit) */
+	/* „Neue Bauakte“ direkt rechts neben dem zentrierten Suchfeld (26rem breit), 0,5rem Abstand */
 	.eoShellNew.sapMBtn { position: absolute; left: calc(50% + 13.5rem); top: 50%; transform: translateY(-50%); margin: 0; z-index: 1; }
+	/* Langer Firmenname: vor dem Suchfeld mit „…“ kürzen statt darunter zu laufen */
+	.sapFShellBar .sapFShellBarSecondTitle { max-width: calc(50vw - 13rem - 14.5rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
+
+/* „Neue Bauakte“ in der Kopfleiste: kompakt, ruhig, gleiche Höhe und Rundung wie das Suchfeld.
+   Farben, Hover, Gedrückt und Fokus kommen aus dem Theme (Emphasized), daher in hell, dunkel, Horizon und Quartz stimmig. */
+.eoShellNew.sapMBtn { height: auto; padding: 0; }
+.eoShellNew.sapMBtn > .sapMBtnInner {
+	height: var(--eoShellFieldHeight, 2.25rem); min-width: var(--eoShellFieldHeight, 2.25rem);
+	border-radius: var(--sapField_BorderCornerRadius, 0.25rem);
+	padding: 0 0.875rem 0 0.625rem; box-shadow: none;
+	font-family: var(--sapFontSemiboldDuplexFamily, var(--sapFontBoldFamily)); font-size: var(--sapFontSize); letter-spacing: 0.01em;
+	transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.eoShellNew.sapMBtn > .sapMBtnInner { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; }
+.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnIcon { font-size: 0.875rem; width: 1rem; height: 1rem; line-height: 1rem; margin: 0; color: inherit; flex: none; }
+.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnIcon::before { -webkit-text-stroke: 0.9px currentColor; }
+.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnContent { line-height: normal; padding: 0; }
+.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnIcon, .eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnContent, .eoShellNew.sapMBtn > .sapMBtnInner bdi { color: inherit !important; }
+/* Die Kopfleiste setzt für ihre Knöpfe eigene (helle) Hover-Farben mit sehr spezifischen Selektoren –
+   hier bewusst die Emphasized-Zustände des Themes (daher !important). */
+.sapFShellBar .eoShellNew.sapMBtn:hover:not(.sapMBtnDisabled) > .sapMBtnInner.sapMBtnEmphasized:not(.sapMBtnActive) {
+	background: var(--sapButton_Emphasized_Hover_Background) !important; border-color: var(--sapButton_Emphasized_Hover_BorderColor) !important;
+	color: var(--sapButton_Emphasized_Hover_TextColor) !important;
+}
+.sapFShellBar .eoShellNew.sapMBtn > .sapMBtnInner.sapMBtnEmphasized.sapMBtnActive {
+	background: var(--sapButton_Emphasized_Active_Background) !important; border-color: var(--sapButton_Emphasized_Active_BorderColor) !important;
+	color: var(--sapButton_Emphasized_Active_TextColor) !important; box-shadow: none;
+}
+/* Nur Symbol (schmale Fenster): quadratisch, Symbol mittig, Beschriftung im Tooltip */
+.eoShellNew.sapMBtn > .sapMBtnInner.sapMBtnIconOnly, .eoShellNew.eoIconOnly > .sapMBtnInner { padding: 0; width: var(--eoShellFieldHeight, 2.25rem); }
+.eoShellNew.eoIconOnly > .sapMBtnInner .sapMBtnIcon { font-size: 1rem; }
 
 /* Abstände: einheitliche Luft zwischen Blöcken, Meldungen und Formularabschnitten */
 .sapMMsgStrip + .sapMMsgStrip { margin-top: 0.5rem; }

@@ -1,14 +1,13 @@
 using System.ComponentModel.DataAnnotations;
-using EstrichOne.Api.Infrastructure.Hosting;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Identity.Passwords;
 using EstrichOne.Api.Modules.Identity.Sessions;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.Options;
 
 namespace EstrichOne.Api.Modules.Identity.TwoFactor;
 
@@ -69,7 +68,7 @@ internal static class TwoFactorEndpoints
 
     private static async Task<Results<Ok<TwoFactorSetupResponse>, ProblemHttpResult>> SetupAsync(
         TwoFactorSetupRequest request, ICurrentUser current, IUserAccounts accounts, TwoFactorService twoFactor, EstrichOneDbContext db,
-        IOptions<EstrichOneOptions> options, CancellationToken cancellationToken)
+        ICompanyProfiles companies, CancellationToken cancellationToken)
     {
         if (!await accounts.VerifyPasswordAsync(current.UserId, request.CurrentPassword, cancellationToken))
         {
@@ -77,8 +76,8 @@ internal static class TwoFactorEndpoints
         }
 
         var user = await db.Set<User>().SingleAsync(u => u.Id == current.UserId, cancellationToken);
-        var issuer = string.IsNullOrWhiteSpace(options.Value.ServerName) || options.Value.ServerName == "EstrichONE"
-            ? "EstrichONE" : $"EstrichONE {options.Value.ServerName.Trim()}";
+        var company = await companies.GetDisplayNameAsync(cancellationToken);
+        var issuer = company == "EstrichONE" ? "EstrichONE" : $"EstrichONE {company}";
         if (await twoFactor.BeginSetupAsync(user, issuer.Replace(":", " ", StringComparison.Ordinal), cancellationToken) is not { } setup)
         {
             return AuthEndpoints.Problem(StatusCodes.Status409Conflict, "TWO_FACTOR_ALREADY_ENABLED", "Bereits eingerichtet",

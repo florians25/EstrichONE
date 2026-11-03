@@ -3,6 +3,7 @@ using System.Text.Json;
 using EstrichOne.Api.Infrastructure.Hosting;
 using EstrichOne.Api.Infrastructure.Peers;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -95,7 +96,7 @@ internal sealed record TargetBackupInfo(string Repository, long Bytes, int Snaps
 
 internal sealed class BackupTargetService(
     EstrichOneDbContext db, IDataProtectionProvider protection, TimeProvider clock, IOptions<BackupSettings> settings,
-    IOptions<EstrichOneOptions> options, BackupStatusReader statusReader)
+    BackupStatusReader statusReader, ICompanyProfiles companies)
 {
     private const string TokenPurpose = "EstrichOne.Backup.TargetToken";
     private const string PasswordPurpose = "EstrichOne.Backup.TargetPassword";
@@ -106,7 +107,7 @@ internal sealed class BackupTargetService(
     public async Task<BackupTarget> PairAsync(string address, string code, Guid userId, CancellationToken cancellationToken)
     {
         var uri = PeerClient.NormalizeAddress(address);
-        var pairing = await PeerClient.PairAsync(uri, code, $"EstrichONE {options.Value.ServerName}", "backup-target", cancellationToken);
+        var pairing = await PeerClient.PairAsync(uri, code, $"EstrichONE {await companies.GetDisplayNameAsync(cancellationToken)}", "backup-target", cancellationToken);
         if (pairing.RestPassword is null || pairing.RestUsername is null || pairing.RestPath is null)
         {
             throw new PeerException("PEER_PAIRING_FAILED", "Das Backup-Ziel hat keine Zugangsdaten geliefert.");

@@ -117,6 +117,23 @@ public sealed class SetupTests(PostgresFixture postgres) : IAsyncLifetime
         empty.StatusCode.ShouldBeOneOf(HttpStatusCode.BadRequest, HttpStatusCode.UnprocessableEntity);
     }
 
+    [Fact]
+    public async Task ServerInfo_ShowsCompanyName_InsteadOfInstallerName_AndFollowsChangesImmediately()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var before = await _client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestJson.Options, ct);
+        (await CompleteAsync(await IssueCodeAsync())).EnsureSuccessStatusCode();
+        var afterSetup = await _client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestJson.Options, ct);
+        var tokens = await _client.LoginOkAsync("admin", "Estrich trocknet langsam 7");
+        using var admin = _factory.CreateClient().WithToken(tokens.AccessToken);
+        (await admin.PutAsJsonAsync("/api/v1/company", new { name = "  Estrich Huber KG " }, ct)).EnsureSuccessStatusCode();
+        var afterChange = await _client.GetFromJsonAsync<ServerInfo>("/api/v1/server-info", TestJson.Options, ct);
+
+        before!.ServerName.ShouldBe("Estrichbau Test GmbH"); // vor der Einrichtung: ESTRICHONE_NAME als Rückfall
+        afterSetup!.ServerName.ShouldBe("Estrichbau Muster GmbH");
+        afterChange!.ServerName.ShouldBe("Estrich Huber KG");
+    }
+
     private async Task<string> IssueCodeAsync()
     {
         await using var scope = _factory.Services.CreateAsyncScope();

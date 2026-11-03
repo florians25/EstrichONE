@@ -8,6 +8,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Documentation.Exports;
 using EstrichOne.Api.Modules.Mail.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -33,7 +34,7 @@ public sealed record ArchiveVerification(
 /// <summary>Kopplung, Regeln, Warteschlange und Übertragung zum Archivserver.</summary>
 internal sealed partial class ArchiveService(
     EstrichOneDbContext db, IArchivableDocuments documents, IDataProtectionProvider protection, TimeProvider clock, IMailService mail,
-    IOptions<EstrichOneOptions> options, IConfiguration configuration, ILogger<ArchiveService> logger)
+    IOptions<EstrichOneOptions> options, IConfiguration configuration, ICompanyProfiles companies, ILogger<ArchiveService> logger)
 {
     public const string ProtectorPurpose = "EstrichOne.Archive.Token";
     private static readonly JsonSerializerOptions Json = new(JsonSerializerDefaults.Web);
@@ -103,7 +104,7 @@ internal sealed partial class ArchiveService(
     public async Task<ArchiveConnection> PairAsync(string address, string code, Guid userId, CancellationToken cancellationToken)
     {
         var uri = PeerClient.NormalizeAddress(address);
-        var pairing = await PeerClient.PairAsync(uri, code, $"EstrichONE {options.Value.ServerName}", "archive", cancellationToken);
+        var pairing = await PeerClient.PairAsync(uri, code, $"EstrichONE {await companies.GetDisplayNameAsync(cancellationToken)}", "archive", cancellationToken);
         var existing = await ConnectionAsync(cancellationToken);
         if (existing is not null)
         {

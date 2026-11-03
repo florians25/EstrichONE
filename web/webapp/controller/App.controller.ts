@@ -38,6 +38,7 @@ import { logos } from "../util/theme";
 import { openSettings } from "../util/settings";
 import { openQuickCall } from "../util/quickCall";
 import { openBauakteWizard } from "../util/bauakteWizard";
+import InstanceManager from "sap/m/InstanceManager";
 import type { CallResponse, DeviceResponse, TicketSummary, WorkItemDto } from "../util/models";
 import { isoDay } from "../util/days";
 import Button from "sap/m/Button";
@@ -110,6 +111,22 @@ export default class AppController extends BaseController {
 		// Module oder Rechte geändert (Einstellungen): Navigation sofort anpassen.
 		document.addEventListener("estrichone-permissions", () => this.refreshShell());
 		document.addEventListener("estrichone-chat", () => void this.loadChat());
+		// Tastenkürzel Alt+N: neue Bauakte (nur angemeldet, mit Recht und ohne offenen Dialog). event.code, damit es auch auf macOS greift.
+		document.addEventListener("keydown", (event) => {
+			if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.code !== "KeyN" || event.repeat) return;
+			if (!session.data.user || !session.has("bauakten.create") || InstanceManager.hasOpenDialog() || InstanceManager.hasOpenPopover()) return;
+			event.preventDefault();
+			this.onNewBauakte();
+		});
+		// Schmale Fenster (Suchfeld mittig, wenig Platz): „Neue Bauakte“ nur als Symbol, Beschriftung bleibt im Tooltip.
+		const compact = window.matchMedia("(min-width: 1100px) and (max-width: 1279px)");
+		const applyCompact = () => {
+			const button = this.el<Button>("newBauakteButton");
+			button.setText(compact.matches ? "" : this.t("shell.newBauakte"));
+			button.toggleStyleClass("eoIconOnly", compact.matches);
+		};
+		compact.addEventListener("change", applyCompact);
+		applyCompact();
 		// Service Worker: neue Pushnachricht (Glocke sofort aktualisieren) bzw. Klick auf eine Benachrichtigung.
 		navigator.serviceWorker?.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
 			if (event.data?.type === "estrichone-notification" && session.data.user) { void this.loadNotices(); void this.loadChat(); }

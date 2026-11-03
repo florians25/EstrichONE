@@ -26,8 +26,9 @@
 					<f:additionalContent>
 						<SearchField id="globalSearch" width="26rem" placeholder="Suchen: Bauakten, Altakten, Kunden, Dokumente …" class="eoShellSearch"
 							search=".onSearch" suggest=".onSuggest" enableSuggestions="true" ariaLabelledBy="globalSearchLabel"/>
-						<Button id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakteTooltip}" icon="sap-icon://add-document" type="Emphasized"
-							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }" class="eoShellNew"/>
+						<Button id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakteTooltip}" icon="sap-icon://add" type="Emphasized"
+							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }" class="eoShellNew"
+							ariaDescribedBy="newBauakteShortcut"/>
 						<Button id="chatButton" icon="sap-icon://discussion-2" tooltip="{= ${view>/chatUnread} > 0 ? 'Chat – ' + ${view>/chatUnread} + ' ungelesen' : 'Chat' }"
 							type="Transparent" press=".onChat" visible="{= ${session>/permissions/chat.use} === true }" class="eoShellChat">
 							<customData><BadgeCustomData key="badge" value="{= ${view>/chatUnread} > 99 ? '99+' : String(${view>/chatUnread}) }"
@@ -121,4 +122,5 @@
 	</FlexBox>
 	<core:InvisibleText id="profileLabel" text="{i18n>shell.profileMenu} {session>/user/displayName}"/>
 	<core:InvisibleText id="globalSearchLabel" text="{i18n>shell.searchLabel}"/>
+	<core:InvisibleText id="newBauakteShortcut" text="{i18n>shell.newBauakteShortcut}"/>
 </mvc:View>

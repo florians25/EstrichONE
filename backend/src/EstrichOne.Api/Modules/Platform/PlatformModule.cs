@@ -2,6 +2,7 @@ using EstrichOne.Api.Infrastructure.Hosting;
 using EstrichOne.Api.Infrastructure.Modules;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using EstrichOne.Api.Modules.Setup.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -56,6 +57,7 @@ public sealed class PlatformModule : IModule
         EstrichOneDbContext db,
         IOptions<EstrichOneOptions> options,
         ISetupState setup,
+        ICompanyProfiles companies,
         CancellationToken cancellationToken)
     {
         var state = await TryReadStateAsync(db, cancellationToken);
@@ -71,7 +73,8 @@ public sealed class PlatformModule : IModule
         var settings = options.Value;
         return TypedResults.Ok(new ServerInfo(
             Product: ServerInfo.ProductName,
-            ServerName: settings.ServerName,
+            // Firmenname aus den Firmendaten (Systemeinstellungen), ESTRICHONE_NAME nur als Rückfall vor der Einrichtung.
+            ServerName: await companies.GetDisplayNameAsync(cancellationToken),
             ServerVersion: ApplicationVersion.Current,
             ApiVersions: ["v1"],
             MinClientVersion: settings.MinClientVersion,

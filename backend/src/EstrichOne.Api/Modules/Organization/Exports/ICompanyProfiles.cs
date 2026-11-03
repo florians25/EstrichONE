@@ -7,6 +7,13 @@ public interface ICompanyProfiles
 
     Task<string?> GetNameAsync(CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Anzeigename des Betriebs für Kopfzeile, Anmeldung, Apps (server-info), 2FA-Aussteller und Kopplungen:
+    /// der gepflegte Firmenname aus den Firmendaten, sonst der Installer-Wert EstrichOne:ServerName (ESTRICHONE_NAME).
+    /// Wird bei jedem Aufruf frisch gelesen, eine Änderung der Firmendaten wirkt also sofort.
+    /// </summary>
+    Task<string> GetDisplayNameAsync(CancellationToken cancellationToken);
+
     /// <summary>Firmendaten für Briefköpfe und Ausdrucke (null vor der Einrichtung).</summary>
     Task<CompanyInfo?> GetProfileAsync(CancellationToken cancellationToken);
 }
