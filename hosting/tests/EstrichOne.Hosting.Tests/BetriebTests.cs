@@ -335,7 +335,7 @@ public sealed class BetriebTests
     [Fact]
     public void Bewertung_ErkenntGestoerteInstanzZertifikatUndServer()
     {
-        var tenant = new Tenant { Slug = "a", CompanyName = "A", Domain = "a.test", Version = "1.0.0", State = TenantState.Running };
+        var tenant = new Tenant { Slug = "a", CompanyName = "A", Domain = "a.test", Version = "1.0.0", State = TenantState.Running, CreatedAt = DateTime.UtcNow.AddDays(-3) };
         var status = TenantStatus.Empty("a") with
         {
             CollectedAt = DateTime.UtcNow,
@@ -350,6 +350,12 @@ public sealed class BetriebTests
 
         // Während eines laufenden Vorgangs (z. B. Aktualisierung) keine Meldung über den Zustand.
         NotificationMonitor.Evaluate([new TenantObservation(tenant, status, null, true)], 0.5, true, null).ShouldBeEmpty();
+
+        // Frisch angelegt: fehlendes Zertifikat ist noch kein Befund.
+        var fresh = new Tenant { Slug = "b", CompanyName = "B", Domain = "b.test", Version = "1.0.0", State = TenantState.Running };
+        var missing = certificate with { Domain = "b.test", State = "missing", CheckedAt = DateTime.UtcNow };
+        NotificationMonitor.Evaluate([new TenantObservation(fresh, TenantStatus.Empty("b") with { CollectedAt = DateTime.UtcNow, Health = HealthLevel.Healthy }, missing, false)],
+            null, true, null).ShouldBeEmpty();
     }
 
     [Fact]

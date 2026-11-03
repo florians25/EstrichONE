@@ -80,7 +80,7 @@
         },
         {
           "name": "notices",
-          "pattern": "hinweise",
+          "pattern": "hinweise:?query:",
           "target": "notices"
         },
         {
@@ -97,6 +97,16 @@
           "name": "settings",
           "pattern": "einstellungen",
           "target": "settings"
+        },
+        {
+          "name": "archives",
+          "pattern": "archiv",
+          "target": "archives"
+        },
+        {
+          "name": "setup",
+          "pattern": "einrichtung",
+          "target": "setup"
         }
       ],
       "targets": {
@@ -133,6 +143,16 @@
         "settings": {
           "name": "Settings",
           "id": "settings",
+          "level": 1
+        },
+        "archives": {
+          "name": "Archives",
+          "id": "archives",
+          "level": 1
+        },
+        "setup": {
+          "name": "Setup",
+          "id": "setup",
           "level": 1
         },
         "notices": {

@@ -113,8 +113,22 @@
 								<Button id="consoleUpdate" text="Konsole aktualisieren" icon="sap-icon://upload-to-cloud" press=".onConsoleUpdate" class="sapUiSmallMarginBegin" />
 							</HBox>
 							<Label text="Stand" /><Text text="{settings>/consoleUpdate/state/message}" />
-							<Label text="" /><Text class="hostingHint" text="Der Installer der Zielversion ersetzt den Konsolen-Container; Mandanten laufen ungestört weiter. Alternativ auf dem Server: docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v {settings>/system/root}:{settings>/system/root} ghcr.io/florians25/estrichone-hosting:latest install" />
+							<Label text="" /><Text class="hostingHint" text="Der Installer der Zielversion ersetzt den Konsolen-Container; Mandanten laufen ungestört weiter. Alternativ auf dem Server: sudo estrichone-hosting update (oder update &lt;version&gt;)." />
 						</f:SimpleForm>
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" title="Zweites Sicherungsziel">
+							<Label text="restic-Repository" labelFor="sysRepository" />
+							<Input id="sysRepository" value="{settings>/secondaryRepository}" placeholder="sftp:backup@sicherung.example.de:/estrichone" />
+							<Button text="Speichern" press=".onSaveRepository" />
+							<Label text="" /><Text class="hostingHint" text="Je Instanz ein Unterordner /&lt;kürzel&gt;; wirkt beim nächsten Vorgang der Instanz (z. B. Neustart). Leer = nur lokal." />
+							<Label text="Einrichtung" /><Link text="Einrichtungsassistent erneut öffnen" press=".onOpenSetup" />
+						</f:SimpleForm>
+					</IconTabFilter>
+					<IconTabFilter key="notifications" text="Benachrichtigungen" icon="sap-icon://bell">
+						<core:Fragment fragmentName="estrichone.hosting.fragment.NotificationForm" type="XML" />
+						<HBox class="sapUiSmallMargin">
+							<Button id="notifySave" text="Speichern" type="Emphasized" press=".onNotifySave" class="sapUiSmallMarginEnd" />
+							<Button id="notifyTest" text="Testnachricht senden" icon="sap-icon://paper-plane" press=".onNotifyTest" />
+						</HBox>
 					</IconTabFilter>
 				</items>
 			</IconTabBar>

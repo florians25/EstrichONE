@@ -5,6 +5,7 @@
 		<headerContent>
 			<Text text="Stand: {path: 'dashboard>/loadedAt', formatter: '.formatter.ago'}" class="hostingHint" />
 			<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh" />
+			<Button id="dashboardCreate" text="Mandant anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" />
 		</headerContent>
 		<content>
 			<VBox class="sapUiResponsiveContentPadding">
@@ -15,48 +16,91 @@
 				<MessageStrip type="Error" showIcon="true" visible="{= ${dashboard>/system/docker/reachable} === false }" class="sapUiSmallMarginBottom"
 					text="Docker ist nicht erreichbar: {dashboard>/system/docker/error}" />
 				<FlexBox id="kpiTiles" class="hostingTiles sapUiSmallMarginBottom" wrap="Wrap">
-					<GenericTile id="tileTotal" header="Mandanten" subheader="gesamt" press=".onTile" frameType="OneByOne" app:filter="all">
+					<GenericTile sizeBehavior="Small" id="tileTotal" header="Mandanten" subheader="gesamt" press=".onTile" frameType="OneByOne" app:filter="all">
 						<TileContent footer="{dashboard>/tenants/provisioning} in Bereitstellung">
 							<NumericContent value="{dashboard>/tenants/total}" icon="sap-icon://building" withMargin="false" />
 						</TileContent>
 					</GenericTile>
-					<GenericTile id="tileActive" header="Aktiv" subheader="laufende Instanzen" press=".onTile" app:filter="Running">
+					<GenericTile sizeBehavior="Small" id="tileActive" header="Aktiv" subheader="laufende Instanzen" press=".onTile" app:filter="Running">
 						<TileContent footer="{dashboard>/health/healthy} ohne Befund">
 							<NumericContent value="{dashboard>/tenants/running}" valueColor="Good" icon="sap-icon://status-positive" withMargin="false" />
 						</TileContent>
 					</GenericTile>
-					<GenericTile id="tileLocked" header="Gesperrt" subheader="Wartungsseite aktiv" press=".onTile" app:filter="Locked">
+					<GenericTile sizeBehavior="Small" id="tileLocked" header="Gesperrt" subheader="Wartungsseite aktiv" press=".onTile" app:filter="Locked">
 						<TileContent footer="{dashboard>/tenants/stopped} angehalten">
 							<NumericContent value="{dashboard>/tenants/locked}" valueColor="{= ${dashboard>/tenants/locked} > 0 ? 'Critical' : 'Neutral'}" icon="sap-icon://locked" withMargin="false" />
 						</TileContent>
 					</GenericTile>
-					<GenericTile id="tileErrors" header="Fehler" subheader="gestört oder fehlgeschlagen" press=".onTile" app:filter="problems">
+					<GenericTile sizeBehavior="Small" id="tileErrors" header="Fehler" subheader="gestört oder fehlgeschlagen" press=".onTile" app:filter="problems">
 						<TileContent footer="{dashboard>/health/degraded} mit Warnung">
 							<NumericContent value="{= ${dashboard>/health/unhealthy} + ${dashboard>/tenants/failed} }"
 								valueColor="{= ${dashboard>/health/unhealthy} + ${dashboard>/tenants/failed} > 0 ? 'Error' : 'Good'}" icon="sap-icon://message-error" withMargin="false" />
 						</TileContent>
 					</GenericTile>
-					<GenericTile id="tileOutdated" header="Veraltete Versionen" subheader="Ziel {dashboard>/defaultVersion}" press=".onTile" app:filter="outdated">
+					<GenericTile sizeBehavior="Small" id="tileOutdated" header="Veraltete Versionen" subheader="Ziel {dashboard>/defaultVersion}" press=".onTile" app:filter="outdated">
 						<TileContent footer="Alle aktualisieren in „Mandanten“">
 							<NumericContent value="{dashboard>/outdated}" valueColor="{= ${dashboard>/outdated} > 0 ? 'Critical' : 'Good'}" icon="sap-icon://upload-to-cloud" withMargin="false" />
 						</TileContent>
 					</GenericTile>
-					<GenericTile id="tileStorage" header="Speicher" subheader="Daten aller Instanzen" press=".onTile" app:filter="all">
+					<GenericTile sizeBehavior="Small" id="tileStorage" header="Speicher" subheader="Daten aller Instanzen" press=".onTile" app:filter="all">
 						<TileContent footer="frei: {path: 'dashboard>/system/diskFreeBytes', formatter: '.formatter.bytes'}">
 							<NumericContent value="{path: 'dashboard>/storageBytes', formatter: '.formatter.gigabytes'}" scale="GB" truncateValueTo="7" icon="sap-icon://database" withMargin="false" />
 						</TileContent>
 					</GenericTile>
-					<GenericTile id="tileUsers" header="Aktive Benutzer" subheader="über alle Instanzen" press=".onTile" app:filter="all">
+					<GenericTile sizeBehavior="Small" id="tileUsers" header="Aktive Benutzer" subheader="über alle Instanzen" press=".onTile" app:filter="all">
 						<TileContent footer="{dashboard>/setupPending} Ersteinrichtung offen">
 							<NumericContent value="{dashboard>/activeUsers}" icon="sap-icon://group" withMargin="false" />
 						</TileContent>
 					</GenericTile>
-					<GenericTile id="tileBackups" header="Sicherungen" subheader="älter als 36 Stunden" press=".onTile" app:filter="backup">
+					<GenericTile sizeBehavior="Small" id="tileBackups" header="Sicherungen" subheader="älter als 36 Stunden" press=".onTile" app:filter="backup">
 						<TileContent footer="täglich, nachts gestaffelt">
 							<NumericContent value="{dashboard>/backupsStale}" valueColor="{= ${dashboard>/backupsStale} > 0 ? 'Critical' : 'Good'}" icon="sap-icon://save" withMargin="false" />
 						</TileContent>
 					</GenericTile>
 				</FlexBox>
+				<Table id="instanceTable" items="{path: 'instances>/items', sorter: [{path: 'rank', descending: true}, {path: 'companyName'}]}" class="sapUiSmallMarginBottom"
+					noDataText="Noch keine Instanzen – mit „Mandant anlegen“ die erste bereitstellen." growing="true" growingThreshold="15" popinLayout="GridSmall">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Zustand aller Instanzen" level="H2" />
+							<ToolbarSpacer />
+							<SearchField id="instanceSearch" width="16rem" placeholder="Suchen …" liveChange=".onInstanceSearch">
+								<layoutData><OverflowToolbarLayoutData minWidth="10rem" shrinkable="true" priority="NeverOverflow" /></layoutData>
+							</SearchField>
+							<SegmentedButton id="instanceFilter" selectedKey="{instances>/filter}" selectionChange=".onInstanceSearch">
+								<items>
+									<SegmentedButtonItem key="all" text="Alle" />
+									<SegmentedButtonItem key="warnings" text="Mit Hinweis ({instances>/warnings})" />
+								</items>
+							</SegmentedButton>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Instanz" /></Column>
+						<Column width="9rem"><Text text="Online" /></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true" width="9rem"><Text text="Version" /></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Letzte Sicherung" /></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true" width="10rem"><Text text="Speicher" /></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Zertifikat / Domain" /></Column>
+						<Column minScreenWidth="1400px" demandPopin="true"><Text text="Hinweise" /></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onInstance" highlight="{= ${instances>rank} >= 3 ? 'Error' : ${instances>rank} >= 1 ? 'Warning' : 'None' }">
+							<ObjectIdentifier title="{instances>companyName}" text="{instances>slug}" />
+							<ObjectStatus text="{parts: ['instances>state', 'instances>health'], formatter: '.formatter.onlineText'}"
+								state="{parts: ['instances>state', 'instances>health'], formatter: '.formatter.onlineState'}"
+								icon="{parts: ['instances>state', 'instances>health'], formatter: '.formatter.onlineIcon'}" />
+							<ObjectStatus text="{instances>version}" state="{path: 'instances>outdated', formatter: '.formatter.versionState'}" icon="{= ${instances>outdated} ? 'sap-icon://upload-to-cloud' : '' }" />
+							<ObjectStatus text="{parts: ['instances>backupHealthy', 'instances>backupLastSuccess'], formatter: '.formatter.backupText'}" state="{path: 'instances>backupHealthy', formatter: '.formatter.backupState'}" />
+							<Text text="{parts: ['instances>diskBytes', 'instances>storageLimitBytes'], formatter: '.formatStorage'}" />
+							<VBox>
+								<ObjectStatus text="{path: 'instances>certificate', formatter: '.formatter.certificateText'}" state="{path: 'instances>certificate', formatter: '.formatter.certificateState'}" icon="{path: 'instances>certificate', formatter: '.formatter.certificateIcon'}" />
+								<Text text="{instances>domain}" class="hostingHint" wrapping="false" />
+							</VBox>
+							<Text text="{= ${instances>hints}.join(' · ') || '–' }" maxLines="2" />
+						</ColumnListItem>
+					</items>
+				</Table>
 				<l:Grid defaultSpan="XL6 L6 M12 S12" hSpacing="1" vSpacing="1">
 					<Panel headerText="Handlungsbedarf" class="sapUiNoContentPadding">
 						<Table id="problemTable" items="{dashboard>/problems}" noDataText="Alles in Ordnung – keine gestörten Instanzen." mode="None">
@@ -68,7 +112,7 @@
 							<items>
 								<ColumnListItem type="Navigation" press=".onProblem">
 									<ObjectIdentifier title="{dashboard>companyName}" text="{dashboard>slug}" />
-									<ObjectStatus text="{path: 'dashboard>health', formatter: '.formatter.healthText'}" state="{path: 'dashboard>health', formatter: '.formatter.healthState'}" icon="{path: 'dashboard>health', formatter: '.formatter.healthIcon'}" />
+									<ObjectStatus text="{parts: ['dashboard>state', 'dashboard>health'], formatter: '.formatter.onlineText'}" state="{parts: ['dashboard>state', 'dashboard>health'], formatter: '.formatter.onlineState'}" icon="{parts: ['dashboard>state', 'dashboard>health'], formatter: '.formatter.onlineIcon'}" />
 									<Text text="{dashboard>problem}" maxLines="3" />
 								</ColumnListItem>
 							</items>

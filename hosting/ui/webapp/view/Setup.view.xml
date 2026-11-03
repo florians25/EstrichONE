@@ -1,0 +1,93 @@
+<mvc:View controllerName="estrichone.hosting.controller.Setup" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<Page id="setupPage" title="Einrichtung der Hosting-Konsole" class="hostingSetupPage">
+		<content>
+			<VBox class="hostingSetupBody sapUiResponsiveContentPadding">
+				<Text text="Ein paar Angaben, dann ist die Konsole betriebsbereit. Alles lässt sich später unter Einstellungen ändern." class="hostingHint sapUiSmallMarginBottom" />
+				<HBox id="setupSteps" class="hostingSteps" items="{setup>/steps}" renderType="Bare">
+					<HBox class="hostingStep" alignItems="Center" renderType="Bare">
+						<customData>
+							<core:CustomData key="state" value="{= ${setup>index} &lt; ${setup>/step} ? 'done' : ${setup>index} === ${setup>/step} ? 'active' : 'todo' }" writeToDom="true" />
+						</customData>
+						<Text text="{= ${setup>index} &lt; ${setup>/step} ? '✓' : ${setup>index} + 1 }" class="hostingStepNumber" />
+						<Text text="{setup>title}" class="hostingStepTitle" />
+					</HBox>
+				</HBox>
+				<NavContainer id="setupPages" height="32rem" autoFocus="false" defaultTransitionName="show" class="hostingSetupPages">
+					<Page id="spPassword" showHeader="false" class="sapUiContentPadding">
+						<VBox visible="{setup>/mustChangePassword}">
+							<Title text="Eigenes Passwort festlegen" level="H3" />
+							<Text text="Das Konto wurde vom Installer mit einem Startpasswort angelegt. Bitte jetzt ein eigenes, langes Passwort wählen (mindestens 12 Zeichen)." class="sapUiSmallMarginBottom" />
+							<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
+								<Label text="Startpasswort" required="true" labelFor="sCurrent" />
+								<Input id="sCurrent" type="Password" value="{setup>/currentPassword}" />
+								<Label text="Neues Passwort" required="true" labelFor="sNew" />
+								<Input id="sNew" type="Password" value="{setup>/newPassword}" valueLiveUpdate="true" />
+								<Label text="Wiederholen" required="true" labelFor="sRepeat" />
+								<Input id="sRepeat" type="Password" value="{setup>/repeatPassword}" valueLiveUpdate="true" />
+							</f:SimpleForm>
+						</VBox>
+						<MessageStrip visible="{= !${setup>/mustChangePassword} }" type="Success" showIcon="true" text="Passwort ist festgelegt ({setup>/userName})." />
+					</Page>
+					<Page id="spTotp" showHeader="false" class="sapUiContentPadding">
+						<Title text="Zwei-Faktor-Anmeldung (empfohlen)" level="H3" />
+						<Text text="Mit einer Authenticator-App (z. B. Microsoft/Google Authenticator, 1Password) ist die Konsole auch bei bekanntem Passwort geschützt. Der Schritt ist freiwillig." class="sapUiSmallMarginBottom" />
+						<MessageStrip visible="{setup>/totpEnabled}" type="Success" showIcon="true" text="Zwei-Faktor-Anmeldung ist eingeschaltet." />
+						<Button id="sTotpBegin" text="Jetzt einrichten" icon="sap-icon://iphone" press=".onTotpBegin" visible="{= !${setup>/totpEnabled} &amp;&amp; !${setup>/totp} }" />
+						<HBox visible="{= !!${setup>/totp} }" wrap="Wrap" alignItems="Start">
+							<Image src="{setup>/totp/qr}" width="11rem" height="11rem" class="hostingQr sapUiMediumMarginEnd" alt="QR-Code für die Authenticator-App" />
+							<VBox>
+								<Text text="1. QR-Code scannen oder Schlüssel eingeben:" />
+								<Text text="{setup>/totp/secret}" class="hostingSecret sapUiTinyMarginTopBottom" />
+								<Label text="2. Angezeigten Code eingeben" labelFor="sTotpCode" />
+								<HBox>
+									<Input id="sTotpCode" value="{setup>/totpCode}" width="9rem" maxLength="6" type="Number" class="sapUiSmallMarginEnd" />
+									<Button text="Bestätigen" type="Emphasized" press=".onTotpEnable" />
+								</HBox>
+							</VBox>
+						</HBox>
+					</Page>
+					<Page id="spVersion" showHeader="false" class="sapUiContentPadding">
+						<Title text="Standardversion für neue Instanzen" level="H3" />
+						<Text text="Neue Mandanten starten mit dieser Version der EstrichONE-Suite; bestehende werden über „Aktualisieren“ (mit Vorab-Sicherung) angehoben." class="sapUiSmallMarginBottom" />
+						<ComboBox id="sVersion" value="{setup>/defaultVersion}" items="{setup>/versions}" width="16rem">
+							<core:Item key="{setup>}" text="{setup>}" />
+						</ComboBox>
+						<Text text="Quelle: {setup>/versionSource}" class="hostingHint sapUiTinyMarginTop" />
+					</Page>
+					<Page id="spBackup" showHeader="false" class="sapUiContentPadding">
+						<Title text="Sicherungen" level="H3" />
+						<Text text="Jede Instanz sichert sich täglich verschlüsselt (restic) nach {setup>/backupRoot}. Ein zweites Ziel außerhalb dieses Servers schützt auch bei Totalausfall – je Instanz entsteht dort ein eigener Unterordner." class="sapUiSmallMarginBottom" />
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
+							<Label text="Zweites Sicherungsziel" labelFor="sRepository" />
+							<Input id="sRepository" value="{setup>/secondaryRepository}" placeholder="sftp:backup@sicherung.example.de:/estrichone" maxLength="500" />
+							<Label text="" />
+							<Text text="restic-Repository: sftp:…, rest:https://…, s3:…, b2:…, azure:…, gs:…, rclone:… oder ein eingebundener Pfad. Leer lassen = nur lokal. Endsicherungen gelöschter Mandanten liegen unter {setup>/archiveDirectory}." class="hostingHint" />
+						</f:SimpleForm>
+					</Page>
+					<Page id="spNotify" showHeader="false" class="sapUiContentPadding">
+						<Title text="Benachrichtigungen bei Problemen" level="H3" />
+						<core:Fragment fragmentName="estrichone.hosting.fragment.NotificationForm" type="XML" />
+						<Button id="sNotifyTest" text="Testnachricht senden" icon="sap-icon://paper-plane" press=".onNotifyTest" class="sapUiSmallMarginTop" />
+					</Page>
+					<Page id="spDone" showHeader="false" class="sapUiContentPadding">
+						<VBox alignItems="Center" class="sapUiLargeMarginTop">
+							<core:Icon src="sap-icon://sys-enter-2" size="3rem" color="Positive" />
+							<Title text="Fertig – die Konsole ist eingerichtet." level="H2" class="sapUiSmallMarginTop" />
+							<Text text="Nächster Schritt: den ersten Mandanten anlegen. Der Assistent führt durch Firma, Adresse, Ressourcen und die erste Admin-Person mit Zugangsbrief." textAlign="Center" class="sapUiSmallMarginTop" />
+							<Button id="sCreateTenant" text="Ersten Mandanten anlegen" type="Emphasized" icon="sap-icon://add" press=".onCreateTenant" class="sapUiMediumMarginTop" />
+							<Link text="Zur Übersicht" press=".onDashboard" class="sapUiSmallMarginTop" />
+						</VBox>
+					</Page>
+				</NavContainer>
+			</VBox>
+		</content>
+		<footer>
+			<OverflowToolbar visible="{= ${setup>/step} &lt; 5 }">
+				<ToolbarSpacer />
+				<Button id="setupBack" text="Zurück" press=".onBack" visible="{= ${setup>/step} > 0 }" />
+				<Button id="setupSkip" text="Überspringen" press=".onSkip" visible="{= ${setup>/step} === 1 || ${setup>/step} === 3 || ${setup>/step} === 4 }" />
+				<Button id="setupNext" text="{= ${setup>/step} === 4 ? 'Einrichtung abschließen' : 'Weiter' }" type="Emphasized" press=".onNext" />
+			</OverflowToolbar>
+		</footer>
+	</Page>
+</mvc:View>

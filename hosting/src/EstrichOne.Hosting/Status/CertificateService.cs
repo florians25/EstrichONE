@@ -140,14 +140,17 @@ public sealed partial class CertificateService
     private static partial void LogHandshakeFailed(ILogger logger, Exception exception, string domain);
 }
 
-/// <summary>Prüft stündlich alle Domains (Instanzen und Konsole).</summary>
+/// <summary>
+/// Prüft alle Domains (Instanzen und Konsole): gültige Zertifikate stündlich, alle anderen alle 5 Minuten (z. B. kurz nach
+/// dem Anlegen, bis Let's Encrypt ausgestellt hat).
+/// </summary>
 public sealed class CertificateMonitor(IServiceScopeFactory scopes, CertificateService certificates, IOptions<HostingOptions> options,
-    ILogger<CertificateMonitor> logger) : BackgroundService
+    TimeProvider clock, ILogger<CertificateMonitor> logger) : BackgroundService
 {
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
-        using var timer = new PeriodicTimer(TimeSpan.FromHours(1));
+        using var timer = new PeriodicTimer(TimeSpan.FromMinutes(5));
         do
         {
             try
@@ -161,7 +164,10 @@ public sealed class CertificateMonitor(IServiceScopeFactory scopes, CertificateS
                 }
 
                 domains.Add(options.Value.ConsoleDomain);
-                await Parallel.ForEachAsync(domains, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = stoppingToken },
+                var now = clock.GetUtcNow().UtcDateTime;
+                var due = domains.Where(d => certificates.Get(d) is not { } known
+                    || known.State != "valid" || now - known.CheckedAt > TimeSpan.FromMinutes(55)).ToList();
+                await Parallel.ForEachAsync(due, new ParallelOptions { MaxDegreeOfParallelism = 4, CancellationToken = stoppingToken },
                     async (domain, token) => await certificates.CheckAsync(domain, token));
             }
             catch (Exception exception) when (exception is not OperationCanceledException)

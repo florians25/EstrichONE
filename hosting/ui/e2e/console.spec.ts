@@ -46,8 +46,32 @@ test.describe.serial('Hosting-Konsole', () => {
     await input(page, 'setupCode').fill(code!);
     await input(page, 'password').fill(PASSWORD);
     await ui(page, 'loginButton').click();
-    await expect(page.getByText('Übersicht', { exact: true }).first()).toBeVisible();
+
+    // Einrichtungsassistent: Passwort steht (selbst gewählt), Zwei-Faktor überspringen, Version, Sicherung, Benachrichtigungen.
+    await expect(ui(page, 'setupPage')).toBeVisible();
+    await expect(ui(page, 'spPassword')).toContainText('Passwort ist festgelegt');
+    await ui(page, 'setupNext').click();
+    await expect(ui(page, 'sTotpBegin')).toBeVisible();
+    await ui(page, 'setupSkip').click();
+    await expect(ui(page, 'sVersion')).toBeVisible();
+    await ui(page, 'setupNext').click();
+    await input(page, 'sRepository').fill('kein repository');
+    await ui(page, 'setupNext').click();
+    await input(page, 'nWebhook').fill('https://hooks.example.org/estrichone');
+    await page.screenshot({ path: 'test-results/01a-einrichtung.png' });
+    await ui(page, 'setupNext').click();
+    // Ungültiges Sicherungsziel wird vom Server abgewiesen.
+    await expect(page.getByText('restic-Repository angeben').first()).toBeVisible();
+    await page.getByRole('button', { name: /Schließen|OK/ }).last().click();
+    await ui(page, 'setupBack').click();
+    await input(page, 'sRepository').fill('sftp:backup@sicherung.example.org:/estrichone');
+    await ui(page, 'setupNext').click();
+    await ui(page, 'setupNext').click();
+    await expect(ui(page, 'sCreateTenant')).toBeVisible();
+    await page.screenshot({ path: 'test-results/01b-einrichtung-fertig.png' });
+    await page.goto('/#/');
     await expect(ui(page, 'tileTotal')).toBeVisible();
+    await expect(ui(page, 'instanceTable')).toBeVisible();
     await page.screenshot({ path: 'test-results/01-uebersicht.png', fullPage: true });
     expect(problems).toEqual([]);
   });
@@ -57,20 +81,42 @@ test.describe.serial('Hosting-Konsole', () => {
     await login(page);
     await page.goto('/#/mandanten');
     await ui(page, 'createTenantButton').click();
-    await input(page, 'fCompany').fill('Estrichbau Müller GmbH');
-    await expect(input(page, 'fSlug')).toHaveValue('estrichbau-mueller');
-    await input(page, 'fCustomer').fill('K-1001');
-    await input(page, 'fContact').fill('Max Müller');
-    await input(page, 'fEmail').fill('info@mueller.example');
+    // Assistent: Firma → Adresse → Ressourcen → erste Admin-Person → Prüfen
+    await input(page, 'wCompany').fill('Estrichbau Müller GmbH');
+    await input(page, 'wCustomer').fill('K-1001');
+    await input(page, 'wContact').fill('Max Müller');
+    await input(page, 'wEmail').fill('info@mueller.example');
+    await ui(page, 'wizardNext').click();
+    await expect(input(page, 'wSlug')).toHaveValue('estrichbau-mueller');
+    await ui(page, 'wizardNext').click();
+    await expect(ui(page, 'wPlans')).toContainText('Starter');
+    await ui(page, 'wizardNext').click();
+    await expect(input(page, 'wAdminName')).toHaveValue('Max Müller');
+    await expect(input(page, 'wAdminUser')).toHaveValue('max.mueller');
     await page.screenshot({ path: 'test-results/02-mandant-anlegen.png' });
-    await ui(page, 'tenantSave').click();
+    await ui(page, 'wizardNext').click();
+    await expect(ui(page, 'wSummaryDomain')).toContainText('estrichbau-mueller.');
+    await ui(page, 'wizardCreate').click();
 
-    // Detailseite: Bereitstellung läuft (simuliert), danach aktiv mit Einrichtungscode.
+    // Detailseite: Bereitstellung und Ersteinrichtung laufen (simuliert), danach aktiv mit Zugangsbrief.
     await expect(ui(page, 'tenantTitle')).toHaveText('Estrichbau Müller GmbH');
     await expect(ui(page, 'detailState')).toContainText('Aktiv', { timeout: 60_000 });
-    await expect(ui(page, 'setupCodeText')).toHaveText(/^[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/, { timeout: 60_000 });
+    await expect(ui(page, 'letterPanel')).toBeVisible({ timeout: 60_000 });
     await expect(ui(page, 'containerTable')).toContainText('postgres');
     await page.screenshot({ path: 'test-results/03-mandant-detail.png', fullPage: true });
+    await ui(page, 'openLetter').click();
+    await input(page, 'passwordPrompt').fill(PASSWORD);
+    await ui(page, 'passwordPromptConfirm').click();
+    await expect(ui(page, 'letterUser')).toHaveText('max.mueller');
+    await expect(ui(page, 'letterPassword')).toHaveText(/^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$/);
+    await page.screenshot({ path: 'test-results/03b-zugangsbrief.png' });
+    await ui(page, 'accessLetterDialog').getByRole('button', { name: 'Schließen' }).click();
+
+    // Sicherung → Wiederherstellungspunkt in der Liste
+    await ui(page, 'actBackup').click();
+    await expect(ui(page, 'operationLogText').locator('textarea')).toHaveValue(/Abgeschlossen/, { timeout: 60_000 });
+    await ui(page, 'operationDialog').getByRole('button', { name: 'Schließen' }).click();
+    await expect(ui(page, 'snapshotTable')).toContainText('/repository', { timeout: 30_000 });
 
     // Liste mit Suche
     await page.goto('/#/mandanten');
@@ -80,6 +126,13 @@ test.describe.serial('Hosting-Konsole', () => {
     await page.locator('[id$="--tenantSearch-I"]').fill('mueller');
     await expect(ui(page, 'tenantTable')).toContainText('Estrichbau Müller GmbH');
     await page.screenshot({ path: 'test-results/04-mandanten.png', fullPage: true });
+
+    // Massenaktion: Auswahl → Neu starten
+    await ui(page, 'tenantTable').locator('.sapMCb').nth(1).click();
+    await expect(ui(page, 'bulkBar')).toContainText('1 ausgewählt');
+    await ui(page, 'bulkRestart').click();
+    await page.getByRole('button', { name: 'OK' }).click();
+    await expect(page.getByText('1 eingereiht').first()).toBeVisible();
 
     // Sperren (Zahlungsverzug) → Wartungsseite
     await ui(page, 'tenantTable').getByText('Estrichbau Müller GmbH').click();
@@ -94,6 +147,21 @@ test.describe.serial('Hosting-Konsole', () => {
     await log.getByRole('button', { name: 'Schließen' }).click();
     await expect(ui(page, 'detailState')).toContainText('Gesperrt', { timeout: 60_000 });
     await page.screenshot({ path: 'test-results/06-gesperrt.png', fullPage: true });
+    expect(problems).toEqual([]);
+  });
+
+  test('Benachrichtigungen, Archiv und Einstellungen', async ({ page }) => {
+    const problems = watchConsole(page);
+    await login(page);
+    await page.getByRole('button', { name: 'Benachrichtigungen' }).first().click();
+    await expect(ui(page, 'notificationList')).toContainText('Keine offenen Probleme');
+    await page.keyboard.press('Escape');
+    await page.goto('/#/archiv');
+    await expect(ui(page, 'archiveTable')).toContainText('Keine Endsicherungen');
+    await page.goto('/#/einstellungen');
+    await page.getByText('Benachrichtigungen', { exact: true }).last().click();
+    await expect(input(page, 'nWebhook')).toHaveValue('https://hooks.example.org/estrichone');
+    await page.screenshot({ path: 'test-results/06c-benachrichtigungen.png', fullPage: true });
     expect(problems).toEqual([]);
   });
 

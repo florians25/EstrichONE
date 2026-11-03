@@ -8,7 +8,8 @@ import ObjectPageLayout from "sap/uxap/ObjectPageLayout";
 import BaseController from "./BaseController";
 import TenantFormDialog from "../util/TenantFormDialog";
 import OperationLogDialog from "../util/OperationLogDialog";
-import { get, post } from "../model/Api";
+import { del, get, post } from "../model/Api";
+import { askPassword, download } from "../util/PasswordPrompt";
 
 interface Detail {
 	summary: { id: string; slug: string; companyName: string; openOperation?: { id: string } | null; state: string; version: string; planId: string; customerNumber?: string; contactName?: string; contactEmail?: string; domain: string };
@@ -24,7 +25,8 @@ const CONFIRM: Record<string, [string, string]> = {
 };
 
 const DONE: Record<string, string> = {
-	start: "Start", stop: "Stopp", restart: "Neustart", unlock: "Entsperren", backup: "Sicherung", provision: "Bereitstellung"
+	start: "Start", stop: "Stopp", restart: "Neustart", unlock: "Entsperren", backup: "Sicherung", provision: "Bereitstellung",
+	"initial-setup": "Ersteinrichtung", rollback: "Zurücknehmen", restore: "Wiederherstellung"
 };
 
 /**
@@ -36,6 +38,8 @@ export default class TenantDetailController extends BaseController {
 	private readonly logs = new JSONModel({ service: "api", lines: "200", level: "all", filter: "", text: "", count: 0, follow: false });
 	private readonly events = new JSONModel({ items: [] });
 	private readonly dlg = new JSONModel({});
+	private readonly snapshots = new JSONModel({ items: [] });
+	private readonly letter = new JSONModel({});
 	private id = "";
 	private timer?: ReturnType<typeof setInterval>;
 	private logTimer?: ReturnType<typeof setInterval>;
@@ -48,6 +52,8 @@ export default class TenantDetailController extends BaseController {
 		this.setModel(this.logs, "logs");
 		this.setModel(this.events, "events");
 		this.setModel(this.dlg, "dlg");
+		this.setModel(this.snapshots, "snapshots");
+		this.setModel(this.letter, "letter");
 		this.getRouter().getRoute("tenant")!.attachPatternMatched((event) => {
 			this.id = (event.getParameter("arguments") as { id: string }).id;
 			this.detail.setData({});
@@ -79,12 +85,14 @@ export default class TenantDetailController extends BaseController {
 
 	private async load(silent = false): Promise<void> {
 		const action = async () => {
-			const [detail, events] = await Promise.all([
+			const [detail, events, snapshots] = await Promise.all([
 				get<Detail>(`/api/tenants/${this.id}`),
-				get<{ items: unknown[] }>(`/api/audit?tenant=${this.id}&take=200`)
+				get<{ items: unknown[] }>(`/api/audit?tenant=${this.id}&take=200`),
+				get<{ items: unknown[] }>(`/api/tenants/${this.id}/snapshots`).catch(() => ({ items: [] }))
 			]);
 			this.detail.setData(detail);
 			this.events.setData(events);
+			this.snapshots.setData(snapshots);
 		};
 		if (silent) {
 			await action().catch(() => undefined);
@@ -231,10 +239,96 @@ export default class TenantDetailController extends BaseController {
 		if (operation) {
 			this.toast("Löschen gestartet");
 			await this.showOperation(operation.id, () => {
-				this.toast("Mandant gelöscht");
-				this.navTo("tenants");
+				this.toast(finalBackup ? "Mandant gelöscht – Endsicherung liegt im Archiv" : "Mandant gelöscht");
+				this.navTo(finalBackup ? "archives" : "tenants");
 			});
 		}
+	}
+
+	/** Letzte Aktualisierung zurücknehmen: vorherige Version und Datenstand der Vorab-Sicherung. */
+	public onRollback(): void {
+		const previous = this.detail.getProperty("/summary/previousVersion") as string;
+		const snapshot = this.snapshots.getProperty("/rollbackSnapshot") as string | null;
+		MessageBox.warning(
+			`Zurück auf Version ${previous}${snapshot ? ` mit dem Datenstand der Vorab-Sicherung (${snapshot.slice(0, 8)}). Änderungen seit der Aktualisierung gehen verloren.` : ". Es gibt keine Vorab-Sicherung – die Daten bleiben unverändert (nur möglich, wenn die neue Version das Schema nicht geändert hat)."}`,
+			{
+				title: "Aktualisierung zurücknehmen",
+				actions: ["Zurücknehmen", MessageBox.Action.CANCEL],
+				emphasizedAction: "Zurücknehmen",
+				onClose: (choice: string) => {
+					if (choice === "Zurücknehmen") void this.execute("rollback", { confirm: true });
+				}
+			});
+	}
+
+	/** Wiederherstellen aus einer Sicherung (vorher wird der aktuelle Stand gesichert). */
+	public onRestore(event: Event): void {
+		const snapshot = (event.getSource() as Control).getBindingContext("snapshots")!.getObject() as { id: string; shortId: string; time: string };
+		const when = this.formatter.dateTime(snapshot.time);
+		MessageBox.warning(`Datenbank und Dateien auf den Stand vom ${when} (${snapshot.shortId}) zurücksetzen? Die Instanz ist dafür einige Minuten nicht erreichbar. Vorher wird der aktuelle Stand gesichert.`, {
+			title: "Wiederherstellen",
+			actions: ["Wiederherstellen", MessageBox.Action.CANCEL],
+			emphasizedAction: MessageBox.Action.CANCEL,
+			onClose: (choice: string) => {
+				if (choice === "Wiederherstellen") void this.execute("restore", { snapshot: snapshot.id, confirm: true, backupFirst: true });
+			}
+		});
+	}
+
+	public async onExport(): Promise<void> {
+		const password = await askPassword(this.getView()!, "Export herunterladen",
+			"Der Export enthält das Sicherungs-Repository und den Schlüssel der Instanz (.env). Bitte nur verschlüsselt weitergeben.", "Herunterladen");
+		if (!password) return;
+		const result = await this.run(() => post<{ url: string; fileName: string }>(`/api/tenants/${this.id}/export`, { password }));
+		if (result) {
+			download(result.url, result.fileName);
+			this.toast("Export wird heruntergeladen");
+		}
+	}
+
+	public async onAccessLetter(): Promise<void> {
+		const password = await askPassword(this.getView()!, "Zugangsbrief öffnen", "Der Zugangsbrief enthält das Startpasswort der ersten Admin-Person.", "Öffnen");
+		if (!password) return;
+		const letter = await this.run(() => post<object>(`/api/tenants/${this.id}/access-letter`, { password }));
+		if (letter) {
+			this.letter.setData(letter);
+			(await this.dialog("AccessLetter")).open();
+		}
+	}
+
+	public onPrintLetter(): void {
+		document.body.classList.add("hostingPrintLetter");
+		window.print();
+		setTimeout(() => document.body.classList.remove("hostingPrintLetter"), 500);
+	}
+
+	public onCopyLetter(): void {
+		const l = this.letter.getData() as { companyName: string; url: string; userName: string; initialPassword: string };
+		const text = [`EstrichONE für ${l.companyName}`, `Adresse: ${l.url}`, `Benutzername: ${l.userName}`, `Startpasswort: ${l.initialPassword}`,
+			"(Bitte nach der ersten Anmeldung ändern.)"].join("\n");
+		void navigator.clipboard?.writeText(text).then(() => this.toast("Zugangsdaten kopiert"));
+	}
+
+	public onDiscardLetter(): void {
+		MessageBox.confirm("Zugangsbrief verwerfen? Das Startpasswort ist danach nur noch beim Kunden bekannt.", {
+			title: "Zugangsbrief verwerfen",
+			onClose: async (choice: string) => {
+				if (choice !== MessageBox.Action.OK) return;
+				const done = await this.run(async () => {
+					await del(`/api/tenants/${this.id}/access-letter`);
+					return true;
+				});
+				if (done) {
+					this.toast("Zugangsbrief verworfen");
+					await this.load(true);
+				}
+			}
+		});
+	}
+
+	/** Ankündigung oder Wartung nur für diese Instanz (Seite „Hinweise und Wartung“ mit Vorauswahl). */
+	public onNotice(event: Event): void {
+		this.getRouter().navTo("notices", { "?query": { tenant: this.id, kind: (event.getSource() as Control).data("kind") as string } });
 	}
 
 	public async onBackupKey(): Promise<void> {

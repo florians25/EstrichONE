@@ -28,7 +28,33 @@ const OPERATION: Record<string, [string, ValueState]> = {
 	Failed: ["Fehlgeschlagen", ValueState.Error]
 };
 
+interface Certificate { state: string; daysLeft?: number | null; error?: string | null; notAfter?: string | null }
+
+const CERTIFICATE: Record<string, [string, ValueState, string]> = {
+	valid: ["Gültig", ValueState.Success, "sap-icon://shield"],
+	expiring: ["Läuft bald ab", ValueState.Warning, "sap-icon://warning"],
+	invalid: ["Ungültig", ValueState.Error, "sap-icon://error"],
+	missing: ["Fehlt", ValueState.Error, "sap-icon://error"],
+	off: ["Nur HTTP", ValueState.None, "sap-icon://unlocked"]
+};
+
+const SEVERITY: Record<string, [ValueState, string]> = {
+	critical: [ValueState.Error, "sap-icon://message-error"],
+	warning: [ValueState.Warning, "sap-icon://message-warning"],
+	info: [ValueState.Information, "sap-icon://message-information"]
+};
+
 export default {
+	certificateText: (c?: Certificate | null) =>
+		!c ? "Noch nicht geprüft" : c.state === "valid" || c.state === "expiring" ? `${CERTIFICATE[c.state][0]} (${c.daysLeft ?? "?"} Tage)` : CERTIFICATE[c.state]?.[0] ?? c.state,
+	certificateState: (c?: Certificate | null) => (!c ? ValueState.None : CERTIFICATE[c.state]?.[1] ?? ValueState.None),
+	certificateIcon: (c?: Certificate | null) => (!c ? "" : CERTIFICATE[c.state]?.[2] ?? ""),
+	/** Laufende Instanz: Gesundheitszustand; sonst Lebenszustand (angehalten, gesperrt …). */
+	onlineText: (state?: string, health?: string) => (state === "Running" ? HEALTH[health ?? ""]?.[0] ?? "Prüfung …" : STATES[state ?? ""]?.[0] ?? ""),
+	onlineState: (state?: string, health?: string) => (state === "Running" ? HEALTH[health ?? ""]?.[1] ?? ValueState.None : STATES[state ?? ""]?.[1] ?? ValueState.None),
+	onlineIcon: (state?: string, health?: string) => (state === "Running" ? HEALTH[health ?? ""]?.[2] ?? "" : STATES[state ?? ""]?.[2] ?? ""),
+	severityState: (severity?: string) => SEVERITY[severity ?? ""]?.[0] ?? ValueState.None,
+	severityIcon: (severity?: string) => SEVERITY[severity ?? ""]?.[1] ?? "sap-icon://message-information",
 	stateText: (state?: string) => (state ? STATES[state]?.[0] ?? state : ""),
 	stateState: (state?: string) => (state ? STATES[state]?.[1] ?? ValueState.None : ValueState.None),
 	stateIcon: (state?: string) => (state ? STATES[state]?.[2] ?? "" : ""),
@@ -92,7 +118,7 @@ export default {
 	usersState: (active?: number | null, max?: number | null) =>
 		!max || active === null || active === undefined ? ValueState.None : active > max ? ValueState.Error : active === max ? ValueState.Warning : ValueState.Success,
 	backupText: (healthy?: boolean | null, last?: string | null) =>
-		healthy === null || healthy === undefined ? "Noch kein Status" : healthy ? `Aktuell (${dateTime.format(new Date(last!))})` : last ? `Veraltet (${dateTime.format(new Date(last))})` : "Keine Sicherung",
+		healthy === null || healthy === undefined ? "Noch kein Status" : healthy ? (last ? `Aktuell (${dateTime.format(new Date(last))})` : "Aktuell") : last ? `Veraltet (${dateTime.format(new Date(last))})` : "Keine Sicherung",
 	backupState: (healthy?: boolean | null) => (healthy === null || healthy === undefined ? ValueState.None : healthy ? ValueState.Success : ValueState.Warning),
 	backupEntryState: (status?: string) =>
 		status === "succeeded" ? ValueState.Success : status === "failed" ? ValueState.Error : status === "running" ? ValueState.Information : ValueState.None,

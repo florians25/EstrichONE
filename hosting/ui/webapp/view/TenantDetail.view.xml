@@ -29,8 +29,12 @@
 						<Button id="actStop" text="Stoppen" icon="sap-icon://stop" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="stop" />
 						<Button id="actRestart" text="Neu starten" icon="sap-icon://restart" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="restart" />
 						<Button id="actUpdate" text="Aktualisieren …" icon="sap-icon://upload-to-cloud" press=".onUpdate" type="{= ${detail>/summary/outdated} ? 'Emphasized' : 'Default' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" />
+						<Button id="actRollback" text="Zurücknehmen …" icon="sap-icon://undo" press=".onRollback" visible="{= !!${detail>/summary/previousVersion} }" enabled="{= !${detail>/summary/openOperation} }"
+							tooltip="Zurück auf {detail>/summary/previousVersion} mit dem Datenstand der Vorab-Sicherung" />
 						<Button id="actLock" text="Sperren …" icon="sap-icon://locked" press=".onLock" visible="{= ${detail>/summary/state} !== 'Locked' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" />
 						<Button id="actUnlock" text="Entsperren" icon="sap-icon://unlocked" press=".onAction" visible="{= ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="unlock" />
+						<Button id="actNotice" text="Ankündigung …" icon="sap-icon://marketing-campaign" press=".onNotice" app:kind="Announcement" />
+						<Button id="actMaintenance" text="Wartung planen …" icon="sap-icon://wrench" press=".onNotice" app:kind="Maintenance" />
 						<Button id="actEdit" text="Bearbeiten" icon="sap-icon://edit" press=".onEdit" />
 						<Button id="actDelete" text="Löschen …" icon="sap-icon://delete" type="Reject" press=".onDelete" enabled="{= !${detail>/summary/openOperation} }" />
 					</uxap:actions>
@@ -58,6 +62,14 @@
 						<Label text="Adresse" />
 						<Link text="{detail>/summary/url}" href="{detail>/summary/url}" target="_blank" />
 					</VBox>
+					<VBox class="sapUiMediumMarginEnd">
+						<Label text="Zertifikat" />
+						<ObjectStatus id="detailCertificate" text="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateText'}" state="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateState'}" icon="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateIcon'}" />
+					</VBox>
+					<VBox class="sapUiMediumMarginEnd">
+						<Label text="Letzte Sicherung" />
+						<ObjectStatus text="{parts: ['detail>/summary/backupHealthy', 'detail>/summary/backupLastSuccess'], formatter: '.formatter.backupText'}" state="{path: 'detail>/summary/backupHealthy', formatter: '.formatter.backupState'}" />
+					</VBox>
 					<VBox class="sapUiMediumMarginEnd" visible="{= !!${detail>/summary/openOperation} }">
 						<Label text="Laufender Vorgang" />
 						<HBox alignItems="Center">
@@ -77,6 +89,15 @@
 								<MessageStrip type="Error" showIcon="true" visible="{= !!${detail>/summary/lastError} }" class="sapUiSmallMarginBottom" text="{detail>/summary/lastError}" />
 								<MessageStrip type="Warning" showIcon="true" visible="{= ${detail>/summary/problems}.length > 0 }" class="sapUiSmallMarginBottom"
 									text="{= ${detail>/summary/problems}.join(' · ') }" />
+								<Panel id="letterPanel" visible="{= !!${detail>/summary/accessLetterAvailable} }" class="sapUiSmallMarginBottom" headerText="Zugangsbrief der ersten Admin-Person">
+									<VBox>
+										<Text text="EstrichONE ist eingerichtet; {detail>/summary/firstAdminUserName} kann sich mit dem Startpasswort anmelden. Den Brief drucken oder sicher übermitteln und danach verwerfen – das Startpasswort ist dann nur noch beim Kunden." />
+										<HBox class="sapUiSmallMarginTop">
+											<Button id="openLetter" text="Zugangsbrief öffnen …" icon="sap-icon://letter" type="Emphasized" press=".onAccessLetter" class="sapUiSmallMarginEnd" />
+											<Button id="discardLetter" text="Verwerfen" icon="sap-icon://delete" press=".onDiscardLetter" />
+										</HBox>
+									</VBox>
+								</Panel>
 								<Panel id="setupPanel" visible="{= ${detail>/status/setupRequired} === true }" class="sapUiSmallMarginBottom" headerText="Ersteinrichtung der Instanz ausstehend">
 									<VBox>
 										<Text text="Der Kunde öffnet {detail>/summary/url}, wählt „Jetzt einrichten“ und gibt diesen Code ein (24 Stunden gültig, einmalig; ein Neustart der Instanz erzeugt einen neuen):" />
@@ -84,6 +105,8 @@
 											<Text id="setupCodeText" text="{= ${detail>/status/setupCode} || 'Code wird ermittelt …' }" class="hostingSetupCode" />
 											<Button icon="sap-icon://copy" tooltip="Code kopieren" type="Transparent" press=".onCopySetupCode" class="sapUiSmallMarginBegin" enabled="{= !!${detail>/status/setupCode} }" />
 										</HBox>
+										<Button id="actInitialSetup" text="Erste Admin-Person {detail>/summary/firstAdminUserName} jetzt anlegen" icon="sap-icon://add-employee" press=".onAction" app:action="initial-setup"
+											visible="{= !!${detail>/summary/firstAdminUserName} }" enabled="{= !${detail>/summary/openOperation} }" class="sapUiSmallMarginTop" />
 									</VBox>
 								</Panel>
 								<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="3" title="Stammdaten">
@@ -139,6 +162,15 @@
 									<Label text="Servername" /><Text text="{= ${detail>/status/probe/serverName} || '–' }" />
 									<Label text="Ersteinrichtung" /><Text text="{= ${detail>/status/setupRequired} === true ? 'ausstehend' : ${detail>/status/setupRequired} === false ? 'abgeschlossen' : '–' }" />
 									<Label text="Fehler" /><Text text="{= ${detail>/status/probe/error} || ${detail>/status/error} || '–' }" />
+								</f:SimpleForm>
+								<f:SimpleForm id="certificateForm" editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="2" title="Domain und Zertifikat" class="sapUiSmallMarginTop">
+									<Label text="Domain" /><Link text="{detail>/summary/domain}" href="{detail>/summary/url}" target="_blank" />
+									<Label text="DNS" /><Text text="{= ${detail>/summary/certificate/addresses}.length ? ${detail>/summary/certificate/addresses}.join(', ') : 'nicht auflösbar (vom Server aus)' }" />
+									<Label text="Zertifikat" />
+									<ObjectStatus text="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateText'}{= ${detail>/summary/certificate/error} ? ' – ' + ${detail>/summary/certificate/error} : '' }" state="{path: 'detail>/summary/certificate', formatter: '.formatter.certificateState'}" />
+									<Label text="Aussteller" /><Text text="{= ${detail>/summary/certificate/issuer} || '–' }" />
+									<Label text="Gültig bis" /><Text text="{path: 'detail>/summary/certificate/notAfter', formatter: '.formatter.dateTime'}" />
+									<Label text="Geprüft" /><Text text="{path: 'detail>/summary/certificate/checkedAt', formatter: '.formatter.ago'} (stündlich und bei „Jetzt prüfen“)" />
 								</f:SimpleForm>
 							</VBox>
 						</uxap:ObjectPageSubSection>
@@ -198,10 +230,28 @@
 										description="{path: 'detail>lastRun/status', formatter: '.formatter.backupEntryText'} · {path: 'detail>lastRun/at', formatter: '.formatter.dateTime'}"
 										icon="sap-icon://it-host" />
 								</List>
-								<HBox>
+								<Table id="snapshotTable" items="{snapshots>/items}" headerText="Sicherungen (Wiederherstellungspunkte)" growing="true" growingThreshold="10"
+									noDataText="Noch keine Sicherung vorhanden." class="sapUiSmallMarginBottom">
+									<columns>
+										<Column width="12rem"><Text text="Zeitpunkt" /></Column>
+										<Column width="8rem"><Text text="Kennung" /></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Ziel" /></Column>
+										<Column hAlign="End" width="12rem"><Text text="" /></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<Text text="{path: 'snapshots>time', formatter: '.formatter.dateTime'}" />
+											<ObjectStatus text="{snapshots>shortId}" state="{= ${snapshots>id} === ${snapshots>/rollbackSnapshot} ? 'Information' : 'None' }" tooltip="{= ${snapshots>id} === ${snapshots>/rollbackSnapshot} ? 'Vorab-Sicherung der letzten Aktualisierung' : ${snapshots>id} }" />
+											<Text text="{snapshots>repository}" />
+											<Button text="Wiederherstellen …" icon="sap-icon://history" press=".onRestore" enabled="{= !${detail>/summary/openOperation} }" />
+										</ColumnListItem>
+									</items>
+								</Table>
+								<HBox wrap="Wrap">
 									<Button id="actBackup" text="Jetzt sichern" icon="sap-icon://save" press=".onAction" app:action="backup"
 										enabled="{= !${detail>/summary/openOperation} &amp;&amp; (${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Locked' || ${detail>/summary/state} === 'Failed') }" class="sapUiSmallMarginEnd" />
-									<Button id="showBackupKey" text="Sicherungsschlüssel anzeigen …" icon="sap-icon://key" press=".onBackupKey" />
+									<Button id="showBackupKey" text="Sicherungsschlüssel anzeigen …" icon="sap-icon://key" press=".onBackupKey" class="sapUiSmallMarginEnd" />
+									<Button id="actExport" text="Export herunterladen …" icon="sap-icon://download" press=".onExport" tooltip="Sicherungs-Repository und Schlüssel als tar.gz (z. B. vor dem Löschen oder zur Übergabe an den Kunden)" />
 								</HBox>
 							</VBox>
 						</uxap:ObjectPageSubSection>

@@ -27,3 +27,30 @@
 .hostingTiles .sapMGT { margin: 0 !important; }
 .hostingQr { background: #fff; padding: 0.5rem; border-radius: 0.5rem; }
 .hostingSecret { font-family: var(--sapFontFamilyMono, monospace); word-break: break-all; }
+
+/* Schrittanzeige (Assistenten „Mandant anlegen“ und „Einrichtung“) */
+.hostingSteps { display: flex; gap: 0.25rem; padding: 0.75rem 1rem; border-bottom: 1px solid var(--sapGroup_TitleBorderColor); flex-wrap: wrap; }
+.hostingStep { gap: 0.5rem; padding: 0.25rem 0.75rem 0.25rem 0.25rem; border-radius: 1rem; }
+.hostingStepNumber {
+	display: inline-flex !important; align-items: center; justify-content: center; width: 1.5rem; height: 1.5rem; border-radius: 50%;
+	font-size: var(--sapFontSmallSize) !important; font-weight: bold; color: var(--sapContent_LabelColor) !important;
+	border: 1px solid var(--sapField_BorderColor); box-sizing: border-box;
+}
+.hostingStepTitle { color: var(--sapContent_LabelColor) !important; }
+.hostingStep[data-state="active"] { background: var(--sapList_SelectionBackgroundColor); }
+.hostingStep[data-state="active"] .hostingStepNumber { background: var(--sapButton_Emphasized_Background); border-color: var(--sapButton_Emphasized_BorderColor); color: var(--sapButton_Emphasized_TextColor) !important; }
+.hostingStep[data-state="active"] .hostingStepTitle { color: var(--sapTextColor) !important; font-weight: bold; }
+.hostingStep[data-state="done"] .hostingStepNumber { background: var(--sapPositiveElementColor); border-color: var(--sapPositiveElementColor); color: var(--sapContent_ContrastTextColor) !important; }
+.hostingWizard .sapMDialogSection { padding: 0 !important; }
+.hostingSetupBody { max-width: 60rem; margin: 0 auto; }
+.hostingSetupPages { border: 1px solid var(--sapGroup_ContentBorderColor); border-top: none; border-radius: 0 0 var(--sapElement_BorderCornerRadius, 0.5rem) var(--sapElement_BorderCornerRadius, 0.5rem); }
+.hostingSetupBody .hostingSteps { border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem) var(--sapElement_BorderCornerRadius, 0.5rem) 0 0; background: var(--sapGroup_ContentBackground); }
+.hostingStrong { font-weight: bold; }
+
+/* Zugangsbrief: gut lesbar, druckbar (nur der Brief wird gedruckt) */
+.hostingLetterValue { font-family: var(--sapFontFamilyMono, ui-monospace, Menlo, Consolas, monospace) !important; font-size: 1.05rem !important; }
+@media print {
+	body.hostingPrintLetter * { visibility: hidden !important; }
+	body.hostingPrintLetter .hostingLetter, body.hostingPrintLetter .hostingLetter * { visibility: visible !important; color: #000 !important; }
+	body.hostingPrintLetter .hostingLetter { position: fixed; left: 0; top: 0; width: 100%; margin: 2cm !important; }
+}

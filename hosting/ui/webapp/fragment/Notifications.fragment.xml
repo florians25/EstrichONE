@@ -1,0 +1,18 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<ResponsivePopover id="notificationPopover" title="Benachrichtigungen" placement="Bottom" contentWidth="26rem" class="hostingNotifications">
+		<content>
+			<List id="notificationList" items="{shell>/notificationItems}" noDataText="Keine offenen Probleme." itemPress=".onNotificationPress">
+				<StandardListItem type="Navigation" title="{shell>title}" description="{shell>text}" wrapping="true"
+					icon="{path: 'shell>severity', formatter: '.formatter.severityIcon'}" iconInset="false"
+					info="{path: 'shell>raisedAt', formatter: '.formatter.ago'}" infoState="{path: 'shell>severity', formatter: '.formatter.severityState'}"
+					highlight="{= ${shell>readAt} ? 'None' : ${shell>severity} === 'critical' ? 'Error' : 'Warning' }" />
+			</List>
+		</content>
+		<endButton>
+			<Button text="Alle gelesen" press=".onNotificationsReadAll" />
+		</endButton>
+		<beginButton>
+			<Button text="{= ${shell>/runningOperations} > 0 ? ${shell>/runningOperations} + ' Vorgänge laufen' : 'Vorgänge' }" icon="sap-icon://activity-items" press=".onNotificationsOperations" />
+		</beginButton>
+	</ResponsivePopover>
+</core:FragmentDefinition>

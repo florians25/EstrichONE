@@ -10,6 +10,7 @@ import Fragment from "sap/ui/core/Fragment";
 import Dialog from "sap/m/Dialog";
 import BaseController from "./BaseController";
 import { get, post } from "../model/Api";
+import ResponsivePopover from "sap/m/ResponsivePopover";
 import { AUTO } from "../util/Theme";
 
 /**
@@ -17,7 +18,8 @@ import { AUTO } from "../util/Theme";
  * @namespace estrichone.hosting.controller
  */
 export default class AppController extends BaseController {
-	private readonly shell = new JSONModel({ selectedKey: "dashboard", openOperations: "" });
+	private readonly shell = new JSONModel({ selectedKey: "dashboard", openOperations: "", notifications: "", notificationItems: [], runningOperations: 0 });
+	private notificationPopover?: ResponsivePopover;
 	private themeDialog?: Dialog;
 	private pollTimer?: ReturnType<typeof setInterval>;
 
@@ -29,6 +31,10 @@ export default class AppController extends BaseController {
 		this.getRouter().attachRouteMatched((event) => {
 			const name = event.getParameter("name") as string;
 			this.shell.setProperty("/selectedKey", name === "tenant" ? "tenants" : name);
+			// Konto aus dem Installer: erst ein eigenes Passwort, dann alles andere.
+			if (name !== "setup" && this.getOwnerComponentTyped().session.getProperty("/mustChangePassword")) {
+				this.getRouter().navTo("setup", {}, true);
+			}
 		});
 	}
 
@@ -48,8 +54,22 @@ export default class AppController extends BaseController {
 		const app = this.byId("rootApp") as App;
 		app.to(this.byId(authenticated ? "shell" : "login")!.getId());
 		if (authenticated) {
+			void this.checkSetup();
 			void this.pollOperations();
 			this.pollTimer ??= setInterval(() => void this.pollOperations(), 10000);
+		}
+	}
+
+	/** Nach der Anmeldung: Einrichtungsassistent, solange er nicht abgeschlossen ist (bzw. das Passwort geändert werden muss). */
+	private async checkSetup(): Promise<void> {
+		try {
+			const state = await get<{ completed: boolean; mustChangePassword: boolean }>("/api/setup-wizard");
+			this.getOwnerComponentTyped().session.setProperty("/mustChangePassword", state.mustChangePassword);
+			if (state.mustChangePassword || !state.completed) {
+				this.getRouter().navTo("setup", {}, true);
+			}
+		} catch {
+			// Assistent ist optional erreichbar über Einstellungen.
 		}
 	}
 
@@ -58,11 +78,46 @@ export default class AppController extends BaseController {
 			return;
 		}
 		try {
-			const dashboard = await get<{ runningOperations: number }>("/api/dashboard");
+			const [dashboard, notifications] = await Promise.all([
+				get<{ runningOperations: number }>("/api/dashboard"),
+				get<{ items: unknown[]; unread: number; open: number }>("/api/notifications")
+			]);
+			this.shell.setProperty("/runningOperations", dashboard.runningOperations);
 			this.shell.setProperty("/openOperations", dashboard.runningOperations > 0 ? String(dashboard.runningOperations) : "");
+			this.shell.setProperty("/notifications", notifications.unread > 0 ? String(notifications.unread) : "");
+			this.shell.setProperty("/notificationItems", notifications.items);
 		} catch {
 			// Anzeige ist optional.
 		}
+	}
+
+	/** Glocke: offene Benachrichtigungen (Probleme) und laufende Vorgänge. */
+	public async onNotifications(event: Event): Promise<void> {
+		const source = (event.getParameter("button" as never) as Control | undefined) ?? (event.getSource() as Control);
+		if (!this.notificationPopover) {
+			this.notificationPopover = (await Fragment.load({ id: this.getView()!.getId(), name: "estrichone.hosting.fragment.Notifications", controller: this })) as ResponsivePopover;
+			this.getView()!.addDependent(this.notificationPopover);
+		}
+		await this.pollOperations();
+		this.notificationPopover.openBy(source);
+	}
+
+	public async onNotificationsReadAll(): Promise<void> {
+		await this.run(() => post("/api/notifications/read-all"));
+		await this.pollOperations();
+	}
+
+	public onNotificationPress(event: Event): void {
+		const item = (event.getParameter("listItem" as never) as Control | undefined) ?? (event.getSource() as Control);
+		const data = item.getBindingContext("shell")!.getObject() as { id: number; tenantId?: string | null };
+		void post(`/api/notifications/${data.id}/read`).then(() => this.pollOperations()).catch(() => undefined);
+		this.notificationPopover?.close();
+		if (data.tenantId) this.navTo("tenant", { id: data.tenantId });
+	}
+
+	public onNotificationsOperations(): void {
+		this.notificationPopover?.close();
+		this.navTo("operations");
 	}
 
 	public onToggleSide(): void {

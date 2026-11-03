@@ -38,6 +38,8 @@ COPY deploy/compose.yml deploy/compose.proxy.yml docker/installer/compose.overri
 # Installer: Compose-Datei der Konsole + Skript
 COPY hosting/deploy/compose.yml hosting/deploy/env.example /opt/estrichone-hosting/
 COPY hosting/deploy/install.sh /usr/local/bin/estrichone-hosting-install
+# Verwaltungsbefehl für den Server (Ein-Befehl-Installation: curl … hosting/install.sh | sudo bash)
+COPY hosting/install.sh /opt/estrichone-hosting/estrichone-hosting
 COPY hosting/deploy/entrypoint.sh /usr/local/bin/estrichone-hosting
 ARG ESTRICHONE_VERSION=0.1.0
 ENV ASPNETCORE_HTTP_PORTS=8080 \

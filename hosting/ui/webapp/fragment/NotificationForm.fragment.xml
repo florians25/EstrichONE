@@ -1,0 +1,24 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="2" columnsXL="2" labelSpanL="4" labelSpanM="4">
+		<core:Title text="E-Mail" />
+		<Label text="Empfänger" labelFor="nEmailTo" />
+		<Input id="nEmailTo" value="{notify>/emailTo}" placeholder="betrieb@firma.de (mehrere mit Komma)" maxLength="500" />
+		<Label text="SMTP-Server" labelFor="nSmtpHost" />
+		<Input id="nSmtpHost" value="{notify>/smtpHost}" placeholder="smtp.firma.de" maxLength="253" />
+		<Label text="Port" labelFor="nSmtpPort" />
+		<StepInput id="nSmtpPort" value="{notify>/smtpPort}" min="1" max="65535" width="10rem" />
+		<Label text="Verschlüsselung" />
+		<CheckBox id="nStartTls" text="STARTTLS (empfohlen, Port 587)" selected="{notify>/smtpStartTls}" />
+		<Label text="Benutzer" labelFor="nSmtpUser" />
+		<Input id="nSmtpUser" value="{notify>/smtpUser}" maxLength="200" />
+		<Label text="Passwort" labelFor="nSmtpPassword" />
+		<Input id="nSmtpPassword" type="Password" value="{notify>/smtpPassword}" placeholder="{= ${notify>/hasSmtpPassword} ? 'gespeichert – leer lassen zum Beibehalten' : '' }" />
+		<Label text="Absender" labelFor="nSmtpFrom" />
+		<Input id="nSmtpFrom" value="{notify>/smtpFrom}" placeholder="konsole@firma.de" maxLength="254" />
+		<core:Title text="Webhook" />
+		<Label text="Adresse" labelFor="nWebhook" />
+		<Input id="nWebhook" value="{notify>/webhookUrl}" placeholder="https://hooks.slack.com/… oder Mattermost/Teams" maxLength="500" />
+		<Label text="" />
+		<Text text="Die Konsole meldet gestörte Instanzen, veraltete Sicherungen, ablaufende Zertifikate, fehlgeschlagene Vorgänge und knappen Speicherplatz – einmal beim Auftreten und einmal, wenn es behoben ist." class="hostingHint" />
+	</f:SimpleForm>
+</core:FragmentDefinition>

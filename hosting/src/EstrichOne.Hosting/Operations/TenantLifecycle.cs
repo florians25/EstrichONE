@@ -26,7 +26,8 @@ public sealed class TenantLifecycle(
     TimeProvider clock,
     IInstanceProbe probe,
     AccessLetters letters,
-    ConsoleSettings consoleSettings)
+    ConsoleSettings consoleSettings,
+    CertificateService certificates)
 {
     /// <summary>Dienste, die für das Zurückspielen einer Sicherung angehalten werden (Datenbank läuft weiter).</summary>
     private static readonly string[] RestoreStopServices = ["api", "caddy", "backup"];
@@ -132,6 +133,9 @@ public sealed class TenantLifecycle(
         await SaveAsync(tenant, cancellationToken);
         await ApplyProxyAsync(log, cancellationToken);
         await status.CollectAsync(tenant, plan, forceUsage: true, cancellationToken);
+        // Zertifikat und DNS im Hintergrund prüfen (der TLS-Handshake darf den Vorgang nicht aufhalten).
+        var domain = tenant.Domain;
+        _ = Task.Run(() => certificates.CheckAsync(domain, CancellationToken.None), CancellationToken.None);
     }
 
     private async Task ProvisionAsync(Tenant tenant, Plan plan, OperationLog log, CancellationToken cancellationToken)
@@ -248,7 +252,7 @@ public sealed class TenantLifecycle(
         {
             await PrepareAsync(tenant, plan, log, cancellationToken);
             log.Write("Images laden …");
-            await ComposeAsync(tenant, ["pull"], PullTimeout, log, cancellationToken);
+            await ComposeAsync(tenant, ["pull", "--policy", "missing"], PullTimeout, log, cancellationToken);
         }
         catch
         {
@@ -325,7 +329,7 @@ public sealed class TenantLifecycle(
         log.Write($"Zurücksetzen {tenant.Version} → {target}{(snapshot is null ? " (ohne Datenstand – keine Vorab-Sicherung)" : $" mit Datenstand {snapshot[..8]}")}.");
         tenant.Version = target;
         await PrepareAsync(tenant, plan, log, cancellationToken);
-        await ComposeAsync(tenant, ["pull", "--ignore-pull-failures"], PullTimeout, log, cancellationToken);
+        await ComposeAsync(tenant, ["pull", "--policy", "missing"], PullTimeout, log, cancellationToken);
         if (snapshot is not null)
         {
             await RestoreSnapshotAsync(tenant, snapshot, log, cancellationToken);

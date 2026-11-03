@@ -9,7 +9,9 @@ import Fragment from "sap/ui/core/Fragment";
 import Dialog from "sap/m/Dialog";
 import MessageBox from "sap/m/MessageBox";
 import BaseController from "./BaseController";
-import TenantFormDialog from "../util/TenantFormDialog";
+import TenantWizard from "../util/TenantWizard";
+import OperationLogDialog from "../util/OperationLogDialog";
+import ListItemBase from "sap/m/ListItemBase";
 import { get, post } from "../model/Api";
 
 interface TenantItem {
@@ -26,6 +28,7 @@ interface TenantItem {
 	version: string;
 	backupHealthy?: boolean | null;
 	createdAt: string;
+	certificate?: { state: string } | null;
 }
 
 /**
@@ -33,8 +36,9 @@ interface TenantItem {
  * @namespace estrichone.hosting.controller
  */
 export default class TenantsController extends BaseController {
-	private readonly tenants = new JSONModel({ items: [], count: 0, filter: "all", query: "" });
-	private form?: TenantFormDialog;
+	private readonly tenants = new JSONModel({ items: [], count: 0, filter: "all", query: "", selected: 0 });
+	private wizard?: TenantWizard;
+	private operationLog?: OperationLogDialog;
 	private updateDialog?: Dialog;
 	private readonly update = new JSONModel({});
 	private timer?: ReturnType<typeof setInterval>;
@@ -64,8 +68,14 @@ export default class TenantsController extends BaseController {
 	private async load(silent = false): Promise<void> {
 		const action = async () => {
 			const items = await get<TenantItem[]>("/api/tenants");
+			const selected = new Set(this.selectedIds());
 			this.tenants.setProperty("/items", items);
 			this.applyFilters();
+			// Auswahl für Massenaktionen über die Aktualisierung hinweg behalten.
+			for (const item of (this.byId("tenantTable") as Table).getItems()) {
+				(item as ListItemBase).setSelected(selected.has(item.getBindingContext("tenants")?.getProperty("id") as string));
+			}
+			this.onSelectionChange();
 		};
 		if (silent) {
 			await action().catch(() => undefined);
@@ -104,6 +114,9 @@ export default class TenantsController extends BaseController {
 			case "backup":
 				filters.push(new Filter({ path: "", test: (t: TenantItem) => t.backupHealthy === false }));
 				break;
+			case "certificate":
+				filters.push(new Filter({ path: "", test: (t: TenantItem) => ["expiring", "invalid", "missing"].includes(t.certificate?.state ?? "") }));
+				break;
 			case "all":
 				break;
 			default:
@@ -120,12 +133,47 @@ export default class TenantsController extends BaseController {
 	}
 
 	public async onCreate(): Promise<void> {
-		this.form ??= new TenantFormDialog(this.getView()!);
-		const id = await this.form.open();
-		if (id) {
+		this.wizard ??= new TenantWizard(this.getView()!);
+		const created = await this.wizard.open();
+		if (created) {
 			this.toast("Mandant angelegt – Bereitstellung läuft");
-			this.navTo("tenant", { id });
+			this.navTo("tenant", { id: created.id });
 		}
+	}
+
+	private selectedIds(): string[] {
+		return (this.byId("tenantTable") as Table).getSelectedItems().map((item) => item.getBindingContext("tenants")!.getProperty("id") as string);
+	}
+
+	public onSelectionChange(): void {
+		this.tenants.setProperty("/selected", this.selectedIds().length);
+	}
+
+	/** Massenaktion (Starten, Stoppen, Neu starten, Sichern) für die ausgewählten Instanzen. */
+	public onBulk(event: Event): void {
+		const action = (event.getSource() as Control).data("action") as string;
+		const ids = this.selectedIds();
+		const labels: Record<string, string> = { start: "starten", stop: "stoppen", restart: "neu starten", backup: "jetzt sichern" };
+		MessageBox.confirm(`${ids.length} Instanz(en) ${labels[action]}? Nicht passende (z. B. bereits laufende) werden übersprungen.`, {
+			title: "Massenaktion",
+			emphasizedAction: MessageBox.Action.OK,
+			onClose: async (choice: string) => {
+				if (choice !== MessageBox.Action.OK) return;
+				const result = await this.run(() => post<{ queued: string[]; skipped: string[] }>("/api/tenants/bulk", { tenantIds: ids, action }));
+				if (result) {
+					this.toast(`${result.queued.length} eingereiht${result.skipped.length ? `, ${result.skipped.length} übersprungen` : ""}`);
+					(this.byId("tenantTable") as Table).removeSelections(true);
+					this.onSelectionChange();
+					await this.load(true);
+				}
+			}
+		});
+	}
+
+	public onShowOperation(event: Event): void {
+		const id = (event.getSource() as Control).getBindingContext("tenants")!.getProperty("openOperation/id") as string;
+		this.operationLog ??= new OperationLogDialog(this.getView()!);
+		void this.operationLog.open(id, () => void this.load(true));
 	}
 
 	public async onUpdateAll(): Promise<void> {

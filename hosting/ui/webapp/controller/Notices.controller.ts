@@ -23,7 +23,19 @@ export default class NoticesController extends BaseController {
 	public onInit(): void {
 		this.setModel(this.notices, "notices");
 		this.setModel(this.notice, "notice");
-		this.getRouter().getRoute("notices")!.attachPatternMatched(() => void this.load());
+		this.getRouter().getRoute("notices")!.attachPatternMatched((event) => {
+			// Aus der Detailseite einer Instanz: Hinweis direkt für diese Instanz anlegen (…/hinweise?tenant=<id>&kind=…).
+			const query = (event.getParameter("arguments") as { "?query"?: { tenant?: string; kind?: string } })["?query"];
+			void this.load().then(() => {
+				if (query?.tenant) {
+					const kind = query.kind === "Maintenance" ? "Maintenance" : "Announcement";
+					void this.open(kind === "Maintenance"
+						? { kind, title: "Wartungsarbeiten", text: "EstrichONE wird aktualisiert und ist in dieser Zeit nicht erreichbar.", allTenants: false, tenantIds: [query.tenant] }
+						: { kind, allTenants: false, tenantIds: [query.tenant] });
+					this.getRouter().navTo("notices", {}, true);
+				}
+			});
+		});
 	}
 
 	private async load(): Promise<void> {

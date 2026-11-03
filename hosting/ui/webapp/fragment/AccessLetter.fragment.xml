@@ -1,0 +1,25 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<Dialog id="accessLetterDialog" title="Zugangsbrief" contentWidth="42rem" class="hostingLetterDialog">
+		<content>
+			<VBox id="accessLetter" class="hostingLetter sapUiMediumMargin">
+				<Image src="{ui>/logo}" height="2rem" class="sapUiSmallMarginBottom" alt="EstrichONE" />
+				<Title text="Ihr Zugang zu EstrichONE" level="H2" class="sapUiSmallMarginBottom" />
+				<Text text="Guten Tag {letter>/displayName}," class="sapUiSmallMarginBottom" />
+				<Text text="für {letter>/companyName} ist EstrichONE eingerichtet. Mit diesen Daten melden Sie sich als erste Administratorin bzw. erster Administrator an und legen danach Ihre Mitarbeitenden selbst an." />
+				<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" class="sapUiSmallMarginTopBottom">
+					<Label text="Adresse" /><Text id="letterUrl" text="{letter>/url}" class="hostingLetterValue" />
+					<Label text="Benutzername" /><Text id="letterUser" text="{letter>/userName}" class="hostingLetterValue" />
+					<Label text="Startpasswort" /><Text id="letterPassword" text="{letter>/initialPassword}" class="hostingLetterValue hostingSecret" />
+					<Label text="E-Mail" visible="{= !!${letter>/email} }" /><Text text="{letter>/email}" visible="{= !!${letter>/email} }" />
+				</f:SimpleForm>
+				<Text text="Bitte ändern Sie das Startpasswort nach der ersten Anmeldung (Profil → Passwort ändern) und richten Sie die Zwei-Faktor-Anmeldung ein. Apps für Windows, iPhone/iPad und Android verbinden sich mit derselben Adresse." />
+				<Text text="Erstellt am {path: 'letter>/createdAt', formatter: '.formatter.dateTime'}" class="hostingHint sapUiSmallMarginTop" />
+			</VBox>
+		</content>
+		<buttons>
+			<Button id="letterPrint" text="Drucken" icon="sap-icon://print" type="Emphasized" press=".onPrintLetter" />
+			<Button id="letterCopy" text="Kopieren" icon="sap-icon://copy" press=".onCopyLetter" />
+			<Button text="Schließen" press=".onDialogCancel" />
+		</buttons>
+	</Dialog>
+</core:FragmentDefinition>

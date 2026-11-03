@@ -6,6 +6,7 @@ import MessageBox from "sap/m/MessageBox";
 import BaseController from "./BaseController";
 import { del, get, post, put } from "../model/Api";
 import { AUTO } from "../util/Theme";
+import { loadNotifications, saveNotifications, testNotifications } from "../util/NotificationSettings";
 
 /**
  * Einstellungen: Darstellung (alle Themes, Systemeinstellung), Passwort, TOTP, Administratoren, System.
@@ -13,9 +14,11 @@ import { AUTO } from "../util/Theme";
  */
 export default class SettingsController extends BaseController {
 	private readonly settings = new JSONModel({});
+	private readonly notify = new JSONModel({});
 
 	public onInit(): void {
 		this.setModel(this.settings, "settings");
+		this.setModel(this.notify, "notify");
 		this.getRouter().getRoute("settings")!.attachPatternMatched(() => void this.load());
 	}
 
@@ -39,7 +42,38 @@ export default class SettingsController extends BaseController {
 			this.settings.setProperty("/admins", admins);
 			this.settings.setProperty("/system", system);
 			this.settings.setProperty("/versions", versions.versions);
+			const wizard = await get<{ secondaryRepository?: string | null }>("/api/setup-wizard").catch(() => ({ secondaryRepository: "" }));
+			this.settings.setProperty("/secondaryRepository", wizard.secondaryRepository ?? "");
+			await loadNotifications(this.notify).catch(() => undefined);
 		});
+	}
+
+	public async onSaveRepository(): Promise<void> {
+		const done = await this.run(async () => {
+			await put("/api/settings/backup", { secondaryRepository: this.settings.getProperty("/secondaryRepository") });
+			return true;
+		});
+		if (done) this.toast("Zweites Sicherungsziel gespeichert");
+	}
+
+	public onOpenSetup(): void {
+		this.navTo("setup");
+	}
+
+	public async onNotifySave(): Promise<void> {
+		const done = await this.run(async () => {
+			await saveNotifications(this.notify);
+			return true;
+		});
+		if (done) this.toast("Benachrichtigungen gespeichert");
+	}
+
+	public async onNotifyTest(): Promise<void> {
+		const message = await this.run(async () => {
+			await saveNotifications(this.notify);
+			return testNotifications();
+		});
+		if (message) this.toast(`Gesendet: ${message}`);
 	}
 
 	public async onThemeAuto(): Promise<void> {

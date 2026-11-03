@@ -1,0 +1,104 @@
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
+	<Dialog id="wizardDialog" title="Mandant anlegen" contentWidth="48rem" resizable="true" draggable="true" class="hostingWizard">
+		<content>
+			<VBox height="100%" renderType="Bare">
+				<HBox id="wizardSteps" class="hostingSteps" items="{wiz>/steps}" renderType="Bare">
+					<HBox class="hostingStep" alignItems="Center" renderType="Bare">
+						<customData>
+							<core:CustomData key="state" value="{= ${wiz>index} &lt; ${wiz>/step} ? 'done' : ${wiz>index} === ${wiz>/step} ? 'active' : 'todo' }" writeToDom="true" />
+						</customData>
+						<Text text="{= ${wiz>index} &lt; ${wiz>/step} ? '✓' : ${wiz>index} + 1 }" class="hostingStepNumber" />
+						<Text text="{wiz>title}" class="hostingStepTitle" />
+					</HBox>
+				</HBox>
+				<NavContainer id="wizardPages" height="30rem" autoFocus="false" defaultTransitionName="show">
+					<Page id="wpCompany" showHeader="false" class="sapUiContentPadding">
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
+							<core:Title text="Firma und Ansprechpartner" />
+							<Label text="Firmenname" required="true" labelFor="wCompany" />
+							<Input id="wCompany" value="{wiz>/companyName}" valueLiveUpdate="true" liveChange=".onCompanyChange" placeholder="Estrichbau Muster GmbH" maxLength="120" />
+							<Label text="Kundennummer" labelFor="wCustomer" />
+							<Input id="wCustomer" value="{wiz>/customerNumber}" maxLength="40" />
+							<Label text="Ansprechpartner" labelFor="wContact" />
+							<Input id="wContact" value="{wiz>/contactName}" maxLength="120" />
+							<Label text="E-Mail" required="true" labelFor="wEmail" />
+							<Input id="wEmail" type="Email" value="{wiz>/contactEmail}" maxLength="254" />
+							<Label text="Telefon" labelFor="wPhone" />
+							<Input id="wPhone" type="Tel" value="{wiz>/contactPhone}" maxLength="40" />
+							<Label text="Notiz" labelFor="wNotes" />
+							<TextArea id="wNotes" value="{wiz>/notes}" rows="2" maxLength="4000" growing="true" />
+						</f:SimpleForm>
+					</Page>
+					<Page id="wpAddress" showHeader="false" class="sapUiContentPadding">
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
+							<core:Title text="Adresse der Instanz" />
+							<Label text="Kürzel" required="true" labelFor="wSlug" />
+							<Input id="wSlug" value="{wiz>/slug}" liveChange=".onSlugChange" maxLength="32" placeholder="z. B. muster" valueLiveUpdate="true" />
+							<Label text="Adresse" />
+							<RadioButtonGroup id="wDomainMode" selectedIndex="{wiz>/domainMode}" columns="1">
+								<RadioButton text="Subdomain: {wiz>/suggestedDomain}" />
+								<RadioButton text="Eigene Domain des Kunden" />
+							</RadioButtonGroup>
+							<Label text="Eigene Domain" labelFor="wDomain" visible="{= ${wiz>/domainMode} === 1 }" />
+							<Input id="wDomain" value="{wiz>/domain}" placeholder="estrichone.kunde.de" maxLength="253" visible="{= ${wiz>/domainMode} === 1 }" />
+						</f:SimpleForm>
+						<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginTop"
+							text="{= ${wiz>/domainMode} === 1 ? 'Beim Kunden einen CNAME-Eintrag ' + (${wiz>/domain} || 'estrichone.kunde.de') + ' → ' + ${wiz>/suggestedDomain} + ' setzen lassen. Das Zertifikat holt der Proxy automatisch, sobald der Eintrag wirkt.' : 'Der Wildcard-Eintrag *.' + ${wiz>/baseDomain} + ' zeigt bereits auf diesen Server – die Adresse ist sofort nutzbar.' }" />
+					</Page>
+					<Page id="wpResources" showHeader="false" class="sapUiContentPadding">
+						<Title text="Tarif und Ressourcen" level="H3" class="sapUiSmallMarginBottom" />
+						<List id="wPlans" mode="SingleSelectLeft" items="{wiz>/plans}" selectionChange=".onPlanSelect" includeItemInSelection="true">
+							<CustomListItem selected="{= ${wiz>id} === ${wiz>/planId} }">
+								<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginBeginEnd sapUiTinyMarginTopBottom">
+									<VBox>
+										<Text text="{wiz>name}" class="hostingStrong" />
+										<Text text="{wiz>description}" class="hostingHint" />
+									</VBox>
+									<Text text="{= ${wiz>maxUsers} ? ${wiz>maxUsers} + ' Benutzer' : 'unbegrenzt' } · {= ${wiz>storageGb} ? ${wiz>storageGb} + ' GB' : 'Speicher frei' } · {= ${wiz>memoryMb} ? ${wiz>memoryMb} + ' MB RAM' : 'RAM frei' } · {= ${wiz>cpuLimit} ? ${wiz>cpuLimit} + ' CPU' : 'CPU frei' }" class="hostingHint" />
+								</HBox>
+							</CustomListItem>
+						</List>
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4" class="sapUiSmallMarginTop">
+							<Label text="Version der Suite" required="true" labelFor="wVersion" />
+							<ComboBox id="wVersion" value="{wiz>/version}" items="{wiz>/versions}">
+								<core:Item key="{wiz>}" text="{wiz>}" />
+							</ComboBox>
+						</f:SimpleForm>
+					</Page>
+					<Page id="wpAdmin" showHeader="false" class="sapUiContentPadding">
+						<CheckBox id="wCreateAdmin" text="Erste Admin-Person jetzt anlegen und Zugangsbrief erzeugen" selected="{wiz>/createAdmin}" />
+						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4" visible="{wiz>/createAdmin}">
+							<Label text="Name" required="true" labelFor="wAdminName" />
+							<Input id="wAdminName" value="{wiz>/firstAdminName}" valueLiveUpdate="true" liveChange=".onAdminNameChange" maxLength="120" />
+							<Label text="Benutzername" required="true" labelFor="wAdminUser" />
+							<Input id="wAdminUser" value="{wiz>/firstAdminUserName}" liveChange=".onAdminUserChange" maxLength="32" />
+							<Label text="E-Mail" labelFor="wAdminEmail" />
+							<Input id="wAdminEmail" type="Email" value="{wiz>/firstAdminEmail}" maxLength="254" />
+						</f:SimpleForm>
+						<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginTop"
+							text="{= ${wiz>/createAdmin} ? 'Nach der Bereitstellung richtet die Konsole EstrichONE ein (Firma und diese Person als Administrator) und erzeugt ein Startpasswort. Der Zugangsbrief liegt danach auf der Detailseite zum Drucken bereit.' : 'Ohne Admin-Person zeigt die Detailseite den Einrichtungscode; der Kunde richtet EstrichONE dann selbst ein.' }" />
+					</Page>
+					<Page id="wpSummary" showHeader="false" class="sapUiContentPadding">
+						<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" labelSpanL="4" labelSpanM="4">
+							<core:Title text="Zusammenfassung" />
+							<Label text="Firma" /><Text text="{wiz>/companyName}{= ${wiz>/customerNumber} ? ' · Kd.-Nr. ' + ${wiz>/customerNumber} : '' }" />
+							<Label text="Kontakt" /><Text text="{= ${wiz>/contactName} ? ${wiz>/contactName} + ' · ' : '' }{wiz>/contactEmail}" />
+							<Label text="Adresse" /><Text id="wSummaryDomain" text="{= ${wiz>/domainMode} === 1 ? ${wiz>/domain} : ${wiz>/suggestedDomain} }" />
+							<Label text="Kürzel" /><Text text="{wiz>/slug} (Compose-Projekt estrichone-{wiz>/slug})" />
+							<Label text="Tarif" /><Text text="{wiz>/planName}" />
+							<Label text="Version" /><Text text="{wiz>/version}" />
+							<Label text="Erste Admin-Person" /><Text text="{= ${wiz>/createAdmin} ? ${wiz>/firstAdminName} + ' (' + ${wiz>/firstAdminUserName} + ')' : 'keine – Einrichtungscode' }" />
+						</f:SimpleForm>
+						<CheckBox id="wProvision" text="Sofort bereitstellen (Images laden, Instanz starten)" selected="{wiz>/provisionNow}" enabled="{= !${wiz>/createAdmin} }" />
+					</Page>
+				</NavContainer>
+			</VBox>
+		</content>
+		<buttons>
+			<Button id="wizardBack" text="Zurück" press=".onBack" visible="{= ${wiz>/step} > 0 }" />
+			<Button id="wizardNext" text="Weiter" type="Emphasized" press=".onNext" visible="{= ${wiz>/step} &lt; 4 }" />
+			<Button id="wizardCreate" text="Anlegen und bereitstellen" type="Emphasized" icon="sap-icon://add" press=".onCreate" visible="{= ${wiz>/step} === 4 }" />
+			<Button text="Abbrechen" press=".onCancel" />
+		</buttons>
+	</Dialog>
+</core:FragmentDefinition>

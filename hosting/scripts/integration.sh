@@ -1,14 +1,18 @@
 #!/usr/bin/env bash
 # Echter Integrationstest der Hosting-Konsole (CI: Linux-Runner mit Docker):
-# Installer ausführen → Konsole + Caddy laufen → Mandant mit den veröffentlichten Suite-Images bereitstellen →
-# Health über den gemeinsamen Proxy prüfen → stoppen/starten, sperren/entsperren, sichern → löschen mit Endsicherung.
-#   IMAGE=estrichone/hosting:ci SUITE_VERSION=0.1.0-preview.6 hosting/scripts/integration.sh
+# Ein-Befehl-Installation (hosting/install.sh) → Admin aus dem Installer, Passwortwechsel, Einrichtungsassistent →
+# Instanz per Assistent mit erster Admin-Person anlegen (Zugangsbrief, Anmeldung in der Suite) → Health über den
+# gemeinsamen Proxy → stoppen/starten, sperren/entsperren, sichern → Aktualisierung mit Vorab-Sicherung und Rücknahme →
+# Wiederherstellung → Export → löschen mit Endsicherung → Archiv → Reparatur-Lauf → Deinstallation.
+#   IMAGE=estrichone/hosting:ci SUITE_VERSION=0.1.0-ci SUITE_VERSION_NEXT=0.1.0-ci.2 hosting/scripts/integration.sh
 # Deutsche Anführungszeichen („…“) in Meldungen sind beabsichtigt.
 # shellcheck disable=SC1111,SC1112
 set -euo pipefail
 
 IMAGE="${IMAGE:-estrichone/hosting:ci}"
-SUITE_VERSION="${SUITE_VERSION:-0.1.0-preview.6}"
+SUITE_VERSION="${SUITE_VERSION:-0.1.0-ci}"
+SUITE_VERSION_NEXT="${SUITE_VERSION_NEXT:-0.1.0-ci.2}"
+HERE="$(cd "$(dirname "$0")/.." && pwd)"
 ROOT="${HOSTING_ROOT:-/srv/estrichone-hosting-ci}"
 HTTP_PORT="${HTTP_PORT:-8088}"
 CONSOLE="http://localhost:${CONSOLE_PORT:-8099}"
@@ -50,36 +54,50 @@ action() { # action AKTION [JSON] → wartet auf den Vorgang
   wait_operation "$(body "$result" | jq -r .id)" "${3:-600}"
   echo "Aktion $1: erfolgreich"
 }
-proxy() { # proxy PFAD → HTTP-Status über den gemeinsamen Caddy
-  curl -s -o /tmp/proxy-body -w '%{http_code}' -H "Host: $DOMAIN" "http://localhost:$HTTP_PORT$1"
+proxy() { # proxy PFAD [JSON] → HTTP-Status über den gemeinsamen Caddy
+  local args=(-s -o /tmp/proxy-body -w '%{http_code}' -H "Host: $DOMAIN")
+  [[ $# -ge 2 ]] && args+=(-H 'Content-Type: application/json' -d "$2")
+  curl "${args[@]}" "http://localhost:$HTTP_PORT$1"
+}
+suite_login() { # suite_login BENUTZER PASSWORT → Anmeldung in der Suite über den Proxy
+  [[ "$(proxy /api/v1/auth/login "{\"login\":\"$1\",\"password\":\"$2\",\"client\":\"web\",\"clientName\":\"ci\"}")" == "200" ]] \
+    || fail "Anmeldung von $1 in der Suite fehlgeschlagen: $(head -c 300 /tmp/proxy-body)"
 }
 wait_proxy() { # wait_proxy PFAD STATUS
   for _ in $(seq 1 60); do [[ "$(proxy "$1")" == "$2" ]] && return 0; sleep 2; done
   fail "Proxy liefert für $1 nicht HTTP $2 (zuletzt $(proxy "$1"): $(head -c 300 /tmp/proxy-body))"
 }
 
-log "Installer ausführen ($IMAGE)"
-sudo mkdir -p "$ROOT"
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$ROOT:$ROOT" \
-  -e HOSTING_ROOT="$ROOT" -e HOSTING_IMAGE="$IMAGE" -e HOSTING_BASE_DOMAIN=hosting.test -e HOSTING_CONSOLE_DOMAIN=konsole.hosting.test \
-  -e HOSTING_PROXY=caddy -e HOSTING_TLS=off -e HOSTING_HTTP_PORT="$HTTP_PORT" -e HOSTING_HTTPS_PORT=8443 \
-  -e HOSTING_DEFAULT_VERSION="$SUITE_VERSION" "$IMAGE" install | tee /tmp/install.log
-CODE="$(grep -oE '^ +[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$' /tmp/install.log | tr -d ' ' | tail -n1)"
-[[ -n "$CODE" ]] || fail "Installer hat keinen Einrichtungscode ausgegeben"
+log "Ein-Befehl-Installation (hosting/install.sh, $IMAGE)"
+sudo env HOSTING_ROOT="$ROOT" HOSTING_IMAGE="$IMAGE" HOSTING_PULL=never HOSTING_NONINTERACTIVE=1 \
+  HOSTING_BASE_DOMAIN=hosting.test HOSTING_CONSOLE_DOMAIN=konsole.hosting.test HOSTING_MODE=direkt HOSTING_TLS=off \
+  HOSTING_HTTP_PORT="$HTTP_PORT" HOSTING_HTTPS_PORT=8443 HOSTING_ADMIN_USER=chefin HOSTING_ADMIN_EMAIL=ci@example.org \
+  HOSTING_DEFAULT_VERSION="$SUITE_VERSION" bash "$HERE/install.sh" | tee /tmp/install.log
+START_PASSWORD="$(sed -n 's/^  Startpasswort: \([A-Za-z0-9-]*\)$/\1/p' /tmp/install.log | tail -n1)"
+[[ "$START_PASSWORD" =~ ^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$ ]] || fail "Installer hat kein Startpasswort ausgegeben"
+grep -q "Adresse:      http://konsole.hosting.test" /tmp/install.log || fail "Abschlussausgabe ohne Adresse"
 sudo test -f "$ROOT/.env" || fail ".env fehlt"
 [[ "$(sudo stat -c %a "$ROOT/.env")" == "600" ]] || fail ".env ist nicht nur für root lesbar"
+sudo test ! -f "$ROOT/console/initial-admin.json" || fail "Startpasswort-Datei wurde nicht gelöscht"
+[[ -x /usr/local/bin/estrichone-hosting ]] || fail "Verwaltungsbefehl estrichone-hosting fehlt"
+sudo estrichone-hosting status | grep -q estrichone-hosting-console || fail "status zeigt die Konsole nicht"
 
-log "Ersteinrichtung und Anmeldung"
-result="$(api POST /api/auth/setup "{\"setupCode\":\"$CODE\",\"userName\":\"admin\",\"password\":\"ci-sehr-geheimes-passwort\"}")"
-expect_status 204 "$result" "Ersteinrichtung"
+log "Anmeldung mit dem Konto aus dem Installer, Passwortwechsel, Einrichtungsassistent"
+result="$(api POST /api/auth/login "{\"userName\":\"chefin\",\"password\":\"$START_PASSWORD\"}")"
+expect_status 204 "$result" "Anmeldung mit Startpasswort"
 CSRF="$(api GET /api/auth/state | sed '$d' | jq -r .csrfToken)"
-[[ "$CSRF" != "null" && -n "$CSRF" ]] || fail "Keine Sitzung nach der Ersteinrichtung"
+[[ "$(api GET /api/setup-wizard | sed '$d' | jq -r .mustChangePassword)" == "true" ]] || fail "Passwortwechsel wird nicht verlangt"
+expect_status 400 "$(api POST /api/setup-wizard/complete '{}')" "Assistent ohne Passwortwechsel"
+expect_status 204 "$(api POST /api/account/password "{\"currentPassword\":\"$START_PASSWORD\",\"newPassword\":\"ci-sehr-geheimes-passwort\"}")" "Passwortwechsel"
+CSRF="$(api GET /api/auth/state | sed '$d' | jq -r .csrfToken)"
+expect_status 204 "$(api POST /api/setup-wizard/complete "{\"defaultVersion\":\"$SUITE_VERSION\"}")" "Einrichtungsassistent"
+[[ "$(api GET /api/setup-wizard | sed '$d' | jq -r .completed)" == "true" ]] || fail "Assistent nicht abgeschlossen"
 [[ "$(curl -s -o /dev/null -w '%{http_code}' -H 'Host: konsole.hosting.test' "http://localhost:$HTTP_PORT/health")" == "200" ]] \
   || fail "Konsole über den Proxy nicht erreichbar"
 
-log "Mandant anlegen und bereitstellen (Suite $SUITE_VERSION aus der Registry)"
+log "Instanz per Assistent anlegen (erste Admin-Person, Suite $SUITE_VERSION)"
 PLAN="$(api GET /api/plans | sed '$d' | jq -r '.[0].id')"
-result="$(api POST /api/tenants "{\"companyName\":\"CI Estrich GmbH\",\"customerNumber\":\"CI-1\",\"contactEmail\":\"ci@example.org\",\"slug\":\"$SLUG\",\"planId\":\"$PLAN\",\"version\":\"$SUITE_VERSION\"}")"
+result="$(api POST /api/tenants "{\"companyName\":\"CI Estrich GmbH\",\"customerNumber\":\"CI-1\",\"contactEmail\":\"ci@example.org\",\"slug\":\"$SLUG\",\"planId\":\"$PLAN\",\"version\":\"$SUITE_VERSION\",\"firstAdminName\":\"Petra Polier\",\"firstAdminUserName\":\"petra\",\"firstAdminEmail\":\"petra@example.org\"}")"
 expect_status 201 "$result" "Mandant anlegen"
 TENANT="$(body "$result" | jq -r .id)"
 wait_operation "$(body "$result" | jq -r .openOperation.id)" 1200
@@ -88,22 +106,31 @@ sudo test -f "$ROOT/instances/$SLUG/.env" || fail "Instanzverzeichnis fehlt"
   || fail "Instanz veröffentlicht Ports"
 [[ "$(sudo stat -c %u "$ROOT/instances/$SLUG/data/files")" == "1654" ]] || fail "Datenverzeichnis gehört nicht UID 1654"
 
-log "Health über den gemeinsamen Proxy"
+log "Zugangsbrief und Anmeldung der ersten Admin-Person in der Suite"
+expect_status 400 "$(api POST "/api/tenants/$TENANT/access-letter" '{"password":"falsch"}')" "Zugangsbrief mit falschem Passwort"
+letter="$(api POST "/api/tenants/$TENANT/access-letter" '{"password":"ci-sehr-geheimes-passwort"}')"
+expect_status 200 "$letter" "Zugangsbrief"
+SUITE_PASSWORD="$(body "$letter" | jq -r .initialPassword)"
+[[ "$(body "$letter" | jq -r .userName)" == "petra" ]] || fail "Zugangsbrief: falscher Benutzer"
 wait_proxy /health/ready 200
-[[ "$(proxy /api/v1/server-info)" == "200" ]] || fail "server-info nicht erreichbar"
-jq -e '.setupRequired == true and .serverVersion != null' /tmp/proxy-body >/dev/null || fail "server-info unerwartet: $(cat /tmp/proxy-body)"
+jq -e '.setupRequired == false' <(proxy /api/v1/server-info >/dev/null; cat /tmp/proxy-body) >/dev/null || fail "Suite nicht eingerichtet: $(cat /tmp/proxy-body)"
+suite_login petra "$SUITE_PASSWORD"
 detail="$(api POST "/api/tenants/$TENANT/refresh" | sed '$d')"
-echo "$detail" | jq '{health, setupRequired, setupCode, runningVersion, problems, containers: [.containers[] | {service, state, health}]}'
+echo "$detail" | jq '{health, setupRequired, runningVersion, problems, containers: [.containers[] | {service, state, health}]}'
 [[ "$(jq -r .health <<<"$detail")" == "Healthy" ]] || fail "Instanz nicht gesund"
-jq -e '.setupCode | test("^[A-Z0-9]{4}(-[A-Z0-9]{4})+$")' <<<"$detail" >/dev/null || fail "Kein Einrichtungscode erkannt"
 logs="$(api GET "/api/tenants/$TENANT/logs?service=api&lines=50" | sed '$d')"
 [[ "$(jq -r .count <<<"$logs")" -gt 0 ]] || fail "Keine Protokollzeilen"
 
-log "Stoppen → Wartungsseite, Starten"
+log "Stoppen → Wartungsseite, Starten, Neustart als Massenaktion"
 action stop
 wait_proxy /health/ready 503
 grep -q 'Vorübergehend nicht erreichbar' /tmp/proxy-body || fail "Wartungsseite fehlt"
 action start
+wait_proxy /health/ready 200
+result="$(api POST /api/tenants/bulk "{\"tenantIds\":[\"$TENANT\"],\"action\":\"restart\"}")"
+expect_status 200 "$result" "Massenaktion"
+[[ "$(body "$result" | jq -r '.queued | length')" == "1" ]] || fail "Massenaktion nicht eingereiht"
+wait_operation "$(api GET "/api/tenants/$TENANT/operations" | sed '$d' | jq -r '.[0].id')" 600
 wait_proxy /health/ready 200
 
 log "Sperren (Zahlungsverzug) und Entsperren"
@@ -116,6 +143,33 @@ log "Sicherung"
 action backup '{}' 900
 detail="$(api POST "/api/tenants/$TENANT/refresh" | sed '$d')"
 jq -e '.backup.lastSuccess != null' <<<"$detail" >/dev/null || fail "Sicherungsstatus fehlt: $(jq .backup <<<"$detail")"
+[[ "$(api GET "/api/tenants/$TENANT/snapshots" | sed '$d' | jq -r '.items | length')" -ge 1 ]] || fail "Keine Sicherung in der Liste"
+
+log "Aktualisierung $SUITE_VERSION → $SUITE_VERSION_NEXT mit Vorab-Sicherung, danach Rücknahme"
+action update "{\"version\":\"$SUITE_VERSION_NEXT\",\"backupFirst\":true}" 1200
+wait_proxy /health/ready 200
+docker ps --filter "label=com.docker.compose.project=estrichone-$SLUG" --format '{{.Image}}' | grep -q "estrichone-api:$SUITE_VERSION_NEXT" \
+  || fail "API läuft nicht mit $SUITE_VERSION_NEXT"
+snapshots="$(api GET "/api/tenants/$TENANT/snapshots" | sed '$d')"
+[[ "$(jq -r .previousVersion <<<"$snapshots")" == "$SUITE_VERSION" ]] || fail "Vorherige Version nicht vermerkt"
+[[ "$(jq -r .rollbackSnapshot <<<"$snapshots")" =~ ^[0-9a-f]{64}$ ]] || fail "Snapshot der Vorab-Sicherung fehlt: $snapshots"
+action rollback '{"confirm":true}' 1200
+wait_proxy /health/ready 200
+docker ps --filter "label=com.docker.compose.project=estrichone-$SLUG" --format '{{.Image}}' | grep -q "estrichone-api:$SUITE_VERSION\$" \
+  || fail "API läuft nach der Rücknahme nicht mit $SUITE_VERSION"
+suite_login petra "$SUITE_PASSWORD"
+
+log "Wiederherstellung der letzten Sicherung"
+action restore '{"snapshot":"latest","confirm":true,"backupFirst":false}' 1200
+wait_proxy /health/ready 200
+suite_login petra "$SUITE_PASSWORD"
+
+log "Export (Sicherungs-Repository + Schlüssel)"
+result="$(api POST "/api/tenants/$TENANT/export" '{"password":"ci-sehr-geheimes-passwort"}')"
+expect_status 200 "$result" "Export"
+curl -sS -b "$JAR" -o /tmp/export.tar.gz "$CONSOLE$(body "$result" | jq -r .url)"
+tar -tzf /tmp/export.tar.gz | grep -q '^instanz.env$' || fail "Export ohne instanz.env"
+tar -tzf /tmp/export.tar.gz | grep -q '^backup-repository/config$' || fail "Export ohne Sicherungs-Repository"
 
 log "Löschen mit Endsicherung (doppelte Bestätigung)"
 result="$(api POST "/api/tenants/$TENANT/actions/delete" '{"confirm":true,"confirmSlug":"falsch"}')"
@@ -125,8 +179,27 @@ action delete "{\"confirm\":true,\"confirmSlug\":\"$SLUG\",\"finalBackup\":true}
 ! docker network inspect "estrichone-$SLUG-edge" >/dev/null 2>&1 || fail "Edge-Netz ist nicht entfernt"
 sudo test ! -d "$ROOT/instances/$SLUG" || fail "Instanzverzeichnis ist nicht gelöscht"
 sudo sh -c "ls -d $ROOT/archive/$SLUG-*/backup-repository && test -f $ROOT/archive/$SLUG-*/instanz.env" || fail "Endsicherung fehlt im Archiv"
+[[ "$(api GET /api/archives | sed '$d' | jq -r '.[0].slug')" == "$SLUG" ]] || fail "Archiv nicht in der Konsole gelistet"
 
 log "Ereignisprotokoll"
 api GET "/api/audit?q=$SLUG&take=100" | sed '$d' | jq -r '.items[] | "\(.at)  \(.actor)  \(.action)  \(.success)"'
+
+log "Reparatur: Installation erneut ausführen (idempotent), Notfall-Zurücksetzen des Admins"
+sudo env HOSTING_NONINTERACTIVE=1 HOSTING_PULL=never estrichone-hosting install | tee /tmp/repair.log
+grep -q "Vorhandene Installation gefunden" /tmp/repair.log || fail "Reparatur-Lauf hat die Installation nicht erkannt"
+! grep -q "Startpasswort:" /tmp/repair.log || fail "Reparatur hat ein neues Konto angelegt"
+expect_status 200 "$(api GET /api/setup-wizard)" "Sitzung nach Reparatur"
+sudo env HOSTING_NONINTERACTIVE=1 HOSTING_PULL=never estrichone-hosting reset-admin chefin | tee /tmp/reset.log
+NEW_PASSWORD="$(sed -n 's/^  Startpasswort: \([A-Za-z0-9-]*\) .*$/\1/p' /tmp/reset.log)"
+[[ -n "$NEW_PASSWORD" ]] || fail "reset-admin ohne neues Passwort"
+expect_status 401 "$(api GET /api/setup-wizard)" "Alte Sitzung nach reset-admin"
+CSRF=""
+expect_status 204 "$(api POST /api/auth/login "{\"userName\":\"chefin\",\"password\":\"$NEW_PASSWORD\"}")" "Anmeldung nach reset-admin"
+
+log "Deinstallation (--purge)"
+sudo env HOSTING_NONINTERACTIVE=1 HOSTING_PULL=never HOSTING_PURGE_CONFIRM=LÖSCHEN estrichone-hosting uninstall --purge
+[[ -z "$(docker ps -aq --filter name=estrichone-hosting)" ]] || fail "Container der Konsole sind nicht entfernt"
+[[ -z "$(sudo ls -A "$ROOT")" ]] || fail "Datenverzeichnis ist nicht leer"
+[[ ! -e /usr/local/bin/estrichone-hosting ]] || fail "Verwaltungsbefehl nicht entfernt"
 echo
 echo "Integrationstest erfolgreich."

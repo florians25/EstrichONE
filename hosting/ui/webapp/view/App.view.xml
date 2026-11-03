@@ -7,7 +7,7 @@
 				<tnt:header>
 					<f:ShellBar id="shellBar" title="EstrichONE" secondTitle="Hosting-Konsole" homeIcon="{ui>/logo}" homeIconTooltip="Zur Übersicht"
 						showMenuButton="true" menuButtonPressed=".onToggleSide" homeIconPressed=".onHome"
-						showNotifications="true" notificationsNumber="{shell>/openOperations}" notificationsPressed=".onOperations"
+						showNotifications="true" notificationsNumber="{shell>/notifications}" notificationsPressed=".onNotifications"
 						avatarPressed=".onAvatar">
 						<f:additionalContent>
 							<OverflowToolbarButton id="themeButton" icon="sap-icon://palette" text="Darstellung" tooltip="Darstellung" type="Transparent" press=".onTheme" />
@@ -25,6 +25,7 @@
 							<tnt:NavigationListItem key="operations" text="Vorgänge" icon="sap-icon://activity-items" />
 							<tnt:NavigationListItem key="notices" text="Hinweise und Wartung" icon="sap-icon://message-information" />
 							<tnt:NavigationListItem key="plans" text="Tarife" icon="sap-icon://product" />
+							<tnt:NavigationListItem key="archives" text="Archiv" icon="sap-icon://attachment-zip-file" />
 							<tnt:NavigationListItem key="audit" text="Ereignisprotokoll" icon="sap-icon://history" />
 						</tnt:NavigationList>
 						<tnt:fixedItem>

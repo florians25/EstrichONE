@@ -1,0 +1,39 @@
+<mvc:View controllerName="estrichone.hosting.controller.Archives" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc">
+	<Page id="archivesPage" title="Archiv">
+		<content>
+			<VBox class="sapUiResponsiveContentPadding">
+				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom"
+					text="Endsicherungen gelöschter Mandanten: restic-Repository mit Schlüsseldatei (instanz.env) und Compose-Dateien. Wiederherstellen auf einem beliebigen Server mit dem Suite-Installer (Modus „restore“) oder per Download an den Kunden übergeben." />
+				<Table id="archiveTable" items="{archives>/items}" noDataText="Keine Endsicherungen vorhanden. Beim Löschen eines Mandanten „Endsicherung ins Archiv“ wählen.">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Endsicherungen ({= ${archives>/items}.length })" level="H2" />
+							<ToolbarSpacer />
+							<Text text="{archives>/directory}" class="hostingHint" />
+							<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh" />
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Mandant" /></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Archiviert" /></Column>
+						<Column hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Größe" /></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Schlüssel" /></Column>
+						<Column hAlign="End" width="20rem"><Text text="" /></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<ObjectIdentifier title="{archives>slug}" text="{archives>name}" />
+							<Text text="{path: 'archives>archivedAt', formatter: '.formatter.dateTime'}" />
+							<Text text="{path: 'archives>sizeBytes', formatter: '.formatter.bytes'}" />
+							<ObjectStatus text="{= ${archives>hasKey} ? 'instanz.env enthalten' : 'fehlt' }" state="{= ${archives>hasKey} ? 'Success' : 'Error' }" />
+							<HBox justifyContent="End">
+								<Button text="Herunterladen …" icon="sap-icon://download" press=".onDownload" class="sapUiTinyMarginEnd" />
+								<Button text="Endgültig löschen …" icon="sap-icon://delete" type="Reject" press=".onDelete" />
+							</HBox>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</content>
+	</Page>
+</mvc:View>

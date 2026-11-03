@@ -67,7 +67,9 @@ public sealed class NotificationMonitor(IServiceScopeFactory scopes, StatusServi
                 findings.Add(new Finding($"tenant:{tenant.Id}:storage", "warning", $"{name}: Speicherkontingent überschritten", storageProblem, tenant.Id, tenant.Slug));
             }
 
-            if (tenant.State is TenantState.Running or TenantState.Locked && certificate is { State: "expiring" or "invalid" or "missing" })
+            // Neue Instanzen: Zertifikat erst nach 30 Minuten bewerten (Let's Encrypt braucht DNS und etwas Zeit).
+            var certificateDue = certificate is not null && certificate.CheckedAt - tenant.CreatedAt > TimeSpan.FromMinutes(30);
+            if (tenant.State is TenantState.Running or TenantState.Locked && certificateDue && certificate is { State: "expiring" or "invalid" or "missing" })
             {
                 findings.Add(new Finding($"tenant:{tenant.Id}:certificate", certificate.State == "expiring" ? "warning" : "critical",
                     $"{name}: Zertifikat {(certificate.State == "expiring" ? "läuft bald ab" : "fehlerhaft")}",
