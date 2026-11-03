@@ -34,14 +34,14 @@ jobs:
       matrix:
         image: [api, web, backup, archive, backup-target, installer, hosting]
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Image bauen
         run: |
           file="docker/${{ matrix.image }}.Dockerfile"
           [ "${{ matrix.image }}" = installer ] && file=docker/installer/Dockerfile
           docker build -q -f "$file" -t "estrichone/${{ matrix.image }}:scan" .
       - name: Schwachstellen-Datenbank zwischenspeichern
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/trivy
           key: trivy-db-${{ github.run_id }}
@@ -67,7 +67,7 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: PostgreSQL-Image aus deploy/compose.yml
         run: |
           image="$(sed -n 's/^    image: \(postgres:.*\)$/\1/p' deploy/compose.yml)"
