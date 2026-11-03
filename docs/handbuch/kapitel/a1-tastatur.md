@@ -5,6 +5,7 @@
 | Tasten | Wirkung |
 |---|---|
 | <kbd>Strg</kbd> + <kbd>Enter</kbd> | Formular bzw. Dialog speichern (Tagesbericht, Notiz, Telefon-Schnellerfassung, Helpdesk-Antwort) |
+| <kbd>Alt</kbd> + <kbd>N</kbd> | Neue Bauakte (Assistent) |
 | <kbd>Esc</kbd> | Dialog oder Auswahlliste schließen |
 | <kbd>Enter</kbd> im Suchfeld | Alle Treffer in der Bauaktenliste zeigen |
 | <kbd>Strg</kbd> + Klick auf einen Link | Seite in neuem Tab öffnen |

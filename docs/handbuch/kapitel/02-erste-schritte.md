@@ -62,7 +62,7 @@ Anmeldezeit und letzter Aktivität. Unbekannte Anmeldungen beenden Sie mit **Abm
 | Nr. | Element | Funktion |
 |---|---|---|
 | 1 | **Suche** | Sucht gleichzeitig in Bauakten (auch Altakten), Kunden und Dokumenten. |
-| 2 | **Neue Bauakte** | Startet den Assistenten für eine neue Bauakte oder Anfrage (Abschnitt 3.2). |
+| 2 | **Neue Bauakte** | Startet den Assistenten für eine neue Bauakte oder Anfrage (Abschnitt 3.2), auch mit <kbd>Alt</kbd> + <kbd>N</kbd>. |
 | 3 | **Glocke** | Benachrichtigungen mit Anzahl der ungelesenen (Abschnitt 8.3). |
 | 4 | **Chat** | Öffnet den Chat; eine Zahl zeigt ungelesene Nachrichten (Abschnitt 8.2). |
 | 5 | **Telefon** | Schnellerfassung eines Anrufs während des Gesprächs (Abschnitt 4.2). Die Zahl zeigt fällige Wiedervorlagen. |

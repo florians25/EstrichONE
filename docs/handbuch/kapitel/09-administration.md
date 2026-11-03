@@ -372,7 +372,7 @@ dann oben einen Hinweis:
 
 Der Hinweis nennt den Befehl für den Server und verlinkt die **Versionshinweise**. Aktualisiert wird auf dem Server:
 
-`sudo /opt/estrichone/update.sh 0.1.1`
+`sudo /opt/estrichone/update.sh 0.1.2` (Versionsnummer wie im Hinweis)
 
 `update.sh` sichert vorher, wartet auf gesunde Dienste und prüft die gemeldete Version. Sicherheitsupdates lassen sich
 automatisch einspielen:
