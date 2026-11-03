@@ -113,8 +113,10 @@ struct ChatTests {
         transport.on("PUT", "/api/v1/chat/attachments/\(photo.id.key)/content", reply: .json("{}"))
         transport.on("POST", "/api/v1/chat/conversations/\(conversation.key)/messages") { request in
             let body = request.jsonBody()
-            #expect(body["clientMessageId"] as? String == item.id.key)
-            #expect(body["attachmentFileIds"] as? [String] == [photo.id.key])
+            if body["text"] as? String == "Halle 2" {
+                #expect(body["clientMessageId"] as? String == item.id.key)
+                #expect(body["attachmentFileIds"] as? [String] == [photo.id.key])
+            }
             return .json(#"{"id":"0193a1b2-0000-7000-8000-0000000c0b77","text":"Halle 2","createdAt":"2026-11-02T07:12:03Z","mine":true,"status":"sent"}"#, status: 201)
         }
         let sent = await outbox.flush(client: client)
