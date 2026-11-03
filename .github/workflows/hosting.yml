@@ -60,7 +60,7 @@ jobs:
           docker run --rm estrichone/hosting:ci cli | head -n 3 | grep -q 'Installation mit einem Befehl'
       - name: Image sichern
         run: docker save estrichone/hosting:ci | gzip -1 > hosting-image.tar.gz
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: hosting-image
           path: hosting-image.tar.gz
@@ -102,7 +102,7 @@ jobs:
         run: docker logs console
       - name: Bildschirmfotos
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: hosting-e2e
           path: hosting/ui/test-results
