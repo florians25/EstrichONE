@@ -134,7 +134,8 @@ for FILE in "${FILES[@]}"; do [[ -z "$(local_original "$FILE")" ]] || { echo "Or
 overview | json "['lastCopy']['status']" | grep -qx succeeded
 compose exec -T backup sh -c 'restic -r "$BACKUP_REPOSITORY" snapshots --tag estrichone-auslagerung --json' | grep -q '"paths"'
 # Eigener Snapshot (nicht Tag „estrichone“): „latest“ und Aufbewahrung der normalen Sicherungen lassen ihn unberührt.
-compose exec -T backup sh -c 'restic -r "$BACKUP_REPOSITORY" snapshots --tag estrichone-auslagerung --json' | not grep -q '"estrichone"'
+compose exec -T backup sh -c 'restic -r "$BACKUP_REPOSITORY" snapshots --tag estrichone-auslagerung --json' \
+  | python3 -c "import sys,json; s=json.load(sys.stdin); assert s and all('estrichone' not in x['tags'] for x in s), s"
 # Auf dem Storage nur Chiffretext
 not grep -rq "GEHEIMER-INHALT" "$DATA/auslagerung"
 [[ "$(find "$DATA/auslagerung/offload" -path '*/objects/*' -type f ! -name '*.json' | wc -l)" -ge 2 ]]
