@@ -859,7 +859,7 @@
         "tags": [
           "Überwachung"
         ],
-        "summary": "Status-Banner für alle Clients: Backup-Server (rot) und Archivserver (gelb), nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.",
+        "summary": "Status-Banner für alle Clients: Backup-Server (rot), Archivserver (gelb), Storage der Auslagerung (gelb, nur Verwaltung), nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.",
         "operationId": "GetHealthBanner",
         "responses": {
           "200": {
@@ -5910,6 +5910,419 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload": {
+      "get": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Speicher-Auslagerung: Belegung Server/Storage, Schwelle, Regeln, Fortschritt, Statuszeile",
+        "operationId": "GetOffloadOverview",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/settings": {
+      "put": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "operationId": "UpdateOffloadSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OffloadSettingsDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadSettingsDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/pair": {
+      "post": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Storage (Dienst estrichone-offload auf Kombiserver/Archivrechner) per Adresse und Kopplungscode verbinden",
+        "operationId": "PairOffloadStorage",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PairOffloadRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadConnectionDto"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/pairing": {
+      "delete": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Entkoppeln – nur, wenn nichts mehr ausgelagert ist (sonst 409)",
+        "operationId": "UnpairOffloadStorage",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/run": {
+      "post": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Jetzt auslagern (nach Regeln bzw. eine Bauakte)",
+        "operationId": "RunOffload",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/OffloadRunRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/recall": {
+      "post": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Wieder lokal speichern: Dateien, eine Bauakte oder alles",
+        "operationId": "RecallOffloadedFiles",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/OffloadRecallRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/files": {
+      "get": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "operationId": "GetOffloadedFiles",
+        "parameters": [
+          {
+            "name": "bauakteId",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "skip",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "take",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadedFilesPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/bauakten": {
+      "get": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "operationId": "GetOffloadedBauakten",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OffloadedBauakteDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/reconcile": {
+      "post": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Abgleich Server ↔ Storage (nach Wiederherstellung oder Ausfall)",
+        "operationId": "ReconcileOffload",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/recover-from-backup": {
+      "post": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Fehlende Originale aus den Auslagerungs-Snapshots der Sicherung zurückspielen",
+        "operationId": "RecoverOffloadFromBackup",
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OffloadAccepted"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/files/offload/locations": {
+      "get": {
+        "tags": [
+          "Speicher-Auslagerung"
+        ],
+        "summary": "Welche der Dateien (ids=…) ihr Original vom Storage laden – Hinweis „wird vom Storage geladen“",
+        "operationId": "GetOffloadLocations",
+        "parameters": [
+          {
+            "name": "ids",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/OffloadLocation"
+                  }
                 }
               }
             }
@@ -26777,6 +27190,10 @@
           },
           "text": {
             "type": "string"
+          },
+          "adminOnly": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -28220,6 +28637,730 @@
           }
         }
       },
+      "OffloadAccepted": {
+        "required": [
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "requestId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OffloadBackupResult": {
+        "required": [
+          "requestId",
+          "status",
+          "message",
+          "at",
+          "files"
+        ],
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "files": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "OffloadConnectionDto": {
+        "required": [
+          "address",
+          "serverName",
+          "serverVersion",
+          "caFingerprint",
+          "fingerprintDisplay",
+          "pairedAt",
+          "lastContactAt",
+          "lastError",
+          "reachable"
+        ],
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "serverName": {
+            "type": "string"
+          },
+          "serverVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "caFingerprint": {
+            "type": "string"
+          },
+          "fingerprintDisplay": {
+            "type": "string"
+          },
+          "pairedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastContactAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reachable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "OffloadCountsDto": {
+        "required": [
+          "offloadedFiles",
+          "offloadedBlobs",
+          "offloadedBytes",
+          "pendingBlobs",
+          "pendingBytes",
+          "missingBlobs",
+          "candidateFiles",
+          "candidateBytes",
+          "cacheBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "offloadedFiles": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offloadedBlobs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offloadedBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "pendingBlobs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "pendingBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "missingBlobs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "candidateFiles": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "candidateBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "cacheBytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "OffloadDiskDto": {
+        "required": [
+          "freeBytes",
+          "totalBytes",
+          "freePercent",
+          "low",
+          "bytesToFree"
+        ],
+        "type": "object",
+        "properties": {
+          "freeBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "totalBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "freePercent": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "low": {
+            "type": "boolean"
+          },
+          "bytesToFree": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "OffloadedBauakteDto": {
+        "required": [
+          "bauakteId",
+          "title",
+          "files",
+          "bytes"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "type": "string"
+          },
+          "files": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "OffloadedFileDto": {
+        "required": [
+          "fileId",
+          "name",
+          "kind",
+          "bauakteId",
+          "bauakteTitle",
+          "sizeBytes",
+          "state",
+          "uploadedAt",
+          "offloadedAt",
+          "backedUpAt",
+          "lastError"
+        ],
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FileKind"
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "bauakteTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "state": {
+            "$ref": "#/components/schemas/OffloadState"
+          },
+          "uploadedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "offloadedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "backedUpAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OffloadedFilesPage": {
+        "required": [
+          "items",
+          "total"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/OffloadedFileDto"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OffloadJobStatus": {
+        "required": [
+          "running",
+          "kind",
+          "total",
+          "processed",
+          "failed",
+          "bytes",
+          "startedAt",
+          "finishedAt",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "running": {
+            "type": "boolean"
+          },
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "processed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "startedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OffloadLocation": {
+        "required": [
+          "fileId",
+          "state"
+        ],
+        "type": "object",
+        "properties": {
+          "fileId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "$ref": "#/components/schemas/OffloadState"
+          }
+        }
+      },
+      "OffloadOverview": {
+        "required": [
+          "status",
+          "paired",
+          "connection",
+          "server",
+          "settings",
+          "disk",
+          "counts",
+          "backupAvailable",
+          "lastCopy",
+          "job",
+          "lastRunAt",
+          "lastRunMessage"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "$ref": "#/components/schemas/OffloadStatusLine"
+          },
+          "paired": {
+            "type": "boolean"
+          },
+          "connection": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OffloadConnectionDto"
+              }
+            ]
+          },
+          "server": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OffloadServerStatus"
+              }
+            ]
+          },
+          "settings": {
+            "$ref": "#/components/schemas/OffloadSettingsDto"
+          },
+          "disk": {
+            "$ref": "#/components/schemas/OffloadDiskDto"
+          },
+          "counts": {
+            "$ref": "#/components/schemas/OffloadCountsDto"
+          },
+          "backupAvailable": {
+            "type": "boolean"
+          },
+          "lastCopy": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OffloadBackupResult"
+              }
+            ]
+          },
+          "job": {
+            "$ref": "#/components/schemas/OffloadJobStatus"
+          },
+          "lastRunAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastRunMessage": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "OffloadRecallRequest": {
+        "type": "object",
+        "properties": {
+          "fileIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "all": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "OffloadRunRequest": {
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "OffloadServerStatistics": {
+        "required": [
+          "objects",
+          "bytes",
+          "trashObjects",
+          "trashBytes",
+          "trashDays",
+          "lastVerification"
+        ],
+        "type": "object",
+        "properties": {
+          "objects": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "trashObjects": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "trashBytes": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "trashDays": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastVerification": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OffloadServerVerification"
+              }
+            ]
+          }
+        }
+      },
+      "OffloadServerStatus": {
+        "required": [
+          "role",
+          "name",
+          "version",
+          "now",
+          "diskFreeBytes",
+          "diskTotalBytes",
+          "offload"
+        ],
+        "type": "object",
+        "properties": {
+          "role": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "now": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "diskFreeBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "diskTotalBytes": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "offload": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OffloadServerStatistics"
+              }
+            ]
+          }
+        }
+      },
+      "OffloadServerVerification": {
+        "required": [
+          "at",
+          "ok",
+          "objectsChecked",
+          "bytesChecked",
+          "errors"
+        ],
+        "type": "object",
+        "properties": {
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "objectsChecked": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bytesChecked": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "OffloadSettingsDto": {
+        "required": [
+          "autoWhenLow",
+          "autoByRules",
+          "thresholdPercent",
+          "thresholdFreeGb",
+          "minAgeMonths",
+          "onlyCompletedBauakten",
+          "includePhotos",
+          "includeVideos",
+          "includeDocuments",
+          "requireBackup",
+          "cacheLimitMb"
+        ],
+        "type": "object",
+        "properties": {
+          "autoWhenLow": {
+            "type": "boolean"
+          },
+          "autoByRules": {
+            "type": "boolean"
+          },
+          "thresholdPercent": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "thresholdFreeGb": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "minAgeMonths": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "onlyCompletedBauakten": {
+            "type": "boolean"
+          },
+          "includePhotos": {
+            "type": "boolean"
+          },
+          "includeVideos": {
+            "type": "boolean"
+          },
+          "includeDocuments": {
+            "type": "boolean"
+          },
+          "requireBackup": {
+            "type": "boolean"
+          },
+          "cacheLimitMb": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "OffloadState": {
+        "enum": [
+          "pending",
+          "offloaded",
+          "recalled",
+          "missing"
+        ]
+      },
+      "OffloadStatusLine": {
+        "required": [
+          "level",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "level": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        }
+      },
       "OrderLineResponse": {
         "required": [
           "id",
@@ -28510,6 +29651,21 @@
         }
       },
       "PairBackupTargetRequest": {
+        "required": [
+          "address",
+          "code"
+        ],
+        "type": "object",
+        "properties": {
+          "address": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          }
+        }
+      },
+      "PairOffloadRequest": {
         "required": [
           "address",
           "code"
@@ -35427,6 +36583,9 @@
     },
     {
       "name": "Einstellungen"
+    },
+    {
+      "name": "Speicher-Auslagerung"
     },
     {
       "name": "Freigaben"

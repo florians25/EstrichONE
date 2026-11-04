@@ -1,7 +1,7 @@
 /** Fernaktualisierung der Zusatzserver (Backup-Ziele, Ziele, die ziehen, Archivserver) – docs/backup.md. */
 import { dateTime } from "./format";
 
-export type PeerKind = "backup-target" | "backup-mirror" | "archive";
+export type PeerKind = "backup-target" | "backup-mirror" | "archive" | "offload";
 export type PeerUpdateStatus = "none" | "requested" | "delivered" | "running" | "succeeded" | "rolled_back" | "failed";
 
 export interface PeerUpdateDto {
@@ -13,7 +13,7 @@ export interface PeerUpdateDto {
 export interface PeerUpdatesResponse { currentVersion: string; items: PeerUpdateDto[] }
 export interface PeerUpdateAllResponse { requested: number; items: PeerUpdateDto[] }
 
-const kindText: Record<PeerKind, string> = { "backup-target": "Backup-Ziel", "backup-mirror": "Backup-Ziel, das zieht", archive: "Archivserver" };
+const kindText: Record<PeerKind, string> = { "backup-target": "Backup-Ziel", "backup-mirror": "Backup-Ziel, das zieht", archive: "Archivserver", offload: "Storage (Auslagerung)" };
 
 export const activeStatus = (s: PeerUpdateStatus): boolean => s === "requested" || s === "delivered" || s === "running";
 

@@ -31,6 +31,9 @@ die Pushnachricht lässt sich abschalten.
 | `backup.failed` | Backup fehlgeschlagen (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
 | `backup.target_down` | Backup-Server nicht erreichbar / letzte Sicherung zu alt (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
 | `archive.down` | Archiv-Server nicht erreichbar (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
+| `storage.low_space` | Speicher auf dem Server knapp (Schwelle der Speicher-Auslagerung unterschritten, höchstens täglich; **Pflicht**, nur Administratoren) | Recht `settings.manage` | `system` (dringend) |
+| `storage.offloaded` | Originale auf den Storage ausgelagert (geprüft und gesichert), mit freiem Platz danach | Recht `settings.manage` | `system` |
+| `storage.offload_unreachable` | Storage der Auslagerung nicht erreichbar oder Originale fehlen dort (täglich; **Pflicht**, nur Administratoren) | Recht `settings.manage` | `system` (dringend) |
 | `peer.update_available` | Nach einem Update des Servers: Zusatzserver (Backup-Ziel, Archivserver) noch auf älterer Version – einmal je Version (nur Administratoren) | Recht `backup.manage` | `system` |
 | `peer.update_succeeded` | Fernaktualisierung eines Zusatzservers erfolgreich (nur Administratoren) | Recht `backup.manage` | `system` |
 | `peer.update_failed` | Fernaktualisierung fehlgeschlagen oder zurückgerollt – vorige Version läuft wieder (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` (dringend) |

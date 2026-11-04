@@ -47,7 +47,11 @@ internal sealed partial class VariantWorker(
         var renderedSha = file.Sha256;
         try
         {
-            var original = await File.ReadAllBytesAsync(storage.PathOf(file.StorageKey), cancellationToken);
+            var source = File.Exists(storage.PathOf(file.StorageKey))
+                ? storage.PathOf(file.StorageKey)
+                : await scope.ServiceProvider.GetRequiredService<OffloadService>().OriginalPathAsync(file.StorageKey, cancellationToken)
+                    ?? storage.PathOf(file.StorageKey);
+            var original = await File.ReadAllBytesAsync(source, cancellationToken);
             foreach (var (name, size) in Sizes)
             {
                 // Kleine Stufen etwas höher, große etwas niedriger komprimiert: scharf am Bildschirm, wenig Speicher.

@@ -10,7 +10,7 @@ Benutzer in Web und Apps ein rotes Banner; Administratoren bekommen nach jeder S
 | Frage | Antwort |
 |---|---|
 | Wie oft? | Täglich eine **Vollsicherung** (Standard 22:30 Uhr, alle Dateien werden neu gelesen und geprüft), optional zusätzlich **inkrementell** alle 1–12 Stunden. Einstellbar im Backup Center → *Zeitplan und Meldungen*. |
-| Was? | Datenbank (alle Fachdaten, Benutzer, Archiv-Nachweise), alle Dateien (Fotos, Dokumente, Videos, Pläne, Vorschaubilder), Schlüsselbund (`.keys`: Anmeldungen, verschlüsselte Push-/APNs-/VAPID-Schlüssel), Server-Konfiguration (`.env`-Kopie), Zeitplan, Backup-Ziele. |
+| Was? | Datenbank (alle Fachdaten, Benutzer, Archiv-Nachweise), alle Dateien (Fotos, Dokumente, Videos, Pläne, Vorschaubilder; ausgelagerte Originale in eigenen, dauerhaften Snapshots – siehe [Auslagerung](#auslagerung)), Schlüsselbund (`.keys`: Anmeldungen, verschlüsselte Push-/APNs-/VAPID-Schlüssel), Server-Konfiguration (`.env`-Kopie), Zeitplan, Backup-Ziele. |
 | Wohin? | Hauptziel (Ordner/zweite Platte/NAS, `sftp:`), optional zweites Ziel, beliebig viele **Backup-Ziele auf anderer Hardware** (Kopplungscode, nur anhängen), **Backup-Ziele, die ziehen** (zuhause hinter NAT) und der **Kombiserver** (Backup-Ziel + Archiv auf einem Rechner, ein Code). |
 | Wie sicher? | restic: AES-256 + Poly1305 je Block, Prüfsummen (SHA-256), Repository-Passwort nur beim Betrieb und auf dem Notfallblatt. Sonntags `restic check` (10 % Daten) und Probe-Wiederherstellung in eine temporäre Datenbank. |
 | Aufbewahrung | Standard 14 täglich / 8 wöchentlich / 12 monatlich / 3 jährlich (lokales Hauptziel); Backup-Ziele behalten alles (nur anhängen). |
@@ -196,6 +196,38 @@ Archiv erweitern, Fehlbedienungen (fehlendes Verzeichnis, gleiche Ports, verscha
 getrennte Volumes und Updater, ein Code koppelt beide, Sicherung landet auf dem Kombiserver, „Abschließen & Archivieren“
 archiviert die Dokumente (Prüflauf in Ordnung), erneuter Lauf ohne neuen Code mit erhaltenen Kopplungen, beide Dienste
 mit Updater; danach Topologie A (Backup-Ziel zieht, derselbe Code koppelt das Archiv).
+
+#### Kombiserver um die Speicher-Auslagerung erweitern
+
+Als dritter, getrennter Dienst kann der Kombiserver ausgelagerte Datei-Originale aufnehmen, wenn der EstrichONE-Server
+knapp wird (Container `estrichone-offload`, Port 8445, eigener Ordner – nicht im Archiv und nicht im Backup-Repository).
+Ein erneuter Installer-Lauf genügt, Backup-Ziel und Archiv bleiben gekoppelt:
+
+```bash
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi \
+  -e ESTRICHONE_OFFLOAD_DATA_DIR=/mnt/storage/estrichone/auslagerung \
+  ghcr.io/florians25/estrichone-installer:<version> backup-archiv
+```
+
+Danach *System → Speicher-Auslagerung → Storage koppeln* (Adresse `<kombiserver>:8445`, Code aus der Ausgabe). Ablauf,
+Verschlüsselung, Sicherungskopie und Wiederherstellung: [docs/speicher.md](speicher.md#auslagerung-auf-den-storage-speicherstufe-storage).
+
+## Auslagerung
+
+Ausgelagerte Originale sind **immer gesichert**: Bevor EstrichONE ein Original lokal löscht, legt der Backup-Dienst auf
+Anforderung der API (`requests/offload-backup.list` im Statusverzeichnis, Ergebnis `offload-backup.json`) in **allen**
+Zielen einen eigenen Snapshot mit genau diesen Dateien an (`restic backup --tag estrichone-auslagerung
+--files-from-verbatim …`). Diese Snapshots tragen nicht den Tag `estrichone` – Liste im Backup Center, „latest“ und
+Aufbewahrung lassen sie unberührt, sie bleiben dauerhaft. Erst nach „succeeded“ in allen Zielen wird lokal gelöscht.
+Der Zwischenspeicher `.offload-cache` ist von den normalen Sicherungen ausgenommen.
+
+- **Wiederherstellen (ganzes System)** bringt Datenbank, Schlüsselring und lokale Dateien zurück; ausgelagerte Originale
+  liegen weiter auf dem Storage (Abgleich nach dem Start, siehe docs/speicher.md). Der Papierkorb des Storage (30 Tage)
+  deckt auch Stände ab, in denen eine Datei später zurückgeholt wurde.
+- **Storage verloren:** *System → Speicher-Auslagerung → Aus Sicherung zurückholen* – der Backup-Dienst spielt die
+  fehlenden Originale aus den Auslagerungs-Snapshots zurück (`requests/offload-recover.list`, vorhandene Dateien bleiben
+  unverändert). Von der Konsole: `sudo docker compose -p estrichone exec backup estrichone-backup offload-recover`
+  (nach einer Anforderung) bzw. `restic snapshots --tag estrichone-auslagerung` zum Ansehen.
 
 ## Abschließen & Archivieren
 

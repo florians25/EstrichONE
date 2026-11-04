@@ -4,7 +4,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Documentation;
 
-internal sealed class ArchivableDocuments(EstrichOneDbContext db, LocalFileStorage storage, System.Threading.Channels.Channel<Guid> variants)
+internal sealed class ArchivableDocuments(EstrichOneDbContext db, LocalFileStorage storage, System.Threading.Channels.Channel<Guid> variants,
+    OffloadService offload)
     : IArchivableDocuments
 {
     public IQueryable<ArchivableDocument> Query() =>
@@ -31,7 +32,17 @@ internal sealed class ArchivableDocuments(EstrichOneDbContext db, LocalFileStora
         var key = await db.Set<FileRecord>().AsNoTracking()
             .Where(file => file.Id == fileId && file.State == FileState.Stored && file.DeletedAt == null)
             .Select(file => file.StorageKey).FirstOrDefaultAsync(cancellationToken);
-        var path = key is null ? null : storage.PathOf(key);
+        // Ausgelagert: vom Storage holen (geprüft). Nicht erreichbar → null, die Archivierung versucht es später erneut.
+        string? path;
+        try
+        {
+            path = key is null ? null : await offload.OriginalPathAsync(key, cancellationToken);
+        }
+        catch (OffloadUnavailableException)
+        {
+            path = null;
+        }
+
         return path is not null && File.Exists(path)
             ? new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read, 81920, useAsync: true)
             : null;
@@ -41,7 +52,8 @@ internal sealed class ArchivableDocuments(EstrichOneDbContext db, LocalFileStora
         db.Set<FileRecord>().SingleOrDefaultAsync(file => file.Id == fileId && file.State == FileState.Stored, cancellationToken);
 
     public async Task<bool> HasContentAsync(Guid fileId, CancellationToken cancellationToken) =>
-        await RecordAsync(fileId, cancellationToken) is { StorageKey: { } key } && File.Exists(storage.PathOf(key));
+        await RecordAsync(fileId, cancellationToken) is { StorageKey: { } key }
+        && (File.Exists(storage.PathOf(key)) || await offload.IsOffloadedAsync(key, cancellationToken));
 
     public async Task EvictAsync(Guid fileId, CancellationToken cancellationToken)
     {
@@ -59,6 +71,11 @@ internal sealed class ArchivableDocuments(EstrichOneDbContext db, LocalFileStora
             {
                 File.Delete(path);
             }
+        }
+
+        if (!shared)
+        {
+            await offload.DiscardAsync(key, cancellationToken); // auch eine ausgelagerte Kopie aufgeben
         }
     }
 
@@ -94,6 +111,7 @@ internal sealed class ArchivableDocuments(EstrichOneDbContext db, LocalFileStora
         }
 
         File.Move(temp, path, overwrite: true);
+        await offload.LocalRestoredAsync(key, cancellationToken);
         if (file.Variants != VariantState.NotApplicable)
         {
             file.SetVariants(VariantState.Pending);

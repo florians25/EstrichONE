@@ -68,6 +68,14 @@ for _ in $(seq 1 60); do grep -q 'KOPPLUNGSCODE' "$WORK/archive.log" && break; s
 E2E_ARCHIVE_CODE="$(sed -n 's/.*KOPPLUNGSCODE: *\([A-Z0-9-]*\).*/\1/p' "$WORK/archive.log" | tail -n 1)"
 export E2E_ARCHIVE_CODE E2E_ARCHIVE_ADDRESS="127.0.0.1:18443"
 
+# Storage der Speicher-Auslagerung (gleicher Dienst, Rolle offload) für die Seite System → Speicher-Auslagerung.
+ESTRICHONE_ROLE=offload ESTRICHONE_DATA="$WORK/offload-data" ESTRICHONE_PORT=18445 ESTRICHONE_NAME="Storage E2E" \
+  dotnet "$WORK/archive/estrichone-archive.dll" >"$WORK/offload.log" 2>&1 &
+PIDS+=($!)
+for _ in $(seq 1 60); do grep -q 'KOPPLUNGSCODE' "$WORK/offload.log" && break; sleep 1; done
+E2E_OFFLOAD_CODE="$(sed -n 's/.*KOPPLUNGSCODE: *\([A-Z0-9-]*\).*/\1/p' "$WORK/offload.log" | tail -n 1)"
+export E2E_OFFLOAD_CODE E2E_OFFLOAD_ADDRESS="127.0.0.1:18445"
+
 cd "$ROOT/web"
 if [[ -n "${WEB_IMAGE:-}" ]]; then
   # Gleiches Caddyfile wie im Betrieb, nur mit lokaler API-Adresse.

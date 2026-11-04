@@ -271,7 +271,7 @@ internal static class FileEndpoints
     /// synchrones Schreiben in die Antwort, ZipArchive schreibt synchron.
     /// </summary>
     private static async Task<Results<FileStreamHttpResult, ProblemHttpResult>> ArchiveAsync(
-        Guid bauakteId, [FromQuery] string ids, EstrichOneDbContext db, IBauakteAccess access, LocalFileStorage storage,
+        Guid bauakteId, [FromQuery] string ids, EstrichOneDbContext db, IBauakteAccess access, OffloadService offload,
         CancellationToken cancellationToken)
     {
         if (!await access.CanReadAsync(bauakteId, cancellationToken))
@@ -294,6 +294,21 @@ internal static class FileEndpoints
             return ProblemFor(FileFailure.NotFound);
         }
 
+        // Ausgelagerte Originale vorab vom Storage holen: Ist er nicht erreichbar, klare Meldung statt eines halben ZIP.
+        var paths = new Dictionary<Guid, string>();
+        try
+        {
+            foreach (var file in files)
+            {
+                paths[file.Id] = await offload.OriginalPathAsync(file.StorageKey!, cancellationToken)
+                    ?? throw new OffloadUnavailableException($"Original von „{file.OriginalName}“ nicht auffindbar.");
+            }
+        }
+        catch (OffloadUnavailableException exception)
+        {
+            return OffloadProblem(exception);
+        }
+
         var temp = new FileStream(Path.GetTempFileName(), FileMode.Create, FileAccess.ReadWrite, FileShare.None, 81920,
             FileOptions.DeleteOnClose | FileOptions.Asynchronous);
         using (var zip = new System.IO.Compression.ZipArchive(temp, System.IO.Compression.ZipArchiveMode.Create, leaveOpen: true))
@@ -304,7 +319,7 @@ internal static class FileEndpoints
                 var entry = zip.CreateEntry(UniqueName(file, used), System.IO.Compression.CompressionLevel.Fastest);
                 entry.LastWriteTime = file.CapturedAt ?? file.CreatedAt;
                 await using var target = entry.Open();
-                await using var content = File.OpenRead(storage.PathOf(file.StorageKey!));
+                await using var content = File.OpenRead(paths[file.Id]);
                 await content.CopyToAsync(target, cancellationToken);
             }
         }
@@ -383,7 +398,7 @@ internal static class FileEndpoints
         await service.FindReadableAsync(id, cancellationToken) is { } file ? TypedResults.Ok(ToResponse(file)) : ProblemFor(FileFailure.NotFound);
 
     private static async Task<Results<PhysicalFileHttpResult, ProblemHttpResult>> DownloadAsync(
-        Guid id, FileService service, LocalFileStorage storage, HttpContext http, CancellationToken cancellationToken,
+        Guid id, FileService service, LocalFileStorage storage, OffloadService offload, HttpContext http, CancellationToken cancellationToken,
         [FromQuery] string variant = "original")
     {
         var file = await service.FindReadableAsync(id, cancellationToken);
@@ -432,8 +447,23 @@ internal static class FileEndpoints
             http.Items[SecurityHeadersMiddleware.AllowSameOriginFramingKey] = true;
         }
 
-        return TypedResults.PhysicalFile(storage.PathOf(file.StorageKey), contentType,
-            fileDownloadName: inline ? null : file.OriginalName, enableRangeProcessing: true);
+        string original;
+        try
+        {
+            original = await offload.OriginalPathAsync(file.StorageKey, cancellationToken) ?? storage.PathOf(file.StorageKey);
+        }
+        catch (OffloadUnavailableException exception)
+        {
+            return OffloadProblem(exception);
+        }
+
+        if (original != storage.PathOf(file.StorageKey))
+        {
+            // Hinweis für Clients: Original kam vom Storage (Speicher-Auslagerung), nicht von der lokalen Platte.
+            http.Response.Headers["X-EstrichOne-Storage"] = "offload";
+        }
+
+        return TypedResults.PhysicalFile(original, contentType, fileDownloadName: inline ? null : file.OriginalName, enableRangeProcessing: true);
     }
 
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
@@ -492,6 +522,11 @@ internal static class FileEndpoints
             $"Das Bild ist zu groß (höchstens {Infrastructure.Media.ImageSafety.MaxPixels / 1_000_000} Megapixel, Kante bis {Infrastructure.Media.ImageSafety.MaxEdge} Pixel)."),
         _ => Problem(StatusCodes.Status400BadRequest, "BAD_REQUEST", "Ungültige Anfrage"),
     };
+
+    /// <summary>Original liegt auf dem Storage, der gerade nicht erreichbar ist (503, Code OFFLOAD_UNAVAILABLE, Retry-After).</summary>
+    internal static ProblemHttpResult OffloadProblem(OffloadUnavailableException exception) =>
+        TypedResults.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "Datei liegt auf dem Storage", detail: exception.Message,
+            extensions: new Dictionary<string, object?> { ["code"] = "OFFLOAD_UNAVAILABLE" });
 
     private static ProblemHttpResult Problem(int status, string code, string title) =>
         TypedResults.Problem(statusCode: status, title: title, extensions: new Dictionary<string, object?> { ["code"] = code });

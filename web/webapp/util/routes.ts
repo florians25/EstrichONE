@@ -54,6 +54,7 @@ export const routes: RouteDef[] = [
 	{ name: "backup", pattern: "/system/sicherung", view: "admin.Backup", permission: "backup.manage", nav: "backup", title: "nav.backup" },
 	{ name: "backupTargets", pattern: "/system/backup-ziele", view: "admin.BackupTargets", permission: "backup.manage", nav: "backupTargets", title: "nav.backupTargets" },
 	{ name: "archive", pattern: "/system/archiv", view: "admin.Archive", permission: "settings.manage", nav: "archive", title: "nav.archive" },
+	{ name: "offload", pattern: "/system/auslagerung", view: "admin.Offload", permission: "settings.manage", nav: "offload", title: "nav.offload" },
 	{ name: "mail", pattern: "/system/e-mail", view: "admin.Mail", permission: "settings.manage", nav: "mail", title: "nav.mail" },
 	{ name: "dossiers", pattern: "/system/aktenarchiv", view: "admin.Dossiers", permission: "bauakten.read", nav: "dossiers", title: "nav.dossiers" },
 	{ name: "monitoring", pattern: "/system/ueberwachung", view: "admin.Monitoring", permission: "backup.manage", nav: "monitoring", title: "nav.monitoring" },

@@ -7,6 +7,9 @@ public enum ServerRole
 
     /// <summary>Backup-Ziel: restic-REST-Server (nur anhängen) hinter derselben Kopplung und demselben Zertifikat.</summary>
     BackupTarget,
+
+    /// <summary>Speicherstufe „Storage“: ausgelagerte, verschlüsselte Datei-Originale des EstrichONE-Servers (eigener Bereich).</summary>
+    Offload,
 }
 
 /// <summary>Konfiguration über Umgebungsvariablen (<c>ESTRICHONE_…</c>), damit ein einziger <c>docker run</c> genügt.</summary>
@@ -49,8 +52,11 @@ public sealed class ArchiveOptions
     /// <summary>Ziel, das zieht: so oft beim Server nach Aufträgen (Aktualisierung) fragen.</summary>
     public TimeSpan CheckInInterval { get; init; } = TimeSpan.FromMinutes(2);
 
-    public string RoleName => Role == ServerRole.Archive ? "archive" : "backup-target";
-    public string RoleTitle => Role == ServerRole.Archive ? "Archivserver" : "Backup-Ziel";
+    /// <summary>Auslagerung: gelöschte Objekte so viele Tage im Papierkorb behalten (Rückholen, Wiederherstellung älterer Stände).</summary>
+    public int OffloadTrashDays { get; init; } = 30;
+
+    public string RoleName => Role switch { ServerRole.Archive => "archive", ServerRole.Offload => "offload", _ => "backup-target" };
+    public string RoleTitle => Role switch { ServerRole.Archive => "Archivserver", ServerRole.Offload => "Storage (Auslagerung)", _ => "Backup-Ziel" };
 
     public static ArchiveOptions FromEnvironment(Func<string, string?>? get = null)
     {
@@ -60,7 +66,8 @@ public sealed class ArchiveOptions
         {
             "archive" or "archiv" => ServerRole.Archive,
             "backup-target" or "backup" or "backupziel" => ServerRole.BackupTarget,
-            var other => throw new InvalidOperationException($"Unbekannte Rolle ESTRICHONE_ROLE={other} (archive oder backup-target)."),
+            "offload" or "auslagerung" or "storage" => ServerRole.Offload,
+            var other => throw new InvalidOperationException($"Unbekannte Rolle ESTRICHONE_ROLE={other} (archive, backup-target oder offload)."),
         };
 
         return new ArchiveOptions
@@ -68,7 +75,12 @@ public sealed class ArchiveOptions
             DataPath = get("ESTRICHONE_DATA") ?? "/data",
             Role = role,
             Port = Int(get("ESTRICHONE_PORT"), 8443),
-            Name = get("ESTRICHONE_NAME") is { Length: > 0 } name ? name : (role == ServerRole.Archive ? "EstrichONE-Archiv" : "EstrichONE-Backup-Ziel"),
+            Name = get("ESTRICHONE_NAME") is { Length: > 0 } name ? name : role switch
+            {
+                ServerRole.Archive => "EstrichONE-Archiv",
+                ServerRole.Offload => "EstrichONE-Storage",
+                _ => "EstrichONE-Backup-Ziel",
+            },
             Addresses = (get("ESTRICHONE_ADDRESS") ?? string.Empty)
                 .Split([',', ' ', ';'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries),
             MinRetentionYears = Math.Clamp(Int(get("ESTRICHONE_MIN_RETENTION_YEARS"), 0), 0, 30),
@@ -79,6 +91,7 @@ public sealed class ArchiveOptions
             PullFingerprint = get("ESTRICHONE_PULL_FINGERPRINT") is { Length: > 0 } fp ? fp : null,
             PullInterval = TimeSpan.FromMinutes(Math.Clamp(Int(get("ESTRICHONE_PULL_INTERVAL_MINUTES"), 60), 5, 1440)),
             UpdatePath = get("ESTRICHONE_UPDATE_DIR") is { Length: > 0 } update ? update : "/update",
+            OffloadTrashDays = Math.Clamp(Int(get("ESTRICHONE_OFFLOAD_TRASH_DAYS"), 30), 1, 3650),
             CheckInInterval = TimeSpan.FromSeconds(Math.Clamp(Int(get("ESTRICHONE_CHECKIN_SECONDS"), 120), 10, 3600)),
         };
     }

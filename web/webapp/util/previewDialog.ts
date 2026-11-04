@@ -12,9 +12,11 @@ import Text from "sap/m/Text";
 import VBox from "sap/m/VBox";
 import HTML from "sap/ui/core/HTML";
 import IllustratedMessage from "sap/m/IllustratedMessage";
+import MessageStrip from "sap/m/MessageStrip";
 import { akteHeader, type AkteContext } from "./akteHeader";
 import { dateTime, fileSize } from "./format";
 import { documentCategories } from "./labels";
+import { storageHint } from "./offload";
 import { session } from "./session";
 import type { FileResponse } from "./models";
 
@@ -49,6 +51,8 @@ export function openPreview(options: PreviewOptions): Dialog {
 	const prev = new Button({ icon: "sap-icon://navigation-left-arrow", tooltip: "Vorherige (Pfeil links)", press: () => show(index - 1) });
 	const next = new Button({ icon: "sap-icon://navigation-right-arrow", tooltip: "Nächste (Pfeil rechts)", press: () => show(index + 1) });
 	const position = new Text();
+	// Speicher-Auslagerung: Hinweis „wird vom Storage geladen“ bzw. klare Meldung, wenn der Storage nicht erreichbar ist.
+	const storage = new MessageStrip({ showIcon: true, visible: false }).addStyleClass("sapUiTinyMarginBottom");
 	const url = (f: FileResponse) => `/api/v1/files/${f.id}/content`;
 
 	const show = (to: number) => {
@@ -70,6 +74,14 @@ export function openPreview(options: PreviewOptions): Dialog {
 		prev.setEnabled(index > 0);
 		next.setEnabled(index < options.files.length - 1);
 		position.setText(options.files.length > 1 ? `${index + 1} von ${options.files.length}` : "");
+		storage.setVisible(false);
+		const shown = index;
+		void storageHint(file.id).then((hint) => {
+			if (!hint || shown !== index || dialog.isDestroyed()) return;
+			storage.setType(hint.type);
+			storage.setText(hint.text);
+			storage.setVisible(true);
+		});
 	};
 
 	const download = () => {
@@ -103,7 +115,7 @@ export function openPreview(options: PreviewOptions): Dialog {
 		content: [new VBox({ height: "100%", renderType: "Bare", items: [
 			...akteHeader(options.context),
 			new VBox({ items: [title, meta] }).addStyleClass("sapUiTinyMarginBottom"),
-			body, none,
+			storage, body, none,
 		] }).addStyleClass("eoPreviewBody")],
 		afterOpen: () => document.addEventListener("keydown", keys),
 		afterClose: () => {

@@ -29,6 +29,9 @@ public sealed class LocalFileStorage(Microsoft.Extensions.Options.IOptions<FileS
 {
     private string Root => options.Value.RootPath;
 
+    /// <summary>Wurzel der Dateiablage (Platzbedarf, Zwischenspeicher der Auslagerung).</summary>
+    public string RootPath => Root;
+
     public static string OriginalKey(Guid id, DateTimeOffset createdAt) =>
         $"originals/{createdAt:yyyy}/{createdAt:MM}/{id:N}";
 

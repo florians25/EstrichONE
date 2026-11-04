@@ -11,7 +11,7 @@ namespace EstrichOne.Api.Tests.Support;
 /// <summary>Echter Archivserver bzw. Backup-Ziel (backend/src/EstrichOne.Archive) mit HTTPS auf einem freien Port.</summary>
 public sealed class ArchiveServerHost : IAsyncDisposable
 {
-    private readonly WebApplication _app;
+    private WebApplication? _app;
 
     private ArchiveServerHost(WebApplication app, ArchiveOptions options)
     {
@@ -23,7 +23,26 @@ public sealed class ArchiveServerHost : IAsyncDisposable
 
     public string Address => $"127.0.0.1:{Options.Port}";
 
-    public IServiceProvider Services => _app.Services;
+    public IServiceProvider Services => _app!.Services;
+
+    /// <summary>Dienst anhalten (Ausfall), Daten bleiben.</summary>
+    public async Task StopAsync()
+    {
+        if (_app is { } app)
+        {
+            _app = null;
+            await app.StopAsync();
+            await app.DisposeAsync();
+        }
+    }
+
+    /// <summary>Wieder starten – gleiche Daten, Zertifikat und Kopplungen.</summary>
+    public async Task StartAgainAsync()
+    {
+        await StopAsync();
+        _app = ArchiveServer.Build(Options, []);
+        await _app.StartAsync();
+    }
 
     public static async Task<ArchiveServerHost> StartAsync(ServerRole role = ServerRole.Archive, int minRetentionYears = 0)
     {
@@ -34,7 +53,7 @@ public sealed class ArchiveServerHost : IAsyncDisposable
             UpdatePath = Path.Combine(data, "update"),
             Role = role,
             Port = FreePort(),
-            Name = role == ServerRole.Archive ? "Archiv Test" : "Backup-Ziel Test",
+            Name = role switch { ServerRole.Archive => "Archiv Test", ServerRole.Offload => "Storage Test", _ => "Backup-Ziel Test" },
             MinRetentionYears = minRetentionYears,
             RestServerPath = "/nicht/vorhanden/rest-server",
         };
@@ -52,8 +71,7 @@ public sealed class ArchiveServerHost : IAsyncDisposable
 
     public async ValueTask DisposeAsync()
     {
-        await _app.StopAsync();
-        await _app.DisposeAsync();
+        await StopAsync();
         if (Directory.Exists(Options.DataPath))
         {
             foreach (var file in Directory.EnumerateFiles(Options.DataPath, "*", SearchOption.AllDirectories))

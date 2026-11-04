@@ -3,6 +3,12 @@
 #
 #   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv
 #   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel
+#   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest auslagerung
+#
+# „auslagerung“ (Aliase offload, storage): Speicherstufe Storage für ausgelagerte Datei-Originale (docs/speicher.md) – eigener
+# Container estrichone-offload (Image estrichone-archive mit ESTRICHONE_ROLE=offload), eigener Datenbereich, Port 8445,
+# optional -e ESTRICHONE_OFFLOAD_TRASH_DAYS=30 (Papierkorb für zurückgeholte Objekte). Auf dem Kombiserver: backup-archiv
+# mit -e ESTRICHONE_OFFLOAD_DATA_DIR=… bzw. -e ESTRICHONE_OFFLOAD=an (siehe kombi.sh).
 #
 # Optionen (-e …): ESTRICHONE_PORT=8443 (Backup-Ziel: 8444), ESTRICHONE_NAME="Archiv Keller", ESTRICHONE_ADDRESS=192.168.1.50 (sonst automatisch),
 #   ESTRICHONE_BIND_ADDRESS=127.0.0.1 (nur an diese Adresse binden, z. B. hinter einem Reverse-Proxy),
@@ -31,7 +37,7 @@ PREVIOUS=""
 # Einstellungen, die der Updater bei jeder Aktualisierung unverändert weitergibt (-e NAME übernimmt den Wert aus der Umgebung).
 SETTINGS="ESTRICHONE_PORT ESTRICHONE_NAME ESTRICHONE_ADDRESS ESTRICHONE_DATA_DIR ESTRICHONE_MIN_RETENTION_YEARS ESTRICHONE_PULL_FROM
   ESTRICHONE_PULL_CODE ESTRICHONE_PULL_FINGERPRINT ESTRICHONE_PULL_INTERVAL_MINUTES ESTRICHONE_CHECKIN_SECONDS ESTRICHONE_NETWORK
-  ESTRICHONE_REGISTRY ESTRICHONE_HEALTH_TIMEOUT ESTRICHONE_BIND_ADDRESS"
+  ESTRICHONE_REGISTRY ESTRICHONE_HEALTH_TIMEOUT ESTRICHONE_BIND_ADDRESS ESTRICHONE_OFFLOAD_TRASH_DAYS"
 
 # Ergebnis für den EstrichONE-Server (nur bei einer Fernaktualisierung): result <status> <meldung> [version]
 result() {
@@ -67,7 +73,8 @@ ROLE_ARG="${1:-}"
 case "$ROLE_ARG" in
   archiv|archive) ROLE=archive; TITLE="Archivserver"; WHERE="System → Archiv → „Archivserver koppeln“" ;;
   backup-ziel|backup-target) ROLE=backup-target; TITLE="Backup-Ziel"; WHERE="System → Backup-Ziele → „Backup-Ziel koppeln“" ;;
-  *) fail "Unbekannte Rolle '${1:-}' (archiv oder backup-ziel)." ;;
+  auslagerung|offload|storage) ROLE=offload; TITLE="Storage (Auslagerung)"; WHERE="System → Speicher-Auslagerung → „Storage koppeln“" ;;
+  *) fail "Unbekannte Rolle '${1:-}' (archiv, backup-ziel oder auslagerung)." ;;
 esac
 
 [ -S /var/run/docker.sock ] || fail "Docker-Socket fehlt: bitte mit -v /var/run/docker.sock:/var/run/docker.sock starten."
@@ -75,6 +82,8 @@ docker version >/dev/null 2>&1 || fail "Docker ist über den Socket nicht erreic
 
 NAME="estrichone-$ROLE"
 IMAGE="$REGISTRY/estrichone-$ROLE:$VERSION"
+# Der Storage ist derselbe Dienst wie der Archivserver in einer anderen Rolle (kein eigenes Image nötig).
+[ "$ROLE" = "offload" ] && IMAGE="$REGISTRY/estrichone-archive:$VERSION"
 UPDATE_VOLUME="$NAME-update"
 UPDATER="$NAME-updater"
 JOB="$NAME-updatejob"
@@ -129,7 +138,7 @@ fi
 
 # ---------------------------------------------------------------------------------------------------------------------
 # Einrichten bzw. aktualisieren (auch als Auftrag des Updaters)
-PORT="${ESTRICHONE_PORT:-8443}"; [ "$ROLE" = "backup-target" ] && PORT="${ESTRICHONE_PORT:-8444}"
+PORT="${ESTRICHONE_PORT:-8443}"; [ "$ROLE" = "backup-target" ] && PORT="${ESTRICHONE_PORT:-8444}"; [ "$ROLE" = "offload" ] && PORT="${ESTRICHONE_PORT:-8445}"
 DATA="${ESTRICHONE_DATA_DIR:-$NAME}"
 HEALTH_TIMEOUT="${ESTRICHONE_HEALTH_TIMEOUT:-120}"
 PREVIOUS="$(image_version "$NAME" || true)"
@@ -173,6 +182,10 @@ set -- -d --name "$NAME" --restart unless-stopped -p "${BIND:+$BIND:}$PORT:8443"
 [ -n "${ESTRICHONE_NAME:-}" ] && set -- "$@" -e "ESTRICHONE_NAME=$ESTRICHONE_NAME"
 [ -n "${ESTRICHONE_MIN_RETENTION_YEARS:-}" ] && set -- "$@" -e "ESTRICHONE_MIN_RETENTION_YEARS=$ESTRICHONE_MIN_RETENTION_YEARS"
 [ -n "${ESTRICHONE_NETWORK:-}" ] && set -- "$@" --network "$ESTRICHONE_NETWORK"
+if [ "$ROLE" = "offload" ]; then
+  set -- "$@" -e ESTRICHONE_ROLE=offload
+  [ -n "${ESTRICHONE_OFFLOAD_TRASH_DAYS:-}" ] && set -- "$@" -e "ESTRICHONE_OFFLOAD_TRASH_DAYS=$ESTRICHONE_OFFLOAD_TRASH_DAYS"
+fi
 if [ "$ROLE" = "backup-target" ] && [ -n "${ESTRICHONE_PULL_FROM:-}" ]; then
   set -- "$@" -e "ESTRICHONE_PULL_FROM=$ESTRICHONE_PULL_FROM"
   [ -n "${ESTRICHONE_PULL_CODE:-}" ] && set -- "$@" -e "ESTRICHONE_PULL_CODE=$ESTRICHONE_PULL_CODE"
@@ -214,7 +227,8 @@ case "${ESTRICHONE_REMOTE_UPDATE:-an}" in
     # shellcheck disable=SC2046 # env_flags liefert nur feste Namen (-e NAME), Werte kommen aus der Umgebung
     docker run -d --name "$UPDATER" --restart unless-stopped -v /var/run/docker.sock:/var/run/docker.sock -v "$UPDATE_VOLUME:/update" \
       $(env_flags) --entrypoint estrichone-peer "$SELF" updater "$ROLE_ARG" >/dev/null
-    REMOTE="an – im EstrichONE-Server unter $( [ "$ROLE" = "archive" ] && echo "System → Archiv" || echo "System → Backup-Ziele" ) „Aktualisieren“"
+    case "$ROLE" in archive) PAGE="System → Archiv" ;; offload) PAGE="System → Speicher-Auslagerung" ;; *) PAGE="System → Backup-Ziele" ;; esac
+    REMOTE="an – im EstrichONE-Server unter $PAGE „Aktualisieren“"
     ;;
 esac
 [ -z "$JOB_ID" ] || exit 0
@@ -245,4 +259,9 @@ fi
 echo
 echo "Aktualisieren: im EstrichONE-Server per Knopfdruck oder hier denselben Befehl erneut ausführen.  Protokoll: sudo docker logs $NAME"
 [ "$ROLE" = "archive" ] && echo "Prüfung jetzt: sudo docker exec $NAME estrichone-archive verify"
+if [ "$ROLE" = "archive" ] && ! exists estrichone-offload; then
+  echo "Speicher-Auslagerung auf diesem Rechner (optional): sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \\"
+  echo "  -e ESTRICHONE_DATA_DIR=/pfad/auslagerung $SELF auslagerung"
+fi
+[ "$ROLE" = "offload" ] && echo "Prüfung jetzt: sudo docker exec $NAME estrichone-archive verify   (alle Prüfsummen der ausgelagerten Objekte)"
 exit 0

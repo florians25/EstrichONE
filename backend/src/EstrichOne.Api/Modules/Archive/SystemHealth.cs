@@ -2,6 +2,8 @@ using System.Globalization;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Backup.Exports;
+using EstrichOne.Api.Modules.Documentation.Exports;
+using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Notifications.Exports;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,9 +16,10 @@ public sealed record BackupHealth(bool Configured, bool Reachable, DateTimeOffse
 /// <param name="Severity"><c>ok</c> oder <c>warning</c> (gelbes Banner).</param>
 public sealed record ArchiveHealth(bool Configured, bool Reachable, DateTimeOffset? LastSuccessAt, string Severity, string? Message);
 
-/// <param name="Key"><c>backup</c> oder <c>archive</c>.</param>
+/// <param name="Key"><c>backup</c>, <c>archive</c> oder <c>offload</c> (Storage der Speicher-Auslagerung).</param>
 /// <param name="Severity"><c>critical</c> (rot) oder <c>warning</c> (gelb).</param>
-public sealed record HealthBanner(string Key, string Severity, string Text);
+/// <param name="AdminOnly">Nur für die Verwaltung (Recht settings.manage); anderen Benutzern wird das Banner nicht ausgeliefert.</param>
+public sealed record HealthBanner(string Key, string Severity, string Text, bool AdminOnly = false);
 
 /// <summary>Status für die Banner aller Clients (Web-Shell, iOS, Android). <c>Banners</c> ist leer, wenn alles in Ordnung ist.</summary>
 public sealed record HealthBannerResponse(BackupHealth Backup, ArchiveHealth Archive, IReadOnlyList<HealthBanner> Banners, DateTimeOffset CheckedAt);
@@ -89,6 +92,21 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             var banners = new List<HealthBanner>();
             if (backupText is not null) banners.Add(new HealthBanner("backup", "critical", backupText));
             if (archiveText is not null) banners.Add(new HealthBanner("archive", "warning", archiveText));
+            // Speicher-Auslagerung: gelb und nur für die Verwaltung (Benutzer bekommen beim Öffnen eine klare Meldung).
+            if (services.GetService<IOffloadHealth>() is { } offloadHealth && await offloadHealth.GetAsync(cancellationToken) is { Configured: true } offload)
+            {
+                if (offload.Missing > 0)
+                {
+                    banners.Add(new HealthBanner("offload", "warning",
+                        $"Hinweis: {offload.Missing} ausgelagerte Original(e) fehlen auf dem Storage – unter Speicher-Auslagerung aus der Sicherung zurückholen.", AdminOnly: true));
+                }
+                else if (!offload.Reachable)
+                {
+                    banners.Add(new HealthBanner("offload", "warning",
+                        $"Hinweis: Storage „{offload.StorageName}“ (Speicher-Auslagerung) nicht erreichbar – {offload.OffloadedFiles} ausgelagerte Originale lassen sich gerade nicht öffnen. Nichts ist verloren.",
+                        AdminOnly: true));
+                }
+            }
             var result = new HealthBannerResponse(
                 new BackupHealth(backupConfigured, backupReachable, backup.LastSuccessAt, backupCritical ? "critical" : "ok", backupText, restore is not null),
                 new ArchiveHealth(connection is not null, archiveReachable, lastArchived, archiveWarning ? "warning" : "ok", archiveText),
@@ -244,9 +262,19 @@ internal static class SystemHealthEndpoints
 {
     public static void Map(IEndpointRouteBuilder api)
     {
-        api.MapGet("/system/health-banner", async (SystemHealthMonitor monitor, CancellationToken ct) => TypedResults.Ok(await monitor.GetAsync(ct)))
+        api.MapGet("/system/health-banner", async (SystemHealthMonitor monitor, ICurrentUser user, IRoleAssignments roles, CancellationToken ct) =>
+            {
+                var health = await monitor.GetAsync(ct);
+                if (health.Banners.Any(b => b.AdminOnly)
+                    && !(await roles.GetUserIdsWithPermissionAsync(Permissions.SettingsManage, ct)).Contains(user.UserId))
+                {
+                    health = health with { Banners = [.. health.Banners.Where(b => !b.AdminOnly)] };
+                }
+
+                return TypedResults.Ok(health);
+            })
             .WithTags("Überwachung").WithName("GetHealthBanner")
-            .WithSummary("Status-Banner für alle Clients: Backup-Server (rot) und Archivserver (gelb), nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.")
+            .WithSummary("Status-Banner für alle Clients: Backup-Server (rot), Archivserver (gelb), Storage der Auslagerung (gelb, nur Verwaltung), nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.")
             .RequireAuthorization();
     }
 }

@@ -122,9 +122,14 @@ public static class PeerClient
 
             if (hello.Role != expectedRole)
             {
-                throw new PeerException("PEER_WRONG_ROLE", expectedRole == "archive"
-                    ? "Unter dieser Adresse läuft ein Backup-Ziel, kein Archivserver."
-                    : "Unter dieser Adresse läuft ein Archivserver, kein Backup-Ziel.");
+                static string Title(string role) => role switch
+                {
+                    "archive" => "ein Archivserver",
+                    "offload" => "ein Storage (Auslagerung)",
+                    _ => "ein Backup-Ziel",
+                };
+                throw new PeerException("PEER_WRONG_ROLE",
+                    $"Unter dieser Adresse läuft {Title(hello.Role)}, nicht {Title(expectedRole)}. Bitte den Port prüfen (Kombiserver: Backup-Ziel 8444, Archiv 8443, Storage 8445).");
             }
 
             using var ca = X509Certificate2.CreateFromPem(hello.CaCertificatePem);

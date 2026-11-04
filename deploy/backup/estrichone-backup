@@ -10,6 +10,8 @@
 #   estrichone-backup restore [ID]    WIEDERHERSTELLEN (Standard: latest) – nur im Dienst „restore“
 #   estrichone-backup dump-config     estrichone.env aus der neuesten Sicherung ausgeben (Installer-Modus „restore“)
 #   estrichone-backup pin-ca URL FP   CA eines Backup-Ziels holen und gegen den Fingerabdruck FP prüfen (gibt PEM aus)
+#   estrichone-backup offload-backup  Sicherungskopie ausgelagerter Originale (Anforderung der API, sonst automatisch)
+#   estrichone-backup offload-recover Ausgelagerte Originale aus der Sicherung zurückholen (Anforderung der API)
 #
 # Konfiguration über Umgebungsvariablen (siehe deploy/.env.example):
 #   RESTIC_PASSWORD, BACKUP_REPOSITORY (Pflicht), BACKUP_REPOSITORY_2 (optional), BACKUP_TIME (HH:MM),
@@ -137,8 +139,9 @@ cmd_run() {
   local repo summary errors=0 target_started
   while read -r repo; do
     target_started="$(date +%s)"
+    # Zwischenspeicher der Speicher-Auslagerung (vom Storage geladene Kopien) gehört nicht in die Sicherung.
     if ensure_repository "$repo" && summary="$(cd "$STAGING_DIR" && rr "$repo" backup --tag "$TAG" --tag "$kind" "${force[@]}" --json \
-        --host estrichone database.dump config "$FILES_DIR" | tail -n 1)"; then
+        --host estrichone --exclude "$FILES_DIR/.offload-cache" database.dump config "$FILES_DIR" | tail -n 1)"; then
       log "Fertig ($(label "$repo")): Snapshot $(grep -o '"snapshot_id":"[0-9a-f]*"' <<<"$summary" | cut -d'"' -f4)"
       [[ "$repo" == target:* ]] && write_status "target-${repo#target:}" \
         "$(result_json succeeded 'Sicherung erfolgreich' "\"durationSeconds\":$(( $(date +%s) - target_started ))")"
@@ -297,6 +300,90 @@ cmd_restore() {
   log "Wiederherstellung abgeschlossen: $count Bauakten, $files Originaldateien. API jetzt starten: docker compose up -d"
 }
 
+# Speicher-Auslagerung (docs/speicher.md): Bevor die API ein Original lokal löscht, legt dieser Dienst in JEDEM Ziel einen
+# eigenen Snapshot mit genau diesen Dateien an (Tag estrichone-auslagerung). Diese Snapshots tragen nicht den Tag „estrichone“:
+# „latest“, Liste und Aufbewahrung (forget --tag estrichone) lassen sie unberührt – sie bleiben dauerhaft erhalten.
+OFFLOAD_TAG="estrichone-auslagerung"
+
+offload_status() { # datei id status meldung [dateien]
+  write_status "$1" "{\"requestId\":\"$2\",\"status\":\"$3\",\"message\":\"$4\",\"at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"files\":${5:-null}}"
+}
+
+# Liste lesen und prüfen: erste Zeile id=<32 hex>, danach nur originals/JJJJ/MM/<32 hex> (keine anderen Pfade).
+offload_list() { # anforderung ziel-liste → id auf stdout
+  local request="$1" out="$2" id line
+  id="$(head -n 1 "$request" | sed -n 's/^id=\([0-9a-f]\{32\}\)$/\1/p')"
+  [[ -n "$id" ]] || return 1
+  : > "$out"
+  while IFS= read -r line; do
+    [[ "$line" =~ ^originals/[0-9]{4}/[0-9]{2}/[0-9a-f]{32}$ ]] || return 1
+    printf '%s/%s\n' "$FILES_DIR" "$line" >> "$out"
+  done < <(tail -n +2 "$request")
+  echo "$id"
+}
+
+cmd_offload_backup() {
+  local request="$STATUS_DIR/requests/offload-backup.list" list="$STAGING_DIR/offload-backup.list" id repo errors=0 count missing=0 file
+  [[ -f "$request" ]] || return 0
+  mkdir -p "$STAGING_DIR"
+  if ! id="$(offload_list "$request" "$list")"; then
+    rm -f "$request"; log "Auslagerung: ungültige Anforderung verworfen"; return 1
+  fi
+  rm -f "$request"
+  count="$(wc -l < "$list")"
+  offload_status offload-backup "$id" running "Sicherungskopie läuft" "$count"
+  while IFS= read -r file; do [[ -f "$file" ]] || missing=$((missing + 1)); done < "$list"
+  if [[ $missing -gt 0 ]]; then
+    offload_status offload-backup "$id" failed "$missing Original(e) fehlen lokal" "$count"; rm -f "$list"; return 1
+  fi
+  while read -r repo; do
+    if ensure_repository "$repo" && rr "$repo" backup --tag "$OFFLOAD_TAG" --host estrichone --files-from-verbatim "$list" >/dev/null; then
+      log "Auslagerung: $count Original(e) gesichert in $(label "$repo")"
+    else
+      errors=$((errors + 1)); log "Auslagerung: Sicherungskopie in $(label "$repo") fehlgeschlagen"
+    fi
+  done < <(repositories)
+  rm -f "$list"
+  if [[ $errors -gt 0 ]]; then
+    offload_status offload-backup "$id" failed "Sicherungskopie in $errors Ziel(en) fehlgeschlagen" "$count"; return 1
+  fi
+  offload_status offload-backup "$id" succeeded "In allen Zielen gesichert" "$count"
+}
+
+# Fehlende ausgelagerte Originale aus den Auslagerungs-Snapshots zurückspielen (Storage verloren). Vorhandenes bleibt.
+cmd_offload_recover() {
+  local request="$STATUS_DIR/requests/offload-recover.list" list="$STAGING_DIR/offload-recover.list" id repo dir="$STAGING_DIR/offload-recover"
+  [[ -f "$request" ]] || return 0
+  mkdir -p "$STAGING_DIR"
+  if ! id="$(offload_list "$request" "$list")"; then
+    rm -f "$request"; log "Auslagerung: ungültige Rückhol-Anforderung verworfen"; return 1
+  fi
+  rm -f "$request"
+  offload_status offload-recover "$id" running "Originale werden aus der Sicherung geholt"
+  local found=0 file rel snapshot
+  while read -r repo; do
+    while read -r snapshot; do
+      rm -rf "$dir" && mkdir -p "$dir"
+      local includes=()
+      while IFS= read -r file; do
+        [[ -f "$file" ]] || includes+=(--include "$file")
+      done < "$list"
+      [[ ${#includes[@]} -gt 0 ]] || break 2
+      rr "$repo" --no-lock restore "$snapshot" --target "$dir" "${includes[@]}" >/dev/null 2>&1 || continue
+      while IFS= read -r file; do
+        rel="${file#"$dir$FILES_DIR"/}"
+        if [[ ! -f "$FILES_DIR/$rel" ]]; then
+          mkdir -p "$FILES_DIR/$(dirname "$rel")"
+          cp -a "$file" "$FILES_DIR/$rel.wiederherstellung" && mv "$FILES_DIR/$rel.wiederherstellung" "$FILES_DIR/$rel"
+          found=$((found + 1))
+        fi
+      done < <(find "$dir" -type f)
+    done < <(rr "$repo" --no-lock snapshots --tag "$OFFLOAD_TAG" --json 2>/dev/null | grep -o '"id":"[0-9a-f]*"' | cut -d'"' -f4 | tac)
+  done < <(repositories)
+  rm -rf "$dir" "$list"
+  offload_status offload-recover "$id" succeeded "$found Original(e) zurückgespielt" "$found"
+}
+
 # Fortschritt für das Backup Center (restore.json); die API setzt am Ende „completed“.
 restore_status() { # status phase percent message
   local now; now="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
@@ -446,6 +533,14 @@ cmd_schedule() {
         log "Wiederherstellung auf Anforderung aus dem Backup Center"
         cmd_restore_request || true
       fi
+      if [[ -f "$STATUS_DIR/requests/offload-backup.list" ]]; then
+        log "Sicherungskopie ausgelagerter Originale auf Anforderung der API"
+        cmd_offload_backup || true
+      fi
+      if [[ -f "$STATUS_DIR/requests/offload-recover.list" ]]; then
+        log "Ausgelagerte Originale aus der Sicherung zurückholen (Anforderung der API)"
+        cmd_offload_recover || true
+      fi
       if [[ -f "$STATUS_DIR/requests/backup-now" ]]; then
         rm -f "$STATUS_DIR/requests/backup-now"
         log "Sicherung auf Anforderung aus dem Backup Center"
@@ -476,6 +571,8 @@ case "${1:-schedule}" in
   schedule) cmd_schedule ;;
   run) cmd_run "${2:-full}" ;;
   restore-request) cmd_restore_request ;;
+  offload-backup) cmd_offload_backup ;;
+  offload-recover) cmd_offload_recover ;;
   dump-config) cmd_dump_config ;;
   pin-ca) cmd_pin_ca "${2:-}" "${3:-}" ;;
   snapshots) cmd_snapshots ;;
@@ -483,6 +580,6 @@ case "${1:-schedule}" in
   check) cmd_check "${2:-10%}" ;;
   restore-test) cmd_restore_test ;;
   restore) cmd_restore "${2:-latest}" ;;
-  -h|--help|help) sed -n '2,17p' "$0" ;;
+  -h|--help|help) sed -n '2,19p' "$0" ;;
   *) fail "Unbekannter Befehl: $1 (Hilfe: estrichone-backup help)" ;;
 esac

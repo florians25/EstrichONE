@@ -362,7 +362,7 @@ internal sealed partial class PeerUpdateService(
             await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System,
                 $"Zusatzserver auf {list.CurrentVersion} aktualisieren",
                 $"{names}: installiert ist eine ältere Version. Im Backup Center unter Backup-Ziele bzw. Archiv mit einem Klick aktualisieren.",
-                offer[0].Kind == "archive" ? "/system/archiv" : "/system/backup-ziele", "peerUpdate", null, NotificationUrgency.Normal,
+                offer[0].Kind switch { "archive" => "/system/archiv", "offload" => "/system/auslagerung", _ => "/system/backup-ziele" }, "peerUpdate", null, NotificationUrgency.Normal,
                 $"peer-update-available:{list.CurrentVersion}", NotificationEvents.PeerUpdateAvailable), cancellationToken);
         }
     }
@@ -523,7 +523,7 @@ internal sealed partial class PeerUpdateService(
         var current = CurrentVersion;
         var available = row.InstalledVersion is { } installed && SemVer.IsValid(installed) && SemVer.IsValid(current)
             && SemVer.Compare(installed, current) < 0;
-        var role = peer.Role == "archive" ? "archiv" : "backup-ziel";
+        var role = peer.Role switch { "archive" => "archiv", "offload" => "auslagerung", _ => "backup-ziel" };
         var command = $"sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock {settings.Value.InstallerImage}:{current} {role}";
         return new PeerUpdateDto(row.Key, row.Kind, row.Name, row.InstalledVersion, current, available, row.UpdaterAvailable, row.UpdaterVersion,
             row.Reachable, row.LastCheckedAt, row.Status, row.TargetVersion, row.PreviousVersion, row.Message, row.RequestedAt, row.FinishedAt,

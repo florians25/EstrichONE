@@ -1,0 +1,223 @@
+<mvc:View controllerName="estrichone.controller.admin.Offload" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.offload}" level="H1"/></f:heading>
+				<f:expandedContent>
+					<Text text="Wird der Platz auf diesem Server knapp, wandern Datei-Originale verschlüsselt auf den Storage (Kombiserver bzw. Archivrechner). Vorschaubilder bleiben hier – in Web und Apps bleibt alles sichtbar."/>
+				</f:expandedContent>
+				<f:actions>
+					<Button text="Aktualisieren" icon="sap-icon://refresh" type="Transparent" press=".onRefresh"/>
+					<Button id="offloadRun" text="Jetzt auslagern" icon="sap-icon://upload-to-cloud" type="Emphasized" press=".onRunNow" visible="{view>/o/paired}" enabled="{view>/ui/canRun}"/>
+					<Button id="offloadPair" text="Storage koppeln" icon="sap-icon://chain-link" type="Emphasized" press=".onPair" visible="{= !!${view>/o} &amp;&amp; !${view>/o/paired} }"/>
+				</f:actions>
+				<f:snappedContent>
+					<ObjectStatus text="{view>/ui/statusText}" state="{view>/ui/statusState}"/>
+				</f:snappedContent>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox class="sapUiResponsiveContentPadding">
+				<!-- Statuszeile: Alles in Ordnung / Handlungsbedarf (Seitenmuster der Verwaltung) -->
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
+				<HBox class="eoJumpBar" renderType="Bare" visible="{= !!${view>/o} }">
+					<Text text="Springen zu:" class="eoMuted"/>
+					<Link text="Belegung" press=".onJump"><customData><core:CustomData key="target" value="secUsage"/></customData></Link>
+					<Link text="Regeln und Schwelle" press=".onJump"><customData><core:CustomData key="target" value="secRules"/></customData></Link>
+					<Link text="Ausgelagert" press=".onJump" visible="{view>/o/paired}"><customData><core:CustomData key="target" value="secFiles"/></customData></Link>
+					<Link text="Sicherung und Abgleich" press=".onJump" visible="{view>/o/paired}"><customData><core:CustomData key="target" value="secBackup"/></customData></Link>
+					<Link text="Storage" press=".onJump" visible="{view>/o/paired}"><customData><core:CustomData key="target" value="secStorage"/></customData></Link>
+					<Link text="Gefährliche Aktionen" press=".onJump" visible="{view>/o/paired}"><customData><core:CustomData key="target" value="secDanger"/></customData></Link>
+				</HBox>
+
+				<MessageStrip visible="{= !!${view>/o} &amp;&amp; !${view>/o/paired} }" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
+					text="Noch kein Storage gekoppelt. Auf dem Kombiserver den Installer erneut mit -e ESTRICHONE_OFFLOAD_DATA_DIR=/pfad/auslagerung ausführen (Modus backup-archiv) bzw. auf einem Archivrechner den Modus „auslagerung“ – dann „Storage koppeln“ wählen und Adresse (Port 8445) und Code eingeben."/>
+
+				<!-- Belegung -->
+				<VBox id="secUsage" class="sapUiMediumMarginBottom">
+					<Title text="Belegung" level="H2"/>
+					<Text text="Freier Platz auf diesem Server und auf dem Storage. Ausgelagert wird bis zur Schwelle plus 5 Prozentpunkte." class="sapUiTinyMarginBottom"/>
+					<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" columnsL="2" columnsXL="2">
+						<core:Title text="Hauptserver"/>
+						<Label text="Belegt"/>
+						<VBox>
+							<ProgressIndicator percentValue="{view>/ui/serverUsed}" displayValue="{view>/ui/serverUsed} %" state="{view>/ui/serverState}" width="100%"/>
+							<Text text="{view>/ui/serverUsedText}"/>
+						</VBox>
+						<Label text="Schwelle"/><Text text="{view>/ui/thresholdText}"/>
+						<Label text="Kandidaten"/><Text text="{view>/ui/candidates}"/>
+						<core:Title text="Storage"/>
+						<Label text="Belegt"/>
+						<VBox>
+							<ProgressIndicator percentValue="{view>/ui/storageUsed}" displayValue="{view>/ui/storageUsed} %" width="100%" visible="{= !!${view>/o/server} }"/>
+							<Text text="{view>/ui/storageUsedText}"/>
+						</VBox>
+						<Label text="Ausgelagert"/><Text text="{view>/ui/offloaded}"/>
+						<Label text="Auf dem Storage"/><Text text="{view>/ui/storageObjects}"/>
+						<Label text="Letzte Prüfung"/><ObjectStatus text="{view>/ui/verification}" state="{view>/ui/verificationState}"/>
+					</form:SimpleForm>
+					<VBox class="sapUiTinyMarginTop">
+						<Label text="Fortschritt"/>
+						<ProgressIndicator percentValue="{view>/ui/jobPercent}" displayValue="{view>/ui/jobPercent} %" visible="{view>/ui/jobRunning}" state="Information" width="100%"/>
+						<Text id="offloadJob" text="{view>/ui/jobText}"/>
+						<MessageStrip text="{view>/ui/pending}" visible="{= !!${view>/ui/pending} }" type="Information" showIcon="true" class="sapUiTinyMarginTop"/>
+					</VBox>
+				</VBox>
+
+				<!-- Regeln und Schwelle -->
+				<VBox id="secRules" class="sapUiMediumMarginBottom" visible="{= !!${view>/o} }">
+					<Title text="Regeln und Schwelle" level="H2"/>
+					<Text text="Was ausgelagert werden darf und wann. Ältere Dateien zuerst; Dateien mit ausstehender Vorschau bleiben lokal." class="sapUiTinyMarginBottom"/>
+					<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" columnsL="1" width="52rem">
+						<Label text="Automatisch bei knappem Platz" labelFor="olLow"/><Switch id="olLow" state="{view>/settings/autoWhenLow}" customTextOn=" " customTextOff=" "/>
+						<Label text="Knapp unter (Prozent frei)" labelFor="olPercent"/><StepInput id="olPercent" value="{view>/settings/thresholdPercent}" min="1" max="90" width="10rem"/>
+						<Label text="oder unter (GB frei, 0 = aus)" labelFor="olGb"/><StepInput id="olGb" value="{view>/settings/thresholdFreeGb}" min="0" max="100000" width="10rem"/>
+						<Label text="Zusätzlich regelmäßig nach Regeln" labelFor="olRules"/>
+						<VBox>
+							<Switch id="olRules" state="{view>/settings/autoByRules}" customTextOn=" " customTextOff=" "/>
+							<Text text="Alle 6 Stunden auslagern, was den Regeln entspricht – auch ohne Platznot."/>
+						</VBox>
+						<Label text="Nur Dateien älter als (Monate)" labelFor="olAge"/><StepInput id="olAge" value="{view>/settings/minAgeMonths}" min="0" max="240" width="10rem"/>
+						<Label text="Nur abgeschlossene Bauakten" labelFor="olDone"/><Switch id="olDone" state="{view>/settings/onlyCompletedBauakten}" customTextOn=" " customTextOff=" "/>
+						<Label text="Dateiarten"/>
+						<HBox wrap="Wrap">
+							<CheckBox text="Fotos" selected="{view>/settings/includePhotos}"/>
+							<CheckBox text="Videos" selected="{view>/settings/includeVideos}"/>
+							<CheckBox text="Dokumente" selected="{view>/settings/includeDocuments}"/>
+						</HBox>
+						<Label text="Zwischenspeicher (MB)" labelFor="olCache"/>
+						<VBox>
+							<StepInput id="olCache" value="{view>/settings/cacheLimitMb}" min="100" max="1000000" step="100" width="10rem"/>
+							<Text text="Vom Storage geladene Originale bleiben hier bis zu dieser Größe vorrätig (derzeit {view>/ui/cache})."/>
+						</VBox>
+						<Label text="Sicherungskopie vor dem Löschen" labelFor="olBackup"/>
+						<VBox>
+							<Switch id="olBackup" state="{view>/settings/requireBackup}" customTextOn=" " customTextOff=" "/>
+							<Text text="Dringend empfohlen: Ein Original wird erst gelöscht, wenn es geprüft auf dem Storage liegt UND in allen Sicherungszielen gesichert ist."/>
+						</VBox>
+						<Label/><Button id="offloadSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSaveSettings"/>
+					</form:SimpleForm>
+				</VBox>
+
+				<!-- Ausgelagert -->
+				<VBox id="secFiles" class="sapUiMediumMarginBottom" visible="{view>/o/paired}">
+					<Title text="Ausgelagert" level="H2"/>
+					<Text text="Ausgelagerte Dateien bleiben in Web und Apps sichtbar; beim Öffnen wird das Original vom Storage geladen. „Wieder lokal speichern“ holt es zurück." class="sapUiTinyMarginBottom"/>
+					<Table items="{view>/bauakten}" class="sapUiSmallMarginBottom" noDataText="Noch keine Bauakte mit ausgelagerten Dateien.">
+						<headerToolbar><OverflowToolbar><Title text="Nach Bauakte" level="H3"/></OverflowToolbar></headerToolbar>
+						<columns>
+							<Column><Text text="Bauakte"/></Column>
+							<Column hAlign="End" width="8rem"><Text text="Dateien"/></Column>
+							<Column hAlign="End" width="8rem"><Text text="Größe"/></Column>
+							<Column hAlign="End" width="14rem"><Text text=""/></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<Link text="{view>title}" press=".onOpenBauakte"/>
+								<Text text="{view>files}"/>
+								<Text text="{view>size}"/>
+								<Button text="Wieder lokal speichern" icon="sap-icon://download" type="Transparent" press=".onRecallBauakte"/>
+							</ColumnListItem>
+						</items>
+					</Table>
+					<Table id="offloadFiles" items="{view>/files}" growing="true" growingThreshold="25" noDataText="Keine Dateien in dieser Ansicht.">
+						<headerToolbar>
+							<OverflowToolbar>
+								<Title text="Dateien ({view>/filesTotal})" level="H3"/>
+								<ToolbarSpacer/>
+								<Select selectedKey="{view>/filter}" change=".onFilter">
+									<core:Item key="" text="Alle"/>
+									<core:Item key="offloaded" text="Auf dem Storage"/>
+									<core:Item key="pending" text="Wartet auf Sicherungskopie"/>
+									<core:Item key="missing" text="Fehlt"/>
+								</Select>
+							</OverflowToolbar>
+						</headerToolbar>
+						<columns>
+							<Column><Text text="Datei"/></Column>
+							<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Bauakte"/></Column>
+							<Column hAlign="End" width="7rem"><Text text="Größe"/></Column>
+							<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zustand"/></Column>
+							<Column hAlign="End" width="10rem"><Text text=""/></Column>
+						</columns>
+						<items>
+							<ColumnListItem>
+								<VBox><Text text="{view>name}"/><Text text="{view>kindText} · {view>when}" class="sapUiTinyMarginTop"/></VBox>
+								<Link text="{view>bauakteTitle}" press=".onOpenBauakte"/>
+								<Text text="{view>size}"/>
+								<VBox><ObjectStatus text="{view>stateText}" state="{view>stateState}"/><Text text="{view>lastError}" visible="{= !!${view>lastError} }"/></VBox>
+								<Button text="Zurückholen" icon="sap-icon://download" type="Transparent" press=".onRecallFile" visible="{view>canRecall}"/>
+							</ColumnListItem>
+						</items>
+					</Table>
+				</VBox>
+
+				<!-- Sicherung und Abgleich -->
+				<VBox id="secBackup" class="sapUiMediumMarginBottom" visible="{view>/o/paired}">
+					<Title text="Sicherung und Abgleich" level="H2"/>
+					<Text text="Ausgelagerte Originale stehen zusätzlich in eigenen, dauerhaft aufbewahrten Snapshots der Sicherung. Fällt der Storage aus, lassen sie sich daraus zurückspielen." class="sapUiTinyMarginBottom"/>
+					<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4">
+						<Label text="Sicherungskopie"/><ObjectStatus text="{view>/ui/backup}" state="{view>/ui/backupState}"/>
+						<Label/>
+						<HBox wrap="Wrap">
+							<Button text="Abgleich jetzt" icon="sap-icon://synchronize" press=".onReconcile" class="sapUiTinyMarginEnd"/>
+							<Button text="Aus Sicherung zurückholen" icon="sap-icon://undo" type="{= ${view>/ui/hasMissing} ? 'Emphasized' : 'Default' }" enabled="{view>/ui/hasMissing}" press=".onRecoverFromBackup"/>
+						</HBox>
+					</form:SimpleForm>
+				</VBox>
+
+				<!-- Storage -->
+				<VBox id="secStorage" class="sapUiMediumMarginBottom" visible="{view>/o/paired}">
+					<Title text="Storage" level="H2"/>
+					<Text text="Gekoppelt mit Kopplungscode und gepinntem Zertifikat; Übertragung über HTTPS, Inhalte AES-256-verschlüsselt (Schlüssel nur auf diesem Server)." class="sapUiTinyMarginBottom"/>
+					<MessageStrip visible="{= !!${view>/o/connection/lastError} }" text="{view>/o/connection/lastError}" type="Warning" showIcon="true" class="sapUiTinyMarginBottom"/>
+					<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4">
+						<Label text="Storage"/><Text text="{view>/o/connection/serverName} ({view>/o/connection/address}, Version {view>/o/connection/serverVersion})"/>
+						<Label text="Fingerabdruck"/><Text text="{view>/o/connection/fingerprintDisplay}"/>
+						<Label text="Verbindung"/><ObjectStatus text="{view>/ui/contact}" state="{view>/ui/contactState}"/>
+					</form:SimpleForm>
+					<List items="{view>/peers/items}" showSeparators="All" visible="{= ${view>/peers/items}.length > 0 }" headerText="Aktualisierung des Storage">
+						<CustomListItem>
+							<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="sapUiSmallMargin">
+								<VBox>
+									<Text text="{view>versionText} · {view>reachText}"/>
+									<ObjectStatus text="{view>stateText}" state="{view>state}" class="sapUiTinyMarginTop"/>
+									<HBox alignItems="Center" class="sapUiTinyMarginTop">
+										<Switch state="{view>autoUpdate}" customTextOn=" " customTextOff=" " change=".onPeerAuto" tooltip="Automatisch mitaktualisieren"/>
+										<Text text="nach Updates dieses Servers automatisch mitaktualisieren" class="sapUiTinyMarginBegin"/>
+									</HBox>
+								</VBox>
+								<HBox>
+									<BusyIndicator size="1rem" visible="{view>active}" class="sapUiTinyMarginEnd"/>
+									<Button text="Aktualisieren" icon="sap-icon://download-from-cloud" type="Emphasized" visible="{view>canUpdate}" press=".onPeerUpdate"/>
+									<Button text="Befehl für den Rechner" icon="sap-icon://command-line-interfaces" visible="{view>needsLocal}" press=".onPeerCommand"/>
+								</HBox>
+							</HBox>
+						</CustomListItem>
+					</List>
+				</VBox>
+
+				<!-- Gefährliche Aktionen getrennt unten -->
+				<VBox id="secDanger" class="eoDangerZone" renderType="Bare" visible="{view>/o/paired}">
+					<Title text="Gefährliche Aktionen" level="H2" titleStyle="H5"/>
+					<HBox class="eoDangerRow" renderType="Bare">
+						<VBox renderType="Bare" class="eoDangerText">
+							<Text text="Alles wieder lokal speichern" class="eoStrong"/>
+							<Text text="Holt alle ausgelagerten Originale zurück auf diesen Server – braucht entsprechend Platz (wird vorher je Datei geprüft)." class="eoMuted"/>
+						</VBox>
+						<Button text="Alles zurückholen …" icon="sap-icon://download" type="Reject" press=".onRecallAll"/>
+					</HBox>
+					<HBox class="eoDangerRow" renderType="Bare">
+						<VBox renderType="Bare" class="eoDangerText">
+							<Text text="Storage entkoppeln" class="eoStrong"/>
+							<Text text="Geht erst, wenn nichts mehr ausgelagert ist. Der Schlüssel der Auslagerung bleibt auf diesem Server erhalten." class="eoMuted"/>
+						</VBox>
+						<Button text="Entkoppeln …" icon="sap-icon://broken-link" type="Reject" press=".onUnpair"/>
+					</HBox>
+				</VBox>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

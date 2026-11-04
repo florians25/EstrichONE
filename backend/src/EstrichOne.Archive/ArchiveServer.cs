@@ -17,7 +17,7 @@ public sealed record PairResponse(string ClientId, string Token, string ServerPr
 
 public sealed record StatusResponse(string Role, string Name, string Version, DateTimeOffset Now, string ClientId, string ClientName,
     DateTimeOffset PairedAt, ArchiveStatistics? Archive, VerificationReport? LastVerification, long? DiskFreeBytes, long? DiskTotalBytes,
-    BackupRepositoryStatus? Backup, UpdateState? Update = null);
+    BackupRepositoryStatus? Backup, UpdateState? Update = null, OffloadStatistics? Offload = null);
 
 public sealed record BackupRepositoryStatus(string Repository, long Bytes, int Snapshots, DateTimeOffset? LastSnapshotAt, bool AppendOnly,
     bool ServerRunning);
@@ -52,6 +52,11 @@ public static class ArchiveServer
         {
             builder.Services.AddSingleton<ArchiveStore>();
             builder.Services.AddHostedService<Maintenance>();
+        }
+        else if (options.Role == ServerRole.Offload)
+        {
+            builder.Services.AddSingleton<OffloadStore>();
+            builder.Services.AddHostedService<OffloadMaintenance>();
         }
         else
         {
@@ -152,7 +157,8 @@ public static class ArchiveServer
             }
 
             return Results.Json(new StatusResponse(options.RoleName, options.Name, Version, clock.GetUtcNow(), client.Id, client.Name, client.PairedAt,
-                store?.Statistics(client.Id), store?.LatestVerification(), drive?.AvailableFreeSpace, drive?.TotalSize, backup, updater.Status()));
+                store?.Statistics(client.Id), store?.LatestVerification(), drive?.AvailableFreeSpace, drive?.TotalSize, backup, updater.Status(),
+                services.GetService<OffloadStore>()?.Statistics(client.Id)));
         });
 
         // Fernaktualisierung: signierter Auftrag des gekoppelten Servers (nur Version), ausgeführt vom Updater-Container.
@@ -180,6 +186,10 @@ public static class ArchiveServer
         {
             MapArchive(api);
         }
+        else if (options.Role == ServerRole.Offload)
+        {
+            MapOffload(api);
+        }
         else
         {
             app.Map("/restic/{**path}", (HttpContext http, string path, ClientRegistry clients, IHttpClientFactory factory) =>
@@ -204,9 +214,12 @@ public static class ArchiveServer
             clients = clients.Clients.Select(c => new { c.Id, c.Name, c.PairedAt }),
             archive = services.GetService<ArchiveStore>()?.Statistics(),
             lastVerification = services.GetService<ArchiveStore>()?.LatestVerification(),
+            offload = services.GetService<OffloadStore>()?.Statistics(null),
         }));
         admin.MapPost("/verify", async (IServiceProvider services, CancellationToken ct) =>
-            services.GetService<ArchiveStore>() is { } store ? Results.Json(await store.VerifyAsync(ct)) : Results.NotFound());
+            services.GetService<ArchiveStore>() is { } store ? Results.Json(await store.VerifyAsync(ct))
+            : services.GetService<OffloadStore>() is { } offload ? Results.Json(await offload.VerifyAsync(ct))
+            : Results.NotFound());
         admin.MapGet("/export", async (IServiceProvider services, string? client, CancellationToken ct) =>
             services.GetService<ArchiveStore>() is { } store
                 ? Results.Stream(new FileStream(await store.ExportAsync(client, null, null, ct), FileMode.Open, FileAccess.Read, FileShare.None,
@@ -310,6 +323,65 @@ public static class ArchiveServer
         });
     }
 
+    /// <summary>Speicherstufe Storage: verschlüsselte Originale ablegen, lesen, in den Papierkorb legen, zurückholen.</summary>
+    private static void MapOffload(RouteGroupBuilder api)
+    {
+        var objects = api.MapGroup("/offload/objects/{id}");
+        objects.MapPut(string.Empty, async (HttpContext http, string id, OffloadStore store, CancellationToken ct) =>
+        {
+            http.Features.Get<IHttpMaxRequestBodySizeFeature>()?.MaxRequestBodySize = null;
+            if (OffloadStore.NormalizeId(id) is not { } objectId)
+            {
+                return Problem(400, "OFFLOAD_INVALID_ID", "Objekt-ID muss eine UUID sein.");
+            }
+
+            var (outcome, info) = await store.PutAsync(Client(http).Id, objectId, http.Request.Headers["X-Offload-Sha256"].ToString(),
+                http.Request.ContentLength, http.Request.Body, ct);
+            return outcome switch
+            {
+                OffloadPutOutcome.Created => Results.Json(info, statusCode: 201),
+                OffloadPutOutcome.AlreadyStored => Results.Json(info),
+                OffloadPutOutcome.Conflict => Problem(409, "OFFLOAD_CONFLICT", "Unter dieser ID liegt bereits ein anderer Inhalt."),
+                OffloadPutOutcome.ChecksumMismatch => Problem(422, "OFFLOAD_CHECKSUM_MISMATCH", "Die Prüfsumme des empfangenen Inhalts stimmt nicht."),
+                OffloadPutOutcome.TooLarge => Problem(413, "OFFLOAD_TOO_LARGE", "Das Objekt ist zu groß."),
+                OffloadPutOutcome.DiskFull => Problem(507, "OFFLOAD_DISK_FULL", "Auf dem Storage ist kein Platz mehr frei."),
+                _ => Problem(400, "OFFLOAD_INVALID", "Kopfzeile X-Offload-Sha256 (64 Hex-Zeichen) fehlt oder ist ungültig."),
+            };
+        });
+
+        objects.MapGet(string.Empty, (HttpContext http, string id, OffloadStore store) =>
+        {
+            var objectId = OffloadStore.NormalizeId(id);
+            var info = objectId is null ? null : store.Info(Client(http).Id, objectId);
+            var stream = info is null ? null : store.Open(Client(http).Id, objectId!);
+            if (stream is null)
+            {
+                return Problem(404, "OFFLOAD_NOT_FOUND", "Objekt nicht auf dem Storage.");
+            }
+
+            http.Response.Headers["X-Offload-Sha256"] = info!.Sha256;
+            return Results.Stream(stream, "application/octet-stream");
+        });
+
+        objects.MapGet("/info", (HttpContext http, string id, OffloadStore store) =>
+            OffloadStore.NormalizeId(id) is { } objectId && store.Info(Client(http).Id, objectId) is { } info
+                ? Results.Json(info)
+                : Problem(404, "OFFLOAD_NOT_FOUND", "Objekt nicht auf dem Storage."));
+
+        objects.MapDelete(string.Empty, (HttpContext http, string id, OffloadStore store) =>
+            OffloadStore.NormalizeId(id) is { } objectId && store.Delete(Client(http).Id, objectId)
+                ? Results.NoContent()
+                : Problem(404, "OFFLOAD_NOT_FOUND", "Objekt nicht auf dem Storage."));
+
+        objects.MapPost("/undelete", (HttpContext http, string id, OffloadStore store) =>
+            OffloadStore.NormalizeId(id) is { } objectId && store.Undelete(Client(http).Id, objectId) && store.Info(Client(http).Id, objectId) is { } info
+                ? Results.Json(info)
+                : Problem(404, "OFFLOAD_NOT_FOUND", "Objekt nicht auf dem Storage (auch nicht im Papierkorb)."));
+
+        api.MapGet("/offload/statistics", (HttpContext http, OffloadStore store) => Results.Json(store.Statistics(Client(http).Id)));
+        api.MapPost("/offload/verify", async (OffloadStore store, CancellationToken ct) => Results.Json(await store.VerifyAsync(ct)));
+    }
+
     private static PairedClient Client(HttpContext http) => (PairedClient)http.Items["client"]!;
 
     private static IResult Problem(int status, string code, string title) =>
@@ -348,9 +420,12 @@ public static class ArchiveServer
             text.AppendLine();
             text.AppendLine($" KOPPLUNGSCODE:  {pairing.Code}      (gültig bis {pairing.ExpiresAt.ToLocalTime():dd.MM.yyyy HH:mm})");
             text.AppendLine();
-            text.AppendLine(options.Role == ServerRole.Archive
-                ? " In EstrichONE: System → Archiv → „Archivserver koppeln“: Adresse dieses Rechners und Code eingeben."
-                : " In EstrichONE: System → Backup-Ziele → „Backup-Ziel koppeln“: Adresse dieses Rechners und Code eingeben.");
+            text.AppendLine(options.Role switch
+            {
+                ServerRole.Archive => " In EstrichONE: System → Archiv → „Archivserver koppeln“: Adresse dieses Rechners und Code eingeben.",
+                ServerRole.Offload => " In EstrichONE: System → Speicher-Auslagerung → „Storage koppeln“: Adresse dieses Rechners und Code eingeben.",
+                _ => " In EstrichONE: System → Backup-Ziele → „Backup-Ziel koppeln“: Adresse dieses Rechners und Code eingeben.",
+            });
         }
         else
         {

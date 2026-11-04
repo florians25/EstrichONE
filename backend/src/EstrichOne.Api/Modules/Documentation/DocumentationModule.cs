@@ -36,12 +36,27 @@ public sealed class DocumentationModule : IModule
         services.AddScoped<ISyncOperationHandler, AcceptanceSync>();
         services.AddScoped<ISyncEntitySource, AcceptanceSource>();
         services.AddScoped<IBauakteHintSource, AcceptanceHints>();
+
+        // Speicher-Auslagerung auf den Storage (Kombiserver/Archivrechner), docs/speicher.md
+        services.AddSingleton<OffloadProgress>();
+        services.AddSingleton<OffloadCache>();
+        services.AddScoped<OffloadService>();
+        services.AddScoped<Exports.IOffloadHealth, OffloadHealth>();
+        services.AddScoped<Exports.IFileArchiveState, OffloadFrozenFiles>();
+        services.AddScoped<Backup.Exports.IUpdatablePeerSource, OffloadUpdatablePeers>();
+        services.AddSingleton<OffloadWorker>();
+        // EstrichOne:Offload:Worker=false schaltet den Hintergrunddienst ab (Tests steuern den Ablauf selbst).
+        if (!string.Equals(configuration["EstrichOne:Offload:Worker"], "false", StringComparison.OrdinalIgnoreCase))
+        {
+            services.AddHostedService(provider => provider.GetRequiredService<OffloadWorker>());
+        }
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api)
     {
         FileEndpoints.Map(api);
         StorageEndpoints.Map(api);
+        OffloadEndpoints.Map(api);
         SiteRecordEndpoints.Map(api);
         ApprovalEndpoints.Map(api);
         DocumentEndpoints.Map(api);

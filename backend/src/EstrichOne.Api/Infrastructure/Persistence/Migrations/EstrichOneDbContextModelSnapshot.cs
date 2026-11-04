@@ -2757,6 +2757,223 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("inspections", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.OffloadConnection", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Address")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("address");
+
+                    b.Property<bool>("AutoByRules")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_by_rules");
+
+                    b.Property<bool>("AutoWhenLow")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_when_low");
+
+                    b.Property<string>("CaCertificatePem")
+                        .HasColumnType("text")
+                        .HasColumnName("ca_certificate_pem");
+
+                    b.Property<string>("CaFingerprint")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("ca_fingerprint");
+
+                    b.Property<int>("CacheLimitMb")
+                        .HasColumnType("integer")
+                        .HasColumnName("cache_limit_mb");
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IncludeDocuments")
+                        .HasColumnType("boolean")
+                        .HasColumnName("include_documents");
+
+                    b.Property<bool>("IncludePhotos")
+                        .HasColumnType("boolean")
+                        .HasColumnName("include_photos");
+
+                    b.Property<bool>("IncludeVideos")
+                        .HasColumnType("boolean")
+                        .HasColumnName("include_videos");
+
+                    b.Property<DateTimeOffset?>("LastContactAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_contact_at");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("last_error");
+
+                    b.Property<DateTimeOffset?>("LastRunAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_run_at");
+
+                    b.Property<string>("LastRunMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("last_run_message");
+
+                    b.Property<DateTimeOffset?>("LowSpaceNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("low_space_notified_at");
+
+                    b.Property<int>("MinAgeMonths")
+                        .HasColumnType("integer")
+                        .HasColumnName("min_age_months");
+
+                    b.Property<bool>("OnlyCompletedBauakten")
+                        .HasColumnType("boolean")
+                        .HasColumnName("only_completed_bauakten");
+
+                    b.Property<DateTimeOffset?>("PairedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("paired_at");
+
+                    b.Property<Guid?>("PairedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("paired_by_user_id");
+
+                    b.Property<string>("ProtectedMasterKey")
+                        .IsRequired()
+                        .HasColumnType("text")
+                        .HasColumnName("protected_master_key");
+
+                    b.Property<string>("ProtectedToken")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_token");
+
+                    b.Property<bool>("RequireBackup")
+                        .HasColumnType("boolean")
+                        .HasColumnName("require_backup");
+
+                    b.Property<string>("ServerName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("server_name");
+
+                    b.Property<string>("ServerVersion")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)")
+                        .HasColumnName("server_version");
+
+                    b.Property<int?>("ThresholdFreeGb")
+                        .HasColumnType("integer")
+                        .HasColumnName("threshold_free_gb");
+
+                    b.Property<int>("ThresholdPercent")
+                        .HasColumnType("integer")
+                        .HasColumnName("threshold_percent");
+
+                    b.Property<DateTimeOffset?>("UnreachableNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("unreachable_notified_at");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.HasKey("Id")
+                        .HasName("pk_offload_connection");
+
+                    b.ToTable("offload_connection", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_offload_threshold", "threshold_percent BETWEEN 1 AND 90");
+                        });
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Documentation.OffloadedBlob", b =>
+                {
+                    b.Property<string>("StorageKey")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("storage_key");
+
+                    b.Property<DateTimeOffset?>("BackedUpAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("backed_up_at");
+
+                    b.Property<string>("BackupRequestId")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)")
+                        .HasColumnName("backup_request_id");
+
+                    b.Property<long>("CipherBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("cipher_bytes");
+
+                    b.Property<string>("CipherSha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("cipher_sha256")
+                        .IsFixedLength();
+
+                    b.Property<DateTimeOffset?>("LastAccessAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_access_at");
+
+                    b.Property<string>("LastError")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("last_error");
+
+                    b.Property<Guid>("ObjectId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("object_id");
+
+                    b.Property<DateTimeOffset?>("OffloadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("offloaded_at");
+
+                    b.Property<string>("Sha256")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character(64)")
+                        .HasColumnName("sha256")
+                        .IsFixedLength();
+
+                    b.Property<long>("SizeBytes")
+                        .HasColumnType("bigint")
+                        .HasColumnName("size_bytes");
+
+                    b.Property<string>("State")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("state");
+
+                    b.Property<DateTimeOffset>("UploadedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("uploaded_at");
+
+                    b.HasKey("StorageKey")
+                        .HasName("pk_offloaded_blobs");
+
+                    b.HasIndex("ObjectId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_offloaded_blobs_object_id");
+
+                    b.HasIndex("State")
+                        .HasDatabaseName("ix_offloaded_blobs_state");
+
+                    b.ToTable("offloaded_blobs", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.Ticket", b =>
                 {
                     b.Property<Guid>("Id")

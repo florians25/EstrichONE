@@ -21,6 +21,7 @@ public sealed class BackupModule : IModule
         services.AddSingleton<BackupMirrorStore>();
         services.AddScoped<EmergencySheetService>();
         services.AddScoped<Exports.IBackupMonitoring, BackupMonitoring>();
+        services.AddSingleton<Exports.IOffloadBackup, OffloadBackup>();
         services.AddHostedService<RestoreFinisher>();
         services.AddScoped<BackupPeerSource>();
         services.AddScoped<Exports.IUpdatablePeerSource>(provider => provider.GetRequiredService<BackupPeerSource>());
