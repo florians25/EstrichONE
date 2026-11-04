@@ -121,7 +121,8 @@ test('Bauakte: „Abschließen & Archivieren“ schließt ab und archiviert sofo
   const detail = await apiCall<{ status: string }>(page, 'GET', `/api/v1/bauakten/${id}`);
   expect(detail.json.status).toBe('completed');
   const records = await apiCall<{ status: string }[]>(page, 'GET', `/api/v1/archive/bauakten/${id}`);
-  expect(records.json.length).toBeGreaterThanOrEqual(2);
+  // Archiviert werden die Dokumente der Bauakte (Fotos sind keine archivpflichtigen Dokumente).
+  expect(records.json.length).toBeGreaterThanOrEqual(1);
   expect(records.json.every((r) => r.status === 'archived')).toBe(true);
   const audit = await apiCall<{ items: { details: string | null }[] }>(page, 'GET', '/api/v1/audit?action=archive.bauakte_queued');
   expect(JSON.stringify(audit.json)).toContain('completion');
