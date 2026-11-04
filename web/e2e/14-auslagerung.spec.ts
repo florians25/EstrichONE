@@ -29,7 +29,7 @@ test('Speicher-Auslagerung: koppeln, Regeln speichern, Dokument auslagern, trans
   await age.fill('0');
   await age.press('Tab');
   await page.locator('[id$="--olBackup"]').click();
-  await page.locator('[id$="offloadSave"]').click();
+  await page.locator('button[id$="--offloadSave"]').click();
   const warn = page.locator('.sapMMessageBox').filter({ hasText: 'Ohne Sicherungskopie' });
   await expect(warn).toBeVisible();
   await warn.getByRole('button', { name: 'Trotzdem speichern' }).click();
