@@ -1,6 +1,8 @@
-// Baut das Benutzerhandbuch (Web) als PDF: Kapitel (Markdown) → HTML mit Print-CSS → Chromium (Playwright) → PDF.
+// Baut ein Benutzerhandbuch als PDF: Kapitel (Markdown) → HTML mit Print-CSS → Chromium (Playwright) → PDF.
 // Zwei Durchläufe: Der erste ermittelt mit pdftotext (Poppler) die Seite jeder Überschrift, der zweite setzt die Seitenzahlen
-// ins Inhaltsverzeichnis. Aufruf: node docs/handbuch/scripts/pdf.mjs   → docs/handbuch/EstrichONE-Handbuch-Web.pdf
+// ins Inhaltsverzeichnis. Aufruf: node docs/handbuch/scripts/pdf.mjs [web|app]
+//   web (Standard) → docs/handbuch/EstrichONE-Handbuch-Web.pdf   (Kapitel und Bilder unter docs/handbuch/)
+//   app            → docs/handbuch/EstrichONE-Handbuch-App.pdf   (Kapitel und Bilder unter docs/handbuch/app/)
 // Umgebung: PLAYWRIGHT_CHROMIUM (Browser), HB_VERSION (Standard: neueste Versionsnotiz), HB_STAND (Standard: heute).
 import { createRequire } from "node:module";
 import { readFileSync, readdirSync, writeFileSync, existsSync, statSync } from "node:fs";
@@ -17,8 +19,23 @@ const { chromium } = require("playwright-core");
 const version = process.env.HB_VERSION ?? readdirSync(join(root, "docs/releases")).filter((f) => /^v\d+\.\d+\.\d+\.md$/.test(f))
   .map((f) => f.slice(1, -3)).sort((a, b) => a.localeCompare(b, undefined, { numeric: true })).pop();
 const stand = process.env.HB_STAND ?? new Date().toLocaleDateString("de-DE", { day: "numeric", month: "long", year: "numeric" });
-const out = join(base, "EstrichONE-Handbuch-Web.pdf");
-const htmlFile = join(base, "handbuch.html");
+const serverLine = version.replace(/\.\d+$/, ".x");
+const variants = {
+  web: {
+    dir: base, file: "EstrichONE-Handbuch-Web.pdf", name: "Benutzerhandbuch Web", heading: "Die Weboberfläche von EstrichONE",
+    sub: "für Büro, Bauleitung und Administration im Estrichbetrieb", scope: `Weboberfläche (Browser) – Server ${serverLine}`,
+  },
+  app: {
+    dir: join(base, "app"), file: "EstrichONE-Handbuch-App.pdf", name: "Benutzerhandbuch App", heading: "Die App EstrichONE für iPhone und iPad",
+    sub: "für Bauleitung, Kolonnen und Büro – auf der Baustelle und unterwegs",
+    scope: `iPhone und iPad ab iOS 17 – Server ${serverLine}`, css: "vorlage/app.css", cover: "bilder/titel.jpg",
+  },
+};
+const variant = variants[process.argv[2] ?? process.env.HB_HANDBUCH ?? "web"];
+if (!variant) throw new Error(`Unbekanntes Handbuch: ${process.argv[2]} (web oder app)`);
+const dir = variant.dir;
+const out = join(base, variant.file);
+const htmlFile = join(dir, "handbuch.html");
 
 // ---- Markdown (bewusst kleine, eindeutige Teilmenge) -------------------------------------------------------------------
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -66,12 +83,19 @@ function markdown(src, chapter) {
       html.push(`<h${level} id="${id}"><span class="num">${label}</span> ${inline(m[2])}<span class="hbAnchor" data-id="${id}"></span></h${level}>`);
       i++; continue;
     }
-    if ((m = /^!\[([^\]]*)\]\(([^)\s]+)(?: "([^"]+)")?\)(?:\{([^}]+)\})?$/.exec(line))) {
+    const image = /^!\[([^\]]*)\]\(([^)\s]+)(?: "([^"]+)")?\)(?:\{([^}]+)\})?$/;
+    if (image.test(line)) {
+      // Bildzeilen direkt untereinander (ohne Leerzeile) stehen nebeneinander in einer Reihe.
       flush();
-      figure++;
-      const cls = m[4] ? ` class="${m[4]}"` : "";
-      html.push(`<figure${cls}><img src="${m[2]}" alt="${esc(m[1])}"><figcaption><span>Abb. ${figure}</span> ${inline(m[3] ?? m[1])}</figcaption></figure>`);
-      i++; continue;
+      const row = [];
+      while (i < lines.length && (m = image.exec(lines[i]))) {
+        figure++;
+        const cls = m[4] ? ` class="${m[4]}"` : "";
+        row.push(`<figure${cls}><img src="${m[2]}" alt="${esc(m[1])}"><figcaption><span>Abb. ${figure}</span> ${inline(m[3] ?? m[1])}</figcaption></figure>`);
+        i++;
+      }
+      html.push(row.length > 1 ? `<div class="figrow n${row.length}">${row.join("")}</div>` : row[0]);
+      continue;
     }
     if ((m = /^> \*\*(Hinweis|Tipp|Wichtig|Achtung|Beispiel):\*\* ?(.*)$/.exec(line))) {
       flush();
@@ -128,12 +152,12 @@ function markdown(src, chapter) {
 }
 
 // ---- Kapitel ---------------------------------------------------------------------------------------------------------
-const files = readdirSync(join(base, "kapitel")).filter((f) => f.endsWith(".md")).sort();
+const files = readdirSync(join(dir, "kapitel")).filter((f) => f.endsWith(".md")).sort();
 const chapters = [];
 let n = 0;
 let appendix = 0;
 for (const f of files) {
-  const src = readFileSync(join(base, "kapitel", f), "utf8");
+  const src = readFileSync(join(dir, "kapitel", f), "utf8");
   const isAppendix = f.startsWith("a");
   const chapter = isAppendix ? { number: String.fromCharCode(65 + appendix++), appendix: true } : { number: String(++n) };
   if (isAppendix) chapter.label = `Anhang ${chapter.number}`;
@@ -144,28 +168,29 @@ for (const f of files) {
 function render(pages) {
   const toc = headings.map((h) => `<li class="l${h.level}"><a href="#${h.id}"><span class="tn">${h.number}</span><span class="tt">${inline(h.text)}</span>` +
     `<span class="tp">${pages ? pages[h.id] ?? "" : "000"}</span></a></li>`).join("\n");
-  const css = readFileSync(join(base, "vorlage/handbuch.css"), "utf8");
+  const css = readFileSync(join(base, "vorlage/handbuch.css"), "utf8") + (variant.css ? "\n" + readFileSync(join(dir, variant.css), "utf8") : "");
   const pageRules = chapters.map((c, i) => `@page kap${i} { @top-right { content: "${c.appendix ? c.label : c.number} · ${c.title.replace(/"/g, "")}"; } }`).join("\n");
   const logo = readFileSync(join(root, "branding/logo-horizontal-white.svg"), "utf8");
-  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>EstrichONE – Benutzerhandbuch Web ${version}</title>
+  return `<!doctype html><html lang="de"><head><meta charset="utf-8"><title>EstrichONE – ${variant.name} ${version}</title>
 <style>
 @font-face { font-family: "Inter Tight"; font-weight: 600; src: url("${pathToFileURL(join(root, "branding/fonts/inter-tight-latin-600-normal.woff"))}"); }
 @font-face { font-family: "Inter Tight"; font-weight: 700; src: url("${pathToFileURL(join(root, "branding/fonts/inter-tight-latin-700-normal.woff"))}"); }
 @font-face { font-family: "Inter Tight"; font-weight: 800; src: url("${pathToFileURL(join(root, "branding/fonts/inter-tight-latin-800-normal.woff"))}"); }
 ${css}
-@page { @bottom-left { content: "EstrichONE ${version} · Benutzerhandbuch Web"; } }
+@page { @bottom-left { content: "EstrichONE ${version} · ${variant.name}"; } }
 ${pageRules}
 </style></head><body>
 <section class="cover">
   <div class="cover-logo">${logo}</div>
+  ${variant.cover ? `<img class="cover-device" src="${variant.cover}" alt="">` : ""}
   <div class="cover-title">
     <p class="kicker">Benutzerhandbuch</p>
-    <h1 class="cover-h">Die Weboberfläche von EstrichONE</h1>
-    <p class="cover-sub">für Büro, Bauleitung und Administration im Estrichbetrieb</p>
+    <h1 class="cover-h">${variant.heading}</h1>
+    <p class="cover-sub">${variant.sub}</p>
   </div>
   <div class="cover-meta">
     <table><tr><th>Version</th><td>${version}</td></tr><tr><th>Stand</th><td>${stand}</td></tr>
-    <tr><th>Gilt für</th><td>Weboberfläche (Browser) – Server ${version.replace(/\.\d+$/, ".x")}</td></tr></table>
+    <tr><th>Gilt für</th><td>${variant.scope}</td></tr></table>
   </div>
 </section>
 <section class="toc"><h1 class="toc-h">Inhalt</h1><ol class="toc-list">${toc}</ol></section>
@@ -186,7 +211,7 @@ async function print(html, file) {
 
 // Durchlauf 1: Seiten der Überschriften über unsichtbare Marken ermitteln.
 const marked = render(null).replace(/<span class="hbAnchor" data-id="([^"]+)"><\/span>/g, '<span class="hbAnchor">HBMARK$1HBEND</span>');
-const probe = join(base, ".probe.pdf");
+const probe = join(dir, ".probe.pdf");
 await print(marked, probe);
 const text = execFileSync("pdftotext", ["-raw", probe, "-"], { maxBuffer: 64 * 1024 * 1024 }).toString();
 const pages = {};

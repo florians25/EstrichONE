@@ -1,0 +1,30 @@
+/* Ergänzung zur Druckvorlage für das App-Handbuch: Bildschirmfotos von iPhone (hochkant, schmal) und iPad. */
+.cover-device { position: absolute; right: 20mm; bottom: 24mm; width: 62mm; border-radius: 8mm; border: 1.6mm solid #0d1f40;
+  box-shadow: 0 4mm 12mm rgba(0, 0, 0, .45); }
+.cover-title { right: 92mm; }
+.cover-meta { right: 92mm; }
+
+/* iPhone: einzeln schmal, mehrere nebeneinander (Bildzeilen direkt untereinander im Kapitel). */
+figure.phone img, .figrow figure img { border-radius: 4.5mm; border: 1px solid #c4cdda; }
+figure.phone { width: 58mm; margin-left: auto; margin-right: auto; }
+figure.phone img { width: 100%; }
+.figrow { display: flex; justify-content: center; align-items: flex-start; gap: 7mm; margin: 3mm 0 5mm; break-inside: avoid; }
+.figrow figure { margin: 0; flex: 0 0 auto; width: 54mm; }
+.figrow.n3 figure { width: 47mm; gap: 5mm; }
+.figrow figcaption, figure.phone figcaption { text-align: center; }
+/* iPad: quer über die Satzbreite bzw. hochkant etwas schmaler. */
+figure.ipad img { border-radius: 3mm; }
+figure.ipadhoch { width: 112mm; margin-left: auto; margin-right: auto; }
+figure.ipadhoch img { border-radius: 3mm; }
+figure.ipadhoch figcaption { text-align: center; }
+
+/* Bildschirmfoto neben dem Text: Bild rechts, Text fließt links daneben. */
+figure.rechts { float: right; width: 52mm; margin: 1mm 0 4mm 7mm; }
+figure.rechts img { border-radius: 4.5mm; border: 1px solid #c4cdda; }
+figure.rechts figcaption { text-align: center; }
+.chapter h1 { clear: both; }
+.chapter .box { overflow: hidden; }
+.chapter table { clear: both; }
+.figrow.n4 { gap: 4mm; }
+.figrow.n4 figure { width: 39mm; }
+.figrow, figure.ipad, figure.ipadhoch, figure.phone { clear: both; }
