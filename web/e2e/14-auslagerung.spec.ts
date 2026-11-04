@@ -61,7 +61,7 @@ test('Speicher-Auslagerung: koppeln, Regeln speichern, Dokument auslagern, trans
 
   // Öffnen: Original kommt vom Storage (Kopfzeile), Inhalt unverändert.
   const download = await page.evaluate(async (id) => {
-    const r = await fetch(`/api/v1/files/${id}/content`);
+    const r = await fetch(`/api/v1/files/${id}/content`, { cache: 'no-store' });
     return { status: r.status, storage: r.headers.get('X-EstrichOne-Storage'), text: await r.text() };
   }, file);
   expect(download.status).toBe(200);
@@ -77,7 +77,7 @@ test('Speicher-Auslagerung: koppeln, Regeln speichern, Dokument auslagern, trans
   await expect(toast(page)).toContainText('Rückholen gestartet');
   await expect.poll(async () => (await apiCall<{ fileId: string }[]>(page, 'GET', `/api/v1/files/offload/locations?ids=${file}`)).json.length,
     { timeout: 60_000 }).toBe(0);
-  const local = await page.evaluate(async (id) => (await fetch(`/api/v1/files/${id}/content`)).headers.get('X-EstrichOne-Storage'), file);
+  const local = await page.evaluate(async (id) => (await fetch(`/api/v1/files/${id}/content`, { cache: 'no-store' })).headers.get('X-EstrichOne-Storage'), file);
   expect(local).toBeNull();
 
   // Aufräumen für die folgenden Tests: alles zurückholen, Standardregeln (nichts Frisches mehr auslagern).
