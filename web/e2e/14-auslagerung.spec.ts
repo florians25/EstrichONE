@@ -56,7 +56,7 @@ test('Speicher-Auslagerung: koppeln, Regeln speichern, Dokument auslagern, trans
   await expect(toast(page)).toContainText('Auslagerung gestartet');
   const files = page.locator('[id$="offloadFiles"]');
   await expect(files.getByText('Altplan.pdf')).toBeVisible({ timeout: 90_000 });
-  await expect(files.getByText('Auf dem Storage').first()).toBeVisible({ timeout: 60_000 });
+  await expect(files.locator('.sapMObjStatus').filter({ hasText: 'Auf dem Storage' }).first()).toBeVisible({ timeout: 60_000 });
   await expect(page.getByRole('link', { name: 'Auslagerung E2E' }).first()).toBeVisible();
 
   // Öffnen: Original kommt vom Storage (Kopfzeile), Inhalt unverändert.
