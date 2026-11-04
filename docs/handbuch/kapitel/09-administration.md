@@ -288,6 +288,27 @@ Verschlüsselungstrojanern.
 erreichbar ist (z. B. im Rechenzentrum): Das Ziel verbindet sich selbst und holt die verschlüsselten Sicherungen – keine
 Portfreigabe nötig (**Ziel, das zieht, hinzufügen**).
 
+### Kombiserver: Backup-Ziel und Archiv auf einem Rechner {#kombiserver}
+
+Wer nur einen weiteren Rechner hat, richtet dort **Backup-Ziel und Archivserver zusammen** ein – mit einem Befehl und
+einem Kopplungscode. Beide Dienste laufen getrennt (eigene Container, eigene Daten), teilen sich aber den Rechner.
+
+1. Auf dem Kombiserver (Linux mit Docker) einmal ausführen:
+   `sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi ghcr.io/florians25/estrichone-installer:latest backup-archiv`.
+   Er zeigt Adresse, Ports (Backup-Ziel 8444, Archiv 8443), **einen** Kopplungscode und beide Fingerabdrücke.
+2. In EstrichONE unter **Backup-Ziele** **Kombiserver koppeln** wählen, Adresse und Code eingeben. EstrichONE koppelt
+   beide Dienste; bereits gekoppelte (z. B. ein vorhandenes Backup-Ziel, das um das Archiv erweitert wurde) werden
+   übersprungen.
+3. Fingerabdrücke vergleichen und den **Notfallzugang** des Backup-Ziels aufbewahren.
+
+Steht der Kombiserver zuhause hinter dem Router und dieser Server im Rechenzentrum, wählen Sie **Kombiserver, der zieht**:
+EstrichONE zeigt den Befehl mit Code; das Backup-Ziel holt die Sicherungen selbst, das Archiv koppeln Sie im zweiten
+Schritt über eine weitergeleitete Adresse (Port 8443) oder eine Tunnel-Adresse – mit demselben Code.
+
+Wichtig: Backup und Archiv auf demselben Rechner ist bequem, aber **kein zweiter Standort für das Archiv**. Stellen Sie
+den Kombiserver räumlich getrennt vom EstrichONE-Server auf (anderes Gebäude, zuhause, Rechenzentrum). Status-Banner
+(rot Backup, gelb Archiv) und Aktualisierung gelten für beide Dienste getrennt.
+
 ### Zusatzserver aktualisieren {#zusatzserver}
 
 Backup-Ziele und Archivserver sind **Zusatzserver** mit eigener Version. Unter **Aktualisierung der Zusatzserver** (auf

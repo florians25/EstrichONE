@@ -10,6 +10,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access;
 using EstrichOne.Api.Modules.Archive;
 using EstrichOne.Api.Modules.Bauakten;
+using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Tests.Support;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -163,6 +164,42 @@ public sealed class ArchiveTests(PostgresFixture postgres) : IAsyncLifetime
         (await queue.Content.ReadFromJsonAsync<QueueResult>(TestJson.Options))!.Queued.ShouldBe(1);
         await RunArchiveAsync();
         (await RecordAsync(otherId))!.Status.ShouldBe(ArchiveRecordStatus.Archived);
+    }
+
+    [Fact]
+    public async Task AbschliessenUndArchivieren_SchliesstAb_ReihtDokumenteEin_ProtokolliertAnlass()
+    {
+        await PairAsync();
+        var (fileId, _) = await UploadDocumentAsync("other", "Aufmass.pdf");
+
+        // Ohne Archivserver-Rechte (Bauleitung): Abschluss und Archivierung mit „bauakten.edit“ wie die bestehende Archivierung.
+        using var office = await _factory.CreateClientAsAsync("bauleitung", StandardRoles.OfficeId);
+        var detail = (await _admin.GetFromJsonAsync<BauakteDetail>($"/api/v1/bauakten/{_bauakteId}", TestJson.Options))!;
+        using var complete = new HttpRequestMessage(HttpMethod.Put, $"/api/v1/bauakten/{_bauakteId}")
+        {
+            Content = JsonContent.Create(new { title = detail.Title, status = "completed" }),
+        };
+        complete.Headers.IfMatch.Add(new EntityTagHeaderValue($"\"{detail.Version}\""));
+        (await _admin.SendAsync(complete)).EnsureSuccessStatusCode();
+
+        // Statusbanner (jeder Angemeldete) sagt der Weboberfläche, ob „Abschließen & Archivieren“ angeboten wird.
+        var banner = await office.GetStringAsync(new Uri("/api/v1/system/health-banner", UriKind.Relative));
+        banner.ShouldContain("\"archive\":{\"configured\":true");
+
+        using var invalid = await office.PostAsync(new Uri($"/api/v1/archive/bauakten/{_bauakteId}?reason=irgendwas", UriKind.Relative), null);
+        invalid.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        using var queue = await office.PostAsync(new Uri($"/api/v1/archive/bauakten/{_bauakteId}?reason=completion", UriKind.Relative), null);
+        queue.StatusCode.ShouldBe(HttpStatusCode.OK, await queue.Content.ReadAsStringAsync());
+        (await queue.Content.ReadFromJsonAsync<QueueResult>(TestJson.Options))!.Queued.ShouldBe(1);
+        await RunArchiveAsync();
+        (await RecordAsync(fileId))!.Status.ShouldBe(ArchiveRecordStatus.Archived);
+        (await _admin.GetFromJsonAsync<BauakteDetail>($"/api/v1/bauakten/{_bauakteId}", TestJson.Options))!.Status.ShouldBe(BauakteStatus.Completed);
+
+        await using var scope = _factory.Services.CreateAsyncScope();
+        var audit = await scope.ServiceProvider.GetRequiredService<EstrichOneDbContext>().Set<EstrichOne.Api.Modules.Audit.AuditEvent>()
+            .Where(e => e.Action == "archive.bauakte_queued" && e.EntityId == _bauakteId.ToString()).SingleAsync();
+        audit.Details.ShouldNotBeNull();
+        audit.Details.ShouldContain("completion");
     }
 
     [Fact]

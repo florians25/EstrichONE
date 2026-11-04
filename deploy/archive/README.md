@@ -37,6 +37,18 @@ sudo docker run -d --name estrichone-archive --restart unless-stopped -p 8443:84
   -v estrichone-archive:/data ghcr.io/florians25/estrichone-archive:latest
 ```
 
+## Archiv und Backup-Ziel auf einem Rechner (Kombiserver)
+
+```bash
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi \
+  ghcr.io/florians25/estrichone-installer:latest backup-archiv
+```
+
+Richtet Archivserver (Port 8443) und Backup-Ziel (Port 8444) in getrennten Containern mit getrennten Daten ein und gibt
+**einen** Kopplungscode für beide aus; in EstrichONE unter *System → Backup-Ziele* „Kombiserver koppeln“. Bequem, aber
+kein zweiter Standort für das Archiv – den Rechner räumlich getrennt vom EstrichONE-Server aufstellen. Details:
+docs/backup.md, Abschnitt „Kombiserver“.
+
 ## Kein zweiter Rechner?
 
 Dann kann der Archivserver im selben Docker-Stack mitlaufen (schlechter, weil derselbe Rechner): EstrichONE-Installer

@@ -167,6 +167,15 @@ public sealed class BackupCenterTests(PostgresFixture postgres) : IAsyncLifetime
         using var created = await admin.PostAsJsonAsync("/api/v1/backup/mirrors", new CreateBackupMirrorRequest("NAS zuhause"), Ct);
         var mirror = (await created.Content.ReadFromJsonAsync<CreateBackupMirrorResponse>(TestJson.Options, Ct))!;
         mirror.Command.ShouldContain($"ESTRICHONE_PULL_CODE={mirror.Code}");
+        mirror.Command.ShouldEndWith(" backup-ziel");
+
+        // Kombiserver (Backup-Ziel + Archiv auf einem Rechner): Befehl für den Installer-Modus backup-archiv.
+        using var combined = await admin.PostAsJsonAsync("/api/v1/backup/mirrors", new CreateBackupMirrorRequest("Kombi zuhause", Combined: true), Ct);
+        var kombi = (await combined.Content.ReadFromJsonAsync<CreateBackupMirrorResponse>(TestJson.Options, Ct))!;
+        kombi.Command.ShouldContain("-v /opt/estrichone-kombi:/opt/estrichone-kombi");
+        kombi.Command.ShouldContain($"ESTRICHONE_PULL_CODE={kombi.Code}");
+        kombi.Command.ShouldEndWith(" backup-archiv");
+        (await admin.DeleteAsync(new Uri($"/api/v1/backup/mirrors/{kombi.Mirror.Id}", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
 
         using var anonymous = _factory.CreateClient();
         (await anonymous.GetAsync(new Uri("/api/v1/backup/mirror/repo/config", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);

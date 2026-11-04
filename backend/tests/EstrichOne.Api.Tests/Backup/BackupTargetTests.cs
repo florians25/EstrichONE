@@ -3,9 +3,11 @@
 using System.Net;
 using System.Net.Http.Json;
 using EstrichOne.Api.Modules.Access;
+using EstrichOne.Api.Modules.Archive;
 using EstrichOne.Api.Modules.Backup;
 using EstrichOne.Api.Tests.Support;
 using EstrichOne.Archive;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace EstrichOne.Api.Tests.Backup;
 
@@ -31,6 +33,31 @@ public sealed class BackupTargetTests(PostgresFixture postgres) : IAsyncLifetime
         await _target.DisposeAsync();
         await _factory.DisposeAsync();
         Directory.Delete(_status, recursive: true);
+    }
+
+    [Fact]
+    public async Task Kombiserver_EinCode_KoppeltBackupZielUndArchiv()
+    {
+        await using var archiveHost = await ArchiveServerHost.StartAsync();
+        using var admin = await _factory.CreateClientAsAsync("admin", StandardRoles.AdministratorId);
+        var registry = _target.Services.GetRequiredService<ClientRegistry>();
+        Should.Throw<ArgumentException>(() => registry.SetPairingCode("ABCD-EFGH"));
+        Should.Throw<ArgumentException>(() => registry.SetPairingCode("ABCD-EFGH-JKLM-NPQ0"));
+        // Ein vom Installer erzeugter Code für beide Dienste (getrennte Container, getrennte Daten).
+        const string code = "KMBX-2345-6789-ABCD";
+        registry.SetPairingCode(code.ToLowerInvariant()).Code.ShouldBe(code);
+        archiveHost.Services.GetRequiredService<ClientRegistry>().SetPairingCode(code);
+
+        using var backup = await _admin.PostAsJsonAsync("/api/v1/backup/targets", new { address = _target.Address, code });
+        backup.StatusCode.ShouldBe(HttpStatusCode.OK, await backup.Content.ReadAsStringAsync());
+        using var archive = await admin.PostAsJsonAsync("/api/v1/archive/pair", new { address = archiveHost.Address, code });
+        archive.StatusCode.ShouldBe(HttpStatusCode.OK, await archive.Content.ReadAsStringAsync());
+        (await admin.GetFromJsonAsync<ArchiveOverview>("/api/v1/archive/status", TestJson.Options))!.Connected.ShouldBeTrue();
+        registry.Clients.Count.ShouldBe(1);
+        archiveHost.Services.GetRequiredService<ClientRegistry>().Clients.Count.ShouldBe(1);
+        // Beide Codes sind verbraucht.
+        registry.OpenPairing().ShouldBeNull();
+        archiveHost.Services.GetRequiredService<ClientRegistry>().OpenPairing().ShouldBeNull();
     }
 
     [Fact]

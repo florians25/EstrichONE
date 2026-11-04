@@ -17559,7 +17559,7 @@
         "tags": [
           "Archiv"
         ],
-        "summary": "Alle Dokumente der Bauakte archivieren (bzw. Fehlgeschlagene erneut versuchen)",
+        "summary": "Alle Dokumente der Bauakte archivieren (bzw. Fehlgeschlagene erneut versuchen); reason=completion beim Abschluss",
         "operationId": "ArchiveBauakte",
         "parameters": [
           {
@@ -17569,6 +17569,13 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "reason",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -23648,6 +23655,10 @@
               "null",
               "string"
             ]
+          },
+          "combined": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

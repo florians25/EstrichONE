@@ -56,7 +56,7 @@ internal static class ArchiveEndpoints
         archive.MapGet("/bauakten/{bauakteId:guid}", BauakteRecordsAsync).WithName("GetBauakteArchiveRecords")
             .RequirePermission(Permissions.BauaktenRead);
         archive.MapPost("/bauakten/{bauakteId:guid}", QueueBauakteAsync).WithName("ArchiveBauakte")
-            .WithSummary("Alle Dokumente der Bauakte archivieren (bzw. Fehlgeschlagene erneut versuchen)")
+            .WithSummary("Alle Dokumente der Bauakte archivieren (bzw. Fehlgeschlagene erneut versuchen); reason=completion beim Abschluss")
             .RequirePermission(Permissions.BauaktenEdit);
         archive.MapGet("/files/{fileId:guid}", FileRecordAsync).WithName("GetFileArchiveRecord").RequirePermission(Permissions.BauaktenRead);
         archive.MapPost("/files/{fileId:guid}", QueueFileAsync).WithName("ArchiveFile").RequirePermission(Permissions.BauaktenEdit);
@@ -92,7 +92,8 @@ internal static class ArchiveEndpoints
     }
 
     private static async Task<Results<Ok<ArchiveConnectionDto>, ProblemHttpResult>> PairAsync(PairArchiveRequest request,
-        ArchiveService service, IAuditLog audit, ICurrentUser user, EstrichOneDbContext db, ArchiveSignal signal, CancellationToken cancellationToken)
+        ArchiveService service, IAuditLog audit, ICurrentUser user, EstrichOneDbContext db, ArchiveSignal signal, SystemHealthMonitor health,
+        CancellationToken cancellationToken)
     {
         try
         {
@@ -101,6 +102,7 @@ internal static class ArchiveEndpoints
                 new Dictionary<string, string?> { ["address"] = connection.Address, ["fingerprint"] = connection.CaFingerprint });
             await db.SaveChangesAsync(cancellationToken);
             signal.Wake();
+            health.Invalidate();
             return TypedResults.Ok(ToDto(connection));
         }
         catch (PeerException exception)
@@ -110,9 +112,10 @@ internal static class ArchiveEndpoints
     }
 
     private static async Task<NoContent> UnpairAsync(ArchiveService service, IAuditLog audit, ICurrentUser user, EstrichOneDbContext db,
-        CancellationToken cancellationToken)
+        SystemHealthMonitor health, CancellationToken cancellationToken)
     {
         await service.UnpairAsync(cancellationToken);
+        health.Invalidate();
         audit.Record("archive.unpaired", user.UserId);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
@@ -288,9 +291,16 @@ internal static class ArchiveEndpoints
         return TypedResults.Ok(ToDto(record));
     }
 
+    /// <param name="reason"><c>completion</c> = „Abschließen &amp; Archivieren“ im Abschlussdialog der Bauakte (steht im Audit).</param>
     private static async Task<Results<Ok<QueueResult>, ProblemHttpResult>> QueueBauakteAsync(Guid bauakteId, ArchiveService service,
-        IBauakteAccess access, ICurrentUser user, IAuditLog audit, EstrichOneDbContext db, ArchiveSignal signal, CancellationToken cancellationToken)
+        IBauakteAccess access, ICurrentUser user, IAuditLog audit, EstrichOneDbContext db, ArchiveSignal signal, string? reason,
+        CancellationToken cancellationToken)
     {
+        if (reason is not (null or "manual" or "completion"))
+        {
+            return Problem(422, "VALIDATION_FAILED", "Ungültige Angaben", "reason muss manual oder completion sein.");
+        }
+
         if (!await access.CanReadAsync(bauakteId, cancellationToken))
         {
             return Problem(404, "BAUAKTE_NOT_FOUND", "Bauakte nicht gefunden", "Die Bauakte existiert nicht oder ist nicht sichtbar.");
@@ -303,7 +313,11 @@ internal static class ArchiveEndpoints
 
         var queued = await service.QueueBauakteAsync(bauakteId, user.UserId, cancellationToken);
         audit.Record("archive.bauakte_queued", user.UserId, "bauakte", bauakteId.ToString(),
-            new Dictionary<string, string?> { ["count"] = queued.ToString(System.Globalization.CultureInfo.InvariantCulture) });
+            new Dictionary<string, string?>
+            {
+                ["count"] = queued.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                ["reason"] = reason ?? "manual",
+            });
         await db.SaveChangesAsync(cancellationToken);
         signal.Wake();
         return TypedResults.Ok(new QueueResult(queued));

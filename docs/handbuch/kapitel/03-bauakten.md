@@ -83,7 +83,11 @@ Fläche und die Zahl der Fotos und Dokumente.
 Die Schaltflächen im Kopf:
 
 - **Status** – ändert den Status von Hand.
-- **Als Auftrag übernehmen** (bei Anfragen) bzw. **Abschließen** (bei laufenden Bauakten).
+- **Als Auftrag übernehmen** (bei Anfragen) bzw. **Abschließen** (bei laufenden Bauakten). Ist ein Archivserver
+  eingerichtet, bietet der Abschlussdialog zusätzlich **Abschließen & Archivieren** an: Die Bauakte wird abgeschlossen
+  und alle ihre Dokumente werden sofort revisionssicher archiviert (Fortschritt im Dialog, Nachweis unter
+  **Aktionen** → **Archivnachweis**). Ist der Archivserver gerade nicht erreichbar, ist die Schaltfläche ausgegraut –
+  dann nur abschließen und später archivieren.
 - **Mir zuweisen** – trägt Sie als Zuständige(n) ein.
 - **Baustellen-Chat anlegen** – Gruppenchat mit allen Beteiligten der Baustelle (Abschnitt 8.2).
 - **Bearbeiten** – Bezeichnung, Baustelle, Termine, Beschreibung.

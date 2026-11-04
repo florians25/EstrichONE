@@ -20,6 +20,7 @@ import { saveBauakte, type BauakteChanges } from "../../util/bauakte";
 import { isoDay, parseDay } from "../../util/days";
 import { address, area, cmNumber, date } from "../../util/format";
 import { openForm } from "../../util/forms";
+import { archiveAfterCompletion, askComplete } from "../../util/completeDialog";
 import { assignmentKinds, bauakteStatus, flowStatuses, statusMarkerColors } from "../../util/labels";
 import type {
 	BauakteDetail, BauakteHint, BauakteMember, BauakteStatus, ContactResponse, DirectoryUser,
@@ -360,9 +361,13 @@ export default class ObjectController extends BaseController {
 		void this.save({ status: "planned" }, this.t("akte.takenOver"));
 	}
 
-	onComplete(): void {
-		void this.confirm(this.t("akte.completeConfirm"), { action: this.t("akte.complete") })
-			.then((ok) => ok && this.save({ status: "completed" }, this.t("akte.completed")));
+	/** Abschlussdialog: „Abschließen“ bzw. – mit eingerichtetem Archivserver – „Abschließen & Archivieren“. */
+	async onComplete(): Promise<void> {
+		const choice = await askComplete({ question: this.t("akte.completeConfirm"), complete: this.t("akte.complete") });
+		if (!choice) return;
+		const b = this.cur();
+		if (!await this.save({ status: "completed" }, this.t("akte.completed"))) return;
+		if (choice === "completeAndArchive") await archiveAfterCompletion(b.id, b.title);
 	}
 
 	onReactivate(): void {

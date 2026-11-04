@@ -41,6 +41,9 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
 
     public void Dispose() => _refresh.Dispose();
 
+    /// <summary>Nach Koppeln/Entkoppeln: nächste Abfrage prüft neu (z. B. „Abschließen &amp; Archivieren“ sofort anbieten).</summary>
+    public void Invalidate() => _current = null;
+
     public async Task<HealthBannerResponse> GetAsync(CancellationToken cancellationToken)
     {
         var current = _current;

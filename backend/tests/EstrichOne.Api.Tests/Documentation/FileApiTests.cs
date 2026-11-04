@@ -74,6 +74,24 @@ public sealed class FileApiTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task Announce_WithCapturedAtInLocalOffset_IsStoredAsUtc()
+    {
+        // Npgsql schreibt timestamptz nur mit Offset 0 – „+01:00“ aus Geräten/Browsern führte zu 500.
+        var jpeg = CreateJpeg(80, 80);
+        var id = Guid.CreateVersion7();
+        using var response = await _worker.PostAsJsonAsync("/api/v1/files", new
+        {
+            id, bauakteId = _bauakteId, kind = "photo", originalName = "zeitzone.jpg", contentType = "image/jpeg",
+            sizeBytes = (long)jpeg.Length, sha256 = Convert.ToHexStringLower(SHA256.HashData(jpeg)), capturedAt = "2026-11-03T09:15:00+01:00",
+        }, TestContext.Current.CancellationToken);
+        response.StatusCode.ShouldBe(HttpStatusCode.Created, await response.Content.ReadAsStringAsync(TestContext.Current.CancellationToken));
+
+        var stored = (await _worker.GetFromJsonAsync<FileResponse>($"/api/v1/files/{id}", TestJson.Options, TestContext.Current.CancellationToken))!;
+        stored.CapturedAt.ShouldBe(new DateTimeOffset(2026, 11, 3, 8, 15, 0, TimeSpan.Zero));
+        stored.CapturedAt!.Value.Offset.ShouldBe(TimeSpan.Zero);
+    }
+
+    [Fact]
     public async Task Upload_WithWrongContent_IsRejectedAndCanBeRetried()
     {
         var jpeg = CreateJpeg(200, 200);

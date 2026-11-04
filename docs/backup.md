@@ -11,7 +11,7 @@ Benutzer in Web und Apps ein rotes Banner; Administratoren bekommen nach jeder S
 |---|---|
 | Wie oft? | Täglich eine **Vollsicherung** (Standard 22:30 Uhr, alle Dateien werden neu gelesen und geprüft), optional zusätzlich **inkrementell** alle 1–12 Stunden. Einstellbar im Backup Center → *Zeitplan und Meldungen*. |
 | Was? | Datenbank (alle Fachdaten, Benutzer, Archiv-Nachweise), alle Dateien (Fotos, Dokumente, Videos, Pläne, Vorschaubilder), Schlüsselbund (`.keys`: Anmeldungen, verschlüsselte Push-/APNs-/VAPID-Schlüssel), Server-Konfiguration (`.env`-Kopie), Zeitplan, Backup-Ziele. |
-| Wohin? | Hauptziel (Ordner/zweite Platte/NAS, `sftp:`), optional zweites Ziel, beliebig viele **Backup-Ziele auf anderer Hardware** (Kopplungscode, nur anhängen) und **Backup-Ziele, die ziehen** (zuhause hinter NAT). |
+| Wohin? | Hauptziel (Ordner/zweite Platte/NAS, `sftp:`), optional zweites Ziel, beliebig viele **Backup-Ziele auf anderer Hardware** (Kopplungscode, nur anhängen), **Backup-Ziele, die ziehen** (zuhause hinter NAT) und der **Kombiserver** (Backup-Ziel + Archiv auf einem Rechner, ein Code). |
 | Wie sicher? | restic: AES-256 + Poly1305 je Block, Prüfsummen (SHA-256), Repository-Passwort nur beim Betrieb und auf dem Notfallblatt. Sonntags `restic check` (10 % Daten) und Probe-Wiederherstellung in eine temporäre Datenbank. |
 | Aufbewahrung | Standard 14 täglich / 8 wöchentlich / 12 monatlich / 3 jährlich (lokales Hauptziel); Backup-Ziele behalten alles (nur anhängen). |
 | Zurückspielen | Backup Center → *Sicherungen* → **Wiederherstellen** (ganzes System, mit Bestätigung und Sperre) oder **Datei …** (eine Datei). |
@@ -88,6 +88,126 @@ EstrichONE-Server aus angesprochen (Kopplungscode, gepinntes Zertifikat):
 | Kein zweiter Rechner | Archiv im Stack (`-e ESTRICHONE_ARCHIVE=lokal`) – nur als Übergang, ein Archiv gehört auf eigene Hardware. |
 
 Fällt der Archivserver aus, hält EstrichONE die Dokumente zurück und überträgt sie später; Benutzer sehen das gelbe Banner.
+
+### D) Kombiserver – Backup-Ziel und Archivserver auf EINEM Rechner
+
+Für Betriebe mit nur einem weiteren Rechner: Installer-Modus **`backup-archiv`** (Aliase `backup-archive`, `kombi`,
+`kombiserver`; der Name sagt, was installiert wird – beide Dienste). Er richtet in einem Lauf beide Dienste ein und gibt
+**einen** Kopplungscode für beide aus.
+
+```mermaid
+flowchart LR
+  S[EstrichONE-Server] -- "Sicherungen (restic, nur anhängen)<br/>Port 8444" --> B
+  S -- "Archivierung (WORM)<br/>Port 8443" --> A
+  subgraph K[Kombiserver – räumlich getrennt]
+    B[estrichone-backup-target<br/>Volume estrichone-backup-target]
+    A[estrichone-archive<br/>Volume estrichone-archive]
+    E[/opt/estrichone-kombi/.env<br/>Rechte 600/]
+  end
+```
+
+**Was getrennt bleibt:** zwei Container, zwei Datenbereiche (Volumes `estrichone-backup-target` und `estrichone-archive`
+bzw. zwei verschiedene, nicht ineinander liegende Ordner), zwei Zertifikate, zwei Updater. **Gemeinsam:** das Verzeichnis
+`/opt/estrichone-kombi` mit einer `.env` (Rechte 600: Ports, Ordner, Name, Optionen und – bis beide gekoppelt sind – der
+Kombi-Code) und der Kopplungscode (16 Zeichen aus 32, 80 Bit, je Dienst einmal verwendbar, 24 Stunden gültig). Backup-
+und Archivdaten werden nie vermischt; die Container haben weiterhin weder Shell noch Docker-Zugriff.
+
+> **Hinweis:** Backup und Archiv auf demselben Rechner ist bequem, aber **kein zweiter Standort für das Archiv**. Der
+> Kombiserver gehört räumlich getrennt vom EstrichONE-Server (anderes Gebäude, zuhause, Rechenzentrum) – sonst trifft ein
+> Brand oder Einbruch Server, Sicherung und Archiv zugleich.
+
+#### Schritt für Schritt (Topologie B: Server schiebt – Kombiserver im Büro-Netz oder im Rechenzentrum)
+
+1. Auf dem Kombiserver (Linux mit Docker):
+   ```bash
+   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi \
+     ghcr.io/florians25/estrichone-installer:<version> backup-archiv
+   ```
+   Ausgabe: Adresse, Backup-Ziel `<adresse>:8444`, Archivserver `<adresse>:8443`, **Kopplungscode** (z. B.
+   `K7QM-2XPA-9DNW-HRT4`), beide Fingerabdrücke, Firewall-Hinweis.
+2. In EstrichONE *System → Backup-Ziele* → **Kombiserver koppeln** → Adresse (ohne Port) und Code; Ports nur ändern,
+   wenn sie bei der Installation geändert wurden. EstrichONE koppelt nacheinander Backup-Ziel und Archiv (bestehende
+   Endpunkte `POST /backup/targets` und `POST /archive/pair`, gleicher Code). Rechte: `backup.manage` und
+   `settings.manage`.
+3. Fingerabdrücke vergleichen. Ab der nächsten Sicherung geht jede Sicherung auch auf den Kombiserver; Dokumente werden
+   nach den Archivregeln archiviert. Notfallblatt neu drucken.
+
+Optionen (`-e …`, werden in der `.env` gemerkt; erneut ausführen = mit denselben Werten aktualisieren):
+
+| Option | Bedeutung |
+|---|---|
+| `ESTRICHONE_NAME="Kombiserver Keller"` | Anzeigename; die Dienste heißen „… – Backup-Ziel“ bzw. „… – Archiv“ |
+| `ESTRICHONE_BACKUP_PORT=8444`, `ESTRICHONE_ARCHIVE_PORT=8443` | Ports (Standard wie bei Einzelinstallationen, müssen verschieden sein) |
+| `ESTRICHONE_BACKUP_DATA_DIR=/srv/backup`, `ESTRICHONE_ARCHIVE_DATA_DIR=/srv/archiv` | Ordner statt Docker-Volumes (z. B. zwei Platten) |
+| `ESTRICHONE_ADDRESS=192.168.1.50` | Adresse für Anzeige und Zertifikat (sonst automatisch) |
+| `ESTRICHONE_BIND_ADDRESS=127.0.0.1` | nur an diese Adresse binden (Reverse-Proxy davor, siehe unten) |
+| `ESTRICHONE_MIN_RETENTION_YEARS=10` | Mindestfrist des Archivs |
+| `ESTRICHONE_NEW_CODE=1` | neuer Code für beide Dienste (z. B. nach dem Entkoppeln oder für eine zweite Installation) |
+| `ESTRICHONE_REMOTE_UPDATE=aus` | keine Fernaktualisierung |
+
+#### Topologie A: Kombiserver zuhause hinter NAT, Hauptserver im Rechenzentrum
+
+1. *System → Backup-Ziele* → **Kombiserver, der zieht** → Bezeichnung → EstrichONE zeigt den Befehl
+   (`POST /backup/mirrors` mit `"combined": true`):
+   ```bash
+   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi \
+     -e ESTRICHONE_PULL_FROM=https://estrichone.firma.de -e ESTRICHONE_PULL_CODE=ABCD-EFGH-JKLM-NPQR \
+     ghcr.io/florians25/estrichone-installer:<version> backup-archiv
+   ```
+2. Das Backup-Ziel zieht (ausgehend, keine Portfreigabe). Der Installer setzt **denselben Code** auch beim Archiv.
+3. Das Archiv muss vom Hauptserver erreichbar sein: Port 8443 (TCP) am Router auf den Kombiserver weiterleiten und eine
+   DynDNS-Adresse verwenden oder beide per WireGuard/Tailscale verbinden. Im zweiten Schritt des Dialogs diese Adresse
+   eingeben – der Code ist schon eingetragen (später auch unter *System → Archiv → Archivserver koppeln*).
+
+#### Ein Port bzw. Reverse-Proxy
+
+Beide Dienste machen HTTPS mit eigenem, gepinntem Zertifikat. Ein Reverse-Proxy davor darf TLS deshalb **nicht
+beenden**, sondern leitet nach Servernamen (SNI) durch – z. B. Nginx `stream` mit `ssl_preread`:
+
+```nginx
+stream {
+  map $ssl_preread_server_name $kombi { archiv.firma.de 127.0.0.1:8443; default 127.0.0.1:8444; }
+  server { listen 443; ssl_preread on; proxy_pass $kombi; }
+}
+```
+
+Dann `-e ESTRICHONE_BIND_ADDRESS=127.0.0.1` setzen und in EstrichONE beide Dienste einzeln mit ihrem Namen koppeln
+(*Backup-Ziel koppeln*: `backup.firma.de:443`, *Archivserver koppeln*: `archiv.firma.de:443`, jeweils derselbe
+Kombi-Code). Der beim Koppeln benutzte Name wird ins Zertifikat übernommen.
+
+**Firewall:** Nur der EstrichONE-Server braucht Zugriff, z. B.
+`sudo ufw allow from <IP des EstrichONE-Servers> to any port 8444,8443 proto tcp`. Ins Internet muss nichts freigegeben
+werden (außer bei Topologie A der Archiv-Port bzw. ein Tunnel).
+
+#### Erweitern, Aktualisieren, Überwachen
+
+- **Vorhandenes Backup-Ziel um das Archiv erweitern** (oder umgekehrt): denselben Befehl `backup-archiv` auf dem Rechner
+  ausführen. Der Installer übernimmt Container, Daten, Kopplung, Port und Ordner des vorhandenen Dienstes, richtet den
+  zweiten ein und gibt einen Code nur für die noch nicht gekoppelten Dienste aus; *Kombiserver koppeln* überspringt
+  bereits gekoppelte. Getrennte Installationen bleiben unverändert gültig.
+- **Idempotent:** erneut ausführen = beide Dienste aktualisieren (mit Rücksprung je Dienst bei Fehlern), Kopplungen und
+  Daten bleiben; solange nicht beide gekoppelt sind, wird derselbe Code erneut ausgegeben.
+- **Fernaktualisierung** je Dienst getrennt (Updater `estrichone-backup-target-updater` und `estrichone-archive-updater`),
+  in *System → Backup-Ziele* bzw. *System → Archiv*.
+- **Status-Banner** unabhängig: rot, wenn das Backup-Ziel ausfällt, gelb, wenn das Archiv ausfällt.
+
+In der CI getestet (`deploy/backup-target/test-kombi.sh`, Workflow *Infrastruktur*): vorhandenes Backup-Ziel um das
+Archiv erweitern, Fehlbedienungen (fehlendes Verzeichnis, gleiche Ports, verschachtelte Ordner), `.env` mit Rechten 600,
+getrennte Volumes und Updater, ein Code koppelt beide, Sicherung landet auf dem Kombiserver, „Abschließen & Archivieren“
+archiviert die Dokumente (Prüflauf in Ordnung), erneuter Lauf ohne neuen Code mit erhaltenen Kopplungen, beide Dienste
+mit Updater; danach Topologie A (Backup-Ziel zieht, derselbe Code koppelt das Archiv).
+
+## Abschließen & Archivieren
+
+Ist ein Archivserver gekoppelt, bietet der Abschlussdialog der Bauakte (Web) neben **Abschließen** die hervorgehobene
+Aktion **Abschließen & Archivieren** an. Sie schließt die Bauakte ab und reiht sofort alle ihre Dokumente zur
+Archivierung ein (bestehender Endpunkt `POST /archive/bauakten/{id}?reason=completion`, Recht `bauakten.edit` wie die
+Archivierung im Archivnachweis; Audit `archive.bauakte_queued` mit `reason=completion`). Der Dialog zeigt den
+Fortschritt (archiviert / gesamt); Fehler lassen die Bauakte abgeschlossen, die Archivierung lässt sich dort bzw. unter
+*Aktionen → Archivnachweis* erneut anstoßen, und EstrichONE versucht nicht erreichte Übertragungen automatisch erneut.
+Ob die Aktion erscheint, entscheidet `GET /system/health-banner`: Archiv nicht eingerichtet → nicht sichtbar;
+eingerichtet, aber nicht erreichbar → deaktiviert mit Hinweis. Die iOS-App hat keinen eigenen Abschlussdialog (Status
+wird dort über die Statusauswahl gesetzt); archiviert wird dann wie bisher nach den Archivregeln.
 
 ## Zeitplan, Aufbewahrung, Meldungen
 
@@ -210,6 +330,8 @@ Installer der aktuellen Version mit denselben Optionen wie bei der Einrichtung a
 ```bash
 sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:<version> backup-ziel
 sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:<version> archiv
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi \
+  ghcr.io/florians25/estrichone-installer:<version> backup-archiv   # Kombiserver
 # Ziel, das zieht: wie bei der Einrichtung zusätzlich -e ESTRICHONE_PULL_FROM=https://… (Code nicht mehr nötig)
 ```
 
@@ -244,7 +366,7 @@ Je gekoppeltem Backup-Ziel gibt es zusätzlich den Notfallzugang als Text (`/bac
 | GET | `/backup/restore` | Fortschritt (`status` `requested`→`running`→`restored`→`completed` bzw. `failed`; 204 = nie) |
 | GET | `/backup/emergency-sheet` | Notfallblatt (PDF) |
 | GET/POST/DELETE | `/backup/targets…` | Backup-Ziele koppeln/entfernen, Notfallzugang |
-| GET/POST/DELETE | `/backup/mirrors…` | Backup-Ziele, die ziehen (Code + Befehl) |
+| GET/POST/DELETE | `/backup/mirrors…` | Backup-Ziele, die ziehen (Code + Befehl; `"combined": true` = Befehl für den Kombiserver) |
 | GET | `/backup/peer-updates` | Zusatzserver: installierte/verfügbare Version, Updater, letzter Auftrag (`?live=false` ohne Abfrage) |
 | POST | `/backup/peer-updates/{key}/update` | Aktualisieren (`{ "version": null }` = Version dieses Servers); 202, 409 läuft schon, 422 Version |
 | POST | `/backup/peer-updates/update-all` | alle veralteten Zusatzserver mit Updater (optional `?kind=archive`) |

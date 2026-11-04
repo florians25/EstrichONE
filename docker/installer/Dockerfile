@@ -10,4 +10,5 @@ COPY deploy/.env.example /installer/env.example
 COPY docker/installer/update.sh /installer/update.sh
 COPY docker/installer/install.sh /usr/local/bin/estrichone-install
 COPY docker/installer/peer.sh /usr/local/bin/estrichone-peer
+COPY docker/installer/kombi.sh /usr/local/bin/estrichone-kombi
 ENTRYPOINT ["estrichone-install"]

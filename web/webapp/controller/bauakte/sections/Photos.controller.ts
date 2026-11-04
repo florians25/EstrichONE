@@ -117,7 +117,8 @@ export default class Photos extends SectionBase {
 						.addStyleClass("eoPhoto"),
 					new VBox({ items: [
 						new Text({ text: "{= ${ph>caption} || ${ph>originalName} }", wrapping: false }),
-						new Text({ text: timeline ? "{ph>time}" : "{path: 'ph>takenAt', formatter: '.formatTaken'}" }).addStyleClass("eoMuted eoTabular"),
+						// Formatter als Funktion: „.formatTaken“ löst nur eine XML-Ansicht auf – hier stand sonst der rohe ISO-Text.
+						new Text({ text: timeline ? "{ph>time}" : { path: "ph>takenAt", formatter: (v: string) => this.formatTaken(v) } }).addStyleClass("eoMuted eoTabular"),
 						new ObjectStatus({ text: "{ph>relation}", icon: "sap-icon://chain-link", visible: "{= !!${ph>relation} }", state: "Information" }),
 					] }).addStyleClass("eoPhotoMeta"),
 				],

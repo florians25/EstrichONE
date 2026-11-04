@@ -106,8 +106,11 @@ internal static class BackupCenterEndpoints
 
                 var url = (options.Value.PublicUrl?.ToString() ?? $"{http.Request.Scheme}://{http.Request.Host}").TrimEnd('/');
                 var version = ApplicationVersion.Current.Split('+')[0];
-                var command = $"sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -e ESTRICHONE_PULL_FROM={url} "
-                    + $"-e ESTRICHONE_PULL_CODE={created.Code} {settings.Value.InstallerImage}:{version} backup-ziel";
+                var command = request.Combined
+                    ? $"sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi "
+                        + $"-e ESTRICHONE_PULL_FROM={url} -e ESTRICHONE_PULL_CODE={created.Code} {settings.Value.InstallerImage}:{version} backup-archiv"
+                    : $"sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -e ESTRICHONE_PULL_FROM={url} "
+                        + $"-e ESTRICHONE_PULL_CODE={created.Code} {settings.Value.InstallerImage}:{version} backup-ziel";
                 audit.Record("backup.mirror.created", user.UserId, "backup_mirror", created.Mirror.Id);
                 await db.SaveChangesAsync(ct);
                 return TypedResults.Ok(new CreateBackupMirrorResponse(created.Mirror, created.Code, url, command));

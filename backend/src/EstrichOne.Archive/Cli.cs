@@ -5,7 +5,7 @@ namespace EstrichOne.Archive;
 
 /// <summary>
 /// Befehle im laufenden Container, z. B. <c>docker exec estrichone-archive estrichone-archive pair</c>:
-/// pair (neuer Kopplungscode), status, verify (Prüfprotokoll), export &lt;datei.zip&gt; [client-id], healthcheck.
+/// pair [code] (neuer bzw. vorgegebener Kopplungscode), status, verify (Prüfprotokoll), export &lt;datei.zip&gt; [client-id], healthcheck.
 /// </summary>
 internal static class Cli
 {
@@ -21,7 +21,20 @@ internal static class Cli
         {
             case "pair":
             {
-                var (code, expires) = new ClientRegistry(options, TimeProvider.System).NewPairingCode();
+                // pair [CODE]: ohne Angabe neuer Zufallscode; mit Angabe genau dieser (Kombiserver, docker/installer/kombi.sh).
+                var registry = new ClientRegistry(options, TimeProvider.System);
+                (string code, DateTimeOffset expires) pairing;
+                try
+                {
+                    pairing = args.Length > 0 ? registry.SetPairingCode(string.Join(' ', args)) : registry.NewPairingCode();
+                }
+                catch (ArgumentException exception)
+                {
+                    Console.Error.WriteLine(exception.Message);
+                    return 2;
+                }
+
+                var (code, expires) = pairing;
                 Console.WriteLine($"Kopplungscode: {code}   (gültig bis {expires.ToLocalTime():dd.MM.yyyy HH:mm}, einmal verwendbar)");
                 return 0;
             }
@@ -74,7 +87,7 @@ internal static class Cli
             }
 
             default:
-                Console.Error.WriteLine("Befehle: pair | status | verify | export [datei.zip] [client-id] | healthcheck");
+                Console.Error.WriteLine("Befehle: pair [code] | status | verify | export [datei.zip] [client-id] | healthcheck");
                 return 2;
         }
     }

@@ -243,6 +243,17 @@ sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/floria
 Dann **System → Backup-Ziele → „Backup-Ziel koppeln“** und den **Notfallzugang** herunterladen und mit dem
 Backup-Passwort aufbewahren. Ausführlich: [backup-target/README.md](backup-target/README.md).
 
+## Kombiserver: Backup-Ziel und Archiv auf einem Rechner
+
+```bash
+sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi \
+  ghcr.io/florians25/estrichone-installer:latest backup-archiv
+```
+
+Ein Lauf, getrennte Container und Daten, eine `.env` (600) unter `/opt/estrichone-kombi`, **ein** Kopplungscode für beide:
+**System → Backup-Ziele → „Kombiserver koppeln“**. Kein zweiter Standort für das Archiv – räumlich getrennt aufstellen.
+Ausführlich: [../docs/backup.md](../docs/backup.md) („Kombiserver“).
+
 ## Überwachung
 
 **System → Überwachung** zeigt Produktivsystem, Archivserver und alle Backup-Ziele: Plattenbelegung, freier Platz und

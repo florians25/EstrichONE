@@ -120,7 +120,8 @@ public sealed class FileRecord : IVersionedEntity, ISoftDeletable
             SizeBytes = sizeBytes,
             Sha256 = sha256.ToLowerInvariant(),
             UploadedByUserId = uploadedByUserId,
-            CapturedAt = capturedAt,
+            // PostgreSQL (timestamptz) nimmt über Npgsql nur UTC an – Aufnahmezeit mit Zeitzone (+01:00) umrechnen.
+            CapturedAt = capturedAt?.ToUniversalTime(),
         };
     }
 

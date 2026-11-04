@@ -90,6 +90,30 @@ public sealed class ClientRegistry
         }
     }
 
+    /// <summary>
+    /// Vorgegebenen Code setzen (alter wird ungültig) – für den Kombiserver: Der Installer erzeugt einen starken Code und
+    /// setzt ihn bei Backup-Ziel und Archivserver, damit EstrichONE beide mit EINEM Code koppelt. Mindestens 12, höchstens
+    /// 32 Zeichen aus dem Code-Alphabet (Bindestriche und Leerzeichen werden ignoriert).
+    /// </summary>
+    public (string Code, DateTimeOffset ExpiresAt) SetPairingCode(string code)
+    {
+        var normalized = PairingProof.Normalize(code ?? string.Empty);
+        var stripped = new string([.. (code ?? string.Empty).Where(c => c is not ('-' or ' '))]);
+        if (normalized.Length is < 12 or > 32 || normalized.Length != stripped.Length)
+        {
+            throw new ArgumentException("Ungültiger Kopplungscode: 12 bis 32 Zeichen aus A–Z (ohne I, O) und 2–9.", nameof(code));
+        }
+
+        var display = string.Join('-', Enumerable.Range(0, (normalized.Length + 3) / 4)
+            .Select(i => normalized.Substring(i * 4, Math.Min(4, normalized.Length - (i * 4)))));
+        lock (_gate)
+        {
+            var state = new PairingState(display, _clock.GetUtcNow() + _options.PairingCodeLifetime, 0);
+            WritePrivate(PairingFile, JsonSerializer.Serialize(state, Json));
+            return (state.Code, state.ExpiresAt);
+        }
+    }
+
     /// <summary>Gültiger offener Code oder null.</summary>
     public (string Code, DateTimeOffset ExpiresAt)? OpenPairing()
     {

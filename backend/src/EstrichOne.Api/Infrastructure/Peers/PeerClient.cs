@@ -78,9 +78,10 @@ public static class PeerClient
     public static async Task<PeerPairing> PairAsync(Uri address, string code, string clientName, string expectedRole,
         CancellationToken cancellationToken)
     {
-        if (NormalizeCode(code).Length != 12)
+        // 12 Zeichen (Code des Zusatzservers) bzw. 16 Zeichen (Kombiserver: ein Code für Backup-Ziel und Archiv).
+        if (NormalizeCode(code).Length is not (12 or 16))
         {
-            throw new PeerException("PEER_CODE_INVALID", "Der Kopplungscode hat 12 Zeichen (z. B. ABCD-EFGH-JKLM).");
+            throw new PeerException("PEER_CODE_INVALID", "Der Kopplungscode hat 12 Zeichen (z. B. ABCD-EFGH-JKLM), beim Kombiserver 16 Zeichen.");
         }
 
         X509Certificate2? presented = null;

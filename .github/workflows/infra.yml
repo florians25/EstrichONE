@@ -29,7 +29,7 @@ jobs:
             docker build -q -f "docker/$image.Dockerfile" -t "estrichone/$image:ci" .
           done
       - name: Shellcheck
-        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh deploy/backup-target/test-remote-update.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh
+        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/kombi.sh deploy/backup-target/test-kombi.sh deploy/backup-target/test-remote-update.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh
       - name: Archiv koppeln, archivieren, Unveränderbarkeit, Löschsperre, Export, Backup-Ziel, Testmail
         env:
           ESTRICHONE_VERSION: ci
@@ -136,6 +136,10 @@ jobs:
             docker build -q -f docker/installer/Dockerfile --build-arg ESTRICHONE_VERSION="$v" -t "ghcr.io/florians25/estrichone-installer:$v" .
           done
           sudo -E VERSION="$VERSION" deploy/backup-target/test-remote-update.sh
+      - name: Kombiserver – Backup-Ziel und Archiv auf einem Rechner, ein Code, Sicherung, Abschließen & Archivieren, Topologie A
+        run: |
+          shellcheck docker/installer/kombi.sh deploy/backup-target/test-kombi.sh
+          sudo -E VERSION="$VERSION" deploy/backup-target/test-kombi.sh
       - name: Archivserver und Backup-Ziel mit einem Befehl (zweimal = Update)
         run: |
           for role in archiv backup-ziel; do

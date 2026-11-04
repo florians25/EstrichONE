@@ -20,10 +20,12 @@
 # shellcheck disable=SC1111,SC1112
 set -eu
 
-# Weitere Rechner: Archivserver bzw. Backup-Ziel (siehe peer.sh)
+# Weitere Rechner: Archivserver bzw. Backup-Ziel (siehe peer.sh), beides zusammen als Kombiserver (kombi.sh)
 RESTORE=0
 case "${1:-}" in
   archiv|archive|backup-ziel|backup-target) exec estrichone-peer "$@" ;;
+  # Kombiserver: Backup-Ziel und Archivserver auf einem Rechner, ein Kopplungscode (siehe kombi.sh)
+  backup-archiv|backup-archive|kombi|kombiserver) exec estrichone-kombi "$@" ;;
   restore|wiederherstellen) RESTORE=1 ;;
 esac
 

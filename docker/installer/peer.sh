@@ -5,9 +5,11 @@
 #   sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel
 #
 # Optionen (-e …): ESTRICHONE_PORT=8443 (Backup-Ziel: 8444), ESTRICHONE_NAME="Archiv Keller", ESTRICHONE_ADDRESS=192.168.1.50 (sonst automatisch),
+#   ESTRICHONE_BIND_ADDRESS=127.0.0.1 (nur an diese Adresse binden, z. B. hinter einem Reverse-Proxy),
 #   ESTRICHONE_DATA_DIR=/srv/archiv (Ordner auf dem Rechner statt Docker-Volume), ESTRICHONE_MIN_RETENTION_YEARS=10 (nur Archiv),
 #   ESTRICHONE_NEW_CODE=1 (neuen Kopplungscode ausgeben, z. B. für eine weitere EstrichONE-Installation),
 #   ESTRICHONE_REMOTE_UPDATE=aus (keine Fernaktualisierung über den EstrichONE-Server, siehe unten).
+# Backup-Ziel und Archivserver auf EINEM Rechner (Kombiserver): Installer-Modus backup-archiv (siehe kombi.sh).
 # Backup-Ziel, das zieht (zuhause hinter NAT/ohne feste IP, Server z. B. im Rechenzentrum – docs/backup.md):
 #   -e ESTRICHONE_PULL_FROM=https://estrichone.firma.de -e ESTRICHONE_PULL_CODE=<Code aus dem Backup Center>
 #   optional -e ESTRICHONE_PULL_FINGERPRINT=<SHA-256> (eigenes Zertifikat) und -e ESTRICHONE_PULL_INTERVAL_MINUTES=60
@@ -29,7 +31,7 @@ PREVIOUS=""
 # Einstellungen, die der Updater bei jeder Aktualisierung unverändert weitergibt (-e NAME übernimmt den Wert aus der Umgebung).
 SETTINGS="ESTRICHONE_PORT ESTRICHONE_NAME ESTRICHONE_ADDRESS ESTRICHONE_DATA_DIR ESTRICHONE_MIN_RETENTION_YEARS ESTRICHONE_PULL_FROM
   ESTRICHONE_PULL_CODE ESTRICHONE_PULL_FINGERPRINT ESTRICHONE_PULL_INTERVAL_MINUTES ESTRICHONE_CHECKIN_SECONDS ESTRICHONE_NETWORK
-  ESTRICHONE_REGISTRY ESTRICHONE_HEALTH_TIMEOUT"
+  ESTRICHONE_REGISTRY ESTRICHONE_HEALTH_TIMEOUT ESTRICHONE_BIND_ADDRESS"
 
 # Ergebnis für den EstrichONE-Server (nur bei einer Fernaktualisierung): result <status> <meldung> [version]
 result() {
@@ -159,7 +161,14 @@ if exists "$NAME"; then
   docker rename "$NAME" "$NAME-vorher"
 fi
 
-set -- -d --name "$NAME" --restart unless-stopped -p "$PORT:8443" -v "$DATA:/data" -v "$UPDATE_VOLUME:/update" \
+# Nur an eine Adresse binden (z. B. 127.0.0.1 hinter einem Reverse-Proxy mit TLS-Durchleitung): -e ESTRICHONE_BIND_ADDRESS=…
+BIND="${ESTRICHONE_BIND_ADDRESS:-}"
+case "$BIND" in
+  ""|alle|all) BIND="" ;;
+  *) printf '%s' "$BIND" | grep -Eq '^[0-9]{1,3}(\.[0-9]{1,3}){3}$' || fail "Ungültige Adresse in ESTRICHONE_BIND_ADDRESS: $BIND (IPv4)" ;;
+esac
+case "$PORT" in ''|*[!0-9]*) fail "Ungültiger Port: $PORT" ;; esac
+set -- -d --name "$NAME" --restart unless-stopped -p "${BIND:+$BIND:}$PORT:8443" -v "$DATA:/data" -v "$UPDATE_VOLUME:/update" \
   -e "ESTRICHONE_ADDRESS=${ADDRESS}" --read-only --tmpfs /tmp --security-opt no-new-privileges:true --cap-drop ALL
 [ -n "${ESTRICHONE_NAME:-}" ] && set -- "$@" -e "ESTRICHONE_NAME=$ESTRICHONE_NAME"
 [ -n "${ESTRICHONE_MIN_RETENTION_YEARS:-}" ] && set -- "$@" -e "ESTRICHONE_MIN_RETENTION_YEARS=$ESTRICHONE_MIN_RETENTION_YEARS"

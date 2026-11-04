@@ -226,7 +226,9 @@ public sealed record BackupMirrorReport(int Snapshots, long Bytes, DateTimeOffse
 public sealed record BackupMirrorDto(string Id, string Name, string? TargetName, DateTimeOffset CreatedAt, bool Paired, DateTimeOffset? CodeExpiresAt,
     DateTimeOffset? LastSeenAt, bool Reachable, BackupMirrorReport? LastReport);
 
-public sealed record CreateBackupMirrorRequest(string? Name);
+/// <param name="Combined">Kombiserver (Backup-Ziel und Archivserver auf einem Rechner): Befehl für den Installer-Modus
+/// <c>backup-archiv</c>; der Code koppelt dann auch den Archivserver (docs/backup.md, „Kombiserver“).</param>
+public sealed record CreateBackupMirrorRequest(string? Name, bool Combined = false);
 
 /// <param name="Command">Ein Befehl für den Rechner zuhause (Backup-Ziel, das zieht).</param>
 public sealed record CreateBackupMirrorResponse(BackupMirrorDto Mirror, string Code, string ServerUrl, string Command);
