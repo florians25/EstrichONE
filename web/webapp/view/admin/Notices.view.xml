@@ -1,6 +1,6 @@
 <mvc:View controllerName="estrichone.controller.admin.Notices" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
 	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.notices}" level="H1"/></f:heading>
@@ -13,21 +13,8 @@
 		</f:title>
 		<f:content>
 			<VBox busy="{view>/busy}">
-				<Panel backgroundDesign="Solid" class="sapUiSmallMarginBottom">
-					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://wrench"/><Title text="Wartungsmodus" level="H2"/></OverflowToolbar></headerToolbar>
-					<VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
-						<ObjectStatus text="{view>/maintenance/text}" state="{view>/maintenance/state}" icon="sap-icon://wrench" class="sapUiTinyMarginBottom"/>
-						<Text text="{view>/maintenance/detail}" visible="{= !!${view>/maintenance/detail} }" class="eoMuted"/>
-						<MessageStrip text="Während der Wartung können sich Benutzer nicht anmelden bzw. erhalten „Wartungsarbeiten“; Administratoren arbeiten weiter, wenn erlaubt."
-							type="Information" showIcon="true" class="sapUiSmallMarginTopBottom"/>
-						<HBox wrap="Wrap" class="eoSystemItem">
-							<Button text="Wartung planen …" icon="sap-icon://appointment-2" press=".onPlanMaintenance"/>
-							<Button text="Jetzt starten …" icon="sap-icon://media-play" type="Reject" press=".onStartMaintenance" visible="{= !${view>/maintenance/running} }"/>
-							<Button text="{= ${view>/maintenance/running} ? 'Wartung beenden' : 'Planung verwerfen' }" icon="sap-icon://stop" press=".onEndMaintenance"
-								visible="{= ${view>/maintenance/has} }"/>
-						</HBox>
-					</VBox>
-				</Panel>
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 				<Table items="{view>/announcements}" noDataText="Keine Ankündigungen der Instanz." popinLayout="GridSmall" class="sapUiSmallMarginBottom">
 					<headerToolbar><OverflowToolbar><Title text="Ankündigungen dieser Instanz" level="H2"/></OverflowToolbar></headerToolbar>
 					<columns>
@@ -57,6 +44,21 @@
 					<List items="{view>/console}" showSeparators="Inner">
 						<StandardListItem title="{view>title}" description="{view>text}" info="{view>period}" infoState="{view>severityState}" icon="sap-icon://message-warning"/>
 					</List>
+				</Panel>
+				<Panel backgroundDesign="Solid" class="eoDangerPanel">
+					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://wrench"/><Title text="Wartungsmodus" level="H2"/><Text text="– sperrt Benutzer aus" class="eoMuted"/></OverflowToolbar></headerToolbar>
+					<VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+						<ObjectStatus text="{view>/maintenance/text}" state="{view>/maintenance/state}" icon="sap-icon://wrench" class="sapUiTinyMarginBottom"/>
+						<Text text="{view>/maintenance/detail}" visible="{= !!${view>/maintenance/detail} }" class="eoMuted"/>
+						<MessageStrip text="Während der Wartung können sich Benutzer nicht anmelden bzw. erhalten „Wartungsarbeiten“; Administratoren arbeiten weiter, wenn erlaubt."
+							type="Information" showIcon="true" class="sapUiSmallMarginTopBottom"/>
+						<HBox wrap="Wrap" class="eoSystemItem">
+							<Button text="Wartung planen …" icon="sap-icon://appointment-2" press=".onPlanMaintenance"/>
+							<Button text="Jetzt starten …" icon="sap-icon://media-play" type="Reject" press=".onStartMaintenance" visible="{= !${view>/maintenance/running} }"/>
+							<Button text="{= ${view>/maintenance/running} ? 'Wartung beenden' : 'Planung verwerfen' }" icon="sap-icon://stop" press=".onEndMaintenance"
+								visible="{= ${view>/maintenance/has} }"/>
+						</HBox>
+					</VBox>
 				</Panel>
 			</VBox>
 		</f:content>

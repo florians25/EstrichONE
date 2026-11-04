@@ -1,6 +1,6 @@
 <mvc:View controllerName="estrichone.controller.admin.Archive" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
 	xmlns:core="sap.ui.core" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.archive}" level="H1"/></f:heading>
@@ -14,11 +14,21 @@
 		</f:title>
 		<f:content>
 			<VBox>
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
+				<HBox class="eoJumpBar" renderType="Bare" visible="{= !!${view>/o/connected} }">
+					<Text text="Springen zu:" class="eoMuted"/>
+					<Link text="Archivserver" press=".onJump"><customData><core:CustomData key="target" value="arServer"/></customData></Link>
+					<Link text="Zusatzserver" press=".onJump" visible="{= ${view>/peers/items}.length > 0 }"><customData><core:CustomData key="target" value="arPeers"/></customData></Link>
+					<Link text="Aufbewahrung" press=".onJump"><customData><core:CustomData key="target" value="rules"/></customData></Link>
+					<Link text="Nachweise" press=".onJump"><customData><core:CustomData key="target" value="records"/></customData></Link>
+					<Link text="Gefährliche Aktionen" press=".onJump"><customData><core:CustomData key="target" value="arDanger"/></customData></Link>
+				</HBox>
 			<VBox busy="{view>/busy}" class="sapUiSmallMarginBottom">
 				<MessageStrip visible="{= !!${view>/o} &amp;&amp; !${view>/o/connected} }" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
 					text="Noch kein Archivserver gekoppelt. Auf dem Archivrechner einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv – dann „Archivserver koppeln“ wählen und Adresse und Kopplungscode eingeben."/>
 				<MessageStrip visible="{= !!${view>/o/connection/lastError} }" text="{view>/o/connection/lastError}" type="Warning" showIcon="true" class="sapUiSmallMarginBottom"/>
-				<form:SimpleForm visible="{view>/o/connected}" editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" columnsL="2" columnsXL="2" title="Archivserver">
+				<form:SimpleForm id="arServer" visible="{view>/o/connected}" editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" columnsL="2" columnsXL="2" title="Archivserver">
 					<core:Title text="Verbindung"/>
 					<Label text="Archivserver"/><Text text="{view>/o/connection/serverName} ({view>/o/connection/address}, Version {view>/o/connection/serverVersion})"/>
 					<Label text="Fingerabdruck"/><Text text="{view>/o/connection/fingerprintDisplay}"/>
@@ -39,10 +49,10 @@
 						<Text text="Abgeschlossene Bauakten werden nach dieser Zeit komplett archiviert und aus dem System entfernt (0 = nur manuell, System → Aktenarchiv)."/>
 					</VBox>
 					<Label text="Bei Fehlern benachrichtigen" labelFor="arMail"/><Input id="arMail" value="{view>/settings/notifyEmail}" type="Email" placeholder="z. B. buero@firma.de (E-Mail-Konto nötig)"/>
-					<Label/><HBox><Button text="{i18n>common.save}" icon="sap-icon://save" press=".onSaveSettings"/><Button text="Entkoppeln" icon="sap-icon://broken-link" type="Transparent" press=".onUnpair" class="sapUiSmallMarginBegin"/></HBox>
+					<Label/><HBox><Button text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSaveSettings"/></HBox>
 				</form:SimpleForm>
 			</VBox>
-			<VBox visible="{= ${view>/peers/items}.length > 0 }" class="sapUiSmallMarginBottom">
+			<VBox id="arPeers" visible="{= ${view>/peers/items}.length > 0 }" class="sapUiSmallMarginBottom">
 				<HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="sapUiTinyMarginBottom">
 					<VBox>
 						<Title text="Aktualisierung der Zusatzserver" level="H2"/>
@@ -142,6 +152,16 @@
 					</ColumnListItem>
 				</items>
 			</Table>
+				<VBox id="arDanger" class="eoDangerZone" renderType="Bare" visible="{= !!${view>/o/connected} }">
+					<Title text="Gefährliche Aktionen" level="H2" titleStyle="H5"/>
+					<HBox class="eoDangerRow" renderType="Bare">
+						<VBox renderType="Bare" class="eoDangerText">
+							<Text text="Archivserver entkoppeln" class="eoStrong"/>
+							<Text text="Neue Dokumente werden danach nicht mehr archiviert. Bereits archivierte Dokumente bleiben auf dem Archivserver unverändert und gesperrt." class="eoMuted"/>
+						</VBox>
+						<Button text="Entkoppeln …" icon="sap-icon://broken-link" type="Reject" press=".onUnpair"/>
+					</HBox>
+				</VBox>
 			</VBox>
 		</f:content>
 	</f:DynamicPage>

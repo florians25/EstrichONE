@@ -66,6 +66,12 @@ export default class Notices extends BaseController {
 			state: running ? "Error" : w ? "Warning" : "Success",
 			detail: w ? `${period(w)}${w.message ? ` · ${w.message}` : ""}${w.adminsMayWork ? " · Administratoren arbeiten weiter" : " · auch Administratoren gesperrt"}` : "",
 		});
+		const active = (m.getProperty("/announcements") as { statusText: string }[]).filter((a) => a.statusText === "aktiv").length;
+		this.statusLine([
+			running && { text: "Wartungsmodus läuft – Benutzer sehen die Wartungsseite", level: "error" },
+			!running && !!w && (!w.endsAt || new Date(w.endsAt).getTime() > now) && { text: `Wartung geplant: ${period(w)}`, level: "info" },
+			!!cm && { text: "Wartung durch den Betreiber angekündigt", level: "info" },
+		], active ? `${active} ${active === 1 ? "Ankündigung" : "Ankündigungen"} aktiv` : "keine Wartung, keine aktive Ankündigung");
 	}
 
 	onNew(): void { void this.edit(null); }

@@ -30,6 +30,7 @@ import { initials } from "../util/format";
 import { setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
 import { navKeyFor, navigation, routes, type NavEntry } from "../util/routes";
+import { adminAreas, adminGroups, matchesArea } from "../util/adminCatalog";
 import { notices } from "../util/notices";
 import { updateHints } from "../util/updateHints";
 import { chatStatus } from "../util/chat";
@@ -196,7 +197,7 @@ export default class AppController extends BaseController {
 		if (list.data("signature") === signature) return;
 		list.data("signature", signature);
 		list.destroyItems();
-		const visible = (e: NavEntry) => !e.permission || session.has(e.permission);
+		const visible = (e: NavEntry) => (!e.permission || session.has(e.permission)) && (!e.anyPermission || e.anyPermission.some((p) => session.has(p)));
 		for (const entry of navigation) {
 			if (entry.children) {
 				const children = entry.children.filter(visible);
@@ -272,6 +273,10 @@ export default class AppController extends BaseController {
 		field.destroySuggestionItems();
 		const add = (text: string, description: string, icon: string, key: string) =>
 			field.addSuggestionItem(new SuggestionItem({ text, description, icon, key }));
+		// Verwaltungsbereiche (z. B. „Backup“, „Logo“, „Push“) direkt anspringen.
+		for (const area of adminAreas.filter((x) => (!x.permission || has(x.permission)) && matchesArea(x, value)).slice(0, 3)) {
+			add(area.title, `Verwaltung · ${adminGroups.find((g) => g.key === area.group)?.title ?? ""}`, area.icon, area.path);
+		}
 		for (const a of akten.items) add(`${a.number ?? "neu"} · ${a.title}`, `Bauakte${a.city ? ` · ${a.city}` : ""}`, "sap-icon://folder-full", `/bauakten/${a.id}`);
 		const contacts = Array.isArray(kunden) ? kunden : kunden.items ?? [];
 		for (const c of contacts.slice(0, 5)) add(c.name, `Kunde${c.city ? ` · ${c.city}` : ""}`, "sap-icon://customer", `/kunden/${c.id}`);

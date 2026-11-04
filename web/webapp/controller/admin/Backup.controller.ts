@@ -1,4 +1,5 @@
 import BaseController from "../BaseController";
+import { adminStatus } from "../../util/adminStatus";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import MessageBox from "sap/m/MessageBox";
@@ -60,6 +61,7 @@ export default class Backup extends BaseController {
 			if (restore && restoreView(restore).active) { this.schedule(); return; }
 			const s = await get<BackupStatusResponse>("backup/status");
 			this.model().setProperty("/s", s);
+			this.model().setProperty("/status", s.healthy ? adminStatus([], s.summary) : adminStatus([{ text: s.summary, level: s.configured ? "error" : "warning" }], ""));
 			this.model().setProperty("/run", info(s.lastRun));
 			this.model().setProperty("/success", info(s.lastSuccess));
 			this.model().setProperty("/check", info(s.lastCheck));

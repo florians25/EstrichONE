@@ -26,7 +26,7 @@ export default class Mail extends BaseController {
 			this.run(() => get<MailTemplateDto[]>("mail/templates")),
 		]);
 		m.setProperty("/busy", false);
-		if (s) { m.setProperty("/s", s); m.setProperty("/loaded", true); m.setProperty("/password", ""); }
+		if (s) { m.setProperty("/s", s); m.setProperty("/loaded", true); m.setProperty("/password", ""); this.mailStatus(s); }
 		m.setProperty("/templates", templates ?? []);
 		await this.loadLog();
 	}
@@ -47,6 +47,15 @@ export default class Mail extends BaseController {
 		if ([25, 465, 587].includes(Number(s.port))) this.model().setProperty("/s/port", defaultPort[s.security]);
 	}
 
+	private mailStatus(s: MailSettingsDto): void {
+		this.statusLine([
+			!s.configured && { text: "Kein E-Mail-Konto eingerichtet – Benachrichtigungen landen nur im Postfach", level: "warning" },
+			s.configured && !s.enabled && "E-Mail-Versand ist ausgeschaltet",
+			s.lastTestOk === false && { text: "Letzte Testmail fehlgeschlagen (Details unter „Konto“)", level: "error" },
+			s.configured && s.lastTestAt === null && { text: "Noch keine Testmail gesendet", level: "info" },
+		], `Versand über ${s.host}`);
+	}
+
 	private async save(): Promise<MailSettingsDto | undefined> {
 		const s = this.model().getProperty("/s") as MailSettingsDto;
 		const password = String(this.model().getProperty("/password") ?? "");
@@ -55,7 +64,7 @@ export default class Mail extends BaseController {
 			userName: s.userName?.trim() || null, password: password || null, clearPassword: false,
 			fromAddress: s.fromAddress?.trim() ?? "", fromName: s.fromName?.trim() || null, replyTo: s.replyTo?.trim() || null,
 		}));
-		if (saved) { this.model().setProperty("/s", saved); this.model().setProperty("/password", ""); }
+		if (saved) { this.model().setProperty("/s", saved); this.model().setProperty("/password", ""); this.mailStatus(saved); }
 		return saved;
 	}
 

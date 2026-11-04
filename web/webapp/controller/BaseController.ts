@@ -9,6 +9,7 @@ import { problemMessage } from "../util/api";
 import { navTo, setQuery } from "../util/navigation";
 import type { RouteMatch } from "../util/router";
 import { session } from "../util/session";
+import { adminStatus, type Issue } from "../util/adminStatus";
 
 /**
  * Gemeinsame Hilfen aller Seiten: Texte (i18n), Navigation, Rechte, Meldungen, Busy-Anzeige.
@@ -53,6 +54,18 @@ export default class BaseController extends Controller {
 		model.setSizeLimit(5000);
 		this.v().setModel(model, name);
 		return model;
+	}
+
+	/** Statuszeile der Verwaltungsseiten (Modell „view“, Pfad /status). */
+	protected statusLine(issues: (Issue | string | false | null | undefined)[], ok: string): void {
+		this.model().setProperty("/status", adminStatus(issues, ok));
+	}
+
+	/** Sprungmarke: Link mit CustomData „target“ (ID eines Abschnitts dieser Seite) scrollt den Abschnitt in Sicht. */
+	onJump(event: { getSource: () => unknown }): void {
+		const source = event.getSource() as { data: (key: string) => unknown };
+		const target = this.v().byId(String(source.data("target") ?? ""));
+		target?.getDomRef()?.scrollIntoView({ behavior: "smooth", block: "start" });
 	}
 
 	protected model(name = "view"): JSONModel {

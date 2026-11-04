@@ -42,7 +42,7 @@ Die Rollen lassen sich in der Rechtematrix anpassen und um eigene Rollen ergänz
 ## Schreibweisen in diesem Handbuch
 
 - **Fett** gesetzt sind Schaltflächen, Menüpunkte und Feldnamen, so wie sie in EstrichONE heißen, z. B. **Neue Bauakte**.
-- Ein Pfeil führt durch die Navigation: **System** → **Sicherung** bedeutet „in der Seitennavigation die Gruppe System
+- Ein Pfeil führt durch die Navigation: **Datensicherung & Archiv** → **Sicherung** bedeutet „in der Seitennavigation die Gruppe Datensicherung & Archiv
   öffnen und Sicherung wählen“.
 - Tasten werden so dargestellt: <kbd>Strg</kbd> + <kbd>Enter</kbd>. Auf dem Mac entspricht <kbd>Strg</kbd> meist <kbd>⌘</kbd>.
 - Orange Ziffern in den Abbildungen gehören zu den nummerierten Erläuterungen im Text.

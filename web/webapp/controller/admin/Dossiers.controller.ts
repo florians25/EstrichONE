@@ -28,6 +28,12 @@ export default class Dossiers extends BaseController {
 			archived: d.archivedAt ? dateTime(d.archivedAt) : "–",
 		}));
 		this.model().setProperty("/items", rows);
+		const failed = rows.filter((r) => !!r.lastError).length;
+		const unlocked = rows.filter((r) => r.status === "unlocked").length;
+		this.statusLine([failed > 0 && { text: `${failed} ${failed === 1 ? "Akte meldet" : "Akten melden"} einen Fehler`, level: "error" },
+			unlocked > 0 && { text: `${unlocked} entsperrt (änderbar)`, level: "info" },
+			rows.some((r) => r.busy) && { text: "Übertragung läuft …", level: "info" }],
+			rows.length ? `${rows.length} ausgelagerte ${rows.length === 1 ? "Bauakte" : "Bauakten"}` : "noch keine Bauakte ausgelagert");
 		clearTimeout(this.timer);
 		if (rows.some((r) => r.busy)) this.timer = setTimeout(() => { if (this.v().getDomRef()) void this.load(); }, 3000);
 	}

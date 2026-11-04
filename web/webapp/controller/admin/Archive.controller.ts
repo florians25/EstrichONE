@@ -70,6 +70,13 @@ export default class Archive extends BaseController {
 			ledger: s?.archive ? `${s.archive.ledgerEntries} Einträge · Kopf ${s.archive.ledgerHead.slice(0, 16)}…` : "–",
 			verification: verificationText(s?.lastVerification ?? null),
 		});
+		this.statusLine([
+			!o.connected && { text: "Noch kein Archivserver gekoppelt – Dokumente werden nicht revisionssicher archiviert", level: "warning" },
+			o.connected && !o.server && "Archivserver nicht erreichbar",
+			!!c?.lastError && { text: `Archivserver meldet: ${c.lastError}`, level: "error" },
+			o.counts.failed > 0 && { text: `${o.counts.failed} Archivierungen fehlgeschlagen (Liste „Fehler“)`, level: "error" },
+			o.counts.pending > 0 && { text: `${o.counts.pending} warten auf Archivierung`, level: "info" },
+		], o.connected ? `${o.counts.archived} Dokumente revisionssicher archiviert` : "");
 		await this.loadRecords();
 	}
 

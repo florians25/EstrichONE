@@ -1,5 +1,6 @@
 /** Seiten der Anwendung mit Pfad, View, Recht und Navigationseintrag. */
 import type { RouteDef } from "./router";
+import { adminAreas, adminGroups, companyTabKeys } from "./adminCatalog";
 
 export const routes: RouteDef[] = [
 	{ name: "login", pattern: "/anmelden", view: "auth.Login", public: true, title: "login.title" },
@@ -43,6 +44,7 @@ export const routes: RouteDef[] = [
 	{ name: "crews", pattern: "/planung/kolonnen", view: "planning.Resources", permission: "planning.read", nav: "crews", title: "nav.crews" },
 	{ name: "devices2", pattern: "/planung/geraete", view: "planning.Resources", permission: "planning.read", nav: "vehicles", title: "nav.vehicles" },
 	{ name: "resources", pattern: "/planung/ressourcen", view: "planning.Resources", permission: "planning.read", nav: "crews", title: "nav.crews" },
+	{ name: "adminHub", pattern: "/verwaltung", view: "admin.Overview", nav: "adminHub", title: "nav.adminHub" },
 	{ name: "masterData", pattern: "/verwaltung/stammdaten", view: "admin.MasterData", permission: "bauakten.read", nav: "masterData", title: "nav.masterData" },
 	{ name: "roles", pattern: "/verwaltung/rollen", view: "admin.Roles", permission: "users.manage", nav: "roles", title: "nav.roles" },
 	{ name: "users", pattern: "/verwaltung/benutzer", view: "admin.Users", permission: "users.manage", nav: "users", title: "nav.users" },
@@ -65,8 +67,12 @@ export interface NavEntry {
 	path?: string;
 	icon?: string;
 	permission?: string;
+	/** Sichtbar, wenn mindestens eines dieser Rechte vorliegt. */
+	anyPermission?: string[];
 	children?: NavEntry[];
 }
+
+const adminPermissions = [...new Set(adminAreas.map((a) => a.permission).filter((p): p is string => !!p))];
 
 /** Gruppierte Seitennavigation (Texte: i18n „nav.<key>“). */
 export const navigation: NavEntry[] = [
@@ -117,28 +123,14 @@ export const navigation: NavEntry[] = [
 			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 		],
 	},
-	{
-		key: "groupIt", children: [
-			{ key: "users", path: "/verwaltung/benutzer", icon: "sap-icon://employee", permission: "users.manage" },
-			{ key: "masterData", path: "/verwaltung/stammdaten", icon: "sap-icon://database", permission: "settings.manage" },
-			{ key: "roles", path: "/verwaltung/rollen", icon: "sap-icon://key-user-settings", permission: "users.manage" },
-			{ key: "devices", path: "/it-center/geraete", icon: "sap-icon://iphone", permission: "devices.read" },
-			{ key: "helpdesk", path: "/it-center/helpdesk", icon: "sap-icon://headset" },
+	// Verwaltung: Gruppen und Einträge aus dem Verwaltungskatalog; vorneweg die Übersicht mit Suche.
+	...adminGroups.map((g, i): NavEntry => ({
+		key: g.key,
+		children: [
+			...(i === 0 ? [{ key: "adminHub", path: "/verwaltung", icon: "sap-icon://action-settings", anyPermission: adminPermissions }] : []),
+			...adminAreas.filter((a) => a.group === g.key).map((a) => ({ key: a.key, path: a.path, icon: a.icon, permission: a.permission })),
 		],
-	},
-	{
-		key: "groupSystem", children: [
-			{ key: "company", path: "/system/firmendaten", icon: "sap-icon://building", permission: "settings.manage" },
-			{ key: "backup", path: "/system/sicherung", icon: "sap-icon://upload-to-cloud", permission: "backup.manage" },
-			{ key: "backupTargets", path: "/system/backup-ziele", icon: "sap-icon://it-host", permission: "backup.manage" },
-			{ key: "archive", path: "/system/archiv", icon: "sap-icon://inbox", permission: "settings.manage" },
-			{ key: "mail", path: "/system/e-mail", icon: "sap-icon://email", permission: "settings.manage" },
-			{ key: "dossiers", path: "/system/aktenarchiv", icon: "sap-icon://folder-blank", permission: "settings.manage" },
-			{ key: "monitoring", path: "/system/ueberwachung", icon: "sap-icon://line-chart", permission: "backup.manage" },
-			{ key: "notices", path: "/system/hinweise", icon: "sap-icon://message-warning", permission: "settings.manage" },
-			{ key: "audit", path: "/system/protokoll", icon: "sap-icon://activities", permission: "audit.read" },
-		],
-	},
+	})),
 ];
 
 /** Personal (HR): Reiter der Urlaubsseite als eigene Navigationseinträge markieren. */
@@ -146,6 +138,7 @@ const vacationTabs: Record<string, string> = { plan: "vacationPlan", antraege: "
 
 export function navKeyFor(nav: string | undefined, query: URLSearchParams): string {
 	if (nav === "crews" && query.get("reiter") === "geraete") return "vehicles";
+	if (nav === "company") return companyTabKeys[query.get("bereich") ?? ""] ?? "company";
 	if (nav === "vacation") return vacationTabs[query.get("reiter") ?? ""] ?? "vacation";
 	return nav ?? "";
 }

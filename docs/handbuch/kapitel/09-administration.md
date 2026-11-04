@@ -1,8 +1,30 @@
 # Administration
 
-Dieses Kapitel richtet sich an Inhaber und Administratoren. Die meisten Seiten liegen in den Gruppen **IT Center** und
-**System** der Seitennavigation und brauchen besondere Rechte (z. B. „Benutzer verwalten“, „Einstellungen verwalten“,
-„Backups verwalten“). Jede Änderung wird im **Protokoll** festgehalten (Abschnitt 9.14).
+Dieses Kapitel richtet sich an Inhaber und Administratoren. Die Verwaltungsseiten sind in der Seitennavigation nach
+Themen gruppiert und brauchen besondere Rechte (z. B. „Benutzer verwalten“, „Einstellungen verwalten“, „Backups
+verwalten“). Jede Änderung wird im **Protokoll** festgehalten (Abschnitt 9.14).
+
+| Gruppe | Seiten |
+|---|---|
+| **Organisation** | Verwaltung (Übersicht), Systemeinstellungen, Stammdaten, Module |
+| **Benutzer & Geräte** | Benutzer, Rollen und Rechte, Geräte, Helpdesk |
+| **Datensicherung & Archiv** | Sicherung (Backup Center), Backup-Ziele, Archiv, Aktenarchiv |
+| **System & Betrieb** | Überwachung, Speicher, Hinweise & Wartung, Protokoll |
+| **Integrationen** | E-Mail, Pushnachrichten |
+
+**Organisation** → **Verwaltung** zeigt alle Bereiche, die Sie sehen dürfen, als Karten – je Bereich mit kurzer
+Beschreibung und, wo sinnvoll, dem Zustand (z. B. Sicherung „aktuell“, Archiv „verbunden“, Helpdesk „2 neu“). Das
+Suchfeld findet Bereiche auch über Stichwörter: „Logo“ führt zu den Systemeinstellungen, „Push“ zu den
+Pushnachrichten, „Passwort“ zu den Benutzern. Mit <kbd>Enter</kbd> öffnet sich der Bereich, wenn genau einer passt.
+Auch die Suche oben in der Kopfzeile schlägt passende Verwaltungsbereiche vor.
+
+![Verwaltung](bilder/verwaltung.png "Verwaltungsübersicht mit Suche, Gruppen und Zustand je Bereich")
+
+Alle Verwaltungsseiten folgen demselben Aufbau: Titel mit Kurzbeschreibung, die Hauptaktion oben rechts, darunter die
+**Statuszeile** – grün „Alles in Ordnung“ mit einer kurzen Zusammenfassung, gelb oder rot „Handlungsbedarf“ mit den
+offenen Punkten (z. B. „Noch kein Backup-Ziel gekoppelt“, „Letzte Testmail fehlgeschlagen“). Aktionen mit großer
+Tragweite (Archivserver entkoppeln, Wartungsmodus starten) stehen getrennt am Seitenende unter **Gefährliche
+Aktionen** bzw. in einem rot umrandeten Abschnitt. Lange Seiten wie das Archiv bieten oben Sprungmarken.
 
 > **Wichtig:** Für Konten mit Verwaltungsrechten sollte die Zwei-Faktor-Anmeldung eingerichtet sein – erst recht, wenn
 > EstrichONE aus dem Internet erreichbar ist. Richten Sie sie für sich selbst ein (Abschnitt 2.2), bevor Sie sie unter
@@ -10,7 +32,7 @@ Dieses Kapitel richtet sich an Inhaber und Administratoren. Die meisten Seiten l
 
 ## Benutzer
 
-**IT Center** → **Benutzer** verwaltet die Konten, ihre Rollen und Zugänge.
+**Benutzer & Geräte** → **Benutzer** verwaltet die Konten, ihre Rollen und Zugänge.
 
 ![Benutzer](bilder/benutzer.png "Benutzerliste mit Rollen, Status, letzter Anmeldung und Aktionen")
 
@@ -42,7 +64,7 @@ gesperrt – so bleiben Verlauf und Protokoll nachvollziehbar.
 
 ## Rollen und Rechte
 
-**IT Center** → **Rollen und Rechte** zeigt die **Rechtematrix**: Zeilen sind die Rechte (gruppiert nach Bauakten,
+**Benutzer & Geräte** → **Rollen und Rechte** zeigt die **Rechtematrix**: Zeilen sind die Rechte (gruppiert nach Bauakten,
 Kontakte, Dokumentation, Planung, Personal, Material, Verwaltung …), Spalten die Rollen.
 
 ![Rollen und Rechte](bilder/rollen.png "Die Rechtematrix mit den vier Standardrollen")
@@ -64,13 +86,13 @@ Wichtige Rechte im Überblick:
 | Planung sehen bzw. planen | Plantafeln, Cockpit, Freigabe des Plans |
 | Personal sehen / verwalten, Urlaub beantragen / genehmigen | Personalbereich |
 | Benutzer verwalten, Rollen und Rechte verwalten | Benutzerverwaltung |
-| Geräte sehen / verwalten / sperren | IT Center → Geräte |
+| Geräte sehen / verwalten / sperren | Benutzer & Geräte → Geräte |
 | Einstellungen verwalten, Backups verwalten, Protokoll lesen | System |
 | Chat nutzen / Chat verwalten | Chat |
 
 ## Stammdaten
 
-**IT Center** → **Stammdaten** pflegt die Grundlagen, auf denen Formulare und Listen aufbauen:
+**Organisation** → **Stammdaten** pflegt die Grundlagen, auf denen Formulare und Listen aufbauen:
 
 - **Wertelisten** – Auswahllisten wie Objektart, Estrichart, Festigkeitsklasse, Aufbau, Dämmung, Heizungsart, Priorität
   und Dokumentart, jeweils mit Bezeichnung, Kurzform, Schlüssel, Reihenfolge und Aktiv-Schalter.
@@ -85,7 +107,7 @@ Wichtige Rechte im Überblick:
 
 ## Geräte und App-Einrichtung (QR-Code) {#geraete}
 
-**IT Center** → **Geräte** listet alle iPhones, iPads, Android-Geräte und Windows-Arbeitsplätze, die mit EstrichONE
+**Benutzer & Geräte** → **Geräte** listet alle iPhones, iPads, Android-Geräte und Windows-Arbeitsplätze, die mit EstrichONE
 verbunden sind – mit Nutzung, Status, App-Version und Betriebssystem sowie dem Zeitpunkt der letzten Verbindung.
 
 So richten Sie ein neues Gerät ein:
@@ -113,7 +135,7 @@ neuen Code für dasselbe Gerät.
 
 ## Firmendaten und Logo
 
-**System** → **Systemeinstellungen** → **Firma** enthält die Firmendaten für den Briefkopf: Firmenname, Straße, PLZ, Ort,
+**Organisation** → **Systemeinstellungen** → **Firma** enthält die Firmendaten für den Briefkopf: Firmenname, Straße, PLZ, Ort,
 Telefon, E-Mail und Website.
 
 ![Firmendaten](bilder/systemeinstellungen.png "Systemeinstellungen, Reiter Firma mit Firmenlogo")
@@ -125,9 +147,13 @@ rechts.
 
 ## Systemeinstellungen {#systemeinstellungen}
 
-Die **Systemeinstellungen** gelten für alle Benutzer. Die Reiter im Überblick:
+Die **Systemeinstellungen** gelten für alle Benutzer. Links stehen die Bereiche in vier Gruppen (Firma & Auftritt,
+Arbeitsweise, Zugang & Meldungen, Technik), rechts die Einstellungen des gewählten Bereichs mit Überschrift und
+Kurzbeschreibung. **Speichern** oben rechts übernimmt die Änderungen aller Bereiche. Die Statuszeile meldet fehlende
+Angaben für den Briefkopf (Anschrift, Telefon oder E-Mail) und weist auf ein fehlendes Logo oder Apple Push hin.
+Speicher, Module und Pushnachrichten haben zusätzlich einen eigenen Eintrag in der Seitennavigation.
 
-| Reiter | Einstellungen |
+| Bereich | Einstellungen |
 |---|---|
 | **Firma** | Firmendaten (Briefkopf) und Firmenlogo |
 | **Bauakten** | Nummernkreis (Aufbau der Aktennummer, z. B. `{JJJJ}-{NNN}`), Hinweis „Erstbegehung fehlt“, vorgeschlagene Vorlage, Status-Automatik („Geplant“ → „In Ausführung“ am ersten Einsatztag oder bei erster Aktivität vor Ort, nach Abnahme abschließen), Gültigkeit des Freigabelinks für Kunden |
@@ -138,9 +164,7 @@ Die **Systemeinstellungen** gelten für alle Benutzer. Die Reiter im Überblick:
 | **PDF-Layout** | Firmenlogo im Kopf, EstrichONE-Logo in der Fußzeile, Akzentfarbe, zusätzliche Fußzeile (Bankverbindung, Registergericht, USt-IdNr.), Fotos je Zeile |
 | **Speicher** | Speicherschonende Ablage von Fotos und PDFs, Belegung, Nachverdichten |
 | **Module** | Material und Chat ein- und ausschalten |
-| **System** | Sprungziele zu Sicherung, Backup-Zielen, Archiv, E-Mail und Protokoll |
-
-Reiter, die nicht in die Leiste passen, erreichen Sie über **Mehr**.
+| **Weitere Bereiche** | Sprungziele zu Sicherung, Backup-Zielen, Archiv, E-Mail und Protokoll |
 
 ### Anmeldung
 
@@ -197,7 +221,7 @@ Dateien nachverdichten** wendet die Einstellungen nachträglich auf ältere Date
 
 ## E-Mail
 
-**System** → **E-Mail** richtet das E-Mail-Konto ein, über das EstrichONE Benachrichtigungen (Freigaben, Helpdesk),
+**Integrationen** → **E-Mail** richtet das E-Mail-Konto ein, über das EstrichONE Benachrichtigungen (Freigaben, Helpdesk),
 Zugangsbriefe und Fehlermeldungen verschickt.
 
 ![E-Mail](bilder/e-mail.png "E-Mail-Konto mit SMTP-Server, Verschlüsselung und Testmail")
@@ -215,7 +239,7 @@ Im Reiter **Vorlagen** passen Sie Betreff und Text jeder E-Mail an (**Standardte
 
 ## Backup Center {#backup}
 
-**System** → **Sicherung** ist das **Backup Center**. EstrichONE sichert täglich vollständig: Datenbank (alle Bauakten,
+**Datensicherung & Archiv** → **Sicherung** ist das **Backup Center**. EstrichONE sichert täglich vollständig: Datenbank (alle Bauakten,
 Kontakte, Planung, Zeiten, Benutzer, Archiv-Nachweise), alle Dateien (Fotos, Dokumente, Videos, Pläne – Originale und
 Vorschaubilder) und die Einstellungen (Konfiguration des Servers, Zeitplan, Backup-Ziele, Schlüsselbund). Die Sicherung
 ist mit AES-256 verschlüsselt, jeder Block hat eine Prüfsumme; wöchentlich wird geprüft und probeweise wiederhergestellt.
@@ -271,7 +295,7 @@ EstrichONE.
 
 ## Backup-Ziele {#backup-ziele}
 
-**System** → **Backup-Ziele** richtet eine zusätzliche Sicherung auf einem **anderen Rechner** ein (NAS, alter PC,
+**Datensicherung & Archiv** → **Backup-Ziele** richtet eine zusätzliche Sicherung auf einem **anderen Rechner** ein (NAS, alter PC,
 Raspberry Pi). Die Ziele arbeiten „nur anhängen“: Löschen ist dort unmöglich – Schutz vor Brand, Diebstahl und
 Verschlüsselungstrojanern.
 
@@ -322,7 +346,7 @@ den Seiten Backup-Ziele und Archiv) sehen Sie je Zusatzserver die installierte u
 
 ## Archiv (revisionssicher) {#archiv}
 
-**System** → **Archiv** bewahrt Dokumente revisionssicher nach GoBD auf: unveränderbar, mit Prüfsummen, Hash-Kette und
+**Datensicherung & Archiv** → **Archiv** bewahrt Dokumente revisionssicher nach GoBD auf: unveränderbar, mit Prüfsummen, Hash-Kette und
 Löschsperre bis zum Fristende – auf einem eigenen **Archivserver**.
 
 ![Archiv](bilder/archiv.png "Archiv: gekoppelter Archivserver, Bestand, Einstellungen und Zusatzserver")
@@ -347,14 +371,14 @@ benachrichtigt wird.
 
 ### Aktenarchiv
 
-**System** → **Aktenarchiv** zeigt komplett ausgelagerte Bauakten. Sie liegen dauerhaft auf dem Archivserver; beim
+**Datensicherung & Archiv** → **Aktenarchiv** zeigt komplett ausgelagerte Bauakten. Sie liegen dauerhaft auf dem Archivserver; beim
 **Abrufen** stehen sie 5 Tage im System zur Ansicht bereit. Änderungen sind erst nach **Entsperren** mit Passwort
 möglich, danach archivieren Sie sie mit **Jetzt neu archivieren** wieder. **Bauakte archivieren …** lagert eine Akte von
 Hand aus.
 
 ## Überwachung
 
-**System** → **Überwachung** zeigt den Zustand aller Systeme: Produktivsystem (Platte, Datenbank, Sicherung,
+**System & Betrieb** → **Überwachung** zeigt den Zustand aller Systeme: Produktivsystem (Platte, Datenbank, Sicherung,
 Archiv-Warteschlange), Archivserver und Backup-Ziele. Warnschwellen: Platte ab 85 % (kritisch ab 95 % oder wenn sie in
 weniger als 14 Tagen voll wäre), Sicherung älter als 36 Stunden.
 
@@ -365,7 +389,7 @@ der Startseite und als Pushnachricht an die Administratoren.
 
 ## Hinweise und Wartung {#wartung}
 
-**System** → **Hinweise & Wartung** verwaltet Ankündigungen und den Wartungsmodus dieser Instanz.
+**System & Betrieb** → **Hinweise & Wartung** verwaltet Ankündigungen und den Wartungsmodus dieser Instanz.
 
 ![Hinweise und Wartung](bilder/hinweise-wartung.png "Wartungsmodus und Ankündigungen")
 
@@ -410,7 +434,7 @@ ziehen Sie die Zusatzserver nach (Abschnitt 9.9).
 
 ## Protokoll
 
-**System** → **Protokoll** zeigt nachvollziehbar, wer wann was getan hat: Zeitpunkt, Ereignis mit Details, Bereich,
+**System & Betrieb** → **Protokoll** zeigt nachvollziehbar, wer wann was getan hat: Zeitpunkt, Ereignis mit Details, Bereich,
 Person, Objekt und IP-Adresse. Einträge lassen sich nicht ändern oder löschen. Filtern Sie nach Bereich, Person und
 Zeitraum; **Bauakte öffnen** springt zum betroffenen Objekt, **Weitere laden** holt ältere Einträge.
 

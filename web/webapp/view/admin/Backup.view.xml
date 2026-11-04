@@ -1,6 +1,6 @@
 <mvc:View controllerName="estrichone.controller.admin.Backup" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
 	xmlns:core="sap.ui.core" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.backup}" level="H1"/></f:heading>
@@ -14,10 +14,10 @@
 		</f:title>
 		<f:content>
 			<VBox visible="{= !!${view>/s} }">
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 				<MessageStrip text="{view>/restore/text}" type="{view>/restore/type}" showIcon="true" class="sapUiSmallMarginBottom" visible="{= !!${view>/restore/text} }"/>
 				<ProgressIndicator percentValue="{view>/restore/percent}" displayValue="{view>/restore/phase}" state="Information" visible="{= !!${view>/restore/active} }"
-					class="sapUiSmallMarginBottom"/>
-				<MessageStrip text="{view>/s/summary}" type="{= ${view>/s/healthy} ? 'Success' : ${view>/s/configured} ? 'Error' : 'Warning' }" showIcon="true"
 					class="sapUiSmallMarginBottom"/>
 				<IconTabBar id="tabs" selectedKey="{view>/tab}" expandable="false" applyContentPadding="false" headerBackgroundDesign="Transparent">
 					<items>

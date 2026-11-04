@@ -36,6 +36,13 @@ export default class Roles extends BaseController {
 		void this.load();
 	}
 
+	private rolesStatus(): void {
+		const changed = this.changedRoles().length;
+		const own = this.roles.filter((r) => !r.isSystem).length;
+		this.statusLine([changed > 0 && `${changed} ${changed === 1 ? "Rolle geändert" : "Rollen geändert"} – „Änderungen speichern“ nicht vergessen`],
+			`${this.roles.length} Rollen (${own} eigene), ${this.catalog.length} Rechte`);
+	}
+
 	private async load(): Promise<void> {
 		const [roles, catalog] = await Promise.all([
 			this.run(() => get<RoleResponse[]>("access/roles")),
@@ -45,6 +52,7 @@ export default class Roles extends BaseController {
 		this.catalog = catalog ?? [...new Set(this.roles.flatMap((r) => r.permissions))].map((code) => ({ code, group: code.split(".")[0], description: code }));
 		this.draft = new Map(this.roles.map((r) => [r.id, new Set(r.permissions)]));
 		this.model().setProperty("/dirty", false);
+		this.rolesStatus();
 		this.render();
 	}
 
@@ -85,6 +93,7 @@ export default class Roles extends BaseController {
 						const set = this.draft.get(role.id)!;
 						if (e.getParameter("selected")) set.add(p.code); else set.delete(p.code);
 						this.model().setProperty("/dirty", this.changedRoles().length > 0);
+						this.rolesStatus();
 					},
 				}));
 			}

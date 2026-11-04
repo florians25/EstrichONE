@@ -19,7 +19,7 @@ Jede Bauakte hat einen **Status**. Er steuert, wo die Akte erscheint, und wird t
 
 Abgeschlossene und stornierte Bauakten heißen **Altakten**. Sie bleiben vollständig erhalten und sind über die Suche und
 **Auftragsbearbeitung** → **Altakten** jederzeit erreichbar. Wie der Status automatisch wechselt, legt die Administration
-unter **System** → **Systemeinstellungen** → **Bauakten** fest.
+unter **Organisation** → **Systemeinstellungen** → **Bauakten** fest.
 
 ## Neue Bauakte anlegen {#bauakte-anlegen}
 
@@ -241,7 +241,7 @@ Es wird nicht überschrieben, sondern bei Bedarf **korrigiert** (eine neue Prüf
 
 ![Erstbegehungsprotokoll](bilder/bauakte-pruefungen.png "Ergebnis der Erstbegehung mit Prüfpunkten und Bemerkungen")
 
-Welche Prüfpunkte und Felder erscheinen, legt die Administration unter **IT Center** → **Stammdaten** → **Formulare**
+Welche Prüfpunkte und Felder erscheinen, legt die Administration unter **Organisation** → **Stammdaten** → **Formulare**
 → **Erstbegehung** fest. Im selben Abschnitt erfassen Sie **CM-Messungen** (Messstelle, Estrich, Dicke, CM-Wert,
 Ergebnis) mit **CM-Messung erfassen**.
 
@@ -321,9 +321,23 @@ Unter **Einsätze** sehen Sie alle geplanten Einsätze der Baustelle mit Tag, Ze
 
 ## Tagesübersicht und Baustellenkarte
 
-**Auftragsbearbeitung** → **Tagesübersicht** zeigt, was heute ansteht: Einsätze aller Kolonnen mit Baustelle,
-Tätigkeit und Team, fällige Wiedervorlagen, Freigaben für Sie, Ihre Aufgaben und neue Tickets. Die Kennzahlen oben
-(Einsätze heute, offene Aufgaben, Freigaben, Wiedervorlagen, offene Anfragen, neue Tickets) springen direkt in die Liste.
+**Auftragsbearbeitung** → **Tagesübersicht** zeigt, was an einem Tag ansteht – standardmäßig heute. Mit den Pfeilen
+neben dem Titel (oder <kbd>Alt</kbd> + <kbd>←</kbd> / <kbd>→</kbd>) blättern Sie tageweise, über das Datumsfeld springen
+Sie zu einem beliebigen Tag, **Heute** führt zurück. Die Adresse merkt sich den Tag, so lässt er sich als Link
+weitergeben.
+
+- **Kennzahlen** oben: Einsätze des Tages (mit Hinweisen auf Konflikte), offene Aufgaben und Mängel (mit
+  überfälligen), Freigaben für Sie, fällige Wiedervorlagen, offene Anfragen und neue Tickets. Ein Klick öffnet die
+  passende Liste.
+- **Einsätze** links als Zeitleiste je Kolonne (mit Kolonnenfarbe, Anzahl Einsätze und Personen): Beginn und Ende,
+  Bauakte und Adresse, Art des Einsatzes, Team, Geräte, Notiz und Hinweise. Ein Klick öffnet die Einsätze der Bauakte;
+  **Cockpit** und **Kolonnenplanung** öffnen denselben Tag dort. Ist nichts eingeplant, bietet die Karte **Einsatz
+  planen** an. Darunter stehen die **Abwesenden** des Tages.
+- **Rechts** die offenen Punkte (Stand jetzt): Lieferungen des Tages, Wiedervorlagen (mit **Erledigt**), Freigaben,
+  Aufgaben und Mängel, neue Tickets, offene Anfragen. Leere Bereiche fasst eine grüne Zeile „Nichts offen: …“
+  zusammen. Es folgen die zuletzt geänderten Bauakten und – für Administratoren – der **Systemstatus** (Sicherung,
+  Archiv, E-Mail).
+- **Drucken** gibt die Tagesübersicht ohne Navigation auf A4 aus, z. B. als Aushang für die Kolonnen.
 
 ![Tagesübersicht](bilder/tagesuebersicht.png "Die Tagesübersicht für den heutigen Tag")
 

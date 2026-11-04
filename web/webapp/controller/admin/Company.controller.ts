@@ -54,15 +54,55 @@ export function numberExample(pattern: string, year = new Date().getFullYear(), 
  * Dokumente und Freigaben, Anmeldung, Benachrichtigungen, Darstellung und Karte, PDF-Layout, Module, System.
  * @namespace estrichone.controller.admin
  */
+const tabInfo: Record<string, { title: string; text: string }> = {
+	firma: { title: "Firma", text: "Briefkopf und Logo – erscheinen im Web und auf allen PDFs." },
+	darstellung: { title: "Darstellung und Karte", text: "Farbschema und Dichte als Vorgabe für neue Benutzer, Kartenkacheln für Baustellenkarte und Bauakten." },
+	pdf: { title: "PDF-Layout", text: "Logo, Akzentfarbe, Fußzeile und Fotos je Zeile in Ausdrucken (Bauakte, Abnahme, Planung, Benutzerbrief)." },
+	bauakte: { title: "Bauakten", text: "Nummernkreis, Vorgaben für neue Bauakten und automatischer Statuswechsel." },
+	dokumente: { title: "Dokumente und Freigaben", text: "Vorschläge für Frist und Rolle bei Freigaben; Ordner und Aufbewahrung." },
+	module: { title: "Module", text: "Material und Chat ein- oder ausschalten – Daten bleiben beim Abschalten erhalten." },
+	sitzungen: { title: "Anmeldung", text: "Wie lange Browser und Apps angemeldet bleiben, Zwei-Faktor-Pflicht für Administratoren." },
+	benachrichtigungen: { title: "Benachrichtigungen", text: "Welche E-Mails verschickt werden, Web Push im Browser und Apple Push für die iOS-App." },
+	speicher: { title: "Speicher", text: "Fotos und PDFs speicherschonend ablegen, Belegung des Servers und Nachverdichten bestehender Dateien." },
+	system: { title: "Weitere Bereiche", text: "Sicherung, Backup-Ziele, Archiv, E-Mail und Protokoll haben eigene Seiten in der Verwaltung." },
+};
+
 export default class Company extends BaseController {
 	private version = 0;
 
 	onInit(): void {
-		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
+		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", tabInfo: tabInfo.firma, status: null, logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
 			themes: [{ id: "system", text: "Systemeinstellung folgen (hell/dunkel)" }, ...themes], patternExample: "" });
 		this.model().attachPropertyChange((event) => {
 			if (String(event.getParameter("path")).includes("bauaktePattern")) this.updateExample();
 		});
+	}
+
+	/** Bereich wählen (Liste links); die Adresse merkt sich den Bereich (?bereich=…), die Navigation markiert ihn. */
+	private selectTab(tab: string, remember = true): void {
+		const m = this.model();
+		m.setProperty("/tab", tab);
+		m.setProperty("/tabInfo", tabInfo[tab] ?? tabInfo.firma);
+		if (remember) this.setQuery({ bereich: tab === "firma" ? null : tab });
+	}
+
+	onSection(event: Event): void {
+		const tab = String((event.getSource() as Control).data("tab") ?? "firma");
+		this.selectTab(tab);
+	}
+
+	/** Statuszeile: fehlende Angaben, die auf Ausdrucken oder beim Versand auffallen. */
+	private updateStatus(): void {
+		const m = this.model();
+		const c = (m.getProperty("/c") ?? {}) as Partial<CompanyResponse>;
+		const logo = m.getProperty("/logo") as { hasLogo: boolean };
+		const push = m.getProperty("/push") as { apnsReady?: boolean } | null;
+		this.statusLine([
+			!(c.street && c.postalCode && c.city) && "Anschrift im Briefkopf unvollständig (Bereich Firma)",
+			!c.phone && !c.email && "Telefon oder E-Mail für den Briefkopf fehlt",
+			!logo?.hasLogo && { text: "Noch kein Firmenlogo hinterlegt", level: "info" },
+			push && !push.apnsReady && { text: "Apple Push nicht eingerichtet (iOS-App nur mit Postfach)", level: "info" },
+		], "Firmendaten vollständig");
 	}
 
 	private updateExample(): void {
@@ -71,7 +111,7 @@ export default class Company extends BaseController {
 
 	async onRouteMatched(match?: RouteMatch): Promise<void> {
 		const tab = match?.query.get("bereich");
-		if (tab) this.model().setProperty("/tab", tab);
+		this.selectTab(tab && tabInfo[tab] ? tab : "firma", false);
 		this.model().setProperty("/busy", true);
 		try {
 			void this.loadPush();
@@ -94,6 +134,7 @@ export default class Company extends BaseController {
 			m.setProperty("/roles", [{ key: "", text: "Keine" }, ...roles.map((r) => ({ key: r.id, text: r.name }))]);
 			m.setProperty("/loaded", !!settings);
 			this.updateExample();
+			this.updateStatus();
 		} catch (error) {
 			this.showError(error);
 		} finally {
@@ -117,6 +158,7 @@ export default class Company extends BaseController {
 	private async loadPush(): Promise<void> {
 		const push = await get<PushSettings>("notifications/settings").catch(() => null);
 		this.model().setProperty("/push", push ? this.pushForm(push) : null);
+		if (this.model().getProperty("/loaded")) this.updateStatus();
 	}
 
 	private pushForm(push: PushSettings): PushForm {
@@ -217,12 +259,12 @@ export default class Company extends BaseController {
 		const c = m.getProperty("/c") as CompanyResponse;
 		const s = m.getProperty("/s") as SystemSettings;
 		if (!c.name?.trim()) {
-			m.setProperty("/tab", "firma");
+			this.selectTab("firma");
 			this.toast("Bitte den Firmennamen angeben.");
 			return;
 		}
 		if (!/\{N+\}/.test(s.numbering.bauaktePattern)) {
-			m.setProperty("/tab", "bauakte");
+			this.selectTab("bauakte");
 			this.toast("Der Nummernkreis braucht eine laufende Nummer, z. B. {NNN}.");
 			return;
 		}
@@ -247,6 +289,7 @@ export default class Company extends BaseController {
 			// Firmenname erscheint sofort in Kopfzeile, Statuszeile und Anmeldung (server-info liefert ihn als serverName).
 			await Promise.all([session.reloadPermissions(), session.loadServer()]);
 			this.toast("Einstellungen gespeichert");
+			this.updateStatus();
 		} catch (error) {
 			this.showError(error);
 		} finally {

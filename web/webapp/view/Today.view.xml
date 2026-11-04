@@ -1,124 +1,279 @@
-<mvc:View controllerName="estrichone.controller.Today" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:grid="sap.ui.layout.cssgrid"
-	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoToday">
+<mvc:View controllerName="estrichone.controller.Today" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:card="sap.f.cards"
+	xmlns:core="sap.ui.core" xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoToday" busy="{view>/busy}" busyIndicatorDelay="400">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.today}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="{view>/today}"/></f:expandedContent>
-				<f:snappedContent><Text text="{view>/today}"/></f:snappedContent>
-				<f:actions><Button text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh"/></f:actions>
+				<f:expandedContent>
+					<HBox alignItems="Center" class="eoDayLine" renderType="Bare">
+						<Text text="{view>/dayText}" class="eoDayText"/>
+						<ObjectStatus text="{view>/relText}" state="{= ${view>/isToday} ? 'Information' : 'None' }" inverted="{view>/isToday}" class="eoDayRel"
+							visible="{= !!${view>/relText} }"/>
+					</HBox>
+				</f:expandedContent>
+				<f:snappedContent><Text text="{view>/dayText}"/></f:snappedContent>
+				<!-- Tagesnavigation: Vortag, Datum, Folgetag, Heute -->
+				<f:content>
+					<HBox alignItems="Center" class="eoDayNav" renderType="Bare">
+						<Button id="dayPrev" icon="sap-icon://navigation-left-arrow" tooltip="Vortag (Alt+←)" press=".onPrevDay" type="Transparent"/>
+						<DatePicker id="dayPicker" value="{view>/day}" valueFormat="yyyy-MM-dd" displayFormat="EEE, dd.MM.yyyy" width="11rem" change=".onPickDay"
+							ariaLabelledBy="dayPickerLabel" class="eoDayPicker"/>
+						<Button id="dayNext" icon="sap-icon://navigation-right-arrow" tooltip="Folgetag (Alt+→)" press=".onNextDay" type="Transparent"/>
+						<Button id="dayToday" text="Heute" press=".onToday" enabled="{= !${view>/isToday} }" class="sapUiTinyMarginBegin"/>
+					</HBox>
+				</f:content>
+				<f:actions>
+					<Button id="todayPrint" text="Drucken" icon="sap-icon://print" press=".onPrint" tooltip="Tagesübersicht drucken (Strg+P)"/>
+					<Button text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh"/>
+				</f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:header>
 			<f:DynamicPageHeader pinnable="false">
-				<!-- Kennzahlen als kompakte, anklickbare Chips in einer Zeile -->
-				<FlexBox class="eoKpiChips" items="{view>/kpis}" wrap="Wrap">
-					<GenericTag text="{view>title}" design="StatusIconHidden" press=".onKpi"
-						status="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'None' }">
-						<ObjectNumber number="{view>value}" emphasized="true"
-							state="{= ${view>color} === 'Error' ? 'Error' : ${view>color} === 'Critical' ? 'Warning' : ${view>color} === 'Good' ? 'Success' : 'None' }"/>
-					</GenericTag>
-				</FlexBox>
+				<!-- Kopf nur im Ausdruck -->
+				<VBox renderType="Bare" class="eoPrintOnly eoDayPrintHead">
+					<Title text="{= 'Tagesübersicht ' + ${view>/dayText} }" level="H2"/>
+					<Text text="{= (${session>/server/serverName} || '') + ' · gedruckt ' + ${view>/printedAt} }" class="eoMuted"/>
+				</VBox>
+				<!-- Kennzahlen: kompakte, anklickbare Kacheln in einer Zeile -->
+				<List id="todayKpis" items="{view>/kpis}" showSeparators="None" class="eoDayKpis" ariaLabelledBy="kpiLabel" showNoData="false">
+					<CustomListItem type="Active" press=".onKpi" class="eoDayKpiItem">
+						<VBox class="eoDayKpi" renderType="Bare">
+							<HBox alignItems="Center" class="eoDayKpiHead" renderType="Bare">
+								<core:Icon src="{view>icon}" class="eoDayKpiIcon"/>
+								<Text text="{view>title}" class="eoDayKpiTitle" maxLines="1"/>
+							</HBox>
+							<ObjectNumber number="{view>value}" state="{view>state}" class="eoDayKpiValue"/>
+							<Text text="{view>hint}" class="eoDayKpiHint" maxLines="1"/>
+						</VBox>
+					</CustomListItem>
+				</List>
 			</f:DynamicPageHeader>
 		</f:header>
 		<f:content>
-			<VBox>
-				<grid:CSSGrid gridTemplateColumns="repeat(auto-fill, minmax(22rem, 1fr))" gridGap="1rem" class="eoTodayGrid">
-					<!-- Einsätze heute nach Kolonne: doppelte Breite -->
-					<Panel backgroundDesign="Solid" class="eoTodayPanel eoTodayWide" visible="{= ${session>/permissions/planning.read} === true }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://appointment-2"/><Title text="Einsätze heute" level="H2"/>
-							<ToolbarSpacer/><Link text="Cockpit" href="/planung/cockpit?ansicht=day"/><Link text="Tagesansicht" href="/planung?ansicht=tag"/></OverflowToolbar></headerToolbar>
-						<Table items="{path: 'view>/assignments', sorter: {path: 'crewLabel', group: true}}" noDataText="Heute ist nichts eingeplant." class="eoDenseTable" popinLayout="GridSmall">
-							<columns>
-								<Column width="5.5rem"><Text text="Zeit"/></Column>
-								<Column><Text text="Baustelle"/></Column>
-								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Tätigkeit"/></Column>
-								<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Team und Geräte"/></Column>
-							</columns>
-							<items>
-								<ColumnListItem type="Navigation" press=".onAssignment" highlight="{= ${view>warnings}.length ? 'Warning' : 'None' }">
-									<Text text="{view>timeText}" class="eoTabular"/>
-									<VBox><Text text="{view>bauakteNumber} {view>bauakteTitle}" class="eoStrong"/><Text text="{view>bauakteAddress}" class="eoMuted" visible="{= !!${view>bauakteAddress} }"/></VBox>
-									<VBox><Text text="{view>activity}"/><Text text="{view>warningText}" class="eoWarnText" visible="{= !!${view>warningText} }"/></VBox>
-									<Text text="{view>peopleText}"/>
-								</ColumnListItem>
-							</items>
-						</Table>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/contacts.read} === true &amp;&amp; ${view>/due}.length > 0 }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://call"/><Title text="Wiedervorlagen fällig" level="H2"/>
-							<ToolbarSpacer/><Link text="Anrufe" href="/anrufe"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/due}" noDataText="Keine fälligen Wiedervorlagen." showSeparators="Inner">
-							<CustomListItem>
-								<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoTodayRow">
-									<VBox><Text text="{view>who}"/><Text text="{= ${view>subject} || ${view>notes} || '–' }" class="eoMuted"/></VBox>
-									<Button text="Erledigt" icon="sap-icon://accept" type="Transparent" press=".onDone" visible="{= ${session>/permissions/contacts.edit} === true }"/>
-								</HBox>
-							</CustomListItem>
-						</List>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/bauakten.read} === true &amp;&amp; ${view>/approvals}.length > 0 }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://approvals"/><Title text="Freigaben für mich" level="H2"/>
-							<ToolbarSpacer/><Link text="Alle" href="/dokumente?reiter=freigaben"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/approvals}" noDataText="Keine Freigaben offen." showSeparators="Inner">
-							<StandardListItem title="{view>fileName}" description="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} + ' · von ' + ${view>requestedByName} }"
-								type="Navigation" press=".onApproval"/>
-						</List>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/work.read} === true &amp;&amp; ${view>/work}.length > 0 }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://task"/><Title text="Meine Aufgaben und Mängel" level="H2"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/work}" noDataText="Keine offenen Aufgaben." showSeparators="Inner">
-							<StandardListItem title="{view>title}" icon="{= ${view>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"
-								info="{path: 'view>dueDate', formatter: 'fmt.date'}" infoState="{path: 'view>dueDate', formatter: 'fmt.overdueState'}" type="Navigation" press=".onWork"/>
-						</List>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/helpdesk.agent} === true &amp;&amp; ${view>/tickets}.length > 0 }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://headset"/><Title text="Neue Tickets" level="H2"/>
-							<ToolbarSpacer/><Link text="Helpdesk" href="/it-center/helpdesk"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/tickets}" noDataText="Keine neuen Tickets." showSeparators="Inner">
-							<StandardListItem title="{view>title}" description="{view>number} · {= ${view>reporterDisplayName} || '–' }" type="Navigation" press=".onTicket"
-								info="{= ${view>reporterBlocked} ? 'kann nicht arbeiten' : '' }" infoState="Error"/>
-						</List>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${view>/absences}.length > 0 }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://general-leave-request"/><Title text="Heute abwesend" level="H2"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/absences}" showSeparators="Inner">
-							<StandardListItem title="{view>userName}" info="{path: 'view>kind', formatter: 'fmt.absenceText'}" infoState="Warning"/>
-						</List>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/materials.read} === true &amp;&amp; ${view>/deliveries}.length > 0 }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://shipping-status"/><Title text="Lieferungen heute" level="H2"/>
-							<ToolbarSpacer/><Link text="Bestellungen" href="/bestellungen"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/deliveries}" showSeparators="Inner">
-							<StandardListItem title="{view>supplierName}{= ${view>deliveryTime} ? ' · ' + ${view>deliveryTime} : '' }" description="{view>linesText}"
-								info="{path: 'view>status', formatter: 'fmt.orderStatusText'}" type="Navigation" press=".onOrder"/>
-						</List>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel" visible="{= ${session>/permissions/contacts.read} === true &amp;&amp; ${view>/inquiries}.length > 0 }">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://inbox"/><Title text="Offene Anfragen" level="H2"/>
-							<ToolbarSpacer/><Link text="Anfragen" href="/anfragen"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/inquiries}" noDataText="Keine offenen Anfragen." showSeparators="Inner">
-							<StandardListItem title="{view>who}" description="{= ${view>subject} || '–' }" info="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusText'}"/>
-						</List>
-					</Panel>
-					<Panel backgroundDesign="Solid" class="eoTodayPanel">
-						<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://folder-full"/><Title text="Zuletzt geänderte Bauakten" level="H2"/></OverflowToolbar></headerToolbar>
-						<List items="{view>/recent}" noDataText="Noch keine Bauakten." showSeparators="Inner">
-							<StandardListItem title="{view>number} {view>title}" description="{path: 'view>updatedAt', formatter: 'fmt.dateTime'}" type="Navigation" press=".onBauakte"
-								info="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" infoState="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}"/>
-						</List>
-					</Panel>
-				</grid:CSSGrid>
-				<!-- System-Status als schmale Zeile -->
-				<MessageStrip text="{view>/emptyText}" type="Success" showIcon="true" visible="{= !!${view>/emptyText} }" class="sapUiSmallMarginTop"/>
-				<FlexBox items="{view>/system}" wrap="Wrap" alignItems="Center" class="eoSystemRow" visible="{= ${view>/system}.length > 0 }">
-					<HBox alignItems="Center" class="eoSystemItem">
-						<ObjectStatus text="{view>label}: {view>text}" state="{view>state}" icon="{view>icon}"/>
-						<Text text="{view>detail}" class="eoMuted" visible="{= !!${view>detail} }"/>
-						<Link text="Öffnen" href="{view>to}"/>
-					</HBox>
+			<VBox renderType="Bare" class="eoDayBody">
+				<FlexBox class="eoDayGrid" renderType="Bare">
+					<!-- Links: Einsätze des Tages je Kolonne als Zeitleiste -->
+					<VBox renderType="Bare" class="eoDayMain">
+						<f:Card id="assignmentsCard" class="eoDayCard" visible="{= ${session>/permissions/planning.read} === true }">
+							<f:header>
+								<card:Header title="{view>/assignTitle}" subtitle="{view>/assignSubtitle}">
+									<card:toolbar>
+										<HBox alignItems="Center" class="eoCardTools" renderType="Bare">
+											<Link text="Cockpit" href="{= '/planung/cockpit?ansicht=day&amp;datum=' + ${view>/day} }"/>
+											<Link text="Kolonnenplanung" href="{= '/planung?ansicht=tag&amp;datum=' + ${view>/day} }"/>
+										</HBox>
+									</card:toolbar>
+								</card:Header>
+							</f:header>
+							<f:content>
+								<VBox renderType="Bare" width="100%">
+									<VBox items="{path: 'view>/crews', templateShareable: false}" renderType="Bare" class="eoCrews">
+										<VBox renderType="Bare" class="eoCrew">
+											<HBox alignItems="Center" class="eoCrewHead" renderType="Bare">
+												<eo:Swatch color="{view>color}"/>
+												<Title text="{view>name}" level="H3" titleStyle="H6" class="eoCrewName"/>
+												<Text text="{view>countText}" class="eoMuted eoCrewCount"/>
+												<ObjectStatus text="{view>warningText}" state="Warning" icon="sap-icon://alert" visible="{= !!${view>warningText} }" class="eoCrewWarn"/>
+											</HBox>
+											<List items="{path: 'view>items', templateShareable: false}" showSeparators="Inner" class="eoDayList">
+												<CustomListItem type="Navigation" press=".onAssignment">
+													<HBox class="eoAssign" renderType="Bare">
+														<VBox class="eoAssignTime" renderType="Bare">
+															<Text text="{view>startText}" class="eoTabular eoStrong"/>
+															<Text text="{view>endText}" class="eoTabular eoMuted" visible="{= !!${view>endText} }"/>
+														</VBox>
+														<eo:Swatch color="{view>kindColor}" shape="bar"/>
+														<VBox class="eoAssignMain" renderType="Bare">
+															<Text text="{view>siteText}" class="eoStrong eoAssignSite"/>
+															<ObjectStatus text="{view>kindText}" icon="{view>kindIcon}" class="eoAssignKind"/>
+															<Text text="{view>bauakteAddress}" class="eoMuted" visible="{= !!${view>bauakteAddress} }"/>
+															<HBox alignItems="Center" wrap="Wrap" class="eoAssignMeta" renderType="Bare">
+																<HBox alignItems="Center" renderType="Bare" visible="{= !!${view>peopleText} }" class="eoAssignFact">
+																	<core:Icon src="sap-icon://group" class="eoAssignIcon" tooltip="Team"/><Text text="{view>peopleText}"/>
+																</HBox>
+																<HBox alignItems="Center" renderType="Bare" visible="{= !!${view>resourceText} }" class="eoAssignFact">
+																	<core:Icon src="sap-icon://shipping-status" class="eoAssignIcon" tooltip="Geräte und Fahrzeuge"/><Text text="{view>resourceText}"/>
+																</HBox>
+																<HBox alignItems="Center" renderType="Bare" visible="{= !!${view>notes} }" class="eoAssignFact">
+																	<core:Icon src="sap-icon://notes" class="eoAssignIcon" tooltip="Notiz"/><Text text="{view>notes}" maxLines="2"/>
+																</HBox>
+															</HBox>
+															<ObjectStatus text="{view>warningText}" tooltip="{view>warningTooltip}" state="Warning" icon="sap-icon://alert"
+																visible="{= !!${view>warningText} }"/>
+														</VBox>
+													</HBox>
+												</CustomListItem>
+											</List>
+										</VBox>
+									</VBox>
+									<IllustratedMessage illustrationType="sapIllus-NoActivities" illustrationSize="Spot" enableDefaultTitleAndDescription="false"
+										title="{view>/emptyAssignTitle}" description="Für diesen Tag ist kein Einsatz eingeplant." visible="{= !${view>/busy} &amp;&amp; ${view>/crews}.length === 0 }"
+										class="eoDayEmpty">
+										<additionalContent>
+											<Button text="Einsatz planen" icon="sap-icon://add" press=".onPlan" visible="{= ${session>/permissions/planning.manage} === true }"/>
+										</additionalContent>
+									</IllustratedMessage>
+								</VBox>
+							</f:content>
+						</f:Card>
+						<f:Card class="eoDayCard" visible="{= ${view>/absences}.length > 0 }">
+							<f:header>
+								<card:Header title="Abwesend" subtitle="{view>/absenceSubtitle}"
+									statusText="{= String(${view>/absences}.length) }"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/absences}" showSeparators="Inner" class="eoDayList eoDayChips">
+									<CustomListItem>
+										<HBox alignItems="Center" justifyContent="SpaceBetween" class="eoCardRow eoDayRow" renderType="Bare">
+											<HBox alignItems="Center" class="eoCardRowMain" renderType="Bare">
+												<Avatar initials="{path: 'view>userName', formatter: 'fmt.initials'}" displaySize="XS" backgroundColor="Accent10"/>
+												<Text text="{view>userName}"/>
+											</HBox>
+											<ObjectStatus text="{view>kindText}" state="{view>state}" class="eoNoShrink"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+					</VBox>
+					<!-- Rechts: offene Punkte (Stand jetzt), Lieferungen des Tages, zuletzt geändert, Systemstatus -->
+					<VBox renderType="Bare" class="eoDaySide">
+						<f:Card class="eoDayCard" visible="{= ${session>/permissions/materials.read} === true &amp;&amp; ${view>/deliveries}.length > 0 }">
+							<f:header>
+								<card:Header title="Lieferungen" subtitle="{view>/deliverySubtitle}"
+									statusText="{= String(${view>/deliveries}.length) }" press=".onToOrders"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/deliveries}" showSeparators="Inner" class="eoDayList">
+									<CustomListItem type="Navigation" press=".onOrder">
+										<HBox class="eoDayItem" renderType="Bare">
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>supplierName}{= ${view>deliveryTime} ? ' · ' + ${view>deliveryTime} : '' }" class="eoStrong"/><Text text="{view>linesText}" class="eoMuted eoDayItemSub"/></VBox>
+											<ObjectStatus text="{path: 'view>status', formatter: 'fmt.orderStatusText'}" class="eoNoShrink"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+						<f:Card class="eoDayCard" visible="{= ${session>/permissions/contacts.read} === true &amp;&amp; ${view>/due}.length > 0 }">
+							<f:header>
+								<card:Header title="Wiedervorlagen fällig" subtitle="Rückrufe und Erinnerungen"
+									statusText="{= String(${view>/due}.length) }" press=".onToCalls"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/due}" showSeparators="Inner" class="eoDayList">
+									<CustomListItem>
+										<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoCardRow eoDayRow" renderType="Bare">
+											<VBox class="eoCardRowMain" renderType="Bare"><Text text="{view>who}" class="eoStrong"/><Text text="{= ${view>subject} || ${view>notes} || '–' }" class="eoMuted" maxLines="1"/></VBox>
+											<Button text="Erledigt" icon="sap-icon://accept" type="Transparent" press=".onDone" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+						<f:Card class="eoDayCard" visible="{= ${session>/permissions/bauakten.read} === true &amp;&amp; ${view>/approvals}.length > 0 }">
+							<f:header>
+								<card:Header title="Freigaben für mich" subtitle="Dokumente warten auf Ihre Entscheidung"
+									statusText="{= String(${view>/approvals}.length) }" press=".onToApprovals"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/approvals}" showSeparators="Inner" class="eoDayList">
+									<CustomListItem type="Navigation" press=".onApproval">
+										<HBox class="eoDayItem" renderType="Bare">
+											<core:Icon src="sap-icon://document"/>
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>fileName}" class="eoStrong"/><Text text="{= (${view>bauakteNumber} || '') + ' ' + ${view>bauakteTitle} + ' · von ' + ${view>requestedByName} }" class="eoMuted eoDayItemSub"/></VBox>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+						<f:Card class="eoDayCard" visible="{= ${session>/permissions/work.read} === true &amp;&amp; ${view>/work}.length > 0 }">
+							<f:header>
+								<card:Header title="Meine Aufgaben und Mängel" subtitle="Offen, nach Fälligkeit"
+									statusText="{= String(${view>/work}.length) }"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/work}" showSeparators="Inner" class="eoDayList">
+									<CustomListItem type="Navigation" press=".onWork">
+										<HBox class="eoDayItem" renderType="Bare">
+											<core:Icon src="{= ${view>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"/>
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>title}" class="eoStrong"/><Text text="{= ${view>kind} === 'defect' ? 'Mangel' : 'Aufgabe' }" class="eoMuted eoDayItemSub"/></VBox>
+											<ObjectStatus text="{path: 'view>dueDate', formatter: 'fmt.date'}" state="{path: 'view>dueDate', formatter: 'fmt.overdueState'}" class="eoNoShrink"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+						<f:Card class="eoDayCard" visible="{= ${session>/permissions/helpdesk.agent} === true &amp;&amp; ${view>/tickets}.length > 0 }">
+							<f:header>
+								<card:Header title="Neue Tickets" subtitle="Helpdesk"
+									statusText="{= String(${view>/tickets}.length) }" press=".onToHelpdesk"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/tickets}" showSeparators="Inner" class="eoDayList">
+									<CustomListItem type="Navigation" press=".onTicket">
+										<HBox class="eoDayItem" renderType="Bare">
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>title}" class="eoStrong"/><Text text="{view>number} · {= ${view>reporterDisplayName} || '–' }" class="eoMuted eoDayItemSub"/></VBox>
+											<ObjectStatus text="{= ${view>reporterBlocked} ? 'kann nicht arbeiten' : '' }" state="Error" class="eoNoShrink"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+						<f:Card class="eoDayCard" visible="{= ${session>/permissions/contacts.read} === true &amp;&amp; ${view>/inquiries}.length > 0 }">
+							<f:header>
+								<card:Header title="Offene Anfragen" subtitle="Noch nicht in eine Bauakte umgewandelt"
+									statusText="{= String(${view>/inquiries}.length) }" press=".onToInquiries"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/inquiries}" showSeparators="Inner" class="eoDayList">
+									<CustomListItem type="Navigation" press=".onInquiry">
+										<HBox class="eoDayItem" renderType="Bare">
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>who}" class="eoStrong"/><Text text="{= ${view>subject} || '–' }" class="eoMuted eoDayItemSub"/></VBox>
+											<ObjectStatus text="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusText'}" class="eoNoShrink"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+						<MessageStrip text="{view>/emptyText}" type="Success" showIcon="true" visible="{= !!${view>/emptyText} }" class="eoDayAllClear"/>
+						<f:Card class="eoDayCard">
+							<f:header>
+								<card:Header title="Zuletzt geänderte Bauakten" press=".onToBauakten"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/recent}" noDataText="Noch keine Bauakten." showSeparators="Inner" class="eoDayList">
+									<CustomListItem type="Navigation" press=".onBauakte">
+										<HBox class="eoDayItem" renderType="Bare">
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>number} {view>title}" class="eoStrong"/><Text text="{path: 'view>updatedAt', formatter: 'fmt.dateTime'}" class="eoMuted eoDayItemSub"/></VBox>
+											<ObjectStatus text="{path: 'view>status', formatter: 'fmt.bauakteStatusText'}" state="{path: 'view>status', formatter: 'fmt.bauakteStatusState'}" class="eoNoShrink"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+						<!-- Systemstatus (nur für Administratoren mit den passenden Rechten) -->
+						<f:Card class="eoDayCard eoNoPrint" visible="{= ${view>/system}.length > 0 }">
+							<f:header>
+								<card:Header title="Systemstatus" subtitle="{view>/systemSubtitle}"/>
+							</f:header>
+							<f:content>
+								<List items="{view>/system}" showSeparators="Inner" class="eoDayList">
+									<CustomListItem type="Navigation" press=".onSystem">
+										<HBox class="eoDayItem" renderType="Bare">
+											<core:Icon src="{view>icon}"/>
+											<VBox class="eoDayItemText" renderType="Bare"><Text text="{view>label}" class="eoStrong"/><Text text="{view>detail}" class="eoMuted eoDayItemSub" visible="{= !!${view>detail} }"/></VBox>
+											<ObjectStatus text="{view>text}" state="{view>state}" class="eoNoShrink"/>
+										</HBox>
+									</CustomListItem>
+								</List>
+							</f:content>
+						</f:Card>
+					</VBox>
 				</FlexBox>
 			</VBox>
 		</f:content>
 	</f:DynamicPage>
+	<core:InvisibleText id="kpiLabel" text="Kennzahlen des Tages"/>
+	<core:InvisibleText id="dayPickerLabel" text="Tag auswählen"/>
 </mvc:View>

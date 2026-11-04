@@ -45,6 +45,13 @@ export default class BackupTargets extends BaseController {
 		void this.peers.load();
 		const items = await this.run(() => get<BackupTargetDto[]>("backup/targets"));
 		this.model().setProperty("/busy", false);
+		const targets = items ?? [];
+		this.statusLine([
+			!targets.length && { text: "Noch kein Backup-Ziel gekoppelt – Sicherung liegt nur auf diesem Server", level: "warning" },
+			...targets.filter((t) => !t.remote).map((t) => ({ text: `${t.name} nicht erreichbar`, level: "warning" as const })),
+			...targets.filter((t) => t.lastRun?.status === "failed").map((t) => ({ text: `letzte Sicherung zu ${t.name} fehlgeschlagen`, level: "error" as const })),
+			...targets.filter((t) => t.remote && !t.remote.appendOnly).map((t) => ({ text: `${t.name} erlaubt Löschen`, level: "warning" as const })),
+		], `${targets.length} ${targets.length === 1 ? "Backup-Ziel" : "Backup-Ziele"} erreichbar und geschützt`);
 		this.model().setProperty("/items", (items ?? []).map((t) => ({
 			...t,
 			paired: dateTime(t.pairedAt),

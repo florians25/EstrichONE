@@ -67,7 +67,7 @@ Anmeldezeit und letzter Aktivität. Unbekannte Anmeldungen beenden Sie mit **Abm
 | 4 | **Chat** | Öffnet den Chat; eine Zahl zeigt ungelesene Nachrichten (Abschnitt 8.2). |
 | 5 | **Telefon** | Schnellerfassung eines Anrufs während des Gesprächs (Abschnitt 4.2). Die Zahl zeigt fällige Wiedervorlagen. |
 | 6 | **Benutzermenü** | Einstellungen, Benachrichtigungen, Passwort, Anmeldung und Sicherheit, Abmelden. |
-| 7 | **Seitennavigation** | Alle Bereiche, gruppiert nach Auftragsbearbeitung, Planung, Material, Büro, Personal, IT Center und System. |
+| 7 | **Seitennavigation** | Alle Bereiche, gruppiert nach Auftragsbearbeitung, Planung, Material, Büro, Personal und – für die Verwaltung – Organisation, Benutzer & Geräte, Datensicherung & Archiv, System & Betrieb sowie Integrationen. |
 | 8 | **Cards** | Das Wichtigste für Sie auf einen Blick, jeweils mit Sprung in die passende Liste. |
 
 Unten zeigt die **Statuszeile**, mit welchem Server Sie verbunden sind, dessen Version sowie Ihren Namen und das Datum.

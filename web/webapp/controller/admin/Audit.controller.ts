@@ -34,5 +34,7 @@ export default class Audit extends BaseController {
 			detailsText: Object.entries(e.details ?? {}).map(([k, v]) => `${k}: ${v ?? "–"}`).join(" · ") }));
 		m.setProperty("/items", more ? [...m.getProperty("/items"), ...rows] : rows);
 		m.setProperty("/cursor", page.nextCursor);
+		const count = (m.getProperty("/items") as unknown[]).length;
+		this.statusLine([{ text: `${count}${page.nextCursor ? "+" : ""} Ereignisse im gewählten Zeitraum · unveränderbar gespeichert`, level: "info" }], "");
 	}
 }

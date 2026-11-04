@@ -4,7 +4,7 @@
 
 Klemmt etwas – am iPad der Kolonne, an der App oder im Büro –, melden Mitarbeiter es als **Ticket**. Die Apps senden auf
 Wunsch technische Angaben (Gerät, Version, Fehlermeldung) mit; Bildschirmfotos lassen sich anhängen. Das Helpdesk-Team
-bearbeitet die Tickets unter **IT Center** → **Helpdesk**.
+bearbeitet die Tickets unter **Benutzer & Geräte** → **Helpdesk**.
 
 ![Helpdesk](bilder/helpdesk.png "Ticketliste und Ticket mit Verlauf und Antwortfeld")
 

@@ -70,6 +70,7 @@ export default class MasterData extends BaseController {
 	private async load(): Promise<void> {
 		const all = (await this.run(() => get<CatalogEntry[]>("catalog"))) ?? [];
 		const m = this.model();
+		this.statusLine([], `${all.length} Einträge in Auswahllisten, Vorlagen und Texten · Änderungen gelten sofort für alle`);
 		m.setProperty("/textBlock", all.filter((e) => e.kind === "textBlock"));
 		m.setProperty("/folderTemplate", all.filter((e) => e.kind === "folderTemplate").map((e) => ({
 			...e, categoryText: documentCategories[e.content.category as keyof typeof documentCategories]?.text ?? String(e.content.category),

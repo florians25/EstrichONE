@@ -33,6 +33,12 @@ export default class Users extends BaseController {
 		const name = (id: string) => this.roles.find((r) => r.id === id)?.name ?? "?";
 		this.model().setProperty("/items", (users ?? []).map((u) => ({ ...u, roleText: u.roleIds.map(name).join(", ") || "–" })));
 		this.model().setProperty("/busy", false);
+		const list = users ?? [];
+		const active = list.filter((u) => u.isActive).length;
+		const locked = list.length - active;
+		this.statusLine([
+			locked > 0 && { text: `${locked} ${locked === 1 ? "Konto gesperrt" : "Konten gesperrt"}`, level: "info" },
+		], `${active} ${active === 1 ? "aktives Konto" : "aktive Konten"}, ${list.filter((u) => u.twoFactorEnabled).length} mit Zwei-Faktor-Anmeldung`);
 	}
 
 	private row(e: Event): UserListItem {

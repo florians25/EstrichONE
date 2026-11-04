@@ -28,6 +28,10 @@ export default class Devices extends BaseController {
 		const pending = list.filter((d) => d.status === "pending").length;
 		this.model().setData({ items: list.map((d) => ({ ...d, icon: icons[d.platform] ?? icons.other })), pending,
 			pendingText: `${pending} ${pending === 1 ? "Gerät wartet" : "Geräte warten"} auf Freigabe.`, busy: false });
+		const locked = list.filter((d) => d.status === "locked").length;
+		this.statusLine([pending > 0 && `${pending} ${pending === 1 ? "Gerät wartet" : "Geräte warten"} auf Freigabe`,
+			locked > 0 && { text: `${locked} gesperrt`, level: "info" }],
+			list.length ? `${list.filter((d) => d.status === "active").length} Geräte aktiv` : "noch keine Geräte registriert");
 	}
 
 	private async act(event: Event, verb: string): Promise<void> {

@@ -306,17 +306,6 @@ li[data-dot] { display: flex; align-items: center; }
 .eoColorSelect .sapMSltLabel::before { content: ""; display: inline-block; width: 0.875rem; height: 0.875rem; border-radius: 50%;
 	margin-right: 0.5rem; vertical-align: middle; background: var(--eoDot, transparent); box-shadow: 0 0 0 1px var(--sapGroup_ContentBorderColor); }
 
-/* Tagesübersicht: Raster über die volle Breite, kompakte Listen, schmale Systemzeile, dezente leere Zustände. */
-.eoTodayGrid { margin-bottom: 1rem; }
-.eoTodayPanel { margin: 0 !important; }
-.eoTodayPanel .sapMPanelContent { padding: 0 !important; }
-.eoTodayWide { grid-column: span 2; }
-@media (max-width: 900px) { .eoTodayWide { grid-column: auto; } }
-.eoTodayRow { padding: 0.375rem 1rem; }
-.eoToday .sapMListNoData, .eoToday .sapMListTblNoData { height: auto !important; min-height: 0; padding: 0.5rem 1rem; color: var(--sapContent_LabelColor);
-	font-size: var(--sapFontSmallSize); justify-content: flex-start; }
-.eoWarnText { color: var(--sapCriticalTextColor); font-size: var(--sapFontSmallSize); }
-.eoSystemRow { gap: 0.5rem 2rem; padding: 0.5rem 1rem; border-top: 1px solid var(--sapGroup_TitleBorderColor); }
 .eoSystemItem { gap: 0.5rem 1rem; }
 /* Dokumente der Bauakte: Ablage links, Liste rechts – auch auf 13-Zoll-Bildschirmen nebeneinander */
 @media (min-width: 900px) { .eoDocLayout.sapMFlexBox { flex-wrap: nowrap; } }
@@ -329,11 +318,6 @@ li[data-dot] { display: flex; align-items: center; }
 .eoSiteIcon { font-size: 1.5rem; color: var(--sapContent_IconColor); }
 .eoPhotoStrip { gap: 0.25rem; max-width: 50rem; overflow-x: auto; }
 .eoPhotoStrip .eoThumb, .eoPhotoStrip img { object-fit: cover; border-radius: 0.25rem; cursor: pointer; }
-
-/* Tagesübersicht: Kennzahlen als Chips */
-.eoKpiChips { gap: 0.5rem; }
-.eoKpiChips .sapMGenericTag { margin: 0; height: 2.25rem; }
-.eoKpiChips .sapMGenericTag .sapMObjectNumberText { font-size: 1.125rem; }
 
 /* Stammdaten: Kategorien links, Inhalt rechts */
 .eoMasterData { gap: 1.5rem; }
@@ -745,3 +729,127 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 }
 .eoHealthBanner .sapMMsgStripMessage { font-weight: 600; }
 .eoHealthBanner.sapMMsgStripError { border-width: 2px; }
+
+/* ---- Tagesübersicht: Tagesnavigation, Kennzahlkacheln, Zeitleiste je Kolonne, Karten rechts, Druck ---- */
+.eoDayLine { gap: 0.75rem; flex-wrap: wrap; }
+.eoDayText.sapMText { font-size: var(--sapFontLargeSize); color: var(--sapContent_LabelColor); }
+.eoDayNav { gap: 0.25rem; flex-wrap: nowrap; }
+.eoDayKpis.sapMList { background: transparent; }
+.eoDayKpis.sapMList > .sapMListUl { display: grid; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); gap: 0.75rem; background: transparent; }
+.eoDayKpis .sapMLIB.eoDayKpiItem { padding: 0; height: auto; min-height: 0; border: 1px solid var(--sapTile_BorderColor, var(--sapGroup_ContentBorderColor));
+	border-radius: var(--sapTile_BorderCornerRadius, 0.75rem); background: var(--sapTile_Background, var(--sapGroup_ContentBackground));
+	box-shadow: var(--sapContent_Shadow0); transition: box-shadow 0.15s ease; }
+.eoDayKpis .sapMLIB.eoDayKpiItem:hover { box-shadow: var(--sapContent_Shadow1); background: var(--sapTile_Hover_Background, var(--sapTile_Background)); }
+.eoDayKpis .sapMLIB.eoDayKpiItem .sapMLIBContent { width: 100%; }
+.eoDayKpi { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 0.5rem; align-items: end; padding: 0.625rem 0.875rem 0.5rem; min-width: 0; }
+.eoDayKpiHead { gap: 0.375rem; min-width: 0; grid-column: 1 / span 2; }
+.eoDayKpiIcon { color: var(--sapContent_IconColor); flex: none; font-size: 0.875rem; }
+.eoDayKpiTitle.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSize); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eoDayKpiValue.sapMObjectNumber { line-height: 2.25rem; }
+.eoDayKpiValue.sapMObjectNumber .sapMObjectNumberText { font-size: 1.75rem; line-height: 2.25rem; font-weight: 400; font-variant-numeric: tabular-nums; }
+.eoDayKpiHint.sapMText { padding-bottom: 0.4375rem; color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eoDayBody { display: flex; flex-direction: column; }
+.eoDayGrid { display: grid !important; grid-template-columns: minmax(0, 1.75fr) minmax(19rem, 1fr); gap: 1rem; align-items: start; }
+@media (max-width: 1100px) { .eoDayGrid { grid-template-columns: minmax(0, 1fr); } }
+.eoDayMain, .eoDaySide { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
+.eoDayCard.sapFCard { overflow: hidden; }
+.eoDayCard .sapFCardHeader { padding: 0; }
+.eoDayCard .sapFCardHeader .sapFCardHeaderMainPart { padding: 0.75rem 1rem 0.5rem; }
+.eoDayCard .sapFCardHeader .sapFCardIcon.sapFAvatar { width: 2.25rem; height: 2.25rem; min-width: 2.25rem; font-size: 1.125rem; }
+.eoDayCard .sapFCardHeader .sapFCardIcon .sapUiIcon { font-size: 1.25rem !important; color: var(--sapContent_IconColor); }
+.eoDayCard .sapFCardHeader .sapFCardTitle { font-size: var(--sapFontHeader5Size); }
+.eoDayCard .sapFCardContent .sapMList { margin-top: 0; }
+.eoCardTools { gap: 1rem; padding-right: 0.25rem; }
+.eoCrews { display: flex; flex-direction: column; }
+.eoCrew { border-top: 1px solid var(--sapList_BorderColor); }
+.eoCrewHead { gap: 0.5rem; padding: 0.625rem 1rem 0.375rem; background: var(--sapList_GroupHeaderBackground, transparent); }
+.eoCrewHead .eoSwatch { margin-right: 0; width: 0.625rem; height: 0.625rem; border-radius: 50%; }
+.eoCrewName.sapMTitle { flex: 0 1 auto; }
+.eoCrewCount.sapMText { flex: 1 1 auto; font-size: var(--sapFontSmallSize); }
+.eoDayList.sapMList .sapMLIB { padding-left: 1rem; padding-right: 1rem; }
+.eoDayList.sapMList .sapMListNoData { padding: 0.5rem 1rem; color: var(--sapContent_LabelColor); height: auto; }
+.eoDayList.sapMList .sapMCustomLI { min-height: 2.75rem; }
+.eoAssign { display: flex; align-items: stretch; gap: 0.75rem; width: 100%; padding: 0.625rem 0; min-width: 0; }
+.eoAssignTime { flex: 0 0 4.25rem; display: flex; flex-direction: column; }
+.eoAssign .eoColorBar { margin-right: 0; width: 0.1875rem; }
+.eoAssignMain { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 0.125rem; }
+.eoAssignSite.sapMText { overflow-wrap: anywhere; }
+.eoAssignKind.sapMObjStatus { margin-bottom: 0.125rem; }
+.eoAssignKind.sapMObjStatus .sapMObjStatusText, .eoAssignKind.sapMObjStatus .sapMObjStatusIcon { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
+.eoAssignMeta { gap: 0.125rem 1.25rem; margin-top: 0.125rem; }
+.eoAssignFact { gap: 0.375rem; min-width: 0; }
+.eoAssignIcon { color: var(--sapContent_IconColor); font-size: 0.875rem; flex: none; }
+.eoDayRow { padding: 0.5rem 0; }
+.eoDayItem { display: flex; align-items: center; gap: 0.75rem; width: 100%; min-width: 0; padding: 0.5rem 0; }
+.eoDayItemText { display: flex; flex-direction: column; flex: 1 1 auto; min-width: 0; }
+.eoDayItemText > .sapMText { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.eoDayItemSub.sapMText { font-size: var(--sapFontSmallSize); }
+.eoDayItem > .sapUiIcon { color: var(--sapContent_IconColor); flex: none; }
+.eoDayAllClear { margin: 0 !important; }
+.eoDayEmpty.sapMIllustratedMessage { padding: 1rem 1rem 1.5rem; }
+.eoPrintOnly { display: none !important; }
+@media (max-width: 600px) {
+	.eoDayKpis.sapMList > .sapMListUl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
+	.eoDayKpiValue.sapMObjectNumber .sapMObjectNumberText { font-size: 1.5rem; line-height: 2rem; }
+	.eoDayNav .eoDayPicker { width: 9rem !important; }
+}
+@media print {
+	.eoToday .sapFDynamicPageHeader { display: block !important; box-shadow: none; padding: 0 0 0.5rem; }
+	.eoPrintOnly { display: flex !important; margin-bottom: 0.75rem; }
+	.eoToday, .eoToday .sapFDynamicPageContentWrapper, .eoToday .sapFDynamicPageHeader, .eoToday .sapFDynamicPageTitleWrapper { background: #fff !important; }
+	.eoDayEmpty .sapMIllustratedMessageIllustration { display: none !important; }
+	.eoDayGrid { grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); }
+	.eoDayCard.sapFCard, .eoDayKpis .sapMLIB.eoDayKpiItem { box-shadow: none !important; break-inside: avoid; }
+	.eoCrew { break-inside: avoid; }
+	.eoCardTools, .eoDayEmpty .sapMIllustratedMessageAdditionalContent, .eoDayRow .sapMBtn { display: none !important; }
+	.sapFDynamicPage, .sapFDynamicPageContentWrapper, .sapFDynamicPageContentFitContainer { overflow: visible !important; height: auto !important; position: static !important; }
+}
+
+/* ---- Verwaltung: einheitliches Seitenmuster (Statuszeile, Abschnitte, Gefahrenbereich) und Übersicht mit Suche ---- */
+.eoAdminStatus.sapMMsgStrip { margin: 0 0 1rem; }
+.eoAdmin .sapFDynamicPageHeader .eoAdminStatus.sapMMsgStrip { margin: 0; }
+.eoAdminHubHead { display: flex; flex-direction: column; gap: 0.75rem; max-width: 64rem; }
+.eoAdminSearch.sapMSF { max-width: 40rem; }
+.eoAdminGroups { display: flex; flex-direction: column; gap: 1.75rem; max-width: 96rem; }
+.eoAdminGroupText.sapMText { margin: 0.125rem 0 0.75rem; }
+.eoAdminTiles.sapMList, .eoAdminTiles.sapMList > .sapMListUl { background: transparent; }
+.eoAdminTiles.sapMList > .sapMListUl { display: grid; grid-template-columns: repeat(auto-fill, minmax(19rem, 1fr)); gap: 0.75rem; }
+.eoAdminTiles .sapMLIB.eoAdminTile { padding: 0; height: auto; min-height: 0; border: 1px solid var(--sapTile_BorderColor, var(--sapGroup_ContentBorderColor));
+	border-radius: var(--sapTile_BorderCornerRadius, 0.75rem); background: var(--sapTile_Background, var(--sapGroup_ContentBackground)); box-shadow: var(--sapContent_Shadow0); }
+.eoAdminTiles .sapMLIB.eoAdminTile:hover { box-shadow: var(--sapContent_Shadow1); }
+.eoAdminTiles .sapMLIB.eoAdminTile .sapMLIBContent { width: 100%; }
+.eoAdminTileBody { display: flex; gap: 0.875rem; align-items: flex-start; padding: 0.875rem 1rem; min-width: 0; }
+.eoAdminTileIcon.sapUiIcon { flex: none; width: 2.5rem; height: 2.5rem; line-height: 2.5rem; font-size: 1.25rem; border-radius: 0.625rem;
+	color: var(--sapButton_Lite_TextColor, var(--sapLinkColor)); background: var(--sapButton_Selected_Background, var(--sapList_SelectionBackgroundColor)); }
+.eoAdminTileText { display: flex; flex-direction: column; gap: 0.25rem; min-width: 0; flex: 1 1 auto; }
+.eoAdminTileHead { gap: 0.5rem; }
+/* Abschnitte: Überschrift + Kurzbeschreibung, Inhalt als ruhige Fläche */
+.eoAdminSection { display: flex; flex-direction: column; margin: 0 0 1.5rem; max-width: 72rem; }
+.eoAdminSection > .sapMTitle { margin-bottom: 0.125rem; }
+.eoAdminSectionText.sapMText { color: var(--sapContent_LabelColor); margin-bottom: 0.625rem; }
+.eoAdminSurface { background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem);
+	padding: 0.5rem 1rem; }
+/* Gefährliche Aktionen getrennt am Seitenende */
+.eoDangerZone { display: flex; flex-direction: column; gap: 0.5rem; margin: 2rem 0 1rem; padding: 1rem; max-width: 72rem;
+	border: 1px solid var(--sapErrorBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); background: var(--sapErrorBackground); }
+.eoDangerZone > .sapMTitle { color: var(--sapNegativeTextColor, var(--sapErrorColor)); }
+.eoDangerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.5rem 0;
+	border-top: 1px solid var(--sapGroup_ContentBorderColor); }
+.eoDangerRow:first-of-type { border-top: 0; }
+.eoDangerRow > .sapMVBox, .eoDangerText { flex: 1 1 20rem; min-width: 0; }
+/* Systemeinstellungen: Bereiche gruppiert links, Inhalt rechts */
+.eoSettingsLayout { display: grid !important; grid-template-columns: 15rem minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+@media (max-width: 1000px) { .eoSettingsLayout { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; } }
+.eoSettingsNav.sapMList { position: sticky; top: 0; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); overflow: hidden; }
+.eoSettingsNav .sapMGHLI { padding-top: 0.75rem; }
+.eoSettingsNav .sapMLIB.sapMSLI { border-bottom: none; }
+.eoSettingsMain { display: flex; flex-direction: column; min-width: 0; max-width: 60rem; }
+.eoSettingsHead { display: flex; flex-direction: column; gap: 0.125rem; margin-bottom: 0.75rem; }
+.eoSettingsTabs.sapMITB > .sapMITBContainerContent, .eoSettingsTabs .sapMITBContent { padding: 0; background: transparent; border: 0; }
+.eoSettingsTabs .sapUiSimpleForm, .eoSettingsTabs .sapUiForm { width: 100% !important; max-width: 60rem; box-sizing: border-box; }
+.eoSettingsTabs .sapUiForm, .eoAdminCard.sapUiForm { border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); overflow: hidden; margin-bottom: 1rem; }
+.eoSettingsTabs .sapMListTbl, .eoSettingsTabs .sapMList { max-width: 100% !important; }
+.eoJumpBar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.25rem; margin: 0 0 1rem; }
+.eoDangerPanel.sapMPanel { margin-top: 1.5rem; border: 1px solid var(--sapErrorBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); overflow: hidden; }
+.eoAdmin .sapUiSimpleForm > .sapUiForm, .eoAdmin .sapUiSimpleForm.sapUiForm { border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); }
+.eoAdmin .sapUiSimpleForm { margin-bottom: 1rem; }

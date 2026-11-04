@@ -345,18 +345,12 @@ export default {
   },
   async systemeinstellungen(h) {
     const p = h.page;
-    for (const [name, file] of [["Firma", "systemeinstellungen"], ["Bauakten", "einstellungen-bauakten"], ["Anmeldung", "einstellungen-anmeldung"],
-      ["Benachrichtigungen", "einstellungen-push"], ["Speicher", "einstellungen-speicher"], ["Module", "einstellungen-module"], ["System", "einstellungen-system"]]) {
-      await h.go("/system/firmendaten");
-      const t = tab(p, name);
-      if (await t.isVisible().catch(() => false)) {
-        await t.click();
-      } else {
-        await visible(p.getByRole("button", { name: /Mehr/ })).click();
-        await visible(p.locator("[role=menuitem], .sapMITBSelectList li, [role=option]").filter({ hasText: name })).click();
-      }
+    // Bereiche links in der Liste; direkt über die Adresse (?bereich=…) öffnen.
+    for (const [key, file] of [["firma", "systemeinstellungen"], ["bauakte", "einstellungen-bauakten"], ["sitzungen", "einstellungen-anmeldung"],
+      ["benachrichtigungen", "einstellungen-push"], ["speicher", "einstellungen-speicher"], ["module", "einstellungen-module"], ["system", "einstellungen-system"]]) {
+      await h.go(`/system/firmendaten?bereich=${key}`);
       await h.idle();
-      if (name === "Benachrichtigungen") await visible(p.getByText("Apple Push (APNs) für die iOS-App")).scrollIntoViewIfNeeded().catch(() => undefined);
+      if (key === "benachrichtigungen") await visible(p.getByText("Apple Push (APNs) für die iOS-App")).scrollIntoViewIfNeeded().catch(() => undefined);
       await h.shot(file);
     }
   },
@@ -392,7 +386,7 @@ export default {
       ["/personal", "personal"], ["/personal/urlaub?reiter=plan", "urlaubsplan"], ["/personal/urlaub?reiter=antraege", "urlaubsantraege"],
       ["/personal/urlaub", "urlaub"], ["/bestellungen", "bestellungen"], ["/material", "material"], ["/lieferanten", "lieferanten"],
       ["/benachrichtigungen", "benachrichtigungen"], ["/verwaltung/nachrichten", "nachrichten"],
-      ["/verwaltung/benutzer", "benutzer"], ["/verwaltung/rollen", "rollen"], ["/verwaltung/stammdaten", "stammdaten"], ["/it-center/geraete", "geraete"],
+      ["/verwaltung", "verwaltung"], ["/verwaltung/benutzer", "benutzer"], ["/verwaltung/rollen", "rollen"], ["/verwaltung/stammdaten", "stammdaten"], ["/it-center/geraete", "geraete"],
       ["/system/backup-ziele", "backup-ziele"], ["/system/archiv", "archiv"], ["/system/e-mail", "e-mail"], ["/system/aktenarchiv", "aktenarchiv"],
       ["/system/ueberwachung", "ueberwachung"], ["/system/protokoll", "protokoll"]]) {
       await h.go(path);

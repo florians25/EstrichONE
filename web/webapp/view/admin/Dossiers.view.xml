@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.admin.Dossiers" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.dossiers}" level="H1"/></f:heading>
@@ -11,6 +11,9 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
+			<VBox renderType="Bare">
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 			<Table id="dossiers" items="{view>/items}" busy="{view>/busy}" growing="true" growingThreshold="100" noDataText="Noch keine Bauakte ausgelagert. Automatisch: System → Archiv → „Akten auslagern nach … Monaten“.">
 				<columns>
 					<Column><Text text="Bauakte"/></Column>
@@ -35,6 +38,7 @@
 					</ColumnListItem>
 				</items>
 			</Table>
+			</VBox>
 		</f:content>
 	</f:DynamicPage>
 </mvc:View>

@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.admin.BackupTargets" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.backupTargets}" level="H1"/></f:heading>
@@ -14,6 +14,8 @@
 		</f:title>
 		<f:content>
 			<VBox busy="{view>/busy}">
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${view>/items}.length === 0 }"
 					text="Auf dem Zielrechner (Linux mit Docker) einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel – er zeigt Adresse und Kopplungscode. Danach „Backup-Ziel koppeln“ wählen."/>
 				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${view>/canKombi} &amp;&amp; ${view>/items}.length === 0 }"

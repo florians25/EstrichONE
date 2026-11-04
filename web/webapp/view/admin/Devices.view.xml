@@ -1,6 +1,6 @@
 <mvc:View controllerName="estrichone.controller.admin.Devices" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
 	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.devices}" level="H1"/></f:heading>
@@ -10,6 +10,8 @@
 		</f:title>
 		<f:content>
 			<VBox>
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 				<MessageStrip text="{view>/pendingText}" type="Warning" showIcon="true" visible="{= ${view>/pending} > 0 }" class="sapUiSmallMarginBottom"/>
 				<Table items="{view>/items}" busy="{view>/busy}" noDataText="Noch keine Geräte registriert." popinLayout="GridSmall">
 					<columns>
