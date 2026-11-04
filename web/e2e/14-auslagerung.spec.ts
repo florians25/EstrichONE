@@ -71,7 +71,7 @@ test('Speicher-Auslagerung: koppeln, Regeln speichern, Dokument auslagern, trans
   expect(where.json.map((w) => w.fileId)).toContain(file);
 
   // Wieder lokal speichern (Bauakte).
-  await page.getByRole('button', { name: 'Wieder lokal speichern' }).first().click();
+  await page.locator('.sapMListTblRow').filter({ hasText: 'Auslagerung E2E' }).getByRole('button', { name: 'Wieder lokal speichern' }).first().click();
   const confirm = page.locator('.sapMMessageBox').filter({ hasText: 'Auslagerung E2E' });
   await confirm.getByRole('button', { name: 'Wieder lokal speichern' }).click();
   await expect(toast(page)).toContainText('Rückholen gestartet');
