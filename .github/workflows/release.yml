@@ -52,6 +52,19 @@ jobs:
               echo "Kein Handbuch unter $pdf – übersprungen."
             fi
           done
+      - name: Schulungsmaterial (Kurzanleitungen, Unterlagen) als ZIP anhängen
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if compgen -G "docs/schulung/pdf/*.pdf" >/dev/null; then
+            name="EstrichONE-Schulung-$TAG"
+            mkdir -p "$RUNNER_TEMP/$name"
+            cp docs/schulung/pdf/*.pdf "$RUNNER_TEMP/$name/"
+            (cd "$RUNNER_TEMP" && zip -qr "$name.zip" "$name")
+            gh release upload "$TAG" "$RUNNER_TEMP/$name.zip" --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            echo "Kein Schulungsmaterial unter docs/schulung/pdf – übersprungen."
+          fi
 
   windows:
     needs: create

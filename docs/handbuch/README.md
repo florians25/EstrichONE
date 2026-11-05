@@ -23,6 +23,7 @@ docs/handbuch/scripts/bilder.sh          # frische Demo-Instanz „Estrichbau Mu
 docs/handbuch/scripts/bilder.sh cockpit  # nur einzelne Szenen (Namen aus scripts/szenen.mjs)
 node docs/handbuch/scripts/pdf.mjs       # PDF bauen (zwei Durchläufe für die Seitenzahlen im Inhaltsverzeichnis)
 node docs/handbuch/scripts/pdf.mjs app   # App-Handbuch bauen
+node docs/handbuch/scripts/pdf.mjs schulung  # Schulungsmaterial und Kurzanleitungen (docs/schulung)
 ```
 
 `bilder.sh` startet PostgreSQL, API, Archivserver und Backup-Dienst auf eigenen Ports (55491, 5191, 18491, Web 4291),

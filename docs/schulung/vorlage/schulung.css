@@ -1,0 +1,103 @@
+/* Ergänzung zur Druckvorlage des Handbuchs (handbuch.css + app.css) für Kurzanleitungen und Schulungsunterlagen. */
+.schulung .cover-title, .schulung .cover-meta { right: 22mm; }
+@page :first { margin-top: 0; @top-left { content: none; } @top-right { content: none; } }
+@page cover { margin: 0; }
+
+/* Kopfband mit Logo, Art und Titel; beim Einzeldokument bis an den Blattrand. */
+.band { margin: 0 -17mm 6mm -19mm; padding: 13mm 17mm 7mm 19mm; color: #fff; display: flex; gap: 9mm; align-items: flex-end;
+  background: radial-gradient(90mm 60mm at 10% 0%, rgba(0, 98, 204, .55), transparent 70%), linear-gradient(180deg, var(--navy-2), var(--navy)); }
+.band-logo { width: 44mm; flex: 0 0 auto; padding-bottom: 1.6mm; }
+.band-logo svg { width: 100%; height: auto; display: block; }
+.band-text { flex: 1; }
+.band .kicker { font-size: 9pt; margin: 0 0 1.5mm; }
+.band h1 { font: 800 21pt/1.12 "Inter Tight", Inter, sans-serif; margin: 0; color: #fff; position: relative; }
+.band-sub { margin: 2mm 0 0; color: var(--ice); font-size: 10pt; }
+.imsammel { break-before: page; }
+.imsammel .band { margin: 0 0 6mm; padding: 8mm 8mm 6mm; border-radius: 3mm; }
+.sammel-toc .tn { min-width: 33mm !important; font-weight: 600; }
+
+/* Überschriften im Dokument */
+.sdoc h2 { font: 700 14pt/1.2 "Inter Tight", Inter, sans-serif; color: var(--navy); margin: 6mm 0 2.5mm; break-after: avoid; position: relative; }
+.sdoc h2 .num { color: var(--blue); margin-right: 2mm; }
+.sdoc h3 { font: 700 11.5pt/1.25 "Inter Tight", Inter, sans-serif; color: var(--navy-2); margin: 4.5mm 0 1.5mm; break-after: avoid; position: relative; }
+.sdoc h3 .num { color: var(--blue); margin-right: 1.5mm; font-weight: 600; }
+.stil-kurz h2 .num, .stil-kurz h3 .num, .stil-blatt h3 .num { display: none; }
+.sdoc h1 .num { display: none; }
+
+/* Kurzanleitung: große Schrift, nummerierte Schritte als Kreise */
+.stil-kurz { font-size: 12.2pt; line-height: 1.45; }
+.stil-kurz h2 { font-size: 15.5pt; margin-top: 5mm; }
+.stil-kurz h2:first-child { margin-top: 0; }
+.stil-kurz ol { list-style: none; counter-reset: schritt; padding-left: 0; margin: 0 0 3mm; }
+.stil-kurz ol > li { counter-increment: schritt; position: relative; padding: .4mm 0 .4mm 12mm; margin: 0 0 2.4mm; min-height: 8.5mm; break-inside: avoid; }
+.stil-kurz ol > li::before { content: counter(schritt); position: absolute; left: 0; top: 0; width: 8.5mm; height: 8.5mm; border-radius: 50%;
+  background: var(--blue); color: #fff; font: 800 12pt/8.5mm "Inter Tight", Inter, sans-serif; text-align: center; }
+.stil-kurz ol[start] { counter-reset: schritt calc(attr(start integer) - 1); }
+.stil-kurz ul { padding-left: 6mm; }
+.stil-kurz .box { font-size: 11pt; }
+.stil-kurz kbd { font-size: 10pt; }
+.stil-kurz code { font-size: 9.6pt; }
+.stil-kurz table { font-size: 10.5pt; }
+.stil-kurz figcaption { font-size: 9pt; }
+.stil-kurz figure.phone { width: 52mm; }
+.stil-kurz .figrow figure { width: 48mm; }
+.stil-kurz .figrow.n3 figure { width: 44mm; }
+.stil-kurz figure.rechts { width: 50mm; }
+figure.breit img { width: 100%; }
+figure.mittel img { width: 78%; margin: 0 auto; }
+figure.mittel figcaption { text-align: center; }
+figure.web, .stil-kurz .figrow figure.web { width: 80mm; }
+figure.web img { border-radius: 2mm; border: 1px solid var(--line); }
+.kontakt { margin-top: 6mm; padding-top: 3mm; border-top: 1px solid var(--line); font-size: 9.5pt; color: var(--muted); break-inside: avoid; }
+.kontakt i { display: inline-block; width: 62mm; border-bottom: 1px solid #9aa6b8; margin: 0 4mm 0 1mm; height: 4mm; }
+.kontakt i.kurz { width: 36mm; }
+
+/* Arbeitsblatt, Test, Formular */
+.stil-blatt { font-size: 10.6pt; }
+.felder { display: flex; gap: 8mm; margin: 0 0 5mm; font-size: 10pt; }
+.felder span { flex: 1; display: flex; align-items: flex-end; gap: 2mm; }
+.felder b { color: var(--navy); white-space: nowrap; }
+.felder i { flex: 1; border-bottom: 1px solid #9aa6b8; height: 5mm; }
+li.cb { list-style: none; position: relative; padding-left: 1mm; }
+li.cb::before { content: ""; position: absolute; left: -6mm; top: 1mm; width: 3.6mm; height: 3.6mm; border: 1.3px solid var(--navy-2); border-radius: .8mm; background: #fff; }
+li.cb.an::before { background: var(--blue); border-color: var(--blue); box-shadow: inset 0 0 0 .7mm #fff; }
+.linien { margin: 1mm 0 4mm; }
+.linien::before { content: ""; display: block; height: calc(var(--n, 3) * 8mm);
+  background: repeating-linear-gradient(180deg, transparent 0 7.6mm, #b8c2d1 7.6mm 8mm); }
+.linien.n1 { --n: 1; } .linien.n2 { --n: 2; } .linien.n4 { --n: 4; } .linien.n5 { --n: 5; }
+.aufgabe { break-inside: avoid; }
+.loesung { border-left: 1.4mm solid #2DA44E; background: #EAF6EE; padding: 2mm 3.6mm; border-radius: 1.6mm; margin: 1mm 0 4mm; }
+.seitenumbruch { break-before: page; height: 0; }
+.unterschriften { display: flex; gap: 14mm; margin-top: 38mm; }
+.unterschriften div { flex: 1; border-top: 1px solid #5b6577; padding-top: 1.5mm; font-size: 9pt; color: var(--muted); }
+
+/* Inhaltsverzeichnis im Dokument */
+.s-toc { margin: 0 0 6mm; }
+.s-toc h2 { font: 700 13pt "Inter Tight", Inter, sans-serif; color: var(--navy); margin: 0 0 2mm; }
+.s-toc ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 10mm; }
+.s-toc li { margin: 0 0 1.2mm; break-inside: avoid; }
+.s-toc a { display: flex; color: inherit; }
+.s-toc .tn { min-width: 7mm; color: var(--blue); font-weight: 600; }
+.s-toc a::after { content: ""; order: 2; flex: 1; border-bottom: 1px dotted #b8c2d1; margin: 0 1.5mm; transform: translateY(-1mm); }
+.s-toc .tp { order: 3; min-width: 6mm; text-align: right; }
+
+/* Teilnahmebestätigung */
+.urkunde { text-align: center; padding: 22mm 6mm 0; font-size: 13pt; line-height: 1.9; }
+.urkunde .gross { font: 800 36pt "Inter Tight", Inter, sans-serif; color: var(--navy); margin: 8mm 0 2mm; }
+.urkunde .feld { display: block; margin: 9mm auto 1mm; width: 120mm; border-bottom: 1px solid #5b6577; height: 8mm; }
+.urkunde .hinweis { font-size: 9pt; color: var(--muted); }
+.urkunde ul { text-align: left; display: inline-block; margin: 2mm auto 0; }
+
+/* Spickzettel */
+.spick .sbody { columns: 2; column-gap: 8mm; font-size: 9.6pt; }
+.spick.stil-kurz { font-size: 10pt; }
+.spick h2 { break-after: avoid; margin-top: 0; font-size: 12pt; }
+.spick table { break-inside: avoid; font-size: 9pt; margin-bottom: 4mm; }
+.spick td:first-child { white-space: nowrap; }
+.sdoc { page: sdoc; }
+.box.loesung { border-color: #2DA44E; background: #EAF6EE; }
+.box.loesung > strong:first-child { color: #1f7a3a; }
+.stil-dokument h2 { break-before: auto; }
+.stil-dokument h2 + h3 { margin-top: 2mm; }
+.luecke { display: inline-block; min-width: 50mm; border-bottom: 1px solid #9aa6b8; height: 4.5mm; vertical-align: bottom; }
+.luecke.breit { min-width: 80mm; } .luecke.kurz { min-width: 16mm; }
