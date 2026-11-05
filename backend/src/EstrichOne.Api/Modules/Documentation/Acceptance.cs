@@ -302,7 +302,7 @@ internal sealed class AcceptanceSync(EstrichOneDbContext db, IBauakteAccess acce
             return (null, null);
         }
 
-        var base64 = signature["png"]?.GetValue<string>();
+        var base64 = SyncPayload.Value<string>(signature["png"], name + ".png");
         if (string.IsNullOrWhiteSpace(base64))
         {
             return (null, null);
@@ -312,7 +312,7 @@ internal sealed class AcceptanceSync(EstrichOneDbContext db, IBauakteAccess acce
         try
         {
             var bytes = Convert.FromBase64String(comma >= 0 ? base64[(comma + 1)..] : base64);
-            var at = signature["signedAt"]?.GetValue<string>() is { } text
+            var at = SyncPayload.Value<string>(signature["signedAt"], name + ".signedAt") is { } text
                 ? DateTimeOffset.Parse(text, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind)
                 : (DateTimeOffset?)null;
             return (bytes, at);

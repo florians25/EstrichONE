@@ -80,7 +80,7 @@ internal sealed class BauakteSync(
             return null;
         }
 
-        var project = node.Deserialize<BauakteProject>(SyncPayload.Json)?.Normalize();
+        var project = SyncPayload.Value<BauakteProject>(node, "project")?.Normalize();
         if (project is not null && await projectValidator.ValidateAsync(project, cancellationToken) is { } error)
         {
             throw new SyncValidationException(error);
@@ -113,7 +113,7 @@ internal sealed class BauakteSync(
             switch (field)
             {
                 case "title":
-                    var title = value?.GetValue<string>();
+                    var title = SyncPayload.Value<string>(value, field);
                     if (string.IsNullOrWhiteSpace(title))
                     {
                         throw new SyncValidationException("Das Bauvorhaben braucht eine Bezeichnung.");
@@ -122,7 +122,7 @@ internal sealed class BauakteSync(
                     bauakte.Rename(title);
                     break;
                 case "status":
-                    var status = value.Deserialize<BauakteStatus>(SyncPayload.Json);
+                    var status = SyncPayload.Value<BauakteStatus>(value, field);
                     if (status == BauakteStatus.Cancelled && bauakte.Status != BauakteStatus.Cancelled)
                     {
                         // Stornieren braucht eine Begründung und geschieht im Büro.
@@ -132,40 +132,40 @@ internal sealed class BauakteSync(
                     bauakte.ChangeStatus(status);
                     break;
                 case "street":
-                    bauakte.ChangeAddress(value?.GetValue<string>(), bauakte.PostalCode, bauakte.City, bauakte.Latitude, bauakte.Longitude);
+                    bauakte.ChangeAddress(SyncPayload.Value<string>(value, field), bauakte.PostalCode, bauakte.City, bauakte.Latitude, bauakte.Longitude);
                     break;
                 case "postalCode":
-                    bauakte.ChangeAddress(bauakte.Street, value?.GetValue<string>(), bauakte.City, bauakte.Latitude, bauakte.Longitude);
+                    bauakte.ChangeAddress(bauakte.Street, SyncPayload.Value<string>(value, field), bauakte.City, bauakte.Latitude, bauakte.Longitude);
                     break;
                 case "city":
-                    bauakte.ChangeAddress(bauakte.Street, bauakte.PostalCode, value?.GetValue<string>(), bauakte.Latitude, bauakte.Longitude);
+                    bauakte.ChangeAddress(bauakte.Street, bauakte.PostalCode, SyncPayload.Value<string>(value, field), bauakte.Latitude, bauakte.Longitude);
                     break;
                 case "latitude":
-                    bauakte.ChangeAddress(bauakte.Street, bauakte.PostalCode, bauakte.City, value?.GetValue<double>(), bauakte.Longitude);
+                    bauakte.ChangeAddress(bauakte.Street, bauakte.PostalCode, bauakte.City, SyncPayload.Value<double?>(value, field), bauakte.Longitude);
                     break;
                 case "longitude":
-                    bauakte.ChangeAddress(bauakte.Street, bauakte.PostalCode, bauakte.City, bauakte.Latitude, value?.GetValue<double>());
+                    bauakte.ChangeAddress(bauakte.Street, bauakte.PostalCode, bauakte.City, bauakte.Latitude, SyncPayload.Value<double?>(value, field));
                     break;
                 case "description":
-                    bauakte.Describe(value?.GetValue<string>());
+                    bauakte.Describe(SyncPayload.Value<string>(value, field));
                     break;
                 case "siteContactName":
-                    bauakte.ChangeSiteContact(value?.GetValue<string>(), bauakte.SiteContactPhone, bauakte.SiteContactEmail);
+                    bauakte.ChangeSiteContact(SyncPayload.Value<string>(value, field), bauakte.SiteContactPhone, bauakte.SiteContactEmail);
                     break;
                 case "siteContactPhone":
-                    bauakte.ChangeSiteContact(bauakte.SiteContactName, value?.GetValue<string>(), bauakte.SiteContactEmail);
+                    bauakte.ChangeSiteContact(bauakte.SiteContactName, SyncPayload.Value<string>(value, field), bauakte.SiteContactEmail);
                     break;
                 case "siteContactEmail":
-                    bauakte.ChangeSiteContact(bauakte.SiteContactName, bauakte.SiteContactPhone, value?.GetValue<string>());
+                    bauakte.ChangeSiteContact(bauakte.SiteContactName, bauakte.SiteContactPhone, SyncPayload.Value<string>(value, field));
                     break;
                 case "siteNotes":
-                    bauakte.ChangeSiteNotes(value?.GetValue<string>());
+                    bauakte.ChangeSiteNotes(SyncPayload.Value<string>(value, field));
                     break;
                 case "project":
                     bauakte.ChangeProject(await ReadProjectAsync(value, cancellationToken) ?? BauakteProject.Empty);
                     break;
                 case "customerId":
-                    var customerId = value.Deserialize<Guid?>(SyncPayload.Json);
+                    var customerId = SyncPayload.Value<Guid?>(value, field);
                     if (customerId is { } id && !await db.Set<Contact>().AnyAsync(c => c.Id == id, cancellationToken))
                     {
                         throw new SyncValidationException("Der Kunde existiert nicht.");
@@ -174,7 +174,7 @@ internal sealed class BauakteSync(
                     bauakte.AssignCustomer(customerId);
                     break;
                 case "responsibleUserId":
-                    var userId = value.Deserialize<Guid?>(SyncPayload.Json);
+                    var userId = SyncPayload.Value<Guid?>(value, field);
                     if (userId is { } uid && !await db.Set<User>().AnyAsync(u => u.Id == uid, cancellationToken))
                     {
                         throw new SyncValidationException("Der Benutzer existiert nicht.");

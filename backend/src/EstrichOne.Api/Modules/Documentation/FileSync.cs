@@ -93,7 +93,7 @@ internal sealed class FileSync(FileService files, EstrichOneDbContext db, IUserP
         var changes = (JsonObject)op.Payload["changes"]!;
         foreach (var field in accepted)
         {
-            var value = changes[field]?.GetValue<string>();
+            var value = SyncPayload.Value<string>(changes[field], field);
             if (field == "caption")
             {
                 var caption = string.IsNullOrWhiteSpace(value) ? null : value.Trim();

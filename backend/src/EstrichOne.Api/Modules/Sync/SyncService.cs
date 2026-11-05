@@ -84,6 +84,15 @@ internal sealed partial class SyncService(
             await transaction.RollbackAsync(cancellationToken);
             return await StoreRejectionAsync(operation, deviceId, SyncOperationResult.Rejected(operation.OpId, "VALIDATION_FAILED", exception.Message), cancellationToken);
         }
+        catch (JsonException exception)
+        {
+            // Rückfallebene für Nutzdaten, die ein Handler direkt (ohne SyncPayload.Value) liest: Ein nicht lesbarer
+            // Feldwert lehnt nur diese Operation ab, statt die ganze Anfrage mit 500 scheitern zu lassen.
+            await transaction.RollbackAsync(cancellationToken);
+            var field = exception.Path is { Length: > 2 } path ? path.TrimStart('$', '.') : "Nutzdaten";
+            return await StoreRejectionAsync(operation, deviceId,
+                SyncOperationResult.Rejected(operation.OpId, "VALIDATION_FAILED", $"Ungültiger Wert für „{field}“."), cancellationToken);
+        }
         catch (DbUpdateConcurrencyException)
         {
             // Parallel geändert – nicht speichern, der Client sendet die Operation erneut.

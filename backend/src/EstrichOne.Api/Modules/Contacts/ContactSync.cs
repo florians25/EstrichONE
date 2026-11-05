@@ -110,8 +110,8 @@ internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permi
         var current = (JsonObject)SyncPayload.ToNode(ContactEndpoints.ToResponse(contact))!;
         var (accepted, conflicts) = SyncPayload.Merge(op.Payload, current.ToDictionary(pair => pair.Key, pair => pair.Value), EditableFields);
         var changes = (JsonObject)op.Payload["changes"]!;
-        T Value<T>(string field, T fallback) => accepted.Contains(field) ? changes[field].Deserialize<T>(SyncPayload.Json) ?? fallback : fallback;
-        string? Text(string field, string? fallback) => accepted.Contains(field) ? Clean(changes[field]?.GetValue<string>()) : fallback;
+        T Value<T>(string field, T fallback) => accepted.Contains(field) ? SyncPayload.Value<T>(changes[field], field) ?? fallback : fallback;
+        string? Text(string field, string? fallback) => accepted.Contains(field) ? Clean(SyncPayload.Value<string>(changes[field], field)) : fallback;
 
         var name = Text("name", contact.Name) ?? throw new SyncValidationException("Bitte einen Namen angeben.");
         var kind = Value("kind", contact.Kind);

@@ -96,16 +96,16 @@ internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IU
             var value = changes[field];
             switch (field)
             {
-                case "title": title = value?.GetValue<string>() ?? string.Empty; break;
-                case "description": description = value?.GetValue<string>(); break;
-                case "dueDate": dueDate = value.Deserialize<DateOnly?>(SyncPayload.Json); break;
+                case "title": title = SyncPayload.Value<string>(value, field) ?? string.Empty; break;
+                case "description": description = SyncPayload.Value<string>(value, field); break;
+                case "dueDate": dueDate = SyncPayload.Value<DateOnly?>(value, field); break;
                 case "assigneeUserId":
-                    assignee = value.Deserialize<Guid?>(SyncPayload.Json);
+                    assignee = SyncPayload.Value<Guid?>(value, field);
                     await EnsureUserExistsAsync(assignee, cancellationToken);
                     break;
                 case "status":
                     var wasDone = item.Status == WorkItemStatus.Done;
-                    item.ChangeStatus(value.Deserialize<WorkItemStatus>(SyncPayload.Json), clock.GetUtcNow());
+                    item.ChangeStatus(SyncPayload.Value<WorkItemStatus>(value, field), clock.GetUtcNow());
                     if (!wasDone && item.Status == WorkItemStatus.Done && item.BauakteId is { } owner)
                     {
                         history.Record(owner, BauakteHistoryActions.WorkItemDone, new Dictionary<string, string?> { ["kind"] = item.Kind.ToString() });

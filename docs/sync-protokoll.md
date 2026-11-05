@@ -96,6 +96,9 @@ Der Client fasst mehrere ungesendete Änderungen desselben Datensatzes zusammen,
 | `room.delete` | – | `bauakten.edit` + sichtbar | Tombstone |
 
 \* Pflichtfeld. Werte im JSON-Format der API: Aufzählungen als camelCase-Text, Zeitpunkte ISO 8601 mit Zeitzone.
+Nicht lesbare Werte (unbekannter Auswahlwert, Zahl als Auswahlwert, Text statt Zahl, kein gültiges Datum, `changes`
+kein Objekt) lehnen nur diese Operation mit `VALIDATION_FAILED` ab; `message` nennt das Feld und bei Auswahlwerten die
+erlaubten Werte.
 
 ## 5. Pull
 

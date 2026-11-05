@@ -58,7 +58,47 @@ public static class SyncPayload
     public static JsonNode? ToNode<T>(T value) => JsonSerializer.SerializeToNode(value, Json);
 
     public static T? Read<T>(JsonObject payload, string name) =>
-        payload.TryGetPropertyValue(name, out var node) && node is not null ? node.Deserialize<T>(Json) : default;
+        payload.TryGetPropertyValue(name, out var node) && node is not null ? Value<T>(node, name) : default;
+
+    /// <summary>
+    /// Liest einen Feldwert. Nicht passende Werte (unbekannter Auswahlwert, Text statt Zahl, kein Datum …) lehnen
+    /// genau diese Operation mit VALIDATION_FAILED ab, statt die ganze Anfrage scheitern zu lassen.
+    /// </summary>
+    public static T? Value<T>(JsonNode? node, string field)
+    {
+        try
+        {
+            return node.Deserialize<T>(Json);
+        }
+        catch (Exception exception) when (exception is JsonException or InvalidOperationException or FormatException or NotSupportedException)
+        {
+            var path = (exception as JsonException)?.Path is { Length: > 1 } p && p[0] == '$' ? p[1..] : string.Empty;
+            throw new SyncValidationException(InvalidValueMessage(typeof(T), field + path, node));
+        }
+    }
+
+    internal static string InvalidValueMessage(Type type, string field, JsonNode? node)
+    {
+        var target = Nullable.GetUnderlyingType(type) ?? type;
+        var shown = node is null ? "leer" : Shorten(node.ToJsonString());
+        var expected = target switch
+        {
+            _ when target.IsEnum => "erlaubt: " + string.Join(", ", Enum.GetNames(target).Select(JsonNamingPolicy.CamelCase.ConvertName)),
+            _ when target == typeof(string) => "erwartet: Text",
+            _ when target == typeof(bool) => "erwartet: true oder false",
+            _ when target == typeof(Guid) => "erwartet: UUID",
+            _ when target == typeof(DateOnly) => "erwartet: Datum JJJJ-MM-TT",
+            _ when target == typeof(TimeOnly) => "erwartet: Uhrzeit HH:MM",
+            _ when target == typeof(DateTimeOffset) || target == typeof(DateTime) => "erwartet: Zeitpunkt nach ISO 8601",
+            _ when target == typeof(int) || target == typeof(long) || target == typeof(decimal) || target == typeof(double) => "erwartet: Zahl",
+            _ => null,
+        };
+        return expected is null
+            ? $"Ungültiger Wert für „{field}“ ({shown})."
+            : $"Ungültiger Wert für „{field}“ ({shown}); {expected}.";
+    }
+
+    private static string Shorten(string text) => text.Length <= 60 ? text : text[..57] + "…";
 
     /// <summary>
     /// Gleicht geänderte Felder ab: Ein Feld wird übernommen, wenn der Serverwert noch dem <c>base</c>-Wert des
@@ -68,8 +108,8 @@ public static class SyncPayload
     public static (List<string> Accepted, List<FieldConflict> Conflicts) Merge(
         JsonObject payload, IReadOnlyDictionary<string, JsonNode?> current, IReadOnlySet<string> allowedFields)
     {
-        var changes = payload["changes"] as JsonObject ?? new JsonObject();
-        var bases = payload["base"] as JsonObject ?? new JsonObject();
+        var changes = ObjectOrEmpty(payload, "changes");
+        var bases = ObjectOrEmpty(payload, "base");
         var accepted = new List<string>();
         var conflicts = new List<FieldConflict>();
 
@@ -95,10 +135,17 @@ public static class SyncPayload
         return (accepted, conflicts);
     }
 
+    private static JsonObject ObjectOrEmpty(JsonObject payload, string name) => payload[name] switch
+    {
+        null => new JsonObject(),
+        JsonObject value => value,
+        _ => throw new SyncValidationException($"„{name}“ muss ein Objekt mit Feldnamen und Werten sein."),
+    };
+
     private static JsonSerializerOptions CreateOptions()
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web);
-        options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase));
+        options.Converters.Add(new System.Text.Json.Serialization.JsonStringEnumConverter(JsonNamingPolicy.CamelCase, allowIntegerValues: false));
         return options;
     }
 }
