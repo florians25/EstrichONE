@@ -3,6 +3,11 @@
 		<VBox class="eoAuthCard" width="30rem">
 			<Image src="{view>/logo}" alt="EstrichONE" height="3rem" class="eoAuthLogo" decorative="false" error=".onLogoError"/>
 			<Title text="{i18n>setup.title}" level="H1" titleStyle="H3" class="sapUiSmallMarginTop"/>
+			<MessageStrip text="{i18n>setup.already}" type="Success" showIcon="true" visible="{= ${session>/server/setupRequired} === false }"
+				class="sapUiSmallMarginTop">
+				<link><Link text="{i18n>setup.toLogin}" href="/anmelden"/></link>
+			</MessageStrip>
+			<VBox visible="{= ${session>/server/setupRequired} !== false }" renderType="Bare">
 			<Text text="{i18n>setup.intro}" class="eoMuted sapUiSmallMarginBottom"/>
 			<Label text="{i18n>setup.code}" labelFor="setupCode" required="true"/>
 			<Input id="setupCode" value="{view>/setupCode}" valueLiveUpdate="true" width="100%" placeholder="XXXX-XXXX-XXXX"/>
@@ -28,6 +33,7 @@
 				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
 			</MessageStrip>
 			<Button text="{i18n>setup.submit}" type="Emphasized" width="100%" press=".onSubmit" busy="{view>/busy}" class="sapUiMediumMarginTop"/>
+			</VBox>
 		</VBox>
 	</FlexBox>
 </mvc:View>

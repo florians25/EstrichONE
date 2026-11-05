@@ -12,7 +12,7 @@
 		<Page id="barePage" showHeader="false" enableScrolling="true" class="eoBarePage">
 			<NavContainer id="bareNav" height="100%" autoFocus="false"/>
 		</Page>
-		<tnt:ToolPage id="toolPage" sideExpanded="{= !${device>/system/phone} }" class="eoToolPage">
+		<tnt:ToolPage id="toolPage" sideExpanded="{view>/sideExpanded}" class="eoToolPage">
 			<tnt:header>
 				<f:ShellBar id="shellBar" title="EstrichONE" secondTitle="{session>/server/serverName}"
 					homeIcon="{view>/logo}" homeIconTooltip="{i18n>shell.home}" homeIconPressed=".onHome"
@@ -25,7 +25,8 @@
 					</f:profile>
 					<f:additionalContent>
 						<SearchField id="globalSearch" width="26rem" placeholder="Suchen: Bauakten, Altakten, Kunden, Dokumente …" class="eoShellSearch"
-							search=".onSearch" suggest=".onSuggest" enableSuggestions="true" ariaLabelledBy="globalSearchLabel"/>
+							search=".onSearch" suggest=".onSuggest" enableSuggestions="true" ariaLabelledBy="globalSearchLabel"
+							visible="{= !${session>/mustChangePassword} }"/>
 						<Button id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakteTooltip}" icon="sap-icon://add" type="Emphasized"
 							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }" class="eoShellNew"
 							ariaDescribedBy="newBauakteShortcut"/>

@@ -20,8 +20,8 @@
 			<FlexBox wrap="Wrap" class="eoStaffHeaderFacts">
 				<VBox><Label text="Kundennummer"/><Text text="{= ${view>/c/customerNumber} || '–' }"/></VBox>
 				<VBox><Label text="Anschrift"/><Text text="{view>/address}"/></VBox>
-				<VBox><Label text="Telefon"/><Link text="{view>/c/phone}" href="tel:{view>/c/phone}" visible="{= !!${view>/c/phone} }"/><Text text="–" visible="{= !${view>/c/phone} }"/></VBox>
-				<VBox><Label text="E-Mail"/><Link text="{view>/c/email}" href="mailto:{view>/c/email}" visible="{= !!${view>/c/email} }"/><Text text="–" visible="{= !${view>/c/email} }"/></VBox>
+				<VBox><Label text="Telefon"/><Link text="{view>/c/phone}" href="tel:{view>/c/phone}" emptyIndicatorMode="On"/></VBox>
+				<VBox><Label text="E-Mail"/><Link text="{view>/c/email}" href="mailto:{view>/c/email}" emptyIndicatorMode="On"/></VBox>
 				<VBox><Label text="Bauakten"/><Text text="{= ${view>/bauakten}.length }"/></VBox>
 			</FlexBox>
 		</uxap:headerContent>
@@ -35,8 +35,7 @@
 						<Label text="Kundennummer"/><Text text="{= ${view>/c/customerNumber} || '–' }"/>
 						<Label text="Geburtstag" visible="{= !!${view>/c/birthday} }"/><Text text="{path: 'view>/c/birthday', formatter: 'fmt.date'}" visible="{= !!${view>/c/birthday} }"/>
 						<Label text="Bevorzugt"/><Text text="{view>/channel}"/>
-						<Label text="Website"/><Link text="{view>/c/website}" href="{view>/c/website}" target="_blank" visible="{= !!${view>/c/website} }"/>
-						<Text text="–" visible="{= !${view>/c/website} }"/>
+						<Label text="Website"/><Link text="{view>/c/website}" href="{view>/c/website}" target="_blank" emptyIndicatorMode="On"/>
 						<core:Title text="Anschrift"/>
 						<Label text="Anschrift"/><Text text="{view>/address}"/>
 						<Label text="Rechnung an"/><Text text="{view>/billing}"/>

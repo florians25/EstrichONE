@@ -15,6 +15,7 @@ import type Event from "sap/ui/base/Event";
 import SuggestionItem from "sap/m/SuggestionItem";
 import type { ShellBar$AvatarPressedEvent, ShellBar$NotificationsPressedEvent } from "sap/f/ShellBar";
 import Theming from "sap/ui/core/Theming";
+import Device from "sap/ui/Device";
 import Menu from "sap/m/Menu";
 import MenuItem from "sap/m/MenuItem";
 import ResponsivePopover from "sap/m/ResponsivePopover";
@@ -136,8 +137,8 @@ export default class AppController extends BaseController {
 		applyCompact();
 		// Tablet hochkant (unter 1024 px): Seitennavigation eingeklappt, damit Inhalte wie Chat oder Tabellen Platz haben.
 		const narrow = window.matchMedia("(max-width: 1023px)");
-		if (narrow.matches) this.el<ToolPage>("toolPage").setSideExpanded(false);
-		narrow.addEventListener("change", (event) => this.el<ToolPage>("toolPage").setSideExpanded(!event.matches));
+		this.model().setProperty("/sideExpanded", !Device.system.phone && !narrow.matches);
+		narrow.addEventListener("change", (event) => this.model().setProperty("/sideExpanded", !Device.system.phone && !event.matches));
 		// Service Worker: neue Pushnachricht (Glocke sofort aktualisieren) bzw. Klick auf eine Benachrichtigung.
 		navigator.serviceWorker?.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
 			if (event.data?.type === "estrichone-notification" && session.data.user) { void this.loadNotices(); void this.loadChat(); }

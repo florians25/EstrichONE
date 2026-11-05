@@ -78,7 +78,8 @@ export default class Overview extends SectionBase {
 			const overdue = open.filter((w) => w.dueDate && w.dueDate < today).length;
 			m.setProperty("/openWork", String(open.length));
 			m.setProperty("/overdue", overdue);
-			m.setProperty("/workFooter", [open.filter((w) => w.kind === "defect").length + " Mängel", overdue ? `${overdue} überfällig` : ""].filter(Boolean).join(" · "));
+			const defects = open.filter((w) => w.kind === "defect").length;
+			m.setProperty("/workFooter", [defects ? `${defects} ${defects === 1 ? "Mangel" : "Mängel"}` : "", overdue ? `${overdue} überfällig` : ""].filter(Boolean).join(" · "));
 			m.setProperty("/work", open.slice(0, 6));
 		}
 		if (notes.status === "fulfilled") {

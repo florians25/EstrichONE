@@ -22,13 +22,13 @@
 				<Panel headerText="Abgenommene Leistung">
 					<VBox>
 						<Text text="{pub>/v/scope}" class="eoPre"/>
-						<Table items="{pub>/v/rooms}" visible="{= ${pub>/v/rooms}.length > 0 }" class="sapUiSmallMarginTop" popinLayout="GridSmall">
+						<Table items="{pub>/v/rooms}" visible="{= !!${pub>/v/rooms} &amp;&amp; ${pub>/v/rooms}.length > 0 }" class="sapUiSmallMarginTop" popinLayout="GridSmall">
 							<columns><Column><Text text="Raum"/></Column><Column width="6rem"><Text text="Geschoss"/></Column><Column hAlign="End" width="7rem"><Text text="Fläche"/></Column><Column minScreenWidth="Tablet" demandPopin="true"><Text text="Estrich"/></Column></columns>
 							<items><ColumnListItem><Text text="{pub>name}"/><Text text="{= ${pub>floor} || '–' }"/><Text text="{path: 'pub>areaSquareMeters', formatter: 'fmt.area'}" class="eoTabular"/><Text text="{= ${pub>screedType} || '–' }"/></ColumnListItem></items>
 						</Table>
 					</VBox>
 				</Panel>
-				<Panel headerText="Mängel und Restarbeiten" visible="{= ${pub>/v/defects}.length > 0 }">
+				<Panel headerText="Mängel und Restarbeiten" visible="{= !!${pub>/v/defects} &amp;&amp; ${pub>/v/defects}.length > 0 }">
 					<List items="{pub>/v/defects}">
 						<StandardListItem title="{pub>title}" info="{= ${pub>dueDate} ? 'Frist ' + ${pub>dueText} : '' }" icon="sap-icon://alert"/>
 					</List>

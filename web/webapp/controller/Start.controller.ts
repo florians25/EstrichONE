@@ -132,9 +132,10 @@ export default class Start extends BaseController {
 			mineWork.then((work) => {
 				const open = work.filter((w) => w.status !== "done").sort((a, b) => (a.dueDate ?? "9999").localeCompare(b.dueDate ?? "9999"));
 				const overdue = open.filter((w) => w.dueDate && w.dueDate < today).length;
+				const defects = open.filter((w) => w.kind === "defect").length;
 				set("work", {
 					value: String(open.length), state: overdue ? "Error" : open.length ? "Neutral" : "Good",
-					details: overdue ? `${overdue} überfällig` : open.some((w) => w.kind === "defect") ? `${open.filter((w) => w.kind === "defect").length} ${open.filter((w) => w.kind === "defect").length === 1 ? "Mangel" : "Mängel"}` : "",
+					details: overdue ? `${overdue} überfällig` : defects ? `${defects} ${defects === 1 ? "Mangel" : "Mängel"}` : "",
 					rows: open.slice(0, 3).map((w) => ({
 						text: w.title, icon: w.kind === "defect" ? "sap-icon://warning2" : "sap-icon://task",
 						side: w.dueDate ? shortDay(w.dueDate) : "", sideState: w.dueDate && w.dueDate < today ? "Error" : w.dueDate === today ? "Warning" : "None",
