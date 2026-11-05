@@ -212,14 +212,15 @@ jobs:
           xcrun simctl boot "$UDID" 2>/dev/null || true
           xcrun simctl bootstatus "$UDID" -b >/dev/null
           # System auf Deutsch (Datum in der Statusleiste des iPad), Einführung „Wischen zum Tippen“ der Tastatur
-          # (englischer Hinweis über dem Formular) als gesehen markieren, dann neu starten (vor dem ersten Start in die
-          # Einstellungsdateien geschrieben, wirkt es nicht).
+          # (englischer Hinweis über dem Formular) als gesehen markieren. Vor dem ersten Start in die Einstellungsdateien
+          # geschrieben wirkt es nicht; statt eines zweiten Starts (auf langsamen Runnern minutenlang) nur die
+          # Oberfläche (SpringBoard) neu starten, damit die Statusleiste die Sprache übernimmt.
           xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLanguages -array de-DE
           xcrun simctl spawn "$UDID" defaults write "Apple Global Domain" AppleLocale -string de_DE
           xcrun simctl spawn "$UDID" defaults write com.apple.Preferences DidShowContinuousPathIntroduction -bool true
           xcrun simctl spawn "$UDID" defaults write com.apple.keyboard.preferences DidShowContinuousPathIntroduction -bool true
-          xcrun simctl shutdown "$UDID"
-          xcrun simctl boot "$UDID"
+          xcrun simctl spawn "$UDID" launchctl stop com.apple.SpringBoard || true
+          sleep 8
           xcrun simctl bootstatus "$UDID" -b >/dev/null
           xcrun simctl status_bar "$UDID" override --time "9:41" --dataNetwork wifi --wifiMode active --wifiBars 3 \
             --cellularMode active --cellularBars 4 --batteryState charged --batteryLevel 100
