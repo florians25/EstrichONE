@@ -92,11 +92,12 @@ im Helpdesk antwortet oder das Büro Ihnen schreibt.
 
 - **Postfach**: Die **Glocke** auf der Heute-Seite (mit Zahl) bzw. **Mehr** → **Benachrichtigungen** öffnet das
   Postfach mit allen Benachrichtigungen, ungelesene oben. Ein Tipp öffnet das Objekt – die Bauakte, die Meldung, den Plan
-  des Tages oder Ihre Aufgaben – und markiert die Benachrichtigung als gelesen. **Alle gelesen** markiert alles.
+  des Tages oder Ihre Aufgaben – und markiert die Benachrichtigung als gelesen. Das **Häkchen** oben rechts
+  (**Alle als gelesen markieren**) markiert alles.
 - **Pushnachrichten**: Tippen Sie im Postfach auf **Aktivieren** (**Pushnachrichten aktivieren**) und erlauben Sie die
   Mitteilungen. Die App fragt nie ungefragt danach. Lehnen Sie ab, stehen alle Benachrichtigungen weiterhin im Postfach;
   einschalten lässt es sich später in den iOS-Einstellungen.
-- **Benachrichtigungsarten**: Unter **Mehr** → **Benachrichtigungen** → **Benachrichtigungsarten** legen Sie je Art fest,
+- **Benachrichtigungsarten**: Unter **Mehr** → **Benachrichtigungen** → **…** → **Benachrichtigungsarten** legen Sie je Art fest,
   ob sie **Nur Postfach** oder **Postfach und Push** erhält.
 - Das **App-Symbol** zeigt die Zahl ungelesener Chats und Benachrichtigungen.
 
