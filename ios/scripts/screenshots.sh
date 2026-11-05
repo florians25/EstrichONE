@@ -58,9 +58,16 @@ if [[ ",$SCENES," == *-quer,* ]]; then
   sleep 6
 fi
 rotate() {
-  osascript -e 'tell application "Simulator" to activate' \
+  osascript -e 'tell application "Simulator" to activate' -e 'delay 1' \
     -e "tell application \"System Events\" to key code $1 using command down" >/dev/null 2>&1 \
     || echo "::warning::$PREFIX: Drehen des Simulators nicht möglich (Bedienungshilfen-Recht für osascript?)"
+  sleep 3
+}
+# Ersatzweg über das Menü „Device“ des Simulators (wenn der Tastendruck nicht ankam).
+rotate_menu() {
+  osascript -e 'tell application "Simulator" to activate' -e 'delay 1' \
+    -e "tell application \"System Events\" to tell process \"Simulator\" to click menu item \"$1\" of menu \"Device\" of menu bar 1" \
+    >/dev/null 2>&1 || echo "::warning::$PREFIX: Simulator-Menü Device > $1 nicht erreichbar."
   sleep 3
 }
 start=$(date +%s)
@@ -82,7 +89,10 @@ while [ $index -lt ${#LIST[@]} ]; do
       if [[ "$name" == *-quer ]] && [ $ROTATED = 0 ]; then rotate 124; ROTATED=1; fi
       if [[ "$name" != *-quer ]] && [ $ROTATED = 1 ]; then rotate 123; ROTATED=0; fi
       # Steht der Simulator trotzdem hochkant (Tastendruck nicht angekommen), noch einmal drehen.
-      if [[ "$name" == *-quer ]] && [[ "$(orientation)" == portrait* ]]; then rotate 124; sleep 1; fi
+      for attempt in 1 2 3; do
+        if [[ "$name" != *-quer ]] || [[ "$(orientation)" != portrait* ]]; then break; fi
+        if [ "$attempt" = 2 ]; then rotate_menu "Rotate Right"; else rotate 124; fi
+      done
       # „…-gross“: mit sehr großer Schrift (Bedienungshilfen) aufnehmen.
       if [[ "$name" == *-gross ]]; then
         xcrun simctl ui "$UDID" content_size accessibility-large >/dev/null 2>&1
