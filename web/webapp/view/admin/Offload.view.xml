@@ -33,7 +33,7 @@
 				</HBox>
 
 				<MessageStrip visible="{= !!${view>/o} &amp;&amp; !${view>/o/paired} }" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
-					text="Noch kein Storage gekoppelt. Auf dem Kombiserver den Installer erneut mit -e ESTRICHONE_OFFLOAD_DATA_DIR=/pfad/auslagerung ausführen (Modus backup-archiv) bzw. auf einem Archivrechner den Modus „auslagerung“ – dann „Storage koppeln“ wählen und Adresse (Port 8445) und Code eingeben."/>
+					text="So koppeln Sie einen Storage: Auf dem Kombiserver den Installer erneut mit -e ESTRICHONE_OFFLOAD_DATA_DIR=/pfad/auslagerung ausführen (Modus backup-archiv) bzw. auf einem Archivrechner den Modus „auslagerung“ – dann „Storage koppeln“ wählen und Adresse (Port 8445) und Code eingeben."/>
 
 				<!-- Belegung -->
 				<VBox id="secUsage" class="sapUiMediumMarginBottom">
@@ -43,7 +43,7 @@
 						<core:Title text="Hauptserver"/>
 						<Label text="Belegt"/>
 						<VBox>
-							<ProgressIndicator percentValue="{view>/ui/serverUsed}" displayValue="{view>/ui/serverUsed} %" state="{view>/ui/serverState}" width="100%"/>
+							<ProgressIndicator percentValue="{view>/ui/serverUsed}" displayValue="{view>/ui/serverUsedLabel}" state="{view>/ui/serverState}" width="100%"/>
 							<Text text="{view>/ui/serverUsedText}"/>
 						</VBox>
 						<Label text="Schwelle"/><Text text="{view>/ui/thresholdText}"/>
@@ -51,7 +51,7 @@
 						<core:Title text="Storage"/>
 						<Label text="Belegt"/>
 						<VBox>
-							<ProgressIndicator percentValue="{view>/ui/storageUsed}" displayValue="{view>/ui/storageUsed} %" width="100%" visible="{= !!${view>/o/server} }"/>
+							<ProgressIndicator percentValue="{view>/ui/storageUsed}" displayValue="{view>/ui/storageUsedLabel}" width="100%" visible="{= !!${view>/o/server} }"/>
 							<Text text="{view>/ui/storageUsedText}"/>
 						</VBox>
 						<Label text="Ausgelagert"/><Text text="{view>/ui/offloaded}"/>

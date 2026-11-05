@@ -122,6 +122,7 @@
 .eoPlanHead .eoPlanCell { position: sticky; top: 0; z-index: 1; background: var(--sapList_HeaderBackground); font-weight: bold; min-height: auto; justify-content: center; }
 .eoPlanLane { position: sticky; left: 0; z-index: 1; background: var(--sapList_HeaderBackground); flex-direction: row; align-items: flex-start; gap: 0.5rem; }
 .eoPlanHead .eoPlanLane { z-index: 2; }
+.eoPlanLane .eoSwatch { flex-shrink: 0; margin-top: 0.3rem; }
 .eoPlanLaneText { display: flex; flex-direction: column; min-width: 0; }
 .eoPlanLaneText small, .eoPlanCard small { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
 .eoPlanAbsences .eoPlanCell { min-height: 2rem; background: var(--sapList_AlternatingBackground); }
@@ -141,6 +142,7 @@
 .eoPlanCard:hover { background: var(--sapTile_Hover_Background); }
 .eoPlanCard:focus-visible { outline: 2px solid var(--sapContent_FocusColor); outline-offset: 1px; }
 .eoPlanMovable { cursor: grab; touch-action: none; }
+.eoPlanCard.eoPlanMovable .eoPlanTime { padding-right: 0.875rem; }
 .eoPlanGhost { position: fixed; z-index: 1000; pointer-events: none; opacity: 0.92; box-shadow: var(--sapContent_Shadow2); transform: rotate(-1deg); }
 .eoPlanDragging { opacity: 0.5; }
 .eoPlanWarn { border-left-color: var(--sapCriticalElementColor); background: var(--sapWarningBackground); }

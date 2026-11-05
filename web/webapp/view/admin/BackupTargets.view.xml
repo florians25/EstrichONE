@@ -16,6 +16,10 @@
 			<VBox busy="{view>/busy}">
 				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
 					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
+				<VBox class="sapUiTinyMarginBottom">
+					<Title text="Gekoppelte Backup-Ziele" level="H2"/>
+					<Text text="Dieser Server überträgt die verschlüsselten Sicherungen an das Ziel – für Ziele im Firmennetz oder mit fester Adresse."/>
+				</VBox>
 				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${view>/items}.length === 0 }"
 					text="Auf dem Zielrechner (Linux mit Docker) einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest backup-ziel – er zeigt Adresse und Kopplungscode. Danach „Backup-Ziel koppeln“ wählen."/>
 				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" visible="{= ${view>/canKombi} &amp;&amp; ${view>/items}.length === 0 }"
@@ -40,8 +44,8 @@
 						</HBox>
 					</CustomListItem>
 				</List>
-				<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiMediumMarginTop sapUiTinyMarginBottom">
-					<VBox>
+				<HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="sapUiMediumMarginTop sapUiTinyMarginBottom">
+					<VBox class="eoGrow">
 						<Title text="Backup-Ziele, die ziehen" level="H2"/>
 						<Text text="Für ein Ziel ohne feste Adresse (zuhause hinter dem Router), wenn dieser Server öffentlich erreichbar ist (z. B. im Rechenzentrum): Das Ziel verbindet sich selbst und holt die verschlüsselten Sicherungen – keine Portfreigabe nötig."/>
 					</VBox>

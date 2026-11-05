@@ -6,6 +6,8 @@
 
 /* Teamplaner */
 .eoTeamPlanner { min-height: 100%; }
+/* Zeilenkopf: Avatar nicht stauchen/dehnen, damit Namen bündig stehen. */
+.eoTeamPlanner .sapMPlanCalRowHead .sapFAvatar { flex: none; }
 .eoPlanningCalendar .sapUiCalendarApp { border-radius: var(--sapElement_BorderCornerRadius); }
 
 /* Wer fährt wohin */
@@ -93,7 +95,7 @@
 .eoVac-vacation { background: var(--sapSuccessBackground); color: var(--sapPositiveTextColor); }
 .eoVac-sick { background: var(--sapErrorBackground); color: var(--sapNegativeTextColor); }
 .eoVac-training, .eoVac-school { background: var(--sapInformationBackground); color: var(--sapInformativeTextColor); }
-.eoVac-specialLeave { background: var(--sapIndicationColor_7_Background, var(--sapWarningBackground)); color: var(--sapTextColor); }
+.eoVac-specialLeave { background: var(--sapIndicationColor_7_Background, var(--sapWarningBackground)); color: var(--sapIndicationColor_7_TextColor, var(--sapTextColor)); }
 .eoVac-other { background: var(--sapNeutralBackground); color: var(--sapNeutralTextColor); }
 .eoVacPending { background-image: repeating-linear-gradient(45deg, transparent, transparent 3px, var(--sapList_BorderColor) 3px, var(--sapList_BorderColor) 4px); font-style: italic; }
 .eoVacRest { min-width: 3rem; padding: 0 0.375rem !important; text-align: right !important; }
@@ -486,3 +488,7 @@ body.eoCkDragActive .eoCk [data-drop] { transition: background-color 80ms, box-s
 	.eoCkGrid .eoCkCard:not(.eoCkCompact) { padding-left: 0.5625rem; padding-right: 0.375rem; } .eoCkLane { padding-left: 0.625rem; padding-right: 0.625rem; } }
 @media (max-width: 64rem) { .eoCkPool { flex-basis: 14rem; } .eoCkKpis { display: none; } }
 @media (max-width: 40rem) { .eoCkBody { flex-direction: column; } .eoCkPool { flex: 0 0 14rem; } }
+/* Seitentitel außerhalb einer DynamicPage (z. B. Baustellenkarte) wie die übrigen Seiten. */
+.eoPageHeading.sapMTitle { font-family: var(--sapObjectHeader_Title_FontFamily); font-size: var(--sapObjectHeader_Title_FontSize); font-weight: var(--sapObjectHeader_Title_FontWeight, normal); }
+/* Verwaltung: Formulare mit fester Breite nie breiter als der Bereich (iPad). */
+.eoAdmin .sapUiSimpleForm { max-width: 100%; }

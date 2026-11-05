@@ -174,7 +174,7 @@ export default class PlanBoard extends Control {
 		b.dataset.lane = data.rows === "people" ? "" : a.crewId ?? "";
 		const color = safeColor(a.crewColor) || safeColor(kind?.color);
 		if (color && !a.warnings.length) b.style.borderLeftColor = color;
-		b.setAttribute("aria-label", `${a.activity}, ${a.bauakteTitle}, ${timeRange(a.startTime, a.endTime) || "ganztags"}${a.warnings.length ? `, ${a.warnings.length} Hinweise` : ""}`);
+		b.setAttribute("aria-label", `${a.activity}, ${a.bauakteTitle}, ${timeRange(a.startTime, a.endTime) || "ganztags"}${a.warnings.length ? `, ${a.warnings.length === 1 ? "1 Hinweis" : `${a.warnings.length} Hinweise`}` : ""}`);
 		if (data.canPlan) {
 			b.classList.add("eoPlanMovable");
 			b.addEventListener("pointerdown", (e) => startDrag(e, b, { kind: "assignment", id: a.id, lane: b.dataset.lane ?? "" }));

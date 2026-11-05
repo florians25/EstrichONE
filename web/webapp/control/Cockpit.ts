@@ -476,7 +476,7 @@ export default class Cockpit extends Control {
 		const time = a.startTime ? `${hhmm(a.startTime)}${a.endTime ? `–${hhmm(a.endTime)}` : ""}` : "ganztags";
 		const title = `${a.bauakteNumber ? `${a.bauakteNumber} · ` : ""}${a.bauakteTitle}`;
 		const city = a.bauakteAddress?.split(",").pop()?.trim().replace(/^\d{5}\s*/, "") ?? "";
-		card.setAttribute("aria-label", `${a.activity}, ${title}, ${time}${a.warnings.length ? `, ${a.warnings.length} Hinweise` : ""}${a.change ? ", geändert seit Freigabe" : ""}`);
+		card.setAttribute("aria-label", `${a.activity}, ${title}, ${time}${a.warnings.length ? `, ${a.warnings.length === 1 ? "1 Hinweis" : `${a.warnings.length} Hinweise`}` : ""}${a.change ? ", geändert seit Freigabe" : ""}`);
 		card.title = [title, `${a.activity} · ${time}`, a.bauakteAddress ?? "", a.people.length ? `Team: ${a.people.map((p) => p.name).join(", ")}` : "",
 			a.resources.length ? `Geräte: ${a.resources.map((r) => r.name).join(", ")}` : "", ...a.warnings.map((w) => `⚠ ${w}`),
 			a.change ? (a.change === "new" ? "Neu seit Freigabe" : "Geändert seit Freigabe") : "", "Klick: Details · Doppelklick: bearbeiten"].filter(Boolean).join("\n");

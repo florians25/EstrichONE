@@ -25,7 +25,7 @@
 					</Select>
 					<core:InvisibleText id="crewLabel" text="Kolonne"/>
 				</OverflowToolbar>
-				<VBox items="{view>/days}" busy="{view>/busy}">
+				<VBox items="{path: 'view>/days', templateShareable: false}" busy="{view>/busy}">
 					<Panel expandable="false" class="sapUiSmallMarginBottom eoAgendaDay">
 						<headerToolbar>
 							<Toolbar>
@@ -35,11 +35,11 @@
 								<Text text="{view>countText}"/>
 							</Toolbar>
 						</headerToolbar>
-						<HBox wrap="Wrap" items="{view>absences}" visible="{= ${view>absences}.length > 0 }" class="sapUiTinyMarginBottom">
+						<HBox wrap="Wrap" items="{path: 'view>absences', templateShareable: false}" visible="{= ${view>absences}.length > 0 }" class="sapUiTinyMarginBottom">
 							<ObjectStatus text="{view>text}" state="Warning" icon="sap-icon://general-leave-request" class="sapUiSmallMarginEnd"/>
 						</HBox>
 						<Text text="Keine Einsätze." class="eoMuted" visible="{= ${view>items}.length === 0 }"/>
-						<List items="{view>items}" visible="{= ${view>items}.length > 0 }" showSeparators="Inner">
+						<List items="{path: 'view>items', templateShareable: false}" visible="{= ${view>items}.length > 0 }" showSeparators="Inner">
 							<CustomListItem>
 								<HBox alignItems="Start" class="sapUiTinyMargin">
 									<eo:Swatch color="{view>crewColor}" shape="bar"/>
@@ -52,7 +52,7 @@
 											<Link text="{view>bauakteText}" href="{= '/bauakten/' + ${view>bauakteId} }" class="sapUiTinyMarginEnd"/>
 											<ObjectStatus text="{view>kindText}" state="Information" class="sapUiTinyMarginEnd"/>
 											<ObjectStatus text="{view>crewName}" visible="{= !!${view>crewName} }" class="sapUiTinyMarginEnd"/>
-											<ObjectStatus text="{= ${view>warnings}.length + ' Hinweise' }" state="Warning" inverted="true" visible="{= ${view>warnings}.length > 0 }" tooltip="{view>warningText}"/>
+											<ObjectStatus text="{= ${view>warnings}.length === 1 ? '1 Hinweis' : ${view>warnings}.length + ' Hinweise' }" state="Warning" inverted="true" visible="{= ${view>warnings}.length > 0 }" tooltip="{view>warningText}"/>
 										</HBox>
 										<Text text="{view>line}"/>
 										<Text text="{view>team}" class="eoMuted"/>

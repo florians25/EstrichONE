@@ -9,7 +9,7 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<Table items="{view>/shown}" busy="{view>/busy}" noDataText="Noch keine Artikel. Legen Sie die Materialien an, die Sie regelmäßig bestellen." sticky="HeaderToolbar,ColumnHeaders"
+			<Table contextualWidth="Auto" items="{view>/shown}" busy="{view>/busy}" noDataText="Noch keine Artikel. Legen Sie die Materialien an, die Sie regelmäßig bestellen." sticky="HeaderToolbar,ColumnHeaders"
 				growing="true" growingThreshold="100" popinLayout="GridSmall">
 				<headerToolbar>
 					<OverflowToolbar>
@@ -26,8 +26,8 @@
 				<columns>
 					<Column><Text text="Bezeichnung"/></Column>
 					<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art.-Nr."/></Column>
-					<Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kategorie"/></Column>
-					<Column width="6rem"><Text text="Einheit"/></Column>
+					<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kategorie"/></Column>
+					<Column width="5rem"><Text text="Einheit"/></Column>
 					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Lieferant"/></Column>
 					<Column width="9rem" hAlign="End"><Text text="Preis je Einheit"/></Column>
 					<Column width="6rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Status"/></Column>
@@ -36,7 +36,7 @@
 				<items>
 					<ColumnListItem>
 						<VBox>
-							<Link text="{view>name}" press=".onEdit" enabled="{= ${session>/permissions/materials.manage} === true }"/>
+							<Link text="{view>name}" wrapping="true" press=".onEdit" enabled="{= ${session>/permissions/materials.manage} === true }"/>
 							<Text text="{view>notes}" visible="{= !!${view>notes} }" class="eoMuted"/>
 						</VBox>
 						<Text text="{= ${view>articleNumber} || '–' }"/>
@@ -45,7 +45,7 @@
 						<Text text="{= ${view>supplierName} || '–' }"/>
 						<Text text="{path: 'view>price', formatter: 'fmt.money'}" class="eoTabular"/>
 						<ObjectStatus text="{path: 'view>isActive', formatter: 'fmt.activeText'}" state="{path: 'view>isActive', formatter: 'fmt.activeState'}"/>
-						<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete"/>
+						<Button icon="sap-icon://delete" type="Transparent" tooltip="Artikel löschen" press=".onDelete"/>
 					</ColumnListItem>
 				</items>
 			</Table>

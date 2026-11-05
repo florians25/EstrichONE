@@ -10,7 +10,9 @@ import type { BackupRunInfo, BackupStatusResponse } from "../../util/models";
 import type { BackupPreferences, BackupSnapshotsResponse, RestoreProgress } from "../../util/infraModels";
 
 const info = (r: BackupRunInfo | null) => (r
-	? { text: `${r.status === "succeeded" ? "Erfolgreich" : r.status === "running" ? "Läuft" : "Fehlgeschlagen"} · ${dateTime(r.at)} · ${r.message}`,
+	? { text: `${r.status === "succeeded" ? "Erfolgreich" : r.status === "running" ? "Läuft" : "Fehlgeschlagen"} · ${dateTime(r.at)}${
+		// „Sicherung erfolgreich“ wiederholt nur den Status.
+		r.message && !(r.status === "succeeded" && /^\S*\s*erfolgreich\.?$/i.test(r.message.trim())) ? ` · ${r.message}` : ""}`,
 		state: r.status === "succeeded" ? "Success" : r.status === "running" ? "Information" : "Error" }
 	: { text: "Noch nie", state: "None" });
 

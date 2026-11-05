@@ -18,7 +18,7 @@
 								<Title text="{view>name}" level="H3"/>
 								<ObjectStatus text="{view>levelText}" state="{view>state}" inverted="true"/>
 							</HBox>
-							<ProgressIndicator visible="{= !!${view>disk} }" percentValue="{view>disk/usedPercent}" displayValue="{view>diskText}" state="{view>diskState}" width="100%" class="sapUiTinyMarginTop"/>
+							<ProgressIndicator visible="{= !!${view>disk} }" percentValue="{= ${view>disk} ? ${view>disk/usedPercent} : 0 }" displayValue="{view>diskText}" state="{view>diskState}" width="100%" class="sapUiTinyMarginTop"/>
 							<List items="{path: 'view>items', templateShareable: false}" showSeparators="None" backgroundDesign="Transparent">
 								<CustomListItem>
 									<HBox>

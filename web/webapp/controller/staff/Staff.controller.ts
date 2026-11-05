@@ -55,7 +55,7 @@ export default class Staff extends BaseController {
 				employmentText: employmentTypes[e.employmentType] ?? e.employmentType,
 				crewText: e.crews.map((c) => c.name).join(", ") || "–",
 				vacationText: number(e.vacationRemaining),
-				todayText: !e.isActive ? (e.exitDate ? `ausgetreten ${date(e.exitDate)}` : "noch nicht eingetreten") : e.absentToday ? absenceKinds[e.absentToday] ?? "abwesend" : "verfügbar",
+				todayText: !e.isActive ? (e.exitDate ? `Ausgetreten ${date(e.exitDate)}` : "Noch nicht eingetreten") : e.absentToday ? absenceKinds[e.absentToday] ?? "Abwesend" : "Verfügbar",
 				todayState: !e.isActive ? "None" : e.absentToday === "sick" ? "Error" : e.absentToday ? "Warning" : "Success",
 				rateText: e.hourlyRate != null ? `${e.hourlyRate.toLocaleString("de-DE", { minimumFractionDigits: 2 })} €` : "–",
 			})));

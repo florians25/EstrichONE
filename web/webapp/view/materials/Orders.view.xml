@@ -23,7 +23,7 @@
 			</f:DynamicPageHeader>
 		</f:header>
 		<f:content>
-			<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Bestellungen in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+			<Table contextualWidth="Auto" items="{view>/items}" busy="{view>/busy}" noDataText="Keine Bestellungen in dieser Ansicht." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
 				<headerToolbar>
 					<OverflowToolbar>
 						<Title text="{= ${view>/items}.length === 1 ? '1 Bestellung' : ${view>/items}.length + ' Bestellungen' }" level="H2"/>
@@ -45,12 +45,12 @@
 				</headerToolbar>
 				<columns>
 					<Column width="8rem"><Text text="Nummer"/></Column>
-					<Column width="11rem"><Text text="Liefertermin"/></Column>
-					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Lieferant"/></Column>
+					<Column width="9rem"><Text text="Liefertermin"/></Column>
+					<Column width="11rem" minScreenWidth="52rem" demandPopin="true"><Text text="Lieferant"/></Column>
 					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Bauakte / Lieferadresse"/></Column>
 					<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Positionen"/></Column>
 					<Column width="7rem" hAlign="End"><Text text="Summe"/></Column>
-					<Column width="7rem"><Text text="Status"/></Column>
+					<Column width="8rem"><Text text="Status"/></Column>
 				</columns>
 				<items>
 					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${view>overdue} ? 'Error' : 'None' }">
@@ -61,7 +61,7 @@
 						</VBox>
 						<Text text="{view>supplierName}"/>
 						<VBox>
-							<Link text="{view>bauakteNumber} · {view>bauakteTitle}" href="/bauakten/{view>bauakteId}?abschnitt=material" visible="{= !!${view>bauakteId} }"/>
+							<Link text="{view>bauakteNumber} · {view>bauakteTitle}" wrapping="true" href="/bauakten/{view>bauakteId}?abschnitt=material" visible="{= !!${view>bauakteId} }"/>
 							<Text text="Lager / ohne Bauakte" visible="{= !${view>bauakteId} }"/>
 							<Text text="{view>address}" class="eoMuted"/>
 						</VBox>

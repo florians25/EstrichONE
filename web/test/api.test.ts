@@ -22,6 +22,14 @@ describe('api', () => {
     expect(problemMessage(error)).toBe('Bitte den Namen angeben.');
   });
 
+  it('ersetzt englische Standardtitel des Servers durch deutsche Meldungen', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(problem(404, { title: 'Not Found', status: 404 })));
+    const error = await api('tickets/x').catch((e: unknown) => e);
+    expect(problemMessage(error)).toMatch(/^Nicht gefunden/);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(problem(409, { title: 'Bauakte gesperrt' })));
+    expect(problemMessage(await api('bauakten/x').catch((e: unknown) => e))).toBe('Bauakte gesperrt');
+  });
+
   it('führt bei PASSWORD_CHANGE_REQUIRED zum Passwortwechsel, ohne die Sitzung zu beenden', async () => {
     const required = vi.fn();
     const ended = vi.fn();

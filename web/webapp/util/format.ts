@@ -35,9 +35,10 @@ export function timeRange(start: string | null | undefined, end: string | null |
 }
 
 export function fileSize(bytes: number): string {
-	return bytes < 1024 * 1024
-		? `${Math.max(1, Math.round(bytes / 1024))} KB`
-		: `${(bytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
+	if (bytes <= 0) return "0 KB";
+	if (bytes < 1024 * 1024) return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+	if (bytes < 1024 ** 3) return `${(bytes / 1024 / 1024).toLocaleString("de-DE", { maximumFractionDigits: 1 })} MB`;
+	return `${(bytes / 1024 ** 3).toLocaleString("de-DE", { maximumFractionDigits: 1 })} GB`;
 }
 
 export function area(value: number | null | undefined): string {

@@ -7,7 +7,9 @@ import { describeTicketEvent, inspectionResult } from '../webapp/util/labels';
 describe('Anzeigeformate', () => {
   it('Dateigrößen, Flächen, CM-Werte', () => {
     expect(fileSize(200)).toBe('1 KB');
+    expect(fileSize(0)).toBe('0 KB');
     expect(fileSize(2.5 * 1024 * 1024)).toBe('2,5 MB');
+    expect(fileSize(15.7 * 1024 ** 3)).toBe('15,7 GB');
     expect(area(42.5)).toBe('42,50 m²');
     expect(cmNumber(1.6)).toBe('1,6');
     expect(cmNumber(null)).toBe('–');

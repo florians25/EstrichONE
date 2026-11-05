@@ -96,6 +96,19 @@ export function problemMessage(error: unknown): string {
 	return `Ein unerwarteter Fehler ist aufgetreten${detail}. Bitte die Seite neu laden und erneut versuchen.`;
 }
 
+const englishTitles = new Set(["Bad Request", "Unauthorized", "Forbidden", "Not Found", "Method Not Allowed", "Conflict", "Gone",
+	"Payload Too Large", "Request Entity Too Large", "Unsupported Media Type", "Unprocessable Entity", "Too Many Requests", "Internal Server Error",
+	"Bad Gateway", "Service Unavailable", "Gateway Timeout", "An error occurred while processing your request.",
+	"One or more validation errors occurred."]);
+const statusTexts: Record<number, string> = {
+	400: "Die Eingaben sind unvollständig oder ungültig.", 403: "Dafür fehlt die Berechtigung.",
+	404: "Nicht gefunden – der Eintrag wurde gelöscht oder die Adresse ist nicht (mehr) gültig.",
+	409: "Der Eintrag wurde inzwischen geändert. Bitte neu laden und erneut versuchen.", 413: "Die Datei ist zu groß.",
+	429: "Zu viele Anfragen in kurzer Zeit. Bitte kurz warten und erneut versuchen.",
+	500: "Auf dem Server ist ein Fehler aufgetreten. Bitte später erneut versuchen.", 502: "Der Server ist gerade nicht erreichbar.",
+	503: "Der Server ist gerade nicht verfügbar (z. B. Wartung). Bitte später erneut versuchen.", 504: "Der Server antwortet nicht rechtzeitig.",
+};
+
 async function toError(response: Response): Promise<ApiError> {
 	let problem: Problem | undefined;
 	try {
@@ -104,7 +117,9 @@ async function toError(response: Response): Promise<ApiError> {
 		problem = undefined;
 	}
 	const firstValidation = problem?.errors ? Object.values(problem.errors).flat()[0] : undefined;
-	const message = firstValidation ?? problem?.detail ?? problem?.title ?? `Die Anfrage ist fehlgeschlagen (Status ${response.status}).`;
+	// Standardtitel von ASP.NET („Not Found“ …) ohne eigene Meldung: deutscher Text statt englischem Statusnamen.
+	const title = problem?.title && !englishTitles.has(problem.title) ? problem.title : undefined;
+	const message = firstValidation ?? problem?.detail ?? title ?? statusTexts[response.status] ?? `Die Anfrage ist fehlgeschlagen (Status ${response.status}).`;
 	return new ApiError(response.status, problem?.code, message, problem);
 }
 

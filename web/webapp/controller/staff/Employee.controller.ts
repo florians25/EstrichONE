@@ -31,6 +31,8 @@ export default class Employee extends BaseController {
 	onInit(): void {
 		this.local({ e: null, busy: false, headline: "", statusText: "", statusState: "None", crewText: "", address: "", employmentText: "", periodText: "",
 			workText: "", rateText: "", vacation: {}, qualifications: [], absences: [], equipment: [], documents: [] });
+		// Erst nach dem Kopftitel setzen (im XML vor headerTitle ausgewertet → Warnung „nicht unterstützt“).
+		(this.byId("objectPage") as ObjectPageLayout).setToggleHeaderOnTitleClick(false);
 	}
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {

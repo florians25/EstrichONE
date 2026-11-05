@@ -286,6 +286,11 @@ public sealed class ArchiveTests(PostgresFixture postgres) : IAsyncLifetime
         var monitoring = (await _admin.GetFromJsonAsync<MonitoringOverview>("/api/v1/system/monitoring", TestJson.Options))!;
         monitoring.Systems.ShouldContain(s => s.Key == "archive" && s.Disk != null);
         monitoring.Systems.ShouldContain(s => s.Key == "production");
+        // Meldezeile ohne doppeltes „Status –“ (Verwaltung zeigt sie als Handlungsbedarf).
+        monitoring.Warnings.ShouldContain(w => w.StartsWith("Backup-Ziel: keines gekoppelt"));
+        // Prozentangaben deutsch formatiert (Komma), unabhängig von der Kultur des Servers.
+        monitoring.Systems.SelectMany(s => s.Items).Where(i => i.Label == "Platte")
+            .ShouldAllBe(i => !System.Text.RegularExpressions.Regex.IsMatch(i.Value, @"\(\d+\.\d+ %\)"));
     }
 
     private async Task ReloginAsync()

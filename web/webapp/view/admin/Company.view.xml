@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.admin.Company" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
-	xmlns:core="sap.ui.core" height="100%">
+	xmlns:core="sap.ui.core" xmlns:eo="estrichone.control" height="100%">
 	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}" class="eoAdmin">
 		<f:title>
 			<f:DynamicPageTitle>
@@ -111,7 +111,7 @@
 							<Label text=""/><Text text="Bei Aktivität verlängert sich die Sitzung von selbst. Läuft sie ab, erscheint ein Anmeldedialog – Eingaben bleiben erhalten." class="eoMuted"/>
 							<core:Title text="Zwei-Faktor-Anmeldung"/>
 							<Label text="Pflicht für Administratoren" labelFor="setTwoFactorAdmins"/>
-							<Switch id="setTwoFactorAdmins" state="{view>/s/session/requireTwoFactorForAdmins}" customTextOn="Ja" customTextOff="Nein"/>
+							<Switch id="setTwoFactorAdmins" state="{view>/s/session/requireTwoFactorForAdmins}" customTextOn=" " customTextOff=" "/>
 							<Label text=""/><Text text="Konten mit Verwaltungsrechten (Benutzer, Rollen, Einstellungen, Backup, Geräte, Protokoll, Archiv) nutzen diese Rechte erst, wenn sie unter „Anmeldung und Sicherheit“ eine Authenticator-App eingerichtet haben. Empfohlen, wenn EstrichONE aus dem Internet erreichbar ist. Vorher selbst einrichten!" class="eoMuted"/>
 							<core:Title text="Apps auf Smartphones und Tablets"/>
 							<Label text="Angemeldet bleiben ohne Nutzung" labelFor="setDeviceIdle"/>
@@ -193,7 +193,10 @@
 							<Label text="Firmenlogo im Kopf"/><Switch state="{view>/s/pdf/showCompanyLogo}" customTextOn=" " customTextOff=" "/>
 							<Label text="EstrichONE-Logo in der Fußzeile"/><Switch state="{view>/s/pdf/showEstrichOneLogo}" customTextOn=" " customTextOff=" "/>
 							<Label text="Akzentfarbe" labelFor="setAccent"/>
-							<Input id="setAccent" value="{view>/s/pdf/accentColor}" maxLength="7" width="8rem" placeholder="#1F4E79"/>
+							<HBox alignItems="Center">
+								<Input id="setAccent" value="{view>/s/pdf/accentColor}" maxLength="7" width="8rem" placeholder="#1F4E79" valueLiveUpdate="true"/>
+								<eo:Swatch color="{view>/s/pdf/accentColor}" class="sapUiSmallMarginBegin"/>
+							</HBox>
 							<Label text="Zusätzliche Fußzeile" labelFor="setFooter"/>
 							<Input id="setFooter" value="{view>/s/pdf/footerText}" maxLength="200" placeholder="z. B. Bankverbindung, Registergericht, USt-IdNr."/>
 							<Label text="Fotos je Zeile" labelFor="setPhotos"/>

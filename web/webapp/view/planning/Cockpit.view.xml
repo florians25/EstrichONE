@@ -86,7 +86,7 @@
 				</Button>
 				<Button id="ckViewBtn" icon="sap-icon://action-settings" type="Transparent" press=".onViewOptions" text="{= ${view>/weekend} ? 'Mo–So' : 'Mo–Fr' }"
 					tooltip="Darstellung: Wochenende anzeigen (W), kompakte Karten" class="eoCkViewBtn" visible="{= ${view>/mode} !== 'day' }">
-					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
 				</Button>
 				<Button icon="sap-icon://palette" type="Transparent" tooltip="Legende" press=".onLegend">
 					<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
@@ -104,7 +104,8 @@
 						<SegmentedButtonItem key="twoWeeks" text="2 Wochen"/>
 						<SegmentedButtonItem key="month" text="Monat"/>
 					</items>
-					<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+					<!-- Schmale Fenster (iPad): wandert als Auswahl ins Überlaufmenü statt abgeschnitten zu werden. -->
+					<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
 				</SegmentedButton>
 			</OverflowToolbar>
 			<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }"/>

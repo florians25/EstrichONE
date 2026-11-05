@@ -1,11 +1,14 @@
 import BaseController from "../BaseController";
 import { get } from "../../util/api";
-import { auditGroups } from "../../util/labels";
+import { auditAreas, auditDetailLabels, auditDetailValues, auditGroups } from "../../util/labels";
+import { date } from "../../util/format";
 import type { AuditLogItem, AuditLogPage } from "../../util/models";
 import { session } from "../../util/session";
 
 /** Protokoll: das nur anfügbare Audit-Log, gefiltert und seitenweise. @namespace estrichone.controller.admin */
 export default class Audit extends BaseController {
+	private names = new Map<string, string>();
+
 	onInit(): void {
 		this.local({ items: [], cursor: null, busy: false, group: "", actor: "", from: null, to: null,
 			groups: [{ key: "", text: "Alle Bereiche" }, ...auditGroups], people: [{ key: "", text: "Alle Personen" }] });
@@ -13,6 +16,7 @@ export default class Audit extends BaseController {
 
 	async onRouteMatched(): Promise<void> {
 		const people = await session.people();
+		this.names = new Map(people.map((p) => [p.id, p.displayName]));
 		this.model().setProperty("/people", [{ key: "", text: "Alle Personen" }, ...people.map((p) => ({ key: p.id, text: p.displayName }))]);
 		await this.load(false);
 	}
@@ -30,11 +34,27 @@ export default class Audit extends BaseController {
 			cursor: more ? m.getProperty("/cursor") : undefined, from: from?.toISOString(), to: end?.toISOString(),
 		}));
 		if (!page) return;
-		const rows = page.items.map((e: AuditLogItem) => ({ ...e, area: e.action.split(".")[0],
-			detailsText: Object.entries(e.details ?? {}).map(([k, v]) => `${k}: ${v ?? "–"}`).join(" · ") }));
+		const rows = page.items.map((e: AuditLogItem) => {
+			const area = e.action.split(".")[0];
+			const bauakteId = e.entityType === "bauakte" ? e.entityId : e.details?.bauakteId ?? null;
+			return { ...e, area: auditAreas[area] ?? area, bauakteId, detailsText: this.details(e.details ?? {}) };
+		});
 		m.setProperty("/items", more ? [...m.getProperty("/items"), ...rows] : rows);
 		m.setProperty("/cursor", page.nextCursor);
 		const count = (m.getProperty("/items") as unknown[]).length;
 		this.statusLine([{ text: `${count}${page.nextCursor ? "+" : ""} Ereignisse im gewählten Zeitraum · unveränderbar gespeichert`, level: "info" }], "");
+	}
+
+	/** Details lesbar: deutsche Feldnamen und Werte, Personen statt IDs, Datum deutsch; Bauakte-ID steckt im Link „Bauakte öffnen“. */
+	private details(details: Record<string, string | null>): string {
+		const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		return Object.entries(details).filter(([k]) => k !== "bauakteId").map(([k, raw]) => {
+			let v = raw ?? "–";
+			if (uuid.test(v)) v = this.names.get(v) ?? "–";
+			else if (/^\d{4}-\d{2}-\d{2}$/.test(v)) v = date(v);
+			else if (k === "fingerprint" && v.length > 16) v = `${v.slice(0, 16).toUpperCase().replace(/(.{4})(?=.)/g, "$1 ")} …`;
+			else v = auditDetailValues[v] ?? auditDetailValues[v.toLowerCase()] ?? v;
+			return `${auditDetailLabels[k] ?? k}: ${v}`;
+		}).join(" · ");
 	}
 }

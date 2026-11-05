@@ -19,7 +19,7 @@
 				<MessageStrip text="{view>/restore/text}" type="{view>/restore/type}" showIcon="true" class="sapUiSmallMarginBottom" visible="{= !!${view>/restore/text} }"/>
 				<ProgressIndicator percentValue="{view>/restore/percent}" displayValue="{view>/restore/phase}" state="Information" visible="{= !!${view>/restore/active} }"
 					class="sapUiSmallMarginBottom"/>
-				<IconTabBar id="tabs" selectedKey="{view>/tab}" expandable="false" applyContentPadding="false" headerBackgroundDesign="Transparent">
+				<IconTabBar id="tabs" headerMode="Inline" selectedKey="{view>/tab}" expandable="false" applyContentPadding="false" headerBackgroundDesign="Transparent">
 					<items>
 						<IconTabFilter key="status" text="Übersicht">
 							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Verlauf">
@@ -86,7 +86,7 @@
 									<core:Item key="6" text="alle 6 Stunden"/>
 									<core:Item key="12" text="alle 12 Stunden"/>
 								</Select>
-								<Label text="Wöchentliche Probe-Wiederherstellung"/><Switch state="{view>/p/weeklyRestoreTest}" customTextOn="Ja" customTextOff="Nein"/>
+								<Label text="Wöchentliche Probe-Wiederherstellung"/><Switch state="{view>/p/weeklyRestoreTest}" customTextOn=" " customTextOff=" "/>
 							</form:SimpleForm>
 							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Aufbewahrung (lokales Hauptziel)">
 								<Label text="Tägliche Stände"/><StepInput value="{view>/p/keepDaily}" min="7" max="365" width="10rem"/>
@@ -96,8 +96,8 @@
 								<Label text=""/><Text text="Gekoppelte Backup-Ziele sind „nur anhängen“ und behalten alles (Schutz vor Verschlüsselungstrojanern)."/>
 							</form:SimpleForm>
 							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Pushnachrichten an Administratoren (Recht backup.manage)">
-								<Label text="Meldungen"/><Switch state="{view>/p/notifyAdmins}" customTextOn="Ein" customTextOff="Aus"/>
-								<Label text="Auch erfolgreiche Sicherungen"/><Switch state="{view>/p/notifyOnSuccess}" enabled="{view>/p/notifyAdmins}" customTextOn="Ja" customTextOff="Nein"/>
+								<Label text="Meldungen"/><Switch state="{view>/p/notifyAdmins}" customTextOn=" " customTextOff=" "/>
+								<Label text="Auch erfolgreiche Sicherungen"/><Switch state="{view>/p/notifyOnSuccess}" enabled="{view>/p/notifyAdmins}" customTextOn=" " customTextOff=" "/>
 								<Label text=""/><Text text="Fehler, Ausfall des Backup- oder Archiv-Servers (einmal, dann täglich) und „wieder in Ordnung“ werden immer gemeldet, solange Meldungen eingeschaltet sind."/>
 								<Label text=""/><Button text="Speichern" type="Emphasized" press=".onSaveSettings" width="10rem"/>
 							</form:SimpleForm>

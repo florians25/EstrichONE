@@ -1,7 +1,7 @@
 <mvc:View controllerName="estrichone.controller.staff.Employee" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:uxap="sap.uxap" xmlns:f="sap.f"
 	xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
 	<uxap:ObjectPageLayout id="objectPage" useIconTabBar="true" upperCaseAnchorBar="false" busy="{view>/busy}" busyIndicatorDelay="200"
-		headerContentPinnable="false" toggleHeaderOnTitleClick="false" navigate=".onSection">
+		headerContentPinnable="false" navigate=".onSection">
 		<uxap:headerTitle>
 			<uxap:ObjectPageDynamicHeaderTitle>
 				<uxap:breadcrumbs><Breadcrumbs currentLocationText="{view>/e/displayName}"><Link text="Personal" href="/personal"/></Breadcrumbs></uxap:breadcrumbs>
@@ -45,16 +45,16 @@
 			<uxap:ObjectPageSection id="secOverview" title="Übersicht" titleUppercase="false">
 				<uxap:subSections>
 					<uxap:ObjectPageSubSection>
-						<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="3" columnsL="2" columnsM="2" labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12" emptySpanXL="0" emptySpanL="0" emptySpanM="0" emptySpanS="0" adjustLabelSpan="false" singleContainerFullSize="false" class="eoDenseForm">
+						<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="3" columnsL="2" columnsM="1" labelSpanXL="4" labelSpanL="4" labelSpanM="3" labelSpanS="12" emptySpanXL="0" emptySpanL="0" emptySpanM="0" emptySpanS="0" adjustLabelSpan="false" singleContainerFullSize="false" class="eoDenseForm">
 							<core:Title text="Kontakt"/>
 							<Label text="Handy"/><Text text="{= ${view>/e/mobile} || '–' }"/>
 							<Label text="Telefon"/><Text text="{= ${view>/e/phone} || '–' }"/>
-							<Label text="E-Mail"/><Link text="{= ${view>/e/email} || '–' }" href="{= 'mailto:' + ${view>/e/email} }" enabled="{= !!${view>/e/email} }"/>
+							<Label text="E-Mail"/><HBox renderType="Bare"><Link text="{view>/e/email}" href="{= 'mailto:' + ${view>/e/email} }" visible="{= !!${view>/e/email} }"/><Text text="–" visible="{= !${view>/e/email} }"/></HBox>
 							<Label text="Anschrift"/><Text text="{view>/address}"/>
 							<Label text="Geburtsdatum"/><Text text="{path: 'view>/e/birthDate', formatter: 'fmt.date'}"/>
 							<core:Title text="Notfallkontakt"/>
 							<Label text="Name"/><Text text="{= ${view>/e/emergencyContactName} || '–' }"/>
-							<Label text="Telefon"/><Link text="{= ${view>/e/emergencyContactPhone} || '–' }" href="{= 'tel:' + ${view>/e/emergencyContactPhone} }" enabled="{= !!${view>/e/emergencyContactPhone} }"/>
+							<Label text="Telefon"/><HBox renderType="Bare"><Link text="{view>/e/emergencyContactPhone}" href="{= 'tel:' + ${view>/e/emergencyContactPhone} }" visible="{= !!${view>/e/emergencyContactPhone} }"/><Text text="–" visible="{= !${view>/e/emergencyContactPhone} }"/></HBox>
 							<Label text="Beziehung"/><Text text="{= ${view>/e/emergencyContactRelation} || '–' }"/>
 							<core:Title text="Beschäftigung"/>
 							<Label text="Personalnummer"/><Text text="{= ${view>/e/personnelNumber} || '–' }"/>
@@ -76,7 +76,7 @@
 							<HBox items="{view>/e/crews}" wrap="Wrap">
 								<HBox alignItems="Center" class="sapUiSmallMarginEnd"><eo:Swatch color="{view>color}"/><Text text="{view>name}"/></HBox>
 							</HBox>
-							<Text text="In keiner Kolonne." visible="{= ${view>/e/crews}.length === 0 }" class="eoMuted"/>
+							<Text text="In keiner Kolonne." visible="{= !!${view>/e/crews} &amp;&amp; ${view>/e/crews}.length === 0 }" class="eoMuted"/>
 							<Button text="Kolonnen ändern" icon="sap-icon://group" press=".onCrews" visible="{= ${view>/e/canManage} &amp;&amp; !!${view>/e/userId} }" class="sapUiSmallMarginTop"/>
 						</VBox>
 					</uxap:ObjectPageSubSection>

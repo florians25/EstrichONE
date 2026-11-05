@@ -65,11 +65,13 @@ export function offloadView(o: OffloadOverview): Record<string, unknown> {
 		statusState: levelState[o.status.level],
 		statusText: o.status.text,
 		serverUsed: used ?? 0,
-		serverUsedText: o.disk.totalBytes ? `${fileSize(o.disk.totalBytes - (o.disk.freeBytes ?? 0))} von ${fileSize(o.disk.totalBytes)} belegt · ${fileSize(o.disk.freeBytes ?? 0)} frei (${o.disk.freePercent ?? 0} %)` : "Unbekannt",
+		serverUsedLabel: `${(used ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %`,
+		serverUsedText: o.disk.totalBytes ? `${fileSize(o.disk.totalBytes - (o.disk.freeBytes ?? 0))} von ${fileSize(o.disk.totalBytes)} belegt · ${fileSize(o.disk.freeBytes ?? 0)} frei (${(o.disk.freePercent ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %)` : "Unbekannt",
 		serverState: o.disk.low ? "Warning" : (used ?? 0) > 100 - threshold - 5 ? "Information" : "Success",
 		thresholdText: `Knapp unter ${threshold} % frei${o.settings.thresholdFreeGb ? ` oder unter ${o.settings.thresholdFreeGb} GB` : ""}`
 			+ (o.disk.low && o.disk.bytesToFree > 0 ? ` · zum Ziel fehlen ${fileSize(o.disk.bytesToFree)}` : ""),
 		storageUsed: storageUsed ?? 0,
+		storageUsedLabel: `${(storageUsed ?? 0).toLocaleString("de-DE", { maximumFractionDigits: 1 })} %`,
 		storageUsedText: o.server && o.server.diskTotalBytes ? `${fileSize(o.server.diskTotalBytes - (o.server.diskFreeBytes ?? 0))} von ${fileSize(o.server.diskTotalBytes)} belegt` : o.paired ? "Nicht erreichbar" : "Kein Storage gekoppelt",
 		storageObjects: o.server?.offload ? `${o.server.offload.objects} Objekte (${fileSize(o.server.offload.bytes)} verschlüsselt)`
 			+ (o.server.offload.trashObjects ? ` · Papierkorb ${o.server.offload.trashObjects} (${o.server.offload.trashDays} Tage)` : "") : "–",

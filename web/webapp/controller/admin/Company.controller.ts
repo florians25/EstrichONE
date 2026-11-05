@@ -8,6 +8,7 @@ import { resetCompany } from "../../util/orderDialogs";
 import { session } from "../../util/session";
 import { loadSystemSettings, saveSystemSettings, type SystemSettings } from "../../util/systemSettings";
 import { themes } from "../../util/theme";
+import { dateTime } from "../../util/format";
 import type { RouteMatch } from "../../util/router";
 import { sendTest, type PushSettings } from "../../util/notifications";
 import { chatSettings, saveChatSettings, type ChatSettings } from "../../util/chat";
@@ -127,7 +128,7 @@ export default class Company extends BaseController {
 			this.version = settings?.version ?? 0;
 			const m = this.model();
 			m.setProperty("/c", c);
-			m.setProperty("/s", settings?.settings ?? null);
+			m.setProperty("/s", this.editable(settings?.settings ?? null));
 			m.setProperty("/logo", logo);
 			m.setProperty("/logoUrl", `/api/v1/company/logo?v=${encodeURIComponent(logo.updatedAt ?? "")}`);
 			m.setProperty("/templates", [{ key: "", text: "Keine Vorlage" }, ...templates.map((t) => ({ key: t.id, text: t.name }))]);
@@ -144,7 +145,7 @@ export default class Company extends BaseController {
 
 	private async loadChat(): Promise<void> {
 		const chat = await chatSettings().catch(() => null);
-		this.model().setProperty("/chat", chat ? { ...chat, cleanupText: chat.lastCleanupAt ? new Date(chat.lastCleanupAt).toLocaleString("de-DE") : "" } : null);
+		this.model().setProperty("/chat", chat ? { ...chat, cleanupText: chat.lastCleanupAt ? dateTime(chat.lastCleanupAt) : "" } : null);
 	}
 
 	private async saveChat(): Promise<void> {
@@ -152,7 +153,7 @@ export default class Company extends BaseController {
 		if (!c) return;
 		const saved = await saveChatSettings({ enabled: c.enabled, retentionDays: Number(c.retentionDays), showPreview: c.showPreview,
 			workersCanChatEachOther: c.workersCanChatEachOther, version: c.version });
-		this.model().setProperty("/chat", { ...saved, cleanupText: saved.lastCleanupAt ? new Date(saved.lastCleanupAt).toLocaleString("de-DE") : "" });
+		this.model().setProperty("/chat", { ...saved, cleanupText: saved.lastCleanupAt ? dateTime(saved.lastCleanupAt) : "" });
 	}
 
 	private async loadPush(): Promise<void> {
@@ -188,7 +189,7 @@ export default class Company extends BaseController {
 			...stats,
 			storedText: `${bytes(stats.storedBytes)} in ${stats.kinds.reduce((n, k) => n + k.files, 0)} Dateien`,
 			savedText: stats.savedBytes > 0 ? `${bytes(stats.savedBytes)} durch Verdichtung` : "noch nichts",
-			duplicateText: stats.duplicateFiles ? `${stats.duplicateFiles} Dateien teilen sich die Ablage (${bytes(stats.duplicateBytes)} gespart)` : "keine",
+			duplicateText: stats.duplicateFiles ? `${stats.duplicateFiles === 1 ? "1 Datei" : `${stats.duplicateFiles} Dateien`} mehrfach hochgeladen, nur einmal abgelegt (${bytes(stats.duplicateBytes)} gespart)` : "keine",
 			diskText: `Originale ${bytes(stats.originalsDiskBytes)}, Vorschaustufen ${bytes(stats.variantsDiskBytes)}${stats.freeDiskBytes != null ? ` · frei ${bytes(stats.freeDiskBytes)}` : ""}`,
 			kinds: stats.kinds.map((k) => ({ ...k, label: kinds[k.kind] ?? k.kind, bytesText: bytes(k.bytes), uploadedText: bytes(k.uploadedBytes) })),
 			jobText: job.running ? `läuft: ${job.processed} geprüft, ${job.optimized} verdichtet (${bytes(job.savedBytes)} gespart)`
@@ -285,7 +286,7 @@ export default class Company extends BaseController {
 			resetCompany();
 			this.version = savedSettings.version;
 			m.setProperty("/c", savedCompany);
-			m.setProperty("/s", savedSettings.settings);
+			m.setProperty("/s", this.editable(savedSettings.settings));
 			// Firmenname erscheint sofort in Kopfzeile, Statuszeile und Anmeldung (server-info liefert ihn als serverName).
 			await Promise.all([session.reloadPermissions(), session.loadServer()]);
 			this.toast("Einstellungen gespeichert");
@@ -331,5 +332,11 @@ export default class Company extends BaseController {
 	onLink(event: Event): void {
 		const path = (event.getSource() as Control).data("path") as string;
 		this.nav(path);
+	}
+
+	/** Für die Auswahlfelder: „Keine Vorlage“/„Keine“ ist der Eintrag mit leerem Schlüssel (gespeichert wird null). */
+	private editable(settings: SystemSettings | null): SystemSettings | null {
+		return settings ? { ...settings, bauakte: { ...settings.bauakte, defaultTemplateId: settings.bauakte.defaultTemplateId ?? "" },
+			approvals: { ...settings.approvals, defaultRoleId: settings.approvals.defaultRoleId ?? "" } } : null;
 	}
 }

@@ -13,7 +13,7 @@
 				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
 					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 				<MessageStrip text="{view>/pendingText}" type="Warning" showIcon="true" visible="{= ${view>/pending} > 0 }" class="sapUiSmallMarginBottom"/>
-				<Table items="{view>/items}" busy="{view>/busy}" noDataText="Noch keine Geräte registriert." popinLayout="GridSmall">
+				<Table contextualWidth="Auto" items="{view>/items}" busy="{view>/busy}" noDataText="Noch keine Geräte registriert." popinLayout="GridSmall">
 					<columns>
 						<Column><Text text="Gerät"/></Column>
 						<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Nutzung"/></Column>

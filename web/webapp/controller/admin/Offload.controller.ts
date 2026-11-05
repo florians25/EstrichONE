@@ -24,7 +24,7 @@ export default class Offload extends BaseController {
 	private followUntil = 0;
 
 	onInit(): void {
-		this.local({ o: null, ui: {}, settings: {}, bauakten: [], files: [], filesTotal: 0, filter: "", peers: PeerUpdatePanel.initial() });
+		this.local({ o: null, ui: { serverUsed: 0, storageUsed: 0, jobPercent: 0 }, settings: {}, bauakten: [], files: [], filesTotal: 0, filter: "", peers: PeerUpdatePanel.initial() });
 		this.peers = new PeerUpdatePanel({ model: () => this.model(), run: (w, s) => this.run(w, s), confirm: (t, o) => this.confirm(t, o) }, ["offload"]);
 	}
 

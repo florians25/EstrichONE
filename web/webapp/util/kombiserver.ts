@@ -11,9 +11,10 @@ export const KOMBI_ARCHIVE_PORT = 8443;
 export const KOMBI_LOCATION_HINT = "Backup und Archiv auf demselben Rechner ist bequem, aber kein zweiter Standort für das Archiv. "
 	+ "Stellen Sie den Kombiserver räumlich getrennt vom EstrichONE-Server auf (anderes Gebäude, zuhause, Rechenzentrum).";
 
-export function kombiCommand(version = "<version>"): string {
+// Nicht „version“ nennen: der UI5-Build (replaceVersion) ersetzt den Platzhalter mit diesem Namen im Quelltext durch die Paketversion.
+export function kombiCommand(tag = "<version>"): string {
 	return "sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone-kombi:/opt/estrichone-kombi "
-		+ `ghcr.io/florians25/estrichone-installer:${version} backup-archiv`;
+		+ "ghcr.io/florians25/estrichone-installer:" + tag + " backup-archiv";
 }
 
 /**

@@ -12,7 +12,7 @@
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<Table id="sentTable" items="{view>/sent}" noDataText="Noch keine Nachrichten gesendet." popinLayout="GridSmall" sticky="ColumnHeaders">
+			<Table contextualWidth="Auto" id="sentTable" items="{view>/sent}" noDataText="Noch keine Nachrichten gesendet." popinLayout="GridSmall" sticky="ColumnHeaders">
 				<headerToolbar>
 					<OverflowToolbar style="Clear">
 						<Title text="Gesendet" level="H2"/>
@@ -21,7 +21,7 @@
 				</headerToolbar>
 				<columns>
 					<Column><Text text="Nachricht"/></Column>
-					<Column minScreenWidth="Tablet" demandPopin="true" width="14rem"><Text text="Empfänger"/></Column>
+					<Column minScreenWidth="Tablet" demandPopin="true" width="11rem"><Text text="Empfänger"/></Column>
 					<Column minScreenWidth="Tablet" demandPopin="true" width="10rem"><Text text="Gesendet"/></Column>
 					<Column width="9rem"><Text text="Gelesen"/></Column>
 					<Column minScreenWidth="Desktop" demandPopin="true" width="13rem">
@@ -111,7 +111,7 @@
 						<ObjectStatus title="Fehler" text="{view>/detail/failed}" state="{= ${view>/detail/failed} > 0 ? 'Error' : 'None' }"/>
 					</HBox>
 				</VBox>
-				<Table items="{view>/detail/list}" sticky="ColumnHeaders">
+				<Table contextualWidth="Auto" items="{view>/detail/list}" sticky="ColumnHeaders">
 					<columns>
 						<Column><Text text="Person"/></Column>
 						<Column width="10rem"><Text text="Gelesen"/></Column>

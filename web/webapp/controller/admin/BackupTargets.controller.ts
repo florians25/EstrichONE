@@ -17,7 +17,7 @@ export default class BackupTargets extends BaseController {
 
 	onInit(): void {
 		this.local({ items: [], busy: false, mirrors: [], mirrorsAvailable: false, peers: PeerUpdatePanel.initial(),
-			canKombi: session.has("settings.manage"), kombiCommand: kombiCommand(), kombiHint: KOMBI_LOCATION_HINT });
+			canKombi: session.has("settings.manage"), kombiCommand: kombiCommand(session.data.server?.serverVersion || undefined), kombiHint: KOMBI_LOCATION_HINT });
 		this.peers = new PeerUpdatePanel({ model: () => this.model(), run: (w, s) => this.run(w, s), confirm: (t, o) => this.confirm(t, o) }, ["backup-target", "backup-mirror"]);
 	}
 

@@ -6,7 +6,7 @@
 				<VBox class="sapUiSmallMargin">
 					<HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap">
 						<VBox>
-							<Title text="{i18n>nav.siteMap}" level="H1"/>
+							<Title text="{i18n>nav.siteMap}" level="H1" class="eoPageHeading"/>
 							<Text text="{view>/subtitle}" class="eoMuted"/>
 						</VBox>
 						<Button text="Als Liste" icon="sap-icon://list" press=".onList"/>

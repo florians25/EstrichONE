@@ -37,7 +37,7 @@
 								<VBox><Label text="Beantragt"/><ObjectNumber number="{view>/meText/requested}" unit="Tage"/></VBox>
 								<VBox><Label text="Rest"/><ObjectNumber number="{view>/meText/remaining}" unit="Tage" emphasized="true" state="{= ${view>/me/vacation/remaining} &lt; 0 ? 'Error' : 'Success' }"/></VBox>
 							</FlexBox>
-							<Table items="{view>/myRequests}" noDataText="Noch keine Anträge." popinLayout="GridSmall">
+							<Table contextualWidth="Auto" items="{view>/myRequests}" noDataText="Noch keine Anträge." popinLayout="GridSmall">
 								<headerToolbar><OverflowToolbar><Title text="Meine Anträge" level="H3"/></OverflowToolbar></headerToolbar>
 								<columns>
 									<Column><Text text="Zeitraum"/></Column>
@@ -62,7 +62,7 @@
 					</IconTabFilter>
 					<IconTabFilter key="antraege" text="Anträge" count="{= ${view>/pending}.length }" visible="{view>/can/approve}">
 						<VBox class="sapUiSmallMargin">
-							<Table id="pendingTable" items="{view>/pending}" noDataText="Keine offenen Anträge." popinLayout="GridSmall">
+							<Table contextualWidth="Auto" id="pendingTable" items="{view>/pending}" noDataText="Keine offenen Anträge." popinLayout="GridSmall">
 								<headerToolbar>
 									<OverflowToolbar>
 										<Title text="Warten auf Genehmigung" level="H3"/><ToolbarSpacer/>
@@ -133,12 +133,12 @@
 						<VBox class="sapUiSmallMargin">
 							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In der Planung erscheint nur „abwesend“."
 								type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
-							<Table items="{path: 'view>/sickNotes', sorter: [{path: 'caseLabel', group: true}, {path: 'from'}]}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
+							<Table contextualWidth="Auto" items="{path: 'view>/sickNotes', sorter: [{path: 'caseLabel', group: true}, {path: 'from'}]}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
 								<columns>
 									<Column><Text text="Eintrag"/></Column>
-									<Column><Text text="Zeitraum"/></Column>
+									<Column width="13rem"><Text text="Zeitraum"/></Column>
 									<Column width="6rem" hAlign="End"><Text text="Arbeitstage"/></Column>
-									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Notiz"/></Column>
+									<Column minScreenWidth="52rem" demandPopin="true"><Text text="Notiz"/></Column>
 									<Column width="10rem"><Text text="AU-Bescheinigung"/></Column>
 									<Column width="5rem" hAlign="End"><Text text=""/></Column>
 								</columns>
@@ -148,8 +148,11 @@
 										<Text text="{view>rangeText}"/>
 										<Text text="{view>workingDays}"/>
 										<Text text="{= ${view>note} || '' }"/>
-										<Link text="{= ${view>certificateFileId} ? 'öffnen' : 'fehlt' }" enabled="{= !!${view>certificateFileId} }" press=".onCertificate"/>
-										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteSick"/>
+										<HBox renderType="Bare">
+											<Link text="öffnen" press=".onCertificate" visible="{= !!${view>certificateFileId} }" tooltip="AU-Bescheinigung öffnen"/>
+											<ObjectStatus text="fehlt" state="Warning" icon="sap-icon://alert" visible="{= !${view>certificateFileId} }"/>
+										</HBox>
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Krankmeldung löschen" press=".onDeleteSick"/>
 									</ColumnListItem>
 								</items>
 							</Table>

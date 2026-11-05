@@ -7,7 +7,7 @@
 				<f:expandedContent>
 					<HBox alignItems="Center" wrap="Wrap">
 						<Text text="{view>/subtitle}" class="sapUiSmallMarginEnd"/>
-						<Link text="Abwesenheiten: Personal (HR) › Urlaubsplan" href="/personal/urlaub?reiter=plan" visible="{= ${session>/permissions/hr.read} === true }"/>
+						<Link text="Abwesenheiten: Personal (HR) › Urlaubsplan" href="/personal/urlaub?reiter=plan" visible="{= ${session>/permissions/hr.read} === true &amp;&amp; ${view>/tab} === 'kolonnen' }"/>
 					</HBox>
 				</f:expandedContent>
 				<f:actions>
@@ -19,14 +19,14 @@
 			<IconTabBar headerMode="Inline" id="tabs" selectedKey="{view>/tab}" expandable="false" class="eoNoTabHeader" stretchContentHeight="false" applyContentPadding="false">
 				<items>
 					<IconTabFilter key="kolonnen" text="Kolonnen" count="{= ${view>/crews}.length }">
-						<Table items="{view>/crews}" busy="{view>/busy}" noDataText="Noch keine Kolonnen." popinLayout="GridSmall">
+						<Table contextualWidth="Auto" items="{view>/crews}" busy="{view>/busy}" noDataText="Noch keine Kolonnen." popinLayout="GridSmall">
 							<columns>
 								<Column><Text text="Kolonne"/></Column>
-								<Column width="12rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kolonnenführer"/></Column>
-								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Mitglieder"/></Column>
-								<Column width="11rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Auslastung (Woche)"/></Column>
+								<Column width="10rem" minScreenWidth="52rem" demandPopin="true"><Text text="Kolonnenführer"/></Column>
+								<Column minScreenWidth="48rem" demandPopin="true"><Text text="Mitglieder"/></Column>
+								<Column width="10rem" minScreenWidth="36rem" demandPopin="true"><Text text="Auslastung (Woche)"/></Column>
 								<Column width="7rem"><Text text="Status"/></Column>
-								<Column width="14rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
+								<Column width="13rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
 							</columns>
 							<items>
 								<ColumnListItem>
@@ -53,19 +53,21 @@
 										<Column width="3rem"><Text text=""/></Column>
 										<Column><Text text="Bezeichnung"/></Column>
 										<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kennzeichen"/></Column>
-										<Column minScreenWidth="70rem" demandPopin="true"><Text text="Typ / Führerschein"/></Column>
-										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="TÜV"/></Column>
-										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Wartung"/></Column>
-										<Column width="9rem" minScreenWidth="62rem" demandPopin="true"><Text text="Kolonne"/></Column>
+										<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="TÜV"/></Column>
+										<Column width="8rem" minScreenWidth="48rem" demandPopin="true"><Text text="Wartung"/></Column>
+										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Kolonne"/></Column>
 										<Column width="8rem"><Text text="Status"/></Column>
 										<Column width="8rem" hAlign="End"><Text text="Aktionen"/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>
-											<Avatar src="{view>thumb}" displaySize="XS" displayShape="Square" fallbackIcon="sap-icon://shipping-status"/>
-											<VBox><Text text="{view>name}" class="eoStrong"/><Text text="{view>notes}" class="eoMuted" visible="{= !!${view>notes} }"/></VBox>
+											<Avatar src="{= ${view>thumb} || 'sap-icon://shipping-status' }" displaySize="XS" displayShape="Square" fallbackIcon="sap-icon://shipping-status"/>
+											<VBox>
+												<Text text="{view>name}" class="eoStrong"/>
+												<Text text="{view>detailText}" class="eoMuted" visible="{= ${view>detailText} !== '–' }"/>
+												<Text text="{view>notes}" class="eoMuted" visible="{= !!${view>notes} }"/>
+											</VBox>
 											<Text text="{= ${view>identifier} || '–' }"/>
-											<Text text="{view>detailText}"/>
 											<ObjectStatus text="{view>inspection/text}" state="{view>inspection/state}"/>
 											<ObjectStatus text="{view>service/text}" state="{view>service/state}"/>
 											<Text text="{view>crewName}"/>
@@ -85,19 +87,21 @@
 										<Column width="3rem"><Text text=""/></Column>
 										<Column><Text text="Bezeichnung"/></Column>
 										<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Seriennummer"/></Column>
-										<Column minScreenWidth="70rem" demandPopin="true"><Text text="Art / Typ"/></Column>
-										<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Prüfung"/></Column>
-										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Wartung"/></Column>
-										<Column width="9rem" minScreenWidth="62rem" demandPopin="true"><Text text="Kolonne"/></Column>
+										<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Prüfung"/></Column>
+										<Column width="8rem" minScreenWidth="48rem" demandPopin="true"><Text text="Wartung"/></Column>
+										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Kolonne"/></Column>
 										<Column width="8rem"><Text text="Status"/></Column>
 										<Column width="8rem" hAlign="End"><Text text="Aktionen"/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>
-											<Avatar src="{view>thumb}" displaySize="XS" displayShape="Square" fallbackIcon="sap-icon://wrench"/>
-											<VBox><Text text="{view>name}" class="eoStrong"/><Text text="{view>notes}" class="eoMuted" visible="{= !!${view>notes} }"/></VBox>
+											<Avatar src="{= ${view>thumb} || 'sap-icon://wrench' }" displaySize="XS" displayShape="Square" fallbackIcon="sap-icon://wrench"/>
+											<VBox>
+												<Text text="{view>name}" class="eoStrong"/>
+												<Text text="{view>detailText}" class="eoMuted" visible="{= ${view>detailText} !== '–' }"/>
+												<Text text="{view>notes}" class="eoMuted" visible="{= !!${view>notes} }"/>
+											</VBox>
 											<Text text="{= ${view>identifier} || '–' }"/>
-											<Text text="{view>detailText}"/>
 											<ObjectStatus text="{view>inspection/text}" state="{view>inspection/state}"/>
 											<ObjectStatus text="{view>service/text}" state="{view>service/state}"/>
 											<Text text="{view>crewName}"/>

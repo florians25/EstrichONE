@@ -11,7 +11,7 @@
 			<VBox>
 				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
 					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
-				<Table items="{view>/items}" busy="{view>/busy}" noDataText="Keine Einträge." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
+				<Table contextualWidth="Auto" items="{view>/items}" busy="{view>/busy}" noDataText="Keine Einträge." sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
 					<headerToolbar>
 						<OverflowToolbar>
 							<Title text="Ereignisse" level="H2"/>
@@ -42,7 +42,7 @@
 							</VBox>
 							<ObjectStatus text="{view>area}" state="{path: 'view>action', formatter: 'fmt.auditState'}"/>
 							<Text text="{= ${view>actorName} || 'System' }"/>
-							<Link text="Bauakte öffnen" href="/bauakten/{view>entityId}" visible="{= ${view>entityType} === 'bauakte' &amp;&amp; !!${view>entityId} }"/>
+							<Link text="Bauakte öffnen" href="/bauakten/{view>bauakteId}" visible="{= !!${view>bauakteId} }"/>
 							<Text text="{= ${view>ipAddress} || '–' }" class="eoTabular"/>
 						</ColumnListItem>
 					</items>

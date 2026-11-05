@@ -136,7 +136,7 @@ internal sealed class MonitoringService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
-        var warnings = systems.SelectMany(s => s.Items.Where(i => i.Level != MonitorLevel.Ok).Select(i => $"{s.Name}: {i.Label} – {i.Value}"))
+        var warnings = systems.SelectMany(s => s.Items.Where(i => i.Level != MonitorLevel.Ok).Select(i => i.Label == "Status" ? $"{s.Name}: {i.Value}" : $"{s.Name}: {i.Label} – {i.Value}"))
             .Concat(systems.Where(s => s.Disk is { UsedPercent: >= WarnPercent }).Select(s => $"{s.Name}: Platte zu {s.Disk!.UsedPercent:0} % belegt"))
             .ToList();
         return new MonitoringOverview(systems.Count == 0 ? MonitorLevel.Ok : systems.Max(s => s.Level), now, systems, warnings);
@@ -169,7 +169,7 @@ internal sealed class MonitoringService(
             info = new DiskInfo(d.Used, d.Total - d.Used, d.Total, percent, perDay, daysUntilFull);
             var level = percent >= CriticalPercent || daysUntilFull < 14 ? MonitorLevel.Critical
                 : percent >= WarnPercent || daysUntilFull < 60 ? MonitorLevel.Warning : MonitorLevel.Ok;
-            items.Insert(0, new("Platte", $"{Size(d.Used)} von {Size(d.Total)} belegt ({percent:0.#} %), {Size(d.Total - d.Used)} frei"
+            items.Insert(0, new("Platte", $"{Size(d.Used)} von {Size(d.Total)} belegt ({percent.ToString("0.#", System.Globalization.CultureInfo.GetCultureInfo("de-DE"))} %), {Size(d.Total - d.Used)} frei"
                 + (perDay is { } g ? $" · Trend {(g >= 0 ? "+" : "")}{Size(g)}/Tag" : string.Empty)
                 + (daysUntilFull is { } days ? $" · voll in ca. {days} Tagen" : string.Empty), level));
         }

@@ -4,7 +4,7 @@
 		<FlexBox height="100%" alignItems="Stretch" class="eoCalendarLayout">
 			<VBox id="sidebar" class="eoCalendarSide" width="17rem" visible="{view>/sidebar}">
 				<Button text="Neuer Termin" icon="sap-icon://add" type="Emphasized" press=".onNew" width="100%" class="sapUiSmallMarginBottom"/>
-				<unified:Calendar id="mini" firstDayOfWeek="1" showWeekNumbers="true" select=".onMiniSelect" width="100%" class="eoMiniCalendar"/>
+				<unified:Calendar id="mini" calendarWeekNumbering="ISO_8601" showWeekNumbers="true" select=".onMiniSelect" width="100%" class="eoMiniCalendar"/>
 				<Toolbar style="Clear" class="sapUiTinyMarginTop">
 					<Title text="Kalender" level="H3"/>
 					<ToolbarSpacer/>
@@ -35,7 +35,7 @@
 			</VBox>
 			<VBox class="eoGrow eoCalendarMain" height="100%">
 				<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiTinyMarginBottom"/>
-				<SinglePlanningCalendar id="spc" title="{view>/title}" startDate="{view>/startDate}" firstDayOfWeek="1" startHour="6" endHour="21"
+				<SinglePlanningCalendar id="spc" title="{view>/title}" startDate="{view>/startDate}" calendarWeekNumbering="ISO_8601" startHour="6" endHour="21"
 					fullDay="{view>/fullDay}" stickyMode="All" visible="{= ${view>/mode} !== 'agenda' }" busy="{view>/busy}" busyIndicatorDelay="200"
 					enableAppointmentsDragAndDrop="true" enableAppointmentsResize="true" enableAppointmentsCreate="true"
 					appointments="{path: 'view>/appointments', templateShareable: false}" appointmentSelect=".onSelect" appointmentDrop=".onDrop"

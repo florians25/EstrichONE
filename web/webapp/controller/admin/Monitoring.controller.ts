@@ -33,7 +33,7 @@ export default class Monitoring extends BaseController {
 		m.setProperty("/systems", o.systems.map((s) => ({
 			...s, levelText: text[s.level], state: state[s.level],
 			items: s.items.map((i) => ({ ...i, state: state[i.level] })),
-			diskText: s.disk ? `${s.disk.usedPercent} % belegt · ${fileSize(s.disk.freeBytes)} frei` : "",
+			diskText: s.disk ? `${s.disk.usedPercent.toLocaleString("de-DE", { maximumFractionDigits: 1 })} % belegt · ${fileSize(s.disk.freeBytes)} frei` : "",
 			diskState: !s.disk ? "None" : s.disk.usedPercent >= 95 ? "Error" : s.disk.usedPercent >= 85 ? "Warning" : "Success",
 		})));
 	}

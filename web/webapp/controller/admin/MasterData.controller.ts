@@ -70,7 +70,6 @@ export default class MasterData extends BaseController {
 	private async load(): Promise<void> {
 		const all = (await this.run(() => get<CatalogEntry[]>("catalog"))) ?? [];
 		const m = this.model();
-		this.statusLine([], `${all.length} Einträge in Auswahllisten, Vorlagen und Texten · Änderungen gelten sofort für alle`);
 		m.setProperty("/textBlock", all.filter((e) => e.kind === "textBlock"));
 		m.setProperty("/folderTemplate", all.filter((e) => e.kind === "folderTemplate").map((e) => ({
 			...e, categoryText: documentCategories[e.content.category as keyof typeof documentCategories]?.text ?? String(e.content.category),
@@ -81,6 +80,8 @@ export default class MasterData extends BaseController {
 		})));
 		invalidateCatalog();
 		await Promise.all([this.loadLists(), this.loadForm()]);
+		const lists = Number(m.getProperty("/listCount") ?? 0);
+		this.statusLine([], `${lists === 1 ? "1 Werteliste" : `${lists} Wertelisten`} mit ${this.items.length} Einträgen · ${all.length === 1 ? "1 Vorlage oder Textbaustein" : `${all.length} Vorlagen und Textbausteine`} · Änderungen gelten sofort für alle`);
 	}
 
 	onNav(e: Event): void {

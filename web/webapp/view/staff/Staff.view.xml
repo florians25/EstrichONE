@@ -32,17 +32,17 @@
 				<MessageStrip text="{view>/expiringText}" type="Warning" showIcon="true" visible="{= ${view>/expiring}.length > 0 }" class="sapUiSmallMarginBottom">
 					<link><Link text="Liste anzeigen" press=".onExpiring"/></link>
 				</MessageStrip>
-				<Table id="staffTable" items="{view>/shown}" busy="{view>/busy}" busyIndicatorDelay="200" growing="true" growingThreshold="100"
+				<Table id="staffTable" contextualWidth="Auto" items="{view>/shown}" busy="{view>/busy}" busyIndicatorDelay="200" growing="true" growingThreshold="100"
 					noDataText="Noch keine Mitarbeiter im Personalstamm. „Aus Benutzerkonten übernehmen“ legt sie für alle Benutzer an." popinLayout="GridSmall"
 					sticky="ColumnHeaders" mode="None">
 					<columns>
 						<Column><Text text="Mitarbeiter"/></Column>
-						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Tätigkeit"/></Column>
-						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kolonne"/></Column>
-						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Kontakt"/></Column>
-						<Column width="8rem" minScreenWidth="Tablet" demandPopin="true" hAlign="End"><Text text="Resturlaub"/></Column>
-						<Column width="10rem"><Text text="Status"/></Column>
-						<Column width="7rem" minScreenWidth="Desktop" demandPopin="true" hAlign="End" visible="{view>/canManage}"><Text text="Stundensatz"/></Column>
+						<Column width="11rem" minScreenWidth="40rem" demandPopin="true"><Text text="Tätigkeit"/></Column>
+						<Column width="9rem" minScreenWidth="46rem" demandPopin="true"><Text text="Kolonne"/></Column>
+						<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Kontakt"/></Column>
+						<Column width="6rem" minScreenWidth="36rem" demandPopin="true" hAlign="End"><Text text="Resturlaub"/></Column>
+						<Column width="8rem"><Text text="Status"/></Column>
+						<Column width="7rem" minScreenWidth="60rem" demandPopin="true" hAlign="End" visible="{view>/canManage}"><Text text="Stundensatz"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem type="Navigation" press=".onOpen">
@@ -63,7 +63,7 @@
 							<ObjectNumber number="{view>vacationText}" unit="Tage" state="{= ${view>vacationRemaining} &lt; 0 ? 'Error' : 'None' }"/>
 							<VBox>
 								<ObjectStatus text="{view>todayText}" state="{view>todayState}" inverted="true"/>
-								<ObjectStatus text="{= ${view>expiringQualifications} + ' Nachweis(e) laufen ab' }" state="Warning" visible="{= ${view>expiringQualifications} > 0 }"
+								<ObjectStatus text="{= ${view>expiringQualifications} === 1 ? '1 Nachweis läuft ab' : ${view>expiringQualifications} + ' Nachweise laufen ab' }" state="Warning" visible="{= ${view>expiringQualifications} > 0 }"
 									icon="sap-icon://alert" class="sapUiTinyMarginTop"/>
 							</VBox>
 							<Text text="{view>rateText}"/>

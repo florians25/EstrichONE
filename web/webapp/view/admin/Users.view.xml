@@ -30,11 +30,11 @@
 					<ToolbarSpacer/>
 					<Text text="{= ${view>/items}.length + ' Benutzer' }"/>
 				</Toolbar>
-				<Table id="table" items="{path: 'view>/items', sorter: {path: 'displayName'}}" busy="{view>/busy}" noDataText="Keine Benutzer." popinLayout="GridSmall">
+				<Table contextualWidth="Auto" id="table" items="{path: 'view>/items', sorter: {path: 'displayName'}}" busy="{view>/busy}" noDataText="Keine Benutzer." popinLayout="GridSmall">
 					<columns>
 						<Column><Text text="Name"/></Column>
-						<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Anmeldename"/></Column>
-						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Rollen"/></Column>
+						<Column width="9rem" minScreenWidth="48rem" demandPopin="true"><Text text="Anmeldename"/></Column>
+						<Column width="12rem" minScreenWidth="56rem" demandPopin="true"><Text text="Rollen"/></Column>
 						<Column width="7rem"><Text text="Status"/></Column>
 						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Letzte Anmeldung"/></Column>
 						<Column width="13rem" hAlign="End"><Text text="Aktionen"/></Column>

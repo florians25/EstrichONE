@@ -1,3 +1,5 @@
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { archiveProgress, completeArchiveOption, kombiAddresses, kombiCommand, kombiSummary, sameEndpoint } from '../webapp/util/kombiserver';
 
@@ -46,5 +48,14 @@ describe('Abschließen & Archivieren', () => {
     expect(archiveProgress([{ status: 'archived' }, { status: 'pending' }])).toMatchObject({ archived: 1, done: false, text: '1 von 2 Dokumenten archiviert …' });
     expect(archiveProgress([{ status: 'archived' }, { status: 'archived' }])).toMatchObject({ done: true, text: 'Alle 2 Dokumente archiviert.' });
     expect(archiveProgress([{ status: 'archived' }, { status: 'failed' }]).text).toContain('1 fehlgeschlagen');
+  });
+});
+
+describe('UI5-Build (replaceVersion)', () => {
+  it('kein Platzhalter ${version} im Quelltext – der Build würde ihn durch die Paketversion ersetzen', () => {
+    const root = join(__dirname, '../webapp');
+    const files = (readdirSync(root, { recursive: true }) as string[]).filter((f) => /\.(ts|js|xml)$/.test(f) && !f.includes('thirdparty'));
+    const hits = files.filter((f) => /\$\{(project\.)?version\}/.test(readFileSync(join(root, f), 'utf8')));
+    expect(hits).toEqual([]);
   });
 });
