@@ -327,7 +327,7 @@ struct AcceptanceDetailView: View {
                     LabeledContent("Stand", value: acceptance.syncState == .synced ? acceptance.state.title : "Noch nicht übertragen")
                         .accessibilityIdentifier("acceptanceState")
                     if let date = acceptance.performedAt {
-                        LabeledContent("Durchgeführt", value: date.formatted(date: .abbreviated, time: .shortened))
+                        LabeledContent("Durchgeführt", value: date.shortStamp)
                     }
                     if let location = acceptance.location { LabeledContent("Ort", value: location) }
                 }

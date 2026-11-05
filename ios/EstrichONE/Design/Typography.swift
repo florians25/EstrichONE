@@ -34,3 +34,16 @@ enum SymbolWeight {
     static let content: Font.Weight = .medium
     static let control: Font.Weight = .semibold
 }
+
+extension Date {
+    /// Zeitpunkt kurz und einheitlich: „heute, 18:45“, „gestern, 18:45“, „2. Nov., 18:45“, in anderen Jahren mit Jahr.
+    var shortStamp: String {
+        let calendar = Calendar.current
+        let time = formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute())
+        if calendar.isDateInToday(self) { return "heute, \(time)" }
+        if calendar.isDateInYesterday(self) { return "gestern, \(time)" }
+        let sameYear = calendar.isDate(self, equalTo: .now, toGranularity: .year)
+        let day = sameYear ? formatted(.dateTime.day().month(.abbreviated)) : formatted(.dateTime.day().month(.abbreviated).year())
+        return "\(day), \(time)"
+    }
+}

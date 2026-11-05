@@ -129,6 +129,8 @@ final class ScreenshotDirector {
         if scene == "postfach" { return 2600 }
         let sheets = ["erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-"]
         if scene.hasSuffix("-quer") { return 3200 }
+        // Unterhaltung: Verlauf lädt nach dem Öffnen (sonst stand teils noch die Ladeanzeige im Bild).
+        if scene.hasPrefix("chat-verlauf") { return 4200 }
         // Bereiche öffnen sich nach dem Laden der Bauakte per Navigation – die Animation braucht etwas länger.
         if scene.hasPrefix("bereich-") || scene == "protokoll" || scene.hasPrefix("chat") { return 2800 }
         if scene == "kontakt-neu" || scene.hasPrefix("dispo-") { return 3400 }

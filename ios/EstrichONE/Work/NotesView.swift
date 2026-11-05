@@ -65,7 +65,7 @@ struct NoteRow: View {
                 .foregroundStyle(Theme.textPrimary)
                 .fixedSize(horizontal: false, vertical: true)
             HStack(spacing: Space.s) {
-                Text([authorName, note.createdAt?.formatted(.dateTime.day().month(.abbreviated).hour().minute())].compactMap { $0 }
+                Text([authorName, note.createdAt?.shortStamp].compactMap { $0 }
                     .joined(separator: " · "))
                     .font(Typo.meta)
                     .foregroundStyle(Theme.textSecondary)
@@ -107,7 +107,7 @@ struct HistoryView: View {
                     let entry = entries[index]
                     VStack(alignment: .leading, spacing: 2) {
                         Text(entry.text.compactText ?? "")
-                        Text(entry.at.formatted(date: .abbreviated, time: .shortened))
+                        Text(entry.at.shortStamp)
                             .font(.caption).foregroundStyle(Theme.textSecondary)
                     }
                     .accessibilityElement(children: .combine)

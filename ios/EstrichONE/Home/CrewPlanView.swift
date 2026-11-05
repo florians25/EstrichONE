@@ -253,7 +253,7 @@ struct DispatchView: View {
         if let plan, plan.stopCount > 0 || plan.release != nil {
             // Eine ruhige Statuszeile: Freigabestand, kleine Schaltfläche, entfallene Einsätze zum Aufklappen.
             if let release = plan.release {
-                let when = release.releasedAt.formatted(.dateTime.day().month(.abbreviated).hour().minute())
+                let when = release.releasedAt.shortStamp
                 let changed = release.changedCount
                 lines.append(AnyView(PlanStatusBar(
                     tone: changed > 0 ? .warning : .success,
@@ -863,7 +863,7 @@ struct PendingPlanChangesView: View {
                 ForEach(entries) { entry in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(entry.change.summary).font(Typo.body)
-                        Text("Erfasst \(entry.createdAt.formatted(date: .abbreviated, time: .shortened))").font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                        Text("Erfasst \(entry.createdAt.shortStamp)").font(Typo.meta).foregroundStyle(Theme.textSecondary)
                         if let error = entry.error {
                             Label(error, systemImage: "xmark.octagon.fill").font(Typo.metaStrong).foregroundStyle(Theme.danger)
                         }

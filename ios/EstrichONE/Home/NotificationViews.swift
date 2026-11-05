@@ -48,7 +48,7 @@ struct NotificationInboxView: View {
         .listStyle(.insetGrouped)
         .overlay { if !loaded { ProgressView() } }
         .navigationTitle("Benachrichtigungen")
-        .navigationBarTitleDisplayMode(.inline)
+        .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .secondaryAction) {
                 NavigationLink {
@@ -60,8 +60,11 @@ struct NotificationInboxView: View {
             }
             if push.unreadCount > 0 {
                 ToolbarItem(placement: .primaryAction) {
-                    Button("Alle gelesen") { Task { await markAllRead() } }
-                        .accessibilityIdentifier("markAllRead")
+                    // Als Symbol, damit der Titel in der Leiste nicht abgeschnitten wird.
+                    Button { Task { await markAllRead() } } label: {
+                        Label("Alle als gelesen markieren", systemImage: "checkmark.circle")
+                    }
+                    .accessibilityIdentifier("markAllRead")
                 }
             }
         }

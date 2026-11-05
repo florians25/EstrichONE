@@ -530,7 +530,7 @@ struct ReleasePlanSheet: View {
             Form {
                 Section {
                     if let release = plan.release {
-                        LabeledContent("Freigegeben", value: release.releasedAt.formatted(date: .abbreviated, time: .shortened))
+                        LabeledContent("Freigegeben", value: release.releasedAt.shortStamp)
                         LabeledContent("Von", value: release.releasedByName)
                         if let text = release.note { LabeledContent("Hinweis", value: text) }
                     } else {

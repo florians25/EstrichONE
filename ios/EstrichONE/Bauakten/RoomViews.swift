@@ -33,7 +33,7 @@ struct RoomEditView: View {
                         .focused($nameFocused)
                         .accessibilityIdentifier("roomNameField")
                     VStack(alignment: .leading, spacing: Space.s) {
-                        TextField("Geschoss", text: $input.floor)
+                        LabeledTextField(title: "Geschoss", prompt: "z. B. EG", text: $input.floor)
                         ChipFlow(spacing: Space.s) {
                             ForEach(floors, id: \.self) { floor in
                                 Button { input.floor = floor } label: {

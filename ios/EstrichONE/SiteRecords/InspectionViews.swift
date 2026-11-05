@@ -488,7 +488,7 @@ struct InspectionRow: View {
     /// „26. Okt., 07:40 · Max Huber · 3 Fotos“
     private var meta: String {
         let photos = inspection.photoFileIds.count + inspection.checkPhotos.values.reduce(0) { $0 + $1.count }
-        return [inspection.performedAt?.formatted(.dateTime.day().month(.abbreviated).hour().minute()), performerName,
+        return [inspection.performedAt?.shortStamp, performerName,
                 photos == 0 ? nil : "\(photos) \(photos == 1 ? "Foto" : "Fotos")"].compactMap { $0 }.joined(separator: " · ")
     }
 }

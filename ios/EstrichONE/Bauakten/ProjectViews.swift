@@ -21,7 +21,7 @@ struct ProjectFields: View {
                     .keyboardType(.decimalPad)
                     .accessibilityIdentifier("projectAreaField")
             }
-            TextField("Geschosse, z. B. KG, EG, OG", text: text(\.floors))
+            LabeledTextField(title: "Geschosse", prompt: "z. B. KG, EG, OG", text: text(\.floors))
             Picker("Priorität", selection: $project.priority) {
                 Text("–").tag(BauakteProject.Priority?.none)
                 ForEach(BauakteProject.Priority.allCases) { Text($0.title).tag(Optional($0)) }
@@ -41,12 +41,12 @@ struct ProjectFields: View {
             UnitField(title: "Nenndicke", unit: "mm") {
                 TextField("Nenndicke", value: $project.nominalThicknessMm, format: .number).keyboardType(.numberPad)
             }
-            TextField("Festigkeitsklasse, z. B. C25-F4", text: text(\.strengthClass))
+            LabeledTextField(title: "Festigkeitsklasse", prompt: "z. B. C25-F4", text: text(\.strengthClass))
             Toggle("Fußbodenheizung", isOn: flag(\.underfloorHeating))
             if project.underfloorHeating == true {
-                TextField("Heizungsart, z. B. Nasssystem", text: text(\.heatingType))
+                LabeledTextField(title: "Heizungsart", prompt: "z. B. Nasssystem", text: text(\.heatingType))
             }
-            TextField("Dämmung, z. B. EPS 035", text: text(\.insulation))
+            LabeledTextField(title: "Dämmung", prompt: "z. B. EPS 035", text: text(\.insulation))
             UnitField(title: "Dämmdicke", unit: "mm") {
                 TextField("Dämmdicke", value: $project.insulationThicknessMm, format: .number).keyboardType(.numberPad)
             }
@@ -101,6 +101,21 @@ struct PlannedPeriodSection: View {
 
     private func day(_ value: Binding<String?>) -> Binding<Date> {
         Binding { value.wrappedValue.flatMap { CalendarDay.date($0) } ?? .now } set: { value.wrappedValue = CalendarDay.string($0) }
+    }
+}
+
+/// Textfeld mit Bezeichnung links und Wert rechts (wie `LabeledContent`), Beispiel als Platzhalter.
+struct LabeledTextField: View {
+    let title: String
+    let prompt: String
+    @Binding var text: String
+
+    var body: some View {
+        LabeledContent(title) {
+            TextField(prompt, text: $text)
+                .multilineTextAlignment(.trailing)
+                .accessibilityLabel(title)
+        }
     }
 }
 
@@ -277,7 +292,9 @@ struct SchemaProjectFields: View {
             } header: {
                 Text(group.label)
             } footer: {
-                let help = group.fields.compactMap { field in field.help.map { "\(field.label): \($0)" } }
+                // Hinweise zu Textfeldern stehen schon als Platzhalter im Feld.
+                let help = group.fields.filter { $0.type != .text && $0.type != .textarea }
+                    .compactMap { field in field.help.map { "\(field.label): \($0)" } }
                 if !help.isEmpty { Text(help.joined(separator: "\n")) }
             }
         }
@@ -292,9 +309,15 @@ struct SchemaProjectFields: View {
         let current = FormSchema.value(field, in: values)
         switch field.type {
         case .text:
-            TextField(title(field), text: text(field)).accessibilityIdentifier("schemaField-\(field.key)")
+            // Bezeichnung links, Wert rechts wie bei Zahlen und Auswahl – die Bezeichnung bleibt sichtbar, wenn ein Wert steht.
+            LabeledTextField(title: title(field), prompt: field.help ?? "–", text: text(field))
+                .accessibilityIdentifier("schemaField-\(field.key)")
         case .textarea:
-            TextField(title(field), text: text(field), axis: .vertical).lineLimit(2...6)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(title(field)).font(Typo.meta).foregroundStyle(Theme.textSecondary)
+                TextField(field.help ?? title(field), text: text(field), axis: .vertical).lineLimit(2...6)
+                    .accessibilityLabel(field.label)
+            }
         case .number, .integer:
             LabeledContent(title(field)) {
                 HStack(spacing: 4) {

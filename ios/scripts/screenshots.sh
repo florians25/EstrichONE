@@ -92,6 +92,15 @@ while [ $index -lt ${#LIST[@]} ]; do
         xcrun simctl ui "$UDID" appearance light
         sleep 0.4
       fi
+      # simctl nimmt im Querformat das hochkant liegende Bild des Displays auf: aufrecht drehen (im Uhrzeigersinn).
+      if [[ "$name" == *-quer ]]; then
+        for file in "$OUT/$PREFIX-$name-hell.png" "$OUT/$PREFIX-$name-dunkel.png"; do
+          [ -f "$file" ] || continue
+          width=$(sips -g pixelWidth "$file" | awk '/pixelWidth/ {print $2}')
+          height=$(sips -g pixelHeight "$file" | awk '/pixelHeight/ {print $2}')
+          if [ "${height:-0}" -gt "${width:-0}" ]; then sips -r 90 "$file" >/dev/null; fi
+        done
+      fi
       if [[ "$name" == *-gross ]]; then
         xcrun simctl ui "$UDID" content_size large >/dev/null 2>&1
         sleep 1

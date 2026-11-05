@@ -482,20 +482,18 @@ struct TicketTimelineRow: View {
                 .padding(.horizontal, Space.m).padding(.vertical, Space.s + 2)
                 .foregroundStyle(isOwn ? Theme.onAccent : Theme.textPrimary)
                 .background(isOwn ? Theme.accentFill : Theme.surface, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                Text(entry.at.formatted(date: .abbreviated, time: .shortened)).font(.caption2).foregroundStyle(Theme.textSecondary)
+                Text(entry.at.shortStamp).font(.caption2).foregroundStyle(Theme.textSecondary)
             }
             .frame(maxWidth: .infinity, alignment: isOwn ? .trailing : .leading)
             .padding(isOwn ? .leading : .trailing, 48)
             .accessibilityElement(children: .combine)
         } else {
-            HStack(spacing: Space.xs) {
-                Image(systemName: entry.kind == "created" ? "plus.circle" : "arrow.triangle.swap")
-                Text("\(entry.summary) · \(entry.at.formatted(date: .omitted, time: .shortened))")
-            }
-            .font(.caption)
-            .foregroundStyle(Theme.textSecondary)
-            .frame(maxWidth: .infinity)
-            .multilineTextAlignment(.center)
+            // Symbol im Text, damit es beim Umbruch mit der ersten Zeile mitläuft; Zeitpunkt mit Tag (Verlauf über Tage).
+            Text("\(Image(systemName: entry.kind == "created" ? "plus.circle" : "arrow.triangle.swap")) \(entry.summary) · \(entry.at.shortStamp)")
+                .font(.caption)
+                .foregroundStyle(Theme.textSecondary)
+                .frame(maxWidth: .infinity)
+                .multilineTextAlignment(.center)
         }
     }
 }

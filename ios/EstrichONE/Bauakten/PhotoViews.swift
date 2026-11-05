@@ -126,7 +126,7 @@ struct PhotoViewer: View {
                                 .accessibilityIdentifier("photoCaption")
                             Spacer()
                             if let date = current.capturedAt {
-                                Text(date.formatted(date: .abbreviated, time: .shortened)).font(.caption).foregroundStyle(.white.opacity(0.7))
+                                Text(date.shortStamp).font(.caption).foregroundStyle(.white.opacity(0.7))
                             }
                         }
                         HStack(spacing: 10) {
