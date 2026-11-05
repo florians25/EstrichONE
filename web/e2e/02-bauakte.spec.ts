@@ -40,7 +40,7 @@ test('Anfrage mit neuem Kunden im Assistenten, Dublettenprüfung, als Auftrag ü
   await expect(page.getByRole('link', { name: 'Familie Kraus' })).toBeVisible();
   await page.getByRole('button', { name: 'Als Auftrag übernehmen' }).click();
   await expect(page.getByRole('button', { name: /Status: Geplant/ })).toBeVisible();
-  await expect(page.locator('.eoHintBadges').getByText('Erstbegehung noch nicht ausgeführt.', { exact: false }).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.locator('.eoHintBadges').getByText('Erstbegehung noch nicht ausgeführt', { exact: true }).filter({ visible: true }).first()).toBeVisible();
 
   // Gleicher Kunde frei eingegeben: Dublettenprüfung bietet den vorhandenen Kunden an.
   await page.locator('[id$="newBauakteButton"]').click();
@@ -325,7 +325,7 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   await insp.getByRole('button', { name: 'Weiter' }).click();
   await expect(insp.getByText('Randdämmstreifen vorhanden: fehlt an der Treppe')).toBeVisible();
   await insp.getByRole('button', { name: 'Weiter' }).click();
-  await expect(insp).toContainText('1 Mängel werden angelegt');
+  await expect(insp).toContainText('1 Mangel wird angelegt');
   await insp.getByRole('button', { name: 'Erstbegehung speichern' }).click();
   await expect(toast(page)).toContainText('Erstbegehung gespeichert');
   await expect(page.getByText('Erstbegehungsprotokoll', { exact: true }).filter({ visible: true }).first()).toBeVisible();

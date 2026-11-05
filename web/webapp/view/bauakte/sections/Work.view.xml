@@ -33,7 +33,7 @@
 				</OverflowToolbar>
 			</headerToolbar>
 			<columns>
-				<Column width="3rem"><Text text="Erledigt" class="sapUiInvisibleText"/></Column>
+				<Column width="3rem"><Text text=""/></Column>
 				<Column><Text text="Aufgabe"/></Column>
 				<Column width="6.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
 				<Column width="9.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Fällig"/></Column>
