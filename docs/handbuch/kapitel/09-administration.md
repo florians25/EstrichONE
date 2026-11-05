@@ -436,6 +436,7 @@ ziehen Sie die Zusatzserver nach (Abschnitt 9.9).
 
 **System & Betrieb** → **Protokoll** zeigt nachvollziehbar, wer wann was getan hat: Zeitpunkt, Ereignis mit Details, Bereich,
 Person, Objekt und IP-Adresse. Einträge lassen sich nicht ändern oder löschen. Filtern Sie nach Bereich, Person und
-Zeitraum; **Bauakte öffnen** springt zum betroffenen Objekt, **Weitere laden** holt ältere Einträge.
+Zeitraum; **Bauakte öffnen** springt zum betroffenen Objekt, **Weitere laden** holt ältere Einträge. Ereignisse, Details
+und Werte stehen auf Deutsch, Personen mit Namen statt interner Kennung.
 
 ![Protokoll](bilder/protokoll.png "Das Protokoll mit Ereignissen, Personen und IP-Adressen")
