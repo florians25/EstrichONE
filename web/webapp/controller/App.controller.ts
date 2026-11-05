@@ -7,6 +7,7 @@ import type Page from "sap/m/Page";
 import type ToolPage from "sap/tnt/ToolPage";
 import type NavigationList from "sap/tnt/NavigationList";
 import NavigationListItem from "sap/tnt/NavigationListItem";
+import BusyIndicator from "sap/ui/core/BusyIndicator";
 import NavigationListGroup from "sap/tnt/NavigationListGroup";
 import type { SideNavigation$ItemSelectEvent } from "sap/tnt/SideNavigation";
 import type { SearchField$SearchEvent } from "sap/m/SearchField";
@@ -135,9 +136,9 @@ export default class AppController extends BaseController {
 		};
 		compact.addEventListener("change", applyCompact);
 		applyCompact();
-		// Unter 1200 px (Tablet, Laptop mit 1280/1366 px bei 125/150 % oder 1920 px bei 150 %): Seitennavigation nur mit
+		// Unter 1024 px (Tablet hochkant): Seitennavigation nur mit
 		// Symbolen, damit Inhalte wie Formulare, Tabellen, Plantafel oder Chat Platz haben. Über ☰ jederzeit ausklappbar.
-		const narrow = window.matchMedia("(max-width: 1199px)");
+		const narrow = window.matchMedia("(max-width: 1023px)");
 		this.model().setProperty("/sideExpanded", !Device.system.phone && !narrow.matches);
 		narrow.addEventListener("change", (event) => this.model().setProperty("/sideExpanded", !Device.system.phone && !event.matches));
 		// Service Worker: neue Pushnachricht (Glocke sofort aktualisieren) bzw. Klick auf eine Benachrichtigung.
@@ -352,8 +353,23 @@ export default class AppController extends BaseController {
 		return view;
 	}
 
+	/**
+	 * Seitenwechsel: Dauert das Laden (Ansicht und erste Daten) länger als 300 ms, erscheint die Ladeanimation.
+	 * Sie verschwindet, sobald der zuletzt angeforderte Wechsel fertig ist (spätestens nach 20 s).
+	 */
 	private async handle(match: RouteMatch | null): Promise<void> {
 		const ticket = ++this.sequence;
+		BusyIndicator.show(300);
+		const safety = setTimeout(() => BusyIndicator.hide(), 20_000);
+		try {
+			await this.show(match, ticket);
+		} finally {
+			clearTimeout(safety);
+			if (ticket === this.sequence) BusyIndicator.hide();
+		}
+	}
+
+	private async show(match: RouteMatch | null, ticket: number): Promise<void> {
 		if (!session.data.ready) {
 			await session.restore();
 		}

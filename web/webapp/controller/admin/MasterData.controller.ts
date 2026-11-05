@@ -95,10 +95,6 @@ export default class MasterData extends BaseController {
 		if (tab === "form" || tab === "inspectionForm") void this.loadForm();
 	}
 
-	onLink(e: Event): void {
-		this.nav(String((e.getSource() as Control).data("href")));
-	}
-
 	private formKey(): string {
 		return this.model().getProperty("/tab") === "inspectionForm" ? "erstbegehung" : "bauakte";
 	}

@@ -25,15 +25,6 @@
 							<StandardListItem title="Textbausteine" icon="sap-icon://text" selected="{= ${view>/tab} === 'textBlock' }" info="{= String(${view>/textBlock}.length) }"><customData><core:CustomData key="tab" value="textBlock"/></customData></StandardListItem>
 							<StandardListItem title="Ordnervorlagen" icon="sap-icon://folder" selected="{= ${view>/tab} === 'folderTemplate' }" info="{= String(${view>/folderTemplate}.length) }"><customData><core:CustomData key="tab" value="folderTemplate"/></customData></StandardListItem>
 							<StandardListItem title="Bauakten-Vorlagen" icon="sap-icon://copy" selected="{= ${view>/tab} === 'bauakteTemplate' }" info="{= String(${view>/bauakteTemplate}.length) }"><customData><core:CustomData key="tab" value="bauakteTemplate"/></customData></StandardListItem>
-							<GroupHeaderListItem title="Weitere Stammdaten"/>
-							<StandardListItem title="Kunden" icon="sap-icon://customer" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/kunden"/></customData></StandardListItem>
-							<StandardListItem title="Lieferanten" icon="sap-icon://supplier" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/lieferanten"/></customData></StandardListItem>
-							<StandardListItem title="Materialstamm" icon="sap-icon://product" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/material"/></customData></StandardListItem>
-							<StandardListItem title="Kolonnen" icon="sap-icon://group" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/planung/kolonnen"/></customData></StandardListItem>
-							<StandardListItem title="Geräte und Fahrzeuge" icon="sap-icon://shipping-status" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/planung/geraete"/></customData></StandardListItem>
-							<StandardListItem title="Benutzer" icon="sap-icon://employee" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/verwaltung/benutzer"/></customData></StandardListItem>
-							<StandardListItem title="Rollen und Rechte" icon="sap-icon://role" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/verwaltung/rollen"/></customData></StandardListItem>
-							<StandardListItem title="Firmendaten" icon="sap-icon://building" type="Navigation" press=".onLink"><customData><core:CustomData key="href" value="/system/firmendaten"/></customData></StandardListItem>
 						</List>
 					</VBox>
 					<VBox class="eoMdContent">
