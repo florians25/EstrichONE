@@ -212,6 +212,15 @@ export const auditDetailLabels: Record<string, string> = {
 	recipients: "Personen", address: "Adresse", fingerprint: "Fingerabdruck", reason: "Grund", user: "Benutzer", userName: "Anmeldename",
 	roles: "Rollen", title: "Titel", version: "Version", autoUpdate: "automatisch", status: "Status", message: "Meldung", files: "Dateien",
 	bytes: "Größe", number: "Nummer", email: "E-Mail", device: "Gerät", platform: "Plattform", target: "Ziel",
+	generated: "automatisch erzeugt", active: "aktiv", admins: "Administratoren", adminsMayWork: "Administratoren arbeiten weiter",
+	announcementOnly: "nur Ankündigung", apns: "Apple Push", attachments: "Anhänge", automatic: "automatisch", bauakte: "Bauakte", by: "durch",
+	code: "Code", comment: "Kommentar", conversation: "Unterhaltung", dailyTime: "täglich um", emailed: "per E-Mail", endsAt: "bis",
+	expires: "gültig bis", fields: "Felder", fileId: "Datei", hours: "Stunden", incrementalEveryHours: "Zwischensicherung (Stunden)",
+	installed: "installiert", ip: "IP-Adresse", keep: "Aufbewahrung", key: "Schlüssel", label: "Bezeichnung", list: "Liste", login: "Anmeldung",
+	memberships: "Mitgliedschaften", messages: "Nachrichten", notifyAdmins: "Administratoren benachrichtigen", ok: "in Ordnung", parts: "Teile",
+	photos: "Fotos", previous: "bisher", queued: "vorgemerkt", removed: "entfernt", renamed: "umbenannt", requireBackup: "Sicherungskopie nötig",
+	scope: "Umfang", sender: "Absender", severity: "Dringlichkeit", source: "Quelle", startsAt: "ab", subject: "Betreff",
+	thresholdPercent: "Schwelle (%)", via: "über", webPush: "Web Push", added: "hinzugefügt",
 };
 /** Werte im Protokoll (Aufzählungen des Servers). */
 export const auditDetailValues: Record<string, string> = {

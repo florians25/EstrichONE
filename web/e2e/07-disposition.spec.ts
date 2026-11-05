@@ -76,7 +76,7 @@ test('Personal: aus Benutzerkonten übernehmen, Stammdaten, Qualifikation mit Ab
   await expect(page.getByRole('row', { name: /Arbeitsvertrag/ })).toBeVisible();
 
   await nav(page, 'Mitarbeiter').click();
-  await expect(page.getByRole('row', { name: /Anna Admin/ })).toContainText('Nachweis(e) laufen ab');
+  await expect(page.getByRole('row', { name: /Anna Admin/ })).toContainText('1 Nachweis läuft ab');
   await expect(page.getByText(/Qualifikation(en)? oder Führerschein(e)? (läuft|laufen)/)).toBeVisible();
 });
 

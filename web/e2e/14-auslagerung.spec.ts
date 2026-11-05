@@ -13,7 +13,7 @@ test('Speicher-Auslagerung: koppeln, Regeln speichern, Dokument auslagern, trans
   await signIn(page, 'admin', adminPassword);
   await page.goto('/system/auslagerung');
   await expect(pageTitle(page)).toHaveText('Speicher-Auslagerung');
-  await expect(page.getByText('Noch kein Storage gekoppelt.', { exact: false })).toBeVisible();
+  await expect(page.getByText('So koppeln Sie einen Storage', { exact: false })).toBeVisible();
 
   await page.getByRole('button', { name: 'Storage koppeln' }).click();
   await page.getByRole('textbox', { name: 'Adresse' }).fill(offloadAddress);
