@@ -15,7 +15,7 @@ DARK=${5:-1}
 BUNDLE=de.estrichone.EstrichONE
 SCENE_TIMEOUT=45
 # Obergrenze je Gerät, damit die CI auch bei mehreren hängenden Bildschirmen zügig fertig wird.
-TOTAL_TIMEOUT=540
+TOTAL_TIMEOUT=${TOTAL_TIMEOUT:-720}
 
 mkdir -p "$OUT"
 xcrun simctl ui "$UDID" appearance light
