@@ -24,6 +24,8 @@ STATE="$DATA/Documents/shot-state"
 NEXT="$DATA/Documents/shot-next"
 mkdir -p "$DATA/Documents"
 
+orientation() { cat "$DATA/Documents/shot-orientation" 2>/dev/null || echo unbekannt; }
+
 running() { pgrep -f "EstrichONE.app/EstrichONE" >/dev/null 2>&1; }
 
 crash_report() {
@@ -40,7 +42,7 @@ crash_report() {
 
 # Startet die App mit den noch fehlenden Bildschirmen.
 launch() {
-  rm -f "$STATE" "$NEXT"
+  rm -f "$STATE" "$NEXT" "$DATA/Documents/shot-orientation"
   # APPSTORE=1: Aufnahmen für den App Store ohne Demo-Kennzeichnung.
   xcrun simctl launch --terminate-running-process "$UDID" "$BUNDLE" \
     -EstrichShots "$1" -EstrichAppStore "$( [ "${APPSTORE:-0}" = "1" ] && echo YES || echo NO )" \
@@ -67,7 +69,7 @@ index=0
 launch "$SCENES"
 waiting_since=$(date +%s)
 while [ $index -lt ${#LIST[@]} ]; do
-  if [ $(( $(date +%s) - start )) -gt $TOTAL_TIMEOUT ]; then
+  if [ $(( $(date +%s) - start )) -gt "$TOTAL_TIMEOUT" ]; then
     echo "::warning::$PREFIX: nach $TOTAL_TIMEOUT s abgebrochen – ${LIST[$index]} und folgende fehlen."
     break
   fi
@@ -79,6 +81,8 @@ while [ $index -lt ${#LIST[@]} ]; do
       # „…-quer“: ins Querformat drehen (bleibt für folgende „-quer“-Bildschirme), sonst zurück ins Hochformat.
       if [[ "$name" == *-quer ]] && [ $ROTATED = 0 ]; then rotate 124; ROTATED=1; fi
       if [[ "$name" != *-quer ]] && [ $ROTATED = 1 ]; then rotate 123; ROTATED=0; fi
+      # Steht der Simulator trotzdem hochkant (Tastendruck nicht angekommen), noch einmal drehen.
+      if [[ "$name" == *-quer ]] && [[ "$(orientation)" == portrait* ]]; then rotate 124; sleep 1; fi
       # „…-gross“: mit sehr großer Schrift (Bedienungshilfen) aufnehmen.
       if [[ "$name" == *-gross ]]; then
         xcrun simctl ui "$UDID" content_size accessibility-large >/dev/null 2>&1
@@ -92,13 +96,17 @@ while [ $index -lt ${#LIST[@]} ]; do
         xcrun simctl ui "$UDID" appearance light
         sleep 0.4
       fi
-      # simctl nimmt im Querformat das hochkant liegende Bild des Displays auf: aufrecht drehen (im Uhrzeigersinn).
-      if [[ "$name" == *-quer ]]; then
+      # simctl nimmt im Querformat das hochkant liegende Bild des Displays auf: nach der Ausrichtung, die die App meldet,
+      # aufrecht drehen.
+      turn=0
+      case "$(orientation)" in
+        landscapeLeft) turn=90 ;;
+        landscapeRight) turn=270 ;;
+        *) if [[ "$name" == *-quer ]]; then echo "::warning::$PREFIX: $name im Hochformat aufgenommen ($(orientation))."; fi ;;
+      esac
+      if [ $turn != 0 ]; then
         for file in "$OUT/$PREFIX-$name-hell.png" "$OUT/$PREFIX-$name-dunkel.png"; do
-          [ -f "$file" ] || continue
-          width=$(sips -g pixelWidth "$file" | awk '/pixelWidth/ {print $2}')
-          height=$(sips -g pixelHeight "$file" | awk '/pixelHeight/ {print $2}')
-          if [ "${height:-0}" -gt "${width:-0}" ]; then sips -r 90 "$file" >/dev/null; fi
+          if [ -f "$file" ]; then sips -r $turn "$file" >/dev/null; fi
         done
       fi
       if [[ "$name" == *-gross ]]; then

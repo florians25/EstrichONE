@@ -1,5 +1,6 @@
 import EstrichCore
 import SwiftUI
+import UIKit
 
 /// Name des Bildschirms, den der Screenshot-Modus gerade zeigt (z. B. „bauakte“, „neu-2“); sonst `nil`.
 /// Ansichten lesen den Wert, um für die Aufnahme den passenden Zustand herzustellen (Reiter, geöffnete Seite, Blatt).
@@ -64,6 +65,9 @@ final class ScreenshotDirector {
     private var folder: URL { URL.documentsDirectory }
     private var stateURL: URL { folder.appending(path: "shot-state") }
     private var nextURL: URL { folder.appending(path: "shot-next") }
+    /// Ausrichtung der Oberfläche fürs Skript: simctl nimmt immer das hochkant liegende Bild des Displays auf, das Skript
+    /// dreht Querformat-Aufnahmen danach aufrecht (und dreht den Simulator nach, falls er noch hochkant steht).
+    private var orientationURL: URL { folder.appending(path: "shot-orientation") }
 
     /// Zeigt alle Bildschirme nacheinander, sobald Anmeldung und erster Abgleich der Demo fertig sind.
     func run(model: @escaping @MainActor () -> AppModel?) async {
@@ -84,9 +88,11 @@ final class ScreenshotDirector {
             prepare(base, model: model())
             current = base
             try? await Task.sleep(for: .milliseconds(Self.settleMilliseconds(scene)))
+            writeOrientation()
             write("ready:\(scene)")
             var polls = 0
             while polls < 900 {
+                writeOrientation()
                 if FileManager.default.fileExists(atPath: nextURL.path()) {
                     try? FileManager.default.removeItem(at: nextURL)
                     break
@@ -135,6 +141,17 @@ final class ScreenshotDirector {
         if scene.hasPrefix("bereich-") || scene == "protokoll" || scene.hasPrefix("chat") { return 2800 }
         if scene == "kontakt-neu" || scene.hasPrefix("dispo-") { return 3400 }
         return sheets.contains { scene.hasPrefix($0) } ? 2800 : 2000
+    }
+
+    private func writeOrientation() {
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first
+        let value = switch scene?.effectiveGeometry.interfaceOrientation {
+        case .landscapeLeft: "landscapeLeft"
+        case .landscapeRight: "landscapeRight"
+        case .portraitUpsideDown: "portraitUpsideDown"
+        default: "portrait"
+        }
+        try? Data(value.utf8).write(to: orientationURL, options: .atomic)
     }
 
     private func write(_ text: String) {
