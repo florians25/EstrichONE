@@ -177,7 +177,7 @@ export async function layoutIssues(page: Page, scopeSelector = 'body'): Promise<
     const root = document.querySelector(sel) ?? document.body;
     const vw = document.documentElement.clientWidth;
     // Bereiche, die absichtlich waagerecht scrollen (Plantafeln, Kalender, breite Tabellen mit eigenem Bildlauf, Reiterleisten).
-    const scrollOk = '.eoScrollX, .sapMITBScrollContainer, .sapMITH, .sapMITBHead, .sapUiCalendarRowApps, .sapMSinglePCRow, .sapMPlanCal, .sapUiCalendarRowVisualContainer, '
+    const scrollOk = '.eoScrollX, .eoPlanBoard, .eoCkScroll, .sapMITBScrollContainer, .sapMITH, .sapMITBHead, .sapUiCalendarRowApps, .sapMSinglePCRow, .sapMPlanCal, .sapUiCalendarRowVisualContainer, '
       + '.sapMSinglePlanningCalendar, .sapMSPCMonthDays, .sapUiTableCnt, .sapUiTableCCnt, .sapMListTblCnt.eoWide, .leaflet-container, .sapMTokenizer, .sapMTokenizerScrollContainer, .sapMSegB, '
       + '.sapMCrsl, .sapMHdrCntrCntr, .sapMSlt, .sapMInputBaseContentWrapper, .sapMPopover, .sapMDialog, .sapMIBar, .sapMTB, .sapUiInvisibleText';
     const label = (e: Element) => {
