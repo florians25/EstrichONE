@@ -17,7 +17,7 @@ struct PhotoGrid: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityIdentifier("photoThumb-\(index)")
-                .accessibilityLabel([photo.caption, photo.capturedAt.map { "Foto vom \($0.formatted(date: .abbreviated, time: .shortened))" } ?? "Foto"]
+                .accessibilityLabel([photo.caption, photo.capturedAt.map { "Foto vom \($0.shortStamp)" } ?? "Foto"]
                     .compactMap { $0 }.joined(separator: ", "))
             }
         }

@@ -311,10 +311,10 @@ struct SystemNoticesBanner: View {
 
     static func window(_ maintenance: SystemNotices.Maintenance) -> String? {
         guard let start = maintenance.start else { return nil }
-        let from = start.formatted(date: .abbreviated, time: .shortened)
+        let from = start.shortStamp
         guard let end = maintenance.end else { return "ab \(from)" }
         let sameDay = Calendar.current.isDate(start, inSameDayAs: end)
-        return "\(from) – \(sameDay ? end.formatted(date: .omitted, time: .shortened) : end.formatted(date: .abbreviated, time: .shortened))"
+        return "\(from) – \(sameDay ? end.shortTime : end.shortStamp)"
     }
 
     static func symbol(_ severity: SystemNotices.Announcement.Severity) -> String {

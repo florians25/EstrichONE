@@ -144,7 +144,7 @@ struct MaintenanceLockView: View {
                         }
                         row("Auf diesem Gerät", value: pendingText, symbol: "lock.shield")
                         InsetDivider()
-                        row("Zuletzt geprüft", value: checkedAt.formatted(date: .omitted, time: .shortened) + " Uhr", symbol: "arrow.clockwise")
+                        row("Zuletzt geprüft", value: checkedAt.shortTime + " Uhr", symbol: "arrow.clockwise")
                     }
                     .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
 
@@ -189,7 +189,7 @@ struct MaintenanceLockView: View {
 
     private var endText: String {
         guard let end = sync.maintenanceEnd else { return "unbekannt" }
-        let time = end.formatted(date: .omitted, time: .shortened) + " Uhr"
+        let time = end.shortTime + " Uhr"
         return Calendar.current.isDateInToday(end) ? time : end.formatted(.dateTime.weekday(.abbreviated).day().month(.abbreviated)) + ", " + time
     }
 

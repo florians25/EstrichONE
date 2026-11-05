@@ -238,7 +238,7 @@ struct DispatchView: View {
     private var statusLines: [AnyView] {
         var lines: [AnyView] = []
         if !isCurrent, let loadedAt {
-            lines.append(AnyView(NoticeLine(tone: .neutral, text: "Ohne Verbindung – Stand \(loadedAt.formatted(date: .abbreviated, time: .shortened))",
+            lines.append(AnyView(NoticeLine(tone: .neutral, text: "Ohne Verbindung – Stand \(loadedAt.shortStamp)",
                                             symbol: "wifi.slash")))
         }
         if !pending.isEmpty {

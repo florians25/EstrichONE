@@ -160,7 +160,7 @@ struct MessageBubble: View {
                 if isMine, isGroup, message.recipients > 1, message.state != .read, message.readBy > 0 {
                     Text("gelesen \(message.readBy)/\(message.recipients) ·")
                 }
-                Text(message.createdAt.formatted(date: .omitted, time: .shortened))
+                Text(message.createdAt.shortTime)
                 if isMine { stateMark }
             }
             .font(.caption2.monospacedDigit())

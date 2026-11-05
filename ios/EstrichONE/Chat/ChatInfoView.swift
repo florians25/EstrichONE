@@ -164,7 +164,7 @@ struct ChatInfoView: View {
         if let until = detail?.mutedUntil, until > Date() {
             Button { Task { await mute(nil, on: false) } } label: {
                 LabeledContent {
-                    Text(until == .distantFuture || until.timeIntervalSinceNow > 365 * 86400 ? "immer" : "bis \(until.formatted(date: .abbreviated, time: .shortened))")
+                    Text(until == .distantFuture || until.timeIntervalSinceNow > 365 * 86400 ? "immer" : "bis \(until.shortStamp)")
                 } label: {
                     Label("Stummschaltung aufheben", systemImage: "bell.slash")
                 }

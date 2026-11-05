@@ -402,7 +402,7 @@ struct AcceptanceDetailView: View {
                         Text(link.emailed ? "Link an \(email) gesendet." : "Link erstellt – bitte an den Kunden weitergeben.")
                             .font(.subheadline.weight(.semibold))
                         Text(link.url).font(.caption.monospaced()).textSelection(.enabled)
-                        Text("Gültig bis \(link.expiresAt.formatted(date: .abbreviated, time: .shortened))")
+                        Text("Gültig bis \(link.expiresAt.shortStamp)")
                             .font(.caption).foregroundStyle(Theme.textSecondary)
                         if let url = URL(string: link.url) {
                             ShareLink(item: url) { Label("Teilen", systemImage: "square.and.arrow.up") }

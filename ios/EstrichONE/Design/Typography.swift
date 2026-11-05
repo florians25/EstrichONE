@@ -39,11 +39,14 @@ extension Date {
     /// Zeitpunkt kurz und einheitlich: „heute, 18:45“, „gestern, 18:45“, „2. Nov., 18:45“, in anderen Jahren mit Jahr.
     var shortStamp: String {
         let calendar = Calendar.current
-        let time = formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute())
+        let time = shortTime
         if calendar.isDateInToday(self) { return "heute, \(time)" }
         if calendar.isDateInYesterday(self) { return "gestern, \(time)" }
         let sameYear = calendar.isDate(self, equalTo: .now, toGranularity: .year)
         let day = sameYear ? formatted(.dateTime.day().month(.abbreviated)) : formatted(.dateTime.day().month(.abbreviated).year())
         return "\(day), \(time)"
     }
+
+    /// Uhrzeit zweistellig wie überall in der App („06:30“).
+    var shortTime: String { formatted(.dateTime.hour(.twoDigits(amPM: .omitted)).minute(.twoDigits)) }
 }

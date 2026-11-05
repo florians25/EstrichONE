@@ -11,7 +11,7 @@ struct MyWeekView: View {
         List {
             if let snapshot, !snapshot.isCurrent {
                 Section {
-                    Label("Ohne Verbindung – Stand \(snapshot.loadedAt.formatted(date: .abbreviated, time: .shortened))", systemImage: "icloud.slash")
+                    Label("Ohne Verbindung – Stand \(snapshot.loadedAt.shortStamp)", systemImage: "icloud.slash")
                         .font(Typo.subhead)
                         .foregroundStyle(Theme.textSecondary)
                 }

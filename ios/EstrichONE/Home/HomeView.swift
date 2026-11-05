@@ -204,7 +204,7 @@ struct HomeView: View {
         VStack(alignment: .leading, spacing: Space.m) {
             SectionHeading(jobs.count > 1 ? "Meine Einsätze" : "Mein Einsatz") {
                 if let planning, !planning.isCurrent {
-                    Label("Stand \(planning.loadedAt.formatted(date: .omitted, time: .shortened))", systemImage: "icloud.slash")
+                    Label("Stand \(planning.loadedAt.shortStamp)", systemImage: "icloud.slash")
                         .labelStyle(TightLabelStyle())
                         .font(Typo.meta)
                         .foregroundStyle(Theme.textSecondary)

@@ -392,7 +392,7 @@ enum ChatTime {
     /// Heute: Uhrzeit, gestern: „Gestern“, sonst Datum.
     static func short(_ date: Date) -> String {
         let calendar = Calendar.current
-        if calendar.isDateInToday(date) { return date.formatted(date: .omitted, time: .shortened) }
+        if calendar.isDateInToday(date) { return date.shortTime }
         if calendar.isDateInYesterday(date) { return "Gestern" }
         return date.formatted(.dateTime.day().month(.twoDigits))
     }
