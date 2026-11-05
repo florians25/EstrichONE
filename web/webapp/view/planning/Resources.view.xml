@@ -52,10 +52,10 @@
 									<columns>
 										<Column width="3rem"><Text text=""/></Column>
 										<Column><Text text="Bezeichnung"/></Column>
-										<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kennzeichen"/></Column>
-										<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="TÜV"/></Column>
-										<Column width="8rem" minScreenWidth="48rem" demandPopin="true"><Text text="Wartung"/></Column>
-										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Kolonne"/></Column>
+										<Column width="9rem" minScreenWidth="44rem" demandPopin="true"><Text text="Kennzeichen"/></Column>
+										<Column width="8rem" minScreenWidth="50rem" demandPopin="true"><Text text="TÜV"/></Column>
+										<Column width="8rem" minScreenWidth="60rem" demandPopin="true"><Text text="Wartung"/></Column>
+										<Column width="9rem" minScreenWidth="68rem" demandPopin="true"><Text text="Kolonne"/></Column>
 										<Column width="8rem"><Text text="Status"/></Column>
 										<Column width="8rem" hAlign="End"><Text text="Aktionen"/></Column>
 									</columns>
@@ -86,10 +86,10 @@
 									<columns>
 										<Column width="3rem"><Text text=""/></Column>
 										<Column><Text text="Bezeichnung"/></Column>
-										<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Seriennummer"/></Column>
-										<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Prüfung"/></Column>
-										<Column width="8rem" minScreenWidth="48rem" demandPopin="true"><Text text="Wartung"/></Column>
-										<Column width="9rem" minScreenWidth="56rem" demandPopin="true"><Text text="Kolonne"/></Column>
+										<Column width="9rem" minScreenWidth="44rem" demandPopin="true"><Text text="Seriennummer"/></Column>
+										<Column width="8rem" minScreenWidth="50rem" demandPopin="true"><Text text="Prüfung"/></Column>
+										<Column width="8rem" minScreenWidth="60rem" demandPopin="true"><Text text="Wartung"/></Column>
+										<Column width="9rem" minScreenWidth="68rem" demandPopin="true"><Text text="Kolonne"/></Column>
 										<Column width="8rem"><Text text="Status"/></Column>
 										<Column width="8rem" hAlign="End"><Text text="Aktionen"/></Column>
 									</columns>
