@@ -4,7 +4,7 @@
 # versionierten Pfaden (/ui-<hash>/…), Stufe 2 baut Caddy mit dem Rate-Limit-Plugin, Stufe 3 liefert die App mit Caddy
 # aus und leitet /api an die API weiter.
 # Basis-Images mit Digest gepinnt (Aktualisierung über Dependabot, Scan mit Trivy in .github/workflows/infra.yml).
-FROM node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS build
+FROM node:26-bookworm-slim@sha256:bc0a2afd3b74ce12222fc8bab99271e66257f021078f5f4a5d687a77d280c1d9 AS build
 WORKDIR /src
 COPY web/package.json web/package-lock.json ./
 RUN npm ci --no-audit --no-fund
