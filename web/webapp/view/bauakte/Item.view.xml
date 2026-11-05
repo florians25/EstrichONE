@@ -43,7 +43,7 @@
 				</form:SimpleForm>
 				<MessageStrip type="Warning" showIcon="true" visible="{= !!${it>/pendingApproval} }" class="sapUiSmallMarginTop"
 					text="{= 'Wartet auf Freigabe durch ' + ${it>/pendingApproval/assigneeName} + (${it>/pendingApproval/message} ? ': „' + ${it>/pendingApproval/message} + '“' : '') }"/>
-				<List headerText="Freigaben" items="{it>/approvals}" visible="{= ${it>/approvals}.length > 0 }" class="sapUiSmallMarginTop">
+				<List headerText="Freigaben" items="{it>/approvals}" visible="{= !!${it>/approvals} &amp;&amp; ${it>/approvals}.length > 0 }" class="sapUiSmallMarginTop">
 					<CustomListItem>
 						<VBox class="sapUiTinyMargin">
 							<ObjectStatus text="{it>statusText}" state="{it>statusState}" inverted="true"/>

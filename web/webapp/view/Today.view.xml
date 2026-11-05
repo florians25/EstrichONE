@@ -37,7 +37,7 @@
 				</VBox>
 				<!-- Kennzahlen: kompakte, anklickbare Kacheln in einer Zeile -->
 				<List id="todayKpis" items="{view>/kpis}" showSeparators="None" class="eoDayKpis" ariaLabelledBy="kpiLabel" showNoData="false">
-					<CustomListItem type="Active" press=".onKpi" class="eoDayKpiItem">
+					<CustomListItem type="Active" press=".onKpi" class="eoDayKpiItem" tooltip="{view>title}: {view>value} {view>hint}">
 						<VBox class="eoDayKpi" renderType="Bare">
 							<HBox alignItems="Center" class="eoDayKpiHead" renderType="Bare">
 								<core:Icon src="{view>icon}" class="eoDayKpiIcon"/>

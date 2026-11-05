@@ -17,7 +17,9 @@
 					<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
 				</Input>
 				<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
-				<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit"/>
+				<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit">
+					<customData><core:CustomData key="autocomplete" value="current-password" writeToDom="true"/></customData>
+				</Input>
 				<CheckBox id="loginRemember" text="{i18n>login.remember}" selected="{view>/remember}" class="sapUiTinyMarginTop"/>
 			</VBox>
 			<VBox visible="{view>/needCode}">

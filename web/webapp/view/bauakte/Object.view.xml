@@ -100,6 +100,7 @@
 				</HBox>
 				<ObjectStatus text="{akte>/approvalsText}" state="Warning" inverted="true" icon="sap-icon://pending" visible="{= !!${akte>/approvalsText} }"/>
 				<HBox items="{akte>/hints}" wrap="Wrap" class="eoHintBadges">
+					<customData><core:CustomData key="role" value="list" writeToDom="true"/></customData>
 					<ObjectStatus text="{akte>text}" state="{akte>type}" inverted="true" tooltip="{akte>text}">
 						<customData><core:CustomData key="role" value="listitem" writeToDom="true"/></customData>
 					</ObjectStatus>
@@ -135,7 +136,7 @@
 				<HBox class="eoKpis">
 					<VBox class="eoKpi" alignItems="End">
 						<Label text="Offen"/>
-						<ObjectNumber number="{akte>/kpi/openWork}" unit="{= ${akte>/kpi/defects} > 0 ? '(' + ${akte>/kpi/defects} + ' Mängel)' : '' }"
+						<ObjectNumber number="{akte>/kpi/openWork}" unit="{= ${akte>/kpi/defects} > 0 ? '(' + ${akte>/kpi/defects} + (${akte>/kpi/defects} === 1 ? ' Mangel)' : ' Mängel)') : '' }"
 							state="{= ${akte>/kpi/overdue} > 0 ? 'Error' : ${akte>/kpi/defects} > 0 ? 'Warning' : 'None' }" class="eoKpiNumber"/>
 					</VBox>
 					<VBox class="eoKpi" alignItems="End">

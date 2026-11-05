@@ -134,7 +134,7 @@ export default class Start extends BaseController {
 				const overdue = open.filter((w) => w.dueDate && w.dueDate < today).length;
 				set("work", {
 					value: String(open.length), state: overdue ? "Error" : open.length ? "Neutral" : "Good",
-					details: overdue ? `${overdue} überfällig` : open.some((w) => w.kind === "defect") ? `${open.filter((w) => w.kind === "defect").length} Mängel` : "",
+					details: overdue ? `${overdue} überfällig` : open.some((w) => w.kind === "defect") ? `${open.filter((w) => w.kind === "defect").length} ${open.filter((w) => w.kind === "defect").length === 1 ? "Mangel" : "Mängel"}` : "",
 					rows: open.slice(0, 3).map((w) => ({
 						text: w.title, icon: w.kind === "defect" ? "sap-icon://warning2" : "sap-icon://task",
 						side: w.dueDate ? shortDay(w.dueDate) : "", sideState: w.dueDate && w.dueDate < today ? "Error" : w.dueDate === today ? "Warning" : "None",
@@ -200,7 +200,7 @@ export default class Start extends BaseController {
 			}).catch(failed("deadlines")),
 			this.has("bauakten.read") ? get<BauaktePage>("bauakten", { status: "inquiry", limit: 100 }).then((p) => {
 				set("newFiles", {
-					value: count(p), state: "Neutral", details: p.items[0] ? `zuletzt ${shortDay(p.items[0].updatedAt.slice(0, 10))}` : "",
+					value: count(p), state: "Neutral", details: p.items[0] ? `zuletzt ${shortDay(isoDay(new Date(p.items[0].updatedAt)))}` : "",
 					rows: p.items.slice(0, 3).map((b) => ({
 						text: `${b.number ? b.number + " · " : ""}${b.title}`, icon: "sap-icon://folder-blank", side: b.city ?? "", sideState: "None", to: `/bauakten/${b.id}`,
 					})),

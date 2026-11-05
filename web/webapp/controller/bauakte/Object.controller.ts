@@ -281,7 +281,7 @@ export default class ObjectController extends BaseController {
 
 	private async loadHints(): Promise<void> {
 		const hints = await get<BauakteHint[]>(`bauakten/${this.id}/hints`).catch(() => [] as BauakteHint[]);
-		this.m().setProperty("/hints", hints.map((h) => ({ text: h.text, type: hintTypes[h.severity] ?? "Information" })));
+		this.m().setProperty("/hints", hints.map((h) => ({ text: h.text.replace(/\.$/, ""), type: hintTypes[h.severity] ?? "Information" })));
 		void get<{ items: unknown[] }>("documents", { bauakteId: this.id, approval: "pending" })
 			.then((r) => this.m().setProperty("/approvalsText", r.items.length ? `${r.items.length} Freigabe${r.items.length === 1 ? "" : "n"} ausstehend` : ""))
 			.catch(() => this.m().setProperty("/approvalsText", ""));
@@ -305,7 +305,7 @@ export default class ObjectController extends BaseController {
 			const open = work.value.filter((w) => w.status !== "done");
 			kpi.openWork = String(open.length);
 			kpi.defects = open.filter((w) => w.kind === "defect").length;
-			kpi.defectsText = `${kpi.defects} Mängel`;
+			kpi.defectsText = `${kpi.defects} ${kpi.defects === 1 ? "Mangel" : "Mängel"}`;
 			kpi.overdue = open.filter((w) => w.dueDate && w.dueDate < today).length;
 		}
 		if (files.status === "fulfilled") {

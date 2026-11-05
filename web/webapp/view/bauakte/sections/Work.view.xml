@@ -11,7 +11,8 @@
 				<layoutData><FlexItemData growFactor="1" minWidth="14rem"/></layoutData>
 			</Input>
 			<DatePicker value="{wk>/due}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" width="10rem" placeholder="Fällig am" ariaLabelledBy="dueLabel"/>
-			<Select selectedKey="{wk>/assignee}" width="12rem" items="{path: 'wk>/people', templateShareable: false}" forceSelection="false" ariaLabelledBy="assigneeLabel">
+			<Select selectedKey="{wk>/assignee}" width="12rem" items="{path: 'wk>/people', templateShareable: false}" forceSelection="true" ariaLabelledBy="assigneeLabel"
+				tooltip="Zuständig">
 				<core:Item key="{wk>key}" text="{wk>text}"/>
 			</Select>
 			<Button text="{i18n>work.add}" icon="sap-icon://add" type="Emphasized" press=".onAdd"/>
@@ -32,12 +33,12 @@
 				</OverflowToolbar>
 			</headerToolbar>
 			<columns>
-				<Column width="3rem"><Text text=""/></Column>
+				<Column width="3rem"><Text text="Erledigt" class="sapUiInvisibleText"/></Column>
 				<Column><Text text="Aufgabe"/></Column>
-				<Column width="7rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
-				<Column width="11rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Fällig"/></Column>
-				<Column width="13rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuständig"/></Column>
-				<Column width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Status"/></Column>
+				<Column width="6.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
+				<Column width="9.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Fällig"/></Column>
+				<Column width="11rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuständig"/></Column>
+				<Column width="8.5rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Status"/></Column>
 				<Column width="5rem" hAlign="Center" minScreenWidth="Desktop" demandPopin="true"><Text text="Fotos"/></Column>
 			</columns>
 			<items>
@@ -54,7 +55,7 @@
 						icon="{= ${wk>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"/>
 					<DatePicker value="{wk>dueDate}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" change=".onDue"
 						editable="{= ${session>/permissions/work.edit} === true }" valueState="{= ${wk>overdue} ? 'Error' : 'None' }" ariaLabelledBy="dueLabel"/>
-					<Select selectedKey="{wk>assigneeUserId}" change=".onAssignee" items="{path: 'wk>/people', templateShareable: false}" forceSelection="false"
+					<Select selectedKey="{wk>assigneeUserId}" change=".onAssignee" items="{path: 'wk>/people', templateShareable: false}" forceSelection="true"
 						enabled="{= ${session>/permissions/work.edit} === true }" width="100%" ariaLabelledBy="assigneeLabel">
 						<core:Item key="{wk>key}" text="{wk>text}"/>
 					</Select>

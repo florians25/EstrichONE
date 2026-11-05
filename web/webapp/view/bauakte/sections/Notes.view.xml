@@ -11,6 +11,18 @@
 				</items>
 			</SegmentedButton>
 		</OverflowToolbar>
+		<VBox visible="{= ${session>/permissions/notes.write} === true }" class="sapUiSmallMarginBottom">
+			<Label text="{i18n>notes.new}" labelFor="noteInput"/>
+			<TextArea id="noteInput" value="{nt>/text}" valueLiveUpdate="true" rows="3" width="100%" placeholder="Notiz schreiben …" growing="true"/>
+			<HBox justifyContent="SpaceBetween" alignItems="Center">
+				<CheckBox text="Anheften" selected="{nt>/pin}"/>
+				<HBox alignItems="Center">
+					<Text text="Strg + Enter speichert" class="eoMuted sapUiSmallMarginEnd"/>
+					<Button text="Textbaustein" icon="sap-icon://text" press=".onTextBlock" tooltip="Textbaustein einfügen"/>
+					<Button text="{i18n>notes.save}" icon="sap-icon://paper-plane" type="Emphasized" press=".onSend" enabled="{= !!${nt>/text}.trim() }"/>
+				</HBox>
+			</HBox>
+		</VBox>
 		<VBox items="{nt>/pinned}" visible="{= ${nt>/pinned}.length > 0 }" class="sapUiSmallMarginBottom">
 			<HBox class="eoNote sapUiTinyMarginBottom" alignItems="Start" justifyContent="SpaceBetween">
 				<customData><core:CustomData key="color" value="{= ${nt>color} || 'yellow' }" writeToDom="true"/></customData>
@@ -64,18 +76,6 @@
 				</HBox>
 			</CustomListItem>
 		</List>
-		<VBox visible="{= ${session>/permissions/notes.write} === true }" class="sapUiSmallMarginTop">
-			<Label text="{i18n>notes.new}" labelFor="noteInput"/>
-			<TextArea id="noteInput" value="{nt>/text}" valueLiveUpdate="true" rows="3" width="100%" placeholder="Notiz schreiben …" growing="true"/>
-			<HBox justifyContent="SpaceBetween" alignItems="Center">
-				<CheckBox text="Anheften" selected="{nt>/pin}"/>
-				<HBox alignItems="Center">
-					<Text text="Strg + Enter speichert" class="eoMuted sapUiSmallMarginEnd"/>
-					<Button text="Textbaustein" icon="sap-icon://text" press=".onTextBlock" tooltip="Textbaustein einfügen"/>
-					<Button text="{i18n>notes.save}" icon="sap-icon://paper-plane" type="Emphasized" press=".onSend" enabled="{= !!${nt>/text}.trim() }"/>
-				</HBox>
-			</HBox>
-		</VBox>
 	</VBox>
 	<core:InvisibleText id="notesLabel" text="Notizen und Verlauf"/>
 </mvc:View>

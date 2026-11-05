@@ -36,13 +36,13 @@
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>
-					<Column width="8rem"><Text text="Kd.-Nr."/></Column>
+					<Column width="6.5rem"><Text text="Kd.-Nr."/></Column>
 					<Column><Text text="Name"/></Column>
-					<Column width="6rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
-					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Ort"/></Column>
-					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Telefon"/></Column>
+					<Column width="5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
+					<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Ort"/></Column>
+					<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Telefon"/></Column>
 					<Column minScreenWidth="64rem" demandPopin="true"><Text text="E-Mail"/></Column>
-					<Column width="7.5rem" hAlign="End"><Text text=""/></Column>
+					<Column width="7.5rem" hAlign="End"><Text text="Aktionen" class="sapUiInvisibleText"/></Column>
 				</columns>
 				<items>
 					<ColumnListItem type="Navigation" press=".onOpen">
@@ -54,7 +54,7 @@
 						<Text text="{= ${view>kind} === 'company' ? 'Firma' : 'Privat' }"/>
 						<FormattedText htmlText="{view>placeHtml}"/>
 						<FormattedText htmlText="{view>phonesHtml}"/>
-						<FormattedText htmlText="{view>emailsHtml}"/>
+						<FormattedText htmlText="{view>emailsHtml}" class="eoWrapAny"/>
 						<HBox class="eoActions">
 							<Button icon="sap-icon://edit" type="Transparent" tooltip="{= 'Bearbeiten: ' + ${view>name} }" press=".onEdit" visible="{= ${session>/permissions/contacts.edit} === true }"/>
 							<Link text="Bauakten" href="/bauakten?kunde={view>id}" class="sapUiTinyMarginBegin"/>

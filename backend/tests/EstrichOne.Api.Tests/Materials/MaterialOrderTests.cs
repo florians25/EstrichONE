@@ -83,6 +83,11 @@ public sealed class MaterialOrderTests(PostgresFixture postgres) : IAsyncLifetim
         hints = await office.GetFromJsonAsync<List<BauakteHint>>($"/api/v1/bauakten/{bauakte.Id}/hints", TestJson.Options, Ct);
         hints!.ShouldContain(h => h.Kind == "delivery_next");
 
+        // Beim Abschicken abgelegter Bestellschein: Beschreibung mit deutschem Status (nicht dem Enum-Namen).
+        var stored = await office.GetFromJsonAsync<List<EstrichOne.Api.Modules.Documentation.FileResponse>>($"/api/v1/bauakten/{bauakte.Id}/files",
+            TestJson.Options, Ct);
+        stored!.ShouldHaveSingleItem().Caption.ShouldBe("Bestellung bei Lieferant (Bestellt)");
+
         // Liefertermin vorgezogen: abgeschickte Bestellungen bleiben änderbar.
         order = await PutAsync<OrderResponse>(office, $"/api/v1/material-orders/{id}", new
         {

@@ -27,6 +27,10 @@ export default class Security extends BaseController {
 		m.setProperty("/sessions", sessions.map((s) => ({ ...s, label: sessionLabel(s), since: dateTime(s.createdAt), seen: dateTime(s.lastSeenAt) })));
 	}
 
+	onPassword(): void {
+		this.nav("/konto/passwort");
+	}
+
 	async onSetup(): Promise<void> {
 		const setup = await openForm<TwoFactorSetup>({
 			title: this.t("security.setup"), submitText: "Weiter",

@@ -78,7 +78,7 @@ export default class List extends BaseController {
 			const items = more ? [...m.getProperty("/items"), ...page.items] : page.items;
 			m.setProperty("/items", items);
 			m.setProperty("/cursor", page.nextCursor);
-			m.setProperty("/countText", `${items.length}${page.nextCursor ? "+" : ""} Bauakten`);
+			m.setProperty("/countText", `${items.length}${page.nextCursor ? "+" : ""} ${items.length === 1 && !page.nextCursor ? "Bauakte" : "Bauakten"}`);
 		} catch (error) {
 			this.showError(error);
 		} finally {

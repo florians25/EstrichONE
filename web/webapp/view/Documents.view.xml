@@ -72,7 +72,7 @@
 											</VBox>
 											<Text text="v{view>versionCount}"/>
 											<VBox>
-												<ObjectStatus text="{view>approvalText}" state="{view>approvalState}" inverted="true" visible="{= !!${view>approvalStatus} }"/>
+												<ObjectStatus text="{view>approvalText}" state="{view>approvalState}" inverted="true" visible="{= !!${view>approvalStatus} }" class="eoBadgeNoWrap"/>
 												<Text text="{view>approvalAssignee}" visible="{= !!${view>approvalAssignee} }" class="eoMuted"/>
 											</VBox>
 											<VBox>

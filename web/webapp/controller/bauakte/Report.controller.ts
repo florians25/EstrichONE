@@ -1,7 +1,7 @@
 import BaseController from "../BaseController";
 import { get } from "../../util/api";
 import { akte } from "../../util/akteStore";
-import { parseDay } from "../../util/days";
+import { isoDay } from "../../util/days";
 import { area, cmNumber, date, dateTime, longDay, timeRange, weatherLine } from "../../util/format";
 import { bauakteStatus, binderNames, checkResults, checkTitles, inspectionResult, roomStatus } from "../../util/labels";
 import type { BauakteDetail, BauakteMember, ContactResponse, FileResponse } from "../../util/models";
@@ -100,7 +100,7 @@ ${withWork ? workTable(openWork.filter((w) => w.kind === "defect"), "Bekannte of
 		}
 		const days = diary.filter((d) => d.day >= from && d.day <= to).sort((x, y) => x.day.localeCompare(y.day));
 		const periodPhotos = photos.filter((p) => {
-			const d = new Date(p.capturedAt ?? p.createdAt).toISOString().slice(0, 10);
+			const d = isoDay(new Date(p.capturedAt ?? p.createdAt));
 			return d >= from && d <= to;
 		});
 		const period = query.get("von") || query.get("bis") ? `Zeitraum ${date(query.get("von"))} – ${date(query.get("bis"))}` : "Gesamter Zeitraum";
@@ -112,7 +112,7 @@ ${withWork ? workTable(openWork.filter((w) => w.kind === "defect"), "Bekannte of
 		return `<div class="eoSheet">${head}<p><strong>${e(period)}</strong></p>${facts}${roomTable}${diaryHtml}${checks}
 ${withWork ? workTable(work, "Aufgaben und Mängel") : ""}
 ${withPhotos ? `<h2>Fotos im Zeitraum (${periodPhotos.length})</h2><div class="photos">${periodPhotos.slice(0, 60).map(photo).join("")}</div>${periodPhotos.length > 60 ? `<p class="muted">… und ${periodPhotos.length - 60} weitere.</p>` : ""}` : ""}
-<p class="muted" style="margin-top:1.5rem">Erstellt mit EstrichONE am ${e(parseDay(new Date().toISOString().slice(0, 10)).toLocaleDateString("de-DE"))}.</p></div>`;
+<p class="muted" style="margin-top:1.5rem">Erstellt mit EstrichONE am ${e(new Date().toLocaleDateString("de-DE", { day: "2-digit", month: "2-digit", year: "numeric" }))}.</p></div>`;
 	}
 
 	onPrint(): void {

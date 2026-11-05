@@ -26,8 +26,8 @@ import { get, onPasswordChangeRequired, onSessionEnded } from "../util/api";
 import { relogin } from "../util/relogin";
 import { loadSystemSettings } from "../util/systemSettings";
 import { hasOwnChoice } from "../util/theme";
-import { initials } from "../util/format";
-import { setRouter } from "../util/navigation";
+import { date, initials } from "../util/format";
+import { currentRoute, setRouter } from "../util/navigation";
 import { PathRouter, type RouteMatch } from "../util/router";
 import { navKeyFor, navigation, routes, type NavEntry } from "../util/routes";
 import { adminAreas, adminGroups, matchesArea } from "../util/adminCatalog";
@@ -50,6 +50,7 @@ import GroupHeaderListItem from "sap/m/GroupHeaderListItem";
 import NotificationListItem from "sap/m/NotificationListItem";
 import { CATEGORY_ICONS, inbox, markAllRead, markRead, refreshWebPush, relativeTime, type NotificationItem } from "../util/notifications";
 import { openNotificationPreferences } from "../util/notificationPreferences";
+import { startInputHints } from "../util/inputHints";
 
 interface Notice {
 	title: string;
@@ -86,6 +87,7 @@ export default class AppController extends BaseController {
 			this.model().setProperty("/logo", logos(Theming.getTheme()).shell);
 			this.model().setProperty("/loginLogo", logos(Theming.getTheme()).horizontal);
 		});
+		startInputHints();
 		this.v().setModel(notices.model, "notices");
 		this.v().setModel(updateHints.model, "updates");
 		notices.start();
@@ -112,6 +114,10 @@ export default class AppController extends BaseController {
 		// Module oder Rechte geändert (Einstellungen): Navigation sofort anpassen.
 		document.addEventListener("estrichone-permissions", () => this.refreshShell());
 		document.addEventListener("estrichone-chat", () => void this.loadChat());
+		document.addEventListener("estrichone-query", () => {
+			const current = currentRoute();
+			if (current) this.model().setProperty("/navKey", navKeyFor(current.route.nav, current.query));
+		});
 		// Tastenkürzel Alt+N: neue Bauakte (nur angemeldet, mit Recht und ohne offenen Dialog). event.code, damit es auch auf macOS greift.
 		document.addEventListener("keydown", (event) => {
 			if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey || event.code !== "KeyN" || event.repeat) return;
@@ -128,6 +134,10 @@ export default class AppController extends BaseController {
 		};
 		compact.addEventListener("change", applyCompact);
 		applyCompact();
+		// Tablet hochkant (unter 1024 px): Seitennavigation eingeklappt, damit Inhalte wie Chat oder Tabellen Platz haben.
+		const narrow = window.matchMedia("(max-width: 1023px)");
+		if (narrow.matches) this.el<ToolPage>("toolPage").setSideExpanded(false);
+		narrow.addEventListener("change", (event) => this.el<ToolPage>("toolPage").setSideExpanded(!event.matches));
 		// Service Worker: neue Pushnachricht (Glocke sofort aktualisieren) bzw. Klick auf eine Benachrichtigung.
 		navigator.serviceWorker?.addEventListener("message", (event: MessageEvent<{ type?: string; url?: string }>) => {
 			if (event.data?.type === "estrichone-notification" && session.data.user) { void this.loadNotices(); void this.loadChat(); }
@@ -478,7 +488,7 @@ export default class AppController extends BaseController {
 		if (session.has("work.read")) {
 			tasks.push(get<WorkItemDto[]>("work-items/mine").then((work) => {
 				for (const w of work.filter((x) => x.status !== "done" && x.dueDate && x.dueDate < today && !covered.has(x.id)).slice(0, 10)) {
-					items.push({ title: `${this.t("notice.overdue")}: ${w.title}`, description: w.dueDate ?? "", icon: "sap-icon://alert",
+					items.push({ title: `${this.t("notice.overdue")}: ${w.title}`, description: w.dueDate ? `fällig seit ${date(w.dueDate)}` : "", icon: "sap-icon://alert",
 						path: w.bauakteId ? `/bauakten/${w.bauakteId}?abschnitt=aufgaben` : "/tagesuebersicht", priority: "High" });
 				}
 			}));

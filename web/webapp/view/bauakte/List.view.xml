@@ -23,7 +23,7 @@
 						</VBox>
 						<VBox class="sapUiSmallMarginEnd">
 							<Label text="{i18n>bauakten.responsible}" labelFor="listResponsible"/>
-							<Select id="listResponsible" selectedKey="{view>/responsible}" change=".onFilter" width="14rem" forceSelection="false"/>
+							<Select id="listResponsible" selectedKey="{view>/responsible}" change=".onFilter" width="14rem" forceSelection="true"/>
 						</VBox>
 						<VBox class="sapUiSmallMarginEnd">
 							<Label text="{i18n>bauakten.customer}" labelFor="listCustomerHost"/>

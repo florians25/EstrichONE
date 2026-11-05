@@ -197,7 +197,10 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 			const r = results.find((x) => x.key === c.result.getSelectedKey());
 			summary.addItem(new Text({ text: `${titles[key]}: ${r?.text ?? "–"}${c.note.getValue().trim() ? ` – ${c.note.getValue().trim()}` : ""}` }));
 		}
-		summary.addItem(new Text({ text: `${selectedPhotos().length} Fotos · ${defectChecks.filter((d) => d.box.getSelected()).length} Mängel werden angelegt` }).addStyleClass("eoMuted sapUiTinyMarginTop"));
+		const photoCount = selectedPhotos().length;
+		const defectCount = defectChecks.filter((d) => d.box.getSelected()).length;
+		summary.addItem(new Text({ text: `${photoCount} ${photoCount === 1 ? "Foto" : "Fotos"} · ${defectCount === 1 ? "1 Mangel wird" : `${defectCount} Mängel werden`} angelegt` })
+			.addStyleClass("eoMuted sapUiTinyMarginTop"));
 	};
 
 	const allSteps = [visitStep, checksStep, photosStep, defectsStep, finishStep];

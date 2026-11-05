@@ -87,7 +87,7 @@ internal sealed class OrderPdf(EstrichOneDbContext db, IPdfBranding branding, IB
             return;
         }
 
-        await generated.StoreAsync(bauakteId, userId, FileName(order), pdf, "office", "Bestellungen", $"Bestellung bei Lieferant ({order.Status})", cancellationToken);
+        await generated.StoreAsync(bauakteId, userId, FileName(order), pdf, "office", "Bestellungen", $"Bestellung bei Lieferant ({MaterialOrder.Labels.Of(order.Status)})", cancellationToken);
     }
 }
 

@@ -26,24 +26,24 @@
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>
-					<Column width="10rem"><Text text="Status"/></Column>
-					<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Eingang"/></Column>
+					<Column width="8rem"><Text text="Status"/></Column>
+					<Column width="9.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Eingang"/></Column>
 					<Column><Text text="Anfragender"/></Column>
 					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Anliegen"/></Column>
-					<Column width="9rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Ort"/></Column>
-					<Column width="7rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Fläche"/></Column>
-					<Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Wunschtermin"/></Column>
-					<Column width="7rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Kanal"/></Column>
+					<Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Ort"/></Column>
+					<Column width="5.5rem" hAlign="End" minScreenWidth="Desktop" demandPopin="true"><Text text="Fläche"/></Column>
+					<Column width="7.5rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Wunschtermin"/></Column>
+					<Column width="6rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Kanal"/></Column>
 				</columns>
 				<items>
 					<ColumnListItem type="Navigation" press=".onOpen">
 						<ObjectStatus text="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusText'}" state="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusState'}" inverted="true"/>
 						<Text text="{view>time}" class="eoTabular"/>
-						<Text text="{view>who}"/>
+						<ObjectIdentifier title="{view>who}"/>
 						<Text text="{= ${view>subject} || '–' }"/>
 						<Text text="{= ${view>siteCity} || '–' }"/>
-						<Text text="{= ${view>areaSquareMeters} ? ${view>areaSquareMeters} + ' m²' : '–' }"/>
-						<Text text="{path: 'view>desiredStart', formatter: 'fmt.date'}"/>
+						<Text text="{path: 'view>areaSquareMeters', formatter: 'fmt.area'}" class="eoTabular"/>
+						<Text text="{path: 'view>desiredStart', formatter: 'fmt.date'}" class="eoTabular"/>
 						<Text text="{path: 'view>source', formatter: 'fmt.callSourceText'}"/>
 					</ColumnListItem>
 				</items>

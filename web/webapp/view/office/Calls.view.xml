@@ -29,7 +29,7 @@
 								class="sapUiSmallMarginEnd" tooltip="{= ${view>direction} === 'outbound' ? 'Ausgehend' : 'Eingehend' }"/>
 							<VBox>
 								<HBox alignItems="Center" wrap="Wrap">
-									<Text text="{view>who}" class="sapUiSmallMarginEnd"/>
+									<Title text="{view>who}" level="H3" titleStyle="H6" wrapping="true" class="sapUiSmallMarginEnd"/>
 									<Link text="{view>callerPhone}" href="tel:{view>callerPhone}" visible="{= !!${view>callerPhone} }" class="sapUiSmallMarginEnd"/>
 									<Text text="{view>time}" class="eoMuted eoTabular sapUiSmallMarginEnd"/>
 									<ObjectStatus text="{view>followText}" state="{= ${view>overdue} ? 'Error' : 'Warning' }" visible="{view>followUp}" inverted="true"/>

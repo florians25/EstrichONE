@@ -4,13 +4,16 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>security.title}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="{i18n>security.intro}"/></f:expandedContent>
+				<f:actions><Button text="{i18n>password.title}" icon="sap-icon://key" press=".onPassword"/></f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
-			<VBox class="sapUiSmallMargin" width="100%">
-				<VBox width="100%" maxWidth="48rem">
-					<Title text="{i18n>security.twoFactor}" level="H2" titleStyle="H4"/>
-					<Text text="{i18n>security.twoFactorIntro}" class="sapUiTinyMarginTop"/>
+			<VBox renderType="Bare">
+				<Panel backgroundDesign="Solid" class="eoCardPanel eoWideCard">
+				<headerToolbar><OverflowToolbar style="Clear"><Title text="{i18n>security.twoFactor}" level="H2"/></OverflowToolbar></headerToolbar>
+				<VBox class="eoPanelBody" renderType="Bare">
+					<Text text="{i18n>security.twoFactorIntro}"/>
 					<MessageStrip id="tfaRestricted" text="{i18n>security.restricted}" type="Warning" showIcon="true" visible="{view>/status/restricted}" class="sapUiSmallMarginTop"/>
 					<MessageStrip text="{i18n>security.required}" type="Information" showIcon="true"
 						visible="{= ${view>/status/requiredByPolicy} &amp;&amp; !${view>/status/restricted} }" class="sapUiSmallMarginTop"/>
@@ -23,21 +26,24 @@
 							enabled="{= !${view>/status/requiredByPolicy} }"/>
 					</HBox>
 				</VBox>
-				<Title text="{i18n>security.sessions}" level="H2" titleStyle="H4" class="sapUiMediumMarginTop"/>
-				<Text text="{i18n>security.sessionsIntro}" class="sapUiTinyMarginTop"/>
-				<Table id="sessions" items="{view>/sessions}" class="sapUiSmallMarginTop" noDataText="–" popinLayout="GridSmall">
-					<headerToolbar>
-						<OverflowToolbar>
-							<ToolbarSpacer/>
-							<Button id="signOutOthers" text="{i18n>security.signOutOthers}" icon="sap-icon://log" press=".onSignOutOthers"
-								enabled="{= ${view>/sessions}.length > 1 }"/>
-						</OverflowToolbar>
-					</headerToolbar>
+				</Panel>
+				<Panel backgroundDesign="Solid" class="eoCardPanel eoWideCard">
+				<headerToolbar>
+					<OverflowToolbar style="Clear">
+						<Title text="{i18n>security.sessions}" level="H2"/>
+						<ToolbarSpacer/>
+						<Button id="signOutOthers" text="{i18n>security.signOutOthers}" icon="sap-icon://log" press=".onSignOutOthers"
+							enabled="{= ${view>/sessions}.length > 1 }"/>
+					</OverflowToolbar>
+				</headerToolbar>
+				<VBox renderType="Bare">
+				<Text text="{i18n>security.sessionsIntro}" class="eoPanelIntro"/>
+				<Table id="sessions" items="{view>/sessions}" noDataText="Keine Anmeldungen gefunden." popinLayout="GridSmall">
 					<columns>
 						<Column><Text text="{i18n>security.client}"/></Column>
 						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>security.since}"/></Column>
 						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="{i18n>security.lastSeen}"/></Column>
-						<Column hAlign="End" width="10rem"><Text text=""/></Column>
+						<Column hAlign="End" width="10rem"><Text text="Aktion" class="sapUiInvisibleText"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem>
@@ -53,6 +59,8 @@
 						</ColumnListItem>
 					</items>
 				</Table>
+				</VBox>
+				</Panel>
 			</VBox>
 		</f:content>
 	</f:DynamicPage>

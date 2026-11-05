@@ -5,18 +5,24 @@
 			<Title text="{i18n>setup.title}" level="H1" titleStyle="H3" class="sapUiSmallMarginTop"/>
 			<Text text="{i18n>setup.intro}" class="eoMuted sapUiSmallMarginBottom"/>
 			<Label text="{i18n>setup.code}" labelFor="setupCode" required="true"/>
-			<Input id="setupCode" value="{view>/setupCode}" valueLiveUpdate="true" width="100%"/>
+			<Input id="setupCode" value="{view>/setupCode}" valueLiveUpdate="true" width="100%" placeholder="XXXX-XXXX-XXXX"/>
 			<Label text="{i18n>setup.company}" labelFor="setupCompany" required="true" class="sapUiSmallMarginTop"/>
 			<Input id="setupCompany" value="{view>/companyName}" valueLiveUpdate="true" width="100%"/>
 			<Title text="{i18n>setup.admin}" level="H2" titleStyle="H5" class="sapUiMediumMarginTop"/>
 			<Label text="{i18n>setup.name}" labelFor="setupName" required="true" class="sapUiSmallMarginTop"/>
 			<Input id="setupName" value="{view>/displayName}" valueLiveUpdate="true" width="100%"/>
 			<Label text="{i18n>setup.userName}" labelFor="setupUser" required="true" class="sapUiSmallMarginTop"/>
-			<Input id="setupUser" value="{view>/userName}" valueLiveUpdate="true" width="100%"/>
+			<Input id="setupUser" value="{view>/userName}" valueLiveUpdate="true" width="100%">
+				<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
+			</Input>
 			<Label text="{i18n>setup.email}" labelFor="setupEmail" class="sapUiSmallMarginTop"/>
-			<Input id="setupEmail" value="{view>/email}" valueLiveUpdate="true" type="Email" width="100%"/>
+			<Input id="setupEmail" value="{view>/email}" valueLiveUpdate="true" type="Email" width="100%">
+				<customData><core:CustomData key="autocomplete" value="email" writeToDom="true"/></customData>
+			</Input>
 			<Label text="{i18n>setup.password}" labelFor="setupPassword" required="true" class="sapUiSmallMarginTop"/>
-			<Input id="setupPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit"/>
+			<Input id="setupPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit">
+				<customData><core:CustomData key="autocomplete" value="new-password" writeToDom="true"/></customData>
+			</Input>
 			<Text text="{i18n>setup.passwordHint}" class="eoHelpText"/>
 			<MessageStrip text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginTop">
 				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>

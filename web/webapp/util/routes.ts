@@ -141,5 +141,6 @@ export function navKeyFor(nav: string | undefined, query: URLSearchParams): stri
 	if (nav === "crews" && query.get("reiter") === "geraete") return "vehicles";
 	if (nav === "company") return companyTabKeys[query.get("bereich") ?? ""] ?? "company";
 	if (nav === "vacation") return vacationTabs[query.get("reiter") ?? ""] ?? "vacation";
+	if (nav === "bauakten" && query.get("status") === "old") return "oldFiles";
 	return nav ?? "";
 }

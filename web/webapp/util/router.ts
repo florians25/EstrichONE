@@ -104,6 +104,8 @@ export class PathRouter {
 		window.history.replaceState(null, "", window.location.pathname + (text ? `?${text}` : ""));
 		if (this.current) {
 			this.current = { ...this.current, query };
+			// Programmrahmen: Navigationseintrag kann von der Query abhängen (z. B. Altakten unter /bauakten?status=old).
+			document.dispatchEvent(new CustomEvent("estrichone-query"));
 		}
 	}
 
