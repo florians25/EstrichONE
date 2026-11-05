@@ -65,7 +65,7 @@
 		<!-- Verlauf -->
 		<VBox id="chatPane" class="eoChatPane" renderType="Bare">
 			<layoutData><FlexItemData growFactor="1" baseSize="0" minWidth="0"/></layoutData>
-			<IllustratedMessage visible="{= !${view>/activeId} }" illustrationType="sapIllus-NoActivities" illustrationSize="Scene"
+			<IllustratedMessage visible="{= !${view>/activeId} }" illustrationType="sapIllus-NoActivities" illustrationSize="Auto" enableVerticalResponsiveness="true"
 				title="Wählen Sie eine Unterhaltung" enableDefaultTitleAndDescription="false" class="eoChatEmpty"
 				description="Nachrichten, Fotos und PDFs werden verschlüsselt gespeichert und nach {view>/retentionDays} Tagen automatisch gelöscht.">
 				<additionalContent>

@@ -178,7 +178,7 @@ export async function layoutIssues(page: Page, scopeSelector = 'body'): Promise<
     const vw = document.documentElement.clientWidth;
     // Bereiche, die absichtlich waagerecht scrollen (Plantafeln, Kalender, breite Tabellen mit eigenem Bildlauf, Reiterleisten).
     const scrollOk = '.eoScrollX, .sapMITBScrollContainer, .sapMITH, .sapMITBHead, .sapUiCalendarRowApps, .sapMSinglePCRow, .sapMPlanCal, .sapUiCalendarRowVisualContainer, '
-      + '.sapMSPCMonthDays, .sapUiTableCnt, .sapUiTableCCnt, .sapMListTblCnt.eoWide, .leaflet-container, .sapMTokenizer, .sapMTokenizerScrollContainer, .sapMSegB, '
+      + '.sapMSinglePlanningCalendar, .sapMSPCMonthDays, .sapUiTableCnt, .sapUiTableCCnt, .sapMListTblCnt.eoWide, .leaflet-container, .sapMTokenizer, .sapMTokenizerScrollContainer, .sapMSegB, '
       + '.sapMCrsl, .sapMHdrCntrCntr, .sapMSlt, .sapMInputBaseContentWrapper, .sapMPopover, .sapMDialog, .sapMIBar, .sapMTB, .sapUiInvisibleText';
     const label = (e: Element) => {
       const id = (e.id || '').replace(/^__[a-z]+\d+-?/i, '').replace(/^.*--/, '');
@@ -262,7 +262,9 @@ export async function layoutIssues(page: Page, scopeSelector = 'body'): Promise<
         const range = document.createRange();
         range.selectNodeContents(n);
         const lines = new Set(Array.from(range.getClientRects()).filter((r) => r.width > 0).map((r) => Math.round(r.top))).size;
-        if (lines > parts && !e.closest(scrollOk) && getComputedStyle(e).hyphens !== 'auto') issues.add(`Mitten im Wort umbrochen (${lines} Zeilen): ${label(e)}`);
+        // Lange Einzelwörter ohne Leerzeichen (Kennungen, Dateinamen, Adressen) dürfen in schmalen Zellen umbrechen.
+        const longToken = text.split(/\s+/).some((w) => w.length > 14);
+        if (lines > parts && !longToken && !e.closest(scrollOk) && getComputedStyle(e).hyphens !== 'auto') issues.add(`Mitten im Wort umbrochen (${lines} Zeilen): ${label(e)}`);
       }
     }
     // 3) Überlagerte Texte (zwei verschiedene Elemente, Textflächen schneiden sich deutlich)
@@ -277,12 +279,21 @@ export async function layoutIssues(page: Page, scopeSelector = 'body'): Promise<
       }
       return new DOMRect(l, t, Math.max(0, rr - l), Math.max(0, b - t));
     };
-    const texts = leaves.filter((e) => Array.from(e.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim().length > 1))
-      .map((e) => ({ e, r: clipped(e, textRect(e)) })).filter((t) => t.r.width > 2 && t.r.height > 2);
+    // Je Zeile ein Rechteck (mehrzeiliger Fließtext mit Link dahinter überlagert sich nicht, nur weil sich die
+    // umschließenden Rechtecke schneiden).
+    const lineRects = (e: Element) => {
+      const nodes = Array.from(e.childNodes).filter((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim());
+      const rects: DOMRect[] = [];
+      for (const n of nodes) { const range = document.createRange(); range.selectNodeContents(n); rects.push(...Array.from(range.getClientRects())); }
+      return rects.map((r) => clipped(e, r)).filter((r) => r.width > 2 && r.height > 2);
+    };
+    const pieces = leaves.filter((e) => Array.from(e.childNodes).some((n) => n.nodeType === Node.TEXT_NODE && (n.textContent ?? '').trim().length > 1))
+      .flatMap((e) => lineRects(e).map((r) => ({ e, r })));
+    const texts = pieces;
     for (let i = 0; i < texts.length; i++) {
       for (let j = i + 1; j < texts.length; j++) {
         const a = texts[i]; const b = texts[j];
-        if (a.e.contains(b.e) || b.e.contains(a.e)) continue;
+        if (a.e === b.e || a.e.contains(b.e) || b.e.contains(a.e)) continue;
         const w = Math.min(a.r.right, b.r.right) - Math.max(a.r.left, b.r.left);
         const h = Math.min(a.r.bottom, b.r.bottom) - Math.max(a.r.top, b.r.top);
         if (w > 3 && h > Math.min(a.r.height, b.r.height) * 0.4) {

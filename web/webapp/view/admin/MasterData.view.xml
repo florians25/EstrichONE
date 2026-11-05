@@ -119,9 +119,9 @@
 					<VBox visible="{= ${view>/tab} === 'textBlock' }" class="eoMdPane">
 							<Table items="{view>/textBlock}" noDataText="Noch keine Textbausteine." popinLayout="GridSmall">
 								<columns>
-									<Column width="14rem"><Text text="Name"/></Column>
+									<Column width="30%"><Text text="Name"/></Column>
 									<Column><Text text="Text"/></Column>
-									<Column width="7rem"><Text text="Status"/></Column>
+									<Column width="7rem" minScreenWidth="36rem" demandPopin="true"><Text text="Status"/></Column>
 									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
 								</columns>
 								<items>
@@ -140,8 +140,8 @@
 					<VBox visible="{= ${view>/tab} === 'folderTemplate' }" class="eoMdPane">
 							<Table items="{view>/folderTemplate}" noDataText="Noch keine Ordnervorlagen – Unterordner werden dann in jeder Bauakte angeboten." popinLayout="GridSmall">
 								<columns>
-									<Column width="14rem"><Text text="Name"/></Column>
-									<Column width="12rem"><Text text="Dokumentart"/></Column>
+									<Column width="30%"><Text text="Name"/></Column>
+									<Column width="12rem" minScreenWidth="40rem" demandPopin="true"><Text text="Dokumentart"/></Column>
 									<Column><Text text="Unterordner"/></Column>
 									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
 								</columns>
@@ -161,9 +161,9 @@
 					<VBox visible="{= ${view>/tab} === 'bauakteTemplate' }" class="eoMdPane">
 							<Table items="{view>/bauakteTemplate}" noDataText="Noch keine Vorlagen – bei der Anlage einer Bauakte wählbar (Beschreibung und Räume)." popinLayout="GridSmall">
 								<columns>
-									<Column width="14rem"><Text text="Name"/></Column>
+									<Column width="30%"><Text text="Name"/></Column>
 									<Column><Text text="Beschreibung"/></Column>
-									<Column><Text text="Räume"/></Column>
+									<Column minScreenWidth="40rem" demandPopin="true"><Text text="Räume"/></Column>
 									<Column width="9rem" hAlign="End" visible="{view>/canManage}"><Text text=""/></Column>
 								</columns>
 								<items>
