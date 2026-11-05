@@ -84,7 +84,10 @@ export default class CockpitController extends BaseController {
 		});
 		this.model().setProperty("/statusOptions", [{ key: "", text: "Alle Status" }, ...flowStatuses.map((s) => ({ key: s, text: bauakteStatus[s].text }))]);
 		try {
-			if (window.localStorage.getItem("eo.cockpit.pool") === "0") this.model().setProperty("/poolOpen", false);
+			// Vorrat eingeklappt, wenn so gewählt – oder ohne eigene Wahl bei schmalem Fenster (z. B. 1280 px mit 150 %),
+			// damit die Plantafel Mo–Fr ohne waagerechten Bildlauf passt.
+			const pool = window.localStorage.getItem("eo.cockpit.pool");
+			if (pool === "0" || (pool === null && window.innerWidth < 1000)) this.model().setProperty("/poolOpen", false);
 			if (window.localStorage.getItem("eo.cockpit.compact") === "1") this.model().setProperty("/compact", true);
 		} catch { /* Speicher nicht verfügbar */ }
 		EventBus.getInstance().subscribe("estrichone", "planningChanged", this.changed, this);

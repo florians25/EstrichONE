@@ -136,7 +136,7 @@ export default class Start extends BaseController {
 				set("work", {
 					value: String(open.length), state: overdue ? "Error" : open.length ? "Neutral" : "Good",
 					details: overdue ? `${overdue} überfällig` : defects ? `${defects} ${defects === 1 ? "Mangel" : "Mängel"}` : "",
-					rows: open.slice(0, 3).map((w) => ({
+					rows: open.slice(0, 4).map((w) => ({
 						text: w.title, icon: w.kind === "defect" ? "sap-icon://warning2" : "sap-icon://task",
 						side: w.dueDate ? shortDay(w.dueDate) : "", sideState: w.dueDate && w.dueDate < today ? "Error" : w.dueDate === today ? "Warning" : "None",
 						to: w.bauakteId ? `/bauakten/${w.bauakteId}?abschnitt=aufgaben` : "/tagesuebersicht",
@@ -150,7 +150,7 @@ export default class Start extends BaseController {
 				set("assignments", {
 					value: String(list.length), state: warnings ? "Critical" : "Neutral",
 					details: warnings ? `${warnings} mit Hinweisen` : crews ? `${crews} ${crews === 1 ? "Kolonne" : "Kolonnen"} unterwegs` : "",
-					rows: list.slice(0, 3).map((a) => ({
+					rows: list.slice(0, 4).map((a) => ({
 						text: `${a.startTime ? a.startTime.slice(0, 5) + " · " : ""}${a.bauakteTitle}`, icon: "sap-icon://shipping-status",
 						side: a.crewName ?? "", sideState: "None", to: `/bauakten/${a.bauakteId}`,
 					})),
@@ -159,7 +159,7 @@ export default class Start extends BaseController {
 			this.has("bauakten.read") ? get<ApprovalResponse[]>("approvals", { scope: "mine", status: "pending" }).then((list) => {
 				set("approvals", {
 					value: String(list.length), state: list.length ? "Critical" : "Good", details: list.length ? "bitte entscheiden" : "",
-					rows: list.slice(0, 3).map((a) => ({
+					rows: list.slice(0, 4).map((a) => ({
 						text: a.fileName, icon: "sap-icon://document", side: a.bauakteNumber ?? "", sideState: "None",
 						to: `/bauakten/${a.bauakteId}/datei/${a.fileId}?abschnitt=dokumente`,
 					})),
@@ -171,7 +171,7 @@ export default class Start extends BaseController {
 				set("tickets", {
 					value: String(t.length), state: blocked ? "Error" : fresh ? "Critical" : "Neutral",
 					details: blocked ? `${blocked} ${blocked === 1 ? "kann" : "können"} nicht arbeiten` : fresh ? `${fresh} neu` : "",
-					rows: [...t].sort((a, b) => Number(b.reporterBlocked) - Number(a.reporterBlocked)).slice(0, 3).map((x) => ({
+					rows: [...t].sort((a, b) => Number(b.reporterBlocked) - Number(a.reporterBlocked)).slice(0, 4).map((x) => ({
 						text: `${x.number} ${x.title}`, icon: x.reporterBlocked ? "sap-icon://alert" : "sap-icon://headset",
 						side: x.status === "new" ? "neu" : "", sideState: "Information", to: `/it-center/helpdesk/${x.id}`,
 					})),
@@ -196,18 +196,18 @@ export default class Start extends BaseController {
 				set("deadlines", {
 					value: String(rows.length), state: due ? "Error" : rows.length ? "Critical" : "Good",
 					details: due ? `${due} heute oder überfällig` : rows.length ? `nächste ${shortDay(rows[0].at)}` : "",
-					rows: rows.slice(0, 3),
+					rows: rows.slice(0, 4),
 				});
 			}).catch(failed("deadlines")),
 			this.has("bauakten.read") ? get<BauaktePage>("bauakten", { status: "inquiry", limit: 100 }).then((p) => {
 				set("newFiles", {
 					value: count(p), state: "Neutral", details: p.items[0] ? `zuletzt ${shortDay(isoDay(new Date(p.items[0].updatedAt)))}` : "",
-					rows: p.items.slice(0, 3).map((b) => ({
+					rows: p.items.slice(0, 4).map((b) => ({
 						text: `${b.number ? b.number + " · " : ""}${b.title}`, icon: "sap-icon://folder-blank", side: b.city ?? "", sideState: "None", to: `/bauakten/${b.id}`,
 					})),
 				});
 			}).catch(failed("newFiles")) : Promise.resolve(),
-			cards.some((c) => c.key === "inbox") ? inbox({ unread: true, limit: 3 }).then((box) => {
+			cards.some((c) => c.key === "inbox") ? inbox({ unread: true, limit: 4 }).then((box) => {
 				set("inbox", {
 					value: String(box.unreadCount), state: box.items.some((n) => n.urgency === "high") ? "Critical" : "Neutral",
 					details: box.items[0] ? relativeTime(box.items[0].createdAt) : "",

@@ -13,15 +13,10 @@
 		</f:title>
 		<f:content>
 			<VBox renderType="Bare" class="eoStartBody">
-			<!-- SAP Cards: Kennzahl im Kopf (NumericHeader), darunter die wichtigsten Einträge; Raster mit gleicher Höhe -->
-			<f:GridContainer id="startCards" items="{path: 'view>/cards', templateShareable: false}" snapToRow="true" class="eoStartCards">
-				<f:layout><f:GridContainerSettings columnSize="17rem" minColumnSize="15rem" maxColumnSize="30rem" rowSize="4.5rem" gap="1rem"/></f:layout>
-				<f:layoutXL><f:GridContainerSettings columns="3" columnSize="24rem" minColumnSize="17rem" maxColumnSize="40rem" rowSize="4.5rem" gap="1rem"/></f:layoutXL>
-				<f:layoutL><f:GridContainerSettings columns="3" columnSize="17rem" minColumnSize="15rem" maxColumnSize="30rem" rowSize="4.5rem" gap="1rem"/></f:layoutL>
-				<f:layoutM><f:GridContainerSettings columns="2" columnSize="17rem" minColumnSize="15rem" maxColumnSize="30rem" rowSize="4.5rem" gap="1rem"/></f:layoutM>
-				<f:layoutS><f:GridContainerSettings columns="1" columnSize="17rem" minColumnSize="15rem" maxColumnSize="40rem" rowSize="4.5rem" gap="0.75rem"/></f:layoutS>
-				<f:Card height="100%" class="eoStartCard">
-					<f:layoutData><f:GridContainerItemLayoutData rows="3" columns="1"/></f:layoutData>
+			<!-- SAP Cards, kompakt: Kopf mit Kennzahl rechts, darunter bis zu vier Einträge; Raster passt sich der Breite an
+			     (CSS-Grid mit Mindestbreite je Karte), Höhe nach Inhalt, Karten einer Reihe gleich hoch -->
+			<FlexBox id="startCards" items="{path: 'view>/cards', templateShareable: false}" renderType="Bare" class="eoStartCards">
+				<f:Card class="eoStartCard">
 					<f:header>
 						<card:NumericHeader title="{view>title}" subtitle="{view>subtitle}" number="{view>value}" iconSrc="{view>icon}" state="{view>state}"
 							details="{view>details}" detailsMaxLines="1" press=".onTile"/>
@@ -41,7 +36,7 @@
 						</List>
 					</f:content>
 				</f:Card>
-			</f:GridContainer>
+			</FlexBox>
 			<FlexBox class="eoStartGrid" renderType="Bare">
 				<Panel headerText="Schnellzugriff" backgroundDesign="Solid" class="eoCardPanel">
 					<FlexBox items="{view>/groups}" wrap="Wrap" class="eoQuickGroups" renderType="Bare">

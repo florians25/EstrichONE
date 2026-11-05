@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, apiCall, nav, openSection, signIn } from './helpers';
+import { adminPassword, apiCall, layoutIssues, nav, openSection, signIn, toast } from './helpers';
 
 const title = 'Abnahme Neubau Seidl';
 const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNkYAAAAAYAAjCB0C8AAAAASUVORK5CYII=', 'base64');
@@ -43,6 +43,63 @@ test('Einstellungen: Materialmodul ab- und wieder einschalten, Firmenlogo hochla
   // Firmenlogo nur in der Vorschau (für PDFs/Briefe), nicht in der Kopfleiste.
   await expect(page.locator('img.eoLogoPreview').first()).toBeVisible();
   await expect(page.locator('.sapFShellBar img[id$="companyLogo"]')).toHaveCount(0);
+});
+
+test('Systemeinstellungen: Bereich links wählen zeigt und markiert genau diesen Bereich, Schalter werden gespeichert', async ({ page }) => {
+  // 1366 × 768 bei 125 % Skalierung (CSS 1093 × 614): Liste und Inhalt nebeneinander, kein Abschneiden.
+  await page.setViewportSize({ width: 1093, height: 614 });
+  await signIn(page, 'admin', adminPassword);
+  await page.goto('/system/firmendaten');
+  const navList = page.locator('.eoSettingsNav');
+  const heading = page.locator('.eoSettingsHead .sapMTitle');
+  const selected = navList.locator('li.sapMLIBSelected');
+  await expect(heading).toHaveText('Firma');
+  await expect(selected).toHaveCount(1);
+  await expect(selected).toContainText('Firma');
+  for (const [entry, key, field] of [
+    ['Dokumente und Freigaben', 'dokumente', 'Vorgeschlagene Frist'], ['Module', 'module', 'Chat einschalten'],
+    ['Speicher', 'speicher', 'Fotos unverändert speichern'], ['Anmeldung', 'sitzungen', 'Abmelden nach Leerlauf'],
+    ['Bauakten', 'bauakte', 'Aufbau der Aktennummer'], ['Firma', 'firma', 'Firmenname'],
+  ] as const) {
+    await navList.getByText(entry, { exact: true }).click();
+    await expect(heading).toHaveText(entry);
+    await expect(selected).toHaveCount(1);
+    await expect(selected).toContainText(entry);
+    await expect(page.locator('.eoSettingsTabs .sapUiFormElementLbl').filter({ hasText: field }).first()).toBeVisible();
+    expect(new URL(page.url()).searchParams.get('bereich')).toBe(key === 'firma' ? null : key);
+    expect(await layoutIssues(page)).toEqual([]);
+  }
+  // Direkt aufgerufener Bereich (Link aus der Verwaltung) ist markiert – nicht der zuvor gewählte.
+  await page.goto('/system/firmendaten?bereich=module');
+  await expect(heading).toHaveText('Module');
+  await expect(selected).toHaveCount(1);
+  await expect(selected).toContainText('Module');
+
+  // Schalter: ungespeicherte Änderung wird angezeigt, Speichern übernimmt Modul- und Chat-Schalter dauerhaft.
+  const material = page.getByRole('switch', { name: /Material \(/ });
+  const preview = page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' });
+  const before = await preview.getAttribute('aria-checked');
+  await material.click();
+  await preview.click();
+  await expect(page.getByText('Ungespeicherte Änderungen', { exact: false })).toBeVisible();
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(toast(page)).toContainText('Einstellungen gespeichert');
+  await expect(page.getByText('Ungespeicherte Änderungen', { exact: false })).toBeHidden();
+  await expect(nav(page, 'Materialstamm')).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('switch', { name: /Material \(/ })).toHaveAttribute('aria-checked', 'false');
+  await expect(page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' })).not.toHaveAttribute('aria-checked', before ?? '');
+  // Zurücksetzen; „Verwerfen“ nimmt eine weitere Änderung zurück.
+  await page.getByRole('switch', { name: /Material \(/ }).click();
+  await page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' }).click();
+  await page.getByRole('button', { name: 'Speichern' }).click();
+  await expect(toast(page)).toContainText('Einstellungen gespeichert');
+  // Seitennavigation ist bei dieser Breite eingeklappt (nur Symbole): Eintrag vorhanden statt sichtbar prüfen.
+  await expect(nav(page, 'Materialstamm')).toHaveCount(1);
+  await page.getByRole('switch', { name: /Material \(/ }).click();
+  await page.getByRole('button', { name: 'Verwerfen' }).click();
+  await expect(page.getByRole('switch', { name: /Material \(/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByText('Ungespeicherte Änderungen', { exact: false })).toBeHidden();
 });
 
 test('Abnahmeprotokoll: Freigabe per Link durch den Kunden, PDF unter „Abnahmen“', async ({ page, browser }) => {

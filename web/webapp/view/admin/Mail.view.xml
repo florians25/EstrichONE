@@ -38,9 +38,9 @@
 							<Label text="Antworten an" labelFor="mlReply"/><Input id="mlReply" value="{view>/s/replyTo}" type="Email" placeholder="optional" maxLength="254"/>
 							<core:Title text="Testmail"/>
 							<Label text="Empfänger" labelFor="mlTestTo"/>
-							<HBox>
+							<HBox wrap="Wrap" class="eoEntryRow">
 								<Input id="mlTestTo" value="{view>/testTo}" type="Email" placeholder="ihre@adresse.de" width="20rem"/>
-								<Button id="mlTest" text="Testmail senden" icon="sap-icon://email" press=".onTest" class="sapUiTinyMarginBegin"/>
+								<Button id="mlTest" text="Testmail senden" icon="sap-icon://email" press=".onTest"/>
 							</HBox>
 						</form:SimpleForm>
 					</IconTabFilter>

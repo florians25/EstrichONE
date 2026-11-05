@@ -72,9 +72,9 @@
 								<columns>
 									<Column><Text text="Mitarbeiter"/></Column>
 									<Column><Text text="Zeitraum"/></Column>
-									<Column width="6rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Tage"/></Column>
-									<Column width="7rem" hAlign="End" minScreenWidth="Tablet" demandPopin="true"><Text text="Rest danach"/></Column>
-									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Hinweise"/></Column>
+									<Column width="6rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Tage"/></Column>
+									<Column width="7rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Rest danach"/></Column>
+									<Column minScreenWidth="48rem" demandPopin="true"><Text text="Hinweise"/></Column>
 									<Column width="14rem" hAlign="End"><Text text=""/></Column>
 								</columns>
 								<items>

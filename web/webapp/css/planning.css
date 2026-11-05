@@ -40,7 +40,7 @@
 
 /* Terminkalender */
 .eoCalendarLayout { height: 100%; }
-.eoCalendarSide { flex: 0 0 17rem; box-sizing: border-box; padding: 0.75rem; overflow-y: auto; border-right: 1px solid var(--sapGroup_TitleBorderColor);
+.eoCalendarSide { flex: 0 0 18rem; box-sizing: border-box; padding: 0.75rem 0.5rem; overflow-y: auto; overflow-x: hidden; border-right: 1px solid var(--sapGroup_TitleBorderColor);
 	background: var(--sapGroup_ContentBackground); }
 .eoCalendarMain { min-width: 0; box-sizing: border-box; padding: 0.5rem 0.75rem 0; }
 .eoMiniCalendar { max-width: 100%; }

@@ -64,7 +64,12 @@ export default class Roles extends BaseController {
 		const canManage = this.model().getProperty("/canManage") === true;
 		const q = String(this.model().getProperty("/filter") ?? "").trim().toLowerCase();
 		const table = new Table({ fixedLayout: false, sticky: ["ColumnHeaders"], ariaLabelledBy: [] });
-		table.addColumn(new Column({ width: "22rem", header: new Text({ text: "Recht" }) }));
+		// Mindestbreite: Rollen-Spalten bleiben lesbar (kein Umbruch mitten in „Standardrolle“); reicht der Platz nicht
+		// (z. B. 1280 px mit 150 %), scrollt die Matrix waagerecht in ihrem Bereich, die Seite selbst nicht.
+		const minWidth = `${16 + this.roles.length * 8.5}rem`;
+		table.addEventDelegate({ onAfterRendering: () => { const dom = table.getDomRef() as HTMLElement | null; if (dom) dom.style.minWidth = minWidth; } });
+		host.addStyleClass("eoScrollX");
+		table.addColumn(new Column({ width: "16rem", header: new Text({ text: "Recht" }) }));
 		for (const role of this.roles) {
 			const header = new VBox({ alignItems: "Center", items: [
 				new Label({ text: role.name, design: "Bold", wrapping: true, textAlign: "Center" }),
@@ -74,7 +79,7 @@ export default class Roles extends BaseController {
 					...(role.isSystem ? [] : [new Button({ icon: "sap-icon://delete", type: "Transparent", tooltip: `${role.name} löschen`, press: () => void this.remove(role) })]),
 				] })] : []),
 			] });
-			table.addColumn(new Column({ hAlign: "Center", width: "9rem", header }));
+			table.addColumn(new Column({ hAlign: "Center", width: "8.5rem", header }));
 		}
 		let group = "";
 		for (const p of this.catalog.filter((x) => !q || x.description.toLowerCase().includes(q) || x.code.includes(q))) {

@@ -135,8 +135,9 @@ export default class AppController extends BaseController {
 		};
 		compact.addEventListener("change", applyCompact);
 		applyCompact();
-		// Tablet hochkant (unter 1024 px): Seitennavigation eingeklappt, damit Inhalte wie Chat oder Tabellen Platz haben.
-		const narrow = window.matchMedia("(max-width: 1023px)");
+		// Unter 1200 px (Tablet, Laptop mit 1280/1366 px bei 125/150 % oder 1920 px bei 150 %): Seitennavigation nur mit
+		// Symbolen, damit Inhalte wie Formulare, Tabellen, Plantafel oder Chat Platz haben. Über ☰ jederzeit ausklappbar.
+		const narrow = window.matchMedia("(max-width: 1199px)");
 		this.model().setProperty("/sideExpanded", !Device.system.phone && !narrow.matches);
 		narrow.addEventListener("change", (event) => this.model().setProperty("/sideExpanded", !Device.system.phone && !event.matches));
 		// Service Worker: neue Pushnachricht (Glocke sofort aktualisieren) bzw. Klick auf eine Benachrichtigung.

@@ -38,9 +38,9 @@
 				<columns>
 					<Column width="6rem"><Text text="Kd.-Nr."/></Column>
 					<Column><Text text="Name"/></Column>
-					<Column width="4.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art"/></Column>
-					<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Ort"/></Column>
-					<Column width="8.5rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Telefon"/></Column>
+					<Column width="4.5rem" minScreenWidth="40rem" demandPopin="true"><Text text="Art"/></Column>
+					<Column width="9rem" minScreenWidth="44rem" demandPopin="true"><Text text="Ort"/></Column>
+					<Column width="8.5rem" minScreenWidth="54rem" demandPopin="true"><Text text="Telefon"/></Column>
 					<Column minScreenWidth="64rem" demandPopin="true"><Text text="E-Mail"/></Column>
 					<Column width="7.5rem" hAlign="End"><Text text=""/></Column>
 				</columns>

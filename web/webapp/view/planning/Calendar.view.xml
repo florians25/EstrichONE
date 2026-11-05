@@ -2,7 +2,7 @@
 	xmlns:unified="sap.ui.unified" xmlns:eo="estrichone.control" height="100%">
 	<Page id="page" showHeader="false" enableScrolling="false" class="eoCalendarPage">
 		<FlexBox height="100%" alignItems="Stretch" class="eoCalendarLayout">
-			<VBox id="sidebar" class="eoCalendarSide" width="17rem" visible="{view>/sidebar}">
+			<VBox id="sidebar" class="eoCalendarSide" width="18rem" visible="{view>/sidebar}">
 				<Button text="Neuer Termin" icon="sap-icon://add" type="Emphasized" press=".onNew" width="100%" class="sapUiSmallMarginBottom"/>
 				<unified:Calendar id="mini" calendarWeekNumbering="ISO_8601" showWeekNumbers="true" select=".onMiniSelect" width="100%" class="eoMiniCalendar"/>
 				<Toolbar style="Clear" class="sapUiTinyMarginTop">

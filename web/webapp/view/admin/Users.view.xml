@@ -37,7 +37,7 @@
 						<Column width="12rem" minScreenWidth="56rem" demandPopin="true"><Text text="Rollen"/></Column>
 						<Column width="7rem"><Text text="Status"/></Column>
 						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Letzte Anmeldung"/></Column>
-						<Column width="13rem" hAlign="End"><Text text="Aktionen"/></Column>
+						<Column width="16rem" hAlign="End"><Text text="Aktionen"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem>

@@ -10,8 +10,16 @@
  * Abhilfe zentral an der SimpleForm: `sap.m.Title` als Inhalt wird beim Hinzufügen in einen Abschnittstitel
  * (`sap.ui.core.Title`) umgewandelt, und bearbeitbare Formulare ohne ausdrückliche Spaltenzahl sind einspaltig.
  * Neuer Code verwendet direkt {@link formTitle}.
+ *
+ * Breite: Das ResponsiveGridLayout richtet sich nach der Breite des Formulars (Container-Query), nicht des Fensters.
+ * Bei Windows-Laptops mit 125/150 % Skalierung bleiben neben Navigation und Bereichsliste oft nur 500–700 px. Damit
+ * Beschriftungen dort nicht in einer schmalen, weit eingerückten Spalte neben abgeschnittenen Feldern stehen, gilt zentral:
+ * - feste Breiten (z. B. `width="56rem"`) werden zur Höchstbreite, das Formular passt sich der verfügbaren Breite an;
+ * - in Eingabeformularen stehen Beschriftungen unter 720 px Formularbreite über den Feldern (Standard wäre 600 px);
+ * - Beschriftungen neben den Feldern stehen linksbündig (CSS `.eoForm`), passend zu den Abschnittsüberschriften.
  */
 import SimpleForm from "sap/ui/layout/form/SimpleForm";
+import Table from "sap/m/Table";
 import CoreTitle from "sap/ui/core/Title";
 import MTitle from "sap/m/Title";
 import Log from "sap/base/Log";
@@ -50,14 +58,48 @@ type Patchable = {
 	__eoFormLayout?: boolean;
 };
 
+/** Ab dieser Formularbreite (px) stehen Beschriftungen neben den Feldern, darunter über ihnen. */
+export const LABELS_BESIDE_FROM = 720;
+
 /** Einspaltig, sofern ein bearbeitbares Formular die Spaltenzahl nicht ausdrücklich festlegt. */
 function singleColumn(form: SimpleForm): void {
 	if (!form.getEditable() || form.getLayout() !== "ResponsiveGridLayout") return;
 	if (form.isPropertyInitial("columnsL") && form.isPropertyInitial("columnsXL")) form.setColumnsL(1);
 }
 
+/** Anpassung an die verfügbare Breite (siehe Kopfkommentar). */
+function fitWidth(form: SimpleForm): void {
+	form.addStyleClass("eoForm");
+	// Nur Eingabeformulare: Anzeigeformulare (z. B. Kennwerte der Bauakte) verteilen sich auf mehrere Spalten.
+	if (form.getEditable() && form.getLayout() === "ResponsiveGridLayout" && form.isPropertyInitial("breakpointM")) form.setBreakpointM(LABELS_BESIDE_FROM);
+	const width = form.getWidth();
+	if (width && !/%$/.test(width) && width !== "auto") {
+		form.setWidth("100%");
+		form.addEventDelegate({ onAfterRendering: () => { const dom = form.getDomRef() as HTMLElement | null; if (dom) dom.style.maxWidth = width; } });
+	}
+}
+
+/**
+ * Tabellen (sap.m.Table): Spalten mit `minScreenWidth`/`demandPopin` richten sich standardmäßig nach der Fensterbreite.
+ * Steht eine Tabelle neben einem Ordnerbaum, in einer Spalte des FlexibleColumnLayout oder bei Skalierung 125/150 % in
+ * einem schmalen Bereich, bleiben dann alle Spalten nebeneinander und Texte werden zeichenweise umbrochen oder
+ * überlagert. Mit `contextualWidth="Auto"` entscheidet die tatsächliche Breite der Tabelle (wie die Formulare).
+ */
+function installTableLayout(): void {
+	const proto = Table.prototype as unknown as { applySettings: (this: Table, settings: object, scope?: object) => Table; __eoTableLayout?: boolean };
+	if (proto.__eoTableLayout) return;
+	proto.__eoTableLayout = true;
+	const apply = proto.applySettings;
+	proto.applySettings = function (settings, scope) {
+		const result = apply.call(this, settings, scope);
+		if (this.isPropertyInitial("contextualWidth")) this.setContextualWidth("Auto");
+		return result;
+	};
+}
+
 /** Einmalig beim Start (Component.init) aufrufen. */
 export function installFormLayout(): void {
+	installTableLayout();
 	const proto = SimpleForm.prototype as unknown as Patchable;
 	if (proto.__eoFormLayout) return;
 	proto.__eoFormLayout = true;
@@ -69,6 +111,7 @@ export function installFormLayout(): void {
 	proto.applySettings = function (settings, scope) {
 		const result = apply.call(this, settings, scope);
 		singleColumn(this);
+		fitWidth(this);
 		return result;
 	};
 }

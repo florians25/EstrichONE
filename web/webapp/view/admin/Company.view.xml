@@ -1,11 +1,11 @@
 <mvc:View controllerName="estrichone.controller.admin.Company" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
 	xmlns:core="sap.ui.core" xmlns:eo="estrichone.control" height="100%">
-	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}" class="eoAdmin">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" busy="{view>/busy}" class="eoAdmin" showFooter="{view>/dirty}">
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="Systemeinstellungen" level="H1"/></f:heading>
 				<f:expandedContent><Text text="Firmendaten, Logo, Vorgaben und Verhalten von EstrichONE für alle Benutzer."/></f:expandedContent>
-				<f:actions><Button id="settingsSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}"/></f:actions>
+				<f:actions><Button id="settingsSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}" visible="{= !${view>/dirty} }"/></f:actions>
 			</f:DynamicPageTitle>
 		</f:title>
 		<f:content>
@@ -14,24 +14,25 @@
 					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 				<FlexBox class="eoSettingsLayout" renderType="Bare">
 					<!-- Bereiche der Systemeinstellungen als gruppierte Liste links (statt vieler Reiter mit Überlauf) -->
-					<List id="settingsNav" mode="SingleSelectMaster" class="eoSettingsNav" ariaLabelledBy="settingsNavLabel" rememberSelections="false">
+					<List id="settingsNav" mode="SingleSelectMaster" class="eoSettingsNav" ariaLabelledBy="settingsNavLabel" rememberSelections="false"
+						selectionChange=".onSection">
 						<GroupHeaderListItem title="Firma &amp; Auftritt"/>
-						<StandardListItem title="Firma" icon="sap-icon://building" type="Active" press=".onSection" selected="{= ${view>/tab} === 'firma' }"><customData><core:CustomData key="tab" value="firma"/></customData></StandardListItem>
-						<StandardListItem title="Darstellung und Karte" icon="sap-icon://palette" type="Active" press=".onSection" selected="{= ${view>/tab} === 'darstellung' }"><customData><core:CustomData key="tab" value="darstellung"/></customData></StandardListItem>
-						<StandardListItem title="PDF-Layout" icon="sap-icon://pdf-attachment" type="Active" press=".onSection" selected="{= ${view>/tab} === 'pdf' }"><customData><core:CustomData key="tab" value="pdf"/></customData></StandardListItem>
+						<StandardListItem title="Firma" icon="sap-icon://building"><customData><core:CustomData key="tab" value="firma"/></customData></StandardListItem>
+						<StandardListItem title="Darstellung und Karte" icon="sap-icon://palette"><customData><core:CustomData key="tab" value="darstellung"/></customData></StandardListItem>
+						<StandardListItem title="PDF-Layout" icon="sap-icon://pdf-attachment"><customData><core:CustomData key="tab" value="pdf"/></customData></StandardListItem>
 						<GroupHeaderListItem title="Arbeitsweise"/>
-						<StandardListItem title="Bauakten" icon="sap-icon://folder-full" type="Active" press=".onSection" selected="{= ${view>/tab} === 'bauakte' }"><customData><core:CustomData key="tab" value="bauakte"/></customData></StandardListItem>
-						<StandardListItem title="Dokumente und Freigaben" icon="sap-icon://approvals" type="Active" press=".onSection" selected="{= ${view>/tab} === 'dokumente' }"><customData><core:CustomData key="tab" value="dokumente"/></customData></StandardListItem>
-						<StandardListItem title="Module" icon="sap-icon://puzzle" type="Active" press=".onSection" selected="{= ${view>/tab} === 'module' }"><customData><core:CustomData key="tab" value="module"/></customData></StandardListItem>
+						<StandardListItem title="Bauakten" icon="sap-icon://folder-full"><customData><core:CustomData key="tab" value="bauakte"/></customData></StandardListItem>
+						<StandardListItem title="Dokumente und Freigaben" icon="sap-icon://approvals"><customData><core:CustomData key="tab" value="dokumente"/></customData></StandardListItem>
+						<StandardListItem title="Module" icon="sap-icon://puzzle"><customData><core:CustomData key="tab" value="module"/></customData></StandardListItem>
 						<GroupHeaderListItem title="Zugang &amp; Meldungen"/>
-						<StandardListItem title="Anmeldung" icon="sap-icon://shield" type="Active" press=".onSection" selected="{= ${view>/tab} === 'sitzungen' }"><customData><core:CustomData key="tab" value="sitzungen"/></customData></StandardListItem>
-						<StandardListItem title="Benachrichtigungen" icon="sap-icon://bell" type="Active" press=".onSection" selected="{= ${view>/tab} === 'benachrichtigungen' }"><customData><core:CustomData key="tab" value="benachrichtigungen"/></customData></StandardListItem>
+						<StandardListItem title="Anmeldung" icon="sap-icon://shield"><customData><core:CustomData key="tab" value="sitzungen"/></customData></StandardListItem>
+						<StandardListItem title="Benachrichtigungen" icon="sap-icon://bell"><customData><core:CustomData key="tab" value="benachrichtigungen"/></customData></StandardListItem>
 						<GroupHeaderListItem title="Technik"/>
-						<StandardListItem title="Speicher" icon="sap-icon://it-system" type="Active" press=".onSection" selected="{= ${view>/tab} === 'speicher' }"><customData><core:CustomData key="tab" value="speicher"/></customData></StandardListItem>
-						<StandardListItem title="Weitere Bereiche" icon="sap-icon://chain-link" type="Active" press=".onSection" selected="{= ${view>/tab} === 'system' }"><customData><core:CustomData key="tab" value="system"/></customData></StandardListItem>
+						<StandardListItem title="Speicher" icon="sap-icon://it-system"><customData><core:CustomData key="tab" value="speicher"/></customData></StandardListItem>
+						<StandardListItem title="Weitere Bereiche" icon="sap-icon://chain-link"><customData><core:CustomData key="tab" value="system"/></customData></StandardListItem>
 					</List>
 					<VBox renderType="Bare" class="eoSettingsMain">
-						<VBox renderType="Bare" class="eoSettingsHead">
+						<VBox id="settingsHead" renderType="Bare" class="eoSettingsHead">
 							<Title text="{view>/tabInfo/title}" level="H2" titleStyle="H4"/>
 							<Text text="{view>/tabInfo/text}" class="eoMuted"/>
 						</VBox>
@@ -308,6 +309,15 @@
 				</FlexBox>
 			</VBox>
 		</f:content>
+		<f:footer>
+			<OverflowToolbar id="settingsFooter">
+				<core:Icon src="sap-icon://edit" class="eoMuted"/>
+				<Text text="Ungespeicherte Änderungen – erst mit „Speichern“ wirksam."/>
+				<ToolbarSpacer/>
+				<Button id="settingsSaveFooter" text="{i18n>common.save}" type="Emphasized" press=".onSave"/>
+				<Button text="Verwerfen" press=".onDiscard"/>
+			</OverflowToolbar>
+		</f:footer>
 	</f:DynamicPage>
 	<core:InvisibleText id="settingsNavLabel" text="Bereiche der Systemeinstellungen"/>
 </mvc:View>

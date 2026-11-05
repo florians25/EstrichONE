@@ -10,9 +10,13 @@ import { loadSystemSettings, saveSystemSettings, type SystemSettings } from "../
 import { themes } from "../../util/theme";
 import { dateTime } from "../../util/format";
 import type { RouteMatch } from "../../util/router";
+import { currentRoute } from "../../util/navigation";
 import { sendTest, type PushSettings } from "../../util/notifications";
 import { chatSettings, saveChatSettings, type ChatSettings } from "../../util/chat";
 import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton";
+import type List from "sap/m/List";
+import type { ListBase$SelectionChangeEvent } from "sap/m/ListBase";
+import StandardListItem from "sap/m/StandardListItem";
 
 interface StorageStats {
 	kinds: { kind: string; files: number; bytes: number; uploadedBytes: number; optimized: number }[];
@@ -72,24 +76,42 @@ export default class Company extends BaseController {
 	private version = 0;
 
 	onInit(): void {
-		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", tabInfo: tabInfo.firma, status: null, logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
+		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", tabInfo: tabInfo.firma, status: null, dirty: false, logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
 			themes: [{ id: "system", text: "Systemeinstellung folgen (hell/dunkel)" }, ...themes], patternExample: "" });
+		// Eingaben des Benutzers (Zwei-Wege-Bindung) markieren ungespeicherte Änderungen: Fußleiste mit Speichern/Verwerfen.
 		this.model().attachPropertyChange((event) => {
-			if (String(event.getParameter("path")).includes("bauaktePattern")) this.updateExample();
+			const path = String(event.getParameter("path"));
+			const context = event.getParameter("context") as { getPath?: () => string } | undefined;
+			const full = path.startsWith("/") ? path : `${context?.getPath?.() ?? ""}/${path}`;
+			if (/^\/(c|s|push|chat)\//.test(full)) this.model().setProperty("/dirty", true);
+			if (path.includes("bauaktePattern")) this.updateExample();
 		});
 	}
 
-	/** Bereich wählen (Liste links); die Adresse merkt sich den Bereich (?bereich=…), die Navigation markiert ihn. */
+	/**
+	 * Bereich wählen (Liste links); die Adresse merkt sich den Bereich (?bereich=…), die Navigation markiert ihn.
+	 * Die Markierung der Liste wird hier gesetzt (nicht per Bindung je Eintrag): Im Modus SingleSelectMaster führt die
+	 * Liste ihre eigene Auswahl, gebundene `selected`-Werte liefen dagegen auseinander (falscher Eintrag markiert).
+	 */
 	private selectTab(tab: string, remember = true): void {
 		const m = this.model();
+		const changed = m.getProperty("/tab") !== tab;
 		m.setProperty("/tab", tab);
 		m.setProperty("/tabInfo", tabInfo[tab] ?? tabInfo.firma);
+		const list = this.byId("settingsNav") as List | undefined;
+		for (const item of list?.getItems() ?? []) {
+			if (item instanceof StandardListItem) item.setSelected(item.data("tab") === tab);
+		}
 		if (remember) this.setQuery({ bereich: tab === "firma" ? null : tab });
+		// Neuer Bereich beginnt mit seiner Überschrift im Blick (auch bei schmalem Fenster mit der Liste über dem Inhalt).
+		const head = changed && remember ? this.byId("settingsHead")?.getDomRef() : null;
+		const top = head?.getBoundingClientRect().top ?? 0;
+		if (head && (top < 0 || top > window.innerHeight * 0.6)) head.scrollIntoView({ block: "start" });
 	}
 
-	onSection(event: Event): void {
-		const tab = String((event.getSource() as Control).data("tab") ?? "firma");
-		this.selectTab(tab);
+	onSection(event: ListBase$SelectionChangeEvent): void {
+		const item = event.getParameter("listItem") as Control | undefined;
+		this.selectTab(String(item?.data("tab") ?? "firma"));
 	}
 
 	/** Statuszeile: fehlende Angaben, die auf Ausdrucken oder beim Versand auffallen. */
@@ -113,6 +135,8 @@ export default class Company extends BaseController {
 	async onRouteMatched(match?: RouteMatch): Promise<void> {
 		const tab = match?.query.get("bereich");
 		this.selectTab(tab && tabInfo[tab] ? tab : "firma", false);
+		// Bereich über die Seitennavigation gewechselt, während Änderungen offen sind: nur umschalten, nichts verwerfen.
+		if (this.model().getProperty("/dirty")) return;
 		this.model().setProperty("/busy", true);
 		try {
 			void this.loadPush();
@@ -134,6 +158,7 @@ export default class Company extends BaseController {
 			m.setProperty("/templates", [{ key: "", text: "Keine Vorlage" }, ...templates.map((t) => ({ key: t.id, text: t.name }))]);
 			m.setProperty("/roles", [{ key: "", text: "Keine" }, ...roles.map((r) => ({ key: r.id, text: r.name }))]);
 			m.setProperty("/loaded", !!settings);
+			m.setProperty("/dirty", false);
 			this.updateExample();
 			this.updateStatus();
 		} catch (error) {
@@ -289,6 +314,7 @@ export default class Company extends BaseController {
 			m.setProperty("/s", this.editable(savedSettings.settings));
 			// Firmenname erscheint sofort in Kopfzeile, Statuszeile und Anmeldung (server-info liefert ihn als serverName).
 			await Promise.all([session.reloadPermissions(), session.loadServer()]);
+			m.setProperty("/dirty", false);
 			this.toast("Einstellungen gespeichert");
 			this.updateStatus();
 		} catch (error) {
@@ -296,6 +322,12 @@ export default class Company extends BaseController {
 		} finally {
 			m.setProperty("/busy", false);
 		}
+	}
+
+	/** Ungespeicherte Änderungen verwerfen: alles neu vom Server laden, Bereich bleibt. */
+	async onDiscard(): Promise<void> {
+		this.model().setProperty("/dirty", false);
+		await this.onRouteMatched(currentRoute() ?? undefined);
 	}
 
 	onLogoUpload(): void {
