@@ -9,7 +9,7 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
     <InvariantGlobalization>false</InvariantGlobalization>
-    <Version>0.1.0</Version>
+    <Version>1.0.2</Version>
     <Company>EstrichONE</Company>
     <Product>EstrichONE</Product>
     <!-- CA1515: Typen in einer Anwendung (nicht Bibliothek) dürfen public sein; Tests greifen darauf zu. -->

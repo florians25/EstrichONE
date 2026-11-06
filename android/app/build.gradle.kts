@@ -12,8 +12,8 @@ android {
         applicationId = "de.estrichone.android"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
+        versionCode = 10002
+        versionName = "1.0.2"
     }
 
     buildTypes {

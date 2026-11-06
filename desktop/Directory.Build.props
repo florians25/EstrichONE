@@ -6,7 +6,7 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
     <AnalysisLevel>latest-recommended</AnalysisLevel>
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
-    <Version>0.1.0</Version>
+    <Version>1.0.2</Version>
     <Company>EstrichONE</Company>
     <Authors>florians25</Authors>
     <Product>EstrichONE</Product>
