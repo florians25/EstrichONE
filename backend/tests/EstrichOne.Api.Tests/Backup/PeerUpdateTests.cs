@@ -92,27 +92,27 @@ public sealed class PeerUpdateTests(PostgresFixture postgres) : IAsyncLifetime
         var updater = new RemoteUpdater(options, TimeProvider.System);
         var token = ClientRegistry.Sha256("geheimes-token");
         var now = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-        UpdateOrder Order(string version, string server = "0.2.0", long? at = null, string? key = null, string role = "backup-target", string id = "0123456789abcdef0123456789abcdef")
+        UpdateOrder Order(string version, string server = "99.2.0", long? at = null, string? key = null, string role = "backup-target", string id = "0123456789abcdef0123456789abcdef")
         {
             var issued = at ?? now;
             return new UpdateOrder(id, version, server, issued, UpdateSignature.Compute(key ?? token, role, "client-1", id, version, server, issued));
         }
 
-        updater.Accept(Order("0.2.0"), token, "client-1")!.Code.ShouldBe("UPDATER_MISSING");
+        updater.Accept(Order("99.2.0"), token, "client-1")!.Code.ShouldBe("UPDATER_MISSING");
         _target.UpdaterHeartbeat();
-        updater.Accept(Order("0.2.0", key: ClientRegistry.Sha256("anderes")), token, "client-1")!.Code.ShouldBe("UPDATE_SIGNATURE_INVALID");
-        updater.Accept(Order("0.2.0", role: "archive"), token, "client-1")!.Code.ShouldBe("UPDATE_SIGNATURE_INVALID");
-        updater.Accept(Order("0.2.0"), token, "client-2")!.Code.ShouldBe("UPDATE_SIGNATURE_INVALID");
-        updater.Accept(Order("0.3.0"), token, "client-1")!.Code.ShouldBe("UPDATE_VERSION_TOO_NEW");
+        updater.Accept(Order("99.2.0", key: ClientRegistry.Sha256("anderes")), token, "client-1")!.Code.ShouldBe("UPDATE_SIGNATURE_INVALID");
+        updater.Accept(Order("99.2.0", role: "archive"), token, "client-1")!.Code.ShouldBe("UPDATE_SIGNATURE_INVALID");
+        updater.Accept(Order("99.2.0"), token, "client-2")!.Code.ShouldBe("UPDATE_SIGNATURE_INVALID");
+        updater.Accept(Order("99.3.0"), token, "client-1")!.Code.ShouldBe("UPDATE_VERSION_TOO_NEW");
         updater.Accept(Order("0.0.9"), token, "client-1")!.Code.ShouldBe("UPDATE_DOWNGRADE");
         updater.Accept(Order("latest"), token, "client-1")!.Code.ShouldBe("UPDATE_VERSION_INVALID");
-        updater.Accept(Order("0.2.0", at: now - 3600), token, "client-1")!.Code.ShouldBe("UPDATE_EXPIRED");
-        updater.Accept(Order("0.2.0", id: "../../etc"), token, "client-1")!.Code.ShouldBe("UPDATE_INVALID");
+        updater.Accept(Order("99.2.0", at: now - 3600), token, "client-1")!.Code.ShouldBe("UPDATE_EXPIRED");
+        updater.Accept(Order("99.2.0", id: "../../etc"), token, "client-1")!.Code.ShouldBe("UPDATE_INVALID");
 
-        updater.Accept(Order("0.2.0"), token, "client-1").ShouldBeNull();
-        File.ReadAllText(Path.Combine(dir, "request")).ShouldContain("version=0.2.0");
+        updater.Accept(Order("99.2.0"), token, "client-1").ShouldBeNull();
+        File.ReadAllText(Path.Combine(dir, "request")).ShouldContain("version=99.2.0");
         updater.Status().State.ShouldBe("pending");
-        updater.Accept(Order("0.2.0", id: "fedcba9876543210fedcba9876543210"), token, "client-1")!.Code.ShouldBe("UPDATE_RUNNING");
+        updater.Accept(Order("99.2.0", id: "fedcba9876543210fedcba9876543210"), token, "client-1")!.Code.ShouldBe("UPDATE_RUNNING");
     }
 
     [Fact]
