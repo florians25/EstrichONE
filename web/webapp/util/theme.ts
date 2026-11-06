@@ -105,3 +105,40 @@ export function logos(themeId: string): { shell: string; horizontal: string; mar
 export function hasOwnChoice(): { theme: boolean; density: boolean } {
 	return { theme: !!read(STORAGE_KEY), density: !!read(DENSITY_KEY) };
 }
+
+/**
+ * Darstellungsgröße: skaliert Schrift, Bedienelemente und Fenster gemeinsam über die Grundschriftgröße (OpenUI5 und das
+ * eigene Stylesheet rechnen in rem). „Automatisch“ vergrößert auf sehr breiten Bildschirmen (z. B. 4K bei 100 %
+ * Windows-Skalierung), damit Texte lesbar bleiben.
+ */
+const SCALE_KEY = "estrichone.scale";
+export const AUTO_SCALE = "auto";
+export const scales: { key: string; text: string }[] = [
+	{ key: AUTO_SCALE, text: "Automatisch" },
+	{ key: "100", text: "100 %" },
+	{ key: "112", text: "112 %" },
+	{ key: "125", text: "125 %" },
+	{ key: "150", text: "150 %" },
+	{ key: "175", text: "175 %" },
+];
+
+export function storedScale(): string {
+	const value = read(SCALE_KEY);
+	return value && scales.some((s) => s.key === value) ? value : AUTO_SCALE;
+}
+
+export function storeScale(scale: string): void {
+	write(SCALE_KEY, scale);
+}
+
+/** Tatsächlicher Faktor in Prozent; „Automatisch“ richtet sich nach der Fensterbreite in CSS-Pixeln. */
+export function resolveScale(scale: string, width: number): number {
+	if (scale !== AUTO_SCALE) {
+		const value = Number(scale);
+		return value === 112 ? 112.5 : value;
+	}
+	if (width >= 3400) return 150;
+	if (width >= 2800) return 125;
+	if (width >= 2200) return 112.5;
+	return 100;
+}

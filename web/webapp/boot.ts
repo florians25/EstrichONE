@@ -2,7 +2,7 @@ import ComponentContainer from "sap/ui/core/ComponentContainer";
 import Theming from "sap/ui/core/Theming";
 import Device from "sap/ui/Device";
 import { resolve, storedChoice, storedDensity } from "./util/theme";
-import { followSystem } from "./util/settings";
+import { followScale, followSystem } from "./util/settings";
 
 /** Start: Farbschema und Dichte des Benutzers anwenden, dann die Anwendung laden. */
 const choice = storedChoice();
@@ -11,6 +11,7 @@ if (Theming.getTheme() !== theme) {
 	Theming.setTheme(theme);
 }
 followSystem();
+followScale();
 // Aktuelles Theme als Attribut, damit das Stylesheet je Theme nachschärfen kann (z. B. kräftigere Icons in Quartz).
 const markTheme = () => { document.documentElement.dataset.eoTheme = Theming.getTheme(); };
 markTheme();

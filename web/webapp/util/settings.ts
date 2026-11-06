@@ -14,7 +14,9 @@ import VBox from "sap/m/VBox";
 import Text from "sap/m/Text";
 import Theming from "sap/ui/core/Theming";
 import Device from "sap/ui/Device";
-import { info, resolve, storeChoice, storeDensity, storedChoice, storedDensity, SYSTEM, themes, type Density } from "./theme";
+import { AUTO_SCALE, info, resolve, resolveScale, scales, storeChoice, storeDensity, storeScale, storedChoice, storedDensity, storedScale, SYSTEM, themes, type Density } from "./theme";
+import Select from "sap/m/Select";
+import Item from "sap/ui/core/Item";
 
 /** Theme anwenden (falls nötig) und Auswahl merken. */
 export function applyChoice(choice: string): void {
@@ -29,6 +31,32 @@ export function applyDensity(density: Density): void {
 	storeDensity(density);
 	document.body.classList.toggle("sapUiSizeCompact", density === "compact");
 	document.body.classList.toggle("sapUiSizeCozy", density === "cozy");
+}
+
+/** Darstellungsgröße anwenden: Grundschriftgröße setzen, bei „Automatisch“ der Fensterbreite folgen. */
+export function applyScale(scale = storedScale()): void {
+	const percent = resolveScale(scale, window.innerWidth);
+	const root = document.documentElement;
+	if (percent === 100) {
+		root.style.removeProperty("font-size");
+	} else {
+		root.style.fontSize = `${percent}%`;
+	}
+	root.dataset.eoScale = String(percent);
+}
+
+let scaleWatch = false;
+/** Einmalig: bei „Automatisch“ auf Größenänderung des Fensters bzw. Wechsel des Bildschirms reagieren. */
+export function followScale(): void {
+	applyScale();
+	if (scaleWatch) return;
+	scaleWatch = true;
+	let timer: ReturnType<typeof setTimeout> | undefined;
+	window.addEventListener("resize", () => {
+		if (storedScale() !== AUTO_SCALE) return;
+		clearTimeout(timer);
+		timer = setTimeout(() => applyScale(), 150);
+	});
 }
 
 /** Bei „Systemeinstellung folgen“ auf Hell/Dunkel des Betriebssystems reagieren. */
@@ -73,17 +101,31 @@ export function openSettings(): void {
 		items: [new SegmentedButtonItem({ key: "compact", text: "Kompakt" }), new SegmentedButtonItem({ key: "cozy", text: "Komfortabel (Touch)" })],
 		selectionChange: () => applyDensity(density.getSelectedKey() as Density),
 	});
+	const scale = new Select("scaleSelect", {
+		width: "100%",
+		selectedKey: storedScale(),
+		items: scales.map((s) => new Item({ key: s.key, text: s.text })),
+		change: () => {
+			storeScale(scale.getSelectedKey());
+			applyScale();
+			scaleInfo.setText(scaleText());
+		},
+	});
+	const scaleText = () => `Aktuell ${String(resolveScale(storedScale(), window.innerWidth)).replace(".", ",")} %` +
+		(storedScale() === AUTO_SCALE ? " – auf großen Bildschirmen (z. B. 4K) automatisch größer" : "");
+	const scaleInfo = new Text({ text: scaleText() });
 	const current = new Text({ text: `Aktiv: ${info(Theming.getTheme()).text}` });
 	const dialog = new Dialog("settingsDialog", {
 		title: "Einstellungen",
-		contentWidth: "30rem",
-		contentHeight: "34rem",
+		contentWidth: "32rem",
+		contentHeight: "38rem",
 		resizable: true,
 		draggable: true,
 		content: [
 			new VBox({
 				items: [
-					new Label({ text: "Dichte der Oberfläche", labelFor: density }), density,
+					new Label({ text: "Schrift- und Fenstergröße", labelFor: scale }), scale, scaleInfo,
+					new Label({ text: "Dichte der Oberfläche", labelFor: density }).addStyleClass("sapUiSmallMarginTop"), density,
 					new Label({ text: "Farbschema", labelFor: list }).addStyleClass("sapUiSmallMarginTop"), current,
 				],
 			}).addStyleClass("sapUiSmallMargin"),
