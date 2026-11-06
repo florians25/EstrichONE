@@ -588,8 +588,17 @@ export default class AppController extends BaseController {
 	}
 
 	onNoticeClose(event: UI5Event): void {
-		const id = (event.getSource() as Control).getBindingContext("notices")?.getProperty("id") as string | undefined;
-		if (id) notices.dismiss(id);
+		const key = (event.getSource() as Control).getBindingContext("notices")?.getProperty("key") as string | undefined;
+		if (key) notices.dismiss(key);
+	}
+
+	onNoticeDetails(event: UI5Event): void {
+		const key = (event.getSource() as Control).getBindingContext("notices")?.getProperty("key") as string | undefined;
+		if (key) notices.details(key);
+	}
+
+	onNoticeToggle(): void {
+		notices.toggleExpanded();
 	}
 
 	onMaintenanceAdmin(): void {

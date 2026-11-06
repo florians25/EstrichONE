@@ -1,6 +1,7 @@
 /**
- * Systemhinweise der Hosting-Konsole (GET /api/v1/system/notices, ohne Anmeldung): Ankündigungen als Banner
- * (je Sitzung wegklickbar), Wartungsankündigung vorab, Wartungsseite bei laufender Wartung bzw. jeder Antwort
+ * Systemhinweise der Hosting-Konsole (GET /api/v1/system/notices, ohne Anmeldung): Ankündigungen und Wartung als
+ * Hinweiskarten (control/NoticeCard, Aufbereitung in noticeView.ts) – je Benutzer ausblendbar (Störungen und laufende
+ * Wartung nicht), mehrere zusammengefasst („+2 weitere Hinweise“), relative Zeitangaben minütlich aktualisiert; Wartungsseite bei laufender Wartung bzw. jeder Antwort
  * 503 MAINTENANCE. Administratoren mit Freigabe (adminsMayWork + settings.manage) arbeiten weiter und sehen einen
  * deutlichen Hinweis. Neu geladen wird alle 2 Minuten und beim Zurückkehren ins Fenster.
  *
@@ -12,6 +13,8 @@ import JSONModel from "sap/ui/model/json/JSONModel";
 import { onMaintenance, onUnreachable, type Problem } from "./api";
 import { session } from "./session";
 import { addressStrip, healthStrips, type AddressCheck, type HealthBanner } from "./health";
+import { bannerSelection, buildCards, moreText, remainingLabel, shortDate, type NoticeCard } from "./noticeView";
+import { openNoticeDetails } from "./noticeDialog";
 
 export interface Announcement {
 	id: string;
@@ -20,6 +23,7 @@ export interface Announcement {
 	severity: "info" | "warning" | "critical";
 	startsAt?: string | null;
 	endsAt?: string | null;
+	source?: string | null;
 }
 
 export interface MaintenanceState {
@@ -28,6 +32,7 @@ export interface MaintenanceState {
 	startsAt: string;
 	endsAt?: string | null;
 	adminsMayWork: boolean;
+	source?: string | null;
 }
 
 export interface NoticesResponse {
@@ -36,14 +41,11 @@ export interface NoticesResponse {
 	serverTime: string;
 }
 
-const dismissedKey = "eo.notices.dismissed";
-const types: Record<Announcement["severity"], string> = { info: "Information", warning: "Warning", critical: "Error" };
-const when = (value: string | null | undefined) =>
-	value ? new Intl.DateTimeFormat("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }).format(new Date(value)) : "";
-
+/** Ausgeblendete Hinweise je Benutzer (bzw. vor der Anmeldung „anon“), dauerhaft im Browser; höchstens 100 Einträge. */
+const dismissedKey = () => `eo.notices.dismissed.v2:${session.data.user?.id ?? "anon"}`;
 function dismissed(): Set<string> {
 	try {
-		return new Set(JSON.parse(sessionStorage.getItem(dismissedKey) ?? "[]") as string[]);
+		return new Set(JSON.parse(localStorage.getItem(dismissedKey()) ?? "[]") as string[]);
 	} catch {
 		return new Set();
 	}
@@ -60,7 +62,7 @@ async function addressCheck(): Promise<AddressCheck | null> {
 
 class Notices {
 	readonly model = new JSONModel({
-		banners: [], adminHint: "", page: false, pageText: "", pageEnd: "", checking: false, canBypass: false,
+		banners: [] as NoticeCard[], all: [] as NoticeCard[], moreCount: 0, moreText: "", expanded: false, page: false, pageText: "", pageEnd: "", checking: false, canBypass: false,
 		health: [], outage: false, outageTitle: "", outageText: "", outageSince: "", outageNext: "",
 	});
 	private outageTimer: ReturnType<typeof setInterval> | undefined;
@@ -69,6 +71,9 @@ class Notices {
 	private healthUser = "";
 	private probing = false;
 	private data: NoticesResponse | null = null;
+	/** Abweichung der Serveruhr (ms), damit „in 10 Min.“ auch bei falsch gehender Geräteuhr stimmt. */
+	private skew = 0;
+	private expanded = false;
 	private pageTimer: ReturnType<typeof setInterval> | undefined;
 	private started = false;
 	/** Durch eine 503-Antwort erkannt, auch wenn /system/notices (noch) nichts meldet. */
@@ -84,6 +89,8 @@ class Notices {
 		window.addEventListener("offline", () => void this.checkOutage());
 		void this.refresh();
 		setInterval(() => void this.refresh(), 120_000);
+		// Relative Angaben („läuft seit 10 Min.“) minütlich nachführen.
+		setInterval(() => { if (this.data) this.apply(); }, 60_000);
 		// Systemstatus alle 5 Minuten (docs/backup.md).
 		setInterval(() => void this.refreshHealth(), 300_000);
 		window.addEventListener("focus", () => void this.refresh());
@@ -97,6 +104,8 @@ class Notices {
 			const response = await fetch("/api/v1/system/notices", { credentials: "same-origin", headers: { Accept: "application/json" } });
 			if (!response.ok) return;
 			this.data = (await response.json()) as NoticesResponse;
+			const server = Date.parse(this.data.serverTime);
+			this.skew = Number.isNaN(server) || Math.abs(server - Date.now()) < 30_000 ? 0 : server - Date.now();
 			if (!this.data.maintenance?.active) this.forced = null;
 			this.apply();
 		} catch {
@@ -188,15 +197,34 @@ class Notices {
 		m.setProperty("/outageNext", `Automatischer Neuversuch in ${this.outageCountdown} s`);
 	}
 
-	dismiss(id: string): void {
-		const set = dismissed();
-		set.add(id);
+	/** Hinweis für diesen Benutzer ausblenden (nicht möglich für Störungen und laufende Wartung). */
+	dismiss(key: string): void {
+		const card = (this.model.getProperty("/all") as NoticeCard[]).find((c) => c.key === key);
+		if (card && !card.dismissible) return;
+		const list = [...dismissed()].filter((k) => k !== key);
+		list.push(key);
 		try {
-			sessionStorage.setItem(dismissedKey, JSON.stringify([...set]));
+			localStorage.setItem(dismissedKey(), JSON.stringify(list.slice(-100)));
 		} catch {
 			// privater Modus: nur bis zum Neuladen ausgeblendet
 		}
 		this.apply();
+	}
+
+	/** Mehrere Hinweise auf- bzw. zuklappen. */
+	toggleExpanded(): void {
+		this.expanded = !this.expanded;
+		this.apply();
+	}
+
+	/** Details-Dialog; ausblendbare Hinweise lassen sich dort ebenfalls ausblenden. */
+	details(key: string): void {
+		const card = (this.model.getProperty("/all") as NoticeCard[]).find((c) => c.key === key);
+		if (card) openNoticeDetails(card, () => this.dismiss(key));
+	}
+
+	isDismissed(key: string): boolean {
+		return dismissed().has(key);
 	}
 
 	private enterFromProblem(problem: Problem | undefined): void {
@@ -213,30 +241,33 @@ class Notices {
 	private apply(): void {
 		const m = this.model;
 		const hidden = dismissed();
+		const now = new Date(Date.now() + this.skew);
 		const maintenance = this.data?.maintenance ?? null;
-		const banners = (this.data?.announcements ?? []).filter((a) => !hidden.has(a.id)).map((a) => ({
-			id: a.id, type: types[a.severity] ?? "Information", text: `${a.title}: ${a.text}`,
-		}));
-		if (maintenance && !maintenance.active) {
-			const id = `maintenance-${maintenance.startsAt}`;
-			if (!hidden.has(id)) {
-				banners.unshift({
-					id, type: "Warning",
-					text: `Geplante Wartung ${when(maintenance.startsAt)}${maintenance.endsAt ? ` bis ${when(maintenance.endsAt)}` : ""}: ${maintenance.message || "EstrichONE ist in dieser Zeit nicht erreichbar."}`,
-				});
-			}
-		}
-		m.setProperty("/banners", banners);
-		const active = !!maintenance?.active || !!this.forced;
+		const started = !!maintenance && new Date(maintenance.startsAt).getTime() <= now.getTime()
+			&& (!maintenance.endsAt || new Date(maintenance.endsAt).getTime() > now.getTime());
+		const active = !!maintenance?.active || started || !!this.forced;
 		const admin = active && this.adminMayWork(maintenance);
-		m.setProperty("/adminHint", admin
-			? `Wartungsmodus aktiv${maintenance?.endsAt ? ` bis ${when(maintenance.endsAt)}` : ""} – nur Administratoren können arbeiten. Benutzer sehen die Wartungsseite.`
-			: "");
+		// Laufende Wartung erscheint als Karte nur für Administratoren, die weiterarbeiten (Benutzer sehen die Wartungsseite).
+		const shownMaintenance = active
+			? admin ? { ...(maintenance ?? { startsAt: now.toISOString(), endsAt: this.forced?.endsAt ?? null, adminsMayWork: true }), active: true } : null
+			: maintenance;
+		const all = buildCards(this.data?.announcements ?? [], shownMaintenance, now, admin);
+		const { shown, hidden: more } = bannerSelection(all, hidden, this.expanded);
+		if (!more && this.expanded && shown.length <= 1) this.expanded = false;
+		m.setProperty("/all", all);
+		m.setProperty("/banners", shown);
+		m.setProperty("/moreCount", more);
+		m.setProperty("/expanded", this.expanded && shown.length > 1);
+		m.setProperty("/moreText", more ? moreText(more) : "Weniger anzeigen");
 		const page = active && !admin && !this.bypass;
 		m.setProperty("/canBypass", active && !!maintenance?.adminsMayWork && !session.data.user);
 		const end = maintenance?.endsAt ?? this.forced?.endsAt ?? null;
 		m.setProperty("/pageText", maintenance?.message || this.forced?.detail || "EstrichONE wird gerade gewartet. Ihre Daten sind sicher; bitte versuchen Sie es später erneut.");
-		m.setProperty("/pageEnd", end ? `Voraussichtlich wieder erreichbar: ${when(end)} Uhr` : "");
+		const endDate = end ? new Date(end) : null;
+		const left = end ? remainingLabel(end, now) : "";
+		m.setProperty("/pageEnd", endDate
+			? `Voraussichtlich wieder erreichbar: ${shortDate(endDate, now)}, ${endDate.toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" })} Uhr${left ? ` (${left})` : ""}`
+			: "");
 		const wasPage = m.getProperty("/page") === true;
 		m.setProperty("/page", page);
 		if (page && !this.pageTimer) {

@@ -1,4 +1,4 @@
-<mvc:View controllerName="estrichone.controller.admin.Notices" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core"
+<mvc:View controllerName="estrichone.controller.admin.Notices" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
 	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
 	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
 		<f:title>
@@ -15,6 +15,18 @@
 			<VBox busy="{view>/busy}">
 				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
 					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
+				<Panel id="noticePreview" backgroundDesign="Solid" class="sapUiSmallMarginBottom">
+					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://show"/><Title text="Vorschau – das sehen Benutzer jetzt" level="H2"/>
+						<ToolbarSpacer/><Text text="Banner oben in EstrichONE, zum Nachlesen auf der Startseite" class="eoMuted"/></OverflowToolbar></headerToolbar>
+					<VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
+						<VBox items="{view>/preview}" renderType="Bare" class="eoNoticePreview eoNoticeList" visible="{= ${view>/preview}.length > 0 }">
+							<eo:NoticeCard kind="{view>kind}" tone="{view>tone}" icon="{view>icon}" label="{view>label}" title="{view>title}" text="{view>text}"
+								period="{view>period}" relative="{view>relative}" remaining="{view>remaining}" source="{view>source}" dismissible="{view>dismissible}"
+								mode="banner" details=".onPreview" dismiss=".onPreviewDismiss"/>
+						</VBox>
+						<Text text="Zurzeit sehen Benutzer keine Hinweise." visible="{= ${view>/preview}.length === 0 }" class="eoMuted"/>
+					</VBox>
+				</Panel>
 				<Table items="{view>/announcements}" noDataText="Keine Ankündigungen der Instanz." popinLayout="GridSmall" class="sapUiSmallMarginBottom">
 					<headerToolbar><OverflowToolbar><Title text="Ankündigungen dieser Instanz" level="H2"/></OverflowToolbar></headerToolbar>
 					<columns>
@@ -23,7 +35,7 @@
 						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zeitraum"/></Column>
 						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Zielgruppe"/></Column>
 						<Column width="8rem"><Text text="Status"/></Column>
-						<Column width="7rem" hAlign="End"><Text text=""/></Column>
+						<Column width="9rem" hAlign="End"><Text text=""/></Column>
 					</columns>
 					<items>
 						<ColumnListItem>
@@ -33,6 +45,7 @@
 							<Text text="{view>target}"/>
 							<ObjectStatus text="{view>statusText}" state="{view>statusState}"/>
 							<HBox justifyContent="End">
+								<Button icon="sap-icon://show" type="Transparent" tooltip="{= 'Vorschau: ' + ${view>title} }" press=".onPreview"/>
 								<Button icon="sap-icon://edit" type="Transparent" tooltip="{= 'Bearbeiten: ' + ${view>title} }" press=".onEdit"/>
 								<Button icon="sap-icon://delete" type="Transparent" tooltip="{= 'Löschen: ' + ${view>title} }" press=".onDelete"/>
 							</HBox>
@@ -50,6 +63,13 @@
 					<VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
 						<ObjectStatus text="{view>/maintenance/text}" state="{view>/maintenance/state}" icon="sap-icon://wrench" class="sapUiTinyMarginBottom"/>
 						<Text text="{view>/maintenance/detail}" visible="{= !!${view>/maintenance/detail} }" class="eoMuted"/>
+						<VBox renderType="Bare" class="eoNoticePreview sapUiSmallMarginTop" visible="{= !!${view>/maintenancePreview} }">
+							<Title text="Ankündigung für Benutzer" level="H3" titleStyle="H6"/>
+							<eo:NoticeCard kind="{view>/maintenancePreview/kind}" tone="{view>/maintenancePreview/tone}" icon="{view>/maintenancePreview/icon}"
+								label="{view>/maintenancePreview/label}" title="{view>/maintenancePreview/title}" text="{view>/maintenancePreview/text}"
+								period="{view>/maintenancePreview/period}" relative="{view>/maintenancePreview/relative}" remaining="{view>/maintenancePreview/remaining}"
+								dismissible="false" mode="banner" details=".onMaintenancePreview"/>
+						</VBox>
 						<MessageStrip text="Während der Wartung können sich Benutzer nicht anmelden bzw. erhalten „Wartungsarbeiten“; Administratoren arbeiten weiter, wenn erlaubt."
 							type="Information" showIcon="true" class="sapUiSmallMarginTopBottom"/>
 						<HBox wrap="Wrap" class="eoSystemItem">

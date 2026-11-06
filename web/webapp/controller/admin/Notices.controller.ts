@@ -4,8 +4,14 @@ import type Control from "sap/ui/core/Control";
 import MessageBox from "sap/m/MessageBox";
 import { del, get, put } from "../../util/api";
 import { dateTime } from "../../util/format";
-import { openForm } from "../../util/forms";
+import { openForm, type FormHandle } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
+import NoticeCard from "../../control/NoticeCard";
+import Title from "sap/m/Title";
+import VBox from "sap/m/VBox";
+import Text from "sap/m/Text";
+import { announcementCard, buildCards, maintenanceCard, type NoticeCard as Card } from "../../util/noticeView";
+import { cardSettings, openNoticeDetails } from "../../util/noticeDialog";
 
 interface Announcement { id: string; title: string; text: string; severity: string; startsAt: string | null; endsAt: string | null; roleIds: string[] | null; notify: boolean }
 interface Maintenance { message: string | null; startsAt: string; endsAt: string | null; adminsMayWork: boolean }
@@ -32,7 +38,7 @@ export default class Notices extends BaseController {
 	private roles: Role[] = [];
 
 	onInit(): void {
-		this.local({ busy: false, announcements: [], console: [], consoleMaintenance: "", maintenance: {} });
+		this.local({ busy: false, announcements: [], console: [], consoleMaintenance: "", maintenance: {}, preview: [] as Card[], maintenancePreview: null });
 	}
 
 	onRouteMatched(): void { void this.load(); }
@@ -66,6 +72,16 @@ export default class Notices extends BaseController {
 			state: running ? "Error" : w ? "Warning" : "Success",
 			detail: w ? `${period(w)}${w.message ? ` · ${w.message}` : ""}${w.adminsMayWork ? " · Administratoren arbeiten weiter" : " · auch Administratoren gesperrt"}` : "",
 		});
+		// Vorschau: genau die Karten, die Benutzer jetzt sehen (Hinweise der Konsole und der Instanz, Wartung der Konsole hat Vorrang).
+		const nowDate = new Date(now);
+		const current = (a: Announcement) => (!a.startsAt || new Date(a.startsAt).getTime() <= now) && (!a.endsAt || new Date(a.endsAt).getTime() > now);
+		const upcoming = (x: Maintenance | null) => !!x && (!x.endsAt || new Date(x.endsAt).getTime() > now);
+		const shownMaintenance = upcoming(cm) ? { ...cm!, source: "console" } : upcoming(w) ? { ...w!, source: "instance" } : null;
+		m.setProperty("/preview", buildCards([
+			...data.console.announcements.filter(current).map((a) => ({ ...a, source: "console" })),
+			...data.instance.announcements.filter(current).map((a) => ({ ...a, source: "instance" })),
+		], shownMaintenance, nowDate));
+		m.setProperty("/maintenancePreview", upcoming(w) ? maintenanceCard({ ...w!, source: "instance" }, nowDate) : null);
 		const active = (m.getProperty("/announcements") as { statusText: string }[]).filter((a) => a.statusText === "aktiv").length;
 		this.statusLine([
 			running && { text: "Wartungsmodus läuft – Benutzer sehen die Wartungsseite", level: "error" },
@@ -75,22 +91,52 @@ export default class Notices extends BaseController {
 	}
 
 	onNew(): void { void this.edit(null); }
+
+	/** Vorschau einer Ankündigung bzw. einer Karte der Benutzer-Vorschau im Details-Dialog. */
+	onPreview(e: Event): void {
+		const obj = (e.getSource() as Control).getBindingContext("view")?.getObject() as (Announcement & { kind?: string }) | undefined;
+		if (!obj) return;
+		openNoticeDetails(obj.kind ? obj as unknown as Card : announcementCard({ ...obj, source: "instance" }, new Date(this.data?.serverTime ?? Date.now())));
+	}
+
+	onMaintenancePreview(): void {
+		const card = this.model().getProperty("/maintenancePreview") as Card | null;
+		if (card) openNoticeDetails(card);
+	}
+
+	onPreviewDismiss(): void {
+		this.toast("Benutzer können diesen Hinweis für sich ausblenden – er bleibt auf der Startseite nachlesbar.");
+	}
 	onEdit(e: Event): void { void this.edit((e.getSource() as Control).getBindingContext("view")?.getObject() as Announcement); }
 
 	private async edit(a: Announcement | null): Promise<void> {
 		const s = toLocal(a?.startsAt ?? null);
 		const en = toLocal(a?.endsAt ?? null);
+		const preview = new NoticeCard({ mode: "banner", showDetails: false });
+		const show = (v: Record<string, unknown>) => {
+			const card = announcementCard({ id: "vorschau", title: String(v.title || "Titel der Ankündigung"), text: String(v.text ?? ""),
+				severity: String(v.severity || "info"), startsAt: toIso(v.startDate, v.startTime), endsAt: toIso(v.endDate, v.endTime) });
+			preview.show({ ...cardSettings(card, "banner"), showDetails: false, dismissible: false });
+		};
+		const live = (_: unknown, form: FormHandle) =>
+			show(Object.fromEntries(["title", "text", "severity", "startDate", "startTime", "endDate", "endTime"].map((k) => [k, form.get(k)])));
+		show({ title: a?.title, text: a?.text, severity: a?.severity ?? "info", startDate: s.date, startTime: s.time, endDate: en.date, endTime: en.time });
 		const saved = await openForm<{ sentEmails: number }>({
-			title: a ? "Ankündigung bearbeiten" : "Neue Ankündigung", width: "36rem",
+			title: a ? "Ankündigung bearbeiten" : "Neue Ankündigung", width: "40rem",
+			extra: () => [new VBox({ renderType: "Bare", items: [
+				new Title({ text: "Vorschau – so sehen Benutzer den Hinweis", level: "H3", titleStyle: "H6" }),
+				preview,
+				new Text({ text: "Benutzer können Hinweise für sich ausblenden – außer Störungen (Art „Kritisch“). Auf der Startseite bleiben alle nachlesbar." }).addStyleClass("eoMuted"),
+			] }).addStyleClass("eoNoticePreview sapUiSmallMarginTop")],
 			initial: { title: a?.title, text: a?.text, severity: a?.severity ?? "info", startDate: s.date, startTime: s.time, endDate: en.date, endTime: en.time,
 				roleIds: a?.roleIds ?? [], notify: a?.notify ?? false, sendEmail: false },
 			fields: [
-				{ key: "title", label: "Titel", required: true, maxLength: 120 },
-				{ key: "text", label: "Text", type: "textarea", rows: 4, maxLength: 2000 },
-				{ key: "severity", label: "Art", type: "segmented", options: Object.entries(severities).map(([key, v]) => ({ key, text: v.text })) },
+				{ key: "title", label: "Titel", required: true, maxLength: 120, onChange: live },
+				{ key: "text", label: "Text", type: "textarea", rows: 4, maxLength: 2000, onChange: live },
+				{ key: "severity", label: "Art", type: "segmented", options: Object.entries(severities).map(([key, v]) => ({ key, text: v.text })), onChange: live },
 				{ key: "sPeriod", label: "Zeitraum (leer = sofort bzw. ohne Ende)", type: "section" },
-				{ key: "startDate", label: "Beginn (Tag)", type: "date" }, { key: "startTime", label: "Beginn (Uhrzeit)", type: "time" },
-				{ key: "endDate", label: "Ende (Tag)", type: "date" }, { key: "endTime", label: "Ende (Uhrzeit)", type: "time" },
+				{ key: "startDate", label: "Beginn (Tag)", type: "date", onChange: live }, { key: "startTime", label: "Beginn (Uhrzeit)", type: "time", onChange: live },
+				{ key: "endDate", label: "Ende (Tag)", type: "date", onChange: live }, { key: "endTime", label: "Ende (Uhrzeit)", type: "time", onChange: live },
 				{ key: "sTarget", label: "Zielgruppe und Versand", type: "section" },
 				{ key: "roleIds", label: "Nur für Rollen (leer = alle)", type: "multi", options: this.roles.map((r) => ({ key: r.id, text: r.name })) },
 				{ key: "notify", label: "Mitteilung in den Apps", type: "checkbox", placeholder: "In den Apps als Mitteilung hervorheben" },

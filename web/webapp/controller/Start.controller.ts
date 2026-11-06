@@ -8,6 +8,7 @@ import { dateTime } from "../util/format";
 import { session } from "../util/session";
 import type { BackupStatusResponse, BauaktePage, PlanningRange, TicketSummary, WorkItemDto } from "../util/models";
 import { CATEGORY_ICONS, inbox, relativeTime } from "../util/notifications";
+import { notices } from "../util/notices";
 
 interface HrReminder { kind: string; employeeId: string; employeeName: string; date: string; text: string; severity: string }
 
@@ -238,5 +239,11 @@ export default class Start extends BaseController {
 	onRow(event: Event): void {
 		const to = (event.getSource() as Control).getBindingContext("view")?.getProperty("to") as string | undefined;
 		if (to) this.nav(to);
+	}
+
+	/** Systemhinweis in voller Länge (Details-Dialog). */
+	onNoticeDetails(event: Event): void {
+		const key = (event.getSource() as Control).getBindingContext("notices")?.getProperty("key") as string | undefined;
+		if (key) notices.details(key);
 	}
 }

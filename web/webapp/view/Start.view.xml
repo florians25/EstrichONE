@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.Start" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:l="sap.ui.layout"
-	xmlns:core="sap.ui.core" xmlns:card="sap.f.cards" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	xmlns:core="sap.ui.core" xmlns:card="sap.f.cards" xmlns:eo="estrichone.control" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
 	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false">
 		<f:title>
 			<f:DynamicPageTitle>
@@ -49,6 +49,22 @@
 					</FlexBox>
 				</Panel>
 				<VBox renderType="Bare" class="eoSideStack">
+					<!-- Systemhinweise zum Nachlesen: alle aktuellen, auch im Banner ausgeblendete -->
+					<Panel id="startNotices" visible="{= ${notices>/all}.length > 0 }" backgroundDesign="Solid" class="eoCardPanel eoStartNotices">
+						<headerToolbar>
+							<OverflowToolbar style="Clear">
+								<core:Icon src="sap-icon://bell"/>
+								<Title text="Systemhinweise" level="H2"/>
+								<ToolbarSpacer/>
+								<ObjectStatus text="{= ${notices>/all}.length }" state="{= ${notices>/all}.length &amp;&amp; ${notices>/all/0/tone} === 'Error' ? 'Error' : 'Information' }" inverted="true"/>
+							</OverflowToolbar>
+						</headerToolbar>
+						<VBox items="{notices>/all}" renderType="Bare" class="eoPanelBody eoNoticeList">
+							<eo:NoticeCard kind="{notices>kind}" tone="{notices>tone}" icon="{notices>icon}" label="{notices>label}" title="{notices>title}"
+								text="{notices>text}" period="{notices>period}" relative="{notices>relative}" remaining="{notices>remaining}"
+								source="{notices>source}" dismissible="false" mode="tile" details=".onNoticeDetails"/>
+						</VBox>
+					</Panel>
 					<Panel visible="{= ${session>/permissions/backup.manage} === true &amp;&amp; !!${view>/backup} }" backgroundDesign="Solid" class="eoCardPanel">
 						<headerToolbar>
 							<OverflowToolbar style="Clear">

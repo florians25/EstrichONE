@@ -1,11 +1,16 @@
 <mvc:View controllerName="estrichone.controller.App"
-	xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:tnt="sap.tnt" xmlns:core="sap.ui.core"
+	xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:tnt="sap.tnt" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
 	displayBlock="true" height="100%">
 	<App id="root" autoFocus="false">
 		<Page id="authPage" showHeader="false" enableScrolling="true" class="eoAuthPage">
-			<VBox items="{notices>/banners}" class="eoNoticeBar" visible="{= ${notices>/banners}.length > 0 }">
-				<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" showCloseButton="true" close=".onNoticeClose"
-					class="eoNotice"/>
+			<VBox class="eoNoticeStack" renderType="Bare" visible="{= ${notices>/banners}.length > 0 }">
+				<VBox items="{notices>/banners}" renderType="Bare" class="eoNoticeList">
+					<eo:NoticeCard kind="{notices>kind}" tone="{notices>tone}" icon="{notices>icon}" label="{notices>label}" title="{notices>title}"
+						text="{notices>text}" period="{notices>period}" relative="{notices>relative}" remaining="{notices>remaining}"
+						source="{notices>source}" dismissible="{notices>dismissible}" mode="banner" details=".onNoticeDetails" dismiss=".onNoticeClose"/>
+				</VBox>
+				<Button text="{notices>/moreText}" icon="{= ${notices>/moreCount} > 0 ? 'sap-icon://slim-arrow-down' : 'sap-icon://slim-arrow-up' }"
+					type="Transparent" press=".onNoticeToggle" visible="{= ${notices>/moreCount} > 0 || ${notices>/expanded} }" class="eoNoticeMore"/>
 			</VBox>
 			<NavContainer id="authNav" height="100%" autoFocus="false"/>
 		</Page>
@@ -56,8 +61,6 @@
 					<VBox items="{notices>/health}" visible="{= ${notices>/health}.length > 0 }" class="eoNoticeBar">
 						<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" customIcon="{notices>icon}" class="eoNotice eoHealthBanner"/>
 					</VBox>
-					<MessageStrip text="{notices>/adminHint}" type="Error" showIcon="true" visible="{= !!${notices>/adminHint} }"
-						customIcon="sap-icon://wrench" class="eoNotice eoAdminMaintenance"/>
 					<MessageStrip id="updateHint" text="{updates>/text}" type="{updates>/type}" showIcon="true" customIcon="sap-icon://locked"
 						visible="{updates>/visible}" showCloseButton="true" close=".onUpdateHintClose" class="eoNotice eoUpdateHint">
 						<link><Link text="Versionshinweise" href="{updates>/url}" target="_blank" visible="{= !!${updates>/url} }"/></link>
@@ -66,9 +69,14 @@
 						visible="{= ${session>/twoFactorRestricted} === true }" class="eoNotice">
 						<link><Link text="{i18n>security.bannerAction}" href="/konto/sicherheit"/></link>
 					</MessageStrip>
-					<VBox items="{notices>/banners}" class="eoNoticeBar" visible="{= ${notices>/banners}.length > 0 }">
-						<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" showCloseButton="true" close=".onNoticeClose"
-							class="eoNotice"/>
+					<VBox class="eoNoticeStack" renderType="Bare" visible="{= ${notices>/banners}.length > 0 }">
+						<VBox items="{notices>/banners}" renderType="Bare" class="eoNoticeList">
+							<eo:NoticeCard kind="{notices>kind}" tone="{notices>tone}" icon="{notices>icon}" label="{notices>label}" title="{notices>title}"
+								text="{notices>text}" period="{notices>period}" relative="{notices>relative}" remaining="{notices>remaining}"
+								source="{notices>source}" dismissible="{notices>dismissible}" mode="banner" details=".onNoticeDetails" dismiss=".onNoticeClose"/>
+						</VBox>
+						<Button text="{notices>/moreText}" icon="{= ${notices>/moreCount} > 0 ? 'sap-icon://slim-arrow-down' : 'sap-icon://slim-arrow-up' }"
+							type="Transparent" press=".onNoticeToggle" visible="{= ${notices>/moreCount} > 0 || ${notices>/expanded} }" class="eoNoticeMore"/>
 					</VBox>
 					<NavContainer id="content" autoFocus="false" height="100%" class="eoContent">
 						<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
