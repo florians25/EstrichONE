@@ -35,7 +35,7 @@ export function applyDensity(density: Density): void {
 
 /** Darstellungsgröße anwenden: Grundschriftgröße setzen, bei „Automatisch“ der Fensterbreite folgen. */
 export function applyScale(scale = storedScale()): void {
-	const percent = resolveScale(scale, window.innerWidth);
+	const percent = resolveScale(scale, window.innerWidth, window.innerHeight);
 	const root = document.documentElement;
 	if (percent === 100) {
 		root.style.removeProperty("font-size");
@@ -111,8 +111,8 @@ export function openSettings(): void {
 			scaleInfo.setText(scaleText());
 		},
 	});
-	const scaleText = () => `Aktuell ${String(resolveScale(storedScale(), window.innerWidth)).replace(".", ",")} %` +
-		(storedScale() === AUTO_SCALE ? " – auf großen Bildschirmen (z. B. 4K) automatisch größer" : "");
+	const scaleText = () => `Aktuell ${String(resolveScale(storedScale(), window.innerWidth, window.innerHeight)).replace(".", ",")} %` +
+		(storedScale() === AUTO_SCALE ? " – auf großen Bildschirmen (4K, Curved/Ultrawide) automatisch größer" : "");
 	const scaleInfo = new Text({ text: scaleText() });
 	const current = new Text({ text: `Aktiv: ${info(Theming.getTheme()).text}` });
 	const dialog = new Dialog("settingsDialog", {

@@ -108,7 +108,7 @@ export function hasOwnChoice(): { theme: boolean; density: boolean } {
 
 /**
  * Darstellungsgröße: skaliert Schrift, Bedienelemente und Fenster gemeinsam über die Grundschriftgröße (OpenUI5 und das
- * eigene Stylesheet rechnen in rem). „Automatisch“ vergrößert auf sehr breiten Bildschirmen (z. B. 4K bei 100 %
+ * eigene Stylesheet rechnen in rem). „Automatisch“ vergrößert auf sehr breiten Bildschirmen (z. B. 4K oder Curved/Ultrawide bei 100 %
  * Windows-Skalierung), damit Texte lesbar bleiben.
  */
 const SCALE_KEY = "estrichone.scale";
@@ -131,13 +131,17 @@ export function storeScale(scale: string): void {
 	write(SCALE_KEY, scale);
 }
 
-/** Tatsächlicher Faktor in Prozent; „Automatisch“ richtet sich nach der Fensterbreite in CSS-Pixeln. */
-export function resolveScale(scale: string, width: number): number {
+/**
+ * Tatsächlicher Faktor in Prozent; „Automatisch“ richtet sich nach Breite und Höhe des Fensters in CSS-Pixeln:
+ * 4K und 5K2K (breit und hoch) 150 %, breite Curved-/Ultrawide-Monitore (z. B. 3440×1440, 5120×1440) 125 %.
+ */
+export function resolveScale(scale: string, width: number, height = width * 9 / 16): number {
 	if (scale !== AUTO_SCALE) {
 		const value = Number(scale);
 		return value === 112 ? 112.5 : value;
 	}
-	if (width >= 3400) return 150;
+	if (width >= 3400 && height >= 1900) return 150;
+	if (width >= 3400) return 125;
 	if (width >= 2800) return 125;
 	if (width >= 2200) return 112.5;
 	return 100;
