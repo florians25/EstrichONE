@@ -232,7 +232,7 @@ struct NoticeDetailSheet: View {
                     HStack(alignment: .center, spacing: Space.m) {
                         IconBadge(symbol: item.symbol, tint: item.tone.tint, background: item.tone.soft, size: 52)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text(item.label.uppercased())
+                            Text((item.label == item.title ? "Systemhinweis" : item.label).uppercased())
                                 .font(Typo.labelStrong)
                                 .tracking(0.6)
                                 .foregroundStyle(item.tone.tint)
@@ -307,8 +307,9 @@ struct NoticeDetailSheet: View {
     /// Großer Countdown: „Beginnt in 2 Tagen“ bzw. „Läuft seit 10 Min. · noch 20 Min.“.
     private func countdown(now: Date) -> some View {
         let relative = NoticePresentation.relative(start: item.start, end: item.end, now: now)
-        let remaining = NoticePresentation.remaining(end: item.end, now: now)
         let upcoming = item.start.map { $0 > now } ?? false
+        // Restdauer erst, wenn es läuft (vorher wäre „noch 3 Tage“ bis zum Ende irreführend).
+        let remaining = upcoming ? "" : NoticePresentation.remaining(end: item.end, now: now)
         let headline = upcoming ? "Beginnt" : (relative.isEmpty ? "Gültig" : "Status")
         let value = relative.isEmpty ? remaining : relative
         return HStack(alignment: .center, spacing: Space.m) {
