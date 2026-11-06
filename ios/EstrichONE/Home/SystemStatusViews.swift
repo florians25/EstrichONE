@@ -5,13 +5,31 @@ import SwiftUI
 /// darunter „Nur Ansicht“ nach 5 Minuten ohne Server. Ruhig, aber nicht zu übersehen; ohne Störung unsichtbar.
 struct SystemStatusStrip: View {
     let sync: SyncController
+    /// Dringende Systemhinweise (Störung, Wartung in Kürze) auf allen Reitern außer „Heute“ (dort als Karten).
+    var showsNotices = true
     @State private var confirmsOverride = false
+    @State private var dismissals = NoticeDismissals.shared
+    @State private var detail: NoticeItem?
+
+    /// Nur Dringendes, das nicht ausgeblendet wurde; laufende Wartung zeigt die Sperrseite bzw. die Startseite.
+    private var urgentNotices: [NoticeItem] {
+        guard showsNotices else { return [] }
+        return NoticePresentation.items(sync.notices, now: .now)
+            .filter { ($0.kind == .critical || $0.kind == .maintenanceSoon) && (!$0.isDismissible || !dismissals.keys.contains($0.id)) }
+    }
 
     var body: some View {
         let banners = sync.healthBanners
         let longOffline = sync.connection.isLongOffline(at: .now)
-        if !banners.isEmpty || sync.isReadOnly || longOffline {
+        let notices = urgentNotices
+        if !banners.isEmpty || sync.isReadOnly || longOffline || !notices.isEmpty {
             VStack(spacing: 0) {
+                ForEach(notices) { item in
+                    StripRow(tone: item.tone == .error ? .danger : .warning, symbol: item.symbol,
+                             text: [item.title, item.relative].filter { !$0.isEmpty }.joined(separator: " · "),
+                             actionTitle: "Details") { detail = item }
+                        .accessibilityIdentifier("noticeStrip-\(item.kind.rawValue)")
+                }
                 ForEach(banners) { banner in
                     StripRow(tone: banner.level == .critical ? .danger : .warning,
                              symbol: banner.level == .critical ? "exclamationmark.octagon.fill" : "exclamationmark.triangle.fill",
@@ -26,10 +44,14 @@ struct SystemStatusStrip: View {
             }
             // Farbe der ersten Zeile hinter der Statusleiste.
             .background(alignment: .top) {
-                (banners.first.map { $0.level == .critical ? Theme.dangerSoft : Theme.warningSoft } ?? Theme.fill)
+                (notices.first.map { $0.tone == .error ? Theme.dangerSoft : Theme.warningSoft }
+                    ?? banners.first.map { $0.level == .critical ? Theme.dangerSoft : Theme.warningSoft } ?? Theme.fill)
                     .ignoresSafeArea(edges: .top)
             }
             .readOnlyOverrideDialog(isPresented: $confirmsOverride, sync: sync)
+            .sheet(item: $detail) { item in
+                NoticeDetailSheet(item: item) { dismissals.dismiss(item.id) }
+            }
         }
     }
 

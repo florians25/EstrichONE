@@ -312,6 +312,19 @@ final class SyncController {
         Task { await evaluateConnection() }
     }
 
+    /// Screenshot-Modus: Systemhinweise vorgeben (`nil` stellt die vom Server wieder her).
+    func simulateNotices(_ value: SystemNotices?) {
+        if let value {
+            if realNotices == nil { realNotices = .some(notices) }
+            notices = value
+        } else if let real = realNotices {
+            notices = real
+            realNotices = nil
+        }
+    }
+
+    private var realNotices: SystemNotices??
+
     /// Screenshot-Modus: Zustand der Sicherung vorgeben.
     func simulateHealth(_ value: SystemHealth?) {
         health = value

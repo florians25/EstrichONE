@@ -15,6 +15,8 @@ public struct SystemNotices: Decodable, Sendable, Equatable {
         public let severity: Severity
         public let startsAt: String?
         public let endsAt: String?
+        /// `console` (Betreiber) oder `instance` (Verwaltung der Instanz).
+        public let source: String?
 
         public init(from decoder: any Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -25,10 +27,11 @@ public struct SystemNotices: Decodable, Sendable, Equatable {
             severity = (try? container.decode(Severity.self, forKey: .severity)) ?? .info
             startsAt = try container.decodeIfPresent(String.self, forKey: .startsAt)
             endsAt = try container.decodeIfPresent(String.self, forKey: .endsAt)
+            source = try container.decodeIfPresent(String.self, forKey: .source)
         }
 
         private enum CodingKeys: String, CodingKey {
-            case id, title, text, severity, startsAt, endsAt
+            case id, title, text, severity, startsAt, endsAt, source
         }
 
         /// Im Zeitfenster (fehlende Grenzen gelten als offen).
@@ -45,6 +48,7 @@ public struct SystemNotices: Decodable, Sendable, Equatable {
         public let startsAt: String
         public let endsAt: String?
         public let adminsMayWork: Bool
+        public let source: String?
 
         public var start: Date? { APIDate.parse(startsAt) }
         public var end: Date? { endsAt.flatMap(APIDate.parse) }

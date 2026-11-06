@@ -117,6 +117,8 @@ final class ScreenshotDirector {
         } else {
             sync?.simulateMaintenance(nil)
         }
+        // „hinweise“, „hinweis-detail“: Störung, geplante Wartung (übermorgen 22:00–23:30 Uhr) und eine Information.
+        sync?.simulateNotices(scene.hasPrefix("hinweis") ? Self.demoNotices() : nil)
         // „stoerung“: Backup- und Archivserver ausgefallen, Server seit 12 Minuten nicht erreichbar (Nur Ansicht).
         if scene.hasPrefix("stoerung") {
             let now = Date()
@@ -130,10 +132,25 @@ final class ScreenshotDirector {
         }
     }
 
+    private static func demoNotices() -> SystemNotices? {
+        let calendar = Calendar.current
+        let day = calendar.date(byAdding: .day, value: 2, to: calendar.startOfDay(for: .now)) ?? .now
+        let start = calendar.date(bySettingHour: 22, minute: 0, second: 0, of: day) ?? day
+        let end = start.addingTimeInterval(90 * 60)
+        let json = """
+        {"announcements":[
+           {"id":"shot-crit","title":"Störung beim E-Mail-Versand","text":"Ausgehende E-Mails werden derzeit verzögert zugestellt. Wir arbeiten an einer Lösung – Ihre Nachrichten gehen nicht verloren.","severity":"critical","startsAt":null,"endsAt":null,"source":"console"},
+           {"id":"shot-info","title":"Neu: Räume per Foto erfassen","text":"Im Bereich Räume lassen sich Maße jetzt direkt aus einem Foto übernehmen.","severity":"info","startsAt":null,"endsAt":"\(APIDate.format(Date.now.addingTimeInterval(5 * 86_400)))","source":"instance"}],
+         "maintenance":{"active":false,"message":"Update auf Version 0.3 – EstrichONE ist in dieser Zeit nicht erreichbar. Bitte vorher abgleichen.","startsAt":"\(APIDate.format(start))","endsAt":"\(APIDate.format(end))","adminsMayWork":true,"source":"instance"},
+         "serverTime":null}
+        """
+        return try? JSONCoding.decoder.decode(SystemNotices.self, from: Data(json.utf8))
+    }
+
     /// Blätter und Seitenwechsel brauchen etwas länger, bis alles steht.
     private static func settleMilliseconds(_ scene: String) -> Int {
         if scene == "postfach" { return 2600 }
-        let sheets = ["erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-"]
+        let sheets = ["hinweis-detail", "erfassen", "neu-", "erstbegehung", "abnahme", "foto-", "tagebuch-neu", "mangel-neu", "raum", "basisdaten-neu", "kontakt-neu", "dispo-"]
         if scene.hasSuffix("-quer") { return 3200 }
         // Unterhaltung: Verlauf lädt nach dem Öffnen (sonst stand teils noch die Ladeanzeige im Bild).
         if scene.hasPrefix("chat-verlauf") { return 4200 }

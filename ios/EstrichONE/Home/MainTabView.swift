@@ -25,7 +25,7 @@ struct MainTabView: View {
     var body: some View {
         // Backup-/Archiv-Störung und „Nur Ansicht“ über allen Reitern (Navigationsleisten darunter).
         VStack(spacing: 0) {
-        if let sync = model.active?.sync { SystemStatusStrip(sync: sync) }
+        if let sync = model.active?.sync { SystemStatusStrip(sync: sync, showsNotices: selection != .today) }
         TabView(selection: Binding(get: { selection }, set: { tab in
             if tab == .capture {
                 if model.active?.sync?.isReadOnly == true { confirmsOverride = true } else { showsCaptureHub = true }
