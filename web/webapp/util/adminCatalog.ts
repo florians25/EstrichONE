@@ -26,7 +26,7 @@ export interface AdminArea {
 /** Gruppen der Verwaltung in Navigationsreihenfolge (Texte: i18n „nav.<key>“). */
 export const adminGroups: AdminGroup[] = [
 	{ key: "groupAdminOrg", title: "Organisation", description: "Firmendaten, Vorgaben für alle Benutzer, Stammdaten und Module" },
-	{ key: "groupAdminUsers", title: "Benutzer & Geräte", description: "Konten, Rollen und Rechte, registrierte Geräte, Helpdesk" },
+	{ key: "groupAdminUsers", title: "Benutzer & Geräte", description: "Konten, Rollen und Rechte, registrierte Geräte, Helpdesk, Fehler & Wünsche" },
 	{ key: "groupAdminData", title: "Datensicherung & Archiv", description: "Backup Center, Backup-Ziele, revisionssicheres Archiv und Aktenarchiv" },
 	{ key: "groupAdminSystem", title: "System & Betrieb", description: "Überwachung, Speicher, Hinweise und Wartung, Protokoll" },
 	{ key: "groupAdminIntegrations", title: "Integrationen", description: "E-Mail-Versand und Pushnachrichten" },
@@ -54,6 +54,9 @@ export const adminAreas: AdminArea[] = [
 	{ key: "helpdesk", group: "groupAdminUsers", title: "Helpdesk", path: "/it-center/helpdesk", icon: "sap-icon://headset",
 		description: "Tickets der Mitarbeiter: Probleme melden, beantworten, erledigen",
 		keywords: "tickets support hilfe problem" },
+	{ key: "feedbackAdmin", group: "groupAdminUsers", title: "Fehler & Wünsche", path: "/it-center/meldungen", icon: "sap-icon://quality-issue",
+		permission: "feedback.manage", description: "Fehlermeldungen und Funktionswünsche der Benutzer: prüfen, einplanen, beantworten",
+		keywords: "feedback fehler bug wunsch funktionswunsch idee meldung verbesserung" },
 	{ key: "backup", group: "groupAdminData", title: "Sicherung", path: "/system/sicherung", icon: "sap-icon://upload-to-cloud", permission: "backup.manage",
 		description: "Backup Center: tägliche Vollsicherung, Zeitplan, Aufbewahrung, Wiederherstellung und Notfallblatt",
 		keywords: "backup center sicherung wiederherstellen restore notfallblatt zeitplan aufbewahrung" },

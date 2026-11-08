@@ -1,0 +1,211 @@
+<mvc:View controllerName="estrichone.controller.Feedback" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+	xmlns:form="sap.ui.layout.form" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<!-- „Meine Meldungen“ (jeder Benutzer) und IT Center › Fehler &amp; Wünsche (Recht feedback.manage): Liste links, Meldung rechts -->
+	<FlexBox id="feedback" height="100%" renderType="Bare" class="eoHelpdesk eoFeedback" alignItems="Stretch">
+		<FlexBox direction="Column" renderType="Bare" class="eoHdMaster">
+			<VBox class="eoHdMasterHead">
+				<HBox justifyContent="SpaceBetween" alignItems="Center">
+					<Title id="fbTitle" text="{= ${view>/manage} ? ${i18n>nav.feedbackAdmin} : ${i18n>nav.myFeedback} }" level="H1" wrapping="true"/>
+					<Button id="fbNew" text="Neue Meldung" icon="sap-icon://add" type="Emphasized" press=".onNew"/>
+				</HBox>
+				<Text text="{= ${view>/manage} ? 'Fehlermeldungen und Funktionswünsche aller Benutzer' : 'Ihre Fehlermeldungen und Funktionswünsche mit Status und Antworten der IT' }"
+					class="eoMuted sapUiTinyMarginBottom"/>
+				<FlexBox wrap="Wrap" class="eoFbCounters" visible="{view>/manage}" items="{view>/counters}">
+					<GenericTag text="{view>text}" status="{view>state}" design="StatusIconHidden" press=".onCounter" ariaLabelledBy="fbCountersLabel">
+						<customData><core:CustomData key="filter" value="{view>key}"/></customData>
+						<value><ObjectNumber number="{view>value}" state="{view>state}" emphasized="false"/></value>
+					</GenericTag>
+				</FlexBox>
+				<SearchField id="fbSearch" value="{view>/filter/query}" liveChange=".onQuery" search=".onQuery" placeholder="Nummer, Titel, Bereich …" width="100%"/>
+				<SegmentedButton id="fbSegments" selectedKey="{view>/filter/status}" selectionChange=".onFilter" width="100%" class="sapUiTinyMarginTop"
+					visible="{= !${view>/manage} }">
+					<items>
+						<SegmentedButtonItem key="open" text="Offen"/>
+						<SegmentedButtonItem key="closed" text="Abgeschlossen"/>
+						<SegmentedButtonItem key="all" text="Alle"/>
+					</items>
+				</SegmentedButton>
+				<VBox visible="{view>/manage}" renderType="Bare">
+					<HBox class="eoHdFilters sapUiTinyMarginTop">
+						<Select id="fbStatus" selectedKey="{view>/filter/status}" change=".onFilter" items="{view>/statusFilters}" width="100%" ariaLabelledBy="fbStatusLabel">
+							<core:Item key="{view>key}" text="{view>text}"/>
+							<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+						</Select>
+						<Select id="fbKind" selectedKey="{view>/filter/kind}" change=".onFilter" width="100%" ariaLabelledBy="fbKindLabel" class="sapUiTinyMarginBegin">
+							<core:Item key="" text="Alle Arten"/>
+							<core:Item key="bug" text="Fehler"/>
+							<core:Item key="feature" text="Funktionswünsche"/>
+							<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+						</Select>
+					</HBox>
+					<HBox class="eoHdFilters sapUiTinyMarginTop">
+						<Select id="fbArea" selectedKey="{view>/filter/area}" change=".onFilter" items="{view>/areaFilters}" width="100%" ariaLabelledBy="fbAreaLabel">
+							<core:Item key="{view>key}" text="{view>text}"/>
+							<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+						</Select>
+						<Select id="fbPriority" selectedKey="{view>/filter/priority}" change=".onFilter" items="{view>/priorityFilters}" width="100%"
+							ariaLabelledBy="fbPriorityLabel" class="sapUiTinyMarginBegin">
+							<core:Item key="{view>key}" text="{view>text}"/>
+							<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+						</Select>
+					</HBox>
+				</VBox>
+			</VBox>
+			<ScrollContainer vertical="true" horizontal="false" height="100%" class="eoHdListScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<List id="fbList" items="{view>/visible}" mode="SingleSelectMaster" selectionChange=".onSelect" busy="{view>/busy}" busyIndicatorDelay="300"
+					noDataText="{view>/noData}" class="eoHdList" showSeparators="Inner">
+					<CustomListItem type="Active" highlight="{view>highlight}" selected="{= ${view>id} === ${view>/selectedId} }">
+						<VBox class="eoHdItem">
+							<HBox justifyContent="SpaceBetween" alignItems="Center">
+								<HBox alignItems="Center">
+									<core:Icon src="{view>kindIcon}" size="0.875rem" class="eoFbKindIcon" tooltip="{view>kindText}"/>
+									<Text text="{view>number}" class="eoHdNumber eoTabular"/>
+								</HBox>
+								<Text text="{path: 'view>lastActivityAt', formatter: 'fmt.waiting'}" class="eoHdAge eoTabular"/>
+							</HBox>
+							<Text text="{view>title}" maxLines="2" class="eoHdItemTitle"/>
+							<HBox alignItems="Center" wrap="Wrap" class="eoHdItemMeta">
+								<ObjectStatus text="{view>statusText}" state="{view>statusState}"/>
+								<ObjectStatus text="{view>priorityText}" state="{view>priorityState}" icon="sap-icon://high-priority" visible="{view>showPriority}"/>
+								<Text text="{view>who}" class="eoHdWho" wrapping="false"/>
+							</HBox>
+						</VBox>
+					</CustomListItem>
+				</List>
+			</ScrollContainer>
+			<Text text="{view>/countText}" class="eoHdCount"/>
+		</FlexBox>
+
+		<FlexBox direction="Column" renderType="Bare" class="eoHdDetail">
+			<layoutData><FlexItemData growFactor="1" baseSize="0" minWidth="0px"/></layoutData>
+			<VBox visible="{= !${view>/d} }" alignItems="Center" justifyContent="Center" height="100%" class="eoHdEmpty">
+				<core:Icon src="sap-icon://quality-issue" size="3rem" class="eoMuted" decorative="true"/>
+				<Title text="{= ${view>/items}.length ? 'Meldung auswählen' : 'Noch keine Meldungen' }" level="H3" class="sapUiSmallMarginTop"/>
+				<Text text="{= ${view>/manage} ? 'Links eine Meldung wählen – Angaben, Anhänge, technische Infos, Verlauf und Antwort erscheinen hier.' : 'Etwas funktioniert nicht oder Sie haben eine Idee? Mit „Neue Meldung“ führt Sie ein kurzes Formular durch die Angaben.' }"
+					textAlign="Center" wrapping="true" class="eoMuted eoHdEmptyText"/>
+				<Button text="Neue Meldung" icon="sap-icon://add" press=".onNew" class="sapUiSmallMarginTop" visible="{= !${view>/items}.length }"/>
+			</VBox>
+			<ScrollContainer id="fbScroll" vertical="true" horizontal="false" height="100%" visible="{= !!${view>/d} }" class="eoHdScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<VBox visible="{= !!${view>/d} }" class="eoHdHead" busy="{view>/detailBusy}" busyIndicatorDelay="300">
+					<HBox id="fbTags" alignItems="Center" wrap="Wrap" class="eoHdTags">
+						<Text text="{view>/d/summary/number}" class="eoHdNumber eoTabular"/>
+						<ObjectStatus text="{view>/head/kindText}" icon="{view>/head/kindIcon}" state="Information"/>
+						<ObjectStatus text="{view>/head/statusText}" state="{view>/head/statusState}" inverted="true"/>
+						<ObjectStatus text="{view>/head/priorityText}" state="{view>/head/priorityState}" icon="sap-icon://high-priority" visible="{view>/manage}"/>
+					</HBox>
+					<Title id="fbItemTitle" text="{view>/d/summary/title}" level="H2" wrapping="true" class="eoHdTitle"/>
+					<FlexBox wrap="Wrap" class="eoHdFacts" items="{view>/facts}">
+						<VBox class="eoHdFact">
+							<Label text="{view>label}"/>
+							<ObjectStatus text="{view>value}" state="{view>state}"/>
+						</VBox>
+					</FlexBox>
+					<FlexBox id="fbActions" wrap="Wrap" alignItems="Center" class="eoFbActions" visible="{view>/manage}">
+						<HBox alignItems="Center" class="eoFbAction">
+							<Label text="Status" labelFor="fbItemStatus"/>
+							<Select id="fbItemStatus" selectedKey="{view>/edit/status}" items="{view>/statusOptions}" change=".onQuickStatus" width="10rem">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</HBox>
+						<HBox alignItems="Center" class="eoFbAction">
+							<Label text="Priorität" labelFor="fbItemPriority"/>
+							<Select id="fbItemPriority" selectedKey="{view>/edit/priority}" items="{view>/priorityOptions}" change=".onQuickPriority" width="8rem">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</HBox>
+						<HBox alignItems="Center" class="eoFbAction">
+							<Label text="Zuständig" labelFor="fbItemAssignee"/>
+							<Select id="fbItemAssignee" selectedKey="{view>/edit/assignee}" items="{view>/people}" forceSelection="false" change=".onQuickAssignee" width="11rem">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</HBox>
+						<HBox alignItems="Center" class="eoFbAction">
+							<Button text="Mir zuweisen" icon="sap-icon://employee" press=".onMine" visible="{= ${view>/d/summary/assigneeUserId} !== ${view>/me} }"/>
+							<Button text="Einordnen" icon="sap-icon://tag" press=".onClassify" tooltip="Art und Bereich ändern" class="sapUiTinyMarginBegin"/>
+						</HBox>
+					</FlexBox>
+					<MessageStrip id="fbProgress" text="{view>/head/progress}" type="{view>/head/progressType}" showIcon="true" visible="{= !${view>/manage} }"
+						class="sapUiTinyMarginBottom"/>
+				</VBox>
+				<VBox class="eoHdScrollInner">
+					<form:SimpleForm id="fbDetails" editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12"
+						columnsXL="1" columnsL="1" columnsM="1" singleContainerFullSize="true" class="eoFbDetails"/>
+					<VBox visible="{= ${view>/d/attachments}.length > 0 }" class="sapUiSmallMarginTop">
+						<Title text="Anhänge" level="H3" class="sapUiTinyMarginBottom"/>
+						<FlexBox items="{view>/attachments}" wrap="Wrap" class="eoTimelineAttachments">
+							<VBox alignItems="Center" width="7rem">
+								<Image src="{view>thumb}" width="6.5rem" height="6.5rem" class="eoPhoto" press=".onAttachment" alt="{view>name}" decorative="false" visible="{view>image}"/>
+								<core:Icon src="sap-icon://document" size="2.5rem" visible="{= !${view>image} }" press=".onAttachment" tooltip="{view>name}"/>
+								<Link text="{view>name}" press=".onAttachment" wrapping="true" textAlign="Center"/>
+							</VBox>
+						</FlexBox>
+					</VBox>
+					<Panel id="fbContext" headerText="Technische Angaben (automatisch mitgesendet)" expandable="true" expanded="{view>/manage}"
+						visible="{= ${view>/context}.length > 0 }" class="sapUiSmallMarginTop eoHdDiag">
+						<form:SimpleForm id="fbContextForm" editable="false" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="3" labelSpanM="4" labelSpanS="12"
+							columnsXL="1" columnsL="1" columnsM="1" singleContainerFullSize="true"/>
+					</Panel>
+					<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMarginTop sapUiTinyMarginBottom">
+						<Title text="Verlauf" level="H3"/>
+						<SegmentedButton selectedKey="{view>/show}" selectionChange=".onShow" visible="{view>/manage}">
+							<items>
+								<SegmentedButtonItem key="all" text="Alles"/>
+								<SegmentedButtonItem key="talk" text="Nur Nachrichten"/>
+							</items>
+						</SegmentedButton>
+					</HBox>
+					<VBox id="fbTimeline" items="{view>/timeline}" class="eoTimeline">
+						<VBox class="eoTimelineItem">
+							<customData><core:CustomData key="tone" value="{view>tone}" writeToDom="true"/></customData>
+							<core:Icon src="{view>icon}" class="eoTimelineDot" tooltip="{view>kindText}"/>
+							<VBox class="eoTimelineBubble" visible="{view>bubble}">
+								<customData><core:CustomData key="who" value="{view>who}" writeToDom="true"/></customData>
+								<HBox justifyContent="SpaceBetween" wrap="Wrap">
+									<Text text="{view>headline}" class="eoStrong"/>
+									<Text text="{path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
+								</HBox>
+								<Text text="{view>text}" class="eoPre" visible="{= !!${view>text} }"/>
+								<FlexBox items="{path: 'view>files', templateShareable: false}" wrap="Wrap" class="eoTimelineAttachments" visible="{= ${view>files}.length > 0 }">
+									<VBox alignItems="Center" width="6rem">
+										<Image src="{view>thumb}" width="5.5rem" height="5.5rem" class="eoPhoto" press=".onAttachment" alt="{view>name}" decorative="false" visible="{view>image}"/>
+										<core:Icon src="sap-icon://document" size="2.5rem" visible="{= !${view>image} }" press=".onAttachment" tooltip="{view>name}"/>
+										<Link text="{view>name}" press=".onAttachment" wrapping="true" textAlign="Center"/>
+									</VBox>
+								</FlexBox>
+							</VBox>
+							<HBox class="eoTimelineEvent" visible="{= !${view>bubble} }" wrap="Wrap">
+								<Text text="{view>summary}" class="eoStrong sapUiTinyMarginEnd"/>
+								<Text text="{view>actorName} · {path: 'view>at', formatter: 'fmt.dateTime'}" class="eoTimelineMeta"/>
+							</HBox>
+						</VBox>
+					</VBox>
+				</VBox>
+			</ScrollContainer>
+			<VBox id="fbComposer" visible="{= !!${view>/d} }" class="eoReplyBar eoHdComposer">
+				<customData><core:CustomData key="internal" value="{= ${view>/internal} ? 'true' : 'false' }" writeToDom="true"/></customData>
+				<TextArea id="fbReply" value="{view>/reply}" valueLiveUpdate="true" rows="2" width="100%" growing="true" growingMaxLines="10"
+					placeholder="{= ${view>/internal} ? 'Interne Notiz (nur für die IT) …' : ${view>/manage} ? 'Antwort an den Einreicher …' : 'Nachricht an die IT, z. B. Rückfrage beantworten …' }"
+					ariaLabelledBy="fbReplyLabel"/>
+				<core:InvisibleText id="fbReplyLabel" text="Antwort oder Notiz"/>
+				<FlexBox items="{view>/pending}" wrap="Wrap" class="eoTimelineAttachments" visible="{= ${view>/pending}.length > 0 }">
+					<Button text="{view>name}" icon="sap-icon://decline" iconFirst="false" type="Transparent" press=".onRemovePending" tooltip="{= ${view>name} + ' entfernen' }"/>
+				</FlexBox>
+				<FlexBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap">
+					<HBox alignItems="Center" wrap="Wrap">
+						<Button text="Datei anhängen" icon="sap-icon://attachment" type="Transparent" press=".onAttach" visible="{view>/canUpload}"/>
+						<CheckBox id="fbInternal" text="Interne Notiz (für den Einreicher unsichtbar)" selected="{view>/internal}" visible="{view>/manage}"/>
+					</HBox>
+					<Button id="fbSend" text="{= ${view>/internal} ? 'Notiz speichern' : ${view>/manage} ? 'Antwort senden' : 'Senden' }" type="Emphasized"
+						icon="sap-icon://paper-plane" enabled="{= !!${view>/reply}.trim() || ${view>/pending}.length > 0 }" press=".onComment" tooltip="Senden (Strg+Enter)"/>
+				</FlexBox>
+			</VBox>
+		</FlexBox>
+	</FlexBox>
+	<core:InvisibleText id="fbCountersLabel" text="Zähler – auswählen filtert die Liste"/>
+	<core:InvisibleText id="fbStatusLabel" text="Status"/>
+	<core:InvisibleText id="fbKindLabel" text="Art"/>
+	<core:InvisibleText id="fbAreaLabel" text="Bereich"/>
+	<core:InvisibleText id="fbPriorityLabel" text="Priorität"/>
+</mvc:View>

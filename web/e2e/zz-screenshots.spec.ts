@@ -18,7 +18,7 @@ test('Bildschirmfotos', async ({ page }) => {
     ['/planung?ansicht=tag', 'planning-day'], ['/planung/kalender', 'planning-month'], ['/planung/arbeitsplan', 'workplan'],
     ['/planung/kolonnen', 'crews'], ['/planung/geraete', 'vehicles'], ['/anfragen', 'inquiries'], ['/anrufe', 'calls'], ['/kunden', 'customers'],
     ['/bestellungen', 'orders'], ['/material', 'materials'], ['/lieferanten', 'suppliers'], ['/verwaltung/benutzer', 'users'],
-    ['/it-center/geraete', 'devices'], ['/it-center/helpdesk', 'helpdesk'], ['/system/sicherung', 'backup'],
+    ['/it-center/geraete', 'devices'], ['/it-center/helpdesk', 'helpdesk'], ['/it-center/meldungen', 'feedback'], ['/meine-meldungen', 'my-feedback'], ['/system/sicherung', 'backup'],
     ['/system/firmendaten', 'company'], ['/system/protokoll', 'audit'], ['/dokumente', 'dms'], ['/dokumente?reiter=freigaben', 'approvals'],
     ['/verwaltung/rollen', 'roles'], ['/verwaltung/stammdaten', 'masterdata'],
   ];

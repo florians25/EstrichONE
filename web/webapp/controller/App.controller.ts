@@ -9,7 +9,7 @@ import type NavigationList from "sap/tnt/NavigationList";
 import NavigationListItem from "sap/tnt/NavigationListItem";
 import BusyIndicator from "sap/ui/core/BusyIndicator";
 import NavigationListGroup from "sap/tnt/NavigationListGroup";
-import type { SideNavigation$ItemSelectEvent } from "sap/tnt/SideNavigation";
+import type { SideNavigation$ItemPressEvent, SideNavigation$ItemSelectEvent } from "sap/tnt/SideNavigation";
 import type { SearchField$SearchEvent } from "sap/m/SearchField";
 import type SearchField from "sap/m/SearchField";
 import type Event from "sap/ui/base/Event";
@@ -41,6 +41,7 @@ import { logos } from "../util/theme";
 import { openSettings } from "../util/settings";
 import { openQuickCall } from "../util/quickCall";
 import { openBauakteWizard } from "../util/bauakteWizard";
+import { openFeedbackWizard } from "../util/feedbackWizard";
 import InstanceManager from "sap/m/InstanceManager";
 import type { CallResponse, DeviceResponse, TicketSummary, WorkItemDto } from "../util/models";
 import { isoDay } from "../util/days";
@@ -231,10 +232,7 @@ export default class AppController extends BaseController {
 	onNavigate(event: SideNavigation$ItemSelectEvent): void {
 		const item = event.getParameter("item") as NavigationListItem;
 		const key = item.getKey();
-		if (key === "__settings") {
-			openSettings();
-			return;
-		}
+		if (key.startsWith("__")) return; // feste Einträge: onNavPress
 		const entry = navigation.flatMap((e) => e.children ?? [e]).find((e) => e.key === key);
 		if (entry?.path) {
 			this.nav(entry.path);
@@ -242,6 +240,13 @@ export default class AppController extends BaseController {
 				this.el<ToolPage>("toolPage").setSideExpanded(false);
 			}
 		}
+	}
+
+	/** Feste Einträge unten (nicht auswählbar, lösen kein itemSelect aus): Meine Meldungen, Einstellungen. */
+	onNavPress(event: SideNavigation$ItemPressEvent): void {
+		const key = (event.getParameter("item") as NavigationListItem | undefined)?.getKey();
+		if (key === "__settings") openSettings();
+		if (key === "__myFeedback") this.nav("/meine-meldungen");
 	}
 
 	onToggleSide(): void {
@@ -303,6 +308,11 @@ export default class AppController extends BaseController {
 		});
 	}
 
+	/** Geführtes Formular „Fehler melden / Funktion wünschen“ über der aktuellen Seite. */
+	onFeedback(): void {
+		void openFeedbackWizard({ onShowMine: (created) => this.nav(`/meine-meldungen/${created.summary.id}`) });
+	}
+
 	onQuickCall(): void {
 		openQuickCall();
 	}
@@ -315,6 +325,8 @@ export default class AppController extends BaseController {
 				new MenuItem({ text: this.t("inbox.preferences"), icon: "sap-icon://bell", press: () => openNotificationPreferences() }),
 				new MenuItem({ text: this.t("password.title"), icon: "sap-icon://key", press: () => this.nav("/konto/passwort") }),
 				new MenuItem({ text: this.t("security.title"), icon: "sap-icon://shield", press: () => this.nav("/konto/sicherheit") }),
+				new MenuItem({ text: this.t("shell.feedback"), icon: "sap-icon://quality-issue", startsSection: true, press: () => this.onFeedback() }),
+				new MenuItem({ text: this.t("shell.myFeedback"), icon: "sap-icon://inbox", press: () => this.nav("/meine-meldungen") }),
 				new MenuItem({ text: this.t("shell.signOut"), icon: "sap-icon://log", startsSection: true, press: () => void this.signOut() }),
 			],
 			// Erst nach der Auswahl aufräumen (das Ereignis kommt nach dem Schließen).

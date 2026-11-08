@@ -42,14 +42,19 @@
 						</Button>
 						<OverflowToolbarButton id="phoneButton" text="{i18n>shell.phone}" tooltip="{i18n>shell.phone}" icon="sap-icon://outgoing-call" press=".onQuickCall"
 							visible="{= ${session>/permissions/contacts.edit} === true }"/>
+						<!-- Fehler melden / Funktion wünschen: direkt links neben dem Profil; in schmalen Fenstern im Überlaufmenü. -->
+						<OverflowToolbarButton id="feedbackButton" text="{i18n>shell.feedback}" tooltip="{i18n>shell.feedback}" icon="sap-icon://feedback"
+							press=".onFeedback" visible="{= !${session>/mustChangePassword} }"/>
 					</f:additionalContent>
 				</f:ShellBar>
 			</tnt:header>
 			<tnt:sideContent>
-				<tnt:SideNavigation id="sideNavigation" itemSelect=".onNavigate" selectedKey="{view>/navKey}">
+				<tnt:SideNavigation id="sideNavigation" itemSelect=".onNavigate" itemPress=".onNavPress" selectedKey="{view>/navKey}">
 					<tnt:NavigationList id="navigationList"/>
 					<tnt:fixedItem>
 						<tnt:NavigationList id="fixedNavigation">
+							<tnt:NavigationListItem id="navFeedback" key="__myFeedback" text="{i18n>shell.myFeedback}" icon="sap-icon://feedback"
+								selectable="false" tooltip="Meine Fehlermeldungen und Funktionswünsche mit Status und Antworten"/>
 							<tnt:NavigationListItem id="navSettings" key="__settings" text="{i18n>settings.title}" icon="sap-icon://action-settings"
 								selectable="false"/>
 						</tnt:NavigationList>
