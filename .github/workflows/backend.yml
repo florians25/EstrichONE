@@ -24,8 +24,8 @@ jobs:
     # Tests allein ~16–20 min (je Testklasse eine eigene Datenbank, Zugriffstest über alle Routen).
     timeout-minutes: 35
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
       - name: Wiederherstellen
@@ -44,7 +44,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Images bauen
         run: |
           docker build -f docker/api.Dockerfile -t estrichone/api:ci .
@@ -86,7 +86,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
       - name: Images bauen
         run: |
           docker build -f docker/api.Dockerfile -t estrichone/api:ci .
