@@ -29,22 +29,26 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
+      # Gradle-Distribution und Abhängigkeiten aus dem Cache (Downloads von GitHub sind zeitweise unzuverlässig).
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Gradle vorbereiten (mit Wiederholung)
+        run: android/scripts/gradle-retry.sh :core:compileTestKotlin
       - name: Tests gegen API und PostgreSQL
         run: android/scripts/test-core-against-server.sh
 
   app:
-    name: App bauen (Compose)
+    name: App bauen (Compose) und Lint
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
       - name: APK bauen und Lint
-        working-directory: android
-        run: ./gradlew --no-daemon :app:assembleDebug :app:lintDebug
+        run: android/scripts/gradle-retry.sh :app:assembleDebug :app:lintDebug
       - uses: actions/upload-artifact@v4
         with:
           name: EstrichONE-Android-debug
@@ -57,3 +61,41 @@ jobs:
           path: android/app/build/reports/lint-results-debug.html
           if-no-files-found: ignore
           retention-days: 7
+
+  # Visuelle Prüfung wie bei iOS: Demomodus, Telefon und Tablet, hell und dunkel. JVM ohne Emulator (Roborazzi auf
+  # Robolectric mit nativer Grafik); Bilder als Artefakt und base64 im Protokoll (android/scripts/shots-to-log.py).
+  screenshots:
+    name: Screenshots (Roborazzi, Demomodus)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Screenshots aufnehmen (und App-Unit-Tests)
+        run: android/scripts/gradle-retry.sh :app:testDebugUnitTest
+      - name: Screenshots sichern
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-screenshots
+          path: android/app/build/outputs/roborazzi
+          if-no-files-found: warn
+          retention-days: 7
+      - name: Testbericht sichern
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-unit-tests
+          path: android/app/build/reports/tests
+          retention-days: 7
+      # Zuletzt, damit die Bilder am Ende des Protokolls stehen.
+      - name: Screenshots ins Protokoll
+        if: always()
+        run: |
+          python3 -m venv "$RUNNER_TEMP/venv"
+          "$RUNNER_TEMP/venv/bin/pip" install --quiet pillow
+          "$RUNNER_TEMP/venv/bin/python" android/scripts/shots-to-log.py android/app/build/outputs/roborazzi

@@ -294,7 +294,7 @@ private class DemoTickets {
 }
 
 /** Chat im Demomodus: Baustellen-, Kolonnen- und Ankündigungsgruppe sowie Einzelchats (wie DemoChat.swift). */
-internal class DemoChat {
+class DemoChat {
     companion object {
         const val SITE = "0193a1b2-de00-7000-8000-00000000d005"
         const val CREW = "0193a1b2-de00-7000-8000-00000000d002"

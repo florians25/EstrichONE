@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Temporäre Kopien zum Öffnen und Teilen (Dokumente, Fotos) sowie Videoaufnahmen der Kamera-App. -->
+<paths>
+    <cache-path name="shared" path="shared/" />
+    <cache-path name="capture" path="capture/" />
+</paths>

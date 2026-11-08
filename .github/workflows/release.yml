@@ -90,7 +90,9 @@ jobs:
     needs: create
     name: Android-App
     runs-on: ubuntu-24.04
-    timeout-minutes: 30
+    timeout-minutes: 40
+    env:
+      HAS_KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 != '' }}
     steps:
       - uses: actions/checkout@v5
         with:
@@ -99,17 +101,38 @@ jobs:
         with:
           distribution: temurin
           java-version: "17"
-      - name: APK bauen
-        working-directory: android
-        # Testversion mit dem Debug-Schlüssel: direkt installierbar. Für Google Play folgt eine Signatur mit dem
-        # Schlüssel des Herausgebers (docs/reengineering/08, Abschnitt 5).
-        run: ./gradlew --no-daemon :app:assembleDebug
+      - uses: gradle/actions/setup-gradle@v4
+      # Version aus dem Tag (v1.0.5 → versionName 1.0.5, versionCode 10005).
+      - name: APK bauen (Testversion, Debug-Schlüssel)
+        run: android/scripts/gradle-retry.sh :app:assembleDebug -PappVersionName="${TAG#v}"
+      # Signiertes Release-APK nur, wenn der Schlüssel des Herausgebers als Secret hinterlegt ist (nie im Repository).
+      - name: Release-APK signieren
+        if: env.HAS_KEYSTORE == 'true'
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ESTRICHONE_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ESTRICHONE_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ESTRICHONE_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          export ESTRICHONE_KEYSTORE_FILE="$RUNNER_TEMP/release.jks"
+          echo "$KEYSTORE_BASE64" | base64 -d > "$ESTRICHONE_KEYSTORE_FILE"
+          android/scripts/gradle-retry.sh :app:assembleRelease -PappVersionName="${TAG#v}"
+          rm -f "$ESTRICHONE_KEYSTORE_FILE"
       - name: Anhängen
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk "EstrichONE-Android-$TAG.apk"
-          gh release upload "$TAG" "EstrichONE-Android-$TAG.apk" --clobber --repo "$GITHUB_REPOSITORY"
+          if [[ -f android/app/build/outputs/apk/release/app-release.apk ]]; then
+            # Signiert: Release-APK unter dem gewohnten Namen, Testversion daneben.
+            cp android/app/build/outputs/apk/release/app-release.apk "EstrichONE-Android-$TAG.apk"
+            cp android/app/build/outputs/apk/debug/app-debug.apk "EstrichONE-Android-$TAG-test.apk"
+            files=("EstrichONE-Android-$TAG.apk" "EstrichONE-Android-$TAG-test.apk")
+          else
+            # Ohne Schlüssel bleibt es beim Debug-APK.
+            cp android/app/build/outputs/apk/debug/app-debug.apk "EstrichONE-Android-$TAG.apk"
+            files=("EstrichONE-Android-$TAG.apk")
+          fi
+          gh release upload "$TAG" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"
 
   server:
     needs: create

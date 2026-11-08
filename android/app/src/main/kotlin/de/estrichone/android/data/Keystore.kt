@@ -71,6 +71,13 @@ class SecureSessionStore(context: Context) : SessionStore {
         get() = prefs.getString("server", null)
         set(value) = prefs.edit().putString("server", value).apply()
 
+    var serverName: String?
+        get() = prefs.getString("serverName", null)
+        set(value) = prefs.edit().putString("serverName", value).apply()
+
+    /** Alles vergessen (Gerät zurücksetzen). */
+    fun clearAll() = prefs.edit().clear().apply()
+
     override var refreshToken: String?
         get() = prefs.getString("refresh", null)?.let { runCatching { decrypt(it) }.getOrNull() }
         set(value) = prefs.edit().putString("refresh", value?.let(::encrypt)).apply()
