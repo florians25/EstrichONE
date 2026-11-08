@@ -10,13 +10,18 @@ import com.github.takahirom.roborazzi.captureRoboImage
 import de.estrichone.android.ui.Appearance
 import de.estrichone.android.ui.AreaKind
 import de.estrichone.android.ui.EstrichTheme
+import de.estrichone.android.ui.InboxPreset
 import de.estrichone.android.ui.MainScreen
 import de.estrichone.android.ui.Nav
 import de.estrichone.android.ui.Root
 import de.estrichone.android.ui.Route
 import de.estrichone.android.ui.Tab
 import de.estrichone.core.DemoChat
+import de.estrichone.core.ApiDate
 import de.estrichone.core.DemoData
+import de.estrichone.core.InboxNotification
+import de.estrichone.core.NotificationFilter
+import de.estrichone.core.NotificationGrouping
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -121,7 +126,30 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     fun chatliste() = main("chatliste", Tab.Today, listOf(Route.ChatList))
 
     @Test
-    fun benachrichtigungen() = main("benachrichtigungen", Tab.Today, listOf(Route.Inbox))
+    fun benachrichtigungen() = inbox("benachrichtigungen")
+
+    @Test
+    fun benachrichtigungenUngelesen() = inbox("benachrichtigungen-ungelesen", NotificationFilter(unreadOnly = true))
+
+    @Test
+    fun benachrichtigungenNachArt() = inbox("benachrichtigungen-art", grouping = NotificationGrouping.Kind)
+
+    @Test
+    fun benachrichtigungDetail() = main("benachrichtigung-detail", Tab.Today, listOf(Route.Inbox, Route.NotificationDetail(InboxNotification(
+        id = "0193a1b2-de00-7000-8000-00000000a003", category = "message", urgency = "normal", title = "Pumpe 2 ab Montag später",
+        body = "Ab Montag Abholung der Pumpe 2 erst ab 6:45 Uhr am Lager. Bitte die Touren entsprechend planen und Material am Vortag laden.",
+        senderName = "Sabine Wagner", createdAt = ApiDate.format(java.time.Instant.now().minusSeconds(3 * 3600)), readAt = null))))
+
+    private fun inbox(name: String, filter: NotificationFilter = NotificationFilter(), grouping: NotificationGrouping = NotificationGrouping.Time) {
+        InboxPreset.filter = filter
+        InboxPreset.grouping = grouping
+        try {
+            main(name, Tab.Today, listOf(Route.Inbox))
+        } finally {
+            InboxPreset.filter = NotificationFilter()
+            InboxPreset.grouping = NotificationGrouping.Time
+        }
+    }
 
     @Test
     fun einstellungen() = main("einstellungen", Tab.More)

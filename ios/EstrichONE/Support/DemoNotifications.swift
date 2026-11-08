@@ -11,35 +11,43 @@ final class DemoNotifications {
         let title: String
         let body: String
         let link: String
+        var objectType = ""
+        var sender = ""
         let minutesAgo: Int
         var read: Bool
     }
 
+    /// Wie der Server sie schickt (Kategorien und Links aus backend/src): heute, gestern, diese Woche und älter.
     private var items: [Item] = [
-        Item(id: "0193a1b2-de00-7000-8000-00000000a010", category: "chat", urgency: "normal", title: "Neue Nachricht von Sabine Wagner",
-             body: "Sabine Wagner (Büro)", link: "/chat/\(DemoChat.office)", minutesAgo: 14, read: false),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a011", category: "work", urgency: "high", title: "Mangel Ihnen zugewiesen",
-             body: "Randfuge Flur EG offen · Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)/maengel", minutesAgo: 25, read: false),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a012", category: "bauakte", urgency: "normal", title: "Kommentar in Ihrer Bauakte",
-             body: "Sabine Wagner: Bitte Fotos der Dämmung vor dem Einbau.", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 70, read: false),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a013", category: "approval", urgency: "normal", title: "Dokument zur Genehmigung",
-             body: "Aufmaß Haus B · MFH Isarpark", link: "/bauakten/\(DemoContent.isarpark)", minutesAgo: 110, read: true),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a014", category: "bauakte", urgency: "normal", title: "Abnahme unterschrieben",
-             body: "EFH Schneider · ohne Mängel", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 60 * 5, read: true),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a015", category: "absence", urgency: "low", title: "Urlaubsantrag genehmigt",
-             body: "Mo 16.11. bis Fr 20.11.", link: "/urlaub", minutesAgo: 60 * 8, read: true),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a016", category: "system", urgency: "normal", title: "Wartung angekündigt",
-             body: "Samstag 6:00 bis 7:30 Uhr – EstrichONE ist dann nicht erreichbar.", link: "", minutesAgo: 60 * 20, read: true),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a001", category: "plan", urgency: "high", title: "Plan für morgen freigegeben",
+        Item(id: "0193a1b2-de00-7000-8000-00000000a001", category: "planning", urgency: "high", title: "Plan für morgen freigegeben",
              body: "Kolonne Huber: 07:30 Praxis Dr. Maier, 10:30 EFH Schneider.", link: "/planung/wer-faehrt-wohin?tag=morgen", minutesAgo: 12, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a010", category: "chat", urgency: "normal", title: "Neue Nachricht von Sabine Wagner",
+             body: "Büro · 2 neue Nachrichten", link: "/chat/\(DemoChat.office)", minutesAgo: 14, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a011", category: "work", urgency: "high", title: "Mangel zugewiesen",
+             body: "Randfuge Flur EG offen · 2026-041 Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)", objectType: "workItem", minutesAgo: 25, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a002", category: "ticket", urgency: "normal", title: "Antwort zu T-2026-0007",
-             body: "IT-Support: Bitte einmal die App öffnen und im WLAN warten.", link: "/helpdesk/\(DemoContent.ticketId)", minutesAgo: 47, read: false),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a003", category: "broadcast", urgency: "normal", title: "Nachricht aus dem Büro",
-             body: "Ab Montag Abholung der Pumpe 2 erst ab 6:45 Uhr am Lager.", link: "", minutesAgo: 180, read: false),
-        Item(id: "0193a1b2-de00-7000-8000-00000000a004", category: "assignment", urgency: "normal", title: "Neue Bauakte zugewiesen",
-             body: "2026-044 · MFH Isarpark, Haus B", link: "/bauakten/\(DemoContent.isarpark)", minutesAgo: 60 * 26, read: true),
+             body: "IT-Support: Bitte einmal die App öffnen und im WLAN warten.", link: "/it-center/helpdesk/\(DemoContent.ticketId)", minutesAgo: 47, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a012", category: "bauakte", urgency: "normal", title: "Neue Notiz von Sabine Wagner",
+             body: "EFH Schneider – bitte Fotos der Dämmung vor dem Einbau.", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 70, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a013", category: "approval", urgency: "normal", title: "Dokument zur Genehmigung",
+             body: "Aufmaß Haus B · 2026-044 MFH Isarpark", link: "/bauakten/\(DemoContent.isarpark)", minutesAgo: 110, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a003", category: "message", urgency: "normal", title: "Pumpe 2 ab Montag später",
+             body: "Ab Montag Abholung der Pumpe 2 erst ab 6:45 Uhr am Lager. Bitte die Touren entsprechend planen und Material am Vortag laden.",
+             link: "", sender: "Sabine Wagner", minutesAgo: 180, read: false),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a014", category: "bauakte", urgency: "normal", title: "Abnahme unterschrieben",
+             body: "2026-038 EFH Schneider · ohne Mängel", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 60 * 5, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a015", category: "absence", urgency: "low", title: "Urlaubsantrag genehmigt",
+             body: "Mo 16.11. bis Fr 20.11. · 5 Tage", link: "/personal/urlaub", minutesAgo: 60 * 26, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a004", category: "bauakte", urgency: "normal", title: "Bauakte zugewiesen",
+             body: "2026-044 · MFH Isarpark, Haus B", link: "/bauakten/\(DemoContent.isarpark)", minutesAgo: 60 * 28, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a016", category: "system", urgency: "normal", title: "Wartung angekündigt",
+             body: "Samstag 6:00 bis 7:30 Uhr – EstrichONE ist dann nicht erreichbar.", link: "", minutesAgo: 60 * 50, read: true),
         Item(id: "0193a1b2-de00-7000-8000-00000000a005", category: "deadline", urgency: "low", title: "Frist morgen",
-             body: "CM-Messung Behandlungsraum 2 · Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)", minutesAgo: 60 * 30, read: true),
+             body: "CM-Messung Behandlungsraum 2 · Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)", minutesAgo: 60 * 75, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a017", category: "planning", urgency: "normal", title: "Planänderung für Donnerstag",
+             body: "Halle Weber: Beginn 8:00 statt 7:00 Uhr.", link: "/planung/wer-faehrt-wohin", minutesAgo: 60 * 24 * 8, read: true),
+        Item(id: "0193a1b2-de00-7000-8000-00000000a018", category: "ticket", urgency: "low", title: "T-2026-0004 erledigt",
+             body: "Tablet-Halterung im Fahrzeug 3 ist getauscht.", link: "/it-center/helpdesk/\(DemoContent.ticketId)", minutesAgo: 60 * 24 * 12, read: true),
     ]
 
     func inbox() -> [String: Any] {
@@ -47,7 +55,8 @@ final class DemoNotifications {
         let list: [[String: Any]] = items.map { item in
             [
                 "id": item.id, "category": item.category, "urgency": item.urgency, "title": item.title, "body": item.body,
-                "link": item.link.isEmpty ? NSNull() : item.link, "objectType": NSNull(), "objectId": NSNull(),
+                "link": item.link.isEmpty ? NSNull() : item.link, "objectType": item.objectType.isEmpty ? NSNull() : item.objectType,
+                "objectId": NSNull(), "senderName": item.sender.isEmpty ? NSNull() : item.sender,
                 "createdAt": APIDate.format(now.addingTimeInterval(TimeInterval(-60 * item.minutesAgo))),
                 "readAt": item.read ? APIDate.format(now.addingTimeInterval(TimeInterval(-60 * item.minutesAgo + 300))) : NSNull(),
             ]
@@ -89,8 +98,12 @@ final class DemoNotifications {
         return preferenceList()
     }
 
-    func markRead(_ id: String) {
-        if let index = items.firstIndex(where: { $0.id == id }) { items[index].read = true }
+    func markRead(_ id: String, read: Bool = true) {
+        if let index = items.firstIndex(where: { $0.id == id }) { items[index].read = read }
+    }
+
+    func delete(_ id: String) {
+        items.removeAll { $0.id == id }
     }
 
     func markAllRead() {

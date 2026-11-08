@@ -26,6 +26,12 @@ data class InboxNotification(
     val isUrgent: Boolean get() = urgency == "high"
     val created: Instant? get() = ApiDate.parse(createdAt)
     val route: NotificationRoute? get() = NotificationRoute.from(link, objectType, objectId)
+    /** Art fürs Postfach (Filter, Symbol, Farbe). */
+    val kind: NotificationKind get() = NotificationKind.of(category)
+    /** Öffnet ein Objekt in der App (sonst zeigt das Postfach die Einzelansicht). */
+    val hasTarget: Boolean get() = route.let { it != null && it != NotificationRoute.Inbox }
+    /** Pfad der Weboberfläche für „Im Browser öffnen“ (z. B. /system/backup-ziele). */
+    val webPath: String? get() = link?.trim()?.takeIf { it.startsWith("/") && !it.startsWith("/api/") }
 }
 
 @Serializable
@@ -62,6 +68,8 @@ sealed interface NotificationRoute {
         private val uuid = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
 
         fun from(link: String?, objectType: String? = null, objectId: String? = null): NotificationRoute? {
+            // Meldungen im IT-Center (Fehler, Wünsche) haben in der App keine eigene Seite – nicht als Helpdesk-Ticket öffnen.
+            if (objectType.equals("feedback", ignoreCase = true)) return Inbox
             link?.let { parse(it) }?.let { return it }
             val id = objectId?.takeIf { uuid.matches(it) }?.lowercase()
             return when (objectType?.lowercase()) {
@@ -69,7 +77,7 @@ sealed interface NotificationRoute {
                 "ticket" -> id?.let { Ticket(it) }
                 "assignment", "plan", "planday", "planning" -> Planning(null)
                 "workitem", "task" -> Tasks
-                "chatconversation", "chat" -> Chat(id)
+                "chatconversation", "chat", "chatmessage" -> Chat(id)
                 "approval" -> Inbox
                 else -> null
             } ?: if (link != null) Inbox else null
@@ -79,7 +87,7 @@ sealed interface NotificationRoute {
             val uri = runCatching { URI(link.trim()) }.getOrNull() ?: return null
             val parts = (uri.path ?: "").split('/').filter { it.isNotEmpty() }.toMutableList()
             if (uri.scheme == "estrichone" && uri.host != null) parts.add(0, uri.host)
-            while (parts.isNotEmpty() && parts.first().lowercase() in setOf("app", "it-center")) parts.removeAt(0)
+            while (parts.isNotEmpty() && parts.first().lowercase() in setOf("app", "it-center", "api", "v1")) parts.removeAt(0)
             val head = parts.firstOrNull()?.lowercase() ?: return null
             val id = parts.getOrNull(1)?.takeIf { uuid.matches(it) }?.lowercase()
             val day = uri.query?.split('&')?.map { it.split('=', limit = 2) }?.firstOrNull { it[0] == "day" || it[0] == "tag" }?.getOrNull(1)
@@ -87,9 +95,9 @@ sealed interface NotificationRoute {
                 "bauakte", "bauakten" -> id?.let { Bauakte(it) }
                 "helpdesk", "tickets", "ticket", "meldungen" -> id?.let { Ticket(it) }
                 "planung", "planning", "plan", "disposition" -> Planning(day ?: parts.drop(1).lastOrNull()?.takeIf { it.length == 10 })
-                "aufgaben", "tasks" -> Tasks
+                "aufgaben", "tasks", "work-items", "maengel" -> Tasks
                 "chat", "nachrichten", "messenger" -> Chat(id)
-                "benachrichtigungen", "notifications", "postfach" -> Inbox
+                "benachrichtigungen", "notifications", "postfach", "urlaub", "personal", "system" -> Inbox
                 else -> null
             }
         }
@@ -97,6 +105,10 @@ sealed interface NotificationRoute {
 }
 
 suspend fun EstrichOneApi.notifications(): NotificationInbox = send("GET", "notifications", null)
+/** Seite des Postfachs: höchstens [limit] Einträge, optional nur ältere als [before] („Ältere laden“). */
+suspend fun EstrichOneApi.notifications(limit: Int, before: Instant? = null): NotificationInbox =
+    send("GET", "notifications", null, query = mapOf("limit" to limit.toString(), "before" to before?.let { ApiDate.format(it) }))
+suspend fun EstrichOneApi.markNotificationUnread(id: String) = send<Unit>("POST", "notifications/$id/unread", JsonObject(emptyMap()))
 suspend fun EstrichOneApi.markNotificationRead(id: String) = send<Unit>("POST", "notifications/$id/read", JsonObject(emptyMap()))
 suspend fun EstrichOneApi.markAllNotificationsRead() = send<JsonElement>("POST", "notifications/read-all", JsonObject(emptyMap()))
 suspend fun EstrichOneApi.deleteNotification(id: String) = send<Unit>("DELETE", "notifications/$id", null)

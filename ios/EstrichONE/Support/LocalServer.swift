@@ -266,6 +266,13 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         case let notificationPath where demo != nil && notificationPath.hasPrefix("/api/v1/notifications/") && notificationPath.hasSuffix("/read"):
             notifications.markRead(notificationPath.split(separator: "/").map(String.init)[3].lowercased())
             return (204, "")
+        case let notificationPath where demo != nil && notificationPath.hasPrefix("/api/v1/notifications/") && notificationPath.hasSuffix("/unread"):
+            notifications.markRead(notificationPath.split(separator: "/").map(String.init)[3].lowercased(), read: false)
+            return (204, "")
+        case let notificationPath where demo != nil && method == "DELETE" && notificationPath.hasPrefix("/api/v1/notifications/")
+            && notificationPath.split(separator: "/").count == 4:
+            notifications.delete(notificationPath.split(separator: "/").map(String.init)[3].lowercased())
+            return (204, "")
         case "/api/v1/planning/backlog" where demo != nil:
             return json(200, planning.backlog())
         case "/api/v1/planning/resources" where demo != nil:

@@ -13,6 +13,8 @@ public struct InboxNotification: Decodable, Equatable, Sendable, Identifiable {
     public let link: String?
     public let objectType: String?
     public let objectId: UUID?
+    /// Absender bei Nachrichten aus dem Büro (sonst `nil`).
+    public let senderName: String?
     public let createdAt: Date
     public var readAt: Date?
 
@@ -20,9 +22,18 @@ public struct InboxNotification: Decodable, Equatable, Sendable, Identifiable {
     public var isUrgent: Bool { urgency == "high" }
     /// Ziel in der App (Bauakte, Meldung, Planung), sonst `nil`.
     public var route: NotificationRoute? { NotificationRoute(link: link, objectType: objectType, objectId: objectId) }
+    /// Art fürs Postfach (Filter, Symbol, Farbe).
+    public var kind: NotificationKind { NotificationKind(category: category) }
+    /// Öffnet ein Objekt in der App (sonst zeigt das Postfach die Einzelansicht).
+    public var hasTarget: Bool { route.map { $0 != .inbox } ?? false }
+    /// Pfad in der Weboberfläche (z. B. `/system/backup-ziele`) für „Im Browser öffnen“, wenn die App kein Ziel hat.
+    public var webPath: String? {
+        guard let link = link?.trimmingCharacters(in: .whitespaces), link.hasPrefix("/"), !link.hasPrefix("/api/") else { return nil }
+        return link
+    }
 
     public init(id: UUID, category: String?, urgency: String?, title: String, body: String?, link: String?, objectType: String? = nil,
-                objectId: UUID? = nil, createdAt: Date, readAt: Date?) {
+                objectId: UUID? = nil, senderName: String? = nil, createdAt: Date, readAt: Date?) {
         self.id = id
         self.category = category
         self.urgency = urgency
@@ -31,6 +42,7 @@ public struct InboxNotification: Decodable, Equatable, Sendable, Identifiable {
         self.link = link
         self.objectType = objectType
         self.objectId = objectId
+        self.senderName = senderName
         self.createdAt = createdAt
         self.readAt = readAt
     }
@@ -45,6 +57,7 @@ public struct InboxNotification: Decodable, Equatable, Sendable, Identifiable {
         link = try c.decodeIfPresent(String.self, forKey: .link)
         objectType = try c.decodeIfPresent(String.self, forKey: .objectType)
         objectId = try? c.decodeIfPresent(UUID.self, forKey: .objectId)
+        senderName = try c.decodeIfPresent(String.self, forKey: .senderName)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? Date()
         if let date = try c.decodeIfPresent(Date.self, forKey: .readAt) {
             readAt = date
@@ -56,7 +69,7 @@ public struct InboxNotification: Decodable, Equatable, Sendable, Identifiable {
     }
 
     private enum CodingKeys: String, CodingKey {
-        case id, category, urgency, title, body, link, objectType, objectId, createdAt, readAt, isRead
+        case id, category, urgency, title, body, link, objectType, objectId, senderName, createdAt, readAt, isRead
     }
 }
 
@@ -100,6 +113,11 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
     public var id: Self { self }
 
     public init?(link: String?, objectType: String? = nil, objectId: UUID? = nil) {
+        // Meldungen im IT-Center (Fehler, Wünsche) haben in der App keine eigene Seite – nicht als Helpdesk-Ticket öffnen.
+        if objectType?.lowercased() == "feedback" {
+            self = .inbox
+            return
+        }
         if let link, let route = Self.parse(link) {
             self = route
             return
@@ -109,7 +127,7 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         case let ("ticket"?, id?): self = .ticket(id)
         case ("assignment"?, _), ("plan"?, _), ("planday"?, _), ("planning"?, _): self = .planning(day: nil)
         case ("workitem"?, _), ("task"?, _): self = .tasks
-        case let ("chatconversation"?, id), let ("chat"?, id): self = .chat(id)
+        case let ("chatconversation"?, id), let ("chat"?, id), let ("chatmessage"?, id): self = .chat(id)
         case ("approval"?, _): self = .inbox
         default:
             guard link != nil else { return nil }
@@ -123,7 +141,7 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         var parts = components.path.split(separator: "/").map(String.init)
         if components.scheme == "estrichone", let host = components.host { parts.insert(host, at: 0) }
         // Präfixe der Weboberfläche ohne eigene Bedeutung („/app/…“, „/it-center/helpdesk/…“).
-        while let first = parts.first, ["app", "it-center"].contains(first.lowercased()) { parts.removeFirst() }
+        while let first = parts.first, ["app", "it-center", "api", "v1"].contains(first.lowercased()) { parts.removeFirst() }
         guard let head = parts.first?.lowercased() else { return nil }
         let id = parts.dropFirst().first.flatMap { UUID(uuidString: $0) }
         let day = components.queryItems?.first { $0.name == "day" || $0.name == "tag" }?.value
@@ -131,9 +149,9 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         case "bauakte", "bauakten": return id.map { .bauakte($0) }
         case "helpdesk", "tickets", "ticket", "meldungen": return id.map { .ticket($0) }
         case "planung", "planning", "plan", "disposition": return .planning(day: day ?? parts.dropFirst().last.flatMap { $0.count == 10 ? $0 : nil })
-        case "aufgaben", "tasks": return .tasks
+        case "aufgaben", "tasks", "work-items", "maengel": return .tasks
         case "chat", "nachrichten", "messenger": return .chat(id)
-        case "benachrichtigungen", "notifications", "postfach": return .inbox
+        case "benachrichtigungen", "notifications", "postfach", "urlaub", "personal", "system": return .inbox
         default: return nil
         }
     }
@@ -169,6 +187,21 @@ private struct EmptyBody: Encodable, Sendable {}
 extension AuthorizedClient {
     public func notifications() async throws(APIError) -> NotificationInbox {
         try await get("notifications")
+    }
+
+    /// Seite des Postfachs: höchstens `limit` Einträge, optional nur ältere als `before` („Ältere laden“).
+    public func notifications(limit: Int, before: Date? = nil) async throws(APIError) -> NotificationInbox {
+        var query = [URLQueryItem(name: "limit", value: String(limit))]
+        if let before { query.append(URLQueryItem(name: "before", value: APIDate.format(before))) }
+        return try await get("notifications", query: query)
+    }
+
+    public func markNotificationUnread(_ id: UUID) async throws(APIError) {
+        let _: NoContent = try await post("notifications/\(id.key)/unread", body: EmptyBody())
+    }
+
+    public func deleteNotification(_ id: UUID) async throws(APIError) {
+        let _: NoContent = try await send(APIRequest(method: "DELETE", path: "notifications/\(id.key)"))
     }
 
     public func markNotificationRead(_ id: UUID) async throws(APIError) {

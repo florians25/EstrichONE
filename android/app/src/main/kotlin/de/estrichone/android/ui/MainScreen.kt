@@ -76,6 +76,7 @@ sealed interface Route {
     data class Camera(val bauakteId: String, val scan: Boolean = false) : Route
     data object ChatList : Route
     data object Inbox : Route
+    data class NotificationDetail(val item: de.estrichone.core.InboxNotification) : Route
     data object Tasks : Route
     data object Week : Route
     data object Dispatch : Route
@@ -252,6 +253,7 @@ private fun RouteScreen(route: Route, twoPane: Boolean) {
         is Route.Camera -> CameraScreen(route.bauakteId, route.scan)
         Route.ChatList -> ChatListScreen()
         Route.Inbox -> InboxScreen()
+        is Route.NotificationDetail -> NotificationDetailScreen(route.item)
         Route.Tasks -> MyTasksScreen()
         Route.Week -> WeekScreen()
         Route.Dispatch -> DispatchScreen()

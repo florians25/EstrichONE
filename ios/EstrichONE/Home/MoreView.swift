@@ -242,7 +242,7 @@ struct MoreView: View {
         case "sync": route = .sync
         case "sicherheit": route = .security
         case "mehr-zuruecksetzen": confirmReset = true
-        case "postfach": route = .inbox
+        case let scene? where scene.hasPrefix("postfach"): route = .inbox
         case "chat", "chat-verlauf", "chat-gruppe", "chat-anhang", "chat-diktat": route = .chat
         case "disposition": route = .dispatch
         case "aufgaben": route = .tasks

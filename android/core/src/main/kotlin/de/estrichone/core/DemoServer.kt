@@ -120,6 +120,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path == "notifications/read-all" -> 200 to json("count" to notifications.readAll())
             path == "notifications/preferences" -> 200 to if (method == "PUT") notifications.save(body) else notifications.preferences()
             parts.size == 3 && parts[0] == "notifications" && parts[2] == "read" -> { notifications.markRead(parts[1]); 204 to null }
+            parts.size == 3 && parts[0] == "notifications" && parts[2] == "unread" -> { notifications.markRead(parts[1], read = false); 204 to null }
             parts.size == 2 && parts[0] == "notifications" && method == "DELETE" -> { notifications.delete(parts[1]); 204 to null }
             path.startsWith("notifications/devices") -> 204 to null
             path.startsWith("chat/") -> chat.handle(method, path.removePrefix("chat/"), query, body, raw, content)
@@ -185,28 +186,38 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
 /** Postfach im Demomodus (wie DemoNotifications.swift). */
 private class DemoInbox {
     private data class Item(val id: String, val category: String, val urgency: String, val title: String, val body: String, val link: String?,
-        val minutesAgo: Long, var read: Boolean)
+        val minutesAgo: Long, var read: Boolean, val objectType: String? = null, val sender: String? = null)
 
+    /** Wie der Server sie schickt (Kategorien und Links aus backend/src, gleich wie DemoNotifications.swift). */
     private val items = mutableListOf(
         Item("0193a1b2-de00-7000-8000-00000000a001", "planning", "high", "Plan für morgen freigegeben",
             "Kolonne Huber: 07:30 Praxis Dr. Maier, 10:30 EFH Schneider.", "/planung/wer-faehrt-wohin", 12, false),
-        Item("0193a1b2-de00-7000-8000-00000000a010", "chat", "normal", "Neue Nachricht von Sabine Wagner", "Sabine Wagner (Büro)",
+        Item("0193a1b2-de00-7000-8000-00000000a010", "chat", "normal", "Neue Nachricht von Sabine Wagner", "Büro · 2 neue Nachrichten",
             "/chat/${DemoChat.OFFICE}", 14, false),
-        Item("0193a1b2-de00-7000-8000-00000000a011", "work", "high", "Mangel Ihnen zugewiesen", "Riss im Flur prüfen · EFH Schneider",
-            "/bauakten/${DemoData.EFH}", 25, false),
+        Item("0193a1b2-de00-7000-8000-00000000a011", "work", "high", "Mangel zugewiesen", "Riss im Flur prüfen · 2026-038 EFH Schneider",
+            "/bauakten/${DemoData.EFH}", 25, false, objectType = "workItem"),
         Item("0193a1b2-de00-7000-8000-00000000a002", "ticket", "normal", "Antwort zu T-2026-0007", "IT-Support: Bitte einmal die App öffnen und im WLAN warten.",
-            "/helpdesk/${DemoData.TICKET}", 47, false),
-        Item("0193a1b2-de00-7000-8000-00000000a012", "bauakte", "normal", "Kommentar in Ihrer Bauakte", "Sabine Wagner: Bitte Fotos der Dämmung vor dem Einbau.",
+            "/it-center/helpdesk/${DemoData.TICKET}", 47, false),
+        Item("0193a1b2-de00-7000-8000-00000000a012", "bauakte", "normal", "Neue Notiz von Sabine Wagner", "EFH Schneider – bitte Fotos der Dämmung vor dem Einbau.",
             "/bauakten/${DemoData.EFH}", 70, false),
-        Item("0193a1b2-de00-7000-8000-00000000a003", "message", "normal", "Nachricht aus dem Büro", "Ab Montag Abholung der Pumpe 2 erst ab 6:45 Uhr am Lager.",
-            null, 180, false),
+        Item("0193a1b2-de00-7000-8000-00000000a013", "approval", "normal", "Dokument zur Genehmigung", "Aufmaß Haus B · 2026-044 MFH Isarpark",
+            "/bauakten/${DemoData.ISARPARK}", 110, true),
+        Item("0193a1b2-de00-7000-8000-00000000a003", "message", "normal", "Pumpe 2 ab Montag später",
+            "Ab Montag Abholung der Pumpe 2 erst ab 6:45 Uhr am Lager. Bitte die Touren entsprechend planen und Material am Vortag laden.",
+            null, 180, false, sender = "Sabine Wagner"),
         Item("0193a1b2-de00-7000-8000-00000000a014", "bauakte", "normal", "Abnahme unterschrieben", "Kindergarten Sonnenschein · ohne Mängel",
             "/bauakten/${DemoData.KITA}", 300, true),
-        Item("0193a1b2-de00-7000-8000-00000000a015", "absence", "low", "Urlaubsantrag genehmigt", "Mo 16.11. bis Fr 20.11.", null, 480, true),
-        Item("0193a1b2-de00-7000-8000-00000000a004", "bauakte", "normal", "Neue Bauakte zugewiesen", "2026-044 · MFH Isarpark, Haus B",
-            "/bauakten/${DemoData.ISARPARK}", 60 * 26, true),
+        Item("0193a1b2-de00-7000-8000-00000000a015", "absence", "low", "Urlaubsantrag genehmigt", "Mo 16.11. bis Fr 20.11. · 5 Tage", "/personal/urlaub", 60 * 26, true),
+        Item("0193a1b2-de00-7000-8000-00000000a004", "bauakte", "normal", "Bauakte zugewiesen", "2026-044 · MFH Isarpark, Haus B",
+            "/bauakten/${DemoData.ISARPARK}", 60 * 28, true),
+        Item("0193a1b2-de00-7000-8000-00000000a016", "system", "normal", "Wartung angekündigt", "Samstag 6:00 bis 7:30 Uhr – EstrichONE ist dann nicht erreichbar.",
+            null, 60 * 50, true),
         Item("0193a1b2-de00-7000-8000-00000000a005", "deadline", "low", "Frist morgen", "CM-Messung Behandlungsraum 2 · Praxis Dr. Maier",
-            "/bauakten/${DemoData.PRAXIS}", 60 * 30, true),
+            "/bauakten/${DemoData.PRAXIS}", 60 * 75, true),
+        Item("0193a1b2-de00-7000-8000-00000000a017", "planning", "normal", "Planänderung für Donnerstag", "Halle Weber: Beginn 8:00 statt 7:00 Uhr.",
+            "/planung/wer-faehrt-wohin", 60 * 24 * 8, true),
+        Item("0193a1b2-de00-7000-8000-00000000a018", "ticket", "low", "T-2026-0004 erledigt", "Tablet-Halterung im Fahrzeug 3 ist getauscht.",
+            "/it-center/helpdesk/${DemoData.TICKET}", 60 * 24 * 12, true),
     )
 
     private val preferences = mutableListOf(
@@ -221,13 +232,13 @@ private class DemoInbox {
     fun inbox(now: Instant) = json(
         "items" to items.map {
             mapOf("id" to it.id, "category" to it.category, "urgency" to it.urgency, "title" to it.title, "body" to it.body, "link" to it.link,
-                "objectType" to null, "objectId" to null, "createdAt" to ApiDate.format(now.minusSeconds(it.minutesAgo * 60)),
+                "objectType" to it.objectType, "objectId" to null, "senderName" to it.sender, "createdAt" to ApiDate.format(now.minusSeconds(it.minutesAgo * 60)),
                 "readAt" to if (it.read) ApiDate.format(now.minusSeconds(it.minutesAgo * 60 - 300)) else null)
         },
         "unreadCount" to items.count { !it.read },
     )
 
-    fun markRead(id: String) { items.firstOrNull { it.id == id }?.read = true }
+    fun markRead(id: String, read: Boolean = true) { items.firstOrNull { it.id == id }?.read = read }
     fun delete(id: String) { items.removeAll { it.id == id } }
     fun readAll(): Int { items.forEach { it.read = true }; return 0 }
     fun preferences() = json("items" to preferences)
