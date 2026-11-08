@@ -74,11 +74,18 @@ public sealed class BackupCenterTests(PostgresFixture postgres) : IAsyncLifetime
         var stale = await Monitor.RefreshAsync(notify: false, Ct);
         stale.Backup.Severity.ShouldBe("critical");
         stale.Banners.Single().ShouldBe(new HealthBanner("backup", "critical",
-            "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 15.01.2030 22:30 Uhr). Bitte geben Sie umgehend Ihrem Admin Bescheid."));
+            "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 15.01.2030 22:30 Uhr). Backup-Ziele und Backup-Dienst unter System → Sicherung prüfen.", AdminOnly: true));
 
         using var later = await _factory.CreateClientAsAsync("polier", StandardRoles.SiteWorkerId);
         var cached = await later.GetFromJsonAsync<HealthBannerResponse>("/api/v1/system/health-banner", TestJson.Options, Ct);
-        cached!.Banners.Single().Severity.ShouldBe("critical");
+        // Benutzer sehen Ausfälle nicht (nur Administratoren).
+        cached!.Banners.ShouldBeEmpty();
+        cached.Backup.Severity.ShouldBe("ok");
+        cached.Backup.Message.ShouldBeNull();
+        using var it = await _factory.CreateClientAsAsync("it-admin", StandardRoles.ItAdministratorId);
+        var forAdmin = await it.GetFromJsonAsync<HealthBannerResponse>("/api/v1/system/health-banner", TestJson.Options, Ct);
+        forAdmin!.Banners.Single().Severity.ShouldBe("critical");
+        forAdmin.Backup.Severity.ShouldBe("critical");
         using var anonymous = _factory.CreateClient();
         (await anonymous.GetAsync(new Uri("/api/v1/system/health-banner", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
     }

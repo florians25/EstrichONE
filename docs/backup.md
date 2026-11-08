@@ -2,8 +2,8 @@
 
 EstrichONE sichert sich selbst: täglich mindestens eine **Vollsicherung** (zusätzlich inkrementell möglich), verschlüsselt
 mit [restic](https://restic.net) (AES-256, Prüfsummen über jeden Block), auf ein oder mehrere Ziele. Alles Nötige steht im
-**Backup Center** der Weboberfläche (System → Sicherung, Recht `backup.manage`). Fällt der Backup-Server aus, sehen alle
-Benutzer in Web und Apps ein rotes Banner; Administratoren bekommen nach jeder Sicherung eine Pushnachricht.
+**Backup Center** der Weboberfläche (System → Sicherung, Recht `backup.manage`). Fällt der Backup-Server aus, sehen
+Administratoren (Recht `settings.manage` oder `backup.manage`) in Web und Apps ein rotes Banner – andere Benutzer nicht; Administratoren bekommen nach jeder Sicherung eine Pushnachricht.
 
 ## Auf einen Blick
 
@@ -87,7 +87,7 @@ EstrichONE-Server aus angesprochen (Kopplungscode, gepinntes Zertifikat):
 | Hauptserver im RZ, Archiv zuhause hinter NAT | Port 8443 (TCP) am Router auf den Archivrechner weiterleiten und eine DynDNS-Adresse verwenden, oder beide per WireGuard/Tailscale verbinden und die Tunnel-Adresse koppeln. Die Verbindung ist durch das gepinnte Zertifikat und das Kopplungs-Token geschützt; der Archivserver nimmt nur Anfragen gekoppelter Clients an. |
 | Kein zweiter Rechner | Archiv im Stack (`-e ESTRICHONE_ARCHIVE=lokal`) – nur als Übergang, ein Archiv gehört auf eigene Hardware. |
 
-Fällt der Archivserver aus, hält EstrichONE die Dokumente zurück und überträgt sie später; Benutzer sehen das gelbe Banner.
+Fällt der Archivserver aus, hält EstrichONE die Dokumente zurück und überträgt sie später; Administratoren sehen das gelbe Banner.
 
 ### D) Kombiserver – Backup-Ziel und Archivserver auf EINEM Rechner
 
@@ -419,7 +419,7 @@ Start bzw. Wiederverbinden. Auch während einer Wartung erreichbar.
 ```json
 {
   "backup":  { "configured": true, "reachable": false, "lastSuccessAt": "2026-10-26T21:30:12Z", "severity": "critical",
-               "message": "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 26.10.2026 22:30 Uhr). Bitte geben Sie umgehend Ihrem Admin Bescheid.",
+               "message": "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 26.10.2026 22:30 Uhr). Backup-Ziele und Backup-Dienst unter System → Sicherung prüfen.",
                "restoreRunning": false },
   "archive": { "configured": true, "reachable": false, "lastSuccessAt": "2026-10-27T08:02:00Z", "severity": "warning",
                "message": "Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung 27.10.2026 09:02 Uhr). Bitte informieren Sie Ihren Admin." },
@@ -432,7 +432,9 @@ Start bzw. Wiederverbinden. Auch während einer Wartung erreichbar.
 ```
 
 Clients zeigen **genau `banners`** an (Reihenfolge = Wichtigkeit, `critical` rot, `warning` gelb, Text unverändert);
-leeres Array = kein Banner. Regeln auf dem Server:
+leeres Array = kein Banner. Die Ausfall-Banner `backup` und `archive` liefert der Server nur an Administratoren (Recht
+`settings.manage` oder `backup.manage`); für alle anderen ist das Array leer und `severity` in `backup`/`archive` steht auf
+`ok` (ohne `message`). Regeln auf dem Server:
 
 | Banner | Bedingung |
 |---|---|

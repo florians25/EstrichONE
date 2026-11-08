@@ -70,7 +70,7 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             var backupStale = backup.LastSuccessAt is not { } success || now - success > BackupMaxAge;
             var backupCritical = backupConfigured && restore is null && (!backupReachable || backupStale);
             var backupText = backupCritical
-                ? $"ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup {Local(backup.LastSuccessAt)}). Bitte geben Sie umgehend Ihrem Admin Bescheid."
+                ? $"ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup {Local(backup.LastSuccessAt)}). Backup-Ziele und Backup-Dienst unter System → Sicherung prüfen."
                 : null;
 
             var archiveService = services.GetRequiredService<ArchiveService>();
@@ -86,12 +86,13 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
 
             var archiveWarning = connection is not null && !archiveReachable;
             var archiveText = archiveWarning
-                ? $"Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung {Local(lastArchived)}). Bitte informieren Sie Ihren Admin."
+                ? $"Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung {Local(lastArchived)}). Dokumente werden zurückgehalten – Archivserver unter System → Archiv prüfen."
                 : null;
 
+            // Ausfälle von Backup- und Archivserver sehen nur Administratoren (Benutzer verunsichert das nur; Admins bekommen zusätzlich Push).
             var banners = new List<HealthBanner>();
-            if (backupText is not null) banners.Add(new HealthBanner("backup", "critical", backupText));
-            if (archiveText is not null) banners.Add(new HealthBanner("archive", "warning", archiveText));
+            if (backupText is not null) banners.Add(new HealthBanner("backup", "critical", backupText, AdminOnly: true));
+            if (archiveText is not null) banners.Add(new HealthBanner("archive", "warning", archiveText, AdminOnly: true));
             // Speicher-Auslagerung: gelb und nur für die Verwaltung (Benutzer bekommen beim Öffnen eine klare Meldung).
             if (services.GetService<IOffloadHealth>() is { } offloadHealth && await offloadHealth.GetAsync(cancellationToken) is { Configured: true } offload)
             {
@@ -265,16 +266,24 @@ internal static class SystemHealthEndpoints
         api.MapGet("/system/health-banner", async (SystemHealthMonitor monitor, ICurrentUser user, IRoleAssignments roles, CancellationToken ct) =>
             {
                 var health = await monitor.GetAsync(ct);
-                if (health.Banners.Any(b => b.AdminOnly)
-                    && !(await roles.GetUserIdsWithPermissionAsync(Permissions.SettingsManage, ct)).Contains(user.UserId))
+                var admin = (await roles.GetUserIdsWithPermissionAsync(Permissions.SettingsManage, ct)).Contains(user.UserId)
+                    || (await roles.GetUserIdsWithPermissionAsync(Permissions.BackupManage, ct)).Contains(user.UserId);
+                if (!admin)
                 {
-                    health = health with { Banners = [.. health.Banners.Where(b => !b.AdminOnly)] };
+                    // Benutzer: keine Ausfallhinweise (auch nicht über Schweregrad/Text ableitbar); Erreichbarkeit bleibt für
+                    // „Abschließen & Archivieren“ erhalten.
+                    health = health with
+                    {
+                        Banners = [.. health.Banners.Where(b => !b.AdminOnly)],
+                        Backup = health.Backup with { Severity = "ok", Message = null },
+                        Archive = health.Archive with { Severity = "ok", Message = null },
+                    };
                 }
 
                 return TypedResults.Ok(health);
             })
             .WithTags("Überwachung").WithName("GetHealthBanner")
-            .WithSummary("Status-Banner für alle Clients: Backup-Server (rot), Archivserver (gelb), Storage der Auslagerung (gelb, nur Verwaltung), nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.")
+            .WithSummary("Status-Banner für alle Clients: Backup-Server (rot), Archivserver (gelb), Storage der Auslagerung (gelb) – Ausfallhinweise nur für Administratoren, nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.")
             .RequireAuthorization();
     }
 }
