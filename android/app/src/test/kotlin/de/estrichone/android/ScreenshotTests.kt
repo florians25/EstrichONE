@@ -23,6 +23,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.GraphicsMode
+import org.robolectric.shadows.ShadowLooper
 
 /** Anwendung ohne Hintergrundarbeit für Robolectric. */
 class TestApp : Application()
@@ -46,7 +47,13 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     private fun demo(): AppModel {
         val model = AppModel(ApplicationProvider.getApplicationContext())
         model.startDemo()
-        compose.waitUntil(30_000) { model.session.value?.service?.bauakten()?.isNotEmpty() == true && model.session.value?.notices?.value != null }
+        // Robolectric pausiert den Main-Looper: beim Warten selbst abarbeiten (Abgleich mit dem Demoserver, Systemhinweise).
+        val deadline = System.currentTimeMillis() + 60_000
+        while (!(model.session.value?.service?.bauakten()?.isNotEmpty() == true && model.session.value?.notices?.value != null)) {
+            ShadowLooper.idleMainLooper()
+            Thread.sleep(50)
+            check(System.currentTimeMillis() < deadline) { "Demomodus nicht bereit: ${model.session.value?.status?.value}" }
+        }
         return model
     }
 
@@ -54,8 +61,9 @@ abstract class ScreenshotBase(private val device: String, private val appearance
         compose.setContent { EstrichTheme(appearance) { content() } }
         compose.waitForIdle()
         // Vorschaubilder und Abrufe laufen im Hintergrund.
-        repeat(6) {
-            Thread.sleep(250)
+        repeat(8) {
+            Thread.sleep(200)
+            ShadowLooper.idleMainLooper()
             compose.mainClock.advanceTimeBy(500)
             compose.waitForIdle()
         }
