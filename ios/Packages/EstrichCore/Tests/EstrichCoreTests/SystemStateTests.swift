@@ -24,8 +24,8 @@ struct SystemStateTests {
         """)
         let banners = failing.banners(at: now, timeZone: berlin)
         #expect(banners.map(\.level) == [.critical, .warning])
-        #expect(banners[0].text == "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 26.10.2026 03:15 Uhr). Bitte geben Sie umgehend Ihrem Admin Bescheid.")
-        #expect(banners[1].text == "Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung 20.10.2026 03:00 Uhr). Bitte informieren Sie Ihren Admin.")
+        #expect(banners[0].text == "Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: 26.10.2026 03:15 Uhr. Bitte informieren Sie umgehend die Administration.")
+        #expect(banners[1].text == "Archivserver nicht erreichbar. Letzte Archivierung: 20.10.2026 03:00 Uhr. Bitte informieren Sie die Administration.")
 
         let notConfigured = try health(#"{"backupTarget":{"configured":false,"reachable":false},"archive":{"configured":false}}"#)
         #expect(notConfigured.banners(at: now).isEmpty)
@@ -34,10 +34,10 @@ struct SystemStateTests {
         // Server mit fertigen Hinweisen (docs/backup.md): genau diese, in dieser Reihenfolge.
         let server = try health("""
         {"backup":{"configured":true,"reachable":false,"severity":"critical"},"archive":{"configured":false},
-         "banners":[{"key":"backup","severity":"critical","text":"ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 26.10.2026 22:30 Uhr). Bitte geben Sie umgehend Ihrem Admin Bescheid."}],
+         "banners":[{"key":"backup","severity":"critical","text":"Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: 26.10.2026 22:30 Uhr. Bitte informieren Sie umgehend die Administration."}],
          "checkedAt":"2026-10-27T21:31:00Z"}
         """)
-        #expect(server.banners(at: now).map(\.level) == [.critical] && server.banners(at: now).first?.text.hasSuffix("Ihrem Admin Bescheid.") == true)
+        #expect(server.banners(at: now).map(\.level) == [.critical] && server.banners(at: now).first?.text.hasSuffix("umgehend die Administration.") == true)
         #expect(try health(#"{"backup":{"configured":true,"reachable":false},"banners":[]}"#).banners(at: now).isEmpty)
         // Ohne Bewertung des Servers: letzte Sicherung älter als 26 Stunden.
         let stale = try health(#"{"backupTarget":{"configured":true,"reachable":true,"lastSuccessAt":"2026-10-26T08:00:00Z"}}"#)

@@ -136,9 +136,9 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
     private fun health(now: Instant): JsonObject {
         val banners = mutableListOf<Map<String, Any?>>()
         if (backupDown) banners += mapOf("key" to "backup", "severity" to "critical",
-            "text" to "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup ${Dates.dateTime(now.minusSeconds(31 * 3600))} Uhr). Bitte geben Sie umgehend Ihrem Admin Bescheid.")
+            "text" to "Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: ${Dates.dateTime(now.minusSeconds(31 * 3600))} Uhr. Bitte informieren Sie umgehend die Administration.")
         if (archiveDown) banners += mapOf("key" to "archive", "severity" to "warning",
-            "text" to "Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung ${Dates.dateTime(now.minusSeconds(9 * 86_400))} Uhr). Bitte informieren Sie Ihren Admin.")
+            "text" to "Archivserver nicht erreichbar. Letzte Archivierung: ${Dates.dateTime(now.minusSeconds(9 * 86_400))} Uhr. Bitte informieren Sie die Administration.")
         return json("backup" to mapOf("configured" to true, "reachable" to !backupDown), "archive" to mapOf("configured" to true, "reachable" to !archiveDown),
             "banners" to banners, "checkedAt" to ApiDate.format(now))
     }

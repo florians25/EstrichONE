@@ -89,12 +89,12 @@ public struct SystemHealth: Decodable, Sendable, Equatable {
         if let backupTarget, backupTarget.isFailing(at: now, maxAge: Self.maxBackupAge) {
             let when = Self.format(backupTarget.lastSuccessAt, timeZone: timeZone)
             result.append(HealthBanner(level: .critical, text: backupTarget.message
-                ?? "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup \(when)). Bitte geben Sie umgehend Ihrem Admin Bescheid."))
+                ?? "Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: \(when). Bitte informieren Sie umgehend die Administration."))
         }
         if let archive, archive.isFailing(at: now, maxAge: 8 * 24 * 3600) {
             let when = Self.format(archive.lastSuccessAt, timeZone: timeZone)
             result.append(HealthBanner(level: .warning, text: archive.message
-                ?? "Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung \(when)). Bitte informieren Sie Ihren Admin."))
+                ?? "Archivserver nicht erreichbar. Letzte Archivierung: \(when). Bitte informieren Sie die Administration."))
         }
         return result
     }

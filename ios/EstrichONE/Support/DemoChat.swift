@@ -60,11 +60,11 @@ final class DemoSwitches: @unchecked Sendable {
         var banners: [[String: Any]] = []
         if backupDown {
             banners.append(["key": "backup", "severity": "critical",
-                            "text": "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup \(formatter.string(from: lastBackup))). Bitte geben Sie umgehend Ihrem Admin Bescheid."])
+                            "text": "Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: \(formatter.string(from: lastBackup)). Bitte informieren Sie umgehend die Administration."])
         }
         if archiveDown {
             banners.append(["key": "archive", "severity": "warning",
-                            "text": "Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung \(formatter.string(from: lastArchive))). Bitte informieren Sie Ihren Admin."])
+                            "text": "Archivserver nicht erreichbar. Letzte Archivierung: \(formatter.string(from: lastArchive)). Bitte informieren Sie die Administration."])
         }
         return [
             "backup": ["configured": true, "reachable": !backupDown, "lastSuccessAt": APIDate.format(lastBackup), "severity": backupDown ? "critical" : "ok"],
