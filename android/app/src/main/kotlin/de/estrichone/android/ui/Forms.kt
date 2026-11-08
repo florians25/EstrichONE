@@ -130,9 +130,13 @@ fun DiarySheet(bauakteId: String, onDismiss: () -> Unit) {
     var end by remember { mutableStateOf("") }
     var text by remember { mutableStateOf("") }
     val day = remember { LocalDate.now(Dates.zone) }
+    // Fotos von heute zu dieser Baustelle (wie auf iOS am Tagebucheintrag).
+    val todaysPhotos = remember { session.service.photos(bauakteId).filter { it.time?.atZone(Dates.zone)?.toLocalDate() == day && it.isPhoto } }
+    var attachPhotos by remember { mutableStateOf(true) }
     FormSheet("Bautagebuch – ${Dates.relativeDay(day)}", bauakteId, onDismiss, canSave = text.isNotBlank(), onSave = {
         session.service.addDiary(bauakteId, day, text, weather, temperature.toIntOrNull(), workers.toIntOrNull(),
-            start.takeIf { it.length == 5 }?.let { "$it:00" }, end.takeIf { it.length == 5 }?.let { "$it:00" })
+            start.takeIf { it.length == 5 }?.let { "$it:00" }, end.takeIf { it.length == 5 }?.let { "$it:00" },
+            photoFileIds = if (attachPhotos) todaysPhotos.map { it.id } else emptyList())
         model.message("Bautagebuch gespeichert.")
     }) {
         Text("Wetter", style = MaterialTheme.typography.titleSmall)
@@ -151,6 +155,15 @@ fun DiarySheet(bauakteId: String, onDismiss: () -> Unit) {
             TimeField(end, { end = it }, "Ende", Modifier.weight(1f))
         }
         DictationField(text, { text = it }, "Was wurde gemacht?", minLines = 5)
+        if (todaysPhotos.isNotEmpty()) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Fotos von heute anhängen")
+                    Secondary("${todaysPhotos.size} Foto${if (todaysPhotos.size == 1) "" else "s"} dieser Baustelle")
+                }
+                Switch(attachPhotos, { attachPhotos = it })
+            }
+        }
     }
 }
 

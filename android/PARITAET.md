@@ -46,7 +46,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 |---|---|---|---|
 | Liste mit Suche, Gruppen nach Status, „Heute im Einsatz“ | ✅ | ✅ | zusätzlich Filter-Chips |
 | Schnellanlage mit Art, Adresse, Kunde (vorhanden oder neu) – offline | ✅ | ✅ | |
-| Dublettenprüfung beim neuen Kunden | ✅ | ❌ | API `contacts/duplicates` vorhanden, Oberfläche fehlt |
+| Dublettenprüfung beim neuen Kunden | ✅ | 🟡 | Hinweis auf ähnliche Kunden aus dem Bestand auf dem Gerät (offline); Serverprüfung `contacts/duplicates` nicht genutzt |
 | Kopf: Nummer, Status ändern, Titel, Kennzahlen aus dem Schema | ✅ | ✅ | |
 | Angeheftete Notiz, Kontakte (Adresse, Kunde, vor Ort, Bauleitung, nächster Einsatz) | ✅ | ✅ | |
 | Aktionsleiste (Foto, Scannen, Tagebuch, Mangel, Mehr) | ✅ | ✅ | |
@@ -56,7 +56,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Fotos und Videos (Raster nach Tagen, Großansicht, Beschriftung, Teilen, Löschen) | ✅ | ✅ | |
 | Dokumente nach Art, öffnen, scannen, hochladen | ✅ | ✅ | |
 | Aufgaben und Mängel (Fälligkeit, abhaken) | ✅ | ✅ | |
-| Bautagebuch (Wetter, Temperatur, Personen, Zeiten, Text, Diktat) | ✅ | ✅ | Fotos am Tagebucheintrag fehlen noch |
+| Bautagebuch (Wetter, Temperatur, Personen, Zeiten, Text, Diktat) | ✅ | ✅ | Fotos des Tages werden angehängt |
 | Erstbegehung nach Schema (Prüfpunkte, Bemerkungen, Messwerte) | ✅ | ✅ | Fotos je Prüfpunkt fehlen noch |
 | CM-Messung mit Belegreife | ✅ | ✅ | |
 | Abnahme mit Unterschriften Kunde/Auftragnehmer | ✅ | ✅ | Freigabelink per E-Mail an den Kunden fehlt |
@@ -128,7 +128,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 ## Offen (Reihenfolge nach Nutzen auf der Baustelle)
 
 1. Chat-Ausgang offline und Echtzeit (SSE), Gruppen anlegen
-2. Fotos an Bautagebuch und Prüfpunkten, Standort an Fotos
+2. Fotos an Prüfpunkten, Standort an Fotos
 3. Disposition/Kolonnenplan für Planer
-4. QR-Code bei der Einrichtung, Dublettenprüfung bei neuen Kunden
+4. QR-Code bei der Einrichtung
 5. FCM, sobald der Server Android-Push anbietet

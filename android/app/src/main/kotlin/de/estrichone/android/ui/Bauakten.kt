@@ -250,6 +250,17 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                 }
             } else {
                 OutlinedTextField(customerName, { customerName = it }, label = { Text("Name des Kunden") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                // Dublettenhinweis aus dem Bestand auf dem Gerät (auch offline).
+                val similar = remember(customerName) { duplicates(contacts, customerName, city) }
+                if (similar.isNotEmpty()) {
+                    Banner("Ähnliche Kunden gibt es schon – bitte prüfen:", Icons.Filled.PersonAdd, tones.warning, tones.warningSoft)
+                    SectionCard {
+                        similar.forEachIndexed { i, c ->
+                            if (i > 0) RowDivider(16.dp)
+                            RowItem(c.name, subtitle = c.subtitle, value = "Übernehmen", onClick = { customerId = c.id; newCustomer = false })
+                        }
+                    }
+                }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Firma", modifier = Modifier.weight(1f))
                     Switch(company, { company = it })
@@ -272,4 +283,12 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
             }, enabled = title.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Anlegen") }
         }
     }
+}
+
+/** Ähnliche Kunden: gleicher Nachname bzw. Name enthalten, bevorzugt im selben Ort (wie DuplicateFinder auf iOS). */
+fun duplicates(contacts: List<de.estrichone.core.Contact>, name: String, city: String): List<de.estrichone.core.Contact> {
+    val words = name.lowercase().split(' ', ',', '-').filter { it.length >= 3 && it !in setOf("familie", "herr", "frau", "gmbh", "und") }
+    if (words.isEmpty()) return emptyList()
+    return contacts.filter { c -> val n = c.name.lowercase(); words.any { n.contains(it) } }
+        .sortedByDescending { it.city.equals(city.trim(), ignoreCase = true) }.take(3)
 }
