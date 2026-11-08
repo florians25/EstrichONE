@@ -587,6 +587,13 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 	.eoHelpdesk { flex-direction: column; }
 	.eoHdMaster { width: 100%; height: auto; max-height: 45%; border-right: none; border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
 }
+/* Meldungen untereinander (schmale Fenster, 150 %): Seite scrollt als Ganzes, Liste mit fester Höhe, Meldung darunter */
+@media (max-width: 1000px) {
+	.eoFeedback { overflow-y: auto; }
+	.eoFeedback .eoHdMaster { max-height: none; flex: none; }
+	.eoFeedback .eoHdListScroll { height: 15rem !important; flex: none !important; }
+	.eoFeedback .eoHdDetail { flex: none !important; height: 85vh; min-height: 22rem; }
+}
 
 /* SAP Cards (nur Übersicht innerhalb der Bauakte): ruhig, gleiche Höhe, Inhalt als kurze Liste */
 .eoOverviewCards { margin: 0.25rem 0 1rem; }
