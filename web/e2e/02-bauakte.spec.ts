@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, apiCall, choose, jpeg, nav, openSection, pageTitle, pdf, signIn, toast, uploadViaDialog, rowMenu } from './helpers';
+import { adminPassword, apiCall, choose, jpeg, mp4, nav, openSection, pageTitle, pdf, signIn, toast, uploadViaDialog, rowMenu } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -249,9 +249,14 @@ test('Fotos: Upload, Zeitstrahl, Großansicht mit Vor/Zurück, Beschriftung, Zuo
   await expect(page.getByText('Fotos (2)')).toBeVisible();
   await expect(page.locator('.sapMGHLI, .sapMLIBGroupHeader, [role=group]').filter({ hasText: /2 Fotos/ }).first()).toBeVisible();
 
-  await page.locator('.eoPhotoTile').first().click();
+  // Kleine, einheitliche Vorschaukacheln (feste Breite) statt großer Bilder; die Großansicht öffnet das Detailfenster.
+  const tiles = page.locator('.eoPhotoTile');
+  for (const tile of await tiles.all()) expect((await tile.boundingBox())!.width).toBeLessThan(170);
+  await tiles.first().click();
   const lightbox = page.getByRole('dialog', { name: 'Fotos' });
   await expect(lightbox.getByText('1 von 2')).toBeVisible();
+  await expect(lightbox.locator('img.eoMediaStageMedia')).toBeVisible();
+  await expect(lightbox.getByRole('button', { name: 'Herunterladen' })).toBeVisible();
   await lightbox.getByRole('button', { name: 'Weiter' }).click();
   await expect(lightbox.getByText('2 von 2')).toBeVisible();
   await lightbox.getByLabel('Beschriftung').fill('Randdämmung Bad OG');
@@ -272,6 +277,21 @@ test('Fotos: Upload, Zeitstrahl, Großansicht mit Vor/Zurück, Beschriftung, Zuo
   await choose(page, page.getByLabel('Raum', { exact: true }).first(), 'Ohne Raum');
   await expect(page.getByText('Fotos (1 von 2)')).toBeVisible();
   await choose(page, page.getByLabel('Raum', { exact: true }).first(), 'Alle Räume');
+
+  // Videos: kleine Kachel mit Abspiel-Symbol statt eingebettetem Player, der Player öffnet sich im Detailfenster.
+  await uploadViaDialog(page, [{ name: 'Rundgang-EG.mp4', mimeType: 'video/mp4', buffer: mp4 }]);
+  await expect(toast(page)).toContainText('1 Datei hochgeladen.');
+  const videoTile = page.locator('.eoMediaThumb[data-kind="video"]');
+  await expect(videoTile).toHaveCount(1);
+  await expect(videoTile.locator('.eoMediaThumbPlay')).toBeAttached();
+  expect((await videoTile.boundingBox())!.width).toBeLessThan(170);
+  await expect(page.locator('video[controls]')).toHaveCount(0);
+  await videoTile.click();
+  const player = page.getByRole('dialog', { name: 'Videos' });
+  await expect(player.locator('video[controls]')).toBeAttached();
+  await expect(player.getByText('Rundgang-EG.mp4').first()).toBeVisible();
+  await player.getByRole('button', { name: 'Schließen' }).click();
+  await expect(player).toHaveCount(0);
 
   await page.getByRole('option', { name: 'Raster' }).click();
   const selecting = page.getByRole('button', { name: 'Auswählen', exact: true });

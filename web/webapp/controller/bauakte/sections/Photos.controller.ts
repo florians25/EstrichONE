@@ -19,6 +19,7 @@ import { isoDay } from "../../../util/days";
 import { dateTime, longDay } from "../../../util/format";
 import { openForm } from "../../../util/forms";
 import { openLightbox } from "../../../util/lightbox";
+import { fileMedia } from "../../../util/media";
 import type { FileResponse, RoomOverview, WorkItemDto } from "../../../util/models";
 import { session } from "../../../util/session";
 
@@ -73,7 +74,7 @@ export default class Photos extends SectionBase {
 			return {
 				...f, takenAt: taken, dayKey: isoDay(new Date(taken)),
 				time: new Date(taken).toLocaleTimeString("de-DE", { hour: "2-digit", minute: "2-digit" }),
-				thumb: `/api/v1/files/${f.id}/content?variant=${f.variants === "ready" ? "thumb" : "original"}`,
+				thumb: fileMedia(f).thumb,
 				relation: [this.roomName(f.roomId), this.workName(f.workItemId)].filter(Boolean).join(" · "),
 			};
 		});
@@ -82,11 +83,10 @@ export default class Photos extends SectionBase {
 			...(rooms?.rooms ?? []).map((r) => ({ key: r.id, text: [r.name, r.floor].filter(Boolean).join(" · ") }))]);
 		m.setProperty("/workOptions", [{ key: "", text: "Alle Bezüge" }, { key: "__defects", text: "Nur Mängel-Fotos" },
 			...work.filter((w) => w.kind === "defect").map((w) => ({ key: w.id, text: `Mangel: ${w.title}` }))]);
-		m.setProperty("/videos", files.filter((f) => f.kind === "video").map((v) => ({
-			...v, html: v.state === "stored"
-				? `<video controls preload="metadata" class="eoVideo" style="width:100%;border-radius:4px;background:#000" src="/api/v1/files/${v.id}/content"></video>`
-				: "<div class=\"eoMuted\">Hochladen ausstehend</div>",
-		})));
+		// Videos als kleine Kacheln (Standbild mit Abspiel-Symbol); der Player öffnet sich im Detailfenster.
+		m.setProperty("/videos", files.filter((f) => f.kind === "video")
+			.sort((a, b) => (b.capturedAt ?? b.createdAt).localeCompare(a.capturedAt ?? a.createdAt))
+			.map((v) => ({ ...v, thumb: v.state === "stored" ? fileMedia(v).thumb : "", thumbKind: v.state === "stored" ? "video" : "other" })));
 		this.refresh();
 	}
 
@@ -153,6 +153,14 @@ export default class Photos extends SectionBase {
 		const ordered = [...list].sort((a, b) => b.takenAt.localeCompare(a.takenAt));
 		openLightbox(ordered, ordered.findIndex((p) => p.id === row.id), {
 			roomName: this.roomName, workName: this.workName, onChanged: () => akte.invalidate(this.bauakteId, "files"),
+		});
+	}
+
+	onOpenVideo(event: Event): void {
+		const row = (event.getSource() as Control).getBindingContext("ph")?.getObject() as FileResponse;
+		const videos = this.ph().getProperty("/videos") as FileResponse[];
+		openLightbox(videos, videos.findIndex((v) => v.id === row.id), {
+			title: "Videos", roomName: this.roomName, workName: this.workName, onChanged: () => akte.invalidate(this.bauakteId, "files"),
 		});
 	}
 

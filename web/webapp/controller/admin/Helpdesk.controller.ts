@@ -11,7 +11,9 @@ import { waitingSince } from "../../util/format";
 import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
 import { options, ticketCategories, ticketPriorities, ticketStatus } from "../../util/labels";
-import { fileUrl, uploadLoose } from "../../util/looseUpload";
+import { uploadLoose } from "../../util/looseUpload";
+import { attachmentView, type AttachmentView } from "../../util/media";
+import { openAttachment } from "../../util/mediaViewer";
 import type { FileResponse, TicketDetail, TicketSummary } from "../../util/models";
 import type { TicketTimelineItem } from "../../util/planningModels";
 import type { RouteMatch } from "../../util/router";
@@ -240,7 +242,7 @@ export default class Helpdesk extends BaseController {
 					eventText: i.kind === "status" ? i.text : null,
 					attachments: i.attachmentFileIds.map((id) => {
 						const f = this.files.get(id);
-						return { id, name: f?.originalName ?? "Anhang", image: !!f && f.contentType.startsWith("image/"), thumb: fileUrl(id, "thumb") };
+						return attachmentView({ id, name: f?.originalName ?? "Anhang", contentType: f?.contentType ?? "" });
 					}),
 				};
 			}));
@@ -410,9 +412,13 @@ export default class Helpdesk extends BaseController {
 		}
 	}
 
+	/** Bilder und Videos im Detailfenster (Blättern innerhalb derselben Anhangsliste), andere Dateien im neuen Tab. */
 	onAttachment(event: Event): void {
-		const id = ((event.getSource() as Control).getBindingContext("view")?.getObject() as { id: string }).id;
-		window.open(fileUrl(id), "_blank", "noopener");
+		const ctx = (event.getSource() as Control).getBindingContext("view");
+		if (!ctx) return;
+		const path = ctx.getPath();
+		const list = (ctx.getModel().getProperty(path.slice(0, path.lastIndexOf("/"))) ?? []) as AttachmentView[];
+		openAttachment(list, (ctx.getObject() as AttachmentView).id);
 	}
 
 	// ---- Neues Ticket ------------------------------------------------------------------------------------------------

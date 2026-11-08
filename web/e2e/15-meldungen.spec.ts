@@ -122,6 +122,13 @@ test('IT verwaltet: Zähler, Filter, Status, Priorität, Zuständigkeit, interne
   // Alle Angaben, Anhang und technische Infos.
   await expect(page.locator('[id$="fbDetails"]').getByText('Die Ladeanzeige dreht sich endlos.')).toBeVisible();
   await expect(page.getByAltText('bildschirm.jpg').first()).toBeVisible();
+  // Anhang als kleine Kachel, Klick öffnet das Detailfenster mit dem Bild (statt eines neuen Tabs).
+  await page.getByRole('button', { name: 'Foto öffnen: bildschirm.jpg' }).first().click();
+  const viewer = page.getByRole('dialog', { name: 'Foto' });
+  await expect(viewer.locator('img.eoMediaStageMedia')).toBeAttached();
+  await expect(viewer.getByRole('button', { name: 'Herunterladen' })).toBeVisible();
+  await viewer.getByRole('button', { name: 'Schließen' }).click();
+  await expect(viewer).toHaveCount(0);
   await expect(page.locator('[id$="fbContext"]').getByText(/Chrome \d+/)).toBeVisible();
   await expect(page.locator('[id$="fbContext"]').getByText('User-Agent')).toBeVisible();
 

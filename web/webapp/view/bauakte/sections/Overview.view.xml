@@ -116,7 +116,7 @@
 					<Link text="{= ${ov>/hero}.length ? 'Alle ' + ${ov>/photoText} : ${i18n>overview.addPhoto} }" press=".onToPhotos"/>
 				</VBox>
 				<HBox items="{ov>/hero}" class="eoPhotoStrip">
-					<Image src="{ov>url}" alt="{ov>alt}" width="4.5rem" height="4.5rem" press=".onOpenPhoto" decorative="false" class="eoThumb"/>
+					<eo:MediaThumb src="{ov>url}" kind="image" alt="{ov>alt}" press=".onOpenPhoto" class="eoMediaThumbS"/>
 				</HBox>
 			</HBox>
 		</FlexBox>

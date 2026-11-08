@@ -11,6 +11,7 @@ import { openForm, type Option } from "../../../util/forms";
 import { uuidv7 } from "../../../util/ids";
 import { binderNames, checkTitles, inspectionResult } from "../../../util/labels";
 import { openLightbox } from "../../../util/lightbox";
+import { fileMedia } from "../../../util/media";
 import type { CrewResponse, DiaryEntry, FileResponse, Inspection, RoomOverview } from "../../../util/models";
 import { session } from "../../../util/session";
 import { acceptanceResults, type AcceptanceResult } from "../../../util/acceptanceWizard";
@@ -45,6 +46,7 @@ const acceptanceStates: Record<AcceptanceDto["state"], { text: string; state: st
 interface PhotoRef {
 	id: string;
 	thumb: string;
+	kind: string;
 	alt: string;
 }
 
@@ -73,7 +75,7 @@ export default class Documentation extends SectionBase {
 
 	private photoRefs(ids: string[] | null | undefined): PhotoRef[] {
 		return (ids ?? []).map((id) => this.photos.find((p) => p.id === id)).filter((p): p is FileResponse => !!p && p.state === "stored").map((p) => ({
-			id: p.id, thumb: `/api/v1/files/${p.id}/content?variant=${p.variants === "ready" ? "thumb" : "original"}`,
+			id: p.id, thumb: fileMedia(p).thumb, kind: fileMedia(p).kind,
 			alt: p.caption ?? `Foto vom ${dateTime(p.capturedAt ?? p.createdAt)}`,
 		}));
 	}

@@ -26,7 +26,8 @@
 		<f:content>
 			<VBox>
 				<core:HTML content="{it>/frame}" sanitizeContent="false" visible="{= ${it>/kind} === 'pdf' }"/>
-				<Image src="{it>/image}" visible="{= ${it>/kind} === 'image' }" width="100%" alt="{it>/file/originalName}" decorative="false" class="eoLightboxImage"/>
+				<Image src="{it>/image}" visible="{= ${it>/kind} === 'image' }" alt="{it>/file/originalName}" decorative="false" press=".onEnlarge"
+					tooltip="Groß anzeigen" class="eoItemMedia"/>
 				<core:HTML content="{it>/video}" sanitizeContent="false" visible="{= ${it>/kind} === 'video' }"/>
 				<IllustratedMessage illustrationType="sapIllus-NoData" illustrationSize="Spot" visible="{= ${it>/kind} === 'none' }"
 					title="{i18n>item.noPreview}" description="{i18n>item.noPreviewText}">

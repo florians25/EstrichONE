@@ -13,6 +13,7 @@ import type { BauakteDetail, FileResponse } from "../../../util/models";
 import { navTo } from "../../../util/navigation";
 import { session } from "../../../util/session";
 import { openLightbox } from "../../../util/lightbox";
+import { fileMedia } from "../../../util/media";
 import { openActivityDialog } from "../../../util/activityDialog";
 import { akteContextOf } from "../../../util/akteHeader";
 import { openForm } from "../../../util/forms";
@@ -61,7 +62,7 @@ export default class Overview extends SectionBase {
 			this.photos = files.value.filter((f) => f.kind === "photo" && f.state === "stored");
 			m.setProperty("/photoText", `${this.photos.length} ${this.photos.length === 1 ? "Foto" : "Fotos"}`);
 			m.setProperty("/hero", [...this.photos].sort((a, b) => (b.capturedAt ?? b.createdAt).localeCompare(a.capturedAt ?? a.createdAt)).slice(0, 10).map((p) => ({
-				id: p.id, url: `/api/v1/files/${p.id}/content?variant=${p.variants === "ready" ? "display" : "original"}`,
+				id: p.id, url: fileMedia(p).thumb,
 				alt: p.caption ?? `Foto vom ${dateTime(p.capturedAt ?? p.createdAt)}`,
 			})));
 			const docs = files.value.filter((f) => f.kind === "document");

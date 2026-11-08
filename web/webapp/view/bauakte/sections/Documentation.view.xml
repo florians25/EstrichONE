@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Documentation" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
-	xmlns:f="sap.f" xmlns:card="sap.f.cards" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout"
+	xmlns:f="sap.f" xmlns:card="sap.f.cards" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout" xmlns:eo="estrichone.control"
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<IconTabBar id="docuTabs" selectedKey="{dc>/tab}" expandable="false" headerMode="Inline" stretchContentHeight="false" applyContentPadding="false"
 		backgroundDesign="Transparent">
@@ -29,8 +29,8 @@
 								</HBox>
 							</HBox>
 							<Text text="{dc>text}" class="eoPre sapUiTinyMarginTop"/>
-							<HBox items="{path: 'dc>photos', templateShareable: false}" wrap="Wrap" class="sapUiTinyMarginTop" visible="{= ${dc>photos}.length > 0 }">
-								<Image src="{dc>thumb}" width="6rem" height="4.5rem" class="sapUiTinyMarginEnd eoPhoto" press=".onDiaryPhoto" alt="{dc>alt}" decorative="false"/>
+							<HBox items="{path: 'dc>photos', templateShareable: false}" wrap="Wrap" renderType="Bare" class="sapUiTinyMarginTop eoMediaGrid" visible="{= ${dc>photos}.length > 0 }">
+								<eo:MediaThumb src="{dc>thumb}" kind="{dc>kind}" alt="{dc>alt}" press=".onDiaryPhoto"/>
 							</HBox>
 							<Text text="{dc>meta}" class="eoMuted sapUiTinyMarginTop"/>
 						</VBox>
@@ -82,8 +82,8 @@
 								<Text text="{= ${dc>/latest/remarks} || '–' }" class="eoPre"/>
 								<Label text="Notizen" visible="{= !!${dc>/latest/notes} }" class="sapUiSmallMarginTop"/>
 								<Text text="{dc>/latest/notes}" visible="{= !!${dc>/latest/notes} }" class="eoPre"/>
-								<HBox items="{path: 'dc>/latestPhotos', templateShareable: false}" wrap="Wrap" class="sapUiTinyMarginTop">
-									<Image src="{dc>thumb}" width="6rem" height="4.5rem" class="sapUiTinyMarginEnd eoPhoto" press=".onInspectionPhoto" alt="{dc>alt}" decorative="false"/>
+								<HBox items="{path: 'dc>/latestPhotos', templateShareable: false}" wrap="Wrap" renderType="Bare" class="sapUiTinyMarginTop eoMediaGrid">
+									<eo:MediaThumb src="{dc>thumb}" kind="{dc>kind}" alt="{dc>alt}" press=".onInspectionPhoto"/>
 								</HBox>
 								<Button text="{i18n>inspections.correct}" icon="sap-icon://edit" press=".onCorrectInitial" class="sapUiSmallMarginTop"
 									visible="{= ${session>/permissions/inspections.write} === true }"/>

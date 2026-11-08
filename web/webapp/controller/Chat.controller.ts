@@ -27,8 +27,6 @@ import ActionSheet from "sap/m/ActionSheet";
 import Popover from "sap/m/Popover";
 import IconTabBar from "sap/m/IconTabBar";
 import IconTabFilter from "sap/m/IconTabFilter";
-import LightBox from "sap/m/LightBox";
-import LightBoxItem from "sap/m/LightBoxItem";
 import MessageStrip from "sap/m/MessageStrip";
 import FormattedText from "sap/m/FormattedText";
 import HTMLControl from "sap/ui/core/HTML";
@@ -39,6 +37,8 @@ import encodeXML from "sap/base/security/encodeXML";
 import type { RouteMatch } from "../util/router";
 import { currentRoute } from "../util/navigation";
 import { uuidv7 } from "../util/ids";
+import { indexOf, type MediaItem } from "../util/media";
+import { openMediaViewer } from "../util/mediaViewer";
 import { get } from "../util/api";
 import { bauakteInput } from "../util/forms";
 import {
@@ -650,8 +650,7 @@ export default class Chat extends BaseController {
 		const grid = photos.length
 			? `<div class="eoChatPhotos eoChatPhotos${Math.min(photos.length, 4)}">${photos.slice(0, 4).map((a, i) => {
 				const more = i === 3 && photos.length > 4 ? `<span class="eoChatPhotoMore">+${photos.length - 4}</span>` : "";
-				const ratio = a.width && a.height && photos.length === 1 ? ` style="aspect-ratio:${a.width}/${a.height}"` : "";
-				return `<button type="button" class="eoChatPhoto" data-action="photo" data-id="${encodeXML(x.id)}" data-attachment="${encodeXML(a.id)}"${ratio} aria-label="Foto öffnen"><img loading="lazy" src="${encodeXML(attachmentUrl(a.id, { thumbnail: a.hasThumbnail }))}" alt="${encodeXML(a.fileName)}"/>${more}</button>`;
+				return `<button type="button" class="eoChatPhoto" data-action="photo" data-id="${encodeXML(x.id)}" data-attachment="${encodeXML(a.id)}" aria-label="Foto öffnen"><img loading="lazy" src="${encodeXML(attachmentUrl(a.id, { thumbnail: a.hasThumbnail }))}" alt="${encodeXML(a.fileName)}"/>${more}</button>`;
 			}).join("")}</div>` : "";
 		const list = docs.map((a) => `<a class="eoChatDoc" href="${encodeXML(attachmentUrl(a.id))}" target="_blank" rel="noopener"><span class="eoChatGlyph">${glyph("pdf-attachment")}</span><span class="eoChatDocText"><span class="eoChatDocName">${encodeXML(a.fileName)}</span><span class="eoChatDocSize">PDF · ${encodeXML(formatBytes(a.sizeBytes))}</span></span><span class="eoChatGlyph eoChatDocDl" title="Herunterladen">${glyph("download")}</span></a>`).join("");
 		return `<div class="eoChatFiles">${grid}${list}</div>`;
@@ -862,16 +861,15 @@ export default class Chat extends BaseController {
 		dialog.open();
 	}
 
+	/** Fotos im Detailfenster (volle Größe, Vor/Zurück, Herunterladen). */
 	private openPhotos(attachments: ChatAttachment[], startId: string): void {
 		const photos = attachments.filter((a) => a.kind === "photo");
-		const start = Math.max(0, photos.findIndex((a) => a.id === startId));
-		const ordered = [...photos.slice(start), ...photos.slice(0, start)];
-		const box = new LightBox({
-			imageContent: ordered.map((a) => new LightBoxItem({ imageSrc: attachmentUrl(a.id), alt: a.fileName, title: a.fileName,
-				subtitle: `${formatBytes(a.sizeBytes)}${a.width ? ` · ${a.width} × ${a.height}` : ""}` })),
-		});
-		box.attachEvent("afterClose", () => box.destroy());
-		box.open();
+		const items: MediaItem[] = photos.map((a) => ({
+			id: a.id, name: a.fileName, kind: "image", src: attachmentUrl(a.id), thumb: attachmentUrl(a.id, { thumbnail: a.hasThumbnail }),
+			download: attachmentUrl(a.id, { download: true }),
+			meta: `${formatBytes(a.sizeBytes)}${a.width ? ` · ${a.width} × ${a.height}` : ""} · ${listTime(a.createdAt)}`,
+		}));
+		openMediaViewer(items, indexOf(items, startId), { title: "Fotos" });
 	}
 
 	// ---- Antworten, Bearbeiten, Erwähnen ---------------------------------------------------------------------------

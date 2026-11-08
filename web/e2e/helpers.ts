@@ -12,6 +12,8 @@ export const jpeg = Buffer.from(
   'base64',
 );
 export const pdf = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF\n');
+/** Kleinste „MP4“-Datei (nur ftyp-Box, Marke isom): genügt der Typerkennung des Servers für Video-Kacheln. */
+export const mp4 = Buffer.concat([Buffer.from([0, 0, 0, 24]), Buffer.from('ftypisom'), Buffer.from([0, 0, 2, 0]), Buffer.from('isommp41')]);
 
 /** Eintrag der Seitennavigation (sap.tnt.SideNavigation). */
 export const nav = (page: Page, name: string) => page.locator('.sapTntSideNavigation').getByText(name, { exact: true });

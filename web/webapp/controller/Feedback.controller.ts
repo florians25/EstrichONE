@@ -7,7 +7,9 @@ import Text from "sap/m/Text";
 import { get, patch, post } from "../util/api";
 import { openForm } from "../util/forms";
 import { formTitle } from "../util/formLayout";
-import { fileUrl, uploadLoose } from "../util/looseUpload";
+import { uploadLoose } from "../util/looseUpload";
+import { attachmentView, type AttachmentView } from "../util/media";
+import { openAttachment } from "../util/mediaViewer";
 import { openFeedbackWizard } from "../util/feedbackWizard";
 import { waitingSince } from "../util/format";
 import type { RouteMatch } from "../util/router";
@@ -237,9 +239,7 @@ export default class Feedback extends BaseController {
 				form.addContent(new Text({ text: row.value }).addStyleClass("eoPre"));
 			}
 		}
-		const fileView = (a: { id: string; name: string; contentType: string }) =>
-			({ id: a.id, name: a.name, image: a.contentType.startsWith("image/"), thumb: fileUrl(a.id, "thumb") });
-		m.setProperty("/attachments", d.attachments.map(fileView));
+		m.setProperty("/attachments", d.attachments.map(attachmentView));
 		const context = contextRows(d.context, manage);
 		m.setProperty("/context", context);
 		const contextForm = this.byId("fbContextForm") as SimpleForm | undefined;
@@ -271,7 +271,7 @@ export default class Feedback extends BaseController {
 					...i, bubble, icon: icons[i.kind] ?? "sap-icon://history", kindText: kindTexts[i.kind] ?? i.kind, tone: i.kind,
 					who: i.kind === "note" ? "note" : i.isReporter ? "reporter" : "agent",
 					headline: i.kind === "note" ? `${i.actorName ?? ""} · interne Notiz` : i.actorName ?? "",
-					files: i.attachments.map((a) => ({ id: a.id, name: a.name, image: a.contentType.startsWith("image/"), thumb: fileUrl(a.id, "thumb") })),
+					files: i.attachments.map(attachmentView),
 				};
 			}));
 	}
@@ -430,8 +430,12 @@ export default class Feedback extends BaseController {
 		}
 	}
 
+	/** Bilder und Videos im Detailfenster (Blättern innerhalb derselben Anhangsliste), andere Dateien im neuen Tab. */
 	onAttachment(event: Event): void {
-		const id = ((event.getSource() as Control).getBindingContext("view")?.getObject() as { id: string }).id;
-		window.open(fileUrl(id), "_blank", "noopener");
+		const ctx = (event.getSource() as Control).getBindingContext("view");
+		if (!ctx) return;
+		const path = ctx.getPath();
+		const list = (ctx.getModel().getProperty(path.slice(0, path.lastIndexOf("/"))) ?? []) as AttachmentView[];
+		openAttachment(list, (ctx.getObject() as AttachmentView).id);
 	}
 }

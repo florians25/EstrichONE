@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Photos" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f"
-	xmlns:grid="sap.ui.layout.cssgrid" xmlns:core="sap.ui.core"
+	xmlns:grid="sap.ui.layout.cssgrid" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<VBox>
 		<FlexBox wrap="Wrap" justifyContent="SpaceBetween" alignItems="Center" class="eoEntryRow">
@@ -35,26 +35,21 @@
 		<f:GridList id="photoGrid" mode="{= ${ph>/selecting} ? 'MultiSelect' : 'None' }" selectionChange=".onSelection" growing="true" growingThreshold="60"
 			noDataText="{i18n>photos.none}" class="sapUiTinyMarginTop">
 			<f:customLayout>
-				<grid:GridBoxLayout boxMinWidth="13rem"/>
+				<grid:GridBoxLayout boxWidth="9.5rem"/>
 			</f:customLayout>
 		</f:GridList>
 		<Title text="{i18n>photos.videos} ({= ${ph>/videos}.length })" level="H3" class="sapUiMediumMarginTop sapUiTinyMarginBottom" visible="{= ${ph>/videos}.length > 0 }"/>
-		<f:GridList items="{ph>/videos}" visible="{= ${ph>/videos}.length > 0 }">
-			<f:customLayout><grid:GridBoxLayout boxMinWidth="20rem"/></f:customLayout>
-			<f:GridListItem>
-				<VBox class="sapUiTinyMargin">
-					<core:HTML content="{ph>html}" sanitizeContent="false"/>
-					<HBox justifyContent="SpaceBetween" alignItems="Center" class="sapUiTinyMarginTop">
-						<VBox>
-							<Text text="{ph>originalName}" wrapping="false"/>
-							<Text text="{path: 'ph>createdAt', formatter: 'fmt.dateTime'} · {path: 'ph>sizeBytes', formatter: 'fmt.fileSize'}" class="eoMuted"/>
-						</VBox>
-						<Button icon="sap-icon://delete" type="Transparent" tooltip="{i18n>common.delete}" press=".onDeleteVideo"
-							visible="{= ${session>/permissions/files.delete} === true }"/>
-					</HBox>
-				</VBox>
-			</f:GridListItem>
-		</f:GridList>
+		<FlexBox items="{ph>/videos}" visible="{= ${ph>/videos}.length > 0 }" wrap="Wrap" class="eoMediaGrid">
+			<VBox class="eoMediaCell eoPhotoCell">
+				<eo:MediaThumb src="{ph>thumb}" kind="{ph>thumbKind}" alt="{ph>originalName}" press=".onOpenVideo" class="eoMediaThumbFill"/>
+				<Text text="{= ${ph>caption} || ${ph>originalName} }" wrapping="false" tooltip="{ph>originalName}" class="sapUiTinyMarginTop"/>
+				<HBox justifyContent="SpaceBetween" alignItems="Center">
+					<Text text="{path: 'ph>sizeBytes', formatter: 'fmt.fileSize'}" class="eoMuted"/>
+					<Button icon="sap-icon://delete" type="Transparent" tooltip="{i18n>common.delete}" press=".onDeleteVideo"
+						visible="{= ${session>/permissions/files.delete} === true }"/>
+				</HBox>
+			</VBox>
+		</FlexBox>
 	</VBox>
 	<core:InvisibleText id="roomFilterLabel" text="{i18n>photos.filterRoom}"/>
 	<core:InvisibleText id="workFilterLabel" text="{i18n>photos.filterWork}"/>

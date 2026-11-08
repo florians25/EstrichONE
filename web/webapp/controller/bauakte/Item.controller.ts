@@ -8,6 +8,8 @@ import { session } from "../../util/session";
 import { documentRows } from "../../util/documents";
 import { dateTime, fileSize } from "../../util/format";
 import { documentCategories } from "../../util/labels";
+import { fileMedia } from "../../util/media";
+import { openMediaViewer } from "../../util/mediaViewer";
 import type { FileResponse } from "../../util/models";
 import type { RouteMatch } from "../../util/router";
 
@@ -51,7 +53,7 @@ export default class Item extends BaseController {
 		m.setProperty("/kind", file.state === "stored" ? kind : "none");
 		m.setProperty("/frame", kind === "pdf" ? `<iframe class="eoPreviewFrame" title="Vorschau ${file.originalName.replace(/["<>&]/g, "")}" src="${url}"></iframe>` : "");
 		m.setProperty("/image", kind === "image" ? `${url}?variant=${file.variants === "ready" ? "display" : "original"}` : "");
-		m.setProperty("/video", kind === "video" ? `<video controls preload="metadata" class="eoPreviewFrame" src="${url}"></video>` : "");
+		m.setProperty("/video", kind === "video" ? `<video controls preload="metadata" class="eoItemMedia eoItemVideo" src="${url}"></video>` : "");
 		m.setProperty("/place", file.kind === "document"
 			? [documentCategories[(file.category ?? "other") as keyof typeof documentCategories]?.text, file.folder].filter(Boolean).join(" / ")
 			: file.kind === "photo" ? "Fotos" : "Videos");
@@ -100,6 +102,12 @@ export default class Item extends BaseController {
 		a.href = `/api/v1/files/${file.id}/content`;
 		a.download = file.originalName;
 		a.click();
+	}
+
+	/** Bild im Detailfenster in voller Größe. */
+	onEnlarge(): void {
+		const file = this.model("it").getProperty("/file") as FileResponse;
+		openMediaViewer([fileMedia(file, `${fileSize(file.sizeBytes)} · ${dateTime(file.capturedAt ?? file.createdAt)}`)], 0);
 	}
 
 	onNewTab(): void {

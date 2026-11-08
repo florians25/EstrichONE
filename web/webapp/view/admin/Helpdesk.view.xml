@@ -1,4 +1,4 @@
-<mvc:View controllerName="estrichone.controller.admin.Helpdesk" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+<mvc:View controllerName="estrichone.controller.admin.Helpdesk" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
 	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
 	<FlexBox id="helpdesk" height="100%" renderType="Bare" class="eoHelpdesk" alignItems="Stretch">
 		<!-- Liste: Suche, Status-Segmente, Kategorie, Sortierung -->
@@ -137,9 +137,8 @@
 								</HBox>
 								<Text text="{view>text}" class="eoPre" visible="{= !!${view>text} }"/>
 								<FlexBox items="{path: 'view>attachments', templateShareable: false}" wrap="Wrap" class="eoTimelineAttachments" visible="{= ${view>attachments}.length > 0 }">
-									<VBox alignItems="Center" width="6rem">
-										<Image src="{view>thumb}" width="5.5rem" height="5.5rem" class="eoPhoto" press=".onAttachment" alt="{view>name}" decorative="false" visible="{view>image}"/>
-										<core:Icon src="sap-icon://document" size="2.5rem" visible="{= !${view>image} }" press=".onAttachment" tooltip="{view>name}"/>
+									<VBox alignItems="Center" class="eoMediaCell">
+										<eo:MediaThumb src="{view>thumb}" kind="{view>kind}" alt="{view>name}" press=".onAttachment"/>
 										<Link text="{view>name}" press=".onAttachment" wrapping="true" textAlign="Center"/>
 									</VBox>
 								</FlexBox>
