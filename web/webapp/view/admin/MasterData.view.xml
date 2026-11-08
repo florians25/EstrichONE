@@ -129,7 +129,7 @@
 							</Table>
 											</VBox>
 					<VBox visible="{= ${view>/tab} === 'folderTemplate' }" class="eoMdPane">
-							<Table items="{view>/folderTemplate}" noDataText="Noch keine Ordnervorlagen – Unterordner werden dann in jeder Bauakte angeboten." popinLayout="GridSmall">
+							<Table items="{view>/folderTemplate}" noDataText="Noch keine Ordnervorlagen. Angelegte Unterordner werden in jeder Bauakte angeboten." popinLayout="GridSmall">
 								<columns>
 									<Column width="30%"><Text text="Name"/></Column>
 									<Column width="12rem" minScreenWidth="40rem" demandPopin="true"><Text text="Dokumentart"/></Column>
@@ -150,7 +150,7 @@
 							</Table>
 											</VBox>
 					<VBox visible="{= ${view>/tab} === 'bauakteTemplate' }" class="eoMdPane">
-							<Table items="{view>/bauakteTemplate}" noDataText="Noch keine Vorlagen – bei der Anlage einer Bauakte wählbar (Beschreibung und Räume)." popinLayout="GridSmall">
+							<Table items="{view>/bauakteTemplate}" noDataText="Noch keine Vorlagen. Vorlagen sind bei der Anlage einer Bauakte wählbar (Beschreibung und Räume)." popinLayout="GridSmall">
 								<columns>
 									<Column width="30%"><Text text="Name"/></Column>
 									<Column><Text text="Beschreibung"/></Column>

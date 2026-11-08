@@ -53,7 +53,7 @@ export default class Users extends BaseController {
 
 	async onCopy(): Promise<void> {
 		const pw = String(this.model().getProperty("/oneTime/oneTimePassword") ?? "");
-		try { await navigator.clipboard.writeText(pw); this.toast("Kopiert"); } catch { this.toast("Kopieren nicht möglich – bitte markieren und kopieren."); }
+		try { await navigator.clipboard.writeText(pw); this.toast("Kopiert"); } catch { this.toast("Kopieren nicht möglich. Bitte markieren und manuell kopieren."); }
 	}
 
 	/** Zugangsbrief nach DIN 5008 mit dem gerade vergebenen Einmalpasswort (neuer Tab). */

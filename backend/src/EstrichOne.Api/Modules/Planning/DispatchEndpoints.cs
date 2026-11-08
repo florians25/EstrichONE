@@ -330,7 +330,7 @@ public sealed class DispatchService(
                 if (!person)
                 {
                     return Problem(StatusCodes.Status422UnprocessableEntity, "Noch kein Einsatz",
-                        "Auf dieser Baustelle ist an dem Tag noch nichts geplant – bitte zuerst einen Mitarbeiter einteilen.", "NO_ASSIGNMENT");
+                        "Auf dieser Baustelle ist an dem Tag noch nichts geplant. Bitte zuerst einen Mitarbeiter einteilen.", "NO_ASSIGNMENT");
                 }
 
                 job = Assignment.Create(Guid.CreateVersion7(), to);

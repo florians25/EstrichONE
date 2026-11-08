@@ -200,7 +200,7 @@ export function maintenanceCard(m: NoticeMaintenanceInput, now: Date = new Date(
 		key: `m:${m.startsAt}:${kind}:${contentHash(`${m.message ?? ""}|${m.endsAt ?? ""}`)}`,
 		kind, tone: s.tone, icon: s.icon, label: s.label, rank: s.rank, dismissible: s.dismissible,
 		title: running
-			? adminWorking ? "Wartungsmodus aktiv – nur Administratoren können arbeiten" : "Wartungsarbeiten laufen"
+			? adminWorking ? "Wartungsmodus aktiv: nur Administratoren können arbeiten" : "Wartungsarbeiten laufen"
 			: "Geplante Wartung",
 		text: running && adminWorking
 			? `Benutzer sehen die Wartungsseite.${m.message ? ` Nachricht: ${m.message}` : ""}`

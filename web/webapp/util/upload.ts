@@ -136,7 +136,7 @@ export function uploadError(status: number, body: ChunkAnswer["body"]): ApiError
 			? "Zeitüberschreitung beim Hochladen. Die Verbindung ist zu langsam oder ein vorgeschalteter Proxy bricht lange Anfragen ab (Zeitlimit erhöhen)."
 			: typeof navigator !== "undefined" && navigator.onLine === false
 				? "Keine Internetverbindung. Das Hochladen kann fortgesetzt werden, sobald die Verbindung wieder besteht."
-				: "Die Verbindung wurde beim Hochladen wiederholt unterbrochen. Bitte Netzwerk und vorgeschalteten Proxy (Größen- und Zeitlimit) prüfen und erneut versuchen – bereits Übertragenes wird fortgesetzt."
+				: "Die Verbindung wurde beim Hochladen wiederholt unterbrochen. Bitte Netzwerk und vorgeschalteten Proxy (Größen- und Zeitlimit) prüfen und erneut versuchen. Bereits übertragene Teile werden fortgesetzt."
 		: status === 413
 			? "Ein vorgeschalteter Proxy lässt die Anfrage nicht durch (HTTP 413, Größenlimit). Im Proxy z. B. „client_max_body_size 64m“ setzen."
 			: status === 401

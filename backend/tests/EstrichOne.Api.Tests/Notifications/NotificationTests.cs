@@ -229,7 +229,7 @@ public sealed class NotificationTests(PostgresFixture postgres) : IAsyncLifetime
 
         var inbox = (await worker.GetFromJsonAsync<NotificationInbox>("/api/v1/notifications", TestJson.Options, Ct))!;
         var item = inbox.Items.ShouldHaveSingleItem();
-        item.Title.ShouldBe("Neue Bauakte zugewiesen");
+        item.Title.ShouldBe("Bauakte zugewiesen");
         item.Link.ShouldBe($"/bauakten/{bauakte.Id}");
         item.ObjectId.ShouldBe(bauakte.Id);
         (await office.GetFromJsonAsync<NotificationInbox>("/api/v1/notifications", TestJson.Options, Ct))!.Items.ShouldBeEmpty();

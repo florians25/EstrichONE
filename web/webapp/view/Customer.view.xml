@@ -71,7 +71,7 @@
 			<uxap:ObjectPageSection id="secDocuments" title="Dokumente">
 				<uxap:subSections><uxap:ObjectPageSubSection>
 					<VBox>
-						<Text text="Alle Dokumente aus allen Bauakten des Kunden – gegliedert nach Bauakte und Dokumentart. Klick öffnet die Vorschau." class="eoMuted sapUiTinyMarginBottom"/>
+						<Text text="Alle Dokumente aus allen Bauakten des Kunden, gegliedert nach Bauakte und Dokumentart. Ein Klick öffnet die Vorschau." class="eoMuted sapUiTinyMarginBottom"/>
 						<Table items="{path: 'view>/documents', sorter: [{path: 'group', group: true}]}" noDataText="Keine Dokumente." class="eoDenseTable" popinLayout="GridSmall">
 							<columns>
 								<Column><Text text="Dokument"/></Column><Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Freigabe"/></Column>

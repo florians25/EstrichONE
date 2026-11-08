@@ -84,7 +84,7 @@ export default class Notices extends BaseController {
 		m.setProperty("/maintenancePreview", upcoming(w) ? maintenanceCard({ ...w!, source: "instance" }, nowDate) : null);
 		const active = (m.getProperty("/announcements") as { statusText: string }[]).filter((a) => a.statusText === "aktiv").length;
 		this.statusLine([
-			running && { text: "Wartungsmodus läuft – Benutzer sehen die Wartungsseite", level: "error" },
+			running && { text: "Wartungsmodus aktiv: Benutzer sehen die Wartungsseite", level: "error" },
 			!running && !!w && (!w.endsAt || new Date(w.endsAt).getTime() > now) && { text: `Wartung geplant: ${period(w)}`, level: "info" },
 			!!cm && { text: "Wartung durch den Betreiber angekündigt", level: "info" },
 		], active ? `${active} ${active === 1 ? "Ankündigung" : "Ankündigungen"} aktiv` : "keine Wartung, keine aktive Ankündigung");
@@ -105,7 +105,7 @@ export default class Notices extends BaseController {
 	}
 
 	onPreviewDismiss(): void {
-		this.toast("Benutzer können diesen Hinweis für sich ausblenden – er bleibt auf der Startseite nachlesbar.");
+		this.toast("Benutzer können diesen Hinweis ausblenden. Er bleibt auf der Startseite abrufbar.");
 	}
 	onEdit(e: Event): void { void this.edit((e.getSource() as Control).getBindingContext("view")?.getObject() as Announcement); }
 
@@ -124,9 +124,9 @@ export default class Notices extends BaseController {
 		const saved = await openForm<{ sentEmails: number }>({
 			title: a ? "Ankündigung bearbeiten" : "Neue Ankündigung", width: "40rem",
 			extra: () => [new VBox({ renderType: "Bare", items: [
-				new Title({ text: "Vorschau – so sehen Benutzer den Hinweis", level: "H3", titleStyle: "H6" }),
+				new Title({ text: "Vorschau aus Benutzersicht", level: "H3", titleStyle: "H6" }),
 				preview,
-				new Text({ text: "Benutzer können Hinweise für sich ausblenden – außer Störungen (Art „Kritisch“). Auf der Startseite bleiben alle nachlesbar." }).addStyleClass("eoMuted"),
+				new Text({ text: "Benutzer können Hinweise ausblenden, ausgenommen Störungen (Art „Kritisch“). Auf der Startseite bleiben alle Hinweise abrufbar." }).addStyleClass("eoMuted"),
 			] }).addStyleClass("eoNoticePreview sapUiSmallMarginTop")],
 			initial: { title: a?.title, text: a?.text, severity: a?.severity ?? "info", startDate: s.date, startTime: s.time, endDate: en.date, endTime: en.time,
 				roleIds: a?.roleIds ?? [], notify: a?.notify ?? false, sendEmail: false },
@@ -165,11 +165,11 @@ export default class Notices extends BaseController {
 		const end = toLocal(w?.endsAt ?? null);
 		const saved = await openForm<Maintenance>({
 			title: now ? "Wartung jetzt starten" : "Wartung planen", width: "34rem", danger: now,
-			intro: now ? "Achtung: Mit dem Start erhalten alle Benutzer sofort die Wartungsseite; offene Eingaben gehen ggf. verloren. Vorher eine Ankündigung schalten!"
+			intro: now ? "Mit dem Start erhalten alle Benutzer sofort die Wartungsseite; offene Eingaben gehen ggf. verloren. Bitte vorher eine Ankündigung schalten."
 				: "Die geplante Wartung wird Benutzern vorab angekündigt (Banner) und sperrt zum Beginn die Anmeldung.",
 			initial: { message: w?.message ?? "", startDate: start.date, startTime: start.time, endDate: end.date, endTime: end.time, adminsMayWork: w?.adminsMayWork ?? true },
 			fields: [
-				{ key: "message", label: "Nachricht an die Benutzer", type: "textarea", rows: 3, maxLength: 2000, placeholder: "z. B. Update auf die neue Version – gegen 18 Uhr wieder verfügbar." },
+				{ key: "message", label: "Nachricht an die Benutzer", type: "textarea", rows: 3, maxLength: 2000, placeholder: "z. B. Update auf die neue Version, ab ca. 18 Uhr wieder verfügbar." },
 				...(now ? [] : [{ key: "startDate", label: "Beginn (Tag)", type: "date" as const, required: true }, { key: "startTime", label: "Beginn (Uhrzeit)", type: "time" as const, required: true }]),
 				{ key: "endDate", label: "Ende (Tag)", type: "date" }, { key: "endTime", label: "Ende (Uhrzeit)", type: "time" },
 				{ key: "adminsMayWork", label: "Administratoren", type: "checkbox", placeholder: "Administratoren dürfen während der Wartung weiterarbeiten" },

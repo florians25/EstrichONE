@@ -309,7 +309,7 @@ export default class Planning extends BaseController {
 			userIds: extras, resourceIds: a.resources.map((r) => r.id), notes: a.notes,
 		}));
 		if (!saved) return;
-		MessageToast.show(saved.warnings.length ? `Verschoben – ${saved.warnings.join(" ")}` : `„${a.activity}“ auf ${weekday(day)}, ${short(day)} verschoben`);
+		MessageToast.show(saved.warnings.length ? `Verschoben. ${saved.warnings.join(" ")}` : `„${a.activity}“ auf ${weekday(day)}, ${short(day)} verschoben`);
 		planningChanged();
 	}
 

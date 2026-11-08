@@ -70,7 +70,7 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             var backupStale = backup.LastSuccessAt is not { } success || now - success > BackupMaxAge;
             var backupCritical = backupConfigured && restore is null && (!backupReachable || backupStale);
             var backupText = backupCritical
-                ? $"ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup {Local(backup.LastSuccessAt)}). Backup-Ziele und Backup-Dienst unter System → Sicherung prüfen."
+                ? $"Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: {Local(backup.LastSuccessAt)}. Bitte Backup-Ziele und Backup-Dienst unter System › Sicherung prüfen."
                 : null;
 
             var archiveService = services.GetRequiredService<ArchiveService>();
@@ -86,7 +86,7 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
 
             var archiveWarning = connection is not null && !archiveReachable;
             var archiveText = archiveWarning
-                ? $"Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung {Local(lastArchived)}). Dokumente werden zurückgehalten – Archivserver unter System → Archiv prüfen."
+                ? $"Archivserver nicht erreichbar. Letzte Archivierung: {Local(lastArchived)}. Dokumente werden zurückgehalten; bitte Archivserver unter System › Archiv prüfen."
                 : null;
 
             // Ausfälle von Backup- und Archivserver sehen nur Administratoren (Benutzer verunsichert das nur; Admins bekommen zusätzlich Push).
@@ -99,12 +99,12 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
                 if (offload.Missing > 0)
                 {
                     banners.Add(new HealthBanner("offload", "warning",
-                        $"Hinweis: {offload.Missing} ausgelagerte Original(e) fehlen auf dem Storage – unter Speicher-Auslagerung aus der Sicherung zurückholen.", AdminOnly: true));
+                        $"{offload.Missing} ausgelagerte Original(e) fehlen auf dem Storage. Wiederherstellung unter System › Speicher-Auslagerung › „Aus Sicherung zurückholen“.", AdminOnly: true));
                 }
                 else if (!offload.Reachable)
                 {
                     banners.Add(new HealthBanner("offload", "warning",
-                        $"Hinweis: Storage „{offload.StorageName}“ (Speicher-Auslagerung) nicht erreichbar – {offload.OffloadedFiles} ausgelagerte Originale lassen sich gerade nicht öffnen. Nichts ist verloren.",
+                        $"Storage „{offload.StorageName}“ (Speicher-Auslagerung) nicht erreichbar. {offload.OffloadedFiles} ausgelagerte Originale können derzeit nicht geöffnet werden; es gehen keine Daten verloren.",
                         AdminOnly: true));
                 }
             }
@@ -153,7 +153,7 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             if (run.Status == "failed")
             {
                 await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Sicherung fehlgeschlagen",
-                    $"{run.Message} ({Local(run.At)}). Bitte im Backup Center prüfen.", link, "backup", null, NotificationUrgency.High,
+                    $"{run.Message} · {Local(run.At)}", link, "backup", null, NotificationUrgency.High,
                     $"backup:run:{run.At:O}", NotificationEvents.BackupFailed), cancellationToken);
             }
             else if (backup.NotifyOnSuccess)
@@ -178,31 +178,31 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
         {
             var anchor = health.Backup.LastSuccessAt ?? DateTimeOffset.UnixEpoch;
             var day = (int)Math.Max(0, (now - anchor).TotalDays);
-            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Backup-Server ausgefallen oder nicht erreichbar",
-                $"Letztes Backup {Local(health.Backup.LastSuccessAt)}. Backup-Ziele und Backup-Dienst prüfen.", link, "backup", null,
+            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Backup-Ziel nicht erreichbar",
+                $"Letzte erfolgreiche Sicherung: {Local(health.Backup.LastSuccessAt)}", link, "backup", null,
                 NotificationUrgency.High, $"backup:outage:{anchor:O}:{day}", NotificationEvents.BackupTargetDown), cancellationToken);
             _backupOutageNotified = true;
         }
         else if (_backupOutageNotified)
         {
             _backupOutageNotified = false;
-            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Backup wieder in Ordnung",
-                $"Letztes Backup {Local(health.Backup.LastSuccessAt)}.", link, "backup", null, NotificationUrgency.Low, Event: NotificationEvents.BackupTargetDown), cancellationToken);
+            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Backup-Ziel wieder erreichbar",
+                $"Letzte erfolgreiche Sicherung: {Local(health.Backup.LastSuccessAt)}", link, "backup", null, NotificationUrgency.Low, Event: NotificationEvents.BackupTargetDown), cancellationToken);
         }
 
         if (health.Archive.Severity == "warning")
         {
             var anchor = archiveContact ?? DateTimeOffset.UnixEpoch;
             var day = (int)Math.Max(0, (now - anchor).TotalDays);
-            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Archiv-Server nicht erreichbar",
-                $"Letzte Archivierung {Local(health.Archive.LastSuccessAt)}. Dokumente werden zurückgehalten und später übertragen.", "/system/archiv",
+            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Archivserver nicht erreichbar",
+                $"Letzte Archivierung: {Local(health.Archive.LastSuccessAt)}. Dokumente werden nach Wiederherstellung der Verbindung übertragen.", "/system/archiv",
                 "archive", null, NotificationUrgency.Normal, $"archive:outage:{anchor:O}:{day}", NotificationEvents.ArchiveDown), cancellationToken);
             _archiveOutageNotified = true;
         }
         else if (_archiveOutageNotified)
         {
             _archiveOutageNotified = false;
-            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Archiv-Server wieder erreichbar", null, "/system/archiv",
+            await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System, "Archivserver wieder erreichbar", null, "/system/archiv",
                 "archive", null, NotificationUrgency.Low, Event: NotificationEvents.ArchiveDown), cancellationToken);
         }
     }

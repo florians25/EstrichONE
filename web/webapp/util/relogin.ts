@@ -36,7 +36,7 @@ export function relogin(): Promise<boolean> {
 		title: "Erneut anmelden",
 		submitText: "Anmelden",
 		width: "26rem",
-		intro: "Die Sitzung ist abgelaufen. Bitte das Passwort eingeben, um weiterzuarbeiten – nicht gespeicherte Eingaben bleiben erhalten.",
+		intro: "Die Sitzung ist abgelaufen. Bitte geben Sie Ihr Passwort ein, um fortzufahren. Nicht gespeicherte Eingaben bleiben erhalten.",
 		initial: { login: user.userName, password: "", remember: readRemember() },
 		fields: [
 			{ key: "login", label: "Anmeldename", type: "text", required: true },

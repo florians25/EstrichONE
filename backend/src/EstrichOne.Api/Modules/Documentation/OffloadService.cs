@@ -392,7 +392,7 @@ internal sealed partial class OffloadService(
 
         if (plainSha != expectedSha)
         {
-            throw new IOException($"Original weicht von seiner Prüfsumme ab ({storageKey}) – wird nicht ausgelagert.");
+            throw new IOException($"Original weicht von seiner Prüfsumme ab ({storageKey}). Die Datei wird nicht ausgelagert.");
         }
 
         // 2. Übertragen: der Storage prüft die Prüfsumme und legt das Objekt erst danach (fsync) ab.
@@ -419,7 +419,7 @@ internal sealed partial class OffloadService(
             await DownloadAsync(http, objectId, key, sink, cancellationToken);
             if (sink.Sha256() != expectedSha || sink.Written != plainLength)
             {
-                throw new CryptographicException("Rückleseprüfung fehlgeschlagen – Original bleibt lokal.");
+                throw new CryptographicException("Rückleseprüfung fehlgeschlagen. Das Original bleibt lokal gespeichert.");
             }
         }
 
@@ -467,7 +467,7 @@ internal sealed partial class OffloadService(
                     foreach (var blob in group)
                     {
                         blob.AwaitBackup(null);
-                        blob.Failed(result?.Message is { } m ? $"Sicherungskopie fehlgeschlagen: {m}" : "Sicherungskopie nicht bestätigt – wird erneut angefordert.");
+                        blob.Failed(result?.Message is { } m ? $"Sicherungskopie fehlgeschlagen: {m}" : "Sicherungskopie nicht bestätigt. Sie wird erneut angefordert.");
                     }
                 }
             }
@@ -488,7 +488,7 @@ internal sealed partial class OffloadService(
             {
                 foreach (var blob in waiting)
                 {
-                    blob.Failed("Kein Backup-Dienst eingerichtet – Original bleibt lokal, bis eine Sicherungskopie möglich ist.");
+                    blob.Failed("Kein Backup-Dienst eingerichtet. Das Original bleibt lokal, bis eine Sicherungskopie möglich ist.");
                 }
             }
         }
@@ -510,7 +510,7 @@ internal sealed partial class OffloadService(
         var info = new FileInfo(path);
         if (info.Exists && info.Length != blob.SizeBytes)
         {
-            blob.Failed("Lokales Original hat sich verändert – bleibt lokal.");
+            blob.Failed("Das lokale Original wurde verändert und bleibt lokal gespeichert.");
             return false;
         }
 
@@ -565,7 +565,7 @@ internal sealed partial class OffloadService(
             catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
             {
                 throw new OffloadUnavailableException(
-                    $"Die Datei liegt auf dem Storage „{settings.ServerName}“, der gerade nicht erreichbar ist. Nichts ist verloren – bitte später erneut versuchen und die Verwaltung informieren.",
+                    $"Die Datei liegt auf dem Storage „{settings.ServerName}“, der derzeit nicht erreichbar ist. Es gehen keine Daten verloren. Bitte versuchen Sie es später erneut und informieren Sie die Verwaltung.",
                     exception);
             }
             catch (CryptographicException exception)
@@ -656,7 +656,7 @@ internal sealed partial class OffloadService(
                 if (Convert.ToHexStringLower(await SHA256.HashDataAsync(check, cancellationToken)) != blob.Sha256)
                 {
                     File.Delete(temp);
-                    blob.Failed("Prüfsumme nach dem Rückholen falsch – erneut versuchen.");
+                    blob.Failed("Prüfsumme nach dem Rückholen fehlerhaft. Bitte erneut versuchen.");
                     return false;
                 }
             }
@@ -786,7 +786,7 @@ internal sealed partial class OffloadService(
                 {
                     if (blob.State != OffloadState.Missing)
                     {
-                        blob.MarkMissing("Objekt fehlt auf dem Storage – aus der Sicherung zurückholen.");
+                        blob.MarkMissing("Objekt fehlt auf dem Storage. Bitte aus der Sicherung zurückholen.");
                         changed++;
                     }
 
@@ -803,7 +803,7 @@ internal sealed partial class OffloadService(
 
                 if (info is not null && info.Sha256 != blob.CipherSha256)
                 {
-                    blob.MarkMissing("Objekt auf dem Storage passt nicht zur Prüfsumme – aus der Sicherung zurückholen.");
+                    blob.MarkMissing("Objekt auf dem Storage stimmt nicht mit der Prüfsumme überein. Bitte aus der Sicherung zurückholen.");
                     changed++;
                 }
                 else if (blob.State == OffloadState.Missing)
@@ -843,7 +843,7 @@ internal sealed partial class OffloadService(
 
     internal static string Describe(Exception exception) => exception switch
     {
-        TaskCanceledException => "Zeitüberschreitung – Storage nicht erreichbar.",
+        TaskCanceledException => "Zeitüberschreitung: Storage nicht erreichbar.",
         HttpRequestException { InnerException: System.Security.Authentication.AuthenticationException } =>
             "Zertifikat des Storage stimmt nicht mehr (neu koppeln?).",
         HttpRequestException { StatusCode: HttpStatusCode.Unauthorized } => "Storage kennt diesen Server nicht mehr (Kopplung aufgehoben).",

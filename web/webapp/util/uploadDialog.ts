@@ -104,7 +104,7 @@ export function openUploadDialog(options_: UploadDialogOptions): Dialog {
 	});
 	const caption = new Input(`${id}-caption`, {
 		width: "100%", maxLength: 500,
-		placeholder: options_.kind === "media" ? "optional, für alle gewählten Fotos – z. B. Fußbodenheizung vor dem Einbringen" : "optional, z. B. Stand Bauantrag",
+		placeholder: options_.kind === "media" ? "optional, für alle gewählten Fotos, z. B. Fußbodenheizung vor dem Einbringen" : "optional, z. B. Stand Bauantrag",
 	});
 	const target = options_.kind === "documents"
 		? [

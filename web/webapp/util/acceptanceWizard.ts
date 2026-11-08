@@ -75,7 +75,7 @@ export function openAcceptanceWizard(options: AcceptanceWizardOptions): Promise<
 
 		// 2 · Leistung und Räume
 		const scope = new TextArea("accScope", { rows: 3, width: "100%", maxLength: 4000, value: "Estricharbeiten gemäß Auftrag.", growing: true });
-		const roomList = new List("accRooms", { mode: "MultiSelect", noDataText: "Keine Räume erfasst – Leistung oben beschreiben.", includeItemInSelection: true });
+		const roomList = new List("accRooms", { mode: "MultiSelect", noDataText: "Keine Räume erfasst. Bitte die Leistung oben beschreiben.", includeItemInSelection: true });
 		const roomTotal = new Text().addStyleClass("eoMuted sapUiTinyMarginTop");
 		const rooms = options.rooms?.rooms ?? [];
 		for (const room of rooms) {
@@ -117,7 +117,7 @@ export function openAcceptanceWizard(options: AcceptanceWizardOptions): Promise<
 		] })] });
 
 		// 4 · Fotos
-		const photoList = new List("accPhotos", { mode: "MultiSelect", noDataText: "Noch keine Fotos – hier aufnehmen oder hochladen.", growing: true, growingThreshold: 30 });
+		const photoList = new List("accPhotos", { mode: "MultiSelect", noDataText: "Noch keine Fotos. Fotos hier aufnehmen oder hochladen.", growing: true, growingThreshold: 30 });
 		const addPhoto = (p: FileResponse, selected: boolean) => {
 			const item = new StandardListItem({ title: p.caption || p.originalName, description: dateTime(p.capturedAt ?? p.createdAt),
 				icon: `/api/v1/files/${p.id}/content?variant=${p.variants === "ready" ? "thumb" : "original"}`, iconInset: false, selected });
@@ -204,7 +204,7 @@ export function openAcceptanceWizard(options: AcceptanceWizardOptions): Promise<
 			const clientPng = link ? null : clientPad.toPng();
 			const contractorPng = contractorPad.toPng();
 			if (!link && !clientPng) {
-				strip.setText("Bitte vom Auftraggeber unterschreiben lassen – oder die Freigabe per Link wählen.");
+				strip.setText("Bitte vom Auftraggeber unterschreiben lassen oder die Freigabe per Link wählen.");
 				strip.setVisible(true);
 				return;
 			}

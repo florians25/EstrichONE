@@ -26,11 +26,11 @@ import { uuidv7 } from "./ids";
 
 export function openQuickCall(): void {
 	const startedAt = Date.now();
-	const live = new ObjectStatus("quickCallTimer", { text: "Gespräch läuft – 00:00", state: "Error", icon: "sap-icon://record", inverted: false });
+	const live = new ObjectStatus("quickCallTimer", { text: "Gespräch läuft · 00:00", state: "Error", icon: "sap-icon://record", inverted: false });
 	live.addStyleClass("eoLiveTimer");
 	const tick = setInterval(() => {
 		const seconds = Math.max(0, Math.floor((Date.now() - startedAt) / 1000));
-		live.setText(`Gespräch läuft – ${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`);
+		live.setText(`Gespräch läuft · ${String(Math.floor(seconds / 60)).padStart(2, "0")}:${String(seconds % 60).padStart(2, "0")}`);
 	}, 1000);
 
 	const who = new Input("quickWho", { placeholder: "Name, Firma oder Telefonnummer", width: "100%" });

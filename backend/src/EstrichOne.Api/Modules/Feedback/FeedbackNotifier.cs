@@ -18,7 +18,7 @@ public sealed class FeedbackNotifier(INotifier notifier, IRoleAssignments roles)
     {
         var managers = await roles.GetUserIdsWithPermissionAsync(Permissions.FeedbackManage, cancellationToken);
         await notifier.NotifyAsync(managers, new NotificationRequest(NotificationCategory.Ticket,
-            $"{(item.Kind == FeedbackKind.Bug ? "Neuer Fehler" : "Neuer Funktionswunsch")} {item.Number}", $"{item.Title} · {item.Area}",
+            $"{(item.Kind == FeedbackKind.Bug ? "Neue Fehlermeldung" : "Neuer Funktionswunsch")} {item.Number}", $"{item.Title} · {item.Area}",
             ManageLink(item.Id), "feedback", item.Id, Event: NotificationEvents.FeedbackSubmitted), cancellationToken);
     }
 
@@ -29,12 +29,13 @@ public sealed class FeedbackNotifier(INotifier notifier, IRoleAssignments roles)
             ? [assignee]
             : await roles.GetUserIdsWithPermissionAsync(Permissions.FeedbackManage, cancellationToken);
         await notifier.NotifyAsync(recipients, new NotificationRequest(NotificationCategory.Ticket,
-            $"Meldung {item.Number}: Rückmeldung des Einreichers", item.Title, ManageLink(item.Id), "feedback", item.Id,
+            $"Rückmeldung zu Meldung {item.Number}", item.Title, ManageLink(item.Id), "feedback", item.Id,
             Event: NotificationEvents.FeedbackSubmitted), cancellationToken);
     }
 
     public Task ReporterUpdatedAsync(FeedbackItem item, bool reply, CancellationToken cancellationToken) =>
         notifier.NotifyAsync([item.ReporterUserId], new NotificationRequest(NotificationCategory.Ticket,
-            $"Ihre Meldung {item.Number}: {(reply ? "neue Antwort der IT" : $"Status „{FeedbackService.StatusName(item.Status)}“")}", item.Title,
+            reply ? $"Antwort zu Meldung {item.Number}" : $"Status geändert: Meldung {item.Number}",
+            reply ? item.Title : $"{item.Title} · {FeedbackService.StatusName(item.Status)}",
             ReporterLink(item.Id), "feedback", item.Id, Event: NotificationEvents.FeedbackUpdated), cancellationToken);
 }

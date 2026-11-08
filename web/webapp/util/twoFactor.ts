@@ -63,7 +63,7 @@ export function showRecoveryCodes(codes: string[], account: string): Promise<voi
 		const dialog = new Dialog({
 			title: "Wiederherstellungscodes", contentWidth: "26rem",
 			content: [new VBox({ items: [
-				new MessageStrip({ type: "Warning", showIcon: true, text: "Jeder Code gilt einmal, falls das Handy verloren geht. Jetzt ausdrucken oder sicher ablegen – sie werden nicht noch einmal angezeigt." }),
+				new MessageStrip({ type: "Warning", showIcon: true, text: "Jeder Code ist einmal gültig und ersetzt bei Verlust des Mobilgeräts den Code aus der App. Bitte ausdrucken oder sicher ablegen; die Codes werden nicht erneut angezeigt." }),
 				new Text({ text, renderWhitespace: true }).addStyleClass("eoTabular sapUiSmallMarginTop").data("testid", "recovery-codes", true),
 			] }).addStyleClass("sapUiSmallMargin")],
 			buttons: [

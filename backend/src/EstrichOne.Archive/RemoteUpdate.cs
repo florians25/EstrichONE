@@ -157,7 +157,7 @@ public sealed partial class RemoteUpdater(ArchiveOptions options, TimeProvider c
 
         if (SemVer.IsValid(ArchiveServer.Version) && SemVer.Compare(order.Version, ArchiveServer.Version) < 0)
         {
-            return new(422, "UPDATE_DOWNGRADE", $"Version {order.Version} ist älter als die installierte ({ArchiveServer.Version}) – Zurückstufen nur am Rechner selbst.");
+            return new(422, "UPDATE_DOWNGRADE", $"Version {order.Version} ist älter als die installierte ({ArchiveServer.Version}). Ein Zurückstufen ist nur direkt am Rechner möglich.");
         }
 
         lock (_gate)

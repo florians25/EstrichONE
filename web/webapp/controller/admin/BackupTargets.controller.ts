@@ -47,7 +47,7 @@ export default class BackupTargets extends BaseController {
 		this.model().setProperty("/busy", false);
 		const targets = items ?? [];
 		this.statusLine([
-			!targets.length && { text: "Noch kein Backup-Ziel gekoppelt – Sicherung liegt nur auf diesem Server", level: "warning" },
+			!targets.length && { text: "Noch kein Backup-Ziel gekoppelt. Die Sicherung liegt nur auf diesem Server.", level: "warning" },
 			...targets.filter((t) => !t.remote).map((t) => ({ text: `${t.name} nicht erreichbar`, level: "warning" as const })),
 			...targets.filter((t) => t.lastRun?.status === "failed").map((t) => ({ text: `letzte Sicherung zu ${t.name} fehlgeschlagen`, level: "error" as const })),
 			...targets.filter((t) => t.remote && !t.remote.appendOnly).map((t) => ({ text: `${t.name} erlaubt Löschen`, level: "warning" as const })),
@@ -72,8 +72,8 @@ export default class BackupTargets extends BaseController {
 		this.model().setProperty("/mirrors", (r?.mirrors ?? []).map((m) => ({
 			...m,
 			title: m.targetName ? `${m.name} (${m.targetName})` : m.name,
-			stateText: !m.paired ? `Wartet auf Kopplung – Code gültig bis ${dateTime(m.codeExpiresAt)}`
-				: m.reachable ? `Verbunden · zuletzt gemeldet ${dateTime(m.lastSeenAt)}` : `Nicht erreichbar – zuletzt gemeldet ${m.lastSeenAt ? dateTime(m.lastSeenAt) : "nie"}`,
+			stateText: !m.paired ? `Wartet auf Kopplung · Code gültig bis ${dateTime(m.codeExpiresAt)}`
+				: m.reachable ? `Verbunden · zuletzt gemeldet ${dateTime(m.lastSeenAt)}` : `Nicht erreichbar · zuletzt gemeldet ${m.lastSeenAt ? dateTime(m.lastSeenAt) : "nie"}`,
 			state: !m.paired ? "Information" : m.reachable && !m.lastReport?.error ? "Success" : "Error",
 			detail: m.lastReport
 				? `${m.lastReport.snapshots} Sicherungsstände · ${fileSize(m.lastReport.bytes)} gespiegelt${m.lastReport.diskFreeBytes != null ? ` · ${fileSize(m.lastReport.diskFreeBytes)} frei` : ""}${m.lastReport.error ? ` · Fehler: ${m.lastReport.error}` : ""}`
@@ -134,7 +134,7 @@ export default class BackupTargets extends BaseController {
 			title: "Kombiserver koppeln", submitText: "Beide koppeln", width: "40rem",
 			fields: [
 				{ key: "intro", type: "info", label: "Backup-Ziel und Archivserver auf einem Rechner, eingerichtet mit dem Installer-Modus „backup-archiv“. "
-					+ "Adresse und Kopplungscode zeigt der Kombiserver nach der Installation an – der eine Code koppelt beide Dienste." },
+					+ "Adresse und Kopplungscode zeigt der Kombiserver nach der Installation an. Ein Code koppelt beide Dienste." },
 				{ key: "hint", type: "info", label: KOMBI_LOCATION_HINT },
 				{ key: "address", label: "Adresse des Kombiservers", required: true, placeholder: "z. B. 192.168.1.50 oder kombi.firma.de",
 					validate: (v, all) => { try { kombiAddresses(String(v ?? ""), Number(all.backupPort), Number(all.archivePort)); return null; } catch (error) { return (error as Error).message; } } },
@@ -217,7 +217,7 @@ export default class BackupTargets extends BaseController {
 		});
 		MessageBox.information(archive
 			? `Archiv gekoppelt mit „${archive.serverName}“ (Fingerabdruck ${archive.fingerprintDisplay}). Das Backup-Ziel meldet sich nach der Installation unter „Backup-Ziele, die ziehen“.`
-			: `Archiv noch nicht gekoppelt. Später unter System → Archiv → „Archivserver koppeln“ mit dem Code ${created.code} (24 Stunden gültig) nachholen.`,
+			: `Archiv noch nicht gekoppelt. Später unter System › Archiv › „Archivserver koppeln“ mit dem Code ${created.code} (24 Stunden gültig) nachholen.`,
 		{ title: "Kombiserver, der zieht" });
 	}
 

@@ -74,7 +74,7 @@ public sealed class BackupCenterTests(PostgresFixture postgres) : IAsyncLifetime
         var stale = await Monitor.RefreshAsync(notify: false, Ct);
         stale.Backup.Severity.ShouldBe("critical");
         stale.Banners.Single().ShouldBe(new HealthBanner("backup", "critical",
-            "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 15.01.2030 22:30 Uhr). Backup-Ziele und Backup-Dienst unter System → Sicherung prüfen.", AdminOnly: true));
+            "Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: 15.01.2030 22:30 Uhr. Bitte Backup-Ziele und Backup-Dienst unter System › Sicherung prüfen.", AdminOnly: true));
 
         using var later = await _factory.CreateClientAsAsync("polier", StandardRoles.SiteWorkerId);
         var cached = await later.GetFromJsonAsync<HealthBannerResponse>("/api/v1/system/health-banner", TestJson.Options, Ct);

@@ -136,7 +136,7 @@ public static class PeerClient
             var fingerprint = Fingerprint(ca);
             if (presented is null || !ChainsTo(ca, presented))
             {
-                throw new PeerException("PEER_CERTIFICATE_MISMATCH", "Das Zertifikat passt nicht zum Dienst – Verbindung abgebrochen.");
+                throw new PeerException("PEER_CERTIFICATE_MISMATCH", "Das Zertifikat passt nicht zum Dienst. Verbindung abgebrochen.");
             }
 
             var nonce = Convert.ToHexStringLower(RandomNumberGenerator.GetBytes(16));
@@ -158,7 +158,7 @@ public static class PeerClient
             if (!CryptographicOperations.FixedTimeEquals(Encoding.ASCII.GetBytes(Proof(code, "server", fingerprint, nonce)),
                     Encoding.ASCII.GetBytes(paired.ServerProof ?? string.Empty)))
             {
-                throw new PeerException("PEER_SERVER_PROOF_INVALID", "Der Dienst konnte den Code nicht bestätigen – möglicher Angriff, Kopplung abgebrochen.");
+                throw new PeerException("PEER_SERVER_PROOF_INVALID", "Der Dienst konnte den Code nicht bestätigen (möglicher Angriff). Kopplung abgebrochen.");
             }
 
             return new PeerPairing(address, hello.Role, paired.Name, hello.Version, hello.CaCertificatePem, fingerprint, paired.ClientId,

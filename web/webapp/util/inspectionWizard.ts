@@ -111,7 +111,7 @@ export function openInitialInspectionWizard(options: InspectionWizardOptions): P
 	const checksStep = new WizardStep("inspStepChecks", { title: "Prüfpunkte", icon: "sap-icon://checklist-item", validated: true, content: [new VBox({ items: [checkBox, valuesForm] })] });
 
 	// 3 · Fotos
-	const photoList = new List("inspPhotos", { mode: "MultiSelect", noDataText: "Noch keine Fotos in der Bauakte – hier direkt aufnehmen oder hochladen.", growing: true, growingThreshold: 30 });
+	const photoList = new List("inspPhotos", { mode: "MultiSelect", noDataText: "Noch keine Fotos in der Bauakte. Fotos hier aufnehmen oder hochladen.", growing: true, growingThreshold: 30 });
 	const addPhotoItem = (p: FileResponse, selected: boolean) => {
 		const item = new StandardListItem({
 			title: p.caption || p.originalName, description: dateTime(p.capturedAt ?? p.createdAt),

@@ -163,8 +163,8 @@ internal sealed partial class OffloadWorker(IServiceScopeFactory scopes, Offload
             connection.NotifiedLowSpace(now);
             await services.GetRequiredService<EstrichOneDbContext>().SaveChangesAsync(cancellationToken);
             var percent = disk.Free * 100.0 / disk.Total;
-            await NotifyAsync(services, new NotificationRequest(NotificationCategory.System, "Speicher auf dem Server knapp",
-                $"Noch {Gb(disk.Free)} frei ({percent:0.#} %). {(settings.AutoWhenLow ? "Originale werden automatisch auf den Storage ausgelagert." : "Automatische Auslagerung ist aus – bitte unter Speicher-Auslagerung handeln.")}",
+            await NotifyAsync(services, new NotificationRequest(NotificationCategory.System, "Speicherplatz knapp",
+                $"Frei: {Gb(disk.Free)} ({percent:0.#} %). {(settings.AutoWhenLow ? "Originale werden automatisch auf den Storage ausgelagert." : "Automatische Auslagerung ist ausgeschaltet; bitte unter System › Speicher-Auslagerung auslagern.")}",
                 "/system/auslagerung", "offload", null, NotificationUrgency.High, $"offload:low:{now:yyyyMMdd}", NotificationEvents.OffloadLowSpace), cancellationToken);
         }
 
@@ -188,8 +188,8 @@ internal sealed partial class OffloadWorker(IServiceScopeFactory scopes, Offload
 
         var tracked2 = await service.ConnectionAsync(cancellationToken);
         tracked2.Ran(now, offloadedBytes > 0
-            ? $"Platz knapp: {Gb(offloadedBytes)} zum Auslagern übertragen und geprüft."
-            : "Platz knapp, aber keine Dateien entsprechen den Regeln (Alter, Arten, abgeschlossene Bauakten).");
+            ? $"Speicherplatz knapp. {Gb(offloadedBytes)} zum Auslagern übertragen und geprüft."
+            : "Speicherplatz knapp. Keine Dateien entsprechen den Regeln (Alter, Arten, abgeschlossene Bauakten).");
         await services.GetRequiredService<EstrichOneDbContext>().SaveChangesAsync(cancellationToken);
     }
 
@@ -206,7 +206,7 @@ internal sealed partial class OffloadWorker(IServiceScopeFactory scopes, Offload
         services.GetRequiredService<IAuditLog>().Record("files.offload.completed", null, "offload", null,
             new Dictionary<string, string?> { ["files"] = finalized.ToString(System.Globalization.CultureInfo.InvariantCulture) });
         await db.SaveChangesAsync(cancellationToken);
-        await NotifyAsync(services, new NotificationRequest(NotificationCategory.System, "Dateien auf den Storage ausgelagert", message,
+        await NotifyAsync(services, new NotificationRequest(NotificationCategory.System, "Dateien ausgelagert", message,
             "/system/auslagerung", "offload", null, NotificationUrgency.Low, $"offload:done:{clock.GetUtcNow():O}", NotificationEvents.OffloadCompleted), cancellationToken);
     }
 
@@ -227,9 +227,10 @@ internal sealed partial class OffloadWorker(IServiceScopeFactory scopes, Offload
         connection.NotifiedUnreachable(clock.GetUtcNow());
         await services.GetRequiredService<EstrichOneDbContext>().SaveChangesAsync(cancellationToken);
         var text = health.Reachable
-            ? $"{health.Missing} ausgelagerte Original(e) fehlen auf dem Storage. Unter Speicher-Auslagerung „Aus Sicherung zurückholen“ wählen."
-            : $"Storage „{settings.ServerName}“ nicht erreichbar – {health.OffloadedFiles} ausgelagerte Originale lassen sich gerade nicht öffnen. Nichts ist verloren.";
-        await NotifyAsync(services, new NotificationRequest(NotificationCategory.System, "Storage der Auslagerung: Handlungsbedarf", text,
+            ? $"{health.Missing} ausgelagerte Original(e) fehlen auf dem Storage. Wiederherstellung unter System › Speicher-Auslagerung › „Aus Sicherung zurückholen“."
+            : $"Storage „{settings.ServerName}“: {health.OffloadedFiles} ausgelagerte Originale können derzeit nicht geöffnet werden. Es gehen keine Daten verloren.";
+        await NotifyAsync(services, new NotificationRequest(NotificationCategory.System,
+            health.Reachable ? "Ausgelagerte Originale fehlen" : "Storage nicht erreichbar", text,
             "/system/auslagerung", "offload", null, NotificationUrgency.High, $"offload:down:{clock.GetUtcNow():yyyyMMdd}", NotificationEvents.OffloadUnreachable),
             cancellationToken);
     }

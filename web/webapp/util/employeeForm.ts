@@ -37,7 +37,7 @@ export async function openEmployeeForm(existing: EmployeeDetail | null): Promise
 			{ key: "emergencyContactRelation", label: "Beziehung", maxLength: 50, suggestions: ["Ehefrau", "Ehemann", "Partner/in", "Mutter", "Vater", "Sohn", "Tochter"] },
 			{ key: "s4", label: "Beschäftigung, Arbeitszeit und Urlaub", type: "section" },
 			{ key: "entryDate", label: "Eintritt", type: "date" },
-			{ key: "probationEnd", label: "Ende der Probezeit", type: "date", help: "Erinnerung unter Urlaub und Abwesenheiten → Fristen." },
+			{ key: "probationEnd", label: "Ende der Probezeit", type: "date", help: "Erinnerung unter Urlaub und Abwesenheiten › Fristen." },
 			{ key: "exitDate", label: "Austritt", type: "date",
 				validate: (v, all) => (v && all.entryDate && String(v) < String(all.entryDate) ? "Der Austritt liegt vor dem Eintritt." : null) },
 			{ key: "workTimeModel", label: "Arbeitszeitmodell", maxLength: 100, suggestions: workTimeModels },

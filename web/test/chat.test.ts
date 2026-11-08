@@ -42,13 +42,13 @@ describe("Systemstatus-Banner", () => {
 		expect(healthTexts({ backupTarget: { configured: false, reachable: false } }, now).backup).toBe("");
 		expect(healthTexts({ backupTarget: { configured: true, reachable: true, lastSuccessAt: "2026-10-28T02:00:00Z" } }, now).backup).toBe("");
 		const red = healthTexts({ backupTarget: { configured: true, reachable: false, lastSuccessAt: "2026-10-28T02:00:00Z" } }, now).backup;
-		expect(red).toMatch(/^ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar \(Letztes Backup 28\.10\.2026, \d\d:00 Uhr\)\. Bitte geben Sie umgehend Ihrem Admin Bescheid\.$/);
+		expect(red).toMatch(/^Backup-Ziel nicht erreichbar\. Letzte erfolgreiche Sicherung: 28\.10\.2026, \d\d:00 Uhr\. Bitte informieren Sie umgehend die Administration\.$/);
 		expect(healthTexts({ backupTarget: { configured: true, reachable: true, lastSuccessAt: "2026-10-27T08:00:00Z" } }, now).backup).not.toBe("");
 	});
 
 	it("gelb für den Archivserver", () => {
 		expect(healthTexts({ archive: { configured: true, reachable: false, lastSuccessAt: null } }, now).archive)
-			.toBe("Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung unbekannt). Bitte informieren Sie Ihren Admin.");
+			.toBe("Archivserver nicht erreichbar. Letzte Archivierung: unbekannt. Bitte informieren Sie die Administration.");
 		expect(healthTexts({ archive: { configured: false, reachable: false } }, now).archive).toBe("");
 	});
 });
@@ -95,6 +95,6 @@ describe("Chat – Messenger-Funktionen", () => {
 		expect(editMinutesLeft(created, 15)).toBe(10);
 		expect(editMinutesLeft(created, 3)).toBe(0);
 		const c = { kind: "direct", members: [], lastMessage: { id: "m", senderUserId: "a", senderName: "A", text: null, createdAt: "", mine: false, deleted: false, attachment: "photo" } };
-		expect(preview(c as unknown as ChatConversation)).toBe("📷 Foto");
+		expect(preview(c as unknown as ChatConversation)).toBe("Foto");
 	});
 });

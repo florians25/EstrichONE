@@ -356,7 +356,7 @@ export default class CockpitController extends BaseController {
 				row("Wochenende anzeigen (Sa/So)", this.showWeekend(), () => this.onWeekend(),
 					"Aus: Woche Mo–Fr. Samstage und Sonntage mit Einsätzen bleiben trotzdem sichtbar."),
 				row("Kompakte Karten", m.getProperty("/compact") === true, () => { m.setProperty("/compact", !(m.getProperty("/compact") === true)); this.onCompact(); },
-					"Eine Zeile je Einsatz (Woche, 2 Wochen) – mehr Überblick bei vielen Einsätzen."),
+					"Eine Zeile je Einsatz (Woche, 2 Wochen) für bessere Übersicht bei vielen Einsätzen."),
 			] }).addStyleClass("sapUiSmallMargin")],
 			afterClose: () => popover.destroy(),
 		});
@@ -492,7 +492,7 @@ export default class CockpitController extends BaseController {
 		if (!result) return;
 		this.pushUndo(action);
 		const warnings = result.warnings;
-		MessageToast.show(warnings.length ? `${label} – Hinweis: ${warnings.slice(0, 2).join(" ")}${warnings.length > 2 ? " …" : ""}` : `${label}. Strg+Z macht es rückgängig.`,
+		MessageToast.show(warnings.length ? `${label}. Hinweis: ${warnings.slice(0, 2).join(" ")}${warnings.length > 2 ? " …" : ""}` : `${label}. Strg+Z macht es rückgängig.`,
 			{ duration: warnings.length ? 5000 : 2500 });
 	}
 
@@ -704,7 +704,7 @@ export default class CockpitController extends BaseController {
 		row("Notizen", notes);
 		const extra: (MessageStrip)[] = [];
 		if (a.warnings.length) extra.push(new MessageStrip({ type: "Warning", showIcon: true, text: a.warnings.join(" · ") }).addStyleClass("eoCkQvWarn"));
-		if (a.change) extra.push(new MessageStrip({ type: "Information", showIcon: true, text: a.change === "new" ? "Neu seit der letzten Freigabe – Mitarbeiter sehen ihn nach erneutem Freigeben als verbindlich." : "Geändert seit der letzten Freigabe." }).addStyleClass("eoCkQvWarn"));
+		if (a.change) extra.push(new MessageStrip({ type: "Information", showIcon: true, text: a.change === "new" ? "Neu seit der letzten Freigabe. Für Mitarbeiter verbindlich nach erneuter Freigabe." : "Geändert seit der letzten Freigabe." }).addStyleClass("eoCkQvWarn"));
 		for (const x of extra) body.addItem(x);
 		const head = new VBox({
 			renderType: "Bare",
@@ -858,7 +858,7 @@ export default class CockpitController extends BaseController {
 
 	private async nextFree(a: PlanAssignment): Promise<void> {
 		if (!a.crewId) {
-			MessageToast.show("Der nächste freie Tag wird je Kolonne gesucht – dieser Einsatz hat keine Kolonne.");
+			MessageToast.show("Der nächste freie Tag wird nur für Kolonnen ermittelt. Dieser Einsatz ist keiner Kolonne zugeordnet.");
 			return;
 		}
 		const before = { ...a };
@@ -1039,7 +1039,7 @@ export default class CockpitController extends BaseController {
 	onConflicts(): void {
 		const board = this.board;
 		if (!board) return;
-		const list = new List({ noDataText: "Keine Konflikte im Zeitraum – sauber geplant." });
+		const list = new List({ noDataText: "Keine Konflikte im Zeitraum." });
 		for (const crew of board.crews) {
 			for (const cell of crew.cells) {
 				if (!cell.assignmentIds.length || !cell.warnings.length) continue;
@@ -1175,7 +1175,7 @@ export default class CockpitController extends BaseController {
 		};
 		fill(plan);
 		const dialog = new Dialog({
-			title: `Einsätze ${longDay(day)} – Karte und Fahrtreihenfolge`, contentWidth: "64rem", resizable: true, draggable: true,
+			title: `Einsätze ${longDay(day)} · Karte und Fahrtreihenfolge`, contentWidth: "64rem", resizable: true, draggable: true,
 			content: [new HBox({ items: [new VBox({ items: [map], width: "100%" }).addStyleClass("eoGrow"), side] }).addStyleClass("eoCkMapLayout")],
 			buttons: [
 				new Button({ text: "Schließen", press: () => dialog.close() }),

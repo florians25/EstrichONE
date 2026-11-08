@@ -260,8 +260,8 @@ internal sealed class AcceptanceHints(EstrichOneDbContext db, IWorkReportSource 
         if (latest.State == AcceptanceState.Completed && (latest.Result != AcceptanceResult.Accepted || open > 0))
         {
             return [new BauakteHint("acceptance", BauakteHintSeverity.Warning, latest.Result == AcceptanceResult.Refused
-                ? "Abnahme verweigert – Mängel beheben und erneut abnehmen."
-                : $"Abnahme mit Vorbehalt – Akte bleibt offen bis die Mängel erledigt sind ({open} offen).")];
+                ? "Abnahme verweigert. Mängel beheben und Abnahme wiederholen."
+                : $"Abnahme mit Vorbehalt. Die Akte bleibt offen, bis die Mängel erledigt sind ({open} offen).")];
         }
 
         return [];

@@ -50,7 +50,7 @@ export function updateHint(status: UpdateStatus | null | undefined): UpdateHint 
 	if (status.available && status.securityUpdate) {
 		return {
 			key: `security:${status.available}`, type: "Error", url,
-			text: `Sicherheitsupdate verfügbar: EstrichONE ${status.available} (installiert ${status.installed}). Bitte zeitnah einspielen – auf dem Server: ${status.command}.${autoText(status.auto, true)}`,
+			text: `Sicherheitsupdate verfügbar: EstrichONE ${status.available} (installiert ${status.installed}). Bitte zeitnah einspielen. Befehl auf dem Server: ${status.command}.${autoText(status.auto, true)}`,
 		};
 	}
 	if (status.auto?.result === "failed") {
@@ -62,7 +62,7 @@ export function updateHint(status: UpdateStatus | null | undefined): UpdateHint 
 	if (status.available) {
 		return {
 			key: `update:${status.available}`, type: "Information", url,
-			text: `Update verfügbar: EstrichONE ${status.available} (installiert ${status.installed}) – auf dem Server: ${status.command}.${autoText(status.auto, false)}`,
+			text: `Update verfügbar: EstrichONE ${status.available} (installiert ${status.installed}). Befehl auf dem Server: ${status.command}.${autoText(status.auto, false)}`,
 		};
 	}
 	return null;

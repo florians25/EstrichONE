@@ -71,7 +71,7 @@
 				<uxap:subSections>
 					<uxap:ObjectPageSubSection>
 						<VBox>
-							<MessageStrip text="Kolonnen, Planung und Abwesenheiten brauchen ein verknüpftes Benutzerkonto (unter „Bearbeiten“ → Benutzerkonto)."
+							<MessageStrip text="Kolonnen, Planung und Abwesenheiten brauchen ein verknüpftes Benutzerkonto (unter „Bearbeiten“ › Benutzerkonto)."
 								type="Information" showIcon="true" visible="{= !${view>/e/userId} }" class="sapUiSmallMarginBottom"/>
 							<HBox items="{view>/e/crews}" wrap="Wrap">
 								<HBox alignItems="Center" class="sapUiSmallMarginEnd"><eo:Swatch color="{view>color}"/><Text text="{view>name}"/></HBox>

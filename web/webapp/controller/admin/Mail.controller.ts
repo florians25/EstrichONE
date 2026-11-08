@@ -49,7 +49,7 @@ export default class Mail extends BaseController {
 
 	private mailStatus(s: MailSettingsDto): void {
 		this.statusLine([
-			!s.configured && { text: "Kein E-Mail-Konto eingerichtet – Benachrichtigungen landen nur im Postfach", level: "warning" },
+			!s.configured && { text: "Kein E-Mail-Konto eingerichtet. Benachrichtigungen werden nur im Postfach zugestellt.", level: "warning" },
 			s.configured && !s.enabled && "E-Mail-Versand ist ausgeschaltet",
 			s.lastTestOk === false && { text: "Letzte Testmail fehlgeschlagen (Details unter „Konto“)", level: "error" },
 			s.configured && s.lastTestAt === null && { text: "Noch keine Testmail gesendet", level: "info" },

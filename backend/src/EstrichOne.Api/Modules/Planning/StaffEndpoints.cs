@@ -576,7 +576,7 @@ internal static class StaffEndpoints
 
         if (employee.UserId is not { } userId)
         {
-            return Validation("Kolonnen brauchen ein Benutzerkonto – bitte zuerst eines verknüpfen.");
+            return Validation("Für Kolonnen ist ein Benutzerkonto erforderlich. Bitte zuerst ein Konto verknüpfen.");
         }
 
         var wanted = request.CrewIds.Distinct().ToList();
@@ -615,7 +615,7 @@ internal static class StaffEndpoints
 
         if (employee.UserId is not { } userId)
         {
-            return Validation("Abwesenheiten brauchen ein Benutzerkonto – bitte zuerst eines verknüpfen.");
+            return Validation("Für Abwesenheiten ist ein Benutzerkonto erforderlich. Bitte zuerst ein Konto verknüpfen.");
         }
 
         try

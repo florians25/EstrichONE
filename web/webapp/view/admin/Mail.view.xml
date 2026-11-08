@@ -30,7 +30,7 @@
 							<Label text="Benutzername" labelFor="mlUser"/><Input id="mlUser" value="{view>/s/userName}" placeholder="meist die E-Mail-Adresse" maxLength="254"/>
 							<Label text="Passwort" labelFor="mlPass"/>
 							<VBox>
-								<Input id="mlPass" value="{view>/password}" type="Password" placeholder="{= ${view>/s/hasPassword} ? 'gespeichert – leer lassen, um es zu behalten' : 'Passwort' }"/>
+								<Input id="mlPass" value="{view>/password}" type="Password" placeholder="{= ${view>/s/hasPassword} ? 'gespeichert (leer lassen, um es beizubehalten)' : 'Passwort' }"/>
 								<Text text="Wird verschlüsselt gespeichert und nie wieder angezeigt." class="sapUiTinyMarginTop"/>
 							</VBox>
 							<Label text="Absenderadresse" labelFor="mlFrom" required="true"/><Input id="mlFrom" value="{view>/s/fromAddress}" type="Email" placeholder="buero@firma.de" maxLength="254"/>

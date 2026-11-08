@@ -147,7 +147,7 @@ test('Abnahmeprotokoll: Freigabe per Link durch den Kunden, PDF unter „Abnahme
   await page.getByRole('tab', { name: /Abnahmen/ }).click();
   await expect(page.getByText('Abgeschlossen, PDF unter „Abnahmen“').filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText(/Petra Kraus/).filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByText(/Abnahme mit Vorbehalt – Akte bleibt offen/).filter({ visible: true }).first()).toBeVisible();
+  await expect(page.getByText(/Abnahme mit Vorbehalt. Die Akte bleibt offen/).filter({ visible: true }).first()).toBeVisible();
   await openSection(page, 'Dokumente');
   await expect(page.locator('.sapMTreeItemBase').filter({ hasText: 'Abnahmen (1)' })).toBeVisible();
 });

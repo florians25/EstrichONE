@@ -88,7 +88,7 @@ export default class CockpitBacklog extends Control {
 		if (!items.length) {
 			const empty = document.createElement("div");
 			empty.className = "eoCkBlEmpty";
-			empty.textContent = "Alles eingeplant – keine Bauvorhaben in dieser Auswahl.";
+			empty.textContent = "Keine offenen Bauvorhaben in dieser Auswahl.";
 			list.append(empty);
 		}
 		list.scrollTop = scrollTop;
@@ -139,7 +139,7 @@ export default class CockpitBacklog extends Control {
 		title.textContent = b.title;
 		title.href = `/bauakten/${b.id}`;
 		title.draggable = false;
-		title.title = `${b.title} – Bauakte öffnen`;
+		title.title = `${b.title}: Bauakte öffnen`;
 		title.addEventListener("click", (e) => {
 			e.preventDefault();
 			this.fireEvent("open", { id: b.id });

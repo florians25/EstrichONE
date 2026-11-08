@@ -544,7 +544,7 @@ export default class Chat extends BaseController {
 
 	private snippet(x: ChatMessage): string {
 		if (x.deleted) return "Nachricht gelöscht";
-		const hint = x.attachments?.length ? (x.attachments.every((a) => a.kind === "photo") ? "📷 Foto" : "📄 Dokument") : x.location ? "📍 Standort" : "";
+		const hint = x.attachments?.length ? (x.attachments.every((a) => a.kind === "photo") ? "Foto" : "Dokument") : x.location ? "Standort" : "";
 		const text = (x.text ?? "").replace(/\s+/g, " ").trim();
 		const full = [hint, text].filter(Boolean).join(" ");
 		return full.length > 90 ? `${full.slice(0, 89)}…` : full;
@@ -1204,7 +1204,7 @@ export default class Chat extends BaseController {
 			try {
 				await mute(id, muted, minutes);
 				m.setProperty("/active/muted", muted);
-				this.toast(muted ? `Stumm geschaltet (${label}) – @Erwähnungen kommen trotzdem an` : "Hinweise wieder eingeschaltet");
+				this.toast(muted ? `Stumm geschaltet (${label}). @Erwähnungen werden weiterhin zugestellt.` : "Hinweise wieder eingeschaltet");
 				await this.loadList();
 			} catch (error) {
 				this.showError(error);
@@ -1415,7 +1415,7 @@ export default class Chat extends BaseController {
 				content.push(new VBox({ renderType: "Bare", items: [
 					new Label({ text: "Beschreibung", labelFor: description }), description,
 					new HBox({ alignItems: "Center", justifyContent: "SpaceBetween", renderType: "Bare", items: [
-						new Label({ text: "Ankündigungsgruppe – nur Admins schreiben", labelFor: announce, wrapping: true }), announce] }).addStyleClass("sapUiSmallMarginTop"),
+						new Label({ text: "Ankündigungsgruppe (nur Admins schreiben)", labelFor: announce, wrapping: true }), announce] }).addStyleClass("sapUiSmallMarginTop"),
 					new Button({ text: "Speichern", type: "Emphasized", press: async () => {
 						try {
 							await updateGroup(c.id, { description: description.getValue(), announcementOnly: announce.getState() });
@@ -1514,7 +1514,7 @@ export default class Chat extends BaseController {
 		} }));
 		if (canAdmin) {
 			buttons.push(new Button({ text: "Im Chat sperren / entsperren …", icon: "sap-icon://locked", type: "Reject", press: async () => {
-				const block = await this.confirm(`${member.name} im Chat sperren? Gesperrte Personen können lesen, aber nicht schreiben. „Abbrechen“ hebt keine Sperre auf – zum Entsperren erneut wählen und „Entsperren“ nutzen.`,
+				const block = await this.confirm(`${member.name} im Chat sperren? Gesperrte Personen können lesen, aber nicht schreiben. Zum Entsperren die Person erneut wählen und „Entsperren“ verwenden.`,
 					{ title: "Moderation", action: "Sperren", danger: true });
 				try {
 					if (block) await blockUser(member.userId, true);
@@ -1663,8 +1663,8 @@ export default class Chat extends BaseController {
 		const me = current.find((s) => !people.some((p) => p.id === s.userId));
 		const title = new Input({ value: existing?.title ?? "", maxLength: 120, placeholder: "z. B. Kolonne Nord, Alle Mitarbeiter" });
 		const description = new TextAreaControl({ value: existing?.description ?? "", rows: 2, maxLength: 1000, width: "100%", placeholder: "Zweck der Gruppe (optional)" });
-		const announce = new CheckBox({ text: "Ankündigungsgruppe – nur Admins schreiben", selected: !!existing?.announcementOnly });
-		const crew = new Select({ width: "100%", items: [new Item({ key: "", text: "Keine – Personen frei wählen" }),
+		const announce = new CheckBox({ text: "Ankündigungsgruppe (nur Admins schreiben)", selected: !!existing?.announcementOnly });
+		const crew = new Select({ width: "100%", items: [new Item({ key: "", text: "Keine (Personen frei wählen)" }),
 			...crewList.map((c) => new Item({ key: c.id, text: `${c.name} (${c.members})` }))] });
 		const members = new MultiComboBox({ width: "100%", placeholder: "Personen hinzufügen",
 			items: people.map((p) => new Item({ key: p.id, text: p.name })),
@@ -1687,7 +1687,7 @@ export default class Chat extends BaseController {
 					new Label({ text: existing?.crewId || existing?.bauakteId ? "Weitere Personen (automatische Mitglieder bleiben)" : "Mitglieder", labelFor: members }), all,
 				] }).addStyleClass("sapUiSmallMarginTop"), members,
 				...(existing ? [] : [announce]),
-				new Text({ text: "Sie selbst sind immer Mitglied und Admin. Nur Personen mit Recht „Chat nutzen“ sind wählbar – Einladung ohne Telefonnummern." })
+				new Text({ text: "Sie selbst sind immer Mitglied und Admin. Nur Personen mit Recht „Chat nutzen“ sind wählbar. Die Einladung erfolgt ohne Telefonnummern." })
 					.addStyleClass("eoMuted sapUiSmallMarginTop"),
 			] }).addStyleClass("sapUiSmallMargin")],
 			beginButton: new Button({ text: existing ? "Speichern" : "Anlegen", type: "Emphasized", press: async () => {

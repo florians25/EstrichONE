@@ -3,7 +3,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.roles}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Rollen mit fein abgestuften Rechten – Rechtematrix bearbeiten, eigene Rollen anlegen"/></f:expandedContent>
+				<f:expandedContent><Text text="Rollen mit fein abgestuften Rechten, Rechtematrix bearbeiten, eigene Rollen anlegen"/></f:expandedContent>
 				<f:actions>
 					<Button text="Rolle anlegen" icon="sap-icon://add" type="Emphasized" press=".onNew" visible="{view>/canManage}"/>
 					<Button text="Änderungen speichern" icon="sap-icon://save" press=".onSave" enabled="{= ${view>/dirty} &amp;&amp; ${view>/canManage} }"

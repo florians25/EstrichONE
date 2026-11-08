@@ -32,7 +32,7 @@ describe('Speicher-Auslagerung (Anzeige)', () => {
     expect(v['jobPercent']).toBe(25);
     expect(String(v['jobText'])).toContain('Auslagern: 1 von 4');
     expect(v['backupState']).toBe('Success');
-    expect(String(v['pending'])).toContain('warten auf die Sicherungskopie');
+    expect(String(v['pending'])).toContain('Sicherungskopie ausstehend');
     expect(String(v['storageObjects'])).toContain('Papierkorb 1 (30 Tage)');
     expect(v['canRun']).toBe(false);
   });

@@ -109,11 +109,11 @@
 							<StepInput id="setIdle" value="{view>/s/session/idleHours}" min="1" max="168" description="Stunden" width="12rem"/>
 							<Label text="„Angemeldet bleiben“" labelFor="setRemember"/>
 							<StepInput id="setRemember" value="{view>/s/session/rememberDays}" min="1" max="90" description="Tage" width="12rem"/>
-							<Label text=""/><Text text="Bei Aktivität verlängert sich die Sitzung von selbst. Läuft sie ab, erscheint ein Anmeldedialog – Eingaben bleiben erhalten." class="eoMuted"/>
+							<Label text=""/><Text text="Bei Aktivität verlängert sich die Sitzung von selbst. Nach Ablauf erscheint ein Anmeldedialog; Eingaben bleiben erhalten." class="eoMuted"/>
 							<core:Title text="Zwei-Faktor-Anmeldung"/>
 							<Label text="Pflicht für Administratoren" labelFor="setTwoFactorAdmins"/>
 							<Switch id="setTwoFactorAdmins" state="{view>/s/session/requireTwoFactorForAdmins}" customTextOn=" " customTextOff=" "/>
-							<Label text=""/><Text text="Konten mit Verwaltungsrechten (Benutzer, Rollen, Einstellungen, Backup, Geräte, Protokoll, Archiv) nutzen diese Rechte erst, wenn sie unter „Anmeldung und Sicherheit“ eine Authenticator-App eingerichtet haben. Empfohlen, wenn EstrichONE aus dem Internet erreichbar ist. Vorher selbst einrichten!" class="eoMuted"/>
+							<Label text=""/><Text text="Konten mit Verwaltungsrechten (Benutzer, Rollen, Einstellungen, Backup, Geräte, Protokoll, Archiv) nutzen diese Rechte erst, wenn sie unter „Anmeldung und Sicherheit“ eine Authenticator-App eingerichtet haben. Empfohlen, wenn EstrichONE aus dem Internet erreichbar ist. Bitte zuvor für das eigene Konto einrichten." class="eoMuted"/>
 							<core:Title text="Apps auf Smartphones und Tablets"/>
 							<Label text="Angemeldet bleiben ohne Nutzung" labelFor="setDeviceIdle"/>
 							<StepInput id="setDeviceIdle" value="{view>/s/session/deviceIdleDays}" min="7" max="365" description="Tage" width="12rem"/>
@@ -146,7 +146,7 @@
 							<Text text="{= ${view>/push/webDevices} + ' Browser · ' + ${view>/push/iosDevices} + ' iPhone/iPad · ' + ${view>/push/androidDevices} + ' Android' }"/>
 							<core:Title text="Apple Push (APNs) für die iOS-App"/>
 							<Label text="Status"/>
-							<ObjectStatus id="pushApnsStatus" text="{= ${view>/push/apnsReady} ? 'Eingerichtet' + (${view>/push/apnsFromEnvironment} ? ' (aus .env)' : '') : 'Nicht eingerichtet – App erhält nur das Postfach' }"
+							<ObjectStatus id="pushApnsStatus" text="{= ${view>/push/apnsReady} ? 'Eingerichtet' + (${view>/push/apnsFromEnvironment} ? ' (aus .env)' : '') : 'Nicht eingerichtet, App erhält nur das Postfach' }"
 								state="{= ${view>/push/apnsReady} ? 'Success' : 'None' }" icon="{= ${view>/push/apnsReady} ? 'sap-icon://sys-enter-2' : 'sap-icon://hint' }"/>
 							<Label text="APNs verwenden"/><Switch id="pushApns" state="{view>/push/apnsEnabled}" customTextOn=" " customTextOff=" "/>
 							<Label text="Key-ID" labelFor="pushKeyId"/><Input id="pushKeyId" value="{view>/push/apnsKeyId}" maxLength="10" width="12rem" placeholder="ABC123DEFG"/>
@@ -158,7 +158,7 @@
 							</SegmentedButton>
 							<Label text="Schlüssel (.p8)"/>
 							<HBox alignItems="Center" wrap="Wrap" class="eoSystemItem">
-								<ObjectStatus text="{= ${view>/push/apnsKey} ? 'Neuer Schlüssel ausgewählt – wird beim Speichern verschlüsselt abgelegt' : ${view>/push/apnsKeyStored} ? 'Gespeichert (verschlüsselt)' : 'Kein Schlüssel' }"
+								<ObjectStatus text="{= ${view>/push/apnsKey} ? 'Neuer Schlüssel ausgewählt, wird beim Speichern verschlüsselt abgelegt' : ${view>/push/apnsKeyStored} ? 'Gespeichert (verschlüsselt)' : 'Kein Schlüssel' }"
 									state="{= ${view>/push/apnsKey} || ${view>/push/apnsKeyStored} ? 'Success' : 'Warning' }"/>
 								<Button text=".p8-Datei wählen …" icon="sap-icon://upload" press=".onApnsKey"/>
 								<Button text="Entfernen" type="Transparent" press=".onApnsKeyRemove" visible="{= ${view>/push/apnsKeyStored} &amp;&amp; !${view>/push/apnsFromEnvironment} }"/>
@@ -214,7 +214,7 @@
 							<Label text="Bildqualität (JPEG)" labelFor="mediaQuality"/>
 							<HBox alignItems="Center" class="eoSystemItem">
 								<StepInput id="mediaQuality" value="{view>/s/media/photoQuality}" min="60" max="95" step="1" width="8rem" enabled="{= !${view>/s/media/keepOriginalPhotos} }"/>
-								<Text text="{= ${view>/s/media/photoQuality} >= 88 ? 'sehr hoch – große Dateien' : ${view>/s/media/photoQuality} >= 78 ? 'empfohlen: scharf, etwa ein Drittel der Kameragröße' : 'sparsam – feine Details leiden' }" class="eoMuted"/>
+								<Text text="{= ${view>/s/media/photoQuality} >= 88 ? 'sehr hoch, große Dateien' : ${view>/s/media/photoQuality} >= 78 ? 'empfohlen: scharf, etwa ein Drittel der Kameragröße' : 'sparsam, feine Details gehen verloren' }" class="eoMuted"/>
 							</HBox>
 							<Label text="Längste Kante" labelFor="mediaEdge"/>
 							<Select id="mediaEdge" selectedKey="{path: 'view>/s/media/photoMaxEdge', type: 'sap.ui.model.type.Integer'}" width="16rem" enabled="{= !${view>/s/media/keepOriginalPhotos} }">
@@ -291,7 +291,7 @@
 							<Label text="Bestand"/>
 							<Text text="{view>/chat/conversations} Unterhaltungen · {view>/chat/messages} Nachrichten (verschlüsselt){= ${view>/chat/lastCleanupAt} ? ' · letzte Löschung ' + ${view>/chat/cleanupText} : '' }"/>
 							<Label text="Betroffenenrechte"/>
-							<Text text="Auskunft und Löschung je Person: Verwaltung → Benutzer → Sprechblase in der Zeile der Person. Rechte: „Chat nutzen“ und „Chat verwalten“ (Rollen)." class="eoMuted"/>
+							<Text text="Auskunft und Löschung je Person: Verwaltung › Benutzer › Sprechblase in der Zeile der Person. Rechte: „Chat nutzen“ und „Chat verwalten“ (Rollen)." class="eoMuted"/>
 						</form:SimpleForm>
 					</IconTabFilter>
 					<IconTabFilter key="system" text="Weitere Bereiche">
@@ -312,7 +312,7 @@
 		<f:footer>
 			<OverflowToolbar id="settingsFooter">
 				<core:Icon src="sap-icon://edit" class="eoMuted"/>
-				<Text text="Ungespeicherte Änderungen – erst mit „Speichern“ wirksam."/>
+				<Text text="Ungespeicherte Änderungen. Wirksam erst nach „Speichern“."/>
 				<ToolbarSpacer/>
 				<Button id="settingsSaveFooter" text="{i18n>common.save}" type="Emphasized" press=".onSave"/>
 				<Button text="Verwerfen" press=".onDiscard"/>

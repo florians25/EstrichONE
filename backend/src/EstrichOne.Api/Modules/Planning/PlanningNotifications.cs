@@ -38,7 +38,6 @@ internal static class PlanningNotifications
         var byPerson = range.Assignments
             .SelectMany(a => a.People.Select(p => (p.Id, Assignment: a)))
             .GroupBy(x => x.Id, x => x.Assignment);
-        var period = from == to ? from.ToString("ddd, dd.MM.", German) : $"{from.ToString("dd.MM.", German)}–{to.ToString("dd.MM.", German)}";
         foreach (var person in byPerson)
         {
             var items = person.OrderBy(a => a.Day).ThenBy(a => a.Sequence)
@@ -48,15 +47,17 @@ internal static class PlanningNotifications
                 continue; // Für diese Person hat sich nichts geändert.
             }
 
-            var lines = items.Take(3).Select(a => (from == to ? string.Empty : a.Day.ToString("ddd dd.MM.", German) + ": ") + a.BauakteTitle).ToList();
+            var lines = items.Take(3).Select(a => string.Join(" · ",
+                new[] { a.Day.ToString("ddd dd.MM.", German), a.StartTime is { } s ? s.ToString("H:mm", German) + " Uhr" : null, a.BauakteTitle }
+                    .Where(p => !string.IsNullOrEmpty(p)))).ToList();
             if (items.Count > 3)
             {
-                lines.Add($"und {items.Count - 3} weitere");
+                lines.Add(items.Count == 4 ? "1 weiterer Einsatz" : $"{items.Count - 3} weitere Einsätze");
             }
 
             await notifier.NotifyAsync([person.Key], new NotificationRequest(
                 NotificationCategory.Planning,
-                update ? $"Plan geändert: {period}" : $"Plan freigegeben: {period}",
+                update ? "Einsatzplan geändert" : "Einsatzplan freigegeben",
                 string.Join("\n", lines),
                 $"/planung/wer-faehrt-wohin?tag={items[0].Day:yyyy-MM-dd}",
                 "plan", null, update ? NotificationUrgency.High : NotificationUrgency.Normal,

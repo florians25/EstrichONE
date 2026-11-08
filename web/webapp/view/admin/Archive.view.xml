@@ -26,7 +26,7 @@
 				</HBox>
 			<VBox busy="{view>/busy}" class="sapUiSmallMarginBottom">
 				<MessageStrip visible="{= !!${view>/o} &amp;&amp; !${view>/o/connected} }" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
-					text="Noch kein Archivserver gekoppelt. Auf dem Archivrechner einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv – dann „Archivserver koppeln“ wählen und Adresse und Kopplungscode eingeben."/>
+					text="Noch kein Archivserver gekoppelt. Auf dem Archivrechner einmal ausführen: sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock ghcr.io/florians25/estrichone-installer:latest archiv. Anschließend „Archivserver koppeln“ wählen und Adresse und Kopplungscode eingeben."/>
 				<MessageStrip visible="{= !!${view>/o/connection/lastError} }" text="{view>/o/connection/lastError}" type="Warning" showIcon="true" class="sapUiSmallMarginBottom"/>
 				<form:SimpleForm id="arServer" visible="{view>/o/connected}" editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" columnsL="2" columnsXL="2" title="Archivserver">
 					<core:Title text="Verbindung"/>
@@ -46,7 +46,7 @@
 					<Label text="Akten auslagern nach (Monaten)" labelFor="arMonths"/>
 					<VBox>
 						<StepInput id="arMonths" value="{view>/settings/dossierAfterMonths}" min="0" max="240" width="10rem"/>
-						<Text text="Abgeschlossene Bauakten werden nach dieser Zeit komplett archiviert und aus dem System entfernt (0 = nur manuell, System → Aktenarchiv)."/>
+						<Text text="Abgeschlossene Bauakten werden nach dieser Zeit komplett archiviert und aus dem System entfernt (0 = nur manuell, System › Aktenarchiv)."/>
 					</VBox>
 					<Label text="Bei Fehlern benachrichtigen" labelFor="arMail"/><Input id="arMail" value="{view>/settings/notifyEmail}" type="Email" placeholder="z. B. buero@firma.de (E-Mail-Konto nötig)"/>
 					<Label/><HBox><Button text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSaveSettings"/></HBox>
@@ -56,7 +56,7 @@
 				<HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="sapUiTinyMarginBottom">
 					<VBox>
 						<Title text="Aktualisierung der Zusatzserver" level="H2"/>
-						<Text text="Per Fernaktualisierung auf die Version dieses Servers ({view>/peers/current}) bringen – Daten bleiben, bei Problemen springt der Rechner automatisch auf die bisherige Version zurück."/>
+						<Text text="Per Fernaktualisierung auf die Version dieses Servers ({view>/peers/current}) bringen. Daten bleiben erhalten; bei Problemen kehrt der Rechner automatisch zur bisherigen Version zurück."/>
 					</VBox>
 					<Button text="Alle aktualisieren ({view>/peers/updatable})" icon="sap-icon://download-from-cloud" type="Emphasized"
 						enabled="{= ${view>/peers/updatable} > 0 }" press=".onPeerUpdateAll"/>

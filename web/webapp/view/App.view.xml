@@ -35,7 +35,7 @@
 						<Button id="newBauakteButton" text="{i18n>shell.newBauakte}" tooltip="{i18n>shell.newBauakteTooltip}" icon="sap-icon://add" type="Emphasized"
 							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }" class="eoShellNew"
 							ariaDescribedBy="newBauakteShortcut"/>
-						<Button id="chatButton" icon="sap-icon://discussion-2" tooltip="{= ${view>/chatUnread} > 0 ? 'Chat – ' + ${view>/chatUnread} + ' ungelesen' : 'Chat' }"
+						<Button id="chatButton" icon="sap-icon://discussion-2" tooltip="{= ${view>/chatUnread} > 0 ? 'Chat (' + ${view>/chatUnread} + ' ungelesen)' : 'Chat' }"
 							type="Transparent" press=".onChat" visible="{= ${session>/permissions/chat.use} === true }" class="eoShellChat">
 							<customData><BadgeCustomData key="badge" value="{= ${view>/chatUnread} > 99 ? '99+' : String(${view>/chatUnread}) }"
 								visible="{= ${view>/chatUnread} > 0 }"/></customData>

@@ -27,7 +27,7 @@
 				<items>
 					<IconTabFilter key="mein" text="Mein Urlaub">
 						<VBox class="sapUiSmallMargin">
-							<MessageStrip text="Für Ihr Konto ist noch kein Personalstamm angelegt – der Resturlaub wird angezeigt, sobald das Büro ihn anlegt."
+							<MessageStrip text="Für Ihr Konto ist noch kein Personalstamm angelegt. Der Resturlaub wird angezeigt, sobald das Büro ihn angelegt hat."
 								type="Information" showIcon="true" visible="{= !${view>/me/employeeId} }" class="sapUiSmallMarginBottom"/>
 							<FlexBox wrap="Wrap" class="eoStaffHeaderFacts sapUiSmallMarginBottom" visible="{= !!${view>/me/vacation} }">
 								<VBox><Label text="Anspruch {view>/me/vacation/year}"/><ObjectNumber number="{view>/meText/entitlement}" unit="Tage"/></VBox>

@@ -8,7 +8,7 @@ export const KOMBI_BACKUP_PORT = 8444;
 export const KOMBI_ARCHIVE_PORT = 8443;
 
 /** Hinweis in Web und Doku: bequem, aber kein zweiter Standort für das Archiv. */
-export const KOMBI_LOCATION_HINT = "Backup und Archiv auf demselben Rechner ist bequem, aber kein zweiter Standort für das Archiv. "
+export const KOMBI_LOCATION_HINT = "Backup und Archiv auf demselben Rechner sind kein zweiter Standort für das Archiv. "
 	+ "Stellen Sie den Kombiserver räumlich getrennt vom EstrichONE-Server auf (anderes Gebäude, zuhause, Rechenzentrum).";
 
 // Nicht „version“ nennen: der UI5-Build (replaceVersion) ersetzt den Platzhalter mit diesem Namen im Quelltext durch die Paketversion.
@@ -63,7 +63,7 @@ export function completeArchiveOption(health: HealthBanner | null | undefined, c
 	const archive = health?.archive;
 	if (!canArchive || !archive?.configured) return { visible: false, enabled: false, tooltip: "" };
 	if (archive.reachable === false) {
-		return { visible: true, enabled: false, tooltip: "Archivserver gerade nicht erreichbar – Bauakte jetzt nur abschließen und später unter „Aktionen → Archivnachweis“ archivieren." };
+		return { visible: true, enabled: false, tooltip: "Archivserver derzeit nicht erreichbar. Bauakte abschließen und später unter „Aktionen › Archivnachweis“ archivieren." };
 	}
 	return { visible: true, enabled: true, tooltip: "Bauakte abschließen und alle Dokumente sofort revisionssicher auf dem Archivserver ablegen." };
 }
@@ -76,7 +76,7 @@ export function archiveProgress(records: { status: string }[]): { total: number;
 	const done = total > 0 && archived + failed === total;
 	const text = total === 0 ? "Keine Dokumente zu archivieren."
 		: done && failed === 0 ? `Alle ${total} Dokumente archiviert.`
-			: done ? `${archived} von ${total} archiviert, ${failed} fehlgeschlagen – erneut versuchen unter „Aktionen → Archivnachweis“.`
+			: done ? `${archived} von ${total} archiviert, ${failed} fehlgeschlagen. Erneuter Versuch unter „Aktionen › Archivnachweis“.`
 				: `${archived} von ${total} Dokumenten archiviert …`;
 	return { total, archived, failed, done, text };
 }

@@ -15,7 +15,7 @@
 				<VBox visible="{= !!${view>/oneTime} }" class="sapUiSmallMarginBottom eoOneTime">
 					<customData><core:CustomData key="testid" value="one-time-password" writeToDom="true"/></customData>
 					<MessageStrip type="Success" showIcon="true" showCloseButton="true" close=".onCloseOneTime"
-						text="{= 'Einmalpasswort für ' + ${view>/oneTime/user/displayName} + ' – es wird nur jetzt angezeigt. Bei der ersten Anmeldung muss ein eigenes Passwort gewählt werden.' }"/>
+						text="{= 'Einmalpasswort für ' + ${view>/oneTime/user/displayName} + '. Es wird nur einmal angezeigt. Bei der ersten Anmeldung muss ein eigenes Passwort gewählt werden.' }"/>
 					<HBox alignItems="Center" class="sapUiTinyMarginTop">
 						<Title text="{view>/oneTime/oneTimePassword}" level="H2" titleStyle="H3" class="eoTabular sapUiSmallMarginEnd">
 							<customData><core:CustomData key="testid" value="one-time-code" writeToDom="true"/></customData>

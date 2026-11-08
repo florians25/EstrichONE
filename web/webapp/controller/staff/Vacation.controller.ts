@@ -268,12 +268,12 @@ export default class Vacation extends BaseController {
 			intro: `${vacationKinds[r.kind]?.text ?? r.kind} ${r.from === r.to ? date(r.from) : `${date(r.from)} – ${date(r.to)}`} (${num(r.workingDays)} Arbeitstage)`
 				+ (r.warnings.length ? `\nHinweise: ${r.warnings.join(" ")}` : ""),
 			fields: [{ key: "comment", label: "Kommentar", type: "textarea", rows: 3, maxLength: 1000, required: !approve,
-				placeholder: approve ? "optional, z. B. Gute Erholung!" : "Begründung für den Mitarbeiter" }],
+				placeholder: approve ? "optional" : "Begründung für den Mitarbeiter" }],
 			submitText: approve ? "Genehmigen" : "Ablehnen", danger: !approve,
 			submit: (v) => post<RequestView>(`hr/absence-requests/${r.id}/decision`, { approve, comment: v.comment || null }),
 		});
 		if (result) {
-			this.toast(approve ? "Genehmigt – in Planung und Urlaubsplan übernommen" : "Abgelehnt");
+			this.toast(approve ? "Genehmigt und in Planung und Urlaubsplan übernommen" : "Abgelehnt");
 			planningChanged();
 			await this.load();
 		}
@@ -287,7 +287,7 @@ export default class Vacation extends BaseController {
 			return;
 		}
 		if (await this.run(() => post<RequestView>(`hr/absence-requests/${r.id}/decision`, { approve: true, comment: null }))) {
-			this.toast(`Genehmigt: ${r.userName} – in Planung und Urlaubsplan übernommen`);
+			this.toast(`Genehmigt: ${r.userName}, in Planung und Urlaubsplan übernommen`);
 			planningChanged();
 			await this.load();
 		}
@@ -317,7 +317,7 @@ export default class Vacation extends BaseController {
 		const saved = await openForm<SickNote>({
 			title: o.existing ? "Krankmeldung bearbeiten" : o.followUpOf ? `Folgebescheinigung: ${o.followUpOf.userName}` : "Krankmeldung erfassen", width: "32rem",
 			intro: o.followUpOf ? `Verlängerung der Krankmeldung vom ${date(o.followUpOf.from)} – ${date(o.followUpOf.to)} (gleicher Krankheitsfall).`
-				: "Vertraulich – nur für die Personalverwaltung sichtbar.",
+				: "Vertraulich, nur für die Personalverwaltung sichtbar.",
 			initial: { userId: base?.userId, from: o.existing?.from ?? next, to: o.existing?.to ?? null, note: o.existing?.note ?? "" },
 			fields: [
 				{ key: "userId", label: "Mitarbeiter", type: "select", required: true, editable: !base, options: people.map((p) => ({ key: p.id, text: p.displayName })) },

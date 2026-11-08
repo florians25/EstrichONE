@@ -188,7 +188,7 @@ internal sealed class PushGateway(IHttpClientFactory http, TimeProvider clock)
             {
                 PushPlatform.Web => await SendWebAsync(device, message, config, cancellationToken),
                 PushPlatform.Ios => await SendApnsAsync(device, message, config, cancellationToken),
-                _ => (PushResult.NotConfigured, "Android-Push (FCM) ist noch nicht eingerichtet – nur Postfach."),
+                _ => (PushResult.NotConfigured, "Android-Push (FCM) ist nicht eingerichtet. Zustellung nur ins Postfach."),
             };
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or System.Security.Cryptography.CryptographicException
@@ -236,7 +236,7 @@ internal sealed class PushGateway(IHttpClientFactory http, TimeProvider clock)
     {
         if (!config.ApnsReady)
         {
-            return (PushResult.NotConfigured, "APNs ist nicht eingerichtet – nur Postfach.");
+            return (PushResult.NotConfigured, "APNs ist nicht eingerichtet. Zustellung nur ins Postfach.");
         }
 
         var sandbox = device.Sandbox || !config.ApnsProduction;

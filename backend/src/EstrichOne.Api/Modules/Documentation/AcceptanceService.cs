@@ -105,7 +105,7 @@ public sealed class AcceptanceService(
         var info = await bauakten.GetAsync(protocol.BauakteId, cancellationToken);
         await notifier.NotifyAsync(await bauakten.TeamUserIdsAsync(protocol.BauakteId, cancellationToken),
             new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Bauakte,
-                approve ? "Abnahme vom Kunden unterschrieben" : "Abnahme vom Kunden abgelehnt",
+                approve ? "Abnahme unterschrieben" : "Abnahme abgelehnt",
                 info is null ? null : $"{info.Number} {info.Title}".Trim(), $"/bauakten/{protocol.BauakteId}", "bauakte", protocol.BauakteId,
                 approve ? Notifications.Exports.NotificationUrgency.Normal : Notifications.Exports.NotificationUrgency.High,
                 Event: Notifications.Exports.NotificationEvents.AcceptanceSigned), cancellationToken);

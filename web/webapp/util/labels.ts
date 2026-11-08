@@ -130,7 +130,7 @@ export function inspectionResult(i: { notRequired: boolean; checks: Record<strin
 		return { text: "Nicht notwendig", tone: "None" };
 	}
 	return Object.values(i.checks).includes("notOk")
-		? { text: "Mit Mängeln – Klärung nötig", tone: "Warning" }
+		? { text: "Mit Mängeln, Klärung erforderlich", tone: "Warning" }
 		: { text: "Bestanden / freigegeben", tone: "Success" };
 }
 

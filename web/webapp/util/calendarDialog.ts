@@ -62,7 +62,7 @@ export function askScope(action: string): Promise<CalendarEditScope | null> {
 	const following = "Dieser und alle folgenden";
 	const series = "Ganze Serie";
 	return new Promise((resolve) => {
-		MessageBox.show(`${action} – für welche Termine der Serie?`, {
+		MessageBox.show(`${action}: Für welche Termine der Serie?`, {
 			title: "Wiederkehrender Termin", icon: MessageBox.Icon.QUESTION,
 			actions: [only, following, series, MessageBox.Action.CANCEL], emphasizedAction: only,
 			onClose: (choice: string | null) => resolve(choice === only ? "occurrence" : choice === following ? "following" : choice === series ? "series" : null),

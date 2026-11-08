@@ -312,7 +312,7 @@ internal static class CockpitEndpoints
 
         if (assignment.CrewId is not { } crewId)
         {
-            return Validation("Der nächste freie Tag wird für Kolonnen ermittelt – dieser Einsatz hat keine Kolonne.");
+            return Validation("Der nächste freie Tag wird nur für Kolonnen ermittelt. Dieser Einsatz ist keiner Kolonne zugeordnet.");
         }
 
         if (await cockpit.NextFreeDayAsync(crewId, assignment.Day, cancellationToken) is not { } day)

@@ -62,8 +62,8 @@ public sealed class SmtpSender(IDataProtectionProvider protection)
     /// <summary>Verständliche Ursache statt Ausnahme-Text.</summary>
     public static (string Message, bool Permanent) Describe(Exception exception) => exception switch
     {
-        AuthenticationException => ("Anmeldung am Mailserver fehlgeschlagen – Benutzername oder Passwort prüfen.", true),
-        SslHandshakeException => ("Verschlüsselung fehlgeschlagen – Sicherheit (STARTTLS/SSL) und Port prüfen.", false),
+        AuthenticationException => ("Anmeldung am Mailserver fehlgeschlagen. Bitte Benutzername und Passwort prüfen.", true),
+        SslHandshakeException => ("Verschlüsselung fehlgeschlagen. Bitte Sicherheit (STARTTLS/SSL) und Port prüfen.", false),
         SmtpCommandException command when command.ErrorCode == SmtpErrorCode.RecipientNotAccepted =>
             ($"Empfänger abgelehnt: {command.Message}", true),
         SmtpCommandException command when command.ErrorCode == SmtpErrorCode.SenderNotAccepted =>
@@ -71,9 +71,9 @@ public sealed class SmtpSender(IDataProtectionProvider protection)
         SmtpCommandException command => ($"Mailserver meldet: {command.Message}", false),
         SmtpProtocolException protocol => ($"Protokollfehler: {protocol.Message}", false),
         ParseException => ("Ungültige E-Mail-Adresse.", true),
-        System.Net.Sockets.SocketException socket => ($"Mailserver nicht erreichbar ({socket.SocketErrorCode}) – Server und Port prüfen.", false),
+        System.Net.Sockets.SocketException socket => ($"Mailserver nicht erreichbar ({socket.SocketErrorCode}). Bitte Server und Port prüfen.", false),
         TimeoutException or OperationCanceledException => ("Zeitüberschreitung beim Mailserver.", false),
-        System.Security.Cryptography.CryptographicException => ("Gespeichertes Passwort nicht lesbar – bitte neu eingeben.", true),
+        System.Security.Cryptography.CryptographicException => ("Gespeichertes Passwort nicht lesbar. Bitte neu eingeben.", true),
         IOException io => ($"Verbindung abgebrochen: {io.Message}", false),
         _ => (exception.Message, false),
     };

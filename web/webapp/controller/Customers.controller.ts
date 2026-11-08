@@ -146,11 +146,11 @@ export default class Customers extends BaseController {
 		});
 		if (!result) return;
 		if (!result.mailConfigured) {
-			MessageBox.warning("Es ist noch kein E-Mail-Konto eingerichtet (System → E-Mail). Es wurde nichts versendet.");
+			MessageBox.warning("Es ist noch kein E-Mail-Konto eingerichtet (System › E-Mail). Es wurde nichts versendet.");
 			return;
 		}
 		table.removeSelections(true);
-		const missing = result.withoutEmail.length ? ` – ohne E-Mail-Adresse: ${result.withoutEmail.join(", ")}` : "";
+		const missing = result.withoutEmail.length ? `. Ohne E-Mail-Adresse: ${result.withoutEmail.join(", ")}` : "";
 		MessageBox.information(`${result.queued} E-Mail(s) in den Versand gegeben${missing}.`, { title: "Serien-E-Mail" });
 	}
 }

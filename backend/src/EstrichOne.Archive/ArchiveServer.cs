@@ -261,7 +261,7 @@ public static class ArchiveServer
             {
                 StoreOutcome.Created => Results.Json(receipt, statusCode: 201),
                 StoreOutcome.AlreadyArchived => Results.Json(receipt),
-                StoreOutcome.Immutable => Problem(409, "ARCHIVE_IMMUTABLE", "Unter dieser ID ist bereits ein anderes Dokument archiviert – archivierte Dokumente sind unveränderbar."),
+                StoreOutcome.Immutable => Problem(409, "ARCHIVE_IMMUTABLE", "Unter dieser ID ist bereits ein anderes Dokument archiviert. Archivierte Dokumente sind unveränderbar."),
                 StoreOutcome.ChecksumMismatch => Problem(422, "ARCHIVE_CHECKSUM_MISMATCH", "Die Prüfsumme des empfangenen Inhalts stimmt nicht."),
                 StoreOutcome.TooLarge => Problem(413, "ARCHIVE_TOO_LARGE", "Das Dokument ist zu groß."),
                 StoreOutcome.RetentionTooShort => Problem(422, "ARCHIVE_RETENTION_TOO_SHORT", "Die Aufbewahrungsfrist ist kürzer als die Mindestfrist des Archivs."),
@@ -422,9 +422,9 @@ public static class ArchiveServer
             text.AppendLine();
             text.AppendLine(options.Role switch
             {
-                ServerRole.Archive => " In EstrichONE: System → Archiv → „Archivserver koppeln“: Adresse dieses Rechners und Code eingeben.",
-                ServerRole.Offload => " In EstrichONE: System → Speicher-Auslagerung → „Storage koppeln“: Adresse dieses Rechners und Code eingeben.",
-                _ => " In EstrichONE: System → Backup-Ziele → „Backup-Ziel koppeln“: Adresse dieses Rechners und Code eingeben.",
+                ServerRole.Archive => " In EstrichONE: System › Archiv › „Archivserver koppeln“: Adresse dieses Rechners und Code eingeben.",
+                ServerRole.Offload => " In EstrichONE: System › Speicher-Auslagerung › „Storage koppeln“: Adresse dieses Rechners und Code eingeben.",
+                _ => " In EstrichONE: System › Backup-Ziele › „Backup-Ziel koppeln“: Adresse dieses Rechners und Code eingeben.",
             });
         }
         else

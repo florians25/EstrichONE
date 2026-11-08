@@ -97,7 +97,7 @@ export async function archiveAfterCompletion(bauakteId: string, title: string): 
 			}
 			const retrying = records.find((r) => r.status === "pending" && r.lastError);
 			if (retrying) {
-				status.setText(`${p.text} Archivserver meldet: ${retrying.lastError} – EstrichONE versucht es automatisch erneut.`);
+				status.setText(`${p.text} Archivserver meldet: ${retrying.lastError}. Die Archivierung wird automatisch wiederholt.`);
 				indicator.setState("Warning");
 			}
 		}

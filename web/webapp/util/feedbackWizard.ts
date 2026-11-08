@@ -121,7 +121,7 @@ export function openFeedbackWizard(options: FeedbackWizardOptions = {}): Promise
 	}).addStyleClass("eoFbTiles");
 	const kindStep = new WizardStep("feedbackStepKind", {
 		title: "Art", icon: "sap-icon://hint", validated: false,
-		content: [new VBox({ items: [new Text({ text: "Worum geht es? Wählen Sie eine Kachel – das Formular passt sich an." }).addStyleClass("sapUiSmallMarginBottom"), kindBox] })],
+		content: [new VBox({ items: [new Text({ text: "Bitte wählen Sie die Art der Meldung. Das Formular passt sich entsprechend an." }).addStyleClass("sapUiSmallMarginBottom"), kindBox] })],
 	});
 
 	// ---- Schritt 2: Angaben -----------------------------------------------------------------------------------------
@@ -163,9 +163,9 @@ export function openFeedbackWizard(options: FeedbackWizardOptions = {}): Promise
 			label("Kurze Zusammenfassung", f.title, true),
 			withHint(f.title, bug ? "Ein Satz, z. B. „Foto-Upload in der Bauakte bricht ab“." : "Ein Satz, z. B. „Bauakten als Excel exportieren“."),
 			label(bug ? "Bereich / Seite" : "Bereich", f.area, true),
-			withHint(f.area, "Vorbelegt mit der Seite, auf der Sie gerade waren – bei Bedarf ändern."));
+			withHint(f.area, "Vorbelegt mit der zuletzt geöffneten Seite. Bei Bedarf ändern."));
 		if (bug) {
-			add(label("Was haben Sie gemacht?", f.steps), withHint(f.steps, "Schritt für Schritt – damit die IT den Fehler nachstellen kann."),
+			add(label("Was haben Sie gemacht?", f.steps), withHint(f.steps, "Schritt für Schritt, damit die IT den Fehler nachvollziehen kann."),
 				label("Was haben Sie erwartet?", f.expected), f.expected,
 				label("Was ist stattdessen passiert?", f.actual, true), withHint(f.actual, "Fehlermeldungen bitte wörtlich abschreiben oder ein Bildschirmfoto anhängen."),
 				label("Wie oft?", f.frequency, true), f.frequency,
@@ -277,7 +277,7 @@ export function openFeedbackWizard(options: FeedbackWizardOptions = {}): Promise
 					fileStrip, fileList,
 				]
 				: [new MessageStrip({ type: "Information", showIcon: true,
-					text: "Mit Ihrer Rolle können keine Dateien hochgeladen werden. Beschreiben Sie das Problem bitte möglichst genau im Text – die IT meldet sich bei Rückfragen." })],
+					text: "Mit Ihrer Rolle können keine Dateien hochgeladen werden. Bitte beschreiben Sie das Problem möglichst genau. Bei Rückfragen meldet sich die IT." })],
 		})],
 	});
 
@@ -394,10 +394,10 @@ export function openFeedbackWizard(options: FeedbackWizardOptions = {}): Promise
 			const done = new IllustratedMessage("feedbackDone", {
 				illustrationType: "sapIllus-SuccessHighFive", illustrationSize: "Dialog", enableDefaultTitleAndDescription: false,
 				// Geschützte Bindestriche: die Nummer bricht nicht um („F-“ / „2026-0011“).
-				title: `Vielen Dank! Ihre Meldung ${created.summary.number.replace(/-/g, "\u2011")} ist eingegangen.`,
+				title: `Vielen Dank. Ihre Meldung ${created.summary.number.replace(/-/g, "\u2011")} ist eingegangen.`,
 				description: bug
-					? "Die IT prüft den Fehler und meldet sich im Verlauf der Meldung. Status und Antworten sehen Sie unter „Meine Meldungen“ – Sie werden bei Änderungen benachrichtigt."
-					: "Die IT prüft Ihren Wunsch und plant ihn ein. Status und Antworten sehen Sie unter „Meine Meldungen“ – Sie werden bei Änderungen benachrichtigt.",
+					? "Die IT prüft den Fehler und antwortet im Verlauf der Meldung. Status und Antworten finden Sie unter „Meine Meldungen“; bei Änderungen werden Sie benachrichtigt."
+					: "Die IT prüft Ihren Wunsch und plant die Umsetzung. Status und Antworten finden Sie unter „Meine Meldungen“; bei Änderungen werden Sie benachrichtigt.",
 			});
 			content.destroyItems(); // Assistent mit festen IDs gleich mit aufräumen
 			content.addItem(new VBox({ alignItems: "Center", justifyContent: "Center", height: "100%", items: [done] }).addStyleClass("eoFbDone"));

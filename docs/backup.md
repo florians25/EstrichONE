@@ -419,13 +419,13 @@ Start bzw. Wiederverbinden. Auch während einer Wartung erreichbar.
 ```json
 {
   "backup":  { "configured": true, "reachable": false, "lastSuccessAt": "2026-10-26T21:30:12Z", "severity": "critical",
-               "message": "ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup 26.10.2026 22:30 Uhr). Backup-Ziele und Backup-Dienst unter System → Sicherung prüfen.",
+               "message": "Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: 26.10.2026 22:30 Uhr. Bitte Backup-Ziele und Backup-Dienst unter System › Sicherung prüfen.",
                "restoreRunning": false },
   "archive": { "configured": true, "reachable": false, "lastSuccessAt": "2026-10-27T08:02:00Z", "severity": "warning",
-               "message": "Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung 27.10.2026 09:02 Uhr). Bitte informieren Sie Ihren Admin." },
+               "message": "Archivserver nicht erreichbar. Letzte Archivierung: 27.10.2026 09:02 Uhr. Dokumente werden zurückgehalten; bitte Archivserver unter System › Archiv prüfen." },
   "banners": [
-    { "key": "backup",  "severity": "critical", "text": "ACHTUNG: Backup-Server ausgefallen …" },
-    { "key": "archive", "severity": "warning",  "text": "Hinweis: Archiv-Server ausgefallen …" }
+    { "key": "backup",  "severity": "critical", "text": "Backup-Ziel nicht erreichbar. …" },
+    { "key": "archive", "severity": "warning",  "text": "Archivserver nicht erreichbar. …" }
   ],
   "checkedAt": "2026-10-27T21:31:00Z"
 }

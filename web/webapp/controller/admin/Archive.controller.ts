@@ -71,7 +71,7 @@ export default class Archive extends BaseController {
 			verification: verificationText(s?.lastVerification ?? null),
 		});
 		this.statusLine([
-			!o.connected && { text: "Noch kein Archivserver gekoppelt – Dokumente werden nicht revisionssicher archiviert", level: "warning" },
+			!o.connected && { text: "Noch kein Archivserver gekoppelt. Dokumente werden nicht revisionssicher archiviert.", level: "warning" },
 			o.connected && !o.server && "Archivserver nicht erreichbar",
 			!!c?.lastError && { text: `Archivserver meldet: ${c.lastError}`, level: "error" },
 			o.counts.failed > 0 && { text: `${o.counts.failed} Archivierungen fehlgeschlagen (Liste „Fehler“)`, level: "error" },

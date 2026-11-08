@@ -25,7 +25,7 @@ const restoreView = (p: RestoreProgress | null) => {
 	if (!p) return { active: false, text: "", type: "Information", percent: 0, phase: "" };
 	const active = p.scope === "full" && ["requested", "running", "restored"].includes(p.status);
 	const what = p.scope === "full" ? "Wiederherstellung des Systems" : "Wiederherstellung einer Datei";
-	const text = active ? `${what} aus Sicherung ${p.snapshot.slice(0, 8)} läuft – EstrichONE ist für alle Benutzer gesperrt. ${p.message}`
+	const text = active ? `${what} aus Sicherung ${p.snapshot.slice(0, 8)} läuft. EstrichONE ist für alle Benutzer gesperrt. ${p.message}`
 		: p.status === "completed" ? `${what} abgeschlossen (${dateTime(p.at)}): ${p.message}`
 		: p.status === "failed" ? `${what} fehlgeschlagen (${dateTime(p.at)}): ${p.message}`
 		: `${what}: ${p.message}`;
@@ -105,7 +105,7 @@ export default class Backup extends BaseController {
 	onSource(): void { this.showSnapshots(); }
 
 	async onRun(): Promise<void> {
-		await this.run(() => post("backup/run"), "Sicherung angefordert – startet innerhalb von 30 Sekunden");
+		await this.run(() => post("backup/run"), "Sicherung angefordert. Start innerhalb von 30 Sekunden.");
 		void this.load(false);
 	}
 
@@ -116,7 +116,7 @@ export default class Backup extends BaseController {
 			keepMonthly: Number(p.keepMonthly), keepYearly: Number(p.keepYearly), notifyAdmins: p.notifyAdmins, notifyOnSuccess: p.notifyOnSuccess,
 			weeklyRestoreTest: p.weeklyRestoreTest,
 		};
-		if (await this.run(() => put("backup/settings", body), "Zeitplan gespeichert – gilt ab dem nächsten Takt des Backup-Dienstes") !== undefined) await this.loadSettings();
+		if (await this.run(() => put("backup/settings", body), "Zeitplan gespeichert. Gültig ab dem nächsten Lauf des Backup-Dienstes.") !== undefined) await this.loadSettings();
 	}
 
 	private row(e: Event): { id: string; shortId: string; when: string } {
@@ -147,7 +147,7 @@ export default class Backup extends BaseController {
 			title: "Einzelne Datei wiederherstellen", submitText: "Datei zurückholen",
 			fields: [
 				{ key: "hint", type: "info", label: `Holt eine Datei (Original und Vorschaubilder) aus der Sicherung vom ${snap.when} zurück, z. B. wenn ein Foto beschädigt ist oder fehlt. `
-					+ "Die Datei-ID steht in der Bauakte unter Dokumente → Details. Alles andere bleibt unverändert, niemand wird gesperrt." },
+					+ "Die Datei-ID steht in der Bauakte unter Dokumente › Details. Alles andere bleibt unverändert, niemand wird gesperrt." },
 				{ key: "fileId", label: "Datei-ID", required: true, placeholder: "z. B. 01a15700-0000-7000-8000-00000000f11e" },
 			],
 			submit: (v) => post("backup/restore", { snapshot: snap.id, source: this.model().getProperty("/source"), scope: "file", fileId: String(v.fileId).trim() }),

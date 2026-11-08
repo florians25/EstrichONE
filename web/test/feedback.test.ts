@@ -63,7 +63,7 @@ describe('Meldungen: Pflichtfelder, Zusammenfassung, Anfrage', () => {
     expect(rows).toEqual([
       { label: 'Art', value: 'Funktionswunsch' }, { label: 'Zusammenfassung', value: 'Excel-Export' }, { label: 'Bereich', value: 'Bauakten' },
       { label: 'Problem bzw. Nutzen', value: 'Abtippen' }, { label: 'Gewünschte Lösung', value: 'Knopf' },
-      { label: 'Wichtigkeit', value: 'Wichtig – spart regelmäßig Zeit' }, { label: 'Anhänge', value: 'liste.png' },
+      { label: 'Wichtigkeit', value: 'Wichtig: spart regelmäßig Zeit' }, { label: 'Anhänge', value: 'liste.png' },
     ]);
   });
 
@@ -119,7 +119,7 @@ describe('Meldungen: Listen', () => {
       actualResult: 'Fehler 500', frequency: 'sometimes', problem: 'nie sichtbar', desiredSolution: null, context: null, attachments: [], timeline: [] } as FeedbackDetail;
     expect(detailRows(detail)).toEqual([
       { label: 'Schritte zum Nachstellen', value: '1. Öffnen' }, { label: 'Tatsächlich passiert', value: 'Fehler 500' },
-      { label: 'Häufigkeit', value: 'Manchmal' }, { label: 'Auswirkung', value: 'Hoch – ich kann damit nicht arbeiten' },
+      { label: 'Häufigkeit', value: 'Manchmal' }, { label: 'Auswirkung', value: 'Hoch: Arbeiten nicht möglich' },
     ]);
   });
 });

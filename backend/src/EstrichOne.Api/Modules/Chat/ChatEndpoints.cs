@@ -878,7 +878,7 @@ internal static partial class ChatEndpoints
     }
 
     private static ProblemHttpResult Disabled() => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Modul deaktiviert",
-        detail: "Der Chat ist deaktiviert (Einstellungen → Module).", extensions: new Dictionary<string, object?> { ["code"] = "MODULE_DISABLED" });
+        detail: "Der Chat ist deaktiviert (Einstellungen › Module).", extensions: new Dictionary<string, object?> { ["code"] = "MODULE_DISABLED" });
 
     private static ProblemHttpResult NotFound() => TypedResults.Problem(statusCode: StatusCodes.Status404NotFound, title: "Unterhaltung nicht gefunden",
         extensions: new Dictionary<string, object?> { ["code"] = "NOT_FOUND" });

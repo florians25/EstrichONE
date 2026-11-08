@@ -59,7 +59,7 @@
 					</HBox>
 				</VBox>
 				<MessageStrip id="pubDone" type="{= ${pub>/decision} === 'approved' ? 'Success' : 'Warning' }" showIcon="true" visible="{= ${pub>/state} === 'done' }"
-					text="{= ${pub>/decision} === 'approved' ? 'Vielen Dank – das Abnahmeprotokoll ist freigegeben. Sie erhalten es vom Estrichbetrieb als PDF.' : 'Ihre Ablehnung wurde übermittelt. Der Estrichbetrieb meldet sich bei Ihnen.' }"
+					text="{= ${pub>/decision} === 'approved' ? 'Vielen Dank. Das Abnahmeprotokoll ist freigegeben. Sie erhalten es vom Estrichbetrieb als PDF.' : 'Ihre Ablehnung wurde übermittelt. Der Estrichbetrieb meldet sich bei Ihnen.' }"
 					class="sapUiMediumMarginTop"/>
 			</VBox>
 			<Text text="Bereitgestellt mit EstrichONE · nur dieses Protokoll ist über den Link sichtbar." class="eoMuted sapUiMediumMarginTop"/>

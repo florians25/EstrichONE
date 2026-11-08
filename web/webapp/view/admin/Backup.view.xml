@@ -4,7 +4,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.backup}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Täglich eine Vollsicherung: Datenbank, Einstellungen und Schlüssel, Fotos, Dokumente, Videos – verschlüsselt, mit Prüfsummen"/></f:expandedContent>
+				<f:expandedContent><Text text="Täglich eine Vollsicherung: Datenbank, Einstellungen und Schlüssel, Fotos, Dokumente, Videos; verschlüsselt und mit Prüfsummen"/></f:expandedContent>
 				<f:actions>
 					<Button text="Notfallblatt" icon="sap-icon://print" press=".onEmergencySheet" enabled="{= !!${view>/s/configured} }"/>
 					<Button text="{= ${view>/s/runRequested} ? 'Sicherung angefordert …' : 'Jetzt sichern' }" icon="sap-icon://upload-to-cloud" type="Emphasized"
@@ -31,8 +31,8 @@
 							</form:SimpleForm>
 							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" title="Inhalt jeder Sicherung">
 								<Label text="Daten"/><Text text="Datenbank (alle Bauakten, Kontakte, Planung, Zeiten, Benutzer, Archiv-Nachweise)"/>
-								<Label text="Dateien"/><Text text="Fotos, Dokumente, Videos, Pläne – Originale und Vorschaubilder"/>
-								<Label text="Einstellungen"/><Text text="Konfiguration des Servers (.env), Zeitplan, Backup-Ziele, Schlüsselbund (Anmeldungen, Push-Schlüssel – verschlüsselt)"/>
+								<Label text="Dateien"/><Text text="Fotos, Dokumente, Videos, Pläne (Originale und Vorschaubilder)"/>
+								<Label text="Einstellungen"/><Text text="Konfiguration des Servers (.env), Zeitplan, Backup-Ziele, Schlüsselbund (Anmeldungen, Push-Schlüssel; verschlüsselt)"/>
 								<Label text="Schutz"/><Text text="AES-256 mit Repository-Passwort, Prüfsumme je Block, wöchentliche Prüfung und Probe-Wiederherstellung"/>
 							</form:SimpleForm>
 						</IconTabFilter>
@@ -44,7 +44,7 @@
 										<core:Item key="{view>key}" text="{view>label}"/>
 									</Select>
 								</HBox>
-								<Table items="{view>/snapshots}" noDataText="Noch keine Sicherung – die Liste füllt der Backup-Dienst nach jedem Lauf." growing="true" growingThreshold="30"
+								<Table items="{view>/snapshots}" noDataText="Noch keine Sicherung vorhanden. Der Backup-Dienst ergänzt die Liste nach jedem Lauf." growing="true" growingThreshold="30"
 									sticky="ColumnHeaders">
 									<columns>
 										<Column><Text text="Zeitpunkt"/></Column>
@@ -105,9 +105,9 @@
 						<IconTabFilter key="emergency" text="Notfall">
 							<VBox class="sapUiSmallMargin">
 								<MessageStrip type="Warning" showIcon="true" class="sapUiSmallMarginBottom"
-									text="Notfallblatt jetzt ausdrucken und getrennt vom Server aufbewahren (Tresor). Es enthält den Wiederherstellungsschlüssel – ohne ihn sind die Sicherungen wertlos."/>
-								<Title text="Server komplett ausgefallen – Neuinstallation aus der Sicherung" level="H3" class="sapUiTinyMarginBottom"/>
-								<Text text="1. Neuen Linux-Server mit Docker bereitstellen und die Domain auf ihn zeigen lassen. 2. Den Befehl unten ausführen. 3. Quelle (Ordner oder Zugang vom Notfallblatt) und Wiederherstellungsschlüssel eingeben – der Installer holt die letzte Sicherung, stellt alles her und startet EstrichONE."/>
+									text="Notfallblatt ausdrucken und getrennt vom Server aufbewahren (z. B. Tresor). Es enthält den Wiederherstellungsschlüssel, ohne den die Sicherungen nicht wiederhergestellt werden können."/>
+								<Title text="Totalausfall des Servers: Neuinstallation aus der Sicherung" level="H3" class="sapUiTinyMarginBottom"/>
+								<Text text="1. Neuen Linux-Server mit Docker bereitstellen und die Domain auf ihn zeigen lassen. 2. Den Befehl unten ausführen. 3. Quelle (Ordner oder Zugang vom Notfallblatt) und Wiederherstellungsschlüssel eingeben. Der Installer holt die letzte Sicherung, stellt alles her und startet EstrichONE."/>
 								<Input value="{view>/restoreCommand}" editable="false" class="sapUiSmallMarginTopBottom"/>
 								<HBox>
 									<Button text="Notfallblatt (PDF)" icon="sap-icon://print" type="Emphasized" press=".onEmergencySheet"/>

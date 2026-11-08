@@ -15,7 +15,7 @@ die Pushnachricht lässt sich abschalten.
 |---|---|---|---|
 | `bauakte.assigned` | Bauakte zugewiesen (Mitglied oder zuständig) | neu zugewiesene Person | `bauakte` |
 | `bauakte.comment` | Neue Notiz in meiner Bauakte (ohne Notiztext; höchstens eine je Bauakte, Autor und Tag) | Zuständige(r) und Mitglieder | `bauakte` |
-| `acceptance.signed` | Abnahme vom Kunden unterschrieben bzw. abgelehnt | Zuständige(r) und Mitglieder | `bauakte` |
+| `acceptance.signed` | Abnahme unterschrieben bzw. abgelehnt | Zuständige(r) und Mitglieder | `bauakte` |
 | `work.assigned` | Aufgabe oder Mangel mir zugewiesen (Web/API; nicht beim Offline-Sync) | zugewiesene Person | `work` |
 | `deadline.due` | Frist: zugewiesene Aufgabe/Mangel heute oder morgen fällig, überfällig (höchstens 7 Tage, einmal je Tag) | zugewiesene Person | `deadline` |
 | `approval.requested` | Dokument zur Genehmigung | zugewiesene Person bzw. alle Mitglieder der Rolle | `approval` (dringend) |
@@ -29,9 +29,9 @@ die Pushnachricht lässt sich abschalten.
 | `system.maintenance` | Wartung angekündigt (**Pflicht**) | alle aktiven Benutzer | `system` (dringend) |
 | `backup.succeeded` | Backup erfolgreich (nur Administratoren) | Recht `backup.manage` | `system` |
 | `backup.failed` | Backup fehlgeschlagen (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
-| `backup.target_down` | Backup-Server nicht erreichbar / letzte Sicherung zu alt (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
-| `archive.down` | Archiv-Server nicht erreichbar (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
-| `storage.low_space` | Speicher auf dem Server knapp (Schwelle der Speicher-Auslagerung unterschritten, höchstens täglich; **Pflicht**, nur Administratoren) | Recht `settings.manage` | `system` (dringend) |
+| `backup.target_down` | Backup-Ziel nicht erreichbar / letzte Sicherung zu alt (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
+| `archive.down` | Archivserver nicht erreichbar (**Pflicht**, nur Administratoren) | Recht `backup.manage` | `system` |
+| `storage.low_space` | Speicherplatz knapp (Schwelle der Speicher-Auslagerung unterschritten, höchstens täglich; **Pflicht**, nur Administratoren) | Recht `settings.manage` | `system` (dringend) |
 | `storage.offloaded` | Originale auf den Storage ausgelagert (geprüft und gesichert), mit freiem Platz danach | Recht `settings.manage` | `system` |
 | `storage.offload_unreachable` | Storage der Auslagerung nicht erreichbar oder Originale fehlen dort (täglich; **Pflicht**, nur Administratoren) | Recht `settings.manage` | `system` (dringend) |
 | `peer.update_available` | Nach einem Update des Servers: Zusatzserver (Backup-Ziel, Archivserver) noch auf älterer Version – einmal je Version (nur Administratoren) | Recht `backup.manage` | `system` |
@@ -41,6 +41,32 @@ die Pushnachricht lässt sich abschalten.
 Die handelnde Person selbst wird nie benachrichtigt. Module übergeben den Code in `NotificationRequest.Event`
 (Katalog `NotificationEvents` in `Modules/Notifications/Exports/INotifier.cs`); die Backup-/Archiv-Ereignisse und die der
 Fernaktualisierung (`peer.*`) löst das Backup-Modul aus (docs/backup.md).
+
+### Texte der Pushnachrichten
+
+Titel nennen das Ereignis, der Text das Objekt und die wesentliche Angabe (getrennt durch „ · “). Keine Ausrufezeichen,
+keine Emojis, keine vertraulichen Inhalte (Notiztexte, Kommentare, Krankmeldungen; Chat-Inhalt nur mit erlaubter Vorschau).
+
+| Ereignis | Titel | Text (Beispiel) |
+|---|---|---|
+| `bauakte.assigned` | Bauakte zugewiesen / Zuständigkeit übertragen | 2026-117 BV Müller, Hauptstr. 5 |
+| `bauakte.comment` | Neue Notiz | 2026-117 BV Müller · Anna Admin |
+| `acceptance.signed` | Abnahme unterschrieben / Abnahme abgelehnt | 2026-117 BV Müller |
+| `work.assigned` | Aufgabe zugewiesen / Mangel zugewiesen | Randdämmstreifen nacharbeiten · 2026-117 BV Müller |
+| `deadline.due` | Heute fällig / Morgen fällig / Frist überschritten | Randdämmstreifen nacharbeiten · fällig seit 03.11. |
+| `approval.requested` | Freigabe angefordert | Angebot.pdf · 2026-117 BV Müller |
+| `approval.decided` | Dokument freigegeben / Freigabe abgelehnt | Angebot.pdf · 2026-117 BV Müller |
+| `planning.released` / `planning.changed` | Einsatzplan freigegeben / Einsatzplan geändert | Mo 10.11. · 7:00 Uhr · BV Müller (je Einsatz eine Zeile, höchstens drei, dann „2 weitere Einsätze“) |
+| `absence.decided` | Urlaubsantrag genehmigt / Urlaubsantrag abgelehnt | 10.11. – 14.11.2026 |
+| `ticket.updated` | Antwort zu Ticket T-2026-0012 / Rückmeldung zu Ticket T-2026-0012 | Drucker im Büro · In Bearbeitung |
+| `feedback.*` | Neue Fehlermeldung F-… / Neuer Funktionswunsch F-… / Rückmeldung zu Meldung F-… / Antwort zu Meldung F-… / Status geändert: Meldung F-… | Titel der Meldung (· Status) |
+| `chat.message` | Nachricht von Max Huber / Max Huber in Kolonne 2 | Vorschau bzw. „Neue Nachricht“, „Sie wurden erwähnt“; Anhänge als „Foto“, „3 Fotos“, „Dokument“, „Standort“ |
+| `system.maintenance` | Wartung angekündigt | Mo 10.11., 18:00–20:00 Uhr · EstrichONE ist in dieser Zeit nicht verfügbar. |
+| `backup.*` | Sicherung erfolgreich / Sicherung fehlgeschlagen / Backup-Ziel nicht erreichbar / Backup-Ziel wieder erreichbar | Zeitpunkt, Art, Dauer, Ziele bzw. letzte erfolgreiche Sicherung |
+| `archive.down` | Archivserver nicht erreichbar / Archivserver wieder erreichbar | Letzte Archivierung: … |
+| `storage.*` | Speicherplatz knapp / Dateien ausgelagert / Storage nicht erreichbar / Ausgelagerte Originale fehlen | freier Platz bzw. Anzahl der Originale |
+| `peer.*` | Aktualisierung für Zusatzserver verfügbar / Zusatzserver aktualisiert / Aktualisierung zurückgerollt / Aktualisierung fehlgeschlagen | Name · Version |
+| `security.login_attack` | Anmeldeangriff erkannt | Konto, Anzahl der Fehlversuche, Zeitraum, Adresse |
 
 ### Abbestellen (je Benutzer)
 | Methode | Pfad | Zweck |
@@ -154,7 +180,7 @@ Payload:
 
 ```json
 {
-  "aps": { "alert": { "title": "Plan freigegeben: Mo, 03.11.", "body": "Neubau Halle Ost" }, "sound": "default",
+  "aps": { "alert": { "title": "Einsatzplan freigegeben", "body": "Mo 03.11. · 7:00 Uhr · Neubau Halle Ost" }, "sound": "default",
            "badge": 3, "thread-id": "planning", "mutable-content": 1 },
   "notificationId": "0193…", "link": "/planung/wer-faehrt-wohin?tag=2026-11-03", "category": "planning",
   "objectType": "plan", "objectId": "0193…"

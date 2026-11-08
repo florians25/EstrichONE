@@ -148,7 +148,7 @@ export function cookieProblem(location: Pick<Location, "protocol" | "host"> = wi
 	const insecure = location.protocol === "http:";
 	const message = insecure
 		? `Die Anmeldung wurde angenommen, aber der Browser speichert die Sitzung über die unverschlüsselte Adresse http://${location.host} nicht. `
-			+ "Bitte EstrichONE über die HTTPS-Adresse aufrufen (z. B. die Domain im Nginx Proxy Manager) – nicht direkt über IP und Port."
+			+ "Bitte EstrichONE über die HTTPS-Adresse aufrufen (z. B. die Domain im Nginx Proxy Manager) aufrufen, nicht direkt über IP und Port."
 		: "Die Anmeldung wurde angenommen, aber der Browser hat die Sitzung nicht gespeichert. Bitte Cookies für diese Seite erlauben "
 			+ "(privater Modus, Tracking-Schutz, Erweiterungen) sowie Datum und Uhrzeit dieses Geräts prüfen und es erneut versuchen.";
 	return new ApiError(0, "SESSION_COOKIE_REJECTED", message);

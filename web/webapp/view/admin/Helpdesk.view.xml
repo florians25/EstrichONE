@@ -63,7 +63,7 @@
 			<VBox visible="{= !${view>/t} }" alignItems="Center" justifyContent="Center" height="100%" class="eoHdEmpty">
 				<core:Icon src="sap-icon://headset" size="3rem" class="eoMuted" decorative="true"/>
 				<Title text="{= ${view>/items}.length ? 'Ticket auswählen' : 'Keine Tickets' }" level="H3" class="sapUiSmallMarginTop"/>
-				<Text text="{= ${view>/agent} ? 'Links ein Ticket wählen – Verlauf, Antwort und Schnellaktionen erscheinen hier.' : 'Probleme mit App, Gerät oder Büro-IT? Melden Sie sie mit „Neues Ticket“ – die IT antwortet hier.' }"
+				<Text text="{= ${view>/agent} ? 'Bitte links ein Ticket wählen. Verlauf, Antwort und Schnellaktionen werden hier angezeigt.' : 'Probleme mit App, Gerät oder Büro-IT können Sie über „Neues Ticket“ melden. Die Antwort der IT erscheint hier.' }"
 					textAlign="Center" wrapping="true" class="eoMuted eoHdEmptyText"/>
 			</VBox>
 			<VBox visible="{= !!${view>/t} }" class="eoHdHead" busy="{view>/detailBusy}" busyIndicatorDelay="300">

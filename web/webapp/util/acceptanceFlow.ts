@@ -12,7 +12,7 @@ import { session } from "./session";
 type AkteData = Parameters<typeof akteContextOf>[0] & { customer?: { name: string; email: string | null } | null };
 
 export function showAcceptanceLink(link: { url: string; expiresAt: string; emailed: boolean }): void {
-	MessageBox.information(`${link.emailed ? "Der Link wurde per E-Mail an den Kunden geschickt." : "Kein Versand per E-Mail (keine Adresse oder kein E-Mail-Konto eingerichtet) – Link bitte weitergeben:"}\n\n${link.url}\n\nGültig bis ${dateTime(link.expiresAt)}.`, {
+	MessageBox.information(`${link.emailed ? "Der Link wurde per E-Mail an den Kunden geschickt." : "Kein Versand per E-Mail (keine Adresse oder kein E-Mail-Konto eingerichtet). Bitte den Link weitergeben:"}\n\n${link.url}\n\nGültig bis ${dateTime(link.expiresAt)}.`, {
 		title: "Freigabelink für den Kunden",
 		actions: ["Link kopieren", MessageBox.Action.CLOSE],
 		emphasizedAction: "Link kopieren",
@@ -38,6 +38,6 @@ export async function runAcceptance(bauakteId: string, data: AkteData | undefine
 	akte.invalidate(bauakteId, "inspections", "work", "files");
 	EventBus.getInstance().publish("bauakte", "reload", { id: bauakteId });
 	if (saved.link) showAcceptanceLink(saved.link);
-	else MessageToast.show(saved.signed ? "Abnahme gespeichert – das PDF liegt unter „Dokumente → Abnahmen“." : "Abnahme gespeichert");
+	else MessageToast.show(saved.signed ? "Abnahme gespeichert. Das PDF liegt unter „Dokumente › Abnahmen“." : "Abnahme gespeichert");
 	return true;
 }

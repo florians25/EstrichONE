@@ -10,31 +10,31 @@ public static class DefaultMailTemplates
     public static IReadOnlyList<MailTemplateDefinition> All { get; } =
     [
         new(MailTemplateKeys.Test, "Testmail", "Testmail von EstrichONE",
-            "Hallo,\n\ndiese Testmail bestätigt, dass das E-Mail-Konto von {{firma}} in EstrichONE richtig eingerichtet ist.\n\n" +
-            "Gesendet: {{zeitpunkt}}\nServer: {{adresse}}\n\nViele Grüße\nEstrichONE", ["firma", "adresse", "zeitpunkt"]),
-        new(MailTemplateKeys.UserWelcome, "Neuer Benutzer – Zugangsdaten", "Ihr Zugang zu EstrichONE ({{firma}})",
-            "Hallo {{name}},\n\nfür Sie wurde ein Zugang zu EstrichONE eingerichtet.\n\nAdresse: {{adresse}}\nBenutzername: {{benutzername}}\n" +
-            "Einmalpasswort: {{passwort}}\n\nBitte melden Sie sich an und vergeben Sie ein eigenes Passwort. Die Anleitung für die App " +
-            "finden Sie im angehängten Brief.\n\nViele Grüße\n{{firma}}", ["name", "benutzername", "passwort", "firma", "adresse"]),
+            "Guten Tag,\n\ndiese Testmail bestätigt, dass das E-Mail-Konto von {{firma}} in EstrichONE korrekt eingerichtet ist.\n\n" +
+            "Gesendet: {{zeitpunkt}}\nServer: {{adresse}}\n\nMit freundlichen Grüßen\nEstrichONE", ["firma", "adresse", "zeitpunkt"]),
+        new(MailTemplateKeys.UserWelcome, "Zugangsdaten für neue Benutzer", "Ihr Zugang zu EstrichONE ({{firma}})",
+            "Guten Tag {{name}},\n\nfür Sie wurde ein Zugang zu EstrichONE eingerichtet.\n\nAdresse: {{adresse}}\nBenutzername: {{benutzername}}\n" +
+            "Einmalpasswort: {{passwort}}\n\nBitte melden Sie sich an und vergeben Sie ein eigenes Passwort. Die Anleitung zur Einrichtung der App " +
+            "finden Sie im beigefügten Schreiben.\n\nMit freundlichen Grüßen\n{{firma}}", ["name", "benutzername", "passwort", "firma", "adresse"]),
         new(MailTemplateKeys.PasswordReset, "Passwort zurückgesetzt", "Neues Einmalpasswort für EstrichONE",
-            "Hallo {{name}},\n\nIhr Passwort für EstrichONE wurde zurückgesetzt.\n\nAdresse: {{adresse}}\nBenutzername: {{benutzername}}\n" +
-            "Einmalpasswort: {{passwort}}\n\nBitte vergeben Sie nach der Anmeldung ein eigenes Passwort.\n\nViele Grüße\n{{firma}}",
+            "Guten Tag {{name}},\n\nIhr Passwort für EstrichONE wurde zurückgesetzt.\n\nAdresse: {{adresse}}\nBenutzername: {{benutzername}}\n" +
+            "Einmalpasswort: {{passwort}}\n\nBitte vergeben Sie nach der Anmeldung ein eigenes Passwort.\n\nMit freundlichen Grüßen\n{{firma}}",
             ["name", "benutzername", "passwort", "firma", "adresse"]),
-        new(MailTemplateKeys.ApprovalRequested, "Freigabe angefordert", "Bitte um Freigabe: {{dokument}}",
-            "Hallo {{name}},\n\nbitte prüfen und freigeben: {{dokument}} (Bauakte {{bauakte}}).\n\n{{nachricht}}\n\n{{link}}\n\nViele Grüße\n{{firma}}",
+        new(MailTemplateKeys.ApprovalRequested, "Freigabe angefordert", "Freigabe angefordert: {{dokument}}",
+            "Guten Tag {{name}},\n\nfolgendes Dokument wartet auf Ihre Freigabe: {{dokument}} (Bauakte {{bauakte}}).\n\n{{nachricht}}\n\n{{link}}\n\nMit freundlichen Grüßen\n{{firma}}",
             ["name", "dokument", "bauakte", "nachricht", "link", "firma"]),
         new(MailTemplateKeys.ApprovalDecided, "Freigabe entschieden", "Freigabe {{entscheidung}}: {{dokument}}",
-            "Hallo {{name}},\n\n{{dokument}} (Bauakte {{bauakte}}) wurde {{entscheidung}}.\n\n{{kommentar}}\n\n{{link}}\n\nViele Grüße\n{{firma}}",
+            "Guten Tag {{name}},\n\ndas Dokument {{dokument}} (Bauakte {{bauakte}}) wurde {{entscheidung}}.\n\n{{kommentar}}\n\n{{link}}\n\nMit freundlichen Grüßen\n{{firma}}",
             ["name", "dokument", "bauakte", "entscheidung", "kommentar", "link", "firma"]),
         new(MailTemplateKeys.HelpdeskUpdated, "Helpdesk-Ticket geändert", "Ticket {{ticket}}: {{titel}}",
-            "Hallo {{name}},\n\nIhr Ticket {{ticket}} „{{titel}}“ hat einen neuen Stand: {{status}}.\n\n{{kommentar}}\n\n{{link}}\n\nViele Grüße\n{{firma}}",
+            "Guten Tag {{name}},\n\nIhr Ticket {{ticket}} „{{titel}}“ wurde aktualisiert. Status: {{status}}.\n\n{{kommentar}}\n\n{{link}}\n\nMit freundlichen Grüßen\n{{firma}}",
             ["name", "ticket", "titel", "status", "kommentar", "link", "firma"]),
-        new(MailTemplateKeys.AcceptanceCustomerApproval, "Abnahme – Freigabe durch den Kunden", "Abnahmeprotokoll {{bauakte}} – bitte freigeben",
+        new(MailTemplateKeys.AcceptanceCustomerApproval, "Abnahme: Freigabe durch den Kunden", "Abnahmeprotokoll {{bauakte}}: Bitte um Freigabe",
             "Guten Tag {{name}},\n\nanbei bzw. unter folgendem Link finden Sie das Abnahmeprotokoll für das Bauvorhaben {{bauakte}}:\n\n{{link}}\n\n" +
-            "Bitte prüfen und freigeben Sie es bis {{frist}}.\n\nMit freundlichen Grüßen\n{{firma}}", ["name", "bauakte", "link", "frist", "firma"]),
+            "Wir bitten Sie, das Protokoll bis {{frist}} zu prüfen und freizugeben.\n\nMit freundlichen Grüßen\n{{firma}}", ["name", "bauakte", "link", "frist", "firma"]),
         new(MailTemplateKeys.ArchiveFailed, "Archivierung fehlgeschlagen", "EstrichONE: Archivierung fehlgeschlagen",
-            "Hallo,\n\ndas Dokument „{{dokument}}“ (Bauakte {{bauakte}}) konnte nicht archiviert werden:\n\n{{fehler}}\n\n" +
-            "EstrichONE versucht es automatisch weiter. Status: {{link}}\n\nViele Grüße\nEstrichONE", ["dokument", "bauakte", "fehler", "link"]),
+            "Guten Tag,\n\ndas Dokument „{{dokument}}“ (Bauakte {{bauakte}}) konnte nicht archiviert werden.\n\nFehler: {{fehler}}\n\n" +
+            "Die Archivierung wird automatisch erneut versucht. Status: {{link}}\n\nMit freundlichen Grüßen\nEstrichONE", ["dokument", "bauakte", "fehler", "link"]),
     ];
 
     public static MailTemplateDefinition? Find(string key) => All.FirstOrDefault(template => template.Key == key);

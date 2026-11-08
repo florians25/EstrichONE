@@ -100,7 +100,7 @@ internal static class SystemSettingsEndpoints
             && !await twoFactor.IsEnabledAsync(currentUser.UserId, cancellationToken))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Erst selbst einrichten",
-                detail: "Bitte zuerst für das eigene Konto die Zwei-Faktor-Anmeldung einrichten (Konto → Anmeldung und Sicherheit), dann die Pflicht einschalten.",
+                detail: "Bitte zuerst für das eigene Konto die Zwei-Faktor-Anmeldung einrichten (Konto › Anmeldung und Sicherheit) und anschließend die Pflicht einschalten.",
                 extensions: new Dictionary<string, object?> { ["code"] = "TWO_FACTOR_SETUP_FIRST" });
         }
 

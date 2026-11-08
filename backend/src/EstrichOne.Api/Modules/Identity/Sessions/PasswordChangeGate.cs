@@ -39,7 +39,7 @@ public static class PasswordChangeGate
                 {
                     Status = StatusCodes.Status403Forbidden,
                     Title = "Passwortwechsel erforderlich",
-                    Detail = "Bitte zuerst ein eigenes Passwort festlegen – das Einmalpasswort der Administration ist noch aktiv.",
+                    Detail = "Bitte zuerst ein eigenes Passwort festlegen. Das Einmalpasswort der Administration ist noch aktiv.",
                     Extensions = { ["code"] = Code },
                 },
             });

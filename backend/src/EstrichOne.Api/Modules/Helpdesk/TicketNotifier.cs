@@ -25,7 +25,7 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
         // Postfach und Push: nur Nummer und Status, nie der Kommentartext (kann sensible Inhalte enthalten).
         await notifier.NotifyAsync([userId], new Notifications.Exports.NotificationRequest(
             Notifications.Exports.NotificationCategory.Ticket,
-            $"Ticket {ticket.Number}: {(ticket.ReporterUserId == userId ? "neue Antwort" : "Rückmeldung des Melders")}",
+            ticket.ReporterUserId == userId ? $"Antwort zu Ticket {ticket.Number}" : $"Rückmeldung zu Ticket {ticket.Number}",
             $"{ticket.Title} · {TicketService.StatusName(ticket.Status)}",
             $"/it-center/helpdesk/{ticket.Id}", "ticket", ticket.Id, Event: Notifications.Exports.NotificationEvents.TicketUpdated), cancellationToken);
 

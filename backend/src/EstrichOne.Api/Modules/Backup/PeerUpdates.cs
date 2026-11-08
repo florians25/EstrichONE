@@ -360,8 +360,8 @@ internal sealed partial class PeerUpdateService(
             var admins = await roles.GetUserIdsWithPermissionAsync(Permissions.BackupManage, cancellationToken);
             var names = string.Join(", ", offer.Select(o => o.Name).Take(5));
             await notifier.NotifyAsync(admins, new NotificationRequest(NotificationCategory.System,
-                $"Zusatzserver auf {list.CurrentVersion} aktualisieren",
-                $"{names}: installiert ist eine ältere Version. Im Backup Center unter Backup-Ziele bzw. Archiv mit einem Klick aktualisieren.",
+                "Aktualisierung für Zusatzserver verfügbar",
+                $"{names} · Version {list.CurrentVersion} verfügbar. Aktualisierung im Backup Center unter Backup-Ziele bzw. Archiv.",
                 offer[0].Kind switch { "archive" => "/system/archiv", "offload" => "/system/auslagerung", _ => "/system/backup-ziele" }, "peerUpdate", null, NotificationUrgency.Normal,
                 $"peer-update-available:{list.CurrentVersion}", NotificationEvents.PeerUpdateAvailable), cancellationToken);
         }
@@ -383,7 +383,7 @@ internal sealed partial class PeerUpdateService(
             }
 
             var message = response.StatusCode == System.Net.HttpStatusCode.NotFound
-                ? "Dieser Rechner kennt die Fernaktualisierung noch nicht – einmal lokal mit dem aktuellen Installer aktualisieren (Befehl in der Weboberfläche)."
+                ? "Dieser Rechner unterstützt die Fernaktualisierung noch nicht. Bitte einmalig lokal mit dem aktuellen Installer aktualisieren (Befehl in der Weboberfläche)."
                 : await ProblemTitleAsync(response, cancellationToken);
             await FinishAsync(peer, row, PeerUpdate.Failed, message, cancellationToken);
         }
@@ -441,7 +441,7 @@ internal sealed partial class PeerUpdateService(
         if (row.Active && row.RequestedAt is { } at && clock.GetUtcNow() - at > RunTimeout)
         {
             await FinishAsync(peer, row, PeerUpdate.Failed, peer.Connect is null && row.Status == PeerUpdate.Requested
-                ? "Der Rechner hat den Auftrag nicht abgeholt (meldet er sich noch?)."
+                ? "Der Rechner hat den Auftrag nicht abgerufen. Bitte die Verbindung des Rechners prüfen."
                 : "Keine Rückmeldung innerhalb von 30 Minuten. Am Rechner prüfen: sudo docker logs estrichone-<rolle>-updater", cancellationToken);
         }
     }
@@ -457,10 +457,10 @@ internal sealed partial class PeerUpdateService(
         var admins = await roles.GetUserIdsWithPermissionAsync(Permissions.BackupManage, cancellationToken);
         var (title, body, urgency, code) = status switch
         {
-            PeerUpdate.Succeeded => ("Zusatzserver aktualisiert", $"{row.Name}: jetzt Version {row.TargetVersion}.", NotificationUrgency.Low,
+            PeerUpdate.Succeeded => ("Zusatzserver aktualisiert", $"{row.Name} · Version {row.TargetVersion} installiert", NotificationUrgency.Low,
                 NotificationEvents.PeerUpdateSucceeded),
-            PeerUpdate.RolledBack => ("Aktualisierung zurückgerollt", $"{row.Name}: Version {row.TargetVersion} wurde nicht gesund, "
-                + $"die vorige Version {row.PreviousVersion ?? ""} läuft wieder. {row.Message}".TrimEnd(), NotificationUrgency.High,
+            PeerUpdate.RolledBack => ("Aktualisierung zurückgerollt", $"{row.Name}: Version {row.TargetVersion} ist nicht fehlerfrei gestartet. "
+                + $"Die vorherige Version {row.PreviousVersion ?? ""} ist wieder aktiv. {row.Message}".TrimEnd(), NotificationUrgency.High,
                 NotificationEvents.PeerUpdateFailed),
             _ => ("Aktualisierung fehlgeschlagen", $"{row.Name}: {row.Message}", NotificationUrgency.High, NotificationEvents.PeerUpdateFailed),
         };

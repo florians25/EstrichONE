@@ -345,7 +345,7 @@ export default class Calendar extends BaseController {
 			const saved = await this.run(() => post<AssignmentView>(`planning/assignments/${a.id}/move`, {
 				day: isoDay(start), startTime: allDay ? null : t(start), endTime: allDay || isoDay(end) !== isoDay(start) ? null : t(end),
 			}));
-			if (saved?.warnings.length) MessageToast.show(`Verschoben – ${saved.warnings.join(" ")}`);
+			if (saved?.warnings.length) MessageToast.show(`Verschoben. ${saved.warnings.join(" ")}`);
 			calendarChanged();
 			return;
 		}

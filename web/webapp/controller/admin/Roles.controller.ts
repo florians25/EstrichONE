@@ -39,7 +39,7 @@ export default class Roles extends BaseController {
 	private rolesStatus(): void {
 		const changed = this.changedRoles().length;
 		const own = this.roles.filter((r) => !r.isSystem).length;
-		this.statusLine([changed > 0 && `${changed} ${changed === 1 ? "Rolle geändert" : "Rollen geändert"} – „Änderungen speichern“ nicht vergessen`],
+		this.statusLine([changed > 0 && `${changed} ${changed === 1 ? "Rolle geändert" : "Rollen geändert"}. Bitte mit „Änderungen speichern“ übernehmen.`],
 			`${this.roles.length} Rollen (${own} eigene), ${this.catalog.length} Rechte`);
 	}
 

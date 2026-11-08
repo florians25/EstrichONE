@@ -106,7 +106,7 @@ internal sealed class MonitoringService(
         }
         else
         {
-            systems.Add(new("archive", "Archivserver", MonitorLevel.Warning, null, [new("Status", "nicht gekoppelt (System → Archiv)", MonitorLevel.Warning)]));
+            systems.Add(new("archive", "Archivserver", MonitorLevel.Warning, null, [new("Status", "nicht gekoppelt (System › Archiv)", MonitorLevel.Warning)]));
         }
 
         // Backup-Ziele
@@ -132,7 +132,7 @@ internal sealed class MonitoringService(
         if (b.Targets.Count == 0)
         {
             systems.Add(new("backup", "Backup-Ziel", MonitorLevel.Warning, null,
-                [new("Status", "keines gekoppelt – Sicherung nur auf diesem Server (System → Backup-Ziele)", MonitorLevel.Warning)]));
+                [new("Status", "keines gekoppelt, Sicherung nur auf diesem Server (System › Backup-Ziele)", MonitorLevel.Warning)]));
         }
 
         await db.SaveChangesAsync(cancellationToken);

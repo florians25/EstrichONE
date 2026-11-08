@@ -132,7 +132,7 @@
 					<Button id="addAcceptance" text="Abnahmeprotokoll erstellen" icon="sap-icon://signature" type="Emphasized" press=".onAddAcceptance"
 						visible="{= ${session>/permissions/inspections.write} === true }"/>
 				</OverflowToolbar>
-				<List id="acceptanceList" items="{dc>/acceptances}" noDataText="Noch keine Abnahme. Bei der Abnahme vor Ort den Assistenten starten – Unterschriften direkt auf dem Gerät.">
+				<List id="acceptanceList" items="{dc>/acceptances}" noDataText="Noch keine Abnahme. Bei der Abnahme vor Ort den Assistenten starten; Unterschriften werden auf dem Gerät erfasst.">
 					<CustomListItem>
 						<FlexBox wrap="Wrap" justifyContent="SpaceBetween" alignItems="Center" class="sapUiSmallMargin eoEntryRow">
 							<VBox>

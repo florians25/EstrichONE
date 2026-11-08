@@ -44,8 +44,8 @@ export function healthTexts(health: HealthBanner | null | undefined, now = Date.
 	const backupDown = !!b?.configured && (b.reachable === false || b.severity === "critical" || b.severity === "error" || stale(b.lastSuccessAt));
 	const archiveDown = !!a?.configured && (a.reachable === false || a.severity === "critical" || a.severity === "error" || a.severity === "warning");
 	return {
-		backup: backupDown ? `ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup ${stamp(b?.lastSuccessAt)}). Bitte geben Sie umgehend Ihrem Admin Bescheid.` : "",
-		archive: archiveDown ? `Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung ${stamp(a?.lastSuccessAt)}). Bitte informieren Sie Ihren Admin.` : "",
+		backup: backupDown ? `Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: ${stamp(b?.lastSuccessAt)}. Bitte informieren Sie umgehend die Administration.` : "",
+		archive: archiveDown ? `Archivserver nicht erreichbar. Letzte Archivierung: ${stamp(a?.lastSuccessAt)}. Bitte informieren Sie die Administration.` : "",
 	};
 }
 

@@ -215,9 +215,9 @@ export function startsRun(previous: ChatMessage | undefined, current: ChatMessag
 export function previewText(c: ChatConversation): string {
 	const m = c.lastMessage;
 	if (!m) return c.kind === "group" ? `${c.members.length} Mitglieder` : "Noch keine Nachrichten";
-	const hint = m.attachment === "photo" ? "📷 Foto" : m.attachment === "document" ? "📄 Dokument" : m.location ? "📍 Standort" : "";
+	const hint = m.attachment === "photo" ? "Foto" : m.attachment === "document" ? "Dokument" : m.location ? "Standort" : "";
 	const text = m.deleted ? "Nachricht gelöscht" : m.text ?? (hint || "Nachricht nicht lesbar");
-	if (m.mine) return `Du: ${text}`;
+	if (m.mine) return `Sie: ${text}`;
 	return c.kind === "group" ? `${m.senderName.split(" ")[0]}: ${text}` : text;
 }
 

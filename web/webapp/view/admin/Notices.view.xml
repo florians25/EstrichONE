@@ -16,7 +16,7 @@
 				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
 					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
 				<Panel id="noticePreview" backgroundDesign="Solid" class="sapUiSmallMarginBottom">
-					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://show"/><Title text="Vorschau – das sehen Benutzer jetzt" level="H2"/>
+					<headerToolbar><OverflowToolbar style="Clear"><core:Icon src="sap-icon://show"/><Title text="Vorschau: aktuelle Anzeige für Benutzer" level="H2"/>
 						<ToolbarSpacer/><Text text="Banner oben in EstrichONE, zum Nachlesen auf der Startseite" class="eoMuted"/></OverflowToolbar></headerToolbar>
 					<VBox class="sapUiSmallMarginBeginEnd sapUiSmallMarginBottom">
 						<VBox items="{view>/preview}" renderType="Bare" class="eoNoticePreview eoNoticeList" visible="{= ${view>/preview}.length > 0 }">
@@ -52,7 +52,7 @@
 						</ColumnListItem>
 					</items>
 				</Table>
-				<Panel backgroundDesign="Solid" headerText="Hinweise des Betreibers (Hosting-Konsole) – nur lesen" visible="{= ${view>/console}.length > 0 || !!${view>/consoleMaintenance} }">
+				<Panel backgroundDesign="Solid" headerText="Hinweise des Betreibers (Hosting-Konsole, schreibgeschützt)" visible="{= ${view>/console}.length > 0 || !!${view>/consoleMaintenance} }">
 					<Text text="{view>/consoleMaintenance}" visible="{= !!${view>/consoleMaintenance} }" class="sapUiSmallMarginBeginEnd"/>
 					<List items="{view>/console}" showSeparators="Inner">
 						<StandardListItem title="{view>title}" description="{view>text}" info="{view>period}" infoState="{view>severityState}" icon="sap-icon://message-warning"/>

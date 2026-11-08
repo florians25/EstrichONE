@@ -5,7 +5,7 @@
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.offload}" level="H1"/></f:heading>
 				<f:expandedContent>
-					<Text text="Wird der Platz auf diesem Server knapp, wandern Datei-Originale verschlüsselt auf den Storage (Kombiserver bzw. Archivrechner). Vorschaubilder bleiben hier – in Web und Apps bleibt alles sichtbar."/>
+					<Text text="Wird der Platz auf diesem Server knapp, wandern Datei-Originale verschlüsselt auf den Storage (Kombiserver bzw. Archivrechner). Vorschaubilder bleiben auf diesem Server; in Web und Apps bleibt alles sichtbar."/>
 				</f:expandedContent>
 				<f:actions>
 					<Button text="Aktualisieren" icon="sap-icon://refresh" type="Transparent" press=".onRefresh"/>
@@ -33,7 +33,7 @@
 				</HBox>
 
 				<MessageStrip visible="{= !!${view>/o} &amp;&amp; !${view>/o/paired} }" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
-					text="So koppeln Sie einen Storage: Auf dem Kombiserver den Installer erneut mit -e ESTRICHONE_OFFLOAD_DATA_DIR=/pfad/auslagerung ausführen (Modus backup-archiv) bzw. auf einem Archivrechner den Modus „auslagerung“ – dann „Storage koppeln“ wählen und Adresse (Port 8445) und Code eingeben."/>
+					text="So koppeln Sie einen Storage: Auf dem Kombiserver den Installer erneut mit -e ESTRICHONE_OFFLOAD_DATA_DIR=/pfad/auslagerung ausführen (Modus backup-archiv) bzw. auf einem Archivrechner den Modus „auslagerung“. Anschließend „Storage koppeln“ wählen und Adresse (Port 8445) und Code eingeben."/>
 
 				<!-- Belegung -->
 				<VBox id="secUsage" class="sapUiMediumMarginBottom">
@@ -77,7 +77,7 @@
 						<Label text="Zusätzlich regelmäßig nach Regeln" labelFor="olRules"/>
 						<VBox>
 							<Switch id="olRules" state="{view>/settings/autoByRules}" customTextOn=" " customTextOff=" "/>
-							<Text text="Alle 6 Stunden auslagern, was den Regeln entspricht – auch ohne Platznot."/>
+							<Text text="Alle 6 Stunden auslagern, was den Regeln entspricht, auch bei ausreichendem Speicherplatz."/>
 						</VBox>
 						<Label text="Nur Dateien älter als (Monate)" labelFor="olAge"/><StepInput id="olAge" value="{view>/settings/minAgeMonths}" min="0" max="240" width="10rem"/>
 						<Label text="Nur abgeschlossene Bauakten" labelFor="olDone"/><Switch id="olDone" state="{view>/settings/onlyCompletedBauakten}" customTextOn=" " customTextOff=" "/>
@@ -205,7 +205,7 @@
 					<HBox class="eoDangerRow" renderType="Bare">
 						<VBox renderType="Bare" class="eoDangerText">
 							<Text text="Alles wieder lokal speichern" class="eoStrong"/>
-							<Text text="Holt alle ausgelagerten Originale zurück auf diesen Server – braucht entsprechend Platz (wird vorher je Datei geprüft)." class="eoMuted"/>
+							<Text text="Holt alle ausgelagerten Originale zurück auf diesen Server. Dafür ist entsprechender Speicherplatz erforderlich (wird je Datei vorab geprüft)." class="eoMuted"/>
 						</VBox>
 						<Button text="Alles zurückholen …" icon="sap-icon://download" type="Reject" press=".onRecallAll"/>
 					</HBox>

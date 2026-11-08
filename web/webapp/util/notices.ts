@@ -159,7 +159,7 @@ class Notices {
 		m.setProperty("/outageTitle", offline ? "Keine Internetverbindung" : "EstrichONE ist gerade nicht erreichbar");
 		m.setProperty("/outageText", offline
 			? "Dieses Gerät ist offline. Sobald die Verbindung zurück ist, geht es hier automatisch weiter."
-			: "Der Server antwortet im Moment nicht – meist ein Neustart oder eine kurze Störung. Bereits gespeicherte Daten sind sicher. Nicht gespeicherte Eingaben bitte nach der Rückkehr kurz prüfen.");
+			: "Der Server antwortet derzeit nicht, in der Regel wegen eines Neustarts oder einer kurzen Störung. Gespeicherte Daten sind gesichert. Bitte nicht gespeicherte Eingaben anschließend prüfen.");
 		m.setProperty("/outageSince", `Nicht erreichbar seit ${new Intl.DateTimeFormat("de-DE", { hour: "2-digit", minute: "2-digit" }).format(new Date())} Uhr`);
 		m.setProperty("/outage", true);
 		this.outageCountdown = 10;

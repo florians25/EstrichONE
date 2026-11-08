@@ -396,7 +396,7 @@ test('Prüfungen und Bautagebuch aus der App erscheinen in der Bauakte', async (
   await expect(page.getByText('Regen · 9 °C')).toBeVisible();
   await page.getByRole('tab', { name: /Prüfungen/ }).click();
   await expect(page.getByText('Erstbegehungsprotokoll', { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByText('Mit Mängeln – Klärung nötig')).toBeVisible();
+  await expect(page.getByText('Mit Mängeln, Klärung erforderlich')).toBeVisible();
   await expect(page.getByText('Randdämmstreifen vorhanden')).toBeVisible();
   await expect(page.getByText('Randdämmung fehlt')).toBeVisible();
   await expect(page.getByRole('row', { name: /Bad OG/ })).toContainText('1,6 CM-% (Grenzwert 1,8)');

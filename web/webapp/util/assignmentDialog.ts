@@ -142,7 +142,7 @@ export async function openAssignment(draft: AssignmentDraft): Promise<void> {
 			if (saved.warnings.length > 0) {
 				// Hinweise sichtbar lassen; die Planung entscheidet, ob sie so bleibt.
 				warn(saved.warnings);
-				MessageToast.show("Gespeichert – bitte die Hinweise prüfen.");
+				MessageToast.show("Gespeichert. Bitte die Hinweise prüfen.");
 				return KEEP_OPEN;
 			}
 			MessageToast.show("Einsatz gespeichert");

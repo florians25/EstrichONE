@@ -57,7 +57,7 @@ export async function openArchiveProof(opts: { fileId?: string; bauakteId?: stri
 		press: async () => {
 			try {
 				await post(opts.fileId ? `archive/files/${opts.fileId}` : `archive/bauakten/${opts.bauakteId}`);
-				MessageToast.show("Zur Archivierung vorgemerkt – der Nachweis erscheint in wenigen Sekunden.");
+				MessageToast.show("Zur Archivierung vorgemerkt. Der Nachweis erscheint in wenigen Sekunden.");
 				setTimeout(() => void fill().catch(() => undefined), 4000);
 			} catch (error) {
 				MessageBox.error(problemMessage(error));

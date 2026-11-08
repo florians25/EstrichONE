@@ -173,9 +173,9 @@ internal static partial class ChatEndpoints
     }
 
     private static string? AttachmentHint(List<ChatAttachment> attachments, bool location) =>
-        attachments.Count == 0 ? location ? "📍 Standort" : null
-        : attachments.All(a => a.Kind == ChatAttachmentKind.Photo) ? attachments.Count == 1 ? "📷 Foto" : $"📷 {attachments.Count} Fotos"
-        : attachments.Count == 1 ? "📄 Dokument" : $"📎 {attachments.Count} Anhänge";
+        attachments.Count == 0 ? location ? "Standort" : null
+        : attachments.All(a => a.Kind == ChatAttachmentKind.Photo) ? attachments.Count == 1 ? "Foto" : $"{attachments.Count} Fotos"
+        : attachments.Count == 1 ? "Dokument" : $"{attachments.Count} Anhänge";
 
     private static async Task<(ChatMessage? Message, ProblemHttpResult? Problem)> SendCoreAsync(
         ChatService chat, EstrichOneDbContext db, TimeProvider clock, ChatConversation conversation, ChatMember member, string? rawText, Guid? replyToId,
@@ -446,7 +446,7 @@ internal static partial class ChatEndpoints
 
         if (!(await chat.SettingsAsync(cancellationToken)).AttachmentsEnabled)
         {
-            return Validation("Anhänge sind im Chat ausgeschaltet (Einstellungen → Module → Chat).");
+            return Validation("Anhänge sind im Chat ausgeschaltet (Einstellungen › Module › Chat).");
         }
 
         var content = await ReadBodyAsync(http, ChatLimits.MaxAttachmentBytes, cancellationToken);
@@ -605,7 +605,7 @@ internal static partial class ChatEndpoints
 
         if (conversation.Kind != ChatConversationKind.Group)
         {
-            return Validation("Einzelchats lassen sich nicht verlassen – stattdessen stumm schalten.");
+            return Validation("Einzelchats können nicht verlassen werden. Sie können die Unterhaltung stattdessen stumm schalten.");
         }
 
         if (member.FromCrew)

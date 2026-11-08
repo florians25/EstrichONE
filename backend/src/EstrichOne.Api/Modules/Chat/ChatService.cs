@@ -207,7 +207,7 @@ internal sealed partial class ChatService(
         {
             var mentioned = message.MentionedUserIds.Contains(member.UserId);
             var preview = settings.ShowPreview && (personal.GetValueOrDefault(member.UserId)?.ShowPreview ?? true);
-            var body = preview ? Preview(content, 120) : mentioned ? "Hat Sie erwähnt" : "Neue Nachricht im Chat";
+            var body = preview ? Preview(content, 120) : mentioned ? "Sie wurden erwähnt" : "Neue Nachricht";
             await notifier.NotifyAsync([member.UserId], new NotificationRequest(NotificationCategory.Chat, title, body, $"/chat/{conversation.Id}",
                 ObjectType, conversation.Id, mentioned ? NotificationUrgency.High : NotificationUrgency.Normal, DedupKey: $"chatmsg:{message.Id:N}",
                 Event: NotificationEvents.ChatMessage, ReplacePrevious: true), cancellationToken);

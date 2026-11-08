@@ -307,7 +307,7 @@ export default class PlanBoard extends Control {
 			table.append(row);
 		}
 		if (data.lanes.length === 0) {
-			const empty = el("div", "eoPlanEmpty", data.rows === "people" ? "Keine Mitarbeiter für diese Auswahl." : "Noch keine Kolonnen – unter „Kolonnen und Geräte“ anlegen.");
+			const empty = el("div", "eoPlanEmpty", data.rows === "people" ? "Keine Mitarbeiter für diese Auswahl." : "Noch keine Kolonnen. Kolonnen unter „Kolonnen und Geräte“ anlegen.");
 			table.append(empty);
 		}
 		return table;

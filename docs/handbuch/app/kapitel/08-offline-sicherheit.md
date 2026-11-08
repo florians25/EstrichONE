@@ -71,8 +71,8 @@ Oben auf allen Hauptseiten erscheint eine farbige Leiste, wenn die Datensicherun
 
 | Leiste | Bedeutung | Was Sie tun |
 |---|---|---|
-| **Rot** – „ACHTUNG: Backup-Server ausgefallen oder nicht erreichbar (Letztes Backup …)“ | Die tägliche Datensicherung läuft nicht. | Geben Sie **umgehend** Ihrer Administration Bescheid. |
-| **Gelb** – „Hinweis: Archiv-Server ausgefallen oder nicht erreichbar (Letzte Archivierung …)“ | Der Archivserver (Langzeitablage) ist nicht erreichbar. Erscheint nur, wenn ein Archivserver eingerichtet ist. | Informieren Sie Ihre Administration. |
+| **Rot** – „Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: …“ | Die tägliche Datensicherung läuft nicht. | Geben Sie **umgehend** Ihrer Administration Bescheid. |
+| **Gelb** – „Archivserver nicht erreichbar. Letzte Archivierung: …“ | Der Archivserver (Langzeitablage) ist nicht erreichbar. Erscheint nur, wenn ein Archivserver eingerichtet ist. | Informieren Sie Ihre Administration. |
 
 Den Text der Leisten liefert der Server; die App zeigt ihn unverändert. Ohne Störung ist keine Leiste zu sehen. Ihre
 Arbeit in der App ist davon nicht betroffen.

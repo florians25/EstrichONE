@@ -112,7 +112,7 @@ export function openSettings(): void {
 		},
 	});
 	const scaleText = () => `Aktuell ${String(resolveScale(storedScale(), window.innerWidth, window.innerHeight)).replace(".", ",")} %` +
-		(storedScale() === AUTO_SCALE ? " – auf großen Bildschirmen (4K, Curved/Ultrawide) automatisch größer" : "");
+		(storedScale() === AUTO_SCALE ? ", auf großen Bildschirmen (4K, Ultrawide) automatisch vergrößert" : "");
 	const scaleInfo = new Text({ text: scaleText() });
 	const current = new Text({ text: `Aktiv: ${info(Theming.getTheme()).text}` });
 	const dialog = new Dialog("settingsDialog", {

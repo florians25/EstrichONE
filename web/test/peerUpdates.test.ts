@@ -18,7 +18,7 @@ describe('Fernaktualisierung der Zusatzserver', () => {
   it('zeigt laufende Aufträge, Rücksprung und Fehler', () => {
     expect(activeStatus('delivered')).toBe(true);
     expect(peerRow({ ...base, status: 'running', targetVersion: '0.1.0-preview.23' })).toMatchObject({ active: true, canUpdate: false, state: 'Information' });
-    expect(peerRow({ ...base, kind: 'backup-mirror', status: 'requested', targetVersion: '0.1.0-preview.23' }).stateText).toContain('Wartet auf Abholung');
+    expect(peerRow({ ...base, kind: 'backup-mirror', status: 'requested', targetVersion: '0.1.0-preview.23' }).stateText).toContain('Wartet auf Abruf');
     expect(peerRow({ ...base, status: 'rolled_back', finishedAt: '2026-10-28T10:00:00Z', message: 'nicht gesund' })).toMatchObject({ state: 'Warning' });
     expect(peerRow({ ...base, status: 'failed', finishedAt: '2026-10-28T10:00:00Z', message: 'Nicht erreichbar' }).stateText).toContain('Nicht erreichbar');
   });

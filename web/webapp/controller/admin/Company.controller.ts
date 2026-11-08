@@ -60,12 +60,12 @@ export function numberExample(pattern: string, year = new Date().getFullYear(), 
  * @namespace estrichone.controller.admin
  */
 const tabInfo: Record<string, { title: string; text: string }> = {
-	firma: { title: "Firma", text: "Briefkopf und Logo – erscheinen im Web und auf allen PDFs." },
+	firma: { title: "Firma", text: "Briefkopf und Logo für Weboberfläche und alle PDF-Dokumente." },
 	darstellung: { title: "Darstellung und Karte", text: "Farbschema und Dichte als Vorgabe für neue Benutzer, Kartenkacheln für Baustellenkarte und Bauakten." },
 	pdf: { title: "PDF-Layout", text: "Logo, Akzentfarbe, Fußzeile und Fotos je Zeile in Ausdrucken (Bauakte, Abnahme, Planung, Benutzerbrief)." },
 	bauakte: { title: "Bauakten", text: "Nummernkreis, Vorgaben für neue Bauakten und automatischer Statuswechsel." },
 	dokumente: { title: "Dokumente und Freigaben", text: "Vorschläge für Frist und Rolle bei Freigaben; Ordner und Aufbewahrung." },
-	module: { title: "Module", text: "Material und Chat ein- oder ausschalten – Daten bleiben beim Abschalten erhalten." },
+	module: { title: "Module", text: "Material und Chat ein- oder ausschalten. Daten bleiben beim Ausschalten erhalten." },
 	sitzungen: { title: "Anmeldung", text: "Wie lange Browser und Apps angemeldet bleiben, Zwei-Faktor-Pflicht für Administratoren." },
 	benachrichtigungen: { title: "Benachrichtigungen", text: "Welche E-Mails verschickt werden, Web Push im Browser und Apple Push für die iOS-App." },
 	speicher: { title: "Speicher", text: "Fotos und PDFs speicherschonend ablegen, Belegung des Servers und Nachverdichten bestehender Dateien." },
@@ -273,7 +273,7 @@ export default class Company extends BaseController {
 	async onPushTest(): Promise<void> {
 		try {
 			await sendTest();
-			this.toast("Testnachricht gesendet – Postfach und Pushnachricht prüfen.");
+			this.toast("Testnachricht gesendet. Bitte Postfach und Pushnachricht prüfen.");
 			document.dispatchEvent(new CustomEvent("estrichone-notices"));
 		} catch (error) {
 			this.showError(error);

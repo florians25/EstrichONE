@@ -3,7 +3,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="Verwaltung" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Alle Einstellungen und Verwaltungsbereiche an einem Ort – nach Themen gruppiert, mit Suche."/></f:expandedContent>
+				<f:expandedContent><Text text="Alle Einstellungen und Verwaltungsbereiche, nach Themen gruppiert und durchsuchbar."/></f:expandedContent>
 				<f:actions><Button text="{i18n>common.refresh}" icon="sap-icon://refresh" press=".onRefresh"/></f:actions>
 			</f:DynamicPageTitle>
 		</f:title>

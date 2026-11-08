@@ -4,7 +4,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.workPlan}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Wer ist wann wo – mit Navigation und Druck"/></f:expandedContent>
+				<f:expandedContent><Text text="Einsätze nach Person und Tag, mit Navigation und Druck"/></f:expandedContent>
 				<f:actions>
 					<Button text="Aktualisieren" icon="sap-icon://refresh" press=".onRefresh"/>
 					<Button text="PDF" icon="sap-icon://pdf-attachment" press=".onPdf" tooltip="Arbeitsplan als PDF"/>

@@ -82,7 +82,7 @@
 			<VBox visible="{= !${view>/d} }" alignItems="Center" justifyContent="Center" height="100%" class="eoHdEmpty">
 				<core:Icon src="sap-icon://quality-issue" size="3rem" class="eoMuted" decorative="true"/>
 				<Title text="{= ${view>/items}.length ? 'Meldung auswählen' : 'Noch keine Meldungen' }" level="H3" class="sapUiSmallMarginTop"/>
-				<Text text="{= ${view>/manage} ? 'Links eine Meldung wählen – Angaben, Anhänge, technische Infos, Verlauf und Antwort erscheinen hier.' : 'Etwas funktioniert nicht oder Sie haben eine Idee? Mit „Neue Meldung“ führt Sie ein kurzes Formular durch die Angaben.' }"
+				<Text text="{= ${view>/manage} ? 'Bitte links eine Meldung wählen. Angaben, Anhänge, technische Informationen, Verlauf und Antwort werden hier angezeigt.' : 'Fehler und Verbesserungsvorschläge melden Sie über „Neue Meldung“. Ein Formular fragt die erforderlichen Angaben ab.' }"
 					textAlign="Center" wrapping="true" class="eoMuted eoHdEmptyText"/>
 				<Button text="Neue Meldung" icon="sap-icon://add" press=".onNew" class="sapUiSmallMarginTop" visible="{= !${view>/items}.length }"/>
 			</VBox>
@@ -201,7 +201,7 @@
 			</VBox>
 		</FlexBox>
 	</FlexBox>
-	<core:InvisibleText id="fbCountersLabel" text="Zähler – auswählen filtert die Liste"/>
+	<core:InvisibleText id="fbCountersLabel" text="Zähler: Auswahl filtert die Liste"/>
 	<core:InvisibleText id="fbStatusLabel" text="Status"/>
 	<core:InvisibleText id="fbKindLabel" text="Art"/>
 	<core:InvisibleText id="fbAreaLabel" text="Bereich"/>

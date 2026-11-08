@@ -32,5 +32,5 @@ internal static class MaterialsGate
     }
 
     public static IResult Disabled() => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Modul deaktiviert",
-        detail: "Das Materialmodul ist deaktiviert (Einstellungen → Module).", extensions: new Dictionary<string, object?> { ["code"] = "MODULE_DISABLED" });
+        detail: "Das Materialmodul ist deaktiviert (Einstellungen › Module).", extensions: new Dictionary<string, object?> { ["code"] = "MODULE_DISABLED" });
 }

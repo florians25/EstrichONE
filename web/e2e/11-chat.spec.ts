@@ -137,7 +137,7 @@ test('Chat: Modul einschalten, Datenschutzhinweis, Einzelchat, Nachricht (Enter)
   await expect(page.locator('.eoChatHead')).toContainText('Alle Mitarbeiter');
   await page.getByRole('button', { name: 'Gruppeninfo' }).click();
   const info = page.getByRole('dialog', { name: 'Gruppeninfo' });
-  await expect(info).toContainText('Ankündigungsgruppe – nur Admins schreiben');
+  await expect(info).toContainText('Ankündigungsgruppe (nur Admins schreiben)');
   await expect(info).toContainText('Admin');
   await shot(page, 'chat-gruppeninfo');
   await info.getByRole('button', { name: 'Schließen' }).click();

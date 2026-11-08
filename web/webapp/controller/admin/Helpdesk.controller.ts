@@ -279,7 +279,7 @@ export default class Helpdesk extends BaseController {
 			const blocks = (this.model().getProperty("/blocks") as { name: string; content: { text: string } }[]) ?? [];
 			const saved = await openForm<TicketDetail>({
 				title: status === "resolved" ? "Als gelöst markieren" : "Ticket schließen", width: "34rem", submitText: "Speichern",
-				intro: "Die Lösung sieht der Melder im Verlauf – kurz und verständlich beschreiben.",
+				intro: "Die Lösung wird dem Melder im Verlauf angezeigt. Bitte kurz und verständlich beschreiben.",
 				initial: { resolution: t.resolution ?? "" },
 				fields: [
 					...(blocks.length ? [{ key: "block", label: "Textbaustein", type: "select" as const, options: [{ key: "", text: "–" }, ...blocks.map((b, i) => ({ key: String(i), text: b.name }))],
@@ -437,7 +437,7 @@ export default class Helpdesk extends BaseController {
 		try {
 			const saved = await openForm<TicketDetail>({
 				title: "Neues IT-Ticket", width: "36rem",
-				intro: "Beschreiben Sie das Problem möglichst genau – die IT meldet sich im Verlauf des Tickets.",
+				intro: "Bitte beschreiben Sie das Problem möglichst genau. Die IT antwortet im Verlauf des Tickets.",
 				initial: { category: "other", priority: "normal", reporterBlocked: false },
 				fields: [
 					{ key: "title", label: "Kurzbeschreibung", required: true, maxLength: 200, placeholder: "z. B. Drucker im Büro druckt nicht" },
@@ -449,7 +449,7 @@ export default class Helpdesk extends BaseController {
 				],
 				extra: canUpload ? () => [new Button({
 					text: "Anhang oder Bildschirmfoto", icon: "sap-icon://attachment",
-					tooltip: "Dateien wählen – Bildschirmfotos auch mit Strg+V einfügen",
+					tooltip: "Dateien wählen (Bildschirmfotos auch mit Strg+V einfügen)",
 					press: () => {
 						const input = document.createElement("input");
 						input.type = "file";

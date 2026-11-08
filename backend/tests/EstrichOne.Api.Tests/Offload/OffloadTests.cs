@@ -163,7 +163,7 @@ public sealed class OffloadTests(PostgresFixture postgres) : IAsyncLifetime
         var line = overview.GetProperty("status");
         if (line.GetProperty("level").GetString() != "ok")
         {
-            line.GetProperty("text").GetString()!.ShouldStartWith("Speicher knapp");
+            line.GetProperty("text").GetString()!.ShouldStartWith("Speicherplatz knapp");
         }
         overview.GetProperty("server").GetProperty("offload").GetProperty("objects").GetInt32().ShouldBe(1);
 
@@ -209,7 +209,7 @@ public sealed class OffloadTests(PostgresFixture postgres) : IAsyncLifetime
             download.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
             var problem = await download.Content.ReadAsStringAsync();
             problem.ShouldContain("OFFLOAD_UNAVAILABLE");
-            problem.ShouldContain("Nichts ist verloren");
+            problem.ShouldContain("Es gehen keine Daten verloren");
         }
 
         var health = await _factory.Services.GetRequiredService<SystemHealthMonitor>().RefreshAsync(notify: false, CancellationToken.None);

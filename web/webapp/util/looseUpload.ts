@@ -42,7 +42,7 @@ async function putPart(id: string, part: ArrayBuffer, start: number, total: numb
 			if (response.status === 413) throw new Error("Die Datei ist zu groß für den Server bzw. Proxy (413).");
 			if (response.status < 500 || attempt >= 3) throw new Error(detail || `Hochladen fehlgeschlagen (Status ${response.status}).`);
 		} catch (error) {
-			if (!(error instanceof TypeError) || attempt >= 3) throw error instanceof TypeError ? new Error("Verbindung beim Hochladen unterbrochen – bitte erneut versuchen.") : error;
+			if (!(error instanceof TypeError) || attempt >= 3) throw error instanceof TypeError ? new Error("Verbindung beim Hochladen unterbrochen. Bitte erneut versuchen.") : error;
 		}
 		await new Promise((resolve) => setTimeout(resolve, 500 * 2 ** attempt));
 	}

@@ -247,7 +247,7 @@ export default class ObjectController extends BaseController {
 		const b = this.cur();
 		try {
 			await post(`bauakten/${b.id}/members/me`);
-			this.toast("Die Bauakte ist Ihnen jetzt zugewiesen.");
+			this.toast("Die Bauakte ist Ihnen zugewiesen.");
 			await this.loadSide();
 		} catch (error) {
 			this.showError(error);

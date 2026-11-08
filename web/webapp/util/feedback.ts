@@ -95,8 +95,8 @@ export const feedbackStatus: Record<FeedbackStatus, { text: string; tone: Tone; 
 	planned: { text: "Geplant", tone: "Warning", hint: "Wird in einer der nächsten Versionen umgesetzt." },
 	inProgress: { text: "In Umsetzung", tone: "Warning", hint: "Wird gerade umgesetzt." },
 	done: { text: "Erledigt", tone: "Success", hint: "Behoben bzw. umgesetzt." },
-	rejected: { text: "Abgelehnt", tone: "Error", hint: "Wird nicht umgesetzt – die Begründung steht im Verlauf." },
-	duplicate: { text: "Duplikat", tone: "None", hint: "Wurde schon gemeldet – siehe verknüpfte Meldung." },
+	rejected: { text: "Abgelehnt", tone: "Error", hint: "Wird nicht umgesetzt. Die Begründung steht im Verlauf." },
+	duplicate: { text: "Duplikat", tone: "None", hint: "Bereits gemeldet, siehe verknüpfte Meldung." },
 };
 export const statusFlow: FeedbackStatus[] = ["new", "inReview", "planned", "inProgress", "done"];
 
@@ -111,10 +111,10 @@ export const feedbackFrequencies: Record<FeedbackFrequency, string> = {
 
 /** Fehler: Auswirkung; Funktionswunsch: Wichtigkeit. */
 export const bugImpacts: Record<FeedbackImpact, string> = {
-	low: "Gering – stört, ich kann aber weiterarbeiten", medium: "Mittel – ich brauche einen Umweg", high: "Hoch – ich kann damit nicht arbeiten",
+	low: "Gering: stört, Weiterarbeit möglich", medium: "Mittel: nur mit Umweg möglich", high: "Hoch: Arbeiten nicht möglich",
 };
 export const featureImpacts: Record<FeedbackImpact, string> = {
-	low: "Wäre schön", medium: "Wichtig – spart regelmäßig Zeit", high: "Sehr wichtig – ohne fehlt mir etwas Wesentliches",
+	low: "Wäre schön", medium: "Wichtig: spart regelmäßig Zeit", high: "Sehr wichtig: wesentliche Funktion fehlt",
 };
 export const impactText = (kind: FeedbackKind, impact: FeedbackImpact): string => (kind === "bug" ? bugImpacts : featureImpacts)[impact] ?? impact;
 export const impactShort: Record<FeedbackImpact, string> = { low: "Gering", medium: "Mittel", high: "Hoch" };

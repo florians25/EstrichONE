@@ -74,7 +74,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 	});
 	const c = {
 		name: new Input("newCustomerName", {
-			width: "100%", maxLength: 200, placeholder: "Name, Firma – vorhandene Kunden werden vorgeschlagen",
+			width: "100%", maxLength: 200, placeholder: "Name, Firma (vorhandene Kunden werden vorgeschlagen)",
 			showSuggestion: true, filterSuggests: false, startSuggestion: 2, maxSuggestionWidth: "34rem",
 		}),
 		number: new Input("newCustomerNumber", { width: "100%", maxLength: 50 }),
@@ -280,7 +280,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		summary.addItem(line("Bauvorhaben", title.getValue().trim()));
 		summary.addItem(line("Anlegen als", kind.getSelectedKey() === "inquiry" ? "Anfrage" : "Bauakte (Auftrag)"));
 		const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
-		if (chosenTemplate) summary.addItem(line("Vorlage", `${chosenTemplate.name}${chosenTemplate.content.rooms?.length ? ` – legt ${chosenTemplate.content.rooms.length} Räume an` : ""}`));
+		if (chosenTemplate) summary.addItem(line("Vorlage", `${chosenTemplate.name}${chosenTemplate.content.rooms?.length ? ` (${chosenTemplate.content.rooms.length} Räume)` : ""}`));
 		if (schema && kennwerte) {
 			const values = kennwerte.read();
 			const shown = fieldsOf(schema).filter((f) => values[f.key] !== null && values[f.key] !== undefined)
@@ -351,8 +351,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 				const f = customerFields();
 				if (!f.name) {
 					c.name.setValueState(ValueState.Error);
-					c.name.setValueStateText("Bitte den Kunden angeben – ohne Kunde keine Bauakte.");
-					strip.setText("Bitte den Kunden angeben – ohne Kunde keine Bauakte.");
+					c.name.setValueStateText("Bitte den Kunden angeben. Eine Bauakte erfordert einen Kunden.");
+					strip.setText("Bitte den Kunden angeben. Eine Bauakte erfordert einen Kunden.");
 					strip.setVisible(true);
 					return;
 				}

@@ -98,7 +98,7 @@ public sealed partial class BackupOperations(IOptions<BackupSettings> options, T
         }
 
         WriteAtomic(Path.Combine(dir, "settings.json"), JsonSerializer.Serialize(p, Json));
-        var env = new StringBuilder("# Von EstrichONE geschrieben (Backup Center → Zeitplan). Nicht von Hand ändern.\n")
+        var env = new StringBuilder("# Von EstrichONE geschrieben (Backup Center › Zeitplan). Nicht von Hand ändern.\n")
             .Append(CultureInfo.InvariantCulture, $"BACKUP_TIME={p.DailyTime}\n")
             .Append(CultureInfo.InvariantCulture, $"BACKUP_INTERVAL_HOURS={p.IncrementalEveryHours}\n")
             .Append(CultureInfo.InvariantCulture, $"KEEP_DAILY={p.KeepDaily}\nKEEP_WEEKLY={p.KeepWeekly}\nKEEP_MONTHLY={p.KeepMonthly}\nKEEP_YEARLY={p.KeepYearly}\n")

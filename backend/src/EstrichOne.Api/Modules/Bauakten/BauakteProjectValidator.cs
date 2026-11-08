@@ -18,7 +18,7 @@ internal sealed class BauakteProjectValidator(IValueLists valueLists)
         {
             if (read(p) is { } value && !await valueLists.ContainsAsync(list, value, cancellationToken))
             {
-                return $"Unbekannter Wert „{value}“ für {list} – bitte in den Stammdaten anlegen.";
+                return $"Unbekannter Wert „{value}“ für {list}. Bitte in den Stammdaten anlegen.";
             }
         }
 

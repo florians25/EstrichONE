@@ -422,9 +422,9 @@ internal static class HrEndpoints
             var range = $"{item.From.ToString("dd.MM.yyyy", CultureInfo.GetCultureInfo("de-DE"))} – {item.To.ToString("dd.MM.yyyy", CultureInfo.GetCultureInfo("de-DE"))}";
             await mail.QueueAsync(new MailRequest(user.Email,
                 $"Urlaubsantrag {(request.Approve ? "genehmigt" : "abgelehnt")}: {range}",
-                $"Hallo {user.DisplayName},\n\nIhr Antrag für {range} wurde {(request.Approve ? "genehmigt" : "abgelehnt")}."
+                $"Guten Tag {user.DisplayName},\n\nIhr Urlaubsantrag für den Zeitraum {range} wurde {(request.Approve ? "genehmigt" : "abgelehnt")}."
                 + (string.IsNullOrWhiteSpace(request.Comment) ? string.Empty : $"\n\nKommentar: {request.Comment}")
-                + (link.Length > 0 ? $"\n\nÜbersicht: {link}" : string.Empty) + "\n",
+                + (link.Length > 0 ? $"\n\nÜbersicht: {link}" : string.Empty) + "\n\nMit freundlichen Grüßen\nEstrichONE\n",
                 "hr.absence_decided", $"absence_request:{item.Id}"), cancellationToken);
         }
 

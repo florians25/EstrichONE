@@ -16,7 +16,7 @@ describe('Hinweis Sicherheitsupdate', () => {
     const hint = updateHint({ ...base, available: '0.1.0-preview.25', securityUpdate: true, command: 'sudo /opt/estrichone/update.sh 0.1.0-preview.25',
       releaseUrl: 'https://github.com/x', auto: { mode: 'sicherheit', window: '02:00-05:00' } });
     expect(hint).toMatchObject({ type: 'Error', key: 'security:0.1.0-preview.25', url: 'https://github.com/x' });
-    expect(hint!.text).toBe('Sicherheitsupdate verfügbar: EstrichONE 0.1.0-preview.25 (installiert 0.1.0-preview.23). Bitte zeitnah einspielen – auf dem Server: sudo /opt/estrichone/update.sh 0.1.0-preview.25. Wird automatisch im Zeitfenster 02:00-05:00 eingespielt.');
+    expect(hint!.text).toBe('Sicherheitsupdate verfügbar: EstrichONE 0.1.0-preview.25 (installiert 0.1.0-preview.23). Bitte zeitnah einspielen. Befehl auf dem Server: sudo /opt/estrichone/update.sh 0.1.0-preview.25. Wird automatisch im Zeitfenster 02:00-05:00 eingespielt.');
   });
 
   it('normale Updates als Information, Automatik „sicherheit“ spielt sie nicht ein', () => {

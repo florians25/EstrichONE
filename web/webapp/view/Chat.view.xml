@@ -125,13 +125,13 @@
 					<Button id="chatAttach" icon="sap-icon://attachment" type="Transparent" press=".onAttachMenu" tooltip="Foto, Dokument, Kamera oder Standort"
 						enabled="{view>/attachmentsEnabled}" class="eoChatTool"/>
 					<TextArea id="chatInput" value="{view>/draft}" valueLiveUpdate="true" growing="true" growingMaxLines="6" rows="1" width="100%"
-						placeholder="{= ${view>/listening} ? 'Sprechen Sie – der Text erscheint hier …' : 'Nachricht schreiben …' }" maxLength="4000"
+						placeholder="{= ${view>/listening} ? 'Bitte sprechen. Der Text erscheint hier …' : 'Nachricht schreiben …' }" maxLength="4000"
 						showExceededText="false" class="eoChatInput" ariaLabelledBy="chatInputLabel" liveChange=".onDraftChange">
 						<layoutData><FlexItemData growFactor="1"/></layoutData>
 					</TextArea>
 					<ToggleButton id="chatDictate" icon="sap-icon://microphone" type="Transparent" press=".onDictate" pressed="{view>/listening}"
 						visible="{view>/canDictate}" class="eoChatTool"
-						tooltip="Diktieren (Spracherkennung des Browsers) – Text vor dem Senden prüfen, es wird kein Audio gespeichert"/>
+						tooltip="Diktieren (Spracherkennung des Browsers). Text vor dem Senden prüfen; es wird kein Audio gespeichert."/>
 					<Button id="chatSend" icon="{= ${view>/compose/mode} === 'edit' ? 'sap-icon://accept' : 'sap-icon://paper-plane' }" type="Emphasized"
 						press=".onSend" enabled="{= ${view>/draft}.trim().length > 0 || ${view>/pending}.length > 0 }"
 						tooltip="{= ${view>/compose/mode} === 'edit' ? 'Änderung speichern (Enter)' : 'Senden (Enter)' }" class="eoChatSend"/>

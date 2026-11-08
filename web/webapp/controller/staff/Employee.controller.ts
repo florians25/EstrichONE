@@ -215,7 +215,7 @@ export default class Employee extends BaseController {
 			submit: (v) => put<AbsenceView>(`staff/employees/${this.id}/absences/${uuidv7()}`, { kind: v.kind, from: v.from, to: v.to, note: v.note || null }),
 		});
 		if (saved) {
-			this.toast("Abwesenheit eingetragen – erscheint in der Planung");
+			this.toast("Abwesenheit eingetragen und in die Planung übernommen");
 			planningChanged();
 			await this.load();
 		}

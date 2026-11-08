@@ -409,7 +409,7 @@ internal sealed class DossierLockMiddleware(RequestDelegate next)
                     && !await documents.HasContentAsync(id, context.RequestAborted))
                 {
                     await Problem(context, 409, "ARCHIVE_EVICTED", "Auf dem Archivserver",
-                        "Die Akte ist ausgelagert. Bitte „Akte abrufen“ wählen – danach ist sie 5 Tage verfügbar.");
+                        "Die Akte ist ausgelagert. Bitte „Akte abrufen“ wählen. Danach ist sie 5 Tage verfügbar.");
                     return;
                 }
             }

@@ -4,7 +4,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.messages}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Nachrichten an einzelne Personen, Rollen, Kolonnen oder alle – im Postfach und als Pushnachricht in App und Browser."/></f:expandedContent>
+				<f:expandedContent><Text text="Nachrichten an einzelne Personen, Rollen, Kolonnen oder alle Benutzer, zugestellt im Postfach und als Pushnachricht in App und Browser."/></f:expandedContent>
 				<f:actions>
 					<Button id="messageNew" text="Neue Nachricht" icon="sap-icon://paper-plane" type="Emphasized" press=".onNew"/>
 					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>

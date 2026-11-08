@@ -102,7 +102,7 @@ const englishTitles = new Set(["Bad Request", "Unauthorized", "Forbidden", "Not 
 	"One or more validation errors occurred."]);
 const statusTexts: Record<number, string> = {
 	400: "Die Eingaben sind unvollständig oder ungültig.", 403: "Dafür fehlt die Berechtigung.",
-	404: "Nicht gefunden – der Eintrag wurde gelöscht oder die Adresse ist nicht (mehr) gültig.",
+	404: "Nicht gefunden. Der Eintrag wurde gelöscht oder die Adresse ist nicht mehr gültig.",
 	409: "Der Eintrag wurde inzwischen geändert. Bitte neu laden und erneut versuchen.", 413: "Die Datei ist zu groß.",
 	429: "Zu viele Anfragen in kurzer Zeit. Bitte kurz warten und erneut versuchen.",
 	500: "Auf dem Server ist ein Fehler aufgetreten. Bitte später erneut versuchen.", 502: "Der Server ist gerade nicht erreichbar.",

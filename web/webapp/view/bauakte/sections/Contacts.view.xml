@@ -92,7 +92,7 @@
 		<VBox visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} }" alignItems="Center" class="eoContactsEmpty">
 			<core:Icon src="sap-icon://address-book" size="2.5rem" class="eoMuted" decorative="true"/>
 			<Title text="Noch keine weiteren Beteiligten" level="H4" class="sapUiSmallMarginTop"/>
-			<Text text="Erfassen Sie Bauleiter, Architekt, Lieferanten oder den Ansprechpartner vor Ort – mit Telefon und E-Mail griffbereit für Büro und Baustelle."
+			<Text text="Erfassen Sie Bauleiter, Architekt, Lieferanten oder den Ansprechpartner vor Ort mit Telefon und E-Mail für Büro und Baustelle."
 				textAlign="Center" wrapping="true" class="eoMuted eoContactsEmptyText"/>
 			<HBox class="sapUiSmallMarginTop eoEntryRow" visible="{akte>/canEdit}" justifyContent="Center" wrap="Wrap">
 				<Button text="Bestehenden Kontakt suchen" icon="sap-icon://search" press=".onFromContacts" visible="{= ${session>/permissions/contacts.read} === true }"/>

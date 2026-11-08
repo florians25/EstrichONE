@@ -126,24 +126,24 @@ internal static class OffloadEndpoints
     {
         if (counts.MissingBlobs > 0)
         {
-            return new("critical", $"{counts.MissingBlobs} ausgelagerte Original(e) fehlen auf dem Storage – bitte „Aus Sicherung zurückholen“.");
+            return new("critical", $"{counts.MissingBlobs} ausgelagerte Original(e) fehlen auf dem Storage. Bitte „Aus Sicherung zurückholen“ wählen.");
         }
 
         if (settings.Paired && !reachable)
         {
-            return new("warning", $"Storage „{settings.ServerName}“ nicht erreichbar – ausgelagerte Originale lassen sich gerade nicht öffnen. Nichts ist verloren.");
+            return new("warning", $"Storage „{settings.ServerName}“ nicht erreichbar. Ausgelagerte Originale können derzeit nicht geöffnet werden; es gehen keine Daten verloren.");
         }
 
         if (!settings.Paired)
         {
             return disk.Low
-                ? new("warning", "Speicher knapp – für die Auslagerung zuerst einen Storage koppeln.")
+                ? new("warning", "Speicherplatz knapp. Für die Auslagerung zuerst einen Storage koppeln.")
                 : new("ok", "Kein Storage gekoppelt. Alle Originale liegen auf diesem Server.");
         }
 
         if (settings.RequireBackup && !backupAvailable)
         {
-            return new("warning", "Kein Backup-Dienst eingerichtet – Originale werden erst gelöscht, wenn eine Sicherungskopie möglich ist.");
+            return new("warning", "Kein Backup-Dienst eingerichtet. Originale werden erst gelöscht, wenn eine Sicherungskopie möglich ist.");
         }
 
         if (lastCopy is { Status: "failed" })
@@ -155,9 +155,9 @@ internal static class OffloadEndpoints
         {
             return settings.AutoWhenLow
                 ? new("warning", counts.CandidateFiles > 0
-                    ? "Speicher knapp – Originale werden automatisch ausgelagert."
-                    : "Speicher knapp – keine Dateien entsprechen den Regeln. Regeln lockern (Alter, Arten) oder Platz erweitern.")
-                : new("warning", "Speicher knapp – automatische Auslagerung ist aus.");
+                    ? "Speicherplatz knapp. Originale werden automatisch ausgelagert."
+                    : "Speicherplatz knapp. Keine Dateien entsprechen den Regeln. Regeln anpassen (Alter, Arten) oder Speicher erweitern.")
+                : new("warning", "Speicherplatz knapp. Die automatische Auslagerung ist ausgeschaltet.");
         }
 
         return new("ok", counts.OffloadedBlobs > 0
@@ -225,7 +225,7 @@ internal static class OffloadEndpoints
         if (!await service.UnpairAsync(cancellationToken))
         {
             return TypedResults.Problem(statusCode: 409, title: "Noch Dateien ausgelagert",
-                detail: "Bitte zuerst alle ausgelagerten Dateien zurückholen („Alles wieder lokal speichern“) – dann entkoppeln.",
+                detail: "Bitte zuerst alle ausgelagerten Dateien zurückholen („Alles wieder lokal speichern“) und anschließend entkoppeln.",
                 extensions: new Dictionary<string, object?> { ["code"] = "OFFLOAD_STILL_IN_USE" });
         }
 

@@ -301,7 +301,7 @@ export default class TeamPlanner extends BaseController {
 			}
 			const saved = await this.run(() => post<AssignmentView>(`planning/assignments/${a.id}/move`, body));
 			if (saved) {
-				MessageToast.show(saved.warnings.length ? `Verschoben – Konflikt: ${saved.warnings.join(" ")}` : `„${saved.activity}“ ${parseDay(saved.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })} ${saved.startTime ? hm(parseLocal(`${saved.day}T${saved.startTime}`)) : ""} geplant`);
+				MessageToast.show(saved.warnings.length ? `Verschoben. Konflikt: ${saved.warnings.join(" ")}` : `„${saved.activity}“ ${parseDay(saved.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })} ${saved.startTime ? hm(parseLocal(`${saved.day}T${saved.startTime}`)) : ""} geplant`);
 				planningChanged();
 			} else {
 				this.render();
@@ -328,7 +328,7 @@ export default class TeamPlanner extends BaseController {
 			}
 			scope = chosen;
 		}
-		if (fromRow !== toRow) MessageToast.show("Termine wechseln die Zeile nicht – Teilnehmer bitte im Termin ändern.");
+		if (fromRow !== toRow) MessageToast.show("Termine können nicht in eine andere Zeile verschoben werden. Teilnehmer bitte im Termin ändern.");
 		const ok = await this.run(() => post(`calendar/events/${o.eventId}/move`, {
 			start: localIso(start), end: localIso(end), allDay: o.allDay, occurrenceDate: o.occurrenceDate, scope,
 		}));

@@ -78,15 +78,15 @@ export function offloadView(o: OffloadOverview): Record<string, unknown> {
 		verification: v ? (v.ok ? `In Ordnung · ${dateTime(v.at)} · ${v.objectsChecked} Objekte` : `${v.errors.length} Abweichung(en) · ${dateTime(v.at)}`) : "Noch nicht geprüft",
 		verificationState: v ? (v.ok ? "Success" : "Error") : "None",
 		offloaded: `${o.counts.offloadedFiles} Dateien · ${fileSize(o.counts.offloadedBytes)}`,
-		pending: o.counts.pendingBlobs ? `${o.counts.pendingBlobs} übertragen und geprüft (${fileSize(o.counts.pendingBytes)}) – warten auf die Sicherungskopie` : "",
+		pending: o.counts.pendingBlobs ? `${o.counts.pendingBlobs} übertragen und geprüft (${fileSize(o.counts.pendingBytes)}), Sicherungskopie ausstehend` : "",
 		candidates: `${o.counts.candidateFiles} Dateien (${fileSize(o.counts.candidateBytes)}) entsprechen den Regeln`,
 		cache: fileSize(o.counts.cacheBytes),
 		contact: o.connection ? (o.connection.reachable ? `Erreichbar · ${dateTime(o.connection.lastContactAt)}` : `Nicht erreichbar · zuletzt ${dateTime(o.connection.lastContactAt)}`) : "",
 		contactState: o.connection?.reachable ? "Success" : "Warning",
-		backup: !o.settings.requireBackup ? "Aus – Originale liegen nach dem Auslagern nur auf dem Storage (nicht empfohlen)"
-			: !o.backupAvailable ? "Kein Backup-Dienst eingerichtet – es wird nichts lokal gelöscht"
+		backup: !o.settings.requireBackup ? "Aus: Originale liegen nach dem Auslagern nur auf dem Storage (nicht empfohlen)"
+			: !o.backupAvailable ? "Kein Backup-Dienst eingerichtet; es wird nichts lokal gelöscht"
 			: o.lastCopy ? `${copyText(o.lastCopy.status)} · ${dateTime(o.lastCopy.at)}${o.lastCopy.message ? ` · ${o.lastCopy.message}` : ""}`
-			: "Bereit – jedes Original wird vor dem lokalen Löschen zusätzlich gesichert",
+			: "Bereit: jedes Original wird vor dem lokalen Löschen zusätzlich gesichert",
 		backupState: !o.settings.requireBackup || !o.backupAvailable || o.lastCopy?.status === "failed" ? "Warning" : "Success",
 		jobRunning: job.running,
 		jobPercent: job.total ? Math.round((job.processed / job.total) * 100) : 0,
@@ -111,7 +111,7 @@ const stateText: Record<OffloadState, { text: string; state: string }> = {
 	pending: { text: "Wartet auf Sicherungskopie", state: "Information" },
 	offloaded: { text: "Auf dem Storage", state: "Success" },
 	recalled: { text: "Wieder lokal", state: "None" },
-	missing: { text: "Fehlt – aus Sicherung zurückholen", state: "Error" },
+	missing: { text: "Fehlt, aus Sicherung zurückholen", state: "Error" },
 };
 const kindText = { photo: "Foto", video: "Video", document: "Dokument" } as const;
 
@@ -141,14 +141,14 @@ export async function storageHint(fileId: string, fetcher: typeof fetch = fetch)
 		const entry = list.find((l) => l.fileId === fileId);
 		if (!entry) return null;
 		if (entry.state === "missing") {
-			return { type: "Error", text: "Das Original fehlt auf dem Storage. Bitte die Verwaltung informieren (Speicher-Auslagerung → Aus Sicherung zurückholen)." };
+			return { type: "Error", text: "Das Original fehlt auf dem Storage. Bitte die Verwaltung informieren (Speicher-Auslagerung › Aus Sicherung zurückholen)." };
 		}
 		const probe = await fetcher(`/api/v1/files/${encodeURIComponent(fileId)}/content`, { credentials: "same-origin", headers: { Range: "bytes=0-0" } });
 		if (probe.status === 503) {
 			const problem = (await probe.json().catch(() => null)) as { detail?: string } | null;
-			return { type: "Error", text: problem?.detail ?? "Der Storage ist gerade nicht erreichbar. Nichts ist verloren – bitte später erneut versuchen." };
+			return { type: "Error", text: problem?.detail ?? "Der Storage ist derzeit nicht erreichbar. Es gehen keine Daten verloren. Bitte später erneut versuchen." };
 		}
-		return { type: "Information", text: "Das Original wird vom Storage geladen (Speicher-Auslagerung) – das kann einen Moment dauern." };
+		return { type: "Information", text: "Das Original wird vom Storage geladen (Speicher-Auslagerung). Dies kann einen Moment dauern." };
 	} catch {
 		return null;
 	}

@@ -387,10 +387,10 @@ function archiveInfo(record: { status: string; retainUntil: string | null } | un
 	const status = record?.status.toLowerCase();
 	if (status === "archived") return { archiveIcon: "sap-icon://locked", archiveText: `Archiviert${record?.retainUntil ? ` (aufbewahrt bis ${new Date(record.retainUntil).toLocaleDateString("de-DE")})` : ""}`, archiveColor: "Positive" };
 	if (status === "pending") return { archiveIcon: "sap-icon://pending", archiveText: "Wird archiviert", archiveColor: "Critical" };
-	if (status === "failed") return { archiveIcon: "sap-icon://alert", archiveText: "Archivierung fehlgeschlagen – wird wiederholt", archiveColor: "Negative" };
+	if (status === "failed") return { archiveIcon: "sap-icon://alert", archiveText: "Archivierung fehlgeschlagen, wird wiederholt", archiveColor: "Negative" };
 	if (!known) return { archiveIcon: "", archiveText: "", archiveColor: "Default" };
 	if (rule?.enabled && rule.trigger.toLowerCase() !== "manual") {
-		return { archiveIcon: "sap-icon://history", archiveText: `Archivpflichtig (${rule.retentionYears} Jahre) – wird ${triggerTexts[rule.trigger] ?? ""} archiviert`, archiveColor: "Neutral" };
+		return { archiveIcon: "sap-icon://history", archiveText: `Archivpflichtig (${rule.retentionYears} Jahre), wird ${triggerTexts[rule.trigger] ?? ""} archiviert`, archiveColor: "Neutral" };
 	}
 	return { archiveIcon: "sap-icon://unlocked", archiveText: "Nicht archivpflichtig", archiveColor: "Default" };
 }

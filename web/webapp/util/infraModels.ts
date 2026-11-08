@@ -71,7 +71,7 @@ export const triggerText: Record<ArchiveTrigger, string> = {
 export const recordStatus: Record<ArchiveRecordStatus, { text: string; state: string }> = {
 	pending: { text: "Wartet", state: "Information" },
 	archived: { text: "Archiviert", state: "Success" },
-	failed: { text: "Fehlgeschlagen – wird erneut versucht", state: "Error" },
+	failed: { text: "Fehlgeschlagen, wird wiederholt", state: "Error" },
 };
 
 export type DossierStatus = "archiving" | "archived" | "restoring" | "available" | "unlocked";
@@ -85,8 +85,8 @@ export const dossierStatus: Record<DossierStatus, { text: string; state: string 
 	archiving: { text: "Wird archiviert", state: "Information" },
 	archived: { text: "Archiviert (ausgelagert)", state: "None" },
 	restoring: { text: "Wird abgerufen", state: "Information" },
-	available: { text: "Abgerufen – nur Ansicht", state: "Success" },
-	unlocked: { text: "Entsperrt – Änderungen möglich", state: "Warning" },
+	available: { text: "Abgerufen, nur Ansicht", state: "Success" },
+	unlocked: { text: "Entsperrt, Änderungen möglich", state: "Warning" },
 };
 
 export type MonitorLevel = "ok" | "warning" | "critical";

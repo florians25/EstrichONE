@@ -175,7 +175,7 @@ internal static partial class ValueListEndpoints
         }
         else if (item.List != request.List || item.Key != request.Key)
         {
-            return Problem("KEY_FIXED", "Liste und Schlüssel lassen sich nach dem Anlegen nicht ändern – bitte umbenennen oder deaktivieren.");
+            return Problem("KEY_FIXED", "Liste und Schlüssel lassen sich nach dem Anlegen nicht ändern. Bitte umbenennen oder deaktivieren.");
         }
 
         item.Update(request.Label, request.ShortLabel, request.SortOrder, request.IsActive);

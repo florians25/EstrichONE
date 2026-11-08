@@ -192,7 +192,7 @@ export default class Contacts extends SectionBase {
 				note: customer.notes }));
 		} else {
 			cards.push(this.card({ key: "customer", kind: "customer", role: "client", roleText: "Kunde (Auftraggeber)", name: "Noch kein Kunde",
-				initials: "?", empty: "Kunde über „Bearbeiten“ zuordnen – mit Dublettenprüfung im Kundenstamm." }));
+				initials: "?", empty: "Kunde über „Bearbeiten“ zuordnen (mit Dublettenprüfung im Kundenstamm)." }));
 		}
 		const siteLines = contactLines(b.siteContactPhone ? [{ kind: "mobile", number: b.siteContactPhone, label: null }] : [],
 			b.siteContactEmail ? [{ address: b.siteContactEmail, label: null }] : [], place(b.street, b.postalCode, b.city));
@@ -342,7 +342,7 @@ export default class Contacts extends SectionBase {
 			fields: [
 				{ key: "role", label: "Rolle", type: "select", required: true, options: roleOptions },
 				{ key: "name", label: "Name", required: !linked, maxLength: 200, placeholder: "z. B. Anna Lechner", editable: !linked,
-					help: linked ? "Aus dem Kundenstamm – Name dort ändern." : undefined },
+					help: linked ? "Aus dem Kundenstamm. Name bitte dort ändern." : undefined },
 				{ key: "company", label: "Firma", maxLength: 200, placeholder: "z. B. Lechner Bau GmbH" },
 				{ key: "phone", label: "Telefon", maxLength: 50, placeholder: "z. B. 0871 123456" },
 				{ key: "mobile", label: "Mobil", maxLength: 50, placeholder: "z. B. 0171 2345678" },

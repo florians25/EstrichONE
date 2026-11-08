@@ -165,7 +165,7 @@ internal static class CallEndpoints
         }
         else if (call.Kind != request.Kind)
         {
-            return Validation("Ein Anruf kann nicht nachträglich zur Anfrage werden – bitte eine neue Anfrage anlegen.");
+            return Validation("Ein Anruf kann nicht nachträglich in eine Anfrage umgewandelt werden. Bitte eine neue Anfrage anlegen.");
         }
 
         try

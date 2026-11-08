@@ -176,7 +176,7 @@ internal sealed class BackupTargetService(
                 catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or JsonException)
                 {
                     target.Contacted(clock.GetUtcNow(), exception is HttpRequestException { InnerException: System.Security.Authentication.AuthenticationException }
-                        ? "Zertifikat passt nicht mehr zur Kopplung – bitte neu koppeln."
+                        ? "Zertifikat stimmt nicht mehr mit der Kopplung überein. Bitte neu koppeln."
                         : $"Nicht erreichbar: {exception.Message}", null);
                 }
             }
@@ -205,7 +205,7 @@ internal sealed class BackupTargetService(
         var name = new string([.. target.Name.Where(c => c is not ('\'' or '\n' or '\r' or '\\'))]);
         WritePrivate(Path.Combine(dir, $"{target.Id:N}.ca.pem"), target.CaCertificatePem);
         WritePrivate(Path.Combine(dir, $"{target.Id:N}.conf"),
-            $"# Von EstrichONE geschrieben (System → Backup-Ziele). Nicht von Hand ändern.\nTARGET_NAME='{name} ({address.Host})'\nTARGET_REPOSITORY='{repository}'\n");
+            $"# Von EstrichONE geschrieben (System › Backup-Ziele). Nicht von Hand ändern.\nTARGET_NAME='{name} ({address.Host})'\nTARGET_REPOSITORY='{repository}'\n");
     }
 
     /// <summary>

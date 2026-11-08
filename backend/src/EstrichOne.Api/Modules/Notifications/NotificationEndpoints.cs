@@ -206,7 +206,7 @@ internal static class NotificationEndpoints
 
             if (info.Mandatory && change.Delivery == NotificationDelivery.Off)
             {
-                return Validation($"„{info.Label}“ lässt sich nicht abbestellen – nur die Pushnachricht kann aus.");
+                return Validation($"„{info.Label}“ kann nicht abbestellt werden. Nur die Pushnachricht lässt sich ausschalten.");
             }
         }
 

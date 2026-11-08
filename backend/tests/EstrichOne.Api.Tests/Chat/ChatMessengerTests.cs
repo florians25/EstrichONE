@@ -113,7 +113,7 @@ public sealed class ChatMessengerTests(PostgresFixture postgres) : IAsyncLifetim
         await using (var scope = _factory.Services.CreateAsyncScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<EstrichOneDbContext>();
-            (await db.Set<Notification>().SingleAsync(n => n.UserId == officeId, Ct)).Body.ShouldBe("📷 Foto: Halle 2 fertig");
+            (await db.Set<Notification>().SingleAsync(n => n.UserId == officeId, Ct)).Body.ShouldBe("Foto: Halle 2 fertig");
         }
 
         // In die Bauakte übernehmen (als Foto mit Vorschauvarianten).
@@ -230,9 +230,9 @@ public sealed class ChatMessengerTests(PostgresFixture postgres) : IAsyncLifetim
         var db = scope.ServiceProvider.GetRequiredService<EstrichOneDbContext>();
         var workerRows = await db.Set<Notification>().AsNoTracking().Where(n => n.UserId == workerId).ToListAsync(Ct);
         workerRows.Count.ShouldBeInRange(1, 2); // je Nachricht ein Hinweis; schon versandte ersetzt der neueste
-        workerRows.ShouldAllBe(n => n.Body == "Neue Nachricht im Chat");
+        workerRows.ShouldAllBe(n => n.Body == "Neue Nachricht");
         var secondRows = await db.Set<Notification>().AsNoTracking().Where(n => n.UserId == secondId).ToListAsync(Ct);
-        secondRows.Single().Body.ShouldBe("Hat Sie erwähnt");
+        secondRows.Single().Body.ShouldBe("Sie wurden erwähnt");
         secondRows.Single().Urgency.ShouldBe(NotificationUrgency.High);
 
         // Nach dem Versand ersetzt der nächste Hinweis die vorigen im Postfach.

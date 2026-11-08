@@ -4,7 +4,7 @@
 		<f:title>
 			<f:DynamicPageTitle>
 				<f:heading><Title text="{i18n>nav.documents}" level="H1"/></f:heading>
-				<f:expandedContent><Text text="Dokumentverwaltung über alle Bauakten – Ablage, Fassungen und Freigaben"/></f:expandedContent>
+				<f:expandedContent><Text text="Dokumentverwaltung über alle Bauakten: Ablage, Fassungen und Freigaben"/></f:expandedContent>
 				<f:actions>
 					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
 				</f:actions>
@@ -92,7 +92,7 @@
 					</IconTabFilter>
 					<IconTabFilter key="freigaben" text="Freigaben" count="{= ${view>/mine}.length }" iconColor="Critical">
 						<Title text="Warten auf meine Freigabe" level="H3" class="sapUiSmallMarginTop sapUiSmallMarginBegin"/>
-						<List items="{view>/mine}" noDataText="Nichts zu tun – keine offenen Freigaben." class="sapUiTinyMarginTop">
+						<List items="{view>/mine}" noDataText="Keine offenen Freigaben." class="sapUiTinyMarginTop">
 							<CustomListItem>
 								<HBox alignItems="Center" justifyContent="SpaceBetween" wrap="Wrap" class="sapUiSmallMargin">
 									<VBox>

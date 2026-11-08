@@ -375,7 +375,7 @@ internal sealed partial class ArchiveService(
                 ?? throw new JsonException("Leere Quittung.");
             if (!string.Equals(receipt.Sha256, document.Sha256, StringComparison.OrdinalIgnoreCase))
             {
-                return ("Quittung mit abweichender Prüfsumme – bitte Archivserver prüfen.", true);
+                return ("Quittung mit abweichender Prüfsumme. Bitte Archivserver prüfen.", true);
             }
 
             record.Succeeded(receipt.ArchivedAt, receipt.RetainUntil, receipt.LedgerSeq, receipt.LedgerHash, connection.ServerName);
@@ -385,7 +385,7 @@ internal sealed partial class ArchiveService(
         var problem = await response.Content.ReadAsStringAsync(cancellationToken);
         return response.StatusCode switch
         {
-            HttpStatusCode.Unauthorized => ("Archivserver lehnt den Zugang ab – bitte neu koppeln.", false),
+            HttpStatusCode.Unauthorized => ("Archivserver lehnt den Zugang ab. Bitte neu koppeln.", false),
             HttpStatusCode.Conflict => ("Unter dieser ID liegt im Archiv bereits ein anderer Inhalt (unveränderbar).", true),
             HttpStatusCode.UnprocessableEntity => ($"Archivserver lehnt ab: {Title(problem)}", true),
             HttpStatusCode.RequestEntityTooLarge => ("Datei zu groß für den Archivserver.", true),
@@ -461,7 +461,7 @@ internal sealed partial class ArchiveService(
     public static string Describe(Exception exception) => exception switch
     {
         HttpRequestException { InnerException: System.Security.Authentication.AuthenticationException } =>
-            "Zertifikat des Archivservers stimmt nicht mehr mit der Kopplung überein – bitte neu koppeln.",
+            "Zertifikat des Archivservers stimmt nicht mehr mit der Kopplung überein. Bitte neu koppeln.",
         HttpRequestException request => $"Archivserver nicht erreichbar: {request.Message}",
         TaskCanceledException => "Zeitüberschreitung beim Archivserver.",
         _ => exception.Message,

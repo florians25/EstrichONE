@@ -307,9 +307,10 @@ internal sealed partial class DeadlineScanner(IServiceScopeFactory scopes, TimeP
         {
             foreach (var item in await source.DueAsync(today.AddDays(1), cancellationToken))
             {
-                var when = item.DueDate < today ? "überfällig seit " + item.DueDate.ToString("dd.MM.", System.Globalization.CultureInfo.GetCultureInfo("de-DE"))
-                    : item.DueDate == today ? "heute fällig" : "morgen fällig";
-                await notifier.NotifyAsync([item.UserId], new NotificationRequest(NotificationCategory.Deadline, item.Title, $"Frist: {when}", item.Link,
+                var due = item.DueDate.ToString("dd.MM.", System.Globalization.CultureInfo.GetCultureInfo("de-DE"));
+                var (title, body) = item.DueDate < today ? ("Frist überschritten", $"{item.Title} · fällig seit {due}")
+                    : item.DueDate == today ? ("Heute fällig", item.Title) : ("Morgen fällig", item.Title);
+                await notifier.NotifyAsync([item.UserId], new NotificationRequest(NotificationCategory.Deadline, title, body, item.Link,
                     item.ObjectType, item.ObjectId, item.DueDate <= today ? NotificationUrgency.High : NotificationUrgency.Normal,
                     $"deadline:{item.Key}:{item.DueDate:yyyy-MM-dd}"), cancellationToken);
                 count++;

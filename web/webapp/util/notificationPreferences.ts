@@ -32,7 +32,7 @@ const STATUS_TEXTS: Record<WebPushStatus, string> = {
 	insecure: "Pushnachrichten brauchen eine HTTPS-Verbindung.",
 	disabled: "Pushnachrichten im Browser sind in den Systemeinstellungen ausgeschaltet.",
 	denied: "Der Browser blockiert Benachrichtigungen für EstrichONE. Bitte in den Website-Einstellungen des Browsers erlauben.",
-	off: "Benachrichtigungen erscheinen im Postfach (Glocke). Mit Push zusätzlich als Systemmeldung – auch wenn EstrichONE nicht geöffnet ist.",
+	off: "Benachrichtigungen erscheinen im Postfach (Glocke). Mit Push zusätzlich als Systemmeldung, auch wenn EstrichONE nicht geöffnet ist.",
 	on: "Pushnachrichten für diesen Browser sind eingeschaltet.",
 };
 
@@ -64,7 +64,7 @@ function eventList(): { list: List; load: () => Promise<void> } {
 				selectedKey: item.delivery,
 				items: [
 					new SegmentedButtonItem({ key: "off", text: "Aus", enabled: !item.mandatory,
-						tooltip: item.mandatory ? "Pflichtmeldung – nicht abbestellbar" : "Abbestellt: weder Postfach noch Push" }),
+						tooltip: item.mandatory ? "Pflichtmeldung, nicht abbestellbar" : "Abbestellt: weder Postfach noch Push" }),
 					new SegmentedButtonItem({ key: "inbox", text: "Postfach", tooltip: "Nur im Postfach (Glocke), keine Pushnachricht" }),
 					new SegmentedButtonItem({ key: "push", text: "Push", tooltip: "Postfach und Pushnachricht" }),
 				],
@@ -170,7 +170,7 @@ export function openNotificationPreferences(): void {
 			new Button({ text: "Testnachricht senden", icon: "sap-icon://paper-plane", press: async () => {
 				try {
 					await sendTest();
-					MessageToast.show("Testnachricht gesendet – sie erscheint im Postfach und als Push auf Ihren Geräten.");
+					MessageToast.show("Testnachricht gesendet. Sie erscheint im Postfach und als Push auf Ihren Geräten.");
 					document.dispatchEvent(new CustomEvent("estrichone-notices"));
 					setTimeout(() => void refresh(), 3000);
 				} catch (error) {

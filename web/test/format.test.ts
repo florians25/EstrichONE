@@ -42,7 +42,7 @@ describe('Anzeigeformate', () => {
   it('Ticket-Ereignisse und Erstbegehung', () => {
     expect(describeTicketEvent('status', 'InProgress')).toBe('hat den Status geändert: In Bearbeitung');
     expect(describeTicketEvent('priority', 'Urgent')).toBe('hat die Priorität geändert: Dringend');
-    expect(inspectionResult({ notRequired: false, checks: { substrate: 'ok', edgeInsulation: 'notOk' } }).text).toBe('Mit Mängeln – Klärung nötig');
+    expect(inspectionResult({ notRequired: false, checks: { substrate: 'ok', edgeInsulation: 'notOk' } }).text).toBe('Mit Mängeln, Klärung erforderlich');
     expect(inspectionResult({ notRequired: true, checks: {} }).text).toBe('Nicht notwendig');
   });
 });

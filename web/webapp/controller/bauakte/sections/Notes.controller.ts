@@ -63,7 +63,7 @@ export default class Notes extends SectionBase {
 					const current = String(m.getProperty("/text") ?? "");
 					m.setProperty("/text", current ? `${current.trimEnd()}\n${b.content.text}` : b.content.text);
 				} }))
-				: [new Button({ text: "Keine Textbausteine – unter Verwaltung › Stammdaten anlegen", enabled: false })],
+				: [new Button({ text: "Keine Textbausteine (anlegen unter Verwaltung › Stammdaten)", enabled: false })],
 			afterClose: () => sheet.destroy(),
 		});
 		sheet.openBy(source);

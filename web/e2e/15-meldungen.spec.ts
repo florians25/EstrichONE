@@ -36,7 +36,7 @@ test('Fehler melden als normaler Benutzer: Art, Pflichtfelder, Bildschirmfoto, Z
   await page.locator('#feedbackExpected-inner').fill('Der Eintrag wird mit Foto gespeichert.');
   await page.locator('#feedbackActual-inner').fill('Die Ladeanzeige dreht sich endlos.');
   await dialog(page).getByRole('radio', { name: 'Immer (nachstellbar)' }).click();
-  await dialog(page).getByRole('radio', { name: /Hoch – ich kann damit nicht arbeiten/ }).click();
+  await dialog(page).getByRole('radio', { name: /Hoch: Arbeiten nicht möglich/ }).click();
   await page.locator('#feedbackNext').click();
 
   // Schritt 3: Bildschirmfoto anhängen.
@@ -81,7 +81,7 @@ test('Funktionswunsch über das Benutzermenü, „Meine Meldungen“ filtert', a
   await page.locator('#feedbackTitle-inner').fill('Bauakten als Excel exportieren');
   await page.locator('#feedbackProblem-inner').fill('Für die Nachkalkulation tippe ich jede Woche alles ab.');
   await page.locator('#feedbackSolution-inner').fill('Ein Knopf „Als Excel exportieren“ über der Liste.');
-  await dialog(page).getByRole('radio', { name: /Wichtig – spart regelmäßig Zeit/ }).click();
+  await dialog(page).getByRole('radio', { name: /Wichtig: spart regelmäßig Zeit/ }).click();
   await page.locator('#feedbackNext').click();
   await page.locator('#feedbackNext').click();
   await page.locator('#feedbackSend').click();
