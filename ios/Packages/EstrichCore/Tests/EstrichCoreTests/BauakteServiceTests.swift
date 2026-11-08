@@ -381,6 +381,11 @@ struct BauakteServiceTests {
         #expect(FileItem.fileExtension(forContentType: "video/quicktime") == "mov")
         #expect(FileItem.fileExtension(forContentType: "image/x-unknown") == "jpg")
         #expect(FileItem.fileExtension(forContentType: "application/octet-stream") == "bin")
+        // Teilen: Videos immer mit Videoendung (WhatsApp nimmt sonst kein Video an).
+        #expect(FileItem.shareExtension(isVideo: true, fileExtension: "mov", contentType: "video/quicktime") == "mov")
+        #expect(FileItem.shareExtension(isVideo: true, fileExtension: "bin", contentType: "video/quicktime") == "mov")
+        #expect(FileItem.shareExtension(isVideo: true, fileExtension: "dat", contentType: "application/octet-stream") == "mp4")
+        #expect(FileItem.shareExtension(isVideo: false, fileExtension: "pdf", contentType: "application/pdf") == "pdf")
     }
 }
 

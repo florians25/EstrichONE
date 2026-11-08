@@ -152,6 +152,36 @@ data class FileItem(val entity: LocalEntity) {
     val isPdf: Boolean get() = contentType == "application/pdf" || originalName.lowercase().endsWith(".pdf")
     val displayName: String get() = caption?.takeIf { it.isNotBlank() } ?: originalName.substringBeforeLast('.').ifEmpty { "Datei" }
     val time: Instant? get() = capturedAt ?: createdAt
+    /** Dateiname zum Teilen und Öffnen: Videos immer mit Videoendung, damit WhatsApp & Co. sie als Video annehmen. */
+    val shareName: String get() = ShareFile.name(displayName, originalName, contentType, isVideo, isPhoto)
+    /** Inhaltstyp zum Teilen (Videos ohne erkennbaren Typ: video/mp4). */
+    val shareMime: String get() = ShareFile.mime(contentType, isVideo, isPhoto)
+}
+
+/** Name und Typ geteilter Dateien (Teilen-Menü von Android, FileProvider). */
+object ShareFile {
+    private val videoExtensions = setOf("mp4", "mov", "m4v")
+
+    fun mime(contentType: String, isVideo: Boolean, isPhoto: Boolean): String {
+        val type = contentType.substringBefore(';').trim().lowercase()
+        return when {
+            isVideo && !type.startsWith("video/") -> "video/mp4"
+            isPhoto && !type.startsWith("image/") -> "image/jpeg"
+            type.isEmpty() -> "application/octet-stream"
+            else -> type
+        }
+    }
+
+    fun name(displayName: String, originalName: String, contentType: String, isVideo: Boolean, isPhoto: Boolean): String {
+        val base = displayName.map { if (it in "/\\:*?\"<>|") '_' else it }.joinToString("").trim().take(80).ifEmpty { "Datei" }
+        val original = originalName.substringAfterLast('.', "").lowercase()
+        val ext = when {
+            isVideo -> original.takeIf { it in videoExtensions } ?: if (mime(contentType, true, false) == "video/quicktime") "mov" else "mp4"
+            isPhoto -> original.ifEmpty { if (contentType.contains("png")) "png" else if (contentType.contains("heic")) "heic" else "jpg" }
+            else -> original.ifEmpty { if (contentType.contains("pdf")) "pdf" else "bin" }
+        }
+        return "$base.$ext"
+    }
 }
 
 data class SiteNote(val entity: LocalEntity) {

@@ -1,5 +1,6 @@
 package de.estrichone.android.ui
 
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -372,9 +373,11 @@ private fun PhotoStrip(session: Session, id: String) {
 
 /** Vorschaubild mit Ladezustand und Übertragungskennzeichen. */
 @Composable
-fun Thumbnail(file: FileItem, session: Session, size: Dp, modifier: Modifier = Modifier, onClick: () -> Unit) {
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
+fun Thumbnail(file: FileItem, session: Session, size: Dp, modifier: Modifier = Modifier, onLongClick: (() -> Unit)? = null, onClick: () -> Unit) {
     val bitmap by produceState<android.graphics.Bitmap?>(null, file.id, file.isStoredOnServer) { value = session.thumbnail(file) }
-    Box(modifier.size(size).clip(RoundedCornerShape(16.dp)).background(tones.fill).clickable(onClick = onClick)) {
+    Box(modifier.size(size).clip(RoundedCornerShape(16.dp)).background(tones.fill)
+        .then(if (onLongClick != null) Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick) else Modifier.clickable(onClick = onClick))) {
         bitmap?.let { Image(it.asImageBitmap(), file.displayName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
         if (file.isVideo) Icon(Icons.Filled.PlayCircle, "Video", tint = androidx.compose.ui.graphics.Color.White, modifier = Modifier.align(Alignment.Center).size(36.dp))
         Box(Modifier.align(Alignment.TopEnd).padding(6.dp)) { SyncMark(file.syncState) }

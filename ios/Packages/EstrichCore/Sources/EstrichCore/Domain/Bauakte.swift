@@ -268,6 +268,17 @@ public struct FileItem: Identifiable, Equatable, Sendable {
         return Self.fileExtension(forContentType: contentType)
     }
 
+    /// Endung der Kopie zum Ansehen und Teilen: Videos immer mit Videoendung (mp4, mov, m4v), damit Messenger wie WhatsApp
+    /// sie als Video annehmen und nicht als unbekannte Datei.
+    public var shareExtension: String { Self.shareExtension(isVideo: isVideo, fileExtension: fileExtension, contentType: contentType) }
+
+    static func shareExtension(isVideo: Bool, fileExtension: String, contentType: String) -> String {
+        let videos = ["mp4", "mov", "m4v"]
+        guard isVideo, !videos.contains(fileExtension) else { return fileExtension }
+        let byType = Self.fileExtension(forContentType: contentType)
+        return videos.contains(byType) ? byType : "mp4"
+    }
+
     /// Endung zum Inhaltstyp (ohne Endung im Namen erkennt QuickLook die Datei sonst nicht).
     static func fileExtension(forContentType contentType: String) -> String {
         switch contentType.lowercased().split(separator: ";").first.map(String.init) ?? "" {

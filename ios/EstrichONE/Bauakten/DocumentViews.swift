@@ -78,7 +78,7 @@ enum FilePreview {
             .appending(path: "Vorschau", directoryHint: .isDirectory)
             .appending(path: file.id.uuidString, directoryHint: .isDirectory)
         let name = String(file.displayName.map { "/:\\".contains($0) ? "_" : $0 }.prefix(80))
-        let url = folder.appending(path: "\(name).\(file.fileExtension)")
+        let url = folder.appending(path: "\(name).\(file.shareExtension)")
         do {
             try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
             try content.write(to: url, options: [.atomic, .completeFileProtection])
@@ -190,6 +190,8 @@ struct VideoPreview: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     @State private var player: AVPlayer?
+    /// Entschlüsselte Kopie mit Videoendung – zum Abspielen und Teilen (WhatsApp, Mail, AirDrop …).
+    @State private var url: URL?
     @State private var failed = false
     @State private var failure: String?
 
@@ -213,11 +215,20 @@ struct VideoPreview: View {
             .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Fertig") { dismiss() } }
+                ToolbarItem(placement: .topBarLeading) {
+                    if let url {
+                        ShareLink(item: url, preview: SharePreview(file.displayName, image: Image(systemName: "video"))) {
+                            Label("Video teilen", systemImage: "square.and.arrow.up")
+                        }
+                        .accessibilityIdentifier("shareVideoButton")
+                    }
+                }
             }
         }
         .task {
             do throws(FilePreview.Failure) {
                 let url = try await FilePreview.temporaryCopy(of: file, using: model)
+                self.url = url
                 let player = AVPlayer(url: url)
                 self.player = player
                 player.play()

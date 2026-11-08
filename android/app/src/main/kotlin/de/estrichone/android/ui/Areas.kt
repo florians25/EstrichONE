@@ -1,5 +1,10 @@
 package de.estrichone.android.ui
 
+import androidx.compose.material.icons.filled.PlayCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -154,14 +159,35 @@ private fun NotesArea(id: String) {
 private fun PhotosArea(id: String) {
     val session = LocalSession.current
     val nav = LocalNav.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
     var gallery by remember { mutableStateOf(false) }
     var video by remember { mutableStateOf(false) }
+    // Auswahl zum Teilen mehrerer Fotos und Videos (lange drücken startet sie).
+    var selected by remember { mutableStateOf<Set<String>>(emptySet()) }
+    var sharing by remember { mutableStateOf<String?>(null) }
     val photos by session.local(id) { session.service.photos(id) }
-    ScreenScaffold(AreaKind.Photos.title, actions = {
-        IconButton(onClick = { gallery = true }) { Icon(Icons.Filled.PhotoLibrary, "Aus Galerie") }
-        IconButton(onClick = { video = true }) { Icon(Icons.Filled.Videocam, "Video aufnehmen") }
+    val selecting = selected.isNotEmpty()
+    fun shareSelected() = scope.launch {
+        val files = photos.filter { it.id in selected }
+        val loaded = files.mapIndexedNotNull { index, file ->
+            sharing = if (files.size > 1) "Wird vorbereitet … ${index + 1} von ${files.size}" else "Wird vorbereitet …"
+            session.content(file)?.let { Triple(it, file.shareName, file.shareMime) }
+        }
+        sharing = null
+        if (loaded.size < files.size) nav.snackbar.showSnackbar("${files.size - loaded.size} Datei(en) noch nicht verfügbar – erst nach der Übertragung.")
+        if (loaded.isNotEmpty() && Links.shareAll(context, loaded)) selected = emptySet()
+    }
+    ScreenScaffold(if (selecting) "${selected.size} ausgewählt" else AreaKind.Photos.title, actions = {
+        if (selecting) {
+            IconButton(onClick = { shareSelected() }, enabled = sharing == null) { Icon(Icons.Filled.Share, "Auswahl teilen") }
+            IconButton(onClick = { selected = emptySet() }) { Icon(Icons.Filled.Close, "Auswahl beenden") }
+        } else {
+            IconButton(onClick = { gallery = true }) { Icon(Icons.Filled.PhotoLibrary, "Aus Galerie") }
+            IconButton(onClick = { video = true }) { Icon(Icons.Filled.Videocam, "Video aufnehmen") }
+        }
     }, floating = {
-        ExtendedFloatingActionButton(onClick = { nav.push(Route.Camera(id)) }, icon = { Icon(Icons.Filled.PhotoCamera, null) }, text = { Text("Foto") })
+        if (!selecting) ExtendedFloatingActionButton(onClick = { nav.push(Route.Camera(id)) }, icon = { Icon(Icons.Filled.PhotoCamera, null) }, text = { Text("Foto") })
     }) { padding ->
         if (photos.isEmpty()) {
             EmptyState(Icons.Outlined.PhotoLibrary, "Noch keine Fotos", "Fotos werden sofort auf dem Gerät gespeichert und im Hintergrund übertragen.",
@@ -170,12 +196,28 @@ private fun PhotosArea(id: String) {
             val groups = photos.groupBy { it.time?.atZone(Dates.zone)?.toLocalDate() }
             LazyVerticalGrid(GridCells.Adaptive(112.dp), contentPadding = padding.content(), horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
+                    Secondary(sharing ?: if (selecting) "Tippen wählt weitere aus. Teilen oben rechts – auch Videos, z. B. per WhatsApp."
+                        else "Lange drücken, um mehrere Fotos oder Videos auszuwählen und zu teilen.", Modifier.padding(start = 4.dp))
+                }
                 groups.forEach { (day, list) ->
                     item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
                         GroupLabel(day?.let { "${Dates.relativeDay(it)} (${list.size})" } ?: "Ohne Datum", Modifier.padding(start = 4.dp))
                     }
                     items(list, key = { it.id }) { file ->
-                        Thumbnail(file, session, 200.dp, Modifier.fillMaxWidth().aspectRatio(1f)) { nav.push(Route.Photo(file.id)) }
+                        val isSelected = file.id in selected
+                        Box(Modifier.fillMaxWidth().aspectRatio(1f)) {
+                            Thumbnail(file, session, 200.dp, Modifier.fillMaxSize(),
+                                onLongClick = { selected = selected + file.id }) {
+                                if (selecting) selected = if (isSelected) selected - file.id else selected + file.id else nav.push(Route.Photo(file.id))
+                            }
+                            if (selecting) {
+                                Icon(if (isSelected) Icons.Filled.CheckCircle else Icons.Outlined.Circle, if (isSelected) "Ausgewählt" else "Nicht ausgewählt",
+                                    tint = if (isSelected) MaterialTheme.colorScheme.primary else Color.White,
+                                    modifier = Modifier.align(Alignment.TopStart).padding(6.dp).size(26.dp).clip(CircleShape)
+                                        .background(if (isSelected) Color.White else Color.Black.copy(alpha = 0.3f)))
+                            }
+                        }
                     }
                 }
             }
@@ -195,11 +237,20 @@ fun PhotoScreen(fileId: String) {
     val file by session.local(fileId) { session.service.file(fileId) }
     var caption by remember(file?.caption) { mutableStateOf(file?.caption ?: "") }
     var deleting by remember { mutableStateOf(false) }
+    var loading by remember { mutableStateOf<String?>(null) }
     val f = file ?: run { ScreenScaffold("Foto") { EmptyState(Icons.Outlined.PhotoLibrary, "Foto nicht gefunden", null, Modifier.padding(it)) }; return }
     val bitmap by produceState<android.graphics.Bitmap?>(null, fileId) { value = session.thumbnail(f, 1600) }
     ScreenScaffold(f.displayName, actions = {
-        IconButton(onClick = { scope.launch { session.content(f)?.let { Links.share(context, it, f.originalName.ifBlank { "Foto.jpg" }, f.contentType) } } }) {
-            Icon(Icons.Filled.Share, "Teilen")
+        IconButton(onClick = {
+            scope.launch {
+                loading = if (f.isVideo) "Video wird vorbereitet …" else "Wird vorbereitet …"
+                val bytes = session.content(f)
+                loading = null
+                if (bytes == null) nav.snackbar.showSnackbar("Noch nicht verfügbar – erst nach der Übertragung.")
+                else Links.share(context, bytes, f.shareName, f.shareMime)
+            }
+        }, enabled = loading == null) {
+            Icon(Icons.Filled.Share, if (f.isVideo) "Video teilen" else "Teilen")
         }
         if (f.entity.data["uploadedByUserId"] == null || (f.entity.data["uploadedByUserId"] as? JsonPrimitive)?.content == session.user.id) {
             IconButton(onClick = { deleting = true }) { Icon(Icons.Filled.Delete, "Löschen") }
@@ -208,7 +259,31 @@ fun PhotoScreen(fileId: String) {
         Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(Modifier.fillMaxWidth().aspectRatio(4f / 3f).clip(RoundedCornerShape(18.dp)).background(Color.Black), contentAlignment = Alignment.Center) {
                 bitmap?.let { Image(it.asImageBitmap(), f.displayName, contentScale = ContentScale.Fit, modifier = Modifier.fillMaxSize()) }
-                    ?: androidx.compose.material3.CircularProgressIndicator()
+                    ?: if (f.isVideo) Icon(Icons.Filled.Videocam, null, tint = Color.White.copy(alpha = 0.5f), modifier = Modifier.size(56.dp))
+                    else androidx.compose.material3.CircularProgressIndicator()
+                if (f.isVideo) {
+                    // Video mit der Abspiel-App des Geräts öffnen (echte Datei mit Videoendung).
+                    IconButton(onClick = {
+                        scope.launch {
+                            loading = "Video wird geladen …"
+                            val bytes = session.content(f)
+                            loading = null
+                            if (bytes == null || !Links.open(context, bytes, f.shareName, f.shareMime)) {
+                                nav.snackbar.showSnackbar(if (bytes == null) "Noch nicht verfügbar – erst nach der Übertragung." else "Keine App zum Abspielen gefunden.")
+                            }
+                        }
+                    }, modifier = Modifier.size(72.dp)) {
+                        Icon(Icons.Filled.PlayCircle, "Video abspielen", tint = Color.White, modifier = Modifier.size(64.dp))
+                    }
+                }
+                loading?.let {
+                    Row(Modifier.align(Alignment.BottomCenter).padding(12.dp).clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.6f))
+                        .padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                        androidx.compose.material3.CircularProgressIndicator(Modifier.size(16.dp), color = Color.White, strokeWidth = 2.dp)
+                        Spacer(Modifier.width(8.dp))
+                        Text(it, color = Color.White, style = MaterialTheme.typography.labelLarge)
+                    }
+                }
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Secondary(listOfNotNull(f.time?.let { Dates.dateTime(it) }, if (f.isStoredOnServer) "übertragen" else "wird übertragen").joinToString(" · "),
