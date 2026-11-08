@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, apiCall, choose, jpeg, nav, pageTitle, pdf, signIn, toast } from './helpers';
+import { adminPassword, apiCall, choose, jpeg, nav, pageTitle, pdf, signIn, toast, onWeekday } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -142,6 +142,7 @@ test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankm
 });
 
 test('Terminkalender: wiederkehrender Termin mit Teilnehmer, Agenda, Monat, Kalender ausblenden, ein Vorkommen löschen', async ({ page }) => {
+  await onWeekday(page);
   await signIn(page, 'admin', adminPassword);
   await nav(page, 'Terminkalender').click();
   await expect(page.locator('.eoCalendarSide')).toBeVisible();

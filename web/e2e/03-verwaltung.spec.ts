@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminPassword, apiCall, choose, nav, pageTitle, signIn, toast } from './helpers';
+import { adminPassword, apiCall, choose, nav, pageTitle, signIn, toast, onWeekday } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -121,6 +121,7 @@ test('Planung: Kolonne und Pumpe anlegen, Einsatz planen, Doppelbelegung wird an
 });
 
 test('Disposition: Vorrat einplanen, Terminart, Tag-, Monatsansicht und Arbeitsplan', async ({ page }) => {
+  await onWeekday(page);
   await signIn(page, 'admin', adminPassword);
   await nav(page, 'Kolonnenplanung').click();
   await page.getByRole('button', { name: /Baustellen-Vorrat/ }).click();

@@ -317,3 +317,17 @@ export async function layoutIssues(page: Page, scopeSelector = 'body'): Promise<
     return Array.from(issues);
   }, scopeSelector);
 }
+
+/**
+ * Am Wochenende zeigen Kalender und Disposition standardmäßig die Arbeitswoche – „heute“ angelegte Termine wären
+ * nicht sichtbar. Für datumsabhängige Tests den Browser auf den nächsten Werktag, 10:00 Uhr, stellen.
+ */
+export async function onWeekday(page: Page) {
+  const now = new Date();
+  const day = now.getDay();
+  if (day !== 0 && day !== 6) return;
+  const target = new Date(now);
+  target.setDate(now.getDate() + (day === 6 ? 2 : 1));
+  target.setHours(10, 0, 0, 0);
+  await page.clock.setFixedTime(target);
+}
