@@ -98,7 +98,7 @@ fun BauaktenScreen(selected: String?) {
     }) { padding ->
         LazyColumn(contentPadding = padding.content()) {
             item {
-                SearchField(search, { search = it }, "Nummer, Bauvorhaben oder Adresse")
+                SearchField(search, { search = it }, "Nummer, Bauvorhaben, Adresse")
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Filter.entries.forEach { f ->
                         val count = all.count { it.status in f.statuses }
@@ -175,7 +175,7 @@ fun BauakteRow(b: Bauakte, customer: String?, job: PlannedJob?, selected: Boolea
 @Composable
 fun SearchField(value: String, onChange: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
     TextField(
-        value = value, onValueChange = onChange, singleLine = true, placeholder = { Text(placeholder) },
+        value = value, onValueChange = onChange, singleLine = true, placeholder = { Text(placeholder, maxLines = 1, overflow = TextOverflow.Ellipsis) },
         leadingIcon = { Icon(Icons.Filled.Search, null) },
         trailingIcon = { if (value.isNotEmpty()) IconButton(onClick = { onChange("") }) { Icon(Icons.Filled.Close, "Suche leeren") } },
         shape = RoundedCornerShape(16.dp), modifier = modifier.fillMaxWidth(),

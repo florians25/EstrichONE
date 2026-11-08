@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -211,8 +212,8 @@ fun Pill(text: String, color: Color, background: Color, icon: ImageVector? = nul
 /** Kennzahl in der Kopfzeile der Bauakte („142,5 m²“). */
 @Composable
 fun Tag(text: String) {
-    Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = tones.textSecondary,
-        modifier = Modifier.clip(RoundedCornerShape(50)).background(tones.fill).padding(horizontal = 10.dp, vertical = 5.dp))
+    Text(text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = tones.textSecondary,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(tones.fillStrong).padding(horizontal = 12.dp, vertical = 6.dp))
 }
 
 /** Zahl als Abzeichen. */
@@ -247,7 +248,8 @@ fun ActionTile(icon: ImageVector, label: String, primary: Boolean = false, modif
     ) {
         Icon(icon, null, tint = if (primary) fg else MaterialTheme.colorScheme.primary, modifier = Modifier.size(26.dp))
         Spacer(Modifier.height(6.dp))
-        Text(label, color = fg, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+        Text(label, color = fg, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center)
     }
 }
 
@@ -373,7 +375,7 @@ fun Secondary(text: String, modifier: Modifier = Modifier, maxLines: Int = Int.M
 @Composable
 fun Tinted(color: Color, content: @Composable () -> Unit) = CompositionLocalProvider(LocalContentColor provides color, content = content)
 
-/** Volle Breite, auf Tablets lesbar begrenzt. */
-fun Modifier.readable(): Modifier = this.fillMaxWidth().widthIn(max = 920.dp)
+/** Volle Breite, auf Tablets lesbar begrenzt und mittig. */
+fun Modifier.readable(): Modifier = this.fillMaxWidth().wrapContentWidth(Alignment.CenterHorizontally).widthIn(max = 920.dp)
 
 fun Modifier.screen(): Modifier = this.fillMaxSize()

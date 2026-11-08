@@ -276,7 +276,8 @@ fun NoticeCards(session: Session) {
     var expanded by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf<NoticeItem?>(null) }
     val items = NoticePresentation.items(notices, now)
-    val (shown, hidden) = NoticePresentation.selection(items, dismissed, expanded)
+    // Bis zu drei Hinweise stehen offen da; bei mehr bleibt der wichtigste sichtbar, der Rest hinter „weitere Hinweise“.
+    val (shown, hidden) = NoticePresentation.selection(items, dismissed, expanded || items.size <= 3)
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         shown.forEach { item ->
             NoticeCard(item, onDetails = { details = item }, onDismiss = if (item.isDismissible) {

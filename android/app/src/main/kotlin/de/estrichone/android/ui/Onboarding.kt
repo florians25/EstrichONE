@@ -2,6 +2,7 @@ package de.estrichone.android.ui
 
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -101,8 +102,10 @@ fun Root(model: AppModel, unlock: () -> Unit = {}) {
 
 /** Markenlogo (E1-Monogramm) auf Navy. */
 @Composable
-fun BrandMark(size: androidx.compose.ui.unit.Dp = 88.dp) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(size * 0.24f)).background(Brush.linearGradient(listOf(NavyLight, Navy))), contentAlignment = Alignment.Center) {
+fun BrandMark(size: androidx.compose.ui.unit.Dp = 88.dp, onDark: Boolean = false) {
+    val shape = RoundedCornerShape(size * 0.24f)
+    Box(Modifier.size(size).clip(shape).background(Brush.linearGradient(if (onDark) listOf(Color(0xFF1A4C8F), NavyLight) else listOf(NavyLight, Navy)))
+        .then(if (onDark) Modifier.border(1.dp, Color.White.copy(alpha = 0.18f), shape) else Modifier), contentAlignment = Alignment.Center) {
         Image(painterResource(R.drawable.ic_launcher_foreground), "EstrichONE", modifier = Modifier.size(size * 1.5f))
     }
 }
@@ -110,10 +113,10 @@ fun BrandMark(size: androidx.compose.ui.unit.Dp = 88.dp) {
 @Composable
 private fun WelcomeScreen(model: AppModel) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, NavyLight)))) {
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(28.dp).widthIn(max = 520.dp).align(Alignment.Center),
+        Column(Modifier.align(Alignment.Center).widthIn(max = 560.dp).fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).padding(28.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Spacer(Modifier.weight(1f))
-            BrandMark(112.dp)
+            BrandMark(112.dp, onDark = true)
             Spacer(Modifier.height(24.dp))
             Text("EstrichONE", color = Color.White, style = MaterialTheme.typography.displaySmall)
             Text("Baustelle, Büro und Kolonne – in einer App.", color = Ice, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
@@ -142,8 +145,8 @@ private fun OnboardingFrame(model: AppModel, title: String, subtitle: String, co
     val error by model.error.collectAsState()
     val busy by model.busy.collectAsState()
     Box(Modifier.fillMaxSize().background(tones.canvas)) {
-        Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding().verticalScroll(rememberScrollState())
-            .padding(24.dp).widthIn(max = 520.dp).align(Alignment.TopCenter), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+        Column(Modifier.align(Alignment.TopCenter).widthIn(max = 560.dp).fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).imePadding()
+            .verticalScroll(rememberScrollState()).padding(24.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
             Spacer(Modifier.height(24.dp))
             BrandMark(64.dp)
             Text(title, style = MaterialTheme.typography.headlineMedium)
@@ -341,7 +344,7 @@ private fun PinEntryScreen(model: AppModel, user: PoolUser) {
 private fun LockScreen(model: AppModel, unlock: () -> Unit) {
     Box(Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Navy, NavyLight))), contentAlignment = Alignment.Center) {
         Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
-            BrandMark(96.dp)
+            BrandMark(96.dp, onDark = true)
             Text("EstrichONE ist gesperrt", color = Color.White, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 20.dp))
             Text("Mit Fingerabdruck, Gesicht oder Gerätecode entsperren.", color = Ice, textAlign = TextAlign.Center, modifier = Modifier.padding(top = 6.dp))
             Button(onClick = unlock, modifier = Modifier.padding(top = 28.dp).height(52.dp),

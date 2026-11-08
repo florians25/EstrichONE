@@ -134,7 +134,10 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
         return
     }
 
-    ScreenScaffold(b.title, showBack = showBack, actions = {
+    val listState = androidx.compose.foundation.lazy.rememberLazyListState()
+    // Titel oben erst nach dem Kopf (wie die große Überschrift auf iOS).
+    val scrolled by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 } }
+    ScreenScaffold(if (scrolled) b.title else "", showBack = showBack, actions = {
         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
         DropdownMenu(menu, { menu = false }) {
             DropdownMenuItem(text = { Text("Basisdaten bearbeiten") }, onClick = { menu = false; nav.push(Route.Area(id, AreaKind.Project)) })
@@ -153,7 +156,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                 onClick = { menu = false; cancelling = true })
         }
     }) { padding ->
-        LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
+        LazyColumn(state = listState, contentPadding = padding.content(), modifier = Modifier.readable()) {
             item { Header(b, session) }
             item { PinnedNote(session, id) }
             item { ContactCard(b, session) }

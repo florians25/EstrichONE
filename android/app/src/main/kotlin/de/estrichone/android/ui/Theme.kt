@@ -4,6 +4,7 @@ import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
+import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.Typography
@@ -37,7 +38,7 @@ data class Tones(
     val danger: Color, val dangerSoft: Color,
     val info: Color, val infoSoft: Color,
     val badge: Color,
-    val canvas: Color, val card: Color, val fill: Color, val separator: Color,
+    val canvas: Color, val card: Color, val fill: Color, val fillStrong: Color, val separator: Color,
     val textSecondary: Color, val textTertiary: Color,
     val dark: Boolean,
 )
@@ -48,7 +49,7 @@ private val LightTones = Tones(
     danger = Color(0xFFC0262D), dangerSoft = Color(0xFFFDECEC),
     info = Color(0xFF0062CC), infoSoft = Color(0xFFE7F0FC),
     badge = Color(0xFFD70015),
-    canvas = Color(0xFFF2F3F7), card = Color(0xFFFFFFFF), fill = Color(0xFFF0F2F6), separator = Color(0xFFE0E3E9),
+    canvas = Color(0xFFF2F3F7), card = Color(0xFFFFFFFF), fill = Color(0xFFF0F2F6), fillStrong = Color(0xFFE2E6EC), separator = Color(0xFFE0E3E9),
     textSecondary = Color(0xFF4A5361), textTertiary = Color(0xFF667080), dark = false,
 )
 
@@ -58,7 +59,7 @@ private val DarkTones = Tones(
     danger = Color(0xFFFF7B7B), dangerSoft = Color(0xFF351617),
     info = Color(0xFF4DA3FF), infoSoft = Color(0xFF18283C),
     badge = Color(0xFFE0353F),
-    canvas = Color(0xFF0E0F12), card = Color(0xFF1C1D21), fill = Color(0xFF2A2B30), separator = Color(0xFF34353B),
+    canvas = Color(0xFF0E0F12), card = Color(0xFF1C1D21), fill = Color(0xFF2A2B30), fillStrong = Color(0xFF3A3B41), separator = Color(0xFF34353B),
     textSecondary = Color(0xFFAEB5C0), textTertiary = Color(0xFF8C939E), dark = true,
 )
 
@@ -134,7 +135,10 @@ fun EstrichTheme(appearance: Appearance = Appearance.System, dynamicColor: Boole
         LightScheme
     }
     CompositionLocalProvider(LocalTones provides tones.copy(canvas = scheme.background)) {
-        MaterialTheme(colorScheme = scheme, typography = Type, shapes = AppShapes, content = content)
+        MaterialTheme(colorScheme = scheme, typography = Type, shapes = AppShapes) {
+            // Text außerhalb von Flächen (Einrichtung, Blätter) in der Schriftfarbe des Hintergrunds, auch dunkel.
+            CompositionLocalProvider(LocalContentColor provides scheme.onBackground, content = content)
+        }
     }
 }
 
