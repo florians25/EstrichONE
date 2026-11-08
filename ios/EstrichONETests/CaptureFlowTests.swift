@@ -14,35 +14,40 @@ struct CaptureFlowTests {
     @Test("„Fertig“ wartet, bis alle ausgelösten Fotos gespeichert sind, und schließt genau einmal")
     func closeWaitsForPendingShots() {
         var shots = PendingShots()
-        #expect(!shots.takeClose())
+        var closes: [Bool] = []
+        closes.append(shots.takeClose())
 
         shots.shutterPressed()
         shots.shutterPressed()
         shots.requestClose()
         #expect(shots.isClosing)
-        #expect(!shots.takeClose())
+        closes.append(shots.takeClose())
 
         shots.shotSettled()
-        #expect(!shots.takeClose())
+        closes.append(shots.takeClose())
         shots.shotSettled()
-        #expect(shots.takeClose())
-        #expect(!shots.takeClose())
+        closes.append(shots.takeClose())
+        closes.append(shots.takeClose())
+        #expect(closes == [false, false, false, true, false])
     }
 
     @Test("Ohne Fotos unterwegs schließt die Kamera sofort; hängt eine Aufnahme, nach Ablauf der Wartezeit")
     func closeImmediatelyOrAfterTimeout() {
         var idle = PendingShots()
         idle.requestClose()
-        #expect(idle.takeClose())
+        let idleCloses = idle.takeClose()
+        #expect(idleCloses)
 
         var stuck = PendingShots()
+        var closes: [Bool] = []
         stuck.shutterPressed()
         stuck.forceClose()
-        #expect(!stuck.takeClose())
+        closes.append(stuck.takeClose())
         stuck.requestClose()
-        #expect(!stuck.takeClose())
+        closes.append(stuck.takeClose())
         stuck.forceClose()
-        #expect(stuck.takeClose())
+        closes.append(stuck.takeClose())
+        #expect(closes == [false, false, true])
         stuck.shotSettled()
         #expect(stuck.count == 0)
     }
