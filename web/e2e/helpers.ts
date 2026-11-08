@@ -23,15 +23,25 @@ export async function signIn(page: Page, login: string, password: string) {
   await page.goto('/anmelden');
   const user = page.locator('input[id$="loginUser-inner"]');
   const secret = page.locator('input[id$="loginPassword-inner"]');
-  // Die Seite setzt beim Öffnen Fokus und Felder zurück: erst danach füllen und prüfen.
-  await expect(async () => {
-    await user.fill(login);
-    await secret.fill(password);
-    await expect(user).toHaveValue(login, { timeout: 500 });
-    await expect(secret).toHaveValue(password, { timeout: 500 });
-  }).toPass({ timeout: 15_000 });
-  await page.getByRole('button', { name: 'Anmelden' }).click();
-  await page.waitForURL((url) => !url.pathname.startsWith('/anmelden'));
+  // Viele Anmeldungen kurz hintereinander (mehrere Testdateien) können die Begrenzung je Adresse erreichen (429):
+  // dann die Meldung ausgeben, kurz warten und erneut anmelden statt bis zum Testende zu hängen.
+  for (let attempt = 1; ; attempt++) {
+    // Die Seite setzt beim Öffnen Fokus und Felder zurück: erst danach füllen und prüfen.
+    await expect(async () => {
+      await user.fill(login);
+      await secret.fill(password);
+      await expect(user).toHaveValue(login, { timeout: 500 });
+      await expect(secret).toHaveValue(password, { timeout: 500 });
+    }).toPass({ timeout: 15_000 });
+    await page.getByRole('button', { name: 'Anmelden' }).click();
+    const done = await page.waitForURL((url) => !url.pathname.startsWith('/anmelden'), { timeout: 20_000 }).then(() => true, () => false);
+    if (done) return;
+    const hint = await page.locator('.sapMMsgStrip:visible, .sapMMessageToast').allTextContents().catch(() => []);
+    if (attempt >= 4) throw new Error(`Anmeldung als ${login} nicht möglich: ${hint.join(' | ') || 'keine Meldung'}`);
+    console.log(`Anmeldung als ${login} (Versuch ${attempt}) blieb auf der Anmeldeseite: ${hint.join(' | ') || 'keine Meldung'} – neuer Versuch`);
+    await page.waitForTimeout(25_000);
+    await page.goto('/anmelden');
+  }
 }
 
 /** UI5-Auswahl (Select, ComboBox, MultiComboBox) öffnen und eine Option wählen. */
