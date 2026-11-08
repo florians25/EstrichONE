@@ -40,7 +40,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      VERSION: 0.1.99-ci
+      VERSION: 1.0.99-ci
     steps:
       - uses: actions/checkout@v5
       - name: Images dieser Version lokal bauen (Namen wie in der Registry)
@@ -124,8 +124,8 @@ jobs:
           sudo -E VERSION="$VERSION" deploy/backup/test-installer-restore.sh
       - name: Fernaktualisierung der Zusatzserver – alte Version, Rücksprung bei Fehler, Update mit erhaltenen Daten, Ziel, das zieht
         env:
-          OLD_VERSION: 0.1.98-ci
-          BROKEN_VERSION: 0.1.98-ci.2
+          OLD_VERSION: 1.0.98-ci
+          BROKEN_VERSION: 1.0.98-ci.2
         run: |
           shellcheck deploy/backup-target/test-remote-update.sh
           # Alte Test-Version (gleicher Code, ältere Versionsnummer) und eine Version, deren Container nie gesund wird.
