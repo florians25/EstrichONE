@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Fensterhintergrund bis Compose übernimmt (hell/dunkel wie das System); Farben kommen aus dem Compose-Theme. -->
-    <style name="Theme.EstrichONE" parent="android:Theme.DeviceDefault.DayNight.NoActionBar" />
+    <!-- Fensterhintergrund bis Compose übernimmt; Farben kommen aus dem Compose-Theme. Dunkel: values-night. -->
+    <style name="Theme.EstrichONE" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/canvas</item>
+    </style>
 </resources>

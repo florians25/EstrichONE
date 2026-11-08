@@ -98,6 +98,8 @@ import de.estrichone.core.deleteChatMessage
 import de.estrichone.core.editChatMessage
 import de.estrichone.core.initials
 import de.estrichone.core.markChatRead
+import de.estrichone.core.muteChat
+import de.estrichone.core.chatConversation
 import de.estrichone.core.reactToChatMessage
 import de.estrichone.core.sendChatMessage
 import de.estrichone.core.startDirectChat
@@ -292,7 +294,10 @@ fun ConversationScreen(id: String) {
     }
 
     val c = conversation
-    ScreenScaffold(c?.title ?: "Chat", bottomBar = {
+    var info by remember { mutableStateOf(false) }
+    ScreenScaffold(c?.title ?: "Chat", actions = {
+        IconButton(onClick = { info = true }) { Icon(Icons.Filled.Groups, "Info zur Unterhaltung") }
+    }, bottomBar = {
         if (c?.canPost == false) {
             Text("Nur Administratoren schreiben in dieser Gruppe.", color = tones.textSecondary, style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth().background(tones.card).navigationBarsPadding().padding(16.dp))
@@ -301,6 +306,7 @@ fun ConversationScreen(id: String) {
                 onAttach = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, onSend = { send() })
         }
     }) { padding ->
+        if (info) ConversationInfo(id) { info = false }
         if (!loaded) LoadView(Load.Loading) {} else
         LazyColumn(Modifier.fillMaxSize(), state = listState, contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = padding.calculateTopPadding() + 8.dp,
             bottom = padding.calculateBottomPadding() + 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -321,6 +327,50 @@ fun ConversationScreen(id: String) {
                     Bubble(m, showName, session, windowMinutes, onReply = { replyTo = m }, onEdit = { editing = m; text = m.text ?: "" },
                         onDelete = { scope.launch { runCatching { withContext(Dispatchers.IO) { session.api.deleteChatMessage(m.id) } }; reload() } },
                         onReact = { emoji -> scope.launch { runCatching { withContext(Dispatchers.IO) { session.api.reactToChatMessage(m.id, emoji) } }; reload() } })
+                }
+            }
+        }
+    }
+}
+
+/** Info zur Unterhaltung: Art, Beschreibung, Mitglieder, Stummschalten (wie ChatInfoView auf iOS). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ConversationInfo(id: String, onDismiss: () -> Unit) {
+    val session = LocalSession.current
+    val scope = rememberCoroutineScope()
+    var detail by remember { mutableStateOf<Load<de.estrichone.core.ChatConversationDetail>>(Load.Loading) }
+    LaunchedEffect(id) { detail = attempt { session.api.chatConversation(id) } }
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = tones.canvas) {
+        Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp)) {
+            LoadView(detail) {
+                val d = (detail as Load.Done).value
+                Text(d.conversation.title, style = MaterialTheme.typography.headlineSmall)
+                Secondary(listOfNotNull(d.conversation.type.title, d.bauakteTitle?.let { "Bauakte $it" }).joinToString(" · "))
+                d.conversation.description?.let { Text(it, modifier = Modifier.padding(top = 8.dp)) }
+                Spacer(Modifier.height(12.dp))
+                SectionCard {
+                    RowItem("Stummschalten", subtitle = "Keine Mitteilungen für diese Unterhaltung", trailing = {
+                        androidx.compose.material3.Switch(d.conversation.muted, { muted ->
+                            scope.launch {
+                                runCatching { withContext(Dispatchers.IO) { session.api.muteChat(id, muted) } }
+                                detail = attempt { session.api.chatConversation(id) }
+                            }
+                        })
+                    })
+                }
+                GroupLabel("${d.members.size} Mitglieder", Modifier.padding(start = 4.dp))
+                SectionCard {
+                    d.members.forEachIndexed { index, m ->
+                        if (index > 0) RowDivider(72.dp)
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Avatar(initials(m.name))
+                            Spacer(Modifier.width(12.dp))
+                            Text(m.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            if (m.isAdmin) Pill("Admin", MaterialTheme.colorScheme.primary, tones.infoSoft)
+                            if (m.fromCrew) Pill("Kolonne", tones.textSecondary, tones.fill)
+                        }
+                    }
                 }
             }
         }

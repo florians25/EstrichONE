@@ -508,6 +508,7 @@ fun SecurityScreen() {
     var biometric by remember { mutableStateOf(prefs.biometricUnlock) }
     var delay by remember { mutableStateOf(LockDelay.entries.firstOrNull { it.seconds == prefs.lockDelaySeconds } ?: LockDelay.FifteenMinutes) }
     val sessions by rememberLoad(Unit) { session.api.sessions() }
+    var changing by remember { mutableStateOf(false) }
     fun save() = model.setLock(enabled, delay, biometric)
     ScreenScaffold("Sicherheit und Sperre") { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
@@ -543,6 +544,10 @@ fun SecurityScreen() {
                     }
                 }
             }
+            if (!session.isDemo) {
+                item { GroupLabel("Konto") }
+                item { SectionCard { RowItem("Passwort ändern", icon = Icons.Filled.Lock, showChevron = true, onClick = { changing = true }) } }
+            }
             item { GroupLabel("Angemeldete Geräte und Browser") }
             item {
                 LoadView(sessions) {
@@ -558,9 +563,34 @@ fun SecurityScreen() {
             }
             item {
                 Secondary("Die Anmeldung ist an dieses Gerät gebunden (Schlüssel im Android Keystore). Daten und Fotos liegen verschlüsselt auf dem Gerät. " +
-                    "Passwort und Zwei-Faktor-Anmeldung ändern Sie in der Weboberfläche unter „Mein Konto“.", Modifier.padding(16.dp))
+                    "Die Zwei-Faktor-Anmeldung richten Sie in der Weboberfläche unter „Mein Konto“ ein.", Modifier.padding(16.dp))
             }
         }
+    }
+    if (changing) ChangePasswordSheet { changing = false }
+}
+
+/** Eigenes Passwort ändern (wie ChangePasswordView auf iOS). */
+@Composable
+private fun ChangePasswordSheet(onDismiss: () -> Unit) {
+    val session = LocalSession.current
+    val model = LocalModel.current
+    val scope = rememberCoroutineScope()
+    var current by remember { mutableStateOf("") }
+    var new by remember { mutableStateOf("") }
+    var repeated by remember { mutableStateOf("") }
+    FormSheet("Passwort ändern", null, onDismiss, save = "Ändern", canSave = current.isNotBlank() && new.length >= 8 && new == repeated, onSave = {
+        scope.launch {
+            val result = attempt { session.api.changePassword(current, new) }
+            model.message(if (result is Load.Done) "Passwort geändert." else (result as? Load.Failed)?.message ?: "Nicht geändert.")
+        }
+    }) {
+        val hidden = androidx.compose.ui.text.input.PasswordVisualTransformation()
+        OutlinedTextField(current, { current = it }, label = { Text("Aktuelles Passwort") }, singleLine = true, visualTransformation = hidden, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(new, { new = it }, label = { Text("Neues Passwort") }, singleLine = true, visualTransformation = hidden, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(repeated, { repeated = it }, label = { Text("Neues Passwort wiederholen") }, singleLine = true, visualTransformation = hidden,
+            modifier = Modifier.fillMaxWidth(), isError = repeated.isNotEmpty() && repeated != new)
+        Secondary("Mindestens 12 Zeichen. Andere Geräte bleiben angemeldet.")
     }
 }
 
