@@ -58,6 +58,8 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         "POST /api/v1/devices/register", "POST /api/v1/devices/attach", "GET /api/v1/devices/me",
         "POST /api/v1/tickets/", "GET /api/v1/tickets/unread", "POST /api/v1/tickets/{id:guid}/seen", "GET /api/v1/tickets/mine",
         "GET /api/v1/tickets/{id:guid}", "POST /api/v1/tickets/{id:guid}/comments", "POST /api/v1/tickets/{id:guid}/reopen",
+        // Fehler melden / Funktion wünschen: jeder darf einreichen und sieht nur eigene Meldungen (fremde: 404).
+        "POST /api/v1/feedback/", "GET /api/v1/feedback/mine", "GET /api/v1/feedback/{id:guid}", "POST /api/v1/feedback/{id:guid}/comments",
         "POST /api/v1/sync/push", "GET /api/v1/sync/pull", "POST /api/v1/sync/snapshot", // je Operation/Objekt geprüft
         "GET /api/v1/notifications/", "GET /api/v1/notifications/unread-count", "POST /api/v1/notifications/{id:guid}/read",
         "POST /api/v1/notifications/{id:guid}/unread", "POST /api/v1/notifications/read-all", "DELETE /api/v1/notifications/{id:guid}",
@@ -187,6 +189,8 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         await Expect(await attacker.PostAsJsonAsync($"/api/v1/chat/conversations/{setup.Conversation}/messages", new { text = "x", clientMessageId = Guid.CreateVersion7() }, Ct), "Chat schreiben");
         await Expect(await attacker.GetAsync(new Uri($"/api/v1/chat/conversations/{setup.Conversation}/messages", UriKind.Relative), Ct), "Chat lesen");
         await Expect(await attacker.PostAsJsonAsync($"/api/v1/tickets/{setup.Ticket}/comments", new { id = Guid.CreateVersion7(), text = "x" }, Ct), "Ticket kommentieren");
+        await Expect(await attacker.PostAsJsonAsync($"/api/v1/feedback/{setup.Feedback}/comments", new { text = "x", isInternal = false }, Ct), "Fremde Meldung beantworten");
+        await Expect(await attacker.PatchAsJsonAsync($"/api/v1/feedback/{setup.Feedback}", new { status = "rejected" }, Ct), "Fremde Meldung ändern");
         await Expect(await attacker.PostAsync(new Uri($"/api/v1/notifications/{setup.Notification}/read", UriKind.Relative), null, Ct), "Fremde Benachrichtigung");
         await Expect(await attacker.PatchAsJsonAsync($"/api/v1/work-items/{setup.WorkItem}", new { status = "done" }, Ct), "Fremde Aufgabe");
 
@@ -207,7 +211,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
     }
 
     private sealed record ForeignObjects(HttpClient Admin, Guid Bauakte, Guid File, Guid Conversation, Guid Message, Guid Attachment,
-        Guid Ticket, Guid Notification, Guid WorkItem, Guid Note)
+        Guid Ticket, Guid Notification, Guid WorkItem, Guid Note, Guid Feedback)
     {
         public static Guid AttackerId(ApiFactory factory)
         {
@@ -227,6 +231,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
                 _ when route.Contains("/chat/messages/{", StringComparison.Ordinal) => Message,
                 _ when route.Contains("/chat/attachments/{", StringComparison.Ordinal) => Attachment,
                 _ when route.StartsWith("/api/v1/tickets/{", StringComparison.Ordinal) => Ticket,
+                _ when route.StartsWith("/api/v1/feedback/{", StringComparison.Ordinal) => Feedback,
                 _ when route.StartsWith("/api/v1/notifications/{", StringComparison.Ordinal) => Notification,
                 _ when route.StartsWith("/api/v1/work-items/{", StringComparison.Ordinal) => WorkItem,
                 _ when route.Contains("{bauakteId", StringComparison.Ordinal) => Bauakte,
@@ -292,11 +297,16 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
 
         var ticket = Guid.CreateVersion7();
         (await admin.PostAsJsonAsync("/api/v1/tickets", new { id = ticket, title = "Drucker", category = "officeIt", source = "web" }, Ct)).EnsureSuccessStatusCode();
+        var feedback = Guid.CreateVersion7();
+        (await admin.PostAsJsonAsync("/api/v1/feedback", new
+        {
+            id = feedback, kind = "feature", title = "Vertraulicher Wunsch", area = "Planung", problem = "p", desiredSolution = "l", impact = "low",
+        }, Ct)).EnsureSuccessStatusCode();
         (await admin.PostAsync(new Uri("/api/v1/notifications/test", UriKind.Relative), null, Ct)).EnsureSuccessStatusCode();
         var inbox = await admin.GetFromJsonAsync<System.Text.Json.Nodes.JsonNode>("/api/v1/notifications", TestJson.Options, Ct);
         var notification = (inbox!["items"] ?? inbox).AsArray()[0]!["id"]!.GetValue<Guid>();
 
-        return new ForeignObjects(admin, bauakte, file, conversation, message, attachment, ticket, notification, workItem, note);
+        return new ForeignObjects(admin, bauakte, file, conversation, message, attachment, ticket, notification, workItem, note, feedback);
     }
 
     private static HttpRequestMessage Request(string method, RouteEndpoint endpoint, Func<string, Guid> ids)

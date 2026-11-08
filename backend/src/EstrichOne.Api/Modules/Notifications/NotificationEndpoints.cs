@@ -179,7 +179,7 @@ internal static class NotificationEndpoints
         EstrichOneDbContext db, Guid userId, IUserPermissions permissions, CancellationToken cancellationToken)
     {
         var granted = await permissions.GetAsync(cancellationToken);
-        var admin = granted.Contains(Permissions.BackupManage) || granted.Contains(Permissions.SettingsManage);
+        var admin = granted.Contains(Permissions.BackupManage) || granted.Contains(Permissions.SettingsManage) || granted.Contains(Permissions.FeedbackManage);
         var saved = await db.Set<NotificationPreference>().AsNoTracking().Where(p => p.UserId == userId)
             .ToDictionaryAsync(p => p.Event, p => p.Delivery, cancellationToken);
         var items = NotificationEvents.All.Where(e => admin || !e.AdminOnly)

@@ -105,6 +105,8 @@ public static class NotificationEvents
     public const string PlanChanged = "planning.changed";
     public const string AbsenceDecided = "absence.decided";
     public const string TicketUpdated = "ticket.updated";
+    public const string FeedbackSubmitted = "feedback.submitted";
+    public const string FeedbackUpdated = "feedback.updated";
     public const string ChatMessage = "chat.message";
     public const string OfficeMessage = "office.message";
     public const string MaintenanceAnnounced = "system.maintenance";
@@ -134,6 +136,8 @@ public static class NotificationEvents
         new(PlanChanged, "Planung", "Planänderung für mich", "Nach der Freigabe haben sich Ihre Einsätze geändert."),
         new(AbsenceDecided, "Personal", "Urlaubsantrag genehmigt oder abgelehnt", "Ihr Urlaubsantrag wurde entschieden."),
         new(TicketUpdated, "Support", "Supportticket", "Antwort oder Statusänderung an Ihrem Ticket."),
+        new(FeedbackUpdated, "Support", "Meine Meldung (Fehler oder Wunsch)", "Antwort der IT oder Statusänderung an Ihrer Fehlermeldung bzw. Ihrem Funktionswunsch."),
+        new(FeedbackSubmitted, "Support", "Neue Fehlermeldung oder neuer Funktionswunsch", "Für die IT: neue Meldungen und Rückmeldungen der Einreicher.", AdminOnly: true),
         new(ChatMessage, "Chat", "Neue Chatnachricht", "Neue Nachricht in einer Unterhaltung (stumm geschaltete Unterhaltungen ausgenommen)."),
         new(OfficeMessage, "Büro", "Nachricht aus dem Büro", "Vom Büro gesendete Nachrichten.", Mandatory: true),
         new(MaintenanceAnnounced, "System", "Wartung angekündigt", "Eine Wartung wurde geplant oder beginnt.", Mandatory: true),

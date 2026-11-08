@@ -8,6 +8,7 @@ using EstrichOne.Api.Modules.Chat;
 using EstrichOne.Api.Modules.Contacts;
 using EstrichOne.Api.Modules.Devices;
 using EstrichOne.Api.Modules.Documentation;
+using EstrichOne.Api.Modules.Feedback;
 using EstrichOne.Api.Modules.Helpdesk;
 using EstrichOne.Api.Modules.Identity;
 using EstrichOne.Api.Modules.Mail;
@@ -38,6 +39,7 @@ public static class ModuleCatalog
         new DocumentationModule(),
         new WorkModule(),
         new HelpdeskModule(),
+        new FeedbackModule(),
         new PlanningModule(),
         new CallsModule(),
         new MaterialsModule(),

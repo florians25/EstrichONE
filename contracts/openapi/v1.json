@@ -7963,6 +7963,369 @@
         ]
       }
     },
+    "/api/v1/feedback": {
+      "post": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Fehler melden oder Funktion wünschen (jeder angemeldete Benutzer; idempotent über die ID)",
+        "operationId": "CreateFeedback",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateFeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Alle Meldungen für die IT – Filter Art, Status (open, closed, all oder ein Status), Bereich, Priorität, Suche; mit Zählern",
+        "operationId": "ListFeedback",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "area",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackListResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/feedback/mine": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Eigene Meldungen mit Status",
+        "operationId": "ListMyFeedback",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/FeedbackSummary"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/feedback/{id}": {
+      "get": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Meldung mit Verlauf (interne Notizen nur für die IT); fremde Meldungen: 404",
+        "operationId": "GetFeedback",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "patch": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Status, Priorität, Zuständigkeit, Duplikat-Verweis, Art und Bereich setzen",
+        "operationId": "UpdateFeedback",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateFeedbackRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/feedback/{id}/comments": {
+      "post": {
+        "tags": [
+          "Feedback"
+        ],
+        "summary": "Antwort (für den Einreicher sichtbar) oder interne Notiz der IT",
+        "operationId": "AddFeedbackComment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AddFeedbackCommentRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/FeedbackDetail"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/planning/print.pdf": {
       "get": {
         "tags": [
@@ -18792,6 +19155,35 @@
           }
         }
       },
+      "AddFeedbackCommentRequest": {
+        "required": [
+          "text",
+          "isInternal"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isInternal": {
+            "type": "boolean"
+          },
+          "attachmentFileIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "AddressCheck": {
         "required": [
           "configuredUrl",
@@ -24227,6 +24619,117 @@
           }
         }
       },
+      "CreateFeedbackRequest": {
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "description",
+          "area",
+          "stepsToReproduce",
+          "expectedResult",
+          "actualResult",
+          "frequency",
+          "problem",
+          "desiredSolution",
+          "impact",
+          "context",
+          "attachmentFileIds"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FeedbackKind"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "area": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "stepsToReproduce": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedResult": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actualResult": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frequency": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FeedbackFrequency"
+              }
+            ]
+          },
+          "problem": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "desiredSolution": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "impact": {
+            "$ref": "#/components/schemas/FeedbackImpact"
+          },
+          "context": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FeedbackContext"
+              }
+            ]
+          },
+          "attachmentFileIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "CreateGroupChatRequest": {
         "required": [
           "title"
@@ -26832,6 +27335,490 @@
           },
           "qualification": {
             "$ref": "#/components/schemas/QualificationView"
+          }
+        }
+      },
+      "FeedbackAttachment": {
+        "required": [
+          "id",
+          "name",
+          "contentType",
+          "sizeBytes"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "contentType": {
+            "type": "string"
+          },
+          "sizeBytes": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "FeedbackContext": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pageTitle": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "browser": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userAgent": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "platform": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "screen": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "viewport": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "pixelRatio": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "appVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "language": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "timeZone": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "FeedbackCounts": {
+        "required": [
+          "total",
+          "open",
+          "new",
+          "inReview",
+          "planned",
+          "inProgress",
+          "done",
+          "rejected",
+          "duplicate",
+          "openBugs",
+          "openFeatures"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "open": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "new": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inReview": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "planned": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inProgress": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "done": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "rejected": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "duplicate": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "openBugs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "openFeatures": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "FeedbackDetail": {
+        "required": [
+          "summary",
+          "description",
+          "stepsToReproduce",
+          "expectedResult",
+          "actualResult",
+          "frequency",
+          "problem",
+          "desiredSolution",
+          "context",
+          "attachments",
+          "timeline"
+        ],
+        "type": "object",
+        "properties": {
+          "summary": {
+            "$ref": "#/components/schemas/FeedbackSummary"
+          },
+          "description": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stepsToReproduce": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expectedResult": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "actualResult": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "frequency": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FeedbackFrequency"
+              }
+            ]
+          },
+          "problem": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "desiredSolution": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "context": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FeedbackContext"
+              }
+            ]
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackAttachment"
+            }
+          },
+          "timeline": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackTimelineItem"
+            }
+          }
+        }
+      },
+      "FeedbackFrequency": {
+        "enum": [
+          "once",
+          "sometimes",
+          "always",
+          null
+        ]
+      },
+      "FeedbackImpact": {
+        "enum": [
+          "low",
+          "medium",
+          "high"
+        ]
+      },
+      "FeedbackKind": {
+        "enum": [
+          "bug",
+          "feature"
+        ]
+      },
+      "FeedbackListResponse": {
+        "required": [
+          "items",
+          "counts",
+          "areas"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackSummary"
+            }
+          },
+          "counts": {
+            "$ref": "#/components/schemas/FeedbackCounts"
+          },
+          "areas": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "FeedbackPriority": {
+        "enum": [
+          "low",
+          "normal",
+          "high",
+          "urgent"
+        ]
+      },
+      "FeedbackStatus": {
+        "enum": [
+          "new",
+          "inReview",
+          "planned",
+          "inProgress",
+          "done",
+          "rejected",
+          "duplicate"
+        ]
+      },
+      "FeedbackSummary": {
+        "required": [
+          "id",
+          "number",
+          "kind",
+          "title",
+          "area",
+          "status",
+          "priority",
+          "impact",
+          "reporterUserId",
+          "reporterName",
+          "assigneeUserId",
+          "assigneeName",
+          "duplicateOfId",
+          "duplicateOfNumber",
+          "attachmentCount",
+          "createdAt",
+          "lastActivityAt",
+          "closedAt",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "number": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/FeedbackKind"
+          },
+          "title": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/FeedbackStatus"
+          },
+          "priority": {
+            "$ref": "#/components/schemas/FeedbackPriority"
+          },
+          "impact": {
+            "$ref": "#/components/schemas/FeedbackImpact"
+          },
+          "reporterUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "reporterName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assigneeUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "assigneeName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "duplicateOfId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "duplicateOfNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "attachmentCount": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "lastActivityAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "closedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "FeedbackTimelineItem": {
+        "required": [
+          "id",
+          "at",
+          "kind",
+          "actorUserId",
+          "actorName",
+          "summary",
+          "text",
+          "isInternal",
+          "isReporter",
+          "attachments"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "actorUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "actorName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "summary": {
+            "type": "string"
+          },
+          "text": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "isInternal": {
+            "type": "boolean"
+          },
+          "isReporter": {
+            "type": "boolean"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/FeedbackAttachment"
+            }
           }
         }
       },
@@ -35541,6 +36528,74 @@
           }
         }
       },
+      "UpdateFeedbackRequest": {
+        "required": [
+          "status",
+          "priority",
+          "assigneeUserId",
+          "unassign",
+          "duplicateOfNumber",
+          "kind",
+          "area"
+        ],
+        "type": "object",
+        "properties": {
+          "status": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FeedbackStatus"
+              }
+            ]
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FeedbackPriority"
+              }
+            ]
+          },
+          "assigneeUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "unassign": {
+            "type": "boolean"
+          },
+          "duplicateOfNumber": {
+            "maxLength": 20,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/FeedbackKind"
+              }
+            ]
+          },
+          "area": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "UpdateFileDetailsRequest": {
         "required": [
           "originalName",
@@ -36598,6 +37653,9 @@
     },
     {
       "name": "Helpdesk"
+    },
+    {
+      "name": "Feedback"
     },
     {
       "name": "Planung"
