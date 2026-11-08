@@ -101,6 +101,9 @@ dependencies {
     implementation(libs.camera.camera2)
     implementation(libs.camera.lifecycle)
     implementation(libs.camera.view)
+    implementation(libs.media3.transformer)
+    implementation(libs.media3.effect)
+    implementation(libs.media3.common)
     implementation(libs.biometric)
     // BiometricPrompt bringt eine alte Fragment-Version mit; ActivityResult-APIs brauchen mindestens 1.3.
     implementation(libs.fragment)

@@ -33,7 +33,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
@@ -42,10 +41,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
+import androidx.compose.material.icons.filled.PictureAsPdf
 import androidx.compose.material.icons.filled.Thermostat
 import androidx.compose.material.icons.filled.UploadFile
 import androidx.compose.material.icons.filled.Videocam
@@ -57,19 +58,21 @@ import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.automirrored.outlined.StickyNote2
 import androidx.compose.material.icons.outlined.VerifiedUser
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledIconButton
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -95,8 +98,11 @@ import androidx.core.content.ContextCompat
 import de.estrichone.android.Session
 import de.estrichone.android.support.Images
 import de.estrichone.android.support.Links
+import de.estrichone.android.support.Videos
 import de.estrichone.core.Bauakte
 import de.estrichone.core.Dates
+import de.estrichone.core.CameraShots
+import de.estrichone.core.VideoTarget
 import de.estrichone.core.DocumentCategory
 import de.estrichone.core.WorkItemKind
 import de.estrichone.core.order
@@ -250,9 +256,8 @@ fun GalleryImport(bauakteId: String, onDone: () -> Unit) {
     val scope = rememberCoroutineScope()
     val launcher = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia(20)) { uris ->
         scope.launch {
-            val count = withContext(Dispatchers.IO) {
-                uris.count { uri -> importMedia(context, session, bauakteId, uri) }
-            }
+            var count = 0
+            for (uri in uris) if (importMedia(context, session, bauakteId, uri)) count++
             if (count > 0) model.message(if (count == 1) "1 Foto gespeichert." else "$count Fotos gespeichert.")
             onDone()
         }
@@ -260,28 +265,52 @@ fun GalleryImport(bauakteId: String, onDone: () -> Unit) {
     LaunchedEffect(Unit) { launcher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageAndVideo)) }
 }
 
-private fun importMedia(context: android.content.Context, session: Session, bauakteId: String, uri: Uri): Boolean {
+private suspend fun importMedia(context: android.content.Context, session: Session, bauakteId: String, uri: Uri): Boolean {
     val type = context.contentResolver.getType(uri) ?: "image/jpeg"
-    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return false
-    return if (type.startsWith("video/")) {
-        session.service.addFile(bauakteId, "video", bytes, "Video.mp4", type) != ""
-    } else {
+    if (type.startsWith("video/")) {
+        // Videos wie Aufnahmen auf 720p/2 Mbit/s verkleinern; gelingt das nicht, das Original übernehmen.
+        val small = Videos.compress(context.applicationContext, uri)
+        val bytes = withContext(Dispatchers.IO) {
+            small?.readBytes() ?: context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+        } ?: return false
+        small?.delete()
+        return withContext(Dispatchers.IO) { session.service.addFile(bauakteId, "video", bytes, "Video.mp4", if (small != null) "video/mp4" else type) != "" }
+    }
+    return withContext(Dispatchers.IO) {
+        val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: return@withContext false
         session.service.addFile(bauakteId, "photo", Images.preparePhoto(bytes), "Foto.jpg", "image/jpeg") != ""
     }
 }
 
-/** Video mit der Kamera-App des Geräts aufnehmen. */
+/** Kamera-App mit Höchstdauer (2 Minuten), wie auf iOS. */
+private class CaptureLimitedVideo : ActivityResultContracts.CaptureVideo() {
+    override fun createIntent(context: android.content.Context, input: Uri) =
+        super.createIntent(context, input).putExtra(android.provider.MediaStore.EXTRA_DURATION_LIMIT, (VideoTarget.MAX_DURATION_MS / 1000).toInt())
+}
+
+/**
+ * Video mit der Kamera-App des Geräts aufnehmen, danach auf 720p/2 Mbit/s verkleinern (Videos.compress) und speichern.
+ * Das Verkleinern läuft im Bereich der Sitzung weiter, auch wenn die Ansicht schon geschlossen ist.
+ */
 @Composable
 fun VideoCapture(bauakteId: String, onDone: () -> Unit) {
     val session = LocalSession.current
     val model = LocalModel.current
     val context = LocalContext.current
     val target = remember { Links.captureUri(context, "video-${System.currentTimeMillis()}.mp4") }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.CaptureVideo()) { ok ->
-        if (ok && target.first.length() > 0) {
-            session.service.addFile(bauakteId, "video", target.first.readBytes(), "Video.mp4", "video/mp4")
-            target.first.delete()
-            model.message("Video gespeichert – wird übertragen.")
+    val launcher = rememberLauncherForActivityResult(CaptureLimitedVideo()) { ok ->
+        val source = target.first
+        if (ok && source.length() > 0) {
+            model.message("Video wird für die Übertragung verkleinert …")
+            session.scope.launch {
+                val small = Videos.compress(context.applicationContext, Uri.fromFile(source))
+                withContext(Dispatchers.IO) {
+                    session.service.addFile(bauakteId, "video", (small ?: source).readBytes(), "Video.mp4", "video/mp4")
+                    small?.delete()
+                    source.delete()
+                }
+                model.message("Video gespeichert – wird übertragen.")
+            }
         }
         onDone()
     }
@@ -343,6 +372,9 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
     val shots = remember { mutableStateListOf<Bitmap>() }
     val pages = remember { mutableStateListOf<ByteArray>() }
     var busy by remember { mutableStateOf(false) }
+    // Ausgelöste, noch nicht gespeicherte Fotos: „Fertig“ schließt erst, wenn sie gespeichert sind.
+    var pendingShots by remember { mutableStateOf(CameraShots()) }
+    var savedCount by remember { mutableIntStateOf(0) }
     var naming by remember { mutableStateOf(false) }
     var gallery by remember { mutableStateOf(false) }
     val bauakte = remember { session.service.bauakte(bauakteId) }
@@ -350,27 +382,55 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
     LaunchedEffect(Unit) { if (!granted) permission.launch(Manifest.permission.CAMERA) }
 
     fun shoot() {
-        if (busy || !granted) return
+        if (busy || !granted || pendingShots.closing) return
         busy = true
+        pendingShots = pendingShots.pressed()
         capture.takePicture(ContextCompat.getMainExecutor(context), object : ImageCapture.OnImageCapturedCallback() {
             override fun onCaptureSuccess(image: ImageProxy) {
                 val buffer = image.planes[0].buffer
                 val raw = ByteArray(buffer.remaining()).also { buffer.get(it) }
                 val rotation = image.imageInfo.rotationDegrees
                 image.close()
-                scope.launch {
-                    val jpeg = withContext(Dispatchers.Default) { Images.preparePhoto(raw, rotation) }
-                    Images.decode(jpeg, 200)?.let { shots.add(0, it) }
-                    if (scan) pages.add(jpeg) else withContext(Dispatchers.IO) { session.service.addFile(bauakteId, "photo", jpeg, "Foto.jpg", "image/jpeg") }
-                    busy = false
+                // Im Bereich der Sitzung, nicht der Ansicht: Wer direkt nach dem Auslösen „Fertig“ oder „Zurück“ tippt,
+                // verliert das Foto nicht (vorher brach das Schließen das Verkleinern und Speichern ab).
+                session.scope.launch {
+                    try {
+                        val jpeg = withContext(Dispatchers.Default) { Images.preparePhoto(raw, rotation) }
+                        Images.decode(jpeg, 200)?.let { shots.add(0, it) }
+                        if (scan) pages.add(jpeg) else withContext(Dispatchers.IO) { session.service.addFile(bauakteId, "photo", jpeg, "Foto.jpg", "image/jpeg") }
+                        savedCount++
+                    } catch (e: Exception) {
+                        model.message("Das Foto konnte nicht gespeichert werden: ${e.message}")
+                    } finally {
+                        busy = false
+                        pendingShots = pendingShots.settled()
+                    }
                 }
             }
 
             override fun onError(exception: ImageCaptureException) {
                 busy = false
+                pendingShots = pendingShots.settled()
                 model.message("Die Aufnahme ist fehlgeschlagen: ${exception.message}")
             }
         })
+    }
+
+    // „Fertig“: erst schließen, wenn alle ausgelösten Fotos gespeichert sind (höchstens 10 s warten).
+    LaunchedEffect(pendingShots) {
+        if (pendingShots.canClose) {
+            if (scan && pages.isNotEmpty()) {
+                // PDF benennen; wird das Blatt verworfen, geht es mit der Kamera weiter.
+                pendingShots = CameraShots()
+                naming = true
+            } else {
+                pendingShots = pendingShots.closed()
+                nav.back()
+            }
+        } else if (pendingShots.closing && pendingShots.pending > 0) {
+            kotlinx.coroutines.delay(10_000)
+            pendingShots = pendingShots.forced()
+        }
     }
 
     DisposableEffect(Unit) {
@@ -405,7 +465,7 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
                 Text(if (scan) "Dokument scannen" else "Fotos", color = Color.White, style = MaterialTheme.typography.titleMedium)
                 Text(bauakte?.title ?: "", color = Color.White.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
             }
-            Text(if (scan) "${pages.size} Seiten" else "${shots.size} Fotos", color = Color.White, style = MaterialTheme.typography.labelLarge,
+            Text(if (scan) "${pages.size} Seiten" else "$savedCount Fotos", color = Color.White, style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.clip(RoundedCornerShape(50)).background(Color.Black.copy(alpha = 0.5f)).padding(horizontal = 12.dp, vertical = 6.dp))
         }
         Column(Modifier.align(Alignment.BottomCenter).fillMaxWidth().background(Color.Black.copy(alpha = 0.55f))
@@ -416,18 +476,20 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
                 }
             }
             Row(Modifier.fillMaxWidth().padding(top = 12.dp, start = 24.dp, end = 24.dp), verticalAlignment = Alignment.CenterVertically) {
-                TextButton(onClick = { gallery = true }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.PhotoLibrary, null, tint = Color.White)
-                    Spacer(Modifier.width(6.dp))
-                    Text("Galerie", color = Color.White)
+                Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
+                    IconButton(onClick = { gallery = true }, modifier = Modifier.size(56.dp).clip(CircleShape).background(Color.White.copy(alpha = 0.18f))) {
+                        Icon(Icons.Filled.PhotoLibrary, "Aus Galerie wählen", tint = Color.White)
+                    }
                 }
                 Box(Modifier.size(78.dp).clip(CircleShape).border(4.dp, Color.White, CircleShape).padding(8.dp).clip(CircleShape)
                     .background(if (busy) Color.Gray else Color.White).clickable(enabled = granted) { shoot() }
                     .semantics { contentDescription = "Auslösen" })
                 Box(Modifier.weight(1f), contentAlignment = Alignment.CenterEnd) {
-                    Button(onClick = {
-                        if (scan && pages.isNotEmpty()) naming = true else nav.back()
-                    }, colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)) { Text(if (scan) "PDF" else "Fertig") }
+                    FilledIconButton(onClick = { pendingShots = pendingShots.closeRequested() }, enabled = !pendingShots.closing, modifier = Modifier.size(56.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = MaterialTheme.colorScheme.primary)) {
+                        if (pendingShots.closing) CircularProgressIndicator(Modifier.size(22.dp), color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp)
+                        else Icon(if (scan) Icons.Filled.PictureAsPdf else Icons.Filled.Check, if (scan) "Als PDF ablegen" else "Fertig")
+                    }
                 }
             }
             Text("Tipp: Auch die Lautstärketaste löst aus.", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall,
