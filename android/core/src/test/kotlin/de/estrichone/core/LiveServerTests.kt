@@ -98,6 +98,57 @@ class LiveServerTests {
     }
 
     @Test
+    @DisplayName("Echter Server: Offline erfassen, synchronisieren (Push, Foto-Upload, Pull) und auf zweitem Gerät sehen")
+    fun liveOfflineSync() = runBlocking {
+        assumeTrue(server != null, "ESTRICHONE_LIVE_SERVER nicht gesetzt")
+        val api = EstrichOneApi(server!!, MemorySessionStore(), SoftwareDeviceKeys())
+        api.signIn(login, password, "Testtelefon")
+        api.bindDevice(DeviceKind.Personal, null, phone)
+        val store = LocalStore(MemoryStorage())
+        val files = MemoryFileVault()
+        val service = BauakteService(store, files) { api.user?.id }
+        val engine = SyncEngine(store, ApiSyncTransport(api), files)
+        assertEquals(SyncOutcome.Completed, engine.synchronize(includeScope = true))
+
+        val id = service.createBauakte("Android-Sync ${System.nanoTime()}", "Ahornweg 3", "84028", "Landshut", BauakteTemplate.NewBuild,
+            newCustomer = NewCustomer("Familie Android", phone = "0171 1"))
+        service.addNote(id, "Schlüssel beim Nachbarn", pinned = true)
+        service.addTask(id, WorkItemKind.Defect, "Riss im Flur")
+        service.addDiary(id, java.time.LocalDate.now(), "Randdämmstreifen gesetzt", DiaryWeather.Sunny, 12, 3)
+        service.saveRoom(id, null, "Wohnen", "EG", 41.2, 65, 40, true, RoomStatus.Planned, null)
+        val image = java.awt.image.BufferedImage(64, 48, java.awt.image.BufferedImage.TYPE_INT_RGB)
+        val jpeg = java.io.ByteArrayOutputStream().also { javax.imageio.ImageIO.write(image, "jpg", it) }.toByteArray()
+        val fileId = service.addFile(id, "photo", jpeg, "Foto.jpg", "image/jpeg", caption = "Einfahrt")
+        service.updateBauakte(id, mapOf("city" to "Ergolding"))
+
+        assertEquals(SyncOutcome.Completed, engine.synchronize())
+        assertTrue(store.rejected().isEmpty(), store.rejected().joinToString { "${it.type}: ${it.errorMessage}" })
+        assertTrue(store.summary().isSettled)
+        val synced = service.bauakte(id)!!
+        assertNotNull(synced.number)
+        assertEquals("Ergolding", synced.city)
+        assertEquals("Familie Android", service.contact(synced.customerId)!!.name)
+        assertTrue(service.file(fileId)!!.isStoredOnServer)
+
+        // Zweites Gerät desselben Benutzers: Erstabgleich bringt alles mit.
+        val other = EstrichOneApi(server, MemorySessionStore(), SoftwareDeviceKeys())
+        other.signIn(login, password, "Zweitgerät")
+        other.bindDevice(DeviceKind.Personal, null, phone)
+        val otherStore = LocalStore(MemoryStorage())
+        val otherService = BauakteService(otherStore, MemoryFileVault()) { other.user?.id }
+        assertEquals(SyncOutcome.Completed, SyncEngine(otherStore, ApiSyncTransport(other), MemoryFileVault()).synchronize(includeScope = true))
+        assertEquals(synced.number, otherService.bauakte(id)!!.number)
+        assertTrue(otherService.notes(id).single().isPinned)
+        assertEquals("Riss im Flur", otherService.tasks(id).single().title)
+        assertEquals(1, otherService.diary(id).size)
+        assertEquals("Wohnen", otherService.rooms(id).single().name)
+        assertEquals("Einfahrt", otherService.photos(id).single().caption)
+        assertTrue(other.bytes("files/$fileId/content")!!.isNotEmpty())
+        assertNotNull(other.systemNotices())
+        assertNotNull(other.notifications())
+    }
+
+    @Test
     @DisplayName("Echter Server: falsches Passwort und Problem melden")
     fun liveWrongPasswordAndReportProblem() = runBlocking {
         assumeTrue(server != null, "ESTRICHONE_LIVE_SERVER nicht gesetzt")

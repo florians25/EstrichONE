@@ -59,4 +59,4 @@ export ESTRICHONE_LIVE_SERVER="http://localhost:$PORT" ESTRICHONE_LIVE_LOGIN=adm
 $GRADLE :core:test --rerun-tasks --no-daemon 2>&1 | tee "$WORK/gradle.log"
 test "${PIPESTATUS[0]}" -eq 0
 # Die Live-Tests dürfen nicht stillschweigend übersprungen worden sein.
-test "$(grep -c 'Echter Server.*PASSED' "$WORK/gradle.log")" -eq 3
+test "$(grep -c 'Echter Server.*PASSED' "$WORK/gradle.log")" -eq 4

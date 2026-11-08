@@ -7,6 +7,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonElement
 import kotlinx.serialization.serializer
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
@@ -19,7 +20,13 @@ import java.util.UUID
 import java.util.concurrent.TimeUnit
 
 /** Fehler der API mit verständlicher Meldung und stabilem [code]. */
-class ApiException(val status: Int, val code: String?, message: String) : Exception(message)
+class ApiException(val status: Int, val code: String?, message: String) : Exception(message) {
+    /** Kein Netz bzw. Server nicht erreichbar. */
+    val isOffline: Boolean get() = status == 0
+
+    /** Wartung des Servers (503 `MAINTENANCE`). */
+    val isMaintenance: Boolean get() = status == 503 && code == "MAINTENANCE"
+}
 
 /** Dauerhafte Ablage der Anmeldung (Android: verschlüsselt, Schlüssel im Keystore). */
 interface SessionStore {
@@ -211,33 +218,70 @@ class EstrichOneApi(
 
     // Transport
 
-    private suspend inline fun <reified T> send(
+    /** Datei bzw. Inhalt (Fotos, PDF) als Bytes; `null` bei 404. */
+    suspend fun bytes(path: String, query: Map<String, String?> = emptyMap()): ByteArray? {
+        val response = authorized { token -> executeBytes("GET", path, null, null, token, query, emptyMap()) }
+        if (response.status == 404) return null
+        if (response.status !in 200..299) throw problem(response.status, String(response.body, Charsets.UTF_8))
+        return response.body
+    }
+
+    /** Rohdaten hochladen (Datei-Upload in Teilen, Chat-Anhänge); Antwort als JSON-Text. */
+    suspend fun upload(
+        method: String, path: String, content: ByteArray, contentType: String, headers: Map<String, String> = emptyMap(),
+        query: Map<String, String?> = emptyMap(),
+    ): String {
+        val response = authorized { token -> executeBytes(method, path, content, contentType, token, query, headers) }
+        val text = String(response.body, Charsets.UTF_8)
+        if (response.status !in 200..299) throw problem(response.status, text)
+        return text
+    }
+
+    @PublishedApi
+    internal suspend inline fun <reified T> send(
         method: String, path: String, body: Any?, authenticated: Boolean = true, query: Map<String, String?> = emptyMap(),
     ): T = send(method, path, body, serializer<T>(), authenticated, query)
 
     @Suppress("UNCHECKED_CAST")
-    private suspend fun <T> send(
+    @PublishedApi
+    internal suspend fun <T> send(
         method: String, path: String, body: Any?, result: KSerializer<T>, authenticated: Boolean, query: Map<String, String?>,
     ): T {
-        if (authenticated && accessToken == null && !refresh(null)) {
-            throw ApiException(401, "UNAUTHORIZED", "Bitte erneut anmelden.")
+        val payload = body?.let { if (it is JsonElement) json.encodeToString(JsonElement.serializer(), it) else json.encodeToString(serializerFor(it), it) }
+            ?.toByteArray(Charsets.UTF_8)
+        val response = if (authenticated) {
+            authorized { token -> executeBytes(method, path, payload, jsonType.toString(), token, query, emptyMap()) }
+        } else {
+            executeBytes(method, path, payload, jsonType.toString(), null, query, emptyMap())
         }
-
-        val used = accessToken
-        var response = execute(method, path, body, if (authenticated) used else null, query)
-        if (authenticated && response.status == 401 && refresh(used)) {
-            response = execute(method, path, body, accessToken, query)
-        }
-
+        val text = String(response.body, Charsets.UTF_8)
         if (response.status !in 200..299) {
-            throw problem(response.status, response.text)
+            throw problem(response.status, text)
         }
+        lastContact = System.currentTimeMillis()
 
-        if (response.status == 204 || response.text.isBlank()) {
+        if (response.status == 204 || text.isBlank() || result.descriptor.serialName == "kotlin.Unit") {
             return Unit as T
         }
 
-        return json.decodeFromString(result, response.text)
+        return json.decodeFromString(result, text)
+    }
+
+    /** Zeitpunkt der letzten erfolgreichen Antwort des Servers (für „Nur Ansicht“ bei längerem Ausfall). */
+    @Volatile
+    var lastContact: Long = 0L
+        private set
+
+    private suspend fun authorized(call: suspend (String?) -> RawResponse): RawResponse {
+        if (accessToken == null && !refresh(null)) {
+            throw ApiException(401, "UNAUTHORIZED", "Bitte erneut anmelden.")
+        }
+        val used = accessToken
+        var response = call(used)
+        if (response.status == 401 && refresh(used)) {
+            response = call(accessToken)
+        }
+        return response
     }
 
     /** Erneuert einmal; parallele Aufrufer warten auf denselben Refresh. */
@@ -245,47 +289,63 @@ class EstrichOneApi(
         if (failedToken != null && accessToken != failedToken) return@withLock true
         val refreshToken = store.refreshToken ?: return@withLock false
         val signature = if (store.deviceId != null) DeviceProof.refresh(refreshToken, keys) else null
-        val response = execute("POST", "auth/refresh", RefreshRequest(refreshToken, signature), null, emptyMap())
+        val body = json.encodeToString(RefreshRequest.serializer(), RefreshRequest(refreshToken, signature)).toByteArray(Charsets.UTF_8)
+        val response = executeBytes("POST", "auth/refresh", body, jsonType.toString(), null, emptyMap(), emptyMap())
+        val text = String(response.body, Charsets.UTF_8)
         if (response.status in 200..299) {
-            val tokens = json.decodeFromString(RefreshResponse.serializer(), response.text)
+            val tokens = json.decodeFromString(RefreshResponse.serializer(), text)
             accessToken = tokens.accessToken
             store.refreshToken = tokens.refreshToken
+            lastContact = System.currentTimeMillis()
             true
         } else {
             if (response.status in 400..499) {
                 accessToken = null
                 store.refreshToken = null
+                sessionEnded?.invoke(problem(response.status, text))
             }
-            if (response.status == 401 || response.status == 403) false else throw problem(response.status, response.text)
+            if (response.status == 401 || response.status == 403) false else throw problem(response.status, text)
         }
     }
 
-    private class RawResponse(val status: Int, val text: String)
+    /** Aufgerufen, wenn der Server die Sitzung beendet (Gerät gesperrt/entfernt, Passwort zurückgesetzt). */
+    @Volatile
+    var sessionEnded: ((ApiException) -> Unit)? = null
 
-    private suspend fun execute(method: String, path: String, body: Any?, token: String?, query: Map<String, String?>): RawResponse =
-        withContext(Dispatchers.IO) {
-            val url = api.resolve(path)!!.newBuilder().apply { query.forEach { (k, v) -> if (v != null) addQueryParameter(k, v) } }.build()
-            val payload = body?.let { json.encodeToString(serializerFor(it), it).toRequestBody(jsonType) }
-                ?: if (method == "GET") null else "".toRequestBody(jsonType)
-            val request = Request.Builder().url(url).method(method, payload).header("Accept", "application/json")
-                .apply { if (token != null) header("Authorization", "Bearer $token") }.build()
-            try {
-                http.newCall(request).execute().use { RawResponse(it.code, it.body.string()) }
-            } catch (exception: IOException) {
-                throw ApiException(0, "NETWORK", "Der Server ist nicht erreichbar. Bitte Netzwerk und Serveradresse prüfen.")
-            }
+    private class RawResponse(val status: Int, val body: ByteArray)
+
+    private suspend fun executeBytes(
+        method: String, path: String, body: ByteArray?, contentType: String?, token: String?, query: Map<String, String?>,
+        headers: Map<String, String>,
+    ): RawResponse = withContext(Dispatchers.IO) {
+        val url = api.resolve(path)!!.newBuilder().apply { query.forEach { (k, v) -> if (v != null) addQueryParameter(k, v) } }.build()
+        val type = (contentType ?: jsonType.toString()).toMediaType()
+        val payload = body?.toRequestBody(type) ?: if (method == "GET" || method == "DELETE") null else ByteArray(0).toRequestBody(type)
+        val request = Request.Builder().url(url).method(method, payload).header("Accept", "application/json")
+            .apply {
+                if (token != null) header("Authorization", "Bearer $token")
+                headers.forEach { (k, v) -> header(k, v) }
+            }.build()
+        try {
+            http.newCall(request).execute().use { RawResponse(it.code, it.body.bytes()) }
+        } catch (exception: IOException) {
+            throw ApiException(0, "NETWORK", "Der Server ist nicht erreichbar. Bitte Netzwerk und Serveradresse prüfen.")
         }
+    }
 
     @Suppress("UNCHECKED_CAST")
     private fun serializerFor(value: Any): KSerializer<Any> = serializer(value::class.java) as KSerializer<Any>
 
     private fun problem(status: Int, text: String): ApiException {
         val parsed = runCatching { json.decodeFromString(Problem.serializer(), text) }.getOrNull()
+        if (status == 503 && parsed?.code == null) {
+            return ApiException(status, "MAINTENANCE", parsed?.detail ?: "Der Server wird gerade gewartet.")
+        }
         return ApiException(status, parsed?.code, parsed?.detail ?: parsed?.title ?: "Der Server meldet einen Fehler ($status).")
     }
 
     companion object {
-        val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true }
+        val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true; coerceInputValues = true }
         private val jsonType = "application/json".toMediaType()
 
         fun newId(): String = UUID.randomUUID().toString()
