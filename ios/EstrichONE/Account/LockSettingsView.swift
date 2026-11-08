@@ -56,7 +56,7 @@ struct LockSettingsView: View {
 
     private var footer: String {
         if biometry == .none {
-            return "Auf diesem Gerät ist weder Face ID noch Touch ID eingerichtet – entsperrt wird mit dem Gerätecode."
+            return "Auf diesem Gerät ist weder Face ID noch Touch ID eingerichtet. Entsperrt wird mit dem Gerätecode."
         }
         let name = biometry.name
         let mode = model.lockPreferences.biometricUnlock

@@ -11,7 +11,7 @@ struct MyWeekView: View {
         List {
             if let snapshot, !snapshot.isCurrent {
                 Section {
-                    Label("Ohne Verbindung – Stand \(snapshot.loadedAt.shortStamp)", systemImage: "icloud.slash")
+                    Label("Keine Verbindung, Stand \(snapshot.loadedAt.shortStamp)", systemImage: "icloud.slash")
                         .font(Typo.subhead)
                         .foregroundStyle(Theme.textSecondary)
                 }
@@ -87,7 +87,7 @@ struct MyTasksView: View {
     var body: some View {
         List {
             if loaded, items.isEmpty {
-                ContentUnavailableView("Keine offenen Aufgaben", systemImage: "checkmark.circle", description: Text("Alles erledigt."))
+                ContentUnavailableView("Keine offenen Aufgaben", systemImage: "checkmark.circle", description: Text("Offene Aufgaben und Mängel erscheinen hier."))
                     .listRowBackground(Color.clear)
             }
             let defects = items.filter { $0.kind == .defect }

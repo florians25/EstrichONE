@@ -330,7 +330,7 @@ struct CustomerChooser: View {
             if newCustomer != nil {
                 Text("Wird mit der Bauakte gespeichert und beim nächsten Abgleich übertragen. Die Kundennummer vergibt das Büro.")
             } else if customer == nil {
-                Text("Pflichtangabe. Gesucht wird auf dem Gerät und – mit Verbindung – auf dem Server.")
+                Text("Pflichtangabe. Gesucht wird auf dem Gerät und bei bestehender Verbindung auf dem Server.")
             }
         }
         .task { recent = (try? await model.active?.service?.recentCustomers()) ?? [] }

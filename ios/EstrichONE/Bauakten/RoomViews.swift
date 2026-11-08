@@ -89,7 +89,7 @@ struct RoomEditView: View {
             .confirmationDialog("Raum löschen?", isPresented: $confirmDelete, titleVisibility: .visible) {
                 Button("Löschen", role: .destructive) { Task { await delete() } }
             } message: {
-                Text("Der Raum wird aus der Bauakte entfernt – auch im Büro.")
+                Text("Der Raum wird aus der Bauakte entfernt, auch für das Büro.")
             }
             .sensoryFeedback(.error, trigger: error) { _, new in new != nil }
             .onAppear {

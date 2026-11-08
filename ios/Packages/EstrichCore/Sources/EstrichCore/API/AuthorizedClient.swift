@@ -50,7 +50,7 @@ public enum SessionEnd: Equatable, Sendable {
     public var message: String {
         switch self {
         case .signedOut: "Die Anmeldung auf diesem Gerät gilt nicht mehr. Bitte einmal mit Passwort anmelden."
-        case .expired: "Sie waren längere Zeit nicht angemeldet. Bitte einmal mit Passwort anmelden – danach genügt wieder Face ID bzw. der Gerätecode."
+        case .expired: "Sie waren längere Zeit nicht angemeldet. Bitte melden Sie sich einmal mit Passwort an. Danach genügt wieder Face ID oder der Gerätecode."
         case .passwordChanged: "Ihr Passwort wurde geändert. Bitte mit dem neuen Passwort anmelden."
         case .revoked: "Die Sitzung auf diesem Gerät wurde beendet (abgemeldet, z. B. im IT Center). Bitte erneut anmelden."
         case .reused: "Die Sitzung wurde aus Sicherheitsgründen beendet. Bitte erneut anmelden."

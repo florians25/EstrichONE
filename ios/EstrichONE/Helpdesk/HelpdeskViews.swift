@@ -188,7 +188,7 @@ struct TicketRow: View {
                     }
                 }
                 if showsReporter {
-                    Text([ticket.reporterDisplayName, ticket.category.title, ticket.assigneeName.map { "→ \($0)" } ?? "nicht zugewiesen"]
+                    Text([ticket.reporterDisplayName, ticket.category.title, ticket.assigneeName.map { "zugewiesen an \($0)" } ?? "nicht zugewiesen"]
                         .compactMap { $0 }.joined(separator: " · "))
                         .font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
                 }
@@ -255,7 +255,7 @@ struct TicketDetailView: View {
                                 .id(entry.id)
                         }
                         if detail.summary.status == .resolved, !isAgent {
-                            Button("Problem besteht weiter – wieder öffnen") { Task { await reopen() } }
+                            Button("Ticket wieder öffnen") { Task { await reopen() } }
                                 .estrichButton(.secondary, fullWidth: true)
                         }
                     } else if let error {
@@ -437,7 +437,7 @@ struct TicketDetailView: View {
             error = nil
             if let summary = detail?.summary { await TicketReadState.mark([summary], model: model) }
         } catch {
-            self.error = error == .offline ? "Keine Verbindung – Antwort bitte später senden." : (error.serverMessage ?? error.message)
+            self.error = error == .offline ? "Keine Verbindung. Bitte die Antwort später senden." : (error.serverMessage ?? error.message)
         }
     }
 

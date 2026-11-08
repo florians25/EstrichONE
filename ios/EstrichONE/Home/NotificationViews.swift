@@ -263,7 +263,7 @@ struct NotificationInboxView: View {
                 NoticeLine(tone: .warning, text: "Pushnachrichten aktiv, Registrierung bei Apple fehlgeschlagen: \(error)", symbol: "bell.badge")
             }
         case .denied:
-            NoticeLine(tone: .neutral, text: "Pushnachrichten sind ausgeschaltet – Benachrichtigungen stehen nur hier im Postfach.",
+            NoticeLine(tone: .neutral, text: "Pushnachrichten deaktiviert. Benachrichtigungen nur im Postfach.",
                        symbol: "bell.slash", actionTitle: "Einstellungen") {
                 if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
             }
@@ -350,7 +350,7 @@ struct NotificationInboxView: View {
             if error.status != 404 {
                 items.insert(removed, at: min(index, items.count))
                 if !removed.isRead { push.setUnread(push.unreadCount + 1) }
-                toast = error == .offline ? "Ohne Verbindung – nicht gelöscht" : (error.serverMessage ?? error.message)
+                toast = error == .offline ? "Nicht gelöscht, keine Verbindung" : (error.serverMessage ?? error.message)
             }
         }
     }

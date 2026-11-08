@@ -150,7 +150,7 @@ struct SchemaInspectionView: View {
                     for (index, field) in checkFields.prefix(3).enumerated() {
                         checks[field.key] = index == 2 ? .notOk : .ok
                     }
-                    if checkFields.count > 2 { remarks[checkFields[2].key] = "Druckprotokoll fehlt noch – Heizungsbauer angerufen." }
+                    if checkFields.count > 2 { remarks[checkFields[2].key] = "Druckprotokoll fehlt noch, Heizungsbauer informiert." }
                 }
             }
         }
@@ -172,7 +172,7 @@ struct SchemaInspectionView: View {
                 }
             }
             ProgressBar(value: checkFields.isEmpty ? 0 : Double(done) / Double(checkFields.count), tint: defects > 0 ? Theme.warning : Theme.accent)
-            Text(notRequired ? "Keine Erstbegehung notwendig – bitte begründen." : "\(done) von \(checkFields.count) Prüfpunkten bewertet")
+            Text(notRequired ? "Keine Erstbegehung notwendig. Bitte begründen." : "\(done) von \(checkFields.count) Prüfpunkten bewertet")
                 .font(Typo.meta)
                 .foregroundStyle(Theme.textSecondary)
         }
@@ -216,7 +216,7 @@ struct SchemaInspectionView: View {
             }
             if field.photos {
                 Button { capture(field.key) } label: {
-                    Label(photoCount == 0 ? "Foto zu diesem Punkt" : "\(photoCount) \(photoCount == 1 ? "Foto" : "Fotos") – weitere", systemImage: "camera")
+                    Label(photoCount == 0 ? "Foto zu diesem Punkt" : "\(photoCount) \(photoCount == 1 ? "Foto" : "Fotos") · weitere aufnehmen", systemImage: "camera")
                 }
                 .estrichButton(.secondary)
             }
@@ -230,7 +230,7 @@ struct SchemaInspectionView: View {
             FormSchema.Field(key: field.key, label: field.label, type: field.type, list: field.list, path: "project.\(field.key)",
                              required: field.required, unit: field.unit,
                              help: [field.help, field.target.map { _ in "wird in die Basisdaten übernommen" }].compactMap { $0 }
-                                .joined(separator: " – ").nilIfEmpty)
+                                .joined(separator: "; ").nilIfEmpty)
         }
         return FormSchema(key: "erstbegehung", version: 0, groups: [
             FormSchema.Group(key: group.key, label: separate ? "\(group.label) – Werte" : group.label, fields: mapped),

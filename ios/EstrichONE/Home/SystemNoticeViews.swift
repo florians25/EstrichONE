@@ -232,9 +232,8 @@ struct NoticeDetailSheet: View {
                     HStack(alignment: .center, spacing: Space.m) {
                         IconBadge(symbol: item.symbol, tint: item.tone.tint, background: item.tone.soft, size: 52)
                         VStack(alignment: .leading, spacing: 2) {
-                            Text((item.label == item.title ? "Systemhinweis" : item.label).uppercased())
+                            Text(item.label == item.title ? "Systemhinweis" : item.label)
                                 .font(Typo.labelStrong)
-                                .tracking(0.6)
                                 .foregroundStyle(item.tone.tint)
                             Text(item.title)
                                 .font(Typo.title)

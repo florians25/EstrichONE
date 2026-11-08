@@ -192,11 +192,11 @@ final class PushCenter {
         case .locked:
             pendingReplies[conversationId] = text
             content.title = "Antwort nicht gesendet"
-            content.body = "EstrichONE ist gesperrt. Tippen Sie hier – Ihr Text steht dann im Eingabefeld."
+            content.body = "EstrichONE ist gesperrt. Der Text bleibt als Entwurf in der Unterhaltung erhalten."
         case .failed:
             pendingReplies[conversationId] = text
             content.title = "Antwort nicht gesendet"
-            content.body = "Bitte öffnen Sie die Unterhaltung und senden Sie erneut."
+            content.body = "Der Text bleibt als Entwurf in der Unterhaltung erhalten."
         }
         try? await UNUserNotificationCenter.current().add(UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
     }

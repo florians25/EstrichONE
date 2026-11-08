@@ -390,7 +390,7 @@ struct BauakteDetailView: View {
             Card {
                 if items.isEmpty {
                     EmptyStateView(symbol: "list.bullet.rectangle", title: "Noch keine Angaben",
-                                   message: "Fläche, Estrichart, Dicke und Heizung – für Kolonne und Büro auf einen Blick.",
+                                   message: "Fläche, Estrichart, Dicke und Heizung der Baustelle für Kolonne und Büro.",
                                    actionTitle: "Angaben erfassen", actionSymbol: "pencil") { action = .project }
                 } else {
                     InfoGrid(items: Array(items.prefix(8)))
@@ -476,7 +476,7 @@ struct BauakteDetailView: View {
             if let updated = content.bauakte.updatedAt {
                 Text("Zuletzt geändert \(updated.formatted(.relative(presentation: .named)))")
             }
-            Text(content.bauakte.syncState == .synced ? "Auf dem Gerät gespeichert und übertragen" : "Auf dem Gerät gespeichert – wird übertragen")
+            Text(content.bauakte.syncState == .synced ? "Auf dem Gerät gespeichert und übertragen" : "Auf dem Gerät gespeichert, Übertragung ausstehend")
         }
         .font(Typo.meta)
         .foregroundStyle(Theme.textTertiary)
@@ -623,7 +623,7 @@ struct BauakteDetailView: View {
             }
         } catch {
             pdfMessage = error == .offline
-                ? "Das PDF erstellt der Server – bitte mit Verbindung erneut versuchen."
+                ? "Das PDF wird auf dem Server erstellt. Bitte mit Verbindung erneut versuchen."
                 : (error.status == 404 ? "Die Bauakte ist noch nicht übertragen. Bitte nach der Synchronisation erneut versuchen." : error.message)
         }
     }

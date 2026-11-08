@@ -32,7 +32,7 @@ struct ChatTests {
         #expect(message.location?.mapsURL?.absoluteString.contains("48.37,10.89") == true)
         let photoOnly = ChatMessage(id: UUID(), conversationId: nil, senderId: nil, senderName: nil, text: "", createdAt: Date(), state: .sent,
                                     attachments: [ChatAttachment(id: UUID(), kind: "photo", name: "a.jpg", contentType: "image/jpeg", sizeBytes: 1)])
-        #expect(photoOnly.summary == "📷 Foto")
+        #expect(photoOnly.summary == "Foto")
     }
 
     @Test("Unterhaltungen: Arten, Stummschaltung, Ankündigungsgruppe")

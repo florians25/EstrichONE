@@ -34,7 +34,7 @@ struct AppLockView: View {
                 .accessibilityHidden(true)
             Text(kind == .none
                  ? "Mit dem Gerätecode entsperren."
-                 : "Mit \(kind.name) entsperren – oder mit dem Gerätecode, falls \(kind.name) nicht klappt.")
+                 : "Mit \(kind.name) oder dem Gerätecode entsperren.")
                 .font(.callout)
                 .foregroundStyle(Theme.textSecondary)
                 .multilineTextAlignment(.center)

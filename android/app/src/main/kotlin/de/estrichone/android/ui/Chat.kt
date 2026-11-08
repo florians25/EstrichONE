@@ -280,7 +280,7 @@ fun ConversationScreen(id: String) {
             val result = runCatching { withContext(Dispatchers.IO) { session.api.sendChatMessage(id, body, clientId, reply, attachments.map { it.id }) } }
             val index = messages.indexOfFirst { it.clientMessageId == clientId }
             if (index >= 0) messages[index] = result.getOrNull() ?: local.copy(localState = "failed")
-            if (result.isFailure) model.message("Nachricht nicht gesendet – bitte erneut versuchen.")
+            if (result.isFailure) model.message("Nachricht nicht gesendet. Bitte erneut versuchen.")
         }
     }
 
@@ -405,7 +405,7 @@ private fun Bubble(
                         Column(Modifier.padding(vertical = 4.dp).clip(RoundedCornerShape(8.dp)).background(if (mine) Color.White.copy(alpha = 0.18f) else tones.fill)
                             .padding(horizontal = 8.dp, vertical = 4.dp)) {
                             Text(r.senderName ?: "", style = MaterialTheme.typography.labelMedium, color = if (mine) textColor else MaterialTheme.colorScheme.primary)
-                            Text(if (r.deleted) "Nachricht gelöscht" else r.text ?: (if (r.attachment == "photo") "📷 Foto" else ""), style = MaterialTheme.typography.bodySmall,
+                            Text(if (r.deleted) "Nachricht gelöscht" else r.text ?: (if (r.attachment == "photo") "Foto" else ""), style = MaterialTheme.typography.bodySmall,
                                 color = textColor.copy(alpha = 0.85f), maxLines = 2, overflow = TextOverflow.Ellipsis)
                         }
                     }

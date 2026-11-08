@@ -309,7 +309,7 @@ fun VideoCapture(bauakteId: String, onDone: () -> Unit) {
                     small?.delete()
                     source.delete()
                 }
-                model.message("Video gespeichert – wird übertragen.")
+                model.message("Video gespeichert. Es wird übertragen, sobald eine Verbindung besteht.")
             }
         }
         onDone()
@@ -341,7 +341,7 @@ fun DocumentImport(bauakteId: String, onDone: () -> Unit) {
     picked?.let { (bytes, meta) ->
         CategorySheet(meta.first.substringBeforeLast('.'), onDismiss = onDone) { caption, category ->
             session.service.addFile(bauakteId, "document", bytes, meta.first, meta.second, caption, category)
-            model.message("Dokument gespeichert – wird übertragen.")
+            model.message("Dokument gespeichert. Es wird übertragen, sobald eine Verbindung besteht.")
             onDone()
         }
     }
@@ -492,7 +492,7 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
                     }
                 }
             }
-            Text("Tipp: Auch die Lautstärketaste löst aus.", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall,
+            Text("Auslösen auch mit der Lautstärketaste", color = Color.White.copy(alpha = 0.7f), style = MaterialTheme.typography.bodySmall,
                 textAlign = TextAlign.Center, modifier = Modifier.fillMaxWidth().padding(top = 8.dp))
         }
     }
@@ -502,7 +502,7 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
             scope.launch {
                 val pdf = withContext(Dispatchers.Default) { Images.pdf(pages.toList()) }
                 session.service.addFile(bauakteId, "document", pdf, "${caption.ifBlank { "Scan" }}.pdf", "application/pdf", caption, category)
-                model.message("PDF mit ${pages.size} Seiten gespeichert – wird übertragen.")
+                model.message("PDF mit ${pages.size} Seiten gespeichert. Es wird übertragen, sobald eine Verbindung besteht.")
                 naming = false
                 nav.back()
             }

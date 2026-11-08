@@ -86,10 +86,10 @@ fun Root(model: AppModel, unlock: () -> Unit = {}) {
     when (val s = stage) {
         Stage.Starting -> Box(Modifier.fillMaxSize().background(tones.canvas), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
         Stage.Welcome -> WelcomeScreen(model)
-        is Stage.Server -> OnboardingFrame(model, "Server verbinden", "Adresse Ihres EstrichONE-Servers, z. B. estrich.firma.de – steht im Zugangsbrief.") { ServerStep(model, s.address) }
+        is Stage.Server -> OnboardingFrame(model, "Server verbinden", "Adresse Ihres EstrichONE-Servers, z. B. estrich.firma.de. Sie steht im Zugangsbrief.") { ServerStep(model, s.address) }
         is Stage.SignIn -> OnboardingFrame(model, "Anmelden", s.serverName.ifBlank { "EstrichONE" }) { SignInStep(model, s) }
         is Stage.TwoFactor -> OnboardingFrame(model, "Bestätigungscode", "Code aus der Authenticator-App bzw. Wiederherstellungscode.") { TwoFactorStep(model, s) }
-        is Stage.ChangePassword -> OnboardingFrame(model, "Neues Passwort", "Sie haben ein Einmalpasswort erhalten. Bitte legen Sie jetzt ein eigenes fest.") { ChangePasswordStep(model) }
+        is Stage.ChangePassword -> OnboardingFrame(model, "Neues Passwort", "Sie haben ein Einmalpasswort erhalten. Bitte legen Sie ein eigenes Passwort mit mindestens 12 Zeichen fest.") { ChangePasswordStep(model) }
         is Stage.Pending -> OnboardingFrame(model, "Wartet auf Freigabe", "„${s.deviceName}“ ist registriert und muss in der Verwaltung freigegeben werden.") { PendingStep(model) }
         is Stage.ChoosePin -> OnboardingFrame(model, "PIN festlegen", "Poolgerät: Mit dieser 6-stelligen PIN entsperren Sie künftig Ihre Daten auf diesem Gerät.") { ChoosePinStep(model) }
         is Stage.UserPicker -> UserPickerScreen(model, s.users)
@@ -119,10 +119,10 @@ private fun WelcomeScreen(model: AppModel) {
             BrandMark(112.dp, onDark = true)
             Spacer(Modifier.height(24.dp))
             Text("EstrichONE", color = Color.White, style = MaterialTheme.typography.displaySmall)
-            Text("Baustelle, Büro und Kolonne – in einer App.", color = Ice, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
+            Text("Software für Baustelle, Büro und Kolonne", color = Ice, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center,
                 modifier = Modifier.padding(top = 8.dp))
             Spacer(Modifier.height(28.dp))
-            listOf("Einsätze und Baustellen auch ohne Netz", "Fotos, Bautagebuch und Protokolle direkt vor Ort", "Chat mit Büro und Kolonne").forEach {
+            listOf("Einsätze und Baustellen auch ohne Verbindung", "Fotos, Bautagebuch und Protokolle vor Ort", "Chat mit Büro und Kolonne").forEach {
                 Row(Modifier.fillMaxWidth().padding(vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
                     Box(Modifier.size(8.dp).clip(CircleShape).background(Color(0xFF4DA3FF)))
                     Spacer(Modifier.width(12.dp))
@@ -133,9 +133,9 @@ private fun WelcomeScreen(model: AppModel) {
             Button(onClick = model::beginSetup, modifier = Modifier.fillMaxWidth().height(54.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = Navy)) { Text("Einrichten", fontSize = 17.sp) }
             TextButton(onClick = model::startDemo, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
-                Text("Demo ausprobieren", color = Color.White, fontSize = 16.sp)
+                Text("Demo starten", color = Color.White, fontSize = 16.sp)
             }
-            Text("Die Demo zeigt Beispieldaten. Es wird nichts gesendet.", color = Ice.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
+            Text("Die Demo zeigt Beispieldaten. Es werden keine Daten gesendet.", color = Ice.copy(alpha = 0.8f), style = MaterialTheme.typography.bodySmall)
         }
     }
 }
@@ -165,7 +165,7 @@ private fun ServerStep(model: AppModel, initial: String) {
     OutlinedTextField(address, { address = it }, label = { Text("Serveradresse") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go), keyboardActions = KeyboardActions(onGo = { model.connect(address) }))
     Button(onClick = { model.connect(address) }, enabled = address.isNotBlank(), modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Weiter") }
-    TextButton(onClick = model::startDemo, modifier = Modifier.fillMaxWidth()) { Text("Stattdessen Demo ausprobieren") }
+    TextButton(onClick = model::startDemo, modifier = Modifier.fillMaxWidth()) { Text("Demo ohne Server starten") }
 }
 
 @Composable
@@ -295,7 +295,7 @@ fun PinPad(pin: String, onChange: (String) -> Unit, dark: Boolean = false) {
 
 @Composable
 private fun UserPickerScreen(model: AppModel, users: List<PoolUser>) {
-    OnboardingFrame(model, "Wer arbeitet?", "Poolgerät – bitte Ihren Namen wählen und mit Ihrer PIN entsperren.") {
+    OnboardingFrame(model, "Wer arbeitet?", "Poolgerät. Bitte Namen wählen und mit der persönlichen PIN entsperren.") {
         SectionCard {
             users.forEachIndexed { index, u ->
                 if (index > 0) RowDivider(72.dp)

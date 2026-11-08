@@ -51,7 +51,7 @@ struct ReportProblemView: View {
                             ForEach(TicketPriority.allCases) { Text($0.title).tag($0) }
                         }
                     }
-                    Toggle("Dringend – ich kann nicht arbeiten", isOn: $blocked)
+                    Toggle("Dringend: Arbeiten nicht möglich", isOn: $blocked)
                 }
                 if !withoutSignIn {
                     // Der Label-Inhalt läuft in einer Sendable-Closure: nur den fertigen Text übergeben.

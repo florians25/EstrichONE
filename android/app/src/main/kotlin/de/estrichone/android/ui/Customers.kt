@@ -105,7 +105,7 @@ fun CustomerScreen(id: String, showBack: Boolean = true) {
                 Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Avatar(c.initials, size = 76.dp)
                     Text(c.name, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 10.dp))
-                    Secondary(listOfNotNull(c.customerNumber ?: "Neu – Nummer vergibt das Büro", if (c.isCompany) "Firma" else null).joinToString(" · "))
+                    Secondary(listOfNotNull(c.customerNumber ?: "Neu, Nummer vergibt das Büro", if (c.isCompany) "Firma" else null).joinToString(" · "))
                     Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         c.phone?.let { CircleAction(Icons.Filled.Phone, "Anrufen", { Links.call(context, it) }) }
                         c.email?.let { CircleAction(Icons.Filled.Email, "E-Mail", { Links.mail(context, it) }) }

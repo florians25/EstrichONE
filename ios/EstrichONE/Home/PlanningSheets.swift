@@ -470,7 +470,7 @@ struct SwapCrewsSheet: View {
                 } header: {
                     Text("Tauschen mit")
                 } footer: {
-                    Text("Die Baustellen beider Kolonnen wechseln für diesen Tag die Kolonne – Besetzung und Fahrzeuge bleiben.")
+                    Text("Die Baustellen beider Kolonnen werden für diesen Tag getauscht. Besetzung und Fahrzeuge bleiben unverändert.")
                 }
             }
             .navigationTitle("Kolonnen")
@@ -534,7 +534,7 @@ struct ReleasePlanSheet: View {
                         LabeledContent("Von", value: release.releasedByName)
                         if let text = release.note { LabeledContent("Hinweis", value: text) }
                     } else {
-                        Label("Noch nicht freigegeben – Mitarbeiter sehen den Plan als vorläufig.", systemImage: "clock")
+                        Label("Noch nicht freigegeben. Mitarbeiter sehen den Plan als vorläufig.", systemImage: "clock")
                             .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                     }
                 } header: {

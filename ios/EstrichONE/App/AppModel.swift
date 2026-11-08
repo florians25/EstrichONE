@@ -227,7 +227,7 @@ final class AppModel {
                         // Nach geänderten Gesichtern/Fingern gilt Face ID erst wieder nach dem Gerätecode – der ist jetzt
                         // eingegeben: Freigabe mit den aktuellen Merkmalen neu anlegen.
                         unlockKeys.save(dataKey, userId: user.id, biometric: true)
-                        notice = "\(BiometryKind.current.name) wurde auf diesem Gerät geändert. EstrichONE hat deshalb einmal den Gerätecode verlangt; ab jetzt genügt wieder \(BiometryKind.current.name)."
+                        notice = "\(BiometryKind.current.name) wurde auf diesem Gerät geändert. EstrichONE hat deshalb einmal den Gerätecode verlangt. Künftig genügt wieder \(BiometryKind.current.name)."
                     }
                     return
                 }

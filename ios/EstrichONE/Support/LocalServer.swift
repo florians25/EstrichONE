@@ -98,7 +98,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         guard switches.maintenance else { return nil }
         let open = ["/api/v1/system/notices", "/api/v1/server-info", "/api/v1/auth"]
         guard !open.contains(where: { path.hasPrefix($0) }) else { return nil }
-        let body = #"{"status":503,"title":"Wartungsarbeiten","detail":"Update auf Version 0.2 – EstrichONE ist in Kürze wieder verfügbar.","code":"MAINTENANCE","endsAt":"\#(APIDate.format(switches.maintenanceEndsAt))"}"#
+        let body = #"{"status":503,"title":"Wartungsarbeiten","detail":"Update auf Version 0.2. EstrichONE ist in Kürze wieder verfügbar.","code":"MAINTENANCE","endsAt":"\#(APIDate.format(switches.maintenanceEndsAt))"}"#
         let response = HTTPURLResponse(url: request.url!, statusCode: 503, httpVersion: "HTTP/1.1", headerFields: ["Content-Type": "application/problem+json"])!
         return (Data(body.utf8), response)
     }
@@ -253,7 +253,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return json(200, DemoSwitches.shared.health())
         case "/api/v1/system/notices" where demo != nil && DemoSwitches.shared.maintenance:
             let end = APIDate.format(DemoSwitches.shared.maintenanceEndsAt)
-            return (200, #"{"announcements":[],"maintenance":{"active":true,"message":"Update auf Version 0.2 – EstrichONE ist in Kürze wieder verfügbar.","startsAt":"\#(APIDate.format(Date()))","endsAt":"\#(end)","adminsMayWork":true},"serverTime":"\#(APIDate.format(Date()))"}"#)
+            return (200, #"{"announcements":[],"maintenance":{"active":true,"message":"Update auf Version 0.2. EstrichONE ist in Kürze wieder verfügbar.","startsAt":"\#(APIDate.format(Date()))","endsAt":"\#(end)","adminsMayWork":true},"serverTime":"\#(APIDate.format(Date()))"}"#)
         case "/api/v1/notifications" where demo != nil:
             return json(200, notifications.inbox())
         case "/api/v1/notifications/preferences" where demo != nil:
@@ -346,7 +346,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return (200, #"{"changes":[],"missing":[]}"#)
         case "/api/v1/system/notices":
             return (200, """
-            {"announcements":[{"id":"uitest-1","title":"Neue App-Version","text":"Dokumente lassen sich jetzt direkt scannen.",
+            {"announcements":[{"id":"uitest-1","title":"Neue App-Version","text":"Dokumente lassen sich in der App scannen.",
               "severity":"info","startsAt":null,"endsAt":null}],
              "maintenance":null,"serverTime":"\(APIDate.format(Date()))"}
             """)

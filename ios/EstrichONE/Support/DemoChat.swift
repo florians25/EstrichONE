@@ -155,7 +155,7 @@ final class DemoChat {
         func at(_ minutes: Double) -> Date { now.addingTimeInterval(-minutes * 60) }
         conversations = [
             Conversation(id: Self.siteChat, title: "Praxis Dr. Maier, Sanierung", kind: "site",
-                         description: "Baustellengruppe zur Bauakte 2026-038 – Team und Bauleitung.",
+                         description: "Baustellengruppe zur Bauakte 2026-038 mit Team und Bauleitung.",
                          members: [userId, Self.officeUser, Self.lukas, Self.anna], admins: [Self.anna, Self.officeUser], unread: 2,
                          bauakteId: DemoContent.praxis, bauakteTitle: "Praxis Dr. Maier, Sanierung", mentioned: true),
             Conversation(id: Self.crewChat, title: "Kolonne Huber", kind: "crew", description: "Alles rund um Einsätze, Material und Fahrzeuge der Kolonne.",

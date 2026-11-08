@@ -238,13 +238,13 @@ struct DispatchView: View {
     private var statusLines: [AnyView] {
         var lines: [AnyView] = []
         if !isCurrent, let loadedAt {
-            lines.append(AnyView(NoticeLine(tone: .neutral, text: "Ohne Verbindung – Stand \(loadedAt.shortStamp)",
+            lines.append(AnyView(NoticeLine(tone: .neutral, text: "Keine Verbindung, Stand \(loadedAt.shortStamp)",
                                             symbol: "wifi.slash")))
         }
         if !pending.isEmpty {
             let failed = pending.contains { $0.error != nil }
             lines.append(AnyView(NoticeLine(tone: failed ? .danger : .warning,
-                                            text: failed ? "Vorgemerkte Änderung abgelehnt" : "\(pending.count) \(pending.count == 1 ? "Änderung" : "Änderungen") vorgemerkt – wird gesendet, sobald Verbindung besteht",
+                                            text: failed ? "Vorgemerkte Änderung abgelehnt" : "\(pending.count) \(pending.count == 1 ? "Änderung" : "Änderungen") vorgemerkt, Versand bei Verbindung",
                                             symbol: "tray.and.arrow.up", actionTitle: "Anzeigen") { showsPending = true }))
         }
         if let holiday = plan?.holiday {
@@ -262,7 +262,7 @@ struct DispatchView: View {
                     detail: changed > 0 ? "\(changed) \(changed == 1 ? "Änderung" : "Änderungen") seit Freigabe" : "von \(release.releasedByName)",
                     actionTitle: plan.canPlan ? "Freigabe" : nil,
                     action: plan.canPlan ? { sheet = .release } : nil,
-                    removed: release.removed.map { "\($0.title) – \($0.activity)" })
+                    removed: release.removed.map { "\($0.title) · \($0.activity)" })
                     .accessibilityIdentifier("releaseStatus")))
             } else {
                 lines.append(AnyView(PlanStatusBar(
@@ -488,7 +488,7 @@ struct DispatchView: View {
             if error == .offline, let outbox {
                 try? await outbox.add(change)
                 pending = await outbox.entries()
-                toast = "Ohne Verbindung – vorgemerkt"
+                toast = "Keine Verbindung, Änderung vorgemerkt"
             } else {
                 toast = error.serverMessage ?? error.message
             }

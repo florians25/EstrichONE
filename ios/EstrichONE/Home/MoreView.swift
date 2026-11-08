@@ -89,7 +89,7 @@ struct MoreView: View {
                     } header: {
                         Text("Demomodus")
                     } footer: {
-                        Text("Beispieldaten – es wird nichts gesendet. Beenden löscht die Demodaten und führt zurück zur Einrichtung.")
+                        Text("Beispieldaten, es werden keine Daten gesendet. Beenden löscht die Demodaten und öffnet die Einrichtung.")
                     }
                 }
 
@@ -139,7 +139,7 @@ struct MoreView: View {
                         .accessibilityIdentifier("requestAccountDeletion")
                     }
                 } footer: {
-                    Text("Abmelden beendet die Sitzung auf dem Server und löscht Ihre Daten auf diesem Gerät. Ihr Benutzerkonto verwaltet Ihr Betrieb – die Löschung beantragen Sie hier, die Administration führt sie aus.")
+                    Text("Abmelden beendet die Sitzung auf dem Server und löscht Ihre Daten auf diesem Gerät. Ihr Benutzerkonto verwaltet Ihr Betrieb. Die Löschung beantragen Sie hier, die Administration führt sie aus.")
                 }
 
                 Section {
@@ -181,7 +181,7 @@ struct MoreView: View {
                 }
             } message: {
                 if unsentBeforeSignOut > 0 {
-                    Text("\(unsentBeforeSignOut) Änderungen sind noch nicht übertragen. Beim Abmelden gehen sie verloren. Besser: Verbindung herstellen und warten, bis alles übertragen ist.")
+                    Text("\(unsentBeforeSignOut) Änderungen sind noch nicht übertragen. Beim Abmelden gehen sie verloren. Bitte vorher eine Verbindung herstellen und die Übertragung abwarten.")
                 }
             }
             .confirmationDialog("Konto löschen beantragen?", isPresented: $confirmDeletion, titleVisibility: .visible) {

@@ -14,7 +14,7 @@ struct ChangePasswordView: View {
         NavigationStack {
             Form {
                 Section {
-                    Text("Sie haben ein Einmalpasswort erhalten. Bitte legen Sie jetzt ein eigenes Passwort fest – mindestens 12 Zeichen. Bis dahin gibt der Server keine Daten frei.")
+                    Text("Sie haben ein Einmalpasswort erhalten. Bitte legen Sie ein eigenes Passwort mit mindestens 12 Zeichen fest. Bis dahin gibt der Server keine Daten frei.")
                 }
                 Section {
                     SecureField("Bisheriges Passwort", text: $current).textContentType(.password)

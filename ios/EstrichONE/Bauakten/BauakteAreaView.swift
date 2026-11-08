@@ -98,7 +98,7 @@ struct BauakteAreaView: View {
                             titleVisibility: .visible, presenting: deletingRoom) { room in
             Button("„\(room.name)“ löschen", role: .destructive) { Task { await delete(room) } }
         } message: { _ in
-            Text("Der Raum wird aus der Bauakte entfernt – auch im Büro.")
+            Text("Der Raum wird aus der Bauakte entfernt, auch für das Büro.")
         }
         .navigationDestination(isPresented: $showsHistory) { HistoryView(bauakteId: bauakte.id) }
         .navigationDestination(item: $openedInspection) { id in
@@ -182,7 +182,7 @@ struct BauakteAreaView: View {
         Section {
             if content.photos.isEmpty {
                 EmptyStateView(symbol: "camera", title: "Noch keine Fotos",
-                               message: "Fotos dokumentieren den Stand vor Ort – Randdämmung, Heizung, Untergrund.",
+                               message: "Fotos dokumentieren den Stand vor Ort, z. B. Randdämmung, Heizung und Untergrund.",
                                actionTitle: "Foto aufnehmen", actionSymbol: "camera") { action = .photo }
             } else {
                 PhotoGrid(photos: content.photos) { file in
@@ -197,7 +197,7 @@ struct BauakteAreaView: View {
         Section {
             if content.documents.isEmpty {
                 EmptyStateView(symbol: "doc.viewfinder", title: "Noch keine Dokumente",
-                               message: "Lieferschein, Plan oder Abnahme einfach abfotografieren – wird als PDF mit Text gespeichert.",
+                               message: "Lieferscheine, Pläne oder Abnahmen scannen. Sie werden als durchsuchbares PDF gespeichert.",
                                actionTitle: "Dokument scannen", actionSymbol: "doc.viewfinder") { action = .scan }
             }
             ForEach(content.documents) { document in
@@ -238,7 +238,7 @@ struct BauakteAreaView: View {
             Section {
                 EmptyStateView(symbol: showsDone ? "checkmark.circle" : "checklist",
                                title: showsDone ? "Noch nichts erledigt" : "Keine offenen Punkte",
-                               message: showsDone ? nil : "Mängel und Aufgaben erscheinen hier – mit Frist und Zuständigem.",
+                               message: showsDone ? nil : "Mängel und Aufgaben mit Frist und Zuständigem erscheinen hier.",
                                actionTitle: showsDone ? nil : "Mangel melden", actionSymbol: "exclamationmark.triangle") { action = .defect }
             }
         }
@@ -293,7 +293,7 @@ struct BauakteAreaView: View {
         if content.rooms.isEmpty {
             Section {
                 EmptyStateView(symbol: "square.split.2x2", title: "Noch keine Räume",
-                               message: "Räume mit Fläche, Estrichdicke und Heizung erfassen – die Summen rechnet die App.",
+                               message: "Räume mit Fläche, Estrichdicke und Heizung erfassen. Die Summen werden automatisch berechnet.",
                                actionTitle: "Raum hinzufügen", actionSymbol: "plus") { editingRoom = RoomEditing() }
             }
         } else {
@@ -349,7 +349,7 @@ struct BauakteAreaView: View {
         func m2(_ value: Double) -> String { "\(value.formatted(.number.precision(.fractionLength(0...1)))) m²" }
         let gap = planned - measured
         if abs(gap) < 0.05 { return "Passt zur Fläche aus den Basisdaten (\(m2(planned)))." }
-        return gap > 0 ? "Laut Basisdaten \(m2(planned)) – in den Räumen fehlen noch \(m2(gap))."
+        return gap > 0 ? "Laut Basisdaten \(m2(planned)), in den Räumen fehlen noch \(m2(gap))."
                        : "In den Räumen \(m2(-gap)) mehr als in den Basisdaten (\(m2(planned)))."
     }
 
@@ -385,7 +385,7 @@ struct BauakteAreaView: View {
         Section {
             if content.inspections.filter({ $0.kind == .initialInspection }).isEmpty {
                 EmptyStateView(symbol: "checklist", title: "Erstbegehung noch offen",
-                               message: "Untergrund, Randdämmung, Heizung, Zufahrt – vor Ort Punkt für Punkt prüfen.",
+                               message: "Untergrund, Randdämmung, Heizung und Zufahrt vor Ort prüfen.",
                                actionTitle: "Erstbegehung durchführen", actionSymbol: "checklist") { action = .inspection }
             }
             ForEach(content.inspections.filter { $0.kind == .initialInspection }) { inspection in
@@ -403,7 +403,7 @@ struct BauakteAreaView: View {
         Section {
             if content.acceptances.isEmpty {
                 EmptyStateView(symbol: "signature", title: "Noch keine Abnahme",
-                               message: "Abnahmeprotokoll mit Mängeln, Fotos und Unterschriften – auch ohne Verbindung.",
+                               message: "Abnahmeprotokoll mit Mängeln, Fotos und Unterschriften, auch ohne Verbindung.",
                                actionTitle: "Abnahme erfassen", actionSymbol: "signature") { action = .acceptance }
             }
             ForEach(content.acceptances) { acceptance in
@@ -465,7 +465,7 @@ struct BauakteAreaView: View {
         }
         Section {
             if bauakte.siteContactName == nil, bauakte.siteContactPhone == nil {
-                Text("Kein Ansprechpartner vor Ort hinterlegt – pflegt das Büro.")
+                Text("Kein Ansprechpartner vor Ort hinterlegt. Die Angabe pflegt das Büro.")
                     .font(Typo.subhead)
                     .foregroundStyle(Theme.textSecondary)
             } else {
@@ -521,7 +521,7 @@ struct BauakteAreaView: View {
         Section {
             if content.notes.isEmpty {
                 EmptyStateView(symbol: "note.text", title: "Noch keine Notizen",
-                               message: "Schlüssel beim Nachbarn, Absprachen mit dem Kunden – für alle in der Akte sichtbar.",
+                               message: "Hinweise wie Schlüsselübergabe oder Absprachen mit dem Kunden. Für alle Beteiligten der Bauakte sichtbar.",
                                actionTitle: "Notiz schreiben", actionSymbol: "square.and.pencil") { action = .note }
             }
             ForEach(content.notes) { note in
@@ -581,7 +581,7 @@ struct BauakteAreaView: View {
         if parties.isEmpty {
             Section {
                 EmptyStateView(symbol: "person.2", title: "Noch keine Kontakte",
-                               message: "Bauleiter, Architekt, Ansprechpartner vor Ort – mit Nummer und Anschrift griffbereit auf der Baustelle.",
+                               message: "Bauleiter, Architekt und Ansprechpartner vor Ort mit Telefonnummer und Anschrift.",
                                actionTitle: "Kontakt hinzufügen", actionSymbol: "person.badge.plus") { editingParty = PartyEditing() }
             } header: {
                 Text("Kontakte")

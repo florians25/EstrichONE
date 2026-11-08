@@ -304,7 +304,7 @@ fun OfflineBanner(session: Session) {
         return
     }
     if (status.offline) {
-        Banner("Offline – Änderungen werden gespeichert und später übertragen.", Icons.Filled.CloudOff, tones.textSecondary, tones.fill,
+        Banner("Keine Verbindung. Änderungen werden gespeichert und später übertragen.", Icons.Filled.CloudOff, tones.textSecondary, tones.fill,
             Modifier.padding(bottom = Space.s))
     }
 }

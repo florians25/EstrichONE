@@ -130,7 +130,7 @@ struct ChatListView: View {
     private var footer: String {
         var text = "Nachrichten und Anhänge werden verschlüsselt auf dem Server Ihres Betriebs gespeichert"
         if let days = status?.retentionDays { text += " und nach \(days) Tagen gelöscht" }
-        return text + ". Keine Sprachnachrichten – zum Diktieren auf das Mikrofon tippen."
+        return text + ". Sprachnachrichten werden nicht unterstützt; zum Diktieren auf das Mikrofon tippen."
     }
 
     @ViewBuilder
@@ -256,7 +256,7 @@ struct ChatListView: View {
             failure = nil
             applyShotScene()
         } catch {
-            failure = error == .offline ? "Ohne Verbindung – der Chat lädt, sobald der Server erreichbar ist. Nachrichten, die Sie jetzt schreiben, werden danach gesendet."
+            failure = error == .offline ? "Keine Verbindung. Der Chat wird geladen, sobald der Server erreichbar ist. Neue Nachrichten werden dann gesendet."
                                         : (error.serverMessage ?? error.message)
         }
         if let chat { drafts = await chat.outbox.allDrafts() }
@@ -453,7 +453,7 @@ struct ChatPrivacyNotice: View {
                         .frame(maxWidth: .infinity)
                         .padding(.top, Space.l)
                     Text("Chat im Betrieb").font(.title2.weight(.semibold)).frame(maxWidth: .infinity)
-                    point("server.rack", "Auf dem Server Ihres Betriebs", "Nachrichten, Fotos und Dokumente liegen verschlüsselt auf dem eigenen Server – nicht bei einem Messenger-Anbieter.")
+                    point("server.rack", "Auf dem Server Ihres Betriebs", "Nachrichten, Fotos und Dokumente liegen verschlüsselt auf dem eigenen Server und nicht bei einem Messenger-Anbieter.")
                     point("calendar.badge.clock", "Löschfrist",
                           retentionDays.map { "Inhalte werden nach \($0) Tagen automatisch endgültig gelöscht." } ?? "Inhalte werden nach der im Betrieb eingestellten Frist automatisch gelöscht.")
                     point("bell.badge", "Pushnachrichten", "Mitteilungen zeigen Absender und Chat. Der Text erscheint nur, wenn der Betrieb und Sie die Vorschau erlauben.")
@@ -517,7 +517,7 @@ private struct NewChatSheet: View {
                         }
                         .accessibilityIdentifier("newGroupButton")
                     } footer: {
-                        Text("Gruppe, Kolonnen-, Baustellen- oder Ankündigungsgruppe. Mitglieder wählen Sie aus der Liste – keine Telefonnummern.")
+                        Text("Gruppe, Kolonnen-, Baustellen- oder Ankündigungsgruppe. Mitglieder wählen Sie aus der Liste aus. Telefonnummern sind nicht erforderlich.")
                     }
                 }
                 Section {

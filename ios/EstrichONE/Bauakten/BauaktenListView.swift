@@ -144,7 +144,7 @@ struct BauaktenListView: View {
                 ContentUnavailableView {
                     Label(scope == .archive ? "Keine abgeschlossenen Bauakten" : "Keine laufenden Baustellen", systemImage: "building.2")
                 } description: {
-                    Text(scope == .archive ? "Abgeschlossene und stornierte Bauakten erscheinen hier." : "Neue Baustellen legen Sie mit „+“ an – auch ohne Verbindung.")
+                    Text(scope == .archive ? "Abgeschlossene und stornierte Bauakten erscheinen hier." : "Neue Bauakten legen Sie mit „+“ an, auch ohne Verbindung.")
                 } actions: {
                     if scope != .archive {
                         Button { creating = true } label: { Label("Neue Bauakte", systemImage: "plus") }

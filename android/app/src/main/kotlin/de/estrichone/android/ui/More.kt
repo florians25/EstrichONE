@@ -398,7 +398,7 @@ fun SyncScreen() {
                 }
             }
             item {
-                Secondary("Erfasstes wird zuerst verschlüsselt auf dem Gerät gespeichert und automatisch übertragen – alle 2 Minuten, nach jeder Änderung und im Hintergrund.",
+                Secondary("Erfasste Daten werden verschlüsselt auf dem Gerät gespeichert und automatisch übertragen: nach jeder Änderung, alle 2 Minuten und im Hintergrund.",
                     Modifier.padding(16.dp))
             }
             (status.outcome as? SyncOutcome.Failed)?.let { failed -> item { Banner(failed.error.message ?: "Fehler", Icons.Filled.ErrorOutline, tones.danger, tones.dangerSoft) } }
@@ -636,7 +636,7 @@ fun MyTasksScreen() {
                     FilterChip(showDone, { showDone = true }, label = { Text("Alle (${tasks.size})") })
                 }
             }
-            if (visible.isEmpty()) item { EmptyState(Icons.AutoMirrored.Outlined.Assignment, "Alles erledigt", "Keine offenen Aufgaben oder Mängel.") }
+            if (visible.isEmpty()) item { EmptyState(Icons.AutoMirrored.Outlined.Assignment, "Keine offenen Aufgaben", "Offene Aufgaben und Mängel erscheinen hier.") }
             visible.groupBy { it.bauakteId }.forEach { (bauakteId, list) ->
                 val b = bauakteId?.let { session.service.bauakte(it) }
                 item { GroupLabel(b?.let { "${it.numberText} · ${it.title}" } ?: "Ohne Bauakte") }

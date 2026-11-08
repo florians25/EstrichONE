@@ -210,7 +210,7 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp),
             verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text("Neue Bauakte", style = MaterialTheme.typography.headlineSmall)
-            Secondary("Die Nummer vergibt der Server beim nächsten Abgleich. Ohne Netz wird die Bauakte sofort auf dem Gerät gespeichert.")
+            Secondary("Die Nummer vergibt der Server beim nächsten Abgleich. Ohne Verbindung wird die Bauakte auf dem Gerät gespeichert.")
             SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
                 BauakteTemplate.entries.forEachIndexed { index, t ->
                     SegmentedButton(selected = template == t, onClick = { template = t }, shape = SegmentedButtonDefaults.itemShape(index, BauakteTemplate.entries.size)) {
@@ -253,7 +253,7 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                 // Dublettenhinweis aus dem Bestand auf dem Gerät (auch offline).
                 val similar = remember(customerName) { duplicates(contacts, customerName, city) }
                 if (similar.isNotEmpty()) {
-                    Banner("Ähnliche Kunden gibt es schon – bitte prüfen:", Icons.Filled.PersonAdd, tones.warning, tones.warningSoft)
+                    Banner("Ähnliche Kunden vorhanden. Bitte prüfen.", Icons.Filled.PersonAdd, tones.warning, tones.warningSoft)
                     SectionCard {
                         similar.forEachIndexed { i, c ->
                             if (i > 0) RowDivider(16.dp)
@@ -275,7 +275,7 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                 try {
                     val id = session.service.createBauakte(title, street, postalCode, city, template, customerId,
                         if (newCustomer && customerName.isNotBlank()) NewCustomer(customerName, company, street, postalCode, city, phone) else null)
-                    model.message("Bauakte angelegt – wird beim nächsten Abgleich übertragen.")
+                    model.message("Bauakte angelegt. Sie wird beim nächsten Abgleich übertragen.")
                     onCreated(id)
                 } catch (e: IllegalArgumentException) {
                     error = e.message

@@ -104,7 +104,7 @@ fun DemoMark() {
             modifier = Modifier.padding(start = 12.dp).clip(RoundedCornerShape(50)).background(tones.infoSoft).clickable { open = true }
                 .padding(horizontal = 14.dp, vertical = 7.dp))
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
-            Text("Demomodus – Beispieldaten, es wird nichts gesendet.", style = MaterialTheme.typography.bodySmall, color = tones.textSecondary,
+            Text("Demomodus mit Beispieldaten. Es werden keine Daten gesendet.", style = MaterialTheme.typography.bodySmall, color = tones.textSecondary,
                 modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
             HorizontalDivider()
             fun refresh() { tick++; session.synchronizeNow() }

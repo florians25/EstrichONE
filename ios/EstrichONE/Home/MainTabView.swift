@@ -136,7 +136,7 @@ struct RootToolbar: ViewModifier {
                 if model.isDemo, !ShotOptions.hidesDemoMarks {
                     ToolbarItem(placement: .topBarLeading) {
                         Menu {
-                            Section("Demomodus – Beispieldaten, es wird nichts gesendet.") {
+                            Section("Demomodus mit Beispieldaten. Es werden keine Daten gesendet.") {
                                 Button("Demo beenden", systemImage: "xmark.circle", role: .destructive) { model.requestDemo(false) }
                                     .accessibilityIdentifier("endDemoButton")
                             }

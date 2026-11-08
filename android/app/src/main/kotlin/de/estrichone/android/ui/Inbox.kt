@@ -215,7 +215,7 @@ fun InboxScreen() {
             if (result.isFailure && (result.exceptionOrNull() as? ApiException)?.status != 404) {
                 items.add(minOf(index, items.size), item)
                 session.setUnreadNotifications(unread())
-                nav.snackbar.showSnackbar("Nicht gelöscht – bitte Verbindung prüfen")
+                nav.snackbar.showSnackbar("Nicht gelöscht, keine Verbindung")
             } else {
                 nav.snackbar.showSnackbar("Benachrichtigung gelöscht")
             }

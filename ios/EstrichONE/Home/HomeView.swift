@@ -159,13 +159,13 @@ struct HomeView: View {
     @ViewBuilder
     private var notices: some View {
         if model.isDemo, !ShotOptions.hidesDemoMarks {
-            NoticeLine(tone: .info, text: "Demomodus: Beispieldaten, es wird nichts gesendet.", symbol: "play.rectangle.fill",
+            NoticeLine(tone: .info, text: "Demomodus mit Beispieldaten. Es werden keine Daten gesendet.", symbol: "play.rectangle.fill",
                        actionTitle: "Beenden") { model.requestDemo(false) }
         }
         if let sync = model.active?.sync {
             if let message = sync.maintenanceMessage {
                 Callout(tone: .warning, title: "Wartung des Servers",
-                        message: "\(message) Sie können weiterarbeiten – alles bleibt auf dem Gerät und wird danach übertragen.",
+                        message: "\(message) Sie können weiterarbeiten. Erfasste Daten bleiben auf dem Gerät und werden danach übertragen.",
                         symbol: "wrench.and.screwdriver.fill")
             } else if sync.summary?.hasProblems == true {
                 Callout(tone: .danger, title: "Übertragung prüfen", message: "Einige Änderungen wurden nicht übernommen.",

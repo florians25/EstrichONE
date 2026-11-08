@@ -52,7 +52,7 @@ struct NotificationPreferencesView: View {
                     .font(Typo.body)
                     .foregroundStyle(Theme.textPrimary)
                 if let description = item.description, !description.isEmpty {
-                    Text(item.mandatory ? "\(description) Pflicht – nur die Pushnachricht lässt sich abschalten." : description)
+                    Text(item.mandatory ? "\(description) Pflichtbenachrichtigung, nur die Pushnachricht kann abgeschaltet werden." : description)
                         .font(Typo.meta)
                         .foregroundStyle(Theme.textSecondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -69,7 +69,7 @@ struct NotificationPreferencesView: View {
             items = try await client.notificationPreferences()
             failure = nil
         } catch {
-            failure = error == .offline ? "Ohne Verbindung – die Auswahl lädt, sobald der Server erreichbar ist." : (error.serverMessage ?? error.message)
+            failure = error == .offline ? "Keine Verbindung. Die Auswahl wird geladen, sobald der Server erreichbar ist." : (error.serverMessage ?? error.message)
         }
         loaded = true
     }

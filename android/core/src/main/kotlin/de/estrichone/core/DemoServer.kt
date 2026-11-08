@@ -66,7 +66,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
     private fun route(method: String, path: String, query: Map<String, String?>, body: JsonObject, raw: ByteArray?): Pair<Int, Any?> {
         val now = Instant.now()
         if (maintenance && !path.startsWith("system/notices") && !path.startsWith("server-info") && !path.startsWith("auth")) {
-            return problem(503, "MAINTENANCE", "Update auf Version 1.1 – EstrichONE ist in Kürze wieder verfügbar.")
+            return problem(503, "MAINTENANCE", "Update auf Version 1.1. EstrichONE ist in Kürze wieder verfügbar.")
         }
         val parts = path.split('/')
         return when {
@@ -113,7 +113,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path == "planning/mine" -> 200 to DemoData.myPlanning(LocalDate.parse(query["from"] ?: LocalDate.now(Dates.zone).toString()))
             path.startsWith("planning/dispatch/") -> 200 to DemoData.dispatch(parts.last())
             path == "system/notices" -> 200 to if (maintenance) json("announcements" to emptyList<String>(), "maintenance" to mapOf("active" to true,
-                "message" to "Update auf Version 1.1 – EstrichONE ist in Kürze wieder verfügbar.", "startsAt" to ApiDate.format(now.minusSeconds(120)),
+                "message" to "Update auf Version 1.1. EstrichONE ist in Kürze wieder verfügbar.", "startsAt" to ApiDate.format(now.minusSeconds(120)),
                 "endsAt" to ApiDate.format(now.plusSeconds(20 * 60)), "adminsMayWork" to true), "serverTime" to ApiDate.format(now)) else DemoData.notices(now)
             path == "system/health-banner" -> 200 to health(now)
             path == "notifications" -> 200 to notifications.inbox(now)
@@ -196,9 +196,9 @@ private class DemoInbox {
             "/chat/${DemoChat.OFFICE}", 14, false),
         Item("0193a1b2-de00-7000-8000-00000000a011", "work", "high", "Mangel zugewiesen", "Riss im Flur prüfen · 2026-038 EFH Schneider",
             "/bauakten/${DemoData.EFH}", 25, false, objectType = "workItem"),
-        Item("0193a1b2-de00-7000-8000-00000000a002", "ticket", "normal", "Antwort zu T-2026-0007", "IT-Support: Bitte einmal die App öffnen und im WLAN warten.",
+        Item("0193a1b2-de00-7000-8000-00000000a002", "ticket", "normal", "Antwort zum Ticket", "T-2026-0007 · Bitte die App im WLAN öffnen und den Abgleich abwarten.",
             "/it-center/helpdesk/${DemoData.TICKET}", 47, false),
-        Item("0193a1b2-de00-7000-8000-00000000a012", "bauakte", "normal", "Neue Notiz von Sabine Wagner", "EFH Schneider – bitte Fotos der Dämmung vor dem Einbau.",
+        Item("0193a1b2-de00-7000-8000-00000000a012", "bauakte", "normal", "Neue Notiz von Sabine Wagner", "2026-038 EFH Schneider · Fotos der Dämmung vor dem Einbau",
             "/bauakten/${DemoData.EFH}", 70, false),
         Item("0193a1b2-de00-7000-8000-00000000a013", "approval", "normal", "Dokument zur Genehmigung", "Aufmaß Haus B · 2026-044 MFH Isarpark",
             "/bauakten/${DemoData.ISARPARK}", 110, true),
@@ -210,13 +210,13 @@ private class DemoInbox {
         Item("0193a1b2-de00-7000-8000-00000000a015", "absence", "low", "Urlaubsantrag genehmigt", "Mo 16.11. bis Fr 20.11. · 5 Tage", "/personal/urlaub", 60 * 26, true),
         Item("0193a1b2-de00-7000-8000-00000000a004", "bauakte", "normal", "Bauakte zugewiesen", "2026-044 · MFH Isarpark, Haus B",
             "/bauakten/${DemoData.ISARPARK}", 60 * 28, true),
-        Item("0193a1b2-de00-7000-8000-00000000a016", "system", "normal", "Wartung angekündigt", "Samstag 6:00 bis 7:30 Uhr – EstrichONE ist dann nicht erreichbar.",
+        Item("0193a1b2-de00-7000-8000-00000000a016", "system", "normal", "Wartung angekündigt", "Samstag 6:00 bis 7:30 Uhr · EstrichONE nicht erreichbar",
             null, 60 * 50, true),
-        Item("0193a1b2-de00-7000-8000-00000000a005", "deadline", "low", "Frist morgen", "CM-Messung Behandlungsraum 2 · Praxis Dr. Maier",
+        Item("0193a1b2-de00-7000-8000-00000000a005", "deadline", "low", "Frist endet morgen", "CM-Messung Behandlungsraum 2 · Praxis Dr. Maier",
             "/bauakten/${DemoData.PRAXIS}", 60 * 75, true),
         Item("0193a1b2-de00-7000-8000-00000000a017", "planning", "normal", "Planänderung für Donnerstag", "Halle Weber: Beginn 8:00 statt 7:00 Uhr.",
             "/planung/wer-faehrt-wohin", 60 * 24 * 8, true),
-        Item("0193a1b2-de00-7000-8000-00000000a018", "ticket", "low", "T-2026-0004 erledigt", "Tablet-Halterung im Fahrzeug 3 ist getauscht.",
+        Item("0193a1b2-de00-7000-8000-00000000a018", "ticket", "low", "Ticket erledigt", "T-2026-0004 · Tablet-Halterung in Fahrzeug 3 getauscht",
             "/it-center/helpdesk/${DemoData.TICKET}", 60 * 24 * 12, true),
     )
 
@@ -259,7 +259,7 @@ private class DemoTickets {
     private val tickets = mutableListOf(
         Ticket(DemoData.TICKET, "T-2026-0007", "Fotos werden nicht übertragen", "Seit gestern bleiben Fotos auf „Wird übertragen“ stehen.", "sync",
             "waitingForReporter", 60 * 26, mutableListOf(
-                Triple("IT-Support", "Danke für die Meldung! Welche App-Version ist installiert? Steht unter Mehr → Info.", 60L * 24),
+                Triple("IT-Support", "Danke für die Meldung. Welche App-Version ist installiert? Sie steht unter Mehr > Info.", 60L * 24),
                 Triple(DemoData.USER_NAME, "Version 1.0.0, Pixel 8. Betroffen sind nur Fotos von heute früh.", 60L * 23),
                 Triple("IT-Support", "Bitte einmal die App öffnen und im WLAN warten, bis die Synchronisation fertig ist. Klappt es dann?", 35L),
             )),

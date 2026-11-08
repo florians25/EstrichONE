@@ -144,7 +144,7 @@ struct CustomerDirectoryView: View {
                 ContentUnavailableView {
                     Label("Noch keine Kunden", systemImage: "person.2")
                 } description: {
-                    Text("Kunden erscheinen nach der Synchronisation oder lassen sich hier anlegen – auch ohne Verbindung.")
+                    Text("Kunden erscheinen nach dem Abgleich oder können hier angelegt werden, auch ohne Verbindung.")
                 } actions: {
                     Button { creating = true } label: { Label("Neuer Kunde", systemImage: "plus") }
                         .estrichButton(.primary, size: .regular)

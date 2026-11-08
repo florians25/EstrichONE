@@ -54,7 +54,7 @@ final class DemoHelpdesk {
         }
         tickets[0].timeline += [
             event(ago(60 * 25), "status", "IT-Support", "IT-Support hat den Status auf „In Bearbeitung“ gesetzt."),
-            comment(ago(60 * 24), "IT-Support", "Danke für die Meldung! Welche App-Version ist installiert? Steht unter Mehr → Info.", reporter: false),
+            comment(ago(60 * 24), "IT-Support", "Danke für die Meldung. Welche App-Version ist installiert? Sie steht unter Mehr > Info.", reporter: false),
             comment(ago(60 * 23), "Max Huber", "Version 0.1.0, iPhone 15. Betroffen sind nur Fotos von heute früh.", reporter: true),
             comment(ago(35), "IT-Support", "Bitte einmal die App öffnen und im WLAN warten, bis die Synchronisation fertig ist. Klappt es dann?",
                     reporter: false),

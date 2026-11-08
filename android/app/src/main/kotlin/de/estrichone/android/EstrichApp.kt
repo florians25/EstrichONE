@@ -24,7 +24,7 @@ class EstrichApp : Application() {
         listOf(
             Triple(CHANNEL_INBOX, "Benachrichtigungen", "Planfreigaben, Zuweisungen, Antworten der IT"),
             Triple(CHANNEL_CHAT, "Chat", "Neue Nachrichten"),
-            Triple(CHANNEL_SYNC, "Synchronisation", "Probleme beim Übertragen"),
+            Triple(CHANNEL_SYNC, "Synchronisation", "Fehler bei der Übertragung"),
         ).forEach { (id, name, description) ->
             manager.createNotificationChannel(NotificationChannel(id, name, NotificationManager.IMPORTANCE_DEFAULT).apply { this.description = description })
         }

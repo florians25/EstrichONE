@@ -262,7 +262,7 @@ struct ChatInfoView: View {
         do throws(APIError) {
             try await client.muteChat(conversationId, muted: on, until: option?.until())
             detail?.mutedUntil = on ? (option?.until() ?? .distantFuture) : nil
-            toast = on ? "Stummgeschaltet – @Erwähnungen kommen trotzdem an" : "Mitteilungen wieder an"
+            toast = on ? "Stummgeschaltet. @Erwähnungen werden weiterhin zugestellt." : "Mitteilungen eingeschaltet"
             changed()
         } catch {
             failure = error.serverMessage ?? error.message
@@ -397,7 +397,7 @@ struct ChatGroupEditor: View {
                 } header: {
                     Text(kind == .crew || kind == .site ? "Weitere Mitglieder (optional)" : "Mitglieder")
                 } footer: {
-                    Text("Auswahl aus den Personen Ihres Betriebs – keine Telefonnummern nötig.")
+                    Text("Auswahl aus den Personen Ihres Betriebs. Telefonnummern sind nicht erforderlich.")
                 }
             }
         }

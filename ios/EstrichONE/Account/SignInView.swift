@@ -81,7 +81,7 @@ struct SignInView: View {
                     }
 
                     if model.hasEnrollmentCode {
-                        Label("Einrichtungscode erkannt – das Gerät wird nach der Anmeldung sofort freigegeben.", systemImage: "qrcode")
+                        Label("Einrichtungscode erkannt. Das Gerät wird nach der Anmeldung freigegeben.", systemImage: "qrcode")
                             .font(.callout)
                             .foregroundStyle(Theme.textSecondary)
                     }
@@ -144,7 +144,7 @@ struct SignInView: View {
                         .frame(minHeight: 44)
 
                     if model.canReportWithoutSignIn {
-                        Button("Anmeldung klappt nicht? Problem melden") { reporting = true }
+                        Button("Problem bei der Anmeldung melden") { reporting = true }
                             .font(Typo.subheadStrong)
                             .tint(Theme.accent)
                             .frame(maxWidth: .infinity)

@@ -307,7 +307,7 @@ struct QuoteView: View {
 
     private var attachmentText: String {
         switch quote.attachmentKind {
-        case "photo": "📷 Foto"
+        case "photo": "Foto"
         case "document": "📄 Dokument"
         default: "…"
         }

@@ -60,13 +60,13 @@ struct BauakteActionHost: ViewModifier {
                 case .scan:
                     ScanFlowView(bauakte: bauakte) { saved in
                         action = nil
-                        done(saved ? "Dokument gespeichert – wird übertragen, sobald Netz da ist." : nil)
+                        done(saved ? "Dokument gespeichert. Es wird übertragen, sobald eine Verbindung besteht." : nil)
                     }
                 default:
                     CameraView(bauakte: bauakte) { count in
                         action = nil
-                        done(count == 0 ? nil : (count == 1 ? "Foto gespeichert – wird übertragen, sobald Netz da ist."
-                                                            : "\(count) Fotos gespeichert – werden übertragen, sobald Netz da ist."))
+                        done(count == 0 ? nil : (count == 1 ? "Foto gespeichert. Es wird übertragen, sobald eine Verbindung besteht."
+                                                            : "\(count) Fotos gespeichert. Sie werden übertragen, sobald eine Verbindung besteht."))
                     }
                 }
             }

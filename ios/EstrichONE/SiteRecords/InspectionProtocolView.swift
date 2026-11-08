@@ -258,7 +258,7 @@ struct InspectionProtocolView: View {
             }
         } catch {
             pdfMessage = error == .offline
-                ? "Das PDF erstellt der Server – bitte mit Verbindung erneut versuchen."
+                ? "Das PDF wird auf dem Server erstellt. Bitte mit Verbindung erneut versuchen."
                 : (error.status == 404 ? "Die Bauakte ist noch nicht übertragen. Bitte nach der Synchronisation erneut versuchen." : error.message)
         }
     }

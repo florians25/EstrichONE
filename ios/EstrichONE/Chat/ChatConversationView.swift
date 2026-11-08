@@ -296,10 +296,10 @@ struct ChatConversationView: View {
 
     private var subtitle: String {
         if let name = chat?.typingName(in: conversationId) { return isGroup ? "\(name) schreibt …" : "schreibt …" }
-        guard let detail else { return isGroup ? effectiveKind.title : "Tippen für Info" }
+        guard let detail else { return isGroup ? effectiveKind.title : "Details anzeigen" }
         if detail.mutedUntil.map({ $0 > Date() }) == true { return "Stummgeschaltet" }
         if isGroup { return detail.members.map { $0.displayName.split(separator: " ").first.map(String.init) ?? $0.displayName }.joined(separator: ", ") }
-        return "Tippen für Info"
+        return "Details anzeigen"
     }
 
     @ViewBuilder
@@ -379,7 +379,7 @@ struct ChatConversationView: View {
         VStack(spacing: 0) {
             Divider()
             if isReadOnly {
-                NoticeLine(tone: .warning, text: "Nur Ansicht: Der Server ist seit über 5 Minuten nicht erreichbar. Schreiben ist gesperrt, bis die Verbindung zurück ist.",
+                NoticeLine(tone: .warning, text: "Nur Ansicht: Der Server ist seit über 5 Minuten nicht erreichbar. Schreiben ist gesperrt, bis die Verbindung wiederhergestellt ist.",
                            symbol: "lock", actionTitle: "Trotzdem", action: { confirmsOverride = true })
                     .padding(Space.m)
             } else if !canWrite {
@@ -430,7 +430,7 @@ struct ChatConversationView: View {
                 HStack(spacing: Space.s) {
                     Image(systemName: "waveform").symbolEffect(.variableColor.iterative, isActive: dictation.phase == .listening)
                         .foregroundStyle(Theme.danger)
-                    Text(dictation.onDevice ? "Diktat läuft – Erkennung auf dem Gerät, nichts wird aufgezeichnet" : "Diktat läuft – nichts wird aufgezeichnet")
+                    Text(dictation.onDevice ? "Diktat läuft. Erkennung auf dem Gerät, keine Aufzeichnung" : "Diktat läuft, keine Aufzeichnung")
                         .font(Typo.label)
                         .foregroundStyle(Theme.textSecondary)
                     Spacer()
@@ -722,7 +722,7 @@ struct ChatConversationView: View {
             }
         } catch {
             if !loaded || error != .offline {
-                failure = error == .offline ? "Ohne Verbindung – neue Nachrichten werden gesendet, sobald der Server erreichbar ist."
+                failure = error == .offline ? "Keine Verbindung. Neue Nachrichten werden gesendet, sobald der Server erreichbar ist."
                                             : (error.serverMessage ?? error.message)
             }
         }
@@ -815,7 +815,7 @@ struct ChatConversationView: View {
             try await chat.enqueue(item, contents: contents)
             if let confirmed = chat.confirmed.last(where: { $0.clientMessageId == item.id }) { merge([confirmed]) }
             if chat.queued.contains(where: { $0.id == item.id && $0.failure == nil }) {
-                failure = "Ohne Verbindung – die Nachricht wartet und wird automatisch gesendet."
+                failure = "Keine Verbindung. Die Nachricht wird gesendet, sobald der Server erreichbar ist."
             }
         } catch {
             toast = "Die Nachricht konnte auf dem Gerät nicht abgelegt werden."

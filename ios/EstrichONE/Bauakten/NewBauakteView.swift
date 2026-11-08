@@ -58,10 +58,10 @@ struct NewBauakteView: View {
 
         var hint: String {
             switch self {
-            case .customer: "Vorhandenen Kunden suchen oder neu erfassen – auch ohne Verbindung."
+            case .customer: "Vorhandenen Kunden suchen oder neu erfassen, auch ohne Verbindung."
             case .site: "Bezeichnung und Adresse. Den Standort übernimmt die App auf Knopfdruck."
-            case .project: "Fläche, Estrich und Aufbau – alles optional und später ergänzbar."
-            case .details: "Kurz prüfen und anlegen. Übertragen wird automatisch, sobald Netz da ist."
+            case .project: "Fläche, Estrich und Aufbau. Alle Angaben sind optional und später ergänzbar."
+            case .details: "Angaben prüfen und Bauakte anlegen. Die Übertragung erfolgt, sobald eine Verbindung besteht."
             }
         }
     }
@@ -240,7 +240,7 @@ struct NewBauakteView: View {
         } header: {
             Text("Baustelle")
         } footer: {
-            Text("Empfohlen, aber nicht Pflicht – die Adresse kann später ergänzt werden.")
+            Text("Empfohlen, aber nicht erforderlich. Die Adresse kann später ergänzt werden.")
         }
     }
 
@@ -307,7 +307,7 @@ struct NewBauakteView: View {
         } header: {
             Text("Gleich danach")
         } footer: {
-            Text("Beim Kunden vor Ort? Die Erstbegehung lässt sich direkt anschließen – auch ohne Verbindung.")
+            Text("Vor Ort kann die Erstbegehung im Anschluss erfasst werden, auch ohne Verbindung.")
         }
     }
 
@@ -473,7 +473,7 @@ struct NewBauakteView: View {
                 input.street = address.street ?? input.street
                 input.postalCode = address.postalCode ?? input.postalCode
                 input.city = address.city ?? input.city
-                locationHint = "Adresse aus dem Standort übernommen – bitte kurz prüfen."
+                locationHint = "Adresse aus dem Standort übernommen. Bitte prüfen."
             } else {
                 // Offline: nur Koordinaten (09, Abschnitt 3).
                 locationHint = "Standort gespeichert. Die Adresse kann ohne Verbindung nicht ermittelt werden."

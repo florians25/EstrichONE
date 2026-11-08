@@ -29,14 +29,14 @@ struct SyncStatusBar: View {
     private var statusLine: (text: String, symbol: String, color: Color, background: Color)? {
         let summary = sync.summary
         if summary?.hasProblems == true {
-            return ("Problem bei der Übertragung – antippen für Details", "exclamationmark.triangle.fill", Theme.danger, Theme.dangerSoft)
+            return ("Problem bei der Übertragung. Für Details antippen.", "exclamationmark.triangle.fill", Theme.danger, Theme.dangerSoft)
         }
         if let message = sync.maintenanceMessage {
             return ("Wartung: \(message) Änderungen bleiben auf dem Gerät und werden danach übertragen.", "wrench.and.screwdriver.fill",
                     Theme.warning, Theme.warningSoft)
         }
         if sync.isOffline {
-            return ("Offline – Änderungen werden gespeichert", "wifi.slash", Theme.textSecondary, Theme.canvas)
+            return ("Keine Verbindung. Änderungen werden gespeichert.", "wifi.slash", Theme.textSecondary, Theme.canvas)
         }
         // Laufende Übertragung zeigt nur das Symbol im Kopf bzw. an den Einträgen – keine eigene Textzeile.
         return nil
@@ -186,7 +186,7 @@ struct SyncView: View {
             return ("icloud.slash", "Offline", "Keine Verbindung. Alles ist auf dem Gerät gespeichert und wird übertragen, sobald der Server erreichbar ist.",
                     Theme.textSecondary)
         }
-        if sync.summary?.hasProblems == true { return ("exclamationmark.icloud.fill", "Bitte prüfen", "Einige Änderungen wurden nicht übernommen – Details unten.", Theme.danger) }
+        if sync.summary?.hasProblems == true { return ("exclamationmark.icloud.fill", "Bitte prüfen", "Einige Änderungen wurden nicht übernommen. Details siehe unten.", Theme.danger) }
         if let summary = sync.summary, !summary.isSettled {
             let count = summary.pendingOperations + summary.pendingUploads
             return ("icloud.and.arrow.up", count == 1 ? "1 Änderung wartet" : "\(count) Änderungen warten", last, Theme.accent)

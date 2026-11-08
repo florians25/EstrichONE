@@ -143,7 +143,7 @@ fun InspectionScreen(bauakteId: String, id: String?) {
                         }
                         session.service.addInitialInspection(bauakteId, if (notRequired) emptyMap() else checks.toMap(), remarks.toMap(), typed, null,
                             notes, notRequired, schema?.version)
-                        model.message("Erstbegehung gespeichert – das Protokoll erstellt der Server.")
+                        model.message("Erstbegehung gespeichert. Das Protokoll wird auf dem Server erstellt.")
                         nav.back()
                     } catch (e: IllegalArgumentException) {
                         error = e.message
@@ -204,7 +204,7 @@ fun AcceptanceScreen(bauakteId: String, id: String?) {
                     try {
                         session.service.addAcceptance(bauakteId, result, clientName, contractorName, bauakte?.addressLine, scope, notes,
                             clientSignature?.let(Images::pngBase64), contractorSignature?.let(Images::pngBase64))
-                        model.message("Abnahme gespeichert – das Protokoll erstellt der Server.")
+                        model.message("Abnahme gespeichert. Das Protokoll wird auf dem Server erstellt.")
                         nav.back()
                     } catch (e: IllegalArgumentException) {
                         error = e.message

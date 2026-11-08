@@ -70,7 +70,7 @@ struct NewAcceptanceView: View {
                     Text("Ergebnis")
                 } footer: {
                     if result == .acceptedWithReservations || result == .refused {
-                        Text("Bitte die Mängel bzw. Vorbehalte unten erfassen – jeder wird als Aufgabe mit Frist angelegt.")
+                        Text("Bitte Mängel und Vorbehalte unten erfassen. Jeder Eintrag wird als Aufgabe mit Frist angelegt.")
                     }
                 }
                 // Beschriftung bleibt sichtbar, auch wenn die Felder vorausgefüllt sind.
@@ -99,7 +99,7 @@ struct NewAcceptanceView: View {
                         captureStarted = .now
                         capturing = true
                     } label: {
-                        Label(photoIds.isEmpty ? "Fotos aufnehmen" : "\(photoIds.count) \(photoIds.count == 1 ? "Foto" : "Fotos") – weitere aufnehmen", systemImage: "camera")
+                        Label(photoIds.isEmpty ? "Fotos aufnehmen" : "\(photoIds.count) \(photoIds.count == 1 ? "Foto" : "Fotos") · weitere aufnehmen", systemImage: "camera")
                     }
                 } header: {
                     Text("Fotos")
@@ -399,7 +399,7 @@ struct AcceptanceDetailView: View {
                 .accessibilityIdentifier("customerLinkButton")
                 if let link {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text(link.emailed ? "Link an \(email) gesendet." : "Link erstellt – bitte an den Kunden weitergeben.")
+                        Text(link.emailed ? "Link an \(email) gesendet." : "Link erstellt. Bitte an den Kunden weitergeben.")
                             .font(.subheadline.weight(.semibold))
                         Text(link.url).font(.caption.monospaced()).textSelection(.enabled)
                         Text("Gültig bis \(link.expiresAt.shortStamp)")

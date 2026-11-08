@@ -339,10 +339,10 @@ public struct ChatMessage: Decodable, Sendable, Equatable, Identifiable {
     public var summary: String {
         if deleted { return "Nachricht gelöscht" }
         if !text.isEmpty { return text }
-        if let location { return "📍 " + (location.label ?? location.address ?? "Standort") }
+        if let location { return (location.label ?? location.address).map { "Standort: " + $0 } ?? "Standort" }
         if let first = attachments.first {
-            if attachments.count > 1 { return first.isPhoto ? "📷 \(attachments.count) Fotos" : "📄 \(attachments.count) Dateien" }
-            return first.isPhoto ? "📷 Foto" : "📄 " + first.name
+            if attachments.count > 1 { return first.isPhoto ? "\(attachments.count) Fotos" : "\(attachments.count) Dateien" }
+            return first.isPhoto ? "Foto" : first.name
         }
         return ""
     }

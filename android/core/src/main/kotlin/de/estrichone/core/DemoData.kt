@@ -73,7 +73,7 @@ object DemoData {
         contact(SCHNEIDER, "person", "Familie Schneider", "K-1088", "Ahornweg 3", "84028", "Landshut",
             listOf(mapOf("kind" to "mobile", "number" to "0171 2345678", "label" to "Herr Schneider"), mapOf("kind" to "landline", "number" to "0871 123456", "label" to null)),
             listOf(mapOf("address" to "schneider@example.com", "label" to "privat")),
-            mapOf("salutation" to "Familie", "preferredChannel" to "mobile", "notes" to "Hund im Garten – bitte klingeln."))
+            mapOf("salutation" to "Familie", "preferredChannel" to "mobile", "notes" to "Hund im Garten, bitte klingeln."))
         contact(HUBER_BAU, "company", "Huber Bau GmbH", "K-1042", "Industriestr. 1", "84028", "Landshut",
             listOf(mapOf("kind" to "office", "number" to "0871 4711", "label" to "Zentrale"), mapOf("kind" to "fax", "number" to "0871 4712", "label" to null)),
             listOf(mapOf("address" to "info@huber.example", "label" to "Zentrale"), mapOf("address" to "bauleitung@huber.example", "label" to "Bauleitung")),
@@ -111,7 +111,7 @@ object DemoData {
         result += change(EntityTypes.NOTE, json("id" to "0193a1b2-de00-7000-8000-0000000d0001", "bauakteId" to EFH, "text" to "Schlüssel liegt beim Nachbarn (Nr. 5).",
             "authorUserId" to user, "isPinned" to true, "createdAt" to time(-86_400 * 2), "version" to 1))
         result += change(EntityTypes.NOTE, json("id" to "0193a1b2-de00-7000-8000-0000000d0002", "bauakteId" to EFH,
-            "text" to "Kunde wünscht Fugen im Türbereich – mit Bauleitung abgestimmt.", "authorUserId" to user, "isPinned" to false,
+            "text" to "Kunde wünscht Fugen im Türbereich, mit Bauleitung abgestimmt.", "authorUserId" to user, "isPinned" to false,
             "createdAt" to time(-86_400), "version" to 1))
         result += change(EntityTypes.DIARY, json("id" to "0193a1b2-de00-7000-8000-0000000e0001", "bauakteId" to EFH, "day" to day(-1),
             "text" to "Randdämmstreifen gesetzt, Folie verlegt.", "weather" to "cloudy", "temperatureCelsius" to 12, "workersPresent" to 3,
@@ -125,7 +125,7 @@ object DemoData {
         result += change(EntityTypes.INSPECTION, json("id" to "0193a1b2-de00-7000-8000-000000001001", "bauakteId" to EFH, "kind" to "initialInspection",
             "performedByUserId" to user, "performedAt" to time(-86_400 * 3), "notRequired" to false,
             "checks" to mapOf("substrate" to "ok", "edgeInsulation" to "ok", "heatingPressureTest" to "ok", "access" to "notOk", "utilities" to "ok"),
-            "checkRemarks" to mapOf("access" to "Zufahrt nur mit kleinem Lkw – Pumpe an die Straße."),
+            "checkRemarks" to mapOf("access" to "Zufahrt nur mit kleinem Lkw, Pumpe an der Straße aufstellen."),
             "values" to mapOf("measuredArea" to 142.5, "thickness" to 65, "underfloorHeating" to true, "water" to true, "power" to true),
             "schemaVersion" to 1, "photoFileIds" to listOf(photos[0].id), "remarks" to "Zufahrt nur mit kleinem Lkw",
             "notes" to "Kunde informiert.\nPumpe am Straßenrand aufstellen.", "version" to 1))
@@ -156,7 +156,7 @@ object DemoData {
         party(1, "architect", "Anna Lechner", company = "Lechner Architekten", phone = "0871 430 22 10", email = "lechner@architekten.example",
             street = "Neustadt 18", city = "Landshut")
         party(2, "siteManager", "Stefan Wimmer", company = "Wimmer Hausbau GmbH", phone = "0871 445 56 0", email = "s.wimmer@wimmer-hausbau.example",
-            note = "Bauleitung – Abnahme der Estricharbeiten", mobile = "0171 445 56 67", street = "Gewerbestraße 4", city = "Landshut", primary = true)
+            note = "Bauleitung, Abnahme der Estricharbeiten", mobile = "0171 445 56 67", street = "Gewerbestraße 4", city = "Landshut", primary = true)
         party(3, "other", "Haustechnik Bauer GmbH", phone = "0871 66 12 0", note = "Heizung: Druckprobe vor dem Einbringen")
         party(4, "supplier", "Transportbeton Isar GmbH", phone = "0871 77 88 0", note = "Disposition ab 6 Uhr")
 
@@ -167,7 +167,7 @@ object DemoData {
         }
         room(1, "EG", "Wohnen/Essen", 41.2, true)
         room(2, "EG", "Küche", 13.4, true)
-        room(3, "EG", "Flur", 10.6, true, notes = "Haarriss an der Haustür – siehe Mangel")
+        room(3, "EG", "Flur", 10.6, true, notes = "Haarriss an der Haustür, siehe Mangel")
         room(4, "EG", "Gäste-WC", 3.4, true)
         room(5, "EG", "Hauswirtschaftsraum", 7.9, true, heated = false)
         room(6, "OG", "Schlafen", 17.2, false)
@@ -312,13 +312,13 @@ object DemoData {
         return json(
             "announcements" to listOf(
                 mapOf("id" to "demo-crit", "title" to "Störung beim E-Mail-Versand",
-                    "text" to "Ausgehende E-Mails werden derzeit verzögert zugestellt. Wir arbeiten an einer Lösung – Ihre Nachrichten gehen nicht verloren.",
+                    "text" to "Ausgehende E-Mails werden derzeit verzögert zugestellt. Die Störung wird behoben, Nachrichten gehen nicht verloren.",
                     "severity" to "critical", "startsAt" to null, "endsAt" to null, "source" to "console"),
                 mapOf("id" to "demo-info", "title" to "Neu: Räume per Foto erfassen",
-                    "text" to "Im Bereich Räume lassen sich Maße jetzt direkt aus einem Foto übernehmen.", "severity" to "info", "startsAt" to null,
+                    "text" to "Im Bereich Räume lassen sich Maße aus einem Foto übernehmen.", "severity" to "info", "startsAt" to null,
                     "endsAt" to ApiDate.format(now.plusSeconds(5 * 86_400)), "source" to "instance"),
             ),
-            "maintenance" to mapOf("active" to false, "message" to "Update auf Version 1.1 – EstrichONE ist in dieser Zeit nicht erreichbar. Bitte vorher abgleichen.",
+            "maintenance" to mapOf("active" to false, "message" to "Update auf Version 1.1. EstrichONE ist in dieser Zeit nicht erreichbar. Bitte vorher abgleichen.",
                 "startsAt" to ApiDate.format(start), "endsAt" to ApiDate.format(start.plusSeconds(90 * 60)), "adminsMayWork" to true, "source" to "instance"),
             "serverTime" to ApiDate.format(now),
         )

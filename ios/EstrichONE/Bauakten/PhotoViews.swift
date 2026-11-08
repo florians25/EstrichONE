@@ -194,7 +194,7 @@ struct PhotoViewer: View {
             } message: {
                 Text(current?.syncState == .pending
                      ? "Das Foto ist noch nicht übertragen und wird nur auf diesem Gerät gelöscht."
-                     : "Das Foto wird aus der Bauakte gelöscht – auch im Büro.")
+                     : "Das Foto wird aus der Bauakte gelöscht, auch für das Büro.")
             }
             .task {
                 if let store = model.active?.sync?.store {

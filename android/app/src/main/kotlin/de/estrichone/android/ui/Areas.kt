@@ -175,7 +175,7 @@ private fun PhotosArea(id: String) {
             session.content(file)?.let { Triple(it, file.shareName, file.shareMime) }
         }
         sharing = null
-        if (loaded.size < files.size) nav.snackbar.showSnackbar("${files.size - loaded.size} Datei(en) noch nicht verfügbar – erst nach der Übertragung.")
+        if (loaded.size < files.size) nav.snackbar.showSnackbar("${files.size - loaded.size} Datei(en) noch nicht übertragen und daher nicht verfügbar.")
         if (loaded.isNotEmpty() && Links.shareAll(context, loaded)) selected = emptySet()
     }
     ScreenScaffold(if (selecting) "${selected.size} ausgewählt" else AreaKind.Photos.title, actions = {
@@ -197,7 +197,7 @@ private fun PhotosArea(id: String) {
             LazyVerticalGrid(GridCells.Adaptive(112.dp), contentPadding = padding.content(), horizontalArrangement = Arrangement.spacedBy(6.dp),
                 verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }) {
-                    Secondary(sharing ?: if (selecting) "Tippen wählt weitere aus. Teilen oben rechts – auch Videos, z. B. per WhatsApp."
+                    Secondary(sharing ?: if (selecting) "Weitere durch Tippen auswählen. Teilen über das Symbol oben rechts, auch Videos."
                         else "Lange drücken, um mehrere Fotos oder Videos auszuwählen und zu teilen.", Modifier.padding(start = 4.dp))
                 }
                 groups.forEach { (day, list) ->
@@ -246,7 +246,7 @@ fun PhotoScreen(fileId: String) {
                 loading = if (f.isVideo) "Video wird vorbereitet …" else "Wird vorbereitet …"
                 val bytes = session.content(f)
                 loading = null
-                if (bytes == null) nav.snackbar.showSnackbar("Noch nicht verfügbar – erst nach der Übertragung.")
+                if (bytes == null) nav.snackbar.showSnackbar("Noch nicht verfügbar, die Übertragung steht aus.")
                 else Links.share(context, bytes, f.shareName, f.shareMime)
             }
         }, enabled = loading == null) {
@@ -269,7 +269,7 @@ fun PhotoScreen(fileId: String) {
                             val bytes = session.content(f)
                             loading = null
                             if (bytes == null || !Links.open(context, bytes, f.shareName, f.shareMime)) {
-                                nav.snackbar.showSnackbar(if (bytes == null) "Noch nicht verfügbar – erst nach der Übertragung." else "Keine App zum Abspielen gefunden.")
+                                nav.snackbar.showSnackbar(if (bytes == null) "Noch nicht verfügbar, die Übertragung steht aus." else "Keine App zum Abspielen gefunden.")
                             }
                         }
                     }, modifier = Modifier.size(72.dp)) {
@@ -357,7 +357,7 @@ private fun TasksArea(id: String) {
                     FilterChip(showDone, { showDone = true }, label = { Text("Alle (${tasks.size})") })
                 }
             }
-            if (visible.isEmpty()) item { EmptyState(Icons.AutoMirrored.Outlined.Assignment, "Alles erledigt", "Keine offenen Aufgaben oder Mängel.") }
+            if (visible.isEmpty()) item { EmptyState(Icons.AutoMirrored.Outlined.Assignment, "Keine offenen Aufgaben", "Offene Aufgaben und Mängel erscheinen hier.") }
             else item {
                 SectionCard { visible.forEachIndexed { index, task -> if (index > 0) RowDivider(56.dp); TaskRow(task, session, task.description) } }
             }
@@ -459,7 +459,7 @@ private fun RoomsArea(id: String) {
     val rooms by session.local(id) { session.service.rooms(id) }
     ScreenScaffold(AreaKind.Rooms.title, floating = { AddButton("Raum") { adding = true } }) { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
-            if (rooms.isEmpty()) item { EmptyState(Icons.Outlined.GridView, "Noch keine Räume", "Räume mit Fläche und Aufbau erfassen – die Summe erscheint hier.") }
+            if (rooms.isEmpty()) item { EmptyState(Icons.Outlined.GridView, "Noch keine Räume", "Räume mit Fläche und Aufbau erfassen. Die Summe erscheint hier.") }
             else item {
                 val total = rooms.sumOf { it.area ?: 0.0 }
                 val laid = rooms.filter { it.status != de.estrichone.core.RoomStatus.Planned }.sumOf { it.area ?: 0.0 }

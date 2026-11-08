@@ -113,7 +113,7 @@ final class ScreenshotDirector {
             ? SessionEnd.passwordChanged.message + " Ihre Daten auf diesem Gerät bleiben erhalten."
             : nil
         if scene.hasPrefix("wartung") {
-            sync?.simulateMaintenance("Update auf Version 0.3 – voraussichtlich bis 7:30 Uhr.")
+            sync?.simulateMaintenance("Update auf Version 0.3, voraussichtlich bis 7:30 Uhr.")
         } else {
             sync?.simulateMaintenance(nil)
         }
@@ -139,9 +139,9 @@ final class ScreenshotDirector {
         let end = start.addingTimeInterval(90 * 60)
         let json = """
         {"announcements":[
-           {"id":"shot-crit","title":"Störung beim E-Mail-Versand","text":"Ausgehende E-Mails werden derzeit verzögert zugestellt. Wir arbeiten an einer Lösung – Ihre Nachrichten gehen nicht verloren.","severity":"critical","startsAt":null,"endsAt":null,"source":"console"},
-           {"id":"shot-info","title":"Neu: Räume per Foto erfassen","text":"Im Bereich Räume lassen sich Maße jetzt direkt aus einem Foto übernehmen.","severity":"info","startsAt":null,"endsAt":"\(APIDate.format(Date.now.addingTimeInterval(5 * 86_400)))","source":"instance"}],
-         "maintenance":{"active":false,"message":"Update auf Version 0.3 – EstrichONE ist in dieser Zeit nicht erreichbar. Bitte vorher abgleichen.","startsAt":"\(APIDate.format(start))","endsAt":"\(APIDate.format(end))","adminsMayWork":true,"source":"instance"},
+           {"id":"shot-crit","title":"Störung beim E-Mail-Versand","text":"Ausgehende E-Mails werden derzeit verzögert zugestellt. Die Störung wird behoben, Nachrichten gehen nicht verloren.","severity":"critical","startsAt":null,"endsAt":null,"source":"console"},
+           {"id":"shot-info","title":"Räume per Foto erfassen","text":"Im Bereich Räume lassen sich Maße aus einem Foto übernehmen.","severity":"info","startsAt":null,"endsAt":"\(APIDate.format(Date.now.addingTimeInterval(5 * 86_400)))","source":"instance"}],
+         "maintenance":{"active":false,"message":"Update auf Version 0.3. EstrichONE ist in dieser Zeit nicht erreichbar. Bitte vorher abgleichen.","startsAt":"\(APIDate.format(start))","endsAt":"\(APIDate.format(end))","adminsMayWork":true,"source":"instance"},
          "serverTime":null}
         """
         return try? JSONCoding.decoder.decode(SystemNotices.self, from: Data(json.utf8))

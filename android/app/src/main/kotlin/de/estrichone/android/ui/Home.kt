@@ -121,7 +121,7 @@ fun HomeScreen() {
                 }
                 Spacer(Modifier.height(Space.m))
                 if (session.isDemo) {
-                    Banner("Demomodus: Beispieldaten, es wird nichts gesendet.", Icons.Filled.PlayCircle, MaterialTheme.colorScheme.primary,
+                    Banner("Demomodus mit Beispieldaten. Es werden keine Daten gesendet.", Icons.Filled.PlayCircle, MaterialTheme.colorScheme.primary,
                         tones.infoSoft, Modifier.padding(bottom = Space.m), action = "Beenden", onAction = model::endDemo)
                 }
                 OfflineBanner(session)

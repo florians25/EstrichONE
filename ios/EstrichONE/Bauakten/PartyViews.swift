@@ -235,7 +235,7 @@ struct PartyEditView: View {
                 .textInputAutocapitalization(.words)
                 .autocorrectionDisabled()
             if candidates.isEmpty {
-                Text(search.isEmpty ? "Keine Kontakte im Kundenstamm dieses Geräts." : "Nichts gefunden – „Neu erfassen“ wählen.")
+                Text(search.isEmpty ? "Keine Kontakte im Kundenstamm dieses Geräts." : "Kein Treffer. Kontakt über „Neu erfassen“ anlegen.")
                     .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
             }
             ForEach(candidates.prefix(30)) { contact in
@@ -264,7 +264,7 @@ struct PartyEditView: View {
             }
             Toggle("Hauptkontakt der Bauakte", isOn: $edit.isPrimary)
         } footer: {
-            Text("Es gibt höchstens einen Hauptkontakt – ein bisheriger verliert die Markierung.")
+            Text("Es gibt nur einen Hauptkontakt. Ein bisheriger Hauptkontakt verliert die Markierung.")
         }
     }
 

@@ -67,7 +67,7 @@ struct WelcomeView: View {
                 Button {
                     model.requestDemo(true)
                 } label: {
-                    Label("Demo ausprobieren – ohne Server", systemImage: "play.rectangle")
+                    Label("Demo ohne Server starten", systemImage: "play.rectangle")
                 }
                 .estrichButton(.tertiary, size: .regular, fullWidth: true)
                 .accessibilityIdentifier("tryDemoButton")

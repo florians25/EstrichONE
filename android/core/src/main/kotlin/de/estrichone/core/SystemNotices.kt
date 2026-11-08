@@ -180,7 +180,7 @@ object NoticePresentation {
         return NoticeItem(
             id = "m:${m.startsAt}:$kindName:${contentHash("${m.message ?: ""}|${m.endsAt ?: ""}")}",
             kind = kind, title = if (running) "Wartungsarbeiten laufen" else "Geplante Wartung",
-            text = m.message ?: "EstrichONE ist in dieser Zeit nicht erreichbar. Bitte rechtzeitig abgleichen – Erfasstes bleibt sicher auf dem Gerät.",
+            text = m.message ?: "EstrichONE ist in dieser Zeit nicht erreichbar. Bitte vorher abgleichen. Erfasste Daten bleiben auf dem Gerät gespeichert.",
             period = period(start, end, now, zone), relative = relative(start, end, now, zone), remaining = if (running) remaining(end, now) else "",
             source = sourceText(m.source), start = start, end = end,
         )

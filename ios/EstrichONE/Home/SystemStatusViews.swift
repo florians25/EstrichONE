@@ -59,11 +59,11 @@ struct SystemStatusStrip: View {
     private func readOnlyRow(now: Date) -> some View {
         let since = OfflineDuration.text(since: sync.connection.lastContact, now: now)
         if sync.isReadOnly {
-            StripRow(tone: .neutral, symbol: "eye", text: "Nur Ansicht – seit \(since) keine Verbindung zum Server. Erfassen und Ändern sind gesperrt.",
+            StripRow(tone: .neutral, symbol: "eye", text: "Nur Ansicht. Seit \(since) keine Verbindung zum Server, Erfassen und Ändern sind gesperrt.",
                      actionTitle: "Trotzdem arbeiten") { confirmsOverride = true }
                 .accessibilityIdentifier("readOnlyBanner")
         } else {
-            StripRow(tone: .neutral, symbol: "wifi.exclamationmark", text: "Offline auf eigene Gefahr – seit \(since) keine Verbindung.",
+            StripRow(tone: .neutral, symbol: "wifi.exclamationmark", text: "Offline auf eigene Gefahr. Seit \(since) keine Verbindung.",
                      actionTitle: "Nur Ansicht") { sync.endReadOnlyOverride() }
                 .accessibilityIdentifier("readOnlyOverriddenBanner")
         }
@@ -78,7 +78,7 @@ extension View {
                 .accessibilityIdentifier("confirmReadOnlyOverride")
             Button("Abbrechen", role: .cancel) {}
         } message: {
-            Text("Der Server ist seit über 5 Minuten nicht erreichbar. Neue Fotos und Änderungen bleiben nur auf diesem Gerät, bis die Verbindung wieder steht – geht das Gerät verloren oder wird die App gelöscht, sind sie weg. Andere sehen Ihre Änderungen erst danach.")
+            Text("Der Server ist seit über 5 Minuten nicht erreichbar. Neue Fotos und Änderungen bleiben nur auf diesem Gerät, bis die Verbindung wiederhergestellt ist. Geht das Gerät verloren oder wird die App gelöscht, sind diese Daten verloren. Andere sehen Ihre Änderungen erst danach.")
         }
     }
 }

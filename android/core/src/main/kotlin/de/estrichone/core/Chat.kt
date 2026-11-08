@@ -68,14 +68,14 @@ data class ChatMessage(
     val isSystem: Boolean get() = senderUserId == null && !mine
     val isRead: Boolean get() = recipients > 0 && readBy >= recipients
 
-    /** Vorschau in der Liste: Text bzw. „📷 Foto“. */
+    /** Vorschau in der Liste: Text bzw. „Foto“. */
     val summary: String
         get() = when {
             deleted -> "Nachricht gelöscht"
             !text.isNullOrBlank() -> text
-            attachments.any { it.isPhoto } -> "📷 Foto"
-            attachments.isNotEmpty() -> "📎 ${attachments.first().fileName}"
-            location != null -> "📍 Standort"
+            attachments.any { it.isPhoto } -> "Foto"
+            attachments.isNotEmpty() -> attachments.first().fileName
+            location != null -> "Standort"
             else -> ""
         }
 

@@ -148,7 +148,7 @@ struct ProjectSection: View {
         Section {
             if items.isEmpty {
                 EmptyStateView(symbol: "list.bullet.rectangle", title: "Noch keine Basisdaten",
-                               message: "Fläche, Estrichart, Dicke und Heizung – für Kolonne und Büro auf einen Blick.",
+                               message: "Fläche, Estrichart, Dicke und Heizung der Baustelle für Kolonne und Büro.",
                                actionTitle: "Basisdaten erfassen", actionSymbol: "square.and.pencil", action: edit)
             } else {
                 // Wie in den Einstellungen: Bezeichnung links, Wert rechts – schnell zu überfliegen, auch mit großer Schrift.
