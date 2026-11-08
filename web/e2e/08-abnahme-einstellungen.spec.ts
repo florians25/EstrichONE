@@ -139,7 +139,7 @@ test('Abnahmeprotokoll: Freigabe per Link durch den Kunden, PDF unter „Abnahme
   await expect(customer.getByText('Randfuge im Bad nachschneiden')).toBeVisible();
   await customer.getByLabel('Ihr Name').fill('Petra Kraus');
   await customer.getByRole('button', { name: 'Freigeben' }).click();
-  await expect(customer.getByText(/das Abnahmeprotokoll ist freigegeben/)).toBeVisible();
+  await expect(customer.getByText(/Das Abnahmeprotokoll ist freigegeben/)).toBeVisible();
   await customer.close();
 
   await openAkte(page);

@@ -43,7 +43,7 @@ test('Archiv: falscher Code wird abgelehnt, mit richtigem Code gekoppelt, Regeln
   await signIn(page, 'admin', adminPassword);
   await page.goto('/system/archiv');
   await expect(pageTitle(page)).toHaveText('Archiv');
-  await expect(page.getByText('Noch kein Archivserver gekoppelt.', { exact: false })).toBeVisible();
+  await expect(page.getByText('Noch kein Archivserver gekoppelt.', { exact: false }).first()).toBeVisible();
 
   await page.getByRole('button', { name: 'Archivserver koppeln' }).click();
   await page.getByRole('textbox', { name: 'Adresse' }).fill(archiveAddress);
