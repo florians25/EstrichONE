@@ -212,8 +212,8 @@ fun Pill(text: String, color: Color, background: Color, icon: ImageVector? = nul
 /** Kennzahl in der Kopfzeile der Bauakte („142,5 m²“). */
 @Composable
 fun Tag(text: String) {
-    Text(text, style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold, color = tones.textSecondary,
-        modifier = Modifier.clip(RoundedCornerShape(50)).background(tones.fillStrong).padding(horizontal = 12.dp, vertical = 6.dp))
+    Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = tones.textSecondary,
+        modifier = Modifier.clip(RoundedCornerShape(50)).background(tones.fillStrong).padding(horizontal = 10.dp, vertical = 5.dp))
 }
 
 /** Zahl als Abzeichen. */
