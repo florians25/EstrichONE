@@ -297,8 +297,11 @@ export default class ObjectController extends BaseController {
 			session.has("planning.read") ? akte.planning(id) : Promise.resolve(null),
 		]);
 		if (id !== this.id) return;
+		// Fläche aus den Basisdaten (Gesamtfläche); nur wenn dort nichts steht, Summe der Räume.
+		const baseArea = (this.m().getProperty("/bauakte") as BauakteDetail | undefined)?.project?.totalArea;
+		if (baseArea != null && Number.isFinite(baseArea) && baseArea > 0) kpi.area = area(baseArea).replace(" m²", "");
 		if (rooms.status === "fulfilled") {
-			kpi.area = area(rooms.value.totalAreaSquareMeters).replace(" m²", "");
+			if (kpi.area === "–" && rooms.value.totalAreaSquareMeters > 0) kpi.area = area(rooms.value.totalAreaSquareMeters).replace(" m²", "");
 			kpi.screeds = [...new Set(rooms.value.rooms.map((r) => r.screedTypeName).filter(Boolean))].join(", ");
 		}
 		if (work.status === "fulfilled" && session.has("work.read")) {
