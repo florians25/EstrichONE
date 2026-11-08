@@ -87,7 +87,9 @@ struct NotificationInboxView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .contentMargins(.horizontal, sideMargin, for: .scrollContent)
+        // Nur auf breiten Fenstern eigene Ränder; sonst die üblichen der gruppierten Liste.
+        .contentMargins(.horizontal, sideMargin > 0 ? sideMargin : nil, for: .scrollContent)
+        .listSectionSpacing(.compact)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .overlay { if !loaded { ProgressView() } }
         .animation(.snappy, value: filter)
@@ -266,9 +268,9 @@ struct NotificationInboxView: View {
                 if let url = URL(string: UIApplication.openNotificationSettingsURLString) { openURL(url) }
             }
         case .notDetermined:
-            Callout(tone: .info, title: "Pushnachrichten aktivieren",
-                    message: "Erfahren Sie sofort, wenn der Plan freigegeben oder geändert wird oder das Büro Ihnen schreibt.",
-                    symbol: "bell.badge", actionTitle: "Aktivieren") { push.requestPermission() }
+            // Knapp in einer Zeile, damit die Benachrichtigungen selbst oben bleiben.
+            NoticeLine(tone: .info, text: "Pushnachrichten für Planfreigaben und Nachrichten aus dem Büro", symbol: "bell.badge",
+                       actionTitle: "Aktivieren") { push.requestPermission() }
         case .unknown:
             EmptyView()
         }
@@ -468,10 +470,12 @@ struct NotificationRow: View {
                         .foregroundStyle(item.kind.tint)
                         .lineLimit(1)
                     if item.isUrgent {
-                        Label("Dringend", systemImage: "exclamationmark.circle.fill")
-                            .font(Typo.labelStrong)
-                            .foregroundStyle(Theme.warning)
-                            .labelStyle(.titleAndIcon)
+                        HStack(spacing: 3) {
+                            Image(systemName: "exclamationmark.circle.fill").imageScale(.small)
+                            Text("Dringend")
+                        }
+                        .font(Typo.labelStrong)
+                        .foregroundStyle(Theme.warning)
                     }
                     Spacer(minLength: 0)
                     if item.hasTarget {
