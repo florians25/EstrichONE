@@ -116,6 +116,32 @@ struct BauakteServiceTests {
         #expect(try await service.files(of: bauakte).first?.syncState == .synced)
     }
 
+    @Test("Fotos direkt nach der Schnellanlage (neuer Kunde, noch ohne Nummer): Kunde, Bauakte, dann Fotos – alles übertragen")
+    func photosRightAfterQuickCreate() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        let bauakte = try await service.create(NewBauakte(title: "EFH Neu"), newCustomer: NewCustomer(name: "Familie Neu"))
+        #expect(try await service.bauakte(bauakte)?.number == nil)
+        let jpegs = (0..<3).map { index in Data([0xFF, 0xD8] + (0..<1500).map { UInt8(($0 + index) % 256) }) }
+        var ids: [UUID] = []
+        for jpeg in jpegs {
+            ids.append(try await service.addPhoto(jpeg, to: bauakte, capturedAt: Date(), caption: "Bad OG"))
+        }
+        #expect(try await service.files(of: bauakte).count == 3)
+
+        #expect(await engine.synchronize(includeScope: true) == .completed)
+
+        #expect(try await service.bauakte(bauakte)?.number == "2026-001")
+        for (id, jpeg) in zip(ids, jpegs) {
+            #expect(server.uploaded(id) == jpeg)
+            #expect(server.entity(id)?["bauakteId"]?.string == bauakte.key)
+        }
+        let local = try await service.files(of: bauakte)
+        #expect(Set(local.map(\.id)) == Set(ids))
+        #expect(local.allSatisfy { $0.syncState == .synced && $0.caption == "Bad OG" })
+        #expect(try await service.store.summary().isSettled)
+    }
+
     @Test("09, AK-2: im Flugmodus angelegt, 20 Fotos, App während des Uploads beendet – alles genau einmal auf dem Server")
     func airplaneModeTwentyPhotos() async throws {
         let server = SimulatedSyncServer()

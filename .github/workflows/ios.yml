@@ -136,7 +136,7 @@ jobs:
     env:
       DEVICE: ${{ matrix.device }}
       IPHONE_SCENES: "heute,heute-glocke,hinweise,hinweis-detail,heute-unten,baustellen,bauakte,bauakte-mitte,bauakte-unten,bereich-fotos,bereich-aufgaben,bereich-protokolle,protokoll,bereich-tagebuch,bereich-raeume,raum,bereich-basisdaten,bereich-kontakte,bereich-notizen,kunden,kundenkarte,disposition,mehr,sync,wartung,stoerung,chat,chat-verlauf,chat-gruppe,chat-anhang,chat-diktat"
-      IPHONE_SCENES_2: "erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,dispo-fahrzeug,dispo-kolonnen,dispo-freigabe,postfach,start,start-adresse,anmelden,anmelden-code,warten,zuruecksetzen,heute-gross,bauakte-gross,disposition,mehr-zuruecksetzen"
+      IPHONE_SCENES_2: "foto-vorschau,kamera,erfassen,tagebuch-neu,mangel-neu,basisdaten-neu,neu-1,neu-2,neu-3,neu-4,erstbegehung,abnahme,aufgaben,woche,meldung,meldung-detail,meldung-bearbeitung,kontakt-neu,dispo-zuweisen,dispo-verschieben,dispo-tauschen,dispo-fahrzeug,dispo-kolonnen,dispo-freigabe,postfach,start,start-adresse,anmelden,anmelden-code,warten,zuruecksetzen,heute-gross,bauakte-gross,disposition,mehr-zuruecksetzen"
       IPAD_SCENES: "heute,heute-glocke,hinweise,hinweis-detail,baustellen,bauakte,bereich-kontakte,kunden,disposition,meldung-detail,anmelden,stoerung,chat-verlauf,chat-gruppe,wartung,heute-quer,baustellen-quer,bauakte-quer,kunden-quer,disposition-quer,meldung-detail-quer,mehr-zuruecksetzen"
     steps:
       - uses: actions/checkout@v5

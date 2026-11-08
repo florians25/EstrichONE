@@ -12,6 +12,17 @@ enum HomeRoute: Hashable {
     case chat
 }
 
+extension NewBauakteView.Next {
+    /// Was nach der Anlage für die **neue** Bauakte startet – in jedem Anlageweg gleich (Baustellen, Erfassen, Kunden).
+    var followUp: SiteTask {
+        switch self {
+        case .open: .open
+        case .photograph: .photo
+        case .inspect: .inspection
+        }
+    }
+}
+
 /// Aktion, für die noch die Baustelle gewählt wird.
 enum SiteTask: String, Identifiable {
     case open, photo, video, scan, diary, inspection, acceptance, defect, task, note, measurement

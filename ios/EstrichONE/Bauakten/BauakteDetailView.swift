@@ -579,6 +579,9 @@ struct BauakteDetailView: View {
             case "tagebuch-neu": action = .diary
             case "mangel-neu": action = .defect
             case "basisdaten-neu": action = .project
+            case "kamera": action = .photo
+            case "foto-vorschau":
+                if viewing == nil, let photo = content?.photos.first(where: \.isPhoto) { viewing = photo }
             default: break
             }
         }

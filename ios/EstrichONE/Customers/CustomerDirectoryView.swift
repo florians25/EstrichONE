@@ -299,6 +299,9 @@ struct CustomerCardView: View {
     @State private var editing = false
     @State private var creatingBauakte = false
     @State private var openedBauakte: UUID?
+    /// „Gleich danach“ aus der Anlage: Kamera bzw. Erstbegehung für die neue Bauakte.
+    @State private var captureFor: Bauakte?
+    @State private var inspectFor: Bauakte?
     @State private var exporting = false
 
     /// Breite Darstellung (iPad): Kontaktdaten links, Bauakten rechts.
@@ -361,10 +364,23 @@ struct CustomerCardView: View {
             }
         }
         .sheet(isPresented: $creatingBauakte) {
-            NewBauakteView(initialCustomer: contact) { id, _ in
+            NewBauakteView(initialCustomer: contact) { id, next in
                 creatingBauakte = false
                 openedBauakte = id
+                guard next.followUp != .open else { return }
+                Task {
+                    // Erst wenn das Anlageblatt geschlossen ist, Kamera bzw. Erstbegehung öffnen.
+                    try? await Task.sleep(for: .milliseconds(600))
+                    let created = try? await model.active?.service?.bauakte(id)
+                    if next.followUp == .photo { captureFor = created } else { inspectFor = created }
+                }
             }
+        }
+        .fullScreenCover(item: $captureFor) { bauakte in
+            CameraView(bauakte: bauakte) { _ in captureFor = nil }
+        }
+        .sheet(item: $inspectFor) { bauakte in
+            InspectionEntryView(bauakte: bauakte) { inspectFor = nil }
         }
         .sheet(isPresented: $exporting) {
             if let contact {

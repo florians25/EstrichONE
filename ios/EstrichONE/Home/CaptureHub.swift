@@ -91,11 +91,11 @@ struct CaptureHub: View {
                 form(activity)
             }
             .sheet(isPresented: $creating) {
-                NewBauakteView { id, _ in
+                NewBauakteView { id, next in
                     creating = false
                     Task {
                         try? await Task.sleep(for: .milliseconds(450))
-                        created = id
+                        await didCreate(id, next: next)
                     }
                 }
             }
@@ -196,6 +196,22 @@ struct CaptureHub: View {
         case .measurement: NewCmMeasurementView(bauakteId: bauakte.id) { finish(nil) }
         case .video: VideoCaptureView(bauakte: bauakte) { saved in finish(saved ? "Video gespeichert" : nil) }
         case .photo, .scan, .open: EmptyView()
+        }
+    }
+
+    /// Neue Bauakte: Sie wird die gewählte Baustelle (sonst landeten die nächsten Fotos in der zuvor gewählten), dann
+    /// startet, was im Anlageblatt unter „gleich danach“ gewählt wurde – Kamera, Erstbegehung oder die Akte.
+    private func didCreate(_ id: UUID, next: NewBauakteView.Next) async {
+        guard let bauakte = try? await model.active?.service?.bauakte(id) else {
+            created = id
+            return
+        }
+        site = bauakte
+        isToday = todayIds.contains(id)
+        if next.followUp == .open {
+            created = id
+        } else {
+            start(next.followUp, for: bauakte)
         }
     }
 

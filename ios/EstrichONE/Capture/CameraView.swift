@@ -25,6 +25,8 @@ struct CameraView: View {
     @State private var errorMessage: String?
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var flash = false
+    /// Ausgelöste, aber noch nicht gespeicherte Fotos: „Fertig“ wartet auf sie.
+    @State private var pending = PendingShots()
 
     init(bauakte: Bauakte, allowsChangingBauakte: Bool = true, caption: String = "", onFinish: @escaping (Int) -> Void) {
         _bauakte = State(initialValue: bauakte)
@@ -63,6 +65,7 @@ struct CameraView: View {
         }
         .task { await startCamera() }
         .onDisappear { camera.stop() }
+        .onChange(of: pending) { closeIfSettled() }
         .onChange(of: pickerItems) { _, items in
             Task { await importPicked(items) }
         }
@@ -108,9 +111,17 @@ struct CameraView: View {
                 Button {
                     finish()
                 } label: {
-                    Text(count == 0 ? "Schließen" : "Fertig (\(count))")
+                    if pending.isClosing {
+                        HStack(spacing: 6) {
+                            ProgressView().tint(Theme.onAccent)
+                            Text("Speichert …")
+                        }
+                    } else {
+                        Text(count == 0 && pending.count == 0 ? "Schließen" : "Fertig (\(count + pending.count))")
+                    }
                 }
-                .estrichButton(count == 0 ? .secondary : .accent)
+                .estrichButton(count == 0 && pending.count == 0 ? .secondary : .accent)
+                .disabled(pending.isClosing)
                 .accessibilityIdentifier("cameraDoneButton")
             }
             .padding(.horizontal)
@@ -143,7 +154,7 @@ struct CameraView: View {
                         .frame(width: 76, height: 76)
                 }
                 .buttonStyle(ShutterButtonStyle())
-                .disabled(cameraState != .running)
+                .disabled(cameraState != .running || pending.isClosing)
                 .accessibilityLabel("Foto aufnehmen")
                 .accessibilityIdentifier("shutterButton")
 
@@ -215,7 +226,8 @@ struct CameraView: View {
         camera.start()
         cameraState = .running
         for await data in camera.photos {
-            await save(data)
+            if let data { await save(data) }
+            pending.shotSettled()
         }
     }
 
@@ -225,6 +237,7 @@ struct CameraView: View {
             try? await Task.sleep(for: .milliseconds(120))
             withAnimation { flash = false }
         }
+        pending.shutterPressed()
         camera.capture()
     }
 
@@ -254,9 +267,53 @@ struct CameraView: View {
         pickerItems = []
     }
 
+    /// Schließt erst, wenn alle ausgelösten Fotos gespeichert sind – sonst gingen die letzten Fotos einer Serie verloren
+    /// (Aufnahme und Verarbeitung dauern nach dem Auslösen noch einen Moment). Sicherheitshalber nach spätestens 10 s.
     private func finish() {
+        pending.requestClose()
+        closeIfSettled()
+        Task {
+            try? await Task.sleep(for: .seconds(10))
+            pending.forceClose()
+        }
+    }
+
+    private func closeIfSettled() {
+        guard pending.takeClose() else { return }
         camera.stop()
         onFinish(count)
+    }
+}
+
+/// Ausgelöste Fotos, die noch nicht dauerhaft gespeichert sind, und der Wunsch zu schließen. Geschlossen wird genau
+/// einmal, und erst, wenn nichts mehr unterwegs ist (oder nach Ablauf der Wartezeit).
+struct PendingShots: Equatable {
+    private(set) var count = 0
+    private(set) var isClosing = false
+    private var forced = false
+    private var closed = false
+
+    mutating func shutterPressed() {
+        count += 1
+    }
+
+    mutating func shotSettled() {
+        count = max(0, count - 1)
+    }
+
+    mutating func requestClose() {
+        isClosing = true
+    }
+
+    mutating func forceClose() {
+        if isClosing { forced = true }
+    }
+
+    /// `true` genau einmal: dann darf die Kamera schließen.
+    mutating func takeClose() -> Bool {
+        guard isClosing, !closed, count == 0 || forced else { return false }
+        closed = true
+        return true
     }
 }
 

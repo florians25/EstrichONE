@@ -99,7 +99,7 @@ enum ShotRoute {
     static func tab(for scene: String) -> MainTabView.Tab {
         let prefix = scene.split(separator: "-").first.map(String.init) ?? scene
         switch prefix {
-        case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "raum", "tagebuch", "mangel", "basisdaten", "protokoll", "kontakt": return .bauakten
+        case "baustellen", "bauakte", "bereich", "neu", "erstbegehung", "abnahme", "foto", "kamera", "raum", "tagebuch", "mangel", "basisdaten", "protokoll", "kontakt": return .bauakten
         case "kunden", "kundenkarte": return .customers
         case "mehr", "sicherheit", "sync", "meldung", "aufgaben", "woche", "disposition", "dispo", "postfach", "chat": return .more
         case "erfassen": return .capture

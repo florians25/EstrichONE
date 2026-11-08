@@ -8,12 +8,13 @@ final class CameraSession: NSObject, @unchecked Sendable, AVCapturePhotoCaptureD
     private let output = AVCapturePhotoOutput()
     private let queue = DispatchQueue(label: "de.estrichone.camera")
     private var configured = false
-    /// Aufgenommene Fotos (JPEG) in Aufnahmereihenfolge.
-    let photos: AsyncStream<Data>
-    private let continuation: AsyncStream<Data>.Continuation
+    /// Ergebnis jeder Auslösung in Aufnahmereihenfolge: JPEG, oder `nil`, wenn die Aufnahme fehlgeschlagen ist (damit
+    /// die Kamera weiß, dass nichts mehr unterwegs ist).
+    let photos: AsyncStream<Data?>
+    private let continuation: AsyncStream<Data?>.Continuation
 
     override init() {
-        (photos, continuation) = AsyncStream.makeStream(of: Data.self)
+        (photos, continuation) = AsyncStream.makeStream(of: Data?.self)
         super.init()
     }
 
@@ -44,7 +45,10 @@ final class CameraSession: NSObject, @unchecked Sendable, AVCapturePhotoCaptureD
 
     func capture() {
         queue.async { [self] in
-            guard session.isRunning else { return }
+            guard session.isRunning else {
+                continuation.yield(nil)
+                return
+            }
             let settings = AVCapturePhotoSettings(format: [
                 AVVideoCodecKey: AVVideoCodecType.jpeg,
                 AVVideoCompressionPropertiesKey: [AVVideoQualityKey: 0.85],
@@ -70,7 +74,10 @@ final class CameraSession: NSObject, @unchecked Sendable, AVCapturePhotoCaptureD
     }
 
     func photoOutput(_ output: AVCapturePhotoOutput, didFinishProcessingPhoto photo: AVCapturePhoto, error: Error?) {
-        guard error == nil, let data = photo.fileDataRepresentation() else { return }
+        guard error == nil, let data = photo.fileDataRepresentation() else {
+            continuation.yield(nil)
+            return
+        }
         continuation.yield(data)
     }
 }

@@ -64,12 +64,12 @@ struct BauaktenListView: View {
             NewBauakteView { id, next in
                 creating = false
                 open(id)
-                if next != .open {
+                if next.followUp != .open {
                     Task {
                         // Erst wenn das Anlageblatt geschlossen ist, Kamera bzw. Erstbegehung öffnen.
                         try? await Task.sleep(for: .milliseconds(600))
                         let created = try? await model.active?.service?.bauakte(id)
-                        if next == .photograph { captureFor = created } else { inspectFor = created }
+                        if next.followUp == .photo { captureFor = created } else { inspectFor = created }
                     }
                 }
             }

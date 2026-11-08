@@ -135,22 +135,31 @@ struct PhotoViewer: View {
                                 editingCaption = true
                             } label: {
                                 Label("Beschriften", systemImage: "tag")
+                                    .labelStyle(.iconOnly)
+                                    .frame(width: 24, height: 24)
                             }
                             .overlayControlStyle()
+                            .accessibilityLabel("Beschriften")
                             .tint(.white)
                             .accessibilityIdentifier("editCaptionButton")
                             if let image = images[current.id] {
                                 ShareLink(item: Image(uiImage: image), preview: SharePreview(current.caption ?? "Foto", image: Image(uiImage: image))) {
                                     Label("Teilen", systemImage: "square.and.arrow.up")
+                                        .labelStyle(.iconOnly)
+                                        .frame(width: 24, height: 24)
                                 }
                                 .overlayControlStyle()
+                                .accessibilityLabel("Teilen")
                                 .tint(.white)
                             }
                             Spacer()
                             if current.syncState == .pending || canDeleteTransferred {
                                 Button(role: .destructive) { confirmDiscard = true } label: {
                                     Label("Löschen", systemImage: "trash")
+                                        .labelStyle(.iconOnly)
+                                        .frame(width: 24, height: 24)
                                 }
+                                .accessibilityLabel("Foto löschen")
                                 .accessibilityIdentifier("deletePhotoButton")
                                 .overlayControlStyle()
                                 .tint(.red)
