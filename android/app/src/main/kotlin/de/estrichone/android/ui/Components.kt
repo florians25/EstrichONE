@@ -70,6 +70,12 @@ import kotlinx.coroutines.withContext
 
 // Bausteine der Oberfläche (wie ios/EstrichONE/Design): Karten auf grauem Grund, Zeilen mit Symbolkachel, Statusfarben.
 
+/** Regelmäßiges Nachladen (Chat, Countdown); in Screenshot-Tests aus, damit die Oberfläche zur Ruhe kommt. */
+object Live {
+    @Volatile
+    var polling = true
+}
+
 object Space {
     val xs = 4.dp
     val s = 8.dp

@@ -65,6 +65,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
@@ -117,6 +118,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     val context = LocalContext.current
     val model = LocalModel.current
     val bauakte by session.local(id) { session.service.bauakte(id) }
+    val chat by session.chat.collectAsState()
     var menu by remember { mutableStateOf(false) }
     var cancelling by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -144,7 +146,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                     else model.message("Das PDF ist nur mit Verbindung zum Server verfügbar.")
                 }
             })
-            if (session.chat.value?.isAvailable == true) {
+            if (chat?.isAvailable == true) {
                 DropdownMenuItem(text = { Text("Baustellenchat") }, onClick = { menu = false; nav.push(Route.ChatList) })
             }
             DropdownMenuItem(text = { Text("Bauakte stornieren", color = tones.danger) }, enabled = b.status != BauakteStatus.Cancelled,

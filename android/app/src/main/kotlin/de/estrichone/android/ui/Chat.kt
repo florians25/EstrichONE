@@ -59,6 +59,7 @@ import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
@@ -127,12 +128,13 @@ fun ChatListScreen() {
     var conversations by remember { mutableStateOf<Load<List<ChatConversation>>>(Load.Loading) }
     var starting by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
-        while (true) {
+        do {
             val next = attempt { session.api.chatConversations() }
             if (next is Load.Done || conversations !is Load.Done) conversations = next
             session.refreshCounters()
+            if (!Live.polling) break
             delay(15_000)
-        }
+        } while (true)
     }
     ScreenScaffold("Chat", floating = {
         ExtendedFloatingActionButton(onClick = { starting = true }, icon = { Icon(Icons.Outlined.PersonAdd, null) }, text = { Text("Neuer Chat") })
@@ -230,7 +232,8 @@ fun ConversationScreen(id: String) {
     var editing by remember { mutableStateOf<ChatMessage?>(null) }
     var loaded by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
-    val windowMinutes = session.chat.value?.editWindowMinutes ?: 15
+    val chatStatus by session.chat.collectAsState()
+    val windowMinutes = chatStatus?.editWindowMinutes ?: 15
 
     suspend fun reload() {
         val page = runCatching { withContext(Dispatchers.IO) { session.api.chatMessages(id) } }.getOrNull() ?: return
@@ -243,11 +246,12 @@ fun ConversationScreen(id: String) {
 
     LaunchedEffect(id) {
         conversation = runCatching { withContext(Dispatchers.IO) { session.api.chatConversations().firstOrNull { it.id == id } } }.getOrNull()
-        while (true) {
+        do {
             reload()
             session.refreshCounters()
+            if (!Live.polling) break
             delay(5_000)
-        }
+        } while (true)
     }
     LaunchedEffect(messages.size) { if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size) }
 

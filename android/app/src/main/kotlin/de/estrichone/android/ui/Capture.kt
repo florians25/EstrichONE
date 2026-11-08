@@ -385,7 +385,7 @@ fun CameraScreen(bauakteId: String, scan: Boolean) {
                     val future = ProcessCameraProvider.getInstance(ctx)
                     future.addListener({
                         val provider = future.get()
-                        val preview = Preview.Builder().build().also { it.surfaceProvider = view.surfaceProvider }
+                        val preview = Preview.Builder().build().also { it.setSurfaceProvider(view.surfaceProvider) }
                         runCatching {
                             provider.unbindAll()
                             provider.bindToLifecycle(lifecycle, CameraSelector.DEFAULT_BACK_CAMERA, preview, capture)

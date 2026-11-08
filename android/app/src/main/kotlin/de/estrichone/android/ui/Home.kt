@@ -271,7 +271,7 @@ fun NoticeCards(session: Session) {
     val model = LocalModel.current
     val notices by session.notices.collectAsState()
     var now by remember { mutableStateOf(Instant.now()) }
-    LaunchedEffect(Unit) { while (true) { delay(30_000); now = Instant.now() } }
+    LaunchedEffect(Unit) { while (Live.polling) { delay(30_000); now = Instant.now() } }
     var dismissed by remember { mutableStateOf(model.prefs.dismissedNotices(session.user.id)) }
     var expanded by remember { mutableStateOf(false) }
     var details by remember { mutableStateOf<NoticeItem?>(null) }

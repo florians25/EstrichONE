@@ -2,6 +2,7 @@ plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 // Version: im Release aus dem Tag (release.yml setzt -PappVersionName=1.0.x -PappVersionCode=…), sonst 1.0.x aus dem Repository.

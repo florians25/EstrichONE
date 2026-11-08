@@ -39,6 +39,10 @@ abstract class ScreenshotBase(private val device: String, private val appearance
 
     private val suffix get() = if (appearance == Appearance.Dark) "dunkel" else "hell"
 
+    init {
+        de.estrichone.android.ui.Live.polling = false
+    }
+
     private fun demo(): AppModel {
         val model = AppModel(ApplicationProvider.getApplicationContext())
         model.startDemo()
