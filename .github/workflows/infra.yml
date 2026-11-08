@@ -19,7 +19,7 @@ concurrency:
 jobs:
   archive:
     name: Archiv, Backup-Ziel und E-Mail (Ende zu Ende)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
@@ -37,7 +37,7 @@ jobs:
 
   installer:
     name: Installer, Update von der letzten Version, weitere Rechner
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       VERSION: 0.1.99-ci

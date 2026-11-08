@@ -859,7 +859,7 @@
         "tags": [
           "Überwachung"
         ],
-        "summary": "Status-Banner für alle Clients: Backup-Server (rot), Archivserver (gelb), Storage der Auslagerung (gelb, nur Verwaltung), nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.",
+        "summary": "Status-Banner für alle Clients: Backup-Server (rot), Archivserver (gelb), Storage der Auslagerung (gelb) – Ausfallhinweise nur für Administratoren, nur wenn eingerichtet. Bis 10 Minuten zwischengespeichert.",
         "operationId": "GetHealthBanner",
         "responses": {
           "200": {

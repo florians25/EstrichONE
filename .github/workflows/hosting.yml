@@ -18,7 +18,7 @@ concurrency:
 jobs:
   test:
     name: Build und Tests (Konsole)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -48,7 +48,7 @@ jobs:
 
   image:
     name: Docker-Image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -69,7 +69,7 @@ jobs:
   e2e:
     name: Oberfläche Ende zu Ende (Playwright, simulierter Docker)
     needs: image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -111,7 +111,7 @@ jobs:
   integration:
     name: Integration mit echtem Docker (Suite-Images aus diesem Stand)
     needs: image
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5

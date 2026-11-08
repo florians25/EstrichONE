@@ -18,7 +18,7 @@ concurrency:
 jobs:
   client:
     name: Client-Bibliothek gegen echten Server (Linux, PostgreSQL)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5

@@ -22,7 +22,7 @@ env:
 jobs:
   create:
     name: Release anlegen
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       # Beim manuellen Start existiert der Tag noch nicht: Release und Tag entstehen auf dem gestarteten Stand.
       - uses: actions/checkout@v5
@@ -89,7 +89,7 @@ jobs:
   android:
     needs: create
     name: Android-App
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v5
@@ -114,7 +114,7 @@ jobs:
   server:
     needs: create
     name: Server-Paket
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v5
@@ -166,7 +166,7 @@ jobs:
   images:
     name: Docker-Images (GitHub Container Registry)
     needs: create
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
