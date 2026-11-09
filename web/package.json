@@ -16,16 +16,16 @@
     "qrcode": "1.5.4"
   },
   "devDependencies": {
-    "@openui5/types": "1.136.22",
+    "@openui5/types": "1.154.0",
     "@playwright/test": "1.56.1",
     "@types/leaflet": "1.9.20",
     "@types/qrcode": "1.5.6",
-    "@ui5/cli": "4.0.71",
+    "@ui5/cli": "4.0.73",
     "jsdom": "^27.4.0",
     "typescript": "~5.9.3",
     "ui5-middleware-simpleproxy": "3.9.0",
-    "ui5-tooling-modules": "3.42.0",
-    "ui5-tooling-transpile": "3.14.0",
+    "ui5-tooling-modules": "3.43.0",
+    "ui5-tooling-transpile": "3.14.1",
     "vitest": "^4.0.0"
   },
   "overrides": {
