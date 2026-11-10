@@ -1,11 +1,14 @@
 package de.estrichone.android.ui
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.automirrored.filled.Undo
@@ -24,6 +27,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import de.estrichone.android.Session
@@ -73,9 +77,19 @@ fun InitialInspectionHint(session: Session, bauakte: Bauakte) {
     var waiving by remember { mutableStateOf(false) }
     if (!InitialInspection.showsMissingHint(bauakte, inspections)) return
     val canWaive = canWaiveInitialInspection(session)
-    Banner(InitialInspection.MISSING, Icons.AutoMirrored.Filled.FactCheck, tones.warning, tones.warningSoft,
-        Modifier.padding(top = 16.dp).testTag("initialInspectionHint"),
-        action = if (canWaive) InitialInspection.WAIVE_BUTTON else null, onAction = if (canWaive) { { waiving = true } } else null)
+    // Text oben, Aktion darunter (wie die Hinweiskarte auf iOS): beide Texte sind lang und sollen nicht mitten im Wort umbrechen.
+    Row(Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(tones.warningSoft).padding(16.dp)
+        .testTag("initialInspectionHint"), verticalAlignment = Alignment.Top) {
+        Icon(Icons.AutoMirrored.Filled.FactCheck, null, tint = tones.warning)
+        Spacer(Modifier.width(12.dp))
+        Column {
+            Text(InitialInspection.MISSING, style = MaterialTheme.typography.bodyLarge)
+            if (canWaive) {
+                Text(InitialInspection.WAIVE_BUTTON, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge,
+                    modifier = Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp)).clickable { waiving = true }.padding(vertical = 6.dp))
+            }
+        }
+    }
     if (waiving) WaiveInitialInspectionDialog(session, bauakte.id) { waiving = false }
 }
 
