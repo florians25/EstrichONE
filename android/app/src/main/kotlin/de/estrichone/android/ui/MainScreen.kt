@@ -79,6 +79,9 @@ sealed interface Route {
     data class NotificationDetail(val item: de.estrichone.core.InboxNotification) : Route
     data object Tasks : Route
     data object Week : Route
+    data object Absences : Route
+    data object AbsenceRequest : Route
+    data object AbsenceApprovals : Route
     data object Dispatch : Route
     data object Helpdesk : Route
     data object ReportProblem : Route
@@ -256,6 +259,9 @@ private fun RouteScreen(route: Route, twoPane: Boolean) {
         is Route.NotificationDetail -> NotificationDetailScreen(route.item)
         Route.Tasks -> MyTasksScreen()
         Route.Week -> WeekScreen()
+        Route.Absences -> AbsencesScreen()
+        Route.AbsenceRequest -> AbsenceRequestScreen()
+        Route.AbsenceApprovals -> AbsenceApprovalsScreen()
         Route.Dispatch -> DispatchScreen()
         Route.Helpdesk -> HelpdeskScreen()
         Route.ReportProblem -> ReportProblemScreen()

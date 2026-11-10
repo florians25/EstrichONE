@@ -162,6 +162,15 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     fun einstellungen() = main("einstellungen", Tab.More)
 
     @Test
+    fun abwesenheit() = main("abwesenheit", Tab.More, listOf(Route.Absences))
+
+    @Test
+    fun abwesenheitAntrag() = main("abwesenheit-antrag", Tab.More, listOf(Route.Absences, Route.AbsenceRequest))
+
+    @Test
+    fun abwesenheitGenehmigung() = main("abwesenheit-genehmigung", Tab.More, listOf(Route.Absences, Route.AbsenceApprovals))
+
+    @Test
     fun kunden() = main("kunden", Tab.Customers)
 }
 

@@ -28,6 +28,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
     private val chat = DemoChat()
     private val notifications = DemoInbox()
     private val tickets = DemoTickets()
+    private val absences = DemoAbsences()
 
     /** Störungen vorführen (Menü „Demo“). */
     @Volatile var backupDown = false
@@ -87,7 +88,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
                     "createdAt" to ApiDate.format(now.minusSeconds(86_400)), "lastSeenAt" to ApiDate.format(now.minusSeconds(7200)), "current" to false))
             path == "auth/two-factor" -> 200 to json("enabled" to false, "recoveryCodesRemaining" to 0, "requiredByPolicy" to false)
             path == "access/me/permissions" -> 200 to listOf("bauakten.read", "bauakten.create", "bauakten.edit", "notes.write", "files.upload", "work.edit",
-                "contacts.read", "contacts.edit", "chat.use")
+                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve")
             path == "settings" -> 200 to json("settings" to json("bauakte" to json("warnMissingInspection" to true)), "version" to 1)
             path == "sync/push" -> 200 to push(body)
             path == "sync/pull" -> 200 to json("changes" to entities.values.map { EstrichOneApi.json.encodeToJsonElement(SyncChange.serializer(), it) },
@@ -125,6 +126,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             parts.size == 2 && parts[0] == "notifications" && method == "DELETE" -> { notifications.delete(parts[1]); 204 to null }
             path.startsWith("notifications/devices") -> 204 to null
             path.startsWith("chat/") -> chat.handle(method, path.removePrefix("chat/"), query, body, raw, content)
+            path.startsWith("hr/") -> absences.handle(method, path, query, body)
             path == "tickets/mine" -> 200 to tickets.list()
             path == "tickets" && method == "POST" -> 200 to tickets.create(body)
             path == "tickets/device" -> 200 to json("number" to "T-2026-0031")

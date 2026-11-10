@@ -41,6 +41,7 @@ import androidx.compose.material.icons.filled.SwitchAccount
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material.icons.automirrored.outlined.Assignment
 import androidx.compose.material.icons.outlined.CalendarMonth
+import androidx.compose.material.icons.outlined.EventAvailable
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.Devices
 import androidx.compose.material.icons.outlined.Forum
@@ -153,6 +154,8 @@ fun MoreScreen() {
                     RowItem("Wer fährt wohin", icon = Icons.Filled.DirectionsCar, showChevron = true, onClick = { nav.push(Route.Dispatch) })
                     RowDivider()
                     RowItem("Meine Woche", icon = Icons.Outlined.CalendarMonth, showChevron = true, onClick = { nav.push(Route.Week) })
+                    RowDivider()
+                    RowItem("Urlaub und Abwesenheit", icon = Icons.Outlined.EventAvailable, showChevron = true, onClick = { nav.push(Route.Absences) })
                 }
             }
             item { GroupLabel("Hilfe") }
