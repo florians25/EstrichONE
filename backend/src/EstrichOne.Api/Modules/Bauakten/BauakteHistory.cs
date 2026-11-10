@@ -147,6 +147,9 @@ internal static class BauakteHistoryEndpoints
                 _ => $"{actor} hat den Kontakt „{Detail("name")}“ ({PartyRole(Detail("role"))}) geändert.",
             },
             "bauakte.diary_added" => $"{actor} hat das Bautagebuch für den {Day(Detail("day"))} ergänzt.",
+            "bauakte.initial_inspection_waiver" => Detail("waived") == "true"
+                ? $"{actor} hat vermerkt, dass keine Erstbegehung erforderlich ist" + (Detail("reason") is { Length: > 0 } r ? $" (Begründung: {r})." : ".")
+                : $"{actor} hat den Vermerk „Keine Erstbegehung erforderlich“ aufgehoben.",
             "bauakte.inspection_added" when Detail("kind") == "CmMeasurement" =>
                 $"{actor} hat eine CM-Messung erfasst: {Percent(Detail("measured"))} CM-% bei Grenzwert {Percent(Detail("limit"))} CM-% – "
                 + (Detail("ready") == "true" ? "belegreif." : "noch nicht belegreif."),

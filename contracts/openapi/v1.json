@@ -4182,6 +4182,76 @@
         ]
       }
     },
+    "/api/v1/bauakten/{id}/initial-inspection-waiver": {
+      "put": {
+        "tags": [
+          "Bauakten"
+        ],
+        "summary": "Erstbegehung als nicht erforderlich vermerken oder den Vermerk aufheben",
+        "operationId": "SetInitialInspectionWaiver",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InitialInspectionWaiverRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BauakteDetail"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{id}/delete": {
       "post": {
         "tags": [
@@ -21237,6 +21307,36 @@
                 "$ref": "#/components/schemas/BauakteProject"
               }
             ]
+          },
+          "initialInspectionWaived": {
+            "type": "boolean",
+            "default": false
+          },
+          "initialInspectionWaivedReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "initialInspectionWaivedByUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "initialInspectionWaivedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "initialInspectionWaivedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -28431,6 +28531,24 @@
           },
           "message": {
             "type": "string"
+          }
+        }
+      },
+      "InitialInspectionWaiverRequest": {
+        "required": [
+          "waived"
+        ],
+        "type": "object",
+        "properties": {
+          "waived": {
+            "type": "boolean"
+          },
+          "reason": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

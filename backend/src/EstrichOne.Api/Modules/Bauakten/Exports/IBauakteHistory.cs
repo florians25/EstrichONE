@@ -25,4 +25,7 @@ public static class BauakteHistoryActions
     public const string RoomAdded = "room_added";
     public const string MembersChanged = "members_changed";
     public const string PartiesChanged = "parties_changed";
+
+    /// <summary>„Erstbegehung nicht erforderlich“ gesetzt (waived=true) oder aufgehoben.</summary>
+    public const string InitialInspectionWaiver = "initial_inspection_waiver";
 }

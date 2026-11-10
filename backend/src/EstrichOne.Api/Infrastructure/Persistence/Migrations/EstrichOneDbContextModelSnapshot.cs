@@ -849,6 +849,28 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("description");
 
+                    b.Property<bool>("InitialInspectionWaived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("initial_inspection_waived");
+
+                    b.Property<DateTimeOffset?>("InitialInspectionWaivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("initial_inspection_waived_at");
+
+                    b.Property<string>("InitialInspectionWaivedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("initial_inspection_waived_by_name");
+
+                    b.Property<Guid?>("InitialInspectionWaivedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("initial_inspection_waived_by_user_id");
+
+                    b.Property<string>("InitialInspectionWaivedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("initial_inspection_waived_reason");
+
                     b.Property<double?>("Latitude")
                         .HasColumnType("double precision")
                         .HasColumnName("latitude");

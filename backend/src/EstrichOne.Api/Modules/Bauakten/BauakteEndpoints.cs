@@ -29,7 +29,12 @@ public sealed record BauakteDetail(
     double? Latitude, double? Longitude, string? Description, Guid? CustomerId, string? TemplateKey,
     Guid? ResponsibleUserId, Guid CreatedByUserId, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, long Version,
     DateOnly? PlannedStart = null, DateOnly? PlannedEnd = null, string? SiteContactName = null, string? SiteContactPhone = null,
-    string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null, BauakteProject? Project = null);
+    string? SiteContactEmail = null, string? SiteNotes = null, string? CancellationReason = null, BauakteProject? Project = null,
+    bool InitialInspectionWaived = false, string? InitialInspectionWaivedReason = null, Guid? InitialInspectionWaivedByUserId = null,
+    string? InitialInspectionWaivedByName = null, DateTimeOffset? InitialInspectionWaivedAt = null);
+
+/// <summary>„Erstbegehung nicht erforderlich“ setzen (<see cref="Waived"/> = true, Begründung optional) oder aufheben.</summary>
+public sealed record InitialInspectionWaiverRequest(bool Waived, [property: MaxLength(Bauakte.MaxWaiverReasonLength)] string? Reason = null);
 
 /// <summary>Anlage mit vom Client erzeugter ID (UUIDv7, ADR 0006). Pflicht ist nur <see cref="Title"/>.</summary>
 public sealed record CreateBauakteRequest(
@@ -105,6 +110,12 @@ internal static class BauakteEndpoints
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status412PreconditionFailed)
             .ProducesProblem(StatusCodes.Status428PreconditionRequired)
+            .RequirePermission(Permissions.BauaktenEdit);
+
+        group.MapPut("/{id:guid}/initial-inspection-waiver", WaiveInitialInspectionAsync).WithName("SetInitialInspectionWaiver")
+            .WithSummary("Erstbegehung als nicht erforderlich vermerken oder den Vermerk aufheben")
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.BauaktenEdit);
 
         group.MapPost("/{id:guid}/delete", DeleteAsync).WithName("DeleteBauakte")
@@ -350,6 +361,27 @@ internal static class BauakteEndpoints
         return TypedResults.Ok(ToDetail(bauakte));
     }
 
+    private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> WaiveInitialInspectionAsync(
+        Guid id, InitialInspectionWaiverRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history,
+        ICurrentUser currentUser, TimeProvider clock, HttpContext http, CancellationToken cancellationToken)
+    {
+        var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
+        if (bauakte is null)
+        {
+            return NotFound();
+        }
+
+        if (request.Reason is { Length: > Bauakte.MaxWaiverReasonLength })
+        {
+            return Validation($"Die Begründung ist länger als {Bauakte.MaxWaiverReasonLength} Zeichen.");
+        }
+
+        await BauakteWaiver.ApplyAsync(db, bauakte, request.Waived, request.Reason, currentUser, clock, history, cancellationToken);
+        await db.SaveChangesAsync(cancellationToken);
+        SetETag(http, bauakte.Version);
+        return TypedResults.Ok(ToDetail(bauakte));
+    }
+
     private static async Task<Results<NoContent, ProblemHttpResult>> DeleteAsync(
         Guid id, DeleteBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, IUserAccounts accounts,
         ICurrentUser currentUser, TimeProvider clock, CancellationToken cancellationToken)
@@ -430,7 +462,9 @@ internal static class BauakteEndpoints
     internal static BauakteDetail ToDetail(Bauakte b) => new(
         b.Id, b.Number, b.Title, b.Status, b.Street, b.PostalCode, b.City, b.Latitude, b.Longitude, b.Description,
         b.CustomerId, b.TemplateKey, b.ResponsibleUserId, b.CreatedByUserId, b.CreatedAt, b.UpdatedAt, b.Version,
-        b.PlannedStart, b.PlannedEnd, b.SiteContactName, b.SiteContactPhone, b.SiteContactEmail, b.SiteNotes, b.CancellationReason, b.Project);
+        b.PlannedStart, b.PlannedEnd, b.SiteContactName, b.SiteContactPhone, b.SiteContactEmail, b.SiteNotes, b.CancellationReason, b.Project,
+        b.InitialInspectionWaived, b.InitialInspectionWaivedReason, b.InitialInspectionWaivedByUserId, b.InitialInspectionWaivedByName,
+        b.InitialInspectionWaivedAt);
 
     /// <summary>Nicht sichtbare und nicht vorhandene Bauakten sind von außen nicht unterscheidbar.</summary>
     private static ProblemHttpResult NotFound() =>

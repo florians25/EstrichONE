@@ -33,6 +33,8 @@ internal sealed class BauakteConfiguration : IEntityTypeConfiguration<Bauakte>
         builder.Property(bauakte => bauakte.SiteContactEmail).HasMaxLength(320);
         builder.Property(bauakte => bauakte.SiteNotes).HasMaxLength(2000);
         builder.Property(bauakte => bauakte.CancellationReason).HasMaxLength(500);
+        builder.Property(bauakte => bauakte.InitialInspectionWaivedReason).HasMaxLength(Bauakte.MaxWaiverReasonLength);
+        builder.Property(bauakte => bauakte.InitialInspectionWaivedByName).HasMaxLength(200);
         builder.Property(bauakte => bauakte.Project).HasColumnType("jsonb").HasConversion(
             project => JsonSerializer.Serialize(project, ProjectJson),
             json => JsonSerializer.Deserialize<BauakteProject>(json, ProjectJson) ?? BauakteProject.Empty);

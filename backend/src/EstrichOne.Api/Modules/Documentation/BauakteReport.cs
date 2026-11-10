@@ -204,7 +204,14 @@ internal sealed class BauakteReportBuilder(
             section.AddParagraph("Prüfungen", StyleNames.Heading2);
             var initial = inspections.Where(i => i.Kind == InspectionKind.InitialInspection).ToList();
             var cm = inspections.Where(i => i.Kind == InspectionKind.CmMeasurement).ToList();
-            if (inspections.Count == 0)
+            if (info.InitialInspectionWaiver is { } waiver && initial.Count == 0)
+            {
+                var by = string.Join(", ", new[] { waiver.ByName, waiver.At is { } at ? PdfReport.DateTime(at) : null }.Where(v => !string.IsNullOrWhiteSpace(v)));
+                var line = section.AddParagraph();
+                line.AddFormattedText("Keine Erstbegehung erforderlich", TextFormat.Bold);
+                line.AddText((by.Length > 0 ? $" · {by}" : string.Empty) + (string.IsNullOrWhiteSpace(waiver.Reason) ? string.Empty : $" · Begründung: {waiver.Reason}"));
+            }
+            else if (inspections.Count == 0)
             {
                 section.AddParagraph("Keine Prüfungen erfasst.").Style = "Muted";
             }

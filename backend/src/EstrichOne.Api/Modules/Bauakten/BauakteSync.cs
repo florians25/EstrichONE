@@ -26,7 +26,8 @@ internal sealed class BauakteSync(
 {
     private static readonly HashSet<string> EditableFields =
         ["title", "status", "street", "postalCode", "city", "latitude", "longitude", "description", "customerId", "responsibleUserId",
-            "siteContactName", "siteContactPhone", "siteContactEmail", "siteNotes", "project"];
+            "siteContactName", "siteContactPhone", "siteContactEmail", "siteNotes", "project",
+            "initialInspectionWaived", "initialInspectionWaivedReason"];
 
     public IReadOnlyCollection<string> OperationTypes { get; } =
         ["bauakte.create", "bauakte.update", "bauakte.setStatus", "bauakte.delete", "note.create", "note.update", "note.delete"];
@@ -62,6 +63,19 @@ internal sealed class BauakteSync(
             SyncPayload.Read<Guid?>(p, "customerId"), SyncPayload.Read<string>(p, "templateKey"),
             Project: await ReadProjectAsync(p["project"], cancellationToken),
             PlannedStart: SyncPayload.Read<DateOnly?>(p, "plannedStart"), PlannedEnd: SyncPayload.Read<DateOnly?>(p, "plannedEnd")), cancellationToken);
+
+        // Offline angelegt und gleich „Erstbegehung nicht erforderlich“ vermerkt: Die App führt das in der Anlage mit.
+        if (outcome == CreateBauakteOutcome.Created && SyncPayload.Read<bool?>(p, "initialInspectionWaived") == true)
+        {
+            var reason = SyncPayload.Read<string>(p, "initialInspectionWaivedReason");
+            if (reason is { Length: > Bauakte.MaxWaiverReasonLength })
+            {
+                reason = reason[..Bauakte.MaxWaiverReasonLength];
+            }
+
+            await BauakteWaiver.ApplyAsync(db, bauakte!, true, reason, currentUser, clock, history, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
 
         return outcome switch
         {
@@ -103,9 +117,26 @@ internal sealed class BauakteSync(
         }
 
         var current = (JsonObject)SyncPayload.ToNode(BauakteEndpoints.ToDetail(bauakte))!;
+        if (op.Payload["changes"] is JsonObject requested && requested.ContainsKey("initialInspectionWaived"))
+        {
+            // Geräte mit einem Stand von vor dem Feld kennen es nicht: fehlend bzw. null heißt „nicht vermerkt“.
+            if (op.Payload["base"] is null)
+            {
+                op.Payload["base"] = new JsonObject();
+            }
+
+            if (op.Payload["base"] is JsonObject bases && (!bases.TryGetPropertyValue("initialInspectionWaived", out var waivedBase) || waivedBase is null))
+            {
+                bases["initialInspectionWaived"] = false;
+            }
+        }
+
         var (accepted, conflicts) = SyncPayload.Merge(op.Payload, current.ToDictionary(pair => pair.Key, pair => pair.Value), EditableFields);
         var changes = (JsonObject)op.Payload["changes"]!;
         var before = BauakteEndpoints.ToDetail(bauakte);
+        bool? waived = null;
+        string? waiverReason = bauakte.InitialInspectionWaivedReason;
+        var waiverReasonChanged = false;
 
         foreach (var field in accepted)
         {
@@ -182,7 +213,29 @@ internal sealed class BauakteSync(
 
                     bauakte.AssignResponsible(userId);
                     break;
+                case "initialInspectionWaived":
+                    waived = SyncPayload.Value<bool?>(value, field) ?? false;
+                    break;
+                case "initialInspectionWaivedReason":
+                    waiverReason = SyncPayload.Value<string>(value, field);
+                    waiverReasonChanged = true;
+                    if (waiverReason is { Length: > Bauakte.MaxWaiverReasonLength })
+                    {
+                        throw new SyncValidationException($"Die Begründung ist länger als {Bauakte.MaxWaiverReasonLength} Zeichen.");
+                    }
+
+                    break;
             }
+        }
+
+        // „Erstbegehung nicht erforderlich“: wer und wann setzt der Server; die Begründung allein ändert nur einen bestehenden Vermerk.
+        if (waived is { } waive)
+        {
+            await BauakteWaiver.ApplyAsync(db, bauakte, waive, waiverReason, currentUser, clock, history, cancellationToken);
+        }
+        else if (waiverReasonChanged && bauakte.InitialInspectionWaived)
+        {
+            await BauakteWaiver.ApplyAsync(db, bauakte, true, waiverReason, currentUser, clock, history, cancellationToken);
         }
 
         BauakteEndpoints.RecordChanges(history, before, BauakteEndpoints.ToDetail(bauakte));

@@ -55,6 +55,20 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
     /// <summary>Begründung bei Status <see cref="BauakteStatus.Cancelled"/>.</summary>
     public string? CancellationReason { get; private set; }
 
+    /// <summary>
+    /// Vermerk „Erstbegehung nicht erforderlich“: Die Bauakte gilt dann nicht mehr als „Erstbegehung offen“
+    /// (Hinweise, Berichte). Aufhebbar; wer und wann wird mitgeführt.
+    /// </summary>
+    public bool InitialInspectionWaived { get; private set; }
+    public string? InitialInspectionWaivedReason { get; private set; }
+    public Guid? InitialInspectionWaivedByUserId { get; private set; }
+
+    /// <summary>Name zum Zeitpunkt des Vermerks, damit die Apps ihn auch offline anzeigen können.</summary>
+    public string? InitialInspectionWaivedByName { get; private set; }
+    public DateTimeOffset? InitialInspectionWaivedAt { get; private set; }
+
+    public const int MaxWaiverReasonLength = 500;
+
     /// <summary>Kennwerte des Bauvorhabens (Fläche, Estrichart, Aufbau …).</summary>
     public BauakteProject Project { get; private set; } = BauakteProject.Empty;
 
@@ -170,6 +184,36 @@ public sealed class Bauakte : IVersionedEntity, ISoftDeletable
     public void ApplyTemplate(string? templateKey) => TemplateKey = templateKey;
 
     public void AssignResponsible(Guid? userId) => ResponsibleUserId = userId;
+
+    /// <summary>„Erstbegehung nicht erforderlich“ vermerken (Begründung optional).</summary>
+    public void WaiveInitialInspection(Guid userId, string? userName, DateTimeOffset at, string? reason)
+    {
+        var trimmed = Blank(reason);
+        if (trimmed is { Length: > MaxWaiverReasonLength })
+        {
+            throw new ArgumentException($"Die Begründung ist länger als {MaxWaiverReasonLength} Zeichen.", nameof(reason));
+        }
+
+        if (!InitialInspectionWaived)
+        {
+            InitialInspectionWaivedByUserId = userId;
+            InitialInspectionWaivedByName = userName;
+            InitialInspectionWaivedAt = at;
+        }
+
+        InitialInspectionWaived = true;
+        InitialInspectionWaivedReason = trimmed;
+    }
+
+    /// <summary>Vermerk aufheben: Die Erstbegehung gilt wieder als offen, solange keine erfasst ist.</summary>
+    public void ResumeInitialInspection()
+    {
+        InitialInspectionWaived = false;
+        InitialInspectionWaivedReason = null;
+        InitialInspectionWaivedByUserId = null;
+        InitialInspectionWaivedByName = null;
+        InitialInspectionWaivedAt = null;
+    }
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
 

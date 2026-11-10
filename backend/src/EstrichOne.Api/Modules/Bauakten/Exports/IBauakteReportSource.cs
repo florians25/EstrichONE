@@ -9,7 +9,10 @@ public sealed record BauakteReportInfo(
     Guid Id, string? Number, string Title, BauakteStatus Status, string? Street, string? PostalCode, string? City, string? Description,
     DateOnly? PlannedStart, DateOnly? PlannedEnd, string? SiteContactName, string? SiteContactPhone, string? SiteNotes,
     CustomerReportInfo? Customer, string CreatedByName, DateTimeOffset CreatedAt, string? ResponsibleName, IReadOnlyList<string> Team,
-    IReadOnlyList<RoomReportRow> Rooms);
+    IReadOnlyList<RoomReportRow> Rooms, InitialInspectionWaiverInfo? InitialInspectionWaiver = null);
+
+/// <summary>Vermerk „Erstbegehung nicht erforderlich“ für Ausdrucke.</summary>
+public sealed record InitialInspectionWaiverInfo(string? ByName, DateTimeOffset? At, string? Reason);
 
 /// <summary>Stammdaten, Kunde, Team und Räume einer Bauakte für Ausdrucke (Bauakte-PDF).</summary>
 public interface IBauakteReportSource

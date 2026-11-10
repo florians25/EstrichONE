@@ -45,6 +45,9 @@ internal sealed class BauakteReportSource(EstrichOneDbContext db) : IBauakteRepo
             bauakte.Description, bauakte.PlannedStart, bauakte.PlannedEnd, bauakte.SiteContactName, bauakte.SiteContactPhone, bauakte.SiteNotes,
             customer, names.GetValueOrDefault(bauakte.CreatedByUserId) ?? "?", bauakte.CreatedAt,
             bauakte.ResponsibleUserId is { } r ? names.GetValueOrDefault(r) : null,
-            bauakte.Members.Select(m => names.GetValueOrDefault(m.UserId)).OfType<string>().Order(StringComparer.CurrentCulture).ToList(), rooms);
+            bauakte.Members.Select(m => names.GetValueOrDefault(m.UserId)).OfType<string>().Order(StringComparer.CurrentCulture).ToList(), rooms,
+            bauakte.InitialInspectionWaived
+                ? new InitialInspectionWaiverInfo(bauakte.InitialInspectionWaivedByName, bauakte.InitialInspectionWaivedAt, bauakte.InitialInspectionWaivedReason)
+                : null);
     }
 }

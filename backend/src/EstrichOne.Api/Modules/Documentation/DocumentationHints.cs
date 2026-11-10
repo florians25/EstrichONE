@@ -16,7 +16,9 @@ internal sealed class DocumentationHints(EstrichOneDbContext db, Organization.Ex
         var inspections = await db.Set<Inspection>().AsNoTracking().Where(i => i.BauakteId == bauakte.Id)
             .OrderByDescending(i => i.PerformedAt).ToListAsync(cancellationToken);
 
+        // „Erstbegehung nicht erforderlich“ zählt wie eine erfasste Erstbegehung.
         if (bauakte.Status is BauakteStatus.Planned or BauakteStatus.InProgress
+            && !bauakte.InitialInspectionWaived
             && inspections.All(i => i.Kind != InspectionKind.InitialInspection)
             && (await settings.GetAsync(cancellationToken)).Bauakte.WarnMissingInspection)
         {
