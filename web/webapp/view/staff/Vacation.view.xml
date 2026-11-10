@@ -7,6 +7,7 @@
 				<f:expandedContent>
 					<FlexBox wrap="Wrap" alignItems="End" class="eoVacKpis">
 						<VBox><Label text="Mein Resturlaub (Tage)"/><Text text="{view>/kpi/remaining}" class="eoKpiValue"/></VBox>
+						<VBox visible="{= ${view>/kpi/expiring} !== '' }"><Label text="Verfällt am {view>/kpi/expiresOn}"/><Text text="{view>/kpi/expiring}" class="eoKpiValue"/></VBox>
 						<VBox visible="{view>/can/approve}"><Label text="Offene Anträge"/>
 							<Link text="{view>/kpi/pending}" press=".onKpiPending" class="eoKpiLink"/></VBox>
 						<VBox visible="{view>/can/hrRead}"><Label text="Heute abwesend"/>
@@ -17,7 +18,7 @@
 				<f:actions>
 					<Button text="Urlaub beantragen" icon="sap-icon://general-leave-request" type="Emphasized" press=".onRequest"/>
 					<Button text="Krankmeldung erfassen" icon="sap-icon://add" press=".onSickNote" visible="{view>/can/hrManage}"/>
-					<Button icon="sap-icon://action-settings" tooltip="Einstellungen: Bundesland, Kolonnen-Grenze, Erinnerungen" press=".onSettings" visible="{view>/can/hrManage}"/>
+					<Button icon="sap-icon://action-settings" tooltip="Einstellungen: Bundesland, Resturlaub, Genehmiger, Kolonnen-Grenze, Erinnerungen" press=".onSettings" visible="{view>/can/hrManage}"/>
 					<Button icon="sap-icon://refresh" tooltip="Neu laden" press=".onRefresh"/>
 				</f:actions>
 			</f:DynamicPageTitle>
@@ -25,39 +26,68 @@
 		<f:content>
 			<IconTabBar headerMode="Inline" id="tabs" selectedKey="{view>/tab}" select=".onTab" expandable="false" applyContentPadding="false" stretchContentHeight="false" busy="{view>/busy}">
 				<items>
-					<IconTabFilter key="mein" text="Mein Urlaub">
+					<IconTabFilter key="mein" text="Meine Übersicht">
 						<VBox class="sapUiSmallMargin">
-							<MessageStrip text="Für Ihr Konto ist noch kein Personalstamm angelegt. Der Resturlaub wird angezeigt, sobald das Büro ihn angelegt hat."
+							<OverflowToolbar class="eoNoPrint">
+								<Button icon="sap-icon://navigation-left-arrow" tooltip="Vorjahr" press=".onPrevYear"/>
+								<Title text="Urlaubskonto {view>/year}" level="H2"/>
+								<Button icon="sap-icon://navigation-right-arrow" tooltip="Folgejahr" press=".onNextYear"/>
+								<ToolbarSpacer/>
+							</OverflowToolbar>
+							<MessageStrip text="Für Ihr Konto ist noch kein Personalstamm angelegt. Das Urlaubskonto wird angezeigt, sobald das Büro ihn angelegt hat."
 								type="Information" showIcon="true" visible="{= !${view>/me/employeeId} }" class="sapUiSmallMarginBottom"/>
-							<FlexBox wrap="Wrap" class="eoStaffHeaderFacts sapUiSmallMarginBottom" visible="{= !!${view>/me/vacation} }">
-								<VBox><Label text="Anspruch {view>/me/vacation/year}"/><ObjectNumber number="{view>/meText/entitlement}" unit="Tage"/></VBox>
-								<VBox><Label text="Übertrag"/><ObjectNumber number="{view>/meText/carryOver}" unit="Tage"/></VBox>
+							<FlexBox wrap="Wrap" class="eoVacAccount sapUiSmallMarginTop sapUiSmallMarginBottom" visible="{= !!${view>/me/vacation} }">
+								<VBox><Label text="Anspruch"/><ObjectNumber number="{view>/meText/entitlement}" unit="Tage"/><Text text="{view>/meText/entitlementInfo}" class="eoMuted"/></VBox>
+								<VBox><Label text="Übertrag Vorjahr"/><ObjectNumber number="{view>/meText/carryOver}" unit="Tage"/><Text text="{view>/meText/carryInfo}" class="eoMuted"/></VBox>
+								<VBox visible="{= ${view>/me/vacation/adjustment} !== 0 }"><Label text="Korrektur"/><ObjectNumber number="{view>/meText/adjustment}" unit="Tage"/></VBox>
 								<VBox><Label text="Genommen"/><ObjectNumber number="{view>/meText/taken}" unit="Tage"/></VBox>
 								<VBox><Label text="Geplant"/><ObjectNumber number="{view>/meText/planned}" unit="Tage"/></VBox>
 								<VBox><Label text="Beantragt"/><ObjectNumber number="{view>/meText/requested}" unit="Tage"/></VBox>
-								<VBox><Label text="Rest"/><ObjectNumber number="{view>/meText/remaining}" unit="Tage" emphasized="true" state="{= ${view>/me/vacation/remaining} &lt; 0 ? 'Error' : 'Success' }"/></VBox>
+								<VBox><Label text="Verbleibend"/><ObjectNumber number="{view>/meText/remaining}" unit="Tage" emphasized="true" state="{= ${view>/me/vacation/remaining} &lt; 0 ? 'Error' : 'Success' }"/>
+									<Text text="{view>/meText/afterRequests}" class="eoMuted"/></VBox>
 							</FlexBox>
-							<Table contextualWidth="Auto" items="{view>/myRequests}" noDataText="Noch keine Anträge." popinLayout="GridSmall">
+							<MessageStrip text="{view>/meText/expiringText}" type="Warning" showIcon="true" visible="{= !!${view>/meText/expiringText} }" class="sapUiSmallMarginBottom"/>
+							<Table contextualWidth="Auto" id="myRequests" items="{view>/myRequests}" noDataText="Noch keine Anträge." popinLayout="GridSmall">
 								<headerToolbar><OverflowToolbar><Title text="Meine Anträge" level="H3"/></OverflowToolbar></headerToolbar>
 								<columns>
 									<Column><Text text="Zeitraum"/></Column>
-									<Column width="9rem"><Text text="Art"/></Column>
-									<Column width="6rem" hAlign="End"><Text text="Tage"/></Column>
+									<Column width="11rem"><Text text="Art"/></Column>
+									<Column width="5rem" hAlign="End"><Text text="Tage"/></Column>
 									<Column width="10rem"><Text text="Status"/></Column>
-									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kommentar"/></Column>
-									<Column width="9rem" hAlign="End"><Text text=""/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Vertretung, Kommentar"/></Column>
+									<Column width="14rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<VBox><Text text="{view>rangeText}"/><Text text="{view>changeText}" class="eoMuted" visible="{= !!${view>changeText} }"/></VBox>
+										<HBox alignItems="Center"><core:HTML content="{view>dot}"/><Text text="{view>typeText}"/></HBox>
+										<Text text="{view>workingDaysText}"/>
+										<ObjectStatus text="{view>statusText}" state="{view>statusState}" inverted="true"/>
+										<Text text="{view>detailText}"/>
+										<HBox justifyContent="End" wrap="Wrap">
+											<Button text="Bearbeiten" type="Transparent" press=".onEditRequest" visible="{view>canEdit}"/>
+											<Button text="Ändern" type="Transparent" press=".onChangeRequest" visible="{view>canChange}" tooltip="Änderungsantrag stellen"/>
+											<Button text="{= ${view>status} === 'approved' ? 'Stornieren' : 'Zurückziehen' }" type="Transparent" press=".onCancel" visible="{view>canCancel}"/>
+										</HBox>
+									</ColumnListItem>
+								</items>
+							</Table>
+							<Table contextualWidth="Auto" items="{view>/myAbsences}" noDataText="Keine eingetragenen Abwesenheiten in diesem Jahr." popinLayout="GridSmall" class="sapUiMediumMarginTop">
+								<headerToolbar><OverflowToolbar><Title text="Meine Abwesenheiten {view>/year}" level="H3"/></OverflowToolbar></headerToolbar>
+								<columns>
+									<Column><Text text="Zeitraum"/></Column>
+									<Column width="14rem"><Text text="Art"/></Column>
+									<Column width="7rem" hAlign="End"><Text text="Arbeitstage"/></Column>
 								</columns>
 								<items>
 									<ColumnListItem>
 										<Text text="{view>rangeText}"/>
-										<Text text="{view>kindText}"/>
-										<Text text="{view>workingDays}"/>
-										<ObjectStatus text="{view>statusText}" state="{view>statusState}" inverted="true"/>
-										<Text text="{= ${view>decisionComment} || ${view>note} || '' }"/>
-										<Button text="Zurückziehen" type="Transparent" press=".onCancel" visible="{view>canCancel}"/>
+										<HBox alignItems="Center"><core:HTML content="{view>dot}"/><Text text="{view>typeName}"/></HBox>
+										<Text text="{view>workingDaysText}"/>
 									</ColumnListItem>
 								</items>
 							</Table>
+							<Text text="{view>/myInfoText}" class="eoMuted sapUiSmallMarginTop"/>
 						</VBox>
 					</IconTabFilter>
 					<IconTabFilter key="antraege" text="Anträge" count="{= ${view>/pending}.length }" visible="{view>/can/approve}">
@@ -66,23 +96,25 @@
 								<headerToolbar>
 									<OverflowToolbar>
 										<Title text="Warten auf Genehmigung" level="H3"/><ToolbarSpacer/>
-										<Button text="Für Mitarbeiter beantragen" icon="sap-icon://add" press=".onRequestFor"/>
+										<Button text="Für Mitarbeiter eintragen" icon="sap-icon://add" press=".onRequestFor" visible="{view>/can/approveAll}"/>
 									</OverflowToolbar>
 								</headerToolbar>
 								<columns>
 									<Column><Text text="Mitarbeiter"/></Column>
 									<Column><Text text="Zeitraum"/></Column>
-									<Column width="6rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Tage"/></Column>
+									<Column width="5rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Tage"/></Column>
 									<Column width="7rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Rest danach"/></Column>
 									<Column minScreenWidth="48rem" demandPopin="true"><Text text="Hinweise"/></Column>
 									<Column width="14rem" hAlign="End"><Text text=""/></Column>
 								</columns>
 								<items>
 									<ColumnListItem highlight="{= ${view>warnings}.length > 0 ? 'Warning' : 'None' }">
-										<VBox><Text text="{view>userName}" class="eoStrong"/><Text text="{view>kindText}" class="eoMuted"/></VBox>
-										<VBox><Text text="{view>rangeText}"/><Text text="{= ${view>note} || '' }" class="eoMuted"/></VBox>
-										<Text text="{view>workingDays}"/>
-										<Text text="{= ${view>remainingAfter} === null ? '–' : ${view>remainingAfter} }"/>
+										<VBox><Text text="{view>userName}" class="eoStrong"/>
+											<HBox alignItems="Center"><core:HTML content="{view>dot}"/><Text text="{view>typeText}" class="eoMuted"/></HBox></VBox>
+										<VBox><Text text="{view>rangeText}"/><Text text="{view>changeText}" class="eoMuted" visible="{= !!${view>changeText} }"/>
+											<Text text="{view>detailText}" class="eoMuted" visible="{= !!${view>detailText} }"/></VBox>
+										<Text text="{view>workingDaysText}"/>
+										<Text text="{= ${view>remainingAfter} === null ? '–' : ${view>remainingAfterText} }"/>
 										<Text text="{= ${view>warnings}.join(' ') || 'keine' }"/>
 										<HBox justifyContent="End">
 											<Button text="Genehmigen" type="Accept" press=".onApprove" visible="{view>canDecide}" class="sapUiTinyMarginEnd"/>
@@ -93,12 +125,15 @@
 							</Table>
 						</VBox>
 					</IconTabFilter>
-					<IconTabFilter key="plan" text="Urlaubsplan" visible="{view>/can/hrRead}">
+					<IconTabFilter key="plan" text="Teamkalender" visible="{view>/can/hrRead}">
 						<VBox class="sapUiSmallMargin">
 							<OverflowToolbar class="eoNoPrint">
-								<Button icon="sap-icon://navigation-left-arrow" tooltip="Vorheriger Monat" press=".onPrevMonth"/>
+								<SegmentedButton selectedKey="{view>/planMode}" selectionChange=".onPlanMode">
+									<items><SegmentedButtonItem key="month" text="Monat"/><SegmentedButtonItem key="year" text="Jahr"/></items>
+								</SegmentedButton>
+								<Button icon="sap-icon://navigation-left-arrow" tooltip="Zurück" press=".onPrevMonth"/>
 								<Title text="{view>/monthTitle}" level="H2"/>
-								<Button icon="sap-icon://navigation-right-arrow" tooltip="Nächster Monat" press=".onNextMonth"/>
+								<Button icon="sap-icon://navigation-right-arrow" tooltip="Weiter" press=".onNextMonth"/>
 								<Button text="Heute" press=".onThisMonth"/>
 								<ToolbarSpacer/>
 								<Text text="{view>/stateText}" class="eoMuted"/>
@@ -108,30 +143,61 @@
 							<FlexBox wrap="Wrap" alignItems="Center" class="eoVacFilters eoNoPrint sapUiTinyMarginTop">
 								<Select selectedKey="{view>/filter/crew}" items="{view>/crewOptions}" change=".onPlanFilter" tooltip="Kolonne" width="12rem">
 									<core:Item key="{view>key}" text="{view>text}"/></Select>
-								<Select selectedKey="{view>/filter/kind}" change=".onPlanFilter" tooltip="Art" width="10rem">
-									<core:Item key="" text="Alle Arten"/><core:Item key="vacation" text="Urlaub"/><core:Item key="sick" text="Krank"/>
-									<core:Item key="training" text="Schulung"/><core:Item key="school" text="Berufsschule"/><core:Item key="specialLeave" text="Sonderurlaub"/>
-									<core:Item key="other" text="Abwesend"/></Select>
+								<Select selectedKey="{view>/filter/type}" items="{view>/typeOptions}" change=".onPlanFilter" tooltip="Art" width="12rem">
+									<core:Item key="{view>key}" text="{view>text}"/></Select>
 								<Select selectedKey="{view>/filter/status}" change=".onPlanFilter" tooltip="Status" width="10rem">
 									<core:Item key="" text="Alle Status"/><core:Item key="approved" text="Genehmigt"/><core:Item key="pending" text="Beantragt"/></Select>
 							</FlexBox>
-							<HBox wrap="Wrap" class="eoVacLegend sapUiTinyMarginTop sapUiTinyMarginBottom">
-								<Text text="U Urlaub" class="eoVac-vacation"/>
-								<Text text="K Krank" class="eoVac-sick" visible="{view>/can/hrManage}"/>
-								<Text text="S Schulung · B Berufsschule" class="eoVac-school"/>
-								<Text text="SU Sonderurlaub" class="eoVac-specialLeave"/>
-								<Text text="A Abwesend" class="eoVac-other"/>
-								<Text text="schraffiert: beantragt" class="eoVacPending"/>
-								<Text text="Wochenende / Feiertag" class="eoVacHoliday"/>
-								<Text text="heute" class="eoVacTodayLegend"/>
-							</HBox>
+							<core:HTML content="{view>/legendHtml}" class="sapUiTinyMarginTop"/>
 							<eo:VacationGrid data="{view>/grid}" cellPress=".onCell"/>
 							<Text text="{view>/holidayText}" class="eoMuted sapUiTinyMarginTop"/>
+							<Text text="{view>/closureText}" class="eoMuted sapUiTinyMarginTop" visible="{= !!${view>/closureText} }"/>
+						</VBox>
+					</IconTabFilter>
+					<IconTabFilter key="konten" text="Urlaubskonten" visible="{view>/can/hrRead}">
+						<VBox class="sapUiSmallMargin">
+							<Table contextualWidth="Auto" id="accountsTable" items="{view>/accounts}" noDataText="Keine Mitarbeiter im Personalstamm." popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Button icon="sap-icon://navigation-left-arrow" tooltip="Vorjahr" press=".onAccountsPrev"/>
+										<Title text="Urlaubskonten {view>/accountsYear}" level="H3"/>
+										<Button icon="sap-icon://navigation-right-arrow" tooltip="Folgejahr" press=".onAccountsNext"/>
+										<ToolbarSpacer/>
+										<SearchField width="14rem" liveChange=".onAccountsSearch" placeholder="Mitarbeiter suchen"/>
+										<Button text="CSV" icon="sap-icon://excel-attachment" press=".onAccountsCsv" tooltip="Jahresübersicht als CSV"/>
+										<Button text="PDF" icon="sap-icon://pdf-attachment" press=".onAccountsPdf" tooltip="Jahresübersicht als PDF"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column><Text text="Mitarbeiter"/></Column>
+									<Column width="6rem" hAlign="End"><Text text="Anspruch"/></Column>
+									<Column width="7rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Übertrag"/></Column>
+									<Column width="6rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Korrektur"/></Column>
+									<Column width="6rem" hAlign="End"><Text text="Genommen"/></Column>
+									<Column width="6rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Geplant"/></Column>
+									<Column width="6rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Beantragt"/></Column>
+									<Column width="6rem" hAlign="End"><Text text="Rest"/></Column>
+									<Column minScreenWidth="64rem" demandPopin="true"><Text text="Weitere Abwesenheiten"/></Column>
+								</columns>
+								<items>
+									<ColumnListItem type="{= ${view>/can/hrManage} ? 'Navigation' : 'Inactive' }" press=".onAccountEdit">
+										<VBox><Text text="{view>name}" class="eoStrong"/><Text text="{view>sub}" class="eoMuted" visible="{= !!${view>sub} }"/></VBox>
+										<VBox><Text text="{view>entitlement}"/><Text text="{view>entitlementInfo}" class="eoMuted" visible="{= !!${view>entitlementInfo} }"/></VBox>
+										<VBox><Text text="{view>carryOver}"/><Text text="{view>carryInfo}" class="eoMuted" visible="{= !!${view>carryInfo} }"/></VBox>
+										<Text text="{view>adjustment}"/>
+										<Text text="{view>taken}"/>
+										<Text text="{view>planned}"/>
+										<Text text="{view>requested}"/>
+										<ObjectNumber number="{view>remaining}" state="{= ${view>vacation/remaining} &lt; 0 ? 'Error' : 'None' }" emphasized="true"/>
+										<Text text="{view>byTypeText}"/>
+									</ColumnListItem>
+								</items>
+							</Table>
 						</VBox>
 					</IconTabFilter>
 					<IconTabFilter key="krank" text="Krankmeldungen" visible="{view>/can/hrManage}" count="{= ${view>/sickNotes}.length }">
 						<VBox class="sapUiSmallMargin">
-							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In der Planung erscheint nur „abwesend“."
+							<MessageStrip text="Vertraulich: Krankmeldungen und AU-Bescheinigungen sieht nur die Personalverwaltung. In Planung und Teamkalender erscheint nur „abwesend“. Bitte keine Diagnosen erfassen."
 								type="Information" showIcon="true" class="sapUiSmallMarginBottom"/>
 							<Table contextualWidth="Auto" items="{path: 'view>/sickNotes', sorter: [{path: 'caseLabel', group: true}, {path: 'from'}]}" noDataText="Keine Krankmeldungen in diesem Jahr." popinLayout="GridSmall">
 								<columns>
@@ -144,7 +210,7 @@
 								</columns>
 								<items>
 									<ColumnListItem type="Navigation" press=".onSickDetail">
-										<Text text="{view>kindText}"/>
+										<VBox><Text text="{view>kindText}"/><Text text="{view>typeName}" class="eoMuted"/></VBox>
 										<Text text="{view>rangeText}"/>
 										<Text text="{view>workingDays}"/>
 										<Text text="{= ${view>note} || '' }"/>
@@ -165,6 +231,58 @@
 									infoState="{= ${view>severity} === 'error' ? 'Error' : ${view>severity} === 'warning' ? 'Warning' : 'Information' }"
 									icon="{view>icon}" type="Navigation" press=".onReminder"/>
 							</List>
+						</VBox>
+					</IconTabFilter>
+					<IconTabFilter key="verwaltung" text="Arten und Betriebsferien" visible="{view>/can/hrManage}">
+						<VBox class="sapUiSmallMargin">
+							<Table contextualWidth="Auto" id="typesTable" items="{view>/typeRows}" popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Abwesenheitsarten" level="H3"/><ToolbarSpacer/>
+										<Button text="Neue Art" icon="sap-icon://add" press=".onNewType"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column><Text text="Art"/></Column>
+									<Column width="5rem"><Text text="Kürzel"/></Column>
+									<Column minScreenWidth="48rem" demandPopin="true"><Text text="Regeln"/></Column>
+									<Column width="7rem"><Text text="Status"/></Column>
+								</columns>
+								<items>
+									<ColumnListItem type="Navigation" press=".onEditType">
+										<HBox alignItems="Center"><core:HTML content="{view>dot}"/><Text text="{view>name}" class="eoStrong"/></HBox>
+										<Text text="{view>code}"/>
+										<Text text="{view>rulesText}"/>
+										<ObjectStatus text="{= ${view>isActive} ? 'aktiv' : 'inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+							<Table contextualWidth="Auto" id="closuresTable" items="{view>/closures}" noDataText="Keine Betriebsferien oder Brückentage in diesem Jahr." popinLayout="GridSmall" class="sapUiMediumMarginTop">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Betriebsferien und Brückentage {view>/accountsYear}" level="H3"/><ToolbarSpacer/>
+										<Button text="Betriebsferien eintragen" icon="sap-icon://add" press=".onNewClosure"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column><Text text="Bezeichnung"/></Column>
+									<Column width="14rem"><Text text="Zeitraum"/></Column>
+									<Column width="7rem" hAlign="End"><Text text="Arbeitstage"/></Column>
+									<Column width="10rem" minScreenWidth="48rem" demandPopin="true"><Text text="Art"/></Column>
+									<Column width="8rem" hAlign="End" minScreenWidth="48rem" demandPopin="true"><Text text="Eingetragen"/></Column>
+									<Column width="5rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem type="Navigation" press=".onEditClosure">
+										<Text text="{view>name}" class="eoStrong"/>
+										<Text text="{view>rangeText}"/>
+										<Text text="{view>workingDaysText}"/>
+										<Text text="{view>typeName}"/>
+										<Text text="{view>employees} Personen"/>
+										<Button icon="sap-icon://delete" type="Transparent" tooltip="Betriebsferien löschen" press=".onDeleteClosure"/>
+									</ColumnListItem>
+								</items>
+							</Table>
 						</VBox>
 					</IconTabFilter>
 				</items>

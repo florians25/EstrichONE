@@ -108,24 +108,30 @@ export default class Resources extends BaseController {
 	onEditCrew(e: Event): void { void this.editCrew(this.row<CrewResponse>(e)); }
 	onEditResource(e: Event): void { void this.editResource(this.row<ResourceResponse>(e)); }
 
-	private putCrew(id: string, c: Pick<CrewResponse, "name" | "leaderUserId" | "memberUserIds" | "color" | "isActive" | "sortOrder">) {
-		return put(`planning/crews/${id}`, { name: c.name, leaderUserId: c.leaderUserId, memberUserIds: c.memberUserIds, color: c.color, isActive: c.isActive, sortOrder: c.sortOrder });
+	/** Ohne minimumStaff bleibt die Mindestbesetzung unverändert (0 = keine). */
+	private putCrew(id: string, c: Pick<CrewResponse, "name" | "leaderUserId" | "memberUserIds" | "color" | "isActive" | "sortOrder"> & { minimumStaff?: number | null }) {
+		return put(`planning/crews/${id}`, { name: c.name, leaderUserId: c.leaderUserId, memberUserIds: c.memberUserIds, color: c.color, isActive: c.isActive, sortOrder: c.sortOrder,
+			minimumStaff: c.minimumStaff ?? null });
 	}
 
 	private async editCrew(crew: CrewResponse | null): Promise<void> {
 		const ok = await openForm<boolean>({
 			title: crew ? "Kolonne bearbeiten" : "Kolonne anlegen", submitText: "Speichern",
-			initial: { name: crew?.name ?? "", leaderUserId: crew?.leaderUserId ?? "", memberUserIds: crew?.memberUserIds ?? [], color: crew?.color ?? crewColors[this.crewList.length % crewColors.length].key },
+			initial: { name: crew?.name ?? "", leaderUserId: crew?.leaderUserId ?? "", memberUserIds: crew?.memberUserIds ?? [], color: crew?.color ?? crewColors[this.crewList.length % crewColors.length].key,
+				minimumStaff: crew?.minimumStaff ?? null },
 			fields: [
 				{ key: "name", label: "Name der Kolonne", required: true, placeholder: "z. B. Kolonne Nord", maxLength: 100 },
 				{ key: "leaderUserId", label: "Kolonnenführer", type: "select", options: [{ key: "", text: "–" }, ...this.activePeople()] },
 				{ key: "memberUserIds", label: "Mitglieder", type: "multi", options: this.activePeople() },
 				{ key: "color", label: "Farbe in der Plantafel", type: "select", options: crewColors },
+				{ key: "minimumStaff", label: "Mindestbesetzung", type: "integer", min: 0, max: 100, unit: "Personen",
+					help: "Hinweis bei Urlaubsanträgen, wenn weniger anwesend wären (nicht blockierend). Leer: keine." },
 			],
 			submit: async (v) => {
 				await this.putCrew(crew?.id ?? uuidv7(), {
 					name: String(v.name).trim(), leaderUserId: (v.leaderUserId as string) || null, memberUserIds: (v.memberUserIds as string[]) ?? [],
 					color: (v.color as string) || null, isActive: crew?.isActive ?? true, sortOrder: crew?.sortOrder ?? this.crewList.length + 1,
+					minimumStaff: (v.minimumStaff as number | null) ?? 0,
 				});
 				return true;
 			},

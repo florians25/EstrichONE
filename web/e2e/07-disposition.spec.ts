@@ -114,7 +114,7 @@ test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankm
   }
   await expect(toast(page)).toContainText('Genehmigt');
 
-  await page.getByRole('tab', { name: 'Mein Urlaub' }).click();
+  await page.getByRole('tab', { name: 'Meine Übersicht' }).click();
   await expect(page.getByRole('row', { name: /Genehmigt/ }).first()).toBeVisible();
 
   await page.goto(`/personal/urlaub?reiter=plan&monat=${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`);
@@ -123,7 +123,7 @@ test('Urlaub: beantragen, genehmigen, Urlaubsplan mit Feiertagen und PDF, Krankm
   await expect(grid.locator('tr').filter({ hasText: 'Anna Admin' }).locator('td.eoVac-vacation').first()).toBeVisible();
   const download = page.waitForEvent('download');
   await page.getByRole('button', { name: 'PDF Monat' }).click();
-  expect((await download).suggestedFilename()).toMatch(/^Urlaubsplan \d{4}-\d{2}\.pdf$/);
+  expect((await download).suggestedFilename()).toMatch(/^Teamkalender \d{4}-\d{2}\.pdf$/);
 
   await page.getByRole('button', { name: 'Krankmeldung erfassen' }).click();
   const sick = await dialog(page, 'Krankmeldung erfassen');

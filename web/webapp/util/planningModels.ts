@@ -82,7 +82,11 @@ export interface EmployeeDocumentView {
 	id: string; fileId: string; category: EmployeeDocumentCategory; title: string; fileName: string | null; contentType: string | null; sizeBytes: number;
 	validUntil: string | null; addedAt: string;
 }
-export interface VacationSummary { year: number; entitlement: number; carryOver: number; taken: number; planned: number; remaining: number; sickDays: number; requested: number }
+export interface VacationSummary {
+	year: number; entitlement: number; carryOver: number; taken: number; planned: number; remaining: number; sickDays: number; requested: number;
+	annualEntitlement?: number; adjustment?: number; carryOverExpiresOn?: string | null; carryOverExpired?: number; carryOverExpiring?: number;
+	remainingAfterRequests?: number;
+}
 export interface EmployeeDetail {
 	id: string; personnelNumber: string | null; firstName: string; lastName: string; displayName: string; jobTitle: string | null;
 	employmentType: EmploymentType; userId: string | null; userName: string | null; email: string | null; phone: string | null; mobile: string | null;

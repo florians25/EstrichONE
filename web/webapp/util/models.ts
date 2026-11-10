@@ -466,6 +466,8 @@ export interface CrewResponse {
   isActive: boolean;
   sortOrder: number;
   version: number;
+  /** Mindestbesetzung (Hinweis bei Abwesenheiten). */
+  minimumStaff?: number | null;
 }
 
 export interface AssignmentView {
