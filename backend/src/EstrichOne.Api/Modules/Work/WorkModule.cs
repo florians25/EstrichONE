@@ -17,5 +17,9 @@ public sealed class WorkModule : IModule
         services.AddScoped<Notifications.Exports.IDeadlineSource, WorkDeadlines>();
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => WorkEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        WorkEndpoints.Map(api);
+        CustomerKeyFigureEndpoints.Map(api);
+    }
 }

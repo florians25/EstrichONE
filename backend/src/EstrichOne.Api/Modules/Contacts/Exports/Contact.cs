@@ -141,6 +141,15 @@ public sealed class Contact : IVersionedEntity, ISoftDeletable
         a is null || (Clean(a.Street) ?? Clean(a.PostalCode) ?? Clean(a.City) ?? Clean(a.Name)) is null
             ? null : new ContactAddress(Clean(a.Name), Clean(a.Street), Clean(a.PostalCode), Clean(a.City));
 
+    /// <summary>Kundennummer aus dem Nummernkreis setzen (nur, solange keine vergeben ist).</summary>
+    public void AssignCustomerNumber(string number)
+    {
+        if (string.IsNullOrWhiteSpace(CustomerNumber))
+        {
+            CustomerNumber = number.Trim();
+        }
+    }
+
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
 
     private static string Required(string value) =>
@@ -165,9 +174,14 @@ public sealed class ContactPerson
     {
         Id = id;
         ContactId = contactId;
-        Name = name.Trim();
-        Function = function;
-        Phone = phone;
-        Email = email;
+        Update(name, function, phone, email);
+    }
+
+    public void Update(string name, string? function, string? phone, string? email)
+    {
+        Name = string.IsNullOrWhiteSpace(name) ? throw new ArgumentException("Name fehlt.", nameof(name)) : name.Trim();
+        Function = string.IsNullOrWhiteSpace(function) ? null : function.Trim();
+        Phone = string.IsNullOrWhiteSpace(phone) ? null : phone.Trim();
+        Email = string.IsNullOrWhiteSpace(email) ? null : email.Trim();
     }
 }

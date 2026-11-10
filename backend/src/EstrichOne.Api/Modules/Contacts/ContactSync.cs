@@ -14,7 +14,7 @@ namespace EstrichOne.Api.Modules.Contacts;
 /// vorfindet. Erlaubt mit <c>contacts.edit</c> oder – für die Baustelle – mit <c>bauakten.create</c> und
 /// <c>contacts.read</c>. Kundennummern vergibt das Büro; hier wird keine gesetzt.
 /// </summary>
-internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permissions) : ISyncOperationHandler
+internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permissions, ICustomerNumbers numbers) : ISyncOperationHandler
 {
     /// <summary>Felder, die <c>contact.update</c> ändern darf (feldweise zusammengeführt wie bei der Bauakte).</summary>
     private static readonly HashSet<string> EditableFields =
@@ -83,6 +83,16 @@ internal sealed class ContactSync(EstrichOneDbContext db, IUserPermissions permi
         }
 
         ContactEndpoints.ApplyDetails(contact, details);
+        // Anlage aus der App: Kundennummer vergibt der Server.
+        try
+        {
+            await numbers.AssignIfMissingAsync(contact, cancellationToken);
+        }
+        catch (CustomerNumbersExhaustedException exhausted)
+        {
+            return SyncOperationResult.Rejected(op.OpId, CustomerNumbersExhaustedException.Code, exhausted.Message);
+        }
+
         db.Add(contact);
         await db.SaveChangesAsync(cancellationToken);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: contact.Version,

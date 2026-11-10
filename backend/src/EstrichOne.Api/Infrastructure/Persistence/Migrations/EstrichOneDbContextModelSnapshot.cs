@@ -1821,6 +1821,22 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("chat_user_settings", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.CustomerNumberSequence", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<long>("LastNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customer_number_sequences");
+
+                    b.ToTable("customer_number_sequences", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.Contact", b =>
                 {
                     b.Property<Guid>("Id")

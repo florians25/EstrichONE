@@ -222,7 +222,7 @@ internal static class CallEndpoints
     }
 
     private static async Task<Results<Ok<ConvertInquiryResponse>, ProblemHttpResult>> ConvertAsync(
-        Guid id, ConvertInquiryRequest request, EstrichOneDbContext db, IBauakteFactory bauakten, CancellationToken cancellationToken)
+        Guid id, ConvertInquiryRequest request, EstrichOneDbContext db, IBauakteFactory bauakten, ICustomerNumbers numbers, CancellationToken cancellationToken)
     {
         var call = await db.Set<CallRecord>().SingleOrDefaultAsync(c => c.Id == id, cancellationToken);
         if (call is null || call.Kind != CallKind.Inquiry)
@@ -242,6 +242,15 @@ internal static class CallEndpoints
             var contact = Contact.Create(Guid.CreateVersion7(), call.Company is null ? ContactKind.Person : ContactKind.Company, customerName);
             contact.Update(contact.Kind, customerName, null, null, null, null, call.CallerPhone, call.CallerEmail,
                 call.Company is not null && call.CallerName is not null ? $"Ansprechpartner: {call.CallerName}" : null);
+            try
+            {
+                await numbers.AssignIfMissingAsync(contact, cancellationToken);
+            }
+            catch (CustomerNumbersExhaustedException exhausted)
+            {
+                return exhausted.ToProblem();
+            }
+
             db.Add(contact);
             await db.SaveChangesAsync(cancellationToken);
             customerId = contact.Id;

@@ -773,6 +773,46 @@
         ]
       }
     },
+    "/api/v1/contacts/{id}/key-figures": {
+      "get": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Kennzahlen des Kunden (Bauakten aktiv/gesamt, Fläche, letzte Aktivität, offene Aufgaben und Mängel) über die sichtbaren Bauakten",
+        "operationId": "GetCustomerKeyFigures",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerKeyFigures"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/material-orders/{id}/pdf": {
       "get": {
         "tags": [
@@ -3801,6 +3841,211 @@
         ]
       }
     },
+    "/api/v1/contacts/numbering": {
+      "get": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Kunden-Nummernkreis: Muster, nächster Zählerwert und Vorschau der nächsten Kundennummer",
+        "operationId": "GetCustomerNumbering",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerNumberingResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Nächsten Zählerwert des Kunden-Nummernkreises setzen (das Muster steht in den Systemeinstellungen)",
+        "operationId": "SaveCustomerNumbering",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveCustomerNumberingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerNumberingResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/contacts/{id}/persons/{personId}": {
+      "put": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Ansprechpartner anlegen oder ändern (idempotent über die ID)",
+        "operationId": "SaveContactPerson",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "personId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveContactPersonRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactPersonResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Ansprechpartner entfernen",
+        "operationId": "DeleteContactPerson",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "personId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/contacts/import": {
       "post": {
         "tags": [
@@ -3849,6 +4094,16 @@
               }
             }
           },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Nicht angemeldet oder Token abgelaufen"
           }
@@ -3865,7 +4120,7 @@
         "tags": [
           "Bauakten"
         ],
-        "summary": "Sichtbare Bauakten, neueste Änderung zuerst",
+        "summary": "Sichtbare Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode",
         "operationId": "ListBauakten",
         "parameters": [
           {
@@ -3911,6 +4166,13 @@
             "schema": {
               "type": "string",
               "format": "uuid"
+            }
+          },
+          {
+            "name": "postalCode",
+            "in": "query",
+            "schema": {
+              "type": "string"
             }
           }
         ],
@@ -25151,6 +25413,70 @@
           null
         ]
       },
+      "CustomerKeyFigures": {
+        "required": [
+          "bauaktenTotal",
+          "bauaktenActive",
+          "inquiries",
+          "completed",
+          "totalArea",
+          "lastActivity",
+          "openTasks",
+          "openDefects",
+          "nextPlannedStart"
+        ],
+        "type": "object",
+        "properties": {
+          "bauaktenTotal": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "bauaktenActive": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "inquiries": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "completed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "totalArea": {
+            "type": "number",
+            "format": "double"
+          },
+          "lastActivity": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "openTasks": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "openDefects": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "nextPlannedStart": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          }
+        }
+      },
       "CustomerLetterRequest": {
         "required": [
           "subject",
@@ -25210,6 +25536,36 @@
               "null",
               "string"
             ]
+          }
+        }
+      },
+      "CustomerNumberingResponse": {
+        "required": [
+          "pattern",
+          "nextNumber",
+          "preview",
+          "capacity",
+          "remaining"
+        ],
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "type": "string"
+          },
+          "nextNumber": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "preview": {
+            "type": "string"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "remaining": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -29739,6 +30095,9 @@
         "properties": {
           "bauaktePattern": {
             "type": "string"
+          },
+          "customerPattern": {
+            "type": "string"
           }
         }
       },
@@ -33316,6 +33675,39 @@
           }
         }
       },
+      "SaveContactPersonRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "function": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "maxLength": 50,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "email": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "SaveContactRequest": {
         "required": [
           "id",
@@ -33523,6 +33915,20 @@
             "type": "integer",
             "format": "int32",
             "default": 0
+          }
+        }
+      },
+      "SaveCustomerNumberingRequest": {
+        "required": [
+          "nextNumber"
+        ],
+        "type": "object",
+        "properties": {
+          "nextNumber": {
+            "maximum": 999999999,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int64"
           }
         }
       },

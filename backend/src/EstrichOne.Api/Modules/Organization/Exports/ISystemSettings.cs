@@ -133,12 +133,38 @@ public sealed record NumberingSettings
 {
     public const string DefaultPattern = "{JJJJ}-{NNN}";
 
+    /// <summary>Muster der Kundennummern (eigener Nummernkreis, Zähler über alle Jahre): 600001 bis 609999.</summary>
+    public const string DefaultCustomerPattern = "60{NNNN}";
+
     public string BauaktePattern { get; init; } = DefaultPattern;
+
+    public string CustomerPattern { get; init; } = DefaultCustomerPattern;
 
     public NumberingSettings Normalize()
     {
         var pattern = SystemSettings.Text(BauaktePattern, 40);
-        return this with { BauaktePattern = pattern is not null && pattern.Contains("{N", StringComparison.Ordinal) ? pattern : DefaultPattern };
+        var customer = SystemSettings.Text(CustomerPattern, 30);
+        return this with
+        {
+            BauaktePattern = pattern is not null && pattern.Contains("{N", StringComparison.Ordinal) ? pattern : DefaultPattern,
+            CustomerPattern = customer is not null && System.Text.RegularExpressions.Regex.IsMatch(customer, "\\{N+\\}") ? customer : DefaultCustomerPattern,
+        };
+    }
+
+    /// <summary>Höchster Zählerwert, der in die Stellen des Musters passt (z. B. 9999 bei „60{NNNN}“).</summary>
+    public static long Capacity(string pattern)
+    {
+        var digits = System.Text.RegularExpressions.Regex.Matches(pattern, "\\{(N+)\\}").Select(m => m.Groups[1].Value.Length).DefaultIfEmpty(9).Min();
+        return (long)Math.Pow(10, Math.Min(digits, 15)) - 1;
+    }
+
+    /// <summary>Nummer nach Muster: {JJJJ} Jahr, {JJ} zweistellig, {N…} laufende Nummer mit Mindeststellen.</summary>
+    public static string Format(string pattern, int year, long number)
+    {
+        var text = pattern.Replace("{JJJJ}", year.ToString(System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal)
+            .Replace("{JJ}", (year % 100).ToString("00", System.Globalization.CultureInfo.InvariantCulture), StringComparison.Ordinal);
+        return System.Text.RegularExpressions.Regex.Replace(text, "\\{(N+)\\}",
+            match => number.ToString(new string('0', match.Groups[1].Value.Length), System.Globalization.CultureInfo.InvariantCulture));
     }
 }
 

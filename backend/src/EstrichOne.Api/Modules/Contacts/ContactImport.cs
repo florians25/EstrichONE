@@ -17,7 +17,7 @@ public sealed record ContactImportResult(
 /// Pflicht ist nur „Name“. Fehlerhafte Zeilen und Dubletten werden gemeldet und nie importiert; alle übrigen
 /// Zeilen werden in einer Transaktion übernommen. Mit <c>dryRun</c> wird nur geprüft.
 /// </summary>
-internal sealed class ContactImport(EstrichOneDbContext db)
+internal sealed class ContactImport(EstrichOneDbContext db, ICustomerNumbers numbers)
 {
     public const int MaxRows = 5_000;
 
@@ -123,6 +123,18 @@ internal sealed class ContactImport(EstrichOneDbContext db)
 
         if (!dryRun && accepted.Count > 0)
         {
+            // Zeilen ohne Kundennummer erhalten die nächste aus dem Nummernkreis (in Dateireihenfolge).
+            foreach (var contact in accepted.Where(c => c.CustomerNumber is null))
+            {
+                string next;
+                do
+                {
+                    next = await numbers.NextAsync(cancellationToken);
+                }
+                while (byNumber.ContainsKey(next.ToUpperInvariant()));
+                contact.AssignCustomerNumber(next);
+            }
+
             db.AddRange(accepted);
             await db.SaveChangesAsync(cancellationToken);
         }

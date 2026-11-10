@@ -119,11 +119,14 @@ internal static class ContactEndpoints
             .RequirePermission(Permissions.ContactsEdit);
 
         ContactDuplicates.Map(contacts);
+        ContactNumbers.Map(contacts);
+        ContactPersons.Map(contacts);
 
         contacts.MapPost("/import", ImportAsync).WithName("ImportContacts")
             .WithSummary("CSV-Import (text/csv im Anfragekörper); mit dryRun=true nur prüfen")
             .Accepts<string>("text/csv")
             .ProducesProblem(StatusCodes.Status413PayloadTooLarge)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.ContactsEdit);
     }
 
@@ -171,7 +174,7 @@ internal static class ContactEndpoints
     }
 
     private static async Task<Results<Created<ContactResponse>, Ok<ContactResponse>, ProblemHttpResult>> CreateAsync(
-        SaveContactRequest request, EstrichOneDbContext db, CancellationToken cancellationToken)
+        SaveContactRequest request, EstrichOneDbContext db, ICustomerNumbers numbers, CancellationToken cancellationToken)
     {
         var existing = await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AsNoTracking()
             .SingleOrDefaultAsync(c => c.Id == request.Id, cancellationToken);
@@ -183,8 +186,9 @@ internal static class ContactEndpoints
                     extensions: new Dictionary<string, object?> { ["code"] = "ID_CONFLICT" });
         }
 
-        if (request.CustomerNumber is not null
-            && await db.Set<Contact>().AnyAsync(c => c.CustomerNumber == request.CustomerNumber, cancellationToken))
+        var customerNumber = string.IsNullOrWhiteSpace(request.CustomerNumber) ? null : request.CustomerNumber.Trim();
+        if (customerNumber is not null
+            && await db.Set<Contact>().AnyAsync(c => c.CustomerNumber == customerNumber, cancellationToken))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
                 extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
@@ -196,11 +200,32 @@ internal static class ContactEndpoints
         }
 
         var contact = Contact.Create(request.Id, request.Kind, request.Name);
-        contact.Update(request.Kind, request.Name, request.CustomerNumber, request.Street, request.PostalCode, request.City,
+        contact.Update(request.Kind, request.Name, customerNumber, request.Street, request.PostalCode, request.City,
             request.Phone, request.Email, request.Notes);
         ApplyDetails(contact, request);
+        // Ohne Nummer vergibt der Server die nächste aus dem Kunden-Nummernkreis.
+        try
+        {
+            await numbers.AssignIfMissingAsync(contact, cancellationToken);
+        }
+        catch (CustomerNumbersExhaustedException exhausted)
+        {
+            return exhausted.ToProblem();
+        }
+
         db.Add(contact);
-        await db.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await db.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (exception.InnerException is Npgsql.PostgresException { SqlState: "23505" } unique
+            && unique.ConstraintName?.Contains("customer_number", StringComparison.Ordinal) == true)
+        {
+            // Gleichzeitig von Hand dieselbe Nummer vergeben (eindeutiger Index).
+            return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
+                extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
+        }
+
         return TypedResults.Created($"/api/v1/contacts/{contact.Id}", ToResponse(contact));
     }
 
@@ -220,7 +245,8 @@ internal static class ContactEndpoints
                 detail: "Der Kontakt wurde inzwischen geändert. Bitte neu laden.", extensions: new Dictionary<string, object?> { ["code"] = "VERSION_CONFLICT" });
         }
 
-        var number = string.IsNullOrWhiteSpace(request.CustomerNumber) ? null : request.CustomerNumber.Trim();
+        // Leer gesendet (ältere Apps, Formulare ohne Feld): vergebene Nummer bleibt erhalten.
+        var number = string.IsNullOrWhiteSpace(request.CustomerNumber) ? contact.CustomerNumber : request.CustomerNumber.Trim();
         if (number is not null && await db.Set<Contact>().AnyAsync(c => c.CustomerNumber == number && c.Id != id, cancellationToken))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
@@ -257,7 +283,14 @@ internal static class ContactEndpoints
                 extensions: new Dictionary<string, object?> { ["code"] = "FILE_TOO_LARGE" });
         }
 
-        return TypedResults.Ok(await import.ImportAsync(buffer.ToArray(), dryRun, cancellationToken));
+        try
+        {
+            return TypedResults.Ok(await import.ImportAsync(buffer.ToArray(), dryRun, cancellationToken));
+        }
+        catch (CustomerNumbersExhaustedException exhausted)
+        {
+            return exhausted.ToProblem();
+        }
     }
 
     internal static ContactResponse ToResponse(Contact c) => new(c.Id, c.Kind, c.Name, c.CustomerNumber, c.Street, c.PostalCode,

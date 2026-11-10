@@ -9,6 +9,7 @@ public sealed class ContactsModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<ContactImport>();
+        services.AddScoped<Exports.ICustomerNumbers, CustomerNumberGenerator>();
         services.AddScoped<ISyncEntitySource, ContactSource>();
         services.AddScoped<ISyncOperationHandler, ContactSync>();
     }

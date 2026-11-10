@@ -45,7 +45,8 @@ public sealed class ContactSyncTests(PostgresFixture postgres) : IAsyncLifetime
         results.Select(r => r.Status).ShouldAllBe(status => status == SyncOperationStatus.Applied);
         results[0].Entity.Text("name").ShouldBe("Familie Schneider");
         results[0].Entity.Text("kind").ShouldBe("person");
-        results[0].Entity.Text("customerNumber").ShouldBeNull();
+        // Kundennummer vergibt der Server aus dem Nummernkreis (Standard „60{NNNN}“).
+        results[0].Entity.Text("customerNumber")!.ShouldMatch("^60[0-9]{4}$");
         results[1].Entity.Text("customerId").ShouldBe(customer.ToString());
 
         var contact = await _office.GetFromJsonAsync<ContactResponse>($"/api/v1/contacts/{customer}", TestJson.Options, TestContext.Current.CancellationToken);

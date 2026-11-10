@@ -87,7 +87,7 @@ internal static class BauakteEndpoints
         var group = api.MapGroup("/bauakten").WithTags("Bauakten");
 
         group.MapGet("/", ListAsync).WithName("ListBauakten")
-            .WithSummary("Sichtbare Bauakten, neueste Änderung zuerst")
+            .WithSummary("Sichtbare Bauakten, neueste Änderung zuerst; Filter: search, status (all|active|old|Status), responsibleUserId, customerId, postalCode")
             .RequirePermission(Permissions.BauaktenRead);
 
         group.MapGet("/map", MapPointsAsync).WithName("ListBauakteMapPoints")
@@ -129,7 +129,7 @@ internal static class BauakteEndpoints
         EstrichOneDbContext db, IBauakteAccess access, CancellationToken cancellationToken,
         [FromQuery] string? search = null, [FromQuery] string? status = null,
         [FromQuery] string? cursor = null, [FromQuery] int? limit = null,
-        [FromQuery] Guid? responsibleUserId = null, [FromQuery] Guid? customerId = null)
+        [FromQuery] Guid? responsibleUserId = null, [FromQuery] Guid? customerId = null, [FromQuery] string? postalCode = null)
     {
         var pageSize = Math.Clamp(limit ?? DefaultPageSize, 1, MaxPageSize);
         var query = (await access.VisibleAsync(db.Set<Bauakte>().AsNoTracking(), cancellationToken));
@@ -178,6 +178,13 @@ internal static class BauakteEndpoints
         if (customerId is { } customer)
         {
             query = query.Where(b => b.CustomerId == customer);
+        }
+
+        // Baustellen an derselben Adresse (Hinweis beim Anlegen einer Bauakte).
+        if (!string.IsNullOrWhiteSpace(postalCode))
+        {
+            var postal = postalCode.Trim();
+            query = query.Where(b => b.PostalCode == postal);
         }
 
         if (cursor is not null)
