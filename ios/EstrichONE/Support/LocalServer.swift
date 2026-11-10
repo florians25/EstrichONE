@@ -41,6 +41,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
     private lazy var notifications = DemoNotifications()
     /// Chat im Demomodus.
     private lazy var chat = DemoChat(userId: currentUserId)
+    /// Urlaub und Abwesenheiten im Demomodus.
+    private lazy var absences = DemoAbsences(userId: currentUserId)
 
     init(serverInfoStatus: Int, serverInfoBody: String, password: String, newDeviceStatus: String, demo: DemoContent? = nil) {
         self.serverInfoStatus = serverInfoStatus
@@ -295,7 +297,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
         case "/api/v1/access/me/permissions" where demo != nil:
             // Demo als Bauleiter mit Planung und IT-Bearbeitung, damit alle Funktionen sichtbar sind.
             return json(200, ["bauakten.read", "bauakten.edit", "bauakten.create", "contacts.read", "planning.read", "planning.manage",
-                              "helpdesk.agent"])
+                              "helpdesk.agent", "absence.request", "absence.approve"])
         case "/api/v1/files" where demo != nil:
             // Eigene Datei ohne Bauakte ankündigen (Anhang einer Antwort im Helpdesk).
             if let id = (body["id"] as? String)?.lowercased() { files[id] = ((body["sizeBytes"] as? Int) ?? 0, 0) }
@@ -313,6 +315,22 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             case (5, "comments"): return helpdesk.comment(parts[3].lowercased(), body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
             case (5, "reopen"): return helpdesk.update(parts[3].lowercased(), body: ["status": "inProgress"]).map { json(200, $0) }
                 ?? problem(404, "NOT_FOUND", "Nicht gefunden")
+            default: return problem(404, "NOT_FOUND", "Nicht gefunden")
+            }
+        case "/api/v1/hr/me" where demo != nil:
+            return json(200, absences.mine())
+        case "/api/v1/hr/absence-requests" where demo != nil:
+            return json(200, absences.list(scope: "pending"))
+        case "/api/v1/hr/absence-requests/preview" where demo != nil:
+            return json(200, absences.preview(body))
+        case let hrPath where demo != nil && hrPath.hasPrefix("/api/v1/hr/absence-requests/"):
+            // /api/v1/hr/absence-requests/{id}[/decision|/cancel]
+            let parts = hrPath.split(separator: "/").map(String.init)
+            let id = parts.count > 4 ? parts[4].lowercased() : ""
+            switch (parts.count, parts.last) {
+            case (5, _): return json(200, absences.save(id: id, body: body))
+            case (6, "decision"): return absences.decide(id: id, body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Antrag nicht gefunden")
+            case (6, "cancel"): return absences.cancel(id: id).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Antrag nicht gefunden")
             default: return problem(404, "NOT_FOUND", "Nicht gefunden")
             }
         case let demoPath where demo != nil && demoPath.hasPrefix("/api/v1/planning/dispatch/"):

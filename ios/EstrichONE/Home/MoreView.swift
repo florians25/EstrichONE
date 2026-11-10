@@ -4,7 +4,7 @@ import SwiftUI
 /// Reiter „Mehr“: Person und Abgleich oben, dann Planung, Hilfe, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     enum Route: String, Identifiable, Hashable {
-        case sync, tasks, dispatch, week, tickets, inbox, chat, security
+        case sync, tasks, dispatch, week, absences, tickets, inbox, chat, security
         var id: String { rawValue }
     }
 
@@ -68,6 +68,8 @@ struct MoreView: View {
                         .accessibilityIdentifier("dispatchRow")
                     Button { route = .week } label: { row("Meine Woche", symbol: "calendar") }
                         .accessibilityIdentifier("myWeekTile")
+                    Button { route = .absences } label: { row("Urlaub und Abwesenheit", symbol: "sun.max") }
+                        .accessibilityIdentifier("absencesRow")
                 }
 
                 Section("Hilfe") {
@@ -158,6 +160,7 @@ struct MoreView: View {
                 case .tasks: MyTasksView()
                 case .dispatch: DispatchView()
                 case .week: MyWeekView()
+                case .absences: AbsenceOverviewView()
                 case .tickets: MyTicketsView()
                 case .inbox: NotificationInboxView()
                 case .chat: ChatListView()
@@ -247,6 +250,7 @@ struct MoreView: View {
         case "disposition": route = .dispatch
         case "aufgaben": route = .tasks
         case "woche": route = .week
+        case "abwesenheit", "abwesenheit-antrag", "abwesenheit-genehmigung": route = .absences
         case "meldung", "meldung-detail", "meldung-bearbeitung": route = .tickets
         case "dispo-zuweisen", "dispo-verschieben", "dispo-tauschen", "dispo-fahrzeug", "dispo-kolonnen", "dispo-freigabe": route = .dispatch
         default: break
