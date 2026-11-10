@@ -1,46 +1,59 @@
 <mvc:View controllerName="estrichone.controller.auth.Login" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.ui.layout.form"
 	xmlns:core="sap.ui.core" height="100%">
-	<FlexBox class="eoAuth" alignItems="Center" justifyContent="Center" height="100%" direction="Column">
-		<VBox class="eoAuthCard" width="26rem">
-			<Image src="{view>/logo}" alt="EstrichONE" height="3rem" class="eoAuthLogo" decorative="false" error=".onLogoError"/>
-			<Title text="{i18n>login.title}" level="H1" titleStyle="H3" class="sapUiSmallMarginTop"/>
-			<Text text="{session>/server/serverName}" class="eoMuted sapUiMediumMarginBottom"/>
+	<FlexBox class="eoAuth eoLogin" alignItems="Center" justifyContent="Center" height="100%">
+		<HBox class="eoLoginShell" renderType="Bare">
+			<VBox class="eoLoginBrand" justifyContent="SpaceBetween" renderType="Bare">
+				<Image src="/logo-horizontal-white.svg" alt="EstrichONE" height="2.5rem" class="eoLoginBrandLogo" decorative="false" error=".onLogoError"/>
+				<VBox renderType="Bare" class="eoLoginBrandCompany">
+					<Text text="{i18n>login.companyLabel}" class="eoLoginBrandLabel"/>
+					<Title text="{= ${session>/server/serverName} || 'EstrichONE' }" level="H2" wrapping="true" class="eoLoginBrandName"/>
+				</VBox>
+				<Text text="{= 'Version ' + (${session>/server/serverVersion} || '') }" visible="{= !!${session>/server/serverVersion} }" class="eoLoginBrandVersion"/>
+			</VBox>
+			<VBox class="eoAuthCard eoLoginCard" renderType="Bare">
+				<Image src="{view>/logo}" alt="EstrichONE" height="2.5rem" class="eoAuthLogo eoLoginCardLogo" decorative="false" error=".onLogoError"/>
+				<Title text="{i18n>login.title}" level="H1" titleStyle="H3" class="eoLoginTitle"/>
+				<Text text="{session>/server/serverName}" class="eoMuted eoLoginCompany"/>
 			<MessageStrip text="{i18n>login.expired}" type="Information" showIcon="true" visible="{= ${view>/reason} === 'abgelaufen' }" class="sapUiSmallMarginBottom"/>
-			<MessageStrip text="{i18n>login.locked}" type="Error" showIcon="true" visible="{= ${view>/reason} === 'gesperrt' }" class="sapUiSmallMarginBottom"/>
-			<MessageStrip type="Warning" showIcon="true" visible="{= ${session>/server/setupRequired} === true }" class="sapUiSmallMarginBottom"
-				text="{i18n>login.setupRequired}">
-				<link><Link text="{i18n>login.setupLink}" href="/einrichtung"/></link>
-			</MessageStrip>
-			<VBox visible="{= !${view>/needCode} }">
-				<Label text="{i18n>login.user}" labelFor="loginUser" required="true"/>
-				<Input id="loginUser" value="{view>/login}" valueLiveUpdate="true" width="100%" submit=".onSubmit">
-					<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
-				</Input>
-				<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
-				<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="{= ${view>/showPassword} ? 'Text' : 'Password' }" width="100%" submit=".onSubmit"
-					showValueHelp="true" valueHelpIconSrc="{= ${view>/showPassword} ? 'sap-icon://hide' : 'sap-icon://show' }" valueHelpRequest=".onTogglePassword"
-					valueState="{= ${view>/capsLock} ? 'Warning' : 'None' }" valueStateText="{i18n>login.capsLock}">
-					<customData><core:CustomData key="autocomplete" value="current-password" writeToDom="true"/></customData>
-				</Input>
-				<CheckBox id="loginRemember" text="{i18n>login.remember}" selected="{view>/remember}" class="sapUiTinyMarginTop"/>
+				<MessageStrip text="{i18n>login.locked}" type="Error" showIcon="true" visible="{= ${view>/reason} === 'gesperrt' }" class="sapUiSmallMarginBottom"/>
+				<MessageStrip type="Warning" showIcon="true" visible="{= ${session>/server/setupRequired} === true }" class="sapUiSmallMarginBottom"
+					text="{i18n>login.setupRequired}">
+					<link><Link text="{i18n>login.setupLink}" href="/einrichtung"/></link>
+				</MessageStrip>
+				<VBox visible="{= !${view>/needCode} }">
+					<Label text="{i18n>login.user}" labelFor="loginUser" required="true"/>
+					<Input id="loginUser" value="{view>/login}" placeholder="z. B. m.mustermann" valueLiveUpdate="true" width="100%" submit=".onSubmit">
+						<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
+					</Input>
+					<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
+					<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="{= ${view>/showPassword} ? 'Text' : 'Password' }" width="100%" submit=".onSubmit"
+						showValueHelp="true" valueHelpIconSrc="{= ${view>/showPassword} ? 'sap-icon://hide' : 'sap-icon://show' }" valueHelpRequest=".onTogglePassword"
+						valueState="{= ${view>/capsLock} ? 'Warning' : 'None' }" valueStateText="{i18n>login.capsLock}">
+						<customData><core:CustomData key="autocomplete" value="current-password" writeToDom="true"/></customData>
+					</Input>
+					<CheckBox id="loginRemember" text="{i18n>login.remember}" selected="{view>/remember}" class="sapUiTinyMarginTop"/>
+				</VBox>
+				<VBox visible="{view>/needCode}">
+					<Text text="{view>/login}" class="eoMuted"/>
+					<Label text="{i18n>login.code}" labelFor="loginCode" required="true" class="sapUiSmallMarginTop"/>
+					<Input id="loginCode" value="{view>/code}" valueLiveUpdate="true" width="100%" maxLength="32" submit=".onSubmit">
+						<customData>
+							<core:CustomData key="autocomplete" value="one-time-code" writeToDom="true"/>
+							<core:CustomData key="inputmode" value="text" writeToDom="true"/>
+						</customData>
+					</Input>
+					<Text text="{i18n>login.codeHint}" class="eoHelpText"/>
+					<Link text="{i18n>login.codeBack}" press=".onCodeBack" class="sapUiTinyMarginTop"/>
+				</VBox>
+				<MessageStrip id="loginError" text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginTop">
+					<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
+				</MessageStrip>
+				<Button text="{= ${view>/busy} ? '…' : ${i18n>login.submit} }" type="Emphasized" width="100%" press=".onSubmit" busy="{view>/busy}" busyIndicatorDelay="0" class="eoLoginSubmit"/>
+				<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoLoginLinks" renderType="Bare">
+					<Link id="loginForgot" text="{i18n>login.forgot}" press=".onForgot" visible="{= !${view>/needCode} }"/>
+					<Text text="{= 'EstrichONE ' + (${session>/server/serverVersion} || '') }" class="eoMuted eoLoginVersion"/>
+				</HBox>
 			</VBox>
-			<VBox visible="{view>/needCode}">
-				<Text text="{view>/login}" class="eoMuted"/>
-				<Label text="{i18n>login.code}" labelFor="loginCode" required="true" class="sapUiSmallMarginTop"/>
-				<Input id="loginCode" value="{view>/code}" valueLiveUpdate="true" width="100%" maxLength="32" submit=".onSubmit">
-					<customData>
-						<core:CustomData key="autocomplete" value="one-time-code" writeToDom="true"/>
-						<core:CustomData key="inputmode" value="text" writeToDom="true"/>
-					</customData>
-				</Input>
-				<Text text="{i18n>login.codeHint}" class="eoHelpText"/>
-				<Link text="{i18n>login.codeBack}" press=".onCodeBack" class="sapUiTinyMarginTop"/>
-			</VBox>
-			<MessageStrip id="loginError" text="{view>/error}" type="Error" showIcon="true" visible="{= !!${view>/error} }" class="sapUiSmallMarginTop">
-				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
-			</MessageStrip>
-			<Button text="{i18n>login.submit}" type="Emphasized" width="100%" press=".onSubmit" busy="{view>/busy}" class="sapUiMediumMarginTop"/>
-		</VBox>
-		<Text text="{= 'EstrichONE' + (${session>/server/serverVersion} ? ' ' + ${session>/server/serverVersion} : '') }" class="eoMuted eoAuthFooter"/>
+		</HBox>
 	</FlexBox>
 </mvc:View>

@@ -1,6 +1,9 @@
 import BaseController from "../BaseController";
 import Theming from "sap/ui/core/Theming";
 import type Image from "sap/m/Image";
+import type Control from "sap/ui/core/Control";
+import Popover from "sap/m/Popover";
+import Text from "sap/m/Text";
 import type Event from "sap/ui/base/Event";
 import { ApiError, problemMessage } from "../../util/api";
 import type { RouteMatch } from "../../util/router";
@@ -11,6 +14,7 @@ import { readRemember, writeRemember } from "../../util/relogin";
 /** @namespace estrichone.controller.auth */
 export default class Login extends BaseController {
 	private target = "/";
+	private forgot?: Popover;
 
 	onInit(): void {
 		this.local({ login: "", password: "", code: "", needCode: false, remember: readRemember(), error: "", busy: false, reason: "", showPassword: false, capsLock: false,
@@ -32,6 +36,17 @@ export default class Login extends BaseController {
 		});
 	}
 
+	/** Kein Selbst-Zurücksetzen: Hinweis auf die Administration. */
+	onForgot(event: Event): void {
+		const link = event.getSource() as Control;
+		if (!this.forgot) {
+			this.forgot = new Popover({ showHeader: false, placement: "Top", contentWidth: "18rem",
+				content: [new Text({ text: this.t("login.forgotText") }).addStyleClass("sapUiSmallMargin")] });
+			this.v().addDependent(this.forgot);
+		}
+		this.forgot.openBy(link);
+	}
+
 	/** Passwort ein- und ausblenden. */
 	onTogglePassword(): void {
 		this.model().setProperty("/showPassword", this.model().getProperty("/showPassword") !== true);
@@ -41,7 +56,9 @@ export default class Login extends BaseController {
 		this.target = match.query.get("ziel") ?? "/";
 		this.model().setData({ ...this.model().getData(), password: "", code: "", needCode: false, error: "", busy: false, showPassword: false, capsLock: false, reason: match.query.get("grund") ?? "" });
 		void session.loadServer();
-		setTimeout(() => this.v().byId("loginUser")?.focus(), 200);
+		const last = lastLogin();
+		if (last && !this.model().getProperty("/login")) this.model().setProperty("/login", last);
+		setTimeout(() => this.v().byId(this.model().getProperty("/login") ? "loginPassword" : "loginUser")?.focus(), 200);
 	}
 
 	onLogoError(event: Event): void {
@@ -73,6 +90,7 @@ export default class Login extends BaseController {
 		try {
 			const remember = model.getProperty("/remember") === true;
 			writeRemember(remember);
+			storeLastLogin(remember ? login : "");
 			await session.signIn(login, password, remember, needCode ? code : undefined);
 			model.setData({ ...model.getData(), password: "", code: "", needCode: false, showPassword: false });
 			this.nav(this.target.startsWith("/") && !this.target.startsWith("//") ? this.target : "/", true);
@@ -93,5 +111,25 @@ export default class Login extends BaseController {
 		} finally {
 			model.setProperty("/busy", false);
 		}
+	}
+}
+
+const LAST_LOGIN_KEY = "estrichone.lastLogin";
+
+/** Anmeldename nur merken, wenn „Angemeldet bleiben“ gewählt wurde (nicht auf gemeinsam genutzten Rechnern). */
+function lastLogin(): string {
+	try {
+		return localStorage.getItem(LAST_LOGIN_KEY) ?? "";
+	} catch {
+		return "";
+	}
+}
+
+function storeLastLogin(value: string): void {
+	try {
+		if (value) localStorage.setItem(LAST_LOGIN_KEY, value);
+		else localStorage.removeItem(LAST_LOGIN_KEY);
+	} catch {
+		// ohne Speicher: nur Komfort
 	}
 }

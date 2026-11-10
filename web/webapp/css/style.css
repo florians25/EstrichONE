@@ -19,6 +19,37 @@
 }
 .eoAuthLogo { display: block; }
 .eoAuthFooter { margin-top: 1rem; font-size: var(--sapFontSmallSize); }
+/* Anmeldeseite: Markenfläche links (ab 60rem), Formular rechts */
+.eoLoginShell { display: flex; width: 100%; max-width: 58rem; min-height: 32rem; border-radius: var(--sapElement_BorderCornerRadius, 0.75rem);
+	overflow: hidden; box-shadow: var(--sapContent_Shadow2); }
+.eoLoginBrand { flex: 1 1 50%; display: flex; flex-direction: column; justify-content: space-between; padding: 2.5rem; box-sizing: border-box;
+	background: linear-gradient(155deg, #0b2a5b 0%, #0a4ab0 60%, #1569e0 100%); color: #fff; }
+.eoLoginBrand .sapMText, .eoLoginBrand .sapMTitle { color: #fff; }
+.eoLoginBrandLogo img, img.eoLoginBrandLogo { height: 2.5rem; width: auto; align-self: flex-start; }
+.eoLoginCardLogo, img.eoLoginCardLogo { align-self: flex-start; }
+.eoLoginBrandLabel { opacity: 0.75; font-size: var(--sapFontSmallSize); text-transform: uppercase; letter-spacing: 0.06em; }
+.eoLoginBrandName.sapMTitle { font-size: 1.75rem; line-height: 1.25; margin-top: 0.375rem; }
+.eoLoginBrandVersion { opacity: 0.7; font-size: var(--sapFontSmallSize); }
+.eoLogin .eoLoginCard { flex: 1 1 50%; display: flex; flex-direction: column; border: 0; border-radius: 0; box-shadow: none; padding: 2.5rem 2.5rem 1.75rem;
+	max-width: none; justify-content: center; }
+.eoLoginCard .sapMInputBase { height: 2.5rem; }
+.eoLoginCard .sapMInputBaseInner { font-size: 1rem; }
+.eoLoginTitle { margin-top: 0; margin-bottom: 1.5rem; }
+.eoLoginCompany { margin: 0.125rem 0 1.25rem; }
+.eoLoginSubmit { margin-top: 1.25rem; }
+.eoLoginLinks { display: flex; justify-content: space-between; align-items: center; margin-top: 1rem; }
+.eoLoginVersion { font-size: var(--sapFontSmallSize); }
+.eoLoginCardLogo, .eoLoginCompany, .eoLoginVersion { display: none; }
+@media (max-width: 59.99rem) {
+	.eoLoginBrand { display: none; }
+	.eoLoginShell { max-width: 28rem; min-height: 0; }
+	.eoLoginCardLogo, .eoLoginCompany { display: block; margin-bottom: 1rem; }
+	.eoLoginTitle { margin-bottom: 0; }
+	.eoLoginCompany { margin: 0.125rem 0 1.25rem; }
+	.eoLoginVersion { display: inline; }
+	.eoLogin .eoLoginCard { padding: 2rem 1.5rem 1.5rem; }
+}
+@media (max-width: 30rem) { .eoLoginShell { box-shadow: none; } .eoLogin { padding: 0; } }
 .eoAuthLogo img, img.eoAuthLogo { height: 3rem; width: auto; }
 
 /* Programmrahmen */
