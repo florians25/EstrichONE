@@ -18,6 +18,7 @@
 	box-sizing: border-box;
 }
 .eoAuthLogo { display: block; }
+.eoAuthFooter { margin-top: 1rem; font-size: var(--sapFontSmallSize); }
 .eoAuthLogo img, img.eoAuthLogo { height: 3rem; width: auto; }
 
 /* Programmrahmen */

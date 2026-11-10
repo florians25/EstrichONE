@@ -94,7 +94,7 @@ test('Laufende Wartung: Benutzer sehen die Wartungsseite, Administratoren arbeit
   });
   await page.getByRole('button', { name: 'Als Administrator anmelden' }).click();
   await page.getByLabel('Anmeldename oder E-Mail').fill('admin');
-  await page.getByLabel('Passwort').fill(adminPassword);
+  await page.getByLabel('Passwort', { exact: true }).fill(adminPassword);
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await page.waitForURL((url) => !url.pathname.startsWith('/anmelden'));
   await page.goto('/start');

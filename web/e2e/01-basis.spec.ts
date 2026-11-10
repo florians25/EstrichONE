@@ -6,7 +6,7 @@ test.describe.configure({ mode: 'serial' });
 test('Ersteinrichtung im Browser und Anmeldung als Administrator', async ({ page }) => {
   await page.goto('/anmelden');
   await expect(page.getByText('EstrichONE ist noch nicht eingerichtet.')).toBeVisible();
-  await page.getByRole('link', { name: 'Jetzt einrichten' }).click();
+  await page.getByRole('link', { name: 'Einrichtung starten' }).click();
 
   await page.getByLabel('Einrichtungscode').fill(setupCode);
   await page.getByLabel('Firmenname').fill('Estrichbau E2E GmbH');
@@ -22,7 +22,7 @@ test('Ersteinrichtung im Browser und Anmeldung als Administrator', async ({ page
 test('Falsches Passwort wird verständlich abgelehnt', async ({ page }) => {
   await page.goto('/anmelden');
   await page.getByLabel('Anmeldename oder E-Mail').fill('admin');
-  await page.getByLabel('Passwort').fill('falsch-falsch');
+  await page.getByLabel('Passwort', { exact: true }).fill('falsch-falsch');
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page.locator('.sapMMsgStrip').filter({ hasText: 'Anmeldename oder Passwort ist nicht korrekt.' })).toBeVisible();
 });
@@ -77,7 +77,7 @@ test('Navigation nach Rechten, Deep-Link nach Anmeldung, Abmelden', async ({ pag
   await page.goto('/bauakten');
   await expect(page).toHaveURL(/\/anmelden\?ziel=%2Fbauakten/);
   await page.getByLabel('Anmeldename oder E-Mail').fill('admin');
-  await page.getByLabel('Passwort').fill(adminPassword);
+  await page.getByLabel('Passwort', { exact: true }).fill(adminPassword);
   await page.getByRole('button', { name: 'Anmelden' }).click();
   await expect(page).toHaveURL(/\/bauakten$/);
   await expect(pageTitle(page)).toHaveText('Bauakten');

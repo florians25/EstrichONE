@@ -4,7 +4,7 @@
 
 1. Öffnen Sie im Browser die Adresse Ihres EstrichONE-Servers – immer mit `https://`.
 2. Geben Sie Ihren **Anmeldenamen** (oder Ihre E-Mail-Adresse) und das **Passwort** ein.
-3. Auf dem eigenen Arbeitsplatzrechner können Sie **Angemeldet bleiben (dieses Gerät)** einschalten. Auf fremden oder
+3. Auf dem eigenen Arbeitsplatzrechner können Sie **Angemeldet bleiben** einschalten. Auf fremden oder
    gemeinsam genutzten Rechnern lassen Sie das Häkchen weg.
 4. Klicken Sie auf **Anmelden**.
 
@@ -24,7 +24,7 @@ dabei erhalten – nach der erneuten Anmeldung arbeiten Sie an derselben Stelle 
 ### Ersteinrichtung (nur einmal, durch die Administration)
 
 Nach der Installation zeigt EstrichONE beim ersten Aufruf „EstrichONE ist noch nicht eingerichtet“ mit dem Link
-**Jetzt einrichten**. Für die Einrichtung brauchen Sie den **Einrichtungscode**, den der Server beim ersten Start in sein
+**Einrichtung starten**. Für die Einrichtung brauchen Sie den **Einrichtungscode**, den der Server beim ersten Start in sein
 Protokoll schreibt (`docker compose logs api`). Tragen Sie Firmennamen und den ersten Administrator ein und klicken Sie
 auf **Einrichten und anmelden**.
 

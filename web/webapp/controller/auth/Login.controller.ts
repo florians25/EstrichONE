@@ -13,14 +13,33 @@ export default class Login extends BaseController {
 	private target = "/";
 
 	onInit(): void {
-		this.local({ login: "", password: "", code: "", needCode: false, remember: readRemember(), error: "", busy: false, reason: "",
+		this.local({ login: "", password: "", code: "", needCode: false, remember: readRemember(), error: "", busy: false, reason: "", showPassword: false, capsLock: false,
 			logo: logos(Theming.getTheme()).horizontal });
 		Theming.attachApplied(() => this.model().setProperty("/logo", logos(Theming.getTheme()).horizontal));
+		// Hinweis auf aktivierte Feststelltaste im Passwortfeld.
+		const caps = (k: KeyboardEvent): void => {
+			this.model().setProperty("/capsLock", typeof k.getModifierState === "function" && k.getModifierState("CapsLock"));
+		};
+		this.v().addEventDelegate({
+			onAfterRendering: () => {
+				const el = this.v().byId("loginPassword")?.getDomRef() as HTMLElement | null | undefined;
+				if (el && !el.dataset.eoCaps) {
+					el.dataset.eoCaps = "1";
+					el.addEventListener("keydown", caps);
+					el.addEventListener("keyup", caps);
+				}
+			},
+		});
+	}
+
+	/** Passwort ein- und ausblenden. */
+	onTogglePassword(): void {
+		this.model().setProperty("/showPassword", this.model().getProperty("/showPassword") !== true);
 	}
 
 	onRouteMatched(match: RouteMatch): void {
 		this.target = match.query.get("ziel") ?? "/";
-		this.model().setData({ ...this.model().getData(), password: "", code: "", needCode: false, error: "", busy: false, reason: match.query.get("grund") ?? "" });
+		this.model().setData({ ...this.model().getData(), password: "", code: "", needCode: false, error: "", busy: false, showPassword: false, capsLock: false, reason: match.query.get("grund") ?? "" });
 		void session.loadServer();
 		setTimeout(() => this.v().byId("loginUser")?.focus(), 200);
 	}
@@ -55,7 +74,7 @@ export default class Login extends BaseController {
 			const remember = model.getProperty("/remember") === true;
 			writeRemember(remember);
 			await session.signIn(login, password, remember, needCode ? code : undefined);
-			model.setData({ ...model.getData(), password: "", code: "", needCode: false });
+			model.setData({ ...model.getData(), password: "", code: "", needCode: false, showPassword: false });
 			this.nav(this.target.startsWith("/") && !this.target.startsWith("//") ? this.target : "/", true);
 		} catch (error) {
 			// Zweiter Schritt: Passwort stimmt, jetzt den Code aus der Authenticator-App abfragen.

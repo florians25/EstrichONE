@@ -17,7 +17,9 @@
 					<customData><core:CustomData key="autocomplete" value="username" writeToDom="true"/></customData>
 				</Input>
 				<Label text="{i18n>login.password}" labelFor="loginPassword" required="true" class="sapUiSmallMarginTop"/>
-				<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="Password" width="100%" submit=".onSubmit">
+				<Input id="loginPassword" value="{view>/password}" valueLiveUpdate="true" type="{= ${view>/showPassword} ? 'Text' : 'Password' }" width="100%" submit=".onSubmit"
+					showValueHelp="true" valueHelpIconSrc="{= ${view>/showPassword} ? 'sap-icon://hide' : 'sap-icon://show' }" valueHelpRequest=".onTogglePassword"
+					valueState="{= ${view>/capsLock} ? 'Warning' : 'None' }" valueStateText="{i18n>login.capsLock}">
 					<customData><core:CustomData key="autocomplete" value="current-password" writeToDom="true"/></customData>
 				</Input>
 				<CheckBox id="loginRemember" text="{i18n>login.remember}" selected="{view>/remember}" class="sapUiTinyMarginTop"/>
@@ -38,7 +40,7 @@
 				<customData><core:CustomData key="role" value="alert" writeToDom="true"/></customData>
 			</MessageStrip>
 			<Button text="{i18n>login.submit}" type="Emphasized" width="100%" press=".onSubmit" busy="{view>/busy}" class="sapUiMediumMarginTop"/>
-			<Text text="{i18n>login.selfHosted}" class="eoMuted sapUiMediumMarginTop"/>
 		</VBox>
+		<Text text="{= 'EstrichONE' + (${session>/server/serverVersion} ? ' ' + ${session>/server/serverVersion} : '') }" class="eoMuted eoAuthFooter"/>
 	</FlexBox>
 </mvc:View>
