@@ -114,6 +114,18 @@ class BauakteService(val store: LocalStore, private val files: FileVault, privat
         store.update(EntityTypes.BAUAKTE, id, changes.mapValues { toJson(if (it.value is String) (it.value as String).clean() else it.value) })
     }
 
+    /** „Erstbegehung nicht erforderlich“ vermerken (Begründung optional, höchstens 500 Zeichen); offline möglich. */
+    fun waiveInitialInspection(id: String, reason: String? = null) {
+        val text = reason.clean()
+        require((text?.length ?: 0) <= 500) { "Die Begründung ist zu lang (höchstens 500 Zeichen)." }
+        store.update(EntityTypes.BAUAKTE, id, mapOf("initialInspectionWaived" to toJson(true), "initialInspectionWaivedReason" to toJson(text)))
+    }
+
+    /** Vermerk aufheben: Die Erstbegehung gilt wieder als offen. */
+    fun resumeInitialInspection(id: String) {
+        store.update(EntityTypes.BAUAKTE, id, mapOf("initialInspectionWaived" to toJson(false), "initialInspectionWaivedReason" to JsonNull))
+    }
+
     /** Status ändern (`bauakte.setStatus`); Storno braucht eine Begründung. */
     fun setStatus(id: String, status: BauakteStatus, reason: String? = null) {
         val current = bauakte(id) ?: return

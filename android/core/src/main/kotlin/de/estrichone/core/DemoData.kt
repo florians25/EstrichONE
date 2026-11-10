@@ -99,7 +99,10 @@ object DemoData {
             3, 5, mapOf("description" to "Industrieestrich im Verbund, 600 m²"))
         bauakte(PRAXIS, "2026-038", "Praxis Dr. Maier, Sanierung", "drying", "Altstadt 12", "84028", "Landshut", MAIER,
             mapOf("objectType" to "renovation", "totalArea" to 85, "screedType" to "caf", "construction" to "floating", "nominalThicknessMm" to 45,
-                "strengthClass" to "CA-C25-F4", "underfloorHeating" to true, "heatingType" to "water"), -12, -10)
+                "strengthClass" to "CA-C25-F4", "underfloorHeating" to true, "heatingType" to "water"), -12, -10,
+            // Sanierung im Bestand: Untergrund aus dem Vorauftrag bekannt, daher keine Erstbegehung.
+            mapOf("initialInspectionWaived" to true, "initialInspectionWaivedReason" to "Untergrund aus dem Vorauftrag bekannt",
+                "initialInspectionWaivedByName" to "Max Huber", "initialInspectionWaivedAt" to time(-14L * 86400)))
         bauakte(ISARPARK, "2026-044", "MFH Isarpark, Haus B", "planned", "Am Isarpark 7", "84034", "Landshut", WOHNBAU,
             mapOf("objectType" to "mfh", "floors" to "EG–3. OG", "totalArea" to 920, "screedType" to "ct", "construction" to "floating",
                 "nominalThicknessMm" to 55, "strengthClass" to "C25-F4", "underfloorHeating" to true, "heatingType" to "water"), 2, 9)

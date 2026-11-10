@@ -58,6 +58,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Aufgaben und Mängel (Fälligkeit, abhaken) | ✅ | ✅ | |
 | Bautagebuch (Wetter, Temperatur, Personen, Zeiten, Text, Diktat) | ✅ | ✅ | Fotos des Tages werden angehängt |
 | Erstbegehung nach Schema (Prüfpunkte, Bemerkungen, Messwerte) | ✅ | ✅ | Fotos je Prüfpunkt fehlen noch |
+| Erstbegehung nicht erforderlich (Hinweiskarte, Protokolle, Rückgängig, offline) | ✅ | ✅ | |
 | CM-Messung mit Belegreife | ✅ | ✅ | |
 | Abnahme mit Unterschriften Kunde/Auftragnehmer | ✅ | ✅ | Freigabelink per E-Mail an den Kunden fehlt |
 | Räume und Flächen (Summen, Stand, bearbeiten) | ✅ | ✅ | |

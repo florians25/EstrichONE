@@ -117,6 +117,13 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     fun foto() = main("foto", Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH), Route.Photo(DemoData.photos.first().id)))
 
     @Test
+    fun erstbegehungOffen() = main("erstbegehung-offen", Tab.Bauakten, listOf(Route.Bauakte(DemoData.ISARPARK)))
+
+    @Test
+    fun erstbegehungEntfaellt() = main("erstbegehung-entfaellt", Tab.Bauakten,
+        listOf(Route.Bauakte(DemoData.PRAXIS), Route.Area(DemoData.PRAXIS, AreaKind.Protocols)))
+
+    @Test
     fun raeume() = main("raeume", Tab.Bauakten, listOf(Route.Bauakte(DemoData.EFH), Route.Area(DemoData.EFH, AreaKind.Rooms)))
 
     @Test

@@ -73,6 +73,43 @@ class SyncTests {
     }
 
     @Test
+    @DisplayName("Erstbegehung nicht erforderlich: offline vermerken, Hinweis entfällt, Server setzt Name und Datum, rückgängig")
+    fun initialInspectionWaiver() = runBlocking {
+        val (api, store, service) = demo()
+        api.signIn("m.huber", "demo", "Test")
+        val engine = SyncEngine(store, ApiSyncTransport(api), MemoryFileVault())
+        assertEquals(SyncOutcome.Completed, engine.synchronize(includeScope = true))
+
+        // Demodaten: Praxis Dr. Maier ist als „keine Erstbegehung erforderlich“ vermerkt.
+        assertTrue(service.bauakte(DemoData.PRAXIS)!!.initialInspectionWaiverText!!.startsWith("Keine Erstbegehung erforderlich (Max Huber, "))
+        val isarpark = service.bauakte(DemoData.ISARPARK)!!
+        assertEquals(InitialInspectionState.Open, InitialInspection.state(isarpark, service.inspections(isarpark.id)))
+        assertTrue(InitialInspection.showsMissingHint(isarpark, service.inspections(isarpark.id)))
+
+        assertThrows<IllegalArgumentException> { service.waiveInitialInspection(isarpark.id, "x".repeat(501)) }
+        service.waiveInitialInspection(isarpark.id, "  Bestandsgebäude ")
+        val local = service.bauakte(isarpark.id)!!
+        assertEquals("Keine Erstbegehung erforderlich (Bestandsgebäude)", local.initialInspectionWaiverText)
+        assertFalse(InitialInspection.showsMissingHint(local, emptyList()))
+        val op = store.backend.outbox().single()
+        assertEquals("bauakte.update", op.type)
+        assertEquals(JsonPrimitive(true), op.payload.obj("changes")!!["initialInspectionWaived"])
+
+        assertEquals(SyncOutcome.Completed, engine.synchronize())
+        val synced = service.bauakte(isarpark.id)!!
+        assertEquals("Max Huber", synced.initialInspectionWaivedByName)
+        assertTrue(synced.initialInspectionWaiverText!!.endsWith(", Bestandsgebäude)"))
+
+        service.resumeInitialInspection(isarpark.id)
+        assertFalse(service.bauakte(isarpark.id)!!.initialInspectionWaived)
+        assertEquals(SyncOutcome.Completed, engine.synchronize())
+        val resumed = service.bauakte(isarpark.id)!!
+        assertNull(resumed.initialInspectionWaiverText)
+        assertNull(resumed.initialInspectionWaivedByName)
+        assertTrue(InitialInspection.showsMissingHint(resumed, emptyList()))
+    }
+
+    @Test
     @DisplayName("Feldweise Änderungen: ungesendete Änderungen werden zusammengefasst, ältester base-Wert bleibt")
     fun mergeUpdates() {
         val store = LocalStore(MemoryStorage())

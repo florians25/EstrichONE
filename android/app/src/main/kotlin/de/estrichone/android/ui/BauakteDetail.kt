@@ -160,6 +160,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
         LazyColumn(state = listState, contentPadding = padding.content(), modifier = Modifier.readable()) {
             item { Header(b, session) }
             item { PinnedNote(session, id) }
+            item { InitialInspectionHint(session, b) }
             item { ContactCard(b, session) }
             item { ActionBar(id) }
             item { OpenPoints(session, id) }

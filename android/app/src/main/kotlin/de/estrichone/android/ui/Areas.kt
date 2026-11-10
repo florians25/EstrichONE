@@ -96,6 +96,11 @@ import de.estrichone.core.formatNumber
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.JsonPrimitive
 import java.time.Instant
+import androidx.compose.material3.TextButton
+import androidx.compose.ui.platform.testTag
+import de.estrichone.core.InitialInspection
+import de.estrichone.core.InitialInspectionState
+import androidx.compose.material.icons.filled.DoNotDisturbOn
 
 @Composable
 fun AreaScreen(bauakteId: String, area: AreaKind) {
@@ -399,6 +404,9 @@ private fun ProtocolsArea(id: String) {
     var cm by remember { mutableStateOf(false) }
     val inspections by session.local(id) { session.service.inspections(id) }
     val acceptances by session.local(id) { session.service.acceptances(id) }
+    val bauakte by session.local(id) { session.service.bauakte(id) }
+    var waiving by remember { mutableStateOf(false) }
+    val canWaive = canWaiveInitialInspection(session)
     ScreenScaffold(AreaKind.Protocols.title, floating = {
         Box {
             AddButton("Protokoll") { menu = true }
@@ -410,8 +418,28 @@ private fun ProtocolsArea(id: String) {
         }
     }) { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
-            if (inspections.isEmpty() && acceptances.isEmpty()) {
+            if (inspections.isEmpty() && acceptances.isEmpty() && bauakte?.initialInspectionWaived != true) {
                 item { EmptyState(Icons.AutoMirrored.Filled.FactCheck, "Noch keine Protokolle", "Erstbegehung, CM-Messung und Abnahme werden hier festgehalten.") }
+            }
+            // Erstbegehung: als nicht erforderlich vermerkt (mit „Rückgängig“) oder noch offen (Schaltfläche wie im Büro).
+            val b = bauakte
+            if (b != null) {
+                when (InitialInspection.state(b, inspections)) {
+                    InitialInspectionState.Waived -> {
+                        item { GroupLabel("Erstbegehung") }
+                        item { InitialInspectionWaiverCard(session, b) }
+                    }
+                    InitialInspectionState.Open -> if (canWaive) {
+                        item {
+                            TextButton(onClick = { waiving = true }, modifier = Modifier.padding(top = 4.dp).testTag("waiveInitialInspectionButton")) {
+                                Icon(Icons.Filled.DoNotDisturbOn, null)
+                                Spacer(Modifier.width(8.dp))
+                                Text(InitialInspection.WAIVE_BUTTON)
+                            }
+                        }
+                    }
+                    InitialInspectionState.Done -> Unit
+                }
             }
             if (inspections.isNotEmpty()) {
                 item { GroupLabel("Prüfungen") }
@@ -449,6 +477,7 @@ private fun ProtocolsArea(id: String) {
         }
     }
     if (cm) CmSheet(id) { cm = false }
+    if (waiving) WaiveInitialInspectionDialog(session, id) { waiving = false }
 }
 
 @Composable

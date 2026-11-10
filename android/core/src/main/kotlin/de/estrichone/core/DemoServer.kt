@@ -169,7 +169,21 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
                 action == "setStatus" -> (existing ?: JsonObject(emptyMap())).merged(mapOf("status" to (payload["status"] ?: JsonNull)))
                 action == "update" && entityType == EntityTypes.NOTE -> (existing ?: JsonObject(emptyMap())).merged(
                     payload.mapKeys { if (it.key == "pinned") "isPinned" else it.key })
-                else -> (existing ?: JsonObject(emptyMap())).merged(payload.obj("changes") ?: JsonObject(emptyMap()))
+                else -> {
+                    val changes = payload.obj("changes") ?: JsonObject(emptyMap())
+                    var data = (existing ?: JsonObject(emptyMap())).merged(changes)
+                    // Wie der Server: „Erstbegehung nicht erforderlich“ mit Name und Zeitpunkt.
+                    val waived = changes.bool("initialInspectionWaived")
+                    if (entityType == EntityTypes.BAUAKTE && waived != null) {
+                        data = data.merged(if (waived) {
+                            mapOf("initialInspectionWaivedByName" to JsonPrimitive("Max Huber"),
+                                "initialInspectionWaivedAt" to JsonPrimitive(ApiDate.format(java.time.Instant.now())))
+                        } else {
+                            mapOf("initialInspectionWaivedByName" to JsonNull, "initialInspectionWaivedAt" to JsonNull, "initialInspectionWaivedReason" to JsonNull)
+                        })
+                    }
+                    data
+                }
             }
             if (entity != null) {
                 val withVersion = entity.merged(mapOf("version" to JsonPrimitive((existing?.long("version") ?: 0) + 1)))

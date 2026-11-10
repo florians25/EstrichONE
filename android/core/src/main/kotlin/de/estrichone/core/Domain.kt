@@ -65,6 +65,23 @@ data class Bauakte(val entity: LocalEntity) {
     val plannedStart: LocalDate? = ApiDate.day(d.str("plannedStart"))
     val plannedEnd: LocalDate? = ApiDate.day(d.str("plannedEnd"))
     val updatedAt: Instant? = ApiDate.parse(d.str("updatedAt"))
+
+    /** „Erstbegehung nicht erforderlich“ (Sync-Felder; wer und wann setzt der Server). */
+    val initialInspectionWaived: Boolean = d.bool("initialInspectionWaived") ?: false
+    val initialInspectionWaivedReason: String? = d.str("initialInspectionWaivedReason")
+    val initialInspectionWaivedByName: String? = d.str("initialInspectionWaivedByName")
+    val initialInspectionWaivedAt: Instant? = ApiDate.parse(d.str("initialInspectionWaivedAt"))
+
+    /** „Keine Erstbegehung erforderlich (Max Huber, 10.11.2026, Bestandsgebäude)“; leere Angaben entfallen, `null` ohne Vermerk. */
+    val initialInspectionWaiverText: String?
+        get() {
+            if (!initialInspectionWaived) return null
+            val parts = listOfNotNull(
+                initialInspectionWaivedByName, initialInspectionWaivedAt?.let { Dates.date(it.atZone(Dates.zone).toLocalDate()) },
+                initialInspectionWaivedReason,
+            ).map { it.trim() }.filter { it.isNotEmpty() }
+            return if (parts.isEmpty()) InitialInspection.WAIVED_TITLE else "${InitialInspection.WAIVED_TITLE} (${parts.joinToString(", ")})"
+        }
     val syncState: SyncState get() = entity.syncState
     val addressLine: String? get() = addressLine(street, postalCode, city)
     val hasLocation: Boolean get() = latitude != null && longitude != null
@@ -275,6 +292,7 @@ data class Inspection(val entity: LocalEntity) {
     val id: String get() = entity.id
     val bauakteId: String? = d.str("bauakteId")?.lowercase()
     val isCmMeasurement: Boolean = d.str("kind") == "cmMeasurement"
+    val isInitial: Boolean = d.str("kind") == "initialInspection"
     val performedAt: Instant? = ApiDate.parse(d.str("performedAt"))
     val notRequired: Boolean = d.bool("notRequired") ?: false
     val checks: Map<String, CheckResult> = d.obj("checks")?.mapNotNull { (k, v) ->
@@ -440,4 +458,27 @@ fun FormField.badge(value: JsonElement?, lists: ValueLists): String? = when (typ
     "select" -> (value as? JsonPrimitive)?.content?.let { lists.short(list, it) }
     "boolean" -> if ((value as? JsonPrimitive)?.content == "true") label else null
     else -> display(value, lists)
+}
+
+/** Stand der Erstbegehung einer Bauakte: erfasst, als nicht erforderlich vermerkt oder offen (gleiche Texte wie im Büro). */
+enum class InitialInspectionState { Done, Waived, Open }
+
+object InitialInspection {
+    const val WAIVE_BUTTON = "Erstbegehung nicht erforderlich"
+    const val WAIVED_TITLE = "Keine Erstbegehung erforderlich"
+    const val UNDO = "Rückgängig"
+    const val MISSING = "Erstbegehung noch nicht ausgeführt"
+    const val CONFIRM =
+        "Für diese Bauakte wird keine Erstbegehung durchgeführt. Sie wird danach nicht mehr als offen angezeigt. Der Vermerk lässt sich jederzeit rückgängig machen."
+
+    /** Eine erfasste Erstbegehung hat Vorrang vor dem Vermerk. */
+    fun state(bauakte: Bauakte, inspections: List<Inspection>): InitialInspectionState = when {
+        inspections.any { it.isInitial } -> InitialInspectionState.Done
+        bauakte.initialInspectionWaived -> InitialInspectionState.Waived
+        else -> InitialInspectionState.Open
+    }
+
+    /** Hinweis „Erstbegehung fehlt“ wie auf dem Server: nur bei geplanten und laufenden Bauakten. */
+    fun showsMissingHint(bauakte: Bauakte, inspections: List<Inspection>): Boolean =
+        bauakte.status in setOf(BauakteStatus.Planned, BauakteStatus.InProgress) && state(bauakte, inspections) == InitialInspectionState.Open
 }
