@@ -11953,7 +11953,7 @@
         "tags": [
           "Personal"
         ],
-        "summary": "Urlaubsplan: Zeilen = Mitarbeiter, Abwesenheiten und offene Anträge von–bis (höchstens 370 Tage), Feiertage",
+        "summary": "Teamkalender: Zeilen = Mitarbeiter, Abwesenheiten und offene Anträge von–bis (höchstens 370 Tage), Feiertage, Arten, Betriebsferien",
         "operationId": "GetVacationPlan",
         "parameters": [
           {
@@ -12008,7 +12008,7 @@
         "tags": [
           "Personal"
         ],
-        "summary": "Urlaubsplan als PDF (year, optional month; ohne Monat zwölf Seiten)",
+        "summary": "Teamkalender als PDF (year, optional month; ohne Monat zwölf Seiten)",
         "operationId": "VacationPlanPdf",
         "parameters": [
           {
@@ -12048,8 +12048,18 @@
         "tags": [
           "Personal"
         ],
-        "summary": "Eigener Resturlaub, eigene Anträge, Feiertage des Jahres",
+        "summary": "Eigenes Urlaubskonto, Anträge, Abwesenheiten, Feiertage und beantragbare Arten (year)",
         "operationId": "GetMyVacation",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -12150,12 +12160,71 @@
         ]
       }
     },
+    "/api/v1/hr/absence-requests/preview": {
+      "post": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Vorschau: Arbeitstage (halbe Tage, Wochenende, Feiertage), Konflikthinweise, Rest danach",
+        "operationId": "PreviewAbsenceRequest",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAbsenceRequestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsencePreview"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/hr/absence-requests/{id}": {
       "put": {
         "tags": [
           "Personal"
         ],
-        "summary": "Urlaub beantragen (idempotent über die ID); Antwort mit Konflikthinweisen und Resturlaub danach",
+        "summary": "Abwesenheit beantragen oder offenen Antrag ändern (idempotent über die ID); nicht genehmigungspflichtige Arten gelten sofort",
         "operationId": "SaveAbsenceRequest",
         "parameters": [
           {
@@ -12235,7 +12304,7 @@
         "tags": [
           "Personal"
         ],
-        "summary": "Genehmigen (wird Abwesenheit in Planung und Urlaubsplan) oder ablehnen, mit Kommentar",
+        "summary": "Genehmigen (wird Abwesenheit in Planung und Teamkalender) oder ablehnen, mit Kommentar; Genehmiger: Recht oder Kolonnenführer",
         "operationId": "DecideAbsenceRequest",
         "parameters": [
           {
@@ -12315,7 +12384,7 @@
         "tags": [
           "Personal"
         ],
-        "summary": "Antrag zurückziehen (genehmigter Urlaub wird wieder freigegeben)",
+        "summary": "Antrag zurückziehen bzw. stornieren (genehmigte Abwesenheit wird wieder freigegeben)",
         "operationId": "CancelAbsenceRequest",
         "parameters": [
           {
@@ -12550,6 +12619,426 @@
                   "items": {
                     "$ref": "#/components/schemas/HrReminder"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/absence-types": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Abwesenheitsarten mit Farbe und Regeln (all = auch inaktive)",
+        "operationId": "ListAbsenceTypes",
+        "parameters": [
+          {
+            "name": "all",
+            "in": "query",
+            "schema": {
+              "type": "boolean",
+              "default": false
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AbsenceTypeView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/absence-types/{id}": {
+      "put": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Abwesenheitsart anlegen oder ändern (Standardarten: Grundart fest; löschen = deaktivieren)",
+        "operationId": "SaveAbsenceType",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveAbsenceTypeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AbsenceTypeView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/closures": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Betriebsferien und Brückentage eines Jahres",
+        "operationId": "ListCompanyClosures",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/ClosureView"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/closures/{id}": {
+      "put": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Betriebsferien oder Brückentag speichern; wird für alle aktiven Mitarbeiter als Abwesenheit eingetragen",
+        "operationId": "SaveCompanyClosure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveClosureRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ClosureView"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Personal"
+        ],
+        "operationId": "DeleteCompanyClosure",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/vacation-accounts": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Urlaubskonten aller Mitarbeiter eines Jahres: Anspruch, Übertrag, Verfall, genommen, geplant, beantragt, Rest, Tage je Art",
+        "operationId": "ListVacationAccounts",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/VacationAccountRow"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/vacation-accounts.csv": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Jahresübersicht der Urlaubskonten als CSV (Semikolon, UTF-8)",
+        "operationId": "VacationAccountsCsv",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/vacation-accounts.pdf": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Jahresübersicht der Urlaubskonten als PDF",
+        "operationId": "VacationAccountsPdf",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/vacation-accounts/{employeeId}": {
+      "put": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Urlaubskonto korrigieren: abweichender Anspruch, Übertrag, Verfallsdatum, Korrektur",
+        "operationId": "SaveVacationAccount",
+        "parameters": [
+          {
+            "name": "employeeId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveVacationAccountRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VacationAccountRow"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -19041,6 +19530,44 @@
           "school"
         ]
       },
+      "AbsencePreview": {
+        "required": [
+          "workingDays",
+          "warnings",
+          "remainingAfter",
+          "requiresApproval",
+          "holidays"
+        ],
+        "type": "object",
+        "properties": {
+          "workingDays": {
+            "type": "number",
+            "format": "double"
+          },
+          "warnings": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "remainingAfter": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "requiresApproval": {
+            "type": "boolean"
+          },
+          "holidays": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Holiday"
+            }
+          }
+        }
+      },
       "AbsenceRequestStatus": {
         "enum": [
           "pending",
@@ -19172,6 +19699,151 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "typeName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "typeColor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "halfDayStart": {
+            "type": "boolean",
+            "default": false
+          },
+          "halfDayEnd": {
+            "type": "boolean",
+            "default": false
+          },
+          "substituteUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "substituteName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "replacesRequestId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "canChange": {
+            "type": "boolean",
+            "default": false
+          },
+          "countsAsVacation": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
+      "AbsenceTypeDays": {
+        "required": [
+          "typeId",
+          "name",
+          "color",
+          "days"
+        ],
+        "type": "object",
+        "properties": {
+          "typeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "days": {
+            "type": "number",
+            "format": "double"
+          }
+        }
+      },
+      "AbsenceTypeView": {
+        "required": [
+          "id",
+          "key",
+          "name",
+          "code",
+          "color",
+          "kind",
+          "requiresApproval",
+          "countsAsVacation",
+          "requestable",
+          "isPaid",
+          "isActive",
+          "sortOrder",
+          "isSystem",
+          "isSickness"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "key": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AbsenceKind"
+          },
+          "requiresApproval": {
+            "type": "boolean"
+          },
+          "countsAsVacation": {
+            "type": "boolean"
+          },
+          "requestable": {
+            "type": "boolean"
+          },
+          "isPaid": {
+            "type": "boolean"
+          },
+          "isActive": {
+            "type": "boolean"
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "isSystem": {
+            "type": "boolean"
+          },
+          "isSickness": {
+            "type": "boolean"
           }
         }
       },
@@ -19214,6 +19886,33 @@
               "null",
               "string"
             ]
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "color": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "halfDayStart": {
+            "type": "boolean",
+            "default": false
+          },
+          "halfDayEnd": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -24014,6 +24713,52 @@
           "other"
         ]
       },
+      "ClosureView": {
+        "required": [
+          "id",
+          "name",
+          "from",
+          "to",
+          "typeId",
+          "workingDays",
+          "employees",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "typeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "workingDays": {
+            "type": "number",
+            "format": "double"
+          },
+          "employees": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "CockpitBoard": {
         "required": [
           "from",
@@ -25330,6 +26075,32 @@
           }
         }
       },
+      "CrewMinimum": {
+        "required": [
+          "crewId",
+          "name",
+          "minimumStaff",
+          "members"
+        ],
+        "type": "object",
+        "properties": {
+          "crewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "minimumStaff": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "members": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "CrewRef": {
         "required": [
           "id",
@@ -25403,6 +26174,13 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "minimumStaff": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -28748,6 +29526,29 @@
           },
           "remindAnniversaries": {
             "type": "boolean"
+          },
+          "carryOverExpiryMonth": {
+            "type": "integer",
+            "format": "int32",
+            "default": 3
+          },
+          "carryOverExpiryDay": {
+            "type": "integer",
+            "format": "int32",
+            "default": 31
+          },
+          "prorateEntitlement": {
+            "type": "boolean",
+            "default": true
+          },
+          "accountingStartYear": {
+            "type": "integer",
+            "format": "int32",
+            "default": 2026
+          },
+          "crewLeadersApprove": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -29767,6 +30568,66 @@
           }
         }
       },
+      "MyAbsence": {
+        "required": [
+          "id",
+          "from",
+          "to",
+          "typeId",
+          "typeName",
+          "color",
+          "kind",
+          "halfDayStart",
+          "halfDayEnd",
+          "workingDays",
+          "requestId"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "typeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "typeName": {
+            "type": "string"
+          },
+          "color": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AbsenceKind"
+          },
+          "halfDayStart": {
+            "type": "boolean"
+          },
+          "halfDayEnd": {
+            "type": "boolean"
+          },
+          "workingDays": {
+            "type": "number",
+            "format": "double"
+          },
+          "requestId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "MyVacation": {
         "required": [
           "employeeId",
@@ -29804,6 +30665,47 @@
             "items": {
               "$ref": "#/components/schemas/Holiday"
             }
+          },
+          "year": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
+          },
+          "types": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AbsenceTypeView"
+            }
+          },
+          "closures": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ClosureView"
+            }
+          },
+          "absences": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/MyAbsence"
+            }
+          },
+          "canApprove": {
+            "type": "boolean",
+            "default": false
+          },
+          "pendingApprovals": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -32920,6 +33822,21 @@
               "null",
               "string"
             ]
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "halfDayStart": {
+            "type": "boolean",
+            "default": false
+          },
+          "halfDayEnd": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -32955,6 +33872,85 @@
               "null",
               "string"
             ]
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "halfDayStart": {
+            "type": "boolean",
+            "default": false
+          },
+          "halfDayEnd": {
+            "type": "boolean",
+            "default": false
+          },
+          "substituteUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "replacesRequestId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
+      "SaveAbsenceTypeRequest": {
+        "required": [
+          "name",
+          "code",
+          "color"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 60,
+            "type": "string"
+          },
+          "code": {
+            "maxLength": 3,
+            "type": "string"
+          },
+          "color": {
+            "maxLength": 7,
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/AbsenceKind"
+          },
+          "requiresApproval": {
+            "type": "boolean",
+            "default": true
+          },
+          "countsAsVacation": {
+            "type": "boolean",
+            "default": false
+          },
+          "requestable": {
+            "type": "boolean",
+            "default": true
+          },
+          "isPaid": {
+            "type": "boolean",
+            "default": true
+          },
+          "isActive": {
+            "type": "boolean",
+            "default": true
+          },
+          "sortOrder": {
+            "type": "integer",
+            "format": "int32",
+            "default": 100
           }
         }
       },
@@ -33621,6 +34617,35 @@
           }
         }
       },
+      "SaveClosureRequest": {
+        "required": [
+          "name",
+          "from",
+          "to"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "maxLength": 100,
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date"
+          },
+          "to": {
+            "type": "string",
+            "format": "date"
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          }
+        }
+      },
       "SaveCompanyRequest": {
         "required": [
           "name"
@@ -33915,6 +34940,13 @@
             "type": "integer",
             "format": "int32",
             "default": 0
+          },
+          "minimumStaff": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
           }
         }
       },
@@ -33958,6 +34990,21 @@
               "null",
               "string"
             ]
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "halfDayStart": {
+            "type": "boolean",
+            "default": false
+          },
+          "halfDayEnd": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -34237,6 +35284,39 @@
           "remindAnniversaries": {
             "type": "boolean",
             "default": true
+          },
+          "carryOverExpiryMonth": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "carryOverExpiryDay": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "prorateEntitlement": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "accountingStartYear": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "crewLeadersApprove": {
+            "type": [
+              "null",
+              "boolean"
+            ]
           }
         }
       },
@@ -34868,6 +35948,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -34963,6 +36050,54 @@
               "integer"
             ],
             "format": "int64"
+          }
+        }
+      },
+      "SaveVacationAccountRequest": {
+        "required": [
+          "year",
+          "entitlement",
+          "carryOver",
+          "carryOverExpiresOn"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "entitlement": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "carryOver": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "carryOverExpiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "adjustment": {
+            "type": "number",
+            "format": "double",
+            "default": 0
+          },
+          "note": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -35497,6 +36632,13 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -37703,6 +38845,123 @@
           }
         }
       },
+      "VacationAccountRow": {
+        "required": [
+          "employeeId",
+          "userId",
+          "name",
+          "personnelNumber",
+          "crews",
+          "entryDate",
+          "exitDate",
+          "vacation",
+          "account"
+        ],
+        "type": "object",
+        "properties": {
+          "employeeId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "personnelNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "crews": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CrewRef"
+            }
+          },
+          "entryDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "exitDate": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "vacation": {
+            "$ref": "#/components/schemas/VacationSummary"
+          },
+          "account": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/VacationAccountValues"
+              }
+            ]
+          }
+        }
+      },
+      "VacationAccountValues": {
+        "required": [
+          "entitlement",
+          "carryOver",
+          "carryOverExpiresOn",
+          "adjustment",
+          "note",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "entitlement": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "carryOver": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          },
+          "carryOverExpiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "adjustment": {
+            "type": "number",
+            "format": "double"
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
       "VacationPlan": {
         "required": [
           "from",
@@ -37734,6 +38993,33 @@
             "type": "array",
             "items": {
               "$ref": "#/components/schemas/VacationPlanRow"
+            }
+          },
+          "types": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AbsenceTypeView"
+            }
+          },
+          "closures": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ClosureView"
+            }
+          },
+          "crewMinimums": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/CrewMinimum"
             }
           }
         }
@@ -37783,6 +39069,28 @@
               "null",
               "string"
             ]
+          },
+          "typeId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "halfDayStart": {
+            "type": "boolean",
+            "default": false
+          },
+          "halfDayEnd": {
+            "type": "boolean",
+            "default": false
+          },
+          "closureId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
           }
         }
       },
@@ -37876,6 +39184,53 @@
             "type": "number",
             "format": "double",
             "default": 0
+          },
+          "annualEntitlement": {
+            "type": "number",
+            "format": "double",
+            "default": 0
+          },
+          "adjustment": {
+            "type": "number",
+            "format": "double",
+            "default": 0
+          },
+          "carryOverExpiresOn": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date"
+          },
+          "carryOverExpired": {
+            "type": "number",
+            "format": "double",
+            "default": 0
+          },
+          "carryOverExpiring": {
+            "type": "number",
+            "format": "double",
+            "default": 0
+          },
+          "remainingAfterRequests": {
+            "type": "number",
+            "format": "double",
+            "default": 0
+          },
+          "byType": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/AbsenceTypeDays"
+            }
+          },
+          "note": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

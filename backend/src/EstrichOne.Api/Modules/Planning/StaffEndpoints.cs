@@ -29,12 +29,23 @@ public sealed record EmployeeDocumentView(
     Guid Id, Guid FileId, EmployeeDocumentCategory Category, string Title, string? FileName, string? ContentType, long SizeBytes, DateOnly? ValidUntil,
     DateTimeOffset AddedAt);
 
-/// <param name="Entitlement">Anspruch im Jahr (anteilig bei Ein-/Austritt im Jahr nicht gekürzt – das entscheidet das Büro).</param>
-/// <param name="Taken">Urlaubstage (Arbeitstage nach Arbeitszeitmodell) bis heute.</param>
-/// <param name="Planned">Urlaubstage ab morgen im selben Jahr.</param>
-/// <param name="Requested">Arbeitstage in offenen Anträgen (noch nicht genehmigt, nicht abgezogen).</param>
+/// <summary>Urlaubskonto eines Jahres.</summary>
+/// <param name="Entitlement">Anspruch im Jahr (anteilig bei Ein-/Austritt nach vollen Monaten oder abweichend erfasst).</param>
+/// <param name="CarryOver">Übertrag aus dem Vorjahr (erfasst oder automatisch).</param>
+/// <param name="Taken">Urlaubstage (Arbeitstage nach Arbeitszeitmodell, halbe Tage 0,5) bis heute.</param>
+/// <param name="Planned">Genehmigte Urlaubstage ab morgen im selben Jahr.</param>
+/// <param name="Remaining">Anspruch + Übertrag + Korrektur − verfallen − genommen − geplant.</param>
+/// <param name="Requested">Arbeitstage in offenen Anträgen (noch nicht abgezogen).</param>
+/// <param name="AnnualEntitlement">Jahresanspruch laut Personalstamm (vor anteiliger Kürzung).</param>
+/// <param name="CarryOverExpiresOn">Verfallsdatum des Übertrags (leer: kein Übertrag oder kein Verfall).</param>
+/// <param name="CarryOverExpired">Verfallener Teil des Übertrags.</param>
+/// <param name="CarryOverExpiring">Teil des Übertrags, der ohne Urlaub bis zum Verfallsdatum verfällt.</param>
+/// <param name="RemainingAfterRequests">Rest, wenn alle offenen Anträge genehmigt werden.</param>
+/// <param name="ByType">Tage je Abwesenheitsart (Krankheitsarten nur für die Personalverwaltung).</param>
 public sealed record VacationSummary(
-    int Year, decimal Entitlement, decimal CarryOver, decimal Taken, decimal Planned, decimal Remaining, int SickDays, decimal Requested = 0);
+    int Year, decimal Entitlement, decimal CarryOver, decimal Taken, decimal Planned, decimal Remaining, int SickDays, decimal Requested = 0,
+    decimal AnnualEntitlement = 0, decimal Adjustment = 0, DateOnly? CarryOverExpiresOn = null, decimal CarryOverExpired = 0, decimal CarryOverExpiring = 0,
+    decimal RemainingAfterRequests = 0, IReadOnlyList<AbsenceTypeDays>? ByType = null, string? Note = null);
 
 public sealed record EmployeeDetail(
     Guid Id, string? PersonnelNumber, string FirstName, string LastName, string DisplayName, string? JobTitle, EmploymentType EmploymentType,
@@ -90,7 +101,9 @@ public sealed record EmployeeOnboardingRequest(
 /// <param name="DocumentFileId">Onboarding-PDF in der Mitarbeiterakte (Dokumente).</param>
 public sealed record EmployeeOnboardingResponse(Guid UserId, string UserName, string OneTimePassword, bool CreatedAccount, Guid DocumentFileId, bool Emailed);
 
-public sealed record SaveEmployeeAbsenceRequest(DateOnly From, DateOnly To, AbsenceKind Kind, [property: MaxLength(500)] string? Note);
+/// <param name="TypeId">Abwesenheitsart (bestimmt dann die Grundart); leer = Standardart zu Kind.</param>
+public sealed record SaveEmployeeAbsenceRequest(DateOnly From, DateOnly To, AbsenceKind Kind, [property: MaxLength(500)] string? Note, Guid? TypeId = null,
+    bool HalfDayStart = false, bool HalfDayEnd = false);
 
 /// <summary>Ablaufende Qualifikationen und Führerscheine aller aktiven Mitarbeiter.</summary>
 public sealed record ExpiringQualification(Guid EmployeeId, string EmployeeName, QualificationView Qualification);
@@ -192,6 +205,7 @@ internal static class StaffEndpoints
         var qualifications = await db.Set<EmployeeQualification>().AsNoTracking()
             .Where(q => ids.Contains(q.EmployeeId) && q.ExpiresOn != null && q.ExpiresOn <= today.AddDays(60)).ToListAsync(cancellationToken);
         var showRate = await permissions.HasAsync(Permissions.HrManage, cancellationToken);
+        var accounts = await hr.AccountsAsync(employees, today.Year, false, cancellationToken);
 
         return TypedResults.Ok(employees.Select(e =>
         {
@@ -200,7 +214,7 @@ internal static class StaffEndpoints
             return new EmployeeListItem(e.Id, e.PersonnelNumber, e.DisplayName, e.FirstName, e.LastName, e.JobTitle, e.EmploymentType, e.Phone, e.Mobile,
                 e.Email, e.City, e.UserId, e.UserId is { } u ? users.GetValueOrDefault(u) : null, e.IsActiveOn(today), e.EntryDate, e.ExitDate,
                 e.UserId is { } member ? crews.Where(c => c.MemberUserIds.Contains(member)).Select(c => new CrewRef(c.Id, c.Name, c.Color)).ToList() : [],
-                showRate ? e.HourlyRate : null, HrService.Vacation(e, own, today, holidays, maySeeSickness).Remaining,
+                showRate ? e.HourlyRate : null, accounts[e.Id].Remaining,
                 own.FirstOrDefault(a => a.Covers(today)) is { } away ? HrService.Mask(away.Kind, maySeeSickness) : null, expiring.Count,
                 expiring.Select(q => q.ExpiresOn).Min(), e.Version);
         }).ToList());
@@ -221,6 +235,7 @@ internal static class StaffEndpoints
         var today = Today(clock);
         var holidays = await hr.HolidaysAsync(new DateOnly(today.Year, 1, 1), new DateOnly(today.Year, 12, 31), cancellationToken);
         var manage = await permissions.HasAsync(Permissions.HrManage, cancellationToken);
+        var types = await hr.TypesAsync(cancellationToken);
         var user = e.UserId is { } uid ? await db.Set<User>().AsNoTracking().SingleOrDefaultAsync(u => u.Id == uid, cancellationToken) : null;
         var crews = e.UserId is { } member
             ? await db.Set<Crew>().AsNoTracking().Where(c => c.MemberUserIds.Contains(member)).OrderBy(c => c.SortOrder).ThenBy(c => c.Name)
@@ -246,21 +261,8 @@ internal static class StaffEndpoints
             equipment.Select(q => new EquipmentView(q.Id, q.ResourceId, q.Name, q.SerialNumber, q.IssuedOn, q.ReturnedOn, q.Notes)).ToList(),
             documents.Select(d => new EmployeeDocumentView(d.Id, d.FileId, d.Category, d.Title, info.GetValueOrDefault(d.FileId)?.OriginalName,
                 info.GetValueOrDefault(d.FileId)?.ContentType, info.GetValueOrDefault(d.FileId)?.SizeBytes ?? 0, d.ValidUntil, d.AddedAt)).ToList(),
-            absences.Select(a => new AbsenceView(a.Id, a.UserId, e.DisplayName, a.From, a.To, HrService.Mask(a.Kind, manage),
-                a.Kind == AbsenceKind.Sick && !manage ? null : a.Note)).ToList(),
-            HrService.Vacation(e, absences, today, holidays, manage, await RequestedDaysAsync(e, db, holidays, cancellationToken)), manage, e.ProbationEnd, e.Version);
-    }
-
-    private static async Task<decimal> RequestedDaysAsync(Employee e, EstrichOneDbContext db, IReadOnlySet<DateOnly> holidays, CancellationToken cancellationToken)
-    {
-        if (e.UserId is not { } userId)
-        {
-            return 0;
-        }
-
-        var pending = await db.Set<AbsenceRequest>().AsNoTracking()
-            .Where(r => r.UserId == userId && r.Status == AbsenceRequestStatus.Pending && r.Kind == AbsenceKind.Vacation).ToListAsync(cancellationToken);
-        return pending.Sum(r => e.WorkingDays(r.From, r.To, holidays));
+            absences.Select(a => AbsenceView.Of(a, e.DisplayName, manage, types)).ToList(),
+            await hr.AccountAsync(e, today.Year, manage, cancellationToken), manage, e.ProbationEnd, e.Version);
     }
 
     private static async Task<Results<Ok<EmployeeDetail>, ProblemHttpResult>> SaveAsync(
@@ -298,8 +300,29 @@ internal static class StaffEndpoints
             employee.Update(request.FirstName ?? string.Empty, request.LastName, request.PersonnelNumber, request.JobTitle, request.EmploymentType);
             employee.ChangeContact(request.Email, request.Phone, request.Mobile, request.Street, request.PostalCode, request.City, request.BirthDate);
             employee.ChangeEmergencyContact(request.EmergencyContactName, request.EmergencyContactPhone, request.EmergencyContactRelation);
+            var isNew = db.Entry(employee).State == EntityState.Added;
+            var oldCarry = employee.VacationCarryOver;
+            var oldUser = employee.UserId;
             employee.ChangeEmployment(request.EntryDate, request.ExitDate, request.WorkTimeModel, request.WeeklyHours, request.WorkDays,
                 request.VacationDaysPerYear, request.VacationCarryOver);
+            if ((isNew && request.VacationCarryOver != 0) || (!isNew && oldCarry != request.VacationCarryOver))
+            {
+                // Übertrag im Personalstamm = Übertrag im Urlaubskonto des laufenden Jahres.
+                var year = Today(clock).Year;
+                var account = await db.Set<VacationAccount>().SingleOrDefaultAsync(a => a.EmployeeId == employee.Id && a.Year == year, cancellationToken);
+                if (account is null)
+                {
+                    account = VacationAccount.Create(Guid.CreateVersion7(), employee.Id, year);
+                    db.Add(account);
+                }
+
+                account.SetCarryOver(request.VacationCarryOver);
+            }
+
+            if (request.UserId is { } linked && linked != oldUser)
+            {
+                await AbsenceAdminEndpoints.ApplyClosuresForUserAsync(linked, request.EntryDate, request.ExitDate, Today(clock), db, cancellationToken);
+            }
             employee.ChangeProbation(request.ProbationEnd);
             employee.ChangeRate(request.HourlyRate);
             employee.ChangeNotes(request.Notes);
@@ -618,9 +641,16 @@ internal static class StaffEndpoints
             return Validation("Für Abwesenheiten ist ein Benutzerkonto erforderlich. Bitte zuerst ein Konto verknüpfen.");
         }
 
+        var type = request.TypeId is { } typeId ? await db.Set<AbsenceType>().AsNoTracking().SingleOrDefaultAsync(t => t.Id == typeId, cancellationToken) : null;
+        if (request.TypeId is not null && type is null)
+        {
+            return Validation("Unbekannte Abwesenheitsart.");
+        }
+
         try
         {
-            var absence = Absence.Create(absenceId, userId, request.From, request.To, request.Kind, request.Note);
+            var absence = Absence.Create(absenceId, userId, request.From, request.To, type?.Kind ?? request.Kind, request.Note)
+                .WithDetails(type?.Id, request.HalfDayStart, request.HalfDayEnd);
             var existing = await db.Set<Absence>().SingleOrDefaultAsync(a => a.Id == absenceId, cancellationToken);
             if (existing is not null)
             {
@@ -634,7 +664,8 @@ internal static class StaffEndpoints
 
             db.Add(absence);
             await db.SaveChangesAsync(cancellationToken);
-            return TypedResults.Ok(new AbsenceView(absence.Id, userId, employee.DisplayName, absence.From, absence.To, absence.Kind, absence.Note));
+            return TypedResults.Ok(new AbsenceView(absence.Id, userId, employee.DisplayName, absence.From, absence.To, absence.Kind, absence.Note,
+                HrService.TypeOf(absence), type?.Name, type?.Color, absence.HalfDayStart, absence.HalfDayEnd));
         }
         catch (ArgumentException exception)
         {

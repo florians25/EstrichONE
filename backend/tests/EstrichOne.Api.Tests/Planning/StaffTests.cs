@@ -113,7 +113,10 @@ public sealed class StaffTests(PostgresFixture postgres) : IAsyncLifetime
         if (Today < monday)
         {
             detail.Vacation.Planned.ShouldBe(5m, "Mo–Fr zählen, Wochenende nicht.");
-            detail.Vacation.Remaining.ShouldBe(25m);
+            // Übertrag (2 Tage) verfällt nach dem 31.03., wenn bis dahin kein Urlaub genommen oder geplant ist.
+            var expired = Today > new DateOnly(Today.Year, 3, 31) && monday > new DateOnly(Today.Year, 3, 31);
+            detail.Vacation.CarryOverExpired.ShouldBe(expired ? 2m : 0m);
+            detail.Vacation.Remaining.ShouldBe(expired ? 23m : 25m);
         }
 
         detail.WorkDays.Count.ShouldBe(5);

@@ -95,6 +95,9 @@ public sealed class Crew : IVersionedEntity
     public bool IsActive { get; private set; } = true;
     public int SortOrder { get; private set; }
 
+    /// <summary>Mindestbesetzung (Personen, die an Arbeitstagen anwesend sein sollten); Hinweis bei Abwesenheiten, nicht blockierend.</summary>
+    public int? MinimumStaff { get; private set; }
+
     public long Version { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -108,6 +111,17 @@ public sealed class Crew : IVersionedEntity
         var crew = new Crew { Id = id };
         crew.Update(name, null, [], null, true, 0);
         return crew;
+    }
+
+    /// <summary>0 oder leer = keine Mindestbesetzung.</summary>
+    public void SetMinimumStaff(int? minimumStaff)
+    {
+        if (minimumStaff is < 0 or > 100)
+        {
+            throw new ArgumentException("Die Mindestbesetzung liegt zwischen 0 und 100.", nameof(minimumStaff));
+        }
+
+        MinimumStaff = minimumStaff is null or 0 ? null : minimumStaff;
     }
 
     public void Update(string name, Guid? leaderUserId, IReadOnlyCollection<Guid> memberUserIds, string? color, bool isActive, int sortOrder)
@@ -162,6 +176,18 @@ public sealed class Absence
     /// <summary>Erfasst am (Verlauf der Krankmeldungen; bei älteren Einträgen leer).</summary>
     public DateTimeOffset? RecordedAt { get; private set; }
 
+    /// <summary>Konfigurierte Abwesenheitsart; leer bei älteren Einträgen (dann Standardart zu <see cref="Kind"/>).</summary>
+    public Guid? TypeId { get; private set; }
+
+    /// <summary>Erster Tag nur halb (Abwesenheit ab Mittag).</summary>
+    public bool HalfDayStart { get; private set; }
+
+    /// <summary>Letzter Tag nur halb (Abwesenheit bis Mittag).</summary>
+    public bool HalfDayEnd { get; private set; }
+
+    /// <summary>Aus Betriebsferien bzw. Brückentag entstanden (wird mit diesen geändert oder gelöscht).</summary>
+    public Guid? ClosureId { get; private set; }
+
     private Absence()
     {
     }
@@ -185,6 +211,16 @@ public sealed class Absence
             CertificateFileId = kind == AbsenceKind.Sick ? certificateFileId : null, RequestId = requestId,
             CaseId = kind == AbsenceKind.Sick ? caseId ?? id : null, RecordedAt = recordedAt,
         };
+    }
+
+    /// <summary>Art und halbe Tage festlegen (eintägig: beide Angaben bedeuten einen halben Tag).</summary>
+    public Absence WithDetails(Guid? typeId, bool halfDayStart, bool halfDayEnd, Guid? closureId = null)
+    {
+        TypeId = typeId;
+        HalfDayStart = halfDayStart;
+        HalfDayEnd = halfDayEnd && (From != To || !halfDayStart);
+        ClosureId = closureId;
+        return this;
     }
 
     public bool Covers(DateOnly day) => From <= day && day <= To;
@@ -416,6 +452,7 @@ internal sealed class AbsenceConfiguration : IEntityTypeConfiguration<Absence>
         builder.HasIndex(a => a.CaseId);
         builder.HasOne<User>().WithMany().HasForeignKey(a => a.UserId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(a => new { a.UserId, a.From, a.To });
+        builder.HasIndex(a => a.ClosureId);
     }
 }
 

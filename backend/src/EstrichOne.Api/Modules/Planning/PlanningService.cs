@@ -18,7 +18,22 @@ public sealed record AssignmentView(
     AssignmentKind Kind = AssignmentKind.Screed, TimeOnly? EndTime = null, BauakteStatus? BauakteStatus = null,
     IReadOnlyList<Guid>? ExcludedUserIds = null, int Sequence = 0, string? Change = null);
 
-public sealed record AbsenceView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, AbsenceKind Kind, string? Note);
+/// <param name="TypeId">Abwesenheitsart (Krankheitsarten ohne Recht als „Sonstige Abwesenheit“).</param>
+/// <param name="Label">Bezeichnung der Art für die Anzeige (Krankheit ohne Recht: „Abwesend“).</param>
+public sealed record AbsenceView(Guid Id, Guid UserId, string UserName, DateOnly From, DateOnly To, AbsenceKind Kind, string? Note,
+    Guid? TypeId = null, string? Label = null, string? Color = null, bool HalfDayStart = false, bool HalfDayEnd = false)
+{
+    /// <summary>Am Tag nur halb abwesend (erster/letzter Tag).</summary>
+    public bool IsHalf(DateOnly day) => (day == From && HalfDayStart) || (day == To && HalfDayEnd);
+
+    public static AbsenceView Of(Absence a, string userName, bool maySeeSickness, IReadOnlyDictionary<Guid, AbsenceType> types)
+    {
+        var typeId = HrService.MaskType(HrService.TypeOf(a), a.Kind, maySeeSickness);
+        var type = types.GetValueOrDefault(typeId);
+        return new AbsenceView(a.Id, a.UserId, userName, a.From, a.To, HrService.Mask(a.Kind, maySeeSickness), a.Kind == AbsenceKind.Sick && !maySeeSickness ? null : a.Note,
+            typeId, a.Kind == AbsenceKind.Sick && !maySeeSickness ? "Abwesend" : type?.Name, type?.Color, a.HalfDayStart, a.HalfDayEnd);
+    }
+}
 
 /// <param name="Appointments">Termine aus den Kalendern mit Teilnehmern oder Kolonnen (Termine ohne Bauvorhaben im Plan).</param>
 public sealed record PlanningRange(
@@ -70,6 +85,7 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
         // Datenschutz: In der Planung heißt jede Krankheit „abwesend“ – Einzelheiten nur in der HR-Ansicht (Personal).
         const bool maySeeSickness = false;
         var settings = await hr.SettingsAsync(cancellationToken);
+        var types = await hr.TypesAsync(cancellationToken);
         var holidays = Enumerable.Range(from.Year, to.Year - from.Year + 1).SelectMany(y => GermanHolidays.For(y, settings.State))
             .Where(h => h.Date >= from && h.Date <= to).ToList();
         var userIds = assignments.SelectMany(PeopleOf).Concat(absences.Select(a => a.UserId)).Distinct().ToList();
@@ -111,7 +127,8 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
 
                 if (allAbsences.FirstOrDefault(abs => abs.UserId == person && abs.Covers(a.Day)) is { } absence)
                 {
-                    warnings.Add($"{Name(person)} ist {AbsenceNames[HrService.Mask(absence.Kind, maySeeSickness)]}.");
+                    var half = (a.Day == absence.From && absence.HalfDayStart) || (a.Day == absence.To && absence.HalfDayEnd);
+                    warnings.Add($"{Name(person)} ist {AbsenceNames[HrService.Mask(absence.Kind, maySeeSickness)]}{(half ? " (halber Tag)" : string.Empty)}.");
                 }
 
                 if (busy.FirstOrDefault(o => o.Start < dayEnd && dayStart < o.End && o.People.Any(p => p.Id == person)) is { } appointment)
@@ -141,8 +158,7 @@ public sealed class PlanningService(EstrichOneDbContext db, CalendarService cale
         }).ToList();
 
         return new PlanningRange(from, to, views,
-            absences.OrderBy(a => a.From).Select(a => new AbsenceView(a.Id, a.UserId, Name(a.UserId), a.From, a.To, HrService.Mask(a.Kind, maySeeSickness),
-                a.Kind == AbsenceKind.Sick && !maySeeSickness ? null : a.Note)).ToList(), shown, holidays);
+            absences.OrderBy(a => a.From).Select(a => AbsenceView.Of(a, Name(a.UserId), maySeeSickness, types)).ToList(), shown, holidays);
     }
 
     public static bool TryParseDay(string? value, out DateOnly day) =>

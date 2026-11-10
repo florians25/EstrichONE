@@ -104,6 +104,8 @@ public static class NotificationEvents
     public const string PlanReleased = "planning.released";
     public const string PlanChanged = "planning.changed";
     public const string AbsenceDecided = "absence.decided";
+    public const string AbsenceRequested = "absence.requested";
+    public const string AbsenceCancelled = "absence.cancelled";
     public const string TicketUpdated = "ticket.updated";
     public const string FeedbackSubmitted = "feedback.submitted";
     public const string FeedbackUpdated = "feedback.updated";
@@ -135,6 +137,8 @@ public static class NotificationEvents
         new(PlanReleased, "Planung", "Plan freigegeben", "Ihr Einsatzplan wurde freigegeben (eine Nachricht je Freigabe)."),
         new(PlanChanged, "Planung", "Planänderung für mich", "Nach der Freigabe haben sich Ihre Einsätze geändert."),
         new(AbsenceDecided, "Personal", "Urlaubsantrag genehmigt oder abgelehnt", "Ihr Urlaubsantrag wurde entschieden."),
+        new(AbsenceRequested, "Personal", "Abwesenheitsantrag zur Genehmigung", "Ein Urlaubs- oder Abwesenheitsantrag wartet auf Ihre Genehmigung."),
+        new(AbsenceCancelled, "Personal", "Abwesenheitsantrag storniert", "Ein Antrag, über den Sie entscheiden, wurde zurückgezogen, oder Ihr Antrag wurde vom Büro storniert."),
         new(TicketUpdated, "Support", "Supportticket", "Antwort oder Statusänderung an Ihrem Ticket."),
         new(FeedbackUpdated, "Support", "Meine Meldung (Fehler oder Wunsch)", "Antwort der IT oder Statusänderung an Ihrer Fehlermeldung bzw. Ihrem Funktionswunsch."),
         new(FeedbackSubmitted, "Support", "Neue Fehlermeldung oder neuer Funktionswunsch", "Neue Meldungen und Rückmeldungen der Einreicher (IT).", AdminOnly: true),

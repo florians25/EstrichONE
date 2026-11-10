@@ -21,13 +21,15 @@ public sealed record SaveResourceRequest(
     [property: MaxLength(50)] IReadOnlyList<Guid>? DocumentFileIds = null, Guid? CrewId = null);
 
 public sealed record CrewResponse(Guid Id, string Name, Guid? LeaderUserId, IReadOnlyList<Guid> MemberUserIds, string? Color, bool IsActive,
-    int SortOrder, long Version);
+    int SortOrder, long Version, int? MinimumStaff = null);
 
 public sealed record SaveCrewRequest(
     [property: Required, MaxLength(100)] string Name, Guid? LeaderUserId, IReadOnlyList<Guid>? MemberUserIds,
-    [property: MaxLength(7)] string? Color, bool IsActive = true, int SortOrder = 0);
+    [property: MaxLength(7)] string? Color, bool IsActive = true, int SortOrder = 0, int? MinimumStaff = null);
 
-public sealed record SaveAbsenceRequest(Guid UserId, DateOnly From, DateOnly To, AbsenceKind Kind, [property: MaxLength(500)] string? Note);
+/// <param name="TypeId">Konfigurierte Abwesenheitsart (bestimmt dann die Grundart); leer = Standardart zu Kind.</param>
+public sealed record SaveAbsenceRequest(Guid UserId, DateOnly From, DateOnly To, AbsenceKind Kind, [property: MaxLength(500)] string? Note,
+    Guid? TypeId = null, bool HalfDayStart = false, bool HalfDayEnd = false);
 
 public sealed record SaveAssignmentRequest(
     Guid BauakteId, DateOnly Day, TimeOnly? StartTime, [property: Required, MaxLength(200)] string Activity, Guid? CrewId,
@@ -98,7 +100,7 @@ internal static class PlanningEndpoints
     private static ResourceResponse ToResponse(Resource r) => new(r.Id, r.Kind, r.Name, r.Identifier, r.Notes, r.IsActive, r.Version,
         r.Model, r.LicenseClass, r.InspectionDue, r.ServiceDue, r.ImageFileId, r.DocumentFileIds, r.CrewId);
 
-    private static CrewResponse ToResponse(Crew c) => new(c.Id, c.Name, c.LeaderUserId, c.MemberUserIds, c.Color, c.IsActive, c.SortOrder, c.Version);
+    private static CrewResponse ToResponse(Crew c) => new(c.Id, c.Name, c.LeaderUserId, c.MemberUserIds, c.Color, c.IsActive, c.SortOrder, c.Version, c.MinimumStaff);
 
     private static async Task<Results<Ok<ResourceResponse>, ProblemHttpResult>> SaveResourceAsync(
         Guid id, SaveResourceRequest request, EstrichOneDbContext db, CancellationToken cancellationToken)
@@ -148,6 +150,12 @@ internal static class PlanningEndpoints
             }
 
             crew.Update(request.Name, request.LeaderUserId, members, string.IsNullOrWhiteSpace(request.Color) ? null : request.Color, request.IsActive, request.SortOrder);
+            if (request.MinimumStaff is { } minimum)
+            {
+                // Nicht angegeben = unverändert (ältere Clients), 0 = keine Mindestbesetzung.
+                crew.SetMinimumStaff(minimum);
+            }
+
             await db.SaveChangesAsync(cancellationToken);
             return TypedResults.Ok(ToResponse(crew));
         }
@@ -166,9 +174,16 @@ internal static class PlanningEndpoints
             return Validation("Unbekannter Mitarbeiter.");
         }
 
+        var type = request.TypeId is { } typeId ? await db.Set<AbsenceType>().AsNoTracking().SingleOrDefaultAsync(t => t.Id == typeId, cancellationToken) : null;
+        if (request.TypeId is not null && type is null)
+        {
+            return Validation("Unbekannte Abwesenheitsart.");
+        }
+
         try
         {
-            var absence = Absence.Create(id, request.UserId, request.From, request.To, request.Kind, request.Note);
+            var absence = Absence.Create(id, request.UserId, request.From, request.To, type?.Kind ?? request.Kind, request.Note)
+                .WithDetails(type?.Id, request.HalfDayStart, request.HalfDayEnd);
             var existing = await db.Set<Absence>().SingleOrDefaultAsync(a => a.Id == id, cancellationToken);
             if (existing is not null)
             {
@@ -177,7 +192,8 @@ internal static class PlanningEndpoints
 
             db.Add(absence);
             await db.SaveChangesAsync(cancellationToken);
-            return TypedResults.Ok(new AbsenceView(absence.Id, absence.UserId, user.DisplayName, absence.From, absence.To, absence.Kind, absence.Note));
+            return TypedResults.Ok(new AbsenceView(absence.Id, absence.UserId, user.DisplayName, absence.From, absence.To, absence.Kind, absence.Note,
+                HrService.TypeOf(absence), type?.Name, type?.Color, absence.HalfDayStart, absence.HalfDayEnd));
         }
         catch (ArgumentException exception)
         {

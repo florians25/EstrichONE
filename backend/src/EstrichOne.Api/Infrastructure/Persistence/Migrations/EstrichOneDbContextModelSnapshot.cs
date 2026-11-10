@@ -5077,9 +5077,21 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("certificate_file_id");
 
+                    b.Property<Guid?>("ClosureId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("closure_id");
+
                     b.Property<DateOnly>("From")
                         .HasColumnType("date")
                         .HasColumnName("from");
+
+                    b.Property<bool>("HalfDayEnd")
+                        .HasColumnType("boolean")
+                        .HasColumnName("half_day_end");
+
+                    b.Property<bool>("HalfDayStart")
+                        .HasColumnType("boolean")
+                        .HasColumnName("half_day_start");
 
                     b.Property<string>("Kind")
                         .IsRequired()
@@ -5104,6 +5116,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("to");
 
+                    b.Property<Guid?>("TypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("type_id");
+
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid")
                         .HasColumnName("user_id");
@@ -5116,6 +5132,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CertificateFileId")
                         .HasDatabaseName("ix_absences_certificate_file_id");
+
+                    b.HasIndex("ClosureId")
+                        .HasDatabaseName("ix_absences_closure_id");
 
                     b.HasIndex("UserId", "From", "To")
                         .HasDatabaseName("ix_absences_user_id_from_to");
@@ -5157,6 +5176,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("from");
 
+                    b.Property<bool>("HalfDayEnd")
+                        .HasColumnType("boolean")
+                        .HasColumnName("half_day_end");
+
+                    b.Property<bool>("HalfDayStart")
+                        .HasColumnType("boolean")
+                        .HasColumnName("half_day_start");
+
                     b.Property<string>("Kind")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -5167,6 +5194,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("character varying(500)")
                         .HasColumnName("note");
+
+                    b.Property<Guid?>("ReplacesRequestId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("replaces_request_id");
 
                     b.Property<DateTimeOffset>("RequestedAt")
                         .HasColumnType("timestamp with time zone")
@@ -5182,9 +5213,17 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("status");
 
+                    b.Property<Guid?>("SubstituteUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("substitute_user_id");
+
                     b.Property<DateOnly>("To")
                         .HasColumnType("date")
                         .HasColumnName("to");
+
+                    b.Property<Guid?>("TypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("type_id");
 
                     b.Property<DateTimeOffset>("UpdatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -5211,6 +5250,242 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("absence_requests", null, t =>
                         {
                             t.HasCheckConstraint("ck_absence_requests_range", "\"to\" >= \"from\"");
+                        });
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.AbsenceType", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Code")
+                        .IsRequired()
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)")
+                        .HasColumnName("code");
+
+                    b.Property<string>("Color")
+                        .IsRequired()
+                        .HasMaxLength(7)
+                        .HasColumnType("character varying(7)")
+                        .HasColumnName("color");
+
+                    b.Property<bool>("CountsAsVacation")
+                        .HasColumnType("boolean")
+                        .HasColumnName("counts_as_vacation");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<bool>("IsPaid")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_paid");
+
+                    b.Property<bool>("IsSystem")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_system");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("key");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)")
+                        .HasColumnName("name");
+
+                    b.Property<bool>("Requestable")
+                        .HasColumnType("boolean")
+                        .HasColumnName("requestable");
+
+                    b.Property<bool>("RequiresApproval")
+                        .HasColumnType("boolean")
+                        .HasColumnName("requires_approval");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.HasKey("Id")
+                        .HasName("pk_absence_types");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasDatabaseName("ix_absence_types_key");
+
+                    b.ToTable("absence_types", (string)null);
+
+                    b.HasData(
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000001"),
+                            Code = "U",
+                            Color = "#43A047",
+                            CountsAsVacation = true,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "vacation",
+                            Kind = "Vacation",
+                            Name = "Urlaub",
+                            Requestable = true,
+                            RequiresApproval = true,
+                            SortOrder = 10
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000002"),
+                            Code = "K",
+                            Color = "#E53935",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "sick",
+                            Kind = "Sick",
+                            Name = "Krankheit",
+                            Requestable = false,
+                            RequiresApproval = false,
+                            SortOrder = 20
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000003"),
+                            Code = "KK",
+                            Color = "#F06292",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = false,
+                            IsSystem = true,
+                            Key = "child_sick",
+                            Kind = "Sick",
+                            Name = "Kind krank",
+                            Requestable = false,
+                            RequiresApproval = false,
+                            SortOrder = 30
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000004"),
+                            Code = "B",
+                            Color = "#1E88E5",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "school",
+                            Kind = "School",
+                            Name = "Berufsschule",
+                            Requestable = true,
+                            RequiresApproval = false,
+                            SortOrder = 40
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000005"),
+                            Code = "F",
+                            Color = "#00ACC1",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "training",
+                            Kind = "Training",
+                            Name = "Fortbildung",
+                            Requestable = true,
+                            RequiresApproval = true,
+                            SortOrder = 50
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000006"),
+                            Code = "SU",
+                            Color = "#8E24AA",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "special_leave",
+                            Kind = "SpecialLeave",
+                            Name = "Sonderurlaub",
+                            Requestable = true,
+                            RequiresApproval = true,
+                            SortOrder = 60
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000007"),
+                            Code = "ÜA",
+                            Color = "#FB8C00",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "overtime",
+                            Kind = "Other",
+                            Name = "Überstundenabbau",
+                            Requestable = true,
+                            RequiresApproval = true,
+                            SortOrder = 70
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000008"),
+                            Code = "UU",
+                            Color = "#6D4C41",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = false,
+                            IsSystem = true,
+                            Key = "unpaid",
+                            Kind = "Other",
+                            Name = "Unbezahlter Urlaub",
+                            Requestable = true,
+                            RequiresApproval = true,
+                            SortOrder = 80
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-000000000009"),
+                            Code = "BF",
+                            Color = "#7CB342",
+                            CountsAsVacation = true,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "closure",
+                            Kind = "Vacation",
+                            Name = "Betriebsferien",
+                            Requestable = false,
+                            RequiresApproval = false,
+                            SortOrder = 90
+                        },
+                        new
+                        {
+                            Id = new Guid("01a10000-0000-7000-8000-00000000000a"),
+                            Code = "A",
+                            Color = "#9E9E9E",
+                            CountsAsVacation = false,
+                            IsActive = true,
+                            IsPaid = true,
+                            IsSystem = true,
+                            Key = "other",
+                            Kind = "Other",
+                            Name = "Sonstige Abwesenheit",
+                            Requestable = true,
+                            RequiresApproval = true,
+                            SortOrder = 100
                         });
                 });
 
@@ -5507,6 +5782,58 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.CompanyClosure", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<DateOnly>("From")
+                        .HasColumnType("date")
+                        .HasColumnName("from");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<DateOnly>("To")
+                        .HasColumnType("date")
+                        .HasColumnName("to");
+
+                    b.Property<Guid>("TypeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("type_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_company_closures");
+
+                    b.HasIndex("From")
+                        .HasDatabaseName("ix_company_closures_from");
+
+                    b.HasIndex("TypeId")
+                        .HasDatabaseName("ix_company_closures_type_id");
+
+                    b.ToTable("company_closures", null, t =>
+                        {
+                            t.HasCheckConstraint("ck_company_closures_range", "\"to\" >= \"from\"");
+                        });
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Crew", b =>
                 {
                     b.Property<Guid>("Id")
@@ -5534,6 +5861,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .IsRequired()
                         .HasColumnType("uuid[]")
                         .HasColumnName("member_user_ids");
+
+                    b.Property<int?>("MinimumStaff")
+                        .HasColumnType("integer")
+                        .HasColumnName("minimum_staff");
 
                     b.Property<string>("Name")
                         .IsRequired()
@@ -5945,9 +6276,29 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<int>("AccountingStartYear")
+                        .HasColumnType("integer")
+                        .HasColumnName("accounting_start_year");
+
+                    b.Property<int>("CarryOverExpiryDay")
+                        .HasColumnType("integer")
+                        .HasColumnName("carry_over_expiry_day");
+
+                    b.Property<int>("CarryOverExpiryMonth")
+                        .HasColumnType("integer")
+                        .HasColumnName("carry_over_expiry_month");
+
+                    b.Property<bool>("CrewLeadersApprove")
+                        .HasColumnType("boolean")
+                        .HasColumnName("crew_leaders_approve");
+
                     b.Property<int>("MaxCrewAbsencePercent")
                         .HasColumnType("integer")
                         .HasColumnName("max_crew_absence_percent");
+
+                    b.Property<bool>("ProrateEntitlement")
+                        .HasColumnType("boolean")
+                        .HasColumnName("prorate_entitlement");
 
                     b.Property<bool>("RemindAnniversaries")
                         .HasColumnType("boolean")
@@ -6088,6 +6439,67 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_resources_crew_id");
 
                     b.ToTable("resources", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.VacationAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<decimal>("Adjustment")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("adjustment");
+
+                    b.Property<decimal?>("CarryOver")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("carry_over");
+
+                    b.Property<DateOnly?>("CarryOverExpiresOn")
+                        .HasColumnType("date")
+                        .HasColumnName("carry_over_expires_on");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid>("EmployeeId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("employee_id");
+
+                    b.Property<decimal?>("Entitlement")
+                        .HasPrecision(5, 1)
+                        .HasColumnType("numeric(5,1)")
+                        .HasColumnName("entitlement");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.Property<int>("Year")
+                        .HasColumnType("integer")
+                        .HasColumnName("year");
+
+                    b.HasKey("Id")
+                        .HasName("pk_vacation_accounts");
+
+                    b.HasIndex("EmployeeId", "Year")
+                        .IsUnique()
+                        .HasDatabaseName("ix_vacation_accounts_employee_id_year");
+
+                    b.ToTable("vacation_accounts", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Platform.SystemState", b =>
@@ -6911,6 +7323,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_calendar_events_calendars_calendar_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.CompanyClosure", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Planning.AbsenceType", null)
+                        .WithMany()
+                        .HasForeignKey("TypeId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_company_closures_absence_types_type_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Planning.Crew", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
@@ -6982,6 +7404,16 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasForeignKey("CrewId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_resources_crews_crew_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Planning.VacationAccount", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Planning.Employee", null)
+                        .WithMany()
+                        .HasForeignKey("EmployeeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_vacation_accounts_employees_employee_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Sync.ProcessedOperation", b =>

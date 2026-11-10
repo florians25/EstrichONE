@@ -30,6 +30,18 @@ public sealed class AbsenceRequest : IVersionedEntity
     public string? DecisionComment { get; private set; }
     public Guid? AbsenceId { get; private set; }
 
+    /// <summary>Konfigurierte Abwesenheitsart (leer bei älteren Anträgen: Standardart zu <see cref="Kind"/>).</summary>
+    public Guid? TypeId { get; private set; }
+
+    public bool HalfDayStart { get; private set; }
+    public bool HalfDayEnd { get; private set; }
+
+    /// <summary>Vertretung während der Abwesenheit (optional).</summary>
+    public Guid? SubstituteUserId { get; private set; }
+
+    /// <summary>Änderungsantrag: ersetzt nach Genehmigung diesen (genehmigten) Antrag.</summary>
+    public Guid? ReplacesRequestId { get; private set; }
+
     public long Version { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -38,7 +50,8 @@ public sealed class AbsenceRequest : IVersionedEntity
     {
     }
 
-    public static AbsenceRequest Create(Guid id, Guid userId, DateOnly from, DateOnly to, AbsenceKind kind, string? note, Guid requestedBy, DateTimeOffset now)
+    public static AbsenceRequest Create(Guid id, Guid userId, DateOnly from, DateOnly to, AbsenceKind kind, string? note, Guid requestedBy, DateTimeOffset now,
+        Guid? typeId = null, bool halfDayStart = false, bool halfDayEnd = false, Guid? substituteUserId = null, Guid? replacesRequestId = null)
     {
         if (kind == AbsenceKind.Sick)
         {
@@ -58,8 +71,48 @@ public sealed class AbsenceRequest : IVersionedEntity
         return new AbsenceRequest
         {
             Id = id, UserId = userId, From = from, To = to, Kind = kind, Note = PlanningText.Optional(note, 500), Status = AbsenceRequestStatus.Pending,
-            RequestedByUserId = requestedBy, RequestedAt = now,
+            RequestedByUserId = requestedBy, RequestedAt = now, TypeId = typeId, HalfDayStart = halfDayStart,
+            HalfDayEnd = halfDayEnd && (from != to || !halfDayStart), SubstituteUserId = substituteUserId == userId ? null : substituteUserId,
+            ReplacesRequestId = replacesRequestId,
         };
+    }
+
+    /// <summary>Offenen Antrag ändern (nur Antragsteller bzw. Büro, solange nicht entschieden).</summary>
+    public void Change(DateOnly from, DateOnly to, AbsenceKind kind, Guid? typeId, bool halfDayStart, bool halfDayEnd, string? note, Guid? substituteUserId)
+    {
+        if (Status != AbsenceRequestStatus.Pending)
+        {
+            throw new InvalidOperationException("Über diesen Antrag wurde bereits entschieden. Bitte stellen Sie einen Änderungsantrag.");
+        }
+
+        var check = Create(Id, UserId, from, to, kind, note, RequestedByUserId, RequestedAt, typeId, halfDayStart, halfDayEnd, substituteUserId);
+        From = check.From;
+        To = check.To;
+        Kind = check.Kind;
+        TypeId = check.TypeId;
+        HalfDayStart = check.HalfDayStart;
+        HalfDayEnd = check.HalfDayEnd;
+        Note = check.Note;
+        SubstituteUserId = check.SubstituteUserId;
+    }
+
+    /// <summary>Ohne Genehmigung (Art nicht genehmigungspflichtig): sofort genehmigt.</summary>
+    public void AutoApprove(DateTimeOffset now, Guid absenceId)
+    {
+        Status = AbsenceRequestStatus.Approved;
+        DecidedAt = now;
+        DecisionComment = "Keine Genehmigung erforderlich.";
+        AbsenceId = absenceId;
+    }
+
+    /// <summary>Durch einen genehmigten Änderungsantrag ersetzt.</summary>
+    public void Supersede(Guid by, DateTimeOffset now)
+    {
+        Status = AbsenceRequestStatus.Cancelled;
+        DecisionComment = "Durch Änderungsantrag ersetzt.";
+        DecidedByUserId ??= by;
+        DecidedAt = now;
+        AbsenceId = null;
     }
 
     public void Decide(bool approve, string? comment, Guid decidedBy, DateTimeOffset now, Guid? absenceId)
@@ -103,6 +156,41 @@ public sealed class HrSettings
 
     public bool RemindBirthdays { get; private set; } = true;
     public bool RemindAnniversaries { get; private set; } = true;
+
+    /// <summary>Resturlaub aus dem Vorjahr verfällt nach diesem Tag (Monat/Tag); 0 = kein Verfall.</summary>
+    public int CarryOverExpiryMonth { get; private set; } = 3;
+    public int CarryOverExpiryDay { get; private set; } = 31;
+
+    /// <summary>Anspruch bei Ein- oder Austritt im Jahr anteilig nach vollen Monaten.</summary>
+    public bool ProrateEntitlement { get; private set; } = true;
+
+    /// <summary>Ab diesem Jahr wird der Resturlaub automatisch ins Folgejahr übertragen (davor nur manuell erfasster Übertrag).</summary>
+    public int AccountingStartYear { get; private set; } = 2026;
+
+    /// <summary>Kolonnenführer dürfen Anträge ihrer Kolonne genehmigen (zusätzlich zum Recht „Urlaubsanträge genehmigen“).</summary>
+    public bool CrewLeadersApprove { get; private set; }
+
+    public DateOnly? CarryOverExpiry(int year) =>
+        CarryOverExpiryMonth is >= 1 and <= 12 ? new DateOnly(year, CarryOverExpiryMonth, Math.Min(Math.Max(CarryOverExpiryDay, 1), DateTime.DaysInMonth(year, CarryOverExpiryMonth))) : null;
+
+    public void UpdateAccounts(int carryOverExpiryMonth, int carryOverExpiryDay, bool prorateEntitlement, int accountingStartYear, bool crewLeadersApprove)
+    {
+        if (carryOverExpiryMonth is < 0 or > 12 || (carryOverExpiryMonth > 0 && (carryOverExpiryDay < 1 || carryOverExpiryDay > DateTime.DaysInMonth(2024, carryOverExpiryMonth))))
+        {
+            throw new ArgumentException("Bitte ein gültiges Verfallsdatum (Tag und Monat) angeben.", nameof(carryOverExpiryDay));
+        }
+
+        if (accountingStartYear is < 2000 or > 2100)
+        {
+            throw new ArgumentException("Bitte ein Jahr zwischen 2000 und 2100 angeben.", nameof(accountingStartYear));
+        }
+
+        CarryOverExpiryMonth = carryOverExpiryMonth;
+        CarryOverExpiryDay = carryOverExpiryMonth == 0 ? 0 : carryOverExpiryDay;
+        ProrateEntitlement = prorateEntitlement;
+        AccountingStartYear = accountingStartYear;
+        CrewLeadersApprove = crewLeadersApprove;
+    }
 
     public void Update(string state, int maxCrewAbsencePercent, bool remindBirthdays, bool remindAnniversaries)
     {

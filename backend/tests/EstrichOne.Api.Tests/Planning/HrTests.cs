@@ -126,7 +126,7 @@ public sealed class HrTests(PostgresFixture postgres) : IAsyncLifetime
         pdf.StatusCode.ShouldBe(HttpStatusCode.OK);
         Encoding.ASCII.GetString(await pdf.Content.ReadAsByteArrayAsync(Ct), 0, 5).ShouldBe("%PDF-");
         using var pdfYear = await office.GetAsync(new Uri($"/api/v1/hr/vacation-plan.pdf?year={year}", UriKind.Relative), Ct);
-        pdfYear.Content.Headers.ContentDisposition!.FileNameStar.ShouldBe($"Urlaubsplan {year}.pdf");
+        pdfYear.Content.Headers.ContentDisposition!.FileNameStar.ShouldBe($"Teamkalender {year}.pdf");
     }
 
     [Fact]

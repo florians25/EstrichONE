@@ -121,7 +121,8 @@ public sealed class CockpitService(
     {
         if (ctx.Range.Absences.FirstOrDefault(a => a.UserId == userId && a.From <= day && day <= a.To) is { } absence)
         {
-            return AbsenceText[absence.Kind];
+            var text = absence.Label is null || absence.TypeId == StandardAbsenceTypes.Other ? AbsenceText[absence.Kind] : absence.Label;
+            return absence.IsHalf(day) ? $"{text} (halber Tag)" : text;
         }
 
         var start = day.ToDateTime(TimeOnly.MinValue);

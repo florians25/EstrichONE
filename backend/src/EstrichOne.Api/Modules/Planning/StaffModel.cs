@@ -155,6 +155,9 @@ public sealed class Employee : IVersionedEntity
 
     public void LinkUser(Guid? userId) => UserId = userId;
 
+    /// <summary>Übertrag des laufenden Jahres aus dem Urlaubskonto übernehmen (Anzeige im Personalstamm).</summary>
+    public void SyncCarryOver(decimal carryOver) => VacationCarryOver = carryOver;
+
     public IReadOnlyList<DayOfWeek> WorkDayList => Enumerable.Range(0, 7).Where(bit => (WorkDays & (1 << bit)) != 0).Select(bit => (DayOfWeek)bit).ToList();
 
     /// <summary>Arbeitstage eines Zeitraums nach dem Arbeitszeitmodell, ohne gesetzliche Feiertage.</summary>
