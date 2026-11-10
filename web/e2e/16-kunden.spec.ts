@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { adminPassword, choose, openSection, pageTitle, signIn } from './helpers';
+import { adminPassword, apiCall, choose, openSection, pageTitle, signIn } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
@@ -13,8 +13,10 @@ test('Kundenanlage: Dublettenhinweis beim Tippen, vorhandenen Kunden verwenden, 
   await dialog.getByRole('button', { name: 'Kunde anlegen' }).click();
   await expect(dialog.getByText('Bitte den Namen angeben.').first()).toBeVisible();
   // Ähnlicher Name und gleiche Telefonnummer: Hinweis erscheint schon beim Tippen.
+  // Aktuelle Nummer des vorhandenen Kunden (andere Tests ändern sie), anders geschrieben eingeben.
+  const kraus = (await apiCall<{ name: string; phone: string | null }[]>(page, 'GET', '/api/v1/contacts?search=Kraus')).json.find((c) => c.name === 'Familie Kraus');
   await dialog.getByLabel('Name', { exact: true }).fill('Kraus');
-  await dialog.getByRole('textbox', { name: 'Telefonnummer 1' }).fill('0871/123456');
+  await dialog.getByRole('textbox', { name: 'Telefonnummer 1' }).fill((kraus?.phone ?? '0871 123456').replace(/ /g, '/'));
   await expect(dialog.getByText(/Es gibt bereits (einen ähnlichen Kunden|\d+ ähnliche Kunden)/)).toBeVisible();
   await expect(dialog).toContainText('gleiche Telefonnummer');
   await dialog.getByRole('button', { name: 'Vorhandenen Kunden verwenden' }).first().click();

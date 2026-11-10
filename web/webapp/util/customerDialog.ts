@@ -226,7 +226,13 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		clearTimeout(pending);
 		pending = setTimeout(() => void check(), 450);
 	}
-	for (const input of [name, street, postalCode, city]) input.attachLiveChange(() => { (input as InputBase).setValueState(ValueState.None); scheduleCheck(); });
+	for (const input of [name, street, postalCode, city]) {
+		input.attachLiveChange(() => {
+			(input as InputBase).setValueState(ValueState.None);
+			if (input === name && name.getValue().trim()) strip.setVisible(false);
+			scheduleCheck();
+		});
+	}
 
 	// ---- Anlegen ------------------------------------------------------------------------------------------------------
 	const strip = new MessageStrip("ncError", { type: "Error", showIcon: true, visible: false }).addStyleClass("sapUiSmallMarginBottom");
