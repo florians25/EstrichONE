@@ -308,7 +308,7 @@ if setup_required; then
 fi
 if [ -n "$CODE" ]; then
   echo
-  echo "Ersteinrichtung: $URL öffnen, „Jetzt einrichten“ wählen und diesen Code eingeben:"
+  echo "Ersteinrichtung: $URL öffnen, „Einrichtung starten“ wählen und diesen Code eingeben:"
   echo
   echo "   $CODE"
 fi

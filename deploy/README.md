@@ -84,7 +84,7 @@ Solange es keinen Benutzer gibt, schreibt der Server beim Start einen **Einricht
 sudo docker compose logs api | grep Einrichtungscode
 ```
 
-Im Browser `https://<ihre-adresse>/` öffnen, „Jetzt einrichten“ wählen und mit diesem Code Firmenname und
+Im Browser `https://<ihre-adresse>/` öffnen, „Einrichtung starten“ wählen und mit diesem Code Firmenname und
 ersten Administrator anlegen. Alternativ per API:
 
 ```bash
