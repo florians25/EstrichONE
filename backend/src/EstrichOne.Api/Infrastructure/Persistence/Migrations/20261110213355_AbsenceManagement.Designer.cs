@@ -13,7 +13,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(EstrichOneDbContext))]
-    [Migration("20261110205929_AbsenceManagement")]
+    [Migration("20261110213355_AbsenceManagement")]
     partial class AbsenceManagement
     {
         /// <inheritdoc />
@@ -851,6 +851,28 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(4000)
                         .HasColumnType("character varying(4000)")
                         .HasColumnName("description");
+
+                    b.Property<bool>("InitialInspectionWaived")
+                        .HasColumnType("boolean")
+                        .HasColumnName("initial_inspection_waived");
+
+                    b.Property<DateTimeOffset?>("InitialInspectionWaivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("initial_inspection_waived_at");
+
+                    b.Property<string>("InitialInspectionWaivedByName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("initial_inspection_waived_by_name");
+
+                    b.Property<Guid?>("InitialInspectionWaivedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("initial_inspection_waived_by_user_id");
+
+                    b.Property<string>("InitialInspectionWaivedReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("initial_inspection_waived_reason");
 
                     b.Property<double?>("Latitude")
                         .HasColumnType("double precision")
@@ -1800,6 +1822,22 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasName("pk_chat_user_settings");
 
                     b.ToTable("chat_user_settings", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.CustomerNumberSequence", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<long>("LastNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_number");
+
+                    b.HasKey("Id")
+                        .HasName("pk_customer_number_sequences");
+
+                    b.ToTable("customer_number_sequences", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.Contact", b =>
