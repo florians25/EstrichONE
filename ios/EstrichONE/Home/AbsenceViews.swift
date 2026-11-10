@@ -82,7 +82,7 @@ struct AbsenceOverviewView: View {
                 Section { ProgressView().frame(maxWidth: .infinity) }
             }
         }
-        .navigationTitle("Urlaub und Abwesenheit")
+        .navigationTitle("Abwesenheiten")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { requesting = true } label: { Label("Urlaub beantragen", systemImage: "plus") }
@@ -290,7 +290,7 @@ struct AbsenceRequestSheet: View {
                 }
             }
         }
-        .navigationTitle("Urlaub beantragen")
+        .navigationTitle("Antrag")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }

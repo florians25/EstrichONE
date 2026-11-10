@@ -96,7 +96,7 @@ fun AbsencesScreen() {
         }
     }) { padding ->
         LoadView(mine) {
-            val m = data!!
+            val m = (mine as Load.Done).value
             LazyColumn(contentPadding = padding.content(), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.readable()) {
                 m.vacation?.let { account -> item { GroupLabel("Urlaubskonto ${account.year}") }; item { AccountCard(account) } }
                     ?: item { Banner("Für Ihr Konto ist noch kein Personalstamm angelegt. Das Büro trägt den Urlaubsanspruch ein.", Icons.Filled.CalendarMonth,
