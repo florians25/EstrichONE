@@ -25,6 +25,7 @@ struct BauakteDetailView: View {
     @State private var toast: String?
     @State private var cancelling = false
     @State private var cancelReason = ""
+    @State private var waivingInspection = false
     @State private var statusError: String?
     @State private var viewing: FileItem?
     @State private var playing: FileItem?
@@ -76,6 +77,10 @@ struct BauakteDetailView: View {
                     Text(pdfMessage ?? "")
                 }
                 .quickLookPreview($pdfURL)
+                .waiveInitialInspectionAlert(isPresented: $waivingInspection, bauakteId: bauakteId) { message in
+                    toast = message
+                    Task { await reload() }
+                }
                 .toast($toast)
             } else if !loaded {
                 SkeletonList()
@@ -173,7 +178,8 @@ struct BauakteDetailView: View {
     private func highlights(_ content: BauakteContent) -> some View {
         let bauakte = content.bauakte
         let warnings = Array(Set(content.todayAssignments.flatMap(\.warnings))).sorted()
-        if bauakte.status == .cancelled || statusError != nil || !content.pinnedNotes.isEmpty || !warnings.isEmpty {
+        let inspectionMissing = InitialInspectionState.showsMissingHint(bauakte: bauakte, inspections: content.inspections)
+        if bauakte.status == .cancelled || statusError != nil || !content.pinnedNotes.isEmpty || !warnings.isEmpty || inspectionMissing {
             VStack(spacing: Space.s) {
                 if bauakte.status == .cancelled {
                     Callout(tone: .danger, title: "Storniert", message: bauakte.cancellationReason ?? "ohne Angabe eines Grundes", symbol: "xmark.circle.fill")
@@ -186,6 +192,12 @@ struct BauakteDetailView: View {
                 }
                 ForEach(content.pinnedNotes) { note in
                     Callout(tone: .info, title: "Angeheftet", message: note.text.compactText ?? "", symbol: "pin.fill")
+                }
+                if inspectionMissing {
+                    // Hinweiskarte wie im Büro: am Hinweis direkt als nicht erforderlich vermerken.
+                    Callout(tone: .warning, message: InitialInspectionState.missingText, symbol: "checklist",
+                            actionTitle: InitialInspectionState.waiveButtonTitle) { waivingInspection = true }
+                        .accessibilityIdentifier("initialInspectionHint")
                 }
             }
         }

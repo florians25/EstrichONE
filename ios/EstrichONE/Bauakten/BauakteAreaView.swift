@@ -30,6 +30,7 @@ struct BauakteAreaView: View {
     @State private var deletingRoom: Room?
     @State private var editingParty: PartyEditing?
     @State private var removingParty: BauakteParty?
+    @State private var waivingInspection = false
 
     private var bauakte: Bauakte { content.bauakte }
 
@@ -108,6 +109,10 @@ struct BauakteAreaView: View {
             }
         }
         .filePreview($previewing)
+        .waiveInitialInspectionAlert(isPresented: $waivingInspection, bauakteId: bauakte.id) { message in
+            toast = message
+            Task { await reload() }
+        }
         .toast($toast)
         .task {
             // Screenshot-Modus „raum“: einen Raum zum Bearbeiten öffnen; „protokoll“: Protokoll der Erstbegehung.
@@ -383,10 +388,19 @@ struct BauakteAreaView: View {
     @ViewBuilder
     private var protocols: some View {
         Section {
-            if content.inspections.filter({ $0.kind == .initialInspection }).isEmpty {
+            switch InitialInspectionState(bauakte: bauakte, inspections: content.inspections) {
+            case .waived:
+                InitialInspectionWaiverRow(bauakte: bauakte) { Task { await resumeInitialInspection() } }
+            case .open:
                 EmptyStateView(symbol: "checklist", title: "Erstbegehung noch offen",
                                message: "Untergrund, Randdämmung, Heizung und Zufahrt vor Ort prüfen.",
                                actionTitle: "Erstbegehung durchführen", actionSymbol: "checklist") { action = .inspection }
+                Button { waivingInspection = true } label: {
+                    Label(InitialInspectionState.waiveButtonTitle, systemImage: "xmark.circle")
+                }
+                .accessibilityIdentifier("waiveInitialInspectionButton")
+            case .done:
+                EmptyView()
             }
             ForEach(content.inspections.filter { $0.kind == .initialInspection }) { inspection in
                 NavigationLink {
@@ -540,6 +554,18 @@ struct BauakteAreaView: View {
     }
 
     // MARK: Ändern
+
+    /// Vermerk „Erstbegehung nicht erforderlich“ aufheben (offline möglich).
+    private func resumeInitialInspection() async {
+        do throws(BauakteError) {
+            try await model.active?.service?.resumeInitialInspection(of: bauakte.id)
+            model.active?.sync?.localChangeMade()
+            toast = "Vermerk aufgehoben. Die Erstbegehung ist wieder offen."
+        } catch {
+            toast = error.message
+        }
+        await reload()
+    }
 
     private func toggle(_ item: WorkItem) async {
         try? await model.active?.service?.setStatus(item.isDone ? .open : .done, of: item.id)

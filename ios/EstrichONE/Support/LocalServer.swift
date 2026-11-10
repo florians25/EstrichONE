@@ -181,6 +181,12 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
                     var entity = entities[entityId] ?? ["id": entityId]
                     let changes = (operation["payload"] as? [String: Any])?["changes"] as? [String: Any] ?? [:]
                     entity.merge(changes) { _, new in new }
+                    // Wie der Server: „Erstbegehung nicht erforderlich“ mit Name und Zeitpunkt.
+                    if type == "bauakte.update", let waived = changes["initialInspectionWaived"] as? Bool {
+                        entity["initialInspectionWaivedByName"] = waived ? "Max Huber" : NSNull()
+                        entity["initialInspectionWaivedAt"] = waived ? APIDate.format(Date()) : NSNull()
+                        if !waived { entity["initialInspectionWaivedReason"] = NSNull() }
+                    }
                     entity["version"] = ((entity["version"] as? Int) ?? 1) + 1
                     entities[entityId] = entity
                     return ["opId": operation["opId"] ?? "", "status": "applied", "version": entity["version"] ?? 2, "entity": entity]

@@ -247,7 +247,10 @@ struct DemoContent: Sendable {
                     postalCode: "84028", city: "Landshut", customer: Self.maier,
                     project: ["objectType": "renovation", "totalArea": 85, "screedType": "caf", "construction": "floating",
                               "nominalThicknessMm": 45, "strengthClass": "CA-C25-F4", "underfloorHeating": true, "heatingType": "water"],
-                    start: -12, end: -10),
+                    start: -12, end: -10,
+                    // Sanierung im Bestand: Untergrund aus dem Vorauftrag bekannt, daher keine Erstbegehung.
+                    extra: ["initialInspectionWaived": true, "initialInspectionWaivedReason": "Untergrund aus dem Vorauftrag bekannt",
+                            "initialInspectionWaivedByName": "Max Huber", "initialInspectionWaivedAt": time(-14 * 86400)]),
             bauakte(Self.isarpark, number: "2026-044", title: "MFH Isarpark, Haus B", status: "planned", street: "Am Isarpark 7",
                     postalCode: "84034", city: "Landshut", customer: Self.wohnbau,
                     project: ["objectType": "mfh", "floors": "EG–3. OG", "totalArea": 920, "screedType": "ct", "construction": "floating",

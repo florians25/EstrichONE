@@ -235,6 +235,12 @@ final class SimulatedSyncServer: SyncTransport, @unchecked Sendable {
                     conflicts.append(FieldConflict(field: field, serverValue: serverValue, clientValue: value))
                 }
             }
+            // Wie der Server: wer und wann beim Vermerk „Erstbegehung nicht erforderlich“.
+            if type == "bauakte", let waived = changes["initialInspectionWaived"]?.bool, !conflicts.contains(where: { $0.field == "initialInspectionWaived" }) {
+                current = current.merging(waived
+                    ? ["initialInspectionWaivedByName": "Max Huber", "initialInspectionWaivedAt": "2026-11-10T11:00:00Z"]
+                    : ["initialInspectionWaivedByName": .null, "initialInspectionWaivedAt": .null, "initialInspectionWaivedReason": .null])
+            }
             let version = (current["version"]?.number ?? 0) + 1
             current = current.merging(["version": .number(version)])
             record(type, id: id, data: current)

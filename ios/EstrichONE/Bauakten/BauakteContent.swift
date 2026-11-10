@@ -165,7 +165,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case "bereich-aufgaben": .work
         case "bereich-tagebuch": .diary
         case "bereich-raeume", "raum": .rooms
-        case "bereich-protokolle", "protokoll": .protocols
+        case "bereich-protokolle", "protokoll", "erstbegehung-entfaellt": .protocols
         case "bereich-basisdaten": .project
         case "bereich-kontakte", "kontakt-neu": .contacts
         case "bereich-notizen": .notes
@@ -200,7 +200,11 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
             let progress = done == 0 ? nil : done == totals.count ? "alle eingebracht" : "\(done) eingebracht"
             return (["\(totals.count) \(totals.count == 1 ? "Raum" : "Räume")", "\(area) m²", progress].compactMap { $0 }.joined(separator: " · "), false)
         case .protocols:
-            let inspection = content.latestInitialInspection == nil ? "Erstbegehung offen" : "Erstbegehung erfasst"
+            let inspection = switch InitialInspectionState(bauakte: content.bauakte, inspections: content.inspections) {
+            case .done: "Erstbegehung erfasst"
+            case .waived: "keine Erstbegehung erforderlich"
+            case .open: "Erstbegehung offen"
+            }
             let acceptance = content.acceptances.isEmpty ? "keine Abnahme" : "\(content.acceptances.count) Abnahme"
             return ("\(inspection) · \(acceptance)", false)
         case .project:

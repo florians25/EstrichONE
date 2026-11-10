@@ -245,6 +245,11 @@ struct BauaktenListView: View {
         guard let scene = shotScene, scene != "baustellen", path.isEmpty, selection == nil, !creating else { return }
         if scene.hasPrefix("neu-") {
             creating = true
+        } else if scene == "erstbegehung-offen", let planned = all.first(where: { $0.status == .planned && !$0.initialInspectionWaived }) {
+            // Hinweiskarte „Erstbegehung noch nicht ausgeführt“ mit „Erstbegehung nicht erforderlich“.
+            open(planned.id)
+        } else if scene == "erstbegehung-entfaellt", let waived = all.first(where: \.initialInspectionWaived) {
+            open(waived.id)
         } else if let first = all.first(where: { $0.status == .inProgress }) ?? all.first {
             open(first.id)
         }

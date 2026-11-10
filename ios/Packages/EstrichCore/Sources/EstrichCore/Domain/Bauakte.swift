@@ -66,6 +66,12 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     public let plannedStart: String?
     public let plannedEnd: String?
     public let updatedAt: Date?
+    /// „Erstbegehung nicht erforderlich“ (Sync-Felder `initialInspectionWaived`, `initialInspectionWaivedReason`;
+    /// wer und wann setzt der Server).
+    public let initialInspectionWaived: Bool
+    public let initialInspectionWaivedReason: String?
+    public let initialInspectionWaivedByName: String?
+    public let initialInspectionWaivedAt: Date?
     public let syncState: SyncState
 
     public init(_ entity: LocalEntity) {
@@ -90,6 +96,10 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
         plannedStart = data["plannedStart"]?.string
         plannedEnd = data["plannedEnd"]?.string
         updatedAt = data["updatedAt"]?.string.flatMap(APIDate.parse)
+        initialInspectionWaived = data["initialInspectionWaived"]?.bool ?? false
+        initialInspectionWaivedReason = data["initialInspectionWaivedReason"]?.string
+        initialInspectionWaivedByName = data["initialInspectionWaivedByName"]?.string
+        initialInspectionWaivedAt = data["initialInspectionWaivedAt"]?.string.flatMap(APIDate.parse)
         syncState = entity.syncState
     }
 
@@ -101,6 +111,50 @@ public struct Bauakte: Identifiable, Equatable, Sendable {
     }
 
     public var hasLocation: Bool { latitude != nil && longitude != nil }
+
+    /// „Keine Erstbegehung erforderlich (Max Huber, 10.11.2026, Bestandsgebäude)“ – leere Angaben entfallen; `nil` ohne Vermerk.
+    public var initialInspectionWaiverText: String? {
+        guard initialInspectionWaived else { return nil }
+        let parts = [initialInspectionWaivedByName, initialInspectionWaivedAt.map(InitialInspectionState.dayText), initialInspectionWaivedReason]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+        return parts.isEmpty ? InitialInspectionState.waivedTitle : "\(InitialInspectionState.waivedTitle) (\(parts.joined(separator: ", ")))"
+    }
+}
+
+/// Stand der Erstbegehung einer Bauakte: erfasst, als nicht erforderlich vermerkt oder offen.
+public enum InitialInspectionState: Equatable, Sendable {
+    case done
+    case waived
+    case open
+
+    /// Schaltfläche (gleicher Text wie im Büro).
+    public static let waiveButtonTitle = "Erstbegehung nicht erforderlich"
+    public static let waivedTitle = "Keine Erstbegehung erforderlich"
+    public static let undoTitle = "Rückgängig"
+    public static let missingText = "Erstbegehung noch nicht ausgeführt"
+    public static let confirmMessage =
+        "Für diese Bauakte wird keine Erstbegehung durchgeführt. Sie wird danach nicht mehr als offen angezeigt. Der Vermerk lässt sich jederzeit rückgängig machen."
+
+    /// Eine erfasste Erstbegehung hat Vorrang vor dem Vermerk.
+    public init(bauakte: Bauakte, inspections: [Inspection]) {
+        if inspections.contains(where: { $0.kind == .initialInspection }) {
+            self = .done
+        } else {
+            self = bauakte.initialInspectionWaived ? .waived : .open
+        }
+    }
+
+    /// Hinweis „Erstbegehung fehlt“ wie auf dem Server: nur bei geplanten und laufenden Bauakten.
+    public static func showsMissingHint(bauakte: Bauakte, inspections: [Inspection]) -> Bool {
+        [.planned, .inProgress].contains(bauakte.status) && InitialInspectionState(bauakte: bauakte, inspections: inspections) == .open
+    }
+
+    static func dayText(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.locale = Locale(identifier: "de_DE")
+        formatter.dateFormat = "dd.MM.yyyy"
+        return formatter.string(from: date)
+    }
 }
 
 /// Kunde bzw. Kontakt (nur mit Recht `contacts.read` auf dem Gerät).

@@ -200,6 +200,29 @@ public struct BauakteService: Sendable {
         }
     }
 
+    /// „Erstbegehung nicht erforderlich“ vermerken (Begründung optional, höchstens 500 Zeichen). Offline möglich;
+    /// Name und Zeitpunkt setzt der Server bei der Übertragung.
+    public func waiveInitialInspection(of id: UUID, reason: String? = nil) async throws(BauakteError) {
+        let reason = reason?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let reason, reason.count > 500 { throw .tooLong("Begründung") }
+        do {
+            try await store.update(.bauakte, id: id, changes: [
+                "initialInspectionWaived": true, "initialInspectionWaivedReason": JSONValue(reason?.isEmpty == false ? reason : nil),
+            ])
+        } catch {
+            throw .from(error)
+        }
+    }
+
+    /// Vermerk aufheben: Die Erstbegehung gilt wieder als offen.
+    public func resumeInitialInspection(of id: UUID) async throws(BauakteError) {
+        do {
+            try await store.update(.bauakte, id: id, changes: ["initialInspectionWaived": false, "initialInspectionWaivedReason": .null])
+        } catch {
+            throw .from(error)
+        }
+    }
+
     public func update(_ id: UUID, changes: [String: JSONValue]) async throws {
         try await store.update(.bauakte, id: id, changes: changes)
     }

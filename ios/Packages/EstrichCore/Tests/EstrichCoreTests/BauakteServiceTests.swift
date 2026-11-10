@@ -365,6 +365,42 @@ struct BauakteServiceTests {
         #expect(try await service.bauakte(other)?.status == .cancelled)
     }
 
+    @Test("Erstbegehung nicht erforderlich: offline vermerken, Hinweis entfällt, Server setzt Name und Datum, rückgängig")
+    func initialInspectionWaiver() async throws {
+        let server = SimulatedSyncServer()
+        let (service, engine, _, _) = try makeService(server: server)
+        let id = try await service.create(NewBauakte(title: "Garage"))
+        #expect(await engine.synchronize() == .completed)
+        let open = try #require(try await service.bauakte(id))
+        #expect(InitialInspectionState(bauakte: open, inspections: []) == .open)
+        #expect(InitialInspectionState.showsMissingHint(bauakte: open, inspections: []))
+
+        await #expect(throws: BauakteError.tooLong("Begründung")) {
+            try await service.waiveInitialInspection(of: id, reason: String(repeating: "x", count: 501))
+        }
+        try await service.waiveInitialInspection(of: id, reason: "  Bestandsgebäude ")
+        let local = try #require(try await service.bauakte(id))
+        #expect(local.initialInspectionWaived && local.initialInspectionWaivedReason == "Bestandsgebäude")
+        #expect(local.initialInspectionWaiverText == "Keine Erstbegehung erforderlich (Bestandsgebäude)", "vor der Übertragung ohne Name und Datum")
+        #expect(!InitialInspectionState.showsMissingHint(bauakte: local, inspections: []))
+        let operation = try #require(try await service.store.operations().first)
+        #expect(operation.type == "bauakte.update")
+        #expect(operation.payload["changes"]?["initialInspectionWaived"]?.bool == true)
+        #expect(operation.payload["base"]?["initialInspectionWaived"] == .null)
+
+        #expect(await engine.synchronize() == .completed)
+        let synced = try #require(try await service.bauakte(id))
+        #expect(synced.initialInspectionWaiverText == "Keine Erstbegehung erforderlich (Max Huber, 10.11.2026, Bestandsgebäude)")
+
+        try await service.resumeInitialInspection(of: id)
+        #expect(try await service.bauakte(id)?.initialInspectionWaived == false)
+        #expect(await engine.synchronize() == .completed)
+        let resumed = try #require(try await service.bauakte(id))
+        #expect(!resumed.initialInspectionWaived && resumed.initialInspectionWaiverText == nil)
+        #expect(server.entity(id)?["initialInspectionWaivedByName"] == .null)
+        #expect(InitialInspectionState.showsMissingHint(bauakte: resumed, inspections: []))
+    }
+
     @Test("Dateinamen: Endung und Anzeigename")
     func fileNames() {
         let pdf = FileItem.splitName("Aufmaß EG.pdf")
