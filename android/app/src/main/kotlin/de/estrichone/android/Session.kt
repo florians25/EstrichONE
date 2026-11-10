@@ -21,6 +21,7 @@ import de.estrichone.core.UserSummary
 import de.estrichone.core.chatStatus
 import de.estrichone.core.healthBanners
 import de.estrichone.core.myPermissions
+import de.estrichone.core.warnMissingInspection
 import de.estrichone.core.myTickets
 import de.estrichone.core.notifications
 import de.estrichone.core.systemNotices
@@ -98,8 +99,13 @@ class Session(
     private val _unreadTickets = MutableStateFlow(0)
     val unreadTickets: StateFlow<Int> = _unreadTickets
 
-    private val _permissions = MutableStateFlow<Set<String>>(emptySet())
+    /** Rechte (nur für die Oberfläche; der Server prüft selbst), zwischengespeichert für den Offline-Betrieb. */
+    private val _permissions = MutableStateFlow(store.backend.meta("my_permissions")?.split(',')?.filter { it.isNotEmpty() }?.toSet() ?: emptySet())
     val permissions: StateFlow<Set<String>> = _permissions
+
+    /** Einstellung „Hinweis Erstbegehung fehlt“ des Büros, zwischengespeichert; ohne Angabe eingeschaltet. */
+    private val _warnMissingInspection = MutableStateFlow(store.backend.meta("warn_missing_inspection") != "false")
+    val warnMissingInspection: StateFlow<Boolean> = _warnMissingInspection
 
     val isDemo: Boolean get() = demo != null
 
@@ -139,7 +145,14 @@ class Session(
         runCatching { api.chatStatus() }.onSuccess { _chat.value = it }.onFailure { if (it is ApiException && it.status == 404) _chat.value = null }
         runCatching { api.notifications() }.onSuccess { _unread.value = it.unreadCount }
         runCatching { api.myTickets() }.onSuccess { list -> _unreadTickets.value = list.count { it.hasUnread } }
-        if (_permissions.value.isEmpty()) runCatching { api.myPermissions() }.onSuccess { _permissions.value = it.toSet() }
+        runCatching { api.myPermissions() }.onSuccess {
+            _permissions.value = it.toSet()
+            store.backend.setMeta("my_permissions", it.joinToString(","))
+        }
+        runCatching { api.warnMissingInspection() }.onSuccess {
+            _warnMissingInspection.value = it
+            store.backend.setMeta("warn_missing_inspection", it.toString())
+        }
     }
 
     fun refreshCounters() {

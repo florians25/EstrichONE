@@ -128,6 +128,10 @@ suspend fun EstrichOneApi.healthBanners(): List<HealthBanner> = try {
 
 suspend fun EstrichOneApi.myPermissions(): List<String> = send("GET", "access/me/permissions", null)
 
+/** Einstellung „Hinweis Erstbegehung fehlt“ (Systemeinstellungen, für alle Angemeldeten lesbar); ohne Angabe eingeschaltet. */
+suspend fun EstrichOneApi.warnMissingInspection(): Boolean =
+    (send<JsonElement>("GET", "settings", null) as? JsonObject)?.obj("settings")?.obj("bauakte")?.bool("warnMissingInspection") ?: true
+
 /** Bauakte sich selbst zuweisen („Mir zuweisen“), danach per Snapshot laden. */
 suspend fun EstrichOneApi.assignToMe(bauakteId: String) = send<JsonElement>("POST", "bauakten/$bauakteId/members/me", JsonObject(emptyMap()))
 

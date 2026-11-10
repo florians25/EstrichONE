@@ -75,7 +75,8 @@ fun WaiveInitialInspectionDialog(session: Session, bauakteId: String, onDismiss:
 fun InitialInspectionHint(session: Session, bauakte: Bauakte) {
     val inspections by session.local(bauakte.id) { session.service.inspections(bauakte.id) }
     var waiving by remember { mutableStateOf(false) }
-    if (!InitialInspection.showsMissingHint(bauakte, inspections)) return
+    val enabled = session.warnMissingInspection.collectAsState().value
+    if (!InitialInspection.showsMissingHint(bauakte, inspections, enabled)) return
     val canWaive = canWaiveInitialInspection(session)
     // Text oben, Aktion darunter (wie die Hinweiskarte auf iOS): beide Texte sind lang und sollen nicht mitten im Wort umbrechen.
     Row(Modifier.padding(top = 16.dp).fillMaxWidth().clip(RoundedCornerShape(18.dp)).background(tones.warningSoft).padding(16.dp)

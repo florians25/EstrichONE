@@ -85,6 +85,9 @@ class SyncTests {
         val isarpark = service.bauakte(DemoData.ISARPARK)!!
         assertEquals(InitialInspectionState.Open, InitialInspection.state(isarpark, service.inspections(isarpark.id)))
         assertTrue(InitialInspection.showsMissingHint(isarpark, service.inspections(isarpark.id)))
+        // Einstellung „Hinweis Erstbegehung fehlt“ des Büros: ausgeschaltet → kein Hinweis.
+        assertTrue(api.warnMissingInspection())
+        assertFalse(InitialInspection.showsMissingHint(isarpark, service.inspections(isarpark.id), enabled = false))
 
         assertThrows<IllegalArgumentException> { service.waiveInitialInspection(isarpark.id, "x".repeat(501)) }
         service.waiveInitialInspection(isarpark.id, "  Bestandsgebäude ")

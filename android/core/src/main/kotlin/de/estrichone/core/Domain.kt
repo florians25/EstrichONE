@@ -478,7 +478,8 @@ object InitialInspection {
         else -> InitialInspectionState.Open
     }
 
-    /** Hinweis „Erstbegehung fehlt“ wie auf dem Server: nur bei geplanten und laufenden Bauakten. */
-    fun showsMissingHint(bauakte: Bauakte, inspections: List<Inspection>): Boolean =
-        bauakte.status in setOf(BauakteStatus.Planned, BauakteStatus.InProgress) && state(bauakte, inspections) == InitialInspectionState.Open
+    /** Hinweis „Erstbegehung fehlt“ wie auf dem Server: nur bei geplanten und laufenden Bauakten und eingeschalteter Einstellung. */
+    /** `enabled`: Einstellung „Hinweis Erstbegehung fehlt“ des Büros. */
+    fun showsMissingHint(bauakte: Bauakte, inspections: List<Inspection>, enabled: Boolean = true): Boolean =
+        enabled && bauakte.status in setOf(BauakteStatus.Planned, BauakteStatus.InProgress) && state(bauakte, inspections) == InitialInspectionState.Open
 }

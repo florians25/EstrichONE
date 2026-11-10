@@ -88,6 +88,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path == "auth/two-factor" -> 200 to json("enabled" to false, "recoveryCodesRemaining" to 0, "requiredByPolicy" to false)
             path == "access/me/permissions" -> 200 to listOf("bauakten.read", "bauakten.create", "bauakten.edit", "notes.write", "files.upload", "work.edit",
                 "contacts.read", "contacts.edit", "chat.use")
+            path == "settings" -> 200 to json("settings" to json("bauakte" to json("warnMissingInspection" to true)), "version" to 1)
             path == "sync/push" -> 200 to push(body)
             path == "sync/pull" -> 200 to json("changes" to entities.values.map { EstrichOneApi.json.encodeToJsonElement(SyncChange.serializer(), it) },
                 "cursor" to "demo-$version", "hasMore" to false,
