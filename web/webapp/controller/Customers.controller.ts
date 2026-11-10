@@ -7,6 +7,8 @@ import { api, get, post } from "../util/api";
 import type Table from "sap/m/Table";
 import { openForm } from "../util/forms";
 import { openCustomerForm } from "../util/customerForm";
+import { openNewCustomerDialog } from "../util/customerDialog";
+import { openBauakteWizard } from "../util/bauakteWizard";
 import type { ContactResponse } from "../util/models";
 import type { RouteMatch } from "../util/router";
 
@@ -72,13 +74,23 @@ export default class Customers extends BaseController {
 	onSearch(): void { void this.load(); }
 	onFilter(): void { void this.load(); }
 
-	onNew(): void {
-		void openCustomerForm(null, false).then((saved) => {
-			if (saved) {
-				this.toast("Kunde gespeichert");
-				void this.load();
+	/** Neuer Kunde: Dialog mit Dublettenprüfung; danach Kundenakte oder direkt die Bauaktenanlage. */
+	async onNew(): Promise<void> {
+		const result = await openNewCustomerDialog({ offerBauakte: true });
+		if (!result) return;
+		if (result.existing) {
+			this.nav(`/kunden/${result.contact.id}`);
+			return;
+		}
+		this.toast(`Kunde angelegt${result.contact.customerNumber ? ` (Kd.-Nr. ${result.contact.customerNumber})` : ""}`);
+		if (result.createBauakte) {
+			const created = await openBauakteWizard({ status: "planned", customer: result.contact });
+			if (created) {
+				this.nav(`/bauakten/${created.id}${created.startInspection ? "?erstbegehung=1" : ""}`);
+				return;
 			}
-		});
+		}
+		this.nav(`/kunden/${result.contact.id}`);
 	}
 
 	onOpen(event: Event): void {

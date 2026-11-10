@@ -15,9 +15,9 @@ for (const width of [1366, 1920]) {
     await expect(wizard.locator('.sapUiFormTitle').filter({ hasText: 'Baustelle' }).first()).toBeVisible();
     expect(await formLayoutIssues(wizard)).toEqual([]);
     // Auch weiter unten (Kennwerte-Gruppen aus dem Formular-Schema).
-    const titles = wizard.locator('.sapUiFormTitle');
-    // Gruppen des Formular-Schemas (Bauvorhaben, Estrich, Baustelle) werden nachgeladen.
-    await expect.poll(() => titles.count()).toBeGreaterThan(2);
+    const titles = wizard.locator('.sapUiFormTitle').filter({ visible: true });
+    // Eckdaten aus dem Formular-Schema werden nachgeladen; weitere Kennwerte sind zugeklappt.
+    await expect.poll(() => titles.count()).toBeGreaterThan(1);
     for (let i = 0; i < await titles.count(); i++) {
       await titles.nth(i).scrollIntoViewIfNeeded();
       await page.waitForTimeout(200);

@@ -9,8 +9,16 @@ import type { Menu$ItemSelectedEvent } from "sap/m/Menu";
 import { del, get, post, put } from "../../../util/api";
 import { akte } from "../../../util/akteStore";
 import { saveBauakte } from "../../../util/bauakte";
-import type { DuplicateCandidate } from "../../../util/bauakteWizard";
-import { KEEP_OPEN, openForm } from "../../../util/forms";
+import { candidateLine, duplicateQueries, mergeCandidates, type DuplicateCandidate } from "../../../util/customerMatch";
+import { KEEP_OPEN, openForm, type FormHandle } from "../../../util/forms";
+import type Dialog from "sap/m/Dialog";
+import Button from "sap/m/Button";
+import CustomListItem from "sap/m/CustomListItem";
+import HBox from "sap/m/HBox";
+import List from "sap/m/List";
+import MessageStrip from "sap/m/MessageStrip";
+import Text from "sap/m/Text";
+import VBox from "sap/m/VBox";
 import { uuidv7 } from "../../../util/ids";
 import type { BauakteDetail, BauakteMember, ContactEmail, ContactPhone, ContactResponse } from "../../../util/models";
 import { session } from "../../../util/session";
@@ -48,7 +56,7 @@ export const partyRoles: Record<PartyRole, { text: string; icon: string; state: 
 	planner: { text: "Planer", icon: "sap-icon://draw-rectangle", state: "Indication05" },
 	generalContractor: { text: "Generalunternehmer", icon: "sap-icon://factory", state: "Warning" },
 	supplier: { text: "Lieferant", icon: "sap-icon://shipping-status", state: "None" },
-	subcontractor: { text: "Nachunternehmer", icon: "sap-icon://group", state: "None" },
+	subcontractor: { text: "Gewerk / Nachunternehmer", icon: "sap-icon://group", state: "None" },
 	other: { text: "Sonstige", icon: "sap-icon://person-placeholder", state: "None" },
 };
 
@@ -58,7 +66,7 @@ const groups: { key: string; title: string; icon: string; roles: PartyRole[] }[]
 	{ key: "site", title: "Vor Ort", icon: "sap-icon://building", roles: ["siteContact"] },
 	{ key: "manager", title: "Bauleitung", icon: "sap-icon://manager", roles: ["siteManager", "generalContractor"] },
 	{ key: "planning", title: "Planung", icon: "sap-icon://draw-rectangle", roles: ["architect", "planner"] },
-	{ key: "trades", title: "Lieferanten und Nachunternehmer", icon: "sap-icon://shipping-status", roles: ["supplier", "subcontractor"] },
+	{ key: "trades", title: "Gewerke, Lieferanten und Nachunternehmer", icon: "sap-icon://shipping-status", roles: ["supplier", "subcontractor"] },
 	{ key: "other", title: "Sonstige", icon: "sap-icon://person-placeholder", roles: ["other"] },
 ];
 
@@ -92,6 +100,14 @@ interface Card {
 	empty: string | null;
 	removable: boolean;
 	search: string;
+	/** Erste Telefonnummer (ohne Fax) und E-Mail-Adresse für die Schnellaktionen. */
+	callText: string;
+	mailText: string;
+}
+
+/** Kontaktdaten einer Karte als Text (Kopieren in E-Mail, Messenger, Notiz). */
+export function cardText(card: { name: string; roleText: string; subtitle?: string; lines: { kind: string; text: string }[] }): string {
+	return [`${card.name} (${card.roleText})`, card.subtitle || null, ...card.lines.map((l) => `${l.kind}: ${l.text}`)].filter(Boolean).join("\n");
 }
 
 export const initials = (name: string): string =>
@@ -140,7 +156,8 @@ export default class Contacts extends SectionBase {
 	private cards: Card[] = [];
 
 	protected init(): void {
-		this.v().setModel(new JSONModel({ groups: [], team: [], count: 0, partyCount: 0, query: "",
+		this.v().setModel(new JSONModel({ groups: [], team: [], count: 0, partyCount: 0, query: "", group: "",
+			groupItems: [{ key: "", text: "Alle Rollen" }, ...groups.map((g) => ({ key: g.key, text: g.title }))],
 			roleItems: roleOptions }), "ct");
 		// Kunde und Team lädt die Objektseite nach: dann neu zeichnen.
 		EventBus.getInstance().subscribe("bauakte", "side", (_c: string, _e: string, data: object) => {
@@ -171,8 +188,10 @@ export default class Contacts extends SectionBase {
 		const card: Card = {
 			roleText: partyRoles[base.role].text, subtitle: "", initials: isCompany ? "" : initials(name), avatarIcon: isCompany ? "sap-icon://building" : "",
 			avatarColor: accentOf(name), isCompany, primary: false, linked: false, contactId: null, customerNumber: "", lines: [], note: null,
-			empty: null, removable: false, search: "", ...base,
+			empty: null, removable: false, search: "", callText: "", mailText: "", ...base,
 		};
+		card.callText = card.lines.find((l) => l.href?.startsWith("tel:"))?.text ?? "";
+		card.mailText = card.lines.find((l) => l.href?.startsWith("mailto:"))?.text ?? "";
 		card.search = [card.name, card.subtitle, card.roleText, card.note, ...card.lines.map((l) => l.text)].filter(Boolean).join(" ").toLowerCase();
 		return card;
 	}
@@ -223,7 +242,9 @@ export default class Contacts extends SectionBase {
 	private applyFilter(): void {
 		const q = String(this.ct().getProperty("/query") ?? "").trim().toLowerCase();
 		const visible = this.cards.filter((c) => !q || q.split(/\s+/).every((t) => c.search.includes(t)));
+		const only = String(this.ct().getProperty("/group") ?? "");
 		this.ct().setProperty("/groups", groups
+			.filter((g) => !only || g.key === only)
 			.map((g) => {
 				const cards = visible.filter((c) => g.roles.includes(c.role)).sort((a, b) => Number(b.primary) - Number(a.primary));
 				return { key: g.key, title: g.title, icon: g.icon, count: String(cards.length), cards };
@@ -233,6 +254,31 @@ export default class Contacts extends SectionBase {
 
 	onFilter(): void {
 		this.applyFilter();
+	}
+
+	onCall(event: Event): void {
+		const card = this.cardOf(event);
+		const line = card.lines.find((l) => l.href?.startsWith("tel:"));
+		if (line?.href) window.location.href = line.href;
+	}
+
+	onMail(event: Event): void {
+		const card = this.cardOf(event);
+		const line = card.lines.find((l) => l.href?.startsWith("mailto:"));
+		if (line?.href) window.location.href = line.href;
+	}
+
+	onCopyCard(event: Event): void {
+		this.copy(cardText(this.cardOf(event)), "Kontaktdaten kopiert");
+	}
+
+	onCopyLine(event: Event): void {
+		const line = (event.getSource() as Control).getBindingContext("ct")?.getObject() as Line;
+		this.copy(line.text, `Kopiert: ${line.text}`);
+	}
+
+	private copy(text: string, message: string): void {
+		void navigator.clipboard?.writeText(text).then(() => this.toast(message)).catch(() => this.toast("Kopieren ist in diesem Browser nicht möglich."));
 	}
 
 	private cardOf(event: Event): Card {
@@ -335,18 +381,22 @@ export default class Contacts extends SectionBase {
 		let checkedFor = "";
 		const canCreateContact = session.has("contacts.edit");
 		const linked = !!party?.contactId;
+		// Neu erfassen: ähnliche Einträge im Kundenstamm schon beim Tippen anzeigen und direkt verknüpfen statt doppelt anzulegen.
+		const finder = !party && session.has("contacts.read") ? this.duplicateFinder() : null;
+		const watch = finder ? { onChange: (_v: unknown, form: FormHandle) => finder.schedule(form) } : {};
 		const saved = await openForm<BauakteParty[]>({
 			title: party ? `${party.name} bearbeiten` : "Neuen Kontakt erfassen", width: "38rem",
+			extra: finder ? (dialog) => finder.controls(dialog) : undefined,
 			intro: linked ? "Name, weitere Nummern und Anschrift kommen aus dem Kundenstamm. Hier erfasste Nummern gelten zusätzlich für diese Bauakte." : undefined,
 			initial: party ? { ...party, isPrimary: !!party.isPrimary } : { role: "siteManager", toContacts: false, isPrimary: false },
 			fields: [
 				{ key: "role", label: "Rolle", type: "select", required: true, options: roleOptions },
 				{ key: "name", label: "Name", required: !linked, maxLength: 200, placeholder: "z. B. Anna Lechner", editable: !linked,
-					help: linked ? "Aus dem Kundenstamm. Name bitte dort ändern." : undefined },
-				{ key: "company", label: "Firma", maxLength: 200, placeholder: "z. B. Lechner Bau GmbH" },
-				{ key: "phone", label: "Telefon", maxLength: 50, placeholder: "z. B. 0871 123456" },
-				{ key: "mobile", label: "Mobil", maxLength: 50, placeholder: "z. B. 0171 2345678" },
-				{ key: "email", label: "E-Mail", type: "email", maxLength: 320 },
+					help: linked ? "Aus dem Kundenstamm. Name bitte dort ändern." : undefined, ...watch },
+				{ key: "company", label: "Firma", maxLength: 200, placeholder: "z. B. Lechner Bau GmbH, Bodenbau Maier (Bodenleger)", ...watch },
+				{ key: "phone", label: "Telefon", maxLength: 50, placeholder: "z. B. 0871 123456", ...watch },
+				{ key: "mobile", label: "Mobil", maxLength: 50, placeholder: "z. B. 0171 2345678", ...watch },
+				{ key: "email", label: "E-Mail", type: "email", maxLength: 320, ...watch },
 				...(!linked ? [
 					{ key: "street", label: "Straße", maxLength: 200 },
 					{ key: "postalCode", label: "PLZ", maxLength: 10 },
@@ -385,6 +435,67 @@ export default class Contacts extends SectionBase {
 			},
 		});
 		if (saved) this.apply(saved, "Kontakt gespeichert");
+		else if (finder?.linked()) this.apply(finder.linked()!, "Vorhandenen Kontakt verknüpft");
+	}
+
+	/**
+	 * Dublettensuche für „Neuen Kontakt erfassen“: Treffer aus dem Kundenstamm mit Schaltfläche „Verknüpfen“; das
+	 * Verknüpfen legt den Beteiligten mit der gewählten Rolle an und schließt den Dialog.
+	 */
+	private duplicateFinder(): { schedule: (form: FormHandle) => void; controls: (dialog: Dialog) => Control[]; linked: () => BauakteParty[] | null } {
+		let timer: ReturnType<typeof setTimeout> | undefined;
+		let lastKey = "";
+		let result: BauakteParty[] | null = null;
+		let dialogRef: Dialog | null = null;
+		const strip = new MessageStrip({ type: "Information", showIcon: true, visible: false,
+			text: "Im Kundenstamm gibt es ähnliche Einträge. Verknüpfen Sie den vorhandenen Eintrag, statt ihn doppelt anzulegen." });
+		const list = new List({ visible: false, showSeparators: "Inner" }).addStyleClass("sapUiTinyMarginTop");
+		const box = new VBox({ renderType: "Bare", items: [strip, list] }).addStyleClass("sapUiContentPadding eoDupBox");
+		const show = (found: DuplicateCandidate[], form: FormHandle) => {
+			list.destroyItems();
+			for (const d of found.slice(0, 5)) {
+				list.addItem(new CustomListItem({ content: [new HBox({ alignItems: "Center", justifyContent: "SpaceBetween", width: "100%", items: [
+					new VBox({ renderType: "Bare", items: [
+						new Text({ text: d.contact.name }).addStyleClass("eoStrong"),
+						new Text({ text: candidateLine(d.contact) }).addStyleClass("eoMuted"),
+						new Text({ text: d.reasons.join(", ") }).addStyleClass("eoMuted"),
+					] }),
+					new Button({ text: "Verknüpfen", type: "Emphasized", press: async () => {
+						dialogRef?.setBusy(true);
+						try {
+							result = await put<BauakteParty[]>(`bauakten/${this.bauakteId}/parties/${uuidv7()}`, {
+								role: form.get("role") || "other", contactId: d.contact.id, name: null, company: (form.get("company") as string) || null,
+								note: (form.get("note") as string) || null, isPrimary: form.get("isPrimary") === true,
+							});
+							dialogRef?.close();
+						} catch (error) {
+							this.showError(error);
+						} finally {
+							dialogRef?.setBusy(false);
+						}
+					} }).addStyleClass("sapUiTinyMarginBegin"),
+				] }).addStyleClass("sapUiTinyMarginTopBottom")] }));
+			}
+			strip.setVisible(found.length > 0);
+			list.setVisible(found.length > 0);
+		};
+		return {
+			controls: (dialog) => { dialogRef = dialog; return [box]; },
+			linked: () => result,
+			schedule: (form) => {
+				clearTimeout(timer);
+				timer = setTimeout(async () => {
+					const text = (k: string) => String(form.get(k) ?? "").trim();
+					const queries = duplicateQueries({ name: text("company") || text("name"), phones: [text("phone"), text("mobile")], emails: [text("email")] });
+					const key = JSON.stringify(queries);
+					if (key === lastKey) return;
+					lastKey = key;
+					const lists = await Promise.all(queries.map((q) => get<DuplicateCandidate[]>("contacts/duplicates", q))).catch(() => []);
+					const linkedIds = new Set(this.parties.map((p) => p.contactId).filter(Boolean));
+					show(mergeCandidates(lists).filter((d) => !linkedIds.has(d.contact.id)), form);
+				}, 450);
+			},
+		};
 	}
 
 	/** Vorhandenen Eintrag aus dem Kundenstamm suchen und als Beteiligten verknüpfen. */

@@ -7,7 +7,7 @@ import { get, put } from "./api";
 export interface SystemSettings {
 	session: { idleHours: number; rememberDays: number; deviceIdleDays: number; requireTwoFactorForAdmins?: boolean };
 	map: { tileUrl: string; attribution: string; maxZoom: number };
-	numbering: { bauaktePattern: string };
+	numbering: { bauaktePattern: string; customerPattern: string };
 	bauakte: {
 		assignCreator: boolean; warnMissingInspection: boolean; defaultTemplateId: string | null;
 		autoStart: "manual" | "firstAssignmentDay" | "firstSiteActivity" | "both"; autoCompleteAfterAcceptance: boolean; acceptanceLinkDays: number;

@@ -28,7 +28,8 @@ test('Anfrage mit neuem Kunden im Assistenten, Dublettenprüfung, als Auftrag ü
   await dialog.getByRole('button', { name: 'Weiter' }).click();
   // Schritt 2: Bauvorhaben und Baustelle.
   await dialog.getByRole('textbox', { name: 'Bauvorhaben' }).fill(title);
-  await dialog.getByRole('button', { name: 'Adresse des Kunden übernehmen' }).click();
+  // Baustellenadresse: „Wie Kundenanschrift“ ist vorgewählt, wenn der Kunde eine Anschrift hat.
+  await expect(dialog.getByRole('option', { name: 'Wie Kundenanschrift', selected: true })).toBeVisible();
   await expect(dialog.getByLabel('Ort', { exact: true })).toHaveValue('Landshut');
   await dialog.getByRole('button', { name: 'Weiter' }).click();
   // Schritt 3: Prüfen.

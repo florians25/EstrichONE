@@ -49,6 +49,8 @@ interface LogoInfo {
 }
 
 /** Beispiel zum Nummernkreis: {JJJJ}, {JJ}, {N…}. */
+interface CustomerNumbering { pattern: string; nextNumber: number; preview: string; capacity: number; remaining: number }
+
 export function numberExample(pattern: string, year = new Date().getFullYear(), number = 7): string {
 	return pattern.replace(/\{JJJJ\}/g, String(year)).replace(/\{JJ\}/g, String(year).slice(-2))
 		.replace(/\{(N+)\}/g, (_m, n: string) => String(number).padStart(n.length, "0"));
@@ -77,14 +79,17 @@ export default class Company extends BaseController {
 
 	onInit(): void {
 		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", tabInfo: tabInfo.firma, status: null, dirty: false, logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
-			themes: [{ id: "system", text: "Systemeinstellung folgen (hell/dunkel)" }, ...themes], patternExample: "" });
+			themes: [{ id: "system", text: "Systemeinstellung folgen (hell/dunkel)" }, ...themes], patternExample: "", customerExample: "", customerNext: "", customerNextLoaded: "", customerHint: "", customerHintType: "Information",
+			customerPatternHint: "",
+			customerHelp: "Neue Kunden erhalten die Nummer automatisch, auch bei Anlage in der App und beim Import. Bereits vergebene Nummern werden übersprungen. "
+				+ "{NNNN} steht für genau vier Stellen; ist der Bereich ausgeschöpft, ist ein neues Muster nötig." });
 		// Eingaben des Benutzers (Zwei-Wege-Bindung) markieren ungespeicherte Änderungen: Fußleiste mit Speichern/Verwerfen.
 		this.model().attachPropertyChange((event) => {
 			const path = String(event.getParameter("path"));
 			const context = event.getParameter("context") as { getPath?: () => string } | undefined;
 			const full = path.startsWith("/") ? path : `${context?.getPath?.() ?? ""}/${path}`;
-			if (/^\/(c|s|push|chat)\//.test(full)) this.model().setProperty("/dirty", true);
-			if (path.includes("bauaktePattern")) this.updateExample();
+			if (/^\/(c|s|push|chat)\//.test(full) || full === "/customerNext") this.model().setProperty("/dirty", true);
+			if (path.includes("Pattern") || full === "/customerNext") this.updateExample();
 		});
 	}
 
@@ -128,8 +133,24 @@ export default class Company extends BaseController {
 		], "Firmendaten vollständig");
 	}
 
+	/** Hinweis, wenn der Kunden-Nummernkreis bald oder ganz ausgeschöpft ist. */
+	private showNumbering(n: CustomerNumbering): void {
+		const m = this.model();
+		m.setProperty("/customerHintType", n.remaining === 0 ? "Error" : "Warning");
+		m.setProperty("/customerHint", n.remaining === 0
+			? `Der Kunden-Nummernkreis „${n.pattern}“ ist ausgeschöpft. Neue Kunden können erst angelegt werden, wenn ein neues Muster festgelegt ist (z. B. mit einer Stelle mehr).`
+			: n.remaining <= 100 ? `Im Kunden-Nummernkreis „${n.pattern}“ sind nur noch ${n.remaining} Nummern frei. Bitte rechtzeitig ein neues Muster festlegen.` : "");
+	}
+
 	private updateExample(): void {
-		this.model().setProperty("/patternExample", numberExample(String(this.model().getProperty("/s/numbering/bauaktePattern") ?? "")));
+		const m = this.model();
+		m.setProperty("/patternExample", numberExample(String(m.getProperty("/s/numbering/bauaktePattern") ?? "")));
+		const next = Number.parseInt(String(m.getProperty("/customerNext") ?? ""), 10);
+		const customer = String(m.getProperty("/s/numbering/customerPattern") ?? "");
+		m.setProperty("/customerExample", numberExample(customer, undefined, Number.isFinite(next) ? next : 1));
+		const digits = Math.min(...[...customer.matchAll(/\{(N+)\}/g)].map((x) => x[1].length), 9);
+		m.setProperty("/customerPatternHint", Number.isFinite(digits) && /\{N+\}/.test(customer)
+			? `${numberExample(customer, undefined, 1)} bis ${numberExample(customer, undefined, 10 ** digits - 1)}` : "Muster mit {N…} angeben");
 	}
 
 	async onRouteMatched(match?: RouteMatch): Promise<void> {
@@ -142,6 +163,12 @@ export default class Company extends BaseController {
 			void this.loadPush();
 			void this.loadChat();
 			void this.loadStorage();
+			void get<CustomerNumbering>("contacts/numbering").then((n) => {
+				this.model().setProperty("/customerNext", String(n.nextNumber));
+				this.model().setProperty("/customerNextLoaded", String(n.nextNumber));
+				this.showNumbering(n);
+				this.updateExample();
+			}).catch(() => undefined);
 			const [c, settings, logo, templates, roles] = await Promise.all([
 				get<CompanyResponse>("company"),
 				loadSystemSettings(true),
@@ -289,6 +316,12 @@ export default class Company extends BaseController {
 			this.toast("Bitte den Firmennamen angeben.");
 			return;
 		}
+		const customerNext = String(m.getProperty("/customerNext") ?? "").trim();
+		if (!/\{N+\}/.test(s.numbering.customerPattern ?? "") || (customerNext && !/^[1-9]\d{0,8}$/.test(customerNext))) {
+			this.selectTab("bauakte");
+			this.toast("Der Kunden-Nummernkreis braucht eine laufende Nummer, z. B. {NNNNN}, und eine nächste Nummer ab 1.");
+			return;
+		}
 		if (!/\{N+\}/.test(s.numbering.bauaktePattern)) {
 			this.selectTab("bauakte");
 			this.toast("Der Nummernkreis braucht eine laufende Nummer, z. B. {NNN}.");
@@ -307,6 +340,13 @@ export default class Company extends BaseController {
 				saveSystemSettings(clean, this.version),
 				this.savePush(),
 				this.saveChat(),
+				customerNext && customerNext !== m.getProperty("/customerNextLoaded")
+					? put<CustomerNumbering>("contacts/numbering", { nextNumber: Number(customerNext) }).then((n) => {
+						m.setProperty("/customerNext", String(n.nextNumber));
+						m.setProperty("/customerNextLoaded", String(n.nextNumber));
+						this.showNumbering(n);
+					})
+					: Promise.resolve(),
 			]);
 			resetCompany();
 			this.version = savedSettings.version;

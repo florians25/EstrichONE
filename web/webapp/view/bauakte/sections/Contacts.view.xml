@@ -5,6 +5,11 @@
 			<Title text="Kontakte und Beteiligte" level="H3"/>
 			<ObjectNumber number="{ct>/count}" class="eoMuted"/>
 			<ToolbarSpacer/>
+			<Select id="contactRoleFilter" selectedKey="{ct>/group}" change=".onFilter" items="{ct>/groupItems}" width="14rem" tooltip="Nach Rolle filtern"
+				visible="{= ${ct>/count} > 3 }">
+				<core:Item key="{ct>key}" text="{ct>text}"/>
+				<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
+			</Select>
 			<SearchField id="contactSearch" width="16rem" placeholder="Name, Firma, Telefon …" liveChange=".onFilter" value="{ct>/query}"
 				visible="{= ${ct>/count} > 3 }" ariaLabelledBy="contactSearchLabel">
 				<layoutData><OverflowToolbarLayoutData priority="NeverOverflow" shrinkable="true" minWidth="10rem"/></layoutData>
@@ -52,13 +57,18 @@
 											<Text text="{ct>text}" wrapping="true" visible="{= !${ct>href} }"/>
 											<Text text="{ct>label}" visible="{= !!${ct>label} }" class="eoContactLineLabel"/>
 										</VBox>
+										<Button icon="sap-icon://copy" type="Transparent" tooltip="{= 'Kopieren: ' + ${ct>text} }" press=".onCopyLine" class="eoContactCopy"/>
 									</HBox>
 								</VBox>
 								<Text text="{ct>note}" visible="{= !!${ct>note} }" wrapping="true" class="eoPre eoContactNote"/>
 								<Text text="{ct>empty}" visible="{= !!${ct>empty} }" wrapping="true" class="eoMuted eoContactNote"/>
-								<HBox justifyContent="End" alignItems="Center" class="eoContactActions" visible="{akte>/canEdit}">
-									<Button text="Bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditCard"/>
-									<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="Mehr zum Kontakt" visible="{ct>removable}">
+								<HBox alignItems="Center" class="eoContactActions" visible="{= ${ct>lines}.length > 0 || ${akte>/canEdit} }">
+									<Button icon="sap-icon://call" type="Transparent" tooltip="{= 'Anrufen: ' + ${ct>callText} }" press=".onCall" visible="{= !!${ct>callText} }"/>
+									<Button icon="sap-icon://email" type="Transparent" tooltip="{= 'E-Mail an ' + ${ct>mailText} }" press=".onMail" visible="{= !!${ct>mailText} }"/>
+									<Button icon="sap-icon://copy" type="Transparent" tooltip="{= 'Kontaktdaten kopieren: ' + ${ct>name} }" press=".onCopyCard" visible="{= ${ct>lines}.length > 0 }"/>
+									<HBox renderType="Bare" class="eoContactActionsEnd">
+									<Button text="Bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditCard" visible="{akte>/canEdit}"/>
+									<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="Mehr zum Kontakt" visible="{= ${ct>removable} &amp;&amp; ${akte>/canEdit} }">
 										<menu>
 											<Menu itemSelected=".onCardAction">
 												<MenuItem text="{= ${ct>primary} ? 'Nicht mehr Hauptkontakt' : 'Als Hauptkontakt markieren' }" icon="sap-icon://favorite">
@@ -81,6 +91,7 @@
 											</Menu>
 										</menu>
 									</MenuButton>
+									</HBox>
 								</HBox>
 							</VBox>
 						</f:content>
@@ -89,17 +100,17 @@
 			</VBox>
 		</VBox>
 
-		<VBox visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} }" alignItems="Center" class="eoContactsEmpty">
+		<VBox visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} &amp;&amp; !${ct>/group} }" alignItems="Center" class="eoContactsEmpty">
 			<core:Icon src="sap-icon://address-book" size="2.5rem" class="eoMuted" decorative="true"/>
 			<Title text="Noch keine weiteren Beteiligten" level="H4" class="sapUiSmallMarginTop"/>
-			<Text text="Erfassen Sie Bauleiter, Architekt, Lieferanten oder den Ansprechpartner vor Ort mit Telefon und E-Mail für Büro und Baustelle."
+			<Text text="Erfassen Sie Bauleiter, Architekt, Gewerke wie Bodenleger oder Heizungsbauer und Lieferanten mit Telefon und E-Mail. Vorhandene Einträge aus dem Kundenstamm lassen sich direkt verknüpfen."
 				textAlign="Center" wrapping="true" class="eoMuted eoContactsEmptyText"/>
 			<HBox class="sapUiSmallMarginTop eoEntryRow" visible="{akte>/canEdit}" justifyContent="Center" wrap="Wrap">
 				<Button text="Bestehenden Kontakt suchen" icon="sap-icon://search" press=".onFromContacts" visible="{= ${session>/permissions/contacts.read} === true }"/>
 				<Button text="Neuen Kontakt erfassen" icon="sap-icon://add-contact" press=".onQuickAdd"/>
 			</HBox>
 		</VBox>
-		<Text text="Keine Kontakte zu „{ct>/query}“." visible="{= !!${ct>/query} &amp;&amp; ${ct>/groups}.length === 0 }" class="eoMuted sapUiSmallMarginTop"/>
+		<Text text="Keine Kontakte in dieser Auswahl." visible="{= (!!${ct>/query} || !!${ct>/group}) &amp;&amp; ${ct>/groups}.length === 0 }" class="eoMuted sapUiSmallMarginTop"/>
 
 		<HBox alignItems="Center" class="eoContactGroupHead sapUiMediumMarginTop">
 			<core:Icon src="sap-icon://group" class="eoContactGroupIcon" decorative="true"/>

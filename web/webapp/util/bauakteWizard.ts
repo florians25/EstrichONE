@@ -1,12 +1,21 @@
 /**
  * Geführte Anlage einer Bauakte oder Anfrage (sap.m.Wizard im Dialog):
- *  1. Kunde (Pflicht) – freie Eingabe mit Vorschlägen vorhandener Kunden; vor dem Weitergehen prüft der Server auf
- *     Dubletten (Name, Telefon, E-Mail, Anschrift). Treffer werden angezeigt: vorhandenen Kunden wählen oder bewusst
- *     neu anlegen.
- *  2. Bauvorhaben und Baustelle – Baustellenadresse auf Wunsch vom Kunden übernehmen.
- *  3. Prüfen und anlegen.
+ *  1. Kunde (Pflicht) – Suche mit Vorschlägen vorhandener Kunden oder Neuanlage (kurz im Schritt oder ausführlich im
+ *     Kundendialog). Schon beim Tippen prüft der Server auf Dubletten (Name, Telefon, E-Mail, Anschrift); Treffer
+ *     werden angezeigt: vorhandenen Kunden wählen oder bewusst neu anlegen.
+ *  2. Bauvorhaben – Vorlage, Zuständige(r), Baustellenadresse „wie Kundenanschrift“ oder abweichend (mit Hinweis auf
+ *     Bauakten an derselben Adresse), Eckdaten (Objektart, Fläche, Estrich, Dicke, Heizung, Zeitraum); zusätzliche
+ *     Kennwerte aufklappbar.
+ *  3. Prüfen und anlegen; danach öffnet der Aufrufer die neue Bauakte.
  */
 import { schemaWizardControls } from "./project";
+import Panel from "sap/m/Panel";
+import Link from "sap/m/Link";
+import { openNewCustomerDialog } from "./customerDialog";
+import { addressLine, atSameAddress, draftKey, duplicateQueries, hasAddress, mergeCandidates, siteFromCustomer, type DuplicateCandidate } from "./customerMatch";
+import { saveBauakte } from "./bauakte";
+import { session } from "./session";
+import { bauakteStatus } from "./labels";
 import { bauakteSchema, displayValue, fieldsOf, writeValues, type FormSchema } from "./formSchema";
 import Dialog from "sap/m/Dialog";
 import { loadSystemSettings } from "./systemSettings";
@@ -38,7 +47,7 @@ import { catalog, type BauakteTemplate } from "./catalog";
 import Select from "sap/m/Select";
 import Item from "sap/ui/core/Item";
 import { uuidv7 } from "./ids";
-import type { BauakteDetail, BauakteStatus, ContactResponse } from "./models";
+import type { BauaktePage, BauakteDetail, BauakteStatus, ContactResponse } from "./models";
 
 export interface WizardOptions {
 	status: Extract<BauakteStatus, "planned" | "inquiry">;
@@ -46,10 +55,20 @@ export interface WizardOptions {
 	customer?: ContactResponse | null;
 }
 
-export interface DuplicateCandidate {
-	contact: ContactResponse;
-	score: number;
-	reasons: string[];
+export type { DuplicateCandidate } from "./customerMatch";
+
+/** Eckdaten, die der Assistent direkt zeigt; weitere Kennwerte stehen aufklappbar darunter. */
+const keyFields = ["objectType", "totalArea", "screedType", "nominalThicknessMm", "underfloorHeating", "heatingType", "plannedStart", "plannedEnd"];
+
+/** Formular-Schema in Eckdaten (feste Auswahl und Pflichtfelder) und weitere Kennwerte teilen. */
+export function splitSchema(schema: FormSchema): { primary: FormSchema; more: FormSchema } {
+	const all = fieldsOf(schema);
+	const primaryFields = [...keyFields.map((k) => all.find((f) => f.key === k)).filter((f) => !!f), ...all.filter((f) => f.required && !keyFields.includes(f.key))];
+	const used = new Set(primaryFields.map((f) => f!.key));
+	return {
+		primary: { ...schema, groups: [{ key: "eckdaten", label: "Eckdaten", fields: primaryFields as FormSchema["groups"][number]["fields"] }] },
+		more: { ...schema, groups: schema.groups.map((g) => ({ ...g, fields: g.fields.filter((f) => !used.has(f.key)) })).filter((g) => g.fields.length > 0) },
+	};
 }
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -77,7 +96,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			width: "100%", maxLength: 200, placeholder: "Name, Firma (vorhandene Kunden werden vorgeschlagen)",
 			showSuggestion: true, filterSuggests: false, startSuggestion: 2, maxSuggestionWidth: "34rem",
 		}),
-		number: new Input("newCustomerNumber", { width: "100%", maxLength: 50 }),
+		number: new Input("newCustomerNumber", { width: "100%", maxLength: 50, placeholder: "wird automatisch vergeben", editable: session.has("settings.manage") }),
 		street: new Input("newCustomerStreet", { width: "100%", maxLength: 200 }),
 		postalCode: new Input("newCustomerPostalCode", { width: "100%", maxLength: 10 }),
 		city: new Input("newCustomerCity", { width: "100%", maxLength: 100 }),
@@ -112,15 +131,17 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		customerKind.setEnabled(false);
 		chosen.setText(`Vorhandener Kunde: ${contact.name}${contact.customerNumber ? ` (${contact.customerNumber})` : ""}${contact.city ? `, ${contact.city}` : ""}`);
 		chosen.setVisible(true);
+		detailed.setVisible(false);
 		showDuplicates([]);
 		checkedFor = fingerprint();
 		validate();
 	};
 	const release = () => {
 		existing = null;
-		for (const field of Object.values(c)) field.setEditable(true);
+		for (const field of Object.values(c)) field.setEditable(field !== c.number || session.has("settings.manage"));
 		customerKind.setEnabled(true);
 		chosen.setVisible(false);
+		detailed.setVisible(true);
 	};
 	chosen.attachClose(() => { release(); validate(); });
 
@@ -178,9 +199,53 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 	c.name.attachLiveChange(() => {
 		if (existing && c.name.getValue().trim() !== existing.name) release();
 		validate();
+		scheduleDuplicates();
 	});
-	for (const field of [c.street, c.postalCode, c.city, c.phone, c.email]) field.attachLiveChange(() => validate());
+	for (const field of [c.street, c.postalCode, c.city, c.phone, c.email]) field.attachLiveChange(() => { validate(); scheduleDuplicates(); });
 	forceNew.attachSelect(() => validate());
+
+	// Dublettenprüfung schon beim Tippen (verzögert); „Weiter“ prüft zusätzlich den letzten Stand.
+	let dupTimer: ReturnType<typeof setTimeout> | undefined;
+	let dupRequest = 0;
+	const draft = () => {
+		const f = customerFields();
+		return { name: f.name ?? "", street: f.street, postalCode: f.postalCode, city: f.city, phones: f.phone ? [f.phone] : [], emails: f.email ? [f.email] : [] };
+	};
+	const runDuplicates = async (): Promise<DuplicateCandidate[]> => {
+		const key = fingerprint();
+		const queries = duplicateQueries(draft());
+		const mine = ++dupRequest;
+		const lists = await Promise.all(queries.map((q) => get<DuplicateCandidate[]>("contacts/duplicates", q)));
+		const found = mergeCandidates(lists);
+		if (mine === dupRequest && !existing) {
+			checkedFor = key;
+			showDuplicates(found);
+			validate();
+		}
+		return found;
+	};
+	let lastDraft = "";
+	function scheduleDuplicates(): void {
+		clearTimeout(dupTimer);
+		if (existing) return;
+		dupTimer = setTimeout(() => {
+			const key = draftKey(draft());
+			if (key === lastDraft) return;
+			lastDraft = key;
+			void runDuplicates().catch(() => undefined);
+		}, 500);
+	}
+
+	// Neuen Kunden mit allen Angaben (mehrere Nummern, Ansprechpartner, Notiz) im Kundendialog erfassen.
+	const detailed = new Button("newCustomerDetailed", {
+		text: "Neuen Kunden ausführlich erfassen …", icon: "sap-icon://add-employee", type: "Transparent",
+		press: async () => {
+			const f = customerFields();
+			const created = await openNewCustomerDialog({ name: f.name || undefined, street: f.street ?? undefined, postalCode: f.postalCode ?? undefined,
+				city: f.city ?? undefined, phone: f.phone ?? undefined, email: f.email ?? undefined, useExistingText: "Diesen Kunden verwenden" });
+			if (created) useExisting(created.contact);
+		},
+	});
 
 	const customerStep = new WizardStep("newStepCustomer", {
 		title: "Kunde", icon: "sap-icon://customer", validated: false,
@@ -188,6 +253,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			chosen,
 			form([
 				new Label({ text: "Name des Kunden", labelFor: c.name, required: true }), c.name,
+				new Label({ text: "" }), detailed,
 				new Label({ text: "Art", labelFor: customerKind }), customerKind,
 				new Label({ text: "Kundennummer", labelFor: c.number }), c.number,
 				new Label({ text: "Straße (Kunde)", labelFor: c.street }), c.street,
@@ -212,18 +278,79 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		city: new Input("newCity", { width: "100%", maxLength: 100 }),
 		description: new TextArea("newDescription", { rows: 3, width: "100%", maxLength: 4000, growing: true }),
 	};
-	const copy = new Button("newCopyAddress", {
-		text: "Adresse des Kunden übernehmen", icon: "sap-icon://copy", type: "Transparent",
-		press: () => {
-			site.street.setValue(c.street.getValue());
-			site.postalCode.setValue(c.postalCode.getValue());
-			site.city.setValue(c.city.getValue());
-		},
+	// Baustellenadresse: wie Kundenanschrift (übernommen, nicht bearbeitbar) oder abweichend.
+	const siteMode = new SegmentedButton("newSiteMode", {
+		selectedKey: "other",
+		items: [new SegmentedButtonItem({ key: "customer", text: "Wie Kundenanschrift" }), new SegmentedButtonItem({ key: "other", text: "Abweichende Adresse" })],
 	});
+	const customerAddress = () => siteFromCustomer({ street: c.street.getValue(), postalCode: c.postalCode.getValue(), city: c.city.getValue() });
+	const applySiteMode = () => {
+		const same = siteMode.getSelectedKey() === "customer";
+		if (same) {
+			const a = customerAddress();
+			site.street.setValue(a.street ?? "");
+			site.postalCode.setValue(a.postalCode ?? "");
+			site.city.setValue(a.city ?? "");
+		}
+		for (const f of [site.street, site.postalCode, site.city]) f.setEditable(!same);
+		scheduleAddressCheck();
+	};
+	siteMode.attachSelectionChange(applySiteMode);
+	/** Beim Wechsel in diesen Schritt: Vorgabe „wie Kundenanschrift“, wenn der Kunde eine Anschrift hat und noch nichts eingetragen ist. */
+	const prepareSite = () => {
+		const customerHas = hasAddress(customerAddress());
+		siteMode.getItems()[0].setEnabled(customerHas);
+		const empty = !site.street.getValue().trim() && !site.city.getValue().trim() && !site.postalCode.getValue().trim();
+		if (!customerHas) siteMode.setSelectedKey("other");
+		else if (empty || siteMode.getSelectedKey() === "customer") siteMode.setSelectedKey("customer");
+		applySiteMode();
+	};
+
+	// Hinweis auf vorhandene Bauakten an derselben Adresse.
+	const addressHint = new MessageStrip("newAddressHint", { type: "Information", showIcon: true, visible: false });
+	const addressLinks = new VBox({ renderType: "Bare", visible: false }).addStyleClass("sapUiTinyMarginTop sapUiSmallMarginBottom");
+	let addressTimer: ReturnType<typeof setTimeout> | undefined;
+	let addressKey = "";
+	const checkAddress = async () => {
+		const a = { street: site.street.getValue(), postalCode: site.postalCode.getValue(), city: site.city.getValue() };
+		const key = JSON.stringify(a);
+		if (key === addressKey) return;
+		addressKey = key;
+		const postal = a.postalCode.trim();
+		if (!a.street.trim() || !postal || !session.has("bauakten.read")) {
+			addressHint.setVisible(false);
+			addressLinks.setVisible(false);
+			return;
+		}
+		try {
+			const page = await get<BauaktePage>("bauakten", { postalCode: postal, status: "all", limit: 200 });
+			if (key !== addressKey) return;
+			const found = atSameAddress(page.items, a);
+			addressLinks.destroyItems();
+			for (const b of found.slice(0, 5)) {
+				addressLinks.addItem(new Link({ text: `${b.number ? `${b.number} · ` : ""}${b.title} (${bauakteStatus[b.status]?.text ?? b.status})`,
+					href: `/bauakten/${b.id}`, target: "_blank", tooltip: "Bauakte in neuem Fenster öffnen" }));
+			}
+			addressHint.setText(found.length === 1
+				? `An dieser Adresse gibt es bereits eine Bauakte (${addressLine(a)}).`
+				: `An dieser Adresse gibt es bereits ${found.length} Bauakten (${addressLine(a)}).`);
+			addressHint.setVisible(found.length > 0);
+			addressLinks.setVisible(found.length > 0);
+		} catch {
+			addressHint.setVisible(false);
+			addressLinks.setVisible(false);
+		}
+	};
+	function scheduleAddressCheck(): void {
+		clearTimeout(addressTimer);
+		addressTimer = setTimeout(() => void checkAddress(), 400);
+	}
+	for (const f of [site.street, site.postalCode, site.city]) f.attachLiveChange(scheduleAddressCheck);
+
 	title.attachLiveChange(() => validate());
 	// Bauakten-Vorlagen aus den Stammdaten: Beschreibung und Standardräume.
 	let templates: BauakteTemplate[] = [];
-	const template = new Select("newTemplate", { width: "100%", forceSelection: false, items: [new Item({ key: "", text: "– ohne Vorlage –" })] });
+	const template = new Select("newTemplate", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "– ohne Vorlage –" })] });
 	void Promise.all([catalog<BauakteTemplate>("bauakteTemplate"), loadSystemSettings()]).then(([list, settings]) => {
 		templates = list;
 		for (const t of list) {
@@ -237,29 +364,48 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		const t = templates.find((x) => x.id === template.getSelectedKey());
 		if (t?.content.description && !site.description.getValue().trim()) site.description.setValue(t.content.description);
 	});
-	// Kennwerte aus dem Formular-Schema der Stammdaten (B7); Gruppen als Zwischenüberschriften.
+	// Zuständige(r): Bauleitung; Benachrichtigung über die Zuweisung wie beim Bearbeiten der Bauakte.
+	const responsible = new Select("newResponsible", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "– nicht festgelegt –" })] });
+	void session.people().then((people) => {
+		for (const p of people.filter((x) => x.isActive)) responsible.addItem(new Item({ key: p.id, text: p.displayName }));
+	}).catch(() => undefined);
+
+	// Kennwerte aus dem Formular-Schema der Stammdaten (B7): Eckdaten direkt, weitere Kennwerte aufklappbar.
 	let schema: FormSchema | null = null;
 	let kennwerte: ReturnType<typeof schemaWizardControls> | null = null;
+	let weitere: ReturnType<typeof schemaWizardControls> | null = null;
 	const kennwerteForm = form([]);
+	const weitereForm = form([]);
+	const weiterePanel = new Panel("newMoreFigures", { headerText: "Zusätzliche Kennwerte (optional)", expandable: true, expanded: false, visible: false,
+		content: [weitereForm] }).addStyleClass("eoWizardPanel");
 	void bauakteSchema().then((loaded) => {
 		if (!loaded) return;
 		schema = loaded;
-		kennwerte = schemaWizardControls(loaded, "new", () => validate());
-		for (const c of kennwerte.content) kennwerteForm.addContent(c);
+		const { primary, more } = splitSchema(loaded);
+		kennwerte = schemaWizardControls(primary, "new", () => validate());
+		for (const x of kennwerte.content) kennwerteForm.addContent(x);
+		if (more.groups.length) {
+			weitere = schemaWizardControls(more, "new", () => validate());
+			for (const x of weitere.content) weitereForm.addContent(x);
+			weiterePanel.setVisible(true);
+		}
 	});
+	const readKennwerte = (): Record<string, unknown> => ({ ...(weitere?.read() ?? {}), ...(kennwerte?.read() ?? {}) });
 	const projectStep = new WizardStep("newStepProject", {
 		title: "Bauvorhaben", icon: "sap-icon://building", validated: false,
 		content: [form([
 			new Label({ text: "Bauvorhaben", labelFor: title, required: true }), title,
 			new Label({ text: "Anlegen als", labelFor: kind }), kind,
 			new Label({ text: "Vorlage", labelFor: template }), template,
+			new Label({ text: "Zuständig", labelFor: responsible }), responsible,
 			formTitle("Baustelle"),
-			new Label({ text: "" }), copy,
+			new Label({ text: "Adresse", labelFor: siteMode }), siteMode,
 			new Label({ text: "Straße", labelFor: site.street }), site.street,
 			new Label({ text: "PLZ", labelFor: site.postalCode }), site.postalCode,
 			new Label({ text: "Ort", labelFor: site.city }), site.city,
+			new Label({ text: "" }), new VBox({ renderType: "Bare", items: [addressHint, addressLinks] }),
 			new Label({ text: "Beschreibung", labelFor: site.description }), site.description,
-		]), kennwerteForm],
+		]), kennwerteForm, weiterePanel],
 	});
 
 	// ---- Schritt 3: Prüfen -------------------------------------------------------------------------------------------
@@ -281,13 +427,17 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		summary.addItem(line("Anlegen als", kind.getSelectedKey() === "inquiry" ? "Anfrage" : "Bauakte (Auftrag)"));
 		const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
 		if (chosenTemplate) summary.addItem(line("Vorlage", `${chosenTemplate.name}${chosenTemplate.content.rooms?.length ? ` (${chosenTemplate.content.rooms.length} Räume)` : ""}`));
+		const who = responsible.getSelectedItem();
+		if (responsible.getSelectedKey() && who) summary.addItem(line("Zuständig", who.getText()));
 		if (schema && kennwerte) {
-			const values = kennwerte.read();
+			const values = readKennwerte();
 			const shown = fieldsOf(schema).filter((f) => values[f.key] !== null && values[f.key] !== undefined)
 				.map((f) => `${f.label}: ${displayValue(schema!, f, values[f.key])}`);
 			summary.addItem(line("Kennwerte", shown.join(" · ")));
 		}
-		summary.addItem(line("Baustelle", [site.street.getValue().trim(), [site.postalCode.getValue().trim(), site.city.getValue().trim()].filter(Boolean).join(" ")].filter(Boolean).join(", ")));
+		summary.addItem(line("Baustelle", `${addressLine({ street: site.street.getValue(), postalCode: site.postalCode.getValue(), city: site.city.getValue() })}${
+			siteMode.getSelectedKey() === "customer" ? " (wie Kundenanschrift)" : ""}`));
+		if (addressHint.getVisible()) summary.addItem(line("Hinweis", addressHint.getText()));
 	};
 
 	const wizard = new Wizard("newBauakteWizard", {
@@ -308,7 +458,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		c.email.setValueStateText("Bitte eine gültige E-Mail-Adresse angeben.");
 		const pendingDuplicates = !existing && candidates.length > 0 && checkedFor === fingerprint() && !forceNew.getSelected();
 		customerStep.setValidated(!!f.name && emailOk && !pendingDuplicates);
-		const missing = kennwerte?.missing() ?? [];
+		const missing = [...(kennwerte?.missing() ?? []), ...(weitere?.missing() ?? [])];
 		projectStep.setValidated(!!title.getValue().trim() && missing.length === 0);
 		updateButtons();
 	}
@@ -341,6 +491,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 				stepIndex = index;
 			}
 			if (index === 2) fillSummary();
+			if (index === 1) prepareSite();
 			if (index === 1 && !title.getValue()) setTimeout(() => title.focus(), 50);
 			updateButtons();
 		};
@@ -360,12 +511,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 				if (!existing && checkedFor !== fingerprint()) {
 					dialog.setBusy(true);
 					try {
-						const found = await get<DuplicateCandidate[]>("contacts/duplicates", {
-							name: f.name, street: f.street, postalCode: f.postalCode, city: f.city, phone: f.phone, email: f.email,
-						});
-						checkedFor = fingerprint();
-						showDuplicates(found);
-						validate();
+						clearTimeout(dupTimer);
+						const found = await runDuplicates();
 						if (found.length > 0) return;
 					} catch (error) {
 						strip.setText(problemMessage(error));
@@ -401,7 +548,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					postalCode: site.postalCode.getValue().trim() || null, city: site.city.getValue().trim() || null,
 					description: site.description.getValue().trim() || null, status,
 					templateKey: template.getSelectedKey() || null,
-					...(schema && kennwerte ? writeValues(schema, kennwerte.read(), null) : {}),
+					...(schema && kennwerte ? writeValues(schema, readKennwerte(), null) : {}),
 				});
 				const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
 				for (const [index, room] of (chosenTemplate?.content.rooms ?? []).entries()) {
@@ -411,6 +558,10 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 						screedTypeId: null, thicknessMillimeters: room.thicknessMillimeters ?? null, insulationMillimeters: null,
 						underfloorHeating: !!room.underfloorHeating, status: "planned", notes: null, sortOrder: index,
 					});
+				}
+				if (responsible.getSelectedKey()) {
+					// Zuständigkeit wie beim Bearbeiten setzen (mit Benachrichtigung); ein Fehler hier verhindert die Anlage nicht.
+					result = await saveBauakte(result, { responsibleUserId: responsible.getSelectedKey() }).catch(() => result!);
 				}
 				if (inspectNow.getSelected()) (result as BauakteDetail & { startInspection?: boolean }).startInspection = true;
 				MessageToast.show(status === "inquiry" ? "Anfrage angelegt" : "Bauakte angelegt");

@@ -67,7 +67,18 @@
 							<core:Title text="Nummernkreis"/>
 							<Label text="Aufbau der Aktennummer" labelFor="setPattern"/>
 							<Input id="setPattern" value="{view>/s/numbering/bauaktePattern}" maxLength="40" valueLiveUpdate="true"
-								description="z. B. {JJJJ}-{NNN} → {view>/patternExample}"/>
+								description="→ {view>/patternExample}"/>
+							<core:Title text="Nummernkreis Kunden"/>
+							<Label text="" visible="{= !!${view>/customerHint} }"/>
+							<MessageStrip text="{view>/customerHint}" type="{view>/customerHintType}" showIcon="true" visible="{= !!${view>/customerHint} }"/>
+							<Label text="Aufbau der Kundennummer" labelFor="setCustomerPattern"/>
+							<Input id="setCustomerPattern" value="{view>/s/numbering/customerPattern}" maxLength="30" valueLiveUpdate="true"
+								description="{view>/customerPatternHint}"/>
+							<Label text="Nächste Kundennummer" labelFor="setCustomerNext"/>
+							<Input id="setCustomerNext" value="{view>/customerNext}" maxLength="9" valueLiveUpdate="true" type="Number"
+								description="→ {view>/customerExample}"/>
+							<Label text=""/>
+							<Text text="{view>/customerHelp}" class="eoHelpText"/>
 							<core:Title text="Vorgaben für neue Bauakten"/>
 							<Label text="Hinweis „Erstbegehung fehlt“"/><Switch state="{view>/s/bauakte/warnMissingInspection}" customTextOn=" " customTextOff=" "/>
 							<Label text="Vorgeschlagene Vorlage" labelFor="setTemplate"/>

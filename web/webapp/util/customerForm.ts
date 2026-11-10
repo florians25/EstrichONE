@@ -2,6 +2,7 @@
 import { get, post, put } from "./api";
 import { KEEP_OPEN, openForm } from "./forms";
 import { uuidv7 } from "./ids";
+import { session } from "./session";
 import type { DuplicateCandidate } from "./bauakteWizard";
 import type { ContactAddress, ContactEmail, ContactPhone, ContactResponse } from "./models";
 
@@ -27,7 +28,8 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 			{ key: "salutation", label: "Anrede", type: "combo", maxLength: 30, options: ["Herr", "Frau", "Familie", "Firma", "Eheleute"].map((t) => ({ key: t, text: t })) },
 			{ key: "title", label: "Titel", maxLength: 50, placeholder: "z. B. Dr." },
 			{ key: "name", label: "Name", required: true, maxLength: 200 },
-			{ key: "customerNumber", label: "Kundennummer", maxLength: 50 },
+			{ key: "customerNumber", label: "Kundennummer", maxLength: 50, editable: session.has("settings.manage"),
+				placeholder: "wird automatisch vergeben", help: session.has("settings.manage") ? undefined : "Aus dem Nummernkreis; Änderung nur mit dem Recht für Einstellungen." },
 			{ key: "sAddress", label: "Anschrift", type: "section" },
 			{ key: "street", label: "Straße", maxLength: 200 },
 			{ key: "postalCode", label: "PLZ", maxLength: 10 },

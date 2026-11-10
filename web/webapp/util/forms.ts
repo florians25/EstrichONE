@@ -518,6 +518,12 @@ export const phoneKinds: Option[] = [
 	{ key: "fax", text: "Fax" }, { key: "private", text: "Privat" },
 ];
 
+/** Listenfeld für eigene Dialoge (Kundenanlage): Telefonnummern bzw. E-Mail-Adressen mit Art und Bezeichnung. */
+export function contactListField(id: string, type: "phones" | "emails", initial: unknown, notify: (v: unknown) => void):
+	{ control: Control; read: () => unknown; write: (v: unknown) => void } {
+	return listField(id, { key: type, type }, initial, notify);
+}
+
 /** Mehrere Telefonnummern (Art, Nummer, Bezeichnung) bzw. E-Mail-Adressen (Adresse, Bezeichnung) mit Hinzufügen/Entfernen. */
 function listField(id: string, field: Field, initial: unknown, notify: (v: unknown) => void): Bound {
 	const phones = field.type === "phones";

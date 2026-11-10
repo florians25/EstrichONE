@@ -353,7 +353,7 @@
 .eoContactLines { gap: 0.375rem; }
 .eoContactLine { gap: 0.625rem; min-width: 0; }
 .eoContactLineIcon { color: var(--sapContent_IconColor); margin-top: 0.125rem; flex: none; }
-.eoContactLineText { min-width: 0; }
+.eoContactLineText { min-width: 0; flex: 1 1 auto; }
 .eoContactLineText .sapMLnk, .eoContactLineText .sapMText { overflow-wrap: anywhere; }
 .eoContactLineLabel.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
 .eoContactNote { margin-top: 0.5rem; color: var(--sapContent_LabelColor); }
@@ -1072,3 +1072,19 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 	.eoMediaViewerBody { flex-direction: column; }
 	.eoMediaViewerSide { width: 100%; height: auto; max-height: 40%; }
 }
+
+/* ===== Kundenakte, Kundenanlage, Bauaktenanlage ===== */
+.eoCustomerHead { display: flex; flex-direction: column; gap: 0.75rem; }
+.eoCustomerFacts { gap: 0.5rem 2rem; }
+.eoCustomerFacts > .sapMVBox { min-width: 10rem; max-width: 24rem; }
+.eoCustomerContacts { gap: 1rem; align-items: flex-start; }
+.eoCustomerContactList { flex: 1 1 22rem; min-width: 0; }
+.eoDupBox:not(:empty) { margin-bottom: 0.5rem; }
+.eoDupBox .sapMList { border: 1px solid var(--sapList_BorderColor); border-radius: var(--sapElement_BorderCornerRadius); margin-top: 0.25rem; }
+.eoWizardPanel { margin-top: 0.5rem; }
+.eoWizardPanel > .sapMPanelContent { padding: 0; }
+/* Kontakte der Bauakte: Schnellaktionen je Karte, Kopieren je Zeile. */
+.eoContactActions { gap: 0.125rem; }
+.eoContactActionsEnd { margin-left: auto; display: flex; align-items: center; }
+.eoContactLine .eoContactCopy { margin-left: auto; flex: none; opacity: 0.55; }
+.eoContactLine:hover .eoContactCopy, .eoContactLine .eoContactCopy:focus-within { opacity: 1; }
