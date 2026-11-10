@@ -51,8 +51,18 @@
 					</f:header>
 					<f:content>
 						<VBox width="100%">
-							<IllustratedMessage illustrationType="sapIllus-NoTasks" illustrationSize="Dot" visible="{= !${dc>/latest} }"
-								title="{i18n>inspections.noneInitial}" description="{i18n>inspections.noneInitialText}" enableVerticalResponsiveness="true"/>
+							<IllustratedMessage illustrationType="sapIllus-NoTasks" illustrationSize="Dot" visible="{= ${dc>/initialState} === 'open' }"
+								title="{i18n>inspections.noneInitial}" description="{i18n>inspections.noneInitialText}" enableVerticalResponsiveness="true">
+								<additionalContent>
+									<Button id="waiveInitialButton" text="{i18n>inspections.waive}" icon="sap-icon://decline" press=".onWaiveInitial"
+										visible="{= ${session>/permissions/bauakten.edit} === true }"/>
+								</additionalContent>
+							</IllustratedMessage>
+							<VBox id="waiverBox" class="sapUiSmallMargin" visible="{= ${dc>/initialState} === 'waived' }">
+								<MessageStrip id="waiverStatus" text="{dc>/waiverText}" type="Information" showIcon="true"/>
+								<Button id="undoWaiverButton" text="{i18n>inspections.waiveUndo}" icon="sap-icon://undo" type="Transparent" press=".onUndoWaiver"
+									class="sapUiTinyMarginTop" visible="{= ${session>/permissions/bauakten.edit} === true }"/>
+							</VBox>
 							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="2" columnsL="2" columnsM="1" visible="{= !!${dc>/latest} }"
 								labelSpanXL="5" labelSpanL="5" labelSpanM="5">
 								<core:Title text="{i18n>inspections.essentials}"/>

@@ -31,6 +31,7 @@ import { bauakteGroup, chatStatus, createBauakteGroup, type ChatBauakteGroup } f
 import { openActivityDialog } from "../../util/activityDialog";
 import { runAcceptance } from "../../util/acceptanceFlow";
 import { openInitialInspectionWizard } from "../../util/inspectionWizard";
+import { askWaiveInitialInspection } from "../../util/inspectionWaiverDialog";
 import { openArchiveProof } from "../../util/archiveProof";
 import { akteContextOf } from "../../util/akteHeader";
 import { catalog, textBlocks, type BauakteTemplate, type TextBlock } from "../../util/catalog";
@@ -279,9 +280,15 @@ export default class ObjectController extends BaseController {
 		EventBus.getInstance().publish("bauakte", "side", { id: b.id });
 	}
 
+	/** Am Hinweis „Erstbegehung fehlt“: als nicht erforderlich vermerken. */
+	async onWaiveInitialInspection(): Promise<void> {
+		if (await askWaiveInitialInspection(this.id)) this.toast("Vermerkt: Keine Erstbegehung erforderlich");
+	}
+
 	private async loadHints(): Promise<void> {
 		const hints = await get<BauakteHint[]>(`bauakten/${this.id}/hints`).catch(() => [] as BauakteHint[]);
 		this.m().setProperty("/hints", hints.map((h) => ({ text: h.text.replace(/\.$/, ""), type: hintTypes[h.severity] ?? "Information" })));
+		this.m().setProperty("/inspectionMissing", hints.some((h) => h.kind === "initial_inspection_missing"));
 		void get<{ items: unknown[] }>("documents", { bauakteId: this.id, approval: "pending" })
 			.then((r) => this.m().setProperty("/approvalsText", r.items.length ? `${r.items.length} Freigabe${r.items.length === 1 ? "" : "n"} ausstehend` : ""))
 			.catch(() => this.m().setProperty("/approvalsText", ""));

@@ -100,7 +100,9 @@ export default class Overview extends SectionBase {
 				m.setProperty("/inspectionValue", initial ? "✓" : "–");
 				m.setProperty("/inspectionScale", "");
 				m.setProperty("/inspectionColor", "Neutral");
-				m.setProperty("/inspectionFooter", initial ? `Erstbegehung ${dateTime(initial.performedAt)}` : "Erstbegehung noch nicht ausgeführt");
+				const waived = !initial && !!this.bauakte()?.initialInspectionWaived;
+				m.setProperty("/inspectionFooter", initial ? `Erstbegehung ${dateTime(initial.performedAt)}`
+					: waived ? "Keine Erstbegehung erforderlich" : "Erstbegehung noch nicht ausgeführt");
 			}
 		}
 		if (planning.status === "fulfilled" && planning.value) {

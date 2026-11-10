@@ -19,6 +19,9 @@ import { runAcceptance, showAcceptanceLink } from "../../../util/acceptanceFlow"
 import { akteContextOf } from "../../../util/akteHeader";
 import { openPreview } from "../../../util/previewDialog";
 import { post } from "../../../util/api";
+import { initialInspectionState, waiverText } from "../../../util/inspectionWaiver";
+import { askWaiveInitialInspection, setInitialInspectionWaiver } from "../../../util/inspectionWaiverDialog";
+import type { BauakteDetail } from "../../../util/models";
 
 interface AcceptanceDto {
 	id: string;
@@ -166,6 +169,7 @@ export default class Documentation extends SectionBase {
 		m.setProperty("/latestResult", latest ? inspectionResult(latest) : null);
 		m.setProperty("/checks", latest && !latest.notRequired ? Object.keys(checkTitles).map((k) => ({ title: checkTitles[k], result: latest.checks[k] ?? null })) : []);
 		m.setProperty("/latestPhotos", this.photoRefs(latest?.photoFileIds));
+		this.showWaiver(this.bauakte(), all);
 		m.setProperty("/initialOlder", initial.slice(1).map((i) => ({ ...i, resultText: inspectionResult(i).text, resultTone: inspectionResult(i).tone })));
 		m.setProperty("/screeds", [...new Set((rooms?.rooms ?? []).map((r) => r.screedTypeName).filter(Boolean))].join(", "));
 		m.setProperty("/areaText", rooms ? area(rooms.totalAreaSquareMeters) : "–");
@@ -262,6 +266,30 @@ export default class Documentation extends SectionBase {
 	}
 
 	// Prüfungen
+
+	/** „Erstbegehung nicht erforderlich“: Schaltfläche nur ohne erfasste Erstbegehung, sonst Vermerk mit „Rückgängig“. */
+	private showWaiver(b: BauakteDetail | null | undefined, inspections: Inspection[]): void {
+		const state = initialInspectionState(b, inspections);
+		this.dc().setProperty("/initialState", state);
+		this.dc().setProperty("/waiverText", state === "waived" ? waiverText(b) : "");
+	}
+
+	protected onBauakteUpdated(b: BauakteDetail): void {
+		this.showWaiver(b, (this.dc().getProperty("/initial") as Inspection[] | undefined) ?? []);
+	}
+
+	async onWaiveInitial(): Promise<void> {
+		if (await askWaiveInitialInspection(this.bauakteId)) this.toast("Vermerkt: Keine Erstbegehung erforderlich");
+	}
+
+	async onUndoWaiver(): Promise<void> {
+		try {
+			await setInitialInspectionWaiver(this.bauakteId, false);
+			this.toast("Vermerk aufgehoben. Die Erstbegehung ist wieder offen.");
+		} catch (error) {
+			this.showError(error);
+		}
+	}
 
 	private async initialForm(corrects: Inspection | null): Promise<void> {
 		const saved = await openInitialInspectionWizard({ bauakteId: this.bauakteId, photos: [...this.photos], corrects });

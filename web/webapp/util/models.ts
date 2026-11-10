@@ -94,6 +94,12 @@ export interface BauakteDetail extends BauakteListItem {
   cancellationReason: string | null;
   /** Kennwerte des Bauvorhabens (Sync-Feld „project“). */
   project?: BauakteProject | null;
+  /** „Erstbegehung nicht erforderlich“ (wer/wann setzt der Server). Ältere Server liefern die Felder nicht. */
+  initialInspectionWaived?: boolean;
+  initialInspectionWaivedReason?: string | null;
+  initialInspectionWaivedByUserId?: string | null;
+  initialInspectionWaivedByName?: string | null;
+  initialInspectionWaivedAt?: string | null;
 }
 
 export type BauakteHintSeverity = "info" | "success" | "warning" | "danger";

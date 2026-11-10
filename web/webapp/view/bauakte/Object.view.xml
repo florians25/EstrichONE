@@ -105,6 +105,8 @@
 						<customData><core:CustomData key="role" value="listitem" writeToDom="true"/></customData>
 					</ObjectStatus>
 				</HBox>
+				<Button id="waiveInitialHintButton" text="{i18n>inspections.waive}" icon="sap-icon://decline" type="Transparent" press=".onWaiveInitialInspection"
+					visible="{= !!${akte>/inspectionMissing} &amp;&amp; ${session>/permissions/bauakten.edit} === true }"/>
 			</HBox>
 			<FlexBox class="eoHeadRow" alignItems="Start" justifyContent="SpaceBetween" width="100%">
 				<FlexBox class="eoHeadFields" wrap="Wrap">
