@@ -42,7 +42,7 @@ test('Ersteinrichtung über Nginx Proxy Manager mit abweichender Domain', async 
   });
   await page.goto('/anmelden');
   await expect(page.getByText('EstrichONE ist noch nicht eingerichtet.')).toBeVisible();
-  await page.getByRole('link', { name: 'Jetzt einrichten' }).click();
+  await page.getByRole('link', { name: 'Einrichtung starten' }).click();
   await page.getByLabel('Einrichtungscode').fill(setupCode);
   await page.getByLabel('Firmenname').fill('Estrichbau Proxy GmbH');
   await page.getByLabel('Name', { exact: true }).fill('Anna Admin');
