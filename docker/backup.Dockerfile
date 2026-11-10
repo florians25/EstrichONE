@@ -4,7 +4,7 @@
 # Basis-Images mit Digest gepinnt (Dependabot aktualisiert, Trivy prüft in .github/workflows/infra.yml).
 FROM restic/restic:0.19.1@sha256:136600b6ff6843d61d355f7f71f460a166429f35de6fd11b568fece3c9a4d510 AS restic
 
-FROM postgres:17.11-alpine@sha256:266d3c257594e195b309ae9d1805e54c788f1d7b375f56bf6c367aac6c917e7b
+FROM postgres:17.11-alpine@sha256:3540c0362c809df084ffac0ae69fe794515f9de92692f02178bcdce0ef0302ac
 COPY --from=restic /usr/bin/restic /usr/local/bin/restic
 # SSH-Client für SFTP-Sicherungsziele; curl und openssl für das Prüfen der CA eines Backup-Ziels (Wiederherstellung).
 # Sicherheitsupdates des Basissystems; gosu (Rechtewechsel des Postgres-Einstiegs, mit altem Go gebaut) wird hier nicht
