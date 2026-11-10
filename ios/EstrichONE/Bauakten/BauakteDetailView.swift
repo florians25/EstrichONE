@@ -94,6 +94,12 @@ struct BauakteDetailView: View {
         .task(id: model.active?.sync?.revision) { await reload() }
         .task {
             try? await model.active?.service?.markOpened(bauakteId)
+            // Recht „Bauakte bearbeiten“ und Einstellung „Hinweis Erstbegehung fehlt“ einmal frisch laden (danach zwischengespeichert).
+            if let store = model.active?.sync?.store {
+                _ = await MyPermissions(store: store).load(using: model.active?.client)
+                _ = await InspectionHintSetting(store: store).load(using: model.active?.client)
+                await reload()
+            }
             // Namen für Verfasser und Zuständige; danach neu anzeigen.
             if !(await DirectoryCache.load(model)).isEmpty { await reload() }
         }
@@ -178,7 +184,8 @@ struct BauakteDetailView: View {
     private func highlights(_ content: BauakteContent) -> some View {
         let bauakte = content.bauakte
         let warnings = Array(Set(content.todayAssignments.flatMap(\.warnings))).sorted()
-        let inspectionMissing = InitialInspectionState.showsMissingHint(bauakte: bauakte, inspections: content.inspections)
+        let inspectionMissing = InitialInspectionState.showsMissingHint(bauakte: bauakte, inspections: content.inspections,
+                                                                        enabled: content.warnMissingInspection)
         if bauakte.status == .cancelled || statusError != nil || !content.pinnedNotes.isEmpty || !warnings.isEmpty || inspectionMissing {
             VStack(spacing: Space.s) {
                 if bauakte.status == .cancelled {
@@ -196,7 +203,7 @@ struct BauakteDetailView: View {
                 if inspectionMissing {
                     // Hinweiskarte wie im Büro: am Hinweis direkt als nicht erforderlich vermerken.
                     Callout(tone: .warning, message: InitialInspectionState.missingText, symbol: "checklist",
-                            actionTitle: InitialInspectionState.waiveButtonTitle) { waivingInspection = true }
+                            actionTitle: content.canEditBauakte ? InitialInspectionState.waiveButtonTitle : nil) { waivingInspection = true }
                         .accessibilityIdentifier("initialInspectionHint")
                 }
             }

@@ -22,6 +22,10 @@ struct BauakteContent {
     var assignments: [Assignment] = []
     /// Namen für Verfasser und Zuständige.
     var names: [UUID: String] = [:]
+    /// Einstellung „Hinweis Erstbegehung fehlt“ des Büros (zwischengespeichert).
+    var warnMissingInspection = true
+    /// Recht „Bauakte bearbeiten“ (nur für die Oberfläche; der Server prüft selbst).
+    var canEditBauakte = false
 
     var openItems: [WorkItem] { workItems.filter { !$0.isDone } }
     var openDefects: Int { openItems.filter { $0.kind == .defect }.count }
@@ -48,6 +52,8 @@ struct BauakteContent {
         content.parties = (try? await service.parties(of: id)) ?? []
         content.customer = if let customerId = bauakte.customerId { try? await service.contact(customerId) } else { nil }
         if let store = model.active?.sync?.store {
+            content.warnMissingInspection = await InspectionHintSetting(store: store).cached()
+            content.canEditBauakte = await MyPermissions(store: store).cached().contains("bauakten.edit")
             let today = CalendarDay.string(.now)
             content.assignments = (await MyPlanning(store: store).cached())?.range.assignments
                 .filter { $0.bauakteId == id && $0.day >= today }

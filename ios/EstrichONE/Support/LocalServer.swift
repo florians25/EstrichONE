@@ -289,6 +289,9 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             guard parts.count == 8 else { return problem(404, "NOT_FOUND", "Nicht gefunden") }
             return json(200, parts[7] == "order" ? planning.order(crewId: parts[4].lowercased(), day: parts[6], body: body)
                                                  : planning.swap(crewId: parts[4].lowercased(), day: parts[6], body: body))
+        case "/api/v1/settings" where demo != nil:
+            // Einstellungen wie der Server (nur der Teil, den die App liest).
+            return json(200, ["settings": ["bauakte": ["warnMissingInspection": true]], "version": 1])
         case "/api/v1/access/me/permissions" where demo != nil:
             // Demo als Bauleiter mit Planung und IT-Bearbeitung, damit alle Funktionen sichtbar sind.
             return json(200, ["bauakten.read", "bauakten.edit", "bauakten.create", "contacts.read", "planning.read", "planning.manage",

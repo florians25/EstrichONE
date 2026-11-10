@@ -49,7 +49,8 @@ extension View {
 /// Vermerk „Keine Erstbegehung erforderlich (Name, Datum, Begründung)“ mit „Rückgängig“.
 struct InitialInspectionWaiverRow: View {
     let bauakte: Bauakte
-    let undo: () -> Void
+    /// `nil` ohne Recht „Bauakte bearbeiten“: nur anzeigen.
+    let undo: (() -> Void)?
 
     var body: some View {
         VStack(alignment: .leading, spacing: Space.s) {
@@ -63,10 +64,12 @@ struct InitialInspectionWaiverRow: View {
                     .foregroundStyle(Theme.textSecondary)
             }
             .accessibilityIdentifier("initialInspectionWaiver")
-            Button(InitialInspectionState.undoTitle, systemImage: "arrow.uturn.backward", action: undo)
-                .font(Typo.subheadStrong)
-                .foregroundStyle(Theme.accent)
-                .accessibilityIdentifier("undoWaiverButton")
+            if let undo {
+                Button(InitialInspectionState.undoTitle, systemImage: "arrow.uturn.backward", action: undo)
+                    .font(Typo.subheadStrong)
+                    .foregroundStyle(Theme.accent)
+                    .accessibilityIdentifier("undoWaiverButton")
+            }
         }
         .padding(.vertical, Space.xs)
     }

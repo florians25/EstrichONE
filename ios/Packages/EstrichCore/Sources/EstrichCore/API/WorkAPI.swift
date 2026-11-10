@@ -53,6 +53,12 @@ public struct MyPermissions: Sendable {
 
     public init(store: LocalStore) { self.store = store }
 
+    /// Zuletzt geladener Stand ohne Serverabfrage (leer, solange noch nie geladen).
+    public func cached() async -> Set<String> {
+        let cached = (try? await store.meta("my_permissions")) ?? nil
+        return Set((cached ?? "").split(separator: ",").map(String.init))
+    }
+
     public func load(using client: AuthorizedClient?) async -> Set<String> {
         if let client, let fresh = try? await client.myPermissions() {
             try? await store.setMeta("my_permissions", fresh.joined(separator: ","))
@@ -60,5 +66,35 @@ public struct MyPermissions: Sendable {
         }
         let cached = (try? await store.meta("my_permissions")) ?? nil
         return Set((cached ?? "").split(separator: ",").map(String.init))
+    }
+}
+
+/// Einstellung „Hinweis Erstbegehung fehlt“ des Büros (`GET settings`, für alle Angemeldeten lesbar), zwischengespeichert
+/// für den Offline-Betrieb. Ohne Angabe eingeschaltet (wie auf dem Server).
+public struct InspectionHintSetting: Sendable {
+    public let store: LocalStore
+
+    public init(store: LocalStore) { self.store = store }
+
+    struct Response: Decodable, Sendable {
+        struct Settings: Decodable, Sendable {
+            struct BauakteSettings: Decodable, Sendable { let warnMissingInspection: Bool? }
+            let bauakte: BauakteSettings?
+        }
+        let settings: Settings?
+    }
+
+    public func cached() async -> Bool {
+        let value = (try? await store.meta("warn_missing_inspection")) ?? nil
+        return value != "false"
+    }
+
+    public func load(using client: AuthorizedClient?) async -> Bool {
+        if let client, let response: Response = try? await client.get("settings") {
+            let enabled = response.settings?.bauakte?.warnMissingInspection ?? true
+            try? await store.setMeta("warn_missing_inspection", enabled ? "true" : "false")
+            return enabled
+        }
+        return await cached()
     }
 }

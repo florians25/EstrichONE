@@ -374,6 +374,10 @@ struct BauakteServiceTests {
         let open = try #require(try await service.bauakte(id))
         #expect(InitialInspectionState(bauakte: open, inspections: []) == .open)
         #expect(InitialInspectionState.showsMissingHint(bauakte: open, inspections: []))
+        #expect(!InitialInspectionState.showsMissingHint(bauakte: open, inspections: [], enabled: false), "Einstellung des Büros ausgeschaltet")
+        #expect(await InspectionHintSetting(store: service.store).cached(), "ohne geladene Einstellung eingeschaltet")
+        try await service.store.setMeta("warn_missing_inspection", "false")
+        #expect(await InspectionHintSetting(store: service.store).cached() == false)
 
         await #expect(throws: BauakteError.tooLong("Begründung")) {
             try await service.waiveInitialInspection(of: id, reason: String(repeating: "x", count: 501))

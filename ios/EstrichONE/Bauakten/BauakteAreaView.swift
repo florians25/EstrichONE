@@ -390,15 +390,17 @@ struct BauakteAreaView: View {
         Section {
             switch InitialInspectionState(bauakte: bauakte, inspections: content.inspections) {
             case .waived:
-                InitialInspectionWaiverRow(bauakte: bauakte) { Task { await resumeInitialInspection() } }
+                InitialInspectionWaiverRow(bauakte: bauakte, undo: content.canEditBauakte ? resumeAction : nil)
             case .open:
                 EmptyStateView(symbol: "checklist", title: "Erstbegehung noch offen",
                                message: "Untergrund, Randdämmung, Heizung und Zufahrt vor Ort prüfen.",
                                actionTitle: "Erstbegehung durchführen", actionSymbol: "checklist") { action = .inspection }
-                Button { waivingInspection = true } label: {
-                    Label(InitialInspectionState.waiveButtonTitle, systemImage: "xmark.circle")
+                if content.canEditBauakte {
+                    Button { waivingInspection = true } label: {
+                        Label(InitialInspectionState.waiveButtonTitle, systemImage: "xmark.circle")
+                    }
+                    .accessibilityIdentifier("waiveInitialInspectionButton")
                 }
-                .accessibilityIdentifier("waiveInitialInspectionButton")
             case .done:
                 EmptyView()
             }
@@ -554,6 +556,10 @@ struct BauakteAreaView: View {
     }
 
     // MARK: Ändern
+
+    private var resumeAction: () -> Void {
+        { Task { await resumeInitialInspection() } }
+    }
 
     /// Vermerk „Erstbegehung nicht erforderlich“ aufheben (offline möglich).
     private func resumeInitialInspection() async {

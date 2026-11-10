@@ -144,9 +144,10 @@ public enum InitialInspectionState: Equatable, Sendable {
         }
     }
 
-    /// Hinweis „Erstbegehung fehlt“ wie auf dem Server: nur bei geplanten und laufenden Bauakten.
-    public static func showsMissingHint(bauakte: Bauakte, inspections: [Inspection]) -> Bool {
-        [.planned, .inProgress].contains(bauakte.status) && InitialInspectionState(bauakte: bauakte, inspections: inspections) == .open
+    /// Hinweis „Erstbegehung fehlt“ wie auf dem Server: nur bei geplanten und laufenden Bauakten und eingeschalteter
+    /// Einstellung „Hinweis Erstbegehung fehlt“ (`enabled`).
+    public static func showsMissingHint(bauakte: Bauakte, inspections: [Inspection], enabled: Bool = true) -> Bool {
+        enabled && [.planned, .inProgress].contains(bauakte.status) && InitialInspectionState(bauakte: bauakte, inspections: inspections) == .open
     }
 
     static func dayText(_ date: Date) -> String {
