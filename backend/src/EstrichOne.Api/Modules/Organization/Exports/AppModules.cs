@@ -82,6 +82,19 @@ public static class AppModules
             NotificationEvents: ["feedback.submitted", "feedback.updated"]),
     ];
 
+    /// <summary>Bereich als Text (wie in Einstellungen › Module der Weboberfläche).</summary>
+    public static string AreaTitle(string area) => area switch
+    {
+        "office" => "Büro",
+        "planning" => "Planung",
+        "material" => "Material",
+        "hr" => "Personal",
+        "site" => "Baustelle und Dokumentation",
+        "service" => "Kommunikation und Service",
+        "core" => "Immer aktiv",
+        _ => area,
+    };
+
     public static AppModuleInfo? Find(string key) => All.FirstOrDefault(m => m.Key == key);
 
     /// <summary>Abschaltbare Module.</summary>

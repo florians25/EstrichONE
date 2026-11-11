@@ -28,11 +28,21 @@ public interface IInstanceProbe
     /// </summary>
     Task<AppPlatformInfo?> CheckAppAsync(string slug, string platform, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Module der Suite mit Zustand (<c>GET /api/v1/system/modules</c> mit Instanz-Schlüssel). <c>null</c>, wenn die
+    /// Suite-Version den Endpunkt noch nicht kennt oder die Instanz keinen Schlüssel hat (404) – dann gilt der Rückfall.
+    /// </summary>
+    Task<ModuleQueryResult> GetModulesAsync(string slug, string token, CancellationToken cancellationToken);
+
     /// <summary>Ersteinrichtung der Suite (<c>POST /api/v1/setup</c>): Firma und erste Admin-Person mit dem Einrichtungscode.</summary>
     Task<NoticePushResult> CompleteSetupAsync(string slug, SuiteSetupRequest request, CancellationToken cancellationToken);
 }
 
 public sealed record NoticePushResult(bool Success, int? StatusCode, string? Error);
+
+/// <summary>Antwort von <c>GET /api/v1/system/modules</c>: Module oder (bei <c>null</c>) der Grund, warum nicht.</summary>
+/// <param name="NotSupported">Die Suite kennt den Endpunkt nicht bzw. hat keinen Instanz-Schlüssel (404): Rückfall auf die Datenbank.</param>
+public sealed record ModuleQueryResult(IReadOnlyList<SuiteModuleState>? Modules, bool NotSupported, string? Error);
 
 public sealed record SuiteSetupAdministrator(string DisplayName, string UserName, string? Email, string Password);
 
@@ -127,6 +137,52 @@ public sealed class HttpInstanceProbe(HttpClient http) : IInstanceProbe
             packageAvailable ? dto?.Download?.Size : null);
     }
 
+    private sealed record ModuleDto(
+        [property: JsonPropertyName("key")] string? Key,
+        [property: JsonPropertyName("title")] string? Title,
+        [property: JsonPropertyName("areaTitle")] string? AreaTitle,
+        [property: JsonPropertyName("area")] string? Area,
+        [property: JsonPropertyName("enabled")] bool Enabled,
+        [property: JsonPropertyName("core")] bool Core);
+
+    private sealed record ModulesDto([property: JsonPropertyName("modules")] IReadOnlyList<ModuleDto>? Modules);
+
+    public async Task<ModuleQueryResult> GetModulesAsync(string slug, string token, CancellationToken cancellationToken)
+    {
+        var uri = new Uri($"http://{InstanceLayout.WebContainer(slug)}:{InstanceLayout.InstanceHttpPort}/api/v1/system/modules");
+        using var request = new HttpRequestMessage(HttpMethod.Get, uri);
+        request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+        try
+        {
+            using var response = await http.SendAsync(request, cancellationToken);
+            if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                return new ModuleQueryResult(null, true, null);
+            }
+
+            if (!response.IsSuccessStatusCode)
+            {
+                var code = (int)response.StatusCode;
+                return new ModuleQueryResult(null, false, code == 401
+                    ? "Die Instanz lehnt den Instanz-Schlüssel ab (HTTP 401) – „Neu konfigurieren“ gleicht ihn an."
+                    : $"HTTP {code}");
+            }
+
+            var dto = await response.Content.ReadFromJsonAsync<ModulesDto>(cancellationToken);
+            var modules = (dto?.Modules ?? [])
+                .Where(m => !string.IsNullOrWhiteSpace(m.Key))
+                .Select(m => new SuiteModuleState(m.Key!, string.IsNullOrWhiteSpace(m.Title) ? m.Key! : m.Title!,
+                    m.AreaTitle ?? m.Area ?? "Weitere", m.Enabled || m.Core, m.Core))
+                .ToList();
+            return new ModuleQueryResult(modules, false, null);
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            return new ModuleQueryResult(null, false, exception.Message);
+        }
+    }
+
     private static string Shorten(string text) => text.Trim() is { Length: > 200 } long_ ? long_[..200] : text.Trim();
 
     public async Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken)
@@ -193,6 +249,43 @@ public sealed class FakeInstanceProbe(IDockerHost docker, InstanceFiles files) :
         PushedNotices[slug] = json;
         return new NoticePushResult(true, 204, null);
     }
+
+    /// <summary>
+    /// Simulation der Modul-Schnittstelle: ab Suite 1.0.15 (bzw. Vorabversionen ab preview.5) mit Katalog und Kernmodulen,
+    /// davor 404 – die Konsole liest dann wie bei älteren Versionen aus der Datenbank. Abgeschaltet sind je Instanz
+    /// dieselben Module wie in der simulierten Datenbank.
+    /// </summary>
+    public async Task<ModuleQueryResult> GetModulesAsync(string slug, string token, CancellationToken cancellationToken)
+    {
+        var env = await files.ReadEnvAsync(slug, cancellationToken);
+        if (!string.Equals(env.GetValueOrDefault("ESTRICHONE_NOTICE_TOKEN"), token, StringComparison.Ordinal))
+        {
+            return new ModuleQueryResult(null, false, "Die Instanz lehnt den Instanz-Schlüssel ab (HTTP 401) – „Neu konfigurieren“ gleicht ihn an.");
+        }
+
+        if (!SupportsModuleApi(env.GetValueOrDefault("ESTRICHONE_VERSION", "0.0.0")))
+        {
+            return new ModuleQueryResult(null, true, null);
+        }
+
+        var disabled = (await docker.ExecAsync(InstanceLayout.PostgresContainer(slug), ["psql", "system_settings"], TimeSpan.FromSeconds(5), cancellationToken)).Output;
+        var stored = SuiteModules.Parse(disabled.Trim());
+        IReadOnlyList<SuiteModuleState> core =
+        [
+            new("bauakten", "Bauakten", "Immer aktiv", true, true),
+            new("contacts", "Kunden und Kontakte", "Immer aktiv", true, true),
+            new("access", "Benutzer und Rechte", "Immer aktiv", true, true),
+            new("settings", "Einstellungen", "Immer aktiv", true, true),
+            new("backup", "Sicherung", "Immer aktiv", true, true),
+        ];
+        return new ModuleQueryResult([.. core, .. stored], false, null);
+    }
+
+    /// <summary>Simulation: Vorabversionen bis preview.4 kennen die Modul-Schnittstelle nicht.</summary>
+    internal static bool SupportsModuleApi(string version) =>
+        !version.Contains("-preview.", StringComparison.Ordinal)
+            ? !Version.TryParse(version.Split('-')[0], out var v) || v >= new Version(1, 0, 15)
+            : int.TryParse(version[(version.LastIndexOf('.') + 1)..], out var preview) && preview >= 5;
 
     public async Task<AppPlatformInfo?> CheckAppAsync(string slug, string platform, CancellationToken cancellationToken)
     {

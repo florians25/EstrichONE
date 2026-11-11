@@ -126,7 +126,9 @@ den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
   (Android/iOS: neueste und Mindestversion, APK vom eigenen Server; eingeschaltete Module).
 - **Mandanten**: Suche (Firma, Kürzel, Domain, Kd.-Nr.), Filter (Zustand, Fehler, veraltet, Sicherung, Zertifikat),
   Spalten bis Zertifikat; **Massenaktionen** für ausgewählte Instanzen (neu starten, jetzt sichern, starten, stoppen) und
-  **Alle aktualisieren** (mit Vorab-Sicherung).
+  **Alle aktualisieren** (mit Vorab-Sicherung): schlägt die **neueste veröffentlichte Version** vor und zeigt vorab, welche
+  Instanzen betroffen sind (Vorschau vom Server, `dryRun`). Nur ältere Instanzen werden aktualisiert, nie zurückgestuft;
+  ist niemand betroffen, bleibt „Aktualisieren“ gesperrt.
 - **Glocke** in der Kopfzeile: offene **Benachrichtigungen** (gestörte Instanz, Sicherung nicht aktuell,
   Speicherkontingent, Zertifikat läuft ab/fehlt, Vorgang fehlgeschlagen, Docker nicht erreichbar, Speicherplatz knapp).
   Ein Befund muss zwei Prüfungen (je 1 Minute) bestehen; Zustellung per E-Mail/Webhook beim Auftreten und beim Beheben.
@@ -143,7 +145,7 @@ den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
 | Übersicht | Zugangsbrief, Einrichtungscode bzw. „Erste Admin-Person jetzt anlegen“, Stammdaten |
 | Betrieb | Container mit Health, CPU, RAM; `/health/ready`, Serverversion; **Domain und Zertifikat** (DNS-Auflösung, Aussteller, gültig bis – echter TLS-Handshake am Proxy, stündlich, bei Problemen alle 5 Minuten) |
 | Ressourcen | Speicher gegen Kontingent, aktive Benutzer gegen Tarif, CPU/RAM |
-| Apps und Module | Android- und iOS-App: neueste Version, Mindestversion, Bezugsquelle (APK vom Server, Store, Link) aus `/api/v1/app-updates/check` (ab Suite 1.0.13); Module der Instanz mit Zustand (aus den Systemeinstellungen, alle 15 Minuten bzw. „Jetzt prüfen“) |
+| Apps und Module | Android- und iOS-App: neueste Version, Mindestversion, Bezugsquelle (APK vom Server, Store, Link) aus `/api/v1/app-updates/check` (ab Suite 1.0.13); **Module der Instanz** mit Bereich und Zustand, Kernmodule als „immer an“ – gemeldet von der Suite selbst (`GET /api/v1/system/modules` mit Instanz-Schlüssel, ab Suite 1.0.15), alle 15 Minuten bzw. „Jetzt prüfen“; Herkunft steht unter der Tabelle |
 | Sicherung | letzter Lauf, Prüfung, Wiederherstellungstest, Archivserver, Backup-Ziele; **Wiederherstellungspunkte** mit „Wiederherstellen …“; Jetzt sichern; Sicherungsschlüssel; **Export herunterladen** |
 | Protokolle, Vorgänge, Technik, Ereignisse | Logs je Dienst mit Filter/Live/Download, Vorgangsprotokolle, Compose-Projekt und Proxy-Ziel, Audit |
 
@@ -232,10 +234,35 @@ Sperren hält in diesem Modus die Weboberfläche der Instanz an (keine eigene Wa
 cd hosting
 dotnet test --solution EstrichOne.Hosting.slnx          # Unit- und Integrationstests (simulierter Docker)
 cd ui && npm ci && npm run build                          # Oberfläche → ui/dist (in wwwroot kopieren)
+npm audit                                                 # 0 Treffer (overrides in package.json, siehe unten)
 Hosting__Docker=fake Hosting__Root=/tmp/hosting dotnet run --project ../src/EstrichOne.Hosting   # Simulation
 npx playwright test                                       # E2E gegen http://localhost:5090
 IMAGE=estrichone/hosting:ci hosting/scripts/integration.sh  # echter Test: Ein-Befehl-Installation, Assistent, Update/Rücknahme, Restore, Deinstallation
 ```
+
+Abhängigkeiten der Oberfläche: Die Werkzeugkette von `@ui5/cli` (Build und Entwicklungsserver, nicht im Image) zieht
+ältere Versionen von `pacote`, `sigstore`, `@sigstore/core`, `glob` und `minimatch` mit bekannten Schwachstellen nach.
+`overrides` in `ui/package.json` heben sie auf die behobenen Versionen (wie in `web/`); Build, Typprüfung,
+Entwicklungsserver und E2E-Tests laufen damit. `npm audit` meldet 0 Treffer. Fällt ein Override nach einem Update der
+UI5-Werkzeuge weg, bitte `npm audit` erneut prüfen.
+
+## Schnittstelle zur Suite (Instanz-Schlüssel)
+
+Die Konsole spricht jede Instanz über deren Edge-Netz direkt an (ohne den öffentlichen Proxy). Ohne Anmeldung:
+`/health/ready`, `/api/v1/server-info`, `/api/v1/app-updates/check`. Mit dem **Instanz-Schlüssel**
+(`ESTRICHONE_NOTICE_TOKEN` in der `.env` der Instanz, in der Suite `EstrichOne__Notices__ManagementToken`,
+`Authorization: Bearer …`):
+
+| Endpunkt | Zweck |
+|---|---|
+| `PUT /api/v1/system/notices` | Ankündigungen und Wartung der Konsole setzen |
+| `GET /api/v1/system/modules` | Modulkatalog mit Name, Bereich, Zustand und Kernmodulen (ab Suite 1.0.15, nur lesend, auch während einer Wartung) |
+
+Ohne konfigurierten Schlüssel antworten beide mit 404, mit falschem Schlüssel mit 401 (Rate-Limit wie die Anmeldung).
+Die Konsole führt deshalb **keine eigene Kopie des Modulkatalogs** mehr: Neue Module erscheinen, sobald die Suite sie
+kennt. Nur bei Suite-Versionen ohne die Schnittstelle (404) liest sie die Schalter wie bisher per `psql` aus
+`system_settings` der Instanz (eingefrorener Katalog dieser Versionen) und sagt das unter der Tabelle („Aus der
+Datenbank gelesen …“). Lehnt die Instanz den Schlüssel ab, steht das ebenfalls dort – „Neu konfigurieren“ gleicht ihn an.
 
 ## Archivserver und Backup-Ziele je Mandant
 

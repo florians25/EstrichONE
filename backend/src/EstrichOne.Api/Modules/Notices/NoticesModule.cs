@@ -77,6 +77,8 @@ public sealed partial class NoticesModule : IModule
             .WithSummary("Systemhinweise vollständig ersetzen – nur Hosting-Konsole (Authorization: Bearer <Instanz-Schlüssel>)")
             .AllowAnonymous().RequireRateLimiting("auth");
 
+        ConsoleModulesEndpoint.Map(api);
+
         // Administratoren der Instanz (Recht settings.manage): eigene Hinweise und Wartung; die der Konsole nur lesen.
         var admin = notices.MapGroup("/admin").RequirePermission(Permissions.SettingsManage);
         admin.MapGet("/", (NoticeStore store, IOptions<NoticeSettings> options, TimeProvider clock) =>
@@ -183,7 +185,8 @@ public sealed partial class NoticesModule : IModule
         return TypedResults.Ok(new SaveAnnouncementResponse(announcement, sent));
     }
 
-    private static bool IsAuthorized(string header, string token)
+    /// <summary>Instanz-Schlüssel der Hosting-Konsole prüfen (zeitkonstant).</summary>
+    internal static bool IsAuthorized(string header, string token)
     {
         const string prefix = "Bearer ";
         if (!header.StartsWith(prefix, StringComparison.Ordinal))

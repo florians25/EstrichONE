@@ -242,7 +242,7 @@ public static class AdministrationEndpoints
                 android = x.Suite?.Android,
                 ios = x.Suite?.Ios,
                 enabledModules = x.Suite?.EnabledModules,
-                moduleCount = x.Suite?.Modules.Count,
+                moduleCount = x.Suite?.SwitchableModules,
                 disabledModules = x.Suite?.Modules.Where(m => !m.Enabled).Select(m => m.Title).ToList(),
                 note = x.Suite is null ? "Noch nicht erhoben (Instanz nicht bereit)." : x.Suite.AppsNote ?? x.Suite.ModulesNote,
             })

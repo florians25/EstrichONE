@@ -7,14 +7,16 @@
 				<ComboBox id="updateAllVersion" value="{update>/version}" items="{update>/versions}" width="100%">
 					<core:Item key="{update>}" text="{update>}" />
 				</ComboBox>
-				<CheckBox text="Vor jeder Aktualisierung sichern (empfohlen)" selected="{update>/backupFirst}" />
-				<CheckBox text="Auch angehaltene Instanzen (Version wird beim nächsten Start aktiv)" selected="{update>/includeStopped}" />
-				<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginTop"
-					text="Betroffen: {update>/affected} Instanz(en)." />
+				<CheckBox text="Vor jeder Aktualisierung sichern (empfohlen)" selected="{update>/backupFirst}" wrapping="true" />
+				<CheckBox text="Auch angehaltene Instanzen (Version wird beim nächsten Start aktiv)" selected="{update>/includeStopped}" wrapping="true" />
+				<Text class="hostingHint sapUiTinyMarginTop"
+					text="Neueste Version: {= ${update>/latest} || 'nicht ermittelbar' } · Standard für neue Instanzen: {update>/defaultVersion}" />
+				<MessageStrip id="updateAllAffected" type="{= ${update>/affected} > 0 ? 'Information' : 'Success' }" showIcon="true" class="sapUiSmallMarginTop"
+					text="{= ${update>/affected} > 0 ? 'Betroffen: ' + ${update>/affected} + ' Instanz(en) – ' + ${update>/affectedNames} : 'Alle Instanzen haben diese oder eine neuere Version.' }" />
 			</VBox>
 		</content>
 		<beginButton>
-			<Button text="Aktualisieren" type="Emphasized" press=".onUpdateAllConfirm" />
+			<Button id="updateAllConfirm" text="Aktualisieren" type="Emphasized" press=".onUpdateAllConfirm" enabled="{= ${update>/affected} > 0 }" />
 		</beginButton>
 		<endButton>
 			<Button text="Abbrechen" press=".onUpdateAllCancel" />

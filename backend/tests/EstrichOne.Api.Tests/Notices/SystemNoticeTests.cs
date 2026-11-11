@@ -174,6 +174,43 @@ public sealed class SystemNoticeEndpointTests(PostgresFixture postgres) : IAsync
     }
 
     [Fact]
+    public async Task Module_FuerDieKonsole_NurMitInstanzSchluessel()
+    {
+        async Task<HttpResponseMessage> GetModulesAsync(string? token)
+        {
+            using var client = _factory.CreateClient();
+            using var request = new HttpRequestMessage(HttpMethod.Get, "/api/v1/system/modules");
+            if (token is not null)
+            {
+                request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+            }
+
+            return await client.SendAsync(request, Ct);
+        }
+
+        (await GetModulesAsync(null)).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await GetModulesAsync("falsch")).StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+
+        using var admin = await _factory.CreateClientAsAsync("chefin", StandardRoles.AdministratorId);
+        (await admin.PutAsJsonAsync("/api/v1/settings/modules", new { modules = new Dictionary<string, bool> { ["helpdesk"] = false } }, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Auch während einer Wartung lesbar (die Konsole prüft dann weiter).
+        var now = _factory.Clock.GetUtcNow();
+        (await PutAsync(new { announcements = Array.Empty<object>(), maintenance = new { startsAt = now.AddMinutes(-1), endsAt = now.AddHours(1), adminsMayWork = false } }, Token))
+            .ShouldBe(HttpStatusCode.NoContent);
+
+        using var response = await GetModulesAsync(Token);
+        response.StatusCode.ShouldBe(HttpStatusCode.OK);
+        var body = (await response.Content.ReadFromJsonAsync<InstanceModulesResponse>(TestJson.Options, Ct))!;
+        body.Modules.Count.ShouldBe(EstrichOne.Api.Modules.Organization.Exports.AppModules.All.Count);
+        var helpdesk = body.Modules.Single(m => m.Key == "helpdesk");
+        (helpdesk.Enabled, helpdesk.Title, helpdesk.AreaTitle).ShouldBe((false, "Helpdesk", "Kommunikation und Service"));
+        body.Modules.Single(m => m.Key == "bauakten").ShouldSatisfyAllConditions(m => m.Core.ShouldBeTrue(), m => m.Enabled.ShouldBeTrue());
+        body.Modules.Single(m => m.Key == "absence").Requires.ShouldBe(["staff"]);
+    }
+
+    [Fact]
     public async Task OhneSchluessel_IstSetzenAbgeschaltet()
     {
         await using var factory = await ApiFactory.CreateMigratedAsync(postgres);
@@ -184,5 +221,9 @@ public sealed class SystemNoticeEndpointTests(PostgresFixture postgres) : IAsync
         };
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "irgendwas");
         (await client.SendAsync(request, Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
+
+        using var modules = new HttpRequestMessage(HttpMethod.Get, "/api/v1/system/modules");
+        modules.Headers.Authorization = new AuthenticationHeaderValue("Bearer", "irgendwas");
+        (await client.SendAsync(modules, Ct)).StatusCode.ShouldBe(HttpStatusCode.NotFound);
     }
 }

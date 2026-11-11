@@ -15,6 +15,7 @@ public sealed partial class StatusService(
     IDockerHost docker,
     IInstanceProbe probe,
     InstanceLayout layout,
+    InstanceFiles files,
     TimeProvider clock,
     IOptions<HostingOptions> options,
     ILogger<StatusService> logger)
@@ -98,7 +99,7 @@ public sealed partial class StatusService(
         }
     }
 
-    /// <summary>Apps (über die Suite, ohne Anmeldung) und Module (direkt aus den Einstellungen in der Datenbank).</summary>
+    /// <summary>Apps (über die Suite, ohne Anmeldung) und Module (über die Suite mit Instanz-Schlüssel, Rückfall Datenbank).</summary>
     private async Task<SuiteInfo> CollectSuiteAsync(string slug, bool postgresRunning, DateTime now, CancellationToken cancellationToken)
     {
         AppPlatformInfo? android = null, ios = null;
@@ -118,29 +119,55 @@ public sealed partial class StatusService(
             appsNote = $"App-Stand nicht abrufbar: {exception.Message}";
         }
 
-        IReadOnlyList<SuiteModuleState> modules = [];
-        string? modulesNote = null;
-        if (postgresRunning)
+        var (modules, modulesNote, source) = await CollectModulesAsync(slug, postgresRunning, cancellationToken);
+        return new SuiteInfo(now, android, ios, appsNote, modules, modulesNote, source);
+    }
+
+    /// <summary>
+    /// Module über die Schnittstelle der Suite (<c>GET /api/v1/system/modules</c> mit Instanz-Schlüssel). Nur wenn die
+    /// Suite-Version sie noch nicht kennt (404) oder sie nicht antwortet, liest die Konsole wie bisher direkt aus der Datenbank.
+    /// </summary>
+    private async Task<(IReadOnlyList<SuiteModuleState> Modules, string? Note, string? Source)> CollectModulesAsync(
+        string slug, bool postgresRunning, CancellationToken cancellationToken)
+    {
+        string? apiProblem = null;
+        var token = (await files.ReadEnvAsync(slug, cancellationToken)).GetValueOrDefault("ESTRICHONE_NOTICE_TOKEN");
+        if (string.IsNullOrEmpty(token))
         {
-            var result = await docker.ExecAsync(InstanceLayout.PostgresContainer(slug),
-                ["psql", "-U", "estrichone", "-d", "estrichone", "-tAc", "SELECT coalesce((data->'modules')::text, '{}') FROM system_settings LIMIT 1"],
-                TimeSpan.FromSeconds(20), cancellationToken);
-            try
-            {
-                modules = result.Success ? SuiteModules.Parse(result.Output.Trim()) : [];
-                modulesNote = result.Success ? null : "Module nicht lesbar (ältere Suite-Version oder Datenbank nicht bereit).";
-            }
-            catch (System.Text.Json.JsonException)
-            {
-                modulesNote = "Module nicht lesbar (unerwartetes Format).";
-            }
+            apiProblem = "Instanz hat noch keinen Instanz-Schlüssel („Neu konfigurieren“ legt ihn an).";
         }
         else
         {
-            modulesNote = "Datenbank läuft nicht.";
+            var result = await probe.GetModulesAsync(slug, token, cancellationToken);
+            if (result.Modules is { } fromSuite)
+            {
+                return (fromSuite, null, ModuleSources.Suite);
+            }
+
+            apiProblem = result.NotSupported ? null : $"Schnittstelle der Suite: {result.Error}";
         }
 
-        return new SuiteInfo(now, android, ios, appsNote, modules, modulesNote);
+        if (!postgresRunning)
+        {
+            return ([], apiProblem ?? "Datenbank läuft nicht.", null);
+        }
+
+        var fallback = await docker.ExecAsync(InstanceLayout.PostgresContainer(slug),
+            ["psql", "-U", "estrichone", "-d", "estrichone", "-tAc", "SELECT coalesce((data->'modules')::text, '{}') FROM system_settings LIMIT 1"],
+            TimeSpan.FromSeconds(20), cancellationToken);
+        var origin = apiProblem is null
+            ? "Aus der Datenbank gelesen (diese Suite-Version meldet die Module noch nicht selbst, ab 1.0.15)."
+            : $"Aus der Datenbank gelesen. {apiProblem}";
+        try
+        {
+            return fallback.Success
+                ? (SuiteModules.Parse(fallback.Output.Trim()), origin, ModuleSources.Database)
+                : ([], apiProblem ?? "Module nicht lesbar (ältere Suite-Version oder Datenbank nicht bereit).", null);
+        }
+        catch (System.Text.Json.JsonException)
+        {
+            return ([], "Module nicht lesbar (unerwartetes Format).", null);
+        }
     }
 
     /// <summary>Der Einrichtungscode steht nur im Protokoll der API (wie beim Suite-Installer).</summary>

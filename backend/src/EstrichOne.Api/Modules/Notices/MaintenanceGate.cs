@@ -14,7 +14,7 @@ namespace EstrichOne.Api.Modules.Notices;
 public sealed class MaintenanceGate(RequestDelegate next)
 {
     private static readonly string[] OpenPrefixes =
-        ["/api/v1/system/notices", "/api/v1/system/health-banner", "/api/v1/server-info", "/api/v1/auth", "/api/v1/setup", "/api/v1/web",
+        ["/api/v1/system/notices", "/api/v1/system/modules", "/api/v1/system/health-banner", "/api/v1/server-info", "/api/v1/auth", "/api/v1/setup", "/api/v1/web",
             "/api/v1/backup/mirror"];
 
     public async Task InvokeAsync(HttpContext context, NoticeStore store, IBackupMonitoring backup)

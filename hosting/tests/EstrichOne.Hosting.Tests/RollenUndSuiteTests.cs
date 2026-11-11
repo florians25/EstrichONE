@@ -155,12 +155,21 @@ public sealed class RollenUndSuiteTests
         suite.GetProperty("android").GetProperty("latestVersion").GetString().ShouldBe("0.1.0");
         suite.GetProperty("android").GetProperty("packageAvailable").GetBoolean().ShouldBeTrue();
         suite.GetProperty("ios").GetProperty("downloadKind").GetString().ShouldBe("store");
-        suite.GetProperty("modules").GetArrayLength().ShouldBeGreaterThanOrEqualTo(SuiteModules.Catalog.Count);
+        // preview.5 meldet die Module selbst (Schnittstelle der Suite, mit Kernmodulen).
+        suite.GetProperty("modulesSource").GetString().ShouldBe(ModuleSources.Suite);
+        suite.GetProperty("modulesNote").ValueKind.ShouldBe(JsonValueKind.Null);
+        var modules = suite.GetProperty("modules").EnumerateArray().ToList();
+        modules.Count(m => m.GetProperty("core").GetBoolean()).ShouldBe(5);
+        modules.Count(m => !m.GetProperty("core").GetBoolean()).ShouldBe(SuiteModules.Catalog.Count);
         detail.GetProperty("latestVersion").GetString().ShouldBe("0.1.0-preview.5");
 
         var old = (await client.GetFromJsonAsync<JsonElement>($"/api/tenants/{alt}", Ct)).GetProperty("suite");
         old.GetProperty("android").ValueKind.ShouldBe(JsonValueKind.Null);
         old.GetProperty("appsNote").GetString()!.ShouldContain("1.0.13");
+        // preview.3 kennt die Schnittstelle nicht: Rückfall auf die Datenbank, mit Hinweis.
+        old.GetProperty("modulesSource").GetString().ShouldBe(ModuleSources.Database);
+        old.GetProperty("modulesNote").GetString()!.ShouldContain("Datenbank");
+        old.GetProperty("modules").GetArrayLength().ShouldBeGreaterThanOrEqualTo(SuiteModules.Catalog.Count);
 
         var dashboard = await client.GetFromJsonAsync<JsonElement>("/api/dashboard", Ct);
         dashboard.GetProperty("latestVersion").GetString().ShouldBe("0.1.0-preview.5");
@@ -177,5 +186,48 @@ public sealed class RollenUndSuiteTests
         modules.First(m => m.Key == "planning").Enabled.ShouldBeTrue();
         modules[^1].Key.ShouldBe("zukunft");
         SuiteModules.Parse("").All(m => m.Enabled).ShouldBeTrue();
+    }
+
+    [Theory]
+    [InlineData("1.0.14", false)]
+    [InlineData("1.0.15", true)]
+    [InlineData("1.1.0", true)]
+    [InlineData("0.1.0-preview.4", false)]
+    [InlineData("0.1.0-preview.5", true)]
+    public void Simulation_KenntModulSchnittstelleAbVersion(string version, bool expected) =>
+        FakeInstanceProbe.SupportsModuleApi(version).ShouldBe(expected);
+
+    private sealed class StubHandler(Func<HttpRequestMessage, HttpResponseMessage> respond) : HttpMessageHandler
+    {
+        public HttpRequestMessage? Last { get; private set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
+        {
+            Last = request;
+            return Task.FromResult(respond(request));
+        }
+    }
+
+    [Fact]
+    public async Task ModulSchnittstelle_MitInstanzSchluessel_UndRueckfallBei404()
+    {
+        const string body = """{"modules":[{"key":"bauakten","area":"core","areaTitle":"Immer aktiv","title":"Bauakten","description":"x","enabled":true,"core":true,"requires":[]},{"key":"helpdesk","area":"service","areaTitle":"Kommunikation und Service","title":"Helpdesk","description":"y","enabled":false,"core":false,"requires":[]},{"key":"neu","area":"zukunft","title":"","enabled":true,"core":false,"requires":[]}]}""";
+        var ok = new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.OK) { Content = new StringContent(body, System.Text.Encoding.UTF8, "application/json") });
+        var result = await new HttpInstanceProbe(new HttpClient(ok)).GetModulesAsync("firma", "geheim", Ct);
+        ok.Last!.RequestUri!.ToString().ShouldEndWith("/api/v1/system/modules");
+        ok.Last.Headers.Authorization!.ToString().ShouldBe("Bearer geheim");
+        result.Modules!.Select(m => (m.Key, m.Title, m.Area, m.Enabled, m.Core)).ShouldBe(
+        [
+            ("bauakten", "Bauakten", "Immer aktiv", true, true),
+            ("helpdesk", "Helpdesk", "Kommunikation und Service", false, false),
+            ("neu", "neu", "zukunft", true, false),
+        ]);
+
+        var old = await new HttpInstanceProbe(new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.NotFound)))).GetModulesAsync("firma", "geheim", Ct);
+        (old.Modules, old.NotSupported).ShouldBe((null, true));
+
+        var denied = await new HttpInstanceProbe(new HttpClient(new StubHandler(_ => new HttpResponseMessage(HttpStatusCode.Unauthorized)))).GetModulesAsync("firma", "geheim", Ct);
+        denied.NotSupported.ShouldBeFalse();
+        denied.Error!.ShouldContain("401");
     }
 }

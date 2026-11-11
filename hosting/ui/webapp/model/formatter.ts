@@ -145,7 +145,12 @@ export default {
 			default: return "Keine Bezugsquelle eingestellt";
 		}
 	},
-	modulesHeader: (modules?: { enabled: boolean }[] | null) =>
-		modules?.length ? `Module (${modules.filter((m) => m.enabled).length} von ${modules.length} eingeschaltet)` : "Module",
+	modulesHeader: (modules?: { enabled: boolean; core?: boolean }[] | null) => {
+		const switchable = (modules ?? []).filter((m) => !m.core);
+		return switchable.length ? `Module (${switchable.filter((m) => m.enabled).length} von ${switchable.length} abschaltbaren eingeschaltet)` : "Module";
+	},
+	/** Herkunft der Modulliste: Schnittstelle der Suite oder Rückfall Datenbank (ältere Versionen). */
+	modulesSourceText: (source?: string | null) =>
+		source === "suite" ? "gemeldet von der Suite" : source === "database" ? "aus der Datenbank gelesen (ältere Suite-Version)" : "",
 	appsShort: (latest?: string | null, minimum?: string | null) => (latest ? `${latest} (mind. ${minimum ?? "–"})` : "–")
 };

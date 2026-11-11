@@ -240,13 +240,15 @@
 									<items>
 										<ColumnListItem>
 											<Text text="{detail>title}" />
-											<ObjectStatus text="{= ${detail>enabled} ? 'eingeschaltet' : 'ausgeschaltet' }" state="{= ${detail>enabled} ? 'Success' : 'None' }"
-												icon="{= ${detail>enabled} ? 'sap-icon://accept' : 'sap-icon://less' }" />
+											<ObjectStatus text="{= ${detail>core} ? 'immer an' : ${detail>enabled} ? 'eingeschaltet' : 'ausgeschaltet' }"
+												state="{= ${detail>enabled} ? 'Success' : 'None' }"
+												icon="{= ${detail>core} ? 'sap-icon://locked' : ${detail>enabled} ? 'sap-icon://accept' : 'sap-icon://less' }" />
 										</ColumnListItem>
 									</items>
 								</Table>
-								<Text text="{detail>/suite/modulesNote}" visible="{= !!${detail>/suite/modulesNote} }" class="hostingHint" />
-								<Text text="Module schaltet die Firma selbst in EstrichONE unter Einstellungen › Module. Stand: {path: 'detail>/suite/collectedAt', formatter: '.formatter.ago'}"
+								<MessageStrip id="modulesNote" text="{detail>/suite/modulesNote}" visible="{= !!${detail>/suite/modulesNote} }" showIcon="true" class="sapUiSmallMarginTop"
+									type="{= ${detail>/suite/modulesSource} === 'database' ? 'Information' : 'Warning' }" />
+								<Text id="modulesSource" text="Module schaltet die Firma selbst in EstrichONE unter Einstellungen › Module. Herkunft: {path: 'detail>/suite/modulesSource', formatter: '.formatter.modulesSourceText'} · Stand: {path: 'detail>/suite/collectedAt', formatter: '.formatter.ago'}"
 									visible="{= !!${detail>/suite} }" class="hostingHint sapUiSmallMarginTop" />
 							</VBox>
 						</uxap:ObjectPageSubSection>

@@ -179,6 +179,25 @@ test.describe.serial('Hosting-Konsole', () => {
     expect(problems).toEqual([]);
   });
 
+  test('Alle aktualisieren: neueste Version vorgeschlagen, Vorschau der betroffenen Instanzen', async ({ page }) => {
+    const problems = watchConsole(page);
+    await login(page);
+    await page.goto('/#/mandanten');
+    await ui(page, 'updateAllButton').click();
+    await expect(ui(page, 'updateAllDialog')).toBeVisible();
+    // Simulierter Katalog: 0.1.0-preview.5 ist die neueste Version, die Instanz läuft mit 0.1.0-preview.4.
+    await expect(input(page, 'updateAllVersion')).toHaveValue('0.1.0-preview.5');
+    await expect(ui(page, 'updateAllAffected')).toContainText('Estrichbau Müller GmbH (0.1.0-preview.4)');
+    await page.screenshot({ path: 'test-results/06d-alle-aktualisieren.png' });
+    // Ältere Zielversion: niemand betroffen (keine Rückstufung), Ausführen gesperrt.
+    await input(page, 'updateAllVersion').fill('0.1.0-preview.3');
+    await input(page, 'updateAllVersion').press('Enter');
+    await expect(ui(page, 'updateAllAffected')).toContainText('diese oder eine neuere Version');
+    await expect(ui(page, 'updateAllConfirm')).toBeDisabled();
+    await ui(page, 'updateAllDialog').getByRole('button', { name: 'Abbrechen' }).click();
+    expect(problems).toEqual([]);
+  });
+
   test('Darstellung: Theme live umschalten und speichern, Logo je Theme', async ({ page }) => {
     const problems = watchConsole(page);
     await login(page);
@@ -250,6 +269,9 @@ test.describe.serial('Hosting-Konsole', () => {
     await expect(ui(viewer, 'actDelete')).toBeHidden();
     await expect(ui(viewer, 'actUpdate')).toBeHidden();
     await expect(ui(viewer, 'moduleTable')).toContainText('Bautagebuch', { timeout: 30_000 });
+    // Simulierte Suite 0.1.0-preview.4 kennt die Modul-Schnittstelle noch nicht: Rückfall auf die Datenbank, mit Hinweis.
+    await expect(ui(viewer, 'modulesNote')).toContainText('Aus der Datenbank gelesen');
+    await expect(ui(viewer, 'modulesSource')).toContainText('aus der Datenbank gelesen (ältere Suite-Version)');
     await viewer.screenshot({ path: 'test-results/11-nur-lesen-instanz.png', fullPage: true });
     // Der Server lehnt Änderungen auch ohne Oberfläche ab.
     const state = await (await viewer.request.get('/api/auth/state')).json();

@@ -120,6 +120,10 @@ suite_login petra "$SUITE_PASSWORD"
 detail="$(api POST "/api/tenants/$TENANT/refresh" | sed '$d')"
 echo "$detail" | jq '{health, setupRequired, runningVersion, problems, containers: [.containers[] | {service, state, health}]}'
 [[ "$(jq -r .health <<<"$detail")" == "Healthy" ]] || fail "Instanz nicht gesund"
+suite="$(api GET "/api/tenants/$TENANT" | sed '$d' | jq .suite)"
+jq '{modulesSource, modulesNote, enabled: [.modules[] | select(.enabled) | .key]}' <<<"$suite"
+jq -e '.modulesSource == "suite" and ([.modules[] | select(.core)] | length) > 0 and ([.modules[] | select(.key == "helpdesk")] | length) == 1' \
+  <<<"$suite" >/dev/null || fail "Module nicht über die Schnittstelle der Suite gemeldet: $suite"
 logs="$(api GET "/api/tenants/$TENANT/logs?service=api&lines=50" | sed '$d')"
 [[ "$(jq -r .count <<<"$logs")" -gt 0 ]] || fail "Keine Protokollzeilen"
 

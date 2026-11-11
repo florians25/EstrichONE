@@ -96,6 +96,7 @@ public sealed record ActionRequest(
     bool? BackupFirst,
     string? Snapshot = null);
 
-public sealed record UpdateAllRequest(string? Version, bool? IncludeStopped, bool? BackupFirst);
+/// <param name="DryRun">Nur ermitteln, welche Instanzen betroffen wären (für die Vorschau im Dialog), nichts einreihen.</param>
+public sealed record UpdateAllRequest(string? Version, bool? IncludeStopped, bool? BackupFirst, bool? DryRun = null);
 
 public sealed record SecretRequest(string? Password);

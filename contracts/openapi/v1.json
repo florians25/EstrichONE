@@ -856,6 +856,30 @@
         ]
       }
     },
+    "/api/v1/system/modules": {
+      "get": {
+        "tags": [
+          "Systemhinweise"
+        ],
+        "summary": "Module der Suite mit Zustand – nur Hosting-Konsole (Authorization: Bearer <Instanz-Schlüssel>)",
+        "operationId": "GetInstanceModules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/InstanceModulesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        }
+      }
+    },
     "/api/v1/system/updates": {
       "get": {
         "tags": [
@@ -33835,6 +33859,62 @@
           "cmMeasurement"
         ]
       },
+      "InstanceModulesResponse": {
+        "required": [
+          "modules"
+        ],
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/InstanceModuleState"
+            }
+          }
+        }
+      },
+      "InstanceModuleState": {
+        "required": [
+          "key",
+          "area",
+          "areaTitle",
+          "title",
+          "description",
+          "enabled",
+          "core",
+          "requires"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "areaTitle": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "core": {
+            "type": "boolean"
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      },
       "JsonElement": {},
       "JsonNode": {},
       "JsonObject": {
@@ -44748,6 +44828,9 @@
       "name": "Material"
     },
     {
+      "name": "Systemhinweise"
+    },
+    {
       "name": "Backup Center"
     },
     {
@@ -44812,9 +44895,6 @@
     },
     {
       "name": "Synchronisation"
-    },
-    {
-      "name": "Systemhinweise"
     },
     {
       "name": "Benachrichtigungen"

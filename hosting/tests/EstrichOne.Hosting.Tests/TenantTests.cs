@@ -196,12 +196,21 @@ public sealed class TenantTests
         await CreateAsync(client, "alt-eins", "Alt Eins", "0.1.0-preview.2");
         await CreateAsync(client, "alt-zwei", "Alt Zwei", "0.1.0-preview.3");
         await CreateAsync(client, "aktuell", "Aktuell", "0.1.0-preview.4");
+        // Vorschau: nur ältere Versionen, nichts eingereiht; eine neuere Instanz würde nie zurückgestuft.
+        await CreateAsync(client, "neuer", "Neuer", "0.1.0-preview.5");
+        var preview = await (await client.PostAsJsonAsync("/api/tenants/update-all", new { version = "0.1.0-preview.4", dryRun = true }, Ct))
+            .Content.ReadFromJsonAsync<JsonElement>(Ct);
+        preview.GetProperty("affected").EnumerateArray().Select(t => t.GetProperty("slug").GetString()).ShouldBe(["alt-eins", "alt-zwei"]);
+        (await client.GetFromJsonAsync<JsonElement>("/api/tenants", Ct)).EnumerateArray()
+            .Count(t => t.GetProperty("openOperation").ValueKind != JsonValueKind.Null).ShouldBe(0);
+
         var response = await client.PostAsJsonAsync("/api/tenants/update-all", new { version = "0.1.0-preview.4" }, Ct);
         (await response.Content.ReadFromJsonAsync<JsonElement>(Ct)).GetProperty("queued").GetInt32().ShouldBe(2);
         for (var i = 0; i < 100; i++)
         {
             var tenants = await client.GetFromJsonAsync<JsonElement>("/api/tenants", Ct);
-            if (tenants.EnumerateArray().All(t => t.GetProperty("version").GetString() == "0.1.0-preview.4" && t.GetProperty("openOperation").ValueKind == JsonValueKind.Null))
+            if (tenants.EnumerateArray().Where(t => t.GetProperty("slug").GetString() != "neuer")
+                    .All(t => t.GetProperty("version").GetString() == "0.1.0-preview.4" && t.GetProperty("openOperation").ValueKind == JsonValueKind.Null))
             {
                 return;
             }

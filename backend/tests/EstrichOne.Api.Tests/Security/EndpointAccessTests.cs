@@ -40,6 +40,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         ["POST /api/v1/tickets/device"] = "token", // Gerät ohne Konto meldet ein Problem (Geräteschlüssel, Rate-Limit)
         ["GET /api/v1/setup/status"] = "public", ["POST /api/v1/setup/"] = "token", // Einrichtungscode, nur einmal
         ["GET /api/v1/system/notices/"] = "public", ["PUT /api/v1/system/notices/"] = "token", // Hosting-Konsole
+        ["GET /api/v1/system/modules"] = "token", // Hosting-Konsole: Modulkatalog mit Zustand
         ["POST /api/v1/backup/mirror/pair"] = "token", ["POST /api/v1/backup/mirror/checkin"] = "token", ["POST /api/v1/backup/mirror/report"] = "token",
         ["GET /api/v1/backup/mirror/repo/config"] = "token", ["GET /api/v1/backup/mirror/repo/{type}/"] = "token",
         ["GET /api/v1/backup/mirror/repo/{type}/{name}"] = "token",

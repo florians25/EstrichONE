@@ -276,7 +276,19 @@ public static partial class TenantEndpoints
                 .ToListAsync(cancellationToken))
             .Where(t => SemanticVersion.IsOlder(t.Version, version))
             .Where(t => request.IncludeStopped == true || t.State != TenantState.Stopped)
+            .OrderBy(t => t.CompanyName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
+        if (request.DryRun == true)
+        {
+            // Vorschau: dieselbe Auswahl wie beim Ausführen (nur ältere Versionen, nie eine Rückstufung).
+            return Results.Ok(new
+            {
+                queued = 0,
+                skipped = Array.Empty<string>(),
+                affected = candidates.Select(t => new { t.Slug, t.CompanyName, t.Version }).ToList(),
+            });
+        }
+
         var queued = 0;
         var skipped = new List<string>();
         foreach (var tenant in candidates)

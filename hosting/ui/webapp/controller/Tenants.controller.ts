@@ -181,23 +181,42 @@ export default class TenantsController extends BaseController {
 			get<{ versions: string[]; latest?: string }>("/api/versions").catch(() => ({ versions: [] as string[], latest: undefined })),
 			get<{ defaultVersion: string }>("/api/settings")
 		]);
-		this.update.setData({ versions: versions.versions, version: settings.defaultVersion, includeStopped: false, backupFirst: true, affected: 0 });
-		this.update.attachPropertyChange(() => this.countAffected());
-		this.countAffected();
+		// Vorschlag: neueste veröffentlichte Version (Instanzverwaltung auf dem neuesten Stand), sonst die Standardversion.
+		const version = versions.latest ?? settings.defaultVersion;
+		this.update.setData({
+			versions: versions.versions, version, latest: versions.latest ?? null, defaultVersion: settings.defaultVersion,
+			includeStopped: false, backupFirst: true, affected: 0, affectedNames: ""
+		});
 		if (!this.updateDialog) {
+			this.update.attachPropertyChange((event) => {
+				const path = event.getParameter("path") as string;
+				if (path === "/version" || path === "/includeStopped") {
+					void this.countAffected();
+				}
+			});
 			this.updateDialog = (await Fragment.load({ id: this.getView()!.getId(), name: "estrichone.hosting.fragment.UpdateAll", controller: this })) as Dialog;
 			this.updateDialog.setModel(this.update, "update");
 			this.getView()!.addDependent(this.updateDialog);
 		}
+		void this.countAffected();
 		this.updateDialog.open();
 	}
 
-	private countAffected(): void {
-		const version = this.update.getProperty("/version") as string;
-		const includeStopped = !!this.update.getProperty("/includeStopped");
-		const items = this.tenants.getProperty("/items") as (TenantItem & { state: string })[];
-		const affected = items.filter((t) => t.version !== version && (includeStopped || t.state !== "Stopped") && t.state !== "Provisioning").length;
-		this.update.setProperty("/affected", affected);
+	/** Vorschau vom Server (gleiche Auswahl wie beim Ausführen: nur ältere Versionen, nie eine Rückstufung). */
+	private async countAffected(): Promise<void> {
+		const { version, includeStopped } = this.update.getData() as { version: string; includeStopped: boolean };
+		try {
+			const preview = await post<{ affected: { companyName: string; version: string }[] }>("/api/tenants/update-all",
+				{ version, includeStopped, dryRun: true });
+			if (this.update.getProperty("/version") !== version) {
+				return; // inzwischen andere Version gewählt
+			}
+			this.update.setProperty("/affected", preview.affected.length);
+			this.update.setProperty("/affectedNames", preview.affected.map((t) => `${t.companyName} (${t.version})`).join(", "));
+		} catch {
+			this.update.setProperty("/affected", 0);
+			this.update.setProperty("/affectedNames", "");
+		}
 	}
 
 	public async onUpdateAllConfirm(): Promise<void> {
