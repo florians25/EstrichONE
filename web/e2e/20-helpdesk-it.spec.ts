@@ -128,7 +128,9 @@ test('Melder bewertet die Lösung', async ({ page }) => {
   await signIn(page, 'l.brandl', 'Estrich-Lukas-2026!');
   await page.goto(`/it-center/helpdesk/${own.summary.id}`);
   await expect(page.getByText('Wie zufrieden sind Sie mit der Lösung?')).toBeVisible();
-  await page.locator('[id$="hdRating"] .sapMRIIcon, [id$="hdRating"] .sapUiIcon').nth(3).click();
+  // Sterne per Tastatur (der Auswahlbereich liegt über den Symbolen).
+  await page.locator('[id$="hdRating"]').focus();
+  for (let i = 0; i < 4; i++) await page.keyboard.press('ArrowRight');
   await page.getByRole('button', { name: 'Bewerten' }).click();
   await expect(toast(page)).toContainText('Danke');
   await expect(page.locator('.eoTimeline')).toContainText('Bewertung: 4 von 5 Sternen');
