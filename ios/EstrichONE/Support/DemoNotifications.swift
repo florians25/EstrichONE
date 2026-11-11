@@ -12,6 +12,7 @@ final class DemoNotifications {
         let body: String
         let link: String
         var objectType = ""
+        var objectId = ""
         var sender = ""
         let minutesAgo: Int
         var read: Bool
@@ -24,20 +25,23 @@ final class DemoNotifications {
         Item(id: "0193a1b2-de00-7000-8000-00000000a010", category: "chat", urgency: "normal", title: "Neue Nachricht von Sabine Wagner",
              body: "Büro · 2 neue Nachrichten", link: "/chat/\(DemoChat.office)", minutesAgo: 14, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a011", category: "work", urgency: "high", title: "Mangel zugewiesen",
-             body: "Randfuge Flur EG offen · 2026-041 Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)", objectType: "workItem", minutesAgo: 25, read: false),
+             body: "Randfuge Flur EG offen · 2026-041 Praxis Dr. Maier", link: "/bauakten/\(DemoContent.praxis)", objectType: "workItem",
+             objectId: "0193a1b2-de00-7000-8000-000000002005", minutesAgo: 25, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a002", category: "ticket", urgency: "normal", title: "Antwort zum Ticket",
              body: "T-2026-0007 · Bitte die App im WLAN öffnen und den Abgleich abwarten.", link: "/it-center/helpdesk/\(DemoContent.ticketId)", minutesAgo: 47, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a012", category: "bauakte", urgency: "normal", title: "Neue Notiz von Sabine Wagner",
              body: "2026-038 EFH Schneider · Fotos der Dämmung vor dem Einbau", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 70, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a013", category: "approval", urgency: "normal", title: "Dokument zur Genehmigung",
-             body: "Aufmaß Haus B · 2026-044 MFH Isarpark", link: "/bauakten/\(DemoContent.isarpark)", minutesAgo: 110, read: true),
+             body: "Aufmaß Haus B · 2026-044 MFH Isarpark", link: "/bauakten/\(DemoContent.isarpark)", objectType: "approval",
+             objectId: "0193a1b2-de00-7000-8000-00000000f013", minutesAgo: 110, read: true),
         Item(id: "0193a1b2-de00-7000-8000-00000000a003", category: "message", urgency: "normal", title: "Pumpe 2 ab Montag später",
              body: "Ab Montag Abholung der Pumpe 2 erst ab 6:45 Uhr am Lager. Bitte die Touren entsprechend planen und Material am Vortag laden.",
              link: "", sender: "Sabine Wagner", minutesAgo: 180, read: false),
         Item(id: "0193a1b2-de00-7000-8000-00000000a014", category: "bauakte", urgency: "normal", title: "Abnahme unterschrieben",
              body: "2026-038 EFH Schneider · ohne Mängel", link: "/bauakten/\(DemoContent.efh)", minutesAgo: 60 * 5, read: true),
         Item(id: "0193a1b2-de00-7000-8000-00000000a015", category: "absence", urgency: "low", title: "Urlaubsantrag genehmigt",
-             body: "Mo 16.11. bis Fr 20.11. · 5 Tage", link: "/personal/urlaub", minutesAgo: 60 * 26, read: true),
+             body: "Urlaub · 22.12. – 06.01.", link: "/personal/urlaub", objectType: "absenceRequest",
+             objectId: "0193a1b2-ab00-7000-8000-000000000005", minutesAgo: 60 * 26, read: true),
         Item(id: "0193a1b2-de00-7000-8000-00000000a004", category: "bauakte", urgency: "normal", title: "Bauakte zugewiesen",
              body: "2026-044 · MFH Isarpark, Haus B", link: "/bauakten/\(DemoContent.isarpark)", minutesAgo: 60 * 28, read: true),
         Item(id: "0193a1b2-de00-7000-8000-00000000a016", category: "system", urgency: "normal", title: "Wartung angekündigt",
@@ -56,7 +60,7 @@ final class DemoNotifications {
             [
                 "id": item.id, "category": item.category, "urgency": item.urgency, "title": item.title, "body": item.body,
                 "link": item.link.isEmpty ? NSNull() : item.link, "objectType": item.objectType.isEmpty ? NSNull() : item.objectType,
-                "objectId": NSNull(), "senderName": item.sender.isEmpty ? NSNull() : item.sender,
+                "objectId": item.objectId.isEmpty ? NSNull() : item.objectId, "senderName": item.sender.isEmpty ? NSNull() : item.sender,
                 "createdAt": APIDate.format(now.addingTimeInterval(TimeInterval(-60 * item.minutesAgo))),
                 "readAt": item.read ? APIDate.format(now.addingTimeInterval(TimeInterval(-60 * item.minutesAgo + 300))) : NSNull(),
             ]

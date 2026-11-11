@@ -560,7 +560,7 @@ struct AbsenceApprovalsView: View {
                         .buttonStyle(.bordered)
                         .tint(Theme.danger)
                     }
-                    .controlSize(.regular)
+                    .controlSize(.large)
                 }
                 .padding(.vertical, Space.xs)
             }

@@ -201,7 +201,9 @@ struct DemoContent: Sendable {
                             "updatedAt": time(-3600), "version": 1])
         }
         func item(_ id: String, _ bauakteId: String, kind: String, title: String, status: String = "open", due: Int? = nil) -> [String: Any] {
-            change("workItem", ["id": id, "bauakteId": bauakteId, "kind": kind, "title": title, "status": status,
+            // Nummer wie im Nummernkreis des Servers (AU-JJJJ-NNNN bzw. M-JJJJ-NNNN).
+            let number = (kind == "defect" ? "M-" : "AU-") + "2026-" + String(id.suffix(4))
+            return change("workItem", ["id": id, "number": number, "bauakteId": bauakteId, "kind": kind, "title": title, "status": status,
                                 "dueDate": due.map(day) ?? NSNull(), "assigneeUserId": user, "createdByUserId": user,
                                 "updatedAt": now, "version": 1])
         }

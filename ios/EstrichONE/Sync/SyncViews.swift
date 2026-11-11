@@ -187,6 +187,14 @@ struct SyncView: View {
                     Theme.textSecondary)
         }
         if sync.summary?.hasProblems == true { return ("exclamationmark.icloud.fill", "Bitte prüfen", "Einige Änderungen wurden nicht übernommen. Details siehe unten.", Theme.danger) }
+        switch sync.lastOutcome {
+        case .retryLater?:
+            return ("clock.arrow.circlepath", "Abgleich unterbrochen", "Der Server ist gerade ausgelastet. Der nächste Versuch läuft automatisch; alles bleibt auf dem Gerät gespeichert.", Theme.warning)
+        case let .failed(error)?:
+            return ("exclamationmark.icloud", "Abgleich unterbrochen", "\(error.message) Der nächste Versuch läuft automatisch; alles bleibt auf dem Gerät gespeichert.", Theme.warning)
+        default:
+            break
+        }
         if let summary = sync.summary, !summary.isSettled {
             let count = summary.pendingOperations + summary.pendingUploads
             return ("icloud.and.arrow.up", count == 1 ? "1 Änderung wartet" : "\(count) Änderungen warten", last, Theme.accent)

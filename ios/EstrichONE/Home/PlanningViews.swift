@@ -90,15 +90,30 @@ struct MyTasksView: View {
     @State private var titles: [UUID: String] = [:]
     @State private var opened: UUID?
     @State private var loaded = false
+    @State private var search = ""
+
+    /// Suche über Nummer, Titel, Beschreibung und Bauakte (Nummer, Bauvorhaben).
+    private var shown: [WorkItem] {
+        let words = search.lowercased().split(separator: " ").map(String.init)
+        guard !words.isEmpty else { return items }
+        return items.filter { item in
+            let text = [item.number, item.title, item.description, item.bauakteId.flatMap { titles[$0] }]
+                .compactMap { $0 }.joined(separator: " ").lowercased()
+            return words.allSatisfy { text.contains($0) }
+        }
+    }
 
     var body: some View {
         List {
             if loaded, items.isEmpty {
                 ContentUnavailableView("Keine offenen Aufgaben", systemImage: "checkmark.circle", description: Text("Offene Aufgaben und Mängel erscheinen hier."))
                     .listRowBackground(Color.clear)
+            } else if loaded, shown.isEmpty {
+                ContentUnavailableView.search(text: search)
+                    .listRowBackground(Color.clear)
             }
-            let defects = items.filter { $0.kind == .defect }
-            let tasks = items.filter { $0.kind != .defect }
+            let defects = shown.filter { $0.kind == .defect }
+            let tasks = shown.filter { $0.kind != .defect }
             if !defects.isEmpty {
                 Section("Mängel (\(defects.count))") { rows(defects) }
             }
@@ -108,6 +123,7 @@ struct MyTasksView: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Meine Aufgaben")
+        .searchable(text: $search, prompt: "Nummer, Titel oder Bauakte")
         .navigationDestination(item: $opened) { BauakteDetailView(bauakteId: $0, initialArea: .work) }
         .task(id: model.active?.sync?.revision) { await reload() }
         .refreshable { await model.active?.sync?.run() }

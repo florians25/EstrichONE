@@ -243,12 +243,16 @@ public actor SyncEngine {
             } catch let error as APIError where error.code == "CHECKSUM_MISMATCH" && !restartedAfterChecksum {
                 restartedAfterChecksum = true
                 offset = 0
-            } catch let error as APIError where (400..<500).contains(error.status ?? 0) {
+            } catch let error as APIError where (400..<500).contains(error.status ?? 0) && !Self.transientStatuses.contains(error.status ?? 0) {
                 try await store.updateUpload(upload.fileId, state: .failed, uploadedBytes: offset, errorCode: error.code)
                 return
             }
         }
     }
+
+    /// Vorübergehende Antworten (Zeitüberschreitung, gesperrt, zu viele Anfragen): Upload bleibt in der Warteschlange und
+    /// wird beim nächsten Lauf fortgesetzt, statt als fehlgeschlagen liegen zu bleiben.
+    static let transientStatuses: Set<Int> = [408, 423, 425, 429]
 
     private func removeExpiredLocalCopies() async throws {
         for fileId in try await store.uploadsCompleted(before: now().addingTimeInterval(-Self.localRetention)) {
