@@ -154,7 +154,7 @@ fun HomeScreen() {
                             RowItem(task.title, icon = if (task.kind == WorkItemKind.Defect) Icons.Filled.Warning else Icons.Filled.Handyman,
                                 iconTint = if (task.kind == WorkItemKind.Defect) tones.warning else MaterialTheme.colorScheme.primary,
                                 iconBackground = if (task.kind == WorkItemKind.Defect) tones.warningSoft else tones.infoSoft,
-                                subtitle = listOfNotNull(task.dueDate?.let { dueText(it, today) }, bauakte?.title).joinToString(" · "),
+                                subtitle = listOfNotNull(task.number, task.dueDate?.let { dueText(it, today) }, bauakte?.title).joinToString(" · "),
                                 showChevron = bauakte != null, onClick = bauakte?.let { b -> { nav.push(Route.Bauakte(b.id)) } })
                         }
                     }

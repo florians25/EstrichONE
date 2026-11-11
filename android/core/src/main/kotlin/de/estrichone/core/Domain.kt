@@ -223,6 +223,8 @@ data class Task(val entity: LocalEntity) {
         else -> WorkItemStatus.Open
     }
     val title: String = d.str("title") ?: ""
+    /** Nummer aus dem Nummernkreis (vergibt der Server, z. B. „M-2026-0012“); bis zum Abgleich leer. */
+    val number: String? = d.str("number")
     val description: String? = d.str("description")
     val dueDate: LocalDate? = ApiDate.day(d.str("dueDate"))
     val assigneeUserId: String? = d.str("assigneeUserId")?.lowercase()

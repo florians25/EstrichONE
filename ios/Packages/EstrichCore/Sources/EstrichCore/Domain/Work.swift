@@ -65,11 +65,14 @@ public struct WorkItem: Identifiable, Equatable, Sendable {
     public let dueDate: String?
     public let assigneeUserId: UUID?
     public let createdByUserId: UUID?
+    /// Nummer aus dem Nummernkreis (vergibt der Server, z. B. „M-2026-0012“); bis zum Abgleich leer.
+    public let number: String?
     public let syncState: SyncState
 
     public init(_ entity: LocalEntity) {
         let data = entity.data
         id = entity.id
+        number = data["number"]?.string
         bauakteId = data["bauakteId"]?.string.flatMap(UUID.init(uuidString:))
         kind = data["kind"]?.string.flatMap(WorkItemKind.init(rawValue:)) ?? .task
         status = data["status"]?.string.flatMap(WorkItemStatus.init(rawValue:)) ?? .open

@@ -356,6 +356,7 @@ fun TaskRow(task: Task, session: Session, subtitle: String? = null) {
             }
             Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 if (task.kind == WorkItemKind.Defect) Pill("Mangel", tones.warning, tones.warningSoft, Icons.Filled.Warning)
+                task.number?.let { Text(it, style = MaterialTheme.typography.labelLarge, color = tones.textSecondary) }
                 task.dueDate?.let { due ->
                     val overdue = task.isOpen && !due.isAfter(today)
                     Row(verticalAlignment = Alignment.CenterVertically) {

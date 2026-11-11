@@ -73,7 +73,7 @@ struct WorkItemRow: View {
                     }
                 }
             }
-            let context = [showsBauakte, assigneeName].compactMap { $0 }.joined(separator: " · ")
+            let context = [item.number, showsBauakte, assigneeName].compactMap { $0 }.joined(separator: " · ")
             if !context.isEmpty {
                 Text(context).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
             }
