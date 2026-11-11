@@ -106,14 +106,14 @@
 						</OverflowToolbar>
 					</headerToolbar>
 					<columns>
-						<Column width="8.5rem"><Button text="Nummer" type="Transparent" icon="{view>/sortIcons/number}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="number"/></customData></Button></Column>
+						<Column width="8rem"><Button text="Nummer" type="Transparent" icon="{view>/sortIcons/number}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="number"/></customData></Button></Column>
 						<Column><Button text="Titel" type="Transparent" icon="{view>/sortIcons/title}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="title"/></customData></Button></Column>
 						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Button text="Melder" type="Transparent" icon="{view>/sortIcons/reporter}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="reporter"/></customData></Button></Column>
 						<Column width="9.5rem" minScreenWidth="Desktop" demandPopin="true"><Button text="Kategorie" type="Transparent" icon="{view>/sortIcons/category}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="category"/></customData></Button></Column>
-						<Column width="7rem"><Button text="Priorität" type="Transparent" icon="{view>/sortIcons/priority}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="priority"/></customData></Button></Column>
-						<Column width="8.5rem"><Button text="Status" type="Transparent" icon="{view>/sortIcons/status}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="status"/></customData></Button></Column>
+						<Column width="7rem" minScreenWidth="Desktop" demandPopin="true"><Button text="Priorität" type="Transparent" icon="{view>/sortIcons/priority}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="priority"/></customData></Button></Column>
+						<Column width="8.5rem" minScreenWidth="Desktop" demandPopin="true"><Button text="Status" type="Transparent" icon="{view>/sortIcons/status}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="status"/></customData></Button></Column>
 						<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Button text="Zuständig" type="Transparent" icon="{view>/sortIcons/assignee}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="assignee"/></customData></Button></Column>
-						<Column width="14rem"><Button text="Fällig" type="Transparent" icon="{view>/sortIcons/due}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="due"/></customData></Button></Column>
+						<Column width="11rem"><Button text="Fällig" type="Transparent" icon="{view>/sortIcons/due}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="due"/></customData></Button></Column>
 						<Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Button text="Aktivität" type="Transparent" icon="{view>/sortIcons/activity}" iconFirst="false" press=".onSortColumn" class="eoHdSortBtn"><customData><core:CustomData key="col" value="activity"/></customData></Button></Column>
 					</columns>
 					<items>
