@@ -34755,6 +34755,15 @@
           }
         }
       },
+      "MonitoringSettings": {
+        "type": "object",
+        "properties": {
+          "outageGraceMinutes": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "MonitorItem": {
         "required": [
           "label",
@@ -42138,6 +42147,9 @@
           },
           "appUpdates": {
             "$ref": "#/components/schemas/AppUpdateSettings"
+          },
+          "monitoring": {
+            "$ref": "#/components/schemas/MonitoringSettings"
           }
         }
       },

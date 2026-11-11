@@ -5,6 +5,7 @@ using EstrichOne.Api.Modules.Backup.Exports;
 using EstrichOne.Api.Modules.Documentation.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Notifications.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Archive;
@@ -25,10 +26,69 @@ public sealed record HealthBanner(string Key, string Severity, string Text, bool
 public sealed record HealthBannerResponse(BackupHealth Backup, ArchiveHealth Archive, IReadOnlyList<HealthBanner> Banners, DateTimeOffset CheckedAt);
 
 /// <summary>
+/// Merkt sich je überwachtem Server (Archivserver, jedes Backup-Ziel) den Zeitpunkt des ersten Fehlschlags einer
+/// ununterbrochenen Störung; jeder erfolgreiche Kontakt setzt ihn zurück. Gemeldet wird ein Ausfall erst, wenn er die
+/// Schwelle aus den Einstellungen (<see cref="MonitoringSettings.OutageGraceMinutes"/>, Standard 3 Minuten) erreicht –
+/// kurze Aussetzer (Neustart, Netzwackler) lösen weder Banner noch Benachrichtigung aus. Nur im Speicher: Nach einem
+/// Neustart der API beginnt die Frist neu.
+/// </summary>
+public sealed class OutageTracker(TimeProvider clock)
+{
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<string, DateTimeOffset> _since = new(StringComparer.Ordinal);
+
+    /// <summary>Ergebnis einer Prüfung eintragen; liefert den Beginn der laufenden Störung (<c>null</c> = erreichbar).</summary>
+    public DateTimeOffset? Observe(string key, bool reachable)
+    {
+        if (reachable)
+        {
+            _since.TryRemove(key, out _);
+            return null;
+        }
+
+        return _since.GetOrAdd(key, clock.GetUtcNow());
+    }
+
+    private TimeSpan _grace = TimeSpan.FromMinutes(MonitoringSettings.DefaultOutageGraceMinutes);
+
+    /// <summary>Mindestens ein Server ist nicht erreichbar, die Störung liegt aber noch innerhalb der Meldefrist.</summary>
+    public bool Pending => _since.Values.Any(at => clock.GetUtcNow() - at < _grace);
+
+    public DateTimeOffset? Since(string key) => _since.TryGetValue(key, out var since) ? since : null;
+
+    /// <summary>Schlüssel mit diesem Präfix vergessen, die nicht mehr überwacht werden (z. B. entkoppelte Backup-Ziele).</summary>
+    public void Retain(string prefix, IEnumerable<string> keys)
+    {
+        var keep = keys.ToHashSet(StringComparer.Ordinal);
+        foreach (var key in _since.Keys.Where(k => k.StartsWith(prefix, StringComparison.Ordinal) && !keep.Contains(k)))
+        {
+            _since.TryRemove(key, out _);
+        }
+    }
+
+    /// <summary>Störung dauert ununterbrochen mindestens <paramref name="grace"/> (dann melden).</summary>
+    public bool Exceeded(DateTimeOffset? since, TimeSpan grace)
+    {
+        _grace = grace;
+        return since is { } at && clock.GetUtcNow() - at >= grace;
+    }
+
+    public const string ArchiveKey = "archive";
+
+    public static string BackupKey(BackupTargetMonitor target) => $"backup:{target.Name}|{target.Address}";
+
+    internal static async Task<TimeSpan> GraceAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var settings = services.GetService<ISystemSettings>() is { } store ? (await store.GetAsync(cancellationToken)).Monitoring : new MonitoringSettings();
+        return TimeSpan.FromMinutes(settings.OutageGraceMinutes);
+    }
+}
+
+/// <summary>
 /// Ermittelt den Zustand von Backup-Server und Archivserver (mit Live-Abfrage) und hält ihn für alle Clients vor;
 /// benachrichtigt Administratoren (Recht backup.manage) nach jeder Sicherung und bei Ausfällen (einmal, dann täglich).
+/// Nicht erreichbare Server gelten erst nach der Frist aus <see cref="OutageTracker"/> als ausgefallen.
 /// </summary>
-public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvider clock) : IDisposable
+public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvider clock, OutageTracker outages) : IDisposable
 {
     /// <summary>Älter als das gilt das letzte Backup als ausgefallen (tägliche Sicherung + 2 Stunden Puffer).</summary>
     public static readonly TimeSpan BackupMaxAge = TimeSpan.FromHours(26);
@@ -68,7 +128,16 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             var backupConfigured = backup.Configured && (backup.Targets.Count > 0 || backup.LastSuccessAt is not null);
             var backupReachable = backup.Targets.All(t => t.Reachable) && backup.LastRunStatus != "failed";
             var backupStale = backup.LastSuccessAt is not { } success || now - success > BackupMaxAge;
-            var backupCritical = backupConfigured && restore is null && (!backupReachable || backupStale);
+            // Nicht erreichbare Ziele erst nach der Frist melden (fehlgeschlagener Lauf und veraltete Sicherung sofort).
+            var grace = await OutageTracker.GraceAsync(services, cancellationToken);
+            var targetDown = false;
+            foreach (var target in backup.Targets)
+            {
+                targetDown |= outages.Exceeded(outages.Observe(OutageTracker.BackupKey(target), target.Reachable), grace);
+            }
+
+            outages.Retain("backup:", backup.Targets.Select(OutageTracker.BackupKey));
+            var backupCritical = backupConfigured && restore is null && (targetDown || backup.LastRunStatus == "failed" || backupStale);
             var backupText = backupCritical
                 ? $"Backup-Ziel nicht erreichbar. Letzte erfolgreiche Sicherung: {Local(backup.LastSuccessAt)}. Bitte Backup-Ziele und Backup-Dienst unter System › Sicherung prüfen."
                 : null;
@@ -78,13 +147,20 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
             var connection = await archiveService.ConnectionAsync(cancellationToken);
             DateTimeOffset? lastArchived = null;
             var archiveReachable = true;
+            DateTimeOffset? archiveDownSince = null;
             if (connection is not null)
             {
                 archiveReachable = await archiveService.ServerStatusAsync(connection, cancellationToken) is not null;
+                archiveDownSince = outages.Observe(OutageTracker.ArchiveKey, archiveReachable);
                 lastArchived = await db.Set<ArchiveRecord>().Where(r => r.ArchivedAt != null).MaxAsync(r => r.ArchivedAt, cancellationToken);
             }
+            else
+            {
+                outages.Observe(OutageTracker.ArchiveKey, reachable: true);
+            }
 
-            var archiveWarning = connection is not null && !archiveReachable;
+            // „Reachable“ bleibt der Live-Zustand (für „Abschließen & Archivieren“); gemeldet wird erst nach der Frist.
+            var archiveWarning = connection is not null && !archiveReachable && outages.Exceeded(archiveDownSince, grace);
             var archiveText = archiveWarning
                 ? $"Archivserver nicht erreichbar. Letzte Archivierung: {Local(lastArchived)}. Dokumente werden zurückgehalten; bitte Archivserver unter System › Archiv prüfen."
                 : null;
@@ -228,16 +304,21 @@ public sealed class SystemHealthMonitor(IServiceScopeFactory scopes, TimeProvide
     }
 }
 
-/// <summary>Prüft jede Minute (Live-Abfrage der Ziele alle 5 Minuten bzw. sofort nach einem Backup-Lauf).</summary>
-internal sealed partial class SystemHealthWorker(SystemHealthMonitor monitor, ILogger<SystemHealthWorker> logger) : BackgroundService
+/// <summary>
+/// Prüft jede Minute live (Backup-Ziele, Archivserver); solange eine Störung noch innerhalb der Meldefrist liegt, alle
+/// 30 Sekunden – so kommt die Meldung zeitnah nach Ablauf der Frist (Standard 3 Minuten), kurze Aussetzer bleiben still.
+/// </summary>
+internal sealed partial class SystemHealthWorker(SystemHealthMonitor monitor, OutageTracker outages, ILogger<SystemHealthWorker> logger) : BackgroundService
 {
+    public static readonly TimeSpan Interval = TimeSpan.FromMinutes(1);
+    public static readonly TimeSpan PendingInterval = TimeSpan.FromSeconds(30);
+
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         try
         {
             await Task.Delay(TimeSpan.FromSeconds(20), stoppingToken);
-            using var timer = new PeriodicTimer(TimeSpan.FromMinutes(1));
-            do
+            while (!stoppingToken.IsCancellationRequested)
             {
                 try
                 {
@@ -247,8 +328,9 @@ internal sealed partial class SystemHealthWorker(SystemHealthMonitor monitor, IL
                 {
                     LogFailed(logger, exception.Message);
                 }
+
+                await Task.Delay(outages.Pending ? PendingInterval : Interval, stoppingToken);
             }
-            while (await timer.WaitForNextTickAsync(stoppingToken));
         }
         catch (OperationCanceledException)
         {

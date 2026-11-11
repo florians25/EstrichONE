@@ -1,6 +1,7 @@
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Backup.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -44,9 +45,14 @@ public sealed record MonitoredSystem(string Key, string Name, MonitorLevel Level
 
 public sealed record MonitoringOverview(MonitorLevel Level, DateTimeOffset At, IReadOnlyList<MonitoredSystem> Systems, IReadOnlyList<string> Warnings);
 
-/// <summary>Überwachung von Produktivsystem, Archivserver und Backup-Zielen (Platten, Dienste, letzte Läufe, Warnschwellen).</summary>
+/// <summary>
+/// Überwachung von Produktivsystem, Archivserver und Backup-Zielen (Platten, Dienste, letzte Läufe, Warnschwellen).
+/// Nicht erreichbare Server werden erst nach der Meldefrist (<see cref="MonitoringSettings.OutageGraceMinutes"/>) als
+/// Warnung geführt; davor steht der Aussetzer neutral in der Liste.
+/// </summary>
 internal sealed class MonitoringService(
-    EstrichOneDbContext db, ArchiveService archive, IBackupMonitoring backup, IConfiguration configuration, TimeProvider clock)
+    EstrichOneDbContext db, ArchiveService archive, IBackupMonitoring backup, IConfiguration configuration, TimeProvider clock,
+    OutageTracker outages, ISystemSettings settings)
 {
     public const double WarnPercent = 85;
     public const double CriticalPercent = 95;
@@ -55,6 +61,7 @@ internal sealed class MonitoringService(
     {
         var now = clock.GetUtcNow();
         var systems = new List<MonitoredSystem>();
+        var grace = TimeSpan.FromMinutes((await settings.GetAsync(cancellationToken)).Monitoring.OutageGraceMinutes);
 
         // Produktivsystem
         var items = new List<MonitorItem>();
@@ -82,10 +89,13 @@ internal sealed class MonitoringService(
         if (connection is not null)
         {
             var status = await archive.ServerStatusAsync(connection, cancellationToken);
+            var downSince = outages.Observe(OutageTracker.ArchiveKey, status is not null);
             var archiveItems = new List<MonitorItem>
             {
-                new("Erreichbar", status is null ? $"nein – {connection.LastError}" : $"ja · Version {status.Version}",
-                    status is null ? (now - (connection.LastContactAt ?? now) > TimeSpan.FromHours(24) ? MonitorLevel.Critical : MonitorLevel.Warning) : MonitorLevel.Ok),
+                status is not null ? new("Erreichbar", $"ja · Version {status.Version}", MonitorLevel.Ok)
+                    : !outages.Exceeded(downSince, grace) ? Briefly(downSince, grace, connection.LastError)
+                    : new("Erreichbar", $"nein – {connection.LastError}",
+                        now - (connection.LastContactAt ?? now) > TimeSpan.FromHours(24) ? MonitorLevel.Critical : MonitorLevel.Warning),
             };
             if (status?.Archive is { } stats)
             {
@@ -112,10 +122,12 @@ internal sealed class MonitoringService(
         // Backup-Ziele
         foreach (var target in b.Targets)
         {
+            var targetDownSince = outages.Observe(OutageTracker.BackupKey(target), target.Reachable);
             var targetItems = new List<MonitorItem>
             {
-                new("Erreichbar", target.Reachable ? "ja" : $"nein{(target.Error is null ? string.Empty : $" – {target.Error}")}",
-                    target.Reachable ? MonitorLevel.Ok : MonitorLevel.Warning),
+                target.Reachable ? new("Erreichbar", "ja", MonitorLevel.Ok)
+                    : !outages.Exceeded(targetDownSince, grace) ? Briefly(targetDownSince, grace, target.Error)
+                    : new("Erreichbar", $"nein{(target.Error is null ? string.Empty : $" – {target.Error}")}", MonitorLevel.Warning),
                 new("Letzte Sicherung dorthin", target.LastRunAt is null ? "noch keine" : $"{(target.LastRunStatus == "succeeded" ? "erfolgreich" : "fehlgeschlagen")} · {Local(target.LastRunAt.Value)}",
                     target.LastRunAt is null ? MonitorLevel.Warning : target.LastRunStatus != "succeeded" || now - target.LastRunAt > TimeSpan.FromHours(36)
                         ? MonitorLevel.Critical : MonitorLevel.Ok),
@@ -176,6 +188,12 @@ internal sealed class MonitoringService(
 
         return new MonitoredSystem(key, name, items.Count == 0 ? MonitorLevel.Ok : items.Max(i => i.Level), info, items);
     }
+
+    /// <summary>Aussetzer innerhalb der Meldefrist: sichtbar, aber ohne Warnstatus (keine Flatter-Meldungen).</summary>
+    private static MonitorItem Briefly(DateTimeOffset? since, TimeSpan grace, string? error) =>
+        new("Erreichbar", $"kurzzeitig nicht erreichbar{(since is { } at ? $" seit {Local(at)}" : string.Empty)} – wird weiter geprüft, "
+            + $"gemeldet erst nach {grace.TotalMinutes:0} Minute{(grace.TotalMinutes == 1 ? string.Empty : "n")} ohne Verbindung"
+            + (error is null ? string.Empty : $" ({error})"), MonitorLevel.Ok);
 
     private static (long Used, long Total)? Drive(string path)
     {

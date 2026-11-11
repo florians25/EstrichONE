@@ -208,8 +208,8 @@ Die App öffnet beim Tippen `link` (Deep Link) und markiert `notificationId` per
 | Ereignis | Empfänger | Kategorie |
 |---|---|---|
 | Sicherung erfolgreich (kurz: Art, Dauer, Ziele) bzw. fehlgeschlagen (dringend) – nach jedem Lauf, abschaltbar im Backup Center → Zeitplan | alle mit Recht `backup.manage` | `system` (`backup.succeeded` abbestellbar, `backup.failed` Pflicht) |
-| Backup-Server ausgefallen/nicht erreichbar bzw. letzte Sicherung älter als 26 h – einmal, dann täglich; „wieder in Ordnung“ | alle mit Recht `backup.manage` | `system` (dringend, `backup.target_down`) |
-| Archivserver nicht erreichbar – einmal, dann täglich; „wieder erreichbar“ | alle mit Recht `backup.manage` | `system` (`archive.down`) |
+| Backup-Ziel länger als die Meldefrist (Standard 3 min, Einstellungen › Benachrichtigungen) nicht erreichbar, letzter Lauf fehlgeschlagen bzw. letzte Sicherung älter als 26 h – einmal, dann täglich; „wieder in Ordnung“ nur nach Ausfallmeldung | alle mit Recht `backup.manage` | `system` (dringend, `backup.target_down`) |
+| Archivserver länger als die Meldefrist (Standard 3 min) ununterbrochen nicht erreichbar – einmal, dann täglich; „wieder erreichbar“ nur nach Ausfallmeldung | alle mit Recht `backup.manage` | `system` (`archive.down`) |
 
 Das rote bzw. gelbe Banner für **alle** Benutzer liefert `GET /api/v1/system/health-banner` (Felder, Texte und Regeln:
 [docs/backup.md](backup.md#status-banner-und-wartung-für-alle-clients-web-shell-ios-android)); Wartungssperre der Apps

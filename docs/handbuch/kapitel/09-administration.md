@@ -190,7 +190,7 @@ Speicher, Module und Pushnachrichten haben zusätzlich einen eigenen Eintrag in 
 | **Nummernkreise** | Nummern aller Datensätze in einer Tabelle (Datensatz, Muster, nächste Nummer, Bereich, Vorschau, verbleibend mit Warnung): Bauakten `{JJJJ}-{NNN}`, Kunden `60{NNNN}`, Lieferanten `70{NNNN}`, Personal `10{NNN}`, Maschinen und Fahrzeuge `20{NNN}`, Kolonnen `K{NN}`, Material `50{NNNN}`, Bestellungen `B-{JJJJ}-{NNNN}`, Anfragen `A-{JJJJ}-{NNNN}`, Aufgaben `AU-{JJJJ}-{NNNN}`, Mängel `M-{JJJJ}-{NNNN}`, Helpdesk-Tickets `T-{JJJJ}-{NNNN}`, Fehler und Wünsche `F-{JJJJ}-{NNNN}`. Muster mit Jahr zählen jedes Jahr neu. Die Nummer vergibt der Server beim Anlegen (Web, App, Import); vergebene Nummern werden übersprungen, vorhandene nie geändert. Von Hand vergeben dürfen Nummern nur Administratoren (Kunden- und Personalnummern auch die Sachbearbeitung). Änderungen stehen im Protokoll. |
 | **Dokumente und Freigaben** | Vorgeschlagene Frist und Rolle für Freigaben, Kommentar beim Freigeben verlangen, Verweis auf Ordner- und Bauakten-Vorlagen und Aufbewahrungsfristen |
 | **Anmeldung** | Sitzungen im Browser (Abmelden nach Leerlauf, Dauer von „Angemeldet bleiben“), Zwei-Faktor-Pflicht für Administratoren, wie lange Apps auf Smartphones und Tablets ohne Nutzung angemeldet bleiben |
-| **Benachrichtigungen** | Welche E-Mails verschickt werden, Web Push, Inhalt in Pushnachrichten, Apple Push (APNs) für die iOS-App |
+| **Benachrichtigungen** | Welche E-Mails verschickt werden, nach wie vielen Minuten ein Ausfall von Archivserver bzw. Backup-Ziel gemeldet wird, Web Push, Inhalt in Pushnachrichten, Apple Push (APNs) für die iOS-App |
 | **Darstellung und Karte** | Farbschema und Dichte als Vorgabe für neue Benutzer, Kachelserver und Quellenangabe der Karte |
 | **PDF-Layout** | Firmenlogo im Kopf, EstrichONE-Logo in der Fußzeile, Akzentfarbe, zusätzliche Fußzeile (Bankverbindung, Registergericht, USt-IdNr.), Fotos je Zeile |
 | **Speicher** | Speicherschonende Ablage von Fotos und PDFs, Belegung, Nachverdichten |
@@ -212,6 +212,12 @@ Face ID/Touch ID, Gerätecode oder Pool-PIN.
 Jede Benachrichtigung landet im Postfach (Glocke). Zusätzlich erscheint sie als Pushnachricht im Browser (**Web Push**)
 und in der iOS-App über den Apple Push Notification Service (**APNs**). Mit **Inhalt in Pushnachrichten zeigen** = aus
 steht auf dem Sperrbildschirm nur „Neue Benachrichtigung“.
+
+**Ausfall von Archivserver und Backup-Zielen › Melden nach** (Standard **3 Minuten**, 0 = sofort, höchstens 60):
+EstrichONE prüft Archivserver und Backup-Ziele jede Minute. Ein Ausfall wird – als Banner, Warnung in der Überwachung und
+Benachrichtigung – erst gemeldet, wenn der Server so lange **ununterbrochen** nicht erreichbar ist. Kurze Aussetzer (Neustart,
+Netzwackler) bleiben still; jeder erfolgreiche Kontakt setzt die Frist zurück. „Wieder erreichbar“ kommt nur, wenn vorher ein
+Ausfall gemeldet wurde.
 
 ![Benachrichtigungen und Push](bilder/einstellungen-push.png "Reiter Benachrichtigungen: E-Mails, Web Push und APNs")
 
@@ -424,7 +430,8 @@ Hand aus.
 
 **System & Betrieb** → **Überwachung** zeigt den Zustand aller Systeme: Produktivsystem (Platte, Datenbank, Sicherung,
 Archiv-Warteschlange), Archivserver und Backup-Ziele. Warnschwellen: Platte ab 85 % (kritisch ab 95 % oder wenn sie in
-weniger als 14 Tagen voll wäre), Sicherung älter als 36 Stunden.
+weniger als 14 Tagen voll wäre), Sicherung älter als 36 Stunden, Archivserver bzw. Backup-Ziel länger als die eingestellte
+Frist (Standard 3 Minuten) nicht erreichbar. Davor steht dort nur „kurzzeitig nicht erreichbar – wird weiter geprüft“.
 
 ![Überwachung](bilder/ueberwachung.png "Überwachung von Produktivsystem, Archivserver und Backup-Ziel")
 

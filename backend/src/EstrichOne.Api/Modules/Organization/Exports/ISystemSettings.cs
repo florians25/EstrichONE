@@ -19,6 +19,7 @@ public sealed record SystemSettings
     public ModuleSettings Modules { get; init; } = new();
     public MediaSettings Media { get; init; } = new();
     public AppUpdateSettings AppUpdates { get; init; } = new();
+    public MonitoringSettings Monitoring { get; init; } = new();
 
     /// <summary>Werte auf erlaubte Bereiche begrenzen (auch für alte oder von Hand geänderte Daten).</summary>
     public SystemSettings Normalize() => this with
@@ -34,6 +35,7 @@ public sealed record SystemSettings
         Modules = (Modules ?? new()).Normalize(),
         Media = (Media ?? new()).Normalize(),
         AppUpdates = (AppUpdates ?? new()).Normalize(),
+        Monitoring = (Monitoring ?? new()).Normalize(),
     };
 
     internal static string? Text(string? value, int max) =>
@@ -426,6 +428,20 @@ public sealed record NotificationSettings
     public bool ApprovalDecided { get; init; } = true;
     public bool HelpdeskUpdates { get; init; } = true;
     public bool NewUserLetterByEmail { get; init; }
+}
+
+/// <summary>Überwachung von Archivserver und Backup-Zielen (Einstellungen › Benachrichtigungen).</summary>
+public sealed record MonitoringSettings
+{
+    public const int DefaultOutageGraceMinutes = 3;
+
+    /// <summary>
+    /// Ein Ausfall von Archivserver bzw. Backup-Ziel wird erst gemeldet (Benachrichtigung, Banner, Warnstatus), wenn der Server
+    /// ununterbrochen mindestens so viele Minuten nicht erreichbar ist (0 = sofort, höchstens 60). Kurze Aussetzer bleiben still.
+    /// </summary>
+    public int OutageGraceMinutes { get; init; } = DefaultOutageGraceMinutes;
+
+    public MonitoringSettings Normalize() => this with { OutageGraceMinutes = Math.Clamp(OutageGraceMinutes, 0, 60) };
 }
 
 public sealed record AppearanceSettings

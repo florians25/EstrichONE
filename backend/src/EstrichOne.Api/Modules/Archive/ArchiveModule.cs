@@ -16,6 +16,7 @@ public sealed class ArchiveModule : IModule
         services.AddSingleton<ArchiveSignal>();
         services.AddScoped<DossierService>();
         services.AddScoped<MonitoringService>();
+        services.AddSingleton<OutageTracker>();
         services.AddSingleton<SystemHealthMonitor>();
         if (!string.Equals(configuration["EstrichOne:Health:Worker"], "false", StringComparison.OrdinalIgnoreCase))
         {

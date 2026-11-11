@@ -22,6 +22,8 @@ export interface SystemSettings {
 	media: { photoQuality: number; photoMaxEdge: number; keepOriginalPhotos: boolean; optimizePdfs: boolean };
 	/** App-Updates (Verwaltung › App-Updates). */
 	appUpdates?: AppUpdateSettings;
+	/** Archivserver/Backup-Ziele: Ausfall erst nach so vielen Minuten ohne Verbindung melden (0–60, Standard 3). */
+	monitoring?: { outageGraceMinutes: number };
 }
 
 export interface SystemSettingsResponse {

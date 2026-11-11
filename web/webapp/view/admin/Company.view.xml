@@ -163,6 +163,13 @@
 							<Label text=""/><Link text="E-Mail-Konto einrichten" href="/system/e-mail"/>
 						</form:SimpleForm>
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem"
+							visible="{= !!${view>/s/monitoring} }">
+							<core:Title text="Ausfall von Archivserver und Backup-Zielen"/>
+							<Label text="Melden nach" labelFor="setOutageGrace"/>
+							<StepInput id="setOutageGrace" value="{view>/s/monitoring/outageGraceMinutes}" min="0" max="60" description="Minuten ohne Verbindung" width="16rem"/>
+							<Label text=""/><Text text="Banner, Warnstatus und Benachrichtigung erscheinen erst, wenn der Server so lange ununterbrochen nicht erreichbar ist (Standard 3 Minuten, 0 = sofort). Kurze Aussetzer, etwa beim Neustart, bleiben still; „wieder erreichbar“ kommt nur nach einer Ausfallmeldung." class="eoMuted"/>
+						</form:SimpleForm>
+						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem"
 							visible="{= !!${view>/push} }">
 							<core:Title text="Pushnachrichten und Postfach"/>
 							<Label text=""/>

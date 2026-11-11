@@ -438,11 +438,20 @@ leeres Array = kein Banner. Die Ausfall-Banner `backup` und `archive` liefert de
 
 | Banner | Bedingung |
 |---|---|
-| rot `backup` | Backup **eingerichtet** (gekoppeltes Backup-Ziel bzw. Ziel, das zieht, oder mindestens eine erfolgreiche Sicherung) **und** (ein Ziel nicht erreichbar, letzter Lauf fehlgeschlagen oder letzte erfolgreiche Sicherung älter als 26 Stunden). Nicht während einer Wiederherstellung. |
-| gelb `archive` | Archivserver gekoppelt **und** nicht erreichbar. |
+| rot `backup` | Backup **eingerichtet** (gekoppeltes Backup-Ziel bzw. Ziel, das zieht, oder mindestens eine erfolgreiche Sicherung) **und** (ein Ziel ununterbrochen länger als die Meldefrist nicht erreichbar, letzter Lauf fehlgeschlagen oder letzte erfolgreiche Sicherung älter als 26 Stunden). Nicht während einer Wiederherstellung. |
+| gelb `archive` | Archivserver gekoppelt **und** ununterbrochen länger als die Meldefrist nicht erreichbar. |
+
+**Meldefrist** (`settings.monitoring.outageGraceMinutes`, Einstellungen › Benachrichtigungen, Standard 3, 0 = sofort,
+höchstens 60): Der Server merkt sich je Archivserver bzw. Backup-Ziel den ersten fehlgeschlagenen Kontakt; jeder
+Erfolg setzt ihn zurück. Erst wenn die Störung die Frist erreicht, gibt es Banner, Warnstatus (`/system/monitoring`) und
+Benachrichtigung – kurze Aussetzer bleiben still. Solange eine Störung in der Frist liegt, prüft der Server alle 30
+Sekunden statt jede Minute, die Meldung kommt also spätestens etwa eine halbe Minute nach Ablauf der Frist.
+`archive.reachable`/`backup.reachable` geben weiterhin den Live-Zustand wieder (z. B. für „Abschließen & Archivieren“).
+Der Beginn einer Störung wird nur im Speicher gehalten; nach einem Neustart der API beginnt die Frist neu.
 
 Zusätzlich benachrichtigt der Server alle Benutzer mit Recht `backup.manage` (Postfach + Push, Kategorie `system`):
-beim Ausfall einmal, danach einmal täglich als Erinnerung, und „wieder in Ordnung“, sobald es behoben ist.
+beim Ausfall (nach der Meldefrist) einmal, danach einmal täglich als Erinnerung, und „wieder in Ordnung“, sobald es
+behoben ist – nur, wenn vorher ein Ausfall gemeldet wurde.
 
 ### Wartungsmodus sperrt alle Clients (B7)
 
