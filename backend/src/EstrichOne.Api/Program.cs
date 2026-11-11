@@ -2,6 +2,7 @@ using EstrichOne.Api.Infrastructure.Hosting;
 using EstrichOne.Api.Infrastructure.Http;
 using EstrichOne.Api.Infrastructure.Modules;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.AppUpdates;
 using EstrichOne.Api.Modules.Identity.Sessions;
 using EstrichOne.Api.Modules.Organization;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
@@ -74,6 +75,8 @@ if (options.TrustForwardedHeaders)
 app.UseMiddleware<SecurityHeadersMiddleware>();
 app.UseExceptionHandler();
 app.UseStatusCodePages();
+// Apps unter der Mindestversion: 426 CLIENT_UPDATE_REQUIRED statt fachlicher Antworten (docs/app-updates.md).
+app.UseClientVersionGate();
 app.UseAuthentication();
 app.UseRateLimiter();
 app.UsePasswordChangeGate();

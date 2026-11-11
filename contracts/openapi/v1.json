@@ -2802,6 +2802,238 @@
         ]
       }
     },
+    "/api/v1/app-updates/check": {
+      "get": {
+        "tags": [
+          "App-Updates"
+        ],
+        "summary": "Update-Prüfung der App: neueste und Mindestversion, Bezugsquelle, Neuerungen (ohne Anmeldung)",
+        "operationId": "CheckAppUpdate",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "version",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppUpdateCheckResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/app-updates/release-notes": {
+      "get": {
+        "tags": [
+          "App-Updates"
+        ],
+        "summary": "„Neu in dieser Version“: Neuerungen nach einer Version bis einschließlich einer anderen (ohne Anmeldung)",
+        "operationId": "GetAppReleaseNotes",
+        "parameters": [
+          {
+            "name": "platform",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "from",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "to",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AppReleaseNote"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/app-updates/android/package": {
+      "get": {
+        "tags": [
+          "App-Updates"
+        ],
+        "summary": "Android-App (APK) dieses Servers; mit Prüfsumme und fortsetzbar (Range)",
+        "operationId": "DownloadAndroidApp",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "head": {
+        "tags": [
+          "App-Updates"
+        ],
+        "summary": "Android-App (APK) dieses Servers; mit Prüfsumme und fortsetzbar (Range)",
+        "operationId": "DownloadAndroidApp",
+        "responses": {
+          "200": {
+            "description": "OK"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/app-updates/overview": {
+      "get": {
+        "tags": [
+          "App-Updates"
+        ],
+        "summary": "Übersicht App-Updates: Regeln, Android-Paket, Geräte mit App-Version",
+        "operationId": "GetAppUpdateOverview",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AppUpdateOverview"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/app-updates/devices/{id}/request-update": {
+      "post": {
+        "tags": [
+          "App-Updates"
+        ],
+        "summary": "Person des Geräts per Benachrichtigung bitten, die App zu aktualisieren",
+        "operationId": "RequestDeviceAppUpdate",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/company": {
       "get": {
         "tags": [
@@ -20641,6 +20873,54 @@
           }
         }
       },
+      "AppDownload": {
+        "required": [
+          "kind",
+          "url"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "sha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "size": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "versionCode": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int32"
+          },
+          "signerSha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "releaseSigned": {
+            "type": "boolean",
+            "default": false
+          }
+        }
+      },
       "AppearanceSettings": {
         "type": "object",
         "properties": {
@@ -20652,6 +20932,93 @@
           },
           "showCompanyLogo": {
             "type": "boolean"
+          }
+        }
+      },
+      "AppPackageInfo": {
+        "required": [
+          "version",
+          "versionCode",
+          "size",
+          "sha256",
+          "releaseSigned",
+          "signerSha256",
+          "valid",
+          "error"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "versionCode": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "size": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "sha256": {
+            "type": "string"
+          },
+          "releaseSigned": {
+            "type": "boolean"
+          },
+          "signerSha256": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "valid": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AppReleaseNote": {
+        "required": [
+          "version",
+          "title",
+          "sections"
+        ],
+        "type": "object",
+        "properties": {
+          "version": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "sections": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppReleaseSection"
+            }
+          }
+        }
+      },
+      "AppReleaseSection": {
+        "required": [
+          "title",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "title": {
+            "type": "string"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -20810,6 +21177,257 @@
           "rejected",
           "cancelled",
           null
+        ]
+      },
+      "AppUpdateCheckResponse": {
+        "required": [
+          "platform",
+          "installedVersion",
+          "serverVersion",
+          "latestVersion",
+          "minimumVersion",
+          "status",
+          "message",
+          "download",
+          "releaseNotes"
+        ],
+        "type": "object",
+        "properties": {
+          "platform": {
+            "type": "string"
+          },
+          "installedVersion": {
+            "type": "string"
+          },
+          "serverVersion": {
+            "type": "string"
+          },
+          "latestVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "minimumVersion": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/AppUpdateState"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "download": {
+            "$ref": "#/components/schemas/AppDownload"
+          },
+          "releaseNotes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppReleaseNote"
+            }
+          }
+        }
+      },
+      "AppUpdateCounts": {
+        "required": [
+          "total",
+          "current",
+          "recommended",
+          "required",
+          "newerThanServer",
+          "unknown"
+        ],
+        "type": "object",
+        "properties": {
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "current": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "recommended": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "required": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newerThanServer": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unknown": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "AppUpdateDevice": {
+        "required": [
+          "id",
+          "name",
+          "platform",
+          "kind",
+          "status",
+          "model",
+          "appVersion",
+          "state",
+          "assignedUserName",
+          "lastSeenAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "platform": {
+            "$ref": "#/components/schemas/DevicePlatform"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/DeviceKind"
+          },
+          "status": {
+            "$ref": "#/components/schemas/DeviceStatus"
+          },
+          "model": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "appVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "state": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AppUpdateState"
+              }
+            ]
+          },
+          "assignedUserName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastSeenAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "AppUpdateOverview": {
+        "required": [
+          "serverVersion",
+          "settings",
+          "android",
+          "ios",
+          "androidPackage",
+          "devices",
+          "counts"
+        ],
+        "type": "object",
+        "properties": {
+          "serverVersion": {
+            "type": "string"
+          },
+          "settings": {
+            "$ref": "#/components/schemas/AppUpdateSettings"
+          },
+          "android": {
+            "$ref": "#/components/schemas/PlatformUpdateInfo"
+          },
+          "ios": {
+            "$ref": "#/components/schemas/PlatformUpdateInfo"
+          },
+          "androidPackage": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/AppPackageInfo"
+              }
+            ]
+          },
+          "devices": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AppUpdateDevice"
+            }
+          },
+          "counts": {
+            "$ref": "#/components/schemas/AppUpdateCounts"
+          }
+        }
+      },
+      "AppUpdateSettings": {
+        "type": "object",
+        "properties": {
+          "recommendUpdates": {
+            "type": "boolean"
+          },
+          "enforceMinimum": {
+            "type": "boolean"
+          },
+          "minimumVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "iosUpdateUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "iosLatestVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "androidUpdateUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "AppUpdateState": {
+        "enum": [
+          "current",
+          "recommended",
+          "required",
+          "newerThanServer"
         ]
       },
       "ArchiveConnectionDto": {
@@ -32956,6 +33574,32 @@
           }
         }
       },
+      "PlatformUpdateInfo": {
+        "required": [
+          "platform",
+          "latestVersion",
+          "minimumVersion",
+          "download"
+        ],
+        "type": "object",
+        "properties": {
+          "platform": {
+            "type": "string"
+          },
+          "latestVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "minimumVersion": {
+            "type": "string"
+          },
+          "download": {
+            "$ref": "#/components/schemas/AppDownload"
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -37751,6 +38395,9 @@
           },
           "media": {
             "$ref": "#/components/schemas/MediaSettings"
+          },
+          "appUpdates": {
+            "$ref": "#/components/schemas/AppUpdateSettings"
           }
         }
       },
@@ -40053,6 +40700,9 @@
     },
     {
       "name": "Geräte"
+    },
+    {
+      "name": "App-Updates"
     },
     {
       "name": "Firmendaten"

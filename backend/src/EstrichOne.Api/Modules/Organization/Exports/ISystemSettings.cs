@@ -18,6 +18,7 @@ public sealed record SystemSettings
     public PdfSettings Pdf { get; init; } = new();
     public ModuleSettings Modules { get; init; } = new();
     public MediaSettings Media { get; init; } = new();
+    public AppUpdateSettings AppUpdates { get; init; } = new();
 
     /// <summary>Werte auf erlaubte Bereiche begrenzen (auch für alte oder von Hand geänderte Daten).</summary>
     public SystemSettings Normalize() => this with
@@ -32,6 +33,7 @@ public sealed record SystemSettings
         Pdf = (Pdf ?? new()).Normalize(),
         Modules = (Modules ?? new()).Normalize(),
         Media = (Media ?? new()).Normalize(),
+        AppUpdates = (AppUpdates ?? new()).Normalize(),
     };
 
     internal static string? Text(string? value, int max) =>
@@ -126,6 +128,54 @@ public sealed partial record MapSettings
 
     [System.Text.RegularExpressions.GeneratedRegex("&(#[0-9]{1,7}|#x[0-9a-fA-F]{1,6}|[a-zA-Z][a-zA-Z0-9]{1,31});|[<>\"'&]")]
     private static partial System.Text.RegularExpressions.Regex EntityOrSpecial();
+}
+
+/// <summary>
+/// Aktualisierung der iOS- und Android-App (Systemeinstellungen › App-Updates, docs/app-updates.md). Die neueste
+/// Android-App liefert der Server selbst aus (im Server-Update enthalten); iOS-Geräte aktualisieren über App Store,
+/// TestFlight oder die Geräteverwaltung (MDM).
+/// </summary>
+public sealed record AppUpdateSettings
+{
+    /// <summary>Hinweis „Update verfügbar“ in den Apps, sobald eine neuere Version bereitsteht.</summary>
+    public bool RecommendUpdates { get; init; } = true;
+
+    /// <summary>Apps unter <see cref="MinimumVersion"/> sperren (Update-Bildschirm statt Arbeit mit veralteter App).</summary>
+    public bool EnforceMinimum { get; init; }
+
+    /// <summary>Mindestversion bei <see cref="EnforceMinimum"/>; leer = Version dieses Servers.</summary>
+    public string? MinimumVersion { get; init; }
+
+    /// <summary>Eigener Hinweis an die Benutzer, z. B. „Bitte bis Freitag aktualisieren“.</summary>
+    public string? Message { get; init; }
+
+    /// <summary>iOS: Link zu App Store, TestFlight oder MDM-Portal (https).</summary>
+    public string? IosUpdateUrl { get; init; }
+
+    /// <summary>iOS: Version, die über <see cref="IosUpdateUrl"/> bereitsteht; leer = Version dieses Servers.</summary>
+    public string? IosLatestVersion { get; init; }
+
+    /// <summary>Android: eigener Download (z. B. MDM) statt des vom Server ausgelieferten APK.</summary>
+    public string? AndroidUpdateUrl { get; init; }
+
+    public AppUpdateSettings Normalize() => this with
+    {
+        MinimumVersion = Version(MinimumVersion),
+        Message = SystemSettings.Text(Message, 500),
+        IosUpdateUrl = Url(IosUpdateUrl),
+        IosLatestVersion = Version(IosLatestVersion),
+        AndroidUpdateUrl = Url(AndroidUpdateUrl),
+    };
+
+    private static string? Version(string? value) =>
+        SystemSettings.Text(value, 50) is { } text && Infrastructure.Hosting.VersionComparer.IsValid(text)
+            ? Infrastructure.Hosting.VersionComparer.Normalize(text)
+            : null;
+
+    private static string? Url(string? value) =>
+        SystemSettings.Text(value, 500) is { } text && Uri.TryCreate(text, UriKind.Absolute, out var uri) && uri.Scheme == Uri.UriSchemeHttps
+            ? text
+            : null;
 }
 
 /// <summary>Nummernkreis der Bauakten: {JJJJ} Jahr, {JJ} Jahr zweistellig, {N…} laufende Nummer mit Mindeststellen.</summary>

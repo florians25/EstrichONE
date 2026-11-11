@@ -124,6 +124,7 @@ public static class NotificationEvents
     public const string PeerUpdateFailed = "peer.update_failed";
     public const string Test = "system.test";
     public const string LoginAttack = "security.login_attack";
+    public const string AppUpdateRequested = "app.update_requested";
 
     public static IReadOnlyList<NotificationEventInfo> All { get; } =
     [
@@ -144,6 +145,7 @@ public static class NotificationEvents
         new(FeedbackSubmitted, "Support", "Neue Fehlermeldung oder neuer Funktionswunsch", "Neue Meldungen und Rückmeldungen der Einreicher (IT).", AdminOnly: true),
         new(ChatMessage, "Chat", "Neue Chatnachricht", "Neue Nachricht in einer Unterhaltung (stumm geschaltete Unterhaltungen ausgenommen)."),
         new(OfficeMessage, "Büro", "Nachricht aus dem Büro", "Vom Büro gesendete Nachrichten.", Mandatory: true),
+        new(AppUpdateRequested, "System", "App aktualisieren", "Die IT bittet, die EstrichONE-App auf einem Ihrer Geräte zu aktualisieren.", Mandatory: true),
         new(MaintenanceAnnounced, "System", "Wartung angekündigt", "Eine Wartung wurde geplant oder beginnt.", Mandatory: true),
         new(BackupSucceeded, "System", "Backup erfolgreich", "Meldung nach jeder erfolgreichen Sicherung.", AdminOnly: true),
         new(BackupFailed, "System", "Backup fehlgeschlagen", "Eine Sicherung ist fehlgeschlagen.", AdminOnly: true, Mandatory: true),

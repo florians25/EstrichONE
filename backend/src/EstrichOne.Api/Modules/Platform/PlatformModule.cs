@@ -1,7 +1,9 @@
 using EstrichOne.Api.Infrastructure.Hosting;
+using EstrichOne.Api.Infrastructure.Http;
 using EstrichOne.Api.Infrastructure.Modules;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
+using EstrichOne.Api.Modules.AppUpdates.Exports;
 using EstrichOne.Api.Modules.Organization.Exports;
 using EstrichOne.Api.Modules.Setup.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -54,6 +56,8 @@ public sealed class PlatformModule : IModule
     }
 
     private static async Task<Results<Ok<ServerInfo>, ProblemHttpResult>> GetServerInfoAsync(
+        HttpContext http,
+        IAppUpdatePolicy appUpdates,
         EstrichOneDbContext db,
         IOptions<EstrichOneOptions> options,
         ISetupState setup,
@@ -71,13 +75,17 @@ public sealed class PlatformModule : IModule
         }
 
         var settings = options.Value;
+        // Apps mit Kennung erhalten die für ihre Plattform geltende Mindestversion (inkl. erzwungener Mindestversion).
+        var minimum = ClientIdentity.From(http.Request) is { } client
+            ? await appUpdates.MinimumVersionAsync(client.Platform, cancellationToken)
+            : settings.MinClientVersion;
         return TypedResults.Ok(new ServerInfo(
             Product: ServerInfo.ProductName,
             // Firmenname aus den Firmendaten (Systemeinstellungen), ESTRICHONE_NAME nur als Rückfall vor der Einrichtung.
             ServerName: await companies.GetDisplayNameAsync(cancellationToken),
             ServerVersion: ApplicationVersion.Current,
             ApiVersions: ["v1"],
-            MinClientVersion: settings.MinClientVersion,
+            MinClientVersion: minimum,
             // Microsoft Entra ID kommt als optionales Verfahren hinzu, wenn es konfiguriert ist (docs/reengineering/12).
             AuthMethods: ["password"],
             InstanceEpoch: state.InstanceEpoch,

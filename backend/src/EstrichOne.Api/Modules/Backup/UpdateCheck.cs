@@ -47,51 +47,7 @@ public sealed record UpdateRelease(string Version, bool Prerelease, bool Securit
 /// <summary>Versionsvergleich nach Semantic Versioning (0.1.0-preview.9 &lt; 0.1.0-preview.10 &lt; 0.1.0 &lt; 0.1.1), wie update.sh.</summary>
 public static class SemanticVersion
 {
-    public static int Compare(string a, string b)
-    {
-        static (int[] Core, string[] Pre) Split(string value)
-        {
-            var text = value.Trim().TrimStart('v').Split('+')[0];
-            var dash = text.IndexOf('-', StringComparison.Ordinal);
-            var core = (dash < 0 ? text : text[..dash]).Split('.');
-            var numbers = new int[3];
-            for (var i = 0; i < 3 && i < core.Length; i++)
-            {
-                _ = int.TryParse(core[i], NumberStyles.None, CultureInfo.InvariantCulture, out numbers[i]);
-            }
-
-            return (numbers, dash < 0 ? [] : text[(dash + 1)..].Split('.'));
-        }
-
-        var (ca, pa) = Split(a);
-        var (cb, pb) = Split(b);
-        for (var i = 0; i < 3; i++)
-        {
-            if (ca[i] != cb[i])
-            {
-                return ca[i].CompareTo(cb[i]);
-            }
-        }
-
-        if (pa.Length == 0 || pb.Length == 0)
-        {
-            // Ohne Vorabkennung ist die Version neuer als jede Vorabversion derselben Nummer.
-            return pa.Length == pb.Length ? 0 : pa.Length == 0 ? 1 : -1;
-        }
-
-        for (var i = 0; i < Math.Min(pa.Length, pb.Length); i++)
-        {
-            var na = int.TryParse(pa[i], NumberStyles.None, CultureInfo.InvariantCulture, out var ia);
-            var nb = int.TryParse(pb[i], NumberStyles.None, CultureInfo.InvariantCulture, out var ib);
-            var result = na && nb ? ia.CompareTo(ib) : na != nb ? (na ? -1 : 1) : string.CompareOrdinal(pa[i], pb[i]);
-            if (result != 0)
-            {
-                return Math.Sign(result);
-            }
-        }
-
-        return Math.Sign(pa.Length.CompareTo(pb.Length));
-    }
+    public static int Compare(string a, string b) => VersionComparer.Compare(a, b);
 
     public static bool IsPrerelease(string version) => version.Contains('-', StringComparison.Ordinal);
 

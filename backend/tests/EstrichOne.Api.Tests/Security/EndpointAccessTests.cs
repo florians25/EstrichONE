@@ -29,6 +29,9 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
     {
         ["GET /health/live"] = "public", ["GET /health/ready"] = "public", ["GET /api/openapi/{documentName}.json"] = "public",
         ["GET /api/v1/server-info"] = "public",
+        // App-Updates: Prüfung, Neuerungen und Android-Paket auch für gesperrte, abgemeldete oder zu alte Apps (docs/app-updates.md).
+        ["GET /api/v1/app-updates/check"] = "public", ["GET /api/v1/app-updates/release-notes"] = "public",
+        ["GET /api/v1/app-updates/android/package"] = "public", ["HEAD /api/v1/app-updates/android/package"] = "public",
         ["POST /api/v1/auth/login"] = "public", ["POST /api/v1/auth/refresh"] = "token",
         ["POST /api/v1/auth/web/login"] = "public", ["POST /api/v1/auth/web/refresh"] = "token", ["POST /api/v1/auth/web/logout"] = "public",
         ["GET /api/v1/company/logo/"] = "public", // Anmeldeseite zeigt das Firmenlogo

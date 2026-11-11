@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Text.Encodings.Web;
+using EstrichOne.Api.Infrastructure.Http;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Devices.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
@@ -72,6 +73,7 @@ public sealed class TokenAuthenticationHandler(
                 UserActive = db.Set<User>().Where(user => user.Id == session.UserId).Select(user => user.IsActive).FirstOrDefault(),
                 MustChangePassword = db.Set<Passwords.LocalCredential>().Where(c => c.UserId == session.UserId).Select(c => c.MustChange).FirstOrDefault(),
                 DeviceStatus = db.Set<Device>().Where(device => device.Id == session.DeviceId).Select(device => (DeviceStatus?)device.Status).FirstOrDefault(),
+                DeviceAppVersion = db.Set<Device>().Where(device => device.Id == session.DeviceId).Select(device => device.AppVersion).FirstOrDefault(),
             })
             .SingleOrDefaultAsync(Context.RequestAborted);
 
@@ -101,10 +103,27 @@ public sealed class TokenAuthenticationHandler(
             return Fail("ACCESS_TOKEN_EXPIRED", "Das Zugriffstoken ist abgelaufen. Bitte mit dem Refresh-Token erneuern.");
         }
 
-        if (now - match.LastSeenAt > LastSeenResolution)
+        var stale = now - match.LastSeenAt > LastSeenResolution;
+        if (stale)
         {
             await db.Set<Session>().Where(s => s.Id == match.Id)
                 .ExecuteUpdateAsync(set => set.SetProperty(s => s.LastSeenAt, now), Context.RequestAborted);
+        }
+
+        // Geräteübersicht (IT Center, App-Updates): zuletzt gesehen und App-Version aus der Kennung der App nachführen.
+        if (match.DeviceId is { } deviceId)
+        {
+            var reported = ClientIdentity.From(Request)?.Version;
+            if (reported is not null && reported != match.DeviceAppVersion)
+            {
+                await db.Set<Device>().Where(d => d.Id == deviceId)
+                    .ExecuteUpdateAsync(set => set.SetProperty(d => d.AppVersion, reported).SetProperty(d => d.LastSeenAt, now), Context.RequestAborted);
+            }
+            else if (stale)
+            {
+                await db.Set<Device>().Where(d => d.Id == deviceId)
+                    .ExecuteUpdateAsync(set => set.SetProperty(d => d.LastSeenAt, now), Context.RequestAborted);
+            }
         }
 
         var deviceState = match.DeviceStatus switch

@@ -1,4 +1,5 @@
 using EstrichOne.Api.Modules.Access;
+using EstrichOne.Api.Modules.AppUpdates;
 using EstrichOne.Api.Modules.Archive;
 using EstrichOne.Api.Modules.Audit;
 using EstrichOne.Api.Modules.Backup;
@@ -33,6 +34,7 @@ public static class ModuleCatalog
         new IdentityModule(),
         new AccessModule(),
         new DevicesModule(),
+        new AppUpdatesModule(),
         new OrganizationModule(),
         new ContactsModule(),
         new BauaktenModule(),
