@@ -28,13 +28,14 @@
 		<core:InvisibleText id="contactSearchLabel" text="Kontakte filtern"/>
 
 		<VBox items="{ct>/groups}" class="eoContactGroups" renderType="Bare">
-			<VBox class="eoContactGroup">
+			<VBox class="eoContactGroup" renderType="Bare">
+				<customData><core:CustomData key="cards" value="{ct>size}" writeToDom="true"/></customData>
 				<HBox alignItems="Center" class="eoContactGroupHead">
 					<core:Icon src="{ct>icon}" class="eoContactGroupIcon" decorative="true"/>
 					<Title text="{ct>title}" level="H4"/>
 					<Text text="{ct>count}" class="eoContactGroupCount"/>
 				</HBox>
-				<grid:CSSGrid items="{path: 'ct>cards', templateShareable: false}" gridTemplateColumns="minmax(0, 1fr)"
+				<grid:CSSGrid items="{path: 'ct>cards', templateShareable: false}" gridTemplateColumns="repeat(auto-fill, minmax(min(100%, 19rem), 1fr))"
 					gridGap="0.75rem" class="eoContactGrid">
 					<f:Card class="eoContactCard">
 						<f:customData><core:CustomData key="primary" value="{= ${ct>primary} ? 'true' : 'false' }" writeToDom="true"/></f:customData>
@@ -43,7 +44,7 @@
 								iconDisplayShape="{= ${ct>isCompany} ? 'Square' : 'Circle' }" iconBackgroundColor="{ct>avatarColor}"/>
 						</f:header>
 						<f:content>
-							<VBox width="100%" class="eoContactBody">
+							<VBox width="100%" class="eoContactBody" renderType="Bare">
 								<HBox alignItems="Center" wrap="Wrap" class="eoContactBadges">
 									<ObjectStatus text="{ct>roleText}" state="None" inverted="true" class="eoRoleBadge"/>
 									<ObjectStatus text="Hauptkontakt" icon="sap-icon://favorite" state="Information" visible="{ct>primary}" class="sapUiTinyMarginBegin"/>
@@ -60,21 +61,36 @@
 										<Button icon="sap-icon://copy" type="Transparent" tooltip="{= 'Kopieren: ' + ${ct>text} }" press=".onCopyLine" class="eoContactCopy"/>
 									</HBox>
 								</VBox>
-								<Text text="{ct>note}" visible="{= !!${ct>note} }" wrapping="true" class="eoPre eoContactNote"/>
-								<Text text="{ct>empty}" visible="{= !!${ct>empty} }" wrapping="true" class="eoMuted eoContactNote"/>
-								<HBox alignItems="Center" class="eoContactActions" visible="{= ${ct>lines}.length > 0 || ${akte>/canEdit} }">
+								<HBox alignItems="Start" class="eoContactLine eoContactEmpty" visible="{= !!${ct>empty} }">
+									<core:Icon src="sap-icon://hint" class="eoContactLineIcon" decorative="true"/>
+									<Text text="{ct>empty}" wrapping="true" class="eoContactLineText"/>
+								</HBox>
+								<Text text="{ct>note}" visible="{= !!${ct>note} }" wrapping="true" maxLines="4" tooltip="{ct>note}" class="eoPre eoContactNote"/>
+								<HBox alignItems="Center" class="eoContactActions">
 									<Button icon="sap-icon://call" type="Transparent" tooltip="{= 'Anrufen: ' + ${ct>callText} }" press=".onCall" visible="{= !!${ct>callText} }"/>
 									<Button icon="sap-icon://email" type="Transparent" tooltip="{= 'E-Mail an ' + ${ct>mailText} }" press=".onMail" visible="{= !!${ct>mailText} }"/>
 									<Button icon="sap-icon://copy" type="Transparent" tooltip="{= 'Kontaktdaten kopieren: ' + ${ct>name} }" press=".onCopyCard" visible="{= ${ct>lines}.length > 0 }"/>
 									<HBox renderType="Bare" class="eoContactActionsEnd">
-									<Button text="Bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditCard" visible="{akte>/canEdit}"/>
-									<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="Mehr zum Kontakt" visible="{= ${ct>removable} &amp;&amp; ${akte>/canEdit} }">
+										<Button text="Bearbeiten" icon="sap-icon://edit" type="Transparent" press=".onEditCard" visible="{akte>/canEdit}"/>
+									<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="Mehr zum Kontakt"
+										visible="{= ${ct>lines}.length > 0 || ${ct>linked} || (${ct>removable} &amp;&amp; ${akte>/canEdit}) }">
 										<menu>
 											<Menu itemSelected=".onCardAction">
-												<MenuItem text="{= ${ct>primary} ? 'Nicht mehr Hauptkontakt' : 'Als Hauptkontakt markieren' }" icon="sap-icon://favorite">
+												<MenuItem text="Kontaktdaten kopieren" icon="sap-icon://copy" visible="{= ${ct>lines}.length > 0 }">
+													<customData><core:CustomData key="action" value="copy"/></customData>
+												</MenuItem>
+												<MenuItem text="Im Kundenstamm öffnen" icon="sap-icon://customer" visible="{ct>linked}">
+													<customData><core:CustomData key="action" value="open"/></customData>
+												</MenuItem>
+												<MenuItem text="Baustelle in Karte öffnen" icon="sap-icon://map-2" visible="{= ${ct>kind} === 'site' &amp;&amp; !!${ct>mapHref} }">
+													<customData><core:CustomData key="action" value="map"/></customData>
+												</MenuItem>
+												<MenuItem text="{= ${ct>primary} ? 'Nicht mehr Hauptkontakt' : 'Als Hauptkontakt markieren' }" icon="sap-icon://favorite"
+													visible="{= ${ct>removable} &amp;&amp; ${akte>/canEdit} }" startsSection="true">
 													<customData><core:CustomData key="action" value="primary"/></customData>
 												</MenuItem>
-												<MenuItem text="Rolle ändern" icon="sap-icon://role" items="{path: 'ct>/roleItems', templateShareable: false}">
+												<MenuItem text="Rolle ändern" icon="sap-icon://role" items="{path: 'ct>/roleItems', templateShareable: false}"
+													visible="{= ${ct>removable} &amp;&amp; ${akte>/canEdit} }">
 													<customData><core:CustomData key="action" value="role"/></customData>
 													<items>
 														<MenuItem text="{ct>text}">
@@ -82,10 +98,8 @@
 														</MenuItem>
 													</items>
 												</MenuItem>
-												<MenuItem text="Im Kundenstamm öffnen" icon="sap-icon://customer" visible="{ct>linked}">
-													<customData><core:CustomData key="action" value="open"/></customData>
-												</MenuItem>
-												<MenuItem text="Aus Bauakte entfernen" icon="sap-icon://delete" startsSection="true">
+												<MenuItem text="Aus Bauakte entfernen" icon="sap-icon://delete" startsSection="true"
+													visible="{= ${ct>removable} &amp;&amp; ${akte>/canEdit} }">
 													<customData><core:CustomData key="action" value="remove"/></customData>
 												</MenuItem>
 											</Menu>

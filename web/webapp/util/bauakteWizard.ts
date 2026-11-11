@@ -1,15 +1,18 @@
 /**
- * Geführte Anlage einer Bauakte oder Anfrage (sap.m.Wizard im Dialog):
+ * Geführte Anlage einer Bauakte oder Anfrage (sap.m.Wizard in einem großen Dialog mit Zusammenfassung rechts):
  *  1. Kunde (Pflicht) – Suche mit Vorschlägen vorhandener Kunden oder Neuanlage (kurz im Schritt oder ausführlich im
  *     Kundendialog). Schon beim Tippen prüft der Server auf Dubletten (Name, Telefon, E-Mail, Anschrift); Treffer
  *     werden angezeigt: vorhandenen Kunden wählen oder bewusst neu anlegen.
- *  2. Bauvorhaben – Vorlage, Zuständige(r), Baustellenadresse „wie Kundenanschrift“ oder abweichend (mit Hinweis auf
- *     Bauakten an derselben Adresse), Eckdaten (Objektart, Fläche, Estrich, Dicke, Heizung, Zeitraum); zusätzliche
- *     Kennwerte aufklappbar.
- *  3. Prüfen und anlegen; danach öffnet der Aufrufer die neue Bauakte.
+ *  2. Bauvorhaben – Bezeichnung, Vorlage, Zuständige(r), Baustellenadresse „wie Kundenanschrift“ oder abweichend (mit
+ *     Hinweis auf Bauakten an derselben Adresse), Eckdaten (Objektart, Geschosse, Fläche, Estrich, Dicke, Heizung) und
+ *     Ausführung (Zeitraum, Priorität) aus dem Formular-Schema der Stammdaten.
+ *  3. Beteiligte (optional) – Ansprechpartner vor Ort, Bauleitung, Architekt oder Planer.
+ *  4. Weitere Angaben (optional) – übrige Kennwerte, Erstbegehung (später, Termin eintragen, direkt im Anschluss oder
+ *     nicht erforderlich) und eine interne Notiz.
+ *  5. Prüfen und anlegen; danach öffnet der Aufrufer die neue Bauakte.
+ * „Anlegen“ steht ab Schritt 2 zur Verfügung: die Schritte 3 und 4 sind Ergänzungen und können entfallen.
  */
 import { schemaWizardControls } from "./project";
-import Panel from "sap/m/Panel";
 import Link from "sap/m/Link";
 import { openNewCustomerDialog } from "./customerDialog";
 import { addressLine, atSameAddress, draftKey, duplicateQueries, hasAddress, mergeCandidates, siteFromCustomer, type DuplicateCandidate } from "./customerMatch";
@@ -26,8 +29,13 @@ import Label from "sap/m/Label";
 import Title from "sap/m/Title";
 import Text from "sap/m/Text";
 import CheckBox from "sap/m/CheckBox";
+import DatePicker from "sap/m/DatePicker";
+import TimePicker from "sap/m/TimePicker";
+import RadioButton from "sap/m/RadioButton";
+import RadioButtonGroup from "sap/m/RadioButtonGroup";
 import SegmentedButton from "sap/m/SegmentedButton";
 import SegmentedButtonItem from "sap/m/SegmentedButtonItem";
+import MessageBox from "sap/m/MessageBox";
 import MessageStrip from "sap/m/MessageStrip";
 import MessageToast from "sap/m/MessageToast";
 import Wizard from "sap/m/Wizard";
@@ -39,6 +47,7 @@ import VBox from "sap/m/VBox";
 import ObjectStatus from "sap/m/ObjectStatus";
 import SuggestionItem from "sap/m/SuggestionItem";
 import SimpleForm from "sap/ui/layout/form/SimpleForm";
+import Device from "sap/ui/Device";
 import { formTitle } from "./formLayout";
 import type Control from "sap/ui/core/Control";
 import { ValueState } from "sap/ui/core/library";
@@ -47,6 +56,10 @@ import { catalog, type BauakteTemplate } from "./catalog";
 import Select from "sap/m/Select";
 import Item from "sap/ui/core/Item";
 import { uuidv7 } from "./ids";
+import { calendars, calendarChanged } from "./calendarDialog";
+import { localIso } from "./planningModels";
+import { appointmentSpan, inspectionChoices, partyBody, splitSchema, type InspectionChoice, type PartyDraft } from "./bauakteDraft";
+import { date } from "./format";
 import type { BauaktePage, BauakteDetail, BauakteStatus, ContactResponse } from "./models";
 
 export interface WizardOptions {
@@ -56,32 +69,43 @@ export interface WizardOptions {
 }
 
 export type { DuplicateCandidate } from "./customerMatch";
-
-/** Eckdaten, die der Assistent direkt zeigt; weitere Kennwerte stehen aufklappbar darunter. */
-const keyFields = ["objectType", "totalArea", "screedType", "nominalThicknessMm", "underfloorHeating", "heatingType", "plannedStart", "plannedEnd"];
-
-/** Formular-Schema in Eckdaten (feste Auswahl und Pflichtfelder) und weitere Kennwerte teilen. */
-export function splitSchema(schema: FormSchema): { primary: FormSchema; more: FormSchema } {
-	const all = fieldsOf(schema);
-	const primaryFields = [...keyFields.map((k) => all.find((f) => f.key === k)).filter((f) => !!f), ...all.filter((f) => f.required && !keyFields.includes(f.key))];
-	const used = new Set(primaryFields.map((f) => f!.key));
-	return {
-		primary: { ...schema, groups: [{ key: "eckdaten", label: "Eckdaten", fields: primaryFields as FormSchema["groups"][number]["fields"] }] },
-		more: { ...schema, groups: schema.groups.map((g) => ({ ...g, fields: g.fields.filter((f) => !used.has(f.key)) })).filter((g) => g.fields.length > 0) },
-	};
-}
+export { splitSchema } from "./bauakteDraft";
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/** Einspaltiges Formular; in den schmalen Spalten des Rasters stehen Beschriftungen über den Feldern. */
 function form(content: Control[]): SimpleForm {
 	return new SimpleForm({
-		editable: true, layout: "ResponsiveGridLayout", labelSpanXL: 4, labelSpanL: 4, labelSpanM: 4, labelSpanS: 12,
-		columnsL: 1, columnsM: 1, singleContainerFullSize: true, content,
-	});
+		editable: true, layout: "ResponsiveGridLayout", labelSpanXL: 4, labelSpanL: 4, labelSpanM: 12, labelSpanS: 12,
+		columnsXL: 1, columnsL: 1, columnsM: 1, singleContainerFullSize: true, content,
+	}).addStyleClass("eoNewAkteForm");
+}
+
+/** Raster für Formulare nebeneinander (bricht bei wenig Platz auf eine Spalte um). */
+function grid(items: Control[], narrow = false): HBox {
+	return new HBox({ renderType: "Bare", items }).addStyleClass(narrow ? "eoNewAkteGrid eoNewAkteGridNarrow" : "eoNewAkteGrid");
+}
+
+interface SummarySection { title: string; rows: [string, string][] }
+
+/** Zusammenfassung in einen Container schreiben (rechts im Dialog kompakt, im Schritt „Prüfen“ ausführlich). */
+function renderSummary(target: VBox, sections: SummarySection[]): void {
+	target.destroyItems();
+	for (const s of sections) {
+		if (!s.rows.length) continue;
+		target.addItem(new Title({ text: s.title, level: "H5", wrapping: true }).addStyleClass("eoNewAkteSumTitle"));
+		for (const [label, value] of s.rows) {
+			target.addItem(new HBox({ renderType: "Bare", items: [
+				new Text({ text: label }).addStyleClass("eoNewAkteSumLabel"),
+				new Text({ text: value || "–", wrapping: true }).addStyleClass("eoNewAkteSumValue"),
+			] }).addStyleClass("eoNewAkteSumRow"));
+		}
+	}
 }
 
 export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetail & { startInspection?: boolean }) | null> {
 	const titleOf = (status: string) => (status === "inquiry" ? "Neue Anfrage" : "Neue Bauakte");
+	let refreshSummary: () => void = () => undefined;
 
 	// ---- Schritt 1: Kunde -----------------------------------------------------------------------------------------
 	let existing: ContactResponse | null = null;
@@ -103,12 +127,12 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		phone: new Input("newCustomerPhone", { width: "100%", type: "Tel", maxLength: 50 }),
 		email: new Input("newCustomerEmail", { width: "100%", type: "Email", maxLength: 320 }),
 	};
-	const chosen = new MessageStrip({ type: "Success", showIcon: true, visible: false, showCloseButton: true });
+	const chosen = new MessageStrip({ type: "Success", showIcon: true, visible: false, showCloseButton: true }).addStyleClass("sapUiSmallMarginBottom");
 	const dupStrip = new MessageStrip({
 		type: "Warning", showIcon: true, visible: false,
 		text: "Es gibt bereits ähnliche Kunden. Bitte einen vorhandenen Kunden verwenden oder bewusst einen neuen anlegen.",
-	});
-	const dupList = new List("newCustomerDuplicates", { visible: false, headerText: "Mögliche Dubletten" });
+	}).addStyleClass("sapUiSmallMarginTop");
+	const dupList = new List("newCustomerDuplicates", { visible: false, headerText: "Mögliche Dubletten" }).addStyleClass("eoNewAkteDupList");
 	const forceNew = new CheckBox("newCustomerForce", { text: "Trotzdem als neuen Kunden anlegen", visible: false });
 
 	const customerFields = (): Record<string, string | null> => ({
@@ -203,6 +227,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 	});
 	for (const field of [c.street, c.postalCode, c.city, c.phone, c.email]) field.attachLiveChange(() => { validate(); scheduleDuplicates(); });
 	forceNew.attachSelect(() => validate());
+	customerKind.attachSelectionChange(() => validate());
 
 	// Dublettenprüfung schon beim Tippen (verzögert); „Weiter“ prüft zusätzlich den letzten Stand.
 	let dupTimer: ReturnType<typeof setTimeout> | undefined;
@@ -251,16 +276,22 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		title: "Kunde", icon: "sap-icon://customer", validated: false,
 		content: [
 			chosen,
-			form([
-				new Label({ text: "Name des Kunden", labelFor: c.name, required: true }), c.name,
-				new Label({ text: "" }), detailed,
-				new Label({ text: "Art", labelFor: customerKind }), customerKind,
-				new Label({ text: "Kundennummer", labelFor: c.number }), c.number,
-				new Label({ text: "Straße (Kunde)", labelFor: c.street }), c.street,
-				new Label({ text: "PLZ (Kunde)", labelFor: c.postalCode }), c.postalCode,
-				new Label({ text: "Ort (Kunde)", labelFor: c.city }), c.city,
-				new Label({ text: "Telefon (Kunde)", labelFor: c.phone }), c.phone,
-				new Label({ text: "E-Mail (Kunde)", labelFor: c.email }), c.email,
+			grid([
+				form([
+					formTitle("Kunde"),
+					new Label({ text: "Name des Kunden", labelFor: c.name, required: true }), c.name,
+					new Label({ text: "" }), detailed,
+					new Label({ text: "Art", labelFor: customerKind }), customerKind,
+					new Label({ text: "Kundennummer", labelFor: c.number }), c.number,
+				]),
+				form([
+					formTitle("Anschrift und Erreichbarkeit"),
+					new Label({ text: "Straße (Kunde)", labelFor: c.street }), c.street,
+					new Label({ text: "PLZ (Kunde)", labelFor: c.postalCode }), c.postalCode,
+					new Label({ text: "Ort (Kunde)", labelFor: c.city }), c.city,
+					new Label({ text: "Telefon (Kunde)", labelFor: c.phone }), c.phone,
+					new Label({ text: "E-Mail (Kunde)", labelFor: c.email }), c.email,
+				]),
 			]),
 			dupStrip, dupList, forceNew,
 		],
@@ -276,7 +307,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		street: new Input("newStreet", { width: "100%", maxLength: 200 }),
 		postalCode: new Input("newPostalCode", { width: "100%", maxLength: 10 }),
 		city: new Input("newCity", { width: "100%", maxLength: 100 }),
-		description: new TextArea("newDescription", { rows: 3, width: "100%", maxLength: 4000, growing: true }),
+		description: new TextArea("newDescription", { rows: 3, width: "100%", maxLength: 4000, growing: true, growingMaxLines: 8,
+			placeholder: "Umfang, Besonderheiten, Wünsche des Kunden" }),
 	};
 	// Baustellenadresse: wie Kundenanschrift (übernommen, nicht bearbeitbar) oder abweichend.
 	const siteMode = new SegmentedButton("newSiteMode", {
@@ -284,6 +316,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		items: [new SegmentedButtonItem({ key: "customer", text: "Wie Kundenanschrift" }), new SegmentedButtonItem({ key: "other", text: "Abweichende Adresse" })],
 	});
 	const customerAddress = () => siteFromCustomer({ street: c.street.getValue(), postalCode: c.postalCode.getValue(), city: c.city.getValue() });
+	const siteAddress = () => ({ street: site.street.getValue(), postalCode: site.postalCode.getValue(), city: site.city.getValue() });
 	const applySiteMode = () => {
 		const same = siteMode.getSelectedKey() === "customer";
 		if (same) {
@@ -294,6 +327,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		}
 		for (const f of [site.street, site.postalCode, site.city]) f.setEditable(!same);
 		scheduleAddressCheck();
+		refreshSummary();
 	};
 	siteMode.attachSelectionChange(applySiteMode);
 	/** Beim Wechsel in diesen Schritt: Vorgabe „wie Kundenanschrift“, wenn der Kunde eine Anschrift hat und noch nichts eingetragen ist. */
@@ -312,7 +346,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 	let addressTimer: ReturnType<typeof setTimeout> | undefined;
 	let addressKey = "";
 	const checkAddress = async () => {
-		const a = { street: site.street.getValue(), postalCode: site.postalCode.getValue(), city: site.city.getValue() };
+		const a = siteAddress();
 		const key = JSON.stringify(a);
 		if (key === addressKey) return;
 		addressKey = key;
@@ -320,6 +354,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		if (!a.street.trim() || !postal || !session.has("bauakten.read")) {
 			addressHint.setVisible(false);
 			addressLinks.setVisible(false);
+			refreshSummary();
 			return;
 		}
 		try {
@@ -340,14 +375,17 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			addressHint.setVisible(false);
 			addressLinks.setVisible(false);
 		}
+		refreshSummary();
 	};
 	function scheduleAddressCheck(): void {
 		clearTimeout(addressTimer);
 		addressTimer = setTimeout(() => void checkAddress(), 400);
 	}
-	for (const f of [site.street, site.postalCode, site.city]) f.attachLiveChange(scheduleAddressCheck);
+	for (const f of [site.street, site.postalCode, site.city]) f.attachLiveChange(() => { scheduleAddressCheck(); refreshSummary(); });
 
 	title.attachLiveChange(() => validate());
+	kind.attachSelectionChange(() => validate());
+	site.description.attachLiveChange(() => refreshSummary());
 	// Bauakten-Vorlagen aus den Stammdaten: Beschreibung und Standardräume.
 	let templates: BauakteTemplate[] = [];
 	const template = new Select("newTemplate", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "– ohne Vorlage –" })] });
@@ -359,95 +397,283 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		// Vorgeschlagene Vorlage aus den Einstellungen.
 		const preferred = settings?.settings.bauakte.defaultTemplateId;
 		if (preferred && list.some((t) => t.id === preferred) && !template.getSelectedKey()) template.setSelectedKey(preferred);
-	});
+		refreshSummary();
+	}).catch(() => undefined);
 	template.attachChange(() => {
 		const t = templates.find((x) => x.id === template.getSelectedKey());
 		if (t?.content.description && !site.description.getValue().trim()) site.description.setValue(t.content.description);
+		refreshSummary();
 	});
 	// Zuständige(r): Bauleitung; Benachrichtigung über die Zuweisung wie beim Bearbeiten der Bauakte.
 	const responsible = new Select("newResponsible", { width: "100%", forceSelection: false, selectedKey: "", items: [new Item({ key: "", text: "– nicht festgelegt –" })] });
 	void session.people().then((people) => {
 		for (const p of people.filter((x) => x.isActive)) responsible.addItem(new Item({ key: p.id, text: p.displayName }));
 	}).catch(() => undefined);
+	responsible.attachChange(() => refreshSummary());
 
-	// Kennwerte aus dem Formular-Schema der Stammdaten (B7): Eckdaten direkt, weitere Kennwerte aufklappbar.
+	// Kennwerte aus dem Formular-Schema der Stammdaten (B7): Eckdaten und Ausführung hier, weitere Kennwerte in Schritt 4.
 	let schema: FormSchema | null = null;
-	let kennwerte: ReturnType<typeof schemaWizardControls> | null = null;
-	let weitere: ReturnType<typeof schemaWizardControls> | null = null;
-	const kennwerteForm = form([]);
-	const weitereForm = form([]);
-	const weiterePanel = new Panel("newMoreFigures", { headerText: "Zusätzliche Kennwerte (optional)", expandable: true, expanded: false, visible: false,
-		content: [weitereForm] }).addStyleClass("eoWizardPanel");
+	const parts: ReturnType<typeof schemaWizardControls>[] = [];
+	const eckdatenForm = form([]);
+	const scheduleForm = form([]);
+	const figuresGrid = grid([eckdatenForm, scheduleForm]);
+	const moreGrid = grid([]);
+	const moreIntro = new Text({ text: "Weitere Kennwerte aus den Stammdaten. Alles lässt sich später in der Bauakte ergänzen.", visible: false })
+		.addStyleClass("eoMuted eoNewAkteIntro");
 	void bauakteSchema().then((loaded) => {
 		if (!loaded) return;
 		schema = loaded;
-		const { primary, more } = splitSchema(loaded);
-		kennwerte = schemaWizardControls(primary, "new", () => validate());
-		for (const x of kennwerte.content) kennwerteForm.addContent(x);
-		if (more.groups.length) {
-			weitere = schemaWizardControls(more, "new", () => validate());
-			for (const x of weitere.content) weitereForm.addContent(x);
-			weiterePanel.setVisible(true);
+		const { primary, schedule, more } = splitSchema(loaded);
+		const add = (part: FormSchema, target: SimpleForm) => {
+			const controls = schemaWizardControls(part, "new", () => validate());
+			parts.push(controls);
+			for (const x of controls.content) target.addContent(x);
+		};
+		if (primary.groups.length) add(primary, eckdatenForm);
+		if (schedule.groups.length) add(schedule, scheduleForm);
+		for (const g of more.groups) {
+			const target = form([]);
+			add({ ...more, groups: [g] }, target);
+			moreGrid.addItem(target);
 		}
-	});
-	const readKennwerte = (): Record<string, unknown> => ({ ...(weitere?.read() ?? {}), ...(kennwerte?.read() ?? {}) });
+		moreIntro.setVisible(more.groups.length > 0);
+		validate();
+	}).catch(() => undefined);
+	const readKennwerte = (): Record<string, unknown> => Object.assign({}, ...parts.map((p) => p.read())) as Record<string, unknown>;
+
 	const projectStep = new WizardStep("newStepProject", {
 		title: "Bauvorhaben", icon: "sap-icon://building", validated: false,
-		content: [form([
-			new Label({ text: "Bauvorhaben", labelFor: title, required: true }), title,
-			new Label({ text: "Anlegen als", labelFor: kind }), kind,
-			new Label({ text: "Vorlage", labelFor: template }), template,
-			new Label({ text: "Zuständig", labelFor: responsible }), responsible,
-			formTitle("Baustelle"),
-			new Label({ text: "Adresse", labelFor: siteMode }), siteMode,
-			new Label({ text: "Straße", labelFor: site.street }), site.street,
-			new Label({ text: "PLZ", labelFor: site.postalCode }), site.postalCode,
-			new Label({ text: "Ort", labelFor: site.city }), site.city,
-			new Label({ text: "" }), new VBox({ renderType: "Bare", items: [addressHint, addressLinks] }),
-			new Label({ text: "Beschreibung", labelFor: site.description }), site.description,
-		]), kennwerteForm, weiterePanel],
+		content: [
+			grid([
+				form([
+					formTitle("Bauvorhaben"),
+					new Label({ text: "Bauvorhaben", labelFor: title, required: true }), title,
+					new Label({ text: "Anlegen als", labelFor: kind }), kind,
+					new Label({ text: "Vorlage", labelFor: template }), template,
+					new Label({ text: "Zuständig", labelFor: responsible }), responsible,
+					new Label({ text: "Beschreibung", labelFor: site.description }), site.description,
+				]),
+				form([
+					formTitle("Baustelle"),
+					new Label({ text: "Adresse", labelFor: siteMode }), siteMode,
+					new Label({ text: "Straße", labelFor: site.street }), site.street,
+					new Label({ text: "PLZ", labelFor: site.postalCode }), site.postalCode,
+					new Label({ text: "Ort", labelFor: site.city }), site.city,
+					new Label({ text: "" }), new VBox({ renderType: "Bare", items: [addressHint, addressLinks] }),
+				]),
+			]),
+			figuresGrid,
+		],
 	});
 
-	// ---- Schritt 3: Prüfen -------------------------------------------------------------------------------------------
-	const summary = new VBox({ renderType: "Bare" });
-	// Beim Kunden vor Ort: direkt im Anschluss die Erstbegehung der neuen Akte erfassen.
-	const inspectNow = new CheckBox("newInspectNow", { text: "Direkt im Anschluss die Erstbegehung durchführen (z. B. jetzt beim Kunden vor Ort)" });
+	// ---- Schritt 3: Beteiligte ---------------------------------------------------------------------------------------
+	const input = (id: string, maxLength: number, type: "Text" | "Tel" | "Email" = "Text", placeholder = "") => {
+		const field = new Input(id, { width: "100%", maxLength, type, placeholder });
+		field.attachLiveChange(() => validate());
+		return field;
+	};
+	const onSite = {
+		name: input("newSiteContactName", 100, "Text", "z. B. Herr Bauer (Polier)"),
+		phone: input("newSiteContactPhone", 50, "Tel"),
+		email: input("newSiteContactEmail", 320, "Email"),
+		notes: new TextArea("newSiteNotes", { rows: 3, width: "100%", maxLength: 2000, growing: true, growingMaxLines: 6,
+			placeholder: "Zufahrt, Schlüssel, Anlieferung, Behinderungen" }),
+	};
+	onSite.notes.attachLiveChange(() => refreshSummary());
+	const takeCustomer = new Button("newSiteFromCustomer", {
+		text: "Kunde ist Ansprechpartner vor Ort", icon: "sap-icon://customer", type: "Transparent",
+		press: () => {
+			const f = customerFields();
+			onSite.name.setValue(f.name ?? "");
+			onSite.phone.setValue(f.phone ?? "");
+			onSite.email.setValue(f.email ?? "");
+			validate();
+		},
+	});
+	const partyInputs = (prefix: string) => ({
+		name: input(`${prefix}Name`, 200, "Text", "Name"),
+		company: input(`${prefix}Company`, 200, "Text", "Firma"),
+		phone: input(`${prefix}Phone`, 50, "Tel"),
+		email: input(`${prefix}Email`, 320, "Email"),
+	});
+	const manager = partyInputs("newManager");
+	const architect = partyInputs("newArchitect");
+	const partyRole = new SegmentedButton("newPlannerRole", {
+		selectedKey: "architect",
+		items: [new SegmentedButtonItem({ key: "architect", text: "Architekt" }), new SegmentedButtonItem({ key: "planner", text: "Planer" })],
+	});
+	partyRole.attachSelectionChange(() => refreshSummary());
+	const partyDraft = (p: typeof manager): PartyDraft => ({ name: p.name.getValue(), company: p.company.getValue(), phone: p.phone.getValue(), email: p.email.getValue() });
+	const partyForm = (heading: string, p: typeof manager, extra: Control[] = []) => form([
+		formTitle(heading), ...extra,
+		new Label({ text: "Name", labelFor: p.name }), p.name,
+		new Label({ text: "Firma", labelFor: p.company }), p.company,
+		new Label({ text: "Telefon", labelFor: p.phone }), p.phone,
+		new Label({ text: "E-Mail", labelFor: p.email }), p.email,
+	]);
+	const partiesStep = new WizardStep("newStepParties", {
+		title: "Beteiligte", icon: "sap-icon://group", validated: true,
+		content: [
+			new Text({ text: "Optional. Weitere Beteiligte wie Lieferanten oder Gewerke erfassen Sie später in der Bauakte unter „Kontakte“." })
+				.addStyleClass("eoMuted eoNewAkteIntro"),
+			grid([
+				form([
+					formTitle("Ansprechpartner vor Ort"),
+					new Label({ text: "" }), takeCustomer,
+					new Label({ text: "Name", labelFor: onSite.name }), onSite.name,
+					new Label({ text: "Telefon", labelFor: onSite.phone }), onSite.phone,
+					new Label({ text: "E-Mail", labelFor: onSite.email }), onSite.email,
+					new Label({ text: "Hinweise zur Baustelle", labelFor: onSite.notes }), onSite.notes,
+				]),
+				partyForm("Bauleitung", manager),
+				partyForm("Architekt oder Planer", architect, [new Label({ text: "Rolle", labelFor: partyRole }), partyRole]),
+			], true),
+		],
+	});
+
+	// ---- Schritt 4: Weitere Angaben (Kennwerte, Erstbegehung, Notiz) -------------------------------------------------
+	const canPlan = session.has("planning.read");
+	const canWaive = session.has("bauakten.edit");
+	const canNote = session.has("notes.write");
+	const inspection = new RadioButtonGroup("newInspection", {
+		columns: 1, selectedIndex: 0,
+		buttons: inspectionChoices.map((o) => new RadioButton({ text: o.text, wrapping: true,
+			enabled: (o.key !== "appointment" || canPlan) && (o.key !== "waived" || canWaive) })),
+	});
+	const inspectionChoice = (): InspectionChoice => inspectionChoices[inspection.getSelectedIndex()]?.key ?? "later";
+	const nextWorkday = (() => {
+		const d = new Date();
+		d.setDate(d.getDate() + 1);
+		while (d.getDay() === 0 || d.getDay() === 6) d.setDate(d.getDate() + 1);
+		return localIso(d).slice(0, 10);
+	})();
+	const inspDay = new DatePicker("newInspectionDay", { width: "100%", valueFormat: "yyyy-MM-dd", displayFormat: "EEE, dd.MM.yyyy", value: nextWorkday });
+	const inspTime = new TimePicker("newInspectionTime", { width: "100%", valueFormat: "HH:mm", displayFormat: "HH:mm", value: "09:00", minutesStep: 15 });
+	const inspDuration = new Select("newInspectionDuration", { width: "100%", selectedKey: "60", items: [
+		new Item({ key: "30", text: "30 Minuten" }), new Item({ key: "60", text: "1 Stunde" }), new Item({ key: "90", text: "1,5 Stunden" }), new Item({ key: "120", text: "2 Stunden" }),
+	] });
+	const waiveReason = new Input("newWaiveReason", { width: "100%", maxLength: 500, placeholder: "z. B. Folgeauftrag, Baustelle bekannt" });
+	const note = new TextArea("newNote", { rows: 4, width: "100%", maxLength: 4000, growing: true, growingMaxLines: 10,
+		placeholder: "Interne Notiz zur Bauakte, z. B. Herkunft der Anfrage, Absprachen am Telefon", enabled: canNote });
+	const appointmentFields = [inspDay, inspTime, inspDuration];
+	const inspectionLabels = { day: new Label({ text: "Datum", labelFor: inspDay }), time: new Label({ text: "Uhrzeit", labelFor: inspTime }),
+		duration: new Label({ text: "Dauer", labelFor: inspDuration }), reason: new Label({ text: "Begründung", labelFor: waiveReason }) };
+	const applyInspection = () => {
+		const choice = inspectionChoice();
+		for (const f of [...appointmentFields, inspectionLabels.day, inspectionLabels.time, inspectionLabels.duration]) f.setVisible(choice === "appointment");
+		waiveReason.setVisible(choice === "waived");
+		inspectionLabels.reason.setVisible(choice === "waived");
+		refreshSummary();
+	};
+	inspection.attachSelect(applyInspection);
+	for (const f of [inspDay, inspTime]) f.attachChange(() => refreshSummary());
+	inspDuration.attachChange(() => refreshSummary());
+	waiveReason.attachLiveChange(() => refreshSummary());
+	note.attachLiveChange(() => refreshSummary());
+	applyInspection();
+
+	const moreStep = new WizardStep("newStepMore", {
+		title: "Weitere Angaben", icon: "sap-icon://add-activity", validated: true,
+		content: [
+			grid([
+				form([
+					formTitle("Erstbegehung"),
+					new Label({ text: "Vorgehen", labelFor: inspection }), inspection,
+					inspectionLabels.day, inspDay, inspectionLabels.time, inspTime, inspectionLabels.duration, inspDuration,
+					inspectionLabels.reason, waiveReason,
+				]),
+				form([
+					formTitle("Interne Notiz"),
+					new Label({ text: "Notiz", labelFor: note }), note,
+				]),
+			]),
+			moreIntro, moreGrid,
+		],
+	});
+
+	// ---- Schritt 5: Prüfen -------------------------------------------------------------------------------------------
+	const review = new VBox({ renderType: "Bare" }).addStyleClass("eoNewAkteSummary eoNewAkteReview");
 	const reviewStep = new WizardStep("newStepReview", { title: "Prüfen", icon: "sap-icon://accept", validated: true,
-		content: [new VBox({ items: [summary, inspectNow.addStyleClass("sapUiSmallMarginTop")] })] });
-	const fillSummary = () => {
-		const line = (label: string, value: string) => new HBox({ items: [new Label({ text: label, width: "10rem" }), new Text({ text: value || "–" })] }).addStyleClass("sapUiTinyMarginBottom");
-		summary.destroyItems();
-		const f = customerFields();
-		summary.addItem(new Title({ text: "Kunde", level: "H5" }).addStyleClass("sapUiTinyMarginBottom"));
-		summary.addItem(line("Kunde", `${f.name}${existing ? " (vorhanden)" : " (wird neu angelegt)"}`));
-		summary.addItem(line("Anschrift", [f.street, [f.postalCode, f.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")));
-		summary.addItem(line("Kontakt", [f.phone, f.email].filter(Boolean).join(" · ")));
-		summary.addItem(new Title({ text: "Bauvorhaben", level: "H5" }).addStyleClass("sapUiSmallMarginTop sapUiTinyMarginBottom"));
-		summary.addItem(line("Bauvorhaben", title.getValue().trim()));
-		summary.addItem(line("Anlegen als", kind.getSelectedKey() === "inquiry" ? "Anfrage" : "Bauakte (Auftrag)"));
-		const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
-		if (chosenTemplate) summary.addItem(line("Vorlage", `${chosenTemplate.name}${chosenTemplate.content.rooms?.length ? ` (${chosenTemplate.content.rooms.length} Räume)` : ""}`));
-		const who = responsible.getSelectedItem();
-		if (responsible.getSelectedKey() && who) summary.addItem(line("Zuständig", who.getText()));
-		if (schema && kennwerte) {
-			const values = readKennwerte();
-			const shown = fieldsOf(schema).filter((f) => values[f.key] !== null && values[f.key] !== undefined)
-				.map((f) => `${f.label}: ${displayValue(schema!, f, values[f.key])}`);
-			summary.addItem(line("Kennwerte", shown.join(" · ")));
+		content: [new Text({ text: "Bitte die Angaben prüfen. Nach dem Anlegen öffnet sich die Bauakte." }).addStyleClass("eoMuted eoNewAkteIntro"), review] });
+
+	const inspectionText = (): string => {
+		switch (inspectionChoice()) {
+			case "appointment": {
+				const span = appointmentSpan(inspDay.getValue(), inspTime.getValue(), Number(inspDuration.getSelectedKey() || 60));
+				return span ? `Termin am ${date(inspDay.getValue())}, ${inspTime.getValue()} Uhr (${inspDuration.getSelectedItem()?.getText() ?? ""})`
+					: "Termin (Datum und Uhrzeit fehlen)";
+			}
+			case "now": return "Direkt im Anschluss durchführen";
+			case "waived": return `Nicht erforderlich${waiveReason.getValue().trim() ? ` (${waiveReason.getValue().trim()})` : ""}`;
+			default: return "Später planen";
 		}
-		summary.addItem(line("Baustelle", `${addressLine({ street: site.street.getValue(), postalCode: site.postalCode.getValue(), city: site.city.getValue() })}${
-			siteMode.getSelectedKey() === "customer" ? " (wie Kundenanschrift)" : ""}`));
-		if (addressHint.getVisible()) summary.addItem(line("Hinweis", addressHint.getText()));
+	};
+	const sections = (): SummarySection[] => {
+		const f = customerFields();
+		const out: SummarySection[] = [];
+		out.push({ title: "Kunde", rows: [
+			["Kunde", f.name ? `${f.name}${existing ? " (vorhanden)" : " (wird neu angelegt)"}` : ""],
+			...(f.street || f.postalCode || f.city ? [["Anschrift", [f.street, [f.postalCode, f.city].filter(Boolean).join(" ")].filter(Boolean).join(", ")] as [string, string]] : []),
+			...(f.phone || f.email ? [["Kontakt", [f.phone, f.email].filter(Boolean).join(" · ")] as [string, string]] : []),
+		] });
+		const rows: [string, string][] = [
+			["Bauvorhaben", title.getValue().trim()],
+			["Anlegen als", kind.getSelectedKey() === "inquiry" ? "Anfrage" : "Bauakte (Auftrag)"],
+		];
+		const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
+		if (chosenTemplate) rows.push(["Vorlage", `${chosenTemplate.name}${chosenTemplate.content.rooms?.length ? ` (${chosenTemplate.content.rooms.length} Räume)` : ""}`]);
+		const who = responsible.getSelectedItem();
+		if (responsible.getSelectedKey() && who) rows.push(["Zuständig", who.getText()]);
+		const a = siteAddress();
+		if (hasAddress(a)) rows.push(["Baustelle", `${addressLine(a)}${siteMode.getSelectedKey() === "customer" ? " (wie Kundenanschrift)" : ""}`]);
+		if (addressHint.getVisible()) rows.push(["Hinweis", addressHint.getText()]);
+		const description = site.description.getValue().trim();
+		if (description) rows.push(["Beschreibung", description.length > 160 ? `${description.slice(0, 160)} …` : description]);
+		out.push({ title: "Bauvorhaben", rows });
+		if (schema) {
+			const values = readKennwerte();
+			out.push({ title: "Kennwerte", rows: fieldsOf(schema).filter((fl) => values[fl.key] !== null && values[fl.key] !== undefined && values[fl.key] !== "")
+				.map((fl) => [fl.label, displayValue(schema!, fl, values[fl.key])] as [string, string]) });
+		}
+		const person = (d: PartyDraft) => [d.name.trim(), d.company.trim() && d.company.trim() !== d.name.trim() ? d.company.trim() : "", d.phone.trim(), d.email.trim()]
+			.filter(Boolean).join(" · ");
+		const people: [string, string][] = [];
+		const vorOrt = person({ name: onSite.name.getValue(), company: "", phone: onSite.phone.getValue(), email: onSite.email.getValue() });
+		if (vorOrt) people.push(["Vor Ort", vorOrt]);
+		if (onSite.notes.getValue().trim()) people.push(["Hinweise", onSite.notes.getValue().trim()]);
+		if (person(partyDraft(manager))) people.push(["Bauleitung", person(partyDraft(manager))]);
+		if (person(partyDraft(architect))) people.push([partyRole.getSelectedKey() === "planner" ? "Planer" : "Architekt", person(partyDraft(architect))]);
+		out.push({ title: "Beteiligte", rows: people });
+		const extra: [string, string][] = [["Erstbegehung", inspectionText()]];
+		const n = note.getValue().trim();
+		if (n) extra.push(["Notiz", n.length > 160 ? `${n.slice(0, 160)} …` : n]);
+		out.push({ title: "Abschluss", rows: extra });
+		return out;
 	};
 
+	// Zusammenfassung rechts (breite Fenster), laufend aktualisiert.
+	const aside = new VBox({ renderType: "Bare", items: [new Title({ text: "Zusammenfassung", level: "H4" }).addStyleClass("eoNewAkteAsideTitle")] })
+		.addStyleClass("eoNewAkteAside");
+	const asideBody = new VBox({ renderType: "Bare" }).addStyleClass("eoNewAkteSummary");
+	aside.addItem(asideBody);
+	let summaryTimer: ReturnType<typeof setTimeout> | undefined;
+	refreshSummary = () => {
+		clearTimeout(summaryTimer);
+		summaryTimer = setTimeout(() => {
+			if (asideBody.isDestroyed?.()) return;
+			const s = sections();
+			renderSummary(asideBody, s);
+			if (stepIndex === steps.length - 1) renderSummary(review, s);
+		}, 120);
+	};
+
+	const steps = [customerStep, projectStep, partiesStep, moreStep, reviewStep];
 	const wizard = new Wizard("newBauakteWizard", {
-		steps: [customerStep, projectStep, reviewStep], showNextButton: false, renderMode: "Page", height: "100%",
-		enableBranching: false,
+		steps, showNextButton: false, renderMode: "Page", height: "100%", enableBranching: false,
 	});
 
-	const strip = new MessageStrip({ type: "Error", showIcon: true, visible: false });
+	const strip = new MessageStrip({ type: "Error", showIcon: true, visible: false }).addStyleClass("eoNewAkteError");
 	let stepIndex = 0;
-	const steps = [customerStep, projectStep, reviewStep];
 
 	let updateButtons: () => void = () => undefined;
 
@@ -458,78 +684,130 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		c.email.setValueStateText("Bitte eine gültige E-Mail-Adresse angeben.");
 		const pendingDuplicates = !existing && candidates.length > 0 && checkedFor === fingerprint() && !forceNew.getSelected();
 		customerStep.setValidated(!!f.name && emailOk && !pendingDuplicates);
-		const missing = [...(kennwerte?.missing() ?? []), ...(weitere?.missing() ?? [])];
+		const missing = parts.flatMap((p) => p.missing());
 		projectStep.setValidated(!!title.getValue().trim() && missing.length === 0);
+		// Beteiligte: E-Mail-Adressen prüfen.
+		let partiesOk = true;
+		for (const field of [onSite.email, manager.email, architect.email]) {
+			const ok = !field.getValue().trim() || emailPattern.test(field.getValue().trim());
+			field.setValueState(ok ? ValueState.None : ValueState.Error);
+			field.setValueStateText("Bitte eine gültige E-Mail-Adresse angeben.");
+			partiesOk &&= ok;
+		}
+		partiesStep.setValidated(partiesOk);
 		updateButtons();
+		refreshSummary();
 	}
 
 	return new Promise((resolve) => {
 		let result: BauakteDetail | null = null;
 		const back = new Button("newBauakteBack", { text: "Zurück", press: () => go(stepIndex - 1) });
 		const next = new Button("newBauakteNext", { text: "Weiter", type: "Emphasized", press: () => void forward() });
-		const create = new Button("newBauakteCreate", { text: "Anlegen", type: "Emphasized", press: () => void submit() });
+		const create = new Button("newBauakteCreate", { text: "Anlegen", press: () => void submit() });
 		const cancel = new Button({ text: "Abbrechen", press: () => dialog.close() });
 
 		updateButtons = () => {
+			const last = stepIndex === steps.length - 1;
 			back.setVisible(stepIndex > 0);
-			next.setVisible(stepIndex < steps.length - 1);
+			next.setVisible(!last);
 			// Im Kundenschritt prüft „Weiter“ selbst (Pflichtname, Dubletten) und erklärt, was fehlt.
 			next.setEnabled(stepIndex === 0 || (steps[stepIndex]?.getValidated() ?? false));
-			create.setVisible(stepIndex === steps.length - 1);
+			// Anlegen ab „Bauvorhaben“: Beteiligte und weitere Angaben sind optional.
+			create.setVisible(stepIndex >= 1);
+			create.setEnabled(customerStep.getValidated() && projectStep.getValidated() && partiesStep.getValidated());
+			create.setType(last ? "Emphasized" : "Default");
+			layout.toggleStyleClass("eoNewAkteLast", last);
+		};
+
+		const entered = (index: number) => {
+			stepIndex = index;
+			if (index === 1) prepareSite();
+			if (index === 1 && !title.getValue()) setTimeout(() => title.focus(), 50);
+			if (index === steps.length - 1) renderSummary(review, sections());
+			updateButtons();
 		};
 
 		const go = (index: number) => {
 			if (index < 0 || index >= steps.length) return;
 			strip.setVisible(false);
 			if (index > stepIndex) {
-				while (stepIndex < index) {
+				let i = stepIndex;
+				while (i < index) {
 					wizard.nextStep();
-					stepIndex++;
+					i++;
 				}
 			} else {
 				wizard.goToStep(steps[index], true);
-				stepIndex = index;
 			}
-			if (index === 2) fillSummary();
-			if (index === 1) prepareSite();
-			if (index === 1 && !title.getValue()) setTimeout(() => title.focus(), 50);
-			updateButtons();
+			entered(index);
 		};
+		// Sprung über die Schrittleiste oben.
+		wizard.attachNavigationChange((event) => {
+			const step = event.getParameter("step") as WizardStep;
+			const index = steps.indexOf(step);
+			if (index >= 0 && index !== stepIndex) entered(index);
+		});
 
 		/** Weiter: im Kundenschritt erst die Dublettenprüfung des Servers. */
 		const forward = async () => {
-			if (stepIndex === 0) {
-				const f = customerFields();
-				if (!f.name) {
-					c.name.setValueState(ValueState.Error);
-					c.name.setValueStateText("Bitte den Kunden angeben. Eine Bauakte erfordert einen Kunden.");
-					strip.setText("Bitte den Kunden angeben. Eine Bauakte erfordert einen Kunden.");
-					strip.setVisible(true);
-					return;
-				}
-				c.name.setValueState(ValueState.None);
-				if (!existing && checkedFor !== fingerprint()) {
-					dialog.setBusy(true);
-					try {
-						clearTimeout(dupTimer);
-						const found = await runDuplicates();
-						if (found.length > 0) return;
-					} catch (error) {
-						strip.setText(problemMessage(error));
-						strip.setVisible(true);
-						return;
-					} finally {
-						dialog.setBusy(false);
-					}
-				}
-				if (!customerStep.getValidated()) return;
-			}
+			if (stepIndex === 0 && !(await customerReady())) return;
 			go(stepIndex + 1);
 		};
 
+		/** Kunde vollständig und ohne offene Dubletten? Sonst Hinweis im Kundenschritt. */
+		const customerReady = async (): Promise<boolean> => {
+			const f = customerFields();
+			if (!f.name) {
+				if (stepIndex !== 0) go(0);
+				c.name.setValueState(ValueState.Error);
+				c.name.setValueStateText("Bitte den Kunden angeben. Eine Bauakte erfordert einen Kunden.");
+				strip.setText("Bitte den Kunden angeben. Eine Bauakte erfordert einen Kunden.");
+				strip.setVisible(true);
+				return false;
+			}
+			c.name.setValueState(ValueState.None);
+			if (!existing && checkedFor !== fingerprint()) {
+				dialog.setBusy(true);
+				try {
+					clearTimeout(dupTimer);
+					const found = await runDuplicates();
+					if (found.length > 0) {
+						if (stepIndex !== 0) go(0);
+						return false;
+					}
+				} catch (error) {
+					strip.setText(problemMessage(error));
+					strip.setVisible(true);
+					return false;
+				} finally {
+					dialog.setBusy(false);
+				}
+			}
+			if (!customerStep.getValidated()) {
+				if (stepIndex !== 0) go(0);
+				return false;
+			}
+			return true;
+		};
+
 		const submit = async () => {
-			dialog.setBusy(true);
 			strip.setVisible(false);
+			if (!(await customerReady())) return;
+			if (!projectStep.getValidated()) {
+				go(1);
+				strip.setText("Bitte die Bezeichnung des Bauvorhabens und alle Pflichtfelder angeben.");
+				strip.setVisible(true);
+				return;
+			}
+			const choice = inspectionChoice();
+			const span = choice === "appointment" ? appointmentSpan(inspDay.getValue(), inspTime.getValue(), Number(inspDuration.getSelectedKey() || 60)) : null;
+			if (choice === "appointment" && !span) {
+				go(3);
+				strip.setText("Bitte Datum und Uhrzeit der Erstbegehung angeben oder „Später planen“ wählen.");
+				strip.setVisible(true);
+				return;
+			}
+			dialog.setBusy(true);
 			try {
 				let customerId = existing?.id ?? null;
 				if (!existing) {
@@ -548,24 +826,68 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					postalCode: site.postalCode.getValue().trim() || null, city: site.city.getValue().trim() || null,
 					description: site.description.getValue().trim() || null, status,
 					templateKey: template.getSelectedKey() || null,
-					...(schema && kennwerte ? writeValues(schema, readKennwerte(), null) : {}),
+					...(schema ? writeValues(schema, readKennwerte(), null) : {}),
 				});
+				const created = result;
+				// Ergänzungen: Ein Fehler hier verhindert die Anlage nicht; was fehlt, steht danach im Hinweis.
+				const failed: string[] = [];
+				const attempt = async (label: string, work: () => Promise<unknown>) => {
+					try {
+						await work();
+					} catch (error) {
+						failed.push(`${label}: ${problemMessage(error)}`);
+					}
+				};
 				const chosenTemplate = templates.find((x) => x.id === template.getSelectedKey());
-				for (const [index, room] of (chosenTemplate?.content.rooms ?? []).entries()) {
-					const roomId = uuidv7();
-					await put(`bauakten/${result.id}/rooms/${roomId}`, {
-						id: roomId, sectionId: null, name: room.name, floor: room.floor ?? null, areaSquareMeters: room.areaSquareMeters ?? null,
-						screedTypeId: null, thicknessMillimeters: room.thicknessMillimeters ?? null, insulationMillimeters: null,
-						underfloorHeating: !!room.underfloorHeating, status: "planned", notes: null, sortOrder: index,
+				await attempt("Räume aus der Vorlage", async () => {
+					for (const [index, room] of (chosenTemplate?.content.rooms ?? []).entries()) {
+						const roomId = uuidv7();
+						await put(`bauakten/${created.id}/rooms/${roomId}`, {
+							id: roomId, sectionId: null, name: room.name, floor: room.floor ?? null, areaSquareMeters: room.areaSquareMeters ?? null,
+							screedTypeId: null, thicknessMillimeters: room.thicknessMillimeters ?? null, insulationMillimeters: null,
+							underfloorHeating: !!room.underfloorHeating, status: "planned", notes: null, sortOrder: index,
+						});
+					}
+				});
+				// Zuständigkeit (mit Benachrichtigung) und Ansprechpartner vor Ort wie beim Bearbeiten der Bauakte setzen.
+				const changes: Record<string, string | null> = {};
+				if (responsible.getSelectedKey()) changes.responsibleUserId = responsible.getSelectedKey();
+				const sc = { siteContactName: onSite.name.getValue().trim() || null, siteContactPhone: onSite.phone.getValue().trim() || null,
+					siteContactEmail: onSite.email.getValue().trim() || null, siteNotes: onSite.notes.getValue().trim() || null };
+				for (const [key, value] of Object.entries(sc)) if (value) changes[key] = value;
+				if (Object.keys(changes).length) {
+					await attempt("Zuständig und Ansprechpartner vor Ort", async () => { result = await saveBauakte(created, changes); });
+				}
+				const managerBody = partyBody("siteManager", partyDraft(manager));
+				if (managerBody) await attempt("Bauleitung", () => put(`bauakten/${created.id}/parties/${uuidv7()}`, managerBody));
+				const plannerBody = partyBody(partyRole.getSelectedKey() || "architect", partyDraft(architect));
+				if (plannerBody) await attempt("Architekt oder Planer", () => put(`bauakten/${created.id}/parties/${uuidv7()}`, plannerBody));
+				const noteText = note.getValue().trim();
+				if (noteText && canNote) await attempt("Notiz", () => post(`bauakten/${created.id}/notes`, { id: uuidv7(), text: noteText }));
+				if (choice === "waived") {
+					await attempt("Erstbegehung nicht erforderlich", async () => {
+						result = await put<BauakteDetail>(`bauakten/${created.id}/initial-inspection-waiver`, { waived: true, reason: waiveReason.getValue().trim() || null });
+					});
+				} else if (choice === "appointment" && span) {
+					await attempt("Termin der Erstbegehung", async () => {
+						const writable = (await calendars()).filter((x) => x.canEdit && x.isActive);
+						const calendar = writable.find((x) => x.kind === "shared") ?? writable[0];
+						if (!calendar) throw new Error("Kein Kalender, in den Sie Termine eintragen dürfen.");
+						const who = responsible.getSelectedKey() || session.userId;
+						await put(`calendar/events/${uuidv7()}`, {
+							calendarId: calendar.id, title: `Erstbegehung: ${created.title}`, location: addressLine(siteAddress()) || null,
+							description: null, kind: "siteVisit", color: null, allDay: false, start: span.start, end: span.end,
+							participantUserIds: who ? [who] : [], crewIds: [], bauakteId: created.id,
+						});
+						calendarChanged();
 					});
 				}
-				if (responsible.getSelectedKey()) {
-					// Zuständigkeit wie beim Bearbeiten setzen (mit Benachrichtigung); ein Fehler hier verhindert die Anlage nicht.
-					result = await saveBauakte(result, { responsibleUserId: responsible.getSelectedKey() }).catch(() => result!);
-				}
-				if (inspectNow.getSelected()) (result as BauakteDetail & { startInspection?: boolean }).startInspection = true;
+				if (choice === "now") (result as BauakteDetail & { startInspection?: boolean }).startInspection = true;
 				MessageToast.show(status === "inquiry" ? "Anfrage angelegt" : "Bauakte angelegt");
 				dialog.close();
+				if (failed.length) {
+					MessageBox.warning(`Die ${status === "inquiry" ? "Anfrage" : "Bauakte"} ist angelegt. Folgende Angaben konnten nicht gespeichert werden und lassen sich in der Bauakte nachtragen:\n\n${failed.join("\n")}`);
+				}
 			} catch (error) {
 				strip.setText(problemMessage(error));
 				strip.setVisible(true);
@@ -574,23 +896,28 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			}
 		};
 
+		const layout = new HBox({ renderType: "Bare", items: [wizard, aside] }).addStyleClass("eoNewAkte");
 		const dialog = new Dialog("newBauakteDialog", {
 			title: titleOf(options.status),
-			contentWidth: "44rem",
-			contentHeight: "34rem",
+			contentWidth: "90vw",
+			contentHeight: "86vh",
+			stretch: Device.system.phone,
 			resizable: true,
 			draggable: true,
 			verticalScrolling: false,
+			horizontalScrolling: false,
 			initialFocus: c.name,
-			content: [new VBox({ height: "100%", renderType: "Bare", items: [strip, wizard] })],
+			content: [new VBox({ height: "100%", renderType: "Bare", items: [strip, layout] }).addStyleClass("eoNewAkteFrame")],
 			buttons: [back, next, create, cancel],
 			afterClose: () => {
+				clearTimeout(summaryTimer);
 				dialog.destroy();
 				resolve(result);
 			},
 		});
 		kind.attachSelectionChange(() => dialog.setTitle(titleOf(kind.getSelectedKey())));
-		dialog.addStyleClass("eoWizardDialog");
+		dialog.addStyleClass("eoWizardDialog eoNewAkteDialog");
+		dialog.attachAfterOpen(() => updateButtons());
 		validate();
 		if (options.customer) useExisting(options.customer);
 		dialog.open();

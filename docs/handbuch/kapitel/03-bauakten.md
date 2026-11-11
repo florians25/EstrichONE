@@ -23,8 +23,10 @@ unter **Organisation** → **Systemeinstellungen** → **Bauakten** fest.
 
 ## Neue Bauakte anlegen {#bauakte-anlegen}
 
-Eine Bauakte entsteht immer mit **Kunde** – ohne Kunde keine Bauakte. Der Assistent führt in drei Schritten durch die
-Anlage und verhindert doppelte Kunden.
+Eine Bauakte entsteht immer mit **Kunde** – ohne Kunde keine Bauakte. Der Assistent führt in fünf Schritten durch die
+Anlage (Kunde, Bauvorhaben, Beteiligte, Weitere Angaben, Prüfen) und verhindert doppelte Kunden. Rechts zeigt eine
+**Zusammenfassung** laufend, was bisher erfasst ist. Ab dem Schritt Bauvorhaben können Sie jederzeit **Anlegen** – die
+Schritte Beteiligte und Weitere Angaben sind optional.
 
 1. Klicken Sie oben auf **Neue Bauakte** (oder in der Bauaktenliste auf **Neue Bauakte** bzw. **Neue Anfrage**).
 2. **Kunde:** Geben Sie den Namen ein. Schon beim Tippen schlägt EstrichONE vorhandene Kunden vor; ein Klick übernimmt
@@ -43,13 +45,20 @@ Häkchen **Trotzdem als neuen Kunden anlegen**.
 4. **Bauvorhaben:** Geben Sie eine aussagekräftige Bezeichnung ein, z. B. „EFH Müller, Neubau“. Unter **Anlegen als**
    wählen Sie **Bauakte (Auftrag)** oder **Anfrage**. Eine **Vorlage** legt Ordner, Räume und Kennwerte gleich mit an.
    **Adresse des Kunden übernehmen** füllt die Baustellenanschrift, wenn sie mit der Kundenanschrift übereinstimmt.
-5. Ergänzen Sie, falls angeboten, die **Kennwerte** (Objektart, Estrichart, Fläche, Dicke, Fußbodenheizung …).
-6. **Prüfen:** Kontrollieren Sie die Zusammenfassung und klicken Sie auf **Anlegen**.
+5. Ergänzen Sie unter **Eckdaten** und **Ausführung** die wichtigsten Kennwerte (Objektart, Geschosse, Fläche,
+   Estrichart, Dicke, Fußbodenheizung, gewünschter Ausführungszeitraum, Priorität) und unter **Zuständig** die
+   Bauleitung im Betrieb.
+6. **Beteiligte (optional):** Ansprechpartner vor Ort (oder **Kunde ist Ansprechpartner vor Ort**), Bauleitung des
+   Auftraggebers sowie Architekt oder Planer. Sie erscheinen später unter **Kontakte** der Bauakte.
+7. **Weitere Angaben (optional):** übrige Kennwerte, eine interne **Notiz** und das Vorgehen zur **Erstbegehung**:
+   später planen, gleich einen **Termin** in den Kalender eintragen, direkt im Anschluss durchführen oder als **nicht
+   erforderlich** vermerken (mit Begründung).
+8. **Prüfen:** Kontrollieren Sie die Zusammenfassung und klicken Sie auf **Anlegen**.
 
 ![Assistent Schritt Bauvorhaben](bilder/bauakte-neu-bauvorhaben.png "Schritt 2: Bauvorhaben, Art der Anlage, Vorlage und Baustelle")
 
-> **Tipp:** Sind Sie gerade beim Kunden vor Ort? Setzen Sie im Schritt Bauvorhaben das Häkchen **Direkt im Anschluss
-> die Erstbegehung durchführen** – dann öffnet sich nach dem Anlegen sofort das Erstbegehungsprotokoll.
+> **Tipp:** Sind Sie gerade beim Kunden vor Ort? Wählen Sie unter **Weitere Angaben** → **Erstbegehung** die Option
+> **Direkt im Anschluss durchführen** – dann öffnet sich nach dem Anlegen sofort das Erstbegehungsprotokoll.
 
 Die **Aktennummer** (z. B. 2026-001) vergibt EstrichONE automatisch nach dem eingestellten Nummernkreis.
 

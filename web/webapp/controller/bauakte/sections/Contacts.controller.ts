@@ -103,6 +103,8 @@ interface Card {
 	/** Erste Telefonnummer (ohne Fax) und E-Mail-Adresse für die Schnellaktionen. */
 	callText: string;
 	mailText: string;
+	/** Kartenlink der Anschrift (Kartenmenü der Baustelle). */
+	mapHref: string;
 }
 
 /** Kontaktdaten einer Karte als Text (Kopieren in E-Mail, Messenger, Notiz). */
@@ -188,8 +190,9 @@ export default class Contacts extends SectionBase {
 		const card: Card = {
 			roleText: partyRoles[base.role].text, subtitle: "", initials: isCompany ? "" : initials(name), avatarIcon: isCompany ? "sap-icon://building" : "",
 			avatarColor: accentOf(name), isCompany, primary: false, linked: false, contactId: null, customerNumber: "", lines: [], note: null,
-			empty: null, removable: false, search: "", callText: "", mailText: "", ...base,
+			empty: null, removable: false, search: "", callText: "", mailText: "", mapHref: "", ...base,
 		};
+		card.mapHref = card.lines.find((l) => l.kind === "Anschrift")?.href ?? "";
 		card.callText = card.lines.find((l) => l.href?.startsWith("tel:"))?.text ?? "";
 		card.mailText = card.lines.find((l) => l.href?.startsWith("mailto:"))?.text ?? "";
 		card.search = [card.name, card.subtitle, card.roleText, card.note, ...card.lines.map((l) => l.text)].filter(Boolean).join(" ").toLowerCase();
@@ -247,7 +250,8 @@ export default class Contacts extends SectionBase {
 			.filter((g) => !only || g.key === only)
 			.map((g) => {
 				const cards = visible.filter((c) => g.roles.includes(c.role)).sort((a, b) => Number(b.primary) - Number(a.primary));
-				return { key: g.key, title: g.title, icon: g.icon, count: String(cards.length), cards };
+				// „size“ steuert die Spaltenbreite der Gruppe im Raster (mehrere Karten nebeneinander statt untereinander).
+				return { key: g.key, title: g.title, icon: g.icon, count: String(cards.length), size: String(Math.min(cards.length, 3)), cards };
 			})
 			.filter((g) => g.cards.length > 0));
 	}
@@ -313,10 +317,24 @@ export default class Contacts extends SectionBase {
 		const item = event.getParameter("item") as MenuItem;
 		const menu = event.getSource() as Control;
 		const card = menu.getBindingContext("ct")?.getObject() as Card | undefined;
-		const party = card && this.parties.find((p) => p.id === card.key);
-		if (!card || !party) return;
+		if (!card) return;
 		const role = item.data("role") as PartyRole | null;
 		const action = item.data("action") as string | null;
+		// Für alle Karten (auch Kunde und Baustelle): kopieren, im Kundenstamm öffnen, Karte.
+		if (action === "copy") {
+			this.copy(cardText(card), "Kontaktdaten kopiert");
+			return;
+		}
+		if (action === "open" && card.contactId) {
+			this.nav(`/kunden/${card.contactId}`);
+			return;
+		}
+		if (action === "map" && card.mapHref) {
+			window.open(card.mapHref, "_blank", "noopener");
+			return;
+		}
+		const party = this.parties.find((p) => p.id === card.key);
+		if (!party) return;
 		try {
 			if (role) {
 				if (role !== party.role) await this.save(party, { role }, `Jetzt ${partyRoles[role].text}`);
@@ -324,8 +342,6 @@ export default class Contacts extends SectionBase {
 				this.apply(await (party.isPrimary ? del<BauakteParty[]>(`bauakten/${this.bauakteId}/parties/${party.id}/primary`)
 					: post<BauakteParty[]>(`bauakten/${this.bauakteId}/parties/${party.id}/primary`, {})),
 				party.isPrimary ? "Markierung entfernt" : `${party.name} ist jetzt Hauptkontakt`);
-			} else if (action === "open" && party.contactId) {
-				this.nav(`/kunden/${party.contactId}`);
 			} else if (action === "remove") {
 				await this.remove(card);
 			}
