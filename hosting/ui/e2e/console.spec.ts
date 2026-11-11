@@ -211,6 +211,55 @@ test.describe.serial('Hosting-Konsole', () => {
     expect(problems).toEqual([]);
   });
 
+  test('Konto „nur lesen“: sieht Instanzen, Apps und Module, ändert nichts', async ({ page, browser }) => {
+    const problems = watchConsole(page);
+    await login(page);
+    await page.goto('/#/einstellungen');
+    await page.getByText('Konten und Rollen', { exact: true }).first().click();
+    await ui(page, 'addAdmin').click();
+    await input(page, 'aUser').fill('leitstand');
+    await input(page, 'aName').fill('Leitstand Bereitschaft');
+    await ui(page, 'aRole').getByText('Nur lesen', { exact: true }).click();
+    await input(page, 'aPassword').fill('Start-Lesezugang-2026');
+    await ui(page, 'adminSave').click();
+    await expect(ui(page, 'adminTable')).toContainText('Nur lesen · Startpasswort');
+    await page.screenshot({ path: 'test-results/10-konten-rollen.png', fullPage: true });
+
+    const viewer = await (await browser.newContext()).newPage();
+    const viewerProblems = watchConsole(viewer);
+    await viewer.goto('/');
+    await input(viewer, 'userName').fill('leitstand');
+    await input(viewer, 'password').fill('Start-Lesezugang-2026');
+    await ui(viewer, 'loginButton').click();
+    // Erst ein eigenes Passwort, Zwei-Faktor optional, danach direkt zur Übersicht (kein Einrichtungsassistent).
+    await input(viewer, 'sCurrent').fill('Start-Lesezugang-2026');
+    await input(viewer, 'sNew').fill('Leitstand-eigenes-2026');
+    await input(viewer, 'sRepeat').fill('Leitstand-eigenes-2026');
+    await ui(viewer, 'setupNext').click();
+    await expect(ui(viewer, 'sTotpBegin')).toBeVisible();
+    await ui(viewer, 'setupNext').click();
+    await expect(ui(viewer, 'instanceTable')).toBeVisible();
+    await expect(viewer.getByText('Hosting-Konsole · nur lesen')).toBeVisible();
+    await expect(ui(viewer, 'dashboardCreate')).toBeHidden();
+    await expect(ui(viewer, 'appTable')).toContainText('Estrichbau Müller GmbH');
+    await viewer.goto('/#/mandanten');
+    await expect(ui(viewer, 'tenantTable')).toContainText('Estrichbau Müller GmbH');
+    await expect(ui(viewer, 'createTenantButton')).toBeHidden();
+    await ui(viewer, 'tenantTable').getByText('Estrichbau Müller GmbH').click();
+    await expect(ui(viewer, 'tenantTitle')).toHaveText('Estrichbau Müller GmbH');
+    await expect(ui(viewer, 'actDelete')).toBeHidden();
+    await expect(ui(viewer, 'actUpdate')).toBeHidden();
+    await expect(ui(viewer, 'moduleTable')).toContainText('Bautagebuch', { timeout: 30_000 });
+    await viewer.screenshot({ path: 'test-results/11-nur-lesen-instanz.png', fullPage: true });
+    // Der Server lehnt Änderungen auch ohne Oberfläche ab.
+    const state = await (await viewer.request.get('/api/auth/state')).json();
+    const denied = await viewer.request.post('/api/tenants', { data: { companyName: 'X' }, headers: { 'X-CSRF-Token': state.csrfToken } });
+    expect(denied.status()).toBe(403);
+    expect((await denied.json()).code).toBe('READ_ONLY');
+    expect(viewerProblems).toEqual([]);
+    expect(problems).toEqual([]);
+  });
+
   test('Ereignisprotokoll und Abmelden', async ({ page }) => {
     await login(page);
     await page.goto('/#/ereignisse');

@@ -24,18 +24,18 @@
 							<core:Item key="Provisioning" text="In Bereitstellung" />
 						</Select>
 						<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh" />
-						<Button id="updateAllButton" text="Alle aktualisieren …" icon="sap-icon://upload-to-cloud" press=".onUpdateAll" />
-						<Button id="createTenantButton" text="Mandant anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" />
+						<Button id="updateAllButton" text="Alle aktualisieren …" icon="sap-icon://upload-to-cloud" press=".onUpdateAll" class="eoWrite" />
+						<Button id="createTenantButton" text="Mandant anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" class="eoWrite" />
 					</OverflowToolbar>
 				</headerToolbar>
 				<infoToolbar>
 					<OverflowToolbar id="bulkBar" visible="{= ${tenants>/selected} > 0 }" design="Info">
 						<Label text="{tenants>/selected} ausgewählt" />
 						<ToolbarSpacer />
-						<Button id="bulkRestart" text="Neu starten" icon="sap-icon://restart" press=".onBulk" app:action="restart" />
-						<Button id="bulkBackup" text="Jetzt sichern" icon="sap-icon://save" press=".onBulk" app:action="backup" />
-						<Button id="bulkStart" text="Starten" icon="sap-icon://media-play" press=".onBulk" app:action="start" />
-						<Button id="bulkStop" text="Stoppen" icon="sap-icon://stop" press=".onBulk" app:action="stop" />
+						<Button id="bulkRestart" text="Neu starten" icon="sap-icon://restart" press=".onBulk" app:action="restart" class="eoWrite" />
+						<Button id="bulkBackup" text="Jetzt sichern" icon="sap-icon://save" press=".onBulk" app:action="backup" class="eoWrite" />
+						<Button id="bulkStart" text="Starten" icon="sap-icon://media-play" press=".onBulk" app:action="start" class="eoWrite" />
+						<Button id="bulkStop" text="Stoppen" icon="sap-icon://stop" press=".onBulk" app:action="stop" class="eoWrite" />
 					</OverflowToolbar>
 				</infoToolbar>
 				<columns>

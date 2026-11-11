@@ -54,3 +54,6 @@
 	body.hostingPrintLetter .hostingLetter, body.hostingPrintLetter .hostingLetter * { visibility: visible !important; color: #000 !important; }
 	body.hostingPrintLetter .hostingLetter { position: fixed; left: 0; top: 0; width: 100%; margin: 2cm !important; }
 }
+
+/* Konten „nur lesen“: ändernde Bedienelemente ausblenden */
+html.hostingReadOnly .eoWrite { display: none !important; }

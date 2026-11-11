@@ -1,7 +1,7 @@
 <mvc:View controllerName="estrichone.hosting.controller.Settings" xmlns="sap.m" xmlns:mvc="sap.ui.core.mvc" xmlns:core="sap.ui.core" xmlns:f="sap.ui.layout.form">
 	<Page id="settingsPage" title="Einstellungen">
 		<content>
-			<IconTabBar id="settingsTabs" expandable="false" class="sapUiResponsiveContentPadding" stretchContentHeight="false">
+			<IconTabBar id="settingsTabs" expandable="false" headerMode="Inline" class="sapUiResponsiveContentPadding" stretchContentHeight="false">
 				<items>
 					<IconTabFilter key="appearance" text="Darstellung" icon="sap-icon://palette">
 						<VBox>
@@ -55,27 +55,32 @@
 							</VBox>
 						</Panel>
 					</IconTabFilter>
-					<IconTabFilter key="admins" text="Administratoren" icon="sap-icon://group">
+					<IconTabFilter key="admins" text="Konten und Rollen" icon="sap-icon://group">
 						<Table id="adminTable" items="{settings>/admins}">
 							<headerToolbar>
 								<OverflowToolbar>
-									<Title text="Administratoren der Konsole" level="H3" />
+									<Title text="Konten der Konsole" level="H3" />
 									<ToolbarSpacer />
-									<Button text="Administrator anlegen" icon="sap-icon://add-employee" press=".onAddAdmin" />
+									<Button id="addAdmin" text="Konto anlegen" icon="sap-icon://add-employee" press=".onAddAdmin" class="eoWrite" />
 								</OverflowToolbar>
 							</headerToolbar>
 							<columns>
 								<Column><Text text="Benutzer" /></Column>
+								<Column><Text text="Rolle" /></Column>
 								<Column><Text text="2FA" /></Column>
 								<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Letzte Anmeldung" /></Column>
-								<Column hAlign="End" width="8rem"><Text text="" /></Column>
+								<Column hAlign="End" width="10rem"><Text text="" /></Column>
 							</columns>
 							<items>
 								<ColumnListItem>
 									<ObjectIdentifier title="{settings>userName}" text="{settings>displayName}" />
+									<ObjectStatus text="{= ${settings>role} === 'Viewer' ? 'Nur lesen' : 'Administrator' }{= ${settings>mustChangePassword} ? ' · Startpasswort' : '' }"
+										icon="{= ${settings>role} === 'Viewer' ? 'sap-icon://show' : 'sap-icon://key-user-settings' }" />
 									<ObjectStatus text="{= ${settings>totpEnabled} ? 'an' : 'aus' }" state="{= ${settings>totpEnabled} ? 'Success' : 'Warning' }" />
 									<Text text="{path: 'settings>lastLoginAt', formatter: '.formatter.dateTime'}{= ${settings>locked} ? ' · gesperrt' : '' }" />
-									<HBox justifyContent="End">
+									<HBox justifyContent="End" class="eoWrite">
+										<Button icon="sap-icon://switch-views" type="Transparent" tooltip="{= ${settings>role} === 'Viewer' ? 'Zum Administrator machen' : 'Auf „nur lesen“ setzen' }"
+											press=".onToggleRole" enabled="{= ${settings>id} !== ${session>/user/id} }" />
 										<Button icon="sap-icon://unlocked" type="Transparent" tooltip="Sperre aufheben" press=".onUnlockAdmin" visible="{settings>locked}" />
 										<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteAdmin" enabled="{= ${settings>id} !== ${session>/user/id} }" />
 									</HBox>
@@ -90,7 +95,7 @@
 								<ComboBox id="sysVersion" value="{settings>/system/defaultVersion}" items="{settings>/versions}" width="14rem">
 									<core:Item key="{settings>}" text="{settings>}" />
 								</ComboBox>
-								<Button text="Speichern" press=".onSaveSystem" class="sapUiSmallMarginBegin" />
+								<Button text="Speichern" press=".onSaveSystem" class="eoWrite sapUiSmallMarginBegin" />
 							</HBox>
 							<Label text="Basis-Domain" /><Text text="{settings>/system/baseDomain} (Mandanten: kürzel.{settings>/system/baseDomain})" />
 							<Label text="Konsole" /><Text text="{settings>/system/consoleDomain}" />
@@ -110,7 +115,7 @@
 								<ComboBox id="consoleVersion" value="{settings>/consoleTarget}" items="{settings>/consoleUpdate/versions}" width="14rem">
 									<core:Item key="{settings>}" text="{settings>}" />
 								</ComboBox>
-								<Button id="consoleUpdate" text="Konsole aktualisieren" icon="sap-icon://upload-to-cloud" press=".onConsoleUpdate" class="sapUiSmallMarginBegin" />
+								<Button id="consoleUpdate" text="Konsole aktualisieren" icon="sap-icon://upload-to-cloud" press=".onConsoleUpdate" class="eoWrite sapUiSmallMarginBegin" />
 							</HBox>
 							<Label text="Stand" /><Text text="{settings>/consoleUpdate/state/message}" />
 							<Label text="" /><Text class="hostingHint" text="Der Installer der Zielversion ersetzt den Konsolen-Container; Mandanten laufen ungestört weiter. Alternativ auf dem Server: sudo estrichone-hosting update (oder update &lt;version&gt;)." />
@@ -118,34 +123,43 @@
 						<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1" title="Zweites Sicherungsziel">
 							<Label text="restic-Repository" labelFor="sysRepository" />
 							<Input id="sysRepository" value="{settings>/secondaryRepository}" placeholder="sftp:backup@sicherung.example.de:/estrichone" />
-							<Button text="Speichern" press=".onSaveRepository" />
+							<Button text="Speichern" press=".onSaveRepository" class="eoWrite" />
 							<Label text="" /><Text class="hostingHint" text="Je Instanz ein Unterordner /&lt;kürzel&gt;; wirkt beim nächsten Vorgang der Instanz (z. B. Neustart). Leer = nur lokal." />
-							<Label text="Einrichtung" /><Link text="Einrichtungsassistent erneut öffnen" press=".onOpenSetup" />
+							<Label text="Einrichtung" /><Link text="Einrichtungsassistent erneut öffnen" press=".onOpenSetup" class="eoWrite" />
 						</f:SimpleForm>
 					</IconTabFilter>
 					<IconTabFilter key="notifications" text="Benachrichtigungen" icon="sap-icon://bell">
 						<core:Fragment fragmentName="estrichone.hosting.fragment.NotificationForm" type="XML" />
 						<HBox class="sapUiSmallMargin">
-							<Button id="notifySave" text="Speichern" type="Emphasized" press=".onNotifySave" class="sapUiSmallMarginEnd" />
-							<Button id="notifyTest" text="Testnachricht senden" icon="sap-icon://paper-plane" press=".onNotifyTest" />
+							<Button id="notifySave" text="Speichern" type="Emphasized" press=".onNotifySave" class="eoWrite sapUiSmallMarginEnd" />
+							<Button id="notifyTest" text="Testnachricht senden" icon="sap-icon://paper-plane" press=".onNotifyTest" class="eoWrite" />
 						</HBox>
 					</IconTabFilter>
 				</items>
 			</IconTabBar>
 		</content>
 		<dependents>
-			<Dialog id="adminDialog" title="Administrator anlegen" contentWidth="26rem">
+			<Dialog id="adminDialog" title="Konto anlegen" contentWidth="28rem">
 				<content>
 					<f:SimpleForm editable="true" layout="ColumnLayout" columnsM="1" columnsL="1" columnsXL="1">
 						<Label text="Benutzername" required="true" labelFor="aUser" />
 						<Input id="aUser" value="{settings>/newAdmin/userName}" />
 						<Label text="Name" labelFor="aName" />
 						<Input id="aName" value="{settings>/newAdmin/displayName}" />
+						<Label text="Rolle" labelFor="aRole" />
+						<SegmentedButton id="aRole" selectedKey="{settings>/newAdmin/role}">
+							<items>
+								<SegmentedButtonItem key="Administrator" text="Administrator" />
+								<SegmentedButtonItem key="Viewer" text="Nur lesen" />
+							</items>
+						</SegmentedButton>
 						<Label text="Startpasswort (mind. 12 Zeichen)" required="true" labelFor="aPassword" />
 						<Input id="aPassword" type="Password" value="{settings>/newAdmin/password}" />
+						<Label text="" />
+						<Text class="hostingHint" text="„Nur lesen“ sieht Zustand, Protokolle und Ereignisse, ändert aber nichts – passend für Bereitschaft und Support. Bei der ersten Anmeldung legt die Person ein eigenes Passwort fest." />
 					</f:SimpleForm>
 				</content>
-				<beginButton><Button text="Anlegen" type="Emphasized" press=".onAdminSave" /></beginButton>
+				<beginButton><Button id="adminSave" text="Anlegen" type="Emphasized" press=".onAdminSave" /></beginButton>
 				<endButton><Button text="Abbrechen" press=".onAdminCancel" /></endButton>
 			</Dialog>
 		</dependents>

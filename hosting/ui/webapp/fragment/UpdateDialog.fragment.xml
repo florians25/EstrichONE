@@ -7,7 +7,10 @@
 				<ComboBox id="updateVersion" value="{dlg>/version}" items="{dlg>/versions}" width="100%">
 					<core:Item key="{dlg>}" text="{dlg>}" />
 				</ComboBox>
+				<Link text="Versionshinweise zu {dlg>/version}" href="{path: 'dlg>/version', formatter: '.formatter.releaseNotesUrl'}" target="_blank"
+					visible="{= !!${dlg>/version} }" class="sapUiTinyMarginTop" />
 				<CheckBox id="updateBackupFirst" text="Vorher sichern (empfohlen)" selected="{dlg>/backupFirst}" />
+				<Text text="Startet die neue Version nicht oder meldet sie sich nicht bereit (/health/ready), nimmt die Konsole die Aktualisierung automatisch zurück – mit Vorab-Sicherung samt Datenstand." class="hostingHint" />
 				<Text text="Quelle der Versionsliste: {dlg>/source}" class="hostingHint sapUiTinyMarginTop" />
 			</VBox>
 		</content>

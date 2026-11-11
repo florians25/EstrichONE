@@ -163,8 +163,39 @@ public static partial class Validation
             ? null
             : "Der Benutzername muss 3–32 Zeichen lang sein (a–z, 0–9, Punkt, Bindestrich, Unterstrich) und mit einem Buchstaben beginnen.";
 
-    public static string? CheckPassword(string? password) =>
-        password is { Length: >= 12 and <= 256 } ? null : "Das Passwort muss mindestens 12 Zeichen lang sein.";
+    /// <summary>Häufige Passwörter und Muster, die trotz Länge sofort erraten werden.</summary>
+    private static readonly string[] WeakPasswords =
+    [
+        "passwort", "password", "kennwort", "estrichone", "estrich", "hosting", "konsole", "admin", "administrator", "qwertz",
+        "qwerty", "asdf", "123456", "abcdef", "letmein", "welcome", "willkommen", "sommer", "winter", "geheim",
+    ];
+
+    /// <summary>
+    /// Passwortregeln der Konsole: 12 bis 256 Zeichen, mindestens 6 verschiedene Zeichen, nicht im Wesentlichen ein
+    /// bekanntes Wort oder der Benutzername. Lange Passphrasen ohne Sonderzeichen sind ausdrücklich erlaubt.
+    /// </summary>
+    public static string? CheckPassword(string? password, string? userName = null)
+    {
+        if (password is not { Length: >= 12 and <= 256 })
+        {
+            return "Das Passwort muss mindestens 12 Zeichen lang sein.";
+        }
+
+        if (password.Distinct().Count() < 6)
+        {
+            return "Das Passwort ist zu gleichförmig – bitte mehr verschiedene Zeichen verwenden (z. B. eine Passphrase aus mehreren Wörtern).";
+        }
+
+        var core = new string(password.ToLowerInvariant().Where(char.IsLetter).ToArray());
+        var digitsOnly = password.All(char.IsDigit);
+        if (digitsOnly || WeakPasswords.Any(w => core == w || (core.Length <= w.Length + 2 && core.Contains(w, StringComparison.Ordinal)))
+            || (!string.IsNullOrEmpty(userName) && password.Contains(userName, StringComparison.OrdinalIgnoreCase) && core.Length <= userName.Length + 2))
+        {
+            return "Das Passwort ist leicht zu erraten (bekanntes Wort, nur Ziffern oder Benutzername). Bitte eine Passphrase wählen.";
+        }
+
+        return null;
+    }
 
     /// <summary>Schlägt aus dem Firmennamen ein gültiges Kürzel vor („Estrichbau Müller GmbH“ → „estrichbau-mueller“).</summary>
     public static string SuggestSlug(string? companyName)

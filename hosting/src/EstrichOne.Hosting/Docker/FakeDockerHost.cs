@@ -297,6 +297,19 @@ public sealed class FakeDockerHost : IDockerHost
 
     public Task<CommandResult> ExecAsync(string container, IReadOnlyList<string> command, TimeSpan timeout, CancellationToken cancellationToken)
     {
+        if (command.Contains("psql") && command.Any(c => c.Contains("system_settings", StringComparison.Ordinal)))
+        {
+            // Simulation: je Instanz unterschiedlich viele abgeschaltete Module.
+            var off = Hash(container) % 3;
+            var json = off switch
+            {
+                0 => "{}",
+                1 => "{\"helpdesk\":false,\"feedback\":true,\"orders\":false}",
+                _ => "{\"machines\":false,\"map\":false,\"dossiers\":false,\"calls\":true}",
+            };
+            return Task.FromResult(new CommandResult(0, json + "\n", string.Empty));
+        }
+
         if (command.Contains("psql"))
         {
             return Task.FromResult(new CommandResult(0, (Hash(container) % 4 + 1).ToString(CultureInfo.InvariantCulture) + "\n", string.Empty));

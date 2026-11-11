@@ -193,7 +193,7 @@ public static class AdministrationEndpoints
     }
 
     private static async Task<IResult> DashboardAsync(HostingDbContext db, StatusService status, ConsoleSettings settings,
-        IDockerHost docker, ProxyManager proxy, IOptions<HostingOptions> options, CancellationToken cancellationToken)
+        IDockerHost docker, ProxyManager proxy, VersionCatalog catalog, IOptions<HostingOptions> options, CancellationToken cancellationToken)
     {
         var defaultVersion = await settings.GetDefaultVersionAsync(cancellationToken);
         var tenants = await db.Tenants.AsNoTracking().Include(t => t.Plan).Where(t => t.State != TenantState.Deleted).ToListAsync(cancellationToken);
@@ -228,9 +228,31 @@ public static class AdministrationEndpoints
         var events = await db.AuditEvents.AsNoTracking().OrderByDescending(a => a.Id).Take(10).ToListAsync(cancellationToken);
         var runningOperations = await db.Operations.CountAsync(o => o.Status == OperationStatus.Running || o.Status == OperationStatus.Queued, cancellationToken);
         var info = await docker.GetSystemInfoAsync(cancellationToken);
+        var latest = (await catalog.GetAsync(tenants.Select(t => t.Version).Distinct(), cancellationToken)).Latest;
+        var apps = tenants.Where(t => t.State is not (TenantState.Deleting or TenantState.Deleted))
+            .OrderBy(t => t.CompanyName, StringComparer.CurrentCultureIgnoreCase)
+            .Select(t => (Tenant: t, Suite: status.GetSuite(t.Slug)))
+            .Select(x => new
+            {
+                tenantId = x.Tenant.Id,
+                x.Tenant.Slug,
+                x.Tenant.CompanyName,
+                x.Tenant.Version,
+                serverVersion = statuses[x.Tenant.Id].RunningVersion,
+                android = x.Suite?.Android,
+                ios = x.Suite?.Ios,
+                enabledModules = x.Suite?.EnabledModules,
+                moduleCount = x.Suite?.Modules.Count,
+                disabledModules = x.Suite?.Modules.Where(m => !m.Enabled).Select(m => m.Title).ToList(),
+                note = x.Suite is null ? "Noch nicht erhoben (Instanz nicht bereit)." : x.Suite.AppsNote ?? x.Suite.ModulesNote,
+            })
+            .ToList();
         return Results.Ok(new
         {
             defaultVersion,
+            latestVersion = latest,
+            behindLatest = latest is null ? 0 : tenants.Count(t => SemanticVersion.IsOlder(t.Version, latest)),
+            apps,
             tenants = new
             {
                 total = tenants.Count,

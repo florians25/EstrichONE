@@ -7,9 +7,9 @@
 					<OverflowToolbar>
 						<Title text="Ankündigungen und Wartungsfenster" level="H2" />
 						<ToolbarSpacer />
-						<Button icon="sap-icon://synchronize" text="Neu verteilen" tooltip="An alle laufenden Instanzen erneut senden" press=".onSync" />
-						<Button id="createMaintenance" text="Wartung planen" icon="sap-icon://wrench" press=".onCreateMaintenance" />
-						<Button id="createAnnouncement" text="Ankündigung" icon="sap-icon://add" type="Emphasized" press=".onCreateAnnouncement" />
+						<Button icon="sap-icon://synchronize" text="Neu verteilen" tooltip="An alle laufenden Instanzen erneut senden" press=".onSync" class="eoWrite" />
+						<Button id="createMaintenance" text="Wartung planen" icon="sap-icon://wrench" press=".onCreateMaintenance" class="eoWrite" />
+						<Button id="createAnnouncement" text="Ankündigung" icon="sap-icon://add" type="Emphasized" press=".onCreateAnnouncement" class="eoWrite" />
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>
@@ -35,9 +35,9 @@
 						<Text text="{parts: ['notices>allTenants', 'notices>targets'], formatter: '.targetsText'}" />
 						<ObjectStatus text="{path: 'notices>targets', formatter: '.syncText'}" state="{path: 'notices>targets', formatter: '.syncState'}" tooltip="{path: 'notices>targets', formatter: '.syncDetails'}" />
 						<HBox justifyContent="End">
-							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit" />
-							<Button icon="sap-icon://stop" type="Transparent" tooltip="Jetzt beenden" press=".onEnd" visible="{= ${notices>status} !== 'beendet' }" />
-							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete" />
+							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit" class="eoWrite" />
+							<Button icon="sap-icon://stop" type="Transparent" tooltip="Jetzt beenden" press=".onEnd" visible="{= ${notices>status} !== 'beendet' }" class="eoWrite" />
+							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete" class="eoWrite" />
 						</HBox>
 					</ColumnListItem>
 				</items>

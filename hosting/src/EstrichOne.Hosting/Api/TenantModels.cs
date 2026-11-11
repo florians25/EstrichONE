@@ -73,7 +73,9 @@ public sealed record TenantDetail(
     string EdgeNetwork,
     string ProxyTarget,
     string? BackupTime,
-    IReadOnlyList<OperationSummary> Operations);
+    IReadOnlyList<OperationSummary> Operations,
+    SuiteInfo? Suite = null,
+    string? LatestVersion = null);
 
 public sealed record PlanDto(Guid Id, string Name, string? Description, int MaxUsers, int StorageGb, int MemoryMb, decimal CpuLimit,
     decimal? MonthlyPrice, int TenantCount)

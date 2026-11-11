@@ -46,6 +46,7 @@ public sealed class HostingDbContext(DbContextOptions<HostingDbContext> options)
         modelBuilder.Entity<AdminUser>(admin =>
         {
             admin.Property(a => a.UserName).HasMaxLength(32);
+            admin.Property(a => a.Role).HasConversion<string>().HasMaxLength(20).HasDefaultValue(AdminRole.Administrator).HasSentinel(AdminRole.Administrator);
             admin.HasIndex(a => a.UserName).IsUnique();
         });
 

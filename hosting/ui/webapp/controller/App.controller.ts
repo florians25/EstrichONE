@@ -65,7 +65,9 @@ export default class AppController extends BaseController {
 		try {
 			const state = await get<{ completed: boolean; mustChangePassword: boolean }>("/api/setup-wizard");
 			this.getOwnerComponentTyped().session.setProperty("/mustChangePassword", state.mustChangePassword);
-			if (state.mustChangePassword || !state.completed) {
+			// Konten „nur lesen“ richten nichts ein – nur das eigene Passwort ist Pflicht.
+			const readOnly = !!this.getOwnerComponentTyped().session.getProperty("/readOnly");
+			if (state.mustChangePassword || (!state.completed && !readOnly)) {
 				this.getRouter().navTo("setup", {}, true);
 			}
 		} catch {

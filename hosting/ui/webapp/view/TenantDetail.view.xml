@@ -24,19 +24,19 @@
 						<Text text="{detail>/summary/slug}" />
 					</uxap:snappedContent>
 					<uxap:actions>
-						<Button id="actStart" text="Starten" icon="sap-icon://media-play" press=".onAction" visible="{= ${detail>/summary/state} === 'Stopped' || ${detail>/summary/state} === 'Failed' }" enabled="{= !${detail>/summary/openOperation} }" app:action="start" />
-						<Button id="actProvision" text="Erneut bereitstellen" icon="sap-icon://synchronize" press=".onAction" visible="{= ${detail>/summary/state} === 'Provisioning' || ${detail>/summary/state} === 'Failed' }" enabled="{= !${detail>/summary/openOperation} }" app:action="provision" />
-						<Button id="actStop" text="Stoppen" icon="sap-icon://stop" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="stop" />
-						<Button id="actRestart" text="Neu starten" icon="sap-icon://restart" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="restart" />
-						<Button id="actUpdate" text="Aktualisieren …" icon="sap-icon://upload-to-cloud" press=".onUpdate" type="{= ${detail>/summary/outdated} ? 'Emphasized' : 'Default' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" />
+						<Button id="actStart" text="Starten" icon="sap-icon://media-play" press=".onAction" visible="{= ${detail>/summary/state} === 'Stopped' || ${detail>/summary/state} === 'Failed' }" enabled="{= !${detail>/summary/openOperation} }" app:action="start" class="eoWrite" />
+						<Button id="actProvision" text="Erneut bereitstellen" icon="sap-icon://synchronize" press=".onAction" visible="{= ${detail>/summary/state} === 'Provisioning' || ${detail>/summary/state} === 'Failed' }" enabled="{= !${detail>/summary/openOperation} }" app:action="provision" class="eoWrite" />
+						<Button id="actStop" text="Stoppen" icon="sap-icon://stop" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="stop" class="eoWrite" />
+						<Button id="actRestart" text="Neu starten" icon="sap-icon://restart" press=".onAction" visible="{= ${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Failed' || ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="restart" class="eoWrite" />
+						<Button id="actUpdate" text="Aktualisieren …" icon="sap-icon://upload-to-cloud" press=".onUpdate" type="{= ${detail>/summary/outdated} ? 'Emphasized' : 'Default' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" class="eoWrite" />
 						<Button id="actRollback" text="Zurücknehmen …" icon="sap-icon://undo" press=".onRollback" visible="{= !!${detail>/summary/previousVersion} }" enabled="{= !${detail>/summary/openOperation} }"
-							tooltip="Zurück auf {detail>/summary/previousVersion} mit dem Datenstand der Vorab-Sicherung" />
-						<Button id="actLock" text="Sperren …" icon="sap-icon://locked" press=".onLock" visible="{= ${detail>/summary/state} !== 'Locked' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" />
-						<Button id="actUnlock" text="Entsperren" icon="sap-icon://unlocked" press=".onAction" visible="{= ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="unlock" />
-						<Button id="actNotice" text="Ankündigung …" icon="sap-icon://marketing-campaign" press=".onNotice" app:kind="Announcement" />
-						<Button id="actMaintenance" text="Wartung planen …" icon="sap-icon://wrench" press=".onNotice" app:kind="Maintenance" />
-						<Button id="actEdit" text="Bearbeiten" icon="sap-icon://edit" press=".onEdit" />
-						<Button id="actDelete" text="Löschen …" icon="sap-icon://delete" type="Reject" press=".onDelete" enabled="{= !${detail>/summary/openOperation} }" />
+							tooltip="Zurück auf {detail>/summary/previousVersion} mit dem Datenstand der Vorab-Sicherung" class="eoWrite" />
+						<Button id="actLock" text="Sperren …" icon="sap-icon://locked" press=".onLock" visible="{= ${detail>/summary/state} !== 'Locked' }" enabled="{= !${detail>/summary/openOperation} &amp;&amp; ${detail>/summary/state} !== 'Provisioning' }" class="eoWrite" />
+						<Button id="actUnlock" text="Entsperren" icon="sap-icon://unlocked" press=".onAction" visible="{= ${detail>/summary/state} === 'Locked' }" enabled="{= !${detail>/summary/openOperation} }" app:action="unlock" class="eoWrite" />
+						<Button id="actNotice" text="Ankündigung …" icon="sap-icon://marketing-campaign" press=".onNotice" app:kind="Announcement" class="eoWrite" />
+						<Button id="actMaintenance" text="Wartung planen …" icon="sap-icon://wrench" press=".onNotice" app:kind="Maintenance" class="eoWrite" />
+						<Button id="actEdit" text="Bearbeiten" icon="sap-icon://edit" press=".onEdit" class="eoWrite" />
+						<Button id="actDelete" text="Löschen …" icon="sap-icon://delete" type="Reject" press=".onDelete" enabled="{= !${detail>/summary/openOperation} }" class="eoWrite" />
 					</uxap:actions>
 				</uxap:ObjectPageDynamicHeaderTitle>
 			</uxap:headerTitle>
@@ -93,8 +93,8 @@
 									<VBox>
 										<Text text="EstrichONE ist eingerichtet; {detail>/summary/firstAdminUserName} kann sich mit dem Startpasswort anmelden. Den Brief drucken oder sicher übermitteln und danach verwerfen – das Startpasswort ist dann nur noch beim Kunden." />
 										<HBox class="sapUiSmallMarginTop">
-											<Button id="openLetter" text="Zugangsbrief öffnen …" icon="sap-icon://letter" type="Emphasized" press=".onAccessLetter" class="sapUiSmallMarginEnd" />
-											<Button id="discardLetter" text="Verwerfen" icon="sap-icon://delete" press=".onDiscardLetter" />
+											<Button id="openLetter" text="Zugangsbrief öffnen …" icon="sap-icon://letter" type="Emphasized" press=".onAccessLetter" class="eoWrite sapUiSmallMarginEnd" />
+											<Button id="discardLetter" text="Verwerfen" icon="sap-icon://delete" press=".onDiscardLetter" class="eoWrite" />
 										</HBox>
 									</VBox>
 								</Panel>
@@ -106,7 +106,7 @@
 											<Button icon="sap-icon://copy" tooltip="Code kopieren" type="Transparent" press=".onCopySetupCode" class="sapUiSmallMarginBegin" enabled="{= !!${detail>/status/setupCode} }" />
 										</HBox>
 										<Button id="actInitialSetup" text="Erste Admin-Person {detail>/summary/firstAdminUserName} jetzt anlegen" icon="sap-icon://add-employee" press=".onAction" app:action="initial-setup"
-											visible="{= !!${detail>/summary/firstAdminUserName} }" enabled="{= !${detail>/summary/openOperation} }" class="sapUiSmallMarginTop" />
+											visible="{= !!${detail>/summary/firstAdminUserName} }" enabled="{= !${detail>/summary/openOperation} }" class="eoWrite sapUiSmallMarginTop" />
 									</VBox>
 								</Panel>
 								<f:SimpleForm editable="false" layout="ColumnLayout" columnsM="2" columnsL="2" columnsXL="3" title="Stammdaten">
@@ -205,6 +205,53 @@
 						</uxap:ObjectPageSubSection>
 					</uxap:subSections>
 				</uxap:ObjectPageSection>
+				<uxap:ObjectPageSection id="secSuite" title="Apps und Module" titleUppercase="false">
+					<uxap:subSections>
+						<uxap:ObjectPageSubSection>
+							<VBox>
+								<MessageStrip type="Information" showIcon="true" visible="{= !${detail>/suite} }" class="sapUiSmallMarginBottom"
+									text="Apps und Module werden erhoben, sobald die Instanz bereit ist (alle 15 Minuten oder mit „Jetzt prüfen“)." />
+								<MessageStrip type="Information" showIcon="true" visible="{= !!${detail>/suite/appsNote} }" class="sapUiSmallMarginBottom" text="{detail>/suite/appsNote}" />
+								<l:Grid defaultSpan="XL4 L4 M6 S12" visible="{= !!${detail>/suite/android} }">
+									<VBox>
+										<Label text="Android-App" />
+										<ObjectStatus text="neueste {detail>/suite/android/latestVersion} · mindestens {detail>/suite/android/minimumVersion}" class="sapMObjectStatusLarge" icon="sap-icon://iphone" />
+										<ObjectStatus text="{path: 'detail>/suite/android', formatter: '.formatter.appSourceText'}" state="{= ${detail>/suite/android/packageAvailable} ? 'Success' : 'Warning' }" />
+									</VBox>
+									<VBox>
+										<Label text="iOS-App" />
+										<ObjectStatus text="neueste {detail>/suite/ios/latestVersion} · mindestens {detail>/suite/ios/minimumVersion}" class="sapMObjectStatusLarge" icon="sap-icon://iphone-2" />
+										<ObjectStatus text="{path: 'detail>/suite/ios', formatter: '.formatter.appSourceText'}" />
+									</VBox>
+									<VBox>
+										<Label text="Server" />
+										<ObjectStatus text="{= ${detail>/status/runningVersion} || ${detail>/summary/version} }" class="sapMObjectStatusLarge" icon="sap-icon://it-host" />
+										<ObjectStatus text="{= ${detail>/latestVersion} &amp;&amp; ${detail>/latestVersion} !== ${detail>/summary/version} ? 'Neuere Version ' + ${detail>/latestVersion} + ' verfügbar' : 'Aktuell' }"
+											state="{= ${detail>/latestVersion} &amp;&amp; ${detail>/latestVersion} !== ${detail>/summary/version} ? 'Warning' : 'Success' }" />
+									</VBox>
+								</l:Grid>
+								<Table id="moduleTable" items="{path: 'detail>/suite/modules', sorter: {path: 'area', group: true}}" class="sapUiSmallMarginTop"
+									headerText="{path: 'detail>/suite/modules', formatter: '.formatter.modulesHeader'}"
+									visible="{= !!${detail>/suite/modules} &amp;&amp; ${detail>/suite/modules}.length > 0 }" noDataText="Keine Angaben">
+									<columns>
+										<Column><Text text="Modul" /></Column>
+										<Column hAlign="End" width="10rem"><Text text="Zustand" /></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<Text text="{detail>title}" />
+											<ObjectStatus text="{= ${detail>enabled} ? 'eingeschaltet' : 'ausgeschaltet' }" state="{= ${detail>enabled} ? 'Success' : 'None' }"
+												icon="{= ${detail>enabled} ? 'sap-icon://accept' : 'sap-icon://less' }" />
+										</ColumnListItem>
+									</items>
+								</Table>
+								<Text text="{detail>/suite/modulesNote}" visible="{= !!${detail>/suite/modulesNote} }" class="hostingHint" />
+								<Text text="Module schaltet die Firma selbst in EstrichONE unter Einstellungen › Module. Stand: {path: 'detail>/suite/collectedAt', formatter: '.formatter.ago'}"
+									visible="{= !!${detail>/suite} }" class="hostingHint sapUiSmallMarginTop" />
+							</VBox>
+						</uxap:ObjectPageSubSection>
+					</uxap:subSections>
+				</uxap:ObjectPageSection>
 				<uxap:ObjectPageSection id="secBackup" title="Sicherung" titleUppercase="false">
 					<uxap:subSections>
 						<uxap:ObjectPageSubSection>
@@ -243,15 +290,15 @@
 											<Text text="{path: 'snapshots>time', formatter: '.formatter.dateTime'}" />
 											<ObjectStatus text="{snapshots>shortId}" state="{= ${snapshots>id} === ${snapshots>/rollbackSnapshot} ? 'Information' : 'None' }" tooltip="{= ${snapshots>id} === ${snapshots>/rollbackSnapshot} ? 'Vorab-Sicherung der letzten Aktualisierung' : ${snapshots>id} }" />
 											<Text text="{snapshots>repository}" />
-											<Button text="Wiederherstellen …" icon="sap-icon://history" press=".onRestore" enabled="{= !${detail>/summary/openOperation} }" />
+											<Button text="Wiederherstellen …" icon="sap-icon://history" press=".onRestore" enabled="{= !${detail>/summary/openOperation} }" class="eoWrite" />
 										</ColumnListItem>
 									</items>
 								</Table>
 								<HBox wrap="Wrap">
 									<Button id="actBackup" text="Jetzt sichern" icon="sap-icon://save" press=".onAction" app:action="backup"
-										enabled="{= !${detail>/summary/openOperation} &amp;&amp; (${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Locked' || ${detail>/summary/state} === 'Failed') }" class="sapUiSmallMarginEnd" />
-									<Button id="showBackupKey" text="Sicherungsschlüssel anzeigen …" icon="sap-icon://key" press=".onBackupKey" class="sapUiSmallMarginEnd" />
-									<Button id="actExport" text="Export herunterladen …" icon="sap-icon://download" press=".onExport" tooltip="Sicherungs-Repository und Schlüssel als tar.gz (z. B. vor dem Löschen oder zur Übergabe an den Kunden)" />
+										enabled="{= !${detail>/summary/openOperation} &amp;&amp; (${detail>/summary/state} === 'Running' || ${detail>/summary/state} === 'Locked' || ${detail>/summary/state} === 'Failed') }" class="eoWrite sapUiSmallMarginEnd" />
+									<Button id="showBackupKey" text="Sicherungsschlüssel anzeigen …" icon="sap-icon://key" press=".onBackupKey" class="eoWrite sapUiSmallMarginEnd" />
+									<Button id="actExport" text="Export herunterladen …" icon="sap-icon://download" press=".onExport" tooltip="Sicherungs-Repository und Schlüssel als tar.gz (z. B. vor dem Löschen oder zur Übergabe an den Kunden)" class="eoWrite" />
 								</HBox>
 							</VBox>
 						</uxap:ObjectPageSubSection>

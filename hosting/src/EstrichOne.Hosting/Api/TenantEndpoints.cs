@@ -94,7 +94,7 @@ public static partial class TenantEndpoints
     }
 
     private static async Task<IResult> GetAsync(Guid id, HostingDbContext db, TenantService service, ConsoleSettings settings,
-        StatusService status, InstanceLayout layout, InstanceFiles files, CancellationToken cancellationToken)
+        StatusService status, InstanceLayout layout, InstanceFiles files, VersionCatalog catalog, CancellationToken cancellationToken)
     {
         var tenant = await db.Tenants.AsNoTracking().Include(t => t.Plan).FirstOrDefaultAsync(t => t.Id == id && t.State != TenantState.Deleted, cancellationToken);
         if (tenant is null)
@@ -112,7 +112,8 @@ public static partial class TenantEndpoints
             PlanDto.From(tenant.Plan!, tenantCount), status.Get(tenant.Slug), layout.Directory(tenant.Slug),
             InstanceLayout.ProjectName(tenant.Slug), InstanceLayout.EdgeNetwork(tenant.Slug),
             $"http://{InstanceLayout.WebContainer(tenant.Slug)}:{InstanceLayout.InstanceHttpPort}",
-            env.GetValueOrDefault("BACKUP_TIME"), recent.Select(TenantService.ToSummary).ToList()));
+            env.GetValueOrDefault("BACKUP_TIME"), recent.Select(TenantService.ToSummary).ToList(),
+            status.GetSuite(tenant.Slug), (await catalog.GetAsync([tenant.Version], cancellationToken)).Latest));
     }
 
     private static async Task<IResult> UpdateAsync(Guid id, TenantInput input, HostingDbContext db, TenantService service,

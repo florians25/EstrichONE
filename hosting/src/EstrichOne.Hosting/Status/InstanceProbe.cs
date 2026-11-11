@@ -22,6 +22,12 @@ public interface IInstanceProbe
     /// <summary>Setzt die Systemhinweise der Instanz (<c>PUT /api/v1/system/notices</c> mit Instanz-Schlüssel).</summary>
     Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken);
 
+    /// <summary>
+    /// Stand der App einer Plattform (<c>GET /api/v1/app-updates/check</c>, ohne Anmeldung). <c>null</c>, wenn die
+    /// Suite-Version den Endpunkt noch nicht kennt (vor 1.0.13).
+    /// </summary>
+    Task<AppPlatformInfo?> CheckAppAsync(string slug, string platform, CancellationToken cancellationToken);
+
     /// <summary>Ersteinrichtung der Suite (<c>POST /api/v1/setup</c>): Firma und erste Admin-Person mit dem Einrichtungscode.</summary>
     Task<NoticePushResult> CompleteSetupAsync(string slug, SuiteSetupRequest request, CancellationToken cancellationToken);
 }
@@ -94,6 +100,33 @@ public sealed class HttpInstanceProbe(HttpClient http) : IInstanceProbe
         }
     }
 
+    private sealed record AppDownloadDto(
+        [property: JsonPropertyName("kind")] string? Kind,
+        [property: JsonPropertyName("url")] string? Url,
+        [property: JsonPropertyName("size")] long? Size);
+
+    private sealed record AppCheckDto(
+        [property: JsonPropertyName("latestVersion")] string? LatestVersion,
+        [property: JsonPropertyName("minimumVersion")] string? MinimumVersion,
+        [property: JsonPropertyName("download")] AppDownloadDto? Download);
+
+    public async Task<AppPlatformInfo?> CheckAppAsync(string slug, string platform, CancellationToken cancellationToken)
+    {
+        // Version 0.0.0: „neueste“ und Mindestversion kommen immer mit, unabhängig vom Gerät.
+        var uri = new Uri($"http://{InstanceLayout.WebContainer(slug)}:{InstanceLayout.InstanceHttpPort}/api/v1/app-updates/check?platform={platform}&version=0.0.0");
+        using var response = await http.GetAsync(uri, cancellationToken);
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
+
+        response.EnsureSuccessStatusCode();
+        var dto = await response.Content.ReadFromJsonAsync<AppCheckDto>(cancellationToken);
+        var packageAvailable = string.Equals(dto?.Download?.Kind, "package", StringComparison.OrdinalIgnoreCase) && dto?.Download?.Url is not null;
+        return new AppPlatformInfo(platform, dto?.LatestVersion, dto?.MinimumVersion, dto?.Download?.Kind, packageAvailable,
+            packageAvailable ? dto?.Download?.Size : null);
+    }
+
     private static string Shorten(string text) => text.Trim() is { Length: > 200 } long_ ? long_[..200] : text.Trim();
 
     public async Task<NoticePushResult> PushNoticesAsync(string slug, string token, string json, CancellationToken cancellationToken)
@@ -161,6 +194,22 @@ public sealed class FakeInstanceProbe(IDockerHost docker, InstanceFiles files) :
         return new NoticePushResult(true, 204, null);
     }
 
+    public async Task<AppPlatformInfo?> CheckAppAsync(string slug, string platform, CancellationToken cancellationToken)
+    {
+        var env = await files.ReadEnvAsync(slug, cancellationToken);
+        var version = env.GetValueOrDefault("ESTRICHONE_VERSION", "0.0.0");
+        // Simulation: Suite-Versionen mit Vorabkennung „preview.3“ kennen die App-Updates noch nicht.
+        if (version.EndsWith("preview.3", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        var app = version.Split('-')[0];
+        return platform == "android"
+            ? new AppPlatformInfo("android", app, "1.0.10", "package", true, 38_412_288)
+            : new AppPlatformInfo("ios", app, "1.0.10", "store", false, null);
+    }
+
     public async Task<ProbeResult> ProbeAsync(string slug, CancellationToken cancellationToken)
     {
         var containers = await docker.ListContainersAsync(InstanceLayout.ProjectName(slug), cancellationToken);
@@ -170,6 +219,12 @@ public sealed class FakeInstanceProbe(IDockerHost docker, InstanceFiles files) :
         }
 
         var env = await files.ReadEnvAsync(slug, cancellationToken);
+        if (env.GetValueOrDefault("ESTRICHONE_VERSION", string.Empty).Contains("ungesund", StringComparison.Ordinal))
+        {
+            // Simulation: Container laufen, die Datenbankmigration der neuen Version scheitert aber (Bereitschaft fehlt).
+            return new ProbeResult(true, 503, "Unhealthy", null, null, null, null);
+        }
+
         return new ProbeResult(true, 200, "Healthy", env.GetValueOrDefault("ESTRICHONE_VERSION"),
             env.GetValueOrDefault("ESTRICHONE_SERVER_NAME"), !CompletedSetups.ContainsKey(slug), null);
     }

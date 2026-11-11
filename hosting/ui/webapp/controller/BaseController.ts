@@ -60,7 +60,8 @@ export default class BaseController extends Controller {
 					}
 				}
 			}
-			if (error.status === 401) {
+			// Nicht angemeldet bzw. Startpasswort noch aktiv: Anmeldung bzw. Einrichtungsseite übernehmen, keine Fehlermeldung.
+			if (error.status === 401 || error.code === "PASSWORD_CHANGE_REQUIRED") {
 				return;
 			}
 			MessageBox.error(error.detail, { title: error.status === 409 ? "Nicht möglich" : "Fehler" });

@@ -69,11 +69,21 @@ public sealed class Tenant
     public string? RollbackSnapshot { get; set; }
 }
 
+/// <summary>Berechtigung eines Kontos der Konsole.</summary>
+public enum AdminRole
+{
+    /// <summary>Darf alles: Instanzen anlegen, ändern, aktualisieren, löschen; Konten und Einstellungen verwalten.</summary>
+    Administrator,
+    /// <summary>Nur lesen (Bereitschaft, Leitstand, Support): Zustand, Protokolle, Ereignisse – keine Änderungen.</summary>
+    Viewer,
+}
+
 public sealed class AdminUser
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public required string UserName { get; set; }
     public string? DisplayName { get; set; }
+    public AdminRole Role { get; set; } = AdminRole.Administrator;
     public required string PasswordHash { get; set; }
     /// <summary>Base32-Geheimnis für TOTP; gesetzt, aber erst nach Bestätigung aktiv.</summary>
     public string? TotpSecret { get; set; }

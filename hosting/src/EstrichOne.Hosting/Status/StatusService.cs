@@ -21,6 +21,10 @@ public sealed partial class StatusService(
 {
     private readonly ConcurrentDictionary<string, TenantStatus> snapshots = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<string, UsageSample> usage = new(StringComparer.Ordinal);
+    private readonly ConcurrentDictionary<string, SuiteInfo> suites = new(StringComparer.Ordinal);
+
+    /// <summary>Apps und Module der Instanz (letzte Erhebung; <c>null</c>, solange die Instanz nicht erreichbar war).</summary>
+    public SuiteInfo? GetSuite(string slug) => suites.GetValueOrDefault(slug);
 
     public TenantStatus Get(string slug) => snapshots.TryGetValue(slug, out var status) ? status : TenantStatus.Empty(slug);
 
@@ -30,6 +34,7 @@ public sealed partial class StatusService(
     {
         snapshots.TryRemove(slug, out _);
         usage.TryRemove(slug, out _);
+        suites.TryRemove(slug, out _);
     }
 
     public async Task<TenantStatus> CollectAsync(Tenant tenant, Plan plan, bool forceUsage, CancellationToken cancellationToken)
@@ -59,6 +64,12 @@ public sealed partial class StatusService(
                 usage[tenant.Slug] = sample;
             }
 
+            if (probeResult is { HealthStatusCode: 200 }
+                && (forceUsage || !suites.TryGetValue(tenant.Slug, out var known) || now - known.CollectedAt > SuiteInfo.MaxAge))
+            {
+                suites[tenant.Slug] = await CollectSuiteAsync(tenant.Slug, running.Any(c => c.Service == "postgres"), now, cancellationToken);
+            }
+
             var backup = BackupState.Read(Path.Combine(layout.DataDirectory(tenant.Slug), "backup-status"), now);
             var (level, problems) = HealthEvaluator.Evaluate(
                 expectedRunning, containers, probeResult, backup,
@@ -85,6 +96,51 @@ public sealed partial class StatusService(
             snapshots[tenant.Slug] = failed;
             return failed;
         }
+    }
+
+    /// <summary>Apps (über die Suite, ohne Anmeldung) und Module (direkt aus den Einstellungen in der Datenbank).</summary>
+    private async Task<SuiteInfo> CollectSuiteAsync(string slug, bool postgresRunning, DateTime now, CancellationToken cancellationToken)
+    {
+        AppPlatformInfo? android = null, ios = null;
+        string? appsNote = null;
+        try
+        {
+            android = await probe.CheckAppAsync(slug, "android", cancellationToken);
+            ios = android is null ? null : await probe.CheckAppAsync(slug, "ios", cancellationToken);
+            if (android is null)
+            {
+                appsNote = "Diese Suite-Version meldet den App-Stand noch nicht (ab 1.0.13).";
+            }
+        }
+        catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            appsNote = $"App-Stand nicht abrufbar: {exception.Message}";
+        }
+
+        IReadOnlyList<SuiteModuleState> modules = [];
+        string? modulesNote = null;
+        if (postgresRunning)
+        {
+            var result = await docker.ExecAsync(InstanceLayout.PostgresContainer(slug),
+                ["psql", "-U", "estrichone", "-d", "estrichone", "-tAc", "SELECT coalesce((data->'modules')::text, '{}') FROM system_settings LIMIT 1"],
+                TimeSpan.FromSeconds(20), cancellationToken);
+            try
+            {
+                modules = result.Success ? SuiteModules.Parse(result.Output.Trim()) : [];
+                modulesNote = result.Success ? null : "Module nicht lesbar (ältere Suite-Version oder Datenbank nicht bereit).";
+            }
+            catch (System.Text.Json.JsonException)
+            {
+                modulesNote = "Module nicht lesbar (unerwartetes Format).";
+            }
+        }
+        else
+        {
+            modulesNote = "Datenbank läuft nicht.";
+        }
+
+        return new SuiteInfo(now, android, ios, appsNote, modules, modulesNote);
     }
 
     /// <summary>Der Einrichtungscode steht nur im Protokoll der API (wie beim Suite-Installer).</summary>

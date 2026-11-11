@@ -73,6 +73,8 @@ public static class InitialAdmin
             admin.LockedUntil = null;
             admin.TotpEnabled = false;
             admin.TotpSecret = null;
+            // Notfallzugang: das zurückgesetzte Konto darf wieder alles (auch wenn es zuvor „nur lesen“ war).
+            admin.Role = AdminRole.Administrator;
             admin.SecurityStamp++;
             message = $"Administrator „{userName}“ per Installer zurückgesetzt (neues Startpasswort, Zwei-Faktor-Anmeldung aus).";
         }

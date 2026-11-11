@@ -43,7 +43,8 @@ export default class SetupController extends BaseController {
 				...this.setup.getData(), ...state, secondaryRepository: state.secondaryRepository ?? "",
 				versions: versions.versions, versionSource: versions.source, currentPassword: "", newPassword: "", repeatPassword: "", totp: null, totpCode: ""
 			});
-			this.go(state.completed ? 5 : 0);
+			// Neues Konto bzw. zurückgesetztes Passwort: auch nach abgeschlossener Einrichtung zuerst das eigene Passwort.
+			this.go(state.completed && !state.mustChangePassword ? 5 : 0);
 		});
 	}
 
@@ -65,6 +66,10 @@ export default class SetupController extends BaseController {
 
 	public onSkip(): void {
 		const step = this.setup.getProperty("/step") as number;
+		if (step >= 1 && (this.getOwnerComponentTyped().session.getProperty("/readOnly") || this.setup.getProperty("/completed"))) {
+			this.navTo("dashboard");
+			return;
+		}
 		if (step === 4) {
 			void this.finish(false);
 		} else {
@@ -97,6 +102,12 @@ export default class SetupController extends BaseController {
 				this.setup.setProperty("/versions", versions.versions);
 				this.setup.setProperty("/versionSource", versions.source);
 			}
+		}
+		// Konten „nur lesen“ und weitere Konten einer fertig eingerichteten Konsole: eigenes Passwort und (optional)
+		// Zwei-Faktor genügen – Version, Sicherung und Benachrichtigungen sind schon eingestellt.
+		if (step >= 1 && (this.getOwnerComponentTyped().session.getProperty("/readOnly") || d.completed)) {
+			this.navTo("dashboard");
+			return;
 		}
 		if (step === 4) {
 			await this.finish(true);

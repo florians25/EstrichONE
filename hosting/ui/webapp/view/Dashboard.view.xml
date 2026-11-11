@@ -5,7 +5,7 @@
 		<headerContent>
 			<Text text="Stand: {path: 'dashboard>/loadedAt', formatter: '.formatter.ago'}" class="hostingHint" />
 			<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh" />
-			<Button id="dashboardCreate" text="Mandant anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" />
+			<Button id="dashboardCreate" text="Mandant anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" class="eoWrite" />
 		</headerContent>
 		<content>
 			<VBox class="sapUiResponsiveContentPadding">
@@ -139,6 +139,13 @@
 						</f:SimpleForm>
 					</Panel>
 					<Panel headerText="Versionen im Einsatz">
+						<MessageStrip showIcon="true" class="sapUiSmallMarginBottom" visible="{= !!${dashboard>/latestVersion} }"
+							type="{= ${dashboard>/behindLatest} > 0 ? 'Warning' : 'Success' }"
+							text="{= ${dashboard>/behindLatest} > 0 ? 'Neueste Version ' + ${dashboard>/latestVersion} + ': ' + ${dashboard>/behindLatest} + ' Instanz(en) noch nicht aktualisiert.' : 'Alle Instanzen sind auf der neuesten Version ' + ${dashboard>/latestVersion} + '.' }">
+							<link>
+								<Link text="Versionshinweise" href="{path: 'dashboard>/latestVersion', formatter: '.formatter.releaseNotesUrl'}" target="_blank" />
+							</link>
+						</MessageStrip>
 						<List items="{dashboard>/versions}" noDataText="Keine Mandanten.">
 							<StandardListItem title="{dashboard>version}" info="{dashboard>count} Instanz(en)"
 								infoState="{= ${dashboard>version} === ${dashboard>/defaultVersion} ? 'Success' : 'Warning'}" icon="sap-icon://tag" />
@@ -160,6 +167,39 @@
 						</List>
 					</Panel>
 				</l:Grid>
+				<Table id="appTable" items="{dashboard>/apps}" class="sapUiSmallMarginTop" noDataText="Noch keine Instanzen." growing="true" growingThreshold="25">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Apps und Module je Instanz" level="H2" />
+							<ToolbarSpacer />
+							<Text text="Angaben der Instanzen, alle 15 Minuten erhoben" class="hostingHint" />
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Mandant" /></Column>
+						<Column width="8rem"><Text text="Server" /></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Android (neueste, Mindestversion)" /></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="iOS (neueste, Mindestversion)" /></Column>
+						<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Module" /></Column>
+					</columns>
+					<items>
+						<ColumnListItem type="Navigation" press=".onProblem">
+							<ObjectIdentifier title="{dashboard>companyName}" text="{dashboard>slug}" />
+							<Text text="{= ${dashboard>serverVersion} || ${dashboard>version} }" />
+							<VBox>
+								<Text text="{parts: ['dashboard>android/latestVersion', 'dashboard>android/minimumVersion'], formatter: '.formatter.appsShort'}" />
+								<ObjectStatus text="{path: 'dashboard>android', formatter: '.formatter.appSourceText'}" state="{= ${dashboard>android/packageAvailable} ? 'Success' : 'None' }"
+									visible="{= !!${dashboard>android} }" />
+								<Text text="{dashboard>note}" visible="{= !${dashboard>android} }" class="hostingHint" />
+							</VBox>
+							<Text text="{parts: ['dashboard>ios/latestVersion', 'dashboard>ios/minimumVersion'], formatter: '.formatter.appsShort'}" />
+							<VBox>
+								<Text text="{= ${dashboard>moduleCount} ? ${dashboard>enabledModules} + ' von ' + ${dashboard>moduleCount} + ' eingeschaltet' : '–' }" />
+								<Text text="{= ${dashboard>disabledModules} &amp;&amp; ${dashboard>disabledModules}.length ? 'aus: ' + ${dashboard>disabledModules}.join(', ') : '' }" class="hostingHint" />
+							</VBox>
+						</ColumnListItem>
+					</items>
+				</Table>
 			</VBox>
 		</content>
 	</Page>

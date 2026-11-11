@@ -4,9 +4,9 @@ on:
   workflow_dispatch: {}
   push:
     branches: ["**", "!dependabot/**"]
-    paths: ["hosting/**", "docker/hosting*.Dockerfile", "deploy/compose*.yml", "docker/installer/compose.override.yml", "branding/*.svg", "global.json", ".github/workflows/hosting.yml"]
+    paths: ["hosting/**", "install.sh", "docker/hosting*.Dockerfile", "deploy/compose*.yml", "docker/installer/compose.override.yml", "branding/*.svg", "global.json", ".github/workflows/hosting.yml"]
   pull_request:
-    paths: ["hosting/**", "docker/hosting*.Dockerfile", "deploy/compose*.yml", "docker/installer/compose.override.yml", "branding/*.svg", "global.json", ".github/workflows/hosting.yml"]
+    paths: ["hosting/**", "install.sh", "docker/hosting*.Dockerfile", "deploy/compose*.yml", "docker/installer/compose.override.yml", "branding/*.svg", "global.json", ".github/workflows/hosting.yml"]
 
 permissions:
   contents: read
@@ -34,7 +34,7 @@ jobs:
           dotnet list hosting/EstrichOne.Hosting.slnx package --vulnerable --include-transitive 2>&1 | tee vulnerable.txt
           ! grep -q "has the following vulnerable packages" vulnerable.txt
       - name: Shellcheck
-        run: shellcheck hosting/install.sh hosting/deploy/*.sh hosting/scripts/*.sh
+        run: shellcheck install.sh hosting/install.sh hosting/deploy/*.sh hosting/scripts/*.sh
       - uses: actions/setup-node@v5
         with:
           node-version: 24

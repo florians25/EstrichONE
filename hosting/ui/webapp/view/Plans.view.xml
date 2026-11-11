@@ -6,7 +6,7 @@
 					<OverflowToolbar>
 						<Title text="Tarife und Pakete" level="H2" />
 						<ToolbarSpacer />
-						<Button id="createPlan" text="Tarif anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" />
+						<Button id="createPlan" text="Tarif anlegen" icon="sap-icon://add" type="Emphasized" press=".onCreate" class="eoWrite" />
 					</OverflowToolbar>
 				</headerToolbar>
 				<infoToolbar>
@@ -34,8 +34,8 @@
 						<Text text="{path: 'plans>monthlyPrice', formatter: '.formatter.price'}" />
 						<Text text="{plans>tenantCount}" />
 						<HBox justifyContent="End">
-							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit" />
-							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete" enabled="{= ${plans>tenantCount} === 0 }" />
+							<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEdit" class="eoWrite" />
+							<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDelete" enabled="{= ${plans>tenantCount} === 0 }" class="eoWrite" />
 						</HBox>
 					</ColumnListItem>
 				</items>

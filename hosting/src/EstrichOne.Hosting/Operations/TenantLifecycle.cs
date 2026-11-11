@@ -297,8 +297,9 @@ public sealed class TenantLifecycle(
             try
             {
                 await UpAsync(tenant, log, cancellationToken);
+                await VerifyReadyAsync(tenant, log, cancellationToken);
             }
-            catch (DockerException exception)
+            catch (Exception exception) when (exception is DockerException or NotReadyException)
             {
                 // Neue Version startet nicht: automatisch zurück auf den bisherigen Stand (Version + Daten der Vorab-Sicherung).
                 log.Write($"Start mit {version} fehlgeschlagen: {exception.Message}");
@@ -317,6 +318,29 @@ public sealed class TenantLifecycle(
         {
             log.Write("Instanz ist angehalten – die neue Version wird beim nächsten Start aktiv.");
         }
+    }
+
+    /// <summary>Die Container laufen – antwortet die Suite auch fachlich? <c>/health/ready</c> (API und Datenbank) muss 200 liefern.</summary>
+    private async Task VerifyReadyAsync(Tenant tenant, OperationLog log, CancellationToken cancellationToken)
+    {
+        var attempts = Settings.IsFake ? 3 : 30;
+        var delay = Settings.IsFake ? TimeSpan.FromMilliseconds(50) : TimeSpan.FromSeconds(4);
+        ProbeResult? last = null;
+        for (var attempt = 1; attempt <= attempts; attempt++)
+        {
+            last = await probe.ProbeAsync(tenant.Slug, cancellationToken);
+            if (last.HealthStatusCode == 200)
+            {
+                log.Write($"Bereitschaftsprüfung bestanden (/health/ready, Server meldet {last.ServerVersion ?? "keine Version"}).");
+                return;
+            }
+
+            await Task.Delay(delay, clock, cancellationToken);
+        }
+
+        throw new NotReadyException(last?.HealthStatusCode is { } code
+            ? $"Bereitschaftsprüfung fehlgeschlagen: /health/ready antwortet mit HTTP {code}"
+            : $"Bereitschaftsprüfung fehlgeschlagen: Instanz nicht erreichbar ({last?.Error ?? "keine Antwort"})");
     }
 
     private string StatusDirectory(Tenant tenant) => Path.Combine(layout.DataDirectory(tenant.Slug), "backup-status");
@@ -514,3 +538,6 @@ public sealed class TenantLifecycle(
 
 /// <summary>Vorgang fehlgeschlagen, Instanz aber automatisch auf den vorherigen Stand zurückgesetzt (läuft wieder).</summary>
 public sealed class RolledBackException(string message) : Exception(message);
+
+/// <summary>Die Instanz startet, meldet sich aber nicht bereit (Bereitschaftsprüfung nach einer Aktualisierung).</summary>
+public sealed class NotReadyException(string message) : Exception(message);

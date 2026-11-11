@@ -5,7 +5,7 @@
 			<mvc:XMLView id="login" viewName="estrichone.hosting.view.Login" />
 			<tnt:ToolPage id="shell" sideExpanded="true">
 				<tnt:header>
-					<f:ShellBar id="shellBar" title="EstrichONE" secondTitle="Hosting-Konsole" homeIcon="{ui>/logo}" homeIconTooltip="Zur Übersicht"
+					<f:ShellBar id="shellBar" title="EstrichONE" secondTitle="{= ${session>/readOnly} ? 'Hosting-Konsole · nur lesen' : 'Hosting-Konsole' }" homeIcon="{ui>/logo}" homeIconTooltip="Zur Übersicht"
 						showMenuButton="true" menuButtonPressed=".onToggleSide" homeIconPressed=".onHome"
 						showNotifications="true" notificationsNumber="{shell>/notifications}" notificationsPressed=".onNotifications"
 						avatarPressed=".onAvatar">

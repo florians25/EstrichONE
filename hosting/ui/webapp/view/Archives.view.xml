@@ -27,8 +27,8 @@
 							<Text text="{path: 'archives>sizeBytes', formatter: '.formatter.bytes'}" />
 							<ObjectStatus text="{= ${archives>hasKey} ? 'instanz.env enthalten' : 'fehlt' }" state="{= ${archives>hasKey} ? 'Success' : 'Error' }" />
 							<HBox justifyContent="End">
-								<Button text="Herunterladen …" icon="sap-icon://download" press=".onDownload" class="sapUiTinyMarginEnd" />
-								<Button text="Endgültig löschen …" icon="sap-icon://delete" type="Reject" press=".onDelete" />
+								<Button text="Herunterladen …" icon="sap-icon://download" press=".onDownload" class="eoWrite sapUiTinyMarginEnd" />
+								<Button text="Endgültig löschen …" icon="sap-icon://delete" type="Reject" press=".onDelete" class="eoWrite" />
 							</HBox>
 						</ColumnListItem>
 					</items>

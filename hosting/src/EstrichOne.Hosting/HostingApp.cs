@@ -196,6 +196,7 @@ public static class HostingApp
         });
         app.UseAuthentication();
         EstrichOne.Hosting.Setup.PasswordChangeGate.UsePasswordChangeGate(app);
+        app.UseRoleGate();
         app.UseCsrfProtection();
         app.UseRateLimiter();
         app.UseAuthorization();

@@ -138,7 +138,7 @@ export default class SettingsController extends BaseController {
 	}
 
 	public onAddAdmin(): void {
-		this.settings.setProperty("/newAdmin", { userName: "", displayName: "", password: "" });
+		this.settings.setProperty("/newAdmin", { userName: "", displayName: "", password: "", role: "Administrator" });
 		(this.byId("adminDialog") as Dialog).open();
 	}
 
@@ -160,10 +160,26 @@ export default class SettingsController extends BaseController {
 
 	public onDeleteAdmin(event: Event): void {
 		const admin = (event.getSource() as Control).getBindingContext("settings")!.getObject() as { id: string; userName: string };
-		MessageBox.confirm(`Administrator „${admin.userName}“ löschen?`, {
+		MessageBox.confirm(`Konto „${admin.userName}“ löschen?`, {
 			onClose: async (choice: string) => {
 				if (choice === MessageBox.Action.OK) {
 					await this.run(() => del(`/api/admins/${admin.id}`));
+					await this.load();
+				}
+			}
+		});
+	}
+
+	public onToggleRole(event: Event): void {
+		const admin = (event.getSource() as Control).getBindingContext("settings")!.getObject() as { id: string; userName: string; role: string };
+		const role = admin.role === "Viewer" ? "Administrator" : "Viewer";
+		const text = role === "Viewer"
+			? `„${admin.userName}“ auf „nur lesen“ setzen? Das Konto wird abgemeldet und kann danach nichts mehr ändern.`
+			: `„${admin.userName}“ zum Administrator machen? Das Konto darf danach Instanzen ändern, aktualisieren und löschen.`;
+		MessageBox.confirm(text, {
+			onClose: async (choice: string) => {
+				if (choice === MessageBox.Action.OK) {
+					await this.run(() => put(`/api/admins/${admin.id}/role`, { role }));
 					await this.load();
 				}
 			}

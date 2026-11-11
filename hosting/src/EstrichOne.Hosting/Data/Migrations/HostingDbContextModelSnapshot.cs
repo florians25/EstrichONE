@@ -48,6 +48,13 @@ namespace EstrichOne.Hosting.Data.Migrations
                     b.Property<string>("Preferences")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("TEXT")
+                        .HasDefaultValue("Administrator");
+
                     b.Property<int>("SecurityStamp")
                         .HasColumnType("INTEGER");
 

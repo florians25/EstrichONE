@@ -19,11 +19,13 @@ public sealed record SetupRequest(string? SetupCode, string? UserName, string? D
 public sealed record ChangePasswordRequest(string? CurrentPassword, string? NewPassword);
 public sealed record TotpCodeRequest(string? Code);
 public sealed record PasswordConfirmRequest(string? Password);
-public sealed record CreateAdminRequest(string? UserName, string? DisplayName, string? Password);
-public sealed record UserInfo(Guid Id, string UserName, string? DisplayName, bool TotpEnabled, JsonElement? Preferences);
+public sealed record CreateAdminRequest(string? UserName, string? DisplayName, string? Password, AdminRole? Role = null);
+public sealed record RoleRequest(AdminRole? Role);
+public sealed record UserInfo(Guid Id, string UserName, string? DisplayName, bool TotpEnabled, JsonElement? Preferences, AdminRole Role = AdminRole.Administrator);
 public sealed record SessionState(bool SetupRequired, bool Authenticated, UserInfo? User, string? CsrfToken, bool Simulation, string ConsoleVersion);
 public sealed record TotpSetup(string Secret, string Uri, string QrSvg);
-public sealed record AdminListItem(Guid Id, string UserName, string? DisplayName, bool TotpEnabled, DateTime CreatedAt, DateTime? LastLoginAt, bool Locked);
+public sealed record AdminListItem(Guid Id, string UserName, string? DisplayName, bool TotpEnabled, DateTime CreatedAt, DateTime? LastLoginAt, bool Locked,
+    AdminRole Role = AdminRole.Administrator, bool MustChangePassword = false);
 
 public static class AuthEndpoints
 {
@@ -70,10 +72,11 @@ public static class AuthEndpoints
             var now = clock.GetUtcNow().UtcDateTime;
             var list = await db.Admins.AsNoTracking().OrderBy(a => a.UserName).ToListAsync(ct);
             return Results.Ok(list.Select(a => new AdminListItem(a.Id, a.UserName, a.DisplayName, a.TotpEnabled, a.CreatedAt, a.LastLoginAt,
-                a.LockedUntil > now)));
+                a.LockedUntil > now, a.Role, a.MustChangePassword)));
         });
         admins.MapPost("/", CreateAdminAsync);
         admins.MapDelete("/{id:guid}", DeleteAdminAsync);
+        admins.MapPut("/{id:guid}/role", ChangeRoleAsync);
         admins.MapPost("/{id:guid}/unlock", async (Guid id, HostingDbContext db, AuditLog audit, CancellationToken ct) =>
         {
             var admin = await db.Admins.FindAsync([id], ct);
@@ -122,7 +125,7 @@ public static class AuthEndpoints
             }
         }
 
-        return new UserInfo(admin.Id, admin.UserName, admin.DisplayName, admin.TotpEnabled, preferences);
+        return new UserInfo(admin.Id, admin.UserName, admin.DisplayName, admin.TotpEnabled, preferences, admin.Role);
     }
 
     private static async Task<IResult> LoginAsync(LoginRequest request, HttpContext context, HostingDbContext db, AuditLog audit,
@@ -211,7 +214,7 @@ public static class AuthEndpoints
         var userName = (request.UserName ?? string.Empty).Trim().ToLowerInvariant();
         var errors = new Dictionary<string, string>();
         if (Validation.CheckUserName(userName) is { } userError) errors["userName"] = userError;
-        if (Validation.CheckPassword(request.Password) is { } passwordError) errors["password"] = passwordError;
+        if (Validation.CheckPassword(request.Password, userName) is { } passwordError) errors["password"] = passwordError;
         if (Validation.CheckText(request.DisplayName, "Der Name", 80, false) is { } nameError) errors["displayName"] = nameError;
         if (errors.Count > 0)
         {
@@ -250,7 +253,7 @@ public static class AuthEndpoints
             return ApiErrors.BadRequest("Das aktuelle Passwort ist falsch.");
         }
 
-        if (Validation.CheckPassword(request.NewPassword) is { } error)
+        if (Validation.CheckPassword(request.NewPassword, admin.UserName) is { } error)
         {
             return ApiErrors.BadRequest(error);
         }
@@ -354,8 +357,9 @@ public static class AuthEndpoints
         var userName = (request.UserName ?? string.Empty).Trim().ToLowerInvariant();
         var errors = new Dictionary<string, string>();
         if (Validation.CheckUserName(userName) is { } userError) errors["userName"] = userError;
-        if (Validation.CheckPassword(request.Password) is { } passwordError) errors["password"] = passwordError;
+        if (Validation.CheckPassword(request.Password, userName) is { } passwordError) errors["password"] = passwordError;
         if (Validation.CheckText(request.DisplayName, "Der Name", 80, false) is { } nameError) errors["displayName"] = nameError;
+        if (request.Role is { } r && !Enum.IsDefined(r)) errors["role"] = "Unbekannte Rolle.";
         if (errors.Count > 0)
         {
             return ApiErrors.Validation(errors);
@@ -366,11 +370,55 @@ public static class AuthEndpoints
             return ApiErrors.Conflict($"Den Benutzer „{userName}“ gibt es bereits.");
         }
 
-        var admin = new AdminUser { UserName = userName, DisplayName = request.DisplayName?.Trim(), PasswordHash = string.Empty };
+        // Startpasswort vergibt ein anderer Mensch: bei der ersten Anmeldung ein eigenes Passwort festlegen.
+        var admin = new AdminUser
+        {
+            UserName = userName, DisplayName = request.DisplayName?.Trim(), PasswordHash = string.Empty,
+            Role = request.Role ?? AdminRole.Administrator, MustChangePassword = true,
+        };
         admin.PasswordHash = HashPassword(admin, request.Password!);
         db.Admins.Add(admin);
-        await audit.WriteAsync("Administrator angelegt", details: userName, cancellationToken: cancellationToken);
-        return Results.Created($"/api/admins/{admin.Id}", new AdminListItem(admin.Id, admin.UserName, admin.DisplayName, false, admin.CreatedAt, null, false));
+        await audit.WriteAsync("Konto angelegt", details: $"{userName} ({RoleLabel(admin.Role)})", cancellationToken: cancellationToken);
+        return Results.Created($"/api/admins/{admin.Id}", new AdminListItem(admin.Id, admin.UserName, admin.DisplayName, false, admin.CreatedAt, null, false,
+            admin.Role, admin.MustChangePassword));
+    }
+
+    public static string RoleLabel(AdminRole role) => role == AdminRole.Viewer ? "nur lesen" : "Administrator";
+
+    private static async Task<IResult> ChangeRoleAsync(Guid id, RoleRequest request, HttpContext context, HostingDbContext db, AuditLog audit,
+        CancellationToken cancellationToken)
+    {
+        if (request.Role is not { } role || !Enum.IsDefined(role))
+        {
+            return ApiErrors.Validation(new Dictionary<string, string> { ["role"] = "Bitte eine Rolle wählen." });
+        }
+
+        var admin = await db.Admins.FindAsync([id], cancellationToken);
+        if (admin is null)
+        {
+            return ApiErrors.NotFound();
+        }
+
+        if (context.User.FindFirstValue(ClaimTypes.NameIdentifier) == id.ToString())
+        {
+            return ApiErrors.Conflict("Die eigene Rolle lässt sich nicht ändern.");
+        }
+
+        if (admin.Role == role)
+        {
+            return Results.NoContent();
+        }
+
+        if (admin.Role == AdminRole.Administrator
+            && await db.Admins.CountAsync(a => a.Role == AdminRole.Administrator, cancellationToken) <= 1)
+        {
+            return ApiErrors.Conflict("Mindestens ein Konto muss Administrator bleiben.");
+        }
+
+        admin.Role = role;
+        admin.SecurityStamp++;
+        await audit.WriteAsync("Rolle geändert", details: $"{admin.UserName}: {RoleLabel(role)}", cancellationToken: cancellationToken);
+        return Results.NoContent();
     }
 
     private static async Task<IResult> DeleteAdminAsync(Guid id, HttpContext context, HostingDbContext db, AuditLog audit, CancellationToken cancellationToken)
@@ -386,13 +434,14 @@ public static class AuthEndpoints
             return ApiErrors.Conflict("Das eigene Konto kann nicht gelöscht werden.");
         }
 
-        if (await db.Admins.CountAsync(cancellationToken) <= 1)
+        if (admin.Role == AdminRole.Administrator
+            && await db.Admins.CountAsync(a => a.Role == AdminRole.Administrator, cancellationToken) <= 1)
         {
             return ApiErrors.Conflict("Der letzte Administrator kann nicht gelöscht werden.");
         }
 
         db.Admins.Remove(admin);
-        await audit.WriteAsync("Administrator gelöscht", details: admin.UserName, cancellationToken: cancellationToken);
+        await audit.WriteAsync("Konto gelöscht", details: admin.UserName, cancellationToken: cancellationToken);
         return Results.NoContent();
     }
 

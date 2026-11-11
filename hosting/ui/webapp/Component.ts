@@ -7,7 +7,7 @@ import { get, onUnauthorized, put, setCsrfToken } from "./model/Api";
 export interface SessionState {
 	setupRequired: boolean;
 	authenticated: boolean;
-	user: { id: string; userName: string; displayName?: string; totpEnabled: boolean; preferences?: { theme?: string } } | null;
+	user: { id: string; userName: string; displayName?: string; totpEnabled: boolean; role?: "Administrator" | "Viewer"; preferences?: { theme?: string } } | null;
 	csrfToken: string | null;
 	simulation: boolean;
 	consoleVersion: string;
@@ -51,7 +51,10 @@ export default class Component extends UIComponent {
 	async refreshSession(): Promise<SessionState> {
 		const state = await get<SessionState>("/api/auth/state");
 		setCsrfToken(state.csrfToken);
-		this.session.setData({ ...state, ready: true });
+		const readOnly = state.user?.role === "Viewer";
+		this.session.setData({ ...state, ready: true, readOnly });
+		// Konten „nur lesen“: ändernde Schaltflächen ausblenden (Klasse eoWrite); der Server lehnt Änderungen ohnehin ab.
+		document.documentElement.classList.toggle("hostingReadOnly", readOnly);
 		const saved = state.user?.preferences?.theme;
 		if (state.authenticated && saved && saved !== this.themes.current) {
 			this.themes.apply(saved);

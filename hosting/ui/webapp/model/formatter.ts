@@ -131,5 +131,21 @@ export default {
 		(name ?? "?").split(/[\s._-]+/).filter(Boolean).slice(0, 2).map((p) => p[0].toUpperCase()).join(""),
 	not: (value: unknown) => !value,
 	successText: (success?: boolean) => (success ? "Erfolgreich" : "Fehlgeschlagen"),
-	successState: (success?: boolean) => (success ? ValueState.Success : ValueState.Error)
+	successState: (success?: boolean) => (success ? ValueState.Success : ValueState.Error),
+	/** Versionshinweise einer Suite-Version auf GitHub (Tag v<version>). */
+	releaseNotesUrl: (version?: string | null) =>
+		version ? `https://github.com/florians25/EstrichONE/releases/tag/v${encodeURIComponent(version.replace(/^v/, ""))}` : "",
+	/** Bezugsquelle der App laut Suite (package = APK vom eigenen Server). */
+	appSourceText: (app?: { downloadKind?: string | null; packageAvailable?: boolean; packageSize?: number | null } | null) => {
+		if (!app) return "";
+		switch (app.downloadKind) {
+			case "package": return app.packageAvailable ? `APK vom eigenen Server${app.packageSize ? ` (${Math.round(app.packageSize / 1048576)} MB)` : ""}` : "APK fehlt auf dem Server";
+			case "link": return "Download-Link";
+			case "store": return "App Store / TestFlight / MDM";
+			default: return "Keine Bezugsquelle eingestellt";
+		}
+	},
+	modulesHeader: (modules?: { enabled: boolean }[] | null) =>
+		modules?.length ? `Module (${modules.filter((m) => m.enabled).length} von ${modules.length} eingeschaltet)` : "Module",
+	appsShort: (latest?: string | null, minimum?: string | null) => (latest ? `${latest} (mind. ${minimum ?? "–"})` : "–")
 };
