@@ -1018,6 +1018,22 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoSettingsHead { display: flex; flex-direction: column; gap: 0.125rem; margin-bottom: 0.75rem; }
 .eoSettingsTabs.sapMITB > .sapMITBContainerContent, .eoSettingsTabs .sapMITBContent { padding: 0; background: transparent; border: 0; }
 .eoSettingsTabs .sapUiSimpleForm, .eoSettingsTabs .sapUiForm { width: 100% !important; max-width: 60rem; box-sizing: border-box; }
+/* Einstellungen › Module: Karten mit Schalter, nach Bereichen */
+.eoModuleAreas { display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem; }
+.eoModuleArea { display: flex; flex-direction: column; gap: 0.25rem; }
+.eoModuleGrid { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(17rem, 1fr)); gap: 0.75rem; margin-top: 0.5rem; }
+.eoModuleCard { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.75rem 0.875rem; background: var(--sapTile_Background, var(--sapGroup_ContentBackground));
+	border: 1px solid var(--sapTile_BorderColor, var(--sapGroup_ContentBorderColor)); border-radius: var(--sapTile_BorderCornerRadius, 0.75rem); box-sizing: border-box; min-width: 0; }
+.eoModuleCard[data-state="off"] { background: var(--sapNeutralBackground, var(--sapGroup_ContentBackground)); border-style: dashed; }
+.eoModuleCard[data-state="off"] .eoModuleIcon, .eoModuleCard[data-state="off"] .sapMTitle { color: var(--sapContent_LabelColor); }
+.eoModuleCardHead { display: flex; gap: 0.5rem; min-height: 2rem; }
+.eoModuleCardTitle { display: flex; gap: 0.5rem; min-width: 0; }
+.eoModuleIcon { font-size: 1.125rem; color: var(--sapContent_IconColor); flex: none; }
+.eoModuleText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
+.eoModuleHint { display: flex; gap: 0.375rem; color: var(--sapInformativeTextColor, var(--sapContent_LabelColor)); font-size: var(--sapFontSmallSize); }
+.eoModuleHint .sapUiIcon { font-size: 0.75rem; color: inherit; }
+.eoModuleHint .sapMText { color: inherit; font-size: inherit; }
+@media (max-width: 600px) { .eoModuleGrid { grid-template-columns: minmax(0, 1fr); } }
 .eoSettingsTabs .sapUiForm, .eoAdminCard.sapUiForm { border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); overflow: hidden; margin-bottom: 1rem; }
 .eoSettingsTabs .sapMListTbl, .eoSettingsTabs .sapMList { max-width: 100% !important; }
 .eoJumpBar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.25rem; margin: 0 0 1rem; }

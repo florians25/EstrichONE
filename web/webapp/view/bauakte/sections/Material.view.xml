@@ -27,9 +27,9 @@
 			</Table>
 			<Text text="{i18n>material.needsHint}" class="eoHelpText sapUiTinyMarginTop"/>
 			<Button text="{i18n>material.orderSelection}" icon="sap-icon://cart" type="Emphasized" press=".onOrderNeeds" class="sapUiSmallMarginTop"
-				enabled="{= ${mt>/selectedNeeds} > 0 }" visible="{= ${session>/permissions/materials.manage} === true &amp;&amp; ${mt>/needs}.length > 0 }"/>
+				enabled="{= ${mt>/selectedNeeds} > 0 }" visible="{= ${session>/permissions/materials.manage} === true &amp;&amp; ${mt>/needs}.length > 0 &amp;&amp; ${session>/modules/orders} !== false }"/>
 		</VBox>
-		<Table items="{mt>/orders}" noDataText="{i18n>material.noOrders}">
+		<Table items="{mt>/orders}" noDataText="{i18n>material.noOrders}" visible="{= ${session>/modules/orders} !== false }">
 			<layoutData><l:GridData span="XL7 L7 M12 S12"/></layoutData>
 			<headerToolbar>
 				<OverflowToolbar>

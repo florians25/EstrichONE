@@ -16,7 +16,8 @@ export interface SystemSettings {
 	notifications: { approvalRequested: boolean; approvalDecided: boolean; helpdeskUpdates: boolean; newUserLetterByEmail: boolean };
 	appearance: { defaultTheme: string; density: "compact" | "cozy"; showCompanyLogo: boolean };
 	pdf: { showCompanyLogo: boolean; showEstrichOneLogo: boolean; accentColor: string; footerText: string | null; photosPerRow: number };
-	modules: { materials: boolean };
+	/** Abschaltbare Module (Einstellungen › Module); Ändern über PUT settings/modules. */
+	modules: Record<string, boolean>;
 	media: { photoQuality: number; photoMaxEdge: number; keepOriginalPhotos: boolean; optimizePdfs: boolean };
 }
 

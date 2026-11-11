@@ -134,9 +134,15 @@ export default class Documentation extends SectionBase {
 
 	protected async load(): Promise<void> {
 		const id = this.bauakteId;
+		// Einstellungen › Module: abgeschaltete Teile (Bautagebuch, Prüfungen, Abnahmen) nicht abfragen; erster sichtbarer Reiter vorn.
+		const on = { tagebuch: session.moduleOn("diary"), pruefungen: session.moduleOn("inspections"), abnahmen: session.moduleOn("acceptance") };
+		const tab = this.dc().getProperty("/tab") as keyof typeof on;
+		if (on[tab] === false) this.dc().setProperty("/tab", (Object.keys(on) as (keyof typeof on)[]).find((k) => on[k]) ?? "berichte");
 		const [diary, inspections, files, rooms, acceptances] = await Promise.all([
-			akte.diary(id), akte.inspections(id), akte.files(id), akte.rooms(id).catch(() => null),
-			get<AcceptanceDto[]>(`bauakten/${id}/acceptances`).catch(() => [] as AcceptanceDto[]),
+			on.tagebuch ? akte.diary(id) : Promise.resolve([] as Awaited<ReturnType<typeof akte.diary>>),
+			on.pruefungen ? akte.inspections(id) : Promise.resolve([] as Awaited<ReturnType<typeof akte.inspections>>),
+			akte.files(id), akte.rooms(id).catch(() => null),
+			on.abnahmen ? get<AcceptanceDto[]>(`bauakten/${id}/acceptances`).catch(() => [] as AcceptanceDto[]) : Promise.resolve([] as AcceptanceDto[]),
 		]);
 		this.showAcceptances(acceptances);
 		if (session.has("planning.read") && !this.crews.length) {

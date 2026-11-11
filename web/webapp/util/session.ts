@@ -6,6 +6,7 @@ import { valueLists } from "./valueLists";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import { api, ApiError, get, post } from "./api";
 import { loadSystemSettings } from "./systemSettings";
+import { disabledModuleOfPath, filterPermissions, moduleOn, pathEnabled, type ModuleStates } from "./modules";
 import type { DirectoryUser, ServerInfo, UserSummary, WebSessionResponse } from "./models";
 
 export interface SessionData {
@@ -15,9 +16,11 @@ export interface SessionData {
 	mustChangePassword: boolean;
 	server: ServerInfo | null;
 	people: DirectoryUser[];
+	/** Schalter der Module (Einstellungen › Module, dazu „chat“); fehlende gelten als an. */
+	modules: ModuleStates;
 }
 
-const empty = (): SessionData => ({ ready: false, user: null, permissions: {}, mustChangePassword: false, server: null, people: [] });
+const empty = (): SessionData => ({ ready: false, user: null, permissions: {}, mustChangePassword: false, server: null, people: [], modules: {} });
 
 class Session {
 	readonly model = new JSONModel(empty());
@@ -29,6 +32,21 @@ class Session {
 
 	has(permission: string): boolean {
 		return this.data.permissions[permission] === true;
+	}
+
+	/** Modul eingeschaltet (Einstellungen › Module)? */
+	moduleOn(key: string): boolean {
+		return moduleOn(this.data.modules ?? {}, key);
+	}
+
+	/** Ziel (Pfad mit Query) gehört zu keinem abgeschalteten Modul – für Kacheln, Karten, Navigation und Suche. */
+	pathEnabled(target: string): boolean {
+		return pathEnabled(this.data.modules ?? {}, target);
+	}
+
+	/** Abgeschaltetes Modul der Seite, sonst null. */
+	disabledModuleOf(target: string): string | null {
+		return disabledModuleOfPath(this.data.modules ?? {}, target);
 	}
 
 	get userId(): string | null {
@@ -53,10 +71,9 @@ class Session {
 		// Zwei-Faktor-Pflicht für Administratoren noch nicht erfüllt: Hinweis in der Kopfzeile (Verwaltungsrechte ruhen).
 		this.model.setProperty("/twoFactorRestricted", twoFactor.restricted);
 		// Abgeschaltete Module (Einstellungen → Module): Rechte des Moduls ausblenden – Navigation, Reiter und Kacheln verschwinden.
-		const modules = { ...(settings?.settings.modules ?? { materials: true }), chat: chat.enabled };
-		const disabled = Object.entries(modules).filter(([, on]) => on === false).map(([key]) => `${key}.`);
+		const modules: ModuleStates = { ...(settings?.settings.modules ?? {}), chat: chat.enabled };
 		this.model.setProperty("/modules", modules);
-		this.model.setProperty("/permissions", Object.fromEntries(list.filter((p) => !disabled.some((d) => p.startsWith(d))).map((p) => [p, true])));
+		this.model.setProperty("/permissions", Object.fromEntries(filterPermissions(modules, list).map((p) => [p, true])));
 	}
 
 	/** Nach dem Speichern der Einstellungen: Module und Rechte neu anwenden. */

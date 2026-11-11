@@ -1,4 +1,5 @@
 import BaseController from "../BaseController";
+import { session } from "../../util/session";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import { get } from "../../util/api";
@@ -45,7 +46,7 @@ export default class Overview extends BaseController {
 	private render(): void {
 		const m = this.model();
 		const query = String(m.getProperty("/query") ?? "");
-		m.setProperty("/sections", adminSections((p) => this.has(p), query).map((g) => ({
+		m.setProperty("/sections", adminSections((p) => this.has(p), query, (path) => session.pathEnabled(path)).map((g) => ({
 			...g, areas: g.areas.map((a) => ({ ...a, statusText: this.states[a.key]?.statusText ?? "", statusState: this.states[a.key]?.statusState ?? "None" })),
 		})));
 	}

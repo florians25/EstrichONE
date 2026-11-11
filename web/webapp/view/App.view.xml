@@ -41,10 +41,10 @@
 								visible="{= ${view>/chatUnread} > 0 }"/></customData>
 						</Button>
 						<OverflowToolbarButton id="phoneButton" text="{i18n>shell.phone}" tooltip="{i18n>shell.phone}" icon="sap-icon://outgoing-call" press=".onQuickCall"
-							visible="{= ${session>/permissions/contacts.edit} === true }"/>
+							visible="{= ${session>/permissions/contacts.edit} === true &amp;&amp; ${session>/modules/calls} !== false }"/>
 						<!-- Fehler melden / Funktion wünschen: direkt links neben dem Profil; in schmalen Fenstern im Überlaufmenü. -->
 						<OverflowToolbarButton id="feedbackButton" text="{i18n>shell.feedback}" tooltip="{i18n>shell.feedback}" icon="sap-icon://feedback"
-							press=".onFeedback" visible="{= !${session>/mustChangePassword} }"/>
+							press=".onFeedback" visible="{= !${session>/mustChangePassword} &amp;&amp; ${session>/modules/feedback} !== false }"/>
 					</f:additionalContent>
 				</f:ShellBar>
 			</tnt:header>
@@ -54,7 +54,7 @@
 					<tnt:fixedItem>
 						<tnt:NavigationList id="fixedNavigation">
 							<tnt:NavigationListItem id="navFeedback" key="__myFeedback" text="{i18n>shell.myFeedback}" icon="sap-icon://feedback"
-								selectable="false" tooltip="Meine Fehlermeldungen und Funktionswünsche mit Status und Antworten"/>
+								selectable="false" visible="{= ${session>/modules/feedback} !== false }" tooltip="Meine Fehlermeldungen und Funktionswünsche mit Status und Antworten"/>
 							<tnt:NavigationListItem id="navSettings" key="__settings" text="{i18n>settings.title}" icon="sap-icon://action-settings"
 								selectable="false"/>
 						</tnt:NavigationList>

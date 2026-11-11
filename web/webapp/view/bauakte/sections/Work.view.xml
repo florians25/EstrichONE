@@ -3,8 +3,8 @@
 	<VBox>
 		<FlexBox wrap="Wrap" alignItems="Center" visible="{= ${session>/permissions/work.edit} === true }" class="sapUiTinyMarginBottom eoEntryRow">
 			<Select id="newKind" selectedKey="{wk>/kind}" width="9rem" ariaLabelledBy="kindLabel">
-				<core:Item key="task" text="Aufgabe"/>
-				<core:Item key="defect" text="Mangel"/>
+				<core:Item key="task" text="Aufgabe" enabled="{= ${session>/modules/tasks} !== false }"/>
+				<core:Item key="defect" text="Mangel" enabled="{= ${session>/modules/defects} !== false }"/>
 			</Select>
 			<Input id="newTitle" value="{wk>/title}" valueLiveUpdate="true" placeholder="{= ${wk>/kind} === 'defect' ? 'Was ist mangelhaft?' : 'Was ist zu tun?' }"
 				submit=".onAdd" ariaLabelledBy="titleLabel" width="100%">

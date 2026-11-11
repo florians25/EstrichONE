@@ -57,7 +57,7 @@ test('Systemeinstellungen: Bereich links wählen zeigt und markiert genau diesen
   await expect(selected).toHaveCount(1);
   await expect(selected).toContainText('Firma');
   for (const [entry, key, field] of [
-    ['Dokumente und Freigaben', 'dokumente', 'Vorgeschlagene Frist'], ['Module', 'module', 'Chat einschalten'],
+    ['Dokumente und Freigaben', 'dokumente', 'Vorgeschlagene Frist'], ['Module', 'module', 'Löschfrist (Tage)'],
     ['Speicher', 'speicher', 'Fotos unverändert speichern'], ['Anmeldung', 'sitzungen', 'Abmelden nach Leerlauf'],
     ['Bauakten', 'bauakte', 'Aufbau der Aktennummer'], ['Firma', 'firma', 'Firmenname'],
   ] as const) {
@@ -75,31 +75,42 @@ test('Systemeinstellungen: Bereich links wählen zeigt und markiert genau diesen
   await expect(selected).toHaveCount(1);
   await expect(selected).toContainText('Module');
 
-  // Schalter: ungespeicherte Änderung wird angezeigt, Speichern übernimmt Modul- und Chat-Schalter dauerhaft.
-  const material = page.getByRole('switch', { name: /Material \(/ });
+  // Modulschalter wirken sofort (mit Rückfrage beim Ausschalten); Material nimmt die Bestellungen mit.
+  const material = () => page.locator('.eoModuleCard[data-module="materials"]').getByRole('switch');
+  await material().click();
+  const ask = page.getByRole('alertdialog', { name: 'Modul ausschalten' }).or(page.getByRole('dialog', { name: 'Modul ausschalten' }));
+  await expect(ask).toContainText('„Bestellungen“');
+  await ask.getByRole('button', { name: 'Ausschalten' }).click();
+  await expect(toast(page)).toContainText('Material und Lieferanten ausgeschaltet');
+  await expect(nav(page, 'Materialstamm')).toHaveCount(0);
+  await page.reload();
+  await expect(material()).toHaveAttribute('aria-checked', 'false');
+  await material().click();
+  await expect(toast(page)).toContainText('Material und Lieferanten eingeschaltet');
+  // Seitennavigation ist bei dieser Breite eingeklappt (nur Symbole): Eintrag vorhanden statt sichtbar prüfen.
+  await expect(nav(page, 'Materialstamm')).toHaveCount(1);
+  // Bestellungen bleiben aus, bis sie selbst wieder eingeschaltet werden.
+  await page.locator('.eoModuleCard[data-module="orders"]').getByRole('switch').click();
+  await expect(toast(page)).toContainText('Bestellungen eingeschaltet');
+
+  // Übrige Schalter: ungespeicherte Änderung wird angezeigt, Speichern übernimmt sie dauerhaft, „Verwerfen“ nimmt sie zurück.
   const preview = page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' });
   const before = await preview.getAttribute('aria-checked');
-  await material.click();
   await preview.click();
   await expect(page.getByText('Ungespeicherte Änderungen', { exact: false })).toBeVisible();
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(toast(page)).toContainText('Einstellungen gespeichert');
   await expect(page.getByText('Ungespeicherte Änderungen', { exact: false })).toBeHidden();
-  await expect(nav(page, 'Materialstamm')).toHaveCount(0);
   await page.reload();
-  await expect(page.getByRole('switch', { name: /Material \(/ })).toHaveAttribute('aria-checked', 'false');
   await expect(page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' })).not.toHaveAttribute('aria-checked', before ?? '');
-  // Zurücksetzen; „Verwerfen“ nimmt eine weitere Änderung zurück.
-  await page.getByRole('switch', { name: /Material \(/ }).click();
   await page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' }).click();
   await page.getByRole('button', { name: 'Speichern' }).click();
   await expect(toast(page)).toContainText('Einstellungen gespeichert');
-  // Seitennavigation ist bei dieser Breite eingeklappt (nur Symbole): Eintrag vorhanden statt sichtbar prüfen.
-  await expect(nav(page, 'Materialstamm')).toHaveCount(1);
-  await page.getByRole('switch', { name: /Material \(/ }).click();
+  await page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' }).click();
   await page.getByRole('button', { name: 'Verwerfen' }).click();
-  await expect(page.getByRole('switch', { name: /Material \(/ })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('switch', { name: 'Vorschau in Pushnachrichten' })).toHaveAttribute('aria-checked', before ?? '');
   await expect(page.getByText('Ungespeicherte Änderungen', { exact: false })).toBeHidden();
+  await expect(material()).toHaveAttribute('aria-checked', 'true');
 });
 
 test('Abnahmeprotokoll: Freigabe per Link durch den Kunden, PDF unter „Abnahmen“', async ({ page, browser }) => {

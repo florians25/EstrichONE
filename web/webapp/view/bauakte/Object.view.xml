@@ -62,8 +62,9 @@
 							<Menu>
 								<MenuItem text="Letzte Aktivitäten …" icon="sap-icon://history" press=".onActivities"/>
 								<MenuItem text="Abnahmeprotokoll erstellen …" icon="sap-icon://signature" press=".onAcceptance"
-									visible="{= ${session>/permissions/inspections.write} === true }"/>
-								<MenuItem text="Erstbegehungsprotokoll (PDF)" icon="sap-icon://inspection" press=".onInspectionPdf"/>
+									visible="{= ${session>/permissions/inspections.write} === true &amp;&amp; ${session>/modules/acceptance} !== false }"/>
+								<MenuItem text="Erstbegehungsprotokoll (PDF)" icon="sap-icon://inspection" press=".onInspectionPdf"
+									visible="{= ${session>/modules/inspections} !== false }"/>
 								<MenuItem text="Schreiben an den Kunden …" icon="sap-icon://letter" press=".onLetter" visible="{akte>/canEdit}"/>
 								<MenuItem text="Archivnachweis …" icon="sap-icon://attachment-zip-file" press=".onArchiveProof"/>
 								<MenuItem text="Bauakte als PDF (mit Fotos)" icon="sap-icon://pdf-attachment" press=".onPdf" startsSection="true"/>
@@ -106,7 +107,7 @@
 					</ObjectStatus>
 				</HBox>
 				<Button id="waiveInitialHintButton" text="{i18n>inspections.waive}" icon="sap-icon://decline" type="Transparent" press=".onWaiveInitialInspection"
-					visible="{= !!${akte>/inspectionMissing} &amp;&amp; ${session>/permissions/bauakten.edit} === true }"/>
+					visible="{= !!${akte>/inspectionMissing} &amp;&amp; ${session>/permissions/bauakten.edit} === true &amp;&amp; ${session>/modules/inspections} !== false }"/>
 			</HBox>
 			<FlexBox class="eoHeadRow" alignItems="Start" justifyContent="SpaceBetween" width="100%">
 				<FlexBox class="eoHeadFields" wrap="Wrap">

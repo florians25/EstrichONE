@@ -279,17 +279,48 @@
 						</form:SimpleForm>
 					</IconTabFilter>
 					<IconTabFilter key="module" text="Module">
-						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
-							<core:Title text="Module ein- und ausschalten"/>
-							<Label text="Material (Material, Lieferanten, Bestellungen)" labelFor="modMaterials"/>
-							<Switch id="modMaterials" state="{view>/s/modules/materials}" customTextOn=" " customTextOff=" "/>
-							<Label text=""/><Text text="Abgeschaltete Module verschwinden aus Navigation, Bauakte und Übersichten. Die Daten bleiben erhalten und sind nach dem Einschalten wieder da." class="eoMuted"/>
-						</form:SimpleForm>
+						<!-- Alle Module der Suite nach Bereichen; Schalter wirken sofort (mit Rückfrage beim Ausschalten). -->
+						<MessageStrip text="Ausgeschaltete Module verschwinden für alle Benutzer aus Navigation, Startseite, Suche, Bauakten und den Apps; ihre Benachrichtigungen entfallen. Die Daten bleiben erhalten und sind nach dem Einschalten wieder da. Schalter wirken sofort."
+							showIcon="true" type="Information" class="sapUiSmallMarginBottom"/>
+						<VBox id="moduleAreas" renderType="Bare" class="eoModuleAreas" items="{path: 'view>/moduleAreas', templateShareable: false}">
+							<items>
+								<VBox renderType="Bare" class="eoModuleArea">
+									<Title text="{view>title}" level="H3" titleStyle="H5"/>
+									<Text text="{view>description}" class="eoMuted"/>
+									<FlexBox wrap="Wrap" renderType="Bare" class="eoModuleGrid" items="{path: 'view>modules', templateShareable: false}">
+										<items>
+											<VBox renderType="Bare" class="eoModuleCard">
+												<customData>
+													<core:CustomData key="state" value="{= ${view>core} ? 'core' : ${view>enabled} ? 'on' : 'off' }" writeToDom="true"/>
+													<core:CustomData key="module" value="{view>key}" writeToDom="true"/>
+												</customData>
+												<HBox alignItems="Center" justifyContent="SpaceBetween" renderType="Bare" class="eoModuleCardHead">
+													<HBox alignItems="Center" renderType="Bare" class="eoModuleCardTitle">
+														<core:Icon src="{view>icon}" class="eoModuleIcon" decorative="true"/>
+														<Title text="{view>title}" level="H4" titleStyle="H6" wrapping="true"/>
+													</HBox>
+													<Switch state="{path: 'view>enabled', mode: 'OneWay'}" enabled="{= !${view>core} &amp;&amp; !${view>/moduleBusy} }"
+														change=".onModuleSwitch" customTextOn=" " customTextOff=" " tooltip="{view>title} ein- oder ausschalten"
+														visible="{= !${view>core} }"/>
+													<ObjectStatus text="Immer aktiv" state="Information" visible="{view>core}"/>
+												</HBox>
+												<Text text="{view>description}" class="eoModuleText"/>
+												<HBox alignItems="Center" renderType="Bare" class="eoModuleHint" visible="{= !!${view>hint} }">
+													<core:Icon src="sap-icon://chain-link" decorative="true"/>
+													<Text text="{view>hint}"/>
+												</HBox>
+											</VBox>
+										</items>
+									</FlexBox>
+								</VBox>
+							</items>
+						</VBox>
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem"
 							visible="{= !!${view>/chat} }">
 							<core:Title text="Chat (Büro und Mitarbeiter)"/>
-							<Label text="Chat einschalten" labelFor="modChat"/>
-							<Switch id="modChat" state="{view>/chat/enabled}" customTextOn=" " customTextOff=" "/>
+							<Label text="Chat"/>
+							<ObjectStatus text="{= ${view>/chat/enabled} ? 'eingeschaltet' : 'ausgeschaltet (Schalter oben unter Kommunikation und Service)' }"
+								state="{= ${view>/chat/enabled} ? 'Success' : 'None' }"/>
 							<Label text=""/><Text text="Mini-Chat nur mit Text, Einzel- und Gruppenchats (auch je Kolonne). Standard ist aus: Ein Chat unter Beschäftigten ist mit dem Betriebsrat abzustimmen (§ 87 BetrVG) und ins Verzeichnis der Verarbeitungstätigkeiten aufzunehmen." class="eoMuted"/>
 							<Label text="Löschfrist (Tage)" labelFor="chatRetention"/>
 							<StepInput id="chatRetention" value="{view>/chat/retentionDays}" min="7" max="730" step="1" largerStep="30" width="9rem"/>

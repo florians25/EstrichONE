@@ -17,6 +17,25 @@ import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton
 import type List from "sap/m/List";
 import type { ListBase$SelectionChangeEvent } from "sap/m/ListBase";
 import StandardListItem from "sap/m/StandardListItem";
+import type Switch from "sap/m/Switch";
+import type { Switch$ChangeEvent } from "sap/m/Switch";
+import { MODULE_AREAS, dependencyHint, dependentsToDisable, disableQuestion, requirementsToEnable, type ModuleInfo } from "../../util/modules";
+
+/** Symbol je Modul (Einstellungen › Module). */
+const moduleIcons: Record<string, string> = {
+	bauakten: "sap-icon://folder-full", contacts: "sap-icon://customer", access: "sap-icon://key-user-settings", settings: "sap-icon://action-settings",
+	backup: "sap-icon://upload-to-cloud", calls: "sap-icon://call", map: "sap-icon://map-2", planning: "sap-icon://gantt-bars",
+	machines: "sap-icon://shipping-status", materials: "sap-icon://product", orders: "sap-icon://cart", staff: "sap-icon://employee-lookup",
+	absence: "sap-icon://general-leave-request", inspections: "sap-icon://inspection", diary: "sap-icon://notes", acceptance: "sap-icon://signature",
+	tasks: "sap-icon://task", defects: "sap-icon://warning2", approvals: "sap-icon://approvals", dossiers: "sap-icon://folder-blank",
+	helpdesk: "sap-icon://headset", feedback: "sap-icon://feedback", chat: "sap-icon://discussion-2",
+};
+
+/** Chat hat eigene Einstellungen (Löschfrist, Datenschutz) und erscheint als Karte unter „Kommunikation und Service“. */
+const chatModule = (enabled: boolean): ModuleInfo => ({
+	key: "chat", area: "service", title: "Chat", core: false, enabled, requires: [], requiredBy: [],
+	description: "Einzel- und Gruppenchats für Büro und Mitarbeiter, auch je Kolonne und Baustelle. Vor dem Einschalten mit dem Betriebsrat abstimmen.",
+});
 
 interface StorageStats {
 	kinds: { kind: string; files: number; bytes: number; uploadedBytes: number; optimized: number }[];
@@ -67,7 +86,7 @@ const tabInfo: Record<string, { title: string; text: string }> = {
 	pdf: { title: "PDF-Layout", text: "Logo, Akzentfarbe, Fußzeile und Fotos je Zeile in Ausdrucken (Bauakte, Abnahme, Planung, Benutzerbrief)." },
 	bauakte: { title: "Bauakten", text: "Nummernkreis, Vorgaben für neue Bauakten und automatischer Statuswechsel." },
 	dokumente: { title: "Dokumente und Freigaben", text: "Vorschläge für Frist und Rolle bei Freigaben; Ordner und Aufbewahrung." },
-	module: { title: "Module", text: "Material und Chat ein- oder ausschalten. Daten bleiben beim Ausschalten erhalten." },
+	module: { title: "Module", text: "Funktionen der Suite für alle Benutzer ein- oder ausschalten. Daten bleiben beim Ausschalten erhalten." },
 	sitzungen: { title: "Anmeldung", text: "Wie lange Browser und Apps angemeldet bleiben, Zwei-Faktor-Pflicht für Administratoren." },
 	benachrichtigungen: { title: "Benachrichtigungen", text: "Welche E-Mails verschickt werden, Web Push im Browser und Apple Push für die iOS-App." },
 	speicher: { title: "Speicher", text: "Fotos und PDFs speicherschonend ablegen, Belegung des Servers und Nachverdichten bestehender Dateien." },
@@ -76,6 +95,7 @@ const tabInfo: Record<string, { title: string; text: string }> = {
 
 export default class Company extends BaseController {
 	private version = 0;
+	private modules: ModuleInfo[] = [];
 
 	onInit(): void {
 		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", tabInfo: tabInfo.firma, status: null, dirty: false, logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
@@ -161,7 +181,7 @@ export default class Company extends BaseController {
 		this.model().setProperty("/busy", true);
 		try {
 			void this.loadPush();
-			void this.loadChat();
+			void this.loadChat().then(() => this.loadModules());
 			void this.loadStorage();
 			void get<CustomerNumbering>("contacts/numbering").then((n) => {
 				this.model().setProperty("/customerNext", String(n.nextNumber));
@@ -192,6 +212,94 @@ export default class Company extends BaseController {
 			this.showError(error);
 		} finally {
 			this.model().setProperty("/busy", false);
+		}
+	}
+
+	/** Module mit Zustand vom Server (dazu der Chat) nach Bereichen für die Karten. */
+	private async loadModules(): Promise<void> {
+		const response = await get<{ modules: ModuleInfo[]; version: number }>("settings/modules").catch(() => null);
+		if (!response) return;
+		this.modules = response.modules;
+		this.showModules();
+	}
+
+	private showModules(): void {
+		const chat = this.model().getProperty("/chat") as ChatSettings | null;
+		const all = chat ? [...this.modules, chatModule(chat.enabled)] : this.modules;
+		this.model().setProperty("/moduleAreas", MODULE_AREAS.map((area) => ({
+			...area,
+			modules: all.filter((m) => m.area === area.key).map((m) => ({ ...m, icon: moduleIcons[m.key] ?? "sap-icon://puzzle", hint: dependencyHint(all, m) })),
+		})).filter((area) => area.modules.length > 0));
+	}
+
+	/**
+	 * Schalter eines Moduls: Ausschalten mit Rückfrage (abhängige Module gehen mit aus), Einschalten nimmt ausgeschaltete
+	 * Voraussetzungen mit (nach Rückfrage). Wirkt sofort für alle; Navigation und Rechte werden neu angewendet.
+	 */
+	async onModuleSwitch(event: Switch$ChangeEvent): Promise<void> {
+		const control = event.getSource() as Switch;
+		const on = event.getParameter("state") === true;
+		const key = String(control.getBindingContext("view")?.getProperty("key") ?? "");
+		const revert = (): void => { control.setState(!on); };
+		if (key === "chat") {
+			await this.switchChat(on, revert);
+			return;
+		}
+		const module = this.modules.find((m) => m.key === key);
+		if (!module) return revert();
+		const changes: Record<string, boolean> = { [key]: on };
+		if (!on) {
+			const dependents = dependentsToDisable(this.modules, key);
+			if (!(await this.confirm(disableQuestion(module, dependents), { title: "Modul ausschalten", action: "Ausschalten", danger: true }))) return revert();
+			for (const d of dependents) changes[d.key] = false;
+		} else {
+			const required = requirementsToEnable(this.modules, key);
+			if (required.length) {
+				const names = required.map((r) => `„${r.title}“`).join(", ");
+				if (!(await this.confirm(`„${module.title}“ benötigt ${names}. ${required.length === 1 ? "Dieses Modul wird" : "Diese Module werden"} mit eingeschaltet.`,
+					{ title: "Modul einschalten", action: "Einschalten" }))) return revert();
+				for (const r of required) changes[r.key] = true;
+			}
+		}
+		const m = this.model();
+		m.setProperty("/moduleBusy", true);
+		try {
+			const saved = await put<{ modules: ModuleInfo[]; version: number }>("settings/modules", { modules: changes, version: this.version });
+			this.version = saved.version;
+			this.modules = saved.modules;
+			// Stand im Formular nachziehen (ohne „ungespeichert“), damit „Speichern“ die Schalter nicht zurücksetzt.
+			const s = m.getProperty("/s") as SystemSettings | null;
+			if (s) m.setProperty("/s/modules", { ...s.modules, ...Object.fromEntries(saved.modules.filter((x) => !x.core).map((x) => [x.key, x.enabled])) });
+			await loadSystemSettings(true);
+			await session.reloadPermissions();
+			const extra = Object.keys(changes).length - 1;
+			this.toast(`${module.title} ${on ? "eingeschaltet" : "ausgeschaltet"}${extra > 0 ? ` (mit ${extra} abhängigen ${extra === 1 ? "Modul" : "Modulen"})` : ""}`);
+		} catch (error) {
+			this.showError(error);
+		} finally {
+			m.setProperty("/moduleBusy", false);
+			this.showModules();
+		}
+	}
+
+	private async switchChat(on: boolean, revert: () => void): Promise<void> {
+		const c = this.model().getProperty("/chat") as ChatSettings | null;
+		if (!c) return revert();
+		const question = on
+			? "Chat einschalten? Ein Chat unter Beschäftigten ist mit dem Betriebsrat abzustimmen (§ 87 BetrVG) und ins Verzeichnis der Verarbeitungstätigkeiten aufzunehmen."
+			: disableQuestion(chatModule(true), []);
+		if (!(await this.confirm(question, { title: on ? "Chat einschalten" : "Modul ausschalten", action: on ? "Einschalten" : "Ausschalten", danger: !on }))) return revert();
+		try {
+			const saved = await saveChatSettings({ enabled: on, retentionDays: Number(c.retentionDays), showPreview: c.showPreview,
+				workersCanChatEachOther: c.workersCanChatEachOther, version: c.version });
+			this.model().setProperty("/chat", { ...saved, cleanupText: saved.lastCleanupAt ? dateTime(saved.lastCleanupAt) : "" });
+			await session.reloadPermissions();
+			this.toast(on ? "Chat eingeschaltet" : "Chat ausgeschaltet");
+		} catch (error) {
+			revert();
+			this.showError(error);
+		} finally {
+			this.showModules();
 		}
 	}
 
@@ -353,7 +461,7 @@ export default class Company extends BaseController {
 			m.setProperty("/c", savedCompany);
 			m.setProperty("/s", this.editable(savedSettings.settings));
 			// Firmenname erscheint sofort in Kopfzeile, Statuszeile und Anmeldung (server-info liefert ihn als serverName).
-			await Promise.all([session.reloadPermissions(), session.loadServer()]);
+			await Promise.all([session.reloadPermissions(), session.loadServer(), this.loadModules()]);
 			m.setProperty("/dirty", false);
 			this.toast("Einstellungen gespeichert");
 			this.updateStatus();

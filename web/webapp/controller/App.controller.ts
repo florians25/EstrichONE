@@ -207,11 +207,13 @@ export default class AppController extends BaseController {
 		const data = session.data;
 		this.model().setProperty("/initials", initials(data.user?.displayName));
 		const list = this.el<NavigationList>("navigationList");
-		const signature = Object.keys(data.permissions).sort().join(",");
+		const signature = Object.keys(data.permissions).sort().join(",") + JSON.stringify(data.modules ?? {});
 		if (list.data("signature") === signature) return;
 		list.data("signature", signature);
 		list.destroyItems();
-		const visible = (e: NavEntry) => (!e.permission || session.has(e.permission)) && (!e.anyPermission || e.anyPermission.some((p) => session.has(p)));
+		// Abgeschaltete Module (Einstellungen › Module) verschwinden aus der Navigation, auch wenn das Recht vorliegt.
+		const visible = (e: NavEntry) => (!e.permission || session.has(e.permission)) && (!e.anyPermission || e.anyPermission.some((p) => session.has(p)))
+			&& (!e.path || session.pathEnabled(e.path));
 		for (const entry of navigation) {
 			if (entry.children) {
 				const children = entry.children.filter(visible);
@@ -292,7 +294,7 @@ export default class AppController extends BaseController {
 		const add = (text: string, description: string, icon: string, key: string) =>
 			field.addSuggestionItem(new SuggestionItem({ text, description, icon, key }));
 		// Verwaltungsbereiche (z. B. „Backup“, „Logo“, „Push“) direkt anspringen.
-		for (const area of adminAreas.filter((x) => (!x.permission || has(x.permission)) && matchesArea(x, value)).slice(0, 3)) {
+		for (const area of adminAreas.filter((x) => (!x.permission || has(x.permission)) && session.pathEnabled(x.path) && matchesArea(x, value)).slice(0, 3)) {
 			add(area.title, `Verwaltung · ${adminGroups.find((g) => g.key === area.group)?.title ?? ""}`, area.icon, area.path);
 		}
 		for (const a of akten.items) add(`${a.number ?? "neu"} · ${a.title}`, `Bauakte${a.city ? ` · ${a.city}` : ""}`, "sap-icon://folder-full", `/bauakten/${a.id}`);
@@ -325,8 +327,8 @@ export default class AppController extends BaseController {
 				new MenuItem({ text: this.t("inbox.preferences"), icon: "sap-icon://bell", press: () => openNotificationPreferences() }),
 				new MenuItem({ text: this.t("password.title"), icon: "sap-icon://key", press: () => this.nav("/konto/passwort") }),
 				new MenuItem({ text: this.t("security.title"), icon: "sap-icon://shield", press: () => this.nav("/konto/sicherheit") }),
-				new MenuItem({ text: this.t("shell.feedback"), icon: "sap-icon://quality-issue", startsSection: true, press: () => this.onFeedback() }),
-				new MenuItem({ text: this.t("shell.myFeedback"), icon: "sap-icon://inbox", press: () => this.nav("/meine-meldungen") }),
+				new MenuItem({ text: this.t("shell.feedback"), icon: "sap-icon://quality-issue", startsSection: true, press: () => this.onFeedback(), visible: session.moduleOn("feedback") }),
+				new MenuItem({ text: this.t("shell.myFeedback"), icon: "sap-icon://inbox", press: () => this.nav("/meine-meldungen"), visible: session.moduleOn("feedback") }),
 				new MenuItem({ text: this.t("shell.signOut"), icon: "sap-icon://log", startsSection: true, press: () => void this.signOut() }),
 			],
 			// Erst nach der Auswahl aufräumen (das Ereignis kommt nach dem Schließen).
@@ -390,7 +392,7 @@ export default class AppController extends BaseController {
 			this.nav(user ? "/start" : "/anmelden", true);
 			return;
 		}
-		const { route } = match;
+		let { route } = match;
 		if (route.redirect) {
 			this.nav(route.redirect(match.query), true);
 			return;
@@ -404,7 +406,12 @@ export default class AppController extends BaseController {
 				this.nav("/konto/passwort", true);
 				return;
 			}
-			if (route.permission && !session.has(route.permission)) {
+			// Seite eines abgeschalteten Moduls (Einstellungen › Module), z. B. über ein Lesezeichen: klare Hinweisseite statt Fehlern.
+			const disabledModule = session.disabledModuleOf(match.path + window.location.search);
+			if (disabledModule) {
+				match = { ...match, route: { ...route, view: "ModuleDisabled", bare: false, title: "nav.moduleDisabled" }, params: { ...match.params, module: disabledModule } };
+				route = match.route;
+			} else if (route.permission && !session.has(route.permission)) {
 				this.nav("/start", true);
 				return;
 			}
@@ -479,7 +486,7 @@ export default class AppController extends BaseController {
 		// Postfach: Ereignisse und Nachrichten aus dem Büro. Hinweise zu denselben Objekten werden nicht doppelt gezeigt.
 		const box = await inbox({ limit: 8 }).catch(() => ({ items: [] as NotificationItem[], unreadCount: 0 }));
 		const covered = new Set(box.items.filter((n) => !n.readAt && n.objectId).map((n) => n.objectId));
-		if (session.has("contacts.read")) {
+		if (session.has("contacts.read") && session.moduleOn("calls")) {
 			tasks.push(get<CallResponse[]>("calls", { due: true }).then((calls) => {
 				for (const c of calls.slice(0, 10)) {
 					items.push({ title: `${this.t("notice.followUp")}: ${[c.callerName, c.company ?? c.customerName].filter(Boolean).join(" · ") || "–"}`,
@@ -489,7 +496,8 @@ export default class AppController extends BaseController {
 		}
 		// Neue Antworten in eigenen bzw. zu bearbeitenden Tickets (für alle Benutzer).
 		const unreadIds = new Set<string>();
-		const unreadTask = get<{ count: number; items: { id: string; number: string; title: string }[] }>("tickets/unread").then((unread) => {
+		const unreadTask = (session.moduleOn("helpdesk") ? get<{ count: number; items: { id: string; number: string; title: string }[] }>("tickets/unread")
+			: Promise.resolve({ count: 0, items: [] })).then((unread) => {
 			for (const t of unread.items.slice(0, 10)) {
 				unreadIds.add(t.id);
 				if (covered.has(t.id)) continue;

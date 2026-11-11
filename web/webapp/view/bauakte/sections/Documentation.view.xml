@@ -5,7 +5,7 @@
 		backgroundDesign="Transparent">
 		<items>
 			<!-- Bautagebuch -->
-			<IconTabFilter key="tagebuch" text="{i18n>diary.title}" icon="sap-icon://notes" count="{dc>/diaryCount}">
+			<IconTabFilter key="tagebuch" text="{i18n>diary.title}" icon="sap-icon://notes" count="{dc>/diaryCount}" visible="{= ${session>/modules/diary} !== false }">
 				<OverflowToolbar style="Clear">
 					<Title text="{i18n>diary.chronicle}" level="H3"/>
 					<ToolbarSpacer/>
@@ -38,7 +38,7 @@
 				</List>
 			</IconTabFilter>
 			<!-- Prüfungen und Protokolle -->
-			<IconTabFilter key="pruefungen" text="{i18n>inspections.title}" icon="sap-icon://lab" count="{dc>/inspectionCount}">
+			<IconTabFilter key="pruefungen" text="{i18n>inspections.title}" icon="sap-icon://lab" count="{dc>/inspectionCount}" visible="{= ${session>/modules/inspections} !== false }">
 				<OverflowToolbar style="Clear">
 					<Title text="{i18n>inspections.protocol}" level="H3"/>
 					<ToolbarSpacer/>
@@ -135,7 +135,7 @@
 			</IconTabFilter>
 			<!-- Berichte -->
 			<!-- Abnahmen -->
-			<IconTabFilter id="abnahmenTab" key="abnahmen" text="Abnahmen" count="{dc>/acceptanceCount}">
+			<IconTabFilter id="abnahmenTab" key="abnahmen" text="Abnahmen" count="{dc>/acceptanceCount}" visible="{= ${session>/modules/acceptance} !== false }">
 				<OverflowToolbar style="Clear">
 					<Title text="Abnahmeprotokolle" level="H3"/>
 					<ToolbarSpacer/>

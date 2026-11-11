@@ -29,7 +29,8 @@ export default class Material extends SectionBase {
 	}
 
 	protected async load(): Promise<void> {
-		const [rooms, orders] = await Promise.all([akte.rooms(this.bauakteId), akte.orders(this.bauakteId)]);
+		const [rooms, orders] = await Promise.all([akte.rooms(this.bauakteId),
+			session.moduleOn("orders") ? akte.orders(this.bauakteId) : Promise.resolve([] as OrderResponse[])]); // Modul Bestellungen aus: keine Abfrage
 		this.rooms = rooms;
 		this.computeNeeds();
 		this.mt().setProperty("/orders", orders.map((o: OrderResponse) => ({

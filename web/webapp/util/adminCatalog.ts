@@ -40,8 +40,8 @@ export const adminAreas: AdminArea[] = [
 		description: "Auswahllisten, Formulare für Basisdaten und Erstbegehung, Textbausteine, Ordner- und Bauakten-Vorlagen",
 		keywords: "wertelisten auswahllisten formulare erstbegehung basisdaten textbausteine vorlagen ordnervorlagen" },
 	{ key: "modules", group: "groupAdminOrg", title: "Module", path: "/system/firmendaten?bereich=module", icon: "sap-icon://puzzle", permission: "settings.manage",
-		description: "Material und Chat ein- oder ausschalten; Löschfrist und Datenschutz des Chats",
-		keywords: "module material chat betriebsrat löschfrist" },
+		description: "Module der Suite ein- oder ausschalten (Planung, Material, Personal, Urlaub, Abnahmen, Mängel, Chat …); Daten bleiben erhalten",
+		keywords: "module funktionen aktivieren deaktivieren abschalten einschalten planung disposition material bestellungen personal urlaub abwesenheit anrufe anfragen erstbegehung abnahme mängel aufgaben bautagebuch freigaben aktenarchiv helpdesk feedback karte maschinen fahrzeuge chat betriebsrat löschfrist" },
 	{ key: "users", group: "groupAdminUsers", title: "Benutzer", path: "/verwaltung/benutzer", icon: "sap-icon://employee", permission: "users.manage",
 		description: "Konten anlegen, sperren, Passwort und Zwei-Faktor zurücksetzen, Zugangsbriefe",
 		keywords: "konten benutzer passwort zugangsbrief einmalpasswort sperren 2fa" },
@@ -107,8 +107,9 @@ export function matchesArea(area: AdminArea, query: string): boolean {
 }
 
 /** Sichtbare Bereiche (Rechte) gruppiert, gefiltert nach Suchtext. */
-export function adminSections(has: (permission: string) => boolean, query = ""): (AdminGroup & { areas: AdminArea[] })[] {
+export function adminSections(has: (permission: string) => boolean, query = "", reachable: (path: string) => boolean = () => true)
+	: (AdminGroup & { areas: AdminArea[] })[] {
 	return adminGroups
-		.map((g) => ({ ...g, areas: adminAreas.filter((a) => a.group === g.key && (!a.permission || has(a.permission)) && matchesArea(a, query)) }))
+		.map((g) => ({ ...g, areas: adminAreas.filter((a) => a.group === g.key && (!a.permission || has(a.permission)) && reachable(a.path) && matchesArea(a, query)) }))
 		.filter((g) => g.areas.length > 0);
 }

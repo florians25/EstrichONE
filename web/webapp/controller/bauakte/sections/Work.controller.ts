@@ -31,6 +31,10 @@ export default class Work extends SectionBase {
 
 	protected async load(): Promise<void> {
 		const people = await session.people();
+		// Einstellungen › Module: nur die eingeschaltete Art anlegen (Aufgaben oder Mängel).
+		if (!session.moduleOn(this.wk().getProperty("/kind") === "defect" ? "defects" : "tasks")) {
+			this.wk().setProperty("/kind", session.moduleOn("tasks") ? "task" : "defect");
+		}
 		this.wk().setProperty("/people", [{ key: "", text: "Niemand" }, ...people.filter((p) => p.isActive).map((p) => ({ key: p.id, text: p.displayName }))]);
 		const [items, files] = await Promise.all([akte.work(this.bauakteId), akte.files(this.bauakteId)]);
 		const today = isoDay(new Date());

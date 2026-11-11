@@ -1,4 +1,5 @@
 import BaseController from "./BaseController";
+import { session } from "../util/session";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import { get, post } from "../util/api";
@@ -91,12 +92,14 @@ export default class Today extends BaseController {
 		m.setProperty("/dayText", longDay(day));
 		m.setProperty("/relText", relativeDay(day, now));
 		m.setProperty("/busy", true);
+		// Einstellungen › Module: abgeschaltete Module erscheinen nicht (keine Kachel, keine Abfrage).
+		const calls = this.has("contacts.read") && session.moduleOn("calls");
 		const kpis = [
 			this.has("planning.read") && { key: "assignments", title: isToday ? "Einsätze heute" : `Einsätze ${short}`, icon: "sap-icon://appointment-2", to: `/planung/cockpit?ansicht=day&datum=${day}` },
 			this.has("work.read") && { key: "work", title: "Aufgaben / Mängel", icon: "sap-icon://task", to: "/bauakten" },
-			this.has("bauakten.read") && { key: "approvals", title: "Freigaben", icon: "sap-icon://approvals", to: "/dokumente?reiter=freigaben" },
-			this.has("contacts.read") && { key: "due", title: "Wiedervorlagen", icon: "sap-icon://call", to: "/anrufe" },
-			this.has("contacts.read") && { key: "inquiries", title: "Anfragen", icon: "sap-icon://inbox", to: "/anfragen" },
+			this.has("bauakten.read") && session.moduleOn("approvals") && { key: "approvals", title: "Freigaben", icon: "sap-icon://approvals", to: "/dokumente?reiter=freigaben" },
+			calls && { key: "due", title: "Wiedervorlagen", icon: "sap-icon://call", to: "/anrufe" },
+			calls && { key: "inquiries", title: "Anfragen", icon: "sap-icon://inbox", to: "/anfragen" },
 			this.has("helpdesk.agent") && { key: "tickets", title: "Tickets", icon: "sap-icon://headset", to: "/it-center/helpdesk" },
 		].filter(Boolean).map((k) => ({ ...(k as object), value: "…", state: "None", hint: "\u00a0" })) as { key: string; value: string; state: string; hint: string }[];
 		m.setProperty("/kpis", kpis);
@@ -107,12 +110,12 @@ export default class Today extends BaseController {
 		};
 		const [planning, due, inquiries, work, deliveries, recent, approvals, tickets, backup, archive, mail] = await Promise.allSettled([
 			this.has("planning.read") ? get<PlanningRange>("planning/range", { from: day, to: day }) : Promise.resolve(null),
-			this.has("contacts.read") ? get<CallResponse[]>("calls", { due: true }) : Promise.resolve([]),
-			this.has("contacts.read") ? get<CallResponse[]>("calls", { kind: "inquiry", open: true, limit: 8 }) : Promise.resolve([]),
+			calls ? get<CallResponse[]>("calls", { due: true }) : Promise.resolve([]),
+			calls ? get<CallResponse[]>("calls", { kind: "inquiry", open: true, limit: 8 }) : Promise.resolve([]),
 			this.has("work.read") ? get<WorkItemDto[]>("work-items/mine") : Promise.resolve([]),
-			this.has("materials.read") ? get<OrderResponse[]>("material-orders", { from: day, to: day }) : Promise.resolve([]),
+			this.has("materials.read") && session.moduleOn("orders") ? get<OrderResponse[]>("material-orders", { from: day, to: day }) : Promise.resolve([]),
 			get<BauaktePage>("bauakten", { limit: 8 }),
-			this.has("bauakten.read") ? get<ApprovalResponse[]>("approvals", { scope: "mine", status: "pending" }) : Promise.resolve([]),
+			this.has("bauakten.read") && session.moduleOn("approvals") ? get<ApprovalResponse[]>("approvals", { scope: "mine", status: "pending" }) : Promise.resolve([]),
 			this.has("helpdesk.agent") ? get<TicketSummary[]>("tickets", { filter: "open" }) : Promise.resolve([]),
 			this.has("backup.manage") ? get<BackupStatusResponse>("backup/status") : Promise.resolve(null),
 			this.has("settings.manage") ? get<ArchiveOverview>("archive/status") : Promise.resolve(null),
@@ -148,11 +151,11 @@ export default class Today extends BaseController {
 		m.setProperty("/tickets", newTickets.slice(0, 6));
 		// Leere Bereiche nicht als eigene Karten zeigen, sondern in einer Zeile zusammenfassen.
 		const empty = [
-			this.has("contacts.read") && !(m.getProperty("/due") as unknown[]).length && "Wiedervorlagen",
-			this.has("bauakten.read") && !myApprovals.length && "Freigaben",
+			calls && !(m.getProperty("/due") as unknown[]).length && "Wiedervorlagen",
+			this.has("bauakten.read") && session.moduleOn("approvals") && !myApprovals.length && "Freigaben",
 			this.has("work.read") && !(m.getProperty("/work") as unknown[]).length && "Aufgaben und Mängel",
 			this.has("helpdesk.agent") && !newTickets.length && "Tickets",
-			this.has("contacts.read") && !(m.getProperty("/inquiries") as unknown[]).length && "Anfragen",
+			calls && !(m.getProperty("/inquiries") as unknown[]).length && "Anfragen",
 		].filter(Boolean);
 		m.setProperty("/emptyText", empty.length ? `Nichts offen: ${empty.join(", ")}.` : "");
 		set("assignments", assignments.length, false, warnings ? `${warnings} mit Hinweisen` : assignments.length ? `${crews.length} ${crews.length === 1 ? "Kolonne" : "Kolonnen"}` : "nichts eingeplant");

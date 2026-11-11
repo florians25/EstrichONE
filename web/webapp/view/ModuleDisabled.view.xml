@@ -1,0 +1,13 @@
+<mvc:View controllerName="estrichone.controller.ModuleDisabled" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" height="100%">
+	<Page id="moduleDisabledPage" showHeader="false" class="eoModuleDisabled">
+		<IllustratedMessage id="moduleDisabledMessage" illustrationType="sapIllus-NoActivities" illustrationSize="Scene"
+			title="Modul „{view>/title}“ ist deaktiviert"
+			description="{view>/text}">
+			<additionalContent>
+				<Button id="moduleDisabledManage" text="Module verwalten" icon="sap-icon://puzzle" type="Emphasized" press=".onManage"
+					visible="{= ${session>/permissions/settings.manage} === true }"/>
+				<Button id="moduleDisabledHome" text="Zur Übersicht" icon="sap-icon://home" press=".onHome"/>
+			</additionalContent>
+		</IllustratedMessage>
+	</Page>
+</mvc:View>
