@@ -132,6 +132,20 @@ struct AbsenceOverviewView: View {
                         Text("Genehmigte Abwesenheiten, die noch nicht begonnen haben, lassen sich nach links wischen und ändern. Bis zur Genehmigung der Änderung gilt der bisherige Zeitraum.")
                     }
                 }
+                let today = CalendarDay.string(.now)
+                let upcoming = mine.holidays.filter { $0.date >= today }.prefix(3)
+                if !upcoming.isEmpty {
+                    Section("Nächste Feiertage") {
+                        ForEach(Array(upcoming), id: \.date) { holiday in
+                            HStack {
+                                Text(holiday.name).font(Typo.body)
+                                Spacer()
+                                Text(Self.weekdayDate(holiday.date)).font(Typo.subhead.monospacedDigit()).foregroundStyle(Theme.textSecondary)
+                            }
+                            .accessibilityElement(children: .combine)
+                        }
+                    }
+                }
                 if let absences = mine.absences, !absences.isEmpty {
                     Section("Eingetragene Abwesenheiten") {
                         ForEach(absences) { absence in
@@ -163,6 +177,12 @@ struct AbsenceOverviewView: View {
                 .pulsing()
             }
         }
+    }
+
+    /// „Fr., 25.12.“
+    static func weekdayDate(_ day: String) -> String {
+        guard let date = CalendarDay.date(day) else { return day }
+        return date.formatted(.dateTime.weekday(.abbreviated).day(.twoDigits).month(.twoDigits).locale(Locale(identifier: "de_DE")))
     }
 
     private func requestRow(_ request: AbsenceRequestItem, in mine: MyVacation) -> some View {
