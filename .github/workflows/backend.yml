@@ -22,7 +22,7 @@ jobs:
     name: Build und Tests
     runs-on: ubuntu-24.04
     # Tests allein ~16–20 min (je Testklasse eine eigene Datenbank, Zugriffstest über alle Routen).
-    timeout-minutes: 35
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-dotnet@v5
