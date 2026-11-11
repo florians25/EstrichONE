@@ -242,6 +242,7 @@ fun ticketStatusLabel(status: String): String = when (status) {
     "new" -> "Neu"
     "inProgress" -> "In Bearbeitung"
     "waitingForReporter" -> "Rückfrage an Sie"
+    "waitingForSupport" -> "Warten auf Support"
     "resolved" -> "Gelöst"
     "closed" -> "Geschlossen"
     else -> status
@@ -262,6 +263,13 @@ data class TicketListItem(
     /** „Telefon, aufgenommen von Anna Becker“ – nur, wenn die IT die Meldung erfasst hat. */
     val intakeText: String? get() = ticketChannelLabel(channel)?.let { c -> createdByName?.let { "$c, aufgenommen von $it" } ?: c }
 }
+
+/** Status aus Sicht der IT („Warten auf Anwenderinfo“ statt „Rückfrage an Sie“). */
+fun ticketStatusAgentLabel(status: String): String = if (status == "waitingForReporter") "Warten auf Anwenderinfo" else ticketStatusLabel(status)
+
+/** Ansichten der Bearbeitung in den Apps (Schlüssel = Filter der API). */
+val agentTicketViews: List<Pair<String, String>> = listOf("mine" to "Meine", "unassigned" to "Nicht zugewiesen", "overdue" to "Überfällig",
+    "support" to "Warten auf Support", "waiting" to "Warten auf Anwenderinfo", "open" to "Alle offenen")
 
 /** Eingangskanal lesbar; null bei „selbst gemeldet“ bzw. unbekannt. */
 fun ticketChannelLabel(channel: String?): String? = when (channel) {
@@ -388,7 +396,7 @@ suspend fun EstrichOneApi.markTicketSeen(id: String) = send<Unit>("POST", "ticke
 suspend fun EstrichOneApi.rateTicket(id: String, rating: Int, comment: String?): TicketFull =
     send("POST", "tickets/$id/rating", TicketRatingRequest(rating.coerceIn(1, 5), comment?.trim()?.ifEmpty { null }))
 
-/** Bearbeitung (Recht helpdesk.agent): Ansichten `mine`, `unassigned`, `overdue`, `waiting`, `open`. */
+/** Bearbeitung (Recht helpdesk.agent): Ansichten `mine`, `unassigned`, `overdue`, `support`, `waiting`, `open`. */
 suspend fun EstrichOneApi.agentTickets(filter: String = "mine"): List<TicketListItem> = send("GET", "tickets", null, query = mapOf("filter" to filter, "sort" to "due"))
 suspend fun EstrichOneApi.updateTicketStatus(id: String, status: String, resolution: String? = null): TicketFull =
     send("PATCH", "tickets/$id", TicketStatusRequest(status = status, resolution = resolution?.trim()?.ifEmpty { null }))

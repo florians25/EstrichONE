@@ -32,6 +32,7 @@ struct MyTicketsView: View {
     @Environment(\.shotScene) private var shotScene
     @State private var scope: Scope = .mine
     @State private var segment: Segment = .open
+    @State private var agentView: AgentTicketView = .mine
     @State private var search = ""
     @State private var tickets: [TicketSummary] = []
     @State private var unread: Set<UUID> = []
@@ -46,7 +47,7 @@ struct MyTicketsView: View {
 
     private var visible: [TicketSummary] {
         let text = search.trimmingCharacters(in: .whitespaces).lowercased()
-        return tickets.filter { segment.matches($0) }
+        return tickets.filter { scope == .agent || segment.matches($0) }
             .filter { text.isEmpty || "\($0.number) \($0.title) \($0.reporterDisplayName ?? "") \($0.category.title)".lowercased().contains(text) }
             .sorted { lhs, rhs in
                 let left = (unread.contains(lhs.id) ? 0 : 1, lhs.status == .waitingForReporter ? 0 : 1)
@@ -64,13 +65,21 @@ struct MyTicketsView: View {
                     }
                     .pickerStyle(.segmented)
                 }
-                Picker("Status", selection: $segment) {
-                    ForEach(Segment.allCases) { segment in
-                        let count = tickets.filter { segment.matches($0) }.count
-                        Text(segment == .all || count == 0 ? segment.rawValue : "\(segment.rawValue) \(count)").tag(segment)
+                if scope == .agent {
+                    Picker("Ansicht", selection: $agentView) {
+                        ForEach(AgentTicketView.allCases) { Text($0.title).tag($0) }
                     }
+                    .pickerStyle(.menu)
+                    .accessibilityIdentifier("agentViewPicker")
+                } else {
+                    Picker("Status", selection: $segment) {
+                        ForEach(Segment.allCases) { segment in
+                            let count = tickets.filter { segment.matches($0) }.count
+                            Text(segment == .all || count == 0 ? segment.rawValue : "\(segment.rawValue) \(count)").tag(segment)
+                        }
+                    }
+                    .pickerStyle(.segmented)
                 }
-                .pickerStyle(.segmented)
             }
             .listRowBackground(Color.clear)
             .listRowSeparator(.hidden)
@@ -124,7 +133,7 @@ struct MyTicketsView: View {
             }
         }
         .navigationDestination(item: $opened) { id in TicketDetailView(ticketId: id, isAgent: isAgent) }
-        .task(id: "\(model.active?.sync?.revision ?? 0)|\(scope.rawValue)") { await load() }
+        .task(id: "\(model.active?.sync?.revision ?? 0)|\(scope.rawValue)|\(agentView.rawValue)") { await load() }
         .refreshable { await load() }
         .onDisappear { Task { await TicketReadState.mark(tickets, model: model) } }
     }
@@ -144,13 +153,15 @@ struct MyTicketsView: View {
         guard let client = model.active?.client else { return }
         if let store = model.active?.sync?.store { isAgent = await MyPermissions(store: store).load(using: client).contains("helpdesk.agent") }
         do throws(APIError) {
-            tickets = scope == .agent ? try await client.agentTickets(filter: "all") : try await client.myTickets()
+            tickets = scope == .agent ? try await client.agentTickets(filter: agentView.rawValue) : try await client.myTickets()
             offline = false
             if scope == .mine, let store = model.active?.sync?.store { unread = await TicketReadState(store: store).unread(tickets) }
             if shotScene == "meldung-detail", opened == nil { opened = tickets.first?.id }
             if shotScene == "meldung-bewertung", opened == nil { opened = tickets.first(where: { $0.status == .resolved })?.id }
             if shotScene == "meldung-bearbeitung", scope == .mine, isAgent { scope = .agent }
-            if shotScene == "meldung-it" || shotScene == "meldung-anleitung", opened == nil { opened = UUID(uuidString: DemoContent.ticketId) }
+            if shotScene == "meldung-support", scope == .mine, isAgent { scope = .agent; agentView = .support }
+            if shotScene == "meldung-it", opened == nil { opened = UUID(uuidString: "0193a1b2-de00-7000-8000-00000000c002") }
+            if shotScene == "meldung-anleitung", opened == nil { opened = UUID(uuidString: DemoContent.ticketId) }
             if shotScene == "meldung-aufnehmen", isAgent, !recording { recording = true }
         } catch {
             offline = true
@@ -199,7 +210,7 @@ struct TicketRow: View {
                 }
                 HStack(spacing: Space.s) {
                     Text(ticket.number).font(Typo.meta.monospacedDigit()).foregroundStyle(Theme.textSecondary)
-                    TicketStatusChip(status: ticket.status)
+                    TicketStatusChip(status: ticket.status, agent: showsReporter)
                     if ticket.priority == .high || ticket.priority == .urgent {
                         Chip(text: ticket.priority.title, symbol: "exclamationmark", tone: ticket.priority == .urgent ? .danger : .warning)
                     }
@@ -219,16 +230,20 @@ struct TicketRow: View {
 /// Stand einer Meldung als Kapsel: wartet auf mich (gelb), gelöst (grün), sonst ruhig.
 struct TicketStatusChip: View {
     let status: TicketStatus
+    /// Bearbeitung: „Warten auf Anwenderinfo“ statt „Rückfrage an Sie“.
+    var agent = false
 
     var body: some View {
-        Chip(text: status.title, symbol: symbol, tone: tone)
-            .accessibilityLabel("Status: \(status.title)")
+        let text = agent ? status.agentTitle : status.title
+        return Chip(text: text, symbol: symbol, tone: tone)
+            .accessibilityLabel("Status: \(text)")
     }
 
     private var tone: Chip.Tone {
         switch status {
         case .new, .inProgress: .accent
         case .waitingForReporter: .warning
+        case .waitingForSupport: .danger
         case .resolved, .closed: .success
         }
     }
@@ -238,6 +253,7 @@ struct TicketStatusChip: View {
         case .new: "tray"
         case .inProgress: "wrench.and.screwdriver"
         case .waitingForReporter: "questionmark.bubble"
+        case .waitingForSupport: "arrow.uturn.left.circle"
         case .resolved: "checkmark.circle"
         case .closed: "lock"
         }
@@ -360,7 +376,7 @@ struct TicketDetailView: View {
         let summary = detail.summary
         return Card(spacing: Space.s) {
             HStack(spacing: Space.s) {
-                TicketStatusChip(status: summary.status)
+                TicketStatusChip(status: summary.status, agent: isAgent)
                 Chip(text: summary.priority.title, symbol: summary.priority == .urgent || summary.priority == .high ? "exclamationmark" : nil,
                      tone: summary.priority == .urgent ? .danger : (summary.priority == .high ? .warning : .neutral))
                 if isAgent, let hint = summary.slaHint {
@@ -460,6 +476,11 @@ struct TicketDetailView: View {
                         .accessibilityIdentifier("ticketBlocksMenu")
                     }
                     Spacer(minLength: 0)
+                    if !internalNote {
+                        Button { Task { await send(thenWaitForReporter: true) } } label: { Label("Mit Rückfrage", systemImage: "questionmark.bubble") }
+                            .disabled(sending || reply.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                            .accessibilityIdentifier("sendAskButton")
+                    }
                 }
                 .font(Typo.meta)
             }
@@ -492,8 +513,8 @@ struct TicketDetailView: View {
     private func agentMenu(_ detail: TicketDetail) -> some View {
         Menu {
             Section("Status") {
-                ForEach([TicketStatus.inProgress, .waitingForReporter, .closed], id: \.self) { status in
-                    Button(status.title) { Task { await update(TicketUpdate(status: status)) } }
+                ForEach([TicketStatus.new, .inProgress, .waitingForReporter, .waitingForSupport, .closed], id: \.self) { status in
+                    Button(status.agentTitle) { Task { await update(TicketUpdate(status: status)) } }
                         .disabled(detail.summary.status == status)
                 }
                 Button("Gelöst …") { resolution = ""; resolving = true }
@@ -588,7 +609,7 @@ struct TicketDetailView: View {
         }
     }
 
-    private func send() async {
+    private func send(thenWaitForReporter: Bool = false) async {
         guard let client = model.active?.client else { return }
         sending = true
         defer { sending = false }
@@ -599,6 +620,9 @@ struct TicketDetailView: View {
             detail = try await client.comment(on: ticketId, text: text.isEmpty ? "Bild" : text, attachmentFileIds: ids, isInternal: isAgent && internalNote)
             reply = ""
             internalNote = false
+            if thenWaitForReporter, isAgent, detail?.summary.status != .waitingForReporter {
+                detail = try await client.updateTicket(ticketId, TicketUpdate(status: .waitingForReporter))
+            }
             attachments = []
             pickerItems = []
             error = nil

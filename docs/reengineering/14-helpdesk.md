@@ -139,3 +139,15 @@ Bearbeitung im Desktop mit diesem. Statistik, SLA und Textbausteine in 1.1.
   öffentliche Antwort oder interne Notiz, Textbausteine mit Platzhaltern), „Meldung aufnehmen“, verknüpfte Anleitungen als
   eigene Seite; Android zeigt Anhänge im Verlauf als Vorschau und öffnet sie.
 
+### 8.2 Status „Warten auf Support“, automatisches Schließen, Navigation
+
+- **Status** `WaitingForSupport` („Warten auf Support“): Antwortet der Melder auf „Warten auf Anwenderinfo“
+  (`WaitingForReporter`, SLA-Uhr steht), wechselt das Ticket dorthin, die Uhr läuft weiter; ohne Zuständige erfahren Gruppe
+  bzw. alle Bearbeiter davon. Eine öffentliche Antwort der IT setzt „In Bearbeitung“. Ansicht `filter=support`, Kennzahl
+  `waitingForSupport`; „Überfällig“ und die SLA-Meldung berücksichtigen den Status. Ältere iOS-Apps kennen den Wert nicht;
+  neue Apps lesen unbekannte Statuswerte als „In Bearbeitung“.
+- **Automatisch schließen:** gelöste Tickets nach `autoCloseDays` (Standard **5**, 1–60) ohne Widerspruch; Ereignis
+  `status` ohne Person, im Verlauf „Automatisch geschlossen“.
+- **Web-Navigation:** eigene Gruppe „IT-Service/Helpdesk“ (Helpdesk, Problem melden, Helpdesk-Einstellungen, Wissensdatenbank);
+  Apps: Gruppe „IT-Service/Helpdesk“ unter „Mehr“.
+

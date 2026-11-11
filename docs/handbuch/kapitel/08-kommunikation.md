@@ -4,7 +4,9 @@
 
 Klemmt etwas – am iPad der Kolonne, an der App oder im Büro –, melden Mitarbeiter es als **Ticket**. Die Apps senden auf
 Wunsch technische Angaben (Gerät, Version, Abgleich, Fehlercodes) mit; Fotos und Bildschirmfotos lassen sich anhängen.
-Das Helpdesk-Team bearbeitet die Tickets unter **Benutzer & Geräte** → **Helpdesk**.
+Alles rund um den Helpdesk steht in der Seitennavigation in der eigenen Gruppe **IT-Service/Helpdesk**: **Helpdesk**
+(Tickets), **Problem melden**, **Helpdesk-Einstellungen** (nur für die Bearbeitung) und **Wissensdatenbank**. Die Gruppe
+erscheint nur, wenn das Modul Helpdesk eingeschaltet ist.
 
 ![Helpdesk](bilder/helpdesk.png "Arbeitsplatz der IT mit Kennzahlen, Ansichten und Ticketliste")
 
@@ -15,8 +17,14 @@ Das Helpdesk-Team bearbeitet die Tickets unter **Benutzer & Geräte** → **Help
   Kennzahl öffnet die passende Ansicht. Erste Antwort und Lösungszeit zählen wie die Ziele in **Geschäftszeit**: Nächte,
   Wochenenden, Feiertage und die Zeit einer Rückfrage an den Melder zählen nicht mit.
   Darunter **Offen nach Kategorie** und die **Auslastung** je Bearbeiter.
-- Gespeicherte **Ansichten**: **Meine**, **Nicht zugewiesen**, **Überfällig**, **Wartet auf Rückmeldung**, **Alle offenen**,
-  **Meine Gruppen**, **Erledigt**, **Alle**.
+- Gespeicherte **Ansichten**: **Meine**, **Nicht zugewiesen**, **Überfällig**, **Warten auf Support**, **Warten auf
+  Anwenderinfo**, **Alle offenen**, **Meine Gruppen**, **Erledigt**, **Alle**.
+- **Status**: Neu → In Bearbeitung → **Warten auf Anwenderinfo** (Rückfrage beim Melder, die Uhr der Ziele steht) →
+  **Warten auf Support** (der Melder hat geantwortet, die IT ist wieder am Zug, die Uhr läuft) → Gelöst → Geschlossen.
+  „Warten auf Support“ setzt EstrichONE selbst, sobald der Melder auf eine Rückfrage antwortet; die zuständige Person (sonst
+  die Gruppe bzw. alle Bearbeiter) wird benachrichtigt. Eine öffentliche Antwort der IT setzt wieder „In Bearbeitung“.
+- **Gelöste Tickets** schließen sich nach **5 Tagen** ohne Widerspruch automatisch (Frist unter Helpdesk-Einstellungen →
+  Optionen). Bis dahin kann der Melder das Ticket wieder öffnen; der Verlauf zeigt „Automatisch geschlossen“.
 - Die **Liste** lässt sich über die Spaltenköpfe sortieren (Nummer, Titel, Melder, Kategorie, Priorität, Status,
   Zuständig, Fällig, Aktivität). Die Suche findet Ticketnummern (auch nur „0042“), Titel, Beschreibung, Melder und Antworten.
   Die Liste lädt 100 Tickets auf einmal; **Weitere laden** unter der Liste holt die nächsten (Anzeige „100 von 742 Tickets“).
@@ -54,6 +62,7 @@ schmalen Fenstern (z. B. 1024 Pixel) vollständig sichtbar. Unter **…** (Weite
   Tippen Sie **@** und den Anfang eines Namens, schlägt EstrichONE passende Kolleginnen und Kollegen vor: mit den
   Pfeiltasten wählen, mit <kbd>Eingabe</kbd> oder <kbd>Tab</kbd> übernehmen, <kbd>Esc</kbd> schließt die Auswahl. Erwähnte
   werden benachrichtigt. **Interne Notiz** ist für den Melder unsichtbar. Senden mit <kbd>Strg</kbd> + <kbd>Enter</kbd>.
+  **Mit Rückfrage senden** schickt die Antwort und setzt den Status auf „Warten auf Anwenderinfo“.
 - **Melder & Geräte**: Kontakt des Melders, seine Geräte mit App-Version und Update-Stand, letzter Kontakt, die
   Diagnosedaten, weitere Tickets der Person und der Systemstatus (Server, Sicherung, Archiv).
 - **Verknüpfungen**: verknüpfte Tickets und Artikel sowie passende Vorschläge aus der Wissensdatenbank.

@@ -228,4 +228,15 @@ struct HelpdeskTests {
             """.utf8))
         #expect(article.paragraphs == ["1. WLAN", "2. Abgleichen"])
     }
+
+    @Test("Status „Warten auf Support“, Titel für Melder und IT, unbekannte Werte und Ansichten der Bearbeitung")
+    func waitingForSupport() throws {
+        #expect(TicketStatus.waitingForSupport.title == "Warten auf Support")
+        #expect(TicketStatus.waitingForReporter.title == "Rückfrage an Sie")
+        #expect(TicketStatus.waitingForReporter.agentTitle == "Warten auf Anwenderinfo")
+        let decoded = try JSONCoding.decoder.decode([TicketStatus].self, from: Data(#"["waitingForSupport","spaeterNeu"]"#.utf8))
+        #expect(decoded == [.waitingForSupport, .inProgress])
+        #expect(AgentTicketView.allCases.map(\.rawValue) == ["mine", "unassigned", "overdue", "support", "waiting", "open"])
+        #expect(AgentTicketView.support.title == "Warten auf Support")
+    }
 }

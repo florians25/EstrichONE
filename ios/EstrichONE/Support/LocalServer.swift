@@ -83,6 +83,13 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             let id = String(path.split(separator: "/")[3]).lowercased()
             lock.withLock { uploaded[id] = content }
         }
+        if demo != nil, path == "/api/v1/tickets", (request.httpMethod ?? "GET") == "GET" {
+            // Ansichten der Bearbeitung (filter=…).
+            let filter = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?.queryItems?.first { $0.name == "filter" }?.value
+            let list = lock.withLock { helpdesk.list(filter: filter) }
+            let response = HTTPURLResponse(url: request.url!, statusCode: 200, httpVersion: "HTTP/1.1", headerFields: nil)!
+            return ((try? JSONSerialization.data(withJSONObject: list)) ?? Data("[]".utf8), response)
+        }
         let cursor = request.url.flatMap { URLComponents(url: $0, resolvingAgainstBaseURL: false) }?
             .queryItems?.first { $0.name == "cursor" }?.value
         let (status, json) = lock.withLock {

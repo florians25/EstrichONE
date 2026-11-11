@@ -114,6 +114,7 @@ fun MoreScreen() {
     val unread by session.unreadNotifications.collectAsState()
     val unreadTickets by session.unreadTickets.collectAsState()
     val modules by session.modules.collectAsState()
+    val permissions by session.permissions.collectAsState()
     var confirmReset by remember { mutableStateOf(false) }
     var confirmSignOut by remember { mutableStateOf(false) }
     ScreenScaffold("Mehr", root = true) { padding ->
@@ -169,12 +170,13 @@ fun MoreScreen() {
                 }
             }
             if (modules.isOn(AppModules.HELPDESK)) {
-                item { GroupLabel("Hilfe") }
+                item { GroupLabel("IT-Service/Helpdesk") }
                 item {
                     SectionCard {
                         RowItem("Problem melden", icon = Icons.Outlined.ReportProblem, onClick = { nav.push(Route.ReportProblem) })
                         RowDivider()
-                        RowItem("Meine Meldungen", icon = Icons.Outlined.SupportAgent, showChevron = true, onClick = { nav.push(Route.Helpdesk) },
+                        RowItem(if ("helpdesk.agent" in permissions) "Helpdesk (Tickets bearbeiten)" else "Meine Meldungen", icon = Icons.Outlined.SupportAgent,
+                            showChevron = true, onClick = { nav.push(Route.Helpdesk) },
                             trailing = { CountBadge(unreadTickets) })
                     }
                 }

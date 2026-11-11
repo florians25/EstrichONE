@@ -85,7 +85,7 @@ struct MoreView: View {
                 }
 
                 if modules.isOn(AppModules.helpdesk) {
-                    Section("Hilfe") {
+                    Section("IT-Service/Helpdesk") {
                         Button { reporting = true } label: { row("Problem melden", symbol: "exclamationmark.bubble", chevron: false) }
                             .accessibilityIdentifier("reportProblemButton")
                         Button { route = .tickets } label: {
@@ -267,7 +267,7 @@ struct MoreView: View {
         case "aufgaben": route = .tasks
         case "woche": route = .week
         case "abwesenheit", "abwesenheit-antrag", "abwesenheit-genehmigung", "abwesenheit-aenderung": route = .absences
-        case "meldung", "meldung-detail", "meldung-bearbeitung", "meldung-bewertung", "meldung-it", "meldung-aufnehmen", "meldung-anleitung": route = .tickets
+        case "meldung", "meldung-detail", "meldung-bearbeitung", "meldung-bewertung", "meldung-it", "meldung-aufnehmen", "meldung-anleitung", "meldung-support": route = .tickets
         case "dispo-zuweisen", "dispo-verschieben", "dispo-tauschen", "dispo-fahrzeug", "dispo-kolonnen", "dispo-freigabe": route = .dispatch
         default: break
         }

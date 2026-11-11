@@ -135,7 +135,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path.startsWith("chat/") -> chat.handle(method, path.removePrefix("chat/"), query, body, raw, content)
             path.startsWith("hr/") -> absences.handle(method, path, query, body)
             path == "tickets/mine" -> 200 to tickets.list()
-            path == "tickets" && method == "GET" -> 200 to tickets.list()
+            path == "tickets" && method == "GET" -> 200 to tickets.list(query["filter"])
             path == "tickets/on-behalf" -> 201 to tickets.createOnBehalf(body)
             path == "helpdesk/agents" -> 200 to tickets.agents()
             path == "helpdesk/groups" -> 200 to tickets.groups()
@@ -318,6 +318,13 @@ private class DemoTickets {
         Ticket("0193a1b2-de00-7000-8000-00000000c004", "T-2026-0004", "Zugang für neuen Mitarbeiter", "Jonas Wirth braucht einen Zugang für die App.", "access",
             "resolved", 60 * 24 * 6, mutableListOf(Triple("IT-Support", "Zugang ist eingerichtet, Einladung ging per E-Mail raus.", 60L * 24 * 5)),
             resolution = "Konto angelegt, Zugangsbrief per E-Mail verschickt."),
+        Ticket("0193a1b2-de00-7000-8000-00000000c005", "T-2026-0011", "Drucker im Büro druckt nur leere Seiten", "Etagendrucker 1. OG zieht Papier ein, druckt aber nichts.",
+            "officeIt", "waitingForSupport", 60 * 5, mutableListOf(
+                Triple("IT-Support", "Welche Meldung zeigt das Display des Druckers?", 60L * 3),
+                Triple("Sabine Wagner", "„Toner fast leer“ – neuer Toner ist aber drin.", 25L),
+            ), priority = "high", subcategory = "0193a1b2-de00-7000-8000-00000000e102", assignee = DemoData.USER_ID, reporter = "Sabine Wagner"),
+        Ticket("0193a1b2-de00-7000-8000-00000000c006", "T-2026-0012", "Tablet Kolonne Kaya: Display gesprungen", "Beim Abladen heruntergefallen.",
+            "deviceDefect", "new", 18, mutableListOf(), priority = "urgent", assignee = null, group = null, reporter = "Emre Kaya"),
     )
 
     private fun summary(t: Ticket, now: Instant = Instant.now()) = mapOf(
@@ -338,8 +345,10 @@ private class DemoTickets {
                 "text" to text, "isInternal" to false, "createdAt" to at(minutes))
         }
         val timeline = buildList {
-            add(mapOf("id" to "${t.id}-c", "at" to at(t.minutesAgo), "kind" to "created", "actorUserId" to DemoData.USER_ID, "actorName" to DemoData.USER_NAME,
-                "summary" to if (t.channel == "selfService") "${DemoData.USER_NAME} hat das Problem gemeldet"
+            add(mapOf("id" to "${t.id}-c", "at" to at(t.minutesAgo), "kind" to "created",
+                "actorUserId" to if (t.reporter == DemoData.USER_NAME || t.channel != "selfService") DemoData.USER_ID else null,
+                "actorName" to if (t.channel == "selfService") t.reporter else DemoData.USER_NAME,
+                "summary" to if (t.channel == "selfService") "${t.reporter} hat das Problem gemeldet"
                     else "${DemoData.USER_NAME} hat die Meldung von ${t.reporter} aufgenommen (${ticketChannelLabel(t.channel)})",
                 "text" to t.description, "isReporter" to true))
             add(mapOf("id" to "${t.id}-a", "at" to at(t.minutesAgo - 20), "kind" to "assignee", "actorName" to "IT-Support", "summary" to "Zugewiesen an IT-Support"))
@@ -361,7 +370,19 @@ private class DemoTickets {
                 "isPublished" to true)) else emptyList())
     }
 
-    fun list() = tickets.map { summary(it) }
+    fun list(filter: String? = null) = tickets.filter { t ->
+        val open = t.status != "resolved" && t.status != "closed"
+        when (filter) {
+            null -> t.reporter == DemoData.USER_NAME
+            "mine" -> open && t.assignee == DemoData.USER_ID
+            "unassigned" -> open && t.assignee == null
+            "overdue" -> open && t.priority == "urgent"
+            "support" -> t.status == "waitingForSupport"
+            "waiting" -> t.status == "waitingForReporter"
+            "open" -> open
+            else -> true
+        }
+    }.map { summary(it) }
 
     fun options() = json("ratingEnabled" to true, "suggestArticles" to true, "categories" to listOf(
         mapOf("key" to "sync", "name" to "Synchronisation", "subcategories" to listOf(mapOf("id" to "0193a1b2-de00-7000-8000-00000000e101", "category" to "sync",
@@ -420,7 +441,9 @@ private class DemoTickets {
             "comments" -> {
                 t.comments.add(Triple(DemoData.USER_NAME, body.str("text") ?: "", 0L))
                 if (body["isInternal"]?.toString() == "true") t.internal += t.comments.lastIndex
-                if (t.status == "waitingForReporter") t.status = "inProgress"
+                val internal = body["isInternal"]?.toString() == "true"
+                if (t.status == "waitingForReporter" && t.reporter == DemoData.USER_NAME) t.status = "waitingForSupport"
+                else if (t.status == "waitingForSupport" && !internal) t.status = "inProgress"
                 200 to detail(t)
             }
             null -> {

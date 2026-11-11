@@ -133,12 +133,17 @@ Hat die IT eine **Anleitung** aus der Wissensdatenbank verknüpft, steht sie in 
 Tipp öffnet sie als eigene Seite. Anhänge im Verlauf zeigen Bilder als Vorschau, andere Dateien mit Namen; ein Tipp öffnet
 sie.
 
-**Für die IT:** Wer im Betrieb Meldungen bearbeitet, sieht im Helpdesk zusätzlich alle Meldungen (iOS: Reiter
-**Bearbeitung**; Android: **Mir zugewiesen** und **Offen**) mit Suche und Filter. In einer Meldung:
+Unter **Mehr** steht alles in der Gruppe **IT-Service/Helpdesk**.
+
+**Für die IT:** Wer im Betrieb Meldungen bearbeitet, sieht im Helpdesk zusätzlich die **Ansichten** der Bearbeitung –
+**Meine**, **Nicht zugewiesen**, **Überfällig**, **Warten auf Support**, **Warten auf Anwenderinfo**, **Alle offenen**
+(iOS: Reiter **Bearbeitung**, darunter die Auswahl **Ansicht**; Android: Leiste über der Liste). In einer Meldung:
 
 - **Zuständig**: sich selbst (**Mir zuweisen**), eine Kollegin oder einen Kollegen oder niemand; dazu die **Gruppe**.
 - **Status**, **Priorität**, **Kategorie** und **Unterkategorie** ändern (iOS: Menü **Bearbeiten** oben rechts; Android:
   Bereich **Bearbeitung** im Ticket). **Gelöst** fragt die Lösung ab, die der Melder sieht.
+- **Warten auf Anwenderinfo** setzen, wenn Sie vom Melder etwas brauchen – am schnellsten mit **Mit Rückfrage senden**
+  (Antwort und Status in einem Schritt). Antwortet der Melder, steht die Meldung auf **Warten auf Support**.
 - Unten **öffentlich antworten** oder eine **Interne Notiz** schreiben (für den Melder unsichtbar). **Textbaustein** fügt
   eine vorbereitete Antwort ein; {Vorname}, {Ticket} und Ähnliches füllt die App selbst aus.
 - **Meldung aufnehmen** (Hörer-Symbol): Ticket für jemanden anlegen, der angerufen, geschrieben hat oder vorbeigekommen ist

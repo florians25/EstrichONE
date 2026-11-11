@@ -201,6 +201,12 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     }) { routes }
 
     @Test
+    fun helpdeskItListe() = agent("helpdesk-it-liste", listOf(Route.Helpdesk))
+
+    @Test
+    fun helpdeskWartetAufSupport() = agent("helpdesk-warten-auf-support", listOf(Route.Helpdesk, Route.Ticket("0193a1b2-de00-7000-8000-00000000c005")))
+
+    @Test
     fun helpdeskBearbeitung() = agent("helpdesk-bearbeitung", listOf(Route.Helpdesk, Route.Ticket(DemoData.TICKET)))
 
     @Test

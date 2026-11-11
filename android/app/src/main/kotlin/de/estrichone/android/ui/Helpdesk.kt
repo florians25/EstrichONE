@@ -26,6 +26,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -140,6 +141,8 @@ fun HelpdeskScreen() {
     val permissions by session.permissions.collectAsState()
     val agent = "helpdesk.agent" in permissions
     var view by rememberSaveable { mutableStateOf("mine") }
+    // Bearbeitung: zuerst die mir zugewiesenen Tickets.
+    LaunchedEffect(agent) { if (agent && view == "mine") view = "agent:mine" }
     val tickets by rememberLoad(view) { if (view == "mine") session.api.myTickets() else session.api.agentView(view) }
     val pending by session.local { HelpdeskReporter(session.store, session.service).pending() }
     ScreenScaffold(if (agent) "Helpdesk" else "Meine Meldungen", floating = {
@@ -148,8 +151,9 @@ fun HelpdeskScreen() {
     }) { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable(), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             if (agent) item {
-                val options = listOf("mine" to "Meine Meldungen", "assigned" to "Mir zugewiesen", "unassigned" to "Offen")
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Ansichten der Bearbeitung wie im Web; „Meine Meldungen“ = eigene Tickets als Melder.
+                val options = listOf("mine" to "Meine Meldungen") + de.estrichone.core.agentTicketViews.map { (key, label) -> "agent:$key" to label }
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     options.forEach { (key, label) -> FilterChip(view == key, { view = key }, label = { Text(label, maxLines = 1) }) }
                 }
                 OutlinedButton(onClick = { nav.push(Route.RecordTicket) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
@@ -181,7 +185,8 @@ fun HelpdeskScreen() {
                                 if (index > 0) RowDivider()
                                 val sla = if (agent && view != "mine") slaText(t) else null
                                 RowItem(t.title, icon = Icons.Outlined.SupportAgent,
-                                    subtitle = listOfNotNull(t.number, ticketStatusLabel(t.status), sla, if (view != "mine") t.reporterDisplayName else null,
+                                    subtitle = listOfNotNull(t.number, if (view == "mine") ticketStatusLabel(t.status) else de.estrichone.core.ticketStatusAgentLabel(t.status),
+                                        sla, if (view != "mine") t.reporterDisplayName else null, if (view != "mine") t.assigneeName ?: "nicht zugewiesen" else null,
                                         de.estrichone.core.ticketChannelLabel(t.channel)?.takeIf { view != "mine" })
                                         .joinToString(" · "),
                                     showChevron = true, onClick = { nav.push(Route.Ticket(t.id)) }, trailing = { if (t.hasUnread) CountBadge(1) })
@@ -195,8 +200,7 @@ fun HelpdeskScreen() {
 }
 
 /** API-Ansicht der Bearbeitung zu den Reitern. */
-private suspend fun de.estrichone.core.EstrichOneApi.agentView(view: String): List<TicketListItem> =
-    agentTickets(if (view == "assigned") "mine" else "unassigned")
+private suspend fun de.estrichone.core.EstrichOneApi.agentView(view: String): List<TicketListItem> = agentTickets(view.removePrefix("agent:"))
 
 /**
  * Ein Ticket: Verlauf als Unterhaltung (Antworten als Sprechblasen, Ereignisse als Zeile), Antwort, Wieder öffnen, Bewertung
@@ -216,6 +220,7 @@ fun TicketScreen(id: String) {
     var stars by remember { mutableStateOf(0) }
     var ratingComment by remember { mutableStateOf("") }
     var resolving by remember { mutableStateOf(false) }
+    var resolveAs by remember { mutableStateOf("resolved") }
     val nav = LocalNav.current
     // Bearbeitung: Personen, Gruppen und Textbausteine einmal laden.
     val agents by produceState(emptyList<HelpdeskAgent>(), agent) { if (agent) value = runCatching { session.api.helpdeskAgents() }.getOrDefault(emptyList()) }
@@ -244,7 +249,8 @@ fun TicketScreen(id: String) {
                 item {
                     Text(full.summary.title, style = MaterialTheme.typography.headlineSmall)
                     FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Pill(ticketStatusLabel(full.summary.status), MaterialTheme.colorScheme.primary, tones.infoSoft)
+                        Pill(if (agent) de.estrichone.core.ticketStatusAgentLabel(full.summary.status) else ticketStatusLabel(full.summary.status),
+                            MaterialTheme.colorScheme.primary, tones.infoSoft)
                         TicketCategory.of(full.summary.category)?.let { Pill(full.summary.subcategoryName?.let { s -> "${it.title} › $s" } ?: it.title, tones.textSecondary, tones.fill) }
                         TicketPriority.of(full.summary.priority).takeIf { it == TicketPriority.High || it == TicketPriority.Urgent }
                             ?.let { Pill(it.title, tones.warning, tones.warningSoft) }
@@ -254,7 +260,7 @@ fun TicketScreen(id: String) {
                     if (agent) full.summary.intakeText?.let { Secondary("Eingang: $it · Melder: ${full.summary.reporterDisplayName ?: "–"}") }
                 }
                 if (agent) item {
-                    AgentPanel(full, agents, groups, options, session.user.id, onResolve = { resolving = true }) { change, message -> update({ session.api.updateTicket(id, change) }, message) }
+                    AgentPanel(full, agents, groups, options, session.user.id, onResolve = { resolveAs = it; resolving = true }) { change, message -> update({ session.api.updateTicket(id, change) }, message) }
                 }
                 full.mergedIntoNumber?.let { number ->
                     item { Banner("Diese Meldung wurde mit $number zusammengeführt. Antworten erhalten Sie dort.", Icons.Outlined.SupportAgent, tones.info, tones.infoSoft) }
@@ -332,6 +338,14 @@ fun TicketScreen(id: String) {
                                 reply = ""
                                 update({ if (agent) session.api.agentReply(id, text, internal) else session.api.commentTicket(id, text) })
                             }, enabled = reply.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(if (internal) "Notiz speichern" else if (agent) "Antwort senden" else "Antworten") }
+                            if (agent && !internal) OutlinedButton(onClick = {
+                                val text = reply
+                                reply = ""
+                                update({
+                                    session.api.agentReply(id, text, false)
+                                    session.api.updateTicket(id, TicketUpdate(status = "waitingForReporter"))
+                                }, "Antwort gesendet, warten auf Anwenderinfo")
+                            }, enabled = reply.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text("Mit Rückfrage senden (warten auf Anwenderinfo)") }
                         }
                     }
                 }
@@ -340,10 +354,10 @@ fun TicketScreen(id: String) {
     }
     if (resolving) {
         var resolution by remember { mutableStateOf("") }
-        AlertDialog(onDismissRequest = { resolving = false }, title = { Text("Als gelöst markieren") },
+        AlertDialog(onDismissRequest = { resolving = false }, title = { Text(if (resolveAs == "closed") "Ticket schließen" else "Als gelöst markieren") },
             text = { OutlinedTextField(resolution, { resolution = it }, label = { Text("Lösung (sieht der Melder)") }, minLines = 3, modifier = Modifier.fillMaxWidth()) },
             confirmButton = {
-                TextButton(onClick = { resolving = false; update({ session.api.updateTicketStatus(id, "resolved", resolution) }, "Ticket gelöst") },
+                TextButton(onClick = { resolving = false; update({ session.api.updateTicketStatus(id, resolveAs, resolution) }, if (resolveAs == "closed") "Ticket geschlossen" else "Ticket gelöst") },
                     enabled = resolution.isNotBlank()) { Text("Speichern") }
             },
             dismissButton = { TextButton(onClick = { resolving = false }) { Text("Abbrechen") } })
@@ -495,7 +509,7 @@ private fun PickerField(label: String, value: String, options: List<Pair<String?
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun AgentPanel(
-    full: TicketFull, agents: List<HelpdeskAgent>, groups: List<HelpdeskGroup>, options: HelpdeskOptions?, me: String, onResolve: () -> Unit,
+    full: TicketFull, agents: List<HelpdeskAgent>, groups: List<HelpdeskGroup>, options: HelpdeskOptions?, me: String, onResolve: (String) -> Unit,
     onChange: (TicketUpdate, String) -> Unit,
 ) {
     val s = full.summary
@@ -503,10 +517,11 @@ private fun AgentPanel(
         Text("Bearbeitung", style = MaterialTheme.typography.titleSmall)
         Text("Status", style = MaterialTheme.typography.labelMedium, color = tones.textSecondary, modifier = Modifier.padding(top = 8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            listOf("new", "inProgress", "waitingForReporter", "resolved").forEach { key ->
+            listOf("new", "inProgress", "waitingForReporter", "waitingForSupport", "resolved", "closed").forEach { key ->
                 FilterChip(s.status == key, {
-                    if (key == "resolved") onResolve() else if (key != s.status) onChange(TicketUpdate(status = key), "Status: ${ticketStatusLabel(key)}")
-                }, label = { Text(if (key == "waitingForReporter") "Rückfrage" else ticketStatusLabel(key)) })
+                    if (key == "resolved" || key == "closed") onResolve(key)
+                    else if (key != s.status) onChange(TicketUpdate(status = key), "Status: ${de.estrichone.core.ticketStatusAgentLabel(key)}")
+                }, label = { Text(de.estrichone.core.ticketStatusAgentLabel(key)) })
             }
         }
         Text("Priorität", style = MaterialTheme.typography.labelMedium, color = tones.textSecondary, modifier = Modifier.padding(top = 4.dp))

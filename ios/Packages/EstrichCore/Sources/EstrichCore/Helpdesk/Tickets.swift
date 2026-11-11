@@ -28,15 +28,43 @@ public enum TicketCategory: String, CaseIterable, Identifiable, Codable, Sendabl
 }
 
 public enum TicketStatus: String, CaseIterable, Codable, Sendable {
-    case new, inProgress, waitingForReporter, resolved, closed
+    case new, inProgress, waitingForReporter, waitingForSupport, resolved, closed
 
+    /// Unbekannte Werte neuerer Server zählen als „In Bearbeitung“ (die Liste lädt trotzdem).
+    public init(from decoder: any Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = TicketStatus(rawValue: raw) ?? .inProgress
+    }
+
+    /// Aus Sicht des Melders.
     public var title: String {
         switch self {
         case .new: "Neu"
         case .inProgress: "In Bearbeitung"
         case .waitingForReporter: "Rückfrage an Sie"
+        case .waitingForSupport: "Warten auf Support"
         case .resolved: "Gelöst"
         case .closed: "Geschlossen"
+        }
+    }
+
+    /// Aus Sicht der IT („Warten auf Anwenderinfo“ statt „Rückfrage an Sie“).
+    public var agentTitle: String { self == .waitingForReporter ? "Warten auf Anwenderinfo" : title }
+}
+
+/// Ansichten der Bearbeitung (Filter der API), wie im Web.
+public enum AgentTicketView: String, CaseIterable, Identifiable, Sendable {
+    case mine, unassigned, overdue, support, waiting, open
+
+    public var id: String { rawValue }
+    public var title: String {
+        switch self {
+        case .mine: "Meine"
+        case .unassigned: "Nicht zugewiesen"
+        case .overdue: "Überfällig"
+        case .support: "Warten auf Support"
+        case .waiting: "Warten auf Anwenderinfo"
+        case .open: "Alle offenen"
         }
     }
 }

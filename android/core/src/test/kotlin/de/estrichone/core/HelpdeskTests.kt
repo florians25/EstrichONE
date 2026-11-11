@@ -163,4 +163,22 @@ class HelpdeskTests {
         assertEquals("inProgress", recorded.summary.status)
         assertTrue(recorded.history().first().summary.contains("aufgenommen (Telefon)"))
     }
+
+    @Test
+    fun `Demomodus Ansichten der Bearbeitung und Warten auf Support`() = kotlinx.coroutines.runBlocking {
+        val server = DemoServer().also { it.itAgent = true }
+        val api = EstrichOneApi("https://demo.invalid", MemorySessionStore(), SoftwareDeviceKeys(), server.client())
+        api.signIn("demo", "demo", "Test")
+        assertEquals(listOf("mine", "unassigned", "overdue", "support", "waiting", "open"), agentTicketViews.map { it.first })
+        val support = api.agentTickets("support")
+        assertEquals(listOf("waitingForSupport"), support.map { it.status }.distinct())
+        assertTrue(api.agentTickets("unassigned").all { it.assigneeUserId == null })
+        assertEquals("Warten auf Support", ticketStatusAgentLabel("waitingForSupport"))
+        assertEquals("Warten auf Anwenderinfo", ticketStatusAgentLabel("waitingForReporter"))
+        assertEquals("Rückfrage an Sie", ticketStatusLabel("waitingForReporter"))
+        // Antwort der IT holt das Ticket in die Bearbeitung zurück; Rückfrage setzt „Warten auf Anwenderinfo“.
+        val answered = api.agentReply(support.first().id, "Bitte Toner einmal neu einsetzen.", internal = false)
+        assertEquals("inProgress", answered.summary.status)
+        assertEquals("waitingForReporter", api.updateTicket(support.first().id, TicketUpdate(status = "waitingForReporter")).summary.status)
+    }
 }

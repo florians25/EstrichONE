@@ -49,7 +49,7 @@ final class DemoHelpdesk {
                   createdAt: ago(60 * 26), lastActivityAt: ago(35), timeline: [], resolution: nil, rating: nil),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c002", number: "T-2026-0009", title: "Drucker im Büro druckt nur leere Seiten",
                   description: "Der Etagendrucker im 1. OG zieht Papier ein, druckt aber nichts.", category: "officeIt", priority: "high",
-                  status: "inProgress", reporterId: "0193a1b2-de00-7000-8000-00000000a0a2", reporterName: "Sabine Wagner", assigneeId: userId, assigneeName: "Max Huber",
+                  status: "waitingForSupport", reporterId: "0193a1b2-de00-7000-8000-00000000a0a2", reporterName: "Sabine Wagner", assigneeId: userId, assigneeName: "Max Huber",
                   createdAt: ago(60 * 3), lastActivityAt: ago(50), timeline: [], resolution: nil, rating: nil),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c003", number: "T-2026-0010", title: "Tablet Kolonne Kaya: Display gesprungen",
                   description: "Beim Abladen heruntergefallen, Touch reagiert unten nicht mehr.", category: "deviceDefect", priority: "urgent",
@@ -75,7 +75,10 @@ final class DemoHelpdesk {
         ]
         tickets[1].timeline += [
             event(ago(60 * 2), "assignee", "IT-Support", "IT-Support hat die Meldung Max Huber zugewiesen."),
-            comment(ago(50), "Max Huber", "Toner ist neu. Ich prüfe vor Ort die Treiber.", reporter: false),
+            comment(ago(50), "Max Huber", "Welche Meldung zeigt das Display des Druckers?", reporter: false),
+            event(ago(50), "status", "Max Huber", "Status: In Bearbeitung → Warten auf Anwenderinfo"),
+            comment(ago(12), "Sabine Wagner", "„Toner fast leer“ – neuer Toner ist aber drin.", reporter: true),
+            event(ago(12), "status", "Sabine Wagner", "Status: Warten auf Anwenderinfo → Warten auf Support"),
         ]
         tickets[1].subcategoryId = "0193a1b2-de00-7000-8000-00000000e102"
         tickets[0].timeline.insert(note(ago(60 * 24 + 5), "IT-Support", "Betrifft auch zwei andere Geräte der Kolonne – vermutlich der Upload-Server."), at: 3)
@@ -121,6 +124,22 @@ final class DemoHelpdesk {
 
     func list(all: Bool) -> [[String: Any]] {
         tickets.filter { all || $0.reporterId == userId }.sorted { $0.lastActivityAt > $1.lastActivityAt }.map(summary)
+    }
+
+    /// Ansichten der Bearbeitung (filter=mine, unassigned, overdue, support, waiting, open).
+    func list(filter: String?) -> [[String: Any]] {
+        tickets.filter { ticket in
+            let open = ticket.status != "resolved" && ticket.status != "closed"
+            switch filter {
+            case "mine": return open && ticket.assigneeId == userId
+            case "unassigned": return open && ticket.assigneeId == nil
+            case "overdue": return open && ticket.priority == "urgent"
+            case "support": return ticket.status == "waitingForSupport"
+            case "waiting": return ticket.status == "waitingForReporter"
+            case "open": return open
+            default: return true
+            }
+        }.sorted { $0.lastActivityAt > $1.lastActivityAt }.map(summary)
     }
 
     func detail(_ id: String) -> [String: Any]? {
@@ -179,8 +198,11 @@ final class DemoHelpdesk {
         tickets[index].timeline.append(comment(now, "Max Huber", body["text"] as? String ?? "", reporter: mine,
                                                attachments: (body["attachmentFileIds"] as? [String]) ?? []))
         if mine, tickets[index].status == "waitingForReporter" {
+            tickets[index].status = "waitingForSupport"
+            tickets[index].timeline.append(event(now, "status", "Max Huber", "Status: Warten auf Anwenderinfo → Warten auf Support"))
+        } else if !mine, tickets[index].status == "waitingForSupport" {
             tickets[index].status = "inProgress"
-            tickets[index].timeline.append(event(now, "status", "Max Huber", "Status: In Bearbeitung"))
+            tickets[index].timeline.append(event(now, "status", "Max Huber", "Status: Warten auf Support → In Bearbeitung"))
         }
         tickets[index].lastActivityAt = now
         return detail(id)
