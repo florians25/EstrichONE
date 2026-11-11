@@ -207,3 +207,53 @@ test('Helpdesk-Einstellungen: Bundesland wählen, Feiertage werden berechnet', a
   const saved = await apiCall<{ state: string }>(page, 'GET', '/api/v1/helpdesk/settings', undefined);
   expect(saved.json.state).toBe('BY');
 });
+
+test('Anwenderinfo anfordern, Antwort des Melders setzt „Warten auf Support“; eigene Navigationsgruppe', async ({ page }) => {
+  await signIn(page, 'l.brandl', 'Estrich-Lukas-2026!');
+  const own = await ticket(page, 'VPN verbindet nicht');
+  await page.context().clearCookies();
+  await signIn(page, 'admin', adminPassword);
+  await expect(page.locator('.sapTntSideNavigation')).toContainText('IT-Service/Helpdesk');
+  await page.goto(`/it-center/helpdesk/${own.summary.id}`);
+  const reply = page.locator('[id$="reply"] textarea');
+  await reply.fill('Welche Fehlermeldung erscheint genau?');
+  await page.locator('[id$="hdSendAsk"]').click();
+  await expect(page.locator('[id$="tStatus"]')).toContainText('Warten auf Anwenderinfo');
+
+  await page.context().clearCookies();
+  await signIn(page, 'l.brandl', 'Estrich-Lukas-2026!');
+  const answered = await apiCall<{ summary: { status: string } }>(page, 'POST', `/api/v1/tickets/${own.summary.id}/comments`,
+    { text: 'Zeitüberschreitung beim Anmelden', isInternal: false });
+  expect(answered.json.summary.status).toBe('waitingForSupport');
+
+  await page.context().clearCookies();
+  await signIn(page, 'admin', adminPassword);
+  await page.goto('/it-center/helpdesk');
+  await page.locator('[id$="hdKpis"]').getByText('Warten auf Support').click();
+  await expect(page.locator('[id$="hdTable"] tbody tr').filter({ hasText: 'VPN verbindet nicht' })).toBeVisible();
+});
+
+test('Helpdesk-Seiten nutzen die volle Breite (1920 und 1280 Pixel)', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  const t = await ticket(page, 'Breite prüfen', 'other', { description: 'Langer Text '.repeat(40) });
+  for (const [w, h] of [[1920, 1080], [1280, 720]]) {
+    await page.setViewportSize({ width: w, height: h });
+    // Ticket: Verlauf so breit wie die Ticketansicht.
+    await page.goto(`/it-center/helpdesk/${t.summary.id}`);
+    await expect(page.locator('.eoTimeline')).toContainText('Langer Text');
+    const detail = await page.locator('.eoHdDetail').filter({ visible: true }).first().boundingBox();
+    const inner = await page.locator('[id$="hdScroll"] .eoHdScrollInner').first().boundingBox();
+    expect(inner!.width).toBeGreaterThan(detail!.width - 4);
+    // Einstellungen: Formular über die ganze Seite, Ziele und Geschäftszeiten nebeneinander (1920).
+    await page.goto('/it-center/helpdesk-einstellungen');
+    const form = page.locator('[id$="hdSla"]').filter({ visible: true }).first();
+    await expect(form).toBeVisible();
+    const content = await page.locator('.sapFDynamicPageContent').filter({ visible: true }).first().boundingBox();
+    expect((await form.boundingBox())!.width).toBeGreaterThan(content!.width * 0.9);
+    if (w === 1920) {
+      const targets = await page.locator('[id$="hdTargets"]').first().boundingBox();
+      const state = await page.locator('[id$="hdState"]').filter({ visible: true }).first().boundingBox();
+      expect(state!.x).toBeGreaterThan(targets!.x + targets!.width - 2);
+    }
+  }
+});

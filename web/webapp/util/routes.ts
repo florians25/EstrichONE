@@ -133,8 +133,18 @@ export const navigation: NavEntry[] = [
 			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 		],
 	},
+	// IT-Service/Helpdesk: eigene Gruppe (sichtbar mit Modul Helpdesk; Einstellungen nur für die Bearbeitung).
+	{
+		key: "groupHelpdesk", children: [
+			...adminAreas.filter((a) => a.group === "groupHelpdesk" && a.key === "helpdesk")
+				.map((a) => ({ key: a.key, path: a.path, icon: a.icon, permission: a.permission })),
+			{ key: "helpdeskNew", path: "/it-center/helpdesk?neu=1", icon: "sap-icon://add-activity" },
+			...adminAreas.filter((a) => a.group === "groupHelpdesk" && a.key !== "helpdesk")
+				.map((a) => ({ key: a.key, path: a.path, icon: a.icon, permission: a.permission })),
+		],
+	},
 	// Verwaltung: Gruppen und Einträge aus dem Verwaltungskatalog; vorneweg die Übersicht mit Suche.
-	...adminGroups.map((g, i): NavEntry => ({
+	...adminGroups.filter((g) => g.key !== "groupHelpdesk").map((g, i): NavEntry => ({
 		key: g.key,
 		children: [
 			...(i === 0 ? [{ key: "adminHub", path: "/verwaltung", icon: "sap-icon://action-settings", anyPermission: adminPermissions }] : []),
@@ -151,5 +161,6 @@ export function navKeyFor(nav: string | undefined, query: URLSearchParams): stri
 	if (nav === "company") return companyTabKeys[query.get("bereich") ?? ""] ?? "company";
 	if (nav === "vacation") return vacationTabs[query.get("reiter") ?? ""] ?? "vacation";
 	if (nav === "bauakten" && query.get("status") === "old") return "oldFiles";
+	if (nav === "helpdesk" && query.get("neu")) return "helpdeskNew";
 	return nav ?? "";
 }

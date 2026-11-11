@@ -69,8 +69,19 @@ describe('Verwaltung', () => {
 
   it('Rechte filtern Bereiche und leere Gruppen', () => {
     const sections = adminSections((p) => p === 'users.manage');
-    expect(sections.map((s) => s.key)).toEqual(['groupAdminUsers']);
-    expect(sections[0].areas.map((x) => x.key)).toEqual(['users', 'roles', 'helpdesk', 'knowledge']);
+    expect(sections.map((s) => s.key)).toEqual(['groupAdminUsers', 'groupHelpdesk']);
+    expect(sections[0].areas.map((x) => x.key)).toEqual(['users', 'roles']);
+    expect(sections[1].areas.map((x) => x.key)).toEqual(['helpdesk', 'knowledge']);
+  });
+
+  it('IT-Service/Helpdesk ist eine eigene Gruppe der Seitennavigation', () => {
+    const group = navigation.find((e) => e.key === 'groupHelpdesk');
+    expect(group?.children?.map((e) => e.key)).toEqual(['helpdesk', 'helpdeskNew', 'helpdeskSettings', 'knowledge']);
+    expect(group?.children?.find((e) => e.key === 'helpdeskSettings')?.permission).toBe('helpdesk.agent');
+    const others = navigation.filter((e) => e.key !== 'groupHelpdesk').flatMap((e) => e.children ?? [e]).map((e) => e.key);
+    expect(others).not.toContain('helpdesk');
+    expect(others).not.toContain('knowledge');
+    expect(navKeyFor('helpdesk', new URLSearchParams('neu=1'))).toBe('helpdeskNew');
   });
 
   it('Reiter der Systemeinstellungen markieren ihren Navigationseintrag', () => {

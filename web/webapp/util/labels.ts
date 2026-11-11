@@ -46,7 +46,7 @@ export const deviceStatus: Record<DeviceStatus, { text: string; tone: Tone }> = 
 
 export const ticketStatus: Record<TicketStatus, { text: string; tone: Tone }> = {
 	new: { text: "Neu", tone: "Information" }, inProgress: { text: "In Bearbeitung", tone: "Information" },
-	waitingForReporter: { text: "Rückfrage", tone: "Warning" }, resolved: { text: "Gelöst", tone: "Success" }, closed: { text: "Geschlossen", tone: "None" },
+	waitingForReporter: { text: "Warten auf Anwenderinfo", tone: "Warning" }, waitingForSupport: { text: "Warten auf Support", tone: "Error" }, resolved: { text: "Gelöst", tone: "Success" }, closed: { text: "Geschlossen", tone: "None" },
 };
 export const ticketCategories: Record<TicketCategory, string> = {
 	signIn: "Anmeldung", sync: "Synchronisation", appError: "App-Fehler", deviceDefect: "Gerät defekt", officeIt: "Drucker/Büro-IT",

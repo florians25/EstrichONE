@@ -284,7 +284,7 @@ export interface Inspection {
 
 export type TicketCategory = "signIn" | "sync" | "appError" | "deviceDefect" | "officeIt" | "access" | "other";
 export type TicketPriority = "low" | "normal" | "high" | "urgent";
-export type TicketStatus = "new" | "inProgress" | "waitingForReporter" | "resolved" | "closed";
+export type TicketStatus = "new" | "inProgress" | "waitingForReporter" | "waitingForSupport" | "resolved" | "closed";
 
 export interface TicketSummary {
   id: string;

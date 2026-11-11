@@ -96,6 +96,12 @@ export default class Helpdesk extends BaseController {
 			this.updateSortIcons();
 			void this.loadMeta(agent);
 		}
+		// „Problem melden“ aus der Seitennavigation: Liste anzeigen und gleich das Formular öffnen.
+		if (match.query.get("neu")) {
+			this.nav("/it-center/helpdesk", true);
+			setTimeout(() => void this.onNew(), 0);
+			return;
+		}
 		const id = match.params.id ?? "";
 		const previous = m.getProperty("/selectedId") as string;
 		m.setProperty("/selectedId", id);
@@ -194,7 +200,8 @@ export default class Helpdesk extends BaseController {
 	private applyStats(stats: HelpdeskStats): void {
 		const m = this.model();
 		m.setProperty("/kpis", kpiTiles(stats));
-		const counts: Record<string, number> = { mine: stats.mine, unassigned: stats.unassigned, overdue: stats.overdue, waiting: stats.waiting, open: stats.open };
+		const counts: Record<string, number> = { mine: stats.mine, unassigned: stats.unassigned, overdue: stats.overdue, waiting: stats.waiting, open: stats.open,
+			support: stats.waitingForSupport ?? 0 };
 		m.setProperty("/views", queueViews.map((v) => ({ ...v, count: counts[v.key] === undefined ? "" : String(counts[v.key]) })));
 		const maxCategory = Math.max(1, ...stats.byCategory.map((c) => c.open));
 		m.setProperty("/byCategory", stats.byCategory.filter((c) => c.open > 0).map((c) => ({
@@ -978,7 +985,12 @@ export default class Helpdesk extends BaseController {
 		m.setProperty("/reply", (reply ? `${reply.trimEnd()}\n\n` : "") + this.fill(text));
 	}
 
-	async onComment(): Promise<void> {
+	/** Antwort senden und auf Antwort des Melders warten („Warten auf Anwenderinfo“, SLA-Uhr steht). */
+	async onCommentAsk(): Promise<void> {
+		await this.onComment("waitingForReporter");
+	}
+
+	async onComment(thenStatus?: string | unknown): Promise<void> {
 		const m = this.model();
 		const t = this.ticket();
 		const pending = m.getProperty("/pending") as { name: string; file: File }[];
@@ -989,8 +1001,11 @@ export default class Helpdesk extends BaseController {
 		const updated = await this.run(async () => {
 			const attachmentFileIds: string[] = [];
 			for (const p of pending) attachmentFileIds.push(await uploadLoose(p.file));
-			return post<HdDetail>(`tickets/${t.summary.id}/comments`, { text, isInternal: m.getProperty("/internal"), attachmentFileIds,
+			const answered = await post<HdDetail>(`tickets/${t.summary.id}/comments`, { text, isInternal: m.getProperty("/internal"), attachmentFileIds,
 				mentionUserIds: mentions.length ? mentions : undefined });
+			return thenStatus === "waitingForReporter" && answered.summary.status !== "waitingForReporter"
+				? patch<HdDetail>(`tickets/${t.summary.id}`, { status: "waitingForReporter", unassign: false })
+				: answered;
 		});
 		if (updated) {
 			m.setProperty("/reply", "");

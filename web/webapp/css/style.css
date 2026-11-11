@@ -602,7 +602,7 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoHdActions .eoHdActLabel.sapMLabel:first-child { margin-left: 0; }
 .eoHdResolved { margin: 0.25rem 0 0.5rem; }
 .eoHdScroll { background: var(--sapBackgroundColor); }
-.eoHdScrollInner { padding: 1rem 1.5rem; max-width: 60rem; box-sizing: border-box; }
+.eoHdScrollInner { padding: 1rem 1.5rem; box-sizing: border-box; width: 100%; }
 .eoHdDetail .eoHdComposer { padding: 0.75rem 1.5rem; border-top: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); position: relative; }
 .eoHdDetail .eoHdComposer[data-internal="true"] { background: var(--sapWarningBackground, #fef7f1); }
 .eoHdDetail .eoHdComposer.eoDropActive { outline: 2px dashed var(--sapBrandColor); outline-offset: -6px; background: var(--sapInformationBackgroundColor, #f5faff); }
@@ -688,7 +688,7 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoHdSuggest { width: 100%; padding: 0.5rem 0; gap: 1rem; }
 .eoHdSuggestBox { margin: 0.25rem 0 0.75rem; padding: 0.75rem 1rem; gap: 0.25rem; background: var(--sapInformationBackgroundColor);
 	border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); }
-.eoKbArticle { max-width: 50rem; }
+.eoKbArticle { width: 100%; }
 .eoKbBody { line-height: 1.6; }
 .eoKbBody h4 { margin: 1rem 0 0.25rem; font-size: var(--sapFontLargeSize); }
 .eoKbBody ol, .eoKbBody ul { padding-left: 1.5rem; }
@@ -1208,7 +1208,7 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoStatusOneLine.sapMObjStatus .sapMObjStatusText { white-space: nowrap; }
 /* Helpdesk: Schnellaktionen als Raster (bleibt bei 1024 px ohne Überlaufmenü), Seitenwechsel, Erwähnen mit @ */
 .eoHdQuick { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.25rem 0.5rem; align-items: end; margin: 0.25rem 0 0.5rem;
-	max-width: 72rem; }
+	width: 100%; }
 .eoHdQuickField { display: flex; flex-direction: column; min-width: 0; }
 .eoHdQuickField .sapMLabel { font-size: var(--sapFontSmallSize); }
 .eoHdQuickField .sapMSlt { min-width: 0; max-width: 100%; }
@@ -1231,3 +1231,8 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoHdMentionPop .sapMLIB[data-active="true"] { background: var(--sapList_SelectionBackgroundColor); }
 .eoHdMentionItem { width: 100%; gap: 1rem; padding: 0 0.75rem; box-sizing: border-box; }
 .eoHdHolidayList { gap: 0.25rem 1rem; margin: 0.5rem 0 0.25rem; }
+/* Helpdesk-Einstellungen: volle Breite, Ziele und Zeiten zweispaltig, gleiche Abstände wie die übrigen Helpdesk-Seiten */
+.eoHdSetTabs .sapUiSimpleForm, .eoHdSetTabs .sapMListTbl { width: 100%; }
+.eoHdSetTabs .sapMITBContent { padding: 1rem 0 0; }
+.eoHdHolidayList .sapMObjStatus { min-width: 12rem; }
+.eoHdSendButtons { gap: 0.5rem; justify-content: flex-end; min-width: 0; }

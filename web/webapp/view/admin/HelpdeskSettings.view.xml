@@ -19,7 +19,7 @@
 				<IconTabBar id="hdSetTabs" selectedKey="{view>/tab}" expandable="false" headerMode="Inline" applyContentPadding="false" class="eoHdSetTabs">
 					<items>
 						<IconTabFilter key="sla" text="Ziele und Zeiten">
-							<form:SimpleForm id="hdSla" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" maxContainerCols="1" width="60rem">
+							<form:SimpleForm id="hdSla" editable="true" layout="ResponsiveGridLayout" labelSpanXL="3" labelSpanL="4" labelSpanM="4" emptySpanXL="0" emptySpanL="0" emptySpanM="0" columnsXL="2" columnsL="2" columnsM="1" width="100%">
 								<core:Title text="Reaktions- und Lösungsziele"/>
 								<Label text="Ziele überwachen" labelFor="hdSlaOn"/>
 								<VBox>
@@ -29,10 +29,10 @@
 								<Label text="Ziele je Priorität"/>
 								<Table id="hdTargets" items="{view>/s/targets}" contextualWidth="Auto" popinLayout="GridSmall" class="eoHdTargets">
 									<columns>
-										<Column width="8rem"><Text text="Priorität"/></Column>
+										<Column width="6.5rem"><Text text="Priorität"/></Column>
 										<Column><Text text="Erste Antwort (Std.)"/></Column>
-										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Lösung (Std.)"/></Column>
-										<Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Rund um die Uhr"/></Column>
+										<Column minScreenWidth="Phone" demandPopin="true"><Text text="Lösung (Std.)"/></Column>
+										<Column width="7rem" minScreenWidth="Phone" demandPopin="true"><Text text="Rund um die Uhr" wrapping="true"/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>

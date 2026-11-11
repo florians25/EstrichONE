@@ -582,8 +582,13 @@
 							</MultiComboBox>
 							<CheckBox text="Interne Notiz (für den Melder unsichtbar)" selected="{view>/internal}" visible="{view>/agent}"/>
 						</HBox>
-						<Button text="{= ${view>/internal} ? 'Notiz speichern' : ${view>/agent} ? 'Antwort senden' : 'Senden' }" type="Emphasized" icon="sap-icon://paper-plane"
-							enabled="{= !!${view>/reply}.trim() || ${view>/pending}.length > 0 }" press=".onComment" tooltip="Senden (Strg+Enter)"/>
+						<HBox alignItems="Center" wrap="Wrap" class="eoHdSendButtons">
+							<Button id="hdSendAsk" text="Mit Rückfrage senden" icon="sap-icon://question-mark" press=".onCommentAsk"
+								visible="{= ${view>/agent} &amp;&amp; !${view>/internal} &amp;&amp; ${view>/t/summary/status} !== 'resolved' }"
+								enabled="{= !!${view>/reply}.trim() }" tooltip="Antwort senden und den Status auf „Warten auf Anwenderinfo“ setzen (SLA-Uhr steht)"/>
+							<Button id="hdSend" text="{= ${view>/internal} ? 'Notiz speichern' : ${view>/agent} ? 'Antwort senden' : 'Senden' }" type="Emphasized" icon="sap-icon://paper-plane"
+								enabled="{= !!${view>/reply}.trim() || ${view>/pending}.length > 0 }" press=".onComment" tooltip="Senden (Strg+Enter)"/>
+						</HBox>
 					</FlexBox>
 				</VBox>
 			</FlexBox>

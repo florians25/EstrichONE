@@ -55,7 +55,7 @@ describe('Helpdesk: Arbeitsliste', () => {
 
   it('bietet die gespeicherten Ansichten der IT an', () => {
     expect(queueViews.map((v) => v.text)).toEqual(
-      ['Meine', 'Nicht zugewiesen', 'Überfällig', 'Wartet auf Rückmeldung', 'Alle offenen', 'Meine Gruppen', 'Erledigt', 'Alle']);
+      ['Meine', 'Nicht zugewiesen', 'Überfällig', 'Warten auf Support', 'Warten auf Anwenderinfo', 'Alle offenen', 'Meine Gruppen', 'Erledigt', 'Alle']);
   });
 
   it('hat Seiten für Arbeitsplatz, Einstellungen und Wissensdatenbank', () => {
@@ -92,16 +92,18 @@ describe('Helpdesk: Kennzahlen und Kontext', () => {
 
   it('zeigt Kacheln mit Ampelfarben und Sprungzielen', () => {
     const tiles = kpiTiles(stats);
-    expect(tiles.map((t) => t.label)).toEqual(['Offen', 'Nicht zugewiesen', 'Überfällig', 'Rückfrage', 'Mir zugewiesen', 'Gelöst diese Woche',
-      'Ø erste Antwort', 'Ø Lösungszeit', 'Zufriedenheit']);
+    expect(tiles.map((t) => t.label)).toEqual(['Offen', 'Nicht zugewiesen', 'Überfällig', 'Warten auf Support', 'Anwenderinfo', 'Mir zugewiesen',
+      'Gelöst diese Woche', 'Ø erste Antwort', 'Ø Lösungszeit', 'Zufriedenheit']);
     expect(tiles[2]).toMatchObject({ key: 'overdue', value: '2', color: 'Error' });
-    expect(tiles[6]).toMatchObject({ value: '1,6', unit: 'h', footer: '87,5 % im Ziel gelöst' });
-    expect(tiles[7]).toMatchObject({ value: '20,5', unit: 'h' });
-    expect(tiles[8]).toMatchObject({ value: '4,4', unit: 'von 5' });
+    expect(tiles[3]).toMatchObject({ key: 'support', value: '0', color: 'Good' });
+    expect(kpiTiles({ ...stats, waitingForSupport: 3 })[3]).toMatchObject({ value: '3', color: 'Critical' });
+    expect(tiles[7]).toMatchObject({ value: '1,6', unit: 'h', footer: '87,5 % im Ziel gelöst' });
+    expect(tiles[8]).toMatchObject({ value: '20,5', unit: 'h' });
+    expect(tiles[9]).toMatchObject({ value: '4,4', unit: 'von 5' });
     // Server rechnet in Geschäftszeit: Hinweis in der Kachel.
     const business = kpiTiles({ ...stats, timeBasis: 'business' });
-    expect(business[6].footer).toBe('Geschäftszeit · 87,5 % im Ziel gelöst');
-    expect(business[7].footer).toBe('Geschäftszeit ohne Rückfrage');
+    expect(business[7].footer).toBe('Geschäftszeit · 87,5 % im Ziel gelöst');
+    expect(business[8].footer).toBe('Geschäftszeit ohne Rückfrage');
     expect(kpiTiles({ ...stats, overdue: 0, satisfactionAverage: null, ratings: 0 })[2].color).toBe('Good');
   });
 

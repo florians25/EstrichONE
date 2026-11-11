@@ -79,6 +79,8 @@ export interface HelpdeskStats {
 	trend: { day: string; created: number; resolved: number }[];
 	/** „business“: Reaktions- und Lösungszeit in Geschäftszeit (ohne Nächte, Wochenende, Feiertage, Rückfrage). */
 	timeBasis?: string;
+	/** Melder hat geantwortet, die IT ist am Zug. */
+	waitingForSupport?: number;
 }
 
 export interface ReporterDevice {
@@ -131,7 +133,8 @@ export const queueViews: { key: string; text: string; empty: string }[] = [
 	{ key: "mine", text: "Meine", empty: "Ihnen ist gerade kein offenes Ticket zugewiesen." },
 	{ key: "unassigned", text: "Nicht zugewiesen", empty: "Alle Tickets haben eine zuständige Person." },
 	{ key: "overdue", text: "Überfällig", empty: "Kein Ticket hat sein Ziel überschritten." },
-	{ key: "waiting", text: "Wartet auf Rückmeldung", empty: "Keine offenen Rückfragen an Melder." },
+	{ key: "support", text: "Warten auf Support", empty: "Kein Melder wartet auf eine Antwort der IT." },
+	{ key: "waiting", text: "Warten auf Anwenderinfo", empty: "Keine offenen Rückfragen an Melder." },
 	{ key: "open", text: "Alle offenen", empty: "Keine offenen Tickets." },
 	{ key: "myGroups", text: "Meine Gruppen", empty: "Keine offenen Tickets in Ihren Gruppen." },
 	{ key: "done", text: "Erledigt", empty: "Noch keine gelösten Tickets." },
@@ -157,7 +160,7 @@ export const updateStates: Record<string, { text: string; tone: "Success" | "War
 };
 
 const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
-const statusRank: Record<string, number> = { new: 0, inProgress: 1, waitingForReporter: 2, resolved: 3, closed: 4 };
+const statusRank: Record<string, number> = { new: 0, inProgress: 1, waitingForSupport: 2, waitingForReporter: 3, resolved: 4, closed: 5 };
 
 /** Dauer in Worten: „45 min“, „3 h 20 min“, „2 T 4 h“. */
 export function duration(ms: number): string {
@@ -301,7 +304,9 @@ export function kpiTiles(s: HelpdeskStats): { key: string; label: string; value:
 		{ key: "open", label: "Offen", value: String(s.open), unit: "", color: "Neutral", footer: s.blocked ? `${s.blocked} können nicht arbeiten` : `${s.createdToday} heute neu` },
 		{ key: "unassigned", label: "Nicht zugewiesen", value: String(s.unassigned), unit: "", color: s.unassigned ? "Critical" : "Good", footer: "warten auf Übernahme" },
 		{ key: "overdue", label: "Überfällig", value: String(s.overdue), unit: "", color: s.overdue ? "Error" : "Good", footer: "Ziel überschritten" },
-		{ key: "waiting", label: "Rückfrage", value: String(s.waiting), unit: "", color: "Neutral", footer: "warten auf Melder" },
+		{ key: "support", label: "Warten auf Support", value: String(s.waitingForSupport ?? 0), unit: "", color: s.waitingForSupport ? "Critical" : "Good",
+			footer: "Melder hat geantwortet" },
+		{ key: "waiting", label: "Anwenderinfo", value: String(s.waiting), unit: "", color: "Neutral", footer: "warten auf Melder" },
 		{ key: "mine", label: "Mir zugewiesen", value: String(s.mine), unit: "", color: "Neutral", footer: "offen" },
 		{ key: "done", label: "Gelöst diese Woche", value: String(s.resolvedThisWeek), unit: "", color: "Good", footer: `${s.createdThisWeek} neu diese Woche` },
 		{ key: "", label: "Ø erste Antwort", value: hours(s.avgFirstResponseMinutes), unit: s.avgFirstResponseMinutes != null && s.avgFirstResponseMinutes < 60 ? "min" : "h",
