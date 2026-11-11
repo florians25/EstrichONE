@@ -16,6 +16,7 @@
 					<OverflowToolbar>
 						<Title text="{= ${view>/items}.length === 1 ? '1 Anfrage' : ${view>/items}.length + ' Anfragen' }" level="H2"/>
 						<ToolbarSpacer/>
+						<SearchField width="16rem" placeholder="Nr., Name, Anliegen, Ort" value="{view>/search}" liveChange=".onSearch"/>
 						<SegmentedButton selectedKey="{view>/tab}" selectionChange=".onTab">
 							<items>
 								<SegmentedButtonItem key="open" text="Offen und in Bearbeitung"/>
@@ -39,7 +40,7 @@
 					<ColumnListItem type="Navigation" press=".onOpen">
 						<ObjectStatus text="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusText'}" state="{path: 'view>inquiryStatus', formatter: 'fmt.inquiryStatusState'}" inverted="true"/>
 						<Text text="{view>time}" class="eoTabular"/>
-						<ObjectIdentifier title="{view>who}"/>
+						<ObjectIdentifier title="{view>who}" text="{view>number}"/>
 						<Text text="{= ${view>subject} || '–' }"/>
 						<Text text="{= ${view>siteCity} || '–' }"/>
 						<Text text="{path: 'view>areaSquareMeters', formatter: 'fmt.area'}" class="eoTabular"/>

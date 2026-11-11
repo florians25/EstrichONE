@@ -147,17 +147,28 @@ test('Bauakte › Kontakte: nach Rolle gruppiert, Schnellaktionen, vorhandenen K
   await expect(linked).toContainText('info@wohnbau-sued.de');
 });
 
-test('Kunden-Nummernkreis in den Einstellungen: Muster, nächste Nummer, Vorschau', async ({ page }) => {
+test('Nummernkreise in den Einstellungen: alle Datensätze, Kunden-Nummernkreis bearbeiten, Vorschau im Kundendialog', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
-  await page.goto('/system/firmendaten?bereich=bauakte');
-  const pattern = page.getByLabel('Aufbau der Kundennummer');
-  await expect(pattern).toHaveValue('60{NNNN}');
-  const next = page.getByLabel('Nächste Kundennummer');
-  await expect(next).not.toHaveValue('');
-  await next.fill('2000');
-  await expect(page.getByText('→ 602000')).toBeVisible();
-  await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.locator('.sapMMessageToast').last()).toContainText('Einstellungen gespeichert');
+  await page.goto('/system/firmendaten?bereich=nummernkreise');
+  const table = page.getByRole('grid', { name: 'Nummernkreise' });
+  for (const label of ['Bauakten', 'Kunden', 'Lieferanten', 'Personal', 'Maschinen und Fahrzeuge', 'Kolonnen', 'Material', 'Bestellungen', 'Anfragen', 'Aufgaben', 'Mängel']) {
+    await expect(table.getByRole('row', { name: new RegExp(`^${label} (Stammdaten|Vorgänge)`) })).toHaveCount(1);
+  }
+  const customers = table.getByRole('row', { name: /^Kunden Stammdaten/ });
+  await expect(customers).toContainText('60{NNNN}');
+  await customers.getByRole('button', { name: /bearbeiten/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Nummernkreis Kunden' });
+  await dialog.getByRole('textbox', { name: 'Nächste Nummer' }).fill('2000');
+  await dialog.getByRole('textbox', { name: 'Nächste Nummer' }).press('Tab');
+  await expect(dialog.getByText(/Nächste Nummer: 602000/)).toBeVisible();
+  // Ungültiges Muster wird im Dialog abgelehnt.
+  await dialog.getByRole('textbox', { name: 'Muster' }).fill('KD-');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(dialog.getByText(/genau eine laufende Nummer/).first()).toBeVisible();
+  await dialog.getByRole('textbox', { name: 'Muster' }).fill('60{NNNN}');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('.sapMMessageToast').last()).toContainText('Nummernkreis Kunden gespeichert');
+  await expect(customers).toContainText('602000');
   await page.goto('/kunden');
   await page.getByRole('button', { name: 'Neuer Kunde' }).click();
   await expect(page.getByRole('dialog', { name: 'Neuer Kunde' }).getByLabel('Kundennummer')).toHaveAttribute('placeholder', /602000/);

@@ -15,7 +15,7 @@
 					<OverflowToolbar>
 						<Title text="{= ${view>/shown}.length } Artikel" level="H2"/>
 						<ToolbarSpacer/>
-						<SearchField width="19rem" placeholder="Bezeichnung, Art.-Nr., Lieferant" liveChange=".refresh" value="{view>/search}"/>
+						<SearchField width="19rem" placeholder="Nr., Bezeichnung, Art.-Nr., Lieferant" liveChange=".refresh" value="{view>/search}"/>
 						<Select selectedKey="{view>/category}" change=".refresh" items="{view>/categories}" ariaLabelledBy="catLabel">
 							<core:Item key="{view>key}" text="{view>text}"/>
 						</Select>
@@ -24,6 +24,7 @@
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>
+					<Column width="6rem"><Text text="Nr."/></Column>
 					<Column><Text text="Bezeichnung"/></Column>
 					<Column width="8rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Art.-Nr."/></Column>
 					<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kategorie"/></Column>
@@ -35,6 +36,7 @@
 				</columns>
 				<items>
 					<ColumnListItem>
+						<Text text="{= ${view>number} || '–' }"/>
 						<VBox>
 							<Link text="{view>name}" wrapping="true" press=".onEdit" enabled="{= ${session>/permissions/materials.manage} === true }"/>
 							<Text text="{view>notes}" visible="{= !!${view>notes} }" class="eoMuted"/>

@@ -14,7 +14,7 @@ const pages = [
   '/personal', '/personal/urlaub', '/verwaltung', '/verwaltung/stammdaten', '/verwaltung/rollen', '/verwaltung/benutzer', '/verwaltung/nachrichten',
   '/it-center/geraete', '/it-center/helpdesk', '/it-center/meldungen', '/meine-meldungen', '/system/sicherung', '/system/backup-ziele', '/system/archiv', '/system/auslagerung', '/system/e-mail',
   '/system/aktenarchiv', '/system/ueberwachung', '/system/hinweise', '/system/protokoll', '/konto/sicherheit',
-  ...['firma', 'darstellung', 'pdf', 'bauakte', 'dokumente', 'module', 'sitzungen', 'benachrichtigungen', 'speicher', 'system']
+  ...['firma', 'darstellung', 'pdf', 'bauakte', 'nummernkreise', 'dokumente', 'module', 'sitzungen', 'benachrichtigungen', 'speicher', 'system']
     .map((b) => `/system/firmendaten${b === 'firma' ? '' : `?bereich=${b}`}`),
 ];
 

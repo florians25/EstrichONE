@@ -343,16 +343,18 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 			return { field, control: c as unknown as Control, read: () => undefined, write: () => undefined };
 		}
 		case "info": {
-			const c = new Text(id, { text: field.help ?? field.label });
+			const c = new Text(id).setText(field.help ?? field.label ?? "");
 			c.addStyleClass("sapUiTinyMarginBottom");
 			return { field, control: c, read: () => undefined, write: () => undefined };
 		}
 		default: {
 			const c = new Input(id, {
-				value: (initial as string) ?? "", placeholder: field.placeholder, width: "100%", editable: field.editable ?? true,
+				placeholder: field.placeholder, width: "100%", editable: field.editable ?? true,
 				type: type === "email" ? "Email" : type === "password" ? "Password" : "Text", maxLength: field.maxLength ?? 0,
 				showSuggestion: !!field.suggestions?.length, startSuggestion: 0,
 			});
+			// Wert per Setter: „{NNNN}“ o. Ä. würde im Konstruktor als Bindung ausgewertet.
+			c.setValue((initial as string) ?? "");
 			for (const s of field.suggestions ?? []) c.addSuggestionItem(new Item({ key: s, text: s }));
 			c.attachChange(() => notify(c.getValue()));
 			return { field, control: c, read: () => c.getValue().trim(), write: (v) => c.setValue((v as string) ?? "") };
@@ -404,7 +406,7 @@ export function openForm<T>(spec: FormSpec<T>): Promise<T | null> {
 	const warnings = new MessageStrip({ type: "Warning", showIcon: true, visible: false });
 	warnings.data("role", "status", true);
 	if (spec.intro) {
-		form.addContent(new Text({ text: spec.intro }).addStyleClass("sapUiSmallMarginBottom"));
+		form.addContent(new Text().setText(spec.intro).addStyleClass("sapUiSmallMarginBottom"));
 	}
 	for (const field of spec.fields) {
 		const b = build(field, spec.initial?.[field.key], prefix, () => handle);
@@ -418,7 +420,7 @@ export function openForm<T>(spec: FormSpec<T>): Promise<T | null> {
 		}
 		form.addContent(b.control);
 		if (field.help && field.type !== "info") {
-			form.addContent(new Text({ text: field.help }).addStyleClass("eoHelpText"));
+			form.addContent(new Text().setText(field.help).addStyleClass("eoHelpText"));
 		}
 	}
 

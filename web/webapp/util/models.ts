@@ -396,6 +396,8 @@ export interface WorkItemDto {
   completedAt: string | null;
   updatedAt: string;
   version: number;
+  /** Nummer aus dem Nummernkreis Aufgaben bzw. Mängel (vergibt der Server). */
+  number?: string | null;
 }
 
 export interface ScreedTypeResponse {
@@ -455,6 +457,8 @@ export interface ResourceResponse {
   imageFileId?: string | null;
   documentFileIds?: string[] | null;
   crewId?: string | null;
+  /** Inventarnummer aus dem Nummernkreis „Maschinen und Fahrzeuge“. */
+  inventoryNumber?: string | null;
 }
 
 export interface CrewResponse {
@@ -468,6 +472,8 @@ export interface CrewResponse {
   version: number;
   /** Mindestbesetzung (Hinweis bei Abwesenheiten). */
   minimumStaff?: number | null;
+  /** Kolonnennummer aus dem Nummernkreis „Kolonnen“. */
+  number?: string | null;
 }
 
 export interface AssignmentView {
@@ -568,6 +574,8 @@ export interface CallResponse {
   calledAt: string;
   updatedAt: string;
   version: number;
+  /** Anfragenummer (nur Anfragen). */
+  number?: string | null;
 }
 
 export interface ConvertInquiryResponse {
@@ -603,6 +611,8 @@ export interface SupplierResponse {
   orderNotes: string | null;
   isActive: boolean;
   version: number;
+  /** Lieferantennummer aus dem Nummernkreis „Lieferanten“. */
+  number?: string | null;
 }
 
 export interface MaterialResponse {
@@ -617,6 +627,8 @@ export interface MaterialResponse {
   notes: string | null;
   isActive: boolean;
   version: number;
+  /** Eigene Materialnummer aus dem Nummernkreis „Material“ (die Artikelnummer ist die des Lieferanten). */
+  number?: string | null;
 }
 
 export interface OrderLineResponse {
@@ -657,5 +669,24 @@ export interface OrderResponse {
   orderedAt: string | null;
   deliveredAt: string | null;
   updatedAt: string;
+  version: number;
+}
+
+/** Nummernkreis (Systemeinstellungen › Nummernkreise). */
+export interface NumberRangeResponse {
+  key: string;
+  label: string;
+  group: string;
+  pattern: string;
+  defaultPattern: string;
+  rangeStart: number;
+  rangeEnd: number | null;
+  nextNumber: number;
+  preview: string;
+  remaining: number | null;
+  capacity: number;
+  yearly: boolean;
+  maxLength: number;
+  editorsMayOverride: boolean;
   version: number;
 }

@@ -111,6 +111,8 @@ test('Material: Lieferant und Artikel anlegen, Bestellungen', async ({ page }) =
   await supplier.getByLabel('Bestellhinweise').fill('Bestellschluss 12 Uhr für Lieferung am Folgetag');
   await supplier.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Baustoff Huber KG/ })).toContainText('K-4711');
+  // Lieferantennummer vergibt der Server aus dem Nummernkreis (Standard 70{NNNN}).
+  await expect(page.getByRole('row', { name: /Baustoff Huber KG/ }).first()).toContainText(/70\d{4}/);
 
   await nav(page, 'Materialstamm').click();
   await page.getByRole('button', { name: 'Artikel anlegen' }).click();
@@ -123,6 +125,7 @@ test('Material: Lieferant und Artikel anlegen, Bestellungen', async ({ page }) =
   await material.getByRole('heading', { name: 'Artikel anlegen' }).click();
   await material.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.getByRole('row', { name: /Randdämmstreifen 8 mm/ })).toContainText('12,90');
+  await expect(page.getByRole('row', { name: /Randdämmstreifen 8 mm/ }).first()).toContainText(/50\d{4}/);
 
   await nav(page, 'Bestellungen').click();
   await expect(pageTitle(page)).toHaveText('Bestellungen');

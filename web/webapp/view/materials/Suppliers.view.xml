@@ -19,6 +19,7 @@
 					</OverflowToolbar>
 				</headerToolbar>
 				<columns>
+					<Column width="6rem"><Text text="Nr."/></Column>
 					<Column><Text text="Lieferant"/></Column>
 					<Column width="9rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kundennr."/></Column>
 					<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Kontakt"/></Column>
@@ -28,6 +29,7 @@
 				</columns>
 				<items>
 					<ColumnListItem>
+						<Text text="{= ${view>number} || '–' }"/>
 						<VBox>
 							<Link text="{view>name}" wrapping="true" press=".onEdit" emphasized="true" enabled="{= ${session>/permissions/materials.manage} === true }"/>
 							<Text text="{= ((${view>street} || '') + ' ' + (${view>postalCode} || '') + ' ' + (${view>city} || '')).trim() || '–' }" class="eoMuted"/>

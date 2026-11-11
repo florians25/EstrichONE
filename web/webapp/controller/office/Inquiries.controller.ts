@@ -21,7 +21,7 @@ import type { CallResponse, ConvertInquiryResponse, InquiryStatus } from "../../
 /** Anfragen als Vorgänge mit Status-Ablauf und Umwandlung in eine Bauakte. @namespace estrichone.controller.office */
 export default class Inquiries extends BaseController {
 	onInit(): void {
-		this.local({ items: [], tab: "open", busy: false });
+		this.local({ items: [], all: [], tab: "open", search: "", busy: false });
 		EventBus.getInstance().subscribe("estrichone", "callsChanged", () => void this.load());
 	}
 
@@ -33,12 +33,21 @@ export default class Inquiries extends BaseController {
 		m.setProperty("/busy", true);
 		try {
 			const items = await get<CallResponse[]>("calls", { kind: "inquiry", open: m.getProperty("/tab") === "open" || undefined });
-			m.setProperty("/items", items.map((c) => ({ ...c, who: caller(c), time: callTime(c.calledAt) })));
+			m.setProperty("/all", items.map((c) => ({ ...c, who: caller(c), time: callTime(c.calledAt) })));
+			this.onSearch();
 		} catch (error) {
 			this.showError(error);
 		} finally {
 			m.setProperty("/busy", false);
 		}
+	}
+
+	/** Suche in der geladenen Liste: Nummer, Name, Firma, Anliegen, Ort. */
+	onSearch(): void {
+		const m = this.model();
+		const q = String(m.getProperty("/search") ?? "").trim().toLowerCase();
+		const all = m.getProperty("/all") as (CallResponse & { who: string })[];
+		m.setProperty("/items", q ? all.filter((c) => [c.number, c.who, c.company, c.subject, c.siteCity].some((v) => v?.toLowerCase().includes(q))) : all);
 	}
 
 	async onNew(): Promise<void> {
@@ -94,7 +103,7 @@ export default class Inquiries extends BaseController {
 		buttons.push(new Button({ text: "Schließen", press: () => dialog.close() }));
 		const progress = new ProgressIndicator({ percentValue: (step / 3) * 100, displayValue: `${step} von 3: ${inquiryStatus[c.inquiryStatus].text}`,
 			state: c.inquiryStatus === "cancelled" ? "Error" : c.inquiryStatus === "converted" ? "Success" : "Information" });
-		const dialog = new Dialog({ title: `Anfrage: ${caller(c)}`, contentWidth: "40rem", draggable: true, resizable: true,
+		const dialog = new Dialog({ title: `Anfrage${c.number ? ` ${c.number}` : ""}: ${caller(c)}`, contentWidth: "40rem", draggable: true, resizable: true,
 			content: [new VBox({ items: [new HBox({ items: [new Text({ text: "Offen → In Bearbeitung → Bauakte erstellt" })] }), progress, form] }).addStyleClass("sapUiSmallMargin")],
 			buttons, afterClose: () => dialog.destroy() });
 		dialog.open();

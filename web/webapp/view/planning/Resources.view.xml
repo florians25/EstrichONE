@@ -30,7 +30,7 @@
 							</columns>
 							<items>
 								<ColumnListItem>
-									<HBox alignItems="Center"><eo:Swatch color="{view>color}"/><Text text="{view>name}"/></HBox>
+									<HBox alignItems="Center"><eo:Swatch color="{view>color}"/><Text text="{= (${view>number} ? ${view>number} + ' · ' : '') + ${view>name} }"/></HBox>
 									<Text text="{view>leaderName}"/>
 									<Text text="{view>memberNames}"/>
 									<ProgressIndicator percentValue="{= Math.min(100, ${view>load/percent}) }" displayValue="{view>load/percent} %" state="{view>load/state}"
@@ -64,6 +64,7 @@
 											<Avatar src="{= ${view>thumb} || 'sap-icon://shipping-status' }" displaySize="XS" displayShape="Square" fallbackIcon="sap-icon://shipping-status"/>
 											<VBox>
 												<Text text="{view>name}" class="eoStrong"/>
+												<Text text="Inv.-Nr. {view>inventoryNumber}" class="eoMuted" visible="{= !!${view>inventoryNumber} }"/>
 												<Text text="{view>detailText}" class="eoMuted" visible="{= ${view>detailText} !== '–' }"/>
 												<Text text="{view>notes}" class="eoMuted" visible="{= !!${view>notes} }"/>
 											</VBox>
@@ -98,6 +99,7 @@
 											<Avatar src="{= ${view>thumb} || 'sap-icon://wrench' }" displaySize="XS" displayShape="Square" fallbackIcon="sap-icon://wrench"/>
 											<VBox>
 												<Text text="{view>name}" class="eoStrong"/>
+												<Text text="Inv.-Nr. {view>inventoryNumber}" class="eoMuted" visible="{= !!${view>inventoryNumber} }"/>
 												<Text text="{view>detailText}" class="eoMuted" visible="{= ${view>detailText} !== '–' }"/>
 												<Text text="{view>notes}" class="eoMuted" visible="{= !!${view>notes} }"/>
 											</VBox>

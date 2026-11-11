@@ -11,6 +11,7 @@ import { fileUrl, uploadLoose } from "../../util/looseUpload";
 import { isoDay } from "../../util/days";
 import { crewLoad } from "../../util/utilization";
 import { openForm } from "../../util/forms";
+import { numberField } from "../../util/numberField";
 import { uuidv7 } from "../../util/ids";
 import { options, resourceKinds } from "../../util/labels";
 import { planningChanged, planningLookups } from "../../util/assignmentDialog";
@@ -109,8 +110,8 @@ export default class Resources extends BaseController {
 	onEditResource(e: Event): void { void this.editResource(this.row<ResourceResponse>(e)); }
 
 	/** Ohne minimumStaff bleibt die Mindestbesetzung unverändert (0 = keine). */
-	private putCrew(id: string, c: Pick<CrewResponse, "name" | "leaderUserId" | "memberUserIds" | "color" | "isActive" | "sortOrder"> & { minimumStaff?: number | null }) {
-		return put(`planning/crews/${id}`, { name: c.name, leaderUserId: c.leaderUserId, memberUserIds: c.memberUserIds, color: c.color, isActive: c.isActive, sortOrder: c.sortOrder,
+	private putCrew(id: string, c: Pick<CrewResponse, "name" | "leaderUserId" | "memberUserIds" | "color" | "isActive" | "sortOrder"> & { minimumStaff?: number | null; number?: string | null }) {
+		return put(`planning/crews/${id}`, { number: c.number ?? null, name: c.name, leaderUserId: c.leaderUserId, memberUserIds: c.memberUserIds, color: c.color, isActive: c.isActive, sortOrder: c.sortOrder,
 			minimumStaff: c.minimumStaff ?? null });
 	}
 
@@ -118,8 +119,9 @@ export default class Resources extends BaseController {
 		const ok = await openForm<boolean>({
 			title: crew ? "Kolonne bearbeiten" : "Kolonne anlegen", submitText: "Speichern",
 			initial: { name: crew?.name ?? "", leaderUserId: crew?.leaderUserId ?? "", memberUserIds: crew?.memberUserIds ?? [], color: crew?.color ?? crewColors[this.crewList.length % crewColors.length].key,
-				minimumStaff: crew?.minimumStaff ?? null },
+				minimumStaff: crew?.minimumStaff ?? null, number: crew?.number ?? "" },
 			fields: [
+				numberField("number", "Kolonnennummer", !crew),
 				{ key: "name", label: "Name der Kolonne", required: true, placeholder: "z. B. Kolonne Nord", maxLength: 100 },
 				{ key: "leaderUserId", label: "Kolonnenführer", type: "select", options: [{ key: "", text: "–" }, ...this.activePeople()] },
 				{ key: "memberUserIds", label: "Mitglieder", type: "multi", options: this.activePeople() },
@@ -131,7 +133,7 @@ export default class Resources extends BaseController {
 				await this.putCrew(crew?.id ?? uuidv7(), {
 					name: String(v.name).trim(), leaderUserId: (v.leaderUserId as string) || null, memberUserIds: (v.memberUserIds as string[]) ?? [],
 					color: (v.color as string) || null, isActive: crew?.isActive ?? true, sortOrder: crew?.sortOrder ?? this.crewList.length + 1,
-					minimumStaff: (v.minimumStaff as number | null) ?? 0,
+					minimumStaff: (v.minimumStaff as number | null) ?? 0, number: (v.number as string) || null,
 				});
 				return true;
 			},
@@ -148,7 +150,7 @@ export default class Resources extends BaseController {
 	/** Immer alle Felder senden (sonst gingen Details beim Aus-/Einschalten verloren). */
 	private putResource(id: string, r: Partial<ResourceResponse> & Pick<ResourceResponse, "kind" | "name">) {
 		return put(`planning/resources/${id}`, {
-			kind: r.kind, name: r.name, identifier: r.identifier ?? null, notes: r.notes ?? null, isActive: r.isActive ?? true,
+			inventoryNumber: r.inventoryNumber ?? null, kind: r.kind, name: r.name, identifier: r.identifier ?? null, notes: r.notes ?? null, isActive: r.isActive ?? true,
 			model: r.model ?? null, licenseClass: r.licenseClass ?? null, inspectionDue: r.inspectionDue ?? null, serviceDue: r.serviceDue ?? null,
 			imageFileId: r.imageFileId ?? null, documentFileIds: r.documentFileIds ?? [], crewId: r.crewId ?? null,
 		});
@@ -202,8 +204,10 @@ export default class Resources extends BaseController {
 		const ok = await openForm<boolean>({
 			title: r ? `${r.name} bearbeiten` : "Fahrzeug oder Gerät hinzufügen", submitText: "Speichern", width: "36rem",
 			initial: { kind: r?.kind ?? kind ?? "vehicle", name: r?.name ?? "", identifier: r?.identifier ?? "", notes: r?.notes ?? "", model: r?.model ?? "",
-				licenseClass: r?.licenseClass ?? "", inspectionDue: r?.inspectionDue ?? null, serviceDue: r?.serviceDue ?? null, crewId: r?.crewId ?? "" },
+				licenseClass: r?.licenseClass ?? "", inspectionDue: r?.inspectionDue ?? null, serviceDue: r?.serviceDue ?? null, crewId: r?.crewId ?? "",
+				inventoryNumber: r?.inventoryNumber ?? "" },
 			fields: [
+				numberField("inventoryNumber", "Inventarnummer", !r),
 				{ key: "kind", label: "Art", type: "select", options: options(resourceKinds) },
 				{ key: "name", label: "Bezeichnung", required: true, placeholder: "z. B. Sprinter 1 oder Mixokret 2", maxLength: 100 },
 				{ key: "identifier", label: "Kennzeichen / Seriennummer", maxLength: 50 },
@@ -223,6 +227,7 @@ export default class Resources extends BaseController {
 					...(r ?? {}), kind: v.kind as ResourceResponse["kind"], name: String(v.name).trim(), identifier: (v.identifier as string) || null,
 					notes: (v.notes as string) || null, isActive: r?.isActive ?? true, model: (v.model as string) || null, licenseClass: (v.licenseClass as string) || null,
 					inspectionDue: (v.inspectionDue as string) || null, serviceDue: (v.serviceDue as string) || null, crewId: (v.crewId as string) || null, imageFileId,
+					inventoryNumber: (v.inventoryNumber as string) || null,
 				});
 				return true;
 			},

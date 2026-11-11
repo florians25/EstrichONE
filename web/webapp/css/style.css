@@ -3,6 +3,7 @@
 .eoMuted { color: var(--sapContent_LabelColor); }
 .eoHelpText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); display: block; margin-top: 0.125rem; }
 .eoTabular { font-variant-numeric: tabular-nums; }
+.eoMono { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-variant-numeric: tabular-nums; }
 .eoPre { white-space: pre-wrap; }
 
 /* Anmeldung */

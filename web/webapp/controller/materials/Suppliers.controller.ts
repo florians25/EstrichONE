@@ -5,6 +5,7 @@ import { del, get, put } from "../../util/api";
 import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
 import type { SupplierResponse } from "../../util/models";
+import { numberField } from "../../util/numberField";
 
 /** Lieferanten. @namespace estrichone.controller.materials */
 export default class Suppliers extends BaseController {
@@ -25,6 +26,7 @@ export default class Suppliers extends BaseController {
 			title: item ? "Lieferant bearbeiten" : "Lieferant anlegen", width: "38rem",
 			initial: item ? { ...item } : { isActive: true },
 			fields: [
+				numberField("number", "Lieferantennummer", !item),
 				{ key: "name", label: "Name", required: true, maxLength: 200 },
 				{ key: "customerNumber", label: "Unsere Kundennummer", maxLength: 50 },
 				{ key: "contactName", label: "Ansprechpartner", maxLength: 100 },
@@ -39,7 +41,7 @@ export default class Suppliers extends BaseController {
 			submit: async (v) => {
 				const id = item?.id ?? uuidv7();
 				const t = (k: string) => (v[k] ? String(v[k]) : null);
-				await put(`suppliers/${id}`, { id, name: v.name, customerNumber: t("customerNumber"), contactName: t("contactName"), phone: t("phone"), email: t("email"),
+				await put(`suppliers/${id}`, { id, number: t("number"), name: v.name, customerNumber: t("customerNumber"), contactName: t("contactName"), phone: t("phone"), email: t("email"),
 					street: t("street"), postalCode: t("postalCode"), city: t("city"), orderNotes: t("orderNotes"), isActive: !!v.isActive });
 				return true;
 			},

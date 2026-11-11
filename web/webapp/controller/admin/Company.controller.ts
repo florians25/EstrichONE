@@ -17,6 +17,10 @@ import type { SegmentedButton$SelectionChangeEvent } from "sap/m/SegmentedButton
 import type List from "sap/m/List";
 import type { ListBase$SelectionChangeEvent } from "sap/m/ListBase";
 import StandardListItem from "sap/m/StandardListItem";
+import Text from "sap/m/Text";
+import { openForm } from "../../util/forms";
+import type { NumberRangeResponse } from "../../util/models";
+import { capacity, formatNumber, isYearly, rangeError, rangeText, remainingLevel, remainingText } from "../../util/numberRanges";
 import type Switch from "sap/m/Switch";
 import type { Switch$ChangeEvent } from "sap/m/Switch";
 import { MODULE_AREAS, dependencyHint, dependentsToDisable, disableQuestion, requirementsToEnable, type ModuleInfo } from "../../util/modules";
@@ -68,8 +72,6 @@ interface LogoInfo {
 }
 
 /** Beispiel zum Nummernkreis: {JJJJ}, {JJ}, {N…}. */
-interface CustomerNumbering { pattern: string; nextNumber: number; preview: string; capacity: number; remaining: number }
-
 export function numberExample(pattern: string, year = new Date().getFullYear(), number = 7): string {
 	return pattern.replace(/\{JJJJ\}/g, String(year)).replace(/\{JJ\}/g, String(year).slice(-2))
 		.replace(/\{(N+)\}/g, (_m, n: string) => String(number).padStart(n.length, "0"));
@@ -84,7 +86,8 @@ const tabInfo: Record<string, { title: string; text: string }> = {
 	firma: { title: "Firma", text: "Briefkopf und Logo für Weboberfläche und alle PDF-Dokumente." },
 	darstellung: { title: "Darstellung und Karte", text: "Farbschema und Dichte als Vorgabe für neue Benutzer, Kartenkacheln für Baustellenkarte und Bauakten." },
 	pdf: { title: "PDF-Layout", text: "Logo, Akzentfarbe, Fußzeile und Fotos je Zeile in Ausdrucken (Bauakte, Abnahme, Planung, Benutzerbrief)." },
-	bauakte: { title: "Bauakten", text: "Nummernkreis, Vorgaben für neue Bauakten und automatischer Statuswechsel." },
+	bauakte: { title: "Bauakten", text: "Vorgaben für neue Bauakten und automatischer Statuswechsel." },
+	nummernkreise: { title: "Nummernkreise", text: "Nummern aller Datensätze: Kunden, Lieferanten, Personal, Maschinen, Material, Bauakten, Bestellungen, Anfragen, Aufgaben, Mängel." },
 	dokumente: { title: "Dokumente und Freigaben", text: "Vorschläge für Frist und Rolle bei Freigaben; Ordner und Aufbewahrung." },
 	module: { title: "Module", text: "Funktionen der Suite für alle Benutzer ein- oder ausschalten. Daten bleiben beim Ausschalten erhalten." },
 	sitzungen: { title: "Anmeldung", text: "Wie lange Browser und Apps angemeldet bleiben, Zwei-Faktor-Pflicht für Administratoren." },
@@ -99,17 +102,14 @@ export default class Company extends BaseController {
 
 	onInit(): void {
 		this.local({ c: {}, s: null, loaded: false, busy: false, tab: "firma", tabInfo: tabInfo.firma, status: null, dirty: false, logo: { hasLogo: false }, logoUrl: "", templates: [], roles: [],
-			themes: [{ id: "system", text: "Systemeinstellung folgen (hell/dunkel)" }, ...themes], patternExample: "", customerExample: "", customerNext: "", customerNextLoaded: "", customerHint: "", customerHintType: "Information",
-			customerPatternHint: "",
-			customerHelp: "Neue Kunden erhalten die Nummer automatisch, auch bei Anlage in der App und beim Import. Bereits vergebene Nummern werden übersprungen. "
-				+ "{NNNN} steht für genau vier Stellen; ist der Bereich ausgeschöpft, ist ein neues Muster nötig." });
+			themes: [{ id: "system", text: "Systemeinstellung folgen (hell/dunkel)" }, ...themes], ranges: [], rangesBusy: false, rangeWarning: null,
+			numbering: { bauakte: "", customer: "" } });
 		// Eingaben des Benutzers (Zwei-Wege-Bindung) markieren ungespeicherte Änderungen: Fußleiste mit Speichern/Verwerfen.
 		this.model().attachPropertyChange((event) => {
 			const path = String(event.getParameter("path"));
 			const context = event.getParameter("context") as { getPath?: () => string } | undefined;
 			const full = path.startsWith("/") ? path : `${context?.getPath?.() ?? ""}/${path}`;
-			if (/^\/(c|s|push|chat)\//.test(full) || full === "/customerNext") this.model().setProperty("/dirty", true);
-			if (path.includes("Pattern") || full === "/customerNext") this.updateExample();
+			if (/^\/(c|s|push|chat)\//.test(full)) this.model().setProperty("/dirty", true);
 		});
 	}
 
@@ -153,24 +153,86 @@ export default class Company extends BaseController {
 		], "Firmendaten vollständig");
 	}
 
-	/** Hinweis, wenn der Kunden-Nummernkreis bald oder ganz ausgeschöpft ist. */
-	private showNumbering(n: CustomerNumbering): void {
+	/** Nummernkreise laden: Tabelle mit Vorschau und Ampel „verbleibend“, Hinweis bei knappen Bereichen. */
+	private async loadRanges(): Promise<void> {
 		const m = this.model();
-		m.setProperty("/customerHintType", n.remaining === 0 ? "Error" : "Warning");
-		m.setProperty("/customerHint", n.remaining === 0
-			? `Der Kunden-Nummernkreis „${n.pattern}“ ist ausgeschöpft. Neue Kunden können erst angelegt werden, wenn ein neues Muster festgelegt ist (z. B. mit einer Stelle mehr).`
-			: n.remaining <= 100 ? `Im Kunden-Nummernkreis „${n.pattern}“ sind nur noch ${n.remaining} Nummern frei. Bitte rechtzeitig ein neues Muster festlegen.` : "");
+		m.setProperty("/rangesBusy", true);
+		try {
+			const ranges = await get<NumberRangeResponse[]>("settings/number-ranges");
+			const state = { ok: "Success", warning: "Warning", error: "Error" } as const;
+			const icon = { ok: "sap-icon://sys-enter-2", warning: "sap-icon://warning", error: "sap-icon://error" } as const;
+			m.setProperty("/ranges", ranges.map((r) => {
+				const level = remainingLevel(r);
+				return { ...r, level, rangeText: rangeText(r), remainingText: remainingText(r), remainingState: r.remaining === null ? "None" : state[level],
+					remainingIcon: r.remaining === null ? "" : icon[level], nextText: r.nextNumber.toLocaleString("de-DE") };
+			}));
+			const tight = ranges.filter((r) => remainingLevel(r) !== "ok");
+			const empty = tight.filter((r) => remainingLevel(r) === "error");
+			m.setProperty("/rangeWarning", tight.length === 0 ? null : {
+				type: empty.length ? "Error" : "Warning",
+				text: empty.length
+					? `Ausgeschöpft: ${empty.map((r) => r.label).join(", ")}. Neue Datensätze dieser Art können erst angelegt werden, wenn Muster oder Bereich erweitert sind.`
+					: `Bald ausgeschöpft: ${tight.map((r) => `${r.label} (${r.remaining} frei)`).join(", ")}. Bitte rechtzeitig Muster oder Bereich erweitern.`,
+			});
+			m.setProperty("/numbering", { bauakte: ranges.find((r) => r.key === "bauakte")?.preview ?? "", customer: ranges.find((r) => r.key === "customer")?.preview ?? "" });
+		} catch (error) {
+			if (this.has("settings.manage")) this.showError(error);
+		} finally {
+			m.setProperty("/rangesBusy", false);
+		}
 	}
 
-	private updateExample(): void {
-		const m = this.model();
-		m.setProperty("/patternExample", numberExample(String(m.getProperty("/s/numbering/bauaktePattern") ?? "")));
-		const next = Number.parseInt(String(m.getProperty("/customerNext") ?? ""), 10);
-		const customer = String(m.getProperty("/s/numbering/customerPattern") ?? "");
-		m.setProperty("/customerExample", numberExample(customer, undefined, Number.isFinite(next) ? next : 1));
-		const digits = Math.min(...[...customer.matchAll(/\{(N+)\}/g)].map((x) => x[1].length), 9);
-		m.setProperty("/customerPatternHint", Number.isFinite(digits) && /\{N+\}/.test(customer)
-			? `${numberExample(customer, undefined, 1)} bis ${numberExample(customer, undefined, 10 ** digits - 1)}` : "Muster mit {N…} angeben");
+	onNumberRanges(): void {
+		this.selectTab("nummernkreise");
+	}
+
+	/** Nummernkreis bearbeiten: Muster, Bereich, nächste Nummer mit Vorschau; gespeichert wird sofort (eigenes Protokoll). */
+	async onEditRange(event: Event): Promise<void> {
+		const r = (event.getSource() as Control).getBindingContext("view")?.getObject() as NumberRangeResponse;
+		const preview = new Text({ text: "" }).addStyleClass("eoHelpText sapUiSmallMarginTop sapUiSmallMarginBeginEnd");
+		const read = (values: Record<string, unknown>) => ({
+			pattern: String(values.pattern ?? "").trim(),
+			rangeStart: values.rangeStart === null || values.rangeStart === undefined || values.rangeStart === "" ? 1 : Number(values.rangeStart),
+			rangeEnd: values.rangeEnd === null || values.rangeEnd === undefined || values.rangeEnd === "" ? null : Number(values.rangeEnd),
+			nextNumber: values.nextNumber === null || values.nextNumber === undefined || values.nextNumber === "" ? null : Number(values.nextNumber),
+		});
+		const show = (values: Record<string, unknown>) => {
+			const v = read(values);
+			const error = rangeError(v, r.maxLength);
+			const next = v.nextNumber ?? r.nextNumber;
+			const end = v.rangeEnd ?? (isYearly(v.pattern) ? null : capacity(v.pattern));
+			preview.setText(error ?? `Nächste Nummer: ${formatNumber(v.pattern, next)} · letzte im Bereich: ${end === null ? "unbegrenzt" : formatNumber(v.pattern, end)}`
+				+ (isYearly(v.pattern) ? " · zählt jedes Jahr ab dem Anfang neu" : ""));
+		};
+		let current: Record<string, unknown> = { pattern: r.pattern, rangeStart: r.rangeStart, rangeEnd: r.rangeEnd, nextNumber: r.nextNumber };
+		const changed = (key: string) => (value: unknown) => { current = { ...current, [key]: value }; show(current); };
+		show(current);
+		const saved = await openForm<NumberRangeResponse>({
+			title: `Nummernkreis ${r.label}`, width: "38rem",
+			intro: `Standard: ${r.defaultPattern}. Bereits vergebene Nummern bleiben unverändert.`,
+			initial: current,
+			fields: [
+				{ key: "pattern", label: "Muster", required: true, maxLength: r.maxLength, onChange: changed("pattern"),
+					help: "{JJJJ} Jahr, {JJ} Jahr zweistellig, {N…} laufende Nummer (Anzahl N = Mindeststellen); sonst Buchstaben, Ziffern und - / . _",
+					validate: (_v, values) => rangeError(read(values), r.maxLength) },
+				{ key: "rangeStart", label: "Bereich von", type: "integer", min: 1, required: true, onChange: changed("rangeStart") },
+				{ key: "rangeEnd", label: "Bereich bis", type: "integer", min: 1, onChange: changed("rangeEnd"),
+					help: "Leer: ohne Jahr bis zur letzten Nummer, die in die Stellen passt; mit Jahr unbegrenzt." },
+				{ key: "nextNumber", label: "Nächste Nummer", type: "integer", min: 1, onChange: changed("nextNumber"),
+					help: r.yearly ? "Gilt für das laufende Jahr." : "Z. B. nach Übernahme aus einem Altsystem höher setzen." },
+			],
+			extra: () => [preview],
+			submit: async (values) => {
+				const v = read(values);
+				return put<NumberRangeResponse>(`settings/number-ranges/${r.key}`, { ...v, nextNumber: v.nextNumber === r.nextNumber ? null : v.nextNumber, version: r.version });
+			},
+		});
+		if (!saved) return;
+		// Bauakten- und Kundenmuster stehen auch in den Systemeinstellungen; sonst würde „Speichern“ sie zurücksetzen.
+		if (saved.key === "bauakte") this.model().setProperty("/s/numbering/bauaktePattern", saved.pattern);
+		if (saved.key === "customer") this.model().setProperty("/s/numbering/customerPattern", saved.pattern);
+		this.toast(`Nummernkreis ${saved.label} gespeichert`);
+		await this.loadRanges();
 	}
 
 	async onRouteMatched(match?: RouteMatch): Promise<void> {
@@ -183,12 +245,7 @@ export default class Company extends BaseController {
 			void this.loadPush();
 			void this.loadChat().then(() => this.loadModules());
 			void this.loadStorage();
-			void get<CustomerNumbering>("contacts/numbering").then((n) => {
-				this.model().setProperty("/customerNext", String(n.nextNumber));
-				this.model().setProperty("/customerNextLoaded", String(n.nextNumber));
-				this.showNumbering(n);
-				this.updateExample();
-			}).catch(() => undefined);
+			void this.loadRanges();
 			const [c, settings, logo, templates, roles] = await Promise.all([
 				get<CompanyResponse>("company"),
 				loadSystemSettings(true),
@@ -206,7 +263,6 @@ export default class Company extends BaseController {
 			m.setProperty("/roles", [{ key: "", text: "Keine" }, ...roles.map((r) => ({ key: r.id, text: r.name }))]);
 			m.setProperty("/loaded", !!settings);
 			m.setProperty("/dirty", false);
-			this.updateExample();
 			this.updateStatus();
 		} catch (error) {
 			this.showError(error);
@@ -424,17 +480,6 @@ export default class Company extends BaseController {
 			this.toast("Bitte den Firmennamen angeben.");
 			return;
 		}
-		const customerNext = String(m.getProperty("/customerNext") ?? "").trim();
-		if (!/\{N+\}/.test(s.numbering.customerPattern ?? "") || (customerNext && !/^[1-9]\d{0,8}$/.test(customerNext))) {
-			this.selectTab("bauakte");
-			this.toast("Der Kunden-Nummernkreis braucht eine laufende Nummer, z. B. {NNNNN}, und eine nächste Nummer ab 1.");
-			return;
-		}
-		if (!/\{N+\}/.test(s.numbering.bauaktePattern)) {
-			this.selectTab("bauakte");
-			this.toast("Der Nummernkreis braucht eine laufende Nummer, z. B. {NNN}.");
-			return;
-		}
 		const clean = {
 			...s,
 			bauakte: { ...s.bauakte, defaultTemplateId: s.bauakte.defaultTemplateId || null },
@@ -448,13 +493,6 @@ export default class Company extends BaseController {
 				saveSystemSettings(clean, this.version),
 				this.savePush(),
 				this.saveChat(),
-				customerNext && customerNext !== m.getProperty("/customerNextLoaded")
-					? put<CustomerNumbering>("contacts/numbering", { nextNumber: Number(customerNext) }).then((n) => {
-						m.setProperty("/customerNext", String(n.nextNumber));
-						m.setProperty("/customerNextLoaded", String(n.nextNumber));
-						this.showNumbering(n);
-					})
-					: Promise.resolve(),
 			]);
 			resetCompany();
 			this.version = savedSettings.version;

@@ -22,6 +22,7 @@
 						<StandardListItem title="PDF-Layout" icon="sap-icon://pdf-attachment"><customData><core:CustomData key="tab" value="pdf"/></customData></StandardListItem>
 						<GroupHeaderListItem title="Arbeitsweise"/>
 						<StandardListItem title="Bauakten" icon="sap-icon://folder-full"><customData><core:CustomData key="tab" value="bauakte"/></customData></StandardListItem>
+						<StandardListItem title="Nummernkreise" icon="sap-icon://number-sign"><customData><core:CustomData key="tab" value="nummernkreise"/></customData></StandardListItem>
 						<StandardListItem title="Dokumente und Freigaben" icon="sap-icon://approvals"><customData><core:CustomData key="tab" value="dokumente"/></customData></StandardListItem>
 						<StandardListItem title="Module" icon="sap-icon://puzzle"><customData><core:CustomData key="tab" value="module"/></customData></StandardListItem>
 						<GroupHeaderListItem title="Zugang &amp; Meldungen"/>
@@ -64,21 +65,9 @@
 					</IconTabFilter>
 					<IconTabFilter key="bauakte" text="Bauakten">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
-							<core:Title text="Nummernkreis"/>
-							<Label text="Aufbau der Aktennummer" labelFor="setPattern"/>
-							<Input id="setPattern" value="{view>/s/numbering/bauaktePattern}" maxLength="40" valueLiveUpdate="true"
-								description="→ {view>/patternExample}"/>
-							<core:Title text="Nummernkreis Kunden"/>
-							<Label text="" visible="{= !!${view>/customerHint} }"/>
-							<MessageStrip text="{view>/customerHint}" type="{view>/customerHintType}" showIcon="true" visible="{= !!${view>/customerHint} }"/>
-							<Label text="Aufbau der Kundennummer" labelFor="setCustomerPattern"/>
-							<Input id="setCustomerPattern" value="{view>/s/numbering/customerPattern}" maxLength="30" valueLiveUpdate="true"
-								description="{view>/customerPatternHint}"/>
-							<Label text="Nächste Kundennummer" labelFor="setCustomerNext"/>
-							<Input id="setCustomerNext" value="{view>/customerNext}" maxLength="9" valueLiveUpdate="true" type="Number"
-								description="→ {view>/customerExample}"/>
-							<Label text=""/>
-							<Text text="{view>/customerHelp}" class="eoHelpText"/>
+							<core:Title text="Nummernkreise"/>
+							<Label text="Akten- und Kundennummer"/>
+							<Link id="setNumberRangesLink" text="Bauakte {view>/numbering/bauakte} · Kunde {view>/numbering/customer} – in „Nummernkreise“ ändern" press=".onNumberRanges"/>
 							<core:Title text="Vorgaben für neue Bauakten"/>
 							<Label text="Hinweis „Erstbegehung fehlt“"/><Switch state="{view>/s/bauakte/warnMissingInspection}" customTextOn=" " customTextOff=" "/>
 							<Label text="Vorgeschlagene Vorlage" labelFor="setTemplate"/>
@@ -97,6 +86,39 @@
 							<Label text="Freigabelink für Kunden gültig" labelFor="setLinkDays"/>
 							<StepInput id="setLinkDays" value="{view>/s/bauakte/acceptanceLinkDays}" min="1" max="60" description="Tage" width="12rem"/>
 						</form:SimpleForm>
+					</IconTabFilter>
+					<IconTabFilter key="nummernkreise" text="Nummernkreise">
+						<VBox renderType="Bare" class="sapUiSmallMarginTop">
+							<MessageStrip id="rangeWarning" text="{view>/rangeWarning/text}" type="{view>/rangeWarning/type}" showIcon="true"
+								visible="{= !!${view>/rangeWarning} }" class="sapUiSmallMarginBottom"/>
+							<Table id="numberRanges" items="{view>/ranges}" busy="{view>/rangesBusy}" noDataText="Nummernkreise werden geladen …" popinLayout="GridSmall"
+								ariaLabelledBy="numberRangesLabel">
+								<columns>
+									<Column width="13rem"><Text text="Datensatz"/></Column>
+									<Column width="12rem"><Text text="Muster"/></Column>
+									<Column width="8rem" minScreenWidth="40rem" demandPopin="true"><Text text="Nächste Nummer"/></Column>
+									<Column width="11rem" minScreenWidth="52rem" demandPopin="true"><Text text="Bereich"/></Column>
+									<Column width="10rem" minScreenWidth="40rem" demandPopin="true"><Text text="Vorschau"/></Column>
+									<Column width="10rem"><Text text="Verbleibend"/></Column>
+									<Column width="3.5rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<VBox>
+											<Text text="{view>label}" class="eoStrong"/>
+											<Text text="{view>group}" class="eoMuted"/>
+										</VBox>
+										<Text text="{view>pattern}" class="eoMono"/>
+										<Text text="{view>nextText}" class="eoTabular"/>
+										<Text text="{view>rangeText}" class="eoTabular"/>
+										<Text text="{view>preview}" class="eoStrong eoMono"/>
+										<ObjectStatus text="{view>remainingText}" state="{view>remainingState}" icon="{view>remainingIcon}"/>
+										<Button icon="sap-icon://edit" type="Transparent" tooltip="Nummernkreis {view>label} bearbeiten" press=".onEditRange"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+							<Text class="eoHelpText sapUiSmallMarginTop" text="Neue Datensätze erhalten ihre Nummer beim Anlegen vom Server – auch aus der App und beim Import. Bereits vergebene Nummern werden übersprungen, vorhandene nie geändert. Muster: \{JJJJ\} Jahr, \{JJ\} Jahr zweistellig, \{N…\} laufende Nummer mit Mindeststellen; Muster mit Jahr zählen je Jahr neu. Von Hand vergeben oder ändern dürfen Nummern nur Administratoren (Kunden- und Personalnummern auch die Sachbearbeitung). Jede Änderung steht im Protokoll."/>
+						</VBox>
 					</IconTabFilter>
 					<IconTabFilter key="dokumente" text="Dokumente und Freigaben">
 						<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="4" labelSpanM="4" maxContainerCols="1" width="56rem">
@@ -362,4 +384,5 @@
 		</f:footer>
 	</f:DynamicPage>
 	<core:InvisibleText id="settingsNavLabel" text="Bereiche der Systemeinstellungen"/>
+	<core:InvisibleText id="numberRangesLabel" text="Nummernkreise"/>
 </mvc:View>

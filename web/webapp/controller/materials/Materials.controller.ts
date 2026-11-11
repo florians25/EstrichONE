@@ -6,6 +6,7 @@ import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
 import { materialCategories, options, units } from "../../util/labels";
 import type { MaterialResponse, SupplierResponse } from "../../util/models";
+import { numberField } from "../../util/numberField";
 
 /** Materialstamm. @namespace estrichone.controller.materials */
 export default class Materials extends BaseController {
@@ -38,7 +39,7 @@ export default class Materials extends BaseController {
 		const m = this.model();
 		const q = String(m.getProperty("/search") ?? "").trim().toLowerCase();
 		const c = m.getProperty("/category") as string;
-		m.setProperty("/shown", this.all.filter((x) => (!c || x.category === c) && (!q || [x.name, x.articleNumber, x.supplierName].some((v) => v?.toLowerCase().includes(q)))));
+		m.setProperty("/shown", this.all.filter((x) => (!c || x.category === c) && (!q || [x.number, x.name, x.articleNumber, x.supplierName].some((v) => v?.toLowerCase().includes(q)))));
 	}
 
 	private async form(item: MaterialResponse | null): Promise<void> {
@@ -48,9 +49,10 @@ export default class Materials extends BaseController {
 			title: item ? "Artikel bearbeiten" : "Artikel anlegen", width: "38rem",
 			initial: item ? { ...item } : { category: "screed", unit: "Sack", isActive: true },
 			fields: [
+				numberField("number", "Materialnummer", !item),
 				{ key: "name", label: "Bezeichnung", required: true, maxLength: 200, placeholder: "z. B. Zementestrich CT-C25-F4, Sackware 40 kg" },
 				{ key: "category", label: "Kategorie", type: "select", required: true, options: options(materialCategories) },
-				{ key: "articleNumber", label: "Artikelnummer", maxLength: 50 },
+				{ key: "articleNumber", label: "Artikelnummer des Lieferanten", maxLength: 50 },
 				{ key: "unit", label: "Einheit", type: "combo", required: true, options: units.map((u) => ({ key: u, text: u })) },
 				{ key: "price", label: "Einkaufspreis je Einheit (netto)", type: "number", unit: "€", min: 0 },
 				{ key: "supplierId", label: "Standardlieferant", type: "select", options: this.suppliers.map((s) => ({ key: s.id, text: s.name })) },
@@ -59,7 +61,7 @@ export default class Materials extends BaseController {
 			],
 			submit: async (v) => {
 				const id = item?.id ?? uuidv7();
-				await put(`materials/${id}`, { id, name: v.name, articleNumber: v.articleNumber || null, category: v.category, unit: v.unit,
+				await put(`materials/${id}`, { id, number: v.number || null, name: v.name, articleNumber: v.articleNumber || null, category: v.category, unit: v.unit,
 					supplierId: v.supplierId || null, price: v.price ?? null, notes: v.notes || null, isActive: !!v.isActive });
 				return true;
 			},

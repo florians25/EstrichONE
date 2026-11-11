@@ -51,7 +51,7 @@
 							ariaLabelledBy="titleLabel"/>
 						<Text text="{wk>description}" visible="{= !!${wk>description} }" class="eoMuted"/>
 					</VBox>
-					<ObjectStatus text="{= ${wk>kind} === 'defect' ? 'Mangel' : 'Aufgabe' }" state="{= ${wk>kind} === 'defect' ? 'Warning' : 'None' }"
+					<ObjectStatus text="{= (${wk>kind} === 'defect' ? 'Mangel' : 'Aufgabe') + (${wk>number} ? ' ' + ${wk>number} : '') }" state="{= ${wk>kind} === 'defect' ? 'Warning' : 'None' }"
 						icon="{= ${wk>kind} === 'defect' ? 'sap-icon://alert' : 'sap-icon://task' }"/>
 					<DatePicker value="{wk>dueDate}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" change=".onDue"
 						editable="{= ${session>/permissions/work.edit} === true }" valueState="{= ${wk>overdue} ? 'Error' : 'None' }" ariaLabelledBy="dueLabel"/>
