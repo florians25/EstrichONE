@@ -304,6 +304,8 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return json(200, body)
         case "/api/v1/tickets" where demo != nil:
             return json(200, helpdesk.list(all: true))
+        case "/api/v1/helpdesk/options" where demo != nil:
+            return json(200, helpdesk.options())
         case let ticketPath where demo != nil && ticketPath.hasPrefix("/api/v1/tickets/"):
             let parts = ticketPath.split(separator: "/").map(String.init)
             switch (parts.count, parts.last) {
@@ -315,6 +317,7 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             case (5, "comments"): return helpdesk.comment(parts[3].lowercased(), body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
             case (5, "reopen"): return helpdesk.update(parts[3].lowercased(), body: ["status": "inProgress"]).map { json(200, $0) }
                 ?? problem(404, "NOT_FOUND", "Nicht gefunden")
+            case (5, "rating"): return helpdesk.rate(parts[3].lowercased(), body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
             default: return problem(404, "NOT_FOUND", "Nicht gefunden")
             }
         case "/api/v1/hr/me" where demo != nil:

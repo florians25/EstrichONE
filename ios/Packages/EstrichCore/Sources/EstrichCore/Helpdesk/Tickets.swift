@@ -69,9 +69,34 @@ public struct TicketSummary: Decodable, Equatable, Identifiable, Sendable {
     public let lastActivityAt: Date
     public var reporterDisplayName: String? = nil
     public var assigneeUserId: UUID? = nil
+    /// Unterkategorie (im Web gepflegt), z. B. „Drucker“.
+    public var subcategoryName: String? = nil
+    /// Ampel der Bearbeitung: met, breached, paused, overdue, dueSoon, ok.
+    public var slaState: String? = nil
+    /// Nächstes Ziel (erste Antwort bzw. Lösung).
+    public var dueAt: Date? = nil
+    public var dueKind: String? = nil
+    public var rating: Int? = nil
 
     /// Offen = noch nicht gelöst oder geschlossen.
     public var isOpen: Bool { status != .resolved && status != .closed }
+
+    /// Kurzer Hinweis für die Bearbeitung, wenn ein Ziel drängt (sonst `nil`).
+    public var slaHint: String? {
+        let what = dueKind == "response" ? "Antwort" : "Lösung"
+        switch slaState {
+        case "overdue": return "\(what) überfällig"
+        case "dueSoon": return "\(what) bald fällig"
+        case "paused": return "wartet auf Melder"
+        default: return nil
+        }
+    }
+}
+
+/// Verknüpfte Anleitung der Wissensdatenbank.
+public struct TicketArticleRef: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let title: String
 }
 
 public struct TicketComment: Decodable, Equatable, Identifiable, Sendable {
@@ -130,11 +155,26 @@ public struct TicketDetail: Decodable, Equatable, Sendable {
         comments = try container.decodeIfPresent([TicketComment].self, forKey: .comments) ?? []
         events = (try? container.decodeIfPresent([TicketEvent].self, forKey: .events)) ?? []
         timeline = try? container.decodeIfPresent([TicketTimelineEntry].self, forKey: .timeline)
+        articles = (try? container.decodeIfPresent([TicketArticleRef].self, forKey: .articles)) ?? []
+        mergedIntoNumber = try container.decodeIfPresent(String.self, forKey: .mergedIntoNumber)
+        rating = try container.decodeIfPresent(Int.self, forKey: .rating)
+        ratingComment = try container.decodeIfPresent(String.self, forKey: .ratingComment)
+        canRate = try container.decodeIfPresent(Bool.self, forKey: .canRate) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
-        case summary, description, resolution, comments, events, timeline
+        case summary, description, resolution, comments, events, timeline, articles, mergedIntoNumber, rating, ratingComment, canRate
     }
+
+    /// Anleitungen, die die IT mit dem Ticket verknüpft hat.
+    public let articles: [TicketArticleRef]
+    /// Doppelt gemeldet: Die Bearbeitung läuft in diesem Ticket weiter.
+    public let mergedIntoNumber: String?
+    /// Bewertung des Melders nach der Lösung (1–5).
+    public let rating: Int?
+    public let ratingComment: String?
+    /// Der Abrufende ist Melder, das Ticket ist gelöst und Bewertungen sind eingeschaltet.
+    public let canRate: Bool
 
     /// Verlauf des Servers (fertige deutsche Sätze); `nil` bei älteren Servern.
     public let timeline: [TicketTimelineEntry]?
@@ -214,14 +254,17 @@ public struct NewTicket: Sendable {
     /// „Dringend – ich kann nicht arbeiten“.
     public var reporterBlocked: Bool
     public var priority: TicketPriority?
+    /// Unterkategorie aus `helpdesk/options` (optional).
+    public var subcategoryId: UUID?
 
     public init(title: String, description: String? = nil, category: TicketCategory = .other, reporterBlocked: Bool = false,
-                priority: TicketPriority? = nil) {
+                priority: TicketPriority? = nil, subcategoryId: UUID? = nil) {
         self.title = title
         self.description = description
         self.category = category
         self.reporterBlocked = reporterBlocked
         self.priority = priority
+        self.subcategoryId = subcategoryId
     }
 
     var cleanTitle: String { title.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -281,6 +324,7 @@ public struct HelpdeskService: Sendable {
             "reporterBlocked": .bool(ticket.reporterBlocked), "source": .string(source),
             "priority": JSONValue((ticket.priority ?? (ticket.reporterBlocked ? .urgent : nil))?.rawValue),
             "diagnostics": diagnostics.map { .object($0.payload) } ?? .null, "attachmentFileIds": .array(attachmentIds),
+            "subcategoryId": JSONValue(ticket.subcategoryId),
         ]
         let local = JSONValue.object(payload).merging([
             "id": JSONValue(id), "number": .null, "status": .string(TicketStatus.new.rawValue), "createdAt": .string(APIDate.format(now())),
@@ -403,6 +447,49 @@ public struct TicketReadState: Sendable {
 extension AuthorizedClient {
     public func reopen(_ id: UUID) async throws(APIError) -> TicketDetail {
         try await post("tickets/\(id.key)/reopen")
+    }
+
+    /// Zufriedenheit nach der Lösung (Melder, 1–5 Sterne).
+    public func rate(_ id: UUID, rating: Int, comment: String?) async throws(APIError) -> TicketDetail {
+        try await post("tickets/\(id.key)/rating", body: TicketRating(rating: min(max(rating, 1), 5), comment: comment))
+    }
+
+    /// Kategorien mit Unterkategorien zum Melden.
+    public func helpdeskOptions() async throws(APIError) -> HelpdeskOptions {
+        try await get("helpdesk/options")
+    }
+}
+
+struct TicketRating: Encodable, Sendable {
+    let rating: Int
+    let comment: String?
+
+    init(rating: Int, comment: String?) {
+        self.rating = rating
+        let text = comment?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.comment = text?.isEmpty == false ? text : nil
+    }
+}
+
+public struct HelpdeskSubcategory: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let category: TicketCategory
+    public let name: String
+}
+
+/// Was die App zum Melden braucht (`GET helpdesk/options`).
+public struct HelpdeskOptions: Decodable, Equatable, Sendable {
+    public struct Category: Decodable, Equatable, Sendable {
+        public let key: TicketCategory
+        public let name: String
+        public let subcategories: [HelpdeskSubcategory]
+    }
+
+    public let categories: [Category]
+    public let ratingEnabled: Bool
+
+    public func subcategories(of category: TicketCategory) -> [HelpdeskSubcategory] {
+        categories.first { $0.key == category }?.subcategories ?? []
     }
 }
 

@@ -192,7 +192,7 @@ class PresentationTests {
         val inbox = api.notifications()
         assertEquals(inbox.items.count { !it.isRead }, inbox.unreadCount)
         assertTrue(api.myTickets().isNotEmpty())
-        val ticket = api.createTicket("Kamera startet nicht", null, TicketCategory.AppError, false, null, mapOf("platform" to "android"))
+        val ticket = api.createTicket("Kamera startet nicht", null, TicketCategory.AppError, false, null, json("platform" to "Android"))
         assertEquals("new", ticket.summary.status)
         val plan = api.myPlan(LocalDate.now().toString(), LocalDate.now().plusDays(6).toString())
         assertEquals("Estrich einbringen OG", plan.assignments.first().activity)

@@ -134,6 +134,8 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path == "tickets/mine" -> 200 to tickets.list()
             path == "tickets" && method == "POST" -> 200 to tickets.create(body)
             path == "tickets/device" -> 200 to json("number" to "T-2026-0031")
+            path == "helpdesk/options" -> 200 to tickets.options()
+            path == "helpdesk/articles/suggest" -> 200 to tickets.suggest(query["q"])
             parts.size >= 2 && parts[0] == "tickets" -> tickets.handle(method, parts, body)
             path == "directory/users" -> 200 to absences.directory()
             else -> problem(404, "NOT_FOUND", "Im Demomodus nicht verfügbar.")
@@ -271,10 +273,11 @@ private class DemoInbox {
     }
 }
 
-/** Meldungen an die IT im Demomodus (wie DemoHelpdesk.swift). */
+/** Meldungen an die IT im Demomodus (wie DemoHelpdesk.swift): Verlauf, Lösung, Bewertung, Unterkategorien, Anleitungen. */
 private class DemoTickets {
     private data class Ticket(val id: String, val number: String, val title: String, val description: String?, val category: String, var status: String,
-        val minutesAgo: Long, val comments: MutableList<Triple<String, String, Long>>)
+        val minutesAgo: Long, val comments: MutableList<Triple<String, String, Long>>, var resolution: String? = null, var rating: Int? = null,
+        val priority: String = "normal", val subcategory: String? = null)
 
     private var counter = 0
     private val tickets = mutableListOf(
@@ -283,13 +286,15 @@ private class DemoTickets {
                 Triple("IT-Support", "Danke für die Meldung. Welche App-Version ist installiert? Sie steht unter Mehr > Info.", 60L * 24),
                 Triple(DemoData.USER_NAME, "Version 1.0.0, Pixel 8. Betroffen sind nur Fotos von heute früh.", 60L * 23),
                 Triple("IT-Support", "Bitte einmal die App öffnen und im WLAN warten, bis die Synchronisation fertig ist. Klappt es dann?", 35L),
-            )),
+            ), priority = "high", subcategory = "Fotos und Dokumente"),
         Ticket("0193a1b2-de00-7000-8000-00000000c004", "T-2026-0004", "Zugang für neuen Mitarbeiter", "Jonas Wirth braucht einen Zugang für die App.", "access",
-            "resolved", 60 * 24 * 6, mutableListOf(Triple("IT-Support", "Zugang ist eingerichtet, Einladung ging per E-Mail raus.", 60L * 24 * 5))),
+            "resolved", 60 * 24 * 6, mutableListOf(Triple("IT-Support", "Zugang ist eingerichtet, Einladung ging per E-Mail raus.", 60L * 24 * 5)),
+            resolution = "Konto angelegt, Zugangsbrief per E-Mail verschickt."),
     )
 
     private fun summary(t: Ticket, now: Instant = Instant.now()) = mapOf(
         "id" to t.id, "number" to t.number, "title" to t.title, "category" to t.category, "status" to t.status, "reporterBlocked" to false,
+        "priority" to t.priority, "subcategoryName" to t.subcategory, "rating" to t.rating,
         "assigneeName" to "IT-Support", "createdAt" to ApiDate.format(now.minusSeconds(t.minutesAgo * 60)),
         "lastActivityAt" to ApiDate.format(now.minusSeconds((t.comments.lastOrNull()?.third ?: t.minutesAgo) * 60)),
         "hasUnread" to (t.status == "waitingForReporter"),
@@ -297,14 +302,44 @@ private class DemoTickets {
 
     private fun detail(t: Ticket): JsonObject {
         val now = Instant.now()
-        return json("summary" to summary(t, now), "description" to t.description, "resolution" to null, "attachmentFileIds" to emptyList<String>(),
-            "comments" to t.comments.mapIndexed { i, (author, text, minutes) ->
-                mapOf("id" to "${t.id}-$i", "authorName" to author, "authorUserId" to if (author == DemoData.USER_NAME) DemoData.USER_ID else null,
-                    "text" to text, "isInternal" to false, "createdAt" to ApiDate.format(now.minusSeconds(minutes * 60)))
-            })
+        val at = { minutes: Long -> ApiDate.format(now.minusSeconds(minutes * 60)) }
+        val comments = t.comments.mapIndexed { i, (author, text, minutes) ->
+            mapOf("id" to "${t.id}-$i", "authorName" to author, "authorUserId" to if (author == DemoData.USER_NAME) DemoData.USER_ID else null,
+                "text" to text, "isInternal" to false, "createdAt" to at(minutes))
+        }
+        val timeline = buildList {
+            add(mapOf("id" to "${t.id}-c", "at" to at(t.minutesAgo), "kind" to "created", "actorUserId" to DemoData.USER_ID, "actorName" to DemoData.USER_NAME,
+                "summary" to "${DemoData.USER_NAME} hat das Problem gemeldet", "text" to t.description, "isReporter" to true))
+            add(mapOf("id" to "${t.id}-a", "at" to at(t.minutesAgo - 20), "kind" to "assignee", "actorName" to "IT-Support", "summary" to "Zugewiesen an IT-Support"))
+            t.comments.forEachIndexed { i, (author, text, minutes) ->
+                add(mapOf("id" to "${t.id}-$i", "at" to at(minutes), "kind" to "comment", "actorName" to author,
+                    "actorUserId" to if (author == DemoData.USER_NAME) DemoData.USER_ID else null, "summary" to "$author hat geantwortet", "text" to text,
+                    "isReporter" to (author == DemoData.USER_NAME)))
+            }
+            if (t.resolution != null) add(mapOf("id" to "${t.id}-r", "at" to at(60L * 24 * 5 - 5), "kind" to "status", "actorName" to "IT-Support",
+                "summary" to "Status: In Bearbeitung → Gelöst", "text" to t.resolution))
+            t.rating?.let { add(mapOf("id" to "${t.id}-s", "at" to at(0), "kind" to "rating", "actorName" to DemoData.USER_NAME,
+                "summary" to "Bewertung: $it von 5 Sternen")) }
+        }
+        return json("summary" to summary(t, now), "description" to t.description, "resolution" to t.resolution, "attachmentFileIds" to emptyList<String>(),
+            "comments" to comments, "timeline" to timeline, "rating" to t.rating, "canRate" to (t.status == "resolved" || t.status == "closed"),
+            "articles" to if (t.category == "sync") listOf(mapOf("id" to "0193a1b2-de00-7000-8000-00000000e001", "title" to "Fotos werden nicht übertragen",
+                "isPublished" to true)) else emptyList())
     }
 
     fun list() = tickets.map { summary(it) }
+
+    fun options() = json("ratingEnabled" to true, "suggestArticles" to true, "categories" to listOf(
+        mapOf("key" to "sync", "name" to "Synchronisation", "subcategories" to listOf(mapOf("id" to "0193a1b2-de00-7000-8000-00000000e101", "category" to "sync",
+            "name" to "Fotos und Dokumente"))),
+        mapOf("key" to "officeIt", "name" to "Drucker/Büro-IT", "subcategories" to listOf(
+            mapOf("id" to "0193a1b2-de00-7000-8000-00000000e102", "category" to "officeIt", "name" to "Drucker"),
+            mapOf("id" to "0193a1b2-de00-7000-8000-00000000e103", "category" to "officeIt", "name" to "Telefon"))),
+    ))
+
+    fun suggest(q: String?) = if (q?.contains("foto", ignoreCase = true) == true) listOf(mapOf("id" to "0193a1b2-de00-7000-8000-00000000e001",
+        "title" to "Fotos werden nicht übertragen", "excerpt" to "WLAN prüfen, unter Mehr › Synchronisation „Jetzt abgleichen“ tippen …", "category" to "sync"))
+    else emptyList()
 
     fun create(body: JsonObject): JsonObject {
         counter++
@@ -319,6 +354,7 @@ private class DemoTickets {
         return when (parts.getOrNull(2)) {
             "comments" -> { t.comments.add(Triple(DemoData.USER_NAME, body.str("text") ?: "", 0L)); t.status = "inProgress"; 200 to detail(t) }
             "reopen" -> { t.status = "inProgress"; 200 to detail(t) }
+            "rating" -> { t.rating = body.long("rating")?.toInt(); 200 to detail(t) }
             "seen" -> 204 to null
             else -> 200 to detail(t)
         }

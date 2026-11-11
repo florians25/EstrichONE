@@ -219,11 +219,23 @@ data class DispatchBoard(val day: String, val sites: List<DispatchSite> = emptyL
 /** „Wer fährt wohin“ für einen Tag. */
 suspend fun EstrichOneApi.dispatch(day: String): DispatchBoard = send("GET", "planning/dispatch/$day", null)
 
-// Helpdesk (Meldungen an die IT)
+// Helpdesk (Meldungen an die IT) – Modelle und Aufrufe; Melden offline siehe Helpdesk.kt
 
 enum class TicketCategory(val raw: String, val title: String) {
     SignIn("signIn", "Anmeldung"), Sync("sync", "Synchronisation"), AppError("appError", "Fehler in der App"),
-    DeviceDefect("deviceDefect", "Gerät defekt"), Access("access", "Zugriff/Rechte"), Other("other", "Sonstiges"),
+    DeviceDefect("deviceDefect", "Gerät defekt"), OfficeIt("officeIt", "Drucker/Büro-IT"), Access("access", "Zugang/Rechte"), Other("other", "Sonstiges");
+
+    companion object {
+        fun of(raw: String?): TicketCategory? = entries.firstOrNull { it.raw == raw }
+    }
+}
+
+enum class TicketPriority(val raw: String, val title: String) {
+    Low("low", "Niedrig"), Normal("normal", "Normal"), High("high", "Hoch"), Urgent("urgent", "Dringend");
+
+    companion object {
+        fun of(raw: String?): TicketPriority = entries.firstOrNull { it.raw == raw } ?: Normal
+    }
 }
 
 fun ticketStatusLabel(status: String): String = when (status) {
@@ -239,40 +251,103 @@ fun ticketStatusLabel(status: String): String = when (status) {
 data class TicketListItem(
     val id: String, val number: String, val title: String, val category: String = "other", val status: String = "new",
     val reporterBlocked: Boolean = false, val assigneeName: String? = null, val createdAt: String? = null, val lastActivityAt: String? = null,
-    val hasUnread: Boolean = false,
-)
+    val hasUnread: Boolean = false, val priority: String = "normal", val reporterDisplayName: String? = null, val assigneeUserId: String? = null,
+    val subcategoryName: String? = null, val groupName: String? = null, val slaState: String? = null, val dueAt: String? = null,
+    val dueKind: String? = null, val rating: Int? = null,
+) {
+    val isOpen: Boolean get() = status != "resolved" && status != "closed"
+}
 
 @Serializable
 data class TicketComment(val id: String, val authorUserId: String? = null, val authorName: String? = null, val text: String = "",
     val isInternal: Boolean = false, val createdAt: String? = null)
 
+/** Eintrag im Verlauf (Server liefert fertige deutsche Sätze). */
+@Serializable
+data class TicketTimelineEntry(
+    val id: String, val at: String, val kind: String, val actorUserId: String? = null, val actorName: String? = null, val summary: String = "",
+    val text: String? = null, val isInternal: Boolean = false, val isReporter: Boolean = false, val attachmentFileIds: List<String> = emptyList(),
+) {
+    /** Antwort (Sprechblase) statt Ereigniszeile. */
+    val isMessage: Boolean get() = kind == "created" || kind == "comment" || kind == "note"
+}
+
+@Serializable
+data class TicketArticleRef(val id: String, val title: String, val isPublished: Boolean = true)
+
 @Serializable
 data class TicketFull(
     val summary: TicketListItem, val description: String? = null, val resolution: String? = null, val comments: List<TicketComment> = emptyList(),
-    val attachmentFileIds: List<String> = emptyList(), val bauakteId: String? = null,
-)
+    val attachmentFileIds: List<String> = emptyList(), val bauakteId: String? = null, val timeline: List<TicketTimelineEntry>? = null,
+    val articles: List<TicketArticleRef>? = null, val mergedIntoNumber: String? = null, val rating: Int? = null, val ratingComment: String? = null,
+    val canRate: Boolean = false,
+) {
+    /** Verlauf für die Anzeige, älteste zuerst: vom Server oder (ältere Server) aus Beschreibung und Antworten. */
+    fun history(includeInternal: Boolean = false): List<TicketTimelineEntry> = timeline?.filter { includeInternal || !it.isInternal }?.sortedBy { it.at }
+        ?: comments.filter { includeInternal || !it.isInternal }.map {
+            TicketTimelineEntry(it.id, it.createdAt ?: "", if (it.isInternal) "note" else "comment", it.authorUserId, it.authorName,
+                "${it.authorName ?: "Jemand"} hat geantwortet", it.text, it.isInternal)
+        }
+}
+
+@Serializable
+data class HelpdeskSubcategory(val id: String, val category: String, val name: String, val isActive: Boolean = true)
+
+@Serializable
+data class HelpdeskCategoryOption(val key: String, val name: String, val subcategories: List<HelpdeskSubcategory> = emptyList())
+
+@Serializable
+data class HelpdeskOptions(val categories: List<HelpdeskCategoryOption> = emptyList(), val ratingEnabled: Boolean = true, val suggestArticles: Boolean = true)
+
+@Serializable
+data class KnowledgeArticleSummary(val id: String, val title: String, val excerpt: String = "", val category: String? = null)
+
+@Serializable
+data class KnowledgeArticle(val id: String, val title: String, val body: String = "", val category: String? = null)
 
 @Serializable
 private data class NewTicketRequest(
     val id: String, val title: String, val description: String?, val category: String, val source: String, val reporterBlocked: Boolean,
-    val bauakteId: String?, val diagnostics: Map<String, String>, val attachmentFileIds: List<String>,
+    val bauakteId: String?, val diagnostics: JsonObject?, val attachmentFileIds: List<String>, val priority: String? = null, val subcategoryId: String? = null,
 )
 
 @Serializable
 private data class TicketCommentRequest(val text: String, val isInternal: Boolean = false, val attachmentFileIds: List<String> = emptyList())
+
+@Serializable
+private data class TicketRatingRequest(val rating: Int, val comment: String? = null)
+
+@Serializable
+private data class TicketStatusRequest(val status: String? = null, val resolution: String? = null, val assigneeUserId: String? = null, val unassign: Boolean = false)
 
 suspend fun EstrichOneApi.myTickets(): List<TicketListItem> = send("GET", "tickets/mine", null)
 suspend fun EstrichOneApi.ticket(id: String): TicketFull = send("GET", "tickets/$id", null)
 suspend fun EstrichOneApi.commentTicket(id: String, text: String): TicketFull = send("POST", "tickets/$id/comments", TicketCommentRequest(text.trim()))
 suspend fun EstrichOneApi.reopenTicket(id: String): TicketFull = send("POST", "tickets/$id/reopen", JsonObject(emptyMap()))
 suspend fun EstrichOneApi.markTicketSeen(id: String) = send<Unit>("POST", "tickets/$id/seen", JsonObject(emptyMap()))
+suspend fun EstrichOneApi.rateTicket(id: String, rating: Int, comment: String?): TicketFull =
+    send("POST", "tickets/$id/rating", TicketRatingRequest(rating.coerceIn(1, 5), comment?.trim()?.ifEmpty { null }))
 
+/** Bearbeitung (Recht helpdesk.agent): Ansichten `mine`, `unassigned`, `overdue`, `waiting`, `open`. */
+suspend fun EstrichOneApi.agentTickets(filter: String = "mine"): List<TicketListItem> = send("GET", "tickets", null, query = mapOf("filter" to filter, "sort" to "due"))
+suspend fun EstrichOneApi.updateTicketStatus(id: String, status: String, resolution: String? = null): TicketFull =
+    send("PATCH", "tickets/$id", TicketStatusRequest(status = status, resolution = resolution?.trim()?.ifEmpty { null }))
+suspend fun EstrichOneApi.assignTicketToMe(id: String, userId: String): TicketFull = send("PATCH", "tickets/$id", TicketStatusRequest(assigneeUserId = userId))
+suspend fun EstrichOneApi.agentReply(id: String, text: String, internal: Boolean): TicketFull =
+    send("POST", "tickets/$id/comments", TicketCommentRequest(text.trim(), isInternal = internal))
+suspend fun EstrichOneApi.helpdeskOptions(): HelpdeskOptions = send("GET", "helpdesk/options", null)
+suspend fun EstrichOneApi.suggestArticles(query: String, category: String?): List<KnowledgeArticleSummary> =
+    send("GET", "helpdesk/articles/suggest", null, query = mapOf("q" to query, "category" to category))
+suspend fun EstrichOneApi.knowledgeArticle(id: String): KnowledgeArticle = send("GET", "helpdesk/articles/$id", null)
+
+/** Direkt senden (online, ältere Wege); die App meldet sonst über [HelpdeskReporter] offline-fähig. */
 suspend fun EstrichOneApi.createTicket(
-    title: String, description: String?, category: TicketCategory, blocked: Boolean, bauakteId: String?, diagnostics: Map<String, String>,
-    attachmentFileIds: List<String> = emptyList(),
+    title: String, description: String?, category: TicketCategory, blocked: Boolean, bauakteId: String?, diagnostics: JsonObject?,
+    attachmentFileIds: List<String> = emptyList(), priority: TicketPriority? = null,
 ): TicketFull = send(
     "POST", "tickets",
-    NewTicketRequest(Ids.v7(), title.trim(), description?.trim()?.ifEmpty { null }, category.raw, "android", blocked, bauakteId, diagnostics, attachmentFileIds),
+    NewTicketRequest(Ids.v7(), title.trim(), description?.trim()?.ifEmpty { null }, category.raw, "android", blocked, bauakteId, diagnostics,
+        attachmentFileIds, priority?.raw),
 )
 
 // Konto und Sicherheit

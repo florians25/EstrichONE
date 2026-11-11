@@ -19,6 +19,8 @@ final class DemoHelpdesk {
         let createdAt: Date
         var lastActivityAt: Date
         var timeline: [[String: Any]]
+        var resolution: String?
+        var rating: Int?
     }
 
     private let userId: String
@@ -33,19 +35,19 @@ final class DemoHelpdesk {
             Entry(id: DemoContent.ticketId, number: "T-2026-0007", title: "Fotos werden nicht übertragen",
                   description: "Seit gestern bleiben Fotos auf „Wird übertragen“ stehen.", category: "sync", priority: "normal",
                   status: "waitingForReporter", reporterId: userId, reporterName: "Max Huber", assigneeId: "0193a1b2-de00-7000-8000-00000000a0a1", assigneeName: "IT-Support",
-                  createdAt: ago(60 * 26), lastActivityAt: ago(35), timeline: []),
+                  createdAt: ago(60 * 26), lastActivityAt: ago(35), timeline: [], resolution: nil, rating: nil),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c002", number: "T-2026-0009", title: "Drucker im Büro druckt nur leere Seiten",
                   description: "Der Etagendrucker im 1. OG zieht Papier ein, druckt aber nichts.", category: "officeIt", priority: "high",
                   status: "inProgress", reporterId: "0193a1b2-de00-7000-8000-00000000a0a2", reporterName: "Sabine Wagner", assigneeId: userId, assigneeName: "Max Huber",
-                  createdAt: ago(60 * 3), lastActivityAt: ago(50), timeline: []),
+                  createdAt: ago(60 * 3), lastActivityAt: ago(50), timeline: [], resolution: nil, rating: nil),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c003", number: "T-2026-0010", title: "Tablet Kolonne Kaya: Display gesprungen",
                   description: "Beim Abladen heruntergefallen, Touch reagiert unten nicht mehr.", category: "deviceDefect", priority: "urgent",
                   status: "new", reporterId: "0193a1b2-de00-7000-8000-000000004005", reporterName: "Emre Kaya", assigneeId: nil, assigneeName: nil,
-                  createdAt: ago(18), lastActivityAt: ago(18), timeline: []),
+                  createdAt: ago(18), lastActivityAt: ago(18), timeline: [], resolution: nil, rating: nil),
             Entry(id: "0193a1b2-de00-7000-8000-00000000c004", number: "T-2026-0004", title: "Zugang für neuen Mitarbeiter",
                   description: "Jonas Wirth braucht einen Zugang für die App.", category: "access", priority: "normal", status: "resolved",
                   reporterId: userId, reporterName: "Max Huber", assigneeId: "0193a1b2-de00-7000-8000-00000000a0a1", assigneeName: "IT-Support",
-                  createdAt: ago(60 * 24 * 6), lastActivityAt: ago(60 * 24 * 5), timeline: []),
+                  createdAt: ago(60 * 24 * 6), lastActivityAt: ago(60 * 24 * 5), timeline: [], resolution: nil, rating: nil),
         ]
         for index in tickets.indices {
             let ticket = tickets[index]
@@ -64,6 +66,7 @@ final class DemoHelpdesk {
             event(ago(60 * 2), "assignee", "IT-Support", "IT-Support hat die Meldung Max Huber zugewiesen."),
             comment(ago(50), "Max Huber", "Toner ist neu. Ich prüfe vor Ort die Treiber.", reporter: false),
         ]
+        tickets[3].resolution = "Konto angelegt, Zugangsbrief per E-Mail verschickt."
         tickets[3].timeline += [
             comment(ago(60 * 24 * 5), "IT-Support", "Zugang ist eingerichtet, Einladung ging per E-Mail raus.", reporter: false),
             event(ago(60 * 24 * 5), "status", "IT-Support", "IT-Support hat den Status auf „Gelöst“ gesetzt."),
@@ -86,7 +89,10 @@ final class DemoHelpdesk {
         ["id": ticket.id, "number": ticket.number, "title": ticket.title, "category": ticket.category, "priority": ticket.priority,
          "status": ticket.status, "reporterBlocked": ticket.priority == "urgent", "reporterUserId": ticket.reporterId,
          "reporterDisplayName": ticket.reporterName, "assigneeUserId": ticket.assigneeId ?? NSNull(), "assigneeName": ticket.assigneeName ?? NSNull(),
-         "source": "ios", "createdAt": APIDate.format(ticket.createdAt), "lastActivityAt": APIDate.format(ticket.lastActivityAt), "version": 1]
+         "source": "ios", "createdAt": APIDate.format(ticket.createdAt), "lastActivityAt": APIDate.format(ticket.lastActivityAt), "version": 1,
+         "slaState": ticket.status == "new" && ticket.priority == "urgent" ? "overdue" : (ticket.status == "waitingForReporter" ? "paused" : "ok"),
+         "dueKind": ticket.status == "new" ? "response" : "resolution", "rating": ticket.rating ?? NSNull(),
+         "subcategoryName": ticket.category == "officeIt" ? "Drucker" : NSNull()]
     }
 
     func list(all: Bool) -> [[String: Any]] {
@@ -95,8 +101,33 @@ final class DemoHelpdesk {
 
     func detail(_ id: String) -> [String: Any]? {
         guard let ticket = tickets.first(where: { $0.id == id }) else { return nil }
-        return ["summary": summary(ticket), "description": ticket.description ?? NSNull(), "resolution": NSNull(), "comments": [[String: Any]](),
-                "events": [[String: Any]](), "attachmentFileIds": [String](), "timeline": ticket.timeline]
+        let done = ticket.status == "resolved" || ticket.status == "closed"
+        let articles: [[String: Any]] = ticket.category == "sync"
+            ? [["id": "0193a1b2-de00-7000-8000-00000000e001", "title": "Fotos werden nicht übertragen", "isPublished": true]] : []
+        return ["summary": summary(ticket), "description": ticket.description ?? NSNull(), "resolution": ticket.resolution ?? NSNull(),
+                "comments": [[String: Any]](), "events": [[String: Any]](), "attachmentFileIds": [String](), "timeline": ticket.timeline,
+                "canRate": done && ticket.reporterId == userId, "rating": ticket.rating ?? NSNull(), "articles": articles]
+    }
+
+    /// Bewertung des Melders nach der Lösung.
+    func rate(_ id: String, body: [String: Any]) -> [String: Any]? {
+        guard let index = tickets.firstIndex(where: { $0.id == id }) else { return nil }
+        let value = min(max(body["rating"] as? Int ?? 0, 1), 5)
+        tickets[index].rating = value
+        tickets[index].timeline.append(event(Date(), "rating", "Max Huber", "Bewertung: \(value) von 5 Sternen"))
+        return detail(id)
+    }
+
+    /// Kategorien mit Unterkategorien (Einstellungen im Web).
+    func options() -> [String: Any] {
+        ["ratingEnabled": true, "suggestArticles": true, "slaEnabled": true, "timeTrackingEnabled": true,
+         "categories": TicketCategory.allCases.map { category -> [String: Any] in
+             let subs: [[String: Any]] = category == .officeIt
+                 ? [["id": "0193a1b2-de00-7000-8000-00000000e102", "category": "officeIt", "name": "Drucker", "isActive": true, "sortOrder": 0, "version": 1],
+                    ["id": "0193a1b2-de00-7000-8000-00000000e103", "category": "officeIt", "name": "Telefon", "isActive": true, "sortOrder": 1, "version": 1]]
+                 : []
+             return ["key": category.rawValue, "name": category.title, "subcategories": subs]
+         }]
     }
 
     /// Meldung aus der App (Sync `ticket.create`).
@@ -107,7 +138,7 @@ final class DemoHelpdesk {
         var ticket = Entry(id: id, number: "T-2026-00\(20 + counter)", title: payload["title"] as? String ?? "Meldung",
                            description: payload["description"] as? String, category: payload["category"] as? String ?? "other",
                            priority: payload["priority"] as? String ?? "normal", status: "new", reporterId: userId, reporterName: "Max Huber",
-                           assigneeId: nil, assigneeName: nil, createdAt: now, lastActivityAt: now, timeline: [])
+                           assigneeId: nil, assigneeName: nil, createdAt: now, lastActivityAt: now, timeline: [], resolution: nil, rating: nil)
         ticket.timeline = [event(now, "created", "Max Huber", "Max Huber hat die Meldung erstellt.", reporter: true)]
         tickets.append(ticket)
     }

@@ -25,6 +25,8 @@ struct ReportProblemView: View {
     @State private var error: String?
     @State private var sentNumber: String?
     @State private var queued = false
+    @State private var options: HelpdeskOptions?
+    @State private var subcategoryId: UUID?
 
     var body: some View {
         NavigationStack {
@@ -45,6 +47,13 @@ struct ReportProblemView: View {
                         .lineLimit(3...8)
                     Picker("Kategorie", selection: $category) {
                         ForEach(TicketCategory.allCases) { Text($0.title).tag($0) }
+                    }
+                    if let subcategories = options?.subcategories(of: category), !subcategories.isEmpty {
+                        Picker("Genauer", selection: $subcategoryId) {
+                            Text("Keine Angabe").tag(UUID?.none)
+                            ForEach(subcategories) { Text($0.name).tag(Optional($0.id)) }
+                        }
+                        .accessibilityIdentifier("ticketSubcategoryPicker")
                     }
                     if !withoutSignIn {
                         Picker("Priorität", selection: $priority) {
@@ -107,7 +116,9 @@ struct ReportProblemView: View {
             .task {
                 category = initialCategory
                 diagnostics = await model.diagnostics()
+                if !withoutSignIn { options = try? await model.active?.client.helpdeskOptions() }
             }
+            .onChange(of: category) { _, _ in subcategoryId = nil }
             .onChange(of: pickerItems) { _, items in
                 Task {
                     var images: [Data] = []
@@ -127,7 +138,7 @@ struct ReportProblemView: View {
         sending = true
         defer { sending = false }
         let ticket = NewTicket(title: title, description: details, category: category, reporterBlocked: blocked,
-                               priority: blocked ? .urgent : priority)
+                               priority: blocked ? .urgent : priority, subcategoryId: withoutSignIn ? nil : subcategoryId)
         do throws(TicketError) {
             if withoutSignIn {
                 sentNumber = try await model.reportWithoutSignIn(ticket, reporterName: reporterName, includeDiagnostics: includeDiagnostics)

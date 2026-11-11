@@ -134,6 +134,7 @@ struct MyTicketsView: View {
             offline = false
             if scope == .mine, let store = model.active?.sync?.store { unread = await TicketReadState(store: store).unread(tickets) }
             if shotScene == "meldung-detail", opened == nil { opened = tickets.first?.id }
+            if shotScene == "meldung-bewertung", opened == nil { opened = tickets.first(where: { $0.status == .resolved })?.id }
             if shotScene == "meldung-bearbeitung", scope == .mine, isAgent { scope = .agent }
         } catch {
             offline = true
@@ -243,6 +244,8 @@ struct TicketDetailView: View {
     @State private var attachments: [Data] = []
     @State private var resolving = false
     @State private var resolution = ""
+    @State private var stars = 0
+    @State private var ratingComment = ""
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -254,6 +257,7 @@ struct TicketDetailView: View {
                             TicketTimelineRow(entry: entry, isOwn: isOwn(entry))
                                 .id(entry.id)
                         }
+                        if detail.canRate, !isAgent { ratingCard(detail) }
                         if detail.summary.status == .resolved, !isAgent {
                             Button("Ticket wieder öffnen") { Task { await reopen() } }
                                 .estrichButton(.secondary, fullWidth: true)
@@ -319,6 +323,9 @@ struct TicketDetailView: View {
                 TicketStatusChip(status: summary.status)
                 Chip(text: summary.priority.title, symbol: summary.priority == .urgent || summary.priority == .high ? "exclamationmark" : nil,
                      tone: summary.priority == .urgent ? .danger : (summary.priority == .high ? .warning : .neutral))
+                if isAgent, let hint = summary.slaHint {
+                    Chip(text: hint, symbol: "clock", tone: summary.slaState == "overdue" ? .danger : .warning)
+                }
                 Spacer(minLength: 0)
                 Text(summary.number).font(Typo.metaStrong.monospacedDigit()).foregroundStyle(Theme.textSecondary)
             }
@@ -328,7 +335,7 @@ struct TicketDetailView: View {
             }
             InsetDivider()
             InfoGrid(items: [
-                InfoItem(label: "Kategorie", value: summary.category.title),
+                InfoItem(label: "Kategorie", value: summary.subcategoryName.map { "\(summary.category.title) › \($0)" } ?? summary.category.title),
                 InfoItem(label: "Gemeldet", value: summary.createdAt.formatted(.relative(presentation: .named))),
                 InfoItem(label: "Melder", value: summary.reporterDisplayName ?? "Sie"),
                 InfoItem(label: "Bearbeitung", value: summary.assigneeName ?? "noch offen"),
@@ -336,6 +343,35 @@ struct TicketDetailView: View {
             if let resolution = detail.resolution?.trimmingCharacters(in: .whitespacesAndNewlines), !resolution.isEmpty {
                 Callout(tone: .success, title: "Lösung", message: resolution, symbol: "checkmark.seal.fill")
             }
+            if let merged = detail.mergedIntoNumber {
+                Callout(tone: .info, title: "Zusammengeführt", message: "Diese Meldung wurde mit \(merged) zusammengeführt. Antworten erhalten Sie dort.")
+            }
+            if !detail.articles.isEmpty {
+                Callout(tone: .info, title: "Anleitung der IT", message: detail.articles.map(\.title).joined(separator: "\n"), symbol: "book.fill")
+            }
+        }
+    }
+
+    /// Zufriedenheit nach der Lösung: 1–5 Sterne und ein freiwilliger Kommentar.
+    private func ratingCard(_ detail: TicketDetail) -> some View {
+        Card(spacing: Space.s) {
+            Text(detail.rating == nil ? "Wie zufrieden sind Sie mit der Lösung?" : "Ihre Bewertung")
+                .font(Typo.bodyStrong).foregroundStyle(Theme.textPrimary)
+            HStack(spacing: Space.s) {
+                ForEach(1...5, id: \.self) { value in
+                    Button { stars = value } label: {
+                        Image(systemName: value <= stars ? "star.fill" : "star").font(.title2)
+                            .foregroundStyle(value <= stars ? Theme.warning : Theme.textSecondary)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("\(value) von 5 Sternen")
+                }
+            }
+            .accessibilityIdentifier("ticketRating")
+            TextField("Kommentar (freiwillig)", text: $ratingComment, axis: .vertical).lineLimit(1...3)
+            Button(detail.rating == nil ? "Bewerten" : "Bewertung ändern") { Task { await rate() } }
+                .estrichButton(.primary, fullWidth: true)
+                .disabled(stars == 0)
         }
     }
 
@@ -412,9 +448,19 @@ struct TicketDetailView: View {
         .accessibilityIdentifier("ticketAgentMenu")
     }
 
+    private func rate() async {
+        do throws(APIError) {
+            detail = try await model.active?.client.rate(ticketId, rating: stars, comment: ratingComment)
+            error = nil
+        } catch {
+            self.error = error.serverMessage ?? error.message
+        }
+    }
+
     private func load() async {
         do throws(APIError) {
             detail = try await model.active?.client.ticket(ticketId)
+            if let detail { stars = detail.rating ?? 0; ratingComment = detail.ratingComment ?? "" }
             error = nil
             if let summary = detail?.summary { await TicketReadState.mark([summary], model: model) }
         } catch {

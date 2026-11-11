@@ -176,6 +176,18 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     }
 
     @Test
+    fun helpdesk() = main("helpdesk", Tab.More, listOf(Route.Helpdesk))
+
+    @Test
+    fun helpdeskTicket() = main("helpdesk-ticket", Tab.More, listOf(Route.Helpdesk, Route.Ticket(DemoData.TICKET)))
+
+    @Test
+    fun helpdeskBewertung() = main("helpdesk-bewertung", Tab.More, listOf(Route.Helpdesk, Route.Ticket("0193a1b2-de00-7000-8000-00000000c004")))
+
+    @Test
+    fun problemMelden() = main("problem-melden", Tab.More, listOf(Route.Helpdesk, Route.ReportProblem))
+
+    @Test
     fun einstellungen() = main("einstellungen", Tab.More)
 
     @Test

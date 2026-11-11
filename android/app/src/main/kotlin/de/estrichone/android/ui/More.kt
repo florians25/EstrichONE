@@ -90,24 +90,15 @@ import de.estrichone.core.InboxNotification
 import de.estrichone.core.LockDelay
 import de.estrichone.core.NotificationInbox
 import de.estrichone.core.SyncOutcome
-import de.estrichone.core.TicketCategory
-import de.estrichone.core.TicketFull
 import de.estrichone.core.WorkItemKind
-import de.estrichone.core.commentTicket
-import de.estrichone.core.createTicket
 import de.estrichone.core.deleteNotification
 import de.estrichone.core.dispatch
 import de.estrichone.core.markAllNotificationsRead
 import de.estrichone.core.markNotificationRead
-import de.estrichone.core.markTicketSeen
-import de.estrichone.core.myTickets
 import de.estrichone.core.notificationPreferences
 import de.estrichone.core.notifications
-import de.estrichone.core.reopenTicket
 import de.estrichone.core.saveNotificationPreference
 import de.estrichone.core.sessions
-import de.estrichone.core.ticket
-import de.estrichone.core.ticketStatusLabel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -229,138 +220,6 @@ fun MoreScreen() {
     if (confirmReset) {
         ConfirmDialog("Gerät zurücksetzen?", "Alle EstrichONE-Daten, Fotos und Anmeldungen werden von diesem Gerät gelöscht. Nicht übertragene Änderungen gehen verloren.",
             "Zurücksetzen", model::resetDevice, { confirmReset = false })
-    }
-}
-
-// Helpdesk
-
-@Composable
-fun HelpdeskScreen() {
-    val session = LocalSession.current
-    val nav = LocalNav.current
-    val tickets by rememberLoad(Unit) { session.api.myTickets() }
-    ScreenScaffold("Meine Meldungen", floating = {
-        androidx.compose.material3.ExtendedFloatingActionButton(onClick = { nav.push(Route.ReportProblem) }, icon = { Icon(Icons.Outlined.ReportProblem, null) },
-            text = { Text("Problem melden") })
-    }) { padding ->
-        LoadView(tickets) {
-            val list = (tickets as Load.Done).value
-            LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
-                if (list.isEmpty()) item { EmptyState(Icons.Outlined.SupportAgent, "Keine Meldungen", "Probleme mit App, Gerät oder Zugang hier an die IT melden.") }
-                else item {
-                    SectionCard {
-                        list.forEachIndexed { index, t ->
-                            if (index > 0) RowDivider()
-                            RowItem(t.title, icon = Icons.Outlined.SupportAgent, subtitle = "${t.number} · ${ticketStatusLabel(t.status)}",
-                                showChevron = true, onClick = { nav.push(Route.Ticket(t.id)) }, trailing = { if (t.hasUnread) CountBadge(1) })
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun TicketScreen(id: String) {
-    val session = LocalSession.current
-    val scope = rememberCoroutineScope()
-    var ticket by remember { mutableStateOf<Load<TicketFull>>(Load.Loading) }
-    var reply by remember { mutableStateOf("") }
-    LaunchedEffect(id) {
-        ticket = attempt { session.api.ticket(id) }
-        runCatching { withContext(Dispatchers.IO) { session.api.markTicketSeen(id) } }
-    }
-    val t = (ticket as? Load.Done)?.value
-    ScreenScaffold(t?.summary?.number ?: "Meldung") { padding ->
-        LoadView(ticket) {
-            val full = t!!
-            LazyColumn(contentPadding = padding.content(), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.readable()) {
-                item {
-                    Text(full.summary.title, style = MaterialTheme.typography.headlineSmall)
-                    Row(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Pill(ticketStatusLabel(full.summary.status), MaterialTheme.colorScheme.primary, tones.infoSoft)
-                        TicketCategory.entries.firstOrNull { it.raw == full.summary.category }?.let { Pill(it.title, tones.textSecondary, tones.fill) }
-                    }
-                }
-                full.description?.let { item { SectionCard(padding = PaddingValues(16.dp)) { Text(it) } } }
-                items(full.comments) { c ->
-                    val mine = c.authorUserId == session.user.id
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = if (mine) Arrangement.End else Arrangement.Start) {
-                        Column(Modifier.fillMaxWidth(0.86f).clip(RoundedCornerShape(16.dp)).background(if (mine) tones.infoSoft else tones.card).padding(12.dp)) {
-                            Text(c.authorName ?: "", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
-                            Text(c.text)
-                            ApiDate.parse(c.createdAt)?.let { Secondary(Dates.ago(it)) }
-                        }
-                    }
-                }
-                item {
-                    if (full.summary.status in setOf("resolved", "closed")) {
-                        OutlinedButton(onClick = { scope.launch { ticket = attempt { session.api.reopenTicket(id) } } }, modifier = Modifier.fillMaxWidth()) { Text("Wieder öffnen") }
-                    } else {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            DictationField(reply, { reply = it }, "Antwort an die IT", minLines = 2)
-                            Button(onClick = { scope.launch { ticket = attempt { session.api.commentTicket(id, reply) }; reply = "" } }, enabled = reply.isNotBlank(),
-                                modifier = Modifier.fillMaxWidth()) { Text("Antworten") }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
-
-/** Problem melden (wie ReportProblemView auf iOS): Art, Beschreibung, Diktat; nur technische Angaben, keine Inhalte. */
-@OptIn(androidx.compose.foundation.layout.ExperimentalLayoutApi::class)
-@Composable
-fun ReportProblemScreen() {
-    val session = LocalSession.current
-    val nav = LocalNav.current
-    val model = LocalModel.current
-    val scope = rememberCoroutineScope()
-    var category by remember { mutableStateOf(TicketCategory.AppError) }
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var blocked by remember { mutableStateOf(false) }
-    var sending by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val status by session.status.collectAsState()
-    ScreenScaffold("Problem melden") { padding ->
-        Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp).readable(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Was ist passiert?", style = MaterialTheme.typography.titleMedium)
-            androidx.compose.foundation.layout.FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                TicketCategory.entries.forEach { c -> FilterChip(category == c, { category = c }, label = { Text(c.title) }) }
-            }
-            OutlinedTextField(title, { title = it }, label = { Text("Kurz: Was funktioniert nicht?") }, singleLine = true, modifier = Modifier.fillMaxWidth())
-            DictationField(description, { description = it }, "Beschreibung (optional)", minLines = 4)
-            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { blocked = !blocked }) {
-                Checkbox(blocked, { blocked = it })
-                Text("Ich kann deshalb nicht weiterarbeiten")
-            }
-            SectionCard(padding = PaddingValues(14.dp)) {
-                Text("Mitgeschickt werden", style = MaterialTheme.typography.titleSmall)
-                Secondary("App ${BuildConfig.VERSION_NAME} · Android ${Build.VERSION.RELEASE} · ${Build.MODEL} · Abgleich: ${status.shortText}. Keine Inhalte aus Bauakten.")
-            }
-            error?.let { Text(it, color = tones.danger) }
-            Button(onClick = {
-                sending = true
-                scope.launch {
-                    val result = attempt {
-                        session.api.createTicket(title, description, category, blocked, null, mapOf(
-                            "appVersion" to BuildConfig.VERSION_NAME, "platform" to "android", "osVersion" to Build.VERSION.RELEASE, "deviceModel" to (Build.MODEL ?: ""),
-                            "deviceKind" to if (session.isPool) "pool" else "personal", "pendingOperations" to status.summary.pendingOperations.toString(),
-                            "pendingUploads" to status.summary.pendingUploads.toString(),
-                        ))
-                    }
-                    sending = false
-                    when (result) {
-                        is Load.Done -> { model.message("Meldung ${result.value.summary.number} wurde an die IT übermittelt."); nav.back() }
-                        is Load.Failed -> error = result.message
-                        Load.Loading -> Unit
-                    }
-                }
-            }, enabled = title.isNotBlank() && !sending, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Meldung senden") }
-        }
     }
 }
 

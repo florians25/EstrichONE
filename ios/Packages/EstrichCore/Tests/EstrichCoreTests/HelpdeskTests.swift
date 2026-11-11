@@ -154,4 +154,40 @@ struct HelpdeskTests {
         await read.markRead([later])
         #expect(await read.unread([later]).isEmpty)
     }
+
+    @Test("Service-Desk: Bewertung, Anleitungen, zusammengeführt, Ampel der Bearbeitung und Unterkategorie beim Melden")
+    func serviceDeskFields() async throws {
+        let json = """
+        {"summary":{"id":"0193a1b2-0000-7000-8000-000000000001","number":"T-2026-0002","title":"Drucker","category":"officeIt",
+          "priority":"high","status":"resolved","reporterBlocked":false,"createdAt":"2026-10-20T08:00:00+00:00",
+          "lastActivityAt":"2026-10-20T10:00:00+00:00","subcategoryName":"Drucker","slaState":"overdue","dueKind":"response",
+          "dueAt":"2026-10-20T09:00:00+00:00","rating":4},
+         "description":null,"resolution":"Rolle gereinigt","comments":[],"events":[],"canRate":true,"rating":4,"ratingComment":"Schnell",
+         "mergedIntoNumber":null,"articles":[{"id":"0193a1b2-0000-7000-8000-0000000000a1","title":"Papierstau beheben","isPublished":true}]}
+        """
+        let detail = try JSONCoding.decoder.decode(TicketDetail.self, from: Data(json.utf8))
+        #expect(detail.canRate && detail.rating == 4 && detail.ratingComment == "Schnell")
+        #expect(detail.articles.map(\.title) == ["Papierstau beheben"])
+        #expect(detail.summary.subcategoryName == "Drucker")
+        #expect(detail.summary.slaHint == "Antwort überfällig")
+
+        // Ältere Server ohne die neuen Felder.
+        let old = try JSONCoding.decoder.decode(TicketDetail.self, from: Data("""
+            {"summary":{"id":"0193a1b2-0000-7000-8000-000000000001","number":"T-1","title":"x","category":"other","priority":"normal",
+             "status":"new","reporterBlocked":false,"createdAt":"2026-10-20T08:00:00+00:00","lastActivityAt":"2026-10-20T08:00:00+00:00"},
+             "comments":[]}
+            """.utf8))
+        #expect(!old.canRate && old.articles.isEmpty && old.summary.slaHint == nil)
+
+        let rating = try JSONCoding.encoder.encode(TicketRating(rating: 5, comment: "  "))
+        #expect(String(decoding: rating, as: UTF8.self).contains("\"rating\":5"))
+        #expect(!String(decoding: rating, as: UTF8.self).contains("comment\":\""))
+
+        let (store, files, engine, server) = try makeStore()
+        let printer = try #require(UUID(uuidString: "0193a1b2-0000-7000-8000-0000000000b1"))
+        let id = try await HelpdeskService(store: store, files: files, userId: userId)
+            .report(NewTicket(title: "Drucker zieht kein Papier", category: .officeIt, subcategoryId: printer), diagnostics: nil)
+        _ = await engine.synchronize()
+        #expect(try #require(server.entity(id))["subcategoryId"]?.string == printer.uuidString.lowercased())
+    }
 }
