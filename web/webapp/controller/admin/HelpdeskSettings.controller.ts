@@ -5,7 +5,7 @@ import { del, get, post, put } from "../../util/api";
 import { openForm } from "../../util/forms";
 import {
 	describeRule, formatHolidays, parseHolidays, strategies, type CannedResponse, type HelpdeskAgent, type HelpdeskGroup, type HelpdeskRule,
-	type HelpdeskSettings as Settings, type TicketSubcategory,
+	type HelpdeskHolidays, type HelpdeskSettings as Settings, type TicketSubcategory,
 } from "../../util/helpdesk";
 import { options, ticketCategories, ticketPriorities } from "../../util/labels";
 import type { RouteMatch } from "../../util/router";
@@ -24,8 +24,10 @@ export default class HelpdeskSettings extends BaseController {
 	private saved: Settings | null = null;
 
 	onInit(): void {
+		const year = new Date().getFullYear();
 		this.local({ busy: false, dirty: false, tab: "sla", canManage: false, s: null, days: [], dayOptions: days, holidays: "", holidayState: "None",
-			holidayError: "", groups: [], subcategories: [], rules: [], responses: [] });
+			holidayError: "", groups: [], subcategories: [], rules: [], responses: [], stateKey: "", states: [{ key: "", text: "Keins – nur zusätzliche Tage" }],
+			holidayYear: String(year), holidayYears: [{ key: String(year) }, { key: String(year + 1) }], holidayDays: [], holidayEmpty: "" });
 	}
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {
@@ -66,9 +68,30 @@ export default class HelpdeskSettings extends BaseController {
 		m.setProperty("/s", copy);
 		m.setProperty("/days", copy.hours.days.map(String));
 		m.setProperty("/holidays", formatHolidays(copy.holidays));
+		m.setProperty("/stateKey", copy.state ?? "");
+		void this.loadHolidays();
 		m.setProperty("/holidayState", "None");
 		m.setProperty("/dirty", false);
 	}
+
+	/** Feiertage des gewählten Jahres als Vorschau (gesetzliche des gewählten Bundeslands und gespeicherte Zusatztage). */
+	private async loadHolidays(): Promise<void> {
+		const m = this.model();
+		const state = String(m.getProperty("/stateKey") ?? "");
+		const preview = await get<HelpdeskHolidays>("helpdesk/holidays", { year: m.getProperty("/holidayYear"), state: state || "-" }).catch(() => null);
+		if (!preview) return;
+		m.setProperty("/states", [{ key: "", text: "Keins – nur zusätzliche Tage" }, ...preview.states.map((x) => ({ key: x.code, text: x.name }))]);
+		const day = (iso: string) => iso.split("-").reverse().slice(0, 2).join(".") + ".";
+		m.setProperty("/holidayDays", preview.days.map((d) => ({ ...d, text: `${day(d.date)} ${d.name}` })));
+		m.setProperty("/holidayEmpty", state ? "Keine Feiertage gefunden." : "Kein Bundesland gewählt: Es zählen nur die zusätzlichen Tage.");
+	}
+
+	onState(): void {
+		this.onDirty();
+		void this.loadHolidays();
+	}
+
+	onHolidayYear(): void { void this.loadHolidays(); }
 
 	onDirty(): void {
 		this.model().setProperty("/dirty", true);
@@ -90,7 +113,7 @@ export default class HelpdeskSettings extends BaseController {
 			m.setProperty("/tab", "sla");
 			return;
 		}
-		const body: Settings = { ...s, hours: { ...s.hours, days: (m.getProperty("/days") as string[]).map(Number) }, holidays: holidays.dates,
+		const body: Settings = { ...s, state: String(m.getProperty("/stateKey") ?? "") || null, hours: { ...s.hours, days: (m.getProperty("/days") as string[]).map(Number) }, holidays: holidays.dates,
 			targets: s.targets.map((t) => ({ ...t, responseHours: Number(t.responseHours), resolutionHours: Math.max(Number(t.resolutionHours), Number(t.responseHours)) })) };
 		const saved = await this.run(() => put<Settings>("helpdesk/settings", body), "Einstellungen gespeichert");
 		if (saved) {

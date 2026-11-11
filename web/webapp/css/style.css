@@ -1206,3 +1206,28 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 
 /* Verwaltung › App-Updates: Stand in einer Zeile */
 .eoStatusOneLine.sapMObjStatus .sapMObjStatusText { white-space: nowrap; }
+/* Helpdesk: Schnellaktionen als Raster (bleibt bei 1024 px ohne Überlaufmenü), Seitenwechsel, Erwähnen mit @ */
+.eoHdQuick { display: grid; grid-template-columns: repeat(auto-fit, minmax(6.5rem, 1fr)); gap: 0.25rem 0.5rem; align-items: end; margin: 0.25rem 0 0.5rem;
+	max-width: 72rem; }
+.eoHdQuickField { display: flex; flex-direction: column; min-width: 0; }
+.eoHdQuickField .sapMLabel { font-size: var(--sapFontSmallSize); }
+.eoHdQuickField .sapMSlt { min-width: 0; max-width: 100%; }
+/* Kleine Fenster (z. B. 1280 × 720 bei 125 %): Kopf mit Schnellaktionen scrollt, Verlauf und Antwortfeld bleiben sichtbar */
+.eoHelpdesk .eoHdDetail > .eoHdHead { flex: 0 1 auto; min-height: 0; max-height: 55%; overflow-y: auto; }
+/* Untereinander (schmale Fenster, 150 %): Liste mit fester Höhe, Ticket darunter, alles scrollt gemeinsam */
+@media (max-width: 1000px) {
+	.eoHelpdesk .eoHdSplit { overflow-y: auto; }
+	.eoHelpdesk .eoHdSplit > .eoHdMaster { max-height: none; flex: none; }
+	.eoHelpdesk .eoHdSplit .eoHdListScroll { height: 14rem !important; flex: none !important; }
+	.eoHelpdesk .eoHdSplit > .eoHdDetail { flex: none !important; height: 85vh; min-height: 22rem; }
+}
+.eoHdQuickButtons { display: flex; gap: 0.25rem; align-items: end; justify-content: flex-end; flex-wrap: nowrap; }
+.eoHdPager { margin-top: 0.5rem; gap: 1rem; }
+.eoHdMoreList.sapMBtn { margin: 0.25rem 0 0.5rem; }
+.eoHdMentionPop.sapMList { position: absolute; left: 1.5rem; bottom: calc(100% - 0.5rem); z-index: 20; width: 20rem; max-width: calc(100% - 3rem);
+	background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem);
+	box-shadow: var(--sapContent_Shadow2); overflow: hidden; }
+.eoHdMentionPop .sapMLIB { min-height: 2.25rem; }
+.eoHdMentionPop .sapMLIB[data-active="true"] { background: var(--sapList_SelectionBackgroundColor); }
+.eoHdMentionItem { width: 100%; gap: 1rem; padding: 0 0.75rem; box-sizing: border-box; }
+.eoHdHolidayList { gap: 0.25rem 1rem; margin: 0.5rem 0 0.25rem; }

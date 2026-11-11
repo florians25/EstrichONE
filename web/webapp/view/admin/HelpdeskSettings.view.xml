@@ -57,11 +57,30 @@
 								<MultiComboBox id="hdDays" selectedKeys="{view>/days}" items="{view>/dayOptions}" width="100%" enabled="{view>/canManage}" selectionFinish=".onDirty">
 									<core:Item key="{view>key}" text="{view>text}"/>
 								</MultiComboBox>
-								<Label text="Feiertage und Betriebsruhe" labelFor="hdHolidays"/>
+								<Label text="Bundesland (gesetzliche Feiertage)" labelFor="hdState"/>
+								<VBox>
+									<Select id="hdState" selectedKey="{view>/stateKey}" items="{view>/states}" width="100%" enabled="{view>/canManage}" change=".onState">
+										<core:Item key="{view>key}" text="{view>text}"/>
+									</Select>
+									<Text text="Feiertage werden jedes Jahr automatisch berechnet, auch die beweglichen um Ostern (Karfreitag, Ostermontag, Christi Himmelfahrt, Pfingstmontag, Fronleichnam)."
+										class="eoMuted"/>
+								</VBox>
+								<Label text="Feiertage" labelFor="hdHolidayYear"/>
+								<VBox id="hdHolidayPreview">
+									<SegmentedButton id="hdHolidayYear" selectedKey="{view>/holidayYear}" items="{view>/holidayYears}" selectionChange=".onHolidayYear">
+										<items><SegmentedButtonItem key="{view>key}" text="{view>key}"/></items>
+									</SegmentedButton>
+									<FlexBox items="{view>/holidayDays}" wrap="Wrap" class="eoHdHolidayList" renderType="Bare">
+										<ObjectStatus text="{view>text}" state="{= ${view>isStatutory} ? 'None' : 'Information' }" icon="{= ${view>isStatutory} ? 'sap-icon://calendar' : 'sap-icon://appointment' }"/>
+									</FlexBox>
+									<Text text="{view>/holidayEmpty}" class="eoMuted" visible="{= !${view>/holidayDays}.length }"/>
+								</VBox>
+								<Label text="Zusätzliche Tage (Betriebsruhe)" labelFor="hdHolidays"/>
 								<VBox>
 									<TextArea id="hdHolidays" value="{view>/holidays}" rows="4" width="100%" placeholder="Ein Datum je Zeile, z. B. 24.12.2026" enabled="{view>/canManage}"
 										liveChange=".onDirty" valueState="{view>/holidayState}" valueStateText="{view>/holidayError}"/>
-									<Text text="An diesen Tagen steht die Uhr. Die Rückfrage an den Melder hält sie ebenfalls an." class="eoMuted"/>
+									<Text text="Zusätzlich zu den gesetzlichen Feiertagen, z. B. Heiligabend, Silvester oder Betriebsferien. An diesen Tagen steht die Uhr; die Rückfrage an den Melder hält sie ebenfalls an."
+										class="eoMuted"/>
 								</VBox>
 								<core:Title text="Optionen"/>
 								<Label text="Neue Tickets melden" labelFor="hdNotify"/>

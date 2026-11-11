@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
-  articleHtml, auditRows, compareTickets, describeRule, deviceLine, duration, fillPlaceholders, formatHolidays, formatMinutes, kpiTiles, mentionedAgents,
-  parseHolidays, parseMinutes, queueViews, slaInfo,
+  articleHtml, auditRows, compareTickets, describeRule, deviceLine, duration, fillPlaceholders, formatHolidays, formatMinutes, insertMention, kpiTiles,
+  mentionCandidates, mentionedAgents, mentionQuery, pageText, parseHolidays, parseMinutes, queueViews, slaInfo, ticketChannels,
   type HdSummary, type HelpdeskStats,
 } from '../webapp/util/helpdesk';
 import { routes } from '../webapp/util/routes';
@@ -93,10 +93,15 @@ describe('Helpdesk: Kennzahlen und Kontext', () => {
   it('zeigt Kacheln mit Ampelfarben und Sprungzielen', () => {
     const tiles = kpiTiles(stats);
     expect(tiles.map((t) => t.label)).toEqual(['Offen', 'Nicht zugewiesen', 'Überfällig', 'Rückfrage', 'Mir zugewiesen', 'Gelöst diese Woche',
-      'Ø erste Antwort', 'Zufriedenheit']);
+      'Ø erste Antwort', 'Ø Lösungszeit', 'Zufriedenheit']);
     expect(tiles[2]).toMatchObject({ key: 'overdue', value: '2', color: 'Error' });
     expect(tiles[6]).toMatchObject({ value: '1,6', unit: 'h', footer: '87,5 % im Ziel gelöst' });
-    expect(tiles[7]).toMatchObject({ value: '4,4', unit: 'von 5' });
+    expect(tiles[7]).toMatchObject({ value: '20,5', unit: 'h' });
+    expect(tiles[8]).toMatchObject({ value: '4,4', unit: 'von 5' });
+    // Server rechnet in Geschäftszeit: Hinweis in der Kachel.
+    const business = kpiTiles({ ...stats, timeBasis: 'business' });
+    expect(business[6].footer).toBe('Geschäftszeit · 87,5 % im Ziel gelöst');
+    expect(business[7].footer).toBe('Geschäftszeit ohne Rückfrage');
     expect(kpiTiles({ ...stats, overdue: 0, satisfactionAverage: null, ratings: 0 })[2].color).toBe('Good');
   });
 
@@ -140,5 +145,53 @@ describe('Helpdesk: Wissensdatenbank', () => {
     expect(articleHtml('# Drucker\nSo geht es:\n1. Klappe öffnen\n2. Papier **vorsichtig** entfernen\n\n- Hinweis <script>x</script>'))
       .toBe('<h4>Drucker</h4><p>So geht es:</p><ol><li>Klappe öffnen</li><li>Papier <strong>vorsichtig</strong> entfernen</li></ol>'
         + '<ul><li>Hinweis &lt;script&gt;x&lt;/script&gt;</li></ul>');
+  });
+});
+
+describe('Erwähnen mit @ beim Tippen', () => {
+  const agents = [
+    { id: 'a', displayName: 'Anna Becker', openTickets: 3 }, { id: 'b', displayName: 'Ben Albrecht', openTickets: 1 },
+    { id: 'c', displayName: 'Carla Anders-Wolf', openTickets: 0 },
+  ];
+
+  it('erkennt den angefangenen Namen an der Schreibmarke', () => {
+    expect(mentionQuery('Bitte @an', 9)).toEqual({ start: 6, query: 'an' });
+    expect(mentionQuery('@', 1)).toEqual({ start: 0, query: '' });
+    expect(mentionQuery('Hallo\n@Ben A', 12)).toEqual({ start: 6, query: 'Ben A' });
+    // E-Mail-Adresse, Zeilenumbruch, fertiger Name mit Leerzeichen dahinter: keine Auswahl.
+    expect(mentionQuery('it@firma.de', 11)).toBeNull();
+    expect(mentionQuery('@Anna\nweiter', 12)).toBeNull();
+    expect(mentionQuery('@Anna Becker hat', 16)).toBeNull();
+    expect(mentionQuery('ohne at', 7)).toBeNull();
+  });
+
+  it('schlägt passende Bearbeiter vor, Namensanfang zuerst', () => {
+    expect(mentionCandidates('an', agents).map((a) => a.id)).toEqual(['a', 'c']);
+    expect(mentionCandidates('alb', agents).map((a) => a.id)).toEqual(['b']);
+    expect(mentionCandidates('wolf', agents).map((a) => a.id)).toEqual(['c']);
+    expect(mentionCandidates('', agents, 2)).toHaveLength(2);
+    expect(mentionCandidates('xyz', agents)).toEqual([]);
+  });
+
+  it('ersetzt den angefangenen Namen und setzt die Schreibmarke dahinter', () => {
+    expect(insertMention('Bitte @an prüfen', 6, 9, 'Anna Becker')).toEqual({ text: 'Bitte @Anna Becker prüfen', caret: 19 });
+    expect(insertMention('@be', 0, 3, 'Ben Albrecht')).toEqual({ text: '@Ben Albrecht ', caret: 14 });
+    const inserted = insertMention('Bitte @an', 6, 9, 'Anna Becker');
+    expect(mentionedAgents(inserted.text, agents)).toEqual(['a']);
+  });
+});
+
+describe('Arbeitsliste seitenweise und Eingangskanal', () => {
+  it('zählt geladene und alle Tickets', () => {
+    expect(pageText(100, 742)).toBe('100 von 742 Tickets');
+    expect(pageText(12, 12, 2)).toBe('12 Tickets · 2 mit neuer Antwort');
+    expect(pageText(1, 1)).toBe('1 Ticket');
+    expect(pageText(1000, 1250)).toBe('1.000 von 1.250 Tickets');
+  });
+
+  it('benennt die Eingangskanäle', () => {
+    expect(ticketChannels.phone.text).toBe('Telefon');
+    expect(ticketChannels.inPerson.text).toBe('Vor Ort');
+    expect(Object.keys(ticketChannels)).toEqual(['selfService', 'phone', 'email', 'inPerson']);
   });
 });

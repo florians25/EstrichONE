@@ -14,6 +14,8 @@
 						<Button text="Wissensdatenbank" icon="sap-icon://course-book" press=".onKnowledge"/>
 						<Button id="hdSettings" text="Einstellungen" icon="sap-icon://action-settings" press=".onSettings"/>
 						<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh"/>
+						<Button id="newOnBehalf" text="Meldung aufnehmen" icon="sap-icon://call" press=".onNewOnBehalf"
+							tooltip="Ticket im Namen eines Melders anlegen (Anruf, E-Mail, vor Ort)"/>
 						<Button id="newTicket" text="Neues Ticket" icon="sap-icon://add" type="Emphasized" press=".onNew"/>
 					</HBox>
 				</FlexBox>
@@ -55,8 +57,8 @@
 					<items><IconTabFilter key="{view>key}" text="{view>text}" count="{view>count}"/></items>
 				</IconTabHeader>
 				<Table id="hdTable" mode="MultiSelect" items="{view>/visible}" selectionChange=".onTableSelection" busy="{view>/busy}" busyIndicatorDelay="300"
-					noDataText="{view>/noData}" sticky="HeaderToolbar,ColumnHeaders" contextualWidth="Auto" popinLayout="GridSmall" growing="true" growingThreshold="100"
-					growingScrollToLoad="true" class="eoHdTable" includeItemInSelection="false">
+					noDataText="{view>/noData}" sticky="HeaderToolbar,ColumnHeaders" contextualWidth="Auto" popinLayout="GridSmall"
+					class="eoHdTable" includeItemInSelection="false">
 					<headerToolbar>
 						<OverflowToolbar class="eoHdTableBar">
 							<SearchField id="hdQueueSearch" value="{view>/query}" search=".onSearch" liveChange=".onQueryLive" placeholder="Nummer, Titel, Text, Melder …"
@@ -145,6 +147,11 @@
 						</ColumnListItem>
 					</items>
 				</Table>
+				<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoHdPager">
+					<Text id="hdQueueCount" text="{view>/countText}" class="eoMuted"/>
+					<Button id="hdMore" text="{view>/moreText}" icon="sap-icon://drill-down" press=".onLoadMore" visible="{view>/hasMore}" busy="{view>/loadingMore}"
+						busyIndicatorDelay="0"/>
+				</HBox>
 			</VBox>
 		</ScrollContainer>
 
@@ -158,7 +165,11 @@
 							<Button icon="sap-icon://table-view" tooltip="Zur Arbeitsliste" type="Transparent" press=".onBackToQueue" visible="{view>/agent}" class="sapUiTinyMarginEnd"/>
 							<Title id="hdListTitle" text="{= ${view>/agent} ? ${view>/viewTitle} : ${i18n>nav.helpdesk} }" level="H1"/>
 						</HBox>
-						<Button id="newTicketSplit" text="Neues Ticket" icon="sap-icon://add" type="{= ${view>/agent} ? 'Default' : 'Emphasized' }" press=".onNew"/>
+						<HBox alignItems="Center">
+							<Button id="newOnBehalfSplit" icon="sap-icon://call" tooltip="Meldung aufnehmen (Anruf, E-Mail, vor Ort)" press=".onNewOnBehalf"
+								visible="{view>/agent}" class="sapUiTinyMarginEnd"/>
+							<Button id="newTicketSplit" text="Neues Ticket" icon="sap-icon://add" type="{= ${view>/agent} ? 'Default' : 'Emphasized' }" press=".onNew"/>
+						</HBox>
 					</HBox>
 					<Text text="{= ${view>/agent} ? 'Gemeldete Probleme aus Apps und Büro' : 'Ihre IT-Meldungen mit Verlauf' }" class="eoMuted sapUiTinyMarginBottom"/>
 					<SearchField id="hdSearch" value="{view>/query}" liveChange=".onQueryLive" search=".onSearch" placeholder="Nummer, Titel, Melder …" width="100%"/>
@@ -209,6 +220,8 @@
 							</VBox>
 						</CustomListItem>
 					</List>
+					<Button text="{view>/moreText}" icon="sap-icon://drill-down" press=".onLoadMore" visible="{view>/hasMore}" busy="{view>/loadingMore}" width="100%"
+						type="Transparent" class="eoHdMoreList"/>
 				</ScrollContainer>
 				<Text text="{view>/countText}" class="eoHdCount"/>
 			</FlexBox>
@@ -238,47 +251,60 @@
 							<ObjectStatus text="{view>value}" state="{view>state}" icon="{view>icon}"/>
 						</VBox>
 					</FlexBox>
-					<OverflowToolbar style="Clear" class="eoHdActions" visible="{view>/agent}">
-						<Label text="Status" labelFor="tStatus" class="eoHdActLabel"/>
-						<Select id="tStatus" selectedKey="{view>/edit/status}" items="{view>/statusOptions}" change=".onQuickStatus" width="9rem">
-							<core:Item key="{view>key}" text="{view>text}"/>
-						</Select>
-						<Label text="Priorität" labelFor="tPriority" class="eoHdActLabel"/>
-						<Select id="tPriority" selectedKey="{view>/edit/priority}" items="{view>/priorityOptions}" change=".onQuickPriority" width="8rem">
-							<core:Item key="{view>key}" text="{view>text}"/>
-						</Select>
-						<Label text="Kategorie" labelFor="tCategory" class="eoHdActLabel"/>
-						<Select id="tCategory" selectedKey="{view>/edit/category}" items="{view>/categoryOptions}" change=".onQuickCategory" width="9rem">
-							<core:Item key="{view>key}" text="{view>text}"/>
-						</Select>
-						<Label text="Unterkategorie" labelFor="tSubcategory" class="eoHdActLabel" visible="{= ${view>/subOptions}.length > 1 }"/>
-						<Select id="tSubcategory" selectedKey="{view>/edit/subcategory}" items="{view>/subOptions}" change=".onQuickSubcategory" width="9rem"
-							visible="{= ${view>/subOptions}.length > 1 }">
-							<core:Item key="{view>key}" text="{view>text}"/>
-						</Select>
-						<Label text="Gruppe" labelFor="tGroup" class="eoHdActLabel" visible="{= ${view>/groups}.length > 0 }"/>
-						<Select id="tGroup" selectedKey="{view>/edit/group}" items="{view>/groupMenu}" change=".onQuickGroup" width="8rem" visible="{= ${view>/groups}.length > 0 }">
-							<core:Item key="{view>key}" text="{view>text}"/>
-						</Select>
-						<Label text="Zuständig" labelFor="tAssignee" class="eoHdActLabel"/>
-						<Select id="tAssignee" selectedKey="{view>/edit/assignee}" items="{view>/people}" forceSelection="false" change=".onQuickAssignee" width="11rem">
-							<core:Item key="{view>key}" text="{view>text}"/>
-						</Select>
-						<ToolbarSpacer/>
-						<Button text="Mir zuweisen" icon="sap-icon://employee" press=".onMine" visible="{= ${view>/t/summary/assigneeUserId} !== ${view>/me} }"/>
-						<MenuButton id="tMore" text="Weitere Aktionen" icon="sap-icon://overflow">
-							<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
-							<menu>
-								<Menu>
-									<MenuItem text="Als Duplikat zusammenführen …" icon="sap-icon://combine" press=".onMerge"/>
-									<MenuItem text="Ticket verknüpfen …" icon="sap-icon://chain-link" press=".onLink"/>
-									<MenuItem text="Artikel verknüpfen …" icon="sap-icon://course-book" press=".onLinkArticle"/>
-									<MenuItem text="Arbeitszeit erfassen …" icon="sap-icon://time-entry-request" press=".onAddTime" visible="{view>/options/timeTrackingEnabled}"/>
-									<MenuItem text="Lösung als Artikel speichern …" icon="sap-icon://add-document" press=".onArticleFromTicket"/>
-								</Menu>
-							</menu>
-						</MenuButton>
-					</OverflowToolbar>
+					<!-- Schnellaktionen als kompaktes Raster: alle Felder bleiben sichtbar, auch bei 1024 px (kein Überlaufmenü) -->
+					<FlexBox id="hdQuick" wrap="Wrap" alignItems="End" class="eoHdQuick" visible="{view>/agent}" renderType="Bare">
+						<VBox class="eoHdQuickField" renderType="Bare">
+							<Label text="Status" labelFor="tStatus"/>
+							<Select id="tStatus" selectedKey="{view>/edit/status}" items="{view>/statusOptions}" change=".onQuickStatus" width="100%">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</VBox>
+						<VBox class="eoHdQuickField" renderType="Bare">
+							<Label text="Priorität" labelFor="tPriority"/>
+							<Select id="tPriority" selectedKey="{view>/edit/priority}" items="{view>/priorityOptions}" change=".onQuickPriority" width="100%">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</VBox>
+						<VBox class="eoHdQuickField" renderType="Bare">
+							<Label text="Kategorie" labelFor="tCategory"/>
+							<Select id="tCategory" selectedKey="{view>/edit/category}" items="{view>/categoryOptions}" change=".onQuickCategory" width="100%">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</VBox>
+						<VBox class="eoHdQuickField" renderType="Bare" visible="{= ${view>/subOptions}.length > 1 }">
+							<Label text="Unterkategorie" labelFor="tSubcategory"/>
+							<Select id="tSubcategory" selectedKey="{view>/edit/subcategory}" items="{view>/subOptions}" change=".onQuickSubcategory" width="100%">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</VBox>
+						<VBox class="eoHdQuickField" renderType="Bare" visible="{= ${view>/groups}.length > 0 }">
+							<Label text="Gruppe" labelFor="tGroup"/>
+							<Select id="tGroup" selectedKey="{view>/edit/group}" items="{view>/groupMenu}" change=".onQuickGroup" width="100%">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</VBox>
+						<VBox class="eoHdQuickField" renderType="Bare">
+							<Label text="Zuständig" labelFor="tAssignee"/>
+							<Select id="tAssignee" selectedKey="{view>/edit/assignee}" items="{view>/people}" forceSelection="false" change=".onQuickAssignee" width="100%">
+								<core:Item key="{view>key}" text="{view>text}"/>
+							</Select>
+						</VBox>
+						<HBox class="eoHdQuickButtons" renderType="Bare">
+							<Button id="tMine" icon="sap-icon://employee" tooltip="Mir zuweisen" press=".onMine"
+								visible="{= ${view>/t/summary/assigneeUserId} !== ${view>/me} }"/>
+							<MenuButton id="tMore" icon="sap-icon://overflow" tooltip="Weitere Aktionen (zusammenführen, verknüpfen, Zeit, Artikel)">
+								<menu>
+									<Menu>
+										<MenuItem text="Als Duplikat zusammenführen …" icon="sap-icon://combine" press=".onMerge"/>
+										<MenuItem text="Ticket verknüpfen …" icon="sap-icon://chain-link" press=".onLink"/>
+										<MenuItem text="Artikel verknüpfen …" icon="sap-icon://course-book" press=".onLinkArticle"/>
+										<MenuItem text="Arbeitszeit erfassen …" icon="sap-icon://time-entry-request" press=".onAddTime" visible="{view>/options/timeTrackingEnabled}"/>
+										<MenuItem text="Lösung als Artikel speichern …" icon="sap-icon://add-document" press=".onArticleFromTicket"/>
+									</Menu>
+								</menu>
+							</MenuButton>
+						</HBox>
+					</FlexBox>
 					<MessageStrip text="{= 'Dieses Ticket wurde mit ' + ${view>/t/mergedIntoNumber} + ' zusammengeführt. Die Bearbeitung läuft dort weiter.' }" type="Information"
 						showIcon="true" visible="{= !!${view>/t/mergedIntoNumber} }" class="sapUiTinyMarginBottom">
 						<link><Link text="Öffnen" press=".onOpenMerged"/></link>
@@ -520,10 +546,21 @@
 
 				<VBox id="composer" visible="{= !!${view>/t} &amp;&amp; ${view>/t/summary/status} !== 'closed' &amp;&amp; ${view>/tab} === 'talk' }" class="eoReplyBar eoHdComposer">
 					<customData><core:CustomData key="internal" value="{= ${view>/internal} ? 'true' : 'false' }" writeToDom="true"/></customData>
+					<List id="hdMentionPop" items="{view>/mention/items}" visible="{view>/mention/open}" class="eoHdMentionPop" showSeparators="None"
+						ariaLabelledBy="mentionLabel" tooltip="Erwähnen: Pfeiltasten wählen, Eingabe übernimmt, Esc schließt">
+						<CustomListItem type="Active" press=".onMentionPick" highlight="None">
+							<customData><core:CustomData key="active" value="{= ${view>active} ? 'true' : 'false' }" writeToDom="true"/></customData>
+							<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoHdMentionItem">
+								<Text text="{view>name}" wrapping="false"/>
+								<Text text="{view>hint}" class="eoMuted" wrapping="false"/>
+							</HBox>
+						</CustomListItem>
+					</List>
 					<TextArea id="reply" value="{view>/reply}" valueLiveUpdate="true" rows="3" width="100%" growing="true" growingMaxLines="10"
-						placeholder="{= ${view>/internal} ? 'Interne Notiz (nur für die Bearbeitung) … Kollegen mit @Name erwähnen' : ${view>/agent} ? 'Antwort an den Melder … (Dateien hierher ziehen oder Strg+V)' : 'Nachricht an die IT … (Dateien hierher ziehen oder Strg+V)' }"
+						placeholder="{= ${view>/internal} ? 'Interne Notiz (nur für die Bearbeitung) … Kollegen mit @ erwähnen' : ${view>/agent} ? 'Antwort an den Melder … (@ erwähnt Kollegen, Dateien hierher ziehen oder Strg+V)' : 'Nachricht an die IT … (Dateien hierher ziehen oder Strg+V)' }"
 						ariaLabelledBy="replyLabel"/>
 					<core:InvisibleText id="replyLabel" text="Antwort oder Notiz"/>
+					<core:InvisibleText id="mentionLabel" text="Kollegin oder Kollegen erwähnen"/>
 					<FlexBox items="{view>/pending}" wrap="Wrap" class="eoTimelineAttachments" visible="{= ${view>/pending}.length > 0 }">
 						<Button text="{view>name}" icon="sap-icon://decline" iconFirst="false" type="Transparent" press=".onRemovePending" tooltip="{= ${view>name} + ' entfernen' }"/>
 					</FlexBox>

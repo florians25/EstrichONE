@@ -21,6 +21,30 @@ export interface HdSummary extends TicketSummary {
 	mergedIntoTicketId?: string | null;
 	rating?: number | null;
 	resolvedAt?: string | null;
+	channel?: TicketChannel;
+	createdByUserId?: string | null;
+	createdByName?: string | null;
+}
+
+/** Eingangskanal: selbst gemeldet oder von der IT aufgenommen (Telefon, E-Mail, vor Ort). */
+export type TicketChannel = "selfService" | "phone" | "email" | "inPerson";
+
+export const ticketChannels: Record<TicketChannel, { text: string; icon: string }> = {
+	selfService: { text: "Selbst gemeldet", icon: "sap-icon://person-placeholder" },
+	phone: { text: "Telefon", icon: "sap-icon://call" },
+	email: { text: "E-Mail", icon: "sap-icon://email" },
+	inPerson: { text: "Vor Ort", icon: "sap-icon://customer" },
+};
+
+/** Seite der Arbeitsliste (GET /tickets/page). */
+export interface TicketPage { items: HdSummary[]; total: number; offset: number; limit: number }
+
+/** Person für „Meldung aufnehmen“ (GET /helpdesk/reporters). */
+export interface HelpdeskReporter { id: string; displayName: string; userName: string; email: string | null; phone: string | null }
+
+export interface HelpdeskHoliday { date: string; name: string; isStatutory: boolean }
+export interface HelpdeskHolidays {
+	year: number; state: string | null; stateName: string | null; days: HelpdeskHoliday[]; states: { code: string; name: string }[];
 }
 
 export interface HdTimelineItem {
@@ -53,6 +77,8 @@ export interface HelpdeskStats {
 	byCategory: { category: TicketCategory; open: number; total30Days: number }[];
 	byAgent: { userId: string; name: string; open: number; overdue: number }[];
 	trend: { day: string; created: number; resolved: number }[];
+	/** „business“: Reaktions- und Lösungszeit in Geschäftszeit (ohne Nächte, Wochenende, Feiertage, Rückfrage). */
+	timeBasis?: string;
 }
 
 export interface ReporterDevice {
@@ -82,6 +108,8 @@ export interface SlaTarget { priority: TicketPriority; responseHours: number; re
 export interface HelpdeskSettings {
 	targets: SlaTarget[]; hours: { start: string; end: string; days: number[] }; holidays: string[]; slaEnabled: boolean; ratingEnabled: boolean;
 	timeTrackingEnabled: boolean; notifyAgentsOnNew: boolean; suggestArticles: boolean; autoCloseDays: number;
+	/** Bundesland für gesetzliche Feiertage (BW … TH) oder null. */
+	state?: string | null;
 }
 export interface HelpdeskGroup { id: string; name: string; description: string | null; memberUserIds: string[]; isActive: boolean; sortOrder: number; version: number }
 export interface TicketSubcategory { id: string; category: TicketCategory; name: string; isActive: boolean; sortOrder: number; version: number }
@@ -226,6 +254,46 @@ export function mentionedAgents(text: string, agents: { id: string; displayName:
 	return [...found];
 }
 
+/**
+ * Erwähnung beim Tippen: Steht vor der Schreibmarke „@“ plus Anfang eines Namens (am Zeilenanfang oder nach Leerzeichen,
+ * höchstens zwei Wörter, keine Zeilenumbrüche), liefert die Funktion Position des „@“ und den bisher getippten Text.
+ */
+export function mentionQuery(text: string, caret: number): { start: number; query: string } | null {
+	const before = text.slice(0, Math.max(0, caret));
+	const at = before.lastIndexOf("@");
+	if (at < 0) return null;
+	if (at > 0 && !/[\s(„"'\[]/u.test(before.charAt(at - 1))) return null;
+	const query = before.slice(at + 1);
+	if (query.length > 40 || /[\n\r]/.test(query) || /\s{2}/.test(query) || query.split(" ").length > 2 || /^\s/.test(query)) return null;
+	if (!/^[\p{L}\d .'-]*$/u.test(query)) return null;
+	return { start: at, query };
+}
+
+/** Passende Bearbeiter zu einem angefangenen Namen (Vor- oder Nachname beginnt damit, bzw. ganzer Name), höchstens <limit>. */
+export function mentionCandidates<T extends { id: string; displayName: string }>(query: string, agents: T[], limit = 6): T[] {
+	const q = query.trim().toLowerCase();
+	const words = (name: string) => name.toLowerCase().split(/[\s-]+/);
+	return agents
+		.filter((a) => !q || a.displayName.toLowerCase().startsWith(q) || words(a.displayName).some((w) => w.startsWith(q)))
+		.sort((a, b) => Number(!a.displayName.toLowerCase().startsWith(q)) - Number(!b.displayName.toLowerCase().startsWith(q))
+			|| a.displayName.localeCompare(b.displayName, "de"))
+		.slice(0, limit);
+}
+
+/** Angefangene Erwähnung durch „@Vollständiger Name “ ersetzen; liefert neuen Text und Position der Schreibmarke. */
+export function insertMention(text: string, start: number, caret: number, name: string): { text: string; caret: number } {
+	const rest = text.slice(caret);
+	const inserted = `@${name}${rest.startsWith(" ") ? "" : " "}`;
+	return { text: text.slice(0, start) + inserted + rest, caret: start + inserted.length + (rest.startsWith(" ") ? 1 : 0) };
+}
+
+/** Zähler unter der Arbeitsliste: „100 von 742 Tickets“ bzw. „12 Tickets“. */
+export function pageText(loaded: number, total: number, unread = 0): string {
+	const noun = (n: number) => (n === 1 ? "Ticket" : "Tickets");
+	const base = total > loaded ? `${loaded.toLocaleString("de-DE")} von ${total.toLocaleString("de-DE")} ${noun(total)}` : `${loaded} ${noun(loaded)}`;
+	return `${base}${unread ? ` · ${unread} mit neuer Antwort` : ""}`;
+}
+
 /** Kennzahlen als Kacheln (Schlüssel = Ansicht, in die ein Klick springt). */
 export function kpiTiles(s: HelpdeskStats): { key: string; label: string; value: string; unit: string; color: "Good" | "Critical" | "Error" | "Neutral"; footer: string }[] {
 	const hours = (m: number | null) => (m == null ? "–" : m < 60 ? String(Math.round(m)) : (m / 60).toLocaleString("de-DE", { maximumFractionDigits: 1 }));
@@ -237,7 +305,9 @@ export function kpiTiles(s: HelpdeskStats): { key: string; label: string; value:
 		{ key: "mine", label: "Mir zugewiesen", value: String(s.mine), unit: "", color: "Neutral", footer: "offen" },
 		{ key: "done", label: "Gelöst diese Woche", value: String(s.resolvedThisWeek), unit: "", color: "Good", footer: `${s.createdThisWeek} neu diese Woche` },
 		{ key: "", label: "Ø erste Antwort", value: hours(s.avgFirstResponseMinutes), unit: s.avgFirstResponseMinutes != null && s.avgFirstResponseMinutes < 60 ? "min" : "h",
-			color: "Neutral", footer: s.slaMetPercent == null ? "letzte 30 Tage" : `${s.slaMetPercent.toLocaleString("de-DE")} % im Ziel gelöst` },
+			color: "Neutral", footer: `${s.timeBasis === "business" ? "Geschäftszeit · " : ""}${s.slaMetPercent == null ? "letzte 30 Tage" : `${s.slaMetPercent.toLocaleString("de-DE")} % im Ziel gelöst`}` },
+		{ key: "", label: "Ø Lösungszeit", value: s.avgResolutionHours == null ? "–" : s.avgResolutionHours.toLocaleString("de-DE", { maximumFractionDigits: 1 }),
+			unit: s.avgResolutionHours == null ? "" : "h", color: "Neutral", footer: s.timeBasis === "business" ? "Geschäftszeit ohne Rückfrage" : "letzte 30 Tage" },
 		{ key: "", label: "Zufriedenheit", value: s.satisfactionAverage == null ? "–" : s.satisfactionAverage.toLocaleString("de-DE", { maximumFractionDigits: 1 }),
 			unit: s.satisfactionAverage == null ? "" : "von 5", color: s.satisfactionAverage != null && s.satisfactionAverage < 3.5 ? "Critical" : "Neutral",
 			footer: s.ratings ? `${s.ratings} Bewertungen (30 Tage)` : "noch keine Bewertung" },

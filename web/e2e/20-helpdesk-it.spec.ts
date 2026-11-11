@@ -135,3 +135,75 @@ test('Melder bewertet die Lösung', async ({ page }) => {
   await expect(toast(page)).toContainText('Danke');
   await expect(page.locator('.eoTimeline')).toContainText('Bewertung: 4 von 5 Sternen');
 });
+
+test('Meldung aufnehmen: IT legt nach Anruf ein Ticket für den Melder an und erwähnt eine Kollegin mit @', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  const it = await apiCall(page, 'POST', '/api/v1/users', {
+    displayName: 'Ida Kollegin', userName: `ida${Date.now()}`, email: null, phone: null, roleIds: ['01a00000-0000-7000-8000-000000000004'],
+  });
+  expect(it.status).toBeLessThan(300);
+
+  await page.goto('/it-center/helpdesk');
+  await page.locator('[id$="newOnBehalf"]').click();
+  const dialog = page.getByRole('dialog', { name: 'Meldung aufnehmen' });
+  await choose(page, dialog.locator('input[role="combobox"]').first(), 'Lukas Brandl', 'Lukas');
+  await dialog.getByLabel('Kurzbeschreibung').fill('Tablet zeigt nach Anruf keine Aufträge');
+  await dialog.getByRole('button', { name: 'Ticket anlegen' }).click();
+  await expect(page.locator('[id$="ticketTitle"]')).toHaveText('Tablet zeigt nach Anruf keine Aufträge');
+  await expect(page.locator('.eoHdFacts')).toContainText('Telefon, aufgenommen von');
+  await expect(page.locator('.eoHdFacts')).toContainText('Lukas Brandl');
+  await expect(page.locator('.eoTimeline')).toContainText('aufgenommen (Telefon)');
+  await expect(page.locator('[id$="tStatus"]')).toContainText('In Bearbeitung');
+
+  // @ öffnet die Auswahl der Kolleginnen und Kollegen; Eingabe übernimmt den Namen.
+  const reply = page.locator('[id$="reply"] textarea');
+  await reply.click();
+  await reply.pressSequentially('Bitte vor Ort prüfen @Id');
+  await expect(page.locator('[id$="hdMentionPop"]')).toContainText('Ida Kollegin');
+  await page.keyboard.press('Enter');
+  await expect(reply).toHaveValue('Bitte vor Ort prüfen @Ida Kollegin ');
+  await expect(page.locator('[id$="hdMentionPop"]')).toBeHidden();
+  await page.getByText('Interne Notiz (für den Melder unsichtbar)').click();
+  await page.getByRole('button', { name: 'Notiz speichern' }).click();
+  await expect(page.locator('.eoTimeline')).toContainText('Benachrichtigt: Ida Kollegin');
+
+  // Der Melder sieht das Ticket als eigenes.
+  await page.context().clearCookies();
+  await signIn(page, 'l.brandl', 'Estrich-Lukas-2026!');
+  const mine = await apiCall<{ title: string; channel: string }[]>(page, 'GET', '/api/v1/tickets/mine', undefined);
+  expect(mine.json.find((t) => t.title === 'Tablet zeigt nach Anruf keine Aufträge')?.channel).toBe('phone');
+});
+
+test('Ticket bei 1024 Pixel: Schnellaktionen ohne Überlaufmenü, Arbeitsliste seitenweise', async ({ page }) => {
+  await page.setViewportSize({ width: 1024, height: 768 });
+  await signIn(page, 'admin', adminPassword);
+  const t = await ticket(page, 'Bildschirm bleibt schwarz', 'deviceDefect');
+  await page.goto(`/it-center/helpdesk/${t.summary.id}`);
+  const quick = page.locator('[id$="hdQuick"]');
+  for (const id of ['tStatus', 'tPriority', 'tCategory', 'tAssignee', 'tMore']) {
+    await expect(quick.locator(`[id$="${id}"]`)).toBeVisible();
+  }
+  await expect(quick.locator('.sapMOTBOverflowButton, [id$="overflowButton"]')).toHaveCount(0);
+  const box = await quick.boundingBox();
+  const more = await quick.locator('[id$="tMore"]').boundingBox();
+  expect(box && more && more.x + more.width <= box.x + box.width + 1).toBeTruthy();
+
+  await page.goto('/it-center/helpdesk');
+  await expect(page.locator('[id$="hdQueueCount"]')).toContainText(/\d+ Tickets?/);
+  const pageOne = await apiCall<{ items: unknown[]; total: number }>(page, 'GET', '/api/v1/tickets/page?filter=all&limit=1&offset=0', undefined);
+  expect(pageOne.json.items).toHaveLength(1);
+  expect(pageOne.json.total).toBeGreaterThan(1);
+});
+
+test('Helpdesk-Einstellungen: Bundesland wählen, Feiertage werden berechnet', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await page.goto('/it-center/helpdesk-einstellungen');
+  await choose(page, page.locator('[id$="hdState"]'), 'Bayern');
+  const preview = page.locator('[id$="hdHolidayPreview"]').filter({ visible: true }).first();
+  await expect(preview).toContainText('Fronleichnam');
+  await expect(preview).toContainText('Karfreitag');
+  await page.locator('[id$="hdSave"]').click();
+  await expect(toast(page)).toContainText('gespeichert');
+  const saved = await apiCall<{ state: string }>(page, 'GET', '/api/v1/helpdesk/settings', undefined);
+  expect(saved.json.state).toBe('BY');
+});
