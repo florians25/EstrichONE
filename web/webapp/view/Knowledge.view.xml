@@ -1,0 +1,74 @@
+<mvc:View controllerName="estrichone.controller.Knowledge" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
+	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<FlexBox id="knowledge" height="100%" renderType="Bare" class="eoHelpdesk eoKnowledge" alignItems="Stretch">
+		<FlexBox direction="Column" renderType="Bare" class="eoHdMaster">
+			<VBox class="eoHdMasterHead">
+				<HBox justifyContent="SpaceBetween" alignItems="Center">
+					<Title id="kbTitle" text="{i18n>nav.knowledge}" level="H1"/>
+					<Button id="kbNew" text="Neuer Artikel" icon="sap-icon://add" type="Emphasized" press=".onNew" visible="{view>/agent}"/>
+				</HBox>
+				<Text text="Anleitungen und bekannte Lösungen der IT" class="eoMuted sapUiTinyMarginBottom"/>
+				<SearchField id="kbSearch" value="{view>/query}" liveChange=".onQuery" search=".onQuery" placeholder="Suchen, z. B. Drucker, Passwort, Fotos" width="100%"/>
+				<HBox class="eoHdFilters sapUiTinyMarginTop">
+					<Select selectedKey="{view>/category}" change=".onQuery" items="{view>/categories}" width="100%" ariaLabelledBy="kbCatLabel">
+						<core:Item key="{view>key}" text="{view>text}"/>
+						<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+					</Select>
+				</HBox>
+			</VBox>
+			<ScrollContainer vertical="true" horizontal="false" height="100%" class="eoHdListScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<List id="kbList" items="{view>/items}" mode="SingleSelectMaster" selectionChange=".onSelect" busy="{view>/busy}" busyIndicatorDelay="300"
+					noDataText="{= ${view>/query} ? 'Keine passenden Artikel.' : 'Noch keine Artikel.' }" class="eoHdList" showSeparators="Inner">
+					<CustomListItem type="Active" selected="{= ${view>id} === ${view>/selectedId} }">
+						<VBox class="eoHdItem">
+							<Text text="{view>title}" maxLines="2" class="eoHdItemTitle eoStrong"/>
+							<Text text="{view>excerpt}" maxLines="2" class="eoHdWho"/>
+							<HBox wrap="Wrap" class="eoHdItemMeta">
+								<ObjectStatus text="Entwurf" state="Warning" visible="{= !${view>isPublished} }"/>
+								<Text text="{path: 'view>category', formatter: 'fmt.ticketCategoryText'}" class="eoHdWho" visible="{= !!${view>category} }"/>
+								<Text text="{= ${view>helpfulCount} ? ${view>helpfulCount} + '× hilfreich' : '' }" class="eoHdWho"/>
+							</HBox>
+						</VBox>
+					</CustomListItem>
+				</List>
+			</ScrollContainer>
+		</FlexBox>
+		<FlexBox direction="Column" renderType="Bare" class="eoHdDetail">
+			<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+			<VBox visible="{= !${view>/a} }" alignItems="Center" justifyContent="Center" height="100%" class="eoHdEmpty">
+				<core:Icon src="sap-icon://course-book" size="3rem" class="eoMuted" decorative="true"/>
+				<Title text="Artikel auswählen" level="H3" class="sapUiSmallMarginTop"/>
+				<Text text="Hier finden Sie Lösungen für häufige Probleme. Hilft nichts davon, melden Sie das Problem im Helpdesk." textAlign="Center" wrapping="true"
+					class="eoMuted eoHdEmptyText"/>
+				<Button text="Problem melden" icon="sap-icon://headset" press=".onHelpdesk" class="sapUiSmallMarginTop"/>
+			</VBox>
+			<ScrollContainer vertical="true" horizontal="false" height="100%" visible="{= !!${view>/a} }" class="eoHdScroll">
+				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
+				<VBox class="eoHdScrollInner eoKbArticle">
+					<HBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap">
+						<VBox>
+							<HBox alignItems="Center" class="eoHdTags">
+								<ObjectStatus text="Entwurf – nur für die IT sichtbar" state="Warning" inverted="true" visible="{= !${view>/a/isPublished} }"/>
+								<Text text="{path: 'view>/a/category', formatter: 'fmt.ticketCategoryText'}" class="eoMuted" visible="{= !!${view>/a/category} }"/>
+							</HBox>
+							<Title id="kbArticleTitle" text="{view>/a/title}" level="H2" wrapping="true" class="eoHdTitle"/>
+						</VBox>
+						<HBox visible="{view>/agent}">
+							<Button text="Bearbeiten" icon="sap-icon://edit" press=".onEdit"/>
+							<Button icon="sap-icon://delete" tooltip="Löschen" type="Transparent" press=".onDelete" class="sapUiTinyMarginBegin"/>
+						</HBox>
+					</HBox>
+					<FormattedText id="kbBody" htmlText="{view>/html}" class="eoKbBody"/>
+					<Text text="{view>/meta}" class="eoMuted sapUiSmallMarginTop"/>
+					<HBox alignItems="Center" wrap="Wrap" class="eoKbFeedback">
+						<Text text="War das hilfreich?" class="sapUiSmallMarginEnd"/>
+						<Button id="kbHelpful" text="{= ${view>/voted} ? 'Danke!' : 'Ja, hat geholfen' }" icon="sap-icon://thumb-up" press=".onHelpful" enabled="{= !${view>/voted} }"/>
+						<Button text="Nein, Problem melden" icon="sap-icon://headset" type="Transparent" press=".onHelpdesk" class="sapUiTinyMarginBegin"/>
+					</HBox>
+				</VBox>
+			</ScrollContainer>
+		</FlexBox>
+	</FlexBox>
+	<core:InvisibleText id="kbCatLabel" text="Kategorie"/>
+</mvc:View>

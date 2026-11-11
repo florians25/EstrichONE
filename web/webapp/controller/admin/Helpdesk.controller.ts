@@ -3,59 +3,77 @@ import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type MenuItem from "sap/m/MenuItem";
 import type { Menu$ItemSelectedEvent } from "sap/m/Menu";
+import type Table from "sap/m/Table";
+import type ListItemBase from "sap/m/ListItemBase";
+import type Select from "sap/m/Select";
+import Item from "sap/ui/core/Item";
 import Button from "sap/m/Button";
 import Text from "sap/m/Text";
-import { get, patch, post } from "../../util/api";
+import Link from "sap/m/Link";
+import VBox from "sap/m/VBox";
+import { del, get, patch, post } from "../../util/api";
 import { textBlocks } from "../../util/catalog";
 import { waitingSince } from "../../util/format";
-import { openForm } from "../../util/forms";
+import { openForm, type FormHandle } from "../../util/forms";
+import {
+	auditRows, compareTickets, deviceLine, fillPlaceholders, formatMinutes, kpiTiles, mentionedAgents, parseMinutes, queueViews, slaInfo, updateStates,
+	type CannedResponse, type HdDetail, type HdSummary, type HdTimelineItem, type HelpdeskAgent, type HelpdeskGroup, type HelpdeskOptions,
+	type HelpdeskStats, type KnowledgeArticleSummary, type SortColumn, type TicketContext, type TimeEntry,
+} from "../../util/helpdesk";
 import { uuidv7 } from "../../util/ids";
 import { options, ticketCategories, ticketPriorities, ticketStatus } from "../../util/labels";
 import { uploadLoose } from "../../util/looseUpload";
 import { attachmentView, type AttachmentView } from "../../util/media";
 import { openAttachment } from "../../util/mediaViewer";
-import type { FileResponse, TicketDetail, TicketSummary } from "../../util/models";
-import type { TicketTimelineItem } from "../../util/planningModels";
+import type { FileResponse, TicketCategory } from "../../util/models";
 import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
 
-type Summary = TicketSummary & { hasUnread?: boolean };
-
 const icons: Record<string, string> = {
 	created: "sap-icon://add-document", comment: "sap-icon://comment", note: "sap-icon://notes", status: "sap-icon://status-in-process",
-	assignee: "sap-icon://employee", priority: "sap-icon://high-priority", category: "sap-icon://tag",
+	assignee: "sap-icon://employee", priority: "sap-icon://high-priority", category: "sap-icon://tag", subcategory: "sap-icon://tag", group: "sap-icon://group",
+	rule: "sap-icon://process", merged: "sap-icon://combine", mergedFrom: "sap-icon://combine", link: "sap-icon://chain-link", unlink: "sap-icon://broken-link",
+	article: "sap-icon://course-book", rating: "sap-icon://favorite", time: "sap-icon://time-entry-request", watcher: "sap-icon://show",
 };
 const kindTexts: Record<string, string> = {
 	created: "Meldung", comment: "Antwort", note: "Interne Notiz", status: "Statuswechsel", assignee: "Zuweisung", priority: "Priorität", category: "Kategorie",
+	subcategory: "Unterkategorie", group: "Gruppe", rule: "Regel", merged: "Zusammengeführt", mergedFrom: "Zusammengeführt", link: "Verknüpfung",
+	unlink: "Verknüpfung", article: "Anleitung", rating: "Bewertung", time: "Arbeitszeit", watcher: "Beobachter",
 };
-/** Reaktionsziel je Priorität (Stunden bis zur ersten Antwort der IT). */
-const responseHours: Record<string, number> = { urgent: 2, high: 8, normal: 24, low: 72 };
-const priorityRank: Record<string, number> = { urgent: 0, high: 1, normal: 2, low: 3 };
 const done = (s: string): boolean => s === "resolved" || s === "closed";
+const highlight: Record<string, string> = { overdue: "Error", dueSoon: "Warning", paused: "Information" };
 
 /**
- * IT Center › Helpdesk als Master-Detail: links die Liste mit Suche, Status-Segmenten, Kategorie und Sortierung
- * (neue Antworten markiert), rechts das Ticket mit Kopf (Status, Priorität, Kategorie, Melder, Zuständig, Alter,
- * Reaktionsziel), Schnellaktionen, Verlauf als Zeitleiste und Antwortfeld mit Anhängen (Ziehen, Strg+V) und
- * Textbausteinen. Bearbeitung sieht alle Tickets, alle anderen ihre eigenen („Meine Tickets“).
+ * IT Center › Helpdesk. Bearbeitung: Arbeitsplatz mit Kennzahlen, gespeicherten Ansichten (Meine, Nicht zugewiesen, Überfällig,
+ * Wartet auf Rückmeldung, Alle offenen …), sortierbarer Liste mit Sammelbearbeitung und Volltextsuche; ein gewähltes Ticket
+ * öffnet die geteilte Ansicht mit Verlauf (Antworten, interne Notizen, Anhänge), Schnellaktionen, Melder und Geräten,
+ * Verknüpfungen, Arbeitszeit und Prüfpfad. Alle anderen sehen ihre eigenen Tickets („Meine Tickets“) und bewerten die Lösung.
  * @namespace estrichone.controller.admin
  */
 export default class Helpdesk extends BaseController {
 	private files = new Map<string, FileResponse | null>();
-	private timeline: TicketTimelineItem[] = [];
+	private timeline: HdTimelineItem[] = [];
 	private loadedAt = 0;
 	private loadedFor = "";
+	private searchTimer: ReturnType<typeof setTimeout> | undefined;
+	private agents: HelpdeskAgent[] = [];
+	private groups: HelpdeskGroup[] = [];
+	private hdOptions: HelpdeskOptions | null = null;
 
 	onInit(): void {
-		this.local({ items: [], visible: [], filter: "open", category: "", sort: "waiting", query: "", busy: false, agent: false, segments: [],
-			categories: [{ key: "", text: "Alle Kategorien" }, ...options(ticketCategories)], noData: "", countText: "", selectedId: "",
-			t: null, timeline: [], facts: [], edit: {}, reply: "", internal: false, detailBusy: false, diagnostics: [], pending: [], show: "all",
-			me: "", canUpload: false, blocks: [], resolvedText: "",
+		this.local({ items: [], visible: [], filter: "open", category: "", priority: "", group: "", sort: "waiting", desc: false, sortIcons: {},
+			query: "", busy: false, agent: false, segments: [], views: [], viewTitle: "Helpdesk", noData: "", countText: "", selectedId: "",
+			categories: [{ key: "", text: "Alle Kategorien" }, ...options(ticketCategories)],
+			priorities: [{ key: "", text: "Alle Prioritäten" }, ...options(ticketPriorities)], groupFilter: [], groups: [], groupMenu: [], assignMenu: [],
+			kpis: [], byCategory: [], byAgent: [], selectedCount: 0, selectionText: "",
+			t: null, timeline: [], facts: [], sla: {}, edit: {}, reply: "", internal: false, mentions: [], agentItems: [], detailBusy: false, diagnostics: [],
+			pending: [], show: "all", me: "", canUpload: false, blocks: [], resolvedText: "", tab: "talk", ctx: null, contextBusy: false, system: [],
+			lastLoginText: "", times: [], timeTotal: "0 min", timeText: "", linkCount: "", audit: [], rate: { value: 0, comment: "" },
+			options: { timeTrackingEnabled: false }, watcherText: "", canDevices: false, subOptions: [],
 			statusOptions: options(ticketStatus), priorityOptions: options(ticketPriorities), categoryOptions: options(ticketCategories), people: [] });
 		// Das Antwortfeld wird erst mit einem Ticket gezeichnet: Ziehen/Einfügen danach anbinden.
 		this.byId("composer")?.addEventDelegate({ onAfterRendering: () => this.wireComposer() });
 	}
-
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {
 		const m = this.model();
@@ -64,24 +82,51 @@ export default class Helpdesk extends BaseController {
 		m.setProperty("/agent", agent);
 		m.setProperty("/me", session.userId);
 		m.setProperty("/canUpload", this.has("files.upload"));
+		m.setProperty("/canDevices", this.has("devices.read"));
 		if (switched) {
 			this.loadedFor = session.userId ?? "";
 			m.setProperty("/filter", "open");
-			m.setProperty("/segments", agent
-				? [{ key: "open", text: "Offen" }, { key: "mine", text: "Mir" }, { key: "unassigned", text: "Neu/frei" }, { key: "all", text: "Alle" }]
-				: [{ key: "open", text: "Offen" }, { key: "done", text: "Erledigt" }, { key: "all", text: "Alle" }]);
-			if (agent) {
-				void session.people().then((people) => m.setProperty("/people", [{ key: "none", text: "Niemand" },
-					...people.filter((p) => p.isActive).map((p) => ({ key: p.id, text: p.displayName }))]));
-				void textBlocks("helpdesk").then((blocks) => m.setProperty("/blocks", blocks));
-			}
+			m.setProperty("/segments", [{ key: "open", text: "Offen" }, { key: "done", text: "Erledigt" }, { key: "all", text: "Alle" }]);
+			this.updateSortIcons();
+			void this.loadMeta(agent);
 		}
 		const id = match.params.id ?? "";
+		const previous = m.getProperty("/selectedId") as string;
 		m.setProperty("/selectedId", id);
+		if (!id && previous) this.clearSelection();
 		// Liste nur neu laden, wenn sie älter als 30 Sekunden ist (Wechsel zwischen Tickets ohne Flackern).
 		if (switched || Date.now() - this.loadedAt > 30_000 || !id) void this.load();
 		if (id) await this.open(id);
 		else this.clearDetail();
+	}
+
+	/** Stammdaten für Bearbeitung und Melden: Optionen, Bearbeiter, Gruppen, Textbausteine. */
+	private async loadMeta(agent: boolean): Promise<void> {
+		const m = this.model();
+		this.hdOptions = await get<HelpdeskOptions>("helpdesk/options").catch(() => null);
+		m.setProperty("/options", { timeTrackingEnabled: !!this.hdOptions?.timeTrackingEnabled });
+		if (!agent) return;
+		const [agents, groups, responses, legacy] = await Promise.all([
+			get<HelpdeskAgent[]>("helpdesk/agents").catch(() => [] as HelpdeskAgent[]),
+			get<HelpdeskGroup[]>("helpdesk/groups").catch(() => [] as HelpdeskGroup[]),
+			get<CannedResponse[]>("helpdesk/responses").catch(() => [] as CannedResponse[]),
+			textBlocks("helpdesk").catch(() => []),
+		]);
+		this.agents = agents;
+		this.groups = groups.filter((g) => g.isActive);
+		m.setProperty("/people", [{ key: "none", text: "Niemand" }, ...agents.map((a) => ({ key: a.id, text: a.displayName }))]);
+		m.setProperty("/agentItems", agents.filter((a) => a.id !== session.userId).map((a) => ({ key: a.id, text: a.displayName })));
+		m.setProperty("/assignMenu", [{ key: session.userId, text: "Mir zuweisen" }, { key: "none", text: "Zuweisung aufheben" },
+			...agents.filter((a) => a.id !== session.userId).map((a) => ({ key: a.id, text: `${a.displayName} (${a.openTickets} offen)` }))]);
+		m.setProperty("/groups", this.groups);
+		m.setProperty("/groupMenu", [{ key: "none", text: "Keine Gruppe" }, ...this.groups.map((g) => ({ key: g.id, text: g.name }))]);
+		m.setProperty("/groupFilter", [{ key: "", text: "Alle Gruppen" }, ...this.groups.map((g) => ({ key: g.id, text: g.name }))]);
+		m.setProperty("/blocks", [
+			...responses.map((r) => ({ name: r.isPersonal ? `${r.name} (eigener)` : r.name, text: r.text, section: false })),
+			...legacy.map((b, i) => ({ name: b.name, text: b.content.text, section: i === 0 && responses.length > 0 })),
+		]);
+		// Namen für Erwähnungen im Verlauf stehen erst jetzt bereit.
+		if (m.getProperty("/t")) this.renderTimeline();
 	}
 
 	// ---- Liste ------------------------------------------------------------------------------------------------------
@@ -90,12 +135,22 @@ export default class Helpdesk extends BaseController {
 		const m = this.model();
 		m.setProperty("/busy", true);
 		try {
-			const filter = m.getProperty("/filter") as string;
-			const items = m.getProperty("/agent")
-				? await get<Summary[]>("tickets", { filter, category: m.getProperty("/category") || undefined })
-				: await get<Summary[]>("tickets/mine");
+			const agent = m.getProperty("/agent") as boolean;
+			if (agent) {
+				const q = String(m.getProperty("/query") ?? "").trim();
+				const [items, stats] = await Promise.all([
+					get<HdSummary[]>("tickets", {
+						filter: m.getProperty("/filter"), category: m.getProperty("/category") || undefined, priority: m.getProperty("/priority") || undefined,
+						group: m.getProperty("/group") || undefined, q: q.length >= 2 ? q : undefined,
+					}),
+					get<HelpdeskStats>("tickets/stats").catch(() => null),
+				]);
+				m.setProperty("/items", items);
+				if (stats) this.applyStats(stats);
+			} else {
+				m.setProperty("/items", await get<HdSummary[]>("tickets/mine"));
+			}
 			this.loadedAt = Date.now();
-			m.setProperty("/items", items);
 			this.applyList();
 		} catch (error) {
 			this.showError(error);
@@ -104,34 +159,90 @@ export default class Helpdesk extends BaseController {
 		}
 	}
 
+	private applyStats(stats: HelpdeskStats): void {
+		const m = this.model();
+		m.setProperty("/kpis", kpiTiles(stats));
+		const counts: Record<string, number> = { mine: stats.mine, unassigned: stats.unassigned, overdue: stats.overdue, waiting: stats.waiting, open: stats.open };
+		m.setProperty("/views", queueViews.map((v) => ({ ...v, count: counts[v.key] === undefined ? "" : String(counts[v.key]) })));
+		const maxCategory = Math.max(1, ...stats.byCategory.map((c) => c.open));
+		m.setProperty("/byCategory", stats.byCategory.filter((c) => c.open > 0).map((c) => ({
+			key: c.category, text: ticketCategories[c.category] ?? c.category, open: String(c.open), percent: Math.round((c.open / maxCategory) * 100) })));
+		const maxAgent = Math.max(1, ...stats.byAgent.map((a) => a.open));
+		m.setProperty("/byAgent", stats.byAgent.slice(0, 8).map((a) => ({ ...a, percent: Math.round((a.open / maxAgent) * 100),
+			label: a.overdue ? `${a.open} offen · ${a.overdue} überfällig` : `${a.open} offen` })));
+	}
+
 	private applyList(): void {
 		const m = this.model();
 		const agent = m.getProperty("/agent") as boolean;
 		const filter = m.getProperty("/filter") as string;
 		const category = m.getProperty("/category") as string;
 		const q = String(m.getProperty("/query") ?? "").trim().toLowerCase();
-		const sort = m.getProperty("/sort") as string;
-		let list = (m.getProperty("/items") as Summary[]).slice();
+		const sort = m.getProperty("/sort") as SortColumn;
+		const desc = m.getProperty("/desc") as boolean;
+		let list = (m.getProperty("/items") as HdSummary[]).slice();
 		if (!agent) {
 			list = list.filter((t) => filter === "all" || (filter === "done" ? done(t.status) : !done(t.status)));
 			if (category) list = list.filter((t) => t.category === category);
 		}
-		if (q) {
+		if (q && !agent) {
+			// Bearbeitung: Der Server sucht im Volltext (auch Beschreibung und Antworten); Melder: hier in Nummer, Titel und Namen.
 			list = list.filter((t) => q.split(/\s+/).every((w) =>
 				[t.number, t.title, t.reporterDisplayName, t.assigneeName, ticketCategories[t.category]].join(" ").toLowerCase().includes(w)));
 		}
-		const by: Record<string, (a: Summary, b: Summary) => number> = {
-			waiting: (a, b) => Number(b.reporterBlocked) - Number(a.reporterBlocked) || a.lastActivityAt.localeCompare(b.lastActivityAt),
-			recent: (a, b) => b.lastActivityAt.localeCompare(a.lastActivityAt),
-			priority: (a, b) => (priorityRank[a.priority] ?? 9) - (priorityRank[b.priority] ?? 9) || a.lastActivityAt.localeCompare(b.lastActivityAt),
-			number: (a, b) => b.number.localeCompare(a.number, "de", { numeric: true }),
-		};
-		list.sort(by[sort] ?? by.waiting);
-		m.setProperty("/visible", list.map((t) => ({ ...t,
-			who: agent ? `${t.reporterDisplayName ?? "–"} · ${t.assigneeName ? `bei ${t.assigneeName}` : "nicht zugewiesen"}` : t.assigneeName ? `bei ${t.assigneeName}` : "noch nicht zugewiesen" })));
+		list.sort((a, b) => compareTickets(a, b, sort, desc));
+		const now = Date.now();
+		m.setProperty("/visible", list.map((t) => {
+			const sla = slaInfo(t, now);
+			return { ...t, slaText: sla.text, slaTone: sla.tone, slaIcon: sla.icon, slaShort: ["overdue", "dueSoon"].includes(sla.key) ? sla.text : "",
+				highlight: highlight[sla.key] ?? "None",
+				who: agent ? `${t.reporterDisplayName ?? "–"} · ${t.assigneeName ? `bei ${t.assigneeName}` : "nicht zugewiesen"}`
+					: t.assigneeName ? `bei ${t.assigneeName}` : "noch nicht zugewiesen" };
+		}));
 		const unread = list.filter((t) => t.hasUnread).length;
 		m.setProperty("/countText", `${list.length} ${list.length === 1 ? "Ticket" : "Tickets"}${unread ? ` · ${unread} mit neuer Antwort` : ""}`);
-		m.setProperty("/noData", q ? `Keine Tickets zu „${q}“.` : agent ? "Keine Tickets in dieser Ansicht." : "Sie haben noch kein Ticket gemeldet.");
+		const view = queueViews.find((v) => v.key === filter);
+		m.setProperty("/viewTitle", view?.text ?? "Helpdesk");
+		m.setProperty("/noData", q ? `Keine Tickets zu „${q}“.` : agent ? view?.empty ?? "Keine Tickets in dieser Ansicht." : "Sie haben noch kein Ticket gemeldet.");
+		this.clearSelection();
+	}
+
+	private updateSortIcons(): void {
+		const m = this.model();
+		const sort = m.getProperty("/sort") as string;
+		const icon = m.getProperty("/desc") ? "sap-icon://sort-descending" : "sap-icon://sort-ascending";
+		const cols = ["number", "title", "reporter", "category", "priority", "status", "assignee", "due", "activity"];
+		m.setProperty("/sortIcons", Object.fromEntries(cols.map((c) => [c, c === sort ? icon : ""])));
+	}
+
+	onSortColumn(event: Event): void {
+		const col = String((event.getSource() as Control).data("col"));
+		const m = this.model();
+		m.setProperty("/desc", m.getProperty("/sort") === col ? !m.getProperty("/desc") : false);
+		m.setProperty("/sort", col);
+		this.updateSortIcons();
+		this.applyList();
+	}
+
+	onView(event: Event): void {
+		const params = event.getParameters() as { key?: string; selectedItem?: Item };
+		const key = params.key ?? params.selectedItem?.getKey() ?? (this.model().getProperty("/filter") as string);
+		this.model().setProperty("/filter", key);
+		void this.load();
+	}
+
+	onKpi(event: Event): void {
+		const key = String((event.getSource() as Control).getBindingContext("view")?.getProperty("key") ?? "");
+		if (!key) return;
+		this.model().setProperty("/filter", key);
+		void this.load();
+	}
+
+	onCategoryBar(event: Event): void {
+		const key = String((event.getSource() as Control).getBindingContext("view")?.getProperty("key") ?? "");
+		this.model().setProperty("/category", key);
+		this.model().setProperty("/filter", "open");
+		void this.load();
 	}
 
 	onFilter(): void {
@@ -139,23 +250,113 @@ export default class Helpdesk extends BaseController {
 		else this.applyList();
 	}
 
-	onSort(): void { this.applyList(); }
+	onSort(): void {
+		this.model().setProperty("/desc", false);
+		this.applyList();
+	}
 
-	onQuery(): void { this.applyList(); }
+	onQueryLive(): void {
+		this.applyList();
+		if (!this.model().getProperty("/agent")) return;
+		clearTimeout(this.searchTimer);
+		this.searchTimer = setTimeout(() => void this.load(), 350);
+	}
+
+	onSearch(): void {
+		if (this.model().getProperty("/agent")) void this.load();
+		else this.applyList();
+	}
+
+	onRefresh(): void { void this.load(); }
 
 	onSelect(event: Event): void {
 		const item = (event as Event<{ listItem: Control }>).getParameter("listItem");
-		const t = item?.getBindingContext("view")?.getObject() as Summary | undefined;
+		const t = item?.getBindingContext("view")?.getObject() as HdSummary | undefined;
 		if (t) this.nav(`/it-center/helpdesk/${t.id}`);
 	}
 
-	/** Zeile in der Liste nach einer Änderung aktualisieren (ohne die ganze Liste neu zu laden). */
-	private patchRow(s: Summary): void {
-		const m = this.model();
-		const items = (m.getProperty("/items") as Summary[]).map((t) => (t.id === s.id ? { ...s, hasUnread: false } : t));
-		if (!items.some((t) => t.id === s.id)) items.unshift({ ...s, hasUnread: false });
-		m.setProperty("/items", items);
-		this.applyList();
+	onRowPress(event: Event): void {
+		const t = (event.getSource() as Control).getBindingContext("view")?.getObject() as HdSummary | undefined;
+		if (t) this.nav(`/it-center/helpdesk/${t.id}`);
+	}
+
+	onBackToQueue(): void {
+		this.nav("/it-center/helpdesk");
+	}
+
+	onKnowledge(): void { this.nav("/wissen"); }
+
+	onSettings(): void { this.nav("/it-center/helpdesk-einstellungen"); }
+
+	// ---- Sammelbearbeitung -------------------------------------------------------------------------------------------
+
+	private table(): Table | undefined {
+		return this.byId("hdTable") as Table | undefined;
+	}
+
+	private selectedIds(): string[] {
+		return (this.table()?.getSelectedItems() ?? []).map((i: ListItemBase) => (i.getBindingContext("view")?.getObject() as HdSummary).id);
+	}
+
+	private clearSelection(): void {
+		this.table()?.removeSelections(true);
+		this.onTableSelection();
+	}
+
+	onTableSelection(): void {
+		const count = this.table()?.getSelectedItems().length ?? 0;
+		this.model().setProperty("/selectedCount", count);
+		this.model().setProperty("/selectionText", count === 1 ? "1 ausgewählt" : `${count} ausgewählt`);
+	}
+
+	private async bulk(body: Record<string, unknown>, what: string): Promise<void> {
+		const ids = this.selectedIds();
+		if (!ids.length) return;
+		const result = await this.run(() => post<{ updated: number; failed: { number: string | null; message: string }[] }>("tickets/bulk", { ids, ...body }));
+		if (!result) return;
+		if (result.failed.length) {
+			this.showError(new Error(`${result.updated} von ${ids.length} Tickets geändert. Nicht möglich:\n${
+				result.failed.map((f) => `${f.number ?? "?"}: ${f.message}`).join("\n")}`), what);
+		} else {
+			this.toast(`${result.updated} ${result.updated === 1 ? "Ticket" : "Tickets"}: ${what}`);
+		}
+		await this.load();
+	}
+
+	private static key(event: Menu$ItemSelectedEvent): string {
+		return String((event.getParameter("item") as MenuItem).data("key") ?? "");
+	}
+
+	async onBulkAssign(event: Menu$ItemSelectedEvent): Promise<void> {
+		const key = Helpdesk.key(event);
+		await this.bulk(key === "none" ? { unassign: true } : { assigneeUserId: key }, key === "none" ? "Zuweisung aufgehoben" : "zugewiesen");
+	}
+
+	async onBulkPriority(event: Menu$ItemSelectedEvent): Promise<void> {
+		const key = Helpdesk.key(event);
+		await this.bulk({ priority: key }, `Priorität ${ticketPriorities[key as keyof typeof ticketPriorities]?.text ?? key}`);
+	}
+
+	async onBulkGroup(event: Menu$ItemSelectedEvent): Promise<void> {
+		const key = Helpdesk.key(event);
+		await this.bulk(key === "none" ? { clearGroup: true } : { groupId: key }, "Gruppe gesetzt");
+	}
+
+	async onBulkStatus(event: Menu$ItemSelectedEvent): Promise<void> {
+		const status = Helpdesk.key(event);
+		const text = ticketStatus[status as keyof typeof ticketStatus]?.text ?? status;
+		if (!done(status)) {
+			await this.bulk({ status }, `Status ${text}`);
+			return;
+		}
+		const ids = this.selectedIds();
+		const saved = await openForm<boolean>({
+			title: `${ids.length} Tickets: ${text}`, width: "34rem", submitText: "Speichern",
+			intro: "Die Lösung erscheint bei allen ausgewählten Tickets im Verlauf und geht an die Melder.",
+			fields: [{ key: "resolution", label: "Lösung", type: "textarea", rows: 4, required: true, maxLength: 8000 }],
+			submit: async (v) => { await this.bulk({ status, resolution: v.resolution }, `Status ${text}`); return true; },
+		});
+		if (!saved) this.clearSelection();
 	}
 
 	// ---- Ticket -----------------------------------------------------------------------------------------------------
@@ -165,21 +366,27 @@ export default class Helpdesk extends BaseController {
 		m.setProperty("/t", null);
 		m.setProperty("/timeline", []);
 		m.setProperty("/facts", []);
+		m.setProperty("/ctx", null);
 		document.title = "Helpdesk – EstrichONE";
 	}
 
 	private async open(id: string): Promise<void> {
 		const m = this.model();
-		if ((m.getProperty("/t") as TicketDetail | null)?.summary.id !== id) {
+		if ((m.getProperty("/t") as HdDetail | null)?.summary.id !== id) {
 			m.setProperty("/reply", "");
 			m.setProperty("/pending", []);
 			m.setProperty("/internal", false);
+			m.setProperty("/mentions", []);
+			m.setProperty("/tab", "talk");
+			m.setProperty("/ctx", null);
+			m.setProperty("/times", []);
 		}
 		m.setProperty("/detailBusy", true);
 		try {
-			await this.apply(await get<TicketDetail>(`tickets/${id}`));
+			await this.apply(await get<HdDetail>(`tickets/${id}`));
 			// Abruf markiert als gelesen: Zähler in der Kopfleiste aktualisieren.
 			document.dispatchEvent(new CustomEvent("estrichone-notices"));
+			if (m.getProperty("/agent")) void this.loadContext(id);
 		} catch (error) {
 			this.showError(error);
 			this.nav("/it-center/helpdesk", true);
@@ -188,49 +395,68 @@ export default class Helpdesk extends BaseController {
 		}
 	}
 
-	private async apply(t: TicketDetail): Promise<void> {
+	private async apply(t: HdDetail): Promise<void> {
 		const m = this.model();
 		const s = t.summary;
 		m.setProperty("/t", t);
-		m.setProperty("/edit", { status: s.status, priority: s.priority, category: s.category, assignee: s.assigneeUserId ?? "none" });
+		m.setProperty("/edit", { status: s.status, priority: s.priority, category: s.category, assignee: s.assigneeUserId ?? "none",
+			group: s.groupId ?? "none", subcategory: s.subcategoryId ?? "none" });
+		this.updateSubOptions(s.category);
 		m.setProperty("/resolvedText", `Die IT hat das Ticket als gelöst markiert${t.resolution ? `: ${t.resolution}` : "."} Besteht das Problem weiter?`);
-		m.setProperty("/diagnostics", Object.entries(t.diagnostics ?? {}).map(([key, value]) => ({ key,
+		m.setProperty("/diagnostics", Object.entries(t.diagnostics ?? {}).map(([key, value]) => ({ key: diagnosticLabels[key] ?? key,
 			value: Array.isArray(value) ? value.map((v) => (typeof v === "object" ? JSON.stringify(v) : String(v))).join("\n") : typeof value === "object" ? JSON.stringify(value) : String(value) })));
+		m.setProperty("/sla", slaInfo(s));
+		m.setProperty("/rate", { value: t.rating ?? 0, comment: t.ratingComment ?? "" });
+		m.setProperty("/linkCount", (t.links?.length ?? 0) + (t.articles?.length ?? 0) ? String((t.links?.length ?? 0) + (t.articles?.length ?? 0)) : "");
+		m.setProperty("/timeText", t.totalMinutes ? formatMinutes(t.totalMinutes) : "");
+		m.setProperty("/timeTotal", formatMinutes(t.totalMinutes ?? 0));
+		m.setProperty("/watcherText", t.watcherNames?.length ? `Verfolgt außerdem: ${t.watcherNames.join(", ")}` : "");
 		document.title = `${s.number} ${s.title} – EstrichONE`;
-		const timeline = (t as TicketDetail & { timeline?: TicketTimelineItem[] | null }).timeline ?? [];
+		const timeline = t.timeline ?? [];
 		const ids = [...new Set(timeline.flatMap((i) => i.attachmentFileIds))].filter((id) => !this.files.has(id));
 		await Promise.all(ids.map(async (id) => this.files.set(id, await get<FileResponse>(`files/${id}`).catch(() => null))));
 		this.timeline = timeline;
 		m.setProperty("/facts", this.facts(t, timeline));
+		m.setProperty("/audit", auditRows(timeline));
 		this.renderTimeline();
 		this.patchRow(s);
+		if (m.getProperty("/tab") === "time") void this.loadTimes();
 		setTimeout(() => this.scrollToEnd(), 0);
 	}
 
-	/** Kopf-Fakten: Kategorie, Melder, Zuständig, Alter, Reaktionsziel (erste Antwort der IT), Quelle, Gerät/Bauakte. */
-	private facts(t: TicketDetail, timeline: TicketTimelineItem[]): { label: string; value: string; state: string; icon: string }[] {
+	private updateSubOptions(category: TicketCategory): void {
+		const subs = this.hdOptions?.categories.find((c) => c.key === category)?.subcategories ?? [];
+		this.model().setProperty("/subOptions", [{ key: "none", text: "–" }, ...subs.map((s) => ({ key: s.id, text: s.name }))]);
+	}
+
+	/** Kopf-Fakten: Kategorie, Melder, Zuständig, Gruppe, Alter, Ziele, Quelle, Gerät. */
+	private facts(t: HdDetail, timeline: HdTimelineItem[]): { label: string; value: string; state: string; icon: string }[] {
 		const s = t.summary;
-		const firstAnswer = timeline.find((i) => i.kind === "comment" && !i.isReporter);
-		const target = (responseHours[s.priority] ?? 24) * 3_600_000;
-		const created = new Date(s.createdAt).getTime();
-		const sla = done(s.status) ? { value: "erledigt", state: "Success" }
-			: firstAnswer ? { value: new Date(firstAnswer.at).getTime() - created <= target ? "eingehalten" : "verspätet beantwortet", state: new Date(firstAnswer.at).getTime() - created <= target ? "Success" : "Warning" }
-				: Date.now() - created > target ? { value: `überschritten (Ziel ${responseHours[s.priority] ?? 24} h)`, state: "Error" }
-					: { value: `Antwort bis ${new Date(created + target).toLocaleString("de-DE", { weekday: "short", hour: "2-digit", minute: "2-digit" })}`, state: "None" };
+		const agent = this.model().getProperty("/agent") as boolean;
 		const sources: Record<string, string> = { web: "Web", desktop: "Windows", ios: "iOS", android: "Android" };
-		return [
-			{ label: "Kategorie", value: ticketCategories[s.category] ?? s.category, state: "None", icon: "" },
+		const fmt = (v: string | null | undefined) => (v ? new Date(v).toLocaleString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" }) : "–");
+		const firstAnswer = s.firstResponseAt ?? timeline.find((i) => i.kind === "comment" && !i.isReporter)?.at ?? null;
+		const rows = [
+			{ label: "Kategorie", value: `${ticketCategories[s.category] ?? s.category}${s.subcategoryName ? ` › ${s.subcategoryName}` : ""}`, state: "None", icon: "" },
 			{ label: "Melder", value: s.reporterDisplayName ?? "–", state: "None", icon: "" },
-			{ label: "Zuständig", value: s.assigneeName ?? "nicht zugewiesen", state: s.assigneeName ? "None" : "Warning", icon: "" },
+			{ label: "Zuständig", value: `${s.assigneeName ?? "nicht zugewiesen"}${s.groupName ? ` (${s.groupName})` : ""}`, state: s.assigneeName ? "None" : "Warning", icon: "" },
 			{ label: "Gemeldet", value: `${waitingSince(s.createdAt)} · ${sources[s.source] ?? s.source}`, state: "None", icon: "" },
-			{ label: "Reaktionsziel", value: sla.value, state: sla.state, icon: "" },
-			...(t.deviceName ? [{ label: "Gerät", value: t.deviceName, state: "None", icon: "" }] : []),
 		];
+		if (agent && s.responseDueAt) {
+			rows.push({ label: "Erste Antwort", value: firstAnswer ? `erfolgt ${fmt(firstAnswer)}` : `bis ${fmt(s.responseDueAt)}`,
+				state: firstAnswer ? (new Date(firstAnswer) <= new Date(s.responseDueAt) ? "Success" : "Warning") : s.slaState === "overdue" && s.dueKind === "response" ? "Error" : "None", icon: "" });
+			rows.push({ label: "Lösung bis", value: fmt(s.resolutionDueAt), state: s.slaState === "overdue" && s.dueKind === "resolution" ? "Error"
+				: s.slaState === "breached" ? "Warning" : s.slaState === "met" ? "Success" : "None", icon: "" });
+		}
+		if (t.deviceName) rows.push({ label: "Gerät", value: t.deviceName, state: "None", icon: "" });
+		if (t.rating) rows.push({ label: "Bewertung", value: `${"★".repeat(t.rating)}${"☆".repeat(5 - t.rating)}`, state: t.rating >= 4 ? "Success" : t.rating <= 2 ? "Error" : "None", icon: "" });
+		return rows;
 	}
 
 	private renderTimeline(): void {
 		const m = this.model();
 		const talkOnly = m.getProperty("/show") === "talk";
+		const names = new Map(this.agents.map((a) => [a.id, a.displayName]));
 		m.setProperty("/timeline", this.timeline
 			.filter((i) => !talkOnly || ["created", "comment", "note"].includes(i.kind))
 			.map((i) => {
@@ -239,7 +465,8 @@ export default class Helpdesk extends BaseController {
 					...i, bubble, icon: icons[i.kind] ?? "sap-icon://history", kindText: kindTexts[i.kind] ?? i.kind,
 					tone: i.kind, who: i.kind === "note" ? "note" : i.isReporter ? "reporter" : "agent",
 					headline: i.kind === "created" ? `${i.actorName ?? "Melder"} hat gemeldet` : i.kind === "note" ? `${i.actorName ?? ""} · interne Notiz` : i.actorName ?? "",
-					eventText: i.kind === "status" ? i.text : null,
+					eventText: ["status", "rating"].includes(i.kind) ? i.text : null,
+					mentions: i.mentionUserIds?.length ? `Benachrichtigt: ${i.mentionUserIds.map((id) => names.get(id) ?? "Kollege").join(", ")}` : "",
 					attachments: i.attachmentFileIds.map((id) => {
 						const f = this.files.get(id);
 						return attachmentView({ id, name: f?.originalName ?? "Anhang", contentType: f?.contentType ?? "" });
@@ -255,13 +482,70 @@ export default class Helpdesk extends BaseController {
 
 	onShow(): void { this.renderTimeline(); }
 
-	private ticket(): TicketDetail {
-		return this.model().getProperty("/t") as TicketDetail;
+	onTab(): void {
+		const tab = this.model().getProperty("/tab") as string;
+		if (tab === "time") void this.loadTimes();
+		if ((tab === "context" || tab === "links") && !this.model().getProperty("/ctx")) void this.loadContext(this.ticket().summary.id);
+		if (tab === "talk") setTimeout(() => this.scrollToEnd(), 0);
+	}
+
+	private ticket(): HdDetail {
+		return this.model().getProperty("/t") as HdDetail;
+	}
+
+	/** Melder, Geräte (App-Version, Update-Stand), weitere Tickets, passende Artikel, Systemstatus. */
+	private async loadContext(id: string): Promise<void> {
+		const m = this.model();
+		m.setProperty("/contextBusy", true);
+		try {
+			const [ctx, health, info] = await Promise.all([
+				get<TicketContext>(`tickets/${id}/context`),
+				get<{ backup: { severity: string; message: string | null; configured: boolean }; archive: { severity: string; configured: boolean };
+					banners: { text: string; severity: string }[] }>("system/health-banner").catch(() => null),
+				get<{ serverVersion: string }>("server-info").catch(() => null),
+			]);
+			if (this.ticket()?.summary.id !== id) return;
+			m.setProperty("/ctx", { ...ctx, devices: ctx.devices.map((d) => ({ ...d, line: deviceLine(d) || "–",
+				updateText: d.updateState ? `${updateStates[d.updateState]?.text ?? d.updateState}${d.updateState === "recommended" || d.updateState === "required" ? ` (${d.latestVersion ?? "neu"})` : ""}` : "",
+				updateTone: d.updateState ? updateStates[d.updateState]?.tone ?? "None" : "None" })) });
+			m.setProperty("/lastLoginText", ctx.reporter?.lastLoginAt ? `Zuletzt angemeldet ${waitingSince(ctx.reporter.lastLoginAt)}` : "");
+			const sev = (s: string | undefined) => (s === "error" || s === "critical" ? "Error" : s === "warning" ? "Warning" : "Success");
+			const system = [{ label: "Server", value: info?.serverVersion ? `Version ${info.serverVersion}` : "erreichbar", state: "Success", icon: "sap-icon://it-host" }];
+			if (health) {
+				if (health.backup.configured) system.push({ label: "Sicherung", value: health.backup.message ?? "in Ordnung", state: sev(health.backup.severity), icon: "sap-icon://upload-to-cloud" });
+				if (health.archive.configured) system.push({ label: "Archiv", value: health.archive.severity === "ok" ? "erreichbar" : "gestört", state: sev(health.archive.severity), icon: "sap-icon://inbox" });
+				for (const b of health.banners.slice(0, 3)) system.push({ label: "Hinweis", value: b.text, state: sev(b.severity), icon: "sap-icon://message-warning" });
+			}
+			m.setProperty("/system", system);
+		} catch (error) {
+			this.showError(error);
+		} finally {
+			m.setProperty("/contextBusy", false);
+		}
+	}
+
+	private async loadTimes(): Promise<void> {
+		const t = this.ticket();
+		if (!t) return;
+		const times = await get<TimeEntry[]>(`tickets/${t.summary.id}/time`).catch(() => [] as TimeEntry[]);
+		this.model().setProperty("/times", times.map((e) => ({ ...e, duration: formatMinutes(e.minutes), own: e.userId === session.userId })));
+		const total = times.reduce((sum, e) => sum + e.minutes, 0);
+		this.model().setProperty("/timeTotal", formatMinutes(total));
+		this.model().setProperty("/timeText", total ? formatMinutes(total) : "");
+	}
+
+	/** Zeile in der Liste nach einer Änderung aktualisieren (ohne die ganze Liste neu zu laden). */
+	private patchRow(s: HdSummary): void {
+		const m = this.model();
+		const items = (m.getProperty("/items") as HdSummary[]).map((t) => (t.id === s.id ? { ...s, hasUnread: false } : t));
+		if (!items.some((t) => t.id === s.id)) items.unshift({ ...s, hasUnread: false });
+		m.setProperty("/items", items);
+		this.applyList();
 	}
 
 	private async update(body: Record<string, unknown>, message: string): Promise<void> {
 		const t = this.ticket();
-		const updated = await this.run(() => patch<TicketDetail>(`tickets/${t.summary.id}`, { unassign: false, ...body }));
+		const updated = await this.run(() => patch<HdDetail>(`tickets/${t.summary.id}`, { unassign: false, ...body }));
 		if (updated) {
 			await this.apply(updated);
 			this.toast(message);
@@ -276,17 +560,17 @@ export default class Helpdesk extends BaseController {
 		if (status === t.summary.status) return;
 		if (done(status)) {
 			// Lösung ist Pflicht: kurz im Dialog erfassen (Textbausteine als Vorlage).
-			const blocks = (this.model().getProperty("/blocks") as { name: string; content: { text: string } }[]) ?? [];
-			const saved = await openForm<TicketDetail>({
+			const blocks = (this.model().getProperty("/blocks") as { name: string; text: string }[]) ?? [];
+			const saved = await openForm<HdDetail>({
 				title: status === "resolved" ? "Als gelöst markieren" : "Ticket schließen", width: "34rem", submitText: "Speichern",
 				intro: "Die Lösung wird dem Melder im Verlauf angezeigt. Bitte kurz und verständlich beschreiben.",
 				initial: { resolution: t.resolution ?? "" },
 				fields: [
 					...(blocks.length ? [{ key: "block", label: "Textbaustein", type: "select" as const, options: [{ key: "", text: "–" }, ...blocks.map((b, i) => ({ key: String(i), text: b.name }))],
-						onChange: (value: unknown, form: { set(key: string, v: unknown): void }) => { if (value !== "") form.set("resolution", blocks[Number(value)]?.content.text ?? ""); } }] : []),
+						onChange: (value: unknown, form: FormHandle) => { if (value !== "") form.set("resolution", this.fill(blocks[Number(value)]?.text ?? "")); } }] : []),
 					{ key: "resolution", label: "Lösung", type: "textarea", rows: 4, required: true, maxLength: 8000 },
 				],
-				submit: (v) => patch<TicketDetail>(`tickets/${t.summary.id}`, { status, resolution: v.resolution, unassign: false }),
+				submit: (v) => patch<HdDetail>(`tickets/${t.summary.id}`, { status, resolution: v.resolution, unassign: false }),
 			});
 			if (saved) {
 				await this.apply(saved);
@@ -301,12 +585,24 @@ export default class Helpdesk extends BaseController {
 
 	async onQuickPriority(): Promise<void> {
 		const priority = this.model().getProperty("/edit/priority") as string;
-		if (priority !== this.ticket().summary.priority) await this.update({ priority }, "Priorität geändert");
+		if (priority !== this.ticket().summary.priority) await this.update({ priority }, "Priorität geändert, Ziele neu berechnet");
 	}
 
 	async onQuickCategory(): Promise<void> {
 		const category = this.model().getProperty("/edit/category") as string;
 		if (category !== this.ticket().summary.category) await this.update({ category }, "Kategorie geändert");
+	}
+
+	async onQuickSubcategory(): Promise<void> {
+		const sub = this.model().getProperty("/edit/subcategory") as string;
+		if ((sub === "none" ? null : sub) === (this.ticket().summary.subcategoryId ?? null)) return;
+		await this.update(sub === "none" ? { clearSubcategory: true } : { subcategoryId: sub }, "Unterkategorie geändert");
+	}
+
+	async onQuickGroup(): Promise<void> {
+		const group = this.model().getProperty("/edit/group") as string;
+		if ((group === "none" ? null : group) === (this.ticket().summary.groupId ?? null)) return;
+		await this.update(group === "none" ? { clearGroup: true } : { groupId: group }, "Gruppe geändert");
 	}
 
 	async onQuickAssignee(): Promise<void> {
@@ -324,11 +620,181 @@ export default class Helpdesk extends BaseController {
 
 	async onReopen(): Promise<void> {
 		const t = this.ticket();
-		const updated = await this.run(() => post<TicketDetail>(`tickets/${t.summary.id}/reopen`, {}));
+		const updated = await this.run(() => post<HdDetail>(`tickets/${t.summary.id}/reopen`, {}));
 		if (updated) await this.apply(updated);
 	}
 
+	async onRate(): Promise<void> {
+		const t = this.ticket();
+		const rate = this.model().getProperty("/rate") as { value: number; comment: string };
+		const updated = await this.run(() => post<HdDetail>(`tickets/${t.summary.id}/rating`, { rating: Math.round(rate.value), comment: rate.comment || null }),
+			"Danke für Ihre Bewertung");
+		if (updated) await this.apply(updated);
+	}
+
+	onOpenMerged(): void {
+		const t = this.ticket();
+		const id = t.summary.mergedIntoTicketId;
+		if (id) this.nav(`/it-center/helpdesk/${id}`);
+	}
+
+	// ---- Verknüpfen, Zusammenführen, Wissen, Zeit --------------------------------------------------------------------
+
+	/** Andere Tickets zur Auswahl (offene zuerst, ohne das aktuelle). */
+	private async otherTicketOptions(): Promise<{ key: string; text: string; additionalText: string }[]> {
+		const id = this.ticket().summary.id;
+		const list = await get<HdSummary[]>("tickets", { filter: "all", limit: 300, sort: "recent" }).catch(() => [] as HdSummary[]);
+		return list.filter((t) => t.id !== id && !t.mergedIntoTicketId)
+			.sort((a, b) => Number(done(a.status)) - Number(done(b.status)))
+			.map((t) => ({ key: t.id, text: `${t.number} · ${t.title}`, additionalText: ticketStatus[t.status]?.text ?? t.status }));
+	}
+
+	async onMerge(): Promise<void> {
+		const t = this.ticket();
+		const tickets = (await this.otherTicketOptions()).filter((o) => o.additionalText !== ticketStatus.closed.text);
+		const merged = await openForm<HdDetail>({
+			title: `${t.summary.number} zusammenführen`, width: "36rem", submitText: "Zusammenführen", danger: true,
+			intro: "Dieses Ticket wird als Duplikat geschlossen. Der Melder verfolgt das Ziel-Ticket und erhält dort die Antworten. "
+				+ "Beschreibung und Anhänge werden als interne Notiz übernommen.",
+			fields: [{ key: "target", label: "Weiter bearbeiten in", type: "combo", required: true, options: tickets, placeholder: "Nummer oder Titel eingeben" }],
+			submit: (v) => post<HdDetail>(`tickets/${t.summary.id}/merge`, { targetTicketId: v.target }),
+		});
+		if (merged) {
+			this.toast(`Mit ${merged.summary.number} zusammengeführt`);
+			this.loadedAt = 0;
+			this.nav(`/it-center/helpdesk/${merged.summary.id}`);
+		}
+	}
+
+	async onLink(): Promise<void> {
+		const t = this.ticket();
+		const tickets = await this.otherTicketOptions();
+		const linked = await openForm<HdDetail>({
+			title: "Ticket verknüpfen", width: "36rem", submitText: "Verknüpfen",
+			intro: "Verknüpfte Tickets erscheinen bei beiden unter „Verknüpfungen“, z. B. bei gleicher Ursache.",
+			fields: [{ key: "other", label: "Ticket", type: "combo", required: true, options: tickets, placeholder: "Nummer oder Titel eingeben" }],
+			submit: (v) => post<HdDetail>(`tickets/${t.summary.id}/links`, { otherTicketId: v.other, kind: "related" }),
+		});
+		if (linked) {
+			await this.apply(linked);
+			this.model().setProperty("/tab", "links");
+		}
+	}
+
+	async onUnlink(event: Event): Promise<void> {
+		const item = (event as Event<{ listItem: Control }>).getParameter("listItem");
+		const link = item.getBindingContext("view")?.getObject() as { ticketId: string; number: string };
+		const updated = await this.run(() => del<HdDetail>(`tickets/${this.ticket().summary.id}/links/${link.ticketId}`), `Verknüpfung zu ${link.number} entfernt`);
+		if (updated) await this.apply(updated);
+	}
+
+	onOpenLinked(event: Event): void {
+		const link = (event.getSource() as Control).getBindingContext("view")?.getObject() as { ticketId: string };
+		this.nav(`/it-center/helpdesk/${link.ticketId}`);
+	}
+
+	onOpenOther(event: Event): void {
+		const other = (event.getSource() as Control).getBindingContext("view")?.getObject() as HdSummary;
+		this.nav(`/it-center/helpdesk/${other.id}`);
+	}
+
+	onDevices(): void { this.nav("/it-center/geraete"); }
+
+	async onLinkArticle(): Promise<void> {
+		const t = this.ticket();
+		const articles = await get<KnowledgeArticleSummary[]>("helpdesk/articles").catch(() => [] as KnowledgeArticleSummary[]);
+		const linked = await openForm<HdDetail>({
+			title: "Artikel verknüpfen", width: "36rem", submitText: "Verknüpfen",
+			intro: "Veröffentlichte Artikel sieht der Melder im Ticket als Anleitung.",
+			fields: [{ key: "article", label: "Artikel", type: "combo", required: true, placeholder: "Titel eingeben",
+				options: articles.map((a) => ({ key: a.id, text: a.title, additionalText: a.isPublished ? "" : "Entwurf" })) }],
+			submit: (v) => post<HdDetail>(`tickets/${t.summary.id}/articles`, { articleId: v.article }),
+		});
+		if (linked) await this.apply(linked);
+	}
+
+	async onLinkSuggested(event: Event): Promise<void> {
+		const article = (event.getSource() as Control).getBindingContext("view")?.getObject() as KnowledgeArticleSummary;
+		const updated = await this.run(() => post<HdDetail>(`tickets/${this.ticket().summary.id}/articles`, { articleId: article.id }), "Artikel verknüpft");
+		if (updated) {
+			await this.apply(updated);
+			const ctx = this.model().getProperty("/ctx") as TicketContext | null;
+			if (ctx) this.model().setProperty("/ctx/suggestedArticles", ctx.suggestedArticles.filter((a) => a.id !== article.id));
+		}
+	}
+
+	async onUnlinkArticle(event: Event): Promise<void> {
+		const item = (event as Event<{ listItem: Control }>).getParameter("listItem");
+		const article = item.getBindingContext("view")?.getObject() as { id: string };
+		const updated = await this.run(() => del<HdDetail>(`tickets/${this.ticket().summary.id}/articles/${article.id}`), "Verknüpfung entfernt");
+		if (updated) await this.apply(updated);
+	}
+
+	onOpenArticle(event: Event): void {
+		const article = (event.getSource() as Control).getBindingContext("view")?.getObject() as { id: string };
+		this.nav(`/wissen/${article.id}`);
+	}
+
+	async onArticleFromTicket(): Promise<void> {
+		const t = this.ticket();
+		const lastAnswer = [...this.timeline].reverse().find((i) => i.kind === "comment" && !i.isReporter)?.text ?? "";
+		const created = await openForm<{ id: string; title: string }>({
+			title: "Lösung als Artikel speichern", width: "40rem", submitText: "Speichern und verknüpfen",
+			intro: "So steht die Lösung beim nächsten Mal in der Wissensdatenbank bereit und wird beim Melden vorgeschlagen.",
+			initial: { title: t.summary.title, body: t.resolution ?? lastAnswer, category: t.summary.category, isPublished: true },
+			fields: [
+				{ key: "title", label: "Titel", required: true, maxLength: 200 },
+				{ key: "body", label: "Anleitung", type: "textarea", rows: 8, required: true, maxLength: 20000 },
+				{ key: "category", label: "Kategorie", type: "select", options: [{ key: "", text: "–" }, ...options(ticketCategories)] },
+				{ key: "keywords", label: "Suchbegriffe", placeholder: "z. B. drucker, toner, papierstau" },
+				{ key: "isPublished", label: "Veröffentlichen (für alle sichtbar)", type: "checkbox" },
+			],
+			submit: (v) => post<{ id: string; title: string }>("helpdesk/articles", { title: v.title, body: v.body, category: v.category || null,
+				keywords: v.keywords || null, isPublished: !!v.isPublished }),
+		});
+		if (!created) return;
+		const updated = await this.run(() => post<HdDetail>(`tickets/${t.summary.id}/articles`, { articleId: created.id }), "Artikel gespeichert und verknüpft");
+		if (updated) await this.apply(updated);
+	}
+
+	async onAddTime(): Promise<void> {
+		const t = this.ticket();
+		const saved = await openForm<TimeEntry>({
+			title: `Arbeitszeit für ${t.summary.number}`, width: "30rem", submitText: "Erfassen",
+			initial: { workDate: new Date().toISOString().slice(0, 10) },
+			fields: [
+				{ key: "duration", label: "Dauer", required: true, placeholder: "z. B. 30, 1:15 oder 1,5 h",
+					validate: (v) => (parseMinutes(String(v ?? "")) ? null : "Bitte eine Dauer wie 30, 1:15 oder 1,5 h angeben.") },
+				{ key: "workDate", label: "Datum", type: "date", required: true },
+				{ key: "note", label: "Tätigkeit", maxLength: 500, placeholder: "z. B. Drucker vor Ort geprüft" },
+			],
+			submit: (v) => post<TimeEntry>(`tickets/${t.summary.id}/time`, { minutes: parseMinutes(String(v.duration)), workDate: v.workDate, note: v.note || null }),
+		});
+		if (saved) {
+			this.toast(`${formatMinutes(saved.minutes)} erfasst`);
+			this.model().setProperty("/tab", "time");
+			await this.apply(await get<HdDetail>(`tickets/${t.summary.id}`));
+		}
+	}
+
+	async onDeleteTime(event: Event): Promise<void> {
+		const item = (event as Event<{ listItem: Control }>).getParameter("listItem");
+		const entry = item.getBindingContext("view")?.getObject() as TimeEntry & { own: boolean };
+		if (!entry.own) {
+			this.toast("Nur eigene Zeitbuchungen lassen sich löschen.");
+			return;
+		}
+		await this.run(() => del(`tickets/${this.ticket().summary.id}/time/${entry.id}`), "Zeitbuchung gelöscht");
+		await this.loadTimes();
+	}
+
 	// ---- Antworten ---------------------------------------------------------------------------------------------------
+
+	private fill(text: string): string {
+		const t = this.ticket();
+		return fillPlaceholders(text, { reporter: t.summary.reporterDisplayName, ticket: t.summary.number, title: t.summary.title,
+			agent: this.agents.find((a) => a.id === session.userId)?.displayName ?? null });
+	}
 
 	private addFiles(files: Iterable<File>): void {
 		if (!this.model().getProperty("/canUpload")) return;
@@ -389,8 +855,7 @@ export default class Helpdesk extends BaseController {
 		const text = String((event.getParameter("item") as MenuItem).data("text") ?? "");
 		const m = this.model();
 		const reply = String(m.getProperty("/reply") ?? "");
-		const name = this.ticket().summary.reporterDisplayName?.replace(/ \(laut Eingabe\)$/, "") ?? "";
-		m.setProperty("/reply", (reply ? `${reply.trimEnd()}\n\n` : "") + text.replace(/\{Melder\}/g, name).replace(/\{Ticket\}/g, this.ticket().summary.number));
+		m.setProperty("/reply", (reply ? `${reply.trimEnd()}\n\n` : "") + this.fill(text));
 	}
 
 	async onComment(): Promise<void> {
@@ -399,15 +864,19 @@ export default class Helpdesk extends BaseController {
 		const pending = m.getProperty("/pending") as { name: string; file: File }[];
 		const text = String(m.getProperty("/reply") ?? "");
 		if (!text.trim() && !pending.length) return;
+		const agent = m.getProperty("/agent") as boolean;
+		const mentions = agent ? [...new Set([...(m.getProperty("/mentions") as string[]), ...mentionedAgents(text, this.agents)])].filter((id) => id !== session.userId) : [];
 		const updated = await this.run(async () => {
 			const attachmentFileIds: string[] = [];
 			for (const p of pending) attachmentFileIds.push(await uploadLoose(p.file));
-			return post<TicketDetail>(`tickets/${t.summary.id}/comments`, { text, isInternal: m.getProperty("/internal"), attachmentFileIds });
+			return post<HdDetail>(`tickets/${t.summary.id}/comments`, { text, isInternal: m.getProperty("/internal"), attachmentFileIds,
+				mentionUserIds: mentions.length ? mentions : undefined });
 		});
 		if (updated) {
 			m.setProperty("/reply", "");
 			m.setProperty("/internal", false);
 			m.setProperty("/pending", []);
+			m.setProperty("/mentions", []);
 			await this.apply(updated);
 		}
 	}
@@ -433,21 +902,52 @@ export default class Helpdesk extends BaseController {
 			const images = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
 			if (images.length) add(images.map((f, i) => new File([f], f.name && f.name !== "image.png" ? f.name : `Bildschirmfoto-${files.length + i + 1}.png`, { type: f.type })));
 		};
+		// Passende Anleitungen aus der Wissensdatenbank, sobald Titel oder Beschreibung feststehen.
+		const suggestions = new VBox({ visible: false });
+		suggestions.addStyleClass("eoHdSuggestBox");
+		let lastQuery = "";
+		const suggest = async (form: FormHandle): Promise<void> => {
+			const q = `${String(form.get("title") ?? "")} ${String(form.get("description") ?? "")}`.trim();
+			if (q.length < 6 || q === lastQuery || !this.hdOptions?.suggestArticles) return;
+			lastQuery = q;
+			const found = await get<KnowledgeArticleSummary[]>("helpdesk/articles/suggest", { q, category: String(form.get("category") ?? "") || undefined })
+				.catch(() => [] as KnowledgeArticleSummary[]);
+			suggestions.destroyItems();
+			if (!found.length) { suggestions.setVisible(false); return; }
+			suggestions.addItem(new Text({ text: "Vielleicht hilft schon eine dieser Anleitungen:" }).addStyleClass("eoStrong"));
+			for (const a of found) {
+				suggestions.addItem(new Link({ text: a.title, wrapping: true, press: () => window.open(`/wissen/${a.id}`, "_blank", "noopener") }));
+			}
+			suggestions.setVisible(true);
+		};
+		const subOptions = (category: string) => [{ key: "", text: "–" },
+			...(this.hdOptions?.categories.find((c) => c.key === category)?.subcategories ?? []).map((s) => ({ key: s.id, text: s.name }))];
+		const anySubs = !!this.hdOptions?.categories.some((c) => c.subcategories.length);
 		if (canUpload) document.addEventListener("paste", paste);
 		try {
-			const saved = await openForm<TicketDetail>({
+			const saved = await openForm<HdDetail>({
 				title: "Neues IT-Ticket", width: "36rem",
 				intro: "Bitte beschreiben Sie das Problem möglichst genau. Die IT antwortet im Verlauf des Tickets.",
-				initial: { category: "other", priority: "normal", reporterBlocked: false },
+				initial: { category: "other", priority: "normal", reporterBlocked: false, subcategory: "" },
 				fields: [
-					{ key: "title", label: "Kurzbeschreibung", required: true, maxLength: 200, placeholder: "z. B. Drucker im Büro druckt nicht" },
-					{ key: "category", label: "Kategorie", type: "select", required: true, options: options(ticketCategories) },
+					{ key: "title", label: "Kurzbeschreibung", required: true, maxLength: 200, placeholder: "z. B. Drucker im Büro druckt nicht",
+						onChange: (_v, form) => void suggest(form) },
+					{ key: "category", label: "Kategorie", type: "select", required: true, options: options(ticketCategories),
+						onChange: (value, form) => {
+							const select = form.control("subcategory") as Select | undefined;
+							if (!select) return;
+							select.destroyItems();
+							for (const o of subOptions(String(value))) select.addItem(new Item({ key: o.key, text: o.text }));
+							select.setSelectedKey("");
+							void suggest(form);
+						} },
+					...(anySubs ? [{ key: "subcategory", label: "Unterkategorie", type: "select" as const, options: subOptions("other") }] : []),
 					{ key: "priority", label: "Priorität", type: "select", required: true, options: options(ticketPriorities) },
 					{ key: "description", label: "Beschreibung", type: "textarea", rows: 6, maxLength: 8000,
-						placeholder: "Was ist passiert? Seit wann? Fehlermeldung? Was haben Sie schon versucht?" },
+						placeholder: "Was ist passiert? Seit wann? Fehlermeldung? Was haben Sie schon versucht?", onChange: (_v, form) => void suggest(form) },
 					{ key: "reporterBlocked", label: "Ich kann deswegen nicht arbeiten", type: "checkbox" },
 				],
-				extra: canUpload ? () => [new Button({
+				extra: () => [suggestions, ...(canUpload ? [new Button({
 					text: "Anhang oder Bildschirmfoto", icon: "sap-icon://attachment",
 					tooltip: "Dateien wählen (Bildschirmfotos auch mit Strg+V einfügen)",
 					press: () => {
@@ -458,14 +958,14 @@ export default class Helpdesk extends BaseController {
 						input.addEventListener("change", () => add(input.files ?? []));
 						input.click();
 					},
-				}), list] : undefined,
+				}), list] : [])],
 				submitText: "Ticket anlegen",
 				submit: async (v) => {
 					const attachmentFileIds: string[] = [];
 					for (const f of files) attachmentFileIds.push(await uploadLoose(f));
-					return post<TicketDetail>("tickets", {
+					return post<HdDetail>("tickets", {
 						id: uuidv7(), title: v.title, description: v.description || null, category: v.category, priority: v.priority,
-						source: "web", reporterBlocked: !!v.reporterBlocked, attachmentFileIds,
+						subcategoryId: v.subcategory || null, source: "web", reporterBlocked: !!v.reporterBlocked, attachmentFileIds,
 					});
 				},
 			});
@@ -479,3 +979,12 @@ export default class Helpdesk extends BaseController {
 		}
 	}
 }
+
+/** Lesbare Namen der Diagnosefelder (14, Abschnitt 3). */
+const diagnosticLabels: Record<string, string> = {
+	appVersion: "App-Version", build: "Build", platform: "Plattform", osVersion: "Betriebssystem", deviceModel: "Gerätemodell", deviceKind: "Gerätetyp",
+	deviceId: "Geräte-ID", network: "Netzwerk", syncOldestPending: "Ältester offener Vorgang", syncLastSuccess: "Letzter Abgleich",
+	syncPendingOperations: "Offene Vorgänge", syncPendingUploads: "Offene Uploads", syncFailedUploads: "Fehlgeschlagene Uploads",
+	syncPendingBytes: "Ausstehende Datenmenge (Byte)", syncConflicts: "Konflikte", freeStorageBytes: "Freier Speicher (Byte)", errorCodes: "Fehlercodes",
+	log: "Protokoll",
+};

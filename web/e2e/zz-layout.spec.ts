@@ -12,7 +12,7 @@ const pages = [
   '/anrufe', '/anfragen', '/kunden', '/bestellungen', '/material', '/lieferanten',
   '/planung/cockpit', '/planung', '/planung/kalender', '/planung/teamplaner', '/planung/arbeitsplan', '/planung/kolonnen', '/planung/geraete',
   '/personal', '/personal/urlaub', '/verwaltung', '/verwaltung/stammdaten', '/verwaltung/rollen', '/verwaltung/benutzer', '/verwaltung/nachrichten',
-  '/it-center/geraete', '/it-center/helpdesk', '/it-center/meldungen', '/meine-meldungen', '/system/sicherung', '/system/backup-ziele', '/system/archiv', '/system/auslagerung', '/system/e-mail',
+  '/it-center/geraete', '/it-center/helpdesk', '/it-center/helpdesk-einstellungen', '/wissen', '/it-center/meldungen', '/meine-meldungen', '/system/sicherung', '/system/backup-ziele', '/system/archiv', '/system/auslagerung', '/system/e-mail',
   '/system/aktenarchiv', '/system/ueberwachung', '/system/hinweise', '/system/protokoll', '/konto/sicherheit',
   ...['firma', 'darstellung', 'pdf', 'bauakte', 'nummernkreise', 'dokumente', 'module', 'sitzungen', 'benachrichtigungen', 'speicher', 'system']
     .map((b) => `/system/firmendaten${b === 'firma' ? '' : `?bereich=${b}`}`),

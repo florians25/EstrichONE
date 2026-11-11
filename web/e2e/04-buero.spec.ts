@@ -48,7 +48,8 @@ test('Helpdesk: Meldung bearbeiten, interne Notiz, Lösung dokumentieren', async
 
   await nav(page, 'Helpdesk').click();
   await expect(page.locator('[id$="hdTitle"]')).toHaveText('Helpdesk');
-  const row = page.locator('[id$="hdList"] li').filter({ hasText: 'Drucker im Büro druckt nicht' });
+  // Arbeitsplatz der IT: Liste mit Ansichten; ein Klick öffnet das Ticket.
+  const row = page.locator('[id$="hdTable"] tr').filter({ hasText: 'Drucker im Büro druckt nicht' });
   await expect(row.getByText('Kann nicht arbeiten')).toBeVisible();
   await row.getByText('Drucker im Büro druckt nicht').click();
   await expect(page).toHaveURL(/\/it-center\/helpdesk\//);

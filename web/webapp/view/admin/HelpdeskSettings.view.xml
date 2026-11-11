@@ -1,0 +1,226 @@
+<mvc:View controllerName="estrichone.controller.admin.HelpdeskSettings" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin" showFooter="{view>/dirty}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.helpdeskSettings}" level="H1"/></f:heading>
+				<f:expandedContent>
+					<Text text="Ziele je Priorität, Geschäftszeiten, Gruppen, Unterkategorien, automatische Zuweisung und Textbausteine für die Bearbeitung."/>
+				</f:expandedContent>
+				<f:actions>
+					<Button text="Zum Helpdesk" icon="sap-icon://headset" press=".onHelpdesk"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox busy="{view>/busy}" renderType="Bare">
+				<MessageStrip text="Ansehen ist möglich. Ändern dürfen nur Personen mit dem Recht „Helpdesk einrichten“ (Textbausteine: alle Bearbeiter)." type="Information"
+					showIcon="true" visible="{= !${view>/canManage} }" class="sapUiSmallMarginBottom"/>
+				<IconTabBar id="hdSetTabs" selectedKey="{view>/tab}" expandable="false" headerMode="Inline" applyContentPadding="false" class="eoHdSetTabs">
+					<items>
+						<IconTabFilter key="sla" text="Ziele und Zeiten">
+							<form:SimpleForm id="hdSla" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" maxContainerCols="1" width="60rem">
+								<core:Title text="Reaktions- und Lösungsziele"/>
+								<Label text="Ziele überwachen" labelFor="hdSlaOn"/>
+								<VBox>
+									<Switch id="hdSlaOn" state="{view>/s/slaEnabled}" customTextOn=" " customTextOff=" " enabled="{view>/canManage}" change=".onDirty"/>
+									<Text text="Fälligkeiten in Liste und Ticket, Ansicht „Überfällig“ und Hinweis an die Zuständigen, wenn ein Ziel überschritten ist." class="eoMuted"/>
+								</VBox>
+								<Label text="Ziele je Priorität"/>
+								<Table id="hdTargets" items="{view>/s/targets}" contextualWidth="Auto" class="eoHdTargets">
+									<columns>
+										<Column width="8rem"><Text text="Priorität"/></Column>
+										<Column><Text text="Erste Antwort (Std.)"/></Column>
+										<Column><Text text="Lösung (Std.)"/></Column>
+										<Column width="8rem"><Text text="Rund um die Uhr"/></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<cells>
+												<ObjectStatus text="{path: 'view>priority', formatter: 'fmt.ticketPriorityText'}" state="{path: 'view>priority', formatter: 'fmt.ticketPriorityState'}"/>
+												<StepInput value="{view>responseHours}" min="0.25" max="720" step="0.5" displayValuePrecision="2" width="9rem" enabled="{view>/canManage}" change=".onDirty"/>
+												<StepInput value="{view>resolutionHours}" min="0.25" max="2160" step="1" displayValuePrecision="2" width="9rem" enabled="{view>/canManage}" change=".onDirty"/>
+												<Switch state="{view>aroundTheClock}" customTextOn=" " customTextOff=" " enabled="{view>/canManage}" change=".onDirty"/>
+											</cells>
+										</ColumnListItem>
+									</items>
+								</Table>
+								<core:Title text="Geschäftszeiten"/>
+								<Label text="Arbeitszeit" labelFor="hdStart"/>
+								<HBox alignItems="Center" class="eoEntryRow">
+									<TimePicker id="hdStart" value="{view>/s/hours/start}" valueFormat="HH:mm" displayFormat="HH:mm" width="8rem" enabled="{view>/canManage}" change=".onDirty"/>
+									<Text text="bis" class="sapUiTinyMarginBeginEnd"/>
+									<TimePicker id="hdEnd" value="{view>/s/hours/end}" valueFormat="HH:mm" displayFormat="HH:mm" width="8rem" enabled="{view>/canManage}" change=".onDirty"
+										ariaLabelledBy="hdEndLabel"/>
+								</HBox>
+								<Label text="Arbeitstage" labelFor="hdDays"/>
+								<MultiComboBox id="hdDays" selectedKeys="{view>/days}" items="{view>/dayOptions}" width="100%" enabled="{view>/canManage}" selectionFinish=".onDirty">
+									<core:Item key="{view>key}" text="{view>text}"/>
+								</MultiComboBox>
+								<Label text="Feiertage und Betriebsruhe" labelFor="hdHolidays"/>
+								<VBox>
+									<TextArea id="hdHolidays" value="{view>/holidays}" rows="4" width="100%" placeholder="Ein Datum je Zeile, z. B. 24.12.2026" enabled="{view>/canManage}"
+										liveChange=".onDirty" valueState="{view>/holidayState}" valueStateText="{view>/holidayError}"/>
+									<Text text="An diesen Tagen steht die Uhr. Die Rückfrage an den Melder hält sie ebenfalls an." class="eoMuted"/>
+								</VBox>
+								<core:Title text="Optionen"/>
+								<Label text="Neue Tickets melden" labelFor="hdNotify"/>
+								<VBox>
+									<Switch id="hdNotify" state="{view>/s/notifyAgentsOnNew}" customTextOn=" " customTextOff=" " enabled="{view>/canManage}" change=".onDirty"/>
+									<Text text="An die zuständige Person, sonst an die Gruppe, sonst an alle Bearbeiter." class="eoMuted"/>
+								</VBox>
+								<Label text="Anleitungen vorschlagen" labelFor="hdSuggest"/>
+								<Switch id="hdSuggest" state="{view>/s/suggestArticles}" customTextOn=" " customTextOff=" " enabled="{view>/canManage}" change=".onDirty"/>
+								<Label text="Bewertung nach der Lösung" labelFor="hdRating"/>
+								<Switch id="hdRating" state="{view>/s/ratingEnabled}" customTextOn=" " customTextOff=" " enabled="{view>/canManage}" change=".onDirty"/>
+								<Label text="Arbeitszeit erfassen" labelFor="hdTimeOn"/>
+								<Switch id="hdTimeOn" state="{view>/s/timeTrackingEnabled}" customTextOn=" " customTextOff=" " enabled="{view>/canManage}" change=".onDirty"/>
+								<Label text="Gelöste Tickets schließen nach" labelFor="hdClose"/>
+								<HBox alignItems="Center">
+									<StepInput id="hdClose" value="{view>/s/autoCloseDays}" min="1" max="60" width="8rem" enabled="{view>/canManage}" change=".onDirty"/>
+									<Text text="Tagen ohne Widerspruch" class="sapUiTinyMarginBegin"/>
+								</HBox>
+							</form:SimpleForm>
+						</IconTabFilter>
+						<IconTabFilter key="groups" text="Gruppen" count="{= ${view>/groups}.length }">
+							<Table id="hdGroups" items="{view>/groups}" noDataText="Noch keine Gruppe. Beispiel: „IT“ für Geräte und Apps, „Büro“ für Drucker und Telefon."
+								contextualWidth="Auto" popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Bearbeitungsgruppen" level="H2"/>
+										<ToolbarSpacer/>
+										<Button text="Gruppe anlegen" icon="sap-icon://add" press=".onAddGroup" enabled="{view>/canManage}"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column><Text text="Mitglieder"/></Column>
+									<Column width="7rem"><Text text="Status"/></Column>
+									<Column width="6rem" hAlign="End"/>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<cells>
+											<VBox><Text text="{view>name}" class="eoStrong"/><Text text="{view>description}" class="eoMuted" visible="{= !!${view>description} }"/></VBox>
+											<Text text="{view>memberText}"/>
+											<ObjectStatus text="{= ${view>isActive} ? 'aktiv' : 'inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }"/>
+											<HBox justifyContent="End">
+												<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditGroup" enabled="{view>/canManage}"/>
+												<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteGroup" enabled="{view>/canManage}"/>
+											</HBox>
+										</cells>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="subcategories" text="Unterkategorien" count="{= ${view>/subcategories}.length }">
+							<Table id="hdSubs" items="{view>/subcategories}" noDataText="Noch keine Unterkategorie. Beispiel: Drucker/Büro-IT › „Drucker“, „Telefon“, „E-Mail“."
+								contextualWidth="Auto">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Unterkategorien" level="H2"/>
+										<ToolbarSpacer/>
+										<Button text="Unterkategorie anlegen" icon="sap-icon://add" press=".onAddSub" enabled="{view>/canManage}"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column width="14rem"><Text text="Kategorie"/></Column>
+									<Column><Text text="Unterkategorie"/></Column>
+									<Column width="7rem"><Text text="Status"/></Column>
+									<Column width="6rem" hAlign="End"/>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<cells>
+											<Text text="{path: 'view>category', formatter: 'fmt.ticketCategoryText'}"/>
+											<Text text="{view>name}" class="eoStrong"/>
+											<ObjectStatus text="{= ${view>isActive} ? 'aktiv' : 'inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }"/>
+											<HBox justifyContent="End">
+												<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditSub" enabled="{view>/canManage}"/>
+												<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteSub" enabled="{view>/canManage}"/>
+											</HBox>
+										</cells>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="rules" text="Automatische Zuweisung" count="{= ${view>/rules}.length }">
+							<Table id="hdRules" items="{view>/rules}" noDataText="Noch keine Regel. Neue Tickets bleiben dann ohne Zuweisung, bis jemand sie übernimmt."
+								contextualWidth="Auto" popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Regeln (die erste passende gilt)" level="H2"/>
+										<ToolbarSpacer/>
+										<Button text="Regel anlegen" icon="sap-icon://add" press=".onAddRule" enabled="{view>/canManage}"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column width="4rem"><Text text="Nr."/></Column>
+									<Column width="12rem"><Text text="Name"/></Column>
+									<Column><Text text="Wenn"/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Dann"/></Column>
+									<Column width="6rem"><Text text="Status"/></Column>
+									<Column width="6rem" hAlign="End"/>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<cells>
+											<Text text="{view>sortOrder}" class="eoTabular"/>
+											<Text text="{view>name}" class="eoStrong"/>
+											<Text text="{view>when}"/>
+											<Text text="{view>then}"/>
+											<ObjectStatus text="{= ${view>isActive} ? 'aktiv' : 'aus' }" state="{= ${view>isActive} ? 'Success' : 'None' }"/>
+											<HBox justifyContent="End">
+												<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditRule" enabled="{view>/canManage}"/>
+												<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteRule" enabled="{view>/canManage}"/>
+											</HBox>
+										</cells>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="responses" text="Textbausteine" count="{= ${view>/responses}.length }">
+							<Table id="hdResponses" items="{view>/responses}" noDataText="Noch keine Textbausteine." contextualWidth="Auto" popinLayout="GridSmall">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Title text="Textbausteine für Antworten" level="H2"/>
+										<ToolbarSpacer/>
+										<Text text="Platzhalter: \{Melder\}, \{Vorname\}, \{Ticket\}, \{Titel\}, \{Bearbeiter\}" class="eoMuted"/>
+										<Button text="Textbaustein anlegen" icon="sap-icon://add" press=".onAddResponse"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column width="14rem"><Text text="Name"/></Column>
+									<Column><Text text="Text"/></Column>
+									<Column width="10rem" minScreenWidth="Tablet" demandPopin="true"><Text text="Kategorie"/></Column>
+									<Column width="6rem" hAlign="End"/>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<cells>
+											<VBox><Text text="{view>name}" class="eoStrong"/><Text text="nur für mich" class="eoMuted" visible="{view>isPersonal}"/></VBox>
+											<Text text="{view>text}" maxLines="3"/>
+											<Text text="{= ${view>category} ? ${view>categoryText} : 'alle' }"/>
+											<HBox justifyContent="End">
+												<Button icon="sap-icon://edit" type="Transparent" tooltip="Bearbeiten" press=".onEditResponse"/>
+												<Button icon="sap-icon://delete" type="Transparent" tooltip="Löschen" press=".onDeleteResponse"/>
+											</HBox>
+										</cells>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+					</items>
+				</IconTabBar>
+			</VBox>
+		</f:content>
+		<f:footer>
+			<OverflowToolbar>
+				<ToolbarSpacer/>
+				<Button text="Verwerfen" press=".onReset"/>
+				<Button id="hdSave" text="Speichern" type="Emphasized" press=".onSave" enabled="{view>/canManage}"/>
+			</OverflowToolbar>
+		</f:footer>
+	</f:DynamicPage>
+	<core:InvisibleText id="hdEndLabel" text="Ende der Arbeitszeit"/>
+</mvc:View>

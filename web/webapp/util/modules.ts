@@ -50,6 +50,7 @@ const PATH_RULES: PathRule[] = [
 	{ path: "/personal", modules: ["staff"] },
 	{ path: "/system/aktenarchiv", modules: ["dossiers"] },
 	{ path: "/it-center/helpdesk", modules: ["helpdesk"] },
+	{ path: "/wissen", modules: ["helpdesk"] },
 	{ path: "/it-center/meldungen", modules: ["feedback"] },
 	{ path: "/meine-meldungen", modules: ["feedback"] },
 	{ path: "/chat", modules: ["chat"] },

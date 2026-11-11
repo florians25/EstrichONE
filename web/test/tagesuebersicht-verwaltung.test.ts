@@ -70,7 +70,7 @@ describe('Verwaltung', () => {
   it('Rechte filtern Bereiche und leere Gruppen', () => {
     const sections = adminSections((p) => p === 'users.manage');
     expect(sections.map((s) => s.key)).toEqual(['groupAdminUsers']);
-    expect(sections[0].areas.map((x) => x.key)).toEqual(['users', 'roles', 'helpdesk']);
+    expect(sections[0].areas.map((x) => x.key)).toEqual(['users', 'roles', 'helpdesk', 'knowledge']);
   });
 
   it('Reiter der Systemeinstellungen markieren ihren Navigationseintrag', () => {
