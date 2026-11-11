@@ -75,10 +75,10 @@
 					<columns>
 						<Column><Text text="Gerät"/></Column>
 						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Person"/></Column>
-						<Column width="8rem"><Text text="App"/></Column>
-						<Column width="13rem"><Text text="Stand"/></Column>
+						<Column width="6rem"><Text text="App"/></Column>
+						<Column width="15rem"><Text text="Stand"/></Column>
 						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuletzt gesehen"/></Column>
-						<Column width="12rem" hAlign="End" visible="{view>/canManage}"><Text text="Aktion"/></Column>
+						<Column width="14rem" hAlign="End" visible="{view>/canManage}"><Text text="Aktion"/></Column>
 					</columns>
 					<items>
 						<ColumnListItem>
@@ -88,7 +88,7 @@
 							</HBox>
 							<Text text="{view>person}"/>
 							<Text text="{= ${view>appVersion} || '–' }" class="eoTabular"/>
-							<ObjectStatus text="{view>stateText}" state="{view>stateState}" inverted="true"/>
+							<ObjectStatus text="{view>stateText}" state="{view>stateState}" inverted="true" class="eoStatusOneLine"/>
 							<Text text="{view>seen}" class="eoTabular"/>
 							<Button text="Zum Update auffordern" type="Transparent" icon="sap-icon://bell" press=".onRequestUpdate" visible="{view>canRequest}"/>
 						</ColumnListItem>

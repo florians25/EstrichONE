@@ -1149,3 +1149,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoNewAkteSumValue.sapMText { overflow-wrap: anywhere; }
 .eoNewAkteReview { max-width: 56rem; }
 .eoNewAkteReview .eoNewAkteSumRow { grid-template-columns: 11rem minmax(0, 1fr); }
+
+/* Verwaltung › App-Updates: Stand in einer Zeile */
+.eoStatusOneLine.sapMObjStatus .sapMObjStatusText { white-space: nowrap; }

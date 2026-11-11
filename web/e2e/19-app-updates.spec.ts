@@ -10,7 +10,7 @@ const shot = async (page: Page, name: string) => {
   await page.screenshot({ path: `${process.env['SCREENSHOT_DIR'] ?? 'test-results/screenshots'}/${name}.png`, fullPage: true });
 };
 
-const field = (page: Page, id: string) => page.locator(`[id$="--${id}-inner"]`);
+const field = (page: Page, id: string) => page.locator(`input[id$="--${id}-inner"], textarea[id$="--${id}-inner"]`);
 
 test('App-Updates: Versionen, Regeln mit Prüfung, erzwungene Mindestversion sperrt alte Apps (426), Web arbeitet weiter', async ({ page }) => {
   test.setTimeout(120_000);
@@ -22,7 +22,7 @@ test('App-Updates: Versionen, Regeln mit Prüfung, erzwungene Mindestversion spe
     await page.locator('.sapMLIB').filter({ hasText: 'iOS- und Android-App: Versionen' }).click();
     await expect(page).toHaveURL(/\/it-center\/app-updates/);
     await expect(page.getByRole('heading', { name: 'App-Updates', level: 1 })).toBeVisible();
-    await expect(page.locator('[id$="--appServerVersion"]')).not.toBeEmpty();
+    await expect(page.locator('span[id$="--appServerVersion"]')).not.toBeEmpty();
     await expect(page.getByText('Regeln', { exact: true })).toBeVisible();
     await shot(page, 'web-app-updates');
 
@@ -31,14 +31,14 @@ test('App-Updates: Versionen, Regeln mit Prüfung, erzwungene Mindestversion spe
     await field(page, 'appMinimum').fill('99.0.0');
     await field(page, 'appMessage').fill('Bitte bis Freitag aktualisieren');
     await field(page, 'appIosUrl').fill('http://testflight.example.com/join/abc');
-    await page.locator('[id$="--appSave"]').click();
+    await page.locator('button[id$="--appSave"]').click();
     const dialog = page.getByRole('alertdialog', { name: 'Bitte prüfen' }).or(page.getByRole('dialog', { name: 'Bitte prüfen' }));
     await expect(dialog).toContainText('nur https-Adressen');
     await dialog.getByRole('button').first().click();
 
     // Gültig speichern; die Mindestversion liegt nie über der verfügbaren Version (hier: Serverversion).
     await field(page, 'appIosUrl').fill('https://testflight.apple.com/join/abc');
-    await page.locator('[id$="--appSave"]').click();
+    await page.locator('button[id$="--appSave"]').click();
     await expect(toast(page)).toContainText('App-Updates gespeichert');
     await shot(page, 'web-app-updates-regeln');
 
@@ -62,7 +62,7 @@ test('App-Updates: Versionen, Regeln mit Prüfung, erzwungene Mindestversion spe
     if ((await enforce.getAttribute('aria-checked')) === 'true') {
       await field(page, 'appMinimum').fill('');
       await enforce.click();
-      await page.locator('[id$="--appSave"]').click();
+      await page.locator('button[id$="--appSave"]').click();
       await expect(toast(page)).toContainText('App-Updates gespeichert');
     }
   }
