@@ -163,7 +163,7 @@ Speicher, Module und Pushnachrichten haben zusätzlich einen eigenen Eintrag in 
 | **Darstellung und Karte** | Farbschema und Dichte als Vorgabe für neue Benutzer, Kachelserver und Quellenangabe der Karte |
 | **PDF-Layout** | Firmenlogo im Kopf, EstrichONE-Logo in der Fußzeile, Akzentfarbe, zusätzliche Fußzeile (Bankverbindung, Registergericht, USt-IdNr.), Fotos je Zeile |
 | **Speicher** | Speicherschonende Ablage von Fotos und PDFs, Belegung, Nachverdichten |
-| **Module** | Material und Chat ein- und ausschalten |
+| **Module** | Alle Fachmodule (Planung, Material, Personal, Urlaub, Anrufe, Protokolle, Abnahmen, Aufgaben, Mängel, Helpdesk, Chat …) ein- und ausschalten |
 | **Weitere Bereiche** | Sprungziele zu Sicherung, Backup-Zielen, Archiv, E-Mail und Protokoll |
 
 ### Anmeldung
@@ -210,14 +210,25 @@ Dateien nachverdichten** wendet die Einstellungen nachträglich auf ältere Date
 
 ### Module
 
-![Module](bilder/einstellungen-module.png "Reiter Module: Material und Chat")
+![Module](bilder/einstellungen-module.png "Reiter Module: Karten je Bereich mit Schalter")
 
-- **Material** (Material, Lieferanten, Bestellungen): Abgeschaltete Module verschwinden aus Navigation, Bauakte und
-  Übersichten. Die Daten bleiben erhalten und sind nach dem Einschalten wieder da.
-- **Chat**: **Chat einschalten**, **Löschfrist (Tage)**, **Vorschau in Pushnachrichten** (aus empfohlen: nur „Neue
-  Nachricht von …“), **Mitarbeiter untereinander** (aus: Mitarbeiter ohne Recht „Chat verwalten“ können Einzelchats nur
-  mit dem Büro beginnen). **Bestand** zeigt Umfang und letzte Löschung; Auskunft und Löschung je Person erledigen Sie in
-  der Benutzerverwaltung.
+Jedes Fachmodul hat eine Karte mit Schalter, gruppiert nach Bereichen (Büro, Planung, Material, Personal, Baustelle und
+Dokumentation, Kommunikation und Service). Die Schalter wirken **sofort** für alle Benutzer in Web und Apps:
+
+- **Ausschalten** fragt nach. Das Modul verschwindet aus Navigation, Startseite, Suche, Bauakte, Tagesübersicht und den
+  Apps; seine Benachrichtigungen (Postfach, Push, E-Mail) entfallen. Wer eine Seite eines abgeschalteten Moduls direkt
+  aufruft (Lesezeichen, alter Link), sieht „Modul deaktiviert“. Die Schnittstelle antwortet mit `MODULE_DISABLED`.
+  **Die Daten bleiben erhalten** und sind nach dem Einschalten wieder da. Administratoren können vorhandene Daten weiter lesen.
+- **Abhängigkeiten** stehen auf der Karte („Benötigt: …“, „Wird benötigt von: …“): *Urlaub und Abwesenheit* braucht
+  *Personal*, *Bestellungen* braucht *Material und Lieferanten*, *Maschinen und Fahrzeuge* braucht *Disposition und
+  Kolonnenplanung*. Abhängige Module gehen beim Ausschalten mit aus; beim Einschalten kommen fehlende Voraussetzungen
+  nach Rückfrage mit.
+- **Immer aktiv** sind Bauakten, Kunden und Kontakte, Benutzer und Rechte, Einstellungen und Sicherung.
+- Jede Änderung steht im **Protokoll** („settings.modules_changed“).
+- **Chat**: Schalter auf der Karte unter „Kommunikation und Service“; darunter **Löschfrist (Tage)**, **Vorschau in
+  Pushnachrichten** (aus empfohlen: nur „Neue Nachricht von …“), **Mitarbeiter untereinander** (aus: Mitarbeiter ohne
+  Recht „Chat verwalten“ können Einzelchats nur mit dem Büro beginnen). **Bestand** zeigt Umfang und letzte Löschung;
+  Auskunft und Löschung je Person erledigen Sie in der Benutzerverwaltung.
 
 ## E-Mail
 
