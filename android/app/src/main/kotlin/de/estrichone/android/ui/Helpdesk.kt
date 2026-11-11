@@ -215,7 +215,7 @@ fun TicketScreen(id: String) {
         }
     }) { padding ->
         LoadView(ticket) {
-            val full = t!!
+            val full = (ticket as? Load.Done)?.value ?: return@LoadView
             LazyColumn(contentPadding = padding.content(), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.readable()) {
                 item {
                     Text(full.summary.title, style = MaterialTheme.typography.headlineSmall)

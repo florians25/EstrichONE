@@ -98,4 +98,18 @@ class HelpdeskTests {
         """.trimIndent())
         assertEquals(listOf("Hallo"), old.history().map { it.text })
     }
+
+    @Test
+    fun `Demomodus liefert Verlauf, Bewertung und Unterkategorien`() = kotlinx.coroutines.runBlocking {
+        val api = EstrichOneApi("https://demo.invalid", MemorySessionStore(), SoftwareDeviceKeys(), DemoServer().client())
+        api.signIn("demo", "demo", "Test")
+        val open = api.ticket(DemoData.TICKET)
+        assertTrue(open.history().first().kind == "created")
+        assertFalse(open.canRate)
+        val resolved = api.ticket("0193a1b2-de00-7000-8000-00000000c004")
+        assertTrue(resolved.canRate)
+        assertEquals(4, api.rateTicket(resolved.summary.id, 4, "gut").rating)
+        assertTrue(api.helpdeskOptions().categories.any { it.subcategories.isNotEmpty() })
+        assertEquals(1, api.suggestArticles("Fotos fehlen", "sync").size)
+    }
 }
