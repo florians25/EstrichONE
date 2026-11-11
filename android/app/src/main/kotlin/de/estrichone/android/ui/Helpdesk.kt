@@ -266,7 +266,7 @@ fun TicketScreen(id: String) {
                         }
                     }
                 }
-                if (full.canRate && !agent) item {
+                if (full.canRate) item {
                     SectionCard(padding = PaddingValues(14.dp)) {
                         Text(if (full.rating == null) "Wie zufrieden sind Sie mit der Lösung?" else "Ihre Bewertung", style = MaterialTheme.typography.titleSmall)
                         Row {
