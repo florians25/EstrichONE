@@ -257,7 +257,7 @@ struct TicketDetailView: View {
                             TicketTimelineRow(entry: entry, isOwn: isOwn(entry))
                                 .id(entry.id)
                         }
-                        if detail.isRatable, !isAgent { ratingCard(detail) }
+                        if detail.isRatable { ratingCard(detail) }
                         if detail.summary.status == .resolved, !isAgent {
                             Button("Ticket wieder öffnen") { Task { await reopen() } }
                                 .estrichButton(.secondary, fullWidth: true)
