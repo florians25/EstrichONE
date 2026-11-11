@@ -113,8 +113,9 @@ im Web eingerichtet hat (Apple Push, siehe Benutzerhandbuch Web).
 Funktioniert etwas nicht – die App, das Gerät, der Zugang –, melden Sie es direkt aus der App:
 
 1. **Mehr** → **Problem melden** (oder auf der Anmeldeseite **Anmeldung klappt nicht? Problem melden**).
-2. Beschreiben Sie unter **Was ist passiert?** das Problem, optional mit **Details**, wählen Sie **Kategorie** und
-   **Priorität**. **Dringend – ich kann nicht arbeiten** hebt die Meldung hervor.
+2. Beschreiben Sie unter **Was ist passiert?** das Problem, optional mit **Details**, wählen Sie **Kategorie**, falls
+   angeboten eine genauere Angabe (z. B. **Drucker**), und **Priorität**. **Dringend – ich kann nicht arbeiten** hebt die
+   Meldung hervor. Passen Anleitungen aus der Wissensdatenbank, zeigt Android sie schon beim Schreiben an.
 3. Mit **Bildschirmfoto oder Foto anhängen** legen Sie ein Bild bei.
 4. **Technische Informationen mitsenden** (App, System, Gerät, Synchronisation, Netzwerk, freier Speicher, Fehlercodes, Protokoll) hilft der IT; mit
    **Anzeigen, was gesendet wird** sehen Sie genau, was dabei ist. **Nie enthalten** sind Passwörter, PINs, Inhalte von
@@ -124,6 +125,9 @@ Funktioniert etwas nicht – die App, das Gerät, der Zugang –, melden Sie es 
 Unter **Mehr** → **Helpdesk** → **Meine Meldungen** sehen Sie den Stand Ihrer Meldungen (offen, Rückfrage an Sie,
 erledigt) mit dem ganzen Verlauf. Stellt die IT eine **Rückfrage**, antworten Sie unten im Feld **Antwort an die IT**.
 Ist das Problem gelöst, aber besteht weiter, öffnen Sie die Meldung mit **Problem besteht weiter – wieder öffnen** erneut.
+Nach der Lösung bewerten Sie mit **1 bis 5 Sternen** und einem freiwilligen Kommentar, wie zufrieden Sie waren. Ohne
+Verbindung wird die Meldung samt Fotos auf dem Gerät gespeichert und automatisch gesendet; bis dahin steht sie unter
+**Wird gesendet**. Eine Pushnachricht zur Antwort der IT öffnet direkt die Meldung.
 
 **Für die IT:** Wer im Betrieb Meldungen bearbeitet, sieht im Helpdesk zusätzlich den Reiter **Bearbeitung** mit allen
 Meldungen (Suche nach Nummer, Titel, Melder; Filter nach Stand). In einer Meldung können Sie sie sich mit **Mir zuweisen**

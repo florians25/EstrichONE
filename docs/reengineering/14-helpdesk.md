@@ -93,3 +93,25 @@ Bearbeitung im Desktop mit diesem. Statistik, SLA und Textbausteine in 1.1.
 - **AK-2:** Interne Notizen sind über die API für den Melder nicht abrufbar (Berechtigungstest).
 - **AK-3:** Das Diagnosepaket enthält bei einem Test mit präparierten Bauakten-, Kunden- und Tokendaten
   keine dieser Zeichenfolgen.
+
+## 8. Ausbau zum Service-Desk (1.1)
+
+- **Ansichten und Liste:** Meine, Nicht zugewiesen, Überfällig, Wartet auf Rückmeldung, Alle offenen, Meine Gruppen,
+  Erledigt, Alle; Volltextsuche (Nummer, Titel, Beschreibung, Melder, Antworten), Sortierung je Spalte,
+  Sammelbearbeitung (`POST /tickets/bulk`, je Ticket gespeichert, Fehler je Ticket zurück).
+- **SLA:** Reaktions- und Lösungsziel je Priorität in Geschäftszeit (`helpdesk_settings`, Standard 1/4, 4/16, 8/40,
+  24/80 Stunden, Mo–Fr 07:00–17:00, Europe/Berlin, Feiertage). „Rückfrage“ hält die Uhr an; die angehaltene Geschäftszeit
+  verschiebt das Lösungsziel. Erste Antwort = erste öffentliche Antwort der Bearbeitung oder Rückfrage/Lösung. Die Wartung
+  meldet überschrittene Ziele einmal an Zuständige, sonst Gruppe, sonst alle Bearbeiter (`ticket.overdue`).
+- **Gruppen, Unterkategorien, Regeln:** erste passende Regel (Kategorie, Unterkategorie, Stichwort) setzt Gruppe,
+  Person (fest oder „wenigste offene Tickets“) und Priorität, wenn der Melder keine gewählt hat.
+- **Zusammenführen und Verknüpfen:** Duplikat wird geschlossen, sein Melder wird Beobachter des Ziels (`watcher_user_ids`),
+  Beschreibung und Anhänge als interne Notiz. Verknüpfungen „hängt zusammen“/„Duplikat“ (`ticket_links`).
+- **Zeiterfassung** (`ticket_time_entries`), **Textbausteine** (`ticket_canned_responses`, gemeinsam oder persönlich),
+  **Erwähnungen** (`mention_user_ids`, nur Bearbeiter), **Prüfpfad** aus `ticket_events`.
+- **Wissensdatenbank** (`knowledge_articles`): veröffentlicht für alle, Entwürfe für die Bearbeitung; Vorschläge beim
+  Melden (`GET /helpdesk/articles/suggest`).
+- **Kontext:** Melder, seine Geräte mit App-Version und Update-Stand (`IAppUpdatePolicy.EvaluateAsync`), weitere Tickets.
+- **Bewertung** nach der Lösung (1–5, nur Melder). **Kennzahlen** über `GET /tickets/stats`.
+- **Rechte:** `helpdesk.agent` (Bearbeitung, Textbausteine, Wissensdatenbank), neu `helpdesk.manage` (Ziele, Gruppen,
+  Unterkategorien, Regeln). Die Standardrolle IT-Administration erhält `helpdesk.manage` per Migration.

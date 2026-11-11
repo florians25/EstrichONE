@@ -3,22 +3,64 @@
 ## Helpdesk {#helpdesk}
 
 Klemmt etwas – am iPad der Kolonne, an der App oder im Büro –, melden Mitarbeiter es als **Ticket**. Die Apps senden auf
-Wunsch technische Angaben (Gerät, Version, Fehlermeldung) mit; Bildschirmfotos lassen sich anhängen. Das Helpdesk-Team
-bearbeitet die Tickets unter **Benutzer & Geräte** → **Helpdesk**.
+Wunsch technische Angaben (Gerät, Version, Abgleich, Fehlercodes) mit; Fotos und Bildschirmfotos lassen sich anhängen.
+Das Helpdesk-Team bearbeitet die Tickets unter **Benutzer & Geräte** → **Helpdesk**.
 
-![Helpdesk](bilder/helpdesk.png "Ticketliste und Ticket mit Verlauf und Antwortfeld")
+![Helpdesk](bilder/helpdesk.png "Arbeitsplatz der IT mit Kennzahlen, Ansichten und Ticketliste")
 
-- Links die Ticketliste mit Nummer, Titel, Melder und Alter. Filter **Offen**, **Mir**, **Neu/frei**, **Alle**, nach
-  Kategorie (Anmeldung, Synchronisation, App-Fehler, Gerätedefekt, Büro-IT, Zugriff, Sonstiges) sowie Sortierung
-  **Wartet am längsten**, **Neueste Aktivität**, **Priorität** oder **Nummer**. Rot markiert: **Kann nicht arbeiten**.
-- Rechts das gewählte Ticket mit **Status**, **Kategorie**, **Priorität** und **Zuständig**. **Mir zuweisen** übernimmt
-  das Ticket; **Wieder öffnen** holt ein erledigtes Ticket zurück.
-- Der **Verlauf** zeigt alle Nachrichten und Änderungen (**Alles** oder **Nur Nachrichten**).
-- Im Antwortfeld schreiben Sie dem Melder – mit **Datei anhängen**, Bildschirmfotos per <kbd>Strg</kbd> + <kbd>V</kbd>
-  und **Textbaustein**. **Interne Notiz** ist für den Melder unsichtbar. **Senden** mit <kbd>Strg</kbd> + <kbd>Enter</kbd>.
+### Arbeitsplatz der IT
 
-Mit **Neues Ticket** melden auch Sie selbst ein Problem. Jeder Benutzer sieht seine eigenen Tickets und die Antworten;
-neue Antworten erscheinen als Benachrichtigung.
+- Oben die **Kennzahlen**: offen, nicht zugewiesen, überfällig, Rückfrage, mir zugewiesen, diese Woche gelöst,
+  durchschnittliche Zeit bis zur ersten Antwort und Zufriedenheit. Ein Klick auf eine Kennzahl öffnet die passende Ansicht.
+  Darunter **Offen nach Kategorie** und die **Auslastung** je Bearbeiter.
+- Gespeicherte **Ansichten**: **Meine**, **Nicht zugewiesen**, **Überfällig**, **Wartet auf Rückmeldung**, **Alle offenen**,
+  **Meine Gruppen**, **Erledigt**, **Alle**.
+- Die **Liste** lässt sich über die Spaltenköpfe sortieren (Nummer, Titel, Melder, Kategorie, Priorität, Status,
+  Zuständig, Fällig, Aktivität). Die Suche findet Ticketnummern (auch nur „0042“), Titel, Beschreibung, Melder und Antworten.
+- **Sammelbearbeitung**: Tickets ankreuzen und mit **Zuweisen**, **Status**, **Priorität** oder **Gruppe** gemeinsam ändern.
+  Beim Lösen fragt EstrichONE einmal nach der Lösung für alle.
+- Die Spalte **Fällig** zeigt das nächste Ziel (erste Antwort bzw. Lösung): rot **überfällig**, orange **bald fällig**,
+  blau **angehalten**, solange der Melder eine Rückfrage beantworten soll.
+
+### Ticket bearbeiten
+
+Ein Klick öffnet das Ticket neben der Liste. Im Kopf stehen Status, Priorität, Kategorie mit Unterkategorie, Melder,
+Zuständig mit Gruppe, die Ziele und die Schnellaktionen (Status, Priorität, Kategorie, Unterkategorie, Gruppe, Zuständig,
+**Mir zuweisen**). Unter **Weitere Aktionen**: **Als Duplikat zusammenführen**, **Ticket verknüpfen**, **Artikel verknüpfen**,
+**Arbeitszeit erfassen** und **Lösung als Artikel speichern**.
+
+- **Verlauf**: Meldung, Antworten, interne Notizen und alle Änderungen; Anhänge mit Vorschau. Im Antwortfeld gibt es
+  **Datei anhängen**, Bildschirmfotos per <kbd>Strg</kbd> + <kbd>V</kbd>, **Textbaustein** und **Kollegen benachrichtigen**
+  (auch mit @Name im Text). **Interne Notiz** ist für den Melder unsichtbar. Senden mit <kbd>Strg</kbd> + <kbd>Enter</kbd>.
+- **Melder & Geräte**: Kontakt des Melders, seine Geräte mit App-Version und Update-Stand, letzter Kontakt, die
+  Diagnosedaten, weitere Tickets der Person und der Systemstatus (Server, Sicherung, Archiv).
+- **Verknüpfungen**: verknüpfte Tickets und Artikel sowie passende Vorschläge aus der Wissensdatenbank.
+- **Zeit**: erfasste Arbeitszeit (z. B. „30“, „1:15“ oder „1,5 h“).
+- **Prüfpfad**: jede Änderung mit Zeitpunkt und Person.
+
+**Zusammenführen** schließt ein doppelt gemeldetes Ticket mit Hinweis auf das Ziel. Dessen Melder verfolgt das Ziel-Ticket
+und erhält dort die Antworten; Beschreibung und Anhänge landen als interne Notiz im Ziel.
+
+### Einstellungen und Wissensdatenbank
+
+Unter **Helpdesk-Einstellungen** legen Personen mit dem Recht „Helpdesk einrichten“ fest:
+
+- **Ziele und Zeiten**: erste Antwort und Lösung je Priorität in Stunden, Geschäftszeiten, Arbeitstage, Feiertage,
+  Bewertung, Zeiterfassung, Vorschläge und nach wie vielen Tagen gelöste Tickets geschlossen werden.
+- **Gruppen** (z. B. IT, Büro-IT) mit Mitgliedern, **Unterkategorien** (z. B. Drucker, Telefon, E-Mail) und
+  **Automatische Zuweisung**: Regeln nach Kategorie, Unterkategorie oder Stichwort setzen Gruppe, Person (fest oder das
+  Mitglied mit den wenigsten offenen Tickets) und Priorität.
+- **Textbausteine** für Antworten, gemeinsam oder nur für sich; Platzhalter {Melder}, {Vorname}, {Ticket}, {Titel},
+  {Bearbeiter}.
+
+Die **Wissensdatenbank** sammelt Anleitungen. Veröffentlichte Artikel sehen alle; beim Melden schlägt EstrichONE passende
+Artikel vor. Entwürfe sieht nur die IT.
+
+### Für alle Mitarbeiter
+
+Mit **Neues Ticket** melden Sie ein Problem (Kategorie, auf Wunsch Unterkategorie, Priorität, Beschreibung, Anhänge).
+Jeder sieht seine eigenen Tickets mit Verlauf; neue Antworten erscheinen als Benachrichtigung. Nach der Lösung können Sie
+mit **1 bis 5 Sternen** bewerten oder das Ticket **wieder öffnen**.
 
 ## Chat {#chat}
 
