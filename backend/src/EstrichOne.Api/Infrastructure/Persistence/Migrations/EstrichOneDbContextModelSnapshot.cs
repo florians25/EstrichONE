@@ -3235,11 +3235,253 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("feedback_items", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.HelpdeskGroup", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Description")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("description");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.PrimitiveCollection<List<Guid>>("MemberUserIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("member_user_ids")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_helpdesk_groups");
+
+                    b.ToTable("helpdesk_groups", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.HelpdeskRule", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AssigneeUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("assignee_user_id");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("group_id");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Keyword")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("keyword");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<string>("Priority")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("priority");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Strategy")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("strategy");
+
+                    b.Property<Guid?>("SubcategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subcategory_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_helpdesk_rules");
+
+                    b.HasIndex("AssigneeUserId")
+                        .HasDatabaseName("ix_helpdesk_rules_assignee_user_id");
+
+                    b.HasIndex("GroupId")
+                        .HasDatabaseName("ix_helpdesk_rules_group_id");
+
+                    b.HasIndex("SubcategoryId")
+                        .HasDatabaseName("ix_helpdesk_rules_subcategory_id");
+
+                    b.ToTable("helpdesk_rules", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.HelpdeskSettingsRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Data")
+                        .IsRequired()
+                        .HasColumnType("jsonb")
+                        .HasColumnName("data");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_helpdesk_settings");
+
+                    b.ToTable("helpdesk_settings", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.KnowledgeArticle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<Guid?>("AuthorUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("author_user_id");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(20000)
+                        .HasColumnType("character varying(20000)")
+                        .HasColumnName("body");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("HelpfulCount")
+                        .HasColumnType("integer")
+                        .HasColumnName("helpful_count");
+
+                    b.Property<bool>("IsPublished")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_published");
+
+                    b.Property<string>("Keywords")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("keywords");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("title");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<Guid?>("UpdatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("updated_by_user_id");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.Property<int>("Views")
+                        .HasColumnType("integer")
+                        .HasColumnName("views");
+
+                    b.HasKey("Id")
+                        .HasName("pk_knowledge_articles");
+
+                    b.HasIndex("AuthorUserId")
+                        .HasDatabaseName("ix_knowledge_articles_author_user_id");
+
+                    b.HasIndex("UpdatedByUserId")
+                        .HasDatabaseName("ix_knowledge_articles_updated_by_user_id");
+
+                    b.ToTable("knowledge_articles", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.Ticket", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
                         .HasColumnName("id");
+
+                    b.PrimitiveCollection<List<Guid>>("ArticleIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("article_ids")
+                        .HasDefaultValueSql("'{}'::uuid[]");
 
                     b.Property<Guid?>("AssigneeUserId")
                         .HasColumnType("uuid")
@@ -3281,9 +3523,21 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("jsonb")
                         .HasColumnName("diagnostics");
 
+                    b.Property<DateTimeOffset?>("FirstResponseAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("first_response_at");
+
+                    b.Property<Guid?>("GroupId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("group_id");
+
                     b.Property<DateTimeOffset>("LastActivityAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("last_activity_at");
+
+                    b.Property<Guid?>("MergedIntoTicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("merged_into_ticket_id");
 
                     b.Property<string>("Number")
                         .IsRequired()
@@ -3291,11 +3545,28 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("number");
 
+                    b.Property<DateTimeOffset?>("OverdueNotifiedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("overdue_notified_at");
+
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)")
                         .HasColumnName("priority");
+
+                    b.Property<DateTimeOffset?>("RatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("rated_at");
+
+                    b.Property<int?>("Rating")
+                        .HasColumnType("integer")
+                        .HasColumnName("rating");
+
+                    b.Property<string>("RatingComment")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("rating_comment");
 
                     b.Property<bool>("ReporterBlocked")
                         .HasColumnType("boolean")
@@ -3315,9 +3586,25 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(10000)")
                         .HasColumnName("resolution");
 
+                    b.Property<DateTimeOffset?>("ResolutionDueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("resolution_due_at");
+
                     b.Property<DateTimeOffset?>("ResolvedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("resolved_at");
+
+                    b.Property<DateTimeOffset?>("ResponseDueAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("response_due_at");
+
+                    b.Property<DateTimeOffset?>("SlaPausedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sla_paused_at");
+
+                    b.Property<int>("SlaPausedMinutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("sla_paused_minutes");
 
                     b.Property<string>("Source")
                         .IsRequired()
@@ -3330,6 +3617,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(30)
                         .HasColumnType("character varying(30)")
                         .HasColumnName("status");
+
+                    b.Property<Guid?>("SubcategoryId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subcategory_id");
 
                     b.Property<string>("Title")
                         .IsRequired()
@@ -3346,11 +3637,15 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("bigint")
                         .HasColumnName("version");
 
+                    b.PrimitiveCollection<List<Guid>>("WatcherUserIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("watcher_user_ids")
+                        .HasDefaultValueSql("'{}'::uuid[]");
+
                     b.HasKey("Id")
                         .HasName("pk_tickets");
-
-                    b.HasIndex("AssigneeUserId")
-                        .HasDatabaseName("ix_tickets_assignee_user_id");
 
                     b.HasIndex("AttachmentFileIds")
                         .HasDatabaseName("ix_tickets_attachment_file_ids");
@@ -3363,9 +3658,26 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.HasIndex("DeviceId")
                         .HasDatabaseName("ix_tickets_device_id");
 
+                    b.HasIndex("GroupId")
+                        .HasDatabaseName("ix_tickets_group_id");
+
+                    b.HasIndex("MergedIntoTicketId")
+                        .HasDatabaseName("ix_tickets_merged_into_ticket_id");
+
                     b.HasIndex("Number")
                         .IsUnique()
                         .HasDatabaseName("ix_tickets_number");
+
+                    b.HasIndex("SubcategoryId")
+                        .HasDatabaseName("ix_tickets_subcategory_id");
+
+                    b.HasIndex("WatcherUserIds")
+                        .HasDatabaseName("ix_tickets_watcher_user_ids");
+
+                    NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("WatcherUserIds"), "gin");
+
+                    b.HasIndex("AssigneeUserId", "Status")
+                        .HasDatabaseName("ix_tickets_assignee_user_id_status");
 
                     b.HasIndex("ReporterUserId", "CreatedAt")
                         .HasDatabaseName("ix_tickets_reporter_user_id_created_at");
@@ -3374,6 +3686,59 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_tickets_status_last_activity_at");
 
                     b.ToTable("tickets", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketCannedResponse", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("owner_user_id");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(8000)
+                        .HasColumnType("character varying(8000)")
+                        .HasColumnName("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_canned_responses");
+
+                    b.HasIndex("OwnerUserId")
+                        .HasDatabaseName("ix_ticket_canned_responses_owner_user_id");
+
+                    b.ToTable("ticket_canned_responses", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketComment", b =>
@@ -3400,6 +3765,13 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<bool>("IsInternal")
                         .HasColumnType("boolean")
                         .HasColumnName("is_internal");
+
+                    b.PrimitiveCollection<List<Guid>>("MentionUserIds")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid[]")
+                        .HasColumnName("mention_user_ids")
+                        .HasDefaultValueSql("'{}'::uuid[]");
 
                     b.Property<string>("Text")
                         .IsRequired()
@@ -3471,6 +3843,47 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("ticket_events", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<Guid>("OtherTicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("other_ticket_id");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_links");
+
+                    b.HasIndex("OtherTicketId")
+                        .HasDatabaseName("ix_ticket_links_other_ticket_id");
+
+                    b.HasIndex("TicketId", "OtherTicketId")
+                        .IsUnique()
+                        .HasDatabaseName("ix_ticket_links_ticket_id_other_ticket_id");
+
+                    b.ToTable("ticket_links", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketRead", b =>
                 {
                     b.Property<Guid>("TicketId")
@@ -3492,6 +3905,97 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_ticket_reads_user_id");
 
                     b.ToTable("ticket_reads", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketSubcategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("category");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean")
+                        .HasColumnName("is_active");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("name");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer")
+                        .HasColumnName("sort_order");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_subcategories");
+
+                    b.HasIndex("Category", "SortOrder")
+                        .HasDatabaseName("ix_ticket_subcategories_category_sort_order");
+
+                    b.ToTable("ticket_subcategories", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketTimeEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<int>("Minutes")
+                        .HasColumnType("integer")
+                        .HasColumnName("minutes");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("note");
+
+                    b.Property<Guid>("TicketId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("ticket_id");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<DateOnly>("WorkDate")
+                        .HasColumnType("date")
+                        .HasColumnName("work_date");
+
+                    b.HasKey("Id")
+                        .HasName("pk_ticket_time_entries");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("ix_ticket_time_entries_user_id");
+
+                    b.HasIndex("TicketId", "WorkDate")
+                        .HasDatabaseName("ix_ticket_time_entries_ticket_id_work_date");
+
+                    b.ToTable("ticket_time_entries", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Exports.User", b =>
@@ -7128,6 +7632,42 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_feedback_items_user_reporter_user_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.HelpdeskRule", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("AssigneeUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_helpdesk_rules_user_assignee_user_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.HelpdeskGroup", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_helpdesk_rules_helpdesk_groups_group_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.TicketSubcategory", null)
+                        .WithMany()
+                        .HasForeignKey("SubcategoryId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_helpdesk_rules_ticket_subcategory_subcategory_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.KnowledgeArticle", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("AuthorUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_knowledge_articles_user_author_user_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("UpdatedByUserId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_knowledge_articles_user_updated_by_user_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.Ticket", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
@@ -7148,11 +7688,38 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_tickets_devices_device_id");
 
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.HelpdeskGroup", null)
+                        .WithMany()
+                        .HasForeignKey("GroupId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_tickets_helpdesk_groups_group_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("MergedIntoTicketId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_tickets_tickets_merged_into_ticket_id");
+
                     b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
                         .WithMany()
                         .HasForeignKey("ReporterUserId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .HasConstraintName("fk_tickets_user_reporter_user_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.TicketSubcategory", null)
+                        .WithMany()
+                        .HasForeignKey("SubcategoryId")
+                        .OnDelete(DeleteBehavior.SetNull)
+                        .HasConstraintName("fk_tickets_ticket_subcategory_subcategory_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketCannedResponse", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .HasConstraintName("fk_ticket_canned_responses_user_owner_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketComment", b =>
@@ -7182,6 +7749,23 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasConstraintName("fk_ticket_events_tickets_ticket_id");
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketLink", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("OtherTicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_links_tickets_other_ticket_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_links_tickets_ticket_id");
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketRead", b =>
                 {
                     b.HasOne("EstrichOne.Api.Modules.Helpdesk.Ticket", null)
@@ -7197,6 +7781,23 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired()
                         .HasConstraintName("fk_ticket_reads_user_user_id");
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketTimeEntry", b =>
+                {
+                    b.HasOne("EstrichOne.Api.Modules.Helpdesk.Ticket", null)
+                        .WithMany()
+                        .HasForeignKey("TicketId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_time_entries_tickets_ticket_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired()
+                        .HasConstraintName("fk_ticket_time_entries_user_user_id");
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Identity.Passwords.LocalCredential", b =>

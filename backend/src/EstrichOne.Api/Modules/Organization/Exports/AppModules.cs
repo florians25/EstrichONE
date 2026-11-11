@@ -77,7 +77,7 @@ public static class AppModules
             NotificationEvents: ["approval.requested", "approval.decided"]),
         new(Dossiers, "site", "Aktenarchiv", "Abgeschlossene Bauakten als unveränderliche Archivakte ablegen und abrufen.", []),
 
-        new(Helpdesk, "service", "Helpdesk", "Supporttickets an die IT mit Diagnose und Anhängen.", [], NotificationEvents: ["ticket.updated"]),
+        new(Helpdesk, "service", "Helpdesk", "Supporttickets an die IT mit Diagnose und Anhängen.", [], NotificationEvents: ["ticket.updated", "ticket.created", "ticket.assigned", "ticket.mentioned", "ticket.overdue"]),
         new(Feedback, "service", "Feedback", "Fehlermeldungen und Funktionswünsche aus Web und Apps.", [],
             NotificationEvents: ["feedback.submitted", "feedback.updated"]),
     ];

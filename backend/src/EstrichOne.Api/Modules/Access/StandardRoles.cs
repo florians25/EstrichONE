@@ -37,7 +37,7 @@ internal sealed class StandardRoles(EstrichOneDbContext db) : IDataInitializer
         ]),
         (ItAdministratorId, "IT-Administration", "Geräte, Support und Backups verwalten.",
         [
-            P.DevicesRead, P.DevicesManage, P.DevicesWipe, P.DevicesSelfEnroll, P.HelpdeskAgent, P.FeedbackManage, P.BackupManage,
+            P.DevicesRead, P.DevicesManage, P.DevicesWipe, P.DevicesSelfEnroll, P.HelpdeskAgent, P.HelpdeskManage, P.FeedbackManage, P.BackupManage,
             P.UsersManage, P.AuditRead,
         ]),
     ];

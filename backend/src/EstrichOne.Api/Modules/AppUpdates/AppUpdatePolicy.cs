@@ -118,4 +118,19 @@ public sealed class AppUpdateService(ISystemSettings settings, AppPackageCatalog
 
     public async Task<string> MinimumVersionAsync(string platform, CancellationToken cancellationToken) =>
         Info(platform, await SettingsAsync(cancellationToken)).MinimumVersion;
+
+    public async Task<AppVersionState> EvaluateAsync(string platform, string? installedVersion, CancellationToken cancellationToken)
+    {
+        var info = Info(platform, await SettingsAsync(cancellationToken));
+        string? state = installedVersion is { } v && VersionComparer.IsValid(v)
+            ? AppUpdatePolicy.Evaluate(v, info, ServerVersion, recommend: true) switch
+            {
+                AppUpdateState.Recommended => "recommended",
+                AppUpdateState.Required => "required",
+                AppUpdateState.NewerThanServer => "newerThanServer",
+                _ => "current",
+            }
+            : null;
+        return new AppVersionState(state, info.LatestVersion, info.MinimumVersion);
+    }
 }

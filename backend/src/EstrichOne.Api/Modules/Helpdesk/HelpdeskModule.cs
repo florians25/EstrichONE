@@ -13,6 +13,7 @@ public sealed class HelpdeskModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddScoped<TicketService>();
+        services.AddScoped<HelpdeskSettingsStore>();
         services.AddScoped<TicketNotifier>();
         services.AddScoped<TicketReadState>();
         services.AddScoped<ITicketAttachments>(provider => provider.GetRequiredService<TicketService>());
@@ -26,5 +27,9 @@ public sealed class HelpdeskModule : IModule
                 _ => new FixedWindowRateLimiterOptions { PermitLimit = 5, Window = TimeSpan.FromHours(1), QueueLimit = 0 })));
     }
 
-    public void MapEndpoints(IEndpointRouteBuilder api) => TicketEndpoints.Map(api);
+    public void MapEndpoints(IEndpointRouteBuilder api)
+    {
+        TicketEndpoints.Map(api);
+        HelpdeskEndpoints.Map(api);
+    }
 }

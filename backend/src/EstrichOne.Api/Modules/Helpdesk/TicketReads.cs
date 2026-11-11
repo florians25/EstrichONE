@@ -60,7 +60,7 @@ internal sealed class TicketReadState(EstrichOneDbContext db, TimeProvider clock
         tickets = isAgent
             ? tickets.Where(t => t.ReporterUserId == userId
                 || (t.Status != TicketStatus.Closed && (t.AssigneeUserId == userId || t.AssigneeUserId == null)))
-            : tickets.Where(t => t.ReporterUserId == userId);
+            : tickets.Where(t => t.ReporterUserId == userId || t.WatcherUserIds.Contains(userId));
         if (among is not null)
         {
             tickets = tickets.Where(t => among.Contains(t.Id));
@@ -73,7 +73,9 @@ internal sealed class TicketReadState(EstrichOneDbContext db, TimeProvider clock
             Created = t.ReporterUserId != userId ? (DateTimeOffset?)t.CreatedAt : null,
             Comment = db.Set<TicketComment>().Where(c => c.TicketId == t.Id && c.AuthorUserId != userId && (isAgent || !c.IsInternal))
                 .Max(c => (DateTimeOffset?)c.CreatedAt),
-            Event = db.Set<TicketEvent>().Where(e => e.TicketId == t.Id && e.ActorUserId != userId).Max(e => (DateTimeOffset?)e.At),
+            Event = db.Set<TicketEvent>().Where(e => e.TicketId == t.Id && e.ActorUserId != userId
+                && (isAgent || (e.Kind != "group" && e.Kind != "rule" && e.Kind != "link" && e.Kind != "unlink" && e.Kind != "time" && e.Kind != "watcher")))
+                .Max(e => (DateTimeOffset?)e.At),
         }).ToListAsync(cancellationToken);
 
         var result = new Dictionary<Guid, DateTimeOffset>();

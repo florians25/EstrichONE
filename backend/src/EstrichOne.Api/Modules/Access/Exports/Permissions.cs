@@ -37,6 +37,7 @@ public static class Permissions
     public const string DevicesWipe = "devices.wipe";
     public const string DevicesSelfEnroll = "devices.self_enroll";
     public const string HelpdeskAgent = "helpdesk.agent";
+    public const string HelpdeskManage = "helpdesk.manage";
     public const string FeedbackManage = "feedback.manage";
     public const string BackupManage = "backup.manage";
     public const string SettingsManage = "settings.manage";
@@ -79,6 +80,7 @@ public static class Permissions
         new(DevicesWipe, "IT Center", "EstrichONE-Daten auf Geräten löschen"),
         new(DevicesSelfEnroll, "IT Center", "Eigenes persönliches Gerät ohne Freigabe einrichten"),
         new(HelpdeskAgent, "IT Center", "Supporttickets bearbeiten"),
+        new(HelpdeskManage, "IT Center", "Helpdesk einrichten: Reaktions- und Lösungsziele, Geschäftszeiten, Gruppen, Unterkategorien, Zuweisungsregeln"),
         new(FeedbackManage, "IT Center", "Fehlermeldungen und Funktionswünsche verwalten (Status, Priorität, Antworten, interne Notizen)"),
         new(NotificationsSend, "Verwaltung", "Nachrichten und Pushnachrichten an Benutzer, Rollen und Kolonnen senden"),
         new(ChatUse, "Chat", "Chat nutzen: Einzel- und Gruppenunterhaltungen mit Kollegen und Büro (wenn das Modul aktiv ist)"),

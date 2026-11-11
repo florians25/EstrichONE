@@ -107,6 +107,10 @@ public static class NotificationEvents
     public const string AbsenceRequested = "absence.requested";
     public const string AbsenceCancelled = "absence.cancelled";
     public const string TicketUpdated = "ticket.updated";
+    public const string TicketCreated = "ticket.created";
+    public const string TicketAssigned = "ticket.assigned";
+    public const string TicketMentioned = "ticket.mentioned";
+    public const string TicketOverdue = "ticket.overdue";
     public const string FeedbackSubmitted = "feedback.submitted";
     public const string FeedbackUpdated = "feedback.updated";
     public const string ChatMessage = "chat.message";
@@ -141,6 +145,10 @@ public static class NotificationEvents
         new(AbsenceRequested, "Personal", "Abwesenheitsantrag zur Genehmigung", "Ein Urlaubs- oder Abwesenheitsantrag wartet auf Ihre Genehmigung."),
         new(AbsenceCancelled, "Personal", "Abwesenheitsantrag storniert", "Ein Antrag, über den Sie entscheiden, wurde zurückgezogen, oder Ihr Antrag wurde vom Büro storniert."),
         new(TicketUpdated, "Support", "Supportticket", "Antwort oder Statusänderung an Ihrem Ticket."),
+        new(TicketCreated, "Support", "Neues Ticket (Bearbeitung)", "Ein neues Ticket für Ihre Gruppe oder ohne zuständige Person ist eingegangen."),
+        new(TicketAssigned, "Support", "Ticket mir zugewiesen (Bearbeitung)", "Ihnen wurde ein Ticket zugewiesen."),
+        new(TicketMentioned, "Support", "Im Ticket erwähnt (Bearbeitung)", "Eine Kollegin oder ein Kollege hat Sie in einer Notiz oder Antwort erwähnt."),
+        new(TicketOverdue, "Support", "Ticketziel überschritten (Bearbeitung)", "Reaktions- oder Lösungsziel eines Ihrer Tickets ist überschritten."),
         new(FeedbackUpdated, "Support", "Meine Meldung (Fehler oder Wunsch)", "Antwort der IT oder Statusänderung an Ihrer Fehlermeldung bzw. Ihrem Funktionswunsch."),
         new(FeedbackSubmitted, "Support", "Neue Fehlermeldung oder neuer Funktionswunsch", "Neue Meldungen und Rückmeldungen der Einreicher (IT).", AdminOnly: true),
         new(ChatMessage, "Chat", "Neue Chatnachricht", "Neue Nachricht in einer Unterhaltung (stumm geschaltete Unterhaltungen ausgenommen)."),

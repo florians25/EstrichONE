@@ -81,6 +81,44 @@ public sealed class Ticket : IVersionedEntity
     public List<Guid> AttachmentFileIds { get; private set; } = [];
     public DateTimeOffset LastActivityAt { get; private set; }
 
+    /// <summary>Unterkategorie (im Web gepflegt, <see cref="TicketSubcategory"/>).</summary>
+    public Guid? SubcategoryId { get; private set; }
+
+    /// <summary>Zuständige Gruppe (z. B. IT, Büro), <see cref="HelpdeskGroup"/>.</summary>
+    public Guid? GroupId { get; private set; }
+
+    /// <summary>Erste öffentliche Antwort der Bearbeitung (Reaktionsziel erfüllt).</summary>
+    public DateTimeOffset? FirstResponseAt { get; private set; }
+
+    /// <summary>Reaktionsziel nach SLA (Geschäftszeiten); null bei Tickets ohne SLA.</summary>
+    public DateTimeOffset? ResponseDueAt { get; private set; }
+
+    /// <summary>Lösungsziel nach SLA, verschoben um die Zeit „Rückfrage“ (Uhr angehalten).</summary>
+    public DateTimeOffset? ResolutionDueAt { get; private set; }
+
+    /// <summary>Seit wann die SLA-Uhr steht (Status „Rückfrage“).</summary>
+    public DateTimeOffset? SlaPausedAt { get; private set; }
+
+    /// <summary>Summe der angehaltenen Geschäftszeit in Minuten.</summary>
+    public int SlaPausedMinutes { get; private set; }
+
+    /// <summary>Hinweis „Ziel überschritten“ an die Bearbeitung bereits gesendet.</summary>
+    public DateTimeOffset? OverdueNotifiedAt { get; private set; }
+
+    /// <summary>Als Duplikat in dieses Ticket zusammengeführt.</summary>
+    public Guid? MergedIntoTicketId { get; private set; }
+
+    /// <summary>Weitere Personen, die das Ticket sehen und Antworten erhalten (z. B. Melder eines zusammengeführten Duplikats).</summary>
+    public List<Guid> WatcherUserIds { get; private set; } = [];
+
+    /// <summary>Verknüpfte Artikel der Wissensdatenbank.</summary>
+    public List<Guid> ArticleIds { get; private set; } = [];
+
+    /// <summary>Zufriedenheit des Melders nach der Lösung (1–5).</summary>
+    public int? Rating { get; private set; }
+    public string? RatingComment { get; private set; }
+    public DateTimeOffset? RatedAt { get; private set; }
+
     public long Version { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
@@ -116,7 +154,7 @@ public sealed class Ticket : IVersionedEntity
             Category = category, Source = source, ReporterBlocked = reporterBlocked, ReporterUserId = reporterUserId,
             ReporterName = reporterName?.Trim() is { Length: > 0 } name ? name[..Math.Min(name.Length, 200)] : null,
             DeviceId = deviceId, BauakteId = bauakteId, Diagnostics = diagnostics, AttachmentFileIds = attachmentFileIds.Distinct().ToList(),
-            LastActivityAt = now,
+            LastActivityAt = now, CreatedAt = now,
         };
     }
 
@@ -156,6 +194,89 @@ public sealed class Ticket : IVersionedEntity
     public void Prioritize(TicketPriority priority) => Priority = priority;
 
     public void Categorize(TicketCategory category) => Category = category;
+
+    public void SetSubcategory(Guid? subcategoryId) => SubcategoryId = subcategoryId;
+
+    public void SetGroup(Guid? groupId) => GroupId = groupId;
+
+    /// <summary>Ziele setzen (Anlage, Prioritätswechsel); die bereits angehaltene Zeit bleibt berücksichtigt.</summary>
+    public void SetDueDates(DateTimeOffset? responseDue, DateTimeOffset? resolutionDue)
+    {
+        ResponseDueAt = responseDue;
+        ResolutionDueAt = resolutionDue;
+        OverdueNotifiedAt = null;
+    }
+
+    public void MarkFirstResponse(DateTimeOffset now) => FirstResponseAt ??= now;
+
+    public void PauseSla(DateTimeOffset now) => SlaPausedAt ??= now;
+
+    /// <summary>Uhr läuft weiter: Lösungsziel um die angehaltene Geschäftszeit verschieben.</summary>
+    public void ResumeSla(int pausedMinutes, DateTimeOffset? shiftedResolutionDue)
+    {
+        if (SlaPausedAt is null)
+        {
+            return;
+        }
+
+        SlaPausedAt = null;
+        SlaPausedMinutes += Math.Max(0, pausedMinutes);
+        ResolutionDueAt = shiftedResolutionDue ?? ResolutionDueAt;
+        OverdueNotifiedAt = null;
+    }
+
+    public void MarkOverdueNotified(DateTimeOffset now) => OverdueNotifiedAt = now;
+
+    public void MergeInto(Guid targetId) => MergedIntoTicketId = targetId;
+
+    public bool AddWatcher(Guid userId)
+    {
+        if (userId == ReporterUserId || WatcherUserIds.Contains(userId))
+        {
+            return false;
+        }
+
+        WatcherUserIds = [.. WatcherUserIds, userId];
+        return true;
+    }
+
+    public bool LinkArticle(Guid articleId)
+    {
+        if (ArticleIds.Contains(articleId))
+        {
+            return false;
+        }
+
+        ArticleIds = [.. ArticleIds, articleId];
+        return true;
+    }
+
+    public bool UnlinkArticle(Guid articleId)
+    {
+        if (!ArticleIds.Contains(articleId))
+        {
+            return false;
+        }
+
+        ArticleIds = ArticleIds.Where(id => id != articleId).ToList();
+        return true;
+    }
+
+    public void Rate(int rating, string? comment, DateTimeOffset now)
+    {
+        if (rating is < 1 or > 5)
+        {
+            throw new ArgumentException("Bitte 1 bis 5 Sterne vergeben.", nameof(rating));
+        }
+
+        var text = comment?.Trim();
+        Rating = rating;
+        RatingComment = string.IsNullOrEmpty(text) ? null : text[..Math.Min(text.Length, 2000)];
+        RatedAt = now;
+    }
+
+    /// <summary>Sichtbar für Melder und Beobachter (ohne Bearbeitungsrecht).</summary>
+    public bool IsVisibleTo(Guid userId) => ReporterUserId == userId || WatcherUserIds.Contains(userId);
 }
 
 public sealed class TicketComment
@@ -172,6 +293,9 @@ public sealed class TicketComment
 
     /// <summary>Anhänge der Antwort (eigene Dateien ohne Bauakte, z. B. Bildschirmfotos).</summary>
     public List<Guid> AttachmentFileIds { get; private set; } = [];
+
+    /// <summary>Erwähnte Kolleginnen und Kollegen (@Name), werden benachrichtigt.</summary>
+    public List<Guid> MentionUserIds { get; private set; } = [];
     public DateTimeOffset CreatedAt { get; private set; }
 
     private TicketComment()
@@ -179,7 +303,7 @@ public sealed class TicketComment
     }
 
     public static TicketComment Create(Guid ticketId, Guid authorUserId, string text, bool isInternal, DateTimeOffset now,
-        IReadOnlyCollection<Guid>? attachmentFileIds = null)
+        IReadOnlyCollection<Guid>? attachmentFileIds = null, IReadOnlyCollection<Guid>? mentionUserIds = null)
     {
         var trimmed = text?.Trim() ?? string.Empty;
         var attachments = (attachmentFileIds ?? []).Distinct().ToList();
@@ -196,12 +320,12 @@ public sealed class TicketComment
         return new TicketComment
         {
             Id = Guid.CreateVersion7(now), TicketId = ticketId, AuthorUserId = authorUserId, Text = trimmed, IsInternal = isInternal, CreatedAt = now,
-            AttachmentFileIds = attachments,
+            AttachmentFileIds = attachments, MentionUserIds = (mentionUserIds ?? []).Distinct().Take(20).ToList(),
         };
     }
 }
 
-/// <summary>Statuswechsel, Zuweisung, Priorität, Kategorie – der Verlauf eines Tickets.</summary>
+/// <summary>Statuswechsel, Zuweisung, Priorität, Kategorie, Gruppe, Zusammenführen, Verknüpfungen – der Verlauf (Prüfpfad) eines Tickets.</summary>
 public sealed class TicketEvent
 {
     public Guid Id { get; private set; }
@@ -246,6 +370,15 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.HasIndex(t => new { t.Status, t.LastActivityAt });
         builder.HasIndex(t => new { t.ReporterUserId, t.CreatedAt });
         builder.HasIndex(t => t.AttachmentFileIds).HasMethod("gin");
+        builder.Property(t => t.WatcherUserIds).HasColumnType("uuid[]").HasDefaultValueSql("'{}'::uuid[]");
+        builder.Property(t => t.ArticleIds).HasColumnType("uuid[]").HasDefaultValueSql("'{}'::uuid[]");
+        builder.Property(t => t.RatingComment).HasMaxLength(2000);
+        builder.HasIndex(t => t.WatcherUserIds).HasMethod("gin");
+        builder.HasIndex(t => new { t.AssigneeUserId, t.Status });
+        builder.HasIndex(t => t.GroupId);
+        builder.HasOne<HelpdeskGroup>().WithMany().HasForeignKey(t => t.GroupId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<TicketSubcategory>().WithMany().HasForeignKey(t => t.SubcategoryId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<Ticket>().WithMany().HasForeignKey(t => t.MergedIntoTicketId).OnDelete(DeleteBehavior.SetNull);
     }
 }
 
@@ -258,6 +391,7 @@ internal sealed class TicketCommentConfiguration : IEntityTypeConfiguration<Tick
         builder.Property(c => c.Text).HasMaxLength(TicketComment.MaxTextLength);
         builder.Property(c => c.AttachmentFileIds).HasColumnType("uuid[]").HasDefaultValueSql("'{}'::uuid[]");
         builder.HasIndex(c => c.AttachmentFileIds).HasMethod("gin");
+        builder.Property(c => c.MentionUserIds).HasColumnType("uuid[]").HasDefaultValueSql("'{}'::uuid[]");
         builder.HasOne<Ticket>().WithMany().HasForeignKey(c => c.TicketId).OnDelete(DeleteBehavior.Cascade);
         builder.HasOne<User>().WithMany().HasForeignKey(c => c.AuthorUserId).OnDelete(DeleteBehavior.Restrict);
         builder.HasIndex(c => new { c.TicketId, c.CreatedAt });

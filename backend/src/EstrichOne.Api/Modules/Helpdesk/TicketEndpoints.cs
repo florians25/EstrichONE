@@ -22,9 +22,11 @@ public sealed record CreateTicketRequest(
     Guid? BauakteId,
     JsonObject? Diagnostics,
     IReadOnlyList<Guid>? AttachmentFileIds,
-    TicketPriority? Priority = null)
+    TicketPriority? Priority = null,
+    Guid? SubcategoryId = null)
 {
-    internal CreateTicketInput ToInput() => new(Id, Title, Description, Category, Source, ReporterBlocked, BauakteId, Diagnostics, AttachmentFileIds, Priority);
+    internal CreateTicketInput ToInput() =>
+        new(Id, Title, Description, Category, Source, ReporterBlocked, BauakteId, Diagnostics, AttachmentFileIds, Priority, SubcategoryId);
 }
 
 /// <param name="Timestamp">Zeitpunkt der Signatur (ISO 8601, wie gesendet); höchstens 10 Minuten Abweichung.</param>
@@ -44,18 +46,45 @@ public sealed record UpdateTicketRequest(
     TicketCategory? Category,
     Guid? AssigneeUserId,
     bool Unassign,
-    [property: MaxLength(Ticket.MaxResolutionLength)] string? Resolution);
+    [property: MaxLength(Ticket.MaxResolutionLength)] string? Resolution,
+    Guid? GroupId = null,
+    bool ClearGroup = false,
+    Guid? SubcategoryId = null,
+    bool ClearSubcategory = false)
+{
+    internal TicketChange ToChange() => new(Status, Priority, Category, AssigneeUserId, Unassign, Resolution, GroupId, ClearGroup, SubcategoryId, ClearSubcategory);
+}
 
 /// <param name="AttachmentFileIds">Eigene, vorher hochgeladene Dateien ohne Bauakte (POST /files), z. B. Bildschirmfotos.</param>
+/// <param name="MentionUserIds">Erwähnte Bearbeiter (@Name); nur die Bearbeitung kann erwähnen.</param>
 public sealed record AddTicketCommentRequest(
-    [property: MaxLength(TicketComment.MaxTextLength)] string? Text, bool IsInternal, IReadOnlyList<Guid>? AttachmentFileIds = null);
+    [property: MaxLength(TicketComment.MaxTextLength)] string? Text, bool IsInternal, IReadOnlyList<Guid>? AttachmentFileIds = null,
+    IReadOnlyList<Guid>? MentionUserIds = null);
 
+/// <summary>Gespeicherte Ansichten der Ticketliste.</summary>
 public enum TicketFilter
 {
+    /// <summary>Alle offenen (nicht gelöst, nicht geschlossen).</summary>
     Open,
+
+    /// <summary>Mir zugewiesen, nicht geschlossen.</summary>
     Mine,
+
+    /// <summary>Niemandem zugewiesen, nicht geschlossen.</summary>
     Unassigned,
     All,
+
+    /// <summary>Reaktions- oder Lösungsziel überschritten.</summary>
+    Overdue,
+
+    /// <summary>Wartet auf Rückmeldung des Melders.</summary>
+    Waiting,
+
+    /// <summary>Meiner Gruppe zugeordnet (offen).</summary>
+    MyGroups,
+
+    /// <summary>Gelöst oder geschlossen.</summary>
+    Done,
 }
 
 internal static class TicketEndpoints
@@ -74,6 +103,7 @@ internal static class TicketEndpoints
     public static void Map(IEndpointRouteBuilder api)
     {
         var group = api.MapGroup("/tickets").WithTags("Helpdesk").RequireModule(AppModules.Helpdesk);
+        AgentEndpoints.Map(group);
 
         group.MapPost("/", CreateAsync).WithName("CreateTicket").WithSummary("Problem melden (idempotent über die Ticket-ID)")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
@@ -110,7 +140,7 @@ internal static class TicketEndpoints
             return Failure(failure!.Value, message!);
         }
 
-        var detail = await tickets.DetailAsync(ticket, includeInternal: false, cancellationToken);
+        var detail = await tickets.DetailAsync(ticket, includeInternal: false, cancellationToken, currentUser.UserId);
         return created ? TypedResults.Created($"/api/v1/tickets/{ticket.Id}", detail) : TypedResults.Ok(detail);
     }
 
@@ -138,7 +168,8 @@ internal static class TicketEndpoints
     private static async Task<Ok<IReadOnlyList<TicketSummary>>> MineAsync(
         TicketService tickets, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken) =>
         TypedResults.Ok(await tickets.SummariesAsync(
-            db.Set<Ticket>().Where(t => t.ReporterUserId == currentUser.UserId).OrderByDescending(t => t.CreatedAt).Take(100), cancellationToken,
+            db.Set<Ticket>().Where(t => t.ReporterUserId == currentUser.UserId || t.WatcherUserIds.Contains(currentUser.UserId))
+                .OrderByDescending(t => t.CreatedAt).Take(100), cancellationToken,
             ids => reads.UnreadAsync(currentUser.UserId, isAgent: false, ids, cancellationToken)));
 
     private static async Task<Ok<TicketUnreadResponse>> UnreadAsync(
@@ -167,28 +198,80 @@ internal static class TicketEndpoints
     }
 
     private static async Task<Ok<IReadOnlyList<TicketSummary>>> ListAsync(
-        TicketService tickets, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken,
-        string? filter = null, string? category = null)
+        TicketService tickets, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, TimeProvider clock, CancellationToken cancellationToken,
+        string? filter = null, string? category = null, string? priority = null, string? status = null, Guid? assignee = null, Guid? group = null,
+        string? q = null, string? sort = null, int? limit = null)
     {
         // Werte wie in JSON (camelCase, z. B. „unassigned“, „officeIt“) oder als Enum-Name.
         var selected = Enum.TryParse<TicketFilter>(filter, ignoreCase: true, out var parsedFilter) ? parsedFilter : TicketFilter.Open;
-        TicketCategory? categoryFilter = Enum.TryParse<TicketCategory>(category, ignoreCase: true, out var parsedCategory) ? parsedCategory : null;
         var query = db.Set<Ticket>().AsQueryable();
+        var me = currentUser.UserId;
+        var now = clock.GetUtcNow();
         query = selected switch
         {
             TicketFilter.Open => query.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved),
-            TicketFilter.Mine => query.Where(t => t.AssigneeUserId == currentUser.UserId && t.Status != TicketStatus.Closed),
+            TicketFilter.Mine => query.Where(t => t.AssigneeUserId == me && t.Status != TicketStatus.Closed),
             TicketFilter.Unassigned => query.Where(t => t.AssigneeUserId == null && t.Status != TicketStatus.Closed),
+            TicketFilter.Overdue => query.Where(t => (t.Status == TicketStatus.New || t.Status == TicketStatus.InProgress)
+                && ((t.FirstResponseAt == null && t.ResponseDueAt < now) || t.ResolutionDueAt < now)),
+            TicketFilter.Waiting => query.Where(t => t.Status == TicketStatus.WaitingForReporter),
+            TicketFilter.MyGroups => query.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved
+                && db.Set<HelpdeskGroup>().Any(g => g.Id == t.GroupId && g.MemberUserIds.Contains(me))),
+            TicketFilter.Done => query.Where(t => t.Status == TicketStatus.Closed || t.Status == TicketStatus.Resolved),
             _ => query,
         };
-        if (categoryFilter is { } c)
+        if (Enum.TryParse<TicketCategory>(category, ignoreCase: true, out var c))
         {
             query = query.Where(t => t.Category == c);
         }
 
-        // Am längsten wartende zuerst; „Ich kann nicht arbeiten“ vorneweg.
-        return TypedResults.Ok(await tickets.SummariesAsync(
-            query.OrderByDescending(t => t.ReporterBlocked).ThenBy(t => t.LastActivityAt).Take(500), cancellationToken,
+        if (Enum.TryParse<TicketPriority>(priority, ignoreCase: true, out var p))
+        {
+            query = query.Where(t => t.Priority == p);
+        }
+
+        if (Enum.TryParse<TicketStatus>(status, ignoreCase: true, out var st))
+        {
+            query = query.Where(t => t.Status == st);
+        }
+
+        if (assignee is { } a)
+        {
+            query = query.Where(t => t.AssigneeUserId == a);
+        }
+
+        if (group is { } g)
+        {
+            query = query.Where(t => t.GroupId == g);
+        }
+
+        if (q?.Trim() is { Length: > 0 } text)
+        {
+            // Volltext über Nummer (auch ohne „T-“), Titel, Beschreibung, Melder und Antworten.
+            foreach (var word in text.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(6))
+            {
+                var pattern = $"%{word.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal)}%";
+                query = query.Where(t => EF.Functions.ILike(t.Number, pattern) || EF.Functions.ILike(t.Title, pattern)
+                    || (t.Description != null && EF.Functions.ILike(t.Description, pattern))
+                    || (t.ReporterName != null && EF.Functions.ILike(t.ReporterName, pattern))
+                    || db.Set<User>().Any(u => u.Id == t.ReporterUserId && EF.Functions.ILike(u.DisplayName, pattern))
+                    || db.Set<TicketComment>().Any(x => x.TicketId == t.Id && EF.Functions.ILike(x.Text, pattern)));
+            }
+        }
+
+        query = sort switch
+        {
+            "recent" => query.OrderByDescending(t => t.LastActivityAt),
+            "created" => query.OrderByDescending(t => t.CreatedAt),
+            "number" => query.OrderByDescending(t => t.CreatedAt).ThenByDescending(t => t.Number),
+            "priority" => query.OrderByDescending(t => t.Priority == TicketPriority.Urgent).ThenByDescending(t => t.Priority == TicketPriority.High)
+                .ThenBy(t => t.Priority == TicketPriority.Low).ThenBy(t => t.LastActivityAt),
+            "due" => query.OrderBy(t => t.ResolutionDueAt == null).ThenBy(t => t.FirstResponseAt == null ? t.ResponseDueAt : t.ResolutionDueAt),
+            // Am längsten wartende zuerst; „Ich kann nicht arbeiten“ vorneweg.
+            _ => query.OrderByDescending(t => t.ReporterBlocked).ThenBy(t => t.LastActivityAt),
+        };
+
+        return TypedResults.Ok(await tickets.SummariesAsync(query.Take(Math.Clamp(limit ?? 500, 1, 1000)), cancellationToken,
             ids => reads.UnreadAsync(currentUser.UserId, isAgent: true, ids, cancellationToken)));
     }
 
@@ -204,12 +287,12 @@ internal static class TicketEndpoints
 
         // Ansehen gilt als gelesen.
         await reads.MarkSeenAsync(id, currentUser.UserId, cancellationToken);
-        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken));
+        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken, currentUser.UserId));
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateTicketRequest request, TicketService tickets, TicketNotifier notifier, EstrichOneDbContext db, ICurrentUser currentUser,
-        TimeProvider clock, CancellationToken cancellationToken)
+        CancellationToken cancellationToken)
     {
         var ticket = await db.Set<Ticket>().SingleOrDefaultAsync(t => t.Id == id, cancellationToken);
         if (ticket is null)
@@ -217,65 +300,34 @@ internal static class TicketEndpoints
             return NotFound();
         }
 
-        var now = clock.GetUtcNow();
-        void Event(string kind, object? from, object? to)
+        var (effect, error) = await tickets.ApplyChangeAsync(ticket, request.ToChange(), currentUser.UserId, cancellationToken);
+        if (effect is null)
         {
-            if (!Equals(from, to))
-            {
-                db.Add(TicketEvent.Create(ticket.Id, currentUser.UserId, kind, from?.ToString(), to?.ToString(), now));
-            }
+            return Problem(StatusCodes.Status422UnprocessableEntity, error!.Contains("Benutzer", StringComparison.Ordinal) ? "UNKNOWN_USER" : "VALIDATION_FAILED",
+                "Ungültige Angaben", error);
         }
 
-        try
-        {
-            if (request.AssigneeUserId is { } assignee || request.Unassign)
-            {
-                var target = request.Unassign ? null : request.AssigneeUserId;
-                if (target is { } userId && !await db.Set<User>().AnyAsync(u => u.Id == userId && u.IsActive, cancellationToken))
-                {
-                    return Problem(StatusCodes.Status422UnprocessableEntity, "UNKNOWN_USER", "Unbekannter Benutzer", "Der Benutzer existiert nicht oder ist gesperrt.");
-                }
-
-                Event("assignee", ticket.AssigneeUserId, target);
-                ticket.Assign(target);
-            }
-
-            if (request.Priority is { } priority)
-            {
-                Event("priority", ticket.Priority, priority);
-                ticket.Prioritize(priority);
-            }
-
-            if (request.Category is { } category)
-            {
-                Event("category", ticket.Category, category);
-                ticket.Categorize(category);
-            }
-
-            if (request.Status is { } status)
-            {
-                Event("status", ticket.Status, status);
-                ticket.ChangeStatus(status, request.Resolution, now);
-            }
-        }
-        catch (ArgumentException exception)
-        {
-            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben", exception.Message);
-        }
-
-        ticket.Touch(now);
         await db.SaveChangesAsync(cancellationToken);
-        if (request.Status is not null)
+        await NotifyChangeAsync(ticket, effect, notifier, cancellationToken);
+        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: true, cancellationToken, currentUser.UserId));
+    }
+
+    internal static async Task NotifyChangeAsync(Ticket ticket, TicketChangeEffect effect, TicketNotifier notifier, CancellationToken cancellationToken)
+    {
+        if (effect.StatusChanged)
         {
-            await notifier.NotifyAsync(ticket, request.Status is TicketStatus.Resolved or TicketStatus.Closed ? ticket.Resolution : null, cancellationToken);
+            await notifier.NotifyAsync(ticket, ticket.Status is TicketStatus.Resolved or TicketStatus.Closed ? ticket.Resolution : null, cancellationToken);
         }
 
-        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: true, cancellationToken));
+        if (effect.NewAssignee is { } assignee)
+        {
+            await notifier.NotifyAssignedAsync(ticket, assignee, cancellationToken);
+        }
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> CommentAsync(
         Guid id, AddTicketCommentRequest request, TicketService tickets, TicketNotifier notifier, EstrichOneDbContext db, ICurrentUser currentUser,
-        IUserPermissions permissions, TimeProvider clock, CancellationToken cancellationToken)
+        IUserPermissions permissions, IRoleAssignments roles, CancellationToken cancellationToken)
     {
         var (ticket, isAgent) = await FindVisibleAsync(id, db, currentUser, permissions, cancellationToken, tracking: true);
         if (ticket is null)
@@ -294,31 +346,33 @@ internal static class TicketEndpoints
             return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben", "Anhänge müssen eigene Dateien ohne Bauakte sein.");
         }
 
-        var now = clock.GetUtcNow();
-        try
+        IReadOnlyList<Guid> mentions = [];
+        if (request.MentionUserIds is { Count: > 0 } wanted)
         {
-            db.Add(TicketComment.Create(ticket.Id, currentUser.UserId, request.Text ?? string.Empty, request.IsInternal, now, attachments));
-        }
-        catch (ArgumentException exception)
-        {
-            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben", exception.Message);
+            if (!isAgent)
+            {
+                return Problem(StatusCodes.Status403Forbidden, "PERMISSION_DENIED", "Keine Berechtigung", "Kolleginnen und Kollegen erwähnt nur die Bearbeitung.");
+            }
+
+            var agents = await roles.GetUserIdsWithPermissionAsync(Permissions.HelpdeskAgent, cancellationToken);
+            mentions = wanted.Distinct().Where(agents.Contains).ToList();
         }
 
-        // Antwort des Melders auf eine Rückfrage: zurück in die Bearbeitung.
-        if (ticket.ReporterUserId == currentUser.UserId && ticket.Status == TicketStatus.WaitingForReporter)
+        var error = await tickets.AddCommentAsync(ticket, currentUser.UserId, isAgent, request.Text ?? string.Empty, request.IsInternal, attachments, mentions,
+            cancellationToken);
+        if (error is not null)
         {
-            db.Add(TicketEvent.Create(ticket.Id, currentUser.UserId, "status", nameof(TicketStatus.WaitingForReporter), nameof(TicketStatus.InProgress), now));
-            ticket.ChangeStatus(TicketStatus.InProgress, null, now);
+            return Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben", error);
         }
 
-        ticket.Touch(now);
         await db.SaveChangesAsync(cancellationToken);
         if (!request.IsInternal)
         {
             await notifier.NotifyAsync(ticket, request.Text, cancellationToken);
         }
 
-        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken));
+        await notifier.NotifyMentionedAsync(ticket, mentions, cancellationToken);
+        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken, currentUser.UserId));
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> ReopenAsync(
@@ -339,20 +393,20 @@ internal static class TicketEndpoints
         var now = clock.GetUtcNow();
         var status = ticket.AssigneeUserId is null ? TicketStatus.New : TicketStatus.InProgress;
         db.Add(TicketEvent.Create(ticket.Id, currentUser.UserId, "status", nameof(TicketStatus.Resolved), status.ToString(), now));
-        ticket.ChangeStatus(status, null, now);
+        tickets.ChangeStatus(ticket, status, null, currentUser.UserId, await tickets.SettingsAsync(cancellationToken), now);
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken));
+        return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken, currentUser.UserId));
     }
 
     /// <summary>Sichtbar für den Melder und für die Bearbeitung; sonst 404 (verrät keine fremden Tickets).</summary>
-    private static async Task<(Ticket? Ticket, bool IsAgent)> FindVisibleAsync(
+    internal static async Task<(Ticket? Ticket, bool IsAgent)> FindVisibleAsync(
         Guid id, EstrichOneDbContext db, ICurrentUser currentUser, IUserPermissions permissions, CancellationToken cancellationToken,
         bool tracking = false)
     {
         var query = tracking ? db.Set<Ticket>() : db.Set<Ticket>().AsNoTracking();
         var ticket = await query.SingleOrDefaultAsync(t => t.Id == id, cancellationToken);
         var isAgent = await permissions.HasAsync(Permissions.HelpdeskAgent, cancellationToken);
-        return ticket is not null && (isAgent || ticket.ReporterUserId == currentUser.UserId) ? (ticket, isAgent) : (null, false);
+        return ticket is not null && (isAgent || ticket.IsVisibleTo(currentUser.UserId)) ? (ticket, isAgent) : (null, false);
     }
 
     private static ProblemHttpResult Failure(TicketFailure failure, string message) => failure switch
@@ -362,10 +416,10 @@ internal static class TicketEndpoints
         _ => Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben", message),
     };
 
-    private static ProblemHttpResult NotFound() =>
+    internal static ProblemHttpResult NotFound() =>
         Problem(StatusCodes.Status404NotFound, "TICKET_NOT_FOUND", "Ticket nicht gefunden", "Das Ticket existiert nicht oder ist nicht sichtbar.");
 
-    private static ProblemHttpResult Problem(int status, string code, string title, string detail) =>
+    internal static ProblemHttpResult Problem(int status, string code, string title, string detail) =>
         TypedResults.Problem(statusCode: status, title: title, detail: detail, extensions: new Dictionary<string, object?> { ["code"] = code });
 
     private static byte[]? TryBase64(string value)

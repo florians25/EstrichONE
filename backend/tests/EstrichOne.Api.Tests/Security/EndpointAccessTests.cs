@@ -61,6 +61,10 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         "POST /api/v1/devices/register", "POST /api/v1/devices/attach", "GET /api/v1/devices/me",
         "POST /api/v1/tickets/", "GET /api/v1/tickets/unread", "POST /api/v1/tickets/{id:guid}/seen", "GET /api/v1/tickets/mine",
         "GET /api/v1/tickets/{id:guid}", "POST /api/v1/tickets/{id:guid}/comments", "POST /api/v1/tickets/{id:guid}/reopen",
+        "POST /api/v1/tickets/{id:guid}/rating", // nur der Melder des Tickets (sonst 404)
+        // Melden mit Unterkategorie und Wissensdatenbank: veröffentlichte Artikel für alle, Entwürfe nur für die Bearbeitung.
+        "GET /api/v1/helpdesk/options", "GET /api/v1/helpdesk/articles", "GET /api/v1/helpdesk/articles/suggest", "GET /api/v1/helpdesk/articles/{id:guid}",
+        "POST /api/v1/helpdesk/articles/{id:guid}/helpful",
         // Fehler melden / Funktion wünschen: jeder darf einreichen und sieht nur eigene Meldungen (fremde: 404).
         "POST /api/v1/feedback/", "GET /api/v1/feedback/mine", "GET /api/v1/feedback/{id:guid}", "POST /api/v1/feedback/{id:guid}/comments",
         "POST /api/v1/sync/push", "GET /api/v1/sync/pull", "POST /api/v1/sync/snapshot", // je Operation/Objekt geprüft
