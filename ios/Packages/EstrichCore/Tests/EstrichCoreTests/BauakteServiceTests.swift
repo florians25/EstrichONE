@@ -488,8 +488,12 @@ struct CustomerTests {
 
         #expect(try await service.contacts().map(\.name) == ["Bau GmbH", "Fa. Huber"])
         #expect(try await service.contacts(search: "k-1042").map(\.id) == [huber])
-        _ = try await service.create(NewBauakte(title: "Halle", customerId: huber))
+        let halle = try await service.create(NewBauakte(title: "Halle", customerId: huber))
         #expect(try await service.recentCustomers().map(\.id) == [huber])
+        // Bauaktensuche findet auch über Kundennummer und Kundenname.
+        #expect(try await service.bauakten(search: "K-1042").map(\.id) == [halle])
+        #expect(try await service.bauakten(search: "huber").map(\.id) == [halle])
+        #expect(try await service.bauakten(search: "K-7").isEmpty)
     }
 
     private func makeService(_ server: SimulatedSyncServer) throws -> (BauakteService, SyncEngine) {

@@ -9,27 +9,44 @@ import UIKit
 actor ThumbnailLoader {
     private let service: BauakteService
     private let client: AuthorizedClient
-    private let cache = NSCache<NSString, UIImage>()
+    /// Threadsicher: Zugriff auch ohne Umweg über den Actor (sofortige Anzeige beim Scrollen).
+    private let cache = ImageCache()
+    /// Laufende Ladevorgänge: dasselbe Bild in Raster und Leiste wird nur einmal geladen.
+    private var inFlight: [NSString: Task<UIImage?, Never>] = [:]
     /// Originale nur bis zu dieser Größe als Ersatz für fehlende Vorschauen laden.
     private let maxOriginalBytes: Int64 = 25 * 1024 * 1024
 
     init(service: BauakteService, client: AuthorizedClient) {
         self.service = service
         self.client = client
-        cache.countLimit = 300
+    }
+
+    /// Bereits geladenes Vorschaubild ohne Warten (oder `nil`).
+    nonisolated func cachedThumbnail(for file: FileItem, size: CGFloat) -> UIImage? {
+        cache.object(forKey: "\(file.id.uuidString)-\(Int(size))" as NSString)
     }
 
     func thumbnail(for file: FileItem, size: CGFloat) async -> UIImage? {
         let key = "\(file.id.uuidString)-\(Int(size))" as NSString
         if let cached = cache.object(forKey: key) { return cached }
-        var image: UIImage?
-        if let data = service.localContent(of: file.id) {
-            image = Self.downsample(data, to: size)
-        } else if file.isStoredOnServer, let data = await remote(file, variant: "thumb") {
-            image = Self.downsample(data, to: size)
-        }
+        if let running = inFlight[key] { return await running.value }
+        let task = Task { await loadThumbnail(for: file, size: size) }
+        inFlight[key] = task
+        let image = await task.value
+        inFlight[key] = nil
         if let image { cache.setObject(image, forKey: key) }
         return image
+    }
+
+    private func loadThumbnail(for file: FileItem, size: CGFloat) async -> UIImage? {
+        if let data = service.localContent(of: file.id) {
+            // Entschlüsseln und Verkleinern außerhalb des Actors, damit mehrere Vorschauen parallel entstehen.
+            return await Task.detached(priority: .userInitiated) { Self.downsample(data, to: size) }.value
+        }
+        if file.isStoredOnServer, let data = await remote(file, variant: "thumb") {
+            return await Task.detached(priority: .userInitiated) { Self.downsample(data, to: size) }.value
+        }
+        return nil
     }
 
     /// Großansicht: eigenes Original oder `display` vom Server (Ersatz: Original).
@@ -79,4 +96,16 @@ actor ThumbnailLoader {
         }
         return UIImage(data: data)
     }
+}
+
+/// `NSCache` hinter einer Sendable-Hülle (NSCache ist threadsicher).
+final class ImageCache: @unchecked Sendable {
+    private let storage: NSCache<NSString, UIImage> = {
+        let cache = NSCache<NSString, UIImage>()
+        cache.countLimit = 300
+        return cache
+    }()
+
+    func object(forKey key: NSString) -> UIImage? { storage.object(forKey: key) }
+    func setObject(_ image: UIImage, forKey key: NSString) { storage.setObject(image, forKey: key) }
 }

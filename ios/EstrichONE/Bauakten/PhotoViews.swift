@@ -37,7 +37,7 @@ struct PhotoThumbnail: View {
         Theme.fill
             .aspectRatio(1, contentMode: .fit)
             .overlay {
-                if let image {
+                if let image = image ?? model.active?.thumbnails?.cachedThumbnail(for: file, size: 120) {
                     Image(uiImage: image).resizable().scaledToFill()
                 } else {
                     Image(systemName: file.isVideo ? "video" : "photo").foregroundStyle(Theme.textTertiary)
@@ -77,6 +77,10 @@ struct PhotoThumbnail: View {
             .task(id: "\(file.id)|\(file.isStoredOnServer)|\(file.syncState)") {
                 // Videos: keine Vorschaubild-Variante – nicht das ganze Video laden.
                 guard !file.isVideo else { return }
+                if image == nil, let cached = model.active?.thumbnails?.cachedThumbnail(for: file, size: 120) {
+                    image = cached
+                    return
+                }
                 image = await model.active?.thumbnails?.thumbnail(for: file, size: 120)
             }
     }

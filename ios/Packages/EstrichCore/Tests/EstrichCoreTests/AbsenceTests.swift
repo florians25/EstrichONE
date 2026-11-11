@@ -40,6 +40,40 @@ struct AbsenceTests {
         #expect(request.rangeText == "07.06. – 09.06.2027 (erster Tag halb)")
         #expect(AbsenceText.days(request.workingDays) == "2,5")
         #expect(mine.absences?.first?.workingDays == Decimal(string: "2.5"))
+        #expect(request.canChange)
+        #expect(mine.canRequestChange(request))
+        let change = request.changeDraft
+        #expect(change.replacesRequestId == request.id && change.from == "2027-06-07" && change.halfDayStart)
+    }
+
+    @Test("Änderungsantrag: nur einer offen, Vertretung wird gesendet")
+    func changeRequest() throws {
+        let approvedId = UUID()
+        let approved = AbsenceRequestItem(id: approvedId, userId: UUID(), userName: "A", from: "2027-08-02", to: "2027-08-13", status: .approved,
+                                          workingDays: 10, substituteUserId: UUID(), canChange: true)
+        let pending = AbsenceRequestItem(id: UUID(), userId: approved.userId, userName: "A", from: "2027-08-09", to: "2027-08-20", status: .pending,
+                                         workingDays: 10, replacesRequestId: approvedId)
+        let mine = MyVacation(employeeId: nil, vacation: nil, requests: [pending, approved], year: 2027)
+        #expect(mine.pendingChange(of: approved) == pending)
+        #expect(!mine.canRequestChange(approved))
+        let body = try #require(String(data: try JSONCoding.encoder.encode(approved.changeDraft.normalized), encoding: .utf8))
+        #expect(body.contains("substituteUserId") && body.contains("replacesRequestId"))
+    }
+
+    @Test("Feiertage Bayern (Demomodus)")
+    func holidays() {
+        let easter = PublicHolidays.easter(2027)
+        #expect(easter.month == 3 && easter.day == 28)
+        let days = PublicHolidays.bavaria(2027).map(\.date)
+        #expect(days.contains("2027-03-26"), "Karfreitag")
+        #expect(days.contains("2027-05-27"), "Fronleichnam")
+        #expect(days.contains("2027-01-06") && days.contains("2027-08-15"))
+        #expect(days.count == 13)
+        let christmas = PublicHolidays.bavaria(from: "2026-12-21", to: "2027-01-08").map(\.name)
+        #expect(christmas == ["1. Weihnachtstag", "2. Weihnachtstag", "Neujahr", "Heilige Drei Könige"])
+        let preview = AbsencePreview(workingDays: 1, warnings: [], remainingAfter: nil, requiresApproval: true,
+                                     holidays: [Holiday(date: "2026-12-25", name: "1. Weihnachtstag")])
+        #expect(preview.holidayText == "Feiertage im Zeitraum (nicht mitgezählt): 25.12. 1. Weihnachtstag")
     }
 
     @Test("Ältere Server ohne Erweiterungen: fehlende Felder mit Standardwerten")
@@ -107,11 +141,11 @@ struct AbsenceTests {
                                  "carryOverExpiresOn", "carryOverExpired", "carryOverExpiring", "remainingAfterRequests"]),
             ("AbsenceRequestView", ["id", "userId", "userName", "from", "to", "note", "status", "workingDays", "decisionComment", "warnings",
                                     "remainingAfter", "canDecide", "canCancel", "typeId", "typeName", "typeColor", "halfDayStart", "halfDayEnd",
-                                    "substituteName", "replacesRequestId"]),
+                                    "substituteName", "replacesRequestId", "substituteUserId", "canChange"]),
             ("AbsenceTypeView", ["id", "key", "name", "code", "color", "kind", "requiresApproval", "countsAsVacation", "requestable", "isActive", "isSickness"]),
             ("MyAbsence", ["id", "from", "to", "typeName", "color", "halfDayStart", "halfDayEnd", "workingDays"]),
-            ("AbsencePreview", ["workingDays", "warnings", "remainingAfter", "requiresApproval"]),
-            ("SaveAbsenceRequestRequest", ["typeId", "from", "to", "halfDayStart", "halfDayEnd", "note", "replacesRequestId"]),
+            ("AbsencePreview", ["workingDays", "warnings", "remainingAfter", "requiresApproval", "holidays"]),
+            ("SaveAbsenceRequestRequest", ["typeId", "from", "to", "halfDayStart", "halfDayEnd", "note", "substituteUserId", "replacesRequestId"]),
             ("DecideAbsenceRequest", ["approve", "comment"]),
         ]
         for (schema, fields) in checks {

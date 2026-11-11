@@ -117,6 +117,22 @@ final class SyncController {
         applyModules(await ModuleSettingsStore(store: store).load(using: client))
     }
 
+    /// Einstellungen des Büros, die die App auswertet („Hinweis Erstbegehung fehlt“) und eigene Rechte: mit der
+    /// Synchronisation höchstens jede Minute, nach der Rückkehr in den Vordergrund sofort. Offline bleibt der letzte Stand.
+    func refreshOfficeSettings() async {
+        if let last = officeSettingsFetchedAt, Date.now.timeIntervalSince(last) < 60 { return }
+        officeSettingsFetchedAt = .now
+        _ = await InspectionHintSetting(store: store).load(using: client)
+        _ = await MyPermissions(store: store).load(using: client)
+    }
+
+    /// Beim nächsten Lauf Einstellungen und Rechte sicher neu laden (z. B. nach der Rückkehr in den Vordergrund).
+    func forceOfficeSettingsRefresh() {
+        officeSettingsFetchedAt = nil
+    }
+
+    private var officeSettingsFetchedAt: Date?
+
     /// Chat-Status neu laden (Modul an/aus, ungelesen).
     func refreshChat() async {
         if let fresh = try? await client.chatStatus() {
@@ -246,6 +262,7 @@ final class SyncController {
         if !isMaintenanceLocked, outcome != .offline {
             await refreshChat()
             await refreshModules()
+            await refreshOfficeSettings()
         }
         revision += 1
         isRunning = false

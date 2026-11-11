@@ -96,7 +96,7 @@ struct BauaktenListView: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Baustellen")
-        .searchable(text: $search, prompt: "Nummer, Bauvorhaben oder Adresse")
+        .searchable(text: $search, prompt: "Nummer, Bauvorhaben, Adresse oder Kunde")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { creating = true } label: { Label("Neue Bauakte", systemImage: "plus") }

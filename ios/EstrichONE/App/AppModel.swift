@@ -421,6 +421,8 @@ final class AppModel {
         if lockPreferences.shouldLock(backgroundSince: since, now: date) {
             lock()
         } else if let sync = active?.sync {
+            // Im Büro geänderte Module, Einstellungen und Rechte gleich übernehmen, nicht erst beim nächsten Öffnen einer Bauakte.
+            sync.forceOfficeSettingsRefresh()
             Task { await sync.run() }
             active?.chat?.start()
         }

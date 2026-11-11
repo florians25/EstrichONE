@@ -8,6 +8,8 @@ import SwiftUI
 /// Breite Darstellung (iPad quer): Übersicht links, gewählter Bereich rechts. Alles offline aus der lokalen Ablage.
 struct BauakteDetailView: View {
     let bauakteId: UUID
+    /// Gleich diesen Bereich öffnen (z. B. aus einer Benachrichtigung „Mangel zugewiesen“).
+    var initialArea: BauakteArea?
 
     @Environment(AppModel.self) private var model
     /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
@@ -35,6 +37,7 @@ struct BauakteDetailView: View {
     @State private var loadingPDF = false
     @State private var pdfMessage: String?
     @State private var showsNavigationTitle = false
+    @State private var appliedInitialArea = false
 
     var body: some View {
         Group {
@@ -48,8 +51,10 @@ struct BauakteDetailView: View {
                             BauakteAreaView(area: wideArea, content: content, schema: schema, lists: lists, embedded: true) { await reload() }
                                 .id(wideArea)
                         }
+                        .onAppear { applyInitialArea(wide: true) }
                     } else {
                         overview(content, wide: false)
+                            .onAppear { applyInitialArea(wide: false) }
                     }
                 }
                 .bauakteActions(content.bauakte, customerName: content.customer?.name, schema: schema, lists: lists, action: $action) { message in
@@ -106,9 +111,17 @@ struct BauakteDetailView: View {
             if !(await DirectoryCache.load(model)).isEmpty { await reload() }
         }
         .refreshable {
+            model.active?.sync?.forceOfficeSettingsRefresh()
             await model.active?.sync?.run()
             await reload()
         }
+    }
+
+    /// Bereich aus der Benachrichtigung einmal öffnen (nur, wenn sein Modul eingeschaltet ist).
+    private func applyInitialArea(wide: Bool) {
+        guard !appliedInitialArea, let initialArea, initialArea.isAvailable(modules) else { return }
+        appliedInitialArea = true
+        if wide { wideArea = initialArea } else { area = initialArea }
     }
 
     // MARK: Übersicht

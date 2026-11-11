@@ -56,10 +56,17 @@ struct MyWeekView: View {
             if let store = model.active?.sync?.store {
                 snapshot = await MyPlanning(store: store).cached()
                 loaded = snapshot != nil
-                snapshot = await MyPlanning(store: store).load(using: model.active?.client) ?? snapshot
             }
-            loaded = true
+            await refresh()
         }
+        .refreshable { await refresh() }
+    }
+
+    private func refresh() async {
+        if let store = model.active?.sync?.store {
+            snapshot = await MyPlanning(store: store).load(using: model.active?.client) ?? snapshot
+        }
+        loaded = true
     }
 
     private var days: [String] {
@@ -101,8 +108,9 @@ struct MyTasksView: View {
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Meine Aufgaben")
-        .navigationDestination(item: $opened) { BauakteDetailView(bauakteId: $0) }
+        .navigationDestination(item: $opened) { BauakteDetailView(bauakteId: $0, initialArea: .work) }
         .task(id: model.active?.sync?.revision) { await reload() }
+        .refreshable { await model.active?.sync?.run() }
     }
 
     private func rows(_ list: [WorkItem]) -> some View {

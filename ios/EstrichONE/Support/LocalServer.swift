@@ -381,6 +381,10 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return (200, "[]")
         case "/api/v1/tickets/device":
             return (200, #"{"number":"T-2026-0001"}"#)
+        case "/api/v1/directory/users" where demo != nil:
+            let people = [["id": currentUserId, "displayName": "Max Huber", "isActive": true] as [String: Any]]
+                + DemoAbsences.colleagues.map { ["id": $0.id, "displayName": $0.name, "isActive": true] as [String: Any] }
+            return json(200, people)
         case "/api/v1/directory/users":
             return (200, """
             [{"id":"0193a1b2-0000-7000-8000-00000000bbbb","displayName":"Lukas Brandl","isActive":true},

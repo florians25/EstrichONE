@@ -103,7 +103,7 @@ struct CustomerDirectoryView: View {
             }
         }
         .navigationTitle("Kunden")
-        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Name, Ort oder Telefon")
+        .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Name, Kundennummer, Ort oder Telefon")
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { creating = true } label: { Label("Neuer Kunde", systemImage: "plus") }

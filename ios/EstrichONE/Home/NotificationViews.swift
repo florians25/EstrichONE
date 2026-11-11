@@ -572,6 +572,11 @@ struct NotificationDetailView: View {
         case .ticket: "Meldung öffnen"
         case .planning: "Planung öffnen"
         case .tasks: "Aufgaben öffnen"
+        case .workItem(_, bauakteId: .some(_)): "Aufgabe öffnen"
+        case .workItem(_, bauakteId: nil): "Aufgaben öffnen"
+        case .approval: "Dokumente öffnen"
+        case .absences(_, approvals: true): "Anträge öffnen"
+        case .absences: "Abwesenheiten öffnen"
         case .chat: "Chat öffnen"
         case .inbox: "Postfach öffnen"
         }
@@ -588,6 +593,10 @@ struct NotificationTargetView: View {
         case let .ticket(id): TicketDetailView(ticketId: id)
         case let .planning(day): DispatchView(initialDay: Self.date(day))
         case .tasks: MyTasksView()
+        case let .workItem(_, bauakteId?): BauakteDetailView(bauakteId: bauakteId, initialArea: .work)
+        case .workItem(_, bauakteId: nil): MyTasksView()
+        case let .approval(bauakteId): BauakteDetailView(bauakteId: bauakteId, initialArea: .media)
+        case let .absences(request, approvals): AbsenceOverviewView(focusRequestId: request, opensApprovals: approvals)
         case let .chat(id?): ChatConversationView(conversationId: id)
         case .chat(nil): ChatListView()
         case .inbox: NotificationInboxView()

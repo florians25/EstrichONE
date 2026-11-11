@@ -118,11 +118,16 @@ public struct AbsenceRequestItem: Codable, Equatable, Identifiable, Sendable {
     public let halfDayEnd: Bool
     public let substituteName: String?
     public let replacesRequestId: UUID?
+    /// Vertretung (Benutzer), falls eingetragen.
+    public let substituteUserId: UUID?
+    /// Genehmigt und noch nicht begonnen: Änderungsantrag möglich.
+    public let canChange: Bool
 
     public init(id: UUID, userId: UUID, userName: String, from: String, to: String, note: String? = nil, status: AbsenceRequestStatus,
                 workingDays: Decimal, decisionComment: String? = nil, warnings: [String] = [], remainingAfter: Decimal? = nil, canDecide: Bool = false,
                 canCancel: Bool = false, typeId: UUID? = nil, typeName: String? = nil, typeColor: String? = nil, halfDayStart: Bool = false,
-                halfDayEnd: Bool = false, substituteName: String? = nil, replacesRequestId: UUID? = nil) {
+                halfDayEnd: Bool = false, substituteName: String? = nil, replacesRequestId: UUID? = nil, substituteUserId: UUID? = nil,
+                canChange: Bool = false) {
         self.id = id
         self.userId = userId
         self.userName = userName
@@ -143,6 +148,8 @@ public struct AbsenceRequestItem: Codable, Equatable, Identifiable, Sendable {
         self.halfDayEnd = halfDayEnd
         self.substituteName = substituteName
         self.replacesRequestId = replacesRequestId
+        self.substituteUserId = substituteUserId
+        self.canChange = canChange
     }
 
     public init(from decoder: any Decoder) throws {
@@ -167,6 +174,8 @@ public struct AbsenceRequestItem: Codable, Equatable, Identifiable, Sendable {
         halfDayEnd = try c.decodeIfPresent(Bool.self, forKey: .halfDayEnd) ?? false
         substituteName = try c.decodeIfPresent(String.self, forKey: .substituteName)
         replacesRequestId = try c.decodeIfPresent(UUID.self, forKey: .replacesRequestId)
+        substituteUserId = try c.decodeIfPresent(UUID.self, forKey: .substituteUserId)
+        canChange = try c.decodeIfPresent(Bool.self, forKey: .canChange) ?? false
     }
 
     /// Zeitraum für die Anzeige, z. B. „07.06. – 09.06.2027 (erster Tag halb)“.
@@ -175,6 +184,24 @@ public struct AbsenceRequestItem: Codable, Equatable, Identifiable, Sendable {
     /// Status für die Anzeige („Ersetzt“ nach genehmigtem Änderungsantrag).
     public var statusText: String {
         status == .cancelled && decisionComment == "Durch Änderungsantrag ersetzt." ? "Ersetzt" : status.title
+    }
+
+    /// Entwurf für einen Änderungsantrag: gleicher Zeitraum, gleiche Art und Vertretung, bezogen auf diesen Antrag.
+    public var changeDraft: AbsenceRequestDraft {
+        AbsenceRequestDraft(typeId: typeId, from: from, to: to, halfDayStart: halfDayStart, halfDayEnd: halfDayEnd, note: note,
+                            substituteUserId: substituteUserId, replacesRequestId: id)
+    }
+}
+
+extension MyVacation {
+    /// Offener Änderungsantrag zu einem genehmigten Antrag (dann kein zweiter möglich).
+    public func pendingChange(of request: AbsenceRequestItem) -> AbsenceRequestItem? {
+        requests.first { $0.replacesRequestId == request.id && $0.status == .pending }
+    }
+
+    /// „Ändern“ anbieten: genehmigt, noch nicht begonnen und noch keine Änderung offen.
+    public func canRequestChange(_ request: AbsenceRequestItem) -> Bool {
+        request.canChange && request.status == .approved && pendingChange(of: request) == nil
     }
 }
 
@@ -193,6 +220,54 @@ public struct MyAbsence: Codable, Equatable, Identifiable, Sendable {
 public struct Holiday: Codable, Equatable, Sendable {
     public let date: String
     public let name: String
+
+    public init(date: String, name: String) {
+        self.date = date
+        self.name = name
+    }
+}
+
+/// Gesetzliche Feiertage (bundesweit plus Bayern) ohne Server, z. B. für den Demomodus. Im Betrieb rechnet der Server
+/// mit dem eingestellten Bundesland.
+public enum PublicHolidays {
+    /// Ostersonntag (Gaußsche Osterformel, gregorianisch).
+    public static func easter(_ year: Int) -> DateComponents {
+        let a = year % 19, b = year / 100, c = year % 100, d = b / 4, e = b % 4
+        let f = (b + 8) / 25, g = (b - f + 1) / 3, h = (19 * a + b - d - g + 15) % 30
+        let i = c / 4, k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7
+        let m = (a + 11 * h + 22 * l) / 451
+        let month = (h + l - 7 * m + 114) / 31
+        let day = (h + l - 7 * m + 114) % 31 + 1
+        return DateComponents(year: year, month: month, day: day)
+    }
+
+    /// Feiertage eines Jahres in Bayern (ohne Augsburger Friedensfest), sortiert, Datum im Format `JJJJ-MM-TT`.
+    public static func bavaria(_ year: Int) -> [Holiday] {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(identifier: "UTC") ?? .current
+        guard let easter = calendar.date(from: easter(year)) else { return [] }
+        func fixed(_ month: Int, _ day: Int, _ name: String) -> Holiday {
+            Holiday(date: String(format: "%04d-%02d-%02d", year, month, day), name: name)
+        }
+        func moving(_ offset: Int, _ name: String) -> Holiday? {
+            guard let date = calendar.date(byAdding: .day, value: offset, to: easter) else { return nil }
+            let parts = calendar.dateComponents([.year, .month, .day], from: date)
+            return Holiday(date: String(format: "%04d-%02d-%02d", parts.year ?? year, parts.month ?? 1, parts.day ?? 1), name: name)
+        }
+        let list: [Holiday?] = [
+            fixed(1, 1, "Neujahr"), fixed(1, 6, "Heilige Drei Könige"), moving(-2, "Karfreitag"), moving(1, "Ostermontag"),
+            fixed(5, 1, "Tag der Arbeit"), moving(39, "Christi Himmelfahrt"), moving(50, "Pfingstmontag"), moving(60, "Fronleichnam"),
+            fixed(8, 15, "Mariä Himmelfahrt"), fixed(10, 3, "Tag der Deutschen Einheit"), fixed(11, 1, "Allerheiligen"),
+            fixed(12, 25, "1. Weihnachtstag"), fixed(12, 26, "2. Weihnachtstag"),
+        ]
+        return list.compactMap { $0 }.sorted { $0.date < $1.date }
+    }
+
+    /// Feiertage zwischen `from` und `to` (einschließlich, `JJJJ-MM-TT`).
+    public static func bavaria(from: String, to: String) -> [Holiday] {
+        guard let first = Int(from.prefix(4)), let last = Int(to.prefix(4)), first <= last else { return [] }
+        return (first...last).flatMap { bavaria($0) }.filter { $0.date >= from && $0.date <= to }
+    }
 }
 
 /// Eigene Übersicht (GET hr/me).
@@ -243,18 +318,36 @@ public struct AbsencePreview: Codable, Equatable, Sendable {
     public let warnings: [String]
     public let remainingAfter: Decimal?
     public let requiresApproval: Bool
+    /// Feiertage im Zeitraum (zählen nicht als Arbeitstage).
+    public let holidays: [Holiday]
 
-    public init(workingDays: Decimal, warnings: [String], remainingAfter: Decimal?, requiresApproval: Bool) {
+    public init(workingDays: Decimal, warnings: [String], remainingAfter: Decimal?, requiresApproval: Bool, holidays: [Holiday] = []) {
         self.workingDays = workingDays
         self.warnings = warnings
         self.remainingAfter = remainingAfter
         self.requiresApproval = requiresApproval
+        self.holidays = holidays
+    }
+
+    public init(from decoder: any Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        workingDays = try c.decode(Decimal.self, forKey: .workingDays)
+        warnings = try c.decodeIfPresent([String].self, forKey: .warnings) ?? []
+        remainingAfter = try c.decodeIfPresent(Decimal.self, forKey: .remainingAfter)
+        requiresApproval = try c.decodeIfPresent(Bool.self, forKey: .requiresApproval) ?? true
+        holidays = try c.decodeIfPresent([Holiday].self, forKey: .holidays) ?? []
     }
 
     public var summary: String {
         let days = "\(AbsenceText.days(workingDays)) Arbeitstage"
         let rest = remainingAfter.map { ", danach \(AbsenceText.days($0)) Tage Resturlaub" } ?? ""
         return days + rest + "." + (requiresApproval ? " Der Antrag geht zur Genehmigung." : " Keine Genehmigung erforderlich.")
+    }
+
+    /// „Feiertage im Zeitraum: 25.12. 1. Weihnachtstag, …“ oder `nil`.
+    public var holidayText: String? {
+        guard !holidays.isEmpty else { return nil }
+        return "Feiertage im Zeitraum (nicht mitgezählt): " + holidays.map { "\(AbsenceText.shortDay($0.date)) \($0.name)" }.joined(separator: ", ")
     }
 }
 
@@ -266,16 +359,19 @@ public struct AbsenceRequestDraft: Codable, Equatable, Sendable {
     public var halfDayStart: Bool
     public var halfDayEnd: Bool
     public var note: String?
+    /// Vertretung während der Abwesenheit (optional).
+    public var substituteUserId: UUID?
     public var replacesRequestId: UUID?
 
     public init(typeId: UUID?, from: String, to: String, halfDayStart: Bool = false, halfDayEnd: Bool = false, note: String? = nil,
-                replacesRequestId: UUID? = nil) {
+                substituteUserId: UUID? = nil, replacesRequestId: UUID? = nil) {
         self.typeId = typeId
         self.from = from
         self.to = to
         self.halfDayStart = halfDayStart
         self.halfDayEnd = halfDayEnd
         self.note = note
+        self.substituteUserId = substituteUserId
         self.replacesRequestId = replacesRequestId
     }
 
@@ -312,6 +408,9 @@ public enum AbsenceText {
         guard parts.count == 3 else { return day }
         return "\(parts[2]).\(parts[1]).\(parts[0])"
     }
+
+    /// „25.12.“ aus „2026-12-25“.
+    public static func shortDay(_ day: String) -> String { String(german(day).prefix(6)) }
 
     public static func range(from: String, to: String, halfDayStart: Bool = false, halfDayEnd: Bool = false) -> String {
         if from == to { return german(from) + (halfDayStart || halfDayEnd ? " (halber Tag)" : "") }

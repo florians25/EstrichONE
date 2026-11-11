@@ -83,7 +83,7 @@ struct BauakteQuickPicker: View {
                 }
             }
             .listStyle(.insetGrouped)
-            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Nummer, Bauvorhaben oder Adresse")
+            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Nummer, Bauvorhaben, Adresse oder Kunde")
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { onDone(nil) } } }

@@ -106,6 +106,12 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
     /// Planung („Wer fährt wohin“) für einen Tag (`JJJJ-MM-TT`), `nil` = heute.
     case planning(day: String?)
     case tasks
+    /// Aufgabe oder Mangel: in der Bauakte den Bereich „Aufgaben & Mängel“, ohne Bauakte „Meine Aufgaben“.
+    case workItem(UUID, bauakteId: UUID?)
+    /// Freigabe eines Dokuments: Bauakte mit „Fotos & Dokumente“.
+    case approval(bauakteId: UUID)
+    /// Urlaub und Abwesenheit: Antrag hervorheben (`request`) bzw. offene Anträge zur Genehmigung (`approvals`).
+    case absences(request: UUID?, approvals: Bool)
     /// Chat: Unterhaltung (`nil` = Liste der Unterhaltungen).
     case chat(UUID?)
     case inbox
@@ -118,7 +124,26 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
             self = .inbox
             return
         }
-        if let link, let route = Self.parse(link) {
+        let linked = link.flatMap(Self.parse)
+        var linkedBauakte: UUID?
+        if case let .bauakte(id)? = linked { linkedBauakte = id }
+        switch (objectType?.lowercased(), objectId) {
+        case ("absencerequest"?, let id):
+            let approvals = link.map { $0.contains("reiter=antraege") } ?? false
+            self = .absences(request: id, approvals: approvals)
+            return
+        case let ("workitem"?, id?):
+            self = .workItem(id, bauakteId: linkedBauakte)
+            return
+        case ("approval"?, _):
+            if let linkedBauakte {
+                self = .approval(bauakteId: linkedBauakte)
+                return
+            }
+        default:
+            break
+        }
+        if let route = linked {
             self = route
             return
         }
@@ -127,6 +152,7 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         case let ("ticket"?, id?): self = .ticket(id)
         case ("assignment"?, _), ("plan"?, _), ("planday"?, _), ("planning"?, _): self = .planning(day: nil)
         case ("workitem"?, _), ("task"?, _): self = .tasks
+        case ("absencerequest"?, _), ("absence"?, _): self = .absences(request: nil, approvals: false)
         case let ("chatconversation"?, id), let ("chat"?, id), let ("chatmessage"?, id): self = .chat(id)
         case ("approval"?, _): self = .inbox
         default:
@@ -151,7 +177,10 @@ public enum NotificationRoute: Equatable, Sendable, Hashable, Identifiable {
         case "planung", "planning", "plan", "disposition": return .planning(day: day ?? parts.dropFirst().last.flatMap { $0.count == 10 ? $0 : nil })
         case "aufgaben", "tasks", "work-items", "maengel": return .tasks
         case "chat", "nachrichten", "messenger": return .chat(id)
-        case "benachrichtigungen", "notifications", "postfach", "urlaub", "personal", "system": return .inbox
+        case "personal", "urlaub", "abwesenheiten", "absences":
+            let tab = components.queryItems?.first { $0.name == "reiter" }?.value
+            return .absences(request: nil, approvals: tab == "antraege")
+        case "benachrichtigungen", "notifications", "postfach", "system": return .inbox
         default: return nil
         }
     }

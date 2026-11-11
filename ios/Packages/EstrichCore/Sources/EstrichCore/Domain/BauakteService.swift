@@ -132,8 +132,17 @@ public struct BauakteService: Sendable {
 
     // MARK: Bauakten
 
+    /// Bauakten, optional gefiltert: Nummer, Bauvorhaben, Adresse und zusätzlich der Kunde (Name, Kundennummer, Ort),
+    /// damit die Suche nach „K-1088“ oder „Schneider“ auch die Baustellen des Kunden findet.
     public func bauakten(search: String? = nil) async throws -> [Bauakte] {
-        try await store.entities(.bauakte, search: search).map(Bauakte.init)
+        let direct = try await store.entities(.bauakte, search: search).map(Bauakte.init)
+        guard let term = search?.trimmingCharacters(in: .whitespaces), !term.isEmpty else { return direct }
+        let customers = Set(try await store.entities(.contact, search: term).map(\.id))
+        guard !customers.isEmpty else { return direct }
+        let found = Set(direct.map(\.id))
+        let viaCustomer = try await store.entities(.bauakte).map(Bauakte.init)
+            .filter { bauakte in bauakte.customerId.map(customers.contains) == true && !found.contains(bauakte.id) }
+        return direct + viaCustomer
     }
 
     public func bauakte(_ id: UUID) async throws -> Bauakte? {

@@ -158,7 +158,7 @@ struct BauaktePickerView: View {
                 }
                 .buttonStyle(.plain)
             }
-            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Nummer, Bauvorhaben oder Adresse")
+            .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .always), prompt: "Nummer, Bauvorhaben, Adresse oder Kunde")
             .navigationTitle("Fotos zuordnen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } } }
