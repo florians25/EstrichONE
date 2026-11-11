@@ -60,6 +60,35 @@ jobs:
             grep -q "Bitte als root bzw. mit sudo" ohne-root.log
             echo "::endgroup::"
           done
+      - name: DNS-Prüfung – NAT (öffentliche Adresse des Routers), falscher Eintrag, offline ohne harten Fehler
+        run: |
+          check() { docker run --rm --add-host estrichone.example.org:198.51.100.7 "$@" -v "$PWD/install.sh:/install.sh:ro" debian:12 \
+            bash /install.sh pruefen --domain estrichone.example.org; }
+          # Hinter NAT zeigt der Eintrag auf die öffentliche Adresse – kein Fehlalarm.
+          check -e ESTRICHONE_PUBLIC_IP=198.51.100.7 | tee nat.log
+          grep -q "öffentliche Adresse dieses Servers" nat.log
+          ! grep -q "keine dieser Adressen" nat.log
+          # Eintrag zeigt woandershin: Hinweis mit der richtigen Adresse.
+          check -e ESTRICHONE_PUBLIC_IP=203.0.113.20 | tee falsch.log
+          grep -q "dieser Server ist aber unter 203.0.113.20 erreichbar" falsch.log
+          # Ohne Netz (Container ohne Netzwerk) bzw. Dienste nicht erreichbar: kurzer Hinweis, kein Abbruch, keine lange Wartezeit.
+          check --network none | tee offline.log
+          grep -q "öffentliche Adresse ist nicht ermittelbar" offline.log
+          grep -q "Prüfung beendet" offline.log
+          echo "198.51.100.7 estrichone.example.org" | sudo tee -a /etc/hosts
+          start=$SECONDS
+          sudo ESTRICHONE_IP_ECHO_URLS="https://192.0.2.1/ https://192.0.2.2/" bash install.sh pruefen --domain estrichone.example.org | tee offline2.log
+          grep -q "öffentliche Adresse ist nicht ermittelbar" offline2.log
+          test $((SECONDS - start)) -lt 40
+          # Echt hinter NAT: Der Runner hat eine private Adresse; ein Name, der auf seine öffentliche zeigt (sslip.io), gilt als richtig.
+          public="$(curl -4 -fsS --max-time 5 https://api.ipify.org || true)"
+          if [ -n "$public" ] && getent ahosts "$public.sslip.io" >/dev/null; then
+            hostname -I
+            sudo bash install.sh pruefen --domain "$public.sslip.io" | tee echt.log
+            grep -q "öffentliche Adresse dieses Servers" echt.log
+          else
+            echo "::notice::Öffentliche Adresse bzw. sslip.io nicht erreichbar – echter NAT-Fall übersprungen"
+          fi
       - name: Images dieser Version lokal bauen (Namen wie in der Registry)
         run: |
           for image in api backup web; do
@@ -96,9 +125,91 @@ jobs:
           grep -q "Port 80 ist bereits belegt" belegt.log
           grep -q "sudo ss -ltnp" belegt.log
           sudo mv /opt/estrichone-erste /opt/estrichone
+      - name: Vorhandener Caddy (Paket, systemd) – EstrichONE als eigene Site eintragen, vorhandene Site bleibt
+        run: |
+          (cd /opt/estrichone && sudo docker compose -p estrichone down -v --remove-orphans)
+          sudo rm -rf /opt/estrichone
+          # Caddy wie auf einem bestehenden Server: aus den Paketquellen; fällt der Spiegel aus, das offizielle Release.
+          if ! { sudo apt-get update -qq && sudo apt-get install -y -qq caddy; }; then
+            curl -fsSL --retry 3 "https://github.com/caddyserver/caddy/releases/download/v2.10.2/caddy_2.10.2_linux_amd64.tar.gz" | sudo tar -xz -C /usr/bin caddy
+            sudo useradd --system --home /var/lib/caddy --create-home --shell /usr/sbin/nologin caddy || true
+            sudo mkdir -p /etc/caddy
+            printf '[Service]\nUser=caddy\nExecStart=/usr/bin/caddy run --environ --config /etc/caddy/Caddyfile\nExecReload=/usr/bin/caddy reload --config /etc/caddy/Caddyfile --force\nAmbientCapabilities=CAP_NET_BIND_SERVICE\n[Install]\nWantedBy=multi-user.target\n' \
+              | sudo tee /etc/systemd/system/caddy.service >/dev/null
+            sudo systemctl daemon-reload
+          fi
+          # Vorhandene Site, die erhalten bleiben muss
+          printf ':80 {\n\trespond "Bestehende Website"\n}\n' | sudo tee /etc/caddy/Caddyfile >/dev/null
+          sudo systemctl enable --now caddy
+          sudo systemctl restart caddy
+          systemctl is-active caddy
+          sudo bash install.sh --ja --domain estrichone.localhost --name "Caddy CI" --version "$VERSION" --auto-updates aus 2>&1 | tee caddy.log
+          grep -q "Ports 80/443 sind belegt" caddy.log
+          grep -q "Vorhandener Caddy: Site estrichone.localhost → 127.0.0.1:8181 eingetragen" caddy.log
+          grep -q "^ESTRICHONE_MODE=proxy$" <(sudo cat /opt/estrichone/.env)
+          sudo cat /etc/caddy/Caddyfile
+          test "$(grep -c '^# >>> EstrichONE (estrichone.localhost)' /etc/caddy/Caddyfile)" = 1
+          test -f /etc/caddy/Caddyfile.vor-estrichone
+          # Suite nur lokal erreichbar, nach außen über den vorhandenen Caddy (internes Zertifikat für *.localhost)
+          ss -Hltn | grep -q "127.0.0.1:8181"
+          ! ss -Hltn | grep -q "0.0.0.0:8181"
+          for _ in $(seq 1 60); do curl -fsSk --resolve estrichone.localhost:443:127.0.0.1 https://estrichone.localhost/health/ready && break; sleep 2; done
+          curl -fsSk --resolve estrichone.localhost:443:127.0.0.1 https://estrichone.localhost/api/v1/server-info | grep -q "\"serverVersion\":\"$VERSION"
+          curl -fsS http://127.0.0.1/ | grep -q "Bestehende Website"
+          # Erneut ausführen = Reparatur: kein zweiter Eintrag
+          sudo bash install.sh 2>&1 | tee caddy-repair.log
+          test "$(grep -c '^# >>> EstrichONE (estrichone.localhost)' /etc/caddy/Caddyfile)" = 1
       - name: Protokolle bei Fehler
         if: failure()
-        run: cd /opt/estrichone && sudo docker compose -p estrichone ps && sudo docker compose -p estrichone logs --tail 80
+        run: |
+          cd /opt/estrichone && sudo docker compose -p estrichone ps && sudo docker compose -p estrichone logs --tail 80
+          sudo journalctl -u caddy --no-pager | tail -n 50 || true
+
+  docker-install:
+    name: Docker-Installation auf frischem ${{ matrix.os }} (systemd-Container wie eine VM), dann Installation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["debian:12", "ubuntu:24.04"]
+    steps:
+      - uses: actions/checkout@v5
+      - name: Frischen Server starten (systemd als PID 1, ohne Docker, eigenes /var/lib/docker)
+        run: |
+          printf 'FROM %s\nENV container=docker DEBIAN_FRONTEND=noninteractive\nRUN for i in 1 2 3; do apt-get update -qq && apt-get install -y -qq --no-install-recommends systemd systemd-sysv dbus ca-certificates curl iproute2 procps && break; sleep 10; done && rm -rf /var/lib/apt/lists/*\nSTOPSIGNAL SIGRTMIN+3\nCMD ["/sbin/init"]\n' \
+            "${{ matrix.os }}" | docker build -q -t estrichone-ci/frischer-server -
+          docker run -d --name server --hostname server --privileged --cgroupns=private --tmpfs /run --tmpfs /run/lock \
+            -v /var/lib/docker estrichone-ci/frischer-server
+          for _ in $(seq 1 30); do docker exec server systemctl is-system-running 2>/dev/null | grep -Eq 'running|degraded' && break; sleep 1; done
+          docker exec server systemctl is-system-running || true
+          ! docker exec server sh -c 'command -v docker'
+          docker cp install.sh server:/root/install.sh
+      - name: Ein Befehl – installiert Docker (get.docker.com) und die neueste veröffentlichte Version
+        run: |
+          PREVIOUS="$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=5" -H "Authorization: Bearer ${{ github.token }}" \
+            | grep -o '"tag_name": *"v[^"]*"' | head -n 1 | sed 's/.*"v\([^"]*\)"/\1/')"
+          echo "Version: $PREVIOUS"
+          docker exec server bash /root/install.sh --ja --docker-installieren --domain localhost --name "Frischer Server CI" \
+            --version "$PREVIOUS" --auto-updates aus 2>&1 | tee install.log
+          grep -q "Docker wird installiert" install.log
+          grep -q "✓ Docker " install.log
+          docker exec server systemctl is-active docker
+          docker exec server systemctl is-enabled docker
+          docker exec server docker compose version
+          for _ in $(seq 1 60); do docker exec server curl -fsSk https://localhost/health/ready && break; sleep 2; done
+          docker exec server curl -fsSk https://localhost/api/v1/server-info | grep -q "\"serverVersion\":\"$PREVIOUS"
+      - name: Erneut prüfen – Docker vorhanden, Installation erkannt
+        run: |
+          docker exec server bash /root/install.sh pruefen | tee pruefen.log
+          grep -q "✓ Docker " pruefen.log
+          grep -q "Port 443: EstrichONE" pruefen.log
+      - name: Protokolle bei Fehler
+        if: failure()
+        run: |
+          docker exec server cat /tmp/estrichone-docker-install.log || true
+          docker exec server journalctl -u docker --no-pager | tail -n 50 || true
+          docker exec server sh -c 'cd /opt/estrichone && docker compose -p estrichone ps && docker compose -p estrichone logs --tail 60' || true
 
   installer:
     name: Installer, Update von der letzten Version, weitere Rechner

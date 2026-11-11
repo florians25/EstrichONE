@@ -24,6 +24,7 @@
 #   --ja                  ESTRICHONE_YES=1        keine Rückfragen, Vorschläge übernehmen
 #   --docker-installieren ESTRICHONE_INSTALL_DOCKER=1  Docker ohne Rückfrage installieren (Debian/Ubuntu)
 #   --ohne-pruefung       ESTRICHONE_SKIP_CHECKS=1     Mindestanforderungen nur melden, nicht abbrechen
+#   ESTRICHONE_PUBLIC_IP  öffentliche Adresse für die DNS-Prüfung vorgeben (sonst kurz ermittelt; „aus“ = nicht fragen)
 # Alle weiteren ESTRICHONE_*-Variablen (z. B. ESTRICHONE_HTTP_PORT, ESTRICHONE_BIND_ADDRESS, ESTRICHONE_ARCHIVE)
 # reicht das Skript an den Installer weiter (siehe deploy/README.md).
 #
@@ -95,7 +96,7 @@ while [ $# -gt 0 ]; do
     --ja|--yes|-y) ESTRICHONE_YES=1 ;;
     --docker-installieren|--install-docker) ESTRICHONE_INSTALL_DOCKER=1 ;;
     --ohne-pruefung|--skip-checks) ESTRICHONE_SKIP_CHECKS=1 ;;
-    -h|--hilfe|--help) sed -n '2,34p' "${BASH_SOURCE[0]}" 2>/dev/null | sed 's/^# \{0,1\}//' || true; exit 0 ;;
+    -h|--hilfe|--help) sed -n '2,32p' "${BASH_SOURCE[0]}" 2>/dev/null | sed 's/^# \{0,1\}//' || true; exit 0 ;;
     installieren|install|reparieren|repair) COMMAND=installieren ;;
     konsole|hosting|console) COMMAND=konsole ;;
     pruefen|prüfen|check) COMMAND=pruefen ;;
@@ -219,8 +220,25 @@ ours_on_port() { # Port gehört schon zu EstrichONE (Reparatur/Aktualisierung)
 
 is_ip_or_local() { case "$1" in localhost|*.local|*.lan|*.internal|*.home.arpa) return 0 ;; esac; [[ "$1" =~ ^[0-9.]+$ || "$1" == *:* ]]; }
 
-check_dns() { # check_dns DOMAIN – zeigt die Domain auf diesen Server?
-  local domain="$1" resolved addresses
+public_ips() { # öffentliche Adresse(n) dieses Servers, wie das Internet sie sieht (hinter NAT: die des Routers)
+  # ESTRICHONE_PUBLIC_IP: fest vorgeben (z. B. ohne Internet) oder „aus“ = nicht ermitteln. Sonst kurz bei bis zu drei
+  # Diensten nachfragen (IPv4, dann IPv6); offline bleibt das Ergebnis leer, ohne Fehler und ohne lange Wartezeit.
+  case "${ESTRICHONE_PUBLIC_IP:-}" in
+    aus|off|none) return 0 ;;
+    ?*) printf '%s\n' "$ESTRICHONE_PUBLIC_IP" | tr -s ', ' '\n' | grep . || true; return 0 ;;
+  esac
+  command -v curl >/dev/null 2>&1 || return 0
+  local family url ip
+  for family in -4 -6; do
+    for url in ${ESTRICHONE_IP_ECHO_URLS:-https://api.ipify.org https://ifconfig.me/ip https://icanhazip.com}; do
+      ip="$(curl "$family" -fsS --connect-timeout 3 --max-time 5 "$url" 2>/dev/null | tr -d '[:space:]' || true)"
+      if [[ "$ip" =~ ^[0-9.]+$ || ( "$ip" == *:* && "$ip" =~ ^[0-9A-Fa-f:]+$ ) ]]; then printf '%s\n' "$ip"; break; fi
+    done
+  done
+}
+
+check_dns() { # check_dns DOMAIN – zeigt die Domain auf diesen Server (direkt oder über die öffentliche Adresse hinter NAT)?
+  local domain="$1" resolved addresses public="" public_list=""
   if is_ip_or_local "$domain"; then
     warn "Adresse $domain: kein öffentlicher Name – Caddy stellt ein eigenes Zertifikat aus (Browserwarnung, Apps brauchen eine echte Domain)."
     return
@@ -237,8 +255,21 @@ check_dns() { # check_dns DOMAIN – zeigt die Domain auf diesen Server?
   for ip in $resolved; do case "$addresses" in *" $ip "*) match=1 ;; esac; done
   if [ "$match" = "1" ]; then
     ok "DNS: $domain → $resolved (dieser Server)"
+    return
+  fi
+  # Nicht lokal: hinter NAT zeigt der Eintrag auf die öffentliche Adresse des Routers – das ist richtig.
+  public_list="$(public_ips | tr '\n' ' ' | sed 's/ *$//')"
+  public=" $public_list "
+  for ip in $resolved; do case "$public" in *" $ip "*) match=1 ;; esac; done
+  if [ "$match" = "1" ]; then
+    ok "DNS: $domain → $resolved (öffentliche Adresse dieses Servers, Netz mit NAT bzw. Router)"
+    hint "Am Router bzw. in der Cloud-Firewall die Ports 80 und 443 auf diesen Server weiterleiten bzw. freigeben."
+  elif [ -n "$public_list" ]; then
+    warn "DNS: $domain → $resolved – dieser Server ist aber unter $public_list erreichbar."
+    hint "DNS-Eintrag auf $public_list ändern, damit Let's Encrypt das Zertifikat ausstellen kann (wirkt nach einigen Minuten)."
+    hint "Läuft der Server bewusst hinter einem anderen Proxy oder Load-Balancer, kann dieser Hinweis entfallen."
   else
-    warn "DNS: $domain → $resolved – keine dieser Adressen gehört zu diesem Server."
+    warn "DNS: $domain → $resolved – keine dieser Adressen gehört zu diesem Server; die öffentliche Adresse ist nicht ermittelbar (offline?)."
     hint "Hinter einem Router (NAT) ist das normal: dort 80 und 443 auf diesen Server weiterleiten."
     hint "Sonst den DNS-Eintrag korrigieren, damit Let's Encrypt das Zertifikat ausstellen kann."
   fi
@@ -439,6 +470,7 @@ docker_args=(--rm -v /var/run/docker.sock:/var/run/docker.sock -v "$DIR:$DIR")
 while IFS= read -r name; do
   case "$name" in
     ESTRICHONE_YES|ESTRICHONE_INSTALL_DOCKER|ESTRICHONE_SKIP_CHECKS|ESTRICHONE_AUTO_UPDATE|ESTRICHONE_VERSION|ESTRICHONE_REF|ESTRICHONE_GITHUB_REPO) continue ;;
+    ESTRICHONE_PUBLIC_IP|ESTRICHONE_IP_ECHO_URLS) continue ;;
   esac
   docker_args+=(-e "$name")
 done < <(env | grep -oE '^ESTRICHONE_[A-Z0-9_]+=' | tr -d '=' | sort -u || true)

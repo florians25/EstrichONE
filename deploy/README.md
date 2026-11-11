@@ -19,7 +19,11 @@ Das Skript
 
 1. **prüft den Server** – Betriebssystem, Prozessor, Arbeitsspeicher (mind. 2 GB, empfohlen 4 GB), freien Speicher
    (mind. 8 GB, empfohlen 30 GB), Docker mit Compose-Plugin, belegte Ports, DNS-Eintrag der Domain und die Firewall
-   (ufw). Jede Meldung nennt die Abhilfe;
+   (ufw). Jede Meldung nennt die Abhilfe. Zeigt die Domain nicht auf eine Adresse des Servers, fragt das Skript kurz
+   (je höchstens 5 Sekunden) die **öffentliche Adresse** ab (ipify, ifconfig.me, icanhazip; IPv4 und IPv6): Hinter einem
+   Router bzw. Cloud-NAT ist der Eintrag dann richtig und es gibt keine Warnung, nur den Hinweis auf die
+   Portweiterleitung. Ohne Internet bleibt es bei einem Hinweis, nie ein Abbruch. `ESTRICHONE_PUBLIC_IP=<adresse>` gibt
+   die Adresse fest vor, `ESTRICHONE_PUBLIC_IP=aus` schaltet die Abfrage ab;
 2. **installiert Docker**, falls es fehlt (Debian/Ubuntu, nach Rückfrage bzw. mit `--docker-installieren`);
 3. fragt nur **Adresse** und **Firmenname** ab (Enter übernimmt den Vorschlag) sowie, ob Sicherheitsupdates nachts
    automatisch eingespielt werden sollen (Vorschlag: ja);
@@ -60,6 +64,9 @@ Typische Meldungen und Abhilfe:
 |---|---|
 | `Port 80 ist bereits belegt (nginx)` | Dienst beenden oder `--modus proxy` (EstrichONE dann hinter diesem Proxy) |
 | `DNS: … ist (noch) nicht auflösbar` | A-/AAAA-Eintrag beim DNS-Anbieter anlegen; das Zertifikat folgt automatisch |
+| `DNS: … (öffentliche Adresse dieses Servers, Netz mit NAT bzw. Router)` | kein Fehler: Server hinter Router/Cloud-NAT; dort 80 und 443 auf den Server weiterleiten bzw. freigeben |
+| `DNS: … – dieser Server ist aber unter … erreichbar` | DNS-Eintrag auf die genannte öffentliche Adresse ändern (oder bewusst anderer Proxy/Load-Balancer davor) |
+| `… die öffentliche Adresse ist nicht ermittelbar (offline?)` | nur ein Hinweis; bei Servern ohne Internet `ESTRICHONE_PUBLIC_IP=<adresse>` setzen |
 | `Firewall (ufw) … lässt Port(s) 80 443 nicht zu` | `sudo ufw allow 80/tcp` und `sudo ufw allow 443/tcp` |
 | `Installer-Image … nicht ladbar` | Internetverbindung, Version bzw. Docker-Proxy im Firmennetz prüfen |
 

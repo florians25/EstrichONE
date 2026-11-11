@@ -256,6 +256,8 @@ Dokumentation, Kommunikation und Service). Die Schalter wirken **sofort** für a
   nach Rückfrage mit.
 - **Immer aktiv** sind Bauakten, Kunden und Kontakte, Benutzer und Rechte, Einstellungen und Sicherung.
 - Jede Änderung steht im **Protokoll** („settings.modules_changed“).
+- Bei gehosteten Instanzen sieht der Betreiber in der Hosting-Konsole, welche Module eingeschaltet sind – nur lesend,
+  über eine eigene, mit dem Instanz-Schlüssel gesicherte Schnittstelle. Ein- und ausschalten können Module nur Sie.
 - **Chat**: Schalter auf der Karte unter „Kommunikation und Service“; darunter **Löschfrist (Tage)**, **Vorschau in
   Pushnachrichten** (aus empfohlen: nur „Neue Nachricht von …“), **Mitarbeiter untereinander** (aus: Mitarbeiter ohne
   Recht „Chat verwalten“ können Einzelchats nur mit dem Büro beginnen). **Bestand** zeigt Umfang und letzte Löschung;
@@ -485,7 +487,11 @@ Ein neuer Server wird mit einem Befehl eingerichtet:
 `curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.sh | sudo bash`
 
 Das Skript prüft zuerst den Server (Arbeitsspeicher, Speicherplatz, Docker, Ports, DNS-Eintrag, Firewall) und nennt zu
-jedem Befund die Abhilfe. Fehlt Docker, installiert es Docker nach Rückfrage. Danach fragt es nur die Adresse und den
+jedem Befund die Abhilfe. Beim DNS-Eintrag vergleicht es auch mit der öffentlichen Adresse des Servers: Steht der Server
+hinter einem Router (NAT), ist ein Eintrag auf die Adresse des Routers richtig – es erinnert dann nur daran, die Ports
+80 und 443 am Router auf den Server weiterzuleiten. Fehlt Docker, installiert es Docker nach Rückfrage (Debian und
+Ubuntu). Läuft auf dem Server bereits Caddy, trägt es EstrichONE dort auf Wunsch als eigene Website ein; vorhandene
+Websites bleiben unverändert (Sicherungskopie `/etc/caddy/Caddyfile.vor-estrichone`). Danach fragt es nur die Adresse und den
 Firmennamen ab, wählt die Betriebsart selbst (eigenes Zertifikat über Let's Encrypt oder hinter einem vorhandenen
 Proxy) und zeigt am Ende Adresse, Backup-Passwort und Einrichtungscode (Kapitel 2, „Ersteinrichtung“).
 
