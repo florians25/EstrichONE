@@ -341,9 +341,10 @@ struct AbsenceRequestRow: View {
                     Spacer(minLength: Space.s)
                     Chip(text: request.statusText, tone: tone)
                 }
-                Text([showsName ? request.typeName : nil, request.rangeText, "\(AbsenceText.days(request.workingDays)) Arbeitstage"]
-                    .compactMap { $0 }.joined(separator: " · "))
-                    .font(Typo.subhead).foregroundStyle(Theme.textSecondary)
+                Text([showsName ? request.typeName : nil, request.rangeText].compactMap { $0 }.joined(separator: " · "))
+                    .font(Typo.subhead).foregroundStyle(Theme.textPrimary)
+                Text("\(AbsenceText.days(request.workingDays)) Arbeitstage")
+                    .font(Typo.subhead.monospacedDigit()).foregroundStyle(Theme.textSecondary)
                 if request.replacesRequestId != nil {
                     Label("Änderungsantrag", systemImage: "calendar.badge.clock").labelStyle(TightLabelStyle())
                         .font(Typo.metaStrong).foregroundStyle(Theme.accent)
@@ -486,7 +487,7 @@ struct AbsenceRequestSheet: View {
                 }
             }
         }
-        .navigationTitle(replaces == nil ? "Antrag" : "Änderung beantragen")
+        .navigationTitle(replaces == nil ? "Antrag" : "Änderung")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } }
