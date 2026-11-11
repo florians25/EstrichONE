@@ -253,7 +253,7 @@ private fun RequestRow(r: AbsenceRequestItem, showsName: Boolean, onCancel: (() 
                 }
                 Pill(r.statusText, color, background)
             }
-            Secondary(listOfNotNull(if (showsName) r.typeName else null, r.rangeText, "${AbsenceText.days(r.workingDays)} Arbeitstage").joinToString(" · "))
+            Secondary(listOfNotNull(if (showsName) r.typeName else null, r.rangeText, AbsenceText.workingDays(r.workingDays)).joinToString(" · "))
             if (r.replacesRequestId != null) Text("Änderungsantrag", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary)
             listOfNotNull(r.substituteName?.let { "Vertretung: $it" }, r.decisionComment, r.note).takeIf { it.isNotEmpty() }?.let {
                 Text(it.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
@@ -376,7 +376,7 @@ fun AbsenceRequestScreen(changing: AbsenceRequestItem? = null) {
                     when {
                         draft.problem != null -> Text(draft.problem!!, color = tones.danger)
                         preview != null -> {
-                            Text(preview!!.summary)
+                            Text(preview!!.summary(change = changing != null))
                             preview!!.holidayText?.let { Secondary(it, Modifier.padding(top = 4.dp)) }
                             preview!!.warnings.forEach { w ->
                                 Row(Modifier.padding(top = 4.dp), verticalAlignment = Alignment.Top) {

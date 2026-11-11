@@ -27,7 +27,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Synchronisationsseite (Warteschlange, abgelehnte Änderungen) | ✅ | ✅ | |
 | „Nur Ansicht“ nach längerem Serverausfall | ✅ | 🟡 | Android zeigt „Offline“ und speichert lokal weiter, ohne eigenen Nur-Ansicht-Modus |
 | Wartung (503 MAINTENANCE) | ✅ | ✅ | Hinweis, Abgleich pausiert |
-| Push-Benachrichtigungen | ✅ APNs | 🟡 | Server hat noch kein FCM („Android-Push ist noch nicht eingerichtet“): Postfach wird im Hintergrund abgefragt und als Mitteilung gezeigt |
+| Push-Benachrichtigungen | ✅ APNs | 🟡 | Server hat noch kein FCM („Android-Push ist noch nicht eingerichtet“): Postfach wird im Hintergrund abgefragt und als Mitteilung gezeigt; Antippen öffnet das Ziel (Bauakte mit Aufgaben bzw. Dokumenten, Chat, Urlaub, Anträge) |
 
 ## Heute
 
@@ -44,7 +44,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
-| Liste mit Suche, Gruppen nach Status, „Heute im Einsatz“ | ✅ | ✅ | zusätzlich Filter-Chips |
+| Liste mit Suche, Gruppen nach Status, „Heute im Einsatz“ | ✅ | ✅ | zusätzlich Filter-Chips; Suche auch nach Kunde und Kundennummer, Ziehen zum Abgleichen |
 | Schnellanlage mit Art, Adresse, Kunde (vorhanden oder neu) – offline | ✅ | ✅ | |
 | Dublettenprüfung beim neuen Kunden | ✅ | 🟡 | Hinweis auf ähnliche Kunden aus dem Bestand auf dem Gerät (offline); Serverprüfung `contacts/duplicates` nicht genutzt |
 | Kopf: Nummer, Status ändern, Titel, Kennzahlen aus dem Schema | ✅ | ✅ | |
@@ -93,6 +93,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Meine Woche | ✅ | ✅ | |
 | Wer fährt wohin (lesend) | ✅ | ✅ | |
 | Kolonnenplan und Disposition für Planer (zuweisen, tauschen, freigeben) | ✅ | ❌ | iOS CrewPlanView/PlanningSheets; auf Android nur lesend |
+| Urlaub: Konto, Anträge, Vorschau mit Feiertagen, Genehmigen | ✅ | ✅ | |
+| Urlaub: Vertretung wählen, Änderungsantrag zu genehmigtem Urlaub | ✅ | ✅ | Demomodus rechnet Feiertage (Bayern) heraus |
 
 ## Kommunikation
 

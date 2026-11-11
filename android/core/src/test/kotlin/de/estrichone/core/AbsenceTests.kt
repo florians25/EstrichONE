@@ -74,6 +74,7 @@ class AbsenceTests {
         assertEquals("07.06.2027 (halber Tag)", AbsenceText.range("2027-06-07", "2027-06-07", halfDayStart = true))
         assertEquals("2,5 Arbeitstage, danach 17 Tage Resturlaub. Der Antrag geht zur Genehmigung.",
             AbsencePreview(2.5, emptyList(), 17.0, true).summary)
+        assertEquals("1 Arbeitstag. Die Änderung geht zur Genehmigung.", AbsencePreview(1.0, emptyList(), null, true).summary(change = true))
         assertEquals("Ersetzt", AbsenceRequestItem("x", "u", "A", "2027-01-04", "2027-01-05", status = "cancelled",
             decisionComment = "Durch Änderungsantrag ersetzt.").statusText)
     }

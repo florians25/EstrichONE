@@ -114,7 +114,7 @@ fun BauaktenScreen(selected: String?) {
         LazyColumn(contentPadding = padding.content()) {
             item(key = "search", contentType = "search") {
                 OfflineBanner(session)
-                SearchField(search, { search = it }, "Nummer, Bauvorhaben, Adresse, Kunde")
+                SearchField(search, { search = it }, "Nummer, Kunde, Adresse")
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Filter.entries.forEach { f ->
                         FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.title} (${counts[f] ?: 0})") },

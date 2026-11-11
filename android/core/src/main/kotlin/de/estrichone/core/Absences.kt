@@ -123,9 +123,15 @@ data class AbsencePreview(
     val requiresApproval: Boolean = true,
     val holidays: List<AbsenceHoliday> = emptyList(),
 ) {
-    val summary: String
-        get() = "${AbsenceText.days(workingDays)} Arbeitstage" + (remainingAfter?.let { ", danach ${AbsenceText.days(it)} Tage Resturlaub" } ?: "") + "." +
-            if (requiresApproval) " Der Antrag geht zur Genehmigung." else " Keine Genehmigung erforderlich."
+    val summary: String get() = summary(change = false)
+
+    /** Zusammenfassung; beim Änderungsantrag geht „die Änderung“ zur Genehmigung. */
+    fun summary(change: Boolean): String =
+        AbsenceText.workingDays(workingDays) + (remainingAfter?.let { ", danach ${AbsenceText.days(it)} Tage Resturlaub" } ?: "") + "." + when {
+            !requiresApproval -> " Keine Genehmigung erforderlich."
+            change -> " Die Änderung geht zur Genehmigung."
+            else -> " Der Antrag geht zur Genehmigung."
+        }
 
     /** „Feiertage im Zeitraum: 25.12.2026 1. Weihnachtstag, …“ oder null. */
     val holidayText: String?
@@ -170,6 +176,9 @@ object AbsenceText {
     private val number = DecimalFormat("0.#", DecimalFormatSymbols(Locale.GERMANY))
 
     fun days(value: Double): String = number.format(value)
+
+    /** „1 Arbeitstag“, „0,5 Arbeitstage“, „3 Arbeitstage“. */
+    fun workingDays(value: Double): String = "${days(value)} " + if (value == 1.0) "Arbeitstag" else "Arbeitstage"
 
     /** 2027-06-07 → 07.06.2027 */
     fun date(day: String): String = day.split('-').takeIf { it.size == 3 }?.let { "${it[2]}.${it[1]}.${it[0]}" } ?: day
