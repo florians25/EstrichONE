@@ -535,6 +535,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 	const canPlan = session.has("planning.read");
 	const canWaive = session.has("bauakten.edit");
 	const canNote = session.has("notes.write");
+	// Einstellungen › Module: ohne „Erstbegehung und Protokolle“ entfällt der Abschnitt (Auswahl bleibt „Später planen“).
+	const inspectionsOn = session.moduleOn("inspections");
 	const inspection = new RadioButtonGroup("newInspection", {
 		columns: 1, selectedIndex: 0,
 		buttons: inspectionChoices.map((o) => new RadioButton({ text: o.text, wrapping: true,
@@ -581,7 +583,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					new Label({ text: "Vorgehen", labelFor: inspection }), inspection,
 					inspectionLabels.day, inspDay, inspectionLabels.time, inspTime, inspectionLabels.duration, inspDuration,
 					inspectionLabels.reason, waiveReason,
-				]),
+				]).setVisible(inspectionsOn),
 				form([
 					formTitle("Interne Notiz"),
 					new Label({ text: "Notiz", labelFor: note }), note,
@@ -644,7 +646,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		if (person(partyDraft(manager))) people.push(["Bauleitung", person(partyDraft(manager))]);
 		if (person(partyDraft(architect))) people.push([partyRole.getSelectedKey() === "planner" ? "Planer" : "Architekt", person(partyDraft(architect))]);
 		out.push({ title: "Beteiligte", rows: people });
-		const extra: [string, string][] = [["Erstbegehung", inspectionText()]];
+		const extra: [string, string][] = inspectionsOn ? [["Erstbegehung", inspectionText()]] : [];
 		const n = note.getValue().trim();
 		if (n) extra.push(["Notiz", n.length > 160 ? `${n.slice(0, 160)} …` : n]);
 		out.push({ title: "Abschluss", rows: extra });
