@@ -58,5 +58,10 @@ echo "== swift test gegen http://localhost:$PORT"
 docker run --rm --network host ${SWIFT_DOCKER_ARGS:-} \
   -e ESTRICHONE_LIVE_SERVER="http://localhost:$PORT" -e ESTRICHONE_LIVE_LOGIN=admin -e ESTRICHONE_LIVE_PASSWORD="$PASSWORD" \
   -v "$ROOT":/repo -w /repo/ios/Packages/EstrichCore "${SWIFT_IMAGE:-swift:6.1-noble}" \
-  bash -c 'test -f /usr/include/sqlite3.h || (apt-get update -qq && apt-get install -y -qq libsqlite3-dev >/dev/null)
+  bash -c 'test -f /usr/include/sqlite3.h || for i in 1 2 3; do
+             apt-get update -qq && apt-get install -y -qq libsqlite3-dev >/dev/null && break
+             # Paketspiegel nicht erreichbar (DNS im Container): Spiegel von Azure versuchen, kurz warten, erneut.
+             sed -i "s#http://archive.ubuntu.com#http://azure.archive.ubuntu.com#g; s#http://security.ubuntu.com#http://azure.archive.ubuntu.com#g" \
+               /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null; sleep 15
+           done
            swift test 2>&1 | tee /tmp/swift-test.log; test "${PIPESTATUS[0]}" -eq 0 && grep -q "Echter Server\" passed" /tmp/swift-test.log'

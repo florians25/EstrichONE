@@ -76,7 +76,8 @@ jobs:
         working-directory: web
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          # Systempakete sind auf dem Runner meist vorhanden; fällt der Paketspiegel aus, nur den Browser laden.
+          npx playwright install --with-deps chromium || npx playwright install chromium
       - name: Shellcheck
         run: shellcheck web/scripts/e2e.sh
       - name: PostgreSQL + API + Web-Image hinter Nginx (10-MB-Grenze wie Nginx Proxy Manager), Playwright
