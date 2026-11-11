@@ -94,7 +94,7 @@ test('Ticket: Melder und Geräte, Verknüpfen, Zeit, Prüfpfad und Zusammenführ
 test('Einstellungen und Wissensdatenbank: Gruppe, Ziele, Artikel als Vorschlag beim Melden', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await page.goto('/it-center/helpdesk-einstellungen');
-  await expect(page.locator('[id$="hdTargets"]')).toContainText('Dringend');
+  await expect(page.locator('.eoHdTargets')).toContainText('Dringend');
   await page.locator('[id$="hdSetTabs"]').getByText(/^Gruppen/).click();
   await page.getByRole('button', { name: 'Gruppe anlegen' }).click();
   const group = page.getByRole('dialog', { name: 'Gruppe anlegen' });
