@@ -18,6 +18,10 @@ RUN dotnet publish backend/src/EstrichOne.Api/EstrichOne.Api.csproj \
 FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:9b755ea799ae649141a073e30d8b62d8095a5465af2b7694d17866e8c05131d8
 WORKDIR /app
 COPY --from=build /app ./
+# App-Updates (docs/app-updates.md): Versionshinweise für „Neu in dieser Version“ und – im Release – das signierte
+# Android-Paket derselben Version mit android.json (Prüfsumme, Signatur); ohne Paket bleibt das Verzeichnis leer.
+COPY docs/releases/ /app/releases/
+COPY docker/app-packages/ /app/app-packages/
 ENV ASPNETCORE_HTTP_PORTS=8080 \
     DOTNET_gcServer=0 \
     TZ=Europe/Berlin

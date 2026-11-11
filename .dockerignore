@@ -4,6 +4,8 @@
 .git/
 legacy/
 docs/
+# Versionshinweise für „Neu in dieser Version“ in den Apps (API-Image, docs/app-updates.md)
+!docs/releases/
 deploy/data/
 deploy/.env
 **/node_modules/

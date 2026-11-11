@@ -45,6 +45,11 @@ jobs:
       - uses: actions/checkout@v5
       - name: Images dieser Version lokal bauen (Namen wie in der Registry)
         run: |
+          # Android-Paket wie im Release (release.yml): APK-Ersatz mit android.json, damit die API es ausliefert.
+          head -c 2000000 /dev/urandom > "docker/app-packages/EstrichONE-Android-v$VERSION.apk"
+          printf '{"version":"%s","versionCode":19999,"file":"EstrichONE-Android-v%s.apk","sha256":"%s","size":%s,"releaseSigned":true,"signerSha256":"ci"}\n' \
+            "$VERSION" "$VERSION" "$(sha256sum "docker/app-packages/EstrichONE-Android-v$VERSION.apk" | cut -d' ' -f1)" \
+            "$(stat -c %s "docker/app-packages/EstrichONE-Android-v$VERSION.apk")" > docker/app-packages/android.json
           for image in api backup web archive backup-target; do
             docker build -q -f "docker/$image.Dockerfile" --build-arg ESTRICHONE_VERSION="$VERSION" -t "ghcr.io/florians25/estrichone-$image:$VERSION" .
           done
@@ -89,6 +94,20 @@ jobs:
           ! grep -q "Automatisches Update" again.log
           sudo /opt/estrichone/update.sh --automatik aus
           ! systemctl is-enabled estrichone-update.timer 2>/dev/null
+      - name: App-Updates über den Proxy (Prüfung, APK mit Prüfsumme, fortsetzbarer Download, Mindestversion bleibt erreichbar)
+        run: |
+          curl -fsS "http://localhost:8181/api/v1/app-updates/check?platform=android&version=1.0.0" | tee check.json
+          grep -q '"status":"recommended"' check.json && grep -q "\"latestVersion\":\"$VERSION\"" check.json
+          sha="$(sed -n 's/.*"sha256":"\([0-9a-f]*\)".*/\1/p' check.json)"
+          curl -fsS -D apk-headers.txt -o app.apk http://localhost:8181/api/v1/app-updates/android/package
+          echo "$sha  app.apk" | sha256sum -c -
+          grep -qi "^content-type: application/vnd.android.package-archive" apk-headers.txt
+          ! grep -qi "^content-encoding:" apk-headers.txt
+          # Abgebrochener Download wird fortgesetzt (Range) und ergibt dieselbe Datei.
+          head -c 700000 app.apk > teil.apk
+          curl -fsS -C - -o teil.apk http://localhost:8181/api/v1/app-updates/android/package
+          cmp app.apk teil.apk
+          curl -fsS -H "X-EstrichONE-Client: android/0.0.1" http://localhost:8181/api/v1/server-info | grep -q '"serverVersion"'
       - name: Gehärteter Stack nach dem Update (Rechte, Grenzen, nur Caddy mit Ports)
         run: |
           cd /opt/estrichone

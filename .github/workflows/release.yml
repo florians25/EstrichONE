@@ -118,6 +118,34 @@ jobs:
           echo "$KEYSTORE_BASE64" | base64 -d > "$ESTRICHONE_KEYSTORE_FILE"
           android/scripts/gradle-retry.sh :app:assembleRelease -PappVersionName="${TAG#v}"
           rm -f "$ESTRICHONE_KEYSTORE_FILE"
+      # Paket für den Server (App-Updates, docs/app-updates.md): signiertes Release-APK bzw. ohne Schlüssel das Debug-APK,
+      # mit SHA-256 und Fingerabdruck des Signaturzertifikats. Das Image der API liefert es aus; die App prüft beides.
+      - name: Paket beschreiben (android.json, Prüfsummen)
+        run: |
+          version="${TAG#v}"
+          mkdir -p "$RUNNER_TEMP/app-packages"
+          if [[ -f android/app/build/outputs/apk/release/app-release.apk ]]; then
+            apk=android/app/build/outputs/apk/release/app-release.apk; signed=true
+          else
+            apk=android/app/build/outputs/apk/debug/app-debug.apk; signed=false
+          fi
+          name="EstrichONE-Android-$TAG.apk"
+          cp "$apk" "$RUNNER_TEMP/app-packages/$name"
+          apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
+          signer="$("$apksigner" verify --print-certs "$apk" | sed -n 's/^Signer #1 certificate SHA-256 digest: //p' | head -1)"
+          test -n "$signer" || { echo "Signatur des APK nicht lesbar"; exit 1; }
+          code="$("$(dirname "$apksigner")/aapt2" dump badging "$apk" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -1 || true)"
+          sha="$(sha256sum "$apk" | cut -d' ' -f1)"
+          size="$(stat -c %s "$apk")"
+          printf '{"version":"%s","versionCode":%s,"file":"%s","sha256":"%s","size":%s,"releaseSigned":%s,"signerSha256":"%s"}\n' \
+            "$version" "${code:-0}" "$name" "$sha" "$size" "$signed" "$signer" > "$RUNNER_TEMP/app-packages/android.json"
+          cat "$RUNNER_TEMP/app-packages/android.json"
+          [[ "$signed" == true ]] || echo "::warning::Kein Signaturschlüssel hinterlegt: Server liefert das Debug-APK aus (jeder Lauf hat einen anderen Debug-Schlüssel: Updates nur nach Deinstallation)."
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-packages
+          path: ${{ runner.temp }}/app-packages
+          retention-days: 7
       - name: Anhängen
         env:
           GH_TOKEN: ${{ github.token }}
@@ -132,7 +160,10 @@ jobs:
             cp android/app/build/outputs/apk/debug/app-debug.apk "EstrichONE-Android-$TAG.apk"
             files=("EstrichONE-Android-$TAG.apk")
           fi
-          gh release upload "$TAG" "${files[@]}" --clobber --repo "$GITHUB_REPOSITORY"
+          sha256sum "${files[@]}" > "EstrichONE-Android-$TAG.sha256"
+          # Versionsangaben der Apps (für Verwaltung, MDM und eigene Verteilung).
+          cp "$RUNNER_TEMP/app-packages/android.json" "EstrichONE-Apps-$TAG.json"
+          gh release upload "$TAG" "${files[@]}" "EstrichONE-Android-$TAG.sha256" "EstrichONE-Apps-$TAG.json" --clobber --repo "$GITHUB_REPOSITORY"
 
   server:
     needs: create
@@ -165,6 +196,13 @@ jobs:
           XCODE=$(ls -d /Applications/Xcode_*.app | grep -vi beta | sort -V | tail -1)
           sudo xcode-select -s "$XCODE"
           xcodebuild -version
+      # App Store und TestFlight erwarten x.y.z: 1.1.0-preview.2 → 1.1.0; Build-Nummer aus dem Lauf (immer steigend).
+      - name: Version aus dem Tag
+        working-directory: ios
+        run: |
+          version="${TAG#v}"; version="${version%%-*}"
+          sed -i '' -E "s/^( +MARKETING_VERSION: ).*/\1\"$version\"/; s/^( +CURRENT_PROJECT_VERSION: ).*/\1\"$GITHUB_RUN_NUMBER\"/" project.yml
+          grep -E "MARKETING_VERSION|CURRENT_PROJECT_VERSION" project.yml
       - name: Xcode-Projekt erzeugen
         working-directory: ios
         run: |
@@ -188,13 +226,30 @@ jobs:
 
   images:
     name: Docker-Images (GitHub Container Registry)
-    needs: create
+    # Wartet auf das Android-Paket: Die API liefert das APK derselben Version aus (App-Updates). Scheitert der
+    # Android-Bau, entstehen die Images trotzdem – die Apps verweisen dann auf das Release.
+    needs: [create, android]
+    if: ${{ !cancelled() && needs.create.result == 'success' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v5
         with:
           ref: ${{ env.TAG }}
+      - uses: actions/download-artifact@v4
+        if: ${{ needs.android.result == 'success' }}
+        with:
+          name: app-packages
+          path: docker/app-packages
+      - name: Android-Paket prüfen
+        run: |
+          if [[ -f docker/app-packages/android.json ]]; then
+            file="$(sed -n 's/.*"file":"\([^"]*\)".*/\1/p' docker/app-packages/android.json)"
+            sha="$(sed -n 's/.*"sha256":"\([^"]*\)".*/\1/p' docker/app-packages/android.json)"
+            echo "$sha  docker/app-packages/$file" | sha256sum -c -
+          else
+            echo "::warning::Kein Android-Paket – das API-Image liefert keine App aus."
+          fi
       - uses: docker/login-action@v3
         with:
           registry: ghcr.io

@@ -38,7 +38,8 @@
 
 (app) {
 	# Echtzeit des Chats (Server-Sent Events) nie komprimieren – sonst puffert die Kompression den Strom.
-	@compress not path /api/v1/chat/events
+	# Das Android-Paket (APK) ist bereits komprimiert und wird fortsetzbar (Range) geladen.
+	@compress not path /api/v1/chat/events /api/v1/app-updates/android/package
 	encode @compress zstd gzip
 
 	header {
