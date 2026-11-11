@@ -1,7 +1,7 @@
 import EstrichCore
 import SwiftUI
 
-// App-Updates (docs/app-updates.md): Hinweis oben, Sperrbildschirm unter der Mindestversion, „Neu in dieser Version“
+// App-Updates (docs/app-updates.md): Hinweis auf „Heute“, Sperrbildschirm unter der Mindestversion, „Neu in dieser Version“
 // nach dem Update und Abschnitt unter Mehr. Eingebunden mit `.appUpdates(model)` in RootView.
 
 extension View {
@@ -18,12 +18,6 @@ private struct AppUpdateModifier: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .safeAreaInset(edge: .top, spacing: 0) {
-                if center.showsBanner, !center.isBlocked {
-                    AppUpdateBanner(center: center)
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
-            }
             .overlay {
                 if center.isBlocked {
                     AppUpdateRequiredView(center: center, pending: model.active?.sync?.summary.map { $0.pendingOperations + $0.pendingUploads } ?? 0)
@@ -31,7 +25,6 @@ private struct AppUpdateModifier: ViewModifier {
                 }
             }
             .animation(.default, value: center.isBlocked)
-            .animation(.default, value: center.showsBanner)
             .sheet(isPresented: Binding(get: { !center.whatsNew.isEmpty && !center.isBlocked }, set: { if !$0 { center.whatsNewShown() } })) {
                 WhatsNewSheet(notes: center.whatsNew) { center.whatsNewShown() }
             }
@@ -57,37 +50,26 @@ private struct AppUpdateModifier: ViewModifier {
     }
 }
 
-/// Hinweis oben: neuere Version verfügbar.
-struct AppUpdateBanner: View {
+/// Hinweis auf „Heute“: neuere Version verfügbar, mit „Aktualisieren“ und „Später“.
+struct AppUpdateNotice: View {
     let center: AppUpdateCenter
 
     var body: some View {
-        HStack(spacing: Space.m) {
-            Image(systemName: "arrow.down.app.fill")
-                .font(.title3)
-                .foregroundStyle(Theme.accent)
-                .accessibilityHidden(true)
-            VStack(alignment: .leading, spacing: 2) {
-                Text("Version \(center.check?.latestVersion ?? "") verfügbar")
-                    .font(Typo.subheadStrong)
-                if let message = center.check?.message {
-                    Text(message)
-                        .font(Typo.meta)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(2)
-                }
+        VStack(alignment: .leading, spacing: Space.s) {
+            NoticeLine(tone: .info, text: text, symbol: "arrow.down.app.fill", actionTitle: "Aktualisieren") {
+                Task { await center.prepareAndOpen() }
             }
-            Spacer(minLength: Space.s)
-            Button("Später") { center.snooze() }
-                .buttonStyle(EstrichButtonStyle(rank: .tertiary, size: .compact))
-            Button("Aktualisieren") { Task { await center.prepareAndOpen() } }
-                .buttonStyle(EstrichButtonStyle(rank: .secondary, size: .compact))
-                .accessibilityIdentifier("updateBannerAction")
+            .accessibilityIdentifier("updateNotice")
+            Button("Später erinnern") { center.snooze() }
+                .font(Typo.meta)
+                .padding(.leading, Space.xl)
         }
-        .padding(.horizontal, Space.l)
-        .padding(.vertical, Space.s)
-        .background(Theme.accentSoft)
-        .accessibilityElement(children: .contain)
+    }
+
+    private var text: String {
+        var text = "Version \(center.check?.latestVersion ?? "") ist verfügbar."
+        if let message = center.check?.message { text += " \(message)" }
+        return text
     }
 }
 
@@ -162,6 +144,8 @@ struct AppUpdateRequiredView: View {
             }
         }
         .accessibilityIdentifier("updateRequired")
+        // Heller Text in der Statusleiste auf dem dunklen Hintergrund.
+        .preferredColorScheme(.dark)
     }
 
     private var summary: String {

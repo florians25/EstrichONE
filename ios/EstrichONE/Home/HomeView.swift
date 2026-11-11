@@ -161,6 +161,10 @@ struct HomeView: View {
 
     @ViewBuilder
     private var notices: some View {
+        // Neue App-Version verfügbar (docs/app-updates.md); Stand und „Später“ unter Mehr › App-Update.
+        if model.updates.showsBanner {
+            AppUpdateNotice(center: model.updates)
+        }
         if model.isDemo, !ShotOptions.hidesDemoMarks {
             NoticeLine(tone: .info, text: "Demomodus mit Beispieldaten. Es werden keine Daten gesendet.", symbol: "play.rectangle.fill",
                        actionTitle: "Beenden") { model.requestDemo(false) }
