@@ -18,5 +18,24 @@
     "typescript": "~5.9.3",
     "ui5-middleware-simpleproxy": "3.9.0",
     "ui5-tooling-transpile": "3.14.1"
+  },
+  "overrides": {
+    "pacote": "^21.5.2",
+    "sigstore": "^4.1.1",
+    "@sigstore/core": "^3.2.1",
+    "glob@>=9 <14.0.2": "^14.0.3",
+    "minimatch@>=7 <11.0.1": "^11.0.4",
+    "@npmcli/map-workspaces": {
+      "minimatch": "^11.0.4"
+    },
+    "@npmcli/package-json": {
+      "glob": "^14.0.3"
+    },
+    "ui5-tooling-transpile": {
+      "minimatch": "^11.0.4"
+    },
+    "ui5-middleware-simpleproxy": {
+      "minimatch": "^11.0.4"
+    }
   }
 }
