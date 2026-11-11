@@ -175,12 +175,12 @@ jobs:
         os: ["debian:12", "ubuntu:24.04"]
     steps:
       - uses: actions/checkout@v5
-      - name: Frischen Server starten (systemd als PID 1, ohne Docker, eigenes /var/lib/docker)
+      - name: Frischen Server starten (systemd als PID 1, ohne Docker, eigene Datenträger für /var/lib/docker und /var/lib/containerd)
         run: |
           printf 'FROM %s\nENV container=docker DEBIAN_FRONTEND=noninteractive\nRUN for i in 1 2 3; do apt-get update -qq && apt-get install -y -qq --no-install-recommends systemd systemd-sysv dbus ca-certificates curl iproute2 procps && break; sleep 10; done && rm -rf /var/lib/apt/lists/*\nSTOPSIGNAL SIGRTMIN+3\nCMD ["/sbin/init"]\n' \
             "${{ matrix.os }}" | docker build -q -t estrichone-ci/frischer-server -
           docker run -d --name server --hostname server --privileged --cgroupns=private --tmpfs /run --tmpfs /run/lock \
-            -v /var/lib/docker estrichone-ci/frischer-server
+            -v /var/lib/docker -v /var/lib/containerd estrichone-ci/frischer-server
           for _ in $(seq 1 30); do docker exec server systemctl is-system-running 2>/dev/null | grep -Eq 'running|degraded' && break; sleep 1; done
           docker exec server systemctl is-system-running || true
           ! docker exec server sh -c 'command -v docker'

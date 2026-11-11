@@ -460,9 +460,10 @@ case "${ESTRICHONE_AUTO_UPDATE:-}" in ""|sicherheit|patch|aus) ;; *) fail "--aut
 
 step "Installer $IMAGE"
 mkdir -p "$DIR"
-if ! docker pull -q "$IMAGE" >/dev/null 2>&1; then
+if ! pull_error="$(docker pull -q "$IMAGE" 2>&1 >/dev/null)"; then
   docker image inspect "$IMAGE" >/dev/null 2>&1 \
-    || fail "Installer-Image $IMAGE nicht ladbar." "Internetverbindung und Version prüfen (Liste: https://github.com/$REPO/releases)." \
+    || fail "Installer-Image $IMAGE nicht ladbar." "Docker meldet: $(printf '%s' "$pull_error" | tail -n 1 | cut -c1-300)" \
+      "Internetverbindung und Version prüfen (Liste: https://github.com/$REPO/releases)." \
       "Firmennetz mit Proxy: Docker-Proxy einrichten (https://docs.docker.com/engine/daemon/proxy/)."
   warn "Laden fehlgeschlagen – vorhandenes lokales Image wird verwendet."
 fi
