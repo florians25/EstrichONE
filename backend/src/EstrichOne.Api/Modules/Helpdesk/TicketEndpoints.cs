@@ -61,6 +61,10 @@ public sealed record AddTicketCommentRequest(
     [property: MaxLength(TicketComment.MaxTextLength)] string? Text, bool IsInternal, IReadOnlyList<Guid>? AttachmentFileIds = null,
     IReadOnlyList<Guid>? MentionUserIds = null);
 
+/// <summary>Seite der Arbeitsliste.</summary>
+/// <param name="Total">Anzahl aller Tickets der Ansicht mit Filtern und Suche.</param>
+public sealed record TicketPage(IReadOnlyList<TicketSummary> Items, int Total, int Offset, int Limit);
+
 /// <summary>Gespeicherte Ansichten der Ticketliste.</summary>
 public enum TicketFilter
 {
@@ -204,11 +208,33 @@ internal static class TicketEndpoints
         string? filter = null, string? category = null, string? priority = null, string? status = null, Guid? assignee = null, Guid? group = null,
         string? q = null, string? sort = null, int? limit = null)
     {
+        var query = ListQuery(db, currentUser.UserId, clock.GetUtcNow(), filter, category, priority, status, assignee, group, q, sort);
+        return TypedResults.Ok(await tickets.SummariesAsync(query.Take(Math.Clamp(limit ?? 500, 1, 1000)), cancellationToken,
+            ids => reads.UnreadAsync(currentUser.UserId, isAgent: true, ids, cancellationToken)));
+    }
+
+    /// <summary>Eine Seite der Arbeitsliste mit Gesamtzahl (Seitenwechsel bzw. Nachladen im Web).</summary>
+    internal static async Task<Ok<TicketPage>> PageAsync(
+        TicketService tickets, TicketReadState reads, EstrichOneDbContext db, ICurrentUser currentUser, TimeProvider clock, CancellationToken cancellationToken,
+        string? filter = null, string? category = null, string? priority = null, string? status = null, Guid? assignee = null, Guid? group = null,
+        string? q = null, string? sort = null, int? offset = null, int? limit = null, bool? desc = null)
+    {
+        var query = ListQuery(db, currentUser.UserId, clock.GetUtcNow(), filter, category, priority, status, assignee, group, q, sort, desc);
+        var total = await query.CountAsync(cancellationToken);
+        var skip = Math.Max(0, offset ?? 0);
+        var take = Math.Clamp(limit ?? 100, 1, 500);
+        var items = await tickets.SummariesAsync(query.Skip(skip).Take(take), cancellationToken,
+            ids => reads.UnreadAsync(currentUser.UserId, isAgent: true, ids, cancellationToken));
+        return TypedResults.Ok(new TicketPage(items, total, skip, take));
+    }
+
+    /// <summary>Ansicht, Filter, Volltext und Sortierung der Arbeitsliste; die ID als letztes Sortierkriterium hält Seiten stabil.</summary>
+    private static IQueryable<Ticket> ListQuery(EstrichOneDbContext db, Guid me, DateTimeOffset now, string? filter, string? category, string? priority,
+        string? status, Guid? assignee, Guid? group, string? q, string? sort, bool? desc = null)
+    {
         // Werte wie in JSON (camelCase, z. B. „unassigned“, „officeIt“) oder als Enum-Name.
         var selected = Enum.TryParse<TicketFilter>(filter, ignoreCase: true, out var parsedFilter) ? parsedFilter : TicketFilter.Open;
         var query = db.Set<Ticket>().AsQueryable();
-        var me = currentUser.UserId;
-        var now = clock.GetUtcNow();
         query = selected switch
         {
             TicketFilter.Open => query.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved),
@@ -261,7 +287,12 @@ internal static class TicketEndpoints
             }
         }
 
-        query = sort switch
+        if (desc is { } descending)
+        {
+            return ColumnOrder(db, query, sort, descending).ThenBy(t => t.Id);
+        }
+
+        IOrderedQueryable<Ticket> ordered = sort switch
         {
             "recent" => query.OrderByDescending(t => t.LastActivityAt),
             "created" => query.OrderByDescending(t => t.CreatedAt),
@@ -272,9 +303,40 @@ internal static class TicketEndpoints
             // Am längsten wartende zuerst; „Ich kann nicht arbeiten“ vorneweg.
             _ => query.OrderByDescending(t => t.ReporterBlocked).ThenBy(t => t.LastActivityAt),
         };
+        return ordered.ThenBy(t => t.Id);
+    }
 
-        return TypedResults.Ok(await tickets.SummariesAsync(query.Take(Math.Clamp(limit ?? 500, 1, 1000)), cancellationToken,
-            ids => reads.UnreadAsync(currentUser.UserId, isAgent: true, ids, cancellationToken)));
+
+    /// <summary>
+    /// Spaltensortierung der Arbeitsliste im Web (wie dort auf dem Gerät): Nummer, Titel, Melder, Kategorie, Priorität, Status,
+    /// Zuständig, Fälligkeit, Aktivität bzw. „wartet am längsten“; <paramref name="descending"/> kehrt die Richtung um.
+    /// </summary>
+    private static IOrderedQueryable<Ticket> ColumnOrder(EstrichOneDbContext db, IQueryable<Ticket> query, string? column, bool descending)
+    {
+        IOrderedQueryable<Ticket> By<TKey>(System.Linq.Expressions.Expression<Func<Ticket, TKey>> key) =>
+            descending ? query.OrderByDescending(key) : query.OrderBy(key);
+        return column switch
+        {
+            "number" => By(t => t.CreatedAt),
+            "title" => By(t => t.Title),
+            "reporter" => By(t => db.Set<User>().Where(u => u.Id == t.ReporterUserId).Select(u => u.DisplayName).FirstOrDefault() ?? t.ReporterName),
+            "category" => By(t => t.Category),
+            "priority" => By(t => t.Priority == TicketPriority.Urgent ? 0 : t.Priority == TicketPriority.High ? 1 : t.Priority == TicketPriority.Normal ? 2 : 3),
+            "status" => By(t => t.Status == TicketStatus.New ? 0 : t.Status == TicketStatus.InProgress ? 1 : t.Status == TicketStatus.WaitingForReporter ? 2
+                : t.Status == TicketStatus.Resolved ? 3 : 4),
+            "assignee" => descending
+                ? query.OrderBy(t => t.AssigneeUserId == null)
+                    .ThenByDescending(t => db.Set<User>().Where(u => u.Id == t.AssigneeUserId).Select(u => u.DisplayName).FirstOrDefault())
+                : query.OrderBy(t => t.AssigneeUserId == null)
+                    .ThenBy(t => db.Set<User>().Where(u => u.Id == t.AssigneeUserId).Select(u => u.DisplayName).FirstOrDefault()),
+            "due" => descending
+                ? query.OrderBy(t => t.ResolutionDueAt == null).ThenByDescending(t => t.FirstResponseAt == null ? t.ResponseDueAt : t.ResolutionDueAt)
+                : query.OrderBy(t => t.ResolutionDueAt == null).ThenBy(t => t.FirstResponseAt == null ? t.ResponseDueAt : t.ResolutionDueAt),
+            "activity" => descending ? query.OrderBy(t => t.LastActivityAt) : query.OrderByDescending(t => t.LastActivityAt),
+            _ => descending
+                ? query.OrderBy(t => t.ReporterBlocked).ThenByDescending(t => t.LastActivityAt)
+                : query.OrderByDescending(t => t.ReporterBlocked).ThenBy(t => t.LastActivityAt),
+        };
     }
 
     private static async Task<Results<Ok<TicketDetail>, ProblemHttpResult>> GetAsync(

@@ -9472,6 +9472,187 @@
         ]
       }
     },
+    "/api/v1/tickets/on-behalf": {
+      "post": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Ticket im Namen eines Melders anlegen (Telefon, E-Mail, vor Ort)",
+        "operationId": "CreateTicketOnBehalf",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/CreateTicketOnBehalfRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketDetail"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/tickets/page": {
+      "get": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Arbeitsliste seitenweise (offset, limit bis 500) mit Gesamtzahl",
+        "operationId": "ListTicketPage",
+        "parameters": [
+          {
+            "name": "filter",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "category",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "priority",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "assignee",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "group",
+            "in": "query",
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "desc",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TicketPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/helpdesk/options": {
       "get": {
         "tags": [
@@ -9594,6 +9775,101 @@
                   "items": {
                     "$ref": "#/components/schemas/HelpdeskAgentDto"
                   }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/helpdesk/reporters": {
+      "get": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Aktive Benutzer zum Anlegen eines Tickets im Namen eines Melders (Suche nach Name, Benutzername, E-Mail, Telefon)",
+        "operationId": "ListHelpdeskReporters",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HelpdeskReporterDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/helpdesk/holidays": {
+      "get": {
+        "tags": [
+          "Helpdesk"
+        ],
+        "summary": "Gesetzliche Feiertage des Bundeslands und eigene Zusatztage eines Jahres (state: Vorschau für ein anderes Bundesland)",
+        "operationId": "ListHelpdeskHolidays",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "state",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HelpdeskHolidays"
                 }
               }
             }
@@ -28950,6 +29226,102 @@
           }
         }
       },
+      "CreateTicketOnBehalfRequest": {
+        "required": [
+          "id",
+          "title",
+          "description",
+          "category",
+          "channel",
+          "source"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "title": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "description": {
+            "maxLength": 10000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "category": {
+            "$ref": "#/components/schemas/TicketCategory"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/TicketChannel"
+          },
+          "source": {
+            "$ref": "#/components/schemas/TicketSource"
+          },
+          "reporterUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "reporterName": {
+            "maxLength": 200,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reporterBlocked": {
+            "type": "boolean",
+            "default": false
+          },
+          "priority": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TicketPriority"
+              }
+            ]
+          },
+          "subcategoryId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "assigneeUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "groupId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "attachmentFileIds": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
       "CreateTicketRequest": {
         "required": [
           "id",
@@ -32614,6 +32986,66 @@
           }
         }
       },
+      "HelpdeskHoliday": {
+        "required": [
+          "date",
+          "name",
+          "isStatutory"
+        ],
+        "type": "object",
+        "properties": {
+          "date": {
+            "type": "string",
+            "format": "date"
+          },
+          "name": {
+            "type": "string"
+          },
+          "isStatutory": {
+            "type": "boolean"
+          }
+        }
+      },
+      "HelpdeskHolidays": {
+        "required": [
+          "year",
+          "state",
+          "stateName",
+          "days",
+          "states"
+        ],
+        "type": "object",
+        "properties": {
+          "year": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "state": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "stateName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HelpdeskHoliday"
+            }
+          },
+          "states": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/HelpdeskStateOption"
+            }
+          }
+        }
+      },
       "HelpdeskOptions": {
         "required": [
           "categories",
@@ -32641,6 +33073,40 @@
           },
           "slaEnabled": {
             "type": "boolean"
+          }
+        }
+      },
+      "HelpdeskReporterDto": {
+        "required": [
+          "id",
+          "displayName",
+          "userName",
+          "email",
+          "phone"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": "string"
+          },
+          "userName": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "phone": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -32787,15 +33253,26 @@
             "format": "int32",
             "default": 7
           },
-          "holidayDates": {
+          "state": {
             "type": [
               "null",
-              "array"
-            ],
-            "items": {
-              "type": "string",
-              "format": "date"
-            }
+              "string"
+            ]
+          }
+        }
+      },
+      "HelpdeskStateOption": {
+        "required": [
+          "code",
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
           }
         }
       },
@@ -32906,6 +33383,10 @@
             "items": {
               "$ref": "#/components/schemas/DayCount"
             }
+          },
+          "timeBasis": {
+            "type": "string",
+            "default": "business"
           }
         }
       },
@@ -41661,6 +42142,15 @@
           "other"
         ]
       },
+      "TicketChannel": {
+        "enum": [
+          "selfService",
+          "phone",
+          "email",
+          "inPerson"
+        ],
+        "default": "selfService"
+      },
       "TicketCommentDto": {
         "required": [
           "id",
@@ -41990,6 +42480,35 @@
           }
         }
       },
+      "TicketPage": {
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TicketSummary"
+            }
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "offset": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "limit": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "TicketPriority": {
         "enum": [
           "low",
@@ -42222,6 +42741,22 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "channel": {
+            "$ref": "#/components/schemas/TicketChannel"
+          },
+          "createdByUserId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "createdByName": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

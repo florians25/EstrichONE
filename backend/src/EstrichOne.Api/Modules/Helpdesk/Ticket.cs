@@ -44,6 +44,22 @@ public enum TicketSource
     Android,
 }
 
+/// <summary>Wie das Problem bei der IT ankam: selbst gemeldet (Web, App) oder von der IT aufgenommen.</summary>
+public enum TicketChannel
+{
+    /// <summary>Vom Melder selbst über Web oder App gemeldet.</summary>
+    SelfService,
+
+    /// <summary>Anruf bei der IT.</summary>
+    Phone,
+
+    /// <summary>E-Mail an die IT.</summary>
+    Email,
+
+    /// <summary>Persönlich vor Ort.</summary>
+    InPerson,
+}
+
 /// <summary>IT-Problem, gemeldet von einem Benutzer oder – ohne Anmeldung – von einem eingerichteten Gerät.</summary>
 public sealed class Ticket : IVersionedEntity
 {
@@ -62,6 +78,12 @@ public sealed class Ticket : IVersionedEntity
     public TicketPriority Priority { get; private set; } = TicketPriority.Normal;
     public TicketStatus Status { get; private set; } = TicketStatus.New;
     public TicketSource Source { get; private set; }
+
+    /// <summary>Eingangskanal; bei Telefon, E-Mail und vor Ort hat die IT das Ticket im Namen des Melders angelegt.</summary>
+    public TicketChannel Channel { get; private set; } = TicketChannel.SelfService;
+
+    /// <summary>Wer das Ticket erfasst hat, wenn nicht der Melder selbst (IT nach Anruf, E-Mail, Besuch).</summary>
+    public Guid? CreatedByUserId { get; private set; }
 
     /// <summary>Melder „Ich kann nicht arbeiten“ – Hinweis für die Bearbeitung, setzt keine Priorität.</summary>
     public bool ReporterBlocked { get; private set; }
@@ -156,6 +178,18 @@ public sealed class Ticket : IVersionedEntity
             DeviceId = deviceId, BauakteId = bauakteId, Diagnostics = diagnostics, AttachmentFileIds = attachmentFileIds.Distinct().ToList(),
             LastActivityAt = now, CreatedAt = now,
         };
+    }
+
+    /// <summary>Von der IT im Namen des Melders erfasst (Anruf, E-Mail, vor Ort).</summary>
+    public void RecordedBy(Guid agentUserId, TicketChannel channel)
+    {
+        if (channel == TicketChannel.SelfService)
+        {
+            throw new ArgumentException("Bitte den Eingangskanal wählen (Telefon, E-Mail oder vor Ort).", nameof(channel));
+        }
+
+        CreatedByUserId = agentUserId;
+        Channel = channel;
     }
 
     public void Touch(DateTimeOffset now) => LastActivityAt = now;
@@ -361,6 +395,8 @@ internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
         builder.Property(t => t.Priority).HasConversion<string>().HasMaxLength(20);
         builder.Property(t => t.Status).HasConversion<string>().HasMaxLength(30);
         builder.Property(t => t.Source).HasConversion<string>().HasMaxLength(20);
+        builder.Property(t => t.Channel).HasConversion<string>().HasMaxLength(20).HasDefaultValue(TicketChannel.SelfService).HasSentinel(TicketChannel.SelfService);
+        builder.HasOne<User>().WithMany().HasForeignKey(t => t.CreatedByUserId).OnDelete(DeleteBehavior.Restrict);
         builder.Property(t => t.Diagnostics).HasColumnType("jsonb");
         builder.Property(t => t.AttachmentFileIds).HasColumnType("uuid[]");
         builder.HasOne<User>().WithMany().HasForeignKey(t => t.ReporterUserId).OnDelete(DeleteBehavior.Restrict);

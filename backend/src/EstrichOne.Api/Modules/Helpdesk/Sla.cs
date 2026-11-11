@@ -1,5 +1,8 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.Text.Json;
+using System.Text.Json.Serialization;
+using EstrichOne.Api.Infrastructure.Calendar;
 using EstrichOne.Api.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 
@@ -23,9 +26,12 @@ public sealed record BusinessHours(string Start = "07:00", string End = "17:00",
 }
 
 /// <summary>Einstellungen des Helpdesks (Einstellungen › Helpdesk im Web).</summary>
-/// <param name="Holidays">Feiertage und Betriebsruhe (ISO-Datum), an denen die SLA-Uhr steht.</param>
+/// <param name="Holidays">Eigene Zusatztage (ISO-Datum, z. B. Betriebsruhe, Heiligabend), an denen die SLA-Uhr steht – zusätzlich zu den
+/// gesetzlichen Feiertagen des Bundeslands.</param>
 /// <param name="NotifyAgentsOnNew">Neue Tickets an die zuständige Gruppe bzw. alle Bearbeiter melden.</param>
 /// <param name="AutoCloseDays">Gelöste Tickets nach so vielen Tagen ohne Widerspruch schließen.</param>
+/// <param name="State">Bundesland (BW, BY, … TH): dessen gesetzliche Feiertage – auch die beweglichen um Ostern – berechnet der Server
+/// je Jahr selbst. Leer = nur die eigenen Zusatztage.</param>
 public sealed record HelpdeskSettings(
     IReadOnlyList<SlaTarget>? Targets = null,
     BusinessHours? Hours = null,
@@ -35,7 +41,8 @@ public sealed record HelpdeskSettings(
     bool TimeTrackingEnabled = true,
     bool NotifyAgentsOnNew = true,
     bool SuggestArticles = true,
-    int AutoCloseDays = 7)
+    int AutoCloseDays = 7,
+    string? State = null)
 {
     public static IReadOnlyList<SlaTarget> DefaultTargets { get; } =
     [
@@ -48,8 +55,12 @@ public sealed record HelpdeskSettings(
     public SlaTarget Target(TicketPriority priority) =>
         Targets?.FirstOrDefault(t => t.Priority == priority) ?? DefaultTargets.First(t => t.Priority == priority);
 
-    public IReadOnlySet<DateOnly> HolidayDates =>
+    private IReadOnlySet<DateOnly> ExtraDates =>
         (Holidays ?? []).Select(h => DateOnly.TryParse(h, CultureInfo.InvariantCulture, out var d) ? d : (DateOnly?)null).OfType<DateOnly>().ToHashSet();
+
+    /// <summary>Gesetzliche Feiertage des Bundeslands und eigene Zusatztage.</summary>
+    [JsonIgnore]
+    public HolidayCalendar Calendar => new(State, ExtraDates);
 
     /// <summary>Werte begrenzen und fehlende Prioritäten mit Standards ergänzen.</summary>
     public HelpdeskSettings Normalize()
@@ -74,11 +85,50 @@ public sealed record HelpdeskSettings(
         return this with
         {
             Targets = targets, Hours = hours,
-            Holidays = HolidayDates.Order().Select(d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Take(200).ToList(),
+            Holidays = ExtraDates.Order().Select(d => d.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture)).Take(200).ToList(),
             AutoCloseDays = Math.Clamp(AutoCloseDays, 1, 60),
+            State = State?.Trim().ToUpperInvariant() is { } code && GermanHolidays.States.ContainsKey(code) ? code : null,
         };
     }
 }
+
+/// <summary>
+/// Tage ohne SLA-Uhr: gesetzliche Feiertage des Bundeslands (je Jahr berechnet, inkl. Karfreitag, Ostermontag, Christi Himmelfahrt,
+/// Pfingstmontag, Fronleichnam) und eigene Zusatztage.
+/// </summary>
+public sealed class HolidayCalendar(string? state, IReadOnlySet<DateOnly> extra)
+{
+    public static readonly HolidayCalendar None = new(null, new HashSet<DateOnly>());
+
+    private static readonly ConcurrentDictionary<(string State, int Year), Dictionary<DateOnly, string>> Statutory = new();
+
+    public string? State { get; } = state;
+
+    public static HolidayCalendar Of(IReadOnlySet<DateOnly> dates) => new(null, dates);
+
+    public bool Contains(DateOnly date) => extra.Contains(date) || (State is not null && StatutoryFor(State, date.Year).ContainsKey(date));
+
+    /// <summary>Name des Feiertags bzw. „Zusatztag“, sonst null.</summary>
+    public string? NameOf(DateOnly date) =>
+        State is not null && StatutoryFor(State, date.Year).TryGetValue(date, out var name) ? name : extra.Contains(date) ? "Zusatztag" : null;
+
+    /// <summary>Alle Tage eines Jahres (gesetzlich und eigene), sortiert.</summary>
+    public IReadOnlyList<HelpdeskHoliday> For(int year)
+    {
+        var statutory = State is null ? [] : StatutoryFor(State, year).Select(h => new HelpdeskHoliday(h.Key, h.Value, true));
+        var own = extra.Where(d => d.Year == year && (State is null || !StatutoryFor(State, year).ContainsKey(d)))
+            .Select(d => new HelpdeskHoliday(d, "Zusatztag", false));
+        return statutory.Concat(own).OrderBy(h => h.Date).ToList();
+    }
+
+    private static Dictionary<DateOnly, string> StatutoryFor(string state, int year) =>
+        year is < 1900 or > 2200
+            ? []
+            : Statutory.GetOrAdd((state, year), key => GermanHolidays.For(key.Year, key.State).ToDictionary(h => h.Date, h => h.Name));
+}
+
+/// <param name="IsStatutory">Gesetzlicher Feiertag des Bundeslands (sonst eigener Zusatztag).</param>
+public sealed record HelpdeskHoliday(DateOnly Date, string Name, bool IsStatutory);
 
 /// <summary>Berechnung von Fälligkeiten in Geschäftszeit (rein, ohne Datenbank – siehe Tests).</summary>
 public static class SlaCalculator
@@ -87,6 +137,10 @@ public static class SlaCalculator
 
     /// <summary>Zeitpunkt nach <paramref name="duration"/> Geschäftszeit ab <paramref name="start"/>.</summary>
     public static DateTimeOffset AddBusinessTime(DateTimeOffset start, TimeSpan duration, BusinessHours hours, IReadOnlySet<DateOnly> holidays,
+        TimeZoneInfo? zone = null) => AddBusinessTime(start, duration, hours, HolidayCalendar.Of(holidays), zone);
+
+    /// <summary>Zeitpunkt nach <paramref name="duration"/> Geschäftszeit ab <paramref name="start"/>.</summary>
+    public static DateTimeOffset AddBusinessTime(DateTimeOffset start, TimeSpan duration, BusinessHours hours, HolidayCalendar holidays,
         TimeZoneInfo? zone = null)
     {
         zone ??= Berlin;
@@ -136,6 +190,10 @@ public static class SlaCalculator
 
     /// <summary>Geschäftszeit zwischen zwei Zeitpunkten (z. B. Dauer einer Rückfrage).</summary>
     public static TimeSpan BusinessTimeBetween(DateTimeOffset from, DateTimeOffset to, BusinessHours hours, IReadOnlySet<DateOnly> holidays,
+        TimeZoneInfo? zone = null) => BusinessTimeBetween(from, to, hours, HolidayCalendar.Of(holidays), zone);
+
+    /// <summary>Geschäftszeit zwischen zwei Zeitpunkten (z. B. Dauer einer Rückfrage).</summary>
+    public static TimeSpan BusinessTimeBetween(DateTimeOffset from, DateTimeOffset to, BusinessHours hours, HolidayCalendar holidays,
         TimeZoneInfo? zone = null)
     {
         zone ??= Berlin;
@@ -174,7 +232,7 @@ public static class SlaCalculator
     {
         var target = settings.Target(priority);
         var hours = settings.Hours ?? new BusinessHours();
-        var holidays = settings.HolidayDates;
+        var holidays = settings.Calendar;
         var paused = TimeSpan.FromMinutes(pausedMinutes);
         if (target.AroundTheClock)
         {
@@ -190,9 +248,18 @@ public static class SlaCalculator
     {
         var span = settings.Target(priority).AroundTheClock
             ? to - from
-            : BusinessTimeBetween(from, to, settings.Hours ?? new BusinessHours(), settings.HolidayDates);
+            : BusinessTimeBetween(from, to, settings.Hours ?? new BusinessHours(), settings.Calendar);
         return (int)Math.Max(0, Math.Round(span.TotalMinutes));
     }
+
+    /// <summary>
+    /// Verstrichene Zeit zwischen zwei Zeitpunkten so, wie die SLA-Uhr sie zählt: Geschäftszeit (ohne Wochenende, Feiertage,
+    /// Zusatztage) bzw. rund um die Uhr bei Prioritäten mit „rund um die Uhr“. Für Kennzahlen zu Reaktions- und Lösungszeit.
+    /// </summary>
+    public static TimeSpan Elapsed(DateTimeOffset from, DateTimeOffset to, TicketPriority priority, HelpdeskSettings settings) =>
+        settings.Target(priority).AroundTheClock
+            ? (to > from ? to - from : TimeSpan.Zero)
+            : BusinessTimeBetween(from, to, settings.Hours ?? new BusinessHours(), settings.Calendar);
 
     /// <summary>
     /// Stand der Ziele für Listen und Ampel: <c>met</c> erledigt im Ziel, <c>breached</c> erledigt nach dem Ziel,

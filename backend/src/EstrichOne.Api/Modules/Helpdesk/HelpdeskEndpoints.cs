@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations;
+using EstrichOne.Api.Infrastructure.Calendar;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
@@ -40,6 +41,14 @@ public sealed record SaveKnowledgeArticleRequest(
     [property: Required, MaxLength(200)] string Title, [property: Required, MaxLength(KnowledgeArticle.MaxBodyLength)] string Body, TicketCategory? Category,
     [property: MaxLength(500)] string? Keywords, bool IsPublished = true);
 
+/// <summary>Person, für die die IT ein Ticket anlegen kann (Auswahl „Melder“).</summary>
+public sealed record HelpdeskReporterDto(Guid Id, string DisplayName, string UserName, string? Email, string? Phone);
+
+public sealed record HelpdeskStateOption(string Code, string Name);
+
+/// <summary>Tage ohne SLA-Uhr eines Jahres: gesetzliche Feiertage des Bundeslands und eigene Zusatztage.</summary>
+public sealed record HelpdeskHolidays(int Year, string? State, string? StateName, IReadOnlyList<HelpdeskHoliday> Days, IReadOnlyList<HelpdeskStateOption> States);
+
 public sealed record HelpdeskAgentDto(Guid Id, string DisplayName, int OpenTickets);
 
 public sealed record HelpdeskCategoryOption(TicketCategory Key, string Name, IReadOnlyList<TicketSubcategoryDto> Subcategories);
@@ -61,6 +70,13 @@ internal static class HelpdeskEndpoints
         group.MapPut("/settings", SaveSettingsAsync).WithName("SaveHelpdeskSettings").WithSummary("Helpdesk-Einstellungen speichern")
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HelpdeskManage);
         group.MapGet("/agents", AgentsAsync).WithName("ListHelpdeskAgents").WithSummary("Bearbeiter mit Anzahl offener Tickets (Zuweisen, Erwähnen)")
+            .RequirePermission(Permissions.HelpdeskAgent);
+
+        group.MapGet("/reporters", ReportersAsync).WithName("ListHelpdeskReporters")
+            .WithSummary("Aktive Benutzer zum Anlegen eines Tickets im Namen eines Melders (Suche nach Name, Benutzername, E-Mail, Telefon)")
+            .RequirePermission(Permissions.HelpdeskAgent);
+        group.MapGet("/holidays", HolidaysAsync).WithName("ListHelpdeskHolidays")
+            .WithSummary("Gesetzliche Feiertage des Bundeslands und eigene Zusatztage eines Jahres (state: Vorschau für ein anderes Bundesland)")
             .RequirePermission(Permissions.HelpdeskAgent);
 
         group.MapGet("/groups", GroupsAsync).WithName("ListHelpdeskGroups").WithSummary("Bearbeitungsgruppen").RequirePermission(Permissions.HelpdeskAgent);
@@ -144,6 +160,11 @@ internal static class HelpdeskEndpoints
             return Invalid("Bitte mindestens einen Arbeitstag wählen.");
         }
 
+        if (!string.IsNullOrWhiteSpace(request.State) && !GermanHolidays.States.ContainsKey(request.State.Trim().ToUpperInvariant()))
+        {
+            return Invalid("Unbekanntes Bundesland.");
+        }
+
         return TypedResults.Ok(await store.SaveAsync(request, cancellationToken));
     }
 
@@ -156,6 +177,37 @@ internal static class HelpdeskEndpoints
             .Where(t => t.AssigneeUserId != null && t.Status != TicketStatus.Resolved && t.Status != TicketStatus.Closed)
             .GroupBy(t => t.AssigneeUserId!.Value).Select(g => new { g.Key, Count = g.Count() }).ToDictionaryAsync(g => g.Key, g => g.Count, cancellationToken);
         return TypedResults.Ok<IReadOnlyList<HelpdeskAgentDto>>(users.Select(u => new HelpdeskAgentDto(u.Id, u.DisplayName, load.GetValueOrDefault(u.Id))).ToList());
+    }
+
+    private static async Task<Ok<IReadOnlyList<HelpdeskReporterDto>>> ReportersAsync(EstrichOneDbContext db, CancellationToken cancellationToken,
+        string? q = null, int? limit = null)
+    {
+        var query = db.Set<User>().AsNoTracking().Where(u => u.IsActive);
+        foreach (var word in (q ?? string.Empty).Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Take(4))
+        {
+            var pattern = $"%{word.Replace("\\", "\\\\", StringComparison.Ordinal).Replace("%", "\\%", StringComparison.Ordinal).Replace("_", "\\_", StringComparison.Ordinal)}%";
+            query = query.Where(u => EF.Functions.ILike(u.DisplayName, pattern) || EF.Functions.ILike(u.UserName, pattern)
+                || (u.Email != null && EF.Functions.ILike(u.Email, pattern)) || (u.Phone != null && EF.Functions.ILike(u.Phone, pattern)));
+        }
+
+        var users = await query.OrderBy(u => u.DisplayName).ThenBy(u => u.Id).Take(Math.Clamp(limit ?? 50, 1, 200))
+            .Select(u => new HelpdeskReporterDto(u.Id, u.DisplayName, u.UserName, u.Email, u.Phone)).ToListAsync(cancellationToken);
+        return TypedResults.Ok<IReadOnlyList<HelpdeskReporterDto>>(users);
+    }
+
+    private static async Task<Ok<HelpdeskHolidays>> HolidaysAsync(HelpdeskSettingsStore store, TimeProvider clock, CancellationToken cancellationToken,
+        int? year = null, string? state = null)
+    {
+        var settings = await store.GetAsync(cancellationToken);
+        if (state is not null)
+        {
+            settings = (settings with { State = state }).Normalize();
+        }
+
+        var y = year is >= 2000 and <= 2100 ? year.Value : TimeZoneInfo.ConvertTime(clock.GetUtcNow(), SlaCalculator.Berlin).Year;
+        var calendar = settings.Calendar;
+        return TypedResults.Ok(new HelpdeskHolidays(y, calendar.State, calendar.State is { } code ? GermanHolidays.States[code] : null, calendar.For(y),
+            GermanHolidays.States.Select(x => new HelpdeskStateOption(x.Key, x.Value)).OrderBy(x => x.Name, StringComparer.Ordinal).ToList()));
     }
 
     // ---- Gruppen -------------------------------------------------------------------------------------------------

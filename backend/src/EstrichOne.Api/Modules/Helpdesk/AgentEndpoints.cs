@@ -36,6 +36,27 @@ public sealed record LinkArticleRequest([property: Required] Guid ArticleId);
 
 public sealed record RateTicketRequest([property: Range(1, 5)] int Rating, [property: MaxLength(2000)] string? Comment = null);
 
+/// <summary>Ticket im Namen eines Melders anlegen (IT nach Anruf, E-Mail oder Besuch).</summary>
+/// <param name="ReporterUserId">Melder (Benutzer); alternativ <paramref name="ReporterName"/> für Personen ohne Zugang.</param>
+/// <param name="Channel">Telefon, E-Mail oder vor Ort.</param>
+/// <param name="AssigneeUserId">Gleich zuweisen (an sich selbst: Status „In Bearbeitung“); sonst gelten die Zuweisungsregeln.</param>
+/// <param name="AttachmentFileIds">Eigene, vorher hochgeladene Dateien der erfassenden Person (z. B. Bildschirmfoto aus der E-Mail).</param>
+public sealed record CreateTicketOnBehalfRequest(
+    [property: Required] Guid Id,
+    [property: Required, MaxLength(Ticket.MaxTitleLength)] string Title,
+    [property: MaxLength(Ticket.MaxDescriptionLength)] string? Description,
+    TicketCategory Category,
+    TicketChannel Channel,
+    TicketSource Source,
+    Guid? ReporterUserId = null,
+    [property: MaxLength(200)] string? ReporterName = null,
+    bool ReporterBlocked = false,
+    TicketPriority? Priority = null,
+    Guid? SubcategoryId = null,
+    Guid? AssigneeUserId = null,
+    Guid? GroupId = null,
+    IReadOnlyList<Guid>? AttachmentFileIds = null);
+
 public sealed record CategoryCount(TicketCategory Category, int Open, int Total30Days);
 
 public sealed record AgentLoad(Guid UserId, string Name, int Open, int Overdue);
@@ -43,12 +64,15 @@ public sealed record AgentLoad(Guid UserId, string Name, int Open, int Overdue);
 public sealed record DayCount(DateOnly Day, int Created, int Resolved);
 
 /// <summary>Kennzahlen für die Übersicht der Bearbeitung.</summary>
-/// <param name="AvgFirstResponseMinutes">Mittlere Zeit bis zur ersten Antwort (Uhrzeit, letzte 30 Tage).</param>
+/// <param name="AvgFirstResponseMinutes">Mittlere Zeit bis zur ersten Antwort in Geschäftszeit, wie die SLA-Uhr sie zählt (ohne Nächte,
+/// Wochenenden, Feiertage; „rund um die Uhr“-Prioritäten durchgehend), Tickets der letzten 30 Tage.</param>
+/// <param name="AvgResolutionHours">Mittlere Lösungszeit in Geschäftszeit ohne angehaltene Zeit („Rückfrage“), letzte 30 Tage.</param>
 /// <param name="SlaMetPercent">Anteil der in den letzten 30 Tagen gelösten Tickets innerhalb des Lösungsziels.</param>
+/// <param name="TimeBasis">„business“: Reaktions- und Lösungszeit in Geschäftszeit laut Helpdesk-Einstellungen.</param>
 public sealed record HelpdeskStats(
     int Open, int Unassigned, int Overdue, int Waiting, int Mine, int Blocked, int CreatedToday, int CreatedThisWeek, int ResolvedThisWeek,
     double? AvgFirstResponseMinutes, double? AvgResolutionHours, double? SlaMetPercent, double? SatisfactionAverage, int Ratings,
-    IReadOnlyList<CategoryCount> ByCategory, IReadOnlyList<AgentLoad> ByAgent, IReadOnlyList<DayCount> Trend);
+    IReadOnlyList<CategoryCount> ByCategory, IReadOnlyList<AgentLoad> ByAgent, IReadOnlyList<DayCount> Trend, string TimeBasis = "business");
 
 /// <param name="UpdateState">current, recommended, required, newerThanServer (siehe App-Updates) oder null.</param>
 public sealed record ReporterDevice(
@@ -91,6 +115,43 @@ internal static class AgentEndpoints
             .WithSummary("Artikel-Verknüpfung entfernen").ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.HelpdeskAgent);
         group.MapPost("/{id:guid}/rating", RateAsync).WithName("RateTicket").WithSummary("Zufriedenheit nach der Lösung (Melder, 1–5 Sterne)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).AllowPendingDevice();
+        group.MapPost("/on-behalf", CreateOnBehalfAsync).WithName("CreateTicketOnBehalf")
+            .WithSummary("Ticket im Namen eines Melders anlegen (Telefon, E-Mail, vor Ort)")
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .RequirePermission(Permissions.HelpdeskAgent);
+        group.MapGet("/page", TicketEndpoints.PageAsync).WithName("ListTicketPage")
+            .WithSummary("Arbeitsliste seitenweise (offset, limit bis 500) mit Gesamtzahl").RequirePermission(Permissions.HelpdeskAgent);
+    }
+
+    private static async Task<Results<Created<TicketDetail>, Ok<TicketDetail>, ProblemHttpResult>> CreateOnBehalfAsync(
+        CreateTicketOnBehalfRequest request, TicketService tickets, ICurrentUser currentUser, CancellationToken cancellationToken)
+    {
+        if (request.Channel == TicketChannel.SelfService)
+        {
+            return TicketEndpoints.Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben",
+                "Bitte den Eingangskanal wählen (Telefon, E-Mail oder vor Ort).");
+        }
+
+        if (request.ReporterUserId is null && string.IsNullOrWhiteSpace(request.ReporterName))
+        {
+            return TicketEndpoints.Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben",
+                "Bitte den Melder auswählen oder seinen Namen eintragen.");
+        }
+
+        var input = new CreateTicketInput(request.Id, request.Title, request.Description, request.Category, request.Source, request.ReporterBlocked, null,
+            null, request.AttachmentFileIds, request.Priority, request.SubcategoryId);
+        var intake = new TicketIntake(request.Channel, currentUser.UserId, request.AssigneeUserId, request.GroupId);
+        var (ticket, created, failure, message) = await tickets.CreateAsync(input, request.ReporterUserId,
+            request.ReporterUserId is null ? request.ReporterName : null, null, cancellationToken, intake);
+        if (ticket is null)
+        {
+            return failure == TicketFailure.IdConflict
+                ? TicketEndpoints.Problem(StatusCodes.Status409Conflict, "ID_CONFLICT", "ID bereits vergeben", message!)
+                : TicketEndpoints.Problem(StatusCodes.Status422UnprocessableEntity, "VALIDATION_FAILED", "Ungültige Angaben", message!);
+        }
+
+        var detail = await tickets.DetailAsync(ticket, includeInternal: true, cancellationToken, currentUser.UserId);
+        return created ? TypedResults.Created($"/api/v1/tickets/{ticket.Id}", detail) : TypedResults.Ok(detail);
     }
 
     private static DateTimeOffset StartOfWeek(DateTimeOffset now)
@@ -102,8 +163,9 @@ internal static class AgentEndpoints
     }
 
     private static async Task<Ok<HelpdeskStats>> StatsAsync(EstrichOneDbContext db, ICurrentUser currentUser, TimeProvider clock,
-        CancellationToken cancellationToken)
+        HelpdeskSettingsStore settingsStore, CancellationToken cancellationToken)
     {
+        var settings = await settingsStore.GetAsync(cancellationToken);
         var now = clock.GetUtcNow();
         var since = now.AddDays(-30);
         var week = StartOfWeek(now);
@@ -117,11 +179,13 @@ internal static class AgentEndpoints
                     && ((t.FirstResponseAt == null && t.ResponseDueAt < now) || t.ResolutionDueAt < now),
             }).ToListAsync(cancellationToken);
         var recent = await db.Set<Ticket>().AsNoTracking().Where(t => t.CreatedAt >= since || t.ResolvedAt >= since)
-            .Select(t => new { t.Category, t.CreatedAt, t.FirstResponseAt, t.ResolvedAt, t.ResolutionDueAt, t.Rating, t.MergedIntoTicketId })
+            .Select(t => new { t.Category, t.Priority, t.CreatedAt, t.FirstResponseAt, t.ResolvedAt, t.ResolutionDueAt, t.Rating, t.MergedIntoTicketId, t.SlaPausedMinutes })
             .ToListAsync(cancellationToken);
 
         var created = recent.Where(t => t.CreatedAt >= since).ToList();
-        var responded = created.Where(t => t.FirstResponseAt is not null).Select(t => (t.FirstResponseAt!.Value - t.CreatedAt).TotalMinutes).ToList();
+        // Reaktions- und Lösungszeit so, wie die SLA-Uhr zählt: Geschäftszeit, Rückfrage herausgerechnet.
+        var responded = created.Where(t => t.FirstResponseAt is not null)
+            .Select(t => SlaCalculator.Elapsed(t.CreatedAt, t.FirstResponseAt!.Value, t.Priority, settings).TotalMinutes).ToList();
         var resolved = recent.Where(t => t.ResolvedAt >= since && t.MergedIntoTicketId is null).ToList();
         var withTarget = resolved.Where(t => t.ResolutionDueAt is not null).ToList();
         var ratings = recent.Where(t => t.Rating is not null).Select(t => (double)t.Rating!.Value).ToList();
@@ -138,7 +202,10 @@ internal static class AgentEndpoints
             open.Count(t => t.AssigneeUserId == currentUser.UserId), open.Count(t => t.ReporterBlocked),
             created.Count(t => t.CreatedAt >= today), created.Count(t => t.CreatedAt >= week), resolved.Count(t => t.ResolvedAt >= week),
             responded.Count > 0 ? Math.Round(responded.Average(), 1) : null,
-            resolved.Count > 0 ? Math.Round(resolved.Average(t => (t.ResolvedAt!.Value - t.CreatedAt).TotalHours), 1) : null,
+            resolved.Count > 0
+                ? Math.Round(resolved.Average(t => Math.Max(0, (SlaCalculator.Elapsed(t.CreatedAt, t.ResolvedAt!.Value, t.Priority, settings)
+                    - TimeSpan.FromMinutes(t.SlaPausedMinutes)).TotalHours)), 1)
+                : null,
             withTarget.Count > 0 ? Math.Round(100.0 * withTarget.Count(t => t.ResolvedAt <= t.ResolutionDueAt) / withTarget.Count, 1) : null,
             ratings.Count > 0 ? Math.Round(ratings.Average(), 2) : null, ratings.Count,
             Enum.GetValues<TicketCategory>().Select(c => new CategoryCount(c, open.Count(t => t.Category == c), created.Count(t => t.Category == c)))

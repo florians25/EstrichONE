@@ -78,6 +78,66 @@ public sealed class SlaAndAssignmentTests
     }
 
     [Fact]
+    public void Calendar_ComputesStatutoryHolidaysPerState_IncludingEasterBasedOnes()
+    {
+        // Ostern 2031: 13. April.
+        var by = new HelpdeskSettings(State: "by").Normalize();
+        by.State.ShouldBe("BY");
+        var days = by.Calendar.For(2031).ToDictionary(d => d.Date, d => d.Name);
+        days[new DateOnly(2031, 4, 11)].ShouldBe("Karfreitag");
+        days[new DateOnly(2031, 4, 14)].ShouldBe("Ostermontag");
+        days[new DateOnly(2031, 5, 22)].ShouldBe("Christi Himmelfahrt");
+        days[new DateOnly(2031, 6, 2)].ShouldBe("Pfingstmontag");
+        days[new DateOnly(2031, 6, 12)].ShouldBe("Fronleichnam");
+        days[new DateOnly(2031, 1, 6)].ShouldBe("Heilige Drei Könige");
+        days.ShouldContainKey(new DateOnly(2031, 11, 1));
+
+        // Hamburg: kein Fronleichnam, aber Reformationstag; Sachsen: Buß- und Bettag (Mittwoch vor dem 23. November).
+        var hh = new HelpdeskSettings(State: "HH").Normalize().Calendar;
+        hh.Contains(new DateOnly(2031, 6, 12)).ShouldBeFalse();
+        hh.Contains(new DateOnly(2031, 10, 31)).ShouldBeTrue();
+        new HelpdeskSettings(State: "SN").Normalize().Calendar.NameOf(new DateOnly(2031, 11, 19)).ShouldBe("Buß- und Bettag");
+
+        // Unbekanntes Bundesland: keine gesetzlichen Tage; eigene Zusatztage bleiben.
+        var none = new HelpdeskSettings(State: "XX", Holidays: ["2031-12-24"]).Normalize();
+        none.State.ShouldBeNull();
+        none.Calendar.For(2031).ShouldBe([new HelpdeskHoliday(new DateOnly(2031, 12, 24), "Zusatztag", false)]);
+    }
+
+    [Fact]
+    public void DueDates_SkipStatutoryHolidaysOfTheState_AndOwnClosureDays()
+    {
+        // Gründonnerstag 10. April 2031, 15 Uhr, Normal = 8 h Reaktion: Karfreitag, Wochenende und Ostermontag zählen nicht.
+        var created = Berlin(2031, 4, 10, 15);
+        var nrw = new HelpdeskSettings(State: "NW").Normalize();
+        SlaCalculator.DueDates(created, TicketPriority.Normal, 0, nrw).Response.ShouldBe(Berlin(2031, 4, 15, 13));
+
+        // Ohne Bundesland läuft die Uhr am Karfreitag und Ostermontag.
+        SlaCalculator.DueDates(created, TicketPriority.Normal, 0, new HelpdeskSettings().Normalize()).Response.ShouldBe(Berlin(2031, 4, 11, 13));
+
+        // Eigene Betriebsruhe am Dienstag kommt zu den gesetzlichen Tagen hinzu.
+        var closure = new HelpdeskSettings(State: "NW", Holidays: ["2031-04-15"]).Normalize();
+        SlaCalculator.DueDates(created, TicketPriority.Normal, 0, closure).Response.ShouldBe(Berlin(2031, 4, 16, 13));
+
+        // Fronleichnam (Donnerstag, 12. Juni 2031) gilt in NRW, in Niedersachsen nicht.
+        var thursday = Berlin(2031, 6, 11, 16);
+        SlaCalculator.Elapsed(thursday, Berlin(2031, 6, 13, 8), TicketPriority.Normal, nrw).ShouldBe(TimeSpan.FromHours(2));
+        SlaCalculator.Elapsed(thursday, Berlin(2031, 6, 13, 8), TicketPriority.Normal, new HelpdeskSettings(State: "NI").Normalize())
+            .ShouldBe(TimeSpan.FromHours(12));
+    }
+
+    [Fact]
+    public void Elapsed_CountsBusinessTime_OrAroundTheClockPerPriority()
+    {
+        var settings = new HelpdeskSettings(Targets: [new SlaTarget(TicketPriority.Urgent, 1, 4, AroundTheClock: true)]).Normalize();
+        var friday = Berlin(2031, 1, 17, 16);
+        var monday = Berlin(2031, 1, 20, 8);
+        SlaCalculator.Elapsed(friday, monday, TicketPriority.Normal, settings).ShouldBe(TimeSpan.FromHours(2));
+        SlaCalculator.Elapsed(friday, monday, TicketPriority.Urgent, settings).ShouldBe(monday - friday);
+        SlaCalculator.Elapsed(monday, friday, TicketPriority.Urgent, settings).ShouldBe(TimeSpan.Zero);
+    }
+
+    [Fact]
     public void Settings_Normalize_FillsMissingTargets_AndRejectsInvertedHours()
     {
         var settings = new HelpdeskSettings(Targets: [new SlaTarget(TicketPriority.High, 2, 1)], Hours: new BusinessHours("18:00", "08:00"),

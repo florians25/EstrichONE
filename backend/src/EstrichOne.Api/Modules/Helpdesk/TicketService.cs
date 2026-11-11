@@ -14,6 +14,10 @@ public sealed record CreateTicketInput(
     Guid Id, string Title, string? Description, TicketCategory Category, TicketSource Source, bool ReporterBlocked, Guid? BauakteId,
     JsonNode? Diagnostics, IReadOnlyList<Guid>? AttachmentFileIds, TicketPriority? Priority = null, Guid? SubcategoryId = null);
 
+/// <summary>Erfassung durch die IT im Namen des Melders (Anruf, E-Mail, vor Ort).</summary>
+/// <param name="AssigneeUserId">Gleich zuweisen (z. B. an sich selbst); ersetzt die automatischen Regeln.</param>
+public sealed record TicketIntake(TicketChannel Channel, Guid CreatedByUserId, Guid? AssigneeUserId = null, Guid? GroupId = null);
+
 public enum TicketFailure
 {
     IdConflict,
@@ -39,6 +43,8 @@ public sealed record TicketEventDto(Guid? ActorUserId, string? ActorName, string
 
 /// <param name="SlaState">met, breached, paused, overdue, dueSoon, ok – oder null (ohne SLA).</param>
 /// <param name="DueAt">Nächstes Ziel: erste Antwort (<paramref name="DueKind"/> = response) oder Lösung (resolution).</param>
+/// <param name="Channel">Eingangskanal (selbst gemeldet, Telefon, E-Mail, vor Ort).</param>
+/// <param name="CreatedByName">Wer das Ticket für den Melder erfasst hat (nur bei Telefon, E-Mail, vor Ort).</param>
 public sealed record TicketSummary(
     Guid Id, string Number, string Title, TicketCategory Category, TicketPriority Priority, TicketStatus Status, bool ReporterBlocked,
     Guid? ReporterUserId, string? ReporterDisplayName, Guid? AssigneeUserId, string? AssigneeName, TicketSource Source,
@@ -46,7 +52,7 @@ public sealed record TicketSummary(
     Guid? GroupId = null, string? GroupName = null, Guid? SubcategoryId = null, string? SubcategoryName = null,
     DateTimeOffset? FirstResponseAt = null, DateTimeOffset? ResponseDueAt = null, DateTimeOffset? ResolutionDueAt = null,
     string? SlaState = null, DateTimeOffset? DueAt = null, string? DueKind = null, Guid? MergedIntoTicketId = null, int? Rating = null,
-    DateTimeOffset? ResolvedAt = null);
+    DateTimeOffset? ResolvedAt = null, TicketChannel Channel = TicketChannel.SelfService, Guid? CreatedByUserId = null, string? CreatedByName = null);
 
 public sealed record TicketLinkDto(Guid TicketId, string Number, string Title, TicketStatus Status, string Kind);
 
@@ -99,6 +105,14 @@ public sealed class TicketService(
         [nameof(TicketCategory.Other)] = "Sonstiges",
     };
 
+    public static string ChannelName(TicketChannel channel) => channel switch
+    {
+        TicketChannel.Phone => "Telefon",
+        TicketChannel.Email => "E-Mail",
+        TicketChannel.InPerson => "vor Ort",
+        _ => "selbst gemeldet",
+    };
+
     public static string CategoryName(TicketCategory category) => CategoryText.GetValueOrDefault(category.ToString()) ?? category.ToString();
 
     /// <summary>Verlaufseinträge nur für die Bearbeitung.</summary>
@@ -107,7 +121,8 @@ public sealed class TicketService(
     public Task<HelpdeskSettings> SettingsAsync(CancellationToken cancellationToken) => settingsStore.GetAsync(cancellationToken);
 
     public async Task<(Ticket? Ticket, bool Created, TicketFailure? Failure, string? Message)> CreateAsync(
-        CreateTicketInput input, Guid? reporterUserId, string? reporterName, Guid? deviceId, CancellationToken cancellationToken)
+        CreateTicketInput input, Guid? reporterUserId, string? reporterName, Guid? deviceId, CancellationToken cancellationToken,
+        TicketIntake? intake = null)
     {
         var existing = await db.Set<Ticket>().SingleOrDefaultAsync(t => t.Id == input.Id, cancellationToken);
         if (existing is not null)
@@ -137,13 +152,33 @@ public sealed class TicketService(
         var attachments = input.AttachmentFileIds ?? [];
         if (attachments.Count > 0)
         {
-            // Nur eigene Dateien ohne Bauakte (Bildschirmfotos, Fotos zum Problem) – nie fremde Bauaktenfotos.
+            // Nur eigene Dateien ohne Bauakte (Bildschirmfotos, Fotos zum Problem) – nie fremde Bauaktenfotos. Bei Erfassung durch
+            // die IT: Dateien der erfassenden Person (z. B. weitergeleitetes Bildschirmfoto aus einer E-Mail).
+            var uploader = intake?.CreatedByUserId ?? reporterUserId;
             var own = await db.Database.SqlQuery<Guid>($"""
-                SELECT id AS "Value" FROM files WHERE id = ANY({attachments.ToArray()}) AND bauakte_id IS NULL AND uploaded_by_user_id = {reporterUserId}
+                SELECT id AS "Value" FROM files WHERE id = ANY({attachments.ToArray()}) AND bauakte_id IS NULL AND uploaded_by_user_id = {uploader}
                 """).ToListAsync(cancellationToken);
-            if (reporterUserId is null || own.Count != attachments.Distinct().Count())
+            if (uploader is null || own.Count != attachments.Distinct().Count())
             {
                 return (null, false, TicketFailure.Validation, "Anhänge müssen eigene Dateien ohne Bauakte sein.");
+            }
+        }
+
+        if (intake is not null)
+        {
+            if (reporterUserId is { } reporterId && !await db.Set<User>().AnyAsync(u => u.Id == reporterId && u.IsActive, cancellationToken))
+            {
+                return (null, false, TicketFailure.Validation, "Der Melder existiert nicht oder ist gesperrt.");
+            }
+
+            if (intake.AssigneeUserId is { } assigneeId && !await db.Set<User>().AnyAsync(u => u.Id == assigneeId && u.IsActive, cancellationToken))
+            {
+                return (null, false, TicketFailure.Validation, "Der Benutzer existiert nicht oder ist gesperrt.");
+            }
+
+            if (intake.GroupId is { } groupId && !await db.Set<HelpdeskGroup>().AnyAsync(g => g.Id == groupId, cancellationToken))
+            {
+                return (null, false, TicketFailure.Validation, "Die Gruppe existiert nicht.");
             }
         }
 
@@ -160,6 +195,10 @@ public sealed class TicketService(
             }
 
             ticket.SetSubcategory(input.SubcategoryId);
+            if (intake is not null)
+            {
+                ticket.RecordedBy(intake.CreatedByUserId, intake.Channel);
+            }
         }
         catch (ArgumentException exception)
         {
@@ -167,8 +206,30 @@ public sealed class TicketService(
         }
 
         db.Add(ticket);
-        db.Add(TicketEvent.Create(ticket.Id, reporterUserId, "created", null, TicketStatus.New.ToString(), now));
-        var decision = await DecideAssignmentAsync(ticket, cancellationToken);
+        db.Add(TicketEvent.Create(ticket.Id, intake?.CreatedByUserId ?? reporterUserId, "created", intake?.Channel.ToString(), TicketStatus.New.ToString(), now));
+        var explicitRouting = intake is { AssigneeUserId: not null } or { GroupId: not null };
+        if (explicitRouting)
+        {
+            if (intake!.GroupId is { } chosenGroup)
+            {
+                ticket.SetGroup(chosenGroup);
+                db.Add(TicketEvent.Create(ticket.Id, intake.CreatedByUserId, "group", null, chosenGroup.ToString(), now));
+            }
+
+            if (intake.AssigneeUserId is { } chosenAssignee)
+            {
+                ticket.Assign(chosenAssignee);
+                db.Add(TicketEvent.Create(ticket.Id, intake.CreatedByUserId, "assignee", null, chosenAssignee.ToString(), now));
+                if (chosenAssignee == intake.CreatedByUserId)
+                {
+                    // Wer selbst übernimmt, arbeitet gleich daran.
+                    ticket.ChangeStatus(TicketStatus.InProgress, null, now);
+                    db.Add(TicketEvent.Create(ticket.Id, intake.CreatedByUserId, "status", nameof(TicketStatus.New), nameof(TicketStatus.InProgress), now));
+                }
+            }
+        }
+
+        var decision = explicitRouting ? null : await DecideAssignmentAsync(ticket, cancellationToken);
         if (decision is not null)
         {
             db.Add(TicketEvent.Create(ticket.Id, null, "rule", null, Clip(decision.RuleName), now));
@@ -199,6 +260,11 @@ public sealed class TicketService(
 
         await db.SaveChangesAsync(cancellationToken);
         await notifier.NotifyCreatedAsync(ticket, settings, cancellationToken);
+        if (intake is not null)
+        {
+            await notifier.NotifyRecordedAsync(ticket, cancellationToken);
+        }
+
         return (ticket, true, null, null);
     }
 
@@ -449,7 +515,7 @@ public sealed class TicketService(
         Func<IReadOnlyCollection<Guid>, Task<Dictionary<Guid, DateTimeOffset>>>? unread = null)
     {
         var tickets = await query.AsNoTracking().ToListAsync(cancellationToken);
-        var lookups = await LookupsAsync(tickets.SelectMany(t => new[] { t.ReporterUserId, t.AssigneeUserId }), cancellationToken);
+        var lookups = await LookupsAsync(tickets.SelectMany(t => new[] { t.ReporterUserId, t.AssigneeUserId, t.CreatedByUserId }), cancellationToken);
         var news = unread is null || tickets.Count == 0 ? [] : await unread(tickets.Select(t => t.Id).ToList());
         var now = clock.GetUtcNow();
         return tickets.Select(t => Summarize(t, lookups, now) with { HasUnread = news.ContainsKey(t.Id) }).ToList();
@@ -464,7 +530,7 @@ public sealed class TicketService(
             .OrderBy(e => e.At).ToListAsync(cancellationToken);
         var personIds = events.Where(e => e.Kind is "assignee" or "watcher").SelectMany(e => new[] { e.FromValue, e.ToValue })
             .Select(v => Guid.TryParse(v, out var g) ? g : (Guid?)null);
-        var lookups = await LookupsAsync(new[] { ticket.ReporterUserId, ticket.AssigneeUserId }
+        var lookups = await LookupsAsync(new[] { ticket.ReporterUserId, ticket.AssigneeUserId, ticket.CreatedByUserId }
             .Concat(comments.Select(c => (Guid?)c.AuthorUserId)).Concat(events.Select(e => e.ActorUserId)).Concat(personIds)
             .Concat(ticket.WatcherUserIds.Select(w => (Guid?)w)), cancellationToken);
         var names = lookups.Names;
@@ -523,8 +589,11 @@ public sealed class TicketService(
                 new(e.Id, e.At, e.Kind, e.ActorUserId, actor, summary, text, e.FromValue, e.ToValue, internalKind, isReporter, []);
             var item = e.Kind switch
             {
-                "created" => new TicketTimelineItem(e.Id, e.At, "created", e.ActorUserId, actor, $"{actor} hat das Problem gemeldet", ticket.Description, null,
-                    e.ToValue, false, true, ticket.AttachmentFileIds),
+                "created" => new TicketTimelineItem(e.Id, e.At, "created", e.ActorUserId, actor,
+                    ticket.Channel != TicketChannel.SelfService && e.ActorUserId is { } recorder && recorder != ticket.ReporterUserId
+                        ? $"{actor} hat die Meldung von {Name(ticket.ReporterUserId) ?? ticket.ReporterName ?? "unbekannt"} aufgenommen ({ChannelName(ticket.Channel)})"
+                        : $"{actor} hat das Problem gemeldet",
+                    ticket.Description, e.FromValue, e.ToValue, false, true, ticket.AttachmentFileIds),
                 "status" => Item($"Status: {Text(StatusText, e.FromValue)} → {Text(StatusText, e.ToValue)}",
                     e.ToValue is nameof(TicketStatus.Resolved) or nameof(TicketStatus.Closed) ? ticket.Resolution : null),
                 "assignee" => Item(e.ToValue is null ? "Zuweisung aufgehoben" : $"Zugewiesen an {Person(e.ToValue)}"),
@@ -698,7 +767,8 @@ public sealed class TicketService(
             GroupId: t.GroupId, GroupName: t.GroupId is { } g ? lookups.Groups.GetValueOrDefault(g) : null,
             SubcategoryId: t.SubcategoryId, SubcategoryName: t.SubcategoryId is { } s ? lookups.Subcategories.GetValueOrDefault(s) : null,
             FirstResponseAt: t.FirstResponseAt, ResponseDueAt: t.ResponseDueAt, ResolutionDueAt: t.ResolutionDueAt, SlaState: sla.State, DueAt: sla.DueAt,
-            DueKind: sla.DueKind, MergedIntoTicketId: t.MergedIntoTicketId, Rating: t.Rating, ResolvedAt: t.ResolvedAt);
+            DueKind: sla.DueKind, MergedIntoTicketId: t.MergedIntoTicketId, Rating: t.Rating, ResolvedAt: t.ResolvedAt, Channel: t.Channel,
+            CreatedByUserId: t.CreatedByUserId, CreatedByName: t.CreatedByUserId is { } by ? names.GetValueOrDefault(by) : null);
     }
 }
 

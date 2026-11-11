@@ -3502,6 +3502,14 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(30)")
                         .HasColumnName("category");
 
+                    b.Property<string>("Channel")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasDefaultValue("SelfService")
+                        .HasColumnName("channel");
+
                     b.Property<DateTimeOffset?>("ClosedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("closed_at");
@@ -3509,6 +3517,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("created_at");
+
+                    b.Property<Guid?>("CreatedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("created_by_user_id");
 
                     b.Property<string>("Description")
                         .HasMaxLength(10000)
@@ -3654,6 +3666,9 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("BauakteId")
                         .HasDatabaseName("ix_tickets_bauakte_id");
+
+                    b.HasIndex("CreatedByUserId")
+                        .HasDatabaseName("ix_tickets_created_by_user_id");
 
                     b.HasIndex("DeviceId")
                         .HasDatabaseName("ix_tickets_device_id");
@@ -7681,6 +7696,12 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasForeignKey("BauakteId")
                         .OnDelete(DeleteBehavior.SetNull)
                         .HasConstraintName("fk_tickets_bauakten_bauakte_id");
+
+                    b.HasOne("EstrichOne.Api.Modules.Identity.Exports.User", null)
+                        .WithMany()
+                        .HasForeignKey("CreatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .HasConstraintName("fk_tickets_user_created_by_user_id");
 
                     b.HasOne("EstrichOne.Api.Modules.Devices.Exports.Device", null)
                         .WithMany()

@@ -73,12 +73,34 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
                 }
             }
 
-            await notifier.NotifyAsync(recipients.Where(id => id != ticket.ReporterUserId).ToList(), new NotificationRequest(
+            await notifier.NotifyAsync(recipients.Where(id => id != ticket.ReporterUserId && id != ticket.CreatedByUserId).ToList(), new NotificationRequest(
                 NotificationCategory.Ticket, $"Neues Ticket {ticket.Number}",
                 $"{ticket.Title} · {TicketService.PriorityName(ticket.Priority)}{(ticket.ReporterBlocked ? " · kann nicht arbeiten" : string.Empty)}",
                 Link(ticket), "ticket", ticket.Id,
                 ticket.ReporterBlocked || ticket.Priority == TicketPriority.Urgent ? NotificationUrgency.High : NotificationUrgency.Normal,
                 DedupKey: $"ticket.created:{ticket.Id}", Event: NotificationEvents.TicketCreated), cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogFailed(logger, exception, ticket.Number);
+        }
+    }
+
+    /// <summary>Von der IT erfasst (Anruf, E-Mail, vor Ort): Der Melder erfährt Nummer und Titel und kann den Verlauf verfolgen.</summary>
+    public async Task NotifyRecordedAsync(Ticket ticket, CancellationToken cancellationToken)
+    {
+        if (ticket.ReporterUserId is not { } reporter || reporter == currentUser.UserId)
+        {
+            return;
+        }
+
+        try
+        {
+            await notifier.NotifyAsync([reporter], new NotificationRequest(
+                NotificationCategory.Ticket, $"Ticket {ticket.Number} für Sie angelegt",
+                $"{ticket.Title} · aufgenommen per {TicketService.ChannelName(ticket.Channel)}", Link(ticket), "ticket", ticket.Id,
+                DedupKey: $"ticket.recorded:{ticket.Id}", Event: NotificationEvents.TicketUpdated), cancellationToken);
+            await MailAsync(ticket, reporter, $"Die IT hat Ihre Meldung ({TicketService.ChannelName(ticket.Channel)}) als Ticket aufgenommen.", cancellationToken);
         }
         catch (Exception exception) when (exception is not OperationCanceledException)
         {

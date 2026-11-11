@@ -283,6 +283,128 @@ public sealed class ServiceDeskTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
+    public async Task OnBehalf_AgentRecordsCallForReporter_ReporterSeesAndIsNotified_OnlyAgentsMay()
+    {
+        using var agent = await _factory.CreateClientAsAsync("it", StandardRoles.ItAdministratorId);
+        using var reporter = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        Guid me = await UserIdAsync("it"), reporterId = await UserIdAsync("baustelle");
+
+        // Melder suchen: Name, Benutzername, E-Mail oder Telefon.
+        var found = await ReadAsync<List<HelpdeskReporterDto>>(await agent.GetAsync(new Uri("/api/v1/helpdesk/reporters?q=baust", UriKind.Relative), Ct));
+        found.ShouldContain(r => r.Id == reporterId);
+        (await reporter.GetAsync(new Uri("/api/v1/helpdesk/reporters", UriKind.Relative), Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+
+        var id = Guid.CreateVersion7();
+        object Body(string channel) => new
+        {
+            id, title = "Tablet zeigt keine Aufträge", description = "Anruf von der Baustelle Lindenstraße", category = "sync", channel, source = "web",
+            reporterUserId = reporterId, priority = "high", assigneeUserId = me,
+        };
+        (await agent.PostAsJsonAsync("/api/v1/tickets/on-behalf", Body("selfService"), Ct)).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+        (await reporter.PostAsJsonAsync("/api/v1/tickets/on-behalf", Body("phone"), Ct)).StatusCode.ShouldBe(HttpStatusCode.Forbidden);
+        (await agent.PostAsJsonAsync("/api/v1/tickets/on-behalf", new { id = Guid.CreateVersion7(), title = "Ohne Melder", category = "other", channel = "email",
+            source = "web" }, Ct)).StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+
+        using var createdResponse = await agent.PostAsJsonAsync("/api/v1/tickets/on-behalf", Body("phone"), Ct);
+        createdResponse.StatusCode.ShouldBe(HttpStatusCode.Created);
+        var created = await ReadAsync<TicketDetail>(createdResponse);
+        created.Summary.ReporterUserId.ShouldBe(reporterId);
+        created.Summary.Channel.ShouldBe(TicketChannel.Phone);
+        created.Summary.CreatedByUserId.ShouldBe(me);
+        created.Summary.AssigneeUserId.ShouldBe(me);
+        created.Summary.Status.ShouldBe(TicketStatus.InProgress, "Wer selbst übernimmt, arbeitet gleich daran.");
+        created.Summary.Priority.ShouldBe(TicketPriority.High);
+        created.Timeline![0].Summary.ShouldContain("aufgenommen (Telefon)");
+
+        // Wiederholung nach Verbindungsabbruch: kein zweites Ticket.
+        (await agent.PostAsJsonAsync("/api/v1/tickets/on-behalf", Body("phone"), Ct)).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        // Der Melder sieht das Ticket als eigenes und erhält einen Hinweis.
+        var mine = await ReadAsync<List<TicketSummary>>(await reporter.GetAsync(new Uri("/api/v1/tickets/mine", UriKind.Relative), Ct));
+        mine.ShouldHaveSingleItem().Id.ShouldBe(id);
+        var notices = string.Empty;
+        for (var i = 0; i < 50 && !notices.Contains("für Sie angelegt", StringComparison.Ordinal); i++)
+        {
+            await Task.Delay(100, Ct);
+            notices = await reporter.GetStringAsync(new Uri("/api/v1/notifications", UriKind.Relative), Ct);
+        }
+
+        notices.ShouldContain($"Ticket {created.Summary.Number} für Sie angelegt");
+
+        // Person ohne Zugang: nur Name; E-Mail-Eingang.
+        var walkIn = await ReadAsync<TicketDetail>(await agent.PostAsJsonAsync("/api/v1/tickets/on-behalf", new
+        {
+            id = Guid.CreateVersion7(), title = "Drucker im Lager", category = "officeIt", channel = "inPerson", source = "web", reporterName = "Lagerhilfe Max",
+        }, Ct));
+        walkIn.Summary.ReporterUserId.ShouldBeNull();
+        walkIn.Summary.ReporterDisplayName.ShouldBe("Lagerhilfe Max (laut Eingabe)");
+        walkIn.Summary.Channel.ShouldBe(TicketChannel.InPerson);
+        walkIn.Summary.Status.ShouldBe(TicketStatus.New);
+    }
+
+    [Fact]
+    public async Task Page_ReturnsStableSlicesWithTotal()
+    {
+        using var agent = await _factory.CreateClientAsAsync("it", StandardRoles.ItAdministratorId);
+        using var reporter = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        for (var i = 1; i <= 7; i++)
+        {
+            await CreateAsync(reporter, $"Meldung {i}");
+            _factory.Clock.Advance(TimeSpan.FromMinutes(1));
+        }
+
+        async Task<TicketPage> PageAsync(int offset) =>
+            await ReadAsync<TicketPage>(await agent.GetAsync(new Uri($"/api/v1/tickets/page?filter=all&sort=created&offset={offset}&limit=3", UriKind.Relative), Ct));
+        var first = await PageAsync(0);
+        var second = await PageAsync(3);
+        var third = await PageAsync(6);
+        first.Total.ShouldBe(7);
+        first.Items.Count.ShouldBe(3);
+        third.Items.ShouldHaveSingleItem();
+        first.Items.Concat(second.Items).Concat(third.Items).Select(t => t.Id).Distinct().Count().ShouldBe(7);
+        first.Items[0].Title.ShouldBe("Meldung 7");
+        (await PageAsync(30)).Items.ShouldBeEmpty();
+
+        // Spaltensortierung wie im Web (auf- und absteigend) über alle Seiten hinweg.
+        var byTitle = await ReadAsync<TicketPage>(await agent.GetAsync(new Uri("/api/v1/tickets/page?filter=all&sort=title&desc=true&limit=2", UriKind.Relative), Ct));
+        byTitle.Items.Select(t => t.Title).ShouldBe(["Meldung 7", "Meldung 6"]);
+        var byNumber = await ReadAsync<TicketPage>(await agent.GetAsync(new Uri("/api/v1/tickets/page?filter=all&sort=number&desc=false&limit=1", UriKind.Relative), Ct));
+        byNumber.Items.ShouldHaveSingleItem().Title.ShouldBe("Meldung 1");
+    }
+
+    [Fact]
+    public async Task Holidays_StateFromSettings_PreviewAndBusinessTimeStats()
+    {
+        using var agent = await _factory.CreateClientAsAsync("it", StandardRoles.ItAdministratorId);
+        var settings = await ReadAsync<HelpdeskSettings>(await agent.GetAsync(new Uri("/api/v1/helpdesk/settings", UriKind.Relative), Ct));
+        (await agent.PutAsJsonAsync("/api/v1/helpdesk/settings", settings with { State = "ZZ" }, TestJson.Options, Ct)).StatusCode
+            .ShouldBe(HttpStatusCode.UnprocessableEntity);
+        var saved = await ReadAsync<HelpdeskSettings>(await agent.PutAsJsonAsync("/api/v1/helpdesk/settings",
+            settings with { State = "BY", Holidays = ["2031-12-24"] }, TestJson.Options, Ct));
+        saved.State.ShouldBe("BY");
+
+        var year = await ReadAsync<HelpdeskHolidays>(await agent.GetAsync(new Uri("/api/v1/helpdesk/holidays?year=2031", UriKind.Relative), Ct));
+        year.StateName.ShouldBe("Bayern");
+        year.States.Count.ShouldBe(16);
+        year.Days.ShouldContain(new HelpdeskHoliday(new DateOnly(2031, 6, 12), "Fronleichnam", true));
+        year.Days.ShouldContain(new HelpdeskHoliday(new DateOnly(2031, 12, 24), "Zusatztag", false));
+        var preview = await ReadAsync<HelpdeskHolidays>(await agent.GetAsync(new Uri("/api/v1/helpdesk/holidays?year=2031&state=HH", UriKind.Relative), Ct));
+        preview.Days.ShouldNotContain(d => d.Name == "Fronleichnam");
+        preview.Days.ShouldContain(d => d.Name == "Reformationstag");
+
+        // Montag 08:00 gemeldet, Freitag 08:00 gelöst: 4 Tage Uhrzeit, aber 40 h Geschäftszeit (Mo 9 h, Di–Do je 10 h, Fr 1 h).
+        using var reporter = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);
+        var ticket = (await CreateAsync(reporter, "VPN bricht ab", category: "officeIt")).Summary;
+        _factory.Clock.SetUtcNow(Monday.AddDays(4));
+        using var it = await LoginAsync("it");
+        await ReadAsync<TicketDetail>(await PatchAsync(it, ticket.Id, new { status = "resolved", resolution = "Treiber aktualisiert." }));
+        var stats = await ReadAsync<HelpdeskStats>(await it.GetAsync(new Uri("/api/v1/tickets/stats", UriKind.Relative), Ct));
+        stats.TimeBasis.ShouldBe("business");
+        stats.AvgResolutionHours.ShouldBe(40);
+        stats.AvgFirstResponseMinutes.ShouldBe(40 * 60);
+    }
+
+    [Fact]
     public async Task KnowledgeBase_PublishedForEveryone_DraftsForAgents_SuggestedAndLinked()
     {
         using var agent = await _factory.CreateClientAsAsync("it", StandardRoles.ItAdministratorId);
