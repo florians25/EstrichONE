@@ -1,0 +1,109 @@
+<mvc:View controllerName="estrichone.controller.admin.AppUpdates" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin" showFooter="{view>/dirty}">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.appUpdates}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="iPhone-, iPad- und Android-App aktuell halten: verfügbare Versionen, Regeln und alle Geräte mit ihrer App-Version."/></f:expandedContent>
+				<f:actions>
+					<Button text="Android-App laden" icon="sap-icon://qr-code" press=".onAndroidQr" visible="{= ${view>/o/android/download/kind} === 'package' }"/>
+					<Button icon="sap-icon://refresh" text="Aktualisieren" press=".onRefresh"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox busy="{view>/busy}" renderType="Bare">
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
+				<form:SimpleForm id="appVersions" editable="false" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" maxContainerCols="1" width="56rem">
+					<core:Title text="Verfügbare Versionen"/>
+					<Label text="Server"/><Text id="appServerVersion" text="{view>/o/serverVersion}"/>
+					<Label text="Android"/>
+					<VBox>
+						<Text id="appAndroidVersion" text="{view>/androidText}"/>
+						<Text text="{view>/packageText}" class="eoMuted" visible="{= !!${view>/packageText} }"/>
+						<Text text="{view>/hashText}" class="eoMuted eoTabular" visible="{= !!${view>/hashText} }"/>
+					</VBox>
+					<Label text="iPhone und iPad"/><Text id="appIosVersion" text="{view>/iosText}"/>
+					<Label text="Mindestversion"/><Text text="Android {view>/o/android/minimumVersion} · iOS {view>/o/ios/minimumVersion}"/>
+				</form:SimpleForm>
+				<form:SimpleForm id="appRules" editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" maxContainerCols="1" width="56rem">
+					<core:Title text="Regeln"/>
+					<Label text="Hinweis „Update verfügbar“" labelFor="appRecommend"/>
+					<Switch id="appRecommend" state="{view>/s/recommendUpdates}" customTextOn=" " customTextOff=" " enabled="{view>/canSave}"/>
+					<Label text="Mindestversion erzwingen" labelFor="appEnforce"/>
+					<VBox>
+						<Switch id="appEnforce" state="{view>/s/enforceMinimum}" customTextOn=" " customTextOff=" " enabled="{view>/canSave}"/>
+						<Text text="Ältere Apps zeigen nur noch den Update-Bildschirm. Nie höher als die verfügbare Version; nicht übertragene Änderungen bleiben auf dem Gerät und werden nach dem Update gesendet." class="eoMuted"/>
+					</VBox>
+					<Label text="Mindestversion" labelFor="appMinimum"/>
+					<HBox class="eoEntryRow" alignItems="Center">
+						<Input id="appMinimum" value="{view>/s/minimumVersion}" placeholder="{= 'leer = Serverversion ' + ${view>/o/serverVersion} }" width="12rem" maxLength="50"
+							enabled="{= ${view>/canSave} &amp;&amp; ${view>/s/enforceMinimum} }"/>
+						<Button text="Serverversion übernehmen" type="Transparent" press=".onUseServerVersion" enabled="{= ${view>/canSave} &amp;&amp; ${view>/s/enforceMinimum} }"/>
+					</HBox>
+					<Label text=""/>
+					<MessageStrip id="appEnforcePreview" text="{view>/enforcePreview}" type="Warning" showIcon="true" visible="{= !!${view>/enforcePreview} }"/>
+					<Label text="Hinweis an die Benutzer" labelFor="appMessage"/>
+					<TextArea id="appMessage" value="{view>/s/message}" rows="2" maxLength="500" width="100%" placeholder="z. B. Bitte bis Freitag aktualisieren – neue Abnahme-Funktion" enabled="{view>/canSave}"/>
+					<core:Title text="iPhone und iPad"/>
+					<Label text="Link zum Update" labelFor="appIosUrl"/>
+					<Input id="appIosUrl" value="{view>/s/iosUpdateUrl}" placeholder="App Store, TestFlight (https://testflight.apple.com/join/…) oder MDM-Portal" maxLength="500" enabled="{view>/canSave}"/>
+					<Label text="Dort verfügbare Version" labelFor="appIosLatest"/>
+					<Input id="appIosLatest" value="{view>/s/iosLatestVersion}" placeholder="{= 'leer = Serverversion ' + ${view>/o/serverVersion} }" width="12rem" maxLength="50" enabled="{view>/canSave}"/>
+					<core:Title text="Android"/>
+					<Label text="Eigener Download" labelFor="appAndroidUrl"/>
+					<VBox>
+						<Input id="appAndroidUrl" value="{view>/s/androidUpdateUrl}" placeholder="leer = App vom Server (empfohlen, mit Prüfsumme)" maxLength="500" enabled="{view>/canSave}"/>
+						<Text text="Nur für Geräteverwaltung (MDM) oder eigene Verteilung. Ohne Eintrag lädt die App das Update direkt vom Server und prüft die Prüfsumme." class="eoMuted"/>
+					</VBox>
+				</form:SimpleForm>
+				<Table id="appDevices" contextualWidth="Auto" items="{view>/rows}" noDataText="{= ${view>/filter} === 'outdated' ? 'Alle Geräte haben die aktuelle App.' : 'Noch keine iOS- oder Android-Geräte registriert.' }"
+					popinLayout="GridSmall" class="sapUiMediumMarginTop">
+					<headerToolbar>
+						<OverflowToolbar>
+							<Title text="Geräte ({view>/o/counts/total})" level="H2"/>
+							<ToolbarSpacer/>
+							<SegmentedButton id="appFilter" selectedKey="{view>/filter}" selectionChange=".onFilter">
+								<items>
+									<SegmentedButtonItem key="outdated" text="Handlungsbedarf"/>
+									<SegmentedButtonItem key="all" text="Alle"/>
+								</items>
+							</SegmentedButton>
+						</OverflowToolbar>
+					</headerToolbar>
+					<columns>
+						<Column><Text text="Gerät"/></Column>
+						<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Person"/></Column>
+						<Column width="8rem"><Text text="App"/></Column>
+						<Column width="13rem"><Text text="Stand"/></Column>
+						<Column width="10rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Zuletzt gesehen"/></Column>
+						<Column width="12rem" hAlign="End" visible="{view>/canManage}"><Text text="Aktion"/></Column>
+					</columns>
+					<items>
+						<ColumnListItem>
+							<HBox alignItems="Center">
+								<core:Icon src="{view>icon}" size="1.25rem" class="sapUiSmallMarginEnd"/>
+								<VBox><Text text="{view>name}"/><Text text="{= ${view>model} || (${view>platform} === 'ios' ? 'iOS' : 'Android') }" class="eoMuted"/></VBox>
+							</HBox>
+							<Text text="{view>person}"/>
+							<Text text="{= ${view>appVersion} || '–' }" class="eoTabular"/>
+							<ObjectStatus text="{view>stateText}" state="{view>stateState}" inverted="true"/>
+							<Text text="{view>seen}" class="eoTabular"/>
+							<Button text="Zum Update auffordern" type="Transparent" icon="sap-icon://bell" press=".onRequestUpdate" visible="{view>canRequest}"/>
+						</ColumnListItem>
+					</items>
+				</Table>
+			</VBox>
+		</f:content>
+		<f:footer>
+			<OverflowToolbar>
+				<core:Icon src="sap-icon://edit" class="eoMuted"/>
+				<Text text="Ungespeicherte Änderungen."/>
+				<ToolbarSpacer/>
+				<Button id="appSave" text="{i18n>common.save}" type="Emphasized" press=".onSave" enabled="{view>/canSave}"/>
+				<Button text="Verwerfen" press=".onDiscard"/>
+			</OverflowToolbar>
+		</f:footer>
+	</f:DynamicPage>
+</mvc:View>

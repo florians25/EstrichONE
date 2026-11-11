@@ -3,6 +3,7 @@
  * die Standards – die Oberfläche bleibt benutzbar.
  */
 import { get, put } from "./api";
+import type { AppUpdateSettings } from "./appUpdates";
 
 export interface SystemSettings {
 	session: { idleHours: number; rememberDays: number; deviceIdleDays: number; requireTwoFactorForAdmins?: boolean };
@@ -19,6 +20,8 @@ export interface SystemSettings {
 	/** Abschaltbare Module (Einstellungen › Module); Ändern über PUT settings/modules. */
 	modules: Record<string, boolean>;
 	media: { photoQuality: number; photoMaxEdge: number; keepOriginalPhotos: boolean; optimizePdfs: boolean };
+	/** App-Updates (Verwaltung › App-Updates). */
+	appUpdates?: AppUpdateSettings;
 }
 
 export interface SystemSettingsResponse {

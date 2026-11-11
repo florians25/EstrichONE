@@ -93,7 +93,7 @@ const tabInfo: Record<string, { title: string; text: string }> = {
 	sitzungen: { title: "Anmeldung", text: "Wie lange Browser und Apps angemeldet bleiben, Zwei-Faktor-Pflicht für Administratoren." },
 	benachrichtigungen: { title: "Benachrichtigungen", text: "Welche E-Mails verschickt werden, Web Push im Browser und Apple Push für die iOS-App." },
 	speicher: { title: "Speicher", text: "Fotos und PDFs speicherschonend ablegen, Belegung des Servers und Nachverdichten bestehender Dateien." },
-	system: { title: "Weitere Bereiche", text: "Sicherung, Backup-Ziele, Archiv, E-Mail und Protokoll haben eigene Seiten in der Verwaltung." },
+	system: { title: "Weitere Bereiche", text: "Sicherung, Backup-Ziele, Archiv, App-Updates, E-Mail und Protokoll haben eigene Seiten in der Verwaltung." },
 };
 
 export default class Company extends BaseController {

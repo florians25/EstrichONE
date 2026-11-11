@@ -49,6 +49,7 @@ export const routes: RouteDef[] = [
 	{ name: "roles", pattern: "/verwaltung/rollen", view: "admin.Roles", permission: "users.manage", nav: "roles", title: "nav.roles" },
 	{ name: "users", pattern: "/verwaltung/benutzer", view: "admin.Users", permission: "users.manage", nav: "users", title: "nav.users" },
 	{ name: "devices", pattern: "/it-center/geraete", view: "admin.Devices", permission: "devices.read", nav: "devices", title: "nav.devices" },
+	{ name: "appUpdates", pattern: "/it-center/app-updates", view: "admin.AppUpdates", permission: "devices.read", nav: "appUpdates", title: "nav.appUpdates" },
 	{ name: "helpdesk", pattern: "/it-center/helpdesk", view: "admin.Helpdesk", nav: "helpdesk", title: "nav.helpdesk" },
 	{ name: "ticket", pattern: "/it-center/helpdesk/:id", view: "admin.Helpdesk", nav: "helpdesk", title: "nav.helpdesk" },
 	{ name: "feedbackAdmin", pattern: "/it-center/meldungen", view: "Feedback", permission: "feedback.manage", nav: "feedbackAdmin", title: "nav.feedbackAdmin" },
