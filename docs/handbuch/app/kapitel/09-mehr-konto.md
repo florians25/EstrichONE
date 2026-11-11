@@ -17,6 +17,17 @@ Der Tab **Mehr** bündelt alles rund um Ihr Konto und das Gerät.
 | **Server** | Adresse und Version des verbundenen Servers |
 | unten | **Sperren** bzw. **Benutzer wechseln**, **Abmelden**, **Konto löschen beantragen**, **App zurücksetzen**, App-Version |
 
+## App aktualisieren
+
+Gibt es eine neue Version, erscheint oben in der App **Version … verfügbar**. **Aktualisieren** überträgt zuerst alle
+offenen Änderungen und öffnet dann den App Store, TestFlight bzw. das Portal Ihrer Firma; **Später** blendet den Hinweis
+bis zum nächsten Start aus. Unter **Mehr** steht im Abschnitt **App-Update** der aktuelle Stand und **Nach Updates
+suchen**.
+
+Ist Ihre App-Version zu alt für den Server, zeigt die App **Update erforderlich**. Ihre Daten und die Anmeldung bleiben
+erhalten; Änderungen, die noch nicht übertragen sind, sendet die App nach dem Update. Nach jedem Update zeigt die App
+einmal **Neu in dieser Version**.
+
 ## Abmelden
 
 **Abmelden** beendet Ihre Sitzung auf dem Server und **löscht Ihre Daten auf diesem Gerät**. Danach ist zum Arbeiten

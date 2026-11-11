@@ -133,6 +133,36 @@ neuen Code für dasselbe Gerät.
 > zeigt der Dialog einen Hinweis. Den QR-Code mit Zugangsdaten enthält auch das Onboarding-PDF neuer Mitarbeiter
 > (Kapitel 6).
 
+## App-Updates {#app-updates}
+
+**Benutzer & Geräte** → **App-Updates** (auch unter Systemeinstellungen → Weitere Bereiche) zeigt, welche App-Versionen
+bereitstehen, welche Regeln gelten und welche Geräte eine ältere App haben.
+
+**Verfügbare Versionen.** Die Android-App liefert der Server selbst aus – sie ist im Server-Update enthalten und hat
+immer dieselbe Version wie der Server. Die Seite zeigt Version, Signatur (Release oder Testversion) und die geprüfte
+Prüfsumme. **Android-App laden** zeigt einen QR-Code mit dem Download-Link für die Erstinstallation. iPhone und iPad
+aktualisieren über App Store, TestFlight oder die Geräteverwaltung Ihres Betriebs (MDM).
+
+**Regeln:**
+
+- **Hinweis „Update verfügbar“** – die Apps zeigen oben einen Hinweis, sobald eine neuere Version bereitsteht.
+- **Mindestversion erzwingen** – ältere Apps zeigen nur noch den Bildschirm „Update erforderlich“. Leer gelassen gilt
+  die Version des Servers. Die Seite nennt vorab, wie viele Geräte das sofort betrifft. Nicht übertragene Änderungen
+  bleiben auf den Geräten und werden nach dem Update gesendet.
+- **Hinweis an die Benutzer** – eigener Text, z. B. „Bitte bis Freitag aktualisieren“.
+- **iPhone und iPad: Link zum Update** – App-Store-, TestFlight- oder MDM-Link. **Dort verfügbare Version**: die Version,
+  die über diesen Link tatsächlich bereitsteht (leer = Serverversion). Die Mindestversion liegt nie darüber.
+- **Android: Eigener Download** – nur für eine Geräteverwaltung; ohne Eintrag lädt die App das Update vom Server.
+
+**Geräte.** Die Liste zeigt je Gerät Person, App-Version, Stand (**Aktuell**, **Update verfügbar**, **Gesperrt – Update
+nötig**, **Neuer als der Server**) und letzte Verbindung. **Zum Update auffordern** schickt der Person eine
+Benachrichtigung (einmal je Version). Steht dort **Neuer als der Server**, aktualisieren Sie den Server (Abschnitt
+„Updates und Sicherheitsupdates“).
+
+> **Hinweis:** Android installiert ein Update nur, wenn es mit demselben Schlüssel signiert ist wie die installierte App.
+> Zeigt die Seite „Testversion (Debug-Signatur)“, fehlt beim Herausgeber der Signaturschlüssel; Updates sind dann nur
+> nach Deinstallation möglich.
+
 ## Firmendaten und Logo
 
 **Organisation** → **Systemeinstellungen** → **Firma** enthält die Firmendaten für den Briefkopf: Firmenname, Straße, PLZ, Ort,
@@ -443,6 +473,10 @@ automatisch einspielen:
 
 Neue Versionslinien (z. B. von 0.1 auf 0.2) werden nie automatisch eingespielt. Nach einem Update des Hauptservers
 ziehen Sie die Zusatzserver nach (Abschnitt 9.9).
+
+Mit dem Server-Update steht auch die neue Android-App bereit: Die Apps zeigen den Hinweis „Update verfügbar“ von selbst
+(siehe „App-Updates“). Für iPhone und iPad die neue Version über App Store, TestFlight oder MDM verteilen und unter
+App-Updates eintragen.
 
 ## Protokoll
 

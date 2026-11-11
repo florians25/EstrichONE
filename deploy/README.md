@@ -210,6 +210,13 @@ Versionslinien (z. B. 0.1 → 0.2) werden nie automatisch eingespielt. Administr
 „Sicherheitsupdate verfügbar“. Für den Betrieb im Internet: Checkliste „Öffentlich betreiben“ in docs/sicherheit.md
 (Firewall, nur 443, Nginx-Proxy-Manager-Einstellungen, `ESTRICHONE_BIND`).
 
+**Apps:** Das Image der API enthält die signierte Android-App derselben Version (mit Prüfsumme) und die
+Versionshinweise. Nach dem Update zeigen die Apps „Update verfügbar“; Android lädt das Update direkt vom Server,
+iPhone/iPad über App Store, TestFlight oder MDM. Regeln (Hinweis, erzwungene Mindestversion, iOS-Link) und die
+Geräteübersicht stehen im Web unter Benutzer & Geräte → App-Updates. Für die Apps muss der Server unter seiner
+öffentlichen Adresse `/api/v1/app-updates/…` ohne Anmeldung ausliefern dürfen (Standard im Caddy-Stack; bei Nginx Proxy
+Manager keine zusätzliche Zugriffsbeschränkung auf diesen Pfad). Einzelheiten: docs/app-updates.md.
+
 Aus dem Quellcode:
 
 ```bash

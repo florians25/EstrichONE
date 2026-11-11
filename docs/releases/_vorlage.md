@@ -6,6 +6,13 @@
 
 - …
 
+## Apps
+
+<!-- Optional: Erscheint in den Apps als „Neu in dieser Version“ (sonst alle Abschnitte außer Server/Installation).
+     Eigene Abschnitte „## iPhone und iPad“ bzw. „## Android“ zeigt nur die jeweilige App. -->
+
+- …
+
 ## Server aktualisieren
 
 Bestehende Installation (ab 0.1.0 legt der Installer das Skript an):
