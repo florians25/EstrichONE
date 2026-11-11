@@ -108,17 +108,20 @@ extension View {
 struct MoreCaptureMenu<MenuLabel: View>: View {
     let perform: (BauakteAction) -> Void
     @ViewBuilder let label: () -> MenuLabel
+    @Environment(AppModel.self) private var model
 
     var body: some View {
+        // Systemeinstellungen › Module: Einträge abgeschalteter Module entfallen.
+        let modules = model.active?.sync?.modules ?? .allOn
         Menu {
             Section {
-                item(.inspection)
-                item(.acceptance)
-                item(.measurement)
+                if modules.isOn(AppModules.inspections) { item(.inspection) }
+                if modules.isOn(AppModules.acceptance) { item(.acceptance) }
+                if modules.isOn(AppModules.inspections) { item(.measurement) }
             }
             Section {
                 item(.video)
-                item(.task)
+                if modules.isOn(AppModules.tasks) { item(.task) }
                 item(.note)
             }
         } label: {

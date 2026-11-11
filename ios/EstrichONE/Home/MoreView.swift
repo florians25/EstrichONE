@@ -20,6 +20,9 @@ struct MoreView: View {
     @State private var confirmDeletion = false
     @State private var deletionRequested = false
 
+    /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
+    private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
+
     var body: some View {
         NavigationStack {
             List {
@@ -61,25 +64,36 @@ struct MoreView: View {
                     }
                 }
 
-                Section("Planung und Aufgaben") {
-                    Button { route = .tasks } label: { row("Meine Aufgaben", symbol: "checklist") }
-                        .accessibilityIdentifier("myTasksTile")
-                    Button { route = .dispatch } label: { row("Wer fährt wohin", symbol: "car.2") }
-                        .accessibilityIdentifier("dispatchRow")
-                    Button { route = .week } label: { row("Meine Woche", symbol: "calendar") }
-                        .accessibilityIdentifier("myWeekTile")
-                    Button { route = .absences } label: { row("Urlaub und Abwesenheit", symbol: "sun.max") }
-                        .accessibilityIdentifier("absencesRow")
+                // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht.
+                if modules.anyOn(AppModules.tasks, AppModules.defects, AppModules.planning, AppModules.absence) {
+                    Section("Planung und Aufgaben") {
+                        if modules.anyOn(AppModules.tasks, AppModules.defects) {
+                            Button { route = .tasks } label: { row("Meine Aufgaben", symbol: "checklist") }
+                                .accessibilityIdentifier("myTasksTile")
+                        }
+                        if modules.isOn(AppModules.planning) {
+                            Button { route = .dispatch } label: { row("Wer fährt wohin", symbol: "car.2") }
+                                .accessibilityIdentifier("dispatchRow")
+                            Button { route = .week } label: { row("Meine Woche", symbol: "calendar") }
+                                .accessibilityIdentifier("myWeekTile")
+                        }
+                        if modules.isOn(AppModules.absence) {
+                            Button { route = .absences } label: { row("Urlaub und Abwesenheit", symbol: "sun.max") }
+                                .accessibilityIdentifier("absencesRow")
+                        }
+                    }
                 }
 
-                Section("Hilfe") {
-                    Button { reporting = true } label: { row("Problem melden", symbol: "exclamationmark.bubble", chevron: false) }
-                        .accessibilityIdentifier("reportProblemButton")
-                    Button { route = .tickets } label: {
-                        row("Helpdesk", symbol: "tray.full", detail: unreadTickets > 0 ? "\(unreadTickets) neu" : nil,
-                            detailTint: Theme.accent)
+                if modules.isOn(AppModules.helpdesk) {
+                    Section("Hilfe") {
+                        Button { reporting = true } label: { row("Problem melden", symbol: "exclamationmark.bubble", chevron: false) }
+                            .accessibilityIdentifier("reportProblemButton")
+                        Button { route = .tickets } label: {
+                            row("Helpdesk", symbol: "tray.full", detail: unreadTickets > 0 ? "\(unreadTickets) neu" : nil,
+                                detailTint: Theme.accent)
+                        }
+                        .accessibilityIdentifier("helpdeskRow")
                     }
-                    .accessibilityIdentifier("helpdeskRow")
                 }
 
                 if model.isDemo {

@@ -138,6 +138,16 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
 
     var id: String { rawValue }
 
+    /// Bereich gehört zu einem eingeschalteten Modul (Systemeinstellungen › Module)?
+    func isAvailable(_ modules: AppModules) -> Bool {
+        switch self {
+        case .work: modules.anyOn(AppModules.tasks, AppModules.defects)
+        case .diary: modules.isOn(AppModules.diary)
+        case .protocols: modules.anyOn(AppModules.inspections, AppModules.acceptance)
+        default: true
+        }
+    }
+
     var title: String {
         switch self {
         case .media: "Fotos & Dokumente"

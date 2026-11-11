@@ -25,6 +25,8 @@ final class SyncController {
     private(set) var health: SystemHealth?
     /// Chat-Modul: aktiv und erlaubt, ungelesene Nachrichten (`nil`, solange unbekannt).
     private(set) var chat: ChatStatus?
+    /// Module der Suite (Systemeinstellungen › Module): abgeschaltete blendet die App aus. Offline gilt der letzte Stand.
+    private(set) var modules: AppModules = .allOn
     /// „Nur Ansicht“ nach 5 Minuten ohne Server (Erfassen und Ändern gesperrt).
     private(set) var isReadOnly = false
     /// Zeitpunkt der letzten Serverantwort, die Übersteuerung „auf eigene Gefahr“ und ob der Server gerade fehlt.
@@ -54,6 +56,8 @@ final class SyncController {
             if let text = try? await store.meta(Self.lastContactKey), let date = APIDate.parse(text) {
                 self?.restoreLastContact(date)
             }
+            let modules = await ModuleSettingsStore(store: store).cached()
+            self?.applyModules(modules)
         }
     }
 
@@ -102,6 +106,15 @@ final class SyncController {
             }
         }
         await store.setReadOnly(readOnly)
+    }
+
+    private func applyModules(_ fresh: AppModules) {
+        if fresh != modules { modules = fresh }
+    }
+
+    /// Modulzustand vom Server (mit jeder Synchronisation); ohne Verbindung bleibt der zwischengespeicherte Stand.
+    func refreshModules() async {
+        applyModules(await ModuleSettingsStore(store: store).load(using: client))
     }
 
     /// Chat-Status neu laden (Modul an/aus, ungelesen).
@@ -230,7 +243,10 @@ final class SyncController {
         await evaluateConnection()
         await refreshSummary()
         await refreshNotices()
-        if !isMaintenanceLocked, outcome != .offline { await refreshChat() }
+        if !isMaintenanceLocked, outcome != .offline {
+            await refreshChat()
+            await refreshModules()
+        }
         revision += 1
         isRunning = false
     }

@@ -31,6 +31,9 @@ struct CaptureHub: View {
 
     private let columns = [GridItem(.flexible(), spacing: Space.s), GridItem(.flexible(), spacing: Space.s)]
 
+    /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
+    private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -39,12 +42,25 @@ struct CaptureHub: View {
                     LazyVGrid(columns: columns, spacing: Space.s) {
                         tile(.photo, symbol: "camera.fill", title: "Foto", subtitle: "Serie mit Beschriftung", id: "hubPhoto")
                         tile(.scan, symbol: "doc.viewfinder", title: "Dokument scannen", subtitle: "Lieferschein, Plan", id: "hubScan")
-                        tile(.diary, symbol: "book", title: "Bautagebuch", subtitle: "Eintrag für heute", id: "hubDiary")
-                        tile(.defect, symbol: "exclamationmark.triangle", title: "Mangel melden", subtitle: "mit Frist", id: "hubDefect")
-                        tile(.inspection, symbol: "checklist", title: "Erstbegehung", subtitle: "Prüfpunkte vor Ort", id: "hubInspection")
-                        tile(.acceptance, symbol: "signature", title: "Abnahme", subtitle: "mit Unterschrift", id: "hubAcceptance")
-                        tile(.task, symbol: "checklist.unchecked", title: "Aufgabe", subtitle: "für mich oder andere", id: "hubTask")
-                        tile(.measurement, symbol: "drop", title: "CM-Messung", subtitle: "Belegreife prüfen", id: "hubMeasurement")
+                        // Systemeinstellungen › Module: Kacheln abgeschalteter Module entfallen.
+                        if modules.isOn(AppModules.diary) {
+                            tile(.diary, symbol: "book", title: "Bautagebuch", subtitle: "Eintrag für heute", id: "hubDiary")
+                        }
+                        if modules.isOn(AppModules.defects) {
+                            tile(.defect, symbol: "exclamationmark.triangle", title: "Mangel melden", subtitle: "mit Frist", id: "hubDefect")
+                        }
+                        if modules.isOn(AppModules.inspections) {
+                            tile(.inspection, symbol: "checklist", title: "Erstbegehung", subtitle: "Prüfpunkte vor Ort", id: "hubInspection")
+                        }
+                        if modules.isOn(AppModules.acceptance) {
+                            tile(.acceptance, symbol: "signature", title: "Abnahme", subtitle: "mit Unterschrift", id: "hubAcceptance")
+                        }
+                        if modules.isOn(AppModules.tasks) {
+                            tile(.task, symbol: "checklist.unchecked", title: "Aufgabe", subtitle: "für mich oder andere", id: "hubTask")
+                        }
+                        if modules.isOn(AppModules.inspections) {
+                            tile(.measurement, symbol: "drop", title: "CM-Messung", subtitle: "Belegreife prüfen", id: "hubMeasurement")
+                        }
                         tile(.video, symbol: "video", title: "Video", subtitle: "kurze Aufnahme", id: "hubVideo")
                         tile(.note, symbol: "square.and.pencil", title: "Notiz", subtitle: "für alle in der Akte", id: "hubNote")
                     }

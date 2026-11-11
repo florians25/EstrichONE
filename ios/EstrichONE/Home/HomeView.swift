@@ -29,6 +29,9 @@ struct HomeView: View {
 
     private var isWide: Bool { sizeClass == .regular }
 
+    /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
+    private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
+
     private var jobs: [TodayJob] {
         TodayJob.make(assignments: planning?.assignments(on: CalendarDay.string(.now)) ?? [], board: dispatch?.board, bauakten: bauakten)
     }
@@ -56,22 +59,22 @@ struct HomeView: View {
                         if isWide {
                             HStack(alignment: .top, spacing: Space.xl) {
                                 VStack(alignment: .leading, spacing: Space.section) {
-                                    todaySection
+                                    if modules.isOn(AppModules.planning) { todaySection }
                                     dispatchSection
                                 }
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 VStack(alignment: .leading, spacing: Space.section) {
                                     tasksSection
-                                    tomorrowSection
+                                    if modules.isOn(AppModules.planning) { tomorrowSection }
                                     recentSection
                                 }
                                 .frame(width: 380)
                             }
                         } else {
-                            todaySection
+                            if modules.isOn(AppModules.planning) { todaySection }
                             dispatchSection
                             tasksSection
-                            tomorrowSection
+                            if modules.isOn(AppModules.planning) { tomorrowSection }
                             recentSection
                         }
                         Color.clear.frame(height: 1).id("bottom")
@@ -271,25 +274,30 @@ struct HomeView: View {
         let defects = items.filter { $0.kind == .defect }.count
         let crews = dispatch?.board?.crewGroups.count ?? 0
         return HStack(alignment: .top, spacing: Space.s) {
-            Button { path.append(.tasks) } label: {
-                QuickAccessTile(symbol: "checklist", title: "Meine Aufgaben", value: loaded ? "\(tasks)" : "–",
-                                detail: defects > 0 ? (defects == 1 ? "1 Mangel" : "\(defects) Mängel") : "offen",
-                                detailTint: defects > 0 ? Theme.warning : Theme.textSecondary)
+            // Systemeinstellungen › Module: Kacheln abgeschalteter Module entfallen.
+            if modules.anyOn(AppModules.tasks, AppModules.defects) {
+                Button { path.append(.tasks) } label: {
+                    QuickAccessTile(symbol: "checklist", title: "Meine Aufgaben", value: loaded ? "\(tasks)" : "–",
+                                    detail: defects > 0 ? (defects == 1 ? "1 Mangel" : "\(defects) Mängel") : "offen",
+                                    detailTint: defects > 0 ? Theme.warning : Theme.textSecondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("myTasksTile")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("myTasksTile")
-            Button { path.append(.dispatch) } label: {
-                QuickAccessTile(symbol: "car.2", title: "Wer fährt wohin", value: dispatch == nil ? "–" : "\(crews)",
-                                detail: "heute")
+            if modules.isOn(AppModules.planning) {
+                Button { path.append(.dispatch) } label: {
+                    QuickAccessTile(symbol: "car.2", title: "Wer fährt wohin", value: dispatch == nil ? "–" : "\(crews)",
+                                    detail: "heute")
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("dispatchTile")
+                Button { path.append(.week) } label: {
+                    QuickAccessTile(symbol: "calendar", title: "Meine Woche", value: planning == nil ? "–" : "\(weekCount)",
+                                    detail: "nächste 7 Tage")
+                }
+                .buttonStyle(.plain)
+                .accessibilityIdentifier("myWeekTile")
             }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("dispatchTile")
-            Button { path.append(.week) } label: {
-                QuickAccessTile(symbol: "calendar", title: "Meine Woche", value: planning == nil ? "–" : "\(weekCount)",
-                                detail: "nächste 7 Tage")
-            }
-            .buttonStyle(.plain)
-            .accessibilityIdentifier("myWeekTile")
         }
         .fixedSize(horizontal: false, vertical: true)
         .accessibilityElement(children: .contain)
@@ -301,7 +309,7 @@ struct HomeView: View {
     @ViewBuilder
     private var dispatchSection: some View {
         let groups = dispatch?.board?.crewGroups ?? []
-        if loaded, dispatch != nil {
+        if loaded, dispatch != nil, modules.isOn(AppModules.planning) {
             VStack(alignment: .leading, spacing: Space.m) {
                 SectionHeading("Wer fährt wohin") {
                     MoreLink { path.append(.dispatch) }
@@ -363,7 +371,7 @@ struct HomeView: View {
 
     @ViewBuilder
     private var tasksSection: some View {
-        if !items.isEmpty {
+        if !items.isEmpty, modules.anyOn(AppModules.tasks, AppModules.defects) {
             VStack(alignment: .leading, spacing: Space.m) {
                 SectionHeading("Offene Aufgaben") {
                     MoreLink("Alle (\(items.count))") { path.append(.tasks) }

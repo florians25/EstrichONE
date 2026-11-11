@@ -10,6 +10,8 @@ struct BauakteDetailView: View {
     let bauakteId: UUID
 
     @Environment(AppModel.self) private var model
+    /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
+    private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
     @Environment(\.shotScene) private var shotScene
     @Environment(\.openURL) private var openURL
     @Environment(\.dynamicTypeSize) private var typeSize
@@ -317,12 +319,16 @@ struct BauakteDetailView: View {
             Button { action = .scan } label: { Label("Scannen", systemImage: "doc.viewfinder") }
                 .buttonStyle(ActionTileStyle())
                 .accessibilityIdentifier("scanDocumentButton")
-            Button { action = .diary } label: { Label("Tagebuch", systemImage: "book") }
-                .buttonStyle(ActionTileStyle())
-                .accessibilityIdentifier("addDiaryButton")
-            Button { action = .defect } label: { Label("Mangel", systemImage: "exclamationmark.triangle") }
-                .buttonStyle(ActionTileStyle())
-                .accessibilityIdentifier("addDefectButton")
+            if modules.isOn(AppModules.diary) {
+                Button { action = .diary } label: { Label("Tagebuch", systemImage: "book") }
+                    .buttonStyle(ActionTileStyle())
+                    .accessibilityIdentifier("addDiaryButton")
+            }
+            if modules.isOn(AppModules.defects) {
+                Button { action = .defect } label: { Label("Mangel", systemImage: "exclamationmark.triangle") }
+                    .buttonStyle(ActionTileStyle())
+                    .accessibilityIdentifier("addDefectButton")
+            }
             MoreCaptureMenu(perform: { action = $0 }) {
                 Label("Mehr", systemImage: "ellipsis")
             }
@@ -339,7 +345,7 @@ struct BauakteDetailView: View {
             if (lhs.kind == .defect) != (rhs.kind == .defect) { return lhs.kind == .defect }
             return (lhs.dueDate ?? "9999") < (rhs.dueDate ?? "9999")
         }
-        if !open.isEmpty {
+        if !open.isEmpty, modules.anyOn(AppModules.tasks, AppModules.defects) {
             VStack(alignment: .leading, spacing: Space.m) {
                 SectionHeading("Offene Punkte") {
                     MoreLink("Alle (\(open.count))") { show(.work) }
@@ -428,7 +434,7 @@ struct BauakteDetailView: View {
         return VStack(alignment: .leading, spacing: Space.m) {
             SectionHeading("Alles zur Baustelle")
             VStack(spacing: 0) {
-                ForEach(Array(BauakteArea.allCases.enumerated()), id: \.element) { index, item in
+                ForEach(Array(BauakteArea.allCases.filter { $0.isAvailable(modules) }.enumerated()), id: \.element) { index, item in
                     if index > 0 { InsetDivider(leading: Space.l + Size.iconBadge + Space.m) }
                     let summary = item.summary(content, projectCount: projectCount)
                     let selected = wide && wideArea == item

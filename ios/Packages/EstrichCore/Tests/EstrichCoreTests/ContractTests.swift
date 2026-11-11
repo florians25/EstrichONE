@@ -67,6 +67,7 @@ struct ContractTests {
         try checkResponse("EnrollmentCodeResponse", sample: EnrollmentCodeResponse(code: "A", kind: .pool, deviceName: nil, expiresAt: Date(), link: nil))
         try checkResponse("ServerInfo", sample: ServerInfo(product: "EstrichONE", serverName: "x", serverVersion: "1", apiVersions: [],
                                                            minClientVersion: "1", authMethods: [], instanceEpoch: UUID(), setupRequired: false))
+        try checkResponse("ModuleStateResponse", sample: AppModules.Response.Module(key: "calls", enabled: true, core: false))
         let ticket = try JSONCoding.decoder.decode(TicketDetail.self, from: Data("""
             {"summary":{"id":"01a00000-0000-7000-8000-000000000001","number":"T-2026-0001","title":"x","category":"sync","priority":"normal",
              "status":"new","reporterBlocked":false,"assigneeName":null,"createdAt":"2026-10-20T07:00:00Z","lastActivityAt":"2026-10-20T07:00:00Z"},
