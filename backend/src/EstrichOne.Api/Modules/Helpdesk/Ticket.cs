@@ -26,7 +26,10 @@ public enum TicketPriority
     Urgent,
 }
 
-/// <summary>Neu → In Bearbeitung → Rückfrage → Gelöst → Geschlossen (docs/reengineering/14, Abschnitt 1).</summary>
+/// <summary>
+/// Neu → In Bearbeitung → Warten auf Anwenderinfo (Rückfrage, SLA-Uhr steht) → Warten auf Support (Melder hat geantwortet,
+/// Uhr läuft) → Gelöst → Geschlossen (docs/reengineering/14, Abschnitt 1 und 8.2).
+/// </summary>
 public enum TicketStatus
 {
     New,
@@ -34,6 +37,9 @@ public enum TicketStatus
     WaitingForReporter,
     Resolved,
     Closed,
+
+    /// <summary>Der Melder hat auf die Rückfrage geantwortet; die IT ist wieder am Zug.</summary>
+    WaitingForSupport,
 }
 
 public enum TicketSource
@@ -68,7 +74,7 @@ public sealed class Ticket : IVersionedEntity
     public const int MaxResolutionLength = 10_000;
 
     /// <summary>Gelöste Tickets schließen sich nach dieser Frist ohne Widerspruch.</summary>
-    public static readonly TimeSpan AutoCloseAfter = TimeSpan.FromDays(7);
+    public static readonly TimeSpan AutoCloseAfter = TimeSpan.FromDays(5);
 
     public Guid Id { get; private set; }
     public string Number { get; private set; } = string.Empty;

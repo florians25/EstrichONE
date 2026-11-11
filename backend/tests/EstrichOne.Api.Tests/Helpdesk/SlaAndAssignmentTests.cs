@@ -147,6 +147,7 @@ public sealed class SlaAndAssignmentTests
         settings.Hours!.Start.ShouldBe("07:00");
         settings.Holidays.ShouldBe(["2031-12-24"]);
         settings.AutoCloseDays.ShouldBe(60);
+        new HelpdeskSettings().AutoCloseDays.ShouldBe(5, "Gelöste Tickets schließen sich standardmäßig nach 5 Tagen.");
     }
 
     [Fact]

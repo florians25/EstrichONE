@@ -68,11 +68,14 @@ public sealed record DayCount(DateOnly Day, int Created, int Resolved);
 /// Wochenenden, Feiertage; „rund um die Uhr“-Prioritäten durchgehend), Tickets der letzten 30 Tage.</param>
 /// <param name="AvgResolutionHours">Mittlere Lösungszeit in Geschäftszeit ohne angehaltene Zeit („Rückfrage“), letzte 30 Tage.</param>
 /// <param name="SlaMetPercent">Anteil der in den letzten 30 Tagen gelösten Tickets innerhalb des Lösungsziels.</param>
+/// <param name="Waiting">Warten auf Anwenderinfo (Rückfrage beim Melder, Uhr steht).</param>
+/// <param name="WaitingForSupport">Melder hat geantwortet, die IT ist am Zug.</param>
 /// <param name="TimeBasis">„business“: Reaktions- und Lösungszeit in Geschäftszeit laut Helpdesk-Einstellungen.</param>
 public sealed record HelpdeskStats(
     int Open, int Unassigned, int Overdue, int Waiting, int Mine, int Blocked, int CreatedToday, int CreatedThisWeek, int ResolvedThisWeek,
     double? AvgFirstResponseMinutes, double? AvgResolutionHours, double? SlaMetPercent, double? SatisfactionAverage, int Ratings,
-    IReadOnlyList<CategoryCount> ByCategory, IReadOnlyList<AgentLoad> ByAgent, IReadOnlyList<DayCount> Trend, string TimeBasis = "business");
+    IReadOnlyList<CategoryCount> ByCategory, IReadOnlyList<AgentLoad> ByAgent, IReadOnlyList<DayCount> Trend, string TimeBasis = "business",
+    int WaitingForSupport = 0);
 
 /// <param name="UpdateState">current, recommended, required, newerThanServer (siehe App-Updates) oder null.</param>
 public sealed record ReporterDevice(
@@ -175,7 +178,7 @@ internal static class AgentEndpoints
             .Select(t => new
             {
                 t.Category, t.AssigneeUserId, t.Status, t.ReporterBlocked,
-                Overdue = (t.Status == TicketStatus.New || t.Status == TicketStatus.InProgress)
+                Overdue = (t.Status == TicketStatus.New || t.Status == TicketStatus.InProgress || t.Status == TicketStatus.WaitingForSupport)
                     && ((t.FirstResponseAt == null && t.ResponseDueAt < now) || t.ResolutionDueAt < now),
             }).ToListAsync(cancellationToken);
         var recent = await db.Set<Ticket>().AsNoTracking().Where(t => t.CreatedAt >= since || t.ResolvedAt >= since)
@@ -212,7 +215,7 @@ internal static class AgentEndpoints
                 .Where(c => c.Open > 0 || c.Total30Days > 0).OrderByDescending(c => c.Open).ThenByDescending(c => c.Total30Days).ToList(),
             agentIds.Select(id => new AgentLoad(id, names.GetValueOrDefault(id) ?? "Unbekannt", open.Count(t => t.AssigneeUserId == id),
                 open.Count(t => t.AssigneeUserId == id && t.Overdue))).OrderByDescending(a => a.Open).ToList(),
-            trend));
+            trend, WaitingForSupport: open.Count(t => t.Status == TicketStatus.WaitingForSupport)));
     }
 
     private static async Task<Results<Ok<BulkTicketResponse>, ProblemHttpResult>> BulkAsync(

@@ -154,7 +154,7 @@ public sealed class ServiceDeskTests(PostgresFixture postgres) : IAsyncLifetime
         using var later = await LoginAsync("baustelle");
         var resumed = await ReadAsync<TicketDetail>(await later.PostAsJsonAsync($"/api/v1/tickets/{ticket.Id}/comments",
             new { text = "Hat nicht geholfen.", isInternal = false }, Ct));
-        resumed.Summary.Status.ShouldBe(TicketStatus.InProgress);
+        resumed.Summary.Status.ShouldBe(TicketStatus.WaitingForSupport);
         resumed.Summary.ResolutionDueAt.ShouldBe(resolutionBefore.AddDays(3).AddHours(1),
             "Freitag 08:00 + 11 h Geschäftszeit = Montag 09:00.");
     }

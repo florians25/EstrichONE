@@ -86,6 +86,47 @@ public sealed class TicketNotifier(EstrichOneDbContext db, IMailService mail, IO
         }
     }
 
+    /// <summary>
+    /// Melder hat auf die Rückfrage geantwortet („Warten auf Support“): an die zuständige Person, sonst die Gruppe, sonst alle
+    /// Bearbeiter.
+    /// </summary>
+    public async Task NotifyAwaitingSupportAsync(Ticket ticket, HelpdeskSettings settings, CancellationToken cancellationToken)
+    {
+        if (ticket.AssigneeUserId is not null)
+        {
+            return; // Die zuständige Person erhält schon „Rückmeldung zu Ticket …“.
+        }
+
+        try
+        {
+            var recipients = await AgentsForAsync(ticket, cancellationToken);
+            await notifier.NotifyAsync(recipients.Where(id => id != currentUser.UserId).ToList(), new NotificationRequest(
+                NotificationCategory.Ticket, $"Ticket {ticket.Number}: Melder hat geantwortet", $"{ticket.Title} · Warten auf Support",
+                Link(ticket), "ticket", ticket.Id, Event: NotificationEvents.TicketUpdated), cancellationToken);
+        }
+        catch (Exception exception) when (exception is not OperationCanceledException)
+        {
+            LogFailed(logger, exception, ticket.Number);
+        }
+    }
+
+    /// <summary>Mitglieder der Gruppe des Tickets mit Bearbeitungsrecht, sonst alle Bearbeiter.</summary>
+    private async Task<IReadOnlyCollection<Guid>> AgentsForAsync(Ticket ticket, CancellationToken cancellationToken)
+    {
+        var agents = await roles.GetUserIdsWithPermissionAsync(Permissions.HelpdeskAgent, cancellationToken);
+        if (ticket.GroupId is { } groupId
+            && await db.Set<HelpdeskGroup>().AsNoTracking().SingleOrDefaultAsync(g => g.Id == groupId, cancellationToken) is { } group)
+        {
+            var members = group.MemberUserIds.Where(agents.Contains).ToList();
+            if (members.Count > 0)
+            {
+                return members;
+            }
+        }
+
+        return agents.ToList();
+    }
+
     /// <summary>Von der IT erfasst (Anruf, E-Mail, vor Ort): Der Melder erfährt Nummer und Titel und kann den Verlauf verfolgen.</summary>
     public async Task NotifyRecordedAsync(Ticket ticket, CancellationToken cancellationToken)
     {

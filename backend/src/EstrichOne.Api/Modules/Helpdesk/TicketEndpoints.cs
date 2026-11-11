@@ -89,6 +89,9 @@ public enum TicketFilter
 
     /// <summary>Gelöst oder geschlossen.</summary>
     Done,
+
+    /// <summary>Melder hat geantwortet, die IT ist am Zug („Warten auf Support“).</summary>
+    Support,
 }
 
 internal static class TicketEndpoints
@@ -240,9 +243,10 @@ internal static class TicketEndpoints
             TicketFilter.Open => query.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved),
             TicketFilter.Mine => query.Where(t => t.AssigneeUserId == me && t.Status != TicketStatus.Closed),
             TicketFilter.Unassigned => query.Where(t => t.AssigneeUserId == null && t.Status != TicketStatus.Closed),
-            TicketFilter.Overdue => query.Where(t => (t.Status == TicketStatus.New || t.Status == TicketStatus.InProgress)
+            TicketFilter.Overdue => query.Where(t => (t.Status == TicketStatus.New || t.Status == TicketStatus.InProgress || t.Status == TicketStatus.WaitingForSupport)
                 && ((t.FirstResponseAt == null && t.ResponseDueAt < now) || t.ResolutionDueAt < now)),
             TicketFilter.Waiting => query.Where(t => t.Status == TicketStatus.WaitingForReporter),
+            TicketFilter.Support => query.Where(t => t.Status == TicketStatus.WaitingForSupport),
             TicketFilter.MyGroups => query.Where(t => t.Status != TicketStatus.Closed && t.Status != TicketStatus.Resolved
                 && db.Set<HelpdeskGroup>().Any(g => g.Id == t.GroupId && g.MemberUserIds.Contains(me))),
             TicketFilter.Done => query.Where(t => t.Status == TicketStatus.Closed || t.Status == TicketStatus.Resolved),
@@ -322,8 +326,8 @@ internal static class TicketEndpoints
             "reporter" => By(t => db.Set<User>().Where(u => u.Id == t.ReporterUserId).Select(u => u.DisplayName).FirstOrDefault() ?? t.ReporterName),
             "category" => By(t => t.Category),
             "priority" => By(t => t.Priority == TicketPriority.Urgent ? 0 : t.Priority == TicketPriority.High ? 1 : t.Priority == TicketPriority.Normal ? 2 : 3),
-            "status" => By(t => t.Status == TicketStatus.New ? 0 : t.Status == TicketStatus.InProgress ? 1 : t.Status == TicketStatus.WaitingForReporter ? 2
-                : t.Status == TicketStatus.Resolved ? 3 : 4),
+            "status" => By(t => t.Status == TicketStatus.New ? 0 : t.Status == TicketStatus.InProgress ? 1 : t.Status == TicketStatus.WaitingForSupport ? 2 : t.Status == TicketStatus.WaitingForReporter ? 3
+                : t.Status == TicketStatus.Resolved ? 4 : 5),
             "assignee" => descending
                 ? query.OrderBy(t => t.AssigneeUserId == null)
                     .ThenByDescending(t => db.Set<User>().Where(u => u.Id == t.AssigneeUserId).Select(u => u.DisplayName).FirstOrDefault())
@@ -436,6 +440,11 @@ internal static class TicketEndpoints
         }
 
         await notifier.NotifyMentionedAsync(ticket, mentions, cancellationToken);
+        if (tickets.AwaitingSupport)
+        {
+            await notifier.NotifyAwaitingSupportAsync(ticket, await tickets.SettingsAsync(cancellationToken), cancellationToken);
+        }
+
         return TypedResults.Ok(await tickets.DetailAsync(ticket, includeInternal: isAgent, cancellationToken, currentUser.UserId));
     }
 

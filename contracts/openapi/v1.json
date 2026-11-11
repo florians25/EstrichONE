@@ -33275,7 +33275,7 @@
           "autoCloseDays": {
             "type": "integer",
             "format": "int32",
-            "default": 7
+            "default": 5
           },
           "state": {
             "type": [
@@ -33411,6 +33411,11 @@
           "timeBasis": {
             "type": "string",
             "default": "business"
+          },
+          "waitingForSupport": {
+            "type": "integer",
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -42623,7 +42628,8 @@
           "inProgress",
           "waitingForReporter",
           "resolved",
-          "closed"
+          "closed",
+          "waitingForSupport"
         ]
       },
       "TicketSubcategoryDto": {

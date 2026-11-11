@@ -29,7 +29,8 @@ public sealed record BusinessHours(string Start = "07:00", string End = "17:00",
 /// <param name="Holidays">Eigene Zusatztage (ISO-Datum, z. B. Betriebsruhe, Heiligabend), an denen die SLA-Uhr steht – zusätzlich zu den
 /// gesetzlichen Feiertagen des Bundeslands.</param>
 /// <param name="NotifyAgentsOnNew">Neue Tickets an die zuständige Gruppe bzw. alle Bearbeiter melden.</param>
-/// <param name="AutoCloseDays">Gelöste Tickets nach so vielen Tagen ohne Widerspruch schließen.</param>
+/// <param name="AutoCloseDays">Gelöste Tickets nach so vielen Tagen ohne Widerspruch schließen (Standard 5); bis dahin kann der Melder
+/// wieder öffnen.</param>
 /// <param name="State">Bundesland (BW, BY, … TH): dessen gesetzliche Feiertage – auch die beweglichen um Ostern – berechnet der Server
 /// je Jahr selbst. Leer = nur die eigenen Zusatztage.</param>
 public sealed record HelpdeskSettings(
@@ -41,7 +42,7 @@ public sealed record HelpdeskSettings(
     bool TimeTrackingEnabled = true,
     bool NotifyAgentsOnNew = true,
     bool SuggestArticles = true,
-    int AutoCloseDays = 7,
+    int AutoCloseDays = 5,
     string? State = null)
 {
     public static IReadOnlyList<SlaTarget> DefaultTargets { get; } =

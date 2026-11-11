@@ -119,13 +119,28 @@ public sealed class HelpdeskTests(PostgresFixture postgres) : IAsyncLifetime
         (await reporter.PostAsJsonAsync($"/api/v1/tickets/{id}/comments", new { text = "Fahrzeug 3, iPhone 15", isInternal = false }, Ct))
             .EnsureSuccessStatusCode();
         var afterAnswer = await agent.GetFromJsonAsync<TicketDetail>($"/api/v1/tickets/{id}", TestJson.Options, Ct);
-        afterAnswer!.Summary.Status.ShouldBe(TicketStatus.InProgress, "Die Antwort auf eine Rückfrage holt das Ticket zurück.");
+        afterAnswer!.Summary.Status.ShouldBe(TicketStatus.WaitingForSupport, "Die Antwort auf eine Rückfrage holt das Ticket zur IT zurück.");
+        (await agent.GetFromJsonAsync<List<TicketSummary>>("/api/v1/tickets?filter=support", TestJson.Options, Ct))!.ShouldHaveSingleItem();
+        (await agent.GetFromJsonAsync<HelpdeskStats>("/api/v1/tickets/stats", TestJson.Options, Ct))!.WaitingForSupport.ShouldBe(1);
+        afterAnswer.Timeline!.ShouldContain(i => i.Summary == "Status: Warten auf Anwenderinfo → Warten auf Support");
+
+        // Öffentliche Antwort der IT: wieder in Bearbeitung.
+        var answered = await (await agent.PostAsJsonAsync($"/api/v1/tickets/{id}/comments", new { text = "Danke, ich prüfe das.", isInternal = false }, Ct))
+            .Content.ReadFromJsonAsync<TicketDetail>(TestJson.Options, Ct);
+        answered!.Summary.Status.ShouldBe(TicketStatus.InProgress);
 
         (await PatchAsync(agent, id, new { status = "resolved", resolution = "App neu angemeldet, Upload läuft." })).EnsureSuccessStatusCode();
         (await reporter.PostAsync(new Uri($"/api/v1/tickets/{id}/reopen", UriKind.Relative), null, Ct)).EnsureSuccessStatusCode();
         (await PatchAsync(agent, id, new { status = "resolved" })).EnsureSuccessStatusCode();
 
-        _factory.Clock.Advance(Ticket.AutoCloseAfter + TimeSpan.FromHours(1));
+        // Vier Tage nach der Lösung bleibt das Ticket offen für Widerspruch, nach fünf Tagen (Standard) wird es geschlossen.
+        _factory.Clock.Advance(TimeSpan.FromDays(4));
+        await using (var scope = _factory.Services.CreateAsyncScope())
+        {
+            (await scope.ServiceProvider.GetRequiredService<TicketService>().CloseResolvedAsync(Ct)).ShouldBe(0);
+        }
+
+        _factory.Clock.Advance(TimeSpan.FromDays(1) + TimeSpan.FromHours(1));
         await using (var scope = _factory.Services.CreateAsyncScope())
         {
             await scope.ServiceProvider.GetRequiredService<TicketService>().CloseResolvedAsync(Ct);
@@ -138,7 +153,8 @@ public sealed class HelpdeskTests(PostgresFixture postgres) : IAsyncLifetime
         closed!.Summary.Status.ShouldBe(TicketStatus.Closed);
         closed.Resolution.ShouldBe("App neu angemeldet, Upload läuft.");
         closed.Events.Select(e => e.Kind).ShouldContain("priority");
-        closed.Events.Count(e => e.Kind == "status").ShouldBeGreaterThanOrEqualTo(5);
+        closed.Events.Count(e => e.Kind == "status").ShouldBeGreaterThanOrEqualTo(6);
+        closed.Timeline!.ShouldContain(i => i.Summary == "Automatisch geschlossen (keine Rückmeldung nach der Lösung)");
     }
 
     [Fact]

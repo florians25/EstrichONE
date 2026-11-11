@@ -66,7 +66,7 @@ public sealed class TicketTimelineTests(PostgresFixture postgres) : IAsyncLifeti
         timeline[0].Kind.ShouldBe("created");
         timeline[0].Text.ShouldBe("Seit heute früh");
         timeline.ShouldContain(i => i.Kind == "note" && i.IsInternal);
-        timeline.ShouldContain(i => i.Kind == "status" && i.Summary == "Status: Neu → Rückfrage");
+        timeline.ShouldContain(i => i.Kind == "status" && i.Summary == "Status: Neu → Warten auf Anwenderinfo");
         timeline.ShouldContain(i => i.Kind == "priority" && i.Summary == "Priorität: Normal → Hoch");
         timeline.Single(i => i.Kind == "comment").AttachmentFileIds.ShouldBe([screenshot]);
 
@@ -81,6 +81,6 @@ public sealed class TicketTimelineTests(PostgresFixture postgres) : IAsyncLifeti
         using var answer = await reporter.PostAsJsonAsync($"/api/v1/tickets/{id}/comments", new { text = "Geht wieder, danke!", isInternal = false }, Ct);
         var after = (await answer.Content.ReadFromJsonAsync<TicketDetail>(TestJson.Options, Ct))!;
         after.Timeline!.Last(i => i.Kind == "comment").IsReporter.ShouldBeTrue();
-        after.Timeline!.ShouldContain(i => i.Summary == "Status: Rückfrage → In Bearbeitung");
+        after.Timeline!.ShouldContain(i => i.Summary == "Status: Warten auf Anwenderinfo → Warten auf Support");
     }
 }

@@ -84,7 +84,8 @@ public sealed class TicketService(
 {
     private static readonly Dictionary<string, string> StatusText = new()
     {
-        [nameof(TicketStatus.New)] = "Neu", [nameof(TicketStatus.InProgress)] = "In Bearbeitung", [nameof(TicketStatus.WaitingForReporter)] = "Rückfrage",
+        [nameof(TicketStatus.New)] = "Neu", [nameof(TicketStatus.InProgress)] = "In Bearbeitung", [nameof(TicketStatus.WaitingForReporter)] = "Warten auf Anwenderinfo",
+        [nameof(TicketStatus.WaitingForSupport)] = "Warten auf Support",
         [nameof(TicketStatus.Resolved)] = "Gelöst", [nameof(TicketStatus.Closed)] = "Geschlossen",
     };
 
@@ -425,7 +426,10 @@ public sealed class TicketService(
         ticket.ResumeSla(paused, resolution);
     }
 
-    /// <summary>Antwort bzw. Notiz anlegen (ohne zu speichern); Melder-Antwort auf Rückfrage holt das Ticket zurück.</summary>
+    /// <summary>Die letzte Antwort des Melders hat das Ticket auf „Warten auf Support“ gesetzt (Benachrichtigung nach dem Speichern).</summary>
+    public bool AwaitingSupport { get; private set; }
+
+    /// <summary>Antwort bzw. Notiz anlegen (ohne zu speichern); Melder-Antwort auf Rückfrage setzt „Warten auf Support“.</summary>
     public async Task<string?> AddCommentAsync(Ticket ticket, Guid authorUserId, bool isAgent, string text, bool isInternal,
         IReadOnlyCollection<Guid> attachments, IReadOnlyCollection<Guid> mentions, CancellationToken cancellationToken)
     {
@@ -443,12 +447,20 @@ public sealed class TicketService(
         var fromReporterSide = ticket.IsVisibleTo(authorUserId);
         if (fromReporterSide && ticket.Status == TicketStatus.WaitingForReporter)
         {
-            db.Add(TicketEvent.Create(ticket.Id, authorUserId, "status", nameof(TicketStatus.WaitingForReporter), nameof(TicketStatus.InProgress), now));
-            ChangeStatus(ticket, TicketStatus.InProgress, null, authorUserId, settings, now);
+            // Antwort des Melders: Die IT ist wieder am Zug, die SLA-Uhr läuft weiter.
+            db.Add(TicketEvent.Create(ticket.Id, authorUserId, "status", nameof(TicketStatus.WaitingForReporter), nameof(TicketStatus.WaitingForSupport), now));
+            ChangeStatus(ticket, TicketStatus.WaitingForSupport, null, authorUserId, settings, now);
+            AwaitingSupport = true;
         }
         else if (isAgent && !isInternal && !fromReporterSide)
         {
             ticket.MarkFirstResponse(now);
+            if (ticket.Status == TicketStatus.WaitingForSupport)
+            {
+                // Öffentliche Antwort der IT: wieder in Bearbeitung.
+                db.Add(TicketEvent.Create(ticket.Id, authorUserId, "status", nameof(TicketStatus.WaitingForSupport), nameof(TicketStatus.InProgress), now));
+                ChangeStatus(ticket, TicketStatus.InProgress, null, authorUserId, settings, now);
+            }
         }
 
         ticket.Touch(now);
@@ -594,6 +606,8 @@ public sealed class TicketService(
                         ? $"{actor} hat die Meldung von {Name(ticket.ReporterUserId) ?? ticket.ReporterName ?? "unbekannt"} aufgenommen ({ChannelName(ticket.Channel)})"
                         : $"{actor} hat das Problem gemeldet",
                     ticket.Description, e.FromValue, e.ToValue, false, true, ticket.AttachmentFileIds),
+                "status" when e.ActorUserId is null && e.ToValue == nameof(TicketStatus.Closed) && e.FromValue == nameof(TicketStatus.Resolved) =>
+                    Item("Automatisch geschlossen (keine Rückmeldung nach der Lösung)"),
                 "status" => Item($"Status: {Text(StatusText, e.FromValue)} → {Text(StatusText, e.ToValue)}",
                     e.ToValue is nameof(TicketStatus.Resolved) or nameof(TicketStatus.Closed) ? ticket.Resolution : null),
                 "assignee" => Item(e.ToValue is null ? "Zuweisung aufgehoben" : $"Zugewiesen an {Person(e.ToValue)}"),
@@ -704,7 +718,7 @@ public sealed class TicketService(
         }
 
         var overdue = await db.Set<Ticket>()
-            .Where(t => t.OverdueNotifiedAt == null && (t.Status == TicketStatus.New || t.Status == TicketStatus.InProgress)
+            .Where(t => t.OverdueNotifiedAt == null && (t.Status == TicketStatus.New || t.Status == TicketStatus.InProgress || t.Status == TicketStatus.WaitingForSupport)
                 && ((t.FirstResponseAt == null && t.ResponseDueAt < now) || t.ResolutionDueAt < now))
             .Take(200).ToListAsync(cancellationToken);
         var agents = overdue.Count == 0 ? [] : await roles.GetUserIdsWithPermissionAsync(Permissions.HelpdeskAgent, cancellationToken);
