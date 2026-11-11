@@ -206,10 +206,10 @@ port_in_use() { # port_in_use PORT → 0, wenn bereits ein Dienst lauscht
 port_owner() { # Name des Prozesses bzw. Containers auf PORT (für verständliche Hinweise)
   local owner=""
   if command -v ss >/dev/null 2>&1; then
-    owner="$(ss -Hltnp "sport = :$1" 2>/dev/null | grep -o 'users:(("[^"]*"' | head -n 1 | sed 's/users:(("//; s/"$//')"
+    owner="$(ss -Hltnp "sport = :$1" 2>/dev/null | grep -o 'users:(("[^"]*"' | head -n 1 | sed 's/users:(("//; s/"$//' || true)"
   fi
   if [ "$owner" = "docker-proxy" ] && command -v docker >/dev/null 2>&1; then
-    owner="Container $(docker ps --filter "publish=$1" --format '{{.Names}}' 2>/dev/null | head -n 1)"
+    owner="Container $(docker ps --filter "publish=$1" --format '{{.Names}}' 2>/dev/null | head -n 1 || true)"
   fi
   printf '%s' "${owner:-unbekannter Dienst}"
 }
@@ -225,7 +225,7 @@ check_dns() { # check_dns DOMAIN – zeigt die Domain auf diesen Server?
     warn "Adresse $domain: kein öffentlicher Name – Caddy stellt ein eigenes Zertifikat aus (Browserwarnung, Apps brauchen eine echte Domain)."
     return
   fi
-  resolved="$(getent ahosts "$domain" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ' | sed 's/ $//')"
+  resolved="$(getent ahosts "$domain" 2>/dev/null | awk '{print $1}' | sort -u | tr '\n' ' ' | sed 's/ $//' || true)"
   if [ -z "$resolved" ]; then
     warn "DNS: $domain ist (noch) nicht auflösbar."
     hint "Beim DNS-Anbieter einen A-Eintrag (IPv4) bzw. AAAA-Eintrag (IPv6) für $domain auf diesen Server anlegen."
@@ -259,7 +259,7 @@ check_firewall() { # check_firewall PORT…
 
 latest_version() { # neueste veröffentlichte Version (GitHub-Releases); leer, wenn nicht ermittelbar
   curl -fsSL --max-time 10 "https://api.github.com/repos/$REPO/releases/latest" 2>/dev/null \
-    | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1
+    | sed -n 's/.*"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1 || true
 }
 
 # Vorhandener Caddy auf dem Server (Paket, systemd): EstrichONE als eigene Site eintragen, Caddy holt das Zertifikat.
@@ -332,7 +332,7 @@ esac
 check_system
 EXISTING=0
 [ -f "$DIR/.env" ] && EXISTING=1
-env_value() { sed -n "s/^$1=//p" "$DIR/.env" 2>/dev/null | tail -n 1 | sed 's/^"\(.*\)"$/\1/'; }
+env_value() { sed -n "s/^$1=//p" "$DIR/.env" 2>/dev/null | tail -n 1 | sed 's/^"\(.*\)"$/\1/' || true; }
 
 if [ "$COMMAND" = "pruefen" ]; then
   if command -v docker >/dev/null 2>&1 && docker info >/dev/null 2>&1; then
@@ -370,8 +370,8 @@ IMAGE="$REGISTRY/estrichone-installer:$VERSION"
 HOST_CADDY_SITE=""
 if [ "$COMMAND" = "installieren" ] && [ "$EXISTING" = "0" ]; then
   step "Angaben"
-  default_domain="$(hostname -f 2>/dev/null || hostname)"
-  case "$default_domain" in *.*) ;; *) default_domain="$(hostname -I 2>/dev/null | awk '{print $1}')" ;; esac
+  default_domain="$(hostname -f 2>/dev/null || hostname 2>/dev/null || true)"
+  case "$default_domain" in *.*) ;; *) default_domain="$(hostname -I 2>/dev/null | awk '{print $1}' || true)" ;; esac
   ask ESTRICHONE_DOMAIN "Adresse von EstrichONE (Domain ohne https://, z. B. estrichone.firma.de)" "${default_domain:-localhost}"
   ESTRICHONE_DOMAIN="${ESTRICHONE_DOMAIN#http://}"; ESTRICHONE_DOMAIN="${ESTRICHONE_DOMAIN#https://}"; ESTRICHONE_DOMAIN="${ESTRICHONE_DOMAIN%%/*}"
   [[ "$ESTRICHONE_DOMAIN" =~ ^[A-Za-z0-9.-]+$ ]] || fail "Ungültige Adresse: $ESTRICHONE_DOMAIN" "Nur den Namen angeben, z. B. estrichone.firma.de"
