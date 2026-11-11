@@ -93,7 +93,7 @@ internal static class WorkEndpoints
 
     private static async Task<Results<Created<WorkItemDto>, Ok<WorkItemDto>, ProblemHttpResult>> CreateAsync(
         CreateWorkItemRequest request, IBauakteAccess access, IBauakteHistory history, ICurrentUser currentUser, EstrichOneDbContext db,
-        INotifier notifier, IBauakteReportSource bauakten, ISystemSettings settings, CancellationToken cancellationToken)
+        INotifier notifier, IBauakteReportSource bauakten, ISystemSettings settings, INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         if (!(await EnabledKindsAsync(settings, cancellationToken)).Contains(request.Kind))
         {
@@ -132,6 +132,7 @@ internal static class WorkEndpoints
             return Validation(exception.Message);
         }
 
+        item.SetNumber(await numberRanges.NextAsync(WorkItem.NumberRange(item.Kind), cancellationToken));
         db.Add(item);
         if (request.BauakteId is { } owner)
         {

@@ -74,7 +74,7 @@ internal static class FeedbackEndpoints
 
     private static async Task<Results<Created<FeedbackDetail>, Ok<FeedbackDetail>, ProblemHttpResult>> CreateAsync(
         CreateFeedbackRequest request, FeedbackService service, FeedbackNotifier notifier, EstrichOneDbContext db, ICurrentUser currentUser,
-        IAuditLog audit, TimeProvider clock, CancellationToken cancellationToken)
+        IAuditLog audit, TimeProvider clock, INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         var existing = await db.Set<FeedbackItem>().AsNoTracking().SingleOrDefaultAsync(f => f.Id == request.Id, cancellationToken);
         if (existing is not null)
@@ -105,7 +105,7 @@ internal static class FeedbackEndpoints
             return Validation(exception.Message);
         }
 
-        item.SetNumber(await service.NextNumberAsync(now, cancellationToken));
+        item.SetNumber(await numberRanges.NextAsync(NumberRangeKeys.Feedback, cancellationToken));
         db.Add(item);
         db.Add(FeedbackEvent.Create(item.Id, currentUser.UserId, "created", null, nameof(FeedbackStatus.New), now));
         audit.Record("feedback.submitted", currentUser.UserId, EntityType, item.Id.ToString(), new Dictionary<string, string?>

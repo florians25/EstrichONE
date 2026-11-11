@@ -12,21 +12,23 @@ namespace EstrichOne.Api.Modules.Planning;
 
 public sealed record ResourceResponse(Guid Id, ResourceKind Kind, string Name, string? Identifier, string? Notes, bool IsActive, long Version,
     string? Model = null, string? LicenseClass = null, DateOnly? InspectionDue = null, DateOnly? ServiceDue = null, Guid? ImageFileId = null,
-    IReadOnlyList<Guid>? DocumentFileIds = null, Guid? CrewId = null);
+    IReadOnlyList<Guid>? DocumentFileIds = null, Guid? CrewId = null, string? InventoryNumber = null);
 
 public sealed record SaveResourceRequest(
     ResourceKind Kind, [property: Required, MaxLength(100)] string Name, [property: MaxLength(50)] string? Identifier,
     [property: MaxLength(2000)] string? Notes, bool IsActive = true,
     [property: MaxLength(100)] string? Model = null, [property: MaxLength(20)] string? LicenseClass = null,
     DateOnly? InspectionDue = null, DateOnly? ServiceDue = null, Guid? ImageFileId = null,
-    [property: MaxLength(50)] IReadOnlyList<Guid>? DocumentFileIds = null, Guid? CrewId = null);
+    [property: MaxLength(50)] IReadOnlyList<Guid>? DocumentFileIds = null, Guid? CrewId = null,
+    [property: MaxLength(30)] string? InventoryNumber = null);
 
 public sealed record CrewResponse(Guid Id, string Name, Guid? LeaderUserId, IReadOnlyList<Guid> MemberUserIds, string? Color, bool IsActive,
-    int SortOrder, long Version, int? MinimumStaff = null);
+    int SortOrder, long Version, int? MinimumStaff = null, string? Number = null);
 
 public sealed record SaveCrewRequest(
     [property: Required, MaxLength(100)] string Name, Guid? LeaderUserId, IReadOnlyList<Guid>? MemberUserIds,
-    [property: MaxLength(7)] string? Color, bool IsActive = true, int SortOrder = 0, int? MinimumStaff = null);
+    [property: MaxLength(7)] string? Color, bool IsActive = true, int SortOrder = 0, int? MinimumStaff = null,
+    [property: MaxLength(30)] string? Number = null);
 
 /// <param name="TypeId">Konfigurierte Abwesenheitsart (bestimmt dann die Grundart); leer = Standardart zu Kind.</param>
 public sealed record SaveAbsenceRequest(Guid UserId, DateOnly From, DateOnly To, AbsenceKind Kind, [property: MaxLength(500)] string? Note,
@@ -99,20 +101,32 @@ internal static class PlanningEndpoints
     }
 
     private static ResourceResponse ToResponse(Resource r) => new(r.Id, r.Kind, r.Name, r.Identifier, r.Notes, r.IsActive, r.Version,
-        r.Model, r.LicenseClass, r.InspectionDue, r.ServiceDue, r.ImageFileId, r.DocumentFileIds, r.CrewId);
+        r.Model, r.LicenseClass, r.InspectionDue, r.ServiceDue, r.ImageFileId, r.DocumentFileIds, r.CrewId, r.InventoryNumber);
 
-    private static CrewResponse ToResponse(Crew c) => new(c.Id, c.Name, c.LeaderUserId, c.MemberUserIds, c.Color, c.IsActive, c.SortOrder, c.Version, c.MinimumStaff);
+    private static CrewResponse ToResponse(Crew c) => new(c.Id, c.Name, c.LeaderUserId, c.MemberUserIds, c.Color, c.IsActive, c.SortOrder, c.Version, c.MinimumStaff, c.Number);
 
     private static async Task<Results<Ok<ResourceResponse>, ProblemHttpResult>> SaveResourceAsync(
-        Guid id, SaveResourceRequest request, EstrichOneDbContext db, CancellationToken cancellationToken)
+        Guid id, SaveResourceRequest request, EstrichOneDbContext db, INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         try
         {
             var resource = await db.Set<Resource>().SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
+            var number = NumberProblems.Clean(request.InventoryNumber);
+            if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Resource, number, resource?.InventoryNumber,
+                    n => db.Set<Resource>().AnyAsync(r => r.InventoryNumber == n && r.Id != id, cancellationToken), cancellationToken) is { } problem)
+            {
+                return problem;
+            }
+
             if (resource is null)
             {
                 resource = Resource.Create(id, request.Kind, request.Name);
+                resource.SetInventoryNumber(number ?? await numberRanges.NextAsync(NumberRangeKeys.Resource, cancellationToken));
                 db.Add(resource);
+            }
+            else
+            {
+                resource.SetInventoryNumber(number);
             }
 
             resource.Update(request.Kind, request.Name, request.Identifier, request.Notes, request.IsActive);
@@ -133,7 +147,7 @@ internal static class PlanningEndpoints
     }
 
     private static async Task<Results<Ok<CrewResponse>, ProblemHttpResult>> SaveCrewAsync(
-        Guid id, SaveCrewRequest request, EstrichOneDbContext db, CancellationToken cancellationToken)
+        Guid id, SaveCrewRequest request, EstrichOneDbContext db, INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         var members = (request.MemberUserIds ?? []).Concat(request.LeaderUserId is { } leader ? [leader] : []).Distinct().ToList();
         if (await db.Set<User>().CountAsync(u => members.Contains(u.Id), cancellationToken) != members.Count)
@@ -144,10 +158,22 @@ internal static class PlanningEndpoints
         try
         {
             var crew = await db.Set<Crew>().SingleOrDefaultAsync(c => c.Id == id, cancellationToken);
+            var number = NumberProblems.Clean(request.Number);
+            if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Crew, number, crew?.Number,
+                    n => db.Set<Crew>().AnyAsync(c => c.Number == n && c.Id != id, cancellationToken), cancellationToken) is { } problem)
+            {
+                return problem;
+            }
+
             if (crew is null)
             {
                 crew = Crew.Create(id, request.Name);
+                crew.SetNumber(number ?? await numberRanges.NextAsync(NumberRangeKeys.Crew, cancellationToken));
                 db.Add(crew);
+            }
+            else
+            {
+                crew.SetNumber(number);
             }
 
             crew.Update(request.Name, request.LeaderUserId, members, string.IsNullOrWhiteSpace(request.Color) ? null : request.Color, request.IsActive, request.SortOrder);

@@ -84,6 +84,12 @@ internal sealed partial class SyncService(
             await transaction.RollbackAsync(cancellationToken);
             return await StoreRejectionAsync(operation, deviceId, SyncOperationResult.Rejected(operation.OpId, "VALIDATION_FAILED", exception.Message), cancellationToken);
         }
+        catch (Organization.Exports.NumberRangeExhaustedException exception)
+        {
+            // Nummernkreis ausgeschöpft (z. B. Kunde aus der App): nur diese Operation ablehnen, mit Hinweis für das Büro.
+            await transaction.RollbackAsync(cancellationToken);
+            return await StoreRejectionAsync(operation, deviceId, SyncOperationResult.Rejected(operation.OpId, exception.ErrorCode, exception.Message), cancellationToken);
+        }
         catch (JsonException exception)
         {
             // Rückfallebene für Nutzdaten, die ein Handler direkt (ohne SyncPayload.Value) liest: Ein nicht lesbarer

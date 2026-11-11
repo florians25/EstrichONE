@@ -282,12 +282,6 @@ public sealed class FeedbackEvent
         new() { Id = Guid.CreateVersion7(now), FeedbackId = feedbackId, ActorUserId = actorUserId, Kind = kind, FromValue = from, ToValue = to, At = now };
 }
 
-public sealed class FeedbackNumberSequence
-{
-    public int Year { get; private set; }
-    public int LastNumber { get; private set; }
-}
-
 internal sealed class FeedbackItemConfiguration : IEntityTypeConfiguration<FeedbackItem>
 {
     public void Configure(EntityTypeBuilder<FeedbackItem> builder)
@@ -347,15 +341,5 @@ internal sealed class FeedbackEventConfiguration : IEntityTypeConfiguration<Feed
         builder.Property(e => e.ToValue).HasMaxLength(100);
         builder.HasOne<FeedbackItem>().WithMany().HasForeignKey(e => e.FeedbackId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(e => new { e.FeedbackId, e.At });
-    }
-}
-
-internal sealed class FeedbackNumberSequenceConfiguration : IEntityTypeConfiguration<FeedbackNumberSequence>
-{
-    public void Configure(EntityTypeBuilder<FeedbackNumberSequence> builder)
-    {
-        builder.ToTable("feedback_number_sequences");
-        builder.HasKey(s => s.Year);
-        builder.Property(s => s.Year).ValueGeneratedNever();
     }
 }

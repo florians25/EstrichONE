@@ -47,7 +47,7 @@ internal sealed class SystemSettingsStore(EstrichOneDbContext db) : ISystemSetti
     public async Task<SystemSettings> GetAsync(CancellationToken cancellationToken)
     {
         var row = await db.Set<SystemSettingsRow>().AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        return Parse(row?.Data);
+        return await NumberRangeService.OverlayAsync(db, Parse(row?.Data), cancellationToken);
     }
 
     internal static SystemSettings Parse(string? data)
@@ -87,12 +87,13 @@ internal static class SystemSettingsEndpoints
     private static async Task<Ok<SystemSettingsResponse>> GetAsync(EstrichOneDbContext db, CancellationToken cancellationToken)
     {
         var row = await db.Set<SystemSettingsRow>().AsNoTracking().SingleOrDefaultAsync(cancellationToken);
-        return TypedResults.Ok(new SystemSettingsResponse(SystemSettingsStore.Parse(row?.Data), row?.Version ?? 0));
+        var settings = await NumberRangeService.OverlayAsync(db, SystemSettingsStore.Parse(row?.Data), cancellationToken);
+        return TypedResults.Ok(new SystemSettingsResponse(settings, row?.Version ?? 0));
     }
 
     private static async Task<Results<Ok<SystemSettingsResponse>, ProblemHttpResult>> SaveAsync(
         SaveSystemSettingsRequest request, EstrichOneDbContext db, IAuditLog audit, ICurrentUser currentUser, ITwoFactorState twoFactor,
-        CancellationToken cancellationToken)
+        NumberRangeService numberRanges, CancellationToken cancellationToken)
     {
         var row = await db.Set<SystemSettingsRow>().SingleOrDefaultAsync(cancellationToken);
         // Zwei-Faktor-Pflicht nur einschalten, wer sie selbst nutzt – sonst sperrt man sich die Einstellungen sofort selbst.
@@ -122,7 +123,15 @@ internal static class SystemSettingsEndpoints
         row.Update(JsonSerializer.Serialize(normalized, SystemSettingsStore.Json));
         audit.Record("settings.saved", currentUser.UserId, "settings", "system");
         ModuleEndpoints.RecordChanges(audit, currentUser.UserId, before.Modules, normalized.Modules);
+        // Ältere Oberflächen ändern die Muster von Bauakten und Kunden hier; Quelle sind die Nummernkreise.
+        foreach (var (key, pattern) in new[] { (NumberRangeKeys.Bauakte, normalized.Numbering.BauaktePattern), (NumberRangeKeys.Customer, normalized.Numbering.CustomerPattern) })
+        {
+            if (await numberRanges.ApplyLegacyPatternAsync(key, pattern, cancellationToken))
+            {
+                audit.Record("settings.number_range.saved", currentUser.UserId, "number_range", key, new Dictionary<string, string?> { ["after"] = pattern });
+            }
+        }
         await db.SaveChangesAsync(cancellationToken);
-        return TypedResults.Ok(new SystemSettingsResponse(normalized, row.Version));
+        return TypedResults.Ok(new SystemSettingsResponse(await NumberRangeService.OverlayAsync(db, normalized, cancellationToken), row.Version));
     }
 }

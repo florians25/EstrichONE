@@ -12,6 +12,9 @@ public sealed class OrganizationModule : IModule
     {
         services.AddScoped<ICompanyProfiles, CompanyProfiles>();
         services.AddScoped<ISystemSettings, SystemSettingsStore>();
+        services.AddScoped<NumberRangeService>();
+        services.AddScoped<INumberRanges>(provider => provider.GetRequiredService<NumberRangeService>());
+        services.AddExceptionHandler<NumberRangeExceptionHandler>();
         services.AddScoped<IPdfBranding, PdfBranding>();
         services.AddScoped<IValueLists, ValueListStore>();
         services.AddScoped<IFormSchemas, FormSchemaStore>();
@@ -27,6 +30,7 @@ public sealed class OrganizationModule : IModule
         CatalogEndpoints.Map(api);
         SystemSettingsEndpoints.Map(api);
         ModuleEndpoints.Map(api);
+        NumberRangeEndpoints.Map(api);
         CompanyLogoEndpoints.Map(api);
         ValueListEndpoints.Map(api);
         FormSchemaEndpoints.Map(api);

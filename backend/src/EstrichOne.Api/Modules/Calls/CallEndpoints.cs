@@ -16,7 +16,7 @@ public sealed record CallResponse(
     string? CallerEmail, string? Company, Guid? CustomerId, string? CustomerName, Guid? BauakteId, string? BauakteLabel, string? Subject,
     string? Notes, bool FollowUp, DateOnly? DueDate, string? NextStep, InquiryStatus InquiryStatus, decimal? AreaSquareMeters, string? ScreedType,
     DateOnly? DesiredStart, string? SiteStreet, string? SitePostalCode, string? SiteCity, Guid? ConvertedBauakteId, string? ConvertedBauakteNumber,
-    Guid HandledByUserId, string? HandledByName, DateTimeOffset CalledAt, DateTimeOffset UpdatedAt, long Version);
+    Guid HandledByUserId, string? HandledByName, DateTimeOffset CalledAt, DateTimeOffset UpdatedAt, long Version, string? Number = null);
 
 public sealed record SaveCallRequest(
     [property: Required] Guid Id,
@@ -122,7 +122,8 @@ internal static class CallEndpoints
         if (!string.IsNullOrWhiteSpace(search))
         {
             var pattern = $"%{search.Trim()}%";
-            query = query.Where(c => (c.CallerName != null && EF.Functions.ILike(c.CallerName, pattern))
+            query = query.Where(c => (c.Number != null && EF.Functions.ILike(c.Number, pattern))
+                || (c.CallerName != null && EF.Functions.ILike(c.CallerName, pattern))
                 || (c.Company != null && EF.Functions.ILike(c.Company, pattern))
                 || (c.CallerPhone != null && EF.Functions.ILike(c.CallerPhone, pattern))
                 || (c.Subject != null && EF.Functions.ILike(c.Subject, pattern))
@@ -141,7 +142,7 @@ internal static class CallEndpoints
 
     private static async Task<Results<Ok<CallResponse>, ProblemHttpResult>> SaveAsync(
         Guid id, SaveCallRequest request, EstrichOneDbContext db, ICurrentUser currentUser, IBauakteAccess access, TimeProvider clock,
-        CancellationToken cancellationToken)
+        INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         if (request.Id != id)
         {
@@ -162,6 +163,11 @@ internal static class CallEndpoints
         if (call is null)
         {
             call = CallRecord.Create(id, request.Kind, currentUser.UserId, request.CalledAt ?? clock.GetUtcNow());
+            if (call.Kind == CallKind.Inquiry)
+            {
+                call.SetNumber(await numberRanges.NextAsync(NumberRangeKeys.Inquiry, cancellationToken));
+            }
+
             db.Add(call);
         }
         else if (call.Kind != request.Kind)
@@ -316,7 +322,7 @@ internal static class CallEndpoints
                 c.CustomerId, c.CustomerId is { } cid ? customers.GetValueOrDefault(cid) : null, c.BauakteId, linked, c.Subject, c.Notes,
                 c.FollowUp, c.DueDate, c.NextStep, c.InquiryStatus, c.AreaSquareMeters, c.ScreedType, c.DesiredStart, c.SiteStreet, c.SitePostalCode,
                 c.SiteCity, c.ConvertedBauakteId, converted, c.HandledByUserId, users.GetValueOrDefault(c.HandledByUserId), c.CalledAt, c.UpdatedAt,
-                c.Version);
+                c.Version, c.Number);
         }).ToList();
     }
 

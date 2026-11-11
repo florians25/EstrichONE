@@ -76,7 +76,8 @@ public sealed class Employee : IVersionedEntity
     {
         FirstName = PlanningText.Optional(firstName, 100) ?? string.Empty;
         LastName = PlanningText.Required(lastName, 100, "Bitte den Nachnamen angeben.");
-        PersonnelNumber = PlanningText.Optional(personnelNumber, 20);
+        // Leer = vergebene Nummer bleibt (sie stammt aus dem Nummernkreis „Personal“).
+        PersonnelNumber = PlanningText.Optional(personnelNumber, 20) ?? PersonnelNumber;
         JobTitle = PlanningText.Optional(jobTitle, 100);
         EmploymentType = employmentType;
     }

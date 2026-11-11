@@ -133,7 +133,7 @@ internal static class OrderEndpoints
 
     private static async Task<Results<Ok<OrderResponse>, ProblemHttpResult>> SaveAsync(
         Guid id, SaveOrderRequest request, EstrichOneDbContext db, IBauakteAccess access, ICurrentUser currentUser, TimeProvider clock,
-        CancellationToken cancellationToken)
+        INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         if (request.Id != id)
         {
@@ -166,7 +166,7 @@ internal static class OrderEndpoints
         var order = await db.Set<MaterialOrder>().SingleOrDefaultAsync(o => o.Id == id, cancellationToken);
         if (order is null)
         {
-            order = MaterialOrder.Create(id, await NextNumberAsync(db, clock, cancellationToken), currentUser.UserId);
+            order = MaterialOrder.Create(id, await numberRanges.NextAsync(NumberRangeKeys.Order, cancellationToken), currentUser.UserId);
             db.Add(order);
         }
         else if (order.BauakteId is { } previous && previous != request.BauakteId && !await access.CanReadAsync(previous, cancellationToken))
@@ -256,20 +256,6 @@ internal static class OrderEndpoints
 
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
-    }
-
-    /// <summary>Wie bei Bauaktennummern: atomares UPSERT in derselben Transaktion, damit keine Lücken entstehen.</summary>
-    private static async Task<string> NextNumberAsync(EstrichOneDbContext db, TimeProvider clock, CancellationToken cancellationToken)
-    {
-        var year = TimeZoneInfo.ConvertTime(clock.GetUtcNow(), Berlin).Year;
-        var rows = await db.Database
-            .SqlQuery<int>($"""
-                INSERT INTO order_number_sequences (year, last_number) VALUES ({year}, 1)
-                ON CONFLICT (year) DO UPDATE SET last_number = order_number_sequences.last_number + 1
-                RETURNING last_number AS "Value"
-                """)
-            .ToListAsync(cancellationToken);
-        return string.Create(CultureInfo.InvariantCulture, $"B-{year}-{rows.Single():0000}");
     }
 
     private static async Task<List<OrderResponse>> ToResponsesAsync(EstrichOneDbContext db, IReadOnlyList<MaterialOrder> orders, CancellationToken cancellationToken)

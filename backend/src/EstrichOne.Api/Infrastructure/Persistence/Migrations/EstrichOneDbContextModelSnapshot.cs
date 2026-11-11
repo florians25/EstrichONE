@@ -701,22 +701,6 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("peer_updates", (string)null);
                 });
 
-            modelBuilder.Entity("EstrichOne.Api.Modules.Bauakten.BauakteNumberSequence", b =>
-                {
-                    b.Property<int>("Year")
-                        .HasColumnType("integer")
-                        .HasColumnName("year");
-
-                    b.Property<int>("LastNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("last_number");
-
-                    b.HasKey("Year")
-                        .HasName("pk_bauakte_number_sequences");
-
-                    b.ToTable("bauakte_number_sequences", (string)null);
-                });
-
             modelBuilder.Entity("EstrichOne.Api.Modules.Bauakten.BauakteParty", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1345,6 +1329,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(10000)")
                         .HasColumnName("notes");
 
+                    b.Property<string>("Number")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("number");
+
                     b.Property<string>("Priority")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -1409,6 +1398,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("HandledByUserId")
                         .HasDatabaseName("ix_calls_handled_by_user_id");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_calls_number")
+                        .HasFilter("number IS NOT NULL");
 
                     b.HasIndex("Kind", "CalledAt")
                         .HasDatabaseName("ix_calls_kind_called_at");
@@ -1819,22 +1813,6 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasName("pk_chat_user_settings");
 
                     b.ToTable("chat_user_settings", (string)null);
-                });
-
-            modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.CustomerNumberSequence", b =>
-                {
-                    b.Property<int>("Id")
-                        .HasColumnType("integer")
-                        .HasColumnName("id");
-
-                    b.Property<long>("LastNumber")
-                        .HasColumnType("bigint")
-                        .HasColumnName("last_number");
-
-                    b.HasKey("Id")
-                        .HasName("pk_customer_number_sequences");
-
-                    b.ToTable("customer_number_sequences", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Contacts.Exports.Contact", b =>
@@ -3257,22 +3235,6 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("feedback_items", (string)null);
                 });
 
-            modelBuilder.Entity("EstrichOne.Api.Modules.Feedback.FeedbackNumberSequence", b =>
-                {
-                    b.Property<int>("Year")
-                        .HasColumnType("integer")
-                        .HasColumnName("year");
-
-                    b.Property<int>("LastNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("last_number");
-
-                    b.HasKey("Year")
-                        .HasName("pk_feedback_number_sequences");
-
-                    b.ToTable("feedback_number_sequences", (string)null);
-                });
-
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.Ticket", b =>
                 {
                     b.Property<Guid>("Id")
@@ -3507,22 +3469,6 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_ticket_events_ticket_id_at");
 
                     b.ToTable("ticket_events", (string)null);
-                });
-
-            modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketNumberSequence", b =>
-                {
-                    b.Property<int>("Year")
-                        .HasColumnType("integer")
-                        .HasColumnName("year");
-
-                    b.Property<int>("LastNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("last_number");
-
-                    b.HasKey("Year")
-                        .HasName("pk_ticket_number_sequences");
-
-                    b.ToTable("ticket_number_sequences", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Helpdesk.TicketRead", b =>
@@ -4103,6 +4049,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(2000)")
                         .HasColumnName("notes");
 
+                    b.Property<string>("Number")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("number");
+
                     b.Property<decimal?>("Price")
                         .HasPrecision(12, 2)
                         .HasColumnType("numeric(12,2)")
@@ -4132,6 +4083,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Name")
                         .HasDatabaseName("ix_materials_name");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_materials_number")
+                        .HasFilter("number IS NOT NULL");
 
                     b.HasIndex("SupplierId")
                         .HasDatabaseName("ix_materials_supplier_id");
@@ -4302,22 +4258,6 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("material_order_lines", (string)null);
                 });
 
-            modelBuilder.Entity("EstrichOne.Api.Modules.Materials.OrderNumberSequence", b =>
-                {
-                    b.Property<int>("Year")
-                        .HasColumnType("integer")
-                        .HasColumnName("year");
-
-                    b.Property<int>("LastNumber")
-                        .HasColumnType("integer")
-                        .HasColumnName("last_number");
-
-                    b.HasKey("Year")
-                        .HasName("pk_order_number_sequences");
-
-                    b.ToTable("order_number_sequences", (string)null);
-                });
-
             modelBuilder.Entity("EstrichOne.Api.Modules.Materials.Supplier", b =>
                 {
                     b.Property<Guid>("Id")
@@ -4362,6 +4302,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(200)")
                         .HasColumnName("name");
 
+                    b.Property<string>("Number")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("number");
+
                     b.Property<string>("OrderNotes")
                         .HasMaxLength(2000)
                         .HasColumnType("character varying(2000)")
@@ -4396,6 +4341,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("Name")
                         .HasDatabaseName("ix_suppliers_name");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_suppliers_number")
+                        .HasFilter("number IS NOT NULL");
 
                     b.ToTable("suppliers", (string)null);
                 });
@@ -4971,6 +4921,67 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_form_schemas_key");
 
                     b.ToTable("form_schemas", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Organization.NumberRange", b =>
+                {
+                    b.Property<string>("RecordType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("record_type");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("Pattern")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)")
+                        .HasColumnName("pattern");
+
+                    b.Property<long?>("RangeEnd")
+                        .HasColumnType("bigint")
+                        .HasColumnName("range_end");
+
+                    b.Property<long>("RangeStart")
+                        .HasColumnType("bigint")
+                        .HasColumnName("range_start");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("RecordType")
+                        .HasName("pk_number_ranges");
+
+                    b.ToTable("number_ranges", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Organization.NumberRangeCounter", b =>
+                {
+                    b.Property<string>("RecordType")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("record_type");
+
+                    b.Property<int>("Period")
+                        .HasColumnType("integer")
+                        .HasColumnName("period");
+
+                    b.Property<long>("LastNumber")
+                        .HasColumnType("bigint")
+                        .HasColumnName("last_number");
+
+                    b.HasKey("RecordType", "Period")
+                        .HasName("pk_number_range_counters");
+
+                    b.ToTable("number_range_counters", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Organization.SystemSettingsRow", b =>
@@ -5872,6 +5883,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)")
                         .HasColumnName("name");
 
+                    b.Property<string>("Number")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("number");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer")
                         .HasColumnName("sort_order");
@@ -5895,6 +5911,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasDatabaseName("ix_crews_member_user_ids");
 
                     NpgsqlIndexBuilderExtensions.HasMethod(b.HasIndex("MemberUserIds"), "gin");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_crews_number")
+                        .HasFilter("number IS NOT NULL");
 
                     b.ToTable("crews", (string)null);
                 });
@@ -6388,6 +6409,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("date")
                         .HasColumnName("inspection_due");
 
+                    b.Property<string>("InventoryNumber")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("inventory_number");
+
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean")
                         .HasColumnName("is_active");
@@ -6437,6 +6463,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CrewId")
                         .HasDatabaseName("ix_resources_crew_id");
+
+                    b.HasIndex("InventoryNumber")
+                        .IsUnique()
+                        .HasDatabaseName("ix_resources_inventory_number")
+                        .HasFilter("inventory_number IS NOT NULL");
 
                     b.ToTable("resources", (string)null);
                 });
@@ -6652,6 +6683,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("kind");
 
+                    b.Property<string>("Number")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)")
+                        .HasColumnName("number");
+
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -6681,6 +6717,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("CreatedByUserId")
                         .HasDatabaseName("ix_work_items_created_by_user_id");
+
+                    b.HasIndex("Number")
+                        .IsUnique()
+                        .HasDatabaseName("ix_work_items_number")
+                        .HasFilter("number IS NOT NULL");
 
                     b.HasIndex("AssigneeUserId", "Status")
                         .HasDatabaseName("ix_work_items_assignee_user_id_status");

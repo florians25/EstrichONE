@@ -220,12 +220,6 @@ public sealed class TicketEvent
         new() { Id = Guid.CreateVersion7(now), TicketId = ticketId, ActorUserId = actorUserId, Kind = kind, FromValue = from, ToValue = to, At = now };
 }
 
-public sealed class TicketNumberSequence
-{
-    public int Year { get; private set; }
-    public int LastNumber { get; private set; }
-}
-
 internal sealed class TicketConfiguration : IEntityTypeConfiguration<Ticket>
 {
     public void Configure(EntityTypeBuilder<Ticket> builder)
@@ -281,15 +275,5 @@ internal sealed class TicketEventConfiguration : IEntityTypeConfiguration<Ticket
         builder.Property(e => e.ToValue).HasMaxLength(100);
         builder.HasOne<Ticket>().WithMany().HasForeignKey(e => e.TicketId).OnDelete(DeleteBehavior.Cascade);
         builder.HasIndex(e => new { e.TicketId, e.At });
-    }
-}
-
-internal sealed class TicketNumberSequenceConfiguration : IEntityTypeConfiguration<TicketNumberSequence>
-{
-    public void Configure(EntityTypeBuilder<TicketNumberSequence> builder)
-    {
-        builder.ToTable("ticket_number_sequences");
-        builder.HasKey(s => s.Year);
-        builder.Property(s => s.Year).ValueGeneratedNever();
     }
 }

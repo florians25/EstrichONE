@@ -26,6 +26,9 @@ public sealed class WorkItem : IVersionedEntity, ISoftDeletable
     public Guid Id { get; private set; }
     public Guid? BauakteId { get; private set; }
     public WorkItemKind Kind { get; private set; }
+
+    /// <summary>Nummer aus dem Nummernkreis „Aufgaben“ bzw. „Mängel“ (Standard AU-{JJJJ}-{NNNN} / M-{JJJJ}-{NNNN}).</summary>
+    public string? Number { get; private set; }
     public WorkItemStatus Status { get; private set; } = WorkItemStatus.Open;
     public string Title { get; private set; } = string.Empty;
     public string? Description { get; private set; }
@@ -62,6 +65,12 @@ public sealed class WorkItem : IVersionedEntity, ISoftDeletable
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
 
+    public void SetNumber(string number) => Number ??= number;
+
+    /// <summary>Schlüssel des Nummernkreises dieser Art.</summary>
+    public static string NumberRange(WorkItemKind kind) =>
+        kind == WorkItemKind.Defect ? Organization.Exports.NumberRangeKeys.Defect : Organization.Exports.NumberRangeKeys.Task;
+
     private static string Required(string title) =>
         string.IsNullOrWhiteSpace(title) ? throw new ArgumentException("Titel fehlt.", nameof(title)) : title.Trim();
 }
@@ -74,6 +83,8 @@ internal sealed class WorkItemConfiguration : IEntityTypeConfiguration<WorkItem>
         builder.ConfigureVersioned();
         builder.Property(item => item.Id).ValueGeneratedNever();
         builder.Property(item => item.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(item => item.Number).HasMaxLength(30);
+        builder.HasIndex(item => item.Number).IsUnique().HasFilter("number IS NOT NULL");
         builder.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
         builder.Property(item => item.Title).HasMaxLength(200);
         builder.Property(item => item.Description).HasMaxLength(4000);

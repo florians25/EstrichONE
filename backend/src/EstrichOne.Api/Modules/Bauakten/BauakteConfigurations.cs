@@ -128,20 +128,3 @@ internal sealed class NoteConfiguration : IEntityTypeConfiguration<Note>
         builder.HasIndex(note => new { note.BauakteId, note.CreatedAt });
     }
 }
-
-/// <summary>Nummernkreis je Jahr für Bauaktennummern.</summary>
-public sealed class BauakteNumberSequence
-{
-    public int Year { get; private set; }
-    public int LastNumber { get; private set; }
-}
-
-internal sealed class BauakteNumberSequenceConfiguration : IEntityTypeConfiguration<BauakteNumberSequence>
-{
-    public void Configure(EntityTypeBuilder<BauakteNumberSequence> builder)
-    {
-        builder.ToTable("bauakte_number_sequences");
-        builder.HasKey(sequence => sequence.Year);
-        builder.Property(sequence => sequence.Year).ValueGeneratedNever();
-    }
-}

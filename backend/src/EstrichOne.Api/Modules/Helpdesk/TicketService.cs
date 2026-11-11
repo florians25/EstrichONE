@@ -5,6 +5,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Helpdesk.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Helpdesk;
@@ -47,7 +48,7 @@ public sealed record TicketDetail(
     IReadOnlyList<TicketCommentDto> Comments, IReadOnlyList<TicketEventDto> Events, IReadOnlyList<TicketTimelineItem>? Timeline = null);
 
 /// <summary>Anlegen und Lesen von Tickets – gemeinsam für REST, Sync und Meldung ohne Anmeldung.</summary>
-public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakten, TimeProvider clock) : ITicketAttachments
+public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakten, TimeProvider clock, INumberRanges numberRanges) : ITicketAttachments
 {
     private static readonly Dictionary<string, string> StatusText = new()
     {
@@ -111,7 +112,7 @@ public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakte
         Ticket ticket;
         try
         {
-            ticket = Ticket.Create(input.Id, await NextNumberAsync(now, cancellationToken), input.Title, input.Description, input.Category,
+            ticket = Ticket.Create(input.Id, await numberRanges.NextAsync(NumberRangeKeys.Ticket, cancellationToken), input.Title, input.Description, input.Category,
                 input.Source, input.ReporterBlocked, reporterUserId, reporterName, deviceId, input.BauakteId, diagnostics, attachments, now);
             if (input.Priority is { } priority)
             {
@@ -127,17 +128,6 @@ public sealed class TicketService(EstrichOneDbContext db, IBauakteAccess bauakte
         db.Add(TicketEvent.Create(ticket.Id, reporterUserId, "created", null, TicketStatus.New.ToString(), now));
         await db.SaveChangesAsync(cancellationToken);
         return (ticket, true, null, null);
-    }
-
-    private async Task<string> NextNumberAsync(DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var year = TimeZoneInfo.ConvertTime(now, Berlin).Year;
-        var rows = await db.Database.SqlQuery<int>($"""
-            INSERT INTO ticket_number_sequences (year, last_number) VALUES ({year}, 1)
-            ON CONFLICT (year) DO UPDATE SET last_number = ticket_number_sequences.last_number + 1
-            RETURNING last_number AS "Value"
-            """).ToListAsync(cancellationToken);
-        return string.Create(CultureInfo.InvariantCulture, $"T-{year}-{rows.Single():0000}");
     }
 
     public async Task<IReadOnlyList<TicketSummary>> SummariesAsync(IQueryable<Ticket> query, CancellationToken cancellationToken,

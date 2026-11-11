@@ -54,6 +54,9 @@ public sealed class CallRecord : IVersionedEntity, ISoftDeletable
 {
     public Guid Id { get; private set; }
     public CallKind Kind { get; private set; }
+
+    /// <summary>Anfragenummer aus dem Nummernkreis „Anfragen“ (Standard A-{JJJJ}-{NNNN}); Gesprächsnotizen haben keine.</summary>
+    public string? Number { get; private set; }
     public CallDirection Direction { get; private set; } = CallDirection.Inbound;
     public CallSource Source { get; private set; } = CallSource.Phone;
     public CallPriority Priority { get; private set; } = CallPriority.Normal;
@@ -161,6 +164,8 @@ public sealed class CallRecord : IVersionedEntity, ISoftDeletable
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
 
+    public void SetNumber(string number) => Number ??= number;
+
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
 }
 
@@ -178,6 +183,8 @@ internal sealed class CallRecordConfiguration : IEntityTypeConfiguration<CallRec
         builder.ConfigureVersioned();
         builder.Property(c => c.Id).ValueGeneratedNever();
         builder.Property(c => c.Kind).HasConversion<string>().HasMaxLength(20);
+        builder.Property(c => c.Number).HasMaxLength(30);
+        builder.HasIndex(c => c.Number).IsUnique().HasFilter("number IS NOT NULL");
         builder.Property(c => c.Direction).HasConversion<string>().HasMaxLength(20);
         builder.Property(c => c.Source).HasConversion<string>().HasMaxLength(20);
         builder.Property(c => c.Priority).HasConversion<string>().HasMaxLength(20);

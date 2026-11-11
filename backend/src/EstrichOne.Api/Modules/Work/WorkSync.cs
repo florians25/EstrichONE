@@ -5,21 +5,22 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Sync.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Work;
 
 public sealed record WorkItemDto(
     Guid Id, Guid? BauakteId, WorkItemKind Kind, WorkItemStatus Status, string Title, string? Description, DateOnly? DueDate,
-    Guid? AssigneeUserId, Guid CreatedByUserId, DateTimeOffset? CompletedAt, DateTimeOffset UpdatedAt, long Version)
+    Guid? AssigneeUserId, Guid CreatedByUserId, DateTimeOffset? CompletedAt, DateTimeOffset UpdatedAt, long Version, string? Number = null)
 {
     public static WorkItemDto From(WorkItem item) => new(item.Id, item.BauakteId, item.Kind, item.Status, item.Title,
-        item.Description, item.DueDate, item.AssigneeUserId, item.CreatedByUserId, item.CompletedAt, item.UpdatedAt, item.Version);
+        item.Description, item.DueDate, item.AssigneeUserId, item.CreatedByUserId, item.CompletedAt, item.UpdatedAt, item.Version, item.Number);
 }
 
 /// <summary>Aufgaben und Mängel: Anlage idempotent, Änderungen feldweise zusammengeführt.</summary>
 internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IUserPermissions permissions, ICurrentUser currentUser,
-    TimeProvider clock, IBauakteHistory history) : ISyncOperationHandler
+    TimeProvider clock, IBauakteHistory history, INumberRanges numberRanges) : ISyncOperationHandler
 {
     private static readonly HashSet<string> EditableFields = ["title", "description", "dueDate", "assigneeUserId", "status"];
 
@@ -65,6 +66,8 @@ internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IU
         var assignee = SyncPayload.Read<Guid?>(op.Payload, "assigneeUserId");
         await EnsureUserExistsAsync(assignee, cancellationToken);
         item.Update(item.Title, SyncPayload.Read<string>(op.Payload, "description"), SyncPayload.Read<DateOnly?>(op.Payload, "dueDate"), assignee);
+        // Nummer vergibt der Server (auch bei Anlage in der App).
+        item.SetNumber(await numberRanges.NextAsync(WorkItem.NumberRange(item.Kind), cancellationToken));
         db.Add(item);
         if (bauakteId is { } owner)
         {

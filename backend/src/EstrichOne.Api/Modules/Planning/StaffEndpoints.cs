@@ -268,7 +268,7 @@ internal static class StaffEndpoints
 
     private static async Task<Results<Ok<EmployeeDetail>, ProblemHttpResult>> SaveAsync(
         Guid id, SaveEmployeeRequest request, EstrichOneDbContext db, IUserPermissions permissions, IStoredFiles files, HrService hr, TimeProvider clock,
-        CancellationToken cancellationToken)
+        INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         if (request.UserId is { } userId)
         {
@@ -298,7 +298,10 @@ internal static class StaffEndpoints
                 db.Add(employee);
             }
 
-            employee.Update(request.FirstName ?? string.Empty, request.LastName, request.PersonnelNumber, request.JobTitle, request.EmploymentType);
+            // Ohne Personalnummer vergibt der Server die nächste aus dem Nummernkreis „Personal“.
+            var personnelNumber = string.IsNullOrEmpty(number) && employee.PersonnelNumber is null
+                ? await numberRanges.NextAsync(NumberRangeKeys.Employee, cancellationToken) : request.PersonnelNumber;
+            employee.Update(request.FirstName ?? string.Empty, request.LastName, personnelNumber, request.JobTitle, request.EmploymentType);
             employee.ChangeContact(request.Email, request.Phone, request.Mobile, request.Street, request.PostalCode, request.City, request.BirthDate);
             employee.ChangeEmergencyContact(request.EmergencyContactName, request.EmergencyContactPhone, request.EmergencyContactRelation);
             var isNew = db.Entry(employee).State == EntityState.Added;
@@ -343,7 +346,7 @@ internal static class StaffEndpoints
         return deleted == 0 ? NotFound("Mitarbeiter nicht gefunden") : TypedResults.NoContent();
     }
 
-    private static async Task<Ok<ImportEmployeesResult>> ImportAsync(EstrichOneDbContext db, CancellationToken cancellationToken)
+    private static async Task<Ok<ImportEmployeesResult>> ImportAsync(EstrichOneDbContext db, INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         var linked = await db.Set<Employee>().Where(e => e.UserId != null).Select(e => e.UserId!.Value).ToListAsync(cancellationToken);
         var users = await db.Set<User>().AsNoTracking().Where(u => u.IsActive && !linked.Contains(u.Id)).ToListAsync(cancellationToken);
@@ -351,8 +354,8 @@ internal static class StaffEndpoints
         {
             var parts = user.DisplayName.Trim().Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
             var employee = Employee.Create(Guid.CreateVersion7());
-            employee.Update(parts.Length > 1 ? parts[0] : string.Empty, parts.Length > 1 ? parts[1] : parts.ElementAtOrDefault(0) ?? user.UserName, null, null,
-                EmploymentType.FullTime);
+            employee.Update(parts.Length > 1 ? parts[0] : string.Empty, parts.Length > 1 ? parts[1] : parts.ElementAtOrDefault(0) ?? user.UserName,
+                await numberRanges.NextAsync(NumberRangeKeys.Employee, cancellationToken), null, EmploymentType.FullTime);
             employee.ChangeContact(user.Email, user.Phone, null, null, null, null, null);
             employee.LinkUser(user.Id);
             db.Add(employee);

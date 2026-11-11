@@ -23,6 +23,9 @@ public sealed class Resource : IVersionedEntity
 
     /// <summary>Kennzeichen oder Seriennummer.</summary>
     public string? Identifier { get; private set; }
+
+    /// <summary>Inventarnummer aus dem Nummernkreis „Maschinen und Fahrzeuge“ (Standard 20{NNN}).</summary>
+    public string? InventoryNumber { get; private set; }
     public string? Notes { get; private set; }
     public bool IsActive { get; private set; } = true;
 
@@ -80,6 +83,8 @@ public sealed class Resource : IVersionedEntity
         DocumentFileIds = documentFileIds.Distinct().Take(50).ToList();
         CrewId = crewId;
     }
+
+    public void SetInventoryNumber(string? number) => InventoryNumber = string.IsNullOrWhiteSpace(number) ? InventoryNumber : number.Trim();
 }
 
 /// <summary>Kolonne: feste Gruppe von Mitarbeitern mit Kolonnenführer.</summary>
@@ -87,6 +92,9 @@ public sealed class Crew : IVersionedEntity
 {
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
+
+    /// <summary>Kolonnennummer aus dem Nummernkreis „Kolonnen“ (Standard K{NN}).</summary>
+    public string? Number { get; private set; }
     public Guid? LeaderUserId { get; private set; }
     public List<Guid> MemberUserIds { get; private set; } = [];
 
@@ -123,6 +131,8 @@ public sealed class Crew : IVersionedEntity
 
         MinimumStaff = minimumStaff is null or 0 ? null : minimumStaff;
     }
+
+    public void SetNumber(string? number) => Number = string.IsNullOrWhiteSpace(number) ? Number : number.Trim();
 
     public void Update(string name, Guid? leaderUserId, IReadOnlyCollection<Guid> memberUserIds, string? color, bool isActive, int sortOrder)
     {
@@ -417,6 +427,8 @@ internal sealed class ResourceConfiguration : IEntityTypeConfiguration<Resource>
         builder.Property(r => r.Kind).HasConversion<string>().HasMaxLength(20);
         builder.Property(r => r.Name).HasMaxLength(100);
         builder.Property(r => r.Identifier).HasMaxLength(50);
+        builder.Property(r => r.InventoryNumber).HasMaxLength(30);
+        builder.HasIndex(r => r.InventoryNumber).IsUnique().HasFilter("inventory_number IS NOT NULL");
         builder.Property(r => r.Notes).HasMaxLength(2000);
         builder.Property(r => r.Model).HasMaxLength(100);
         builder.Property(r => r.LicenseClass).HasMaxLength(20);
@@ -434,6 +446,8 @@ internal sealed class CrewConfiguration : IEntityTypeConfiguration<Crew>
         builder.Property(c => c.Id).ValueGeneratedNever();
         builder.Property(c => c.Name).HasMaxLength(100);
         builder.Property(c => c.Color).HasMaxLength(7);
+        builder.Property(c => c.Number).HasMaxLength(30);
+        builder.HasIndex(c => c.Number).IsUnique().HasFilter("number IS NOT NULL");
         builder.Property(c => c.MemberUserIds).HasColumnType("uuid[]");
         builder.HasOne<User>().WithMany().HasForeignKey(c => c.LeaderUserId).OnDelete(DeleteBehavior.SetNull);
         builder.HasIndex(c => c.MemberUserIds).HasMethod("gin");

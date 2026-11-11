@@ -34,6 +34,9 @@ public sealed class Supplier : IVersionedEntity, ISoftDeletable
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
 
+    /// <summary>Lieferantennummer aus dem Nummernkreis „Lieferanten“ (Standard 70{NNNN}).</summary>
+    public string? Number { get; private set; }
+
     /// <summary>Unsere Kundennummer beim Lieferanten (steht auf der Bestellung).</summary>
     public string? CustomerNumber { get; private set; }
     public string? ContactName { get; private set; }
@@ -74,6 +77,8 @@ public sealed class Supplier : IVersionedEntity, ISoftDeletable
     }
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
+
+    public void SetNumber(string? number) => Number = string.IsNullOrWhiteSpace(number) ? Number : number.Trim();
 }
 
 /// <summary>Artikel im Materialstamm (Estrichmörtel, Dämmung, Folie, Randdämmstreifen …).</summary>
@@ -81,6 +86,11 @@ public sealed class Material : IVersionedEntity, ISoftDeletable
 {
     public Guid Id { get; private set; }
     public string Name { get; private set; } = string.Empty;
+
+    /// <summary>Eigene Materialnummer aus dem Nummernkreis „Material“ (Standard 50{NNNN}).</summary>
+    public string? Number { get; private set; }
+
+    /// <summary>Artikelnummer des Lieferanten (steht auf der Bestellung).</summary>
     public string? ArticleNumber { get; private set; }
     public MaterialCategory Category { get; private set; }
     public string Unit { get; private set; } = "Stk";
@@ -116,6 +126,8 @@ public sealed class Material : IVersionedEntity, ISoftDeletable
     }
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
+
+    public void SetNumber(string? number) => Number = string.IsNullOrWhiteSpace(number) ? Number : number.Trim();
 }
 
 /// <summary>Materialbestellung beim Lieferanten, meist für eine Bauakte und Lieferung auf die Baustelle.</summary>
@@ -283,13 +295,6 @@ public sealed class MaterialOrderLine
     }
 }
 
-/// <summary>Nummernkreis je Jahr für Bestellnummern (<c>B-JJJJ-NNNN</c>).</summary>
-public sealed class OrderNumberSequence
-{
-    public int Year { get; private set; }
-    public int LastNumber { get; private set; }
-}
-
 internal static class Text
 {
     public static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -304,6 +309,8 @@ internal sealed class SupplierConfiguration : IEntityTypeConfiguration<Supplier>
         builder.Property(s => s.Id).ValueGeneratedNever();
         builder.Property(s => s.Name).HasMaxLength(200);
         builder.Property(s => s.CustomerNumber).HasMaxLength(50);
+        builder.Property(s => s.Number).HasMaxLength(30);
+        builder.HasIndex(s => s.Number).IsUnique().HasFilter("number IS NOT NULL");
         builder.Property(s => s.ContactName).HasMaxLength(200);
         builder.Property(s => s.Phone).HasMaxLength(80);
         builder.Property(s => s.Email).HasMaxLength(320);
@@ -324,6 +331,8 @@ internal sealed class MaterialConfiguration : IEntityTypeConfiguration<Material>
         builder.Property(m => m.Id).ValueGeneratedNever();
         builder.Property(m => m.Name).HasMaxLength(200);
         builder.Property(m => m.ArticleNumber).HasMaxLength(50);
+        builder.Property(m => m.Number).HasMaxLength(30);
+        builder.HasIndex(m => m.Number).IsUnique().HasFilter("number IS NOT NULL");
         builder.Property(m => m.Category).HasConversion<string>().HasMaxLength(20);
         builder.Property(m => m.Unit).HasMaxLength(20);
         builder.Property(m => m.Price).HasPrecision(12, 2);
@@ -372,15 +381,5 @@ internal sealed class MaterialOrderLineConfiguration : IEntityTypeConfiguration<
         builder.Property(l => l.UnitPrice).HasPrecision(12, 2);
         builder.HasOne<Material>().WithMany().HasForeignKey(l => l.MaterialId).OnDelete(DeleteBehavior.SetNull);
         builder.HasIndex(l => new { l.OrderId, l.Position });
-    }
-}
-
-internal sealed class OrderNumberSequenceConfiguration : IEntityTypeConfiguration<OrderNumberSequence>
-{
-    public void Configure(EntityTypeBuilder<OrderNumberSequence> builder)
-    {
-        builder.ToTable("order_number_sequences");
-        builder.HasKey(s => s.Year);
-        builder.Property(s => s.Year).ValueGeneratedNever();
     }
 }

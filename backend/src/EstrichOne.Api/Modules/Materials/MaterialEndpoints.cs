@@ -10,7 +10,7 @@ namespace EstrichOne.Api.Modules.Materials;
 
 public sealed record SupplierResponse(
     Guid Id, string Name, string? CustomerNumber, string? ContactName, string? Phone, string? Email, string? Street, string? PostalCode,
-    string? City, string? OrderNotes, bool IsActive, long Version);
+    string? City, string? OrderNotes, bool IsActive, long Version, string? Number = null);
 
 public sealed record SaveSupplierRequest(
     [property: Required] Guid Id,
@@ -23,11 +23,12 @@ public sealed record SaveSupplierRequest(
     [property: MaxLength(10)] string? PostalCode = null,
     [property: MaxLength(100)] string? City = null,
     [property: MaxLength(2000)] string? OrderNotes = null,
-    bool IsActive = true);
+    bool IsActive = true,
+    [property: MaxLength(30)] string? Number = null);
 
 public sealed record MaterialResponse(
     Guid Id, string Name, string? ArticleNumber, MaterialCategory Category, string Unit, Guid? SupplierId, string? SupplierName, decimal? Price,
-    string? Notes, bool IsActive, long Version);
+    string? Notes, bool IsActive, long Version, string? Number = null);
 
 public sealed record SaveMaterialRequest(
     [property: Required] Guid Id,
@@ -38,7 +39,8 @@ public sealed record SaveMaterialRequest(
     Guid? SupplierId = null,
     [property: Range(0, 1_000_000)] decimal? Price = null,
     [property: MaxLength(2000)] string? Notes = null,
-    bool IsActive = true);
+    bool IsActive = true,
+    [property: MaxLength(30)] string? Number = null);
 
 /// <summary>Lieferanten und Materialstamm. Lesen mit „Material sehen“, Pflegen mit „Material bestellen“.</summary>
 internal static class MaterialEndpoints
@@ -75,7 +77,7 @@ internal static class MaterialEndpoints
     }
 
     private static async Task<Results<Ok<SupplierResponse>, ProblemHttpResult>> SaveSupplierAsync(
-        Guid id, SaveSupplierRequest request, EstrichOneDbContext db, CancellationToken cancellationToken)
+        Guid id, SaveSupplierRequest request, EstrichOneDbContext db, INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         if (request.Id != id)
         {
@@ -83,10 +85,23 @@ internal static class MaterialEndpoints
         }
 
         var supplier = await db.Set<Supplier>().SingleOrDefaultAsync(s => s.Id == id, cancellationToken);
+        var number = NumberProblems.Clean(request.Number);
+        if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Supplier, number, supplier?.Number,
+                n => db.Set<Supplier>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AnyAsync(s => s.Number == n && s.Id != id, cancellationToken),
+                cancellationToken) is { } problem)
+        {
+            return problem;
+        }
+
         if (supplier is null)
         {
             supplier = Supplier.Create(id);
+            supplier.SetNumber(number ?? await numberRanges.NextAsync(NumberRangeKeys.Supplier, cancellationToken));
             db.Add(supplier);
+        }
+        else
+        {
+            supplier.SetNumber(number);
         }
 
         try
@@ -147,7 +162,8 @@ internal static class MaterialEndpoints
         if (!string.IsNullOrWhiteSpace(search))
         {
             var pattern = $"%{search.Trim()}%";
-            query = query.Where(m => EF.Functions.ILike(m.Name, pattern) || (m.ArticleNumber != null && EF.Functions.ILike(m.ArticleNumber, pattern)));
+            query = query.Where(m => EF.Functions.ILike(m.Name, pattern) || (m.ArticleNumber != null && EF.Functions.ILike(m.ArticleNumber, pattern))
+                || (m.Number != null && EF.Functions.ILike(m.Number, pattern)));
         }
 
         var rows = await query.OrderBy(m => m.Category).ThenBy(m => m.Name).ToListAsync(cancellationToken);
@@ -155,7 +171,7 @@ internal static class MaterialEndpoints
     }
 
     private static async Task<Results<Ok<MaterialResponse>, ProblemHttpResult>> SaveMaterialAsync(
-        Guid id, SaveMaterialRequest request, EstrichOneDbContext db, CancellationToken cancellationToken)
+        Guid id, SaveMaterialRequest request, EstrichOneDbContext db, INumberRanges numberRanges, CancellationToken cancellationToken)
     {
         if (request.Id != id)
         {
@@ -168,10 +184,23 @@ internal static class MaterialEndpoints
         }
 
         var material = await db.Set<Material>().SingleOrDefaultAsync(m => m.Id == id, cancellationToken);
+        var number = NumberProblems.Clean(request.Number);
+        if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Material, number, material?.Number,
+                n => db.Set<Material>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AnyAsync(m => m.Number == n && m.Id != id, cancellationToken),
+                cancellationToken) is { } problem)
+        {
+            return problem;
+        }
+
         if (material is null)
         {
             material = Material.Create(id);
+            material.SetNumber(number ?? await numberRanges.NextAsync(NumberRangeKeys.Material, cancellationToken));
             db.Add(material);
+        }
+        else
+        {
+            material.SetNumber(number);
         }
 
         try
@@ -204,7 +233,7 @@ internal static class MaterialEndpoints
     }
 
     private static SupplierResponse ToResponse(Supplier s) => new(s.Id, s.Name, s.CustomerNumber, s.ContactName, s.Phone, s.Email, s.Street,
-        s.PostalCode, s.City, s.OrderNotes, s.IsActive, s.Version);
+        s.PostalCode, s.City, s.OrderNotes, s.IsActive, s.Version, s.Number);
 
     private static async Task<List<MaterialResponse>> ToResponsesAsync(EstrichOneDbContext db, IReadOnlyList<Material> rows, CancellationToken cancellationToken)
     {
@@ -212,7 +241,7 @@ internal static class MaterialEndpoints
         var names = await db.Set<Supplier>().AsNoTracking().IgnoreQueryFilters([QueryFilters.NotDeleted]).Where(s => ids.Contains(s.Id))
             .ToDictionaryAsync(s => s.Id, s => s.Name, cancellationToken);
         return rows.Select(m => new MaterialResponse(m.Id, m.Name, m.ArticleNumber, m.Category, m.Unit, m.SupplierId,
-            m.SupplierId is { } sid ? names.GetValueOrDefault(sid) : null, m.Price, m.Notes, m.IsActive, m.Version)).ToList();
+            m.SupplierId is { } sid ? names.GetValueOrDefault(sid) : null, m.Price, m.Notes, m.IsActive, m.Version, m.Number)).ToList();
     }
 }
 

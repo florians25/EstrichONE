@@ -60,17 +60,6 @@ public sealed class FeedbackService(EstrichOneDbContext db, IStoredFiles files)
 
     public static string KindName(FeedbackKind kind) => kind == FeedbackKind.Bug ? "Fehler" : "Funktionswunsch";
 
-    public async Task<string> NextNumberAsync(DateTimeOffset now, CancellationToken cancellationToken)
-    {
-        var year = TimeZoneInfo.ConvertTime(now, Berlin).Year;
-        var rows = await db.Database.SqlQuery<int>($"""
-            INSERT INTO feedback_number_sequences (year, last_number) VALUES ({year}, 1)
-            ON CONFLICT (year) DO UPDATE SET last_number = feedback_number_sequences.last_number + 1
-            RETURNING last_number AS "Value"
-            """).ToListAsync(cancellationToken);
-        return string.Create(CultureInfo.InvariantCulture, $"F-{year}-{rows.Single():0000}");
-    }
-
     /// <summary>Nur eigene, hochgeladene Dateien ohne Bauakte (Bildschirmfotos) dürfen angehängt werden.</summary>
     public async Task<bool> AreOwnLooseFilesAsync(IReadOnlyCollection<Guid> fileIds, Guid userId, CancellationToken cancellationToken)
     {
