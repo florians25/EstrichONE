@@ -58,6 +58,7 @@ import de.estrichone.core.UpdateState
 import de.estrichone.core.UpdateStatus
 import de.estrichone.core.blocksApp
 import de.estrichone.core.check
+import de.estrichone.core.isBusy
 
 // App-Updates (docs/app-updates.md): Hinweis oben in der App, Sperrbildschirm unter der Mindestversion, Ablauf
 // (Abgleich, Download, Installation) als Dialog und „Neu in dieser Version“ nach dem Update.
@@ -238,7 +239,8 @@ fun UpdateRequiredScreen(updater: AppUpdater, state: UpdateState, pendingChanges
                         UpdateFlowPrimary(updater, state)
                     }
                 }
-                OutlinedButton(onClick = { updater.check(UpdateSchedule.Trigger.Manual) }, modifier = Modifier.fillMaxWidth()) { Text("Erneut prüfen") }
+                // Während Abgleich, Download und Installation nicht unterbrechen.
+                if (!state.isBusy) OutlinedButton(onClick = { updater.check(UpdateSchedule.Trigger.Manual) }, modifier = Modifier.fillMaxWidth()) { Text("Erneut prüfen") }
             }
             check?.releaseNotes?.takeIf { it.isNotEmpty() }?.let { notes ->
                 WhiteCard { ReleaseNotesList(notes, maxItems = 6) }
