@@ -81,7 +81,7 @@ test('Ticket: Melder und Geräte, Verknüpfen, Zeit, Prüfpfad und Zusammenführ
   await page.locator('[id$="tMore"]').click();
   await page.getByText('Als Duplikat zusammenführen …').click();
   const merge = page.getByRole('dialog', { name: /zusammenführen/ });
-  await merge.getByLabel('Weiter bearbeiten in').fill(target.summary.number);
+  await merge.locator('input[role="combobox"]').first().fill(target.summary.number);
   await page.locator('.sapMComboBoxBasePicker li, .sapMSuggestionsPopover li').filter({ hasText: target.summary.number }).first().click();
   await merge.getByRole('button', { name: 'Zusammenführen' }).click();
   await expect(page).toHaveURL(new RegExp(target.summary.id));

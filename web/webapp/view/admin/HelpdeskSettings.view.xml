@@ -27,19 +27,19 @@
 									<Text text="Fälligkeiten in Liste und Ticket, Ansicht „Überfällig“ und Hinweis an die Zuständigen, wenn ein Ziel überschritten ist." class="eoMuted"/>
 								</VBox>
 								<Label text="Ziele je Priorität"/>
-								<Table id="hdTargets" items="{view>/s/targets}" contextualWidth="Auto" class="eoHdTargets">
+								<Table id="hdTargets" items="{view>/s/targets}" contextualWidth="Auto" popinLayout="GridSmall" class="eoHdTargets">
 									<columns>
 										<Column width="8rem"><Text text="Priorität"/></Column>
 										<Column><Text text="Erste Antwort (Std.)"/></Column>
-										<Column><Text text="Lösung (Std.)"/></Column>
-										<Column width="8rem"><Text text="Rund um die Uhr"/></Column>
+										<Column minScreenWidth="Desktop" demandPopin="true"><Text text="Lösung (Std.)"/></Column>
+										<Column width="8rem" minScreenWidth="Desktop" demandPopin="true"><Text text="Rund um die Uhr"/></Column>
 									</columns>
 									<items>
 										<ColumnListItem>
 											<cells>
 												<ObjectStatus text="{path: 'view>priority', formatter: 'fmt.ticketPriorityText'}" state="{path: 'view>priority', formatter: 'fmt.ticketPriorityState'}"/>
-												<StepInput value="{view>responseHours}" min="0.25" max="720" step="0.5" displayValuePrecision="2" width="9rem" enabled="{view>/canManage}" change=".onDirty"/>
-												<StepInput value="{view>resolutionHours}" min="0.25" max="2160" step="1" displayValuePrecision="2" width="9rem" enabled="{view>/canManage}" change=".onDirty"/>
+												<StepInput value="{view>responseHours}" min="0.25" max="720" step="0.5" displayValuePrecision="2" width="100%" enabled="{view>/canManage}" change=".onDirty"/>
+												<StepInput value="{view>resolutionHours}" min="0.25" max="2160" step="1" displayValuePrecision="2" width="100%" enabled="{view>/canManage}" change=".onDirty"/>
 												<Switch state="{view>aroundTheClock}" customTextOn=" " customTextOff=" " enabled="{view>/canManage}" change=".onDirty"/>
 											</cells>
 										</ColumnListItem>
