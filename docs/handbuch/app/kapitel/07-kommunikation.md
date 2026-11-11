@@ -129,7 +129,20 @@ Nach der Lösung bewerten Sie mit **1 bis 5 Sternen** und einem freiwilligen Kom
 Verbindung wird die Meldung samt Fotos auf dem Gerät gespeichert und automatisch gesendet; bis dahin steht sie unter
 **Wird gesendet**. Eine Pushnachricht zur Antwort der IT öffnet direkt die Meldung.
 
-**Für die IT:** Wer im Betrieb Meldungen bearbeitet, sieht im Helpdesk zusätzlich den Reiter **Bearbeitung** mit allen
-Meldungen (Suche nach Nummer, Titel, Melder; Filter nach Stand). In einer Meldung können Sie sie sich mit **Mir zuweisen**
-übernehmen, dem Melder antworten (**Antwort an den Melder**), **Bearbeiten** (Status, Priorität, Kategorie), eine
-**Lösung eintragen** und die Meldung **Als gelöst markieren**.
+Hat die IT eine **Anleitung** aus der Wissensdatenbank verknüpft, steht sie in der Meldung unter **Anleitung der IT**; ein
+Tipp öffnet sie als eigene Seite. Anhänge im Verlauf zeigen Bilder als Vorschau, andere Dateien mit Namen; ein Tipp öffnet
+sie.
+
+**Für die IT:** Wer im Betrieb Meldungen bearbeitet, sieht im Helpdesk zusätzlich alle Meldungen (iOS: Reiter
+**Bearbeitung**; Android: **Mir zugewiesen** und **Offen**) mit Suche und Filter. In einer Meldung:
+
+- **Zuständig**: sich selbst (**Mir zuweisen**), eine Kollegin oder einen Kollegen oder niemand; dazu die **Gruppe**.
+- **Status**, **Priorität**, **Kategorie** und **Unterkategorie** ändern (iOS: Menü **Bearbeiten** oben rechts; Android:
+  Bereich **Bearbeitung** im Ticket). **Gelöst** fragt die Lösung ab, die der Melder sieht.
+- Unten **öffentlich antworten** oder eine **Interne Notiz** schreiben (für den Melder unsichtbar). **Textbaustein** fügt
+  eine vorbereitete Antwort ein; {Vorname}, {Ticket} und Ähnliches füllt die App selbst aus.
+- **Meldung aufnehmen** (Hörer-Symbol): Ticket für jemanden anlegen, der angerufen, geschrieben hat oder vorbeigekommen ist
+  – **Eingang** (Telefon, E-Mail, Vor Ort), **Melder** suchen oder seinen Namen eintragen, Problem beschreiben, **Selbst
+  übernehmen**. Das geht nur mit Verbindung.
+
+![IT-Bearbeitung](bilder/iphone-meldung-it.jpg "Für die IT: Meldung bearbeiten, interne Notiz und Textbaustein")

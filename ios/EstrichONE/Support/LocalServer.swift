@@ -306,11 +306,23 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return json(200, helpdesk.list(all: true))
         case "/api/v1/helpdesk/options" where demo != nil:
             return json(200, helpdesk.options())
+        case "/api/v1/helpdesk/agents" where demo != nil:
+            return json(200, helpdesk.agents())
+        case "/api/v1/helpdesk/groups" where demo != nil:
+            return json(200, helpdesk.groupList())
+        case "/api/v1/helpdesk/responses" where demo != nil:
+            return json(200, helpdesk.responses())
+        case "/api/v1/helpdesk/reporters" where demo != nil:
+            return json(200, helpdesk.reporters(nil))
+        case let articlePath where demo != nil && articlePath.hasPrefix("/api/v1/helpdesk/articles/"):
+            return helpdesk.article(String(articlePath.split(separator: "/").last ?? "").lowercased()).map { json(200, $0) }
+                ?? problem(404, "NOT_FOUND", "Nicht gefunden")
         case let ticketPath where demo != nil && ticketPath.hasPrefix("/api/v1/tickets/"):
             let parts = ticketPath.split(separator: "/").map(String.init)
             switch (parts.count, parts.last) {
             case (4, "mine"): return json(200, helpdesk.list(all: false))
             case (4, "device"): return (200, #"{"number":"T-2026-0001"}"#)
+            case (4, "on-behalf"): return json(201, helpdesk.record(body))
             case (4, _) where method == "PATCH":
                 return helpdesk.update(parts[3].lowercased(), body: body).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")
             case (4, _): return helpdesk.detail(parts[3].lowercased()).map { json(200, $0) } ?? problem(404, "NOT_FOUND", "Nicht gefunden")

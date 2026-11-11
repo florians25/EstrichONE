@@ -77,6 +77,18 @@ public struct TicketSummary: Decodable, Equatable, Identifiable, Sendable {
     public var dueAt: Date? = nil
     public var dueKind: String? = nil
     public var rating: Int? = nil
+    public var groupId: UUID? = nil
+    public var groupName: String? = nil
+    public var subcategoryId: UUID? = nil
+    /// Eingang: selfService, phone, email, inPerson (bei Telefon, E-Mail, vor Ort hat die IT die Meldung aufgenommen).
+    public var channel: String? = nil
+    public var createdByName: String? = nil
+
+    /// „Telefon, aufgenommen von Anna Becker“ – nur, wenn die IT die Meldung erfasst hat.
+    public var intakeText: String? {
+        guard let label = TicketChannel.label(channel) else { return nil }
+        return createdByName.map { "\(label), aufgenommen von \($0)" } ?? label
+    }
 
     /// Offen = noch nicht gelöst oder geschlossen.
     public var isOpen: Bool { status != .resolved && status != .closed }
@@ -91,6 +103,31 @@ public struct TicketSummary: Decodable, Equatable, Identifiable, Sendable {
         default: return nil
         }
     }
+}
+
+/// Eingangskanal einer Meldung.
+public enum TicketChannel: String, CaseIterable, Identifiable, Sendable {
+    case phone, email, inPerson
+
+    public var id: String { rawValue }
+    public var title: String {
+        switch self {
+        case .phone: "Telefon"
+        case .email: "E-Mail"
+        case .inPerson: "Vor Ort"
+        }
+    }
+
+    public var symbol: String {
+        switch self {
+        case .phone: "phone"
+        case .email: "envelope"
+        case .inPerson: "person"
+        }
+    }
+
+    /// Lesbarer Kanal; `nil` bei „selbst gemeldet“ oder unbekannt.
+    public static func label(_ raw: String?) -> String? { raw.flatMap(TicketChannel.init(rawValue:))?.title }
 }
 
 /// Verknüpfte Anleitung der Wissensdatenbank.
@@ -183,13 +220,16 @@ public struct TicketDetail: Decodable, Equatable, Sendable {
     public let timeline: [TicketTimelineEntry]?
 
     /// Verlauf für die Anzeige, älteste zuerst, ohne interne Notizen: vom Server oder aus Antworten und Ereignissen.
-    public var history: [TicketTimelineEntry] {
+    public var history: [TicketTimelineEntry] { history(includeInternal: false) }
+
+    /// Verlauf; die Bearbeitung sieht auch interne Notizen.
+    public func history(includeInternal: Bool) -> [TicketTimelineEntry] {
         if let timeline {
-            return timeline.filter { !$0.isInternal }.sorted { $0.at < $1.at }
+            return timeline.filter { includeInternal || !$0.isInternal }.sorted { $0.at < $1.at }
         }
-        let fromComments = comments.filter { !$0.isInternal }.map {
+        let fromComments = comments.filter { includeInternal || !$0.isInternal }.map {
             TicketTimelineEntry(id: $0.id, at: $0.createdAt, kind: "comment", actorUserId: $0.authorUserId, actorName: $0.authorName,
-                                summary: "\($0.authorName ?? "Jemand") hat geantwortet.", text: $0.text, isInternal: false, isReporter: false,
+                                summary: "\($0.authorName ?? "Jemand") hat geantwortet.", text: $0.text, isInternal: $0.isInternal, isReporter: false,
                                 attachmentFileIds: [])
         }
         let fromEvents = events.map {
@@ -390,15 +430,145 @@ public struct TicketUpdate: Encodable, Sendable {
     public var assigneeUserId: UUID?
     public var unassign: Bool
     public var resolution: String?
+    public var groupId: UUID?
+    public var clearGroup: Bool
+    public var subcategoryId: UUID?
+    public var clearSubcategory: Bool
 
     public init(status: TicketStatus? = nil, priority: TicketPriority? = nil, category: TicketCategory? = nil, assigneeUserId: UUID? = nil,
-                unassign: Bool = false, resolution: String? = nil) {
+                unassign: Bool = false, resolution: String? = nil, groupId: UUID? = nil, clearGroup: Bool = false, subcategoryId: UUID? = nil,
+                clearSubcategory: Bool = false) {
         self.status = status
         self.priority = priority
         self.category = category
         self.assigneeUserId = assigneeUserId
         self.unassign = unassign
         self.resolution = resolution
+        self.groupId = groupId
+        self.clearGroup = clearGroup
+        self.subcategoryId = subcategoryId
+        self.clearSubcategory = clearSubcategory
+    }
+}
+
+/// Bearbeiter (Zuweisen) mit Anzahl offener Tickets.
+public struct HelpdeskAgent: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let displayName: String
+    public var openTickets: Int? = nil
+}
+
+/// Bearbeitungsgruppe (z. B. IT, Büro).
+public struct HelpdeskGroup: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let name: String
+    public var isActive: Bool? = nil
+}
+
+/// Textbaustein der Bearbeitung (gemeinsam oder eigener).
+public struct CannedResponse: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let name: String
+    public let text: String
+    public var isPersonal: Bool? = nil
+
+    /// Platzhalter wie im Web füllen: {Melder}, {Vorname}, {Ticket}, {Titel}, {Bearbeiter}.
+    public static func fill(_ text: String, reporter: String?, ticket: String, title: String, agent: String?) -> String {
+        var name = (reporter ?? "").trimmingCharacters(in: .whitespaces)
+        if name.hasSuffix(" (laut Eingabe)") { name = String(name.dropLast(" (laut Eingabe)".count)) }
+        let first = name.split(separator: " ").first.map(String.init) ?? ""
+        return text.replacingOccurrences(of: "{Melder}", with: name.isEmpty ? "zusammen" : name)
+            .replacingOccurrences(of: "{Vorname}", with: first.isEmpty ? "zusammen" : first)
+            .replacingOccurrences(of: "{Ticket}", with: ticket)
+            .replacingOccurrences(of: "{Titel}", with: title)
+            .replacingOccurrences(of: "{Bearbeiter}", with: agent ?? "Ihre IT")
+    }
+}
+
+/// Person, für die die IT eine Meldung aufnimmt (`GET helpdesk/reporters`).
+public struct HelpdeskReporterPerson: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let displayName: String
+    public var userName: String? = nil
+    public var email: String? = nil
+    public var phone: String? = nil
+}
+
+/// Anleitung der Wissensdatenbank.
+public struct KnowledgeArticle: Decodable, Equatable, Identifiable, Sendable {
+    public let id: UUID
+    public let title: String
+    public let body: String
+    public var category: TicketCategory? = nil
+
+    /// Absätze für die Anzeige (Leerzeilen trennen).
+    public var paragraphs: [String] {
+        body.components(separatedBy: "\n\n").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.isEmpty }
+    }
+}
+
+/// „Meldung aufnehmen“: Die IT legt nach Anruf, E-Mail oder Besuch ein Ticket im Namen des Melders an.
+public struct TicketIntake: Encodable, Sendable {
+    public let id: UUID
+    public let title: String
+    public let description: String?
+    public let category: TicketCategory
+    public let channel: String
+    public let source: String
+    public let reporterUserId: UUID?
+    public let reporterName: String?
+    public let reporterBlocked: Bool
+    public let priority: TicketPriority
+    public let subcategoryId: UUID?
+    public let assigneeUserId: UUID?
+
+    public init(title: String, description: String?, category: TicketCategory, channel: TicketChannel, reporterUserId: UUID?, reporterName: String?,
+                priority: TicketPriority = .normal, reporterBlocked: Bool = false, subcategoryId: UUID? = nil, assigneeUserId: UUID? = nil,
+                now: Date = Date()) {
+        id = UUID.v7(now: now)
+        self.title = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        let text = description?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.description = text?.isEmpty == false ? text : nil
+        self.category = category
+        self.channel = channel.rawValue
+        source = "ios"
+        self.reporterUserId = reporterUserId
+        let name = reporterName?.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.reporterName = reporterUserId == nil && name?.isEmpty == false ? name : nil
+        self.reporterBlocked = reporterBlocked
+        self.priority = priority
+        self.subcategoryId = subcategoryId
+        self.assigneeUserId = assigneeUserId
+    }
+}
+
+extension AuthorizedClient {
+    public func helpdeskAgents() async throws(APIError) -> [HelpdeskAgent] {
+        try await get("helpdesk/agents")
+    }
+
+    public func helpdeskGroups() async throws(APIError) -> [HelpdeskGroup] {
+        let groups: [HelpdeskGroup] = try await get("helpdesk/groups")
+        return groups.filter { $0.isActive ?? true }
+    }
+
+    public func cannedResponses() async throws(APIError) -> [CannedResponse] {
+        try await get("helpdesk/responses")
+    }
+
+    /// Melder suchen (Name, Benutzername, E-Mail, Telefon).
+    public func helpdeskReporters(query: String) async throws(APIError) -> [HelpdeskReporterPerson] {
+        let text = query.trimmingCharacters(in: .whitespaces)
+        return try await get("helpdesk/reporters", query: [URLQueryItem(name: "limit", value: "30")] + (text.isEmpty ? [] : [URLQueryItem(name: "q", value: text)]))
+    }
+
+    /// Meldung im Namen eines Melders anlegen (Telefon, E-Mail, vor Ort).
+    public func recordTicket(_ intake: TicketIntake) async throws(APIError) -> TicketDetail {
+        try await post("tickets/on-behalf", body: intake)
+    }
+
+    public func knowledgeArticle(_ id: UUID) async throws(APIError) -> KnowledgeArticle {
+        try await get("helpdesk/articles/\(id.key)")
     }
 }
 

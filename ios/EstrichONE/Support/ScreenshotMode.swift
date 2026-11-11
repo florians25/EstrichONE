@@ -159,6 +159,9 @@ final class ScreenshotDirector {
         // Bereiche öffnen sich nach dem Laden der Bauakte per Navigation – die Animation braucht etwas länger.
         if scene.hasPrefix("bereich-") || scene == "protokoll" || scene.hasPrefix("chat") { return 2800 }
         if scene == "kontakt-neu" || scene.hasPrefix("dispo-") { return 3400 }
+        // Helpdesk der IT: Ticket bzw. Anleitung öffnen sich nach dem Laden der Liste (Anleitung zusätzlich nach den Stammdaten).
+        if scene == "meldung-it" || scene == "meldung-aufnehmen" { return 3400 }
+        if scene == "meldung-anleitung" { return 4600 }
         return sheets.contains { scene.hasPrefix($0) } ? 2800 : 2000
     }
 

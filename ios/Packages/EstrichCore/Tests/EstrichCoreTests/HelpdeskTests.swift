@@ -190,4 +190,42 @@ struct HelpdeskTests {
         _ = await engine.synchronize()
         #expect(try #require(server.entity(id))["subcategoryId"]?.string == printer.uuidString.lowercased())
     }
+
+    @Test("IT-Bearbeitung: Eingang, Gruppe, interne Notizen, Textbausteine, Meldung aufnehmen und Anleitung")
+    func agentFields() throws {
+        let json = """
+        {"summary":{"id":"0193a1b2-0000-7000-8000-000000000003","number":"T-2026-0031","title":"Tablet ohne Aufträge","category":"sync",
+          "priority":"high","status":"inProgress","reporterBlocked":false,"createdAt":"2026-11-11T08:00:00+00:00",
+          "lastActivityAt":"2026-11-11T08:05:00+00:00","channel":"phone","createdByName":"Anna Becker","groupId":"0193a1b2-0000-7000-8000-0000000000c1",
+          "groupName":"IT","subcategoryId":null,"reporterDisplayName":"Lukas Brandl"},
+         "comments":[],"events":[],
+         "timeline":[{"id":"0193a1b2-0000-7000-8000-0000000000d1","at":"2026-11-11T08:00:00+00:00","kind":"created","summary":"aufgenommen","text":"Anruf","isReporter":true},
+                     {"id":"0193a1b2-0000-7000-8000-0000000000d2","at":"2026-11-11T08:03:00+00:00","kind":"note","summary":"Notiz","text":"intern","isInternal":true}]}
+        """
+        let detail = try JSONCoding.decoder.decode(TicketDetail.self, from: Data(json.utf8))
+        #expect(detail.summary.intakeText == "Telefon, aufgenommen von Anna Becker")
+        #expect(detail.summary.groupName == "IT")
+        #expect(detail.history.count == 1)
+        #expect(detail.history(includeInternal: true).count == 2)
+
+        #expect(CannedResponse.fill("Hallo {Vorname}, {Ticket} – {Bearbeiter}", reporter: "Lukas Brandl", ticket: "T-2026-0031", title: "x", agent: nil)
+                == "Hallo Lukas, T-2026-0031 – Ihre IT")
+        #expect(CannedResponse.fill("{Melder}", reporter: "Max Muster (laut Eingabe)", ticket: "", title: "", agent: nil) == "Max Muster")
+        #expect(TicketChannel.label("selfService") == nil)
+
+        let update = String(decoding: try JSONCoding.encoder.encode(TicketUpdate(priority: .urgent, clearGroup: true)), as: UTF8.self)
+        #expect(update.contains("\"priority\":\"urgent\"") && update.contains("\"clearGroup\":true"))
+        #expect(!update.contains("assigneeUserId"))
+
+        let reporter = try #require(UUID(uuidString: "0193a1b2-0000-7000-8000-0000000000e1"))
+        let intake = String(decoding: try JSONCoding.encoder.encode(TicketIntake(title: "  Drucker  ", description: " ", category: .officeIt,
+            channel: .inPerson, reporterUserId: reporter, reporterName: "ignoriert")), as: UTF8.self)
+        #expect(intake.contains("\"channel\":\"inPerson\"") && intake.contains("\"title\":\"Drucker\"") && intake.contains("\"source\":\"ios\""))
+        #expect(!intake.contains("ignoriert") && !intake.contains("\"description\":\" \""))
+
+        let article = try JSONCoding.decoder.decode(KnowledgeArticle.self, from: Data("""
+            {"id":"0193a1b2-0000-7000-8000-0000000000a1","title":"Fotos","body":"1. WLAN\\n\\n2. Abgleichen\\n\\n","category":"sync"}
+            """.utf8))
+        #expect(article.paragraphs == ["1. WLAN", "2. Abgleichen"])
+    }
 }

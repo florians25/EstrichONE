@@ -267,7 +267,7 @@ struct MoreView: View {
         case "aufgaben": route = .tasks
         case "woche": route = .week
         case "abwesenheit", "abwesenheit-antrag", "abwesenheit-genehmigung", "abwesenheit-aenderung": route = .absences
-        case "meldung", "meldung-detail", "meldung-bearbeitung", "meldung-bewertung": route = .tickets
+        case "meldung", "meldung-detail", "meldung-bearbeitung", "meldung-bewertung", "meldung-it", "meldung-aufnehmen", "meldung-anleitung": route = .tickets
         case "dispo-zuweisen", "dispo-verschieben", "dispo-tauschen", "dispo-fahrzeug", "dispo-kolonnen", "dispo-freigabe": route = .dispatch
         default: break
         }

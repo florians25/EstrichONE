@@ -21,7 +21,18 @@ final class DemoHelpdesk {
         var timeline: [[String: Any]]
         var resolution: String?
         var rating: Int?
+        var groupId: String? = DemoHelpdesk.groupIt
+        var subcategoryId: String?
+        var channel = "selfService"
+        var createdByName: String?
     }
+
+    static let groupIt = "0193a1b2-de00-7000-8000-00000000f101"
+    static let groupOffice = "0193a1b2-de00-7000-8000-00000000f102"
+    static let articleId = "0193a1b2-de00-7000-8000-00000000e001"
+    private static let groups = [groupIt: "IT", groupOffice: "Büro"]
+    private static let subcategories = ["0193a1b2-de00-7000-8000-00000000e102": "Drucker", "0193a1b2-de00-7000-8000-00000000e103": "Telefon"]
+    private static let agentNames = ["0193a1b2-de00-7000-8000-00000000a0a1": "IT-Support", "0193a1b2-de00-7000-8000-00000000a0a4": "Anna Lechner"]
 
     private let userId: String
     private var tickets: [Entry] = []
@@ -66,6 +77,8 @@ final class DemoHelpdesk {
             event(ago(60 * 2), "assignee", "IT-Support", "IT-Support hat die Meldung Max Huber zugewiesen."),
             comment(ago(50), "Max Huber", "Toner ist neu. Ich prüfe vor Ort die Treiber.", reporter: false),
         ]
+        tickets[1].subcategoryId = "0193a1b2-de00-7000-8000-00000000e102"
+        tickets[0].timeline.insert(note(ago(60 * 24 + 5), "IT-Support", "Betrifft auch zwei andere Geräte der Kolonne – vermutlich der Upload-Server."), at: 3)
         tickets[3].resolution = "Konto angelegt, Zugangsbrief per E-Mail verschickt."
         tickets[3].timeline += [
             comment(ago(60 * 24 * 5), "IT-Support", "Zugang ist eingerichtet, Einladung ging per E-Mail raus.", reporter: false),
@@ -85,6 +98,14 @@ final class DemoHelpdesk {
          "isReporter": reporter, "attachmentFileIds": attachments]
     }
 
+    private func note(_ at: Date, _ actor: String, _ text: String) -> [String: Any] {
+        var entry = comment(at, actor, text, reporter: false)
+        entry["kind"] = "note"
+        entry["isInternal"] = true
+        entry["summary"] = "\(actor) hat eine interne Notiz geschrieben"
+        return entry
+    }
+
     private func summary(_ ticket: Entry) -> [String: Any] {
         ["id": ticket.id, "number": ticket.number, "title": ticket.title, "category": ticket.category, "priority": ticket.priority,
          "status": ticket.status, "reporterBlocked": ticket.priority == "urgent", "reporterUserId": ticket.reporterId,
@@ -92,7 +113,10 @@ final class DemoHelpdesk {
          "source": "ios", "createdAt": APIDate.format(ticket.createdAt), "lastActivityAt": APIDate.format(ticket.lastActivityAt), "version": 1,
          "slaState": ticket.status == "new" && ticket.priority == "urgent" ? "overdue" : (ticket.status == "waitingForReporter" ? "paused" : "ok"),
          "dueKind": ticket.status == "new" ? "response" : "resolution", "rating": ticket.rating ?? NSNull(),
-         "subcategoryName": ticket.category == "officeIt" ? "Drucker" : NSNull()]
+         "subcategoryId": ticket.subcategoryId ?? NSNull(),
+         "subcategoryName": ticket.subcategoryId.flatMap { Self.subcategories[$0] } ?? NSNull(),
+         "groupId": ticket.groupId ?? NSNull(), "groupName": ticket.groupId.flatMap { Self.groups[$0] } ?? NSNull(),
+         "channel": ticket.channel, "createdByName": ticket.createdByName ?? NSNull()]
     }
 
     func list(all: Bool) -> [[String: Any]] {
@@ -147,6 +171,11 @@ final class DemoHelpdesk {
         guard let index = tickets.firstIndex(where: { $0.id == id }) else { return nil }
         let now = Date()
         let mine = tickets[index].reporterId == userId
+        if body["isInternal"] as? Bool == true {
+            tickets[index].timeline.append(note(now, "Max Huber", body["text"] as? String ?? ""))
+            tickets[index].lastActivityAt = now
+            return detail(id)
+        }
         tickets[index].timeline.append(comment(now, "Max Huber", body["text"] as? String ?? "", reporter: mine,
                                                attachments: (body["attachmentFileIds"] as? [String]) ?? []))
         if mine, tickets[index].status == "waitingForReporter" {
@@ -170,9 +199,21 @@ final class DemoHelpdesk {
             tickets[index].timeline.append(event(now, "priority", "Max Huber",
                                                  "Max Huber hat die Priorität auf „\(TicketPriority(rawValue: priority)?.title ?? priority)“ gesetzt."))
         }
+        if let category = body["category"] as? String, category != tickets[index].category {
+            tickets[index].category = category
+            tickets[index].subcategoryId = nil
+            tickets[index].timeline.append(event(now, "category", "Max Huber", "Kategorie: \(TicketCategory(rawValue: category)?.title ?? category)"))
+        }
+        if let sub = (body["subcategoryId"] as? String)?.lowercased() { tickets[index].subcategoryId = sub }
+        if body["clearSubcategory"] as? Bool == true { tickets[index].subcategoryId = nil }
+        if let group = (body["groupId"] as? String)?.lowercased() {
+            tickets[index].groupId = group
+            tickets[index].timeline.append(event(now, "group", "Max Huber", "Gruppe: \(Self.groups[group] ?? "–")"))
+        }
+        if body["clearGroup"] as? Bool == true { tickets[index].groupId = nil }
         if let assignee = (body["assigneeUserId"] as? String)?.lowercased() {
             tickets[index].assigneeId = assignee
-            tickets[index].assigneeName = assignee == userId ? "Max Huber" : "Lukas Brandl"
+            tickets[index].assigneeName = assignee == userId ? "Max Huber" : (Self.agentNames[assignee] ?? "Lukas Brandl")
             tickets[index].timeline.append(event(now, "assignee", "Max Huber", "Max Huber hat die Meldung \(tickets[index].assigneeName ?? "") zugewiesen."))
         } else if body["unassign"] as? Bool == true {
             tickets[index].assigneeId = nil
@@ -180,5 +221,61 @@ final class DemoHelpdesk {
         }
         tickets[index].lastActivityAt = now
         return detail(id)
+    }
+
+    // MARK: Bearbeitung
+
+    func agents() -> [[String: Any]] {
+        [["id": userId, "displayName": "Max Huber", "openTickets": 1]]
+            + Self.agentNames.sorted { $0.value < $1.value }.map { ["id": $0.key, "displayName": $0.value, "openTickets": 3] }
+    }
+
+    func groupList() -> [[String: Any]] {
+        Self.groups.sorted { $0.value < $1.value }.map { ["id": $0.key, "name": $0.value, "isActive": true, "memberUserIds": [String]()] }
+    }
+
+    func responses() -> [[String: Any]] {
+        [["id": "0193a1b2-de00-7000-8000-00000000f201", "name": "Begrüßung", "isPersonal": false,
+          "text": "Hallo {Vorname},\n\ndanke für Ihre Meldung {Ticket}. Wir kümmern uns darum."],
+         ["id": "0193a1b2-de00-7000-8000-00000000f202", "name": "Abgleich im WLAN", "isPersonal": false,
+          "text": "Bitte die App im WLAN öffnen und unter Mehr › Synchronisation „Jetzt abgleichen“ tippen."]]
+    }
+
+    func reporters(_ query: String?) -> [[String: Any]] {
+        let people = [("0193a1b2-de00-7000-8000-00000000a0a2", "Sabine Wagner", "s.wagner"), ("0193a1b2-de00-7000-8000-000000004005", "Emre Kaya", "e.kaya"),
+                      ("0193a1b2-de00-7000-8000-00000000a0a5", "Jonas Wirth", "j.wirth"), ("0193a1b2-0000-7000-8000-00000000bbbb", "Lukas Brandl", "l.brandl")]
+        let text = (query ?? "").lowercased()
+        return people.filter { text.isEmpty || $0.1.lowercased().contains(text) || $0.2.contains(text) }
+            .map { ["id": $0.0, "displayName": $0.1, "userName": $0.2] }
+    }
+
+    func article(_ id: String) -> [String: Any]? {
+        guard id == Self.articleId else { return nil }
+        return ["id": id, "title": "Fotos werden nicht übertragen", "category": "sync", "isPublished": true,
+                "body": "So bringen Sie wartende Fotos auf den Server:\n\n1. WLAN oder mobile Daten einschalten.\n\n2. In der App Mehr › Synchronisation öffnen und „Jetzt abgleichen“ tippen.\n\n3. Warten, bis „Alles übertragen“ erscheint.\n\nHilft das nicht, bitte die Meldung beantworten – die IT sieht dann die technischen Angaben."]
+    }
+
+    /// „Meldung aufnehmen“: Ticket im Namen eines Melders (Telefon, E-Mail, vor Ort).
+    func record(_ body: [String: Any]) -> [String: Any] {
+        counter += 1
+        let now = Date()
+        let id = (body["id"] as? String)?.lowercased() ?? UUID().uuidString.lowercased()
+        let reporterId = (body["reporterUserId"] as? String)?.lowercased()
+        let reporterName = reporterId.flatMap { rid in reporters(nil).first { ($0["id"] as? String) == rid }?["displayName"] as? String }
+            ?? (body["reporterName"] as? String) ?? "Melder"
+        let assignee = (body["assigneeUserId"] as? String)?.lowercased()
+        let channel = body["channel"] as? String ?? "phone"
+        var ticket = Entry(id: id, number: "T-2026-00\(20 + counter)", title: body["title"] as? String ?? "Meldung",
+                           description: body["description"] as? String, category: body["category"] as? String ?? "other",
+                           priority: body["priority"] as? String ?? "normal", status: assignee == userId ? "inProgress" : "new",
+                           reporterId: reporterId ?? "", reporterName: reporterName, assigneeId: assignee, assigneeName: assignee == userId ? "Max Huber" : nil,
+                           createdAt: now, lastActivityAt: now, timeline: [], resolution: nil, rating: nil)
+        ticket.channel = channel
+        ticket.createdByName = "Max Huber"
+        ticket.groupId = nil
+        ticket.timeline = [event(now, "created", "Max Huber",
+                                 "Max Huber hat die Meldung von \(reporterName) aufgenommen (\(TicketChannel.label(channel) ?? "Telefon"))", reporter: true)]
+        tickets.append(ticket)
+        return detail(id) ?? [:]
     }
 }

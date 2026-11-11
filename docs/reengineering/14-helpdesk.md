@@ -115,3 +115,27 @@ Bearbeitung im Desktop mit diesem. Statistik, SLA und Textbausteine in 1.1.
 - **Bewertung** nach der Lösung (1–5, nur Melder). **Kennzahlen** über `GET /tickets/stats`.
 - **Rechte:** `helpdesk.agent` (Bearbeitung, Textbausteine, Wissensdatenbank), neu `helpdesk.manage` (Ziele, Gruppen,
   Unterkategorien, Regeln). Die Standardrolle IT-Administration erhält `helpdesk.manage` per Migration.
+
+### 8.1 Ergänzungen (1.1, Erfassung durch die IT, Feiertage, Apps)
+
+- **Meldung aufnehmen:** `POST /tickets/on-behalf` (Recht `helpdesk.agent`) mit Melder (`reporterUserId`) oder Name
+  (`reporterName`, Person ohne Zugang), Eingang `channel` (`phone`, `email`, `inPerson`; `selfService` für selbst
+  gemeldete), optional direkter Zuweisung (an sich selbst: Status „In Bearbeitung“) bzw. Gruppe – sonst die Regeln.
+  Neue Spalten `tickets.channel` (Standard `SelfService`) und `tickets.created_by_user_id`. Der Melder sieht das Ticket als
+  eigenes und erhält „Ticket … für Sie angelegt“. Anhänge sind Dateien der erfassenden Person. Melder-Suche:
+  `GET /helpdesk/reporters?q=` (aktive Benutzer, Name, Benutzername, E-Mail, Telefon).
+- **Feiertage:** `helpdesk_settings.state` (Bundesland). Die gesetzlichen Feiertage berechnet der Server je Jahr
+  (`Infrastructure/Calendar/GermanHolidays`, gemeinsam mit der Personalverwaltung; Ostern nach Gauß), eigene Zusatztage
+  (`holidays`) kommen hinzu. `GET /helpdesk/holidays?year=&state=` liefert die Tage eines Jahres (auch als Vorschau für ein
+  anderes Bundesland). Gemeindeweise Feiertage sind nicht enthalten.
+- **Kennzahlen:** `avgFirstResponseMinutes` und `avgResolutionHours` in Geschäftszeit wie die SLA-Uhr
+  (`SlaCalculator.Elapsed`; „rund um die Uhr“-Prioritäten durchgehend), Lösungszeit ohne angehaltene Zeit;
+  `timeBasis = "business"`.
+- **Arbeitsliste seitenweise:** `GET /tickets/page?offset=&limit=` (bis 500) mit `total`; Spaltensortierung des Webs mit
+  `sort` und `desc` über alle Seiten, die ID als letztes Kriterium hält Seiten stabil. `GET /tickets` bleibt für Apps.
+- **Web:** Erwähnen beim Tippen von „@“ (Auswahl mit Pfeiltasten, Eingabe, Esc), Schnellaktionen als Raster ohne
+  Überlaufmenü (bei 1024 px vollständig; kleine Fenster: Kopf scrollt, Liste und Ticket untereinander).
+- **Apps:** Bearbeitung für die IT (Status, Priorität, Zuständig mit Person und Gruppe, Kategorie, Unterkategorie,
+  öffentliche Antwort oder interne Notiz, Textbausteine mit Platzhaltern), „Meldung aufnehmen“, verknüpfte Anleitungen als
+  eigene Seite; Android zeigt Anhänge im Verlauf als Vorschau und öffnet sie.
+
