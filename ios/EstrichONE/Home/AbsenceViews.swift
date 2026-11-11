@@ -367,6 +367,7 @@ struct AbsenceRequestRow: View {
                 }
                 ForEach(request.warnings, id: \.self) { warning in
                     Label(warning, systemImage: "exclamationmark.triangle").font(Typo.meta).foregroundStyle(Theme.warning)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
         }
@@ -577,17 +578,17 @@ struct AbsenceApprovalsView: View {
                     AbsenceRequestRow(request: item)
                     HStack(spacing: Space.s) {
                         Button { Task { await decide(item, approve: true, comment: nil) } } label: {
-                            Label("Genehmigen", systemImage: "checkmark").frame(maxWidth: .infinity)
+                            Label("Genehmigen", systemImage: "checkmark").lineLimit(1).frame(maxWidth: .infinity, minHeight: 36)
                         }
                         .buttonStyle(.borderedProminent)
                         .tint(Theme.success)
                         Button { reason = ""; rejecting = item } label: {
-                            Label("Ablehnen", systemImage: "xmark").frame(maxWidth: .infinity)
+                            Label("Ablehnen", systemImage: "xmark").lineLimit(1).frame(maxWidth: .infinity, minHeight: 36)
                         }
                         .buttonStyle(.bordered)
                         .tint(Theme.danger)
                     }
-                    .controlSize(.large)
+                    .controlSize(.regular)
                 }
                 .padding(.vertical, Space.xs)
             }
