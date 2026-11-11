@@ -25,14 +25,17 @@ public final class EncryptedDatabase {
         }
         database = try SQLiteDatabase(image: image)
 
+        // Nur fehlende Versionen, in einer Transaktion samt neuer Versionsnummer: Schlägt eine Migration fehl, bleibt der
+        // alte Stand (auch auf dem Datenträger) erhalten und der nächste Start versucht es erneut. Eine neuere Datenbank
+        // (App zurückgestuft, z. B. TestFlight) bleibt unangetastet. Migrationen nur anhängen und nie Daten löschen.
         let current = database.userVersion
         if current < migrations.count {
             try database.transaction {
                 for migration in migrations[current...] {
                     try migration(database)
                 }
+                try database.execute("PRAGMA user_version = \(migrations.count)")
             }
-            database.userVersion = migrations.count
             try persist()
         }
     }

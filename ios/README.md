@@ -214,6 +214,16 @@ Die App ist für Pushnachrichten vorbereitet (`EstrichONE/App/PushNotifications.
 Exportkonformität, Krypto-Inventar, Datenschutz-Manifest (`EstrichONE/Resources/PrivacyInfo.xcprivacy`), Nutzungstexte,
 Kontolöschung, Review-Hinweise und die vollständige Checkliste mit Store-Texten: **`APPSTORE.md`**.
 
+## Updates der App
+
+Die App prüft gegen den eigenen Server (docs/app-updates.md, `Update/AppUpdateCenter.swift`): Hinweis „Version …
+verfügbar“, Sperrbildschirm unter der Mindestversion (auch nach 426 `CLIENT_UPDATE_REQUIRED`), Link zu App Store,
+TestFlight oder MDM aus der Verwaltung, vorher Abgleich offener Änderungen, nach dem Update einmal „Neu in dieser
+Version“. Jede Anfrage trägt `X-EstrichONE-Client: ios/<version>` (`ClientIdentifyingTransport`). Das Release setzt
+`MARKETING_VERSION` aus dem Tag (ohne Vorabkennung) und `CURRENT_PROJECT_VERSION` aus der Laufnummer; nach dem Upload
+die in TestFlight bzw. im App Store verfügbare Version in der Verwaltung unter App-Updates eintragen. Datenbank-Upgrades:
+Migrationen nur anhängen, nie Daten löschen (Tests „Datenbank-Upgrade“).
+
 ## Signierung und Verteilung
 
 Für den Simulator ist keine Signierung nötig. Für ein echtes Gerät in Xcode unter *Signing & Capabilities* das

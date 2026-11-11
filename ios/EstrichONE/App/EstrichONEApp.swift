@@ -161,6 +161,8 @@ struct RootView: View {
             } message: {
                 Text(model.notice ?? "")
             }
+            // Hinweis auf neue Version, Sperre unter der Mindestversion, „Neu in dieser Version“ (docs/app-updates.md).
+            .appUpdates(model)
     }
 
     @ViewBuilder

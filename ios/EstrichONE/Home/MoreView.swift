@@ -158,6 +158,8 @@ struct MoreView: View {
                     Text("Abmelden beendet die Sitzung auf dem Server und löscht Ihre Daten auf diesem Gerät. Ihr Benutzerkonto verwaltet Ihr Betrieb. Die Löschung beantragen Sie hier, die Administration führt sie aus.")
                 }
 
+                AppUpdateSection()
+
                 Section {
                     Button("App zurücksetzen", role: .destructive) { confirmReset = true }
                         .accessibilityIdentifier("resetAppButton")

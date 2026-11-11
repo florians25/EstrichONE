@@ -34,8 +34,8 @@ struct AppEnvironment {
         if UserDefaults.standard.bool(forKey: demoFlagKey) { return demo() }
         return AppEnvironment(
             defaults: .standard,
-            // Ohne Cookies und ohne Zwischenspeicher.
-            transport: URLSession(configuration: .ephemeral),
+            // Ohne Cookies und ohne Zwischenspeicher; jede Anfrage nennt die App-Version (Mindestversion, docs/app-updates.md).
+            transport: ClientIdentifyingTransport(base: URLSession(configuration: .ephemeral), version: shortVersion, signal: updateSignal),
             secrets: KeychainSecretStore(),
             storageRoot: URL.applicationSupportDirectory.appending(path: "EstrichONE", directoryHint: .isDirectory),
             pinIterations: VaultEnvelope.pinIterations,
@@ -65,6 +65,9 @@ struct AppEnvironment {
         environment.isDemo = true
         return environment
     }
+
+    /// Ablehnungen wegen zu alter App (426) an das App-Update melden.
+    static let updateSignal = AppUpdateSignal()
 
     var appVersion: SemanticVersion {
         SemanticVersion(Self.shortVersion) ?? SemanticVersion(major: 0, minor: 0, patch: 0)

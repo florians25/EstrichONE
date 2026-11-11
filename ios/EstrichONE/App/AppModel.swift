@@ -56,6 +56,8 @@ final class AppModel {
     }
 
     let checker: ServerConnectionChecker
+    /// App-Update: Hinweis, Sperre unter der Mindestversion, Neuerungen (Update/AppUpdateCenter.swift).
+    let updates: AppUpdateCenter
     private let environment: AppEnvironment
     private let serverStore: ServerStore
     private(set) var accounts: AccountService?
@@ -107,6 +109,10 @@ final class AppModel {
         serverStore = ServerStore(defaults: environment.defaults)
         lockPreferences = AppLockPreferences.load(from: environment.defaults)
         checker = ServerConnectionChecker(transport: environment.transport, appVersion: environment.appVersion)
+        updates = AppUpdateCenter(transport: environment.transport, defaults: environment.defaults,
+                                  installedVersion: AppEnvironment.shortVersion, signal: AppEnvironment.updateSignal)
+        updates.serverAddress = { [weak self] in self?.server?.address }
+        updates.unsentChanges = { [weak self] in await self?.unsentItems() ?? 0 }
         if let server = serverStore.load() {
             open(server)
         }
