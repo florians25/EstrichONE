@@ -10,6 +10,8 @@ import de.estrichone.android.data.PoolUser
 import de.estrichone.android.data.SecureSessionStore
 import de.estrichone.android.data.SqlStorage
 import de.estrichone.android.support.Images
+import de.estrichone.android.update.AppUpdater
+import de.estrichone.android.update.PendingChanges
 import de.estrichone.core.ApiException
 import de.estrichone.core.DemoServer
 import de.estrichone.core.DeviceDescription
@@ -28,6 +30,8 @@ import de.estrichone.core.PinPolicy
 import de.estrichone.core.PinVault
 import de.estrichone.core.SessionStore
 import de.estrichone.core.SoftwareDeviceKeys
+import de.estrichone.core.UpdateSchedule
+import de.estrichone.core.isUpdateRequired
 import de.estrichone.core.UserSummary
 import de.estrichone.core.WrongPinException
 import de.estrichone.core.requiresTwoFactorCode
@@ -169,6 +173,27 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
 
     private var api: EstrichOneApi? = null
     private var poolPin: String? = null
+
+    /** App-Update (docs/app-updates.md): Prüfung gegen den eigenen Server, Download, Installation, Neuerungen. */
+    val updater: AppUpdater = AppUpdater(context, api = { _session.value?.api ?: this.api }, changes = {
+        _session.value?.takeIf { !it.isDemo }?.let { session ->
+            object : PendingChanges {
+                override fun count(): Int = session.store.summary().let { it.pendingOperations + it.pendingUploads }
+                override suspend fun synchronize(): Int {
+                    session.synchronize()
+                    return count()
+                }
+            }
+        }
+    })
+
+    /** Noch nicht übertragene Änderungen der angemeldeten Person (Hinweis auf dem Update-Bildschirm). */
+    fun pendingChangeCount(): Int = _session.value?.takeIf { !it.isDemo }?.store?.summary()?.let { it.pendingOperations + it.pendingUploads } ?: 0
+
+    private fun checkForUpdates() {
+        updater.check(UpdateSchedule.Trigger.Start)
+        updater.loadWhatsNew()
+    }
     private var backgroundSince: Long? = null
 
     val prefs: DevicePrefs get() = platform.prefs
@@ -193,6 +218,7 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
             api = EstrichOneApi(server, platform.sessions, platform.keys)
             if (prefs.isPool) {
                 _stage.value = poolStart()
+                checkForUpdates()
                 return@launch
             }
             _stage.value = try {
@@ -204,7 +230,8 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
                     signInStage()
                 }
             } catch (e: ApiException) {
-                if (e.isOffline && platform.sessions.refreshToken != null && platform.sessions.user != null) {
+                // App zu alt (426): lokale Daten öffnen, der Update-Bildschirm liegt darüber; nach dem Update geht es nahtlos weiter.
+                if ((e.isOffline || e.isUpdateRequired) && platform.sessions.refreshToken != null && platform.sessions.user != null) {
                     // Offline weiterarbeiten: lokaler Stand ist auf dem Gerät, der Abgleich folgt später.
                     openSession(api!!, platform.sessions.user!!)
                     if (prefs.lockEnabled) Stage.Locked else Stage.Ready
@@ -216,6 +243,7 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
                 _error.value = e.message
                 signInStage()
             }
+            checkForUpdates()
         }
     }
 
@@ -242,6 +270,7 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
             _session.value = session
             session.start()
             _stage.value = Stage.Ready
+            checkForUpdates()
         }
     }
 
@@ -494,6 +523,7 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
         backgroundSince = null
         // Modulzustand und Büro-Einstellungen gleich beim Zurückkehren auffrischen (auch hinter der App-Sperre).
         _session.value?.refreshSettings()
+        updater.check(UpdateSchedule.Trigger.Resume)
         if (_stage.value != Stage.Ready || _session.value?.isDemo == true) return
         val delay = LockDelay.entries.firstOrNull { it.seconds == prefs.lockDelaySeconds } ?: LockDelay.FifteenMinutes
         if (prefs.lockEnabled && delay.shouldLock(since, System.currentTimeMillis())) _stage.value = Stage.Locked

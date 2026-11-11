@@ -73,6 +73,10 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
         return when {
             path == "server-info" -> 200 to json("product" to "EstrichONE", "serverName" to "Demo-Betrieb", "serverVersion" to "1.0.0",
                 "apiVersions" to listOf("v1"), "minClientVersion" to "1.0.0", "authMethods" to listOf("password"), "setupRequired" to false)
+            path == "app-updates/check" -> 200 to json("platform" to (query["platform"] ?: "android"), "installedVersion" to (query["version"] ?: "1.0.0"),
+                "serverVersion" to "1.0.0", "latestVersion" to (query["version"] ?: "1.0.0"), "minimumVersion" to "1.0.0", "status" to "current",
+                "download" to json("kind" to "none"), "releaseNotes" to emptyList<Any>())
+            path == "app-updates/release-notes" -> 200 to emptyList<Any>()
             path == "auth/login" || path == "auth/refresh" -> 200 to json(
                 "accessToken" to "demo-access", "accessTokenExpiresAt" to ApiDate.format(now.plusSeconds(900)), "refreshToken" to "demo-refresh",
                 "refreshTokenExpiresAt" to ApiDate.format(now.plusSeconds(86_400 * 30)),

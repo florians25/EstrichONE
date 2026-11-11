@@ -299,7 +299,8 @@ class EstrichOneApi(
             lastContact = System.currentTimeMillis()
             true
         } else {
-            if (response.status in 400..499) {
+            // 426: App zu alt – Anmeldung bleibt erhalten, nach dem Update geht es weiter.
+            if (response.status in 400..499 && response.status != 426) {
                 accessToken = null
                 store.refreshToken = null
                 sessionEnded?.invoke(problem(response.status, text))
@@ -323,6 +324,7 @@ class EstrichOneApi(
         val payload = body?.toRequestBody(type) ?: if (method == "GET" || method == "DELETE") null else ByteArray(0).toRequestBody(type)
         val request = Request.Builder().url(url).method(method, payload).header("Accept", "application/json")
             .apply {
+                clientIdentity?.let { header(ClientIdentity.HEADER, it) }
                 if (token != null) header("Authorization", "Bearer $token")
                 headers.forEach { (k, v) -> header(k, v) }
             }.build()
@@ -341,10 +343,23 @@ class EstrichOneApi(
         if (status == 503 && parsed?.code == null) {
             return ApiException(status, "MAINTENANCE", parsed?.detail ?: "Der Server wird gerade gewartet.")
         }
-        return ApiException(status, parsed?.code, parsed?.detail ?: parsed?.title ?: "Der Server meldet einen Fehler ($status).")
+        val exception = ApiException(status, parsed?.code, parsed?.detail ?: parsed?.title ?: "Der Server meldet einen Fehler ($status).")
+        if (exception.isUpdateRequired) {
+            val minimum = runCatching { (json.parseToJsonElement(text) as? kotlinx.serialization.json.JsonObject)?.get("minimumVersion")?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.content } }.getOrNull()
+            updateRequired?.invoke(exception, minimum)
+        }
+        return exception
     }
 
     companion object {
+        /** Kennung dieser App für jede Anfrage (`X-EstrichONE-Client: android/1.0.5`); setzt die App beim Start. */
+        @Volatile
+        var clientIdentity: String? = null
+
+        /** Server lehnt die App-Version ab (426 `CLIENT_UPDATE_REQUIRED`): Fehler und Mindestversion. */
+        @Volatile
+        var updateRequired: ((ApiException, String?) -> Unit)? = null
+
         val json = Json { ignoreUnknownKeys = true; explicitNulls = false; encodeDefaults = true; coerceInputValues = true }
         private val jsonType = "application/json".toMediaType()
 

@@ -622,6 +622,7 @@ fun AppearanceScreen() {
 @Composable
 fun AboutScreen() {
     val session = LocalSession.current
+    val model = LocalModel.current
     val context = LocalContext.current
     ScreenScaffold("Info") { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
@@ -636,6 +637,7 @@ fun AboutScreen() {
                     RowItem("Gerät", value = if (session.isPool) "Poolgerät" else "Persönliches Gerät")
                 }
             }
+            item { UpdateSection(model) }
             item {
                 SectionCard(Modifier.padding(top = 16.dp)) {
                     RowItem("Impressum und Datenschutz", showChevron = true, onClick = { Links.web(context, if (session.isDemo) "https://estrichone.de" else "${session.api.baseUrl}impressum") })

@@ -209,9 +209,12 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
             Box(Modifier.fillMaxSize().background(tones.canvas)) {
                 Column(Modifier.fillMaxSize()) {
                     val banners by session.health.collectAsState()
+                    val updateBanner = model.hasUpdateBanner
                     HealthStrip(session)
-                    // Unter einem Ausfall-Hinweis gehört die Statusleiste schon dem Hinweis.
-                    Box(Modifier.weight(1f).then(if (banners.isNotEmpty()) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier)) { TabContent(nav) }
+                    // Neuere App-Version: Hinweis mit „Aktualisieren“ (unter einem Ausfall-Hinweis ohne eigene Statusleiste).
+                    if (banners.isEmpty()) UpdateBanner(model) else Box(Modifier.consumeWindowInsets(WindowInsets.statusBars)) { UpdateBanner(model) }
+                    // Unter einem Hinweis gehört die Statusleiste schon dem Hinweis.
+                    Box(Modifier.weight(1f).then(if (banners.isNotEmpty() || updateBanner) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier)) { TabContent(nav) }
                 }
                 SnackbarHost(nav.snackbar, Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(16.dp))
             }

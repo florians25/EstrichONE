@@ -11,6 +11,7 @@ import de.estrichone.core.OutboxOperation
 import de.estrichone.core.PendingUpload
 import de.estrichone.core.SealedSecret
 import de.estrichone.core.StorageBackend
+import de.estrichone.core.StorageSchema
 import de.estrichone.core.SyncState
 import de.estrichone.core.UserSummary
 import kotlinx.serialization.Serializable
@@ -79,11 +80,25 @@ class SqlStorage(file: File, key: ByteArray) : StorageBackend {
         file.parentFile?.mkdirs()
         val password = key.joinToString("") { "%02x".format(it) }
         db = SQLiteDatabase.openOrCreateDatabase(file, password, null, null)
-        db.execSQL("CREATE TABLE IF NOT EXISTS entities (type TEXT NOT NULL, id TEXT NOT NULL, bauakte TEXT, state TEXT NOT NULL, json TEXT NOT NULL, PRIMARY KEY (type, id))")
-        db.execSQL("CREATE INDEX IF NOT EXISTS entities_bauakte ON entities (bauakte)")
-        db.execSQL("CREATE TABLE IF NOT EXISTS outbox (seq INTEGER PRIMARY KEY AUTOINCREMENT, json TEXT NOT NULL)")
-        db.execSQL("CREATE TABLE IF NOT EXISTS uploads (fileId TEXT PRIMARY KEY, json TEXT NOT NULL)")
-        db.execSQL("CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT)")
+        migrate()
+    }
+
+    /**
+     * Schema nachziehen (StorageSchema): nur fehlende Versionen, in einer Transaktion samt neuer Versionsnummer.
+     * Schlägt eine Migration fehl, bleibt alles beim alten Stand – keine Daten gehen verloren, der nächste Start versucht es erneut.
+     */
+    private fun migrate() {
+        val current = db.rawQuery("PRAGMA user_version", arrayOf<String>()).use { c -> if (c.moveToFirst()) c.getInt(0) else 0 }
+        val pending = StorageSchema.pending(current)
+        if (pending.isEmpty()) return
+        db.beginTransaction()
+        try {
+            pending.forEach { db.execSQL(it) }
+            db.execSQL("PRAGMA user_version = ${StorageSchema.version}")
+            db.setTransactionSuccessful()
+        } finally {
+            db.endTransaction()
+        }
     }
 
     private val json = EstrichOneApi.json
@@ -125,7 +140,8 @@ class SqlStorage(file: File, key: ByteArray) : StorageBackend {
 
     override fun outbox(): List<OutboxOperation> = lock.withLock {
         db.rawQuery("SELECT seq, json FROM outbox ORDER BY seq", arrayOf<String>()).use { c ->
-            buildList { while (c.moveToNext()) add(json.decodeFromString(OutboxOperation.serializer(), c.getString(1)).copy(seq = c.getLong(0))) }
+            // Ein nicht lesbarer Eintrag (z. B. nach einem Versionswechsel) bleibt in der Datenbank und blockiert die übrigen nicht.
+            buildList { while (c.moveToNext()) runCatching { json.decodeFromString(OutboxOperation.serializer(), c.getString(1)).copy(seq = c.getLong(0)) }.onSuccess { add(it) } }
         }
     }
 
@@ -143,7 +159,7 @@ class SqlStorage(file: File, key: ByteArray) : StorageBackend {
 
     override fun uploads(): List<PendingUpload> = lock.withLock {
         db.rawQuery("SELECT json FROM uploads", arrayOf<String>()).use { c ->
-            buildList { while (c.moveToNext()) add(json.decodeFromString(PendingUpload.serializer(), c.getString(0))) }
+            buildList { while (c.moveToNext()) runCatching { json.decodeFromString(PendingUpload.serializer(), c.getString(0)) }.onSuccess { add(it) } }
         }
     }
 

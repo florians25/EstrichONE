@@ -9,6 +9,8 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import de.estrichone.android.work.SyncWorker
+import de.estrichone.core.ClientIdentity
+import de.estrichone.core.EstrichOneApi
 import java.util.concurrent.TimeUnit
 
 /** Anwendung: hält das [AppModel], legt Mitteilungskanäle an und plant den Abgleich im Hintergrund. */
@@ -18,7 +20,10 @@ class EstrichApp : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        // Jede Anfrage nennt die App-Version; der Server prüft damit die Mindestversion (docs/app-updates.md).
+        EstrichOneApi.clientIdentity = ClientIdentity.android(BuildConfig.VERSION_NAME)
         model = AppModel(this)
+        EstrichOneApi.updateRequired = { error, minimum -> model.updater.serverRejected(minimum, error.message) }
         model.start()
         val manager = getSystemService(NotificationManager::class.java)
         listOf(

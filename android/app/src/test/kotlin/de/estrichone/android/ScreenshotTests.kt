@@ -16,6 +16,15 @@ import de.estrichone.android.ui.Nav
 import de.estrichone.android.ui.Root
 import de.estrichone.android.ui.Route
 import de.estrichone.android.ui.Tab
+import de.estrichone.android.ui.WhatsNewContent
+import de.estrichone.core.AppDownload
+import de.estrichone.core.AppReleaseNote
+import de.estrichone.core.AppReleaseSection
+import de.estrichone.core.AppUpdateCheck
+import de.estrichone.core.UpdateState
+import de.estrichone.core.UpdateStatus
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.fillMaxSize
 import de.estrichone.core.DemoChat
 import de.estrichone.core.ApiDate
 import de.estrichone.core.DemoData
@@ -76,10 +85,14 @@ abstract class ScreenshotBase(private val device: String, private val appearance
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/$device-$name-$suffix.png")
     }
 
-    private fun main(name: String, tab: Tab, routes: List<Route> = emptyList()) = main(name, tab) { routes }
+    private fun main(name: String, tab: Tab, routes: List<Route> = emptyList()) = scene(name, tab, {}) { routes }
 
-    private fun main(name: String, tab: Tab, routes: (Session) -> List<Route>) {
+    private fun main(name: String, tab: Tab, routes: (Session) -> List<Route>) = scene(name, tab, {}, routes)
+
+    /** Hauptansicht mit vorbereitetem Modell (z. B. Zustand des App-Updates). */
+    private fun scene(name: String, tab: Tab, prepare: (AppModel) -> Unit, routes: (Session) -> List<Route>) {
         val model = demo()
+        prepare(model)
         val session = model.session.value!!
         val stack = routes(session)
         shot(name) {
@@ -185,6 +198,55 @@ abstract class ScreenshotBase(private val device: String, private val appearance
 
     @Test
     fun kunden() = main("kunden", Tab.Customers)
+
+    // App-Updates (docs/app-updates.md)
+
+    private val notes = listOf(
+        AppReleaseNote("1.0.13", "EstrichONE 1.0.13", listOf(
+            AppReleaseSection("Apps", listOf("Updates direkt in der App: laden, prüfen, installieren – Daten bleiben erhalten", "Neu in dieser Version nach jedem Update")),
+            AppReleaseSection("Bauakten", listOf("Abnahme mit Unterschrift auch ohne Netz", "Fotos schneller hochladen")))),
+        AppReleaseNote("1.0.12", "EstrichONE 1.0.12", listOf(AppReleaseSection("Module", listOf("Module lassen sich in der Verwaltung ein- und ausschalten")))),
+    )
+
+    private fun update(status: UpdateStatus, message: String? = null) = AppUpdateCheck(
+        installedVersion = BuildConfig.VERSION_NAME, serverVersion = "1.0.13", latestVersion = "1.0.13", minimumVersion = if (status == UpdateStatus.Required) "1.0.13" else "1.0.0",
+        status = status, message = message, download = AppDownload("package", "/api/v1/app-updates/android/package", "ab", 31_400_000, 10013, null, true),
+        releaseNotes = notes,
+    )
+
+    @Test
+    fun updateHinweis() = scene("update-hinweis", Tab.Today, { it.updater.show(UpdateState.Available(update(UpdateStatus.Recommended, "Bitte bis Freitag aktualisieren"))) }) { emptyList() }
+
+    @Test
+    fun updateInfo() = scene("update-info", Tab.More, { it.updater.show(UpdateState.Available(update(UpdateStatus.Recommended))) }) { listOf(Route.About) }
+
+    @Test
+    fun updateErforderlich() {
+        val model = demo()
+        model.updater.show(UpdateState.Available(update(UpdateStatus.Required, "Neue Abnahme-Funktion – bitte heute noch aktualisieren.")))
+        shot("update-erforderlich") { Root(model) }
+    }
+
+    @Test
+    fun updateDownload() {
+        val model = demo()
+        model.updater.show(UpdateState.Downloading(update(UpdateStatus.Required), 12_600_000, 31_400_000))
+        shot("update-download") { Root(model) }
+    }
+
+    @Test
+    fun updateSignatur() {
+        val model = demo()
+        model.updater.show(UpdateState.SignatureMismatch(update(UpdateStatus.Required)))
+        shot("update-signatur") { Root(model) }
+    }
+
+    @Test
+    fun neuInDieserVersion() = shot("neu-in-dieser-version") {
+        androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize().background(de.estrichone.android.ui.tones.canvas)) {
+            WhatsNewContent(notes) {}
+        }
+    }
 }
 
 @Config(application = TestApp::class, sdk = [35], qualifiers = "w411dp-h891dp-port-notnight-xxhdpi")

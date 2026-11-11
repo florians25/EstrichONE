@@ -40,3 +40,20 @@ Screenshots auf (Telefon und Tablet, hell und dunkel; Artefakt `android-screensh
 `versionName`/`versionCode` kommen im Release aus dem Tag (`-PappVersionName=1.0.5` → Code 10005). Ein signiertes
 Release-APK entsteht nur, wenn die Secrets `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`
 (und optional `ANDROID_KEY_PASSWORD`) gesetzt sind; sonst bleibt es beim Debug-APK. Schlüssel nie ins Repository.
+
+> **Wichtig für Updates:** Android installiert ein Update nur über eine App mit **demselben Signaturschlüssel**. Ohne
+> Keystore-Secrets signiert jeder Release-Lauf mit einem neuen, zufälligen Debug-Schlüssel – Geräte können dann nicht
+> aktualisieren, sondern müssen deinstallieren und neu installieren. Den Keystore einmal erzeugen
+> (`keytool -genkeypair -v -keystore estrichone.jks -keyalg RSA -keysize 4096 -validity 10000 -alias estrichone`),
+> base64-kodiert als Secret hinterlegen und an einem sicheren Ort aufbewahren. Geht er verloren, müssen alle Geräte die
+> App einmal neu installieren.
+
+## Updates
+
+Die App aktualisiert sich vom eigenen Server (docs/app-updates.md): Das Release legt das APK mit `android.json`
+(SHA-256, Fingerabdruck des Signaturzertifikats) ins API-Image; die App prüft beim Start, beim Zurückkehren und von
+Hand (`core/AppUpdates.kt`: Versionsvergleich, Drosselung, Zustandsautomat, fortsetzbarer Download mit Prüfsumme),
+überträgt vorher offene Änderungen, fragt bei Bedarf nach der Erlaubnis „Apps aus dieser Quelle installieren“ und
+installiert per PackageInstaller (`app/update/`). Ein Update mit anderem Schlüssel wird vor dem Download erkannt und
+erklärt. Jede Anfrage trägt `X-EstrichONE-Client: android/<version>`; 426 `CLIENT_UPDATE_REQUIRED` zeigt den
+Update-Bildschirm. Das Datenbankschema ist versioniert (`core/StorageSchema.kt`, nur ergänzende Migrationen).

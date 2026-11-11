@@ -37,6 +37,14 @@ class MainActivity : FragmentActivity() {
             EstrichTheme(Appearance.entries.firstOrNull { it.name == look.first } ?: Appearance.System, look.second) {
                 Root(model, unlock = ::unlock)
             }
+            // Bestätigung der Installation (PackageInstaller) anzeigen.
+            val confirmation by model.updater.confirmation.collectAsState()
+            LaunchedEffect(confirmation) {
+                confirmation?.let { intent ->
+                    runCatching { startActivity(intent) }
+                    model.updater.confirmationShown()
+                }
+            }
             LaunchedEffect(stage) {
                 if (stage == Stage.Locked) unlock()
                 if (stage == Stage.Ready && Build.VERSION.SDK_INT >= 33 &&
@@ -75,6 +83,8 @@ class MainActivity : FragmentActivity() {
         // Inhalte nicht in der App-Übersicht zeigen, solange die Sperre aktiv ist.
         if (model.prefs.lockEnabled) window.addFlags(WindowManager.LayoutParams.FLAG_SECURE) else window.clearFlags(WindowManager.LayoutParams.FLAG_SECURE)
         model.onInactive((System.currentTimeMillis() - lastInteraction) / 1000)
+        // Zurück aus „Apps aus dieser Quelle installieren“: Installation fortsetzen.
+        model.updater.onResume()
     }
 
     override fun onUserInteraction() {

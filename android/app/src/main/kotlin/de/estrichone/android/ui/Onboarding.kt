@@ -81,6 +81,15 @@ import de.estrichone.core.initials
 /** Wurzel der Oberfläche: Einrichtung, Anmeldung, Sperre oder Hauptansicht. */
 @Composable
 fun Root(model: AppModel, unlock: () -> Unit = {}) {
+    Box(Modifier.fillMaxSize()) {
+        Stages(model, unlock)
+        // Update-Bildschirm (Mindestversion), Ablauf des Updates und „Neu in dieser Version“ über allem.
+        UpdateOverlay(model)
+    }
+}
+
+@Composable
+private fun Stages(model: AppModel, unlock: () -> Unit) {
     val stage by model.stage.collectAsState()
     val session by model.session.collectAsState()
     when (val s = stage) {
