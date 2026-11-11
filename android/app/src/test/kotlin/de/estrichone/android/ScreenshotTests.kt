@@ -22,6 +22,7 @@ import de.estrichone.core.DemoData
 import de.estrichone.core.InboxNotification
 import de.estrichone.core.NotificationFilter
 import de.estrichone.core.NotificationGrouping
+import de.estrichone.core.myVacation
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -75,11 +76,14 @@ abstract class ScreenshotBase(private val device: String, private val appearance
         compose.onRoot().captureRoboImage("build/outputs/roborazzi/$device-$name-$suffix.png")
     }
 
-    private fun main(name: String, tab: Tab, routes: List<Route> = emptyList()) {
+    private fun main(name: String, tab: Tab, routes: List<Route> = emptyList()) = main(name, tab) { routes }
+
+    private fun main(name: String, tab: Tab, routes: (Session) -> List<Route>) {
         val model = demo()
         val session = model.session.value!!
+        val stack = routes(session)
         shot(name) {
-            val nav = remember { Nav(tab).also { it.set(tab, routes) } }
+            val nav = remember { Nav(tab).also { it.set(tab, stack) } }
             MainScreen(model, session, nav)
         }
     }
@@ -165,7 +169,13 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     fun abwesenheit() = main("abwesenheit", Tab.More, listOf(Route.Absences))
 
     @Test
-    fun abwesenheitAntrag() = main("abwesenheit-antrag", Tab.More, listOf(Route.Absences, Route.AbsenceRequest))
+    fun abwesenheitAntrag() = main("abwesenheit-antrag", Tab.More, listOf(Route.Absences, Route.AbsenceRequest()))
+
+    @Test
+    fun abwesenheitAenderung() = main("abwesenheit-aenderung", Tab.More) { session ->
+        val approved = kotlinx.coroutines.runBlocking { session.api.myVacation() }.requests.first { it.canChange }
+        listOf(Route.Absences, Route.AbsenceRequest(changing = approved))
+    }
 
     @Test
     fun abwesenheitGenehmigung() = main("abwesenheit-genehmigung", Tab.More, listOf(Route.Absences, Route.AbsenceApprovals))

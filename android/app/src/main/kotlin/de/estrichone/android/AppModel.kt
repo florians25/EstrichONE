@@ -21,6 +21,8 @@ import de.estrichone.core.LockDelay
 import de.estrichone.core.MemoryFileVault
 import de.estrichone.core.MemorySessionStore
 import de.estrichone.core.MemoryStorage
+import de.estrichone.core.NotificationRoute
+import de.estrichone.core.markNotificationRead
 import de.estrichone.core.POOL_INACTIVITY_SECONDS
 import de.estrichone.core.PinPolicy
 import de.estrichone.core.PinVault
@@ -140,6 +142,29 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
         prefs.appearance = appearance
         prefs.dynamicColor = dynamicColor
         _look.value = appearance to dynamicColor
+    }
+
+    /** Ziel aus einer angetippten Mitteilung; die Hauptansicht öffnet es, sobald sie bereit (entsperrt) ist. */
+    private val _pendingRoute = MutableStateFlow<NotificationRoute?>(null)
+    val pendingRoute: StateFlow<NotificationRoute?> = _pendingRoute
+
+    private var pendingNotificationId: String? = null
+
+    fun openFromNotification(route: NotificationRoute, notificationId: String?) {
+        pendingNotificationId = notificationId
+        _pendingRoute.value = route
+    }
+
+    /** Ziel ist geöffnet: Benachrichtigung als gelesen markieren (wie Antippen im Postfach). */
+    fun routeOpened() {
+        _pendingRoute.value = null
+        val id = pendingNotificationId ?: return
+        pendingNotificationId = null
+        val session = _session.value ?: return
+        session.scope.launch(Dispatchers.IO) {
+            runCatching { session.api.markNotificationRead(id) }
+            session.refreshCounters()
+        }
     }
 
     private var api: EstrichOneApi? = null
@@ -464,6 +489,8 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
     fun onForeground() {
         val since = backgroundSince ?: return
         backgroundSince = null
+        // Modulzustand und Büro-Einstellungen gleich beim Zurückkehren auffrischen (auch hinter der App-Sperre).
+        _session.value?.refreshSettings()
         if (_stage.value != Stage.Ready || _session.value?.isDemo == true) return
         val delay = LockDelay.entries.firstOrNull { it.seconds == prefs.lockDelaySeconds } ?: LockDelay.FifteenMinutes
         if (prefs.lockEnabled && delay.shouldLock(since, System.currentTimeMillis())) _stage.value = Stage.Locked

@@ -3,7 +3,6 @@ package de.estrichone.android.work
 import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
-import android.content.Intent
 import android.content.pm.PackageManager
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -11,7 +10,7 @@ import androidx.core.content.ContextCompat
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import de.estrichone.android.EstrichApp
-import de.estrichone.android.MainActivity
+import de.estrichone.android.NotificationTarget
 import de.estrichone.android.R
 import de.estrichone.core.notifications
 import kotlinx.coroutines.Dispatchers
@@ -32,8 +31,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
         val last = model.prefs.lastNotified
         val newer = if (last == null) fresh.takeLast(1) else fresh.filter { (it.createdAt ?: "") > last }
         if (newer.isNotEmpty() && ContextCompat.checkSelfPermission(applicationContext, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED) {
-            val open = PendingIntent.getActivity(applicationContext, 0, Intent(applicationContext, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE)
             newer.takeLast(3).forEach { n ->
+                // Tippen öffnet das Ziel (Bauakte, Chat, Urlaub …) statt nur die App; eigener requestCode je Mitteilung.
+                val open = PendingIntent.getActivity(applicationContext, n.id.hashCode(), NotificationTarget.intent(applicationContext, n),
+                    PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
                 val notification = NotificationCompat.Builder(applicationContext, if (n.category == "chat") EstrichApp.CHANNEL_CHAT else EstrichApp.CHANNEL_INBOX)
                     .setSmallIcon(R.drawable.ic_launcher_monochrome).setContentTitle(n.title).setContentText(n.body)
                     .setStyle(NotificationCompat.BigTextStyle().bigText(n.body)).setContentIntent(open).setAutoCancel(true).build()

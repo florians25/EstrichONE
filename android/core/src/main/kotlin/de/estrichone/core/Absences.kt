@@ -70,8 +70,11 @@ data class AbsenceRequestItem(
     val typeColor: String? = null,
     val halfDayStart: Boolean = false,
     val halfDayEnd: Boolean = false,
+    val substituteUserId: String? = null,
     val substituteName: String? = null,
     val replacesRequestId: String? = null,
+    /** Genehmigt und noch nicht begonnen: Änderungsantrag möglich (Server entscheidet). */
+    val canChange: Boolean = false,
 ) {
     val rangeText: String get() = AbsenceText.range(from, to, halfDayStart, halfDayEnd)
     val statusText: String get() = if (status == "cancelled" && decisionComment == "Durch Änderungsantrag ersetzt.") "Ersetzt" else AbsenceText.status(status)
@@ -118,10 +121,15 @@ data class AbsencePreview(
     val warnings: List<String> = emptyList(),
     val remainingAfter: Double? = null,
     val requiresApproval: Boolean = true,
+    val holidays: List<AbsenceHoliday> = emptyList(),
 ) {
     val summary: String
         get() = "${AbsenceText.days(workingDays)} Arbeitstage" + (remainingAfter?.let { ", danach ${AbsenceText.days(it)} Tage Resturlaub" } ?: "") + "." +
             if (requiresApproval) " Der Antrag geht zur Genehmigung." else " Keine Genehmigung erforderlich."
+
+    /** „Feiertage im Zeitraum: 25.12.2026 1. Weihnachtstag, …“ oder null. */
+    val holidayText: String?
+        get() = holidays.takeIf { it.isNotEmpty() }?.joinToString(", ", prefix = "Feiertage im Zeitraum (zählen nicht): ") { "${AbsenceText.date(it.date)} ${it.name}" }
 }
 
 /** Antrag bzw. Vorschau (Tage als yyyy-MM-dd). */
@@ -133,6 +141,7 @@ data class AbsenceDraft(
     val halfDayStart: Boolean = false,
     val halfDayEnd: Boolean = false,
     val note: String? = null,
+    val substituteUserId: String? = null,
     val replacesRequestId: String? = null,
 ) {
     /** Fehlertext für das Formular oder null. */
@@ -145,6 +154,13 @@ data class AbsenceDraft(
 
     /** Eintägig mit beiden Angaben = ein halber Tag; leere Bemerkung wird nicht gesendet. */
     fun normalized(): AbsenceDraft = copy(halfDayEnd = halfDayEnd && !(from == to && halfDayStart), note = note?.trim()?.ifEmpty { null })
+
+    companion object {
+        /** Änderungsantrag zu einem genehmigten Antrag: Angaben übernehmen, der Server ersetzt den alten Zeitraum erst nach Genehmigung. */
+        fun changing(request: AbsenceRequestItem): AbsenceDraft = AbsenceDraft(
+            request.typeId, request.from, request.to, request.halfDayStart, request.halfDayEnd, request.note, request.substituteUserId, request.id,
+        )
+    }
 }
 
 @Serializable
@@ -164,6 +180,10 @@ object AbsenceText {
         val half = listOfNotNull(if (halfDayStart) "erster Tag halb" else null, if (halfDayEnd) "letzter Tag halb" else null).joinToString(", ")
         return "$start – ${date(to)}" + if (half.isEmpty()) "" else " ($half)"
     }
+
+    /** Hinweis oben im Änderungsantrag. */
+    fun changeIntro(request: AbsenceRequestItem): String =
+        "Genehmigt: ${request.typeName ?: "Abwesenheit"} ${request.rangeText}. Bis die Änderung genehmigt ist, gilt der bisherige Zeitraum."
 
     fun status(status: String): String = when (status) {
         "pending" -> "Beantragt"

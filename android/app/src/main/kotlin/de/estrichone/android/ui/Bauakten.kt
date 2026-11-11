@@ -15,6 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -91,54 +98,56 @@ fun BauaktenScreen(selected: String?) {
     val today = LocalDate.now(Dates.zone).toString()
     val todayJobs = plan.filter { it.day == today }.associateBy { it.bauakteId }
     val customers by session.local { session.service.contacts().associateBy { it.id } }
-    val list = all.filter { it.matches(search) && (search.isNotBlank() || it.status in filter.statuses) }
+    val list = remember(all, customers, search, filter) {
+        all.filter { it.matches(search, customers[it.customerId]) && (search.isNotBlank() || it.status in filter.statuses) }
+    }
+    val counts = remember(all) { Filter.entries.associateWith { f -> all.count { it.status in f.statuses } } }
+    val status by session.status.collectAsState()
+    val scope = rememberCoroutineScope()
 
     ScreenScaffold("Baustellen", root = true, actions = { SyncAction() }, floating = {
         ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Neue Bauakte") })
     }) { padding ->
+        // Nach unten ziehen: sofort abgleichen (neue Bauakten, Änderungen aus dem Büro).
+        PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = padding.content()) {
-            item {
-                SearchField(search, { search = it }, "Nummer, Bauvorhaben, Adresse")
+            item(key = "search", contentType = "search") {
+                OfflineBanner(session)
+                SearchField(search, { search = it }, "Nummer, Bauvorhaben, Adresse, Kunde")
                 Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Filter.entries.forEach { f ->
-                        val count = all.count { it.status in f.statuses }
-                        FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.title} ($count)") },
-                            colors = FilterChipDefaults.filterChipColors(containerColor = tones.card))
+                        FilterChip(selected = filter == f, onClick = { filter = f }, label = { Text("${f.title} (${counts[f] ?: 0})") },
+                            colors = FilterChipDefaults.filterChipColors(containerColor = tones.card), modifier = Modifier.heightIn(min = 40.dp))
                     }
                 }
             }
             if (list.isEmpty()) {
-                item { EmptyState(Icons.Outlined.Apartment, if (search.isBlank()) "Keine Baustellen" else "Keine Bauakte gefunden",
-                    if (search.isBlank()) "Neue Bauakten legen Sie unten rechts an." else "Suche nach Nummer, Bauvorhaben, Straße oder Ort.") }
+                item(key = "empty") { EmptyState(Icons.Outlined.Apartment, if (search.isBlank()) "Keine Baustellen" else "Keine Bauakte gefunden",
+                    if (search.isBlank()) "Neue Bauakten legen Sie unten rechts an." else "Suche nach Nummer, Bauvorhaben, Adresse, Kunde oder Kundennummer.") }
             }
             val todayList = if (search.isBlank()) list.filter { it.id in todayJobs } else emptyList()
-            if (todayList.isNotEmpty()) {
-                item { GroupLabel("Heute im Einsatz") }
-                item { BauakteCards(todayList, todayJobs, customers, selected, session) }
+            // Jede Zeile ein eigenes Listenelement mit fester ID: auch bei Hunderten Bauakten wird nur das Sichtbare gezeichnet.
+            fun group(id: String, title: String, rows: List<Bauakte>) {
+                item(key = "label-$id", contentType = "label") { GroupLabel(title) }
+                itemsIndexed(rows, key = { _, b -> "$id-${b.id}" }, contentType = { _, _ -> "bauakte" }) { index, b ->
+                    CardSlot(index, rows.size) {
+                        BauakteRow(b, customers[b.customerId], todayJobs[b.id], selected == b.id) { nav.set(nav.tab, listOf(Route.Bauakte(b.id))) }
+                    }
+                }
             }
+            if (todayList.isNotEmpty()) group("today", "Heute im Einsatz", todayList)
             val rest = list.filter { it !in todayList }
-            rest.groupBy { it.status }.toSortedMap(compareBy { it.order }).forEach { (status, group) ->
-                item { GroupLabel("${if (status == BauakteStatus.Drying) "Trocknung" else status.label} (${group.size})") }
-                item { BauakteCards(group, todayJobs, customers, selected, session) }
+            rest.groupBy { it.status }.toSortedMap(compareBy { it.order }).forEach { (status, rows) ->
+                group(status.name, "${if (status == BauakteStatus.Drying) "Trocknung" else status.label} (${rows.size})", rows)
             }
+        }
         }
     }
     if (creating) NewBauakteSheet(onDismiss = { creating = false }) { id -> creating = false; nav.set(nav.tab, listOf(Route.Bauakte(id))) }
 }
 
 @Composable
-private fun BauakteCards(list: List<Bauakte>, today: Map<String, PlannedJob>, customers: Map<String, de.estrichone.core.Contact>, selected: String?, session: Session) {
-    val nav = LocalNav.current
-    SectionCard {
-        list.forEachIndexed { index, b ->
-            if (index > 0) RowDivider(16.dp)
-            BauakteRow(b, customers[b.customerId]?.name, today[b.id], selected == b.id) { nav.set(nav.tab, listOf(Route.Bauakte(b.id))) }
-        }
-    }
-}
-
-@Composable
-fun BauakteRow(b: Bauakte, customer: String?, job: PlannedJob?, selected: Boolean = false, onClick: () -> Unit) {
+fun BauakteRow(b: Bauakte, customer: de.estrichone.core.Contact?, job: PlannedJob?, selected: Boolean = false, onClick: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().background(if (selected) tones.infoSoft else Color.Transparent).clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
@@ -155,7 +164,7 @@ fun BauakteRow(b: Bauakte, customer: String?, job: PlannedJob?, selected: Boolea
                 StatusLabel(b.status)
                 if (customer != null) {
                     Spacer(Modifier.width(8.dp))
-                    Text(customer, style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(listOfNotNull(customer.name, customer.customerNumber).joinToString(" · "), style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
             }
             if (job != null) {

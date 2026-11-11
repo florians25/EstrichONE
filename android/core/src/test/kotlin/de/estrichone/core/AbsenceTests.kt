@@ -97,6 +97,68 @@ class AbsenceTests {
     }
 
     @Test
+    @DisplayName("Feiertage: Ostern, Bundesländer, Zeitraum")
+    fun holidays() {
+        assertEquals(java.time.LocalDate.of(2027, 3, 28), GermanHolidays.easterSunday(2027))
+        assertEquals(java.time.LocalDate.of(2026, 4, 5), GermanHolidays.easterSunday(2026))
+        val bavaria = GermanHolidays.of(2026, "BY").map { it.name }
+        assertEquals(13, bavaria.size)
+        assertTrue("Mariä Himmelfahrt" in bavaria && "Fronleichnam" in bavaria)
+        assertFalse("Reformationstag" in GermanHolidays.of(2026, "BY").map { it.name })
+        assertTrue("Buß- und Bettag" in GermanHolidays.of(2026, "SN").map { it.name })
+        assertEquals(listOf("2026-12-25", "2026-12-26", "2027-01-01"),
+            GermanHolidays.between(java.time.LocalDate.of(2026, 12, 20), java.time.LocalDate.of(2027, 1, 2), "BY").map { it.date })
+    }
+
+    @Test
+    @DisplayName("Demomodus: Feiertage zählen nicht als Urlaubstage")
+    fun demoHolidays() = runBlocking {
+        val api = EstrichOneApi("https://demo.invalid", MemorySessionStore(), SoftwareDeviceKeys(), DemoServer().client())
+        api.signIn("m.huber", "demo", "Test")
+        val vacation = api.myVacation().requestableTypes.first { it.key == "vacation" }
+        // Mo 21.12. bis Fr 1.1.: 10 Werktage, davon 25.12. und 1.1. Feiertag (26.12. ist Samstag).
+        val preview = api.previewAbsence(AbsenceDraft(vacation.id, "2026-12-21", "2027-01-01"))
+        assertEquals(8.0, preview.workingDays)
+        assertEquals(listOf("1. Weihnachtstag", "2. Weihnachtstag", "Neujahr"), preview.holidays.map { it.name })
+        assertEquals("Feiertage im Zeitraum (zählen nicht): 25.12.2026 1. Weihnachtstag, 26.12.2026 2. Weihnachtstag, 01.01.2027 Neujahr", preview.holidayText)
+        // Fronleichnam 2027 (Do 27.5.) fällt in eine Woche Pfingsturlaub.
+        assertEquals(4.0, api.previewAbsence(AbsenceDraft(vacation.id, "2027-05-24", "2027-05-28")).workingDays)
+    }
+
+    @Test
+    @DisplayName("Demomodus: Vertretung und Änderungsantrag zu genehmigtem Urlaub")
+    fun demoChangeRequest() = runBlocking {
+        val api = EstrichOneApi("https://demo.invalid", MemorySessionStore(), SoftwareDeviceKeys(), DemoServer().client())
+        api.signIn("m.huber", "demo", "Test")
+        val approved = api.myVacation().requests.first { it.isApproved }
+        assertTrue(approved.canChange)
+        assertEquals("Lukas Brandl", approved.substituteName)
+        val colleagues = api.directory().filter { it.id != approved.userId }
+        val sabine = colleagues.first { it.displayName == "Sabine Wagner" }
+
+        val change = AbsenceDraft.changing(approved).copy(to = java.time.LocalDate.parse(approved.to).minusDays(4).toString(), substituteUserId = sabine.id)
+        assertEquals(approved.id, change.replacesRequestId)
+        val body = EstrichOneApi.json.encodeToString(AbsenceDraft.serializer(), change.normalized())
+        assertTrue(body.contains("\"replacesRequestId\":\"${approved.id}\"") && body.contains("\"substituteUserId\":\"${sabine.id}\""))
+        val preview = api.previewAbsence(change)
+        assertTrue(preview.remainingAfter!! > api.myVacation().vacation!!.afterRequests, "Der bisherige Zeitraum wird gutgeschrieben")
+
+        val created = api.requestAbsence(change)
+        assertEquals("pending", created.status)
+        assertEquals(approved.id, created.replacesRequestId)
+        assertEquals("Sabine Wagner", created.substituteName)
+        // Solange die Änderung offen ist, gilt der alte Zeitraum und kein zweiter Änderungsantrag.
+        val before = api.myVacation().requests.first { it.id == approved.id }
+        assertTrue(before.isApproved)
+        assertFalse(before.canChange)
+
+        // Der Demobenutzer genehmigt selbst (Genehmiger): alter Antrag gilt als ersetzt.
+        assertEquals("approved", api.decideAbsence(created.id, true, null).status)
+        val after = api.myVacation().requests.first { it.id == approved.id }
+        assertEquals("Ersetzt", after.statusText)
+    }
+
+    @Test
     @DisplayName("Feldnamen stimmen mit dem API-Vertrag überein")
     fun contract() {
         var dir: File? = File("").absoluteFile

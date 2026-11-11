@@ -55,14 +55,19 @@ private data class PreferenceChanges(val items: List<PreferenceChange>)
 @Serializable
 private data class PushDeviceRequest(val platform: String, val token: String, val deviceName: String?, val appVersion: String?)
 
-/** Ziel einer Benachrichtigung in der App (Bauakte, Meldung, Planung, Aufgaben, Chat, Postfach). */
+/** Ziel einer Benachrichtigung in der App (Bauakte, Meldung, Planung, Aufgaben, Chat, Urlaub, Postfach). */
 sealed interface NotificationRoute {
-    data class Bauakte(val id: String) : NotificationRoute
+    /** [section]: Bereich in der Bauakte, der gleich geöffnet wird (Aufgaben und Mängel, Dokumente zur Freigabe). */
+    data class Bauakte(val id: String, val section: BauakteSection? = null) : NotificationRoute
     data class Ticket(val id: String) : NotificationRoute
     data class Planning(val day: String?) : NotificationRoute
     data object Tasks : NotificationRoute
     data class Chat(val conversationId: String?) : NotificationRoute
+    /** Urlaub und Abwesenheit; [approvals]: Anträge zur Genehmigung (Hinweis an Genehmiger). */
+    data class Absences(val approvals: Boolean = false) : NotificationRoute
     data object Inbox : NotificationRoute
+
+    enum class BauakteSection { Tasks, Documents }
 
     companion object {
         private val uuid = Regex("^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$")
@@ -70,14 +75,25 @@ sealed interface NotificationRoute {
         fun from(link: String?, objectType: String? = null, objectId: String? = null): NotificationRoute? {
             // Meldungen im IT-Center (Fehler, Wünsche) haben in der App keine eigene Seite – nicht als Helpdesk-Ticket öffnen.
             if (objectType.equals("feedback", ignoreCase = true)) return Inbox
-            link?.let { parse(it) }?.let { return it }
+            val type = objectType?.lowercase()
+            link?.let { parse(it) }?.let { route ->
+                // Aufgabe, Mangel oder Freigabe in einer Bauakte: gleich den passenden Bereich zeigen.
+                if (route is Bauakte && route.section == null) {
+                    when (type) {
+                        "workitem", "task", "defect" -> return route.copy(section = BauakteSection.Tasks)
+                        "approval" -> return route.copy(section = BauakteSection.Documents)
+                    }
+                }
+                return route
+            }
             val id = objectId?.takeIf { uuid.matches(it) }?.lowercase()
-            return when (objectType?.lowercase()) {
+            return when (type) {
                 "bauakte" -> id?.let { Bauakte(it) }
                 "ticket" -> id?.let { Ticket(it) }
                 "assignment", "plan", "planday", "planning" -> Planning(null)
                 "workitem", "task" -> Tasks
                 "chatconversation", "chat", "chatmessage" -> Chat(id)
+                "absencerequest", "absence" -> Absences()
                 "approval" -> Inbox
                 else -> null
             } ?: if (link != null) Inbox else null
@@ -90,14 +106,25 @@ sealed interface NotificationRoute {
             while (parts.isNotEmpty() && parts.first().lowercase() in setOf("app", "it-center", "api", "v1")) parts.removeAt(0)
             val head = parts.firstOrNull()?.lowercase() ?: return null
             val id = parts.getOrNull(1)?.takeIf { uuid.matches(it) }?.lowercase()
-            val day = uri.query?.split('&')?.map { it.split('=', limit = 2) }?.firstOrNull { it[0] == "day" || it[0] == "tag" }?.getOrNull(1)
+            val query = uri.query?.split('&')?.map { it.split('=', limit = 2) }.orEmpty()
+            val day = query.firstOrNull { it[0] == "day" || it[0] == "tag" }?.getOrNull(1)
             return when (head) {
-                "bauakte", "bauakten" -> id?.let { Bauakte(it) }
+                "bauakte", "bauakten" -> id?.let {
+                    Bauakte(it, when (parts.getOrNull(2)?.lowercase()) {
+                        "maengel", "aufgaben", "tasks", "work-items" -> BauakteSection.Tasks
+                        "dokumente", "documents", "freigaben" -> BauakteSection.Documents
+                        else -> null
+                    })
+                }
                 "helpdesk", "tickets", "ticket", "meldungen" -> id?.let { Ticket(it) }
                 "planung", "planning", "plan", "disposition" -> Planning(day ?: parts.drop(1).lastOrNull()?.takeIf { it.length == 10 })
                 "aufgaben", "tasks", "work-items", "maengel" -> Tasks
                 "chat", "nachrichten", "messenger" -> Chat(id)
-                "benachrichtigungen", "notifications", "postfach", "urlaub", "personal", "system" -> Inbox
+                "urlaub" -> Absences(query.any { it[0] == "reiter" && it.getOrNull(1) == "antraege" })
+                "personal" -> if (parts.getOrNull(1)?.lowercase() in setOf("urlaub", "abwesenheit", null)) {
+                    Absences(query.any { it[0] == "reiter" && it.getOrNull(1) == "antraege" })
+                } else Inbox
+                "benachrichtigungen", "notifications", "postfach", "system" -> Inbox
                 else -> null
             }
         }

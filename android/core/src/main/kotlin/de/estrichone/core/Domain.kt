@@ -89,10 +89,21 @@ data class Bauakte(val entity: LocalEntity) {
     /** „2026-041“ bzw. „Neu“, solange der Server noch keine Nummer vergeben hat. */
     val numberText: String get() = number ?: "Neu"
 
-    fun matches(search: String): Boolean {
-        val q = search.trim().lowercase()
-        if (q.isEmpty()) return true
-        return listOfNotNull(number, title, street, postalCode, city, description).any { it.lowercase().contains(q) }
+    /**
+     * Suche über Nummer, Bauvorhaben, Adresse, Beschreibung und – falls bekannt – Kunde mit Kundennummer. Jedes Wort muss
+     * vorkommen („schneider landshut“, „K-1088“), ohne Groß-/Kleinschreibung und Akzente.
+     */
+    fun matches(search: String, customer: Contact? = null): Boolean = SearchText.matches(search,
+        listOfNotNull(number, title, street, postalCode, city, description, customer?.name, customer?.customerNumber, siteContactName))
+}
+
+/** Gemeinsame Suche der Listen: jedes Suchwort muss in einem der Felder vorkommen. */
+object SearchText {
+    fun matches(search: String, fields: List<String>): Boolean {
+        val words = NotificationFilter.fold(search).split(Regex("\\s+")).filter { it.isNotEmpty() }
+        if (words.isEmpty()) return true
+        val haystack = NotificationFilter.fold(fields.joinToString(" "))
+        return words.all { it in haystack }
     }
 }
 
@@ -131,10 +142,11 @@ data class Contact(val entity: LocalEntity) {
     val initials: String get() = initials(name)
 
     fun matches(search: String): Boolean {
-        val q = search.trim().lowercase()
-        if (q.isEmpty()) return true
-        return (listOfNotNull(name, customerNumber, street, postalCode, city) + phones.map { it.number } + emails.map { it.address })
-            .any { it.lowercase().contains(q) }
+        if (SearchText.matches(search, listOfNotNull(name, customerNumber, street, postalCode, city) + emails.map { it.address })) return true
+        // Telefonnummern auch ohne Leerzeichen und Schrägstriche finden („0871430“).
+        val digits = search.filter { it.isDigit() }
+        return digits.length >= 4 && digits.length == search.count { !it.isWhitespace() && it !in "/-()+" } &&
+            phones.any { p -> p.number.filter { it.isDigit() }.contains(digits) }
     }
 }
 

@@ -115,6 +115,9 @@ class Session(
 
     val isDemo: Boolean get() = demo != null
 
+    /** Zuletzt geladene Online-Daten je Seite (Urlaub, Aufgaben …): beim Wiederöffnen sofort sichtbar, ohne Ladekreis. */
+    val memo = java.util.concurrent.ConcurrentHashMap<String, Any>()
+
     /** Vorschaubilder (klein) und Großansichten im Speicher. */
     private val thumbnails = LruCache<String, Bitmap>(80)
 
@@ -151,6 +154,11 @@ class Session(
         runCatching { api.chatStatus() }.onSuccess { _chat.value = it }.onFailure { if (it is ApiException && it.status == 404) _chat.value = null }
         runCatching { api.notifications() }.onSuccess { _unread.value = it.unreadCount }
         runCatching { api.myTickets() }.onSuccess { list -> _unreadTickets.value = list.count { it.hasUnread } }
+        loadSettings()
+    }
+
+    /** Rechte, Module und Büro-Einstellungen (z. B. „Hinweis Erstbegehung fehlt“) laden und offline vorhalten. */
+    private suspend fun loadSettings() {
         runCatching { api.myPermissions() }.onSuccess {
             _permissions.value = it.toSet()
             store.backend.setMeta("my_permissions", it.joinToString(","))
@@ -164,6 +172,20 @@ class Session(
             store.backend.setMeta("warn_missing_inspection", it.toString())
         }
     }
+
+    /**
+     * Beim Zurückkehren in die App: Einstellungen des Büros sofort neu laden, ohne auf den (ggf. längeren) Abgleich zu warten.
+     * Höchstens alle 30 Sekunden, damit schnelles Hin- und Herwechseln keine Abrufe häuft.
+     */
+    fun refreshSettings() {
+        val now = System.currentTimeMillis()
+        if (now - lastSettingsRefresh < 30_000) return
+        lastSettingsRefresh = now
+        scope.launch(Dispatchers.IO) { loadSettings() }
+    }
+
+    @Volatile
+    private var lastSettingsRefresh = 0L
 
     fun refreshCounters() {
         scope.launch(Dispatchers.IO) {

@@ -128,7 +128,7 @@ class PresentationTests {
         assertEquals(NotificationRoute.Planning("2026-11-09"), NotificationRoute.from("/planung?day=2026-11-09"))
         assertEquals(NotificationRoute.Chat(id), NotificationRoute.from(null, "chatConversation", id))
         assertEquals(NotificationRoute.Tasks, NotificationRoute.from(null, "workItem", null))
-        assertEquals(NotificationRoute.Inbox, NotificationRoute.from("/urlaub"))
+        assertEquals(NotificationRoute.Absences(), NotificationRoute.from("/urlaub"))
         assertNull(NotificationRoute.from(null))
     }
 

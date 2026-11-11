@@ -105,12 +105,20 @@ class NotificationFeedTests {
     @DisplayName("Ziele aller Links des Servers")
     fun targets() {
         val id = "0193a1b2-0000-7000-8000-0000000b0001"
-        assertEquals(NotificationRoute.Bauakte(id), NotificationRoute.from("/bauakten/$id/maengel"))
+        assertEquals(NotificationRoute.Bauakte(id, NotificationRoute.BauakteSection.Tasks), NotificationRoute.from("/bauakten/$id/maengel"))
+        assertEquals(NotificationRoute.Bauakte(id), NotificationRoute.from("/bauakten/$id"))
+        // Aufgabe oder Mangel in einer Bauakte: Bereich Aufgaben und Mängel; Freigabe: Dokumente.
+        assertEquals(NotificationRoute.Bauakte(id, NotificationRoute.BauakteSection.Tasks), NotificationRoute.from("/bauakten/$id", "workItem", id))
+        assertEquals(NotificationRoute.Bauakte(id, NotificationRoute.BauakteSection.Documents), NotificationRoute.from("/bauakten/$id", "approval", id))
+        assertEquals(NotificationRoute.Bauakte(id), NotificationRoute.from("/bauakten/$id", "bauakte", id))
         assertEquals(NotificationRoute.Bauakte(id), NotificationRoute.from("/api/v1/bauakten/$id/notes"))
         assertEquals(NotificationRoute.Chat(id), NotificationRoute.from("/chat/$id"))
         assertEquals(NotificationRoute.Tasks, NotificationRoute.from("/start", "workItem", id))
         assertEquals(NotificationRoute.Inbox, NotificationRoute.from("/it-center/meldungen/$id", "feedback", id))
-        assertEquals(NotificationRoute.Inbox, NotificationRoute.from("/personal/urlaub"))
+        assertEquals(NotificationRoute.Absences(), NotificationRoute.from("/personal/urlaub", "absenceRequest", id))
+        assertEquals(NotificationRoute.Absences(approvals = true), NotificationRoute.from("/personal/urlaub?reiter=antraege", "absenceRequest", id))
+        assertEquals(NotificationRoute.Absences(), NotificationRoute.from(null, "absenceRequest", id))
+        assertEquals(NotificationRoute.Inbox, NotificationRoute.from("/personal/mitarbeiter"))
         assertEquals(NotificationRoute.Inbox, NotificationRoute.from("/system/backup-ziele"))
 
         val system = item(9, "system", "Sicherung fehlgeschlagen", link = "/system/backup-ziele", hoursAgo = 1.0)
@@ -121,6 +129,8 @@ class NotificationFeedTests {
         assertNull(note.webPath)
         assertFalse(item(11, "message", "Hallo", hoursAgo = 1.0).hasTarget)
         assertEquals("Bauakte öffnen", NotificationFeed.openTitle(NotificationRoute.Bauakte(id)))
+        assertEquals("Anträge öffnen", NotificationFeed.openTitle(NotificationRoute.Absences(approvals = true)))
+        assertTrue(item(12, "absence", "Urlaubsantrag genehmigt", link = "/personal/urlaub", hoursAgo = 1.0).hasTarget)
     }
 
     @Test

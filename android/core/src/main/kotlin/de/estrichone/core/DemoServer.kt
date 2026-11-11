@@ -131,7 +131,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path == "tickets" && method == "POST" -> 200 to tickets.create(body)
             path == "tickets/device" -> 200 to json("number" to "T-2026-0031")
             parts.size >= 2 && parts[0] == "tickets" -> tickets.handle(method, parts, body)
-            path == "directory/users" -> 200 to listOf(mapOf("id" to DemoData.USER_ID, "displayName" to DemoData.USER_NAME, "isActive" to true))
+            path == "directory/users" -> 200 to absences.directory()
             else -> problem(404, "NOT_FOUND", "Im Demomodus nicht verfügbar.")
         }
     }

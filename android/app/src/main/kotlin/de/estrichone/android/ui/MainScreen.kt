@@ -80,7 +80,8 @@ sealed interface Route {
     data object Tasks : Route
     data object Week : Route
     data object Absences : Route
-    data object AbsenceRequest : Route
+    /** Antrag stellen; mit [changing] Änderungsantrag zu diesem genehmigten Antrag. */
+    data class AbsenceRequest(val changing: de.estrichone.core.AbsenceRequestItem? = null) : Route
     data object AbsenceApprovals : Route
     data object Dispatch : Route
     data object Helpdesk : Route
@@ -135,7 +136,16 @@ class Nav(initialTab: Tab) {
     /** Ziel einer Benachrichtigung bzw. eines Links öffnen. */
     fun open(route: NotificationRoute) {
         when (route) {
-            is NotificationRoute.Bauakte -> { tab = Tab.Bauakten; stacks[tab] = listOf(Route.Bauakte(route.id)) }
+            is NotificationRoute.Bauakte -> {
+                tab = Tab.Bauakten
+                val area = when (route.section) {
+                    NotificationRoute.BauakteSection.Tasks -> AreaKind.Tasks
+                    NotificationRoute.BauakteSection.Documents -> AreaKind.Documents
+                    null -> null
+                }
+                stacks[tab] = listOfNotNull(Route.Bauakte(route.id), area?.let { Route.Area(route.id, it) })
+            }
+            is NotificationRoute.Absences -> { tab = Tab.More; stacks[tab] = listOfNotNull(Route.Absences, if (route.approvals) Route.AbsenceApprovals else null) }
             is NotificationRoute.Ticket -> { tab = Tab.More; stacks[tab] = listOf(Route.Helpdesk, Route.Ticket(route.id)) }
             is NotificationRoute.Planning -> { tab = Tab.More; stacks[tab] = listOf(Route.Dispatch) }
             NotificationRoute.Tasks -> { tab = Tab.More; stacks[tab] = listOf(Route.Tasks) }
@@ -165,6 +175,15 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
     val moreBadge = unreadTickets + (chat?.takeIf { it.isAvailable }?.unreadCount ?: 0)
 
     LaunchedEffect(Unit) { model.messages.collect { nav.snackbar.showSnackbar(it) } }
+    // Angetippte Mitteilung: Ziel öffnen (Bauakte mit Bereich, Chat, Urlaub, Postfach …).
+    val pending by model.pendingRoute.collectAsState()
+    LaunchedEffect(pending) {
+        pending?.let {
+            nav.captureOpen = false
+            nav.open(it)
+            model.routeOpened()
+        }
+    }
     BackHandler(enabled = nav.stack().isNotEmpty()) { nav.back() }
 
     CompositionLocalProvider(LocalNav provides nav, LocalSession provides session, LocalModel provides model) {
@@ -260,7 +279,7 @@ private fun RouteScreen(route: Route, twoPane: Boolean) {
         Route.Tasks -> MyTasksScreen()
         Route.Week -> WeekScreen()
         Route.Absences -> AbsencesScreen()
-        Route.AbsenceRequest -> AbsenceRequestScreen()
+        is Route.AbsenceRequest -> AbsenceRequestScreen(route.changing)
         Route.AbsenceApprovals -> AbsenceApprovalsScreen()
         Route.Dispatch -> DispatchScreen()
         Route.Helpdesk -> HelpdeskScreen()

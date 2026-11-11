@@ -94,6 +94,22 @@ fun SectionCard(modifier: Modifier = Modifier, padding: PaddingValues = PaddingV
     }
 }
 
+/**
+ * Zeile [index] von [count] einer Karte, die über mehrere Listenelemente geht (LazyColumn): oben bzw. unten abgerundet,
+ * Trennlinie zwischen den Zeilen. So bleibt die Kartenoptik erhalten, ohne alle Zeilen auf einmal zu zeichnen.
+ */
+@Composable
+fun CardSlot(index: Int, count: Int, divider: Dp = 16.dp, content: @Composable ColumnScope.() -> Unit) {
+    val top = if (index == 0) 20.dp else 0.dp
+    val bottom = if (index == count - 1) 20.dp else 0.dp
+    Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom), color = tones.card) {
+        Column {
+            if (index > 0) RowDivider(divider)
+            content()
+        }
+    }
+}
+
 /** Überschrift eines Abschnitts mit optionaler Aktion rechts („Alle (5)“). */
 @Composable
 fun SectionHeader(title: String, modifier: Modifier = Modifier, action: String? = null, onAction: (() -> Unit)? = null) {
@@ -349,6 +365,36 @@ fun <T> rememberLoad(key: Any?, fetch: suspend () -> T): MutableState<Load<T>> {
         if (state.value is Load.Loading) state.value = attempt(fetch)
     }
     return state
+}
+
+/** Abfrage mit Nachladen: zeigt den letzten Stand sofort und lädt im Hintergrund nach (ohne blockierenden Ladekreis). */
+class Refreshable<T> internal constructor(val load: Load<T>, val refreshing: Boolean, private val trigger: MutableState<Int>) {
+    val value: T? get() = (load as? Load.Done<T>)?.value
+
+    fun refresh() {
+        trigger.value++
+    }
+}
+
+/**
+ * Wie [rememberLoad], aber mit Zwischenspeicher in der Sitzung ([cacheKey]): Beim Wiederöffnen erscheint der letzte Stand
+ * sofort, ein Fehler beim Nachladen überschreibt geladene Daten nicht.
+ */
+@Composable
+fun <T> rememberRefreshable(cacheKey: String, fetch: suspend () -> T): Refreshable<T> {
+    val session = LocalSession.current
+    @Suppress("UNCHECKED_CAST")
+    val state = remember(cacheKey) { mutableStateOf<Load<T>>((session.memo[cacheKey] as? T)?.let { Load.Done(it) } ?: Load.Loading) }
+    val refreshing = remember(cacheKey) { mutableStateOf(false) }
+    val trigger = remember(cacheKey) { mutableStateOf(0) }
+    LaunchedEffect(cacheKey, trigger.value) {
+        refreshing.value = true
+        val result = attempt(fetch)
+        if (result is Load.Done) result.value?.let { session.memo[cacheKey] = it }
+        if (result is Load.Done || state.value !is Load.Done) state.value = result
+        refreshing.value = false
+    }
+    return Refreshable(state.value, refreshing.value, trigger)
 }
 
 /** Ergebnis einer Abfrage auf den lokalen Stand; neu bei jeder Änderung (Revision). */

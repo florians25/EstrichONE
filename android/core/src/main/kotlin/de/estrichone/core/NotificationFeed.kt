@@ -135,6 +135,7 @@ object NotificationFeed {
         is NotificationRoute.Planning -> "Planung öffnen"
         NotificationRoute.Tasks -> "Aufgaben öffnen"
         is NotificationRoute.Chat -> "Chat öffnen"
+        is NotificationRoute.Absences -> if (route.approvals) "Anträge öffnen" else "Urlaub öffnen"
         NotificationRoute.Inbox -> "Postfach öffnen"
     }
 }

@@ -192,34 +192,35 @@ fun BauakteQuickPicker(title: String, onDone: (Bauakte?) -> Unit) {
         value = session.weekPlan()?.assignments?.filter { it.day == today }?.map { it.bauakteId }?.toSet().orEmpty()
     }
     val all = remember { session.service.bauakten() }
+    val customers = remember { session.service.contacts().associateBy { it.id } }
     ModalBottomSheet(onDismissRequest = { onDone(null) }, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
         Column(Modifier.padding(horizontal = 16.dp)) {
             Text(title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 4.dp))
             Secondary("Baustelle wählen", Modifier.padding(bottom = 12.dp))
-            SearchField(search, { search = it }, "Nummer, Bauvorhaben oder Adresse")
+            SearchField(search, { search = it }, "Nummer, Bauvorhaben, Adresse, Kunde")
         }
         LazyColumn(contentPadding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
             val today = all.filter { it.id in todayIds }
             if (search.isBlank() && today.isNotEmpty()) {
                 item { GroupLabel("Heute im Einsatz", Modifier.padding(start = 4.dp)) }
-                item { PickerCard(today, onDone) }
+                item { PickerCard(today, customers, onDone) }
             }
-            val others = all.filter { it.matches(search) && (search.isNotBlank() || (it.id !in todayIds && it.status.order <= 3)) }
+            val others = all.filter { it.matches(search, customers[it.customerId]) && (search.isNotBlank() || (it.id !in todayIds && it.status.order <= 3)) }
             item { GroupLabel(if (search.isBlank()) "Laufende Baustellen" else "Treffer", Modifier.padding(start = 4.dp)) }
             item {
                 if (others.isEmpty()) Secondary(if (search.isBlank()) "Keine weiteren laufenden Baustellen." else "Keine Bauakte gefunden.", Modifier.padding(8.dp))
-                else PickerCard(others, onDone)
+                else PickerCard(others, customers, onDone)
             }
         }
     }
 }
 
 @Composable
-private fun PickerCard(list: List<Bauakte>, onDone: (Bauakte?) -> Unit) {
+private fun PickerCard(list: List<Bauakte>, customers: Map<String, de.estrichone.core.Contact>, onDone: (Bauakte?) -> Unit) {
     SectionCard {
         list.forEachIndexed { index, b ->
             if (index > 0) RowDivider(16.dp)
-            BauakteRow(b, null, null) { onDone(b) }
+            BauakteRow(b, customers[b.customerId], null) { onDone(b) }
         }
     }
 }

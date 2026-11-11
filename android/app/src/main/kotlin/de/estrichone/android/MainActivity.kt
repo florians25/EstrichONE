@@ -30,6 +30,7 @@ class MainActivity : FragmentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        if (savedInstanceState == null) handleNotification(intent)
         setContent {
             val look by model.look.collectAsState()
             val stage by model.stage.collectAsState()
@@ -44,6 +45,19 @@ class MainActivity : FragmentActivity() {
                 }
             }
         }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleNotification(intent)
+    }
+
+    /** Angetippte Mitteilung: Ziel merken, die Hauptansicht öffnet es nach dem Entsperren. */
+    private fun handleNotification(intent: android.content.Intent?) {
+        val (route, id) = NotificationTarget.from(intent) ?: return
+        model.openFromNotification(route, id)
+        // Nicht bei jeder Konfigurationsänderung erneut öffnen.
+        intent?.removeExtra("de.estrichone.notification.id")
     }
 
     override fun onStart() {
