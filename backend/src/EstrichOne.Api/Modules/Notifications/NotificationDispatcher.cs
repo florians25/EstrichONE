@@ -1,6 +1,7 @@
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Notifications.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Notifications;
@@ -30,7 +31,8 @@ internal sealed class PushSignal : IDisposable
     public Task WaitAsync(TimeSpan timeout, CancellationToken cancellationToken) => _signal.WaitAsync(timeout, cancellationToken);
 }
 
-internal sealed partial class Notifier(EstrichOneDbContext db, ICurrentUser currentUser, TimeProvider clock, PushSignal signal, ILogger<Notifier> logger)
+internal sealed partial class Notifier(
+    EstrichOneDbContext db, ICurrentUser currentUser, TimeProvider clock, PushSignal signal, ISystemSettings settings, ILogger<Notifier> logger)
     : INotifier
 {
     public async Task NotifyAsync(IEnumerable<Guid> userIds, NotificationRequest notification, CancellationToken cancellationToken)
@@ -40,6 +42,12 @@ internal sealed partial class Notifier(EstrichOneDbContext db, ICurrentUser curr
             var actor = Actor();
             var ids = userIds.Where(id => id != Guid.Empty && id != actor).Distinct().ToList();
             if (ids.Count == 0)
+            {
+                return;
+            }
+
+            // Abgeschaltete Module (Einstellungen › Module) benachrichtigen nicht – weder Postfach noch Push.
+            if (!(await settings.GetAsync(cancellationToken)).Modules.AllowsNotification(notification.Event ?? NotificationEvents.Default(notification.Category)))
             {
                 return;
             }

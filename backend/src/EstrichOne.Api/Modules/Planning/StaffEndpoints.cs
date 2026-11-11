@@ -3,6 +3,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Documentation.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -121,7 +122,7 @@ internal static class StaffEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var staff = api.MapGroup("/staff").WithTags("Personal");
+        var staff = api.MapGroup("/staff").WithTags("Personal").RequireModule(AppModules.Staff);
         staff.MapGet("/employees", ListAsync).WithName("ListEmployees")
             .WithSummary("Mitarbeiter (status = active | former | all, search), mit Kolonnen, Resturlaub und ablaufenden Qualifikationen")
             .RequirePermission(Permissions.HrRead);

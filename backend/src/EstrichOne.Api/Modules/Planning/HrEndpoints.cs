@@ -8,6 +8,7 @@ using EstrichOne.Api.Modules.Documentation.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Mail.Exports;
 using EstrichOne.Api.Modules.Notifications.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -107,11 +108,12 @@ internal static class HrEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var hr = api.MapGroup("/hr").WithTags("Personal");
+        var root = api.MapGroup("/hr").WithTags("Personal");
+        var hr = root.MapGroup(string.Empty).RequireModule(AppModules.Absence); // Urlaub und Abwesenheit (setzt Personal voraus)
         hr.MapGet("/settings", GetSettingsAsync).WithName("GetHrSettings").RequirePermission(Permissions.HrRead);
         hr.MapPut("/settings", SaveSettingsAsync).WithName("SaveHrSettings").ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission(Permissions.HrManage);
-        hr.MapGet("/holidays", HolidaysAsync).WithName("ListHolidays").WithSummary("Gesetzliche Feiertage eines Jahres im eingestellten Bundesland")
+        root.MapGet("/holidays", HolidaysAsync).WithName("ListHolidays").WithSummary("Gesetzliche Feiertage eines Jahres im eingestellten Bundesland")
             .RequirePermission(Permissions.PlanningRead);
         hr.MapGet("/vacation-plan", PlanAsync).WithName("GetVacationPlan")
             .WithSummary("Teamkalender: Zeilen = Mitarbeiter, Abwesenheiten und offene Anträge von–bis (höchstens 370 Tage), Feiertage, Arten, Betriebsferien")
@@ -150,9 +152,9 @@ internal static class HrEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.HrManage);
         hr.MapDelete("/sick-notes/{id:guid}", DeleteSickNoteAsync).WithName("DeleteSickNote").ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission(Permissions.HrManage);
-        hr.MapGet("/reminders", RemindersAsync).WithName("ListHrReminders")
+        root.MapGet("/reminders", RemindersAsync).WithName("ListHrReminders")
             .WithSummary("Fristen: ablaufende Qualifikationen/Führerscheine/Unterweisungen, Probezeitende, Geburtstage, Jubiläen (days = Vorlauf)")
-            .RequirePermission(Permissions.HrRead);
+            .RequirePermission(Permissions.HrRead).RequireModule(AppModules.Staff);
 
         AbsenceAdminEndpoints.Map(hr);
     }

@@ -30,7 +30,7 @@ public sealed record SystemSettings
         Notifications = Notifications ?? new(),
         Appearance = (Appearance ?? new()).Normalize(),
         Pdf = (Pdf ?? new()).Normalize(),
-        Modules = Modules ?? new(),
+        Modules = (Modules ?? new()).Normalize(),
         Media = (Media ?? new()).Normalize(),
     };
 
@@ -228,10 +228,131 @@ public sealed record MediaSettings
     public MediaSettings Normalize() => this with { PhotoQuality = Math.Clamp(PhotoQuality, 60, 95), PhotoMaxEdge = Math.Clamp(PhotoMaxEdge, 2048, 8192) };
 }
 
-/// <summary>Abschaltbare Module. Daten bleiben beim Abschalten erhalten.</summary>
+/// <summary>
+/// Abschaltbare Module (Einstellungen › Module, Katalog in <see cref="AppModules"/>). Daten bleiben beim Abschalten erhalten;
+/// die Endpunkte eines abgeschalteten Moduls antworten mit 409 <c>MODULE_DISABLED</c>, Clients blenden es aus.
+/// Fehlende Werte (ältere Einstellungen) gelten als eingeschaltet.
+/// </summary>
 public sealed record ModuleSettings
 {
+    /// <summary>Anrufe und Anfragen.</summary>
+    public bool Calls { get; init; } = true;
+
+    /// <summary>Disposition und Kolonnenplanung (Cockpit, Kolonnenplanung, Teamplaner, Kalender, Arbeitsplan, Kolonnen).</summary>
+    public bool Planning { get; init; } = true;
+
+    /// <summary>Maschinen und Fahrzeuge (Stammdaten der Geräte; setzt die Planung voraus).</summary>
+    public bool Machines { get; init; } = true;
+
+    /// <summary>Baustellenkarte.</summary>
+    public bool Map { get; init; } = true;
+
+    /// <summary>Material und Lieferanten.</summary>
     public bool Materials { get; init; } = true;
+
+    /// <summary>Bestellungen (setzt Material voraus).</summary>
+    public bool Orders { get; init; } = true;
+
+    /// <summary>Personal (Mitarbeiter, Qualifikationen, Fristen).</summary>
+    public bool Staff { get; init; } = true;
+
+    /// <summary>Urlaub und Abwesenheit (setzt Personal voraus).</summary>
+    public bool Absence { get; init; } = true;
+
+    /// <summary>Erstbegehung und Prüfprotokolle.</summary>
+    public bool Inspections { get; init; } = true;
+
+    /// <summary>Bautagebuch.</summary>
+    public bool Diary { get; init; } = true;
+
+    /// <summary>Abnahmen (Abnahmeprotokoll, Kundenfreigabe).</summary>
+    public bool Acceptance { get; init; } = true;
+
+    /// <summary>Aufgaben.</summary>
+    public bool Tasks { get; init; } = true;
+
+    /// <summary>Mängel.</summary>
+    public bool Defects { get; init; } = true;
+
+    /// <summary>Dokumentfreigaben.</summary>
+    public bool Approvals { get; init; } = true;
+
+    /// <summary>Aktenarchiv (abgeschlossene Bauakten als Archivakte).</summary>
+    public bool Dossiers { get; init; } = true;
+
+    /// <summary>Helpdesk (Supporttickets an die IT).</summary>
+    public bool Helpdesk { get; init; } = true;
+
+    /// <summary>Feedback (Fehlermeldungen und Funktionswünsche).</summary>
+    public bool Feedback { get; init; } = true;
+
+    /// <summary>Eingeschaltet? Kernmodule und unbekannte Schlüssel gelten als eingeschaltet.</summary>
+    public bool IsEnabled(string key) => key switch
+    {
+        AppModules.Calls => Calls,
+        AppModules.Planning => Planning,
+        AppModules.Machines => Machines,
+        AppModules.Map => Map,
+        AppModules.Materials => Materials,
+        AppModules.Orders => Orders,
+        AppModules.Staff => Staff,
+        AppModules.Absence => Absence,
+        AppModules.Inspections => Inspections,
+        AppModules.Diary => Diary,
+        AppModules.Acceptance => Acceptance,
+        AppModules.Tasks => Tasks,
+        AppModules.Defects => Defects,
+        AppModules.Approvals => Approvals,
+        AppModules.Dossiers => Dossiers,
+        AppModules.Helpdesk => Helpdesk,
+        AppModules.Feedback => Feedback,
+        _ => true,
+    };
+
+    /// <summary>Einen Schalter setzen (unbekannte Schlüssel und Kernmodule bleiben unverändert).</summary>
+    public ModuleSettings With(string key, bool on) => key switch
+    {
+        AppModules.Calls => this with { Calls = on },
+        AppModules.Planning => this with { Planning = on },
+        AppModules.Machines => this with { Machines = on },
+        AppModules.Map => this with { Map = on },
+        AppModules.Materials => this with { Materials = on },
+        AppModules.Orders => this with { Orders = on },
+        AppModules.Staff => this with { Staff = on },
+        AppModules.Absence => this with { Absence = on },
+        AppModules.Inspections => this with { Inspections = on },
+        AppModules.Diary => this with { Diary = on },
+        AppModules.Acceptance => this with { Acceptance = on },
+        AppModules.Tasks => this with { Tasks = on },
+        AppModules.Defects => this with { Defects = on },
+        AppModules.Approvals => this with { Approvals = on },
+        AppModules.Dossiers => this with { Dossiers = on },
+        AppModules.Helpdesk => this with { Helpdesk = on },
+        AppModules.Feedback => this with { Feedback = on },
+        _ => this,
+    };
+
+    /// <summary>Abhängigkeiten durchsetzen: Ist eine Voraussetzung aus, ist auch das abhängige Modul aus (z. B. Urlaub ohne Personal).</summary>
+    public ModuleSettings Normalize()
+    {
+        var result = this;
+        bool changed;
+        do
+        {
+            changed = false;
+            foreach (var module in AppModules.Switchable)
+            {
+                if (result.IsEnabled(module.Key) && module.Requires.Any(r => !result.IsEnabled(r)))
+                {
+                    result = result.With(module.Key, false);
+                    changed = true;
+                }
+            }
+        }
+        while (changed);
+
+        return result;
+    }
 }
 
 public sealed record ApprovalSettings

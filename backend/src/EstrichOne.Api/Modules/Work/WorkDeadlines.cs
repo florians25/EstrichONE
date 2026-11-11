@@ -1,17 +1,19 @@
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Notifications.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Work;
 
 /// <summary>Offene, zugewiesene Aufgaben und Mängel mit Frist für die tägliche Fristen-Benachrichtigung.</summary>
-internal sealed class WorkDeadlines(EstrichOneDbContext db) : IDeadlineSource
+internal sealed class WorkDeadlines(EstrichOneDbContext db, ISystemSettings settings) : IDeadlineSource
 {
     public async Task<IReadOnlyList<DeadlineItem>> DueAsync(DateOnly until, CancellationToken cancellationToken)
     {
         var from = until.AddDays(-7); // Überfälliges nur eine Woche lang melden (je Tag höchstens einmal).
+        var kinds = await WorkEndpoints.EnabledKindsAsync(settings, cancellationToken); // abgeschaltete Module melden keine Fristen
         var items = await db.Set<WorkItem>().AsNoTracking()
-            .Where(w => w.AssigneeUserId != null && w.DueDate != null && w.DueDate <= until && w.DueDate >= from
+            .Where(w => kinds.Contains(w.Kind) && w.AssigneeUserId != null && w.DueDate != null && w.DueDate <= until && w.DueDate >= from
                 && w.Status != WorkItemStatus.Done)
             .Select(w => new { w.Id, w.AssigneeUserId, w.DueDate, w.Title, w.Kind, w.BauakteId })
             .Take(2000).ToListAsync(cancellationToken);

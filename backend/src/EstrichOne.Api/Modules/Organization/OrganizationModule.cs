@@ -26,6 +26,7 @@ public sealed class OrganizationModule : IModule
         CompanyEndpoints.Map(api);
         CatalogEndpoints.Map(api);
         SystemSettingsEndpoints.Map(api);
+        ModuleEndpoints.Map(api);
         CompanyLogoEndpoints.Map(api);
         ValueListEndpoints.Map(api);
         FormSchemaEndpoints.Map(api);

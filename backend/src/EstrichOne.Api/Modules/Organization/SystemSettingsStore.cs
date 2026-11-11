@@ -117,9 +117,11 @@ internal static class SystemSettingsEndpoints
             db.Add(row);
         }
 
+        var before = SystemSettingsStore.Parse(row.Data);
         var normalized = request.Settings.Normalize();
         row.Update(JsonSerializer.Serialize(normalized, SystemSettingsStore.Json));
         audit.Record("settings.saved", currentUser.UserId, "settings", "system");
+        ModuleEndpoints.RecordChanges(audit, currentUser.UserId, before.Modules, normalized.Modules);
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(new SystemSettingsResponse(normalized, row.Version));
     }

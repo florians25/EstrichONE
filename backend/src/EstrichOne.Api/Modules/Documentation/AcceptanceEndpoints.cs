@@ -35,7 +35,7 @@ internal static class AcceptanceEndpoints
 {
     public static void Map(IEndpointRouteBuilder api)
     {
-        var group = api.MapGroup("/").WithTags("Abnahme");
+        var group = api.MapGroup("/").WithTags("Abnahme").RequireModule(AppModules.Acceptance);
         group.MapGet("/bauakten/{id:guid}/acceptances", ListAsync).WithName("ListAcceptances").WithSummary("Abnahmeprotokolle der Bauakte (neueste zuerst)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
         group.MapGet("/bauakten/{id:guid}/acceptance-form.pdf", BlankAsync).WithName("AcceptanceFormPdf")
@@ -50,7 +50,7 @@ internal static class AcceptanceEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.InspectionsWrite);
 
-        var open = api.MapGroup("/public/acceptances/{token}").WithTags("Abnahme (öffentlich)").AllowAnonymous()
+        var open = api.MapGroup("/public/acceptances/{token}").WithTags("Abnahme (öffentlich)").AllowAnonymous().RequireModule(AppModules.Acceptance)
             .RequireRateLimiting("auth-refresh"); // Grenze je Adresse wie beim Erneuern der Sitzung
         open.MapGet("/", PublicViewAsync).WithName("GetPublicAcceptance").ProducesProblem(StatusCodes.Status404NotFound);
         open.MapGet("/photos/{fileId:guid}", PublicPhotoAsync).WithName("GetPublicAcceptancePhoto").ProducesProblem(StatusCodes.Status404NotFound);

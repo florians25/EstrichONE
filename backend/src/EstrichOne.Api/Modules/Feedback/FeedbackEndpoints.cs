@@ -4,6 +4,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -49,7 +50,7 @@ internal static class FeedbackEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var group = api.MapGroup("/feedback").WithTags("Feedback");
+        var group = api.MapGroup("/feedback").WithTags("Feedback").RequireModule(AppModules.Feedback);
 
         group.MapPost("/", CreateAsync).WithName("CreateFeedback")
             .WithSummary("Fehler melden oder Funktion wünschen (jeder angemeldete Benutzer; idempotent über die ID)")

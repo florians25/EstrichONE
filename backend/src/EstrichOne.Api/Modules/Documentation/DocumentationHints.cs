@@ -13,6 +13,11 @@ internal sealed class DocumentationHints(EstrichOneDbContext db, Organization.Ex
     public async Task<IReadOnlyList<BauakteHint>> GetHintsAsync(Bauakte bauakte, DateOnly today, CancellationToken cancellationToken)
     {
         var hints = new List<BauakteHint>();
+        if (!(await settings.GetAsync(cancellationToken)).Modules.Inspections)
+        {
+            return hints; // Modul Erstbegehung und Protokolle abgeschaltet
+        }
+
         var inspections = await db.Set<Inspection>().AsNoTracking().Where(i => i.BauakteId == bauakte.Id)
             .OrderByDescending(i => i.PerformedAt).ToListAsync(cancellationToken);
 

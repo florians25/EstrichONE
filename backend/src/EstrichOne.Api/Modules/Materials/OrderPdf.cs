@@ -97,14 +97,7 @@ internal static class OrderPdfEndpoints
         api.MapGet("/material-orders/{id:guid}/pdf", PdfAsync).WithTags("Material").WithName("MaterialOrderPdf")
             .WithSummary("Bestellschein als PDF (DIN 5008); mit Bezug zur Bauakte wird er dort unter Büro / Bestellungen abgelegt")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf").ProducesProblem(StatusCodes.Status404NotFound)
-            .RequirePermission(Permissions.MaterialsRead).RequireMaterialsModule();
-
-    private static RouteHandlerBuilder RequireMaterialsModule(this RouteHandlerBuilder builder) =>
-        builder.AddEndpointFilter(async (context, next) =>
-        {
-            var settings = await context.HttpContext.RequestServices.GetRequiredService<ISystemSettings>().GetAsync(context.HttpContext.RequestAborted);
-            return settings.Modules.Materials ? await next(context) : MaterialsGate.Disabled();
-        });
+            .RequirePermission(Permissions.MaterialsRead).RequireModule(AppModules.Orders);
 
     private static async Task<Results<FileContentHttpResult, ProblemHttpResult>> PdfAsync(
         Guid id, EstrichOneDbContext db, IBauakteAccess access, OrderPdf pdf, ICurrentUser currentUser, CancellationToken cancellationToken)

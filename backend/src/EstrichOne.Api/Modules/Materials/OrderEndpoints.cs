@@ -4,6 +4,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -52,7 +53,7 @@ internal static class OrderEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var orders = api.MapGroup("/material-orders").WithTags("Material").RequireMaterialsModule();
+        var orders = api.MapGroup("/material-orders").WithTags("Material").RequireModule(AppModules.Orders);
         orders.MapGet("/", ListAsync).WithName("ListMaterialOrders")
             .WithSummary("Bestellungen; open=true nur Bestellt/Bestätigt; from/to auf den Liefertag")
             .RequirePermission(Permissions.MaterialsRead);

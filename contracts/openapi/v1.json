@@ -3139,6 +3139,92 @@
         ]
       }
     },
+    "/api/v1/settings/modules": {
+      "get": {
+        "tags": [
+          "Einstellungen"
+        ],
+        "summary": "Module der Suite mit Zustand, Bereich und Abhängigkeiten (für alle Angemeldeten; Apps blenden abgeschaltete Module aus)",
+        "operationId": "GetModules",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModulesResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Einstellungen"
+        ],
+        "summary": "Module ein- oder ausschalten (Abhängigkeiten werden geprüft, Daten bleiben erhalten, Eintrag im Protokoll)",
+        "operationId": "SaveModules",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveModulesRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModulesResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/company/logo": {
       "get": {
         "tags": [
@@ -11906,48 +11992,6 @@
         ]
       }
     },
-    "/api/v1/hr/holidays": {
-      "get": {
-        "tags": [
-          "Personal"
-        ],
-        "summary": "Gesetzliche Feiertage eines Jahres im eingestellten Bundesland",
-        "operationId": "ListHolidays",
-        "parameters": [
-          {
-            "name": "year",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/Holiday"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Nicht angemeldet oder Token abgelaufen"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/hr/vacation-plan": {
       "get": {
         "tags": [
@@ -12591,49 +12635,6 @@
         ]
       }
     },
-    "/api/v1/hr/reminders": {
-      "get": {
-        "tags": [
-          "Personal"
-        ],
-        "summary": "Fristen: ablaufende Qualifikationen/Führerscheine/Unterweisungen, Probezeitende, Geburtstage, Jubiläen (days = Vorlauf)",
-        "operationId": "ListHrReminders",
-        "parameters": [
-          {
-            "name": "days",
-            "in": "query",
-            "schema": {
-              "type": "integer",
-              "format": "int32",
-              "default": 60
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "type": "array",
-                  "items": {
-                    "$ref": "#/components/schemas/HrReminder"
-                  }
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "Nicht angemeldet oder Token abgelaufen"
-          }
-        },
-        "security": [
-          {
-            "bearer": []
-          }
-        ]
-      }
-    },
     "/api/v1/hr/absence-types": {
       "get": {
         "tags": [
@@ -13039,6 +13040,91 @@
               "application/problem+json": {
                 "schema": {
                   "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/holidays": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Gesetzliche Feiertage eines Jahres im eingestellten Bundesland",
+        "operationId": "ListHolidays",
+        "parameters": [
+          {
+            "name": "year",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Holiday"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/hr/reminders": {
+      "get": {
+        "tags": [
+          "Personal"
+        ],
+        "summary": "Fristen: ablaufende Qualifikationen/Führerscheine/Unterweisungen, Probezeitende, Geburtstage, Jubiläen (days = Vorlauf)",
+        "operationId": "ListHrReminders",
+        "parameters": [
+          {
+            "name": "days",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 60
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/HrReminder"
+                  }
                 }
               }
             }
@@ -30359,8 +30445,120 @@
       "ModuleSettings": {
         "type": "object",
         "properties": {
+          "calls": {
+            "type": "boolean"
+          },
+          "planning": {
+            "type": "boolean"
+          },
+          "machines": {
+            "type": "boolean"
+          },
+          "map": {
+            "type": "boolean"
+          },
           "materials": {
             "type": "boolean"
+          },
+          "orders": {
+            "type": "boolean"
+          },
+          "staff": {
+            "type": "boolean"
+          },
+          "absence": {
+            "type": "boolean"
+          },
+          "inspections": {
+            "type": "boolean"
+          },
+          "diary": {
+            "type": "boolean"
+          },
+          "acceptance": {
+            "type": "boolean"
+          },
+          "tasks": {
+            "type": "boolean"
+          },
+          "defects": {
+            "type": "boolean"
+          },
+          "approvals": {
+            "type": "boolean"
+          },
+          "dossiers": {
+            "type": "boolean"
+          },
+          "helpdesk": {
+            "type": "boolean"
+          },
+          "feedback": {
+            "type": "boolean"
+          }
+        }
+      },
+      "ModulesResponse": {
+        "required": [
+          "modules",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ModuleStateResponse"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "ModuleStateResponse": {
+        "required": [
+          "key",
+          "area",
+          "title",
+          "description",
+          "enabled",
+          "core",
+          "requires",
+          "requiredBy"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "area": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean"
+          },
+          "core": {
+            "type": "boolean"
+          },
+          "requires": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "requiredBy": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -35377,6 +35575,27 @@
           "isActive": {
             "type": "boolean",
             "default": true
+          }
+        }
+      },
+      "SaveModulesRequest": {
+        "required": [
+          "modules"
+        ],
+        "type": "object",
+        "properties": {
+          "modules": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "boolean"
+            }
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },

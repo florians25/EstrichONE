@@ -4,6 +4,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -61,7 +62,7 @@ internal static class CalendarEndpoints
 {
     public static void Map(IEndpointRouteBuilder api)
     {
-        var group = api.MapGroup("/calendar").WithTags("Kalender");
+        var group = api.MapGroup("/calendar").WithTags("Kalender").RequireModule(AppModules.Planning);
         group.MapGet("/calendars", ListCalendarsAsync).WithName("ListCalendars")
             .WithSummary("Sichtbare Kalender (gemeinsame und der eigene persönliche, der bei Bedarf angelegt wird)")
             .RequirePermission(Permissions.PlanningRead);

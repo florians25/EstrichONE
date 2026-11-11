@@ -3,6 +3,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 
 namespace EstrichOne.Api.Modules.Archive;
@@ -13,7 +14,7 @@ internal static class DossierEndpoints
 {
     public static void Map(IEndpointRouteBuilder api)
     {
-        var dossiers = api.MapGroup("/archive/dossiers").WithTags("Aktenarchiv");
+        var dossiers = api.MapGroup("/archive/dossiers").WithTags("Aktenarchiv").RequireModule(AppModules.Dossiers);
 
         dossiers.MapGet("/", async (DossierService service, string? ids, CancellationToken ct) =>
                 TypedResults.Ok(await service.ListAsync(

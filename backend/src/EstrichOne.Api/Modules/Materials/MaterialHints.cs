@@ -13,7 +13,7 @@ internal sealed class MaterialHints(EstrichOneDbContext db, ISystemSettings sett
 
     public async Task<IReadOnlyList<BauakteHint>> GetHintsAsync(Bauakte bauakte, DateOnly today, CancellationToken cancellationToken)
     {
-        if (!(await settings.GetAsync(cancellationToken)).Modules.Materials)
+        if (!(await settings.GetAsync(cancellationToken)).Modules.Orders)
         {
             return [];
         }

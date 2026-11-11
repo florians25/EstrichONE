@@ -50,7 +50,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
     [
         "GET /api/v1/directory/users", // nur Name und Status (Zuständige auswählen), keine Kontaktdaten
         "GET /api/v1/bauakten/{id:guid}/history", "GET /api/v1/files/{id:guid}", "GET /api/v1/files/{id:guid}/content", // IBauakteAccess
-        "GET /api/v1/system/health-banner", "GET /api/v1/settings/", "GET /api/v1/company/", "GET /api/v1/company/logo/info",
+        "GET /api/v1/system/health-banner", "GET /api/v1/settings/", "GET /api/v1/settings/modules/", "GET /api/v1/company/", "GET /api/v1/company/logo/info",
         "POST /api/v1/auth/logout", "GET /api/v1/auth/me", "POST /api/v1/auth/change-password", "GET /api/v1/access/me/permissions",
         "GET /api/v1/auth/two-factor/", "POST /api/v1/auth/two-factor/setup", "POST /api/v1/auth/two-factor/enable",
         "POST /api/v1/auth/two-factor/recovery-codes", "POST /api/v1/auth/two-factor/disable",

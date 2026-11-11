@@ -5,6 +5,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -35,7 +36,7 @@ internal static class ApprovalEndpoints
 {
     public static void Map(IEndpointRouteBuilder api)
     {
-        var files = api.MapGroup("/files").WithTags("Freigaben");
+        var files = api.MapGroup("/files").WithTags("Freigaben").RequireModule(AppModules.Approvals);
         files.MapGet("/{fileId:guid}/approvals", HistoryAsync).WithName("ListFileApprovals")
             .WithSummary("Freigabeverlauf eines Dokuments (neueste zuerst)")
             .RequirePermission(Permissions.BauaktenRead);
@@ -44,7 +45,7 @@ internal static class ApprovalEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(Permissions.FilesUpload);
 
-        var approvals = api.MapGroup("/approvals").WithTags("Freigaben");
+        var approvals = api.MapGroup("/approvals").WithTags("Freigaben").RequireModule(AppModules.Approvals);
         approvals.MapGet("/", ListAsync).WithName("ListApprovals")
             .WithSummary("Freigaben: scope=mine (an mich oder meine Rollen), requested (von mir angefragt), all; status=pending|done|all")
             .RequirePermission(Permissions.BauaktenRead);

@@ -3,6 +3,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -56,14 +57,14 @@ internal static class PlanningEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var planning = api.MapGroup("/planning").WithTags("Planung");
+        var planning = api.MapGroup("/planning").WithTags("Planung").RequireModule(AppModules.Planning);
         PlanningPrint.Map(planning);
 
         planning.MapGet("/resources", async (EstrichOneDbContext db, CancellationToken ct) => TypedResults.Ok(
                 (await db.Set<Resource>().AsNoTracking().OrderBy(r => r.Kind).ThenBy(r => r.Name).ToListAsync(ct)).Select(ToResponse).ToList()))
             .WithName("ListResources").RequirePermission(Permissions.PlanningRead);
         planning.MapPut("/resources/{id:guid}", SaveResourceAsync).WithName("SaveResource")
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.PlanningManage);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).RequirePermission(Permissions.PlanningManage).RequireModule(AppModules.Machines);
 
         planning.MapGet("/crews", async (EstrichOneDbContext db, CancellationToken ct) => TypedResults.Ok(
                 (await db.Set<Crew>().AsNoTracking().OrderBy(c => c.SortOrder).ThenBy(c => c.Name).ToListAsync(ct)).Select(ToResponse).ToList()))

@@ -6,6 +6,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Devices.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -72,7 +73,7 @@ internal static class TicketEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var group = api.MapGroup("/tickets").WithTags("Helpdesk");
+        var group = api.MapGroup("/tickets").WithTags("Helpdesk").RequireModule(AppModules.Helpdesk);
 
         group.MapPost("/", CreateAsync).WithName("CreateTicket").WithSummary("Problem melden (idempotent über die Ticket-ID)")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)

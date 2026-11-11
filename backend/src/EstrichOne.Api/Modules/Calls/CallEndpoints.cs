@@ -4,6 +4,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Contacts.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -62,7 +63,7 @@ internal static class CallEndpoints
 
     public static void Map(IEndpointRouteBuilder api)
     {
-        var calls = api.MapGroup("/calls").WithTags("Anrufe und Anfragen");
+        var calls = api.MapGroup("/calls").WithTags("Anrufe und Anfragen").RequireModule(AppModules.Calls);
         calls.MapGet("/", ListAsync).WithName("ListCalls")
             .WithSummary("Anrufe oder Anfragen, neueste zuerst; due=true nur fällige Wiedervorlagen")
             .RequirePermission(Permissions.ContactsRead);

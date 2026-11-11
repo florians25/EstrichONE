@@ -3,6 +3,7 @@ using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -60,7 +61,7 @@ internal static class CockpitEndpoints
 {
     public static void Map(IEndpointRouteBuilder api)
     {
-        var planning = api.MapGroup("/planning").WithTags("Planung");
+        var planning = api.MapGroup("/planning").WithTags("Planung").RequireModule(AppModules.Planning);
         planning.MapGet("/cockpit", BoardAsync).WithName("GetPlanningCockpit")
             .WithSummary("Disponenten-Cockpit: Kolonnen × Tage mit Tagesbesetzung, Fahrzeugen, Auslastung, Konflikten und Freigabestand (höchstens 62 Tage)")
             .ProducesProblem(StatusCodes.Status400BadRequest).RequirePermission(Permissions.PlanningRead);

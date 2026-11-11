@@ -4,6 +4,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Notifications.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -34,9 +35,9 @@ internal static class WorkEndpoints
     public static void Map(IEndpointRouteBuilder api)
     {
         api.MapGet("/bauakten/{id:guid}/work-items", ListForBauakteAsync).WithName("ListBauakteWorkItems").WithTags("Aufgaben")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.WorkRead);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.WorkRead).RequireModule(AppModules.Tasks, AppModules.Defects);
 
-        var group = api.MapGroup("/work-items").WithTags("Aufgaben");
+        var group = api.MapGroup("/work-items").WithTags("Aufgaben").RequireModule(AppModules.Tasks, AppModules.Defects);
         group.MapGet("/mine", MineAsync).WithName("ListMyWorkItems").WithSummary("Offene Aufgaben, die mir zugewiesen sind")
             .RequirePermission(Permissions.WorkRead);
         group.MapPost("/", CreateAsync).WithName("CreateWorkItem").WithSummary("Aufgabe oder Mangel anlegen (idempotent über die ID)")
@@ -47,32 +48,61 @@ internal static class WorkEndpoints
             .RequirePermission(Permissions.WorkEdit);
     }
 
+    /// <summary>Arten, deren Modul eingeschaltet ist (Aufgaben, Mängel).</summary>
+    internal static async Task<WorkItemKind[]> EnabledKindsAsync(ISystemSettings settings, CancellationToken cancellationToken)
+    {
+        var modules = (await settings.GetAsync(cancellationToken)).Modules;
+        var kinds = new List<WorkItemKind>(2);
+        if (modules.Tasks)
+        {
+            kinds.Add(WorkItemKind.Task);
+        }
+
+        if (modules.Defects)
+        {
+            kinds.Add(WorkItemKind.Defect);
+        }
+
+        return [.. kinds];
+    }
+
     private static async Task<Results<Ok<List<WorkItemDto>>, ProblemHttpResult>> ListForBauakteAsync(
-        Guid id, IBauakteAccess access, EstrichOneDbContext db, CancellationToken cancellationToken)
+        Guid id, IBauakteAccess access, EstrichOneDbContext db, ISystemSettings settings, CancellationToken cancellationToken)
     {
         if (!await access.CanReadAsync(id, cancellationToken))
         {
             return BauakteNotFound();
         }
 
-        var items = await db.Set<WorkItem>().AsNoTracking().Where(w => w.BauakteId == id)
+        var kinds = await EnabledKindsAsync(settings, cancellationToken);
+        var items = await db.Set<WorkItem>().AsNoTracking().Where(w => w.BauakteId == id && kinds.Contains(w.Kind))
             .OrderBy(w => w.Status == WorkItemStatus.Done).ThenBy(w => w.DueDate == null).ThenBy(w => w.DueDate).ThenBy(w => w.Title)
             .ToListAsync(cancellationToken);
         return TypedResults.Ok(items.Select(WorkItemDto.From).ToList());
     }
 
-    private static async Task<Ok<List<WorkItemDto>>> MineAsync(EstrichOneDbContext db, ICurrentUser currentUser, CancellationToken cancellationToken)
+    private static async Task<Ok<List<WorkItemDto>>> MineAsync(
+        EstrichOneDbContext db, ICurrentUser currentUser, ISystemSettings settings, CancellationToken cancellationToken)
     {
+        var kinds = await EnabledKindsAsync(settings, cancellationToken);
         var items = await db.Set<WorkItem>().AsNoTracking()
-            .Where(w => w.AssigneeUserId == currentUser.UserId && w.Status != WorkItemStatus.Done)
+            .Where(w => w.AssigneeUserId == currentUser.UserId && w.Status != WorkItemStatus.Done && kinds.Contains(w.Kind))
             .OrderBy(w => w.DueDate == null).ThenBy(w => w.DueDate).Take(200).ToListAsync(cancellationToken);
         return TypedResults.Ok(items.Select(WorkItemDto.From).ToList());
     }
 
     private static async Task<Results<Created<WorkItemDto>, Ok<WorkItemDto>, ProblemHttpResult>> CreateAsync(
         CreateWorkItemRequest request, IBauakteAccess access, IBauakteHistory history, ICurrentUser currentUser, EstrichOneDbContext db,
-        INotifier notifier, IBauakteReportSource bauakten, CancellationToken cancellationToken)
+        INotifier notifier, IBauakteReportSource bauakten, ISystemSettings settings, CancellationToken cancellationToken)
     {
+        if (!(await EnabledKindsAsync(settings, cancellationToken)).Contains(request.Kind))
+        {
+            var key = request.Kind == WorkItemKind.Defect ? AppModules.Defects : AppModules.Tasks;
+            return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Modul deaktiviert",
+                detail: $"Das Modul „{AppModules.Find(key)!.Title}“ ist deaktiviert (Einstellungen › Module).",
+                extensions: new Dictionary<string, object?> { ["code"] = AppModules.DisabledCode, ["module"] = key });
+        }
+
         if (request.BauakteId is { } bauakteId && !await access.CanReadAsync(bauakteId, cancellationToken))
         {
             return BauakteNotFound();

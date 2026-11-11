@@ -312,13 +312,13 @@ internal static class SiteRecordEndpoints
     {
         var group = api.MapGroup("/bauakten/{id:guid}").WithTags("Bautagebuch und Prüfungen");
         group.MapGet("/diary", ListDiaryAsync).WithName("ListDiaryEntries").WithSummary("Bautagebuch (neuester Tag zuerst)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead).RequireModule(AppModules.Diary);
         group.MapGet("/inspections", ListInspectionsAsync).WithName("ListInspections").WithSummary("Prüfungen (neueste zuerst)")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead).RequireModule(AppModules.Inspections);
         group.MapGet("/initial-inspection.pdf", InitialInspectionPdfAsync).WithName("InitialInspectionPdf")
             .WithSummary("Erstbegehungsprotokoll als PDF (neueste Erstbegehung; mit inspectionId eine bestimmte Prüfung)")
             .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
-            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead).RequireModule(AppModules.Inspections);
     }
 
     private static async Task<IResult> InitialInspectionPdfAsync(

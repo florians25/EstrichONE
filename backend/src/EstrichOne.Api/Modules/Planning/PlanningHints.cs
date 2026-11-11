@@ -1,17 +1,23 @@
 using System.Globalization;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Bauakten.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.EntityFrameworkCore;
 
 namespace EstrichOne.Api.Modules.Planning;
 
 /// <summary>„Einsatz heute“ bzw. „Nächster Einsatz“ in der Bauakte.</summary>
-internal sealed class PlanningHints(EstrichOneDbContext db) : IBauakteHintSource
+internal sealed class PlanningHints(EstrichOneDbContext db, ISystemSettings settings) : IBauakteHintSource
 {
     private static readonly CultureInfo German = CultureInfo.GetCultureInfo("de-DE");
 
     public async Task<IReadOnlyList<BauakteHint>> GetHintsAsync(Bauakte bauakte, DateOnly today, CancellationToken cancellationToken)
     {
+        if (!(await settings.GetAsync(cancellationToken)).Modules.Planning)
+        {
+            return [];
+        }
+
         var upcoming = await db.Set<Assignment>().AsNoTracking()
             .Where(a => a.BauakteId == bauakte.Id && a.Day >= today && a.Day <= today.AddDays(30))
             .OrderBy(a => a.Day).ThenBy(a => a.StartTime)
