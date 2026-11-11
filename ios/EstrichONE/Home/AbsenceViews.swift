@@ -24,6 +24,8 @@ struct AbsenceOverviewView: View {
     @State private var error: String?
     @State private var highlighted: UUID?
     @State private var handledLaunchTarget = false
+    /// Zähler für die Bestätigung per Vibration nach dem Senden.
+    @State private var sent = 0
 
     private static let cacheKey = "hr_me"
 
@@ -48,6 +50,7 @@ struct AbsenceOverviewView: View {
                 NavigationStack {
                     AbsenceRequestSheet(types: mine.requestableTypes) {
                         requesting = false
+                        sent += 1
                         Task { await load() }
                     }
                 }
@@ -58,6 +61,7 @@ struct AbsenceOverviewView: View {
                 NavigationStack {
                     AbsenceRequestSheet(types: mine.requestableTypes, replaces: request) {
                         changing = nil
+                        sent += 1
                         Task { await load() }
                     }
                 }
@@ -77,6 +81,7 @@ struct AbsenceOverviewView: View {
         .alert("Nicht möglich", isPresented: Binding(get: { error != nil }, set: { if !$0 { error = nil } })) {
             Button("OK", role: .cancel) {}
         } message: { Text(error ?? "") }
+        .sensoryFeedback(.success, trigger: sent)
         .task { await load() }
         .refreshable { await load() }
     }
@@ -558,6 +563,7 @@ struct AbsenceApprovalsView: View {
     @State private var rejecting: AbsenceRequestItem?
     @State private var reason = ""
     @State private var error: String?
+    @State private var decided = 0
 
     var body: some View {
         List {
@@ -587,6 +593,7 @@ struct AbsenceApprovalsView: View {
             }
         }
         .navigationTitle("Anträge genehmigen")
+        .sensoryFeedback(.success, trigger: decided)
         .alert("Antrag ablehnen", isPresented: Binding(get: { rejecting != nil }, set: { if !$0 { rejecting = nil } })) {
             TextField("Begründung", text: $reason)
             Button("Abbrechen", role: .cancel) {}
@@ -619,6 +626,7 @@ struct AbsenceApprovalsView: View {
         guard let client = model.active?.client else { return }
         do throws(APIError) {
             _ = try await client.decideAbsence(item.id, approve: approve, comment: comment)
+            decided += 1
             await load()
             onChange()
         } catch {
