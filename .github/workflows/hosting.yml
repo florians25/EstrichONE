@@ -95,7 +95,8 @@ jobs:
           E2E_BASE_URL: http://localhost:5090
         run: |
           npm ci
-          npx playwright install --with-deps chromium
+          # Systempakete sind auf dem Runner meist vorhanden; fällt der Paketspiegel aus, nur den Browser laden.
+          npx playwright install --with-deps chromium || npx playwright install chromium
           npx playwright test
       - name: Protokoll der Konsole
         if: failure()
