@@ -257,7 +257,7 @@ struct TicketDetailView: View {
                             TicketTimelineRow(entry: entry, isOwn: isOwn(entry))
                                 .id(entry.id)
                         }
-                        if detail.canRate, !isAgent { ratingCard(detail) }
+                        if detail.isRatable, !isAgent { ratingCard(detail) }
                         if detail.summary.status == .resolved, !isAgent {
                             Button("Ticket wieder öffnen") { Task { await reopen() } }
                                 .estrichButton(.secondary, fullWidth: true)
@@ -346,8 +346,8 @@ struct TicketDetailView: View {
             if let merged = detail.mergedIntoNumber {
                 Callout(tone: .info, title: "Zusammengeführt", message: "Diese Meldung wurde mit \(merged) zusammengeführt. Antworten erhalten Sie dort.")
             }
-            if !detail.articles.isEmpty {
-                Callout(tone: .info, title: "Anleitung der IT", message: detail.articles.map(\.title).joined(separator: "\n"), symbol: "book.fill")
+            if !detail.linkedArticles.isEmpty {
+                Callout(tone: .info, title: "Anleitung der IT", message: detail.linkedArticles.map(\.title).joined(separator: "\n"), symbol: "book.fill")
             }
         }
     }

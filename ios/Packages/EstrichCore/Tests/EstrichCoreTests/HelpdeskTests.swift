@@ -166,8 +166,8 @@ struct HelpdeskTests {
          "mergedIntoNumber":null,"articles":[{"id":"0193a1b2-0000-7000-8000-0000000000a1","title":"Papierstau beheben","isPublished":true}]}
         """
         let detail = try JSONCoding.decoder.decode(TicketDetail.self, from: Data(json.utf8))
-        #expect(detail.canRate && detail.rating == 4 && detail.ratingComment == "Schnell")
-        #expect(detail.articles.map(\.title) == ["Papierstau beheben"])
+        #expect(detail.isRatable && detail.rating == 4 && detail.ratingComment == "Schnell")
+        #expect(detail.linkedArticles.map(\.title) == ["Papierstau beheben"])
         #expect(detail.summary.subcategoryName == "Drucker")
         #expect(detail.summary.slaHint == "Antwort überfällig")
 
@@ -177,7 +177,7 @@ struct HelpdeskTests {
              "status":"new","reporterBlocked":false,"createdAt":"2026-10-20T08:00:00+00:00","lastActivityAt":"2026-10-20T08:00:00+00:00"},
              "comments":[]}
             """.utf8))
-        #expect(!old.canRate && old.articles.isEmpty && old.summary.slaHint == nil)
+        #expect(!old.isRatable && old.linkedArticles.isEmpty && old.summary.slaHint == nil)
 
         let rating = try JSONCoding.encoder.encode(TicketRating(rating: 5, comment: "  "))
         #expect(String(decoding: rating, as: UTF8.self).contains("\"rating\":5"))

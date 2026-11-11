@@ -103,7 +103,6 @@ internal static class TicketEndpoints
     public static void Map(IEndpointRouteBuilder api)
     {
         var group = api.MapGroup("/tickets").WithTags("Helpdesk").RequireModule(AppModules.Helpdesk);
-        AgentEndpoints.Map(group);
 
         group.MapPost("/", CreateAsync).WithName("CreateTicket").WithSummary("Problem melden (idempotent über die Ticket-ID)")
             .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
@@ -128,6 +127,9 @@ internal static class TicketEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden).ProducesProblem(StatusCodes.Status404NotFound).AllowPendingDevice();
         group.MapPost("/{id:guid}/reopen", ReopenAsync).WithName("ReopenTicket").WithSummary("Gelöstes Ticket wieder öffnen (Melder)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).AllowPendingDevice();
+
+        // Nach den bestehenden Routen: Die gemeinsamen Schemas (TicketStatus, TicketPriority) entstehen wie bisher aus diesen.
+        AgentEndpoints.Map(group);
     }
 
     private static async Task<Results<Created<TicketDetail>, Ok<TicketDetail>, ProblemHttpResult>> CreateAsync(

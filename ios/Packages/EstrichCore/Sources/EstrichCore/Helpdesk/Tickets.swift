@@ -155,26 +155,29 @@ public struct TicketDetail: Decodable, Equatable, Sendable {
         comments = try container.decodeIfPresent([TicketComment].self, forKey: .comments) ?? []
         events = (try? container.decodeIfPresent([TicketEvent].self, forKey: .events)) ?? []
         timeline = try? container.decodeIfPresent([TicketTimelineEntry].self, forKey: .timeline)
-        articles = (try? container.decodeIfPresent([TicketArticleRef].self, forKey: .articles)) ?? []
+        articles = try? container.decodeIfPresent([TicketArticleRef].self, forKey: .articles)
         mergedIntoNumber = try container.decodeIfPresent(String.self, forKey: .mergedIntoNumber)
         rating = try container.decodeIfPresent(Int.self, forKey: .rating)
         ratingComment = try container.decodeIfPresent(String.self, forKey: .ratingComment)
-        canRate = try container.decodeIfPresent(Bool.self, forKey: .canRate) ?? false
+        canRate = try container.decodeIfPresent(Bool.self, forKey: .canRate)
     }
 
     private enum CodingKeys: String, CodingKey {
         case summary, description, resolution, comments, events, timeline, articles, mergedIntoNumber, rating, ratingComment, canRate
     }
 
-    /// Anleitungen, die die IT mit dem Ticket verknüpft hat.
-    public let articles: [TicketArticleRef]
+    /// Anleitungen, die die IT mit dem Ticket verknüpft hat (`nil` bei älteren Servern, siehe ``linkedArticles``).
+    public let articles: [TicketArticleRef]?
     /// Doppelt gemeldet: Die Bearbeitung läuft in diesem Ticket weiter.
     public let mergedIntoNumber: String?
     /// Bewertung des Melders nach der Lösung (1–5).
     public let rating: Int?
     public let ratingComment: String?
-    /// Der Abrufende ist Melder, das Ticket ist gelöst und Bewertungen sind eingeschaltet.
-    public let canRate: Bool
+    /// Der Abrufende ist Melder, das Ticket ist gelöst und Bewertungen sind eingeschaltet (`nil` bei älteren Servern).
+    public let canRate: Bool?
+
+    public var linkedArticles: [TicketArticleRef] { articles ?? [] }
+    public var isRatable: Bool { canRate ?? false }
 
     /// Verlauf des Servers (fertige deutsche Sätze); `nil` bei älteren Servern.
     public let timeline: [TicketTimelineEntry]?
