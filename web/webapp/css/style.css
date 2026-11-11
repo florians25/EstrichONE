@@ -1236,3 +1236,4 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoHdSetTabs .sapMITBContent { padding: 1rem 0 0; }
 .eoHdHolidayList .sapMObjStatus { min-width: 12rem; }
 .eoHdSendButtons { gap: 0.5rem; justify-content: flex-end; min-width: 0; }
+.eoHdDetail > .eoHdTabs.sapMITH { flex: none; padding: 0 1.5rem; margin: 0; background: var(--sapGroup_ContentBackground); border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }

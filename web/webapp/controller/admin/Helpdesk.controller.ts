@@ -495,8 +495,11 @@ export default class Helpdesk extends BaseController {
 		if (agent && s.responseDueAt) {
 			rows.push({ label: "Erste Antwort", value: firstAnswer ? `erfolgt ${fmt(firstAnswer)}` : `bis ${fmt(s.responseDueAt)}`,
 				state: firstAnswer ? (new Date(firstAnswer) <= new Date(s.responseDueAt) ? "Success" : "Warning") : s.slaState === "overdue" && s.dueKind === "response" ? "Error" : "None", icon: "" });
-			rows.push({ label: "Lösung bis", value: fmt(s.resolutionDueAt), state: s.slaState === "overdue" && s.dueKind === "resolution" ? "Error"
-				: s.slaState === "breached" ? "Warning" : s.slaState === "met" ? "Success" : "None", icon: "" });
+			// „Lösung bis“ steht nur hier, wenn die Ampel im Kopf schon die erste Antwort zeigt (sonst doppelt).
+			if (s.dueKind === "response" || s.slaState === "met" || s.slaState === "breached") {
+				rows.push({ label: "Lösung bis", value: fmt(s.resolutionDueAt), state: s.slaState === "overdue" && s.dueKind === "resolution" ? "Error"
+					: s.slaState === "breached" ? "Warning" : s.slaState === "met" ? "Success" : "None", icon: "" });
+			}
 		}
 		if (t.deviceName) rows.push({ label: "Gerät", value: t.deviceName, state: "None", icon: "" });
 		if (t.rating) rows.push({ label: "Bewertung", value: `${"★".repeat(t.rating)}${"☆".repeat(5 - t.rating)}`, state: t.rating >= 4 ? "Success" : t.rating <= 2 ? "Error" : "None", icon: "" });

@@ -316,17 +316,18 @@
 						</MessageStrip>
 						<Button text="Wieder öffnen" icon="sap-icon://refresh" press=".onReopen" class="sapUiSmallMarginBegin"/>
 					</HBox>
-					<IconTabHeader id="hdTabs" selectedKey="{view>/tab}" select=".onTab" visible="{view>/agent}" mode="Inline" class="eoHdTabs">
-						<items>
-							<IconTabFilter key="talk" text="Verlauf"/>
-							<IconTabFilter key="context" text="Melder &amp; Geräte"/>
-							<IconTabFilter key="links" text="Verknüpfungen" count="{view>/linkCount}"/>
-							<IconTabFilter key="time" text="Zeit" count="{view>/timeText}" visible="{view>/options/timeTrackingEnabled}"/>
-							<IconTabFilter key="audit" text="Prüfpfad"/>
-						</items>
-					</IconTabHeader>
 				</VBox>
 
+				<!-- Reiter außerhalb des scrollenden Kopfs: bleiben auch in kleinen Fenstern sichtbar -->
+					<IconTabHeader id="hdTabs" selectedKey="{view>/tab}" select=".onTab" visible="{= ${view>/agent} &amp;&amp; !!${view>/t} }" mode="Inline" class="eoHdTabs">
+					<items>
+						<IconTabFilter key="talk" text="Verlauf"/>
+						<IconTabFilter key="context" text="Melder &amp; Geräte"/>
+						<IconTabFilter key="links" text="Verknüpfungen" count="{view>/linkCount}"/>
+						<IconTabFilter key="time" text="Zeit" count="{view>/timeText}" visible="{view>/options/timeTrackingEnabled}"/>
+						<IconTabFilter key="audit" text="Prüfpfad"/>
+					</items>
+				</IconTabHeader>
 				<!-- Verlauf -->
 				<ScrollContainer id="hdScroll" vertical="true" horizontal="false" height="100%" visible="{= !!${view>/t} &amp;&amp; ${view>/tab} === 'talk' }" class="eoHdScroll">
 					<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
