@@ -245,18 +245,34 @@ struct ChatListView: View {
         searching = false
     }
 
+    private static let cacheKey = "chat_conversations"
+
+    private static func sorted(_ list: [ChatConversation]) -> [ChatConversation] {
+        list.sorted { lhs, rhs in
+            if lhs.pinned != rhs.pinned { return lhs.pinned }
+            return (lhs.lastMessageAt ?? .distantPast) > (rhs.lastMessageAt ?? .distantPast)
+        }
+    }
+
     private func load() async {
         guard let client = model.active?.client else { return }
+        let store = model.active?.sync?.store
+        // Zuletzt geladene Liste sofort zeigen (verschlüsselt auf dem Gerät), dann frisch laden.
+        if !loaded, conversations.isEmpty, let store, let text = try? await store.meta(Self.cacheKey),
+           let cached = ChatConversation.decodeList(Data(text.utf8)), !cached.isEmpty {
+            conversations = Self.sorted(cached)
+            loaded = true
+        }
         do throws(APIError) {
-            let list = try await client.chatConversations()
-            conversations = list.sorted { lhs, rhs in
-                if lhs.pinned != rhs.pinned { return lhs.pinned }
-                return (lhs.lastMessageAt ?? .distantPast) > (rhs.lastMessageAt ?? .distantPast)
-            }
+            let (list, data) = try await client.chatConversationsWithData()
+            conversations = Self.sorted(list)
+            if let store { try? await store.setMeta(Self.cacheKey, String(decoding: data, as: UTF8.self)) }
             failure = nil
             applyShotScene()
         } catch {
-            failure = error == .offline ? "Keine Verbindung. Der Chat wird geladen, sobald der Server erreichbar ist. Neue Nachrichten werden dann gesendet."
+            failure = error == .offline
+                ? (conversations.isEmpty ? "Keine Verbindung. Der Chat wird geladen, sobald der Server erreichbar ist. Neue Nachrichten werden dann gesendet."
+                                         : "Keine Verbindung. Angezeigt wird der zuletzt geladene Stand; neue Nachrichten werden gesendet, sobald der Server erreichbar ist.")
                                         : (error.serverMessage ?? error.message)
         }
         if let chat { drafts = await chat.outbox.allDrafts() }

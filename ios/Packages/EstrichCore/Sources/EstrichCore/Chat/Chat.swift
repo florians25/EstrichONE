@@ -745,6 +745,13 @@ public struct ChatMediaItem: Decodable, Sendable, Identifiable, Equatable {
 }
 
 /// Liste oder Seite `{ items }`.
+extension ChatConversation {
+    /// Liste aus einer Antwort von `GET chat/conversations` (auch aus dem Zwischenspeicher).
+    public static func decodeList(_ data: Data) -> [ChatConversation]? {
+        try? JSONCoding.decoder.decode(ChatList<ChatConversation>.self, from: data).items
+    }
+}
+
 struct ChatList<Item: Decodable & Sendable>: Decodable, Sendable {
     let items: [Item]
 
@@ -903,6 +910,13 @@ extension AuthorizedClient {
     public func chatConversations() async throws(APIError) -> [ChatConversation] {
         let list: ChatList<ChatConversation> = try await get("chat/conversations")
         return list.items
+    }
+
+    /// Unterhaltungen samt Rohantwort, damit die App die Liste verschlüsselt zwischenspeichern und offline sofort zeigen kann.
+    public func chatConversationsWithData() async throws(APIError) -> (items: [ChatConversation], data: Data) {
+        let data: Data = try await get("chat/conversations")
+        guard let items = ChatConversation.decodeList(data) else { throw .invalidResponse }
+        return (items, data)
     }
 
     public func chatConversation(_ id: UUID) async throws(APIError) -> ChatConversationDetail {
