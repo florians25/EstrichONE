@@ -126,7 +126,8 @@ struct SchemaUpgradeTests {
             let store = LocalStore(database: try EncryptedDatabase(url: url, key: key, migrations: LocalStore.schema))
             try await store.create(.bauakte, id: id, data: .object(["id": JSONValue(id), "title": .string("EFH Huber")]),
                                    payload: ["title": .string("EFH Huber")])
-            #expect(try await store.operations().count == 1)
+            let count = try await store.operations().count
+            #expect(count == 1)
         }
         // Nächste App-Version hängt eine Migration an (neue Spalte, neue Tabelle).
         let next = LocalStore.schema + [{ db in
@@ -136,8 +137,10 @@ struct SchemaUpgradeTests {
         let upgraded = try EncryptedDatabase(url: url, key: key, migrations: next)
         #expect(upgraded.database.userVersion == next.count)
         let store = LocalStore(database: upgraded)
-        #expect(try await store.operations().count == 1)
-        #expect(try await store.entity(.bauakte, id)?.data["title"] == .string("EFH Huber"))
+        let count = try await store.operations().count
+        let title = try await store.entity(.bauakte, id)?.data["title"]
+        #expect(count == 1)
+        #expect(title == .string("EFH Huber"))
         // Erneutes Öffnen: keine zweite Ausführung (ALTER TABLE würde sonst scheitern).
         _ = try EncryptedDatabase(url: url, key: key, migrations: next)
     }
@@ -157,8 +160,10 @@ struct SchemaUpgradeTests {
         #expect(throws: Broken.self) { _ = try EncryptedDatabase(url: url, key: key, migrations: broken) }
         let reopened = try EncryptedDatabase(url: url, key: key, migrations: LocalStore.schema)
         #expect(reopened.database.userVersion == LocalStore.schema.count)
-        #expect(try await LocalStore(database: reopened).operations().count == 1)
         #expect((try? reopened.database.query("SELECT * FROM half")) == nil)
+        let store = LocalStore(database: reopened)
+        let count = try await store.operations().count
+        #expect(count == 1)
     }
 
     @Test("Zurückgestufte App (z. B. TestFlight): neuere Datenbank wird geöffnet, nicht verändert")
@@ -171,6 +176,8 @@ struct SchemaUpgradeTests {
         }
         let older = try EncryptedDatabase(url: url, key: key, migrations: LocalStore.schema)
         #expect(older.database.userVersion == newer.count)
-        #expect(try await LocalStore(database: older).operations().count == 1)
+        let store = LocalStore(database: older)
+        let count = try await store.operations().count
+        #expect(count == 1)
     }
 }
