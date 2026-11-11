@@ -85,11 +85,19 @@ import de.estrichone.core.PlannedJob
 import de.estrichone.core.WorkItemKind
 import de.estrichone.core.dueText
 import de.estrichone.core.myPlan
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
+import androidx.compose.foundation.layout.fillMaxSize
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
+
+/** Zuletzt geladener Plan (ohne Netz), damit „Mein Einsatz“ sofort erscheint und nicht erst nach dem Abruf. */
+fun Session.cachedWeekPlan(): MyPlanning? =
+    runCatching { store.backend.meta("plan")?.let { EstrichOneApi.json.decodeFromString(MyPlanning.serializer(), it) } }.getOrNull()
 
 /** Planung der nächsten 7 Tage; offline aus dem letzten Abruf (lokal gespeichert). */
 suspend fun Session.weekPlan(today: LocalDate = LocalDate.now(Dates.zone)): MyPlanning? = withContext(Dispatchers.IO) {
@@ -102,6 +110,7 @@ suspend fun Session.weekPlan(today: LocalDate = LocalDate.now(Dates.zone)): MyPl
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen() {
     val session = LocalSession.current
@@ -109,14 +118,18 @@ fun HomeScreen() {
     val model = LocalModel.current
     val today = remember { LocalDate.now(Dates.zone) }
     val status by session.status.collectAsState()
-    val plan by produceState<MyPlanning?>(null, status.outcome) { value = session.weekPlan(today) ?: value }
+    val cached = remember { session.cachedWeekPlan() }
+    val plan by produceState(cached, status.outcome) { value = session.weekPlan(today) ?: value }
+    val scope = rememberCoroutineScope()
     val tasks by session.local { session.service.myTasks().filter { it.isOpen } }
     val firstName = session.user.displayName.substringBefore(' ')
     val modules by session.modules.collectAsState()
 
     ScreenScaffold("Heute", root = true, actions = { SyncAction(); InboxActions() }) { padding ->
+        // Nach unten ziehen: abgleichen und Plan, Hinweise und Zähler neu laden.
+        PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
-            item {
+            item(key = "head") {
                 Column(Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
                     Text("${Dates.greeting()}, $firstName", style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp))
                     Secondary(Dates.long(today))
@@ -172,6 +185,7 @@ fun HomeScreen() {
                     }
                 }
             }
+        }
         }
     }
 }

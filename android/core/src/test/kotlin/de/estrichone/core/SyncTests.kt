@@ -209,4 +209,22 @@ class SyncTests {
         assertFalse(a.any { it.isUpperCase() })
         assertTrue(JsonObject(emptyMap()).compact().isEmpty())
     }
+
+    @Test
+    @DisplayName("Fehlgeschlagene Uploads erneut einreihen, fehlende Datei bleibt fehlgeschlagen")
+    fun retryFailedUploads() {
+        val store = LocalStore(MemoryStorage())
+        store.backend.putUpload(PendingUpload("a", 10, "x", "image/jpeg", uploadedBytes = 4, state = UploadState.Failed, errorCode = "PAYLOAD_TOO_LARGE"))
+        store.backend.putUpload(PendingUpload("b", 10, "x", "image/jpeg", state = UploadState.Failed, errorCode = "LOCAL_FILE_MISSING"))
+        assertEquals(2, store.summary().failedUploads)
+        val before = store.revision.value
+        assertEquals(1, store.retryFailedUploads())
+        assertTrue(store.revision.value > before)
+        assertEquals(1, store.summary().failedUploads)
+        val retried = store.upload("a")!!
+        assertEquals(UploadState.Waiting, retried.state)
+        assertEquals(0, retried.uploadedBytes)
+        assertNull(retried.errorCode)
+        assertEquals(0, store.retryFailedUploads())
+    }
 }

@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -197,7 +198,8 @@ private fun Header(b: Bauakte, session: Session) {
             SyncMark(b.syncState)
             Spacer(Modifier.width(8.dp))
             Box {
-                Row(Modifier.clip(RoundedCornerShape(50)).background(tones.card).clickable { statusMenu = true }.padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
+                Row(Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(50)).background(tones.card).clickable(role = androidx.compose.ui.semantics.Role.Button) { statusMenu = true }
+                    .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
                     verticalAlignment = Alignment.CenterVertically) {
                     StatusLabel(b.status, short = false)
                     Icon(Icons.Filled.ArrowDropDown, "Status ändern", tint = tones.textSecondary)
@@ -335,10 +337,13 @@ private fun OpenPoints(session: Session, id: String) {
 @Composable
 fun TaskRow(task: Task, session: Session, subtitle: String? = null) {
     val today = LocalDate.now(Dates.zone)
+    val haptics = androidx.compose.ui.platform.LocalHapticFeedback.current
     Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 10.dp), verticalAlignment = Alignment.Top) {
         IconButton(onClick = {
+            haptics.performHapticFeedback(if (task.isOpen) androidx.compose.ui.hapticfeedback.HapticFeedbackType.Confirm
+                else androidx.compose.ui.hapticfeedback.HapticFeedbackType.ToggleOff)
             session.service.setTaskStatus(task, if (task.isOpen) WorkItemStatus.Done else WorkItemStatus.Open)
-        }) {
+        }, modifier = Modifier.size(48.dp)) {
             Icon(if (task.isOpen) Icons.Filled.RadioButtonUnchecked else Icons.Filled.CheckCircle,
                 if (task.isOpen) "Als erledigt markieren" else "Wieder öffnen",
                 tint = when {

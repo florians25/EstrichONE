@@ -86,6 +86,7 @@ private enum class Filter(val title: String, val statuses: Set<BauakteStatus>) {
     Done("Abgeschlossen", setOf(BauakteStatus.Completed, BauakteStatus.Cancelled)),
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BauaktenScreen(selected: String?) {
     val session = LocalSession.current

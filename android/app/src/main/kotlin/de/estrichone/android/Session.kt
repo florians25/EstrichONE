@@ -119,7 +119,10 @@ class Session(
     val memo = java.util.concurrent.ConcurrentHashMap<String, Any>()
 
     /** Vorschaubilder (klein) und Großansichten im Speicher. */
-    private val thumbnails = LruCache<String, Bitmap>(80)
+    private val thumbnails = object : LruCache<String, Bitmap>((Runtime.getRuntime().maxMemory() / 8 / 1024).toInt().coerceAtLeast(16 * 1024)) {
+        // Größe in KiB: ein Achtel des Heaps, damit lange Fotolisten flüssig scrollen, ohne den Speicher zu sprengen.
+        override fun sizeOf(key: String, value: Bitmap): Int = (value.allocationByteCount / 1024).coerceAtLeast(1)
+    }
 
     @OptIn(FlowPreview::class)
     fun start() {

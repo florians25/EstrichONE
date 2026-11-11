@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.wrapContentHeight
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -116,7 +117,8 @@ fun SectionHeader(title: String, modifier: Modifier = Modifier, action: String? 
     Row(modifier.fillMaxWidth().padding(top = Space.xl, bottom = Space.s, start = 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, style = SectionTitle, modifier = Modifier.weight(1f).semantics { this.contentDescription = title })
         if (action != null && onAction != null) {
-            Row(Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onAction).padding(horizontal = 6.dp, vertical = 4.dp),
+            // Mindestens 48 dp hoch: auch mit Handschuhen gut zu treffen.
+            Row(Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button, onClick = onAction).padding(horizontal = 6.dp, vertical = 4.dp),
                 verticalAlignment = Alignment.CenterVertically) {
                 Text(action, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
                 Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MaterialTheme.colorScheme.primary, modifier = Modifier.size(20.dp))
@@ -307,7 +309,8 @@ fun Banner(text: String, icon: ImageVector, color: Color, background: Color, mod
         Text(text, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
         if (action != null && onAction != null) {
             Text(action, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable(onClick = onAction).padding(6.dp))
+                modifier = Modifier.heightIn(min = 48.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button, onClick = onAction)
+                    .wrapContentHeight(Alignment.CenterVertically).padding(horizontal = 8.dp, vertical = 6.dp))
         }
     }
 }

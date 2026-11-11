@@ -69,6 +69,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -402,7 +405,11 @@ fun SyncScreen() {
                     if (status.summary.failedUploads > 0) {
                         RowDivider()
                         RowItem("Fehlgeschlagene Uploads", value = status.summary.failedUploads.toString(), icon = Icons.Filled.ErrorOutline, iconTint = tones.danger,
-                            iconBackground = tones.dangerSoft)
+                            iconBackground = tones.dangerSoft, subtitle = "Werden erst nach erneutem Versuch übertragen.", trailing = {
+                                TextButton(onClick = {
+                                    if (session.store.retryFailedUploads() > 0) scope.launch { session.synchronize() }
+                                }, enabled = !status.running) { Text("Erneut versuchen") }
+                            })
                     }
                 }
             }
@@ -644,24 +651,36 @@ fun AboutScreen() {
 fun MyTasksScreen() {
     val session = LocalSession.current
     var adding by remember { mutableStateOf(false) }
-    var showDone by remember { mutableStateOf(false) }
+    var showDone by rememberSaveable { mutableStateOf(false) }
+    var search by rememberSaveable { mutableStateOf("") }
     val tasks by session.local { session.service.myTasks() }
-    val visible = tasks.filter { showDone || it.isOpen }
+    val bauakten by session.local { session.service.bauakten().associateBy { it.id } }
+    // Suche über Titel, Nummer (z. B. A-2026-0012) und Bauakte (Nummer, Bauvorhaben).
+    val visible = remember(tasks, bauakten, showDone, search) {
+        tasks.filter { t ->
+            (showDone || search.isNotBlank() || t.isOpen) && de.estrichone.core.SearchText.matches(search,
+                listOfNotNull(t.title, t.number, t.description, bauakten[t.bauakteId]?.number, bauakten[t.bauakteId]?.title))
+        }
+    }
     ScreenScaffold("Meine Aufgaben", floating = {
         androidx.compose.material3.ExtendedFloatingActionButton(onClick = { adding = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Aufgabe") })
     }) { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
-            item {
-                Row(Modifier.padding(bottom = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChip(!showDone, { showDone = false }, label = { Text("Offen (${tasks.count { it.isOpen }})") })
-                    FilterChip(showDone, { showDone = true }, label = { Text("Alle (${tasks.size})") })
+            item(key = "filter") {
+                SearchField(search, { search = it }, "Titel, Nummer oder Bauakte")
+                Row(Modifier.padding(vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(!showDone, { showDone = false }, label = { Text("Offen (${tasks.count { it.isOpen }})") }, modifier = Modifier.heightIn(min = 40.dp))
+                    FilterChip(showDone, { showDone = true }, label = { Text("Alle (${tasks.size})") }, modifier = Modifier.heightIn(min = 40.dp))
                 }
             }
-            if (visible.isEmpty()) item { EmptyState(Icons.AutoMirrored.Outlined.Assignment, "Keine offenen Aufgaben", "Offene Aufgaben und Mängel erscheinen hier.") }
+            if (visible.isEmpty()) item(key = "empty") {
+                if (search.isBlank()) EmptyState(Icons.AutoMirrored.Outlined.Assignment, "Keine offenen Aufgaben", "Offene Aufgaben und Mängel erscheinen hier.")
+                else EmptyState(Icons.AutoMirrored.Outlined.Assignment, "Keine Treffer", "Keine Aufgabe passt zu „${search.trim()}“.")
+            }
             visible.groupBy { it.bauakteId }.forEach { (bauakteId, list) ->
-                val b = bauakteId?.let { session.service.bauakte(it) }
-                item { GroupLabel(b?.let { "${it.numberText} · ${it.title}" } ?: "Ohne Bauakte") }
-                item { SectionCard { list.forEachIndexed { i, t -> if (i > 0) RowDivider(56.dp); TaskRow(t, session) } } }
+                val b = bauakteId?.let { bauakten[it] }
+                item(key = "label-$bauakteId") { GroupLabel(b?.let { "${it.numberText} · ${it.title}" } ?: "Ohne Bauakte") }
+                itemsIndexed(list, key = { _, t -> t.id }, contentType = { _, _ -> "task" }) { i, t -> CardSlot(i, list.size, 56.dp) { TaskRow(t, session) } }
             }
         }
     }

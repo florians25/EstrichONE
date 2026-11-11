@@ -483,6 +483,9 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
 
     fun onBackground() {
         backgroundSince = System.currentTimeMillis()
+        _session.value?.takeIf { !it.isDemo && !it.store.summary().isSettled }?.let {
+            runCatching { de.estrichone.android.work.SyncWorker.scheduleSoon(context) }
+        }
         if (_session.value != null && prefs.isPool && !prefs.demo) switchUser()
     }
 

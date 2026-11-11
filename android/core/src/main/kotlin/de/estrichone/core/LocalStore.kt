@@ -411,6 +411,20 @@ class LocalStore(val backend: StorageBackend) {
         changed()
     }
 
+    /**
+     * Fehlgeschlagene Uploads erneut einreihen (z. B. nach einer Ablehnung durch den Server, die inzwischen behoben ist).
+     * Fehlt die Datei auf dem Gerät, hilft kein neuer Versuch. Liefert die Zahl der neu eingereihten Dateien.
+     */
+    fun retryFailedUploads(): Int {
+        val count = backend.transaction {
+            val failed = backend.uploads().filter { it.state == UploadState.Failed && it.errorCode != "LOCAL_FILE_MISSING" }
+            failed.forEach { backend.putUpload(it.copy(state = UploadState.Waiting, uploadedBytes = 0, errorCode = null)) }
+            failed.size
+        }
+        if (count > 0) changed()
+        return count
+    }
+
     fun uploadsCompletedBefore(time: Long): List<String> =
         backend.uploads().filter { it.state == UploadState.Done && (it.completedAt ?: 0) < time }.map { it.fileId }
 
