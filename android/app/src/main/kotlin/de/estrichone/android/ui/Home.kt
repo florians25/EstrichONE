@@ -74,6 +74,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import de.estrichone.android.Session
 import de.estrichone.android.support.Links
+import de.estrichone.core.AppModules
 import de.estrichone.core.ApiException
 import de.estrichone.core.Dates
 import de.estrichone.core.EstrichOneApi
@@ -111,6 +112,7 @@ fun HomeScreen() {
     val plan by produceState<MyPlanning?>(null, status.outcome) { value = session.weekPlan(today) ?: value }
     val tasks by session.local { session.service.myTasks().filter { it.isOpen } }
     val firstName = session.user.displayName.substringBefore(' ')
+    val modules by session.modules.collectAsState()
 
     ScreenScaffold("Heute", root = true, actions = { SyncAction(); InboxActions() }) { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
@@ -127,9 +129,12 @@ fun HomeScreen() {
                 OfflineBanner(session)
                 NoticeCards(session)
             }
-            item { SectionHeader("Mein Einsatz") }
+            // Systemeinstellungen › Module: ohne Disposition kein Einsatz, ohne Aufgaben und Mängel keine offenen Punkte.
+            val planning = modules.isOn(AppModules.PLANNING)
+            if (planning) item { SectionHeader("Mein Einsatz") }
             val todays = plan?.assignments?.filter { it.day == today.toString() }.orEmpty()
             when {
+                !planning -> Unit
                 plan == null -> item { SectionCard { EmptyState(Icons.Filled.CalendarMonth, "Einsätze werden geladen", "Ohne Verbindung erscheint der zuletzt geladene Plan.") } }
                 todays.isEmpty() -> item {
                     SectionCard { EmptyState(Icons.Filled.EventBusy, "Heute nichts eingeplant", "Ihre nächsten Einsätze stehen unten bei „Diese Woche“.") }
@@ -139,7 +144,7 @@ fun HomeScreen() {
                     Spacer(Modifier.height(Space.m))
                 }
             }
-            if (tasks.isNotEmpty()) {
+            if (tasks.isNotEmpty() && modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) {
                 item { SectionHeader("Offene Punkte", action = "Alle (${tasks.size})", onAction = { nav.push(Route.Tasks) }) }
                 item {
                     SectionCard {
@@ -156,7 +161,7 @@ fun HomeScreen() {
                 }
             }
             val upcoming = plan?.assignments?.filter { it.day > today.toString() }.orEmpty()
-            if (upcoming.isNotEmpty()) {
+            if (upcoming.isNotEmpty() && planning) {
                 item { SectionHeader("Diese Woche", action = "Woche", onAction = { nav.push(Route.Week) }) }
                 item {
                     SectionCard {
@@ -240,8 +245,13 @@ fun TodayJobCard(job: PlannedJob, session: Session) {
         Spacer(Modifier.height(Space.m))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.push(Route.Camera(job.bauakteId)) }
-            ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Diary.with(job.bauakteId) }
-            ActionTile(Icons.Outlined.ReportProblem, "Mangel", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Defect.with(job.bauakteId) }
+            val modules by session.modules.collectAsState()
+            if (modules.isOn(AppModules.DIARY)) {
+                ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Diary.with(job.bauakteId) }
+            }
+            if (modules.isOn(AppModules.DEFECTS)) {
+                ActionTile(Icons.Outlined.ReportProblem, "Mangel", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Defect.with(job.bauakteId) }
+            }
             ActionTile(Icons.Outlined.Folder, "Akte", modifier = Modifier.weight(1f)) { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }
         }
     }

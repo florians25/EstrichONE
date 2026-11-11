@@ -86,6 +86,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import de.estrichone.android.Session
 import de.estrichone.android.support.Links
+import de.estrichone.core.AppModules
 import de.estrichone.core.Bauakte
 import de.estrichone.core.BauakteStatus
 import de.estrichone.core.Dates
@@ -109,12 +110,21 @@ enum class AreaKind(val title: String, val icon: ImageVector) {
     Protocols("Protokolle", Icons.Outlined.VerifiedUser),
     Rooms("Räume und Flächen", Icons.Outlined.GridView),
     Contacts("Kontakte und Beteiligte", Icons.Outlined.Contacts),
-    Project("Estrich und Bauvorhaben", Icons.Outlined.Tune),
+    Project("Estrich und Bauvorhaben", Icons.Outlined.Tune);
+
+    /** Bereich gehört zu einem eingeschalteten Modul (Systemeinstellungen › Module)? */
+    fun isAvailable(modules: AppModules): Boolean = when (this) {
+        Tasks -> modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)
+        Diary -> modules.isOn(AppModules.DIARY)
+        Protocols -> modules.anyOn(AppModules.INSPECTIONS, AppModules.ACCEPTANCE)
+        else -> true
+    }
 }
 
 @Composable
 fun BauakteScreen(id: String, showBack: Boolean = true) {
     val session = LocalSession.current
+    val modules by session.modules.collectAsState()
     val nav = LocalNav.current
     val context = LocalContext.current
     val model = LocalModel.current
@@ -163,7 +173,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
             item { InitialInspectionHint(session, b) }
             item { ContactCard(b, session) }
             item { ActionBar(id) }
-            item { OpenPoints(session, id) }
+            if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) item { OpenPoints(session, id) }
             item { PhotoStrip(session, id) }
             item { ProjectGrid(session, b) }
             item { Areas(session, b) }
@@ -290,11 +300,16 @@ private fun ContactCard(b: Bauakte, session: Session) {
 @Composable
 private fun ActionBar(id: String) {
     val nav = LocalNav.current
+    val modules by LocalSession.current.modules.collectAsState()
     Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.push(Route.Camera(id)) }
         ActionTile(Icons.Filled.DocumentScanner, "Scannen", modifier = Modifier.weight(1f)) { nav.push(Route.Camera(id, scan = true)) }
-        ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Diary.with(id) }
-        ActionTile(Icons.Outlined.ReportProblem, "Mangel", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Defect.with(id) }
+        if (modules.isOn(AppModules.DIARY)) {
+            ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Diary.with(id) }
+        }
+        if (modules.isOn(AppModules.DEFECTS)) {
+            ActionTile(Icons.Outlined.ReportProblem, "Mangel", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Defect.with(id) }
+        }
         ActionTile(Icons.Outlined.MoreHoriz, "Mehr", modifier = Modifier.weight(1f)) { nav.captureOpenFor = id }
     }
 }
@@ -422,9 +437,10 @@ private fun Areas(session: Session, b: Bauakte) {
             AreaKind.Contacts to s.parties(b.id).size + (if (b.customerId != null) 1 else 0),
         )
     }
+    val modules by session.modules.collectAsState()
     SectionHeader("Bereiche")
     SectionCard {
-        AreaKind.entries.filter { it != AreaKind.Project }.forEachIndexed { index, area ->
+        AreaKind.entries.filter { it != AreaKind.Project && it.isAvailable(modules) }.forEachIndexed { index, area ->
             if (index > 0) RowDivider()
             RowItem(area.title, icon = area.icon, value = counts[area]?.takeIf { it > 0 }?.toString(), showChevron = true,
                 onClick = { nav.push(Route.Area(b.id, area)) })

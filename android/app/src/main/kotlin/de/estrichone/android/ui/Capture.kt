@@ -71,6 +71,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -99,6 +100,7 @@ import de.estrichone.android.Session
 import de.estrichone.android.support.Images
 import de.estrichone.android.support.Links
 import de.estrichone.android.support.Videos
+import de.estrichone.core.AppModules
 import de.estrichone.core.Bauakte
 import de.estrichone.core.Dates
 import de.estrichone.core.CameraShots
@@ -128,6 +130,16 @@ enum class SiteTask(val title: String, val icon: ImageVector) {
     Open("Baustelle öffnen", Icons.Outlined.Folder);
 
     fun with(bauakteId: String?) = CaptureRequest(this, bauakteId)
+
+    /** Gehört zu einem eingeschalteten Modul (Systemeinstellungen › Module)? */
+    fun isAvailable(modules: AppModules): Boolean = when (this) {
+        Diary -> modules.isOn(AppModules.DIARY)
+        Inspection, Measurement -> modules.isOn(AppModules.INSPECTIONS)
+        Acceptance -> modules.isOn(AppModules.ACCEPTANCE)
+        Defect -> modules.isOn(AppModules.DEFECTS)
+        Task -> modules.isOn(AppModules.TASKS)
+        else -> true
+    }
 }
 
 data class CaptureRequest(val task: SiteTask, val bauakteId: String?)
@@ -139,6 +151,7 @@ fun CaptureHub(bauakteId: String?, onDismiss: () -> Unit) {
     val nav = LocalNav.current
     val session = LocalSession.current
     val title = bauakteId?.let { session.service.bauakte(it)?.title }
+    val modules by session.modules.collectAsState()
     ModalBottomSheet(onDismissRequest = onDismiss, containerColor = tones.canvas) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 28.dp)) {
             Text("Erfassen", style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(start = 4.dp))
@@ -147,7 +160,7 @@ fun CaptureHub(bauakteId: String?, onDismiss: () -> Unit) {
                 "Fotos und Dokumente" to listOf(SiteTask.Photo, SiteTask.Gallery, SiteTask.Video, SiteTask.Scan, SiteTask.Upload),
                 "Protokolle" to listOf(SiteTask.Diary, SiteTask.Inspection, SiteTask.Measurement, SiteTask.Acceptance),
                 "Aufgaben und Notizen" to listOf(SiteTask.Defect, SiteTask.Task, SiteTask.Note),
-            ).forEach { (group, tasks) ->
+            ).map { (group, tasks) -> group to tasks.filter { it.isAvailable(modules) } }.filter { it.second.isNotEmpty() }.forEach { (group, tasks) ->
                 GroupLabel(group, Modifier.padding(start = 0.dp))
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp), maxItemsInEachRow = 4) {
                     tasks.forEach { task ->

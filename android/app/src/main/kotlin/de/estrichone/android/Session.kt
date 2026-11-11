@@ -18,7 +18,9 @@ import de.estrichone.core.SyncOutcome
 import de.estrichone.core.SyncSummary
 import de.estrichone.core.SystemNotices
 import de.estrichone.core.UserSummary
+import de.estrichone.core.AppModules
 import de.estrichone.core.chatStatus
+import de.estrichone.core.modules
 import de.estrichone.core.healthBanners
 import de.estrichone.core.myPermissions
 import de.estrichone.core.warnMissingInspection
@@ -107,6 +109,10 @@ class Session(
     private val _warnMissingInspection = MutableStateFlow(store.backend.meta("warn_missing_inspection") != "false")
     val warnMissingInspection: StateFlow<Boolean> = _warnMissingInspection
 
+    /** Module der Suite (Systemeinstellungen › Module), zwischengespeichert; ohne Angabe alles an. */
+    private val _modules = MutableStateFlow(AppModules.decode(store.backend.meta("app_modules")))
+    val modules: StateFlow<AppModules> = _modules
+
     val isDemo: Boolean get() = demo != null
 
     /** Vorschaubilder (klein) und Großansichten im Speicher. */
@@ -148,6 +154,10 @@ class Session(
         runCatching { api.myPermissions() }.onSuccess {
             _permissions.value = it.toSet()
             store.backend.setMeta("my_permissions", it.joinToString(","))
+        }
+        runCatching { api.modules() }.onSuccess {
+            _modules.value = it
+            store.backend.setMeta("app_modules", it.encode())
         }
         runCatching { api.warnMissingInspection() }.onSuccess {
             _warnMissingInspection.value = it

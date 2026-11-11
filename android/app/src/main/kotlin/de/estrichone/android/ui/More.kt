@@ -79,6 +79,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import de.estrichone.android.BuildConfig
 import de.estrichone.android.support.Links
+import de.estrichone.core.AppModules
 import de.estrichone.core.ApiDate
 import de.estrichone.core.Dates
 import de.estrichone.core.DispatchBoard
@@ -118,6 +119,7 @@ fun MoreScreen() {
     val chat by session.chat.collectAsState()
     val unread by session.unreadNotifications.collectAsState()
     val unreadTickets by session.unreadTickets.collectAsState()
+    val modules by session.modules.collectAsState()
     var confirmReset by remember { mutableStateOf(false) }
     var confirmSignOut by remember { mutableStateOf(false) }
     ScreenScaffold("Mehr", root = true) { padding ->
@@ -146,25 +148,41 @@ fun MoreScreen() {
                     RowItem("Benachrichtigungen", icon = Icons.Outlined.Inbox, showChevron = true, onClick = { nav.push(Route.Inbox) }, trailing = { CountBadge(unread) })
                 }
             }
-            item { GroupLabel("Planung und Aufgaben") }
-            item {
-                SectionCard {
-                    RowItem("Meine Aufgaben", icon = Icons.AutoMirrored.Outlined.Assignment, showChevron = true, onClick = { nav.push(Route.Tasks) })
-                    RowDivider()
-                    RowItem("Wer fährt wohin", icon = Icons.Filled.DirectionsCar, showChevron = true, onClick = { nav.push(Route.Dispatch) })
-                    RowDivider()
-                    RowItem("Meine Woche", icon = Icons.Outlined.CalendarMonth, showChevron = true, onClick = { nav.push(Route.Week) })
-                    RowDivider()
-                    RowItem("Urlaub und Abwesenheit", icon = Icons.Outlined.EventAvailable, showChevron = true, onClick = { nav.push(Route.Absences) })
+            // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht.
+            val planningRows = buildList<Pair<String, () -> Unit>> {
+                if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) add("Meine Aufgaben" to { nav.push(Route.Tasks) })
+                if (modules.isOn(AppModules.PLANNING)) {
+                    add("Wer fährt wohin" to { nav.push(Route.Dispatch) })
+                    add("Meine Woche" to { nav.push(Route.Week) })
+                }
+                if (modules.isOn(AppModules.ABSENCE)) add("Urlaub und Abwesenheit" to { nav.push(Route.Absences) })
+            }
+            if (planningRows.isNotEmpty()) {
+                item { GroupLabel("Planung und Aufgaben") }
+                item {
+                    SectionCard {
+                        planningRows.forEachIndexed { index, (title, open) ->
+                            if (index > 0) RowDivider()
+                            val icon = when (title) {
+                                "Meine Aufgaben" -> Icons.AutoMirrored.Outlined.Assignment
+                                "Wer fährt wohin" -> Icons.Filled.DirectionsCar
+                                "Meine Woche" -> Icons.Outlined.CalendarMonth
+                                else -> Icons.Outlined.EventAvailable
+                            }
+                            RowItem(title, icon = icon, showChevron = true, onClick = open)
+                        }
+                    }
                 }
             }
-            item { GroupLabel("Hilfe") }
-            item {
-                SectionCard {
-                    RowItem("Problem melden", icon = Icons.Outlined.ReportProblem, onClick = { nav.push(Route.ReportProblem) })
-                    RowDivider()
-                    RowItem("Meine Meldungen", icon = Icons.Outlined.SupportAgent, showChevron = true, onClick = { nav.push(Route.Helpdesk) },
-                        trailing = { CountBadge(unreadTickets) })
+            if (modules.isOn(AppModules.HELPDESK)) {
+                item { GroupLabel("Hilfe") }
+                item {
+                    SectionCard {
+                        RowItem("Problem melden", icon = Icons.Outlined.ReportProblem, onClick = { nav.push(Route.ReportProblem) })
+                        RowDivider()
+                        RowItem("Meine Meldungen", icon = Icons.Outlined.SupportAgent, showChevron = true, onClick = { nav.push(Route.Helpdesk) },
+                            trailing = { CountBadge(unreadTickets) })
+                    }
                 }
             }
             item { GroupLabel("Einstellungen") }
