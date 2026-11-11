@@ -5,9 +5,9 @@ on:
   workflow_dispatch: {}
   push:
     branches: ["**", "!dependabot/**"]
-    paths: ["backend/src/**", "docker/**", "deploy/**", "global.json", ".github/workflows/infra.yml"]
+    paths: ["backend/src/**", "docker/**", "deploy/**", "install.sh", "global.json", ".github/workflows/infra.yml"]
   pull_request:
-    paths: ["backend/src/**", "docker/**", "deploy/**", "global.json", ".github/workflows/infra.yml"]
+    paths: ["backend/src/**", "docker/**", "deploy/**", "install.sh", "global.json", ".github/workflows/infra.yml"]
 
 permissions:
   contents: read
@@ -34,6 +34,71 @@ jobs:
         env:
           ESTRICHONE_VERSION: ci
         run: sudo -E deploy/archive/test-archive.sh
+
+  oneliner:
+    name: Ein-Befehl-Installation (install.sh) – Voraussetzungen, frischer Server, Reparatur
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      VERSION: 1.0.98-ci
+    steps:
+      - uses: actions/checkout@v5
+      - name: Shellcheck
+        run: shellcheck install.sh
+      - name: Voraussetzungen auf frischem Debian und Ubuntu (ohne Docker) – verständliche Meldungen statt Abbruch mitten drin
+        run: |
+          for os in debian:12 ubuntu:24.04; do
+            echo "::group::$os"
+            docker run --rm -v "$PWD/install.sh:/install.sh:ro" "$os" bash /install.sh pruefen --domain estrichone.example.org | tee pruefen.log
+            grep -q "Docker ist nicht installiert – die Installation bietet das an" pruefen.log
+            grep -q "Prüfung beendet" pruefen.log
+            ! docker run --rm -v "$PWD/install.sh:/install.sh:ro" "$os" bash /install.sh --ja --domain estrichone.example.org > ohne-docker.log 2>&1
+            cat ohne-docker.log
+            grep -q "FEHLER: Docker ist nicht installiert." ohne-docker.log
+            grep -q -- "--docker-installieren" ohne-docker.log
+            ! docker run --rm -u 1000 -v "$PWD/install.sh:/install.sh:ro" "$os" bash /install.sh > ohne-root.log 2>&1
+            grep -q "Bitte als root bzw. mit sudo" ohne-root.log
+            echo "::endgroup::"
+          done
+      - name: Images dieser Version lokal bauen (Namen wie in der Registry)
+        run: |
+          for image in api backup web; do
+            docker build -q -f "docker/$image.Dockerfile" --build-arg ESTRICHONE_VERSION="$VERSION" -t "ghcr.io/florians25/estrichone-$image:$VERSION" .
+          done
+          docker build -q -f docker/installer/Dockerfile --build-arg ESTRICHONE_VERSION="$VERSION" -t "ghcr.io/florians25/estrichone-installer:$VERSION" .
+      - name: Frischer Server – ein Befehl ohne Rückfragen (Betriebsart direkt auf 80/443, Einrichtungscode am Ende)
+        run: |
+          sudo bash install.sh --ja --domain localhost --name "Estrichbau CI GmbH" --version "$VERSION" --auto-updates aus 2>&1 | tee install.log
+          grep -q "Ports 80/443 sind frei" install.log
+          grep -q "^ESTRICHONE_MODE=direkt$" <(sudo cat /opt/estrichone/.env)
+          grep -q "^ESTRICHONE_HTTPS_PORT=443$" <(sudo cat /opt/estrichone/.env)
+          grep -q "BACKUP-PASSWORT" install.log
+          grep -Eq "^   [A-Z0-9]{4}(-[A-Z0-9]{4})+$" install.log
+          test -x /opt/estrichone/update.sh
+          for _ in $(seq 1 30); do curl -fsSk https://localhost/health/ready && break; sleep 2; done
+          curl -fsSk https://localhost/api/v1/server-info | grep -q "\"serverVersion\":\"$VERSION"
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost/)" = 308
+      - name: Erneut ausführen = Reparatur (keine Rückfragen, Daten und Passwörter bleiben)
+        run: |
+          before="$(sudo grep '^POSTGRES_PASSWORD=' /opt/estrichone/.env)"
+          sudo bash install.sh 2>&1 | tee repair.log
+          grep -q "Vorhandene Installation" repair.log
+          test "$(sudo grep '^POSTGRES_PASSWORD=' /opt/estrichone/.env)" = "$before"
+          for _ in $(seq 1 30); do curl -fsSk https://localhost/health/ready && break; sleep 2; done
+          sudo bash install.sh pruefen | tee pruefen.log
+          grep -q "Port 443: EstrichONE" pruefen.log
+          grep -q "Vorhandene Installation: /opt/estrichone (Version $VERSION)" pruefen.log
+      - name: Belegter Port wird mit Abhilfe gemeldet (zweite Installation daneben)
+        run: |
+          sudo mv /opt/estrichone /opt/estrichone-erste
+          ! sudo bash install.sh --ja --domain localhost --modus direkt --version "$VERSION" > belegt.log 2>&1
+          cat belegt.log
+          grep -q "Port 80 ist bereits belegt" belegt.log
+          grep -q "sudo ss -ltnp" belegt.log
+          sudo mv /opt/estrichone-erste /opt/estrichone
+      - name: Protokolle bei Fehler
+        if: failure()
+        run: cd /opt/estrichone && sudo docker compose -p estrichone ps && sudo docker compose -p estrichone logs --tail 80
 
   installer:
     name: Installer, Update von der letzten Version, weitere Rechner

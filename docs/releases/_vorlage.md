@@ -28,6 +28,12 @@ einmalig mit dem Installer-Befehl unten aktualisieren.
 ## Server neu installieren
 
 ```bash
+curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.sh | sudo bash -s -- --version <version>
+```
+
+Gleichwertig mit vorhandenem Docker:
+
+```bash
 sudo docker run --rm -it \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v /opt/estrichone:/opt/estrichone \

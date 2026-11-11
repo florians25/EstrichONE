@@ -478,6 +478,27 @@ Mit dem Server-Update steht auch die neue Android-App bereit: Die Apps zeigen de
 (siehe „App-Updates“). Für iPhone und iPad die neue Version über App Store, TestFlight oder MDM verteilen und unter
 App-Updates eintragen.
 
+### Installation, Reparatur und Prüfung {#installation}
+
+Ein neuer Server wird mit einem Befehl eingerichtet:
+
+`curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.sh | sudo bash`
+
+Das Skript prüft zuerst den Server (Arbeitsspeicher, Speicherplatz, Docker, Ports, DNS-Eintrag, Firewall) und nennt zu
+jedem Befund die Abhilfe. Fehlt Docker, installiert es Docker nach Rückfrage. Danach fragt es nur die Adresse und den
+Firmennamen ab, wählt die Betriebsart selbst (eigenes Zertifikat über Let's Encrypt oder hinter einem vorhandenen
+Proxy) und zeigt am Ende Adresse, Backup-Passwort und Einrichtungscode (Kapitel 2, „Ersteinrichtung“).
+
+| Befehl (an `… \| sudo bash -s --` angehängt) | Wirkung |
+|---|---|
+| (nichts) | installieren; erneut ausgeführt: reparieren, ohne Rückfragen, Daten bleiben |
+| `pruefen` | nur prüfen, nichts verändern – z. B. vor einem Umzug oder bei Störungen |
+| `aktualisieren` | wie `update.sh`: sichern, aktualisieren, Dienste prüfen |
+| `wiederherstellen` | neuer Server aus einer Sicherung (Notfallblatt bereithalten) |
+| `archiv`, `backup-ziel`, `kombi` | Zusatzserver einrichten (siehe „Backup-Ziele“ und „Archiv“) |
+
+Das Backup-Passwort aus der Abschlussausgabe gehört außerhalb des Servers in den Passwortmanager.
+
 ## Protokoll
 
 **System & Betrieb** → **Protokoll** zeigt nachvollziehbar, wer wann was getan hat: Zeitpunkt, Ereignis mit Details, Bereich,

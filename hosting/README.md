@@ -14,8 +14,13 @@ Internet ──80/443──▶ Caddy (estrichone-hosting-proxy) ──┬─ kon
 ## Installation – ein Befehl
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/hosting/install.sh | sudo bash
+curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.sh | sudo bash -s -- konsole
 ```
+
+Der gemeinsame Einstieg `install.sh` prüft zuerst den Server (Arbeitsspeicher, Speicherplatz, Docker, Ports 80/443) und
+installiert Docker bei Bedarf; danach übernimmt `hosting/install.sh`. Der bisherige Befehl
+`curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/hosting/install.sh | sudo bash` funktioniert
+unverändert.
 
 Der Assistent fragt mit sinnvollen Vorschlägen ab (Enter übernimmt den Vorschlag):
 
@@ -116,7 +121,9 @@ den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
 ![Übersicht](docs/bilder/03-uebersicht.png)
 
 - **Übersicht**: Kennzahlen, **Zustand aller Instanzen** (online, Version, letzte Sicherung, Speicher, Zertifikat und
-  Domain, Hinweise; Probleme zuerst; Suche und Filter „Mit Hinweis“), Handlungsbedarf, Server, Versionen, Ereignisse.
+  Domain, Hinweise; Probleme zuerst; Suche und Filter „Mit Hinweis“), Handlungsbedarf, Server, Versionen (mit der
+  **neuesten veröffentlichten Version** und Link zu den Versionshinweisen), Ereignisse und **Apps und Module je Instanz**
+  (Android/iOS: neueste und Mindestversion, APK vom eigenen Server; eingeschaltete Module).
 - **Mandanten**: Suche (Firma, Kürzel, Domain, Kd.-Nr.), Filter (Zustand, Fehler, veraltet, Sicherung, Zertifikat),
   Spalten bis Zertifikat; **Massenaktionen** für ausgewählte Instanzen (neu starten, jetzt sichern, starten, stoppen) und
   **Alle aktualisieren** (mit Vorab-Sicherung).
@@ -136,14 +143,16 @@ den **Einrichtungscode**, mit dem der Kunde selbst einrichtet.
 | Übersicht | Zugangsbrief, Einrichtungscode bzw. „Erste Admin-Person jetzt anlegen“, Stammdaten |
 | Betrieb | Container mit Health, CPU, RAM; `/health/ready`, Serverversion; **Domain und Zertifikat** (DNS-Auflösung, Aussteller, gültig bis – echter TLS-Handshake am Proxy, stündlich, bei Problemen alle 5 Minuten) |
 | Ressourcen | Speicher gegen Kontingent, aktive Benutzer gegen Tarif, CPU/RAM |
+| Apps und Module | Android- und iOS-App: neueste Version, Mindestversion, Bezugsquelle (APK vom Server, Store, Link) aus `/api/v1/app-updates/check` (ab Suite 1.0.13); Module der Instanz mit Zustand (aus den Systemeinstellungen, alle 15 Minuten bzw. „Jetzt prüfen“) |
 | Sicherung | letzter Lauf, Prüfung, Wiederherstellungstest, Archivserver, Backup-Ziele; **Wiederherstellungspunkte** mit „Wiederherstellen …“; Jetzt sichern; Sicherungsschlüssel; **Export herunterladen** |
 | Protokolle, Vorgänge, Technik, Ereignisse | Logs je Dienst mit Filter/Live/Download, Vorgangsprotokolle, Compose-Projekt und Proxy-Ziel, Audit |
 
 ![Sicherung und Wiederherstellung](docs/bilder/06-mandant-sicherung.png)
 
 **Aktualisieren mit Rücknahme:** Vor dem Wechsel sichert die Konsole die Instanz und merkt sich diesen Snapshot. Startet
-die neue Version nicht (`docker compose up --wait` scheitert), nimmt die Konsole die Aktualisierung **automatisch**
-zurück: alte Version, Datenbank und Dateien aus der Vorab-Sicherung, Start – der Vorgang ist „fehlgeschlagen“, die
+die neue Version nicht (`docker compose up --wait` scheitert) oder meldet sie sich danach nicht bereit (`/health/ready`
+liefert innerhalb von zwei Minuten kein 200, z. B. weil die Datenbankmigration scheitert), nimmt die Konsole die
+Aktualisierung **automatisch** zurück: alte Version, Datenbank und Dateien aus der Vorab-Sicherung, Start – der Vorgang ist „fehlgeschlagen“, die
 Instanz läuft wieder. Nach einer erfolgreichen Aktualisierung bleibt **Zurücknehmen** verfügbar (gleicher Ablauf per
 Knopf), bis zur nächsten Aktualisierung.
 
@@ -162,8 +171,13 @@ einem beliebigen Server mit dem Suite-Installer (Modus „restore“).
   dürfen weiterarbeiten) an einzelne, ausgewählte oder alle Instanzen; die Suite zeigt sie als Banner bzw. Wartungsseite.
 - **Tarife**: Benutzer- und Speicherlimit (überwacht), RAM- und CPU-Grenze für die API (durchgesetzt), Preis.
 - **Ereignisprotokoll** aller Aktionen (Konsole und Installer) mit Suche, Zeitraum, Ergebnisfilter, CSV-Export.
-- **Sicherheit**: eigene Administratoren (PBKDF2, `__Host-`-Cookie, CSRF, Rate-Limit, Kontosperre, TOTP), Passwortabfrage
-  vor Zugangsbrief/Export/Schlüssel, strikte CSP, optionale IP-Allowlist (siehe unten).
+- **Konten und Rollen** (Einstellungen): **Administrator** oder **Nur lesen** (Bereitschaft, Support, Leitstand). Konten
+  „nur lesen“ sehen Zustand, Protokolle, Vorgänge und Ereignisse; ändernde Knöpfe sind ausgeblendet, der Server lehnt
+  Änderungen, Zugangsbrief, Sicherungsschlüssel und Export mit 403 `READ_ONLY` ab. Neue Konten legen bei der ersten
+  Anmeldung ein eigenes Passwort fest; Rollenwechsel beendet die Sitzungen des Kontos; ein Administrator bleibt immer.
+- **Sicherheit**: eigene Konten (PBKDF2, `__Host-`-Cookie, CSRF, Rate-Limit, Kontosperre, TOTP), Passwortregeln
+  (mind. 12 Zeichen, nicht gleichförmig, kein bekanntes Wort oder Benutzername – Passphrasen ausdrücklich erwünscht),
+  Passwortabfrage vor Zugangsbrief/Export/Schlüssel, strikte CSP, optionale IP-Allowlist (siehe unten).
 - **Oberfläche**: OpenUI5 (self-hosted), alle Themes mit „Systemeinstellung folgen“, nur das EstrichONE-Logo.
 
 ## Voraussetzungen

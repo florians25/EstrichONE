@@ -7,7 +7,65 @@
 - Für den Zugriff aus dem Internet bzw. von Smartphones: eine Domain, die auf den Server zeigt,
   und offene Ports 80 und 443
 
-## Installation mit einem Docker-Befehl (empfohlen zum Testen)
+## Installation mit einem Befehl (empfohlen)
+
+Auf einem frischen Linux-Server (Ubuntu 24.04 LTS oder Debian 12) genügt:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.sh | sudo bash
+```
+
+Das Skript
+
+1. **prüft den Server** – Betriebssystem, Prozessor, Arbeitsspeicher (mind. 2 GB, empfohlen 4 GB), freien Speicher
+   (mind. 8 GB, empfohlen 30 GB), Docker mit Compose-Plugin, belegte Ports, DNS-Eintrag der Domain und die Firewall
+   (ufw). Jede Meldung nennt die Abhilfe;
+2. **installiert Docker**, falls es fehlt (Debian/Ubuntu, nach Rückfrage bzw. mit `--docker-installieren`);
+3. fragt nur **Adresse** und **Firmenname** ab (Enter übernimmt den Vorschlag) sowie, ob Sicherheitsupdates nachts
+   automatisch eingespielt werden sollen (Vorschlag: ja);
+4. wählt die **Betriebsart** selbst: Sind 80 und 443 frei, holt EstrichONE das Zertifikat selbst bei Let's Encrypt
+   (`direkt` auf 80/443). Sind sie belegt, läuft EstrichONE hinter dem vorhandenen Proxy (`proxy`, HTTP auf 8181). Ist
+   der vorhandene Proxy ein **Caddy auf dem Server** (Paket, systemd), trägt das Skript EstrichONE auf Wunsch dort als
+   Site ein – das Zertifikat holt dann dieser Caddy. Beim Nginx Proxy Manager zeigt es die nötigen Einstellungen;
+5. startet den Installer der neuesten Version, legt `/opt/estrichone/update.sh` an und zeigt am Ende **Adresse,
+   Backup-Passwort und Einrichtungscode**.
+
+**Erneut ausführen = Reparatur:** Bei einer vorhandenen Installation fragt das Skript nichts, bleibt bei der installierten
+Version und stellt Compose-Dateien, Rechte und Dienste wieder her. Daten, `.env` und Passwörter bleiben unverändert.
+
+| Befehl | Wirkung |
+|---|---|
+| `curl -fsSL …/install.sh \| sudo bash` | installieren bzw. reparieren |
+| `curl -fsSL …/install.sh \| sudo bash -s -- pruefen` | nur prüfen, nichts verändern |
+| `curl -fsSL …/install.sh \| sudo bash -s -- aktualisieren [VERSION]` | aktualisieren mit Sicherung (= `update.sh`) |
+| `curl -fsSL …/install.sh \| sudo bash -s -- wiederherstellen` | Neuinstallation aus einer Sicherung (Notfallblatt) |
+| `curl -fsSL …/install.sh \| sudo bash -s -- archiv` (bzw. `backup-ziel`, `kombi`) | weiteren Rechner einrichten |
+| `curl -fsSL …/install.sh \| sudo bash -s -- konsole` | Hosting-Konsole für viele Instanzen (siehe `hosting/README.md`) |
+
+**Ohne Rückfragen** (Automatisierung): `--ja` und die Angaben als Optionen oder Umgebungsvariablen:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/florians25/EstrichONE/main/install.sh | sudo bash -s -- \
+  --ja --docker-installieren --domain estrichone.firma.de --name "Estrichbau Muster GmbH"
+```
+
+Weitere Optionen: `--modus direkt|proxy`, `--version 1.0.13`, `--auto-updates sicherheit|patch|aus`,
+`--ohne-pruefung` (Mindestanforderungen nur melden). Alle `ESTRICHONE_*`-Variablen des Installers (z. B.
+`ESTRICHONE_HTTP_PORT`, `ESTRICHONE_BIND_ADDRESS`, `ESTRICHONE_TRUSTED_PROXIES`, `ESTRICHONE_ARCHIVE=lokal`) reicht das
+Skript weiter.
+
+Typische Meldungen und Abhilfe:
+
+| Meldung | Abhilfe |
+|---|---|
+| `Port 80 ist bereits belegt (nginx)` | Dienst beenden oder `--modus proxy` (EstrichONE dann hinter diesem Proxy) |
+| `DNS: … ist (noch) nicht auflösbar` | A-/AAAA-Eintrag beim DNS-Anbieter anlegen; das Zertifikat folgt automatisch |
+| `Firewall (ufw) … lässt Port(s) 80 443 nicht zu` | `sudo ufw allow 80/tcp` und `sudo ufw allow 443/tcp` |
+| `Installer-Image … nicht ladbar` | Internetverbindung, Version bzw. Docker-Proxy im Firmennetz prüfen |
+
+## Installation mit einem Docker-Befehl
+
+Gleichwertig, wenn Docker bereits installiert ist (das Skript oben ruft genau diesen Installer auf):
 
 ```bash
 sudo docker run --rm -it \

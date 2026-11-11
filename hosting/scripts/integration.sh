@@ -68,11 +68,12 @@ wait_proxy() { # wait_proxy PFAD STATUS
   fail "Proxy liefert für $1 nicht HTTP $2 (zuletzt $(proxy "$1"): $(head -c 300 /tmp/proxy-body))"
 }
 
-log "Ein-Befehl-Installation (hosting/install.sh, $IMAGE)"
+log "Ein-Befehl-Installation (install.sh konsole → hosting/install.sh, $IMAGE)"
 sudo env HOSTING_ROOT="$ROOT" HOSTING_IMAGE="$IMAGE" HOSTING_PULL=never HOSTING_NONINTERACTIVE=1 \
   HOSTING_BASE_DOMAIN=hosting.test HOSTING_CONSOLE_DOMAIN=konsole.hosting.test HOSTING_MODE=direkt HOSTING_TLS=off \
   HOSTING_HTTP_PORT="$HTTP_PORT" HOSTING_HTTPS_PORT=8443 HOSTING_ADMIN_USER=chefin HOSTING_ADMIN_EMAIL=ci@example.org \
-  HOSTING_DEFAULT_VERSION="$SUITE_VERSION" bash "$HERE/install.sh" | tee /tmp/install.log
+  HOSTING_DEFAULT_VERSION="$SUITE_VERSION" bash "$HERE/../install.sh" konsole | tee /tmp/install.log
+grep -q "Server prüfen" /tmp/install.log || fail "Gemeinsame Prüfung des Servers (install.sh) fehlt"
 START_PASSWORD="$(sed -n 's/^  Startpasswort: \([A-Za-z0-9-]*\)$/\1/p' /tmp/install.log | tail -n1)"
 [[ "$START_PASSWORD" =~ ^[A-Za-z0-9]{4}(-[A-Za-z0-9]{4}){3}$ ]] || fail "Installer hat kein Startpasswort ausgegeben"
 grep -q "Adresse:      http://konsole.hosting.test" /tmp/install.log || fail "Abschlussausgabe ohne Adresse"
