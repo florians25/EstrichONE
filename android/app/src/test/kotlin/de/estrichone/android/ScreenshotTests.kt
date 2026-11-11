@@ -187,6 +187,29 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     @Test
     fun problemMelden() = main("problem-melden", Tab.More, listOf(Route.Helpdesk, Route.ReportProblem))
 
+    /** Demonutzer als IT-Bearbeiter: Rechte neu laden lassen und warten, bis sie da sind. */
+    private fun agent(name: String, routes: List<Route>) = scene(name, Tab.More, { model ->
+        val session = model.session.value!!
+        session.demo!!.itAgent = true
+        session.synchronizeNow()
+        val deadline = System.currentTimeMillis() + 30_000
+        while ("helpdesk.agent" !in session.permissions.value) {
+            ShadowLooper.idleMainLooper()
+            Thread.sleep(50)
+            check(System.currentTimeMillis() < deadline) { "Rechte der Bearbeitung nicht geladen" }
+        }
+    }) { routes }
+
+    @Test
+    fun helpdeskBearbeitung() = agent("helpdesk-bearbeitung", listOf(Route.Helpdesk, Route.Ticket(DemoData.TICKET)))
+
+    @Test
+    fun helpdeskMeldungAufnehmen() = agent("helpdesk-meldung-aufnehmen", listOf(Route.Helpdesk, Route.RecordTicket))
+
+    @Test
+    fun helpdeskAnleitung() = main("helpdesk-anleitung", Tab.More, listOf(Route.Helpdesk, Route.Ticket(DemoData.TICKET),
+        Route.Article("0193a1b2-de00-7000-8000-00000000e001")))
+
     @Test
     fun einstellungen() = main("einstellungen", Tab.More)
 

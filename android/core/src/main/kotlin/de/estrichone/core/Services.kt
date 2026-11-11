@@ -253,9 +253,54 @@ data class TicketListItem(
     val reporterBlocked: Boolean = false, val assigneeName: String? = null, val createdAt: String? = null, val lastActivityAt: String? = null,
     val hasUnread: Boolean = false, val priority: String = "normal", val reporterDisplayName: String? = null, val assigneeUserId: String? = null,
     val subcategoryName: String? = null, val groupName: String? = null, val slaState: String? = null, val dueAt: String? = null,
-    val dueKind: String? = null, val rating: Int? = null,
+    val dueKind: String? = null, val rating: Int? = null, val groupId: String? = null, val subcategoryId: String? = null,
+    /** Eingang: selfService, phone, email, inPerson (Melder angerufen, gemailt, vor Ort – dann hat die IT erfasst). */
+    val channel: String? = null, val createdByName: String? = null,
 ) {
     val isOpen: Boolean get() = status != "resolved" && status != "closed"
+
+    /** „Telefon, aufgenommen von Anna Becker“ – nur, wenn die IT die Meldung erfasst hat. */
+    val intakeText: String? get() = ticketChannelLabel(channel)?.let { c -> createdByName?.let { "$c, aufgenommen von $it" } ?: c }
+}
+
+/** Eingangskanal lesbar; null bei „selbst gemeldet“ bzw. unbekannt. */
+fun ticketChannelLabel(channel: String?): String? = when (channel) {
+    "phone" -> "Telefon"
+    "email" -> "E-Mail"
+    "inPerson" -> "Vor Ort"
+    else -> null
+}
+
+/** Bearbeiter (Zuweisen, Erwähnen) mit Anzahl offener Tickets. */
+@Serializable
+data class HelpdeskAgent(val id: String, val displayName: String, val openTickets: Int = 0)
+
+@Serializable
+data class HelpdeskGroup(val id: String, val name: String, val isActive: Boolean = true)
+
+/** Textbaustein der Bearbeitung (gemeinsam oder eigener). */
+@Serializable
+data class CannedResponse(val id: String, val name: String, val text: String, val category: String? = null, val isPersonal: Boolean = false)
+
+/** Person, für die die IT eine Meldung aufnimmt. */
+@Serializable
+data class HelpdeskReporterPerson(val id: String, val displayName: String, val userName: String = "", val email: String? = null, val phone: String? = null)
+
+/** Metadaten einer Datei (Anhang im Verlauf). */
+@Serializable
+data class StoredFileInfo(val id: String, val originalName: String = "Anhang", val contentType: String = "application/octet-stream", val sizeBytes: Long = 0) {
+    val isImage: Boolean get() = contentType.startsWith("image/")
+}
+
+/**
+ * Textbaustein mit Platzhaltern füllen (wie im Web): {Melder}, {Vorname}, {Ticket}, {Titel}, {Bearbeiter}.
+ * „(laut Eingabe)“ hinter Namen von Meldungen ohne Anmeldung fällt weg.
+ */
+fun fillTicketPlaceholders(text: String, reporter: String?, ticket: String, title: String, agent: String?): String {
+    val name = (reporter ?: "").removeSuffix(" (laut Eingabe)").trim()
+    val first = name.split(Regex("\\s+")).firstOrNull().orEmpty()
+    return text.replace("{Melder}", name.ifEmpty { "zusammen" }).replace("{Vorname}", first.ifEmpty { "zusammen" })
+        .replace("{Ticket}", ticket).replace("{Titel}", title).replace("{Bearbeiter}", agent ?: "Ihre IT")
 }
 
 @Serializable
@@ -317,6 +362,21 @@ private data class TicketCommentRequest(val text: String, val isInternal: Boolea
 @Serializable
 private data class TicketRatingRequest(val rating: Int, val comment: String? = null)
 
+/** Änderung der Bearbeitung (PATCH /tickets/{id}); null = unverändert. */
+@Serializable
+data class TicketUpdate(
+    val status: String? = null, val resolution: String? = null, val priority: String? = null, val category: String? = null,
+    val assigneeUserId: String? = null, val unassign: Boolean = false, val groupId: String? = null, val clearGroup: Boolean = false,
+    val subcategoryId: String? = null, val clearSubcategory: Boolean = false,
+)
+
+@Serializable
+private data class TicketOnBehalfRequest(
+    val id: String, val title: String, val description: String?, val category: String, val channel: String, val source: String,
+    val reporterUserId: String?, val reporterName: String?, val reporterBlocked: Boolean, val priority: String?, val subcategoryId: String?,
+    val assigneeUserId: String?,
+)
+
 @Serializable
 private data class TicketStatusRequest(val status: String? = null, val resolution: String? = null, val assigneeUserId: String? = null, val unassign: Boolean = false)
 
@@ -339,6 +399,23 @@ suspend fun EstrichOneApi.helpdeskOptions(): HelpdeskOptions = send("GET", "help
 suspend fun EstrichOneApi.suggestArticles(query: String, category: String?): List<KnowledgeArticleSummary> =
     send("GET", "helpdesk/articles/suggest", null, query = mapOf("q" to query, "category" to category))
 suspend fun EstrichOneApi.knowledgeArticle(id: String): KnowledgeArticle = send("GET", "helpdesk/articles/$id", null)
+suspend fun EstrichOneApi.updateTicket(id: String, change: TicketUpdate): TicketFull = send("PATCH", "tickets/$id", change)
+suspend fun EstrichOneApi.helpdeskAgents(): List<HelpdeskAgent> = send("GET", "helpdesk/agents", null)
+suspend fun EstrichOneApi.helpdeskGroups(): List<HelpdeskGroup> = send<List<HelpdeskGroup>>("GET", "helpdesk/groups", null).filter { it.isActive }
+suspend fun EstrichOneApi.cannedResponses(): List<CannedResponse> = send("GET", "helpdesk/responses", null)
+suspend fun EstrichOneApi.helpdeskReporters(query: String): List<HelpdeskReporterPerson> =
+    send("GET", "helpdesk/reporters", null, query = mapOf("q" to query.trim().ifEmpty { null }, "limit" to "30"))
+suspend fun EstrichOneApi.fileInfo(id: String): StoredFileInfo = send("GET", "files/$id", null)
+
+/** Meldung aufnehmen (IT nach Anruf, E-Mail, vor Ort): Ticket gehört dem Melder; ohne Zugang genügt der Name. */
+suspend fun EstrichOneApi.createTicketOnBehalf(
+    title: String, description: String?, category: TicketCategory, channel: String, reporterUserId: String?, reporterName: String?,
+    priority: TicketPriority = TicketPriority.Normal, blocked: Boolean = false, subcategoryId: String? = null, assigneeUserId: String? = null,
+): TicketFull = send(
+    "POST", "tickets/on-behalf",
+    TicketOnBehalfRequest(Ids.v7(), title.trim(), description?.trim()?.ifEmpty { null }, category.raw, channel, "android", reporterUserId,
+        if (reporterUserId == null) reporterName?.trim()?.ifEmpty { null } else null, blocked, priority.raw, subcategoryId, assigneeUserId),
+)
 
 /** Direkt senden (online, ältere Wege); die App meldet sonst über [HelpdeskReporter] offline-fähig. */
 suspend fun EstrichOneApi.createTicket(

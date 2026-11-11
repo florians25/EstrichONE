@@ -86,6 +86,10 @@ sealed interface Route {
     data object Dispatch : Route
     data object Helpdesk : Route
     data object ReportProblem : Route
+    /** IT: Meldung im Namen eines Melders aufnehmen (Anruf, E-Mail, vor Ort). */
+    data object RecordTicket : Route
+    /** Anleitung aus der Wissensdatenbank. */
+    data class Article(val id: String) : Route
     data object Sync : Route
     data object Security : Route
     data object NotificationSettings : Route
@@ -287,6 +291,8 @@ private fun RouteScreen(route: Route, twoPane: Boolean) {
         Route.Dispatch -> DispatchScreen()
         Route.Helpdesk -> HelpdeskScreen()
         Route.ReportProblem -> ReportProblemScreen()
+        Route.RecordTicket -> RecordTicketScreen()
+        is Route.Article -> ArticleScreen(route.id)
         Route.Sync -> SyncScreen()
         Route.Security -> SecurityScreen()
         Route.NotificationSettings -> NotificationSettingsScreen()

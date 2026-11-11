@@ -7,6 +7,7 @@ import android.os.StatFs
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -20,6 +21,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -27,9 +30,14 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.AddPhotoAlternate
+import androidx.compose.material.icons.outlined.ArrowDropDown
+import androidx.compose.material.icons.outlined.Call
+import androidx.compose.material.icons.outlined.Description
+import androidx.compose.material.icons.outlined.Email
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.TextSnippet
 import androidx.compose.material.icons.outlined.CloudUpload
 import androidx.compose.material.icons.outlined.MenuBook
 import androidx.compose.material.icons.outlined.ReportProblem
@@ -54,6 +62,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -61,11 +70,28 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.estrichone.android.BuildConfig
 import de.estrichone.android.support.Images
+import de.estrichone.android.support.Links
+import de.estrichone.core.CannedResponse
+import de.estrichone.core.HelpdeskAgent
+import de.estrichone.core.HelpdeskGroup
+import de.estrichone.core.HelpdeskReporterPerson
+import de.estrichone.core.TicketUpdate
+import de.estrichone.core.cannedResponses
+import de.estrichone.core.createTicketOnBehalf
+import de.estrichone.core.fileInfo
+import de.estrichone.core.fillTicketPlaceholders
+import de.estrichone.core.helpdeskAgents
+import de.estrichone.core.helpdeskGroups
+import de.estrichone.core.helpdeskReporters
+import de.estrichone.core.knowledgeArticle
+import de.estrichone.core.updateTicket
 import de.estrichone.core.ApiDate
 import de.estrichone.core.Dates
 import de.estrichone.core.HelpdeskOptions
@@ -80,7 +106,6 @@ import de.estrichone.core.TicketListItem
 import de.estrichone.core.TicketPriority
 import de.estrichone.core.agentReply
 import de.estrichone.core.agentTickets
-import de.estrichone.core.assignTicketToMe
 import de.estrichone.core.commentTicket
 import de.estrichone.core.helpdeskOptions
 import de.estrichone.core.markTicketSeen
@@ -127,6 +152,11 @@ fun HelpdeskScreen() {
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     options.forEach { (key, label) -> FilterChip(view == key, { view = key }, label = { Text(label, maxLines = 1) }) }
                 }
+                OutlinedButton(onClick = { nav.push(Route.RecordTicket) }, modifier = Modifier.fillMaxWidth().padding(top = 8.dp)) {
+                    Icon(Icons.Outlined.Call, null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Meldung aufnehmen (Anruf, E-Mail, vor Ort)")
+                }
             }
             val waiting = pending.filter { it.state != SyncState.Synced || it.number == null }
             if (view == "mine" && waiting.isNotEmpty()) item {
@@ -151,7 +181,8 @@ fun HelpdeskScreen() {
                                 if (index > 0) RowDivider()
                                 val sla = if (agent && view != "mine") slaText(t) else null
                                 RowItem(t.title, icon = Icons.Outlined.SupportAgent,
-                                    subtitle = listOfNotNull(t.number, ticketStatusLabel(t.status), sla, if (view != "mine") t.reporterDisplayName else null)
+                                    subtitle = listOfNotNull(t.number, ticketStatusLabel(t.status), sla, if (view != "mine") t.reporterDisplayName else null,
+                                        de.estrichone.core.ticketChannelLabel(t.channel)?.takeIf { view != "mine" })
                                         .joinToString(" · "),
                                     showChevron = true, onClick = { nav.push(Route.Ticket(t.id)) }, trailing = { if (t.hasUnread) CountBadge(1) })
                             }
@@ -185,7 +216,12 @@ fun TicketScreen(id: String) {
     var stars by remember { mutableStateOf(0) }
     var ratingComment by remember { mutableStateOf("") }
     var resolving by remember { mutableStateOf(false) }
-    var menu by remember { mutableStateOf(false) }
+    val nav = LocalNav.current
+    // Bearbeitung: Personen, Gruppen und Textbausteine einmal laden.
+    val agents by produceState(emptyList<HelpdeskAgent>(), agent) { if (agent) value = runCatching { session.api.helpdeskAgents() }.getOrDefault(emptyList()) }
+    val groups by produceState(emptyList<HelpdeskGroup>(), agent) { if (agent) value = runCatching { session.api.helpdeskGroups() }.getOrDefault(emptyList()) }
+    val blocks by produceState(emptyList<CannedResponse>(), agent) { if (agent) value = runCatching { session.api.cannedResponses() }.getOrDefault(emptyList()) }
+    val options by produceState<HelpdeskOptions?>(null, agent) { if (agent) value = runCatching { session.api.helpdeskOptions() }.getOrNull() }
     LaunchedEffect(id) {
         ticket = attempt { session.api.ticket(id) }
         (ticket as? Load.Done)?.value?.let { stars = it.rating ?: 0; ratingComment = it.ratingComment ?: "" }
@@ -201,19 +237,7 @@ fun TicketScreen(id: String) {
             }
         }
     }
-    ScreenScaffold(t?.summary?.number ?: "Meldung", actions = {
-        if (agent && t != null) {
-            IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Bearbeiten") }
-            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                if (t.summary.assigneeUserId != session.user.id) {
-                    DropdownMenuItem(text = { Text("Mir zuweisen") }, onClick = { menu = false; update({ session.api.assignTicketToMe(id, session.user.id) }, "Ticket übernommen") })
-                }
-                DropdownMenuItem(text = { Text("In Bearbeitung") }, onClick = { menu = false; update({ session.api.updateTicketStatus(id, "inProgress") }) })
-                DropdownMenuItem(text = { Text("Rückfrage an Melder") }, onClick = { menu = false; update({ session.api.updateTicketStatus(id, "waitingForReporter") }) })
-                DropdownMenuItem(text = { Text("Gelöst …") }, onClick = { menu = false; resolving = true })
-            }
-        }
-    }) { padding ->
+    ScreenScaffold(t?.summary?.number ?: "Meldung") { padding ->
         LoadView(ticket) {
             val full = (ticket as? Load.Done)?.value ?: return@LoadView
             LazyColumn(contentPadding = padding.content(), verticalArrangement = Arrangement.spacedBy(10.dp), modifier = Modifier.readable()) {
@@ -227,6 +251,10 @@ fun TicketScreen(id: String) {
                         if (agent) slaText(full.summary)?.let { Pill(it, tones.danger, tones.dangerSoft) }
                     }
                     full.summary.assigneeName?.let { Secondary("Bearbeitet von $it", Modifier.padding(top = 6.dp)) }
+                    if (agent) full.summary.intakeText?.let { Secondary("Eingang: $it · Melder: ${full.summary.reporterDisplayName ?: "–"}") }
+                }
+                if (agent) item {
+                    AgentPanel(full, agents, groups, options, session.user.id, onResolve = { resolving = true }) { change, message -> update({ session.api.updateTicket(id, change) }, message) }
                 }
                 full.mergedIntoNumber?.let { number ->
                     item { Banner("Diese Meldung wurde mit $number zusammengeführt. Antworten erhalten Sie dort.", Icons.Outlined.SupportAgent, tones.info, tones.infoSoft) }
@@ -243,7 +271,7 @@ fun TicketScreen(id: String) {
                 if (articles.isNotEmpty()) item {
                     SectionCard(padding = PaddingValues(14.dp)) {
                         Text("Anleitungen zu dieser Meldung", style = MaterialTheme.typography.titleSmall)
-                        articles.forEach { a -> RowItem(a.title, icon = Icons.Outlined.MenuBook) }
+                        articles.forEach { a -> RowItem(a.title, icon = Icons.Outlined.MenuBook, showChevron = true, onClick = { nav.push(Route.Article(a.id)) }) }
                     }
                 }
                 items(full.history(includeInternal = agent), key = { it.id }) { e ->
@@ -255,7 +283,7 @@ fun TicketScreen(id: String) {
                                 Text((e.actorName ?: "") + if (e.isInternal) " · interne Notiz" else "", style = MaterialTheme.typography.labelLarge,
                                     color = MaterialTheme.colorScheme.primary)
                                 e.text?.let { Text(it) }
-                                if (e.attachmentFileIds.isNotEmpty()) Secondary(if (e.attachmentFileIds.size == 1) "1 Anhang" else "${e.attachmentFileIds.size} Anhänge")
+                                if (e.attachmentFileIds.isNotEmpty()) TicketAttachments(e.attachmentFileIds)
                                 ApiDate.parse(e.at)?.let { Secondary(Dates.ago(it)) }
                             }
                         }
@@ -289,7 +317,12 @@ fun TicketScreen(id: String) {
                         OutlinedButton(onClick = { update({ session.api.reopenTicket(id) }) }, modifier = Modifier.fillMaxWidth()) { Text("Problem besteht weiter – wieder öffnen") }
                     } else {
                         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            DictationField(reply, { reply = it }, if (internal) "Interne Notiz" else if (agent) "Antwort an den Melder" else "Antwort an die IT", minLines = 2)
+                            DictationField(reply, { reply = it }, if (internal) "Interne Notiz" else if (agent) "Öffentliche Antwort an den Melder" else "Antwort an die IT", minLines = 2)
+                            if (agent && blocks.isNotEmpty()) TextBlockButton(blocks) { text ->
+                                val filled = fillTicketPlaceholders(text, full.summary.reporterDisplayName, full.summary.number, full.summary.title,
+                                    agents.firstOrNull { it.id == session.user.id }?.displayName)
+                                reply = if (reply.isBlank()) filled else reply.trimEnd() + "\n\n" + filled
+                            }
                             if (agent) Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { internal = !internal }) {
                                 Checkbox(internal, { internal = it })
                                 Text("Interne Notiz (für den Melder unsichtbar)")
@@ -298,7 +331,7 @@ fun TicketScreen(id: String) {
                                 val text = reply
                                 reply = ""
                                 update({ if (agent) session.api.agentReply(id, text, internal) else session.api.commentTicket(id, text) })
-                            }, enabled = reply.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(if (internal) "Notiz speichern" else "Antworten") }
+                            }, enabled = reply.isNotBlank(), modifier = Modifier.fillMaxWidth()) { Text(if (internal) "Notiz speichern" else if (agent) "Antwort senden" else "Antworten") }
                         }
                     }
                 }
@@ -378,7 +411,8 @@ fun ReportProblemScreen() {
             DictationField(description, { description = it }, "Beschreibung (optional)", minLines = 4)
             if (suggestions.isNotEmpty()) SectionCard(padding = PaddingValues(14.dp)) {
                 Text("Vielleicht hilft schon eine Anleitung", style = MaterialTheme.typography.titleSmall)
-                suggestions.forEach { a -> RowItem(a.title, icon = Icons.Outlined.MenuBook, subtitle = a.excerpt.take(120)) }
+                suggestions.forEach { a -> RowItem(a.title, icon = Icons.Outlined.MenuBook, subtitle = a.excerpt.take(120), showChevron = true,
+                    onClick = { nav.push(Route.Article(a.id)) }) }
             }
             Text("Wie dringend?", style = MaterialTheme.typography.titleSmall)
             FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -432,6 +466,257 @@ fun ReportProblemScreen() {
                     }.onFailure { error = it.message ?: "Die Meldung konnte nicht gespeichert werden." }
                 }
             }, enabled = title.isNotBlank() && !sending, modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Meldung senden") }
+        }
+    }
+}
+
+/** Auswahlfeld mit Liste (Zuständig, Gruppe, Kategorie …): Beschriftung oben, gewählter Wert, Pfeil. */
+@Composable
+private fun PickerField(label: String, value: String, options: List<Pair<String?, String>>, modifier: Modifier = Modifier, onPick: (String?) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box(modifier) {
+        Column(Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp)).background(tones.fill).clickable { open = true }.padding(horizontal = 12.dp, vertical = 8.dp)) {
+            Text(label, style = MaterialTheme.typography.labelMedium, color = tones.textSecondary)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(value, Modifier.weight(1f), maxLines = 1)
+                Icon(Icons.Outlined.ArrowDropDown, null, tint = tones.textSecondary)
+            }
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            options.forEach { (key, text) -> DropdownMenuItem(text = { Text(text) }, onClick = { open = false; onPick(key) }) }
+        }
+    }
+}
+
+/**
+ * Bearbeitung im Ticket (Recht helpdesk.agent): Status, Priorität, Zuständig (Person, Gruppe), Kategorie und Unterkategorie –
+ * wie die Schnellaktionen im Web. „Gelöst“ fragt die Lösung ab.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun AgentPanel(
+    full: TicketFull, agents: List<HelpdeskAgent>, groups: List<HelpdeskGroup>, options: HelpdeskOptions?, me: String, onResolve: () -> Unit,
+    onChange: (TicketUpdate, String) -> Unit,
+) {
+    val s = full.summary
+    SectionCard(padding = PaddingValues(14.dp)) {
+        Text("Bearbeitung", style = MaterialTheme.typography.titleSmall)
+        Text("Status", style = MaterialTheme.typography.labelMedium, color = tones.textSecondary, modifier = Modifier.padding(top = 8.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            listOf("new", "inProgress", "waitingForReporter", "resolved").forEach { key ->
+                FilterChip(s.status == key, {
+                    if (key == "resolved") onResolve() else if (key != s.status) onChange(TicketUpdate(status = key), "Status: ${ticketStatusLabel(key)}")
+                }, label = { Text(if (key == "waitingForReporter") "Rückfrage" else ticketStatusLabel(key)) })
+            }
+        }
+        Text("Priorität", style = MaterialTheme.typography.labelMedium, color = tones.textSecondary, modifier = Modifier.padding(top = 4.dp))
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            TicketPriority.entries.forEach { p ->
+                FilterChip(s.priority == p.raw, { if (s.priority != p.raw) onChange(TicketUpdate(priority = p.raw), "Priorität: ${p.title}, Ziele neu berechnet") },
+                    label = { Text(p.title) })
+            }
+        }
+        Column(Modifier.padding(top = 8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PickerField("Zuständig", s.assigneeName ?: "nicht zugewiesen",
+                    listOf<Pair<String?, String>>(me to "Mir zuweisen", null to "Niemand") + agents.filter { it.id != me }.map { it.id to "${it.displayName} (${it.openTickets} offen)" },
+                    Modifier.weight(1f)) { key ->
+                    if (key != s.assigneeUserId) onChange(if (key == null) TicketUpdate(unassign = true) else TicketUpdate(assigneeUserId = key),
+                        if (key == null) "Zuweisung aufgehoben" else if (key == me) "Ticket übernommen" else "Zugewiesen")
+                }
+                if (groups.isNotEmpty()) PickerField("Gruppe", s.groupName ?: "keine", listOf<Pair<String?, String>>(null to "Keine Gruppe") + groups.map { it.id to it.name },
+                    Modifier.weight(1f)) { key ->
+                    if (key != s.groupId) onChange(if (key == null) TicketUpdate(clearGroup = true) else TicketUpdate(groupId = key), "Gruppe geändert")
+                }
+            }
+            val subs = options?.categories?.firstOrNull { it.key == s.category }?.subcategories.orEmpty()
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                PickerField("Kategorie", TicketCategory.of(s.category)?.title ?: s.category, TicketCategory.entries.map { it.raw to it.title }, Modifier.weight(1f)) { key ->
+                    if (key != null && key != s.category) onChange(TicketUpdate(category = key), "Kategorie geändert")
+                }
+                if (subs.isNotEmpty()) PickerField("Unterkategorie", s.subcategoryName ?: "–", listOf<Pair<String?, String>>(null to "–") + subs.map { it.id to it.name },
+                    Modifier.weight(1f)) { key ->
+                    if (key != s.subcategoryId) onChange(if (key == null) TicketUpdate(clearSubcategory = true) else TicketUpdate(subcategoryId = key), "Unterkategorie geändert")
+                }
+            }
+        }
+    }
+}
+
+/** Textbausteine der Bearbeitung zum Einfügen ins Antwortfeld (Platzhalter wie {Vorname} werden gefüllt). */
+@Composable
+private fun TextBlockButton(blocks: List<CannedResponse>, onPick: (String) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    Box {
+        OutlinedButton(onClick = { open = true }) {
+            Icon(Icons.Outlined.TextSnippet, null)
+            Spacer(Modifier.width(8.dp))
+            Text("Textbaustein")
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            blocks.forEach { b -> DropdownMenuItem(text = { Text(if (b.isPersonal) "${b.name} (eigener)" else b.name) }, onClick = { open = false; onPick(b.text) }) }
+        }
+    }
+}
+
+/** Anhänge einer Antwort: Bilder als Vorschau, andere Dateien mit Namen; Tippen öffnet die Datei. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun TicketAttachments(ids: List<String>) {
+    FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        ids.forEach { TicketAttachment(it) }
+    }
+}
+
+@Composable
+private fun TicketAttachment(id: String) {
+    val session = LocalSession.current
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val info by produceState<de.estrichone.core.StoredFileInfo?>(null, id) { value = withContext(Dispatchers.IO) { runCatching { session.api.fileInfo(id) }.getOrNull() } }
+    val image = info?.isImage == true
+    val bitmap by produceState<android.graphics.Bitmap?>(null, id, image) {
+        if (image) value = withContext(Dispatchers.IO) {
+            runCatching { session.api.bytes("files/$id/content", mapOf("variant" to "thumb")) ?: session.api.bytes("files/$id/content") }.getOrNull()
+                ?.let { Images.decode(it, 480) }
+        }
+    }
+    val open: () -> Unit = {
+        scope.launch {
+            val bytes = withContext(Dispatchers.IO) { runCatching { session.api.bytes("files/$id/content") }.getOrNull() }
+            if (bytes != null) Links.open(context, bytes, info?.originalName ?: "Anhang", info?.contentType ?: "application/octet-stream")
+        }
+    }
+    if (image) {
+        Box(Modifier.size(150.dp, 112.dp).clip(RoundedCornerShape(10.dp)).background(tones.fill).clickable(onClick = open)) {
+            bitmap?.let { Image(it.asImageBitmap(), info?.originalName, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize()) }
+        }
+    } else {
+        Row(Modifier.clip(RoundedCornerShape(10.dp)).background(tones.fill).clickable(onClick = open).padding(10.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Outlined.Description, null, tint = MaterialTheme.colorScheme.primary)
+            Spacer(Modifier.width(8.dp))
+            Text(info?.originalName ?: "Anhang", style = MaterialTheme.typography.bodyMedium, maxLines = 1)
+        }
+    }
+}
+
+/** Anleitung aus der Wissensdatenbank (verknüpft im Ticket oder beim Melden vorgeschlagen). */
+@Composable
+fun ArticleScreen(id: String) {
+    val session = LocalSession.current
+    val article by rememberLoad(id) { session.api.knowledgeArticle(id) }
+    ScreenScaffold("Anleitung") { padding ->
+        LoadView(article) {
+            val a = (article as Load.Done).value
+            Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp).readable(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(a.title, style = MaterialTheme.typography.headlineSmall)
+                TicketCategory.of(a.category)?.let { Pill(it.title, tones.textSecondary, tones.fill) }
+                a.body.split(Regex("\\n{2,}")).filter { it.isNotBlank() }.forEach { paragraph ->
+                    Text(paragraph.trim(), style = MaterialTheme.typography.bodyLarge)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Meldung aufnehmen (Recht helpdesk.agent): Die IT legt nach Anruf, E-Mail oder Besuch ein Ticket im Namen des Melders an.
+ * Melder suchen (Name, Benutzername, E-Mail, Telefon) oder Namen eintragen; standardmäßig übernimmt die erfassende Person.
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+fun RecordTicketScreen() {
+    val session = LocalSession.current
+    val nav = LocalNav.current
+    val model = LocalModel.current
+    val scope = rememberCoroutineScope()
+    var channel by rememberSaveable { mutableStateOf("phone") }
+    var query by rememberSaveable { mutableStateOf("") }
+    var reporter by remember { mutableStateOf<HelpdeskReporterPerson?>(null) }
+    var results by remember { mutableStateOf<List<HelpdeskReporterPerson>>(emptyList()) }
+    var title by rememberSaveable { mutableStateOf("") }
+    var description by rememberSaveable { mutableStateOf("") }
+    var category by rememberSaveable { mutableStateOf(TicketCategory.Other) }
+    var priority by rememberSaveable { mutableStateOf(TicketPriority.Normal) }
+    var blocked by rememberSaveable { mutableStateOf(false) }
+    var assignToMe by rememberSaveable { mutableStateOf(true) }
+    var sending by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
+    val status by session.status.collectAsState()
+    LaunchedEffect(query, reporter) {
+        if (reporter != null) return@LaunchedEffect
+        delay(300)
+        results = runCatching { session.api.helpdeskReporters(query) }.getOrDefault(emptyList()).take(6)
+    }
+    ScreenScaffold("Meldung aufnehmen") { padding ->
+        Column(Modifier.padding(padding).verticalScroll(rememberScrollState()).padding(16.dp).readable(), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Secondary("Für Anrufe, E-Mails und Besuche: Das Ticket gehört dem Melder, er sieht den Verlauf und erhält die Antworten.")
+            Text("Eingang", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                listOf(Triple("phone", "Telefon", Icons.Outlined.Call), Triple("email", "E-Mail", Icons.Outlined.Email), Triple("inPerson", "Vor Ort", Icons.Outlined.Person))
+                    .forEach { (key, label, icon) -> FilterChip(channel == key, { channel = key }, label = { Text(label) }, leadingIcon = { Icon(icon, null) }) }
+            }
+            Text("Melder", style = MaterialTheme.typography.titleSmall)
+            val chosen = reporter
+            if (chosen != null) {
+                SectionCard {
+                    RowItem(chosen.displayName, icon = Icons.Outlined.Person, subtitle = listOfNotNull(chosen.userName.ifBlank { null }, chosen.email).joinToString(" · "),
+                        trailing = { TextButton(onClick = { reporter = null }) { Text("Ändern") } })
+                }
+            } else {
+                OutlinedTextField(query, { query = it }, label = { Text("Name, Benutzername, E-Mail oder Telefon") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                if (results.isNotEmpty()) SectionCard {
+                    results.forEachIndexed { i, r ->
+                        if (i > 0) RowDivider()
+                        RowItem(r.displayName, icon = Icons.Outlined.Person, subtitle = listOfNotNull(r.userName.ifBlank { null }, r.email ?: r.phone).joinToString(" · "),
+                            onClick = { reporter = r })
+                    }
+                }
+                Secondary("Ohne Zugang zu EstrichONE: Namen eintragen, dann wird er als Melder vermerkt.")
+            }
+            OutlinedTextField(title, { title = it }, label = { Text("Kurzbeschreibung") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+            DictationField(description, { description = it }, "Was schildert der Melder?", minLines = 3)
+            Text("Kategorie", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TicketCategory.entries.forEach { c -> FilterChip(category == c, { category = c }, label = { Text(c.title) }) }
+            }
+            Text("Priorität", style = MaterialTheme.typography.titleSmall)
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                TicketPriority.entries.forEach { p -> FilterChip(priority == p, { priority = p }, label = { Text(p.title) }) }
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.clickable { blocked = !blocked }) {
+                Checkbox(blocked, { blocked = it })
+                Text("Melder kann deswegen nicht arbeiten")
+            }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f)) {
+                    Text("Selbst übernehmen")
+                    Secondary("Sonst ordnen die Regeln das Ticket zu.")
+                }
+                Switch(assignToMe, { assignToMe = it })
+            }
+            error?.let { Text(it, color = tones.danger) }
+            val name = query.trim()
+            Button(onClick = {
+                sending = true
+                error = null
+                scope.launch {
+                    val result = attempt {
+                        session.api.createTicketOnBehalf(title, description, category, channel, reporter?.id, if (reporter == null) name else null, priority, blocked,
+                            assigneeUserId = if (assignToMe) session.user.id else null)
+                    }
+                    sending = false
+                    when (result) {
+                        is Load.Done -> {
+                            model.message("Ticket ${result.value.summary.number} für ${result.value.summary.reporterDisplayName ?: "den Melder"} angelegt")
+                            nav.replace(Route.Ticket(result.value.summary.id))
+                        }
+                        is Load.Failed -> error = result.message
+                        Load.Loading -> Unit
+                    }
+                }
+            }, enabled = title.isNotBlank() && (reporter != null || name.isNotEmpty()) && !sending && !status.offline,
+                modifier = Modifier.fillMaxWidth().height(52.dp)) { Text("Ticket anlegen") }
         }
     }
 }

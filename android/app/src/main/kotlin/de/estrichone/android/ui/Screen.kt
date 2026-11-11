@@ -112,6 +112,7 @@ fun DemoMark() {
             DropdownMenuItem(text = { Text((if (demo.archiveDown) "✓ " else "") + "Archiv-Server ausgefallen") }, onClick = { demo.archiveDown = !demo.archiveDown; refresh() })
             DropdownMenuItem(text = { Text(if (demo.maintenance) "Wartung beenden" else "Wartung starten") }, leadingIcon = { Icon(Icons.Filled.Build, null) },
                 onClick = { demo.maintenance = !demo.maintenance; refresh() })
+            DropdownMenuItem(text = { Text((if (demo.itAgent) "✓ " else "") + "Als IT-Bearbeiter") }, onClick = { demo.itAgent = !demo.itAgent; refresh() })
             HorizontalDivider()
             DropdownMenuItem(text = { Text("Demo beenden", color = tones.danger) }, onClick = { open = false; model.endDemo() })
         }

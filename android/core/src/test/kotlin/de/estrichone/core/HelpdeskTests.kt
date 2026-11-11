@@ -112,4 +112,55 @@ class HelpdeskTests {
         assertTrue(api.helpdeskOptions().categories.any { it.subcategories.isNotEmpty() })
         assertEquals(1, api.suggestArticles("Fotos fehlen", "sync").size)
     }
+
+    @Test
+    fun `Textbausteine füllen Platzhalter, Eingangskanal lesbar`() {
+        assertEquals("Hallo Lukas, T-2026-0007 ist bei Anna.",
+            fillTicketPlaceholders("Hallo {Vorname}, {Ticket} ist bei {Bearbeiter}.", "Lukas Brandl", "T-2026-0007", "Drucker", "Anna"))
+        assertEquals("Hallo zusammen – Ihre IT", fillTicketPlaceholders("Hallo {Vorname} – {Bearbeiter}", null, "T-1", "x", null))
+        assertEquals("Max Muster", fillTicketPlaceholders("{Melder}", "Max Muster (laut Eingabe)", "T-1", "x", null))
+        assertEquals("Telefon", ticketChannelLabel("phone"))
+        assertNull(ticketChannelLabel("selfService"))
+        val item = TicketListItem("1", "T-1", "x", channel = "email", createdByName = "Anna Becker")
+        assertEquals("E-Mail, aufgenommen von Anna Becker", item.intakeText)
+        assertNull(TicketListItem("2", "T-2", "y").intakeText)
+    }
+
+    @Test
+    fun `Änderung der Bearbeitung sendet nur gesetzte Felder`() {
+        val body = EstrichOneApi.json.encodeToString(TicketUpdate.serializer(), TicketUpdate(priority = "high", groupId = "g"))
+        assertTrue(body.contains("\"priority\":\"high\"") && body.contains("\"groupId\":\"g\""))
+        assertFalse(body.contains("assigneeUserId"), body)
+        assertFalse(body.contains("status"), body)
+    }
+
+    @Test
+    fun `Demomodus IT bearbeitet, nimmt Meldung auf, Anleitung und Anhang`() = kotlinx.coroutines.runBlocking {
+        val server = DemoServer().also { it.itAgent = true }
+        val api = EstrichOneApi("https://demo.invalid", MemorySessionStore(), SoftwareDeviceKeys(), server.client())
+        api.signIn("demo", "demo", "Test")
+        assertTrue("helpdesk.agent" in api.myPermissions())
+        val agents = api.helpdeskAgents()
+        assertTrue(agents.size >= 2)
+        val changed = api.updateTicket(DemoData.TICKET, TicketUpdate(priority = "urgent", assigneeUserId = agents[1].id, groupId = api.helpdeskGroups().last().id))
+        assertEquals("urgent", changed.summary.priority)
+        assertEquals(agents[1].displayName, changed.summary.assigneeName)
+        assertEquals("Büro", changed.summary.groupName)
+        assertTrue(api.cannedResponses().any { it.text.contains("{Vorname}") })
+
+        val withPhoto = changed.history().first { it.attachmentFileIds.isNotEmpty() }
+        val file = api.fileInfo(withPhoto.attachmentFileIds.first())
+        assertTrue(file.isImage)
+
+        val article = api.knowledgeArticle(changed.articles!!.first().id)
+        assertTrue(article.body.contains("Jetzt abgleichen"))
+
+        val lukas = api.helpdeskReporters("lukas").single()
+        val recorded = api.createTicketOnBehalf("Tablet ohne Aufträge", "Anruf", TicketCategory.Sync, "phone", lukas.id, null,
+            assigneeUserId = DemoData.USER_ID)
+        assertEquals("Lukas Brandl", recorded.summary.reporterDisplayName)
+        assertEquals("phone", recorded.summary.channel)
+        assertEquals("inProgress", recorded.summary.status)
+        assertTrue(recorded.history().first().summary.contains("aufgenommen (Telefon)"))
+    }
 }

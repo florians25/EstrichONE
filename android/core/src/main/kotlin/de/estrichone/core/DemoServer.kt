@@ -35,6 +35,9 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
     @Volatile var archiveDown = false
     @Volatile var maintenance = false
 
+    /** Demonutzer zusätzlich als IT-Bearbeiter (Recht helpdesk.agent) – Menü „Demo“ und Bildschirmfotos der Bearbeitung. */
+    @Volatile var itAgent = false
+
     init {
         DemoData.changes().forEach { entities["${it.entityType}/${it.id}"] = it }
     }
@@ -92,7 +95,7 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
                     "createdAt" to ApiDate.format(now.minusSeconds(86_400)), "lastSeenAt" to ApiDate.format(now.minusSeconds(7200)), "current" to false))
             path == "auth/two-factor" -> 200 to json("enabled" to false, "recoveryCodesRemaining" to 0, "requiredByPolicy" to false)
             path == "access/me/permissions" -> 200 to listOf("bauakten.read", "bauakten.create", "bauakten.edit", "notes.write", "files.upload", "work.edit",
-                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve")
+                "contacts.read", "contacts.edit", "chat.use", "absence.request", "absence.approve") + (if (itAgent) listOf("helpdesk.agent") else emptyList())
             path == "settings" -> 200 to json("settings" to json("bauakte" to json("warnMissingInspection" to true)), "version" to 1)
             path == "sync/push" -> 200 to push(body)
             path == "sync/pull" -> 200 to json("changes" to entities.values.map { EstrichOneApi.json.encodeToJsonElement(SyncChange.serializer(), it) },
@@ -132,10 +135,21 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
             path.startsWith("chat/") -> chat.handle(method, path.removePrefix("chat/"), query, body, raw, content)
             path.startsWith("hr/") -> absences.handle(method, path, query, body)
             path == "tickets/mine" -> 200 to tickets.list()
+            path == "tickets" && method == "GET" -> 200 to tickets.list()
+            path == "tickets/on-behalf" -> 201 to tickets.createOnBehalf(body)
+            path == "helpdesk/agents" -> 200 to tickets.agents()
+            path == "helpdesk/groups" -> 200 to tickets.groups()
+            path == "helpdesk/responses" -> 200 to tickets.responses()
+            path == "helpdesk/reporters" -> 200 to tickets.reporters(query["q"])
+            parts.size == 2 && parts[0] == "files" && method == "GET" -> 200 to json("id" to parts[1], "originalName" to
+                (DemoData.photos.firstOrNull { it.id == parts[1] }?.let { "${it.caption}.jpg" } ?: "Anhang.pdf"),
+                "contentType" to if (DemoData.photos.any { it.id == parts[1] }) "image/jpeg" else "application/pdf", "sizeBytes" to 412_000)
             path == "tickets" && method == "POST" -> 200 to tickets.create(body)
             path == "tickets/device" -> 200 to json("number" to "T-2026-0031")
             path == "helpdesk/options" -> 200 to tickets.options()
             path == "helpdesk/articles/suggest" -> 200 to tickets.suggest(query["q"])
+            parts.size == 3 && parts[0] == "helpdesk" && parts[1] == "articles" -> tickets.article(parts[2])?.let { 200 to it }
+                ?: problem(404, "NOT_FOUND", "Artikel nicht gefunden")
             parts.size >= 2 && parts[0] == "tickets" -> tickets.handle(method, parts, body)
             path == "directory/users" -> 200 to absences.directory()
             else -> problem(404, "NOT_FOUND", "Im Demomodus nicht verfügbar.")
@@ -275,9 +289,22 @@ private class DemoInbox {
 
 /** Meldungen an die IT im Demomodus (wie DemoHelpdesk.swift): Verlauf, Lösung, Bewertung, Unterkategorien, Anleitungen. */
 private class DemoTickets {
-    private data class Ticket(val id: String, val number: String, val title: String, val description: String?, val category: String, var status: String,
+    private data class Ticket(val id: String, val number: String, val title: String, val description: String?, var category: String, var status: String,
         val minutesAgo: Long, val comments: MutableList<Triple<String, String, Long>>, var resolution: String? = null, var rating: Int? = null,
-        val priority: String = "normal", val subcategory: String? = null)
+        var priority: String = "normal", var subcategory: String? = null, var assignee: String? = IT_SUPPORT, var group: String? = GROUP_IT,
+        val attachments: Map<Int, List<String>> = emptyMap(), val reporter: String = DemoData.USER_NAME, val channel: String = "selfService",
+        val internal: MutableSet<Int> = mutableSetOf())
+
+    companion object {
+        const val IT_SUPPORT = "0193a1b2-de00-7000-8000-00000000f001"
+        const val IT_ANNA = "0193a1b2-de00-7000-8000-00000000f002"
+        const val GROUP_IT = "0193a1b2-de00-7000-8000-00000000f101"
+        const val GROUP_OFFICE = "0193a1b2-de00-7000-8000-00000000f102"
+        private val agentNames = mapOf(IT_SUPPORT to "IT-Support", IT_ANNA to "Anna Lechner", DemoData.USER_ID to DemoData.USER_NAME)
+        private val groupNames = mapOf(GROUP_IT to "IT", GROUP_OFFICE to "Büro")
+        private val subNames = mapOf("0193a1b2-de00-7000-8000-00000000e101" to "Fotos und Dokumente", "0193a1b2-de00-7000-8000-00000000e102" to "Drucker",
+            "0193a1b2-de00-7000-8000-00000000e103" to "Telefon")
+    }
 
     private var counter = 0
     private val tickets = mutableListOf(
@@ -286,7 +313,8 @@ private class DemoTickets {
                 Triple("IT-Support", "Danke für die Meldung. Welche App-Version ist installiert? Sie steht unter Mehr > Info.", 60L * 24),
                 Triple(DemoData.USER_NAME, "Version 1.0.0, Pixel 8. Betroffen sind nur Fotos von heute früh.", 60L * 23),
                 Triple("IT-Support", "Bitte einmal die App öffnen und im WLAN warten, bis die Synchronisation fertig ist. Klappt es dann?", 35L),
-            ), priority = "high", subcategory = "Fotos und Dokumente"),
+            ), priority = "high", subcategory = "0193a1b2-de00-7000-8000-00000000e101",
+            attachments = mapOf(1 to listOf("0193a1b2-de00-7000-8000-00000000a003"), 2 to listOf(DemoData.PDF))),
         Ticket("0193a1b2-de00-7000-8000-00000000c004", "T-2026-0004", "Zugang für neuen Mitarbeiter", "Jonas Wirth braucht einen Zugang für die App.", "access",
             "resolved", 60 * 24 * 6, mutableListOf(Triple("IT-Support", "Zugang ist eingerichtet, Einladung ging per E-Mail raus.", 60L * 24 * 5)),
             resolution = "Konto angelegt, Zugangsbrief per E-Mail verschickt."),
@@ -294,8 +322,10 @@ private class DemoTickets {
 
     private fun summary(t: Ticket, now: Instant = Instant.now()) = mapOf(
         "id" to t.id, "number" to t.number, "title" to t.title, "category" to t.category, "status" to t.status, "reporterBlocked" to false,
-        "priority" to t.priority, "subcategoryName" to t.subcategory, "rating" to t.rating,
-        "assigneeName" to "IT-Support", "createdAt" to ApiDate.format(now.minusSeconds(t.minutesAgo * 60)),
+        "priority" to t.priority, "subcategoryId" to t.subcategory, "subcategoryName" to t.subcategory?.let { subNames[it] }, "rating" to t.rating,
+        "assigneeUserId" to t.assignee, "assigneeName" to t.assignee?.let { agentNames[it] }, "groupId" to t.group, "groupName" to t.group?.let { groupNames[it] },
+        "reporterDisplayName" to t.reporter, "channel" to t.channel, "createdByName" to if (t.channel != "selfService") DemoData.USER_NAME else null,
+        "createdAt" to ApiDate.format(now.minusSeconds(t.minutesAgo * 60)),
         "lastActivityAt" to ApiDate.format(now.minusSeconds((t.comments.lastOrNull()?.third ?: t.minutesAgo) * 60)),
         "hasUnread" to (t.status == "waitingForReporter"),
     )
@@ -309,12 +339,16 @@ private class DemoTickets {
         }
         val timeline = buildList {
             add(mapOf("id" to "${t.id}-c", "at" to at(t.minutesAgo), "kind" to "created", "actorUserId" to DemoData.USER_ID, "actorName" to DemoData.USER_NAME,
-                "summary" to "${DemoData.USER_NAME} hat das Problem gemeldet", "text" to t.description, "isReporter" to true))
+                "summary" to if (t.channel == "selfService") "${DemoData.USER_NAME} hat das Problem gemeldet"
+                    else "${DemoData.USER_NAME} hat die Meldung von ${t.reporter} aufgenommen (${ticketChannelLabel(t.channel)})",
+                "text" to t.description, "isReporter" to true))
             add(mapOf("id" to "${t.id}-a", "at" to at(t.minutesAgo - 20), "kind" to "assignee", "actorName" to "IT-Support", "summary" to "Zugewiesen an IT-Support"))
             t.comments.forEachIndexed { i, (author, text, minutes) ->
-                add(mapOf("id" to "${t.id}-$i", "at" to at(minutes), "kind" to "comment", "actorName" to author,
-                    "actorUserId" to if (author == DemoData.USER_NAME) DemoData.USER_ID else null, "summary" to "$author hat geantwortet", "text" to text,
-                    "isReporter" to (author == DemoData.USER_NAME)))
+                val note = i in t.internal
+                add(mapOf("id" to "${t.id}-$i", "at" to at(minutes), "kind" to if (note) "note" else "comment", "actorName" to author,
+                    "actorUserId" to if (author == DemoData.USER_NAME) DemoData.USER_ID else null,
+                    "summary" to if (note) "$author hat eine interne Notiz geschrieben" else "$author hat geantwortet", "text" to text,
+                    "isInternal" to note, "isReporter" to (author == t.reporter), "attachmentFileIds" to t.attachments[i].orEmpty()))
             }
             if (t.resolution != null) add(mapOf("id" to "${t.id}-r", "at" to at(60L * 24 * 5 - 5), "kind" to "status", "actorName" to "IT-Support",
                 "summary" to "Status: In Bearbeitung → Gelöst", "text" to t.resolution))
@@ -341,6 +375,37 @@ private class DemoTickets {
         "title" to "Fotos werden nicht übertragen", "excerpt" to "WLAN prüfen, unter Mehr › Synchronisation „Jetzt abgleichen“ tippen …", "category" to "sync"))
     else emptyList()
 
+    fun agents() = listOf(IT_SUPPORT, IT_ANNA, DemoData.USER_ID).map { mapOf("id" to it, "displayName" to agentNames[it], "openTickets" to 3) }
+
+    fun groups() = groupNames.map { (id, name) -> mapOf("id" to id, "name" to name, "isActive" to true, "memberUserIds" to emptyList<String>()) }
+
+    fun responses() = listOf(
+        mapOf("id" to "0193a1b2-de00-7000-8000-00000000f201", "name" to "Begrüßung", "text" to "Hallo {Vorname},\n\ndanke für Ihre Meldung {Ticket}. Wir kümmern uns darum.",
+            "isPersonal" to false),
+        mapOf("id" to "0193a1b2-de00-7000-8000-00000000f202", "name" to "Abgleich im WLAN", "text" to "Bitte die App im WLAN öffnen und unter Mehr › Synchronisation „Jetzt abgleichen“ tippen.",
+            "category" to "sync", "isPersonal" to false),
+    )
+
+    fun reporters(q: String?) = listOf("Lukas Brandl" to "l.brandl", "Jonas Wirth" to "j.wirth", "Sabine Wagner" to "s.wagner")
+        .filter { q.isNullOrBlank() || it.first.contains(q, ignoreCase = true) || it.second.contains(q, ignoreCase = true) }
+        .mapIndexed { i, (name, login) -> mapOf("id" to "0193a1b2-de00-7000-8000-00000000f30$i", "displayName" to name, "userName" to login) }
+
+    fun article(id: String) = if (id == "0193a1b2-de00-7000-8000-00000000e001") json("id" to id, "title" to "Fotos werden nicht übertragen", "category" to "sync",
+        "body" to "So bringen Sie wartende Fotos auf den Server:\n\n1. WLAN oder mobile Daten einschalten.\n2. In der App Mehr › Synchronisation öffnen.\n" +
+            "3. „Jetzt abgleichen“ tippen und warten, bis „Alles übertragen“ erscheint.\n\nHilft das nicht, bitte die Meldung beantworten – die IT sieht dann die " +
+            "technischen Angaben.", "isPublished" to true) else null
+
+    fun createOnBehalf(body: JsonObject): JsonObject {
+        counter++
+        val reporter = body.str("reporterName") ?: reporters(null).firstOrNull { it["id"] == body.str("reporterUserId") }?.get("displayName") as? String ?: "Melder"
+        val t = Ticket(body.str("id") ?: Ids.v7(), "T-2026-%04d".format(20 + counter), body.str("title") ?: "Meldung", body.str("description"),
+            body.str("category") ?: "other", if (body.str("assigneeUserId") == DemoData.USER_ID) "inProgress" else "new", 0, mutableListOf(),
+            priority = body.str("priority") ?: "normal", assignee = body.str("assigneeUserId"), group = null, reporter = reporter,
+            channel = body.str("channel") ?: "phone")
+        tickets.add(0, t)
+        return detail(t)
+    }
+
     fun create(body: JsonObject): JsonObject {
         counter++
         val t = Ticket(body.str("id") ?: Ids.v7(), "T-2026-%04d".format(20 + counter), body.str("title") ?: "Meldung", body.str("description"),
@@ -352,7 +417,24 @@ private class DemoTickets {
     fun handle(method: String, parts: List<String>, body: JsonObject): Pair<Int, Any?> {
         val t = tickets.firstOrNull { it.id == parts[1] } ?: return 404 to json("code" to "NOT_FOUND", "detail" to "Nicht gefunden")
         return when (parts.getOrNull(2)) {
-            "comments" -> { t.comments.add(Triple(DemoData.USER_NAME, body.str("text") ?: "", 0L)); t.status = "inProgress"; 200 to detail(t) }
+            "comments" -> {
+                t.comments.add(Triple(DemoData.USER_NAME, body.str("text") ?: "", 0L))
+                if (body["isInternal"]?.toString() == "true") t.internal += t.comments.lastIndex
+                if (t.status == "waitingForReporter") t.status = "inProgress"
+                200 to detail(t)
+            }
+            null -> {
+                body.str("status")?.let { t.status = it; body.str("resolution")?.let { r -> t.resolution = r } }
+                body.str("priority")?.let { t.priority = it }
+                body.str("category")?.let { if (it != t.category) { t.category = it; t.subcategory = null } }
+                body.str("subcategoryId")?.let { t.subcategory = it }
+                if (body["clearSubcategory"]?.toString() == "true") t.subcategory = null
+                body.str("assigneeUserId")?.let { t.assignee = it }
+                if (body["unassign"]?.toString() == "true") t.assignee = null
+                body.str("groupId")?.let { t.group = it }
+                if (body["clearGroup"]?.toString() == "true") t.group = null
+                200 to detail(t)
+            }
             "reopen" -> { t.status = "inProgress"; 200 to detail(t) }
             "rating" -> { t.rating = body.long("rating")?.toInt(); 200 to detail(t) }
             "seen" -> 204 to null
