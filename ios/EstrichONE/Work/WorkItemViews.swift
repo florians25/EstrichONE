@@ -75,7 +75,7 @@ struct WorkItemRow: View {
             }
             let context = [item.number, showsBauakte, assigneeName].compactMap { $0 }.joined(separator: " · ")
             if !context.isEmpty {
-                Text(context).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(1)
+                Text(context).font(Typo.meta).foregroundStyle(Theme.textSecondary).lineLimit(2)
             }
             SyncStateBadge(state: item.syncState)
         }
