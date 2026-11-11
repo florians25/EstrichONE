@@ -22,7 +22,7 @@
     "@types/qrcode": "1.5.6",
     "@ui5/cli": "4.0.71",
     "jsdom": "^27.4.0",
-    "typescript": "~5.9.3",
+    "typescript": "~7.0.2",
     "ui5-middleware-simpleproxy": "3.9.0",
     "ui5-tooling-modules": "3.42.0",
     "ui5-tooling-transpile": "3.14.0",
