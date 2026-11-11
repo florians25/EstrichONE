@@ -187,8 +187,13 @@ jobs:
           docker cp install.sh server:/root/install.sh
       - name: Ein Befehl – installiert Docker (get.docker.com) und die neueste veröffentlichte Version
         run: |
-          PREVIOUS="$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=5" -H "Authorization: Bearer ${{ github.token }}" \
-            | grep -o '"tag_name": *"v[^"]*"' | head -n 1 | sed 's/.*"v\([^"]*\)"/\1/')"
+          # Neueste Veröffentlichung, deren Installer-Image schon in der Registry liegt (ein frisches Release baut evtl. noch).
+          PREVIOUS=""
+          for v in $(curl -fsSL "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=5" -H "Authorization: Bearer ${{ github.token }}" \
+            | grep -o '"tag_name": *"v[^"]*"' | sed 's/.*"v\([^"]*\)"/\1/'); do
+            if docker manifest inspect "ghcr.io/florians25/estrichone-installer:$v" >/dev/null 2>&1; then PREVIOUS="$v"; break; fi
+          done
+          test -n "$PREVIOUS"
           echo "Version: $PREVIOUS"
           docker exec server bash /root/install.sh --ja --docker-installieren --domain localhost --name "Frischer Server CI" \
             --version "$PREVIOUS" --auto-updates aus 2>&1 | tee install.log
@@ -232,8 +237,13 @@ jobs:
           docker build -q -f docker/installer/Dockerfile --build-arg ESTRICHONE_VERSION="$VERSION" -t "ghcr.io/florians25/estrichone-installer:$VERSION" .
       - name: Letzte veröffentlichte Version installieren
         run: |
-          PREVIOUS="$(curl -fsSL "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=5" -H "Authorization: Bearer ${{ github.token }}" \
-            | grep -o '"tag_name": *"v[^"]*"' | head -n 1 | sed 's/.*"v\([^"]*\)"/\1/')"
+          # Neueste Veröffentlichung, deren Installer-Image schon in der Registry liegt (ein frisches Release baut evtl. noch).
+          PREVIOUS=""
+          for v in $(curl -fsSL "https://api.github.com/repos/${GITHUB_REPOSITORY}/releases?per_page=5" -H "Authorization: Bearer ${{ github.token }}" \
+            | grep -o '"tag_name": *"v[^"]*"' | sed 's/.*"v\([^"]*\)"/\1/'); do
+            if docker manifest inspect "ghcr.io/florians25/estrichone-installer:$v" >/dev/null 2>&1; then PREVIOUS="$v"; break; fi
+          done
+          test -n "$PREVIOUS"
           echo "Ausgangsversion: $PREVIOUS"
           sudo mkdir -p /opt/estrichone
           sudo docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v /opt/estrichone:/opt/estrichone \
