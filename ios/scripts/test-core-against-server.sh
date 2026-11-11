@@ -54,13 +54,25 @@ curl -sf --noproxy localhost -H 'Content-Type: application/json' -o /dev/null "h
   -d "{\"setupCode\":\"$CODE\",\"companyName\":\"Integrationstest\",\"administrator\":{\"displayName\":\"Admin\",\"userName\":\"admin\",\"email\":null,\"password\":\"$PASSWORD\"}}"
 
 echo "== swift test gegen http://localhost:$PORT"
+# SQLite-Header und -Bibliothek vom Runner in den Container geben: Der Paketspiegel ist im Container nicht immer erreichbar.
+HOST_SQLITE=()
+if [ -f /usr/include/sqlite3.h ]; then
+  HOST_SQLITE+=(-v /usr/include/sqlite3.h:/opt/hostsqlite/sqlite3.h:ro)
+  LIB="$(readlink -f /usr/lib/x86_64-linux-gnu/libsqlite3.so.0 2>/dev/null || true)"
+  if [ -n "$LIB" ] && [ -f "$LIB" ]; then HOST_SQLITE+=(-v "$LIB":/opt/hostsqlite/libsqlite3.so.0:ro); fi
+fi
 # shellcheck disable=SC2086
-docker run --rm --network host ${SWIFT_DOCKER_ARGS:-} \
+docker run --rm --network host ${SWIFT_DOCKER_ARGS:-} "${HOST_SQLITE[@]}" \
   -e ESTRICHONE_LIVE_SERVER="http://localhost:$PORT" -e ESTRICHONE_LIVE_LOGIN=admin -e ESTRICHONE_LIVE_PASSWORD="$PASSWORD" \
   -v "$ROOT":/repo -w /repo/ios/Packages/EstrichCore "${SWIFT_IMAGE:-swift:6.1-noble}" \
-  bash -c 'test -f /usr/include/sqlite3.h || for i in 1 2 3; do
+  bash -c 'if [ ! -f /usr/include/sqlite3.h ] && [ -f /opt/hostsqlite/sqlite3.h ]; then
+             cp /opt/hostsqlite/sqlite3.h /usr/include/
+             L=/usr/lib/$(uname -m)-linux-gnu
+             [ -e "$L/libsqlite3.so.0" ] || cp /opt/hostsqlite/libsqlite3.so.0 "$L/" 2>/dev/null
+             [ -e "$L/libsqlite3.so" ] || ln -s libsqlite3.so.0 "$L/libsqlite3.so"
+           fi
+           test -f /usr/include/sqlite3.h || for i in 1 2 3; do
              apt-get update -qq && apt-get install -y -qq libsqlite3-dev >/dev/null && break
-             # Paketspiegel nicht erreichbar (DNS im Container): Spiegel von Azure versuchen, kurz warten, erneut.
              sed -i "s#http://archive.ubuntu.com#http://azure.archive.ubuntu.com#g; s#http://security.ubuntu.com#http://azure.archive.ubuntu.com#g" \
                /etc/apt/sources.list.d/ubuntu.sources 2>/dev/null; sleep 15
            done
