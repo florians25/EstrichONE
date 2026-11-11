@@ -15,6 +15,9 @@ async function openAkte(page: Page) {
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
 }
 
+/** Schalter einer Modulkarte (Systemeinstellungen › Module). */
+const moduleSwitch = (page: Page, key: string) => page.locator(`.eoModuleCard[data-module="${key}"]`).getByRole('switch');
+
 async function settings(page: Page, tab: string) {
   await page.goto(`/system/firmendaten?bereich=${tab}`);
   await expect(page.getByRole('heading', { name: 'Systemeinstellungen' })).toBeVisible();
@@ -23,17 +26,21 @@ async function settings(page: Page, tab: string) {
 test('Einstellungen: Materialmodul ab- und wieder einschalten, Firmenlogo hochladen', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await settings(page, 'module');
-  await page.getByRole('switch', { name: /Material \(/ }).click();
-  await page.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.locator('.sapMMessageToast').last()).toContainText('Einstellungen gespeichert');
+  await moduleSwitch(page, 'materials').click();
+  await page.getByRole('alertdialog', { name: 'Modul ausschalten' }).or(page.getByRole('dialog', { name: 'Modul ausschalten' }))
+    .getByRole('button', { name: 'Ausschalten' }).click();
+  await expect(page.locator('.sapMMessageToast').last()).toContainText('Material und Lieferanten ausgeschaltet');
   await expect(nav(page, 'Materialstamm')).toHaveCount(0);
   await openAkte(page);
   await expect(page.locator('.sapUxAPAnchorBar').getByText('Material', { exact: true })).toHaveCount(0);
 
   await settings(page, 'module');
-  await page.getByRole('switch', { name: /Material \(/ }).click();
-  await page.getByRole('button', { name: 'Speichern' }).click();
+  await moduleSwitch(page, 'materials').click();
+  await expect(page.locator('.sapMMessageToast').last()).toContainText('Material und Lieferanten eingeschaltet');
   await expect(nav(page, 'Materialstamm')).toBeVisible();
+  // Bestellungen gingen mit aus und werden wieder eingeschaltet.
+  await moduleSwitch(page, 'orders').click();
+  await expect(page.locator('.sapMMessageToast').last()).toContainText('Bestellungen eingeschaltet');
 
   await settings(page, 'firma');
   const chooser = page.waitForEvent('filechooser');
@@ -59,7 +66,7 @@ test('Systemeinstellungen: Bereich links wählen zeigt und markiert genau diesen
   for (const [entry, key, field] of [
     ['Dokumente und Freigaben', 'dokumente', 'Vorgeschlagene Frist'], ['Module', 'module', 'Löschfrist (Tage)'],
     ['Speicher', 'speicher', 'Fotos unverändert speichern'], ['Anmeldung', 'sitzungen', 'Abmelden nach Leerlauf'],
-    ['Bauakten', 'bauakte', 'Aufbau der Aktennummer'], ['Firma', 'firma', 'Firmenname'],
+    ['Bauakten', 'bauakte', 'Vorgeschlagene Vorlage'], ['Firma', 'firma', 'Firmenname'],
   ] as const) {
     await navList.getByText(entry, { exact: true }).click();
     await expect(heading).toHaveText(entry);

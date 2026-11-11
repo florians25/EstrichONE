@@ -92,14 +92,14 @@
 							<MessageStrip id="rangeWarning" text="{view>/rangeWarning/text}" type="{view>/rangeWarning/type}" showIcon="true"
 								visible="{= !!${view>/rangeWarning} }" class="sapUiSmallMarginBottom"/>
 							<Table id="numberRanges" items="{view>/ranges}" busy="{view>/rangesBusy}" noDataText="Nummernkreise werden geladen …" popinLayout="GridSmall"
-								ariaLabelledBy="numberRangesLabel">
+								ariaLabelledBy="numberRangesLabel" contextualWidth="Auto">
 								<columns>
-									<Column width="13rem"><Text text="Datensatz"/></Column>
-									<Column width="12rem"><Text text="Muster"/></Column>
-									<Column width="8rem" minScreenWidth="40rem" demandPopin="true"><Text text="Nächste Nummer"/></Column>
-									<Column width="11rem" minScreenWidth="52rem" demandPopin="true"><Text text="Bereich"/></Column>
-									<Column width="10rem" minScreenWidth="40rem" demandPopin="true"><Text text="Vorschau"/></Column>
-									<Column width="10rem"><Text text="Verbleibend"/></Column>
+									<Column><Text text="Datensatz"/></Column>
+									<Column><Text text="Muster"/></Column>
+									<Column minScreenWidth="40rem" demandPopin="true"><Text text="Nächste Nummer"/></Column>
+									<Column minScreenWidth="60rem" demandPopin="true"><Text text="Bereich"/></Column>
+									<Column minScreenWidth="50rem" demandPopin="true"><Text text="Vorschau"/></Column>
+									<Column minScreenWidth="30rem" demandPopin="true"><Text text="Verbleibend"/></Column>
 									<Column width="3.5rem" hAlign="End"><Text text=""/></Column>
 								</columns>
 								<items>

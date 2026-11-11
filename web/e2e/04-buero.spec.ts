@@ -89,7 +89,7 @@ test('Büro: Telefon-Schnellerfassung mit Wiedervorlage, Anfrage erfassen und in
   await form.getByLabel('Ort', { exact: true }).fill('Landshut');
   await form.getByRole('button', { name: 'Speichern' }).click();
   await page.getByRole('row', { name: /Lang Bau GmbH/ }).click();
-  const detail = page.getByRole('dialog', { name: /Anfrage: Petra Lang/ });
+  const detail = page.getByRole('dialog', { name: /Anfrage.*: Petra Lang/ });
   await detail.getByRole('button', { name: 'In Bearbeitung' }).click();
   await detail.getByRole('button', { name: 'In Bauakte umwandeln' }).last().click();
   await page.getByRole('alertdialog').getByRole('button', { name: 'Umwandeln', exact: true }).click();
