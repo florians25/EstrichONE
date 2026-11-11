@@ -3225,6 +3225,144 @@
         ]
       }
     },
+    "/api/v1/settings/number-ranges": {
+      "get": {
+        "tags": [
+          "Einstellungen"
+        ],
+        "summary": "Alle Nummernkreise: Muster, Bereich, nächste Nummer, Vorschau und verbleibende Nummern",
+        "operationId": "ListNumberRanges",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/NumberRangeResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/number-ranges/{key}": {
+      "get": {
+        "tags": [
+          "Einstellungen"
+        ],
+        "summary": "Ein Nummernkreis",
+        "operationId": "GetNumberRange",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumberRangeResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Einstellungen"
+        ],
+        "summary": "Muster, Bereich und nächste Nummer eines Nummernkreises ändern (protokolliert)",
+        "operationId": "SaveNumberRange",
+        "parameters": [
+          {
+            "name": "key",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveNumberRangeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NumberRangeResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/company/logo": {
       "get": {
         "tags": [
@@ -23658,6 +23796,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -26267,6 +26411,12 @@
               "integer"
             ],
             "format": "int32"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -30387,6 +30537,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -31198,6 +31354,86 @@
           },
           "customerPattern": {
             "type": "string"
+          }
+        }
+      },
+      "NumberRangeResponse": {
+        "required": [
+          "key",
+          "label",
+          "group",
+          "pattern",
+          "defaultPattern",
+          "rangeStart",
+          "rangeEnd",
+          "nextNumber",
+          "preview",
+          "remaining",
+          "capacity",
+          "yearly",
+          "maxLength",
+          "editorsMayOverride",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "group": {
+            "type": "string"
+          },
+          "pattern": {
+            "type": "string"
+          },
+          "defaultPattern": {
+            "type": "string"
+          },
+          "rangeStart": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "rangeEnd": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "nextNumber": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "preview": {
+            "type": "string"
+          },
+          "remaining": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "capacity": {
+            "type": "integer",
+            "format": "int64"
+          },
+          "yearly": {
+            "type": "boolean"
+          },
+          "maxLength": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "editorsMayOverride": {
+            "type": "boolean"
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
           }
         }
       },
@@ -33722,6 +33958,12 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "inventoryNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -35145,6 +35387,13 @@
               "integer"
             ],
             "format": "int32"
+          },
+          "number": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -35575,6 +35824,13 @@
           "isActive": {
             "type": "boolean",
             "default": true
+          },
+          "number": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -35610,6 +35866,50 @@
             "items": {
               "$ref": "#/components/schemas/NotificationPreferenceChange"
             }
+          }
+        }
+      },
+      "SaveNumberRangeRequest": {
+        "required": [
+          "pattern"
+        ],
+        "type": "object",
+        "properties": {
+          "pattern": {
+            "maxLength": 40,
+            "type": "string"
+          },
+          "rangeStart": {
+            "maximum": 999999999,
+            "minimum": 1,
+            "type": "integer",
+            "format": "int64",
+            "default": 1
+          },
+          "rangeEnd": {
+            "maximum": 999999999,
+            "minimum": 1,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "nextNumber": {
+            "maximum": 999999999,
+            "minimum": 1,
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
           }
         }
       },
@@ -35942,6 +36242,13 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "inventoryNumber": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -36251,6 +36558,13 @@
           "isActive": {
             "type": "boolean",
             "default": true
+          },
+          "number": {
+            "maxLength": 30,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -37144,6 +37458,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -39651,6 +39971,12 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "number": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
