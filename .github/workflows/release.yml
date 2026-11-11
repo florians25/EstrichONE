@@ -133,7 +133,7 @@ jobs:
           cp "$apk" "$RUNNER_TEMP/app-packages/$name"
           apksigner="$(ls -d "$ANDROID_HOME"/build-tools/*/apksigner | sort -V | tail -1)"
           certs="$("$apksigner" verify --print-certs "$apk" 2>&1 || true)"
-          signer="$(printf '%s\n' "$certs" | sed -n 's/^Signer.*certificate SHA-256 digest: *//p' | head -1 | tr -d ' :' | tr 'A-F' 'a-f')"
+          signer="$(printf '%s\n' "$certs" | sed -n 's/^.*[Ss]igner.*certificate SHA-256 digest: *//p' | head -1 | tr -d ' :' | tr 'A-F' 'a-f')"
           test -n "$signer" || { printf '%s\n' "$certs"; echo "Signatur des APK nicht lesbar"; exit 1; }
           code="$("$(dirname "$apksigner")/aapt2" dump badging "$apk" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -1 || true)"
           sha="$(sha256sum "$apk" | cut -d' ' -f1)"
