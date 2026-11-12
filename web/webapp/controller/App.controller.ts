@@ -247,16 +247,25 @@ export default class AppController extends BaseController {
 	onTeams(event: Event): void {
 		const source = event.getSource() as Control;
 		const items = [
-			new MenuItem({ text: "Microsoft Teams öffnen", icon: "sap-icon://collaborate", press: () => this.openTeams() }),
-			...(session.data.teams?.canStartChats ? [new MenuItem({ text: "Chat in Teams starten …", icon: "sap-icon://discussion", press: () => void pickTeamsChat() })] : []),
+			new MenuItem({ text: "Microsoft Teams öffnen", icon: "sap-icon://collaborate", key: "open" }),
+			...(session.data.teams?.canStartChats ? [new MenuItem({ text: "Chat in Teams starten …", icon: "sap-icon://discussion", key: "chat" })] : []),
 			...(session.data.permissions["chat.use"] && session.data.teams?.chatReadOnly
-				? [new MenuItem({ text: "Chat-Archiv (nur lesen)", icon: "sap-icon://inbox", startsSection: true, press: () => this.nav("/chat") })] : []),
+				? [new MenuItem({ text: "Chat-Archiv (nur lesen)", icon: "sap-icon://inbox", startsSection: true, key: "archive" })] : []),
 		];
 		if (items.length === 1) {
 			this.openTeams();
 			return;
 		}
-		const menu = new Menu({ items, closed: () => menu.destroy() });
+		const menu = new Menu({
+			items,
+			itemSelected: (e) => {
+				const key = (e.getParameter("item") as MenuItem).getKey();
+				if (key === "open") this.openTeams();
+				if (key === "chat") void pickTeamsChat();
+				if (key === "archive") this.nav("/chat");
+			},
+			closed: () => setTimeout(() => menu.destroy(), 0),
+		});
 		this.getView()?.addDependent(menu);
 		menu.openBy(source, false);
 	}
