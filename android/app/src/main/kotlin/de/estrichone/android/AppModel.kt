@@ -467,6 +467,8 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
         closeSession()
         client.sessionEnded = { problem -> scope.launch { sessionEnded(problem) } }
         val session = Session(user, client, platform.store(user.id), platform.files(user.id), null, description.name, prefs.isPool)
+        // Update freigegeben: Sitzung ist serverseitig beendet – zur Anmeldung, Daten bleiben auf dem Gerät.
+        session.onUpdateReleased = { text -> scope.launch { sessionEnded(ApiException(401, "UPDATED", text)) } }
         _session.value = session
         session.start()
     }

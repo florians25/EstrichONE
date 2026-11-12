@@ -191,6 +191,7 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
     BackHandler(enabled = nav.stack().isNotEmpty()) { nav.back() }
 
     CompositionLocalProvider(LocalNav provides nav, LocalSession provides session, LocalModel provides model) {
+      Box(Modifier.fillMaxSize()) {
         NavigationSuiteScaffold(
             navigationSuiteItems = {
                 Tab.entries.forEach { tab ->
@@ -214,15 +215,22 @@ fun MainScreen(model: AppModel, session: Session, nav: Nav = remember { Nav(Tab.
                 Column(Modifier.fillMaxSize()) {
                     val banners by session.health.collectAsState()
                     val updateBanner = model.hasUpdateBanner
-                    HealthStrip(session)
+                    // Update-Ankündigung (Countdown) ganz oben; sie übernimmt dann die Statusleiste.
+                    val serverUpdate by session.update.collectAsState()
+                    val announcing = serverUpdate?.phase == "announce"
+                    UpdateAnnounceBar(session)
+                    Box(if (announcing) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier) { HealthStrip(session) }
                     // Neuere App-Version: Hinweis mit „Aktualisieren“ (unter einem Ausfall-Hinweis ohne eigene Statusleiste).
-                    if (banners.isEmpty()) UpdateBanner(model) else Box(Modifier.consumeWindowInsets(WindowInsets.statusBars)) { UpdateBanner(model) }
+                    if (banners.isEmpty() && !announcing) UpdateBanner(model) else Box(Modifier.consumeWindowInsets(WindowInsets.statusBars)) { UpdateBanner(model) }
                     // Unter einem Hinweis gehört die Statusleiste schon dem Hinweis.
-                    Box(Modifier.weight(1f).then(if (banners.isNotEmpty() || updateBanner) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier)) { TabContent(nav) }
+                    Box(Modifier.weight(1f).then(if (banners.isNotEmpty() || updateBanner || announcing) Modifier.consumeWindowInsets(WindowInsets.statusBars) else Modifier)) { TabContent(nav) }
                 }
                 SnackbarHost(nav.snackbar, Modifier.align(androidx.compose.ui.Alignment.BottomCenter).padding(16.dp))
             }
         }
+        // Update-Ablauf: Wartungsbildschirm über allem (auch über die Navigation).
+        UpdateMaintenanceOverlay(session)
+      }
         if (nav.captureOpen || nav.captureOpenFor != null) {
             CaptureHub(bauakteId = nav.captureOpenFor, onDismiss = { nav.captureOpen = false; nav.captureOpenFor = null })
         }

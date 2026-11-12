@@ -17,6 +17,8 @@ import de.estrichone.core.SyncEngine
 import de.estrichone.core.SyncOutcome
 import de.estrichone.core.SyncSummary
 import de.estrichone.core.SystemNotices
+import de.estrichone.core.UpdateMaintenance
+import de.estrichone.core.UpdatePresentation
 import de.estrichone.core.UserSummary
 import de.estrichone.core.AppModules
 import de.estrichone.core.chatStatus
@@ -89,6 +91,18 @@ class Session(
     private val _notices = MutableStateFlow<SystemNotices?>(null)
     val notices: StateFlow<SystemNotices?> = _notices
 
+    /** Laufendes Update (Ankündigung, Update, Abschluss); [updateOffline] = Server gerade nicht erreichbar (Container-Tausch). */
+    private val _update = MutableStateFlow<UpdateMaintenance?>(null)
+    val update: StateFlow<UpdateMaintenance?> = _update
+    private val _updateOffline = MutableStateFlow(false)
+    val updateOffline: StateFlow<Boolean> = _updateOffline
+    private var updateSynced: String? = null
+    private var updateBlocked = false
+
+    /** Nach der Freigabe eines Updates (Sitzung serverseitig beendet): neu anmelden mit Hinweis. */
+    @Volatile
+    var onUpdateReleased: ((String) -> Unit)? = null
+
     private val _health = MutableStateFlow<List<HealthBanner>>(emptyList())
     val health: StateFlow<List<HealthBanner>> = _health
 
@@ -129,6 +143,8 @@ class Session(
         if (loop != null) return
         loop = scope.launch {
             launch { store.revision.drop(1).debounce(1500).collect { if (!store.summary().isSettled) synchronize() } }
+            // Systemhinweise und Update-Ablauf: alle 30 s, während eines Updates alle 5 s (Countdown, Freigabe).
+            launch { while (true) { delay(if (_update.value != null) 5_000 else 30_000); refreshNotices() } }
             while (true) {
                 synchronize()
                 delay(120_000)
@@ -150,8 +166,40 @@ class Session(
         scope.launch { synchronize() }
     }
 
+    /** Hinweise neu laden und den Update-Ablauf nachführen (ohne Anmeldung lesbar, auch während des Updates). */
+    suspend fun refreshNotices() {
+        val result = withContext(Dispatchers.IO) { runCatching { api.systemNotices() } }
+        result.onSuccess { notices ->
+            _notices.value = notices
+            _updateOffline.value = false
+            applyUpdate(notices.activeUpdate)
+        }.onFailure { if (_update.value != null) _updateOffline.value = true }
+    }
+
+    /** Vorschau und Bildschirmfotos: Update-Stand direkt setzen. */
+    fun previewUpdate(state: UpdateMaintenance?, offline: Boolean = false) {
+        _updateOffline.value = offline
+        _update.value = state
+    }
+
+    private fun applyUpdate(state: UpdateMaintenance?) {
+        val previous = _update.value
+        _update.value = state
+        if (state != null) {
+            if (UpdatePresentation.screen(state, java.time.Instant.now()).page) updateBlocked = true
+            // Ankündigung: offene Änderungen sofort übertragen, solange der Server noch annimmt.
+            if (state.phase == "announce" && updateSynced != state.id) {
+                updateSynced = state.id
+                scope.launch { synchronize() }
+            }
+        } else if (previous != null && updateBlocked) {
+            updateBlocked = false
+            onUpdateReleased?.invoke(UpdatePresentation.doneText(previous.targetVersion, previous.phase == "failed"))
+        }
+    }
+
     private suspend fun refreshExtras() {
-        runCatching { api.systemNotices() }.onSuccess { _notices.value = it }
+        runCatching { api.systemNotices() }.onSuccess { _notices.value = it; _updateOffline.value = false; withContext(Dispatchers.Main) { applyUpdate(it.activeUpdate) } }
         if (_status.value.outcome == SyncOutcome.Offline) return
         runCatching { api.healthBanners() }.onSuccess { _health.value = it }
         runCatching { api.chatStatus() }.onSuccess { _chat.value = it }.onFailure { if (it is ApiException && it.status == 404) _chat.value = null }

@@ -118,6 +118,25 @@ abstract class ScreenshotBase(private val device: String, private val appearance
     @Test
     fun heute() = main("heute", Tab.Today)
 
+    /** Update-Ablauf: Ankündigung mit Countdown, Wartungsbildschirm im Update und im Abschluss (wie Web und iOS). */
+    private fun updateScene(name: String, phase: String, seconds: Long, offline: Boolean = false) =
+        scene(name, Tab.Today, { model ->
+            val now = java.time.Instant.now()
+            model.session.value!!.previewUpdate(de.estrichone.core.UpdateMaintenance(
+                "demo-update", phase, "1.0.15", "1.0.16", now.minusSeconds(90).toString(), now.minusSeconds(60 - seconds).toString(),
+                now.plusSeconds(seconds).toString(),
+            ), offline)
+        }) { emptyList() }
+
+    @Test
+    fun updateAnkuendigung() = updateScene("update-1-ankuendigung", "announce", 47)
+
+    @Test
+    fun updateLaeuft() = updateScene("update-2-update", "update", 38, offline = true)
+
+    @Test
+    fun updateAbschluss() = updateScene("update-3-abschluss", "finish", 52)
+
     @Test
     fun baustellen() = main("baustellen", Tab.Bauakten)
 

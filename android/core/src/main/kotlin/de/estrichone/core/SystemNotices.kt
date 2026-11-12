@@ -11,7 +11,14 @@ import kotlin.math.roundToLong
 
 /** Hinweise des Betreibers (`GET /system/notices`, ohne Anmeldung): Ankündigungen und Wartung. */
 @Serializable
-data class SystemNotices(val announcements: List<Announcement> = emptyList(), val maintenance: Maintenance? = null, val serverTime: String? = null) {
+data class SystemNotices(
+    val announcements: List<Announcement> = emptyList(), val maintenance: Maintenance? = null, val serverTime: String? = null,
+    /** Laufendes Update (Ankündigung, Update, Abschluss) – siehe [UpdatePresentation]. */
+    val update: UpdateMaintenance? = null,
+) {
+    /** Gültiges Update oder null (unbekannte Phase wird ignoriert). */
+    val activeUpdate: UpdateMaintenance? get() = update?.takeIf { it.phase in UpdatePresentation.phases }
+
     @Serializable
     data class Announcement(
         val id: String, val title: String, val text: String = "", val severity: String = "info", val startsAt: String? = null,
