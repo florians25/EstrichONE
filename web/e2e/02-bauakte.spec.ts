@@ -209,7 +209,8 @@ test('Zentrale Dokumentverwaltung: Ordner, Suche, Freigabe anfordern, ablehnen m
   await nav(page, 'Übersicht').click();
   const approvalsCard = page.locator('.eoStartCards .sapFCard').filter({ hasText: 'Warten auf Genehmigung' });
   await expect(approvalsCard).toContainText('Angebot 2026-117 v2.pdf');
-  await approvalsCard.locator('.sapFCardHeader').click();
+  // Klickbar sind Titelbereich und Kennzahl des Kartenkopfs (sapFCardSectionClickable), nicht der Abstand dazwischen.
+  await approvalsCard.locator('.sapFCardHeader .sapFCardSectionClickable').first().click();
   const inbox = page.locator('.sapMITBContainerContent');
   await expect(inbox.getByText('„Bitte Preise prüfen“')).toBeVisible();
   await inbox.getByRole('button', { name: 'Ablehnen' }).first().click();
