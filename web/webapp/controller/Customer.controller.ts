@@ -17,6 +17,8 @@ import { openForm, phoneKinds } from "../util/forms";
 import { uuidv7 } from "../util/ids";
 import type { RouteMatch } from "../util/router";
 import { navTo } from "../util/navigation";
+import { openCustomerRemoval, reactivateCustomer } from "../util/customerRemovalDialog";
+import { customerState } from "../util/customerRemoval";
 
 interface DocumentListItem { file: FileResponse; bauakteNumber: string | null; bauakteTitle: string; approvalStatus: ApprovalStatus | null }
 interface Person { id: string; name: string; function: string | null; phone: string | null; email: string | null }
@@ -40,7 +42,7 @@ export default class Customer extends BaseController {
 	private files: FileResponse[] = [];
 
 	onInit(): void {
-		this.local({ c: null, busy: false, headline: "", address: "", salutation: "", channel: "", billing: "", delivery: "",
+		this.local({ c: null, busy: false, stateText: "", stateHint: "", headline: "", address: "", salutation: "", channel: "", billing: "", delivery: "",
 			primaryPhone: "", primaryEmail: "", routeUrl: null, mainPerson: "", kpis: [],
 			bauakten: [], shownBauakten: [], bauakteFilter: "", bauakteSearch: "", bauakteEmpty: "", counts: { all: 0, active: 0, inquiry: 0, old: 0 },
 			documents: [], reach: [], persons: [], history: [] });
@@ -118,6 +120,10 @@ export default class Customer extends BaseController {
 	private showContact(c: ContactResponse): void {
 		const m = this.model();
 		m.setProperty("/c", c);
+		m.setProperty("/stateText", customerState(c).text);
+		m.setProperty("/stateHint", c.anonymizedAt
+			? `Dieser Kunde wurde am ${date(c.anonymizedAt)} anonymisiert (DSGVO). Bauakten und Unterlagen bleiben erhalten.`
+			: c.archivedAt ? `Archiviert seit ${date(c.archivedAt)}: Der Kunde erscheint nicht in Auswahllisten und Suche. Reaktivieren macht ihn wieder aktiv.` : "");
 		m.setProperty("/headline", [c.customerNumber ? `Kd.-Nr. ${c.customerNumber}` : "ohne Kundennummer", [c.postalCode, c.city].filter(Boolean).join(" ")].filter(Boolean).join(" · "));
 		m.setProperty("/address", [c.street, [c.postalCode, c.city].filter(Boolean).join(" ")].filter(Boolean).join(", ") || "–");
 		m.setProperty("/salutation", [c.salutation, c.title].filter(Boolean).join(" ") || "–");
@@ -186,6 +192,25 @@ export default class Customer extends BaseController {
 			this.toast("Kunde gespeichert");
 			await this.load();
 		}
+	}
+
+	/** Löschen (ohne verknüpfte Daten), sonst Archivieren oder Anonymisieren. */
+	async onRemove(): Promise<void> {
+		const c = this.model().getProperty("/c") as ContactResponse;
+		const result = await openCustomerRemoval(c).catch((e: unknown) => { this.showError(e); return null; });
+		if (!result) return;
+		if (result.action === "deleted") {
+			this.toast(`${c.name} gelöscht`);
+			this.nav("/kunden", true);
+			return;
+		}
+		this.toast({ archived: "Kunde archiviert", reactivated: "Kunde wieder aktiv", anonymized: "Kunde anonymisiert" }[result.action]);
+		if (result.contact) this.showContact(result.contact);
+	}
+
+	async onReactivate(): Promise<void> {
+		const saved = await this.run(() => reactivateCustomer(this.id), "Kunde wieder aktiv");
+		if (saved) this.showContact(saved);
 	}
 
 	async onEditNotes(): Promise<void> {

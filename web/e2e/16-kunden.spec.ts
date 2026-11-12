@@ -173,3 +173,124 @@ test('Nummernkreise in den Einstellungen: alle Datensätze, Kunden-Nummernkreis 
   await page.getByRole('button', { name: 'Neuer Kunde' }).click();
   await expect(page.getByRole('dialog', { name: 'Neuer Kunde' }).getByLabel('Kundennummer')).toHaveAttribute('placeholder', /602000/);
 });
+
+/** Eindeutige Namen je Lauf (Wiederholung gegen denselben Server). */
+const run = Date.now().toString(36).slice(-5);
+
+/** Bildschirmfotos (SHOTS_DIR gesetzt) in 1920 und 1280 Breite. */
+async function shots(page: import('@playwright/test').Page, name: string) {
+  const dir = process.env['SHOTS_DIR'];
+  if (!dir) return;
+  const size = page.viewportSize();
+  for (const width of [1920, 1280]) {
+    await page.setViewportSize({ width, height: width === 1920 ? 1080 : 800 });
+    await page.waitForTimeout(600);
+    await page.screenshot({ path: `${dir}/${name}-${width}.png` });
+  }
+  if (size) await page.setViewportSize(size);
+}
+
+test('Kunde ohne verknüpfte Daten löschen: Kundennummer eintippen, Nummer wird nicht wieder vergeben', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  const created = await apiCall<{ id: string; customerNumber: string }>(page, 'POST', '/api/v1/contacts',
+    { id: crypto.randomUUID(), kind: 'person', name: `Probekunde Löschen ${run}`, city: 'Ergolding', phone: '0871 555' });
+  expect(created.status).toBe(201);
+  const number = created.json.customerNumber;
+  await page.goto('/kunden');
+  await page.getByPlaceholder(/Name, Nummer, Ort/).fill(`Probekunde Löschen ${run}`);
+  await page.getByPlaceholder(/Name, Nummer, Ort/).press('Enter');
+  const row = page.getByRole('row', { name: new RegExp(`Probekunde Löschen ${run}`) });
+  await row.getByRole('button', { name: `Löschen oder archivieren: Probekunde Löschen ${run}` }).click();
+  const dialog = page.getByRole('alertdialog', { name: /^Kunde löschen/ });
+  await expect(dialog).toContainText('keine Bauakten, Anrufe oder andere verknüpfte Daten');
+  await expect(dialog).toContainText(`Die Kundennummer ${number} wird nicht erneut vergeben`);
+  const remove = dialog.getByRole('button', { name: 'Endgültig löschen' });
+  await expect(remove).toBeDisabled();
+  await dialog.getByLabel(`Zum Bestätigen die Kundennummer ${number} eintippen`).fill('999999');
+  await expect(remove).toBeDisabled();
+  await dialog.getByLabel(`Zum Bestätigen die Kundennummer ${number} eintippen`).fill(number);
+  await shots(page, 'kunde-loeschen-dialog');
+  await remove.click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('.sapMMessageToast').last()).toContainText(`Probekunde Löschen ${run} gelöscht`);
+  await expect(row).toHaveCount(0);
+  expect((await apiCall(page, 'GET', `/api/v1/contacts/${created.json.id}`)).status).toBe(404);
+  // Nummer bleibt vergeben.
+  const again = await apiCall(page, 'POST', '/api/v1/contacts', { id: crypto.randomUUID(), kind: 'person', name: 'Gleiche Nummer', customerNumber: number });
+  expect(again.status).toBe(409);
+});
+
+test('Kunde mit Bauakte: Löschen verweigert mit Bezügen, archivieren, Filter „Archivierte“, reaktivieren', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  const customer = await apiCall<{ id: string; customerNumber: string }>(page, 'POST', '/api/v1/contacts',
+    { id: crypto.randomUUID(), kind: 'company', name: `Archivbau ${run} GmbH`, city: 'Landshut' });
+  const akte = await apiCall<{ id: string }>(page, 'POST', '/api/v1/bauakten', { id: crypto.randomUUID(), title: 'Halle Archivbau', customerId: customer.json.id });
+  expect(akte.status).toBe(201);
+  await page.goto(`/kunden/${customer.json.id}`);
+  await expect(pageTitle(page)).toHaveText(`Archivbau ${run} GmbH`);
+  await page.getByRole('button', { name: 'Löschen/Archivieren' }).click();
+  const dialog = page.getByRole('dialog', { name: /^Kunde kann nicht gelöscht werden/ });
+  await expect(dialog).toContainText('kann nicht gelöscht werden. Noch verknüpft: 1 Bauakte.');
+  await expect(dialog.getByRole('link', { name: /Halle Archivbau/ })).toBeVisible();
+  await expect(dialog.getByRole('button', { name: 'Endgültig löschen' })).toHaveCount(0);
+  await expect(dialog.getByRole('button', { name: 'Anonymisieren …' })).toBeVisible();
+  await shots(page, 'kunde-bezuege-dialog');
+  // Anonymisieren (DSGVO): zweite Stufe mit Kundennummer und ausdrücklicher Bestätigung; hier abbrechen.
+  await dialog.getByRole('button', { name: 'Anonymisieren …' }).click();
+  const anonymize = page.getByRole('dialog', { name: /^Kunde anonymisieren/ }).or(page.getByRole('alertdialog', { name: /^Kunde anonymisieren/ }));
+  const go = anonymize.getByRole('button', { name: 'Unwiderruflich anonymisieren' });
+  await anonymize.getByLabel(`Zum Bestätigen die Kundennummer ${customer.json.customerNumber} eintippen`).fill(customer.json.customerNumber);
+  await expect(go).toBeDisabled();
+  await anonymize.getByText(/Mir ist bewusst/).click();
+  await expect(go).toBeEnabled();
+  await shots(page, 'kunde-anonymisieren-dialog');
+  await anonymize.getByRole('button', { name: 'Abbrechen' }).click();
+  await expect(anonymize).toBeHidden();
+  await page.getByRole('button', { name: 'Löschen/Archivieren' }).click();
+  await dialog.getByRole('button', { name: 'Archivieren', exact: true }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page.locator('[id$="customerState"]')).toContainText('Archiviert');
+  await expect(page.locator('[id$="archivedStrip"]')).toContainText('nicht in Auswahllisten und Suche');
+  await shots(page, 'kunde-archiviert-akte');
+
+  // Kundenliste: standardmäßig nur aktive Kunden; „Archivierte“ zeigt ihn mit Kennzeichen.
+  await page.goto('/kunden');
+  await page.getByPlaceholder(/Name, Nummer, Ort/).fill(`Archivbau ${run}`);
+  await page.getByPlaceholder(/Name, Nummer, Ort/).press('Enter');
+  await expect(page.getByRole('row', { name: new RegExp(`Archivbau ${run} GmbH`) })).toHaveCount(0);
+  await choose(page, page.locator('[id$="statusFilter"]'), 'Archivierte');
+  await expect(page.getByRole('row', { name: new RegExp(`Archivbau ${run} GmbH`) })).toContainText('Archiviert');
+  await shots(page, 'kundenliste-archivierte');
+  // Auswahllisten (z. B. Bauaktenanlage) bieten ihn nicht an.
+  const pick = await apiCall<{ id: string }[]>(page, 'GET', `/api/v1/contacts?search=Archivbau%20${run}&limit=10`);
+  expect(pick.json).toHaveLength(0);
+
+  await page.getByRole('row', { name: new RegExp(`Archivbau ${run} GmbH`) }).getByText(`Archivbau ${run} GmbH`, { exact: true }).click();
+  await page.getByRole('button', { name: 'Reaktivieren' }).click();
+  await expect(page.locator('[id$="customerState"]')).toBeHidden();
+  expect((await apiCall<{ id: string }[]>(page, 'GET', `/api/v1/contacts?search=Archivbau%20${run}`)).json).toHaveLength(1);
+});
+
+test('Kundenliste: Mehrfachauswahl löscht Kunden ohne Bezüge und archiviert die übrigen', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  const free = await apiCall<{ id: string }>(page, 'POST', '/api/v1/contacts', { id: crypto.randomUUID(), kind: 'person', name: `Sammel Frei ${run}` });
+  const linked = await apiCall<{ id: string }>(page, 'POST', '/api/v1/contacts', { id: crypto.randomUUID(), kind: 'person', name: `Sammel Gebunden ${run}` });
+  await apiCall(page, 'POST', '/api/v1/bauakten', { id: crypto.randomUUID(), title: 'EFH Sammel', customerId: linked.json.id });
+  await page.goto('/kunden');
+  await page.getByPlaceholder(/Name, Nummer, Ort/).fill(run);
+  await page.getByPlaceholder(/Name, Nummer, Ort/).press('Enter');
+  await expect(page.getByRole('row', { name: new RegExp(`Sammel .*${run}`) })).toHaveCount(2);
+  for (const name of [`Sammel Frei ${run}`, `Sammel Gebunden ${run}`]) {
+    await page.getByRole('row', { name: new RegExp(name) }).getByRole('checkbox').click();
+  }
+  await page.getByRole('button', { name: 'Löschen/Archivieren' }).click();
+  const dialog = page.getByRole('alertdialog', { name: /^2 Kunden löschen oder archivieren/ });
+  await expect(dialog).toContainText(`1 ohne verknüpfte Daten werden endgültig gelöscht: Sammel Frei ${run}`);
+  await expect(dialog).toContainText(`Sammel Gebunden ${run} (1 Bauakte)`);
+  await dialog.getByLabel('Zum Bestätigen die Anzahl 2 eintippen').fill('2');
+  await dialog.getByRole('button', { name: 'Ausführen' }).click();
+  await expect(page.locator('.sapMMessageToast').last()).toContainText('1 gelöscht, 1 archiviert');
+  await expect(page.getByRole('row', { name: new RegExp(`Sammel .*${run}`) })).toHaveCount(0);
+  expect((await apiCall(page, 'GET', `/api/v1/contacts/${free.json.id}`)).status).toBe(404);
+  expect((await apiCall<{ archivedAt: string | null }>(page, 'GET', `/api/v1/contacts/${linked.json.id}`)).json.archivedAt).not.toBeNull();
+});

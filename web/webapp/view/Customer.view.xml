@@ -9,6 +9,7 @@
 					<HBox alignItems="Center" wrap="Wrap" renderType="Bare">
 						<Title text="{view>/c/name}" level="H1" wrapping="true" class="sapUiTinyMarginEnd"/>
 						<ObjectStatus text="{= ${view>/c/kind} === 'company' ? 'Gewerbekunde' : 'Privatkunde' }" state="Information" inverted="true"/>
+						<ObjectStatus id="customerState" text="{view>/stateText}" state="Warning" inverted="true" visible="{= !!${view>/stateText} }" class="sapUiTinyMarginBegin"/>
 					</HBox>
 				</uxap:heading>
 				<uxap:expandedContent><Text text="{view>/headline}"/></uxap:expandedContent>
@@ -17,8 +18,12 @@
 					<Button text="Anrufen" icon="sap-icon://call" press=".onCall" visible="{= !!${view>/primaryPhone} }" tooltip="{= 'Anrufen: ' + ${view>/primaryPhone} }"/>
 					<Button text="E-Mail" icon="sap-icon://email" press=".onMail" visible="{= !!${view>/primaryEmail} }" tooltip="{= 'E-Mail an ' + ${view>/primaryEmail} }"/>
 					<Button text="Route" icon="sap-icon://map-3" press=".onRoute" visible="{= !!${view>/routeUrl} }" tooltip="Route zur Kundenanschrift planen"/>
-					<Button text="Bearbeiten" icon="sap-icon://edit" press=".onEdit" visible="{= ${session>/permissions/contacts.edit} === true }"/>
-					<Button text="Neue Bauakte" icon="sap-icon://add-document" type="Emphasized" press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }"/>
+					<Button text="Bearbeiten" icon="sap-icon://edit" press=".onEdit" visible="{= ${session>/permissions/contacts.edit} === true &amp;&amp; !${view>/c/anonymizedAt} }"/>
+					<Button id="reactivateCustomer" text="Reaktivieren" icon="sap-icon://undo" press=".onReactivate"
+						visible="{= ${session>/permissions/contacts.edit} === true &amp;&amp; !!${view>/c/archivedAt} &amp;&amp; !${view>/c/anonymizedAt} }"/>
+					<Button id="removeCustomer" text="{= ${view>/c/archivedAt} ? 'Löschen' : 'Löschen/Archivieren' }" icon="sap-icon://delete" press=".onRemove"
+						visible="{= (${session>/permissions/contacts.edit} === true || ${session>/permissions/contacts.delete} === true) &amp;&amp; !${view>/c/anonymizedAt} }"/>
+					<Button text="Neue Bauakte" icon="sap-icon://add-document" type="Emphasized" press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true &amp;&amp; !${view>/c/archivedAt} }"/>
 				</uxap:actions>
 			</uxap:ObjectPageDynamicHeaderTitle>
 		</uxap:headerTitle>
@@ -43,6 +48,7 @@
 			<uxap:ObjectPageSection id="secOverview" title="Übersicht">
 				<uxap:subSections><uxap:ObjectPageSubSection>
 					<VBox renderType="Bare">
+						<MessageStrip id="archivedStrip" text="{view>/stateHint}" type="Warning" showIcon="true" visible="{= !!${view>/stateHint} }" class="sapUiSmallMarginBottom"/>
 						<MessageStrip text="{view>/c/notes}" type="Information" showIcon="true" visible="{= !!${view>/c/notes} }" class="sapUiSmallMarginBottom eoPre"
 							customIcon="sap-icon://notes"/>
 						<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="3" columnsL="2" columnsM="2" labelSpanXL="4" labelSpanL="4" labelSpanM="4" labelSpanS="12" emptySpanXL="0" emptySpanL="0" emptySpanM="0" emptySpanS="0" adjustLabelSpan="false" singleContainerFullSize="false" class="eoDenseForm">

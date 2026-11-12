@@ -9,6 +9,8 @@ import { openForm } from "../util/forms";
 import { openCustomerForm } from "../util/customerForm";
 import { openNewCustomerDialog } from "../util/customerDialog";
 import { openBauakteWizard } from "../util/bauakteWizard";
+import { openBulkRemoval, openCustomerRemoval } from "../util/customerRemovalDialog";
+import { customerState, summarizeBulk } from "../util/customerRemoval";
 import type { ContactResponse } from "../util/models";
 import type { RouteMatch } from "../util/router";
 
@@ -35,7 +37,7 @@ export function highlight(text: string | null | undefined, query: string): strin
  */
 export default class Customers extends BaseController {
 	onInit(): void {
-		this.local({ items: [], search: "", kind: "", sort: "name", busy: false });
+		this.local({ items: [], search: "", kind: "", sort: "name", status: "active", busy: false });
 	}
 
 	async onRouteMatched(match: RouteMatch): Promise<void> {
@@ -53,7 +55,7 @@ export default class Customers extends BaseController {
 		const q = String(m.getProperty("/search") ?? "");
 		try {
 			const items = await get<ContactResponse[]>("contacts", { limit: 500, search: q || undefined, kind: m.getProperty("/kind") || undefined,
-				sort: m.getProperty("/sort") });
+				sort: m.getProperty("/sort"), status: m.getProperty("/status") });
 			m.setProperty("/items", items.map((c) => {
 				const phones = (c.phones ?? []).map((p) => p.number);
 				const emails = (c.emails ?? []).map((e) => e.address);
@@ -62,6 +64,7 @@ export default class Customers extends BaseController {
 					placeHtml: highlight([c.postalCode, c.city].filter(Boolean).join(" ") || "–", q),
 					phonesHtml: highlight(phones.join(", ") || "–", q), emailsHtml: highlight(emails.join(", ") || "–", q),
 					sub: [c.salutation, c.title].filter(Boolean).join(" "),
+					stateText: customerState(c).text, stateState: customerState(c).state,
 				};
 			}));
 		} catch (error) {
@@ -104,6 +107,32 @@ export default class Customers extends BaseController {
 			this.toast("Kunde gespeichert");
 			void this.load();
 		}
+	}
+
+	/** Löschen (ohne verknüpfte Daten) bzw. Archivieren mit Bestätigung. */
+	async onRemove(event: Event): Promise<void> {
+		const c = (event.getSource() as Control).getBindingContext("view")?.getObject() as ContactResponse;
+		const result = await openCustomerRemoval(c).catch((e: unknown) => { this.showError(e); return null; });
+		if (!result) return;
+		this.toast({ deleted: `${c.name} gelöscht`, archived: `${c.name} archiviert`, reactivated: `${c.name} wieder aktiv`, anonymized: "Kunde anonymisiert" }[result.action]);
+		void this.load();
+	}
+
+	/** Mehrfachauswahl: ohne verknüpfte Daten löschen, sonst archivieren. */
+	async onBulkRemove(): Promise<void> {
+		const table = this.byId("customerTable") as Table;
+		const selected = table.getSelectedItems().map((i) => i.getBindingContext("view")?.getObject() as ContactResponse).filter(Boolean);
+		if (!selected.length) {
+			this.toast("Bitte zuerst Kunden in der Liste auswählen (Häkchen).");
+			return;
+		}
+		const outcome = await openBulkRemoval(selected).catch((e: unknown) => { this.showError(e); return null; });
+		if (!outcome) return;
+		table.removeSelections(true);
+		const failed = outcome.filter((o) => o.action === "failed");
+		if (failed.length) MessageBox.warning(failed.map((f) => `${f.name}: ${f.reason ?? "Fehler"}`).join("\n"), { title: summarizeBulk(outcome) });
+		else this.toast(summarizeBulk(outcome));
+		void this.load();
 	}
 
 	/** CSV: erst prüfen (Fehler und Dubletten zeigen), dann auf Wunsch übernehmen. */

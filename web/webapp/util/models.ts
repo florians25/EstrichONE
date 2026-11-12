@@ -362,6 +362,17 @@ export interface ContactResponse {
   preferredChannel: "phone" | "mobile" | "email" | "letter" | null;
   birthday: string | null;
   website: string | null;
+  /** Archiviert (inaktiv): nicht in Auswahllisten und Suche. */
+  archivedAt?: string | null;
+  /** Anonymisiert (DSGVO): Name und Kontaktdaten ersetzt. */
+  anonymizedAt?: string | null;
+}
+
+export interface CustomerReferenceItem { id: string; text: string; link: string | null }
+export interface CustomerReference { kind: string; label: string; count: number; link: string | null; items: CustomerReferenceItem[] }
+export interface CustomerReferencesResponse {
+  id: string; name: string; customerNumber: string | null; deletable: boolean; confirmText: string; archived: boolean; anonymized: boolean;
+  references: CustomerReference[];
 }
 
 export interface ContactPhone { kind: "mobile" | "landline" | "office" | "fax" | "private"; number: string; label: string | null }

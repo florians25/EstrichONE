@@ -10,6 +10,8 @@
 						change=".onImport" visible="{= ${session>/permissions/contacts.edit} === true }" sameFilenameAllowed="true" style="Transparent"/>
 					<Button text="Serien-E-Mail" icon="sap-icon://email" press=".onMailing" visible="{= ${session>/permissions/contacts.edit} === true }"
 						tooltip="E-Mail an die ausgewählten Kunden (Häkchen in der Liste)"/>
+					<Button id="bulkRemove" text="Löschen/Archivieren" icon="sap-icon://delete" press=".onBulkRemove" visible="{= ${session>/permissions/contacts.edit} === true }"
+						tooltip="Ausgewählte Kunden löschen (ohne verknüpfte Daten) oder archivieren"/>
 					<Button text="Neuer Kunde" icon="sap-icon://add-employee" type="Emphasized" press=".onNew" visible="{= ${session>/permissions/contacts.edit} === true }"/>
 				</f:actions>
 			</f:DynamicPageTitle>
@@ -28,6 +30,9 @@
 								<SegmentedButtonItem key="person" text="Privat"/>
 							</items>
 						</SegmentedButton>
+						<Select id="statusFilter" selectedKey="{view>/status}" change=".onFilter" tooltip="Aktive, archivierte oder alle Kunden" width="10rem">
+							<core:Item key="active" text="Aktive"/><core:Item key="archived" text="Archivierte"/><core:Item key="all" text="Alle (auch inaktive)"/>
+						</Select>
 						<Select selectedKey="{view>/sort}" change=".onFilter" tooltip="Sortierung" width="11rem">
 							<core:Item key="name" text="Nach Name"/><core:Item key="number" text="Nach Kundennummer"/>
 							<core:Item key="city" text="Nach Ort"/><core:Item key="recent" text="Zuletzt geändert"/>
@@ -42,13 +47,16 @@
 					<Column width="9rem" minScreenWidth="44rem" demandPopin="true"><Text text="Ort"/></Column>
 					<Column width="8.5rem" minScreenWidth="54rem" demandPopin="true"><Text text="Telefon"/></Column>
 					<Column minScreenWidth="64rem" demandPopin="true"><Text text="E-Mail"/></Column>
-					<Column width="7.5rem" hAlign="End"><Text text=""/></Column>
+					<Column width="9.5rem" hAlign="End"><Text text=""/></Column>
 				</columns>
 				<items>
 					<ColumnListItem type="Navigation" press=".onOpen">
 						<FormattedText htmlText="{view>numberHtml}" class="eoTabular"/>
 						<VBox>
-							<FormattedText htmlText="{view>nameHtml}" class="eoStrong"/>
+							<HBox alignItems="Center" renderType="Bare" wrap="Wrap">
+								<FormattedText htmlText="{view>nameHtml}" class="eoStrong sapUiTinyMarginEnd"/>
+								<ObjectStatus text="{view>stateText}" state="{view>stateState}" inverted="true" visible="{= !!${view>stateText} }"/>
+							</HBox>
 							<Text text="{view>sub}" class="eoMuted" visible="{= !!${view>sub} }"/>
 						</VBox>
 						<Text text="{= ${view>kind} === 'company' ? 'Firma' : 'Privat' }"/>
@@ -57,6 +65,8 @@
 						<FormattedText htmlText="{view>emailsHtml}" class="eoWrapAny"/>
 						<HBox class="eoActions">
 							<Button icon="sap-icon://edit" type="Transparent" tooltip="{= 'Bearbeiten: ' + ${view>name} }" press=".onEdit" visible="{= ${session>/permissions/contacts.edit} === true }"/>
+							<Button icon="sap-icon://delete" type="Transparent" tooltip="{= 'Löschen oder archivieren: ' + ${view>name} }" press=".onRemove"
+								visible="{= ${session>/permissions/contacts.edit} === true || ${session>/permissions/contacts.delete} === true }"/>
 							<Link text="Bauakten" href="/bauakten?kunde={view>id}" class="sapUiTinyMarginBegin"/>
 						</HBox>
 					</ColumnListItem>
