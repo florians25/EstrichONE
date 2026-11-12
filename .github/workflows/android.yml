@@ -21,16 +21,16 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 25
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-dotnet@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
-      - uses: actions/setup-java@v5
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
       # Gradle-Distribution und Abhängigkeiten aus dem Cache (Downloads von GitHub sind zeitweise unzuverlässig).
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Gradle vorbereiten (mit Wiederholung)
         run: android/scripts/gradle-retry.sh :core:compileTestKotlin
       - name: Tests gegen API und PostgreSQL
@@ -41,20 +41,20 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: APK bauen und Lint
         run: android/scripts/gradle-retry.sh :app:assembleDebug :app:lintDebug
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: EstrichONE-Android-debug
           path: android/app/build/outputs/apk/debug/*.apk
           retention-days: 14
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: Android-Lint
@@ -69,17 +69,17 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-java@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
       - name: Screenshots aufnehmen (und App-Unit-Tests)
         run: android/scripts/gradle-retry.sh :app:testDebugUnitTest
       - name: Screenshots sichern
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-screenshots
           path: android/app/build/outputs/roborazzi
@@ -87,7 +87,7 @@ jobs:
           retention-days: 7
       - name: Testbericht sichern
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-unit-tests
           path: android/app/build/reports/tests
