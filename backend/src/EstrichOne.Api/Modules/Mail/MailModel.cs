@@ -136,6 +136,20 @@ public sealed class MailLogEntry : IAuditedEntity
         Body = string.Empty;
     }
 
+    /// <summary>Empfänger und Inhalt entfernen (Kunde gelöscht oder anonymisiert); Zeitpunkt und Status bleiben im Protokoll.</summary>
+    public void Anonymize()
+    {
+        To = "anonymisiert";
+        Subject = "(anonymisiert)";
+        Body = string.Empty;
+        AttachmentsJson = null;
+        AttachmentNames = null;
+        if (Status == MailStatus.Queued)
+        {
+            Failed("Empfänger gelöscht", NextAttemptAt, permanent: true);
+        }
+    }
+
     /// <summary>Wiederholung nach 1, 5, 30 Minuten und 2 Stunden; danach endgültig fehlgeschlagen.</summary>
     public void Failed(string error, DateTimeOffset now, bool permanent)
     {

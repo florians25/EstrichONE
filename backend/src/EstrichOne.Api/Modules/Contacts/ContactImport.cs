@@ -56,10 +56,12 @@ internal sealed class ContactImport(EstrichOneDbContext db, ICustomerNumbers num
                 [new ImportIssue(1, $"Höchstens {MaxRows} Zeilen je Import.")], [], dryRun);
         }
 
-        var existing = await db.Set<Contact>().AsNoTracking()
-            .Select(c => new { c.Id, c.Name, c.CustomerNumber, c.PostalCode, c.Email })
+        // Gelöschte Kunden (Tombstones) nur für die Kundennummer: sie wird nie neu vergeben.
+        var all = await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AsNoTracking()
+            .Select(c => new { c.Id, c.Name, c.CustomerNumber, c.PostalCode, c.Email, Deleted = c.DeletedAt != null })
             .ToListAsync(cancellationToken);
-        var byNumber = existing.Where(c => c.CustomerNumber != null).ToDictionary(c => c.CustomerNumber!.ToUpperInvariant(), c => c.Id);
+        var existing = all.Where(c => !c.Deleted).ToList();
+        var byNumber = all.Where(c => c.CustomerNumber != null).ToDictionary(c => c.CustomerNumber!.ToUpperInvariant(), c => c.Id);
         var byNameAndPostal = existing.GroupBy(c => Key(c.Name, c.PostalCode)).ToDictionary(g => g.Key, g => g.First().Id);
         var byEmail = existing.Where(c => c.Email != null).GroupBy(c => c.Email!.ToUpperInvariant()).ToDictionary(g => g.Key, g => g.First().Id);
 

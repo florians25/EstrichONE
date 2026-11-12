@@ -3960,7 +3960,7 @@
         "tags": [
           "Kontakte"
         ],
-        "summary": "Kunden suchen (Name, Kundennummer, Ort, alle Telefonnummern und E-Mail-Adressen, Ansprechpartner); kind=company|person, sort=name|number|city|recent",
+        "summary": "Kunden suchen (Name, Kundennummer, Ort, alle Telefonnummern und E-Mail-Adressen, Ansprechpartner); kind=company|person, sort=name|number|city|recent, status=active (Standard)|archived|all",
         "operationId": "SearchContacts",
         "parameters": [
           {
@@ -3987,6 +3987,13 @@
           },
           {
             "name": "sort",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "status",
             "in": "query",
             "schema": {
               "type": "string"
@@ -4183,6 +4190,74 @@
           },
           "412": {
             "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Kunden ohne Bezüge endgültig löschen; confirm = Kundennummer (ohne Nummer: Name). Mit Bezügen 409 CUSTOMER_HAS_REFERENCES",
+        "operationId": "DeleteContact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "confirm",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -4507,6 +4582,236 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/contacts/{id}/references": {
+      "get": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Bezüge des Kunden (Bauakten, Projektbeteiligungen, Anrufe …) und ob er gelöscht werden darf",
+        "operationId": "GetContactReferences",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CustomerReferencesResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/contacts/{id}/archive": {
+      "post": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Kunden archivieren (inaktiv): bleibt mit allen Bezügen erhalten, erscheint nicht mehr in Auswahllisten und Suche",
+        "operationId": "ArchiveContact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/contacts/{id}/reactivate": {
+      "post": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Archivierten Kunden wieder aktiv setzen",
+        "operationId": "ReactivateContact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/contacts/{id}/anonymize": {
+      "post": {
+        "tags": [
+          "Kontakte"
+        ],
+        "summary": "Kunden anonymisieren (DSGVO): Name und Kontaktdaten werden unwiderruflich ersetzt, Bezüge bleiben; doppelte Bestätigung",
+        "operationId": "AnonymizeContact",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnonymizeContactRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ContactResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -23127,6 +23432,22 @@
           }
         }
       },
+      "AnonymizeContactRequest": {
+        "required": [
+          "confirm",
+          "irreversible"
+        ],
+        "type": "object",
+        "properties": {
+          "confirm": {
+            "maxLength": 200,
+            "type": "string"
+          },
+          "irreversible": {
+            "type": "boolean"
+          }
+        }
+      },
       "AnonymousTypeOfGuidAndstringAndboolean": {
         "required": [
           "id",
@@ -28860,6 +29181,20 @@
               "null",
               "string"
             ]
+          },
+          "archivedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "anonymizedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
           }
         }
       },
@@ -29799,6 +30134,109 @@
           "remaining": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "CustomerReference": {
+        "required": [
+          "kind",
+          "label",
+          "count",
+          "link",
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "count": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerReferenceItem"
+            }
+          }
+        }
+      },
+      "CustomerReferenceItem": {
+        "required": [
+          "id",
+          "text",
+          "link"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "text": {
+            "type": "string"
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "CustomerReferencesResponse": {
+        "required": [
+          "id",
+          "name",
+          "customerNumber",
+          "deletable",
+          "confirmText",
+          "archived",
+          "anonymized",
+          "references"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "customerNumber": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "deletable": {
+            "type": "boolean"
+          },
+          "confirmText": {
+            "type": "string"
+          },
+          "archived": {
+            "type": "boolean"
+          },
+          "anonymized": {
+            "type": "boolean"
+          },
+          "references": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/CustomerReference"
+            }
           }
         }
       },

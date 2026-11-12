@@ -164,6 +164,13 @@ public sealed class CallRecord : IVersionedEntity, ISoftDeletable
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
 
+    /// <summary>Anruferdaten des anonymisierten Kunden ersetzen; Inhalt und Verknüpfung bleiben.</summary>
+    public void AnonymizeCaller(string name)
+    {
+        CallerName = name;
+        CallerPhone = CallerEmail = Company = null;
+    }
+
     public void SetNumber(string number) => Number ??= number;
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();

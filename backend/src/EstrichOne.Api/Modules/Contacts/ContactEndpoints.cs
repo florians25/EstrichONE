@@ -13,7 +13,8 @@ public sealed record ContactResponse(
     string? Phone, string? Email, string? Notes, long Version,
     IReadOnlyList<ContactPhone> Phones, IReadOnlyList<ContactEmail> Emails, string? Salutation, string? Title,
     ContactAddress? BillingAddress, ContactAddress? DeliveryAddress, string? VatId, string? TaxNumber,
-    ContactChannel? PreferredChannel, DateOnly? Birthday, string? Website);
+    ContactChannel? PreferredChannel, DateOnly? Birthday, string? Website,
+    DateTimeOffset? ArchivedAt = null, DateTimeOffset? AnonymizedAt = null);
 
 /// <summary>
 /// Erweiterte Kundendaten im Anlegen/Ändern. Sendet ein Client keines dieser Felder (ältere App), bleiben sie
@@ -91,7 +92,7 @@ internal static class ContactEndpoints
         var contacts = api.MapGroup("/contacts").WithTags("Kontakte");
 
         contacts.MapGet("/", SearchAsync).WithName("SearchContacts")
-            .WithSummary("Kunden suchen (Name, Kundennummer, Ort, alle Telefonnummern und E-Mail-Adressen, Ansprechpartner); kind=company|person, sort=name|number|city|recent")
+            .WithSummary("Kunden suchen (Name, Kundennummer, Ort, alle Telefonnummern und E-Mail-Adressen, Ansprechpartner); kind=company|person, sort=name|number|city|recent, status=active (Standard)|archived|all")
             .RequirePermission(Permissions.ContactsRead);
 
         contacts.MapGet("/{id:guid}", async (Guid id, EstrichOneDbContext db, CancellationToken ct) =>
@@ -121,6 +122,7 @@ internal static class ContactEndpoints
         ContactDuplicates.Map(contacts);
         ContactNumbers.Map(contacts);
         ContactPersons.Map(contacts);
+        ContactLifecycle.Map(contacts);
 
         contacts.MapPost("/import", ImportAsync).WithName("ImportContacts")
             .WithSummary("CSV-Import (text/csv im Anfragekörper); mit dryRun=true nur prüfen")
@@ -131,9 +133,17 @@ internal static class ContactEndpoints
     }
 
     private static async Task<Ok<List<ContactResponse>>> SearchAsync(EstrichOneDbContext db, CancellationToken cancellationToken,
-        [FromQuery] string? search = null, [FromQuery] int? limit = null, [FromQuery] ContactKind? kind = null, [FromQuery] string? sort = null)
+        [FromQuery] string? search = null, [FromQuery] int? limit = null, [FromQuery] ContactKind? kind = null, [FromQuery] string? sort = null,
+        [FromQuery] string? status = null)
     {
         var query = db.Set<Contact>().AsNoTracking();
+        // Archivierte Kunden erscheinen nur auf Wunsch (Filter „Archivierte anzeigen“), nie in Auswahllisten.
+        query = status switch
+        {
+            "all" => query,
+            "archived" => query.Where(c => c.ArchivedAt != null),
+            _ => query.Where(c => c.ArchivedAt == null),
+        };
         if (kind is { } k)
         {
             query = query.Where(c => c.Kind == k);
@@ -188,7 +198,7 @@ internal static class ContactEndpoints
 
         var customerNumber = string.IsNullOrWhiteSpace(request.CustomerNumber) ? null : request.CustomerNumber.Trim();
         if (customerNumber is not null
-            && await db.Set<Contact>().AnyAsync(c => c.CustomerNumber == customerNumber, cancellationToken))
+            && await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AnyAsync(c => c.CustomerNumber == customerNumber, cancellationToken))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
                 extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
@@ -247,7 +257,9 @@ internal static class ContactEndpoints
 
         // Leer gesendet (ältere Apps, Formulare ohne Feld): vergebene Nummer bleibt erhalten.
         var number = string.IsNullOrWhiteSpace(request.CustomerNumber) ? contact.CustomerNumber : request.CustomerNumber.Trim();
-        if (number is not null && await db.Set<Contact>().AnyAsync(c => c.CustomerNumber == number && c.Id != id, cancellationToken))
+        // Auch Nummern gelöschter Kunden bleiben vergeben.
+        if (number is not null && await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted])
+                .AnyAsync(c => c.CustomerNumber == number && c.Id != id, cancellationToken))
         {
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
                 extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
@@ -295,7 +307,7 @@ internal static class ContactEndpoints
 
     internal static ContactResponse ToResponse(Contact c) => new(c.Id, c.Kind, c.Name, c.CustomerNumber, c.Street, c.PostalCode,
         c.City, c.Phone, c.Email, c.Notes, c.Version, c.Phones, c.Emails, c.Salutation, c.Title, c.BillingAddress, c.DeliveryAddress,
-        c.VatId, c.TaxNumber, c.PreferredChannel, c.Birthday, c.Website);
+        c.VatId, c.TaxNumber, c.PreferredChannel, c.Birthday, c.Website, c.ArchivedAt, c.AnonymizedAt);
 
     private static bool HasDetails(IContactDetailsRequest r) =>
         r.Phones is not null || r.Emails is not null || r.Salutation is not null || r.Title is not null || r.BillingAddress is not null

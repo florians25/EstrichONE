@@ -119,6 +119,10 @@ erlaubten Werte.
 - Der Feed enthält **je Datensatz nur den letzten Stand**. Eine zwischenzeitlich mehrfach geänderte Bauakte kommt einmal.
 - **Entitätstypen v1:** `bauakte`, `note`, `file`, `workItem`, `contact` (nur mit `contacts.read`), `screedType`, `room`,
   `bauakteParty` (Beteiligte wie Bauherr, Bauleiter, Architekt, Lieferant; nur lesend, gepflegt im Büro).
+- **Kunden löschen und archivieren:** Gelöscht wird über die API (`DELETE contacts/{id}`, nur ohne Bezüge); der Feed
+  liefert dann einen Tombstone (`deleted: true`, ohne Daten) und die Apps entfernen den Kunden. Archivierte Kunden
+  bleiben im Feed mit `archivedAt` (bzw. `anonymizedAt` nach einer Anonymisierung); die Apps blenden sie in
+  Auswahllisten aus und zeigen sie in der Kundenliste nur auf Wunsch.
 - **Neue Entitätstypen:** Ältere Clients überspringen unbekannte Typen. Der iOS-Client merkt sich, welche Typen er beim
   letzten Abruf kannte, und gleicht nach einem Update, das neue Typen versteht, einmal ohne Cursor neu ab (Outbox bleibt).
 - **Sichtbarkeit:** wie in der API (`bauakten.read_all` oder Mitglied bzw. zuständig). Notizen, Dateien und Aufgaben

@@ -82,6 +82,13 @@ public sealed class BauakteParty : IVersionedEntity
     }
 
     public void SetPrimary(bool primary) => IsPrimary = primary;
+
+    /// <summary>Kopierte Kundendaten ersetzen (Kunde anonymisiert); Rolle und Verknüpfung bleiben.</summary>
+    public void Anonymize(string name)
+    {
+        Name = name;
+        Company = Phone = Email = Mobile = Street = PostalCode = City = null;
+    }
 }
 
 internal sealed class BauaktePartyConfiguration : IEntityTypeConfiguration<BauakteParty>

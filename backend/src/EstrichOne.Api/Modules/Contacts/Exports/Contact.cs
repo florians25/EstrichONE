@@ -80,6 +80,12 @@ public sealed class Contact : IVersionedEntity, ISoftDeletable
     public DateTimeOffset UpdatedAt { get; set; }
     public DateTimeOffset? DeletedAt { get; private set; }
 
+    /// <summary>Archiviert (inaktiv): bleibt mit allen Bezügen erhalten, erscheint aber nicht mehr in Auswahllisten und Suche.</summary>
+    public DateTimeOffset? ArchivedAt { get; private set; }
+
+    /// <summary>Personenbezogene Daten entfernt (DSGVO); Kundennummer und Bezüge bleiben.</summary>
+    public DateTimeOffset? AnonymizedAt { get; private set; }
+
     private Contact()
     {
     }
@@ -151,6 +157,41 @@ public sealed class Contact : IVersionedEntity, ISoftDeletable
     }
 
     public void Delete(DateTimeOffset at) => DeletedAt ??= at;
+
+    public void Archive(DateTimeOffset at) => ArchivedAt ??= at;
+
+    public void Reactivate() => ArchivedAt = null;
+
+    /// <summary>
+    /// Endgültig löschen: alle Inhalte (Name, Anschriften, Telefon, E-Mail, Notiz, Ansprechpartner) werden entfernt. Die
+    /// Zeile bleibt nur als Tombstone mit ID und Kundennummer stehen – damit die Apps den Kunden beim Abgleich entfernen
+    /// und die Nummer nie erneut vergeben wird.
+    /// </summary>
+    public void Purge(DateTimeOffset at)
+    {
+        Erase("Gelöschter Kunde");
+        DeletedAt ??= at;
+    }
+
+    /// <summary>Personenbezogene Daten ersetzen; Kundennummer, ID und alle Bezüge (Bauakten, Anrufe) bleiben. Archiviert zugleich.</summary>
+    public void Anonymize(DateTimeOffset at)
+    {
+        Erase(string.IsNullOrWhiteSpace(CustomerNumber) ? "Anonymisierter Kunde" : $"Anonymisierter Kunde {CustomerNumber}");
+        AnonymizedAt ??= at;
+        ArchivedAt ??= at;
+    }
+
+    private void Erase(string name)
+    {
+        Name = name;
+        Street = PostalCode = City = Phone = Email = Notes = Salutation = Title = VatId = TaxNumber = Website = null;
+        Phones = [];
+        Emails = [];
+        BillingAddress = DeliveryAddress = null;
+        PreferredChannel = null;
+        Birthday = null;
+        Persons.Clear();
+    }
 
     private static string Required(string value) =>
         string.IsNullOrWhiteSpace(value) ? throw new ArgumentException("Name fehlt.", nameof(value)) : value.Trim();

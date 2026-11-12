@@ -13,6 +13,7 @@ public sealed class MailModule : IModule
         services.AddScoped<MailService>();
         services.AddScoped<IMailService>(provider => provider.GetRequiredService<MailService>());
         services.AddHostedService<MailWorker>();
+        services.AddScoped<Contacts.Exports.ICustomerReferenceSource, MailCustomerReferences>();
     }
 
     public void MapEndpoints(IEndpointRouteBuilder api) => MailEndpoints.Map(api);

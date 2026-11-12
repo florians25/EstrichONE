@@ -14,6 +14,8 @@ public static class Permissions
     public const string BauaktenAssign = "bauakten.assign";
     public const string ContactsRead = "contacts.read";
     public const string ContactsEdit = "contacts.edit";
+    public const string ContactsDelete = "contacts.delete";
+    public const string ContactsAnonymize = "contacts.anonymize";
     public const string FilesUpload = "files.upload";
     public const string FilesDelete = "files.delete";
     public const string DocumentsApprove = "documents.approve";
@@ -56,7 +58,9 @@ public static class Permissions
         new(BauaktenDelete, "Bauakten", "Bauakten löschen und wiederherstellen"),
         new(BauaktenAssign, "Bauakten", "Kollegen einer Bauakte zuordnen"),
         new(ContactsRead, "Kontakte", "Kunden und Projektbeteiligte sehen"),
-        new(ContactsEdit, "Kontakte", "Kunden und Projektbeteiligte bearbeiten"),
+        new(ContactsEdit, "Kontakte", "Kunden und Projektbeteiligte bearbeiten, archivieren und reaktivieren"),
+        new(ContactsDelete, "Kontakte", "Kunden ohne Bauakten, Anrufe und andere Bezüge endgültig löschen"),
+        new(ContactsAnonymize, "Kontakte", "Kunden mit Altdaten anonymisieren (DSGVO: Name und Kontaktdaten werden unwiderruflich ersetzt)"),
         new(FilesUpload, "Dokumentation", "Fotos, Videos und Dokumente hochladen"),
         new(FilesDelete, "Dokumentation", "Fotos, Videos und Dokumente löschen"),
         new(DocumentsApprove, "Dokumentation", "Über alle Dokumentfreigaben entscheiden (auch fremde)"),

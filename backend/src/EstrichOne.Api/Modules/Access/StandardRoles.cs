@@ -26,7 +26,7 @@ internal sealed class StandardRoles(EstrichOneDbContext db) : IDataInitializer
         (OfficeId, "Büro und Bauleitung", "Bauakten, Kontakte, Planung und Aufgaben vollständig bearbeiten.",
         [
             P.BauaktenRead, P.BauaktenReadAll, P.BauaktenCreate, P.BauaktenEdit, P.BauaktenDelete, P.BauaktenAssign,
-            P.ContactsRead, P.ContactsEdit, P.FilesUpload, P.FilesDelete, P.NotesWrite, P.DiaryWrite, P.InspectionsWrite, P.WorkRead, P.WorkEdit,
+            P.ContactsRead, P.ContactsEdit, P.ContactsDelete, P.FilesUpload, P.FilesDelete, P.NotesWrite, P.DiaryWrite, P.InspectionsWrite, P.WorkRead, P.WorkEdit,
             P.PlanningRead, P.PlanningManage, P.HrRead, P.AbsenceRequest, P.AbsenceApprove, P.MaterialsRead, P.MaterialsManage, P.DevicesRead, P.DevicesSelfEnroll,
             P.NotificationsSend, P.ChatUse, P.ChatAdmin,
         ]),
