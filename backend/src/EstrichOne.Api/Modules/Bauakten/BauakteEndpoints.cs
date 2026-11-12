@@ -268,6 +268,10 @@ internal static class BauakteEndpoints
                     extensions: new Dictionary<string, object?> { ["code"] = "ID_CONFLICT" });
             case CreateBauakteOutcome.UnknownCustomer:
                 return Validation("Der angegebene Kunde existiert nicht.", "UNKNOWN_CUSTOMER");
+            case CreateBauakteOutcome.CustomerArchived:
+                return Validation(CustomerAssignment.ArchivedMessage, CustomerAssignment.ArchivedCode);
+            case CreateBauakteOutcome.CustomerDeleted:
+                return Validation(CustomerAssignment.DeletedMessage, CustomerAssignment.DeletedCode);
             case CreateBauakteOutcome.AlreadyExists:
                 SetETag(http, bauakte!.Version);
                 return TypedResults.Ok(ToDetail(bauakte));
@@ -299,9 +303,9 @@ internal static class BauakteEndpoints
             return VersionConflict(bauakte);
         }
 
-        if (request.CustomerId is { } customerId && !await db.Set<Contact>().AnyAsync(c => c.Id == customerId, cancellationToken))
+        if (await CustomerAssignment.CheckAsync(db, request.CustomerId, bauakte.CustomerId, cancellationToken) is { } refused)
         {
-            return Validation("Der angegebene Kunde existiert nicht.", "UNKNOWN_CUSTOMER");
+            return Validation(refused.Message, refused.Code);
         }
 
         if (request.PlannedStart is { } start && request.PlannedEnd is { } end && end < start)

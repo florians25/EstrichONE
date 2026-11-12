@@ -61,3 +61,16 @@ describe('Kunden löschen oder archivieren', () => {
     expect(candidateLine(archived)).toMatch(/^archiviert · Kd\.-Nr\. 600001/);
   });
 });
+
+describe('Dublettenprüfung mit archivierten Treffern', () => {
+  it('bietet „Reaktivieren und verwenden“ statt „Verwenden“', async () => {
+    const { candidateUsable, useCandidateText } = await import('../webapp/util/customerRemoval');
+    const archived = { archivedAt: '2026-11-01T10:00:00Z' };
+    expect(useCandidateText({}, 'Vorhandenen Kunden verwenden')).toBe('Vorhandenen Kunden verwenden');
+    expect(useCandidateText(archived, 'Vorhandenen Kunden verwenden')).toBe('Reaktivieren und verwenden');
+    expect(useCandidateText(archived, 'Diesen Kunden verwenden')).toBe('Reaktivieren und verwenden');
+    expect(useCandidateText(archived, 'Verknüpfen')).toBe('Reaktivieren und verknüpfen');
+    expect(candidateUsable({ anonymizedAt: '2026-11-02T10:00:00Z' })).toBe(false);
+    expect(candidateUsable(archived)).toBe(true);
+  });
+});

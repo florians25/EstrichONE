@@ -43,7 +43,7 @@ noch Daten hängen: Bauakten (auch im Papierkorb), Projektbeteiligungen in fremd
 | **Keine verknüpften Daten** (z. B. versehentlich oder doppelt angelegt) | **Endgültig löschen**: Zur Bestätigung tippen Sie die **Kundennummer** ein (ohne Nummer den Namen). Gelöscht werden Stammdaten, Telefonnummern, E-Mail-Adressen, Notiz und Ansprechpartner. Die Kundennummer wird **nie wieder vergeben**. Alternativ: **Stattdessen archivieren**. |
 | **Verknüpfte Daten vorhanden** | Löschen ist gesperrt. Der Dialog nennt die Verknüpfungen mit Anzahl je Art (z. B. „2 Bauakten und 1 Anruf oder Anfrage“) und verlinkt die Bauakten. Stattdessen **Archivieren**. |
 
-**Archivieren** setzt den Kunden inaktiv: Er bleibt mit allen Bauakten, Dokumenten und Anrufen erhalten, erscheint aber
+**Archivieren** setzt den Kunden inaktiv (neue Bauakten, Anfragen oder Projektbeteiligungen mit ihm lehnt EstrichONE ab: „Kunde ist archiviert – zuerst reaktivieren“; die Dublettenprüfung bietet dafür **Reaktivieren und verwenden**): Er bleibt mit allen Bauakten, Dokumenten und Anrufen erhalten, erscheint aber
 nicht mehr in Auswahllisten (Bauaktenanlage, Anrufe, Kundensuche) und in der Kundenliste nur unter **Archivierte**. Die
 Kundenakte zeigt dann den Hinweis „Archiviert“; **Reaktivieren** macht den Kunden wieder aktiv. In den Apps verschwindet
 ein gelöschter Kunde beim nächsten Abgleich; archivierte Kunden zeigt die App nur mit **Archivierte anzeigen**.

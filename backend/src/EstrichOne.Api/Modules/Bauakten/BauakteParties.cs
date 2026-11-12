@@ -265,6 +265,11 @@ internal static class BauaktePartyEndpoints
             return (null, null, false);
         }
 
+        if (await CustomerAssignment.CheckAsync(db, request.ContactId, party?.ContactId, cancellationToken) is { } refused)
+        {
+            return (null, refused.Message, false);
+        }
+
         if (party is not null && request.Version is { } version && version != party.Version)
         {
             return (party, null, true);

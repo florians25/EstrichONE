@@ -17,6 +17,8 @@ import Link from "sap/m/Link";
 import { openNewCustomerDialog } from "./customerDialog";
 import { addressLine, atSameAddress, draftKey, duplicateQueries, hasAddress, mergeCandidates, siteFromCustomer, type DuplicateCandidate } from "./customerMatch";
 import { saveBauakte } from "./bauakte";
+import { candidateUsable, useCandidateText } from "./customerRemoval";
+import { ensureActive } from "./customerRemovalDialog";
 import { session } from "./session";
 import { bauakteStatus } from "./labels";
 import { bauakteSchema, displayValue, fieldsOf, writeValues, type FormSchema } from "./formSchema";
@@ -183,7 +185,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 							new Text({ text: [contact.street, [contact.postalCode, contact.city].filter(Boolean).join(" "), contact.phone, contact.email].filter(Boolean).join(" · ") || "–" }).addStyleClass("eoMuted"),
 							new ObjectStatus({ text: d.reasons.join(", "), state: d.score >= 60 ? "Error" : "Warning" }),
 						] }),
-						new Button({ text: "Diesen Kunden verwenden", type: "Emphasized", press: () => useExisting(contact) }),
+						new Button({ text: useCandidateText(contact, "Diesen Kunden verwenden"), type: "Emphasized", visible: candidateUsable(contact),
+							press: () => void ensureActive(contact).then(useExisting, (error: unknown) => MessageBox.error(problemMessage(error))) }),
 					],
 				}).addStyleClass("sapUiTinyMargin")],
 			}));

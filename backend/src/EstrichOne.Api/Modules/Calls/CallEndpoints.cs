@@ -149,9 +149,11 @@ internal static class CallEndpoints
             return Validation("Die ID passt nicht zur Adresse.");
         }
 
-        if (request.CustomerId is { } customerId && !await db.Set<Contact>().AnyAsync(c => c.Id == customerId, cancellationToken))
+        // Bisherige Zuordnung bleibt erlaubt; neu zuordnen nur aktive Kunden.
+        var currentCustomer = await db.Set<CallRecord>().AsNoTracking().Where(c => c.Id == id).Select(c => c.CustomerId).SingleOrDefaultAsync(cancellationToken);
+        if (await CustomerAssignment.CheckAsync(db, request.CustomerId, currentCustomer, cancellationToken) is { } refused)
         {
-            return Validation("Der Kunde existiert nicht.");
+            return Validation(refused.Message, refused.Code);
         }
 
         if (request.BauakteId is { } bauakteId && !await access.CanReadAsync(bauakteId, cancellationToken))
@@ -240,6 +242,11 @@ internal static class CallEndpoints
         if (call.InquiryStatus == InquiryStatus.Converted)
         {
             return Conflict("Die Anfrage ist bereits eine Bauakte.");
+        }
+
+        if (await CustomerAssignment.CheckAsync(db, call.CustomerId, null, cancellationToken) is { } refused)
+        {
+            return Validation(refused.Message, refused.Code);
         }
 
         await using var transaction = await db.Database.BeginTransactionAsync(cancellationToken);
@@ -332,6 +339,7 @@ internal static class CallEndpoints
     private static ProblemHttpResult Conflict(string detail) => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Nicht möglich",
         detail: detail, extensions: new Dictionary<string, object?> { ["code"] = "INQUIRY_STATE_CONFLICT" });
 
-    private static ProblemHttpResult Validation(string detail) => TypedResults.Problem(statusCode: StatusCodes.Status422UnprocessableEntity,
-        title: "Ungültige Angaben", detail: detail, extensions: new Dictionary<string, object?> { ["code"] = "VALIDATION_FAILED" });
+    private static ProblemHttpResult Validation(string detail, string code = "VALIDATION_FAILED") => TypedResults.Problem(
+        statusCode: StatusCodes.Status422UnprocessableEntity, title: "Ungültige Angaben", detail: detail,
+        extensions: new Dictionary<string, object?> { ["code"] = code });
 }

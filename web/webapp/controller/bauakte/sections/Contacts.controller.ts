@@ -10,6 +10,8 @@ import { del, get, post, put } from "../../../util/api";
 import { akte } from "../../../util/akteStore";
 import { saveBauakte } from "../../../util/bauakte";
 import { candidateLine, duplicateQueries, mergeCandidates, type DuplicateCandidate } from "../../../util/customerMatch";
+import { candidateUsable, useCandidateText } from "../../../util/customerRemoval";
+import { ensureActive } from "../../../util/customerRemovalDialog";
 import { KEEP_OPEN, openForm, type FormHandle } from "../../../util/forms";
 import type Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
@@ -476,9 +478,10 @@ export default class Contacts extends SectionBase {
 						new Text({ text: candidateLine(d.contact) }).addStyleClass("eoMuted"),
 						new Text({ text: d.reasons.join(", ") }).addStyleClass("eoMuted"),
 					] }),
-					new Button({ text: "Verknüpfen", type: "Emphasized", press: async () => {
+					new Button({ text: useCandidateText(d.contact, "Verknüpfen"), type: "Emphasized", visible: candidateUsable(d.contact), press: async () => {
 						dialogRef?.setBusy(true);
 						try {
+							await ensureActive(d.contact);
 							result = await put<BauakteParty[]>(`bauakten/${this.bauakteId}/parties/${uuidv7()}`, {
 								role: form.get("role") || "other", contactId: d.contact.id, name: null, company: (form.get("company") as string) || null,
 								note: (form.get("note") as string) || null, isPrimary: form.get("isPrimary") === true,

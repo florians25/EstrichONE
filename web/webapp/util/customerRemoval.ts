@@ -71,3 +71,15 @@ export function customerState(c: { archivedAt?: string | null; anonymizedAt?: st
 	if (c.archivedAt) return { text: "Archiviert", state: "Warning" };
 	return { text: "", state: "None" };
 }
+
+/**
+ * Beschriftung für einen Treffer der Dublettenprüfung: Archivierte Kunden lassen sich nicht zuordnen (der Server lehnt
+ * mit CUSTOMER_ARCHIVED ab) – stattdessen „Reaktivieren und verwenden“.
+ */
+export function useCandidateText(contact: { archivedAt?: string | null; anonymizedAt?: string | null }, text: string): string {
+	if (!contact.archivedAt || contact.anonymizedAt) return text;
+	return text.replace(/^(Vorhandenen Kunden|Diesen Kunden) verwenden$/, "Reaktivieren und verwenden").replace(/^Verknüpfen$/, "Reaktivieren und verknüpfen");
+}
+
+/** Anonymisierte Kunden sind nicht mehr verwendbar (Treffer ohne Schaltfläche). */
+export const candidateUsable = (contact: { anonymizedAt?: string | null }) => !contact.anonymizedAt;

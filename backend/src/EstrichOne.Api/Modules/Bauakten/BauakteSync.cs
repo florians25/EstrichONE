@@ -81,6 +81,8 @@ internal sealed class BauakteSync(
         {
             CreateBauakteOutcome.IdConflict => SyncOperationResult.Rejected(op.OpId, "ID_CONFLICT", "Unter dieser ID existiert bereits eine andere Bauakte."),
             CreateBauakteOutcome.UnknownCustomer => SyncOperationResult.Rejected(op.OpId, "UNKNOWN_CUSTOMER", "Der Kunde existiert nicht."),
+            CreateBauakteOutcome.CustomerArchived => SyncOperationResult.Rejected(op.OpId, CustomerAssignment.ArchivedCode, CustomerAssignment.ArchivedMessage),
+            CreateBauakteOutcome.CustomerDeleted => SyncOperationResult.Rejected(op.OpId, CustomerAssignment.DeletedCode, CustomerAssignment.DeletedMessage),
             _ => new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: bauakte!.Version,
                 Entity: SyncPayload.ToNode(BauakteEndpoints.ToDetail(bauakte))),
         };
@@ -197,9 +199,9 @@ internal sealed class BauakteSync(
                     break;
                 case "customerId":
                     var customerId = SyncPayload.Value<Guid?>(value, field);
-                    if (customerId is { } id && !await db.Set<Contact>().AnyAsync(c => c.Id == id, cancellationToken))
+                    if (await CustomerAssignment.CheckAsync(db, customerId, bauakte.CustomerId, cancellationToken) is { } refused)
                     {
-                        throw new SyncValidationException("Der Kunde existiert nicht.");
+                        throw new SyncValidationException(refused.Message);
                     }
 
                     bauakte.AssignCustomer(customerId);

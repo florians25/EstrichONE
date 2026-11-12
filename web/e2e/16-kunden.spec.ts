@@ -269,6 +269,24 @@ test('Kunde mit Bauakte: Löschen verweigert mit Bezügen, archivieren, Filter �
   await page.getByRole('button', { name: 'Reaktivieren' }).click();
   await expect(page.locator('[id$="customerState"]')).toBeHidden();
   expect((await apiCall<{ id: string }[]>(page, 'GET', `/api/v1/contacts?search=Archivbau%20${run}`)).json).toHaveLength(1);
+
+  // Archivierte Kunden lehnt der Server bei neuen Zuordnungen ab; die Dublettenprüfung bietet „Reaktivieren und verwenden“.
+  await apiCall(page, 'POST', `/api/v1/contacts/${customer.json.id}/archive`);
+  const refused = await apiCall<{ code: string; detail: string }>(page, 'POST', '/api/v1/bauakten',
+    { id: crypto.randomUUID(), title: 'Neue Halle', customerId: customer.json.id });
+  expect(refused.status).toBe(422);
+  expect(refused.json.code).toBe('CUSTOMER_ARCHIVED');
+  expect(refused.json.detail).toBe('Kunde ist archiviert – zuerst reaktivieren.');
+  await page.goto('/kunden');
+  await page.getByRole('button', { name: 'Neuer Kunde' }).click();
+  const create = page.getByRole('dialog', { name: 'Neuer Kunde' });
+  await create.getByRole('option', { name: 'Gewerbekunde' }).click();
+  await create.getByLabel('Firma', { exact: true }).fill(`Archivbau ${run} GmbH`);
+  await expect(create).toContainText('archiviert');
+  await shots(page, 'dublette-archiviert');
+  await create.getByRole('button', { name: 'Reaktivieren und verwenden' }).first().click();
+  await expect(page).toHaveURL(new RegExp(`/kunden/${customer.json.id}`));
+  await expect(page.locator('[id$="customerState"]')).toBeHidden();
 });
 
 test('Kundenliste: Mehrfachauswahl löscht Kunden ohne Bezüge und archiviert die übrigen', async ({ page }) => {

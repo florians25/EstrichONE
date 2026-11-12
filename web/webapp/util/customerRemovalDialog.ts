@@ -31,6 +31,10 @@ export const deleteCustomer = (id: string, confirm: string) =>
 export const archiveCustomer = (id: string) => post<ContactResponse>(`contacts/${id}/archive`);
 export const reactivateCustomer = (id: string) => post<ContactResponse>(`contacts/${id}/reactivate`);
 
+/** Treffer der Dublettenprüfung übernehmen: archivierte Kunden vorher reaktivieren (der Server lehnt sie sonst ab). */
+export const ensureActive = async (contact: ContactResponse): Promise<ContactResponse> =>
+	contact.archivedAt ? reactivateCustomer(contact.id) : contact;
+
 function referenceList(refs: CustomerReferencesResponse, close: () => void): Control {
 	const box = new VBox({ renderType: "Bare" }).addStyleClass("sapUiSmallMarginTop eoRemovalRefs");
 	for (const ref of refs.references) {

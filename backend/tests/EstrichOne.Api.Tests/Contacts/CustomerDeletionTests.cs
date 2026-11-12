@@ -246,4 +246,55 @@ public sealed class CustomerDeletionTests(PostgresFixture postgres) : IAsyncLife
         var audit = (await admin.GetFromJsonAsync<AuditLogPage>("/api/v1/audit?action=contact.anonymized", TestJson.Options, Ct))!.Items.ShouldHaveSingleItem();
         audit.Details["references"].ShouldBe("1 Bauakte, 1 Projektbeteiligung, 1 Anruf oder Anfrage");
     }
+
+    [Fact]
+    public async Task ArchivedOrDeletedCustomers_CannotBeAssignedAnew_ExistingAssignmentsStay()
+    {
+        var archived = await CreateAsync("Archiv Zuordnung");
+        var deleted = await CreateAsync("Weg Zuordnung");
+        var callId = Guid.CreateVersion7();
+        (await _office.PutAsJsonAsync($"/api/v1/calls/{callId}", new { id = callId, kind = "call", customerId = archived.Id, subject = "Alt" }, TestJson.Options, Ct))
+            .EnsureSuccessStatusCode();
+        (await _office.PostAsync(new Uri($"/api/v1/contacts/{archived.Id}/archive", UriKind.Relative), null, Ct)).EnsureSuccessStatusCode();
+        (await DeleteAsync(_office, deleted, deleted.CustomerNumber)).StatusCode.ShouldBe(HttpStatusCode.NoContent);
+
+        async Task Refused(HttpResponseMessage response, string code)
+        {
+            response.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity, await response.Content.ReadAsStringAsync(Ct));
+            var problem = await response.ReadProblemAsync();
+            problem.Code.ShouldBe(code);
+            if (code == "CUSTOMER_ARCHIVED")
+            {
+                problem.Detail.ShouldBe("Kunde ist archiviert – zuerst reaktivieren.");
+            }
+        }
+
+        foreach (var (customer, code) in new[] { (archived, "CUSTOMER_ARCHIVED"), (deleted, "CUSTOMER_DELETED") })
+        {
+            await Refused(await _office.PostAsJsonAsync("/api/v1/bauakten", new { id = Guid.CreateVersion7(), title = "Neu", customerId = customer.Id }, TestJson.Options, Ct), code);
+            var newCall = Guid.CreateVersion7();
+            await Refused(await _office.PutAsJsonAsync($"/api/v1/calls/{newCall}", new { id = newCall, kind = "inquiry", customerId = customer.Id }, TestJson.Options, Ct), code);
+        }
+
+        // Projektbeteiligter und App (Sync) ebenso.
+        var akte = Guid.CreateVersion7();
+        (await _office.PostAsJsonAsync("/api/v1/bauakten", new { id = akte, title = "Halle" }, TestJson.Options, Ct)).EnsureSuccessStatusCode();
+        using (var party = await _office.PutAsJsonAsync($"/api/v1/bauakten/{akte}/parties/{Guid.CreateVersion7()}", new { role = "architect", contactId = archived.Id }, TestJson.Options, Ct))
+        {
+            party.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+            (await party.ReadProblemAsync()).Detail.ShouldBe("Kunde ist archiviert – zuerst reaktivieren.");
+        }
+
+        var push = await _office.PushAsync(SyncClient.Op("bauakte.create", Guid.CreateVersion7(), new { title = "App", customerId = archived.Id }));
+        push.Results.ShouldHaveSingleItem().Code.ShouldBe("CUSTOMER_ARCHIVED");
+
+        // Bestehende Zuordnung bleibt änderbar (Anruf mit demselben archivierten Kunden).
+        (await _office.PutAsJsonAsync($"/api/v1/calls/{callId}", new { id = callId, kind = "call", customerId = archived.Id, subject = "Nachtrag" }, TestJson.Options, Ct))
+            .EnsureSuccessStatusCode();
+
+        // Nach dem Reaktivieren geht es wieder.
+        (await _office.PostAsync(new Uri($"/api/v1/contacts/{archived.Id}/reactivate", UriKind.Relative), null, Ct)).EnsureSuccessStatusCode();
+        (await _office.PostAsJsonAsync("/api/v1/bauakten", new { id = Guid.CreateVersion7(), title = "Jetzt", customerId = archived.Id }, TestJson.Options, Ct))
+            .EnsureSuccessStatusCode();
+    }
 }

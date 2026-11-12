@@ -5,6 +5,7 @@
  * übernommen werden. Nach dem Anlegen kann direkt eine Bauakte für den Kunden folgen.
  */
 import Dialog from "sap/m/Dialog";
+import MessageBox from "sap/m/MessageBox";
 import Button from "sap/m/Button";
 import Input from "sap/m/Input";
 import TextArea from "sap/m/TextArea";
@@ -37,6 +38,8 @@ import {
 	candidateLine, candidateState, draftKey, duplicateQueries, mergeCandidates, validateCustomer, type CustomerDraft, type DuplicateCandidate,
 } from "./customerMatch";
 import type { ContactEmail, ContactPhone, ContactResponse } from "./models";
+import { candidateUsable, useCandidateText } from "./customerRemoval";
+import { ensureActive } from "./customerRemovalDialog";
 
 export interface NewCustomerOptions {
 	/** Vorbelegung, z. B. der im Bauakten-Assistenten eingegebene Name. */
@@ -185,8 +188,15 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 						new Text({ text: candidateLine(c) }).addStyleClass("eoMuted"),
 						new ObjectStatus({ text: d.reasons.join(", "), state: candidateState(d.score) }),
 					] }).setLayoutData(new FlexItemData({ growFactor: 1, shrinkFactor: 1 })),
-					new Button({ text: options.useExistingText ?? "Vorhandenen Kunden verwenden", type: "Emphasized",
-						press: () => finish({ contact: c, existing: true, createBauakte: false }) }).addStyleClass("sapUiTinyMarginBegin"),
+					new Button({ text: useCandidateText(c, options.useExistingText ?? "Vorhandenen Kunden verwenden"), type: "Emphasized",
+						visible: candidateUsable(c),
+						press: async () => {
+							try {
+								finish({ contact: await ensureActive(c), existing: true, createBauakte: false });
+							} catch (error) {
+								MessageBox.error(problemMessage(error));
+							}
+						} }).addStyleClass("sapUiTinyMarginBegin"),
 				],
 			}).addStyleClass("sapUiTinyMarginTopBottom sapUiSmallMarginBeginEnd")] }));
 		}

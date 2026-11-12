@@ -12,6 +12,12 @@ public enum CreateBauakteOutcome
     AlreadyExists,
     IdConflict,
     UnknownCustomer,
+
+    /// <summary>Kunde archiviert (<see cref="CustomerAssignment"/>).</summary>
+    CustomerArchived,
+
+    /// <summary>Kunde gelöscht (Tombstone).</summary>
+    CustomerDeleted,
 }
 
 public sealed record NewBauakte(
@@ -41,9 +47,14 @@ public sealed class BauakteCommands(EstrichOneDbContext db, ICurrentUser current
                 : (null, CreateBauakteOutcome.IdConflict);
         }
 
-        if (request.CustomerId is { } customerId && !await db.Set<Contact>().AnyAsync(c => c.Id == customerId, cancellationToken))
+        if (await CustomerAssignment.CheckAsync(db, request.CustomerId, null, cancellationToken) is { } refused)
         {
-            return (null, CreateBauakteOutcome.UnknownCustomer);
+            return (null, refused.Code switch
+            {
+                CustomerAssignment.ArchivedCode => CreateBauakteOutcome.CustomerArchived,
+                CustomerAssignment.DeletedCode => CreateBauakteOutcome.CustomerDeleted,
+                _ => CreateBauakteOutcome.UnknownCustomer,
+            });
         }
 
         var bauakte = Bauakte.Create(request.Id, request.Title, currentUser.UserId);
