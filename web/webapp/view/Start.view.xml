@@ -28,16 +28,9 @@
 					</f:header>
 					<f:content>
 						<List items="{path: 'view>rows', templateShareable: false}" showSeparators="None" noDataText="{view>empty}" busy="{view>loading}"
-							busyIndicatorDelay="0" class="eoCardList">
-							<CustomListItem type="Active" press=".onRow">
-								<HBox justifyContent="SpaceBetween" alignItems="Center" class="eoCardRow" renderType="Bare">
-									<HBox alignItems="Center" class="eoCardRowMain" renderType="Bare">
-										<core:Icon src="{view>icon}" class="eoCardRowIcon" visible="{= !!${view>icon} }"/>
-										<Text text="{view>text}" wrapping="false" tooltip="{view>text}"/>
-									</HBox>
-									<ObjectStatus text="{view>side}" state="{view>sideState}" class="eoNoShrink" visible="{= !!${view>side} }"/>
-								</HBox>
-							</CustomListItem>
+							busyIndicatorDelay="0">
+							<StandardListItem type="Active" press=".onRow" title="{view>text}" icon="{view>icon}" info="{view>side}" infoState="{view>sideState}"
+								wrapping="false" tooltip="{view>text}"/>
 						</List>
 					</f:content>
 				</f:Card>

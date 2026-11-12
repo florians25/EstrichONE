@@ -40,7 +40,7 @@
 			<!-- Erstbegehung: Status, Termin, Protokolle, Fotos und Dokumente -->
 			<IconTabFilter id="erstbegehungTab" key="erstbegehung" text="Erstbegehung" icon="sap-icon://inspection" count="{dc>/initialCount}"
 				visible="{= ${session>/modules/inspections} !== false }">
-				<OverflowToolbar style="Clear" class="eoDocBar">
+				<OverflowToolbar style="Clear">
 					<Title text="Erstbegehung" level="H3"/>
 					<ObjectStatus id="initialStatus" text="{dc>/ib/statusText}" state="{dc>/ib/statusState}" icon="{dc>/ib/statusIcon}" inverted="true"/>
 					<ToolbarSpacer/>
@@ -57,33 +57,31 @@
 						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
 				</OverflowToolbar>
 				<!-- Eckdaten in einer Zeile: Status, Termin, durchgeführt, Ergebnis -->
-				<grid:CSSGrid gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 11rem), 1fr))" gridGap="0.5rem 1.5rem" class="eoFacts">
-					<VBox renderType="Bare" class="eoFact">
+				<grid:CSSGrid gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 11rem), 1fr))" gridGap="0.5rem 1.5rem" class="sapUiSmallMarginTopBottom">
+					<VBox renderType="Bare">
 						<Label text="Termin"/>
 						<Text id="initialAppointment" text="{= ${dc>/ib/appointmentText} || 'nicht geplant' }" wrapping="true"/>
 					</VBox>
-					<VBox renderType="Bare" class="eoFact">
+					<VBox renderType="Bare">
 						<Label text="Durchgeführt"/>
 						<Text text="{= ${dc>/latest} ? ${dc>/ib/doneText} : '–' }" wrapping="true"/>
 					</VBox>
-					<VBox renderType="Bare" class="eoFact">
+					<VBox renderType="Bare">
 						<Label text="Ergebnis"/>
 						<ObjectStatus text="{dc>/latestResult/text}" state="{dc>/latestResult/tone}" visible="{= !!${dc>/latest} }"/>
 						<Text text="–" visible="{= !${dc>/latest} }"/>
 					</VBox>
-					<VBox renderType="Bare" class="eoFact">
+					<VBox renderType="Bare">
 						<Label text="Protokolle"/>
 						<Text text="{= ${dc>/initial}.length === 0 ? 'keine' : ${dc>/initial}.length === 1 ? '1 Protokoll' : ${dc>/initial}.length + ' Protokolle' }"/>
 					</VBox>
 				</grid:CSSGrid>
-				<MessageStrip id="waiverStatus" text="{dc>/waiverText}" type="Information" showIcon="true" visible="{= ${dc>/ib/status} === 'waived' }" class="eoDocStrip"/>
-				<HBox id="initialEmpty" alignItems="Center" class="eoEmptyRow" visible="{= ${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned' }">
-					<core:Icon src="sap-icon://inspection" class="eoEmptyRowIcon" decorative="true"/>
-					<Text text="{= ${dc>/ib/status} === 'planned' ? 'Termin steht. Die Erstbegehung wird vor Ort in der App oder hier durchgeführt; das Protokoll erscheint danach hier.' : 'Noch keine Erstbegehung. Termin planen oder direkt durchführen – vor Ort in der App oder hier.' }"
-						wrapping="true" class="eoEmptyRowText"/>
-				</HBox>
+				<MessageStrip id="waiverStatus" text="{dc>/waiverText}" type="Information" showIcon="true" visible="{= ${dc>/ib/status} === 'waived' }" class="sapUiSmallMarginBottom"/>
+				<MessageStrip id="initialEmpty" type="Information" showIcon="true" class="sapUiSmallMarginBottom"
+					visible="{= ${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned' }"
+					text="{= ${dc>/ib/status} === 'planned' ? 'Termin steht. Die Erstbegehung wird vor Ort in der App oder hier durchgeführt; das Protokoll erscheint danach hier.' : 'Noch keine Erstbegehung. Termin planen oder direkt durchführen – vor Ort in der App oder hier.' }"/>
 
-				<f:Card id="initialProtocolCard" class="eoDocCard" visible="{= !!${dc>/latest} }">
+				<f:Card id="initialProtocolCard" class="sapUiSmallMarginTop" visible="{= !!${dc>/latest} }">
 					<f:header>
 						<card:Header title="{i18n>inspections.initialProtocol}" subtitle="{dc>/latestText}" iconSrc="sap-icon://inspection"/>
 					</f:header>
@@ -101,7 +99,7 @@
 								<Label text="Fläche"/><Text text="{dc>/areaText}"/>
 								<Label text="Fußbodenheizung"/><Text text="{dc>/heatingText}"/>
 							</form:SimpleForm>
-							<Table items="{dc>/checks}" visible="{= ${dc>/checks}.length > 0 }" class="eoCheckTable">
+							<Table items="{dc>/checks}" visible="{= ${dc>/checks}.length > 0 }" >
 								<columns>
 									<Column><Text text="{i18n>inspections.checkPoint}"/></Column>
 									<Column width="12rem"><Text text="{i18n>inspections.result}"/></Column>
@@ -124,30 +122,25 @@
 				</f:Card>
 
 				<!-- Fotos und Dokumente der Erstbegehung -->
-				<OverflowToolbar style="Clear" class="eoDocSubBar" visible="{= !!${dc>/latest} || ${dc>/initialDocs}.length > 0 }">
-					<Title text="Fotos und Dokumente" level="H4"/>
-					<Text text="{= String(${dc>/latestPhotos}.length + ${dc>/initialDocs}.length) }" class="eoContactGroupCount"/>
+				<OverflowToolbar style="Clear" class="sapUiSmallMarginTop" visible="{= !!${dc>/latest} || ${dc>/initialDocs}.length > 0 }">
+					<Title text="{= 'Fotos und Dokumente (' + (${dc>/latestPhotos}.length + ${dc>/initialDocs}.length) + ')' }" level="H4"/>
 				</OverflowToolbar>
 				<HBox items="{path: 'dc>/latestPhotos', templateShareable: false}" wrap="Wrap" renderType="Bare" class="eoMediaGrid" visible="{= ${dc>/latestPhotos}.length > 0 }">
 					<eo:MediaThumb src="{dc>thumb}" kind="{dc>kind}" alt="{dc>alt}" press=".onInspectionPhoto"/>
 				</HBox>
-				<List id="initialDocList" items="{dc>/initialDocs}" visible="{= ${dc>/initialDocs}.length > 0 }" class="eoDocList" showSeparators="Inner">
+				<List id="initialDocList" items="{dc>/initialDocs}" visible="{= ${dc>/initialDocs}.length > 0 }" showSeparators="Inner">
 					<StandardListItem title="{dc>originalName}" description="{dc>meta}" icon="sap-icon://pdf-attachment" type="Active" press=".onInitialDoc"/>
 				</List>
-				<HBox alignItems="Center" class="eoEmptyRow" visible="{= !!${dc>/latest} &amp;&amp; ${dc>/latestPhotos}.length + ${dc>/initialDocs}.length === 0 }">
-					<core:Icon src="sap-icon://camera" class="eoEmptyRowIcon" decorative="true"/>
-					<Text text="Keine Fotos oder Dokumente zur Erstbegehung. Das Protokoll lässt sich jederzeit über „Protokoll (PDF)“ erzeugen."
-						wrapping="true" class="eoEmptyRowText"/>
-				</HBox>
+				<MessageStrip type="Information" showIcon="true" visible="{= !!${dc>/latest} &amp;&amp; ${dc>/latestPhotos}.length + ${dc>/initialDocs}.length === 0 }"
+					text="Keine Fotos oder Dokumente zur Erstbegehung. Das Protokoll lässt sich jederzeit über „Protokoll (PDF)“ erzeugen."/>
 
 				<!-- Alle Protokolle (auch Korrekturen und frühere Begehungen) -->
-				<OverflowToolbar style="Clear" class="eoDocSubBar" visible="{= ${dc>/initial}.length > 1 }">
-					<Title text="Alle Protokolle" level="H4"/>
-					<Text text="{= String(${dc>/initial}.length) }" class="eoContactGroupCount"/>
+				<OverflowToolbar style="Clear" class="sapUiSmallMarginTop" visible="{= ${dc>/initial}.length > 1 }">
+					<Title text="{= 'Alle Protokolle (' + ${dc>/initial}.length + ')' }" level="H4"/>
 				</OverflowToolbar>
-				<List id="initialAllList" items="{dc>/initialAll}" visible="{= ${dc>/initial}.length > 1 }" class="eoDocList" showSeparators="Inner">
+				<List id="initialAllList" items="{dc>/initialAll}" visible="{= ${dc>/initial}.length > 1 }" showSeparators="Inner">
 					<CustomListItem>
-						<HBox alignItems="Center" justifyContent="SpaceBetween" class="eoDocListRow">
+						<HBox alignItems="Center" justifyContent="SpaceBetween" width="100%" class="sapUiTinyMarginTopBottom">
 							<VBox renderType="Bare">
 								<Text text="{dc>line}"/>
 								<ObjectStatus text="{dc>resultText}" state="{dc>resultTone}"/>
@@ -159,7 +152,7 @@
 			</IconTabFilter>
 			<!-- CM-Messungen (Belegreife) -->
 			<IconTabFilter id="messungenTab" key="pruefungen" text="CM-Messungen" icon="sap-icon://lab" count="{dc>/cmCount}" visible="{= ${session>/modules/inspections} !== false }">
-				<OverflowToolbar style="Clear" class="eoDocBar">
+				<OverflowToolbar style="Clear">
 					<Title text="{i18n>inspections.cmTitle}" level="H3"/>
 					<ToolbarSpacer/>
 					<Button text="{i18n>inspections.addCm}" icon="sap-icon://lab" type="Emphasized" press=".onAddCm" visible="{= ${session>/permissions/inspections.write} === true }"/>

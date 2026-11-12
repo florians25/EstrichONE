@@ -16,7 +16,6 @@
  * Beschriftungen dort nicht in einer schmalen, weit eingerückten Spalte neben abgeschnittenen Feldern stehen, gilt zentral:
  * - feste Breiten (z. B. `width="56rem"`) werden zur Höchstbreite, das Formular passt sich der verfügbaren Breite an;
  * - in Eingabeformularen stehen Beschriftungen unter 720 px Formularbreite über den Feldern (Standard wäre 600 px);
- * - Beschriftungen neben den Feldern stehen linksbündig (CSS `.eoForm`), passend zu den Abschnittsüberschriften.
  */
 import SimpleForm from "sap/ui/layout/form/SimpleForm";
 import Table from "sap/m/Table";

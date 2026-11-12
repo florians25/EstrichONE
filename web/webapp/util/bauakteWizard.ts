@@ -220,7 +220,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		try {
 			useExisting(await get<ContactResponse>(`contacts/${item.getKey()}`));
 		} catch (error) {
-			showToast(problemMessage(error), { type: "error" });
+			showToast(problemMessage(error));
 		}
 	});
 	c.name.attachLiveChange(() => {
