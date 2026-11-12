@@ -4,11 +4,11 @@
 #      beginnt in 0:59“, die Apps gleichen vorher ab. Neue Anmeldungen sind gesperrt.
 #   2. Update (mindestens 60 s): Die API beendet alle Sitzungen und sperrt alles; Sicherung und Austausch der Container.
 #      Web und Apps zeigen den Wartungsbildschirm – auch, solange die API nicht läuft (Caddy liefert /update-status.json).
-#   3. Abschluss (Standard 60 s): Neue Version läuft und ist bereit (/health/ready); danach Freigabe, Clients laden neu.
+#   3. Abschluss (Standard 30 s): Neue Version läuft und ist bereit (/health/ready); danach Freigabe, Clients laden neu.
 #
 # Der Stand liegt in data/backup-status/update-maintenance.json (API liest ihn, Caddy liefert ihn als /update-status.json).
 # Dauer je Phase in Sekunden (Umgebung oder .env): ESTRICHONE_UPDATE_ANNOUNCE_SECONDS, ESTRICHONE_UPDATE_MIN_SECONDS,
-# ESTRICHONE_UPDATE_FINISH_SECONDS – Standard je 60 (zusammen mindestens 3 Minuten); kürzer nur für Tests.
+# ESTRICHONE_UPDATE_FINISH_SECONDS – Standard 60 / 60 / 30 (zusammen mindestens 2,5 Minuten); kürzer nur für Tests.
 #
 # Erwartet vor phase_init: PHASE_FILE (Pfad der Datei), PHASE_FROM, PHASE_TARGET, PHASE_SOURCE.
 # shellcheck shell=sh disable=SC1111,SC1112
@@ -23,7 +23,7 @@ phase_seconds() { # phase_seconds WERT STANDARD – nur ganze Zahlen ≥ 0
 phase_init() {
   PHASE_ANNOUNCE="$(phase_seconds "${ESTRICHONE_UPDATE_ANNOUNCE_SECONDS:-}" 60)"
   PHASE_MIN="$(phase_seconds "${ESTRICHONE_UPDATE_MIN_SECONDS:-}" 60)"
-  PHASE_FINISH="$(phase_seconds "${ESTRICHONE_UPDATE_FINISH_SECONDS:-}" 60)"
+  PHASE_FINISH="$(phase_seconds "${ESTRICHONE_UPDATE_FINISH_SECONDS:-}" 30)"
   PHASE_STARTED="$(phase_now)"
   PHASE_ID="$(date -u +%Y%m%dT%H%M%SZ)-${PHASE_TARGET:-update}"
   PHASE_UPDATE_STARTED=""

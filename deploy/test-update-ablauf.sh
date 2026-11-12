@@ -7,7 +7,7 @@
 #   3. Update/Abschluss: alles gesperrt (503 MAINTENANCE, reason update), /update-status.json bleibt erreichbar,
 #      auch solange die API getauscht wird.
 #   4. Freigabe: Stand weg, alte Sitzung ungültig (401), neue Anmeldung klappt, Gesamtdauer ≥ Summe der Phasen.
-#   5. Standarddauer: ohne Angaben dauert der Ablauf mindestens 3 Minuten (Trockenlauf von update-phases.sh).
+#   5. Standarddauer: ohne Angaben dauert der Ablauf mindestens 2,5 Minuten (Trockenlauf von update-phases.sh).
 # Benutzer admin wird bei Bedarf eingerichtet (gleiches Passwort wie deploy/backup/test-installer-restore.sh).
 # shellcheck disable=SC1111,SC1112
 set -euo pipefail
@@ -111,12 +111,12 @@ api "$URL/api/v1/system/notices" | json ".get('update')" | grep -qx None
 test "$(status "${AUTH[@]}" "$URL/api/v1/auth/me")" = 401
 login | json "['accessToken']" >/dev/null
 
-log "Standarddauer: mindestens 3 Minuten"
+log "Standarddauer: mindestens 2,5 Minuten (Abschluss 30 s)"
 (
   # shellcheck disable=SC1091
   . "$DIR/update-phases.sh"
   unset ESTRICHONE_UPDATE_ANNOUNCE_SECONDS ESTRICHONE_UPDATE_MIN_SECONDS ESTRICHONE_UPDATE_FINISH_SECONDS
   phase_init
-  test $((PHASE_ANNOUNCE + PHASE_MIN + PHASE_FINISH)) -ge 180
+  test $((PHASE_ANNOUNCE + PHASE_MIN + PHASE_FINISH)) -ge 150 && test "$PHASE_FINISH" -eq 30
 )
 echo "Update-Ablauf: alle Prüfungen bestanden."

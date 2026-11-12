@@ -11,10 +11,10 @@
 #        derselben Versionslinie (x.y), jeweils nur im Zeitfenster (Standard 02:00-05:00, Serverzeit).
 #   sudo /opt/estrichone/update.sh --wartung-beenden   Wartungsbildschirm nach einem abgebrochenen Update freigeben
 #
-# Ablauf (mindestens 3 Minuten, update-phases.sh): Version ermitteln, Images laden → 1. Ankündigung (60 s, Countdown für
+# Ablauf (mindestens 2,5 Minuten, update-phases.sh): Version ermitteln, Images laden → 1. Ankündigung (60 s, Countdown für
 # alle Benutzer, Apps gleichen ab) → 2. Update (≥ 60 s: Sitzungen enden, Wartungsbildschirm; Sicherung, Installer der
 # Zielversion – Konfiguration und Daten bleiben –, warten, bis alle Dienste gesund sind, Version prüfen) → 3. Abschluss
-# (60 s) → Freigabe. Dauer je Phase: ESTRICHONE_UPDATE_ANNOUNCE_SECONDS / _MIN_SECONDS / _FINISH_SECONDS (Umgebung oder .env). Der Stand (geprüft, verfügbar, letzte Automatik) steht in
+# (30 s) → Freigabe. Dauer je Phase: ESTRICHONE_UPDATE_ANNOUNCE_SECONDS / _MIN_SECONDS / _FINISH_SECONDS (Umgebung oder .env). Der Stand (geprüft, verfügbar, letzte Automatik) steht in
 # data/backup-status/update.json; die Weboberfläche zeigt Administratoren daraus „Sicherheitsupdate verfügbar“.
 # shellcheck disable=SC1111,SC1112
 set -eu

@@ -1,6 +1,6 @@
 #!/bin/sh
 # Prüft update-phases.sh ohne Docker (CI: infra.yml, lokal: sh docker/installer/test-update-phases.sh):
-# Reihenfolge und Inhalt der Phasen, Mindestdauern (verkürzt), Standard 3 × 60 s, Fehlschlag mit und ohne laufendes System.
+# Reihenfolge und Inhalt der Phasen, Mindestdauern (verkürzt), Standard 60 / 60 / 30 s, Fehlschlag mit und ohne laufendes System.
 # shellcheck disable=SC1111,SC1112,SC2034,SC2015
 set -eu
 HERE="$(cd "$(dirname "$0")" && pwd)"
@@ -14,10 +14,10 @@ field() { python3 -c 'import json,sys; v=json.load(open(sys.argv[1])).get(sys.ar
 PHASE_FILE="$WORK/backup-status/update-maintenance.json"
 PHASE_FROM="1.0.15" PHASE_TARGET="1.0.16" PHASE_SOURCE="test"
 
-# Standard: je 60 s, ungültige Angaben fallen auf den Standard zurück.
+# Standard: 60 / 60 / 30 s, ungültige Angaben fallen auf den Standard zurück.
 ESTRICHONE_UPDATE_ANNOUNCE_SECONDS="" ESTRICHONE_UPDATE_MIN_SECONDS="abc" ESTRICHONE_UPDATE_FINISH_SECONDS=""
 phase_init
-[ "$PHASE_ANNOUNCE" = 60 ] && [ "$PHASE_MIN" = 60 ] && [ "$PHASE_FINISH" = 60 ] || fail "Standarddauer nicht 3 × 60 s"
+[ "$PHASE_ANNOUNCE" = 60 ] && [ "$PHASE_MIN" = 60 ] && [ "$PHASE_FINISH" = 30 ] || fail "Standarddauer nicht 60 / 60 / 30 s"
 
 # Verkürzter Ablauf: 2 s Ankündigung, 3 s Update, 2 s Abschluss.
 ESTRICHONE_UPDATE_ANNOUNCE_SECONDS=2 ESTRICHONE_UPDATE_MIN_SECONDS=3 ESTRICHONE_UPDATE_FINISH_SECONDS=2
