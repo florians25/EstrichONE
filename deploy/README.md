@@ -257,10 +257,38 @@ sudo /opt/estrichone/update.sh          # neueste veröffentlichte Version
 sudo /opt/estrichone/update.sh 0.1.0    # bestimmte Version (auch zurück auf eine ältere)
 ```
 
-Das Skript zeigt „Installiert → Neu“, **sichert vorher** (Backup-Dienst; bricht bei Fehler ab, ohne Sicherung:
-`--ohne-sicherung`), führt den Installer der Zielversion aus (Konfiguration und Daten bleiben), wartet, bis alle
+Das Skript zeigt „Installiert → Neu“, lädt die Images vorab, kündigt das Update an (siehe „Update-Ablauf“), **sichert
+vorher** (Backup-Dienst; bricht bei Fehler ab, ohne Sicherung: `--ohne-sicherung`), führt den Installer der Zielversion aus (Konfiguration und Daten bleiben), wartet, bis alle
 Dienste gesund sind, prüft die laufende Version und meldet klar Erfolg oder Fehler. Installationen vor 0.1.0 haben
 das Skript noch nicht: einmal den Installer-Befehl von oben mit der neuen Version ausführen, danach ist es da.
+
+### Update-Ablauf (mindestens 3 Minuten)
+
+Jedes Update läuft in drei Phasen – mit `update.sh`, `install.sh aktualisieren`, dem Installer auf einer laufenden
+Installation (andere Version) und der Hosting-Konsole (Einzel- und Massen-Update) gleich:
+
+| Phase | Dauer | Was passiert |
+|---|---|---|
+| 1. Ankündigung | 60 s | Alle angemeldeten Benutzer sehen oben „Update auf Version X beginnt in 0:59 – bitte Arbeit speichern“ (Web und Apps). Die Apps übertragen offene Änderungen sofort. Neue Anmeldungen sind gesperrt. |
+| 2. Update | mindestens 60 s | Die API beendet alle Sitzungen (auch Administratoren) und sperrt alles außer Hinweisen und Serverinfo. Web und Apps zeigen den Wartungsbildschirm mit Phase, Zielversion und Fortschritt. Sicherung, Austausch der Container, Warten auf `/health/ready`. |
+| 3. Abschluss | 60 s | Die neue Version läuft; der Wartungsbildschirm zeigt „Freigabe in 0:59“. Danach Freigabe: das Web lädt neu und zeigt die Anmeldung mit „EstrichONE wurde auf Version X aktualisiert“, die Apps führen zur Anmeldung (Daten bleiben auf dem Gerät). |
+
+Der Stand liegt in `data/backup-status/update-maintenance.json`. Die API liest ihn bei jeder Anfrage (Kopfzeile
+`X-EstrichONE-Update` auf jeder Antwort, Feld `update` in `/api/v1/system/notices`); Caddy liefert ihn zusätzlich als
+`/update-status.json` aus dem nur lesend eingebundenen Verzeichnis – so bleibt der Wartungsbildschirm im Web auch dann
+stehen, wenn die API gerade getauscht wird (statt „nicht erreichbar“). Die Störungsseite (`deploy/fallback`) zeigt
+Phase und Countdown ebenso.
+
+- **Dauer anpassen** (Sekunden, Umgebung oder `.env`): `ESTRICHONE_UPDATE_ANNOUNCE_SECONDS`, `ESTRICHONE_UPDATE_MIN_SECONDS`,
+  `ESTRICHONE_UPDATE_FINISH_SECONDS` – Standard je 60. Kürzer nur für Tests (CI: `deploy/test-update-ablauf.sh`).
+- **Fehlschlag:** Läuft EstrichONE weiter (z. B. Sicherung fehlgeschlagen), sehen die Benutzer „Update fehlgeschlagen –
+  Version X läuft weiter“ und nach der Abschlussdauer die Freigabe. Startet nichts mehr, bleibt der Wartungsbildschirm
+  mit Meldung stehen. Nach der Reparatur freigeben: `sudo /opt/estrichone/update.sh --wartung-beenden`. Ein verwaister
+  Stand (abgebrochenes Skript) gilt nach 6 Stunden automatisch nicht mehr.
+- **Erstes Update nach Einführung:** Der Ablauf gilt ab der Version, die ihn mitbringt – das `update.sh` einer älteren
+  Installation spielt das erste Update noch ohne Phasen ein.
+- Läuft EstrichONE beim Update nicht (angehalten), entfällt die Ankündigung. Eine Reparatur mit derselben Version
+  (Installer erneut) tauscht keine Container und kündigt nichts an.
 
 **Sicherheitsupdates automatisch** (empfohlen, docs/sicherheit.md → „Sicherheitsupdates“):
 

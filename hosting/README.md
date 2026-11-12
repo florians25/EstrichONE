@@ -158,6 +158,22 @@ Aktualisierung **automatisch** zurück: alte Version, Datenbank und Dateien aus 
 Instanz läuft wieder. Nach einer erfolgreichen Aktualisierung bleibt **Zurücknehmen** verfügbar (gleicher Ablauf per
 Knopf), bis zur nächsten Aktualisierung.
 
+**Update-Ablauf je Instanz (mindestens 3 Minuten):** Wie `update.sh` der Suite (deploy/README.md, „Update-Ablauf“)
+schreibt die Konsole den Stand nach `data/backup-status/update-maintenance.json` der Instanz:
+
+1. **Ankündigung** (60 s) – nach dem Laden der Images: Countdown für alle Benutzer, Apps gleichen ab, neue Anmeldungen gesperrt.
+2. **Update** (mindestens 60 s) – Sitzungen enden, Wartungsbildschirm; Vorab-Sicherung, `up --wait`, `/health/ready`.
+3. **Abschluss** (60 s) – danach Freigabe.
+
+Schlägt der Start fehl, zeigt die Instanz „Update wird zurückgenommen“, nach der Rücknahme „Update fehlgeschlagen –
+Version X läuft wieder“ und gibt nach der Abschlussdauer frei. Misslingt auch die Rücknahme, bleibt der
+Wartungsbildschirm stehen; **Neu starten**, **Starten** oder **Zurücknehmen** beenden ihn. Die Phase steht am Vorgang:
+in der Liste „Vorgänge“, bei den Vorgängen der Instanz und im Protokoll-Dialog („1/3 Ankündigung · noch 0:42“ …
+„Freigegeben“) – bei **Alle aktualisieren** also je Instanz. Gesperrte und angehaltene Instanzen werden ohne Ankündigung
+aktualisiert. Dauer: `Hosting__UpdateAnnounceSeconds`, `Hosting__UpdateMinimumSeconds`, `Hosting__UpdateFinishSeconds`
+(Standard je 60; nur für Tests verkürzen). Mehrere Instanzen laufen parallel bis `Hosting__MaxParallelOperations`
+(Standard 2) – bei vielen Instanzen für „Alle aktualisieren“ ggf. erhöhen.
+
 **Wiederherstellen:** beliebigen Wiederherstellungspunkt wählen; die Konsole sichert vorher den aktuellen Stand, hält
 API, Web und Sicherung an, spielt mit dem Dienst `restore` der Suite Datenbank (Tausch über eine neue Datenbank) und
 Dateien zurück und startet die Instanz.

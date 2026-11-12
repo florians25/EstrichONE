@@ -483,6 +483,24 @@ automatisch einspielen:
 Neue Versionslinien (z. B. von 0.1 auf 0.2) werden nie automatisch eingespielt. Nach einem Update des Hauptservers
 ziehen Sie die Zusatzserver nach (Abschnitt 9.9).
 
+### Ablauf eines Updates für die Benutzer {#update-ablauf}
+
+Ein Update dauert mindestens drei Minuten und läuft immer gleich ab – egal ob per `update.sh`, automatisch nachts oder
+über die Hosting-Konsole:
+
+1. **Ankündigung (1 Minute):** Alle Angemeldeten sehen oben eine gelbe Leiste „Update auf Version X beginnt in 0:59 –
+   bitte Arbeit speichern“. Die Apps übertragen offene Änderungen sofort. Neue Anmeldungen sind in dieser Minute gesperrt.
+2. **Update (mindestens 1 Minute):** Alle werden abgemeldet – auch Administratoren. Web und Apps zeigen den
+   Wartungsbildschirm mit Phase, Zielversion und Fortschritt; er bleibt auch stehen, solange der Server neu startet.
+3. **Abschluss (1 Minute):** Die neue Version läuft, der Bildschirm zeigt „Freigabe in 0:59“. Danach lädt das Web neu
+   und zeigt die Anmeldung mit „EstrichONE wurde auf Version X aktualisiert“; die Apps führen zur Anmeldung. Auf dem
+   Gerät erfasste Daten bleiben erhalten und werden nach der Anmeldung übertragen.
+
+Schlägt das Update fehl und läuft die bisherige Version weiter, sehen die Benutzer kurz „Update fehlgeschlagen“ und
+werden danach wieder freigegeben. Startet EstrichONE nicht mehr, bleibt der Wartungsbildschirm stehen, bis das Problem
+behoben ist; freigeben mit `sudo /opt/estrichone/update.sh --wartung-beenden`. Planen Sie Updates daher außerhalb der
+Arbeitszeit oder kündigen Sie sie zusätzlich unter „Hinweise und Wartung“ an.
+
 Mit dem Server-Update steht auch die neue Android-App bereit: Die Apps zeigen den Hinweis „Update verfügbar“ von selbst
 (siehe „App-Updates“). Für iPhone und iPad die neue Version über App Store, TestFlight oder MDM verteilen und unter
 App-Updates eintragen.
