@@ -23,7 +23,7 @@ sudo /opt/estrichone/update.sh <version>  # genau diese Version
 ```
 
 Das Skript kündigt das Update allen Benutzern eine Minute vorher an, meldet alle ab, sichert, aktualisiert, wartet auf
-alle Dienste und gibt nach einer weiteren Minute frei (mindestens 3 Minuten, deploy/README.md „Update-Ablauf“); es
+alle Dienste und gibt nach weiteren 30 Sekunden frei (mindestens 2,5 Minuten, deploy/README.md „Update-Ablauf“); es
 meldet Erfolg oder Fehler. Ältere Installationen
 einmalig mit dem Installer-Befehl unten aktualisieren.
 

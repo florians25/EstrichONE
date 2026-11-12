@@ -580,14 +580,14 @@ ziehen Sie die Zusatzserver nach (Abschnitt 9.9).
 
 ### Ablauf eines Updates für die Benutzer {#update-ablauf}
 
-Ein Update dauert mindestens drei Minuten und läuft immer gleich ab – egal ob per `update.sh`, automatisch nachts oder
+Ein Update dauert mindestens zweieinhalb Minuten und läuft immer gleich ab – egal ob per `update.sh`, automatisch nachts oder
 über die Hosting-Konsole:
 
 1. **Ankündigung (1 Minute):** Alle Angemeldeten sehen oben eine gelbe Leiste „Update auf Version X beginnt in 0:59 –
    bitte Arbeit speichern“. Die Apps übertragen offene Änderungen sofort. Neue Anmeldungen sind in dieser Minute gesperrt.
 2. **Update (mindestens 1 Minute):** Alle werden abgemeldet – auch Administratoren. Web und Apps zeigen den
    Wartungsbildschirm mit Phase, Zielversion und Fortschritt; er bleibt auch stehen, solange der Server neu startet.
-3. **Abschluss (1 Minute):** Die neue Version läuft, der Bildschirm zeigt „Freigabe in 0:59“. Danach lädt das Web neu
+3. **Abschluss (30 Sekunden):** Die neue Version läuft, der Bildschirm zeigt „Freigabe in 0:29“. Danach lädt das Web neu
    und zeigt die Anmeldung mit „EstrichONE wurde auf Version X aktualisiert“; die Apps führen zur Anmeldung. Auf dem
    Gerät erfasste Daten bleiben erhalten und werden nach der Anmeldung übertragen.
 

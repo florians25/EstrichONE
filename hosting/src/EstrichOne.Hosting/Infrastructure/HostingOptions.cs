@@ -73,14 +73,14 @@ public sealed class HostingOptions
 
     /// <summary>
     /// Update-Ablauf je Instanz (deploy/README.md): Ankündigung an alle Benutzer mit Countdown, Mindestdauer der Update-Phase
-    /// (Sitzungen beendet, Wartungsbildschirm) und Abschluss vor der Freigabe – Standard je 60 s, zusammen mindestens 3 Minuten.
+    /// (Sitzungen beendet, Wartungsbildschirm) und Abschluss vor der Freigabe – Standard 60 / 60 / 30 s, zusammen mindestens 2,5 Minuten.
     /// Nur für Tests verkürzen.
     /// </summary>
     public int UpdateAnnounceSeconds { get; set; } = 60;
 
     public int UpdateMinimumSeconds { get; set; } = 60;
 
-    public int UpdateFinishSeconds { get; set; } = 60;
+    public int UpdateFinishSeconds { get; set; } = 30;
 
     /// <summary>
     /// Optional: eigenes Wurzelverzeichnis für die Sicherungs-Repositorys (z. B. zweite Festplatte); je Mandant ein
