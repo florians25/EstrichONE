@@ -1,9 +1,7 @@
 import CoreLocation
 import EstrichCore
-import PhotosUI
 import SwiftUI
 import UIKit
-import UniformTypeIdentifiers
 
 /// Verlauf einer Unterhaltung mit Eingabezeile. Eigene Nachrichten rechts in Markenblau, andere links; je Nachricht
 /// Uhrzeit und Zustand (wartet, gesendet ✓, zugestellt ✓✓, gelesen ✓✓ hell). Neues kommt über den Echtzeit-Kanal,
@@ -29,12 +27,9 @@ struct ChatConversationView: View {
     @State private var draftReady = false
     @State private var replyTo: ChatMessage?
     @State private var editing: ChatMessage?
-    @State private var picked: [PickedAttachment] = []
     @State private var location: ChatLocation?
-    @State private var photoItems: [PhotosPickerItem] = []
-    @State private var showsPhotoPicker = false
-    @State private var showsCamera = false
-    @State private var showsDocuments = false
+    /// Verknüpfte Teams-Unterhaltung der Bauakte (Ziel des Hinweises „Für Datei- und Fotoaustausch …“).
+    @State private var teamsLink: TeamsLink?
     @State private var choosesBauakteAddress = false
     @State private var locating = false
     @State private var forwarding: ChatMessage?
@@ -212,26 +207,10 @@ struct ChatConversationView: View {
             }
             if event.kind == .conversation, event.conversationId == conversationId { Task { await loadDetail() } }
         }
-        .photosPicker(isPresented: $showsPhotoPicker, selection: $photoItems, maxSelectionCount: ChatLimits.maxAttachments, matching: .images)
-        .onChange(of: photoItems) { _, items in
-            guard !items.isEmpty else { return }
-            Task { await importPhotos(items) }
-        }
     }
 
     private func presenting<Content: View>(_ content: Content) -> some View {
         content
-        .fullScreenCover(isPresented: $showsCamera) {
-            ChatCameraPicker { image in
-                showsCamera = false
-                if let image { Task { await addCameraPhoto(image) } }
-            }
-            .ignoresSafeArea()
-        }
-        .fileImporter(isPresented: $showsDocuments, allowedContentTypes: [.pdf, .image, .plainText, .commaSeparatedText, .spreadsheet, .presentation, .item],
-                      allowsMultipleSelection: true) { result in
-            if case let .success(urls) = result { importDocuments(urls) }
-        }
         .sheet(isPresented: $choosesBauakteAddress) {
             BauaktePickerSheet(title: "Baustellenadresse teilen", preferred: detail?.bauakteId) { bauakte in
                 choosesBauakteAddress = false
@@ -416,7 +395,7 @@ struct ChatConversationView: View {
                 ComposerBanner(symbol: "arrowshape.turn.up.left.fill", title: replyTo.isMine(userId: userId) ? "Antwort an mich" : "Antwort an \(replyTo.senderName ?? "")",
                                text: replyTo.summary) { self.replyTo = nil }
             }
-            if !picked.isEmpty || location != nil { attachmentStrip }
+            if location != nil { attachmentStrip }
             if let query = ChatMentions.pendingQuery(in: draft), isGroup {
                 let suggestions = ChatMentions.suggestions(for: query, members: detail?.members ?? [], excluding: userId)
                 if !suggestions.isEmpty {
@@ -453,7 +432,7 @@ struct ChatConversationView: View {
                 NoticeLine(tone: .neutral, text: problem, symbol: "mic.slash")
             }
             HStack(alignment: .bottom, spacing: Space.s) {
-                if editing == nil { attachMenu }
+                if editing == nil { shareMenu }
                 HStack(alignment: .bottom, spacing: 4) {
                     TextField(editing == nil ? "Nachricht" : "Text", text: $draft, axis: .vertical)
                         .lineLimit(1...6)
@@ -492,6 +471,7 @@ struct ChatConversationView: View {
                 .accessibilityLabel(editing == nil ? "Senden" : "Änderung sichern")
                 .accessibilityIdentifier("chatSend")
             }
+            if editing == nil { ChatFileExchangeHint(targets: ChatComposerPolicy.teamsTargets(link: teamsLink, status: sync?.teams)) }
         }
         .padding(.horizontal, Space.m)
         .padding(.vertical, Space.s)
@@ -499,16 +479,12 @@ struct ChatConversationView: View {
 
     private var canSend: Bool {
         if editing != nil { return ChatLimits.clean(draft) != nil && ChatLimits.clean(draft) != editing?.text }
-        return ChatLimits.clean(draft) != nil || !picked.isEmpty || location != nil
+        return ChatLimits.clean(draft) != nil || location != nil
     }
 
-    private var attachMenu: some View {
+    /// Nur noch Standort und Baustellenadresse teilen – keine Kamera, Fotos oder Dokumente (`ChatComposerPolicy`).
+    private var shareMenu: some View {
         Menu {
-            Button("Kamera", systemImage: "camera") { showsCamera = true }
-                .disabled(!UIImagePickerController.isSourceTypeAvailable(.camera))
-            Button("Fotos", systemImage: "photo.on.rectangle") { showsPhotoPicker = true }
-            Button("Dokument", systemImage: "doc") { showsDocuments = true }
-            Divider()
             Button("Mein Standort", systemImage: "location") { Task { await shareCurrentLocation() } }
             Button("Baustellenadresse", systemImage: "building.2") {
                 if let id = detail?.bauakteId {
@@ -520,43 +496,19 @@ struct ChatConversationView: View {
             .disabled(model.active?.service == nil)
         } label: {
             Group {
-                if locating { ProgressView() } else { Image(systemName: "plus").font(.system(size: 18, weight: .semibold)) }
+                if locating { ProgressView() } else { Image(systemName: "location").font(.system(size: 17, weight: .semibold)) }
             }
             .foregroundStyle(Theme.accent)
             .frame(width: 34, height: 34)
             .contentShape(Rectangle())
         }
-        .accessibilityLabel("Anhang")
-        .accessibilityIdentifier("chatAttachButton")
+        .accessibilityLabel("Standort teilen")
+        .accessibilityIdentifier("chatShareLocationButton")
     }
 
     private var attachmentStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: Space.s) {
-                ForEach(picked) { item in
-                    ZStack(alignment: .topTrailing) {
-                        Group {
-                            if let preview = item.preview {
-                                Image(uiImage: preview).resizable().scaledToFill()
-                            } else {
-                                VStack(spacing: 2) {
-                                    Image(systemName: "doc.fill").font(.title2).foregroundStyle(Theme.accent)
-                                    Text(item.name).font(.caption2).lineLimit(2).multilineTextAlignment(.center)
-                                    Text(ChatFormat.size(Int64(item.data.count))).font(.caption2).foregroundStyle(Theme.textSecondary)
-                                }
-                                .padding(4)
-                            }
-                        }
-                        .frame(width: 72, height: 72)
-                        .background(Theme.fill)
-                        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-                        Button { picked.removeAll { $0.id == item.id } } label: {
-                            Image(systemName: "xmark.circle.fill").font(.system(size: 20)).foregroundStyle(.white, .black.opacity(0.6))
-                        }
-                        .offset(x: 6, y: -6)
-                        .accessibilityLabel("Anhang entfernen")
-                    }
-                }
                 if let location {
                     ZStack(alignment: .topTrailing) {
                         VStack(spacing: 2) {
@@ -626,42 +578,7 @@ struct ChatConversationView: View {
         draftReady = true
     }
 
-    // MARK: Anhänge
-
-    private func importPhotos(_ items: [PhotosPickerItem]) async {
-        photoItems = []
-        for item in items.prefix(ChatLimits.maxAttachments - picked.count) {
-            guard let raw = try? await item.loadTransferable(type: Data.self) else { continue }
-            let jpeg = await Task.detached(priority: .userInitiated) { PhotoCompressor.prepare(raw) }.value
-            picked.append(PickedAttachment.photo(jpeg))
-        }
-    }
-
-    private func addCameraPhoto(_ image: UIImage) async {
-        guard let raw = image.jpegData(compressionQuality: 0.9) else { return }
-        let jpeg = await Task.detached(priority: .userInitiated) { PhotoCompressor.prepare(raw) }.value
-        picked.append(PickedAttachment.photo(jpeg))
-    }
-
-    private func importDocuments(_ urls: [URL]) {
-        for url in urls.prefix(ChatLimits.maxAttachments - picked.count) {
-            let scoped = url.startAccessingSecurityScopedResource()
-            defer { if scoped { url.stopAccessingSecurityScopedResource() } }
-            guard let data = try? Data(contentsOf: url) else { continue }
-            guard data.count <= ChatLimits.maxDocumentBytes else {
-                toast = "„\(url.lastPathComponent)“ ist größer als 25 MB."
-                continue
-            }
-            let type = UTType(filenameExtension: url.pathExtension)
-            if type?.conforms(to: .image) == true, type != .pdf {
-                // Bilder als Dokument gewählt: wie Fotos verkleinern.
-                picked.append(PickedAttachment.photo(PhotoCompressor.prepare(data)))
-            } else {
-                picked.append(PickedAttachment(name: url.lastPathComponent, kind: "document",
-                                               contentType: type?.preferredMIMEType ?? "application/octet-stream", data: data, preview: nil))
-            }
-        }
-    }
+    // MARK: Standort
 
     private func shareCurrentLocation() async {
         locating = true
@@ -709,6 +626,13 @@ struct ChatConversationView: View {
     private func loadDetail() async {
         guard let client = model.active?.client else { return }
         if let fresh = try? await client.chatConversation(conversationId) { detail = fresh }
+        await loadTeamsLink()
+    }
+
+    /// Teams-Verknüpfung der Bauakte zum Hinweis an der Eingabe (nur mit Teams-Anbindung und online; sonst Team „Baustellen“ bzw. nur Text).
+    private func loadTeamsLink() async {
+        guard teamsLink == nil, let bauakteId = detail?.bauakteId, let active = model.active, active.sync?.teams?.available == true else { return }
+        teamsLink = try? await active.client.bauakteTeams(bauakteId).link
     }
 
     private func load(full: Bool) async {
@@ -811,20 +735,16 @@ struct ChatConversationView: View {
         }
         let text = ChatLimits.clean(draft) ?? ""
         dictation.stop()
-        let attachments = picked.map { ChatOutboxItem.Attachment(id: $0.id, kind: $0.kind, name: $0.name, contentType: $0.contentType,
-                                                                 sizeBytes: Int64($0.data.count)) }
-        var contents: [UUID: Data] = [:]
-        for item in picked { contents[item.id] = item.data }
-        let item = ChatOutboxItem(conversationId: conversationId, text: text, attachments: attachments, replyToId: replyTo?.id,
+        // Keine Anhänge mehr aus der App (ChatComposerPolicy); nur Text und ggf. Standort.
+        let item = ChatOutboxItem(conversationId: conversationId, text: text, replyToId: replyTo?.id,
                                   replyToSender: replyTo?.senderName, replyToText: replyTo?.summary,
                                   mentionUserIds: ChatMentions.mentioned(in: text, members: detail?.members ?? []), location: location)
         draft = ""
-        picked = []
         location = nil
         replyTo = nil
         chat.saveDraft("", for: conversationId)
         do {
-            try await chat.enqueue(item, contents: contents)
+            try await chat.enqueue(item, contents: [:])
             if let confirmed = chat.confirmed.last(where: { $0.clientMessageId == item.id }) { merge([confirmed]) }
             if chat.queued.contains(where: { $0.id == item.id && $0.failure == nil }) {
                 failure = "Keine Verbindung. Die Nachricht wird gesendet, sobald der Server erreichbar ist."
@@ -924,19 +844,9 @@ struct ChatConversationView: View {
         case "chat-verlauf":
             draft = "Passt, ich bringe die Rolle mit."
         case "chat-anhang":
-            Task {
-                try? await Task.sleep(for: .milliseconds(900))
-                let demo = model.active?.chat
-                if let photo = await demo?.image(for: ChatAttachment(id: UUID(uuidString: DemoChat.samplePhoto)!, kind: "photo", name: "Foto.jpg",
-                                                                   contentType: "image/jpeg", sizeBytes: 0), thumbnail: false),
-                   let jpeg = photo.jpegData(compressionQuality: 0.8) {
-                    picked = [PickedAttachment.photo(jpeg)]
-                }
-                picked.append(PickedAttachment(name: "Aufmaß Halle 2.pdf", kind: "document", contentType: "application/pdf",
-                                               data: Data(count: 412_000), preview: nil))
-                location = ChatLocation(latitude: 48.3705, longitude: 10.8978, label: "Praxis Dr. Maier, Sanierung", address: "Altstadt 12, Augsburg")
-                draft = "Aufmaß und Zufahrt für morgen"
-            }
+            // Früher: Foto und PDF in der Eingabe. Jetzt: Hinweis auf Teams statt Anhang, Standort bleibt.
+            location = ChatLocation(latitude: 48.3705, longitude: 10.8978, label: "Praxis Dr. Maier, Sanierung", address: "Altstadt 12, Augsburg")
+            draft = "Zufahrt für morgen"
         case "chat-gruppe":
             Task {
                 try? await Task.sleep(for: .milliseconds(600))
@@ -951,23 +861,6 @@ struct ChatConversationView: View {
         default: break
         }
         #endif
-    }
-}
-
-/// Gewählter, noch nicht gesendeter Anhang (Foto bereits verkleinert).
-struct PickedAttachment: Identifiable {
-    let id = UUID.v7()
-    let name: String
-    let kind: String
-    let contentType: String
-    let data: Data
-    let preview: UIImage?
-
-    static func photo(_ jpeg: Data) -> PickedAttachment {
-        let stamp = Date().formatted(.dateTime.year().month(.twoDigits).day(.twoDigits).hour(.twoDigits(amPM: .omitted)).minute(.twoDigits))
-            .filter { $0.isNumber }
-        return PickedAttachment(name: "Foto_\(stamp).jpg", kind: "photo", contentType: "image/jpeg", data: jpeg,
-                                preview: ThumbnailLoader.downsample(jpeg, to: 72))
     }
 }
 
@@ -1022,40 +915,5 @@ private struct TypingIndicator: View {
             Text("\(name) schreibt …").font(Typo.label).foregroundStyle(Theme.textSecondary)
         }
         .accessibilityElement(children: .combine)
-    }
-}
-
-/// Kamera für ein Foto direkt in den Chat.
-struct ChatCameraPicker: UIViewControllerRepresentable {
-    let onFinish: @MainActor (UIImage?) -> Void
-
-    func makeUIViewController(context: Context) -> UIImagePickerController {
-        let picker = UIImagePickerController()
-        picker.sourceType = .camera
-        picker.cameraCaptureMode = .photo
-        picker.delegate = context.coordinator
-        return picker
-    }
-
-    func updateUIViewController(_ picker: UIImagePickerController, context: Context) {}
-
-    func makeCoordinator() -> Coordinator { Coordinator(onFinish: onFinish) }
-
-    final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate, @unchecked Sendable {
-        private let onFinish: @MainActor (UIImage?) -> Void
-
-        init(onFinish: @escaping @MainActor (UIImage?) -> Void) {
-            self.onFinish = onFinish
-        }
-
-        nonisolated func imagePickerController(_ picker: UIImagePickerController,
-                                               didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
-            let image = info[.originalImage] as? UIImage
-            MainActor.assumeIsolated { self.onFinish(image) }
-        }
-
-        nonisolated func imagePickerControllerDidCancel(_ picker: UIImagePickerController) {
-            MainActor.assumeIsolated { self.onFinish(nil) }
-        }
     }
 }

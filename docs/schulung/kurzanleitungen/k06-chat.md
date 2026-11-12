@@ -18,13 +18,14 @@
 1. Auf der Heute-Seite die **Sprechblase** oben rechts tippen (oder **Mehr** → **Chat**).
 2. Unterhaltung wählen – neu: **Stift** oben rechts → **Neuer Chat** oder **Neue Gruppe**.
 3. Text eingeben oder auf das **Mikrofon** tippen und diktieren. Mit `@Name` jemanden gezielt erwähnen.
-4. **„+“** hängt **Kamera**, **Fotos**, **Dokument** (bis 25 MB) oder **Standort** an (auch die Baustellenadresse).
+4. **Dateien und Fotos** verschickt die App im Chat nicht mehr – dafür **Microsoft Teams** verwenden (Hinweis unter dem
+   Eingabefeld, ggf. mit **In Teams öffnen**). Das **Standort-Symbol** teilt Ihren Standort oder die Baustellenadresse.
 5. Auf den **Pfeil** tippen – gesendet.
 
 ## Nützliche Handgriffe
 
 - **Lange drücken** auf eine Nachricht: **Antworten**, Reaktion, **Weiterleiten**, **Anheften**, **Bearbeiten** und
-  bei Fotos/Dokumenten **In Bauakte übernehmen**.
+  bei Fotos/Dokumenten aus älteren Nachrichten **In Bauakte übernehmen**.
 - Aus der **Mitteilung** antworten: Mitteilung gedrückt halten → **Antworten**.
 - Zu viele Mitteilungen? Namen oben antippen → **Stummschalten** (@Erwähnungen kommen trotzdem an).
 

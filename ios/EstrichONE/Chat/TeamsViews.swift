@@ -46,3 +46,31 @@ struct ChatArchiveNotice: View {
         .accessibilityIdentifier("chatArchiveNotice")
     }
 }
+
+/// Hinweis unter der Eingabezeile des Chats: In der App keine Dateien und Fotos mehr verschicken, dafür Microsoft Teams
+/// (`ChatComposerPolicy`). Mit Teams-Verknüpfung tippbar („In Teams öffnen“), sonst reiner Text.
+struct ChatFileExchangeHint: View {
+    let targets: TeamsOpenTargets?
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: Space.xs) {
+            Image(systemName: "info.circle")
+                .accessibilityHidden(true)
+            Text(ChatComposerPolicy.fileExchangeHint)
+                .fixedSize(horizontal: false, vertical: true)
+            Spacer(minLength: 0)
+            if let targets, !targets.candidates.isEmpty {
+                Button("In Teams öffnen") { Task { await TeamsOpener.open(targets) } }
+                    .font(Typo.labelStrong)
+                    .buttonStyle(.borderless)
+                    .foregroundStyle(Theme.accent)
+                    .accessibilityIdentifier("chatFileHintTeams")
+            }
+        }
+        .font(Typo.label)
+        .foregroundStyle(Theme.textSecondary)
+        .padding(.horizontal, Space.xs)
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("chatFileExchangeHint")
+    }
+}

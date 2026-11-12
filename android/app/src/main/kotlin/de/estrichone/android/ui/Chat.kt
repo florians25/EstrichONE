@@ -1,8 +1,5 @@
 package de.estrichone.android.ui
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -31,7 +28,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Reply
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.AddPhotoAlternate
 import androidx.compose.material.icons.filled.Apartment
 import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
@@ -43,6 +39,7 @@ import androidx.compose.material.icons.filled.LocalShipping
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.outlined.Forum
+import androidx.compose.material.icons.outlined.Info
 import androidx.compose.material.icons.outlined.PersonAdd
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -55,6 +52,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
@@ -75,6 +73,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -85,6 +84,10 @@ import de.estrichone.android.support.Images
 import de.estrichone.android.support.Links
 import de.estrichone.core.ApiException
 import de.estrichone.core.ChatAttachment
+import de.estrichone.core.ChatComposerPolicy
+import de.estrichone.core.TeamsLink
+import de.estrichone.core.TeamsTargets
+import de.estrichone.core.bauakteTeams
 import de.estrichone.core.ChatConversation
 import de.estrichone.core.ChatLimits
 import de.estrichone.core.ChatMessage
@@ -104,7 +107,6 @@ import de.estrichone.core.chatConversation
 import de.estrichone.core.reactToChatMessage
 import de.estrichone.core.sendChatMessage
 import de.estrichone.core.startDirectChat
-import de.estrichone.core.uploadChatAttachment
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -221,13 +223,12 @@ private fun StartChatSheet(onDismiss: () -> Unit, onStarted: (String) -> Unit) {
     }
 }
 
-/** Verlauf einer Unterhaltung mit Eingabe, Diktat und Fotoanhang. */
+/** Verlauf einer Unterhaltung mit Eingabe und Diktat. Keine Anhänge mehr – Hinweis auf Microsoft Teams (`ChatComposerPolicy`). */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun ConversationScreen(id: String) {
     val session = LocalSession.current
     val model = LocalModel.current
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val messages = remember { mutableStateListOf<ChatMessage>() }
     var conversation by remember { mutableStateOf<ChatConversation?>(null) }
@@ -248,8 +249,15 @@ fun ConversationScreen(id: String) {
         runCatching { withContext(Dispatchers.IO) { session.api.markChatRead(id) } }
     }
 
+    val teams by session.teams.collectAsState()
+    var teamsLink by remember(id) { mutableStateOf<TeamsLink?>(null) }
     LaunchedEffect(id) {
         conversation = runCatching { withContext(Dispatchers.IO) { session.api.chatConversations().firstOrNull { it.id == id } } }.getOrNull()
+        // Teams-Unterhaltung der Bauakte für den Hinweis „Für Datei- und Fotoaustausch …“ (nur mit Teams-Anbindung).
+        val bauakteId = conversation?.bauakteId
+        if (bauakteId != null && session.teams.value?.available == true) {
+            teamsLink = runCatching { withContext(Dispatchers.IO) { session.api.bauakteTeams(bauakteId) } }.getOrNull()?.link
+        }
         do {
             reload()
             session.refreshCounters()
@@ -259,7 +267,7 @@ fun ConversationScreen(id: String) {
     }
     LaunchedEffect(messages.size) { if (messages.isNotEmpty()) listState.animateScrollToItem(messages.size) }
 
-    fun send(attachments: List<ChatAttachment> = emptyList()) {
+    fun send() {
         val body = text.trim()
         val edit = editing
         if (edit != null) {
@@ -271,33 +279,20 @@ fun ConversationScreen(id: String) {
             }
             return
         }
-        if (!ChatLimits.canSend(body, attachments.size)) return
+        if (!ChatLimits.canSend(body)) return
         val clientId = Ids.v7()
         val local = ChatMessage(Ids.v7(), id, session.user.id, session.user.displayName, body, de.estrichone.core.ApiDate.format(Instant.now()), mine = true,
-            clientMessageId = clientId, attachments = attachments, localState = "sending",
+            clientMessageId = clientId, localState = "sending",
             replyTo = replyTo?.let { de.estrichone.core.ChatReply(it.id, it.senderName, it.text) })
         val reply = replyTo?.id
         messages.add(local)
         text = ""
         replyTo = null
         scope.launch {
-            val result = runCatching { withContext(Dispatchers.IO) { session.api.sendChatMessage(id, body, clientId, reply, attachments.map { it.id }) } }
+            val result = runCatching { withContext(Dispatchers.IO) { session.api.sendChatMessage(id, body, clientId, reply, emptyList()) } }
             val index = messages.indexOfFirst { it.clientMessageId == clientId }
             if (index >= 0) messages[index] = result.getOrNull() ?: local.copy(localState = "failed")
             if (result.isFailure) model.message("Nachricht nicht gesendet. Bitte erneut versuchen.")
-        }
-    }
-
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        uri ?: return@rememberLauncherForActivityResult
-        scope.launch {
-            val attachment = runCatching {
-                withContext(Dispatchers.IO) {
-                    val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() } ?: error("leer")
-                    session.api.uploadChatAttachment(id, Images.preparePhoto(bytes), "Foto.jpg", "image/jpeg")
-                }
-            }.getOrNull()
-            if (attachment == null) model.message("Das Foto konnte nicht hochgeladen werden.") else send(listOf(attachment))
         }
     }
 
@@ -315,7 +310,7 @@ fun ConversationScreen(id: String) {
                 modifier = Modifier.fillMaxWidth().background(tones.card).navigationBarsPadding().padding(16.dp))
         } else {
             Composer(text, { text = it }, replyTo ?: editing, editing != null, onCancel = { replyTo = null; editing = null; text = "" },
-                onAttach = { picker.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }, onSend = { send() })
+                teamsTargets = ChatComposerPolicy.teamsTargets(teamsLink, teams), onSend = { send() })
         }
     }) { padding ->
         if (info) ConversationInfo(id) { info = false }
@@ -503,7 +498,7 @@ private fun nameColor(name: String?): Color {
 
 @Composable
 private fun Composer(
-    text: String, onText: (String) -> Unit, context: ChatMessage?, editing: Boolean, onCancel: () -> Unit, onAttach: () -> Unit, onSend: () -> Unit,
+    text: String, onText: (String) -> Unit, context: ChatMessage?, editing: Boolean, onCancel: () -> Unit, teamsTargets: TeamsTargets?, onSend: () -> Unit,
 ) {
     Surface(color = tones.card, tonalElevation = 2.dp) {
         Column(Modifier.navigationBarsPadding().imePadding()) {
@@ -519,7 +514,6 @@ private fun Composer(
                 }
             }
             Row(Modifier.fillMaxWidth().padding(horizontal = 6.dp, vertical = 6.dp), verticalAlignment = Alignment.Bottom) {
-                if (!editing) IconButton(onClick = onAttach) { Icon(Icons.Filled.AddPhotoAlternate, "Foto anhängen") }
                 TextField(text, onText, placeholder = { Text("Nachricht") }, maxLines = 5, shape = RoundedCornerShape(22.dp), modifier = Modifier.weight(1f),
                     colors = TextFieldDefaults.colors(focusedContainerColor = tones.fill, unfocusedContainerColor = tones.fill,
                         focusedIndicatorColor = Color.Transparent, unfocusedIndicatorColor = Color.Transparent),
@@ -527,6 +521,24 @@ private fun Composer(
                 IconButton(onClick = onSend, enabled = text.isNotBlank()) {
                     Icon(Icons.AutoMirrored.Filled.Send, "Senden", tint = if (text.isNotBlank()) MaterialTheme.colorScheme.primary else tones.textTertiary)
                 }
+            }
+            if (!editing) FileExchangeHint(teamsTargets)
+        }
+    }
+}
+
+/** Hinweis statt Anhang-Knopf: Dateien und Fotos über Microsoft Teams austauschen; mit Teams-Ziel tippbar. */
+@Composable
+private fun FileExchangeHint(targets: TeamsTargets?) {
+    val context = LocalContext.current
+    val model = LocalModel.current
+    Row(Modifier.fillMaxWidth().padding(start = 16.dp, end = 8.dp, bottom = 6.dp).testTag("chatFileExchangeHint"), verticalAlignment = Alignment.CenterVertically) {
+        Icon(Icons.Outlined.Info, null, tint = tones.textSecondary, modifier = Modifier.size(16.dp))
+        Spacer(Modifier.width(6.dp))
+        Text(ChatComposerPolicy.FILE_EXCHANGE_HINT, style = MaterialTheme.typography.bodySmall, color = tones.textSecondary, modifier = Modifier.weight(1f))
+        if (targets != null) {
+            TextButton(onClick = { if (!Links.teams(context, targets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.") }) {
+                Text("In Teams öffnen", style = MaterialTheme.typography.labelLarge)
             }
         }
     }

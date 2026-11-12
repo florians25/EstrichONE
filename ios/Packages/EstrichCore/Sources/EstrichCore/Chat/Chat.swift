@@ -789,6 +789,27 @@ public enum ChatLimits {
     }
 }
 
+/// Eingabezeile des Chats: In der App werden keine Dateien, Fotos, Videos oder Dokumente mehr verschickt.
+/// Statt des Anhang-Knopfs steht ein Hinweis auf Microsoft Teams; Text, Diktat und Standort bleiben. Anhänge in älteren
+/// Nachrichten bleiben ansehbar. Wartende Nachrichten mit Anhang aus älteren App-Versionen sendet die Warteschlange
+/// unverändert weiter (sie liegen bereits verschlüsselt auf dem Gerät; nichts geht verloren).
+public enum ChatComposerPolicy {
+    /// Neue Anhänge (Kamera, Fotos, Dokumente) in der App anbieten – nein.
+    public static let allowsAttachments = false
+    /// Hinweis an der Stelle des früheren Anhang-Knopfs.
+    public static let fileExchangeHint = "Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden."
+    /// Was die Eingabezeile neben Text und Diktat anbietet (nur Standort bzw. Baustellenadresse, keine Dateien).
+    public static let shareOptions = ["Mein Standort", "Baustellenadresse"]
+
+    /// Ziel für „In Teams öffnen“ am Hinweis: die verknüpfte Teams-Unterhaltung der Bauakte, sonst das Team „Baustellen“
+    /// (nur mit Teams-Anbindung), sonst keins – dann steht der Hinweis als reiner Text da.
+    public static func teamsTargets(link: TeamsLink?, status: TeamsStatus?) -> TeamsOpenTargets? {
+        if let link, !link.targets.candidates.isEmpty { return link.targets }
+        guard let status, status.available, !status.homeTargets.candidates.isEmpty else { return nil }
+        return status.homeTargets
+    }
+}
+
 /// Stummschalten wie im Messenger: 1 Stunde, 8 Stunden, 1 Woche, immer.
 public enum ChatMuteOption: String, CaseIterable, Sendable, Identifiable {
     case hour, eightHours, week, always

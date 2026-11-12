@@ -101,7 +101,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
 | Chat: Unterhaltungen, Verlauf, Senden, Antworten, Reaktionen, Bearbeiten, Löschen | ✅ | ✅ | |
-| Chat: Fotos senden und ansehen, Dokumente öffnen, Standort ansehen | ✅ | ✅ | |
+| Chat: keine Dateien/Fotos mehr senden, Hinweis „Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden.“ (mit „In Teams öffnen“, wenn verknüpft) | ✅ | ✅ | `ChatComposerPolicy` in beiden Kernen |
+| Chat: Fotos und Dokumente älterer Nachrichten ansehen/öffnen, Standort ansehen | ✅ | ✅ | |
 | Chat: Diktat | ✅ | ✅ Android-Spracheingabe | |
 | Microsoft Teams: „In Teams öffnen“ (Bauakte, Mehr, Heute), Chat-Archiv im Modus „Microsoft Teams“ | ✅ | ✅ | Teams-App per `msteams:`, sonst Browser |
 | Chat: Einzelchat starten, Info (Mitglieder, Stummschalten) | ✅ | ✅ | |
