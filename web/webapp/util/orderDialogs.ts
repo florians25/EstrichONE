@@ -19,7 +19,7 @@ import { formTitle } from "./formLayout";
 import Link from "sap/m/Link";
 import ObjectStatus from "sap/m/ObjectStatus";
 import MessageStrip from "sap/m/MessageStrip";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import MessageBox from "sap/m/MessageBox";
 import OverflowToolbar from "sap/m/OverflowToolbar";
 import ToolbarSpacer from "sap/m/ToolbarSpacer";
@@ -210,7 +210,7 @@ export async function openOrderEditor(editing: OrderEditing): Promise<OrderRespo
 					deliveryCity: city.getValue().trim() || null, siteContact: contact.getValue().trim() || null, notes: notes.getValue().trim() || null,
 					lines: lines.map((l) => ({ id: l.id, materialId: l.materialId || null, description: l.description.trim(), quantity: l.q, unit: l.unit.trim(), unitPrice: l.p })),
 				});
-				MessageToast.show(o ? "Bestellung gespeichert" : `Bestellung ${result.number} angelegt`);
+				showToast(o ? "Bestellung gespeichert" : `Bestellung ${result.number} angelegt`);
 				changed();
 				dialog.close();
 			} catch (error) {
@@ -262,7 +262,7 @@ export async function openOrderDetail(orderId: string, canManage: boolean): Prom
 		try {
 			await post(`material-orders/${o.id}/status`, { status: next });
 			o = await get<OrderResponse>(`material-orders/${o.id}`);
-			MessageToast.show(text);
+			showToast(text);
 			changed();
 			render();
 		} catch (error) {
@@ -312,7 +312,7 @@ export async function openOrderDetail(orderId: string, canManage: boolean): Prom
 		} }));
 		actions.addContent(new Button({ text: "Text kopieren", icon: "sap-icon://copy", press: async () => {
 			await navigator.clipboard.writeText(orderText(o, comp)).catch(() => undefined);
-			MessageToast.show("Bestelltext kopiert");
+			showToast("Bestelltext kopiert");
 		} }));
 		if (canManage) {
 			const items: MenuItem[] = [];

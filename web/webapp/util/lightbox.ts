@@ -6,7 +6,7 @@ import Button from "sap/m/Button";
 import Text from "sap/m/Text";
 import Label from "sap/m/Label";
 import Input from "sap/m/Input";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import { problemMessage, put } from "./api";
 import { dateTime, fileSize } from "./format";
 import { fileMedia, type MediaItem } from "./media";
@@ -48,11 +48,11 @@ export function openLightbox(files: FileResponse[], start: number, options: Ligh
 					roomId: file.roomId, workItemId: file.workItemId,
 				});
 				byId.set(updated.id, updated);
-				MessageToast.show("Beschriftung gespeichert");
+				showToast("Beschriftung gespeichert");
 				options.onChanged?.(updated);
 				viewer?.replace(fileMedia(updated, metaOf(updated)));
 			} catch (error) {
-				MessageToast.show(problemMessage(error));
+				showToast(problemMessage(error), { type: "error" });
 			}
 		},
 	});

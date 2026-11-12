@@ -5,7 +5,7 @@ import type Control from "sap/ui/core/Control";
 import EventBus from "sap/ui/core/EventBus";
 import type List from "sap/m/List";
 import type SegmentedButton from "sap/m/SegmentedButton";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "../../util/toast";
 import type { RouteMatch } from "../../util/router";
 import { get, put } from "../../util/api";
 import { addDays, isoDay, isoWeek, mondayOf, parseDay } from "../../util/days";
@@ -301,7 +301,7 @@ export default class Planning extends BaseController {
 		}
 		if (a.day === day && (a.crewId ?? null) === (crewId ?? null) && extras.join() === a.people.map((p) => p.id).filter((id) => !crewMembers.has(id)).join()) return;
 		if (!crewId && extras.length === 0) {
-			MessageToast.show("Ohne Kolonne braucht der Einsatz mindestens einen Mitarbeiter. Bitte im Einsatz Mitarbeiter wählen.");
+			showToast("Ohne Kolonne braucht der Einsatz mindestens einen Mitarbeiter. Bitte im Einsatz Mitarbeiter wählen.");
 			return;
 		}
 		const saved = await this.run(() => put<AssignmentView>(`planning/assignments/${a.id}`, {
@@ -309,7 +309,7 @@ export default class Planning extends BaseController {
 			userIds: extras, resourceIds: a.resources.map((r) => r.id), notes: a.notes,
 		}));
 		if (!saved) return;
-		MessageToast.show(saved.warnings.length ? `Verschoben. ${saved.warnings.join(" ")}` : `„${a.activity}“ auf ${weekday(day)}, ${short(day)} verschoben`);
+		showToast(saved.warnings.length ? `Verschoben. ${saved.warnings.join(" ")}` : `„${a.activity}“ auf ${weekday(day)}, ${short(day)} verschoben`);
 		planningChanged();
 	}
 

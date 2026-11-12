@@ -167,7 +167,7 @@ test('Nummernkreise in den Einstellungen: alle Datensätze, Kunden-Nummernkreis 
   await expect(dialog.getByText(/genau eine laufende Nummer/).first()).toBeVisible();
   await dialog.getByRole('textbox', { name: 'Muster' }).fill('60{NNNN}');
   await dialog.getByRole('button', { name: 'Speichern' }).click();
-  await expect(page.locator('.sapMMessageToast').last()).toContainText('Nummernkreis Kunden gespeichert');
+  await expect(page.locator('.eoToast').last()).toContainText('Nummernkreis Kunden gespeichert');
   await expect(customers).toContainText('602000');
   await page.goto('/kunden');
   await page.getByRole('button', { name: 'Neuer Kunde' }).click();
@@ -212,7 +212,7 @@ test('Kunde ohne verknüpfte Daten löschen: Kundennummer eintippen, Nummer wird
   await shots(page, 'kunde-loeschen-dialog');
   await remove.click();
   await expect(dialog).toBeHidden();
-  await expect(page.locator('.sapMMessageToast').last()).toContainText(`Probekunde Löschen ${run} gelöscht`);
+  await expect(page.locator('.eoToast').last()).toContainText(`Probekunde Löschen ${run} gelöscht`);
   await expect(row).toHaveCount(0);
   expect((await apiCall(page, 'GET', `/api/v1/contacts/${created.json.id}`)).status).toBe(404);
   // Nummer bleibt vergeben.
@@ -307,7 +307,7 @@ test('Kundenliste: Mehrfachauswahl löscht Kunden ohne Bezüge und archiviert di
   await expect(dialog).toContainText(`Sammel Gebunden ${run} (1 Bauakte)`);
   await dialog.getByLabel('Zum Bestätigen die Anzahl 2 eintippen').fill('2');
   await dialog.getByRole('button', { name: 'Ausführen' }).click();
-  await expect(page.locator('.sapMMessageToast').last()).toContainText('1 gelöscht, 1 archiviert');
+  await expect(page.locator('.eoToast').last()).toContainText('1 gelöscht, 1 archiviert');
   await expect(page.getByRole('row', { name: new RegExp(`Sammel .*${run}`) })).toHaveCount(0);
   expect((await apiCall(page, 'GET', `/api/v1/contacts/${free.json.id}`)).status).toBe(404);
   expect((await apiCall<{ archivedAt: string | null }>(page, 'GET', `/api/v1/contacts/${linked.json.id}`)).json.archivedAt).not.toBeNull();

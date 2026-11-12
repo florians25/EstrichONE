@@ -9,7 +9,7 @@ import Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
 import List from "sap/m/List";
 import StandardListItem from "sap/m/StandardListItem";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "../../util/toast";
 import type { RouteMatch } from "../../util/router";
 import { get, post } from "../../util/api";
 import { addDays, isoDay, mondayOf, parseDay } from "../../util/days";
@@ -271,7 +271,7 @@ export default class TeamPlanner extends BaseController {
 		let start = snap(startDate);
 		let end = snap(endDate);
 		if (k.type === "x") {
-			MessageToast.show("Abwesenheiten bitte unter „Kolonnen und Geräte“ ändern.");
+			showToast("Abwesenheiten bitte unter „Kolonnen und Geräte“ ändern.");
 			this.render();
 			return;
 		}
@@ -301,7 +301,7 @@ export default class TeamPlanner extends BaseController {
 			}
 			const saved = await this.run(() => post<AssignmentView>(`planning/assignments/${a.id}/move`, body));
 			if (saved) {
-				MessageToast.show(saved.warnings.length ? `Verschoben. Konflikt: ${saved.warnings.join(" ")}` : `„${saved.activity}“ ${parseDay(saved.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })} ${saved.startTime ? hm(parseLocal(`${saved.day}T${saved.startTime}`)) : ""} geplant`);
+				showToast(saved.warnings.length ? `Verschoben. Konflikt: ${saved.warnings.join(" ")}` : `„${saved.activity}“ ${parseDay(saved.day).toLocaleDateString("de-DE", { weekday: "short", day: "2-digit", month: "2-digit" })} ${saved.startTime ? hm(parseLocal(`${saved.day}T${saved.startTime}`)) : ""} geplant`);
 				planningChanged();
 			} else {
 				this.render();
@@ -310,7 +310,7 @@ export default class TeamPlanner extends BaseController {
 		}
 		const o = this.range?.appointments?.find((x) => x.eventId === k.id && x.start === k.start);
 		if (!o || !o.canEdit) {
-			MessageToast.show("Diesen Termin dürfen Sie nicht verschieben.");
+			showToast("Diesen Termin dürfen Sie nicht verschieben.");
 			this.render();
 			return;
 		}
@@ -328,7 +328,7 @@ export default class TeamPlanner extends BaseController {
 			}
 			scope = chosen;
 		}
-		if (fromRow !== toRow) MessageToast.show("Termine können nicht in eine andere Zeile verschoben werden. Teilnehmer bitte im Termin ändern.");
+		if (fromRow !== toRow) showToast("Termine können nicht in eine andere Zeile verschoben werden. Teilnehmer bitte im Termin ändern.");
 		const ok = await this.run(() => post(`calendar/events/${o.eventId}/move`, {
 			start: localIso(start), end: localIso(end), allDay: o.allDay, occurrenceDate: o.occurrenceDate, scope,
 		}));

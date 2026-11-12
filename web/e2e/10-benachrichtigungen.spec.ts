@@ -11,7 +11,7 @@ test('Nachricht an alle senden: Verlauf mit Zustellstatus, Glocke, Postfach, gel
   await dialog.getByLabel('Titel').fill('Morgen Treffpunkt 6:30 Uhr am Lager');
   await dialog.getByLabel('Text').fill('Bitte Messgeräte mitnehmen.');
   await dialog.getByRole('button', { name: 'Senden' }).click();
-  await expect(page.locator('.sapMMessageToast')).toContainText('gesendet');
+  await expect(page.locator('.eoToast').last()).toContainText('gesendet');
   const row = page.locator('[id$="sentTable"]').getByRole('row').filter({ hasText: 'Morgen Treffpunkt 6:30 Uhr am Lager' }).first();
   await expect(row).toContainText('Alle Benutzer');
   await row.click();

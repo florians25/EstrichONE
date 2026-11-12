@@ -1,6 +1,6 @@
 /** Abnahme starten (aus der Dokumentation oder dem Aktionen-Menü) und das Ergebnis anzeigen. */
 import MessageBox from "sap/m/MessageBox";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import EventBus from "sap/ui/core/EventBus";
 import { get } from "./api";
 import { openAcceptanceWizard } from "./acceptanceWizard";
@@ -17,7 +17,7 @@ export function showAcceptanceLink(link: { url: string; expiresAt: string; email
 		actions: ["Link kopieren", MessageBox.Action.CLOSE],
 		emphasizedAction: "Link kopieren",
 		onClose: (action: unknown) => {
-			if (action === "Link kopieren") void navigator.clipboard?.writeText(link.url).then(() => MessageToast.show("Link kopiert"));
+			if (action === "Link kopieren") void navigator.clipboard?.writeText(link.url).then(() => showToast("Link kopiert"));
 		},
 	});
 }
@@ -38,6 +38,6 @@ export async function runAcceptance(bauakteId: string, data: AkteData | undefine
 	akte.invalidate(bauakteId, "inspections", "work", "files");
 	EventBus.getInstance().publish("bauakte", "reload", { id: bauakteId });
 	if (saved.link) showAcceptanceLink(saved.link);
-	else MessageToast.show(saved.signed ? "Abnahme gespeichert. Das PDF liegt unter „Dokumente › Abnahmen“." : "Abnahme gespeichert");
+	else showToast(saved.signed ? "Abnahme gespeichert. Das PDF liegt unter „Dokumente › Abnahmen“." : "Abnahme gespeichert");
 	return true;
 }

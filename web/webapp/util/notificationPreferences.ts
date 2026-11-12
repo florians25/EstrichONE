@@ -13,7 +13,7 @@ import HBox from "sap/m/HBox";
 import List from "sap/m/List";
 import StandardListItem from "sap/m/StandardListItem";
 import Title from "sap/m/Title";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import MessageBox from "sap/m/MessageBox";
 import IconTabBar from "sap/m/IconTabBar";
 import IconTabFilter from "sap/m/IconTabFilter";
@@ -73,7 +73,7 @@ function eventList(): { list: List; load: () => Promise<void> } {
 					try {
 						await savePreferences([{ event: item.event, delivery }]);
 						item.delivery = delivery;
-						MessageToast.show(`${item.label}: ${delivery === "off" ? "abbestellt" : delivery === "inbox" ? "nur Postfach" : "Postfach und Push"}`);
+						showToast(`${item.label}: ${delivery === "off" ? "abbestellt" : delivery === "inbox" ? "nur Postfach" : "Postfach und Push"}`);
 					} catch (error) {
 						choice.setSelectedKey(item.delivery);
 						MessageBox.error(problemMessage(error));
@@ -134,7 +134,7 @@ export function openNotificationPreferences(): void {
 		toggle.setEnabled(false);
 		try {
 			const result = toggle.getState() ? await enableWebPush() : await disableWebPush();
-			if (result === "on") MessageToast.show("Pushnachrichten eingeschaltet");
+			if (result === "on") showToast("Pushnachrichten eingeschaltet");
 		} catch (error) {
 			MessageBox.error(problemMessage(error));
 		}
@@ -170,7 +170,7 @@ export function openNotificationPreferences(): void {
 			new Button({ text: "Testnachricht senden", icon: "sap-icon://paper-plane", press: async () => {
 				try {
 					await sendTest();
-					MessageToast.show("Testnachricht gesendet. Sie erscheint im Postfach und als Push auf Ihren Geräten.");
+					showToast("Testnachricht gesendet. Sie erscheint im Postfach und als Push auf Ihren Geräten.");
 					document.dispatchEvent(new CustomEvent("estrichone-notices"));
 					setTimeout(() => void refresh(), 3000);
 				} catch (error) {

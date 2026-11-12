@@ -2,7 +2,7 @@
 import Button from "sap/m/Button";
 import MessageStrip from "sap/m/MessageStrip";
 import MessageBox from "sap/m/MessageBox";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import Link from "sap/m/Link";
 import EventBus from "sap/ui/core/EventBus";
 import { del, get, problemMessage, put } from "./api";
@@ -142,10 +142,10 @@ export async function openAssignment(draft: AssignmentDraft): Promise<void> {
 			if (saved.warnings.length > 0) {
 				// Hinweise sichtbar lassen; die Planung entscheidet, ob sie so bleibt.
 				warn(saved.warnings);
-				MessageToast.show("Gespeichert. Bitte die Hinweise prüfen.");
+				showToast("Gespeichert. Bitte die Hinweise prüfen.");
 				return KEEP_OPEN;
 			}
-			MessageToast.show("Einsatz gespeichert");
+			showToast("Einsatz gespeichert");
 			return true;
 		},
 	});

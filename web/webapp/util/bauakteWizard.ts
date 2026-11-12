@@ -39,7 +39,7 @@ import SegmentedButton from "sap/m/SegmentedButton";
 import SegmentedButtonItem from "sap/m/SegmentedButtonItem";
 import MessageBox from "sap/m/MessageBox";
 import MessageStrip from "sap/m/MessageStrip";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import Wizard from "sap/m/Wizard";
 import WizardStep from "sap/m/WizardStep";
 import List from "sap/m/List";
@@ -220,7 +220,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 		try {
 			useExisting(await get<ContactResponse>(`contacts/${item.getKey()}`));
 		} catch (error) {
-			MessageToast.show(problemMessage(error));
+			showToast(problemMessage(error), { type: "error" });
 		}
 	});
 	c.name.attachLiveChange(() => {
@@ -888,7 +888,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 					});
 				}
 				if (choice === "now") (result as BauakteDetail & { startInspection?: boolean }).startInspection = true;
-				MessageToast.show(status === "inquiry" ? "Anfrage angelegt" : "Bauakte angelegt");
+				showToast(status === "inquiry" ? "Anfrage angelegt" : "Bauakte angelegt");
 				dialog.close();
 				if (failed.length) {
 					MessageBox.warning(`Die ${status === "inquiry" ? "Anfrage" : "Bauakte"} ist angelegt. Folgende Angaben konnten nicht gespeichert werden und lassen sich in der Bauakte nachtragen:\n\n${failed.join("\n")}`);

@@ -4,7 +4,7 @@ import type ResourceModel from "sap/ui/model/resource/ResourceModel";
 import type ResourceBundle from "sap/base/i18n/ResourceBundle";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import MessageBox from "sap/m/MessageBox";
-import MessageToast from "sap/m/MessageToast";
+import { showToast, type ToastOptions } from "../util/toast";
 import { problemMessage } from "../util/api";
 import { navTo, setQuery } from "../util/navigation";
 import type { RouteMatch } from "../util/router";
@@ -72,8 +72,9 @@ export default class BaseController extends Controller {
 		return this.v().getModel(name) as JSONModel;
 	}
 
-	protected toast(text: string): void {
-		MessageToast.show(text, { closeOnBrowserNavigation: false });
+	/** Kurzmeldung oben rechts (util/toast): Art aus dem Text oder ausdrücklich, optional mit Aktion. */
+	protected toast(text: string, options?: ToastOptions): void {
+		showToast(text, options);
 	}
 
 	protected showError(error: unknown, title?: string): void {

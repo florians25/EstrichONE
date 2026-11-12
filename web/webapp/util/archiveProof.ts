@@ -12,7 +12,7 @@ import Title from "sap/m/Title";
 import ObjectStatus from "sap/m/ObjectStatus";
 import MessageStrip from "sap/m/MessageStrip";
 import MessageBox from "sap/m/MessageBox";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import { ApiError, get, post, problemMessage } from "./api";
 import { date, dateTime, fileSize } from "./format";
 import { recordStatus } from "./infraModels";
@@ -57,7 +57,7 @@ export async function openArchiveProof(opts: { fileId?: string; bauakteId?: stri
 		press: async () => {
 			try {
 				await post(opts.fileId ? `archive/files/${opts.fileId}` : `archive/bauakten/${opts.bauakteId}`);
-				MessageToast.show("Zur Archivierung vorgemerkt. Der Nachweis erscheint in wenigen Sekunden.");
+				showToast("Zur Archivierung vorgemerkt. Der Nachweis erscheint in wenigen Sekunden.");
 				setTimeout(() => void fill().catch(() => undefined), 4000);
 			} catch (error) {
 				MessageBox.error(problemMessage(error));

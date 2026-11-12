@@ -12,7 +12,7 @@ import DatePicker from "sap/m/DatePicker";
 import SegmentedButton from "sap/m/SegmentedButton";
 import SegmentedButtonItem from "sap/m/SegmentedButtonItem";
 import MessageStrip from "sap/m/MessageStrip";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import ObjectStatus from "sap/m/ObjectStatus";
 import Bar from "sap/m/Bar";
 import Title from "sap/m/Title";
@@ -82,7 +82,7 @@ export function openQuickCall(): void {
 				followUp: followUp.getState(), dueDate: due.getValue() || null, calledAt: new Date(startedAt).toISOString(),
 			});
 			EventBus.getInstance().publish("estrichone", "callsChanged");
-			MessageToast.show(kind === "inquiry" ? "Anfrage gespeichert" : "Gesprächsnotiz gespeichert");
+			showToast(kind === "inquiry" ? "Anfrage gespeichert" : "Gesprächsnotiz gespeichert");
 			dialog.close();
 		} catch (error) {
 			strip.setText(problemMessage(error));

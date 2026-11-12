@@ -13,7 +13,7 @@ import type SinglePlanningCalendarView from "sap/m/SinglePlanningCalendarView";
 import type CalendarAppointment from "sap/ui/unified/CalendarAppointment";
 import type UnifiedCalendar from "sap/ui/unified/Calendar";
 import DateRange from "sap/ui/unified/DateRange";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "../../util/toast";
 import Button from "sap/m/Button";
 import type { RouteMatch } from "../../util/router";
 import { del, get, post, put } from "../../util/api";
@@ -336,7 +336,7 @@ export default class Calendar extends BaseController {
 		if (k.type === "a") {
 			const a = this.assignments.find((x) => x.id === k.id);
 			if (!a || !session.has("planning.manage")) {
-				MessageToast.show("Einsätze plant das Büro.");
+				showToast("Einsätze plant das Büro.");
 				this.render();
 				return;
 			}
@@ -345,13 +345,13 @@ export default class Calendar extends BaseController {
 			const saved = await this.run(() => post<AssignmentView>(`planning/assignments/${a.id}/move`, {
 				day: isoDay(start), startTime: allDay ? null : t(start), endTime: allDay || isoDay(end) !== isoDay(start) ? null : t(end),
 			}));
-			if (saved?.warnings.length) MessageToast.show(`Verschoben. ${saved.warnings.join(" ")}`);
+			if (saved?.warnings.length) showToast(`Verschoben. ${saved.warnings.join(" ")}`);
 			calendarChanged();
 			return;
 		}
 		const o = this.occurrences.find((x) => x.eventId === k.id && x.start === k.start);
 		if (!o?.canEdit) {
-			MessageToast.show("Diesen Termin dürfen Sie nicht ändern.");
+			showToast("Diesen Termin dürfen Sie nicht ändern.");
 			this.render();
 			return;
 		}
@@ -368,7 +368,7 @@ export default class Calendar extends BaseController {
 			start: localIso(start), end: localIso(end), allDay: allDay || (o.allDay && this.model().getProperty("/mode") === "monat"), occurrenceDate: o.occurrenceDate, scope,
 		}));
 		if (ok) {
-			MessageToast.show(`„${o.title}“ verschoben`);
+			showToast(`„${o.title}“ verschoben`);
 			calendarChanged();
 		} else {
 			this.render();

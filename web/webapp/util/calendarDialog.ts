@@ -19,7 +19,7 @@ import HBox from "sap/m/HBox";
 import Link from "sap/m/Link";
 import MessageStrip from "sap/m/MessageStrip";
 import MessageBox from "sap/m/MessageBox";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import SimpleForm from "sap/ui/layout/form/SimpleForm";
 import Item from "sap/ui/core/Item";
 import ListItem from "sap/ui/core/ListItem";
@@ -291,7 +291,7 @@ export async function openEventDialog(options: { eventId?: string; occurrenceDat
 					}
 					changed = true;
 					calendarChanged();
-					MessageToast.show("Termin gespeichert");
+					showToast("Termin gespeichert");
 					dialog.close();
 				} catch (e) {
 					error.setText(problemMessage(e));
@@ -320,7 +320,7 @@ export async function openEventDialog(options: { eventId?: string; occurrenceDat
 					await del(`calendar/events/${detail.id}${query}`);
 					changed = true;
 					calendarChanged();
-					MessageToast.show("Termin gelöscht");
+					showToast("Termin gelöscht");
 					dialog.close();
 				} catch (e) {
 					error.setText(problemMessage(e));

@@ -2,7 +2,7 @@ import BaseController from "../BaseController";
 import type Event from "sap/ui/base/Event";
 import EventBus from "sap/ui/core/EventBus";
 import type SegmentedButton from "sap/m/SegmentedButton";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "../../util/toast";
 import MessageBox from "sap/m/MessageBox";
 import Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
@@ -492,8 +492,8 @@ export default class CockpitController extends BaseController {
 		if (!result) return;
 		this.pushUndo(action);
 		const warnings = result.warnings;
-		MessageToast.show(warnings.length ? `${label}. Hinweis: ${warnings.slice(0, 2).join(" ")}${warnings.length > 2 ? " …" : ""}` : `${label}. Strg+Z macht es rückgängig.`,
-			{ duration: warnings.length ? 5000 : 2500 });
+		showToast(warnings.length ? `${label}. Hinweis: ${warnings.slice(0, 2).join(" ")}${warnings.length > 2 ? " …" : ""}` : `${label}.`,
+			{ type: warnings.length ? "warning" : "success", duration: warnings.length ? 6000 : 4000, action: { text: "Rückgängig (Strg+Z)", press: () => void this.onUndo() } });
 	}
 
 	private pushUndo(action: Action): void {
@@ -514,7 +514,7 @@ export default class CockpitController extends BaseController {
 		if (!action) return;
 		if (await action.undo()) {
 			this.redoStack.push(action);
-			MessageToast.show(`Rückgängig: ${action.label}`);
+			showToast(`Rückgängig: ${action.label}`);
 		}
 		this.updateUndo();
 	}
@@ -525,7 +525,7 @@ export default class CockpitController extends BaseController {
 		if (!action) return;
 		if (await action.redo()) {
 			this.undoStack.push(action);
-			MessageToast.show(`Wiederholt: ${action.label}`);
+			showToast(`Wiederholt: ${action.label}`);
 		}
 		this.updateUndo();
 	}
@@ -570,7 +570,7 @@ export default class CockpitController extends BaseController {
 		if (copy) {
 			const copies = group.map((a) => this.copyOp(a, addDays(a.day, delta), changeCrew ? crewId : a.crewId, a.id === dragged.id ? start : null));
 			if (copies.some((c) => c.op.op === "upsert" && !c.op.assignment.crewId && c.op.assignment.userIds.length === 0)) {
-				MessageToast.show("Ohne Kolonne braucht ein Einsatz mindestens einen Mitarbeiter.");
+				showToast("Ohne Kolonne braucht ein Einsatz mindestens einen Mitarbeiter.");
 				return;
 			}
 			await this.perform(group.length === 1 ? `„${dragged.bauakteTitle}“ kopiert` : `${group.length} Einsätze kopiert`,
@@ -578,7 +578,7 @@ export default class CockpitController extends BaseController {
 			return;
 		}
 		if (changeCrew && !crewId && group.some((a) => a.people.length === 0)) {
-			MessageToast.show("Ohne Kolonne braucht ein Einsatz mindestens einen Mitarbeiter.");
+			showToast("Ohne Kolonne braucht ein Einsatz mindestens einen Mitarbeiter.");
 			return;
 		}
 		const forward: PlanOperation[] = group.map((a) => {
@@ -629,7 +629,7 @@ export default class CockpitController extends BaseController {
 		const days = this.board.days.filter((d) => d.day > a.day && d.day <= until && d.isWorkday
 			&& !this.board!.assignments.some((x) => x.day === d.day && x.bauakteId === a.bauakteId && x.crewId === a.crewId)).map((d) => d.day);
 		if (!days.length) {
-			MessageToast.show("Keine weiteren Arbeitstage in diesem Bereich frei.");
+			showToast("Keine weiteren Arbeitstage in diesem Bereich frei.");
 			return;
 		}
 		const copies = days.map((d) => this.copyOp(a, d, a.crewId));
@@ -858,7 +858,7 @@ export default class CockpitController extends BaseController {
 
 	private async nextFree(a: PlanAssignment): Promise<void> {
 		if (!a.crewId) {
-			MessageToast.show("Der nächste freie Tag wird nur für Kolonnen ermittelt. Dieser Einsatz ist keiner Kolonne zugeordnet.");
+			showToast("Der nächste freie Tag wird nur für Kolonnen ermittelt. Dieser Einsatz ist keiner Kolonne zugeordnet.");
 			return;
 		}
 		const before = { ...a };
@@ -869,7 +869,7 @@ export default class CockpitController extends BaseController {
 				redo: async () => !!(await this.send([{ op: "move", id: a.id, day: moved.day }])),
 				undo: async () => !!(await this.send([this.restoreOp(before)])),
 			});
-			MessageToast.show(`„${a.bauakteTitle}“ auf den nächsten freien Tag verschoben: ${longDay(moved.day)}`);
+			showToast(`„${a.bauakteTitle}“ auf den nächsten freien Tag verschoben: ${longDay(moved.day)}`);
 			if (!this.days().includes(moved.day)) this.selected = this.selected.filter((id) => id !== a.id);
 			void this.load(false);
 		} catch (error) {
@@ -880,7 +880,7 @@ export default class CockpitController extends BaseController {
 	onNextFree(): void {
 		const a = this.selected.length === 1 ? this.find(this.selected[0]) : undefined;
 		if (a) void this.nextFree(a);
-		else MessageToast.show("Bitte genau einen Einsatz auswählen.");
+		else showToast("Bitte genau einen Einsatz auswählen.");
 	}
 
 	async onDeleteSelected(): Promise<void> {
@@ -899,13 +899,13 @@ export default class CockpitController extends BaseController {
 		const targets = Array.from({ length: 5 }, (_, i) => addDays(monday, i)).filter((d) => d > day
 			&& this.board?.days.find((x) => x.day === d)?.isWorkday !== false);
 		if (!jobs.length || !targets.length) {
-			MessageToast.show(jobs.length ? "Keine weiteren Arbeitstage in dieser Woche." : "An diesem Tag ist nichts geplant.");
+			showToast(jobs.length ? "Keine weiteren Arbeitstage in dieser Woche." : "An diesem Tag ist nichts geplant.");
 			return;
 		}
 		const copies = targets.flatMap((d) => jobs.filter((a) => !this.board!.assignments.some((x) => x.day === d && x.bauakteId === a.bauakteId && x.crewId === a.crewId))
 			.map((a) => this.copyOp(a, d, a.crewId)));
 		if (!copies.length) {
-			MessageToast.show("Die Woche ist bereits so geplant.");
+			showToast("Die Woche ist bereits so geplant.");
 			return;
 		}
 		await this.perform(`Tag ${short(day)} auf die Woche kopiert (${copies.length} Einsätze)`, copies.map((c) => c.op),
@@ -926,7 +926,7 @@ export default class CockpitController extends BaseController {
 		if (!(await run())) return;
 		const label = `${this.crewInfo(crewA).crewName} ⇄ ${this.crewInfo(crewB).crewName} am ${short(day)}`;
 		this.pushUndo({ label, redo: run, undo: run });
-		MessageToast.show(`Kolonnen getauscht: ${label}`);
+		showToast(`Kolonnen getauscht: ${label}`);
 	}
 
 	onMenu(e: Event): void {
@@ -994,7 +994,7 @@ export default class CockpitController extends BaseController {
 		const targets = Array.from({ length: 5 }, (_, i) => addDays(monday, i)).filter((d) => d > a.day
 			&& !this.board!.assignments.some((x) => x.day === d && x.bauakteId === a.bauakteId && x.crewId === a.crewId));
 		if (!targets.length) {
-			MessageToast.show("Keine weiteren Arbeitstage in dieser Woche frei.");
+			showToast("Keine weiteren Arbeitstage in dieser Woche frei.");
 			return Promise.resolve();
 		}
 		const copies = targets.map((d) => this.copyOp(a, d, a.crewId));
@@ -1083,7 +1083,7 @@ export default class CockpitController extends BaseController {
 				if (reset) await del(`planning/crews/${crewId}/days/${day}/roster`);
 				else await put(`planning/crews/${crewId}/days/${day}/roster`, { memberUserIds: members.getSelectedKeys(), resourceIds: vehicles.getSelectedKeys(), note: note.getValue() });
 				dialog.close();
-				MessageToast.show(reset ? "Stammbesetzung gilt wieder." : `Tagesbesetzung ${crew.name} am ${short(day)} gespeichert.`);
+				showToast(reset ? "Stammbesetzung gilt wieder." : `Tagesbesetzung ${crew.name} am ${short(day)} gespeichert.`);
 				void this.load(false);
 			} catch (error) {
 				this.showError(error);
@@ -1220,7 +1220,7 @@ export default class CockpitController extends BaseController {
 					try {
 						const result = await post<PlanReleaseInfo[]>("planning/releases", { from: o.from, to: o.to, note: note.getValue() || null });
 						dialog.close();
-						MessageToast.show(`Plan freigegeben: ${result.length} ${result.length === 1 ? "Tag" : "Tage"}.`);
+						showToast(`Plan freigegeben: ${result.length} ${result.length === 1 ? "Tag" : "Tage"}.`);
 						void this.load(false);
 					} catch (error) { this.showError(error); }
 				},
