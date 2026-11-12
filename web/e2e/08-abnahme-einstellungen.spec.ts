@@ -29,24 +29,24 @@ test('Einstellungen: Materialmodul ab- und wieder einschalten, Firmenlogo hochla
   await moduleSwitch(page, 'materials').click();
   await page.getByRole('alertdialog', { name: 'Modul ausschalten' }).or(page.getByRole('dialog', { name: 'Modul ausschalten' }))
     .getByRole('button', { name: 'Ausschalten' }).click();
-  await expect(page.locator('.eoToast').last()).toContainText('Material und Lieferanten ausgeschaltet');
+  await expect(page.locator('.eoToast .eoToastText').last()).toContainText('Material und Lieferanten ausgeschaltet');
   await expect(nav(page, 'Materialstamm')).toHaveCount(0);
   await openAkte(page);
   await expect(page.locator('.sapUxAPAnchorBar').getByText('Material', { exact: true })).toHaveCount(0);
 
   await settings(page, 'module');
   await moduleSwitch(page, 'materials').click();
-  await expect(page.locator('.eoToast').last()).toContainText('Material und Lieferanten eingeschaltet');
+  await expect(page.locator('.eoToast .eoToastText').last()).toContainText('Material und Lieferanten eingeschaltet');
   await expect(nav(page, 'Materialstamm')).toBeVisible();
   // Bestellungen gingen mit aus und werden wieder eingeschaltet.
   await moduleSwitch(page, 'orders').click();
-  await expect(page.locator('.eoToast').last()).toContainText('Bestellungen eingeschaltet');
+  await expect(page.locator('.eoToast .eoToastText').last()).toContainText('Bestellungen eingeschaltet');
 
   await settings(page, 'firma');
   const chooser = page.waitForEvent('filechooser');
   await page.getByRole('button', { name: 'Logo hochladen …' }).click();
   await (await chooser).setFiles({ name: 'logo.png', mimeType: 'image/png', buffer: png });
-  await expect(page.locator('.eoToast').last()).toContainText('Logo gespeichert');
+  await expect(page.locator('.eoToast .eoToastText').last()).toContainText('Logo gespeichert');
   // Firmenlogo nur in der Vorschau (für PDFs/Briefe), nicht in der Kopfleiste.
   await expect(page.locator('img.eoLogoPreview').first()).toBeVisible();
   await expect(page.locator('.sapFShellBar img[id$="companyLogo"]')).toHaveCount(0);

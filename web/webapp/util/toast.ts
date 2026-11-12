@@ -113,13 +113,13 @@ export function showToast(text: string, options: ToastOptions = {}): HTMLElement
 	toast.className = `eoToast eoToast-${type}`;
 	toast.setAttribute("role", type === "error" || type === "warning" ? "alert" : "status");
 	toast.appendChild(icon(type));
-	const body = document.createElement("div");
-	body.className = "eoToastText";
 	const hidden = document.createElement("span");
 	hidden.className = "eoToastSr";
 	hidden.textContent = `${LABELS[type]}: `;
-	body.append(hidden, document.createTextNode(text));
-	toast.appendChild(body);
+	const body = document.createElement("div");
+	body.className = "eoToastText";
+	body.textContent = text;
+	toast.append(hidden, body);
 	if (options.action) {
 		const action = options.action;
 		const button = document.createElement("button");

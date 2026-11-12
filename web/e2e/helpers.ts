@@ -92,7 +92,7 @@ export async function openSection(page: Page, name: string) {
 }
 
 /** Kurzmeldung (util/toast, oben rechts) prüfen. */
-export const toast = (page: Page) => page.locator('.eoToast').last();
+export const toast = (page: Page) => page.locator('.eoToast .eoToastText').last();
 
 /** API-Aufruf aus der Browser-Sitzung (mit CSRF), z. B. für App-Daten über den Sync. */
 export async function apiCall<T>(page: Page, method: string, path: string, body?: unknown): Promise<{ status: number; json: T }> {
