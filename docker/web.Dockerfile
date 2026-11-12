@@ -22,8 +22,8 @@ FROM caddy:2.11.7@sha256:36c24ad91a7ff7bc4c87fe22bfa8df3c4b18da0773d73fc12ee2c52
 RUN apk upgrade --no-cache
 COPY --from=caddy /usr/bin/caddy /usr/bin/caddy
 COPY --from=build /src/dist /srv
-# Störungs- und Wartungsseite (Caddy bei 502/503/504, Service Worker ohne Verbindung)
-COPY deploy/fallback/ /srv/
+# Störungs-, Wartungs- und Update-Seite: /srv/stoerung.html (OpenUI5, web/webapp/stoerung.html) – Caddy bei 502/503/504,
+# Service Worker ohne Verbindung.
 COPY deploy/Caddyfile /etc/caddy/Caddyfile
 # Caddyfile beim Bau prüfen (Syntax, Plugin vorhanden)
 RUN ESTRICHONE_DOMAIN=localhost caddy adapt --config /etc/caddy/Caddyfile >/dev/null

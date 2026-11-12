@@ -102,7 +102,7 @@
 	}
 
 	# Server nicht erreichbar (Neustart, Absturz, Update): API-Aufrufe bekommen Problem-JSON, Seiten die Störungsseite
-	# (deploy/fallback, docs/backup.md). Antworten der API selbst – auch 503 MAINTENANCE – reicht Caddy unverändert durch.
+	# (/stoerung.html, OpenUI5 aus web/webapp, docs/backup.md). Antworten der API selbst – auch 503 MAINTENANCE – reicht Caddy unverändert durch.
 	# Rate-Limit überschritten: Problem-JSON wie die API (Retry-After setzt das Plugin).
 	handle_errors 429 {
 		header -Server

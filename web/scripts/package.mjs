@@ -29,7 +29,9 @@ function unwanted(path) {
 }
 
 rmSync(target, { recursive: true, force: true });
-const files = walk(source).filter((f) => !unwanted(f) && !f.endsWith('index.html'));
+// Einstiegsseiten (nie zwischengespeichert): App und Störungs-/Update-Seite (stoerung.html, fallback/main.ts).
+const pages = ['index.html', 'stoerung.html'];
+const files = walk(source).filter((f) => !unwanted(f) && !pages.includes(relative(source, f)));
 const hash = createHash('sha256');
 for (const file of files.sort()) {
   hash.update(relative(source, file));
@@ -41,14 +43,17 @@ for (const file of files) {
   cpSync(file, join(base, relative(source, file)));
 }
 
-const html = readFileSync(join(source, 'index.html'), 'utf8')
-  .replaceAll('"/resources/', `"/${version}/resources/`)
-  .replaceAll('"estrichone": "/"', `"estrichone": "/${version}/"`)
-  .replaceAll('href="/boot.css"', `href="/${version}/boot.css"`);
-if (html.includes('"/resources/')) {
-  throw new Error('index.html enthält noch unversionierte Pfade.');
+for (const page of pages) {
+  if (!existsSync(join(source, page))) continue;
+  const html = readFileSync(join(source, page), 'utf8')
+    .replaceAll('"/resources/', `"/${version}/resources/`)
+    .replaceAll('"estrichone": "/"', `"estrichone": "/${version}/"`)
+    .replaceAll('href="/boot.css"', `href="/${version}/boot.css"`);
+  if (html.includes('"/resources/')) {
+    throw new Error(`${page} enthält noch unversionierte Pfade.`);
+  }
+  writeFileSync(join(target, page), html);
 }
-writeFileSync(join(target, 'index.html'), html);
 if (existsSync('public')) {
   cpSync('public', target, { recursive: true });
 }

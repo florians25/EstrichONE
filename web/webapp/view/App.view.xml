@@ -131,26 +131,11 @@
 			</additionalContent>
 		</IllustratedMessage>
 	</FlexBox>
-	<!-- Update-Ablauf: Wartungsbildschirm mit Phase, Zielversion, Countdown und Fortschritt (util/updateView.ts) -->
+	<!-- Update-Ablauf: Wartungsbildschirm mit Phase, Zielversion, Countdown und Fortschritt (fragment/UpdateScreen) -->
 	<FlexBox id="updateOverlay" visible="{notices>/upd/page}" direction="Column" alignItems="Center" justifyContent="Center"
-		class="eoMaintenance eoUpdateScreen" renderType="Bare">
-		<VBox class="eoUpdateCard" renderType="Bare">
-			<Image src="{view>/loginLogo}" alt="EstrichONE" height="2.5rem" class="sapUiSmallMarginBottom"/>
-			<Title id="updateTitle" text="{notices>/upd/title}" level="H1" titleStyle="H3" wrapping="true"/>
-			<Text id="updateVersion" text="Zielversion {notices>/upd/version}" visible="{= !!${notices>/upd/version} }" class="eoUpdateVersion"/>
-			<HBox items="{notices>/upd/steps}" class="eoUpdateSteps" renderType="Bare">
-				<Text text="{notices>label}" class="eoUpdateStep">
-					<customData><core:CustomData key="step" value="{notices>state}" writeToDom="true"/></customData>
-				</Text>
-			</HBox>
-			<Text id="updateCountdownLabel" text="{notices>/upd/countdownLabel}" class="eoUpdateCountdownLabel"/>
-			<Text id="updateCountdown" text="{notices>/upd/countdown}" visible="{= !!${notices>/upd/countdown} }" class="eoUpdateCountdown"/>
-			<ProgressIndicator id="updateProgress" percentValue="{notices>/upd/percent}" showValue="false" height="0.5rem"
-				state="{= ${notices>/upd/failed} ? 'Error' : 'None' }" class="eoUpdateProgress"/>
-			<Text id="updateText" text="{notices>/upd/text}" class="eoUpdateText"/>
-			<Text text="{= ${notices>/updateOffline} ? 'Server wird gerade getauscht – die Seite wartet automatisch.' : 'Die Seite prüft alle 5 Sekunden und lädt nach der Freigabe automatisch neu.' }"
-				class="eoMuted eoUpdateScreenHint"/>
-		</VBox>
+		class="eoMaintenance" renderType="Bare">
+		<Image src="{view>/loginLogo}" alt="EstrichONE" height="3rem" class="sapUiMediumMarginBottom"/>
+		<core:Fragment fragmentName="estrichone.fragment.UpdateScreen" type="XML"/>
 	</FlexBox>
 	<FlexBox id="outageOverlay" visible="{= ${notices>/outage} &amp;&amp; !${notices>/page} &amp;&amp; !${notices>/upd/page} }" direction="Column" alignItems="Center" justifyContent="Center"
 		class="eoMaintenance eoOutage" renderType="Bare">

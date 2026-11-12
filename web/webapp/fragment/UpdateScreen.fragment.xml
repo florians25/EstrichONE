@@ -1,0 +1,20 @@
+<!-- Update-Ablauf: Wartungsbildschirm (util/updateView.ts) – nur Standard-Controls (Horizon), gleich in der App
+     (App.view, Modell „notices“) und auf der Störungsseite stoerung.html (fallback/main.ts, gleiches Modell). -->
+<core:FragmentDefinition xmlns="sap.m" xmlns:core="sap.ui.core">
+	<IllustratedMessage id="updateMessage" illustrationType="{= ${notices>/upd/failed} ? 'sapIllus-UnableToUpload' : 'sapIllus-UploadToCloud' }"
+		title="{notices>/upd/title}" description="{notices>/upd/text}" enableDefaultTitleAndDescription="false">
+		<additionalContent>
+			<VBox alignItems="Center" width="100%">
+				<ObjectStatus id="updatePhase" text="{notices>/upd/phaseText}" icon="sap-icon://upload-to-cloud" inverted="true"
+					state="{= ${notices>/upd/failed} ? 'Error' : 'Information' }" class="sapUiTinyMarginBottom"/>
+				<Text id="updateVersion" text="Zielversion {notices>/upd/version}" visible="{= !!${notices>/upd/version} }"/>
+				<Label id="updateCountdownLabel" text="{notices>/upd/countdownLabel}" class="sapUiSmallMarginTop"/>
+				<Title id="updateCountdown" text="{notices>/upd/countdown}" level="H2" titleStyle="H1" visible="{= !!${notices>/upd/countdown} }"/>
+				<ProgressIndicator id="updateProgress" percentValue="{notices>/upd/percent}" displayValue="{notices>/upd/phaseText}" showValue="false"
+					state="{= ${notices>/upd/failed} ? 'Error' : 'None' }" width="20rem" class="sapUiSmallMarginTop"/>
+				<Text text="{= ${notices>/updateOffline} ? 'Server wird gerade getauscht – die Seite wartet automatisch.' : 'Die Seite prüft alle 5 Sekunden und lädt nach der Freigabe automatisch neu.' }"
+					textAlign="Center" maxLines="3" width="22rem" class="sapUiSmallMarginTop"/>
+			</VBox>
+		</additionalContent>
+	</IllustratedMessage>
+</core:FragmentDefinition>

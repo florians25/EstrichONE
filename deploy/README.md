@@ -276,7 +276,7 @@ Installation (andere Version) und der Hosting-Konsole (Einzel- und Massen-Update
 Der Stand liegt in `data/backup-status/update-maintenance.json`. Die API liest ihn bei jeder Anfrage (Kopfzeile
 `X-EstrichONE-Update` auf jeder Antwort, Feld `update` in `/api/v1/system/notices`); Caddy liefert ihn zusätzlich als
 `/update-status.json` aus dem nur lesend eingebundenen Verzeichnis – so bleibt der Wartungsbildschirm im Web auch dann
-stehen, wenn die API gerade getauscht wird (statt „nicht erreichbar“). Die Störungsseite (`deploy/fallback`) zeigt
+stehen, wenn die API gerade getauscht wird (statt „nicht erreichbar“). Die Störungsseite (`/stoerung.html`, OpenUI5 wie die App) zeigt
 Phase und Countdown ebenso.
 
 - **Dauer anpassen** (Sekunden, Umgebung oder `.env`): `ESTRICHONE_UPDATE_ANNOUNCE_SECONDS`, `ESTRICHONE_UPDATE_MIN_SECONDS`,

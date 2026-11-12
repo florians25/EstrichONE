@@ -43,6 +43,10 @@ describe('Update-Ablauf: Aufbereitung für Leiste und Wartungsbildschirm', () =>
     expect(update.countdown).toBe('0:30');
     expect(update.percent).toBe(50);
     expect(update.version).toBe('1.0.16');
+    expect(update.phaseText).toBe('Schritt 2 von 3: Update');
+    expect(updateView(state('announce', -1, 59), now).phaseText).toBe('Schritt 1 von 3: Ankündigung');
+    expect(updateView(state('announce', -61, -1), now).phaseText).toBe('Schritt 2 von 3: Update');
+    expect(updateView(state('failed', 0, null), now).phaseText).toBe('Fehlgeschlagen');
     const late = updateView(state('update', -90, -30), now);
     expect(late.countdown).toBe('');
     expect(late.countdownLabel).toBe('Läuft …');

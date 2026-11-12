@@ -41,6 +41,8 @@ export interface UpdateView {
 	steps: UpdateStep[];
 	failed: boolean;
 	version: string;
+	/** „Schritt 2 von 3: Update“ (ObjectStatus) bzw. „Rücknahme“, „Fehlgeschlagen“. */
+	phaseText: string;
 }
 
 const PHASES: UpdatePhase[] = ["announce", "update", "finish", "rollback", "failed"];
@@ -79,7 +81,10 @@ export function updateView(state: UpdateState, now: Date): UpdateView {
 	const steps: UpdateStep[] = ["Ankündigung", "Update", third].map((label, i) => ({
 		label, state: i < index ? "done" : i === index ? "now" : "todo",
 	}));
-	const base = { version: state.targetVersion ?? "", steps, percent, failed: state.phase === "failed" };
+	const shownIndex = state.phase === "announce" && !announcing ? 1 : index;
+	const phaseText = state.phase === "rollback" ? "Rücknahme" : state.phase === "failed" ? "Fehlgeschlagen"
+		: `Schritt ${shownIndex + 1} von 3: ${["Ankündigung", "Update", "Abschluss"][shownIndex]}`;
+	const base = { version: state.targetVersion ?? "", steps, percent, failed: state.phase === "failed", phaseText };
 	if (announcing) {
 		const text = running
 			? `Update auf ${target} beginnt in ${clock(left)} – bitte Arbeit speichern. Danach ist eine neue Anmeldung nötig.`

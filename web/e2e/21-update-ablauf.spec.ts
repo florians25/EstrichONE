@@ -74,20 +74,31 @@ test('Update: Ankündigung mit Countdown, Wartungsbildschirm auch ohne API, Frei
   write('update', 60);
   const overlay = page.locator('[id$="--updateOverlay"]');
   await expect(overlay).toBeVisible({ timeout: 15_000 });
-  await expect(page.locator('[id$="--updateTitle"]')).toHaveText('Update wird eingespielt');
-  await expect(page.locator('[id$="--updateVersion"]')).toHaveText('Zielversion 9.9.9');
-  await expect(overlay.locator('.eoUpdateStep[data-step="now"]')).toHaveText('Update');
+  await expect(overlay).toContainText('Update wird eingespielt');
+  await expect(overlay.locator('[id$="--updateVersion"]')).toHaveText('Zielversion 9.9.9');
+  await expect(overlay.locator('[id$="--updatePhase"]')).toContainText('Schritt 2 von 3: Update');
   await shot(page, 'update-2-update');
 
   // API weg (Container werden getauscht): Stand kommt von Caddy, keine Störungsseite.
   await page.route('**/api/v1/**', (route) => route.fulfill({ status: 502, contentType: 'application/problem+json', body: '{"code":"SERVER_UNAVAILABLE"}' }));
   await page.route('**/update-status.json', (route) => route.fulfill({ json: state('finish', 60) }));
-  await expect(page.locator('[id$="--updateTitle"]')).toHaveText('Update wird abgeschlossen', { timeout: 15_000 });
-  await expect(page.locator('[id$="--updateCountdown"]')).toHaveText(/^[01]:\d\d$/);
+  await expect(overlay).toContainText('Update wird abgeschlossen', { timeout: 15_000 });
+  await expect(overlay.locator('[id$="--updateCountdown"]')).toHaveText(/^[01]:\d\d$/);
   await expect(page.locator('[id$="--outageOverlay"]')).toBeHidden();
   await expect(overlay).toContainText('Server wird gerade getauscht');
   await page.unroute('**/api/v1/**');
   await page.unroute('**/update-status.json');
+
+  // Störungsseite (OpenUI5, Caddy bei nicht erreichbarer API) zeigt denselben Wartungsbildschirm.
+  const fallback = await page.context().newPage();
+  await fallback.route('**/update-status.json', (route) => route.fulfill({ json: state('update', 40) }));
+  await fallback.route('**/api/v1/**', (route) => route.fulfill({ status: 502, contentType: 'application/problem+json', body: '{"code":"SERVER_UNAVAILABLE"}' }));
+  await fallback.goto('/stoerung.html');
+  await expect(fallback.locator('.sapMIllustratedMessage').filter({ hasText: 'Update wird eingespielt' })).toBeVisible({ timeout: 20_000 });
+  await expect(fallback.locator('[id$="updatePhase"]')).toContainText('Schritt 2 von 3: Update');
+  await expect(fallback.getByText('Server wird gerade getauscht')).toBeVisible();
+  await shot(fallback, 'update-stoerungsseite');
+  await fallback.close();
 
   // 3. Abschluss mit neuer Version, dann Freigabe: Seite lädt neu, Anmeldung mit Hinweis.
   write('finish', 60);

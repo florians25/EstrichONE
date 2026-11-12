@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex" />
+    <title>EstrichONE – nicht erreichbar</title>
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="/boot.css" />
+    <!-- Störungs-, Wartungs- und Update-Seite (OpenUI5 wie die App, fallback/main.ts). Caddy liefert sie bei 502/503/504,
+         der Service Worker ohne Verbindung. Der Text unten gilt nur, bis UI5 geladen ist (bzw. ganz ohne Verbindung). -->
+    <script id="sap-ui-bootstrap" src="/resources/sap-ui-core.js"
+      data-sap-ui-theme="sap_horizon"
+      data-sap-ui-language="de"
+      data-sap-ui-async="true"
+      data-sap-ui-compat-version="edge"
+      data-sap-ui-resource-roots='{"estrichone": "/"}'
+      data-sap-ui-on-init="module:estrichone/fallback/main"
+      data-sap-ui-xx-wait-for-theme="init"></script>
+  </head>
+  <body class="sapUiBody" id="content">
+    <div id="splash" class="splash"><img src="/logo.svg" alt="EstrichONE" width="64" height="64" />
+      <p>EstrichONE ist gerade nicht erreichbar. Die Seite versucht es automatisch erneut.</p></div>
+  </body>
+</html>
