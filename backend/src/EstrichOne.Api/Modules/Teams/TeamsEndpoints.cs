@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
+using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.RegularExpressions;
 using EstrichOne.Api.Infrastructure.Persistence;
@@ -77,34 +79,36 @@ internal static partial class TeamsEndpoints
         api.MapGet("/teams/status", StatusAsync).WithTags("Microsoft Teams").WithName("GetTeamsStatus")
             .WithSummary("Chat-Modus und Teams-Anbindung für Navigation, Bauakte und Startseite (alle Angemeldeten)");
 
-        var settings = api.MapGroup("/settings/integrations/teams").WithTags("Microsoft Teams").RequirePermission(Permissions.SettingsIntegrations);
+        var settings = api.MapGroup("/settings/integrations/teams").WithTags("Microsoft Teams").RequirePermission(Permissions.SettingsIntegrations)
+            .AddEndpointFilter(GuardAsync);
         settings.MapGet("/", GetSettingsAsync).WithName("GetTeamsSettings").WithSummary("Einstellungen (Geheimnisse nie im Klartext)");
         settings.MapPut("/", SaveSettingsAsync).WithName("SaveTeamsSettings")
             .WithSummary("Speichern (Schlüssel, Zertifikat und Webhook verschlüsselt; null = unverändert)")
             .ProducesProblem(StatusCodes.Status412PreconditionFailed).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .ProducesProblem(StatusCodes.Status502BadGateway).ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         settings.MapPost("/test", TestAsync).WithName("TestTeamsConnection").WithSummary("Verbindungstest: Anmeldung, Berechtigungen, Team, Dienstkonto")
-            .ProducesProblem(StatusCodes.Status409Conflict);
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         settings.MapPost("/webhook/test", TestWebhookAsync).WithName("TestTeamsWebhook").WithSummary("Testkarte an den Workflows-Webhook senden")
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status502BadGateway);
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status424FailedDependency);
         settings.MapGet("/users", UsersAsync).WithName("ListTeamsUserMappings").WithSummary("Zuordnung Benutzer ↔ Microsoft-Konto");
         settings.MapPost("/users/match", MatchAsync).WithName("MatchTeamsUsers").WithSummary("Alle Benutzer über E-Mail/UPN zuordnen (von Hand gesetzte bleiben)")
-            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status502BadGateway);
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
         settings.MapPut("/users/{userId:guid}", MapUserAsync).WithName("MapTeamsUser").WithSummary("Zuordnung von Hand korrigieren")
-            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status502BadGateway);
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status424FailedDependency);
         settings.MapPost("/sender/start", StartSenderAsync).WithName("StartTeamsSenderLogin")
             .WithSummary("Dienstkonto verbinden: Gerätecode-Anmeldung starten (für Karten über Microsoft Graph)").ProducesProblem(StatusCodes.Status409Conflict);
         settings.MapPost("/sender/poll", PollSenderAsync).WithName("PollTeamsSenderLogin").WithSummary("Stand der Gerätecode-Anmeldung")
             .ProducesProblem(StatusCodes.Status409Conflict);
         settings.MapDelete("/sender", DisconnectSenderAsync).WithName("DisconnectTeamsSender").WithSummary("Dienstkonto trennen (Token löschen)");
 
-        var bauakte = api.MapGroup("/bauakten/{id:guid}/teams").WithTags("Microsoft Teams");
+        var bauakte = api.MapGroup("/bauakten/{id:guid}/teams").WithTags("Microsoft Teams").AddEndpointFilter(GuardAsync);
         bauakte.MapGet("/", BauakteAsync).WithName("GetBauakteTeams").WithSummary("Verknüpfte Teams-Unterhaltung der Bauakte")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenRead);
         bauakte.MapPost("/", LinkAsync).WithName("LinkBauakteTeams")
             .WithSummary("Kanal oder Gruppenchat anlegen bzw. vorhandenen per Link verknüpfen")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
-            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status424FailedDependency)
             .RequirePermission(Permissions.BauaktenEdit);
         bauakte.MapPost("/sync", SyncAsync).WithName("SyncBauakteTeamsMembers").WithSummary("Mitglieder jetzt abgleichen (Ergebnis an der Verknüpfung)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
@@ -361,7 +365,7 @@ internal static partial class TeamsEndpoints
             var summary = await teams.MatchUsersAsync(row, cancellationToken);
             if (summary.Error is { } error)
             {
-                return Problem(new GraphException("MATCH_FAILED", error));
+                return Problem(error);
             }
 
             audit.Record("teams.users_matched", user.UserId, "teams_settings", "1", new Dictionary<string, string?>
@@ -646,18 +650,93 @@ internal static partial class TeamsEndpoints
     private static ProblemHttpResult NotLinked() =>
         TypedResults.Problem(statusCode: 404, title: "Nicht verknüpft", detail: "Diese Bauakte ist nicht mit Teams verknüpft.", extensions: Code("TEAMS_NOT_LINKED"));
 
-    /// <summary>Microsoft-Fehler als Problem: keine Verbindung 503, Ablehnung durch Microsoft 502, eigene Prüfungen 409/422.</summary>
-    private static ProblemHttpResult Problem(GraphException exception)
+    /// <summary>
+    /// Microsoft-Fehler als Problem: keine Verbindung, Zeitüberschreitung oder Drosselung 503, Ablehnung durch Microsoft 424, eigene Prüfungen 409/422.
+    /// Bewusst nie 502/504: Vorgeschaltete Proxys (Cloudflare) ersetzen solche Antworten des Servers durch eine eigene Fehlerseite – die
+    /// Oberfläche sähe dann nur „Bad Gateway“ statt des Grundes.
+    /// </summary>
+    internal static ProblemHttpResult Problem(GraphException exception)
     {
         var status = exception.Code switch
         {
-            "OFFLINE" => StatusCodes.Status503ServiceUnavailable,
+            "OFFLINE" or "TIMEOUT" or "THROTTLED" => StatusCodes.Status503ServiceUnavailable,
             "NOT_CONFIGURED" or "SECRET_UNREADABLE" or "NO_SITE_TEAM" or "CONFLICT" or "NO_SENDER" => StatusCodes.Status409Conflict,
             "INVALID_LINK" or "INVALID_TEAM" or "TOO_FEW_MEMBERS" or "CERTIFICATE_INVALID" => StatusCodes.Status422UnprocessableEntity,
             "NOT_FOUND" when exception.Status is null => StatusCodes.Status422UnprocessableEntity,
-            _ => StatusCodes.Status502BadGateway,
+            _ => StatusCodes.Status424FailedDependency,
         };
-        var title = exception.Code == "OFFLINE" ? "Keine Verbindung zu Microsoft 365" : "Microsoft Teams";
+        var title = exception.Code switch
+        {
+            "OFFLINE" => "Keine Verbindung zu Microsoft 365",
+            "TIMEOUT" => "Microsoft 365 antwortet nicht rechtzeitig",
+            _ => "Microsoft Teams",
+        };
         return TypedResults.Problem(statusCode: status, title: title, detail: exception.Message, extensions: Code("TEAMS_" + exception.Code));
+    }
+
+    /// <summary>
+    /// Jede Teams-Anfrage aus der Oberfläche: kurze Gesamtfrist für Microsoft-Aufrufe (<see cref="TeamsOptions.InteractiveDeadline"/>) und
+    /// jede Ausnahme als lesbares Problem mit Eintrag im Server-Log – nie ein Verbindungsabbruch oder eine leere 500.
+    /// </summary>
+    private static async ValueTask<object?> GuardAsync(EndpointFilterInvocationContext context, EndpointFilterDelegate next)
+    {
+        var http = context.HttpContext;
+        var services = http.RequestServices;
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger(typeof(TeamsEndpoints).FullName!);
+        var step = http.GetEndpoint()?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName ?? http.Request.Path.Value ?? "Teams";
+        var started = Stopwatch.GetTimestamp();
+        using var interactive = services.GetRequiredService<GraphClient>().BeginInteractive();
+        try
+        {
+            var result = await next(context);
+            if (result is IStatusCodeHttpResult { StatusCode: >= 400 } failed && result is ProblemHttpResult problem)
+            {
+                logger.LogWarning("Teams {Step}: HTTP {Status} {Code} nach {Elapsed} ms – {Detail}", step, failed.StatusCode,
+                    problem.ProblemDetails.Extensions.TryGetValue("code", out var code) ? code : null, (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds,
+                    problem.ProblemDetails.Detail);
+            }
+
+            return result;
+        }
+        catch (GraphException exception)
+        {
+            logger.LogWarning("Teams {Step}: {Code} (HTTP {GraphStatus}) nach {Elapsed} ms – {Message}", step, exception.Code, exception.Status,
+                (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds, exception.Message);
+            return Problem(exception);
+        }
+        catch (OperationCanceledException) when (http.RequestAborted.IsCancellationRequested)
+        {
+            throw; // Browser hat abgebrochen – niemand wartet auf eine Antwort.
+        }
+        catch (Exception exception)
+        {
+            logger.LogError(exception, "Teams {Step}: unerwarteter Fehler nach {Elapsed} ms", step, (long)Stopwatch.GetElapsedTime(started).TotalMilliseconds);
+            return Unexpected(exception, Activity.Current?.Id ?? http.TraceIdentifier);
+        }
+    }
+
+    /// <summary>Unerwartete Ausnahme (kein Microsoft-Fehler) als verständliches Problem; Einzelheiten nur im Server-Log.</summary>
+    internal static ProblemHttpResult Unexpected(Exception exception, string traceId)
+    {
+        var (status, code, title, detail) = exception switch
+        {
+            OperationCanceledException => (StatusCodes.Status503ServiceUnavailable, "TEAMS_TIMEOUT", "Microsoft 365 antwortet nicht rechtzeitig",
+                "Microsoft 365 hat nicht rechtzeitig geantwortet. Bitte in einigen Minuten erneut versuchen; Einzelheiten stehen im Server-Log."),
+            HttpRequestException => (StatusCodes.Status503ServiceUnavailable, "TEAMS_OFFLINE", "Keine Verbindung zu Microsoft 365",
+                GraphClient.Offline("graph.microsoft.com").Message),
+            CryptographicException => (StatusCodes.Status409Conflict, "TEAMS_SECRET_UNREADABLE", "Microsoft Teams",
+                "Der gespeicherte Schlüssel bzw. das Zertifikat ist nicht verwendbar. Bitte Schlüssel bzw. Zertifikat neu eingeben und speichern."),
+            UriFormatException => (StatusCodes.Status422UnprocessableEntity, "TEAMS_INVALID_ADDRESS", "Microsoft Teams",
+                "Eine Adresse ist ungültig (Tenant-ID, Team-Link oder Webhook-URL). Bitte die Angaben prüfen."),
+            DbUpdateException => (StatusCodes.Status500InternalServerError, "TEAMS_SAVE_FAILED", "Microsoft Teams",
+                "Das Ergebnis konnte nicht gespeichert werden (gleichzeitige Änderung oder Datenbankfehler). Bitte die Seite neu laden und erneut versuchen."),
+            System.Text.Json.JsonException or FormatException or InvalidOperationException => (StatusCodes.Status500InternalServerError,
+                "TEAMS_UNEXPECTED_RESPONSE", "Microsoft Teams",
+                "Die Antwort von Microsoft 365 konnte nicht verarbeitet werden. Bitte erneut versuchen; Einzelheiten stehen im Server-Log."),
+            _ => (StatusCodes.Status500InternalServerError, "TEAMS_INTERNAL_ERROR", "Microsoft Teams",
+                "Bei der Teams-Anbindung ist ein unerwarteter Fehler aufgetreten. Bitte erneut versuchen; Einzelheiten stehen im Server-Log."),
+        };
+        return TypedResults.Problem(statusCode: status, title: title, detail: $"{detail} (Fehlerkennung {traceId})",
+            extensions: new Dictionary<string, object?> { ["code"] = code, ["traceId"] = traceId });
     }
 }

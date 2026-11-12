@@ -78,6 +78,22 @@ der Berechtigung), falscher Schlüssel (AADSTS-Codes), **Server ohne Internet** 
 Tests laufen gegen einen nachgebildeten Graph-Server (`backend/tests/…/Support/FakeGraphServer.cs`), nie gegen einen
 echten Tenant.
 
+**Fristen.** Anfragen aus der Oberfläche (Verbindungstest, Zuordnung, Verknüpfen, Abgleich, Dienstkonto) haben für alle
+Microsoft-Aufrufe zusammen eine Frist von 25 s (`InteractiveDeadline`), je Versuch 10 s (`InteractiveAttemptTimeout`) und
+höchstens 2 Versuche (`InteractiveMaxAttempts`); danach antwortet die API mit 503 `TEAMS_TIMEOUT` („Microsoft 365 antwortet
+nicht rechtzeitig …“). So bekommt die Oberfläche immer eine Antwort, bevor ein vorgeschalteter Proxy (Cloudflare 100 s)
+abbricht. Der Hintergrundabgleich nutzt die längeren Werte (`AttemptTimeout` 30 s, `MaxAttempts` 4). Die Kontenzuordnung
+fragt gebündelt (Graph-`$batch`, 20 Benutzer je Aufruf).
+
+**Statuscodes.** Ablehnung durch Microsoft → 424 (`TEAMS_FORBIDDEN`, `TEAMS_AUTH_FAILED`, `TEAMS_GRAPH_ERROR` …), keine
+Verbindung, Frist, Drosselung → 503, eigene Prüfungen → 409/422, Unerwartetes → 500 mit Fehlerkennung. **Nie 502/504:**
+Cloudflare ersetzt solche Antworten des Servers durch eine eigene englische Fehlerseite („The origin web server returned
+an invalid or incomplete response …“), der Grund ginge verloren.
+
+**Fehlersuche.** Jeder fehlgeschlagene Microsoft-Aufruf steht mit Schritt, HTTP-Status und Graph- bzw. AADSTS-Code im
+Log (ohne Geheimnisse, ohne E-Mail-Adressen):
+`cd /opt/estrichone && sudo docker compose logs api --since 30m | grep -iE "teams|graph|entra|microsoft 365"`.
+
 ### Mitgliederabgleich (best effort)
 
 Soll: Zuständige Person und Mitglieder der Bauakte mit zugeordnetem Microsoft-Konto (plus Dienstkonto bei „Karten über

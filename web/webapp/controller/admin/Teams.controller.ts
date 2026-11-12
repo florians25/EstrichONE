@@ -24,6 +24,14 @@ const modeHints: Record<ChatMode, string> = {
 	both: "Eingebauter Chat wie bisher und zusätzlich „In Teams öffnen“ an Bauakten und in der Navigation.",
 };
 
+/** Ergebnis des letzten Verbindungstests mit Zeitpunkt und den fehlgeschlagenen Schritten. */
+function lastTestText(s: TeamsSettings): string {
+	if (!s.lastTestAt) return "";
+	const at = dateTime(s.lastTestAt);
+	if (s.lastTestOk) return `Letzter Verbindungstest am ${at} erfolgreich.`;
+	return `Letzter Verbindungstest am ${at} fehlgeschlagen – ${s.lastTestError ?? "Ohne Angabe – bitte „Verbindung testen“ wählen."}`;
+}
+
 /** Einstellungen › Integrationen › Microsoft Teams. @namespace estrichone.controller.admin */
 export default class Teams extends BaseController {
 	private pollTimer: ReturnType<typeof setTimeout> | undefined;
@@ -31,7 +39,7 @@ export default class Teams extends BaseController {
 	onInit(): void {
 		this.local({
 			s: null, loaded: false, busy: false, secret: "", certificate: "", certificateText: "", webhook: "", team: "", users: [], steps: [],
-			modeHint: "", lastPostText: "", tab: "connection",
+			modeHint: "", lastPostText: "", lastTestText: "", tab: "connection",
 		});
 		this.model().attachPropertyChange((e) => {
 			if (String(e.getParameter("path")).endsWith("chatMode")) this.applyHints(this.model().getProperty("/s") as TeamsSettings);
@@ -88,6 +96,7 @@ export default class Teams extends BaseController {
 		m.setProperty("/modeHint", modeHints[s.chatMode]);
 		m.setProperty("/certificateText", s.certificateThumbprint
 			? `Gespeichert: Fingerabdruck ${s.certificateThumbprint}${s.certificateExpiresAt ? `, gültig bis ${dateTime(s.certificateExpiresAt)}` : ""}` : "");
+		m.setProperty("/lastTestText", lastTestText(s));
 		m.setProperty("/lastPostText", s.lastPostAt ? `${dateTime(s.lastPostAt)}${s.lastPostError ? ` – ${s.lastPostError}` : " – gesendet"}` : "");
 	}
 

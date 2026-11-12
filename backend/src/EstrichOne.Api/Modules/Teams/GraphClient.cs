@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Globalization;
 using System.Net;
 using System.Net.Http.Headers;
@@ -28,6 +29,24 @@ public sealed class TeamsOptions
 
     /// <summary>Erlaubte Hosts (Endungen) für Workflows-Webhooks.</summary>
     public string[] WebhookHosts { get; set; } = ["logic.azure.com", "powerplatform.com", "powerautomate.com", "webhook.office.com"];
+
+    /// <summary>Höchstdauer eines einzelnen Versuchs im Hintergrund (Abgleich, Karten).</summary>
+    public TimeSpan AttemptTimeout { get; set; } = TimeSpan.FromSeconds(30);
+
+    /// <summary>
+    /// Gesamtfrist aller Microsoft-Aufrufe einer Anfrage aus der Oberfläche. Deutlich unter den Zeitgrenzen vorgeschalteter
+    /// Proxys (Cloudflare 100 s, Nginx 60 s), damit die Oberfläche immer eine verständliche Antwort bekommt.
+    /// </summary>
+    public TimeSpan InteractiveDeadline { get; set; } = TimeSpan.FromSeconds(25);
+
+    /// <summary>Höchstdauer eines einzelnen Versuchs bei Anfragen aus der Oberfläche.</summary>
+    public TimeSpan InteractiveAttemptTimeout { get; set; } = TimeSpan.FromSeconds(10);
+
+    /// <summary>Versuche je Aufruf bei Anfragen aus der Oberfläche (Wartezeiten nur, solange die Gesamtfrist reicht).</summary>
+    public int InteractiveMaxAttempts { get; set; } = 2;
+
+    /// <summary>Anfragen je Graph-<c>$batch</c> (Microsoft erlaubt höchstens 20).</summary>
+    public int BatchSize { get; set; } = 20;
 
     /// <summary>Nur für Tests: Webhooks auch über http (Loopback).</summary>
     public bool AllowHttpWebhooks { get; set; }
@@ -85,8 +104,8 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
         };
         AddClientAuthentication(form, credentials);
         var json = await TokenRequestAsync(credentials.TenantId, form, cancellationToken);
-        var token = json["access_token"]?.GetValue<string>() ?? throw new GraphException("AUTH_FAILED", "Microsoft hat kein Zugriffstoken geliefert.");
-        var seconds = json["expires_in"] is { } e ? ReadInt(e) : 3600;
+        var token = Str(json["access_token"]) ?? throw new GraphException("AUTH_FAILED", "Microsoft hat kein Zugriffstoken geliefert.");
+        var seconds = json["expires_in"] is { } e ? ReadInt(e, 3600) : 3600;
         _tokens[key] = (token, clock.GetUtcNow().AddSeconds(Math.Max(60, seconds - 300)));
         return token;
     }
@@ -96,12 +115,13 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
     public async Task<DeviceCodeStart> StartDeviceCodeAsync(string tenantId, string clientId, CancellationToken cancellationToken)
     {
         var url = $"{Options.LoginBaseUrl.TrimEnd('/')}/{Uri.EscapeDataString(tenantId)}/oauth2/v2.0/devicecode";
-        var json = await FormAsync(url, new Dictionary<string, string> { ["client_id"] = clientId, ["scope"] = SenderScopes }, cancellationToken);
+        var json = await FormAsync(url, new Dictionary<string, string> { ["client_id"] = clientId, ["scope"] = SenderScopes }, "Gerätecode anfordern",
+            cancellationToken);
         return new DeviceCodeStart(
-            json["device_code"]?.GetValue<string>() ?? throw new GraphException("AUTH_FAILED", "Microsoft hat keinen Gerätecode geliefert."),
-            json["user_code"]?.GetValue<string>() ?? string.Empty,
-            json["verification_uri"]?.GetValue<string>() ?? "https://microsoft.com/devicelogin",
-            json["expires_in"] is { } e ? ReadInt(e) : 900, json["interval"] is { } i ? ReadInt(i) : 5, json["message"]?.GetValue<string>());
+            Str(json["device_code"]) ?? throw new GraphException("AUTH_FAILED", "Microsoft hat keinen Gerätecode geliefert."),
+            Str(json["user_code"]) ?? string.Empty,
+            Str(json["verification_uri"]) ?? "https://microsoft.com/devicelogin",
+            json["expires_in"] is { } e ? ReadInt(e, 900) : 900, json["interval"] is { } i ? ReadInt(i, 5) : 5, Str(json["message"]));
     }
 
     /// <summary><c>null</c>, solange die Anmeldung aussteht.</summary>
@@ -145,6 +165,7 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
     public async Task<JsonNode?> SendAsync(HttpMethod method, string token, string path, JsonNode? body, string permission, CancellationToken cancellationToken)
     {
         var url = $"{Options.GraphBaseUrl.TrimEnd('/')}/v1.0/{path.TrimStart('/')}";
+        var step = $"{method.Method} {StepName(path)}";
         using var response = await SendWithRetryAsync(() =>
         {
             var request = new HttpRequestMessage(method, url);
@@ -155,14 +176,102 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
             }
 
             return request;
-        }, "graph.microsoft.com", cancellationToken);
+        }, "graph.microsoft.com", step, cancellationToken);
         var text = await response.Content.ReadAsStringAsync(cancellationToken);
         if (response.IsSuccessStatusCode)
         {
-            return string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text);
+            return string.IsNullOrWhiteSpace(text) ? null : ParseJson(text, step, (int)response.StatusCode);
         }
 
-        throw GraphError(response.StatusCode, text, permission);
+        throw GraphError(step, response.StatusCode, text, permission);
+    }
+
+    /// <summary>Ergebnis einer Teilanfrage aus <see cref="BatchGetAsync"/>: Inhalt oder Fehler.</summary>
+    public sealed record BatchItem(JsonNode? Body, GraphException? Error);
+
+    /// <summary>
+    /// Viele lesende Aufrufe gebündelt (Graph-<c>$batch</c>, je Bündel höchstens 20): N Benutzer zuordnen kostet N/20 Aufrufe
+    /// statt N. Gedrosselte Teilanfragen (429) werden nach Retry-After wiederholt, solange Versuche und Frist reichen.
+    /// </summary>
+    public async Task<IReadOnlyList<BatchItem>> BatchGetAsync(string token, IReadOnlyList<string> paths, string permission,
+        CancellationToken cancellationToken)
+    {
+        var results = new BatchItem?[paths.Count];
+        var size = Math.Clamp(Options.BatchSize, 1, 20);
+        var maxAttempts = MaxAttempts(Current.Value);
+        for (var start = 0; start < paths.Count; start += size)
+        {
+            var pending = Enumerable.Range(start, Math.Min(size, paths.Count - start)).ToList();
+            for (var round = 1; pending.Count > 0; round++)
+            {
+                var requests = new JsonArray();
+                foreach (var i in pending)
+                {
+                    requests.Add(new JsonObject
+                    {
+                        ["id"] = i.ToString(CultureInfo.InvariantCulture), ["method"] = "GET", ["url"] = "/" + paths[i].TrimStart('/'),
+                    });
+                }
+
+                var answer = await PostAsync(token, "$batch", new JsonObject { ["requests"] = requests }, permission, cancellationToken);
+                var throttled = new List<int>();
+                var wait = TimeSpan.Zero;
+                foreach (var response in (answer?["responses"] as JsonArray ?? []).OfType<JsonObject>())
+                {
+                    if (!int.TryParse(Str(response["id"]), NumberStyles.Integer, CultureInfo.InvariantCulture, out var i) || !pending.Contains(i)
+                        || results[i] is not null)
+                    {
+                        continue;
+                    }
+
+                    var status = response["status"] is { } s ? ReadInt(s, 0) : 0;
+                    var body = response["body"]?.DeepClone();
+                    if (status is >= 200 and < 300)
+                    {
+                        results[i] = new BatchItem(body, null);
+                    }
+                    else if (status is 429 or 503 or 504 && round < maxAttempts)
+                    {
+                        throttled.Add(i);
+                        var retryAfter = Str(response["headers"]?["Retry-After"]) is { } header
+                            && int.TryParse(header, NumberStyles.Integer, CultureInfo.InvariantCulture, out var seconds)
+                                ? TimeSpan.FromSeconds(seconds)
+                                : Backoff(round);
+                        wait = TimeSpan.FromTicks(Math.Clamp(Math.Max(wait.Ticks, retryAfter.Ticks), 0, Options.MaxRetryDelay.Ticks));
+                    }
+                    else
+                    {
+                        results[i] = new BatchItem(null, GraphError($"GET {StepName(paths[i])} (Batch)", (HttpStatusCode)status,
+                            body?.ToJsonString() ?? string.Empty, permission));
+                    }
+                }
+
+                foreach (var i in pending.Where(i => results[i] is null && !throttled.Contains(i)))
+                {
+                    results[i] = new BatchItem(null, new GraphException("UNEXPECTED_RESPONSE", "Microsoft 365 hat auf eine Teilanfrage nicht geantwortet."));
+                }
+
+                if (throttled.Count > 0)
+                {
+                    if (Current.Value is { } interactive && wait >= interactive.Remaining)
+                    {
+                        logger.LogWarning("Microsoft Graph $batch: {Count} Teilanfragen gedrosselt, Frist reicht nicht für einen weiteren Versuch", throttled.Count);
+                        foreach (var i in throttled)
+                        {
+                            results[i] = new BatchItem(null, Throttled());
+                        }
+
+                        break;
+                    }
+
+                    await DelayAsync(wait, "graph.microsoft.com", "POST $batch", cancellationToken);
+                }
+
+                pending = throttled;
+            }
+        }
+
+        return results.Select(r => r ?? new BatchItem(null, Throttled())).ToList();
     }
 
     // ---------- Webhook (Teams-Workflows) ----------
@@ -200,10 +309,11 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
         using var response = await SendWithRetryAsync(() => new HttpRequestMessage(HttpMethod.Post, url)
         {
             Content = new StringContent(payload.ToJsonString(), Encoding.UTF8, "application/json"),
-        }, new Uri(url).Host, cancellationToken);
+        }, Uri.TryCreate(url, UriKind.Absolute, out var uri) ? uri.Host : "Webhook", "POST Webhook", cancellationToken);
         if (!response.IsSuccessStatusCode)
         {
             var text = await response.Content.ReadAsStringAsync(cancellationToken);
+            logger.LogWarning("Teams-Workflow-Webhook ({Host}) lehnt ab: HTTP {Status}", uri?.Host, (int)response.StatusCode);
             throw new GraphException("WEBHOOK_FAILED", (int)response.StatusCode switch
             {
                 401 or 403 => "Der Workflow hat die Nachricht abgelehnt (keine Berechtigung). Bitte den Workflow in Teams prüfen oder eine neue URL erzeugen.",
@@ -215,44 +325,151 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
 
     // ---------- intern ----------
 
-    private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> create, string host, CancellationToken cancellationToken)
+    // ---------- Frist für Anfragen aus der Oberfläche ----------
+
+    private static readonly AsyncLocal<InteractiveScope?> Current = new();
+
+    /// <summary>
+    /// Ab hier gelten für alle Microsoft-Aufrufe (dieses asynchronen Ablaufs) die kurze Gesamtfrist, kürzere Versuche und weniger
+    /// Wiederholungen der Oberfläche. Läuft die Frist ab, endet jeder Aufruf mit <c>TIMEOUT</c> statt die Verbindung offen zu halten,
+    /// bis ein vorgeschalteter Proxy sie kappt. Die Datenbank ist davon nicht betroffen (Ergebnisse werden gespeichert).
+    /// </summary>
+    public IDisposable BeginInteractive(TimeSpan? deadline = null)
     {
+        var scope = new InteractiveScope(deadline ?? Options.InteractiveDeadline, Current.Value);
+        Current.Value = scope;
+        return scope;
+    }
+
+    private sealed class InteractiveScope : IDisposable
+    {
+        private readonly CancellationTokenSource _cts;
+        private readonly long _started = Stopwatch.GetTimestamp();
+        private readonly TimeSpan _deadline;
+        private readonly InteractiveScope? _previous;
+
+        public InteractiveScope(TimeSpan deadline, InteractiveScope? previous)
+        {
+            _deadline = deadline;
+            _previous = previous;
+            _cts = new CancellationTokenSource(deadline);
+        }
+
+        public bool Ended { get; private set; }
+
+        public CancellationToken Token => Ended ? CancellationToken.None : _cts.Token;
+
+        public TimeSpan Remaining => _deadline - Stopwatch.GetElapsedTime(_started);
+
+        public bool Expired => !Ended && (_cts.IsCancellationRequested || Remaining <= TimeSpan.Zero);
+
+        public void Dispose()
+        {
+            if (Ended)
+            {
+                return;
+            }
+
+            Ended = true;
+            Current.Value = _previous;
+            _cts.Dispose();
+        }
+    }
+
+    private int MaxAttempts(InteractiveScope? interactive) =>
+        Math.Max(1, interactive is null ? Options.MaxAttempts : Math.Min(Options.MaxAttempts, Options.InteractiveMaxAttempts));
+
+    // ---------- intern ----------
+
+    private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> create, string host, string step,
+        CancellationToken cancellationToken)
+    {
+        var interactive = Current.Value is { Ended: false } scope ? scope : null;
+        var maxAttempts = MaxAttempts(interactive);
         var client = http.CreateClient(HttpClientName);
         for (var attempt = 1; ; attempt++)
         {
-            HttpResponseMessage response;
-            try
+            var attemptTimeout = interactive is null ? Options.AttemptTimeout : Options.InteractiveAttemptTimeout;
+            if (interactive is not null)
             {
-                using var request = create();
-                response = await client.SendAsync(request, cancellationToken);
-            }
-            catch (Exception exception) when (IsNetworkFailure(exception, cancellationToken))
-            {
-                if (attempt >= Options.MaxAttempts || IsPermanentNetworkFailure(exception))
+                if (interactive.Expired)
                 {
-                    logger.LogWarning(exception, "Microsoft 365 nicht erreichbar ({Host})", host);
-                    throw Offline(host);
+                    logger.LogWarning("Microsoft 365 {Step}: Frist von {Deadline} s abgelaufen, Aufruf nicht mehr gestartet", step,
+                        Options.InteractiveDeadline.TotalSeconds);
+                    throw TimedOut(host);
                 }
 
-                await Task.Delay(Backoff(attempt), cancellationToken);
-                continue;
+                attemptTimeout = interactive.Remaining < attemptTimeout ? interactive.Remaining : attemptTimeout;
+            }
+
+            HttpResponseMessage response;
+            using (var attemptCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, interactive?.Token ?? CancellationToken.None))
+            {
+                attemptCts.CancelAfter(attemptTimeout);
+                try
+                {
+                    using var request = create();
+                    response = await client.SendAsync(request, attemptCts.Token);
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException)
+                {
+                    var timedOut = exception is OperationCanceledException;
+                    if (attempt >= maxAttempts || interactive?.Expired == true || (!timedOut && IsPermanentNetworkFailure(exception)))
+                    {
+                        if (timedOut)
+                        {
+                            logger.LogWarning("Microsoft 365 {Step}: keine Antwort von {Host} (Zeitüberschreitung nach {Attempt} Versuch(en))", step, host, attempt);
+                            throw TimedOut(host);
+                        }
+
+                        logger.LogWarning(exception, "Microsoft 365 {Step}: {Host} nicht erreichbar ({Attempt} Versuch(e))", step, host, attempt);
+                        throw Offline(host);
+                    }
+
+                    await DelayAsync(Backoff(attempt), host, step, cancellationToken);
+                    continue;
+                }
             }
 
             var status = (int)response.StatusCode;
-            if ((status is 429 or 503 or 504) && attempt < Options.MaxAttempts)
+            if ((status is 429 or 503 or 504) && attempt < maxAttempts)
             {
                 var delay = RetryAfter(response) ?? Backoff(attempt);
-                if (logger.IsEnabled(LogLevel.Information))
+                if (interactive is null || delay < interactive.Remaining)
                 {
-                    logger.LogInformation("Microsoft 365 drosselt ({Status}); neuer Versuch {Attempt} in {Delay}", status, attempt + 1, delay);
-                }
+                    if (logger.IsEnabled(LogLevel.Information))
+                    {
+                        logger.LogInformation("Microsoft 365 {Step}: HTTP {Status} (Drosselung/Störung); neuer Versuch {Attempt} in {Delay}", step, status,
+                            attempt + 1, delay);
+                    }
 
-                response.Dispose();
-                await Task.Delay(delay, cancellationToken);
-                continue;
+                    response.Dispose();
+                    await DelayAsync(delay, host, step, cancellationToken);
+                    continue;
+                }
             }
 
             return response;
+        }
+    }
+
+    /// <summary>Warten vor dem nächsten Versuch; endet die Frist der Oberfläche vorher: <c>TIMEOUT</c>.</summary>
+    private async Task DelayAsync(TimeSpan delay, string host, string step, CancellationToken cancellationToken)
+    {
+        var interactive = Current.Value is { Ended: false } scope ? scope : null;
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, interactive?.Token ?? CancellationToken.None);
+        try
+        {
+            await Task.Delay(delay, linked.Token);
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning("Microsoft 365 {Step}: Frist abgelaufen, während auf einen neuen Versuch gewartet wurde ({Host})", step, host);
+            throw TimedOut(host);
         }
     }
 
@@ -275,9 +492,6 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
         return TimeSpan.FromSeconds(Math.Min(seconds, Options.MaxRetryDelay.TotalSeconds));
     }
 
-    private static bool IsNetworkFailure(Exception exception, CancellationToken cancellationToken) =>
-        exception is HttpRequestException || (exception is TaskCanceledException && !cancellationToken.IsCancellationRequested);
-
     /// <summary>Name nicht auflösbar oder Netz nicht erreichbar: Wiederholen hilft nicht (Server ohne Internet).</summary>
     private static bool IsPermanentNetworkFailure(Exception exception) =>
         exception.InnerException is SocketException { SocketErrorCode: SocketError.HostNotFound or SocketError.NetworkUnreachable or SocketError.NoData
@@ -287,16 +501,41 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
         $"Microsoft 365 ist vom Server aus nicht erreichbar ({host}). Für Teams braucht der EstrichONE-Server eine Internetverbindung (HTTPS, Port 443 zu "
         + "login.microsoftonline.com und graph.microsoft.com) – bitte Firewall oder Proxy prüfen. Ohne Internet bleibt der eingebaute Chat nutzbar.");
 
+    public static GraphException TimedOut(string host) => new("TIMEOUT",
+        $"Microsoft 365 antwortet nicht rechtzeitig ({host}). Bitte in einigen Minuten erneut versuchen. Bleibt es dabei, die Internetverbindung "
+        + "des Servers (Firewall, Proxy) prüfen; Einzelheiten stehen im Server-Log (docker compose logs api).");
+
+    private static GraphException Throttled() =>
+        new("THROTTLED", "Microsoft drosselt die Anfragen gerade. Bitte in einigen Minuten erneut versuchen.", 429);
+
+    private JsonNode? ParseJson(string text, string step, int status)
+    {
+        try
+        {
+            return JsonNode.Parse(text);
+        }
+        catch (JsonException)
+        {
+            logger.LogWarning("Microsoft 365 {Step}: HTTP {Status}, Antwort ist kein JSON ({Length} Zeichen)", step, status, text.Length);
+            throw new GraphException("UNEXPECTED_RESPONSE",
+                "Microsoft 365 hat eine unerwartete Antwort geliefert (kein JSON). Möglicherweise schaltet sich ein Proxy oder eine Firewall dazwischen; "
+                + "Einzelheiten stehen im Server-Log.", status);
+        }
+    }
+
+    /// <summary>Pfad ohne Abfrage (keine E-Mail-Adressen aus Filtern im Log).</summary>
+    private static string StepName(string path) => Clip(path.Split('?', 2)[0].TrimStart('/'), 120);
+
     private async Task<JsonObject> TokenRequestAsync(string tenantId, Dictionary<string, string> form, CancellationToken cancellationToken)
     {
         var url = $"{Options.LoginBaseUrl.TrimEnd('/')}/{Uri.EscapeDataString(tenantId)}/oauth2/v2.0/token";
-        return await FormAsync(url, form, cancellationToken);
+        return await FormAsync(url, form, $"Anmeldung ({form.GetValueOrDefault("grant_type")})", cancellationToken);
     }
 
-    private async Task<JsonObject> FormAsync(string url, Dictionary<string, string> form, CancellationToken cancellationToken)
+    private async Task<JsonObject> FormAsync(string url, Dictionary<string, string> form, string step, CancellationToken cancellationToken)
     {
         using var response = await SendWithRetryAsync(() => new HttpRequestMessage(HttpMethod.Post, url) { Content = new FormUrlEncodedContent(form) },
-            "login.microsoftonline.com", cancellationToken);
+            "login.microsoftonline.com", step, cancellationToken);
         var text = await response.Content.ReadAsStringAsync(cancellationToken);
         JsonObject? json = null;
         try
@@ -313,8 +552,22 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
             return json;
         }
 
-        var error = json?["error"]?.GetValue<string>();
-        var description = json?["error_description"]?.GetValue<string>() ?? Clip(text, 300);
+        var error = Str(json?["error"]);
+        var description = Str(json?["error_description"]) ?? Clip(text, 300);
+        if (json is null)
+        {
+            logger.LogWarning("Microsoft Entra ID {Step}: HTTP {Status}, Antwort ist kein JSON ({Length} Zeichen)", step, (int)response.StatusCode, text.Length);
+            throw new GraphException("UNEXPECTED_RESPONSE",
+                $"Die Anmeldung bei Microsoft lieferte keine gültige Antwort (HTTP {(int)response.StatusCode}). Möglicherweise schaltet sich ein Proxy oder "
+                + "eine Firewall dazwischen; Einzelheiten stehen im Server-Log.", (int)response.StatusCode);
+        }
+
+        if (error is not ("authorization_pending" or "slow_down"))
+        {
+            logger.LogWarning("Microsoft Entra ID {Step}: HTTP {Status}, Fehler {Error}, Code {Code}", step, (int)response.StatusCode, error,
+                description.Split(':', 2)[0].Trim());
+        }
+
         throw error switch
         {
             "authorization_pending" => new GraphException("AUTHORIZATION_PENDING", "Anmeldung steht noch aus."),
@@ -342,20 +595,23 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
         };
     }
 
-    private static GraphException GraphError(HttpStatusCode status, string text, string permission)
+    private GraphException GraphError(string step, HttpStatusCode status, string text, string permission)
     {
         string? code = null;
         string? message = null;
         try
         {
-            var error = JsonNode.Parse(text)?["error"];
-            code = error?["code"]?.GetValue<string>();
-            message = error?["message"]?.GetValue<string>();
+            var error = string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text)?["error"];
+            code = Str(error?["code"]);
+            message = Str(error?["message"]);
         }
         catch (Exception exception) when (exception is JsonException or InvalidOperationException)
         {
             message = Clip(text, 200);
         }
+
+        logger.LogWarning("Microsoft Graph {Step}: HTTP {Status}, Graph-Code {GraphCode}, benötigte Berechtigung {Permission}: {GraphMessage}", step,
+            (int)status, code ?? "-", permission, Clip(message, 300));
 
         return (int)status switch
         {
@@ -421,16 +677,16 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
 
     private static DelegatedToken Delegated(JsonObject json)
     {
-        var access = json["access_token"]?.GetValue<string>() ?? throw new GraphException("AUTH_FAILED", "Microsoft hat kein Zugriffstoken geliefert.");
+        var access = Str(json["access_token"]) ?? throw new GraphException("AUTH_FAILED", "Microsoft hat kein Zugriffstoken geliefert.");
         string? name = null;
         string? id = null;
-        if (json["id_token"]?.GetValue<string>() is { } idToken && idToken.Split('.') is { Length: >= 2 } parts)
+        if (Str(json["id_token"]) is { } idToken && idToken.Split('.') is { Length: >= 2 } parts)
         {
             try
             {
                 var claims = JsonNode.Parse(Base64UrlDecode(parts[1]));
-                name = claims?["preferred_username"]?.GetValue<string>() ?? claims?["name"]?.GetValue<string>();
-                id = claims?["oid"]?.GetValue<string>();
+                name = Str(claims?["preferred_username"]) ?? Str(claims?["name"]);
+                id = Str(claims?["oid"]);
             }
             catch (Exception exception) when (exception is JsonException or FormatException or InvalidOperationException)
             {
@@ -438,15 +694,22 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
             }
         }
 
-        return new DelegatedToken(access, json["refresh_token"]?.GetValue<string>(), name, id);
+        return new DelegatedToken(access, Str(json["refresh_token"]), name, id);
     }
 
     private static string CacheKey(GraphCredentials c) =>
         $"{c.TenantId}|{c.ClientId}|{Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(c.Secret ?? c.CertificatePem ?? string.Empty)))}";
 
-    private static int ReadInt(JsonNode node) => node.GetValueKind() == JsonValueKind.String
-        ? int.Parse(node.GetValue<string>(), CultureInfo.InvariantCulture)
-        : node.GetValue<int>();
+    private static int ReadInt(JsonNode node, int fallback) => node switch
+    {
+        JsonValue value when value.TryGetValue<int>(out var number) => number,
+        JsonValue value when value.TryGetValue<string>(out var text) && int.TryParse(text, NumberStyles.Integer, CultureInfo.InvariantCulture, out var parsed)
+            => parsed,
+        _ => fallback,
+    };
+
+    /// <summary>Zeichenkette aus JSON; anderer Typ oder fehlend: <c>null</c> (nie eine Ausnahme bei unerwarteten Antworten).</summary>
+    internal static string? Str(JsonNode? node) => node is JsonValue value && value.TryGetValue<string>(out var text) ? text : null;
 
     private static string Base64Url(byte[] bytes) => Convert.ToBase64String(bytes).TrimEnd('=').Replace('+', '-').Replace('/', '_');
 

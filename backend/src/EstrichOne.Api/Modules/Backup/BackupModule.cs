@@ -78,7 +78,7 @@ public sealed class BackupModule : IModule
                 }
                 catch (PeerException exception)
                 {
-                    return TypedResults.Problem(statusCode: exception.Code == "PEER_UNREACHABLE" ? 502 : 422, title: "Kopplung fehlgeschlagen",
+                    return TypedResults.Problem(statusCode: exception.Code == "PEER_UNREACHABLE" ? 503 : 422, title: "Kopplung fehlgeschlagen",
                         detail: exception.Message, extensions: new Dictionary<string, object?> { ["code"] = exception.Code });
                 }
             })

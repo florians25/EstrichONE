@@ -17,7 +17,7 @@ public sealed class TeamsModule : IModule
     public void AddServices(IServiceCollection services, IConfiguration configuration)
     {
         services.AddOptions<TeamsOptions>().Bind(configuration.GetSection(TeamsOptions.SectionName));
-        services.AddHttpClient(GraphClient.HttpClientName, client => client.Timeout = TimeSpan.FromSeconds(30));
+        services.AddHttpClient(GraphClient.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(2)); // Obergrenze; die Fristen je Versuch setzt GraphClient
         services.AddSingleton<GraphClient>();
         services.AddSingleton<TeamsQueue>();
         services.AddScoped<TeamsService>();

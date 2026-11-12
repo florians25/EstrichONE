@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Net;
 using System.Net.Http.Json;
 using System.Security.Cryptography;
@@ -486,6 +487,124 @@ public sealed class TeamsTests(PostgresFixture postgres) : IAsyncLifetime
         using var match = await admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/users/match", UriKind.Relative), null, Ct);
         match.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
         (await match.Content.ReadAsStringAsync(Ct)).ShouldContain("TEAMS_OFFLINE");
+    }
+
+    [Fact]
+    public async Task SlowMicrosoft_AnswersWithinDeadline_ReadableTimeout()
+    {
+        // Microsoft 365 hängt: Die Oberfläche bekommt innerhalb der Frist eine verständliche Antwort, statt dass ein
+        // vorgeschalteter Proxy (Cloudflare, 100 s) die Verbindung kappt und „Bad Gateway“ zeigt.
+        var settings = Settings(_graph.Url, _graph.Url);
+        settings["EstrichOne:Teams:InteractiveDeadline"] = "00:00:03";
+        settings["EstrichOne:Teams:InteractiveAttemptTimeout"] = "00:00:02";
+        await using var factory = await ApiFactory.CreateMigratedAsync(postgres, settings);
+        using var admin = await factory.CreateClientAsAsync("admin", StandardRoles.AdministratorId);
+        await SaveAsync(admin, new { chatMode = "both", tenantId = Tenant, clientId = Client, authKind = "secret", clientSecret = FakeGraphServer.Secret });
+        await factory.CreateUserAsync("dora", roleIds: StandardRoles.SiteWorkerId);
+        _graph.Slow["/v1.0/"] = TimeSpan.FromSeconds(60);
+
+        var watch = Stopwatch.StartNew();
+        using var match = await admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/users/match", UriKind.Relative), null, Ct);
+        watch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(15));
+        match.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        match.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+        var body = await match.Content.ReadAsStringAsync(Ct);
+        body.ShouldContain("TEAMS_TIMEOUT");
+        body.ShouldContain("nicht rechtzeitig");
+
+        watch.Restart();
+        using var test = await admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/test", UriKind.Relative), null, Ct);
+        watch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(15));
+        var result = (await test.Content.ReadFromJsonAsync<TeamsTestResponse>(TestJson.Options, Ct))!;
+        result.Ok.ShouldBeFalse();
+        result.Steps.ShouldContain(s => !s.Ok && s.Detail.Contains("nicht rechtzeitig"));
+        var saved = (await admin.GetFromJsonAsync<TeamsSettingsResponse>("/api/v1/settings/integrations/teams", TestJson.Options, Ct))!;
+        saved.LastTestOk.ShouldBe(false);
+        saved.LastTestError!.ShouldContain("Benutzer lesen");
+        _graph.Slow.Clear();
+    }
+
+    [Fact]
+    public async Task MatchingManyUsers_UsesBatches_RetriesThrottledParts()
+    {
+        await ConfigureAsync();
+        for (var i = 0; i < 25; i++)
+        {
+            await _factory.CreateUserAsync($"nutzer{i}", roleIds: StandardRoles.SiteWorkerId);
+            _graph.Users[$"nutzer{i}@example.org"] = ($"aad-{i}", $"Nutzer {i}");
+        }
+
+        _graph.Throttle["/v1.0/users"] = 1; // eine Teilanfrage gedrosselt (429 im Batch)
+        using var match = await _admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/users/match", UriKind.Relative), null, Ct);
+        match.StatusCode.ShouldBe(HttpStatusCode.OK, await match.Content.ReadAsStringAsync(Ct));
+        var summary = (await match.Content.ReadFromJsonAsync<TeamsMatchResponse>(TestJson.Options, Ct))!;
+        summary.Matched.ShouldBeGreaterThanOrEqualTo(25);
+
+        _graph.CallsTo("GET", "/v1.0/users").ShouldBeEmpty();
+        var lookups = _graph.BatchCalls.Count(c => c.Path == "/v1.0/users");
+        lookups.ShouldBeGreaterThanOrEqualTo(26); // 25 + Wiederholung der gedrosselten Teilanfrage
+        _graph.CallsTo("POST", "/v1.0/$batch").Count.ShouldBeLessThanOrEqualTo((lookups + 19) / 20 + 1);
+        var users = (await _admin.GetFromJsonAsync<List<TeamsUserMapping>>("/api/v1/settings/integrations/teams/users", TestJson.Options, Ct))!;
+        users.Where(u => u.Email?.StartsWith("nutzer", StringComparison.Ordinal) == true).ShouldAllBe(u => u.AadUserId != null);
+    }
+
+    [Fact]
+    public async Task MicrosoftErrors_NeverBadGateway_UnexpectedAnswersReadable()
+    {
+        await ConfigureAsync();
+        var (_, anna) = await UserAsync("anna", StandardRoles.SiteWorkerId, "aad-anna");
+
+        // Fehlende Berechtigung: 424 mit Grund – nie 502/504 (Cloudflare ersetzt solche Antworten durch eine eigene Fehlerseite).
+        _graph.Forbidden.Add("/v1.0/users");
+        using (var forbidden = await _admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/users/match", UriKind.Relative), null, Ct))
+        {
+            forbidden.StatusCode.ShouldBe(HttpStatusCode.FailedDependency);
+            var body = await forbidden.Content.ReadAsStringAsync(Ct);
+            body.ShouldContain("TEAMS_FORBIDDEN");
+            body.ShouldContain("User.Read.All");
+        }
+
+        _graph.Forbidden.Clear();
+
+        // Proxy-Fehlerseite statt JSON: Verbindungstest nennt den Schritt, Zuordnung von Hand ein lesbares Problem.
+        _graph.Raw["/v1.0/users"] = (200, "<html><body>Proxy</body></html>");
+        using (var test = await _admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/test", UriKind.Relative), null, Ct))
+        {
+            var result = (await test.Content.ReadFromJsonAsync<TeamsTestResponse>(TestJson.Options, Ct))!;
+            result.Steps.ShouldContain(s => s.Name.StartsWith("Benutzer lesen", StringComparison.Ordinal) && !s.Ok && s.Detail.Contains("unerwartete Antwort"));
+        }
+
+        using (var manual = await _admin.PutAsJsonAsync($"/api/v1/settings/integrations/teams/users/{anna}", new { account = "a@firma.de" }, Ct))
+        {
+            manual.StatusCode.ShouldBe(HttpStatusCode.FailedDependency);
+            manual.Content.Headers.ContentType?.MediaType.ShouldBe("application/problem+json");
+            (await manual.Content.ReadAsStringAsync(Ct)).ShouldContain("TEAMS_UNEXPECTED_RESPONSE");
+        }
+
+        _graph.Raw.Clear();
+    }
+
+    [Fact]
+    public void AnyException_BecomesReadableProblem_NeverBadGateway()
+    {
+        Exception[] exceptions =
+        [
+            new InvalidOperationException("x"), new System.Text.Json.JsonException("x"), new CryptographicException("x"), new DbUpdateException("x"),
+            new HttpRequestException("x"), new TaskCanceledException("x"), new UriFormatException("x"), new ArgumentException("x"),
+        ];
+        foreach (var exception in exceptions)
+        {
+            var problem = TeamsEndpoints.Unexpected(exception, "trace-1");
+            problem.StatusCode.ShouldNotBeOneOf(502, 504);
+            problem.ProblemDetails.Detail!.ShouldContain("Fehlerkennung trace-1");
+            problem.ProblemDetails.Extensions["code"]!.ToString()!.ShouldStartWith("TEAMS_");
+        }
+
+        foreach (var code in new[] { "OFFLINE", "TIMEOUT", "THROTTLED", "AUTH_FAILED", "FORBIDDEN", "GRAPH_ERROR", "GRAPH_REJECTED", "WEBHOOK_FAILED",
+            "UNEXPECTED_RESPONSE" })
+        {
+            TeamsEndpoints.Problem(new GraphException(code, "x", 502)).StatusCode.ShouldNotBeOneOf(502, 504);
+        }
     }
 
     [Theory]

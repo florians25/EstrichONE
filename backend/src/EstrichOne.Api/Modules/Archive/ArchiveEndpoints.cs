@@ -107,7 +107,7 @@ internal static class ArchiveEndpoints
         }
         catch (PeerException exception)
         {
-            return Problem(exception.Code is "PEER_UNREACHABLE" ? 502 : 422, exception.Code, "Kopplung fehlgeschlagen", exception.Message);
+            return Problem(exception.Code is "PEER_UNREACHABLE" ? 503 : 422, exception.Code, "Kopplung fehlgeschlagen", exception.Message);
         }
     }
 
@@ -216,7 +216,7 @@ internal static class ArchiveEndpoints
         }
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
-            return Problem(502, "ARCHIVE_UNREACHABLE", "Archivserver nicht erreichbar", ArchiveService.Describe(exception));
+            return Problem(503, "ARCHIVE_UNREACHABLE", "Archivserver nicht erreichbar", ArchiveService.Describe(exception));
         }
     }
 
@@ -251,7 +251,7 @@ internal static class ArchiveEndpoints
         catch (Exception exception) when (exception is HttpRequestException or TaskCanceledException)
         {
             client.Dispose();
-            return Problem(502, "ARCHIVE_UNREACHABLE", "Archivserver nicht erreichbar", ArchiveService.Describe(exception));
+            return Problem(503, "ARCHIVE_UNREACHABLE", "Archivserver nicht erreichbar", ArchiveService.Describe(exception));
         }
     }
 
