@@ -12,6 +12,7 @@
      Chatverlauf (Sprechblasen), Ablagefläche fürs Hochladen, Farbpunkte der Farbauswahl.
    - Raster und Anordnung eigener Inhalte (CSS-Grid/Flex: Startseiten-Karten, Kontakte, Kopf-Fakten der Bauakte,
      Einstellungen, Helpdesk-Ticketansicht) – nur Lage und Breite, keine Optik der Steuerelemente.
+   - Seitenkopf der DynamicPage bis zum rechten Rand (UI5 rückt ihn sonst um die Bildlaufleiste ein, wie die Objektseite).
    - Schutz gegen Abschneiden/Überlauf (min-width: 0, Umbruch, Auslassungspunkte, SegmentedButton nach Textbreite).
    - Anmeldeseite (Markenfläche), öffentliche Freigabeseite, Wartungs-/Hinweisseiten, Systemhinweise (control/NoticeCard).
    - Druck (@media print) und Bestellschein/Berichte (eoSheet, Papieroptik).
@@ -459,6 +460,9 @@ li[data-dot] { display: flex; align-items: center; }
 @container (max-width: 6rem) {
 	.sapUiCalendarAppTitle, .sapUiCalendarAppText { white-space: nowrap !important; overflow: hidden; text-overflow: clip; overflow-wrap: normal; }
 }
+/* Seitenkopf der DynamicPage bis an den rechten Rand des Inhaltsbereichs wie bei der Objektseite: UI5 rückt den Titel bei
+   klassischer Bildlaufleiste um deren Breite ein (Inline-Stil right: 12px); so endet er nicht mehr vor einem Streifen. */
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper { right: 0 !important; }
 /* Aktionsspalten in Tabellen: Schaltflächen in einer Zeile, nicht abgeschnitten */
 .eoActions { flex-wrap: nowrap; gap: 0.25rem; justify-content: flex-end; align-items: center; }
 /* Dokumente (zentral): Luft unter den Reitern, Ordnerbaum als Karte */

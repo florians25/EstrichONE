@@ -80,7 +80,7 @@ for (const scale of [1.25, 1.5]) {
 
 /**
  * Seitenkopf im SAP-Standard (DynamicPage bzw. Objektseite ohne eigene Gestaltung): Titel und Aktionen liegen vollständig
- * im Fenster, nichts läuft waagerecht über, die Aktionen überdecken den Titel nicht, und es gibt keine eigenen
+ * im Fenster, der Kopf reicht bis an den rechten Rand des Inhaltsbereichs, nichts läuft waagerecht über, die Aktionen überdecken den Titel nicht, und es gibt keine eigenen
  * Kopf-Sonderwege mehr (keine Pseudo-Elemente oder Fremdfarben am Kopf).
  */
 async function headerIssues(page: Page): Promise<string[]> {
@@ -94,6 +94,16 @@ async function headerIssues(page: Page): Promise<string[]> {
     if (t.left < 0 || t.right > window.innerWidth + 1) out.push(`Kopf außerhalb des Fensters (${Math.round(t.left)}–${Math.round(t.right)} px)`);
     const se = document.scrollingElement as HTMLElement;
     if (se.scrollWidth > se.clientWidth + 1) out.push(`Seite läuft waagerecht über (${se.scrollWidth} px bei ${se.clientWidth} px)`);
+    // Kopf (Titelbereich, bei der Objektseite auch die Reiterleiste) reicht bis an den rechten Rand des Inhaltsbereichs –
+    // kein Streifen rechts neben den Aktionen, auch nicht bei klassischer Bildlaufleiste.
+    const area = [...document.querySelectorAll<HTMLElement>('.eoContent')].find(visible);
+    if (area) {
+      const edge = area.getBoundingClientRect().right;
+      for (const e of [title.parentElement!, ...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageNavigation')].filter(visible)) {
+        const r = e.getBoundingClientRect();
+        if (Math.abs(r.right - edge) > 1) out.push(`Kopf endet ${Math.round(edge - r.right)} px vor dem rechten Rand (${e.className.split(' ')[0]})`);
+      }
+    }
     const heading = title.querySelector<HTMLElement>('.sapFDynamicPageTitleMainHeading');
     for (const a of title.querySelectorAll<HTMLElement>('.sapFDynamicPageTitleMainActions, .sapFDynamicPageTitleMainNavigationArea')) {
       const r = a.getBoundingClientRect();
