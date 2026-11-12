@@ -136,7 +136,8 @@ export const navigation: NavEntry[] = [
 			{ key: "vacation", path: "/personal/urlaub", icon: "sap-icon://general-leave-request", permission: "absence.request" },
 		],
 	},
-	// IT-Service/Helpdesk: eigene Gruppe (sichtbar mit Modul Helpdesk; Einstellungen nur für die Bearbeitung).
+	// IT-Service/Helpdesk: eigene Gruppe (Einträge je nach Modul Helpdesk bzw. Feedback; Einstellungen nur für die Bearbeitung,
+	// „Fehler & Wünsche“ nur mit feedback.manage).
 	{
 		key: "groupHelpdesk", children: [
 			...adminAreas.filter((a) => a.group === "groupHelpdesk" && a.key === "helpdesk")

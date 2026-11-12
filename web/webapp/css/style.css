@@ -12,7 +12,8 @@
      Chatverlauf (Sprechblasen), Ablagefläche fürs Hochladen, Farbpunkte der Farbauswahl.
    - Raster und Anordnung eigener Inhalte (CSS-Grid/Flex: Startseiten-Karten, Kontakte, Kopf-Fakten der Bauakte,
      Einstellungen, Helpdesk-Ticketansicht) – nur Lage und Breite, keine Optik der Steuerelemente.
-   - Seitenkopf der DynamicPage bis zum rechten Rand (UI5 rückt ihn sonst um die Bildlaufleiste ein, wie die Objektseite).
+   - Seitenkopf von DynamicPage und Objektseite bis zum rechten Fensterrand (UI5 rückt ihn sonst um die Bildlaufleiste ein).
+   - Kopfleiste: Lage von Suchfeld (mittig) und „Neue Bauakte“ (daneben); die Steuerelemente selbst bleiben Standard.
    - Schutz gegen Abschneiden/Überlauf (min-width: 0, Umbruch, Auslassungspunkte, SegmentedButton nach Textbreite).
    - Anmeldeseite (Markenfläche), öffentliche Freigabeseite, Wartungs-/Hinweisseiten, Systemhinweise (control/NoticeCard).
    - Druck (@media print) und Bestellschein/Berichte (eoSheet, Papieroptik).
@@ -408,6 +409,17 @@ li[data-dot] { display: flex; align-items: center; }
 
 
 
+/* Kopfleiste (sap.f.ShellBar): globale Suche mittig, „Neue Bauakte“ direkt rechts daneben, Symbole rechts – wie vor 1.0.19.
+   Die ShellBar kennt keinen Platz „Mitte“ für eigene Inhalte, daher nur die Lage per CSS; Suchfeld und Knopf bleiben
+   Standard-Steuerelemente (Farben, Höhe, Hover, Fokus aus dem Theme). Unter 1100 px stehen beide wie ausgeliefert rechts. */
+@media (min-width: 1100px) {
+	.eoShellSearch.sapMSF { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 1; }
+	/* 26rem Suchfeld: halbe Breite (13rem) plus 0,5rem Abstand */
+	.eoShellNew.sapMBtn { position: absolute; left: calc(50% + 13.5rem); top: 50%; transform: translateY(-50%); margin: 0; z-index: 1; }
+	/* Langer Firmenname: vor dem Suchfeld mit „…“ kürzen statt darunter zu laufen */
+	.sapFShellBar .sapFShellBarSecondTitle { max-width: calc(50vw - 13rem - 14.5rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+
 /* Abstände: einheitliche Luft zwischen Blöcken, Meldungen und Formularabschnitten */
 .sapMMsgStrip + .sapMMsgStrip { margin-top: 0.5rem; }
 .eoOverviewGrid { margin-top: 1rem; }
@@ -460,9 +472,12 @@ li[data-dot] { display: flex; align-items: center; }
 @container (max-width: 6rem) {
 	.sapUiCalendarAppTitle, .sapUiCalendarAppText { white-space: nowrap !important; overflow: hidden; text-overflow: clip; overflow-wrap: normal; }
 }
-/* Seitenkopf der DynamicPage bis an den rechten Rand des Inhaltsbereichs wie bei der Objektseite: UI5 rückt den Titel bei
-   klassischer Bildlaufleiste um deren Breite ein (Inline-Stil right: 12px); so endet er nicht mehr vor einem Streifen. */
-.sapFDynamicPage > .sapFDynamicPageTitleWrapper { right: 0 !important; }
+/* Seitenkopf (DynamicPage und Objektseite) bis an den rechten Fensterrand: UI5 rückt den fest stehenden Titelbereich um die
+   Breite der Bildlaufleiste des Inhalts ein (Inline-Stil right: 12–17px), damit sie neben dem Kopf sichtbar bleibt. Mit den
+   Windows-Bildlaufleisten (Chrome/Edge, Spur durchsichtig) stand dort ein grauer Streifen in Seitenfarbe über die ganze Höhe
+   neben dem weißen Kopf und der Reiterleiste. Der Kopf liegt jetzt über dem oberen Ende der Bildlaufleiste; darunter bleibt
+   sie unverändert bedienbar. */
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper, .sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle { right: 0 !important; }
 /* Aktionsspalten in Tabellen: Schaltflächen in einer Zeile, nicht abgeschnitten */
 .eoActions { flex-wrap: nowrap; gap: 0.25rem; justify-content: flex-end; align-items: center; }
 /* Dokumente (zentral): Luft unter den Reitern, Ordnerbaum als Karte */
@@ -484,8 +499,11 @@ li[data-dot] { display: flex; align-items: center; }
 
 /* Helpdesk: Master-Detail (Liste links, Ticket rechts) */
 .eoHelpdesk { height: 100%; background: var(--sapBackgroundColor); }
-.eoHdMaster { width: 23rem; min-width: 19rem; flex: none; border-right: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); height: 100%; }
+.eoHdMaster { width: clamp(19rem, 26%, 23rem); min-width: 0; flex: none; border-right: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); height: 100%; }
 .eoHdMasterHead { padding: 1rem 1rem 0.75rem; border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
+/* Kopf der Ticketliste: Titel und Knöpfe brechen bei schmaler Liste um, statt sich zu berühren */
+.eoHdMasterBar { gap: 0.25rem 0.5rem; }
+.eoHdMasterBar > .sapMFlexItem:first-child { min-width: 0; }
 .eoHdFilters { width: 100%; }
 .eoHdFilters > .sapMFlexItem { min-width: 0; }
 .eoHdFilters .sapMSlt { min-width: 0; max-width: 100%; }
@@ -613,7 +631,7 @@ li[data-dot] { display: flex; align-items: center; }
 /* Startseite: kompakte SAP Cards im CSS-Grid – Mindestbreite je Karte, so viele Spalten wie passen (1366 px: 3,
    1920 px: 4, iPad hochkant: 2), Höhe nach Inhalt, Karten einer Reihe gleich hoch. Kopf einzeilig: Symbol, Titel und
    Untertitel links, Kennzahl rechts; darunter bis zu vier Einträge in dichten Zeilen. */
-.eoStartCards { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 1rem; margin: 0 0 1rem; align-items: stretch; }
+.eoStartCards { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(min(100%, 14rem), 1fr)); gap: 1rem; margin: 0 0 1rem; align-items: stretch; }
 .eoStartCards > .sapFCard { min-width: 0; }
 .eoNoShrink { flex: none; }
 .eoGap > * + * { margin-top: 0.5rem; }

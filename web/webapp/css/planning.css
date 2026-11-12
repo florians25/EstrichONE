@@ -59,12 +59,15 @@
 .eoStaffHeaderFacts { gap: 2rem; }
 .eoQualExpired { color: var(--sapNegativeTextColor); }
 
-/* Helpdesk-Verlauf (Zeitleiste) */
-.eoTimeline { position: relative; padding-left: 1.75rem; }
-.eoTimeline::before { content: ""; position: absolute; left: 0.6875rem; top: 0.5rem; bottom: 0.5rem; width: 2px; background: var(--sapGroup_TitleBorderColor); }
-.eoTimelineItem { position: relative; margin-bottom: 0.75rem; }
-.eoTimelineDot { position: absolute !important; left: -1.75rem; top: 0.125rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; display: flex !important; align-items: center;
-	justify-content: center; font-size: 0.75rem; background: var(--sapList_Background); border: 2px solid var(--sapGroup_TitleBorderColor); color: var(--sapContent_IconColor); }
+/* Helpdesk-Verlauf (Zeitleiste, auch Fehler & Wünsche): Symbolspalte 2,75rem mit Kreis 1,75rem (inkl. Rand), Linie mittig
+   darunter, 1rem Abstand zwischen Kreis und Eintrag und 1rem zwischen den Einträgen – nichts berührt oder überdeckt den Inhalt. */
+.eoTimeline { position: relative; padding-left: 2.75rem; }
+.eoTimeline::before { content: ""; position: absolute; left: calc(0.875rem - 1px); top: 0.5rem; bottom: 0.5rem; width: 2px; background: var(--sapGroup_TitleBorderColor); }
+.eoTimelineItem { position: relative; margin-bottom: 1rem; min-width: 0; }
+.eoTimelineItem:last-child { margin-bottom: 0; }
+.eoTimelineDot { position: absolute !important; left: -2.75rem; top: 0; width: 1.75rem; height: 1.75rem; box-sizing: border-box; border-radius: 50%;
+	display: flex !important; align-items: center; justify-content: center; font-size: 0.75rem; background: var(--sapList_Background);
+	border: 2px solid var(--sapGroup_TitleBorderColor); color: var(--sapContent_IconColor); }
 .eoTimelineItem[data-tone="comment"] .eoTimelineDot { border-color: var(--sapInformativeElementColor); color: var(--sapInformativeElementColor); }
 .eoTimelineItem[data-tone="note"] .eoTimelineDot { border-color: var(--sapCriticalElementColor); color: var(--sapCriticalElementColor); }
 .eoTimelineItem[data-tone="status"] .eoTimelineDot { border-color: var(--sapPositiveElementColor); color: var(--sapPositiveElementColor); }
@@ -73,7 +76,10 @@
 	border: 1px solid var(--sapTile_BorderColor); box-shadow: var(--sapContent_Shadow0); gap: 0.25rem; }
 .eoTimelineBubble[data-who="reporter"] { background: var(--sapInformationBackground); }
 .eoTimelineBubble[data-who="note"] { background: var(--sapWarningBackground); border-style: dashed; }
-.eoTimelineEvent { color: var(--sapContent_LabelColor); padding-top: 0.25rem; }
+.eoTimelineBubble > .sapMHBox { gap: 0.125rem 1rem; }
+.eoTimelineBubble .sapMText { overflow-wrap: anywhere; }
+.eoTimelineEvent { color: var(--sapContent_LabelColor); padding-top: 0.25rem; min-height: 1.5rem; align-items: baseline; gap: 0 0.5rem; }
+.eoTimelineEvent > .sapMText { overflow-wrap: anywhere; }
 .eoTimelineMeta { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
 .eoTimelineAttachments { gap: 0.5rem; margin-top: 0.5rem; }
 .eoReplyBar { position: sticky; bottom: 0; background: var(--sapBackgroundColor); padding: 0.5rem 0; z-index: 2; }

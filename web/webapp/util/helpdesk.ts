@@ -53,6 +53,23 @@ export interface HdTimelineItem {
 	mentionUserIds?: string[] | null;
 }
 
+/**
+ * Zusatztext unter einem Ereignis im Verlauf (Lösung beim Status „Gelöst“/„Geschlossen“, Kommentar der Bewertung).
+ * Der Server liefert die Lösung des Tickets an jedem dieser Status-Ereignisse; gezeigt wird sie nur am letzten, und nur,
+ * wenn sie etwas sagt (keine Zeile aus reinem Satzzeichen wie „,“).
+ */
+export function timelineEventTexts(items: HdTimelineItem[]): Map<string, string> {
+	const meaningful = (t: string | null) => !!t && /[\p{L}\p{N}]/u.test(t);
+	const out = new Map<string, string>();
+	let lastResolution: HdTimelineItem | undefined;
+	for (const i of items) {
+		if (i.kind === "status" && meaningful(i.text) && (!lastResolution || i.at >= lastResolution.at)) lastResolution = i;
+		if (i.kind === "rating" && meaningful(i.text)) out.set(i.id, i.text!.trim());
+	}
+	if (lastResolution) out.set(lastResolution.id, lastResolution.text!.trim());
+	return out;
+}
+
 export interface HdLink { ticketId: string; number: string; title: string; status: TicketStatus; kind: "related" | "duplicate" }
 export interface HdArticleRef { id: string; title: string; isPublished: boolean }
 

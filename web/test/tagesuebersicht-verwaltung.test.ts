@@ -76,11 +76,13 @@ describe('Verwaltung', () => {
 
   it('IT-Service/Helpdesk ist eine eigene Gruppe der Seitennavigation', () => {
     const group = navigation.find((e) => e.key === 'groupHelpdesk');
-    expect(group?.children?.map((e) => e.key)).toEqual(['helpdesk', 'helpdeskNew', 'helpdeskSettings', 'knowledge']);
+    expect(group?.children?.map((e) => e.key)).toEqual(['helpdesk', 'helpdeskNew', 'helpdeskSettings', 'knowledge', 'feedbackAdmin']);
+    expect(group?.children?.find((e) => e.key === 'feedbackAdmin')?.permission).toBe('feedback.manage');
     expect(group?.children?.find((e) => e.key === 'helpdeskSettings')?.permission).toBe('helpdesk.agent');
     const others = navigation.filter((e) => e.key !== 'groupHelpdesk').flatMap((e) => e.children ?? [e]).map((e) => e.key);
     expect(others).not.toContain('helpdesk');
     expect(others).not.toContain('knowledge');
+    expect(others).not.toContain('feedbackAdmin');
     expect(navKeyFor('helpdesk', new URLSearchParams('neu=1'))).toBe('helpdeskNew');
   });
 

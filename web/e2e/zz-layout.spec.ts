@@ -139,6 +139,100 @@ for (const [width, height, scale, scheme] of [[1920, 1080, 1, 'light'], [1920, 1
   });
 }
 
+/**
+ * Keine Lücke am rechten Rand mit sichtbaren Bildlaufleisten (wie Chrome/Edge unter Windows; Playwright blendet sie sonst
+ * aus): Der fest stehende Seitenkopf (DynamicPage-Titel, Titel der Objektseite samt angehefteter Reiterleiste) endet genau
+ * am rechten Rand des Inhaltsbereichs (= Fensterrand), der Inhaltsbereich selbst am Fensterrand und links bündig an der
+ * Seitennavigation. Was im Bildlaufbereich liegt, reicht bis an dessen Bildlaufleiste.
+ */
+async function edgeIssues(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const visible = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0;
+    const out: string[] = [];
+    const area = [...document.querySelectorAll<HTMLElement>('.eoContent')].find(visible);
+    if (!area) return ['kein Inhaltsbereich'];
+    const a = area.getBoundingClientRect();
+    const right = document.documentElement.clientWidth;
+    if (Math.abs(a.right - right) > 1) out.push(`Inhaltsbereich endet ${Math.round(right - a.right)} px vor dem Fensterrand`);
+    const side = [...document.querySelectorAll<HTMLElement>('.sapTntToolPageAside')].find(visible);
+    if (side && Math.abs(side.getBoundingClientRect().right - a.left) > 1) out.push(`Lücke links zwischen Navigation und Seite (${Math.round(a.left - side.getBoundingClientRect().right)} px)`);
+    const fixed = [...document.querySelectorAll<HTMLElement>('.eoContent .sapFDynamicPage > .sapFDynamicPageTitleWrapper, .eoContent .sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle')].filter(visible);
+    for (const e of fixed) {
+      const r = e.getBoundingClientRect();
+      if (Math.abs(r.right - a.right) > 1) out.push(`Seitenkopf endet ${Math.round(a.right - r.right)} px vor dem rechten Rand (${e.className.split(' ')[0]})`);
+      if (Math.abs(r.left - a.left) > 1) out.push(`Seitenkopf beginnt ${Math.round(r.left - a.left)} px rechts vom Inhaltsbereich`);
+    }
+    for (const sc of [...document.querySelectorAll<HTMLElement>('.eoContent .sapUxAPObjectPageWrapper, .eoContent .sapFDynamicPageContentWrapper')].filter(visible)) {
+      const edge = sc.getBoundingClientRect().left + sc.clientLeft + sc.clientWidth;
+      for (const c of [...sc.querySelectorAll<HTMLElement>(':scope > .sapUxAPObjectPageScroll > .sapUxAPObjectPageNavigation, :scope > .sapFDynamicPageContent')].filter(visible)) {
+        const r = c.getBoundingClientRect();
+        if (r.right < edge - 1) out.push(`Inhalt endet ${Math.round(edge - r.right)} px vor der Bildlaufleiste (${c.className.split(' ')[0]})`);
+      }
+    }
+    return out;
+  });
+}
+
+test('Kein Streifen am rechten Rand mit sichtbaren Bildlaufleisten (1920 und 1280 bei 125 %)', async ({ playwright }) => {
+  test.setTimeout(180_000);
+  const browser = await playwright.chromium.launch({ ignoreDefaultArgs: ['--hide-scrollbars'] });
+  const found: string[] = [];
+  for (const [width, height, scale] of [[1920, 1080, 1], [1280, 800, 1.25]] as const) {
+    const { context, page } = await session(browser, Math.round(width / scale), Math.round(height / scale), scale);
+    const details = (await detailPages(page)).filter((p) => p.startsWith('/bauakten/'));
+    for (const path of ['/start', '/bauakten', '/kunden', '/it-center/helpdesk', '/system/backup-ziele', ...details]) {
+      await page.goto(path);
+      await settle(page);
+      for (const issue of await edgeIssues(page)) found.push(`${width}@${scale} ${path}: ${issue}`);
+      if (path.startsWith('/bauakten/')) {
+        // Angehefteter Kopf beim Bildlauf: Titel und Reiterleiste bis zum Rand
+        await page.locator('.sapUxAPObjectPageWrapper').first().evaluate((e) => { e.scrollTop = 400; });
+        await page.waitForTimeout(600);
+        for (const issue of await edgeIssues(page)) found.push(`${width}@${scale} ${path} (gescrollt): ${issue}`);
+      }
+    }
+    await context.close();
+  }
+  await browser.close();
+  expect(found).toEqual([]);
+});
+
+test('Helpdesk-Verlauf: Symbole berühren und überdecken die Einträge nicht, Einträge mit Abstand', async ({ browser }) => {
+  for (const [width, height] of [[1920, 1080], [1280, 720]] as const) {
+    const { context, page } = await session(browser, width, height, 1);
+    const tickets = await page.evaluate(async () => (await (await fetch('/api/v1/tickets?filter=all&limit=3&sort=recent')).json()) as { id: string }[]);
+    expect(tickets.length).toBeGreaterThan(0);
+    for (const t of tickets) {
+      await page.goto(`/it-center/helpdesk/${t.id}`);
+      await settle(page);
+      await expect(page.locator('.eoTimelineItem').first()).toBeVisible();
+      const issues = await page.evaluate(() => {
+        const out: string[] = [];
+        const items = [...document.querySelectorAll<HTMLElement>('[id$="timeline"] > .eoTimelineItem, [id$="timeline"] .eoTimelineItem')].filter((e) => e.getBoundingClientRect().height > 0);
+        let lastBottom = -Infinity;
+        for (const item of items) {
+          const dot = item.querySelector<HTMLElement>('.eoTimelineDot')!.getBoundingClientRect();
+          for (const c of item.querySelectorAll<HTMLElement>('.eoTimelineBubble, .eoTimelineEvent, .eoTimelineItem > .sapMText')) {
+            const r = c.getBoundingClientRect();
+            if (r.width === 0) continue;
+            if (r.left < dot.right + 8) out.push(`Symbol zu nah am Eintrag (${Math.round(r.left - dot.right)} px): ${item.textContent?.slice(0, 40)}`);
+          }
+          const box = item.getBoundingClientRect();
+          if (box.top < lastBottom + 8) out.push(`Einträge ohne Abstand: ${item.textContent?.slice(0, 40)}`);
+          if (dot.top < lastBottom) out.push(`Symbol überlappt den vorigen Eintrag: ${item.textContent?.slice(0, 40)}`);
+          lastBottom = Math.max(box.bottom, dot.bottom);
+        }
+        for (const t of document.querySelectorAll<HTMLElement>('.eoTimelineItem .sapMText')) {
+          if (t.getBoundingClientRect().height > 0 && /^[\s,.;:–-]+$/.test(t.textContent ?? '')) out.push(`Leere Zeile „${t.textContent}“ im Verlauf`);
+        }
+        return out;
+      });
+      expect(issues, `${width}: ${t.id}`).toEqual([]);
+    }
+    await context.close();
+  }
+});
+
 // Durchsicht mit Bildschirmfotos über alle Breiten und Zoomstufen (LAYOUT_SWEEP=1), nicht Teil der regulären Tests.
 const sweep: [string, number, number, number][] = [];
 for (const [w, h] of [[1280, 720], [1366, 768], [1440, 900], [1536, 864], [1920, 1080]]) {

@@ -129,6 +129,6 @@ describe('Meldungen: Einstieg und Rechte', () => {
     expect(routes.find((r) => r.pattern === '/meine-meldungen')?.permission).toBeUndefined();
     expect(routes.find((r) => r.pattern === '/meine-meldungen/:id')?.view).toBe('Feedback');
     expect(routes.filter((r) => r.pattern.startsWith('/it-center/meldungen')).map((r) => r.permission)).toEqual(['feedback.manage', 'feedback.manage']);
-    expect(adminAreas.find((a) => a.path === '/it-center/meldungen')).toMatchObject({ permission: 'feedback.manage', group: 'groupAdminUsers' });
+    expect(adminAreas.find((a) => a.path === '/it-center/meldungen')).toMatchObject({ permission: 'feedback.manage', group: 'groupHelpdesk' });
   });
 });

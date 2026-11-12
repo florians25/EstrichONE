@@ -18,12 +18,12 @@
 				text="{view>/teamsNotice}" visible="{= !!${view>/teamsNotice} }" class="sapUiSmallMarginBottom">
 				<link><Link text="Teams installieren" href="{session>/teams/teamsDownloadUrl}" target="_blank"/></link>
 			</MessageStrip>
-			<!-- SAP Cards, kompakt: Kopf mit Kennzahl rechts, darunter bis zu vier Einträge; Raster passt sich der Breite an
-			     (CSS-Grid mit Mindestbreite je Karte), Höhe nach Inhalt, Karten einer Reihe gleich hoch -->
+			<!-- SAP Cards, kompakt: Kopf mit kleiner Kennzahl (numberSize S, Symbol XS), darunter bis zu drei Einträge; Raster passt sich
+			     der Breite an (CSS-Grid mit Mindestbreite je Karte, bei 1920 px eine Reihe), Höhe nach Inhalt, Karten einer Reihe gleich hoch -->
 			<FlexBox id="startCards" items="{path: 'view>/cards', templateShareable: false}" renderType="Bare" class="eoStartCards">
 				<f:Card class="eoStartCard">
 					<f:header>
-						<card:NumericHeader title="{view>title}" subtitle="{view>subtitle}" number="{view>value}" iconSrc="{view>icon}" state="{view>state}"
+						<card:NumericHeader title="{view>title}" subtitle="{view>subtitle}" number="{view>value}" numberSize="S" iconSrc="{view>icon}" iconSize="XS" state="{view>state}"
 							details="{view>details}" detailsMaxLines="1" press=".onTile"/>
 					</f:header>
 					<f:content>

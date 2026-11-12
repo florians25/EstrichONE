@@ -7,7 +7,8 @@ verwalten“). Jede Änderung wird im **Protokoll** festgehalten (Abschnitt 9.14
 | Gruppe | Seiten |
 |---|---|
 | **Organisation** | Verwaltung (Übersicht), Systemeinstellungen, Stammdaten, Module |
-| **Benutzer & Geräte** | Benutzer, Rollen und Rechte, Geräte, Helpdesk |
+| **Benutzer & Geräte** | Benutzer, Rollen und Rechte, Geräte, App-Updates |
+| **IT-Service/Helpdesk** | Helpdesk, Problem melden, Helpdesk-Einstellungen, Wissensdatenbank, Fehler & Wünsche |
 | **Datensicherung & Archiv** | Sicherung (Backup Center), Backup-Ziele, Archiv, Aktenarchiv |
 | **System & Betrieb** | Überwachung, Speicher, Hinweise & Wartung, Protokoll |
 | **Integrationen** | E-Mail, Pushnachrichten |

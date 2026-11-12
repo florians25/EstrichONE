@@ -166,7 +166,7 @@
 			<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
 			<FlexBox direction="Column" renderType="Bare" class="eoHdMaster">
 				<VBox class="eoHdMasterHead">
-					<HBox justifyContent="SpaceBetween" alignItems="Center">
+					<HBox justifyContent="SpaceBetween" alignItems="Center" wrap="Wrap" class="eoHdMasterBar">
 						<HBox alignItems="Center">
 							<Button icon="sap-icon://table-view" tooltip="Zur Arbeitsliste" type="Transparent" press=".onBackToQueue" visible="{view>/agent}" class="sapUiTinyMarginEnd"/>
 							<Title id="hdListTitle" text="{= ${view>/agent} ? ${view>/viewTitle} : ${i18n>nav.helpdesk} }" level="H1"/>

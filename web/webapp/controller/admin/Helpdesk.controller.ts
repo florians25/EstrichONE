@@ -17,7 +17,7 @@ import { waitingSince } from "../../util/format";
 import { openForm, type FormHandle } from "../../util/forms";
 import {
 	auditRows, compareTickets, deviceLine, fillPlaceholders, formatMinutes, insertMention, kpiTiles, mentionCandidates, mentionedAgents, mentionQuery,
-	pageText, parseMinutes, queueViews, slaInfo, ticketChannels, updateStates,
+	pageText, parseMinutes, queueViews, slaInfo, ticketChannels, timelineEventTexts, updateStates,
 	type CannedResponse, type HdDetail, type HdSummary, type HdTimelineItem, type HelpdeskAgent, type HelpdeskGroup, type HelpdeskOptions,
 	type HelpdeskReporter, type HelpdeskStats, type KnowledgeArticleSummary, type SortColumn, type TicketChannel, type TicketContext, type TicketPage,
 	type TimeEntry,
@@ -510,6 +510,7 @@ export default class Helpdesk extends BaseController {
 		const m = this.model();
 		const talkOnly = m.getProperty("/show") === "talk";
 		const names = new Map(this.agents.map((a) => [a.id, a.displayName]));
+		const eventTexts = timelineEventTexts(this.timeline);
 		m.setProperty("/timeline", this.timeline
 			.filter((i) => !talkOnly || ["created", "comment", "note"].includes(i.kind))
 			.map((i) => {
@@ -518,7 +519,7 @@ export default class Helpdesk extends BaseController {
 					...i, bubble, icon: icons[i.kind] ?? "sap-icon://history", kindText: kindTexts[i.kind] ?? i.kind,
 					tone: i.kind, who: i.kind === "note" ? "note" : i.isReporter ? "reporter" : "agent",
 					headline: i.kind === "created" ? (i.fromValue && i.fromValue !== "SelfService" ? i.summary : `${i.actorName ?? "Melder"} hat gemeldet`) : i.kind === "note" ? `${i.actorName ?? ""} · interne Notiz` : i.actorName ?? "",
-					eventText: ["status", "rating"].includes(i.kind) ? i.text : null,
+					eventText: eventTexts.get(i.id) ?? null,
 					mentions: i.mentionUserIds?.length ? `Benachrichtigt: ${i.mentionUserIds.map((id) => names.get(id) ?? "Kollege").join(", ")}` : "",
 					attachments: i.attachmentFileIds.map((id) => {
 						const f = this.files.get(id);

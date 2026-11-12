@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   articleHtml, auditRows, compareTickets, describeRule, deviceLine, duration, fillPlaceholders, formatHolidays, formatMinutes, insertMention, kpiTiles,
-  mentionCandidates, mentionedAgents, mentionQuery, pageText, parseHolidays, parseMinutes, queueViews, slaInfo, ticketChannels,
+  mentionCandidates, mentionedAgents, mentionQuery, pageText, parseHolidays, parseMinutes, queueViews, slaInfo, ticketChannels, timelineEventTexts,
   type HdSummary, type HelpdeskStats,
 } from '../webapp/util/helpdesk';
 import { routes } from '../webapp/util/routes';
@@ -195,5 +195,16 @@ describe('Arbeitsliste seitenweise und Eingangskanal', () => {
     expect(ticketChannels.phone.text).toBe('Telefon');
     expect(ticketChannels.inPerson.text).toBe('Vor Ort');
     expect(Object.keys(ticketChannels)).toEqual(['selfService', 'phone', 'email', 'inPerson']);
+  });
+});
+
+describe('Verlauf: Zusatztexte der Ereignisse', () => {
+  const ev = (id: string, kind: string, at: string, text: string | null) => ({ id, at, kind, actorUserId: null, actorName: null, summary: '', text,
+    fromValue: null, toValue: null, isInternal: false, isReporter: false, attachmentFileIds: [] });
+  it('Lösung nur am letzten Status-Ereignis, Satzzeichen allein gilt nicht als Text', () => {
+    const texts = timelineEventTexts([ev('a', 'status', '2026-11-01T10:00:00Z', 'Rolle gereinigt'), ev('b', 'status', '2026-11-02T10:00:00Z', 'Rolle gereinigt'),
+      ev('c', 'rating', '2026-11-03T10:00:00Z', ' Danke! '), ev('d', 'comment', '2026-11-03T11:00:00Z', 'Hallo')]);
+    expect([...texts.entries()]).toEqual([['c', 'Danke!'], ['b', 'Rolle gereinigt']]);
+    expect(timelineEventTexts([ev('a', 'status', '2026-11-01T10:00:00Z', ','), ev('b', 'rating', '2026-11-01T11:00:00Z', ' , ')]).size).toBe(0);
   });
 });

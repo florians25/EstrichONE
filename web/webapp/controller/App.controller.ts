@@ -130,7 +130,7 @@ export default class AppController extends BaseController {
 			event.preventDefault();
 			this.onNewBauakte();
 		});
-		// Schmale Fenster (wenig Platz in der Kopfleiste): „Neue Bauakte“ nur als Symbol, Beschriftung bleibt im Tooltip.
+		// Schmale Fenster (Suchfeld mittig, wenig Platz): „Neue Bauakte“ nur als Symbol, Beschriftung bleibt im Tooltip.
 		const compact = window.matchMedia("(min-width: 1100px) and (max-width: 1279px)");
 		const applyCompact = () => {
 			const button = this.el<Button>("newBauakteButton");

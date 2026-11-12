@@ -26,8 +26,8 @@ export interface AdminArea {
 /** Gruppen der Verwaltung in Navigationsreihenfolge (Texte: i18n „nav.<key>“). */
 export const adminGroups: AdminGroup[] = [
 	{ key: "groupAdminOrg", title: "Organisation", description: "Firmendaten, Vorgaben für alle Benutzer, Stammdaten und Module" },
-	{ key: "groupAdminUsers", title: "Benutzer & Geräte", description: "Konten, Rollen und Rechte, registrierte Geräte, Fehler & Wünsche" },
-	{ key: "groupHelpdesk", title: "IT-Service/Helpdesk", description: "Tickets der IT, Problem melden, Wissensdatenbank und Einstellungen des Helpdesks" },
+	{ key: "groupAdminUsers", title: "Benutzer & Geräte", description: "Konten, Rollen und Rechte, registrierte Geräte, App-Updates" },
+	{ key: "groupHelpdesk", title: "IT-Service/Helpdesk", description: "Tickets der IT, Problem melden, Wissensdatenbank, Einstellungen des Helpdesks, Fehler & Wünsche" },
 	{ key: "groupAdminData", title: "Datensicherung & Archiv", description: "Backup Center, Backup-Ziele, revisionssicheres Archiv und Aktenarchiv" },
 	{ key: "groupAdminSystem", title: "System & Betrieb", description: "Überwachung, Speicher, Hinweise und Wartung, Protokoll" },
 	{ key: "groupAdminIntegrations", title: "Integrationen", description: "E-Mail-Versand, Pushnachrichten und Microsoft Teams" },
@@ -64,7 +64,7 @@ export const adminAreas: AdminArea[] = [
 	{ key: "knowledge", group: "groupHelpdesk", title: "Wissensdatenbank", path: "/wissen", icon: "sap-icon://course-book",
 		description: "Anleitungen und bekannte Lösungen der IT, auch als Vorschlag beim Melden",
 		keywords: "wissen anleitung hilfe faq lösung artikel" },
-	{ key: "feedbackAdmin", group: "groupAdminUsers", title: "Fehler & Wünsche", path: "/it-center/meldungen", icon: "sap-icon://quality-issue",
+	{ key: "feedbackAdmin", group: "groupHelpdesk", title: "Fehler & Wünsche", path: "/it-center/meldungen", icon: "sap-icon://quality-issue",
 		permission: "feedback.manage", description: "Fehlermeldungen und Funktionswünsche der Benutzer: prüfen, einplanen, beantworten",
 		keywords: "feedback fehler bug wunsch funktionswunsch idee meldung verbesserung" },
 	{ key: "backup", group: "groupAdminData", title: "Sicherung", path: "/system/sicherung", icon: "sap-icon://upload-to-cloud", permission: "backup.manage",

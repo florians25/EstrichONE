@@ -5,8 +5,9 @@
 Klemmt etwas – am iPad der Kolonne, an der App oder im Büro –, melden Mitarbeiter es als **Ticket**. Die Apps senden auf
 Wunsch technische Angaben (Gerät, Version, Abgleich, Fehlercodes) mit; Fotos und Bildschirmfotos lassen sich anhängen.
 Alles rund um den Helpdesk steht in der Seitennavigation in der eigenen Gruppe **IT-Service/Helpdesk**: **Helpdesk**
-(Tickets), **Problem melden**, **Helpdesk-Einstellungen** (nur für die Bearbeitung) und **Wissensdatenbank**. Die Gruppe
-erscheint nur, wenn das Modul Helpdesk eingeschaltet ist.
+(Tickets), **Problem melden**, **Helpdesk-Einstellungen** (nur für die Bearbeitung), **Wissensdatenbank** und **Fehler &
+Wünsche** (Fehlermeldungen und Funktionswünsche aller Benutzer, nur mit dem Recht „Fehlermeldungen und Funktionswünsche
+verwalten“). Die Einträge erscheinen, wenn das Modul Helpdesk bzw. Feedback eingeschaltet ist.
 
 ![Helpdesk](bilder/helpdesk.png "Arbeitsplatz der IT mit Kennzahlen, Ansichten und Ticketliste")
 
