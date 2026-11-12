@@ -21,3 +21,5 @@ services:
     volumes: !override
       - ${ESTRICHONE_DATA_DIR:-./data}/caddy/data:/data
       - ${ESTRICHONE_DATA_DIR:-./data}/caddy/config:/config
+      # Stand des Update-Ablaufs (/update-status.json) – nur lesend
+      - ${ESTRICHONE_DATA_DIR:-./data}/backup-status:/status:ro

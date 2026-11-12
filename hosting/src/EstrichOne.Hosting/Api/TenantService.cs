@@ -161,11 +161,11 @@ public sealed class TenantService(
 
     public static OperationSummary ToSummary(Operation operation) =>
         new(operation.Id, operation.Kind, OperationService.Labels[operation.Kind], operation.Status, operation.RequestedBy,
-            operation.QueuedAt, operation.StartedAt, operation.FinishedAt, operation.Error);
+            operation.QueuedAt, operation.StartedAt, operation.FinishedAt, operation.Error, operation.Phase, operation.PhaseUntil);
 
     public static OperationDetail ToDetail(Operation operation) =>
         new(operation.Id, operation.TenantId, operation.Kind, OperationService.Labels[operation.Kind], operation.Status, operation.RequestedBy,
-            operation.QueuedAt, operation.StartedAt, operation.FinishedAt, operation.Error, operation.Log);
+            operation.QueuedAt, operation.StartedAt, operation.FinishedAt, operation.Error, operation.Log, operation.Phase, operation.PhaseUntil);
 
     public async Task<Dictionary<Guid, Operation>> OpenOperationsAsync(CancellationToken cancellationToken) =>
         (await db.Operations.AsNoTracking()

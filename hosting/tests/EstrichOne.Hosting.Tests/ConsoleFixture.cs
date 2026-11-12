@@ -31,12 +31,13 @@ public sealed class ConsoleApp : IAsyncDisposable
 
     public FakeDockerHost Docker => app.Services.GetRequiredService<FakeDockerHost>();
 
-    public static async Task<ConsoleApp> StartAsync(string proxy = "caddy", Action<string>? prepareRoot = null)
+    /// <param name="settings">Zusätzliche Einstellungen (<c>--Hosting:…=…</c>); der Update-Ablauf läuft in Tests ohne Wartezeit.</param>
+    public static async Task<ConsoleApp> StartAsync(string proxy = "caddy", Action<string>? prepareRoot = null, params string[] settings)
     {
         var temp = new TempDirectory();
         prepareRoot?.Invoke(temp.Path);
-        var args = new[]
-        {
+        string[] args =
+        [
             "--Hosting:Docker=fake",
             $"--Hosting:Root={temp.Path}",
             $"--Hosting:TemplateDirectory={TestPaths.Templates}",
@@ -45,7 +46,11 @@ public sealed class ConsoleApp : IAsyncDisposable
             $"--Hosting:Proxy={proxy}",
             "--Hosting:DisableStatusCollector=true",
             "--Logging:LogLevel:Default=Warning",
-        };
+            "--Hosting:UpdateAnnounceSeconds=0",
+            "--Hosting:UpdateMinimumSeconds=0",
+            "--Hosting:UpdateFinishSeconds=0",
+            .. settings,
+        ];
         var app = HostingApp.Build(args, builder => builder.WebHost.UseTestServer());
         await DataSeeder.InitializeAsync(app.Services, CancellationToken.None);
         await app.StartAsync();

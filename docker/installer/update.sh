@@ -9,9 +9,12 @@
 #        automatische Updates einrichten (stündliche Prüfung per systemd-Timer bzw. /etc/cron.d):
 #        sicherheit = nur Releases mit „Sicherheitsupdate“ in den Versionshinweisen, patch = alle Fehlerbehebungen
 #        derselben Versionslinie (x.y), jeweils nur im Zeitfenster (Standard 02:00-05:00, Serverzeit).
+#   sudo /opt/estrichone/update.sh --wartung-beenden   Wartungsbildschirm nach einem abgebrochenen Update freigeben
 #
-# Ablauf: Version ermitteln → Sicherung → Installer der Zielversion ausführen (Konfiguration und Daten bleiben)
-# → warten, bis alle Dienste gesund sind → Version prüfen. Der Stand (geprüft, verfügbar, letzte Automatik) steht in
+# Ablauf (mindestens 3 Minuten, update-phases.sh): Version ermitteln, Images laden → 1. Ankündigung (60 s, Countdown für
+# alle Benutzer, Apps gleichen ab) → 2. Update (≥ 60 s: Sitzungen enden, Wartungsbildschirm; Sicherung, Installer der
+# Zielversion – Konfiguration und Daten bleiben –, warten, bis alle Dienste gesund sind, Version prüfen) → 3. Abschluss
+# (60 s) → Freigabe. Dauer je Phase: ESTRICHONE_UPDATE_ANNOUNCE_SECONDS / _MIN_SECONDS / _FINISH_SECONDS (Umgebung oder .env). Der Stand (geprüft, verfügbar, letzte Automatik) steht in
 # data/backup-status/update.json; die Weboberfläche zeigt Administratoren daraus „Sicherheitsupdate verfügbar“.
 # shellcheck disable=SC1111,SC1112
 set -eu
@@ -30,17 +33,24 @@ while [ $# -gt 0 ]; do
     --ohne-sicherung|--no-backup) BACKUP=0 ;;
     --pruefen|--check) ACTION=check ;;
     --automatisch|--auto) ACTION=auto ;;
+    --wartung-beenden|--end-maintenance) ACTION=release ;;
     --automatik|--auto-setup)
       ACTION=setup; AUTO_MODE="${2:-}"; [ $# -gt 1 ] && shift
       case "${2:-}" in [0-9]*-[0-9]*) AUTO_WINDOW="$2"; shift ;; esac ;;
-    -h|--help) sed -n '2,17p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,22p' "$0"; exit 0 ;;
     v[0-9]*|[0-9]*) TARGET="${1#v}" ;;
     *) echo "Unbekannte Angabe: $1 (Hilfe: $0 --help)" >&2; exit 2 ;;
   esac
   shift
 done
 
-fail() { echo; echo "FEHLER: $*" >&2; exit 1; }
+PHASE_ACTIVE=0
+fail() {
+  echo; echo "FEHLER: $*" >&2
+  # Während des Update-Ablaufs: Benutzer informieren und – wenn EstrichONE läuft – wieder freigeben.
+  if [ "$PHASE_ACTIVE" = "1" ]; then trap - INT TERM; phase_abort "$*" "$(stack_healthy && echo 1 || echo 0)"; fi
+  exit 1
+}
 [ "$(id -u)" = "0" ] || fail "Bitte mit sudo ausführen: sudo $0"
 [ "$DIR" = "/opt/estrichone" ] || fail "update.sh muss in /opt/estrichone liegen (Installationsverzeichnis des Installers)."
 [ -f "$DIR/.env" ] || fail "Keine Installation in $DIR gefunden (.env fehlt)."
@@ -56,6 +66,26 @@ CURRENT="$(env_value ESTRICHONE_VERSION)"
 DATA="$(env_value ESTRICHONE_DATA_DIR)"; DATA="${DATA:-./data}"
 case "$DATA" in /*) ;; *) DATA="$DIR/${DATA#./}" ;; esac
 STATUS_FILE="$DATA/backup-status/update.json"
+PHASE_FILE="$DATA/backup-status/update-maintenance.json"
+# Dauer der Phasen: Umgebung vor .env, Standard je 60 s.
+for key in ESTRICHONE_UPDATE_ANNOUNCE_SECONDS ESTRICHONE_UPDATE_MIN_SECONDS ESTRICHONE_UPDATE_FINISH_SECONDS; do
+  eval "[ -n \"\${$key:-}\" ] || $key=\"\$(env_value $key)\""
+done
+if [ -f "$DIR/update-phases.sh" ]; then
+  # shellcheck disable=SC1091 # liegt neben update.sh (vom Installer abgelegt)
+  . "$DIR/update-phases.sh"
+else
+  # Ältere Installation ohne Hilfsdatei: Update ohne Phasen (der Installer der Zielversion legt sie ab).
+  phase_init() { PHASE_ACTIVE=0; }
+  phase_announce() { :; }
+  phase_update() { :; }
+  phase_finish() { :; }
+  phase_abort() { :; }
+  phase_clear() { rm -f "$PHASE_FILE"; }
+fi
+stack_healthy() {
+  (cd "$DIR" && docker compose -p estrichone ps --format '{{.Service}} {{.State}} {{.Health}}' 2>/dev/null) | grep -q '^api running healthy'
+}
 
 fetch() {
   case "$1" in
@@ -149,6 +179,12 @@ write_status() { # write_status VERFÜGBAR SICHERHEIT [ERGEBNIS VON NACH MELDUNG
     "$( [ "${2:-0}" = "1" ] && echo true || echo false)" "$(json_str "${mode:-aus}")" "$(json_str "${window:-02:00-05:00}")" \
     "${last:-null}" > "$tmp" && chmod 644 "$tmp" && mv "$tmp" "$STATUS_FILE"
 }
+
+if [ "$ACTION" = "release" ]; then
+  phase_clear
+  echo "Wartungsbildschirm beendet – EstrichONE ist wieder freigegeben."
+  exit 0
+fi
 
 if [ "$ACTION" = "setup" ]; then
   case "$AUTO_MODE" in sicherheit|patch|aus) ;; *) fail "Automatik: sicherheit, patch oder aus angeben (z. B. sudo $0 --automatik sicherheit 02:00-05:00)." ;; esac
@@ -267,6 +303,20 @@ docker pull -q "$INSTALLER" >/dev/null 2>&1 || docker image inspect "$INSTALLER"
   || fail "Version $TARGET gibt es nicht ($INSTALLER)."
 
 cd "$DIR"
+# Images vorab laden, damit die Wartung nicht auf den Download wartet (Fehler meldet später der Installer).
+for image in api web backup; do docker pull -q "$REGISTRY/estrichone-$image:$TARGET" >/dev/null 2>&1 || true; done
+
+# shellcheck disable=SC2034 # gelesen in update-phases.sh
+PHASE_FROM="$CURRENT" PHASE_TARGET="$TARGET" PHASE_SOURCE="update.sh"
+phase_init
+if docker compose -p estrichone ps --status running --services 2>/dev/null | grep -qx api; then
+  trap 'fail "Update abgebrochen."' INT TERM
+  phase_announce
+  phase_update
+else
+  echo "Hinweis: EstrichONE läuft nicht – keine Ankündigung an Benutzer."
+fi
+
 if [ "$BACKUP" = "1" ]; then
   if docker compose -p estrichone ps --status running --services 2>/dev/null | grep -qx backup; then
     echo "Sicherung vor dem Update …"
@@ -278,7 +328,8 @@ if [ "$BACKUP" = "1" ]; then
 fi
 
 echo "Update auf $TARGET …"
-docker run --rm -v /var/run/docker.sock:/var/run/docker.sock -v "$DIR:/opt/estrichone" "$INSTALLER" \
+# ESTRICHONE_UPDATE_PHASES=extern: Der Installer kündigt nicht selbst an (das übernimmt dieses Skript).
+docker run --rm -e ESTRICHONE_UPDATE_PHASES=extern -v /var/run/docker.sock:/var/run/docker.sock -v "$DIR:/opt/estrichone" "$INSTALLER" \
   || fail "Der Installer meldet einen Fehler (Ausgabe oben). Daten und Konfiguration sind unverändert erhalten."
 
 echo "Warte, bis alle Dienste bereit sind …"
@@ -296,6 +347,11 @@ case "$RUNNING" in
   "$TARGET"*) ;;
   *) fail "Der Server meldet Version '${RUNNING:-?}' statt $TARGET." ;;
 esac
+# Bereit heißt: /health/ready (API und Datenbank) antwortet mit 200.
+docker run --rm --network estrichone_frontend --entrypoint wget "$INSTALLER" -qO- http://api:8080/health/ready >/dev/null 2>&1 \
+  || fail "Die neue Version meldet sich nicht bereit (/health/ready)."
+[ "$PHASE_ACTIVE" = "1" ] && phase_finish
+trap - INT TERM
 CURRENT_BEFORE="$CURRENT"; CURRENT="$TARGET"; write_status "" 0 2>/dev/null || true
 echo
 echo "======================================================================"

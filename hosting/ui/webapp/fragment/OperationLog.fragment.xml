@@ -4,6 +4,10 @@
 		<content>
 			<VBox class="sapUiSmallMargin" height="100%">
 				<MessageStrip type="Error" showIcon="true" visible="{= !!${op>/error} }" text="{op>/error}" class="sapUiSmallMarginBottom" />
+				<HBox id="operationPhase" alignItems="Center" visible="{= !!${op>/phase} }" class="sapUiSmallMarginBottom">
+					<Label text="Update-Ablauf:" class="sapUiTinyMarginEnd" />
+					<ObjectStatus text="{parts: ['op>/phase', 'op>/phaseUntil'], formatter: '.formatter.phaseText'}" state="{path: 'op>/phase', formatter: '.formatter.phaseState'}" inverted="true" />
+				</HBox>
 				<Text text="Angefordert von {op>/requestedBy} · {path: 'op>/queuedAt', formatter: '.formatter.dateTime'}{= ${op>/finishedAt} ? ' · abgeschlossen ' : '' }{path: 'op>/finishedAt', formatter: '.formatter.ago'}" class="hostingHint sapUiSmallMarginBottom" />
 				<TextArea id="operationLogText" value="{op>/log}" editable="false" width="100%" rows="26" wrapping="Off" class="hostingMono" />
 			</VBox>

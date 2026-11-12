@@ -158,6 +158,10 @@ public sealed class Operation
     public DateTime? FinishedAt { get; set; }
     public string Log { get; set; } = string.Empty;
     public string? Error { get; set; }
+    /// <summary>Phase des Update-Ablaufs (announce, update, finish, rollback, failed, released); sonst leer.</summary>
+    public string? Phase { get; set; }
+    /// <summary>Ende der Phase (Countdown in der Konsole).</summary>
+    public DateTime? PhaseUntil { get; set; }
 }
 
 /// <summary>Einstellungen der Konsole als Schlüssel/Wert (z. B. Standardversion, Einrichtungscode-Hash).</summary>

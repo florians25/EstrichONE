@@ -10,6 +10,7 @@ public static class MaintenancePage
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="robots" content="noindex">
+        <meta http-equiv="refresh" content="20">
         <title>EstrichONE – vorübergehend nicht erreichbar</title>
         <style>
           :root { color-scheme: light dark; --bg: #f5f6f7; --card: #ffffff; --text: #1d2d3e; --muted: #556b82; --accent: #0b2d5b; }
@@ -29,9 +30,9 @@ public static class MaintenancePage
         <main>
           {{(logoDataUri is null ? string.Empty : $"<img src=\"{logoDataUri}\" alt=\"EstrichONE\">")}}
           <h1>Vorübergehend nicht erreichbar</h1>
-          <p>Diese EstrichONE-Instanz ist im Moment nicht verfügbar – wegen Wartungsarbeiten oder auf Veranlassung des Betreibers.</p>
+          <p>Diese EstrichONE-Instanz ist im Moment nicht verfügbar – wegen eines Updates, wegen Wartungsarbeiten oder auf Veranlassung des Betreibers.</p>
           <p>Ihre Daten sind sicher gespeichert. Bitte versuchen Sie es später erneut oder wenden Sie sich an Ihren Ansprechpartner.</p>
-          <small>EstrichONE Hosting</small>
+          <small>Die Seite prüft alle 20 Sekunden und lädt automatisch neu. · EstrichONE Hosting</small>
         </main>
         </body>
         </html>

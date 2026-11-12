@@ -255,6 +255,12 @@ namespace EstrichOne.Hosting.Data.Migrations
                     b.Property<string>("Parameters")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Phase")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("PhaseUntil")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("QueuedAt")
                         .HasColumnType("TEXT");
 

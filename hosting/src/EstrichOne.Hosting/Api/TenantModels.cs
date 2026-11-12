@@ -19,11 +19,12 @@ public sealed record TenantInput(
     string? FirstAdminUserName = null,
     string? FirstAdminEmail = null);
 
+/// <param name="Phase">Update-Ablauf: announce, update, finish, rollback, failed bzw. released (Countdown bis <paramref name="PhaseUntil"/>).</param>
 public sealed record OperationSummary(Guid Id, OperationKind Kind, string Label, OperationStatus Status, string RequestedBy,
-    DateTime QueuedAt, DateTime? StartedAt, DateTime? FinishedAt, string? Error);
+    DateTime QueuedAt, DateTime? StartedAt, DateTime? FinishedAt, string? Error, string? Phase = null, DateTime? PhaseUntil = null);
 
 public sealed record OperationDetail(Guid Id, Guid TenantId, OperationKind Kind, string Label, OperationStatus Status, string RequestedBy,
-    DateTime QueuedAt, DateTime? StartedAt, DateTime? FinishedAt, string? Error, string Log);
+    DateTime QueuedAt, DateTime? StartedAt, DateTime? FinishedAt, string? Error, string Log, string? Phase = null, DateTime? PhaseUntil = null);
 
 public sealed record TenantListItem(
     Guid Id,

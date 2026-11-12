@@ -44,7 +44,30 @@ const SEVERITY: Record<string, [ValueState, string]> = {
 	info: [ValueState.Information, "sap-icon://message-information"]
 };
 
+/** Update-Ablauf je Instanz (deploy/README.md): Phase mit Schritt und Farbe. */
+const PHASES: Record<string, [string, ValueState]> = {
+	announce: ["1/3 Ankündigung", ValueState.Information],
+	update: ["2/3 Update", ValueState.Warning],
+	finish: ["3/3 Abschluss", ValueState.Information],
+	rollback: ["Rücknahme", ValueState.Warning],
+	failed: ["Fehlgeschlagen", ValueState.Error],
+	released: ["Freigegeben", ValueState.Success]
+};
+
+/** „2/3 Update · noch 0:42“ – Countdown bis zum Ende der Phase (Server liefert UTC ohne Zone oder ISO). */
+export function phaseText(phase?: string | null, until?: string | null, now = Date.now()): string {
+	if (!phase) return "";
+	const label = PHASES[phase]?.[0] ?? phase;
+	if (!until || phase === "released") return label;
+	const end = Date.parse(/[zZ]|[+-]\d\d:\d\d$/.test(until) ? until : `${until}Z`);
+	const left = Math.ceil((end - now) / 1000);
+	if (Number.isNaN(left) || left <= 0) return label;
+	return `${label} · noch ${Math.floor(left / 60)}:${String(left % 60).padStart(2, "0")}`;
+}
+
 export default {
+	phaseText: (phase?: string | null, until?: string | null) => phaseText(phase, until),
+	phaseState: (phase?: string | null) => (phase ? PHASES[phase]?.[1] ?? ValueState.None : ValueState.None),
 	certificateText: (c?: Certificate | null) =>
 		!c ? "Noch nicht geprüft" : c.state === "valid" || c.state === "expiring" ? `${CERTIFICATE[c.state][0]} (${c.daysLeft ?? "?"} Tage)` : CERTIFICATE[c.state]?.[0] ?? c.state,
 	certificateState: (c?: Certificate | null) => (!c ? ValueState.None : CERTIFICATE[c.state]?.[1] ?? ValueState.None),

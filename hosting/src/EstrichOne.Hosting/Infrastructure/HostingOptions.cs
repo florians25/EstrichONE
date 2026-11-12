@@ -72,6 +72,17 @@ public sealed class HostingOptions
     public int ComposeWaitSeconds { get; set; } = 300;
 
     /// <summary>
+    /// Update-Ablauf je Instanz (deploy/README.md): Ankündigung an alle Benutzer mit Countdown, Mindestdauer der Update-Phase
+    /// (Sitzungen beendet, Wartungsbildschirm) und Abschluss vor der Freigabe – Standard je 60 s, zusammen mindestens 3 Minuten.
+    /// Nur für Tests verkürzen.
+    /// </summary>
+    public int UpdateAnnounceSeconds { get; set; } = 60;
+
+    public int UpdateMinimumSeconds { get; set; } = 60;
+
+    public int UpdateFinishSeconds { get; set; } = 60;
+
+    /// <summary>
     /// Optional: eigenes Wurzelverzeichnis für die Sicherungs-Repositorys (z. B. zweite Festplatte); je Mandant ein
     /// Unterordner. Muss wie <see cref="Root"/> mit gleichem Pfad in den Konsolen-Container eingebunden sein.
     /// </summary>

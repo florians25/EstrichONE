@@ -129,6 +129,13 @@ public sealed class TenantLifecycle(
                 throw new InvalidOperationException($"Unbekannter Vorgang {operation.Kind}.");
         }
 
+        // Läuft die Instanz wieder (Start, Neustart, Zurücksetzen …), endet ein hängengebliebener Update-Wartungsbildschirm.
+        if (operation.Kind is OperationKind.Start or OperationKind.Restart or OperationKind.Rollback or OperationKind.Unlock or OperationKind.Reconfigure
+            && UpdateRun.Clear(layout, tenant.Slug))
+        {
+            log.Write("Wartungsbildschirm eines abgebrochenen Updates beendet – die Instanz ist wieder freigegeben.");
+        }
+
         tenant.LastError = null;
         await SaveAsync(tenant, cancellationToken);
         await ApplyProxyAsync(log, cancellationToken);
@@ -265,58 +272,106 @@ public sealed class TenantLifecycle(
 
         var wasRunning = tenant.State is TenantState.Running or TenantState.Failed
             || (tenant.State == TenantState.Locked && tenant.StateBeforeLock == TenantState.Running);
-        if (backupFirst && wasRunning)
+        // Geordneter Ablauf nur, wenn Benutzer arbeiten können: Ankündigung (Countdown), Update (Sitzungen enden), Abschluss.
+        var run = wasRunning && tenant.State != TenantState.Locked
+            ? new UpdateRun(layout, tenant.Slug, previous, version!, log, Settings, clock)
+            : null;
+        try
         {
-            try
+            if (run is not null)
             {
-                log.Write("Vorab-Sicherung mit der bisherigen Version …");
-                await BackupAsync(tenant, log, cancellationToken);
-                tenant.RollbackSnapshot = SnapshotReader.Read(StatusDirectory(tenant)) is [var newest, ..] ? newest.Id : null;
-                log.Write(tenant.RollbackSnapshot is null
-                    ? "Vorab-Sicherung erstellt (Snapshot-Liste nicht lesbar – Zurücksetzen nur ohne Datenstand)."
-                    : $"Vorab-Sicherung {tenant.RollbackSnapshot[..8]} – Grundlage für das Zurücksetzen.");
-            }
-            catch
-            {
-                tenant.Version = previous;
-                await files.UpdateEnvAsync(tenant.Slug, InstanceFiles.EnvValuesFor(tenant, Settings), cancellationToken);
-                log.Write($"Vorab-Sicherung fehlgeschlagen – Aktualisierung abgebrochen, {previous} bleibt aktiv.");
-                throw;
-            }
-        }
-
-        if (!backupFirst || !wasRunning)
-        {
-            tenant.RollbackSnapshot = null;
-        }
-
-        tenant.PreviousVersion = previous;
-        await SaveAsync(tenant, cancellationToken);
-        if (wasRunning)
-        {
-            try
-            {
-                await UpAsync(tenant, log, cancellationToken);
-                await VerifyReadyAsync(tenant, log, cancellationToken);
-            }
-            catch (Exception exception) when (exception is DockerException or NotReadyException)
-            {
-                // Neue Version startet nicht: automatisch zurück auf den bisherigen Stand (Version + Daten der Vorab-Sicherung).
-                log.Write($"Start mit {version} fehlgeschlagen: {exception.Message}");
-                log.Write("Automatische Rücknahme der Aktualisierung …");
-                await RollbackAsync(tenant, plan, log, cancellationToken);
-                throw new RolledBackException(
-                    $"Aktualisierung auf {version} fehlgeschlagen ({exception.Message}). Automatisch auf {previous} zurückgesetzt – die Instanz läuft wieder.");
+                await run.AnnounceAsync(cancellationToken);
+                await run.BeginUpdateAsync(cancellationToken);
             }
 
-            if (tenant.State == TenantState.Failed)
+            if (backupFirst && wasRunning)
             {
-                await SetStateAsync(tenant, TenantState.Running, cancellationToken);
+                try
+                {
+                    log.Write("Vorab-Sicherung mit der bisherigen Version …");
+                    await BackupAsync(tenant, log, cancellationToken);
+                    tenant.RollbackSnapshot = SnapshotReader.Read(StatusDirectory(tenant)) is [var newest, ..] ? newest.Id : null;
+                    log.Write(tenant.RollbackSnapshot is null
+                        ? "Vorab-Sicherung erstellt (Snapshot-Liste nicht lesbar – Zurücksetzen nur ohne Datenstand)."
+                        : $"Vorab-Sicherung {tenant.RollbackSnapshot[..8]} – Grundlage für das Zurücksetzen.");
+                }
+                catch (Exception exception)
+                {
+                    tenant.Version = previous;
+                    await files.UpdateEnvAsync(tenant.Slug, InstanceFiles.EnvValuesFor(tenant, Settings), cancellationToken);
+                    log.Write($"Vorab-Sicherung fehlgeschlagen – Aktualisierung abgebrochen, {previous} bleibt aktiv.");
+                    if (run is not null && exception is not OperationCanceledException)
+                    {
+                        await run.FailAsync($"Vorab-Sicherung fehlgeschlagen – Version {previous} läuft weiter.", running: true, cancellationToken);
+                    }
+
+                    throw;
+                }
+            }
+
+            if (!backupFirst || !wasRunning)
+            {
+                tenant.RollbackSnapshot = null;
+            }
+
+            tenant.PreviousVersion = previous;
+            await SaveAsync(tenant, cancellationToken);
+            if (wasRunning)
+            {
+                try
+                {
+                    await UpAsync(tenant, log, cancellationToken);
+                    await VerifyReadyAsync(tenant, log, cancellationToken);
+                }
+                catch (Exception exception) when (exception is DockerException or NotReadyException)
+                {
+                    // Neue Version startet nicht: automatisch zurück auf den bisherigen Stand (Version + Daten der Vorab-Sicherung).
+                    log.Write($"Start mit {version} fehlgeschlagen: {exception.Message}");
+                    log.Write("Automatische Rücknahme der Aktualisierung …");
+                    if (run is not null)
+                    {
+                        await run.RollbackAsync(cancellationToken);
+                    }
+
+                    try
+                    {
+                        await RollbackAsync(tenant, plan, log, cancellationToken);
+                    }
+                    catch (Exception rollbackError) when (rollbackError is not OperationCanceledException && run is not null)
+                    {
+                        await run.FailAsync($"Update auf {version} fehlgeschlagen, Rücknahme ebenfalls – der Betreiber ist informiert.", running: false, cancellationToken);
+                        throw;
+                    }
+
+                    if (run is not null)
+                    {
+                        await run.FailAsync($"Update auf {version} fehlgeschlagen – Version {previous} läuft wieder.", running: true, cancellationToken);
+                    }
+
+                    throw new RolledBackException(
+                        $"Aktualisierung auf {version} fehlgeschlagen ({exception.Message}). Automatisch auf {previous} zurückgesetzt – die Instanz läuft wieder.");
+                }
+
+                if (tenant.State == TenantState.Failed)
+                {
+                    await SetStateAsync(tenant, TenantState.Running, cancellationToken);
+                }
+
+                if (run is not null)
+                {
+                    await run.FinishAsync(cancellationToken);
+                }
+            }
+            else
+            {
+                log.Write("Instanz ist angehalten – die neue Version wird beim nächsten Start aktiv.");
             }
         }
-        else
+        catch (Exception exception) when (run is { Active: true } && exception is not RolledBackException)
         {
-            log.Write("Instanz ist angehalten – die neue Version wird beim nächsten Start aktiv.");
+            // Unerwarteter Abbruch mitten im Ablauf: Wartungsbildschirm mit Hinweis stehen lassen (Freigabe per Neustart).
+            await run.FailAsync("Update unterbrochen – der Betreiber ist informiert.", running: false, CancellationToken.None);
+            throw;
         }
     }
 

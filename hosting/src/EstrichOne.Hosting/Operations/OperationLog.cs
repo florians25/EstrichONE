@@ -12,6 +12,30 @@ public sealed class OperationLog(Guid operationId, IServiceScopeFactory scopes, 
     private readonly StringBuilder text = new();
     private readonly Lock sync = new();
     private bool dirty;
+    private string? phase;
+    private DateTime? phaseUntil;
+
+    /// <summary>Phase des Update-Ablaufs für die Konsole (mit dem Protokoll geschrieben).</summary>
+    public void SetPhase(string? value, DateTime? until)
+    {
+        lock (sync)
+        {
+            phase = value;
+            phaseUntil = until;
+            dirty = true;
+        }
+    }
+
+    public (string? Phase, DateTime? Until) Phase
+    {
+        get
+        {
+            lock (sync)
+            {
+                return (phase, phaseUntil);
+            }
+        }
+    }
 
     public void Write(string line)
     {
@@ -44,6 +68,8 @@ public sealed class OperationLog(Guid operationId, IServiceScopeFactory scopes, 
     public async Task FlushAsync(CancellationToken cancellationToken)
     {
         string snapshot;
+        string? currentPhase;
+        DateTime? until;
         lock (sync)
         {
             if (!dirty)
@@ -52,13 +78,16 @@ public sealed class OperationLog(Guid operationId, IServiceScopeFactory scopes, 
             }
 
             snapshot = text.ToString();
+            currentPhase = phase;
+            until = phaseUntil;
             dirty = false;
         }
 
         await using var scope = scopes.CreateAsyncScope();
         var db = scope.ServiceProvider.GetRequiredService<HostingDbContext>();
         await db.Operations.Where(o => o.Id == operationId)
-            .ExecuteUpdateAsync(s => s.SetProperty(o => o.Log, snapshot), cancellationToken);
+            .ExecuteUpdateAsync(s => s.SetProperty(o => o.Log, snapshot).SetProperty(o => o.Phase, currentPhase)
+                .SetProperty(o => o.PhaseUntil, until), cancellationToken);
     }
 
     /// <summary>Schreibt das Protokoll alle zwei Sekunden, solange <paramref name="cancellationToken"/> nicht abgebrochen ist.</summary>

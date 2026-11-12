@@ -118,6 +118,7 @@ public sealed class OperationWorker(
             await pump;
             operation.FinishedAt = clock.GetUtcNow().UtcDateTime;
             operation.Log = log.Text;
+            (operation.Phase, operation.PhaseUntil) = log.Phase;
             await db.SaveChangesAsync(CancellationToken.None);
         }
     }

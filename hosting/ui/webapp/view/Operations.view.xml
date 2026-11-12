@@ -21,7 +21,10 @@
 					<ColumnListItem type="Navigation" press=".onOpen" highlight="{= ${ops>operation/status} === 'Failed' ? 'Error' : ${ops>operation/status} === 'Succeeded' ? 'Success' : 'Information' }">
 						<Link text="{= ${ops>companyName} || 'gelöschter Mandant' }" press=".onTenant" enabled="{= !!${ops>companyName} }" />
 						<ObjectIdentifier title="{ops>operation/label}" text="von {ops>operation/requestedBy}" />
-						<ObjectStatus text="{path: 'ops>operation/status', formatter: '.formatter.operationText'}" state="{path: 'ops>operation/status', formatter: '.formatter.operationState'}" />
+						<VBox>
+							<ObjectStatus text="{path: 'ops>operation/status', formatter: '.formatter.operationText'}" state="{path: 'ops>operation/status', formatter: '.formatter.operationState'}" />
+							<ObjectStatus text="{parts: ['ops>operation/phase', 'ops>operation/phaseUntil'], formatter: '.formatter.phaseText'}" state="{path: 'ops>operation/phase', formatter: '.formatter.phaseState'}" visible="{= !!${ops>operation/phase} }" />
+						</VBox>
 						<Text text="{path: 'ops>operation/queuedAt', formatter: '.formatter.dateTime'}" />
 						<Text text="{parts: ['ops>operation/startedAt', 'ops>operation/finishedAt'], formatter: '.duration'}" />
 						<Text text="{ops>operation/error}" maxLines="2" />

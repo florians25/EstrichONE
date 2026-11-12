@@ -123,8 +123,10 @@ if [ "$RESTORE" = "1" ]; then
   echo "Konfiguration aus der Sicherung übernommen (Domain $(sed -n 's/^ESTRICHONE_DOMAIN=//p' "$DIR/.env"))."
 fi
 cp /installer/compose.yml /installer/compose.override.yml /installer/compose.proxy.yml "$DIR/"
-# Einfaches Aktualisieren: sudo /opt/estrichone/update.sh [VERSION]
+# Einfaches Aktualisieren: sudo /opt/estrichone/update.sh [VERSION] – mit geordnetem Ablauf (update-phases.sh)
 cp /installer/update.sh "$DIR/update.sh" && chmod 755 "$DIR/update.sh"
+cp /installer/update-phases.sh "$DIR/update-phases.sh" && chmod 644 "$DIR/update-phases.sh"
+PREVIOUS_VERSION="$( [ -f "$DIR/.env" ] && sed -n 's/^ESTRICHONE_VERSION=//p' "$DIR/.env" | tail -n 1 || true)"
 
 if [ -f "$DIR/.env" ]; then
   echo "Vorhandene Installation gefunden – Konfiguration bleibt, Version wird auf $VERSION gesetzt."
@@ -235,6 +237,24 @@ chown -R "$API_UID:$API_UID" "$DATA/files" "$DATA/config" "$DATA/backup-status" 
 echo "Images laden und Dienste starten …"
 docker compose -p estrichone pull --quiet --ignore-pull-failures
 
+# Aktualisierung einer laufenden Installation direkt mit dem Installer: derselbe geordnete Ablauf wie update.sh
+# (Ankündigung, Update, Abschluss). Ruft update.sh den Installer auf, kündigt update.sh selbst an (…_PHASES=extern).
+PHASES=0
+# Gleiche Version erneut (Reparatur) tauscht keine Container – dann ohne Ankündigung.
+if [ "$FIRST" = "0" ] && [ "$RESTORE" = "0" ] && [ "${ESTRICHONE_UPDATE_PHASES:-}" != "extern" ] && [ "${ESTRICHONE_UPDATE_PHASES:-}" != "aus" ] \
+  && [ -n "$PREVIOUS_VERSION" ] && [ "$PREVIOUS_VERSION" != "$VERSION" ] \
+  && docker compose -p estrichone ps --status running --services 2>/dev/null | grep -qx api; then
+  # shellcheck disable=SC2034 # gelesen in update-phases.sh
+  PHASE_FILE="$DATA/backup-status/update-maintenance.json" PHASE_FROM="$PREVIOUS_VERSION" PHASE_TARGET="$VERSION" PHASE_SOURCE="installer"
+  # shellcheck disable=SC1091
+  . /installer/update-phases.sh
+  phase_init
+  trap 'phase_abort "Update abgebrochen." 0; exit 1' INT TERM
+  phase_announce
+  phase_update
+  PHASES=1
+fi
+
 # Datenbank zuerst starten und das Passwort aus der .env setzen. Hilft, wenn die .env neu erzeugt wurde, das
 # Datenverzeichnis aber noch mit einem älteren Passwort angelegt ist (sonst: „password authentication failed“).
 # Im Container ist der lokale Zugang ohne Passwort erlaubt (Standard des postgres-Images).
@@ -254,7 +274,16 @@ if [ "$RESTORE" = "1" ]; then
     || fail "Wiederherstellung fehlgeschlagen (Meldung oben). Die Daten der Sicherung sind unverändert."
 fi
 
-docker compose -p estrichone up -d --remove-orphans
+if [ "$PHASES" = "1" ]; then
+  if ! docker compose -p estrichone up -d --remove-orphans --wait --wait-timeout 300; then
+    phase_abort "Die neue Version $VERSION startet nicht." 0
+    fail "Dienste nicht bereit (docker compose -p estrichone logs api)."
+  fi
+  phase_finish
+  trap - INT TERM
+else
+  docker compose -p estrichone up -d --remove-orphans
+fi
 
 URL="$ESTRICHONE_PUBLIC_URL"
 echo

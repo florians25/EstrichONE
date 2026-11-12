@@ -132,6 +132,16 @@
 		reverse_proxy api:8080
 	}
 
+	# Update-Ablauf (deploy/README.md): Stand für Wartungsbildschirm und Störungsseite – auch, solange die API getauscht wird.
+	# Nur diese eine Datei aus /status (backup-status, nur lesend); ohne laufendes Update 404.
+	handle /update-status.json {
+		root * /status
+		rewrite * /update-maintenance.json
+		header Cache-Control no-store
+		header Content-Type "application/json; charset=utf-8"
+		file_server
+	}
+
 	# Weboberfläche (React): unbekannte Pfade liefern index.html, die App übernimmt das Routing.
 	handle {
 		root * /srv

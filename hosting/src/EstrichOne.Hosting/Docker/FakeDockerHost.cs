@@ -38,10 +38,14 @@ public sealed class FakeDockerHost : IDockerHost
         public DateTime Since { get; set; } = DateTime.UtcNow;
     }
 
+    /// <summary>Für Tests: wird vor jedem Compose-Aufruf mit Projektverzeichnis und Argumenten aufgerufen.</summary>
+    public Action<ComposeProject, IReadOnlyList<string>>? OnCompose { get; set; }
+
     public async Task<CommandResult> ComposeAsync(ComposeProject project, IReadOnlyList<string> arguments, TimeSpan timeout,
         Action<string>? output, CancellationToken cancellationToken)
     {
         Calls.Enqueue($"{project.Name} {string.Join(' ', arguments)}");
+        OnCompose?.Invoke(project, arguments);
         var verb = arguments.Count > 0 ? arguments[0] : string.Empty;
         if (verb == "--profile" && arguments.Count > 2)
         {

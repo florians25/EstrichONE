@@ -29,7 +29,10 @@ jobs:
             docker build -q -f "docker/$image.Dockerfile" -t "estrichone/$image:ci" .
           done
       - name: Shellcheck
-        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/kombi.sh deploy/backup-target/test-kombi.sh deploy/backup-target/test-offload.sh deploy/backup-target/test-remote-update.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh
+        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/kombi.sh deploy/backup-target/test-kombi.sh deploy/backup-target/test-offload.sh deploy/backup-target/test-remote-update.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh \
+            docker/installer/update-phases.sh docker/installer/test-update-phases.sh deploy/test-update-ablauf.sh
+      - name: Update-Ablauf – Phasen-Hilfsskript (verkürzt, ohne Docker)
+        run: sh docker/installer/test-update-phases.sh
       - name: Archiv koppeln, archivieren, Unveränderbarkeit, Löschsperre, Export, Backup-Ziel, Testmail
         env:
           ESTRICHONE_VERSION: ci
@@ -317,8 +320,12 @@ jobs:
           sleep 61   # Zeitfenster des Rate-Limits ablaufen lassen (folgende Schritte melden sich an)
       - name: Vom Installer abgelegtes update.sh erneut ausführen (idempotent)
         run: |
-          sudo /opt/estrichone/update.sh --ohne-sicherung "$VERSION" | tee update2.log
+          ESTRICHONE_UPDATE_ANNOUNCE_SECONDS=2 ESTRICHONE_UPDATE_MIN_SECONDS=2 ESTRICHONE_UPDATE_FINISH_SECONDS=2 \
+            sudo -E /opt/estrichone/update.sh --ohne-sicherung "$VERSION" | tee update2.log
           grep -q "Update erfolgreich" update2.log
+          grep -q "Phase 3/3" update2.log
+      - name: Update-Ablauf Ende zu Ende (Ankündigung, Sperre, Abmeldung, Wartungsstand ohne API, Freigabe; verkürzte Phasen)
+        run: sudo -E VERSION="$VERSION" deploy/test-update-ablauf.sh
       - name: Unbekannte Version wird sauber abgelehnt
         run: |
           ! sudo /opt/estrichone/update.sh 9.9.9 2> err.log

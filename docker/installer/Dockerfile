@@ -7,7 +7,7 @@ ARG ESTRICHONE_VERSION=dev
 ENV INSTALLER_VERSION=${ESTRICHONE_VERSION}
 COPY deploy/compose.yml deploy/compose.proxy.yml docker/installer/compose.override.yml /installer/
 COPY deploy/.env.example /installer/env.example
-COPY docker/installer/update.sh /installer/update.sh
+COPY docker/installer/update.sh docker/installer/update-phases.sh /installer/
 COPY docker/installer/install.sh /usr/local/bin/estrichone-install
 COPY docker/installer/peer.sh /usr/local/bin/estrichone-peer
 COPY docker/installer/kombi.sh /usr/local/bin/estrichone-kombi

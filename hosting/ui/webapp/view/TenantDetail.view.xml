@@ -75,6 +75,8 @@
 						<HBox alignItems="Center">
 							<BusyIndicator size="1rem" class="sapUiTinyMarginEnd" />
 							<Link text="{detail>/summary/openOperation/label} ({path: 'detail>/summary/openOperation/status', formatter: '.formatter.operationText'})" press=".onOpenOperationLog" />
+							<ObjectStatus text="{parts: ['detail>/summary/openOperation/phase', 'detail>/summary/openOperation/phaseUntil'], formatter: '.formatter.phaseText'}"
+								state="{path: 'detail>/summary/openOperation/phase', formatter: '.formatter.phaseState'}" visible="{= !!${detail>/summary/openOperation/phase} }" class="sapUiTinyMarginBegin" />
 						</HBox>
 					</VBox>
 				</FlexBox>
@@ -358,7 +360,10 @@
 								<items>
 									<ColumnListItem type="Navigation" press=".onOperation">
 										<ObjectIdentifier title="{detail>label}" text="von {detail>requestedBy}" />
-										<ObjectStatus text="{path: 'detail>status', formatter: '.formatter.operationText'}" state="{path: 'detail>status', formatter: '.formatter.operationState'}" />
+										<VBox>
+											<ObjectStatus text="{path: 'detail>status', formatter: '.formatter.operationText'}" state="{path: 'detail>status', formatter: '.formatter.operationState'}" />
+											<ObjectStatus text="{parts: ['detail>phase', 'detail>phaseUntil'], formatter: '.formatter.phaseText'}" state="{path: 'detail>phase', formatter: '.formatter.phaseState'}" visible="{= !!${detail>phase} }" />
+										</VBox>
 										<Text text="{path: 'detail>queuedAt', formatter: '.formatter.dateTime'}" />
 										<Text text="{path: 'detail>finishedAt', formatter: '.formatter.dateTime'}" />
 										<Text text="{detail>error}" maxLines="2" />

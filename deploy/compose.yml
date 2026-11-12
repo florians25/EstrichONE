@@ -226,6 +226,8 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ${ESTRICHONE_DATA_DIR:-./data}/caddy/data:/data
       - ${ESTRICHONE_DATA_DIR:-./data}/caddy/config:/config
+      # Nur lesend: Stand des Update-Ablaufs (/update-status.json), damit die Wartungsseite ohne API weiterläuft
+      - ${ESTRICHONE_DATA_DIR:-./data}/backup-status:/status:ro
     depends_on:
       api:
         condition: service_healthy
