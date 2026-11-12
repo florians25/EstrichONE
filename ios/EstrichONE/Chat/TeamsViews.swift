@@ -91,7 +91,7 @@ struct TeamsPeopleSheet: View {
 /// Einmaliger Hinweis „Ab sofort chatten wir in Teams“ (wegklickbar, je Text gemerkt).
 struct TeamsRolloutNotice: View {
     let text: String
-    @AppStorage("teamsNoticeDismissed") private var dismissed = ""
+    @SwiftUI.AppStorage("teamsNoticeDismissed") private var dismissed = ""
 
     var body: some View {
         if dismissed != text {
