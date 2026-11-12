@@ -159,7 +159,7 @@ final class SyncController {
 
     /// Hinweise neu laden (Start, Vordergrund, mit jeder Synchronisation). Ohne Verbindung bleibt der letzte Stand.
     func refreshNotices() async {
-        if realNotices != nil { return }
+        if simulatingNotices { return }
         if let fresh = try? await client.systemNotices() {
             notices = fresh
             updateOffline = false
@@ -187,6 +187,15 @@ final class SyncController {
 
     private var healthFetchedAt: Date?
     private var healthFetchedWhileUnreachable = false
+
+    /// Screenshot-Modus gibt Hinweise vor: dann nicht vom Server überschreiben.
+    private var simulatingNotices: Bool {
+        #if DEBUG
+        realNotices != nil
+        #else
+        false
+        #endif
+    }
 
     /// Update-Ablauf nachführen: In der Ankündigung sofort abgleichen; nach der Freigabe einmal abgleichen – der Server
     /// meldet dann „Sitzung beim Update beendet“, die App führt zur Anmeldung (Daten bleiben auf dem Gerät).
