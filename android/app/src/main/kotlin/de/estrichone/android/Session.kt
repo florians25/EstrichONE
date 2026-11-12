@@ -171,18 +171,24 @@ class Session(
         val result = withContext(Dispatchers.IO) { runCatching { api.systemNotices() } }
         result.onSuccess { notices ->
             _notices.value = notices
-            _updateOffline.value = false
+            if (!previewing) _updateOffline.value = false
             applyUpdate(notices.activeUpdate)
         }.onFailure { if (_update.value != null) _updateOffline.value = true }
     }
 
     /** Vorschau und Bildschirmfotos: Update-Stand direkt setzen. */
     fun previewUpdate(state: UpdateMaintenance?, offline: Boolean = false) {
+        previewing = state != null
         _updateOffline.value = offline
         _update.value = state
     }
 
+    /** Vorgegebener Stand (Vorschau): nicht vom Server überschreiben. */
+    @Volatile
+    private var previewing = false
+
     private fun applyUpdate(state: UpdateMaintenance?) {
+        if (previewing) return
         val previous = _update.value
         _update.value = state
         if (state != null) {
@@ -199,7 +205,7 @@ class Session(
     }
 
     private suspend fun refreshExtras() {
-        runCatching { api.systemNotices() }.onSuccess { _notices.value = it; _updateOffline.value = false; withContext(Dispatchers.Main) { applyUpdate(it.activeUpdate) } }
+        runCatching { api.systemNotices() }.onSuccess { _notices.value = it; if (!previewing) _updateOffline.value = false; withContext(Dispatchers.Main) { applyUpdate(it.activeUpdate) } }
         if (_status.value.outcome == SyncOutcome.Offline) return
         runCatching { api.healthBanners() }.onSuccess { _health.value = it }
         runCatching { api.chatStatus() }.onSuccess { _chat.value = it }.onFailure { if (it is ApiException && it.status == 404) _chat.value = null }
