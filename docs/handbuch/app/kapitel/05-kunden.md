@@ -44,3 +44,17 @@ Kunden.
 
 > **Hinweis:** Kunden erscheinen nach der Synchronisation in der Liste. Beim Anlegen einer Bauakte sucht die App mit
 > Verbindung zusätzlich auf dem Server (Kapitel 4).
+
+## Kunden archivieren oder löschen
+
+Mit dem Recht **Kunden bearbeiten** bzw. **Kunden löschen** steht im Aktionsmenü der Kundenkarte (iPhone/iPad: **…**,
+Android: **⋮**) **Löschen oder archivieren …**. Das geht nur mit Verbindung zum Server, denn der Server prüft, ob am
+Kunden noch Bauakten, Projektbeteiligungen oder Anrufe hängen:
+
+- **Ohne verknüpfte Daten** löschen Sie den Kunden nach Eingabe der **Kundennummer** endgültig. Beim nächsten Abgleich
+  verschwindet er von allen Geräten.
+- **Mit verknüpften Daten** nennt die App die Verknüpfungen (z. B. „2 Bauakten“) und bietet **Archivieren** an. Ein
+  archivierter Kunde bleibt an seinen Bauakten sichtbar, erscheint aber nicht mehr bei der Kundenauswahl und in der
+  Kundenliste nur mit **Archivierte anzeigen**. **Reaktivieren** im Aktionsmenü macht ihn wieder aktiv.
+
+Anonymisieren (DSGVO) ist nur im Büro möglich (Handbuch Web, Kapitel Kunden).

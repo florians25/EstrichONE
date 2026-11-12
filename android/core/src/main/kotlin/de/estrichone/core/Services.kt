@@ -447,3 +447,42 @@ data class TwoFactorStatus(val enabled: Boolean = false, val recoveryCodesRemain
 suspend fun EstrichOneApi.sessions(): List<SessionInfo> = send("GET", "auth/sessions", null)
 suspend fun EstrichOneApi.revokeSession(id: String) = send<Unit>("DELETE", "auth/sessions/$id", null)
 suspend fun EstrichOneApi.twoFactorStatus(): TwoFactorStatus = send("GET", "auth/two-factor", null)
+
+// Kunden löschen, archivieren, reaktivieren (nur online; der Abgleich entfernt bzw. aktualisiert den Kunden danach)
+
+@Serializable
+data class CustomerReferenceItem(val id: String, val text: String, val link: String? = null)
+
+@Serializable
+data class CustomerReference(val kind: String, val label: String, val count: Int, val link: String? = null, val items: List<CustomerReferenceItem> = emptyList())
+
+@Serializable
+data class CustomerReferences(
+    val id: String,
+    val name: String,
+    val customerNumber: String? = null,
+    val deletable: Boolean,
+    val confirmText: String,
+    val archived: Boolean = false,
+    val anonymized: Boolean = false,
+    val references: List<CustomerReference> = emptyList(),
+) {
+    /** „1 Bauakte und 2 Anrufe und Anfragen“. */
+    val summary: String get() = CustomerRemoval.describe(references)
+}
+
+object CustomerRemoval {
+    fun describe(references: List<CustomerReference>): String {
+        val parts = references.filter { it.count > 0 }.map { "${it.count} ${it.label}" }
+        return if (parts.size <= 1) parts.joinToString("") else parts.dropLast(1).joinToString(", ") + " und " + parts.last()
+    }
+
+    /** Eingetippte Bestätigung (Kundennummer bzw. Name), Groß-/Kleinschreibung egal. */
+    fun confirms(input: String, expected: String): Boolean =
+        input.trim().isNotEmpty() && input.trim().equals(expected.trim(), ignoreCase = true)
+}
+
+suspend fun EstrichOneApi.customerReferences(id: String): CustomerReferences = send("GET", "contacts/$id/references", null)
+suspend fun EstrichOneApi.deleteCustomer(id: String, confirm: String) = send<Unit>("DELETE", "contacts/$id", null, query = mapOf("confirm" to confirm))
+suspend fun EstrichOneApi.archiveCustomer(id: String) = send<JsonElement>("POST", "contacts/$id/archive", JsonObject(emptyMap()))
+suspend fun EstrichOneApi.reactivateCustomer(id: String) = send<JsonElement>("POST", "contacts/$id/reactivate", JsonObject(emptyMap()))

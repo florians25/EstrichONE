@@ -246,6 +246,11 @@ public struct BauakteService: Sendable {
         try await store.entities(.contact, search: search).map(Contact.init).sorted { $0.name.localizedCompare($1.name) == .orderedAscending }
     }
 
+    /// Aktive Kunden für Auswahllisten (Bauaktenanlage, Kundensuche); archivierte nur in der Kartei auf Wunsch.
+    public func activeContacts(search: String? = nil) async throws -> [Contact] {
+        try await contacts(search: search).filter { !$0.isArchived }
+    }
+
     public func contact(_ id: UUID) async throws -> Contact? {
         try await store.entity(.contact, id).map(Contact.init)
     }

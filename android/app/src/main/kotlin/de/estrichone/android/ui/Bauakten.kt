@@ -214,7 +214,7 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
     var company by remember { mutableStateOf(false) }
     var phone by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    val contacts = remember { session.service.contacts() }
+    val contacts = remember { session.service.activeContacts() }
 
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), containerColor = tones.canvas) {
         Column(Modifier.verticalScroll(rememberScrollState()).imePadding().padding(horizontal = 20.dp).padding(bottom = 32.dp),

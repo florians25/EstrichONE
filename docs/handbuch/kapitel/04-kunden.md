@@ -13,6 +13,10 @@ Bauträger, Architekten und Gemeinden.
 - **CSV importieren** übernimmt einen vorhandenen Kundenbestand, z. B. aus der bisherigen Software.
 - **Serien-E-Mail** öffnet eine E-Mail an alle Kunden, die Sie mit dem Häkchen markiert haben.
 - **Bauakten** in einer Zeile springt zu den Bauakten dieses Kunden.
+- Die Auswahl **Aktive / Archivierte / Alle (auch inaktive)** blendet archivierte Kunden ein. Standardmäßig sind nur
+  aktive Kunden zu sehen.
+- Das Papierkorb-Symbol in einer Zeile bzw. **Löschen/Archivieren** in der Werkzeugleiste (für alle mit Häkchen
+  markierten Kunden) löscht oder archiviert Kunden – siehe unten.
 
 ### Kundenakte
 
@@ -28,6 +32,39 @@ Schaltflächen für **Anrufen**, **E-Mail**, **Bearbeiten** und **Neue Bauakte**
 | **Dokumente** | Alle Dokumente aus allen Bauakten des Kunden, gegliedert nach Bauakte und Dokumentart; ein Klick öffnet die Vorschau |
 | **Kontakte** | Weitere Telefonnummern, E-Mail-Adressen und Ansprechpartner |
 | **Verlauf** | Änderungen am Kunden |
+
+### Kunden löschen, archivieren oder anonymisieren {#kunden-loeschen}
+
+**Löschen/Archivieren** in der Kundenakte (oder das Papierkorb-Symbol in der Kundenliste) prüft zuerst, ob am Kunden
+noch Daten hängen: Bauakten (auch im Papierkorb), Projektbeteiligungen in fremden Bauakten sowie Anrufe und Anfragen.
+
+| Situation | Was EstrichONE anbietet |
+|---|---|
+| **Keine verknüpften Daten** (z. B. versehentlich oder doppelt angelegt) | **Endgültig löschen**: Zur Bestätigung tippen Sie die **Kundennummer** ein (ohne Nummer den Namen). Gelöscht werden Stammdaten, Telefonnummern, E-Mail-Adressen, Notiz und Ansprechpartner. Die Kundennummer wird **nie wieder vergeben**. Alternativ: **Stattdessen archivieren**. |
+| **Verknüpfte Daten vorhanden** | Löschen ist gesperrt. Der Dialog nennt die Verknüpfungen mit Anzahl je Art (z. B. „2 Bauakten und 1 Anruf oder Anfrage“) und verlinkt die Bauakten. Stattdessen **Archivieren**. |
+
+**Archivieren** setzt den Kunden inaktiv: Er bleibt mit allen Bauakten, Dokumenten und Anrufen erhalten, erscheint aber
+nicht mehr in Auswahllisten (Bauaktenanlage, Anrufe, Kundensuche) und in der Kundenliste nur unter **Archivierte**. Die
+Kundenakte zeigt dann den Hinweis „Archiviert“; **Reaktivieren** macht den Kunden wieder aktiv. In den Apps verschwindet
+ein gelöschter Kunde beim nächsten Abgleich; archivierte Kunden zeigt die App nur mit **Archivierte anzeigen**.
+
+Mit der Mehrfachauswahl (Häkchen) und **Löschen/Archivieren** erledigen Sie mehrere Kunden auf einmal: Kunden ohne
+verknüpfte Daten werden gelöscht, alle übrigen archiviert. Zur Bestätigung tippen Sie die Anzahl ein.
+
+**Anonymisieren (DSGVO):** Verlangt ein Kunde mit Altdaten die Löschung seiner personenbezogenen Daten, ersetzt
+**Anonymisieren …** Name, Anschriften, Telefon, E-Mail, Notiz und Ansprechpartner durch „Anonymisierter Kunde
+600123“ – auch in den Projektbeteiligten der Bauakten, in Anrufnotizen (Name, Telefon, E-Mail des Anrufers) und im
+E-Mail-Versandprotokoll. Bauakten, Dokumente und Kundennummer bleiben erhalten. Dafür tippen Sie die Kundennummer ein
+und bestätigen ausdrücklich, dass sich der Schritt nicht rückgängig machen lässt.
+
+| Recht | Wer es standardmäßig hat | Erlaubt |
+|---|---|---|
+| `contacts.edit` | Administrator, Büro und Bauleitung | Archivieren und Reaktivieren |
+| `contacts.delete` | Administrator, Büro und Bauleitung | Kunden ohne verknüpfte Daten löschen |
+| `contacts.anonymize` | nur Administrator | Kunden anonymisieren |
+
+Jeder Schritt steht mit Kundennummer (ohne Namen) im **Protokoll** (`contact.deleted`, `contact.archived`,
+`contact.reactivated`, `contact.anonymized`).
 
 > **Tipp:** Pflegen Sie Telefonnummern im Kundenstamm vollständig. Dann erkennt die Dublettenprüfung bekannte Anrufer
 > auch dann, wenn der Name anders geschrieben wird.

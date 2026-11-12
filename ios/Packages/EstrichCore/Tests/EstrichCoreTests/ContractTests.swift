@@ -78,6 +78,13 @@ struct ContractTests {
         try checkResponse("TicketSummary", sample: ticket.summary)
         try checkResponse("TicketCommentDto", sample: ticket.comments[0])
         try checkResponse("DirectoryUser", sample: DirectoryUser(id: UUID(), displayName: "a", isActive: true))
+        let references = try JSONCoding.decoder.decode(CustomerReferences.self, from: Data("""
+            {"id":"01a00000-0000-7000-8000-000000000001","name":"x","customerNumber":null,"deletable":true,"confirmText":"x","archived":false,
+             "anonymized":false,"references":[{"kind":"bauakten","label":"Bauakte","count":1,"link":null,"items":[{"id":"01a00000-0000-7000-8000-000000000002","text":"x","link":null}]}]}
+            """.utf8))
+        try checkResponse("CustomerReferencesResponse", sample: references)
+        try checkResponse("CustomerReference", sample: references.references[0])
+        try checkResponse("CustomerReferenceItem", sample: references.references[0].items[0])
         try checkResponse("BauakteHistoryEntry", sample: try JSONCoding.decoder.decode(BauakteHistoryEntry.self, from: Data("""
             {"at":"2026-10-20T07:00:00.0000000+00:00","action":"bauakte.created","actorUserId":null,"actorName":null,"text":"x"}
             """.utf8)))

@@ -136,6 +136,11 @@ data class Contact(val entity: LocalEntity) {
     val salutation: String? = d.str("salutation")
     val website: String? = d.str("website")
     val preferredChannel: String? = d.str("preferredChannel")
+
+    /** Archiviert (inaktiv): bleibt für Bauakten erhalten, erscheint aber nicht in Auswahllisten und standardmäßig nicht in der Kundenliste. */
+    val archivedAt: Instant? = ApiDate.parse(d.str("archivedAt"))
+    val anonymizedAt: Instant? = ApiDate.parse(d.str("anonymizedAt"))
+    val isArchived: Boolean get() = archivedAt != null
     val syncState: SyncState get() = entity.syncState
     val addressLine: String? get() = addressLine(street, postalCode, city)
     val subtitle: String get() = listOfNotNull(customerNumber?.takeIf { it.isNotBlank() }, city?.takeIf { it.isNotBlank() }).joinToString(" · ")

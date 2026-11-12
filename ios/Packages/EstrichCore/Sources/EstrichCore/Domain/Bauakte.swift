@@ -181,6 +181,12 @@ public struct Contact: Identifiable, Equatable, Sendable {
     public let deliveryAddress: ContactAddress?
     public let version: Int64?
     public let syncState: SyncState
+    /// Archiviert (inaktiv): bleibt an Bauakten erhalten, erscheint aber nicht in Auswahllisten und standardmäßig nicht in der Kartei.
+    public let archivedAt: Date?
+    /// Anonymisiert (DSGVO): Name und Kontaktdaten wurden im Büro ersetzt.
+    public let anonymizedAt: Date?
+
+    public var isArchived: Bool { archivedAt != nil }
 
     public init(_ entity: LocalEntity) {
         let data = entity.data
@@ -207,6 +213,8 @@ public struct Contact: Identifiable, Equatable, Sendable {
         deliveryAddress = ContactAddress(json: data["deliveryAddress"])
         version = data["version"]?.number.map { Int64($0) }
         syncState = entity.syncState
+        archivedAt = data["archivedAt"]?.string.flatMap(APIDate.parse)
+        anonymizedAt = data["anonymizedAt"]?.string.flatMap(APIDate.parse)
     }
 
     /// Kontakt aus einer Serverantwort (`ContactResponse`); `nil` ohne gültige ID.

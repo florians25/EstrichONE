@@ -26,7 +26,11 @@ class BauakteService(val store: LocalStore, private val files: FileVault, privat
 
     fun bauakte(id: String): Bauakte? = store.entity(EntityTypes.BAUAKTE, id)?.let(::Bauakte)
 
+    /** Alle Kunden auf dem Gerät (auch archivierte, z. B. für den Kundennamen an einer Bauakte). */
     fun contacts(): List<Contact> = store.entities(EntityTypes.CONTACT).map(::Contact).sortedBy { it.name.lowercase() }
+
+    /** Aktive Kunden für Auswahllisten (Bauaktenanlage, Kundenliste ohne „Archivierte anzeigen“). */
+    fun activeContacts(): List<Contact> = contacts().filterNot { it.isArchived }
 
     fun contact(id: String?): Contact? = id?.let { store.entity(EntityTypes.CONTACT, it) }?.let(::Contact)
 

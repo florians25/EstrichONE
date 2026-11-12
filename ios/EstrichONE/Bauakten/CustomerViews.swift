@@ -147,7 +147,7 @@ struct CustomerPickerView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Abbrechen") { dismiss() } } }
             .task(id: "\(search)|\(model.active?.sync?.revision ?? 0)") {
-                contacts = (try? await model.active?.service?.contacts(search: search)) ?? []
+                contacts = (try? await model.active?.service?.activeContacts(search: search)) ?? []
             }
             .navigationDestination(isPresented: $creating) {
                 NewCustomerForm(initialName: search.trimmingCharacters(in: .whitespaces)) { contact in
@@ -347,7 +347,7 @@ struct CustomerChooser: View {
         }
         try? await Task.sleep(for: .milliseconds(250))
         guard !Task.isCancelled, let active = model.active else { return }
-        let local = Array(((try? await active.service?.contacts(search: text)) ?? []).prefix(8))
+        let local = Array(((try? await active.service?.activeContacts(search: text)) ?? []).prefix(8))
         results = local
         guard text.count >= 2, let remote = try? await active.client.searchContacts(text, limit: 8), !Task.isCancelled else { return }
         results = Self.merged(local, remote)

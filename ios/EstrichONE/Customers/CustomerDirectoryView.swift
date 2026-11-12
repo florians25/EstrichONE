@@ -32,6 +32,8 @@ struct CustomerDirectoryView: View {
     @State private var selection: UUID?
     @State private var path: [UUID] = []
     @State private var creating = false
+    /// Archivierte Kunden einblenden (standardmäßig aus, wie im Büro).
+    @State private var showArchived = false
 
     var body: some View {
         Group {
@@ -67,6 +69,7 @@ struct CustomerDirectoryView: View {
 
     private var filtered: [Contact] {
         contacts.filter { contact in
+            if contact.isArchived, !showArchived { return false }
             switch filter {
             case .all: true
             case .companies: contact.isCompany
@@ -124,6 +127,11 @@ struct CustomerDirectoryView: View {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets())
             .accessibilityIdentifier("customerFilter")
+            let archived = contacts.filter(\.isArchived).count
+            if archived > 0 {
+                Toggle("Archivierte anzeigen (\(archived))", isOn: $showArchived)
+                    .accessibilityIdentifier("customerShowArchived")
+            }
         }
         if !loaded {
             Section {
@@ -243,7 +251,8 @@ struct CustomerRow: View {
                     .font(Typo.headline)
                     .foregroundStyle(selected ? Color.white : Theme.textPrimary)
                     .lineLimit(2)
-                let details = [contact.isCompany ? "Firma" : nil, contact.city, contact.customerNumber].compactMap { $0?.isEmpty == false ? $0 : nil }
+                let details = [contact.isArchived ? "Archiviert" : nil, contact.isCompany ? "Firma" : nil, contact.city, contact.customerNumber]
+                    .compactMap { $0?.isEmpty == false ? $0 : nil }
                 Text(details.isEmpty ? "Keine weiteren Angaben" : details.joined(separator: " · "))
                     .font(Typo.subhead)
                     .foregroundStyle(selected ? Color.white.opacity(0.85) : Theme.textSecondary)
@@ -303,6 +312,10 @@ struct CustomerCardView: View {
     @State private var captureFor: Bauakte?
     @State private var inspectFor: Bauakte?
     @State private var exporting = false
+    @State private var removing = false
+    @State private var canEdit = false
+    @State private var canDelete = false
+    @Environment(\.dismiss) private var dismiss
 
     /// Breite Darstellung (iPad): Kontaktdaten links, Bauakten rechts.
     @State private var width: CGFloat = 0
@@ -348,6 +361,13 @@ struct CustomerCardView: View {
                         if let url = ContactLink.phone(Self.preferredPhone(contact)) {
                             Button("Anrufen", systemImage: "phone") { openURL(url) }
                         }
+                        if contact.anonymizedAt == nil, canEdit, contact.isArchived {
+                            Button("Reaktivieren", systemImage: "arrow.uturn.backward") { Task { await reactivate(contact) } }
+                        }
+                        if contact.anonymizedAt == nil, canEdit || canDelete {
+                            Button(contact.isArchived ? "Löschen …" : "Löschen oder archivieren …", systemImage: "trash", role: .destructive) { removing = true }
+                                .accessibilityIdentifier("customerRemove")
+                        }
                     } label: {
                         Label("Aktionen", systemImage: "ellipsis.circle")
                     }
@@ -388,8 +408,22 @@ struct CustomerCardView: View {
                     .ignoresSafeArea()
             }
         }
+        .sheet(isPresented: $removing) {
+            if let contact {
+                CustomerRemovalView(contact: contact, canDelete: canDelete, canArchive: canEdit) { deleted in
+                    if deleted { dismiss() } else { Task { await reload() } }
+                }
+            }
+        }
         .navigationDestination(item: $openedBauakte) { BauakteDetailView(bauakteId: $0) }
         .task(id: model.active?.sync?.revision) { await reload() }
+        .task {
+            // Rechte einmal frisch laden (Löschen/Archivieren im Aktionsmenü), danach zwischengespeichert.
+            guard let store = model.active?.sync?.store else { return }
+            let granted = await MyPermissions(store: store).load(using: model.active?.client)
+            canEdit = granted.contains("contacts.edit")
+            canDelete = granted.contains("contacts.delete")
+        }
     }
 
 
@@ -547,8 +581,23 @@ struct CustomerCardView: View {
         }
     }
 
+    private func reactivate(_ contact: Contact) async {
+        guard let client = model.active?.client else { return }
+        do {
+            try await client.reactivateCustomer(contact.id)
+            await model.active?.sync?.run()
+        } catch {
+            // Ohne Verbindung bleibt der Kunde archiviert; der nächste Versuch klappt mit Netz.
+        }
+    }
+
     private func reload() async {
         guard let service = model.active?.service else { return }
+        if let store = model.active?.sync?.store {
+            let granted = await MyPermissions(store: store).cached()
+            canEdit = granted.contains("contacts.edit")
+            canDelete = granted.contains("contacts.delete")
+        }
         contact = try? await service.contact(contactId)
         bauakten = ((try? await service.bauakten(ofCustomer: contactId)) ?? [])
             .sorted { ($0.status.sortRank, $0.number ?? "") < ($1.status.sortRank, $1.number ?? "") }
