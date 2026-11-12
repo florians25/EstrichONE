@@ -1,4 +1,5 @@
 import SectionBase from "./SectionBase";
+import { startTeamsChat, teamsChatStates } from "../../../util/teamsChat";
 import JSONModel from "sap/ui/model/json/JSONModel";
 import EventBus from "sap/ui/core/EventBus";
 import type View from "sap/ui/core/mvc/View";
@@ -249,8 +250,14 @@ export default class Contacts extends SectionBase {
 		this.cards = cards;
 		this.ct().setProperty("/count", cards.length);
 		this.ct().setProperty("/partyCount", this.parties.length);
-		this.ct().setProperty("/team", teamCards(members ?? [], this.assignments, isoDay(new Date()))
-			.map((t) => ({ ...t, avatarColor: accentOf(t.displayName) })));
+		const team = teamCards(members ?? [], this.assignments, isoDay(new Date()))
+			.map((t) => ({ ...t, avatarColor: accentOf(t.displayName), teamsChat: { visible: false, enabled: false, tooltip: "" } }));
+		this.ct().setProperty("/team", team);
+		// Microsoft Teams: „Chat in Teams“ je Person (deaktiviert mit Grund, wenn kein Microsoft-Konto zugeordnet ist).
+		void teamsChatStates(team.map((t) => t.userId)).then((states) => {
+			if (this.ct().getProperty("/team") !== team) return;
+			this.ct().setProperty("/team", team.map((t) => ({ ...t, teamsChat: states[t.userId] })));
+		});
 		this.applyFilter();
 	}
 
@@ -293,6 +300,11 @@ export default class Contacts extends SectionBase {
 	onMailMember(event: Event): void {
 		const m = this.memberOf(event);
 		if (m.email) window.location.href = `mailto:${m.email}`;
+	}
+
+	/** Einzelchat in Microsoft Teams mit dieser Person. */
+	onTeamsChatMember(event: Event): void {
+		void startTeamsChat([this.memberOf(event).userId]);
 	}
 
 	onCopyMember(event: Event): void {

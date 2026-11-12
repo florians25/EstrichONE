@@ -6,7 +6,17 @@ import { get } from "../util/api";
 import { isoDay } from "../util/days";
 import { dateTime } from "../util/format";
 import { session } from "../util/session";
-import { chatPresentation, teamsHome } from "../util/teams";
+import { chatPresentation, teamsHome, teamsNoticeKey } from "../util/teams";
+
+/** Hinweis „Ab sofort chatten wir in Teams“ – bis die Person ihn schließt (je Text, nur in diesem Browser). */
+function teamsNoticeVisible(text: string | null | undefined): boolean {
+	if (!text) return false;
+	try {
+		return localStorage.getItem(teamsNoticeKey(text)) !== "1";
+	} catch {
+		return true;
+	}
+}
 import type { BackupStatusResponse, BauaktePage, PlanningRange, TicketSummary, WorkItemDto } from "../util/models";
 import { CATEGORY_ICONS, inbox, relativeTime } from "../util/notifications";
 import { notices } from "../util/notices";
@@ -100,6 +110,7 @@ export default class Start extends BaseController {
 		m.setProperty("/today", new Date().toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }));
 		// Kommunikation: eingebauter Chat (im Modus „Microsoft Teams“ als Archiv) und „In Teams öffnen“.
 		const chat = chatPresentation(session.data.teams);
+		this.model().setProperty("/teamsNotice", teamsNoticeVisible(session.data.teams?.rolloutNotice) ? session.data.teams?.rolloutNotice : "");
 		const communication = { label: "Kommunikation", tiles: [
 			{ label: chat.chatLabel, icon: chat.chatWritable ? "sap-icon://discussion-2" : "sap-icon://attachment-zip-file", to: "/chat", permission: "chat.use" },
 			...(chat.showTeams ? [{ label: "In Teams öffnen", icon: "sap-icon://collaborate", to: "teams:" }] : []),
@@ -254,5 +265,17 @@ export default class Start extends BaseController {
 	onNoticeDetails(event: Event): void {
 		const key = (event.getSource() as Control).getBindingContext("notices")?.getProperty("key") as string | undefined;
 		if (key) notices.details(key);
+	}
+
+	onTeamsNoticeClose(): void {
+		const text = session.data.teams?.rolloutNotice;
+		if (text) {
+			try {
+				localStorage.setItem(teamsNoticeKey(text), "1");
+			} catch {
+				// ohne Browser-Speicher erscheint der Hinweis beim nächsten Besuch wieder
+			}
+		}
+		this.model().setProperty("/teamsNotice", "");
 	}
 }

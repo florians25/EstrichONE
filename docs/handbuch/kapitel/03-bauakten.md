@@ -100,7 +100,8 @@ Die Schaltflächen im Kopf:
 - **Mir zuweisen** – trägt Sie als Zuständige(n) ein.
 - **Baustellen-Chat anlegen** – Gruppenchat mit allen Beteiligten der Baustelle (Abschnitt 8.2).
 - **In Teams öffnen** bzw. **Mit Teams verknüpfen** – Kanal oder Gruppenchat in Microsoft Teams (wenn eingerichtet,
-  Abschnitt 9 „Microsoft Teams“); im Menü des Knopfs: Mitglieder abgleichen, Details, Verknüpfung lösen.
+  Abschnitt 9 „Microsoft Teams“); im Menü des Knopfs: Chat mit dem ganzen Bauakten-Team, Nachricht in Teams posten,
+  Mitglieder abgleichen, Details, Verknüpfung lösen und – mit Recht `teams.delete` – archivieren bzw. in Teams löschen.
 - **Bearbeiten** – Bezeichnung, Baustelle, Termine, Beschreibung.
 - **Aktionen** – alle Ausdrucke und weitere Funktionen:
 

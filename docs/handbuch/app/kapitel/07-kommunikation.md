@@ -156,3 +156,16 @@ Unter **Mehr** steht alles in der Gruppe **IT-Service/Helpdesk**.
   übernehmen**. Das geht nur mit Verbindung.
 
 ![IT-Bearbeitung](bilder/iphone-meldung-it.jpg "Für die IT: Meldung bearbeiten, interne Notiz und Textbaustein")
+
+### Chatten in Microsoft Teams
+
+Nutzt Ihr Betrieb Microsoft Teams im Modus „Microsoft Teams“, ist der Chat in der App ein **Chat-Archiv** (nur lesen).
+Neue Unterhaltungen beginnen Sie direkt in der Teams-App:
+
+- **Neuer Chat in Teams** (im Chat-Archiv): Person antippen – der Einzelchat öffnet sich in der Teams-App. Es erscheinen
+  nur Kolleginnen und Kollegen mit Microsoft-Konto.
+- **Bauakte** › **…** › **Chat mit dem Team in Teams**: Gruppenchat mit dem ganzen Bauakten-Team; **In Teams öffnen**
+  öffnet den Kanal bzw. Chat der Baustelle.
+- Ist die Teams-App nicht installiert, öffnet sich Teams im Browser; die App bietet **Microsoft Teams installieren** an
+  (App Store bzw. Google Play).
+- Einmalig erscheint auf **Heute** der Hinweis „Ab sofort chatten wir in Microsoft Teams“; mit **×** blenden Sie ihn aus.

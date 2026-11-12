@@ -48,6 +48,15 @@ der Server spricht direkt mit `login.microsoftonline.com` und `graph.microsoft.c
 | `ChannelMessage.Send` | Delegiert | nur „Karten über Graph“ | Karten über das Dienstkonto in verknüpfte Kanäle senden |
 | `ChatMessage.Send` | Delegiert | nur „Karten über Graph“ | Karten über das Dienstkonto in verknüpfte Gruppenchats senden |
 | `offline_access` | Delegiert | nur „Karten über Graph“ | Dienstkonto angemeldet halten (Aktualisierungstoken, verschlüsselt) |
+| `ChannelSettings.ReadWrite.All` | Anwendung | Archivieren | Kanal einer Bauakte archivieren bzw. wiederherstellen (von Hand oder „Beim Abschließen: archivieren“) |
+| `Channel.Delete.All` | Anwendung | Löschen | Kanal einer Bauakte löschen |
+| `Chat.ManageDeletion.All` | Anwendung | Löschen | Gruppenchat einer Bauakte löschen (alternativ `Chat.ReadWrite.All`) |
+
+`Chat.Create` deckt zusätzlich „Einzelchats über Microsoft Graph“ ab (Einstellung, Standard aus). Ohne die drei neuen
+Berechtigungen funktioniert alles andere; Archivieren bzw. Löschen melden dann 424 `TEAMS_FORBIDDEN` mit dem Namen der
+fehlenden Berechtigung. Der **Verbindungstest** liest die gewährten Anwendungsberechtigungen aus dem Zugriffstoken
+(Anspruch `roles`) und zeigt im Schritt „Berechtigungen (Anwendung)“, welche optionalen fehlen und was dann nicht geht
+(Hinweis, kein Fehler) – ohne etwas zu löschen oder anzulegen.
 
 Warum delegiert für Nachrichten: Microsoft Graph erlaubt Anwendungen (ohne angemeldete Person) kein Senden in Kanäle
 oder Chats (nur Datenimport). Deshalb sendet ein **Dienstkonto** (z. B. `estrichone@firma.de`, Teams-Lizenz nötig), das
@@ -115,14 +124,82 @@ Nummer und Titel der Bauakte, Link „In EstrichONE öffnen“ (nur mit `Estrich
 Kommentare, Kundendaten, Preise, Fotos. Versand im Hintergrund; Fehler unter „Nachrichten › Letzte Karte“ und an der
 Verknüpfung.
 
+## Chats aus EstrichONE starten (Einzel- und Gruppenchats)
+
+„Chat in Teams“ startet einen Einzel- bzw. Gruppenchat mit Kolleginnen und Kollegen. Standard ist ein **Teams-Deep-Link**
+(keine Graph-Berechtigung nötig, funktioniert auch ohne App-Registrierung):
+
+`https://teams.microsoft.com/l/chat/0/0?users=<upn1>,<upn2>&topicName=<Thema>&message=<Text>` – ein Empfänger: Einzelchat
+(ein vorhandener wird geöffnet), mehrere: Gruppenchat (nur dann mit Thema). In den Apps zuerst `msteams:/l/chat/0/0?…`
+(Teams-App), sonst der https-Link (Universal Link bzw. App-Link; ohne Teams-App im Browser). iOS fragt `msteams` über
+`LSApplicationQueriesSchemes`, Android `com.microsoft.teams` über `<queries>` ab; fehlt die App, bieten die Apps
+„Microsoft Teams installieren“ (App Store / Google Play) an.
+
+- **Konto je Person:** zugeordneter Anmeldename (UPN). Ohne App-Registrierung bzw. solange noch nicht abgeglichen: die
+  E-Mail-Adresse in EstrichONE (meist gleich dem UPN – nicht geprüft). Ist eine Person bei Microsoft **nicht gefunden**,
+  erscheint bei ihr keine Teams-Aktion.
+- **Optional über Microsoft Graph** (Einstellung „Einzelchats über Microsoft Graph anlegen“, `Chat.Create`): Einzelchats
+  werden mit `POST /chats` (`chatType: oneOnOne`) angelegt – Microsoft gibt einen vorhandenen 1:1-Chat zurück, der Link ist
+  stabil. Gruppenchats bleiben Deep Links, weil Graph bei jedem Aufruf einen **neuen** Gruppenchat anlegen würde.
+- Wo: Bauakte › Kontakte › Team im Betrieb (Symbol je Person), Bauakte-Menü „Teams“ › „Chat mit dem ganzen
+  Bauakten-Team“, Personal › Mitarbeiter (Symbol im Kopf), Kopfzeile › Teams-Menü › „Chat in Teams starten …“, Chat-Archiv
+  „Neuer Chat in Teams“; Apps: Chat-Archiv „Neuer Chat in Teams“, Bauakte-Menü „Chat mit dem Team in Teams“.
+- **Nicht** im Helpdesk/IT-Service: Tickets und Kommentare bleiben bewusst in EstrichONE.
+
+## Archivieren, Löschen, Abschluss der Bauakte
+
+Recht **`teams.delete`** (neu, Verwaltungsrecht mit Zwei-Faktor-Pflicht wie `settings.integrations`, ab Werk nur
+Administrator). Im Bauakte-Menü „Teams“:
+
+| Aktion | Kanal | Gruppenchat | Graph |
+|---|---|---|---|
+| **Archivieren** / **Wiederherstellen** | ja – nur lesen, in Teams wiederherstellbar | **nicht möglich** (Teams kennt kein Archiv für Chats) → 409 `TEAMS_NOT_SUPPORTED` | `POST /teams/{id}/channels/{id}/archive` bzw. `/unarchive` |
+| **In Teams löschen** | ja – Teambesitzer können gelöschte Kanäle 30 Tage wiederherstellen | ja – vorläufig gelöscht, Wiederherstellung nur durch Microsoft-365-Admin | `DELETE /teams/{id}/channels/{id}` bzw. `DELETE /chats/{id}` |
+| **Verknüpfung lösen** | ja (in Teams bleibt alles) | ja | – |
+
+Löschen verlangt das **Eintippen der Bauaktennummer** (`confirmation`, sonst 422 `TEAMS_CONFIRMATION_MISMATCH`), löst danach
+die Verknüpfung und wird protokolliert. Bei Microsoft bereits gelöschte Unterhaltungen (404) gelten als erledigt. Der
+Standardkanal „Allgemein“ ist nicht löschbar. Per Link verknüpfte Kanäle ohne `groupId` lassen sich nur in Teams selbst
+archivieren bzw. löschen.
+
+**Beim Abschließen der Bauakte** (Einstellung, Standard **archivieren**, sonst „nichts“ oder „löschen“): Der
+Hintergrundabgleich (alle 10 Minuten) archiviert bzw. löscht Unterhaltungen **abgeschlossener oder stornierter** Bauakten –
+nur solche, die EstrichONE selbst angelegt hat. Wird die Bauakte wieder geöffnet, hebt er die Archivierung auf. Fehler
+(z. B. fehlende Berechtigung) stehen an der Verknüpfung (`closeError`, Bauakte › Teams › Details); neuer Versuch nach einem
+Tag. Bestehende Verknüpfungen werden beim Update nicht rückwirkend archiviert.
+
+## Umstellung („alle zum Chatten nach Teams bringen“)
+
+**Einstellungen › Integrationen › Microsoft Teams › Umstellung** (`settings.integrations`):
+
+1. **Konten:** zugeordnet / bei Microsoft nicht gefunden / noch nicht geprüft / ohne E-Mail. Ob jemand die Teams-App
+   tatsächlich nutzt, zeigt EstrichONE nicht (dafür wäre `Reports.Read.All` nötig) – siehe Teams Admin Center › Berichte.
+2. **Alle offenen Bauakten ohne Teams-Verknüpfung verknüpfen:** startet einen **Hintergrundauftrag** (`202 Accepted`); die
+   Seite fragt den Stand ab (`GET …/rollout/job`, alle 2 s). Kein langer HTTP-Aufruf hinter Cloudflare. Je Bauakte
+   gelten die üblichen Fristen und Wiederholungen des Hintergrunds; grundsätzliche Fehler (keine Verbindung, Anmeldung,
+   Berechtigung) brechen ab, Einzelfehler (z. B. Gruppenchat mit weniger als zwei Konten) werden aufgelistet. Höchstens ein
+   Auftrag gleichzeitig; der Stand liegt im Speicher (nach Neustart weg – erneut starten macht beim Rest weiter).
+3. **Hinweis „Ab sofort chatten wir in Teams“** (Text anpassbar): einmal auf der Startseite und in den Apps (Heute),
+   wegklickbar und gemerkt, mit Link zum Installieren von Teams.
+
+Im Chat-Modus **Microsoft Teams** führen alle Chat-Einstiege nach Teams: Kopfzeile (Teams-Menü: Teams öffnen, Chat in Teams
+starten, Chat-Archiv), Navigation „Microsoft Teams“, Bauakte „In Teams öffnen“ statt Baustellen-Chat, Apps ohne
+eingebaute Eingabe. Das Chat-Archiv bleibt lesbar.
+
 ## Rechte und Protokoll
 
 - `settings.integrations` (neu, Verwaltungsrecht mit Zwei-Faktor-Pflicht, Standard nur Administrator): Einstellungen,
   Kontenzuordnung, Dienstkonto.
-- Bauakte: sehen mit `bauakten.read` und Sichtbarkeit der Bauakte; verknüpfen, abgleichen, lösen mit `bauakten.edit`.
+- `teams.delete` (neu, Verwaltungsrecht mit Zwei-Faktor-Pflicht, Standard nur Administrator): Kanäle archivieren,
+  wiederherstellen, Kanäle und Gruppenchats in Teams löschen.
+- Bauakte: sehen mit `bauakten.read` und Sichtbarkeit der Bauakte; verknüpfen, abgleichen, lösen und „Nachricht in Teams
+  posten“ mit `bauakten.edit`.
+- Chats starten (`GET /teams/people`, `POST /teams/chats`): `chat.use`.
 - Protokoll: `teams.settings_saved`, `teams.chat_mode_changed`, `teams.connection_tested`, `teams.webhook_tested`,
   `teams.users_matched`, `teams.user_mapped`, `teams.sender_connected`, `teams.sender_disconnected`,
-  `teams.bauakte_linked`, `teams.bauakte_unlinked`, `teams.members_synced` – ohne Geheimnisse und ohne Nachrichteninhalte.
+  `teams.bauakte_linked`, `teams.bauakte_unlinked`, `teams.members_synced`, `teams.bauakte_archived_in_teams`,
+  `teams.bauakte_unarchived_in_teams`, `teams.bauakte_deleted_in_teams` (mit `trigger` manual/closed), `teams.message_posted`
+  (nur Länge), `teams.link_all_started` – ohne Geheimnisse und ohne Nachrichteninhalte.
 
 ## API (alle unter `/api/v1`)
 
@@ -137,8 +214,25 @@ Verknüpfung.
 | `GET /bauakten/{id}/teams` | `bauakten.read` | Verknüpfung mit `webUrl` (https) und `appUrl` (`msteams:`) |
 | `POST /bauakten/{id}/teams` | `bauakten.edit` | `{ kind: "channel" \| "groupChat" }` anlegen oder `{ url }` verknüpfen |
 | `POST /bauakten/{id}/teams/sync`, `DELETE /bauakten/{id}/teams` | `bauakten.edit` | abgleichen, lösen (in Teams wird nichts gelöscht) |
+| `POST /bauakten/{id}/teams/message` | `bauakten.edit` | `{ text }` als Karte in den Kanal/Chat (Webhook oder Dienstkonto) |
+| `POST /bauakten/{id}/teams/archive`, `…/unarchive` | `teams.delete` | Kanal archivieren bzw. wiederherstellen |
+| `POST /bauakten/{id}/teams/delete` | `teams.delete` | `{ confirmation: "<Bauaktennummer>" }` – in Teams löschen und Verknüpfung lösen |
+| `GET /teams/people` | `chat.use` | Kollegen mit `upn` (bzw. `reason`, warum kein Chat möglich ist) |
+| `POST /teams/chats` | `chat.use` | `{ userIds, topic?, message? }` → `{ webUrl, appUrl, viaGraph, included, missing }` |
+| `GET /settings/integrations/teams/rollout` | `settings.integrations` | Stand der Umstellung |
+| `POST …/rollout/link-all`, `GET/DELETE …/rollout/job` | `settings.integrations` | Massenverknüpfung starten (202), Stand, abbrechen |
 
 Apps öffnen `appUrl` (`msteams:/l/…`), wenn die Teams-App installiert ist, sonst `webUrl` im Browser.
+`GET /bauakten/{id}/teams` liefert zusätzlich `teamChat` (Deep Link für das ganze Bauakten-Team ohne die eigene Person),
+`canDelete`, `canPost`, `confirmation` (Bauaktennummer) und `closeAction`; `GET /teams/status` liefert `rolloutNotice`,
+`canStartChats`, `canDelete` und `teamsDownloadUrl`.
+
+## Nicht geprüft (ohne echten Tenant)
+
+Alles ist gegen den nachgebildeten Graph-Server getestet. Annahmen nach der Microsoft-Graph-Dokumentation, die mit einem
+echten Mandanten zu bestätigen sind: Kanal-Archivierung über v1.0 (`…/channels/{id}/archive`, `ChannelSettings.ReadWrite.All`),
+Löschen von Chats mit Anwendungsrecht `Chat.ManageDeletion.All` (bzw. `Chat.ReadWrite.All`), `roles` im App-Token, Verhalten
+des Deep Links `…/l/chat/0/0?users=…` bei Gast- bzw. externen Konten.
 
 ## Datenschutzhinweis (Vorlage für den Betrieb)
 

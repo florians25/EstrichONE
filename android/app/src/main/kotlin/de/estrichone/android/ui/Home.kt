@@ -141,6 +141,7 @@ fun HomeScreen() {
                 }
                 OfflineBanner(session)
                 NoticeCards(session)
+                TeamsRolloutCard()
             }
             // Systemeinstellungen › Module: ohne Disposition kein Einsatz, ohne Aufgaben und Mängel keine offenen Punkte.
             val planning = modules.isOn(AppModules.PLANNING)

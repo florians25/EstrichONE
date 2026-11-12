@@ -20661,6 +20661,117 @@
         ]
       }
     },
+    "/api/v1/teams/people": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Microsoft-Konten (UPN) der Kollegen für „Chat in Teams“ – mit Grund, wenn kein Chat möglich ist",
+        "operationId": "ListTeamsPeople",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamsPerson"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teams/chats": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Einzel- oder Gruppenchat in Teams: Teams-Link (Deep Link, optional über Microsoft Graph angelegt)",
+        "operationId": "StartTeamsChat",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartTeamsChatRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsChatLinkResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/settings/integrations/teams": {
       "get": {
         "tags": [
@@ -21136,6 +21247,153 @@
         ]
       }
     },
+    "/api/v1/settings/integrations/teams/rollout": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Stand der Umstellung: Konten, Bauakten mit und ohne Verknüpfung",
+        "operationId": "GetTeamsRollout",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsRolloutResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/rollout/link-all": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Alle offenen Bauakten ohne Teams-Verknüpfung im Hintergrund verknüpfen (Stand über GET …/rollout/job)",
+        "operationId": "StartTeamsLinkAll",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartTeamsLinkJobRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsLinkJobResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/rollout/job": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Stand der Massenverknüpfung",
+        "operationId": "GetTeamsLinkJob",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsLinkJobResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Massenverknüpfung abbrechen",
+        "operationId": "CancelTeamsLinkJob",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{id}/teams": {
       "get": {
         "tags": [
@@ -21346,6 +21604,349 @@
           },
           "404": {
             "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/teams/archive": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Kanal in Teams archivieren (nur lesen, wiederherstellbar; Gruppenchats: nicht möglich)",
+        "operationId": "ArchiveBauakteTeams",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsLinkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/teams/unarchive": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Archivierten Kanal wiederherstellen",
+        "operationId": "UnarchiveBauakteTeams",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsLinkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/teams/delete": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Kanal bzw. Gruppenchat in Teams löschen und Verknüpfung lösen (Bestätigung mit Bauaktennummer)",
+        "operationId": "DeleteBauakteTeams",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeleteBauakteTeamsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/teams/message": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Kurze Nachricht in den verknüpften Kanal bzw. Chat (Webhook oder Dienstkonto)",
+        "operationId": "PostBauakteTeamsMessage",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PostBauakteTeamsMessageRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsLinkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -27068,7 +27669,12 @@
           "canManage",
           "canCreate",
           "canCreateChannel",
-          "defaultLinkKind"
+          "defaultLinkKind",
+          "canDelete",
+          "canPost",
+          "confirmation",
+          "teamChat",
+          "closeAction"
         ],
         "type": "object",
         "properties": {
@@ -27100,6 +27706,28 @@
           },
           "defaultLinkKind": {
             "$ref": "#/components/schemas/TeamsLinkKind"
+          },
+          "canDelete": {
+            "type": "boolean"
+          },
+          "canPost": {
+            "type": "boolean"
+          },
+          "confirmation": {
+            "type": "string"
+          },
+          "teamChat": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TeamsChatLinkResponse"
+              }
+            ]
+          },
+          "closeAction": {
+            "$ref": "#/components/schemas/TeamsCloseAction"
           }
         }
       },
@@ -31385,6 +32013,18 @@
           "password": {
             "maxLength": 1024,
             "type": "string"
+          }
+        }
+      },
+      "DeleteBauakteTeamsRequest": {
+        "type": "object",
+        "properties": {
+          "confirmation": {
+            "maxLength": 250,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -38234,6 +38874,18 @@
           }
         }
       },
+      "PostBauakteTeamsMessageRequest": {
+        "required": [
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "text": {
+            "maxLength": 2000,
+            "type": "string"
+          }
+        }
+      },
       "ProblemDetails": {
         "type": "object",
         "properties": {
@@ -42297,6 +42949,24 @@
               "integer"
             ],
             "format": "int64"
+          },
+          "closeAction": {
+            "$ref": "#/components/schemas/TeamsCloseAction"
+          },
+          "chatsViaGraph": {
+            "type": "boolean",
+            "default": false
+          },
+          "rolloutNotice": {
+            "type": "boolean",
+            "default": false
+          },
+          "rolloutNoticeText": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -42989,6 +43659,51 @@
           }
         }
       },
+      "StartTeamsChatRequest": {
+        "required": [
+          "userIds"
+        ],
+        "type": "object",
+        "properties": {
+          "userIds": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          "topic": {
+            "maxLength": 250,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "message": {
+            "maxLength": 1000,
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "StartTeamsLinkJobRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TeamsLinkKind"
+              }
+            ]
+          }
+        }
+      },
       "StorageJobStatus": {
         "required": [
           "running",
@@ -43556,12 +44271,151 @@
           "certificate"
         ]
       },
+      "TeamsChatLinkResponse": {
+        "required": [
+          "webUrl",
+          "appUrl",
+          "viaGraph",
+          "included",
+          "missing"
+        ],
+        "type": "object",
+        "properties": {
+          "webUrl": {
+            "type": "string"
+          },
+          "appUrl": {
+            "type": "string"
+          },
+          "viaGraph": {
+            "type": "boolean"
+          },
+          "included": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "missing": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamsChatMissing"
+            }
+          }
+        }
+      },
+      "TeamsChatMissing": {
+        "required": [
+          "userId",
+          "name",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
       "TeamsChatMode": {
         "enum": [
           "estrichOne",
           "teams",
           "both"
         ]
+      },
+      "TeamsCloseAction": {
+        "enum": [
+          "nothing",
+          "archive",
+          "delete"
+        ]
+      },
+      "TeamsLinkJobResponse": {
+        "required": [
+          "id",
+          "state",
+          "kind",
+          "total",
+          "processed",
+          "linked",
+          "skipped",
+          "failed",
+          "errors",
+          "error",
+          "startedAt",
+          "finishedAt",
+          "startedByName"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "state": {
+            "type": "string"
+          },
+          "kind": {
+            "$ref": "#/components/schemas/TeamsLinkKind"
+          },
+          "total": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "processed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "linked": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "failed": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "errors": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "startedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "TeamsLinkKind": {
         "enum": [
@@ -43588,7 +44442,9 @@
           "lastPostError",
           "hasWebhook",
           "linkedAt",
-          "linkedByName"
+          "linkedByName",
+          "archivedAt",
+          "closeError"
         ],
         "type": "object",
         "properties": {
@@ -43677,6 +44533,19 @@
               "null",
               "string"
             ]
+          },
+          "archivedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "closeError": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -43730,12 +44599,115 @@
           }
         }
       },
+      "TeamsPerson": {
+        "required": [
+          "userId",
+          "name",
+          "upn",
+          "fromEmail",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "upn": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "fromEmail": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "TeamsPostVia": {
         "enum": [
           "off",
           "graph",
           "webhook"
         ]
+      },
+      "TeamsRolloutResponse": {
+        "required": [
+          "activeUsers",
+          "mapped",
+          "notFound",
+          "unchecked",
+          "noEmail",
+          "openBauakten",
+          "linkedOpen",
+          "unlinkedOpen",
+          "job",
+          "canLinkAll",
+          "cannotLinkReason"
+        ],
+        "type": "object",
+        "properties": {
+          "activeUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "mapped": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notFound": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unchecked": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "noEmail": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "openBauakten": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "linkedOpen": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unlinkedOpen": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "job": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TeamsLinkJobResponse"
+              }
+            ]
+          },
+          "canLinkAll": {
+            "type": "boolean"
+          },
+          "cannotLinkReason": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
       },
       "TeamsSenderStart": {
         "required": [
@@ -43832,7 +44804,11 @@
           "activeUsers",
           "linkedBauakten",
           "permissions",
-          "version"
+          "version",
+          "closeAction",
+          "chatsViaGraph",
+          "rolloutNotice",
+          "rolloutNoticeText"
         ],
         "type": "object",
         "properties": {
@@ -43987,6 +44963,21 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          },
+          "closeAction": {
+            "$ref": "#/components/schemas/TeamsCloseAction"
+          },
+          "chatsViaGraph": {
+            "type": "boolean"
+          },
+          "rolloutNotice": {
+            "type": "boolean"
+          },
+          "rolloutNoticeText": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -44047,6 +45038,24 @@
           "teamsAppUrl": {
             "type": "string",
             "default": "msteams:"
+          },
+          "rolloutNotice": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canStartChats": {
+            "type": "boolean",
+            "default": false
+          },
+          "canDelete": {
+            "type": "boolean",
+            "default": false
+          },
+          "teamsDownloadUrl": {
+            "type": "string",
+            "default": "https://www.microsoft.com/microsoft-teams/download-app"
           }
         }
       },
@@ -44089,6 +45098,10 @@
           },
           "detail": {
             "type": "string"
+          },
+          "warning": {
+            "type": "boolean",
+            "default": false
           }
         }
       },

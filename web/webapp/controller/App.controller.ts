@@ -37,6 +37,7 @@ import { notices } from "../util/notices";
 import { updateHints } from "../util/updateHints";
 import { chatStatus } from "../util/chat";
 import { chatPresentation, teamsHome } from "../util/teams";
+import { pickTeamsChat } from "../util/teamsChat";
 import { session } from "../util/session";
 import { logos } from "../util/theme";
 import { openSettings } from "../util/settings";
@@ -241,8 +242,22 @@ export default class AppController extends BaseController {
 		this.el<NavigationList>("navigationList").setSelectedKey(String(this.model().getProperty("/navKey") ?? ""));
 	}
 
-	onTeams(): void {
-		this.openTeams();
+	/** Kopfzeile „Microsoft Teams“: Teams öffnen, Chat starten, Chat-Archiv (im Modus „Teams“ der Weg zu allen Unterhaltungen). */
+	onTeams(event: Event): void {
+		const source = event.getSource() as Control;
+		const items = [
+			new MenuItem({ text: "Microsoft Teams öffnen", icon: "sap-icon://collaborate", press: () => this.openTeams() }),
+			...(session.data.teams?.canStartChats ? [new MenuItem({ text: "Chat in Teams starten …", icon: "sap-icon://discussion", press: () => void pickTeamsChat() })] : []),
+			...(session.data.permissions["chat.use"] && session.data.teams?.chatReadOnly
+				? [new MenuItem({ text: "Chat-Archiv (nur lesen)", icon: "sap-icon://inbox", startsSection: true, press: () => this.nav("/chat") })] : []),
+		];
+		if (items.length === 1) {
+			this.openTeams();
+			return;
+		}
+		const menu = new Menu({ items, closed: () => menu.destroy() });
+		this.getView()?.addDependent(menu);
+		menu.openBy(source, false);
 	}
 
 	onNavigate(event: SideNavigation$ItemSelectEvent): void {

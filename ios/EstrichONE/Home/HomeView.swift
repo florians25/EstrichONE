@@ -54,6 +54,9 @@ struct HomeView: View {
                         VStack(alignment: .leading, spacing: Space.m) {
                             dateLine
                             notices
+                            if let notice = model.active?.sync?.teams?.rolloutNotice, !notice.isEmpty {
+                                TeamsRolloutNotice(text: notice)
+                            }
                         }
                         quickAccess
                         if isWide {

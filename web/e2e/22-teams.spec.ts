@@ -84,6 +84,51 @@ test('Microsoft Teams: Einstellungen, Chat-Modus, Bauakte per Link verknüpfen, 
   await expect(page.locator('[id$="chatExport"]').filter({ visible: true })).toHaveCount(1);
   await shot(page, 'chat-archiv');
 
+  // Chat-Archiv: neuer Chat führt nach Teams (Personenauswahl), kein eingebauter Einzelchat.
+  await expect(page.locator('[id$="chatNewTeams"]').filter({ visible: true })).toHaveCount(1);
+
+  // Einzel- und Gruppenchats per Deep Link (ohne App-Registrierung über die E-Mail-Adresse).
+  const people = await apiCall<{ userId: string; upn: string | null }[]>(page, 'GET', '/api/v1/teams/people');
+  expect(people.status).toBe(200);
+  const me = await apiCall<{ id: string }>(page, 'GET', '/api/v1/auth/me');
+  const other = people.json.find((p) => p.upn && p.userId !== me.json.id);
+  if (other) {
+    const chat = await apiCall<{ webUrl: string; appUrl: string; viaGraph: boolean }>(page, 'POST', '/api/v1/teams/chats', { userIds: [other.userId] });
+    expect(chat.status).toBe(200);
+    expect(chat.json.webUrl).toBe(`https://teams.microsoft.com/l/chat/0/0?users=${other.upn}`);
+    expect(chat.json.appUrl).toMatch(/^msteams:\/l\/chat\/0\/0\?users=/);
+    expect(chat.json.viaGraph).toBe(false);
+  }
+
+  // Bauakte ohne App-Registrierung: kein Löschen/Archivieren im Menü.
+  await page.goto(`/bauakten/${id}`);
+  await button.locator('.sapMSBArrow, .sapMBtnInner').last().click();
+  await expect(page.getByRole('menuitem', { name: 'In Teams löschen …' })).toHaveCount(0);
+  await page.keyboard.press('Escape');
+
+  // Umstellung: Stand der Konten und Bauakten; Massenverknüpfung braucht die App-Registrierung.
+  await page.goto('/system/microsoft-teams');
+  await page.getByRole('tab', { name: 'Umstellung' }).click();
+  await expect(page.getByText(/mit Teams verknüpft, \d+ ohne Verknüpfung/)).toBeVisible();
+  await expect(page.getByText('Dafür ist die App-Registrierung nötig (Reiter „Verbindung“).')).toBeVisible();
+  await expect(page.locator('[id$="tmLinkAll"]').filter({ visible: true })).toBeDisabled();
+  await shot(page, 'umstellung');
+
+  // Hinweis „Ab sofort chatten wir in Teams“: einmal auf der Startseite, wegklickbar und gemerkt.
+  const notice = await apiCall(page, 'PUT', '/api/v1/settings/integrations/teams', { chatMode: 'teams', rolloutNotice: true });
+  expect(notice.status).toBe(200);
+  await page.goto('/start');
+  await page.reload();
+  const strip = page.locator('[id$="teamsNotice"]').filter({ visible: true });
+  await expect(strip).toContainText('Ab sofort chatten wir in Microsoft Teams');
+  await expect(strip.getByRole('link', { name: 'Teams installieren' })).toBeVisible();
+  await shot(page, 'hinweis');
+  await strip.getByRole('button').last().click();
+  await expect(strip).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByRole('heading', { level: 1 }).first()).toBeVisible();
+  await expect(page.locator('[id$="teamsNotice"]').filter({ visible: true })).toHaveCount(0);
+
   // Verknüpfung lösen und Modus zurück auf den eingebauten Chat (folgende Tests erwarten ihn).
   const unlink = await apiCall(page, 'DELETE', `/api/v1/bauakten/${id}/teams`);
   expect(unlink.status).toBe(204);

@@ -59,6 +59,32 @@ public sealed class FakeGraphServer : IAsyncDisposable
     /// <summary>Pfade mit diesem Anfang antworten mit festem Status und Text (z. B. HTML einer Proxy-Fehlerseite).</summary>
     public ConcurrentDictionary<string, (int Status, string Text)> Raw { get; } = new();
 
+    /// <summary>Gewährte Anwendungsberechtigungen (Anspruch <c>roles</c> im App-Token); Standard: alle, die EstrichONE kennt.</summary>
+    public ConcurrentDictionary<string, bool> AppRoles { get; } = new(new[]
+    {
+        "User.Read.All", "Team.ReadBasic.All", "Channel.Create", "TeamMember.ReadWrite.All", "Chat.Create", "ChatMember.ReadWrite.All",
+        "ChannelSettings.ReadWrite.All", "Channel.Delete.All", "Chat.ManageDeletion.All",
+    }.ToDictionary(r => r, _ => true), StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>Angelegte Kanäle: Kanal-ID → archiviert.</summary>
+    public ConcurrentDictionary<string, bool> Channels { get; } = new();
+
+    /// <summary>Gelöschte Kanäle bzw. Chats.</summary>
+    public ConcurrentBag<string> Deleted { get; } = [];
+
+    /// <summary>Angelegte Chats: Chat-ID → Art (<c>group</c>, <c>oneOnOne</c>).</summary>
+    public ConcurrentDictionary<string, string> Chats { get; } = new();
+
+    private string AppToken()
+    {
+        var payload = new JsonObject { ["aud"] = "https://graph.microsoft.com", ["roles"] = new JsonArray(AppRoles.Keys.Select(r => (JsonNode)r).ToArray()) };
+        return "eyJhbGciOiJub25lIn0." + Convert.ToBase64String(Encoding.UTF8.GetBytes(payload.ToJsonString())).TrimEnd('=').Replace('+', '-').Replace('/', '_')
+            + ".app";
+    }
+
+    private static bool IsAppToken(string authorization) =>
+        authorization.StartsWith("Bearer eyJhbGciOiJub25lIn0.", StringComparison.Ordinal) && authorization.EndsWith(".app", StringComparison.Ordinal);
+
     public List<GraphCall> CallsTo(string method, string pathStart) =>
         Calls.Where(c => c.Method == method && c.Path.StartsWith(pathStart, StringComparison.Ordinal)).ToList();
 
@@ -164,7 +190,7 @@ public sealed class FakeGraphServer : IAsyncDisposable
             var ok = form.GetValueOrDefault("client_secret") == Secret
                 || (form.GetValueOrDefault("client_assertion") is { } assertion && assertion.Split('.').Length == 3);
             return ok
-                ? (200, new JsonObject { ["access_token"] = "app-token", ["expires_in"] = 3599, ["token_type"] = "Bearer" })
+                ? (200, new JsonObject { ["access_token"] = AppToken(), ["expires_in"] = 3599, ["token_type"] = "Bearer" })
                 : (401, new JsonObject { ["error"] = "invalid_client", ["error_description"] = "AADSTS7000215: Invalid client secret provided." });
         }
 
@@ -194,7 +220,7 @@ public sealed class FakeGraphServer : IAsyncDisposable
 
     private (int, JsonNode?) Graph(string method, string path, string query, string body, string authorization)
     {
-        if (authorization is not ("Bearer app-token" or "Bearer user-token"))
+        if (!IsAppToken(authorization) && authorization != "Bearer user-token")
         {
             return (401, new JsonObject { ["error"] = new JsonObject { ["code"] = "InvalidAuthenticationToken" } });
         }
@@ -283,6 +309,7 @@ public sealed class FakeGraphServer : IAsyncDisposable
                     }
 
                     var id = $"19:{Guid.NewGuid():N}@thread.tacv2";
+                    Channels[id] = false;
                     return (201, new JsonObject
                     {
                         ["id"] = id, ["displayName"] = name,
@@ -296,9 +323,45 @@ public sealed class FakeGraphServer : IAsyncDisposable
             case ("POST", ["teams", var team, "members"]):
                 return (201, AddMember(team, body));
 
+            case ("POST", ["teams", _, "channels", var channel, "archive"]):
+                return Channels.ContainsKey(channel) ? (202, Archive(channel, true)) : (404, Error("NotFound", "Channel not found"));
+
+            case ("POST", ["teams", _, "channels", var channel, "unarchive"]):
+                return Channels.ContainsKey(channel) ? (202, Archive(channel, false)) : (404, Error("NotFound", "Channel not found"));
+
+            case ("DELETE", ["teams", _, "channels", var channel]):
+                if (!Channels.TryRemove(channel, out _))
+                {
+                    return (404, Error("NotFound", "Channel not found"));
+                }
+
+                Deleted.Add(channel);
+                return (204, null);
+
+            case ("DELETE", ["chats", var chat]):
+                if (!Chats.TryRemove(chat, out _))
+                {
+                    return (404, Error("NotFound", "Chat not found"));
+                }
+
+                Deleted.Add(chat);
+                return (204, null);
+
+            case ("POST", ["chats"]) when ChatType(body) == "oneOnOne":
+                {
+                    var ids = (JsonNode.Parse(body)?["members"] as JsonArray ?? []).Select(UserIdOf).Order(StringComparer.Ordinal).ToList();
+                    var id = $"19:{string.Join("_", ids)}@unq.gbl.spaces";
+                    Chats[id] = "oneOnOne";
+                    return (201, new JsonObject
+                    {
+                        ["id"] = id, ["chatType"] = "oneOnOne", ["webUrl"] = $"https://teams.microsoft.com/l/chat/{Uri.EscapeDataString(id)}/0?tenantId=tenant",
+                    });
+                }
+
             case ("POST", ["chats"]):
                 {
                     var id = $"19:{Guid.NewGuid():N}@thread.v2";
+                    Chats[id] = "group";
                     var members = Members.GetOrAdd(id, _ => new());
                     foreach (var member in JsonNode.Parse(body)?["members"] as JsonArray ?? [])
                     {
@@ -334,6 +397,14 @@ public sealed class FakeGraphServer : IAsyncDisposable
             default:
                 return (404, Error("NotFound", $"{method} {path}"));
         }
+    }
+
+    private static string? ChatType(string body) => (JsonNode.Parse(body) as JsonObject)?["chatType"]?.GetValue<string>();
+
+    private JsonObject? Archive(string channel, bool archived)
+    {
+        Channels[channel] = archived;
+        return null;
     }
 
     private static JsonObject UserJson(string mail, (string Id, string Name) user) =>

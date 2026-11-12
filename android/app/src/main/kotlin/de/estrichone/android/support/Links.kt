@@ -24,8 +24,23 @@ object Links {
     fun web(context: Context, url: String) = start(context, Intent(Intent.ACTION_VIEW, Uri.parse(if ("://" in url) url else "https://$url")))
 
     /** Microsoft Teams: zuerst die Teams-App (`msteams:`), sonst Teams im Browser (Teams-App übernimmt per App-Link). */
-    fun teams(context: Context, targets: de.estrichone.core.TeamsTargets): Boolean =
-        targets.candidates.any { start(context, Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
+    fun teams(context: Context, targets: de.estrichone.core.TeamsTargets): Boolean {
+        val installed = teamsInstalled(context)
+        // 1. Teams-App über msteams:, 2. https-Link ausdrücklich an die Teams-App, 3. Browser.
+        if (installed && targets.app != null && start(context, Intent(Intent.ACTION_VIEW, Uri.parse(targets.app)))) return true
+        val web = targets.web ?: return false
+        if (installed && start(context, Intent(Intent.ACTION_VIEW, Uri.parse(web)).setPackage(de.estrichone.core.TeamsChatLinks.TEAMS_PACKAGE))) return true
+        return start(context, Intent(Intent.ACTION_VIEW, Uri.parse(web)))
+    }
+
+    /** Ist die Teams-App installiert (Paketabfrage, im Manifest unter <queries> freigegeben)? */
+    fun teamsInstalled(context: Context): Boolean =
+        runCatching { context.packageManager.getPackageInfo(de.estrichone.core.TeamsChatLinks.TEAMS_PACKAGE, 0) }.isSuccess
+
+    /** Google Play: Microsoft Teams installieren. */
+    fun installTeams(context: Context): Boolean =
+        start(context, Intent(Intent.ACTION_VIEW, Uri.parse("market://details?id=${de.estrichone.core.TeamsChatLinks.TEAMS_PACKAGE}")))
+            || web(context, de.estrichone.core.TeamsChatLinks.PLAY_STORE_URL)
 
     /** Navigation zur Baustelle (Koordinaten, sonst Adresse). */
     fun route(context: Context, address: String?, latitude: Double? = null, longitude: Double? = null): Boolean {

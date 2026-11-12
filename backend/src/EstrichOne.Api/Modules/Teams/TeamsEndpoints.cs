@@ -18,9 +18,14 @@ namespace EstrichOne.Api.Modules.Teams;
 /// <param name="ChatMode">Wo Unterhaltungen stattfinden: <c>estrichOne</c>, <c>teams</c> oder <c>both</c>.</param>
 /// <param name="ChatReadOnly">Eingebauter Chat nur noch als Archiv (lesen, exportieren).</param>
 /// <param name="Available">Teams-Verknüpfungen nutzbar (Modus nicht „nur EstrichONE-Chat“).</param>
+/// <param name="RolloutNotice">Hinweis „Ab sofort chatten wir in Teams“ für Web und Apps (nur wenn eingeschaltet).</param>
+/// <param name="CanStartChats">„Chat in Teams“ an Personen anbieten (Teams im Einsatz und Recht <c>chat.use</c>).</param>
+/// <param name="CanDelete">Recht <c>teams.delete</c>: Kanäle und Gruppenchats von Bauakten archivieren bzw. löschen.</param>
 public sealed record TeamsStatusResponse(
     TeamsChatMode ChatMode, bool ChatReadOnly, bool Available, bool GraphConfigured, TeamsPostVia PostVia, bool CanManage, string? SiteTeamName,
-    string? SiteTeamUrl, string? SiteTeamAppUrl, string TeamsWebUrl = "https://teams.microsoft.com", string TeamsAppUrl = "msteams:");
+    string? SiteTeamUrl, string? SiteTeamAppUrl, string TeamsWebUrl = "https://teams.microsoft.com", string TeamsAppUrl = "msteams:",
+    string? RolloutNotice = null, bool CanStartChats = false, bool CanDelete = false,
+    string TeamsDownloadUrl = "https://www.microsoft.com/microsoft-teams/download-app");
 
 public sealed record TeamsSettingsResponse(
     TeamsChatMode ChatMode, string? TenantId, string? ClientId, TeamsAuthKind AuthKind, bool HasClientSecret, string? CertificateThumbprint,
@@ -28,7 +33,8 @@ public sealed record TeamsSettingsResponse(
     bool SyncMembers, TeamsPostVia PostVia, bool HasWebhook, string? WebhookHost, bool PostDefects, bool PostAcceptance, bool PostSchedule,
     string? SenderName, DateTimeOffset? SenderConnectedAt, DateTimeOffset? LastTestAt, bool? LastTestOk, string? LastTestError,
     DateTimeOffset? LastPostAt, string? LastPostError, bool GraphConfigured, int MappedUsers, int ActiveUsers, int LinkedBauakten,
-    IReadOnlyList<TeamsPermissionInfo> Permissions, long Version);
+    IReadOnlyList<TeamsPermissionInfo> Permissions, long Version, TeamsCloseAction CloseAction, bool ChatsViaGraph, bool RolloutNotice,
+    string? RolloutNoticeText);
 
 /// <summary>Geheimnisse: <c>null</c> = unverändert; <c>Clear…</c> entfernt sie. <paramref name="SiteTeam"/>: ID oder Teams-Link, leer = entfernen, <c>null</c> = unverändert.</summary>
 public sealed record SaveTeamsSettingsRequest(
@@ -37,7 +43,8 @@ public sealed record SaveTeamsSettingsRequest(
     [property: MaxLength(20_000)] string? CertificatePem = null, bool ClearCertificate = false, [property: MaxLength(2000)] string? SiteTeam = null,
     TeamsLinkKind DefaultLinkKind = TeamsLinkKind.Channel, bool AutoLink = false, bool SyncMembers = true, TeamsPostVia PostVia = TeamsPostVia.Off,
     [property: MaxLength(2000)] string? WebhookUrl = null, bool ClearWebhook = false, bool PostDefects = true, bool PostAcceptance = true,
-    bool PostSchedule = true, long? Version = null);
+    bool PostSchedule = true, long? Version = null, TeamsCloseAction CloseAction = TeamsCloseAction.Archive, bool ChatsViaGraph = false,
+    bool RolloutNotice = false, [property: MaxLength(TeamsSettingsRow.MaxNoticeText)] string? RolloutNoticeText = null);
 
 public sealed record TeamsTestResponse(bool Ok, IReadOnlyList<TeamsTestStep> Steps, DateTimeOffset At);
 
@@ -59,12 +66,39 @@ public sealed record TeamsSenderState(bool Connected, bool Pending, string? Send
 public sealed record TeamsLinkResponse(
     TeamsLinkKind Kind, bool Created, string? DisplayName, string WebUrl, string AppUrl, string? TeamId, string? ChannelId, string? ChatId,
     bool SyncMembers, DateTimeOffset? LastSyncAt, string? LastSyncError, int SyncedMembers, int UnmappedMembers, DateTimeOffset? LastPostAt,
-    string? LastPostError, bool HasWebhook, DateTimeOffset LinkedAt, string? LinkedByName);
+    string? LastPostError, bool HasWebhook, DateTimeOffset LinkedAt, string? LinkedByName, DateTimeOffset? ArchivedAt, string? CloseError);
 
 /// <param name="CanManage">Verknüpfen, abgleichen, lösen (bauakten.edit).</param>
 /// <param name="CanCreate">Automatisch anlegen möglich (Graph eingerichtet).</param>
+/// <param name="CanDelete">Recht <c>teams.delete</c>: archivieren bzw. in Teams löschen (Bestätigung mit <paramref name="Confirmation"/>).</param>
+/// <param name="CanPost">„Nachricht in Kanal posten“ möglich (Webhook bzw. Dienstkonto eingerichtet, Recht <c>bauakten.edit</c>).</param>
+/// <param name="Confirmation">Zum Löschen einzutippen: Bauaktennummer (ohne Nummer: Titel).</param>
+/// <param name="TeamChat">Chat mit dem ganzen Bauakten-Team (ohne den Aufrufer) als Teams-Link; <c>null</c>, wenn niemand ein Microsoft-Konto hat.</param>
+/// <param name="CloseAction">Was beim Abschließen der Bauakte mit der Unterhaltung geschieht.</param>
 public sealed record BauakteTeamsResponse(
-    Guid BauakteId, TeamsChatMode ChatMode, TeamsLinkResponse? Link, bool CanManage, bool CanCreate, bool CanCreateChannel, TeamsLinkKind DefaultLinkKind);
+    Guid BauakteId, TeamsChatMode ChatMode, TeamsLinkResponse? Link, bool CanManage, bool CanCreate, bool CanCreateChannel, TeamsLinkKind DefaultLinkKind,
+    bool CanDelete, bool CanPost, string Confirmation, TeamsChatLinkResponse? TeamChat, TeamsCloseAction CloseAction);
+
+/// <param name="Confirmation">Bauaktennummer (bzw. Titel ohne Nummer) – Schutz vor versehentlichem Löschen.</param>
+public sealed record DeleteBauakteTeamsRequest([property: MaxLength(250)] string? Confirmation = null);
+
+public sealed record PostBauakteTeamsMessageRequest([property: Required, MaxLength(2000)] string Text);
+
+/// <param name="UserIds">Personen für den Chat (der Aufrufer wird nicht mitgezählt): eine = Einzelchat, mehrere = Gruppenchat.</param>
+/// <param name="Topic">Thema (nur Gruppenchats).</param>
+/// <param name="Message">Vorgeschlagener erster Text.</param>
+public sealed record StartTeamsChatRequest(
+    [property: Required, MaxLength(100)] IReadOnlyList<Guid> UserIds, [property: MaxLength(250)] string? Topic = null,
+    [property: MaxLength(1000)] string? Message = null);
+
+/// <summary>Stand der Umstellung auf Teams (Einstellungen › Integrationen › Microsoft Teams › Umstellung).</summary>
+/// <param name="Unchecked">Aktive Benutzer ohne Prüfung (noch nicht abgeglichen – „Chat in Teams“ nutzt dann die E-Mail-Adresse).</param>
+public sealed record TeamsRolloutResponse(
+    int ActiveUsers, int Mapped, int NotFound, int Unchecked, int NoEmail, int OpenBauakten, int LinkedOpen, int UnlinkedOpen, TeamsLinkJobResponse? Job,
+    bool CanLinkAll, string? CannotLinkReason);
+
+/// <param name="Kind">Art der neuen Unterhaltungen; ohne Angabe die Voreinstellung.</param>
+public sealed record StartTeamsLinkJobRequest(TeamsLinkKind? Kind = null);
 
 /// <param name="Kind">Automatisch anlegen: Kanal im Team „Baustellen“ oder Gruppenchat. Ohne Angabe: <paramref name="Url"/> verknüpfen.</param>
 /// <param name="Url">Vorhandener Kanal oder Chat (Link aus Teams).</param>
@@ -78,6 +112,14 @@ internal static partial class TeamsEndpoints
     {
         api.MapGet("/teams/status", StatusAsync).WithTags("Microsoft Teams").WithName("GetTeamsStatus")
             .WithSummary("Chat-Modus und Teams-Anbindung für Navigation, Bauakte und Startseite (alle Angemeldeten)");
+
+        var people = api.MapGroup("/teams").WithTags("Microsoft Teams").RequirePermission(Permissions.ChatUse).AddEndpointFilter(GuardAsync);
+        people.MapGet("/people", PeopleAsync).WithName("ListTeamsPeople")
+            .WithSummary("Microsoft-Konten (UPN) der Kollegen für „Chat in Teams“ – mit Grund, wenn kein Chat möglich ist");
+        people.MapPost("/chats", StartChatAsync).WithName("StartTeamsChat")
+            .WithSummary("Einzel- oder Gruppenchat in Teams: Teams-Link (Deep Link, optional über Microsoft Graph angelegt)")
+            .ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
         var settings = api.MapGroup("/settings/integrations/teams").WithTags("Microsoft Teams").RequirePermission(Permissions.SettingsIntegrations)
             .AddEndpointFilter(GuardAsync);
@@ -101,6 +143,14 @@ internal static partial class TeamsEndpoints
         settings.MapPost("/sender/poll", PollSenderAsync).WithName("PollTeamsSenderLogin").WithSummary("Stand der Gerätecode-Anmeldung")
             .ProducesProblem(StatusCodes.Status409Conflict);
         settings.MapDelete("/sender", DisconnectSenderAsync).WithName("DisconnectTeamsSender").WithSummary("Dienstkonto trennen (Token löschen)");
+        settings.MapGet("/rollout", RolloutAsync).WithName("GetTeamsRollout").WithSummary("Stand der Umstellung: Konten, Bauakten mit und ohne Verknüpfung");
+        settings.MapPost("/rollout/link-all", StartLinkJobAsync).WithName("StartTeamsLinkAll")
+            .WithSummary("Alle offenen Bauakten ohne Teams-Verknüpfung im Hintergrund verknüpfen (Stand über GET …/rollout/job)")
+            .Produces<TeamsLinkJobResponse>(StatusCodes.Status202Accepted).ProducesProblem(StatusCodes.Status409Conflict);
+        settings.MapGet("/rollout/job", LinkJobAsync).WithName("GetTeamsLinkJob").WithSummary("Stand der Massenverknüpfung")
+            .ProducesProblem(StatusCodes.Status404NotFound);
+        settings.MapDelete("/rollout/job", CancelLinkJobAsync).WithName("CancelTeamsLinkJob").WithSummary("Massenverknüpfung abbrechen")
+            .ProducesProblem(StatusCodes.Status404NotFound);
 
         var bauakte = api.MapGroup("/bauakten/{id:guid}/teams").WithTags("Microsoft Teams").AddEndpointFilter(GuardAsync);
         bauakte.MapGet("/", BauakteAsync).WithName("GetBauakteTeams").WithSummary("Verknüpfte Teams-Unterhaltung der Bauakte")
@@ -114,6 +164,22 @@ internal static partial class TeamsEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
         bauakte.MapDelete("/", UnlinkAsync).WithName("UnlinkBauakteTeams").WithSummary("Verknüpfung lösen (in Teams wird nichts gelöscht)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
+        bauakte.MapPost("/archive", ArchiveAsync).WithName("ArchiveBauakteTeams")
+            .WithSummary("Kanal in Teams archivieren (nur lesen, wiederherstellbar; Gruppenchats: nicht möglich)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.TeamsDelete);
+        bauakte.MapPost("/unarchive", UnarchiveAsync).WithName("UnarchiveBauakteTeams").WithSummary("Archivierten Kanal wiederherstellen")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.TeamsDelete);
+        bauakte.MapPost("/delete", DeleteRemoteAsync).WithName("DeleteBauakteTeams")
+            .WithSummary("Kanal bzw. Gruppenchat in Teams löschen und Verknüpfung lösen (Bestätigung mit Bauaktennummer)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .RequirePermission(Permissions.TeamsDelete);
+        bauakte.MapPost("/message", PostMessageAsync).WithName("PostBauakteTeamsMessage")
+            .WithSummary("Kurze Nachricht in den verknüpften Kanal bzw. Chat (Webhook oder Dienstkonto)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.BauaktenEdit);
     }
 
     // ---------- Status ----------
@@ -121,10 +187,20 @@ internal static partial class TeamsEndpoints
     private static async Task<Ok<TeamsStatusResponse>> StatusAsync(TeamsService teams, IUserPermissions permissions, CancellationToken cancellationToken)
     {
         var row = await teams.SettingsAsync(cancellationToken);
-        return TypedResults.Ok(new TeamsStatusResponse(row.ChatMode, row.ChatMode == TeamsChatMode.Teams, row.ChatMode != TeamsChatMode.EstrichOne,
-            row.GraphConfigured, row.PostVia, await permissions.HasAsync(Permissions.SettingsIntegrations, cancellationToken), row.SiteTeamName,
-            row.SiteTeamUrl, row.SiteTeamUrl is null ? null : TeamsService.AppUrl(row.SiteTeamUrl)));
+        var granted = await permissions.GetAsync(cancellationToken);
+        var available = row.ChatMode != TeamsChatMode.EstrichOne;
+        var notice = available && row.RolloutNotice
+            ? Blank(row.RolloutNoticeText) ?? DefaultNotice
+            : null;
+        return TypedResults.Ok(new TeamsStatusResponse(row.ChatMode, row.ChatMode == TeamsChatMode.Teams, available,
+            row.GraphConfigured, row.PostVia, granted.Contains(Permissions.SettingsIntegrations), row.SiteTeamName,
+            row.SiteTeamUrl, row.SiteTeamUrl is null ? null : TeamsService.AppUrl(row.SiteTeamUrl), RolloutNotice: notice,
+            CanStartChats: available && granted.Contains(Permissions.ChatUse), CanDelete: available && granted.Contains(Permissions.TeamsDelete)));
     }
+
+    internal const string DefaultNotice =
+        "Ab sofort chatten wir in Microsoft Teams. Bitte die Teams-App auf Smartphone und PC installieren und mit dem Firmenkonto anmelden. "
+        + "Der bisherige EstrichONE-Chat bleibt als Archiv lesbar.";
 
     // ---------- Einstellungen ----------
 
@@ -139,7 +215,8 @@ internal static partial class TeamsEndpoints
             row.CertificateExpiresAt, row.SiteTeamId, row.SiteTeamName, row.SiteTeamUrl, row.DefaultLinkKind, row.AutoLink, row.SyncMembers, row.PostVia,
             row.ProtectedWebhookUrl is not null, webhook is null ? null : (Uri.TryCreate(webhook, UriKind.Absolute, out var uri) ? uri.Host : null),
             row.PostDefects, row.PostAcceptance, row.PostSchedule, row.SenderName, row.SenderConnectedAt, row.LastTestAt, row.LastTestOk, row.LastTestError,
-            row.LastPostAt, row.LastPostError, row.GraphConfigured, mapped, active.Count, linked, TeamsService.Permissions, row.Version);
+            row.LastPostAt, row.LastPostError, row.GraphConfigured, mapped, active.Count, linked, TeamsService.Permissions, row.Version, row.CloseAction,
+            row.ChatsViaGraph, row.RolloutNotice, row.RolloutNoticeText);
     }
 
     private static async Task<Ok<TeamsSettingsResponse>> GetSettingsAsync(TeamsService teams, CancellationToken cancellationToken) =>
@@ -239,6 +316,10 @@ internal static partial class TeamsEndpoints
         row.PostDefects = request.PostDefects;
         row.PostAcceptance = request.PostAcceptance;
         row.PostSchedule = request.PostSchedule;
+        row.CloseAction = request.CloseAction;
+        row.ChatsViaGraph = request.ChatsViaGraph;
+        row.RolloutNotice = request.RolloutNotice;
+        row.RolloutNoticeText = Blank(request.RolloutNoticeText);
         if (credentialsChanged)
         {
             graph.Forget();
@@ -272,7 +353,8 @@ internal static partial class TeamsEndpoints
         audit.Record("teams.settings_saved", user.UserId, "teams_settings", "1", new Dictionary<string, string?>
         {
             ["chatMode"] = row.ChatMode.ToString(), ["tenant"] = row.TenantId, ["client"] = row.ClientId, ["auth"] = row.AuthKind.ToString(),
-            ["postVia"] = row.PostVia.ToString(), ["credentialsChanged"] = credentialsChanged ? "true" : "false",
+            ["postVia"] = row.PostVia.ToString(), ["credentialsChanged"] = credentialsChanged ? "true" : "false", ["closeAction"] = row.CloseAction.ToString(),
+            ["rolloutNotice"] = row.RolloutNotice ? "true" : "false",
         });
         if (before.ChatMode != row.ChatMode)
         {
@@ -508,23 +590,58 @@ internal static partial class TeamsEndpoints
             .SingleOrDefaultAsync(cancellationToken);
         return new TeamsLinkResponse(link.Kind, link.Created, link.DisplayName, link.WebUrl, TeamsService.AppUrl(link.WebUrl), link.TeamId, link.ChannelId,
             link.ChatId, link.SyncMembers, link.LastSyncAt, link.LastSyncError, link.SyncedMembers, link.UnmappedMembers, link.LastPostAt, link.LastPostError,
-            link.ProtectedWebhookUrl is not null, link.LinkedAt, name);
+            link.ProtectedWebhookUrl is not null, link.LinkedAt, name, link.ArchivedAt, link.CloseError);
     }
 
     private static async Task<Results<Ok<BauakteTeamsResponse>, ProblemHttpResult>> BauakteAsync(
-        Guid id, TeamsService teams, IBauakteAccess access, IUserPermissions permissions, CancellationToken cancellationToken)
+        Guid id, TeamsService teams, IBauakteAccess access, IUserPermissions permissions, ICurrentUser user, CancellationToken cancellationToken)
     {
         if (!await access.CanReadAsync(id, cancellationToken))
         {
             return BauakteNotFound();
         }
 
+        return TypedResults.Ok(await BauakteResponseAsync(id, teams, permissions, user, cancellationToken));
+    }
+
+    private static async Task<BauakteTeamsResponse> BauakteResponseAsync(Guid id, TeamsService teams, IUserPermissions permissions, ICurrentUser user,
+        CancellationToken cancellationToken)
+    {
         var row = await teams.SettingsAsync(cancellationToken);
         var link = await teams.Db.Set<TeamsBauakteLink>().AsNoTracking().SingleOrDefaultAsync(l => l.BauakteId == id, cancellationToken);
-        var canManage = await permissions.HasAsync(Permissions.BauaktenEdit, cancellationToken);
-        return TypedResults.Ok(new BauakteTeamsResponse(id, row.ChatMode, await LinkResponseAsync(teams, link, cancellationToken), canManage,
-            canManage && row.GraphConfigured, canManage && row.GraphConfigured && !string.IsNullOrWhiteSpace(row.SiteTeamId), row.DefaultLinkKind));
+        var granted = await permissions.GetAsync(cancellationToken);
+        var canManage = granted.Contains(Permissions.BauaktenEdit);
+        var bauakte = await teams.Db.Set<Bauakte>().AsNoTracking().Where(b => b.Id == id).Select(b => new { b.Number, b.Title }).SingleAsync(cancellationToken);
+        TeamsChatLinkResponse? teamChat = null;
+        if (row.ChatMode != TeamsChatMode.EstrichOne)
+        {
+            var members = await teams.Bauakten.TeamUserIdsAsync(id, cancellationToken);
+            if (members.Any(m => m != user.UserId))
+            {
+                // Nur Deep Link (kein Graph-Aufruf beim Öffnen der Bauakte).
+                var people = await teams.PeopleAsync(row, members.Where(m => m != user.UserId).ToList(), cancellationToken);
+                var included = people.Where(p => p.Upn is not null).ToList();
+                if (included.Count > 0)
+                {
+                    var url = TeamsService.ChatDeepLink(included.Select(p => p.Upn!), TeamsService.BauakteTopic(bauakte.Number, bauakte.Title), null);
+                    teamChat = new TeamsChatLinkResponse(url, TeamsService.AppUrl(url), false, included.Select(p => p.Name).ToList(),
+                        people.Where(p => p.Upn is null).Select(p => new TeamsChatMissing(p.UserId, p.Name, p.Reason ?? "Kein Microsoft-Konto.")).ToList());
+                }
+            }
+        }
+
+        var canPost = canManage && link is not null && row.PostVia switch
+        {
+            TeamsPostVia.Webhook => row.ProtectedWebhookUrl is not null || link.ProtectedWebhookUrl is not null,
+            TeamsPostVia.Graph => row.ProtectedSenderToken is not null,
+            _ => false,
+        };
+        return new BauakteTeamsResponse(id, row.ChatMode, await LinkResponseAsync(teams, link, cancellationToken), canManage,
+            canManage && row.GraphConfigured, canManage && row.GraphConfigured && !string.IsNullOrWhiteSpace(row.SiteTeamId), row.DefaultLinkKind,
+            granted.Contains(Permissions.TeamsDelete) && row.GraphConfigured, canPost, Confirmation(bauakte.Number, bauakte.Title), teamChat, row.CloseAction);
     }
+
+    private static string Confirmation(string? number, string title) => string.IsNullOrWhiteSpace(number) ? title.Trim() : number.Trim();
 
     private static async Task<Results<Created<TeamsLinkResponse>, ProblemHttpResult>> LinkAsync(
         Guid id, LinkBauakteTeamsRequest request, TeamsService teams, GraphClient graph, IBauakteAccess access, IAuditLog audit, ICurrentUser user,
@@ -631,6 +748,202 @@ internal static partial class TeamsEndpoints
         return TypedResults.NoContent();
     }
 
+    // ---------- Archivieren, Löschen, Nachricht ----------
+
+    private static async Task<(TeamsBauakteLink? Link, ProblemHttpResult? Problem)> LinkForAsync(Guid id, TeamsService teams, IBauakteAccess access,
+        CancellationToken cancellationToken)
+    {
+        var link = await teams.Db.Set<TeamsBauakteLink>().SingleOrDefaultAsync(l => l.BauakteId == id, cancellationToken);
+        return link is null || !await access.CanReadAsync(id, cancellationToken) ? (null, NotLinked()) : (link, null);
+    }
+
+    private static async Task<Results<Ok<TeamsLinkResponse>, ProblemHttpResult>> ArchiveAsync(
+        Guid id, TeamsService teams, IBauakteAccess access, IAuditLog audit, ICurrentUser user, CancellationToken cancellationToken)
+    {
+        var (link, problem) = await LinkForAsync(id, teams, access, cancellationToken);
+        if (link is null)
+        {
+            return problem!;
+        }
+
+        var row = await teams.SettingsAsync(cancellationToken);
+        if (!row.GraphConfigured)
+        {
+            return NotConfigured();
+        }
+
+        await teams.ArchiveAsync(row, link, cancellationToken);
+        audit.Record("teams.bauakte_archived_in_teams", user.UserId, "bauakte", id.ToString(), new Dictionary<string, string?> { ["name"] = link.DisplayName });
+        await teams.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok((await LinkResponseAsync(teams, link, cancellationToken))!);
+    }
+
+    private static async Task<Results<Ok<TeamsLinkResponse>, ProblemHttpResult>> UnarchiveAsync(
+        Guid id, TeamsService teams, IBauakteAccess access, IAuditLog audit, ICurrentUser user, CancellationToken cancellationToken)
+    {
+        var (link, problem) = await LinkForAsync(id, teams, access, cancellationToken);
+        if (link is null)
+        {
+            return problem!;
+        }
+
+        var row = await teams.SettingsAsync(cancellationToken);
+        if (!row.GraphConfigured)
+        {
+            return NotConfigured();
+        }
+
+        await teams.UnarchiveAsync(row, link, cancellationToken);
+        audit.Record("teams.bauakte_unarchived_in_teams", user.UserId, "bauakte", id.ToString(), new Dictionary<string, string?> { ["name"] = link.DisplayName });
+        await teams.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok((await LinkResponseAsync(teams, link, cancellationToken))!);
+    }
+
+    private static async Task<Results<NoContent, ProblemHttpResult>> DeleteRemoteAsync(
+        Guid id, DeleteBauakteTeamsRequest request, TeamsService teams, IBauakteAccess access, IAuditLog audit, ICurrentUser user,
+        CancellationToken cancellationToken)
+    {
+        var (link, problem) = await LinkForAsync(id, teams, access, cancellationToken);
+        if (link is null)
+        {
+            return problem!;
+        }
+
+        var bauakte = await teams.Db.Set<Bauakte>().AsNoTracking().Where(b => b.Id == id).Select(b => new { b.Number, b.Title }).SingleAsync(cancellationToken);
+        var expected = Confirmation(bauakte.Number, bauakte.Title);
+        if (!string.Equals(Blank(request.Confirmation), expected, StringComparison.OrdinalIgnoreCase))
+        {
+            return TypedResults.Problem(statusCode: 422, title: "Bestätigung falsch",
+                detail: $"Zum Löschen bitte die Bauaktennummer „{expected}“ genau eintippen.", extensions: Code("TEAMS_CONFIRMATION_MISMATCH"));
+        }
+
+        var row = await teams.SettingsAsync(cancellationToken);
+        if (!row.GraphConfigured)
+        {
+            return NotConfigured();
+        }
+
+        await teams.DeleteRemoteAsync(row, link, cancellationToken);
+        teams.Db.Remove(link);
+        audit.Record("teams.bauakte_deleted_in_teams", user.UserId, "bauakte", id.ToString(), new Dictionary<string, string?>
+        {
+            ["kind"] = link.Kind.ToString(), ["name"] = link.DisplayName, ["created"] = link.Created ? "true" : "false", ["trigger"] = "manual",
+        });
+        await teams.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<Results<Ok<TeamsLinkResponse>, ProblemHttpResult>> PostMessageAsync(
+        Guid id, PostBauakteTeamsMessageRequest request, TeamsService teams, IBauakteAccess access, IAuditLog audit, ICurrentUser user,
+        CancellationToken cancellationToken)
+    {
+        var (link, problem) = await LinkForAsync(id, teams, access, cancellationToken);
+        if (link is null)
+        {
+            return problem!;
+        }
+
+        var text = Blank(request.Text);
+        if (text is null)
+        {
+            return Invalid("Bitte einen Text eingeben.");
+        }
+
+        var bauakte = await teams.Db.Set<Bauakte>().AsNoTracking().SingleAsync(b => b.Id == id, cancellationToken);
+        var author = await teams.Db.Set<User>().AsNoTracking().Where(u => u.Id == user.UserId).Select(u => u.DisplayName).SingleOrDefaultAsync(cancellationToken)
+            ?? "EstrichONE";
+        await teams.PostMessageAsync(await teams.SettingsAsync(cancellationToken), link, bauakte, author, text, cancellationToken);
+        audit.Record("teams.message_posted", user.UserId, "bauakte", id.ToString(), new Dictionary<string, string?> { ["length"] = text.Length.ToString(
+            System.Globalization.CultureInfo.InvariantCulture) });
+        await teams.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Ok((await LinkResponseAsync(teams, link, cancellationToken))!);
+    }
+
+    // ---------- Einzel- und Gruppenchats ----------
+
+    private static async Task<Ok<List<TeamsPerson>>> PeopleAsync(TeamsService teams, CancellationToken cancellationToken)
+    {
+        var row = await teams.SettingsAsync(cancellationToken);
+        return TypedResults.Ok(row.ChatMode == TeamsChatMode.EstrichOne ? [] : await teams.PeopleAsync(row, null, cancellationToken));
+    }
+
+    private static async Task<Results<Ok<TeamsChatLinkResponse>, ProblemHttpResult>> StartChatAsync(
+        StartTeamsChatRequest request, TeamsService teams, ICurrentUser user, CancellationToken cancellationToken)
+    {
+        var row = await teams.SettingsAsync(cancellationToken);
+        if (row.ChatMode == TeamsChatMode.EstrichOne)
+        {
+            return TypedResults.Problem(statusCode: 409, title: "Teams nicht im Einsatz",
+                detail: "Microsoft Teams ist nicht eingeschaltet (Einstellungen › Integrationen › Microsoft Teams › Chat-Modus).", extensions: Code("TEAMS_NOT_ACTIVE"));
+        }
+
+        if (request.UserIds is not { Count: > 0 } || request.UserIds.All(u => u == user.UserId))
+        {
+            return Invalid("Bitte mindestens eine andere Person auswählen.");
+        }
+
+        return TypedResults.Ok(await teams.ChatLinkAsync(row, user.UserId, request.UserIds, request.Topic, request.Message, cancellationToken));
+    }
+
+    // ---------- Umstellung ----------
+
+    private static async Task<Ok<TeamsRolloutResponse>> RolloutAsync(TeamsService teams, TeamsRolloutJobs jobs, CancellationToken cancellationToken)
+    {
+        var db = teams.Db;
+        var row = await teams.SettingsAsync(cancellationToken);
+        var people = await teams.PeopleAsync(row, null, cancellationToken);
+        var links = await db.Set<TeamsUserLink>().AsNoTracking().ToDictionaryAsync(l => l.UserId, cancellationToken);
+        var mapped = people.Count(p => links.GetValueOrDefault(p.UserId)?.AadUserId is not null);
+        var notFound = people.Count(p => links.GetValueOrDefault(p.UserId) is { AadUserId: null, CheckedAt: var at } && at != default);
+        var noEmail = people.Count(p => p.Upn is null && !links.ContainsKey(p.UserId));
+        var linkedIds = db.Set<TeamsBauakteLink>().Select(l => l.BauakteId);
+        var open = db.Set<Bauakte>().AsNoTracking().Where(b => b.Status != BauakteStatus.Completed && b.Status != BauakteStatus.Cancelled);
+        var openCount = await open.CountAsync(cancellationToken);
+        var linkedOpen = await open.CountAsync(b => linkedIds.Contains(b.Id), cancellationToken);
+        var reason = !row.GraphConfigured ? "Dafür ist die App-Registrierung nötig (Reiter „Verbindung“)."
+            : row.DefaultLinkKind == TeamsLinkKind.Channel && string.IsNullOrWhiteSpace(row.SiteTeamId) ? "Bitte zuerst das Team „Baustellen“ festlegen."
+            : null;
+        return TypedResults.Ok(new TeamsRolloutResponse(people.Count, mapped, notFound, people.Count - mapped - notFound - noEmail, noEmail, openCount, linkedOpen,
+            openCount - linkedOpen, jobs.Current, reason is null, reason));
+    }
+
+    private static async Task<Results<Accepted<TeamsLinkJobResponse>, ProblemHttpResult>> StartLinkJobAsync(
+        StartTeamsLinkJobRequest request, TeamsService teams, TeamsRolloutJobs jobs, IAuditLog audit, ICurrentUser user, CancellationToken cancellationToken)
+    {
+        var row = await teams.SettingsAsync(cancellationToken);
+        if (!row.GraphConfigured)
+        {
+            return NotConfigured();
+        }
+
+        var kind = request.Kind ?? row.DefaultLinkKind;
+        if (kind == TeamsLinkKind.Channel && string.IsNullOrWhiteSpace(row.SiteTeamId))
+        {
+            return Problem(new GraphException("NO_SITE_TEAM", "Bitte zuerst unter „Verbindung“ das Team „Baustellen“ festlegen."));
+        }
+
+        var name = await teams.Db.Set<User>().AsNoTracking().Where(u => u.Id == user.UserId).Select(u => u.DisplayName).SingleOrDefaultAsync(cancellationToken);
+        var (job, started) = jobs.Start(kind, user.UserId, name);
+        if (!started)
+        {
+            return TypedResults.Problem(statusCode: 409, title: "Läuft bereits",
+                detail: $"Die Verknüpfung läuft bereits ({job.Processed} von {job.Total} Bauakten).", extensions: Code("TEAMS_JOB_RUNNING"));
+        }
+
+        audit.Record("teams.link_all_started", user.UserId, "teams_settings", "1", new Dictionary<string, string?> { ["kind"] = kind.ToString() });
+        await teams.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Accepted("/api/v1/settings/integrations/teams/rollout/job", job);
+    }
+
+    private static Results<Ok<TeamsLinkJobResponse>, ProblemHttpResult> LinkJobAsync(TeamsRolloutJobs jobs) =>
+        jobs.Current is { } job ? TypedResults.Ok(job) : NoJob();
+
+    private static Results<NoContent, ProblemHttpResult> CancelLinkJobAsync(TeamsRolloutJobs jobs) =>
+        jobs.CancelCurrent() ? TypedResults.NoContent() : NoJob();
+
+    private static ProblemHttpResult NoJob() =>
+        TypedResults.Problem(statusCode: 404, title: "Kein Auftrag", detail: "Es läuft keine Massenverknüpfung.", extensions: Code("TEAMS_NO_JOB"));
+
     // ---------- Hilfen ----------
 
     private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
@@ -660,8 +973,9 @@ internal static partial class TeamsEndpoints
         var status = exception.Code switch
         {
             "OFFLINE" or "TIMEOUT" or "THROTTLED" => StatusCodes.Status503ServiceUnavailable,
-            "NOT_CONFIGURED" or "SECRET_UNREADABLE" or "NO_SITE_TEAM" or "CONFLICT" or "NO_SENDER" => StatusCodes.Status409Conflict,
-            "INVALID_LINK" or "INVALID_TEAM" or "TOO_FEW_MEMBERS" or "CERTIFICATE_INVALID" => StatusCodes.Status422UnprocessableEntity,
+            "NOT_CONFIGURED" or "SECRET_UNREADABLE" or "NO_SITE_TEAM" or "CONFLICT" or "NO_SENDER" or "NOT_SUPPORTED" or "NO_POST"
+                => StatusCodes.Status409Conflict,
+            "INVALID_LINK" or "INVALID_TEAM" or "TOO_FEW_MEMBERS" or "CERTIFICATE_INVALID" or "NO_PARTICIPANTS" => StatusCodes.Status422UnprocessableEntity,
             "NOT_FOUND" when exception.Status is null => StatusCodes.Status422UnprocessableEntity,
             _ => StatusCodes.Status424FailedDependency,
         };

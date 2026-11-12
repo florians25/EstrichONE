@@ -64,11 +64,16 @@
 							<Menu itemSelected=".onTeamsMenu">
 								<MenuItem text="In Teams öffnen" key="open" icon="sap-icon://action" visible="{= !!${akte>/teams/link} }"/>
 								<MenuItem text="Mit Teams verknüpfen …" key="link" icon="sap-icon://chain-link" visible="{= !${akte>/teams/link} &amp;&amp; ${akte>/teams/canManage} }"/>
+								<MenuItem text="Chat mit dem ganzen Bauakten-Team" key="teamChat" icon="sap-icon://group" visible="{= !!${akte>/teams/teamChat} }"/>
+								<MenuItem text="Nachricht in Teams posten …" key="post" icon="sap-icon://paper-plane" visible="{= ${akte>/teams/canPost} === true }"/>
 								<MenuItem text="Mitglieder jetzt abgleichen" key="sync" icon="sap-icon://synchronize"
 									visible="{= !!${akte>/teams/link} &amp;&amp; ${akte>/teams/canManage} &amp;&amp; ${akte>/teams/link/syncMembers} }"/>
 								<MenuItem text="Details …" key="details" icon="sap-icon://hint" visible="{= !!${akte>/teams/link} }"/>
 								<MenuItem text="Verknüpfung lösen" key="unlink" icon="sap-icon://broken-link" visible="{= !!${akte>/teams/link} &amp;&amp; ${akte>/teams/canManage} }"
 									startsSection="true"/>
+								<MenuItem text="Kanal in Teams archivieren" key="archive" icon="sap-icon://inbox" visible="{= ${akte>/teams/canArchive} === true }"/>
+								<MenuItem text="Kanal wiederherstellen" key="unarchive" icon="sap-icon://undo" visible="{= ${akte>/teams/canUnarchive} === true }"/>
+								<MenuItem text="In Teams löschen …" key="delete" icon="sap-icon://delete" visible="{= !!${akte>/teams/link} &amp;&amp; ${akte>/teams/canDelete} === true }"/>
 							</Menu>
 						</menu>
 					</MenuButton>

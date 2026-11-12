@@ -44,6 +44,7 @@ public static class Permissions
     public const string BackupManage = "backup.manage";
     public const string SettingsManage = "settings.manage";
     public const string SettingsIntegrations = "settings.integrations";
+    public const string TeamsDelete = "teams.delete";
     public const string AuditRead = "audit.read";
     public const string ArchiveUnlock = "archive.unlock";
     public const string NotificationsSend = "notifications.send";
@@ -93,6 +94,7 @@ public static class Permissions
         new(BackupManage, "System", "Backups verwalten"),
         new(SettingsManage, "System", "Firmendaten und Einstellungen ändern"),
         new(SettingsIntegrations, "System", "Integrationen einrichten: Microsoft Teams (App-Registrierung, Kontenzuordnung, Chat-Modus)"),
+        new(TeamsDelete, "System", "Microsoft Teams: Kanäle und Gruppenchats von Bauakten in Teams archivieren und löschen"),
         new(AuditRead, "System", "Audit-Log einsehen"),
         new(ArchiveUnlock, "System", "Archivierte Bauakten zum Bearbeiten entsperren (mit Passwort)"),
     ];
@@ -106,7 +108,7 @@ public static class Permissions
     /// </summary>
     public static IReadOnlySet<string> Privileged { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        UsersManage, RolesManage, SettingsManage, SettingsIntegrations, BackupManage, DevicesManage, DevicesWipe, AuditRead, ArchiveUnlock,
+        UsersManage, RolesManage, SettingsManage, SettingsIntegrations, TeamsDelete, BackupManage, DevicesManage, DevicesWipe, AuditRead, ArchiveUnlock,
     };
 }
 

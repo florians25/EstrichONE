@@ -42,6 +42,7 @@ import { openMediaViewer } from "../util/mediaViewer";
 import { get, problemMessage } from "../util/api";
 import MessageBox from "sap/m/MessageBox";
 import { teamsHome } from "../util/teams";
+import { pickTeamsChat } from "../util/teamsChat";
 import { bauakteInput } from "../util/forms";
 import {
 	accentOf, attachmentUrl, blockUser, chatStatus, checkFile, clock, connectEvents, contacts, conversation, conversations, createGroup, crews, dayKey,
@@ -1570,6 +1571,11 @@ export default class Chat extends BaseController {
 		});
 		this.v().addDependent(dialog);
 		dialog.open();
+	}
+
+	/** Chat-Archiv (Modus „Microsoft Teams“): neuer Einzel- bzw. Gruppenchat in Teams. */
+	onNewTeamsChat(): void {
+		void pickTeamsChat();
 	}
 
 	/** Microsoft Teams (Team „Baustellen“ bzw. Teams allgemein) in neuem Fenster. */

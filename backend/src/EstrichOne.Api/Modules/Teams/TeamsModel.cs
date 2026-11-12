@@ -37,10 +37,24 @@ public enum TeamsPostVia
     Webhook,
 }
 
+/// <summary>Was mit dem Teams-Kanal bzw. -Chat geschieht, wenn eine Bauakte abgeschlossen oder storniert wird.</summary>
+public enum TeamsCloseAction
+{
+    /// <summary>Nichts (Kanal bzw. Chat bleibt unverändert).</summary>
+    Nothing,
+
+    /// <summary>Kanal archivieren (nur lesen; in Teams wiederherstellbar). Gruppenchats lassen sich nicht archivieren – sie bleiben unverändert.</summary>
+    Archive,
+
+    /// <summary>Kanal bzw. Gruppenchat löschen (bei Microsoft vorläufig gelöscht, Kanäle 30 Tage wiederherstellbar).</summary>
+    Delete,
+}
+
 /// <summary>Einstellungen der Teams-Anbindung (eine Zeile). Geheimnisse nur verschlüsselt (Data Protection).</summary>
 public sealed class TeamsSettingsRow : IVersionedEntity
 {
     public const int SingletonId = 1;
+    public const int MaxNoticeText = 1000;
 
     public int Id { get; private set; } = SingletonId;
 
@@ -82,6 +96,16 @@ public sealed class TeamsSettingsRow : IVersionedEntity
     public DateTimeOffset? SenderConnectedAt { get; set; }
     public string? ProtectedDeviceCode { get; set; }
     public DateTimeOffset? DeviceCodeExpiresAt { get; set; }
+
+    /// <summary>Beim Abschließen bzw. Stornieren der Bauakte (nur von EstrichONE angelegte Unterhaltungen).</summary>
+    public TeamsCloseAction CloseAction { get; set; } = TeamsCloseAction.Archive;
+
+    /// <summary>Einzel- und Gruppenchats aus EstrichONE über Microsoft Graph anlegen (stabiler Link) statt nur per Teams-Link.</summary>
+    public bool ChatsViaGraph { get; set; }
+
+    /// <summary>Hinweis „Ab sofort chatten wir in Teams“ in Web und Apps.</summary>
+    public bool RolloutNotice { get; set; }
+    public string? RolloutNoticeText { get; set; }
 
     public DateTimeOffset? LastTestAt { get; set; }
     public bool? LastTestOk { get; set; }
@@ -150,6 +174,13 @@ public sealed class TeamsBauakteLink
     public string? LastPostError { get; set; }
     public bool SyncPending { get; set; }
 
+    /// <summary>Kanal in Teams archiviert (nur lesen).</summary>
+    public DateTimeOffset? ArchivedAt { get; set; }
+
+    /// <summary>Abschluss-Aktion (<see cref="TeamsCloseAction"/>) erledigt bzw. zuletzt versucht.</summary>
+    public DateTimeOffset? CloseHandledAt { get; set; }
+    public string? CloseError { get; set; }
+
     /// <summary>Prüfsumme der zuletzt abgeglichenen Soll-Mitglieder (unverändert → kein erneuter Abgleich nötig).</summary>
     public string? DesiredHash { get; set; }
 }
@@ -165,6 +196,8 @@ internal sealed class TeamsSettingsRowConfiguration : IEntityTypeConfiguration<T
         builder.Property(s => s.AuthKind).HasConversion<string>().HasMaxLength(20);
         builder.Property(s => s.DefaultLinkKind).HasConversion<string>().HasMaxLength(20);
         builder.Property(s => s.PostVia).HasConversion<string>().HasMaxLength(20);
+        builder.Property(s => s.CloseAction).HasConversion<string>().HasMaxLength(20);
+        builder.Property(s => s.RolloutNoticeText).HasMaxLength(TeamsSettingsRow.MaxNoticeText);
         builder.Property(s => s.TenantId).HasMaxLength(100);
         builder.Property(s => s.ClientId).HasMaxLength(100);
         builder.Property(s => s.CertificateThumbprint).HasMaxLength(100);
@@ -208,5 +241,6 @@ internal sealed class TeamsBauakteLinkConfiguration : IEntityTypeConfiguration<T
         builder.Property(l => l.LastSyncError).HasMaxLength(2000);
         builder.Property(l => l.LastPostError).HasMaxLength(2000);
         builder.Property(l => l.DesiredHash).HasMaxLength(64);
+        builder.Property(l => l.CloseError).HasMaxLength(2000);
     }
 }

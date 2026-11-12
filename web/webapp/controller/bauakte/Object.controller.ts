@@ -28,7 +28,10 @@ import type {
 import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
 import { bauakteGroup, chatStatus, createBauakteGroup, type ChatBauakteGroup } from "../../util/chat";
-import { akteTeamsDetails, linkAkteTeams, loadAkteTeams, openTeamsLink, syncAkteTeams, unlinkAkteTeams } from "../../util/teamsAkte";
+import {
+	akteTeamsDetails, archiveAkteTeams, chatWithAkteTeam, deleteAkteTeams, linkAkteTeams, loadAkteTeams, openTeamsLink, postAkteTeams, syncAkteTeams,
+	unlinkAkteTeams,
+} from "../../util/teamsAkte";
 import type { BauakteTeams } from "../../util/teams";
 import { openActivityDialog } from "../../util/activityDialog";
 import { runAcceptance } from "../../util/acceptanceFlow";
@@ -233,6 +236,18 @@ export default class ObjectController extends BaseController {
 			if (key === "link") await linkAkteTeams(m, id);
 			if (key === "sync") await syncAkteTeams(m, id);
 			if (key === "details") MessageBox.information(akteTeamsDetails(m.getProperty("/teams") as BauakteTeams | null), { title: "Microsoft Teams" });
+			if (key === "teamChat") chatWithAkteTeam(m);
+			if (key === "post") await postAkteTeams(m, id);
+			if (key === "archive" && await this.confirm("Kanal in Teams archivieren? Er bleibt lesbar, neue Nachrichten sind nicht mehr möglich. Wiederherstellen geht jederzeit.",
+				{ action: "Archivieren" })) {
+				await archiveAkteTeams(m, id, true);
+				this.toast("Kanal in Teams archiviert");
+			}
+			if (key === "unarchive") {
+				await archiveAkteTeams(m, id, false);
+				this.toast("Kanal wiederhergestellt");
+			}
+			if (key === "delete" && await deleteAkteTeams(m, id)) this.toast("In Teams gelöscht, Verknüpfung gelöst");
 			if (key === "unlink" && await this.confirm("Verknüpfung mit Teams lösen? Kanal bzw. Chat und alle Nachrichten bleiben in Teams erhalten.",
 				{ action: "Lösen", danger: true })) {
 				await unlinkAkteTeams(m, id);

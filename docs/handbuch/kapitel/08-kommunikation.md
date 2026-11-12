@@ -129,7 +129,9 @@ Nachrichten und Anhänge werden verschlüsselt gespeichert und nach der eingeste
 Nutzt Ihr Betrieb Microsoft Teams (Abschnitt 9 „Microsoft Teams“), erscheinen **Microsoft Teams** in der Navigation und
 auf der Startseite sowie **In Teams öffnen** an der Bauakte – im Browser öffnet sich Teams (bzw. die Teams-App, wenn sie
 installiert ist). Im Modus „Microsoft Teams“ heißt der Chat **Chat-Archiv**: Bisherige Unterhaltungen bleiben lesbar und
-lassen sich exportieren, geschrieben wird nur noch in Teams.
+lassen sich exportieren, geschrieben wird nur noch in Teams. Neue Chats starten Sie dann über das Teams-Symbol in der Kopfzeile
+(**Chat in Teams starten …**), im Chat-Archiv über **Neuer Chat in Microsoft Teams** oder über das Teams-Symbol bei einer
+Person (Bauakte › Kontakte › Team im Betrieb, Personalakte). Eine Person ergibt einen Einzelchat, mehrere einen Gruppenchat.
 
 ## Benachrichtigungen {#benachrichtigungen}
 

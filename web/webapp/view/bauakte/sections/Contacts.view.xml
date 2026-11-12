@@ -144,6 +144,8 @@
 						<OverflowToolbar design="Transparent" style="Clear" class="eoContactActions">
 							<Button icon="sap-icon://email" type="Transparent" tooltip="{= 'E-Mail an ' + ${ct>email} }" press=".onMailMember" visible="{= !!${ct>email} }"/>
 							<Button icon="sap-icon://copy" type="Transparent" tooltip="{= 'Kontaktdaten kopieren: ' + ${ct>displayName} }" press=".onCopyMember"/>
+							<Button icon="sap-icon://collaborate" type="Transparent" press=".onTeamsChatMember" tooltip="{= 'Chat in Teams mit ' + ${ct>displayName} }"
+								visible="{= ${ct>teamsChat/visible} === true &amp;&amp; ${ct>teamsChat/enabled} === true }"/>
 							<ToolbarSpacer/>
 							<Button text="Zuweisung ändern" icon="sap-icon://edit" type="Transparent" press=".onAssign" visible="{akte>/canEdit}"/>
 						</OverflowToolbar>

@@ -158,12 +158,12 @@ Aktualisierung **automatisch** zurück: alte Version, Datenbank und Dateien aus 
 Instanz läuft wieder. Nach einer erfolgreichen Aktualisierung bleibt **Zurücknehmen** verfügbar (gleicher Ablauf per
 Knopf), bis zur nächsten Aktualisierung.
 
-**Update-Ablauf je Instanz (mindestens 3 Minuten):** Wie `update.sh` der Suite (deploy/README.md, „Update-Ablauf“)
+**Update-Ablauf je Instanz (mindestens 2,5 Minuten):** Wie `update.sh` der Suite (deploy/README.md, „Update-Ablauf“)
 schreibt die Konsole den Stand nach `data/backup-status/update-maintenance.json` der Instanz:
 
 1. **Ankündigung** (60 s) – nach dem Laden der Images: Countdown für alle Benutzer, Apps gleichen ab, neue Anmeldungen gesperrt.
 2. **Update** (mindestens 60 s) – Sitzungen enden, Wartungsbildschirm; Vorab-Sicherung, `up --wait`, `/health/ready`.
-3. **Abschluss** (60 s) – danach Freigabe.
+3. **Abschluss** (30 s) – danach Freigabe.
 
 Schlägt der Start fehl, zeigt die Instanz „Update wird zurückgenommen“, nach der Rücknahme „Update fehlgeschlagen –
 Version X läuft wieder“ und gibt nach der Abschlussdauer frei. Misslingt auch die Rücknahme, bleibt der

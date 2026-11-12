@@ -13,6 +13,11 @@
 		</f:title>
 		<f:content>
 			<VBox renderType="Bare" class="eoStartBody">
+			<!-- Microsoft Teams: Hinweis „Ab sofort chatten wir in Teams“ (Einstellungen › Microsoft Teams › Umstellung), schließbar -->
+			<MessageStrip id="teamsNotice" type="Information" showIcon="true" customIcon="sap-icon://collaborate" showCloseButton="true" close=".onTeamsNoticeClose"
+				text="{view>/teamsNotice}" visible="{= !!${view>/teamsNotice} }" class="sapUiSmallMarginBottom">
+				<link><Link text="Teams installieren" href="{session>/teams/teamsDownloadUrl}" target="_blank"/></link>
+			</MessageStrip>
 			<!-- SAP Cards, kompakt: Kopf mit Kennzahl rechts, darunter bis zu vier Einträge; Raster passt sich der Breite an
 			     (CSS-Grid mit Mindestbreite je Karte), Höhe nach Inhalt, Karten einer Reihe gleich hoch -->
 			<FlexBox id="startCards" items="{path: 'view>/cards', templateShareable: false}" renderType="Bare" class="eoStartCards">
