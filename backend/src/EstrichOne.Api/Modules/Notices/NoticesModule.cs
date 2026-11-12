@@ -25,6 +25,9 @@ public sealed partial class NoticesModule : IModule
     {
         services.AddOptions<NoticeSettings>().Bind(configuration.GetSection(NoticeSettings.SectionName));
         services.AddSingleton<NoticeStore>();
+        services.AddSingleton<UpdateMaintenanceReader>();
+        services.AddSingleton<UpdateSessionTerminator>();
+        services.AddHostedService(provider => provider.GetRequiredService<UpdateSessionTerminator>());
         services.AddTransient<IStartupFilter, MaintenanceStartupFilter>();
     }
 
@@ -32,7 +35,7 @@ public sealed partial class NoticesModule : IModule
     {
         var notices = api.MapGroup("/system/notices").WithTags("Systemhinweise");
 
-        notices.MapGet("/", async (NoticeStore store, HttpContext http, IServiceProvider services, CancellationToken ct) =>
+        notices.MapGet("/", async (NoticeStore store, UpdateMaintenanceReader updates, HttpContext http, IServiceProvider services, CancellationToken ct) =>
             {
                 // Angemeldet: auch Hinweise an die eigenen Rollen.
                 IReadOnlyCollection<Guid>? roles = null;
@@ -42,10 +45,11 @@ public sealed partial class NoticesModule : IModule
                     roles = await services.GetRequiredService<IRoleAssignments>().GetRoleIdsAsync(userId, ct);
                 }
 
-                return TypedResults.Ok(store.ForClients(roles));
+                http.Response.Headers.CacheControl = "no-store";
+                return TypedResults.Ok(store.ForClients(roles) with { Update = updates.Current() });
             })
             .WithName("GetSystemNotices")
-            .WithSummary("Aktuelle Ankündigungen und geplante bzw. laufende Wartung (ohne Anmeldung lesbar)")
+            .WithSummary("Aktuelle Ankündigungen, geplante bzw. laufende Wartung und laufendes Update (ohne Anmeldung lesbar)")
             .AllowAnonymous();
 
         notices.MapPut("/", Results<NoContent, NotFound, UnauthorizedHttpResult, ValidationProblem> (

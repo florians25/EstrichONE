@@ -10,6 +10,9 @@ namespace EstrichOne.Api.Modules.Notices;
 /// selbst bleiben erreichbar, damit Clients die Wartungsseite zeigen und Administratoren sich anmelden können.
 /// Gilt für alle Clients (Web, Apps): Sync und Uploads werden abgewiesen, die Apps behalten ihre Outbox und senden nach dem
 /// Ende erneut. Während einer Wiederherstellung aus dem Backup Center gilt die Sperre auch für Administratoren.
+/// Update-Ablauf (<see cref="UpdateMaintenanceState"/>): Jede Antwort trägt <c>X-EstrichONE-Update: &lt;Phase&gt;</c>, damit
+/// Clients den Countdown sofort zeigen. In der Ankündigung sind nur neue Anmeldungen gesperrt; ab der Update-Phase ist alles
+/// gesperrt (auch Anmeldung, Erneuern und Administratoren), und alle Sitzungen werden einmal beendet.
 /// </summary>
 public sealed class MaintenanceGate(RequestDelegate next)
 {
@@ -17,9 +20,38 @@ public sealed class MaintenanceGate(RequestDelegate next)
         ["/api/v1/system/notices", "/api/v1/system/modules", "/api/v1/system/health-banner", "/api/v1/server-info", "/api/v1/auth", "/api/v1/setup", "/api/v1/web",
             "/api/v1/backup/mirror"];
 
-    public async Task InvokeAsync(HttpContext context, NoticeStore store, IBackupMonitoring backup)
+    /// <summary>Bleiben während der Update-Phase offen: Hinweise, Serverinfo, Abmelden und ziehende Backup-Ziele.</summary>
+    private static readonly string[] UpdateOpenPrefixes =
+        ["/api/v1/system/notices", "/api/v1/system/modules", "/api/v1/system/health-banner", "/api/v1/server-info", "/api/v1/auth/logout",
+            "/api/v1/auth/web/logout", "/api/v1/backup/mirror"];
+
+    private static readonly string[] LoginPaths = ["/api/v1/auth/login", "/api/v1/auth/web/login"];
+
+    public const string UpdateHeader = "X-EstrichONE-Update";
+
+    public async Task InvokeAsync(HttpContext context, NoticeStore store, IBackupMonitoring backup, UpdateMaintenanceReader updates,
+        UpdateSessionTerminator terminator)
     {
         var path = context.Request.Path;
+        if (path.StartsWithSegments("/api/v1") && updates.Current() is { } update)
+        {
+            context.Response.Headers[UpdateHeader] = update.Phase;
+            context.Response.Headers.CacheControl = "no-store";
+            if (update.Blocking)
+            {
+                await terminator.EnsureAsync(update, context.RequestAborted);
+            }
+
+            var blocked = update.Blocking
+                ? !UpdateOpenPrefixes.Any(p => path.StartsWithSegments(p))
+                : HttpMethods.IsPost(context.Request.Method) && LoginPaths.Any(p => path.Equals(p, StringComparison.OrdinalIgnoreCase));
+            if (blocked)
+            {
+                await UpdateProblemAsync(context, update);
+                return;
+            }
+        }
+
         if (!path.StartsWithSegments("/api/v1") || OpenPrefixes.Any(p => path.StartsWithSegments(p)))
         {
             await next(context);
@@ -78,6 +110,22 @@ public sealed class MaintenanceGate(RequestDelegate next)
             {
                 ["code"] = "MAINTENANCE", ["reason"] = "maintenance", ["startsAt"] = window.StartsAt, ["endsAt"] = window.EndsAt,
                 ["adminsMayWork"] = window.AdminsMayWork,
+            }).ExecuteAsync(context);
+    }
+
+    private static Task UpdateProblemAsync(HttpContext context, UpdateMaintenanceState update)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.Headers.RetryAfter = "30";
+        var version = update.TargetVersion is { Length: > 0 } v ? $" auf Version {v}" : string.Empty;
+        var detail = update.Blocking
+            ? $"EstrichONE wird gerade{version} aktualisiert. Danach bitte erneut anmelden."
+            : $"Das Update{version} beginnt in Kürze. Anmelden ist danach wieder möglich.";
+        return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: UpdatePhases.Title(update.Phase), detail: detail,
+            extensions: new Dictionary<string, object?>
+            {
+                ["code"] = "MAINTENANCE", ["reason"] = "update", ["phase"] = update.Phase, ["targetVersion"] = update.TargetVersion,
+                ["startsAt"] = update.StartedAt, ["endsAt"] = update.PhaseEndsAt, ["adminsMayWork"] = false,
             }).ExecuteAsync(context);
     }
 }

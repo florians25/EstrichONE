@@ -24,6 +24,7 @@ public sealed class IdentityModule : IModule
         services.AddScoped<IUserAccounts, UserAccounts>();
         services.AddScoped<ICurrentUser, CurrentUser>();
         services.AddScoped<ISessionDevices, SessionDevices>();
+        services.AddScoped<ISessionTermination, SessionTermination>();
         services.AddSingleton<IAuthorizationHandler, DeviceApprovedHandler>();
 
         services.AddAuthentication(TokenAuthenticationHandler.SchemeName)

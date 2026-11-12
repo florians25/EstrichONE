@@ -17060,7 +17060,7 @@
         "tags": [
           "Systemhinweise"
         ],
-        "summary": "Aktuelle Ankündigungen und geplante bzw. laufende Wartung (ohne Anmeldung lesbar)",
+        "summary": "Aktuelle Ankündigungen, geplante bzw. laufende Wartung und laufendes Update (ohne Anmeldung lesbar)",
         "operationId": "GetSystemNotices",
         "responses": {
           "200": {
@@ -42114,6 +42114,16 @@
           "serverTime": {
             "type": "string",
             "format": "date-time"
+          },
+          "update": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/UpdateMaintenanceState"
+              }
+            ]
           }
         }
       },
@@ -43780,6 +43790,76 @@
           },
           "body": {
             "type": "string"
+          }
+        }
+      },
+      "UpdateMaintenanceState": {
+        "required": [
+          "id",
+          "phase",
+          "fromVersion",
+          "targetVersion",
+          "startedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "phase": {
+            "type": "string"
+          },
+          "fromVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "targetVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "phaseStartedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "phaseEndsAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "expiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "source": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "blocking": {
+            "type": "boolean"
           }
         }
       },

@@ -15,4 +15,10 @@ public sealed class NoticeSettings
 
     /// <summary>Geplante Wartung wird Clients so lange vorher angekündigt.</summary>
     public TimeSpan MaintenancePreview { get; set; } = TimeSpan.FromDays(14);
+
+    /// <summary>
+    /// Stand des Update-Ablaufs (geschrieben von update.sh bzw. der Hosting-Konsole); leer = <c>update-maintenance.json</c>
+    /// im Backup-Status-Verzeichnis (<c>EstrichOne:Backup:StatusPath</c>).
+    /// </summary>
+    public string? UpdateStatePath { get; set; }
 }

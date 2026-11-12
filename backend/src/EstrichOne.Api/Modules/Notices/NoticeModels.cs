@@ -48,8 +48,10 @@ public sealed record SaveAnnouncementRequest(
 /// <param name="SentEmails">Anzahl eingereihter E-Mails (0, wenn kein E-Mail-Konto eingerichtet ist).</param>
 public sealed record SaveAnnouncementResponse(SystemAnnouncement Announcement, int SentEmails);
 
-/// <summary>Antwort für Clients: aktuell gültige Ankündigungen und die nächste bzw. laufende Wartung.</summary>
+/// <summary>Antwort für Clients: aktuell gültige Ankündigungen, die nächste bzw. laufende Wartung und ein laufendes Update.</summary>
+/// <param name="Update">Update-Ablauf (Ankündigung mit Countdown, Update, Abschluss); <c>null</c> ohne Update.</param>
 public sealed record SystemNoticesResponse(
     IReadOnlyList<SystemAnnouncement> Announcements,
     MaintenanceState? Maintenance,
-    DateTimeOffset ServerTime);
+    DateTimeOffset ServerTime,
+    UpdateMaintenanceState? Update = null);
