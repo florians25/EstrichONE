@@ -4,7 +4,7 @@
 # Enthält: Konsole (ASP.NET Core), Weboberfläche (OpenUI5, self-hosted), Docker-CLI mit Compose-Plugin,
 # die Compose-Vorlagen der Suite (eine Quelle: deploy/compose*.yml) und den Installer (… install).
 
-FROM node:24-bookworm@sha256:8fa96264f302f58bbb13aa7339c541547b56975766ce956c875da149452a3e40 AS ui
+FROM node:25-bookworm@sha256:78839ac448c23517f8eab2e8f7943d9b4f73979eb7f8bed2c73dbf72ff869e7b AS ui
 WORKDIR /src/hosting/ui
 COPY hosting/ui/package.json hosting/ui/package-lock.json ./
 RUN npm ci --no-audit --no-fund

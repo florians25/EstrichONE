@@ -9,7 +9,7 @@ ARG REST_SERVER_VERSION=v0.14.0
 RUN CGO_ENABLED=0 GOBIN=/out go install -trimpath -ldflags "-s -w" github.com/restic/rest-server/cmd/rest-server@${REST_SERVER_VERSION} \
  && test -x /out/rest-server
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:de4fe90a98845d75910b9769662465c84de1a934665c431279d1382b2bddc02b AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0@sha256:fe0fd4e93bd2fbb47c883b7a6369e5c8d3db8bf01cdc5981f6ee35fbdf3ff4fb AS build
 WORKDIR /src
 COPY global.json ./
 COPY backend/Directory.Build.props backend/Directory.Packages.props backend/
@@ -21,7 +21,7 @@ RUN dotnet publish backend/src/EstrichOne.Archive/EstrichOne.Archive.csproj --co
       -p:Version=${ESTRICHONE_VERSION}
 
 # Ohne Shell und Paketmanager, Benutzer app (UID 1654); „extra“ enthält die Zeitzonendaten (Europe/Berlin).
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:9b755ea799ae649141a073e30d8b62d8095a5465af2b7694d17866e8c05131d8
+FROM mcr.microsoft.com/dotnet/aspnet:10.0-noble-chiseled-extra@sha256:cae5b962bfb786606def03d250c6a645cc98839095c89e806e4bd8978a68115b
 WORKDIR /app
 COPY --from=build /app ./
 COPY --from=rest-server /out/rest-server /usr/local/bin/rest-server
