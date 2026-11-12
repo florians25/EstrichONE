@@ -20736,8 +20736,8 @@
               }
             }
           },
-          "502": {
-            "description": "Bad Gateway",
+          "424": {
+            "description": "Failed Dependency",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -20795,6 +20795,16 @@
               }
             }
           },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
           "401": {
             "description": "Nicht angemeldet oder Token abgelaufen"
           }
@@ -20844,8 +20854,8 @@
               }
             }
           },
-          "502": {
-            "description": "Bad Gateway",
+          "424": {
+            "description": "Failed Dependency",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -20925,8 +20935,18 @@
               }
             }
           },
-          "502": {
-            "description": "Bad Gateway",
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -20995,8 +21015,8 @@
               }
             }
           },
-          "502": {
-            "description": "Bad Gateway",
+          "424": {
+            "description": "Failed Dependency",
             "content": {
               "application/problem+json": {
                 "schema": {
@@ -21233,8 +21253,8 @@
               }
             }
           },
-          "502": {
-            "description": "Bad Gateway",
+          "424": {
+            "description": "Failed Dependency",
             "content": {
               "application/problem+json": {
                 "schema": {

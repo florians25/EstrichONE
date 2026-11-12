@@ -114,9 +114,9 @@ internal sealed partial class TeamsService(
             token = await TokenAsync(row, cancellationToken);
             steps.Add(new("Anmeldung bei Microsoft Entra ID", true, $"App {row.ClientId} im Mandanten {row.TenantId} angemeldet."));
         }
-        catch (GraphException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            steps.Add(new("Anmeldung bei Microsoft Entra ID", false, exception.Message));
+            steps.Add(new("Anmeldung bei Microsoft Entra ID", false, StepFailure(exception, "Anmeldung bei Microsoft Entra ID")));
             return steps;
         }
 
@@ -124,15 +124,15 @@ internal sealed partial class TeamsService(
         {
             await graph.GetAsync(token, "users?$top=1&$select=id", "User.Read.All", cancellationToken);
             return "Benutzerverzeichnis lesbar.";
-        });
+        }, cancellationToken);
         if (!string.IsNullOrWhiteSpace(row.SiteTeamId))
         {
             await StepAsync(steps, "Team „Baustellen“ (Team.ReadBasic.All)", async () =>
             {
                 var team = await graph.GetAsync(token, $"teams/{Uri.EscapeDataString(row.SiteTeamId)}?$select=id,displayName,webUrl", "Team.ReadBasic.All",
                     cancellationToken);
-                return $"Team „{team?["displayName"]?.GetValue<string>() ?? row.SiteTeamName}“ gefunden.";
-            });
+                return $"Team „{GraphClient.Str(team?["displayName"]) ?? row.SiteTeamName}“ gefunden.";
+            }, cancellationToken);
         }
 
         if (row.ProtectedSenderToken is not null)
@@ -141,22 +141,35 @@ internal sealed partial class TeamsService(
             {
                 await SenderTokenAsync(row, cancellationToken);
                 return $"Angemeldet als {row.SenderName ?? "Dienstkonto"}.";
-            });
+            }, cancellationToken);
         }
 
         return steps;
     }
 
-    private static async Task StepAsync(List<TeamsTestStep> steps, string name, Func<Task<string>> action)
+    private async Task StepAsync(List<TeamsTestStep> steps, string name, Func<Task<string>> action, CancellationToken cancellationToken)
     {
         try
         {
             steps.Add(new(name, true, await action()));
         }
-        catch (GraphException exception)
+        catch (Exception exception) when (exception is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
         {
-            steps.Add(new(name, false, exception.Message));
+            steps.Add(new(name, false, StepFailure(exception, name)));
         }
+    }
+
+    /// <summary>Fehler eines Prüfschritts lesbar; Unerwartetes (kein Microsoft-Fehler) mit Ausnahme ins Log.</summary>
+    private string StepFailure(Exception exception, string step)
+    {
+        if (exception is GraphException graphException)
+        {
+            logger.LogWarning("Teams-Verbindungstest, Schritt „{Step}“: {Code} – {Message}", step, graphException.Code, graphException.Message);
+            return graphException.Message;
+        }
+
+        logger.LogError(exception, "Teams-Verbindungstest, Schritt „{Step}“: unerwarteter Fehler", step);
+        return $"Unerwarteter Fehler ({exception.GetType().Name}). Bitte erneut versuchen; Einzelheiten stehen im Server-Log (docker compose logs api).";
     }
 
     /// <summary>Team „Baustellen“ über ID oder „Link zum Team abrufen“.</summary>
@@ -171,20 +184,26 @@ internal sealed partial class TeamsService(
 
         var token = await TokenAsync(row, cancellationToken);
         var team = await graph.GetAsync(token, $"teams/{Uri.EscapeDataString(id)}?$select=id,displayName,webUrl", "Team.ReadBasic.All", cancellationToken);
-        return (id, team?["displayName"]?.GetValue<string>() ?? "Team", team?["webUrl"]?.GetValue<string>());
+        return (id, GraphClient.Str(team?["displayName"]) ?? "Team", GraphClient.Str(team?["webUrl"]));
     }
 
     // ---------- Benutzerzuordnung ----------
 
-    public sealed record MatchSummary(int Matched, int NotFound, int Manual, int Skipped, string? Error);
+    /// <param name="Error">Grundsätzlicher Fehler (keine Verbindung, Anmeldung, Berechtigung, Frist) – Zuordnung abgebrochen.</param>
+    public sealed record MatchSummary(int Matched, int NotFound, int Manual, int Skipped, GraphException? Error);
 
+    /// <summary>Fehler, bei denen weitere Benutzer nicht zu prüfen sind (betrifft alle gleich).</summary>
+    private static bool Fatal(GraphException exception) =>
+        exception.Code is "OFFLINE" or "AUTH_FAILED" or "FORBIDDEN" or "TIMEOUT" or "THROTTLED" or "UNEXPECTED_RESPONSE";
+
+    /// <summary>Alle aktiven Benutzer über E-Mail/UPN zuordnen – gebündelt (Graph-$batch, 20 je Aufruf) statt eines Aufrufs je Benutzer.</summary>
     public async Task<MatchSummary> MatchUsersAsync(TeamsSettingsRow row, CancellationToken cancellationToken)
     {
         var token = await TokenAsync(row, cancellationToken);
         var users = await db.Set<User>().AsNoTracking().Where(u => u.IsActive).ToListAsync(cancellationToken);
         var links = await db.Set<TeamsUserLink>().ToDictionaryAsync(l => l.UserId, cancellationToken);
         int matched = 0, notFound = 0, manual = 0, skipped = 0;
-        string? error = null;
+        var candidates = new List<(TeamsUserLink Link, string Address)>();
         foreach (var user in users)
         {
             if (links.TryGetValue(user.Id, out var existing) && existing.Manual)
@@ -207,30 +226,49 @@ internal sealed partial class TeamsService(
                 links[user.Id] = existing;
             }
 
+            candidates.Add((existing, address));
+        }
+
+        GraphException? error = null;
+        if (candidates.Count > 0)
+        {
             try
             {
-                var account = await FindAccountAsync(token, address, cancellationToken);
-                Apply(existing, account, manual: false);
-                existing.Error = account is null ? $"Kein Microsoft-Konto mit „{address}“ gefunden." : null;
-                if (account is null)
+                var results = await graph.BatchGetAsync(token, candidates.Select(c => UserLookupPath(c.Address)).ToList(), "User.Read.All", cancellationToken);
+                error = results.Select(r => r.Error).FirstOrDefault(e => e is not null && Fatal(e));
+                for (var i = 0; i < candidates.Count && error is null; i++)
                 {
-                    notFound++;
+                    var (link, address) = candidates[i];
+                    if (results[i].Error is { } failure)
+                    {
+                        link.Error = failure.Message;
+                        link.CheckedAt = clock.GetUtcNow();
+                        notFound++;
+                        continue;
+                    }
+
+                    var account = SingleAccount(results[i].Body);
+                    Apply(link, account, manual: false);
+                    link.Error = account is null ? $"Kein Microsoft-Konto mit „{address}“ gefunden." : null;
+                    if (account is null)
+                    {
+                        notFound++;
+                    }
+                    else
+                    {
+                        matched++;
+                    }
                 }
-                else
-                {
-                    matched++;
-                }
-            }
-            catch (GraphException exception) when (exception.Code is not ("OFFLINE" or "AUTH_FAILED" or "FORBIDDEN"))
-            {
-                existing.Error = exception.Message;
-                notFound++;
             }
             catch (GraphException exception)
             {
-                error = exception.Message;
-                break;
+                error = exception;
             }
+        }
+
+        if (error is not null)
+        {
+            logger.LogWarning("Teams-Kontenzuordnung abgebrochen: {Code} – {Message}", error.Code, error.Message);
         }
 
         await db.SaveChangesAsync(cancellationToken);
@@ -290,19 +328,23 @@ internal sealed partial class TeamsService(
         link.CheckedAt = clock.GetUtcNow();
     }
 
-    private async Task<(string Id, string? Upn, string? Name)?> FindAccountAsync(string token, string address, CancellationToken cancellationToken)
+    private async Task<(string Id, string? Upn, string? Name)?> FindAccountAsync(string token, string address, CancellationToken cancellationToken) =>
+        SingleAccount(await graph.GetAsync(token, UserLookupPath(address), "User.Read.All", cancellationToken));
+
+    /// <summary>Suche nach E-Mail oder UPN (höchstens zwei Treffer – zwei heißt: nicht eindeutig).</summary>
+    internal static string UserLookupPath(string address)
     {
         var quoted = address.Replace("'", "''", StringComparison.Ordinal);
         var filter = Uri.EscapeDataString($"mail eq '{quoted}' or userPrincipalName eq '{quoted}'");
-        var result = await graph.GetAsync(token, $"users?$filter={filter}&$select=id,displayName,userPrincipalName,mail&$top=2", "User.Read.All",
-            cancellationToken);
-        var values = result?["value"] as JsonArray;
-        return values is { Count: 1 } ? Account(values[0]) : null;
+        return $"users?$filter={filter}&$select=id,displayName,userPrincipalName,mail&$top=2";
     }
 
+    private static (string Id, string? Upn, string? Name)? SingleAccount(JsonNode? result) =>
+        result?["value"] is JsonArray { Count: 1 } values ? Account(values[0]) : null;
+
     private static (string Id, string? Upn, string? Name)? Account(JsonNode? node) =>
-        node?["id"]?.GetValue<string>() is { } id
-            ? (id, node["userPrincipalName"]?.GetValue<string>(), node["displayName"]?.GetValue<string>())
+        GraphClient.Str(node?["id"]) is { } id
+            ? (id, GraphClient.Str(node?["userPrincipalName"]), GraphClient.Str(node?["displayName"]))
             : null;
 
     // ---------- Verknüpfung je Bauakte ----------
@@ -342,8 +384,8 @@ internal sealed partial class TeamsService(
             }
 
             link.TeamId = row.SiteTeamId;
-            link.ChannelId = channel?["id"]?.GetValue<string>();
-            link.WebUrl = channel?["webUrl"]?.GetValue<string>() ?? ChannelUrl(link.ChannelId!, name, row.SiteTeamId, row.TenantId);
+            link.ChannelId = GraphClient.Str(channel?["id"]) ?? throw MissingId("Kanal");
+            link.WebUrl = GraphClient.Str(channel?["webUrl"]) ?? ChannelUrl(link.ChannelId, name, row.SiteTeamId, row.TenantId);
         }
         else
         {
@@ -363,8 +405,8 @@ internal sealed partial class TeamsService(
 
             var chat = await graph.PostAsync(token, "chats", new JsonObject { ["chatType"] = "group", ["topic"] = name, ["members"] = members },
                 "Chat.Create", cancellationToken);
-            link.ChatId = chat?["id"]?.GetValue<string>();
-            link.WebUrl = chat?["webUrl"]?.GetValue<string>() ?? ChatUrl(link.ChatId!, row.TenantId);
+            link.ChatId = GraphClient.Str(chat?["id"]) ?? throw MissingId("Gruppenchat");
+            link.WebUrl = GraphClient.Str(chat?["webUrl"]) ?? ChatUrl(link.ChatId, row.TenantId);
             link.ManagedMemberIds = [.. desired.Ids];
             link.SyncedMembers = desired.Ids.Count;
             link.UnmappedMembers = desired.Unmapped;
@@ -375,6 +417,9 @@ internal sealed partial class TeamsService(
         db.Add(link);
         return link;
     }
+
+    private static GraphException MissingId(string what) =>
+        new("UNEXPECTED_RESPONSE", $"Microsoft hat den {what} angelegt, aber keine ID zurückgemeldet. Bitte in Teams prüfen und ggf. per Link verknüpfen.");
 
     public async Task<TeamsBauakteLink> LinkByUrlAsync(Guid bauakteId, string url, Guid actor, CancellationToken cancellationToken)
     {
@@ -520,14 +565,15 @@ internal sealed partial class TeamsService(
             var json = await graph.GetAsync(token, next, permission, cancellationToken);
             foreach (var member in (json?["value"] as JsonArray ?? []).OfType<JsonObject>())
             {
-                if (member["userId"]?.GetValue<string>() is { } userId)
+                if (GraphClient.Str(member["userId"]) is { } userId)
                 {
-                    result[userId] = member["id"]?.GetValue<string>() ?? userId;
+                    result[userId] = GraphClient.Str(member["id"]) ?? userId;
                 }
             }
 
-            var nextLink = json?["@odata.nextLink"]?.GetValue<string>();
-            next = nextLink is null ? null : nextLink[(nextLink.IndexOf("/v1.0/", StringComparison.Ordinal) + 6)..];
+            var nextLink = GraphClient.Str(json?["@odata.nextLink"]);
+            var at = nextLink?.IndexOf("/v1.0/", StringComparison.Ordinal) ?? -1;
+            next = at < 0 ? null : nextLink![(at + 6)..];
         }
 
         return result;

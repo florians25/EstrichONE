@@ -30,6 +30,43 @@ describe('api', () => {
     expect(problemMessage(await api('bauakten/x').catch((e: unknown) => e))).toBe('Bauakte gesperrt');
   });
 
+  it('zeigt bei Fehlerseiten vorgeschalteter Proxys (Cloudflare, Caddy) eine deutsche Meldung statt des englischen Textes', async () => {
+    const cloudflare = 'The origin web server returned an invalid or incomplete response to Cloudflare. This typically indicates the origin is overloaded or misconfigured.';
+    // Cloudflare liefert bei Accept: application/json eigenes JSON (ohne EstrichONE-Code) …
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ title: 'Bad gateway', status: 502, detail: cloudflare }),
+      { status: 502, headers: { 'Content-Type': 'application/json' } })));
+    let message = problemMessage(await api('settings/integrations/teams/users/match', { method: 'POST' }).catch((e: unknown) => e));
+    expect(message).toMatch(/^Der Server hat nicht rechtzeitig oder nur unvollständig geantwortet – bitte erneut versuchen/);
+    expect(message).toContain('Server-Log');
+    expect(message).not.toContain('Cloudflare');
+    // … oder HTML bzw. Text (504, 520–524).
+    for (const status of [504, 520, 524]) {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(`<html>${cloudflare}</html>`, { status, headers: { 'Content-Type': 'text/html' } })));
+      message = problemMessage(await api('x', { method: 'POST' }).catch((e: unknown) => e));
+      expect(message).toMatch(/^Der Server hat nicht rechtzeitig/);
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('error code: 502', { status: 502, headers: { 'Content-Type': 'text/plain' } })));
+    expect(problemMessage(await api('x', { method: 'POST' }).catch((e: unknown) => e))).toMatch(/^Der Server hat nicht rechtzeitig/);
+  });
+
+  it('behält die Meldungen eigener Probleme (mit Code) auch bei 5xx', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(problem(503, {
+      title: 'Microsoft 365 antwortet nicht rechtzeitig', code: 'TEAMS_TIMEOUT', detail: 'Microsoft 365 antwortet nicht rechtzeitig (graph.microsoft.com).',
+    })));
+    const error = await api('settings/integrations/teams/users/match', { method: 'POST' }).catch((e: unknown) => e);
+    expect((error as ApiError).code).toBe('TEAMS_TIMEOUT');
+    expect(problemMessage(error)).toBe('Microsoft 365 antwortet nicht rechtzeitig (graph.microsoft.com).');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(problem(424, { code: 'TEAMS_FORBIDDEN', detail: 'Microsoft verweigert den Zugriff – es fehlt die Berechtigung „User.Read.All“.' })));
+    expect(problemMessage(await api('x', { method: 'POST' }).catch((e: unknown) => e))).toContain('User.Read.All');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(problem(500, { title: 'Interner Serverfehler', code: 'INTERNAL_ERROR', detail: 'Bitte die traceId melden.' })));
+    expect(problemMessage(await api('x', { method: 'POST' }).catch((e: unknown) => e))).toBe('Bitte die traceId melden.');
+  });
+
+  it('Hochladen: Proxy-Fehlerseite ergibt die deutsche Meldung', () => {
+    expect(uploadError(502, { detail: 'The origin web server returned an invalid response.' }).message).not.toContain('origin');
+    expect(uploadError(422, { detail: 'Dateityp nicht erlaubt.', code: 'VALIDATION_FAILED' }).message).toBe('Dateityp nicht erlaubt.');
+  });
+
   it('führt bei PASSWORD_CHANGE_REQUIRED zum Passwortwechsel, ohne die Sitzung zu beenden', async () => {
     const required = vi.fn();
     const ended = vi.fn();

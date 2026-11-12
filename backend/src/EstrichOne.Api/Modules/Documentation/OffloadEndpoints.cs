@@ -214,7 +214,7 @@ internal static class OffloadEndpoints
         }
         catch (PeerException exception)
         {
-            return TypedResults.Problem(statusCode: exception.Code switch { "PEER_UNREACHABLE" => 502, "OFFLOAD_STILL_IN_USE" => 409, _ => 422 },
+            return TypedResults.Problem(statusCode: exception.Code switch { "PEER_UNREACHABLE" => 503, "OFFLOAD_STILL_IN_USE" => 409, _ => 422 },
                 title: "Kopplung fehlgeschlagen", detail: exception.Message, extensions: new Dictionary<string, object?> { ["code"] = exception.Code });
         }
     }

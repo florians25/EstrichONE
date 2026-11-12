@@ -157,6 +157,22 @@ data class ChatSearchHit(val conversationId: String, val conversationTitle: Stri
     val senderName: String? = null, val snippet: String? = null, val createdAt: String? = null)
 
 /** Grenzen und Hilfen für das Schreiben. */
+/**
+ * Eingabezeile des Chats: In der App werden keine Dateien, Fotos, Videos oder Dokumente mehr verschickt.
+ * Statt des Anhang-Knopfs steht ein Hinweis auf Microsoft Teams; Text und Diktat bleiben. Anhänge älterer Nachrichten
+ * bleiben ansehbar. (Android hat keine Warteschlange für Anhänge: ein Foto wurde bisher sofort hochgeladen.)
+ */
+object ChatComposerPolicy {
+    const val ALLOWS_ATTACHMENTS = false
+    const val FILE_EXCHANGE_HINT = "Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden."
+
+    /** Ziel für „In Teams öffnen“ am Hinweis: Teams-Unterhaltung der Bauakte, sonst Team „Baustellen“ (nur mit Teams-Anbindung), sonst keins. */
+    fun teamsTargets(link: TeamsLink?, status: TeamsStatus?): TeamsTargets? {
+        link?.targets?.takeIf { it.candidates.isNotEmpty() }?.let { return it }
+        return status?.takeIf { it.available }?.homeTargets?.takeIf { it.candidates.isNotEmpty() }
+    }
+}
+
 object ChatLimits {
     const val MAX_TEXT = 4000
     val quickReactions = listOf("👍", "❤️", "😂", "😮", "🙏", "✅")

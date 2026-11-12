@@ -115,21 +115,44 @@ const statusTexts: Record<number, string> = {
 	404: "Nicht gefunden. Der Eintrag wurde gelöscht oder die Adresse ist nicht mehr gültig.",
 	409: "Der Eintrag wurde inzwischen geändert. Bitte neu laden und erneut versuchen.", 413: "Die Datei ist zu groß.",
 	429: "Zu viele Anfragen in kurzer Zeit. Bitte kurz warten und erneut versuchen.",
-	500: "Auf dem Server ist ein Fehler aufgetreten. Bitte später erneut versuchen.", 502: "Der Server ist gerade nicht erreichbar.",
-	503: "Der Server ist gerade nicht verfügbar (z. B. Wartung). Bitte später erneut versuchen.", 504: "Der Server antwortet nicht rechtzeitig.",
+	500: "Auf dem Server ist ein Fehler aufgetreten. Bitte später erneut versuchen.",
+	503: "Der Server ist gerade nicht verfügbar (z. B. Wartung). Bitte später erneut versuchen.",
 };
+
+/** Antwort eines vorgeschalteten Proxys (Cloudflare, Caddy, Nginx), nicht der API: Zeitüberschreitung oder abgebrochene Antwort. */
+export const gatewayMessage = "Der Server hat nicht rechtzeitig oder nur unvollständig geantwortet – bitte erneut versuchen. "
+	+ "Bleibt es dabei, stehen die Einzelheiten im Server-Log (docker compose logs api).";
+
+/**
+ * Stammt die Fehlerantwort nicht von EstrichONE? Eigene Probleme (API und Caddy) tragen immer einen `code`; Proxys wie Cloudflare
+ * liefern bei 5xx eigene Seiten oder JSON mit englischem Text („The origin web server returned an invalid or incomplete response …“),
+ * die nicht in der Oberfläche erscheinen sollen.
+ */
+export function isForeignProblem(status: number, problem: { code?: string } | undefined): boolean {
+	return status >= 500 && !problem?.code;
+}
+
+/** Deutsche Meldung zu einem Status ohne eigene Problembeschreibung. */
+export function statusMessage(status: number): string {
+	if (status === 502 || status === 504 || (status >= 520 && status <= 530)) return gatewayMessage;
+	return statusTexts[status] ?? `Die Anfrage ist fehlgeschlagen (Status ${status}).`;
+}
 
 async function toError(response: Response): Promise<ApiError> {
 	let problem: Problem | undefined;
 	try {
-		problem = (await response.json()) as Problem;
+		const body: unknown = await response.json();
+		problem = body && typeof body === "object" ? (body as Problem) : undefined;
 	} catch {
 		problem = undefined;
+	}
+	if (isForeignProblem(response.status, problem)) {
+		return new ApiError(response.status, undefined, statusMessage(response.status), undefined);
 	}
 	const firstValidation = problem?.errors ? Object.values(problem.errors).flat()[0] : undefined;
 	// Standardtitel von ASP.NET („Not Found“ …) ohne eigene Meldung: deutscher Text statt englischem Statusnamen.
 	const title = problem?.title && !englishTitles.has(problem.title) ? problem.title : undefined;
-	const message = firstValidation ?? problem?.detail ?? title ?? statusTexts[response.status] ?? `Die Anfrage ist fehlgeschlagen (Status ${response.status}).`;
+	const message = firstValidation ?? problem?.detail ?? title ?? statusMessage(response.status);
 	return new ApiError(response.status, problem?.code, message, problem);
 }
 

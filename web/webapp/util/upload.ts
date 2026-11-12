@@ -2,7 +2,7 @@
  * Hochladen wie die Apps: Datei ankündigen (Metadaten + SHA-256), dann den Inhalt senden; der Server prüft
  * Typ und Prüfsumme. Mit Fortschritt (XMLHttpRequest) und optional als neue Fassung eines Dokuments.
  */
-import { ApiError, csrfHeaders, get, post, problemMessage, refreshSession } from "./api";
+import { ApiError, csrfHeaders, get, isForeignProblem, post, problemMessage, refreshSession } from "./api";
 import { uuidv7 } from "./ids";
 import type { DocumentCategory, FileResponse } from "./models";
 import { sha256Hex } from "./sha256";
@@ -128,7 +128,7 @@ async function sendContent(id: string, bytes: ArrayBuffer, options: UploadOption
 
 /** Verständliche Ursache statt „Server nicht erreichbar“. */
 export function uploadError(status: number, body: ChunkAnswer["body"]): ApiError {
-	if (body.detail || body.title) {
+	if ((body.detail || body.title) && !isForeignProblem(status, body)) {
 		return new ApiError(status, body.code, body.detail ?? body.title ?? "");
 	}
 	const message = status === 0

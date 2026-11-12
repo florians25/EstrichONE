@@ -20,7 +20,7 @@
 						<IconTabFilter key="connection" text="Verbindung">
 							<VBox class="sapUiSmallMargin" busy="{view>/busy}">
 								<MessageStrip visible="{= ${view>/s/lastTestAt} !== null }" type="{= ${view>/s/lastTestOk} ? 'Success' : 'Error' }" showIcon="true"
-									text="{= ${view>/s/lastTestOk} ? 'Letzter Verbindungstest erfolgreich.' : 'Letzter Verbindungstest fehlgeschlagen: ' + ${view>/s/lastTestError} }"
+									text="{view>/lastTestText}"
 									class="sapUiSmallMarginBottom"/>
 								<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" id="teamsPrivacy"
 									text="Datenschutz: An Microsoft gehen nur die Zuordnung der Konten (über die dienstliche E-Mail-Adresse), Mitgliedschaften in den Unterhaltungen der Bauakten und – falls eingeschaltet – kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten. EstrichONE liest keine Nachrichten aus Teams. Vor der Umstellung Betriebsrat einbinden und Beschäftigte informieren (Vorlage im Handbuch)."/>

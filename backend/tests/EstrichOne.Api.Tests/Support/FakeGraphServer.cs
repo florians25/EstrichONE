@@ -38,6 +38,9 @@ public sealed class FakeGraphServer : IAsyncDisposable
 
     public ConcurrentQueue<GraphCall> Calls { get; } = new();
 
+    /// <summary>Teilanfragen aus Graph-<c>$batch</c>-Aufrufen.</summary>
+    public ConcurrentQueue<GraphCall> BatchCalls { get; } = new();
+
     /// <summary>Bekannte Konten: E-Mail/UPN → (ID, Name).</summary>
     public ConcurrentDictionary<string, (string Id, string Name)> Users { get; } = new(StringComparer.OrdinalIgnoreCase);
 
@@ -49,6 +52,12 @@ public sealed class FakeGraphServer : IAsyncDisposable
 
     /// <summary>Pfade mit diesem Anfang: 403 (fehlende Berechtigung).</summary>
     public ConcurrentBag<string> Forbidden { get; } = [];
+
+    /// <summary>Pfade mit diesem Anfang antworten erst nach dieser Wartezeit (überlastetes Microsoft 365, hängender Proxy).</summary>
+    public ConcurrentDictionary<string, TimeSpan> Slow { get; } = new();
+
+    /// <summary>Pfade mit diesem Anfang antworten mit festem Status und Text (z. B. HTML einer Proxy-Fehlerseite).</summary>
+    public ConcurrentDictionary<string, (int Status, string Text)> Raw { get; } = new();
 
     public List<GraphCall> CallsTo(string method, string pathStart) =>
         Calls.Where(c => c.Method == method && c.Path.StartsWith(pathStart, StringComparison.Ordinal)).ToList();
@@ -78,6 +87,32 @@ public sealed class FakeGraphServer : IAsyncDisposable
         var path = request.Path.Value ?? "/";
         Calls.Enqueue(new GraphCall(request.Method, path, Uri.UnescapeDataString(request.QueryString.Value ?? string.Empty), body,
             request.Headers.Authorization.ToString()));
+
+        foreach (var (prefix, delay) in Slow)
+        {
+            if (path.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                try
+                {
+                    await Task.Delay(delay, context.RequestAborted);
+                }
+                catch (OperationCanceledException)
+                {
+                    return;
+                }
+            }
+        }
+
+        foreach (var (prefix, raw) in Raw)
+        {
+            if (path.StartsWith(prefix, StringComparison.Ordinal))
+            {
+                context.Response.StatusCode = raw.Status;
+                context.Response.ContentType = "text/html";
+                await context.Response.WriteAsync(raw.Text);
+                return;
+            }
+        }
 
         foreach (var (prefix, remaining) in Throttle)
         {
@@ -167,6 +202,46 @@ public sealed class FakeGraphServer : IAsyncDisposable
         var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
         switch (method, segments)
         {
+            case ("POST", ["$batch"]):
+                {
+                    // JSON-Batching wie Graph: Teilanfragen einzeln beantworten (Rechte und Drosselung je Teilanfrage).
+                    var responses = new JsonArray();
+                    foreach (var request in JsonNode.Parse(body)?["requests"] as JsonArray ?? [])
+                    {
+                        var id = request?["id"]?.GetValue<string>();
+                        var url = request?["url"]?.GetValue<string>() ?? "/";
+                        var parts = url.Split('?', 2);
+                        var subPath = "/v1.0" + parts[0];
+                        var subQuery = parts.Length > 1 ? "?" + Uri.UnescapeDataString(parts[1]) : string.Empty;
+                        BatchCalls.Enqueue(new GraphCall(request?["method"]?.GetValue<string>() ?? "GET", subPath, subQuery, string.Empty, authorization));
+                        var throttled = Throttle.FirstOrDefault(t => subPath.StartsWith(t.Key, StringComparison.Ordinal) && t.Value > 0);
+                        (int, JsonNode?) answer;
+                        if (throttled.Key is not null)
+                        {
+                            Throttle[throttled.Key] = throttled.Value - 1;
+                            answer = (429, Error("TooManyRequests", "Rate limit"));
+                        }
+                        else if (Forbidden.Any(prefix => subPath.StartsWith(prefix, StringComparison.Ordinal)))
+                        {
+                            answer = (403, Error("Forbidden", "Missing role permissions on the request."));
+                        }
+                        else
+                        {
+                            answer = Graph(request?["method"]?.GetValue<string>() ?? "GET", parts[0], subQuery, string.Empty, authorization);
+                        }
+
+                        var entry = new JsonObject { ["id"] = id, ["status"] = answer.Item1, ["body"] = answer.Item2 };
+                        if (answer.Item1 == 429)
+                        {
+                            entry["headers"] = new JsonObject { ["Retry-After"] = "1" };
+                        }
+
+                        responses.Add(entry);
+                    }
+
+                    return (200, new JsonObject { ["responses"] = responses });
+                }
+
             case ("GET", ["users"]):
                 {
                     var match = System.Text.RegularExpressions.Regex.Match(query, "mail eq '([^']+)'");
