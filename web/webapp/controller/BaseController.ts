@@ -72,7 +72,7 @@ export default class BaseController extends Controller {
 		return this.v().getModel(name) as JSONModel;
 	}
 
-	/** Kurzmeldung oben rechts (util/toast): Art aus dem Text oder ausdrücklich, optional mit Aktion. */
+	/** Kurzmeldung (sap.m.MessageToast über util/toast). */
 	protected toast(text: string, options?: ToastOptions): void {
 		showToast(text, options);
 	}

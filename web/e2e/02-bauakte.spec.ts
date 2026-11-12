@@ -470,7 +470,7 @@ test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async
   await expect(architect).toContainText('Architekt');
   await expect(architect.getByRole('link', { name: /0871 12345/ })).toHaveAttribute('href', 'tel:087112345');
   await expect(architect.getByRole('link', { name: /0171 9876543/ })).toBeVisible();
-  await expect(page.locator('.eoContactGroup').filter({ hasText: 'Planung' }).filter({ visible: true }).first()).toContainText('Frau Lehner');
+  await expect(page.locator('.eoContactCard').filter({ hasText: 'Frau Lehner' }).filter({ visible: true }).first()).toBeVisible();
 
   // Hauptkontakt markieren und Rolle ändern über das Kartenmenü
   await architect.getByRole('button', { name: 'Mehr zum Kontakt' }).click();

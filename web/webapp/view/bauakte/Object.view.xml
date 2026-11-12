@@ -135,13 +135,13 @@
 						<Label text="{i18n>akte.site}"/>
 						<HBox alignItems="Center" class="eoInline">
 							<Text text="{akte>/placeText}" wrapping="true" maxLines="2" tooltip="{akte>/placeText}"/>
-							<Button icon="sap-icon://map" type="Transparent" press=".onShowMap" class="eoMapButton" tooltip="Karte" text=""/>
+							<Button icon="sap-icon://map" type="Transparent" press=".onShowMap" tooltip="Karte"/>
 						</HBox>
 					</VBox>
 					<VBox class="eoHeadField">
 						<Label text="Zuständig"/>
-						<Button id="assignButton" text="{akte>/assignedText}" tooltip="{i18n>akte.assigned}: {akte>/assignedText}" press=".onAssign"
-							enabled="{akte>/canEdit}" type="Transparent" class="eoFactButton"/>
+						<Link id="assignButton" text="{akte>/assignedText}" tooltip="{i18n>akte.assigned}: {akte>/assignedText}" press=".onAssign"
+							enabled="{akte>/canEdit}" wrapping="true"/>
 					</VBox>
 					<VBox class="eoHeadField eoHeadWide">
 						<Label text="{i18n>akte.next}"/>
@@ -156,15 +156,15 @@
 					<VBox class="eoKpi" alignItems="End">
 						<Label text="Offen"/>
 						<ObjectNumber number="{akte>/kpi/openWork}" unit="{= ${akte>/kpi/defects} > 0 ? '(' + ${akte>/kpi/defects} + (${akte>/kpi/defects} === 1 ? ' Mangel)' : ' Mängel)') : '' }"
-							state="{= ${akte>/kpi/overdue} > 0 ? 'Error' : ${akte>/kpi/defects} > 0 ? 'Warning' : 'None' }" class="eoKpiNumber"/>
+							state="{= ${akte>/kpi/overdue} > 0 ? 'Error' : ${akte>/kpi/defects} > 0 ? 'Warning' : 'None' }" class="sapMObjectNumberLarge"/>
 					</VBox>
 					<VBox class="eoKpi" alignItems="End">
 						<Label text="Fläche"/>
-						<ObjectNumber number="{akte>/kpi/area}" unit="m²" class="eoKpiNumber"/>
+						<ObjectNumber number="{akte>/kpi/area}" unit="m²" class="sapMObjectNumberLarge"/>
 					</VBox>
 					<VBox class="eoKpi" alignItems="End">
 						<Label text="Fotos / Dokumente"/>
-						<ObjectNumber number="{= ${akte>/kpi/photos} === undefined ? '–' : ${akte>/kpi/photos} + ' / ' + ${akte>/kpi/docs} }" class="eoKpiNumber"/>
+						<ObjectNumber number="{= ${akte>/kpi/photos} === undefined ? '–' : ${akte>/kpi/photos} + ' / ' + ${akte>/kpi/docs} }" class="sapMObjectNumberLarge"/>
 					</VBox>
 				</HBox>
 			</FlexBox>

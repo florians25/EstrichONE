@@ -52,7 +52,7 @@ export function openLightbox(files: FileResponse[], start: number, options: Ligh
 				options.onChanged?.(updated);
 				viewer?.replace(fileMedia(updated, metaOf(updated)));
 			} catch (error) {
-				showToast(problemMessage(error), { type: "error" });
+				showToast(problemMessage(error));
 			}
 		},
 	});

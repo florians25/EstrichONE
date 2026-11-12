@@ -1,4 +1,21 @@
-/* EstrichONE – ergänzende Stile. Farben ausschließlich über Theme-Parameter (alle Themes inkl. Kontrast). */
+/* EstrichONE – ergänzende Stile. Farben ausschließlich über Theme-Parameter (alle Themes inkl. Kontrast).
+
+   Grundsatz: SAP Fiori im Auslieferungszustand (Horizon hell/dunkel). Seitenkopf (DynamicPage, Objektseite mit Titel,
+   Breadcrumbs, Aktionen, Kopfbereich, Reiterleiste), Abschnitte, Karten (sap.f.Card), Listen, Tabellen, Formulare,
+   Meldungen (sap.m.MessageToast, MessageStrip), Leerzustände (sap.m.IllustratedMessage) und Status (ObjectStatus) werden
+   NICHT umgestaltet – keine eigenen Ränder, Flächen, Ecken, Schatten oder Höhen an SAP-Steuerelementen. Abstände kommen
+   aus den Standardklassen (sapUiSmallMargin…, sapUiContentPadding) bzw. aus den Steuerelementen selbst.
+
+   Was hier bleibt und warum:
+   - Eigene Inhalte ohne SAP-Gegenstück: Plantafel/Disponenten-Cockpit (planning.css, Ziehen & Ablegen, Raster),
+     Kalender-/Urlaubsraster, Karte (Leaflet), Unterschriftenfeld (Canvas), Medien-Vorschau und Detailfenster,
+     Chatverlauf (Sprechblasen), Ablagefläche fürs Hochladen, Farbpunkte der Farbauswahl.
+   - Raster und Anordnung eigener Inhalte (CSS-Grid/Flex: Startseiten-Karten, Kontakte, Kopf-Fakten der Bauakte,
+     Einstellungen, Helpdesk-Ticketansicht) – nur Lage und Breite, keine Optik der Steuerelemente.
+   - Schutz gegen Abschneiden/Überlauf (min-width: 0, Umbruch, Auslassungspunkte, SegmentedButton nach Textbreite).
+   - Anmeldeseite (Markenfläche), öffentliche Freigabeseite, Wartungs-/Hinweisseiten, Systemhinweise (control/NoticeCard).
+   - Druck (@media print) und Bestellschein/Berichte (eoSheet, Papieroptik).
+*/
 
 .eoMuted { color: var(--sapContent_LabelColor); }
 .eoHelpText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); display: block; margin-top: 0.125rem; }
@@ -33,8 +50,6 @@
 .eoLoginBrandVersion { opacity: 0.7; font-size: var(--sapFontSmallSize); }
 .eoLogin .eoLoginCard { flex: 1 1 50%; display: flex; flex-direction: column; border: 0; border-radius: 0; box-shadow: none; padding: 2.5rem 2.5rem 1.75rem;
 	max-width: none; justify-content: center; }
-.eoLoginCard .sapMInputBase { height: 2.5rem; }
-.eoLoginCard .sapMInputBaseInner { font-size: 1rem; }
 .eoLoginTitle { margin-top: 0; margin-bottom: 1.5rem; }
 .eoLoginCompany { margin: 0.125rem 0 1.25rem; }
 .eoLoginSubmit { margin-top: 1.25rem; }
@@ -135,11 +150,6 @@
 	.sapMPage > section, .sapMNav, .sapTntToolPage, .sapTntToolPageMain, .sapTntToolPageContentWrapper, .sapMPageEnableScrolling { overflow: visible !important; height: auto !important; position: static !important; }
 }
 
-/* Upload-Bereich kompakt halten */
-.eoUpload .sapMIllustratedMessage { padding: 0.5rem 0 !important; }
-.eoUpload .sapMIllustratedMessage .sapMIllustratedMessageIllustration svg,
-.eoUpload .sapMIllustratedMessage svg { max-height: 5rem; }
-.eoUpload .sapMIllustratedMessageMainContent { min-height: 0 !important; }
 .eoColorBar { display: block; width: 0.25rem; align-self: stretch; border-radius: 0.125rem; margin-right: 0.5rem; min-height: 1.5rem; }
 .eoGrow { flex: 1 1 auto; min-width: 0; }
 .eoEntryRow { gap: 0.5rem; }
@@ -217,20 +227,10 @@
 .eoTopNotices { --eoInset: 1rem; display: flex; flex-direction: column; gap: 0.5rem; flex: none; padding: 0.75rem var(--eoInset) 0; box-sizing: border-box; }
 /* Nichts sichtbar (nur Platzhalter ausgeblendeter Leisten): kein Leerraum unter der Kopfzeile. */
 .eoTopNotices:not(:has(> :not(.sapUiHiddenPlaceholder):not([hidden]))) { display: none; }
-/* Einzug wie der Seitenrand von Kopf und Inhalt (--eoPageX): nach der Breite des Inhaltsbereichs, nicht des Fensters. */
-.eoMain { container: eomain / inline-size; }
-@container eomain (min-width: 1024px) { .eoTopNotices { --eoInset: 1.25rem; } }
-@container eomain (min-width: 1440px) { .eoTopNotices { --eoInset: 1.5rem; } }
 .eoTopNotices > * { margin: 0; }
 .eoTopNotices + .eoContent, .eoTopNotices ~ .eoContent { margin-top: 0.5rem; }
 .eoNoticeBar { display: flex; flex-direction: column; gap: 0.5rem; padding: 0; }
 .eoNotice { margin: 0; }
-.eoTopNotices .sapMMsgStrip, .eoAuthPage .eoTopNotices .sapMMsgStrip {
-	border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); min-height: 2.75rem; padding-top: 0.75rem; padding-bottom: 0.75rem;
-	padding-inline-start: 1.25rem; padding-inline-end: 3.25rem; box-sizing: border-box; margin: 0;
-}
-.eoTopNotices .sapMMsgStrip .sapMMsgStripIcon { inset-inline-start: 0.5rem; top: 0.75rem; }
-.eoTopNotices .sapMMsgStrip .sapMMsgStripCloseButton { inset-inline-end: 0.625rem; top: 0.5rem; }
 .eoTopNotices .eoNoticeStack { padding: 0; }
 /* Anmeldeseite: Leisten und Hinweiskarten gleich breit über dem Anmeldefeld. */
 .eoAuthPage .eoTopNotices, .eoAuthPage .eoNoticeStack.eoNoticeStack { max-width: 60rem; width: calc(100% - 2rem); margin: 0 auto; padding-left: 0; padding-right: 0; }
@@ -241,8 +241,7 @@
 .eoNoticeStack { display: flex; flex-direction: column; gap: 0.375rem; padding: 0.5rem 0.75rem 0.25rem; flex: none; }
 .eoNoticeList { display: flex; flex-direction: column; gap: 0.375rem; }
 .eoAuthPage .eoNoticeStack { max-width: 60rem; margin: 0 auto; width: 100%; box-sizing: border-box; }
-.eoNoticeMore.sapMBtn { align-self: flex-start; height: 1.75rem; margin-top: -0.125rem; }
-.eoNoticeMore .sapMBtnInner { height: 1.75rem; min-height: 1.75rem; font-size: var(--sapFontSmallSize); }
+.eoNoticeMore.sapMBtn { align-self: flex-start; }
 .eoNoticeCard {
 	--eoTone: var(--sapInformativeElementColor); --eoToneBg: var(--sapInformationBackgroundColor); --eoToneBorder: var(--sapInformationBorderColor);
 	display: flex; align-items: center; gap: 0.75rem; min-width: 0; box-sizing: border-box;
@@ -331,100 +330,22 @@
 .eoHeadRow { gap: 1rem 2rem; flex-wrap: wrap; }
 .eoHeadFields { flex: 1 1 36rem; display: grid !important; grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr)); gap: 0.25rem 1.5rem; }
 .eoHeadField { min-width: 0; }
-.eoHeadField > .sapMLabel { color: var(--sapContent_LabelColor); }
 .eoHeadField .sapMText, .eoHeadField .sapMLnk { max-width: 100%; }
 .eoClamp2 { display: -webkit-box !important; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.eoFactButton .sapMBtnContent { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .eoHeadWide { grid-column: span 1; }
 .eoHeadFields { grid-template-columns: repeat(auto-fit, minmax(7.5rem, 1fr)); }
 @media (min-width: 1200px) { .eoHeadFields { grid-template-columns: 1.1fr 1.3fr 1.15fr 1.4fr 0.75fr; } }
 @media (max-width: 1440px) { .eoKpis { gap: 1rem; } .eoHeadRow { column-gap: 1.25rem; } }
-.eoFactButton.sapMBtn { height: 1.375rem; margin-left: -0.5rem; max-width: calc(100% + 0.5rem); }
-.eoFactButton .sapMBtnInner { height: 1.375rem; min-height: 0; text-align: left; }
-.eoFactButton .sapMBtnContent { line-height: 1.375rem; }
 .eoKpis { gap: 1.5rem; flex: none; margin-left: auto; }
 .eoKpi { min-width: 4.5rem; }
-.eoKpiNumber .sapMObjectNumberText { font-size: 1.25rem; line-height: 1.5rem; font-weight: 400; }
-.eoKpiNumber .sapMObjectNumberUnit { font-size: 0.75rem; }
 .eoHintBadges { gap: 0.375rem; }
 .eoHintBadges:empty { display: none; }
-.eoDenseForm .sapUiFormTitle { border-bottom: none; }
-.eoDenseForm .sapUiFormCLElement { margin-bottom: 0; }
-.eoOverviewGrid .eoDenseTable .sapMListTblCell { padding-top: 0.25rem; padding-bottom: 0.25rem; }
 .eoInline { gap: 0.5rem; }
 
 /* Übersicht der Bauakte: Raster ohne Lücken, Karten je Zeile gleich hoch */
 .eoOverviewGrid > .sapFCard { height: 100%; }
 @media (max-width: 48rem) { .eoOverviewGrid > * { grid-column: auto !important; } }
 .eoChanges { font-size: 0.875rem; color: var(--sapContent_LabelColor); }
-/* Kontakte der Bauakte: Gruppen nach Rolle in einem gemeinsamen Raster. Jede Gruppe belegt zwei Rasterzeilen
-   (Überschrift, Karten) als Subgrid: Überschriften einer Reihe stehen auf einer Linie, Karten einer Reihe sind gleich hoch,
-   die Aktionsleiste sitzt immer unten. Gruppen mit mehreren Karten belegen mehrere Spalten (Karten nebeneinander),
-   soweit das Raster breit genug ist (Container-Abfrage auf die Breite des Bereichs). */
-.eoContacts { container-type: inline-size; }
-.eoContactsBar.sapMTB { padding: 0; border-bottom: none; }
-.eoContactsBar .sapMObjectNumber { margin-left: 0.25rem; }
-.eoContactGroups.sapMFlexBox { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr));
-	column-gap: 0.75rem; row-gap: 0; align-items: stretch; margin-top: 0.75rem; }
-.eoContactGroup.sapMFlexBox { display: grid !important; grid-row: span 2; grid-template-rows: subgrid; grid-template-columns: minmax(0, 1fr);
-	justify-content: stretch; align-content: stretch; min-width: 0; margin-bottom: 1.25rem; }
-@container (min-width: 38.75rem) { .eoContactGroup[data-cards="2"], .eoContactGroup[data-cards="3"] { grid-column: span 2; } }
-@container (min-width: 58.5rem) { .eoContactGroup[data-cards="3"] { grid-column: span 3; } }
-.eoContactGroupHead { gap: 0.5rem; margin-bottom: 0.5rem; min-height: 1.75rem; }
-.eoContactGroup > .eoContactGroupHead { align-self: end; }
-.eoContactGroupIcon { color: var(--sapContent_IconColor); font-size: 1rem; }
-.eoContactGroupCount { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); padding: 0 0.375rem; border-radius: 0.75rem;
-	background: var(--sapNeutralBackgroundColor, var(--sapList_AlternatingBackground)); line-height: 1.25rem; }
-.eoContactGrid.sapUiLayoutCSSGrid { grid-auto-rows: 1fr; align-items: stretch; height: auto; min-width: 0; }
-.eoContactGrid > .sapFCard { height: 100%; min-width: 0; }
-.eoContactCard.sapFCard { display: flex; flex-direction: column; }
-.eoContactCard .sapFCardHeader { padding-bottom: 0.5rem; min-height: 4.25rem; box-sizing: border-box; }
-.eoContactCard .sapFCardContent { flex: 1 1 auto; display: flex; flex-direction: column; min-height: 0; }
-.eoContactCard[data-primary="true"] { box-shadow: inset 0 3px 0 var(--sapBrandColor), var(--sapContent_Shadow0); }
-.eoContactBody.sapMFlexBox { padding: 0 1rem; box-sizing: border-box; flex: 1 1 auto; height: auto !important; }
-.eoContactBadges { gap: 0.25rem 0; margin-bottom: 0.625rem; min-height: 1.5rem; }
-.eoRoleBadge.sapMObjStatusInverted { background: var(--sapList_AlternatingBackground, #f5f6f7); }
-.eoContactLines { gap: 0.375rem; }
-.eoContactLine { gap: 0.625rem; min-width: 0; min-height: 2rem; }
-.eoContactLineIcon { color: var(--sapContent_IconColor); margin-top: 0.125rem; flex: none; width: 1rem; }
-.eoContactLineText { min-width: 0; flex: 1 1 auto; }
-.eoContactLineText .sapMLnk, .eoContactLineText .sapMText { overflow-wrap: anywhere; }
-.eoContactLineLabel.sapMText { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
-.eoContactEmpty .sapMText, .eoContactEmpty .eoContactLineIcon { color: var(--sapContent_LabelColor); }
-.eoContactLines:not(:empty) + .eoContactEmpty { margin-top: 0.375rem; }
-.eoContactNote { color: var(--sapContent_LabelColor); }
-/* Aktionsleiste: Schnellaktionen links, „Bearbeiten“ und Menü rechts; immer an der Unterkante der Karte. */
-.eoContactActions { margin-top: auto !important; padding: 0.375rem 0 0.375rem; border-top: 1px solid var(--sapGroup_ContentBorderColor);
-	gap: 0.125rem; min-height: 2.75rem; box-sizing: border-box; }
-.eoContactBody > .eoContactLines, .eoContactBody > .eoContactEmpty, .eoContactBody > .eoContactNote { flex: none; }
-.eoContactBody > .eoContactLines:not(:empty), .eoContactBody > .eoContactEmpty, .eoContactBody > .eoContactNote { margin-bottom: 0.75rem; }
-.eoContactActionsEnd { margin-left: auto; display: flex; align-items: center; }
-.eoContactLine .eoContactCopy { margin-left: auto; flex: none; opacity: 0.55; }
-.eoContactLine:hover .eoContactCopy, .eoContactLine .eoContactCopy:focus-within { opacity: 1; }
-/* Kompakter Leerzustand der Bauakte: eine schmale Zeile (Symbol, ein Satz, Aktionen rechts bzw. darunter). */
-.eoEmptyRow.sapMFlexBox { gap: 0.5rem 0.75rem; padding: 0.625rem 0.875rem; border: 1px dashed var(--sapGroup_ContentBorderColor);
-	border-radius: 0.75rem; margin: 0.5rem 0 0.75rem; min-height: 2.75rem; box-sizing: border-box; background: transparent; }
-.eoEmptyRowIcon { color: var(--sapContent_IconColor); font-size: 1.125rem; flex: none; width: 1.25rem; }
-.eoEmptyRowText { flex: 1 1 16rem; min-width: 0; }
-.eoEmptyRowText.sapMText, .eoEmptyRowText .sapMText { color: var(--sapContent_LabelColor); }
-.eoEmptyRowText .eoEmptyRowTitle.sapMText { color: var(--sapTextColor); font-weight: 700; font-family: var(--sapFontBoldFamily); }
-.eoEmptyRowActions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-left: auto; }
-.eoContactsEmpty.sapMFlexBox { margin-top: 0.75rem; }
-/* Team im Betrieb: Karten im selben Raster und mit gleicher Mindesthöhe wie die Kontaktkarten. */
-.eoTeamBar.sapMTB { margin-top: 1.5rem; }
-.eoContactGrid > .eoContactCard.sapFCard { min-height: 13.5rem; }
-/* Dokumentation › Erstbegehung: Kopfzeile mit Status, Eckdaten, Protokoll, Fotos und Dokumente. */
-.eoDocBar.sapMTB { padding: 0 0.25rem; border-bottom: none; }
-.eoDocBar .sapMObjectStatus { margin-left: 0.5rem; }
-.eoDocSubBar.sapMTB { padding: 0 0.25rem; border-bottom: none; margin-top: 1rem; height: 2.25rem; }
-.eoDocSubBar .eoContactGroupCount { margin-left: 0.25rem; }
-.eoFacts.sapUiLayoutCSSGrid { padding: 0.75rem 1rem; margin: 0.25rem 0 0.75rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.75rem;
-	background: var(--sapGroup_ContentBackground); box-sizing: border-box; }
-.eoFact { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
-.eoDocStrip.sapMMsgStrip { margin-bottom: 0.75rem; }
-.eoDocCard.sapFCard { margin-bottom: 0.25rem; }
-.eoDocList.sapMList { border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.75rem; overflow: hidden; margin-bottom: 0.5rem; }
-.eoDocListRow.sapMFlexBox { padding: 0.375rem 0.5rem 0.375rem 1rem; gap: 0.75rem; }
 .eoLogoPreview { max-width: 20rem; object-fit: contain; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.25rem; padding: 0.25rem; background: #fff; }
 .eoSignature { position: relative; border: 1px solid var(--sapField_BorderColor); border-radius: 0.5rem; background: #fff; touch-action: none; }
 .eoSignature canvas { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
@@ -438,9 +359,6 @@
 .eoPublicLead { font-size: 1.125rem; font-weight: 600; margin-top: 0.25rem; }
 .eoPublicLogo { max-width: 16rem; object-fit: contain; }
 .eoPublicDecision { padding: 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.5rem; }
-.eoDenseForm .sapUiRespGridSpanXL5.sapUiFormElementLbl, .eoDenseForm .sapUiFormElementLbl { padding-top: 0.125rem; }
-.eoDenseForm .sapUiRespGrid > div { margin-top: 0 !important; margin-bottom: 0.125rem !important; }
-.eoDenseForm .sapMLabel { color: var(--sapContent_LabelColor); }
 .eoHintBadges .sapMObjStatus { max-width: min(24rem, 100%); }
 .eoHintBadges .sapMObjStatusWrapper { max-width: 100%; min-width: 0; }
 .eoHintBadges > .sapMFlexItem { min-width: 0; max-width: 100%; }
@@ -449,7 +367,6 @@
 .eoBadgeRow:not(:has(.sapMObjStatus:not(.sapUiHidden))) { display: none; }
 .eoHeadField .eoInline { min-width: 0; gap: 0.25rem; }
 .eoHeadField .eoInline > .sapMFlexItem:first-child { min-width: 0; flex: 0 1 auto; overflow: hidden; }
-.eoMapButton.sapMBtn { height: 1.375rem; } .eoMapButton .sapMBtnInner { height: 1.375rem; min-height: 0; min-width: 1.75rem; }
 .eoHeadField .eoInline > .sapMFlexItem:last-child { flex: none; }
 
 /* SegmentedButton: Segmente so breit wie ihr Text, in Toolbars nicht schrumpfen (keine „Wo…“, „Mo…“). */
@@ -476,7 +393,7 @@ li[data-dot] { display: flex; align-items: center; }
 .eoDocTreePane .sapMTreeItemBase .sapMSLITitleOnly { white-space: normal; }
 
 /* Übersicht: Standort und neueste Bilder als eine Zeile */
-.eoSiteStrip { gap: 1rem 2rem; margin-top: 1rem; padding: 0.75rem 1rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.5rem; }
+.eoSiteStrip { gap: 1rem 2rem; margin-top: 1rem; }
 .eoSiteIcon { font-size: 1.5rem; color: var(--sapContent_IconColor); }
 .eoPhotoStrip { gap: 0.25rem; max-width: 50rem; overflow-x: auto; }
 
@@ -488,56 +405,10 @@ li[data-dot] { display: flex; align-items: center; }
 .eoMdContent { min-width: 0; }
 @media (max-width: 900px) { .eoMasterData.sapMFlexBox { flex-direction: column; } .eoMdNav { width: 100% !important; border-right: none; position: static; } }
 
-/* Quartz (sap_fiori_3*): die Symbolschrift ist sehr dünn – Konturen leicht verstärken */
-html[data-eo-theme^="sap_fiori_3"] .sapUiIcon::before,
-html[data-eo-theme^="sap_fiori_3"] .sapUiIcon[data-sap-ui-icon-content]::before { -webkit-text-stroke: 0.45px currentColor; }
-html[data-eo-theme^="sap_fiori_3"] .sapTntNLI .sapUiIcon::before,
-html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0.6px currentColor; }
 
-/* Globale Suche mittig in der Kopfleiste */
-@media (min-width: 1100px) {
-	.eoShellSearch.sapMSF { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); margin: 0; z-index: 1; }
-	/* „Neue Bauakte“ direkt rechts neben dem zentrierten Suchfeld (26rem breit), 0,5rem Abstand */
-	.eoShellNew.sapMBtn { position: absolute; left: calc(50% + 13.5rem); top: 50%; transform: translateY(-50%); margin: 0; z-index: 1; }
-	/* Langer Firmenname: vor dem Suchfeld mit „…“ kürzen statt darunter zu laufen */
-	.sapFShellBar .sapFShellBarSecondTitle { max-width: calc(50vw - 13rem - 14.5rem); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-}
-
-/* „Neue Bauakte“ in der Kopfleiste: kompakt, ruhig, gleiche Höhe und Rundung wie das Suchfeld.
-   Farben, Hover, Gedrückt und Fokus kommen aus dem Theme (Emphasized), daher in hell, dunkel, Horizon und Quartz stimmig. */
-.eoShellNew.sapMBtn { height: auto; padding: 0; }
-.eoShellNew.sapMBtn > .sapMBtnInner {
-	height: var(--eoShellFieldHeight, 2.25rem); min-width: var(--eoShellFieldHeight, 2.25rem);
-	border-radius: var(--sapField_BorderCornerRadius, 0.25rem);
-	padding: 0 0.875rem 0 0.625rem; box-shadow: none;
-	font-family: var(--sapFontSemiboldDuplexFamily, var(--sapFontBoldFamily)); font-size: var(--sapFontSize); letter-spacing: 0.01em;
-	transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease;
-}
-.eoShellNew.sapMBtn > .sapMBtnInner { display: inline-flex; align-items: center; justify-content: center; gap: 0.375rem; }
-.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnIcon { font-size: 0.875rem; width: 1rem; height: 1rem; line-height: 1rem; margin: 0; color: inherit; flex: none; }
-.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnIcon::before { -webkit-text-stroke: 0.9px currentColor; }
-.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnContent { line-height: normal; padding: 0; }
-.eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnIcon, .eoShellNew.sapMBtn > .sapMBtnInner .sapMBtnContent, .eoShellNew.sapMBtn > .sapMBtnInner bdi { color: inherit !important; }
-/* Die Kopfleiste setzt für ihre Knöpfe eigene (helle) Hover-Farben mit sehr spezifischen Selektoren –
-   hier bewusst die Emphasized-Zustände des Themes (daher !important). */
-.sapFShellBar .eoShellNew.sapMBtn:hover:not(.sapMBtnDisabled) > .sapMBtnInner.sapMBtnEmphasized:not(.sapMBtnActive) {
-	background: var(--sapButton_Emphasized_Hover_Background) !important; border-color: var(--sapButton_Emphasized_Hover_BorderColor) !important;
-	color: var(--sapButton_Emphasized_Hover_TextColor) !important;
-}
-.sapFShellBar .eoShellNew.sapMBtn > .sapMBtnInner.sapMBtnEmphasized.sapMBtnActive {
-	background: var(--sapButton_Emphasized_Active_Background) !important; border-color: var(--sapButton_Emphasized_Active_BorderColor) !important;
-	color: var(--sapButton_Emphasized_Active_TextColor) !important; box-shadow: none;
-}
-/* Nur Symbol (schmale Fenster): quadratisch, Symbol mittig, Beschriftung im Tooltip */
-.eoShellNew.sapMBtn > .sapMBtnInner.sapMBtnIconOnly, .eoShellNew.eoIconOnly > .sapMBtnInner { padding: 0; width: var(--eoShellFieldHeight, 2.25rem); }
-.eoShellNew.eoIconOnly > .sapMBtnInner .sapMBtnIcon { font-size: 1rem; }
 
 /* Abstände: einheitliche Luft zwischen Blöcken, Meldungen und Formularabschnitten */
 .sapMMsgStrip + .sapMMsgStrip { margin-top: 0.5rem; }
-.sapUiForm .sapUiFormTitle { margin-bottom: 0.25rem; }
-.sapUiForm .sapUiFormContainerTitle + .sapUiFormElement, .sapUiFormResGrid > div > .sapUiRespGrid { row-gap: 0.25rem; }
-.sapFDynamicPageContent > .sapMVBox > .sapMTable + .sapMTable, .sapFDynamicPageContent .sapMPanel + .sapMPanel { margin-top: 1rem; }
-.sapMOTB.sapMTB + .sapMListTbl, .sapMOTB.sapMTB + .sapMList { margin-top: 0.25rem; }
 .eoOverviewGrid { margin-top: 1rem; }
 
 /* Legenden (Plantafel, Teamplaner, Kalender): Einträge schrumpfen nicht, fester Abstand. */
@@ -548,9 +419,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 /* SegmentedButton als Inline-Flex: Breite = Inhalt, Nachbarn in Werkzeugleisten überlappen nicht. */
 .sapMSegB:not(.eoSegFill) { display: inline-flex !important; }
 .sapMSegB:not(.eoSegFill) > .sapMSegBBtn { flex: none; float: none; }
-/* Werkzeugleisten: etwas Luft zwischen Gruppen (Schalter, Auswahl, Beschriftung). */
-.sapMTB > .sapMSwitch, .sapMTB > .sapMSegB { margin-right: 0.5rem; }
-.sapMTB > .sapMLabel { margin-right: 0.5rem; }
 
 /* ===== Layout-System (8-px-Raster): Kennzahlen, Karten, Schnellzugriff, Legenden ===== */
 /* Kennzahlen als Kopf-Fakten (statt Kacheln): Beschriftung, große Zahl, kurzer Hinweis – ruhig und ohne „…“. */
@@ -563,7 +431,7 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoKpiHint { color: var(--sapContent_LabelColor); font-size: var(--sapFontSmallSize); }
 .eoKpiBarInline { padding: 0.5rem 0 1rem; }
 /* Karten (Panels) im Seiteninhalt: einheitlicher Abstand, Kopf mit Trennlinie, Inhalt mit 16 px Rand. */
-.eoCardPanel { margin-bottom: 1rem; border-radius: var(--sapElement_BorderCornerRadius); overflow: hidden; }
+.eoCardPanel { margin-bottom: 1rem; }
 .eoCardPanel > .sapMPanelContent { padding: 0; overflow-x: hidden; }
 .eoCardPanel .eoPanelBody { padding: 0.75rem 1rem 1rem; gap: 0.25rem; display: flex; flex-direction: column; }
 .eoNarrowCard { max-width: 36rem; }
@@ -591,9 +459,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 @container (max-width: 6rem) {
 	.sapUiCalendarAppTitle, .sapUiCalendarAppText { white-space: nowrap !important; overflow: hidden; text-overflow: clip; overflow-wrap: normal; }
 }
-/* Objektseite: kein dicker Fokusrahmen um den ganzen Abschnitt nach Mausklick auf einen Reiter (Tastatur behält ihn). */
-.sapUxAPObjectPageSection:focus:not(:focus-visible), .sapUxAPObjectPageSubSection:focus:not(:focus-visible) { outline: none !important; }
-.sapUxAPObjectPageSection:focus:not(:focus-visible)::after, .sapUxAPObjectPageSubSection:focus:not(:focus-visible)::after { display: none !important; }
 /* Aktionsspalten in Tabellen: Schaltflächen in einer Zeile, nicht abgeschnitten */
 .eoActions { flex-wrap: nowrap; gap: 0.25rem; justify-content: flex-end; align-items: center; }
 /* Dokumente (zentral): Luft unter den Reitern, Ordnerbaum als Karte */
@@ -612,9 +477,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 /* Kopf der Bauakte: langer Titel bricht um, statt die Aktionen (Status, Abschließen, Bearbeiten) ins Überlaufmenü zu drängen */
 .eoAkteTitle, .eoTitleLine, .eoTitleLine > .sapMFlexItem { min-width: 0; }
 .eoTitleLine .sapMTitle { white-space: normal; }
-.sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeading, .sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeadingInner { min-width: 0; }
-.sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainHeading { flex: 1 1 0 !important; }
-.sapUxAPObjectPageHeaderTitle .sapFDynamicPageTitleMainActions { flex: 0 0 auto !important; max-width: 60%; }
 
 /* Helpdesk: Master-Detail (Liste links, Ticket rechts) */
 .eoHelpdesk { height: 100%; background: var(--sapBackgroundColor); }
@@ -689,25 +551,16 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 }
 
 /* Helpdesk – Arbeitsplatz der IT: Kennzahlen, Ansichten, Liste mit Sammelbearbeitung; Ticket mit Reitern */
-.eoHdQueue { background: var(--sapBackgroundColor); }
-.eoHdQueueInner { padding: 1rem 1.5rem 2rem; box-sizing: border-box; }
-.eoHdQueueHead { gap: 0.75rem; margin-bottom: 1rem; }
-.eoHdQueueActions { gap: 0.5rem; }
-.eoHdKpis { padding: 0.75rem 1rem; margin-bottom: 0.75rem; background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor);
-	border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); }
 .eoHdKpiLink.sapMLnk { color: var(--sapContent_LabelColor); font-size: var(--sapFontSize); }
 .eoHdKpiLink.sapMLnk:not(.sapMLnkDsbl):hover { color: var(--sapLinkColor); }
 .eoHdKpiLink.sapMLnkDsbl { opacity: 1; color: var(--sapContent_LabelColor); cursor: default; }
-.eoHdBreakdown { gap: 1rem 3rem; margin-bottom: 0.75rem; padding: 0.75rem 1rem; background: var(--sapGroup_ContentBackground);
-	border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); }
+.eoHdBreakdown { gap: 1rem 3rem; }
 .eoHdBreakdownCol { flex: 1 1 22rem; min-width: 18rem; gap: 0.25rem; }
 .eoHdBar { gap: 0.75rem; min-height: 1.75rem; }
 .eoHdBarLabel { flex: none; overflow: hidden; text-overflow: ellipsis; }
 .eoHdBar .sapMPI { margin: 0; }
-.eoHdBarFill.sapMPI .sapMPIBar { background: var(--sapChart_OrderedColor_1, var(--sapBrandColor)); }
 .eoHdBarValue { flex: none; min-width: 9rem; text-align: end; }
 .eoStatusOneLine, .eoStatusOneLine .sapMObjStatusText { white-space: nowrap; }
-.eoHdViews.sapMITH { background: transparent; box-shadow: none; padding-left: 0; }
 .eoHdSortBtn.sapMBtn { padding: 0; max-width: 100%; }
 .eoHdSortBtn .sapMBtnInner { padding: 0; border: none; font-weight: 700; color: var(--sapList_HeaderTextColor); min-width: 0; }
 .eoHdSortBtn .sapMBtnContent { overflow: visible; }
@@ -739,14 +592,11 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoKbFeedback { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid var(--sapGroup_ContentBorderColor); }
 @media (max-width: 1000px) {
 	.eoHdSplit { flex-direction: column; }
-	.eoHdQueueInner { padding: 0.75rem; }
 }
 
 /* SAP Cards (nur Übersicht innerhalb der Bauakte): ruhig, gleiche Höhe, Inhalt als kurze Liste */
 .eoOverviewCards { margin: 0.25rem 0 1rem; }
 .eoOverviewCards .sapFCard { overflow: hidden; }
-.eoCardList.sapMList .sapMLIB { padding: 0 1rem; min-height: 2rem; border-bottom: none; }
-.eoCardList.sapMList .sapMListNoData { padding: 0.5rem 1rem; color: var(--sapContent_LabelColor); }
 .eoCardRow { width: 100%; min-width: 0; gap: 0.5rem; }
 .eoCardRowMain { min-width: 0; gap: 0.5rem; flex: 1 1 auto; }
 .eoCardRowMain .sapMText, .eoCardRow > .sapMText { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -759,24 +609,8 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 /* Startseite: kompakte SAP Cards im CSS-Grid – Mindestbreite je Karte, so viele Spalten wie passen (1366 px: 3,
    1920 px: 4, iPad hochkant: 2), Höhe nach Inhalt, Karten einer Reihe gleich hoch. Kopf einzeilig: Symbol, Titel und
    Untertitel links, Kennzahl rechts; darunter bis zu vier Einträge in dichten Zeilen. */
-.eoStartCards { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 0.75rem; margin: 0 0 1rem; align-items: stretch; }
-.eoStartCards > .sapFCard { overflow: hidden; height: auto !important; min-width: 0; }
-.eoStartCards .sapFCardHeader.sapFCardNumericHeader { display: flex; flex-direction: row; align-items: center; gap: 0.75rem; padding: 0.625rem 1rem 0.375rem; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderMainPart { flex: 1 1 auto; min-width: 0; gap: 0; padding: 0; margin: 0; align-items: center; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderImage { margin-right: 0.625rem; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderText { min-width: 0; }
-.eoStartCards .sapFCardNumericHeader .sapFCardTitle { font-size: var(--sapFontHeader6Size, 1rem); }
-.eoStartCards .sapFCardNumericHeader .sapFCardSubtitle { margin-top: 0; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderLastPart { flex: none; display: flex; flex-direction: column; align-items: flex-end; padding: 0; margin: 0; max-width: 45%; }
-.eoStartCards .sapFCardNumericHeader .sapFCardNumericIndicators { margin: 0; }
-.eoStartCards .sapFCardNumericHeader .sapMNCValue, .eoStartCards .sapFCardNumericHeader .sapMNCValue > span { font-size: 1.75rem !important; line-height: 2rem; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderDetailsWrapper { margin: 0; max-width: 100%; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderDetails { font-size: var(--sapFontSmallSize, 0.75rem); }
-.eoStartCards .sapFCardContent { padding-bottom: 0.375rem; }
-.eoStartCards .eoCardList.sapMList .sapMLIB { min-height: 1.875rem; padding: 0 1rem; }
-.eoStartCards .eoCardList.sapMList .sapMLIBContent { min-width: 0; }
-.eoStartCards .eoCardList.sapMList .sapMListNoData { padding: 0.25rem 1rem 0.5rem; min-height: 0; justify-content: flex-start; text-align: left; font-size: var(--sapFontSmallSize, 0.875rem); }
-.eoStartCards .eoCardList .sapMListNoDataText { text-align: left; }
+.eoStartCards { display: grid !important; grid-template-columns: repeat(auto-fill, minmax(min(100%, 19rem), 1fr)); gap: 1rem; margin: 0 0 1rem; align-items: stretch; }
+.eoStartCards > .sapFCard { min-width: 0; }
 .eoNoShrink { flex: none; }
 .eoGap > * + * { margin-top: 0.5rem; }
 .eoStatusRow { gap: 0.25rem 1rem; }
@@ -859,9 +693,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoChatAction { font: inherit; font-size: 0.75rem; cursor: pointer; border: none; background: transparent; color: var(--sapLinkColor); padding: 0.125rem 0.25rem; }
 .eoChatComposer { gap: 0.5rem; padding: 0.5rem 1rem 0.25rem; background: var(--sapGroup_ContentBackground); border-top: 1px solid var(--sapGroup_TitleBorderColor); }
 .eoChatComposer .eoChatInput { margin: 0; }
-.eoChatComposer .eoChatInput .sapMTextAreaInner { border-radius: 1.125rem; padding: 0.4375rem 0.875rem; min-height: 2.25rem; resize: none; }
-.eoChatSend.sapMBtn { height: 2.25rem; }
-.eoChatSend .sapMBtnInner { border-radius: 50%; width: 2.25rem; height: 2.25rem; min-width: 2.25rem; padding: 0; }
 .eoChatHint { padding: 0 1rem 0.375rem; font-size: 0.6875rem; color: var(--sapContent_LabelColor); background: var(--sapGroup_ContentBackground); }
 /* Chat – Messenger-Funktionen (Runde 10) */
 .eoChatSideTitle { gap: 0.375rem; }
@@ -906,8 +737,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoChatPendingRemove .sapMBtnInner { min-width: 1.5rem; width: 1.5rem; height: 1.5rem; border-radius: 50%; padding: 0;
 	background: var(--sapGroup_ContentBackground); box-shadow: var(--sapContent_Shadow1); }
 .eoChatReadOnly { margin: 0.5rem 1rem; }
-.eoChatTool.sapMBtn { height: 2.25rem; }
-.eoChatTool .sapMBtnInner { border-radius: 50%; width: 2.25rem; min-width: 2.25rem; height: 2.25rem; padding: 0; }
 .eoChatTool.sapMToggleBtnPressed .sapMBtnInner, .eoChatTool .sapMToggleBtnPressed { background: var(--sapNegativeColor) !important; color: #fff !important;
 	animation: eoChatPulse 1.4s ease-in-out infinite; }
 @keyframes eoChatPulse { 50% { box-shadow: 0 0 0 0.375rem color-mix(in srgb, var(--sapNegativeColor) 20%, transparent); } }
@@ -1022,13 +851,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoDayGrid { display: grid !important; grid-template-columns: minmax(0, 1.75fr) minmax(19rem, 1fr); gap: 1rem; align-items: start; }
 @media (max-width: 1100px) { .eoDayGrid { grid-template-columns: minmax(0, 1fr); } }
 .eoDayMain, .eoDaySide { display: flex; flex-direction: column; gap: 1rem; min-width: 0; }
-.eoDayCard.sapFCard { overflow: hidden; }
-.eoDayCard .sapFCardHeader { padding: 0; }
-.eoDayCard .sapFCardHeader .sapFCardHeaderMainPart { padding: 0.75rem 1rem 0.5rem; }
-.eoDayCard .sapFCardHeader .sapFCardIcon.sapFAvatar { width: 2.25rem; height: 2.25rem; min-width: 2.25rem; font-size: 1.125rem; }
-.eoDayCard .sapFCardHeader .sapFCardIcon .sapUiIcon { font-size: 1.25rem !important; color: var(--sapContent_IconColor); }
-.eoDayCard .sapFCardHeader .sapFCardTitle { font-size: var(--sapFontHeader5Size); }
-.eoDayCard .sapFCardContent .sapMList { margin-top: 0; }
 .eoCardTools { gap: 1rem; padding-right: 0.25rem; }
 .eoCrews { display: flex; flex-direction: column; }
 .eoCrew { border-top: 1px solid var(--sapList_BorderColor); }
@@ -1056,7 +878,6 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoDayItemSub.sapMText { font-size: var(--sapFontSmallSize); }
 .eoDayItem > .sapUiIcon { color: var(--sapContent_IconColor); flex: none; }
 .eoDayAllClear { margin: 0 !important; }
-.eoDayEmpty.sapMIllustratedMessage { padding: 1rem 1rem 1.5rem; }
 .eoPrintOnly { display: none !important; }
 @media (max-width: 600px) {
 	.eoDayKpis.sapMList > .sapMListUl { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.5rem; }
@@ -1097,25 +918,16 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoAdminSection { display: flex; flex-direction: column; margin: 0 0 1.5rem; max-width: 72rem; }
 .eoAdminSection > .sapMTitle { margin-bottom: 0.125rem; }
 .eoAdminSectionText.sapMText { color: var(--sapContent_LabelColor); margin-bottom: 0.625rem; }
-.eoAdminSurface { background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem);
-	padding: 0.5rem 1rem; }
 /* Gefährliche Aktionen getrennt am Seitenende */
-.eoDangerZone { display: flex; flex-direction: column; gap: 0.5rem; margin: 2rem 0 1rem; padding: 1rem; max-width: 72rem;
-	border: 1px solid var(--sapErrorBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); background: var(--sapErrorBackground); }
-.eoDangerZone > .sapMTitle { color: var(--sapNegativeTextColor, var(--sapErrorColor)); }
-.eoDangerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.5rem 0;
-	border-top: 1px solid var(--sapGroup_ContentBorderColor); }
-.eoDangerRow:first-of-type { border-top: 0; }
+.eoDangerZone { display: flex; flex-direction: column; gap: 0.5rem; margin: 2rem 0 1rem; max-width: 72rem; }
+.eoDangerRow { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; padding: 0.5rem 0; }
 .eoDangerRow > .sapMVBox, .eoDangerText { flex: 1 1 20rem; min-width: 0; }
 /* Systemeinstellungen: Bereiche gruppiert links, Inhalt rechts */
 .eoSettingsLayout { display: grid !important; grid-template-columns: 15rem minmax(0, 1fr); gap: 1.5rem; align-items: start; }
 @media (max-width: 1000px) { .eoSettingsLayout { grid-template-columns: minmax(0, 1fr); gap: 0.75rem; } }
-.eoSettingsNav.sapMList { position: sticky; top: 0; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); overflow: hidden; }
-.eoSettingsNav .sapMGHLI { padding-top: 0.75rem; }
-.eoSettingsNav .sapMLIB.sapMSLI { border-bottom: none; }
+.eoSettingsNav.sapMList { position: sticky; top: 0; }
 .eoSettingsMain { display: flex; flex-direction: column; min-width: 0; max-width: 60rem; }
 .eoSettingsHead { display: flex; flex-direction: column; gap: 0.125rem; margin-bottom: 0.75rem; }
-.eoSettingsTabs.sapMITB > .sapMITBContainerContent, .eoSettingsTabs .sapMITBContent { padding: 0; background: transparent; border: 0; }
 .eoSettingsTabs .sapUiSimpleForm, .eoSettingsTabs .sapUiForm { width: 100% !important; max-width: 60rem; box-sizing: border-box; }
 /* Einstellungen › Module: Karten mit Schalter, nach Bereichen */
 .eoModuleAreas { display: flex; flex-direction: column; gap: 1.25rem; margin-bottom: 1.5rem; }
@@ -1133,23 +945,10 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoModuleHint .sapUiIcon { font-size: 0.75rem; color: inherit; }
 .eoModuleHint .sapMText { color: inherit; font-size: inherit; }
 @media (max-width: 600px) { .eoModuleGrid { grid-template-columns: minmax(0, 1fr); } }
-.eoSettingsTabs .sapUiForm, .eoAdminCard.sapUiForm { border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); overflow: hidden; margin-bottom: 1rem; }
 .eoSettingsTabs .sapMListTbl, .eoSettingsTabs .sapMList { max-width: 100% !important; }
 .eoJumpBar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.25rem 1.25rem; margin: 0 0 1rem; }
-.eoDangerPanel.sapMPanel { margin-top: 1.5rem; border: 1px solid var(--sapErrorBorderColor); border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); overflow: hidden; }
-.eoAdmin .sapUiSimpleForm > .sapUiForm, .eoAdmin .sapUiSimpleForm.sapUiForm { border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); }
 .eoAdmin .sapUiSimpleForm { margin-bottom: 1rem; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderImage .sapFAvatar { width: 2.25rem; height: 2.25rem; font-size: 1.125rem; }
-.eoStartCards .sapFCardNumericHeader .sapFCardHeaderImage .sapFAvatar .sapUiIcon { font-size: 1.375rem; }
 
-/* Formulare (zentral über util/formLayout.ts, Klasse eoForm): Beschriftungen neben den Feldern linksbündig – sie fluchten
-   mit der Abschnittsüberschrift statt weit eingerückt rechts in der Beschriftungsspalte zu stehen. */
-.eoForm .sapUiFormLblColon .sapUiFormResGridCont > .sapUiFormElementLbl > .sapMLabel,
-.eoForm .sapUiFormResGridCont > .sapUiFormElementLbl > .sapMLabel { float: none !important; text-align: start !important; }
-.eoForm .sapUiFormResGridCont > .sapUiFormElementLbl { text-align: start !important; }
-.eoForm .sapUiFormLblColon .sapUiFormResGridCont > .sapUiFormElementLbl > .sapMLabel .sapMLabelInner { display: inline !important; }
-.eoForm .sapUiFormLblColon .sapUiFormResGridCont > .sapUiFormElementLbl > .sapMLabel .sapMLabelColonAndRequired { display: inline !important; min-width: 0; }
-.eoForm .sapUiFormResGridCont > .sapUiFormElementLbl { padding-right: 0.75rem; box-sizing: border-box; }
 /* Zeilen aus Feld + Schaltfläche/Hinweis in Formularen brechen bei schmaler Breite um, statt rechts abgeschnitten zu werden. */
 .eoForm .sapUiRespGrid .sapMHBox:not(.eoNoWrap) { flex-wrap: wrap; row-gap: 0.25rem; }
 .eoForm .sapUiRespGrid .sapMHBox > .sapMFlexItem, .eoForm .sapUiRespGrid .sapMHBox > * { min-width: 0; max-width: 100%; }
@@ -1282,84 +1081,8 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoHdSendButtons { gap: 0.5rem; justify-content: flex-end; min-width: 0; }
 .eoHdDetail > .eoHdTabs.sapMITH { flex: none; padding: 0 1.5rem; margin: 0; background: var(--sapGroup_ContentBackground); border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
 
-/* Seitenkopf aller Seiten (DynamicPage und Objektseite) und Inhalt auf einer ruhigen Fläche: Titel, Kopfbereich,
-   Kopfdetails und Reiterleiste tragen den Seitenhintergrund wie der Inhalt (keine abgesetzten Bänder oder Kopfkarten),
-   abgegrenzt nur durch eine feine Linie unter dem gesamten Kopf. Kopf und Inhalt stehen mit demselben, schmalen
-   Außenabstand bündig (je nach Breite 1 bis 1,5 rem statt der 2 bis 3 rem von UI5). Seitlicher Abstand als Innenabstand
-   des absolut positionierten Titelbereichs, oben als Außenabstand des Titels (beides zählt UI5 in die Höhe des
-   Titelbereichs, der Inhalt rückt entsprechend nach unten). Breakpoint-Klassen wie die Inhaltsränder von UI5. */
-.sapFDynamicPage, .sapUxAPObjectPageLayout { --eoPageX: 1.5rem; --eoHeadGap: 0.5rem; --eoHeadLine: var(--sapGroup_TitleBorderColor); }
-.sapFDynamicPage.sapFDynamicPage-Std-Desktop, .sapUxAPObjectPageLayout.sapUxAPObjectPageLayout-Std-Desktop { --eoPageX: 1.25rem; }
-.sapFDynamicPage.sapFDynamicPage-Std-Tablet, .sapFDynamicPage.sapFDynamicPage-Std-Phone,
-.sapUxAPObjectPageLayout.sapUxAPObjectPageLayout-Std-Tablet, .sapUxAPObjectPageLayout.sapUxAPObjectPageLayout-Std-Phone { --eoPageX: 1rem; }
-/* Inhalt: Ränder wie der Kopf. */
-.sapFDynamicPage > .sapFDynamicPageContentWrapper .sapFDynamicPageContent,
-.sapFDynamicPage > .sapFDynamicPageContentWrapper .sapFDynamicPageContentFitContainer { padding-left: var(--eoPageX); padding-right: var(--eoPageX); }
-.sapUxAPObjectPageLayout .sapUxAPObjectPageSection .sapUxAPObjectPageSectionContainer .sapUxAPObjectPageSubSection .sapUxAPBlockContainer {
-	margin-left: var(--eoPageX); margin-right: var(--eoPageX); background: transparent; }
-/* DynamicPage: Titel und Kopfbereich ohne eigene Fläche, Schatten oder Ecken; Linie unter dem letzten Teil des Kopfs. */
-.sapFDynamicPage > .sapFDynamicPageTitleWrapper { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: var(--sapBackgroundColor); box-shadow: none; }
-.sapFDynamicPage > .sapFDynamicPageTitleWrapper > .sapFDynamicPageTitle { margin-top: 0.5rem; padding-left: 1rem; padding-right: 1rem;
-	background: transparent; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--eoHeadLine); }
-.sapFDynamicPage > .sapFDynamicPageTitleWrapper .sapFDynamicPageHeader,
-.sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; background: transparent; box-shadow: none; border-radius: 0;
-	border-bottom: 1px solid var(--eoHeadLine); }
-.sapFDynamicPage > .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper { padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: transparent; }
-.sapFDynamicPage > .sapFDynamicPageTitleWrapper:has(.sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden)) > .sapFDynamicPageTitle,
-.sapFDynamicPage:has(> .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden))
-	> .sapFDynamicPageTitleWrapper:not(.sapFDynamicPageTitleSnapped) > .sapFDynamicPageTitle { border-bottom-color: transparent; }
-/* Objektseite (Bauakte, Kunde, Mitarbeiter): Titel, Kopfdetails und Reiterleiste auf der Breite des Inhalts, Linie unter den Reitern. */
-.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: var(--sapBackgroundColor); box-shadow: none; }
-.sapUxAPObjectPageHeaderTitle > .sapFDynamicPageTitle { margin-top: 0.5rem; padding-left: 1rem; padding-right: 1rem; background: transparent; box-shadow: none; border-radius: 0; }
-.sapUxAPObjectPageScroll > .sapUxAPObjectPageHeaderDetails, .sapUxAPObjectPageScroll > .sapUxAPObjectPageNavigation { margin-left: var(--eoPageX); margin-right: var(--eoPageX); }
-.sapUxAPObjectPageHeaderDetails .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; background: transparent; box-shadow: none; border-radius: 0; }
-.sapUxAPObjectPageScroll > .sapUxAPObjectPageNavigation, .sapUxAPObjectPageHeaderTitle > .sapUxAPObjectPageStickyAnchorBar:not(:empty) {
-	background: transparent; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--eoHeadLine); }
-.sapUxAPObjectPageNavigation, .sapUxAPObjectPageNavigation .sapMITH, .sapUxAPObjectPageStickyAnchorBar .sapMITH { background: transparent; box-shadow: none; }
-.sapUxAPObjectPageWrapper { background: transparent; }
-.sapUxAPObjectPageNavigation > .sapMITH, .sapUxAPObjectPageStickyAnchorBar .sapMITH { padding-left: 0.8125rem; padding-right: 0.8125rem; }
-/* Beim Bildlauf läuft der Inhalt unter dem stehenden Kopf hindurch: Der Titelbereich trägt den Seitenhintergrund (oben,
-   links und rechts scheint nichts durch), darunter deckt ein schmaler Streifen in Seitenfarbe den Inhalt ab – gleicher
-   Abstand zwischen Linie und Inhalt. Der Streifen liegt außerhalb der gemessenen Titelhöhe (oben im Innenabstand des
-   Inhalts, ändert kein Layout) und fehlt, solange ein aufgeklappter Kopfbereich bzw. die Kopfdetails der Objektseite im
-   Inhalt den Kopf nach unten fortsetzen. */
-.sapFDynamicPage.sapFDynamicPageWithScroll > .sapFDynamicPageTitleWrapper::after,
-.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle.sapUxAPObjectPageHeaderStickied::after {
-	content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--eoHeadGap); background: var(--sapBackgroundColor); }
-.sapFDynamicPage:has(> .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden))
-	> .sapFDynamicPageTitleWrapper:not(.sapFDynamicPageTitleSnapped)::after { content: none; }
-/* Überlagernde Bildlaufleiste (macOS, Chromium): UI5 rückt den Titel 12 px ein, der Inhalt bleibt – rechte Kante angleichen. */
-.sapFDynamicPage.sapFDynamicPageWithOverlayScrollbar > .sapFDynamicPageTitleWrapper { padding-right: calc(var(--eoPageX) - 12px); }
-.eoDocCard .eoCheckTable.sapMList { width: auto !important; margin: 0 1rem; }
 /* Eingeklappter Titel der Objektseite: langer Titel mit Auslassungspunkten statt unter die Aktionen zu laufen. */
 .eoSnapTitle.sapMFlexBox { min-width: 0; max-width: 100%; }
 .eoSnapTitle.sapMFlexBox > .sapMFlexItem { min-width: 0 !important; }
 .eoSnapTitle .sapMTitle { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
-/* Kurzmeldungen (util/toast.ts): kleine Karten oben rechts unter der Kopfzeile, gestapelt, Farbakzent und Symbol je Art,
-   Abstand zum Rand wie der Seitenrand. Die Region lässt Klicks durch, nur die Karten selbst sind bedienbar. */
-.eoToasts { position: fixed; right: 1rem; z-index: 100000; display: flex; flex-direction: column; align-items: flex-end; gap: 0.5rem;
-	padding-top: 0.75rem; width: min(24rem, calc(100vw - 2rem)); pointer-events: none; box-sizing: border-box; }
-@media (min-width: 1280px) { .eoToasts { right: 1.25rem; } }
-@media (min-width: 1700px) { .eoToasts { right: 1.5rem; } }
-.eoToast { --eoToastAccent: var(--sapPositiveElementColor); pointer-events: auto; cursor: pointer; display: flex; align-items: flex-start; gap: 0.625rem;
-	width: 100%; box-sizing: border-box; padding: 0.625rem 0.5rem 0.625rem 0.75rem; border-radius: 0.75rem;
-	background: var(--sapGroup_ContentBackground); color: var(--sapTextColor); font-family: var(--sapFontFamily); font-size: var(--sapFontSize);
-	line-height: 1.35; border: 1px solid var(--sapGroup_ContentBorderColor); border-left: 4px solid var(--eoToastAccent);
-	box-shadow: var(--sapContent_Shadow2); animation: eoToastIn 0.18s ease-out; transition: opacity 0.18s, transform 0.18s; }
-.eoToast-info { --eoToastAccent: var(--sapInformativeElementColor); }
-.eoToast-warning { --eoToastAccent: var(--sapCriticalElementColor); }
-.eoToast-error { --eoToastAccent: var(--sapNegativeElementColor); }
-.eoToastIcon { flex: none; width: 1.25rem; height: 1.25rem; color: var(--eoToastAccent); }
-.eoToastText { flex: 1 1 auto; min-width: 0; padding-top: 0.0625rem; overflow-wrap: anywhere; }
-.eoToastSr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
-.eoToastAction, .eoToastClose { flex: none; border: none; background: transparent; cursor: pointer; font: inherit; border-radius: 0.375rem; }
-.eoToastAction { color: var(--sapLinkColor); font-family: var(--sapFontBoldFamily); font-weight: 700; padding: 0.0625rem 0.375rem; }
-.eoToastClose { color: var(--sapContent_IconColor); font-size: 1.125rem; line-height: 1; width: 1.5rem; height: 1.5rem; margin-top: -0.125rem; opacity: 0.7; }
-.eoToastAction:hover, .eoToastClose:hover { background: var(--sapButton_Lite_Hover_Background); opacity: 1; }
-.eoToastAction:focus-visible, .eoToastClose:focus-visible { outline: var(--sapContent_FocusWidth) solid var(--sapContent_FocusColor); outline-offset: 1px; }
-.eoToastsPassive .eoToast { pointer-events: none; }
-.eoToastLeave { opacity: 0; transform: translateX(0.75rem); pointer-events: none; }
-@keyframes eoToastIn { from { opacity: 0; transform: translateX(0.75rem); } }
-@media (prefers-reduced-motion: reduce) { .eoToast { animation: none; transition: none; } }
-@media print { .eoToasts { display: none; } }

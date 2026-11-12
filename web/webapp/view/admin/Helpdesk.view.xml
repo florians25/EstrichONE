@@ -1,25 +1,26 @@
-<mvc:View controllerName="estrichone.controller.admin.Helpdesk" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control"
+<mvc:View controllerName="estrichone.controller.admin.Helpdesk" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core" xmlns:eo="estrichone.control" xmlns:f="sap.f"
 	core:require="{fmt: 'estrichone/model/formatter'}" height="100%">
 	<FlexBox id="helpdesk" direction="Column" height="100%" renderType="Bare" class="eoHelpdesk">
 		<!-- Arbeitsplatz der IT (kein Ticket gewählt): Kennzahlen, gespeicherte Ansichten, sortierbare Liste mit Sammelbearbeitung -->
-		<ScrollContainer id="hdQueue" vertical="true" horizontal="false" height="100%" visible="{= ${view>/agent} &amp;&amp; !${view>/selectedId} }" class="eoHdQueue">
-			<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
-			<VBox class="eoHdQueueInner">
-				<FlexBox justifyContent="SpaceBetween" alignItems="Start" wrap="Wrap" class="eoHdQueueHead">
-					<VBox>
-						<Title id="hdTitle" text="{i18n>nav.helpdesk}" level="H1"/>
-						<Text text="Arbeitsplatz der IT: Tickets aus Apps, Web und Büro" class="eoMuted"/>
-					</VBox>
-					<HBox class="eoHdQueueActions" wrap="Wrap">
+		<f:DynamicPage id="hdQueue" toggleHeaderOnTitleClick="false" visible="{= ${view>/agent} &amp;&amp; !${view>/selectedId} }">
+			<f:layoutData><FlexItemData growFactor="1" baseSize="0"/></f:layoutData>
+			<f:title>
+				<f:DynamicPageTitle>
+					<f:heading><Title id="hdTitle" text="{i18n>nav.helpdesk}" level="H1"/></f:heading>
+					<f:expandedContent><Text text="Arbeitsplatz der IT: Tickets aus Apps, Web und Büro"/></f:expandedContent>
+					<f:actions>
 						<Button text="Wissensdatenbank" icon="sap-icon://course-book" press=".onKnowledge"/>
 						<Button id="hdSettings" text="Einstellungen" icon="sap-icon://action-settings" press=".onSettings"/>
 						<Button icon="sap-icon://refresh" tooltip="Aktualisieren" press=".onRefresh"/>
 						<Button id="newOnBehalf" text="Meldung aufnehmen" icon="sap-icon://call" press=".onNewOnBehalf"
 							tooltip="Ticket im Namen eines Melders anlegen (Anruf, E-Mail, vor Ort)"/>
 						<Button id="newTicket" text="Neues Ticket" icon="sap-icon://add" type="Emphasized" press=".onNew"/>
-					</HBox>
-				</FlexBox>
-				<FlexBox id="hdKpis" class="eoKpiBar eoHdKpis" items="{view>/kpis}" wrap="Wrap" renderType="Bare">
+					</f:actions>
+				</f:DynamicPageTitle>
+			</f:title>
+			<f:header>
+				<f:DynamicPageHeader pinnable="false">
+				<FlexBox id="hdKpis" class="eoKpiBar" items="{view>/kpis}" wrap="Wrap" renderType="Bare">
 					<VBox class="eoKpiItem" renderType="Bare">
 						<Link text="{view>label}" press=".onKpi" enabled="{= !!${view>key} }" class="eoHdKpiLink"/>
 						<ObjectNumber number="{view>value}" unit="{view>unit}" class="eoKpiFigure"
@@ -27,7 +28,7 @@
 						<Text text="{view>footer}" class="eoKpiHint"/>
 					</VBox>
 				</FlexBox>
-				<FlexBox wrap="Wrap" class="eoHdBreakdown" visible="{= ${view>/byCategory}.length > 0 }" renderType="Bare">
+				<FlexBox wrap="Wrap" class="eoHdBreakdown sapUiSmallMarginTop" visible="{= ${view>/byCategory}.length > 0 }" renderType="Bare">
 					<VBox class="eoHdBreakdownCol">
 						<Title text="Offen nach Kategorie" level="H3"/>
 						<VBox items="{view>/byCategory}">
@@ -53,7 +54,11 @@
 						</VBox>
 					</VBox>
 				</FlexBox>
-				<IconTabHeader id="hdViews" selectedKey="{view>/filter}" select=".onView" items="{view>/views}" mode="Inline" class="eoHdViews">
+				</f:DynamicPageHeader>
+			</f:header>
+			<f:content>
+			<VBox>
+				<IconTabHeader id="hdViews" selectedKey="{view>/filter}" select=".onView" items="{view>/views}" mode="Inline">
 					<items><IconTabFilter key="{view>key}" text="{view>text}" count="{view>count}"/></items>
 				</IconTabHeader>
 				<Table id="hdTable" mode="MultiSelect" items="{view>/visible}" selectionChange=".onTableSelection" busy="{view>/busy}" busyIndicatorDelay="300"
@@ -153,7 +158,8 @@
 						busyIndicatorDelay="0"/>
 				</HBox>
 			</VBox>
-		</ScrollContainer>
+			</f:content>
+		</f:DynamicPage>
 
 		<!-- Ticketansicht: links die Liste, rechts das Ticket -->
 		<FlexBox id="hdSplit" height="100%" renderType="Bare" alignItems="Stretch" class="eoHdSplit" visible="{= !${view>/agent} || !!${view>/selectedId} }">

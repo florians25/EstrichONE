@@ -79,66 +79,44 @@ for (const scale of [1.25, 1.5]) {
 }
 
 /**
- * Seitenkopf: linke und rechte Kante wie der Inhalt darunter, keine eigene Hintergrundfläche (gleicher Hintergrund wie
- * die Seite), Aktionen mit Luft zum rechten Rand, nichts rechts abgeschnitten; Hinweisleisten oben mit demselben Einzug.
+ * Seitenkopf im SAP-Standard (DynamicPage bzw. Objektseite ohne eigene Gestaltung): Titel und Aktionen liegen vollständig
+ * im Fenster, nichts läuft waagerecht über, die Aktionen überdecken den Titel nicht, und es gibt keine eigenen
+ * Kopf-Sonderwege mehr (keine Pseudo-Elemente oder Fremdfarben am Kopf).
  */
 async function headerIssues(page: Page): Promise<string[]> {
   return page.evaluate(() => {
     const visible = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0;
     const out: string[] = [];
-    const op = [...document.querySelectorAll('.sapUxAPObjectPageLayout')].find(visible);
-    const dp = [...document.querySelectorAll('.sapFDynamicPage')].find(visible);
-    let title: HTMLElement | undefined;
-    let left = 0;
-    let right = 0;
-    if (op) {
-      title = [...op.querySelectorAll<HTMLElement>(':scope > .sapUxAPObjectPageHeaderTitle > .sapFDynamicPageTitle')].find(visible);
-      const block = [...op.querySelectorAll<HTMLElement>('.sapUxAPBlockContainer')].find(visible);
-      if (!block) return out;
-      left = block.getBoundingClientRect().left;
-      right = block.getBoundingClientRect().right;
-    } else if (dp) {
-      title = [...dp.querySelectorAll<HTMLElement>(':scope > .sapFDynamicPageTitleWrapper > .sapFDynamicPageTitle')].find(visible);
-      const content = dp.querySelector<HTMLElement>(':scope > .sapFDynamicPageContentWrapper .sapFDynamicPageContent');
-      if (!content) return out;
-      const cs = getComputedStyle(content);
-      const r = content.getBoundingClientRect();
-      left = r.left + parseFloat(cs.paddingLeft);
-      right = r.right - parseFloat(cs.paddingRight);
-    }
+    const title = [...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageHeaderTitle > .sapFDynamicPageTitle, .sapFDynamicPage > .sapFDynamicPageTitleWrapper > .sapFDynamicPageTitle')]
+      .find(visible);
     if (!title) return out;
     const t = title.getBoundingClientRect();
-    const cs = getComputedStyle(title);
-    if (Math.abs(t.left - left) > 2) out.push(`Kopf links bei ${Math.round(t.left)} px, Inhalt bei ${Math.round(left)} px`);
-    // Klassische Bildlaufleiste: UI5 rückt den Titel um ihre Breite ein, der Inhalt ebenso.
-    if (Math.abs(t.right - right) > 2 && Math.abs(t.right - right) > 18) out.push(`Kopf rechts bei ${Math.round(t.right)} px, Inhalt bei ${Math.round(right)} px`);
-    if (t.right > window.innerWidth) out.push('Kopf rechts abgeschnitten');
-    const page = [...document.querySelectorAll('.sapFDynamicPage, .sapUxAPObjectPageLayout')].find(visible)!;
-    const pageBg = getComputedStyle(document.body).backgroundColor;
-    const surfaces = [title, ...page.querySelectorAll<HTMLElement>('.sapFDynamicPageHeader, .sapUxAPObjectPageNavigation, .sapUxAPObjectPageNavigation .sapMITH')]
-      .filter((e) => visible(e) && e.getBoundingClientRect().height > 0);
-    for (const e of surfaces) {
-      const bg = getComputedStyle(e).backgroundColor;
-      if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== pageBg) out.push(`Kopf mit eigener Fläche (${e.className.split(' ')[0]}: ${bg})`);
-    }
-    const strip = [...document.querySelectorAll<HTMLElement>('.eoMain .eoTopNotices > .sapMMsgStrip')].find(visible);
-    if (strip && dp && Math.abs(strip.getBoundingClientRect().left - t.left) > 2) {
-      out.push(`Hinweisleiste links bei ${Math.round(strip.getBoundingClientRect().left)} px, Kopf bei ${Math.round(t.left)} px`);
-    }
-    if (t.top - (title.parentElement?.getBoundingClientRect().top ?? 0) < 4) out.push('Kopf klebt oben an der Kante');
-    for (const a of title.querySelectorAll<HTMLElement>('.sapFDynamicPageTitleActionsBar, .sapFDynamicPageTitleTopRight')) {
+    if (t.left < 0 || t.right > window.innerWidth + 1) out.push(`Kopf außerhalb des Fensters (${Math.round(t.left)}–${Math.round(t.right)} px)`);
+    const se = document.scrollingElement as HTMLElement;
+    if (se.scrollWidth > se.clientWidth + 1) out.push(`Seite läuft waagerecht über (${se.scrollWidth} px bei ${se.clientWidth} px)`);
+    const heading = title.querySelector<HTMLElement>('.sapFDynamicPageTitleMainHeading');
+    for (const a of title.querySelectorAll<HTMLElement>('.sapFDynamicPageTitleMainActions, .sapFDynamicPageTitleMainNavigationArea')) {
       const r = a.getBoundingClientRect();
-      if (r.width > 0 && r.right > t.right - 8) out.push(`Aktionen ohne Abstand zum rechten Rand (${Math.round(t.right - r.right)} px)`);
+      if (r.width === 0) continue;
+      if (r.right > window.innerWidth + 1) out.push(`Aktionen rechts abgeschnitten (${Math.round(r.right)} px)`);
+      const h = heading?.getBoundingClientRect();
+      if (h && h.width > 0 && r.left < h.right - 1 && r.top < h.bottom - 1 && r.bottom > h.top + 1) out.push('Aktionen überdecken den Titel');
+    }
+    const wrapper = title.parentElement!;
+    for (const pseudo of ['::before', '::after']) {
+      const c = getComputedStyle(wrapper, pseudo).content;
+      if (c && c !== 'none' && c !== 'normal') out.push(`Eigenes Pseudo-Element am Kopf (${pseudo})`);
     }
     return out;
   });
 }
 
-const headerPages = ['/system/backup-ziele', '/system/archiv', '/kunden', '/it-center/helpdesk', '/system/firmendaten', '/bauakten'];
-for (const [width, height, scale] of [[1920, 1080, 1], [1920, 1080, 1.25], [1280, 720, 1], [1280, 720, 1.5]] as const) {
-  test(`Seitenkopf bündig und ohne eigene Fläche bei ${width} × ${height} mit ${scale * 100} %`, async ({ browser }) => {
+const headerPages = ['/start', '/system/backup-ziele', '/system/archiv', '/kunden', '/it-center/helpdesk', '/system/firmendaten', '/bauakten'];
+for (const [width, height, scale, scheme] of [[1920, 1080, 1, 'light'], [1920, 1080, 1, 'dark'], [1280, 720, 1, 'light'], [1280, 720, 1.5, 'dark']] as const) {
+  test(`Seitenkopf im SAP-Standard ohne Überlauf bei ${width} × ${height} mit ${scale * 100} % (${scheme === 'dark' ? 'dunkel' : 'hell'})`, async ({ browser }) => {
     test.setTimeout(180_000);
     const { context, page } = await session(browser, Math.round(width / scale), Math.round(height / scale), scale);
+    await page.emulateMedia({ colorScheme: scheme });
     const found: string[] = [];
     const details = await detailPages(page);
     for (const path of [...headerPages, ...details]) {
@@ -148,92 +126,6 @@ for (const [width, height, scale] of [[1920, 1080, 1], [1920, 1080, 1.25], [1280
     }
     await context.close();
     expect(found).toEqual([]);
-  });
-}
-
-/**
- * Gescrollter Zustand: Der Inhalt läuft unter dem stehenden Seitenkopf hindurch, darf aber nirgends zwischen Kopfzeile
- * und Unterkante des Kopfs (samt Abstandsstreifen) durchscheinen – oben, an den Seiten, an den Ecken und darunter.
- * Geprüft mit elementFromPoint: Jeder Punkt muss zum Kopfbereich gehören (oder zur Bildlaufleiste des Inhalts).
- */
-async function scrolledHeaderIssues(page: Page, px: number): Promise<string[] | null> {
-  const ready = await page.evaluate((px) => {
-    const visible = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0;
-    const scroller = [...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageWrapper, .sapFDynamicPage > .sapFDynamicPageContentWrapper')].find(visible);
-    if (!scroller || scroller.scrollHeight - scroller.clientHeight < 40) return false;
-    scroller.scrollTop = Math.min(px, scroller.scrollHeight - scroller.clientHeight);
-    scroller.dispatchEvent(new Event('scroll'));
-    return true;
-  }, px);
-  if (!ready) return null;
-  await page.waitForTimeout(700);
-  return page.evaluate(() => {
-    const visible = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0;
-    const out: string[] = [];
-    const scroller = [...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageWrapper, .sapFDynamicPage > .sapFDynamicPageContentWrapper')].find(visible)!;
-    const head = [...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle, .sapFDynamicPage > .sapFDynamicPageTitleWrapper')]
-      .find(visible);
-    const title = head?.querySelector<HTMLElement>(':scope > .sapFDynamicPageTitle');
-    if (!head || !title) return out;
-    // Nur wenn der Inhalt tatsächlich unter dem Kopf liegt (bei aufgeklapptem Kopfbereich im Inhalt setzt dieser den Kopf fort).
-    const content = scroller.querySelector<HTMLElement>('.sapUxAPObjectPageContainer, .sapFDynamicPageContent');
-    const h = head.getBoundingClientRect();
-    if (!content || content.getBoundingClientRect().top >= h.bottom) return out;
-    const opaque = (c: string) => c.startsWith('rgb(') || (c.startsWith('rgba(') && parseFloat(c.split(',')[3]) >= 0.99);
-    const after = getComputedStyle(head, '::after');
-    const gap = after.content !== 'none' && after.position === 'absolute' ? parseFloat(after.height) || 0 : 0;
-    const t = title.getBoundingClientRect();
-    const xs = [h.left + 2, (h.left + t.left) / 2, t.left + 2, t.left + 6, (t.left + t.right) / 2, t.right - 6, t.right - 2, (t.right + h.right) / 2];
-    const ys = [h.top + 1, (h.top + t.top) / 2, t.top + 2, t.top + 6, t.bottom - 6, t.bottom - 2, h.bottom - 2];
-    if (gap >= 2) ys.push(h.bottom + gap / 2, h.bottom + gap - 1);
-    for (const y of ys) {
-      for (const x of xs) {
-        if (x >= h.right - 1) continue;
-        const el = document.elementFromPoint(x, y);
-        if (!el || el === scroller) continue;
-        if (head.contains(el)) {
-          // Der Kopf muss an dieser Stelle deckend gemalt sein (eigene Fläche oder die eines Elternteils im Kopf).
-          if (y >= h.bottom) { if (opaque(after.backgroundColor)) continue; } else {
-            let e: Element | null = el;
-            while (e && e !== head.parentElement && !opaque(getComputedStyle(e).backgroundColor)) e = e.parentElement;
-            if (e && e !== head.parentElement) continue;
-          }
-          out.push(`Inhalt scheint bei ${Math.round(x)}/${Math.round(y)} durch den durchsichtigen Kopf`);
-          continue;
-        }
-        out.push(`Inhalt scheint bei ${Math.round(x)}/${Math.round(y)} durch (${(el.className || el.tagName).toString().split(' ')[0]})`);
-      }
-    }
-    return [...new Set(out)].slice(0, 6);
-  });
-}
-
-for (const [width, height, scale, scheme] of [[1920, 1080, 1, 'dark'], [1280, 720, 1, 'light'], [1280, 720, 1.25, 'dark'], [1280, 720, 1.5, 'light']] as const) {
-  test(`Gescrollter Seitenkopf deckt den Inhalt ab bei ${width} × ${height} mit ${scale * 100} % (${scheme === 'dark' ? 'dunkel' : 'hell'})`, async ({ browser }) => {
-    test.setTimeout(180_000);
-    const { context, page } = await session(browser, Math.round(width / scale), Math.round(height / scale), scale);
-    await page.emulateMedia({ colorScheme: scheme });
-    const found: string[] = [];
-    let checked = 0;
-    const details = await detailPages(page);
-    for (const path of ['/start', ...headerPages, ...details]) {
-      for (const px of [60, 600]) {
-        await page.goto(path);
-        await settle(page);
-        const issues = await scrolledHeaderIssues(page, px);
-        if (issues === null) break;
-        checked++;
-        for (const issue of issues) found.push(`${path} (${px} px): ${issue}`);
-      }
-    }
-    await eachSection(page, details, async (name) => {
-      const issues = await scrolledHeaderIssues(page, 600);
-      if (issues) checked++;
-      for (const issue of issues ?? []) found.push(`Bauakte › ${name}: ${issue}`);
-    });
-    await context.close();
-    expect(found).toEqual([]);
-    expect(checked).toBeGreaterThan(0);
   });
 }
 

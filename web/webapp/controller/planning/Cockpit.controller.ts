@@ -492,8 +492,8 @@ export default class CockpitController extends BaseController {
 		if (!result) return;
 		this.pushUndo(action);
 		const warnings = result.warnings;
-		showToast(warnings.length ? `${label}. Hinweis: ${warnings.slice(0, 2).join(" ")}${warnings.length > 2 ? " …" : ""}` : `${label}.`,
-			{ type: warnings.length ? "warning" : "success", duration: warnings.length ? 6000 : 4000, action: { text: "Rückgängig (Strg+Z)", press: () => void this.onUndo() } });
+		showToast(warnings.length ? `${label}. Hinweis: ${warnings.slice(0, 2).join(" ")}${warnings.length > 2 ? " …" : ""}` : `${label}. Strg+Z macht es rückgängig.`,
+			{ duration: warnings.length ? 5000 : 2500 });
 	}
 
 	private pushUndo(action: Action): void {

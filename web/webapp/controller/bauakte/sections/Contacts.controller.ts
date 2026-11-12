@@ -164,7 +164,7 @@ export default class Contacts extends SectionBase {
 	private assignments: AssignmentView[] = [];
 
 	protected init(): void {
-		this.v().setModel(new JSONModel({ groups: [], team: [], count: 0, partyCount: 0, query: "", group: "",
+		this.v().setModel(new JSONModel({ groups: [], cards: [], team: [], count: 0, partyCount: 0, query: "", group: "",
 			groupItems: [{ key: "", text: "Alle Rollen" }, ...groups.map((g) => ({ key: g.key, text: g.title }))],
 			roleItems: roleOptions }), "ct");
 		// Kunde und Team lädt die Objektseite nach: dann neu zeichnen.
@@ -258,14 +258,16 @@ export default class Contacts extends SectionBase {
 		const q = String(this.ct().getProperty("/query") ?? "").trim().toLowerCase();
 		const visible = this.cards.filter((c) => !q || q.split(/\s+/).every((t) => c.search.includes(t)));
 		const only = String(this.ct().getProperty("/group") ?? "");
-		this.ct().setProperty("/groups", groups
+		const shown = groups
 			.filter((g) => !only || g.key === only)
 			.map((g) => {
 				const cards = visible.filter((c) => g.roles.includes(c.role)).sort((a, b) => Number(b.primary) - Number(a.primary));
-				// „size“ steuert die Spaltenbreite der Gruppe im Raster (mehrere Karten nebeneinander statt untereinander).
-				return { key: g.key, title: g.title, icon: g.icon, count: String(cards.length), size: String(Math.min(cards.length, 3)), cards };
+				return { key: g.key, title: g.title, icon: g.icon, count: String(cards.length), cards };
 			})
-			.filter((g) => g.cards.length > 0));
+			.filter((g) => g.cards.length > 0);
+		this.ct().setProperty("/groups", shown);
+		// Alle Karten in einem Raster, nach Gruppen sortiert (Rolle steht auf jeder Karte).
+		this.ct().setProperty("/cards", shown.flatMap((g) => g.cards));
 	}
 
 	onFilter(): void {
