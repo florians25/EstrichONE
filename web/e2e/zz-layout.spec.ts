@@ -79,8 +79,8 @@ for (const scale of [1.25, 1.5]) {
 }
 
 /**
- * Seitenkopf als Karte: linke und rechte Kante wie der Inhalt darunter, alle Ecken gerundet (unten nur ohne
- * anschließenden Kopfbereich), Aktionen mit Luft zum rechten Rand, nichts rechts abgeschnitten.
+ * Seitenkopf: linke und rechte Kante wie der Inhalt darunter, keine eigene Hintergrundfläche (gleicher Hintergrund wie
+ * die Seite), Aktionen mit Luft zum rechten Rand, nichts rechts abgeschnitten; Hinweisleisten oben mit demselben Einzug.
  */
 async function headerIssues(page: Page): Promise<string[]> {
   return page.evaluate(() => {
@@ -113,7 +113,18 @@ async function headerIssues(page: Page): Promise<string[]> {
     // Klassische Bildlaufleiste: UI5 rückt den Titel um ihre Breite ein, der Inhalt ebenso.
     if (Math.abs(t.right - right) > 2 && Math.abs(t.right - right) > 18) out.push(`Kopf rechts bei ${Math.round(t.right)} px, Inhalt bei ${Math.round(right)} px`);
     if (t.right > window.innerWidth) out.push('Kopf rechts abgeschnitten');
-    if (parseFloat(cs.borderTopLeftRadius) < 4 || parseFloat(cs.borderTopRightRadius) < 4) out.push('Kopf oben nicht gerundet');
+    const page = [...document.querySelectorAll('.sapFDynamicPage, .sapUxAPObjectPageLayout')].find(visible)!;
+    const pageBg = getComputedStyle(document.body).backgroundColor;
+    const surfaces = [title, ...page.querySelectorAll<HTMLElement>('.sapFDynamicPageHeader, .sapUxAPObjectPageNavigation, .sapUxAPObjectPageNavigation .sapMITH')]
+      .filter((e) => visible(e) && e.getBoundingClientRect().height > 0);
+    for (const e of surfaces) {
+      const bg = getComputedStyle(e).backgroundColor;
+      if (bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent' && bg !== pageBg) out.push(`Kopf mit eigener Fläche (${e.className.split(' ')[0]}: ${bg})`);
+    }
+    const strip = [...document.querySelectorAll<HTMLElement>('.eoMain .eoTopNotices > .sapMMsgStrip')].find(visible);
+    if (strip && dp && Math.abs(strip.getBoundingClientRect().left - t.left) > 2) {
+      out.push(`Hinweisleiste links bei ${Math.round(strip.getBoundingClientRect().left)} px, Kopf bei ${Math.round(t.left)} px`);
+    }
     if (t.top - (title.parentElement?.getBoundingClientRect().top ?? 0) < 4) out.push('Kopf klebt oben an der Kante');
     for (const a of title.querySelectorAll<HTMLElement>('.sapFDynamicPageTitleActionsBar, .sapFDynamicPageTitleTopRight')) {
       const r = a.getBoundingClientRect();
@@ -125,7 +136,7 @@ async function headerIssues(page: Page): Promise<string[]> {
 
 const headerPages = ['/system/backup-ziele', '/system/archiv', '/kunden', '/it-center/helpdesk', '/system/firmendaten', '/bauakten'];
 for (const [width, height, scale] of [[1920, 1080, 1], [1920, 1080, 1.25], [1280, 720, 1], [1280, 720, 1.5]] as const) {
-  test(`Seitenkopf bündig und gerundet bei ${width} × ${height} mit ${scale * 100} %`, async ({ browser }) => {
+  test(`Seitenkopf bündig und ohne eigene Fläche bei ${width} × ${height} mit ${scale * 100} %`, async ({ browser }) => {
     test.setTimeout(180_000);
     const { context, page } = await session(browser, Math.round(width / scale), Math.round(height / scale), scale);
     const found: string[] = [];
@@ -137,6 +148,92 @@ for (const [width, height, scale] of [[1920, 1080, 1], [1920, 1080, 1.25], [1280
     }
     await context.close();
     expect(found).toEqual([]);
+  });
+}
+
+/**
+ * Gescrollter Zustand: Der Inhalt läuft unter dem stehenden Seitenkopf hindurch, darf aber nirgends zwischen Kopfzeile
+ * und Unterkante des Kopfs (samt Abstandsstreifen) durchscheinen – oben, an den Seiten, an den Ecken und darunter.
+ * Geprüft mit elementFromPoint: Jeder Punkt muss zum Kopfbereich gehören (oder zur Bildlaufleiste des Inhalts).
+ */
+async function scrolledHeaderIssues(page: Page, px: number): Promise<string[] | null> {
+  const ready = await page.evaluate((px) => {
+    const visible = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0;
+    const scroller = [...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageWrapper, .sapFDynamicPage > .sapFDynamicPageContentWrapper')].find(visible);
+    if (!scroller || scroller.scrollHeight - scroller.clientHeight < 40) return false;
+    scroller.scrollTop = Math.min(px, scroller.scrollHeight - scroller.clientHeight);
+    scroller.dispatchEvent(new Event('scroll'));
+    return true;
+  }, px);
+  if (!ready) return null;
+  await page.waitForTimeout(700);
+  return page.evaluate(() => {
+    const visible = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0;
+    const out: string[] = [];
+    const scroller = [...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageWrapper, .sapFDynamicPage > .sapFDynamicPageContentWrapper')].find(visible)!;
+    const head = [...document.querySelectorAll<HTMLElement>('.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle, .sapFDynamicPage > .sapFDynamicPageTitleWrapper')]
+      .find(visible);
+    const title = head?.querySelector<HTMLElement>(':scope > .sapFDynamicPageTitle');
+    if (!head || !title) return out;
+    // Nur wenn der Inhalt tatsächlich unter dem Kopf liegt (bei aufgeklapptem Kopfbereich im Inhalt setzt dieser den Kopf fort).
+    const content = scroller.querySelector<HTMLElement>('.sapUxAPObjectPageContainer, .sapFDynamicPageContent');
+    const h = head.getBoundingClientRect();
+    if (!content || content.getBoundingClientRect().top >= h.bottom) return out;
+    const opaque = (c: string) => c.startsWith('rgb(') || (c.startsWith('rgba(') && parseFloat(c.split(',')[3]) >= 0.99);
+    const after = getComputedStyle(head, '::after');
+    const gap = after.content !== 'none' && after.position === 'absolute' ? parseFloat(after.height) || 0 : 0;
+    const t = title.getBoundingClientRect();
+    const xs = [h.left + 2, (h.left + t.left) / 2, t.left + 2, t.left + 6, (t.left + t.right) / 2, t.right - 6, t.right - 2, (t.right + h.right) / 2];
+    const ys = [h.top + 1, (h.top + t.top) / 2, t.top + 2, t.top + 6, t.bottom - 6, t.bottom - 2, h.bottom - 2];
+    if (gap >= 2) ys.push(h.bottom + gap / 2, h.bottom + gap - 1);
+    for (const y of ys) {
+      for (const x of xs) {
+        if (x >= h.right - 1) continue;
+        const el = document.elementFromPoint(x, y);
+        if (!el || el === scroller) continue;
+        if (head.contains(el)) {
+          // Der Kopf muss an dieser Stelle deckend gemalt sein (eigene Fläche oder die eines Elternteils im Kopf).
+          if (y >= h.bottom) { if (opaque(after.backgroundColor)) continue; } else {
+            let e: Element | null = el;
+            while (e && e !== head.parentElement && !opaque(getComputedStyle(e).backgroundColor)) e = e.parentElement;
+            if (e && e !== head.parentElement) continue;
+          }
+          out.push(`Inhalt scheint bei ${Math.round(x)}/${Math.round(y)} durch den durchsichtigen Kopf`);
+          continue;
+        }
+        out.push(`Inhalt scheint bei ${Math.round(x)}/${Math.round(y)} durch (${(el.className || el.tagName).toString().split(' ')[0]})`);
+      }
+    }
+    return [...new Set(out)].slice(0, 6);
+  });
+}
+
+for (const [width, height, scale, scheme] of [[1920, 1080, 1, 'dark'], [1280, 720, 1, 'light'], [1280, 720, 1.25, 'dark'], [1280, 720, 1.5, 'light']] as const) {
+  test(`Gescrollter Seitenkopf deckt den Inhalt ab bei ${width} × ${height} mit ${scale * 100} % (${scheme === 'dark' ? 'dunkel' : 'hell'})`, async ({ browser }) => {
+    test.setTimeout(180_000);
+    const { context, page } = await session(browser, Math.round(width / scale), Math.round(height / scale), scale);
+    await page.emulateMedia({ colorScheme: scheme });
+    const found: string[] = [];
+    let checked = 0;
+    const details = await detailPages(page);
+    for (const path of ['/start', ...headerPages, ...details]) {
+      for (const px of [60, 600]) {
+        await page.goto(path);
+        await settle(page);
+        const issues = await scrolledHeaderIssues(page, px);
+        if (issues === null) break;
+        checked++;
+        for (const issue of issues) found.push(`${path} (${px} px): ${issue}`);
+      }
+    }
+    await eachSection(page, details, async (name) => {
+      const issues = await scrolledHeaderIssues(page, 600);
+      if (issues) checked++;
+      for (const issue of issues ?? []) found.push(`Bauakte › ${name}: ${issue}`);
+    });
+    await context.close();
+    expect(found).toEqual([]);
+    expect(checked).toBeGreaterThan(0);
   });
 }
 

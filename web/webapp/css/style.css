@@ -212,13 +212,15 @@
 
 /* ---- Systemhinweise und Wartung ---- */
 /* Hinweisleisten unter der Kopfzeile (Update verfügbar, Update-Ankündigung, Systemstatus, Zwei-Faktor, Systemhinweise):
-   eingerückt wie der Seiteninhalt (1 rem schmal, 2 rem ab 600 px, 3 rem ab 1440 px), Abstand zur Kopfzeile und zum Inhalt,
+   eingerückt wie der Seiteninhalt (1 rem, 1,25 rem ab 1024 px, 1,5 rem ab 1440 px Inhaltsbreite), Abstand zur Kopfzeile und zum Inhalt,
    abgerundete Ecken, Schließen-Knopf mit Luft zum Rand – für alle Arten einheitlich. */
 .eoTopNotices { --eoInset: 1rem; display: flex; flex-direction: column; gap: 0.5rem; flex: none; padding: 0.75rem var(--eoInset) 0; box-sizing: border-box; }
 /* Nichts sichtbar (nur Platzhalter ausgeblendeter Leisten): kein Leerraum unter der Kopfzeile. */
 .eoTopNotices:not(:has(> :not(.sapUiHiddenPlaceholder):not([hidden]))) { display: none; }
-@media (min-width: 600px) { .eoTopNotices { --eoInset: 2rem; } }
-@media (min-width: 1440px) { .eoTopNotices { --eoInset: 3rem; } }
+/* Einzug wie der Seitenrand von Kopf und Inhalt (--eoPageX): nach der Breite des Inhaltsbereichs, nicht des Fensters. */
+.eoMain { container: eomain / inline-size; }
+@container eomain (min-width: 1024px) { .eoTopNotices { --eoInset: 1.25rem; } }
+@container eomain (min-width: 1440px) { .eoTopNotices { --eoInset: 1.5rem; } }
 .eoTopNotices > * { margin: 0; }
 .eoTopNotices + .eoContent, .eoTopNotices ~ .eoContent { margin-top: 0.5rem; }
 .eoNoticeBar { display: flex; flex-direction: column; gap: 0.5rem; padding: 0; }
@@ -1280,33 +1282,52 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoHdSendButtons { gap: 0.5rem; justify-content: flex-end; min-width: 0; }
 .eoHdDetail > .eoHdTabs.sapMITH { flex: none; padding: 0 1.5rem; margin: 0; background: var(--sapGroup_ContentBackground); border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
 
-/* Seitenkopf aller Seiten (DynamicPage und Objektseite) als gerundete Karte mit demselben Außenabstand wie der Inhalt:
-   kein eckiges Band von Kante zu Kante, Schaltflächen mit Luft zum rechten Rand. Seitlicher Abstand als Innenabstand des
-   absolut positionierten Titelbereichs, oben als Außenabstand des Titels (beides zählt UI5 in die Höhe des Titelbereichs,
-   der Inhalt rückt entsprechend nach unten). Breakpoint-Klassen wie die Inhaltsränder von UI5. */
-.sapFDynamicPage { --eoPageX: 3rem; --eoHeadRadius: 0.75rem; }
-.sapFDynamicPage.sapFDynamicPage-Std-Desktop, .sapFDynamicPage.sapFDynamicPage-Std-Tablet { --eoPageX: 2rem; }
-.sapFDynamicPage.sapFDynamicPage-Std-Phone { --eoPageX: 1rem; }
-.sapFDynamicPage > .sapFDynamicPageTitleWrapper { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: transparent; }
-.sapFDynamicPage > .sapFDynamicPageTitleWrapper > .sapFDynamicPageTitle { margin-top: 0.5rem; border-radius: var(--eoHeadRadius);
-	padding-left: 1rem; padding-right: 1rem; }
-/* Kopfbereich (Kennzahlen, Filter) unter dem Titel: gleiche Ränder, Titel und Kopf bilden zusammen eine Karte. */
+/* Seitenkopf aller Seiten (DynamicPage und Objektseite) und Inhalt auf einer ruhigen Fläche: Titel, Kopfbereich,
+   Kopfdetails und Reiterleiste tragen den Seitenhintergrund wie der Inhalt (keine abgesetzten Bänder oder Kopfkarten),
+   abgegrenzt nur durch eine feine Linie unter dem gesamten Kopf. Kopf und Inhalt stehen mit demselben, schmalen
+   Außenabstand bündig (je nach Breite 1 bis 1,5 rem statt der 2 bis 3 rem von UI5). Seitlicher Abstand als Innenabstand
+   des absolut positionierten Titelbereichs, oben als Außenabstand des Titels (beides zählt UI5 in die Höhe des
+   Titelbereichs, der Inhalt rückt entsprechend nach unten). Breakpoint-Klassen wie die Inhaltsränder von UI5. */
+.sapFDynamicPage, .sapUxAPObjectPageLayout { --eoPageX: 1.5rem; --eoHeadGap: 0.5rem; --eoHeadLine: var(--sapGroup_TitleBorderColor); }
+.sapFDynamicPage.sapFDynamicPage-Std-Desktop, .sapUxAPObjectPageLayout.sapUxAPObjectPageLayout-Std-Desktop { --eoPageX: 1.25rem; }
+.sapFDynamicPage.sapFDynamicPage-Std-Tablet, .sapFDynamicPage.sapFDynamicPage-Std-Phone,
+.sapUxAPObjectPageLayout.sapUxAPObjectPageLayout-Std-Tablet, .sapUxAPObjectPageLayout.sapUxAPObjectPageLayout-Std-Phone { --eoPageX: 1rem; }
+/* Inhalt: Ränder wie der Kopf. */
+.sapFDynamicPage > .sapFDynamicPageContentWrapper .sapFDynamicPageContent,
+.sapFDynamicPage > .sapFDynamicPageContentWrapper .sapFDynamicPageContentFitContainer { padding-left: var(--eoPageX); padding-right: var(--eoPageX); }
+.sapUxAPObjectPageLayout .sapUxAPObjectPageSection .sapUxAPObjectPageSectionContainer .sapUxAPObjectPageSubSection .sapUxAPBlockContainer {
+	margin-left: var(--eoPageX); margin-right: var(--eoPageX); background: transparent; }
+/* DynamicPage: Titel und Kopfbereich ohne eigene Fläche, Schatten oder Ecken; Linie unter dem letzten Teil des Kopfs. */
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: var(--sapBackgroundColor); box-shadow: none; }
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper > .sapFDynamicPageTitle { margin-top: 0.5rem; padding-left: 1rem; padding-right: 1rem;
+	background: transparent; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--eoHeadLine); }
 .sapFDynamicPage > .sapFDynamicPageTitleWrapper .sapFDynamicPageHeader,
-.sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; border-radius: 0 0 var(--eoHeadRadius) var(--eoHeadRadius); }
+.sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; background: transparent; box-shadow: none; border-radius: 0;
+	border-bottom: 1px solid var(--eoHeadLine); }
 .sapFDynamicPage > .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper { padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: transparent; }
 .sapFDynamicPage > .sapFDynamicPageTitleWrapper:has(.sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden)) > .sapFDynamicPageTitle,
 .sapFDynamicPage:has(> .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden))
-	> .sapFDynamicPageTitleWrapper:not(.sapFDynamicPageTitleSnapped) > .sapFDynamicPageTitle { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
-/* Objektseite (Bauakte, Kunde, Mitarbeiter): Titel, Kopf und Reiterleiste als eine Karte auf der Breite der Inhaltskarte. */
-.sapUxAPObjectPageLayout { --eoPageX: 2rem; --eoHeadRadius: 0.75rem; }
-.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: transparent; }
-.sapUxAPObjectPageHeaderTitle > .sapFDynamicPageTitle { margin-top: 0.5rem; border-radius: var(--eoHeadRadius) var(--eoHeadRadius) 0 0; padding-left: 1rem; padding-right: 1rem; }
+	> .sapFDynamicPageTitleWrapper:not(.sapFDynamicPageTitleSnapped) > .sapFDynamicPageTitle { border-bottom-color: transparent; }
+/* Objektseite (Bauakte, Kunde, Mitarbeiter): Titel, Kopfdetails und Reiterleiste auf der Breite des Inhalts, Linie unter den Reitern. */
+.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: var(--sapBackgroundColor); box-shadow: none; }
+.sapUxAPObjectPageHeaderTitle > .sapFDynamicPageTitle { margin-top: 0.5rem; padding-left: 1rem; padding-right: 1rem; background: transparent; box-shadow: none; border-radius: 0; }
 .sapUxAPObjectPageScroll > .sapUxAPObjectPageHeaderDetails, .sapUxAPObjectPageScroll > .sapUxAPObjectPageNavigation { margin-left: var(--eoPageX); margin-right: var(--eoPageX); }
-.sapUxAPObjectPageHeaderDetails .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; }
+.sapUxAPObjectPageHeaderDetails .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; background: transparent; box-shadow: none; border-radius: 0; }
 .sapUxAPObjectPageScroll > .sapUxAPObjectPageNavigation, .sapUxAPObjectPageHeaderTitle > .sapUxAPObjectPageStickyAnchorBar:not(:empty) {
-	border-radius: 0 0 var(--eoHeadRadius) var(--eoHeadRadius); overflow: hidden; }
+	background: transparent; box-shadow: none; border-radius: 0; border-bottom: 1px solid var(--eoHeadLine); }
+.sapUxAPObjectPageNavigation, .sapUxAPObjectPageNavigation .sapMITH, .sapUxAPObjectPageStickyAnchorBar .sapMITH { background: transparent; box-shadow: none; }
 .sapUxAPObjectPageWrapper { background: transparent; }
 .sapUxAPObjectPageNavigation > .sapMITH, .sapUxAPObjectPageStickyAnchorBar .sapMITH { padding-left: 0.8125rem; padding-right: 0.8125rem; }
+/* Beim Bildlauf läuft der Inhalt unter dem stehenden Kopf hindurch: Der Titelbereich trägt den Seitenhintergrund (oben,
+   links und rechts scheint nichts durch), darunter deckt ein schmaler Streifen in Seitenfarbe den Inhalt ab – gleicher
+   Abstand zwischen Linie und Inhalt. Der Streifen liegt außerhalb der gemessenen Titelhöhe (oben im Innenabstand des
+   Inhalts, ändert kein Layout) und fehlt, solange ein aufgeklappter Kopfbereich bzw. die Kopfdetails der Objektseite im
+   Inhalt den Kopf nach unten fortsetzen. */
+.sapFDynamicPage.sapFDynamicPageWithScroll > .sapFDynamicPageTitleWrapper::after,
+.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle.sapUxAPObjectPageHeaderStickied::after {
+	content: ""; position: absolute; left: 0; right: 0; top: 100%; height: var(--eoHeadGap); background: var(--sapBackgroundColor); }
+.sapFDynamicPage:has(> .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden))
+	> .sapFDynamicPageTitleWrapper:not(.sapFDynamicPageTitleSnapped)::after { content: none; }
 /* Überlagernde Bildlaufleiste (macOS, Chromium): UI5 rückt den Titel 12 px ein, der Inhalt bleibt – rechte Kante angleichen. */
 .sapFDynamicPage.sapFDynamicPageWithOverlayScrollbar > .sapFDynamicPageTitleWrapper { padding-right: calc(var(--eoPageX) - 12px); }
 .eoDocCard .eoCheckTable.sapMList { width: auto !important; margin: 0 1rem; }
