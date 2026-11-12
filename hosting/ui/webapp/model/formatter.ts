@@ -55,7 +55,7 @@ const PHASES: Record<string, [string, ValueState]> = {
 };
 
 /** „2/3 Update · noch 0:42“ – Countdown bis zum Ende der Phase (Server liefert UTC ohne Zone oder ISO). */
-export function phaseText(phase?: string | null, until?: string | null, now = Date.now()): string {
+function phaseText(phase?: string | null, until?: string | null, now = Date.now()): string {
 	if (!phase) return "";
 	const label = PHASES[phase]?.[0] ?? phase;
 	if (!until || phase === "released") return label;

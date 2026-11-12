@@ -29,7 +29,8 @@ jobs:
             docker build -q -f "docker/$image.Dockerfile" -t "estrichone/$image:ci" .
           done
       - name: Shellcheck
-        run: shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/kombi.sh deploy/backup-target/test-kombi.sh deploy/backup-target/test-offload.sh deploy/backup-target/test-remote-update.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh \
+        run: |
+          shellcheck deploy/archive/test-archive.sh docker/installer/peer.sh docker/installer/kombi.sh deploy/backup-target/test-kombi.sh deploy/backup-target/test-offload.sh deploy/backup-target/test-remote-update.sh docker/installer/update.sh deploy/backup/estrichone-backup deploy/backup/test-installer-restore.sh \
             docker/installer/update-phases.sh docker/installer/test-update-phases.sh deploy/test-update-ablauf.sh
       - name: Update-Ablauf – Phasen-Hilfsskript (verkürzt, ohne Docker)
         run: sh docker/installer/test-update-phases.sh
