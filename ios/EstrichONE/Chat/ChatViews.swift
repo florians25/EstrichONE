@@ -18,6 +18,7 @@ struct ChatListView: View {
     @State private var hits: [ChatSearchHit] = []
     @State private var searching = false
     @State private var showsPrivacy = false
+    @State private var startsTeamsChat = false
     @State private var openHit: ChatSearchHit?
 
     private var chat: ChatCenter? { model.active?.chat }
@@ -51,7 +52,17 @@ struct ChatListView: View {
                     Button("Neuer Chat", systemImage: "square.and.pencil") { startsChat = true }
                         .accessibilityIdentifier("newChatButton")
                 }
+            } else if teams?.canStartChats == true {
+                // Modus „Microsoft Teams“: neuer Chat direkt in der Teams-App.
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Neuer Chat in Teams", systemImage: "square.and.pencil") { startsTeamsChat = true }
+                        .accessibilityIdentifier("newTeamsChatButton")
+                }
             }
+        }
+        .sheet(isPresented: $startsTeamsChat) {
+            TeamsPeopleSheet()
+                .presentationDetents([.medium, .large])
         }
         .sheet(isPresented: $startsChat) {
             NewChatSheet(canCreateGroups: status?.canAdmin == true) { conversation in

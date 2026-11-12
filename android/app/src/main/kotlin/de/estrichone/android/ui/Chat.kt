@@ -138,11 +138,16 @@ fun ChatListScreen() {
             delay(15_000)
         } while (true)
     }
+    var startingTeams by remember { mutableStateOf(false) }
     // Modus „Microsoft Teams“: Chat-Archiv (lesen, kein neuer Chat).
     val status by session.chat.collectAsState()
     val archive = status?.readOnly == true
     ScreenScaffold(if (archive) "Chat-Archiv" else "Chat", actions = { TeamsAction() }, floating = {
         if (!archive) ExtendedFloatingActionButton(onClick = { starting = true }, icon = { Icon(Icons.Outlined.PersonAdd, null) }, text = { Text("Neuer Chat") })
+        // Modus „Microsoft Teams“: neuer Chat direkt in der Teams-App.
+        else if (session.teams.collectAsState().value?.canStartChats == true) {
+            ExtendedFloatingActionButton(onClick = { startingTeams = true }, icon = { Icon(Icons.Outlined.PersonAdd, null) }, text = { Text("Neuer Chat in Teams") })
+        }
     }) { padding ->
         LoadView(conversations) {
             val list = (conversations as Load.Done).value.filter { search.isBlank() || it.title.contains(search, true) || it.lastMessage?.summary?.contains(search, true) == true }
@@ -162,6 +167,7 @@ fun ChatListScreen() {
         }
     }
     if (starting) StartChatSheet(onDismiss = { starting = false }) { id -> starting = false; nav.push(Route.Chat(id)) }
+    if (startingTeams) TeamsPeopleDialog(onDismiss = { startingTeams = false })
 }
 
 @Composable

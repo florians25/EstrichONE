@@ -40,6 +40,8 @@ struct BauakteDetailView: View {
     @State private var appliedInitialArea = false
     /// Verknüpfte Teams-Unterhaltung (nur online und im Chat-Modus „Teams“ bzw. „beides“).
     @State private var teamsLink: TeamsLink?
+    /// Gruppenchat mit dem ganzen Bauakten-Team in Teams.
+    @State private var teamChat: TeamsChatLink?
 
     var body: some View {
         Group {
@@ -583,6 +585,10 @@ struct BauakteDetailView: View {
             if let teamsLink {
                 OpenInTeamsButton(targets: teamsLink.targets)
             }
+            if let teamChat {
+                Button("Chat mit dem Team in Teams", systemImage: "person.3") { Task { await TeamsOpener.open(teamChat.targets) } }
+                    .accessibilityIdentifier("teamsTeamChatButton")
+            }
         } label: {
             if loadingPDF {
                 ProgressView()
@@ -614,9 +620,12 @@ struct BauakteDetailView: View {
     private func loadTeams() async {
         guard let active = model.active, active.sync?.teams?.available == true else {
             teamsLink = nil
+            teamChat = nil
             return
         }
-        teamsLink = try? await active.client.bauakteTeams(bauakteId).link
+        let teams = try? await active.client.bauakteTeams(bauakteId)
+        teamsLink = teams?.link
+        teamChat = teams?.teamChat
     }
 
     private func reload() async {

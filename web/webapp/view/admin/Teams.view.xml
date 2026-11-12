@@ -26,8 +26,8 @@
 									text="Datenschutz: An Microsoft gehen nur die Zuordnung der Konten (über die dienstliche E-Mail-Adresse), Mitgliedschaften in den Unterhaltungen der Bauakten und – falls eingeschaltet – kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten. EstrichONE liest keine Nachrichten aus Teams. Vor der Umstellung Betriebsrat einbinden und Beschäftigte informieren (Vorlage im Handbuch)."/>
 								<List id="teamsTestSteps" items="{view>/steps}" visible="{= ${view>/steps}.length > 0 }" headerText="Ergebnis des Verbindungstests"
 									class="sapUiSmallMarginBottom" width="48rem">
-									<StandardListItem title="{view>name}" description="{view>detail}" icon="{= ${view>ok} ? 'sap-icon://sys-enter-2' : 'sap-icon://error' }"
-										highlight="{= ${view>ok} ? 'Success' : 'Error' }" wrapping="true"/>
+									<StandardListItem title="{view>name}" description="{view>detail}" icon="{= ${view>ok} ? (${view>warning} ? 'sap-icon://alert' : 'sap-icon://sys-enter-2') : 'sap-icon://error' }"
+										highlight="{= ${view>ok} ? (${view>warning} ? 'Warning' : 'Success') : 'Error' }" wrapping="true"/>
 								</List>
 							</VBox>
 							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="56rem">
@@ -84,6 +84,21 @@
 									<Switch id="tmSync" state="{view>/s/syncMembers}" customTextOn=" " customTextOff=" "/>
 									<Text text="Zuständige und Mitglieder der Bauakte werden in Teams aufgenommen; im Gruppenchat entfernt EstrichONE nur Personen, die es selbst hinzugefügt hat."/>
 								</VBox>
+								<Label text="Beim Abschließen der Bauakte" labelFor="tmClose"/>
+								<VBox>
+									<Select id="tmClose" selectedKey="{view>/s/closeAction}">
+										<core:Item key="archive" text="Kanal archivieren (empfohlen)"/>
+										<core:Item key="nothing" text="Nichts tun"/>
+										<core:Item key="delete" text="Kanal bzw. Gruppenchat löschen"/>
+									</Select>
+									<Text text="Gilt nur für von EstrichONE angelegte Unterhaltungen. Archivierte Kanäle bleiben lesbar und werden beim Wiederöffnen der Bauakte wiederhergestellt. Gruppenchats lassen sich nicht archivieren."/>
+								</VBox>
+								<core:Title text="Einzelchats"/>
+								<Label text="Über Microsoft Graph anlegen" labelFor="tmChatsGraph"/>
+								<VBox>
+									<Switch id="tmChatsGraph" state="{view>/s/chatsViaGraph}" customTextOn=" " customTextOff=" "/>
+									<Text text="Aus: „Chat in Teams“ öffnet einen Teams-Link (keine Berechtigung nötig). Ein: Einzelchats werden über Microsoft Graph angelegt (Chat.Create) – stabiler Link."/>
+								</VBox>
 							</form:SimpleForm>
 						</IconTabFilter>
 						<IconTabFilter key="users" text="Benutzer" count="{= ${view>/s/mappedUsers} + '/' + ${view>/s/activeUsers} }">
@@ -111,6 +126,37 @@
 									</ColumnListItem>
 								</items>
 							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="rollout" text="Umstellung">
+							<VBox class="sapUiSmallMargin" busy="{view>/rolloutBusy}">
+								<Text text="Alle zum Chatten nach Teams bringen: Konten prüfen, Bauakten verknüpfen, Beschäftigte informieren." class="sapUiSmallMarginBottom"/>
+								<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="56rem">
+									<core:Title text="1. Konten"/>
+									<Label text="Benutzer"/>
+									<Text id="tmRolloutUsers" text="{view>/rolloutUsersText}"/>
+									<core:Title text="2. Bauakten"/>
+									<Label text="Offene Bauakten"/>
+									<VBox>
+										<Text id="tmRolloutBauakten" text="{view>/rolloutBauaktenText}"/>
+										<Button id="tmLinkAll" text="Alle offenen Bauakten ohne Teams jetzt verknüpfen" icon="sap-icon://chain-link" press=".onLinkAll" class="sapUiTinyMarginTop"
+											enabled="{= ${view>/rollout/canLinkAll} === true &amp;&amp; ${view>/rollout/unlinkedOpen} > 0 &amp;&amp; ${view>/rollout/job/state} !== 'running' }"/>
+										<Text text="{view>/rollout/cannotLinkReason}" visible="{= !!${view>/rollout/cannotLinkReason} }"/>
+										<ProgressIndicator id="tmLinkProgress" visible="{= !!${view>/rollout/job} }" percentValue="{view>/jobPercent}" displayValue="{view>/jobText}"
+											state="{= ${view>/rollout/job/state} === 'failed' ? 'Error' : ${view>/rollout/job/state} === 'running' ? 'Information' : 'Success' }"
+											showValue="true" class="sapUiTinyMarginTop"/>
+										<Button text="Abbrechen" type="Transparent" press=".onCancelLinkAll" visible="{= ${view>/rollout/job/state} === 'running' }"/>
+										<Text text="{view>/jobErrors}" visible="{= !!${view>/jobErrors} }"/>
+									</VBox>
+									<core:Title text="3. Beschäftigte informieren"/>
+									<Label text="Hinweis „Ab sofort chatten wir in Teams“" labelFor="tmNotice"/>
+									<VBox>
+										<Switch id="tmNotice" state="{view>/s/rolloutNotice}" customTextOn=" " customTextOff=" "/>
+										<TextArea value="{view>/s/rolloutNoticeText}" rows="3" width="100%" maxLength="1000"
+											placeholder="Ab sofort chatten wir in Microsoft Teams. Bitte die Teams-App auf Smartphone und PC installieren und mit dem Firmenkonto anmelden. Der bisherige EstrichONE-Chat bleibt als Archiv lesbar."/>
+										<Text text="Erscheint einmalig auf der Startseite und in den Apps (wegklickbar) mit Link zum Herunterladen von Teams. Speichern nicht vergessen."/>
+									</VBox>
+								</form:SimpleForm>
+							</VBox>
 						</IconTabFilter>
 						<IconTabFilter key="messages" text="Nachrichten">
 							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="56rem">

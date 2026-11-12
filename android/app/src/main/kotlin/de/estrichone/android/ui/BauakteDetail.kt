@@ -140,12 +140,15 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     // Microsoft Teams: verknüpfte Unterhaltung (nur online und im Modus „Teams“ bzw. „beides“).
     val teams by session.teams.collectAsState()
     var teamsLink by remember(id) { mutableStateOf<de.estrichone.core.TeamsLink?>(null) }
+    var teamChat by remember(id) { mutableStateOf<de.estrichone.core.TeamsChatLink?>(null) }
     LaunchedEffect(id, teams?.available) {
-        teamsLink = if (teams?.available == true) {
-            runCatching { withContext(Dispatchers.IO) { session.api.bauakteTeams(id) } }.getOrNull()?.link
+        val loaded = if (teams?.available == true) {
+            runCatching { withContext(Dispatchers.IO) { session.api.bauakteTeams(id) } }.getOrNull()
         } else {
             null
         }
+        teamsLink = loaded?.link
+        teamChat = loaded?.teamChat
     }
     var menu by remember { mutableStateOf(false) }
     var cancelling by remember { mutableStateOf(false) }
@@ -182,6 +185,12 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                 DropdownMenuItem(text = { Text("In Teams öffnen") }, onClick = {
                     menu = false
                     if (!Links.teams(context, link.targets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.")
+                })
+            }
+            teamChat?.let { chat ->
+                DropdownMenuItem(text = { Text("Chat mit dem Team in Teams") }, onClick = {
+                    menu = false
+                    if (!Links.teams(context, chat.targets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.")
                 })
             }
             if (chat?.isAvailable == true && chat?.readOnly != true) {

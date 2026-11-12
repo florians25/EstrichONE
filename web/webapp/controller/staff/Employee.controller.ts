@@ -8,6 +8,7 @@ import { absenceKinds } from "../../util/labels";
 import { date } from "../../util/format";
 import { openForm } from "../../util/forms";
 import { uuidv7 } from "../../util/ids";
+import { startTeamsChat, teamsChatStates } from "../../util/teamsChat";
 import { openEmployeeForm } from "../../util/employeeForm";
 import { fileUrl, uploadLoose } from "../../util/looseUpload";
 import { canOnboard, openOnboarding } from "../../util/onboarding";
@@ -60,10 +61,21 @@ export default class Employee extends BaseController {
 		this.apply(e);
 	}
 
+	/** Einzelchat in Microsoft Teams mit dieser Person. */
+	onTeamsChat(): void {
+		const userId = this.model().getProperty("/e/userId") as string | null;
+		if (userId) void startTeamsChat([userId]);
+	}
+
 	private apply(e: EmployeeDetail): void {
 		const m = this.model();
 		const today = new Date().toISOString().slice(0, 10);
 		m.setProperty("/e", e);
+		m.setProperty("/teamsChat", null);
+		if (e.userId) {
+			const userId = e.userId;
+			void teamsChatStates([userId]).then((states) => { if (m.getProperty("/e/userId") === userId) m.setProperty("/teamsChat", states[userId]); });
+		}
 		m.setProperty("/headline", [e.jobTitle, employmentTypes[e.employmentType], e.personnelNumber ? `Nr. ${e.personnelNumber}` : null].filter(Boolean).join(" · "));
 		const away = e.absences.find((a) => a.from <= today && today <= a.to);
 		m.setProperty("/statusText", !e.isActive ? (e.exitDate && e.exitDate < today ? `Ausgetreten am ${date(e.exitDate)}` : `Eintritt am ${date(e.entryDate)}`)

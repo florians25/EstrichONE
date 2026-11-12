@@ -330,7 +330,8 @@ Im **Microsoft Entra Admin Center** (entra.microsoft.com) mit einem Konto „Anw
      sofort kopieren (er ist nur einmal sichtbar) und in EstrichONE eintragen. Ablaufdatum im Kalender notieren.
 4. **API-Berechtigungen** → **Berechtigung hinzufügen** → **Microsoft Graph** → **Anwendungsberechtigungen**:
    `User.Read.All` und `Team.ReadBasic.All` (immer), dazu je nach Nutzung `Channel.Create` und
-   `TeamMember.ReadWrite.All` (Kanäle) bzw. `Chat.Create` und `ChatMember.ReadWrite.All` (Gruppenchats).
+   `TeamMember.ReadWrite.All` (Kanäle) bzw. `Chat.Create` und `ChatMember.ReadWrite.All` (Gruppenchats), zum
+   Archivieren `ChannelSettings.ReadWrite.All`, zum Löschen `Channel.Delete.All` und `Chat.ManageDeletion.All`.
    Die Liste mit Begründung zeigt EstrichONE im Reiter **Berechtigungen**.
 5. **Administratorzustimmung für … erteilen** wählen und bestätigen. Alle Einträge zeigen danach „Gewährt“.
 6. In Teams ein Team **Baustellen** anlegen (oder ein vorhandenes nehmen), beim Team **…** → **Link zum Team abrufen**
@@ -351,6 +352,27 @@ Berechtigungen `ChannelMessage.Send`, `ChatMessage.Send` und `offline_access` hi
 **Authentifizierung** „Öffentliche Clientflows zulassen“ auf **Ja** stellen. Dann unter **Nachrichten** → **Dienstkonto
 verbinden** mit einem eigenen Konto (z. B. estrichone@firma.de, Teams-Lizenz nötig) anmelden: Seite öffnen, Code
 eingeben. Microsoft erlaubt Anwendungen kein Senden ohne angemeldetes Konto – daher das Dienstkonto.
+
+**Archivieren und Löschen** (zusätzliche Anwendungsberechtigungen `ChannelSettings.ReadWrite.All`, `Channel.Delete.All`
+und `Chat.ManageDeletion.All`; Recht **Teams-Unterhaltungen archivieren und löschen**, `teams.delete`, ab Werk nur
+Administrator, mit Zwei-Faktor-Pflicht): In der Bauakte im Menü des Knopfs **In Teams öffnen** stehen **Kanal in Teams
+archivieren** bzw. **Kanal wiederherstellen** und **In Teams löschen …**. Zum Löschen tippen Sie die Bauaktennummer ein;
+gelöschte Kanäle kann ein Teambesitzer 30 Tage lang in Teams wiederherstellen. Gruppenchats lassen sich in Teams nicht
+archivieren, nur löschen – oder Sie wählen **Verknüpfung lösen** (in Teams bleibt alles erhalten). Unter **Verbindung** →
+**Beim Abschließen der Bauakte** legen Sie fest, was mit von EstrichONE angelegten Unterhaltungen geschieht, wenn eine
+Bauakte abgeschlossen oder storniert wird: **Kanal archivieren** (Standard), **Nichts tun** oder **löschen**. Welche
+Berechtigungen fehlen, zeigt **Verbindung testen** im Schritt „Berechtigungen (Anwendung)“.
+
+**Einzel- und Gruppenchats:** Bei Personen erscheint ein Teams-Symbol (**Chat in Teams**) – in der Bauakte unter
+Kontakte › Team im Betrieb und in der Personalakte; im Menü der Bauakte **Chat mit dem ganzen Bauakten-Team**, in der
+Kopfzeile **Chat in Teams starten …**. Personen ohne Microsoft-Konto bekommen kein Symbol. Ohne App-Registrierung
+verwendet EstrichONE die E-Mail-Adresse als Teams-Konto. Mit **Einzelchats über Microsoft Graph anlegen** (Verbindung,
+braucht `Chat.Create`) entsteht ein fester Chat-Link. Der Helpdesk bleibt bewusst ohne Teams.
+
+**Umstellung** (Reiter): zeigt, wie viele Benutzer einem Microsoft-Konto zugeordnet sind und wie viele offene Bauakten
+noch nicht verknüpft sind. **Alle offenen Bauakten ohne Teams jetzt verknüpfen** läuft im Hintergrund, der Fortschritt
+erscheint darunter (die Seite darf offen bleiben oder geschlossen werden). Mit **Hinweis „Ab sofort chatten wir in
+Teams“** sehen alle einmal einen Hinweis auf der Startseite und in den Apps, mit Link zum Installieren von Teams.
 
 > **Server ohne Internet:** Für Teams braucht der EstrichONE-Server HTTPS-Zugang zu login.microsoftonline.com und
 > graph.microsoft.com. Ist er nicht erreichbar, meldet EstrichONE „Microsoft 365 ist vom Server aus nicht erreichbar“;

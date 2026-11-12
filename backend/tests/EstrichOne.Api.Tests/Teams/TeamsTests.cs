@@ -159,7 +159,8 @@ public sealed class TeamsTests(PostgresFixture postgres) : IAsyncLifetime
         using var test = await _admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/test", UriKind.Relative), null, Ct);
         var result = (await test.Content.ReadFromJsonAsync<TeamsTestResponse>(TestJson.Options, Ct))!;
         result.Ok.ShouldBeTrue(string.Join(" | ", result.Steps.Select(s => s.Detail)));
-        result.Steps.Count.ShouldBe(3);
+        result.Steps.Count.ShouldBe(4); // Anmeldung, Berechtigungen (aus dem Token), Benutzer, Team
+        result.Steps.ShouldContain(s => s.Name.StartsWith("Berechtigungen", StringComparison.Ordinal) && s.Ok && !s.Warning);
         _graph.CallsTo("POST", $"/{Tenant}/oauth2/v2.0/token").ShouldNotBeEmpty();
         // Token wird zwischengespeichert: nicht für jeden Graph-Aufruf neu angemeldet.
         _graph.CallsTo("POST", $"/{Tenant}/oauth2/v2.0/token").Count.ShouldBeLessThan(_graph.CallsTo("GET", "/v1.0/").Count + 1);

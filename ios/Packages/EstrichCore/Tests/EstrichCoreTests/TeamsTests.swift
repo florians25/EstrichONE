@@ -74,4 +74,34 @@ struct TeamsTests {
         let foreign = TeamsLink(kind: "channel", displayName: nil, webUrl: "https://evil.example/x", appUrl: "https://evil.example/y")
         #expect(ChatComposerPolicy.teamsTargets(link: foreign, status: nil) == nil)
     }
+
+    @Test("Chat in Teams: Deep Link wie Server und Web, Teams-App zuerst")
+    func chatDeepLinks() throws {
+        #expect(TeamsChatLinks.webURL(upns: ["dieter@example.org"], topic: "Thema")
+            == "https://teams.microsoft.com/l/chat/0/0?users=dieter@example.org")
+        #expect(TeamsChatLinks.webURL(upns: ["a@x.de", "b+c@x.de"], topic: "Bauakte 4711 EFH & Co", message: "Hallo")
+            == "https://teams.microsoft.com/l/chat/0/0?users=a@x.de,b%2Bc@x.de&topicName=Bauakte%204711%20EFH%20%26%20Co&message=Hallo")
+        #expect(TeamsChatLinks.appURL(fromWeb: "https://teams.microsoft.com/l/chat/0/0?users=a@x.de") == "msteams:/l/chat/0/0?users=a@x.de")
+
+        let people = [TeamsPerson(userId: UUID(), name: "Anna", upn: "anna@x.de"), TeamsPerson(userId: UUID(), name: "Bernd", upn: nil)]
+        let targets = try #require(TeamsChatLinks.targets(for: people))
+        #expect(targets.candidates.map(\.absoluteString) == ["msteams:/l/chat/0/0?users=anna@x.de", "https://teams.microsoft.com/l/chat/0/0?users=anna@x.de"])
+        #expect(TeamsChatLinks.targets(for: [people[1]]) == nil)
+    }
+
+    @Test("Personen, Teamchat der Bauakte und Hinweis aus der API")
+    func peopleAndNotice() throws {
+        let people = try JSONCoding.decoder.decode([TeamsPerson].self, from: Data("""
+        [{"userId":"0190a1b2-0000-7000-8000-000000000001","name":"Anna","upn":"anna@x.de","fromEmail":false,"reason":null},
+         {"userId":"0190a1b2-0000-7000-8000-000000000002","name":"Bernd","upn":null,"fromEmail":false,"reason":"Kein Microsoft-Konto."}]
+        """.utf8))
+        #expect(people.map(\.upn) == ["anna@x.de", nil])
+        let akte = try JSONCoding.decoder.decode(BauakteTeamsResponse.self, from: Data("""
+        {"chatMode":"teams","link":null,"canManage":false,"teamChat":{"webUrl":"https://teams.microsoft.com/l/chat/0/0?users=a@x.de",
+         "appUrl":"msteams:/l/chat/0/0?users=a@x.de","viaGraph":false,"included":["Anna"],"missing":[]}}
+        """.utf8))
+        #expect(akte.teamChat?.targets.candidates.first?.scheme == "msteams")
+        let status = try JSONCoding.decoder.decode(TeamsStatus.self, from: Data(#"{"chatMode":"teams","rolloutNotice":"Ab sofort Teams","canStartChats":true}"#.utf8))
+        #expect(status.rolloutNotice == "Ab sofort Teams" && status.canStartChats)
+    }
 }

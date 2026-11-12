@@ -7172,6 +7172,10 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("bauakte_id");
 
+                    b.Property<DateTimeOffset?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("archived_at");
+
                     b.Property<string>("ChannelId")
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
@@ -7181,6 +7185,15 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("character varying(300)")
                         .HasColumnName("chat_id");
+
+                    b.Property<string>("CloseError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("close_error");
+
+                    b.Property<DateTimeOffset?>("CloseHandledAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("close_handled_at");
 
                     b.Property<bool>("Created")
                         .HasColumnType("boolean")
@@ -7310,10 +7323,20 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(20)")
                         .HasColumnName("chat_mode");
 
+                    b.Property<bool>("ChatsViaGraph")
+                        .HasColumnType("boolean")
+                        .HasColumnName("chats_via_graph");
+
                     b.Property<string>("ClientId")
                         .HasMaxLength(100)
                         .HasColumnType("character varying(100)")
                         .HasColumnName("client_id");
+
+                    b.Property<string>("CloseAction")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("close_action");
 
                     b.Property<DateTimeOffset>("CreatedAt")
                         .HasColumnType("timestamp with time zone")
@@ -7388,6 +7411,15 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.Property<string>("ProtectedWebhookUrl")
                         .HasColumnType("text")
                         .HasColumnName("protected_webhook_url");
+
+                    b.Property<bool>("RolloutNotice")
+                        .HasColumnType("boolean")
+                        .HasColumnName("rollout_notice");
+
+                    b.Property<string>("RolloutNoticeText")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("rollout_notice_text");
 
                     b.Property<DateTimeOffset?>("SenderConnectedAt")
                         .HasColumnType("timestamp with time zone")

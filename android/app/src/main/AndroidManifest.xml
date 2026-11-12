@@ -30,6 +30,12 @@
         <intent>
             <action android:name="android.media.action.VIDEO_CAPTURE" />
         </intent>
+        <!-- Microsoft Teams: „Chat in Teams“ und „In Teams öffnen“ direkt in der Teams-App -->
+        <package android:name="com.microsoft.teams" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="msteams" />
+        </intent>
     </queries>
 
     <application

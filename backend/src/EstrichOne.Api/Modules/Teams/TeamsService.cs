@@ -17,7 +17,8 @@ namespace EstrichOne.Api.Modules.Teams;
 /// <summary>Benötigte Microsoft-Graph-Berechtigungen mit Begründung (Oberfläche und Handbuch).</summary>
 public sealed record TeamsPermissionInfo(string Name, string Type, bool Required, string Reason);
 
-public sealed record TeamsTestStep(string Name, bool Ok, string Detail);
+/// <param name="Warning">Bestanden, aber mit Hinweis (z. B. optionale Berechtigung fehlt).</param>
+public sealed record TeamsTestStep(string Name, bool Ok, string Detail, bool Warning = false);
 
 /// <summary>Teams-Link (Kanal, Chat oder Team) zerlegt.</summary>
 public sealed record TeamsLinkTarget(TeamsLinkKind? Kind, string? TeamId, string? ChannelId, string? ChatId, string? TenantId, string? Name, string WebUrl);
@@ -25,7 +26,7 @@ public sealed record TeamsLinkTarget(TeamsLinkKind? Kind, string? TeamId, string
 /// <summary>Kern der Teams-Anbindung: Geheimnisse, Zuordnung der Konten, Verknüpfung je Bauakte, Mitgliederabgleich, Ereigniskarten.</summary>
 internal sealed partial class TeamsService(
     EstrichOneDbContext db, GraphClient graph, IDataProtectionProvider protection, TimeProvider clock, IOptions<EstrichOneOptions> app,
-    IBauakteReportSource bauakten, ILogger<TeamsService> logger)
+    IBauakteReportSource bauakten, Audit.Exports.IAuditLog audit, ILogger<TeamsService> logger)
 {
     public const string ProtectorPurpose = "EstrichOne.Teams.Secrets.v1";
 
@@ -36,15 +37,33 @@ internal sealed partial class TeamsService(
         new("Channel.Create", "Anwendung", false, "Je Bauakte einen Kanal im Team „Baustellen“ anlegen (nur bei Art „Kanal“)."),
         new("TeamMember.ReadWrite.All", "Anwendung", false,
             "Bauakten-Team ins Team „Baustellen“ aufnehmen, damit es den Kanal sieht (nur bei Art „Kanal“ mit Mitgliederabgleich; entfernt niemanden)."),
-        new("Chat.Create", "Anwendung", false, "Je Bauakte einen Gruppenchat mit dem Bauakten-Team anlegen (nur bei Art „Gruppenchat“)."),
+        new("Chat.Create", "Anwendung", false,
+            "Je Bauakte einen Gruppenchat mit dem Bauakten-Team anlegen (nur bei Art „Gruppenchat“) und – falls eingeschaltet – Einzelchats mit stabilem Link."),
         new("ChatMember.ReadWrite.All", "Anwendung", false,
             "Mitglieder des Gruppenchats bei Teamänderungen abgleichen (fügt hinzu, entfernt nur von EstrichONE Hinzugefügte)."),
+        new("ChannelSettings.ReadWrite.All", "Anwendung", false,
+            "Kanal einer Bauakte archivieren bzw. wiederherstellen (von Hand oder beim Abschließen der Bauakte, Einstellung „Beim Abschließen“)."),
+        new("Channel.Delete.All", "Anwendung", false, "Kanal einer Bauakte in Teams löschen (Recht „teams.delete“, Bestätigung mit Bauaktennummer)."),
+        new("Chat.ManageDeletion.All", "Anwendung", false,
+            "Gruppenchat einer Bauakte in Teams löschen (alternativ Chat.ReadWrite.All). Ohne diese Berechtigung bleibt nur „Verknüpfung lösen“."),
         new("ChannelMessage.Send", "Delegiert", false, "Ereigniskarten über das Dienstkonto in verknüpfte Kanäle senden (nur bei „Senden über Microsoft Graph“)."),
         new("ChatMessage.Send", "Delegiert", false, "Ereigniskarten über das Dienstkonto in verknüpfte Gruppenchats senden (nur bei „Senden über Microsoft Graph“)."),
         new("offline_access", "Delegiert", false, "Dienstkonto angemeldet halten (Aktualisierungstoken, verschlüsselt gespeichert)."),
     ];
 
     public EstrichOneDbContext Db => db;
+
+    internal GraphClient Graph => graph;
+
+    internal TimeProvider Clock => clock;
+
+    internal ILogger Logger => logger;
+
+    internal IBauakteReportSource Bauakten => bauakten;
+
+    internal Audit.Exports.IAuditLog Audit => audit;
+
+    internal Uri? PublicUrl => app.Value.PublicUrl;
 
     private IDataProtector Protector => protection.CreateProtector(ProtectorPurpose);
 
@@ -120,6 +139,7 @@ internal sealed partial class TeamsService(
             return steps;
         }
 
+        PermissionStep(steps, token);
         await StepAsync(steps, "Benutzer lesen (User.Read.All)", async () =>
         {
             await graph.GetAsync(token, "users?$top=1&$select=id", "User.Read.All", cancellationToken);

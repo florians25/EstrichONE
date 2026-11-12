@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  akteButtonText, akteButtonVisible, chatPresentation, isTeamsUrl, linkRequest, linkSummary, mappingState, teamsHome,
+  akteButtonText, akteButtonVisible, chatDeepLink, chatPresentation, confirmationMatches, isTeamsUrl, jobText, personChatState, teamsNoticeKey, linkRequest, linkSummary, mappingState, teamsHome,
   type BauakteTeams, type TeamsLink, type TeamsStatus, type TeamsUserMapping,
 } from '../webapp/util/teams';
 import { adminAreas, matchesArea } from '../webapp/util/adminCatalog';
@@ -95,5 +95,34 @@ describe('Einstellungen', () => {
     expect(routes.find((r) => r.pattern === area.path)?.permission).toBe('settings.integrations');
     expect(matchesArea(area, 'entra')).toBe(true);
     expect(navigation.some((n) => n.key === 'teams')).toBe(true);
+  });
+});
+
+describe('Chat in Teams', () => {
+  it('baut Deep Links wie der Server (Einzelchat ohne Thema, Gruppenchat mit Thema und Text)', () => {
+    expect(chatDeepLink(['dieter@example.org'], 'Thema', null)).toBe('https://teams.microsoft.com/l/chat/0/0?users=dieter@example.org');
+    expect(chatDeepLink(['a@x.de', 'b+c@x.de'], 'Bauakte 4711 EFH & Co', 'Hallo'))
+      .toBe('https://teams.microsoft.com/l/chat/0/0?users=a@x.de,b%2Bc@x.de&topicName=Bauakte%204711%20EFH%20%26%20Co&message=Hallo');
+    expect(isTeamsUrl(chatDeepLink(['a@x.de']))).toBe(true);
+  });
+
+  it('bietet „Chat in Teams“ nur mit Microsoft-Konto an', () => {
+    expect(personChatState({ userId: '1', name: 'Anna', upn: 'anna@x.de', fromEmail: false, reason: null }).enabled).toBe(true);
+    const none = personChatState({ userId: '2', name: 'Bernd', upn: null, fromEmail: false, reason: 'Kein Microsoft-Konto.' });
+    expect(none.enabled).toBe(false);
+    expect(none.tooltip).toContain('Kein Microsoft-Konto');
+    expect(personChatState({ userId: '1', name: 'Ich', upn: 'ich@x.de', fromEmail: false, reason: null }, true).enabled).toBe(false);
+    expect(personChatState(undefined).enabled).toBe(false);
+  });
+
+  it('prüft die Lösch-Bestätigung und beschreibt den Fortschritt', () => {
+    expect(confirmationMatches(' 2026-001 ', '2026-001')).toBe(true);
+    expect(confirmationMatches('2026-002', '2026-001')).toBe(false);
+    expect(confirmationMatches('', '')).toBe(false);
+    const job = { id: 'j', kind: 'channel' as const, total: 4, processed: 2, linked: 2, skipped: 0, failed: 0, errors: [], error: null,
+      startedAt: '', finishedAt: null, startedByName: null };
+    expect(jobText({ ...job, state: 'running' })).toBe('Läuft: 2 von 4 Bauakten (2 verknüpft, 0 übersprungen, 0 fehlgeschlagen)');
+    expect(jobText({ ...job, state: 'failed', error: 'Keine Verbindung' })).toContain('Keine Verbindung');
+    expect(teamsNoticeKey('A')).not.toBe(teamsNoticeKey('B'));
   });
 });

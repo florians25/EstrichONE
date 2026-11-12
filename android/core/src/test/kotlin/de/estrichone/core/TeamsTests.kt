@@ -65,4 +65,39 @@ class TeamsTests {
         assertNull(ChatComposerPolicy.teamsTargets(null, null))
         assertNull(ChatComposerPolicy.teamsTargets(TeamsLink("channel", null, "https://evil.example/x", "https://evil.example/y"), null))
     }
+
+    @Test
+    @DisplayName("Chat in Teams: Deep Link wie Server und Web, Teams-App zuerst")
+    fun chatDeepLinks() {
+        assertEquals("https://teams.microsoft.com/l/chat/0/0?users=dieter@example.org", TeamsChatLinks.webUrl(listOf("dieter@example.org"), "Thema"))
+        assertEquals(
+            "https://teams.microsoft.com/l/chat/0/0?users=a@x.de,b%2Bc@x.de&topicName=Bauakte%204711%20EFH%20%26%20Co&message=Hallo",
+            TeamsChatLinks.webUrl(listOf("a@x.de", "b+c@x.de"), "Bauakte 4711 EFH & Co", "Hallo"),
+        )
+        assertEquals("%C3%A4", TeamsChatLinks.encode("ä"))
+        assertEquals("msteams:/l/chat/0/0?users=a@x.de", TeamsChatLinks.appUrl("https://teams.microsoft.com/l/chat/0/0?users=a@x.de"))
+        val people = listOf(TeamsPerson("1", "Anna", "anna@x.de"), TeamsPerson("2", "Bernd", null))
+        assertEquals(
+            listOf("msteams:/l/chat/0/0?users=anna@x.de", "https://teams.microsoft.com/l/chat/0/0?users=anna@x.de"),
+            TeamsChatLinks.targets(people)!!.candidates,
+        )
+        assertNull(TeamsChatLinks.targets(listOf(people[1])))
+    }
+
+    @Test
+    @DisplayName("Teams: Personen, Teamchat der Bauakte und Hinweis aus der API")
+    fun peopleAndNotice() {
+        val people = EstrichOneApi.json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(TeamsPerson.serializer()), """
+            [{"userId":"1","name":"Anna","upn":"anna@x.de","fromEmail":false,"reason":null},{"userId":"2","name":"Bernd","upn":null,"reason":"Kein Konto"}]
+        """.trimIndent())
+        assertEquals(listOf("anna@x.de", null), people.map { it.upn })
+        val akte = EstrichOneApi.json.decodeFromString(BauakteTeams.serializer(), """
+            {"chatMode":"teams","teamChat":{"webUrl":"https://teams.microsoft.com/l/chat/0/0?users=a@x.de","appUrl":"msteams:/l/chat/0/0?users=a@x.de",
+             "viaGraph":false,"included":["Anna"],"missing":[]}}
+        """.trimIndent())
+        assertEquals("msteams", akte.teamChat!!.targets.candidates.first().substringBefore(':'))
+        val status = EstrichOneApi.json.decodeFromString(TeamsStatus.serializer(), """{"chatMode":"teams","rolloutNotice":"Ab sofort Teams","canStartChats":true}""")
+        assertTrue(status.canStartChats)
+        assertEquals("Ab sofort Teams", status.rolloutNotice)
+    }
 }

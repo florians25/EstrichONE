@@ -14,7 +14,7 @@ import { dateTime } from "../../util/format";
 import { prompt } from "../../util/forms";
 import { session } from "../../util/session";
 import {
-	chatModeLabels, mappingState, type ChatMode, type TeamsSenderStart, type TeamsSenderState, type TeamsSettings, type TeamsTestResponse,
+	chatModeLabels, jobText, mappingState, type ChatMode, type TeamsRollout, type TeamsSenderStart, type TeamsSenderState, type TeamsSettings, type TeamsTestResponse,
 	type TeamsUserMapping,
 } from "../../util/teams";
 
@@ -39,7 +39,8 @@ export default class Teams extends BaseController {
 	onInit(): void {
 		this.local({
 			s: null, loaded: false, busy: false, secret: "", certificate: "", certificateText: "", webhook: "", team: "", users: [], steps: [],
-			modeHint: "", lastPostText: "", lastTestText: "", tab: "connection",
+			modeHint: "", lastPostText: "", lastTestText: "", tab: "connection", rollout: null, rolloutBusy: false, rolloutUsersText: "",
+			rolloutBauaktenText: "", jobPercent: 0, jobText: "", jobErrors: "",
 		});
 		this.model().attachPropertyChange((e) => {
 			if (String(e.getParameter("path")).endsWith("chatMode")) this.applyHints(this.model().getProperty("/s") as TeamsSettings);
@@ -48,6 +49,40 @@ export default class Teams extends BaseController {
 
 	onExit(): void {
 		clearTimeout(this.pollTimer);
+		clearTimeout(this.jobTimer);
+	}
+
+	private jobTimer: ReturnType<typeof setTimeout> | undefined;
+
+	private applyRollout(r: TeamsRollout): void {
+		const m = this.model();
+		m.setProperty("/rollout", r);
+		m.setProperty("/rolloutUsersText", `${r.mapped} von ${r.activeUsers} mit Microsoft-Konto zugeordnet · ${r.notFound} ohne passendes Konto · `
+			+ `${r.unchecked} noch nicht geprüft · ${r.noEmail} ohne E-Mail-Adresse. Ob jemand die Teams-App nutzt, zeigt EstrichONE nicht (Teams Admin Center › Berichte).`);
+		m.setProperty("/rolloutBauaktenText", `${r.linkedOpen} von ${r.openBauakten} mit Teams verknüpft, ${r.unlinkedOpen} ohne Verknüpfung.`);
+		const job = r.job;
+		m.setProperty("/jobPercent", job && job.total > 0 ? Math.round(job.processed / job.total * 100) : job ? 100 : 0);
+		m.setProperty("/jobText", jobText(job));
+		m.setProperty("/jobErrors", job?.errors.length ? job.errors.join("\n") : "");
+		clearTimeout(this.jobTimer);
+		if (job?.state === "running") this.jobTimer = setTimeout(() => void this.loadRollout(), 2000);
+	}
+
+	private async loadRollout(): Promise<void> {
+		const r = await get<TeamsRollout>("settings/integrations/teams/rollout").catch(() => null);
+		if (r) this.applyRollout(r);
+	}
+
+	async onLinkAll(): Promise<void> {
+		const r = this.model().getProperty("/rollout") as TeamsRollout | null;
+		if (!r || !await this.confirm(`${r.unlinkedOpen} offene Bauakten ohne Teams-Verknüpfung jetzt verknüpfen? EstrichONE legt je Bauakte die eingestellte Unterhaltung an `
+			+ "und nimmt das Bauakten-Team auf. Das läuft im Hintergrund; diese Seite zeigt den Fortschritt.", { action: "Verknüpfen" })) return;
+		if (await this.run(() => post("settings/integrations/teams/rollout/link-all", {}))) await this.loadRollout();
+	}
+
+	async onCancelLinkAll(): Promise<void> {
+		await this.run(() => del("settings/integrations/teams/rollout/job"));
+		await this.loadRollout();
 	}
 
 	onRouteMatched(): void { void this.load(); }
@@ -62,6 +97,7 @@ export default class Teams extends BaseController {
 		m.setProperty("/busy", false);
 		if (s) this.apply(s);
 		this.applyUsers(users ?? []);
+		void this.loadRollout();
 	}
 
 	private apply(s: TeamsSettings): void {
@@ -117,7 +153,8 @@ export default class Teams extends BaseController {
 			clientSecret: String(m.getProperty("/secret") ?? "") || null, certificatePem: String(m.getProperty("/certificate") ?? "") || null,
 			siteTeam: team === previousTeam ? null : team, defaultLinkKind: s.defaultLinkKind, autoLink: s.autoLink, syncMembers: s.syncMembers,
 			postVia: s.postVia, webhookUrl: String(m.getProperty("/webhook") ?? "") || null, postDefects: s.postDefects, postAcceptance: s.postAcceptance,
-			postSchedule: s.postSchedule, version: s.version,
+			postSchedule: s.postSchedule, version: s.version, closeAction: s.closeAction ?? "archive", chatsViaGraph: s.chatsViaGraph === true,
+			rolloutNotice: s.rolloutNotice === true, rolloutNoticeText: s.rolloutNoticeText?.trim() || null,
 		}));
 		if (saved) {
 			this.apply(saved);

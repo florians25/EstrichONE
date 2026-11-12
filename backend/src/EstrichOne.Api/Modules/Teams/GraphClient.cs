@@ -110,6 +110,31 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
         return token;
     }
 
+    /// <summary>
+    /// Gewährte Anwendungsberechtigungen aus dem Zugriffstoken (JWT-Anspruch <c>roles</c>); <c>null</c>, wenn das Token nicht
+    /// lesbar ist. So zeigt der Verbindungstest fehlende optionale Rechte, ohne etwas auszuprobieren (z. B. Löschen).
+    /// </summary>
+    public static IReadOnlySet<string>? AppRoles(string token)
+    {
+        var parts = token.Split('.');
+        if (parts.Length != 3)
+        {
+            return null;
+        }
+
+        try
+        {
+            var claims = JsonNode.Parse(Base64UrlDecode(parts[1]));
+            return claims?["roles"] is JsonArray roles
+                ? roles.Select(Str).OfType<string>().ToHashSet(StringComparer.OrdinalIgnoreCase)
+                : new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (Exception exception) when (exception is JsonException or FormatException or InvalidOperationException or ArgumentException)
+        {
+            return null;
+        }
+    }
+
     // ---------- Anmeldung (Dienstkonto, Gerätecode) ----------
 
     public async Task<DeviceCodeStart> StartDeviceCodeAsync(string tenantId, string clientId, CancellationToken cancellationToken)

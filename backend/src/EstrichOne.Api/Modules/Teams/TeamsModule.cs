@@ -20,6 +20,7 @@ public sealed class TeamsModule : IModule
         services.AddHttpClient(GraphClient.HttpClientName, client => client.Timeout = TimeSpan.FromMinutes(2)); // Obergrenze; die Fristen je Versuch setzt GraphClient
         services.AddSingleton<GraphClient>();
         services.AddSingleton<TeamsQueue>();
+        services.AddSingleton<TeamsRolloutJobs>();
         services.AddScoped<TeamsService>();
         services.AddScoped<ITeamsIntegration, TeamsIntegration>();
         services.AddHostedService<TeamsWorker>();
@@ -170,6 +171,9 @@ internal sealed class TeamsWorker(IServiceScopeFactory scopes, TeamsQueue queue,
                 }
             }
         }
+
+        // Abgeschlossene bzw. stornierte Bauakten: Kanal archivieren oder löschen (Einstellung „Beim Abschließen“).
+        await service.HandleClosedAsync(settings, cancellationToken);
 
         var stale = clock.GetUtcNow().AddDays(-1);
         var links = await db.Set<TeamsBauakteLink>().Where(l => l.SyncMembers).ToListAsync(cancellationToken);

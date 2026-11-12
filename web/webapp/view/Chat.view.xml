@@ -14,6 +14,8 @@
 						visible="{= ${view>/archive} === true }"/>
 					<Button icon="sap-icon://add-employee" tooltip="Neuer Einzelchat" type="Transparent" press=".onNewDirect" ariaLabelledBy="chatNewDirectLabel"
 						visible="{= !${view>/archive} }"/>
+					<Button id="chatNewTeams" icon="sap-icon://add-employee" tooltip="Neuer Chat in Microsoft Teams" type="Transparent" press=".onNewTeamsChat"
+						visible="{= ${view>/archive} === true &amp;&amp; ${session>/teams/canStartChats} === true }"/>
 					<Button id="chatNewGroup" icon="sap-icon://add-contact" tooltip="Neue Gruppe" type="Transparent" press=".onNewGroup" visible="{= ${view>/canAdmin} &amp;&amp; !${view>/archive} }"
 						ariaLabelledBy="chatNewGroupLabel"/>
 					<Button icon="sap-icon://action-settings" tooltip="Meine Chat-Einstellungen" type="Transparent" press=".onMySettings"/>
