@@ -13,6 +13,9 @@ export interface Problem {
 	code?: string;
 	errors?: Record<string, string[]>;
 	endsAt?: string;
+	/** Wartung: <c>maintenance</c>, <c>restore</c> oder <c>update</c> (Update-Ablauf, util/updateView.ts). */
+	reason?: string;
+	phase?: string;
 }
 
 /** Fehler einer API-Anfrage mit verständlicher Meldung. */
@@ -40,6 +43,13 @@ let maintenanceHit: (problem: Problem | undefined) => void = () => undefined;
 /** Wartungsmodus: jede 503-Antwort mit Code MAINTENANCE meldet sich hier (Wartungsseite). */
 export function onMaintenance(listener: (problem: Problem | undefined) => void): void {
 	maintenanceHit = listener;
+}
+
+let updateHint: (phase: string) => void = () => undefined;
+
+/** Update-Ablauf: Jede Antwort mit Kopfzeile X-EstrichONE-Update meldet die Phase (Countdown sofort zeigen). */
+export function onUpdateHint(listener: (phase: string) => void): void {
+	updateHint = listener;
 }
 
 let unreachableHit: () => void = () => undefined;
@@ -218,6 +228,8 @@ export async function api<T>(path: string, options: RequestOptions = {}): Promis
 	if ([502, 504].includes(response.status) || (response.status === 503 && response.headers.get("Content-Type")?.includes("problem") !== true)) {
 		unreachableHit();
 	}
+	const phase = response.headers?.get?.("X-EstrichONE-Update");
+	if (phase) updateHint(phase);
 	if (response.status === 401 && !url.startsWith("/api/v1/auth/web/")) {
 		let error = await toError(response);
 		// Abgelaufenes oder (nach Ablauf des Cookies) fehlendes Zugriffstoken: still erneuern und wiederholen.

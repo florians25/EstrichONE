@@ -3,6 +3,12 @@
 	displayBlock="true" height="100%">
 	<App id="root" autoFocus="false">
 		<Page id="authPage" showHeader="false" enableScrolling="true" class="eoAuthPage">
+			<VBox class="eoTopNotices" renderType="Bare" visible="{= !!${notices>/updateDone} || ${notices>/upd/banner} }">
+				<MessageStrip id="updateDoneStrip" text="{notices>/updateDone}" type="Success" showIcon="true" customIcon="sap-icon://upload-to-cloud"
+					visible="{= !!${notices>/updateDone} }" showCloseButton="true" close=".onUpdateDoneClose" class="eoNotice"/>
+				<MessageStrip id="updateAnnounceAuth" text="{notices>/upd/bannerText}" type="Warning" showIcon="true" customIcon="sap-icon://upload-to-cloud"
+					visible="{notices>/upd/banner}" class="eoNotice eoUpdateAnnounce"/>
+			</VBox>
 			<VBox class="eoNoticeStack" renderType="Bare" visible="{= ${notices>/banners}.length > 0 }">
 				<VBox items="{notices>/banners}" renderType="Bare" class="eoNoticeList">
 					<eo:NoticeCard kind="{notices>kind}" tone="{notices>tone}" icon="{notices>icon}" label="{notices>label}" title="{notices>title}"
@@ -63,6 +69,10 @@
 			</tnt:sideContent>
 			<tnt:mainContents>
 				<FlexBox direction="Column" height="100%" renderType="Bare" class="eoMain">
+					<!-- Hinweisleisten unter der Kopfzeile: einheitlich eingerückt wie der Seiteninhalt (css: .eoTopNotices) -->
+					<VBox class="eoTopNotices" renderType="Bare">
+					<MessageStrip id="updateAnnounce" text="{notices>/upd/bannerText}" type="Warning" showIcon="true" customIcon="sap-icon://upload-to-cloud"
+						visible="{notices>/upd/banner}" class="eoNotice eoUpdateAnnounce"/>
 					<VBox items="{notices>/health}" visible="{= ${notices>/health}.length > 0 }" class="eoNoticeBar">
 						<MessageStrip text="{notices>text}" type="{notices>type}" showIcon="true" customIcon="{notices>icon}" class="eoNotice eoHealthBanner"/>
 					</VBox>
@@ -83,6 +93,7 @@
 						<Button text="{notices>/moreText}" icon="{= ${notices>/moreCount} > 0 ? 'sap-icon://slim-arrow-down' : 'sap-icon://slim-arrow-up' }"
 							type="Transparent" press=".onNoticeToggle" visible="{= ${notices>/moreCount} > 0 || ${notices>/expanded} }" class="eoNoticeMore"/>
 					</VBox>
+					</VBox>
 					<NavContainer id="content" autoFocus="false" height="100%" class="eoContent">
 						<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
 					</NavContainer>
@@ -102,7 +113,7 @@
 			</tnt:mainContents>
 		</tnt:ToolPage>
 	</App>
-	<FlexBox id="maintenanceOverlay" visible="{notices>/page}" direction="Column" alignItems="Center" justifyContent="Center" class="eoMaintenance"
+	<FlexBox id="maintenanceOverlay" visible="{= ${notices>/page} &amp;&amp; !${notices>/upd/page} }" direction="Column" alignItems="Center" justifyContent="Center" class="eoMaintenance"
 		renderType="Bare">
 		<Image src="{view>/loginLogo}" alt="EstrichONE" height="3rem" class="sapUiMediumMarginBottom"/>
 		<IllustratedMessage illustrationType="sapIllus-SimpleConnection" title="Wartungsarbeiten" description="{notices>/pageText}"
@@ -120,7 +131,28 @@
 			</additionalContent>
 		</IllustratedMessage>
 	</FlexBox>
-	<FlexBox id="outageOverlay" visible="{= ${notices>/outage} &amp;&amp; !${notices>/page} }" direction="Column" alignItems="Center" justifyContent="Center"
+	<!-- Update-Ablauf: Wartungsbildschirm mit Phase, Zielversion, Countdown und Fortschritt (util/updateView.ts) -->
+	<FlexBox id="updateOverlay" visible="{notices>/upd/page}" direction="Column" alignItems="Center" justifyContent="Center"
+		class="eoMaintenance eoUpdateScreen" renderType="Bare">
+		<VBox class="eoUpdateCard" renderType="Bare">
+			<Image src="{view>/loginLogo}" alt="EstrichONE" height="2.5rem" class="sapUiSmallMarginBottom"/>
+			<Title id="updateTitle" text="{notices>/upd/title}" level="H1" titleStyle="H3" wrapping="true"/>
+			<Text id="updateVersion" text="Zielversion {notices>/upd/version}" visible="{= !!${notices>/upd/version} }" class="eoUpdateVersion"/>
+			<HBox items="{notices>/upd/steps}" class="eoUpdateSteps" renderType="Bare">
+				<Text text="{notices>label}" class="eoUpdateStep">
+					<customData><core:CustomData key="step" value="{notices>state}" writeToDom="true"/></customData>
+				</Text>
+			</HBox>
+			<Text id="updateCountdownLabel" text="{notices>/upd/countdownLabel}" class="eoUpdateCountdownLabel"/>
+			<Text id="updateCountdown" text="{notices>/upd/countdown}" visible="{= !!${notices>/upd/countdown} }" class="eoUpdateCountdown"/>
+			<ProgressIndicator id="updateProgress" percentValue="{notices>/upd/percent}" showValue="false" height="0.5rem"
+				state="{= ${notices>/upd/failed} ? 'Error' : 'None' }" class="eoUpdateProgress"/>
+			<Text id="updateText" text="{notices>/upd/text}" class="eoUpdateText"/>
+			<Text text="{= ${notices>/updateOffline} ? 'Server wird gerade getauscht – die Seite wartet automatisch.' : 'Die Seite prüft alle 5 Sekunden und lädt nach der Freigabe automatisch neu.' }"
+				class="eoMuted eoUpdateScreenHint"/>
+		</VBox>
+	</FlexBox>
+	<FlexBox id="outageOverlay" visible="{= ${notices>/outage} &amp;&amp; !${notices>/page} &amp;&amp; !${notices>/upd/page} }" direction="Column" alignItems="Center" justifyContent="Center"
 		class="eoMaintenance eoOutage" renderType="Bare">
 		<Image src="{view>/loginLogo}" alt="EstrichONE" height="3rem" class="sapUiMediumMarginBottom"/>
 		<IllustratedMessage illustrationType="sapIllus-UnableToLoad" title="{notices>/outageTitle}" description="{notices>/outageText}"

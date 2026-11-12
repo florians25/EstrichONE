@@ -3,14 +3,19 @@
  * Hinweiskarten (control/NoticeCard, Aufbereitung in noticeView.ts) – je Benutzer ausblendbar (Störungen und laufende
  * Wartung nicht), mehrere zusammengefasst („+2 weitere Hinweise“), relative Zeitangaben minütlich aktualisiert; Wartungsseite bei laufender Wartung bzw. jeder Antwort
  * 503 MAINTENANCE. Administratoren mit Freigabe (adminsMayWork + settings.manage) arbeiten weiter und sehen einen
- * deutlichen Hinweis. Neu geladen wird alle 2 Minuten und beim Zurückkehren ins Fenster.
+ * deutlichen Hinweis. Neu geladen wird alle 30 Sekunden und beim Zurückkehren ins Fenster.
+ *
+ * Update-Ablauf (util/updateView.ts): Ankündigung als Leiste mit Countdown, danach Wartungsbildschirm mit Phase, Zielversion
+ * und Fortschritt; während des Updates alle 5 Sekunden prüfen – fällt die API weg, liest die Seite /update-status.json
+ * (Caddy) und zeigt keine Störungsseite. Nach der Freigabe lädt die Seite neu und zeigt die Anmeldung mit Hinweis.
  *
  * Dazu der Systemstatus (Backup-/Archivserver, docs/backup.md): rotes bzw. gelbes Banner, nur wenn eingerichtet.
  * Und die Störungsseite: Antwortet der Server nicht (Netzwerkfehler, 502/503/504), prüft die Seite nach und zeigt
  * „EstrichONE ist gerade nicht erreichbar“ mit automatischem Neuversuch – ohne die geöffnete Seite zu verwerfen.
  */
 import JSONModel from "sap/ui/model/json/JSONModel";
-import { onMaintenance, onUnreachable, type Problem } from "./api";
+import { onMaintenance, onUnreachable, onUpdateHint, type Problem } from "./api";
+import { doneKey, doneText, isUpdateState, updateView, type UpdateState } from "./updateView";
 import { session } from "./session";
 import { addressStrip, healthStrips, type AddressCheck, type HealthBanner } from "./health";
 import { bannerSelection, buildCards, moreText, remainingLabel, shortDate, type NoticeCard } from "./noticeView";
@@ -39,6 +44,7 @@ export interface NoticesResponse {
 	announcements: Announcement[];
 	maintenance: MaintenanceState | null;
 	serverTime: string;
+	update?: UpdateState | null;
 }
 
 /** Ausgeblendete Hinweise je Benutzer (bzw. vor der Anmeldung „anon“), dauerhaft im Browser; höchstens 100 Einträge. */
@@ -64,7 +70,16 @@ class Notices {
 	readonly model = new JSONModel({
 		banners: [] as NoticeCard[], all: [] as NoticeCard[], moreCount: 0, moreText: "", expanded: false, page: false, pageText: "", pageEnd: "", checking: false, canBypass: false,
 		health: [], outage: false, outageTitle: "", outageText: "", outageSince: "", outageNext: "",
+		upd: { banner: false, bannerText: "", page: false, title: "", text: "", countdown: "", countdownLabel: "", percent: 0, steps: [], failed: false, version: "" },
+		updateOffline: false, updateDone: "",
 	});
+	/** Laufendes Update (Server bzw. /update-status.json); null ohne Update. */
+	private update: UpdateState | null = null;
+	/** Wartungsbildschirm war sichtbar (Sitzungen beendet): nach der Freigabe neu laden. */
+	private updateBlocked = false;
+	private updateTick: ReturnType<typeof setInterval> | undefined;
+	private updatePoll: ReturnType<typeof setInterval> | undefined;
+	private hintAt = 0;
 	private outageTimer: ReturnType<typeof setInterval> | undefined;
 	private outageCountdown = 0;
 	private outageAttempts = 0;
@@ -86,9 +101,11 @@ class Notices {
 		this.started = true;
 		onMaintenance((problem) => this.enterFromProblem(problem));
 		onUnreachable(() => void this.checkOutage());
+		onUpdateHint((phase) => this.updateHinted(phase));
 		window.addEventListener("offline", () => void this.checkOutage());
+		this.showUpdateDone();
 		void this.refresh();
-		setInterval(() => void this.refresh(), 120_000);
+		setInterval(() => void this.refresh(), 30_000);
 		// Relative Angaben („läuft seit 10 Min.“) minütlich nachführen.
 		setInterval(() => { if (this.data) this.apply(); }, 60_000);
 		// Systemstatus alle 5 Minuten (docs/backup.md).
@@ -101,16 +118,107 @@ class Notices {
 
 	async refresh(): Promise<void> {
 		try {
-			const response = await fetch("/api/v1/system/notices", { credentials: "same-origin", headers: { Accept: "application/json" } });
-			if (!response.ok) return;
+			const response = await fetch("/api/v1/system/notices", { credentials: "same-origin", headers: { Accept: "application/json" }, cache: "no-store" });
+			if (!response.ok) {
+				if (this.update) await this.refreshUpdateStatic();
+				return;
+			}
 			this.data = (await response.json()) as NoticesResponse;
+			this.model.setProperty("/updateOffline", false);
+			this.setUpdate(isUpdateState(this.data.update) ? this.data.update : null);
 			const server = Date.parse(this.data.serverTime);
 			this.skew = Number.isNaN(server) || Math.abs(server - Date.now()) < 30_000 ? 0 : server - Date.now();
 			if (!this.data.maintenance?.active) this.forced = null;
 			this.apply();
 		} catch {
-			// Server nicht erreichbar: Zustand beibehalten.
+			// Server nicht erreichbar: Zustand beibehalten; während eines Updates den Stand von Caddy lesen.
+			if (this.update) await this.refreshUpdateStatic();
 		}
+	}
+
+	// ---- Update-Ablauf --------------------------------------------------------------------------------------------
+
+	/** Stand ohne API (Container werden getauscht): /update-status.json liefert Caddy aus dem Statusverzeichnis. */
+	private async refreshUpdateStatic(): Promise<void> {
+		this.model.setProperty("/updateOffline", true);
+		try {
+			const response = await fetch("/update-status.json", { cache: "no-store", headers: { Accept: "application/json" } });
+			if (!response.ok) return;
+			const state = (await response.json()) as unknown;
+			if (isUpdateState(state)) this.setUpdate(state);
+		} catch {
+			// Auch Caddy wird gerade getauscht – Bildschirm bleibt, nächster Versuch in 5 Sekunden.
+		}
+	}
+
+	/** Kopfzeile X-EstrichONE-Update auf einer API-Antwort: sofort nachsehen (höchstens alle 5 Sekunden). */
+	private updateHinted(phase: string): void {
+		if (this.update?.phase === phase || Date.now() - this.hintAt < 5_000) return;
+		this.hintAt = Date.now();
+		void this.refresh();
+	}
+
+	private setUpdate(state: UpdateState | null): void {
+		if (!state) {
+			if (!this.update) return;
+			const finished = this.update;
+			this.update = null;
+			clearInterval(this.updateTick);
+			clearInterval(this.updatePoll);
+			this.updateTick = this.updatePoll = undefined;
+			if (this.updateBlocked) {
+				// Freigegeben: Sitzungen sind beendet – neu laden, Anmeldung mit Hinweis zeigen.
+				try {
+					sessionStorage.setItem(doneKey, JSON.stringify({ version: finished.targetVersion ?? "", failed: finished.phase === "failed" }));
+				} catch {
+					// privater Modus: ohne Hinweis
+				}
+				window.location.reload();
+				return;
+			}
+			this.renderUpdate();
+			return;
+		}
+		this.update = state;
+		if (!this.updateTick) this.updateTick = setInterval(() => this.renderUpdate(), 1_000);
+		if (!this.updatePoll) this.updatePoll = setInterval(() => void this.refresh(), 5_000);
+		this.renderUpdate();
+	}
+
+	private renderUpdate(): void {
+		const m = this.model;
+		if (!this.update) {
+			m.setProperty("/upd", { ...(m.getProperty("/upd") as object), banner: false, page: false });
+			return;
+		}
+		const view = updateView(this.update, new Date(Date.now() + this.skew));
+		if (view.page) {
+			this.updateBlocked = true;
+			// Kein „nicht erreichbar“ während des Updates – der Wartungsbildschirm erklärt es.
+			if (m.getProperty("/outage")) {
+				clearInterval(this.outageTimer);
+				this.outageTimer = undefined;
+				m.setProperty("/outage", false);
+			}
+		}
+		m.setProperty("/upd", view);
+	}
+
+	/** Nach dem Neuladen: „EstrichONE wurde auf Version X aktualisiert – bitte erneut anmelden.“ */
+	private showUpdateDone(): void {
+		try {
+			const raw = sessionStorage.getItem(doneKey);
+			if (!raw) return;
+			sessionStorage.removeItem(doneKey);
+			const done = JSON.parse(raw) as { version?: string; failed?: boolean };
+			this.model.setProperty("/updateDone", doneText(done.version, !!done.failed));
+		} catch {
+			// ohne Hinweis
+		}
+	}
+
+	dismissUpdateDone(): void {
+		this.model.setProperty("/updateDone", "");
 	}
 
 	/** Backup-/Archivstatus (rot/gelb), nur angemeldet; der Server liefert nur Banner für Eingerichtetes. */
@@ -140,6 +248,11 @@ class Notices {
 	}
 
 	async checkOutage(): Promise<void> {
+		if (this.update) {
+			// Während des Updates ist die API zeitweise weg – Stand von Caddy lesen statt Störungsseite.
+			await this.refreshUpdateStatic();
+			return;
+		}
 		if (this.probing || this.model.getProperty("/outage")) return;
 		this.probing = true;
 		try {
@@ -228,6 +341,12 @@ class Notices {
 	}
 
 	private enterFromProblem(problem: Problem | undefined): void {
+		if (problem?.reason === "update") {
+			// Update-Ablauf: eigener Bildschirm (Phase, Countdown) statt der allgemeinen Wartungsseite.
+			this.hintAt = 0;
+			this.updateHinted(problem.phase ?? "update");
+			return;
+		}
 		this.forced = problem ?? {};
 		this.bypass = false;
 		this.apply();

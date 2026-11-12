@@ -49,6 +49,9 @@ export Serilog__MinimumLevel__Default=Warning
 # Systemhinweise wie von der Hosting-Konsole setzen (Instanz-Schlüssel nur für den Test).
 export EstrichOne__Notices__ManagementToken="e2e-notices-token"
 export E2E_NOTICES_TOKEN="$EstrichOne__Notices__ManagementToken"
+# Update-Ablauf: Statusdatei wie von update.sh (21-update-ablauf.spec.ts schreibt sie).
+export EstrichOne__Notices__UpdateStatePath="$WORK/update-maintenance.json"
+export E2E_UPDATE_STATE="$EstrichOne__Notices__UpdateStatePath"
 dotnet publish "$ROOT/backend/src/EstrichOne.Api" -c Release -o "$WORK/api" --nologo -v quiet
 dotnet "$WORK/api/EstrichOne.Api.dll" migrate >/dev/null
 dotnet "$WORK/api/EstrichOne.Api.dll" >"$WORK/api.log" 2>&1 &

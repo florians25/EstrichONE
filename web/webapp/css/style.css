@@ -211,8 +211,28 @@
 .eoDmsLayout { gap: 1rem; } .eoDmsFolders { flex: 0 0 15rem; } @media (max-width: 900px) { .eoDmsLayout { flex-direction: column; } .eoDmsFolders { width: 100% !important; } }
 
 /* ---- Systemhinweise und Wartung ---- */
-.eoNoticeBar { padding: 0.25rem 0.5rem 0; }
-.eoNotice { margin-bottom: 0.25rem; }
+/* Hinweisleisten unter der Kopfzeile (Update verfügbar, Update-Ankündigung, Systemstatus, Zwei-Faktor, Systemhinweise):
+   eingerückt wie der Seiteninhalt (1 rem schmal, 2 rem ab 600 px, 3 rem ab 1440 px), Abstand zur Kopfzeile und zum Inhalt,
+   abgerundete Ecken, Schließen-Knopf mit Luft zum Rand – für alle Arten einheitlich. */
+.eoTopNotices { --eoInset: 1rem; display: flex; flex-direction: column; gap: 0.5rem; flex: none; padding: 0.75rem var(--eoInset) 0; box-sizing: border-box; }
+/* Nichts sichtbar (nur Platzhalter ausgeblendeter Leisten): kein Leerraum unter der Kopfzeile. */
+.eoTopNotices:not(:has(> :not(.sapUiHiddenPlaceholder):not([hidden]))) { display: none; }
+@media (min-width: 600px) { .eoTopNotices { --eoInset: 2rem; } }
+@media (min-width: 1440px) { .eoTopNotices { --eoInset: 3rem; } }
+.eoTopNotices > * { margin: 0; }
+.eoTopNotices + .eoContent, .eoTopNotices ~ .eoContent { margin-top: 0.5rem; }
+.eoNoticeBar { display: flex; flex-direction: column; gap: 0.5rem; padding: 0; }
+.eoNotice { margin: 0; }
+.eoTopNotices .sapMMsgStrip, .eoAuthPage .eoTopNotices .sapMMsgStrip {
+	border-radius: var(--sapElement_BorderCornerRadius, 0.5rem); min-height: 2.75rem; padding-top: 0.75rem; padding-bottom: 0.75rem;
+	padding-inline-start: 1.25rem; padding-inline-end: 3.25rem; box-sizing: border-box; margin: 0;
+}
+.eoTopNotices .sapMMsgStrip .sapMMsgStripIcon { inset-inline-start: 0.5rem; top: 0.75rem; }
+.eoTopNotices .sapMMsgStrip .sapMMsgStripCloseButton { inset-inline-end: 0.625rem; top: 0.5rem; }
+.eoTopNotices .eoNoticeStack { padding: 0; }
+/* Anmeldeseite: Leisten und Hinweiskarten gleich breit über dem Anmeldefeld. */
+.eoAuthPage .eoTopNotices, .eoAuthPage .eoNoticeStack.eoNoticeStack { max-width: 60rem; width: calc(100% - 2rem); margin: 0 auto; padding-left: 0; padding-right: 0; }
+.eoUpdateAnnounce .sapMMsgStripMessage { font-weight: bold; font-variant-numeric: tabular-nums; }
 
 /* Systemhinweise (control/NoticeCard): Karte mit farbigem Rand, Symbol im getönten Kreis, Titel + Zeit-Chip, Zeitraum und Text.
    Farben nur aus Theme-Variablen; in der Shell als kompakter Stapel über dem Inhalt (schiebt ihn nach unten, überlagert nichts). */
@@ -279,6 +299,25 @@
 	.eoNoticeLine { white-space: normal; flex-wrap: wrap; }
 }
 .eoMaintenance { position: fixed; inset: 0; z-index: 9000; background: var(--sapBackgroundColor); padding: 1rem; overflow: auto; }
+
+/* Update-Ablauf: Wartungsbildschirm (wie die Apps und die Störungsseite deploy/fallback) */
+.eoUpdateScreen { background: radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--sapBrandColor) 10%, var(--sapBackgroundColor)), var(--sapBackgroundColor) 70%); }
+.eoUpdateCard { display: flex; flex-direction: column; align-items: stretch; gap: 0.5rem; width: 100%; max-width: 32rem; box-sizing: border-box;
+	padding: 2rem 2rem 1.75rem; border-radius: 1rem; background: var(--sapGroup_ContentBackground); border: 1px solid var(--sapGroup_ContentBorderColor);
+	box-shadow: var(--sapContent_Shadow2); }
+.eoUpdateCard .sapMImg { align-self: flex-start; }
+.eoUpdateVersion { color: var(--sapContent_LabelColor); }
+.eoUpdateSteps { display: flex; gap: 0.5rem; margin: 1rem 0 0.5rem; }
+.eoUpdateStep { flex: 1 1 0; font-size: var(--sapFontSmallSize); color: var(--sapContent_LabelColor); }
+.eoUpdateStep::before { content: ""; display: block; height: 0.25rem; border-radius: 0.125rem; margin-bottom: 0.375rem; background: var(--sapField_BorderColor); }
+.eoUpdateStep[data-step="done"]::before { background: var(--sapPositiveElementColor); }
+.eoUpdateStep[data-step="now"] { color: var(--sapTextColor); font-weight: bold; }
+.eoUpdateStep[data-step="now"]::before { background: var(--sapBrandColor); }
+.eoUpdateCountdownLabel { margin-top: 0.5rem; color: var(--sapContent_LabelColor); }
+.eoUpdateCountdown { font-size: 2.5rem; line-height: 1.1; font-weight: bold; font-variant-numeric: tabular-nums; color: var(--sapTextColor); }
+.eoUpdateProgress.sapMPI { margin: 0.25rem 0 0.75rem; }
+.eoUpdateText { line-height: 1.5; }
+.eoUpdateScreenHint { margin-top: 0.5rem; font-size: var(--sapFontSmallSize); }
 .eoHistoryChanges { font-size: var(--sapFontSmallSize); }
 
 /* Hochladen im Dialog: Ablagefläche, Kopf mit Aktendaten */

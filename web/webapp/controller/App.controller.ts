@@ -625,6 +625,11 @@ export default class AppController extends BaseController {
 		notices.adminLogin();
 	}
 
+	/** Hinweis „EstrichONE wurde aktualisiert“ auf der Anmeldeseite schließen. */
+	onUpdateDoneClose(): void {
+		notices.dismissUpdateDone();
+	}
+
 	onMaintenanceRecheck(): void {
 		void notices.recheck();
 	}

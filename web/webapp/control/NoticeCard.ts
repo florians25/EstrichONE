@@ -9,7 +9,6 @@ import type { MetadataOptions } from "sap/ui/core/Element";
  * Darstellungen: <c>banner</c> (eine kompakte Zeile Text, in der Shell), <c>tile</c> (Startseite, zwei Zeilen Text),
  * <c>full</c> (Details-Dialog und Vorschau, vollständiger Text ohne Schaltflächen).
  * Farben kommen ausschließlich aus den Theme-Variablen (hell, dunkel, hoher Kontrast).
- * @namespace estrichone.control
  */
 export interface NoticeCardSettings {
 	kind?: string; tone?: string; icon?: string; label?: string; title?: string; text?: string; period?: string; relative?: string;
@@ -17,6 +16,10 @@ export interface NoticeCardSettings {
 	details?: () => void; dismiss?: () => void;
 }
 
+/**
+ * Die Namensraum-Angabe muss direkt vor der Klasse stehen – sonst entsteht keine UI5-Klasse (Renderer fehlt, Karten leer).
+ * @namespace estrichone.control
+ */
 export default class NoticeCard extends Control {
 	// UI5 ruft beim Klonen (Listenvorlagen) new C(id, settings) auf – beide Formen weiterreichen.
 	constructor(idOrSettings?: string | NoticeCardSettings, settings?: NoticeCardSettings) {
