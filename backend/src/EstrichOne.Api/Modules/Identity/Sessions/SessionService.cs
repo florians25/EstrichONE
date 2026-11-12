@@ -30,6 +30,9 @@ public enum RefreshFailure
 
     /// <summary>Sitzung abgemeldet bzw. im IT Center beendet.</summary>
     Revoked,
+
+    /// <summary>Sitzung beim Einspielen eines Updates beendet (Update-Ablauf, Notices/UpdateMaintenance.cs).</summary>
+    SystemUpdate,
     UserDisabled,
     DeviceProofRequired,
     DeviceLocked,
@@ -212,6 +215,7 @@ public sealed class SessionService(
         "user_disabled" => RefreshFailure.UserDisabled,
         "device_retired" => RefreshFailure.DeviceRevoked,
         "refresh_token_reused" => RefreshFailure.Reused,
+        "system_update" => RefreshFailure.SystemUpdate,
         _ => RefreshFailure.Revoked,
     };
 

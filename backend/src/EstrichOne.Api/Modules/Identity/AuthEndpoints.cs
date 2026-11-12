@@ -155,6 +155,7 @@ internal static class AuthEndpoints
                 RefreshFailure.DeviceRevoked => ("DEVICE_REVOKED", "Dieses Gerät wurde aus EstrichONE entfernt."),
                 RefreshFailure.PasswordChanged => ("PASSWORD_CHANGED", "Das Passwort wurde geändert. Bitte mit dem neuen Passwort anmelden."),
                 RefreshFailure.Revoked => ("SESSION_REVOKED", "Die Sitzung wurde beendet (abgemeldet). Bitte neu anmelden."),
+                RefreshFailure.SystemUpdate => ("SESSION_ENDED_UPDATE", "EstrichONE wurde aktualisiert. Bitte erneut anmelden – Ihre Daten auf dem Gerät bleiben erhalten."),
                 RefreshFailure.SessionEnded or RefreshFailure.Expired => ("SESSION_EXPIRED", "Die Sitzung ist abgelaufen. Bitte neu anmelden."),
                 _ => ("INVALID_REFRESH_TOKEN", "Der Token ist ungültig."),
             };

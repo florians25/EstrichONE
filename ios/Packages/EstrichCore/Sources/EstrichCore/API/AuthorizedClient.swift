@@ -16,6 +16,8 @@ public enum SessionEnd: Equatable, Sendable {
     case revoked
     /// Anmeldedaten wurden doppelt verwendet – aus Sicherheitsgründen beendet.
     case reused
+    /// Beim Einspielen eines Updates beendet (Update-Ablauf).
+    case systemUpdate
     case userDisabled
     case deviceLocked
     case deviceRevoked
@@ -30,6 +32,7 @@ public enum SessionEnd: Equatable, Sendable {
         case "PASSWORD_CHANGED": self = .passwordChanged
         case "SESSION_REVOKED": self = .revoked
         case "REFRESH_TOKEN_REUSED": self = .reused
+        case "SESSION_ENDED_UPDATE": self = .systemUpdate
         case "INVALID_REFRESH_TOKEN", "DEVICE_PROOF_INVALID": self = .signedOut
         default: return nil
         }
@@ -54,6 +57,7 @@ public enum SessionEnd: Equatable, Sendable {
         case .passwordChanged: "Ihr Passwort wurde geändert. Bitte mit dem neuen Passwort anmelden."
         case .revoked: "Die Sitzung auf diesem Gerät wurde beendet (abgemeldet, z. B. im IT Center). Bitte erneut anmelden."
         case .reused: "Die Sitzung wurde aus Sicherheitsgründen beendet. Bitte erneut anmelden."
+        case .systemUpdate: "EstrichONE wurde aktualisiert. Bitte erneut anmelden."
         case .userDisabled: "Ihr Benutzerkonto ist gesperrt. Bitte an die Administration wenden."
         case .deviceLocked: "Dieses Gerät ist gesperrt. Bitte an die IT-Administration wenden."
         case .deviceRevoked: "Dieses Gerät wurde aus EstrichONE entfernt. Die App muss neu eingerichtet werden."
@@ -63,7 +67,7 @@ public enum SessionEnd: Equatable, Sendable {
     /// Mit Passwort neu anmelden (statt Hinweis „gesperrt“ bzw. „entfernt“).
     public var requiresPassword: Bool {
         switch self {
-        case .signedOut, .expired, .passwordChanged, .revoked, .reused: true
+        case .signedOut, .expired, .passwordChanged, .revoked, .reused, .systemUpdate: true
         case .userDisabled, .deviceLocked, .deviceRevoked: false
         }
     }

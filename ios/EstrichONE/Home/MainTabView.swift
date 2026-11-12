@@ -25,6 +25,7 @@ struct MainTabView: View {
     var body: some View {
         // Backup-/Archiv-Störung und „Nur Ansicht“ über allen Reitern (Navigationsleisten darunter).
         VStack(spacing: 0) {
+        if let sync = model.active?.sync { UpdateAnnounceBanner(sync: sync) }
         if let sync = model.active?.sync { SystemStatusStrip(sync: sync, showsNotices: selection != .today) }
         TabView(selection: Binding(get: { selection }, set: { tab in
             if tab == .capture {
@@ -53,6 +54,8 @@ struct MainTabView: View {
         }
         .modifier(SidebarAdaptable())
         }
+        // Update-Ablauf: Wartungsbildschirm über allem, solange das Update läuft (ohne Fehlermeldungen oder Abmelde-Schleifen).
+        .overlay { if let sync = model.active?.sync { UpdateMaintenanceScreen(sync: sync) } }
         .readOnlyOverrideDialog(isPresented: $confirmsOverride, sync: model.active?.sync)
         .sheet(isPresented: $showsCaptureHub) {
             CaptureHub { showsCaptureHub = false }

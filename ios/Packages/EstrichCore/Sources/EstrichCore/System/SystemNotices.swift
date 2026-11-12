@@ -57,6 +57,11 @@ public struct SystemNotices: Decodable, Sendable, Equatable {
     public let announcements: [Announcement]
     public let maintenance: Maintenance?
     public let serverTime: String?
+    /// Laufendes Update (Ankündigung, Update, Abschluss) – siehe ``UpdatePresentation``.
+    public let update: UpdateMaintenance?
+
+    /// Gültiges Update oder `nil` (unbekannte Phase wird ignoriert).
+    public var activeUpdate: UpdateMaintenance? { update.flatMap { $0.isKnownPhase ? $0 : nil } }
 
     /// Ankündigungen, die jetzt gelten.
     public func currentAnnouncements(at date: Date = Date()) -> [Announcement] {

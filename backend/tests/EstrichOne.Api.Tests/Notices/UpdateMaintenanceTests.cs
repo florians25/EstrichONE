@@ -105,6 +105,25 @@ public sealed class UpdateMaintenanceTests(PostgresFixture postgres) : IAsyncLif
     }
 
     [Fact]
+    public async Task Erneuern_NachDemUpdate_MeldetSitzungBeimUpdateBeendet()
+    {
+        await _factory.CreateUserAsync("monteur", roleIds: StandardRoles.SiteWorkerId);
+        using var client = _factory.CreateClient();
+        var tokens = await client.LoginOkAsync("monteur");
+        Write(UpdatePhases.Update);
+        // Während des Updates: Erneuern gesperrt (503), die Sitzung endet nicht auf dem Gerät.
+        using (var blocked = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = tokens.RefreshToken }, Ct))
+        {
+            blocked.StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+        }
+
+        File.Delete(_file);
+        using var refresh = await client.PostAsJsonAsync("/api/v1/auth/refresh", new { refreshToken = tokens.RefreshToken }, Ct);
+        refresh.StatusCode.ShouldBe(HttpStatusCode.Unauthorized);
+        (await refresh.ReadProblemAsync()).Code.ShouldBe("SESSION_ENDED_UPDATE");
+    }
+
+    [Fact]
     public async Task VerwaisterStand_WirdIgnoriert()
     {
         using var worker = await _factory.CreateClientAsAsync("baustelle", StandardRoles.SiteWorkerId);

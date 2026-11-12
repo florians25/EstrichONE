@@ -21,6 +21,14 @@ final class SyncController {
     /// Hinweise des Betreibers (Ankündigungen, Wartung); zuletzt abgerufener Stand.
     private(set) var notices: SystemNotices?
 
+    /// Laufendes Update (Ankündigung mit Countdown, Update, Abschluss) – deploy/README.md „Update-Ablauf“.
+    private(set) var update: UpdateMaintenance?
+    /// Server während des Updates nicht erreichbar (Container werden getauscht): Wartungsbildschirm wartet weiter.
+    private(set) var updateOffline = false
+    private var updateSynced: String?
+    private var updateBlocked = false
+    private var noticeLoop: Task<Void, Never>?
+
     /// Zustand von Backup- und Archivserver (rote/gelbe Hinweise), zuletzt abgerufener Stand.
     private(set) var health: SystemHealth?
     /// Chat-Modul: aktiv und erlaubt, ungelesene Nachrichten (`nil`, solange unbekannt).
@@ -151,7 +159,14 @@ final class SyncController {
 
     /// Hinweise neu laden (Start, Vordergrund, mit jeder Synchronisation). Ohne Verbindung bleibt der letzte Stand.
     func refreshNotices() async {
-        if let fresh = try? await client.systemNotices() { notices = fresh }
+        if realNotices != nil { return }
+        if let fresh = try? await client.systemNotices() {
+            notices = fresh
+            updateOffline = false
+            applyUpdate(fresh.activeUpdate)
+        } else if update != nil {
+            updateOffline = true
+        }
         // Backup-/Archivstatus höchstens alle 5 Minuten (der Server speichert ihn zwischen), sofort nach dem Wiederverbinden.
         let reconnected = healthFetchedWhileUnreachable && !connection.unreachable
         if let last = healthFetchedAt, Date.now.timeIntervalSince(last) < 270, !reconnected { return }
@@ -173,9 +188,35 @@ final class SyncController {
     private var healthFetchedAt: Date?
     private var healthFetchedWhileUnreachable = false
 
+    /// Update-Ablauf nachführen: In der Ankündigung sofort abgleichen; nach der Freigabe einmal abgleichen – der Server
+    /// meldet dann „Sitzung beim Update beendet“, die App führt zur Anmeldung (Daten bleiben auf dem Gerät).
+    private func applyUpdate(_ state: UpdateMaintenance?) {
+        let previous = update
+        update = state
+        if let state {
+            if UpdatePresentation.screen(state, now: .now).page { updateBlocked = true }
+            if state.phase == "announce", updateSynced != state.id {
+                updateSynced = state.id
+                Task { await run() }
+            }
+        } else if previous != nil, updateBlocked {
+            updateBlocked = false
+            Task { await run() }
+        }
+    }
+
     func start() {
         loop?.cancel()
         startClock()
+        // Systemhinweise und Update-Ablauf: alle 30 s, während eines Updates alle 5 s (Countdown, Freigabe).
+        noticeLoop?.cancel()
+        noticeLoop = Task { [weak self] in
+            while !Task.isCancelled {
+                let fast = self?.update != nil
+                try? await Task.sleep(for: .seconds(fast ? 5 : 30))
+                await self?.refreshNotices()
+            }
+        }
         loop = Task { [weak self] in
             // Jeder Lauf mit Sichtbarkeitsliste: Rechteentzug und neu sichtbare Bauakten (z. B. eingeplant) sofort.
             await self?.run()
@@ -188,6 +229,8 @@ final class SyncController {
     }
 
     func stop() {
+        noticeLoop?.cancel()
+        noticeLoop = nil
         loop?.cancel()
         debounce?.cancel()
         clock?.cancel()
@@ -350,8 +393,10 @@ final class SyncController {
         if let value {
             if realNotices == nil { realNotices = .some(notices) }
             notices = value
+            update = value.activeUpdate
         } else if let real = realNotices {
             notices = real
+            update = real?.activeUpdate
             realNotices = nil
         }
     }

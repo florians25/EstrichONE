@@ -120,7 +120,9 @@ final class ScreenshotDirector {
             sync?.simulateMaintenance(nil)
         }
         // „hinweise“, „hinweis-detail“: Störung, geplante Wartung (übermorgen 22:00–23:30 Uhr) und eine Information.
-        sync?.simulateNotices(scene.hasPrefix("hinweis") ? Self.demoNotices() : nil)
+        // „systemupdate-ankuendigung|-update|-abschluss“: Update-Ablauf (Countdown-Leiste bzw. Wartungsbildschirm).
+        sync?.simulateNotices(scene.hasPrefix("hinweis") ? Self.demoNotices()
+            : scene.hasPrefix("systemupdate-") ? Self.updateNotices(String(scene.dropFirst("systemupdate-".count))) : nil)
         // „stoerung“: Backup- und Archivserver ausgefallen, Server seit 12 Minuten nicht erreichbar (Nur Ansicht).
         if scene.hasPrefix("stoerung") {
             let now = Date()
@@ -132,6 +134,21 @@ final class ScreenshotDirector {
             sync?.simulateHealth(nil)
             sync?.simulateOutage(minutes: nil)
         }
+    }
+
+    private static func updateNotices(_ scene: String) -> SystemNotices? {
+        let (phase, left): (String, Double) = switch scene {
+        case "update": ("update", 38)
+        case "abschluss": ("finish", 52)
+        default: ("announce", 47)
+        }
+        let now = Date.now
+        let json = """
+        {"announcements":[],"maintenance":null,"serverTime":null,"update":{"id":"shot-update","phase":"\(phase)","fromVersion":"1.0.15",
+         "targetVersion":"1.0.16","startedAt":"\(APIDate.format(now.addingTimeInterval(-90)))","phaseStartedAt":"\(APIDate.format(now.addingTimeInterval(left - 60)))",
+         "phaseEndsAt":"\(APIDate.format(now.addingTimeInterval(left)))"}}
+        """
+        return try? JSONCoding.decoder.decode(SystemNotices.self, from: Data(json.utf8))
     }
 
     private static func demoNotices() -> SystemNotices? {
