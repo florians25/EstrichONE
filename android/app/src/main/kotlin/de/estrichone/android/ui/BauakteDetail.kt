@@ -26,6 +26,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.FactCheck
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CheckCircle
@@ -111,7 +112,8 @@ enum class AreaKind(val title: String, val icon: ImageVector) {
     Documents("Dokumente", Icons.Outlined.Description),
     Tasks("Aufgaben und Mängel", Icons.AutoMirrored.Outlined.Assignment),
     Diary("Bautagebuch", Icons.AutoMirrored.Outlined.MenuBook),
-    Protocols("Protokolle", Icons.Outlined.VerifiedUser),
+    InitialInspection("Erstbegehung", Icons.AutoMirrored.Filled.FactCheck),
+    Protocols("Abnahme und CM-Messungen", Icons.Outlined.VerifiedUser),
     Rooms("Räume und Flächen", Icons.Outlined.GridView),
     Contacts("Kontakte und Beteiligte", Icons.Outlined.Contacts),
     Project("Estrich und Bauvorhaben", Icons.Outlined.Tune);
@@ -120,6 +122,7 @@ enum class AreaKind(val title: String, val icon: ImageVector) {
     fun isAvailable(modules: AppModules): Boolean = when (this) {
         Tasks -> modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)
         Diary -> modules.isOn(AppModules.DIARY)
+        InitialInspection -> modules.isOn(AppModules.INSPECTIONS)
         Protocols -> modules.anyOn(AppModules.INSPECTIONS, AppModules.ACCEPTANCE)
         else -> true
     }
@@ -459,7 +462,8 @@ private fun Areas(session: Session, b: Bauakte) {
         mapOf(
             AreaKind.Notes to s.notes(b.id).size, AreaKind.Photos to s.photos(b.id).size, AreaKind.Documents to s.documents(b.id).size,
             AreaKind.Tasks to s.tasks(b.id).count { it.isOpen }, AreaKind.Diary to s.diary(b.id).size,
-            AreaKind.Protocols to s.inspections(b.id).size + s.acceptances(b.id).size, AreaKind.Rooms to s.rooms(b.id).size,
+            AreaKind.InitialInspection to s.inspections(b.id).count { it.isInitial },
+            AreaKind.Protocols to s.inspections(b.id).count { it.isCmMeasurement } + s.acceptances(b.id).size, AreaKind.Rooms to s.rooms(b.id).size,
             AreaKind.Contacts to s.parties(b.id).size + (if (b.customerId != null) 1 else 0),
         )
     }

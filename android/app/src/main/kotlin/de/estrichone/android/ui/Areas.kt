@@ -99,8 +99,12 @@ import java.time.Instant
 import androidx.compose.material3.TextButton
 import androidx.compose.ui.platform.testTag
 import de.estrichone.core.InitialInspection
-import de.estrichone.core.InitialInspectionState
 import androidx.compose.material.icons.filled.DoNotDisturbOn
+import androidx.compose.material.icons.filled.CalendarMonth
+import de.estrichone.core.InitialInspectionOverview
+import de.estrichone.core.InitialInspectionStatus
+import de.estrichone.core.PlannedJob
+import java.time.LocalDate
 
 @Composable
 fun AreaScreen(bauakteId: String, area: AreaKind) {
@@ -110,6 +114,7 @@ fun AreaScreen(bauakteId: String, area: AreaKind) {
         AreaKind.Documents -> DocumentsArea(bauakteId)
         AreaKind.Tasks -> TasksArea(bauakteId)
         AreaKind.Diary -> DiaryArea(bauakteId)
+        AreaKind.InitialInspection -> InitialInspectionArea(bauakteId)
         AreaKind.Protocols -> ProtocolsArea(bauakteId)
         AreaKind.Rooms -> RoomsArea(bauakteId)
         AreaKind.Contacts -> ContactsArea(bauakteId)
@@ -396,70 +401,131 @@ private fun DiaryArea(id: String) {
     if (adding) DiarySheet(id) { adding = false }
 }
 
+/**
+ * Bereich „Erstbegehung“ wie der Reiter „Erstbegehung“ der Dokumentation im Büro: Status (offen, geplant, durchgeführt,
+ * nicht erforderlich), Termin aus der Planung, Durchführen bzw. Vermerk, alle Protokolle, Fotos und abgelegte Protokoll-PDFs.
+ */
+@Composable
+private fun InitialInspectionArea(id: String) {
+    val session = LocalSession.current
+    val nav = LocalNav.current
+    val context = LocalContext.current
+    val model = LocalModel.current
+    val scope = rememberCoroutineScope()
+    val inspections by session.local(id) { session.service.inspections(id) }
+    val bauakte by session.local(id) { session.service.bauakte(id) }
+    val photos by session.local(id) { session.service.photos(id) }
+    val documents by session.local(id) { session.service.documents(id).filter { InitialInspectionOverview.isProtocolDocument(it) } }
+    val jobs by produceState<List<PlannedJob>>(emptyList(), id) { value = session.weekPlan()?.assignments.orEmpty() }
+    var waiving by remember { mutableStateOf(false) }
+    val canWaive = canWaiveInitialInspection(session)
+    val b = bauakte
+    val overview = b?.let { InitialInspectionOverview(it, inspections, jobs, LocalDate.now(Dates.zone).toString()) }
+    val pending = overview?.status == InitialInspectionStatus.Open || overview?.status == InitialInspectionStatus.Planned
+    val palette = tones
+    val (tint, soft) = when (overview?.status) {
+        InitialInspectionStatus.Planned -> palette.info to palette.infoSoft
+        InitialInspectionStatus.Done -> palette.success to palette.successSoft
+        InitialInspectionStatus.Waived -> palette.textSecondary to palette.fillStrong
+        else -> palette.warning to palette.warningSoft
+    }
+    ScreenScaffold(AreaKind.InitialInspection.title, floating = {
+        if (pending) AddButton("Durchführen") { nav.push(Route.Inspection(id, null)) }
+    }) { padding ->
+        LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
+            if (b == null || overview == null) return@LazyColumn
+            item { GroupLabel("Status") }
+            item {
+                SectionCard {
+                    RowItem(overview.status.title, modifier = Modifier.testTag("initialInspectionStatus"), icon = Icons.AutoMirrored.Filled.FactCheck,
+                        iconTint = tint, iconBackground = soft,
+                        subtitle = overview.protocols.firstOrNull()?.performedAt?.let { "Durchgeführt am ${Dates.dateTime(it)}" })
+                    RowDivider()
+                    RowItem("Termin", modifier = Modifier.testTag("initialInspectionAppointment"), icon = Icons.Filled.CalendarMonth,
+                        subtitle = overview.appointment?.let { InitialInspectionOverview.appointmentText(it) } ?: "nicht geplant – Termine plant das Büro")
+                }
+            }
+            when (overview.status) {
+                InitialInspectionStatus.Waived -> item { InitialInspectionWaiverCard(session, b) }
+                InitialInspectionStatus.Open, InitialInspectionStatus.Planned -> if (canWaive) {
+                    item {
+                        TextButton(onClick = { waiving = true }, modifier = Modifier.padding(top = 4.dp).testTag("waiveInitialInspectionButton")) {
+                            Icon(Icons.Filled.DoNotDisturbOn, null)
+                            Spacer(Modifier.width(8.dp))
+                            Text(InitialInspection.WAIVE_BUTTON)
+                        }
+                    }
+                }
+                InitialInspectionStatus.Done -> Unit
+            }
+            if (overview.protocols.isNotEmpty()) {
+                item { GroupLabel("Protokolle (${overview.protocols.size})") }
+                item {
+                    SectionCard {
+                        overview.protocols.forEachIndexed { index, i ->
+                            if (index > 0) RowDivider()
+                            RowItem(i.title, icon = Icons.AutoMirrored.Filled.FactCheck,
+                                iconTint = if (i.defects > 0) tones.warning else tones.success,
+                                iconBackground = if (i.defects > 0) tones.warningSoft else tones.successSoft,
+                                subtitle = (listOfNotNull(i.performedAt?.let { Dates.dateTime(it) }) +
+                                    listOfNotNull(if (i.notRequired) "nicht erforderlich" else null, if (i.defects > 0) "${i.defects} Mangel" else "ohne Mängel")).joinToString(" · "),
+                                showChevron = true, onClick = { nav.push(Route.Inspection(id, i.id)) }, trailing = { SyncMark(i.syncState) })
+                        }
+                    }
+                }
+            }
+            val shown = photos.filter { it.id in overview.photoIds }
+            if (shown.isNotEmpty() || documents.isNotEmpty()) {
+                item { GroupLabel("Fotos und Dokumente (${shown.size + documents.size})") }
+                item {
+                    SectionCard {
+                        shown.forEachIndexed { index, photo ->
+                            if (index > 0) RowDivider()
+                            RowItem(photo.caption ?: "Foto", icon = Icons.Filled.PhotoCamera,
+                                subtitle = photo.time?.let { Dates.ago(it) }, showChevron = true, onClick = { nav.push(Route.Photo(photo.id)) })
+                        }
+                        documents.forEachIndexed { index, file ->
+                            if (index > 0 || shown.isNotEmpty()) RowDivider()
+                            RowItem(file.displayName, icon = Icons.Filled.PictureAsPdf, iconTint = tones.danger, iconBackground = tones.dangerSoft,
+                                subtitle = file.time?.let { Dates.ago(it) },
+                                onClick = {
+                                    scope.launch {
+                                        val bytes = session.content(file)
+                                        if (bytes == null || !Links.open(context, bytes, file.originalName.ifBlank { "Erstbegehungsprotokoll.pdf" }, file.contentType)) {
+                                            model.message("Das Dokument kann gerade nicht geöffnet werden.")
+                                        }
+                                    }
+                                }, trailing = { SyncMark(file.syncState) })
+                        }
+                    }
+                }
+            }
+        }
+    }
+    if (waiving) WaiveInitialInspectionDialog(session, id) { waiving = false }
+}
+
+/** Abnahmen und CM-Messungen (die Erstbegehung hat einen eigenen Bereich). */
 @Composable
 private fun ProtocolsArea(id: String) {
     val session = LocalSession.current
     val nav = LocalNav.current
     var menu by remember { mutableStateOf(false) }
     var cm by remember { mutableStateOf(false) }
-    val inspections by session.local(id) { session.service.inspections(id) }
+    val measurements by session.local(id) { session.service.inspections(id).filter { it.isCmMeasurement } }
     val acceptances by session.local(id) { session.service.acceptances(id) }
-    val bauakte by session.local(id) { session.service.bauakte(id) }
-    var waiving by remember { mutableStateOf(false) }
-    val canWaive = canWaiveInitialInspection(session)
     ScreenScaffold(AreaKind.Protocols.title, floating = {
         Box {
             AddButton("Protokoll") { menu = true }
             DropdownMenu(menu, { menu = false }) {
-                DropdownMenuItem(text = { Text("Erstbegehung") }, leadingIcon = { Icon(Icons.AutoMirrored.Filled.FactCheck, null) }, onClick = { menu = false; nav.push(Route.Inspection(id, null)) })
                 DropdownMenuItem(text = { Text("CM-Messung") }, leadingIcon = { Icon(Icons.Filled.Thermostat, null) }, onClick = { menu = false; cm = true })
                 DropdownMenuItem(text = { Text("Abnahme") }, leadingIcon = { Icon(Icons.Filled.VerifiedUser, null) }, onClick = { menu = false; nav.push(Route.Acceptance(id, null)) })
             }
         }
     }) { padding ->
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
-            if (inspections.isEmpty() && acceptances.isEmpty() && bauakte?.initialInspectionWaived != true) {
-                item { EmptyState(Icons.AutoMirrored.Filled.FactCheck, "Noch keine Protokolle", "Erstbegehung, CM-Messung und Abnahme werden hier festgehalten.") }
-            }
-            // Erstbegehung: als nicht erforderlich vermerkt (mit „Rückgängig“) oder noch offen (Schaltfläche wie im Büro).
-            val b = bauakte
-            if (b != null) {
-                when (InitialInspection.state(b, inspections)) {
-                    InitialInspectionState.Waived -> {
-                        item { GroupLabel("Erstbegehung") }
-                        item { InitialInspectionWaiverCard(session, b) }
-                    }
-                    InitialInspectionState.Open -> if (canWaive) {
-                        item {
-                            TextButton(onClick = { waiving = true }, modifier = Modifier.padding(top = 4.dp).testTag("waiveInitialInspectionButton")) {
-                                Icon(Icons.Filled.DoNotDisturbOn, null)
-                                Spacer(Modifier.width(8.dp))
-                                Text(InitialInspection.WAIVE_BUTTON)
-                            }
-                        }
-                    }
-                    InitialInspectionState.Done -> Unit
-                }
-            }
-            if (inspections.isNotEmpty()) {
-                item { GroupLabel("Prüfungen") }
-                item {
-                    SectionCard {
-                        inspections.forEachIndexed { index, i ->
-                            if (index > 0) RowDivider()
-                            val subtitle = if (i.isCmMeasurement) {
-                                listOfNotNull(i.location, i.measured?.let { "${formatNumber(it)} CM-%" }, when (i.isReady) { true -> "belegreif"; false -> "nicht belegreif"; null -> null })
-                            } else {
-                                listOfNotNull(if (i.notRequired) "nicht erforderlich" else null, if (i.defects > 0) "${i.defects} Mangel" else "ohne Mängel")
-                            }
-                            RowItem(i.title, icon = if (i.isCmMeasurement) Icons.Filled.Thermostat else Icons.AutoMirrored.Filled.FactCheck,
-                                iconTint = if (i.isReady == false || i.defects > 0) tones.warning else tones.success,
-                                iconBackground = if (i.isReady == false || i.defects > 0) tones.warningSoft else tones.successSoft,
-                                subtitle = (listOfNotNull(i.performedAt?.let { Dates.dateTime(it) }) + subtitle).joinToString(" · "), showChevron = !i.isCmMeasurement,
-                                onClick = if (i.isCmMeasurement) null else { { nav.push(Route.Inspection(id, i.id)) } }, trailing = { SyncMark(i.syncState) })
-                        }
-                    }
-                }
+            if (measurements.isEmpty() && acceptances.isEmpty()) {
+                item { EmptyState(Icons.Filled.VerifiedUser, "Noch keine Protokolle", "CM-Messungen und die Abnahme werden hier festgehalten.") }
             }
             if (acceptances.isNotEmpty()) {
                 item { GroupLabel("Abnahmen") }
@@ -474,10 +540,26 @@ private fun ProtocolsArea(id: String) {
                     }
                 }
             }
+            if (measurements.isNotEmpty()) {
+                item { GroupLabel("CM-Messungen") }
+                item {
+                    SectionCard {
+                        measurements.forEachIndexed { index, i ->
+                            if (index > 0) RowDivider()
+                            val subtitle = listOfNotNull(i.location, i.measured?.let { "${formatNumber(it)} CM-%" },
+                                when (i.isReady) { true -> "belegreif"; false -> "nicht belegreif"; null -> null })
+                            RowItem(i.title, icon = Icons.Filled.Thermostat,
+                                iconTint = if (i.isReady == false) tones.warning else tones.success,
+                                iconBackground = if (i.isReady == false) tones.warningSoft else tones.successSoft,
+                                subtitle = (listOfNotNull(i.performedAt?.let { Dates.dateTime(it) }) + subtitle).joinToString(" · "),
+                                trailing = { SyncMark(i.syncState) })
+                        }
+                    }
+                }
+            }
         }
     }
     if (cm) CmSheet(id) { cm = false }
-    if (waiving) WaiveInitialInspectionDialog(session, id) { waiving = false }
 }
 
 @Composable

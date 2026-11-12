@@ -502,3 +502,43 @@ object InitialInspection {
     fun showsMissingHint(bauakte: Bauakte, inspections: List<Inspection>, enabled: Boolean = true): Boolean =
         enabled && bauakte.status in setOf(BauakteStatus.Planned, BauakteStatus.InProgress) && state(bauakte, inspections) == InitialInspectionState.Open
 }
+
+/** Status der Erstbegehung im Bereich „Erstbegehung“ (gleiche Texte wie im Büro). */
+enum class InitialInspectionStatus(val title: String) {
+    Open("Offen"), Planned("Geplant"), Done("Durchgeführt"), Waived("Nicht erforderlich")
+}
+
+/**
+ * Bereich „Erstbegehung“ der Bauakte wie der Reiter „Erstbegehung“ der Dokumentation im Büro: Status mit „Geplant“
+ * (nächster Einsatz mit Terminart Erstbegehung), Termin, alle Protokolle (neueste zuerst), Fotos der neuesten Begehung.
+ */
+class InitialInspectionOverview(bauakte: Bauakte, inspections: List<Inspection>, jobs: List<PlannedJob>, today: String) {
+    val protocols: List<Inspection> = inspections.filter { it.isInitial }.sortedByDescending { it.performedAt ?: Instant.EPOCH }
+    val photoIds: List<String> = protocols.firstOrNull()?.photoFileIds.orEmpty()
+    val appointment: PlannedJob? = jobs.filter { it.bauakteId.equals(bauakte.id, ignoreCase = true) && isInitialInspection(it) && it.day >= today }
+        .minByOrNull { it.day + (it.startTime ?: "") }
+    val status: InitialInspectionStatus = when (InitialInspection.state(bauakte, inspections)) {
+        InitialInspectionState.Done -> InitialInspectionStatus.Done
+        InitialInspectionState.Waived -> InitialInspectionStatus.Waived
+        InitialInspectionState.Open -> if (appointment == null) InitialInspectionStatus.Open else InitialInspectionStatus.Planned
+    }
+
+    companion object {
+        /** Terminart „initialInspection“; ältere Server ohne Terminart: Tätigkeit „Erstbegehung“. */
+        fun isInitialInspection(job: PlannedJob): Boolean =
+            job.kind == "initialInspection" || (job.kind == null && job.activity.contains("Erstbegehung", ignoreCase = true))
+
+        /** „Do., 19.11.2026, 08:00 · Kolonne Nord, Max Huber“ */
+        fun appointmentText(job: PlannedJob): String {
+            val day = runCatching { java.time.LocalDate.parse(job.day) }.getOrNull()
+            val date = day?.let { "${Dates.weekdayShort(it)}, ${Dates.date(it)}" } ?: job.day
+            val who = (listOfNotNull(job.crewName) + job.people.map { it.name }).distinct()
+            val text = date + (Dates.clock(job.startTime)?.let { ", $it" } ?: "")
+            return if (who.isEmpty()) text else "$text · ${who.joinToString(", ")}"
+        }
+
+        /** Vom Server abgelegte Erstbegehungsprotokolle (PDF im Ordner „Erstbegehung“, Titel „Erstbegehung“). */
+        fun isProtocolDocument(file: FileItem): Boolean =
+            file.kind == "document" && (file.originalName.startsWith("Erstbegehungsprotokoll") || file.caption?.startsWith("Erstbegehung") == true)
+    }
+}
