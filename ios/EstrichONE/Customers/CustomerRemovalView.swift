@@ -121,14 +121,17 @@ struct CustomerRemovalView: View {
         }
     }
 
-    private func run(deleted: Bool, _ action: (AuthorizedClient) async throws(APIError) -> Void) async {
+    private func run(deleted: Bool, _ action: (AuthorizedClient) async throws -> Void) async {
         guard let client = model.active?.client else { return }
         busy = true
         defer { busy = false }
         do {
             try await action(client)
+        } catch let failure as APIError {
+            self.error = failure.message
+            return
         } catch {
-            self.error = error.message
+            self.error = APIError.offline.message
             return
         }
         // Der Abgleich holt den Tombstone (gelöscht) bzw. den archivierten Stand.

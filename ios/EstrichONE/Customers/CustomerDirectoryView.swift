@@ -71,9 +71,9 @@ struct CustomerDirectoryView: View {
         contacts.filter { contact in
             if contact.isArchived, !showArchived { return false }
             switch filter {
-            case .all: true
-            case .companies: contact.isCompany
-            case .people: !contact.isCompany
+            case .all: return true
+            case .companies: return contact.isCompany
+            case .people: return !contact.isCompany
             }
         }
     }
