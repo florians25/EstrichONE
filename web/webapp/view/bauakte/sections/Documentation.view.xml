@@ -57,7 +57,7 @@
 						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
 				</OverflowToolbar>
 				<!-- Eckdaten in einer Zeile: Status, Termin, durchgeführt, Ergebnis -->
-				<grid:CSSGrid gridTemplateColumns="repeat(auto-fill, minmax(min(100%, 13rem), 1fr))" gridGap="0.5rem 1.5rem" class="eoFacts">
+				<grid:CSSGrid gridTemplateColumns="repeat(auto-fit, minmax(min(100%, 11rem), 1fr))" gridGap="0.5rem 1.5rem" class="eoFacts">
 					<VBox renderType="Bare" class="eoFact">
 						<Label text="Termin"/>
 						<Text id="initialAppointment" text="{= ${dc>/ib/appointmentText} || 'nicht geplant' }" wrapping="true"/>
