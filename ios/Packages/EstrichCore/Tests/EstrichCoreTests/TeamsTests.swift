@@ -54,4 +54,24 @@ struct TeamsTests {
         let unlinked = try JSONCoding.decoder.decode(BauakteTeamsResponse.self, from: Data(#"{"chatMode":"teams","link":null,"canManage":false}"#.utf8))
         #expect(unlinked.link == nil && unlinked.chatMode == .teams)
     }
+
+    @Test("Chat-Eingabe: keine Anhänge mehr, Hinweis auf Teams mit passendem Ziel")
+    func composerPolicy() {
+        #expect(ChatComposerPolicy.allowsAttachments == false)
+        #expect(ChatComposerPolicy.fileExchangeHint == "Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden.")
+        #expect(!ChatComposerPolicy.shareOptions.contains { ["Kamera", "Fotos", "Dokument"].contains($0) })
+
+        let link = TeamsLink(kind: "channel", displayName: "BV Maier", webUrl: "https://teams.microsoft.com/l/channel/x", appUrl: "msteams:/l/channel/x")
+        let both = TeamsStatus(chatMode: .both, siteTeamUrl: "https://teams.microsoft.com/l/team/y")
+        // Verknüpfte Unterhaltung der Bauakte geht vor.
+        #expect(ChatComposerPolicy.teamsTargets(link: link, status: both) == link.targets)
+        // Sonst das Team „Baustellen“ bzw. Teams allgemein.
+        #expect(ChatComposerPolicy.teamsTargets(link: nil, status: both)?.web == URL(string: "https://teams.microsoft.com/l/team/y"))
+        // Ohne Teams-Anbindung: nur der Text.
+        #expect(ChatComposerPolicy.teamsTargets(link: nil, status: TeamsStatus(chatMode: .estrichOne)) == nil)
+        #expect(ChatComposerPolicy.teamsTargets(link: nil, status: nil) == nil)
+        // Fremde Adressen öffnet der Hinweis nicht.
+        let foreign = TeamsLink(kind: "channel", displayName: nil, webUrl: "https://evil.example/x", appUrl: "https://evil.example/y")
+        #expect(ChatComposerPolicy.teamsTargets(link: foreign, status: nil) == nil)
+    }
 }

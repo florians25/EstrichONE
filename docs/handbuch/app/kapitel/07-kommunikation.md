@@ -38,18 +38,22 @@ Dokumente**, **In diesem Chat suchen**, **Stummschalten** und **Gruppe verlassen
 ### Nachrichten schreiben
 
 - Text eingeben und auf den Pfeil tippen. Mit `@Name` erwähnen Sie jemanden; die Person wird gezielt benachrichtigt.
-- **„+“** hängt etwas an: **Kamera**, **Fotos**, **Dokument** (bis 25 MB) oder **Standort** – **Mein Standort** oder die
-  **Baustellenadresse** der verknüpften Bauakte.
+- **Dateien und Fotos verschickt die App im Chat nicht mehr.** Unter dem Eingabefeld steht der Hinweis **„Für Datei- und
+  Fotoaustausch bitte Microsoft Teams verwenden.“** Ist die Bauakte mit einer Teams-Unterhaltung verknüpft (oder Ihr
+  Betrieb nutzt Teams), öffnet **In Teams öffnen** daneben direkt Teams. Das gilt in jedem Chat-Modus.
+- Das **Standort-Symbol** links neben dem Eingabefeld teilt **Mein Standort** oder die **Baustellenadresse** der
+  verknüpften Bauakte (nur iPhone/iPad).
 - **Langes Drücken** auf eine Nachricht: **Antworten**, Reaktion (z. B. 👍), **Kopieren**, **Weiterleiten**,
   **Anheften**, **Bearbeiten** und **Für alle löschen** (eigene Nachrichten, für kurze Zeit nach dem Senden), **Gelesen
-  von …** sowie bei Fotos und Dokumenten **In Bauakte übernehmen**.
+  von …** sowie bei Fotos und Dokumenten aus älteren Nachrichten **In Bauakte übernehmen**.
 - **Entwürfe** bleiben je Unterhaltung erhalten, auch wenn Sie die App verlassen.
 
-![Anhänge](bilder/iphone-chat-anhang.jpg "Anhänge vor dem Senden: Dokumente und Fotos")
+![Eingabe](bilder/iphone-chat-anhang.jpg "Eingabe mit Standort und Hinweis auf Microsoft Teams")
 ![Diktat](bilder/iphone-chat-diktat.jpg "Diktat: gesprochener Text landet bearbeitbar im Eingabefeld")
 
-> **Tipp:** **In Bauakte übernehmen** legt ein Foto oder Dokument aus dem Chat als eigenes Foto bzw. Dokument in der
-> Bauakte ab – auch ohne Verbindung. So geht nichts in einem Chatverlauf verloren.
+> **Tipp:** Fotos und Dokumente, die früher im Chat verschickt wurden, bleiben sichtbar und lassen sich öffnen. **In
+> Bauakte übernehmen** legt sie als eigenes Foto bzw. Dokument in der Bauakte ab – auch ohne Verbindung. Fotos für die
+> Baustelle gehören ohnehin in die Bauakte (Fotos, Mängel, Erstbegehung) – daran ändert sich nichts.
 
 ### Diktieren statt tippen
 
@@ -79,8 +83,9 @@ sind in der Liste gekennzeichnet.
 
 ### Chat ohne Verbindung
 
-Ohne Netz schreiben Sie wie gewohnt; Nachrichten samt Fotos und Dokumenten warten verschlüsselt auf dem Gerät und werden
-automatisch gesendet, sobald der Server erreichbar ist („Ohne Verbindung – die Nachricht wartet und wird automatisch
+Ohne Netz schreiben Sie wie gewohnt; Nachrichten warten verschlüsselt auf dem Gerät und werden automatisch gesendet,
+sobald der Server erreichbar ist. Hatten Sie vor dem Update ohne Verbindung noch eine Nachricht mit Foto oder Dokument
+geschrieben, wird sie unverändert mitgesendet („Ohne Verbindung – die Nachricht wartet und wird automatisch
 gesendet“). Im Modus **Nur Ansicht** (Kapitel 8) ist das Schreiben gesperrt.
 
 ## Benachrichtigungen

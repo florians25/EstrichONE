@@ -51,4 +51,18 @@ class TeamsTests {
         assertTrue(TeamsTargets.of(null, "http://teams.microsoft.com/l/chat/1").candidates.isEmpty())
         assertNull(EstrichOneApi.json.decodeFromString(BauakteTeams.serializer(), """{"chatMode":"teams","link":null}""").link)
     }
+
+    @Test
+    @DisplayName("Chat-Eingabe: keine Anhänge mehr, Hinweis auf Teams mit passendem Ziel")
+    fun composerPolicy() {
+        assertFalse(ChatComposerPolicy.ALLOWS_ATTACHMENTS)
+        assertEquals("Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden.", ChatComposerPolicy.FILE_EXCHANGE_HINT)
+        val link = TeamsLink("channel", "BV Maier", "https://teams.microsoft.com/l/channel/x", "msteams:/l/channel/x")
+        val both = TeamsStatus(chatMode = "both", available = true, siteTeamUrl = "https://teams.microsoft.com/l/team/y")
+        assertEquals(link.targets, ChatComposerPolicy.teamsTargets(link, both))
+        assertEquals("https://teams.microsoft.com/l/team/y", ChatComposerPolicy.teamsTargets(null, both)?.web)
+        assertNull(ChatComposerPolicy.teamsTargets(null, TeamsStatus()))
+        assertNull(ChatComposerPolicy.teamsTargets(null, null))
+        assertNull(ChatComposerPolicy.teamsTargets(TeamsLink("channel", null, "https://evil.example/x", "https://evil.example/y"), null))
+    }
 }
