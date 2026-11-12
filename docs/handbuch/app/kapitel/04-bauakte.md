@@ -61,7 +61,8 @@ Die Bauakte zeigt von oben nach unten:
   Aufgabe, Erstbegehung, CM-Messung, Abnahme).
 - **Offene Punkte** (Mängel und Aufgaben), die neuesten **Fotos**, **Estrich und Bauvorhaben**.
 - **Alles zur Baustelle** – die Bereiche: **Fotos & Dokumente**, **Aufgaben & Mängel**, **Bautagebuch**, **Räume &
-  Flächen**, **Protokolle**, **Basisdaten**, **Kontakte** und **Notizen & Verlauf**, jeweils mit Kurzinfo.
+  Flächen**, **Erstbegehung**, **Abnahme & Messungen**, **Basisdaten**, **Kontakte** und **Notizen & Verlauf**, jeweils
+  mit Kurzinfo.
 - **Letzte Aktivität** – wer zuletzt was erfasst hat.
 
 Oben rechts (**Weitere Aktionen**) finden Sie **Basisdaten bearbeiten**, **Bauakte als PDF**, **Verlauf**, **Status
@@ -151,7 +152,13 @@ in **Notizen & Verlauf** zeigt, wer was wann geändert hat; er ist nur mit Verbi
 Bei der **Erstbegehung** prüfen Sie vor Ort, ob die Baustelle bereit ist: Untergrund, Randdämmung, Heizung, Zufahrt,
 Wasser und Strom. Die Prüfpunkte legt Ihr Betrieb im Web fest.
 
-1. Öffnen Sie **Erstbegehung** (in der Bauakte unter **Mehr**, in **Protokolle** oder in **Erfassen**).
+Der eigene Bereich **Erstbegehung** der Bauakte zeigt den **Status** (**Offen**, **Geplant**, **Durchgeführt** oder
+**Nicht erforderlich**), den **Termin** aus der Planung des Büros (Einsatz mit der Terminart Erstbegehung, mit Kolonne
+und Uhrzeit), alle **Protokolle** sowie die **Fotos und Dokumente** der Erstbegehung (auch das vom Server abgelegte
+Protokoll-PDF). Von dort führen Sie die Erstbegehung durch oder vermerken **Erstbegehung nicht erforderlich**. Ist das
+Modul „Erstbegehung und Protokolle“ ausgeschaltet, entfällt der Bereich.
+
+1. Öffnen Sie **Erstbegehung** (in der Bauakte unter **Mehr**, im Bereich **Erstbegehung** oder in **Erfassen**).
 2. Setzen Sie bei jedem Prüfpunkt **In Ordnung**, **Mangel** oder **Entfällt**. Mit **Foto zu diesem Punkt**
    dokumentieren Sie den Befund direkt am Punkt; bei einem Mangel beschreiben Sie ihn kurz.
 3. Tragen Sie **Messwerte und Angaben** (z. B. gemessene Fläche, Estrichdicke) und freie **Notizen** ein.
@@ -166,7 +173,7 @@ Protokoll öffnen Sie mit **Als PDF ansehen** – das PDF erstellt der Server, d
 
 Mit der **CM-Messung** halten Sie die Restfeuchte des Estrichs fest und sehen sofort, ob er **belegreif** ist:
 
-1. Öffnen Sie **CM-Messung** (Bauakte → **Mehr**, **Protokolle** oder **Erfassen**).
+1. Öffnen Sie **CM-Messung** (Bauakte → **Mehr**, **Abnahme & Messungen** oder **Erfassen**).
 2. Wählen Sie die **Estrichart** – **Zementestrich (CT)** oder **Calciumsulfatestrich (CA)** – und ob er **beheizt**
    ist (Fußbodenheizung).
 3. Tragen Sie den **Messort** (z. B. „Bad OG“) und den **Messwert** in CM-% ein, optional eine Bemerkung und Fotos
@@ -184,13 +191,13 @@ Die App vergleicht den Wert mit dem Grenzwert und zeigt **Belegreif** oder **Noc
 
 ## Abnahme mit Unterschrift
 
-![Protokolle](bilder/iphone-bereich-protokolle.jpg "Protokolle: Erstbegehung, Abnahme und CM-Messungen")
+![Abnahme und Messungen](bilder/iphone-bereich-protokolle.jpg "Abnahme & Messungen: Abnahme und CM-Messungen")
 ![Abnahme](bilder/iphone-abnahme.jpg "Abnahme: Ergebnis, Teilnehmer und Ort, abgenommene Leistung")
 
 Das **Abnahmeprotokoll** erfassen Sie vollständig in der App – mit Mängeln, Fotos und Unterschriften, auch ohne
 Verbindung:
 
-1. Öffnen Sie **Abnahme** (Bauakte → **Mehr**, **Protokolle** → **Abnahme erfassen** oder **Erfassen**).
+1. Öffnen Sie **Abnahme** (Bauakte → **Mehr**, **Abnahme & Messungen** → **Abnahme erfassen** oder **Erfassen**).
 2. Wählen Sie das **Ergebnis**: **Abgenommen**, **Mit Vorbehalt** oder **Verweigert**.
 3. Tragen Sie **Teilnehmer und Ort** (Auftraggeber, Auftragnehmer, Adresse der Baustelle) und die **abgenommene
    Leistung** ein (z. B. „Zementestrich CT-C25-F4, 65 mm, EG und OG“).

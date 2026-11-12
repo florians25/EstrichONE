@@ -246,6 +246,9 @@ final class BauakteUITests: XCTestCase {
 
         // Anzeige: Protokoll mit Ergebnis und Notizen.
         XCTAssertTrue(app.element("bauakteTitle").waitForExistence(timeout: 15), app.debugDescription)
+        // Eigener Bereich „Erstbegehung“: Status „Durchgeführt“, darunter die Protokolle.
+        app.tapElement(app.reveal("area-initialInspection"), "area-initialInspection")
+        XCTAssertTrue(app.element("initialInspectionStatus").waitForExistence(timeout: 10), app.debugDescription)
         app.tapElement(app.reveal("inspectionProtocolLink"), "inspectionProtocolLink")
         let status = app.element("inspectionStatus")
         XCTAssertTrue(status.waitForExistence(timeout: 10), app.debugDescription)

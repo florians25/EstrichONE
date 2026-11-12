@@ -34,6 +34,12 @@ struct BauakteContent {
     var latestInitialInspection: Inspection? { inspections.first { $0.kind == .initialInspection } }
     var measurements: [Inspection] { inspections.filter { $0.kind == .cmMeasurement } }
     var todayAssignments: [Assignment] { assignments.filter { $0.day == CalendarDay.string(.now) } }
+    /// Bereich „Erstbegehung“: Status (offen, geplant, durchgeführt, nicht erforderlich), Termin, Protokolle, Fotos.
+    var initialInspection: InitialInspectionOverview {
+        InitialInspectionOverview(bauakte: bauakte, inspections: inspections, assignments: assignments, today: CalendarDay.string(.now))
+    }
+    /// Vom Server abgelegte Erstbegehungsprotokolle (PDF).
+    var initialInspectionDocuments: [FileItem] { documents.filter(InitialInspectionOverview.isProtocolDocument) }
 
     @MainActor
     static func load(_ id: UUID, model: AppModel) async -> BauakteContent? {
@@ -134,7 +140,7 @@ struct ActivityEntry: Identifiable {
 
 /// Bereiche einer Bauakte – alle Daten, verständlich gegliedert.
 enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
-    case media, work, diary, rooms, protocols, project, contacts, notes
+    case media, work, diary, rooms, initialInspection, protocols, project, contacts, notes
 
     var id: String { rawValue }
 
@@ -143,6 +149,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         switch self {
         case .work: modules.anyOn(AppModules.tasks, AppModules.defects)
         case .diary: modules.isOn(AppModules.diary)
+        case .initialInspection: modules.isOn(AppModules.inspections)
         case .protocols: modules.anyOn(AppModules.inspections, AppModules.acceptance)
         default: true
         }
@@ -154,7 +161,8 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case .work: "Aufgaben & Mängel"
         case .diary: "Bautagebuch"
         case .rooms: "Räume & Flächen"
-        case .protocols: "Protokolle"
+        case .initialInspection: "Erstbegehung"
+        case .protocols: "Abnahme & Messungen"
         case .project: "Basisdaten"
         case .contacts: "Kontakte"
         case .notes: "Notizen & Verlauf"
@@ -167,6 +175,7 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case .work: "checklist"
         case .diary: "book"
         case .rooms: "square.split.2x2"
+        case .initialInspection: "checklist"
         case .protocols: "doc.text"
         case .project: "list.bullet.rectangle"
         case .contacts: "person.2"
@@ -181,7 +190,8 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
         case "bereich-aufgaben": .work
         case "bereich-tagebuch": .diary
         case "bereich-raeume", "raum": .rooms
-        case "bereich-protokolle", "protokoll", "erstbegehung-entfaellt": .protocols
+        case "bereich-erstbegehung", "protokoll", "erstbegehung-entfaellt": .initialInspection
+        case "bereich-protokolle": .protocols
         case "bereich-basisdaten": .project
         case "bereich-kontakte", "kontakt-neu": .contacts
         case "bereich-notizen": .notes
@@ -215,14 +225,24 @@ enum BauakteArea: String, CaseIterable, Identifiable, Hashable {
             let done = totals.laid + totals.ready
             let progress = done == 0 ? nil : done == totals.count ? "alle eingebracht" : "\(done) eingebracht"
             return (["\(totals.count) \(totals.count == 1 ? "Raum" : "Räume")", "\(area) m²", progress].compactMap { $0 }.joined(separator: " · "), false)
-        case .protocols:
-            let inspection = switch InitialInspectionState(bauakte: content.bauakte, inspections: content.inspections) {
-            case .done: "Erstbegehung erfasst"
-            case .waived: "keine Erstbegehung erforderlich"
-            case .open: "Erstbegehung offen"
+        case .initialInspection:
+            let overview = content.initialInspection
+            switch overview.status {
+            case .done:
+                let date = overview.protocols.first?.performedAt?.formatted(.dateTime.day().month(.abbreviated).year())
+                return (["Durchgeführt", date].compactMap { $0 }.joined(separator: " · "), false)
+            case .planned:
+                return ("Geplant · \(overview.appointment.map(InitialInspectionOverview.appointmentText) ?? "")", false)
+            case .waived:
+                return ("Nicht erforderlich", false)
+            case .open:
+                return ("Offen · noch kein Termin", content.warnMissingInspection && [.planned, .inProgress].contains(content.bauakte.status))
             }
+        case .protocols:
             let acceptance = content.acceptances.isEmpty ? "keine Abnahme" : "\(content.acceptances.count) Abnahme"
-            return ("\(inspection) · \(acceptance)", false)
+            let measurements = content.measurements.isEmpty ? nil
+                : "\(content.measurements.count) \(content.measurements.count == 1 ? "CM-Messung" : "CM-Messungen")"
+            return ([acceptance, measurements].compactMap { $0 }.joined(separator: " · "), false)
         case .project:
             return projectCount == 0 ? ("Angaben fehlen", true) : ("\(projectCount) Angaben", false)
         case .contacts:

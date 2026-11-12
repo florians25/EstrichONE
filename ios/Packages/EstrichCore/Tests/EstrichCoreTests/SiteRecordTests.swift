@@ -87,6 +87,44 @@ struct SiteRecordTests {
         #expect(server.entity(id)?["notes"]?.string?.contains("\n") == true)
     }
 
+    @Test("Bereich Erstbegehung: offen, geplant (Einsatz „Erstbegehung“), durchgeführt mit Protokollen und Fotos")
+    func initialInspectionOverview() async throws {
+        let (service, _) = try makeService(server: SimulatedSyncServer())
+        let id = try await service.create(NewBauakte(title: "EFH Termin"))
+        let bauakte = try #require(try await service.bauakte(id))
+        func assignment(_ kind: String?, day: String, activity: String = "Erstbegehung", of akte: UUID? = nil) throws -> Assignment {
+            var json: [String: Any] = [
+                "id": UUID.v7().uuidString, "day": day, "startTime": "08:00:00", "activity": activity, "bauakteId": (akte ?? id).uuidString,
+                "bauakteTitle": "EFH Termin", "crewName": "Kolonne Nord", "people": [["id": UUID.v7().uuidString, "name": "Max Huber"]],
+                "resources": [], "warnings": [],
+            ]
+            if let kind { json["kind"] = kind }
+            return try JSONDecoder().decode(Assignment.self, from: JSONSerialization.data(withJSONObject: json))
+        }
+        let screed = try assignment("screed", day: "2026-11-20", activity: "Estrich einbringen")
+        let past = try assignment("initialInspection", day: "2026-11-01")
+        let other = try assignment("initialInspection", day: "2026-11-18", of: UUID.v7())
+        #expect(InitialInspectionOverview(bauakte: bauakte, inspections: [], assignments: [screed, past, other], today: "2026-11-12").status == .open)
+
+        let planned = try assignment("initialInspection", day: "2026-11-19")
+        let overview = InitialInspectionOverview(bauakte: bauakte, inspections: [], assignments: [screed, planned], today: "2026-11-12")
+        #expect(overview.status == .planned && overview.status.title == "Geplant")
+        #expect(overview.appointment?.id == planned.id)
+        let text = InitialInspectionOverview.appointmentText(planned)
+        #expect(text.contains("19.11.2026, 08:00 · Kolonne Nord, Max Huber"), "\(text)")
+        // Ältere Server ohne Terminart: Tätigkeit „Erstbegehung“ zählt.
+        #expect(try assignment(nil, day: "2026-11-19").isInitialInspection)
+        #expect(try !assignment(nil, day: "2026-11-19", activity: "Estrich").isInitialInspection)
+
+        let photo = UUID.v7()
+        _ = try await service.addInitialInspection(to: id, notRequired: false, checks: [.substrate: .ok], photoFileIds: [photo], remarks: nil)
+        let done = InitialInspectionOverview(bauakte: bauakte, inspections: try await service.inspections(of: id), assignments: [planned],
+                                             today: "2026-11-12")
+        #expect(done.status == .done && done.status.title == "Durchgeführt")
+        #expect(done.protocols.count == 1 && done.photoIds == [photo])
+        #expect(InitialInspectionOverview.Status.waived.title == "Nicht erforderlich")
+    }
+
     @Test("Abnahme: Ergebnis Pflicht, Vorbehalt nur mit Mangel oder Notiz, Mängel als Aufgaben mit Frist vor dem Protokoll gesendet")
     func acceptance() async throws {
         let server = SimulatedSyncServer()

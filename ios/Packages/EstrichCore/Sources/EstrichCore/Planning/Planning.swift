@@ -28,9 +28,16 @@ public struct Assignment: Codable, Equatable, Identifiable, Sendable {
     public let resources: [Resource]
     public let notes: String?
     public let warnings: [String]
+    /// Terminart (`screed`, `initialInspection`, …); ältere Server liefern sie nicht.
+    public var kind: String? = nil
 
     /// „07:00“
     public var startText: String? { startTime.map { String($0.prefix(5)) } }
+
+    /// Termin der Erstbegehung (Terminart, bei älteren Servern ersatzweise die Tätigkeit).
+    public var isInitialInspection: Bool {
+        kind == "initialInspection" || (kind == nil && activity.localizedCaseInsensitiveContains("Erstbegehung"))
+    }
 }
 
 public struct PlanningRange: Codable, Equatable, Sendable {

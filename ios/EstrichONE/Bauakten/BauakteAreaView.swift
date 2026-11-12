@@ -48,6 +48,7 @@ struct BauakteAreaView: View {
             case .work: work
             case .diary: diary
             case .rooms: rooms
+            case .initialInspection: initialInspection
             case .protocols: protocols
             case .project: project
             case .contacts: contacts
@@ -124,7 +125,7 @@ struct BauakteAreaView: View {
                 try? await Task.sleep(for: .milliseconds(400))
                 editingParty = PartyEditing()
             }
-            if shotScene == "protokoll", area == .protocols, openedInspection == nil, let inspection = content.latestInitialInspection {
+            if shotScene == "protokoll", area == .initialInspection, openedInspection == nil, let inspection = content.latestInitialInspection {
                 try? await Task.sleep(for: .milliseconds(400))
                 openedInspection = inspection.id
             }
@@ -156,10 +157,11 @@ struct BauakteAreaView: View {
         case .rooms:
             Button { editingRoom = RoomEditing() } label: { Label("Raum hinzufügen", systemImage: "plus") }
                 .accessibilityIdentifier("addRoomButton")
+        case .initialInspection:
+            Button { action = .inspection } label: { Label(BauakteAction.inspection.title, systemImage: "plus") }
+                .accessibilityIdentifier("addInspectionButton")
         case .protocols:
             Menu {
-                Button(BauakteAction.inspection.title, systemImage: "checklist") { action = .inspection }
-                    .accessibilityIdentifier("addInspectionButton")
                 Button(BauakteAction.acceptance.title, systemImage: "signature") { action = .acceptance }
                     .accessibilityIdentifier("addAcceptanceButton")
                 Button(BauakteAction.measurement.title, systemImage: "drop") { action = .measurement }
@@ -383,18 +385,34 @@ struct BauakteAreaView: View {
         return Array(result.prefix(5))
     }
 
-    // MARK: Protokolle
+    // MARK: Erstbegehung
 
+    /// Wie der Reiter „Erstbegehung“ der Dokumentation im Büro: Status und Termin, Durchführen bzw. Vermerk,
+    /// alle Protokolle (mit PDF in der Protokollansicht), Fotos und abgelegte Protokoll-PDFs.
     @ViewBuilder
-    private var protocols: some View {
+    private var initialInspection: some View {
+        let overview = content.initialInspection
+        let photos = content.photos.filter { overview.photoIds.contains($0.id) }
+        let documents = content.initialInspectionDocuments
         Section {
-            switch InitialInspectionState(bauakte: bauakte, inspections: content.inspections) {
+            LabeledContent("Status") {
+                Chip(text: overview.status.title, tone: overview.status.chipTone)
+                    .accessibilityIdentifier("initialInspectionStatus")
+            }
+            LabeledContent("Termin", value: overview.appointment.map(InitialInspectionOverview.appointmentText) ?? "nicht geplant")
+                .accessibilityIdentifier("initialInspectionAppointment")
+            if let latest = overview.protocols.first {
+                LabeledContent("Durchgeführt", value: [latest.performedAt?.formatted(date: .numeric, time: .shortened),
+                                                      latest.performedByUserId.flatMap { content.names[$0] }]
+                    .compactMap { $0 }.joined(separator: " · "))
+            }
+            switch overview.status {
             case .waived:
                 InitialInspectionWaiverRow(bauakte: bauakte, undo: content.canEditBauakte ? resumeAction : nil)
-            case .open:
-                EmptyStateView(symbol: "checklist", title: "Erstbegehung noch offen",
-                               message: "Untergrund, Randdämmung, Heizung und Zufahrt vor Ort prüfen.",
-                               actionTitle: "Erstbegehung durchführen", actionSymbol: "checklist") { action = .inspection }
+            case .open, .planned:
+                Button { action = .inspection } label: { Label("Erstbegehung durchführen", systemImage: "checklist") }
+                    .font(Typo.subheadStrong)
+                    .accessibilityIdentifier("startInitialInspectionButton")
                 if content.canEditBauakte {
                     Button { waivingInspection = true } label: {
                         Label(InitialInspectionState.waiveButtonTitle, systemImage: "xmark.circle")
@@ -402,20 +420,58 @@ struct BauakteAreaView: View {
                     .accessibilityIdentifier("waiveInitialInspectionButton")
                 }
             case .done:
-                EmptyView()
-            }
-            ForEach(content.inspections.filter { $0.kind == .initialInspection }) { inspection in
-                NavigationLink {
-                    InspectionProtocolView(inspection: inspection, bauakte: bauakte,
-                                           performerName: inspection.performedByUserId.flatMap { content.names[$0] })
-                } label: {
-                    InspectionRow(inspection: inspection, performerName: inspection.performedByUserId.flatMap { content.names[$0] })
+                if let latest = overview.protocols.first {
+                    Button { openedInspection = latest.id } label: { Label("Protokoll ansehen", systemImage: "doc.richtext") }
+                        .accessibilityIdentifier("openInitialProtocolButton")
                 }
-                .accessibilityIdentifier("inspectionProtocolLink")
             }
         } header: {
             Text("Erstbegehung")
+        } footer: {
+            if overview.status == .open {
+                Text("Termine plant das Büro (Terminart „Erstbegehung“); sie erscheinen hier mit Kolonne und Uhrzeit.")
+            }
         }
+        if !overview.protocols.isEmpty {
+            Section {
+                ForEach(overview.protocols) { inspection in
+                    NavigationLink {
+                        InspectionProtocolView(inspection: inspection, bauakte: bauakte,
+                                               performerName: inspection.performedByUserId.flatMap { content.names[$0] })
+                    } label: {
+                        InspectionRow(inspection: inspection, performerName: inspection.performedByUserId.flatMap { content.names[$0] })
+                    }
+                    .accessibilityIdentifier("inspectionProtocolLink")
+                }
+            } header: {
+                Text("Protokolle (\(overview.protocols.count))")
+            }
+        }
+        if !photos.isEmpty || !documents.isEmpty {
+            Section {
+                if !photos.isEmpty {
+                    PhotoGrid(photos: photos) { file in
+                        if file.isVideo { playing = file } else { viewing = file }
+                    }
+                    .listRowInsets(EdgeInsets(top: Space.m, leading: Space.m, bottom: Space.m, trailing: Space.m))
+                }
+                ForEach(documents) { document in
+                    Button { previewing = document } label: {
+                        DocumentRow(file: document, isLoading: previewing?.id == document.id)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityIdentifier("initialDocument-\(document.displayName)")
+                }
+            } header: {
+                Text("Fotos und Dokumente (\(photos.count + documents.count))")
+            }
+        }
+    }
+
+    // MARK: Abnahme und Messungen
+
+    @ViewBuilder
+    private var protocols: some View {
         Section {
             if content.acceptances.isEmpty {
                 EmptyStateView(symbol: "signature", title: "Noch keine Abnahme",
@@ -707,6 +763,18 @@ private struct AreaTitle: ViewModifier {
             content
         } else {
             content.navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        }
+    }
+}
+
+private extension InitialInspectionOverview.Status {
+    /// Farbe des Status wie im Büro: offen (Warnung), geplant (Akzent), durchgeführt (Erfolg), nicht erforderlich (neutral).
+    var chipTone: Chip.Tone {
+        switch self {
+        case .open: .warning
+        case .planned: .accent
+        case .done: .success
+        case .waived: .neutral
         }
     }
 }
