@@ -28,6 +28,8 @@ import type {
 import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
 import { bauakteGroup, chatStatus, createBauakteGroup, type ChatBauakteGroup } from "../../util/chat";
+import { akteTeamsDetails, linkAkteTeams, loadAkteTeams, openTeamsLink, syncAkteTeams, unlinkAkteTeams } from "../../util/teamsAkte";
+import type { BauakteTeams } from "../../util/teams";
 import { openActivityDialog } from "../../util/activityDialog";
 import { runAcceptance } from "../../util/acceptanceFlow";
 import { openInitialInspectionWizard } from "../../util/inspectionWizard";
@@ -193,6 +195,7 @@ export default class ObjectController extends BaseController {
 		this.updateContactFacts();
 		document.title = `${b.number ?? ""} ${b.title} – EstrichONE`.trim();
 		void this.loadChatGroup(b.id);
+		if (this.m().getProperty("/teamsFor") !== b.id) void loadAkteTeams(this.m(), b.id, session.data.teams?.available === true);
 	}
 
 	/** Baustellen-Chat: nur bei eingeschaltetem Chat und Recht; Link in die Gruppe bzw. Anlegen. */
@@ -202,9 +205,41 @@ export default class ObjectController extends BaseController {
 		m.setProperty("/chatGroupFor", bauakteId);
 		m.setProperty("/chatGroup", null);
 		const status = await chatStatus().catch(() => null);
-		if (!status?.canUse) return;
+		// Modus „Microsoft Teams“: statt Baustellen-Chat „In Teams öffnen“ (Archiv bleibt unter Chat-Archiv lesbar).
+		if (!status?.canUse || session.data.teams?.chatReadOnly) return;
 		const group = await bauakteGroup(bauakteId).catch(() => null);
 		if (m.getProperty("/chatGroupFor") === bauakteId) m.setProperty("/chatGroup", group);
+	}
+
+	/** Microsoft Teams: Knopf „In Teams öffnen“ bzw. „Mit Teams verknüpfen“. */
+	onTeamsOpen(): void {
+		const teams = this.m().getProperty("/teams") as BauakteTeams | null;
+		if (teams?.link) openTeamsLink(teams.link);
+		else if (teams?.canManage) void this.onTeamsMenuKey("link");
+	}
+
+	onTeamsMenu(event: Event): void {
+		const item = event.getParameter("item" as never) as unknown as MenuItem;
+		void this.onTeamsMenuKey(item.getKey());
+	}
+
+	private async onTeamsMenuKey(key: string): Promise<void> {
+		const m = this.m();
+		const id = this.cur()?.id;
+		if (!id) return;
+		try {
+			if (key === "open") openTeamsLink((m.getProperty("/teams") as BauakteTeams | null)?.link);
+			if (key === "link") await linkAkteTeams(m, id);
+			if (key === "sync") await syncAkteTeams(m, id);
+			if (key === "details") MessageBox.information(akteTeamsDetails(m.getProperty("/teams") as BauakteTeams | null), { title: "Microsoft Teams" });
+			if (key === "unlink" && await this.confirm("Verknüpfung mit Teams lösen? Kanal bzw. Chat und alle Nachrichten bleiben in Teams erhalten.",
+				{ action: "Lösen", danger: true })) {
+				await unlinkAkteTeams(m, id);
+				this.toast("Verknüpfung gelöst");
+			}
+		} catch (error) {
+			this.showError(error, "Microsoft Teams");
+		}
 	}
 
 	async onChatGroup(): Promise<void> {

@@ -36,6 +36,7 @@ import { adminAreas, adminGroups, matchesArea } from "../util/adminCatalog";
 import { notices } from "../util/notices";
 import { updateHints } from "../util/updateHints";
 import { chatStatus } from "../util/chat";
+import { chatPresentation, teamsHome } from "../util/teams";
 import { session } from "../util/session";
 import { logos } from "../util/theme";
 import { openSettings } from "../util/settings";
@@ -207,13 +208,15 @@ export default class AppController extends BaseController {
 		const data = session.data;
 		this.model().setProperty("/initials", initials(data.user?.displayName));
 		const list = this.el<NavigationList>("navigationList");
-		const signature = Object.keys(data.permissions).sort().join(",") + JSON.stringify(data.modules ?? {});
+		const signature = Object.keys(data.permissions).sort().join(",") + JSON.stringify(data.modules ?? {}) + JSON.stringify(data.teams?.chatMode ?? "");
 		if (list.data("signature") === signature) return;
 		list.data("signature", signature);
 		list.destroyItems();
 		// Abgeschaltete Module (Einstellungen › Module) verschwinden aus der Navigation, auch wenn das Recht vorliegt.
+		// Microsoft Teams: Eintrag nur im Chat-Modus „Teams“ oder „beides“.
+		const presentation = chatPresentation(data.teams);
 		const visible = (e: NavEntry) => (!e.permission || session.has(e.permission)) && (!e.anyPermission || e.anyPermission.some((p) => session.has(p)))
-			&& (!e.path || session.pathEnabled(e.path));
+			&& (!e.path || session.pathEnabled(e.path)) && (e.key !== "teams" || presentation.showTeams);
 		for (const entry of navigation) {
 			if (entry.children) {
 				const children = entry.children.filter(visible);
@@ -228,13 +231,29 @@ export default class AppController extends BaseController {
 	}
 
 	private navItem(entry: NavEntry): NavigationListItem {
-		return new NavigationListItem({ key: entry.key, text: this.t(`nav.${entry.key}`), icon: entry.icon });
+		// Modus „Microsoft Teams“: der eingebaute Chat ist nur noch ein Archiv (lesen, exportieren).
+		const text = entry.key === "chat" && session.data.teams?.chatReadOnly ? this.t("nav.chatArchive") : this.t(`nav.${entry.key}`);
+		return new NavigationListItem({ key: entry.key, text, icon: entry.icon });
+	}
+
+	/** Microsoft Teams in neuem Fenster (Team „Baustellen“, sonst Teams allgemein); die Auswahl bleibt bei der aktuellen Seite. */
+	private openTeams(): void {
+		window.open(teamsHome(session.data.teams), "_blank", "noopener");
+		this.el<NavigationList>("navigationList").setSelectedKey(String(this.model().getProperty("/navKey") ?? ""));
+	}
+
+	onTeams(): void {
+		this.openTeams();
 	}
 
 	onNavigate(event: SideNavigation$ItemSelectEvent): void {
 		const item = event.getParameter("item") as NavigationListItem;
 		const key = item.getKey();
 		if (key.startsWith("__")) return; // feste Einträge: onNavPress
+		if (key === "teams") {
+			this.openTeams();
+			return;
+		}
 		const entry = navigation.flatMap((e) => e.children ?? [e]).find((e) => e.key === key);
 		if (entry?.path) {
 			this.nav(entry.path);

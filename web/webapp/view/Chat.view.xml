@@ -4,21 +4,30 @@
 		<VBox class="eoChatSide" renderType="Bare">
 			<HBox alignItems="Center" justifyContent="SpaceBetween" class="eoChatSideHead" renderType="Bare">
 				<HBox alignItems="Center" renderType="Bare" class="eoChatSideTitle">
-					<Title text="Chat" level="H2" titleStyle="H4"/>
+					<Title text="{= ${view>/archive} ? 'Chat-Archiv' : 'Chat' }" level="H2" titleStyle="H4"/>
 					<core:Icon src="sap-icon://connected" visible="{view>/live}" class="eoChatLive" tooltip="Echtzeit verbunden"/>
 				</HBox>
 				<HBox renderType="Bare">
-					<Button icon="sap-icon://add-employee" tooltip="Neuer Einzelchat" type="Transparent" press=".onNewDirect" ariaLabelledBy="chatNewDirectLabel"/>
-					<Button id="chatNewGroup" icon="sap-icon://add-contact" tooltip="Neue Gruppe" type="Transparent" press=".onNewGroup" visible="{view>/canAdmin}"
+					<Button id="chatTeams" icon="sap-icon://collaborate" tooltip="In Microsoft Teams öffnen" type="Transparent" press=".onOpenTeams"
+						visible="{= ${session>/teams/available} === true }"/>
+					<Button id="chatExport" icon="sap-icon://download" tooltip="Meine Chatverläufe exportieren (JSON)" type="Transparent" press=".onExport"
+						visible="{= ${view>/archive} === true }"/>
+					<Button icon="sap-icon://add-employee" tooltip="Neuer Einzelchat" type="Transparent" press=".onNewDirect" ariaLabelledBy="chatNewDirectLabel"
+						visible="{= !${view>/archive} }"/>
+					<Button id="chatNewGroup" icon="sap-icon://add-contact" tooltip="Neue Gruppe" type="Transparent" press=".onNewGroup" visible="{= ${view>/canAdmin} &amp;&amp; !${view>/archive} }"
 						ariaLabelledBy="chatNewGroupLabel"/>
 					<Button icon="sap-icon://action-settings" tooltip="Meine Chat-Einstellungen" type="Transparent" press=".onMySettings"/>
 				</HBox>
 			</HBox>
+			<MessageStrip id="chatArchiveStrip" visible="{= ${view>/archive} === true }" type="Information" showIcon="true" class="eoChatReadOnly"
+				text="Unterhaltungen finden jetzt in Microsoft Teams statt. Hier bleiben die bisherigen Verläufe lesbar und exportierbar.">
+				<link><Link text="In Teams öffnen" press=".onOpenTeams"/></link>
+			</MessageStrip>
 			<SearchField id="chatSearch" placeholder="Chats und Nachrichten durchsuchen" liveChange=".onSearch" class="eoChatSearch" ariaLabelledBy="chatSearchLabel"/>
 			<ScrollContainer vertical="true" horizontal="false" height="100%" class="eoChatSideScroll">
 				<layoutData><FlexItemData growFactor="1" baseSize="0"/></layoutData>
 				<List id="chatList" items="{view>/filtered}" mode="SingleSelectMaster" selectionChange=".onSelect" showSeparators="None"
-					noDataText="{= ${view>/loaded} ? (${view>/query} ? 'Kein Chat mit diesem Namen.' : 'Noch keine Unterhaltungen. Mit „Neuer Einzelchat“ beginnen.') : 'Wird geladen …' }"
+					noDataText="{= ${view>/loaded} ? (${view>/query} ? 'Kein Chat mit diesem Namen.' : ${view>/archive} ? 'Keine archivierten Unterhaltungen.' : 'Noch keine Unterhaltungen. Mit „Neuer Einzelchat“ beginnen.') : 'Wird geladen …' }"
 					class="eoChatConvList">
 					<CustomListItem selected="{= ${view>id} === ${view>/activeId} }" class="eoChatConv" type="Active">
 						<customData><core:CustomData key="unread" value="{= ${view>unreadCount} > 0 ? 'yes' : 'no' }" writeToDom="true"/></customData>
@@ -69,7 +78,8 @@
 				title="Wählen Sie eine Unterhaltung" enableDefaultTitleAndDescription="false" class="eoChatEmpty"
 				description="Nachrichten, Fotos und PDFs werden verschlüsselt gespeichert und nach {view>/retentionDays} Tagen automatisch gelöscht.">
 				<additionalContent>
-					<Button text="Neuer Einzelchat" icon="sap-icon://add-employee" type="Emphasized" press=".onNewDirect"/>
+					<Button text="Neuer Einzelchat" icon="sap-icon://add-employee" type="Emphasized" press=".onNewDirect" visible="{= !${view>/archive} }"/>
+					<Button text="In Teams öffnen" icon="sap-icon://collaborate" type="Emphasized" press=".onOpenTeams" visible="{= ${view>/archive} === true }"/>
 				</additionalContent>
 			</IllustratedMessage>
 			<HBox visible="{= !!${view>/activeId} }" alignItems="Center" class="eoChatHead" renderType="Bare">
@@ -118,10 +128,10 @@
 						<Button icon="sap-icon://decline" type="Transparent" press=".onRemovePending" tooltip="Entfernen" class="eoChatPendingRemove"/>
 					</VBox>
 				</HBox>
-				<MessageStrip visible="{= !!${view>/active} &amp;&amp; ${view>/active/canPost} === false }" type="Information" showIcon="true"
-					text="{= ${view>/blocked} ? 'Sie sind im Chat gesperrt und können nur lesen.' : 'Ankündigungsgruppe: Nur Admins können schreiben.' }"
+				<MessageStrip visible="{= !!${view>/active} &amp;&amp; (${view>/active/canPost} === false || ${view>/archive} === true) }" type="Information" showIcon="true"
+					text="{= ${view>/archive} ? 'Chat-Archiv: nur lesen. Neue Nachrichten bitte in Microsoft Teams schreiben.' : ${view>/blocked} ? 'Sie sind im Chat gesperrt und können nur lesen.' : 'Ankündigungsgruppe: Nur Admins können schreiben.' }"
 					class="eoChatReadOnly"/>
-				<HBox visible="{= ${view>/active/canPost} !== false }" alignItems="End" class="eoChatComposer" renderType="Bare">
+				<HBox visible="{= ${view>/active/canPost} !== false &amp;&amp; !${view>/archive} }" alignItems="End" class="eoChatComposer" renderType="Bare">
 					<Button id="chatAttach" icon="sap-icon://attachment" type="Transparent" press=".onAttachMenu" tooltip="Foto, Dokument, Kamera oder Standort"
 						enabled="{view>/attachmentsEnabled}" class="eoChatTool"/>
 					<TextArea id="chatInput" value="{view>/draft}" valueLiveUpdate="true" growing="true" growingMaxLines="6" rows="1" width="100%"

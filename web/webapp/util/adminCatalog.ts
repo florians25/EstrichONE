@@ -30,7 +30,7 @@ export const adminGroups: AdminGroup[] = [
 	{ key: "groupHelpdesk", title: "IT-Service/Helpdesk", description: "Tickets der IT, Problem melden, Wissensdatenbank und Einstellungen des Helpdesks" },
 	{ key: "groupAdminData", title: "Datensicherung & Archiv", description: "Backup Center, Backup-Ziele, revisionssicheres Archiv und Aktenarchiv" },
 	{ key: "groupAdminSystem", title: "System & Betrieb", description: "Überwachung, Speicher, Hinweise und Wartung, Protokoll" },
-	{ key: "groupAdminIntegrations", title: "Integrationen", description: "E-Mail-Versand und Pushnachrichten" },
+	{ key: "groupAdminIntegrations", title: "Integrationen", description: "E-Mail-Versand, Pushnachrichten und Microsoft Teams" },
 ];
 
 export const adminAreas: AdminArea[] = [
@@ -100,6 +100,10 @@ export const adminAreas: AdminArea[] = [
 	{ key: "push", group: "groupAdminIntegrations", title: "Pushnachrichten", path: "/system/firmendaten?bereich=benachrichtigungen", icon: "sap-icon://bell",
 		permission: "settings.manage", description: "Welche Benachrichtigungen per E-Mail gehen, Web Push und Apple Push (APNs)",
 		keywords: "push benachrichtigungen apns web push ios" },
+	{ key: "teamsSettings", group: "groupAdminIntegrations", title: "Microsoft Teams", path: "/system/microsoft-teams", icon: "sap-icon://collaborate",
+		permission: "settings.integrations",
+		description: "Unterhaltungen in Teams: App-Registrierung (Entra ID), Konten zuordnen, Kanal oder Gruppenchat je Bauakte, Karten bei Ereignissen, Chat-Modus",
+		keywords: "teams microsoft 365 office entra azure ad app-registrierung graph kanal gruppenchat webhook workflows chat-modus chat archiv" },
 ];
 
 /** Systemeinstellungen-Reiter, die in der Navigation als eigener Eintrag erscheinen (Query „bereich“). */

@@ -103,6 +103,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Chat: Unterhaltungen, Verlauf, Senden, Antworten, Reaktionen, Bearbeiten, Löschen | ✅ | ✅ | |
 | Chat: Fotos senden und ansehen, Dokumente öffnen, Standort ansehen | ✅ | ✅ | |
 | Chat: Diktat | ✅ | ✅ Android-Spracheingabe | |
+| Microsoft Teams: „In Teams öffnen“ (Bauakte, Mehr, Heute), Chat-Archiv im Modus „Microsoft Teams“ | ✅ | ✅ | Teams-App per `msteams:`, sonst Browser |
 | Chat: Einzelchat starten, Info (Mitglieder, Stummschalten) | ✅ | ✅ | |
 | Chat: Gruppen anlegen, Weiterleiten, Anheften, Suche, Medienübersicht, Standort senden | ✅ | ❌ | API im Kern teils vorhanden |
 | Chat: Echtzeit | ✅ SSE | 🟡 | Abfrage alle 5 s im Verlauf, 15 s in der Liste |

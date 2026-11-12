@@ -21,6 +21,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Apartment
@@ -111,6 +112,8 @@ fun MoreScreen() {
     val nav = LocalNav.current
     val status by session.status.collectAsState()
     val chat by session.chat.collectAsState()
+    val teams by session.teams.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
     val unread by session.unreadNotifications.collectAsState()
     val unreadTickets by session.unreadTickets.collectAsState()
     val modules by session.modules.collectAsState()
@@ -137,7 +140,14 @@ fun MoreScreen() {
             item {
                 SectionCard {
                     if (chat?.isAvailable == true) {
-                        RowItem("Chat", icon = Icons.Outlined.Forum, showChevron = true, onClick = { nav.push(Route.ChatList) }, trailing = { CountBadge(chat?.unreadCount ?: 0) })
+                        RowItem(if (chat?.readOnly == true) "Chat-Archiv" else "Chat", icon = Icons.Outlined.Forum, showChevron = true,
+                            onClick = { nav.push(Route.ChatList) }, trailing = { CountBadge(chat?.unreadCount ?: 0) })
+                        RowDivider()
+                    }
+                    // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App bzw. Teams im Browser.
+                    teams?.takeIf { it.available }?.let { teamsStatus ->
+                        RowItem("Microsoft Teams", icon = Icons.Filled.Groups, value = teamsStatus.siteTeamName, showChevron = true,
+                            onClick = { if (!Links.teams(context, teamsStatus.homeTargets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.") })
                         RowDivider()
                     }
                     RowItem("Benachrichtigungen", icon = Icons.Outlined.Inbox, showChevron = true, onClick = { nav.push(Route.Inbox) }, trailing = { CountBadge(unread) })

@@ -65,6 +65,7 @@ export const routes: RouteDef[] = [
 	{ name: "archive", pattern: "/system/archiv", view: "admin.Archive", permission: "settings.manage", nav: "archive", title: "nav.archive" },
 	{ name: "offload", pattern: "/system/auslagerung", view: "admin.Offload", permission: "settings.manage", nav: "offload", title: "nav.offload" },
 	{ name: "mail", pattern: "/system/e-mail", view: "admin.Mail", permission: "settings.manage", nav: "mail", title: "nav.mail" },
+	{ name: "teamsSettings", pattern: "/system/microsoft-teams", view: "admin.Teams", permission: "settings.integrations", nav: "teamsSettings", title: "nav.teamsSettings" },
 	{ name: "dossiers", pattern: "/system/aktenarchiv", view: "admin.Dossiers", permission: "bauakten.read", nav: "dossiers", title: "nav.dossiers" },
 	{ name: "monitoring", pattern: "/system/ueberwachung", view: "admin.Monitoring", permission: "backup.manage", nav: "monitoring", title: "nav.monitoring" },
 	{ name: "notices", pattern: "/system/hinweise", view: "admin.Notices", permission: "settings.manage", nav: "notices", title: "nav.notices" },
@@ -88,6 +89,8 @@ const adminPermissions = [...new Set(adminAreas.map((a) => a.permission).filter(
 export const navigation: NavEntry[] = [
 	{ key: "start", path: "/start", icon: "sap-icon://home" },
 	{ key: "chat", path: "/chat", icon: "sap-icon://discussion-2", permission: "chat.use" },
+	// Microsoft Teams: öffnet Teams (Team „Baustellen“) in neuem Fenster; sichtbar im Chat-Modus „Teams“ oder „beides“.
+	{ key: "teams", icon: "sap-icon://collaborate" },
 	{
 		key: "groupOrders", children: [
 			{ key: "today", path: "/tagesuebersicht", icon: "sap-icon://date-time", permission: "bauakten.read" },

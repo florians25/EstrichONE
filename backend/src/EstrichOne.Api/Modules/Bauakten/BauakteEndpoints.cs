@@ -283,7 +283,8 @@ internal static class BauakteEndpoints
 
     private static async Task<Results<Ok<BauakteDetail>, ProblemHttpResult>> UpdateAsync(
         Guid id, UpdateBauakteRequest request, EstrichOneDbContext db, IBauakteAccess access, IBauakteHistory history, HttpContext http,
-        BauakteProjectValidator projectValidator, Notifications.Exports.INotifier notifier, CancellationToken cancellationToken)
+        BauakteProjectValidator projectValidator, Notifications.Exports.INotifier notifier, Teams.Exports.ITeamsIntegration teams,
+        CancellationToken cancellationToken)
     {
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken)).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
         if (bauakte is null)
@@ -346,6 +347,7 @@ internal static class BauakteEndpoints
         bauakte.Describe(request.Description);
         bauakte.AssignCustomer(request.CustomerId);
         var previousResponsible = bauakte.ResponsibleUserId;
+        var previousSchedule = (before.PlannedStart, before.PlannedEnd);
         bauakte.AssignResponsible(request.ResponsibleUserId);
         RecordChanges(history, before, ToDetail(bauakte));
 
@@ -358,6 +360,18 @@ internal static class BauakteEndpoints
             // Zwischen Lesen und Schreiben hat jemand anderes geändert.
             var current = await db.Set<Bauakte>().AsNoTracking().SingleAsync(b => b.Id == id, cancellationToken);
             return VersionConflict(current);
+        }
+
+        if (bauakte.ResponsibleUserId != previousResponsible)
+        {
+            teams.BauakteTeamChanged(bauakte.Id);
+        }
+
+        if ((bauakte.PlannedStart, bauakte.PlannedEnd) != previousSchedule && (bauakte.PlannedStart is not null || bauakte.PlannedEnd is not null))
+        {
+            teams.Publish(new Teams.Exports.TeamsEvent(bauakte.Id, Teams.Exports.TeamsEventKind.ScheduleChanged, "Ausführungszeitraum geändert",
+                $"{bauakte.PlannedStart?.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture) ?? "offen"} – "
+                + $"{bauakte.PlannedEnd?.ToString("dd.MM.yyyy", System.Globalization.CultureInfo.InvariantCulture) ?? "offen"}", $"/bauakten/{bauakte.Id}"));
         }
 
         if (bauakte.ResponsibleUserId is { } responsible && responsible != previousResponsible)

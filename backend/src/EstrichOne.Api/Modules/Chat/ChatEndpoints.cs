@@ -5,6 +5,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
 using EstrichOne.Api.Modules.Notifications.Exports;
+using EstrichOne.Api.Modules.Teams.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -15,10 +16,12 @@ namespace EstrichOne.Api.Modules.Chat;
 /// <param name="PrivacyAccepted">Datenschutzhinweis bestätigt (sonst beim ersten Öffnen zeigen, <c>PUT /chat/me/settings</c>).</param>
 /// <param name="Blocked">Von der Verwaltung gesperrt: lesen ja, schreiben nein.</param>
 /// <param name="Realtime">Echtzeitkanal: <c>sse</c> = <c>GET /chat/events</c>; Polling bleibt als Rückfall.</param>
+/// <param name="Mode">Chat-Modus (Einstellungen › Integrationen › Microsoft Teams).</param>
+/// <param name="ReadOnly">Modus „Microsoft Teams“: der Chat ist ein Archiv – lesen und exportieren, nicht schreiben.</param>
 public sealed record ChatStatusResponse(bool Enabled, bool CanUse, bool CanAdmin, int UnreadCount, int UnreadConversations, int RetentionDays, bool ShowPreview,
     bool PrivacyAccepted = false, bool Blocked = false, int EditWindowMinutes = ChatSettingsRow.DefaultEditWindowMinutes, bool AttachmentsEnabled = true,
     long MaxAttachmentBytes = ChatLimits.MaxAttachmentBytes, bool ReadReceipts = true, bool PersonalShowPreview = true, string Realtime = "sse",
-    int PrivacyNoticeVersion = ChatLimits.PrivacyNoticeVersion);
+    int PrivacyNoticeVersion = ChatLimits.PrivacyNoticeVersion, TeamsChatMode Mode = TeamsChatMode.EstrichOne, bool ReadOnly = false);
 
 /// <summary>Grenzen für Clients.</summary>
 public static class ChatLimits
@@ -128,7 +131,19 @@ internal static partial class ChatEndpoints
         {
             var http = context.HttpContext;
             var settings = await http.RequestServices.GetRequiredService<ChatService>().SettingsAsync(http.RequestAborted);
-            return settings.Enabled ? await next(context) : Disabled();
+            if (!settings.Enabled)
+            {
+                return Disabled();
+            }
+
+            // Modus „Microsoft Teams“: Verläufe bleiben lesbar und exportierbar, Schreiben geht nur noch in Teams.
+            if (!HttpMethods.IsGet(http.Request.Method) && !ArchiveAllowed.Contains(http.GetEndpoint()?.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName ?? string.Empty)
+                && await http.RequestServices.GetRequiredService<ITeamsIntegration>().ChatModeAsync(http.RequestAborted) == TeamsChatMode.Teams)
+            {
+                return ReadOnly();
+            }
+
+            return await next(context);
         });
         chat.MapGet("/contacts", ContactsAsync).WithName("ListChatContacts").WithSummary("Personen, mit denen ein Einzelchat möglich ist");
         chat.MapGet("/conversations", ConversationsAsync).WithName("ListChatConversations")
@@ -170,16 +185,18 @@ internal static partial class ChatEndpoints
     }
 
     private static async Task<Ok<ChatStatusResponse>> StatusAsync(
-        ChatService chat, EstrichOneDbContext db, IUserPermissions permissions, ICurrentUser user, CancellationToken cancellationToken)
+        ChatService chat, EstrichOneDbContext db, IUserPermissions permissions, ICurrentUser user, ITeamsIntegration teams, CancellationToken cancellationToken)
     {
         var settings = await chat.SettingsAsync(cancellationToken);
+        var mode = await teams.ChatModeAsync(cancellationToken);
         var granted = await permissions.GetAsync(cancellationToken);
         var canUse = granted.Contains(Permissions.ChatUse) || granted.Contains(Permissions.ChatAdmin);
         var (count, conversations) = settings.Enabled && canUse ? await UnreadAsync(db, user.UserId, cancellationToken) : (0, 0);
         var personal = await chat.UserSettingsAsync(user.UserId, cancellationToken);
         return TypedResults.Ok(new ChatStatusResponse(settings.Enabled, canUse && settings.Enabled, granted.Contains(Permissions.ChatAdmin), count, conversations,
             settings.RetentionDays, settings.ShowPreview, personal?.PrivacyAcceptedAt is not null, personal?.BlockedAt is not null, settings.EditWindowMinutes,
-            settings.AttachmentsEnabled, ChatLimits.MaxAttachmentBytes, personal?.ReadReceipts ?? true, personal?.ShowPreview ?? true));
+            settings.AttachmentsEnabled, ChatLimits.MaxAttachmentBytes, personal?.ReadReceipts ?? true, personal?.ShowPreview ?? true, Mode: mode,
+            ReadOnly: mode == TeamsChatMode.Teams));
     }
 
     private static async Task<(int Messages, int Conversations)> UnreadAsync(EstrichOneDbContext db, Guid userId, CancellationToken cancellationToken)
@@ -207,9 +224,14 @@ internal static partial class ChatEndpoints
     }
 
     private static async Task<Ok<List<ChatConversationSummary>>> ConversationsAsync(
-        ChatService chat, EstrichOneDbContext db, ICurrentUser user, TimeProvider clock, CancellationToken cancellationToken)
+        ChatService chat, EstrichOneDbContext db, ICurrentUser user, TimeProvider clock, ITeamsIntegration teams, CancellationToken cancellationToken)
     {
-        await chat.SyncCrewGroupsAsync(cancellationToken);
+        // Im Archiv (Modus „Microsoft Teams“) bleiben Gruppen, wie sie sind.
+        if (await teams.ChatModeAsync(cancellationToken) != TeamsChatMode.Teams)
+        {
+            await chat.SyncCrewGroupsAsync(cancellationToken);
+        }
+
         var mine = await db.Set<ChatMember>().Where(m => m.UserId == user.UserId).ToListAsync(cancellationToken);
         var ids = mine.Select(m => m.ConversationId).ToList();
         var conversations = await db.Set<ChatConversation>().AsNoTracking().Where(c => ids.Contains(c.Id)).ToListAsync(cancellationToken);
@@ -876,6 +898,16 @@ internal static partial class ChatEndpoints
         await db.SaveChangesAsync(cancellationToken);
         return TypedResults.Ok(await SettingsResponseAsync(db, cancellationToken));
     }
+
+    /// <summary>Im Archiv (Modus „Microsoft Teams“) erlaubt: gelesen markieren, stumm schalten, persönliche Einstellungen, Anhang in Bauakte übernehmen.</summary>
+    private static readonly HashSet<string> ArchiveAllowed = new(StringComparer.Ordinal)
+    {
+        "MarkChatRead", "MuteChatConversation", "AcceptChatPrivacyNotice", "SaveMyChatSettings", "CopyChatAttachmentToBauakte",
+    };
+
+    private static ProblemHttpResult ReadOnly() => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Chat-Archiv",
+        detail: "Unterhaltungen finden jetzt in Microsoft Teams statt. Der Chat in EstrichONE ist nur noch zum Lesen und Exportieren da.",
+        extensions: new Dictionary<string, object?> { ["code"] = "CHAT_READ_ONLY" });
 
     private static ProblemHttpResult Disabled() => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Modul deaktiviert",
         detail: "Der Chat ist deaktiviert (Einstellungen › Module).", extensions: new Dictionary<string, object?> { ["code"] = "MODULE_DISABLED" });

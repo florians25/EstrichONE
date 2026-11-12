@@ -39,7 +39,9 @@ import { currentRoute } from "../util/navigation";
 import { uuidv7 } from "../util/ids";
 import { indexOf, type MediaItem } from "../util/media";
 import { openMediaViewer } from "../util/mediaViewer";
-import { get } from "../util/api";
+import { get, problemMessage } from "../util/api";
+import MessageBox from "sap/m/MessageBox";
+import { teamsHome } from "../util/teams";
 import { bauakteInput } from "../util/forms";
 import {
 	accentOf, attachmentUrl, blockUser, chatStatus, checkFile, clock, connectEvents, contacts, conversation, conversations, createGroup, crews, dayKey,
@@ -249,6 +251,8 @@ export default class Chat extends BaseController {
 			m.setProperty("/blocked", !!status.blocked);
 			m.setProperty("/attachmentsEnabled", status.attachmentsEnabled !== false);
 			m.setProperty("/retentionHint", `Verschlüsselt gespeichert · Löschung nach ${status.retentionDays} Tagen`);
+			// Modus „Microsoft Teams“: nur lesen und exportieren.
+			m.setProperty("/archive", status.readOnly === true);
 			if (!status.privacyAccepted && !this.privacyShown) this.showPrivacy(status);
 		}
 		await this.loadList();
@@ -1566,6 +1570,26 @@ export default class Chat extends BaseController {
 		});
 		this.v().addDependent(dialog);
 		dialog.open();
+	}
+
+	/** Microsoft Teams (Team „Baustellen“ bzw. Teams allgemein) in neuem Fenster. */
+	onOpenTeams(): void {
+		window.open(teamsHome(session.data.teams), "_blank", "noopener");
+	}
+
+	/** Chat-Archiv: eigene Verläufe als JSON speichern (Auskunft, Datenübertragbarkeit). */
+	async onExport(): Promise<void> {
+		try {
+			const data = await get<unknown>("chat/export");
+			const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
+			const anchor = document.createElement("a");
+			anchor.href = url;
+			anchor.download = `chat-archiv-${new Date().toISOString().slice(0, 10)}.json`;
+			anchor.click();
+			setTimeout(() => URL.revokeObjectURL(url), 10_000);
+		} catch (error) {
+			MessageBox.error(problemMessage(error), { title: "Export nicht möglich" });
+		}
 	}
 
 	async onMySettings(): Promise<void> {

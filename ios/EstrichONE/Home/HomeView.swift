@@ -95,9 +95,16 @@ struct HomeView: View {
             .navigationTitle("Heute")
             .toolbar {
                 ToolbarItem(placement: .primaryAction) { syncButton }
-                if let chat = model.active?.sync?.chat, chat.isAvailable {
+                // Modus „Microsoft Teams“: statt Chat „In Teams öffnen“ (das Archiv bleibt unter Mehr erreichbar).
+                if let chat = model.active?.sync?.chat, chat.isAvailable, !chat.readOnly {
                     ToolbarItem(placement: .primaryAction) {
                         ChatToolbarButton(count: chat.unreadCount) { path.append(.chat) }
+                    }
+                }
+                if let teams = model.active?.sync?.teams, teams.available {
+                    ToolbarItem(placement: .primaryAction) {
+                        OpenInTeamsButton(targets: teams.homeTargets)
+                            .labelStyle(.iconOnly)
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {

@@ -91,9 +91,20 @@ internal static class WorkEndpoints
         return TypedResults.Ok(items.Select(WorkItemDto.From).ToList());
     }
 
+    /// <summary>Neuer Mangel einer Bauakte: optional als Karte in die verknüpfte Teams-Unterhaltung.</summary>
+    internal static void PublishDefect(Teams.Exports.ITeamsIntegration teams, WorkItem item)
+    {
+        if (item.Kind == WorkItemKind.Defect && item.BauakteId is { } bauakteId)
+        {
+            teams.Publish(new Teams.Exports.TeamsEvent(bauakteId, Teams.Exports.TeamsEventKind.DefectCreated,
+                $"{item.Number} {item.Title}".Trim(), Link: $"/bauakten/{bauakteId}"));
+        }
+    }
+
     private static async Task<Results<Created<WorkItemDto>, Ok<WorkItemDto>, ProblemHttpResult>> CreateAsync(
         CreateWorkItemRequest request, IBauakteAccess access, IBauakteHistory history, ICurrentUser currentUser, EstrichOneDbContext db,
-        INotifier notifier, IBauakteReportSource bauakten, ISystemSettings settings, INumberRanges numberRanges, CancellationToken cancellationToken)
+        INotifier notifier, IBauakteReportSource bauakten, ISystemSettings settings, INumberRanges numberRanges, Teams.Exports.ITeamsIntegration teams,
+        CancellationToken cancellationToken)
     {
         if (!(await EnabledKindsAsync(settings, cancellationToken)).Contains(request.Kind))
         {
@@ -141,6 +152,7 @@ internal static class WorkEndpoints
 
         await db.SaveChangesAsync(cancellationToken);
         await NotifyAssignedAsync(item, null, notifier, bauakten, cancellationToken);
+        PublishDefect(teams, item);
         return TypedResults.Created($"/api/v1/work-items/{item.Id}", WorkItemDto.From(item));
     }
 

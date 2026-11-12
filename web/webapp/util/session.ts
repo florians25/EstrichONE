@@ -8,6 +8,7 @@ import { api, ApiError, get, post } from "./api";
 import { loadSystemSettings } from "./systemSettings";
 import { disabledModuleOfPath, filterPermissions, moduleOn, pathEnabled, type ModuleStates } from "./modules";
 import type { DirectoryUser, ServerInfo, UserSummary, WebSessionResponse } from "./models";
+import type { TeamsStatus } from "./teams";
 
 export interface SessionData {
 	ready: boolean;
@@ -18,6 +19,8 @@ export interface SessionData {
 	people: DirectoryUser[];
 	/** Schalter der Module (Einstellungen › Module, dazu „chat“); fehlende gelten als an. */
 	modules: ModuleStates;
+	/** Microsoft Teams: Chat-Modus und Team „Baustellen“ (null = nicht geladen bzw. Server ohne Teams-Anbindung). */
+	teams?: TeamsStatus | null;
 }
 
 const empty = (): SessionData => ({ ready: false, user: null, permissions: {}, mustChangePassword: false, server: null, people: [], modules: {} });
@@ -65,9 +68,11 @@ class Session {
 	}
 
 	private async loadPermissionsNow(): Promise<void> {
-		const [list, settings, , chat, twoFactor] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true),
+		const [list, settings, , chat, twoFactor, teams] = await Promise.all([get<string[]>("access/me/permissions"), loadSystemSettings(true), valueLists(true),
 			get<{ enabled: boolean }>("chat/status").catch(() => ({ enabled: false })),
-			get<{ restricted: boolean }>("auth/two-factor").catch(() => ({ restricted: false }))]);
+			get<{ restricted: boolean }>("auth/two-factor").catch(() => ({ restricted: false })),
+			get<TeamsStatus>("teams/status").catch(() => null)]);
+		this.model.setProperty("/teams", teams);
 		// Zwei-Faktor-Pflicht für Administratoren noch nicht erfüllt: Hinweis in der Kopfzeile (Verwaltungsrechte ruhen).
 		this.model.setProperty("/twoFactorRestricted", twoFactor.restricted);
 		// Abgeschaltete Module (Einstellungen → Module): Rechte des Moduls ausblenden – Navigation, Reiter und Kacheln verschwinden.

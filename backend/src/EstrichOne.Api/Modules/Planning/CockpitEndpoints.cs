@@ -518,7 +518,7 @@ internal static class CockpitEndpoints
 
     private static async Task<Results<Ok<IReadOnlyList<PlanReleaseInfo>>, ProblemHttpResult>> ReleaseAsync(
         ReleasePlanRequest request, CockpitService cockpit, PlanningService planning, EstrichOneDbContext db,
-        Notifications.Exports.INotifier notifier, CancellationToken cancellationToken)
+        Notifications.Exports.INotifier notifier, Teams.Exports.ITeamsIntegration teams, CancellationToken cancellationToken)
     {
         if (request.To < request.From || request.To.DayNumber - request.From.DayNumber > 62)
         {
@@ -529,7 +529,7 @@ internal static class CockpitEndpoints
         var released = await cockpit.ReleaseAsync(request.From, request.To, request.Note, cancellationToken);
         await PlanningNotifications.ReleasedAsync(planning, notifier, request.From, request.To,
             previous.Count == 0 ? null : previous.SelectMany(r => r.Items()).GroupBy(i => i.AssignmentId).ToDictionary(g => g.Key, g => g.First().Version),
-            cancellationToken);
+            cancellationToken, teams);
         return TypedResults.Ok(released);
     }
 

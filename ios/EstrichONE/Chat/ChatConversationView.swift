@@ -378,7 +378,19 @@ struct ChatConversationView: View {
     private var composer: some View {
         VStack(spacing: 0) {
             Divider()
-            if isReadOnly {
+            if model.active?.sync?.chat?.readOnly == true {
+                // Modus „Microsoft Teams“: Archiv, Schreiben nur noch in Teams.
+                VStack(spacing: Space.s) {
+                    Label("Chat-Archiv: nur lesen. Neue Nachrichten bitte in Microsoft Teams schreiben.", systemImage: "archivebox")
+                        .font(Typo.subhead)
+                        .foregroundStyle(Theme.textSecondary)
+                    if let teams = model.active?.sync?.teams, teams.available {
+                        OpenInTeamsButton(targets: teams.homeTargets)
+                    }
+                }
+                .frame(maxWidth: .infinity)
+                .padding(Space.l)
+            } else if isReadOnly {
                 NoticeLine(tone: .warning, text: "Nur Ansicht: Der Server ist seit über 5 Minuten nicht erreichbar. Schreiben ist gesperrt, bis die Verbindung wiederhergestellt ist.",
                            symbol: "lock", actionTitle: "Trotzdem", action: { confirmsOverride = true })
                     .padding(Space.m)

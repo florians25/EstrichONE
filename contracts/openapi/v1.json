@@ -880,6 +880,35 @@
         }
       }
     },
+    "/api/v1/teams/status": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Chat-Modus und Teams-Anbindung für Navigation, Bauakte und Startseite (alle Angemeldeten)",
+        "operationId": "GetTeamsStatus",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsStatusResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/system/updates": {
       "get": {
         "tags": [
@@ -20632,6 +20661,690 @@
         ]
       }
     },
+    "/api/v1/settings/integrations/teams": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Einstellungen (Geheimnisse nie im Klartext)",
+        "operationId": "GetTeamsSettings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsSettingsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Speichern (Schlüssel, Zertifikat und Webhook verschlüsselt; null = unverändert)",
+        "operationId": "SaveTeamsSettings",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SaveTeamsSettingsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsSettingsResponse"
+                }
+              }
+            }
+          },
+          "412": {
+            "description": "Precondition Failed",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/test": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Verbindungstest: Anmeldung, Berechtigungen, Team, Dienstkonto",
+        "operationId": "TestTeamsConnection",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsTestResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/webhook/test": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Testkarte an den Workflows-Webhook senden",
+        "operationId": "TestTeamsWebhook",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamsWebhookTestRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsTestResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/users": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Zuordnung Benutzer ↔ Microsoft-Konto",
+        "operationId": "ListTeamsUserMappings",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamsUserMapping"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/users/match": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Alle Benutzer über E-Mail/UPN zuordnen (von Hand gesetzte bleiben)",
+        "operationId": "MatchTeamsUsers",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsMatchResponse"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/users/{userId}": {
+      "put": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Zuordnung von Hand korrigieren",
+        "operationId": "MapTeamsUser",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MapTeamsUserRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsUserMapping"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/sender/start": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Dienstkonto verbinden: Gerätecode-Anmeldung starten (für Karten über Microsoft Graph)",
+        "operationId": "StartTeamsSenderLogin",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsSenderStart"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/sender/poll": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Stand der Gerätecode-Anmeldung",
+        "operationId": "PollTeamsSenderLogin",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsSenderState"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/settings/integrations/teams/sender": {
+      "delete": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Dienstkonto trennen (Token löschen)",
+        "operationId": "DisconnectTeamsSender",
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/teams": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Verknüpfte Teams-Unterhaltung der Bauakte",
+        "operationId": "GetBauakteTeams",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/BauakteTeamsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Kanal oder Gruppenchat anlegen bzw. vorhandenen per Link verknüpfen",
+        "operationId": "LinkBauakteTeams",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LinkBauakteTeamsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsLinkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "502": {
+            "description": "Bad Gateway",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Verknüpfung lösen (in Teams wird nichts gelöscht)",
+        "operationId": "UnlinkBauakteTeams",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/bauakten/{id}/teams/sync": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Mitglieder jetzt abgleichen (Ergebnis an der Verknüpfung)",
+        "operationId": "SyncBauakteTeamsMembers",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsLinkResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/backup/status": {
       "get": {
         "tags": [
@@ -26327,6 +27040,49 @@
           "cancelled"
         ]
       },
+      "BauakteTeamsResponse": {
+        "required": [
+          "bauakteId",
+          "chatMode",
+          "link",
+          "canManage",
+          "canCreate",
+          "canCreateChannel",
+          "defaultLinkKind"
+        ],
+        "type": "object",
+        "properties": {
+          "bauakteId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "chatMode": {
+            "$ref": "#/components/schemas/TeamsChatMode"
+          },
+          "link": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TeamsLinkResponse"
+              }
+            ]
+          },
+          "canManage": {
+            "type": "boolean"
+          },
+          "canCreate": {
+            "type": "boolean"
+          },
+          "canCreateChannel": {
+            "type": "boolean"
+          },
+          "defaultLinkKind": {
+            "$ref": "#/components/schemas/TeamsLinkKind"
+          }
+        }
+      },
       "BroadcastDetail": {
         "required": [
           "broadcast",
@@ -28361,6 +29117,13 @@
             "type": "integer",
             "format": "int32",
             "default": 1
+          },
+          "mode": {
+            "$ref": "#/components/schemas/TeamsChatMode"
+          },
+          "readOnly": {
+            "type": "boolean",
+            "default": false
           }
         }
       },
@@ -34513,6 +35276,41 @@
           }
         }
       },
+      "LinkBauakteTeamsRequest": {
+        "type": "object",
+        "properties": {
+          "kind": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/TeamsLinkKind"
+              }
+            ]
+          },
+          "url": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "webhookUrl": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncMembers": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          }
+        }
+      },
       "LinkTicketRequest": {
         "required": [
           "otherTicketId"
@@ -34856,6 +35654,18 @@
           "maxZoom": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "MapTeamsUserRequest": {
+        "type": "object",
+        "properties": {
+          "account": {
+            "maxLength": 320,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -41372,6 +42182,104 @@
           }
         }
       },
+      "SaveTeamsSettingsRequest": {
+        "type": "object",
+        "properties": {
+          "chatMode": {
+            "$ref": "#/components/schemas/TeamsChatMode"
+          },
+          "tenantId": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clientId": {
+            "maxLength": 100,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "authKind": {
+            "$ref": "#/components/schemas/TeamsAuthKind"
+          },
+          "clientSecret": {
+            "maxLength": 500,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clearClientSecret": {
+            "type": "boolean",
+            "default": false
+          },
+          "certificatePem": {
+            "maxLength": 20000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clearCertificate": {
+            "type": "boolean",
+            "default": false
+          },
+          "siteTeam": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "defaultLinkKind": {
+            "$ref": "#/components/schemas/TeamsLinkKind"
+          },
+          "autoLink": {
+            "type": "boolean",
+            "default": false
+          },
+          "syncMembers": {
+            "type": "boolean",
+            "default": true
+          },
+          "postVia": {
+            "$ref": "#/components/schemas/TeamsPostVia"
+          },
+          "webhookUrl": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clearWebhook": {
+            "type": "boolean",
+            "default": false
+          },
+          "postDefects": {
+            "type": "boolean",
+            "default": true
+          },
+          "postAcceptance": {
+            "type": "boolean",
+            "default": true
+          },
+          "postSchedule": {
+            "type": "boolean",
+            "default": true
+          },
+          "version": {
+            "type": [
+              "null",
+              "integer"
+            ],
+            "format": "int64"
+          }
+        }
+      },
       "SaveTicketSubcategoryRequest": {
         "required": [
           "category",
@@ -42619,6 +43527,627 @@
           "version": {
             "type": "integer",
             "format": "int64"
+          }
+        }
+      },
+      "TeamsAuthKind": {
+        "enum": [
+          "secret",
+          "certificate"
+        ]
+      },
+      "TeamsChatMode": {
+        "enum": [
+          "estrichOne",
+          "teams",
+          "both"
+        ]
+      },
+      "TeamsLinkKind": {
+        "enum": [
+          "channel",
+          "groupChat"
+        ]
+      },
+      "TeamsLinkResponse": {
+        "required": [
+          "kind",
+          "created",
+          "displayName",
+          "webUrl",
+          "appUrl",
+          "teamId",
+          "channelId",
+          "chatId",
+          "syncMembers",
+          "lastSyncAt",
+          "lastSyncError",
+          "syncedMembers",
+          "unmappedMembers",
+          "lastPostAt",
+          "lastPostError",
+          "hasWebhook",
+          "linkedAt",
+          "linkedByName"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "$ref": "#/components/schemas/TeamsLinkKind"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "webUrl": {
+            "type": "string"
+          },
+          "appUrl": {
+            "type": "string"
+          },
+          "teamId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "channelId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "chatId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncMembers": {
+            "type": "boolean"
+          },
+          "lastSyncAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastSyncError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "syncedMembers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unmappedMembers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastPostAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastPostError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "hasWebhook": {
+            "type": "boolean"
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "linkedByName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TeamsMatchResponse": {
+        "required": [
+          "matched",
+          "notFound",
+          "manual",
+          "skipped"
+        ],
+        "type": "object",
+        "properties": {
+          "matched": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "notFound": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "manual": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "skipped": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "TeamsPermissionInfo": {
+        "required": [
+          "name",
+          "type",
+          "required",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "required": {
+            "type": "boolean"
+          },
+          "reason": {
+            "type": "string"
+          }
+        }
+      },
+      "TeamsPostVia": {
+        "enum": [
+          "off",
+          "graph",
+          "webhook"
+        ]
+      },
+      "TeamsSenderStart": {
+        "required": [
+          "userCode",
+          "verificationUri",
+          "expiresAt",
+          "intervalSeconds",
+          "message"
+        ],
+        "type": "object",
+        "properties": {
+          "userCode": {
+            "type": "string"
+          },
+          "verificationUri": {
+            "type": "string"
+          },
+          "expiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "intervalSeconds": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "message": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "TeamsSenderState": {
+        "required": [
+          "connected",
+          "pending",
+          "senderName",
+          "connectedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "connected": {
+            "type": "boolean"
+          },
+          "pending": {
+            "type": "boolean"
+          },
+          "senderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "connectedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamsSettingsResponse": {
+        "required": [
+          "chatMode",
+          "tenantId",
+          "clientId",
+          "authKind",
+          "hasClientSecret",
+          "certificateThumbprint",
+          "certificateExpiresAt",
+          "siteTeamId",
+          "siteTeamName",
+          "siteTeamUrl",
+          "defaultLinkKind",
+          "autoLink",
+          "syncMembers",
+          "postVia",
+          "hasWebhook",
+          "webhookHost",
+          "postDefects",
+          "postAcceptance",
+          "postSchedule",
+          "senderName",
+          "senderConnectedAt",
+          "lastTestAt",
+          "lastTestOk",
+          "lastTestError",
+          "lastPostAt",
+          "lastPostError",
+          "graphConfigured",
+          "mappedUsers",
+          "activeUsers",
+          "linkedBauakten",
+          "permissions",
+          "version"
+        ],
+        "type": "object",
+        "properties": {
+          "chatMode": {
+            "$ref": "#/components/schemas/TeamsChatMode"
+          },
+          "tenantId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "clientId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "authKind": {
+            "$ref": "#/components/schemas/TeamsAuthKind"
+          },
+          "hasClientSecret": {
+            "type": "boolean"
+          },
+          "certificateThumbprint": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "certificateExpiresAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "siteTeamId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteTeamName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteTeamUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "defaultLinkKind": {
+            "$ref": "#/components/schemas/TeamsLinkKind"
+          },
+          "autoLink": {
+            "type": "boolean"
+          },
+          "syncMembers": {
+            "type": "boolean"
+          },
+          "postVia": {
+            "$ref": "#/components/schemas/TeamsPostVia"
+          },
+          "hasWebhook": {
+            "type": "boolean"
+          },
+          "webhookHost": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "postDefects": {
+            "type": "boolean"
+          },
+          "postAcceptance": {
+            "type": "boolean"
+          },
+          "postSchedule": {
+            "type": "boolean"
+          },
+          "senderName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "senderConnectedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastTestAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastTestOk": {
+            "type": [
+              "null",
+              "boolean"
+            ]
+          },
+          "lastTestError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "lastPostAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "lastPostError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "graphConfigured": {
+            "type": "boolean"
+          },
+          "mappedUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "activeUsers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "linkedBauakten": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamsPermissionInfo"
+            }
+          },
+          "version": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      },
+      "TeamsStatusResponse": {
+        "required": [
+          "chatMode",
+          "chatReadOnly",
+          "available",
+          "graphConfigured",
+          "postVia",
+          "canManage",
+          "siteTeamName",
+          "siteTeamUrl",
+          "siteTeamAppUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "chatMode": {
+            "$ref": "#/components/schemas/TeamsChatMode"
+          },
+          "chatReadOnly": {
+            "type": "boolean"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "graphConfigured": {
+            "type": "boolean"
+          },
+          "postVia": {
+            "$ref": "#/components/schemas/TeamsPostVia"
+          },
+          "canManage": {
+            "type": "boolean"
+          },
+          "siteTeamName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteTeamUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "siteTeamAppUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "teamsWebUrl": {
+            "type": "string",
+            "default": "https://teams.microsoft.com"
+          },
+          "teamsAppUrl": {
+            "type": "string",
+            "default": "msteams:"
+          }
+        }
+      },
+      "TeamsTestResponse": {
+        "required": [
+          "ok",
+          "steps",
+          "at"
+        ],
+        "type": "object",
+        "properties": {
+          "ok": {
+            "type": "boolean"
+          },
+          "steps": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamsTestStep"
+            }
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamsTestStep": {
+        "required": [
+          "name",
+          "ok",
+          "detail"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "detail": {
+            "type": "string"
+          }
+        }
+      },
+      "TeamsUserMapping": {
+        "required": [
+          "userId",
+          "name",
+          "email",
+          "active",
+          "aadUserId",
+          "userPrincipalName",
+          "accountName",
+          "manual",
+          "error",
+          "checkedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "email": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "active": {
+            "type": "boolean"
+          },
+          "aadUserId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "userPrincipalName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "accountName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "manual": {
+            "type": "boolean"
+          },
+          "error": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "checkedAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamsWebhookTestRequest": {
+        "type": "object",
+        "properties": {
+          "url": {
+            "maxLength": 2000,
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -45365,6 +46894,9 @@
     },
     {
       "name": "Systemhinweise"
+    },
+    {
+      "name": "Microsoft Teams"
     },
     {
       "name": "Backup Center"

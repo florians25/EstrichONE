@@ -6,6 +6,7 @@ import { get } from "../util/api";
 import { isoDay } from "../util/days";
 import { dateTime } from "../util/format";
 import { session } from "../util/session";
+import { chatPresentation, teamsHome } from "../util/teams";
 import type { BackupStatusResponse, BauaktePage, PlanningRange, TicketSummary, WorkItemDto } from "../util/models";
 import { CATEGORY_ICONS, inbox, relativeTime } from "../util/notifications";
 import { notices } from "../util/notices";
@@ -97,7 +98,14 @@ export default class Start extends BaseController {
 		const inWeek = isoDay(new Date(Date.now() + 7 * 86_400_000));
 		m.setProperty("/greeting", `Guten Tag, ${session.data.user?.displayName ?? ""}`);
 		m.setProperty("/today", new Date().toLocaleDateString("de-DE", { weekday: "long", day: "2-digit", month: "long", year: "numeric" }));
-		m.setProperty("/groups", groups.map((g) => ({ ...g, tiles: g.tiles.filter((t) => (!t.permission || this.has(t.permission)) && session.pathEnabled(t.to)) }))
+		// Kommunikation: eingebauter Chat (im Modus „Microsoft Teams“ als Archiv) und „In Teams öffnen“.
+		const chat = chatPresentation(session.data.teams);
+		const communication = { label: "Kommunikation", tiles: [
+			{ label: chat.chatLabel, icon: chat.chatWritable ? "sap-icon://discussion-2" : "sap-icon://attachment-zip-file", to: "/chat", permission: "chat.use" },
+			...(chat.showTeams ? [{ label: "In Teams öffnen", icon: "sap-icon://collaborate", to: "teams:" }] : []),
+		] };
+		m.setProperty("/groups", [...groups.slice(0, 4), communication, ...groups.slice(4)]
+			.map((g) => ({ ...g, tiles: g.tiles.filter((t: Tile) => (!t.permission || this.has(t.permission)) && (t.to === "teams:" || session.pathEnabled(t.to))) }))
 			.filter((g) => g.tiles.length > 0));
 
 		const cards: StartCard[] = [];
@@ -233,7 +241,8 @@ export default class Start extends BaseController {
 	onTile(event: Event): void {
 		const control = event.getSource() as Control;
 		const to = control.getBindingContext("view")?.getProperty("to") as string | undefined;
-		if (to) this.nav(to);
+		if (to === "teams:") window.open(teamsHome(session.data.teams), "_blank", "noopener");
+		else if (to) this.nav(to);
 	}
 
 	onRow(event: Event): void {

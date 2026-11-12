@@ -43,6 +43,7 @@ public static class Permissions
     public const string FeedbackManage = "feedback.manage";
     public const string BackupManage = "backup.manage";
     public const string SettingsManage = "settings.manage";
+    public const string SettingsIntegrations = "settings.integrations";
     public const string AuditRead = "audit.read";
     public const string ArchiveUnlock = "archive.unlock";
     public const string NotificationsSend = "notifications.send";
@@ -91,6 +92,7 @@ public static class Permissions
         new(ChatAdmin, "Chat", "Chat verwalten: Gruppen anlegen, Einstellungen, Export und Löschung für Betroffenenrechte"),
         new(BackupManage, "System", "Backups verwalten"),
         new(SettingsManage, "System", "Firmendaten und Einstellungen ändern"),
+        new(SettingsIntegrations, "System", "Integrationen einrichten: Microsoft Teams (App-Registrierung, Kontenzuordnung, Chat-Modus)"),
         new(AuditRead, "System", "Audit-Log einsehen"),
         new(ArchiveUnlock, "System", "Archivierte Bauakten zum Bearbeiten entsperren (mit Passwort)"),
     ];
@@ -104,7 +106,7 @@ public static class Permissions
     /// </summary>
     public static IReadOnlySet<string> Privileged { get; } = new HashSet<string>(StringComparer.Ordinal)
     {
-        UsersManage, RolesManage, SettingsManage, BackupManage, DevicesManage, DevicesWipe, AuditRead, ArchiveUnlock,
+        UsersManage, RolesManage, SettingsManage, SettingsIntegrations, BackupManage, DevicesManage, DevicesWipe, AuditRead, ArchiveUnlock,
     };
 }
 

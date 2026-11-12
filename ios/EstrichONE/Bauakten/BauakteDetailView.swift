@@ -38,6 +38,8 @@ struct BauakteDetailView: View {
     @State private var pdfMessage: String?
     @State private var showsNavigationTitle = false
     @State private var appliedInitialArea = false
+    /// Verknüpfte Teams-Unterhaltung (nur online und im Chat-Modus „Teams“ bzw. „beides“).
+    @State private var teamsLink: TeamsLink?
 
     var body: some View {
         Group {
@@ -68,7 +70,17 @@ struct BauakteDetailView: View {
                     PhotoViewer(photos: content.photos.filter(\.isPhoto), selection: file.id) { Task { await reload() } }
                 }
                 .fullScreenCover(item: $playing) { file in VideoPreview(file: file) }
-                .toolbar { ToolbarItem(placement: .primaryAction) { moreMenu(content.bauakte) } }
+                .toolbar {
+                    if let teamsLink {
+                        ToolbarItem(placement: .primaryAction) {
+                            OpenInTeamsButton(targets: teamsLink.targets)
+                                .labelStyle(.iconOnly)
+                                .accessibilityHint(teamsLink.summary)
+                        }
+                    }
+                    ToolbarItem(placement: .primaryAction) { moreMenu(content.bauakte) }
+                }
+                .task(id: bauakteId) { await loadTeams() }
                 .alert("Bauakte stornieren?", isPresented: $cancelling) {
                     TextField("Grund (Pflicht)", text: $cancelReason)
                         .accessibilityIdentifier("cancelReasonField")
@@ -568,6 +580,9 @@ struct BauakteDetailView: View {
             }
             Button("Basisdaten bearbeiten", systemImage: "pencil") { action = .project }
             Button("Verlauf", systemImage: "clock.arrow.circlepath") { show(.notes) }
+            if let teamsLink {
+                OpenInTeamsButton(targets: teamsLink.targets)
+            }
         } label: {
             if loadingPDF {
                 ProgressView()
@@ -593,6 +608,15 @@ struct BauakteDetailView: View {
     private func show(_ target: BauakteArea) {
         area = target
         wideArea = target
+    }
+
+    /// Microsoft Teams: Verknüpfung laden (ohne Verbindung oder Teams-Anbindung bleibt der Knopf weg).
+    private func loadTeams() async {
+        guard let active = model.active, active.sync?.teams?.available == true else {
+            teamsLink = nil
+            return
+        }
+        teamsLink = try? await active.client.bauakteTeams(bauakteId).link
     }
 
     private func reload() async {

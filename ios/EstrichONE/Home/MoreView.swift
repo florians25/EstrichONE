@@ -57,10 +57,17 @@ struct MoreView: View {
                     .accessibilityIdentifier("inboxRow")
                     if let chat = model.active?.sync?.chat, chat.isAvailable {
                         Button { route = .chat } label: {
-                            row("Chat", symbol: "bubble.left.and.bubble.right", detail: chat.unreadCount > 0 ? "\(chat.unreadCount) neu" : nil,
-                                detailTint: Theme.accent)
+                            row(chat.readOnly ? "Chat-Archiv" : "Chat", symbol: chat.readOnly ? "archivebox" : "bubble.left.and.bubble.right",
+                                detail: chat.unreadCount > 0 ? "\(chat.unreadCount) neu" : nil, detailTint: Theme.accent)
                         }
                         .accessibilityIdentifier("chatRow")
+                    }
+                    // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App bzw. Teams im Browser.
+                    if let teams = model.active?.sync?.teams, teams.available {
+                        Button { Task { await TeamsOpener.open(teams.homeTargets) } } label: {
+                            row("Microsoft Teams", symbol: "person.2.wave.2", detail: teams.siteTeamName, detailTint: Theme.textSecondary)
+                        }
+                        .accessibilityIdentifier("teamsRow")
                     }
                 }
 

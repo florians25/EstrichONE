@@ -22,6 +22,8 @@ import de.estrichone.core.UpdatePresentation
 import de.estrichone.core.UserSummary
 import de.estrichone.core.AppModules
 import de.estrichone.core.chatStatus
+import de.estrichone.core.TeamsStatus
+import de.estrichone.core.teamsStatus
 import de.estrichone.core.modules
 import de.estrichone.core.healthBanners
 import de.estrichone.core.myPermissions
@@ -108,6 +110,9 @@ class Session(
 
     private val _chat = MutableStateFlow<ChatStatus?>(null)
     val chat: StateFlow<ChatStatus?> = _chat
+    private val _teams = MutableStateFlow<TeamsStatus?>(null)
+    /** Microsoft Teams: Chat-Modus und Team „Baustellen“ (`null` = Server ohne Teams-Anbindung). */
+    val teams: StateFlow<TeamsStatus?> = _teams
 
     private val _unread = MutableStateFlow(0)
     val unreadNotifications: StateFlow<Int> = _unread
@@ -209,6 +214,7 @@ class Session(
         if (_status.value.outcome == SyncOutcome.Offline) return
         runCatching { api.healthBanners() }.onSuccess { _health.value = it }
         runCatching { api.chatStatus() }.onSuccess { _chat.value = it }.onFailure { if (it is ApiException && it.status == 404) _chat.value = null }
+        runCatching { api.teamsStatus() }.onSuccess { _teams.value = it }
         runCatching { api.notifications() }.onSuccess { _unread.value = it.unreadCount }
         runCatching { api.myTickets() }.onSuccess { list -> _unreadTickets.value = list.count { it.hasUnread } }
         loadSettings()

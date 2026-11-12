@@ -18,6 +18,14 @@ Abgeschaltet antworten alle Chat-Endpunkte (außer `/chat/status` und `/chat/adm
 `MODULE_DISABLED`. Daten bleiben erhalten (Löschfrist läuft weiter); Export und Löschung für Betroffenenrechte
 funktionieren auch bei abgeschaltetem Modul.
 
+## Microsoft Teams (Chat-Modus)
+
+Unter **Einstellungen › Integrationen › Microsoft Teams** wählt der Betrieb „EstrichONE-Chat“ (Standard), „Microsoft
+Teams“ oder „beides“ ([Microsoft Teams](microsoft-teams.md)). Im Modus „Microsoft Teams“ ist der Chat ein **Archiv**:
+Lesen, gelesen markieren, stumm schalten, Anhang in Bauakte übernehmen und Export gehen weiter; alle anderen schreibenden
+Endpunkte antworten mit **409** `CHAT_READ_ONLY`. Kolonnen- und Baustellengruppen werden nicht mehr angepasst. Es wird
+nichts gelöscht. `GET /chat/status` enthält `mode` und `readOnly`; Web und Apps zeigen „Chat-Archiv“ und „In Teams öffnen“.
+
 ## Rechte
 
 | Recht | Bedeutung | Standardrollen |

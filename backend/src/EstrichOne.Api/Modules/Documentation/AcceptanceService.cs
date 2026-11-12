@@ -30,6 +30,7 @@ public sealed class AcceptanceService(
     IOptions<EstrichOneOptions> options,
     TimeProvider clock,
     Notifications.Exports.INotifier notifier,
+    Teams.Exports.ITeamsIntegration teams,
     ILogger<AcceptanceService> logger)
 {
     private const string EntityType = "bauakte";
@@ -101,6 +102,12 @@ public sealed class AcceptanceService(
             await FinalizeAsync(protocol, null, cancellationToken);
         }
 
+        if (!approve)
+        {
+            teams.Publish(new Teams.Exports.TeamsEvent(protocol.BauakteId, Teams.Exports.TeamsEventKind.AcceptanceRejected,
+                "Der Kunde hat die Abnahme über den Link abgelehnt.", Link: $"/bauakten/{protocol.BauakteId}"));
+        }
+
         // Team der Bauakte: nur Ergebnis und Bauakte, nie Kommentar oder Name des Kunden.
         var info = await bauakten.GetAsync(protocol.BauakteId, cancellationToken);
         await notifier.NotifyAsync(await bauakten.TeamUserIdsAsync(protocol.BauakteId, cancellationToken),
@@ -132,6 +139,8 @@ public sealed class AcceptanceService(
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        teams.Publish(new Teams.Exports.TeamsEvent(protocol.BauakteId, Teams.Exports.TeamsEventKind.AcceptanceSigned,
+            $"Ergebnis: {Result(protocol.Result)}", Link: $"/bauakten/{protocol.BauakteId}"));
     }
 
     public static string Result(AcceptanceResult result) => result switch

@@ -17,6 +17,10 @@ export interface ChatStatus {
 	readReceipts?: boolean;
 	personalShowPreview?: boolean;
 	realtime?: string;
+	/** Chat-Modus (Microsoft Teams); „teams“ = Archiv. */
+	mode?: "estrichOne" | "teams" | "both";
+	/** Nur lesen und exportieren (Modus „Microsoft Teams“). */
+	readOnly?: boolean;
 }
 
 export type AttachmentKind = "photo" | "document";

@@ -125,7 +125,7 @@ fun HomeScreen() {
     val firstName = session.user.displayName.substringBefore(' ')
     val modules by session.modules.collectAsState()
 
-    ScreenScaffold("Heute", root = true, actions = { SyncAction(); InboxActions() }) { padding ->
+    ScreenScaffold("Heute", root = true, actions = { SyncAction(); TeamsAction(); InboxActions() }) { padding ->
         // Nach unten ziehen: abgleichen und Plan, Hinweise und Zähler neu laden.
         PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {

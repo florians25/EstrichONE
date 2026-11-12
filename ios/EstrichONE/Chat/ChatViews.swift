@@ -22,12 +22,15 @@ struct ChatListView: View {
 
     private var chat: ChatCenter? { model.active?.chat }
     private var status: ChatStatus? { model.active?.sync?.chat }
+    /// Modus „Microsoft Teams“: Chat-Archiv (nur lesen).
+    private var archive: Bool { status?.readOnly == true }
+    private var teams: TeamsStatus? { model.active?.sync?.teams }
 
     var body: some View {
         conversationList
         .listStyle(.insetGrouped)
         .overlay { if !loaded { ProgressView() } }
-        .navigationTitle("Chat")
+        .navigationTitle(archive ? "Chat-Archiv" : "Chat")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "In allen Chats suchen")
         .task(id: search) { await runSearch() }
@@ -38,9 +41,16 @@ struct ChatListView: View {
             ChatConversationView(conversationId: hit.conversationId, title: hit.conversationTitle, focusMessage: hit.message.id)
         }
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button("Neuer Chat", systemImage: "square.and.pencil") { startsChat = true }
-                    .accessibilityIdentifier("newChatButton")
+            if let teams, teams.available {
+                ToolbarItem(placement: .primaryAction) {
+                    OpenInTeamsButton(targets: teams.homeTargets)
+                }
+            }
+            if !archive {
+                ToolbarItem(placement: .primaryAction) {
+                    Button("Neuer Chat", systemImage: "square.and.pencil") { startsChat = true }
+                        .accessibilityIdentifier("newChatButton")
+                }
             }
         }
         .sheet(isPresented: $startsChat) {
@@ -83,6 +93,11 @@ struct ChatListView: View {
 
     private var conversationList: some View {
         List {
+            if archive {
+                Section {
+                    ChatArchiveNotice(targets: teams?.homeTargets)
+                }
+            }
             if let failure {
                 Section {
                     NoticeLine(tone: .neutral, text: failure, symbol: "wifi.slash")

@@ -7165,6 +7165,324 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                     b.ToTable("sync_operations", (string)null);
                 });
 
+            modelBuilder.Entity("EstrichOne.Api.Modules.Teams.TeamsBauakteLink", b =>
+                {
+                    b.Property<Guid>("BauakteId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("bauakte_id");
+
+                    b.Property<string>("ChannelId")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("channel_id");
+
+                    b.Property<string>("ChatId")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("chat_id");
+
+                    b.Property<bool>("Created")
+                        .HasColumnType("boolean")
+                        .HasColumnName("created");
+
+                    b.Property<string>("DesiredHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("desired_hash");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("kind");
+
+                    b.Property<DateTimeOffset?>("LastPostAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_post_at");
+
+                    b.Property<string>("LastPostError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_post_error");
+
+                    b.Property<DateTimeOffset?>("LastSyncAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_sync_at");
+
+                    b.Property<string>("LastSyncError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_sync_error");
+
+                    b.Property<DateTimeOffset>("LinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("linked_at");
+
+                    b.Property<Guid>("LinkedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_by_user_id");
+
+                    b.PrimitiveCollection<List<string>>("ManagedMemberIds")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("managed_member_ids");
+
+                    b.Property<string>("ProtectedWebhookUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_webhook_url");
+
+                    b.Property<bool>("SyncMembers")
+                        .HasColumnType("boolean")
+                        .HasColumnName("sync_members");
+
+                    b.Property<bool>("SyncPending")
+                        .HasColumnType("boolean")
+                        .HasColumnName("sync_pending");
+
+                    b.Property<int>("SyncedMembers")
+                        .HasColumnType("integer")
+                        .HasColumnName("synced_members");
+
+                    b.Property<string>("TeamId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("team_id");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<int>("UnmappedMembers")
+                        .HasColumnType("integer")
+                        .HasColumnName("unmapped_members");
+
+                    b.Property<string>("WebUrl")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("web_url");
+
+                    b.HasKey("BauakteId")
+                        .HasName("pk_teams_bauakte_links");
+
+                    b.ToTable("teams_bauakte_links", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Teams.TeamsSettingsRow", b =>
+                {
+                    b.Property<int>("Id")
+                        .HasColumnType("integer")
+                        .HasColumnName("id");
+
+                    b.Property<string>("AuthKind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("auth_kind");
+
+                    b.Property<bool>("AutoLink")
+                        .HasColumnType("boolean")
+                        .HasColumnName("auto_link");
+
+                    b.Property<DateTimeOffset?>("AutoLinkSince")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("auto_link_since");
+
+                    b.Property<DateTimeOffset?>("CertificateExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("certificate_expires_at");
+
+                    b.Property<string>("CertificateThumbprint")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("certificate_thumbprint");
+
+                    b.Property<string>("ChatMode")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("chat_mode");
+
+                    b.Property<string>("ClientId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("client_id");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("DefaultLinkKind")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("default_link_kind");
+
+                    b.Property<DateTimeOffset?>("DeviceCodeExpiresAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("device_code_expires_at");
+
+                    b.Property<DateTimeOffset?>("LastPostAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_post_at");
+
+                    b.Property<string>("LastPostError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_post_error");
+
+                    b.Property<DateTimeOffset?>("LastTestAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_test_at");
+
+                    b.Property<string>("LastTestError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_test_error");
+
+                    b.Property<bool?>("LastTestOk")
+                        .HasColumnType("boolean")
+                        .HasColumnName("last_test_ok");
+
+                    b.Property<bool>("PostAcceptance")
+                        .HasColumnType("boolean")
+                        .HasColumnName("post_acceptance");
+
+                    b.Property<bool>("PostDefects")
+                        .HasColumnType("boolean")
+                        .HasColumnName("post_defects");
+
+                    b.Property<bool>("PostSchedule")
+                        .HasColumnType("boolean")
+                        .HasColumnName("post_schedule");
+
+                    b.Property<string>("PostVia")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)")
+                        .HasColumnName("post_via");
+
+                    b.Property<string>("ProtectedCertificate")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_certificate");
+
+                    b.Property<string>("ProtectedClientSecret")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_client_secret");
+
+                    b.Property<string>("ProtectedDeviceCode")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_device_code");
+
+                    b.Property<string>("ProtectedSenderToken")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_sender_token");
+
+                    b.Property<string>("ProtectedWebhookUrl")
+                        .HasColumnType("text")
+                        .HasColumnName("protected_webhook_url");
+
+                    b.Property<DateTimeOffset?>("SenderConnectedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("sender_connected_at");
+
+                    b.Property<string>("SenderName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("sender_name");
+
+                    b.Property<string>("SenderUserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("sender_user_id");
+
+                    b.Property<string>("SiteTeamId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("site_team_id");
+
+                    b.Property<string>("SiteTeamName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("site_team_name");
+
+                    b.Property<string>("SiteTeamUrl")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("site_team_url");
+
+                    b.Property<bool>("SyncMembers")
+                        .HasColumnType("boolean")
+                        .HasColumnName("sync_members");
+
+                    b.Property<string>("TenantId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("updated_at");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version");
+
+                    b.HasKey("Id")
+                        .HasName("pk_teams_settings");
+
+                    b.ToTable("teams_settings", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Teams.TeamsUserLink", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("user_id");
+
+                    b.Property<string>("AadUserId")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)")
+                        .HasColumnName("aad_user_id");
+
+                    b.Property<DateTimeOffset>("CheckedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("checked_at");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)")
+                        .HasColumnName("error");
+
+                    b.Property<bool>("Manual")
+                        .HasColumnType("boolean")
+                        .HasColumnName("manual");
+
+                    b.Property<string>("UserPrincipalName")
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)")
+                        .HasColumnName("user_principal_name");
+
+                    b.HasKey("UserId")
+                        .HasName("pk_teams_user_links");
+
+                    b.ToTable("teams_user_links", (string)null);
+                });
+
             modelBuilder.Entity("EstrichOne.Api.Modules.Work.WorkItem", b =>
                 {
                     b.Property<Guid>("Id")

@@ -50,7 +50,7 @@ internal static class BauakteTeamEndpoints
 
     private static async Task<Results<Ok<List<BauakteMemberResponse>>, ProblemHttpResult>> SetMembersAsync(
         Guid id, SetMembersRequest request, IBauakteAccess access, IBauakteHistory history, EstrichOneDbContext db,
-        Notifications.Exports.INotifier notifier, CancellationToken cancellationToken)
+        Notifications.Exports.INotifier notifier, Teams.Exports.ITeamsIntegration teams, CancellationToken cancellationToken)
     {
         var bauakte = await (await access.VisibleAsync(db.Set<Bauakte>(), cancellationToken))
             .Include(b => b.Members).SingleOrDefaultAsync(b => b.Id == id, cancellationToken);
@@ -82,6 +82,11 @@ internal static class BauakteTeamEndpoints
         }
 
         await db.SaveChangesAsync(cancellationToken);
+        if (!current.SetEquals(wanted))
+        {
+            teams.BauakteTeamChanged(bauakte.Id);
+        }
+
         var added = wanted.Where(u => !current.Contains(u) && u != responsible).ToList();
         await notifier.NotifyAsync(added, new Notifications.Exports.NotificationRequest(Notifications.Exports.NotificationCategory.Bauakte,
             "Bauakte zugewiesen", $"{bauakte.Number} {bauakte.Title}".Trim(), $"/bauakten/{bauakte.Id}", "bauakte", bauakte.Id,

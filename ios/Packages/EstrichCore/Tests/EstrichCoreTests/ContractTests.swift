@@ -78,6 +78,9 @@ struct ContractTests {
         try checkResponse("TicketSummary", sample: ticket.summary)
         try checkResponse("TicketCommentDto", sample: ticket.comments[0])
         try checkResponse("DirectoryUser", sample: DirectoryUser(id: UUID(), displayName: "a", isActive: true))
+        let teamsLink = TeamsLink(kind: "channel", displayName: nil, webUrl: "https://teams.microsoft.com/l/channel/x", appUrl: "msteams:/l/channel/x")
+        try checkResponse("TeamsLinkResponse", sample: teamsLink)
+        try checkResponse("BauakteTeamsResponse", sample: BauakteTeamsResponse(chatMode: .teams, link: teamsLink, canManage: true))
         let references = try JSONCoding.decoder.decode(CustomerReferences.self, from: Data("""
             {"id":"01a00000-0000-7000-8000-000000000001","name":"x","customerNumber":null,"deletable":true,"confirmText":"x","archived":false,
              "anonymized":false,"references":[{"kind":"bauakten","label":"Bauakte","count":1,"link":null,"items":[{"id":"01a00000-0000-7000-8000-000000000002","text":"x","link":null}]}]}

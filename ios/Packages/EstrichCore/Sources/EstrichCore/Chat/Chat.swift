@@ -23,10 +23,12 @@ public struct ChatStatus: Decodable, Sendable, Equatable {
     public let privacyNoticeVersion: Int
     /// Datenschutzhinweis schon bestätigt (Server).
     public let privacyAccepted: Bool
+    /// Modus „Microsoft Teams“: der Chat ist ein Archiv – lesen und exportieren, nicht schreiben.
+    public let readOnly: Bool
 
     public init(enabled: Bool, canUse: Bool = true, canAdmin: Bool = false, unreadCount: Int = 0, unreadConversations: Int? = nil,
                 retentionDays: Int? = nil, showPreview: Bool = false, editWindowMinutes: Int = 15, privacyNoticeVersion: Int = 1,
-                privacyAccepted: Bool = false) {
+                privacyAccepted: Bool = false, readOnly: Bool = false) {
         self.enabled = enabled
         self.canUse = canUse
         self.canAdmin = canAdmin
@@ -37,6 +39,7 @@ public struct ChatStatus: Decodable, Sendable, Equatable {
         self.editWindowMinutes = editWindowMinutes
         self.privacyNoticeVersion = privacyNoticeVersion
         self.privacyAccepted = privacyAccepted
+        self.readOnly = readOnly
     }
 
     public init(from decoder: any Decoder) throws {
@@ -51,11 +54,12 @@ public struct ChatStatus: Decodable, Sendable, Equatable {
         editWindowMinutes = (try? c.decodeIfPresent(Int.self, forKey: .editWindowMinutes)) ?? 15
         privacyNoticeVersion = (try? c.decodeIfPresent(Int.self, forKey: .privacyNoticeVersion)) ?? 1
         privacyAccepted = (try? c.decodeIfPresent(Bool.self, forKey: .privacyAccepted)) ?? false
+        readOnly = (try? c.decodeIfPresent(Bool.self, forKey: .readOnly)) ?? false
     }
 
     private enum CodingKeys: String, CodingKey {
         case enabled, moduleEnabled, canUse, allowed, canAdmin, unreadCount, unread, unreadConversations, retentionDays, showPreview
-        case editWindowMinutes, privacyNoticeVersion, privacyAccepted
+        case editWindowMinutes, privacyNoticeVersion, privacyAccepted, readOnly
     }
 
     public var isAvailable: Bool { enabled && canUse }

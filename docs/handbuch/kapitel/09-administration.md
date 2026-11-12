@@ -287,6 +287,79 @@ Zugangsbriefe und Fehlermeldungen verschickt.
 Im Reiter **Vorlagen** passen Sie Betreff und Text jeder E-Mail an (**Standardtext wiederherstellen** setzt zurück). Das
 **Versandprotokoll** zeigt jede verschickte E-Mail mit Status; fehlgeschlagene lassen sich **erneut senden**.
 
+## Microsoft Teams {#teams}
+
+**Integrationen** → **Microsoft Teams** verlagert Unterhaltungen nach Microsoft Teams: je Bauakte ein Kanal im Team
+„Baustellen“ oder ein Gruppenchat mit dem Bauakten-Team, **In Teams öffnen** in Web und Apps und – auf Wunsch – Karten bei
+neuen Mängeln, Abnahmen und Terminänderungen. Ohne Einrichtung ändert sich nichts. Recht: **Integrationen einrichten**
+(`settings.integrations`, ab Werk nur Administrator).
+
+### Chat-Modus
+
+- **EstrichONE-Chat** (Standard): wie bisher, keine Teams-Knöpfe.
+- **Beides**: eingebauter Chat wie bisher, zusätzlich **Microsoft Teams** in der Navigation, auf der Startseite und
+  **In Teams öffnen** an jeder verknüpften Bauakte.
+- **Microsoft Teams**: Der eingebaute Chat wird zum **Chat-Archiv** – alle Verläufe bleiben lesbar und lassen sich
+  exportieren (Symbol **Herunterladen** im Chat-Archiv), neue Nachrichten und Chats gibt es nur noch in Teams. Es wird
+  nichts gelöscht; die eingestellte Löschfrist läuft weiter. Zurückschalten ist jederzeit möglich.
+
+### Ohne App-Registrierung (einfacher Weg)
+
+1. Chat-Modus **Beides** oder **Microsoft Teams** wählen und **Speichern**.
+2. In der Bauakte **Mit Teams verknüpfen** → **Vorhandenen Kanal oder Chat per Link verknüpfen**. Den Link holen Sie in
+   Teams beim Kanal über **…** → **Link zum Kanal abrufen** bzw. beim Chat über **…** → **Link kopieren**.
+3. Optional Karten: In Teams beim Zielkanal **…** → **Workflows** → **Beim Empfang einer Webhookanforderung in einem
+   Kanal posten** → Team und Kanal wählen → die angezeigte URL kopieren. In EstrichONE unter **Nachrichten** „Senden über:
+   Teams-Workflows-Webhook“, URL einfügen, **Testkarte senden**. Die URL ist geheim und wird verschlüsselt gespeichert.
+
+### Mit App-Registrierung (Kanäle und Chats automatisch, Mitglieder abgleichen)
+
+Im **Microsoft Entra Admin Center** (entra.microsoft.com) mit einem Konto „Anwendungsadministrator“ oder
+„Globaler Administrator“:
+
+1. **Identität** → **Anwendungen** → **App-Registrierungen** → **Neue Registrierung**. Name „EstrichONE“, Kontotyp
+   **Nur Konten in diesem Organisationsverzeichnis (einzelner Mandant)**, keine Umleitungs-URI → **Registrieren**.
+2. Auf der Übersichtsseite **Anwendungs-ID (Client)** und **Verzeichnis-ID (Mandant)** kopieren und in EstrichONE als
+   **Client-ID** und **Tenant-ID** eintragen.
+3. **Zertifikate & Geheimnisse**:
+   - empfohlen **Zertifikate** → **Zertifikat hochladen** (öffentlicher Teil, .cer/.pem). In EstrichONE „Anmeldung der
+     App: Zertifikat“ und Zertifikat **mit privatem Schlüssel** im PEM-Format einfügen. Erzeugen z. B. mit
+     `openssl req -x509 -newkey rsa:2048 -nodes -days 730 -subj "/CN=EstrichONE" -keyout key.pem -out cert.pem`
+     (in EstrichONE den Inhalt von cert.pem und key.pem untereinander einfügen, in Entra nur cert.pem hochladen);
+   - oder **Geheime Clientschlüssel** → **Neuer geheimer Clientschlüssel** (Ablauf höchstens 24 Monate). Den **Wert**
+     sofort kopieren (er ist nur einmal sichtbar) und in EstrichONE eintragen. Ablaufdatum im Kalender notieren.
+4. **API-Berechtigungen** → **Berechtigung hinzufügen** → **Microsoft Graph** → **Anwendungsberechtigungen**:
+   `User.Read.All` und `Team.ReadBasic.All` (immer), dazu je nach Nutzung `Channel.Create` und
+   `TeamMember.ReadWrite.All` (Kanäle) bzw. `Chat.Create` und `ChatMember.ReadWrite.All` (Gruppenchats).
+   Die Liste mit Begründung zeigt EstrichONE im Reiter **Berechtigungen**.
+5. **Administratorzustimmung für … erteilen** wählen und bestätigen. Alle Einträge zeigen danach „Gewährt“.
+6. In Teams ein Team **Baustellen** anlegen (oder ein vorhandenes nehmen), beim Team **…** → **Link zum Team abrufen**
+   und den Link in EstrichONE unter **Team „Baustellen“** einfügen.
+7. **Speichern** und **Verbindung testen**. Jeder Schritt wird einzeln bewertet; bei fehlender Berechtigung nennt
+   EstrichONE ihren Namen.
+8. Reiter **Benutzer** → **Alle automatisch zuordnen**: Benutzer werden über ihre E-Mail-Adresse bzw. den
+   Anmeldenamen (UPN) ihrem Microsoft-Konto zugeordnet. Abweichungen korrigieren Sie mit dem Stift (UPN, E-Mail oder
+   Objekt-ID); von Hand gesetzte Zuordnungen bleiben beim nächsten Abgleich erhalten.
+
+Weitere Einstellungen: **Neue Unterhaltung als** (Kanal oder Gruppenchat), **Neue Bauakten automatisch verknüpfen**
+und **Mitglieder abgleichen**. Zuständige und Mitglieder der Bauakte werden aufgenommen; im Gruppenchat entfernt
+EstrichONE nur Personen, die es selbst hinzugefügt hat, aus dem Team „Baustellen“ niemanden. Hinweise zum Abgleich (z. B.
+Person ohne Microsoft-Konto) zeigt die Bauakte im Menü des Knopfs **In Teams öffnen** unter **Details**.
+
+**Karten über Microsoft Graph** (in den verknüpften Kanal bzw. Chat statt per Webhook): Zusätzlich die **delegierten**
+Berechtigungen `ChannelMessage.Send`, `ChatMessage.Send` und `offline_access` hinzufügen und zustimmen, unter
+**Authentifizierung** „Öffentliche Clientflows zulassen“ auf **Ja** stellen. Dann unter **Nachrichten** → **Dienstkonto
+verbinden** mit einem eigenen Konto (z. B. estrichone@firma.de, Teams-Lizenz nötig) anmelden: Seite öffnen, Code
+eingeben. Microsoft erlaubt Anwendungen kein Senden ohne angemeldetes Konto – daher das Dienstkonto.
+
+> **Server ohne Internet:** Für Teams braucht der EstrichONE-Server HTTPS-Zugang zu login.microsoftonline.com und
+> graph.microsoft.com. Ist er nicht erreichbar, meldet EstrichONE „Microsoft 365 ist vom Server aus nicht erreichbar“;
+> der eingebaute Chat und alle anderen Funktionen arbeiten weiter.
+
+> **Datenschutz:** Vor der Umstellung mit dem Betriebsrat regeln und die Beschäftigten informieren (Vorlage für den
+> Datenschutzhinweis: `docs/microsoft-teams.md`). EstrichONE übermittelt nur Kontozuordnung, Mitgliedschaften und – falls
+> eingeschaltet – kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten; es liest keine Nachrichten aus Teams.
+
 ## Backup Center {#backup}
 
 **Datensicherung & Archiv** → **Sicherung** ist das **Backup Center**. EstrichONE sichert täglich vollständig: Datenbank (alle Bauakten,

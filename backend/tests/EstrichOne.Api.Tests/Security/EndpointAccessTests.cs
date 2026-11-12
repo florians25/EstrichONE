@@ -75,6 +75,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         "DELETE /api/v1/notifications/devices/{id:guid}", "DELETE /api/v1/notifications/devices", "GET /api/v1/notifications/preferences",
         "PUT /api/v1/notifications/preferences", "POST /api/v1/notifications/test",
         "GET /api/v1/chat/status",
+        "GET /api/v1/teams/status", // Chat-Modus und Team-Link für Navigation und Startseite, keine Geheimnisse
     ];
 
     public async ValueTask InitializeAsync() => _factory = await ApiFactory.CreateMigratedAsync(postgres, new Dictionary<string, string>

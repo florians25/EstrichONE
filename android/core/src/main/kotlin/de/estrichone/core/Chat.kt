@@ -12,6 +12,8 @@ data class ChatStatus(
     val enabled: Boolean = false, val canUse: Boolean = false, val canAdmin: Boolean = false, val unreadCount: Int = 0,
     val unreadConversations: Int = 0, val retentionDays: Int? = null, val showPreview: Boolean = true, val privacyAccepted: Boolean = true,
     val editWindowMinutes: Int = 15, val attachmentsEnabled: Boolean = true, val readReceipts: Boolean = true, val privacyNoticeVersion: Int = 0,
+    /** Modus „Microsoft Teams“: Chat-Archiv – lesen und exportieren, nicht schreiben. */
+    val readOnly: Boolean = false,
 ) {
     val isAvailable: Boolean get() = enabled && canUse
 }

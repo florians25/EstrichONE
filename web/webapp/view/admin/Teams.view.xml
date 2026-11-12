@@ -1,0 +1,178 @@
+<mvc:View controllerName="estrichone.controller.admin.Teams" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:f="sap.f" xmlns:form="sap.ui.layout.form"
+	xmlns:core="sap.ui.core" height="100%">
+	<f:DynamicPage id="page" toggleHeaderOnTitleClick="false" class="eoAdmin">
+		<f:title>
+			<f:DynamicPageTitle>
+				<f:heading><Title text="{i18n>nav.teamsSettings}" level="H1"/></f:heading>
+				<f:expandedContent><Text text="Unterhaltungen in Microsoft Teams führen: je Bauakte ein Kanal oder Gruppenchat, „In Teams öffnen“ in Web und Apps, Karten bei neuen Mängeln, Abnahmen und Terminänderungen. Ohne Einrichtung bleibt alles wie bisher."/></f:expandedContent>
+				<f:actions>
+					<Button id="teamsTestButton" text="Verbindung testen" icon="sap-icon://connected" press=".onTest" enabled="{view>/s/graphConfigured}"/>
+					<Button id="teamsSave" text="{i18n>common.save}" icon="sap-icon://save" type="Emphasized" press=".onSave" enabled="{view>/loaded}"/>
+				</f:actions>
+			</f:DynamicPageTitle>
+		</f:title>
+		<f:content>
+			<VBox renderType="Bare">
+				<MessageStrip id="adminStatus" text="{view>/status/text}" type="{view>/status/type}" customIcon="{view>/status/icon}" showIcon="true"
+					visible="{= !!${view>/status} }" class="eoAdminStatus"/>
+				<IconTabBar id="teamsTabs" expandable="false" stretchContentHeight="false" applyContentPadding="false" selectedKey="{view>/tab}">
+					<items>
+						<IconTabFilter key="connection" text="Verbindung">
+							<VBox class="sapUiSmallMargin" busy="{view>/busy}">
+								<MessageStrip visible="{= ${view>/s/lastTestAt} !== null }" type="{= ${view>/s/lastTestOk} ? 'Success' : 'Error' }" showIcon="true"
+									text="{= ${view>/s/lastTestOk} ? 'Letzter Verbindungstest erfolgreich.' : 'Letzter Verbindungstest fehlgeschlagen: ' + ${view>/s/lastTestError} }"
+									class="sapUiSmallMarginBottom"/>
+								<MessageStrip type="Information" showIcon="true" class="sapUiSmallMarginBottom" id="teamsPrivacy"
+									text="Datenschutz: An Microsoft gehen nur die Zuordnung der Konten (über die dienstliche E-Mail-Adresse), Mitgliedschaften in den Unterhaltungen der Bauakten und – falls eingeschaltet – kurze Ereigniskarten ohne Namen, Kommentare oder Kundendaten. EstrichONE liest keine Nachrichten aus Teams. Vor der Umstellung Betriebsrat einbinden und Beschäftigte informieren (Vorlage im Handbuch)."/>
+								<List id="teamsTestSteps" items="{view>/steps}" visible="{= ${view>/steps}.length > 0 }" headerText="Ergebnis des Verbindungstests"
+									class="sapUiSmallMarginBottom" width="48rem">
+									<StandardListItem title="{view>name}" description="{view>detail}" icon="{= ${view>ok} ? 'sap-icon://sys-enter-2' : 'sap-icon://error' }"
+										highlight="{= ${view>ok} ? 'Success' : 'Error' }" wrapping="true"/>
+								</List>
+							</VBox>
+							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="56rem">
+								<core:Title text="Chat-Modus"/>
+								<Label text="Unterhaltungen in" labelFor="tmMode"/>
+								<VBox>
+									<SegmentedButton id="tmMode" selectedKey="{view>/s/chatMode}" width="100%">
+										<items>
+											<SegmentedButtonItem key="estrichOne" text="EstrichONE-Chat"/>
+											<SegmentedButtonItem key="teams" text="Microsoft Teams"/>
+											<SegmentedButtonItem key="both" text="Beides"/>
+										</items>
+									</SegmentedButton>
+									<Text text="{view>/modeHint}" class="sapUiTinyMarginTop"/>
+								</VBox>
+								<core:Title text="App-Registrierung (Microsoft Entra ID)"/>
+								<Label text="Verzeichnis-ID (Tenant-ID)" labelFor="tmTenant"/>
+								<Input id="tmTenant" value="{view>/s/tenantId}" placeholder="00000000-0000-0000-0000-000000000000 oder firma.onmicrosoft.com" maxLength="100"/>
+								<Label text="Anwendungs-ID (Client-ID)" labelFor="tmClient"/>
+								<Input id="tmClient" value="{view>/s/clientId}" placeholder="00000000-0000-0000-0000-000000000000" maxLength="100"/>
+								<Label text="Anmeldung der App" labelFor="tmAuth"/>
+								<Select id="tmAuth" selectedKey="{view>/s/authKind}">
+									<core:Item key="secret" text="Geheimer Clientschlüssel"/>
+									<core:Item key="certificate" text="Zertifikat (empfohlen)"/>
+								</Select>
+								<Label text="Clientschlüssel (Wert)" labelFor="tmSecret" visible="{= ${view>/s/authKind} === 'secret' }"/>
+								<VBox visible="{= ${view>/s/authKind} === 'secret' }">
+									<Input id="tmSecret" value="{view>/secret}" type="Password"
+										placeholder="{= ${view>/s/hasClientSecret} ? 'gespeichert (leer lassen, um ihn beizubehalten)' : 'Wert des geheimen Clientschlüssels' }"/>
+									<Text text="Wird verschlüsselt gespeichert und nie wieder angezeigt. Ablaufdatum in Entra ID notieren (höchstens 24 Monate)." class="sapUiTinyMarginTop"/>
+								</VBox>
+								<Label text="Zertifikat (PEM)" labelFor="tmCert" visible="{= ${view>/s/authKind} === 'certificate' }"/>
+								<VBox visible="{= ${view>/s/authKind} === 'certificate' }">
+									<TextArea id="tmCert" value="{view>/certificate}" rows="4" width="100%"
+										placeholder="{= ${view>/s/certificateThumbprint} ? 'gespeichert – Fingerabdruck ' + ${view>/s/certificateThumbprint} : '-----BEGIN CERTIFICATE----- … -----BEGIN PRIVATE KEY----- …' }"/>
+									<Text text="{view>/certificateText}" visible="{= !!${view>/certificateText} }" class="sapUiTinyMarginTop"/>
+								</VBox>
+								<core:Title text="Bauakten"/>
+								<Label text="Team „Baustellen“" labelFor="tmTeam"/>
+								<VBox>
+									<Input id="tmTeam" value="{view>/team}" placeholder="Link zum Team (Teams › Team › … › Link zum Team abrufen) oder Gruppen-ID"/>
+									<Link text="{= 'Gespeichert: ' + ${view>/s/siteTeamName} }" href="{view>/s/siteTeamUrl}" target="_blank" visible="{= !!${view>/s/siteTeamName} }"
+										class="sapUiTinyMarginTop"/>
+								</VBox>
+								<Label text="Neue Unterhaltung als" labelFor="tmKind"/>
+								<Select id="tmKind" selectedKey="{view>/s/defaultLinkKind}">
+									<core:Item key="channel" text="Kanal im Team „Baustellen“"/>
+									<core:Item key="groupChat" text="Gruppenchat mit dem Bauakten-Team"/>
+								</Select>
+								<Label text="Neue Bauakten automatisch verknüpfen" labelFor="tmAuto"/>
+								<Switch id="tmAuto" state="{view>/s/autoLink}" customTextOn=" " customTextOff=" "/>
+								<Label text="Mitglieder abgleichen" labelFor="tmSync"/>
+								<VBox>
+									<Switch id="tmSync" state="{view>/s/syncMembers}" customTextOn=" " customTextOff=" "/>
+									<Text text="Zuständige und Mitglieder der Bauakte werden in Teams aufgenommen; im Gruppenchat entfernt EstrichONE nur Personen, die es selbst hinzugefügt hat."/>
+								</VBox>
+							</form:SimpleForm>
+						</IconTabFilter>
+						<IconTabFilter key="users" text="Benutzer" count="{= ${view>/s/mappedUsers} + '/' + ${view>/s/activeUsers} }">
+							<Table id="teamsUsers" items="{view>/users}" growing="true" growingThreshold="100"
+								noDataText="Keine Benutzer.">
+								<headerToolbar>
+									<OverflowToolbar>
+										<Text text="Zuordnung über E-Mail-Adresse bzw. UPN; von Hand korrigierte Einträge bleiben beim Abgleich erhalten."/>
+										<ToolbarSpacer/>
+										<Button id="teamsMatch" text="Alle automatisch zuordnen" icon="sap-icon://synchronize" press=".onMatch" enabled="{view>/s/graphConfigured}"/>
+									</OverflowToolbar>
+								</headerToolbar>
+								<columns>
+									<Column><Text text="Benutzer"/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Microsoft-Konto"/></Column>
+									<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Status"/></Column>
+									<Column width="5rem" hAlign="End"><Text text=""/></Column>
+								</columns>
+								<items>
+									<ColumnListItem>
+										<ObjectIdentifier title="{view>name}" text="{view>email}"/>
+										<Text text="{= ${view>userPrincipalName} || '–' }"/>
+										<ObjectStatus text="{view>stateText}" state="{view>state}"/>
+										<Button icon="sap-icon://edit" tooltip="Zuordnung korrigieren" type="Transparent" press=".onEditUser"/>
+									</ColumnListItem>
+								</items>
+							</Table>
+						</IconTabFilter>
+						<IconTabFilter key="messages" text="Nachrichten">
+							<form:SimpleForm editable="true" layout="ResponsiveGridLayout" labelSpanL="3" labelSpanM="4" width="56rem">
+								<core:Title text="Karten in Teams bei Ereignissen"/>
+								<Label text="Senden über" labelFor="tmPost"/>
+								<Select id="tmPost" selectedKey="{view>/s/postVia}">
+									<core:Item key="off" text="Nicht senden"/>
+									<core:Item key="webhook" text="Teams-Workflows-Webhook (ohne App-Registrierung)"/>
+									<core:Item key="graph" text="Microsoft Graph mit Dienstkonto (in den verknüpften Kanal bzw. Chat)"/>
+								</Select>
+								<Label text="Ereignisse"/>
+								<VBox>
+									<CheckBox id="tmDefects" text="Neuer Mangel" selected="{view>/s/postDefects}"/>
+									<CheckBox id="tmAcceptance" text="Abnahme unterschrieben oder abgelehnt" selected="{view>/s/postAcceptance}"/>
+									<CheckBox id="tmSchedule" text="Terminänderung (Ausführungszeitraum, Einsatzplan)" selected="{view>/s/postSchedule}"/>
+								</VBox>
+								<Label text="Webhook-URL" labelFor="tmWebhook" visible="{= ${view>/s/postVia} === 'webhook' }"/>
+								<VBox visible="{= ${view>/s/postVia} === 'webhook' }">
+									<Input id="tmWebhook" value="{view>/webhook}" type="Password"
+										placeholder="{= ${view>/s/hasWebhook} ? 'gespeichert (' + ${view>/s/webhookHost} + ') – leer lassen, um sie beizubehalten' : 'https://…logic.azure.com/… bzw. …powerplatform.com/…' }"/>
+									<Text text="In Teams beim Kanal „…“ › „Workflows“ › „Beim Empfang einer Webhookanforderung in einem Kanal posten“. Die URL ist geheim und wird verschlüsselt gespeichert."
+										class="sapUiTinyMarginTop"/>
+									<Button id="tmWebhookTest" text="Testkarte senden" icon="sap-icon://paper-plane" press=".onWebhookTest" class="sapUiTinyMarginTop"/>
+								</VBox>
+								<Label text="Dienstkonto" visible="{= ${view>/s/postVia} === 'graph' }"/>
+								<VBox visible="{= ${view>/s/postVia} === 'graph' }">
+									<Text text="{= ${view>/s/senderName} ? 'Verbunden: ' + ${view>/s/senderName} : 'Kein Dienstkonto verbunden. Karten über Graph sendet ein angemeldetes Konto (z. B. estrichone@firma.de), keine App.' }"/>
+									<HBox class="sapUiTinyMarginTop">
+										<Button id="tmSenderConnect" text="{= ${view>/s/senderName} ? 'Neu verbinden' : 'Dienstkonto verbinden' }" icon="sap-icon://log" press=".onConnectSender"
+											enabled="{view>/s/graphConfigured}"/>
+										<Button text="Trennen" type="Transparent" press=".onDisconnectSender" visible="{= !!${view>/s/senderName} }" class="sapUiTinyMarginBegin"/>
+									</HBox>
+								</VBox>
+								<Label text="Letzte Karte" visible="{= !!${view>/s/lastPostAt} }"/>
+								<ObjectStatus visible="{= !!${view>/s/lastPostAt} }" text="{view>/lastPostText}" state="{= ${view>/s/lastPostError} ? 'Error' : 'Success' }"/>
+							</form:SimpleForm>
+						</IconTabFilter>
+						<IconTabFilter key="permissions" text="Berechtigungen">
+							<VBox class="sapUiSmallMargin">
+								<Text text="Diese Microsoft-Graph-Berechtigungen in der App-Registrierung hinzufügen und „Administratorzustimmung erteilen“ wählen. Optionale nur, wenn die Funktion genutzt wird. Schritt für Schritt: Handbuch › Microsoft Teams."
+									class="sapUiSmallMarginBottom"/>
+								<Table id="teamsPermissions" items="{view>/s/permissions}">
+									<columns>
+										<Column width="14rem"><Text text="Berechtigung"/></Column>
+										<Column width="7rem"><Text text="Typ"/></Column>
+										<Column width="7rem"><Text text="Nötig"/></Column>
+										<Column minScreenWidth="Tablet" demandPopin="true"><Text text="Wofür"/></Column>
+									</columns>
+									<items>
+										<ColumnListItem>
+											<Text text="{view>name}"/>
+											<Text text="{view>type}"/>
+											<ObjectStatus text="{= ${view>required} ? 'immer' : 'optional' }" state="{= ${view>required} ? 'Information' : 'None' }"/>
+											<Text text="{view>reason}"/>
+										</ColumnListItem>
+									</items>
+								</Table>
+							</VBox>
+						</IconTabFilter>
+					</items>
+				</IconTabBar>
+			</VBox>
+		</f:content>
+	</f:DynamicPage>
+</mvc:View>

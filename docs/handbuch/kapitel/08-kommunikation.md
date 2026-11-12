@@ -124,6 +124,13 @@ Nachrichten und Anhänge werden verschlüsselt gespeichert und nach der eingeste
 > (§ 87 BetrVG) und ins Verzeichnis der Verarbeitungstätigkeiten aufzunehmen. Eingeschaltet wird er unter
 > **Systemeinstellungen** → **Module** (Abschnitt 9.6).
 
+### Chat und Microsoft Teams
+
+Nutzt Ihr Betrieb Microsoft Teams (Abschnitt 9 „Microsoft Teams“), erscheinen **Microsoft Teams** in der Navigation und
+auf der Startseite sowie **In Teams öffnen** an der Bauakte – im Browser öffnet sich Teams (bzw. die Teams-App, wenn sie
+installiert ist). Im Modus „Microsoft Teams“ heißt der Chat **Chat-Archiv**: Bisherige Unterhaltungen bleiben lesbar und
+lassen sich exportieren, geschrieben wird nur noch in Teams.
+
 ## Benachrichtigungen {#benachrichtigungen}
 
 Die **Glocke** oben rechts zeigt die Zahl der ungelesenen Benachrichtigungen. Sie führt zur Seite

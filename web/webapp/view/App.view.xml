@@ -42,10 +42,12 @@
 							press=".onNewBauakte" visible="{= ${session>/permissions/bauakten.create} === true }" class="eoShellNew"
 							ariaDescribedBy="newBauakteShortcut"/>
 						<Button id="chatButton" icon="sap-icon://discussion-2" tooltip="{= ${view>/chatUnread} > 0 ? 'Chat (' + ${view>/chatUnread} + ' ungelesen)' : 'Chat' }"
-							type="Transparent" press=".onChat" visible="{= ${session>/permissions/chat.use} === true }" class="eoShellChat">
+							type="Transparent" press=".onChat" visible="{= ${session>/permissions/chat.use} === true &amp;&amp; ${session>/teams/chatReadOnly} !== true }" class="eoShellChat">
 							<customData><BadgeCustomData key="badge" value="{= ${view>/chatUnread} > 99 ? '99+' : String(${view>/chatUnread}) }"
 								visible="{= ${view>/chatUnread} > 0 }"/></customData>
 						</Button>
+						<Button id="shellTeamsButton" icon="sap-icon://collaborate" tooltip="In Microsoft Teams öffnen" type="Transparent" press=".onTeams"
+							visible="{= ${session>/teams/available} === true }" class="eoShellChat"/>
 						<OverflowToolbarButton id="phoneButton" text="{i18n>shell.phone}" tooltip="{i18n>shell.phone}" icon="sap-icon://outgoing-call" press=".onQuickCall"
 							visible="{= ${session>/permissions/contacts.edit} === true &amp;&amp; ${session>/modules/calls} !== false }"/>
 						<!-- Fehler melden / Funktion wünschen: direkt links neben dem Profil; in schmalen Fenstern im Überlaufmenü. -->

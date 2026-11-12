@@ -20,7 +20,7 @@ public sealed record WorkItemDto(
 
 /// <summary>Aufgaben und Mängel: Anlage idempotent, Änderungen feldweise zusammengeführt.</summary>
 internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IUserPermissions permissions, ICurrentUser currentUser,
-    TimeProvider clock, IBauakteHistory history, INumberRanges numberRanges) : ISyncOperationHandler
+    TimeProvider clock, IBauakteHistory history, INumberRanges numberRanges, Teams.Exports.ITeamsIntegration teams) : ISyncOperationHandler
 {
     private static readonly HashSet<string> EditableFields = ["title", "description", "dueDate", "assigneeUserId", "status"];
 
@@ -74,6 +74,7 @@ internal sealed class WorkSync(EstrichOneDbContext db, IBauakteAccess access, IU
             history.Record(owner, BauakteHistoryActions.WorkItemCreated, new Dictionary<string, string?> { ["kind"] = item.Kind.ToString() });
         }
         await db.SaveChangesAsync(cancellationToken);
+        WorkEndpoints.PublishDefect(teams, item);
         return new SyncOperationResult(op.OpId, SyncOperationStatus.Applied, Version: item.Version, Entity: SyncPayload.ToNode(WorkItemDto.From(item)));
     }
 

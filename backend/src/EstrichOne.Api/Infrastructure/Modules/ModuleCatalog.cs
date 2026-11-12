@@ -21,6 +21,7 @@ using EstrichOne.Api.Modules.Planning;
 using EstrichOne.Api.Modules.Platform;
 using EstrichOne.Api.Modules.Setup;
 using EstrichOne.Api.Modules.Sync;
+using EstrichOne.Api.Modules.Teams;
 using EstrichOne.Api.Modules.Work;
 
 namespace EstrichOne.Api.Infrastructure.Modules;
@@ -50,6 +51,7 @@ public static class ModuleCatalog
         new NoticesModule(),
         new NotificationsModule(),
         new ChatModule(),
+        new TeamsModule(),
         new BackupModule(),
         new MailModule(),
         new ArchiveModule(),

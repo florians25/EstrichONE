@@ -31,10 +31,24 @@ internal static class PlanningNotifications
 
     /// <param name="previous">Einsätze (ID → Version) der vorigen Freigabe; <c>null</c> = erste Freigabe.</param>
     public static async Task ReleasedAsync(PlanningService planning, INotifier notifier, DateOnly from, DateOnly to,
-        IReadOnlyDictionary<Guid, long>? previous, CancellationToken cancellationToken)
+        IReadOnlyDictionary<Guid, long>? previous, CancellationToken cancellationToken, Teams.Exports.ITeamsIntegration? teams = null)
     {
         var update = previous is not null;
         var range = await planning.RangeAsync(from, to, null, cancellationToken);
+        if (teams is not null)
+        {
+            // Je Bauakte eine Karte „Termin geändert“ (nur Tag, Uhrzeit, Tätigkeit – keine Namen).
+            foreach (var bauakte in range.Assignments.Where(a => previous is null || !previous.TryGetValue(a.Id, out var v) || v != a.Version)
+                .GroupBy(a => a.BauakteId))
+            {
+                var days = bauakte.OrderBy(a => a.Day).ThenBy(a => a.Sequence).Take(5).Select(a => string.Join(" · ",
+                    new[] { a.Day.ToString("ddd dd.MM.", German), a.StartTime is { } s ? s.ToString("H:mm", German) + " Uhr" : null, a.Activity }
+                        .Where(p => !string.IsNullOrEmpty(p))));
+                teams.Publish(new Teams.Exports.TeamsEvent(bauakte.Key, Teams.Exports.TeamsEventKind.ScheduleChanged,
+                    update ? "Einsatzplan geändert" : "Einsatz eingeplant", string.Join("\n", days), $"/bauakten/{bauakte.Key}"));
+            }
+        }
+
         var byPerson = range.Assignments
             .SelectMany(a => a.People.Select(p => (p.Id, Assignment: a)))
             .GroupBy(x => x.Id, x => x.Assignment);

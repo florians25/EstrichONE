@@ -33,6 +33,8 @@ final class SyncController {
     private(set) var health: SystemHealth?
     /// Chat-Modul: aktiv und erlaubt, ungelesene Nachrichten (`nil`, solange unbekannt).
     private(set) var chat: ChatStatus?
+    /// Microsoft Teams: Chat-Modus und Team „Baustellen“ (`nil` = Server ohne Teams-Anbindung oder unbekannt).
+    private(set) var teams: TeamsStatus?
     /// Module der Suite (Systemeinstellungen › Module): abgeschaltete blendet die App aus. Offline gilt der letzte Stand.
     private(set) var modules: AppModules = .allOn
     /// „Nur Ansicht“ nach 5 Minuten ohne Server (Erfassen und Ändern gesperrt).
@@ -147,6 +149,7 @@ final class SyncController {
             chat = fresh
             PushCenter.shared.setChatUnread(conversations: fresh.isAvailable ? fresh.unreadConversations : 0)
         }
+        if let fresh = await client.teamsStatus() { teams = fresh }
     }
 
     /// Server in Wartung: Synchronisation pausiert, Arbeiten auf dem Gerät geht weiter.

@@ -100,6 +100,9 @@ import de.estrichone.core.display
 import de.estrichone.core.dueText
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import de.estrichone.core.bauakteTeams
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 /** Bereiche einer Bauakte (wie BauakteDetailView.Area auf iOS). */
 enum class AreaKind(val title: String, val icon: ImageVector) {
@@ -131,6 +134,16 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     val model = LocalModel.current
     val bauakte by session.local(id) { session.service.bauakte(id) }
     val chat by session.chat.collectAsState()
+    // Microsoft Teams: verknüpfte Unterhaltung (nur online und im Modus „Teams“ bzw. „beides“).
+    val teams by session.teams.collectAsState()
+    var teamsLink by remember(id) { mutableStateOf<de.estrichone.core.TeamsLink?>(null) }
+    LaunchedEffect(id, teams?.available) {
+        teamsLink = if (teams?.available == true) {
+            runCatching { withContext(Dispatchers.IO) { session.api.bauakteTeams(id) } }.getOrNull()?.link
+        } else {
+            null
+        }
+    }
     var menu by remember { mutableStateOf(false) }
     var cancelling by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -150,6 +163,7 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     // Titel oben erst nach dem Kopf (wie die große Überschrift auf iOS).
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 } }
     ScreenScaffold(if (scrolled) b.title else "", showBack = showBack, actions = {
+        teamsLink?.let { TeamsAction(it.targets) }
         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
         DropdownMenu(menu, { menu = false }) {
             DropdownMenuItem(text = { Text("Basisdaten bearbeiten") }, onClick = { menu = false; nav.push(Route.Area(id, AreaKind.Project)) })
@@ -161,7 +175,13 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
                     else model.message("Das PDF ist nur mit Verbindung zum Server verfügbar.")
                 }
             })
-            if (chat?.isAvailable == true) {
+            teamsLink?.let { link ->
+                DropdownMenuItem(text = { Text("In Teams öffnen") }, onClick = {
+                    menu = false
+                    if (!Links.teams(context, link.targets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.")
+                })
+            }
+            if (chat?.isAvailable == true && chat?.readOnly != true) {
                 DropdownMenuItem(text = { Text("Baustellenchat") }, onClick = { menu = false; nav.push(Route.ChatList) })
             }
             DropdownMenuItem(text = { Text("Bauakte stornieren", color = tones.danger) }, enabled = b.status != BauakteStatus.Cancelled,

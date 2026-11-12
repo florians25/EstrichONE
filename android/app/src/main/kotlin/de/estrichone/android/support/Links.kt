@@ -23,6 +23,10 @@ object Links {
 
     fun web(context: Context, url: String) = start(context, Intent(Intent.ACTION_VIEW, Uri.parse(if ("://" in url) url else "https://$url")))
 
+    /** Microsoft Teams: zuerst die Teams-App (`msteams:`), sonst Teams im Browser (Teams-App übernimmt per App-Link). */
+    fun teams(context: Context, targets: de.estrichone.core.TeamsTargets): Boolean =
+        targets.candidates.any { start(context, Intent(Intent.ACTION_VIEW, Uri.parse(it))) }
+
     /** Navigation zur Baustelle (Koordinaten, sonst Adresse). */
     fun route(context: Context, address: String?, latitude: Double? = null, longitude: Double? = null): Boolean {
         val target = if (latitude != null && longitude != null) "$latitude,$longitude" else Uri.encode(address ?: return false)

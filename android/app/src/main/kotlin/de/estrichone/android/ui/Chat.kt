@@ -136,12 +136,16 @@ fun ChatListScreen() {
             delay(15_000)
         } while (true)
     }
-    ScreenScaffold("Chat", floating = {
-        ExtendedFloatingActionButton(onClick = { starting = true }, icon = { Icon(Icons.Outlined.PersonAdd, null) }, text = { Text("Neuer Chat") })
+    // Modus „Microsoft Teams“: Chat-Archiv (lesen, kein neuer Chat).
+    val status by session.chat.collectAsState()
+    val archive = status?.readOnly == true
+    ScreenScaffold(if (archive) "Chat-Archiv" else "Chat", actions = { TeamsAction() }, floating = {
+        if (!archive) ExtendedFloatingActionButton(onClick = { starting = true }, icon = { Icon(Icons.Outlined.PersonAdd, null) }, text = { Text("Neuer Chat") })
     }) { padding ->
         LoadView(conversations) {
             val list = (conversations as Load.Done).value.filter { search.isBlank() || it.title.contains(search, true) || it.lastMessage?.summary?.contains(search, true) == true }
             LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
+                if (archive) item { ChatArchiveCard() }
                 item { SearchField(search, { search = it }, "Unterhaltungen durchsuchen", Modifier.padding(bottom = 12.dp)) }
                 if (list.isEmpty()) item { EmptyState(Icons.Outlined.Forum, "Keine Unterhaltungen", "Mit „Neuer Chat“ eine Kollegin oder einen Kollegen anschreiben.") }
                 else item {
@@ -302,7 +306,11 @@ fun ConversationScreen(id: String) {
     ScreenScaffold(c?.title ?: "Chat", actions = {
         IconButton(onClick = { info = true }) { Icon(Icons.Filled.Groups, "Info zur Unterhaltung") }
     }, bottomBar = {
-        if (c?.canPost == false) {
+        if (chatStatus?.readOnly == true) {
+            Text("Chat-Archiv: nur lesen. Neue Nachrichten bitte in Microsoft Teams schreiben.", color = tones.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.fillMaxWidth().background(tones.card).navigationBarsPadding().padding(16.dp))
+        } else if (c?.canPost == false) {
             Text("Nur Administratoren schreiben in dieser Gruppe.", color = tones.textSecondary, style = MaterialTheme.typography.bodyMedium,
                 modifier = Modifier.fillMaxWidth().background(tones.card).navigationBarsPadding().padding(16.dp))
         } else {
