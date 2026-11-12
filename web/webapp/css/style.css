@@ -355,7 +355,6 @@
 .eoOverviewGrid > .sapFCard { height: 100%; }
 @media (max-width: 48rem) { .eoOverviewGrid > * { grid-column: auto !important; } }
 .eoChanges { font-size: 0.875rem; color: var(--sapContent_LabelColor); }
-.eoTeamChip { padding: 0.25rem 0.75rem 0.25rem 0.25rem; border-radius: 1.5rem; border: 1px solid var(--sapGroup_ContentBorderColor); background: var(--sapGroup_ContentBackground); }
 /* Kontakte der Bauakte: Gruppen nach Rolle in einem gemeinsamen Raster. Jede Gruppe belegt zwei Rasterzeilen
    (Überschrift, Karten) als Subgrid: Überschriften einer Reihe stehen auf einer Linie, Karten einer Reihe sind gleich hoch,
    die Aktionsleiste sitzt immer unten. Gruppen mit mehreren Karten belegen mehrere Spalten (Karten nebeneinander),
@@ -400,8 +399,30 @@
 .eoContactActionsEnd { margin-left: auto; display: flex; align-items: center; }
 .eoContactLine .eoContactCopy { margin-left: auto; flex: none; opacity: 0.55; }
 .eoContactLine:hover .eoContactCopy, .eoContactLine .eoContactCopy:focus-within { opacity: 1; }
-.eoContactsEmpty { padding: 2rem 1rem; border: 1px dashed var(--sapGroup_ContentBorderColor); border-radius: 0.75rem; margin-top: 1rem; }
-.eoContactsEmptyText { max-width: 34rem; margin-top: 0.25rem; }
+/* Kompakter Leerzustand der Bauakte: eine schmale Zeile (Symbol, ein Satz, Aktionen rechts bzw. darunter). */
+.eoEmptyRow.sapMFlexBox { gap: 0.5rem 0.75rem; padding: 0.625rem 0.875rem; border: 1px dashed var(--sapGroup_ContentBorderColor);
+	border-radius: 0.75rem; margin: 0.5rem 0 0.75rem; min-height: 2.75rem; box-sizing: border-box; background: transparent; }
+.eoEmptyRowIcon { color: var(--sapContent_IconColor); font-size: 1.125rem; flex: none; width: 1.25rem; }
+.eoEmptyRowText { flex: 1 1 16rem; min-width: 0; }
+.eoEmptyRowText.sapMText, .eoEmptyRowText .sapMText { color: var(--sapContent_LabelColor); }
+.eoEmptyRowText .eoEmptyRowTitle.sapMText { color: var(--sapTextColor); font-weight: 700; font-family: var(--sapFontBoldFamily); }
+.eoEmptyRowActions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-left: auto; }
+.eoContactsEmpty.sapMFlexBox { margin-top: 0.75rem; }
+/* Team im Betrieb: Karten im selben Raster und mit gleicher Mindesthöhe wie die Kontaktkarten. */
+.eoTeamBar.sapMTB { margin-top: 1.5rem; }
+.eoContactGrid > .eoContactCard.sapFCard { min-height: 13.5rem; }
+/* Dokumentation › Erstbegehung: Kopfzeile mit Status, Eckdaten, Protokoll, Fotos und Dokumente. */
+.eoDocBar.sapMTB { padding: 0 0.25rem; border-bottom: none; }
+.eoDocBar .sapMObjectStatus { margin-left: 0.5rem; }
+.eoDocSubBar.sapMTB { padding: 0 0.25rem; border-bottom: none; margin-top: 1rem; height: 2.25rem; }
+.eoDocSubBar .eoContactGroupCount { margin-left: 0.25rem; }
+.eoFacts.sapUiLayoutCSSGrid { padding: 0.75rem 1rem; margin: 0.25rem 0 0.75rem; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.75rem;
+	background: var(--sapGroup_ContentBackground); box-sizing: border-box; }
+.eoFact { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+.eoDocStrip.sapMMsgStrip { margin-bottom: 0.75rem; }
+.eoDocCard.sapFCard { margin-bottom: 0.25rem; }
+.eoDocList.sapMList { border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.75rem; overflow: hidden; margin-bottom: 0.5rem; }
+.eoDocListRow.sapMFlexBox { padding: 0.375rem 0.5rem 0.375rem 1rem; gap: 0.75rem; }
 .eoLogoPreview { max-width: 20rem; object-fit: contain; border: 1px solid var(--sapGroup_ContentBorderColor); border-radius: 0.25rem; padding: 0.25rem; background: #fff; }
 .eoSignature { position: relative; border: 1px solid var(--sapField_BorderColor); border-radius: 0.5rem; background: #fff; touch-action: none; }
 .eoSignature canvas { width: 100%; height: 100%; display: block; cursor: crosshair; touch-action: none; }
@@ -1258,3 +1279,38 @@ html[data-eo-theme^="sap_fiori_3"] .sapMBtnIcon::before { -webkit-text-stroke: 0
 .eoHdHolidayList .sapMObjStatus { min-width: 12rem; }
 .eoHdSendButtons { gap: 0.5rem; justify-content: flex-end; min-width: 0; }
 .eoHdDetail > .eoHdTabs.sapMITH { flex: none; padding: 0 1.5rem; margin: 0; background: var(--sapGroup_ContentBackground); border-bottom: 1px solid var(--sapGroup_ContentBorderColor); }
+
+/* Seitenkopf aller Seiten (DynamicPage und Objektseite) als gerundete Karte mit demselben Außenabstand wie der Inhalt:
+   kein eckiges Band von Kante zu Kante, Schaltflächen mit Luft zum rechten Rand. Seitlicher Abstand als Innenabstand des
+   absolut positionierten Titelbereichs, oben als Außenabstand des Titels (beides zählt UI5 in die Höhe des Titelbereichs,
+   der Inhalt rückt entsprechend nach unten). Breakpoint-Klassen wie die Inhaltsränder von UI5. */
+.sapFDynamicPage { --eoPageX: 3rem; --eoHeadRadius: 0.75rem; }
+.sapFDynamicPage.sapFDynamicPage-Std-Desktop, .sapFDynamicPage.sapFDynamicPage-Std-Tablet { --eoPageX: 2rem; }
+.sapFDynamicPage.sapFDynamicPage-Std-Phone { --eoPageX: 1rem; }
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: transparent; }
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper > .sapFDynamicPageTitle { margin-top: 0.5rem; border-radius: var(--eoHeadRadius);
+	padding-left: 1rem; padding-right: 1rem; }
+/* Kopfbereich (Kennzahlen, Filter) unter dem Titel: gleiche Ränder, Titel und Kopf bilden zusammen eine Karte. */
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper .sapFDynamicPageHeader,
+.sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; border-radius: 0 0 var(--eoHeadRadius) var(--eoHeadRadius); }
+.sapFDynamicPage > .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper { padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: transparent; }
+.sapFDynamicPage > .sapFDynamicPageTitleWrapper:has(.sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden)) > .sapFDynamicPageTitle,
+.sapFDynamicPage:has(> .sapFDynamicPageContentWrapper > .sapFDynamicPageHeaderWrapper > .sapFDynamicPageHeader:not(.sapFDynamicPageHeaderHidden))
+	> .sapFDynamicPageTitleWrapper:not(.sapFDynamicPageTitleSnapped) > .sapFDynamicPageTitle { border-bottom-left-radius: 0; border-bottom-right-radius: 0; }
+/* Objektseite (Bauakte, Kunde, Mitarbeiter): Titel, Kopf und Reiterleiste als eine Karte auf der Breite der Inhaltskarte. */
+.sapUxAPObjectPageLayout { --eoPageX: 2rem; --eoHeadRadius: 0.75rem; }
+.sapUxAPObjectPageLayout > .sapUxAPObjectPageHeaderTitle { box-sizing: border-box; padding-left: var(--eoPageX); padding-right: var(--eoPageX); background: transparent; }
+.sapUxAPObjectPageHeaderTitle > .sapFDynamicPageTitle { margin-top: 0.5rem; border-radius: var(--eoHeadRadius) var(--eoHeadRadius) 0 0; padding-left: 1rem; padding-right: 1rem; }
+.sapUxAPObjectPageScroll > .sapUxAPObjectPageHeaderDetails, .sapUxAPObjectPageScroll > .sapUxAPObjectPageNavigation { margin-left: var(--eoPageX); margin-right: var(--eoPageX); }
+.sapUxAPObjectPageHeaderDetails .sapFDynamicPageHeader { padding-left: 1rem; padding-right: 1rem; }
+.sapUxAPObjectPageScroll > .sapUxAPObjectPageNavigation, .sapUxAPObjectPageHeaderTitle > .sapUxAPObjectPageStickyAnchorBar:not(:empty) {
+	border-radius: 0 0 var(--eoHeadRadius) var(--eoHeadRadius); overflow: hidden; }
+.sapUxAPObjectPageWrapper { background: transparent; }
+.sapUxAPObjectPageNavigation > .sapMITH, .sapUxAPObjectPageStickyAnchorBar .sapMITH { padding-left: 0.8125rem; padding-right: 0.8125rem; }
+/* Überlagernde Bildlaufleiste (macOS, Chromium): UI5 rückt den Titel 12 px ein, der Inhalt bleibt – rechte Kante angleichen. */
+.sapFDynamicPage.sapFDynamicPageWithOverlayScrollbar > .sapFDynamicPageTitleWrapper { padding-right: calc(var(--eoPageX) - 12px); }
+.eoDocCard .eoCheckTable.sapMList { width: auto !important; margin: 0 1rem; }
+/* Eingeklappter Titel der Objektseite: langer Titel mit Auslassungspunkten statt unter die Aktionen zu laufen. */
+.eoSnapTitle.sapMFlexBox { min-width: 0; max-width: 100%; }
+.eoSnapTitle.sapMFlexBox > .sapMFlexItem { min-width: 0 !important; }
+.eoSnapTitle .sapMTitle { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

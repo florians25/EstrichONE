@@ -232,7 +232,7 @@ test('Weitere Fenster: Aktionen der Bauakte, Erstbegehung, Helpdesk, Chat', asyn
   await page.goto(akte);
   await settle(page);
   await openSection(page, 'Dokumentation').catch(() => undefined);
-  for (const tab of [/Prüfungen/, /Abnahmen/]) {
+  for (const tab of [/Erstbegehung/, /CM-Messungen/, /Abnahmen/]) {
     await page.getByRole('tab', { name: tab }).filter({ visible: true }).first().click().catch(() => undefined);
     await settle(page);
     await check(page, page.locator('body'), `Bauakte › Dokumentation › ${tab.source}`);

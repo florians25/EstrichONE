@@ -184,7 +184,7 @@ export default {
     await openAkte(h, "Sonnenhof");
     await section(h, "Dokumentation");
     await h.shot("bauakte-dokumentation");
-    await visible(h.page.getByRole("tab", { name: /Prüfungen/ })).click().catch(() => undefined);
+    await visible(h.page.getByRole("tab", { name: /Erstbegehung/ })).click().catch(() => undefined);
     await h.idle();
     await h.shot("bauakte-pruefungen");
   },

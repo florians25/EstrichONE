@@ -142,8 +142,12 @@ griffbereit für Büro und Baustelle.
   **Neuen Kontakt erfassen …** legt ihn neu an.
 - Über das Menü einer Karte ändern Sie die **Rolle**, machen den Kontakt zum **Hauptkontakt**, öffnen ihn **im
   Kundenstamm** oder entfernen ihn aus der Bauakte.
-- Unter **Team im Betrieb** weisen Sie Mitarbeiter zu (**Mitarbeiter zuweisen**). Zugewiesene sehen die Bauakte, auch
-  wenn sie nur das Recht „Eigene Bauakten sehen“ haben.
+- Gibt es noch keine weiteren Beteiligten, zeigt eine schmale Zeile direkt die beiden Wege **Bestehenden Kontakt suchen**
+  und **Neuen Kontakt erfassen**.
+- **Team im Betrieb** zeigt die zuständige Person und die zugewiesenen Mitarbeiter als Karten in derselben Optik wie die
+  Kontakte: Avatar, Name, Rolle (**Zuständig**, **Mitarbeiter**, **Gesperrt**), die Kolonne aus den Einsätzen der Akte
+  sowie E-Mail und **Kontaktdaten kopieren**. **Mitarbeiter zuweisen** rechts in der Überschrift ändert die Zuweisung.
+  Zugewiesene sehen die Bauakte, auch wenn sie nur das Recht „Eigene Bauakten sehen“ haben.
 
 ## Dokumente
 
@@ -238,7 +242,26 @@ Kolonnen und Daten.
 Bei der **Erstbegehung** prüft die Bauleitung vor Beginn, ob die Baustelle bereit ist. Das Protokoll ist ein Nachweis:
 Es wird nicht überschrieben, sondern bei Bedarf **korrigiert** (eine neue Prüfung mit Verweis auf die alte).
 
-1. Öffnen Sie **Dokumentation** → **Prüfungen & Protokolle** und klicken Sie auf **Erstbegehung erfassen**.
+Alles zur Erstbegehung steht im eigenen Reiter **Dokumentation** → **Erstbegehung**:
+
+- Oben der **Status** – **Offen**, **Geplant**, **Durchgeführt** oder **Nicht erforderlich** – und die Eckdaten
+  **Termin**, **Durchgeführt** (wann, von wem), **Ergebnis** und Anzahl der **Protokolle**.
+- **Termin planen** legt einen Einsatz mit der Terminart **Erstbegehung** an (vorbelegt mit der zuständigen Person, die
+  Kolonne lässt sich ergänzen). Steht schon ein Termin – aus der Planung oder ein Kalendertermin „Erstbegehung: …“ aus
+  dem Anlage-Assistenten –, heißt die Schaltfläche **Termin ändern** und öffnet ihn.
+- **Erstbegehung durchführen** öffnet den Assistenten (siehe unten). Danach zeigt der Reiter das
+  **Erstbegehungsprotokoll** mit Prüfpunkten, Bemerkungen und Notizen, **Protokoll (PDF)** und **Korrigieren**.
+- **Fotos und Dokumente** zeigt die Fotos der Erstbegehung und die vom Server abgelegten Protokoll-PDFs (Ordner
+  „Erstbegehung“ unter **Protokolle**). Bei mehreren Begehungen listet **Alle Protokolle** jede einzeln mit eigenem PDF.
+- **Nicht erforderlich** vermerkt, dass keine Erstbegehung nötig ist (mit optionaler Begründung); **Vermerk aufheben**
+  macht das rückgängig.
+
+Ist in **Einstellungen** → **Module** „Erstbegehung und Protokolle“ ausgeschaltet, entfallen die Reiter
+**Erstbegehung** und **CM-Messungen**.
+
+So führen Sie die Erstbegehung durch:
+
+1. Klicken Sie im Reiter **Erstbegehung** auf **Erstbegehung durchführen**.
 2. **Begehung:** Zeitpunkt und freie Notizen (Gespräch mit dem Kunden, Zufahrt, Besonderheiten). Ist keine Begehung
    nötig, schalten Sie **Erstbegehung nicht notwendig** ein und nennen den Grund.
 3. **Prüfpunkte:** Je Punkt **In Ordnung**, **Mangel** oder **Entfällt**, auf Wunsch mit Bemerkung – z. B. „Untergrund
@@ -250,11 +273,11 @@ Es wird nicht überschrieben, sondern bei Bedarf **korrigiert** (eine neue Prüf
 
 ![Erstbegehung erfassen](bilder/erstbegehung-dialog.png "Der Assistent Erstbegehung erfassen")
 
-![Erstbegehungsprotokoll](bilder/bauakte-pruefungen.png "Ergebnis der Erstbegehung mit Prüfpunkten und Bemerkungen")
+![Erstbegehungsprotokoll](bilder/bauakte-pruefungen.png "Reiter Erstbegehung mit Status, Eckdaten und Protokoll")
 
 Welche Prüfpunkte und Felder erscheinen, legt die Administration unter **Organisation** → **Stammdaten** → **Formulare**
-→ **Erstbegehung** fest. Im selben Abschnitt erfassen Sie **CM-Messungen** (Messstelle, Estrich, Dicke, CM-Wert,
-Ergebnis) mit **CM-Messung erfassen**.
+→ **Erstbegehung** fest. **CM-Messungen** (Messstelle, Estrich, Dicke, CM-Wert, Ergebnis) erfassen Sie im Reiter
+**Dokumentation** → **CM-Messungen** mit **CM-Messung erfassen**.
 
 ## Abnahme mit Unterschrift {#abnahme}
 

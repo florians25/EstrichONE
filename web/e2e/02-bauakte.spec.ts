@@ -325,7 +325,7 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   await expect(entry).toContainText('Kolonne Nord');
   await expect(entry.getByRole('button', { name: 'Randdämmung Bad OG' })).toBeVisible();
 
-  await page.getByRole('tab', { name: /Prüfungen/ }).click();
+  await page.getByRole('tab', { name: /CM-Messungen/ }).click();
   await page.getByRole('button', { name: 'CM-Messung erfassen' }).click();
   const cm = page.getByRole('dialog', { name: 'CM-Messung erfassen' });
   await cm.getByRole('combobox', { name: 'Messstelle (Raum)' }).fill('Wohnen/Essen EG');
@@ -334,8 +334,10 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   await expect(page.getByRole('row', { name: /Wohnen\/Essen EG/ })).toContainText(/1,6 CM-% \(Grenzwert (1,8|2,0)\)/);
   await expect(page.getByRole('row', { name: /Wohnen\/Essen EG/ }).getByText('Belegreif', { exact: true })).toBeVisible();
 
-  // Erstbegehung als geführter Ablauf: Prüfpunkt beanstandet → Mangel wird angelegt.
-  await page.getByRole('button', { name: 'Erstbegehung erfassen' }).first().click();
+  // Erstbegehung im eigenen Reiter als geführter Ablauf: Prüfpunkt beanstandet → Mangel wird angelegt.
+  await page.getByRole('tab', { name: /Erstbegehung/ }).click();
+  await expect(page.locator('[id$="initialStatus"]')).toContainText('Offen');
+  await page.getByRole('button', { name: 'Erstbegehung durchführen' }).first().click();
   const insp = page.getByRole('dialog', { name: 'Erstbegehung erfassen' });
   await insp.getByLabel('Notizen (frei, beliebig lang)').fill('Gespräch mit Frau Kraus:\nZufahrt über den Hof, Hund im Garten.');
   await insp.getByRole('button', { name: 'Weiter' }).click();
@@ -351,6 +353,10 @@ test('Baustellendokumentation: Tagesbericht mit Arbeitszeit, Kolonne und Fotos, 
   await expect(toast(page)).toContainText('Erstbegehung gespeichert');
   await expect(page.getByText('Erstbegehungsprotokoll', { exact: true }).filter({ visible: true }).first()).toBeVisible();
   await expect(page.getByText(/Zufahrt über den Hof, Hund im Garten/).first()).toBeVisible();
+  await expect(page.locator('[id$="initialStatus"]')).toContainText('Durchgeführt');
+  await expect(page.locator('[id$="initialPdfButton"]')).toBeVisible();
+  // Das Protokoll-PDF legt der Server unter „Erstbegehung“ ab; es erscheint bei den Dokumenten der Erstbegehung.
+  await expect(page.locator('[id$="initialDocList"]').getByText(/Erstbegehungsprotokoll .*\.pdf/).first()).toBeVisible({ timeout: 20_000 });
 
   // Bauakte als PDF (Server): Deckblatt, Räume, Tagebuch, Prüfungen, Mängel, Fotodokumentation.
   const pdfDownload = page.waitForEvent('download');
@@ -395,11 +401,13 @@ test('Prüfungen und Bautagebuch aus der App erscheinen in der Bauakte', async (
   await expect(page.getByRole('heading', { name: 'EFH Prüfung E2E' })).toBeVisible();
   await expect(page.getByText('Estrich im EG eingebracht')).toBeVisible();
   await expect(page.getByText('Regen · 9 °C')).toBeVisible();
-  await page.getByRole('tab', { name: /Prüfungen/ }).click();
+  await page.getByRole('tab', { name: /Erstbegehung/ }).click();
   await expect(page.getByText('Erstbegehungsprotokoll', { exact: true }).filter({ visible: true }).first()).toBeVisible();
-  await expect(page.getByText('Mit Mängeln, Klärung erforderlich')).toBeVisible();
+  await expect(page.getByText('Mit Mängeln, Klärung erforderlich').first()).toBeVisible();
+  await expect(page.locator('[id$="initialStatus"]')).toContainText('Durchgeführt');
   await expect(page.getByText('Randdämmstreifen vorhanden')).toBeVisible();
   await expect(page.getByText('Randdämmung fehlt')).toBeVisible();
+  await page.getByRole('tab', { name: /CM-Messungen/ }).click();
   await expect(page.getByRole('row', { name: /Bad OG/ })).toContainText('1,6 CM-% (Grenzwert 1,8)');
   await openSection(page, 'Notizen & Verlauf');
   await expect(page.getByText('Anna Admin hat eine CM-Messung erfasst: 1,6 CM-% bei Grenzwert 1,8 CM-% – belegreif.')).toBeVisible();

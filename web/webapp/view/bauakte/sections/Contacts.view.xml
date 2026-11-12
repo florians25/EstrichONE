@@ -114,34 +114,70 @@
 			</VBox>
 		</VBox>
 
-		<VBox visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} &amp;&amp; !${ct>/group} }" alignItems="Center" class="eoContactsEmpty">
-			<core:Icon src="sap-icon://address-book" size="2.5rem" class="eoMuted" decorative="true"/>
-			<Title text="Noch keine weiteren Beteiligten" level="H4" class="sapUiSmallMarginTop"/>
-			<Text text="Erfassen Sie Bauleiter, Architekt, Gewerke wie Bodenleger oder Heizungsbauer und Lieferanten mit Telefon und E-Mail. Vorhandene Einträge aus dem Kundenstamm lassen sich direkt verknüpfen."
-				textAlign="Center" wrapping="true" class="eoMuted eoContactsEmptyText"/>
-			<HBox class="sapUiSmallMarginTop eoEntryRow" visible="{akte>/canEdit}" justifyContent="Center" wrap="Wrap">
+		<!-- Leerzustand: eine schmale Zeile statt großer Fläche -->
+		<HBox id="contactsEmpty" visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} &amp;&amp; !${ct>/group} }" alignItems="Center" wrap="Wrap"
+			class="eoEmptyRow eoContactsEmpty">
+			<core:Icon src="sap-icon://address-book" class="eoEmptyRowIcon" decorative="true"/>
+			<VBox renderType="Bare" class="eoEmptyRowText">
+				<Text text="Noch keine weiteren Beteiligten" class="eoEmptyRowTitle"/>
+				<Text text="Bauleiter, Architekt, Gewerke und Lieferanten mit Telefon und E-Mail – neu oder aus dem Kundenstamm." wrapping="true" class="eoMuted"/>
+			</VBox>
+			<HBox renderType="Bare" class="eoEmptyRowActions" visible="{akte>/canEdit}">
 				<Button text="Bestehenden Kontakt suchen" icon="sap-icon://search" press=".onFromContacts" visible="{= ${session>/permissions/contacts.read} === true }"/>
 				<Button text="Neuen Kontakt erfassen" icon="sap-icon://add-contact" press=".onQuickAdd"/>
 			</HBox>
-		</VBox>
+		</HBox>
 		<Text text="Keine Kontakte in dieser Auswahl." visible="{= (!!${ct>/query} || !!${ct>/group}) &amp;&amp; ${ct>/groups}.length === 0 }" class="eoMuted sapUiSmallMarginTop"/>
 
-		<HBox alignItems="Center" class="eoContactGroupHead sapUiMediumMarginTop">
-			<core:Icon src="sap-icon://group" class="eoContactGroupIcon" decorative="true"/>
-			<Title text="Team im Betrieb" level="H4"/>
-			<Text text="{= ${ct>/team}.length }" class="eoContactGroupCount"/>
+		<!-- Team im Betrieb: gleiche Kartenoptik wie die Kontakte -->
+		<OverflowToolbar style="Clear" class="eoContactsBar eoTeamBar">
+			<Title text="Team im Betrieb" level="H3"/>
+			<ObjectNumber number="{= ${ct>/team}.length }" class="eoMuted"/>
+			<ToolbarSpacer/>
+			<Button id="assignTeam" text="{i18n>contacts.assign}" icon="sap-icon://add-employee" press=".onAssign" visible="{akte>/canEdit}">
+				<layoutData><OverflowToolbarLayoutData priority="NeverOverflow"/></layoutData>
+			</Button>
+		</OverflowToolbar>
+		<grid:CSSGrid id="teamGrid" items="{ct>/team}" gridTemplateColumns="repeat(auto-fill, minmax(min(100%, 19rem), 1fr))" gridGap="0.75rem"
+			class="eoContactGrid eoTeamGrid" visible="{= ${ct>/team}.length > 0 }">
+			<f:Card class="eoContactCard eoTeamCard">
+				<f:header>
+					<card:Header title="{ct>displayName}" subtitle="{ct>subtitle}" iconInitials="{ct>initials}" iconDisplayShape="Circle" iconBackgroundColor="{ct>avatarColor}"/>
+				</f:header>
+				<f:content>
+					<VBox width="100%" class="eoContactBody" renderType="Bare">
+						<HBox alignItems="Center" wrap="Wrap" class="eoContactBadges">
+							<ObjectStatus text="{ct>roleText}" state="{= ${ct>responsible} ? 'Information' : 'None' }" inverted="true" class="eoRoleBadge"/>
+							<ObjectStatus text="{ct>crewText}" icon="sap-icon://group" visible="{= !!${ct>crewText} }" class="sapUiTinyMarginBegin eoMuted"/>
+						</HBox>
+						<VBox items="{path: 'ct>lines', templateShareable: false}" class="eoContactLines">
+							<HBox alignItems="Start" class="eoContactLine">
+								<core:Icon src="{ct>icon}" class="eoContactLineIcon" tooltip="{ct>kind}"/>
+								<VBox class="eoContactLineText">
+									<Link text="{ct>text}" href="{ct>href}" wrapping="true" visible="{= !!${ct>href} }"/>
+									<Text text="{ct>text}" wrapping="true" visible="{= !${ct>href} }"/>
+									<Text text="{ct>label}" visible="{= !!${ct>label} }" class="eoContactLineLabel"/>
+								</VBox>
+							</HBox>
+						</VBox>
+						<HBox alignItems="Start" class="eoContactLine eoContactEmpty" visible="{= ${ct>lines}.length === 0 }">
+							<core:Icon src="sap-icon://hint" class="eoContactLineIcon" decorative="true"/>
+							<Text text="Keine E-Mail-Adresse hinterlegt." wrapping="true" class="eoContactLineText"/>
+						</HBox>
+						<HBox alignItems="Center" class="eoContactActions">
+							<Button icon="sap-icon://email" type="Transparent" tooltip="{= 'E-Mail an ' + ${ct>email} }" press=".onMailMember" visible="{= !!${ct>email} }"/>
+							<Button icon="sap-icon://copy" type="Transparent" tooltip="{= 'Kontaktdaten kopieren: ' + ${ct>displayName} }" press=".onCopyMember"/>
+							<HBox renderType="Bare" class="eoContactActionsEnd">
+								<Button text="Zuweisung ändern" icon="sap-icon://edit" type="Transparent" press=".onAssign" visible="{akte>/canEdit}"/>
+							</HBox>
+						</HBox>
+					</VBox>
+				</f:content>
+			</f:Card>
+		</grid:CSSGrid>
+		<HBox alignItems="Center" class="eoEmptyRow" visible="{= ${ct>/team}.length === 0 }">
+			<core:Icon src="sap-icon://employee" class="eoEmptyRowIcon" decorative="true"/>
+			<Text text="Noch niemand zugewiesen. Zuständige Person und Mitarbeiter sehen die Bauakte in ihrer Übersicht und in der App." wrapping="true" class="eoEmptyRowText eoMuted"/>
 		</HBox>
-		<FlexBox wrap="Wrap" alignItems="Center" class="eoEntryRow" items="{ct>/team}">
-			<HBox alignItems="Center" class="eoTeamChip">
-				<Avatar initials="{ct>initials}" displaySize="XS" class="sapUiTinyMarginEnd"/>
-				<VBox>
-					<Text text="{ct>displayName}"/>
-					<Text text="{ct>roleText}" class="eoMuted"/>
-				</VBox>
-			</HBox>
-		</FlexBox>
-		<Text text="Noch niemand zugewiesen." visible="{= ${ct>/team}.length === 0 }" class="eoMuted"/>
-		<Button text="{i18n>contacts.assign}" icon="sap-icon://add-employee" press=".onAssign" visible="{akte>/canEdit}" class="sapUiTinyMarginTop"
-			type="Transparent"/>
 	</VBox>
 </mvc:View>

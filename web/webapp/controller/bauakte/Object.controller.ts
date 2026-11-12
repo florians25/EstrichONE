@@ -120,6 +120,7 @@ export default class ObjectController extends BaseController {
 		if (match.query.get("erstbegehung") === "1") {
 			// Aus dem Anlage-Assistenten: nahtlos in die Erstbegehung der neuen Akte.
 			this.nav(`/bauakten/${id}?abschnitt=dokumentation`, true);
+			EventBus.getInstance().publish("bauakte", "docuTab", { id, tab: "erstbegehung" });
 			void this.startInspection(id);
 		}
 	}

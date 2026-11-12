@@ -19,13 +19,15 @@ async function openAkte(page: Page) {
   await expect(page.getByRole('heading', { name: title })).toBeVisible();
 }
 
-test('Erstbegehung nicht erforderlich: am Hinweis vermerken, in Prüfungen anzeigen und rückgängig machen', async ({ page }) => {
+test('Erstbegehung nicht erforderlich: am Hinweis vermerken, im Reiter „Erstbegehung“ anzeigen und rückgängig machen', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await openAkte(page);
   const hint = page.locator('.eoHintBadges').getByText('Erstbegehung noch nicht ausgeführt', { exact: true }).filter({ visible: true });
   await expect(hint.first()).toBeVisible();
   await openSection(page, 'Dokumentation');
-  await page.getByRole('tab', { name: /Prüfungen/ }).click();
+  await page.getByRole('tab', { name: /Erstbegehung/ }).click();
+  const status = page.locator('[id$="initialStatus"]');
+  await expect(status).toContainText('Offen');
   const waive = page.locator('[id$="waiveInitialButton"]');
   await expect(waive).toBeVisible();
   await shot(page, 'web-bauakte-erstbegehung-vorher');
@@ -43,6 +45,8 @@ test('Erstbegehung nicht erforderlich: am Hinweis vermerken, in Prüfungen anzei
   const strip = page.locator('[id$="waiverStatus"]');
   await expect(strip).toContainText(/Keine Erstbegehung erforderlich \(.+, \d{2}\.\d{2}\.\d{4}, Bestandsgebäude, Untergrund bekannt\)/);
   await expect(waive.filter({ visible: true })).toHaveCount(0);
+  await expect(status).toContainText('Nicht erforderlich');
+  await expect(page.locator('[id$="startInitialButton"]').filter({ visible: true })).toHaveCount(0);
   await shot(page, 'web-bauakte-erstbegehung-nachher');
 
   // Rückgängig: wieder offen, Schaltfläche wird erneut angeboten.
@@ -51,4 +55,21 @@ test('Erstbegehung nicht erforderlich: am Hinweis vermerken, in Prüfungen anzei
   await expect(hint.first()).toBeVisible();
   await expect(waive).toBeVisible();
   await expect(strip.filter({ visible: true })).toHaveCount(0);
+  await expect(status).toContainText('Offen');
+});
+
+test('Erstbegehung planen: Einsatz mit Terminart Erstbegehung, Status „Geplant“ mit Termin', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await openAkte(page);
+  await openSection(page, 'Dokumentation');
+  await page.getByRole('tab', { name: /Erstbegehung/ }).click();
+  await expect(page.locator('[id$="initialAppointment"]')).toHaveText('nicht geplant');
+  await page.locator('[id$="planInitialButton"]').click();
+  const dialog = page.getByRole('dialog', { name: 'Einsatz planen' });
+  await expect(dialog.getByLabel('Tätigkeit')).toHaveValue('Erstbegehung');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(page.locator('[id$="initialStatus"]')).toContainText('Geplant');
+  await expect(page.locator('[id$="initialAppointment"]')).toContainText(/\d{2}\.\d{2}\.\d{4}, 08:00/);
+  await expect(page.locator('[id$="planInitialButton"]')).toHaveText('Termin ändern');
+  await shot(page, 'web-bauakte-erstbegehung-geplant');
 });

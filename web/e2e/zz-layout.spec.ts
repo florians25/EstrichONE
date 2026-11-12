@@ -78,6 +78,68 @@ for (const scale of [1.25, 1.5]) {
   });
 }
 
+/**
+ * Seitenkopf als Karte: linke und rechte Kante wie der Inhalt darunter, alle Ecken gerundet (unten nur ohne
+ * anschließenden Kopfbereich), Aktionen mit Luft zum rechten Rand, nichts rechts abgeschnitten.
+ */
+async function headerIssues(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const visible = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0;
+    const out: string[] = [];
+    const op = [...document.querySelectorAll('.sapUxAPObjectPageLayout')].find(visible);
+    const dp = [...document.querySelectorAll('.sapFDynamicPage')].find(visible);
+    let title: HTMLElement | undefined;
+    let left = 0;
+    let right = 0;
+    if (op) {
+      title = [...op.querySelectorAll<HTMLElement>(':scope > .sapUxAPObjectPageHeaderTitle > .sapFDynamicPageTitle')].find(visible);
+      const block = [...op.querySelectorAll<HTMLElement>('.sapUxAPBlockContainer')].find(visible);
+      if (!block) return out;
+      left = block.getBoundingClientRect().left;
+      right = block.getBoundingClientRect().right;
+    } else if (dp) {
+      title = [...dp.querySelectorAll<HTMLElement>(':scope > .sapFDynamicPageTitleWrapper > .sapFDynamicPageTitle')].find(visible);
+      const content = dp.querySelector<HTMLElement>(':scope > .sapFDynamicPageContentWrapper .sapFDynamicPageContent');
+      if (!content) return out;
+      const cs = getComputedStyle(content);
+      const r = content.getBoundingClientRect();
+      left = r.left + parseFloat(cs.paddingLeft);
+      right = r.right - parseFloat(cs.paddingRight);
+    }
+    if (!title) return out;
+    const t = title.getBoundingClientRect();
+    const cs = getComputedStyle(title);
+    if (Math.abs(t.left - left) > 2) out.push(`Kopf links bei ${Math.round(t.left)} px, Inhalt bei ${Math.round(left)} px`);
+    // Klassische Bildlaufleiste: UI5 rückt den Titel um ihre Breite ein, der Inhalt ebenso.
+    if (Math.abs(t.right - right) > 2 && Math.abs(t.right - right) > 18) out.push(`Kopf rechts bei ${Math.round(t.right)} px, Inhalt bei ${Math.round(right)} px`);
+    if (t.right > window.innerWidth) out.push('Kopf rechts abgeschnitten');
+    if (parseFloat(cs.borderTopLeftRadius) < 4 || parseFloat(cs.borderTopRightRadius) < 4) out.push('Kopf oben nicht gerundet');
+    if (t.top - (title.parentElement?.getBoundingClientRect().top ?? 0) < 4) out.push('Kopf klebt oben an der Kante');
+    for (const a of title.querySelectorAll<HTMLElement>('.sapFDynamicPageTitleActionsBar, .sapFDynamicPageTitleTopRight')) {
+      const r = a.getBoundingClientRect();
+      if (r.width > 0 && r.right > t.right - 8) out.push(`Aktionen ohne Abstand zum rechten Rand (${Math.round(t.right - r.right)} px)`);
+    }
+    return out;
+  });
+}
+
+const headerPages = ['/system/backup-ziele', '/system/archiv', '/kunden', '/it-center/helpdesk', '/system/firmendaten', '/bauakten'];
+for (const [width, height, scale] of [[1920, 1080, 1], [1920, 1080, 1.25], [1280, 720, 1], [1280, 720, 1.5]] as const) {
+  test(`Seitenkopf bündig und gerundet bei ${width} × ${height} mit ${scale * 100} %`, async ({ browser }) => {
+    test.setTimeout(180_000);
+    const { context, page } = await session(browser, Math.round(width / scale), Math.round(height / scale), scale);
+    const found: string[] = [];
+    const details = await detailPages(page);
+    for (const path of [...headerPages, ...details]) {
+      await page.goto(path);
+      await settle(page);
+      for (const issue of await headerIssues(page)) found.push(`${path}: ${issue}`);
+    }
+    await context.close();
+    expect(found).toEqual([]);
+  });
+}
+
 // Durchsicht mit Bildschirmfotos über alle Breiten und Zoomstufen (LAYOUT_SWEEP=1), nicht Teil der regulären Tests.
 const sweep: [string, number, number, number][] = [];
 for (const [w, h] of [[1280, 720], [1366, 768], [1440, 900], [1536, 864], [1920, 1080]]) {

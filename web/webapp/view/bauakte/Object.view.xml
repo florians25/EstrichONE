@@ -24,9 +24,9 @@
 					</VBox>
 				</uxap:expandedHeading>
 				<uxap:snappedHeading>
-					<HBox alignItems="Center">
+					<HBox alignItems="Center" class="eoSnapTitle">
 						<Avatar src="sap-icon://folder-full" displaySize="XS" class="sapUiTinyMarginEnd" backgroundColor="Accent6" decorative="true"/>
-						<Title text="{akte>/bauakte/number} · {akte>/bauakte/title}" level="H1" wrapping="false"/>
+						<Title text="{akte>/bauakte/number} · {akte>/bauakte/title}" tooltip="{akte>/bauakte/number} · {akte>/bauakte/title}" level="H1" wrapping="false"/>
 					</HBox>
 				</uxap:snappedHeading>
 				<uxap:snappedContent>

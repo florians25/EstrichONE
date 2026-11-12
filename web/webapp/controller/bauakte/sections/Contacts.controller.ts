@@ -25,6 +25,9 @@ import { uuidv7 } from "../../../util/ids";
 import type { BauakteDetail, BauakteMember, ContactEmail, ContactPhone, ContactResponse } from "../../../util/models";
 import { session } from "../../../util/session";
 import type ObjectController from "../Object.controller";
+import { isoDay } from "../../../util/days";
+import { teamCardText, teamCards, type TeamCard } from "../../../util/teamCards";
+import type { AssignmentView } from "../../../util/models";
 
 export type PartyRole = "client" | "siteContact" | "siteManager" | "architect" | "planner" | "generalContractor" | "supplier" | "subcontractor" | "other";
 
@@ -155,9 +158,10 @@ export function contactLines(phones: ContactPhone[], emails: ContactEmail[], add
  * @namespace estrichone.controller.bauakte.sections
  */
 export default class Contacts extends SectionBase {
-	protected watches = ["parties", "members"];
+	protected watches = ["parties", "members", "planning"];
 	private parties: BauakteParty[] = [];
 	private cards: Card[] = [];
+	private assignments: AssignmentView[] = [];
 
 	protected init(): void {
 		this.v().setModel(new JSONModel({ groups: [], team: [], count: 0, partyCount: 0, query: "", group: "",
@@ -174,7 +178,13 @@ export default class Contacts extends SectionBase {
 	}
 
 	protected async load(): Promise<void> {
-		this.parties = await get<BauakteParty[]>(`bauakten/${this.bauakteId}/parties`).catch(() => []);
+		const [parties, planning] = await Promise.all([
+			get<BauakteParty[]>(`bauakten/${this.bauakteId}/parties`).catch(() => []),
+			// Kolonne der Mitarbeiter aus den Einsätzen der Akte (nur mit Leserecht der Planung).
+			session.has("planning.read") ? akte.planning(this.bauakteId).catch(() => null) : Promise.resolve(null),
+		]);
+		this.parties = parties;
+		this.assignments = planning?.assignments ?? [];
 		this.render();
 	}
 
@@ -239,8 +249,8 @@ export default class Contacts extends SectionBase {
 		this.cards = cards;
 		this.ct().setProperty("/count", cards.length);
 		this.ct().setProperty("/partyCount", this.parties.length);
-		this.ct().setProperty("/team", (members ?? []).map((m) => ({ displayName: m.displayName, initials: initials(m.displayName),
-			roleText: m.role === "responsible" ? "Zuständig" : m.isActive ? "Mitarbeiter" : "Gesperrt" })));
+		this.ct().setProperty("/team", teamCards(members ?? [], this.assignments, isoDay(new Date()))
+			.map((t) => ({ ...t, avatarColor: accentOf(t.displayName) })));
 		this.applyFilter();
 	}
 
@@ -272,6 +282,19 @@ export default class Contacts extends SectionBase {
 		const card = this.cardOf(event);
 		const line = card.lines.find((l) => l.href?.startsWith("mailto:"));
 		if (line?.href) window.location.href = line.href;
+	}
+
+	private memberOf(event: Event): TeamCard {
+		return (event.getSource() as Control).getBindingContext("ct")?.getObject() as TeamCard;
+	}
+
+	onMailMember(event: Event): void {
+		const m = this.memberOf(event);
+		if (m.email) window.location.href = `mailto:${m.email}`;
+	}
+
+	onCopyMember(event: Event): void {
+		this.copy(teamCardText(this.memberOf(event)), "Kontaktdaten kopiert");
 	}
 
 	onCopyCard(event: Event): void {

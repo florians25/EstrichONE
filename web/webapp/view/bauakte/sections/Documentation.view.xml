@@ -1,5 +1,5 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Documentation" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m"
-	xmlns:f="sap.f" xmlns:card="sap.f.cards" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout" xmlns:eo="estrichone.control"
+	xmlns:f="sap.f" xmlns:card="sap.f.cards" xmlns:form="sap.ui.layout.form" xmlns:core="sap.ui.core" xmlns:l="sap.ui.layout" xmlns:grid="sap.ui.layout.cssgrid" xmlns:eo="estrichone.control"
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<IconTabBar id="docuTabs" selectedKey="{dc>/tab}" expandable="false" headerMode="Inline" stretchContentHeight="false" applyContentPadding="false"
 		backgroundDesign="Transparent">
@@ -37,33 +37,59 @@
 					</CustomListItem>
 				</List>
 			</IconTabFilter>
-			<!-- Prüfungen und Protokolle -->
-			<IconTabFilter key="pruefungen" text="{i18n>inspections.title}" icon="sap-icon://lab" count="{dc>/inspectionCount}" visible="{= ${session>/modules/inspections} !== false }">
-				<OverflowToolbar style="Clear">
-					<Title text="{i18n>inspections.protocol}" level="H3"/>
+			<!-- Erstbegehung: Status, Termin, Protokolle, Fotos und Dokumente -->
+			<IconTabFilter id="erstbegehungTab" key="erstbegehung" text="Erstbegehung" icon="sap-icon://inspection" count="{dc>/initialCount}"
+				visible="{= ${session>/modules/inspections} !== false }">
+				<OverflowToolbar style="Clear" class="eoDocBar">
+					<Title text="Erstbegehung" level="H3"/>
+					<ObjectStatus id="initialStatus" text="{dc>/ib/statusText}" state="{dc>/ib/statusState}" icon="{dc>/ib/statusIcon}" inverted="true"/>
 					<ToolbarSpacer/>
-					<Button text="{i18n>inspections.addInitial}" icon="sap-icon://inspection" press=".onAddInitial" visible="{= ${session>/permissions/inspections.write} === true }"/>
-					<Button text="{i18n>inspections.addCm}" icon="sap-icon://lab" type="Emphasized" press=".onAddCm" visible="{= ${session>/permissions/inspections.write} === true }"/>
+					<Button id="planInitialButton" text="{= ${dc>/ib/appointment} ? 'Termin ändern' : 'Termin planen' }" icon="sap-icon://appointment-2" press=".onPlanInitial"
+						visible="{= ${dc>/ib/canPlan} &amp;&amp; (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') }"/>
+					<Button id="waiveInitialButton" text="Nicht erforderlich" icon="sap-icon://decline" press=".onWaiveInitial" tooltip="{i18n>inspections.waive}"
+						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; ${session>/permissions/bauakten.edit} === true }"/>
+					<Button id="undoWaiverButton" text="Vermerk aufheben" icon="sap-icon://undo" press=".onUndoWaiver"
+						visible="{= ${dc>/ib/status} === 'waived' &amp;&amp; ${session>/permissions/bauakten.edit} === true }"/>
+					<Button id="initialPdfButton" text="Protokoll (PDF)" icon="sap-icon://pdf-attachment" press=".onInitialPdf" visible="{= ${dc>/ib/status} === 'done' }"/>
+					<Button id="correctInitialButton" text="{i18n>inspections.correct}" icon="sap-icon://edit" press=".onCorrectInitial"
+						visible="{= ${dc>/ib/status} === 'done' &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
+					<Button id="startInitialButton" text="Erstbegehung durchführen" icon="sap-icon://inspection" type="Emphasized" press=".onAddInitial"
+						visible="{= (${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned') &amp;&amp; ${session>/permissions/inspections.write} === true }"/>
 				</OverflowToolbar>
-				<f:Card class="sapUiSmallMarginBottom">
+				<!-- Eckdaten in einer Zeile: Status, Termin, durchgeführt, Ergebnis -->
+				<grid:CSSGrid gridTemplateColumns="repeat(auto-fill, minmax(min(100%, 13rem), 1fr))" gridGap="0.5rem 1.5rem" class="eoFacts">
+					<VBox renderType="Bare" class="eoFact">
+						<Label text="Termin"/>
+						<Text id="initialAppointment" text="{= ${dc>/ib/appointmentText} || 'nicht geplant' }" wrapping="true"/>
+					</VBox>
+					<VBox renderType="Bare" class="eoFact">
+						<Label text="Durchgeführt"/>
+						<Text text="{= ${dc>/latest} ? ${dc>/ib/doneText} : '–' }" wrapping="true"/>
+					</VBox>
+					<VBox renderType="Bare" class="eoFact">
+						<Label text="Ergebnis"/>
+						<ObjectStatus text="{dc>/latestResult/text}" state="{dc>/latestResult/tone}" visible="{= !!${dc>/latest} }"/>
+						<Text text="–" visible="{= !${dc>/latest} }"/>
+					</VBox>
+					<VBox renderType="Bare" class="eoFact">
+						<Label text="Protokolle"/>
+						<Text text="{= ${dc>/initial}.length === 0 ? 'keine' : ${dc>/initial}.length === 1 ? '1 Protokoll' : ${dc>/initial}.length + ' Protokolle' }"/>
+					</VBox>
+				</grid:CSSGrid>
+				<MessageStrip id="waiverStatus" text="{dc>/waiverText}" type="Information" showIcon="true" visible="{= ${dc>/ib/status} === 'waived' }" class="eoDocStrip"/>
+				<HBox id="initialEmpty" alignItems="Center" class="eoEmptyRow" visible="{= ${dc>/ib/status} === 'open' || ${dc>/ib/status} === 'planned' }">
+					<core:Icon src="sap-icon://inspection" class="eoEmptyRowIcon" decorative="true"/>
+					<Text text="{= ${dc>/ib/status} === 'planned' ? 'Termin steht. Die Erstbegehung wird vor Ort in der App oder hier durchgeführt; das Protokoll erscheint danach hier.' : 'Noch keine Erstbegehung. Termin planen oder direkt durchführen – vor Ort in der App oder hier.' }"
+						wrapping="true" class="eoEmptyRowText"/>
+				</HBox>
+
+				<f:Card id="initialProtocolCard" class="eoDocCard" visible="{= !!${dc>/latest} }">
 					<f:header>
 						<card:Header title="{i18n>inspections.initialProtocol}" subtitle="{dc>/latestText}" iconSrc="sap-icon://inspection"/>
 					</f:header>
 					<f:content>
 						<VBox width="100%">
-							<IllustratedMessage illustrationType="sapIllus-NoTasks" illustrationSize="Dot" visible="{= ${dc>/initialState} === 'open' }"
-								title="{i18n>inspections.noneInitial}" description="{i18n>inspections.noneInitialText}" enableVerticalResponsiveness="true">
-								<additionalContent>
-									<Button id="waiveInitialButton" text="{i18n>inspections.waive}" icon="sap-icon://decline" press=".onWaiveInitial"
-										visible="{= ${session>/permissions/bauakten.edit} === true }"/>
-								</additionalContent>
-							</IllustratedMessage>
-							<VBox id="waiverBox" class="sapUiSmallMargin" visible="{= ${dc>/initialState} === 'waived' }">
-								<MessageStrip id="waiverStatus" text="{dc>/waiverText}" type="Information" showIcon="true"/>
-								<Button id="undoWaiverButton" text="{i18n>inspections.waiveUndo}" icon="sap-icon://undo" type="Transparent" press=".onUndoWaiver"
-									class="sapUiTinyMarginTop" visible="{= ${session>/permissions/bauakten.edit} === true }"/>
-							</VBox>
-							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="2" columnsL="2" columnsM="1" visible="{= !!${dc>/latest} }"
+							<form:SimpleForm editable="false" layout="ResponsiveGridLayout" columnsXL="2" columnsL="2" columnsM="1"
 								labelSpanXL="5" labelSpanL="5" labelSpanM="5">
 								<core:Title text="{i18n>inspections.essentials}"/>
 								<Label text="Ergebnis"/><ObjectStatus text="{dc>/latestResult/text}" state="{dc>/latestResult/tone}" inverted="true"/>
@@ -75,7 +101,7 @@
 								<Label text="Fläche"/><Text text="{dc>/areaText}"/>
 								<Label text="Fußbodenheizung"/><Text text="{dc>/heatingText}"/>
 							</form:SimpleForm>
-							<Table items="{dc>/checks}" visible="{= !!${dc>/latest} }" class="sapUiSmallMarginBeginEnd">
+							<Table items="{dc>/checks}" visible="{= ${dc>/checks}.length > 0 }" class="eoCheckTable">
 								<columns>
 									<Column><Text text="{i18n>inspections.checkPoint}"/></Column>
 									<Column width="12rem"><Text text="{i18n>inspections.result}"/></Column>
@@ -87,28 +113,58 @@
 									</ColumnListItem>
 								</items>
 							</Table>
-							<VBox class="sapUiSmallMargin" visible="{= !!${dc>/latest} }">
+							<VBox class="sapUiSmallMargin">
 								<Label text="{i18n>inspections.remarks}"/>
 								<Text text="{= ${dc>/latest/remarks} || '–' }" class="eoPre"/>
 								<Label text="Notizen" visible="{= !!${dc>/latest/notes} }" class="sapUiSmallMarginTop"/>
 								<Text text="{dc>/latest/notes}" visible="{= !!${dc>/latest/notes} }" class="eoPre"/>
-								<HBox items="{path: 'dc>/latestPhotos', templateShareable: false}" wrap="Wrap" renderType="Bare" class="sapUiTinyMarginTop eoMediaGrid">
-									<eo:MediaThumb src="{dc>thumb}" kind="{dc>kind}" alt="{dc>alt}" press=".onInspectionPhoto"/>
-								</HBox>
-								<Button text="{i18n>inspections.correct}" icon="sap-icon://edit" press=".onCorrectInitial" class="sapUiSmallMarginTop"
-									visible="{= ${session>/permissions/inspections.write} === true }"/>
 							</VBox>
-							<List items="{dc>/initialOlder}" headerText="{i18n>inspections.earlier}" visible="{= ${dc>/initialOlder}.length > 0 }">
-								<StandardListItem title="{path: 'dc>performedAt', formatter: 'fmt.dateTime'} · {path: 'dc>performedByUserId', formatter: 'fmt.person'}"
-									info="{dc>resultText}" infoState="{dc>resultTone}"/>
-							</List>
 						</VBox>
 					</f:content>
 				</f:Card>
-				<Table id="cmTable" items="{dc>/cm}" noDataText="{i18n>inspections.noneCm}" headerText="{i18n>inspections.cmTitle}" popinLayout="GridSmall">
-					<headerToolbar>
-						<OverflowToolbar style="Clear"><Title text="{i18n>inspections.cmTitle} ({= ${dc>/cm}.length })" level="H3"/></OverflowToolbar>
-					</headerToolbar>
+
+				<!-- Fotos und Dokumente der Erstbegehung -->
+				<OverflowToolbar style="Clear" class="eoDocSubBar" visible="{= !!${dc>/latest} || ${dc>/initialDocs}.length > 0 }">
+					<Title text="Fotos und Dokumente" level="H4"/>
+					<Text text="{= String(${dc>/latestPhotos}.length + ${dc>/initialDocs}.length) }" class="eoContactGroupCount"/>
+				</OverflowToolbar>
+				<HBox items="{path: 'dc>/latestPhotos', templateShareable: false}" wrap="Wrap" renderType="Bare" class="eoMediaGrid" visible="{= ${dc>/latestPhotos}.length > 0 }">
+					<eo:MediaThumb src="{dc>thumb}" kind="{dc>kind}" alt="{dc>alt}" press=".onInspectionPhoto"/>
+				</HBox>
+				<List id="initialDocList" items="{dc>/initialDocs}" visible="{= ${dc>/initialDocs}.length > 0 }" class="eoDocList" showSeparators="Inner">
+					<StandardListItem title="{dc>originalName}" description="{dc>meta}" icon="sap-icon://pdf-attachment" type="Active" press=".onInitialDoc"/>
+				</List>
+				<HBox alignItems="Center" class="eoEmptyRow" visible="{= !!${dc>/latest} &amp;&amp; ${dc>/latestPhotos}.length + ${dc>/initialDocs}.length === 0 }">
+					<core:Icon src="sap-icon://camera" class="eoEmptyRowIcon" decorative="true"/>
+					<Text text="Keine Fotos oder Dokumente zur Erstbegehung. Das Protokoll lässt sich jederzeit über „Protokoll (PDF)“ erzeugen."
+						wrapping="true" class="eoEmptyRowText"/>
+				</HBox>
+
+				<!-- Alle Protokolle (auch Korrekturen und frühere Begehungen) -->
+				<OverflowToolbar style="Clear" class="eoDocSubBar" visible="{= ${dc>/initial}.length > 1 }">
+					<Title text="Alle Protokolle" level="H4"/>
+					<Text text="{= String(${dc>/initial}.length) }" class="eoContactGroupCount"/>
+				</OverflowToolbar>
+				<List id="initialAllList" items="{dc>/initialAll}" visible="{= ${dc>/initial}.length > 1 }" class="eoDocList" showSeparators="Inner">
+					<CustomListItem>
+						<HBox alignItems="Center" justifyContent="SpaceBetween" class="eoDocListRow">
+							<VBox renderType="Bare">
+								<Text text="{dc>line}"/>
+								<ObjectStatus text="{dc>resultText}" state="{dc>resultTone}"/>
+							</VBox>
+							<Button text="PDF" icon="sap-icon://pdf-attachment" type="Transparent" press=".onInitialPdfOf" tooltip="Dieses Protokoll als PDF"/>
+						</HBox>
+					</CustomListItem>
+				</List>
+			</IconTabFilter>
+			<!-- CM-Messungen (Belegreife) -->
+			<IconTabFilter id="messungenTab" key="pruefungen" text="CM-Messungen" icon="sap-icon://lab" count="{dc>/cmCount}" visible="{= ${session>/modules/inspections} !== false }">
+				<OverflowToolbar style="Clear" class="eoDocBar">
+					<Title text="{i18n>inspections.cmTitle}" level="H3"/>
+					<ToolbarSpacer/>
+					<Button text="{i18n>inspections.addCm}" icon="sap-icon://lab" type="Emphasized" press=".onAddCm" visible="{= ${session>/permissions/inspections.write} === true }"/>
+				</OverflowToolbar>
+				<Table id="cmTable" items="{dc>/cm}" noDataText="{i18n>inspections.noneCm}" popinLayout="GridSmall">
 					<columns>
 						<Column width="10rem"><Text text="Datum"/></Column>
 						<Column><Text text="Messstelle"/></Column>

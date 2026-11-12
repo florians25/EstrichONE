@@ -22,6 +22,14 @@ import { post } from "../../../util/api";
 import { initialInspectionState, waiverText } from "../../../util/inspectionWaiver";
 import { askWaiveInitialInspection, setInitialInspectionWaiver } from "../../../util/inspectionWaiverDialog";
 import type { BauakteDetail } from "../../../util/models";
+import EventBus from "sap/ui/core/EventBus";
+import { assignmentKinds } from "../../../util/labels";
+import { draftOf, newDraft, openAssignment, planningLookups } from "../../../util/assignmentDialog";
+import { openEventDialog } from "../../../util/calendarDialog";
+import type { CalendarOccurrence } from "../../../util/planningModels";
+import {
+	appointmentText, initialAppointments, initialStatus, initialStatusView, isInitialInspectionDocument, relevantAppointment, type InitialAppointment,
+} from "../../../util/initialInspectionPlan";
 
 interface AcceptanceDto {
 	id: string;
@@ -54,22 +62,35 @@ interface PhotoRef {
 }
 
 /**
- * Baustellendokumentation: Bautagebuch (je Tag mit Wetter, Arbeitszeit, Kolonne, Fotos), Prüfungen und Protokolle
- * (Erstbegehung, CM-Messung mit Belegreife) und Berichte zum Drucken. Erfassen läuft wie in den Apps über den Sync.
+ * Baustellendokumentation: Bautagebuch (je Tag mit Wetter, Arbeitszeit, Kolonne, Fotos), Erstbegehung (Status, Termin,
+ * Protokolle, Fotos und Dokumente), CM-Messungen mit Belegreife, Abnahmen und Berichte zum Drucken. Erfassen läuft wie
+ * in den Apps über den Sync.
  * @namespace estrichone.controller.bauakte.sections
  */
 export default class Documentation extends SectionBase {
-	protected watches = ["diary", "inspections", "files", "rooms"];
+	protected watches = ["diary", "inspections", "files", "rooms", "planning"];
 	private photos: FileResponse[] = [];
 	private rooms: RoomOverview | null = null;
 	private crews: CrewResponse[] = [];
+	private appointment: InitialAppointment | null = null;
 
 	protected init(): void {
 		const today = isoDay(new Date());
-		const model = new JSONModel({ tab: "tagebuch", diary: [], diaryShown: [], diaryQuery: "", cm: [], initial: [], initialOlder: [], latest: null,
-			checks: [], latestPhotos: [], reportFrom: addDays(today, -90), reportTo: today, reportPhotos: true, reportWork: true, diaryCount: "", inspectionCount: "" });
+		const model = new JSONModel({ tab: "tagebuch", diary: [], diaryShown: [], diaryQuery: "", cm: [], initial: [], latest: null,
+			checks: [], latestPhotos: [], initialDocs: [], initialAll: [], initialCount: "", cmCount: "",
+			ib: { status: "open", statusText: "", statusState: "None", statusIcon: "", appointment: null, appointmentText: "", doneText: "", canPlan: false },
+			reportFrom: addDays(today, -90), reportTo: today, reportPhotos: true, reportWork: true, diaryCount: "" });
 		model.setSizeLimit(5000);
 		this.v().setModel(model, "dc");
+		// Einsatz oder Termin gespeichert (auch aus Planung/Kalender): Termin der Erstbegehung neu ermitteln.
+		EventBus.getInstance().subscribe("estrichone", "planningChanged", () => {
+			if (this.bauakteId) akte.invalidate(this.bauakteId, "planning");
+		});
+		// Aus dem Anlage-Assistenten oder einem Hinweis: Reiter „Erstbegehung“ vorn.
+		EventBus.getInstance().subscribe("bauakte", "docuTab", (_c: string, _e: string, data: object) => {
+			const { id, tab } = data as { id: string; tab: string };
+			if (id === this.bauakteId || !this.bauakteId) model.setProperty("/tab", tab);
+		});
 	}
 
 	private dc(): JSONModel {
@@ -135,14 +156,20 @@ export default class Documentation extends SectionBase {
 	protected async load(): Promise<void> {
 		const id = this.bauakteId;
 		// Einstellungen › Module: abgeschaltete Teile (Bautagebuch, Prüfungen, Abnahmen) nicht abfragen; erster sichtbarer Reiter vorn.
-		const on = { tagebuch: session.moduleOn("diary"), pruefungen: session.moduleOn("inspections"), abnahmen: session.moduleOn("acceptance") };
+		const on = { tagebuch: session.moduleOn("diary"), erstbegehung: session.moduleOn("inspections"), pruefungen: session.moduleOn("inspections"),
+			abnahmen: session.moduleOn("acceptance") };
 		const tab = this.dc().getProperty("/tab") as keyof typeof on;
 		if (on[tab] === false) this.dc().setProperty("/tab", (Object.keys(on) as (keyof typeof on)[]).find((k) => on[k]) ?? "berichte");
-		const [diary, inspections, files, rooms, acceptances] = await Promise.all([
+		const today = isoDay(new Date());
+		const canSeePlan = on.erstbegehung && session.has("planning.read");
+		const [diary, inspections, files, rooms, acceptances, planning, events] = await Promise.all([
 			on.tagebuch ? akte.diary(id) : Promise.resolve([] as Awaited<ReturnType<typeof akte.diary>>),
 			on.pruefungen ? akte.inspections(id) : Promise.resolve([] as Awaited<ReturnType<typeof akte.inspections>>),
 			akte.files(id), akte.rooms(id).catch(() => null),
 			on.abnahmen ? get<AcceptanceDto[]>(`bauakten/${id}/acceptances`).catch(() => [] as AcceptanceDto[]) : Promise.resolve([] as AcceptanceDto[]),
+			canSeePlan ? akte.planning(id).catch(() => null) : Promise.resolve(null),
+			canSeePlan ? get<CalendarOccurrence[]>("calendar/events", { from: addDays(today, -120), to: addDays(today, 270) }).catch(() => [] as CalendarOccurrence[])
+				: Promise.resolve([] as CalendarOccurrence[]),
 		]);
 		this.showAcceptances(acceptances);
 		if (session.has("planning.read") && !this.crews.length) {
@@ -168,15 +195,24 @@ export default class Documentation extends SectionBase {
 		const initial = all.filter((i) => i.kind === "initialInspection");
 		const latest = initial[0] ?? null;
 		m.setProperty("/initial", initial);
-		m.setProperty("/cm", all.filter((i) => i.kind === "cmMeasurement"));
-		m.setProperty("/inspectionCount", String(all.length));
+		const cm = all.filter((i) => i.kind === "cmMeasurement");
+		m.setProperty("/cm", cm);
+		m.setProperty("/cmCount", String(cm.length));
+		m.setProperty("/initialCount", String(initial.length));
 		m.setProperty("/latest", latest);
 		m.setProperty("/latestText", latest ? `Erfasst am ${dateTime(latest.performedAt)}` : "");
 		m.setProperty("/latestResult", latest ? inspectionResult(latest) : null);
 		m.setProperty("/checks", latest && !latest.notRequired ? Object.keys(checkTitles).map((k) => ({ title: checkTitles[k], result: latest.checks[k] ?? null })) : []);
 		m.setProperty("/latestPhotos", this.photoRefs(latest?.photoFileIds));
+		m.setProperty("/initialAll", initial.map((i) => ({
+			...i, resultText: inspectionResult(i).text, resultTone: inspectionResult(i).tone,
+			line: `${dateTime(i.performedAt)} · ${session.name(i.performedByUserId)}${i.correctsInspectionId ? " · Korrektur" : ""}`,
+		})));
+		m.setProperty("/initialDocs", files.filter(isInitialInspectionDocument)
+			.sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+			.map((f) => ({ ...f, meta: `${dateTime(f.createdAt)} · ${f.caption ?? "Protokoll"}` })));
+		this.appointment = relevantAppointment(initialAppointments(id, planning?.assignments ?? [], events), today);
 		this.showWaiver(this.bauakte(), all);
-		m.setProperty("/initialOlder", initial.slice(1).map((i) => ({ ...i, resultText: inspectionResult(i).text, resultTone: inspectionResult(i).tone })));
 		m.setProperty("/screeds", [...new Set((rooms?.rooms ?? []).map((r) => r.screedTypeName).filter(Boolean))].join(", "));
 		m.setProperty("/areaText", rooms ? area(rooms.totalAreaSquareMeters) : "–");
 		m.setProperty("/heatingText", rooms?.rooms.length ? (rooms.rooms.some((r) => r.underfloorHeating) ? "ja" : "nein") : "unbekannt");
@@ -275,9 +311,20 @@ export default class Documentation extends SectionBase {
 
 	/** „Erstbegehung nicht erforderlich“: Schaltfläche nur ohne erfasste Erstbegehung, sonst Vermerk mit „Rückgängig“. */
 	private showWaiver(b: BauakteDetail | null | undefined, inspections: Inspection[]): void {
+		const m = this.dc();
 		const state = initialInspectionState(b, inspections);
-		this.dc().setProperty("/initialState", state);
-		this.dc().setProperty("/waiverText", state === "waived" ? waiverText(b) : "");
+		m.setProperty("/initialState", state);
+		m.setProperty("/waiverText", state === "waived" ? waiverText(b) : "");
+		// Reiter „Erstbegehung“: erfasst vor Vermerk vor Termin.
+		const status = initialStatus(b, inspections, this.appointment);
+		const view = initialStatusView[status];
+		const latest = m.getProperty("/latest") as Inspection | null;
+		m.setProperty("/ib", {
+			status, statusText: view.text, statusState: view.state, statusIcon: view.icon,
+			appointment: this.appointment, appointmentText: appointmentText(this.appointment),
+			doneText: latest ? `${dateTime(latest.performedAt)} · ${session.name(latest.performedByUserId)}` : "",
+			canPlan: session.has("planning.manage"),
+		});
 	}
 
 	protected onBauakteUpdated(b: BauakteDetail): void {
@@ -306,8 +353,58 @@ export default class Documentation extends SectionBase {
 	}
 
 	onAddInitial(): void {
-		this.dc().setProperty("/tab", "pruefungen");
+		this.dc().setProperty("/tab", "erstbegehung");
 		void this.initialForm(null);
+	}
+
+	/** Termin der Erstbegehung: vorhandenen Einsatz oder Kalendertermin öffnen, sonst Einsatz (Terminart Erstbegehung) planen. */
+	async onPlanInitial(): Promise<void> {
+		const a = this.appointment;
+		try {
+			if (a?.source === "calendar") {
+				await openEventDialog({ eventId: a.id });
+				return;
+			}
+			if (a?.source === "assignment") {
+				const view = ((await akte.planning(this.bauakteId)).assignments ?? []).find((x) => x.id === a.id);
+				if (view) {
+					const { crews } = await planningLookups();
+					await openAssignment(draftOf(view, crews));
+					return;
+				}
+			}
+			const b = this.bauakte();
+			const draft = newDraft(addDays(isoDay(new Date()), 1), null, { id: b.id, label: `${b.number ?? "neu"} · ${b.title}` });
+			// Speichern meldet „planningChanged“; die Einsätze der Akte werden dann neu geladen.
+			// Vorbelegt mit der zuständigen Person (sonst mit dem eigenen Benutzer); Kolonne lässt sich ergänzen.
+			const who = b.responsibleUserId ?? session.userId;
+			await openAssignment({ ...draft, kind: "initialInspection", activity: assignmentKinds.initialInspection.activity, startTime: "08:00:00",
+				userIds: who ? [who] : [] });
+		} catch (error) {
+			this.showError(error);
+		}
+	}
+
+	/** Neuestes Erstbegehungsprotokoll bzw. ein bestimmtes als PDF (Server erzeugt es aus den erfassten Daten). */
+	private openInitialPdf(inspectionId?: string): void {
+		const query = inspectionId ? `?inspectionId=${encodeURIComponent(inspectionId)}` : "";
+		window.open(`/api/v1/bauakten/${this.bauakteId}/initial-inspection.pdf${query}`, "_blank", "noopener");
+	}
+
+	onInitialPdf(): void {
+		this.openInitialPdf((this.dc().getProperty("/latest") as Inspection | null)?.id);
+	}
+
+	onInitialPdfOf(event: Event): void {
+		const item = (event.getSource() as Control).getBindingContext("dc")?.getObject() as Inspection;
+		this.openInitialPdf(item.id);
+	}
+
+	onInitialDoc(event: Event): void {
+		const file = (event.getSource() as Control).getBindingContext("dc")?.getObject() as FileResponse;
+		const docs = this.dc().getProperty("/initialDocs") as FileResponse[];
+		openPreview({ files: docs, index: Math.max(0, docs.findIndex((d) => d.id === file.id)),
+			context: akteContextOf((this.v().getModel("akte") as JSONModel | undefined)?.getData() as Parameters<typeof akteContextOf>[0]) });
 	}
 
 	onCorrectInitial(): void {
