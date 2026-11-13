@@ -59,7 +59,6 @@ struct HomeView: View {
                 }
                 .listStyle(.insetGrouped)
                 .listSectionSpacing(.compact)
-                .contentMargins(.horizontal, isWide ? Space.xl : 0, for: .scrollContent)
                 .task(id: loaded) {
                     // Screenshot-Modus: unteren Teil zeigen.
                     guard loaded, shotScene == "heute-unten" else { return }
@@ -140,9 +139,6 @@ struct HomeView: View {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
             .listRowSeparator(.hidden)
-        } header: {
-            Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
-                .accessibilityIdentifier("todayDate")
         }
     }
 
@@ -208,8 +204,10 @@ struct HomeView: View {
                 }
             }
         } header: {
+            // Datum als Überschrift des Einsatzes (keine eigene Zeile), bei altem Stand mit Hinweis.
             HStack {
-                Text(jobs.count > 1 ? "Meine Einsätze" : "Mein Einsatz")
+                Text(Date.now.formatted(.dateTime.weekday(.wide).day().month(.wide)))
+                    .accessibilityIdentifier("todayDate")
                 Spacer()
                 if let planning, !planning.isCurrent {
                     Text("Stand \(planning.loadedAt.shortStamp)")

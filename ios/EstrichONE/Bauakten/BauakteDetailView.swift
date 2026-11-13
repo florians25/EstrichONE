@@ -170,13 +170,13 @@ struct BauakteDetailView: View {
         HStack(spacing: Space.s) {
             Button { action = .photo } label: {
                 Label("Foto", systemImage: "camera")
-                    .frame(maxWidth: .infinity, minHeight: Size.minTap)
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(.borderedProminent)
             .accessibilityIdentifier("addPhotoButton")
             Button { action = .video } label: {
                 Label("Video", systemImage: "video")
-                    .frame(maxWidth: .infinity, minHeight: Size.minTap)
+                    .frame(maxWidth: .infinity)
             }
             .buttonStyle(.bordered)
             .accessibilityIdentifier("addVideoButton")

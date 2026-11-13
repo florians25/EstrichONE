@@ -133,7 +133,7 @@ struct TodayJobCard: View {
             HStack(spacing: Space.s) {
                 Button { perform(.photo) } label: {
                     Label("Foto", systemImage: "camera")
-                        .frame(maxWidth: .infinity, minHeight: Size.minTap)
+                        .frame(maxWidth: .infinity)
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(!canCapture)
@@ -146,7 +146,7 @@ struct TodayJobCard: View {
                 } label: {
                     Label("Weitere Aktionen", systemImage: "ellipsis")
                         .labelStyle(.iconOnly)
-                        .frame(minWidth: Size.minTap, minHeight: Size.minTap)
+                        .frame(minWidth: 28)
                 }
                 .menuStyle(.button)
                 .buttonStyle(.bordered)
