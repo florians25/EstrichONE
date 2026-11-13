@@ -129,21 +129,30 @@ struct TodayJobCard: View {
                 }
             }
 
+            // Eine Hauptaktion (Foto); Tagebuch und Mangel im Menü daneben. Die Akte öffnet der Kopf.
             HStack(spacing: Space.s) {
-                Button { perform(.photo) } label: { Label("Foto", systemImage: "camera.fill") }
-                    .buttonStyle(ActionTileStyle(rank: .primary))
-                    .disabled(!canCapture)
-                    .accessibilityIdentifier("todayJobPhoto")
-                Button { perform(.diary) } label: { Label("Tagebuch", systemImage: "book") }
-                    .buttonStyle(ActionTileStyle())
-                    .disabled(!canCapture)
-                Button { perform(.defect) } label: { Label("Mangel", systemImage: "exclamationmark.triangle") }
-                    .buttonStyle(ActionTileStyle())
-                    .disabled(!canCapture)
-                Button { perform(.open) } label: { Label("Akte", systemImage: "folder") }
-                    .buttonStyle(ActionTileStyle())
-                    .accessibilityIdentifier("todayJobOpen")
+                Button { perform(.photo) } label: {
+                    Label("Foto", systemImage: "camera")
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.borderedProminent)
+                .disabled(!canCapture)
+                .accessibilityIdentifier("todayJobPhoto")
+                Menu {
+                    Button("Bautagebuch-Eintrag", systemImage: "book") { perform(.diary) }
+                    Button("Mangel melden", systemImage: "exclamationmark.triangle") { perform(.defect) }
+                    Button("Bauakte öffnen", systemImage: "folder") { perform(.open) }
+                        .accessibilityIdentifier("todayJobOpen")
+                } label: {
+                    Label("Weitere Aktionen", systemImage: "ellipsis")
+                        .labelStyle(.iconOnly)
+                        .frame(minWidth: 28)
+                }
+                .menuStyle(.button)
+                .buttonStyle(.bordered)
+                .disabled(!canCapture)
             }
+            .controlSize(.large)
         }
         .padding(Space.l)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -250,11 +259,7 @@ struct TodayJobCard: View {
             SkeletonBar(height: 14)
             SkeletonBar(width: 200, height: 14)
             SkeletonBar(width: 160, height: 14)
-            HStack(spacing: Space.s) {
-                ForEach(0..<4, id: \.self) { _ in
-                    RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Theme.fill).frame(height: 64)
-                }
-            }
+            RoundedRectangle(cornerRadius: Radius.s, style: .continuous).fill(Theme.fill).frame(height: Size.minTap)
         }
         .padding(Space.l)
         .card()

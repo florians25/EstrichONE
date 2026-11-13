@@ -9,7 +9,7 @@ ist die Seite nur zum Ansehen; die Schaltflächen zum Ändern erscheinen dann ni
 
 ## Die Tagesansicht
 
-Öffnen Sie **Wer fährt wohin** über die Kachel auf der Heute-Seite oder unter **Mehr** → **Wer fährt wohin**.
+Öffnen Sie **Wer fährt wohin** auf der Heute-Seite unter **Überblick**.
 
 - Die **Tagesleiste** oben wechselt den Tag; das Kalendersymbol wählt ein beliebiges Datum.
 - Darunter steht der **Freigabestand** des Tages, z. B. „Freigegeben 27. Okt., 06:30 – 2 Änderungen seit Freigabe“

@@ -26,8 +26,7 @@ Beispieldaten (sechs Bauakten in allen Ständen mit Kunden, Fotos, Lieferschein-
 CM-Messung, Räumen, Beteiligten, Aufgaben, Einsätzen der Woche, „Wer fährt wohin“ mit drei Kolonnen und einer Meldung an
 die IT). Der „Server“ läuft dabei im App-Prozess (`Support/LocalServer.swift`, Daten in `Support/DemoContent.swift`):
 **es wird nichts über das Netzwerk gesendet**, Änderungen bleiben auf dem Gerät. Die Kennzeichnung „Demo“ oben links
-und ein Hinweis auf der Heute-Seite zeigen den Demomodus; „Beenden“ (dort, im Menü „Demo“ oder unter Mehr) löscht alle
-Demodaten und führt zurück zur Einrichtung. Kamera, Dokumentenscanner und Videoaufnahme funktionieren auch im Demomodus (lokal gespeichert).
+zeigt den Demomodus; „Demo beenden“ in ihrem Menü löscht alle Demodaten und führt zurück zur Einrichtung. Kamera, Dokumentenscanner und Videoaufnahme funktionieren auch im Demomodus (lokal gespeichert).
 
 Text für die App-Review-Notizen (App Store Connect):
 

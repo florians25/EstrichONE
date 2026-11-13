@@ -6,7 +6,8 @@ Freigaben, Planänderungen und Antworten, und der **Helpdesk** für Probleme mit
 ## Chat
 
 Der Chat ist ein Modul von EstrichONE; Ihr Betrieb schaltet es im Web ein. Ist es aktiv, erscheint auf der Heute-Seite
-oben rechts eine Sprechblase mit der Zahl ungelesener Nachrichten und unter **Mehr** der Eintrag **Chat**.
+oben rechts unter **Weitere Aktionen** der Eintrag **Chat** (mit Zahl ungelesener Nachrichten) und unter **Mehr** der
+Eintrag **Chat**; die Zahl steht auch am Reiter **Mehr**.
 
 ![Chats](bilder/iphone-chat.jpg "Chatliste mit Einzel-, Kolonnen- und Baustellenchats")
 ![Unterhaltung](bilder/iphone-chat-verlauf.jpg "Unterhaltung mit Fotos, Standort, Reaktionen und Erwähnung")

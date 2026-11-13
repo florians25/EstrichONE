@@ -163,41 +163,23 @@ fun MoreScreen() {
                     RowItem("Benachrichtigungen", icon = Icons.Outlined.Inbox, showChevron = true, onClick = { nav.push(Route.Inbox) }, trailing = { CountBadge(unread) })
                 }
             }
-            // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht.
-            val planningRows = buildList<Pair<String, () -> Unit>> {
-                if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) add("Meine Aufgaben" to { nav.push(Route.Tasks) })
-                if (modules.isOn(AppModules.PLANNING)) {
-                    add("Wer fährt wohin" to { nav.push(Route.Dispatch) })
-                    add("Meine Woche" to { nav.push(Route.Week) })
-                }
-                if (modules.isOn(AppModules.ABSENCE)) add("Urlaub und Abwesenheit" to { nav.push(Route.Absences) })
-            }
-            if (planningRows.isNotEmpty()) {
-                item { GroupLabel("Planung und Aufgaben") }
+            // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben, Wer fährt wohin und
+            // Meine Woche stehen auf „Heute“ und hier nicht noch einmal.
+            if (modules.isOn(AppModules.ABSENCE) || modules.isOn(AppModules.HELPDESK)) {
+                item { GroupLabel("Service") }
                 item {
                     SectionCard {
-                        planningRows.forEachIndexed { index, (title, open) ->
-                            if (index > 0) RowDivider()
-                            val icon = when (title) {
-                                "Meine Aufgaben" -> Icons.AutoMirrored.Outlined.Assignment
-                                "Wer fährt wohin" -> Icons.Filled.DirectionsCar
-                                "Meine Woche" -> Icons.Outlined.CalendarMonth
-                                else -> Icons.Outlined.EventAvailable
-                            }
-                            RowItem(title, icon = icon, showChevron = true, onClick = open)
+                        if (modules.isOn(AppModules.ABSENCE)) {
+                            RowItem("Urlaub und Abwesenheit", icon = Icons.Outlined.EventAvailable, showChevron = true, onClick = { nav.push(Route.Absences) })
                         }
-                    }
-                }
-            }
-            if (modules.isOn(AppModules.HELPDESK)) {
-                item { GroupLabel("IT-Service/Helpdesk") }
-                item {
-                    SectionCard {
-                        RowItem("Problem melden", icon = Icons.Outlined.ReportProblem, onClick = { nav.push(Route.ReportProblem) })
-                        RowDivider()
-                        RowItem(if ("helpdesk.agent" in permissions) "Helpdesk (Tickets bearbeiten)" else "Meine Meldungen", icon = Icons.Outlined.SupportAgent,
-                            showChevron = true, onClick = { nav.push(Route.Helpdesk) },
-                            trailing = { CountBadge(unreadTickets) })
+                        if (modules.isOn(AppModules.HELPDESK)) {
+                            if (modules.isOn(AppModules.ABSENCE)) RowDivider()
+                            RowItem(if ("helpdesk.agent" in permissions) "IT-Service/Helpdesk (Tickets bearbeiten)" else "IT-Service/Helpdesk",
+                                icon = Icons.Outlined.SupportAgent, showChevron = true, onClick = { nav.push(Route.Helpdesk) },
+                                trailing = { CountBadge(unreadTickets) })
+                            RowDivider()
+                            RowItem("Problem melden", icon = Icons.Outlined.ReportProblem, onClick = { nav.push(Route.ReportProblem) })
+                        }
                     }
                 }
             }
@@ -213,21 +195,19 @@ fun MoreScreen() {
                     RowItem("Info", icon = Icons.Filled.Info, value = BuildConfig.VERSION_NAME, showChevron = true, onClick = { nav.push(Route.About) })
                 }
             }
-            item { Spacer(Modifier.height(16.dp)) }
-            item {
-                SectionCard {
-                    if (session.isDemo) {
-                        RowItem("Demo beenden", icon = Icons.Filled.PlayCircle, iconTint = tones.danger, iconBackground = tones.dangerSoft, titleColor = tones.danger,
-                            onClick = model::endDemo)
-                    } else {
+            // Demo beenden: oben links unter „Demo“ (nicht noch einmal hier).
+            if (!session.isDemo) {
+                item { Spacer(Modifier.height(16.dp)) }
+                item {
+                    SectionCard {
                         if (session.isPool) {
                             RowItem("Benutzer wechseln", icon = Icons.Filled.SwitchAccount, onClick = model::switchUser)
                             RowDivider()
                         }
-                        RowItem("Abmelden", icon = Icons.AutoMirrored.Filled.Logout, iconTint = tones.danger, iconBackground = tones.dangerSoft, titleColor = tones.danger,
+                        RowItem("Abmelden", icon = Icons.AutoMirrored.Filled.Logout, iconTint = tones.danger, titleColor = tones.danger,
                             onClick = { confirmSignOut = true })
                         RowDivider()
-                        RowItem("Gerät zurücksetzen", icon = Icons.Filled.DeleteForever, iconTint = tones.danger, iconBackground = tones.dangerSoft, titleColor = tones.danger,
+                        RowItem("Gerät zurücksetzen", icon = Icons.Filled.DeleteForever, iconTint = tones.danger, titleColor = tones.danger,
                             subtitle = "Alle Daten und Anmeldungen von diesem Gerät löschen", onClick = { confirmReset = true })
                     }
                 }

@@ -89,25 +89,11 @@ private val DarkScheme = darkColorScheme(
 
 val LocalTones = staticCompositionLocalOf { LightTones }
 
-private val Type = Typography().let { base ->
-    base.copy(
-        displaySmall = base.displaySmall.copy(fontWeight = FontWeight.Bold),
-        headlineLarge = base.headlineLarge.copy(fontWeight = FontWeight.Bold, fontSize = 32.sp, lineHeight = 38.sp),
-        headlineMedium = base.headlineMedium.copy(fontWeight = FontWeight.Bold),
-        headlineSmall = base.headlineSmall.copy(fontWeight = FontWeight.SemiBold),
-        titleLarge = base.titleLarge.copy(fontWeight = FontWeight.SemiBold),
-        titleMedium = base.titleMedium.copy(fontWeight = FontWeight.SemiBold, fontSize = 17.sp),
-        titleSmall = base.titleSmall.copy(fontWeight = FontWeight.SemiBold),
-        bodyLarge = base.bodyLarge.copy(fontSize = 17.sp, lineHeight = 24.sp),
-        bodyMedium = base.bodyMedium.copy(fontSize = 15.sp, lineHeight = 21.sp),
-        labelLarge = base.labelLarge.copy(fontWeight = FontWeight.SemiBold, fontSize = 15.sp),
-    )
-}
+/** Schriftskala von Material 3 ohne Anpassungen (skaliert mit der Schriftgröße des Systems). */
+private val Type = Typography()
 
-private val AppShapes = Shapes(
-    extraSmall = RoundedCornerShape(8.dp), small = RoundedCornerShape(12.dp), medium = RoundedCornerShape(16.dp),
-    large = RoundedCornerShape(22.dp), extraLarge = RoundedCornerShape(28.dp),
-)
+/** Eckradien von Material 3. */
+private val AppShapes = Shapes()
 
 /** Erscheinungsbild: System, hell oder dunkel (Mehr › Darstellung). */
 enum class Appearance(val title: String) { System("Wie System"), Light("Hell"), Dark("Dunkel") }
@@ -145,4 +131,4 @@ fun EstrichTheme(appearance: Appearance = Appearance.System, dynamicColor: Boole
 /** Kurzer Zugriff in Composables. */
 val tones: Tones @Composable get() = LocalTones.current
 
-val SectionTitle: TextStyle @Composable get() = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, fontSize = 21.sp)
+val SectionTitle: TextStyle @Composable get() = MaterialTheme.typography.titleMedium

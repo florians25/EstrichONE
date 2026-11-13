@@ -41,7 +41,7 @@ Unten auf dem iPhone (auf dem iPad oben) sitzt die **Tab-Leiste** mit fünf Bere
 | **Baustellen** | alle Bauakten, die Sie sehen dürfen – laufende sowie abgeschlossene und stornierte –, Suche, neue Bauakte |
 | **Erfassen** | Schnellzugriff: Baustelle wählen, dann Foto, Dokument, Bautagebuch, Mangel, Erstbegehung, Abnahme, Aufgabe, CM-Messung, Video oder Notiz |
 | **Kunden** | Kundenstamm mit Anrufen, Nachricht, E-Mail und Route |
-| **Mehr** | Synchronisation, Benachrichtigungen, Chat, Planung und Aufgaben, Helpdesk, Sperre und Face ID, Gerät, Server, Abmelden |
+| **Mehr** | Synchronisation, Benachrichtigungen, Chat, Urlaub, Helpdesk, Sperre und Face ID, Gerät, Server und App, Abmelden |
 
 Oben rechts auf der Heute-Seite zeigen kleine Symbole den Stand der **Synchronisation** (Wolke), den **Chat** mit der
 Zahl ungelesener Nachrichten und die **Glocke** mit neuen Benachrichtigungen.

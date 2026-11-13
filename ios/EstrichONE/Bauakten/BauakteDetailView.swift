@@ -37,6 +37,8 @@ struct BauakteDetailView: View {
     @State private var loadingPDF = false
     @State private var pdfMessage: String?
     @State private var showsNavigationTitle = false
+    /// „Alle Basisdaten“ aufgeklappt.
+    @State private var showsAllKeyData = false
     @State private var appliedInitialArea = false
     /// Verknüpfte Teams-Unterhaltung (nur online und im Chat-Modus „Teams“ bzw. „beides“).
     @State private var teamsLink: TeamsLink?
@@ -73,13 +75,7 @@ struct BauakteDetailView: View {
                 }
                 .fullScreenCover(item: $playing) { file in VideoPreview(file: file) }
                 .toolbar {
-                    if let teamsLink {
-                        ToolbarItem(placement: .primaryAction) {
-                            OpenInTeamsButton(targets: teamsLink.targets)
-                                .labelStyle(.iconOnly)
-                                .accessibilityHint(teamsLink.summary)
-                        }
-                    }
+                    // Alles außer Foto und Video (unten) steckt im Menü „…“ – auch „In Teams öffnen“.
                     ToolbarItem(placement: .primaryAction) { moreMenu(content.bauakte) }
                 }
                 .task(id: bauakteId) { await loadTeams() }
@@ -140,54 +136,68 @@ struct BauakteDetailView: View {
 
     // MARK: Übersicht
 
+    /// Standardliste: oben die Basisdaten auf einen Blick (Nummer, Status, Bauvorhaben, Adresse mit Route, Kunde und
+    /// Ansprechpartner mit Anruf, nächster Einsatz), dann Kennwerte (aufklappbar), offene Punkte, neueste Fotos und die
+    /// Bereiche. „Foto“ und „Video“ stehen immer erreichbar unten.
     private func overview(_ content: BauakteContent, wide: Bool) -> some View {
         ScrollViewReader { proxy in
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.xl) {
+            List {
+                Section {
                     header(content)
-                    highlights(content)
-                    facts(content)
-                    actionBar
-                    openPoints(content)
-                        .id("openPoints")
-                    photoStrip(content)
-                    keyData(content)
-                    areas(content, wide: wide)
-                        .id("areas")
-                    activitySection(content)
-                    footer(content)
+                    ForEach(factList(content)) { fact in factRow(fact) }
                 }
-                .padding(.horizontal, Space.l)
-                .padding(.top, Space.s)
-                .padding(.bottom, Space.xxl)
+                highlights(content)
+                keyData(content)
+                openPoints(content)
+                photoStrip(content)
+                areas(content, wide: wide)
             }
+            .listStyle(.insetGrouped)
+            .listSectionSpacing(.compact)
             .scrolledPastHeader($showsNavigationTitle)
-            .background(Theme.canvas)
+            .safeAreaInset(edge: .bottom) { captureBar }
             .task(id: loaded) {
-                // Screenshot-Modus: Mitte (offene Punkte, Fotos, Kenndaten) bzw. unten (alle Bereiche).
-                guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "openPoints" : nil else { return }
+                // Screenshot-Modus: Mitte (Kennwerte, offene Punkte, Fotos) bzw. unten (alle Bereiche).
+                guard loaded, let target = shotScene == "bauakte-unten" ? "areas" : shotScene == "bauakte-mitte" ? "keyData" : nil else { return }
                 try? await Task.sleep(for: .milliseconds(300))
                 proxy.scrollTo(target, anchor: .top)
             }
         }
     }
 
+    /// Die zwei Hauptaktionen der Baustelle – groß, mit Handschuhen bedienbar, Kamera öffnet sofort.
+    private var captureBar: some View {
+        HStack(spacing: Space.s) {
+            Button { action = .photo } label: {
+                Label("Foto", systemImage: "camera")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.borderedProminent)
+            .accessibilityIdentifier("addPhotoButton")
+            Button { action = .video } label: {
+                Label("Video", systemImage: "video")
+                    .frame(maxWidth: .infinity)
+            }
+            .buttonStyle(.bordered)
+            .accessibilityIdentifier("addVideoButton")
+        }
+        .controlSize(.large)
+        .font(.body.weight(.semibold))
+        .padding(.horizontal, Space.l)
+        .padding(.vertical, Space.s)
+        .background(.bar)
+    }
+
     private func header(_ content: BauakteContent) -> some View {
         let bauakte = content.bauakte
-        let badges = schema?.badges(for: bauakte.projectData, lists: lists) ?? bauakte.project.badges
-        // Sehr große Schrift: Stand unter die Nummer statt daneben.
-        let layout = typeSize.isAccessibilitySize ? AnyLayout(VStackLayout(alignment: .leading, spacing: Space.s))
-                                                  : AnyLayout(HStackLayout(alignment: .center, spacing: Space.s))
-        return VStack(alignment: .leading, spacing: Space.s) {
-            layout {
-                HStack(spacing: Space.s) {
-                    Text(bauakte.number ?? "Neu · noch ohne Nummer")
-                        .font(Typo.subheadStrong.monospacedDigit())
-                        .foregroundStyle(Theme.textSecondary)
-                        .accessibilityIdentifier("bauakteNumber")
-                    SyncStateBadge(state: bauakte.syncState)
-                }
-                if !typeSize.isAccessibilitySize { Spacer(minLength: Space.s) }
+        return VStack(alignment: .leading, spacing: Space.xs) {
+            HStack(alignment: .firstTextBaseline, spacing: Space.s) {
+                Text(bauakte.number ?? "Neu · noch ohne Nummer")
+                    .font(Typo.subhead.monospacedDigit())
+                    .foregroundStyle(Theme.textSecondary)
+                    .accessibilityIdentifier("bauakteNumber")
+                SyncStateBadge(state: bauakte.syncState)
+                Spacer(minLength: Space.s)
                 statusMenu(bauakte)
             }
             Text(bauakte.title)
@@ -196,17 +206,8 @@ struct BauakteDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
                 .accessibilityAddTraits(.isHeader)
                 .accessibilityIdentifier("bauakteTitle")
-            if !badges.isEmpty {
-                ChipFlow {
-                    ForEach(badges, id: \.self) { badge in
-                        Chip(text: badge)
-                    }
-                }
-                .padding(.top, 2)
-                .accessibilityIdentifier("projectBadges")
-            }
         }
-        .padding(.horizontal, Space.xs)
+        .padding(.vertical, Space.xs)
     }
 
     @ViewBuilder
@@ -216,25 +217,30 @@ struct BauakteDetailView: View {
         let inspectionMissing = InitialInspectionState.showsMissingHint(bauakte: bauakte, inspections: content.inspections,
                                                                         enabled: content.warnMissingInspection)
         if bauakte.status == .cancelled || statusError != nil || !content.pinnedNotes.isEmpty || !warnings.isEmpty || inspectionMissing {
-            VStack(spacing: Space.s) {
-                if bauakte.status == .cancelled {
-                    Callout(tone: .danger, title: "Storniert", message: bauakte.cancellationReason ?? "ohne Angabe eines Grundes", symbol: "xmark.circle.fill")
+            Section {
+                Group {
+                    if bauakte.status == .cancelled {
+                        Callout(tone: .danger, title: "Storniert", message: bauakte.cancellationReason ?? "ohne Angabe eines Grundes", symbol: "xmark.circle.fill")
+                    }
+                    if let statusError {
+                        Callout(tone: .danger, message: statusError)
+                    }
+                    ForEach(warnings, id: \.self) { warning in
+                        Callout(tone: .warning, message: warning)
+                    }
+                    ForEach(content.pinnedNotes) { note in
+                        Callout(tone: .info, title: "Angeheftet", message: note.text.compactText ?? "", symbol: "pin.fill")
+                    }
+                    if inspectionMissing {
+                        // Hinweiskarte wie im Büro: am Hinweis direkt als nicht erforderlich vermerken.
+                        Callout(tone: .warning, message: InitialInspectionState.missingText, symbol: "checklist",
+                                actionTitle: content.canEditBauakte ? InitialInspectionState.waiveButtonTitle : nil) { waivingInspection = true }
+                            .accessibilityIdentifier("initialInspectionHint")
+                    }
                 }
-                if let statusError {
-                    Callout(tone: .danger, message: statusError)
-                }
-                ForEach(warnings, id: \.self) { warning in
-                    Callout(tone: .warning, message: warning)
-                }
-                ForEach(content.pinnedNotes) { note in
-                    Callout(tone: .info, title: "Angeheftet", message: note.text.compactText ?? "", symbol: "pin.fill")
-                }
-                if inspectionMissing {
-                    // Hinweiskarte wie im Büro: am Hinweis direkt als nicht erforderlich vermerken.
-                    Callout(tone: .warning, message: InitialInspectionState.missingText, symbol: "checklist",
-                            actionTitle: content.canEditBauakte ? InitialInspectionState.waiveButtonTitle : nil) { waivingInspection = true }
-                        .accessibilityIdentifier("initialInspectionHint")
-                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+                .listRowSeparator(.hidden)
             }
         }
     }
@@ -291,24 +297,15 @@ struct BauakteDetailView: View {
         return list
     }
 
-    private func facts(_ content: BauakteContent) -> some View {
-        let list = factList(content)
-        return VStack(spacing: 0) {
-            ForEach(Array(list.enumerated()), id: \.element.id) { index, fact in
-                if index > 0 { InsetDivider(leading: Space.l + Size.iconBadge + Space.m) }
-                factRow(fact)
-            }
-        }
-        .card()
-    }
-
     @ViewBuilder
     private func factRow(_ fact: Fact) -> some View {
         let row = HStack(spacing: Space.m) {
-            IconBadge(symbol: fact.symbol, tint: fact.tint, background: fact.tint.opacity(0.12))
+            Image(systemName: fact.symbol)
+                .foregroundStyle(fact.tint)
+                .frame(width: 28)
+                .accessibilityHidden(true)
             VStack(alignment: .leading, spacing: 2) {
                 Text(fact.title)
-                    .font(Typo.body)
                     .foregroundStyle(Theme.textPrimary)
                     .fixedSize(horizontal: false, vertical: true)
                 if let subtitle = fact.subtitle {
@@ -324,47 +321,66 @@ struct BauakteDetailView: View {
                     .buttonStyle(IconButtonStyle())
                     .accessibilityLabel(fact.linkTitle)
                     .accessibilityIdentifier("fact-\(fact.id)-link")
-            } else if fact.tap != nil {
-                Chevron()
             }
         }
-        .padding(.horizontal, Space.l)
-        .padding(.vertical, Space.m)
+        .frame(minHeight: Size.minTap)
         .contentShape(Rectangle())
         if let tap = fact.tap {
-            Button(action: tap) { row }.buttonStyle(RowButtonStyle())
+            Button(action: tap) { row }
+                .buttonStyle(.plain)
         } else {
             row
         }
     }
 
-    private var actionBar: some View {
-        HStack(spacing: Space.s) {
-            Button { action = .photo } label: { Label("Foto", systemImage: "camera.fill") }
-                .buttonStyle(ActionTileStyle(rank: .primary))
-                .accessibilityIdentifier("addPhotoButton")
-            Button { action = .scan } label: { Label("Scannen", systemImage: "doc.viewfinder") }
-                .buttonStyle(ActionTileStyle())
-                .accessibilityIdentifier("scanDocumentButton")
-            if modules.isOn(AppModules.diary) {
-                Button { action = .diary } label: { Label("Tagebuch", systemImage: "book") }
-                    .buttonStyle(ActionTileStyle())
-                    .accessibilityIdentifier("addDiaryButton")
-            }
-            if modules.isOn(AppModules.defects) {
-                Button { action = .defect } label: { Label("Mangel", systemImage: "exclamationmark.triangle") }
-                    .buttonStyle(ActionTileStyle())
-                    .accessibilityIdentifier("addDefectButton")
-            }
-            MoreCaptureMenu(perform: { action = $0 }) {
-                Label("Mehr", systemImage: "ellipsis")
-            }
-            .buttonStyle(ActionTileStyle())
-            .accessibilityIdentifier("addMenu")
-        }
+    // MARK: Basisdaten, offene Punkte, Fotos
+
+    private func projectItems(_ bauakte: Bauakte) -> [InfoItem] {
+        let rows = schema.map { ProjectSection.items(bauakte, schema: $0, lists: lists) } ?? ProjectSection.items(bauakte)
+        return rows.filter { $0.title != "Geplant" }.map { InfoItem(label: $0.title, value: $0.value, symbol: $0.symbol) }
     }
 
-    // MARK: Offene Punkte, Fotos, Kenndaten
+    /// Die vier wichtigsten Kennwerte direkt, alle weiteren per Tipp auf „Alle Basisdaten“ aufklappbar.
+    private func keyData(_ content: BauakteContent) -> some View {
+        let items = projectItems(content.bauakte)
+        let first = Array(items.prefix(4))
+        let rest = Array(items.dropFirst(4))
+        return Section {
+            if items.isEmpty {
+                Button("Basisdaten erfassen", systemImage: "pencil") { action = .project }
+                    .frame(minHeight: Size.minTap)
+                    .id("keyData")
+            } else {
+                ForEach(Array(first.enumerated()), id: \.element.id) { index, item in
+                    LabeledContent(item.label, value: item.value)
+                        .id(index == 0 ? "keyData" : item.id)
+                }
+                if !rest.isEmpty {
+                    DisclosureGroup(isExpanded: $showsAllKeyData) {
+                        ForEach(rest) { item in
+                            LabeledContent(item.label, value: item.value)
+                        }
+                    } label: {
+                        Text("Alle Basisdaten (\(items.count))")
+                            .foregroundStyle(Theme.accent)
+                    }
+                    .frame(minHeight: Size.minTap)
+                    .accessibilityIdentifier("allKeyDataButton")
+                }
+            }
+        } header: {
+            HStack {
+                Text("Basisdaten")
+                Spacer()
+                if !items.isEmpty {
+                    Button("Bearbeiten") { action = .project }
+                        .font(Typo.subhead)
+                        .textCase(nil)
+                        .accessibilityIdentifier("editProjectButton")
+                }
+            }
+        }
+    }
 
     @ViewBuilder
     private func openPoints(_ content: BauakteContent) -> some View {
@@ -373,167 +389,94 @@ struct BauakteDetailView: View {
             return (lhs.dueDate ?? "9999") < (rhs.dueDate ?? "9999")
         }
         if !open.isEmpty, modules.anyOn(AppModules.tasks, AppModules.defects) {
-            VStack(alignment: .leading, spacing: Space.m) {
-                SectionHeading("Offene Punkte") {
-                    MoreLink("Alle (\(open.count))") { show(.work) }
-                }
-                VStack(spacing: 0) {
-                    ForEach(Array(open.prefix(3).enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { InsetDivider(leading: 60) }
-                        WorkItemRow(item: item, assigneeName: item.assigneeUserId.flatMap { content.names[$0] }) {
-                            Task { await toggle(item) }
-                        }
-                        .padding(.horizontal, Space.s)
+            Section("Offene Punkte") {
+                ForEach(Array(open.prefix(3).enumerated()), id: \.element.id) { index, item in
+                    WorkItemRow(item: item, assigneeName: item.assigneeUserId.flatMap { content.names[$0] }) {
+                        Task { await toggle(item) }
                     }
+                    .listRowInsets(EdgeInsets(top: 0, leading: Space.xs, bottom: 0, trailing: Space.l))
+                    .id(index == 0 ? "openPoints" : item.id.uuidString)
                 }
-                .card()
-            }
-        }
-    }
-
-    private func photoStrip(_ content: BauakteContent) -> some View {
-        VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeading("Fotos") {
-                if !content.photos.isEmpty {
-                    MoreLink("Alle (\(content.photos.count))") { show(.media) }
+                if open.count > 3 {
+                    Button("Alle \(open.count) anzeigen") { show(.work) }
+                        .frame(minHeight: Size.minTap)
                 }
             }
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: Space.s) {
-                    Button { action = .photo } label: {
-                        VStack(spacing: Space.xs) {
-                            Image(systemName: "camera.fill").font(.title3.weight(SymbolWeight.control))
-                            Text(content.photos.isEmpty ? "Erstes Foto" : "Foto").font(Typo.metaStrong)
-                        }
-                        .foregroundStyle(Theme.accent)
-                        .frame(width: 96, height: 96)
-                        .background(Theme.accentSoft, in: RoundedRectangle(cornerRadius: Radius.m, style: .continuous))
-                    }
-                    .buttonStyle(TileButtonStyle())
-                    ForEach(Array(content.photos.prefix(12).enumerated()), id: \.element.id) { index, file in
-                        Button {
-                            if file.isVideo { playing = file } else { viewing = file }
-                        } label: {
-                            PhotoThumbnail(file: file, radius: Radius.m, showsCaption: false)
-                                .frame(width: 96, height: 96)
-                        }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel(file.caption ?? (file.isVideo ? "Video" : "Foto"))
-                        .accessibilityIdentifier("photoThumb-\(index)")
-                    }
-                }
-            }
-            .scrollClipDisabled()
-        }
-    }
-
-    private func projectItems(_ bauakte: Bauakte) -> [InfoItem] {
-        let rows = schema.map { ProjectSection.items(bauakte, schema: $0, lists: lists) } ?? ProjectSection.items(bauakte)
-        return rows.filter { $0.title != "Geplant" }.map { InfoItem(label: $0.title, value: $0.value, symbol: $0.symbol) }
-    }
-
-    private func keyData(_ content: BauakteContent) -> some View {
-        let items = projectItems(content.bauakte)
-        return VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeading("Estrich und Bauvorhaben") {
-                Button("Bearbeiten") { action = .project }
-                    .accessibilityIdentifier("editProjectButton")
-            }
-            Card {
-                if items.isEmpty {
-                    EmptyStateView(symbol: "list.bullet.rectangle", title: "Noch keine Angaben",
-                                   message: "Fläche, Estrichart, Dicke und Heizung der Baustelle für Kolonne und Büro.",
-                                   actionTitle: "Angaben erfassen", actionSymbol: "pencil") { action = .project }
-                } else {
-                    InfoGrid(items: Array(items.prefix(8)))
-                    if items.count > 8 {
-                        MoreLink("Alle \(items.count) Angaben") { show(.project) }
-                    }
-                }
-            }
-        }
-    }
-
-    // MARK: Bereiche, Aktivität
-
-    private func areas(_ content: BauakteContent, wide: Bool) -> some View {
-        let projectCount = projectItems(content.bauakte).count
-        return VStack(alignment: .leading, spacing: Space.m) {
-            SectionHeading("Alles zur Baustelle")
-            VStack(spacing: 0) {
-                ForEach(Array(BauakteArea.allCases.filter { $0.isAvailable(modules) }.enumerated()), id: \.element) { index, item in
-                    if index > 0 { InsetDivider(leading: Space.l + Size.iconBadge + Space.m) }
-                    let summary = item.summary(content, projectCount: projectCount)
-                    let selected = wide && wideArea == item
-                    Button { if wide { wideArea = item } else { area = item } } label: {
-                        HStack(spacing: Space.m) {
-                            IconBadge(symbol: item.symbol)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(item.title).font(Typo.body).foregroundStyle(Theme.textPrimary)
-                                Text(summary.text)
-                                    .font(Typo.subhead)
-                                    .foregroundStyle(summary.isMissing ? Theme.warning : Theme.textSecondary)
-                                    .lineLimit(1)
-                            }
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            Chevron()
-                        }
-                        .padding(.horizontal, Space.l)
-                        .padding(.vertical, Space.m)
-                        .background(selected ? Theme.accentSoft : .clear)
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(RowButtonStyle())
-                    .accessibilityIdentifier("area-\(item.rawValue)")
-                }
-            }
-            .card()
         }
     }
 
     @ViewBuilder
-    private func activitySection(_ content: BauakteContent) -> some View {
-        let entries = Array(content.activity.prefix(5))
-        if !entries.isEmpty {
-            VStack(alignment: .leading, spacing: Space.m) {
-                SectionHeading("Letzte Aktivität")
-                VStack(alignment: .leading, spacing: Space.m) {
-                    ForEach(entries) { entry in
-                        HStack(alignment: .firstTextBaseline, spacing: Space.m) {
-                            Image(systemName: entry.symbol)
-                                .font(.subheadline.weight(SymbolWeight.content))
-                                .foregroundStyle(Theme.textSecondary)
-                                .frame(width: 22)
-                                .accessibilityHidden(true)
-                            Text(entry.text)
-                                .font(Typo.subhead)
-                                .foregroundStyle(Theme.textPrimary)
-                                .lineLimit(2)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                            Text(entry.date.formatted(.relative(presentation: .named)))
-                                .font(Typo.meta)
-                                .foregroundStyle(Theme.textSecondary)
+    private func photoStrip(_ content: BauakteContent) -> some View {
+        if !content.photos.isEmpty {
+            Section("Neueste Fotos") {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: Space.s) {
+                        ForEach(Array(content.photos.prefix(12).enumerated()), id: \.element.id) { index, file in
+                            Button {
+                                if file.isVideo { playing = file } else { viewing = file }
+                            } label: {
+                                PhotoThumbnail(file: file, radius: Radius.s, showsCaption: false)
+                                    .frame(width: 88, height: 88)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(file.caption ?? (file.isVideo ? "Video" : "Foto"))
+                            .accessibilityIdentifier("photoThumb-\(index)")
                         }
-                        .accessibilityElement(children: .combine)
                     }
+                    .padding(.horizontal, Space.l)
+                    .padding(.vertical, Space.s)
                 }
-                .padding(Space.l)
-                .card()
+                .listRowInsets(EdgeInsets())
             }
         }
     }
 
-    private func footer(_ content: BauakteContent) -> some View {
-        VStack(spacing: Space.xs) {
-            if let updated = content.bauakte.updatedAt {
-                Text("Zuletzt geändert \(updated.formatted(.relative(presentation: .named)))")
+    // MARK: Bereiche
+
+    private func areas(_ content: BauakteContent, wide: Bool) -> some View {
+        let projectCount = projectItems(content.bauakte).count
+        let list = BauakteArea.allCases.filter { $0.isAvailable(modules) }
+        return Section {
+            ForEach(Array(list.enumerated()), id: \.element) { index, item in
+                let summary = item.summary(content, projectCount: projectCount)
+                let selected = wide && wideArea == item
+                Button { if wide { wideArea = item } else { area = item } } label: {
+                    HStack(spacing: Space.m) {
+                        Image(systemName: item.symbol)
+                            .foregroundStyle(Theme.accent)
+                            .frame(width: 28)
+                            .accessibilityHidden(true)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(item.title).foregroundStyle(Theme.textPrimary)
+                            Text(summary.text)
+                                .font(Typo.subhead)
+                                .foregroundStyle(summary.isMissing ? Theme.warning : Theme.textSecondary)
+                                .lineLimit(1)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        Chevron()
+                    }
+                    .frame(minHeight: Size.minTap)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .listRowBackground(selected ? Theme.accentSoft : nil)
+                .accessibilityIdentifier("area-\(item.rawValue)")
+                .id(index == 0 ? "areas" : item.rawValue)
             }
-            Text(content.bauakte.syncState == .synced ? "Auf dem Gerät gespeichert und übertragen" : "Auf dem Gerät gespeichert, Übertragung ausstehend")
+        } header: {
+            Text("Bereiche")
+        } footer: {
+            footer(content)
         }
-        .font(Typo.meta)
-        .foregroundStyle(Theme.textTertiary)
-        .frame(maxWidth: .infinity)
-        .multilineTextAlignment(.center)
+    }
+
+    private func footer(_ content: BauakteContent) -> some View {
+        let state = content.bauakte.syncState == .synced ? "übertragen" : "Übertragung ausstehend"
+        if let updated = content.bauakte.updatedAt {
+            return Text("Zuletzt geändert \(updated.formatted(.relative(presentation: .named))) · \(state)")
+        }
+        return Text("Auf dem Gerät gespeichert · \(state)")
     }
 
     // MARK: Status und Menü
@@ -554,40 +497,56 @@ struct BauakteDetailView: View {
                 .accessibilityIdentifier("cancelBauakteButton")
             }
         } label: {
-            HStack(spacing: 6) {
+            HStack(spacing: 4) {
                 StatusDot(color: bauakte.status.tint)
                 Text(bauakte.status.shortTitle)
-                    .font(Typo.subheadStrong)
-                    .foregroundStyle(Theme.textPrimary)
+                    .font(Typo.subhead)
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
                 Image(systemName: "chevron.up.chevron.down")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Theme.textSecondary)
+                    .font(.caption2.weight(.semibold))
             }
-            .padding(.horizontal, Space.m)
-            .frame(minHeight: 36)
-            .background(Theme.surface, in: Capsule())
-            .contentShape(Capsule())
+            .frame(minHeight: Size.minTap)
+            .contentShape(Rectangle())
         }
+        .menuStyle(.button)
+        .buttonStyle(.borderless)
         .accessibilityLabel("Status: \(bauakte.status.title). Ändern")
         .accessibilityIdentifier("statusMenu")
     }
 
     private func moreMenu(_ bauakte: Bauakte) -> some View {
         Menu {
-            Button("Bauakte als PDF", systemImage: "doc.richtext") { Task { await openPDF(bauakte) } }
-            if let url = MapsLink.url(for: bauakte) {
-                Button("Route starten", systemImage: "arrow.triangle.turn.up.right.diamond") { openURL(url) }
+            // Erfassen (Foto und Video stehen unten als Hauptaktionen).
+            Section {
+                captureItem(.scan, id: "scanDocumentButton")
+                if modules.isOn(AppModules.diary) { captureItem(.diary, id: "addDiaryButton") }
+                if modules.isOn(AppModules.defects) { captureItem(.defect, id: "addDefectButton") }
+                if modules.isOn(AppModules.tasks) { captureItem(.task, id: "add-task") }
+                captureItem(.note, id: "add-note")
             }
-            Button("Basisdaten bearbeiten", systemImage: "pencil") { action = .project }
-            Button("Verlauf", systemImage: "clock.arrow.circlepath") { show(.notes) }
-            if let teamsLink {
-                OpenInTeamsButton(targets: teamsLink.targets)
+            Section {
+                if modules.isOn(AppModules.inspections) { captureItem(.inspection, id: "add-inspection") }
+                if modules.isOn(AppModules.acceptance) { captureItem(.acceptance, id: "add-acceptance") }
+                if modules.isOn(AppModules.inspections) { captureItem(.measurement, id: "add-measurement") }
             }
-            if let teamChat {
-                Button("Chat mit dem Team in Teams", systemImage: "person.3") { Task { await TeamsOpener.open(teamChat.targets) } }
-                    .accessibilityIdentifier("teamsTeamChatButton")
+            Section {
+                Button("Bauakte als PDF", systemImage: "doc.richtext") { Task { await openPDF(bauakte) } }
+                if let url = MapsLink.url(for: bauakte) {
+                    Button("Route starten", systemImage: "arrow.triangle.turn.up.right.diamond") { openURL(url) }
+                }
+                Button("Basisdaten bearbeiten", systemImage: "pencil") { action = .project }
+                Button("Verlauf", systemImage: "clock.arrow.circlepath") { show(.notes) }
+            }
+            if teamsLink != nil || teamChat != nil {
+                Section {
+                    if let teamsLink {
+                        OpenInTeamsButton(targets: teamsLink.targets)
+                    }
+                    if let teamChat {
+                        Button("Chat mit dem Team in Teams", systemImage: "person.3") { Task { await TeamsOpener.open(teamChat.targets) } }
+                            .accessibilityIdentifier("teamsTeamChatButton")
+                    }
+                }
             }
         } label: {
             if loadingPDF {
@@ -597,6 +556,11 @@ struct BauakteDetailView: View {
             }
         }
         .accessibilityIdentifier("bauakteMoreMenu")
+    }
+
+    private func captureItem(_ item: BauakteAction, id: String) -> some View {
+        Button(item.title, systemImage: item.symbol) { action = item }
+            .accessibilityIdentifier(id)
     }
 
     /// „2.–6. Nov.“ bzw. „ab 2. Nov.“

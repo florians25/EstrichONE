@@ -106,7 +106,7 @@ fun BauaktenScreen(selected: String?) {
     val status by session.status.collectAsState()
     val scope = rememberCoroutineScope()
 
-    ScreenScaffold("Baustellen", root = true, actions = { SyncAction() }, floating = {
+    ScreenScaffold("Baustellen", root = true, floating = {
         ExtendedFloatingActionButton(onClick = { creating = true }, icon = { Icon(Icons.Filled.Add, null) }, text = { Text("Neue Bauakte") })
     }) { padding ->
         // Nach unten ziehen: sofort abgleichen (neue Bauakten, Änderungen aus dem Büro).
