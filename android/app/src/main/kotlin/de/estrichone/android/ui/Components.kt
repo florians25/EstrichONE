@@ -87,10 +87,10 @@ object Space {
     val section = 28.dp
 }
 
-/** Weiße (dunkel: graue) Karte mit großen Ecken. */
+/** Weiße (dunkel: graue) Karte mit Standardecken (Material 3, 16 dp). */
 @Composable
 fun SectionCard(modifier: Modifier = Modifier, padding: PaddingValues = PaddingValues(0.dp), content: @Composable ColumnScope.() -> Unit) {
-    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(20.dp), color = tones.card, tonalElevation = 0.dp) {
+    Surface(modifier = modifier.fillMaxWidth(), shape = RoundedCornerShape(16.dp), color = tones.card, tonalElevation = 0.dp) {
         Column(Modifier.padding(padding), content = content)
     }
 }
@@ -101,8 +101,8 @@ fun SectionCard(modifier: Modifier = Modifier, padding: PaddingValues = PaddingV
  */
 @Composable
 fun CardSlot(index: Int, count: Int, divider: Dp = 16.dp, content: @Composable ColumnScope.() -> Unit) {
-    val top = if (index == 0) 20.dp else 0.dp
-    val bottom = if (index == count - 1) 20.dp else 0.dp
+    val top = if (index == 0) 16.dp else 0.dp
+    val bottom = if (index == count - 1) 16.dp else 0.dp
     Surface(Modifier.fillMaxWidth(), shape = RoundedCornerShape(topStart = top, topEnd = top, bottomStart = bottom, bottomEnd = bottom), color = tones.card) {
         Column {
             if (index > 0) RowDivider(divider)
@@ -134,11 +134,12 @@ fun GroupLabel(text: String, modifier: Modifier = Modifier) {
         modifier = modifier.padding(start = 20.dp, top = Space.l, bottom = Space.s))
 }
 
-/** Symbol in einer abgerundeten Kachel (Zeilen, Karten). */
+/** Symbol vor Zeilen – schlicht wie in Material-3-Listen (ohne getönte Kachel); `background` bleibt aus Kompatibilität. */
 @Composable
+@Suppress("UNUSED_PARAMETER")
 fun IconTile(icon: ImageVector, tint: Color = MaterialTheme.colorScheme.primary, background: Color = tones.infoSoft, size: Dp = 36.dp) {
-    Box(Modifier.size(size).clip(RoundedCornerShape(10.dp)).background(background), contentAlignment = Alignment.Center) {
-        Icon(icon, null, tint = tint, modifier = Modifier.size(size * 0.58f))
+    Box(Modifier.size(size), contentAlignment = Alignment.Center) {
+        Icon(icon, null, tint = tint, modifier = Modifier.size(24.dp))
     }
 }
 
@@ -230,8 +231,7 @@ fun Pill(text: String, color: Color, background: Color, icon: ImageVector? = nul
 /** Kennzahl in der Kopfzeile der Bauakte („142,5 m²“). */
 @Composable
 fun Tag(text: String) {
-    Text(text, style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.SemiBold, color = tones.textSecondary,
-        modifier = Modifier.clip(RoundedCornerShape(50)).background(tones.fillStrong).padding(horizontal = 10.dp, vertical = 5.dp))
+    Text(text, style = MaterialTheme.typography.labelMedium, color = tones.textSecondary)
 }
 
 /** Zahl als Abzeichen. */

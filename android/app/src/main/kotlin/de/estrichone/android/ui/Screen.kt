@@ -153,6 +153,16 @@ fun InboxActions() {
     }
 }
 
+/** Nur die Glocke mit Zahl (Heute: Chat und Abgleich stehen im Menü „⋮“). */
+@Composable
+fun NotificationAction() {
+    val nav = LocalNav.current
+    val unread by LocalSession.current.unreadNotifications.collectAsState()
+    IconButton(onClick = { nav.push(Route.Inbox) }) {
+        BadgedBox(badge = { CountBadge(unread) }) { Icon(Icons.Outlined.Notifications, "Benachrichtigungen") }
+    }
+}
+
 /** Bestätigung vor Aktionen mit Datenverlust. */
 @Composable
 fun ConfirmDialog(title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, destructive: Boolean = true) {

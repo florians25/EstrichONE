@@ -47,6 +47,15 @@ import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.ReportProblem
 import androidx.compose.material.icons.outlined.Place
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Checklist
+import androidx.compose.material.icons.outlined.DirectionsCar
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.OutlinedIconButton
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -125,61 +134,58 @@ fun HomeScreen() {
     val firstName = session.user.displayName.substringBefore(' ')
     val modules by session.modules.collectAsState()
 
-    ScreenScaffold("Heute", root = true, actions = { SyncAction(); TeamsAction(); InboxActions() }) { padding ->
+    ScreenScaffold("Heute", root = true, actions = { HomeOverflow(); NotificationAction() }) { padding ->
         // Nach unten ziehen: abgleichen und Plan, Hinweise und Zähler neu laden.
         PullToRefreshBox(isRefreshing = status.running, onRefresh = { scope.launch { session.synchronize() } }, modifier = Modifier.fillMaxSize()) {
         LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
             item(key = "head") {
-                Column(Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
-                    Text("${Dates.greeting()}, $firstName", style = MaterialTheme.typography.titleLarge.copy(fontSize = 22.sp))
-                    Secondary(Dates.long(today))
-                }
-                Spacer(Modifier.height(Space.m))
-                if (session.isDemo) {
-                    Banner("Demomodus mit Beispieldaten. Es werden keine Daten gesendet.", Icons.Filled.PlayCircle, MaterialTheme.colorScheme.primary,
-                        tones.infoSoft, Modifier.padding(bottom = Space.m), action = "Beenden", onAction = model::endDemo)
-                }
+                // Datum als ruhige Zeile; Hinweise nur bei Bedarf. Der Demomodus steht oben links („Demo“).
+                Secondary(Dates.long(today), modifier = Modifier.padding(start = 4.dp, bottom = Space.s))
                 OfflineBanner(session)
                 NoticeCards(session)
                 TeamsRolloutCard()
             }
-            // Systemeinstellungen › Module: ohne Disposition kein Einsatz, ohne Aufgaben und Mängel keine offenen Punkte.
+            // Systemeinstellungen › Module: ohne Disposition kein Einsatz, ohne Aufgaben und Mängel keine Aufgabenzeile.
             val planning = modules.isOn(AppModules.PLANNING)
             if (planning) item { SectionHeader("Mein Einsatz") }
             val todays = plan?.assignments?.filter { it.day == today.toString() }.orEmpty()
             when {
                 !planning -> Unit
-                plan == null -> item { SectionCard { EmptyState(Icons.Filled.CalendarMonth, "Einsätze werden geladen", "Ohne Verbindung erscheint der zuletzt geladene Plan.") } }
-                todays.isEmpty() -> item {
-                    SectionCard { EmptyState(Icons.Filled.EventBusy, "Heute nichts eingeplant", "Ihre nächsten Einsätze stehen unten bei „Diese Woche“.") }
-                }
+                plan == null -> item { SectionCard { RowItem("Einsätze werden geladen …") } }
+                todays.isEmpty() -> item { SectionCard { RowItem("Heute ist nichts für Sie eingeplant.") } }
                 else -> items(todays, key = { it.id }) { job ->
                     TodayJobCard(job, session)
                     Spacer(Modifier.height(Space.m))
                 }
             }
-            if (tasks.isNotEmpty() && modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) {
-                item { SectionHeader("Offene Punkte", action = "Alle (${tasks.size})", onAction = { nav.push(Route.Tasks) }) }
+            val showsTasks = modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)
+            if (showsTasks || planning) {
+                // Überblick wie auf iOS: drei normale Listenzeilen mit Zahl rechts.
+                item { SectionHeader("Überblick") }
                 item {
                     SectionCard {
-                        tasks.take(3).forEachIndexed { index, task ->
-                            if (index > 0) RowDivider()
-                            val bauakte = task.bauakteId?.let { session.service.bauakte(it) }
-                            RowItem(task.title, icon = if (task.kind == WorkItemKind.Defect) Icons.Filled.Warning else Icons.Filled.Handyman,
-                                iconTint = if (task.kind == WorkItemKind.Defect) tones.warning else MaterialTheme.colorScheme.primary,
-                                iconBackground = if (task.kind == WorkItemKind.Defect) tones.warningSoft else tones.infoSoft,
-                                subtitle = listOfNotNull(task.number, task.dueDate?.let { dueText(it, today) }, bauakte?.title).joinToString(" · "),
-                                showChevron = bauakte != null, onClick = bauakte?.let { b -> { nav.push(Route.Bauakte(b.id)) } })
+                        val defects = tasks.count { it.kind == WorkItemKind.Defect }
+                        if (showsTasks) {
+                            RowItem("Meine Aufgaben", icon = Icons.Outlined.Checklist, value = "${tasks.size}", showChevron = true,
+                                subtitle = when (defects) { 0 -> null; 1 -> "davon 1 Mangel"; else -> "davon $defects Mängel" },
+                                onClick = { nav.push(Route.Tasks) })
+                        }
+                        if (planning) {
+                            if (showsTasks) RowDivider()
+                            RowItem("Wer fährt wohin", icon = Icons.Outlined.DirectionsCar, showChevron = true, onClick = { nav.push(Route.Dispatch) })
+                            RowDivider()
+                            RowItem("Meine Woche", icon = Icons.Filled.CalendarMonth, showChevron = true,
+                                value = plan?.assignments?.count { it.day >= today.toString() }?.toString(), onClick = { nav.push(Route.Week) })
                         }
                     }
                 }
             }
             val upcoming = plan?.assignments?.filter { it.day > today.toString() }.orEmpty()
             if (upcoming.isNotEmpty() && planning) {
-                item { SectionHeader("Diese Woche", action = "Woche", onAction = { nav.push(Route.Week) }) }
+                item { SectionHeader("Diese Woche") }
                 item {
                     SectionCard {
-                        upcoming.take(5).forEachIndexed { index, job ->
+                        upcoming.take(3).forEachIndexed { index, job ->
                             if (index > 0) RowDivider(16.dp)
                             WeekRow(job, today) { nav.push(Route.Bauakte(job.bauakteId)) }
                         }
@@ -187,6 +193,40 @@ fun HomeScreen() {
                 }
             }
         }
+        }
+    }
+}
+
+/** „⋮“ oben rechts auf Heute: Abgleich (mit Stand), Chat, Microsoft Teams – eine sichtbare Aktion daneben (Benachrichtigungen). */
+@Composable
+private fun HomeOverflow() {
+    val session = LocalSession.current
+    val nav = LocalNav.current
+    val model = LocalModel.current
+    val context = LocalContext.current
+    val status by session.status.collectAsState()
+    val chat by session.chat.collectAsState()
+    val teams by session.teams.collectAsState()
+    var open by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { open = true }) {
+            Icon(if (status.summary.hasProblems) Icons.Filled.ErrorOutline else Icons.Filled.MoreVert, "Weitere Aktionen",
+                tint = if (status.summary.hasProblems) tones.danger else MaterialTheme.colorScheme.onSurface)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            DropdownMenuItem(text = { Text("Abgleich: ${status.shortText}") }, leadingIcon = { Icon(Icons.Filled.CloudDone, null) },
+                onClick = { open = false; nav.push(Route.Sync) })
+            if (chat?.isAvailable == true) {
+                val unread = chat?.unreadCount ?: 0
+                DropdownMenuItem(text = { Text(if (unread > 0) "Chat ($unread neu)" else "Chat") }, leadingIcon = { Icon(Icons.Outlined.ChatBubbleOutline, null) },
+                    onClick = { open = false; nav.push(Route.ChatList) })
+            }
+            teams?.takeIf { it.available }?.homeTargets?.let { target ->
+                DropdownMenuItem(text = { Text("In Teams öffnen") }, leadingIcon = { Icon(Icons.Filled.Groups, null) }, onClick = {
+                    open = false
+                    if (!Links.teams(context, target)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.")
+                })
+            }
         }
     }
 }
@@ -258,16 +298,30 @@ fun TodayJobCard(job: PlannedJob, session: Session) {
         job.notes?.let { JobLine(Icons.Outlined.ChatBubbleOutline, it, secondary = true) }
         job.warnings.forEach { JobLine(Icons.Filled.Warning, it, color = tones.warning) }
         Spacer(Modifier.height(Space.m))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.push(Route.Camera(job.bauakteId)) }
-            val modules by session.modules.collectAsState()
-            if (modules.isOn(AppModules.DIARY)) {
-                ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Diary.with(job.bauakteId) }
+        // Eine Hauptaktion (Foto); Tagebuch, Mangel und „Akte öffnen“ im Menü daneben.
+        val modules by session.modules.collectAsState()
+        var menu by remember { mutableStateOf(false) }
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Button(onClick = { nav.push(Route.Camera(job.bauakteId)) }, modifier = Modifier.weight(1f).heightIn(min = 48.dp)) {
+                Icon(Icons.Filled.PhotoCamera, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Foto")
             }
-            if (modules.isOn(AppModules.DEFECTS)) {
-                ActionTile(Icons.Outlined.ReportProblem, "Mangel", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Defect.with(job.bauakteId) }
+            Box {
+                OutlinedIconButton(onClick = { menu = true }, modifier = Modifier.size(48.dp)) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (modules.isOn(AppModules.DIARY)) {
+                        DropdownMenuItem(text = { Text("Bautagebuch-Eintrag") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, null) },
+                            onClick = { menu = false; nav.captureTask = SiteTask.Diary.with(job.bauakteId) })
+                    }
+                    if (modules.isOn(AppModules.DEFECTS)) {
+                        DropdownMenuItem(text = { Text("Mangel melden") }, leadingIcon = { Icon(Icons.Outlined.ReportProblem, null) },
+                            onClick = { menu = false; nav.captureTask = SiteTask.Defect.with(job.bauakteId) })
+                    }
+                    DropdownMenuItem(text = { Text("Bauakte öffnen") }, leadingIcon = { Icon(Icons.Outlined.Folder, null) },
+                        onClick = { menu = false; nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) })
+                }
             }
-            ActionTile(Icons.Outlined.Folder, "Akte", modifier = Modifier.weight(1f)) { nav.open(de.estrichone.core.NotificationRoute.Bauakte(job.bauakteId)) }
         }
     }
 }
@@ -337,12 +391,11 @@ private fun noticeIcon(item: NoticeItem) = when (item.kind) {
 @Composable
 fun NoticeCard(item: NoticeItem, onDetails: () -> Unit, onDismiss: (() -> Unit)?) {
     val (color, soft) = noticeColors(item)
+    // Ruhig: Karte ohne Farbstreifen und Rahmen; nur Symbol und Countdown tragen die Farbe.
     Row(
-        Modifier.fillMaxWidth().height(IntrinsicSize.Min).clip(RoundedCornerShape(18.dp))
-            .background(if (item.tone == NoticeItem.Tone.Error) soft.copy(alpha = if (tones.dark) 0.6f else 0.35f) else tones.card)
-            .border(1.dp, color.copy(alpha = 0.25f), RoundedCornerShape(18.dp)),
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+            .background(if (item.tone == NoticeItem.Tone.Error) soft else tones.card),
     ) {
-        Box(Modifier.width(5.dp).fillMaxHeight().background(color))
         Row(Modifier.weight(1f).padding(start = 12.dp, top = 14.dp, bottom = 10.dp, end = 4.dp)) {
             IconTile(noticeIcon(item), color, soft, 38.dp)
             Spacer(Modifier.width(12.dp))

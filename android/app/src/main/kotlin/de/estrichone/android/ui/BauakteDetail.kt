@@ -1,5 +1,14 @@
 package de.estrichone.android.ui
 
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Videocam
+import androidx.compose.material3.Button
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Surface
+import androidx.compose.ui.text.style.TextAlign
+
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -168,10 +177,23 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     val listState = androidx.compose.foundation.lazy.rememberLazyListState()
     // Titel oben erst nach dem Kopf (wie die große Überschrift auf iOS).
     val scrolled by remember { androidx.compose.runtime.derivedStateOf { listState.firstVisibleItemIndex > 0 } }
-    ScreenScaffold(if (scrolled) b.title else "", showBack = showBack, actions = {
-        teamsLink?.let { TeamsAction(it.targets) }
+    // Foto und Video als Hauptaktionen unten (immer erreichbar, mit Handschuhen bedienbar); alles andere im Menü „⋮“.
+    ScreenScaffold(if (scrolled) b.title else "", showBack = showBack, bottomBar = { CaptureBar(id) }, actions = {
         IconButton(onClick = { menu = true }) { Icon(Icons.Filled.MoreVert, "Weitere Aktionen") }
         DropdownMenu(menu, { menu = false }) {
+            DropdownMenuItem(text = { Text("Dokument scannen") }, leadingIcon = { Icon(Icons.Filled.DocumentScanner, null) },
+                onClick = { menu = false; nav.push(Route.Camera(id, scan = true)) })
+            if (modules.isOn(AppModules.DIARY)) {
+                DropdownMenuItem(text = { Text("Bautagebuch-Eintrag") }, leadingIcon = { Icon(Icons.AutoMirrored.Outlined.MenuBook, null) },
+                    onClick = { menu = false; nav.captureTask = SiteTask.Diary.with(id) })
+            }
+            if (modules.isOn(AppModules.DEFECTS)) {
+                DropdownMenuItem(text = { Text("Mangel melden") }, leadingIcon = { Icon(Icons.Outlined.ReportProblem, null) },
+                    onClick = { menu = false; nav.captureTask = SiteTask.Defect.with(id) })
+            }
+            DropdownMenuItem(text = { Text("Weitere erfassen …") }, leadingIcon = { Icon(Icons.Outlined.MoreHoriz, null) },
+                onClick = { menu = false; nav.captureOpenFor = id })
+            HorizontalDivider()
             DropdownMenuItem(text = { Text("Basisdaten bearbeiten") }, onClick = { menu = false; nav.push(Route.Area(id, AreaKind.Project)) })
             DropdownMenuItem(text = { Text("Bauakte als PDF") }, onClick = {
                 menu = false
@@ -201,14 +223,15 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
         }
     }) { padding ->
         LazyColumn(state = listState, contentPadding = padding.content(), modifier = Modifier.readable()) {
+            // Oben die Basisdaten auf einen Blick: Nummer, Status, Bauvorhaben, Adresse mit Route, Kunde und Ansprechpartner mit
+            // Anruf, nächster Einsatz. Darunter Kennwerte (aufklappbar), offene Punkte, neueste Fotos und die Bereiche.
             item { Header(b, session) }
+            item { ContactCard(b, session) }
             item { PinnedNote(session, id) }
             item { InitialInspectionHint(session, b) }
-            item { ContactCard(b, session) }
-            item { ActionBar(id) }
+            item { ProjectGrid(session, b) }
             if (modules.anyOn(AppModules.TASKS, AppModules.DEFECTS)) item { OpenPoints(session, id) }
             item { PhotoStrip(session, id) }
-            item { ProjectGrid(session, b) }
             item { Areas(session, b) }
             b.description?.takeIf { it.isNotBlank() }?.let { text ->
                 item { SectionHeader("Beschreibung") }
@@ -219,20 +242,16 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     if (cancelling) CancelDialog(onDismiss = { cancelling = false }) { reason -> session.service.setStatus(id, BauakteStatus.Cancelled, reason) }
 }
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun Header(b: Bauakte, session: Session) {
     var statusMenu by remember { mutableStateOf(false) }
-    val badges = remember(b) { session.service.badges(b) }
     Column(Modifier.padding(horizontal = 4.dp, vertical = 4.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(b.numberText, style = MaterialTheme.typography.titleMedium, color = tones.textSecondary, modifier = Modifier.weight(1f))
+            Text(b.numberText, style = MaterialTheme.typography.bodyMedium, color = tones.textSecondary, modifier = Modifier.weight(1f))
             SyncMark(b.syncState)
             Spacer(Modifier.width(8.dp))
             Box {
-                Row(Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(50)).background(tones.card).clickable(role = androidx.compose.ui.semantics.Role.Button) { statusMenu = true }
-                    .padding(start = 12.dp, end = 6.dp, top = 6.dp, bottom = 6.dp),
-                    verticalAlignment = Alignment.CenterVertically) {
+                TextButton(onClick = { statusMenu = true }, modifier = Modifier.heightIn(min = 48.dp)) {
                     StatusLabel(b.status, short = false)
                     Icon(Icons.Filled.ArrowDropDown, "Status ändern", tint = tones.textSecondary)
                 }
@@ -246,12 +265,26 @@ private fun Header(b: Bauakte, session: Session) {
                 }
             }
         }
-        Spacer(Modifier.height(6.dp))
-        Text(b.title, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+        Text(b.title, style = MaterialTheme.typography.headlineSmall)
         if (b.status == BauakteStatus.Cancelled && b.cancellationReason != null) Secondary("Storniert: ${b.cancellationReason}")
-        if (badges.isNotEmpty()) {
-            FlowRow(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                badges.forEach { Tag(it) }
+    }
+}
+
+/** Foto und Video – die zwei Hauptaktionen der Baustelle, groß unten. */
+@Composable
+private fun CaptureBar(id: String) {
+    val nav = LocalNav.current
+    Surface(color = MaterialTheme.colorScheme.surfaceContainer) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = { nav.push(Route.Camera(id)) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+                Icon(Icons.Filled.PhotoCamera, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Foto")
+            }
+            FilledTonalButton(onClick = { nav.captureTask = SiteTask.Video.with(id) }, modifier = Modifier.weight(1f).heightIn(min = 52.dp)) {
+                Icon(Icons.Filled.Videocam, null, modifier = Modifier.size(20.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Video")
             }
         }
     }
@@ -332,32 +365,13 @@ private fun ContactCard(b: Bauakte, session: Session) {
 }
 
 @Composable
-private fun ActionBar(id: String) {
-    val nav = LocalNav.current
-    val modules by LocalSession.current.modules.collectAsState()
-    Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        ActionTile(Icons.Filled.PhotoCamera, "Foto", primary = true, modifier = Modifier.weight(1f)) { nav.push(Route.Camera(id)) }
-        ActionTile(Icons.Filled.DocumentScanner, "Scannen", modifier = Modifier.weight(1f)) { nav.push(Route.Camera(id, scan = true)) }
-        if (modules.isOn(AppModules.DIARY)) {
-            ActionTile(Icons.AutoMirrored.Outlined.MenuBook, "Tagebuch", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Diary.with(id) }
-        }
-        if (modules.isOn(AppModules.DEFECTS)) {
-            ActionTile(Icons.Outlined.ReportProblem, "Mangel", modifier = Modifier.weight(1f)) { nav.captureTask = SiteTask.Defect.with(id) }
-        }
-        ActionTile(Icons.Outlined.MoreHoriz, "Mehr", modifier = Modifier.weight(1f)) { nav.captureOpenFor = id }
-    }
-}
-
-@Composable
 private fun OpenPoints(session: Session, id: String) {
     val nav = LocalNav.current
     val tasks by session.local(id) { session.service.tasks(id) }
     val open = tasks.filter { it.isOpen }
-    SectionHeader("Offene Punkte", action = "Alle (${tasks.size})", onAction = { nav.push(Route.Area(id, AreaKind.Tasks)) })
+    if (open.isEmpty()) return
+    SectionHeader("Offene Punkte", action = if (open.size > 3) "Alle (${open.size})" else null, onAction = { nav.push(Route.Area(id, AreaKind.Tasks)) })
     SectionCard {
-        if (open.isEmpty()) {
-            RowItem("Keine offenen Aufgaben oder Mängel", icon = Icons.Filled.CheckCircle, iconTint = tones.success, iconBackground = tones.successSoft)
-        }
         open.take(3).forEachIndexed { index, task ->
             if (index > 0) RowDivider(56.dp)
             TaskRow(task, session)
@@ -412,16 +426,10 @@ fun TaskRow(task: Task, session: Session, subtitle: String? = null) {
 private fun PhotoStrip(session: Session, id: String) {
     val nav = LocalNav.current
     val photos by session.local(id) { session.service.photos(id) }
-    SectionHeader("Fotos", action = "Alle (${photos.size})", onAction = { nav.push(Route.Area(id, AreaKind.Photos)) })
+    if (photos.isEmpty()) return
+    SectionHeader("Neueste Fotos")
     LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        item {
-            Column(Modifier.size(116.dp).clip(RoundedCornerShape(16.dp)).background(tones.infoSoft).clickable { nav.push(Route.Camera(id)) },
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Icon(Icons.Filled.PhotoCamera, null, tint = MaterialTheme.colorScheme.primary)
-                Text("Foto", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-            }
-        }
-        items(photos.take(12), key = { it.id }) { file -> Thumbnail(file, session, 116.dp) { nav.push(Route.Photo(file.id)) } }
+        items(photos.take(12), key = { it.id }) { file -> Thumbnail(file, session, 96.dp) { nav.push(Route.Photo(file.id)) } }
     }
 }
 
@@ -438,27 +446,36 @@ fun Thumbnail(file: FileItem, session: Session, size: Dp, modifier: Modifier = M
     }
 }
 
+/** Basisdaten: die vier wichtigsten Kennwerte direkt, alle weiteren per Tipp auf „Alle Basisdaten“ aufklappbar. */
 @Composable
 private fun ProjectGrid(session: Session, b: Bauakte) {
     val nav = LocalNav.current
     val schema = remember(b.id) { session.service.schema("bauakte") }
     val lists = remember(b.id) { session.service.valueLists() }
+    var expanded by remember(b.id) { mutableStateOf(false) }
     val fields = schema?.groups?.flatMap { it.fields }.orEmpty().mapNotNull { field ->
         field.display(b.project[field.path.removePrefix("project.")], lists)?.let { field.label to it }
-    }.filter { it.second.length < 40 }
-    SectionHeader("Estrich und Bauvorhaben", action = "Bearbeiten", onAction = { nav.push(Route.Area(b.id, AreaKind.Project)) })
-    SectionCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) {
-        if (fields.isEmpty()) Secondary("Noch keine Angaben. Über „Bearbeiten“ ergänzen.")
-        fields.chunked(2).forEach { row ->
-            Row(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
-                row.forEach { (label, value) ->
-                    Column(Modifier.weight(1f).padding(end = 8.dp)) {
-                        Text(label, style = MaterialTheme.typography.bodySmall, color = tones.textSecondary)
-                        Text(value, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
-                    }
-                }
-                if (row.size == 1) Spacer(Modifier.weight(1f))
+    }
+    SectionHeader("Basisdaten", action = if (fields.isEmpty()) null else "Bearbeiten", onAction = { nav.push(Route.Area(b.id, AreaKind.Project)) })
+    SectionCard {
+        if (fields.isEmpty()) {
+            RowItem("Basisdaten erfassen", titleColor = MaterialTheme.colorScheme.primary, onClick = { nav.push(Route.Area(b.id, AreaKind.Project)) })
+        }
+        val shown = if (expanded) fields else fields.take(4)
+        shown.forEachIndexed { index, (label, value) ->
+            if (index > 0) RowDivider(16.dp)
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 16.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text(label, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                Text(value, style = MaterialTheme.typography.bodyLarge, color = tones.textSecondary, textAlign = TextAlign.End,
+                    modifier = Modifier.weight(1f).padding(start = 8.dp))
             }
+        }
+        if (fields.size > 4) {
+            RowDivider(16.dp)
+            RowItem(if (expanded) "Weniger anzeigen" else "Alle Basisdaten (${fields.size})", titleColor = MaterialTheme.colorScheme.primary,
+                onClick = { expanded = !expanded }, trailing = {
+                    Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null, tint = MaterialTheme.colorScheme.primary)
+                })
         }
     }
 }

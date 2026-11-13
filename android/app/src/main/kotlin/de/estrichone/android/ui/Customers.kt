@@ -76,7 +76,7 @@ fun CustomersScreen(selected: String?) {
     // Archivierte Kunden nur auf Wunsch (wie „Archivierte“ im Büro).
     val archivedCount = contacts.count { it.isArchived }
     val list = contacts.filter { (showArchived || !it.isArchived) && it.matches(search) }
-    ScreenScaffold("Kunden", root = true, actions = { SyncAction() }) { padding ->
+    ScreenScaffold("Kunden", root = true) { padding ->
         LazyColumn(contentPadding = padding.content()) {
             item { SearchField(search, { search = it }, "Name, Nummer, Ort oder Telefon", Modifier.padding(bottom = 8.dp)) }
             if (archivedCount > 0) {

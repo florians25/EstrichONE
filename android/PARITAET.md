@@ -33,12 +33,22 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 
 | Funktion | iOS | Android | Bemerkung |
 |---|---|---|---|
-| Begrüßung, Datum, Demo-Hinweis | ✅ | ✅ | |
+| Datum; Hinweise nur bei Bedarf (Demo steht oben links unter „Demo“) | ✅ | ✅ | ruhige Standardliste ohne Begrüßung und Kacheln |
 | Systemhinweise als Karten (Störung, Wartung, Countdown, Details, Ausblenden, „weitere Hinweise“) | ✅ | ✅ | gleiche Logik (NoticePresentation, unit-getestet) |
 | Ausfall-Hinweise Backup/Archiv nur, wenn der Server sie liefert | ✅ | ✅ | |
 | Mein Einsatz (Zeit, Status, Adresse + Route, Ansprechpartner + Anruf, Tätigkeit, Kolonne, Fahrzeuge, Notiz, Aktionen) | ✅ | ✅ | Plan offline aus dem letzten Abruf |
-| Offene Punkte, Diese Woche | ✅ | ✅ | |
-| Chat- und Postfach-Symbol mit Zahl | ✅ | ✅ | |
+| „Mein Einsatz“: eine Hauptaktion „Foto“, Tagebuch/Mangel/Akte im Menü „…“ bzw. „⋮“ | ✅ | ✅ | |
+| Überblick: Meine Aufgaben (davon Mängel), Wer fährt wohin, Meine Woche als Listenzeilen mit Zahl | ✅ | ✅ | ersetzt Kacheln und die Vorschauen „Offene Aufgaben“/„Wer fährt wohin“ |
+| Morgen (iOS) bzw. Diese Woche (Android), Zuletzt geöffnet | ✅ | 🟡 | Android ohne „Zuletzt geöffnet“ |
+| Oben rechts nur Glocke mit Zahl; Abgleich, Chat und „In Teams öffnen“ im Menü „…“ bzw. „⋮“ | ✅ | ✅ | |
+
+## Mehr
+
+| Funktion | iOS | Android | Bemerkung |
+|---|---|---|---|
+| Konto und Synchronisation, Kommunikation (Benachrichtigungen, Chat, Teams), Service (Urlaub, IT-Service/Helpdesk, Problem melden) | ✅ | ✅ | Meine Aufgaben, Wer fährt wohin, Meine Woche nur noch auf „Heute“ |
+| Selten Gebrauchtes gebündelt | ✅ „Gerät, Server und App“ (Gerät, Server, App-Update, Konto löschen, App zurücksetzen) | ✅ „Einstellungen“ (Sicherheit, Mitteilungen, Darstellung, Info) | |
+| Demo beenden | ✅ | ✅ | nur oben links unter „Demo“ |
 
 ## Baustellen (Bauakten)
 
@@ -47,10 +57,11 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Liste mit Suche, Gruppen nach Status, „Heute im Einsatz“ | ✅ | ✅ | zusätzlich Filter-Chips; Suche auch nach Kunde und Kundennummer, Ziehen zum Abgleichen |
 | Schnellanlage mit Art, Adresse, Kunde (vorhanden oder neu) – offline | ✅ | ✅ | |
 | Dublettenprüfung beim neuen Kunden | ✅ | 🟡 | Hinweis auf ähnliche Kunden aus dem Bestand auf dem Gerät (offline); Serverprüfung `contacts/duplicates` nicht genutzt |
-| Kopf: Nummer, Status ändern, Titel, Kennzahlen aus dem Schema | ✅ | ✅ | |
-| Angeheftete Notiz, Kontakte (Adresse, Kunde, vor Ort, Bauleitung, nächster Einsatz) | ✅ | ✅ | |
-| Aktionsleiste (Foto, Scannen, Tagebuch, Mangel, Mehr) | ✅ | ✅ | |
-| Offene Punkte, Fotostreifen, Estrich und Bauvorhaben | ✅ | ✅ | |
+| Basisdaten oben auf einen Blick: Nummer, Status ändern, Titel, Adresse + Route, Kunde/vor Ort/Bauleitung + Anruf, nächster Einsatz | ✅ | ✅ | ohne Kennzahl-Kapseln (stehen unter Basisdaten) |
+| Unten immer „Foto“ und „Video“ (große Schaltflächen) | ✅ | ✅ | Hauptaktionen der Bauakte |
+| Menü „…“/„⋮“: Scannen, Tagebuch, Mangel, Aufgabe, Notiz, Erstbegehung, Abnahme, CM-Messung, PDF, Basisdaten, Teams | ✅ | ✅ | Android: Aufgabe, Notiz und Prüfungen unter „Weitere erfassen …“ |
+| Basisdaten: vier Kennwerte direkt, „Alle Basisdaten“ klappt auf | ✅ | ✅ | |
+| Angeheftete Notiz, Hinweise nur bei Bedarf; Offene Punkte und neueste Fotos nur, wenn vorhanden | ✅ | ✅ | |
 | Basisdaten nach Formular-Schema bearbeiten | ✅ | ✅ | |
 | Notizen (anheften, löschen) | ✅ | ✅ | |
 | Fotos und Videos (Raster nach Tagen, Großansicht, Beschriftung, Teilen, Löschen) | ✅ | ✅ | |
@@ -104,7 +115,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Chat: keine Dateien/Fotos mehr senden, Hinweis „Für Datei- und Fotoaustausch bitte Microsoft Teams verwenden.“ (mit „In Teams öffnen“, wenn verknüpft) | ✅ | ✅ | `ChatComposerPolicy` in beiden Kernen |
 | Chat: Fotos und Dokumente älterer Nachrichten ansehen/öffnen, Standort ansehen | ✅ | ✅ | |
 | Chat: Diktat | ✅ | ✅ Android-Spracheingabe | |
-| Microsoft Teams: „In Teams öffnen“ (Bauakte, Mehr, Heute), Chat-Archiv im Modus „Microsoft Teams“ | ✅ | ✅ | Teams-App per `msteams:`, sonst Browser |
+| Microsoft Teams: „In Teams öffnen“ (Bauakte und Heute im Menü, Mehr), Chat-Archiv im Modus „Microsoft Teams“ | ✅ | ✅ | Teams-App per `msteams:`, sonst Browser |
 | Chat: Einzelchat starten, Info (Mitglieder, Stummschalten) | ✅ | ✅ | |
 | Chat: Gruppen anlegen, Weiterleiten, Anheften, Suche, Medienübersicht, Standort senden | ✅ | ❌ | API im Kern teils vorhanden |
 | Chat: Echtzeit | ✅ SSE | 🟡 | Abfrage alle 5 s im Verlauf, 15 s in der Liste |
