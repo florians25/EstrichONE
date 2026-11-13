@@ -87,6 +87,11 @@ export interface FormSpec<T> {
 	danger?: boolean;
 	/** Breite des Dialogs, z. B. „40rem“. */
 	width?: string;
+	/**
+	 * Großes Fenster für umfangreiche Formulare (z. B. Kennwerte): fast volle Fensterbreite und -höhe,
+	 * Feldgruppen zweispaltig ab großen Bildschirmen. `width` wird dann ignoriert.
+	 */
+	large?: boolean;
 	intro?: string;
 	/** Nur ansehen (ohne Speichern), z. B. ohne Planungsrecht. */
 	readOnly?: boolean;
@@ -398,8 +403,8 @@ export function openForm<T>(spec: FormSpec<T>): Promise<T | null> {
 		editable: true,
 		layout: "ResponsiveGridLayout",
 		labelSpanXL: 4, labelSpanL: 4, labelSpanM: 4, labelSpanS: 12,
-		columnsXL: 1, columnsL: 1, columnsM: 1,
-		singleContainerFullSize: true,
+		columnsXL: spec.large ? 2 : 1, columnsL: spec.large ? 2 : 1, columnsM: 1,
+		singleContainerFullSize: !spec.large,
 	});
 	const strip = new MessageStrip({ type: "Error", showIcon: true, visible: false });
 	strip.addStyleClass("sapUiSmallMarginBottom");
@@ -476,7 +481,8 @@ export function openForm<T>(spec: FormSpec<T>): Promise<T | null> {
 		});
 		const dialog = new Dialog({
 			title: spec.title,
-			contentWidth: spec.width ?? "36rem",
+			contentWidth: spec.large ? "min(90rem, 92vw)" : spec.width ?? "36rem",
+			contentHeight: spec.large ? "80vh" : undefined,
 			resizable: true,
 			draggable: true,
 			content: [strip, form, warnings],

@@ -209,7 +209,7 @@ export default class Overview extends SectionBase {
 		if (!schema) return;
 		const b = this.bauakte();
 		const saved = await openForm<BauakteDetail>({
-			title: "Kennwerte bearbeiten", width: "44rem", initial: initialValues(schema, b), fields: formFields(schema, b),
+			title: "Kennwerte bearbeiten", large: true, initial: initialValues(schema, b), fields: formFields(schema, b),
 			submit: (v) => {
 				const current = this.bauakte();
 				return saveBauakte(current, writeValues(schema, v, current.project));
