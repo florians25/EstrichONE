@@ -4,7 +4,7 @@ import SwiftUI
 /// Reiter „Mehr“: Person und Abgleich oben, dann Planung, Hilfe, Gerät und Server, Sperren und Abmelden (07, Abschnitt 2).
 struct MoreView: View {
     enum Route: String, Identifiable, Hashable {
-        case sync, tasks, dispatch, week, absences, tickets, inbox, chat, security
+        case sync, tasks, dispatch, week, absences, tickets, inbox, chat, security, device
         var id: String { rawValue }
     }
 
@@ -12,13 +12,10 @@ struct MoreView: View {
     @Environment(\.shotScene) private var shotScene
     @State private var route: Route?
     @State private var confirmSignOut = false
-    @State private var confirmReset = false
     @State private var unsentBeforeSignOut = 0
     @State private var reporting = false
     @State private var unreadTickets = 0
     @State private var push = PushCenter.shared
-    @State private var confirmDeletion = false
-    @State private var deletionRequested = false
 
     /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
     private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
@@ -71,70 +68,37 @@ struct MoreView: View {
                     }
                 }
 
-                // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht.
-                if modules.anyOn(AppModules.tasks, AppModules.defects, AppModules.planning, AppModules.absence) {
-                    Section("Planung und Aufgaben") {
-                        if modules.anyOn(AppModules.tasks, AppModules.defects) {
-                            Button { route = .tasks } label: { row("Meine Aufgaben", symbol: "checklist") }
-                                .accessibilityIdentifier("myTasksTile")
-                        }
-                        if modules.isOn(AppModules.planning) {
-                            Button { route = .dispatch } label: { row("Wer fährt wohin", symbol: "car.2") }
-                                .accessibilityIdentifier("dispatchRow")
-                            Button { route = .week } label: { row("Meine Woche", symbol: "calendar") }
-                                .accessibilityIdentifier("myWeekTile")
-                        }
+                // Systemeinstellungen › Module: Einträge abgeschalteter Module erscheinen nicht. Meine Aufgaben,
+                // Wer fährt wohin und Meine Woche stehen auf „Heute“ und hier nicht noch einmal.
+                if modules.anyOn(AppModules.absence, AppModules.helpdesk) {
+                    Section("Service") {
                         if modules.isOn(AppModules.absence) {
                             Button { route = .absences } label: { row("Urlaub und Abwesenheit", symbol: "sun.max") }
                                 .accessibilityIdentifier("absencesRow")
                         }
-                    }
-                }
-
-                if modules.isOn(AppModules.helpdesk) {
-                    Section("IT-Service/Helpdesk") {
-                        Button { reporting = true } label: { row("Problem melden", symbol: "exclamationmark.bubble", chevron: false) }
-                            .accessibilityIdentifier("reportProblemButton")
-                        Button { route = .tickets } label: {
-                            row("Helpdesk", symbol: "tray.full", detail: unreadTickets > 0 ? "\(unreadTickets) neu" : nil,
-                                detailTint: Theme.accent)
-                        }
-                        .accessibilityIdentifier("helpdeskRow")
-                    }
-                }
-
-                if model.isDemo {
-                    Section {
-                        Button(role: .destructive) { model.requestDemo(false) } label: {
-                            row("Demo beenden", symbol: "xmark.circle", tint: Theme.danger, titleColor: Theme.danger, chevron: false)
-                        }
-                        .accessibilityIdentifier("endDemoButton")
-                    } header: {
-                        Text("Demomodus")
-                    } footer: {
-                        Text("Beispieldaten, es werden keine Daten gesendet. Beenden löscht die Demodaten und öffnet die Einrichtung.")
-                    }
-                }
-
-                if let registration = model.deviceRegistration {
-                    Section("Dieses Gerät") {
-                        LabeledContent("Name", value: registration.name)
-                        LabeledContent("Nutzung", value: registration.kind == .pool ? "Poolgerät" : "Persönliches Gerät")
-                        LabeledContent("Status", value: Self.describe(registration.status))
-                        if registration.kind == .personal, model.active != nil {
-                            Button { route = .security } label: {
-                                row(securityTitle, symbol: securitySymbol, detail: model.lockPreferences.delay.title)
+                        if modules.isOn(AppModules.helpdesk) {
+                            Button { route = .tickets } label: {
+                                row("IT-Service/Helpdesk", symbol: "tray.full", detail: unreadTickets > 0 ? "\(unreadTickets) neu" : nil,
+                                    detailTint: Theme.accent)
                             }
-                            .accessibilityIdentifier("lockSettingsRow")
+                            .accessibilityIdentifier("helpdeskRow")
+                            Button { reporting = true } label: { row("Problem melden", symbol: "exclamationmark.bubble", chevron: false) }
+                                .accessibilityIdentifier("reportProblemButton")
                         }
                     }
                 }
 
-                if let server = model.server {
-                    Section("Server") {
-                        ServerDetails(server: server)
-                            .listRowInsets(EdgeInsets())
+                Section {
+                    if let registration = model.deviceRegistration, registration.kind == .personal, model.active != nil {
+                        Button { route = .security } label: {
+                            row(securityTitle, symbol: securitySymbol, detail: model.lockPreferences.delay.title)
+                        }
+                        .accessibilityIdentifier("lockSettingsRow")
                     }
+                    Button { route = .device } label: {
+                        row("Gerät, Server und App", symbol: "iphone", detail: model.updates.showsBanner ? "Update" : nil, detailTint: Theme.accent)
+                    }
+                    .accessibilityIdentifier("deviceRow")
                 }
 
                 Section {
@@ -154,24 +118,8 @@ struct MoreView: View {
                         row("Abmelden", symbol: "rectangle.portrait.and.arrow.right", tint: Theme.danger, titleColor: Theme.danger, chevron: false)
                     }
                     .accessibilityIdentifier("signOutButton")
-                    if model.active != nil {
-                        Button(role: .destructive) { confirmDeletion = true } label: {
-                            row("Konto löschen beantragen", symbol: "person.crop.circle.badge.xmark", tint: Theme.danger, titleColor: Theme.danger,
-                                chevron: false)
-                        }
-                        .accessibilityIdentifier("requestAccountDeletion")
-                    }
                 } footer: {
-                    Text("Abmelden beendet die Sitzung auf dem Server und löscht Ihre Daten auf diesem Gerät. Ihr Benutzerkonto verwaltet Ihr Betrieb. Die Löschung beantragen Sie hier, die Administration führt sie aus.")
-                }
-
-                AppUpdateSection()
-
-                Section {
-                    Button("App zurücksetzen", role: .destructive) { confirmReset = true }
-                        .accessibilityIdentifier("resetAppButton")
-                } footer: {
-                    Text("Löscht alles auf diesem Gerät (Server, Gerät, Personen, Fotos, Einstellungen) und startet bei der Einrichtung. Startet die App nicht mehr richtig: Einstellungen-App › EstrichONE › „Beim nächsten Start zurücksetzen“.\n\nEstrichONE \(AppEnvironment.appVersionText)")
+                    Text("Abmelden beendet die Sitzung und löscht Ihre Daten auf diesem Gerät.")
                 }
             }
             .listStyle(.insetGrouped)
@@ -188,6 +136,7 @@ struct MoreView: View {
                 case .inbox: NotificationInboxView()
                 case .chat: ChatListView()
                 case .security: LockSettingsView()
+                case .device: DeviceAndAppView()
                 }
             }
             .navigationDestination(for: HomeRoute.self) { route in
@@ -210,18 +159,6 @@ struct MoreView: View {
                     Text("\(unsentBeforeSignOut) Änderungen sind noch nicht übertragen. Beim Abmelden gehen sie verloren. Bitte vorher eine Verbindung herstellen und die Übertragung abwarten.")
                 }
             }
-            .confirmationDialog("Konto löschen beantragen?", isPresented: $confirmDeletion, titleVisibility: .visible) {
-                Button("Löschung beantragen", role: .destructive) { Task { await requestDeletion() } }
-            } message: {
-                Text("Die Administration Ihres Betriebs erhält einen Antrag über den Helpdesk und löscht Ihr Benutzerkonto samt persönlicher Daten (gesetzliche Aufbewahrungspflichten ausgenommen). Bis dahin können Sie die App weiter nutzen.")
-            }
-            .alert("Antrag gestellt", isPresented: $deletionRequested) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                Text("Der Antrag liegt im Helpdesk. Zum sofortigen Entfernen Ihrer Daten von diesem Gerät: Abmelden.")
-            }
-            .resetAppConfirmation(isPresented: $confirmReset)
-            .refreshable { await model.refreshDeviceStatus() }
             .sheet(isPresented: $reporting) {
                 ReportProblemView { reporting = false }
             }
@@ -267,7 +204,7 @@ struct MoreView: View {
         switch shotScene {
         case "sync": route = .sync
         case "sicherheit": route = .security
-        case "mehr-zuruecksetzen": confirmReset = true
+        case "mehr-zuruecksetzen": route = .device
         case let scene? where scene.hasPrefix("postfach"): route = .inbox
         case "chat", "chat-verlauf", "chat-gruppe", "chat-anhang", "chat-diktat": route = .chat
         case "disposition": route = .dispatch
@@ -295,6 +232,75 @@ struct MoreView: View {
         }
     }
 
+    static func describe(_ status: DeviceStatus) -> String {
+        switch status {
+        case .pending: "wartet auf Freigabe"
+        case .active: "freigegeben"
+        case .locked: "gesperrt"
+        case .retired: "entfernt"
+        }
+    }
+}
+
+/// Mehr › „Gerät, Server und App“: alles, was selten gebraucht wird – Gerät, Server, App-Update, Konto und Zurücksetzen.
+struct DeviceAndAppView: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.shotScene) private var shotScene
+    @State private var confirmReset = false
+    @State private var confirmDeletion = false
+    @State private var deletionRequested = false
+
+    var body: some View {
+        List {
+            if let registration = model.deviceRegistration {
+                Section("Dieses Gerät") {
+                    LabeledContent("Name", value: registration.name)
+                    LabeledContent("Nutzung", value: registration.kind == .pool ? "Poolgerät" : "Persönliches Gerät")
+                    LabeledContent("Status", value: MoreView.describe(registration.status))
+                }
+            }
+
+            if let server = model.server {
+                Section("Server") {
+                    ServerDetails(server: server)
+                        .listRowInsets(EdgeInsets())
+                }
+            }
+
+            AppUpdateSection()
+
+            Section {
+                if model.active != nil {
+                    Button("Konto löschen beantragen", role: .destructive) { confirmDeletion = true }
+                        .accessibilityIdentifier("requestAccountDeletion")
+                }
+                Button("App zurücksetzen", role: .destructive) { confirmReset = true }
+                    .accessibilityIdentifier("resetAppButton")
+            } footer: {
+                Text("Ihr Benutzerkonto verwaltet Ihr Betrieb; die Löschung beantragen Sie hier, die Administration führt sie aus. „App zurücksetzen“ löscht alles auf diesem Gerät (Server, Gerät, Personen, Fotos, Einstellungen) und startet bei der Einrichtung. Startet die App nicht mehr richtig: Einstellungen-App › EstrichONE › „Beim nächsten Start zurücksetzen“.\n\nEstrichONE \(AppEnvironment.appVersionText)")
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Gerät, Server und App")
+        .navigationBarTitleDisplayMode(.inline)
+        .refreshable { await model.refreshDeviceStatus() }
+        .confirmationDialog("Konto löschen beantragen?", isPresented: $confirmDeletion, titleVisibility: .visible) {
+            Button("Löschung beantragen", role: .destructive) { Task { await requestDeletion() } }
+        } message: {
+            Text("Die Administration Ihres Betriebs erhält einen Antrag über den Helpdesk und löscht Ihr Benutzerkonto samt persönlicher Daten (gesetzliche Aufbewahrungspflichten ausgenommen). Bis dahin können Sie die App weiter nutzen.")
+        }
+        .alert("Antrag gestellt", isPresented: $deletionRequested) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text("Der Antrag liegt im Helpdesk. Zum sofortigen Entfernen Ihrer Daten von diesem Gerät: Abmelden.")
+        }
+        .resetAppConfirmation(isPresented: $confirmReset)
+        .task {
+            // Screenshot-Modus: Rückfrage „App zurücksetzen“ zeigen.
+            if shotScene == "mehr-zuruecksetzen" { confirmReset = true }
+        }
+    }
+
     /// Apple-Vorgabe 5.1.1(v): Löschung des Kontos aus der App heraus anstoßen. Konten legt der Betrieb an; der Antrag
     /// geht als Meldung an die Administration (offline vorgemerkt), die das Konto im Web löscht.
     private func requestDeletion() async {
@@ -303,14 +309,5 @@ struct MoreView: View {
                                               description: "\(name) beantragt in der App die Löschung des eigenen Benutzerkontos und der persönlichen Daten.",
                                               category: .access), includeDiagnostics: false, attachments: [])
         deletionRequested = true
-    }
-
-    static func describe(_ status: DeviceStatus) -> String {
-        switch status {
-        case .pending: "wartet auf Freigabe"
-        case .active: "freigegeben"
-        case .locked: "gesperrt"
-        case .retired: "entfernt"
-        }
     }
 }

@@ -115,7 +115,8 @@ struct InsetDivider: View {
 
 // MARK: Symbole, Avatare, Chips
 
-/// SF Symbol in einer zart getönten, abgerundeten Fläche – einheitlich in Markenblau (keine bunten Kacheln).
+/// SF Symbol vor Zeilen – schlicht wie in Standardlisten (ohne getönte Fläche), einheitlich in Markenblau.
+/// `background` bleibt aus Kompatibilität und wird nicht mehr gezeichnet.
 struct IconBadge: View {
     let symbol: String
     var tint: Color = Theme.accent
@@ -126,10 +127,9 @@ struct IconBadge: View {
     var body: some View {
         let side = size * min(scale, 1.6)
         Image(systemName: symbol)
-            .font(.system(size: side * 0.47, weight: SymbolWeight.control))
+            .font(.system(size: side * 0.6, weight: .regular))
             .foregroundStyle(tint)
             .frame(width: side, height: side)
-            .background(background, in: RoundedRectangle(cornerRadius: side * 0.3, style: .continuous))
             .accessibilityHidden(true)
     }
 }
@@ -184,7 +184,7 @@ struct Chip: View {
         }
         .font(Typo.labelStrong)
         .foregroundStyle(foreground)
-        .padding(.horizontal, 9)
+        .padding(.horizontal, tone == .warning || tone == .danger ? 9 : 0)
         .frame(minHeight: 26)
         .background(background, in: Capsule())
     }
@@ -199,12 +199,10 @@ struct Chip: View {
         }
     }
 
+    /// Ruhig: nur Warnung und Fehler bekommen eine getönte Kapsel, alles andere ist schlichter Text.
     private var background: Color {
         switch tone {
-        // Auch auf dem grauen Seitenhintergrund sichtbar (nicht nur auf weißen Karten).
-        case .neutral: Theme.fillStrong
-        case .accent: Theme.accentSoft
-        case .success: Theme.successSoft
+        case .neutral, .accent, .success: .clear
         case .warning: Theme.warningSoft
         case .danger: Theme.dangerSoft
         }

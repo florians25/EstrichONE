@@ -47,26 +47,27 @@ es an derselben Adresse schon eine Bauakte, weist die App darauf hin und bietet 
 
 ## Die Bauakte im Überblick
 
-![Bauakte oben](bilder/iphone-bauakte.jpg "Kopf der Bauakte: Stand, Kenndaten, Adresse, Kunde, Ansprechpartner")
-![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Offene Punkte, Fotos, Estrich und Bauvorhaben")
-![Bauakte unten](bilder/iphone-bauakte-unten.jpg "Alles zur Baustelle und letzte Aktivität")
+![Bauakte oben](bilder/iphone-bauakte.jpg "Basisdaten auf einen Blick, unten Foto und Video")
+![Bauakte Mitte](bilder/iphone-bauakte-mitte.jpg "Basisdaten, offene Punkte und neueste Fotos")
+![Bauakte unten](bilder/iphone-bauakte-unten.jpg "Die Bereiche der Bauakte")
 
 Die Bauakte zeigt von oben nach unten:
 
-- **Kopf** mit Nummer, **Stand** (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben und Kenndaten (z. B. EFH, 142,5 m²,
-  CT, 65 mm, Fußbodenheizung) sowie angehefteten Notizen.
-- **Adresse** mit **Route starten**, **Kunde** und **Ansprechpartner vor Ort** mit **Anrufen**, Bauleiter, nächster
-  Einsatz mit Kolonne.
-- Eine Leiste mit den häufigsten Aktionen: **Foto**, **Scanner**, **Tagebuch**, **Mangel** und **Mehr** (Video, Notiz,
-  Aufgabe, Erstbegehung, CM-Messung, Abnahme).
-- **Offene Punkte** (Mängel und Aufgaben), die neuesten **Fotos**, **Estrich und Bauvorhaben**.
-- **Alles zur Baustelle** – die Bereiche: **Fotos & Dokumente**, **Aufgaben & Mängel**, **Bautagebuch**, **Räume &
-  Flächen**, **Erstbegehung**, **Abnahme & Messungen**, **Basisdaten**, **Kontakte** und **Notizen & Verlauf**, jeweils
-  mit Kurzinfo.
-- **Letzte Aktivität** – wer zuletzt was erfasst hat.
+- **Basisdaten auf einen Blick**: Nummer, **Stand** (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben, **Adresse** mit
+  **Route starten**, **Kunde** und **Ansprechpartner vor Ort** mit **Anrufen**, Bauleiter, nächster Einsatz mit Kolonne.
+- Hinweise nur bei Bedarf: angeheftete Notizen, Erstbegehung fehlt, Warnungen aus der Planung, storniert.
+- **Basisdaten** – die vier wichtigsten Kennwerte (z. B. Objektart, Fläche, Estrichart, Dicke); **Alle Basisdaten**
+  klappt alle weiteren auf, **Bearbeiten** ändert sie.
+- **Offene Punkte** (Mängel und Aufgaben) und die **neuesten Fotos** – nur, wenn es welche gibt.
+- **Bereiche**: **Fotos & Dokumente**, **Aufgaben & Mängel**, **Bautagebuch**, **Räume & Flächen**, **Erstbegehung**,
+  **Abnahme & Messungen**, **Basisdaten**, **Kontakte** und **Notizen & Verlauf**, jeweils mit Kurzinfo. Die letzte
+  Aktivität steht unter **Notizen & Verlauf**.
 
-Oben rechts (**Weitere Aktionen**) finden Sie **Basisdaten bearbeiten**, **Bauakte als PDF**, **Verlauf**, **Status
-ändern** und **Stornieren …**.
+Unten stehen immer die zwei großen Schaltflächen **Foto** und **Video** – die Kamera öffnet sofort, die Aufnahme landet
+in dieser Bauakte. Alles Weitere steht oben rechts unter **Weitere Aktionen** (**…** bzw. **⋮**): **Dokument scannen**,
+**Bautagebuch-Eintrag**, **Mangel melden**, **Aufgabe**, **Notiz**, **Erstbegehung**, **Abnahme**, **CM-Messung**
+(Android: unter **Weitere erfassen …**), **Bauakte als PDF**, **Route starten**, **Basisdaten bearbeiten**, **Verlauf**
+und **In Teams öffnen**. **Stornieren …** steht im Menü des Stands.
 
 Jeder Eintrag zeigt seinen Übertragungsstand: „Auf dem Gerät gespeichert – wird übertragen“ oder „Auf dem Gerät
 gespeichert und übertragen“.
@@ -89,7 +90,7 @@ In **Fotos & Dokumente** tippen Sie ein Foto an, um es groß zu sehen (Doppeltip
 
 ## Videos aufnehmen
 
-Über **Mehr** → **Video aufnehmen** in der Bauakte (oder **Erfassen** → **Video**) nehmen Sie ein kurzes Video auf,
+Über **Video** unten in der Bauakte (oder **Erfassen** → **Video**) nehmen Sie ein kurzes Video auf,
 **bis 2 Minuten** lang, z. B. „Estrich wird eingebracht“. Alternativ wählen Sie ein Video aus der Mediathek; längere
 Videos werden auf die ersten 2 Minuten gekürzt. Die App verkleinert das Video vor der Übertragung und zeigt die Größe an.
 Mit **Video speichern** landet es in **Fotos & Dokumente**.
@@ -113,7 +114,7 @@ Dokumente öffnen Sie in **Fotos & Dokumente** mit einem Tipp in der Vorschau; v
 ![Bautagebuch](bilder/iphone-bereich-tagebuch.jpg "Bautagebuch: Einträge nach Tagen")
 ![Neuer Eintrag](bilder/iphone-tagebuch-neu.jpg "Neuer Eintrag mit Textbausteinen")
 
-Das Bautagebuch hält fest, was auf der Baustelle passiert ist. Tippen Sie auf **Tagebuch** bzw. **Neuer Eintrag**:
+Das Bautagebuch hält fest, was auf der Baustelle passiert ist. Tippen Sie auf **Weitere Aktionen** → **Bautagebuch-Eintrag** bzw. im Bereich auf **Neuer Eintrag**:
 
 - **Tag** (vorbelegt mit heute) und **Was ist passiert?** – ein Text, den Sie tippen oder diktieren.
 - **Textbausteine** für häufige Einträge mit einem Tipp: „Estrich eingebracht“, „Randdämmstreifen gesetzt“, „Folie

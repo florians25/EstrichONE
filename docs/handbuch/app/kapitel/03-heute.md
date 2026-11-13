@@ -3,24 +3,24 @@
 Die Heute-Seite ist der Startpunkt für jeden Arbeitstag. Sie zeigt, wo Sie heute eingeteilt sind, was zu tun ist und
 wer wohin fährt – und bietet die wichtigsten Handgriffe für die Baustelle mit einem Tipp.
 
-![Heute](bilder/iphone-heute.jpg "Oben: Begrüßung, Kennzahlen und Mein Einsatz")
-![Heute weiter unten](bilder/iphone-heute-unten.jpg "Weiter unten: Offene Aufgaben, Morgen und Wer fährt wohin")
+![Heute](bilder/iphone-heute.jpg "Oben: Datum, Hinweise und Mein Einsatz")
+![Heute weiter unten](bilder/iphone-heute-unten.jpg "Weiter unten: Überblick, Morgen und Zuletzt geöffnet")
 
 ## Aufbau der Seite
 
 Von oben nach unten:
 
-1. **Begrüßung und Datum** – rechts daneben die Symbole für Synchronisation, Chat und Benachrichtigungen (Glocke).
-2. **Kennzahlen**: **Meine Aufgaben** (Anzahl offen, davon Mängel), **Wer fährt wohin** (Zahl der Kolonnen heute) und
-   **Meine Woche** (Einsätze der nächsten 7 Tage). Ein Tipp öffnet die jeweilige Seite.
-3. **Mein Einsatz** – bei mehreren Einsätzen **Meine Einsätze** (unten).
-4. **Wer fährt wohin** – alle Kolonnen des Tages in Kurzform.
-5. **Offene Aufgaben** – Ihre offenen Aufgaben und Mängel mit Fälligkeit; **Alle** öffnet die vollständige Liste.
-6. **Morgen** – Ihre Einsätze von morgen; **Woche** öffnet Meine Woche.
-7. **Zuletzt geöffnet** – die Bauakten, die Sie zuletzt angesehen haben.
+1. **Datum** und – nur wenn es etwas zu sagen gibt – Hinweise (Wartung, offline, Übertragung prüfen, neue App-Version,
+   Meldungen des Betriebs). Oben rechts stehen nur die **Glocke** (Benachrichtigungen) und **Weitere Aktionen** (**…**
+   bzw. **⋮**) mit **Abgleich** (Stand der Synchronisation), **Chat** und **In Teams öffnen**.
+2. **Mein Einsatz** – bei mehreren Einsätzen **Meine Einsätze**.
+3. **Überblick** – drei Zeilen mit Zahl rechts: **Meine Aufgaben** (offen, davon Mängel), **Wer fährt wohin** (Kolonnen
+   heute) und **Meine Woche** (Einsätze der nächsten 7 Tage). Ein Tipp öffnet die jeweilige Seite.
+4. **Morgen** (Android: **Diese Woche**) – Ihre nächsten Einsätze.
+5. **Zuletzt geöffnet** – die Bauakten, die Sie zuletzt angesehen haben.
 
 Ziehen Sie die Seite nach unten, um sie sofort zu aktualisieren. Ist nichts eingeplant, steht dort „Heute ist nichts
-für Sie eingeplant. Neue Einsätze erscheinen hier, sobald das Büro plant.“
+für Sie eingeplant.“
 
 ## Mein Einsatz
 
@@ -35,8 +35,9 @@ Die Karte **Mein Einsatz** enthält alles, was Sie morgens brauchen:
 | **Tätigkeit** (z. B. „Estrich einbringen OG“) | |
 | **Kolonne** mit Besetzung, Fahrzeuge und Geräte, Hinweis aus der Planung | |
 
-Unter der Karte liegen vier große Schaltflächen für die Baustelle: **Foto**, **Tagebuch**, **Mangel** und **Akte**. Sie
-beziehen sich immer auf die Bauakte dieses Einsatzes – ohne Suchen und ohne Auswahl.
+Unter der Karte liegt die große Schaltfläche **Foto**; daneben öffnet **…** (**⋮**) **Bautagebuch-Eintrag**, **Mangel
+melden** und **Bauakte öffnen**. Alles bezieht sich immer auf die Bauakte dieses Einsatzes – ohne Suchen und ohne
+Auswahl. Die Bauakte öffnet auch ein Tipp auf den Kopf der Karte.
 
 > **Tipp:** Ein Foto, das Sie hier aufnehmen, ist sofort in der richtigen Bauakte. Fehlt das Netz, steht unten
 > „Foto gespeichert – wird übertragen, sobald Netz da ist.“

@@ -2,7 +2,7 @@
 
 Der Tab **Mehr** bündelt alles rund um Ihr Konto und das Gerät.
 
-![Mehr](bilder/iphone-mehr.jpg "Tab Mehr: Konto, Synchronisation, Benachrichtigungen, Chat, Planung")
+![Mehr](bilder/iphone-mehr.jpg "Tab Mehr: Konto, Synchronisation, Benachrichtigungen, Chat, Service")
 ![App zurücksetzen](bilder/iphone-mehr-zuruecksetzen.jpg "App zurücksetzen: Rückfrage vor dem Löschen")
 
 ## Was unter „Mehr“ steht
@@ -11,17 +11,19 @@ Der Tab **Mehr** bündelt alles rund um Ihr Konto und das Gerät.
 |---|---|
 | Kopf | Ihr Name und Anmeldename, **Synchronisation** mit Stand (Kapitel 8) |
 | **Benachrichtigungen**, **Chat** | Postfach und Chat mit Zahl neuer Einträge, Push an/aus (Kapitel 7) |
-| **Planung und Aufgaben** | **Meine Aufgaben**, **Wer fährt wohin**, **Meine Woche** (Kapitel 3 und 6) |
-| **Hilfe** | **Problem melden** und **Helpdesk** (Kapitel 7) |
-| **Dieses Gerät** | Gerätename, Nutzung (**Persönliches Gerät** oder **Poolgerät**), Status der Freigabe; auf persönlichen Geräten **Sperre und Face ID** (Kapitel 2) |
-| **Server** | Adresse und Version des verbundenen Servers |
-| unten | **Sperren** bzw. **Benutzer wechseln**, **Abmelden**, **Konto löschen beantragen**, **App zurücksetzen**, App-Version |
+| **Service** | **Urlaub und Abwesenheit**, **IT-Service/Helpdesk** und **Problem melden** (Kapitel 6 und 7) |
+| Sperre und Gerät | auf persönlichen Geräten **Sperre und Face ID** (Kapitel 2); **Gerät, Server und App**: Gerätename, Nutzung (**Persönliches Gerät** oder **Poolgerät**), Status der Freigabe, Server, **App-Update**, **Konto löschen beantragen**, **App zurücksetzen** und App-Version |
+| unten | **Sperren** bzw. **Benutzer wechseln** und **Abmelden** |
+
+**Meine Aufgaben**, **Wer fährt wohin** und **Meine Woche** stehen auf der Heute-Seite unter **Überblick** (Kapitel 3),
+**Demo beenden** oben links unter **Demo**. Android: Sicherheit, Mitteilungen, Darstellung und Info stehen unter
+**Einstellungen**, **Gerät zurücksetzen** unten (Anhang A3).
 
 ## App aktualisieren
 
 Gibt es eine neue Version, erscheint oben in der App **Version … verfügbar**. **Aktualisieren** überträgt zuerst alle
 offenen Änderungen und öffnet dann den App Store, TestFlight bzw. das Portal Ihrer Firma; **Später** blendet den Hinweis
-bis zum nächsten Start aus. Unter **Mehr** steht im Abschnitt **App-Update** der aktuelle Stand und **Nach Updates
+bis zum nächsten Start aus. Unter **Mehr** → **Gerät, Server und App** steht im Abschnitt **App-Update** der aktuelle Stand und **Nach Updates
 suchen**.
 
 Ist Ihre App-Version zu alt für den Server, zeigt die App **Update erforderlich**. Ihre Daten und die Anmeldung bleiben
@@ -43,7 +45,7 @@ Sie angemeldet und nichts wird gelöscht.
 
 ## App zurücksetzen
 
-**App zurücksetzen** löscht **alles** auf diesem Gerät – Server, Gerät, alle Personen, Fotos, noch nicht übertragene
+**App zurücksetzen** (**Mehr** → **Gerät, Server und App**) löscht **alles** auf diesem Gerät – Server, Gerät, alle Personen, Fotos, noch nicht übertragene
 Daten und Einstellungen – und startet bei der Einrichtung. Auf dem Server bleibt alles erhalten. Nach der Rückfrage
 tippen Sie auf **Alles löschen und neu einrichten**.
 

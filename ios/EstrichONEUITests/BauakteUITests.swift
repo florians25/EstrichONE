@@ -129,6 +129,7 @@ final class BauakteUITests: XCTestCase {
         createBauakte("Halle Gewerbering", in: app)
 
         // Scan (im Simulator mit zwei erzeugten Seiten): Seiten prüfen, Art wählen, als PDF ablegen.
+        app.tap("bauakteMoreMenu")
         app.tap("scanDocumentButton")
         XCTAssertTrue(app.element("scanTitleField").waitForExistence(timeout: 20), app.debugDescription)
         let pages = app.descendants(matching: .any).matching(identifier: "scanPage")
@@ -141,6 +142,7 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(document.waitForExistence(timeout: 30) || app.reveal(document), app.debugDescription)
 
         // Bautagebuch mit Textbaustein.
+        app.tap("bauakteMoreMenu")
         app.tap("addDiaryButton")
         XCTAssertTrue(app.element("diaryTextField").waitForExistence(timeout: 10))
         app.tapElement(app.buttons["Estrich eingebracht"].firstMatch, "Textbaustein")
@@ -179,8 +181,8 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(note.waitForExistence(timeout: 5) || app.reveal(note), app.debugDescription)
 
         // Mangel erfassen, dann abhaken.
-        app.tapElement(app.reveal("addMenu"), "addMenu")
-        app.tapElement(app.buttons["Mangel"].firstMatch, "Menüpunkt Mangel")
+        app.tap("bauakteMoreMenu")
+        app.tapElement(app.buttons["Mangel melden"].firstMatch, "Menüpunkt Mangel melden")
         app.type("Riss im Flur", into: "workItemTitleField")
         app.tap("saveWorkItemButton")
         let toggle = app.element("toggleWorkItem-Riss im Flur")
@@ -190,7 +192,7 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.wait(for: toggle, "label CONTAINS %@", "Wieder öffnen", timeout: 10), toggle.label)
 
         // CM-Messung: Belegreife sofort sichtbar.
-        app.tapElement(app.reveal("addMenu"), "addMenu")
+        app.tap("bauakteMoreMenu")
         app.tapElement(app.buttons["CM-Messung"].firstMatch, "Menüpunkt CM-Messung")
         app.type("Bad OG", into: "cmLocationField")
         app.type("1,6", into: "cmValueField")
@@ -309,7 +311,7 @@ final class BauakteUITests: XCTestCase {
         XCTAssertTrue(app.reveal(app.element("tomorrowPreview")), app.debugDescription)
 
         // „Wer fährt wohin“ nach Kolonnen: Kolonnen mit Farbe, Stärke und Abwesenden.
-        app.tapElement(app.reveal("dispatchAllButton"), "dispatchAllButton")
+        app.tapElement(app.reveal("dispatchTile"), "dispatchTile")
         XCTAssertTrue(app.element("crew-Kolonne Huber").waitForExistence(timeout: 15), app.debugDescription)
         XCTAssertTrue(app.text(containing: "fehlt: Tobias Lang").waitForExistence(timeout: 5), app.debugDescription)
         app.navigationBars.buttons.element(boundBy: 0).tap()
