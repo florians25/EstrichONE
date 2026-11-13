@@ -76,6 +76,7 @@ public sealed class EndpointAccessTests(PostgresFixture postgres) : IAsyncLifeti
         "PUT /api/v1/notifications/preferences", "POST /api/v1/notifications/test",
         "GET /api/v1/chat/status",
         "GET /api/v1/teams/status", // Chat-Modus und Team-Link für Navigation und Startseite, keine Geheimnisse
+        "GET /api/v1/teams/crews/mine", // Teams-Chats der eigenen Kolonnen (Apps), nur eigene Mitgliedschaften
     ];
 
     public async ValueTask InitializeAsync() => _factory = await ApiFactory.CreateMigratedAsync(postgres, new Dictionary<string, string>
