@@ -29,8 +29,7 @@ import type { RouteMatch } from "../../util/router";
 import { session } from "../../util/session";
 import { bauakteGroup, chatStatus, createBauakteGroup, type ChatBauakteGroup } from "../../util/chat";
 import {
-	akteTeamsDetails, archiveAkteTeams, chatWithAkteTeam, deleteAkteTeams, linkAkteTeams, loadAkteTeams, openTeamsLink, postAkteTeams, syncAkteTeams,
-	unlinkAkteTeams,
+	createAkteTeamsChat, deleteAkteTeams, linkAkteTeams, loadAkteTeams, openTeamsLink, unlinkAkteTeams,
 } from "../../util/teamsAkte";
 import type { BauakteTeams } from "../../util/teams";
 import { openActivityDialog } from "../../util/activityDialog";
@@ -215,11 +214,11 @@ export default class ObjectController extends BaseController {
 		if (m.getProperty("/chatGroupFor") === bauakteId) m.setProperty("/chatGroup", group);
 	}
 
-	/** Microsoft Teams: Knopf „In Teams öffnen“ bzw. „Mit Teams verknüpfen“. */
+	/** Microsoft Teams: Knopf „In Teams öffnen“ bzw. „Teams-Chat anlegen“. */
 	onTeamsOpen(): void {
 		const teams = this.m().getProperty("/teams") as BauakteTeams | null;
 		if (teams?.link) openTeamsLink(teams.link);
-		else if (teams?.canManage) void this.onTeamsMenuKey("link");
+		else if (teams?.canManage) void this.onTeamsMenuKey("create");
 	}
 
 	onTeamsMenu(event: Event): void {
@@ -233,22 +232,13 @@ export default class ObjectController extends BaseController {
 		if (!id) return;
 		try {
 			if (key === "open") openTeamsLink((m.getProperty("/teams") as BauakteTeams | null)?.link);
+			if (key === "create") await createAkteTeamsChat(m, id);
 			if (key === "link") await linkAkteTeams(m, id);
-			if (key === "sync") await syncAkteTeams(m, id);
-			if (key === "details") MessageBox.information(akteTeamsDetails(m.getProperty("/teams") as BauakteTeams | null), { title: "Microsoft Teams" });
-			if (key === "teamChat") chatWithAkteTeam(m);
-			if (key === "post") await postAkteTeams(m, id);
-			if (key === "archive" && await this.confirm("Kanal in Teams archivieren? Er bleibt lesbar, neue Nachrichten sind nicht mehr möglich. Wiederherstellen geht jederzeit.",
-				{ action: "Archivieren" })) {
-				await archiveAkteTeams(m, id, true);
-				this.toast("Kanal in Teams archiviert");
+			if (key === "delete") {
+				const result = await deleteAkteTeams(m, id);
+				if (result) this.toast(result === "deleted" ? "Teams-Chat gelöscht" : "Verknüpfung gelöst");
 			}
-			if (key === "unarchive") {
-				await archiveAkteTeams(m, id, false);
-				this.toast("Kanal wiederhergestellt");
-			}
-			if (key === "delete" && await deleteAkteTeams(m, id)) this.toast("In Teams gelöscht, Verknüpfung gelöst");
-			if (key === "unlink" && await this.confirm("Verknüpfung mit Teams lösen? Kanal bzw. Chat und alle Nachrichten bleiben in Teams erhalten.",
+			if (key === "unlink" && await this.confirm("Verknüpfung mit Teams lösen? Chat bzw. Kanal und alle Nachrichten bleiben in Teams erhalten.",
 				{ action: "Lösen", danger: true })) {
 				await unlinkAkteTeams(m, id);
 				this.toast("Verknüpfung gelöst");

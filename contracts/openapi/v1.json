@@ -909,6 +909,38 @@
         ]
       }
     },
+    "/api/v1/teams/crews/mine": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Teams-Chats der eigenen Kolonnen (Apps: „In Teams öffnen“); leer ohne Teams",
+        "operationId": "ListMyTeamsCrewChats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/TeamsMyCrewChatResponse"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/system/updates": {
       "get": {
         "tags": [
@@ -21573,6 +21605,56 @@
         ]
       }
     },
+    "/api/v1/bauakten/{id}/teams/participants": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Auswahl für „Teams-Chat anlegen“: Bauakten-Team, Kolonnen, Gruppen (Rollen), Personen mit Microsoft-Konto",
+        "operationId": "ListBauakteTeamsParticipants",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsParticipantsResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
     "/api/v1/bauakten/{id}/teams/sync": {
       "post": {
         "tags": [
@@ -21914,6 +21996,198 @@
                 }
               }
             }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teams/crews": {
+      "get": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Teams-Chats der Kolonnen (einer je Kolonne)",
+        "operationId": "ListTeamsCrewChats",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsCrewChatsResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teams/crews/{crewId}/chat": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Teams-Chat der Kolonne anlegen (Microsoft Graph; Mitglieder folgen der Kolonne)",
+        "operationId": "CreateTeamsCrewChat",
+        "parameters": [
+          {
+            "name": "crewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamsCrewChatResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "424": {
+            "description": "Failed Dependency",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "503": {
+            "description": "Service Unavailable",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Nicht angemeldet oder Token abgelaufen"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/teams/crews/{crewId}/chat/delete": {
+      "post": {
+        "tags": [
+          "Microsoft Teams"
+        ],
+        "summary": "Teams-Chat der Kolonne in Teams löschen",
+        "operationId": "DeleteTeamsCrewChat",
+        "parameters": [
+          {
+            "name": "crewId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
           },
           "404": {
             "description": "Not Found",
@@ -35968,6 +36242,23 @@
               "null",
               "boolean"
             ]
+          },
+          "topic": {
+            "maxLength": 250,
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "participants": {
+            "maxItems": 200,
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
           }
         }
       },
@@ -44338,6 +44629,89 @@
           "delete"
         ]
       },
+      "TeamsCrewChatResponse": {
+        "required": [
+          "crewId",
+          "displayName",
+          "webUrl",
+          "appUrl",
+          "created",
+          "syncedMembers",
+          "unmappedMembers",
+          "lastSyncError",
+          "linkedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "crewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "webUrl": {
+            "type": "string"
+          },
+          "appUrl": {
+            "type": "string"
+          },
+          "created": {
+            "type": "boolean"
+          },
+          "syncedMembers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unmappedMembers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "lastSyncError": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "linkedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "TeamsCrewChatsResponse": {
+        "required": [
+          "available",
+          "viaGraph",
+          "canCreate",
+          "canDelete",
+          "chats"
+        ],
+        "type": "object",
+        "properties": {
+          "available": {
+            "type": "boolean"
+          },
+          "viaGraph": {
+            "type": "boolean"
+          },
+          "canCreate": {
+            "type": "boolean"
+          },
+          "canDelete": {
+            "type": "boolean"
+          },
+          "chats": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamsCrewChatResponse"
+            }
+          }
+        }
+      },
       "TeamsLinkJobResponse": {
         "required": [
           "id",
@@ -44573,6 +44947,103 @@
           "skipped": {
             "type": "integer",
             "format": "int32"
+          }
+        }
+      },
+      "TeamsMyCrewChatResponse": {
+        "required": [
+          "crewId",
+          "crewName",
+          "displayName",
+          "webUrl",
+          "appUrl"
+        ],
+        "type": "object",
+        "properties": {
+          "crewId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "crewName": {
+            "type": "string"
+          },
+          "displayName": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "webUrl": {
+            "type": "string"
+          },
+          "appUrl": {
+            "type": "string"
+          }
+        }
+      },
+      "TeamsParticipantOption": {
+        "required": [
+          "key",
+          "kind",
+          "name",
+          "userIds"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "userIds": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        }
+      },
+      "TeamsParticipantsResponse": {
+        "required": [
+          "options",
+          "people",
+          "selfUserId",
+          "viaGraph",
+          "minMembers",
+          "topic"
+        ],
+        "type": "object",
+        "properties": {
+          "options": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamsParticipantOption"
+            }
+          },
+          "people": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/TeamsPerson"
+            }
+          },
+          "selfUserId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "viaGraph": {
+            "type": "boolean"
+          },
+          "minMembers": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "topic": {
+            "type": "string"
           }
         }
       },

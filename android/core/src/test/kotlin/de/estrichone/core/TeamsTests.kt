@@ -18,7 +18,7 @@ class TeamsTests {
         """.trimIndent())
         assertTrue(status.chatReadOnly && status.available)
         assertEquals("Chat-Archiv", status.chatTitle)
-        assertEquals(listOf("msteams", "https"), status.homeTargets.candidates.map { it.substringBefore(':') })
+        assertEquals(listOf("https", "msteams"), status.homeTargets.candidates.map { it.substringBefore(':') })
 
         val chat = EstrichOneApi.json.decodeFromString(ChatStatus.serializer(), """{"enabled":true,"canUse":true,"readOnly":true,"mode":"teams"}""")
         assertTrue(chat.readOnly)
@@ -78,7 +78,7 @@ class TeamsTests {
         assertEquals("msteams:/l/chat/0/0?users=a@x.de", TeamsChatLinks.appUrl("https://teams.microsoft.com/l/chat/0/0?users=a@x.de"))
         val people = listOf(TeamsPerson("1", "Anna", "anna@x.de"), TeamsPerson("2", "Bernd", null))
         assertEquals(
-            listOf("msteams:/l/chat/0/0?users=anna@x.de", "https://teams.microsoft.com/l/chat/0/0?users=anna@x.de"),
+            listOf("https://teams.microsoft.com/l/chat/0/0?users=anna@x.de", "msteams:/l/chat/0/0?users=anna@x.de"),
             TeamsChatLinks.targets(people)!!.candidates,
         )
         assertNull(TeamsChatLinks.targets(listOf(people[1])))
@@ -95,7 +95,13 @@ class TeamsTests {
             {"chatMode":"teams","teamChat":{"webUrl":"https://teams.microsoft.com/l/chat/0/0?users=a@x.de","appUrl":"msteams:/l/chat/0/0?users=a@x.de",
              "viaGraph":false,"included":["Anna"],"missing":[]}}
         """.trimIndent())
-        assertEquals("msteams", akte.teamChat!!.targets.candidates.first().substringBefore(':'))
+        assertEquals("msteams", akte.teamChat!!.targets.candidates.last().substringBefore(':'))
+        // Kolonnen-Chat der eigenen Kolonne; ohne appUrl wird msteams: aus dem https-Link gebildet.
+        val crew = EstrichOneApi.json.decodeFromString(kotlinx.serialization.builtins.ListSerializer(TeamsCrewChat.serializer()), """
+            [{"crewId":"c1","crewName":"Nord","displayName":"Kolonne Nord","webUrl":"https://teams.microsoft.com/l/chat/19%3Ak%40thread.v2/0"}]
+        """.trimIndent())
+        assertEquals("Kolonne Nord", crew.single().title)
+        assertEquals(listOf("https://teams.microsoft.com/l/chat/19%3Ak%40thread.v2/0", "msteams:/l/chat/19%3Ak%40thread.v2/0"), crew.single().targets.candidates)
         val status = EstrichOneApi.json.decodeFromString(TeamsStatus.serializer(), """{"chatMode":"teams","rolloutNotice":"Ab sofort Teams","canStartChats":true}""")
         assertTrue(status.canStartChats)
         assertEquals("Ab sofort Teams", status.rolloutNotice)

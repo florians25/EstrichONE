@@ -280,26 +280,33 @@ public sealed class TeamsTests(PostgresFixture postgres) : IAsyncLifetime
         var (_, anna) = await UserAsync("anna", StandardRoles.SiteWorkerId, "aad-anna");
         var (_, bernd) = await UserAsync("bernd", StandardRoles.SiteWorkerId, "aad-bernd");
         var (_, carla) = await UserAsync("carla", StandardRoles.SiteWorkerId, "aad-carla");
+        var (_, dora) = await UserAsync("dora", StandardRoles.SiteWorkerId, "aad-dora");
         using (await _admin.PostAsync(new Uri("/api/v1/settings/integrations/teams/users/match", UriKind.Relative), null, Ct))
         {
         }
 
-        var lonely = await BauakteAsync("Nur eine Person", anna);
-        using (var tooFew = await _admin.PostAsJsonAsync($"/api/v1/bauakten/{lonely}/teams", new { kind = "groupChat" }, Ct))
+        // Zwei Personen sind für Microsoft kein Gruppenchat: verständliche Meldung statt Ablehnung durch Graph.
+        var pair = await BauakteAsync("Nur zwei Personen", anna, bernd);
+        using (var tooFew = await _admin.PostAsJsonAsync($"/api/v1/bauakten/{pair}/teams", new { kind = "groupChat" }, Ct))
         {
             tooFew.StatusCode.ShouldBe(HttpStatusCode.UnprocessableEntity);
+            var text = await tooFew.Content.ReadAsStringAsync(Ct);
+            text.ShouldContain("TEAMS_TOO_FEW_MEMBERS");
+            text.ShouldContain("mindestens 3 Personen");
         }
 
-        var bauakte = await BauakteAsync("MFH Gruppenchat", anna, bernd);
+        _graph.CallsTo("POST", "/v1.0/chats").ShouldBeEmpty();
+
+        var bauakte = await BauakteAsync("MFH Gruppenchat", anna, bernd, dora);
         var link = await LinkAsync(bauakte, new { kind = "groupChat" });
         link.Kind.ShouldBe(TeamsLinkKind.GroupChat);
         link.AppUrl.ShouldStartWith("msteams:/l/chat/");
         var chat = _graph.Members[link.ChatId!];
-        chat.Keys.OrderBy(k => k).ShouldBe(["aad-anna", "aad-bernd"]);
+        chat.Keys.OrderBy(k => k).ShouldBe(["aad-anna", "aad-bernd", "aad-dora"]);
         chat["aad-fremd"] = "m-aad-fremd"; // in Teams von Hand hinzugefügt
 
         // Team ändern: Bernd raus, Carla rein → Abgleich (im Hintergrund nach der Teamänderung).
-        using (var set = await _admin.PutAsJsonAsync($"/api/v1/bauakten/{bauakte}/members", new { userIds = new[] { anna, carla } }, Ct))
+        using (var set = await _admin.PutAsJsonAsync($"/api/v1/bauakten/{bauakte}/members", new { userIds = new[] { anna, carla, dora } }, Ct))
         {
             set.EnsureSuccessStatusCode();
         }
@@ -410,8 +417,10 @@ public sealed class TeamsTests(PostgresFixture postgres) : IAsyncLifetime
                 new TeamsEvent(chatAkte, TeamsEventKind.AcceptanceSigned, "Ergebnis: abgenommen"));
         }
 
-        await WaitForAsync(() => _graph.CallsTo("POST", $"/v1.0/chats/{link.ChatId}/messages").Count == 1);
-        var message = _graph.CallsTo("POST", $"/v1.0/chats/{link.ChatId}/messages").Single();
+        // Erste Nachricht beim Anlegen (sonst erscheint der neue Chat in Teams erst nach der ersten Nachricht), dann die Karte.
+        await WaitForAsync(() => _graph.CallsTo("POST", $"/v1.0/chats/{link.ChatId}/messages").Count == 2);
+        _graph.CallsTo("POST", $"/v1.0/chats/{link.ChatId}/messages")[0].Body.ShouldContain("wurde aus EstrichONE angelegt");
+        var message = _graph.CallsTo("POST", $"/v1.0/chats/{link.ChatId}/messages")[1];
         message.Authorization.ShouldBe("Bearer user-token");
         message.Body.ShouldContain("Abnahme unterschrieben");
     }

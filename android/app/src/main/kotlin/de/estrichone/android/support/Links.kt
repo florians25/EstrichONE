@@ -23,14 +23,19 @@ object Links {
 
     fun web(context: Context, url: String) = start(context, Intent(Intent.ACTION_VIEW, Uri.parse(if ("://" in url) url else "https://$url")))
 
-    /** Microsoft Teams: zuerst die Teams-App (`msteams:`), sonst Teams im Browser (Teams-App übernimmt per App-Link). */
+    /**
+     * Microsoft Teams – immer in die Teams-App: 1. https-Link ausdrücklich an die Teams-App (setPackage), 2. `msteams:`,
+     * 3. Google Play „Microsoft Teams installieren“. Kein Browser bzw. Custom Tab als Standard.
+     * Früher entschied eine Paketabfrage vorab („installiert?“); scheiterte sie (z. B. Teams nur im Arbeitsprofil) oder war Teams nicht
+     * als Standard für teams.microsoft.com eingetragen, öffnete der https-Link den Browser.
+     */
     fun teams(context: Context, targets: de.estrichone.core.TeamsTargets): Boolean {
-        val installed = teamsInstalled(context)
-        // 1. Teams-App über msteams:, 2. https-Link ausdrücklich an die Teams-App, 3. Browser.
-        if (installed && targets.app != null && start(context, Intent(Intent.ACTION_VIEW, Uri.parse(targets.app)))) return true
-        val web = targets.web ?: return false
-        if (installed && start(context, Intent(Intent.ACTION_VIEW, Uri.parse(web)).setPackage(de.estrichone.core.TeamsChatLinks.TEAMS_PACKAGE))) return true
-        return start(context, Intent(Intent.ACTION_VIEW, Uri.parse(web)))
+        targets.web?.let { web ->
+            if (start(context, Intent(Intent.ACTION_VIEW, Uri.parse(web)).setPackage(de.estrichone.core.TeamsChatLinks.TEAMS_PACKAGE))) return true
+        }
+        targets.app?.let { app -> if (start(context, Intent(Intent.ACTION_VIEW, Uri.parse(app)))) return true }
+        if (targets.web == null && targets.app == null) return false
+        return installTeams(context)
     }
 
     /** Ist die Teams-App installiert (Paketabfrage, im Manifest unter <queries> freigegeben)? */

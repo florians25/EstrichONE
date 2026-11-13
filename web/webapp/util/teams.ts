@@ -201,7 +201,7 @@ export function linkSummary(link: TeamsLink | null | undefined): string {
 
 /** Text für den Bauakte-Knopf. */
 export function akteButtonText(teams: BauakteTeams | null | undefined): string {
-	return teams?.link ? "In Teams öffnen" : "Mit Teams verknüpfen";
+	return teams?.link ? "In Teams öffnen" : "Teams-Chat anlegen";
 }
 
 /** Sichtbar, wenn Teams im Einsatz ist und es etwas zu öffnen oder zu verknüpfen gibt. */
@@ -218,6 +218,62 @@ export function linkRequest(choice: "channel" | "groupChat" | "url", url: string
 		return { url: trimmed, syncMembers };
 	}
 	return { kind: choice, syncMembers };
+}
+
+/** Schnellauswahl im Dialog „Teams-Chat anlegen“ (GET /bauakten/{id}/teams/participants). */
+export interface TeamsParticipantOption { key: string; kind: "team" | "crew" | "role" | "user"; name: string; userIds: string[] }
+
+export interface TeamsParticipants {
+	options: TeamsParticipantOption[]; people: TeamsPerson[]; selfUserId: string; viaGraph: boolean; minMembers: number; topic: string;
+}
+
+/** Teams-Chat einer Kolonne (GET /teams/crews). */
+export interface TeamsCrewChat {
+	crewId: string; displayName: string | null; webUrl: string; appUrl: string; created: boolean; syncedMembers: number; unmappedMembers: number;
+	lastSyncError: string | null; linkedAt: string;
+}
+
+export interface TeamsCrewChats { available: boolean; viaGraph: boolean; canCreate: boolean; canDelete: boolean; chats: TeamsCrewChat[] }
+
+/** „Kolonne Nord“ – ohne doppeltes „Kolonne“ (wie der Server). */
+export function crewLabel(name: string): string {
+	const trimmed = name.trim();
+	return /^kolonne/i.test(trimmed) ? trimmed : `Kolonne ${trimmed}`;
+}
+
+/** Gruppenname in der Auswahl mit Anzahl Personen. */
+export function participantText(option: TeamsParticipantOption): string {
+	return option.kind === "user" ? option.name : `${option.name} (${option.userIds.length})`;
+}
+
+/**
+ * Teilnehmer aus der Auswahl (Gruppen und Personen zusammengeführt, ohne Doppelte). Die eigene Person ist immer dabei.
+ * `withAccount`: mit Microsoft-Konto; `withoutAccount`: ohne (werden nicht aufgenommen).
+ */
+export function resolveParticipants(data: Pick<TeamsParticipants, "options" | "people" | "selfUserId">, selected: string[]): {
+	withAccount: TeamsPerson[]; withoutAccount: TeamsPerson[];
+} {
+	const ids = new Set<string>([data.selfUserId]);
+	for (const key of selected) for (const id of data.options.find((o) => o.key === key)?.userIds ?? []) ids.add(id);
+	const people = [...ids].map((id) => data.people.find((p) => p.userId === id)).filter((p): p is TeamsPerson => !!p);
+	return { withAccount: people.filter((p) => !!p.upn), withoutAccount: people.filter((p) => !p.upn) };
+}
+
+/** Hinweis im Dialog (nur wenn nötig): Personen ohne Konto, zu wenige für einen Gruppenchat. Leer = kein Hinweis. */
+export function participantHint(data: Pick<TeamsParticipants, "options" | "people" | "selfUserId" | "viaGraph" | "minMembers">, selected: string[]): string {
+	const { withAccount, withoutAccount: all } = resolveParticipants(data, selected);
+	const withoutAccount = all.filter((p) => p.userId !== data.selfUserId); // eigene Person: kein Hinweis nötig
+	const parts: string[] = [];
+	if (withoutAccount.length > 0) {
+		const names = withoutAccount.slice(0, 5).map((p) => p.name).join(", ") + (withoutAccount.length > 5 ? " …" : "");
+		parts.push(`${withoutAccount.length} ${withoutAccount.length === 1 ? "Person hat" : "Personen haben"} kein Microsoft-Konto und ${withoutAccount.length === 1 ? "wird" : "werden"} nicht aufgenommen: ${names}.`);
+	}
+	if (data.viaGraph && withAccount.length < data.minMembers) {
+		parts.push(withAccount.length <= 1
+			? "Bitte weitere Personen auswählen."
+			: `Ein Gruppenchat braucht mindestens ${data.minMembers} Personen mit Microsoft-Konto – „Anlegen“ öffnet stattdessen einen Einzelchat in Teams (wird nicht in der Bauakte gespeichert).`);
+	}
+	return parts.join(" ");
 }
 
 /** Zeile der Benutzerzuordnung für die Tabelle. */

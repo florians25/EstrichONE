@@ -2,7 +2,11 @@ import BaseController from "../BaseController";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import type { RouteMatch } from "../../util/router";
-import { get, put } from "../../util/api";
+import { get, post, put } from "../../util/api";
+import MessageBox from "sap/m/MessageBox";
+import { session } from "../../util/session";
+import { chatDeepLink, crewLabel, type TeamsCrewChat, type TeamsCrewChats, type TeamsPerson } from "../../util/teams";
+import { openTeamsUrl, teamsPeople } from "../../util/teamsChat";
 import Dialog from "sap/m/Dialog";
 import Button from "sap/m/Button";
 import List from "sap/m/List";
@@ -37,9 +41,10 @@ const crewColors = [
 export default class Resources extends BaseController {
 	private people: DirectoryUser[] = [];
 	private crewList: CrewResponse[] = [];
+	private teamsPeopleList: TeamsPerson[] = [];
 
 	onInit(): void {
-		this.local({ tab: "kolonnen", title: "Kolonnen", subtitle: "", addText: addTexts.kolonnen, crews: [], resources: [], busy: false, deviceTab: "fahrzeuge", vehicles: [], machines: [] });
+		this.local({ teamsCrews: { available: false }, tab: "kolonnen", title: "Kolonnen", subtitle: "", addText: addTexts.kolonnen, crews: [], resources: [], busy: false, deviceTab: "fahrzeuge", vehicles: [], machines: [] });
 	}
 
 	onRouteMatched(match: RouteMatch): void {
@@ -59,15 +64,21 @@ export default class Resources extends BaseController {
 		const now = new Date();
 		const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7));
 		const week = Array.from({ length: 5 }, (_, i) => isoDay(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + i)));
-		const [lookups, people, range] = await Promise.all([
+		const teamsOn = session.data.teams?.available === true;
+		const [lookups, people, range, teamsCrews, teamsPeopleList] = await Promise.all([
 			this.run(() => planningLookups(true)),
 			this.run(() => get<DirectoryUser[]>("directory/users")),
 			get<PlanningRange>("planning/range", { from: week[0], to: week[4] }).catch(() => null),
+			teamsOn ? get<TeamsCrewChats>("teams/crews").catch(() => null) : Promise.resolve(null),
+			teamsOn ? teamsPeople() : Promise.resolve([] as TeamsPerson[]),
 		]);
+		this.teamsPeopleList = teamsPeopleList;
+		const crewChats = new Map((teamsCrews?.chats ?? []).map((c) => [c.crewId, c]));
 		this.people = people ?? [];
 		this.crewList = lookups?.crews ?? [];
 		const m = this.model();
-		m.setProperty("/crews", this.crewList.map((c) => ({ ...c, leaderName: this.name(c.leaderUserId), memberNames: c.memberUserIds.map((id) => this.name(id)).join(", ") || "–",
+		m.setProperty("/teamsCrews", teamsCrews ?? { available: false });
+		m.setProperty("/crews", this.crewList.map((c) => ({ ...c, teamsChat: crewChats.get(c.id) ?? null, leaderName: this.name(c.leaderUserId), memberNames: c.memberUserIds.map((id) => this.name(id)).join(", ") || "–",
 			load: crewLoad(c.id, range?.assignments ?? [], week) })));
 		const crewName = new Map(this.crewList.map((x) => [x.id, x.name]));
 		const resources = (lookups?.resources ?? []).map((r) => ({
@@ -104,6 +115,57 @@ export default class Resources extends BaseController {
 		const tab = String(this.model().getProperty("/tab"));
 		if (tab === "geraete") void this.editResource(null, this.model().getProperty("/deviceTab") === "maschinen" ? "pump" : "vehicle");
 		else void this.editCrew(null);
+	}
+
+	/** Kolonne › „Teams-Chat“: öffnen bzw. anlegen (Graph) oder – ohne App-Registrierung – direkt in Teams starten (Teams-Link). */
+	async onCrewTeams(e: Event): Promise<void> {
+		const crew = this.row<CrewResponse & { teamsChat: TeamsCrewChat | null }>(e);
+		if (crew.teamsChat) {
+			openTeamsUrl(crew.teamsChat.webUrl);
+			return;
+		}
+		const state = this.model().getProperty("/teamsCrews") as TeamsCrewChats;
+		const name = crew.number ? `${crew.number} ${crew.name}` : crew.name;
+		if (!state.viaGraph) {
+			// Ohne App-Registrierung: Gruppenchat per Teams-Link (sofort im Klick öffnen, nicht gespeichert).
+			const upns = crew.memberUserIds.filter((id) => id !== session.userId)
+				.map((id) => this.teamsPeopleList.find((p) => p.userId === id)?.upn).filter((u): u is string => !!u);
+			if (upns.length === 0) {
+				MessageBox.information("Niemand aus der Kolonne hat ein Microsoft-Konto.", { title: "Teams-Chat" });
+				return;
+			}
+			openTeamsUrl(chatDeepLink(upns, crewLabel(crew.name)));
+			return;
+		}
+		if (!state.canCreate) return;
+		if (!await this.confirm(`Teams-Chat „${crewLabel(crew.name)}“ mit den Mitgliedern der Kolonne ${name} anlegen? Sie sind ebenfalls dabei. `
+			+ "Ändert sich die Kolonne, werden die Mitglieder im Chat automatisch angepasst.", { title: "Teams-Chat anlegen", action: "Anlegen" })) return;
+		try {
+			const chat = await post<TeamsCrewChat>(`teams/crews/${crew.id}/chat`);
+			await this.load();
+			const open = "In Teams öffnen";
+			MessageBox.success(`Teams-Chat „${chat.displayName ?? ""}“ angelegt (${chat.syncedMembers} Personen`
+				+ (chat.unmappedMembers > 0 ? `, ${chat.unmappedMembers} ohne Microsoft-Konto nicht aufgenommen` : "") + ").", {
+				title: "Teams-Chat", actions: [open, MessageBox.Action.CLOSE], emphasizedAction: open,
+				onClose: (action: unknown) => { if (action === open) openTeamsUrl(chat.webUrl); },
+			});
+		} catch (error) {
+			this.showError(error, "Teams-Chat");
+		}
+	}
+
+	async onCrewTeamsDelete(e: Event): Promise<void> {
+		const crew = (e.getSource() as Control).getBindingContext("view")?.getObject() as CrewResponse & { teamsChat: TeamsCrewChat | null };
+		if (!crew?.teamsChat) return;
+		if (!await this.confirm(`Teams-Chat „${crew.teamsChat.displayName ?? ""}“ mit allen Nachrichten in Microsoft Teams löschen? `
+			+ "Wiederherstellen kann nur ein Microsoft-365-Administrator.", { title: "Teams-Chat löschen", action: "Löschen", danger: true })) return;
+		try {
+			await post(`teams/crews/${crew.id}/chat/delete`);
+			this.toast("Teams-Chat gelöscht");
+			await this.load();
+		} catch (error) {
+			this.showError(error, "Teams-Chat");
+		}
 	}
 
 	onEditCrew(e: Event): void { void this.editCrew(this.row<CrewResponse>(e)); }

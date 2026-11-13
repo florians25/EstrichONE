@@ -2,20 +2,22 @@ import EstrichCore
 import SwiftUI
 import UIKit
 
-/// Microsoft Teams (docs/microsoft-teams.md): „In Teams öffnen“ öffnet die Teams-App (`msteams:`), wenn sie installiert ist,
-/// sonst Teams im Browser. Ohne Teams-Anbindung erscheint nichts davon.
+/// Microsoft Teams (docs/microsoft-teams.md): „In Teams öffnen“ führt immer in die Teams-App. Ohne Teams-Anbindung erscheint nichts davon.
 enum TeamsOpener {
-    /// Teams-App (`msteams:`, in Info.plist unter LSApplicationQueriesSchemes), sonst der https-Link (Universal Link – die Teams-App
-    /// übernimmt ihn, wenn sie installiert ist; sonst Safari). Liefert `false`, wenn die Teams-App fehlt (für den Hinweis „Teams installieren“).
+    /// 1. https-Link nur als Universal Link (öffnet die Teams-App, nie Safari), 2. `msteams:` (LSApplicationQueriesSchemes),
+    /// 3. Hinweis „Microsoft Teams installieren“ (App Store) – der Browser nur, wenn man ihn dort ausdrücklich wählt.
+    /// Früher: https-Link ohne `universalLinksOnly` – hatte jemand Teams-Links einmal in Safari geöffnet (bzw. war die Teams-App
+    /// nur über `msteams:` nicht erreichbar), landete man im Browser statt in der App.
     @MainActor
     @discardableResult
     static func open(_ targets: TeamsOpenTargets) async -> Bool {
+        if let web = targets.web, await UIApplication.shared.open(web, options: [.universalLinksOnly: true]) {
+            return true
+        }
         if let app = targets.app, UIApplication.shared.canOpenURL(app), await UIApplication.shared.open(app) {
             return true
         }
-        if let web = targets.web {
-            _ = await UIApplication.shared.open(web)
-        }
+        offerInstall(web: targets.web)
         return false
     }
 
@@ -23,6 +25,27 @@ enum TeamsOpener {
     static var isTeamsInstalled: Bool {
         guard let url = URL(string: "msteams:/") else { return false }
         return UIApplication.shared.canOpenURL(url)
+    }
+
+    /// Teams-App fehlt: App Store anbieten (Standardaktion), Browser nur auf ausdrücklichen Wunsch.
+    @MainActor
+    private static func offerInstall(web: URL?) {
+        let alert = UIAlertController(title: "Microsoft Teams", message: "Die Teams-App ist auf diesem Gerät nicht installiert.", preferredStyle: .alert)
+        let install = UIAlertAction(title: "Microsoft Teams installieren", style: .default) { _ in
+            Task { @MainActor in _ = await UIApplication.shared.open(TeamsChatLinks.appStoreURL) }
+        }
+        alert.addAction(install)
+        if let web {
+            alert.addAction(UIAlertAction(title: "Im Browser öffnen", style: .default) { _ in
+                Task { @MainActor in _ = await UIApplication.shared.open(web) }
+            })
+        }
+        alert.addAction(UIAlertAction(title: "Abbrechen", style: .cancel))
+        alert.preferredAction = install
+        let scene = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.first { $0.activationState == .foregroundActive }
+        var top = scene?.keyWindow?.rootViewController
+        while let presented = top?.presentedViewController { top = presented }
+        top?.present(alert, animated: true)
     }
 }
 
@@ -49,7 +72,7 @@ struct TeamsPeopleSheet: View {
                             Label("Microsoft Teams installieren", systemImage: "arrow.down.app")
                         }
                     } footer: {
-                        Text("Ohne Teams-App öffnet sich der Chat im Browser.")
+                        Text("Chats öffnen sich in der Teams-App.")
                     }
                 }
                 ForEach(reachable) { person in

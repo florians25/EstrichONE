@@ -1,15 +1,17 @@
 /**
- * Bauakte ↔ Microsoft Teams: Verknüpfung laden, „In Teams öffnen“, verknüpfen (Kanal, Gruppenchat oder per Link),
- * Mitglieder abgleichen und Verknüpfung lösen. Die Bauakte-Ansicht bindet nur einen Knopf an „akte>/teams“.
+ * Bauakte ↔ Microsoft Teams: ein Knopf mit Menü – „In Teams öffnen“, „Teams-Chat anlegen …“, „Per Link verknüpfen …“,
+ * „Teams-Chat löschen …“ (bzw. „Verknüpfung lösen“). Mitgliederabgleich, Archivieren und Karten laufen automatisch
+ * bzw. über die Einstellungen; die Bauakte-Ansicht bindet nur an „akte>/teams“.
  */
 import type JSONModel from "sap/ui/model/json/JSONModel";
 import MessageBox from "sap/m/MessageBox";
+import MessageStrip from "sap/m/MessageStrip";
+import Button from "sap/m/Button";
 import { del, get, post } from "./api";
-import { openForm } from "./forms";
-import { akteButtonText, akteButtonVisible, closeActionLabels, confirmationMatches, isTeamsUrl, linkRequest, linkSummary, type BauakteTeams,
-	type TeamsLink } from "./teams";
+import { openForm, type Option } from "./forms";
+import { akteButtonText, akteButtonVisible, chatDeepLink, confirmationMatches, isTeamsUrl, linkRequest, linkSummary, participantHint, participantText,
+	resolveParticipants, type BauakteTeams, type TeamsLink, type TeamsParticipants } from "./teams";
 import { openTeamsUrl } from "./teamsChat";
-import { dateTime } from "./format";
 
 /** Verknüpfung der Bauakte nach „akte>/teams“ (nur, wenn Teams im Einsatz ist). */
 export async function loadAkteTeams(model: JSONModel, bauakteId: string, available: boolean): Promise<void> {
@@ -27,74 +29,8 @@ function applyAkteTeams(model: JSONModel, teams: BauakteTeams | null): void {
 		visible: akteButtonVisible(teams),
 		buttonText: akteButtonText(teams),
 		tooltip: linkSummary(teams.link) + (teams.link?.lastSyncError ? `\n${teams.link.lastSyncError}` : ""),
-		warning: !!teams.link?.lastSyncError || !!teams.link?.lastPostError,
-		canArchive: !!teams.canDelete && teams.link?.kind === "channel" && !teams.link?.archivedAt,
-		canUnarchive: !!teams.canDelete && teams.link?.kind === "channel" && !!teams.link?.archivedAt,
+		warning: !!teams.link?.lastSyncError,
 	} : null);
-}
-
-/** Chat mit dem ganzen Bauakten-Team (Deep Link vom Server, ohne die eigene Person). */
-export function chatWithAkteTeam(model: JSONModel): void {
-	const teams = model.getProperty("/teams") as BauakteTeams | null;
-	if (!teams?.teamChat) {
-		MessageBox.information("Niemand aus dem Bauakten-Team hat ein Microsoft-Konto – bitte Konten zuordnen (Einstellungen › Microsoft Teams › Benutzer).",
-			{ title: "Chat mit dem Team" });
-		return;
-	}
-	openTeamsUrl(teams.teamChat.webUrl);
-}
-
-/** Kanal archivieren bzw. wiederherstellen (Recht teams.delete). */
-export async function archiveAkteTeams(model: JSONModel, bauakteId: string, archive: boolean): Promise<void> {
-	const teams = model.getProperty("/teams") as BauakteTeams | null;
-	if (!teams?.link) return;
-	const link = await post<TeamsLink>(`bauakten/${bauakteId}/teams/${archive ? "archive" : "unarchive"}`);
-	applyAkteTeams(model, { ...teams, link });
-}
-
-/** Kanal bzw. Gruppenchat in Teams löschen: Bestätigung durch Eintippen der Bauaktennummer. */
-export async function deleteAkteTeams(model: JSONModel, bauakteId: string): Promise<boolean> {
-	const teams = model.getProperty("/teams") as BauakteTeams | null;
-	if (!teams?.link) return false;
-	const expected = teams.confirmation ?? "";
-	const what = teams.link.kind === "channel" ? "den Kanal" : "den Gruppenchat";
-	const done = await openForm<boolean>({
-		title: "In Microsoft Teams löschen",
-		width: "34rem",
-		danger: true,
-		intro: `Löscht ${what} „${teams.link.displayName ?? ""}“ mit allen Nachrichten und Dateien in Microsoft Teams und löst die Verknüpfung. `
-			+ (teams.link.kind === "channel"
-				? "Ein Teambesitzer kann gelöschte Kanäle 30 Tage lang in Teams wiederherstellen."
-				: "Gelöschte Chats kann nur ein Microsoft-365-Administrator wiederherstellen.")
-			+ " Alternative: „Archivieren“ (nur Kanäle) oder „Verknüpfung lösen“ (in Teams bleibt alles erhalten).",
-		fields: [{ key: "confirmation", label: `Zur Bestätigung die Bauaktennummer „${expected}“ eintippen`, type: "text", required: true,
-			validate: (value) => confirmationMatches(String(value ?? ""), expected) ? null : `Bitte genau „${expected}“ eintippen.` }],
-		initial: { confirmation: "" },
-		submitText: "Endgültig löschen",
-		submit: async (values) => {
-			await post(`bauakten/${bauakteId}/teams/delete`, { confirmation: String(values.confirmation ?? "") });
-			return true;
-		},
-	});
-	if (!done) return false;
-	applyAkteTeams(model, { ...teams, link: null });
-	return true;
-}
-
-/** Kurze Nachricht in den verknüpften Kanal bzw. Chat. */
-export async function postAkteTeams(model: JSONModel, bauakteId: string): Promise<void> {
-	const teams = model.getProperty("/teams") as BauakteTeams | null;
-	if (!teams?.link) return;
-	const link = await openForm<TeamsLink>({
-		title: "Nachricht in Teams posten",
-		width: "34rem",
-		intro: `Erscheint als Karte in ${teams.link.kind === "channel" ? "Kanal" : "Gruppenchat"} „${teams.link.displayName ?? ""}“ mit Ihrem Namen und einem Link zur Bauakte.`,
-		fields: [{ key: "text", label: "Nachricht", type: "textarea", rows: 4, maxLength: 2000, required: true }],
-		initial: { text: "" },
-		submitText: "Posten",
-		submit: (values) => post<TeamsLink>(`bauakten/${bauakteId}/teams/message`, { text: String(values.text ?? "") }),
-	});
-	if (link) applyAkteTeams(model, { ...teams, link });
 }
 
 /** Teams öffnen: im Browser der https-Link (öffnet die Teams-App, falls installiert, sonst Teams im Web). */
@@ -103,62 +39,135 @@ export function openTeamsLink(link: TeamsLink | null | undefined): void {
 	openTeamsUrl(link.webUrl);
 }
 
+type Created = { link: TeamsLink } | { opened: true };
+
+/**
+ * „Teams-Chat anlegen …“: Name (vorbelegt) und Teilnehmer (Bauakten-Team vorausgewählt, dazu Kolonnen, Gruppen, Personen).
+ * Mit App-Registrierung legt Microsoft Graph den Gruppenchat an und er wird mit der Bauakte verknüpft (Mitglieder folgen der Auswahl).
+ * Ohne App-Registrierung bzw. unter drei Personen öffnet sich der Chat direkt in Teams (Teams-Link, nicht gespeichert).
+ */
+export async function createAkteTeamsChat(model: JSONModel, bauakteId: string): Promise<boolean> {
+	const teams = model.getProperty("/teams") as BauakteTeams | null;
+	if (!teams) return false;
+	const data = await get<TeamsParticipants>(`bauakten/${bauakteId}/teams/participants`);
+	const people = new Map(data.people.map((p) => [p.userId, p]));
+	const options: Option[] = data.options
+		.filter((o) => o.kind !== "user" || o.userIds[0] !== data.selfUserId)
+		.map((o) => ({ key: o.key, text: o.kind === "user" && !people.get(o.userIds[0])?.upn ? `${o.name} (ohne Microsoft-Konto)` : participantText(o) }));
+	const hint = new MessageStrip({ type: "Information", showIcon: true });
+	const showHint = (selected: string[]) => {
+		const text = participantHint(data, selected);
+		hint.setText(text);
+		hint.setVisible(!!text);
+	};
+	showHint(["team"]);
+	const result = await openForm<Created>({
+		title: "Teams-Chat anlegen",
+		width: "36rem",
+		intro: data.viaGraph ? undefined
+			: "Der Chat öffnet sich direkt in Microsoft Teams. Ohne App-Registrierung wird er nicht in der Bauakte gespeichert und lässt sich hier nicht löschen.",
+		fields: [
+			{ key: "topic", label: "Name", required: true, maxLength: 250 },
+			{ key: "participants", label: "Teilnehmer", type: "multi", options, required: true, placeholder: "Bauakten-Team, Kolonne, Gruppe oder Person",
+				onChange: (value) => showHint((value as string[]) ?? []) },
+		],
+		initial: { topic: data.topic, participants: ["team"] },
+		extra: () => [hint],
+		submitText: "Anlegen",
+		submit: async (values) => {
+			const selected = (values.participants as string[]) ?? [];
+			const topic = String(values.topic ?? "").trim();
+			const { withAccount } = resolveParticipants(data, selected);
+			const others = withAccount.filter((p) => p.userId !== data.selfUserId);
+			if (others.length === 0) throw new Error("Bitte mindestens eine weitere Person mit Microsoft-Konto auswählen.");
+			if (!data.viaGraph || withAccount.length < data.minMembers) {
+				// Sofort (noch im Klick) öffnen – nach einer Serveranfrage würde der Browser das neue Fenster blockieren.
+				openTeamsUrl(chatDeepLink(others.map((p) => p.upn as string), topic));
+				return { opened: true };
+			}
+			const link = await post<TeamsLink>(`bauakten/${bauakteId}/teams`, { kind: "groupChat", topic, participants: selected });
+			return { link };
+		},
+	});
+	if (!result) return false;
+	if ("opened" in result) return true;
+	applyAkteTeams(model, { ...teams, link: result.link });
+	const open = "In Teams öffnen";
+	MessageBox.success(`Teams-Chat „${result.link.displayName ?? ""}“ angelegt und mit der Bauakte verknüpft (${result.link.syncedMembers} Personen). `
+		+ "Tipp: gleich öffnen und die erste Nachricht schreiben – erst dann steht der Chat bei allen in der Teams-Chatliste.", {
+		title: "Microsoft Teams", actions: [open, MessageBox.Action.CLOSE], emphasizedAction: open,
+		onClose: (action: unknown) => { if (action === open) openTeamsLink(result.link); },
+	});
+	return true;
+}
+
+/** „Per Link verknüpfen …“: vorhandenen Kanal oder Chat aus Teams. */
 export async function linkAkteTeams(model: JSONModel, bauakteId: string): Promise<void> {
 	const teams = model.getProperty("/teams") as BauakteTeams | null;
 	if (!teams) return;
-	// Nur vorhandene Kanäle/Chats per Link verknüpfen; direktes Anlegen aus EstrichONE ist ausgeblendet (Nutzerwunsch).
 	const linked = await openForm<TeamsLink>({
-		title: "Mit Microsoft Teams verknüpfen",
-		width: "38rem",
-		intro: "Vorhandenen Kanal oder Chat per Link verknüpfen: in Teams › „…“ › „Link zum Kanal abrufen“ bzw. „Link kopieren“ und hier einfügen.",
-		fields: [
-			{ key: "url", label: "Link aus Teams", type: "text", required: true, placeholder: "https://teams.microsoft.com/l/channel/…" },
-			...(teams.canCreate ? [{ key: "syncMembers", label: "Mitglieder abgleichen", type: "switch" as const }] : []),
-		],
-		initial: { url: "", syncMembers: false },
+		title: "Per Link verknüpfen",
+		width: "36rem",
+		intro: "Vorhandenen Chat oder Kanal verknüpfen: in Teams beim Chat „…“ › „Link kopieren“ bzw. beim Kanal „Link zum Kanal abrufen“ und hier einfügen.",
+		fields: [{ key: "url", label: "Link aus Teams", type: "text", required: true, placeholder: "https://teams.microsoft.com/l/chat/…" }],
+		initial: { url: "" },
 		submitText: "Verknüpfen",
 		submit: async (values) => {
-			const request = linkRequest("url", String(values.url ?? ""), values.syncMembers === true);
+			const request = linkRequest("url", String(values.url ?? ""), false);
 			if (typeof request === "string") throw new Error(request);
 			return post<TeamsLink>(`bauakten/${bauakteId}/teams`, request);
 		},
 	});
-	if (!linked) return;
-	applyAkteTeams(model, { ...teams, link: linked });
-	if (linked.lastSyncError) {
-		MessageBox.warning(`Verknüpft. Hinweis zum Mitgliederabgleich: ${linked.lastSyncError}`, { title: "Microsoft Teams" });
-	}
+	if (linked) applyAkteTeams(model, { ...teams, link: linked });
 }
 
-export async function syncAkteTeams(model: JSONModel, bauakteId: string): Promise<void> {
+/**
+ * „Teams-Chat löschen …“ (Recht teams.delete): löscht Chat bzw. Kanal in Teams nach Eintippen der Bauaktennummer.
+ * „Nur Verknüpfung lösen“ lässt alles in Teams stehen.
+ */
+export async function deleteAkteTeams(model: JSONModel, bauakteId: string): Promise<"deleted" | "unlinked" | null> {
 	const teams = model.getProperty("/teams") as BauakteTeams | null;
-	if (!teams?.link) return;
-	const link = await post<TeamsLink>(`bauakten/${bauakteId}/teams/sync`);
-	applyAkteTeams(model, { ...teams, link });
-	if (link.lastSyncError) MessageBox.warning(link.lastSyncError, { title: "Mitgliederabgleich mit Hinweis" });
-	else MessageBox.success(`${link.syncedMembers} Mitglieder abgeglichen.`, { title: "Microsoft Teams" });
+	if (!teams?.link) return null;
+	const expected = teams.confirmation ?? "";
+	const channel = teams.link.kind === "channel";
+	let unlinked = false;
+	const done = await openForm<boolean>({
+		title: "Teams-Chat löschen",
+		width: "34rem",
+		danger: true,
+		intro: `Löscht ${channel ? "den Kanal" : "den Chat"} „${teams.link.displayName ?? ""}“ mit allen Nachrichten und Dateien in Microsoft Teams. `
+			+ (channel ? "Ein Teambesitzer kann gelöschte Kanäle 30 Tage lang wiederherstellen." : "Wiederherstellen kann nur ein Microsoft-365-Administrator.")
+			+ " Soll in Teams alles bleiben: „Nur Verknüpfung lösen“.",
+		fields: [{ key: "confirmation", label: `Zur Bestätigung „${expected}“ eintippen`, type: "text", required: true,
+			validate: (value) => confirmationMatches(String(value ?? ""), expected) ? null : `Bitte genau „${expected}“ eintippen.` }],
+		initial: { confirmation: "" },
+		submitText: "Endgültig löschen",
+		leftButton: (dialog) => new Button({ text: "Nur Verknüpfung lösen", press: async () => {
+			dialog.setBusy(true);
+			try {
+				await del(`bauakten/${bauakteId}/teams`);
+				unlinked = true;
+				dialog.close();
+			} catch (error) {
+				MessageBox.error(error instanceof Error ? error.message : String(error), { title: "Microsoft Teams" });
+			} finally {
+				dialog.setBusy(false);
+			}
+		} }),
+		submit: async (values) => {
+			await post(`bauakten/${bauakteId}/teams/delete`, { confirmation: String(values.confirmation ?? "") });
+			return true;
+		},
+	});
+	if (!done && !unlinked) return null;
+	applyAkteTeams(model, { ...teams, link: null });
+	return done ? "deleted" : "unlinked";
 }
 
+/** „Verknüpfung lösen“ (ohne Recht zum Löschen): in Teams bleibt alles erhalten. */
 export async function unlinkAkteTeams(model: JSONModel, bauakteId: string): Promise<void> {
 	const teams = model.getProperty("/teams") as BauakteTeams | null;
 	if (!teams?.link) return;
 	await del(`bauakten/${bauakteId}/teams`);
 	applyAkteTeams(model, { ...teams, link: null });
-}
-
-/** Infotext zur Verknüpfung (Menü „Details“). */
-export function akteTeamsDetails(teams: BauakteTeams | null): string {
-	const link = teams?.link;
-	if (!link) return "Nicht verknüpft.";
-	return [
-		linkSummary(link),
-		teams?.closeAction && link.created ? `Beim Abschließen der Bauakte: ${closeActionLabels[teams.closeAction]}` : "",
-		link.archivedAt ? `In Teams archiviert am ${dateTime(link.archivedAt)}` : "",
-		link.closeError ? `Abschluss-Aktion nicht ausgeführt: ${link.closeError}` : "",
-		`Verknüpft am ${dateTime(link.linkedAt)}${link.linkedByName ? ` von ${link.linkedByName}` : ""}${link.created ? " (von EstrichONE angelegt)" : " (per Link)"}`,
-		link.syncMembers ? (link.lastSyncAt ? `Letzter Abgleich ${dateTime(link.lastSyncAt)}` : "Noch nicht abgeglichen") : "Mitglieder werden nicht abgeglichen",
-		link.unmappedMembers > 0 ? `${link.unmappedMembers} Person(en) ohne Microsoft-Konto` : "",
-		link.lastSyncError ? `Hinweis: ${link.lastSyncError}` : "",
-		link.lastPostError ? `Letzte Karte nicht gesendet: ${link.lastPostError}` : link.lastPostAt ? `Letzte Karte ${dateTime(link.lastPostAt)}` : "",
-	].filter(Boolean).join("\n");
 }

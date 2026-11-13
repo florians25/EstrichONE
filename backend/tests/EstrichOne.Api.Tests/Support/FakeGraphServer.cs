@@ -360,6 +360,12 @@ public sealed class FakeGraphServer : IAsyncDisposable
 
             case ("POST", ["chats"]):
                 {
+                    if ((JsonNode.Parse(body)?["members"] as JsonArray ?? []).Count < 3)
+                    {
+                        // Annahme nach Microsoft-Dokumentation/Teams-Verhalten: Gruppenchats erst ab drei Personen.
+                        return (400, Error("BadRequest", "Group chat must have at least 3 members."));
+                    }
+
                     var id = $"19:{Guid.NewGuid():N}@thread.v2";
                     Chats[id] = "group";
                     var members = Members.GetOrAdd(id, _ => new());

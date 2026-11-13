@@ -161,6 +161,12 @@ public sealed class TeamsBauakteLink
     /// <summary>Microsoft-Konten, die EstrichONE hinzugefügt hat – nur diese entfernt der Abgleich wieder.</summary>
     public List<string> ManagedMemberIds { get; set; } = [];
 
+    /// <summary>
+    /// Wer zum Gruppenchat gehört (<see cref="TeamsMemberSources"/>): <c>team</c> (Bauakten-Team), <c>crew:{id}</c>, <c>role:{id}</c>,
+    /// <c>user:{id}</c>. Leer = Bauakten-Team (Verknüpfungen vor 1.0.24).
+    /// </summary>
+    public List<string> MemberSources { get; set; } = [];
+
     /// <summary>Webhook nur für diese Bauakte (verschlüsselt); sonst der allgemeine.</summary>
     public string? ProtectedWebhookUrl { get; set; }
 
@@ -183,6 +189,41 @@ public sealed class TeamsBauakteLink
 
     /// <summary>Prüfsumme der zuletzt abgeglichenen Soll-Mitglieder (unverändert → kein erneuter Abgleich nötig).</summary>
     public string? DesiredHash { get; set; }
+}
+
+/// <summary>Teams-Gruppenchat einer Kolonne (höchstens einer je Kolonne); Mitglieder folgen der Kolonne.</summary>
+public sealed class TeamsCrewChat
+{
+    public Guid CrewId { get; set; }
+    public string ChatId { get; set; } = string.Empty;
+    public string WebUrl { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
+
+    /// <summary>Von EstrichONE angelegt (sonst per Link verknüpft).</summary>
+    public bool Created { get; set; }
+    public List<string> ManagedMemberIds { get; set; } = [];
+    public Guid LinkedByUserId { get; set; }
+    public DateTimeOffset LinkedAt { get; set; }
+    public DateTimeOffset? LastSyncAt { get; set; }
+    public string? LastSyncError { get; set; }
+    public int SyncedMembers { get; set; }
+    public int UnmappedMembers { get; set; }
+    public string? DesiredHash { get; set; }
+    public bool SyncPending { get; set; }
+}
+
+internal sealed class TeamsCrewChatConfiguration : IEntityTypeConfiguration<TeamsCrewChat>
+{
+    public void Configure(EntityTypeBuilder<TeamsCrewChat> builder)
+    {
+        builder.ToTable("teams_crew_chats");
+        builder.HasKey(c => c.CrewId);
+        builder.Property(c => c.ChatId).HasMaxLength(300);
+        builder.Property(c => c.WebUrl).HasMaxLength(2000);
+        builder.Property(c => c.DisplayName).HasMaxLength(TeamsBauakteLink.MaxName);
+        builder.Property(c => c.LastSyncError).HasMaxLength(2000);
+        builder.Property(c => c.DesiredHash).HasMaxLength(64);
+    }
 }
 
 internal sealed class TeamsSettingsRowConfiguration : IEntityTypeConfiguration<TeamsSettingsRow>

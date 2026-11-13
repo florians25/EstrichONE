@@ -40,4 +40,7 @@ public interface ITeamsIntegration
 
     /// <summary>Team einer Bauakte geändert: Mitglieder der verknüpften Unterhaltung bald abgleichen.</summary>
     void BauakteTeamChanged(Guid bauakteId);
+
+    /// <summary>Mitglieder einer Kolonne geändert: Teams-Chat der Kolonne (und Bauakten-Chats mit dieser Kolonne) im Hintergrund abgleichen.</summary>
+    void CrewChanged(Guid crewId);
 }

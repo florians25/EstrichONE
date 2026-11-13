@@ -99,9 +99,17 @@ Die Schaltflächen im Kopf:
   dann nur abschließen und später archivieren.
 - **Mir zuweisen** – trägt Sie als Zuständige(n) ein.
 - **Baustellen-Chat anlegen** – Gruppenchat mit allen Beteiligten der Baustelle (Abschnitt 8.2).
-- **In Teams öffnen** bzw. **Mit Teams verknüpfen** – Kanal oder Gruppenchat in Microsoft Teams (wenn eingerichtet,
-  Abschnitt 9 „Microsoft Teams“); im Menü des Knopfs: Chat mit dem ganzen Bauakten-Team, Nachricht in Teams posten,
-  Mitglieder abgleichen, Details, Verknüpfung lösen und – mit Recht `teams.delete` – archivieren bzw. in Teams löschen.
+- **In Teams öffnen** bzw. **Teams-Chat anlegen** – nur wenn Microsoft Teams eingerichtet ist (Abschnitt 9 „Microsoft
+  Teams“). Im Menü des Knopfs:
+  - **Teams-Chat anlegen …** – Name (vorbelegt mit Bauaktennummer und Bauvorhaben) und **Teilnehmer**: Das
+    **Bauakten-Team** (Zuständige und Mitarbeiter) ist vorausgewählt, dazu lassen sich **Kolonnen**, **Gruppen** und
+    einzelne **Personen** auswählen. Sie selbst sind immer dabei. Ein Hinweis erscheint nur, wenn ausgewählte Personen kein
+    Microsoft-Konto haben. Ändern sich später Bauakten-Team oder Kolonne, passt EstrichONE die Mitglieder im Chat
+    automatisch an. Ohne App-Registrierung öffnet sich der Chat direkt in Teams und wird nicht in der Bauakte gespeichert.
+  - **Per Link verknüpfen …** – einen vorhandenen Chat oder Kanal aus Teams verknüpfen (in Teams **…** → **Link
+    kopieren** bzw. **Link zum Kanal abrufen**).
+  - **Teams-Chat löschen …** (Recht `teams.delete`) – löscht den Chat in Teams nach Eintippen der Bauaktennummer;
+    **Nur Verknüpfung lösen** lässt ihn in Teams bestehen. Ohne dieses Recht steht hier **Verknüpfung lösen**.
 - **Bearbeiten** – Bezeichnung, Baustelle, Termine, Beschreibung.
 - **Aktionen** – alle Ausdrucke und weitere Funktionen:
 

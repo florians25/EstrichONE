@@ -150,6 +150,11 @@ aus.
 Status. **Kolonne anlegen** bzw. **Bearbeiten**: Name, Farbe (erscheint in allen Plantafeln), Kolonnenführer, Mitglieder
 und Reihenfolge. **Deaktivieren** blendet eine Kolonne aus der Planung aus, ohne ihre Einsätze zu löschen.
 
+**Teams-Chat** (nur wenn Microsoft Teams eingerichtet ist): öffnet den Teams-Chat der Kolonne bzw. legt ihn an – mit
+allen Mitgliedern der Kolonne, die ein Microsoft-Konto haben, und Ihnen. Ändert sich die Kolonne, passt EstrichONE die
+Mitglieder im Chat automatisch an. Löschen (Recht `teams.delete`) über **…** → **Teams-Chat löschen …**. Ohne
+App-Registrierung öffnet **Teams-Chat** einen Gruppenchat direkt in Teams (nicht gespeichert).
+
 ![Kolonnen](bilder/kolonnen.png "Kolonnen mit Kolonnenführer, Mitgliedern und Auslastung")
 
 ## Geräte und Fahrzeuge

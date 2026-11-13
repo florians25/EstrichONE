@@ -44,6 +44,8 @@ internal sealed class TeamsQueue
 
 internal sealed record TeamChanged(Guid BauakteId);
 
+internal sealed record CrewChanged(Guid CrewId);
+
 internal sealed class TeamsIntegration(EstrichOneDbContext db, TeamsQueue queue) : ITeamsIntegration
 {
     public async Task<TeamsChatMode> ChatModeAsync(CancellationToken cancellationToken) =>
@@ -52,6 +54,8 @@ internal sealed class TeamsIntegration(EstrichOneDbContext db, TeamsQueue queue)
     public void Publish(TeamsEvent teamsEvent) => queue.Write(teamsEvent);
 
     public void BauakteTeamChanged(Guid bauakteId) => queue.Write(new TeamChanged(bauakteId));
+
+    public void CrewChanged(Guid crewId) => queue.Write(new CrewChanged(crewId));
 }
 
 /// <summary>
@@ -88,6 +92,7 @@ internal sealed class TeamsWorker(IServiceScopeFactory scopes, TeamsQueue queue,
                 {
                     TeamsEvent teamsEvent => service.PostAsync(teamsEvent, stoppingToken),
                     TeamChanged changed => SyncOneAsync(service, changed.BauakteId, stoppingToken),
+                    CrewChanged crew => SyncCrewAsync(service, crew.CrewId, stoppingToken),
                     _ => Task.CompletedTask,
                 });
             }
@@ -124,6 +129,30 @@ internal sealed class TeamsWorker(IServiceScopeFactory scopes, TeamsQueue queue,
 
         await service.SyncMembersAsync(await service.SettingsAsync(cancellationToken), link, cancellationToken);
         await db.SaveChangesAsync(cancellationToken);
+    }
+
+    /// <summary>Kolonne geändert: ihr Teams-Chat und Bauakten-Chats, zu denen die Kolonne gehört.</summary>
+    private static async Task SyncCrewAsync(TeamsService service, Guid crewId, CancellationToken cancellationToken)
+    {
+        var db = service.Db;
+        var settings = await service.SettingsAsync(cancellationToken);
+        if (!settings.GraphConfigured)
+        {
+            return;
+        }
+
+        if (await db.Set<TeamsCrewChat>().SingleOrDefaultAsync(c => c.CrewId == crewId, cancellationToken) is { } chat)
+        {
+            await service.SyncCrewChatAsync(settings, chat, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var source = TeamsMemberSources.Crew(crewId);
+        foreach (var link in await db.Set<TeamsBauakteLink>().Where(l => l.SyncMembers && l.MemberSources.Contains(source)).ToListAsync(cancellationToken))
+        {
+            await service.SyncMembersAsync(settings, link, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+        }
     }
 
     private async Task SweepAsync(TeamsService service, CancellationToken cancellationToken)
@@ -180,7 +209,7 @@ internal sealed class TeamsWorker(IServiceScopeFactory scopes, TeamsQueue queue,
         foreach (var link in links)
         {
             var due = link.SyncPending || link.LastSyncAt is null || link.LastSyncAt < stale
-                || (await service.DesiredMembersAsync(settings, link.BauakteId, cancellationToken)).Hash != link.DesiredHash;
+                || (await service.DesiredMembersAsync(settings, link, cancellationToken)).Hash != link.DesiredHash;
             if (!due)
             {
                 continue;
@@ -191,6 +220,23 @@ internal sealed class TeamsWorker(IServiceScopeFactory scopes, TeamsQueue queue,
             if (link.LastSyncError?.StartsWith("Microsoft 365 ist vom Server aus nicht erreichbar", StringComparison.Ordinal) == true)
             {
                 break; // ohne Internet nicht jede Bauakte einzeln versuchen
+            }
+        }
+
+        foreach (var chat in await db.Set<TeamsCrewChat>().ToListAsync(cancellationToken))
+        {
+            var due = chat.SyncPending || chat.LastSyncAt is null || chat.LastSyncAt < stale
+                || (await service.CrewDesiredAsync(settings, chat.CrewId, chat.LinkedByUserId, cancellationToken)).Hash != chat.DesiredHash;
+            if (!due)
+            {
+                continue;
+            }
+
+            await service.SyncCrewChatAsync(settings, chat, cancellationToken);
+            await db.SaveChangesAsync(cancellationToken);
+            if (chat.LastSyncError?.StartsWith("Microsoft 365 ist vom Server aus nicht erreichbar", StringComparison.Ordinal) == true)
+            {
+                break;
             }
         }
     }

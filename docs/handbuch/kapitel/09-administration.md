@@ -307,8 +307,8 @@ neuen Mängeln, Abnahmen und Terminänderungen. Ohne Einrichtung ändert sich ni
 ### Ohne App-Registrierung (einfacher Weg)
 
 1. Chat-Modus **Beides** oder **Microsoft Teams** wählen und **Speichern**.
-2. In der Bauakte **Mit Teams verknüpfen** → **Vorhandenen Kanal oder Chat per Link verknüpfen**. Den Link holen Sie in
-   Teams beim Kanal über **…** → **Link zum Kanal abrufen** bzw. beim Chat über **…** → **Link kopieren**.
+2. In der Bauakte **Teams-Chat anlegen …** (öffnet den Chat direkt in Teams) oder **Per Link verknüpfen …**. Den Link
+   holen Sie in Teams beim Kanal über **…** → **Link zum Kanal abrufen** bzw. beim Chat über **…** → **Link kopieren**.
 3. Optional Karten: In Teams beim Zielkanal **…** → **Workflows** → **Beim Empfang einer Webhookanforderung in einem
    Kanal posten** → Team und Kanal wählen → die angezeigte URL kopieren. In EstrichONE unter **Nachrichten** „Senden über:
    Teams-Workflows-Webhook“, URL einfügen, **Testkarte senden**. Die URL ist geheim und wird verschlüsselt gespeichert.
@@ -346,7 +346,16 @@ Im **Microsoft Entra Admin Center** (entra.microsoft.com) mit einem Konto „Anw
 Weitere Einstellungen: **Neue Unterhaltung als** (Kanal oder Gruppenchat), **Neue Bauakten automatisch verknüpfen**
 und **Mitglieder abgleichen**. Zuständige und Mitglieder der Bauakte werden aufgenommen; im Gruppenchat entfernt
 EstrichONE nur Personen, die es selbst hinzugefügt hat, aus dem Team „Baustellen“ niemanden. Hinweise zum Abgleich (z. B.
-Person ohne Microsoft-Konto) zeigt die Bauakte im Menü des Knopfs **In Teams öffnen** unter **Details**.
+Person ohne Microsoft-Konto) zeigt die Bauakte als Hinweis am Knopf **In Teams öffnen** (Tooltip).
+
+**Teams-Chats anlegen** (Anwendungsberechtigung `Chat.Create`, für den Abgleich `ChatMember.ReadWrite.All`): In der
+Bauakte **Teams-Chat anlegen …** mit frei gewählten Teilnehmern (Bauakten-Team, Kolonnen, Gruppen = Benutzerrollen,
+Personen) und unter **Kolonnen** je Kolonne **Teams-Chat**. Microsoft legt Gruppenchats erst ab **drei Personen mit
+Microsoft-Konto** an; bei weniger öffnet EstrichONE stattdessen einen Einzelchat direkt in Teams. Ein neuer Chat erscheint
+in der Teams-Chatliste erst nach der ersten Nachricht – mit verbundenem Dienstkonto schreibt EstrichONE sie selbst,
+sonst bitte gleich über **In Teams öffnen** die erste Nachricht schreiben. Antwortet Microsoft beim Anlegen nicht
+rechtzeitig, wiederholt EstrichONE das Anlegen bewusst nicht (sonst entstünde der Chat doppelt) und bittet, in Teams
+nachzusehen.
 
 **Karten über Microsoft Graph** (in den verknüpften Kanal bzw. Chat statt per Webhook): Zusätzlich die **delegierten**
 Berechtigungen `ChannelMessage.Send`, `ChatMessage.Send` und `offline_access` hinzufügen und zustimmen, unter
@@ -356,10 +365,10 @@ eingeben. Microsoft erlaubt Anwendungen kein Senden ohne angemeldetes Konto – 
 
 **Archivieren und Löschen** (zusätzliche Anwendungsberechtigungen `ChannelSettings.ReadWrite.All`, `Channel.Delete.All`
 und `Chat.ManageDeletion.All`; Recht **Teams-Unterhaltungen archivieren und löschen**, `teams.delete`, ab Werk nur
-Administrator, mit Zwei-Faktor-Pflicht): In der Bauakte im Menü des Knopfs **In Teams öffnen** stehen **Kanal in Teams
-archivieren** bzw. **Kanal wiederherstellen** und **In Teams löschen …**. Zum Löschen tippen Sie die Bauaktennummer ein;
-gelöschte Kanäle kann ein Teambesitzer 30 Tage lang in Teams wiederherstellen. Gruppenchats lassen sich in Teams nicht
-archivieren, nur löschen – oder Sie wählen **Verknüpfung lösen** (in Teams bleibt alles erhalten). Unter **Verbindung** →
+Administrator, mit Zwei-Faktor-Pflicht): In der Bauakte im Menü des Knopfs **In Teams öffnen** steht **Teams-Chat
+löschen …**, bei Kolonnen **…** → **Teams-Chat löschen …**. Zum Löschen in der Bauakte tippen Sie die Bauaktennummer
+ein; gelöschte Kanäle kann ein Teambesitzer 30 Tage lang in Teams wiederherstellen. **Nur Verknüpfung lösen** lässt alles
+in Teams bestehen. Kanäle archiviert EstrichONE automatisch beim Abschließen der Bauakte (siehe unten). Unter **Verbindung** →
 **Beim Abschließen der Bauakte** legen Sie fest, was mit von EstrichONE angelegten Unterhaltungen geschieht, wenn eine
 Bauakte abgeschlossen oder storniert wird: **Kanal archivieren** (Standard), **Nichts tun** oder **löschen**. Welche
 Berechtigungen fehlen, zeigt **Verbindung testen** im Schritt „Berechtigungen (Anwendung)“.

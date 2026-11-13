@@ -41,7 +41,7 @@ import androidx.compose.runtime.setValue
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
-// Microsoft Teams (docs/microsoft-teams.md): „In Teams öffnen“ öffnet die Teams-App, sonst Teams im Browser.
+// Microsoft Teams (docs/microsoft-teams.md): „In Teams öffnen“ öffnet immer die Teams-App (sonst Google Play „Teams installieren“).
 
 /** Symbol in der Kopfzeile, solange Teams im Einsatz ist (Modus „Teams“ oder „beides“). */
 @Composable

@@ -19,6 +19,7 @@ struct MoreView: View {
     @State private var push = PushCenter.shared
     @State private var confirmDeletion = false
     @State private var deletionRequested = false
+    @State private var crewChats: [TeamsCrewChat] = []
 
     /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
     private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
@@ -62,12 +63,18 @@ struct MoreView: View {
                         }
                         .accessibilityIdentifier("chatRow")
                     }
-                    // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App bzw. Teams im Browser.
+                    // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App; dazu die Teams-Chats der eigenen Kolonnen.
                     if let teams = model.active?.sync?.teams, teams.available {
                         Button { Task { await TeamsOpener.open(teams.homeTargets) } } label: {
                             row("Microsoft Teams", symbol: "person.2.wave.2", detail: teams.siteTeamName, detailTint: Theme.textSecondary)
                         }
                         .accessibilityIdentifier("teamsRow")
+                        ForEach(crewChats) { chat in
+                            Button { Task { await TeamsOpener.open(chat.targets) } } label: {
+                                row(chat.title, symbol: "person.3", detail: "Teams-Chat", detailTint: Theme.textSecondary)
+                            }
+                            .accessibilityIdentifier("teamsCrewChatRow")
+                        }
                     }
                 }
 
@@ -226,6 +233,9 @@ struct MoreView: View {
                 ReportProblemView { reporting = false }
             }
             .task { applyShotScene() }
+            .task(id: model.active?.sync?.teams?.available == true) {
+                crewChats = model.active?.sync?.teams?.available == true ? await model.active?.client.myTeamsCrewChats() ?? [] : []
+            }
             .task(id: "\(model.active?.sync?.revision ?? 0)|\(route == nil)") {
                 if route == nil { unreadTickets = await TicketReadState.unreadCount(model: model) }
             }

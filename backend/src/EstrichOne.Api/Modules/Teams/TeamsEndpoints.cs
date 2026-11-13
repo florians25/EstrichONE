@@ -8,6 +8,7 @@ using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Audit.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Notifications.Exports;
 using EstrichOne.Api.Modules.Teams.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
@@ -103,8 +104,36 @@ public sealed record StartTeamsLinkJobRequest(TeamsLinkKind? Kind = null);
 /// <param name="Kind">Automatisch anlegen: Kanal im Team „Baustellen“ oder Gruppenchat. Ohne Angabe: <paramref name="Url"/> verknüpfen.</param>
 /// <param name="Url">Vorhandener Kanal oder Chat (Link aus Teams).</param>
 /// <param name="WebhookUrl">Optional: Teams-Workflows-Webhook nur für diese Bauakte.</param>
+/// <param name="Topic">Name des Gruppenchats (Standard „Bauakte Nummer Titel“).</param>
+/// <param name="Participants">Teilnehmer des Gruppenchats: <c>team</c>, <c>crew:{id}</c>, <c>role:{id}</c>, <c>user:{id}</c> (leer = Bauakten-Team);
+/// die anlegende Person kommt immer dazu. Der Mitgliederabgleich folgt diesen Teilnehmern.</param>
 public sealed record LinkBauakteTeamsRequest(
-    TeamsLinkKind? Kind = null, [property: MaxLength(2000)] string? Url = null, [property: MaxLength(2000)] string? WebhookUrl = null, bool? SyncMembers = null);
+    TeamsLinkKind? Kind = null, [property: MaxLength(2000)] string? Url = null, [property: MaxLength(2000)] string? WebhookUrl = null, bool? SyncMembers = null,
+    [property: MaxLength(250)] string? Topic = null, [property: MaxLength(200)] IReadOnlyList<string>? Participants = null);
+
+/// <summary>Schnellauswahl im Dialog „Teams-Chat anlegen“: Bauakten-Team, Kolonne, Gruppe (Rolle) oder Person.</summary>
+/// <param name="Key"><c>team</c>, <c>crew:{id}</c>, <c>role:{id}</c> bzw. <c>user:{id}</c>.</param>
+/// <param name="Kind"><c>team</c>, <c>crew</c>, <c>role</c> oder <c>user</c>.</param>
+public sealed record TeamsParticipantOption(string Key, string Kind, string Name, IReadOnlyList<Guid> UserIds);
+
+/// <param name="People">Alle aktiven Personen mit Microsoft-Konto (<c>upn</c>) bzw. Grund, warum keines zugeordnet ist.</param>
+/// <param name="ViaGraph">Chat wird über Microsoft Graph angelegt und gespeichert; sonst nur Teams-Link (nicht gespeichert).</param>
+/// <param name="MinMembers">Mindestzahl Personen mit Microsoft-Konto für einen Gruppenchat (Microsoft: 3).</param>
+public sealed record TeamsParticipantsResponse(
+    IReadOnlyList<TeamsParticipantOption> Options, IReadOnlyList<TeamsPerson> People, Guid SelfUserId, bool ViaGraph, int MinMembers, string Topic);
+
+/// <summary>Teams-Chat einer Kolonne.</summary>
+public sealed record TeamsCrewChatResponse(
+    Guid CrewId, string? DisplayName, string WebUrl, string AppUrl, bool Created, int SyncedMembers, int UnmappedMembers, string? LastSyncError,
+    DateTimeOffset LinkedAt);
+
+/// <summary>Teams-Chat einer eigenen Kolonne (Apps).</summary>
+public sealed record TeamsMyCrewChatResponse(Guid CrewId, string CrewName, string? DisplayName, string WebUrl, string AppUrl);
+
+/// <param name="ViaGraph">Anlegen über Microsoft Graph (gespeichert, Mitglieder folgen der Kolonne); sonst öffnet „Teams-Chat“ einen Teams-Link.</param>
+/// <param name="CanCreate">Recht <c>planning.manage</c>.</param>
+/// <param name="CanDelete">Recht <c>teams.delete</c> und App-Registrierung.</param>
+public sealed record TeamsCrewChatsResponse(bool Available, bool ViaGraph, bool CanCreate, bool CanDelete, IReadOnlyList<TeamsCrewChatResponse> Chats);
 
 internal static partial class TeamsEndpoints
 {
@@ -160,6 +189,9 @@ internal static partial class TeamsEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity).ProducesProblem(StatusCodes.Status424FailedDependency)
             .RequirePermission(Permissions.BauaktenEdit);
+        bauakte.MapGet("/participants", ParticipantsAsync).WithName("ListBauakteTeamsParticipants")
+            .WithSummary("Auswahl für „Teams-Chat anlegen“: Bauakten-Team, Kolonnen, Gruppen (Rollen), Personen mit Microsoft-Konto")
+            .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
         bauakte.MapPost("/sync", SyncAsync).WithName("SyncBauakteTeamsMembers").WithSummary("Mitglieder jetzt abgleichen (Ergebnis an der Verknüpfung)")
             .ProducesProblem(StatusCodes.Status404NotFound).RequirePermission(Permissions.BauaktenEdit);
         bauakte.MapDelete("/", UnlinkAsync).WithName("UnlinkBauakteTeams").WithSummary("Verknüpfung lösen (in Teams wird nichts gelöscht)")
@@ -176,6 +208,22 @@ internal static partial class TeamsEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
             .RequirePermission(Permissions.TeamsDelete);
+        var crews = api.MapGroup("/teams/crews").WithTags("Microsoft Teams").AddEndpointFilter(GuardAsync);
+        crews.MapGet("/", CrewChatsAsync).WithName("ListTeamsCrewChats").WithSummary("Teams-Chats der Kolonnen (einer je Kolonne)")
+            .RequirePermission(Permissions.PlanningRead);
+        api.MapGet("/teams/crews/mine", MyCrewChatsAsync).WithTags("Microsoft Teams").WithName("ListMyTeamsCrewChats").AddEndpointFilter(GuardAsync)
+            .WithSummary("Teams-Chats der eigenen Kolonnen (Apps: „In Teams öffnen“); leer ohne Teams")
+            .Produces<List<TeamsMyCrewChatResponse>>();
+        crews.MapPost("/{crewId:guid}/chat", CreateCrewChatAsync).WithName("CreateTeamsCrewChat")
+            .WithSummary("Teams-Chat der Kolonne anlegen (Microsoft Graph; Mitglieder folgen der Kolonne)")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status422UnprocessableEntity)
+            .ProducesProblem(StatusCodes.Status424FailedDependency).ProducesProblem(StatusCodes.Status503ServiceUnavailable)
+            .RequirePermission(Permissions.PlanningManage);
+        crews.MapPost("/{crewId:guid}/chat/delete", DeleteCrewChatAsync).WithName("DeleteTeamsCrewChat")
+            .WithSummary("Teams-Chat der Kolonne in Teams löschen")
+            .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable).RequirePermission(Permissions.TeamsDelete);
+
         bauakte.MapPost("/message", PostMessageAsync).WithName("PostBauakteTeamsMessage")
             .WithSummary("Kurze Nachricht in den verknüpften Kanal bzw. Chat (Webhook oder Dienstkonto)")
             .ProducesProblem(StatusCodes.Status404NotFound).ProducesProblem(StatusCodes.Status409Conflict).ProducesProblem(StatusCodes.Status424FailedDependency)
@@ -680,7 +728,7 @@ internal static partial class TeamsEndpoints
                     return NotConfigured();
                 }
 
-                link = await teams.CreateLinkAsync(id, kind, user.UserId, cancellationToken);
+                link = await teams.CreateLinkAsync(id, kind, user.UserId, cancellationToken, request.Participants, request.Topic);
             }
             else
             {
@@ -744,6 +792,145 @@ internal static partial class TeamsEndpoints
 
         teams.Db.Remove(link);
         audit.Record("teams.bauakte_unlinked", user.UserId, "bauakte", id.ToString(), new Dictionary<string, string?> { ["name"] = link.DisplayName });
+        await teams.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.NoContent();
+    }
+
+    private static async Task<Results<Ok<TeamsParticipantsResponse>, ProblemHttpResult>> ParticipantsAsync(
+        Guid id, TeamsService teams, IBauakteAccess access, IEnumerable<INotificationAudience> audiences, IRoleAssignments roles, ICurrentUser user,
+        CancellationToken cancellationToken)
+    {
+        if (!await access.CanReadAsync(id, cancellationToken))
+        {
+            return BauakteNotFound();
+        }
+
+        var row = await teams.SettingsAsync(cancellationToken);
+        var people = await teams.PeopleAsync(row, null, cancellationToken);
+        var active = people.Select(p => p.UserId).ToHashSet();
+        var options = new List<TeamsParticipantOption>
+        {
+            new(TeamsMemberSources.Team, "team", "Bauakten-Team (Zuständige und Mitarbeiter)",
+                (await teams.Bauakten.TeamUserIdsAsync(id, cancellationToken)).Where(active.Contains).ToList()),
+        };
+        foreach (var audience in audiences)
+        {
+            foreach (var crew in await audience.CrewsAsync(cancellationToken))
+            {
+                var members = (await audience.CrewMembersAsync([crew.Id], cancellationToken)).Where(active.Contains).ToList();
+                options.Add(new(TeamsMemberSources.Crew(crew.Id), "crew", TeamsService.CrewLabel(crew.Name), members));
+            }
+        }
+
+        foreach (var (roleId, name) in (await roles.GetRoleNamesAsync(cancellationToken)).OrderBy(r => r.Value, StringComparer.CurrentCultureIgnoreCase))
+        {
+            var members = (await roles.GetUserIdsInRoleAsync(roleId, cancellationToken)).Where(active.Contains).ToList();
+            if (members.Count > 0)
+            {
+                options.Add(new(TeamsMemberSources.Role(roleId), "role", $"Gruppe {name}", members));
+            }
+        }
+
+        options.AddRange(people.OrderBy(p => p.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(p => new TeamsParticipantOption(TeamsMemberSources.User(p.UserId), "user", p.Name, [p.UserId])));
+        var bauakte = await teams.Db.Set<Bauakte>().AsNoTracking().Where(b => b.Id == id).Select(b => new { b.Number, b.Title }).SingleAsync(cancellationToken);
+        var topic = string.IsNullOrWhiteSpace(bauakte.Number) ? bauakte.Title.Trim() : $"{bauakte.Number.Trim()} · {bauakte.Title.Trim()}";
+        return TypedResults.Ok(new TeamsParticipantsResponse(options, people, user.UserId, row.GraphConfigured, TeamsService.MinGroupChatMembers,
+            TeamsService.Clip(topic, 250)));
+    }
+
+    // ---------- Kolonnen ----------
+
+    private static TeamsCrewChatResponse CrewChatResponse(TeamsCrewChat chat) => new(chat.CrewId, chat.DisplayName, chat.WebUrl,
+        TeamsService.AppUrl(chat.WebUrl), chat.Created, chat.SyncedMembers, chat.UnmappedMembers, chat.LastSyncError, chat.LinkedAt);
+
+    private static async Task<Ok<TeamsCrewChatsResponse>> CrewChatsAsync(TeamsService teams, IUserPermissions permissions, CancellationToken cancellationToken)
+    {
+        var row = await teams.SettingsAsync(cancellationToken);
+        var granted = await permissions.GetAsync(cancellationToken);
+        var available = row.ChatMode != TeamsChatMode.EstrichOne;
+        var chats = available ? await teams.Db.Set<TeamsCrewChat>().AsNoTracking().ToListAsync(cancellationToken) : [];
+        return TypedResults.Ok(new TeamsCrewChatsResponse(available, row.GraphConfigured, available && granted.Contains(Permissions.PlanningManage),
+            available && row.GraphConfigured && granted.Contains(Permissions.TeamsDelete), chats.Select(CrewChatResponse).ToList()));
+    }
+
+    private static async Task<Ok<List<TeamsMyCrewChatResponse>>> MyCrewChatsAsync(TeamsService teams, IEnumerable<INotificationAudience> audiences,
+        ICurrentUser user, CancellationToken cancellationToken)
+    {
+        var row = await teams.SettingsAsync(cancellationToken);
+        var result = new List<TeamsMyCrewChatResponse>();
+        if (row.ChatMode == TeamsChatMode.EstrichOne)
+        {
+            return TypedResults.Ok(result);
+        }
+
+        var chats = await teams.Db.Set<TeamsCrewChat>().AsNoTracking().ToListAsync(cancellationToken);
+        foreach (var audience in audiences)
+        {
+            var names = (await audience.CrewsAsync(cancellationToken)).ToDictionary(c => c.Id, c => c.Name);
+            foreach (var chat in chats.Where(c => names.ContainsKey(c.CrewId)))
+            {
+                if ((await audience.CrewMembersAsync([chat.CrewId], cancellationToken)).Contains(user.UserId))
+                {
+                    result.Add(new TeamsMyCrewChatResponse(chat.CrewId, names[chat.CrewId], chat.DisplayName, chat.WebUrl, TeamsService.AppUrl(chat.WebUrl)));
+                }
+            }
+        }
+
+        return TypedResults.Ok(result);
+    }
+
+    private static async Task<Results<Created<TeamsCrewChatResponse>, ProblemHttpResult>> CreateCrewChatAsync(
+        Guid crewId, TeamsService teams, IEnumerable<INotificationAudience> audiences, IAuditLog audit, ICurrentUser user, CancellationToken cancellationToken)
+    {
+        var row = await teams.SettingsAsync(cancellationToken);
+        if (row.ChatMode == TeamsChatMode.EstrichOne || !row.GraphConfigured)
+        {
+            return NotConfigured();
+        }
+
+        AudienceOption? crew = null;
+        foreach (var audience in audiences)
+        {
+            crew ??= (await audience.CrewsAsync(cancellationToken)).FirstOrDefault(c => c.Id == crewId);
+        }
+
+        if (crew is null)
+        {
+            return TypedResults.Problem(statusCode: 404, title: "Kolonne nicht gefunden", detail: "Die Kolonne gibt es nicht oder sie ist inaktiv.",
+                extensions: Code("NOT_FOUND"));
+        }
+
+        if (await teams.Db.Set<TeamsCrewChat>().AnyAsync(c => c.CrewId == crewId, cancellationToken))
+        {
+            return TypedResults.Problem(statusCode: 409, title: "Schon vorhanden", detail: "Diese Kolonne hat bereits einen Teams-Chat.",
+                extensions: Code("TEAMS_ALREADY_LINKED"));
+        }
+
+        var chat = await teams.CreateCrewChatAsync(crewId, crew.Name, user.UserId, cancellationToken);
+        audit.Record("teams.crew_chat_created", user.UserId, "crew", crewId.ToString(), new Dictionary<string, string?> { ["name"] = chat.DisplayName });
+        await teams.Db.SaveChangesAsync(cancellationToken);
+        return TypedResults.Created($"/api/v1/teams/crews/{crewId}/chat", CrewChatResponse(chat));
+    }
+
+    private static async Task<Results<NoContent, ProblemHttpResult>> DeleteCrewChatAsync(
+        Guid crewId, TeamsService teams, IAuditLog audit, ICurrentUser user, CancellationToken cancellationToken)
+    {
+        var chat = await teams.Db.Set<TeamsCrewChat>().SingleOrDefaultAsync(c => c.CrewId == crewId, cancellationToken);
+        if (chat is null)
+        {
+            return TypedResults.Problem(statusCode: 404, title: "Kein Teams-Chat", detail: "Diese Kolonne hat keinen Teams-Chat.", extensions: Code("TEAMS_NOT_LINKED"));
+        }
+
+        var row = await teams.SettingsAsync(cancellationToken);
+        if (!row.GraphConfigured)
+        {
+            return NotConfigured();
+        }
+
+        await teams.DeleteCrewChatAsync(row, chat, cancellationToken);
+        teams.Db.Remove(chat);
+        audit.Record("teams.crew_chat_deleted", user.UserId, "crew", crewId.ToString(), new Dictionary<string, string?> { ["name"] = chat.DisplayName });
         await teams.Db.SaveChangesAsync(cancellationToken);
         return TypedResults.NoContent();
     }

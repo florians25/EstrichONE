@@ -93,7 +93,7 @@ object TeamsChatLinks {
     /** `https://teams.microsoft.com/l/…` → `msteams:/l/…` */
     fun appUrl(web: String): String? {
         val uri = runCatching { java.net.URI(web) }.getOrNull() ?: return null
-        if (!uri.scheme.equals("https", ignoreCase = true)) return null
+        if (!uri.scheme.equals("https", ignoreCase = true) || uri.rawPath.isNullOrEmpty() || uri.rawPath == "/") return null
         return "msteams:" + uri.rawPath + (uri.rawQuery?.let { "?$it" } ?: "")
     }
 
@@ -106,17 +106,22 @@ object TeamsChatLinks {
     }
 }
 
-/** Reihenfolge beim Öffnen: Teams-App (`msteams:`), sonst Browser – nur echte Teams-Adressen. */
+/**
+ * Reihenfolge beim Öffnen – immer die Teams-App: https-Link ausdrücklich an die Teams-App (Paket), dann `msteams:`;
+ * fehlt die App: Google Play „Microsoft Teams installieren“. Nur echte Teams-Adressen.
+ */
 data class TeamsTargets(val app: String?, val web: String?) {
-    val candidates: List<String> get() = listOfNotNull(app, web)
+    val candidates: List<String> get() = listOfNotNull(web, app)
 
     companion object {
         private val teamsHosts = setOf("teams.microsoft.com", "teams.cloud.microsoft", "teams.live.com")
 
-        fun of(app: String?, web: String?): TeamsTargets = TeamsTargets(
-            app?.takeIf { it.startsWith("msteams:", ignoreCase = true) },
-            web?.takeIf { isTeamsWeb(it) },
-        )
+        fun of(app: String?, web: String?): TeamsTargets {
+            val safeWeb = web?.takeIf { isTeamsWeb(it) }
+            // Fehlt `msteams:` (ältere Server), aus dem https-Link bilden.
+            val safeApp = (app?.takeIf { it.isNotBlank() } ?: safeWeb?.let { TeamsChatLinks.appUrl(it) })?.takeIf { it.startsWith("msteams:", ignoreCase = true) }
+            return TeamsTargets(safeApp, safeWeb)
+        }
 
         fun isTeamsWeb(url: String): Boolean {
             val uri = runCatching { java.net.URI(url) }.getOrNull() ?: return false
@@ -135,6 +140,20 @@ suspend fun EstrichOneApi.teamsStatus(): TeamsStatus? = try {
 /** Microsoft-Konten der Kollegen für „Chat in Teams“ (leer ohne Teams-Anbindung bzw. Recht). */
 suspend fun EstrichOneApi.teamsPeople(): List<TeamsPerson> = try {
     send("GET", "teams/people", null)
+} catch (error: ApiException) {
+    if (error.status == 404 || error.status == 403) emptyList() else throw error
+}
+
+/** Teams-Chat einer eigenen Kolonne (`GET /api/v1/teams/crews/mine`). */
+@Serializable
+data class TeamsCrewChat(val crewId: String = "", val crewName: String = "", val displayName: String? = null, val webUrl: String = "", val appUrl: String = "") {
+    val title: String get() = displayName ?: if (crewName.startsWith("Kolonne", ignoreCase = true)) crewName else "Kolonne $crewName"
+    val targets: TeamsTargets get() = TeamsTargets.of(appUrl, webUrl)
+}
+
+/** Teams-Chats der eigenen Kolonnen (leer ohne Teams bzw. bei älteren Servern). */
+suspend fun EstrichOneApi.myTeamsCrewChats(): List<TeamsCrewChat> = try {
+    send("GET", "teams/crews/mine", null)
 } catch (error: ApiException) {
     if (error.status == 404 || error.status == 403) emptyList() else throw error
 }

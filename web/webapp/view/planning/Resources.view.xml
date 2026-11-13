@@ -26,7 +26,7 @@
 								<Column minScreenWidth="48rem" demandPopin="true"><Text text="Mitglieder"/></Column>
 								<Column width="10rem" minScreenWidth="36rem" demandPopin="true"><Text text="Auslastung (Woche)"/></Column>
 								<Column width="7rem"><Text text="Status"/></Column>
-								<Column width="13rem" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
+								<Column width="{= ${view>/teamsCrews/available} ? '20rem' : '13rem' }" hAlign="End" visible="{= ${session>/permissions/planning.manage} === true }"><Text text="Aktionen"/></Column>
 							</columns>
 							<items>
 								<ColumnListItem>
@@ -37,8 +37,18 @@
 										tooltip="{view>load/text}" showValue="true" height="1.25rem"/>
 									<ObjectStatus text="{= ${view>isActive} ? 'Aktiv' : 'Inaktiv' }" state="{= ${view>isActive} ? 'Success' : 'None' }" inverted="true"/>
 									<HBox justifyContent="End">
+										<Button text="Teams-Chat" icon="sap-icon://collaborate" type="Transparent" press=".onCrewTeams" visible="{= ${view>/teamsCrews/available} === true }"
+											tooltip="{= ${view>teamsChat} ? 'Teams-Chat der Kolonne öffnen' : 'Teams-Chat mit den Mitgliedern der Kolonne anlegen' }"/>
 										<Button text="Bearbeiten" type="Transparent" press=".onEditCrew"/>
 										<Button text="{= ${view>isActive} ? 'Deaktivieren' : 'Aktivieren' }" type="Transparent" press=".onToggleCrew"/>
+										<MenuButton icon="sap-icon://overflow" type="Transparent" tooltip="Weitere Aktionen"
+											visible="{= !!${view>teamsChat} &amp;&amp; ${view>/teamsCrews/canDelete} === true }">
+											<menu>
+												<Menu itemSelected=".onCrewTeamsDelete">
+													<MenuItem text="Teams-Chat löschen …" icon="sap-icon://delete"/>
+												</Menu>
+											</menu>
+										</MenuButton>
 									</HBox>
 								</ColumnListItem>
 							</items>

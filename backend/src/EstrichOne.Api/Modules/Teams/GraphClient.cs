@@ -187,7 +187,16 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
     public Task<JsonNode?> DeleteAsync(string token, string path, string permission, CancellationToken cancellationToken) =>
         SendAsync(HttpMethod.Delete, token, path, null, permission, cancellationToken);
 
-    public async Task<JsonNode?> SendAsync(HttpMethod method, string token, string path, JsonNode? body, string permission, CancellationToken cancellationToken)
+    /// <summary>
+    /// Anlegen (Gruppenchat, Kanal): nicht idempotent. Wiederholt wird nur bei 429 (Microsoft hat die Anfrage nicht angenommen); bei
+    /// Zeitüberschreitung oder 503/504 kann Microsoft trotzdem angelegt haben – ein zweiter Versuch ergäbe einen doppelten Chat bzw.
+    /// „Kanal existiert bereits“. Dann <c>MAYBE_CREATED</c> mit Hinweis, in Teams nachzusehen.
+    /// </summary>
+    public Task<JsonNode?> CreateAsync(string token, string path, JsonNode body, string permission, string what, CancellationToken cancellationToken) =>
+        SendAsync(HttpMethod.Post, token, path, body, permission, cancellationToken, what);
+
+    public async Task<JsonNode?> SendAsync(HttpMethod method, string token, string path, JsonNode? body, string permission, CancellationToken cancellationToken,
+        string? createOnce = null)
     {
         var url = $"{Options.GraphBaseUrl.TrimEnd('/')}/v1.0/{path.TrimStart('/')}";
         var step = $"{method.Method} {StepName(path)}";
@@ -201,7 +210,7 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
             }
 
             return request;
-        }, "graph.microsoft.com", step, cancellationToken);
+        }, "graph.microsoft.com", step, cancellationToken, createOnce);
         var text = await response.Content.ReadAsStringAsync(cancellationToken);
         if (response.IsSuccessStatusCode)
         {
@@ -407,7 +416,7 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
     // ---------- intern ----------
 
     private async Task<HttpResponseMessage> SendWithRetryAsync(Func<HttpRequestMessage> create, string host, string step,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken, string? createOnce = null)
     {
         var interactive = Current.Value is { Ended: false } scope ? scope : null;
         var maxAttempts = MaxAttempts(interactive);
@@ -443,6 +452,12 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
                 catch (Exception exception) when (exception is HttpRequestException or OperationCanceledException)
                 {
                     var timedOut = exception is OperationCanceledException;
+                    if (createOnce is not null && (timedOut || !IsPermanentNetworkFailure(exception)))
+                    {
+                        logger.LogWarning("Microsoft 365 {Step}: keine Antwort beim Anlegen – nicht wiederholt (sonst doppelt angelegt)", step);
+                        throw MaybeCreated(createOnce);
+                    }
+
                     if (attempt >= maxAttempts || interactive?.Expired == true || (!timedOut && IsPermanentNetworkFailure(exception)))
                     {
                         if (timedOut)
@@ -461,6 +476,13 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
             }
 
             var status = (int)response.StatusCode;
+            if (createOnce is not null && status is 503 or 504)
+            {
+                logger.LogWarning("Microsoft 365 {Step}: HTTP {Status} beim Anlegen – nicht wiederholt (sonst doppelt angelegt)", step, status);
+                response.Dispose();
+                throw MaybeCreated(createOnce);
+            }
+
             if ((status is 429 or 503 or 504) && attempt < maxAttempts)
             {
                 var delay = RetryAfter(response) ?? Backoff(attempt);
@@ -525,6 +547,11 @@ public sealed class GraphClient(IHttpClientFactory http, IOptions<TeamsOptions> 
     public static GraphException Offline(string host) => new("OFFLINE",
         $"Microsoft 365 ist vom Server aus nicht erreichbar ({host}). Für Teams braucht der EstrichONE-Server eine Internetverbindung (HTTPS, Port 443 zu "
         + "login.microsoftonline.com und graph.microsoft.com) – bitte Firewall oder Proxy prüfen. Ohne Internet bleibt der eingebaute Chat nutzbar.");
+
+    /// <summary>Anlegen ohne eindeutige Antwort: nicht wiederholen, sondern in Teams nachsehen lassen.</summary>
+    public static GraphException MaybeCreated(string what) => new("TIMEOUT",
+        $"Microsoft 365 hat beim Anlegen ({what}) nicht rechtzeitig geantwortet. Möglicherweise wurde er trotzdem angelegt – bitte in Teams nachsehen "
+        + "und ihn dann über „Per Link verknüpfen …“ verknüpfen, statt ihn erneut anzulegen (sonst entsteht er doppelt).");
 
     public static GraphException TimedOut(string host) => new("TIMEOUT",
         $"Microsoft 365 antwortet nicht rechtzeitig ({host}). Bitte in einigen Minuten erneut versuchen. Bleibt es dabei, die Internetverbindung "

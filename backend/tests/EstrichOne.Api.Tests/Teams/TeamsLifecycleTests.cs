@@ -196,8 +196,9 @@ public sealed class TeamsLifecycleTests(PostgresFixture postgres) : IAsyncLifeti
         await ConfigureAsync(defaultLinkKind: "groupChat");
         var (_, a) = await UserAsync("anna", StandardRoles.SiteWorkerId, "aad-anna");
         var (_, b) = await UserAsync("bernd", StandardRoles.SiteWorkerId, "aad-bernd");
+        var (_, c) = await UserAsync("carla", StandardRoles.SiteWorkerId, "aad-carla");
         await MatchAsync();
-        var (bauakte, number) = await BauakteAsync("MFH Chat", a, b);
+        var (bauakte, number) = await BauakteAsync("MFH Chat", a, b, c);
         var link = await LinkAsync(bauakte, "groupChat");
 
         using (var archive = await _admin.PostAsync(new Uri($"/api/v1/bauakten/{bauakte}/teams/archive", UriKind.Relative), null, Ct))

@@ -130,6 +130,27 @@ public struct TeamsChatLink: Decodable, Sendable, Equatable {
     public var targets: TeamsOpenTargets { TeamsOpenTargets(app: appUrl, web: webUrl) }
 }
 
+/// Teams-Chat einer eigenen Kolonne (`GET /api/v1/teams/crews/mine`).
+public struct TeamsCrewChat: Decodable, Sendable, Equatable, Identifiable {
+    public let crewId: UUID
+    public let crewName: String
+    public let displayName: String?
+    public let webUrl: String
+    public let appUrl: String
+
+    public init(crewId: UUID, crewName: String, displayName: String?, webUrl: String, appUrl: String) {
+        self.crewId = crewId
+        self.crewName = crewName
+        self.displayName = displayName
+        self.webUrl = webUrl
+        self.appUrl = appUrl
+    }
+
+    public var id: UUID { crewId }
+    public var title: String { displayName ?? (crewName.lowercased().hasPrefix("kolonne") ? crewName : "Kolonne \(crewName)") }
+    public var targets: TeamsOpenTargets { TeamsOpenTargets(app: appUrl, web: webUrl) }
+}
+
 /// Kollege für „Chat in Teams“ (`GET /api/v1/teams/people`).
 public struct TeamsPerson: Decodable, Sendable, Equatable, Identifiable {
     public let userId: UUID
@@ -170,7 +191,8 @@ public enum TeamsChatLinks {
 
     /// `https://teams.microsoft.com/l/…` → `msteams:/l/…`
     public static func appURL(fromWeb web: String) -> String? {
-        guard let url = URL(string: web), url.scheme == "https", let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return nil }
+        guard let url = URL(string: web), url.scheme == "https", let components = URLComponents(url: url, resolvingAgainstBaseURL: false),
+              components.percentEncodedPath.count > 1 else { return nil }
         return "msteams:" + components.percentEncodedPath + (components.percentEncodedQuery.map { "?" + $0 } ?? "")
     }
 
@@ -186,15 +208,18 @@ public enum TeamsChatLinks {
     public static let appStoreURL = URL(string: "https://apps.apple.com/app/microsoft-teams/id1113153706")!
 }
 
-/// Wohin „In Teams öffnen“ führt: zuerst die Teams-App (`msteams:`), sonst der Browser (nur echte Teams-Adressen).
+/// Wohin „In Teams öffnen“ führt – immer in die Teams-App: zuerst der https-Link als Universal Link (nur App, nie Safari),
+/// dann `msteams:` (gleicher Pfad wie `teams.microsoft.com/l/…`). Nur echte Teams-Adressen.
 public struct TeamsOpenTargets: Sendable, Equatable {
     public let app: URL?
     public let web: URL?
 
     public init(app: String?, web: String?) {
-        let appURL = app.flatMap { URL(string: $0) }
+        let webURL = web.flatMap { URL(string: $0) }.flatMap { TeamsOpenTargets.isTeamsWeb($0) }
+        // Fehlt `msteams:` (z. B. ältere Server), aus dem https-Link bilden.
+        let appURL = ((app?.isEmpty == false ? app : nil) ?? webURL.flatMap { TeamsChatLinks.appURL(fromWeb: $0.absoluteString) }).flatMap { URL(string: $0) }
         self.app = appURL?.scheme?.lowercased() == "msteams" ? appURL : nil
-        self.web = web.flatMap { URL(string: $0) }.flatMap { TeamsOpenTargets.isTeamsWeb($0) }
+        self.web = webURL
     }
 
     /// Nur https-Adressen von Microsoft Teams (keine fremden Links aus der Datenbank öffnen).
@@ -204,8 +229,8 @@ public struct TeamsOpenTargets: Sendable, Equatable {
         return url
     }
 
-    /// Reihenfolge der Versuche.
-    public var candidates: [URL] { [app, web].compactMap { $0 } }
+    /// Reihenfolge der Versuche: Universal Link (Teams-App), dann `msteams:`.
+    public var candidates: [URL] { [web, app].compactMap { $0 } }
 }
 
 extension AuthorizedClient {
@@ -224,6 +249,16 @@ extension AuthorizedClient {
         do throws(APIError) {
             let people: [TeamsPerson] = try await get("teams/people")
             return people
+        } catch {
+            return []
+        }
+    }
+
+    /// Teams-Chats der eigenen Kolonnen (leer ohne Teams bzw. ältere Server).
+    public func myTeamsCrewChats() async -> [TeamsCrewChat] {
+        do throws(APIError) {
+            let chats: [TeamsCrewChat] = try await get("teams/crews/mine")
+            return chats
         } catch {
             return []
         }

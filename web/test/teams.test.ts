@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import {
   akteButtonText, akteButtonVisible, chatDeepLink, chatPresentation, confirmationMatches, isTeamsUrl, jobText, personChatState, teamsNoticeKey, linkRequest, linkSummary, mappingState, teamsHome,
-  type BauakteTeams, type TeamsLink, type TeamsStatus, type TeamsUserMapping,
+  crewLabel, participantHint, participantText, resolveParticipants,
+  type BauakteTeams, type TeamsLink, type TeamsParticipants, type TeamsStatus, type TeamsUserMapping,
 } from '../webapp/util/teams';
 import { adminAreas, matchesArea } from '../webapp/util/adminCatalog';
 import { navigation, routes } from '../webapp/util/routes';
@@ -48,7 +49,7 @@ describe('Bauakte', () => {
     expect(akteButtonVisible(akte({ canManage: true }))).toBe(true);
     expect(akteButtonVisible(akte({ link }))).toBe(true);
     expect(akteButtonText(akte({ link }))).toBe('In Teams öffnen');
-    expect(akteButtonText(akte({ canManage: true }))).toBe('Mit Teams verknüpfen');
+    expect(akteButtonText(akte({ canManage: true }))).toBe('Teams-Chat anlegen');
   });
 
   it('Zusammenfassung nennt Art, Name und Abgleich', () => {
@@ -73,6 +74,37 @@ describe('Bauakte', () => {
     expect(linkRequest('url', ' https://teams.microsoft.com/l/channel/x/y ', false)).toEqual({ url: 'https://teams.microsoft.com/l/channel/x/y', syncMembers: false });
     expect(linkRequest('url', '', false)).toMatch(/Link aus Teams/);
     expect(linkRequest('url', 'https://example.org', false)).toMatch(/kein Link/);
+  });
+});
+
+describe('Teams-Chat anlegen', () => {
+  const person = (userId: string, upn: string | null) => ({ userId, name: userId.toUpperCase(), upn, fromEmail: false, reason: upn ? null : 'Kein Microsoft-Konto.' });
+  const data: TeamsParticipants = {
+    selfUserId: 'me', viaGraph: true, minMembers: 3, topic: '2026-001 · EFH',
+    people: [person('me', 'me@x.de'), person('anna', 'anna@x.de'), person('bernd', 'bernd@x.de'), person('ohne', null)],
+    options: [
+      { key: 'team', kind: 'team', name: 'Bauakten-Team (Zuständige und Mitarbeiter)', userIds: ['anna'] },
+      { key: 'crew:k1', kind: 'crew', name: 'Kolonne Nord', userIds: ['bernd', 'ohne', 'anna'] },
+      { key: 'user:anna', kind: 'user', name: 'Anna', userIds: ['anna'] },
+    ],
+  };
+
+  it('führt Gruppen und Personen ohne Doppelte zusammen, die eigene Person ist immer dabei', () => {
+    const r = resolveParticipants(data, ['team', 'crew:k1', 'user:anna']);
+    expect(r.withAccount.map((p) => p.userId).sort()).toEqual(['anna', 'bernd', 'me']);
+    expect(r.withoutAccount.map((p) => p.userId)).toEqual(['ohne']);
+    expect(participantText(data.options[1])).toBe('Kolonne Nord (3)');
+    expect(participantText(data.options[2])).toBe('Anna');
+    expect(crewLabel('Nord')).toBe('Kolonne Nord');
+    expect(crewLabel(' Kolonne Süd ')).toBe('Kolonne Süd');
+  });
+
+  it('Hinweis nur, wenn nötig: ohne Konto bzw. zu wenige für einen Gruppenchat', () => {
+    expect(participantHint(data, ['team', 'crew:k1'])).toMatch(/^1 Person hat kein Microsoft-Konto und wird nicht aufgenommen: OHNE\.$/);
+    expect(participantHint(data, ['team'])).toContain('mindestens 3 Personen');
+    expect(participantHint(data, [])).toBe('Bitte weitere Personen auswählen.');
+    expect(participantHint({ ...data, people: data.people.map((p) => ({ ...p, upn: p.upn ?? 'x@x.de' })) }, ['crew:k1'])).toBe('');
+    expect(participantHint({ ...data, viaGraph: false }, ['team'])).toBe(''); // Teams-Link: zwei Personen sind ein Einzelchat
   });
 });
 

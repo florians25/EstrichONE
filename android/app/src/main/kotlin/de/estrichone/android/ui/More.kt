@@ -99,6 +99,7 @@ import de.estrichone.core.markNotificationRead
 import de.estrichone.core.notificationPreferences
 import de.estrichone.core.notifications
 import de.estrichone.core.saveNotificationPreference
+import de.estrichone.core.myTeamsCrewChats
 import de.estrichone.core.sessions
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -114,6 +115,10 @@ fun MoreScreen() {
     val chat by session.chat.collectAsState()
     val teams by session.teams.collectAsState()
     val context = androidx.compose.ui.platform.LocalContext.current
+    // Teams-Chats der eigenen Kolonnen (nur mit Teams-Anbindung).
+    val crewChats by produceState(emptyList<de.estrichone.core.TeamsCrewChat>(), teams?.available) {
+        value = if (teams?.available == true) runCatching { withContext(Dispatchers.IO) { session.api.myTeamsCrewChats() } }.getOrDefault(emptyList()) else emptyList()
+    }
     val unread by session.unreadNotifications.collectAsState()
     val unreadTickets by session.unreadTickets.collectAsState()
     val modules by session.modules.collectAsState()
@@ -144,11 +149,16 @@ fun MoreScreen() {
                             onClick = { nav.push(Route.ChatList) }, trailing = { CountBadge(chat?.unreadCount ?: 0) })
                         RowDivider()
                     }
-                    // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App bzw. Teams im Browser.
+                    // Microsoft Teams (Modus „Teams“ oder „beides“): öffnet die Teams-App; dazu die Teams-Chats der eigenen Kolonnen.
                     teams?.takeIf { it.available }?.let { teamsStatus ->
                         RowItem("Microsoft Teams", icon = Icons.Filled.Groups, value = teamsStatus.siteTeamName, showChevron = true,
                             onClick = { if (!Links.teams(context, teamsStatus.homeTargets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.") })
                         RowDivider()
+                        crewChats.forEach { crewChat ->
+                            RowItem(crewChat.title, icon = Icons.Filled.Groups, value = "Teams-Chat", showChevron = true,
+                                onClick = { if (!Links.teams(context, crewChat.targets)) model.message("Microsoft Teams lässt sich auf diesem Gerät nicht öffnen.") })
+                            RowDivider()
+                        }
                     }
                     RowItem("Benachrichtigungen", icon = Icons.Outlined.Inbox, showChevron = true, onClick = { nav.push(Route.Inbox) }, trailing = { CountBadge(unread) })
                 }

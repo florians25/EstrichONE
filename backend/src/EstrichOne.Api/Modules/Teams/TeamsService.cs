@@ -5,8 +5,10 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 using EstrichOne.Api.Infrastructure.Hosting;
 using EstrichOne.Api.Infrastructure.Persistence;
+using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Bauakten.Exports;
 using EstrichOne.Api.Modules.Identity.Exports;
+using EstrichOne.Api.Modules.Notifications.Exports;
 using EstrichOne.Api.Modules.Teams.Exports;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.EntityFrameworkCore;
@@ -26,8 +28,12 @@ public sealed record TeamsLinkTarget(TeamsLinkKind? Kind, string? TeamId, string
 /// <summary>Kern der Teams-Anbindung: Geheimnisse, Zuordnung der Konten, Verknüpfung je Bauakte, Mitgliederabgleich, Ereigniskarten.</summary>
 internal sealed partial class TeamsService(
     EstrichOneDbContext db, GraphClient graph, IDataProtectionProvider protection, TimeProvider clock, IOptions<EstrichOneOptions> app,
-    IBauakteReportSource bauakten, Audit.Exports.IAuditLog audit, ILogger<TeamsService> logger)
+    IBauakteReportSource bauakten, Audit.Exports.IAuditLog audit, ILogger<TeamsService> logger, IEnumerable<INotificationAudience> audiences,
+    IRoleAssignments roles)
 {
+    /// <summary>Gruppenchat mit Microsoft Graph: Microsoft legt Gruppenchats erst ab drei Personen an (zwei = Einzelchat).</summary>
+    public const int MinGroupChatMembers = 3;
+
     public const string ProtectorPurpose = "EstrichOne.Teams.Secrets.v1";
 
     public static IReadOnlyList<TeamsPermissionInfo> Permissions { get; } =
@@ -38,14 +44,14 @@ internal sealed partial class TeamsService(
         new("TeamMember.ReadWrite.All", "Anwendung", false,
             "Bauakten-Team ins Team „Baustellen“ aufnehmen, damit es den Kanal sieht (nur bei Art „Kanal“ mit Mitgliederabgleich; entfernt niemanden)."),
         new("Chat.Create", "Anwendung", false,
-            "Je Bauakte einen Gruppenchat mit dem Bauakten-Team anlegen (nur bei Art „Gruppenchat“) und – falls eingeschaltet – Einzelchats mit stabilem Link."),
+            "„Teams-Chat anlegen“ an Bauakte und Kolonne (Gruppenchat mit den gewählten Personen) und – falls eingeschaltet – Einzelchats mit stabilem Link."),
         new("ChatMember.ReadWrite.All", "Anwendung", false,
-            "Mitglieder des Gruppenchats bei Teamänderungen abgleichen (fügt hinzu, entfernt nur von EstrichONE Hinzugefügte)."),
+            "Mitglieder der Gruppenchats bei Änderungen an Bauakten-Team bzw. Kolonne abgleichen (fügt hinzu, entfernt nur von EstrichONE Hinzugefügte)."),
         new("ChannelSettings.ReadWrite.All", "Anwendung", false,
             "Kanal einer Bauakte archivieren bzw. wiederherstellen (von Hand oder beim Abschließen der Bauakte, Einstellung „Beim Abschließen“)."),
         new("Channel.Delete.All", "Anwendung", false, "Kanal einer Bauakte in Teams löschen (Recht „teams.delete“, Bestätigung mit Bauaktennummer)."),
         new("Chat.ManageDeletion.All", "Anwendung", false,
-            "Gruppenchat einer Bauakte in Teams löschen (alternativ Chat.ReadWrite.All). Ohne diese Berechtigung bleibt nur „Verknüpfung lösen“."),
+            "Teams-Chat einer Bauakte bzw. Kolonne löschen (alternativ Chat.ReadWrite.All). Ohne diese Berechtigung bleibt nur „Verknüpfung lösen“."),
         new("ChannelMessage.Send", "Delegiert", false, "Ereigniskarten über das Dienstkonto in verknüpfte Kanäle senden (nur bei „Senden über Microsoft Graph“)."),
         new("ChatMessage.Send", "Delegiert", false, "Ereigniskarten über das Dienstkonto in verknüpfte Gruppenchats senden (nur bei „Senden über Microsoft Graph“)."),
         new("offline_access", "Delegiert", false, "Dienstkonto angemeldet halten (Aktualisierungstoken, verschlüsselt gespeichert)."),
@@ -369,11 +375,13 @@ internal sealed partial class TeamsService(
 
     // ---------- Verknüpfung je Bauakte ----------
 
-    public async Task<TeamsBauakteLink> CreateLinkAsync(Guid bauakteId, TeamsLinkKind kind, Guid actor, CancellationToken cancellationToken)
+    /// <param name="sources">Teilnehmer (<see cref="TeamsMemberSources"/>); <c>null</c> = Bauakten-Team (Massenverknüpfung). Angegeben (aus dem Dialog):
+    /// leer = Bauakten-Team, die anlegende Person kommt immer dazu.</param>
+    public async Task<TeamsBauakteLink> CreateLinkAsync(Guid bauakteId, TeamsLinkKind kind, Guid actor, CancellationToken cancellationToken,
+        IReadOnlyList<string>? sources = null, string? topic = null)
     {
         var row = await SettingsAsync(cancellationToken);
         var bauakte = await db.Set<Bauakte>().AsNoTracking().SingleAsync(b => b.Id == bauakteId, cancellationToken);
-        var token = await TokenAsync(row, cancellationToken);
         var name = ChannelName(bauakte.Number, bauakte.Title);
         var link = new TeamsBauakteLink
         {
@@ -387,20 +395,22 @@ internal sealed partial class TeamsService(
                 throw new GraphException("NO_SITE_TEAM", "Bitte zuerst unter Einstellungen › Integrationen › Microsoft Teams das Team „Baustellen“ festlegen.");
             }
 
+            var token = await TokenAsync(row, cancellationToken);
             JsonNode? channel;
             try
             {
-                channel = await graph.PostAsync(token, $"teams/{Uri.EscapeDataString(row.SiteTeamId)}/channels", new JsonObject
+                channel = await graph.CreateAsync(token, $"teams/{Uri.EscapeDataString(row.SiteTeamId)}/channels", new JsonObject
                 {
                     ["displayName"] = name, ["description"] = Clip($"EstrichONE-Bauakte {bauakte.Number} {bauakte.Title}".Trim(), 1000),
                     ["membershipType"] = "standard",
-                }, "Channel.Create", cancellationToken);
+                }, "Channel.Create", "Kanal", cancellationToken);
             }
             catch (GraphException exception) when (exception.Code == "CONFLICT"
                 || (exception.Code == "GRAPH_REJECTED" && exception.Message.Contains("exist", StringComparison.OrdinalIgnoreCase)))
             {
                 throw new GraphException("CONFLICT",
-                    $"Im Team „{row.SiteTeamName}“ gibt es bereits einen Kanal „{name}“. Bitte diesen über „Vorhandenen Kanal oder Chat verknüpfen“ per Link verknüpfen.");
+                    $"Im Team „{row.SiteTeamName}“ gibt es bereits einen Kanal „{name}“ (auch gelöschte Kanäle blockieren ihren Namen 30 Tage). "
+                    + "Bitte den vorhandenen Kanal über „Per Link verknüpfen …“ verknüpfen oder in Teams endgültig löschen.");
             }
 
             link.TeamId = row.SiteTeamId;
@@ -409,24 +419,12 @@ internal sealed partial class TeamsService(
         }
         else
         {
-            var desired = await DesiredMembersAsync(row, bauakteId, cancellationToken);
-            if (desired.Ids.Count < 2)
-            {
-                throw new GraphException("TOO_FEW_MEMBERS",
-                    "Für einen Gruppenchat müssen mindestens zwei Personen des Bauakten-Teams (Zuständige, Mitglieder) einem Microsoft-Konto zugeordnet sein. "
-                    + "Bitte Team ergänzen oder Konten zuordnen (Einstellungen › Integrationen › Microsoft Teams › Benutzer).");
-            }
-
-            var members = new JsonArray();
-            foreach (var id in desired.Ids)
-            {
-                members.Add(Member(id, owner: true, history: false));
-            }
-
-            var chat = await graph.PostAsync(token, "chats", new JsonObject { ["chatType"] = "group", ["topic"] = name, ["members"] = members },
-                "Chat.Create", cancellationToken);
-            link.ChatId = GraphClient.Str(chat?["id"]) ?? throw MissingId("Gruppenchat");
-            link.WebUrl = GraphClient.Str(chat?["webUrl"]) ?? ChatUrl(link.ChatId, row.TenantId);
+            link.MemberSources = sources is null ? [] : WithActor(sources, actor); // Massenverknüpfung: nur Bauakten-Team
+            link.DisplayName = Clip(Blank(topic) ?? BauakteTopic(bauakte.Number, bauakte.Title), TeamsBauakteLink.MaxName);
+            var desired = await DesiredMembersAsync(row, link, cancellationToken);
+            var chat = await CreateGroupChatAsync(row, link.DisplayName, desired, cancellationToken);
+            link.ChatId = chat.ChatId;
+            link.WebUrl = chat.WebUrl;
             link.ManagedMemberIds = [.. desired.Ids];
             link.SyncedMembers = desired.Ids.Count;
             link.UnmappedMembers = desired.Unmapped;
@@ -436,6 +434,73 @@ internal sealed partial class TeamsService(
 
         db.Add(link);
         return link;
+    }
+
+    /// <summary>Teilnehmer ohne Doppelte, Bauakten-Team als Standard, anlegende Person immer dabei.</summary>
+    internal static List<string> WithActor(IReadOnlyList<string>? sources, Guid actor)
+    {
+        var list = (sources ?? []).Select(s => s.Trim()).Where(TeamsMemberSources.IsValid).Distinct(StringComparer.OrdinalIgnoreCase).ToList();
+        if (list.Count == 0)
+        {
+            list.Add(TeamsMemberSources.Team);
+        }
+
+        var self = TeamsMemberSources.User(actor);
+        if (actor != Guid.Empty && !list.Contains(self, StringComparer.OrdinalIgnoreCase))
+        {
+            list.Add(self);
+        }
+
+        return list;
+    }
+
+    private static string? Blank(string? value) => string.IsNullOrWhiteSpace(value) ? null : value.Trim();
+
+    /// <summary>
+    /// Gruppenchat über Microsoft Graph (<c>POST /chats</c>, alle als Besitzer). Weniger als drei Konten: verständlicher Fehler statt
+    /// Ablehnung durch Microsoft. Ist ein Dienstkonto verbunden, schreibt es eine erste Nachricht – sonst erscheint ein neuer Chat in Teams
+    /// erst nach der ersten Nachricht in der Chatliste (über den Link ist er sofort erreichbar).
+    /// </summary>
+    public async Task<(string ChatId, string WebUrl)> CreateGroupChatAsync(TeamsSettingsRow row, string topic, DesiredMembers desired,
+        CancellationToken cancellationToken)
+    {
+        if (desired.Ids.Count < MinGroupChatMembers)
+        {
+            throw new GraphException("TOO_FEW_MEMBERS",
+                $"Ein Gruppenchat in Teams braucht mindestens {MinGroupChatMembers} Personen mit Microsoft-Konto – gefunden: {desired.Ids.Count}"
+                + (desired.Unmapped > 0 ? $" ({desired.Unmapped} weitere ohne Microsoft-Konto)" : string.Empty)
+                + ". Bitte weitere Personen auswählen bzw. Konten zuordnen (Einstellungen › Integrationen › Microsoft Teams › Benutzer); "
+                + "für zwei Personen genügt ein Einzelchat.");
+        }
+
+        var token = await TokenAsync(row, cancellationToken);
+        var members = new JsonArray();
+        foreach (var id in desired.Ids)
+        {
+            members.Add(Member(id, owner: true, history: false));
+        }
+
+        var chat = await graph.CreateAsync(token, "chats", new JsonObject { ["chatType"] = "group", ["topic"] = Clip(topic, 250), ["members"] = members },
+            "Chat.Create", "Gruppenchat", cancellationToken);
+        var chatId = GraphClient.Str(chat?["id"]) ?? throw MissingId("Gruppenchat");
+        var webUrl = GraphClient.Str(chat?["webUrl"]) ?? ChatUrl(chatId, row.TenantId);
+        if (row.ProtectedSenderToken is not null && row.SenderUserId is { } sender && desired.Ids.Contains(sender, StringComparer.OrdinalIgnoreCase))
+        {
+            try
+            {
+                var senderToken = await SenderTokenAsync(row, cancellationToken);
+                await graph.PostAsync(senderToken, $"chats/{Uri.EscapeDataString(chatId)}/messages", new JsonObject
+                {
+                    ["body"] = new JsonObject { ["contentType"] = "text", ["content"] = Clip($"Chat „{topic}“ wurde aus EstrichONE angelegt.", 500) },
+                }, "ChatMessage.Send (delegiert)", cancellationToken);
+            }
+            catch (GraphException exception)
+            {
+                logger.LogWarning("Erste Nachricht im neuen Teams-Chat nicht gesendet: {Message}", exception.Message);
+            }
+        }
+
+        return (chatId, webUrl);
     }
 
     private static GraphException MissingId(string what) =>
@@ -461,10 +526,48 @@ internal sealed partial class TeamsService(
 
     public sealed record DesiredMembers(List<string> Ids, int Unmapped, string Hash);
 
-    /// <summary>Microsoft-Konten des Bauakten-Teams (Zuständige und Mitglieder) und – falls verbunden – das Dienstkonto.</summary>
-    public async Task<DesiredMembers> DesiredMembersAsync(TeamsSettingsRow row, Guid bauakteId, CancellationToken cancellationToken)
+    /// <summary>Soll-Mitglieder einer Bauakten-Verknüpfung: Teilnehmer (<see cref="TeamsBauakteLink.MemberSources"/>, leer = Bauakten-Team).</summary>
+    public Task<DesiredMembers> DesiredMembersAsync(TeamsSettingsRow row, TeamsBauakteLink link, CancellationToken cancellationToken) =>
+        DesiredMembersAsync(row, link.MemberSources.Count == 0 ? [TeamsMemberSources.Team] : link.MemberSources, link.BauakteId, cancellationToken);
+
+    /// <summary>Microsoft-Konten der Teilnehmer und – falls verbunden – das Dienstkonto.</summary>
+    public async Task<DesiredMembers> DesiredMembersAsync(TeamsSettingsRow row, IReadOnlyList<string> sources, Guid? bauakteId,
+        CancellationToken cancellationToken) =>
+        await DesiredForUsersAsync(row, await ResolveUsersAsync(sources, bauakteId, cancellationToken), cancellationToken);
+
+    /// <summary>Benutzer-IDs zu Teilnehmern (Bauakten-Team, Kolonne, Rolle, Person).</summary>
+    public async Task<List<Guid>> ResolveUsersAsync(IReadOnlyList<string> sources, Guid? bauakteId, CancellationToken cancellationToken)
     {
-        var userIds = await bauakten.TeamUserIdsAsync(bauakteId, cancellationToken);
+        var users = new HashSet<Guid>();
+        foreach (var source in sources)
+        {
+            var (kind, id) = TeamsMemberSources.Parse(source);
+            switch (kind)
+            {
+                case TeamsMemberSources.Team when bauakteId is { } bauakte:
+                    users.UnionWith(await bauakten.TeamUserIdsAsync(bauakte, cancellationToken));
+                    break;
+                case TeamsMemberSources.CrewPrefix:
+                    foreach (var audience in audiences)
+                    {
+                        users.UnionWith(await audience.CrewMembersAsync([id], cancellationToken));
+                    }
+
+                    break;
+                case TeamsMemberSources.RolePrefix:
+                    users.UnionWith(await roles.GetUserIdsInRoleAsync(id, cancellationToken));
+                    break;
+                case TeamsMemberSources.UserPrefix:
+                    users.Add(id);
+                    break;
+            }
+        }
+
+        return [.. users];
+    }
+
+    public async Task<DesiredMembers> DesiredForUsersAsync(TeamsSettingsRow row, IReadOnlyCollection<Guid> userIds, CancellationToken cancellationToken)
+    {
         var active = await db.Set<User>().AsNoTracking().Where(u => userIds.Contains(u.Id) && u.IsActive).Select(u => u.Id).ToListAsync(cancellationToken);
         var mapped = await db.Set<TeamsUserLink>().AsNoTracking().Where(l => active.Contains(l.UserId) && l.AadUserId != null)
             .Select(l => l.AadUserId!).ToListAsync(cancellationToken);
@@ -491,37 +594,12 @@ internal sealed partial class TeamsService(
 
         try
         {
-            var desired = await DesiredMembersAsync(row, link.BauakteId, cancellationToken);
+            var desired = await DesiredMembersAsync(row, link, cancellationToken);
             var token = await TokenAsync(row, cancellationToken);
             var problems = new List<string>();
             if (link.Kind == TeamsLinkKind.GroupChat && link.ChatId is { } chatId)
             {
-                var current = await MembersAsync(token, $"chats/{Uri.EscapeDataString(chatId)}/members", "ChatMember.ReadWrite.All", cancellationToken);
-                foreach (var id in desired.Ids.Where(id => !current.ContainsKey(id)))
-                {
-                    await TryAsync(problems, () => graph.PostAsync(token, $"chats/{Uri.EscapeDataString(chatId)}/members", Member(id, owner: true, history: true),
-                        "ChatMember.ReadWrite.All", cancellationToken));
-                    if (!link.ManagedMemberIds.Contains(id, StringComparer.OrdinalIgnoreCase))
-                    {
-                        link.ManagedMemberIds = [.. link.ManagedMemberIds, id];
-                    }
-                }
-
-                // Nur Personen entfernen, die EstrichONE selbst hinzugefügt hat und die nicht mehr zum Team gehören.
-                foreach (var id in link.ManagedMemberIds.Where(id => !desired.Ids.Contains(id, StringComparer.OrdinalIgnoreCase)).ToList())
-                {
-                    if (current.TryGetValue(id, out var membership))
-                    {
-                        var removed = await TryAsync(problems, () => graph.DeleteAsync(token,
-                            $"chats/{Uri.EscapeDataString(chatId)}/members/{Uri.EscapeDataString(membership)}", "ChatMember.ReadWrite.All", cancellationToken));
-                        if (!removed)
-                        {
-                            continue;
-                        }
-                    }
-
-                    link.ManagedMemberIds = link.ManagedMemberIds.Where(m => !string.Equals(m, id, StringComparison.OrdinalIgnoreCase)).ToList();
-                }
+                link.ManagedMemberIds = await SyncChatMembersAsync(token, chatId, desired, link.ManagedMemberIds, problems, cancellationToken);
             }
             else if (link.Kind == TeamsLinkKind.Channel && link.TeamId is { } teamId)
             {
@@ -541,13 +619,7 @@ internal sealed partial class TeamsService(
                 problems.Add("Die Verknüpfung enthält keine Kanal- bzw. Chat-ID – Mitglieder lassen sich nicht abgleichen.");
             }
 
-            if (desired.Unmapped > 0)
-            {
-                problems.Add(desired.Unmapped == 1
-                    ? "1 Person des Bauakten-Teams ist keinem Microsoft-Konto zugeordnet."
-                    : $"{desired.Unmapped} Personen des Bauakten-Teams sind keinem Microsoft-Konto zugeordnet.");
-            }
-
+            AddUnmapped(problems, desired.Unmapped);
             link.SyncedMembers = desired.Ids.Count;
             link.UnmappedMembers = desired.Unmapped;
             link.DesiredHash = desired.Hash;
@@ -559,6 +631,126 @@ internal sealed partial class TeamsService(
         }
 
         link.LastSyncAt = clock.GetUtcNow();
+    }
+
+    private static void AddUnmapped(List<string> problems, int unmapped)
+    {
+        if (unmapped > 0)
+        {
+            problems.Add(unmapped == 1
+                ? "1 Person ist keinem Microsoft-Konto zugeordnet."
+                : $"{unmapped} Personen sind keinem Microsoft-Konto zugeordnet.");
+        }
+    }
+
+    /// <summary>
+    /// Gruppenchat abgleichen: fehlende Konten hinzufügen (mit Verlauf), nur von EstrichONE Hinzugefügte wieder entfernen.
+    /// Liefert die neue Liste der von EstrichONE verwalteten Konten.
+    /// </summary>
+    private async Task<List<string>> SyncChatMembersAsync(string token, string chatId, DesiredMembers desired, List<string> managedIds, List<string> problems,
+        CancellationToken cancellationToken)
+    {
+        var managed = managedIds.ToList();
+        var current = await MembersAsync(token, $"chats/{Uri.EscapeDataString(chatId)}/members", "ChatMember.ReadWrite.All", cancellationToken);
+        foreach (var id in desired.Ids.Where(id => !current.ContainsKey(id)))
+        {
+            await TryAsync(problems, () => graph.PostAsync(token, $"chats/{Uri.EscapeDataString(chatId)}/members", Member(id, owner: true, history: true),
+                "ChatMember.ReadWrite.All", cancellationToken));
+            if (!managed.Contains(id, StringComparer.OrdinalIgnoreCase))
+            {
+                managed.Add(id);
+            }
+        }
+
+        foreach (var id in managed.Where(id => !desired.Ids.Contains(id, StringComparer.OrdinalIgnoreCase)).ToList())
+        {
+            if (current.TryGetValue(id, out var membership))
+            {
+                var removed = await TryAsync(problems, () => graph.DeleteAsync(token,
+                    $"chats/{Uri.EscapeDataString(chatId)}/members/{Uri.EscapeDataString(membership)}", "ChatMember.ReadWrite.All", cancellationToken));
+                if (!removed)
+                {
+                    continue;
+                }
+            }
+
+            managed.RemoveAll(m => string.Equals(m, id, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return managed;
+    }
+
+    // ---------- Kolonnen ----------
+
+    /// <summary>Teams-Chat einer Kolonne anlegen (Mitglieder = Kolonne mit Microsoft-Konto, dazu die anlegende Person).</summary>
+    public async Task<TeamsCrewChat> CreateCrewChatAsync(Guid crewId, string crewName, Guid actor, CancellationToken cancellationToken)
+    {
+        var row = await SettingsAsync(cancellationToken);
+        var desired = await CrewDesiredAsync(row, crewId, actor, cancellationToken);
+        var topic = Clip(CrewLabel(crewName), TeamsBauakteLink.MaxName);
+        var (chatId, webUrl) = await CreateGroupChatAsync(row, topic, desired, cancellationToken);
+        var chat = new TeamsCrewChat
+        {
+            CrewId = crewId, ChatId = chatId, WebUrl = webUrl, DisplayName = topic, Created = true, ManagedMemberIds = [.. desired.Ids], LinkedByUserId = actor,
+            LinkedAt = clock.GetUtcNow(), LastSyncAt = clock.GetUtcNow(), SyncedMembers = desired.Ids.Count, UnmappedMembers = desired.Unmapped,
+            DesiredHash = desired.Hash,
+        };
+        db.Add(chat);
+        return chat;
+    }
+
+    /// <summary>„Kolonne Nord“ – ohne doppeltes „Kolonne“, wenn der Name schon so beginnt.</summary>
+    public static string CrewLabel(string name)
+    {
+        var trimmed = name.Trim();
+        return trimmed.StartsWith("Kolonne", StringComparison.OrdinalIgnoreCase) ? trimmed : $"Kolonne {trimmed}";
+    }
+
+    /// <summary>Soll der Kolonne; die anlegende Person (z. B. Disponent) bleibt Mitglied.</summary>
+    public Task<DesiredMembers> CrewDesiredAsync(TeamsSettingsRow row, Guid crewId, Guid creator, CancellationToken cancellationToken) =>
+        DesiredMembersAsync(row, [TeamsMemberSources.Crew(crewId), TeamsMemberSources.User(creator)], null, cancellationToken);
+
+    /// <summary>Kolonnen-Chat abgleichen (best effort, wirft nie).</summary>
+    public async Task SyncCrewChatAsync(TeamsSettingsRow row, TeamsCrewChat chat, CancellationToken cancellationToken)
+    {
+        chat.SyncPending = false;
+        if (!row.GraphConfigured)
+        {
+            return;
+        }
+
+        try
+        {
+            var desired = await CrewDesiredAsync(row, chat.CrewId, chat.LinkedByUserId, cancellationToken);
+            var problems = new List<string>();
+            chat.ManagedMemberIds = await SyncChatMembersAsync(await TokenAsync(row, cancellationToken), chat.ChatId, desired, chat.ManagedMemberIds, problems,
+                cancellationToken);
+            AddUnmapped(problems, desired.Unmapped);
+            chat.SyncedMembers = desired.Ids.Count;
+            chat.UnmappedMembers = desired.Unmapped;
+            chat.DesiredHash = desired.Hash;
+            chat.LastSyncError = problems.Count == 0 ? null : Clip(string.Join(" ", problems.Distinct()), 2000);
+        }
+        catch (GraphException exception)
+        {
+            chat.LastSyncError = exception.Message;
+        }
+
+        chat.LastSyncAt = clock.GetUtcNow();
+    }
+
+    /// <summary>Kolonnen-Chat in Teams löschen (bei Microsoft schon gelöscht = erledigt).</summary>
+    public async Task DeleteCrewChatAsync(TeamsSettingsRow row, TeamsCrewChat chat, CancellationToken cancellationToken)
+    {
+        var token = await TokenAsync(row, cancellationToken);
+        try
+        {
+            await graph.DeleteAsync(token, $"chats/{Uri.EscapeDataString(chat.ChatId)}", "Chat.ManageDeletion.All", cancellationToken);
+        }
+        catch (GraphException exception) when (exception.Status == 404)
+        {
+            logger.LogWarning("Teams-Chat der Kolonne {CrewId} war bei Microsoft schon gelöscht", chat.CrewId);
+        }
     }
 
     private static async Task<bool> TryAsync(List<string> problems, Func<Task> action)
@@ -844,4 +1036,32 @@ internal sealed partial class TeamsService(
     internal static string Clip(string? text, int max) => GraphClient.Clip(text, max);
 
     internal static string Format(DateOnly date) => date.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture);
+}
+
+/// <summary>Teilnehmer eines Teams-Chats als Schlüssel (gespeichert an der Verknüpfung, Mitgliederabgleich folgt ihnen).</summary>
+public static class TeamsMemberSources
+{
+    public const string Team = "team";
+    public const string CrewPrefix = "crew";
+    public const string RolePrefix = "role";
+    public const string UserPrefix = "user";
+
+    public static string Crew(Guid id) => $"{CrewPrefix}:{id}";
+
+    public static string Role(Guid id) => $"{RolePrefix}:{id}";
+
+    public static string User(Guid id) => $"{UserPrefix}:{id}";
+
+    public static (string Kind, Guid Id) Parse(string source)
+    {
+        if (string.Equals(source, Team, StringComparison.OrdinalIgnoreCase))
+        {
+            return (Team, Guid.Empty);
+        }
+
+        var at = source.IndexOf(':', StringComparison.Ordinal);
+        return at > 0 && Guid.TryParse(source[(at + 1)..], out var id) ? (source[..at].ToLowerInvariant(), id) : (string.Empty, Guid.Empty);
+    }
+
+    public static bool IsValid(string source) => Parse(source).Kind is Team or CrewPrefix or RolePrefix or UserPrefix;
 }

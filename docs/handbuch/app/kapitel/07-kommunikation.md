@@ -166,6 +166,8 @@ Neue Unterhaltungen beginnen Sie direkt in der Teams-App:
   nur Kolleginnen und Kollegen mit Microsoft-Konto.
 - **Bauakte** › **…** › **Chat mit dem Team in Teams**: Gruppenchat mit dem ganzen Bauakten-Team; **In Teams öffnen**
   öffnet den Kanal bzw. Chat der Baustelle.
-- Ist die Teams-App nicht installiert, öffnet sich Teams im Browser; die App bietet **Microsoft Teams installieren** an
-  (App Store bzw. Google Play).
+- **Mehr** › **Kolonne …** (Teams-Chat): Teams-Chat Ihrer Kolonne, wenn das Büro ihn angelegt hat.
+- Alle Teams-Links öffnen sich in der **Teams-App**, nicht im Browser. Ist die Teams-App nicht installiert, bietet die App
+  **Microsoft Teams installieren** an (App Store bzw. Google Play); auf dem iPhone lässt sich Teams dort auch im Browser
+  öffnen.
 - Einmalig erscheint auf **Heute** der Hinweis „Ab sofort chatten wir in Microsoft Teams“; mit **×** blenden Sie ihn aus.

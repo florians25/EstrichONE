@@ -147,7 +147,8 @@ internal static class PlanningEndpoints
     }
 
     private static async Task<Results<Ok<CrewResponse>, ProblemHttpResult>> SaveCrewAsync(
-        Guid id, SaveCrewRequest request, EstrichOneDbContext db, INumberRanges numberRanges, CancellationToken cancellationToken)
+        Guid id, SaveCrewRequest request, EstrichOneDbContext db, INumberRanges numberRanges, Teams.Exports.ITeamsIntegration teams,
+        CancellationToken cancellationToken)
     {
         var members = (request.MemberUserIds ?? []).Concat(request.LeaderUserId is { } leader ? [leader] : []).Distinct().ToList();
         if (await db.Set<User>().CountAsync(u => members.Contains(u.Id), cancellationToken) != members.Count)
@@ -184,6 +185,7 @@ internal static class PlanningEndpoints
             }
 
             await db.SaveChangesAsync(cancellationToken);
+            teams.CrewChanged(crew.Id); // Teams-Chat der Kolonne im Hintergrund abgleichen (ohne Chat: nichts)
             return TypedResults.Ok(ToResponse(crew));
         }
         catch (ArgumentException exception)

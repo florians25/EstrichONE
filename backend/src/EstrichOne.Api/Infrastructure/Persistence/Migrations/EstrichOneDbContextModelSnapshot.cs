@@ -7246,6 +7246,11 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasColumnType("text[]")
                         .HasColumnName("managed_member_ids");
 
+                    b.PrimitiveCollection<List<string>>("MemberSources")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("member_sources");
+
                     b.Property<string>("ProtectedWebhookUrl")
                         .HasColumnType("text")
                         .HasColumnName("protected_webhook_url");
@@ -7286,6 +7291,79 @@ namespace EstrichOne.Api.Infrastructure.Persistence.Migrations
                         .HasName("pk_teams_bauakte_links");
 
                     b.ToTable("teams_bauakte_links", (string)null);
+                });
+
+            modelBuilder.Entity("EstrichOne.Api.Modules.Teams.TeamsCrewChat", b =>
+                {
+                    b.Property<Guid>("CrewId")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid")
+                        .HasColumnName("crew_id");
+
+                    b.Property<string>("ChatId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)")
+                        .HasColumnName("chat_id");
+
+                    b.Property<bool>("Created")
+                        .HasColumnType("boolean")
+                        .HasColumnName("created");
+
+                    b.Property<string>("DesiredHash")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)")
+                        .HasColumnName("desired_hash");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)")
+                        .HasColumnName("display_name");
+
+                    b.Property<DateTimeOffset?>("LastSyncAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("last_sync_at");
+
+                    b.Property<string>("LastSyncError")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("last_sync_error");
+
+                    b.Property<DateTimeOffset>("LinkedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("linked_at");
+
+                    b.Property<Guid>("LinkedByUserId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("linked_by_user_id");
+
+                    b.PrimitiveCollection<List<string>>("ManagedMemberIds")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("managed_member_ids");
+
+                    b.Property<bool>("SyncPending")
+                        .HasColumnType("boolean")
+                        .HasColumnName("sync_pending");
+
+                    b.Property<int>("SyncedMembers")
+                        .HasColumnType("integer")
+                        .HasColumnName("synced_members");
+
+                    b.Property<int>("UnmappedMembers")
+                        .HasColumnType("integer")
+                        .HasColumnName("unmapped_members");
+
+                    b.Property<string>("WebUrl")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)")
+                        .HasColumnName("web_url");
+
+                    b.HasKey("CrewId")
+                        .HasName("pk_teams_crew_chats");
+
+                    b.ToTable("teams_crew_chats", (string)null);
                 });
 
             modelBuilder.Entity("EstrichOne.Api.Modules.Teams.TeamsSettingsRow", b =>

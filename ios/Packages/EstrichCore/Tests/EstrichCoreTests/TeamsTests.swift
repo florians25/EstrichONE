@@ -50,6 +50,16 @@ struct TeamsTests {
         #expect(foreign.candidates.isEmpty)
         let insecure = TeamsOpenTargets(app: nil, web: "http://teams.microsoft.com/l/chat/1")
         #expect(insecure.candidates.isEmpty)
+        // Ohne appUrl (ältere Server): msteams: aus dem https-Link.
+        let derived = TeamsOpenTargets(app: nil, web: "https://teams.microsoft.com/l/chat/19%3Ax%40thread.v2/0?tenantId=t")
+        #expect(derived.app?.absoluteString == "msteams:/l/chat/19%3Ax%40thread.v2/0?tenantId=t")
+
+        let crew = try JSONCoding.decoder.decode([TeamsCrewChat].self, from: Data("""
+        [{"crewId":"0193a1b2-0000-7000-8000-0000000c0001","crewName":"Nord","displayName":"Kolonne Nord",
+          "webUrl":"https://teams.microsoft.com/l/chat/19%3Ak%40thread.v2/0","appUrl":"msteams:/l/chat/19%3Ak%40thread.v2/0"}]
+        """.utf8))
+        #expect(crew.first?.title == "Kolonne Nord")
+        #expect(crew.first?.targets.candidates.first?.host == "teams.microsoft.com")
 
         let unlinked = try JSONCoding.decoder.decode(BauakteTeamsResponse.self, from: Data(#"{"chatMode":"teams","link":null,"canManage":false}"#.utf8))
         #expect(unlinked.link == nil && unlinked.chatMode == .teams)
@@ -85,7 +95,8 @@ struct TeamsTests {
 
         let people = [TeamsPerson(userId: UUID(), name: "Anna", upn: "anna@x.de"), TeamsPerson(userId: UUID(), name: "Bernd", upn: nil)]
         let targets = try #require(TeamsChatLinks.targets(for: people))
-        #expect(targets.candidates.map(\.absoluteString) == ["msteams:/l/chat/0/0?users=anna@x.de", "https://teams.microsoft.com/l/chat/0/0?users=anna@x.de"])
+        // Universal Link zuerst (öffnet nur die Teams-App), dann msteams:.
+        #expect(targets.candidates.map(\.absoluteString) == ["https://teams.microsoft.com/l/chat/0/0?users=anna@x.de", "msteams:/l/chat/0/0?users=anna@x.de"])
         #expect(TeamsChatLinks.targets(for: [people[1]]) == nil)
     }
 
