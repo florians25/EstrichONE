@@ -100,7 +100,7 @@
 
 		<!-- Leerzustand: SAP IllustratedMessage (klein) mit den beiden Aktionen -->
 		<IllustratedMessage id="contactsEmpty" visible="{= ${ct>/partyCount} === 0 &amp;&amp; !${ct>/query} &amp;&amp; !${ct>/group} }"
-			illustrationType="sapIllus-NoEntries" illustrationSize="Spot" enableVerticalResponsiveness="true" title="Noch keine weiteren Beteiligten"
+			illustrationType="sapIllus-NoEntries" illustrationSize="Dot" enableVerticalResponsiveness="true" title="Noch keine weiteren Beteiligten"
 			description="Bauleiter, Architekt, Gewerke und Lieferanten mit Telefon und E-Mail – neu oder aus dem Kundenstamm.">
 			<additionalContent>
 				<Button text="Bestehenden Kontakt suchen" icon="sap-icon://search" press=".onFromContacts"

@@ -9,6 +9,7 @@ import { patch, post } from "../../../util/api";
 import { akte } from "../../../util/akteStore";
 import { isoDay } from "../../../util/days";
 import { uuidv7 } from "../../../util/ids";
+import { openForm } from "../../../util/forms";
 import { openLightbox } from "../../../util/lightbox";
 import type { FileResponse, WorkItemDto } from "../../../util/models";
 import { session } from "../../../util/session";
@@ -22,7 +23,7 @@ export default class Work extends SectionBase {
 	private files: FileResponse[] = [];
 
 	protected init(): void {
-		this.v().setModel(new JSONModel({ kind: "task", title: "", due: "", assignee: "", people: [], shown: [], filter: "open" }), "wk");
+		this.v().setModel(new JSONModel({ people: [], shown: [], filter: "open" }), "wk");
 	}
 
 	private wk(): JSONModel {
@@ -31,10 +32,6 @@ export default class Work extends SectionBase {
 
 	protected async load(): Promise<void> {
 		const people = await session.people();
-		// Einstellungen › Module: nur die eingeschaltete Art anlegen (Aufgaben oder Mängel).
-		if (!session.moduleOn(this.wk().getProperty("/kind") === "defect" ? "defects" : "tasks")) {
-			this.wk().setProperty("/kind", session.moduleOn("tasks") ? "task" : "defect");
-		}
 		this.wk().setProperty("/people", [{ key: "", text: "Niemand" }, ...people.filter((p) => p.isActive).map((p) => ({ key: p.id, text: p.displayName }))]);
 		const [items, files] = await Promise.all([akte.work(this.bauakteId), akte.files(this.bauakteId)]);
 		const today = isoDay(new Date());
@@ -60,19 +57,38 @@ export default class Work extends SectionBase {
 		akte.invalidate(this.bauakteId, "work");
 	}
 
-	async onAdd(): Promise<void> {
-		const m = this.wk();
-		const title = String(m.getProperty("/title") ?? "").trim();
-		if (!title) return;
-		const result = await this.run(() => post("work-items", {
-			id: uuidv7(), bauakteId: this.bauakteId, kind: m.getProperty("/kind"), title, dueDate: m.getProperty("/due") || null,
-			assigneeUserId: m.getProperty("/assignee") || null,
-		}));
-		if (result !== undefined) {
-			m.setProperty("/title", "");
-			m.setProperty("/due", "");
-			m.setProperty("/filter", "open");
+	onAddTask(): Promise<void> {
+		return this.openCreate("task");
+	}
+
+	onAddDefect(): Promise<void> {
+		return this.openCreate("defect");
+	}
+
+	/** Aufgabe bzw. Mangel im Fenster anlegen (Titel, Beschreibung, Fälligkeit, Zuständig). */
+	private async openCreate(kind: "task" | "defect"): Promise<void> {
+		const defect = kind === "defect";
+		const people = (this.wk().getProperty("/people") as { key: string; text: string }[]) ?? [];
+		const saved = await openForm<WorkItemDto>({
+			title: defect ? "Mangel erfassen" : "Aufgabe anlegen", submitText: "Anlegen", width: "40rem",
+			initial: { title: "", description: "", dueDate: "", assignee: "" },
+			fields: [
+				{ key: "title", label: defect ? "Mangel" : "Aufgabe", required: true, maxLength: 200,
+					placeholder: defect ? "Was ist mangelhaft?" : "Was ist zu tun?" },
+				{ key: "description", label: "Beschreibung", type: "textarea", rows: 4, maxLength: 4000,
+					placeholder: defect ? "Ort, Umfang, Ursache …" : "Details (optional)" },
+				{ key: "dueDate", label: "Fällig am", type: "date" },
+				{ key: "assignee", label: "Zuständig", type: "select", options: people.map((p) => ({ key: p.key, text: p.text })) },
+			],
+			submit: (v) => post<WorkItemDto>("work-items", {
+				id: uuidv7(), bauakteId: this.bauakteId, kind, title: String(v.title ?? "").trim(),
+				description: String(v.description ?? "").trim() || null, dueDate: v.dueDate || null, assigneeUserId: v.assignee || null,
+			}),
+		});
+		if (saved) {
+			this.wk().setProperty("/filter", "open");
 			akte.invalidate(this.bauakteId, "work");
+			this.toast(defect ? "Mangel erfasst" : "Aufgabe angelegt");
 		}
 	}
 

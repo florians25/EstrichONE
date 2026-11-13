@@ -76,9 +76,11 @@ test('Anfrage mit neuem Kunden im Assistenten, Dublettenprüfung, als Auftrag ü
   await expect(page.locator('.eoRoomTotal')).toContainText('42,50');
 
   await openSection(page, 'Aufgaben & Mängel');
-  await choose(page, page.getByLabel('Art', { exact: true }).first(), 'Mangel');
-  await page.getByPlaceholder('Was ist mangelhaft?').fill('Randdämmstreifen fehlt im Bad');
-  await page.getByRole('button', { name: 'Hinzufügen' }).click();
+  await page.getByRole('button', { name: 'Mangel erfassen' }).click();
+  const defectDialog = page.getByRole('dialog', { name: 'Mangel erfassen' });
+  await defectDialog.getByPlaceholder('Was ist mangelhaft?').fill('Randdämmstreifen fehlt im Bad');
+  await defectDialog.getByRole('button', { name: 'Anlegen' }).click();
+  await expect(defectDialog).toBeHidden();
   const row = page.getByRole('row').filter({ has: page.locator('input[value="Randdämmstreifen fehlt im Bad"]') });
   await expect(row).toBeVisible();
   await row.getByRole('button', { name: 'Erledigt: Randdämmstreifen fehlt im Bad' }).click();

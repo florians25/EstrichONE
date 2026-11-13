@@ -1,22 +1,6 @@
 <mvc:View controllerName="estrichone.controller.bauakte.sections.Work" xmlns:mvc="sap.ui.core.mvc" xmlns="sap.m" xmlns:core="sap.ui.core"
 	core:require="{fmt: 'estrichone/model/formatter'}">
 	<VBox>
-		<FlexBox wrap="Wrap" alignItems="Center" visible="{= ${session>/permissions/work.edit} === true }" class="sapUiTinyMarginBottom eoEntryRow">
-			<Select id="newKind" selectedKey="{wk>/kind}" width="9rem" ariaLabelledBy="kindLabel">
-				<core:Item key="task" text="Aufgabe" enabled="{= ${session>/modules/tasks} !== false }"/>
-				<core:Item key="defect" text="Mangel" enabled="{= ${session>/modules/defects} !== false }"/>
-			</Select>
-			<Input id="newTitle" value="{wk>/title}" valueLiveUpdate="true" placeholder="{= ${wk>/kind} === 'defect' ? 'Was ist mangelhaft?' : 'Was ist zu tun?' }"
-				submit=".onAdd" ariaLabelledBy="titleLabel" width="100%">
-				<layoutData><FlexItemData growFactor="1" minWidth="14rem"/></layoutData>
-			</Input>
-			<DatePicker value="{wk>/due}" valueFormat="yyyy-MM-dd" displayFormat="dd.MM.yyyy" width="10rem" placeholder="Fällig am" ariaLabelledBy="dueLabel"/>
-			<Select selectedKey="{wk>/assignee}" width="12rem" items="{path: 'wk>/people', templateShareable: false}" forceSelection="true" ariaLabelledBy="assigneeLabel"
-				tooltip="Zuständig">
-				<core:Item key="{wk>key}" text="{wk>text}"/>
-			</Select>
-			<Button text="{i18n>work.add}" icon="sap-icon://add" type="Emphasized" press=".onAdd"/>
-		</FlexBox>
 		<Table id="workTable" items="{wk>/shown}" noDataText="{i18n>work.none}" sticky="HeaderToolbar,ColumnHeaders" popinLayout="GridSmall">
 			<headerToolbar>
 				<OverflowToolbar>
@@ -30,6 +14,10 @@
 							<SegmentedButtonItem key="all" text="Alle"/>
 						</items>
 					</SegmentedButton>
+					<Button text="Aufgabe anlegen" icon="sap-icon://add" type="Emphasized" press=".onAddTask"
+						visible="{= ${session>/permissions/work.edit} === true &amp;&amp; ${session>/modules/tasks} !== false }"/>
+					<Button text="Mangel erfassen" icon="sap-icon://add" press=".onAddDefect"
+						visible="{= ${session>/permissions/work.edit} === true &amp;&amp; ${session>/modules/defects} !== false }"/>
 				</OverflowToolbar>
 			</headerToolbar>
 			<columns>
