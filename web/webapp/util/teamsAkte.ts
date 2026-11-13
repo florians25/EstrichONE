@@ -106,27 +106,19 @@ export function openTeamsLink(link: TeamsLink | null | undefined): void {
 export async function linkAkteTeams(model: JSONModel, bauakteId: string): Promise<void> {
 	const teams = model.getProperty("/teams") as BauakteTeams | null;
 	if (!teams) return;
-	const options = [
-		...(teams.canCreateChannel ? [{ key: "channel", text: "Kanal im Team „Baustellen“ anlegen" }] : []),
-		...(teams.canCreate ? [{ key: "groupChat", text: "Gruppenchat mit dem Bauakten-Team anlegen" }] : []),
-		{ key: "url", text: "Vorhandenen Kanal oder Chat per Link verknüpfen" },
-	];
-	const initialChoice = teams.canCreate ? (teams.defaultLinkKind === "channel" && teams.canCreateChannel ? "channel" : "groupChat") : "url";
+	// Nur vorhandene Kanäle/Chats per Link verknüpfen; direktes Anlegen aus EstrichONE ist ausgeblendet (Nutzerwunsch).
 	const linked = await openForm<TeamsLink>({
 		title: "Mit Microsoft Teams verknüpfen",
 		width: "38rem",
-		intro: teams.canCreate
-			? "EstrichONE legt die Unterhaltung an und nimmt Zuständige und Mitglieder der Bauakte auf (sofern ihnen ein Microsoft-Konto zugeordnet ist)."
-			: "Ohne App-Registrierung lässt sich ein vorhandener Kanal oder Chat per Link verknüpfen (Teams › „…“ › „Link zum Kanal abrufen“ bzw. „Link kopieren“).",
+		intro: "Vorhandenen Kanal oder Chat per Link verknüpfen: in Teams › „…“ › „Link zum Kanal abrufen“ bzw. „Link kopieren“ und hier einfügen.",
 		fields: [
-			{ key: "choice", label: "Unterhaltung", type: "select", options, required: true },
-			{ key: "url", label: "Link aus Teams", type: "text", placeholder: "https://teams.microsoft.com/l/channel/…" },
-			{ key: "syncMembers", label: "Mitglieder abgleichen", type: "switch", help: teams.canCreate ? undefined : "Nur mit App-Registrierung möglich." },
+			{ key: "url", label: "Link aus Teams", type: "text", required: true, placeholder: "https://teams.microsoft.com/l/channel/…" },
+			...(teams.canCreate ? [{ key: "syncMembers", label: "Mitglieder abgleichen", type: "switch" as const }] : []),
 		],
-		initial: { choice: initialChoice, url: "", syncMembers: teams.canCreate },
+		initial: { url: "", syncMembers: false },
 		submitText: "Verknüpfen",
 		submit: async (values) => {
-			const request = linkRequest(values.choice as "channel" | "groupChat" | "url", String(values.url ?? ""), values.syncMembers === true);
+			const request = linkRequest("url", String(values.url ?? ""), values.syncMembers === true);
 			if (typeof request === "string") throw new Error(request);
 			return post<TeamsLink>(`bauakten/${bauakteId}/teams`, request);
 		},

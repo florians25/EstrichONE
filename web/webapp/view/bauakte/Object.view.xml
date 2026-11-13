@@ -86,7 +86,7 @@
 									visible="{= ${session>/permissions/inspections.write} === true &amp;&amp; ${session>/modules/acceptance} !== false }"/>
 								<MenuItem text="Erstbegehungsprotokoll (PDF)" icon="sap-icon://inspection" press=".onInspectionPdf"
 									visible="{= ${session>/modules/inspections} !== false }"/>
-								<MenuItem text="Schreiben an den Kunden …" icon="sap-icon://letter" press=".onLetter" visible="{akte>/canEdit}"/>
+								<!-- „Schreiben an den Kunden …“ vorerst ausgeblendet (Nutzerwunsch, wird später überarbeitet) -->
 								<MenuItem text="Archivnachweis …" icon="sap-icon://attachment-zip-file" press=".onArchiveProof"/>
 								<MenuItem text="Bauakte als PDF (mit Fotos)" icon="sap-icon://pdf-attachment" press=".onPdf" startsSection="true"/>
 								<MenuItem text="{i18n>akte.report}" icon="sap-icon://print" press=".onReport"/>

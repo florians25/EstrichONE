@@ -112,7 +112,6 @@ Die Schaltflächen im Kopf:
 | **Letzte Aktivitäten …** | Wer hat zuletzt was in dieser Akte getan |
 | **Abnahmeprotokoll erstellen …** | Startet die digitale Abnahme (Abschnitt 3.10) |
 | **Erstbegehungsprotokoll (PDF)** | Protokoll der letzten Erstbegehung |
-| **Schreiben an den Kunden …** | Brief nach DIN 5008 mit Firmenkopf, als PDF in der Akte abgelegt |
 | **Archivnachweis …** | Prüfbericht, welche Dokumente revisionssicher archiviert sind |
 | **Bauakte als PDF (mit Fotos)** | Die komplette Akte als PDF |
 | **Baustellenbericht drucken** / **Abnahmeprotokoll drucken** / **Bauaktenblatt drucken** | Ausdrucke für Mappe und Kolonne |

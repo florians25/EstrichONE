@@ -1,5 +1,5 @@
 import { expect, test, type Page } from '@playwright/test';
-import { adminPassword, apiCall, choose, nav, signIn, toast } from './helpers';
+import { adminPassword, apiCall, nav, signIn, toast } from './helpers';
 
 // Microsoft Teams ohne echten Tenant: Chat-Modus, Verknüpfen per Link (ohne App-Registrierung), „In Teams öffnen“, Chat-Archiv.
 const TEAMS_LINK = 'https://teams.microsoft.com/l/channel/19%3ae2e0001%40thread.tacv2/E2E%20Teams?groupId=a1b2c3d4-0000-4000-8000-00000000babe&tenantId=t';
@@ -64,7 +64,6 @@ test('Microsoft Teams: Einstellungen, Chat-Modus, Bauakte per Link verknüpfen, 
   await page.getByRole('menuitem', { name: 'Mit Teams verknüpfen …' }).click();
   const dialog = page.getByRole('dialog', { name: 'Mit Microsoft Teams verknüpfen' });
   await expect(dialog).toBeVisible();
-  await choose(page, dialog.getByLabel('Unterhaltung'), 'Vorhandenen Kanal oder Chat per Link verknüpfen');
   await dialog.getByLabel('Link aus Teams').fill(TEAMS_LINK);
   await dialog.getByRole('button', { name: 'Verknüpfen' }).click();
   await expect(dialog).toBeHidden();
