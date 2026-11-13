@@ -13,7 +13,7 @@ struct TeamsTests {
         """.utf8))
         #expect(status.chatMode == .teams && status.chatReadOnly && status.available)
         #expect(status.chatTitle == "Chat-Archiv")
-        #expect(status.homeTargets.candidates.map(\.scheme) == ["msteams", "https"])
+        #expect(status.homeTargets.candidates.map(\.scheme) == ["https", "msteams"])
         #expect(status.siteTeamName == "Baustellen")
     }
 
@@ -111,7 +111,7 @@ struct TeamsTests {
         {"chatMode":"teams","link":null,"canManage":false,"teamChat":{"webUrl":"https://teams.microsoft.com/l/chat/0/0?users=a@x.de",
          "appUrl":"msteams:/l/chat/0/0?users=a@x.de","viaGraph":false,"included":["Anna"],"missing":[]}}
         """.utf8))
-        #expect(akte.teamChat?.targets.candidates.first?.scheme == "msteams")
+        #expect(akte.teamChat?.targets.candidates.last?.scheme == "msteams")
         let status = try JSONCoding.decoder.decode(TeamsStatus.self, from: Data(#"{"chatMode":"teams","rolloutNotice":"Ab sofort Teams","canStartChats":true}"#.utf8))
         #expect(status.rolloutNotice == "Ab sofort Teams" && status.canStartChats)
     }
