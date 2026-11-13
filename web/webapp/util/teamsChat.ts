@@ -4,7 +4,7 @@
  * (POST /teams/chats – Deep Link, optional über Microsoft Graph). Teams öffnet sich in neuem Fenster bzw. in der Teams-App.
  */
 import MessageBox from "sap/m/MessageBox";
-import MessageToast from "sap/m/MessageToast";
+import { showToast } from "./toast";
 import { get, post } from "./api";
 import { openForm } from "./forms";
 import { session } from "./session";
@@ -52,7 +52,7 @@ export async function startTeamsChat(userIds: string[], topic?: string, message?
 			MessageBox.warning(`Teams geöffnet. Nicht aufgenommen (kein Microsoft-Konto): ${chat.missing.map((m) => `${m.name} – ${m.reason}`).join("; ")}`,
 				{ title: "Chat in Teams" });
 		} else {
-			MessageToast.show(chat.included.length > 1 ? `Gruppenchat mit ${chat.included.length} Personen in Teams geöffnet` : `Chat mit ${chat.included[0]} in Teams geöffnet`);
+			showToast(chat.included.length > 1 ? `Gruppenchat mit ${chat.included.length} Personen in Teams geöffnet` : `Chat mit ${chat.included[0]} in Teams geöffnet`);
 		}
 	} catch (error) {
 		MessageBox.error(error instanceof Error ? error.message : String(error), { title: "Chat in Teams" });
