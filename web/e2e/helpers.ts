@@ -38,7 +38,7 @@ export async function signIn(page: Page, login: string, password: string) {
     await page.getByRole('button', { name: 'Anmelden' }).click();
     const done = await page.waitForURL((url) => !url.pathname.startsWith('/anmelden'), { timeout: 20_000 }).then(() => true, () => false);
     if (done) return;
-    const hint = await page.locator('.sapMMsgStrip:visible, .sapMMessageToast').allTextContents().catch(() => []);
+    const hint = await page.locator('.sapMMsgStrip:visible, .eoToast').allTextContents().catch(() => []);
     if (attempt >= 4) throw new Error(`Anmeldung als ${login} nicht möglich: ${hint.join(' | ') || 'keine Meldung'}`);
     console.log(`Anmeldung als ${login} (Versuch ${attempt}) blieb auf der Anmeldeseite: ${hint.join(' | ') || 'keine Meldung'} – neuer Versuch`);
     await page.waitForTimeout(25_000);
@@ -92,7 +92,7 @@ export async function openSection(page: Page, name: string) {
 }
 
 /** Meldung (MessageToast) prüfen. */
-export const toast = (page: Page) => page.locator('.sapMMessageToast').last();
+export const toast = (page: Page) => page.locator('.eoToast .eoToastText').last();
 
 /** API-Aufruf aus der Browser-Sitzung (mit CSRF), z. B. für App-Daten über den Sync. */
 export async function apiCall<T>(page: Page, method: string, path: string, body?: unknown): Promise<{ status: number; json: T }> {
@@ -212,7 +212,7 @@ export async function layoutIssues(page: Page, scopeSelector = 'body'): Promise<
     const se = document.scrollingElement as HTMLElement;
     if (se.scrollWidth > se.clientWidth + 1) issues.add(`Seite läuft waagerecht über (${se.scrollWidth} px Inhalt bei ${se.clientWidth} px Fenster)`);
     const candidates = Array.from(root.querySelectorAll('*')).filter((e) => {
-      if (e.closest('.sapMPopover, .sapMDialog, .sapUiBLy, .sapMMessageToast, .sapMSelectList, .sapUiInvisibleText') && !root.closest('.sapMDialog')) return false;
+      if (e.closest('.sapMPopover, .sapMDialog, .sapUiBLy, .eoToasts, .sapMSelectList, .sapUiInvisibleText') && !root.closest('.sapMDialog')) return false;
       return true;
     });
     const clipOf = (e: Element): Element | null => {
