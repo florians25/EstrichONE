@@ -45,7 +45,7 @@ public sealed class CustomerRecordTests(PostgresFixture postgres) : IAsyncLifeti
     }
 
     [Fact]
-    public async Task CustomerNumbers_AreAssignedFromOwnSequence_ManualNumbersStayUnique()
+    public async Task CustomerNumbers_AreAssignedFromOwnSequence_ManualNumbersRejected()
     {
         var numbering = await _office.GetFromJsonAsync<CustomerNumberingResponse>("/api/v1/contacts/numbering", TestJson.Options, Ct);
         numbering!.Pattern.ShouldBe("60{NNNN}");
@@ -53,19 +53,27 @@ public sealed class CustomerRecordTests(PostgresFixture postgres) : IAsyncLifeti
         numbering.Preview.ShouldBe("600001");
 
         (await CreateContactAsync(new { id = Guid.CreateVersion7(), kind = "company", name = "Bau Huber GmbH" })).CustomerNumber.ShouldBe("600001");
-        // Von Hand vergebene Nummer, die der Zähler später erreichen würde, wird übersprungen.
-        (await CreateContactAsync(new { id = Guid.CreateVersion7(), kind = "person", name = "Eigene Nummer", customerNumber = "600002" })).CustomerNumber.ShouldBe("600002");
-        (await CreateContactAsync(new { id = Guid.CreateVersion7(), kind = "person", name = "Eva Lang" })).CustomerNumber.ShouldBe("600003");
-        using (var taken = await _office.PostAsJsonAsync("/api/v1/contacts", new { id = Guid.CreateVersion7(), kind = "person", name = "Doppelt", customerNumber = "600003" }, TestJson.Options, Ct))
+        // Eigene Nummern sind nicht erlaubt (nur aus dem Nummernkreis), auch nicht mit Einstellungsrecht.
+        using (var manual = await _office.PostAsJsonAsync("/api/v1/contacts", new { id = Guid.CreateVersion7(), kind = "person", name = "Eigene Nummer", customerNumber = "600002" }, TestJson.Options, Ct))
         {
-            taken.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+            manual.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            (await manual.Content.ReadAsStringAsync(Ct)).ShouldContain("NUMBER_MANUAL_FORBIDDEN");
         }
+
+        (await CreateContactAsync(new { id = Guid.CreateVersion7(), kind = "person", name = "Eva Lang" })).CustomerNumber.ShouldBe("600002");
 
         // Ändern ohne Nummer (ältere Apps, Formulare ohne Feld) behält die vergebene Nummer.
         var eva = (await _office.GetFromJsonAsync<List<ContactResponse>>("/api/v1/contacts?search=Eva", TestJson.Options, Ct))!.Single();
         using (var updated = await _office.PutAsJsonAsync($"/api/v1/contacts/{eva.Id}", new { version = eva.Version, kind = "person", name = "Eva Lang", city = "Landshut" }, TestJson.Options, Ct))
         {
-            (await updated.Content.ReadFromJsonAsync<ContactResponse>(TestJson.Options, Ct))!.CustomerNumber.ShouldBe("600003");
+            (await updated.Content.ReadFromJsonAsync<ContactResponse>(TestJson.Options, Ct))!.CustomerNumber.ShouldBe("600002");
+        }
+
+        // Nummer ändern: abgelehnt.
+        eva = (await _office.GetFromJsonAsync<List<ContactResponse>>("/api/v1/contacts?search=Eva", TestJson.Options, Ct))!.Single();
+        using (var changed = await _office.PutAsJsonAsync($"/api/v1/contacts/{eva.Id}", new { version = eva.Version, kind = "person", name = "Eva Lang", customerNumber = "609999" }, TestJson.Options, Ct))
+        {
+            changed.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         }
 
         // Muster und Startwert in den Einstellungen: nur mit Einstellungsrecht.

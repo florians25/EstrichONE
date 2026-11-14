@@ -283,24 +283,23 @@ internal static class StaffEndpoints
             }
         }
 
-        var number = request.PersonnelNumber?.Trim();
-        if (!string.IsNullOrEmpty(number) && await db.Set<Employee>().AnyAsync(e => e.PersonnelNumber == number && e.Id != id, cancellationToken))
-        {
-            return Conflict($"Die Personalnummer {number} ist schon vergeben.", "PERSONNEL_NUMBER_TAKEN");
-        }
-
         try
         {
             var employee = await db.Set<Employee>().SingleOrDefaultAsync(e => e.Id == id, cancellationToken);
+            // Personalnummern kommen ausschließlich aus dem Nummernkreis „Personal“: leer oder unverändert, sonst abgelehnt.
+            if (NumberProblems.RejectManual(request.PersonnelNumber, employee?.PersonnelNumber) is { } manual)
+            {
+                return manual;
+            }
+
             if (employee is null)
             {
                 employee = Employee.Create(id);
                 db.Add(employee);
             }
 
-            // Ohne Personalnummer vergibt der Server die nächste aus dem Nummernkreis „Personal“.
-            var personnelNumber = string.IsNullOrEmpty(number) && employee.PersonnelNumber is null
-                ? await numberRanges.NextAsync(NumberRangeKeys.Employee, cancellationToken) : request.PersonnelNumber;
+            // Ohne Personalnummer (neu oder Altbestand) vergibt der Server die nächste aus dem Nummernkreis „Personal“.
+            var personnelNumber = employee.PersonnelNumber ?? await numberRanges.NextAsync(NumberRangeKeys.Employee, cancellationToken);
             employee.Update(request.FirstName ?? string.Empty, request.LastName, personnelNumber, request.JobTitle, request.EmploymentType);
             employee.ChangeContact(request.Email, request.Phone, request.Mobile, request.Street, request.PostalCode, request.City, request.BirthDate);
             employee.ChangeEmergencyContact(request.EmergencyContactName, request.EmergencyContactPhone, request.EmergencyContactRelation);

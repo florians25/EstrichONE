@@ -1,15 +1,17 @@
 import type { Field } from "./forms";
-import { session } from "./session";
+
+/** Anzeige im Nummernfeld neuer Datensätze (ohne weitere Hinweistexte). */
+export const AUTO_NUMBER = "wird automatisch vergeben";
 
 /**
- * Feld „Nummer“ für Stammdaten-Dialoge: leer = automatisch aus dem Nummernkreis. Von Hand ändern dürfen nur
- * Administratoren (Einstellungen ändern); alle anderen sehen die vergebene Nummer schreibgeschützt.
+ * Feld „Nummer“ für Stammdaten-Dialoge: Nummern kommen ausschließlich aus dem Nummernkreis. Das Feld ist immer
+ * schreibgeschützt – bei neuen Datensätzen mit „wird automatisch vergeben“, sonst mit der vergebenen Nummer, ohne
+ * weitere Hinweistexte.
+ * Der Server lehnt abweichende Nummern ab (NUMBER_MANUAL_FORBIDDEN).
  */
 export function numberField(key: string, label: string, isNew: boolean): Field {
-	const admin = session.has("settings.manage");
 	return {
-		key, label, maxLength: 30, editable: admin,
-		placeholder: isNew ? "wird automatisch vergeben" : "",
-		help: admin ? "Leer lassen für die nächste Nummer aus dem Nummernkreis (Systemeinstellungen › Nummernkreise)." : undefined,
+		key, label, maxLength: 30, editable: false,
+		placeholder: isNew ? AUTO_NUMBER : "",
 	};
 }

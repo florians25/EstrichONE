@@ -2,7 +2,7 @@
 import { get, post, put } from "./api";
 import { KEEP_OPEN, openForm } from "./forms";
 import { uuidv7 } from "./ids";
-import { session } from "./session";
+import { AUTO_NUMBER } from "./numberField";
 import type { DuplicateCandidate } from "./bauakteWizard";
 import type { ContactAddress, ContactEmail, ContactPhone, ContactResponse } from "./models";
 
@@ -28,8 +28,8 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 			{ key: "salutation", label: "Anrede", type: "combo", maxLength: 30, options: ["Herr", "Frau", "Familie", "Firma", "Eheleute"].map((t) => ({ key: t, text: t })) },
 			{ key: "title", label: "Titel", maxLength: 50, placeholder: "z. B. Dr." },
 			{ key: "name", label: "Name", required: true, maxLength: 200 },
-			{ key: "customerNumber", label: "Kundennummer", maxLength: 50, editable: session.has("settings.manage"),
-				placeholder: "wird automatisch vergeben", help: session.has("settings.manage") ? undefined : "Aus dem Nummernkreis; Änderung nur mit dem Recht für Einstellungen." },
+			{ key: "customerNumber", label: "Kundennummer", maxLength: 50, editable: false,
+				placeholder: AUTO_NUMBER },
 			{ key: "sAddress", label: "Anschrift", type: "section" },
 			{ key: "street", label: "Straße", maxLength: 200 },
 			{ key: "postalCode", label: "PLZ", maxLength: 10 },
@@ -63,7 +63,7 @@ export async function openCustomerForm(contact: ContactResponse | null, readOnly
 			const emails = (v.emails as ContactEmail[]) ?? [];
 			const bad = emails.find((e) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e.address));
 			if (bad) throw new Error(`Ungültige E-Mail-Adresse „${bad.address}“.`);
-			const body = { kind: v.kind, name: v.name, customerNumber: v.customerNumber || null, street: v.street || null, postalCode: v.postalCode || null,
+			const body = { kind: v.kind, name: v.name, customerNumber: null, street: v.street || null, postalCode: v.postalCode || null,
 				city: v.city || null, phone: phones[0]?.number ?? null, email: emails[0]?.address ?? null, notes: v.notes || null,
 				phones, emails, salutation: v.salutation || null, title: v.title || null,
 				billingAddress: address(v, "billing"), deliveryAddress: address(v, "delivery"), vatId: v.vatId || null, taxNumber: v.taxNumber || null,

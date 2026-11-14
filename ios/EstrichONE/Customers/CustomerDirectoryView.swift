@@ -646,6 +646,11 @@ struct CustomerEditView: View {
                     TextField(edit.isCompany ? "Firmenname" : "Name", text: $edit.name)
                         .textContentType(edit.isCompany ? .organizationName : .name)
                         .accessibilityIdentifier("customerEditName")
+                    // Kundennummer nur aus dem Nummernkreis (Server): schreibgeschützt, ohne weitere Hinweise.
+                    LabeledContent("Kundennummer") {
+                        Text(contact?.customerNumber ?? "wird automatisch vergeben").foregroundStyle(.secondary)
+                    }
+                    .accessibilityIdentifier("customerEditNumber")
                     if !edit.isCompany {
                         HStack {
                             TextField("Anrede", text: $edit.salutation)

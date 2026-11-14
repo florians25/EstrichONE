@@ -21,7 +21,7 @@ Ein Klick öffnet die Mitarbeiterakte mit den Abschnitten:
 | Abschnitt | Inhalt |
 |---|---|
 | **Übersicht / Kontakt** | Handy, Telefon, E-Mail, Anschrift, Geburtsdatum, Notfallkontakt mit Beziehung |
-| **Beschäftigung** | Personalnummer, Art (Vollzeit, Teilzeit …), Eintritt und Austritt, Arbeitszeit, Arbeitstage, Stundensatz, Notizen |
+| **Beschäftigung** | Personalnummer (automatisch aus dem Nummernkreis, nicht änderbar), Art (Vollzeit, Teilzeit …), Eintritt und Austritt, Arbeitszeit, Arbeitstage, Stundensatz, Notizen |
 | **Kolonnen** | Zugehörigkeit zu Kolonnen (**Kolonnen ändern**) |
 | **Qualifikationen** | Qualifikationen und Führerscheinklassen mit Nummer und **Gültig bis** |
 | **Urlaub und Abwesenheiten** | Anspruch, Übertrag, genommen, geplant, Rest, Krankheitstage; **Abwesenheit eintragen** |

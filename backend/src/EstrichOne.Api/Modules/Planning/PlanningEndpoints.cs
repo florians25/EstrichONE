@@ -112,8 +112,7 @@ internal static class PlanningEndpoints
         {
             var resource = await db.Set<Resource>().SingleOrDefaultAsync(r => r.Id == id, cancellationToken);
             var number = NumberProblems.Clean(request.InventoryNumber);
-            if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Resource, number, resource?.InventoryNumber,
-                    n => db.Set<Resource>().AnyAsync(r => r.InventoryNumber == n && r.Id != id, cancellationToken), cancellationToken) is { } problem)
+            if (NumberProblems.RejectManual(number, resource?.InventoryNumber) is { } problem)
             {
                 return problem;
             }
@@ -160,8 +159,7 @@ internal static class PlanningEndpoints
         {
             var crew = await db.Set<Crew>().SingleOrDefaultAsync(c => c.Id == id, cancellationToken);
             var number = NumberProblems.Clean(request.Number);
-            if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Crew, number, crew?.Number,
-                    n => db.Set<Crew>().AnyAsync(c => c.Number == n && c.Id != id, cancellationToken), cancellationToken) is { } problem)
+            if (NumberProblems.RejectManual(number, crew?.Number) is { } problem)
             {
                 return problem;
             }

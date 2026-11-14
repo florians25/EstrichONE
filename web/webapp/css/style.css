@@ -973,6 +973,8 @@ li[data-dot] { display: flex; align-items: center; }
 
 /* Zeilen aus Feld + Schaltfläche/Hinweis in Formularen brechen bei schmaler Breite um, statt rechts abgeschnitten zu werden. */
 .eoForm .sapUiRespGrid .sapMHBox:not(.eoNoWrap) { flex-wrap: wrap; row-gap: 0.25rem; }
+/* Telefon-/E-Mail-Zeilen (Kunde): [Art · Nummer] und [Bezeichnung · Entfernen] mit gleichem Abstand, auch nach dem Umbruch. */
+.eoContactRow.sapMFlexBox { column-gap: 0.5rem; row-gap: 0.25rem; }
 .eoForm .sapUiRespGrid .sapMHBox > .sapMFlexItem, .eoForm .sapUiRespGrid .sapMHBox > * { min-width: 0; max-width: 100%; }
 /* Bereiche, die absichtlich waagerecht scrollen (z. B. Rechtematrix bei vielen Rollen), statt die Seite zu verbreitern. */
 .eoScrollX { overflow-x: auto; max-width: 100%; }

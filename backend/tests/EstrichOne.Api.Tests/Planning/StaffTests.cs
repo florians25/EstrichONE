@@ -62,7 +62,7 @@ public sealed class StaffTests(PostgresFixture postgres) : IAsyncLifetime
         var year = Today.Year;
         var saved = await PutAsync<EmployeeDetail>(admin, $"/api/v1/staff/employees/{id}", new
         {
-            firstName = "Lukas", lastName = "Berger", personnelNumber = "P-017", jobTitle = "Estrichleger", employmentType = "fullTime", userId = lukas.Id,
+            firstName = "Lukas", lastName = "Berger", jobTitle = "Estrichleger", employmentType = "fullTime", userId = lukas.Id,
             mobile = "0171 1234567", street = "Hauptstr. 4", postalCode = "84028", city = "Landshut", birthDate = "1990-04-12",
             emergencyContactName = "Maria Berger", emergencyContactPhone = "0871 55555", emergencyContactRelation = "Ehefrau",
             entryDate = "2019-03-01", workTimeModel = "Vollzeit 40 h", weeklyHours = 40m, workDays = Weekdays,
@@ -154,12 +154,13 @@ public sealed class StaffTests(PostgresFixture postgres) : IAsyncLifetime
     {
         using var admin = await _factory.CreateClientAsAsync("chefin", StandardRoles.AdministratorId);
         var lukas = await _factory.CreateUserAsync("lukas", roleIds: StandardRoles.SiteWorkerId);
-        await PutAsync<EmployeeDetail>(admin, $"/api/v1/staff/employees/{Guid.CreateVersion7()}", new { lastName = "Berger", personnelNumber = "P-1", userId = lukas.Id });
+        await PutAsync<EmployeeDetail>(admin, $"/api/v1/staff/employees/{Guid.CreateVersion7()}", new { lastName = "Berger", userId = lukas.Id });
 
         using var twice = await admin.PutAsJsonAsync($"/api/v1/staff/employees/{Guid.CreateVersion7()}", new { lastName = "Zweiter", userId = lukas.Id }, Ct);
         twice.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        // Personalnummern nur aus dem Nummernkreis: eigene Nummer abgelehnt.
         using var number = await admin.PutAsJsonAsync($"/api/v1/staff/employees/{Guid.CreateVersion7()}", new { lastName = "Dritter", personnelNumber = "P-1" }, Ct);
-        number.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+        number.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         using var exit = await admin.PutAsJsonAsync($"/api/v1/staff/employees/{Guid.CreateVersion7()}", new
         {
             lastName = "Falsch", entryDate = "2024-05-01", exitDate = "2024-04-01",

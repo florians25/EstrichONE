@@ -14,12 +14,6 @@ public interface INumberRanges
     /// <summary>Nächste freie Nummer der Art; wirft <see cref="NumberRangeExhaustedException"/>, wenn der Bereich ausgeschöpft ist.</summary>
     Task<string> NextAsync(string key, CancellationToken cancellationToken);
 
-    /// <summary>
-    /// Darf der aktuelle Benutzer eine Nummer von Hand vergeben oder ändern? Immer mit „Einstellungen ändern“;
-    /// bei Arten, deren Nummer schon immer im Formular stand (Kunden, Personal), auch mit dem Bearbeitungsrecht der Art.
-    /// </summary>
-    Task<bool> MayOverrideAsync(string key, CancellationToken cancellationToken);
-
     /// <summary>Stand eines Nummernkreises (Muster, Bereich, nächste Nummer, Vorschau).</summary>
     Task<NumberRangeResponse> StateAsync(string key, CancellationToken cancellationToken);
 
@@ -32,6 +26,7 @@ public interface INumberRanges
 /// <param name="Preview">So sieht die nächste Nummer aus.</param>
 /// <param name="Remaining">Noch freie Zählerwerte bis zum Ende des Bereichs; leer = unbegrenzt.</param>
 /// <param name="Capacity">Höchster Zählerwert, der in die Stellen des Musters passt.</param>
+/// <param name="EditorsMayOverride">Veraltet, immer false: Nummern werden ausschließlich aus dem Nummernkreis vergeben.</param>
 public sealed record NumberRangeResponse(string Key, string Label, string Group, string Pattern, string DefaultPattern, long RangeStart, long? RangeEnd,
     long NextNumber, string Preview, long? Remaining, long Capacity, bool Yearly, int MaxLength, bool EditorsMayOverride, long Version);
 
@@ -57,9 +52,8 @@ public static class NumberRangeKeys
 /// Beschreibung einer Nummernkreis-Art. <paramref name="Table"/>/<paramref name="Column"/> nennen die Spalte, deren
 /// vorhandene Werte (auch gelöschter Datensätze) beim Vergeben übersprungen werden.
 /// </summary>
-/// <param name="EditorsMayOverride">Nummer darf auch ohne „Einstellungen ändern“ von Hand gesetzt werden (bisheriges Verhalten).</param>
 public sealed record NumberRangeDefinition(string Key, string Label, string Group, string DefaultPattern, long DefaultStart, string Table, string Column,
-    int MaxLength, bool EditorsMayOverride = false)
+    int MaxLength)
 {
     /// <summary>Standard-Ende: bei Mustern ohne Jahr die Stellenzahl (z. B. 9999 bei „60{NNNN}“), mit Jahr unbegrenzt.</summary>
     public long? DefaultEnd => NumberPattern.IsYearly(DefaultPattern) ? null : NumberPattern.Capacity(DefaultPattern);
@@ -75,9 +69,9 @@ public static class NumberRangeDefinitions
     public static readonly IReadOnlyList<NumberRangeDefinition> All =
     [
         new(NumberRangeKeys.Bauakte, "Bauakten", "Vorgänge", "{JJJJ}-{NNN}", 1, "bauakten", "number", 18),
-        new(NumberRangeKeys.Customer, "Kunden", "Stammdaten", "60{NNNN}", 1, "contacts", "customer_number", 30, EditorsMayOverride: true),
+        new(NumberRangeKeys.Customer, "Kunden", "Stammdaten", "60{NNNN}", 1, "contacts", "customer_number", 30),
         new(NumberRangeKeys.Supplier, "Lieferanten", "Stammdaten", "70{NNNN}", 1, "suppliers", "number", 30),
-        new(NumberRangeKeys.Employee, "Personal", "Stammdaten", "10{NNN}", 1, "employees", "personnel_number", 18, EditorsMayOverride: true),
+        new(NumberRangeKeys.Employee, "Personal", "Stammdaten", "10{NNN}", 1, "employees", "personnel_number", 18),
         new(NumberRangeKeys.Resource, "Maschinen und Fahrzeuge", "Stammdaten", "20{NNN}", 1, "resources", "inventory_number", 30),
         new(NumberRangeKeys.Crew, "Kolonnen", "Stammdaten", "K{NN}", 1, "crews", "number", 30),
         new(NumberRangeKeys.Material, "Material", "Stammdaten", "50{NNNN}", 1, "materials", "number", 30),
@@ -166,41 +160,31 @@ public class NumberRangeExhaustedException(string key, string label, string patt
         detail: Message, extensions: new Dictionary<string, object?> { ["code"] = ErrorCode, ["numberRange"] = Key });
 }
 
-/// <summary>Einheitliche Antworten zu Nummern (von Hand vergeben).</summary>
+/// <summary>
+/// Nummern werden ausschließlich aus dem Nummernkreis vergeben: Eine vom Client gesendete Nummer ist nur erlaubt,
+/// wenn sie leer ist oder der bereits vergebenen entspricht. Ausnahme ist der Kunden-Import (vorhandene Nummern aus der Datei).
+/// </summary>
 public static class NumberProblems
 {
-    /// <summary>409: Die Nummer ist bereits vergeben.</summary>
-    public static ProblemHttpResult Taken(string code = "NUMBER_TAKEN") => TypedResults.Problem(statusCode: StatusCodes.Status409Conflict,
-        title: "Nummer bereits vergeben", detail: "Diese Nummer ist bereits vergeben. Bitte eine andere wählen oder das Feld leer lassen (automatisch).",
-        extensions: new Dictionary<string, object?> { ["code"] = code });
+    public const string ManualForbiddenCode = "NUMBER_MANUAL_FORBIDDEN";
 
-    /// <summary>403: Nummern vergibt der Nummernkreis; von Hand nur mit „Einstellungen ändern“.</summary>
-    public static ProblemHttpResult OverrideForbidden() => TypedResults.Problem(statusCode: StatusCodes.Status403Forbidden,
-        title: "Nummer wird automatisch vergeben", detail: "Die Nummer vergibt der Nummernkreis. Von Hand ändern dürfen nur Administratoren (Einstellungen ändern).",
-        extensions: new Dictionary<string, object?> { ["code"] = "NUMBER_OVERRIDE_FORBIDDEN" });
+    /// <summary>400: Nummer von Hand eingegeben oder geändert.</summary>
+    public static ProblemHttpResult ManualForbidden() => TypedResults.Problem(statusCode: StatusCodes.Status400BadRequest,
+        title: "Nummer wird automatisch vergeben", detail: ManualForbiddenDetail,
+        extensions: new Dictionary<string, object?> { ["code"] = ManualForbiddenCode });
+
+    public const string ManualForbiddenDetail =
+        "Nummern werden automatisch aus dem Nummernkreis vergeben und können nicht von Hand eingegeben oder geändert werden.";
 
     /// <summary>Leere Eingabe = automatisch (null), sonst ohne Leerzeichen am Rand.</summary>
     public static string? Clean(string? number) => string.IsNullOrWhiteSpace(number) ? null : number.Trim();
 
     /// <summary>
-    /// Prüft eine von Hand angegebene Nummer: unverändert oder leer ist immer erlaubt; sonst nur mit Recht
-    /// (<see cref="INumberRanges.MayOverrideAsync"/>) und wenn sie noch frei ist (409). Null = in Ordnung.
+    /// Prüft eine vom Client gesendete Nummer: leer oder gleich der vergebenen ist in Ordnung (null), jede andere
+    /// wird abgelehnt (<see cref="ManualForbidden"/>) – bei der Anlage ebenso wie beim Ändern.
     /// </summary>
-    public static async Task<ProblemHttpResult?> CheckOverrideAsync(INumberRanges ranges, string key, string? requested, string? current,
-        Func<string, Task<bool>> isTaken, CancellationToken cancellationToken)
-    {
-        if (requested is null || requested == current)
-        {
-            return null;
-        }
-
-        if (!await ranges.MayOverrideAsync(key, cancellationToken))
-        {
-            return OverrideForbidden();
-        }
-
-        return await isTaken(requested) ? Taken() : null;
-    }
+    public static ProblemHttpResult? RejectManual(string? requested, string? current) =>
+        Clean(requested) is { } number && number != current ? ManualForbidden() : null;
 
     /// <summary>Unique-Verletzung (23505) auf einer Nummernspalte?</summary>
     public static bool IsUniqueViolation(Exception exception, string columnFragment) =>

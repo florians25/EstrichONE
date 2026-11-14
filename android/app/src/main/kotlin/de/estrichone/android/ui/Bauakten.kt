@@ -260,6 +260,9 @@ fun NewBauakteSheet(onDismiss: () -> Unit, onCreated: (String) -> Unit) {
                 }
             } else {
                 OutlinedTextField(customerName, { customerName = it }, label = { Text("Name des Kunden") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+                // Kundennummer nur aus dem Nummernkreis (Server): schreibgeschützt, ohne weitere Hinweise.
+                OutlinedTextField("wird automatisch vergeben", {}, label = { Text("Kundennummer") }, readOnly = true, enabled = false, singleLine = true,
+                    modifier = Modifier.fillMaxWidth())
                 // Dublettenhinweis aus dem Bestand auf dem Gerät (auch offline).
                 val similar = remember(customerName) { duplicates(contacts, customerName, city) }
                 if (similar.isNotEmpty()) {

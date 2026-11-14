@@ -38,7 +38,7 @@ einem Anruf erscheint. Die App fragt dafür einmalig nach dem Zugriff auf Ihre K
    (Pflicht), dazu Telefonnummern, E-Mail-Adressen, Anschrift und den **bevorzugten Kontaktweg**.
 3. Tippen Sie auf **Sichern**.
 
-Der Kunde wird beim nächsten Abgleich übertragen; die **Kundennummer vergibt das Büro**. Neue Kunden lassen sich auch
+Der Kunde wird beim nächsten Abgleich übertragen; die **Kundennummer wird automatisch aus dem Nummernkreis vergeben**. Neue Kunden lassen sich auch
 direkt beim Anlegen einer Bauakte erfassen (Kapitel 4). Mit **Bearbeiten** ändern Sie die Angaben eines vorhandenen
 Kunden.
 

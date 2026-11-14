@@ -131,31 +131,48 @@ public sealed class NumberRangeTests(PostgresFixture postgres) : IAsyncLifetime
     }
 
     [Fact]
-    public async Task ManualNumbers_OnlyForAdmins_AndUnique()
+    public async Task ManualNumbers_AreRejected_EvenForAdmins()
     {
-        var id = Guid.CreateVersion7();
-        using (var forbidden = await _office.PutAsJsonAsync($"/api/v1/suppliers/{id}", new { id, name = "Eigene Nummer", number = "L-1" }, TestJson.Options, Ct))
+        // Anlage mit eigener Nummer: abgelehnt, auch mit „Einstellungen ändern“.
+        foreach (var client in new[] { _office, _admin })
         {
-            forbidden.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
-            (await forbidden.Content.ReadAsStringAsync(Ct)).ShouldContain("NUMBER_OVERRIDE_FORBIDDEN");
+            var id = Guid.CreateVersion7();
+            using var forbidden = await client.PutAsJsonAsync($"/api/v1/suppliers/{id}", new { id, name = "Eigene Nummer", number = "L-1" }, TestJson.Options, Ct);
+            forbidden.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            (await forbidden.Content.ReadAsStringAsync(Ct)).ShouldContain(NumberProblems.ManualForbiddenCode);
         }
 
-        (await PutAsync<SupplierResponse>(_admin, $"/api/v1/suppliers/{id}", new { id, name = "Eigene Nummer", number = "700002" })).Number.ShouldBe("700002");
-        // Sachbearbeiter sendet die vorhandene Nummer unverändert zurück: erlaubt.
-        (await PutAsync<SupplierResponse>(_office, $"/api/v1/suppliers/{id}", new { id, name = "Eigene Nummer GmbH", number = "700002" })).Number.ShouldBe("700002");
-
-        var other = Guid.CreateVersion7();
-        using (var taken = await _admin.PutAsJsonAsync($"/api/v1/suppliers/{other}", new { id = other, name = "Doppelt", number = "700002" }, TestJson.Options, Ct))
+        var supplier = Guid.CreateVersion7();
+        var created = await PutAsync<SupplierResponse>(_admin, $"/api/v1/suppliers/{supplier}", new { id = supplier, name = "Automatisch" });
+        created.Number.ShouldBe("700001");
+        // Vorhandene Nummer unverändert zurücksenden oder leer lassen: erlaubt, die Nummer bleibt.
+        (await PutAsync<SupplierResponse>(_office, $"/api/v1/suppliers/{supplier}", new { id = supplier, name = "Automatisch GmbH", number = "700001" })).Number.ShouldBe("700001");
+        (await PutAsync<SupplierResponse>(_office, $"/api/v1/suppliers/{supplier}", new { id = supplier, name = "Automatisch GmbH" })).Number.ShouldBe("700001");
+        // Ändern: abgelehnt.
+        using (var change = await _admin.PutAsJsonAsync($"/api/v1/suppliers/{supplier}", new { id = supplier, name = "Automatisch GmbH", number = "700099" }, TestJson.Options, Ct))
         {
-            taken.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+            change.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         }
+
+        // Ebenso Material, Maschinen, Kolonnen und Personal.
+        var material = Guid.CreateVersion7();
+        (await _admin.PutAsJsonAsync($"/api/v1/materials/{material}", new { id = material, name = "Folie", category = "membrane", unit = "Rolle", number = "M-1" }, TestJson.Options, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await _admin.PutAsJsonAsync($"/api/v1/planning/resources/{Guid.CreateVersion7()}", new { kind = "machine", name = "Pumpe", inventoryNumber = "INV-1" }, TestJson.Options, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await _admin.PutAsJsonAsync($"/api/v1/planning/crews/{Guid.CreateVersion7()}", new { name = "Kolonne X", number = "K-99" }, TestJson.Options, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+        (await _admin.PutAsJsonAsync($"/api/v1/staff/employees/{Guid.CreateVersion7()}", new { lastName = "Hand", personnelNumber = "P-1" }, TestJson.Options, Ct))
+            .StatusCode.ShouldBe(HttpStatusCode.BadRequest);
     }
 
     [Fact]
-    public async Task Counter_SkipsManualNumbers()
+    public async Task Counter_SkipsExistingNumbers()
     {
-        var manual = Guid.CreateVersion7();
-        await PutAsync<SupplierResponse>(_admin, $"/api/v1/suppliers/{manual}", new { id = manual, name = "Von Hand", number = "700001" });
+        var first = Guid.CreateVersion7();
+        (await PutAsync<SupplierResponse>(_office, $"/api/v1/suppliers/{first}", new { id = first, name = "Erster" })).Number.ShouldBe("700001");
+        // Zähler zurückgesetzt: die vorhandene Nummer wird übersprungen.
+        await PutAsync<NumberRangeResponse>(_admin, "/api/v1/settings/number-ranges/supplier", new { pattern = "70{NNNN}", rangeStart = 1, nextNumber = 1 });
         var next = Guid.CreateVersion7();
         (await PutAsync<SupplierResponse>(_office, $"/api/v1/suppliers/{next}", new { id = next, name = "Automatisch" })).Number.ShouldBe("700002");
     }

@@ -8,7 +8,10 @@ test('Kundenanlage: Dublettenhinweis beim Tippen, vorhandenen Kunden verwenden, 
   await page.goto('/kunden');
   await page.getByRole('button', { name: 'Neuer Kunde' }).click();
   const dialog = page.getByRole('dialog', { name: 'Neuer Kunde' });
-  await expect(dialog.getByLabel('Kundennummer')).toHaveAttribute('placeholder', /wird automatisch vergeben, voraussichtlich 60\d{4}/);
+  // Kundennummer nur aus dem Nummernkreis: schreibgeschützt, „wird automatisch vergeben“, ohne weitere Hinweise.
+  await expect(dialog.getByLabel('Kundennummer')).toHaveValue('wird automatisch vergeben');
+  await expect(dialog.getByText(/Nummernkreis/)).toHaveCount(0);
+  await expect(dialog.getByLabel('Kundennummer')).not.toBeEditable();
   // Pflichtfeld: ohne Namen kein Anlegen.
   await dialog.getByRole('button', { name: 'Kunde anlegen' }).click();
   await expect(dialog.getByText('Bitte den Namen angeben.').first()).toBeVisible();
@@ -147,7 +150,7 @@ test('Bauakte › Kontakte: nach Rolle gruppiert, Schnellaktionen, vorhandenen K
   await expect(linked).toContainText('info@wohnbau-sued.de');
 });
 
-test('Nummernkreise in den Einstellungen: alle Datensätze, Kunden-Nummernkreis bearbeiten, Vorschau im Kundendialog', async ({ page }) => {
+test('Nummernkreise in den Einstellungen: alle Datensätze, Kunden-Nummernkreis bearbeiten, Vorschau', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await page.goto('/system/firmendaten?bereich=nummernkreise');
   const table = page.getByRole('grid', { name: 'Nummernkreise' });
@@ -169,9 +172,7 @@ test('Nummernkreise in den Einstellungen: alle Datensätze, Kunden-Nummernkreis 
   await dialog.getByRole('button', { name: 'Speichern' }).click();
   await expect(page.locator('.eoToast .eoToastText').last()).toContainText('Nummernkreis Kunden gespeichert');
   await expect(customers).toContainText('602000');
-  await page.goto('/kunden');
-  await page.getByRole('button', { name: 'Neuer Kunde' }).click();
-  await expect(page.getByRole('dialog', { name: 'Neuer Kunde' }).getByLabel('Kundennummer')).toHaveAttribute('placeholder', /602000/);
+  expect((await apiCall<{ preview: string }>(page, 'GET', '/api/v1/contacts/numbering')).json.preview).toBe('602000');
 });
 
 /** Eindeutige Namen je Lauf (Wiederholung gegen denselben Server). */
@@ -215,9 +216,10 @@ test('Kunde ohne verknüpfte Daten löschen: Kundennummer eintippen, Nummer wird
   await expect(page.locator('.eoToast .eoToastText').last()).toContainText(`Probekunde Löschen ${run} gelöscht`);
   await expect(row).toHaveCount(0);
   expect((await apiCall(page, 'GET', `/api/v1/contacts/${created.json.id}`)).status).toBe(404);
-  // Nummer bleibt vergeben.
-  const again = await apiCall(page, 'POST', '/api/v1/contacts', { id: crypto.randomUUID(), kind: 'person', name: 'Gleiche Nummer', customerNumber: number });
-  expect(again.status).toBe(409);
+  // Nummern lassen sich nicht von Hand vergeben (auch nicht die frei gewordene).
+  const again = await apiCall<{ code?: string }>(page, 'POST', '/api/v1/contacts', { id: crypto.randomUUID(), kind: 'person', name: 'Gleiche Nummer', customerNumber: number });
+  expect(again.status).toBe(400);
+  expect(again.json.code).toBe('NUMBER_MANUAL_FORBIDDEN');
 });
 
 test('Kunde mit Bauakte: Löschen verweigert mit Bezügen, archivieren, Filter „Archivierte“, reaktivieren', async ({ page }) => {

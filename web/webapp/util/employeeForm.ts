@@ -3,6 +3,7 @@ import { put } from "./api";
 import { openForm } from "./forms";
 import { uuidv7 } from "./ids";
 import { session } from "./session";
+import { AUTO_NUMBER } from "./numberField";
 import { employmentTypes, weekdays, type EmployeeDetail } from "./planningModels";
 
 const workTimeModels = ["Vollzeit 40 h (Mo–Fr)", "Vollzeit 39 h (Mo–Fr)", "Teilzeit", "Saison (März–November)", "Minijob", "Gleitzeit", "4-Tage-Woche"];
@@ -20,7 +21,7 @@ export async function openEmployeeForm(existing: EmployeeDetail | null): Promise
 			{ key: "s1", label: "Person", type: "section" },
 			{ key: "firstName", label: "Vorname", maxLength: 100 },
 			{ key: "lastName", label: "Nachname", required: true, maxLength: 100 },
-			{ key: "personnelNumber", label: "Personalnummer", maxLength: 20 },
+			{ key: "personnelNumber", label: "Personalnummer", maxLength: 20, editable: false, placeholder: AUTO_NUMBER },
 			{ key: "jobTitle", label: "Tätigkeit", maxLength: 100, suggestions: ["Estrichleger", "Kolonnenführer", "Bauleiter", "Helfer", "Auszubildender", "Büro", "Fahrer"] },
 			{ key: "employmentType", label: "Beschäftigung", type: "select", required: true, options: Object.entries(employmentTypes).map(([key, text]) => ({ key, text })) },
 			{ key: "birthDate", label: "Geburtsdatum", type: "date" },
@@ -54,7 +55,7 @@ export async function openEmployeeForm(existing: EmployeeDetail | null): Promise
 			{ key: "notes", label: "Notizen", type: "textarea", rows: 3, maxLength: 4000 },
 		],
 		submit: (v) => put<EmployeeDetail>(`staff/employees/${existing?.id ?? uuidv7()}`, {
-			firstName: v.firstName || null, lastName: v.lastName, personnelNumber: v.personnelNumber || null, jobTitle: v.jobTitle || null,
+			firstName: v.firstName || null, lastName: v.lastName, personnelNumber: null, jobTitle: v.jobTitle || null,
 			employmentType: v.employmentType, userId: v.userId || null, email: v.email || null, phone: v.phone || null, mobile: v.mobile || null,
 			street: v.street || null, postalCode: v.postalCode || null, city: v.city || null, birthDate: v.birthDate || null,
 			emergencyContactName: v.emergencyContactName || null, emergencyContactPhone: v.emergencyContactPhone || null,

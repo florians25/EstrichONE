@@ -36,7 +36,8 @@ test('Personal: aus Benutzerkonten übernehmen, Stammdaten, Qualifikation mit Ab
     if (!(await form.isVisible())) await page.getByRole('button', { name: 'Bearbeiten' }).click();
     await expect(form).toBeVisible({ timeout: 3000 });
   }).toPass({ timeout: 20_000 });
-  await form.getByLabel('Personalnummer').fill('P-001');
+  // Personalnummer kommt aus dem Nummernkreis und ist schreibgeschützt.
+  await expect(form.getByLabel('Personalnummer')).not.toBeEditable();
   await form.getByLabel('Handy').fill('0171 2345678');
   await form.getByRole('textbox', { name: 'Ort' }).fill('Landshut');
   await form.getByLabel('Stundensatz').fill('24,50');

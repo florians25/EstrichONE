@@ -9,7 +9,9 @@ Bauträger, Architekten und Gemeinden.
 
 - Die Suche findet Name, Kundennummer, Ort, Telefon, E-Mail und Ansprechpartner.
 - **Alle**, **Firmen** und **Privat** filtern nach Art; sortiert wird nach Name, Kundennummer, Ort oder letzter Änderung.
-- **Neuer Kunde** legt einen Kunden an. Auch hier prüft EstrichONE beim Speichern auf Dubletten.
+- **Neuer Kunde** legt einen Kunden an. Auch hier prüft EstrichONE beim Speichern auf Dubletten. Die **Kundennummer**
+  vergibt EstrichONE automatisch aus dem Nummernkreis; sie lässt sich nicht von Hand eingeben oder ändern. Telefonnummern
+  und E-Mail-Adressen stehen je in einer Zeile mit Art, Nummer, optionaler **Bezeichnung** (z. B. „Büro“) und Entfernen.
 - **CSV importieren** übernimmt einen vorhandenen Kundenbestand, z. B. aus der bisherigen Software.
 - **Serien-E-Mail** öffnet eine E-Mail an alle Kunden, die Sie mit dem Häkchen markiert haben.
 - **Bauakten** in einer Zeile springt zu den Bauakten dieses Kunden.

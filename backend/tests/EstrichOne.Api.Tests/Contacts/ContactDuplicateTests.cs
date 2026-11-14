@@ -18,7 +18,7 @@ public sealed class ContactDuplicateTests(PostgresFixture postgres) : IAsyncLife
         foreach (var contact in new[]
         {
             new SaveContactRequest(Guid.CreateVersion7(), ContactKind.Person, "Familie Kraus", null, "Hauptstraße 3", "84028", "Landshut", "0871 123456", "kraus@example.de"),
-            new SaveContactRequest(Guid.CreateVersion7(), ContactKind.Company, "Bau Huber GmbH", "K-1", "Industriestr. 1", "84034", "Landshut", "+49 871 99887766"),
+            new SaveContactRequest(Guid.CreateVersion7(), ContactKind.Company, "Bau Huber GmbH", null, "Industriestr. 1", "84034", "Landshut", "+49 871 99887766"),
             new SaveContactRequest(Guid.CreateVersion7(), ContactKind.Person, "Maria Schneider", null, null, "80331", "München"),
         })
         {

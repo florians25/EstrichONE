@@ -86,9 +86,7 @@ internal static class MaterialEndpoints
 
         var supplier = await db.Set<Supplier>().SingleOrDefaultAsync(s => s.Id == id, cancellationToken);
         var number = NumberProblems.Clean(request.Number);
-        if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Supplier, number, supplier?.Number,
-                n => db.Set<Supplier>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AnyAsync(s => s.Number == n && s.Id != id, cancellationToken),
-                cancellationToken) is { } problem)
+        if (NumberProblems.RejectManual(number, supplier?.Number) is { } problem)
         {
             return problem;
         }
@@ -185,9 +183,7 @@ internal static class MaterialEndpoints
 
         var material = await db.Set<Material>().SingleOrDefaultAsync(m => m.Id == id, cancellationToken);
         var number = NumberProblems.Clean(request.Number);
-        if (await NumberProblems.CheckOverrideAsync(numberRanges, NumberRangeKeys.Material, number, material?.Number,
-                n => db.Set<Material>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AnyAsync(m => m.Number == n && m.Id != id, cancellationToken),
-                cancellationToken) is { } problem)
+        if (NumberProblems.RejectManual(number, material?.Number) is { } problem)
         {
             return problem;
         }

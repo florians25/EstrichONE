@@ -117,7 +117,7 @@
 									</ColumnListItem>
 								</items>
 							</Table>
-							<Text class="eoHelpText sapUiSmallMarginTop" text="Neue Datensätze erhalten ihre Nummer beim Anlegen vom Server – auch aus der App und beim Import. Bereits vergebene Nummern werden übersprungen, vorhandene nie geändert. Muster: \{JJJJ\} Jahr, \{JJ\} Jahr zweistellig, \{N…\} laufende Nummer mit Mindeststellen; Muster mit Jahr zählen je Jahr neu. Von Hand vergeben oder ändern dürfen Nummern nur Administratoren (Kunden- und Personalnummern auch die Sachbearbeitung). Jede Änderung steht im Protokoll."/>
+							<Text class="eoHelpText sapUiSmallMarginTop" text="Neue Datensätze erhalten ihre Nummer beim Anlegen vom Server – auch aus der App und beim Import. Bereits vergebene Nummern werden übersprungen, vorhandene nie geändert. Muster: \{JJJJ\} Jahr, \{JJ\} Jahr zweistellig, \{N…\} laufende Nummer mit Mindeststellen; Muster mit Jahr zählen je Jahr neu. Nummern lassen sich nicht von Hand eingeben oder ändern; nur der Kunden-Import übernimmt vorhandene Kundennummern aus der Datei. Jede Änderung eines Nummernkreises steht im Protokoll."/>
 						</VBox>
 					</IconTabFilter>
 					<IconTabFilter key="dokumente" text="Dokumente und Freigaben">

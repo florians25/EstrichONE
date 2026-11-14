@@ -2,6 +2,7 @@ using System.ComponentModel.DataAnnotations;
 using EstrichOne.Api.Infrastructure.Persistence;
 using EstrichOne.Api.Modules.Access.Exports;
 using EstrichOne.Api.Modules.Contacts.Exports;
+using EstrichOne.Api.Modules.Organization.Exports;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
@@ -196,12 +197,10 @@ internal static class ContactEndpoints
                     extensions: new Dictionary<string, object?> { ["code"] = "ID_CONFLICT" });
         }
 
-        var customerNumber = string.IsNullOrWhiteSpace(request.CustomerNumber) ? null : request.CustomerNumber.Trim();
-        if (customerNumber is not null
-            && await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted]).AnyAsync(c => c.CustomerNumber == customerNumber, cancellationToken))
+        // Kundennummern kommen ausschließlich aus dem Nummernkreis (Ausnahme: Kunden-Import).
+        if (NumberProblems.RejectManual(request.CustomerNumber, null) is { } manual)
         {
-            return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
-                extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
+            return manual;
         }
 
         if (Invalid(request) is { } invalid)
@@ -210,10 +209,10 @@ internal static class ContactEndpoints
         }
 
         var contact = Contact.Create(request.Id, request.Kind, request.Name);
-        contact.Update(request.Kind, request.Name, customerNumber, request.Street, request.PostalCode, request.City,
+        contact.Update(request.Kind, request.Name, null, request.Street, request.PostalCode, request.City,
             request.Phone, request.Email, request.Notes);
         ApplyDetails(contact, request);
-        // Ohne Nummer vergibt der Server die nächste aus dem Kunden-Nummernkreis.
+        // Der Server vergibt die nächste Nummer aus dem Kunden-Nummernkreis.
         try
         {
             await numbers.AssignIfMissingAsync(contact, cancellationToken);
@@ -231,7 +230,7 @@ internal static class ContactEndpoints
         catch (DbUpdateException exception) when (exception.InnerException is Npgsql.PostgresException { SqlState: "23505" } unique
             && unique.ConstraintName?.Contains("customer_number", StringComparison.Ordinal) == true)
         {
-            // Gleichzeitig von Hand dieselbe Nummer vergeben (eindeutiger Index).
+            // Gleichzeitig dieselbe Nummer vergeben (z. B. parallel zum Import; eindeutiger Index).
             return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
                 extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
         }
@@ -255,15 +254,13 @@ internal static class ContactEndpoints
                 detail: "Der Kontakt wurde inzwischen geändert. Bitte neu laden.", extensions: new Dictionary<string, object?> { ["code"] = "VERSION_CONFLICT" });
         }
 
-        // Leer gesendet (ältere Apps, Formulare ohne Feld): vergebene Nummer bleibt erhalten.
-        var number = string.IsNullOrWhiteSpace(request.CustomerNumber) ? contact.CustomerNumber : request.CustomerNumber.Trim();
-        // Auch Nummern gelöschter Kunden bleiben vergeben.
-        if (number is not null && await db.Set<Contact>().IgnoreQueryFilters([QueryFilters.NotDeleted])
-                .AnyAsync(c => c.CustomerNumber == number && c.Id != id, cancellationToken))
+        // Leer oder unverändert gesendet: vergebene Nummer bleibt erhalten; eine andere Nummer wird abgelehnt.
+        if (NumberProblems.RejectManual(request.CustomerNumber, contact.CustomerNumber) is { } manual)
         {
-            return TypedResults.Problem(statusCode: StatusCodes.Status409Conflict, title: "Kundennummer bereits vergeben",
-                extensions: new Dictionary<string, object?> { ["code"] = "CUSTOMER_NUMBER_TAKEN" });
+            return manual;
         }
+
+        var number = contact.CustomerNumber;
 
         if (Invalid(request) is { } invalid)
         {

@@ -18,6 +18,11 @@ struct CustomerFields: View {
             .textContentType(customer.isCompany ? .organizationName : .name)
             .submitLabel(.next)
             .accessibilityIdentifier("customerNameField")
+        // Kundennummer nur aus dem Nummernkreis (Server): schreibgeschützt, ohne weitere Hinweise.
+        LabeledContent("Kundennummer") {
+            Text("wird automatisch vergeben").foregroundStyle(.secondary)
+        }
+        .accessibilityIdentifier("customerNumberAuto")
         TextField("Telefon", text: text(\.phone))
             .keyboardType(.phonePad)
             .textContentType(.telephoneNumber)
@@ -174,7 +179,7 @@ struct NewCustomerForm: View {
             Section {
                 CustomerFields(customer: $customer)
             } footer: {
-                Text("Die Kundennummer vergibt das Büro. Der Kunde wird mit der nächsten Synchronisation übertragen.")
+                Text("Der Kunde wird mit der nächsten Synchronisation übertragen.")
             }
             SimilarCustomersSection(similar: similar) { onCreated($0) }
             if let errorMessage {
@@ -328,7 +333,7 @@ struct CustomerChooser: View {
             Text(newCustomer != nil ? "Neuer Kunde *" : "Kunde *")
         } footer: {
             if newCustomer != nil {
-                Text("Wird mit der Bauakte gespeichert und beim nächsten Abgleich übertragen. Die Kundennummer vergibt das Büro.")
+                Text("Wird mit der Bauakte gespeichert und beim nächsten Abgleich übertragen.")
             } else if customer == nil {
                 Text("Pflichtangabe. Gesucht wird auf dem Gerät und bei bestehender Verbindung auf dem Server.")
             }

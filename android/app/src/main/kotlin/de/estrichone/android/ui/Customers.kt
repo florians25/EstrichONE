@@ -161,7 +161,7 @@ fun CustomerScreen(id: String, showBack: Boolean = true) {
                 Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                     Avatar(c.initials, size = 76.dp)
                     Text(c.name, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.padding(top = 10.dp))
-                    Secondary(listOfNotNull(c.customerNumber?.let { "Kd.-Nr. $it" } ?: "Noch ohne Kundennummer (vergibt das Büro)", if (c.isCompany) "Firma" else "Privat",
+                    Secondary(listOfNotNull(c.customerNumber?.let { "Kd.-Nr. $it" } ?: "Kd.-Nr. wird automatisch vergeben", if (c.isCompany) "Firma" else "Privat",
                         if (c.anonymizedAt != null) "Anonymisiert" else if (c.isArchived) "Archiviert" else null).joinToString(" · "))
                     Row(Modifier.padding(top = 14.dp), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                         c.phone?.let { CircleAction(Icons.Filled.Phone, "Anrufen", { Links.call(context, it) }) }
@@ -304,6 +304,8 @@ private fun CustomerSheet(contact: Contact, onDismiss: () -> Unit) {
         session.service.updateContact(contact, mapOf("name" to name, "street" to street, "postalCode" to postalCode, "city" to city, "notes" to notes, "website" to website))
     }) {
         OutlinedTextField(name, { name = it }, label = { Text("Name") }, singleLine = true, modifier = Modifier.fillMaxWidth())
+        OutlinedTextField(contact.customerNumber ?: "wird automatisch vergeben", {}, label = { Text("Kundennummer") }, readOnly = true, enabled = false,
+            singleLine = true, modifier = Modifier.fillMaxWidth())
         OutlinedTextField(street, { street = it }, label = { Text("Straße") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             OutlinedTextField(postalCode, { postalCode = it }, label = { Text("PLZ") }, singleLine = true, modifier = Modifier.weight(0.35f))
@@ -311,6 +313,6 @@ private fun CustomerSheet(contact: Contact, onDismiss: () -> Unit) {
         }
         OutlinedTextField(website, { website = it }, label = { Text("Webseite") }, singleLine = true, modifier = Modifier.fillMaxWidth())
         DictationField(notes, { notes = it }, "Notiz", minLines = 2)
-        Secondary("Kundennummer, Steuerdaten und Ansprechpartner pflegt das Büro.", Modifier.padding(PaddingValues(top = 4.dp)))
+        Secondary("Steuerdaten und Ansprechpartner pflegt das Büro.", Modifier.padding(PaddingValues(top = 4.dp)))
     }
 }

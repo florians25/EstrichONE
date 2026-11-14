@@ -394,7 +394,7 @@ public sealed class AbsenceManagementTests(PostgresFixture postgres) : IAsyncLif
         var year = Today.Year + 1;
         var employee = await SendAsync<EmployeeDetail>(admin, HttpMethod.Put, $"/api/v1/staff/employees/{Guid.CreateVersion7()}", new
         {
-            firstName = "Anna", lastName = "Kraus", userId = anna.Id, vacationDaysPerYear = 24m, entryDate = $"{year}-04-01", personnelNumber = "P-9",
+            firstName = "Anna", lastName = "Kraus", userId = anna.Id, vacationDaysPerYear = 24m, entryDate = $"{year}-04-01",
         });
 
         // Betriebsferien 28.–31.12. (Montag bis Donnerstag je nach Jahr), für alle eingetragen und vom Urlaub abgezogen.
@@ -435,7 +435,7 @@ public sealed class AbsenceManagementTests(PostgresFixture postgres) : IAsyncLif
         csv.StatusCode.ShouldBe(HttpStatusCode.OK);
         var text = Encoding.UTF8.GetString(await csv.Content.ReadAsByteArrayAsync(Ct));
         text.ShouldContain("Personalnummer;Mitarbeiter;Kolonne");
-        text.ShouldContain("P-9;Anna Kraus;");
+        text.ShouldContain($"{employee.PersonnelNumber};Anna Kraus;");
         using var pdf = await office.GetAsync(new Uri($"/api/v1/hr/vacation-accounts.pdf?year={year}", UriKind.Relative), Ct);
         Encoding.ASCII.GetString(await pdf.Content.ReadAsByteArrayAsync(Ct), 0, 5).ShouldBe("%PDF-");
 

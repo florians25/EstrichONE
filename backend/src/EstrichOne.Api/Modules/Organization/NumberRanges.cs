@@ -82,7 +82,7 @@ public sealed record SaveNumberRangeRequest(
     [property: Range(1, 999_999_999)] long? NextNumber = null,
     long? Version = null);
 
-internal sealed class NumberRangeService(EstrichOneDbContext db, TimeProvider clock, IUserPermissions permissions, IAuditLog audit, ICurrentUser currentUser)
+internal sealed class NumberRangeService(EstrichOneDbContext db, TimeProvider clock, IAuditLog audit, ICurrentUser currentUser)
     : INumberRanges
 {
     private static readonly TimeZoneInfo Berlin = TimeZoneInfo.FindSystemTimeZoneById("Europe/Berlin");
@@ -121,9 +121,6 @@ internal sealed class NumberRangeService(EstrichOneDbContext db, TimeProvider cl
         throw new InvalidOperationException($"Keine freie Nummer im Nummernkreis {definition.Label} gefunden. Bitte den Nummernkreis in den Einstellungen prüfen.");
     }
 
-    public async Task<bool> MayOverrideAsync(string key, CancellationToken cancellationToken) =>
-        NumberRangeDefinitions.Get(key).EditorsMayOverride || await permissions.HasAsync(Permissions.SettingsManage, cancellationToken);
-
     /// <summary>Vorhandene Nummer (auch gelöschter oder von Hand nummerierter Datensätze)? Tabelle und Spalte stammen aus der festen Liste.</summary>
     private async Task<bool> IsUsedAsync(NumberRangeDefinition definition, string number, CancellationToken cancellationToken)
     {
@@ -154,7 +151,7 @@ internal sealed class NumberRangeService(EstrichOneDbContext db, TimeProvider cl
         var shown = range.RangeEnd is { } end ? Math.Min(next, end) : next;
         return new NumberRangeResponse(definition.Key, definition.Label, definition.Group, range.Pattern, definition.DefaultPattern, range.RangeStart, range.RangeEnd,
             next, NumberPattern.Format(range.Pattern, Year, shown), range.RangeEnd is { } e ? Math.Max(0, e - next + 1) : null, capacity,
-            NumberPattern.IsYearly(range.Pattern), definition.MaxLength, definition.EditorsMayOverride, range.Version);
+            NumberPattern.IsYearly(range.Pattern), definition.MaxLength, EditorsMayOverride: false, range.Version);
     }
 
     public Task<NumberRangeResponse> StateAsync(string key, CancellationToken cancellationToken) =>

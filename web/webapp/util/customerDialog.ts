@@ -34,6 +34,7 @@ import { contactListField } from "./forms";
 import { formTitle } from "./formLayout";
 import { uuidv7 } from "./ids";
 import { session } from "./session";
+import { AUTO_NUMBER } from "./numberField";
 import {
 	candidateLine, candidateState, draftKey, duplicateQueries, mergeCandidates, validateCustomer, type CustomerDraft, type DuplicateCandidate,
 } from "./customerMatch";
@@ -80,9 +81,8 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 	const salutation = new ComboBox("ncSalutation", { width: "100%", items: salutations.map((t) => new Item({ key: t, text: t })) });
 	const title = new Input("ncTitle", { width: "100%", maxLength: 50, placeholder: "z. B. Dr." });
 	const name = new Input("ncName", { width: "100%", maxLength: 200, value: options.name ?? "" });
-	// Kundennummer aus dem eigenen Nummernkreis; von Hand überschreiben nur mit dem Recht für Einstellungen.
-	const manualNumber = session.has("settings.manage");
-	const number = new Input("ncNumber", { width: "100%", maxLength: 50, editable: manualNumber, placeholder: "wird automatisch vergeben" });
+	// Kundennummer ausschließlich aus dem Nummernkreis: schreibgeschützt, ohne weitere Hinweise.
+	const number = new Input("ncNumber", { width: "100%", editable: false, value: AUTO_NUMBER });
 	const vatId = new Input("ncVatId", { width: "100%", maxLength: 30, placeholder: "DE…" });
 	const street = new Input("ncStreet", { width: "100%", maxLength: 200, value: options.street ?? "" });
 	const postalCode = new Input("ncPostalCode", { width: "100%", maxLength: 10, value: options.postalCode ?? "" });
@@ -101,14 +101,6 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 	const notes = new TextArea("ncNotes", { width: "100%", rows: 3, maxLength: 4000, growing: true,
 		placeholder: "z. B. Zahlungsziel, Rechnung nur per E-Mail, Schlüssel bei Nachbarn" });
 
-	// Kundennummer: leer lassen vergibt der Server die nächste Nummer; der Vorschlag steht als Platzhalter im Feld.
-	const numberHelp = new Text({ text: manualNumber
-		? "Wird beim Anlegen automatisch aus dem Nummernkreis vergeben. Eine eigene Nummer muss eindeutig sein."
-		: "Wird beim Anlegen automatisch aus dem Nummernkreis vergeben." }).addStyleClass("eoHelpText");
-	void get<{ preview: string }>("contacts/numbering").then((n) => {
-		number.setPlaceholder(`wird automatisch vergeben, voraussichtlich ${n.preview}`);
-	}).catch(() => undefined);
-
 	const nameLabel = new Label({ text: "Name", labelFor: name, required: true });
 	const companyOnly: Control[] = [];
 	const personOnly: Control[] = [];
@@ -124,7 +116,7 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		...l("Anrede", salutation, personOnly), ...l("Titel", title, personOnly),
 		nameLabel, name,
 		...l("USt-IdNr.", vatId, companyOnly),
-		new Label({ text: "Kundennummer", labelFor: number }), number, numberHelp,
+		new Label({ text: "Kundennummer", labelFor: number }), number,
 		formTitle("Anschrift"),
 		new Label({ text: "Straße und Hausnummer", labelFor: street }), street,
 		new Label({ text: "PLZ", labelFor: postalCode }), postalCode,
@@ -276,11 +268,10 @@ export function openNewCustomerDialog(options: NewCustomerOptions = {}): Promise
 		const p = phoneList();
 		const e = emailList();
 		const text = (v: string) => v.trim() || null;
-		const customerNumber = text(number.getValue());
 		dialog.setBusy(true);
 		try {
 			const contact = await post<ContactResponse>("contacts", {
-				id: uuidv7(), kind: kind.getSelectedKey(), name: name.getValue().trim(), customerNumber: manualNumber ? customerNumber : null,
+				id: uuidv7(), kind: kind.getSelectedKey(), name: name.getValue().trim(), customerNumber: null,
 				street: text(street.getValue()), postalCode: text(postalCode.getValue()), city: text(city.getValue()),
 				phone: p[0]?.number ?? null, email: e[0]?.address ?? null, phones: p, emails: e,
 				salutation: company ? "Firma" : text(salutation.getValue()), title: company ? null : text(title.getValue()),

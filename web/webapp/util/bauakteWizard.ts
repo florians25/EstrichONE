@@ -20,6 +20,7 @@ import { saveBauakte } from "./bauakte";
 import { candidateUsable, useCandidateText } from "./customerRemoval";
 import { ensureActive } from "./customerRemovalDialog";
 import { session } from "./session";
+import { AUTO_NUMBER } from "./numberField";
 import { bauakteStatus } from "./labels";
 import { bauakteSchema, displayValue, fieldsOf, writeValues, type FormSchema } from "./formSchema";
 import Dialog from "sap/m/Dialog";
@@ -122,7 +123,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 			width: "100%", maxLength: 200, placeholder: "Name, Firma (vorhandene Kunden werden vorgeschlagen)",
 			showSuggestion: true, filterSuggests: false, startSuggestion: 2, maxSuggestionWidth: "34rem",
 		}),
-		number: new Input("newCustomerNumber", { width: "100%", maxLength: 50, placeholder: "wird automatisch vergeben", editable: session.has("settings.manage") }),
+		number: new Input("newCustomerNumber", { width: "100%", value: AUTO_NUMBER, editable: false }),
 		street: new Input("newCustomerStreet", { width: "100%", maxLength: 200 }),
 		postalCode: new Input("newCustomerPostalCode", { width: "100%", maxLength: 10 }),
 		city: new Input("newCustomerCity", { width: "100%", maxLength: 100 }),
@@ -164,7 +165,8 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 	};
 	const release = () => {
 		existing = null;
-		for (const field of Object.values(c)) field.setEditable(field !== c.number || session.has("settings.manage"));
+		for (const field of Object.values(c)) field.setEditable(field !== c.number);
+		c.number.setValue(AUTO_NUMBER);
 		customerKind.setEnabled(true);
 		chosen.setVisible(false);
 		detailed.setVisible(true);
@@ -818,7 +820,7 @@ export function openBauakteWizard(options: WizardOptions): Promise<(BauakteDetai
 				if (!existing) {
 					const f = customerFields();
 					const contact = await post<ContactResponse>("contacts", {
-						id: uuidv7(), kind: customerKind.getSelectedKey(), name: f.name, customerNumber: c.number.getValue().trim() || null,
+						id: uuidv7(), kind: customerKind.getSelectedKey(), name: f.name, customerNumber: null,
 						street: f.street, postalCode: f.postalCode, city: f.city, phone: f.phone, email: f.email, notes: null,
 					});
 					// Kunde ist angelegt: bei erneutem Versuch nicht doppelt anlegen.

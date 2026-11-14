@@ -88,11 +88,11 @@ public sealed class CustomerDeletionTests(PostgresFixture postgres) : IAsyncLife
         tombstone.Deleted.ShouldBeTrue();
         tombstone.Data.ShouldBeNull();
 
-        // Die Nummer bleibt vergeben: weder automatisch noch von Hand erneut.
+        // Die Nummer bleibt vergeben: nicht automatisch erneut (von Hand lassen sich Nummern ohnehin nicht vergeben).
         (await CreateAsync("Nachfolger")).CustomerNumber.ShouldBe("600002");
         using (var manual = await _office.PostAsJsonAsync("/api/v1/contacts", new { id = Guid.CreateVersion7(), kind = "person", name = "Hand", customerNumber = "600001" }, TestJson.Options, Ct))
         {
-            manual.StatusCode.ShouldBe(HttpStatusCode.Conflict);
+            manual.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         }
 
         // Neu anlegen mit derselben ID (z. B. App mit altem Stand) ist nicht möglich.

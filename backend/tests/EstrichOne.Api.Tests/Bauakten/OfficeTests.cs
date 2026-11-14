@@ -125,7 +125,7 @@ public sealed class OfficeTests(PostgresFixture postgres) : IAsyncLifetime
 
         using var update = await office.PutAsJsonAsync($"/api/v1/contacts/{customer}", new
         {
-            version = contact.Version, kind = "person", name = "Familie Berger", customerNumber = "K-1001", city = "Landshut", phone = "0871 123",
+            version = contact.Version, kind = "person", name = "Familie Berger", city = "Landshut", phone = "0871 123",
         }, Ct);
         using var stale = await office.PutAsJsonAsync($"/api/v1/contacts/{customer}", new { version = contact.Version, kind = "person", name = "X" }, Ct);
         update.StatusCode.ShouldBe(HttpStatusCode.OK, await update.Content.ReadAsStringAsync(Ct));
