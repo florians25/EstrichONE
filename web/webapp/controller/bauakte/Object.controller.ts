@@ -443,7 +443,7 @@ export default class ObjectController extends BaseController {
 		const people = (await session.people()).filter((p) => p.isActive);
 		const customer = this.m().getProperty("/customer") as ContactResponse | null;
 		await openForm({
-			title: this.t("akte.editTitle"), width: "44rem",
+			title: this.t("akte.editTitle"), large: true,
 			initial: { ...b, status: b.status === "cancelled" ? "planned" : b.status },
 			fields: [
 				{ key: "base", label: "Basisdaten", type: "section" },

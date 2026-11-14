@@ -32,6 +32,7 @@ import type Control from "sap/ui/core/Control";
 import type InputBase from "sap/m/InputBase";
 import { ValueState } from "sap/ui/core/library";
 import { get, post, problemMessage } from "./api";
+import { largeDialogSize } from "./dialogSize";
 import { parseNumber } from "./format";
 import { uuidv7 } from "./ids";
 import type { BauaktePage, ContactResponse } from "./models";
@@ -88,7 +89,7 @@ export interface FormSpec<T> {
 	/** Breite des Dialogs, z. B. „40rem“. */
 	width?: string;
 	/**
-	 * Großes Fenster für umfangreiche Formulare (z. B. Kennwerte): fast volle Fensterbreite und -höhe,
+	 * Großes Fenster für umfangreiche Formulare (Kennwerte, Bauakte bearbeiten): fast volle Fensterbreite,
 	 * Feldgruppen zweispaltig ab großen Bildschirmen. `width` wird dann ignoriert.
 	 */
 	large?: boolean;
@@ -362,6 +363,14 @@ function build(field: Field, initial: unknown, prefix: string, handle: () => For
 			c.setValue((initial as string) ?? "");
 			for (const s of field.suggestions ?? []) c.addSuggestionItem(new Item({ key: s, text: s }));
 			c.attachChange(() => notify(c.getValue()));
+			if (field.editable === false) {
+				// Schreibgeschützt (z. B. Nummern aus dem Nummernkreis): ein schreibgeschütztes Input zeigt keinen Platzhalter,
+				// daher steht „wird automatisch vergeben“ als Anzeigewert; gelesen wird immer der eigentliche Wert.
+				let value = (initial as string | null | undefined) ?? "";
+				const show = () => c.setValue(value || field.placeholder || "");
+				show();
+				return { field, control: c, read: () => value.trim(), write: (v) => { value = (v as string) ?? ""; show(); } };
+			}
 			return { field, control: c, read: () => c.getValue().trim(), write: (v) => c.setValue((v as string) ?? "") };
 		}
 	}
@@ -481,8 +490,7 @@ export function openForm<T>(spec: FormSpec<T>): Promise<T | null> {
 		});
 		const dialog = new Dialog({
 			title: spec.title,
-			contentWidth: spec.large ? "min(90rem, 92vw)" : spec.width ?? "36rem",
-			contentHeight: spec.large ? "80vh" : undefined,
+			...(spec.large ? largeDialogSize(window.innerWidth) : { contentWidth: spec.width ?? "36rem" }),
 			resizable: true,
 			draggable: true,
 			content: [strip, form, warnings],
@@ -550,14 +558,22 @@ function listField(id: string, field: Field, initial: unknown, notify: (v: unkno
 		const name = new InvisibleText({ text: `${phones ? "Telefonnummer" : "E-Mail-Adresse"} ${n}` });
 		value.addAriaLabelledBy(name);
 		const label = new Input({ value: row.label, width: "9rem", maxLength: 50, placeholder: "Bezeichnung", tooltip: `Bezeichnung ${n} (optional, z. B. Büro)` });
-		const line = new HBox({ alignItems: "Center", width: "100%", renderType: "Bare" });
+		const line = new HBox({ alignItems: "Center", width: "100%", renderType: "Bare", wrap: "Wrap" }).addStyleClass("eoContactRow");
 		const entry = { row, kind, value, label, line };
 		const remove = new Button({ icon: "sap-icon://decline", type: "Transparent", tooltip: `${phones ? "Nummer" : "Adresse"} entfernen`,
 			press: () => { rows.splice(rows.indexOf(entry), 1); box.removeItem(line); line.destroy(); notify(read()); } });
-		if (kind) line.addItem(kind.addStyleClass("sapUiTinyMarginEnd").setLayoutData(new FlexItemData({ shrinkFactor: 0 })));
-		label.setLayoutData(new FlexItemData({ shrinkFactor: 0 }));
-		value.setLayoutData(new FlexItemData({ growFactor: 1 }));
-		line.addItem(name).addItem(value).addItem(label.addStyleClass("sapUiTinyMarginBegin")).addItem(remove);
+		// Zwei Gruppen je Zeile: [Art · Nummer/Adresse] und [Bezeichnung · Entfernen]. Passt beides nicht nebeneinander
+		// (schmale Dialoge), rutscht die zweite Gruppe geschlossen in die nächste Zeile – vorher brach jedes Feld einzeln
+		// um und die Bezeichnung stand verloren eingerückt unter der Nummer, das Entfernen-Kreuz allein darunter.
+		const main = new HBox({ alignItems: "Center", renderType: "Bare" }).addStyleClass("eoNoWrap")
+			.setLayoutData(new FlexItemData({ growFactor: 1, shrinkFactor: 1, baseSize: "14rem" }));
+		if (kind) main.addItem(kind.addStyleClass("sapUiTinyMarginEnd").setLayoutData(new FlexItemData({ shrinkFactor: 0 })));
+		value.setLayoutData(new FlexItemData({ growFactor: 1, shrinkFactor: 1, baseSize: "0" }));
+		main.addItem(name).addItem(value);
+		const extra = new HBox({ alignItems: "Center", renderType: "Bare" }).addStyleClass("eoNoWrap")
+			.setLayoutData(new FlexItemData({ shrinkFactor: 0 }));
+		extra.addItem(label).addItem(remove);
+		line.addItem(main).addItem(extra);
 		rows.push(entry);
 		box.insertItem(line, rows.length - 1);
 	};

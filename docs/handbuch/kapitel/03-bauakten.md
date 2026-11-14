@@ -60,7 +60,8 @@ Häkchen **Trotzdem als neuen Kunden anlegen**.
 > **Tipp:** Sind Sie gerade beim Kunden vor Ort? Wählen Sie unter **Weitere Angaben** → **Erstbegehung** die Option
 > **Direkt im Anschluss durchführen** – dann öffnet sich nach dem Anlegen sofort das Erstbegehungsprotokoll.
 
-Die **Aktennummer** (z. B. 2026-001) vergibt EstrichONE automatisch nach dem eingestellten Nummernkreis.
+Die **Aktennummer** (z. B. 2026-001) vergibt EstrichONE automatisch nach dem eingestellten Nummernkreis; von Hand
+lässt sie sich weder eingeben noch ändern.
 
 ## Bauaktenliste
 
@@ -110,7 +111,7 @@ Die Schaltflächen im Kopf:
     kopieren** bzw. **Link zum Kanal abrufen**).
   - **Teams-Chat löschen …** (Recht `teams.delete`) – löscht den Chat in Teams nach Eintippen der Bauaktennummer;
     **Nur Verknüpfung lösen** lässt ihn in Teams bestehen. Ohne dieses Recht steht hier **Verknüpfung lösen**.
-- **Bearbeiten** – Bezeichnung, Baustelle, Termine, Beschreibung.
+- **Bearbeiten** – Bezeichnung, Baustelle, Termine, Beschreibung; im großen Fenster (Basisdaten links, Baustelle rechts).
 - **Aktionen** – alle Ausdrucke und weitere Funktionen:
 
 ![Menü Aktionen](bilder/bauakte-aktionen.png "Das Menü Aktionen der Bauakte"){halb}
@@ -135,7 +136,8 @@ der Mitte klappen Sie den Kopf ein, damit mehr Platz für den Inhalt bleibt.
 
 **Übersicht** fasst Basisdaten, Baustellendaten, Termine, den Stand der Dokumentation, offene Aufgaben, die nächsten
 Einsätze, neueste Dokumente, Freigaben, angeheftete Notizen, den Standort auf der Karte und die neuesten Bilder
-zusammen. **Kennwerte bearbeiten** ändert Objektart, Estrichart, Fläche, Dicke, Dämmung, Heizung, Zufahrt usw. Fehlt der
+zusammen. **Kennwerte bearbeiten** ändert Objektart, Estrichart, Fläche, Dicke, Dämmung, Heizung, Zufahrt usw. im großen,
+zweispaltigen Fenster. Fehlt der
 Standort, klicken Sie in die Karte und speichern ihn.
 
 ## Kontakte und Beteiligte

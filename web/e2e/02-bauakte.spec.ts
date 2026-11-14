@@ -442,6 +442,38 @@ test('Standort per Karte festlegen und in der Kopfzeile anzeigen', async ({ page
   expect(referers.every((r) => r.startsWith(new URL(page.url()).origin))).toBe(true);
 });
 
+test('Kennwerte bearbeiten und speichern, Bauakte bearbeiten im großen Fenster', async ({ page }) => {
+  await signIn(page, 'admin', adminPassword);
+  await openAkte(page);
+  const id = new URL(page.url()).pathname.split('/')[2];
+  // Fehlerbild 1.0.25: Der Dialog öffnete sich nicht (ungültige Breite „min(…)“ für sap.m.Dialog).
+  await page.getByRole('button', { name: 'Kennwerte bearbeiten' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Kennwerte bearbeiten' });
+  await expect(dialog).toBeVisible();
+  // Großes Fenster: fast volle Breite, Feldgruppen zweispaltig.
+  expect((await dialog.boundingBox())!.width).toBeGreaterThan(1200);
+  await dialog.getByLabel('Nenndicke').fill('65');
+  await dialog.getByRole('button', { name: 'Speichern' }).click();
+  await expect(dialog).toBeHidden();
+  await expect(toast(page)).toContainText('Gespeichert');
+  const saved = await apiCall<{ project: { nominalThicknessMm: number | null } }>(page, 'GET', `/api/v1/bauakten/${id}`);
+  expect(saved.json.project.nominalThicknessMm).toBe(65);
+  // Erneut öffnen: der gespeicherte Wert steht im Formular.
+  await page.getByRole('button', { name: 'Kennwerte bearbeiten' }).click();
+  await expect(dialog.getByLabel('Nenndicke')).toHaveValue('65');
+  await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+
+  // „Bauakte bearbeiten“ nutzt dasselbe große Fenster (Basisdaten links, Baustelle rechts).
+  await page.getByRole('button', { name: 'Bearbeiten', exact: true }).first().click();
+  const edit = page.getByRole('dialog', { name: 'Bauakte bearbeiten' });
+  await expect(edit).toBeVisible();
+  expect((await edit.boundingBox())!.width).toBeGreaterThan(1200);
+  const left = (await edit.getByLabel('Bauvorhaben').boundingBox())!;
+  const right = (await edit.getByLabel('Straße').boundingBox())!;
+  expect(right.x).toBeGreaterThan(left.x + left.width / 2);
+  await edit.getByRole('button', { name: 'Abbrechen' }).click();
+});
+
 test('Kontakte, Zuweisung, Storno mit Begründung, Löschen mit Passwort', async ({ page }) => {
   await signIn(page, 'admin', adminPassword);
   await openAkte(page);
