@@ -58,9 +58,6 @@ public sealed partial class NewBauakteViewModel(AppSession session) : PageViewMo
     public partial string NewCustomerName { get; set; } = string.Empty;
 
     [ObservableProperty]
-    public partial string NewCustomerNumber { get; set; } = string.Empty;
-
-    [ObservableProperty]
     public partial string NewCustomerPhone { get; set; } = string.Empty;
 
     [ObservableProperty]
@@ -152,8 +149,9 @@ public sealed partial class NewBauakteViewModel(AppSession session) : PageViewMo
             Guid? customerId = Choice switch
             {
                 CustomerChoice.Existing => SelectedCustomer!.Id,
+                // Kundennummer vergibt der Server aus dem Nummernkreis (keine Eingabe).
                 CustomerChoice.New => (await client.CreateContactAsync(new SaveContactRequest(_customerId, NewCustomerKind, NewCustomerName.Trim(),
-                    Blank(NewCustomerNumber), Blank(NewCustomerStreet), Blank(NewCustomerPostalCode), Blank(NewCustomerCity), Blank(NewCustomerPhone),
+                    null, Blank(NewCustomerStreet), Blank(NewCustomerPostalCode), Blank(NewCustomerCity), Blank(NewCustomerPhone),
                     Blank(NewCustomerEmail)))).Id,
                 _ => null,
             };

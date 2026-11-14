@@ -314,7 +314,7 @@ public sealed class ExtendedClientTests(PostgresFixture postgres) : IAsyncLifeti
     {
         await CompleteSetupAsync();
         using var client = await SignedInAsync("buero", StandardRoles.OfficeId);
-        var contact = await client.CreateContactAsync(new SaveContactRequest(Guid.CreateVersion7(), ContactKind.Company, "Bauträger Lang GmbH", "K-1001",
+        var contact = await client.CreateContactAsync(new SaveContactRequest(Guid.CreateVersion7(), ContactKind.Company, "Bauträger Lang GmbH", null,
             City: "Ergolding"), Ct);
         var updated = await client.UpdateContactAsync(contact with { Phone = "0871 999" }, Ct);
         var dryRun = await client.ImportContactsAsync("Name;Ort;Telefon\nHuber Bau;Landshut;0871 1\n", true, Ct);
