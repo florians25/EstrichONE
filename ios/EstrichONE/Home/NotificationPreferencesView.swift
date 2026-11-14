@@ -28,7 +28,7 @@ struct NotificationPreferencesView: View {
             }
         }
         .listStyle(.insetGrouped)
-        .overlay { if !loaded { ProgressView() } }
+        .overlay { if !loaded { ListSkeleton() } }
         .navigationTitle("Benachrichtigungsarten")
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }

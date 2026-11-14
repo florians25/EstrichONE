@@ -47,8 +47,9 @@ struct HomeView: View {
         NavigationStack(path: $path) {
             ScrollViewReader { proxy in
                 List {
-                    noticeRows
-                    if modules.isOn(AppModules.planning) { todaySection }
+                    // Hinweise stehen im Abschnitt des Einsatzes (unter dem Datum); ohne Planung in einem eigenen Abschnitt.
+                    // So entsteht ohne Hinweis keine leere Lücke oben.
+                    if modules.isOn(AppModules.planning) { todaySection } else { Section { noticeRows } }
                     overviewSection
                     if modules.isOn(AppModules.planning) { tomorrowSection }
                     recentSection
@@ -111,9 +112,7 @@ struct HomeView: View {
 
     /// Hinweise nur, wenn es etwas zu sagen gibt (Wartung, Übertragungsfehler, offline, Systemmeldungen, neue Version).
     /// Der Demomodus ist oben links gekennzeichnet („Demo“) und wird hier nicht noch einmal erklärt.
-    @ViewBuilder
     private var noticeRows: some View {
-        Section {
             Group {
                 if model.updates.showsBanner {
                     AppUpdateNotice(center: model.updates)
@@ -139,7 +138,6 @@ struct HomeView: View {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
             .listRowSeparator(.hidden)
-        }
     }
 
     /// „…“ oben rechts: Abgleich (mit Stand), Chat bzw. Microsoft Teams.
@@ -182,9 +180,11 @@ struct HomeView: View {
 
     private var todaySection: some View {
         Section {
+            noticeRows
             if !loaded {
                 TodayJobCard.placeholder
                     .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
             } else if jobs.isEmpty {
                 // Leerzustand: eine Zeile (Meine Woche steht direkt darunter).
                 VStack(alignment: .leading, spacing: 2) {
@@ -200,7 +200,9 @@ struct HomeView: View {
                     TodayJobCard(job: job, canCapture: bauakten[job.bauakteId] != nil) { action in
                         perform(action, for: job)
                     }
-                    .listRowInsets(EdgeInsets())
+                    .listRowInsets(EdgeInsets(top: Space.xs, leading: 0, bottom: Space.xs, trailing: 0))
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 }
             }
         } header: {
@@ -318,6 +320,18 @@ struct HomeView: View {
                 ForEach(list) { bauakte in
                     NavigationLink(value: HomeRoute.bauakte(bauakte.id)) {
                         BauakteRow(bauakte: bauakte)
+                    }
+                    // Weniger Tippen: Foto direkt aus der Liste (Wischen nach rechts oder lange drücken).
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button("Foto", systemImage: "camera") { cameraFor = bauakte }
+                            .tint(Theme.accent)
+                    }
+                    .contextMenu {
+                        Button("Foto aufnehmen", systemImage: "camera") { cameraFor = bauakte }
+                        Button("Bautagebuch-Eintrag", systemImage: "book") { diaryFor = bauakte }
+                        if let url = MapsLink.url(for: bauakte) {
+                            Link(destination: url) { Label("Route starten", systemImage: "arrow.triangle.turn.up.right.diamond") }
+                        }
                     }
                 }
             }

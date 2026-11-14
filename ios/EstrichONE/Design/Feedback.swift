@@ -57,30 +57,10 @@ struct SkeletonCard: View {
     }
 }
 
-/// Liste als Platzhalter (z. B. Bauakte beim ersten Öffnen).
+/// Liste als Platzhalter (z. B. Bauakte beim ersten Öffnen) – wie die fertige Standardliste, nur ausgegraut.
 struct SkeletonList: View {
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Space.l) {
-                VStack(alignment: .leading, spacing: Space.s) {
-                    SkeletonBar(width: 90, height: 14)
-                    SkeletonBar(width: 240, height: 26)
-                    SkeletonBar(width: 160, height: 14)
-                }
-                .padding(.horizontal, Space.xs)
-                SkeletonCard(lines: 3, showsHeader: false)
-                HStack(spacing: Space.s) {
-                    ForEach(0..<4, id: \.self) { _ in
-                        RoundedRectangle(cornerRadius: Radius.l, style: .continuous).fill(Theme.fill).frame(height: 64)
-                    }
-                }
-                SkeletonCard(lines: 4)
-                SkeletonCard(lines: 5)
-            }
-            .padding(Space.l)
-        }
-        .background(Theme.canvas)
-        .pulsing()
+        ListSkeleton(rows: 7)
     }
 }
 
@@ -185,4 +165,32 @@ struct ToastModifier: ViewModifier {
 
 extension View {
     func toast(_ message: Binding<String?>) -> some View { modifier(ToastModifier(message: message)) }
+}
+
+/// Platzhalter für Listen beim ersten Laden: graue Zeilen (Standard „redacted“) statt eines Drehkreisels.
+struct ListSkeleton: View {
+    var rows = 6
+
+    var body: some View {
+        List {
+            Section {
+                ForEach(0..<rows, id: \.self) { _ in
+                    Label {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Platzhalter für einen Eintrag")
+                            Text("Zweite Zeile mit Angaben").font(Typo.subhead)
+                        }
+                    } icon: {
+                        Image(systemName: "circle.fill")
+                    }
+                    .padding(.vertical, Space.xxs)
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .redacted(reason: .placeholder)
+        .allowsHitTesting(false)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Wird geladen")
+    }
 }

@@ -34,7 +34,7 @@ struct ChatInfoView: View {
         .listStyle(.insetGrouped)
         .navigationTitle(chatKind == .direct ? "Kontaktinfo" : "Gruppeninfo")
         .navigationBarTitleDisplayMode(.inline)
-        .overlay { if detail == nil, failure == nil { ProgressView() } }
+        .overlay { if detail == nil, failure == nil { ListSkeleton(rows: 4) } }
         .task { await load() }
         .onChange(of: search) { _, text in if text.isEmpty { hits = [] } }
         .onChange(of: avatarItem) { _, item in
@@ -524,7 +524,7 @@ struct ChatMemberPicker: View {
                 }
                 .buttonStyle(.plain)
             }
-            .overlay { if !loaded { ProgressView() } }
+            .overlay { if !loaded { ListSkeleton() } }
             .searchable(text: $search, prompt: "Person suchen")
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)

@@ -244,3 +244,14 @@ struct AppModelTests {
         #expect(UnreadBadge.appBadge(250) == 250)
     }
 }
+
+@Suite("Bauakte: Reihenfolge der Kennwerte")
+struct KeyDataOrderTests {
+    @Test("Estrichart, Dicke, Fläche zuerst, sonst Reihenfolge des Formulars")
+    func estrichartDickeFlaecheZuerst() {
+        let items = ["Objektart", "Geschosse", "Gesamtfläche", "Priorität", "Estrichart", "Dämmdicke", "Nenndicke"]
+            .map { InfoItem(label: $0, value: "x") }
+        let sorted = BauakteDetailView.keyDataFirst(items).map(\.label)
+        #expect(sorted == ["Estrichart", "Nenndicke", "Gesamtfläche", "Objektart", "Geschosse", "Priorität", "Dämmdicke"])
+    }
+}

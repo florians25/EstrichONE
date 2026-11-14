@@ -28,7 +28,7 @@ struct BauaktePickerSheet: View {
                     }
                 }
             }
-            .overlay { if !loaded { ProgressView() } }
+            .overlay { if !loaded { ListSkeleton() } }
             .searchable(text: $search, prompt: "Baustelle suchen")
             .navigationTitle(title)
             .navigationBarTitleDisplayMode(.inline)
@@ -348,7 +348,7 @@ struct ChatMediaView: View {
             }
         }
         .background(Theme.canvas)
-        .overlay { if !loaded { ProgressView() } }
+        .overlay { if !loaded { ListSkeleton() } }
         .navigationTitle("Medien und Dokumente")
         .navigationBarTitleDisplayMode(.inline)
         .task {

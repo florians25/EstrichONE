@@ -17,7 +17,8 @@ Von oben nach unten:
 3. **Überblick** – drei Zeilen mit Zahl rechts: **Meine Aufgaben** (offen, davon Mängel), **Wer fährt wohin** (Kolonnen
    heute) und **Meine Woche** (Einsätze der nächsten 7 Tage). Ein Tipp öffnet die jeweilige Seite.
 4. **Morgen** (Android: **Diese Woche**) – Ihre nächsten Einsätze.
-5. **Zuletzt geöffnet** – die Bauakten, die Sie zuletzt angesehen haben.
+5. **Zuletzt geöffnet** – die Bauakten, die Sie zuletzt angesehen haben. Auf dem iPhone legt Wischen nach rechts
+   gleich ein **Foto** an; langes Drücken zeigt **Foto aufnehmen**, **Bautagebuch-Eintrag** und **Route starten**.
 
 Ziehen Sie die Seite nach unten, um sie sofort zu aktualisieren. Ist nichts eingeplant, steht dort „Heute ist nichts
 für Sie eingeplant.“

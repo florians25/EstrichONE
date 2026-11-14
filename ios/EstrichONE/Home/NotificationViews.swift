@@ -91,7 +91,7 @@ struct NotificationInboxView: View {
         .contentMargins(.horizontal, sideMargin > 0 ? sideMargin : nil, for: .scrollContent)
         .listSectionSpacing(.compact)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
-        .overlay { if !loaded { ProgressView() } }
+        .overlay { if !loaded { ListSkeleton() } }
         .animation(.snappy, value: filter)
         .animation(.snappy, value: grouping)
         .searchable(text: $filter.query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Benachrichtigungen durchsuchen")

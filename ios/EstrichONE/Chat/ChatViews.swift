@@ -30,7 +30,7 @@ struct ChatListView: View {
     var body: some View {
         conversationList
         .listStyle(.insetGrouped)
-        .overlay { if !loaded { ProgressView() } }
+        .overlay { if !loaded { ListSkeleton() } }
         .navigationTitle(archive ? "Chat-Archiv" : "Chat")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $search, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "In allen Chats suchen")
@@ -588,7 +588,7 @@ private struct NewChatSheet: View {
                     }
                 }
             }
-            .overlay { if !loaded { ProgressView() } }
+            .overlay { if !loaded { ListSkeleton() } }
             .searchable(text: $search, prompt: "Person suchen")
             .navigationTitle("Neuer Chat")
             .navigationBarTitleDisplayMode(.inline)

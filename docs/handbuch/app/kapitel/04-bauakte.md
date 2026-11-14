@@ -56,7 +56,8 @@ Die Bauakte zeigt von oben nach unten:
 - **Basisdaten auf einen Blick**: Nummer, **Stand** (antippen zum Ändern, Abschnitt 4.16), Bauvorhaben, **Adresse** mit
   **Route starten**, **Kunde** und **Ansprechpartner vor Ort** mit **Anrufen**, Bauleiter, nächster Einsatz mit Kolonne.
 - Hinweise nur bei Bedarf: angeheftete Notizen, Erstbegehung fehlt, Warnungen aus der Planung, storniert.
-- **Basisdaten** – die vier wichtigsten Kennwerte (z. B. Objektart, Fläche, Estrichart, Dicke); **Alle Basisdaten**
+- **Basisdaten** – die vier wichtigsten Kennwerte, zuerst **Estrichart**, **Dicke**, **Fläche** und **Termin** (soweit
+  erfasst), danach in der Reihenfolge des Formulars; **Alle Basisdaten**
   klappt alle weiteren auf, **Bearbeiten** ändert sie.
 - **Offene Punkte** (Mängel und Aufgaben) und die **neuesten Fotos** – nur, wenn es welche gibt.
 - **Bereiche**: **Fotos & Dokumente**, **Aufgaben & Mängel**, **Bautagebuch**, **Räume & Flächen**, **Erstbegehung**,
@@ -271,12 +272,13 @@ er erhalten.
 
 Der Tab **Erfassen** ist der schnellste Weg, etwas zu einer Baustelle festzuhalten, ohne die Bauakte zu suchen:
 
-1. Oben steht die **Baustelle** – vorausgewählt ist die Bauakte Ihres heutigen Einsatzes („Für den heutigen
-   Einsatz“). Mit **Ändern** wählen Sie eine andere.
-2. Tippen Sie auf eine Kachel: **Foto** (Serie mit Beschriftung), **Dokument scannen** (Lieferschein, Plan),
-   **Bautagebuch** (Eintrag für heute), **Mangel melden** (mit Frist), **Erstbegehung** (Prüfpunkte vor Ort),
-   **Abnahme** (mit Unterschrift), **Aufgabe** (für mich oder andere), **CM-Messung** (Belegreife prüfen), **Video**
-   (kurze Aufnahme) oder **Notiz** (für alle in der Akte).
+1. Oben steht die **Baustelle** – vorausgewählt ist die Bauakte Ihres heutigen Einsatzes („Heutiger Einsatz“), sonst
+   die zuletzt geöffnete. Mit **Ändern** wählen Sie eine andere.
+2. Tippen Sie auf einen Eintrag der Liste: unter **Fotos und Dokumente** **Foto** (Serie mit Beschriftung), **Video**
+   (kurze Aufnahme) und **Dokument scannen** (Lieferschein, Plan); unter **Festhalten** **Bautagebuch** (Eintrag für
+   heute), **Mangel melden** (mit Frist), **Aufgabe** (für mich oder andere) und **Notiz** (für alle in der Akte); unter
+   **Prüfen** **Erstbegehung** (Prüfpunkte vor Ort), **CM-Messung** (Belegreife prüfen) und **Abnahme** (mit
+   Unterschrift).
 
 Darunter legt **Neue Bauakte anlegen** eine neue Baustelle an. Nach dem Speichern bestätigt die App kurz, z. B.
 „Foto gespeichert“.

@@ -49,7 +49,7 @@ struct DispatchView: View {
         }
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .background(Theme.canvas)
-        .overlay { if loading && plan == nil { ProgressView() } }
+        .overlay { if loading && plan == nil { ListSkeleton() } }
         .navigationTitle("Wer fährt wohin")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

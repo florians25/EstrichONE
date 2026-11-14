@@ -25,6 +25,14 @@ final class OnboardingUITests: XCTestCase {
         app.element(identifier)
     }
 
+    /// Angemeldete Person: Der Name steht unter „Mehr“ (Heute zeigt keinen Namen mehr).
+    @MainActor
+    private func currentUser(in app: XCUIApplication) -> XCUIElement {
+        let tab = app.tabBars.buttons["Mehr"].firstMatch
+        if tab.waitForExistence(timeout: 15) { tab.tap() }
+        return element("currentUserName", in: app)
+    }
+
     @MainActor
     private func tap(_ identifier: String, in app: XCUIApplication, timeout: TimeInterval = 15,
                      file: StaticString = #filePath, line: UInt = #line) {
@@ -106,14 +114,14 @@ final class OnboardingUITests: XCTestCase {
         type(password, into: "passwordField", in: app)
         tap("signInButton", in: app)
         app.dismissSavePasswordPrompt()
-        let user = element("currentUserName", in: app)
+        let user = currentUser(in: app)
         XCTAssertTrue(user.waitForExistence(timeout: 15))
         XCTAssertEqual(user.label, "Max Huber")
 
         // Nach einem Neustart ist die App eingerichtet und gesperrt; Entsperren öffnet die eigene Sitzung.
         app.terminate()
         app = launch(keepState: true)
-        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(currentUser(in: app).waitForExistence(timeout: 15))
         XCTAssertFalse(element("welcomeTitle", in: app).exists)
     }
 
@@ -134,8 +142,8 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 15), "Triviale PIN wird abgelehnt\n\(app.debugDescription)")
         enterPIN("482913", in: app)
         enterPIN("482913", in: app)
-        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
-        XCTAssertEqual(element("currentUserName", in: app).label, "Max Huber")
+        XCTAssertTrue(currentUser(in: app).waitForExistence(timeout: 15))
+        XCTAssertEqual(currentUser(in: app).label, "Max Huber")
 
         // Benutzerwechsel: Auswahl statt Fortsetzung der letzten Sitzung (11, AK-2).
         tap("switchUserButton", in: app)
@@ -144,8 +152,8 @@ final class OnboardingUITests: XCTestCase {
         signIn("lukas", in: app)
         enterPIN("573920", in: app)
         enterPIN("573920", in: app)
-        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
-        XCTAssertEqual(element("currentUserName", in: app).label, "Lukas Brandl")
+        XCTAssertTrue(currentUser(in: app).waitForExistence(timeout: 15))
+        XCTAssertEqual(currentUser(in: app).label, "Lukas Brandl")
 
         // Zurück zu Max: falsche PIN wird abgelehnt, richtige öffnet nur seinen Tresor.
         tap("switchUserButton", in: app)
@@ -153,8 +161,8 @@ final class OnboardingUITests: XCTestCase {
         enterPIN("573920", in: app)
         XCTAssertTrue(element("pinError", in: app).waitForExistence(timeout: 15))
         enterPIN("482913", in: app)
-        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
-        XCTAssertEqual(element("currentUserName", in: app).label, "Max Huber")
+        XCTAssertTrue(currentUser(in: app).waitForExistence(timeout: 15))
+        XCTAssertEqual(currentUser(in: app).label, "Max Huber")
     }
 
     /// Zwei-Faktor-Anmeldung beim Benutzerwechsel am Poolgerät: Code-Abfrage nach dem Passwort, falscher Code wird
@@ -168,7 +176,7 @@ final class OnboardingUITests: XCTestCase {
         signIn("m.huber", in: app)
         enterPIN("482913", in: app)
         enterPIN("482913", in: app)
-        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
+        XCTAssertTrue(currentUser(in: app).waitForExistence(timeout: 15))
 
         tap("switchUserButton", in: app)
         tap("addPersonButton", in: app)
@@ -189,8 +197,8 @@ final class OnboardingUITests: XCTestCase {
         XCTAssertTrue(element("choosePINTitle", in: app).waitForExistence(timeout: 15))
         enterPIN("573920", in: app)
         enterPIN("573920", in: app)
-        XCTAssertTrue(element("currentUserName", in: app).waitForExistence(timeout: 15))
-        XCTAssertEqual(element("currentUserName", in: app).label, "Sabine Berger")
+        XCTAssertTrue(currentUser(in: app).waitForExistence(timeout: 15))
+        XCTAssertEqual(currentUser(in: app).label, "Sabine Berger")
     }
 
     @MainActor

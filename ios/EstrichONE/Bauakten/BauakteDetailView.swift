@@ -337,7 +337,24 @@ struct BauakteDetailView: View {
 
     private func projectItems(_ bauakte: Bauakte) -> [InfoItem] {
         let rows = schema.map { ProjectSection.items(bauakte, schema: $0, lists: lists) } ?? ProjectSection.items(bauakte)
-        return rows.filter { $0.title != "Geplant" }.map { InfoItem(label: $0.title, value: $0.value, symbol: $0.symbol) }
+        let items = rows.filter { $0.title != "Geplant" }.map { InfoItem(label: $0.title, value: $0.value, symbol: $0.symbol) }
+        return Self.keyDataFirst(items)
+    }
+
+    /// Was die Kolonne zuerst braucht: Estrichart, Dicke, Fläche, Termin – danach alles in der Reihenfolge des Formulars.
+    static func keyDataFirst(_ items: [InfoItem]) -> [InfoItem] {
+        func rank(_ label: String) -> Int {
+            let text = label.lowercased()
+            if text.contains("estrichart") { return 0 }
+            if text == "dicke" || text.contains("nenndicke") || text.contains("estrichdicke") { return 1 }
+            if text == "fläche" || text.contains("gesamtfläche") { return 2 }
+            if text.contains("termin") { return 3 }
+            return 4
+        }
+        return items.enumerated().sorted { lhs, rhs in
+            let (left, right) = (rank(lhs.element.label), rank(rhs.element.label))
+            return left != right ? left < right : lhs.offset < rhs.offset
+        }.map(\.element)
     }
 
     /// Die vier wichtigsten Kennwerte direkt, alle weiteren per Tipp auf „Alle Basisdaten“ aufklappbar.

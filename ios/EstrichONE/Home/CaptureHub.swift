@@ -2,7 +2,7 @@ import EstrichCore
 import SwiftUI
 
 /// „Erfassen“: alles, was auf der Baustelle neu entsteht, an einer Stelle. Oben die Baustelle (heutiger Einsatz bzw.
-/// zuletzt geöffnet, jederzeit änderbar), darunter große Kacheln – ein Tipp, und es geht los. Ohne gewählte Baustelle
+/// zuletzt geöffnet, jederzeit änderbar), darunter eine Standardliste in Gruppen – ein Tipp, und es geht los. Ohne gewählte Baustelle
 /// wird sie vor der Aktion abgefragt.
 struct CaptureHub: View {
     let onDone: () -> Void
@@ -29,48 +29,50 @@ struct CaptureHub: View {
         let id: UUID
     }
 
-    private let columns = [GridItem(.flexible(), spacing: Space.s), GridItem(.flexible(), spacing: Space.s)]
-
     /// Module der Suite (zuletzt bekannter Stand; ohne Angabe alles an).
     private var modules: AppModules { model.active?.sync?.modules ?? .allOn }
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: Space.l) {
-                    siteCard
-                    LazyVGrid(columns: columns, spacing: Space.s) {
-                        tile(.photo, symbol: "camera.fill", title: "Foto", subtitle: "Serie mit Beschriftung", id: "hubPhoto")
-                        tile(.scan, symbol: "doc.viewfinder", title: "Dokument scannen", subtitle: "Lieferschein, Plan", id: "hubScan")
-                        // Systemeinstellungen › Module: Kacheln abgeschalteter Module entfallen.
-                        if modules.isOn(AppModules.diary) {
-                            tile(.diary, symbol: "book", title: "Bautagebuch", subtitle: "Eintrag für heute", id: "hubDiary")
-                        }
-                        if modules.isOn(AppModules.defects) {
-                            tile(.defect, symbol: "exclamationmark.triangle", title: "Mangel melden", subtitle: "mit Frist", id: "hubDefect")
-                        }
+            // Standardliste in Gruppen (wie Android): ein Tipp, und es geht los.
+            List {
+                Section("Baustelle") { siteCard }
+                Section("Fotos und Dokumente") {
+                    tile(.photo, symbol: "camera", title: "Foto", subtitle: "Serie mit Beschriftung", id: "hubPhoto")
+                    tile(.video, symbol: "video", title: "Video", subtitle: "kurze Aufnahme", id: "hubVideo")
+                    tile(.scan, symbol: "doc.viewfinder", title: "Dokument scannen", subtitle: "Lieferschein, Plan", id: "hubScan")
+                }
+                // Systemeinstellungen › Module: Einträge abgeschalteter Module entfallen.
+                Section("Festhalten") {
+                    if modules.isOn(AppModules.diary) {
+                        tile(.diary, symbol: "book", title: "Bautagebuch", subtitle: "Eintrag für heute", id: "hubDiary")
+                    }
+                    if modules.isOn(AppModules.defects) {
+                        tile(.defect, symbol: "exclamationmark.triangle", title: "Mangel melden", subtitle: "mit Frist", id: "hubDefect")
+                    }
+                    if modules.isOn(AppModules.tasks) {
+                        tile(.task, symbol: "checklist.unchecked", title: "Aufgabe", subtitle: "für mich oder andere", id: "hubTask")
+                    }
+                    tile(.note, symbol: "square.and.pencil", title: "Notiz", subtitle: "für alle in der Akte", id: "hubNote")
+                }
+                if modules.anyOn(AppModules.inspections, AppModules.acceptance) {
+                    Section("Prüfen") {
                         if modules.isOn(AppModules.inspections) {
                             tile(.inspection, symbol: "checklist", title: "Erstbegehung", subtitle: "Prüfpunkte vor Ort", id: "hubInspection")
+                            tile(.measurement, symbol: "drop", title: "CM-Messung", subtitle: "Belegreife prüfen", id: "hubMeasurement")
                         }
                         if modules.isOn(AppModules.acceptance) {
                             tile(.acceptance, symbol: "signature", title: "Abnahme", subtitle: "mit Unterschrift", id: "hubAcceptance")
                         }
-                        if modules.isOn(AppModules.tasks) {
-                            tile(.task, symbol: "checklist.unchecked", title: "Aufgabe", subtitle: "für mich oder andere", id: "hubTask")
-                        }
-                        if modules.isOn(AppModules.inspections) {
-                            tile(.measurement, symbol: "drop", title: "CM-Messung", subtitle: "Belegreife prüfen", id: "hubMeasurement")
-                        }
-                        tile(.video, symbol: "video", title: "Video", subtitle: "kurze Aufnahme", id: "hubVideo")
-                        tile(.note, symbol: "square.and.pencil", title: "Notiz", subtitle: "für alle in der Akte", id: "hubNote")
                     }
+                }
+                Section {
                     Button { creating = true } label: { Label("Neue Bauakte anlegen", systemImage: "folder.badge.plus") }
-                        .estrichButton(.secondary, size: .regular, fullWidth: true)
+                        .frame(minHeight: Size.minTap)
                         .accessibilityIdentifier("newBauakteTile")
                 }
-                .padding(Space.l)
             }
-            .background(Theme.canvas)
+            .listStyle(.insetGrouped)
             .navigationTitle("Erfassen")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Fertig", action: onDone) } }
@@ -131,18 +133,13 @@ struct CaptureHub: View {
     private var siteCard: some View {
         Button { picking = .open } label: {
             HStack(spacing: Space.m) {
-                IconBadge(symbol: "building.2", size: 40)
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(site == nil ? "Baustelle" : (isToday ? "Für den heutigen Einsatz" : "Für die Baustelle"))
-                        .font(Typo.label)
-                        .foregroundStyle(Theme.textSecondary)
                     Text(site?.title ?? "Noch keine gewählt")
-                        .font(Typo.headline)
                         .foregroundStyle(Theme.textPrimary)
                         .lineLimit(2)
                         .multilineTextAlignment(.leading)
                     if let site {
-                        Text([site.number, site.addressLine].compactMap { $0 }.joined(separator: " · "))
+                        Text([isToday ? "Heutiger Einsatz" : nil, site.number, site.addressLine].compactMap { $0 }.joined(separator: " · "))
                             .font(Typo.subhead)
                             .foregroundStyle(Theme.textSecondary)
                             .lineLimit(1)
@@ -150,12 +147,10 @@ struct CaptureHub: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 Text(site == nil ? "Wählen" : "Ändern")
-                    .font(Typo.subheadStrong)
                     .foregroundStyle(Theme.accent)
             }
-            .padding(Space.l)
-            .card()
-            .contentShape(RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
+            .frame(minHeight: Size.minTap)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityIdentifier("hubSite")
@@ -165,27 +160,18 @@ struct CaptureHub: View {
         Button {
             if let site { start(task, for: site) } else { picking = task }
         } label: {
-            VStack(alignment: .leading, spacing: Space.s) {
-                IconBadge(symbol: symbol, size: 36)
+            Label {
                 VStack(alignment: .leading, spacing: 1) {
-                    Text(title)
-                        .font(Typo.subheadStrong)
-                        .foregroundStyle(Theme.textPrimary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
-                    Text(subtitle)
-                        .font(Typo.meta)
-                        .foregroundStyle(Theme.textSecondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+                    Text(title).foregroundStyle(Theme.textPrimary)
+                    Text(subtitle).font(Typo.subhead).foregroundStyle(Theme.textSecondary)
                 }
+            } icon: {
+                Image(systemName: symbol).foregroundStyle(Theme.accent)
             }
-            .padding(Space.m + 2)
-            .frame(maxWidth: .infinity, minHeight: 92, alignment: .topLeading)
-            .card(radius: Radius.l)
-            .contentShape(RoundedRectangle(cornerRadius: Radius.l, style: .continuous))
+            .frame(maxWidth: .infinity, minHeight: Size.minTap, alignment: .leading)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(TileButtonStyle())
+        .buttonStyle(.plain)
         .accessibilityIdentifier(id)
     }
 
