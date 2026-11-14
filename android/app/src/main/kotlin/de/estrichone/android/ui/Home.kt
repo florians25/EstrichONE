@@ -192,6 +192,24 @@ fun HomeScreen() {
                     }
                 }
             }
+            // Zuletzt geöffnet (wie iOS), ohne die Baustellen von heute; im Demomodus mit Beispielen.
+            val shownToday = todays.map { it.bauakteId }.toSet()
+            val recentIds = model.prefs.recentBauakten(session.user.id).ifEmpty {
+                if (session.isDemo) listOf(de.estrichone.core.DemoData.HALLE, de.estrichone.core.DemoData.ISARPARK) else emptyList()
+            }
+            val recent = recentIds.filter { it !in shownToday }.mapNotNull { session.service.bauakte(it) }.take(3)
+            if (recent.isNotEmpty()) {
+                item { SectionHeader("Zuletzt geöffnet") }
+                item {
+                    SectionCard {
+                        recent.forEachIndexed { index, b ->
+                            if (index > 0) RowDivider(16.dp)
+                            RowItem(b.title, subtitle = listOfNotNull(b.numberText, b.addressLine).joinToString(" · "), showChevron = true,
+                                onClick = { nav.push(Route.Bauakte(b.id)) })
+                        }
+                    }
+                }
+            }
         }
         }
     }

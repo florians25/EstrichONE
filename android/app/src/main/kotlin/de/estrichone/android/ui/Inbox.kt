@@ -267,7 +267,7 @@ fun InboxScreen() {
             modifier = Modifier.fillMaxSize()) {
             LazyColumn(contentPadding = padding.content(), modifier = Modifier.readable()) {
                 if (!loaded) {
-                    item { Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator() } }
+                    item { SkeletonRows() }
                 }
                 if (loaded && items.isNotEmpty()) {
                     item(key = "search") {

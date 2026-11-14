@@ -407,10 +407,24 @@ fun <T> Session.local(vararg keys: Any?, query: () -> T): State<T> {
     return produceState(initialValue = remember(*keys) { query() }, revision, *keys) { value = query() }
 }
 
+/** Platzhalter beim ersten Laden: graue Zeilen in einer Karte statt eines Drehkreisels. */
+@Composable
+fun SkeletonRows(rows: Int = 5, modifier: Modifier = Modifier) {
+    SectionCard(modifier.padding(top = Space.s).semantics { contentDescription = "Wird geladen" }) {
+        repeat(rows) { index ->
+            if (index > 0) RowDivider(16.dp)
+            Column(Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 16.dp, vertical = 12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                Box(Modifier.fillMaxWidth(if (index % 2 == 0) 0.7f else 0.55f).height(14.dp).clip(RoundedCornerShape(4.dp)).background(tones.fill))
+                Box(Modifier.fillMaxWidth(0.4f).height(12.dp).clip(RoundedCornerShape(4.dp)).background(tones.fill))
+            }
+        }
+    }
+}
+
 @Composable
 fun LoadView(load: Load<*>, content: @Composable () -> Unit) {
     when (load) {
-        Load.Loading -> Box(Modifier.fillMaxWidth().padding(40.dp), contentAlignment = Alignment.Center) { androidx.compose.material3.CircularProgressIndicator() }
+        Load.Loading -> SkeletonRows()
         is Load.Failed -> EmptyState(Icons.Filled.CloudOff, "Nicht verfügbar", load.message)
         is Load.Done<*> -> content()
     }

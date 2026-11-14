@@ -161,6 +161,8 @@ fun BauakteScreen(id: String, showBack: Boolean = true) {
     }
     var menu by remember { mutableStateOf(false) }
     var cancelling by remember { mutableStateOf(false) }
+    // Für „Zuletzt geöffnet“ auf Heute merken.
+    LaunchedEffect(id) { model.prefs.markBauakteOpened(session.user.id, id) }
     val scope = rememberCoroutineScope()
 
     val b = bauakte
@@ -446,6 +448,21 @@ fun Thumbnail(file: FileItem, session: Session, size: Dp, modifier: Modifier = M
     }
 }
 
+/** Was die Kolonne zuerst braucht: Estrichart, Dicke, Fläche, Termin – danach alles in der Reihenfolge des Formulars. */
+internal fun keyDataFirst(fields: List<Pair<String, String>>): List<Pair<String, String>> {
+    fun rank(label: String): Int {
+        val text = label.lowercase()
+        return when {
+            "estrichart" in text -> 0
+            text == "dicke" || "nenndicke" in text || "estrichdicke" in text -> 1
+            text == "fläche" || "gesamtfläche" in text -> 2
+            "termin" in text -> 3
+            else -> 4
+        }
+    }
+    return fields.sortedBy { rank(it.first) } // stabil: gleiche Stufe behält die Formular-Reihenfolge
+}
+
 /** Basisdaten: die vier wichtigsten Kennwerte direkt, alle weiteren per Tipp auf „Alle Basisdaten“ aufklappbar. */
 @Composable
 private fun ProjectGrid(session: Session, b: Bauakte) {
@@ -453,9 +470,9 @@ private fun ProjectGrid(session: Session, b: Bauakte) {
     val schema = remember(b.id) { session.service.schema("bauakte") }
     val lists = remember(b.id) { session.service.valueLists() }
     var expanded by remember(b.id) { mutableStateOf(false) }
-    val fields = schema?.groups?.flatMap { it.fields }.orEmpty().mapNotNull { field ->
+    val fields = keyDataFirst(schema?.groups?.flatMap { it.fields }.orEmpty().mapNotNull { field ->
         field.display(b.project[field.path.removePrefix("project.")], lists)?.let { field.label to it }
-    }
+    })
     SectionHeader("Basisdaten", action = if (fields.isEmpty()) null else "Bearbeiten", onAction = { nav.push(Route.Area(b.id, AreaKind.Project)) })
     SectionCard {
         if (fields.isEmpty()) {

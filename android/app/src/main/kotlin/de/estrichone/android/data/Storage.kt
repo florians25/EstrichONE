@@ -268,5 +268,14 @@ class DevicePrefs(context: Context) {
 
     fun setDismissedNotices(userId: String, ids: Set<String>) = prefs.edit().putStringSet("dismissed-$userId", ids).apply()
 
+    /** Zuletzt geöffnete Bauakten je Person (neueste zuerst, höchstens zehn) – für „Zuletzt geöffnet“ auf Heute. */
+    fun recentBauakten(userId: String): List<String> =
+        prefs.getString("recent-$userId", null)?.split(',')?.filter { it.isNotBlank() }.orEmpty()
+
+    fun markBauakteOpened(userId: String, id: String) {
+        val list = (listOf(id) + recentBauakten(userId).filter { it != id }).take(10)
+        prefs.edit().putString("recent-$userId", list.joinToString(",")).apply()
+    }
+
     fun clear() = prefs.edit().clear().apply()
 }

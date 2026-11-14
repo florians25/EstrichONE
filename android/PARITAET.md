@@ -39,7 +39,8 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Mein Einsatz (Zeit, Status, Adresse + Route, Ansprechpartner + Anruf, Tätigkeit, Kolonne, Fahrzeuge, Notiz, Aktionen) | ✅ | ✅ | Plan offline aus dem letzten Abruf |
 | „Mein Einsatz“: eine Hauptaktion „Foto“, Tagebuch/Mangel/Akte im Menü „…“ bzw. „⋮“ | ✅ | ✅ | |
 | Überblick: Meine Aufgaben (davon Mängel), Wer fährt wohin, Meine Woche als Listenzeilen mit Zahl | ✅ | ✅ | ersetzt Kacheln und die Vorschauen „Offene Aufgaben“/„Wer fährt wohin“ |
-| Morgen (iOS) bzw. Diese Woche (Android), Zuletzt geöffnet | ✅ | 🟡 | Android ohne „Zuletzt geöffnet“ |
+| Morgen (iOS) bzw. Diese Woche (Android), Zuletzt geöffnet | ✅ | ✅ | iOS zusätzlich Wischen/langes Drücken für Foto, Tagebuch, Route |
+| Laden: graue Platzhalterzeilen statt Drehkreisel (Listen, Bauakte) | ✅ | ✅ | |
 | Oben rechts nur Glocke mit Zahl; Abgleich, Chat und „In Teams öffnen“ im Menü „…“ bzw. „⋮“ | ✅ | ✅ | |
 
 ## Mehr
@@ -60,7 +61,7 @@ Legende: ✅ umgesetzt · 🟡 teilweise (siehe Bemerkung) · ❌ fehlt noch
 | Basisdaten oben auf einen Blick: Nummer, Status ändern, Titel, Adresse + Route, Kunde/vor Ort/Bauleitung + Anruf, nächster Einsatz | ✅ | ✅ | ohne Kennzahl-Kapseln (stehen unter Basisdaten) |
 | Unten immer „Foto“ und „Video“ (große Schaltflächen) | ✅ | ✅ | Hauptaktionen der Bauakte |
 | Menü „…“/„⋮“: Scannen, Tagebuch, Mangel, Aufgabe, Notiz, Erstbegehung, Abnahme, CM-Messung, PDF, Basisdaten, Teams | ✅ | ✅ | Android: Aufgabe, Notiz und Prüfungen unter „Weitere erfassen …“ |
-| Basisdaten: vier Kennwerte direkt, „Alle Basisdaten“ klappt auf | ✅ | ✅ | |
+| Basisdaten: vier Kennwerte direkt (zuerst Estrichart, Dicke, Fläche, Termin), „Alle Basisdaten“ klappt auf | ✅ | ✅ | unit-getestet |
 | Angeheftete Notiz, Hinweise nur bei Bedarf; Offene Punkte und neueste Fotos nur, wenn vorhanden | ✅ | ✅ | |
 | Basisdaten nach Formular-Schema bearbeiten | ✅ | ✅ | |
 | Notizen (anheften, löschen) | ✅ | ✅ | |

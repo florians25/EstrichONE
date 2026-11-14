@@ -1,6 +1,7 @@
 package de.estrichone.android
 
 import de.estrichone.android.ui.duplicates
+import de.estrichone.android.ui.keyDataFirst
 import de.estrichone.android.ui.parseColor
 import de.estrichone.core.Contact
 import de.estrichone.core.EntityTypes
@@ -29,5 +30,12 @@ class UiLogicTests {
     fun crewColorsAreParsed() {
         assertEquals(0xFFE07A1F.toInt(), parseColor("#E07A1F")!!.value.shr(32).toInt())
         assertNull(parseColor("rot"))
+    }
+
+    @Test
+    fun keyDataStartsWithEstrichartDickeFlaeche() {
+        val labels = listOf("Objektart", "Geschosse", "Gesamtfläche", "Priorität", "Estrichart", "Dämmdicke", "Nenndicke")
+        val sorted = keyDataFirst(labels.map { it to "x" }).map { it.first }
+        assertEquals(listOf("Estrichart", "Nenndicke", "Gesamtfläche", "Objektart", "Geschosse", "Priorität", "Dämmdicke"), sorted)
     }
 }
