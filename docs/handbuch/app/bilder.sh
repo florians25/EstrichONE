@@ -7,6 +7,9 @@
 # siehe ios/README.md) als iphone-<bildschirm>-hell.png und ipad-<bildschirm>-hell.png. Die hochauflösenden Motive
 # „Heute“ und iPad kommen aus dem App-Store-Paket (ios/AppStore/roh). Ausgabe: docs/handbuch/app/bilder/*.jpg,
 # iPhone 540 px breit, iPad 1200 px breit, JPEG Qualität 84 (ImageMagick).
+#
+# Ohne Artefakte (Download gesperrt) reichen die Protokollzeilen SHOT|… (iPhone 540 px, iPad 760 px): daraus
+# wiederhergestellte PNGs liefern dieselben Motive in etwas geringerer Auflösung; fehlende Motive bleiben unverändert.
 set -euo pipefail
 src="${1:?Ordner mit iphone-…-hell.png / ipad-…-hell.png angeben}"
 here="$(cd "$(dirname "$0")" && pwd)"
