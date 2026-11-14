@@ -245,6 +245,7 @@ struct AppModelTests {
     }
 }
 
+@MainActor
 @Suite("Bauakte: Reihenfolge der Kennwerte")
 struct KeyDataOrderTests {
     @Test("Estrichart, Dicke, Fläche zuerst, sonst Reihenfolge des Formulars")
