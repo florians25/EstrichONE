@@ -22,8 +22,9 @@ import de.estrichone.core.UpdateEvent
 import de.estrichone.core.UpdateSchedule
 import de.estrichone.core.UpdateState
 import de.estrichone.core.UpdateStatus
-import de.estrichone.core.WhatsNew
-import de.estrichone.core.appReleaseNotes
+import de.estrichone.core.markReleaseNotesSeen
+import de.estrichone.core.recentReleaseNotes
+import de.estrichone.core.whatsNew
 import de.estrichone.core.check
 import de.estrichone.core.checkAppUpdate
 import de.estrichone.core.isBusy
@@ -56,6 +57,8 @@ interface PendingChanges {
 class AppUpdater(
     private val context: Context,
     private val api: () -> EstrichOneApi?,
+    /** Angemeldete Sitzung (für „Was gibt’s Neues“); `null` vor der Anmeldung. */
+    private val signedIn: () -> EstrichOneApi? = { null },
     private val changes: () -> PendingChanges?,
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
@@ -265,32 +268,61 @@ class AppUpdater(
         _confirmation.value = null
     }
 
-    // Neu in dieser Version
+    // Was gibt’s Neues
 
-    /** Nach einem Update einmal die Neuerungen zeigen; ohne Verbindung beim nächsten Start erneut versuchen. */
-    fun loadWhatsNew() {
-        val last = prefs.getString("lastRunVersion", null)
-        if (last == null) {
-            prefs.edit().putString("lastRunVersion", installedVersion).apply()
-            return
-        }
-        val since = WhatsNew.since(last, installedVersion) ?: run {
-            if (last != installedVersion) prefs.edit().putString("lastRunVersion", installedVersion).apply()
-            return
-        }
-        val client = api() ?: return
+    /** Stand der angezeigten Neuerungen (für „Verstanden“); `null` = von Hand geöffnet. */
+    private var whatsNewVersion: String? = null
+    private var whatsNewCheckedFor: String? = null
+
+    /** Mehr › „Was gibt’s Neues“ ohne hinterlegte Neuerungen für die App. */
+    private val _noWhatsNew = MutableStateFlow(false)
+    val noWhatsNew: StateFlow<Boolean> = _noWhatsNew
+
+    /**
+     * Nach der Anmeldung (auch nach App- oder Server-Update) einmal je Benutzer und Prozess: Neuerungen für die Apps
+     * („## Apps“) seit der zuletzt gesehenen Version. Den Stand führt der Server (geräteübergreifend, neue Benutzer still
+     * als gesehen); ohne Verbindung beim nächsten Start erneut.
+     */
+    fun loadWhatsNew(userId: String?) {
+        if (frozen || userId == null || whatsNewCheckedFor == userId) return
+        val client = signedIn() ?: return
+        whatsNewCheckedFor = userId
         // Heruntergeladene Pakete werden nach der Installation nicht mehr gebraucht.
         directory.deleteRecursively()
         scope.launch {
-            runCatching { withContext(Dispatchers.IO) { client.appReleaseNotes(since, installedVersion) } }.onSuccess { notes ->
-                if (notes.isEmpty()) prefs.edit().putString("lastRunVersion", installedVersion).apply() else _whatsNew.value = notes
-            }
+            runCatching { withContext(Dispatchers.IO) { client.whatsNew() } }
+                .onSuccess { state ->
+                    if (state.notes.isNotEmpty()) {
+                        whatsNewVersion = state.serverVersion
+                        _whatsNew.value = state.notes
+                    }
+                }
+                .onFailure { whatsNewCheckedFor = null }
         }
     }
 
+    /** Mehr › „Was gibt’s Neues“: die letzten Versionen. */
+    fun openWhatsNew() {
+        val client = signedIn() ?: return
+        scope.launch {
+            val notes = runCatching { withContext(Dispatchers.IO) { client.recentReleaseNotes() } }.getOrDefault(emptyList())
+            whatsNewVersion = null
+            if (notes.isEmpty()) _noWhatsNew.value = true else _whatsNew.value = notes
+        }
+    }
+
+    fun noWhatsNewShown() {
+        _noWhatsNew.value = false
+    }
+
+    /** „Verstanden“: auf dem Server als gesehen markieren (auch für die anderen Geräte). */
     fun whatsNewShown() {
         _whatsNew.value = emptyList()
-        prefs.edit().putString("lastRunVersion", installedVersion).apply()
+        if (frozen) return
+        val client = signedIn() ?: return
+        val version = whatsNewVersion
+        whatsNewVersion = null
+        scope.launch { runCatching { withContext(Dispatchers.IO) { client.markReleaseNotesSeen(version) } } }
     }
 
     /** Nur für Screenshots und Tests. */

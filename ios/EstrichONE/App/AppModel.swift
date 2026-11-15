@@ -113,6 +113,10 @@ final class AppModel {
                                   installedVersion: AppEnvironment.shortVersion, signal: AppEnvironment.updateSignal)
         updates.serverAddress = { [weak self] in self?.server?.address }
         updates.unsentChanges = { [weak self] in await self?.unsentItems() ?? 0 }
+        updates.signedIn = { [weak self] in
+            guard let active = self?.active else { return nil }
+            return (active.user.id, active.client)
+        }
         if let server = serverStore.load() {
             open(server)
         }

@@ -213,6 +213,26 @@ class AppUpdateTests {
             EstrichOneApi.updateRequired = null
         }
     }
+    @Test
+    @DisplayName("Was gibt’s Neues: **fett** sicher zerlegen, offenes ** entfernen")
+    fun releaseNoteText() {
+        assertEquals(listOf("Neu: " to false, "Heute" to true, " ohne Lücke" to false), ReleaseNoteText.segments("Neu: **Heute** ohne Lücke"))
+        assertEquals(listOf("offen ohne Ende" to false), ReleaseNoteText.segments("offen **ohne Ende"))
+        assertEquals(listOf("<b>x</b>" to true), ReleaseNoteText.segments("**<b>x</b>**"))
+        assertEquals("Heute ohne Lücke", ReleaseNoteText.plain("**Heute** ohne Lücke"))
+    }
+
+    @Test
+    @DisplayName("Was gibt’s Neues: Abruf, letzte Versionen und „Verstanden“ (Demoserver)")
+    fun whatsNewDemo() = runBlocking {
+        val api = EstrichOneApi("https://demo.estrichone.invalid", MemorySessionStore(), SoftwareDeviceKeys(), DemoServer().client())
+        api.signIn("m.huber", "demo", "Demo")
+        val state = api.whatsNew()
+        assertEquals("1.0.0", state.serverVersion)
+        assertTrue(state.notes.isEmpty())
+        assertEquals("Apps", api.recentReleaseNotes().first().sections.first().title)
+        api.markReleaseNotesSeen("1.0.0")
+    }
 }
 
 class StorageSchemaTests {
@@ -230,4 +250,5 @@ class StorageSchemaTests {
         assertTrue(StorageSchema.isDestructive("DROP TABLE outbox"))
         assertTrue(StorageSchema.isDestructive("alter table entities drop column json"))
     }
+
 }

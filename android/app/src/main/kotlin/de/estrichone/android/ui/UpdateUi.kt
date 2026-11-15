@@ -47,12 +47,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import de.estrichone.android.AppModel
 import de.estrichone.android.update.AppUpdater
 import de.estrichone.core.AppReleaseNote
+import de.estrichone.core.ReleaseNoteText
 import de.estrichone.core.UpdateSchedule
 import de.estrichone.core.UpdateState
 import de.estrichone.core.UpdateStatus
@@ -84,6 +89,15 @@ fun UpdateOverlay(model: AppModel) {
             text = { UpdateFlowContent(updater, state) },
             confirmButton = { UpdateFlowPrimary(updater, state) },
             dismissButton = { if (state.isDismissable) TextButton(onClick = updater::dismiss) { Text("Schließen") } },
+        )
+    }
+    val nothing by updater.noWhatsNew.collectAsState()
+    if (nothing) {
+        AlertDialog(
+            onDismissRequest = updater::noWhatsNewShown,
+            title = { Text("Was gibt’s Neues") },
+            text = { Text("Für die App sind zurzeit keine Neuerungen hinterlegt.") },
+            confirmButton = { TextButton(onClick = updater::noWhatsNewShown) { Text("OK") } },
         )
     }
     if (notes.isNotEmpty()) {
@@ -267,7 +281,7 @@ fun ReleaseNotesList(notes: List<AppReleaseNote>, maxItems: Int = Int.MAX_VALUE)
                 Text(section.title, style = MaterialTheme.typography.labelLarge, color = tones.textSecondary, modifier = Modifier.padding(top = 4.dp))
                 section.items.forEach { item ->
                     if (shown < maxItems) {
-                        Row { Text("•", modifier = Modifier.width(16.dp)); Text(item, style = MaterialTheme.typography.bodyMedium) }
+                        Row { Text("•", modifier = Modifier.width(16.dp)); Text(releaseNoteItem(item), style = MaterialTheme.typography.bodyMedium) }
                         shown++
                     }
                 }
@@ -276,7 +290,14 @@ fun ReleaseNotesList(notes: List<AppReleaseNote>, maxItems: Int = Int.MAX_VALUE)
     }
 }
 
-/** „Neu in dieser Version“ nach einem Update. */
+/** Punkt mit **fett** (nur diese Auszeichnung, kein HTML). */
+private fun releaseNoteItem(text: String): AnnotatedString = buildAnnotatedString {
+    ReleaseNoteText.segments(text).forEach { (part, bold) ->
+        if (bold) withStyle(SpanStyle(fontWeight = FontWeight.SemiBold)) { append(part) } else append(part)
+    }
+}
+
+/** „Was gibt’s Neues“ nach Anmeldung bzw. Update und unter Mehr. */
 @Composable
 fun WhatsNewContent(notes: List<AppReleaseNote>, onDone: () -> Unit) {
     Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(horizontal = 24.dp, vertical = 8.dp),
@@ -285,12 +306,12 @@ fun WhatsNewContent(notes: List<AppReleaseNote>, onDone: () -> Unit) {
             IconTile(Icons.Filled.NewReleases)
             Spacer(Modifier.width(12.dp))
             Column {
-                Text("Neu in dieser Version", style = SectionTitle)
+                Text("Was gibt’s Neues", style = SectionTitle)
                 Secondary("EstrichONE ${notes.first().version}")
             }
         }
         SectionCard(padding = androidx.compose.foundation.layout.PaddingValues(16.dp)) { ReleaseNotesList(notes) }
-        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("Weiter") }
+        Button(onClick = onDone, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp)) { Text("Verstanden") }
         Spacer(Modifier.height(16.dp))
     }
 }
@@ -313,6 +334,8 @@ fun UpdateSection(model: AppModel) {
         RowItem("App-Update", subtitle = text, icon = Icons.Filled.SystemUpdate, trailing = {
             if (state is UpdateState.Checking) CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
         })
+        RowDivider(16.dp)
+        RowItem("Was gibt’s Neues", icon = Icons.Filled.NewReleases, onClick = updater::openWhatsNew, showChevron = true)
         RowDivider(16.dp)
         if (check?.status == UpdateStatus.Recommended || check?.status == UpdateStatus.Required) {
             RowItem("Jetzt aktualisieren", titleColor = MaterialTheme.colorScheme.primary, onClick = updater::start, showChevron = true)

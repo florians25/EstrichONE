@@ -101,6 +101,45 @@ suspend fun EstrichOneApi.checkAppUpdate(version: String, platform: String = "an
 suspend fun EstrichOneApi.appReleaseNotes(from: String?, to: String, platform: String = "android"): List<AppReleaseNote> =
     send("GET", "app-updates/release-notes", null, authenticated = false, query = mapOf("platform" to platform, "from" to from, "to" to to))
 
+/** „Was gibt’s Neues“ nach der Anmeldung (`GET release-notes/whats-new`, Stand auf dem Server, geräteübergreifend). */
+@Serializable
+data class WhatsNewState(val serverVersion: String, val lastSeenVersion: String? = null, val notes: List<AppReleaseNote> = emptyList())
+
+@Serializable
+data class ReleaseNotesSeen(val audience: String, val version: String?)
+
+/** Neuerungen für die Apps („## Apps“) seit der zuletzt gesehenen Version; neue Benutzer markiert der Server still. */
+suspend fun EstrichOneApi.whatsNew(platform: String = "android"): WhatsNewState =
+    send("GET", "release-notes/whats-new", null, query = mapOf("audience" to "apps", "platform" to platform))
+
+/** Mehr › „Was gibt’s Neues“: die letzten Versionen mit Neuerungen für die Apps. */
+suspend fun EstrichOneApi.recentReleaseNotes(platform: String = "android", limit: Int = 5): List<AppReleaseNote> =
+    send("GET", "release-notes", null, query = mapOf("audience" to "apps", "platform" to platform, "limit" to limit.toString()))
+
+/** „Verstanden“: bis zu dieser Version (ohne: Serverversion) gesehen. */
+suspend fun EstrichOneApi.markReleaseNotesSeen(version: String?) =
+    send<Unit>("PUT", "release-notes/seen", ReleaseNotesSeen(audience = "apps", version = version))
+
+/** Punkte der Versionshinweise enthalten nur `**fett**` als Auszeichnung (kein HTML, keine Links). */
+object ReleaseNoteText {
+    /** Text in Abschnitte zerlegen: (Text, fett). Ein einzelnes „**“ ohne Gegenstück wird entfernt. */
+    fun segments(text: String): List<Pair<String, Boolean>> {
+        val parts = text.split("**")
+        val closed = parts.size % 2 == 1
+        val result = mutableListOf<Pair<String, Boolean>>()
+        parts.forEachIndexed { index, part ->
+            val bold = index % 2 == 1 && (closed || index < parts.size - 1)
+            if (part.isNotEmpty()) {
+                val last = result.lastOrNull()
+                if (last != null && last.second == bold) result[result.size - 1] = (last.first + part) to bold else result += part to bold
+            }
+        }
+        return result
+    }
+
+    fun plain(text: String): String = text.replace("**", "")
+}
+
 /** Wann wieder geprüft wird: beim Start nach 30 Minuten, beim Zurückkehren nach 6 Stunden, von Hand immer. */
 object UpdateSchedule {
     const val ON_START_MS = 30 * 60 * 1000L

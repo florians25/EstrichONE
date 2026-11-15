@@ -42,6 +42,25 @@ struct AppUpdateTests {
         #expect(WhatsNewPolicy.since(lastRun: "1.0.10", current: "1.0.12") == "1.0.10")
     }
 
+    @Test("Was gibt’s Neues: **fett** sicher zerlegen, offenes ** entfernen")
+    func releaseNoteText() {
+        let parts = ReleaseNoteText.segments("Neu: **Heute** ohne Lücke")
+        #expect(parts.map { $0.text } == ["Neu: ", "Heute", " ohne Lücke"])
+        #expect(parts.map { $0.bold } == [false, true, false])
+        #expect(ReleaseNoteText.segments("offen **ohne Ende").map { $0.text } == ["offen ohne Ende"])
+        #expect(ReleaseNoteText.segments("**<b>x</b>**").map { $0.bold } == [true])
+        #expect(ReleaseNoteText.plain("**Heute** ohne Lücke") == "Heute ohne Lücke")
+    }
+
+    @Test("Was gibt’s Neues: Antwort lesen (ohne Notizen: leer)")
+    func decodeWhatsNew() throws {
+        let state = try JSONCoding.decoder.decode(WhatsNewState.self, from: Data(
+            #"{"serverVersion":"1.0.27","lastSeenVersion":"1.0.26","notes":[{"version":"1.0.27","title":"EstrichONE 1.0.27","sections":[{"title":"Apps","items":["**Neu** hier"]}]}]}"#.utf8))
+        #expect(state.notes.first?.sections.first?.items == ["**Neu** hier"])
+        let empty = try JSONCoding.decoder.decode(WhatsNewState.self, from: Data(#"{"serverVersion":"1.0.27","lastSeenVersion":null}"#.utf8))
+        #expect(empty.notes.isEmpty)
+    }
+
     @Test("Antwort des Servers lesen, unbekannter Stand sperrt nie")
     func decode() throws {
         let json = """

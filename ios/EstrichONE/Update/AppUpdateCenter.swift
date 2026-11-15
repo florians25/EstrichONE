@@ -5,15 +5,20 @@ import UIKit
 
 /// App-Updates auf iOS (docs/app-updates.md): prüft gegen den eigenen Server (beim Start, beim Zurückkehren gedrosselt,
 /// von Hand und nach einer Ablehnung mit 426), zeigt Hinweis bzw. Sperre und führt zu App Store, TestFlight oder MDM.
-/// iOS installiert nicht selbst; nach dem Update erscheint einmal „Neu in dieser Version“.
+/// iOS installiert nicht selbst; nach Anmeldung bzw. Update erscheint einmal „Was gibt’s Neues“.
 @MainActor
 @Observable
 final class AppUpdateCenter {
     private(set) var check: AppUpdateCheck?
     private(set) var isChecking = false
     private(set) var checkFailed = false
-    /// Neuerungen nach einem Update (Blatt „Neu in dieser Version“).
+    /// Neuerungen nach Anmeldung bzw. Update (Blatt „Was gibt’s Neues“).
     var whatsNew: [AppReleaseNote] = []
+    /// Mehr › „Was gibt’s Neues“ ohne hinterlegte Neuerungen für die App.
+    var noWhatsNew = false
+    /// Stand der angezeigten Neuerungen (für „Verstanden“); `nil` = von Hand geöffnet.
+    private var whatsNewVersion: String?
+    private var checkedWhatsNewFor: UUID?
     /// „Später“ für diese Version (bis zum nächsten Start).
     private(set) var snoozedVersion: String?
     /// Vor dem Wechsel in den App Store: offene Änderungen werden übertragen.
@@ -27,11 +32,12 @@ final class AppUpdateCenter {
     /// Adresse des verbundenen Servers und Abgleich offener Änderungen (setzt das App-Modell).
     @ObservationIgnored var serverAddress: @MainActor () -> ServerAddress? = { nil }
     @ObservationIgnored var unsentChanges: @MainActor () async -> Int = { 0 }
+    /// Angemeldete Person und ihr Client (für „Was gibt’s Neues“); `nil` vor der Anmeldung.
+    @ObservationIgnored var signedIn: @MainActor () -> (userId: UUID, client: AuthorizedClient)? = { nil }
     /// Screenshots: gezeigter Zustand bleibt stehen.
     private var frozen = false
 
     private static let lastCheckKey = "estrichone.update.lastCheck"
-    private static let lastRunKey = "estrichone.update.lastRunVersion"
 
     init(transport: HTTPTransport, defaults: UserDefaults, installedVersion: String, signal: AppUpdateSignal) {
         self.transport = transport
@@ -106,33 +112,41 @@ final class AppUpdateCenter {
         if let link { UIApplication.shared.open(link) }
     }
 
-    /// Nach einem Update einmal die Neuerungen zeigen; ohne Verbindung beim nächsten Start erneut versuchen.
+    /// Nach der Anmeldung (auch nach App- oder Server-Update) einmal je Benutzer: Neuerungen für die Apps („## Apps“)
+    /// seit der zuletzt gesehenen Version. Den Stand führt der Server (geräteübergreifend; neue Benutzer still als
+    /// gesehen); ohne Verbindung beim nächsten Start erneut.
     func loadWhatsNew() {
-        let last = defaults.string(forKey: Self.lastRunKey)
-        guard let last else {
-            defaults.set(installedVersion, forKey: Self.lastRunKey)
-            return
-        }
-        guard let since = WhatsNewPolicy.since(lastRun: last, current: installedVersion) else {
-            if last != installedVersion { defaults.set(installedVersion, forKey: Self.lastRunKey) }
-            return
-        }
-        guard !frozen, let address = serverAddress() else { return }
-        let api = APIClient(server: address, transport: transport)
-        let version = installedVersion
+        guard !frozen, let current = signedIn(), checkedWhatsNewFor != current.userId else { return }
+        checkedWhatsNewFor = current.userId
         Task {
-            guard let notes = try? await api.appReleaseNotes(from: since, to: version) else { return }
-            if notes.isEmpty {
-                defaults.set(version, forKey: Self.lastRunKey)
-            } else {
-                whatsNew = notes
+            do {
+                let state = try await current.client.whatsNew()
+                guard !frozen, !state.notes.isEmpty else { return }
+                whatsNewVersion = state.serverVersion
+                whatsNew = state.notes
+            } catch {
+                checkedWhatsNewFor = nil
             }
         }
     }
 
+    /// Mehr › „Was gibt’s Neues“: die letzten Versionen (ohne Eintrag: Hinweis).
+    func openWhatsNew() {
+        guard let current = signedIn() else { return }
+        Task {
+            let notes = (try? await current.client.recentReleaseNotes()) ?? []
+            whatsNewVersion = nil
+            if notes.isEmpty { noWhatsNew = true } else { whatsNew = notes }
+        }
+    }
+
+    /// „Verstanden“: auf dem Server als gesehen markieren (auch für die anderen Geräte).
     func whatsNewShown() {
         whatsNew = []
-        defaults.set(installedVersion, forKey: Self.lastRunKey)
+        guard !frozen, let current = signedIn() else { return }
+        let version = whatsNewVersion
+        whatsNewVersion = nil
+        Task { try? await current.client.markReleaseNotesSeen(version: version) }
     }
 
     #if DEBUG
@@ -148,7 +162,7 @@ final class AppUpdateCenter {
         }
         let notes = [
             AppReleaseNote(version: "1.0.13", title: "EstrichONE 1.0.13", sections: [
-                AppReleaseSection(title: "Apps", items: ["Hinweis auf neue Versionen direkt in der App", "Neu in dieser Version nach jedem Update"]),
+                AppReleaseSection(title: "Apps", items: ["Hinweis auf neue Versionen direkt in der App", "**Was gibt’s Neues:** nach jedem Update einmal die Neuerungen"]),
                 AppReleaseSection(title: "Bauakten", items: ["Abnahme mit Unterschrift auch ohne Netz", "Fotos schneller hochladen"]),
             ]),
             AppReleaseNote(version: "1.0.12", title: "EstrichONE 1.0.12", sections: [

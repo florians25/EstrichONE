@@ -80,6 +80,10 @@ class DemoServer(private val content: (String) -> ByteArray? = { null }) : Inter
                 "serverVersion" to "1.0.0", "latestVersion" to (query["version"] ?: "1.0.0"), "minimumVersion" to "1.0.0", "status" to "current",
                 "download" to json("kind" to "none"), "releaseNotes" to emptyList<Any>())
             path == "app-updates/release-notes" -> 200 to emptyList<Any>()
+            path == "release-notes/whats-new" -> 200 to json("serverVersion" to "1.0.0", "lastSeenVersion" to "1.0.0", "notes" to emptyList<Any>())
+            path == "release-notes" -> 200 to listOf(json("version" to "1.0.0", "title" to "EstrichONE 1.0.0", "sections" to listOf(
+                json("title" to "Apps", "items" to listOf("**Demo:** Beispieldaten zum Ausprobieren, nichts wird gesendet.")))))
+            path == "release-notes/seen" -> 204 to null
             path == "auth/login" || path == "auth/refresh" -> 200 to json(
                 "accessToken" to "demo-access", "accessTokenExpiresAt" to ApiDate.format(now.plusSeconds(900)), "refreshToken" to "demo-refresh",
                 "refreshTokenExpiresAt" to ApiDate.format(now.plusSeconds(86_400 * 30)),

@@ -256,3 +256,75 @@ extension APIClient {
         return try await get("app-updates/release-notes", query: query)
     }
 }
+
+// MARK: - Was gibt’s Neues
+
+/// Antwort von `GET release-notes/whats-new`: Neuerungen für die Apps („## Apps“) seit der zuletzt gesehenen Version.
+/// Den Stand führt der Server je Benutzer (geräteübergreifend); neue Benutzer markiert er still als gesehen.
+public struct WhatsNewState: Codable, Equatable, Sendable {
+    public var serverVersion: String
+    public var lastSeenVersion: String?
+    public var notes: [AppReleaseNote]
+
+    public init(serverVersion: String, lastSeenVersion: String?, notes: [AppReleaseNote]) {
+        self.serverVersion = serverVersion
+        self.lastSeenVersion = lastSeenVersion
+        self.notes = notes
+    }
+
+    public init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        serverVersion = try c.decode(String.self, forKey: .serverVersion)
+        lastSeenVersion = try c.decodeIfPresent(String.self, forKey: .lastSeenVersion)
+        notes = try c.decodeIfPresent([AppReleaseNote].self, forKey: .notes) ?? []
+    }
+}
+
+private struct ReleaseNotesSeen: Encodable, Sendable {
+    let audience = "apps"
+    let version: String?
+
+    enum CodingKeys: String, CodingKey { case audience, version }
+}
+
+/// Punkte der Versionshinweise enthalten nur `**fett**` als Auszeichnung (kein HTML, keine Links).
+public enum ReleaseNoteText {
+    /// Text in Abschnitte (Text, fett) zerlegen; ein einzelnes „**“ ohne Gegenstück wird entfernt.
+    public static func segments(_ text: String) -> [(text: String, bold: Bool)] {
+        let parts = text.components(separatedBy: "**")
+        let closed = parts.count % 2 == 1
+        var result: [(text: String, bold: Bool)] = []
+        for (index, part) in parts.enumerated() where !part.isEmpty {
+            let bold = index % 2 == 1 && (closed || index < parts.count - 1)
+            if let last = result.last, last.bold == bold {
+                result[result.count - 1].text += part
+            } else {
+                result.append((part, bold))
+            }
+        }
+        return result
+    }
+
+    public static func plain(_ text: String) -> String {
+        text.replacingOccurrences(of: "**", with: "")
+    }
+}
+
+extension AuthorizedClient {
+    /// Nach der Anmeldung: Neuerungen für die Apps seit der zuletzt gesehenen Version (leer: nichts zeigen).
+    public func whatsNew() async throws(APIError) -> WhatsNewState {
+        try await get("release-notes/whats-new", query: [URLQueryItem(name: "audience", value: "apps"), URLQueryItem(name: "platform", value: "ios")])
+    }
+
+    /// Mehr › „Was gibt’s Neues“: die letzten Versionen mit Neuerungen für die Apps.
+    public func recentReleaseNotes(limit: Int = 5) async throws(APIError) -> [AppReleaseNote] {
+        try await get("release-notes", query: [URLQueryItem(name: "audience", value: "apps"), URLQueryItem(name: "platform", value: "ios"),
+                                               URLQueryItem(name: "limit", value: String(limit))])
+    }
+
+    /// „Verstanden“: bis zu dieser Version (ohne: Serverversion) gesehen, auch für die anderen Geräte.
+    public func markReleaseNotesSeen(version: String?) async throws(APIError) {
+        let body = try? JSONCoding.encoder.encode(ReleaseNotesSeen(version: version))
+        let _: NoContent = try await send(APIRequest(method: "PUT", path: "release-notes/seen", body: body, contentType: "application/json"))
+    }
+}

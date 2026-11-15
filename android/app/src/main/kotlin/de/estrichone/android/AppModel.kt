@@ -175,7 +175,7 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
     private var poolPin: String? = null
 
     /** App-Update (docs/app-updates.md): Prüfung gegen den eigenen Server, Download, Installation, Neuerungen. */
-    val updater: AppUpdater = AppUpdater(context, api = { _session.value?.api ?: this.api }, changes = {
+    val updater: AppUpdater = AppUpdater(context, api = { _session.value?.api ?: this.api }, signedIn = { _session.value?.api }, changes = {
         _session.value?.takeIf { !it.isDemo }?.let { session ->
             object : PendingChanges {
                 override fun count(): Int = session.store.summary().let { it.pendingOperations + it.pendingUploads }
@@ -192,7 +192,7 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
 
     private fun checkForUpdates() {
         updater.check(UpdateSchedule.Trigger.Start)
-        updater.loadWhatsNew()
+        updater.loadWhatsNew(_session.value?.user?.id)
     }
     private var backgroundSince: Long? = null
 
@@ -471,6 +471,8 @@ class AppModel(private val context: Context, private val platform: Platform = Pl
         session.onUpdateReleased = { text -> scope.launch { sessionEnded(ApiException(401, "UPDATED", text)) } }
         _session.value = session
         session.start()
+        // Nach der Anmeldung bzw. nach einem Update einmal „Was gibt’s Neues“ (Stand auf dem Server).
+        updater.loadWhatsNew(user.id)
     }
 
     private fun closeSession() {

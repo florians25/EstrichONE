@@ -1,8 +1,8 @@
 import EstrichCore
 import SwiftUI
 
-// App-Updates (docs/app-updates.md): Hinweis auf „Heute“, Sperrbildschirm unter der Mindestversion, „Neu in dieser Version“
-// nach dem Update und Abschnitt unter Mehr. Eingebunden mit `.appUpdates(model)` in RootView.
+// App-Updates (docs/app-updates.md): Hinweis auf „Heute“, Sperrbildschirm unter der Mindestversion, „Was gibt’s Neues“
+// nach Anmeldung bzw. Update und Abschnitt unter Mehr. Eingebunden mit `.appUpdates(model)` in RootView.
 
 extension View {
     /// Hinweis, Sperre und Neuerungen über der ganzen App; prüft beim Start und beim Zurückkehren (gedrosselt).
@@ -46,6 +46,15 @@ private struct AppUpdateModifier: ViewModifier {
                     center.refresh(.launch)
                     center.loadWhatsNew()
                 }
+            }
+            // Nach der Anmeldung bzw. dem Entsperren: einmal „Was gibt’s Neues“ (Stand auf dem Server).
+            .onChange(of: model.active?.user.id) { _, user in
+                if user != nil { center.loadWhatsNew() }
+            }
+            .alert("Was gibt’s Neues", isPresented: Binding(get: { center.noWhatsNew }, set: { center.noWhatsNew = $0 })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text("Für die App sind zurzeit keine Neuerungen hinterlegt.")
             }
     }
 }
@@ -171,7 +180,7 @@ struct ReleaseNotesList: View {
                 case let .item(text):
                     HStack(alignment: .firstTextBaseline, spacing: Space.s) {
                         Text("•").accessibilityHidden(true)
-                        Text(text).font(Typo.callout).fixedSize(horizontal: false, vertical: true)
+                        Text(Self.styled(text)).font(Typo.callout).fixedSize(horizontal: false, vertical: true)
                     }
                 }
             }
@@ -180,6 +189,17 @@ struct ReleaseNotesList: View {
 
     private enum Line {
         case version(String), section(String), item(String)
+    }
+
+    /// Nur **fett** als Auszeichnung (kein Markdown-Link, kein HTML).
+    static func styled(_ text: String) -> AttributedString {
+        var result = AttributedString()
+        for part in ReleaseNoteText.segments(text) {
+            var piece = AttributedString(part.text)
+            if part.bold { piece.inlinePresentationIntent = .stronglyEmphasized }
+            result += piece
+        }
+        return result
     }
 
     private var visible: [Line] {
@@ -199,7 +219,7 @@ struct ReleaseNotesList: View {
     }
 }
 
-/// „Neu in dieser Version“ nach einem Update.
+/// „Was gibt’s Neues“ nach Anmeldung bzw. Update und unter Mehr.
 struct WhatsNewSheet: View {
     let notes: [AppReleaseNote]
     let done: () -> Void
@@ -215,14 +235,14 @@ struct WhatsNewSheet: View {
                         .padding(Space.l)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .background(Theme.surface, in: RoundedRectangle(cornerRadius: Radius.xl, style: .continuous))
-                    Button("Weiter", action: done)
+                    Button("Verstanden", action: done)
                         .buttonStyle(EstrichButtonStyle(rank: .primary, fullWidth: true))
                         .accessibilityIdentifier("whatsNewDone")
                 }
                 .padding(Space.l)
             }
             .background(Theme.canvas)
-            .navigationTitle("Neu in dieser Version")
+            .navigationTitle("Was gibt’s Neues")
         }
         .presentationDetents([.large])
     }
@@ -250,6 +270,12 @@ struct AppUpdateSection: View {
                 Button("Nach Updates suchen") { center.refresh(.manual) }
                     .accessibilityIdentifier("checkForUpdates")
             }
+            Button {
+                center.openWhatsNew()
+            } label: {
+                Label("Was gibt’s Neues", systemImage: "sparkles")
+            }
+            .accessibilityIdentifier("whatsNew")
         } footer: {
             if center.check?.status == .newerThanServer {
                 Text("Diese App ist neuer als der Server (\(center.check?.serverVersion ?? "")). Sie funktioniert weiter; die IT sollte den Server aktualisieren (sudo /opt/estrichone/update.sh).")

@@ -264,6 +264,12 @@ final class FakeServer: HTTPTransport, @unchecked Sendable {
             return json(status, result)
         case let swapPath where demo != nil && swapPath.hasPrefix("/api/v1/planning/days/") && swapPath.hasSuffix("/swap-crews"):
             return json(200, planning.swapCrews(day: swapPath.split(separator: "/").map(String.init)[4], body: body))
+        case "/api/v1/release-notes/whats-new" where demo != nil:
+            return (200, #"{"serverVersion":"1.0.0","lastSeenVersion":"1.0.0","notes":[]}"#)
+        case "/api/v1/release-notes" where demo != nil:
+            return (200, #"[{"version":"1.0.0","title":"EstrichONE 1.0.0","sections":[{"title":"Apps","items":["**Demo:** Beispieldaten zum Ausprobieren, nichts wird gesendet."]}]}]"#)
+        case "/api/v1/release-notes/seen" where demo != nil:
+            return (204, "")
         case "/api/v1/system/health-banner" where demo != nil:
             return json(200, DemoSwitches.shared.health())
         case "/api/v1/system/notices" where demo != nil && DemoSwitches.shared.maintenance:
