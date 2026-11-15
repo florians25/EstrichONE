@@ -56,14 +56,13 @@
 						icon="sap-icon://discussion" press=".onChatGroup"
 						visible="{= !!${akte>/chatGroup} &amp;&amp; (${akte>/chatGroup/member} || ${akte>/chatGroup/canCreate}) }"
 						tooltip="{= ${akte>/chatGroup/conversationId} ? 'Gruppe mit Team und Bauleitung (' + ${akte>/chatGroup/members} + ' Mitglieder)' : 'Chatgruppe mit Team und Bauleitung dieser Bauakte anlegen' }">
-						<!-- Wenig Platz (z. B. 1680 × 1050 mit 125 %): Chat und Teams zuerst ins Überlaufmenü, Bearbeiten bleibt sichtbar -->
+						<!-- Wenig Platz (z. B. 1680 × 1050 mit 125 %): der Baustellen-Chat zuerst ins Überlaufmenü, damit Bearbeiten und Aktionen sichtbar bleiben -->
 						<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
 					</Button>
 					<!-- Microsoft Teams (Chat-Modus „Teams“ oder „beides“): öffnen, anlegen, per Link verknüpfen, löschen – Abgleich läuft automatisch -->
 					<MenuButton id="akteTeamsButton" text="{akte>/teams/buttonText}" icon="sap-icon://collaborate" visible="{= ${akte>/teams/visible} === true }"
 						buttonMode="Split" useDefaultActionOnly="true" defaultAction=".onTeamsOpen"
 						tooltip="{akte>/teams/tooltip}" type="{= ${akte>/teams/warning} ? 'Attention' : 'Default' }">
-						<layoutData><OverflowToolbarLayoutData priority="Low"/></layoutData>
 						<menu>
 							<Menu itemSelected=".onTeamsMenu">
 								<MenuItem text="In Teams öffnen" key="open" icon="sap-icon://action" visible="{= !!${akte>/teams/link} }"/>
@@ -76,9 +75,7 @@
 							</Menu>
 						</menu>
 					</MenuButton>
-					<Button text="{i18n>common.edit}" icon="sap-icon://edit" press=".onEdit" visible="{akte>/canEdit}">
-						<layoutData><OverflowToolbarLayoutData priority="High"/></layoutData>
-					</Button>
+					<Button text="{i18n>common.edit}" icon="sap-icon://edit" press=".onEdit" visible="{akte>/canEdit}"/>
 					<MenuButton id="actionsButton" text="{i18n>common.actions}" icon="sap-icon://overflow">
 						<menu>
 							<Menu>
