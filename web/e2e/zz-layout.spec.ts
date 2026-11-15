@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type Page } from '@playwright/test';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { adminPassword, layoutIssues, openSection, signIn } from './helpers';
+import { adminPassword, dialogFitIssues, layoutIssues, openSection, signIn } from './helpers';
 
 // Layout auf typischen Büro-Bildschirmen: Windows-Laptops mit 1920 px und 125 %/150 % Skalierung haben effektiv nur
 // 1536/1280 px, 1280er-Fenster bei 125 %/150 % nur 1024/853 px. Keine Seite darf dort waagerecht überlaufen, Inhalte
@@ -232,6 +232,88 @@ test('Helpdesk-Verlauf: Symbole berühren und überdecken die Einträge nicht, E
     await context.close();
   }
 });
+
+/**
+ * 22- und 24-Zoll-Monitore im Büro (Fensterinhalt ohne Browserleisten): 1920 × 1080 mit 125 % (1536 × 740), 1680 × 1050
+ * (1680 × 930) und 1920 × 1080 (1920 × 960). Wichtige Seiten ohne waagerechten Überlauf oder abgeschnittene Inhalte,
+ * Startkarten ohne einzelne Karte in der letzten Reihe, Helpdesk-Titel nicht zusammengedrückt, Zieltabelle der
+ * Helpdesk-Einstellungen mit lesbaren Werten, Kopf der Bauakte mit sichtbarem „Bearbeiten“ und die großen Dialoge
+ * (Kennwerte, Bauakte bearbeiten, Neue Bauakte, Was gibt’s Neues) vollständig im Fenster mit sichtbaren Knöpfen.
+ */
+const monitorPages = ['/start', '/bauakten', '/kunden', '/planung/cockpit', '/planung', '/planung/kalender', '/planung/teamplaner',
+  '/it-center/helpdesk', '/it-center/helpdesk-einstellungen', '/system/firmendaten?bereich=benachrichtigungen', '/dokumente', '/personal'];
+for (const [width, height, scale] of [[1536, 740, 1.25], [1680, 930, 1], [1920, 960, 1]] as const) {
+  test(`Büromonitore: Seiten und Dialoge bei ${width} × ${height} mit ${scale * 100} %`, async ({ browser }) => {
+    test.setTimeout(300_000);
+    const { context, page } = await session(browser, width, height, scale);
+    const found: string[] = [];
+    const add = (where: string, issues: string[]) => { for (const issue of issues) found.push(`${where}: ${issue}`); };
+    // „Was gibt’s Neues“ nach der Anmeldung ggf. schließen
+    await page.waitForTimeout(1500);
+    await page.getByRole('dialog', { name: /Was gibt’s Neues/ }).getByRole('button', { name: 'Verstanden' }).click({ timeout: 1000 }).catch(() => undefined);
+    const details = await detailPages(page);
+    for (const path of [...monitorPages, ...details.filter((p) => p.startsWith('/bauakten/'))]) {
+      await page.goto(path);
+      await settle(page);
+      add(path, await layoutIssues(page));
+      add(path, await page.evaluate(() => {
+        const out: string[] = [];
+        const shown = (e: Element) => (e as HTMLElement).getBoundingClientRect().width > 0;
+        // Startkarten: gleichmäßig verteilt (nicht 5 + 1)
+        const cards = [...document.querySelectorAll<HTMLElement>('.eoStartCards > .sapFCard')].filter(shown);
+        if (cards.length > 1) {
+          const rows = new Map<number, number>();
+          for (const c of cards) { const top = Math.round(c.getBoundingClientRect().top); rows.set(top, (rows.get(top) ?? 0) + 1); }
+          const counts = [...rows.values()];
+          if (Math.max(...counts) - Math.min(...counts) > 1) out.push(`Startkarten ungleich verteilt (${counts.join(' + ')})`);
+        }
+        // Tabellen: keine flexible Spalte schmaler als 5,5rem; Eingabewerte und Feldbeschreibungen nicht abgeschnitten
+        for (const th of [...document.querySelectorAll<HTMLElement>('.sapMListTbl th.sapMListTblCell')].filter(shown)) {
+          const text = (th.textContent ?? '').trim();
+          if (text.length > 2 && !th.style.width && th.getBoundingClientRect().width < 88) out.push(`Spalte „${text}“ nur ${Math.round(th.getBoundingClientRect().width)} px breit`);
+        }
+        for (const i of [...document.querySelectorAll<HTMLInputElement>('input')].filter(shown)) {
+          if (i.value && !['checkbox', 'file', 'radio'].includes(i.type) && i.scrollWidth > i.clientWidth + 1) out.push(`Eingabewert abgeschnitten: „${i.value}“`);
+        }
+        for (const d of [...document.querySelectorAll<HTMLElement>('.sapMStepInputDescription')].filter(shown)) {
+          if (d.scrollWidth > d.clientWidth + 1) out.push(`Beschreibung abgeschnitten: „${d.textContent}“`);
+        }
+        return out;
+      }));
+      if (path.startsWith('/bauakten/')) {
+        await expect(page.getByRole('button', { name: 'Bearbeiten', exact: true }).filter({ visible: true }), `${path}: Bearbeiten im Kopf`).toHaveCount(1);
+        for (const name of ['Kennwerte bearbeiten', 'Bearbeiten']) {
+          await page.getByRole('button', { name, exact: true }).filter({ visible: true }).first().click();
+          const dialog = page.getByRole('dialog', { name: name === 'Bearbeiten' ? 'Bauakte bearbeiten' : name });
+          await expect(dialog).toBeVisible();
+          await page.waitForTimeout(500);
+          add(`Dialog ${name}`, await dialogFitIssues(page));
+          await dialog.getByRole('button', { name: 'Abbrechen' }).click();
+          await expect(dialog).toHaveCount(0);
+        }
+      }
+    }
+    await page.goto('/start');
+    await settle(page);
+    await page.getByRole('button', { name: 'Neue Bauakte' }).first().click();
+    const wizard = page.getByRole('dialog', { name: 'Neue Bauakte' });
+    await expect(wizard).toBeVisible();
+    await page.waitForTimeout(500);
+    add('Dialog Neue Bauakte', await dialogFitIssues(page));
+    await page.keyboard.press('Escape');
+    await page.getByRole('button', { name: /Verwerfen|Abbrechen/ }).filter({ visible: true }).last().click({ timeout: 1500 }).catch(() => undefined);
+    await expect(wizard).toHaveCount(0);
+    await page.getByLabel(/^Benutzermenü/).first().click();
+    await page.getByRole('menuitem', { name: 'Was gibt’s Neues' }).click();
+    const news = page.getByRole('dialog', { name: /Was gibt’s Neues/ });
+    await expect(news).toBeVisible();
+    await page.waitForTimeout(500);
+    add('Dialog Was gibt’s Neues', await dialogFitIssues(page));
+    await news.getByRole('button', { name: 'Verstanden' }).click();
+    await context.close();
+    expect(found).toEqual([]);
+  });
+}
 
 // Durchsicht mit Bildschirmfotos über alle Breiten und Zoomstufen (LAYOUT_SWEEP=1), nicht Teil der regulären Tests.
 const sweep: [string, number, number, number][] = [];

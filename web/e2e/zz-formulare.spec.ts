@@ -1,15 +1,16 @@
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { writeFileSync, mkdirSync } from 'node:fs';
-import { adminPassword, formLayoutIssues, openSection, signIn } from './helpers';
+import { adminPassword, dialogFitIssues, formLayoutIssues, openSection, signIn } from './helpers';
 
 // Durchsicht aller Fenster: öffnet Seiten, Reiter, Dialoge und Assistenten, prüft die Formular-Überschriften und
-// legt Bildschirmfotos ab (FORMS_SWEEP=1, Breite über SWEEP_WIDTH, z. B. 1366 oder 1920). Nicht Teil der regulären Tests.
+// legt Bildschirmfotos ab (FORMS_SWEEP=1, Breite über SWEEP_WIDTH, z. B. 1366 oder 1920, Höhe über SWEEP_HEIGHT, z. B. 740 für
+// 1920 × 1080 mit 125 % abzüglich Browserleisten; FORMS_SHOTS=0 ohne Bildschirmfotos). Nicht Teil der regulären Tests.
 test.skip(!process.env['FORMS_SWEEP'], 'nur auf Anforderung');
 test.use({ actionTimeout: 6000, navigationTimeout: 20000, trace: 'off' });
 
 const width = Number(process.env['SWEEP_WIDTH'] ?? 1366);
-const height = width >= 1900 ? 1080 : 768;
-const dir = `test-results/formulare-${width}`;
+const height = Number(process.env['SWEEP_HEIGHT'] ?? (width >= 1900 ? 1080 : 768));
+const dir = `test-results/formulare-${width}x${height}`;
 const report: { window: string; issues: string[] }[] = [];
 
 const open = /^(neu|neue|neuer|neues)\b|anlegen|hinzufügen|erfassen|bearbeiten|planen|einrichten|beantragen|eintragen|nachricht|gruppe|ticket|bestellen|urlaub|abwesenheit|krank|kontakt|zuordnen|termin|einladen|ändern|verschieben|kopieren|vorlage|textbaustein|ziel|kolonne|fahrzeug|gerät|rolle|benutzer|passwort|testmail|koppeln|wiederherstellen|anfrage|aufgabe|mangel|raum|notiz|messung|bericht|freigabe anfordern|einstellungen/i;
@@ -24,9 +25,11 @@ const safe = (s: string) => s.replace(/[^a-z0-9äöüß]+/gi, '-').replace(/^-|-
 
 async function check(page: Page, scope: Locator, window: string, screenshot = true) {
   const issues = await formLayoutIssues(scope).catch((e) => [`Prüfung fehlgeschlagen: ${String(e).slice(0, 100)}`]);
+  // Dialoge: passen ins Fenster, Knöpfe unten sichtbar
+  issues.push(...await dialogFitIssues(page));
   report.push({ window, issues });
   writeFileSync(`${dir}/report-${safe(test.info().title)}.json`, JSON.stringify(report, null, 2));
-  if (screenshot) await page.waitForTimeout(500).then(() => page.screenshot({ path: `${dir}/${safe(window)}.png` }));
+  if (screenshot && process.env['FORMS_SHOTS'] !== '0') await page.waitForTimeout(500).then(() => page.screenshot({ path: `${dir}/${safe(window)}.png` }));
 }
 
 const topDialog = (page: Page) => page.locator('.sapMDialog:visible').last();

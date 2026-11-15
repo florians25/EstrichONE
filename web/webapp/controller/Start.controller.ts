@@ -3,6 +3,7 @@ import BaseController from "./BaseController";
 import type Event from "sap/ui/base/Event";
 import type Control from "sap/ui/core/Control";
 import { get } from "../util/api";
+import { followBalancedColumns } from "../util/cardGrid";
 import { isoDay } from "../util/days";
 import { dateTime } from "../util/format";
 import { session } from "../util/session";
@@ -91,6 +92,16 @@ const shortDay = (iso: string) => new Date(`${iso}T12:00:00`).toLocaleDateString
 export default class Start extends BaseController {
 	onInit(): void {
 		this.local({ greeting: "", today: "", cards: [] as StartCard[], kpis: [], groups: [], backup: null, monitor: null, busy: false });
+		// Karten gleichmäßig auf die Reihen verteilen (sechs Karten: 6 oder 3 + 3, nicht 5 + 1).
+		let observer: ResizeObserver | undefined;
+		const cards = this.byId("startCards") as Control;
+		cards.addEventDelegate({
+			onAfterRendering: () => {
+				observer?.disconnect();
+				const dom = cards.getDomRef();
+				observer = dom instanceof HTMLElement ? followBalancedColumns(dom) : undefined;
+			},
+		});
 	}
 
 	onRouteMatched(): void {

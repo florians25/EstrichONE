@@ -331,6 +331,38 @@ export async function layoutIssues(page: Page, scopeSelector = 'body'): Promise<
 }
 
 /**
+ * Offene Dialoge passen ins Fenster: Rahmen vollständig sichtbar, Fußleiste mit allen Knöpfen sichtbar und nicht
+ * abgeschnitten, kein waagerechter Bildlauf im Inhalt. Liefert die Abweichungen je Dialog (Titel).
+ */
+export async function dialogFitIssues(page: Page): Promise<string[]> {
+  return page.evaluate(() => {
+    const out: string[] = [];
+    const vis = (e: Element | null): e is HTMLElement => !!e && (e as HTMLElement).getBoundingClientRect().width > 0 && getComputedStyle(e).visibility !== 'hidden';
+    const vw = document.documentElement.clientWidth;
+    const vh = document.documentElement.clientHeight;
+    for (const d of [...document.querySelectorAll<HTMLElement>('.sapMDialog')].filter(vis)) {
+      const r = d.getBoundingClientRect();
+      const name = d.querySelector('.sapMDialogTitle, .sapMTitle')?.textContent?.trim() || d.id;
+      if (r.top < -1 || r.left < -1 || r.bottom > vh + 1 || r.right > vw + 1) {
+        out.push(`Dialog „${name}“ ragt aus dem Fenster (${Math.round(r.left)},${Math.round(r.top)}–${Math.round(r.right)},${Math.round(r.bottom)} bei ${vw} × ${vh})`);
+      }
+      const foot = d.querySelector<HTMLElement>(':scope > footer, .sapMDialogFooter');
+      if (foot && vis(foot)) {
+        const f = foot.getBoundingClientRect();
+        if (f.bottom > Math.min(vh, r.bottom) + 1) out.push(`Dialog „${name}“: Fußleiste nicht sichtbar (unten bei ${Math.round(f.bottom)} px)`);
+        for (const b of [...foot.querySelectorAll<HTMLElement>('.sapMBtn')].filter(vis)) {
+          const br = b.getBoundingClientRect();
+          if (br.right > Math.min(vw, r.right) + 1 || br.left < r.left - 1 || br.bottom > Math.min(vh, r.bottom) + 1) out.push(`Dialog „${name}“: Knopf „${b.textContent?.trim()}“ abgeschnitten`);
+        }
+      }
+      const scroll = d.querySelector<HTMLElement>('.sapMDialogSection');
+      if (scroll && scroll.scrollWidth > scroll.clientWidth + 2) out.push(`Dialog „${name}“: waagerechter Bildlauf (${scroll.scrollWidth} > ${scroll.clientWidth} px)`);
+    }
+    return out;
+  });
+}
+
+/**
  * Am Wochenende zeigen Kalender und Disposition standardmäßig die Arbeitswoche – „heute“ angelegte Termine wären
  * nicht sichtbar. Für datumsabhängige Tests den Browser auf den nächsten Werktag, 10:00 Uhr, stellen.
  */
